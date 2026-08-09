@@ -3,6 +3,8 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import {
   AWARD_TYPES,
+  ACTIVE_AWARD_TYPES,
+  isAwardRetired,
   getAwardBadge,
   getAwardType,
   getFranchiseAwards,
@@ -530,5 +532,88 @@ describe('afl.config.json ownerHistory shape', () => {
         ).toBe(false);
       }
     }
+  });
+});
+
+/**
+ * Retired awards — the AFL Cup, replaced by the Premier League after 2016.
+ *
+ * Retirement was previously implicit: the Cup was simply left out of
+ * ALWAYS_ACTIVE and TITLE_TYPES by hand. These tests pin the explicit flag and
+ * the two things it has to guarantee — past winners keep their history, and
+ * nothing offers the award as still achievable.
+ */
+describe('retired awards', () => {
+  const RETIRED = AWARD_TYPES.filter((a) => a.retired !== undefined);
+
+  it('marks the AFL Cup retired after 2016, replaced by the Premier League', () => {
+    const cup = AWARD_TYPES.find((a) => a.slug === 'afl-cup')!;
+    expect(cup.retired).toBe(2016);
+    expect(cup.replacedBy).toBe('premier-league');
+    expect(isAwardRetired('afl-cup')).toBe(true);
+  });
+
+  it('treats every other award as active', () => {
+    for (const a of AWARD_TYPES) {
+      if (a.slug === 'afl-cup') continue;
+      expect(isAwardRetired(a.slug), `${a.slug} should be active`).toBe(false);
+    }
+  });
+
+  it('ACTIVE_AWARD_TYPES is the taxonomy minus the retired ones', () => {
+    expect(ACTIVE_AWARD_TYPES).toHaveLength(AWARD_TYPES.length - RETIRED.length);
+    expect(ACTIVE_AWARD_TYPES.map((a) => a.slug)).not.toContain('afl-cup');
+  });
+
+  it('points replacedBy at a real award that is itself active', () => {
+    for (const a of RETIRED) {
+      if (!a.replacedBy) continue;
+      const target = AWARD_TYPES.find((t) => t.slug === a.replacedBy);
+      expect(target, `${a.slug} replacedBy ${a.replacedBy} not found`).toBeDefined();
+      expect(isAwardRetired(a.replacedBy)).toBe(false);
+    }
+  });
+
+  it('never offers a retired award as a locked slot, for any franchise', () => {
+    const divisions: AwardSlug[] = ['al-north', 'al-south', 'nl-east', 'nl-west'];
+    const conferences: AwardSlug[] = ['al-champion', 'nl-champion'];
+    for (let i = 1; i <= 24; i++) {
+      const id = String(i).padStart(4, '0');
+      for (const divisionSlug of divisions) {
+        for (const conferenceSlug of conferences) {
+          const room = getFranchiseTrophyRoom(id, { divisionSlug, conferenceSlug });
+          for (const tier of room) {
+            for (const item of tier.items) {
+              if (!item.locked) continue;
+              expect(
+                isAwardRetired(item.slug),
+                `${id} offered locked retired award ${item.slug}`
+              ).toBe(false);
+            }
+          }
+        }
+      }
+    }
+  });
+
+  it('keeps no retired slug in the title-progress types', () => {
+    for (const t of TITLE_TYPES) {
+      for (const slug of t.slugs) expect(isAwardRetired(slug)).toBe(false);
+    }
+  });
+
+  it('still renders a retired award that WAS won, and counts it', () => {
+    const allFranchises = Array.from({ length: 24 }, (_, i) =>
+      String(i + 1).padStart(4, '0')
+    );
+    const cupWinner = allFranchises.find((id) =>
+      getFranchiseTrophyCase(id).some((t) => t.slug === 'afl-cup')
+    );
+    expect(cupWinner, 'no franchise shows an AFL Cup badge').toBeDefined();
+
+    const badge = getFranchiseTrophyCase(cupWinner!).find((t) => t.slug === 'afl-cup')!;
+    expect(badge.locked).not.toBe(true);
+    expect(badge.years.every((y) => y <= 2016)).toBe(true);
+    expect(countFranchiseBadges(cupWinner!)).toBeGreaterThan(0);
   });
 });

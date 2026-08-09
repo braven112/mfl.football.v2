@@ -81,6 +81,18 @@ export interface AwardType {
    * kept only so the model can support a count-only award later.
    */
   dated?: boolean;
+  /**
+   * Last season this award was contested, for awards that no longer exist.
+   *
+   * A retired award is still real history — its past winners keep their badges
+   * and it still counts toward trophy totals and sweeps in the seasons it ran.
+   * What it must NOT do is appear as something a franchise could still win: no
+   * locked placeholder, no "not yet won" progress slot. Anything offering an
+   * award as achievable must filter on this (see ACTIVE_AWARD_TYPES).
+   */
+  retired?: number;
+  /** The award that took this one's place, when it was replaced rather than dropped. */
+  replacedBy?: AwardSlug;
 }
 
 /**
@@ -90,7 +102,10 @@ export interface AwardType {
  */
 export const AWARD_TYPES: AwardType[] = [
   { slug: 'afl-championship', label: 'AFL Champion', badge: 'afl-championship.svg', category: 'championship', tier: 'gold', dated: true },
-  { slug: 'afl-cup', label: 'AFL Cup', badge: 'afl-cup.svg', category: 'cup', tier: 'gold', dated: true },
+  // Retired after 2016 and replaced by the Premier League — the two never
+  // share a season (Cup 2015-16, Premier League 2018 on). Historical badges
+  // still render; it is simply no longer winnable.
+  { slug: 'afl-cup', label: 'AFL Cup', badge: 'afl-cup.svg', category: 'cup', tier: 'gold', dated: true, retired: 2016, replacedBy: 'premier-league' },
   { slug: 'premier-league', label: 'Premier League', badge: 'premier-league.svg', category: 'tier', tier: 'gold', dated: true },
   { slug: 'al-champion', label: 'AL Champion', badge: 'al-champion.svg', category: 'conference', tier: 'conference', dated: true },
   { slug: 'nl-champion', label: 'NL Champion', badge: 'nl-champion.svg', category: 'conference', tier: 'conference', dated: true },
@@ -237,6 +252,16 @@ export function attributeAwardYear(sourceId: string | null, year: number): strin
 export function getAwardBadge(slug: AwardSlug): string {
   const type = BY_SLUG.get(slug);
   return `/assets/afl/awards/${type ? type.badge : `${slug}.svg`}`;
+}
+
+/** Awards a franchise could still win today. Excludes retired awards. */
+export const ACTIVE_AWARD_TYPES: AwardType[] = AWARD_TYPES.filter(
+  (a) => a.retired === undefined
+);
+
+/** True for an award that no longer exists, e.g. the AFL Cup. */
+export function isAwardRetired(slug: AwardSlug): boolean {
+  return BY_SLUG.get(slug)?.retired !== undefined;
 }
 
 export function getAwardType(slug: AwardSlug): AwardType | undefined {
@@ -437,6 +462,14 @@ export function getFranchiseTrophyCaseByTier(franchiseId: string): TrophyTierGro
  * appear when actually won. The team's own conference/division titles are added
  * per-franchise in getFranchiseTrophyRoom.
  */
+/**
+ * The universal majors every franchise can chase, shown as locked placeholders
+ * when unwon. NOT simply "every active award" — conference and division slots
+ * are added per-franchise from that team's own assignment.
+ *
+ * A retired award must never appear here (it would render an unwinnable slot),
+ * which is enforced below rather than left to whoever edits this list next.
+ */
 const ALWAYS_ACTIVE: AwardSlug[] = [
   'afl-championship',
   'premier-league',
@@ -465,9 +498,12 @@ export function getFranchiseTrophyRoom(
   const earned = getFranchiseTrophyCase(franchiseId);
   const earnedSlugs = new Set(earned.map((t) => t.slug));
 
-  const lockable = new Set<AwardSlug>(ALWAYS_ACTIVE);
-  if (opts.conferenceSlug) lockable.add(opts.conferenceSlug);
-  if (opts.divisionSlug) lockable.add(opts.divisionSlug);
+  // Retired awards are filtered out rather than trusted to be absent: a locked
+  // "No AFL Cup" slot would tell an owner to go win something that no longer
+  // exists. Applies to the per-franchise slots too, not just ALWAYS_ACTIVE.
+  const lockable = new Set<AwardSlug>(ALWAYS_ACTIVE.filter((s) => !isAwardRetired(s)));
+  if (opts.conferenceSlug && !isAwardRetired(opts.conferenceSlug)) lockable.add(opts.conferenceSlug);
+  if (opts.divisionSlug && !isAwardRetired(opts.divisionSlug)) lockable.add(opts.divisionSlug);
 
   const locked: TrophyCaseItem[] = [];
   for (const slug of lockable) {
