@@ -20,7 +20,7 @@
  */
 import { getLeagueContext } from '../../utils/league-context';
 import { resolveLeaguePath, resolveDirectoryHref } from '../../utils/nav-utils';
-import { getFooterColumns, getDeepCuts } from '../../config/footer-config';
+import { getFooterColumns, getDeepCuts, pathBelongsToLeague } from '../../config/footer-config';
 import {
   getFooterChampions,
   getFooterDraftStatus,
@@ -81,6 +81,14 @@ const sweepName = (n: number) => SWEEP_NAMES[n] ?? `${n} Titles`;
 
 const bandYear = champions[0]?.year ?? draftStatus?.year ?? null;
 const trophyHref = href('/franchises');
+
+/**
+ * Search exists only for TheLeague (src/pages/theleague/search.astro hardcodes
+ * its own base path). Prefixing the bare /search for another league produced a
+ * 404 in the utility bar — on EVERY page of AFL and Best Ball. QuickLinks
+ * already routes AFL's "all pages" CTA to the league home for the same reason.
+ */
+const showSearch = pathBelongsToLeague('/search', slug);
 const searchHref = href('/search');
 
 /**
@@ -155,7 +163,7 @@ const bandStyle =
                   <span class="champ-meta">
                     {champ.titles.map((t) => t.label).join(' + ')} · {champ.year}
                   </span>
-                  {!champ.banner && <span class="champ-team">{champ.team}</span>}
+                  {!champ.banner && <span class="champ-team">{champ.teamDisplay}</span>}
                 </span>
                 <span class="champ-cta" aria-hidden="true">→</span>
               </span>
@@ -236,8 +244,12 @@ const bandStyle =
 
     <div class="footer-util">
       <span>© {new Date().getFullYear()} {league.name}</span>
-      <span class="util-sep" aria-hidden="true">·</span>
-      <a href={searchHref}>Search</a>
+      {showSearch && (
+        <>
+          <span class="util-sep" aria-hidden="true">·</span>
+          <a href={searchHref}>Search</a>
+        </>
+      )}
     </div>
   </div>
 </footer>

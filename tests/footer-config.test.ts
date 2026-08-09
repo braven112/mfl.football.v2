@@ -5,8 +5,7 @@ import {
   DECK_COLUMNS,
   AFL_ALL_PLAY_PATH,
 } from '../src/config/footer-config';
-import { D_LEAGUE, PREMIER_LEAGUE, getTierForYear } from '../src/utils/afl-tier';
-import { getCurrentSeasonYear } from '../src/utils/league-year';
+import { D_LEAGUE, PREMIER_LEAGUE, getCurrentTierMembership } from '../src/utils/afl-tier';
 
 const findAllPlayLabel = (franchiseId: string | null) => {
   const cols = getFooterColumns('afl-fantasy', franchiseId);
@@ -17,16 +16,14 @@ const findAllPlayLabel = (franchiseId: string | null) => {
   return null;
 };
 
-// Pick real franchises out of the live tier history rather than hardcoding
-// ids, so promotion/relegation can't silently invalidate the test.
-const year = getCurrentSeasonYear();
-const franchises = Array.from({ length: 24 }, (_, i) =>
-  String(i + 1).padStart(4, '0')
-);
+// Pick real franchises out of the live tier membership rather than hardcoding
+// ids, so promotion/relegation can't silently invalidate the test. Uses the
+// same source the code does — see applyTierLabel on why it is not year-keyed.
+const membership = getCurrentTierMembership() ?? {};
 const dLeagueId =
-  franchises.find((id) => getTierForYear(id, year) === D_LEAGUE) ?? null;
+  Object.keys(membership).find((id) => membership[id] === D_LEAGUE) ?? null;
 const premierId =
-  franchises.find((id) => getTierForYear(id, year) === PREMIER_LEAGUE) ?? null;
+  Object.keys(membership).find((id) => membership[id] === PREMIER_LEAGUE) ?? null;
 
 describe('AFL all-play link is named after the viewer’s tier', () => {
   it('defaults to Premier League when signed out', () => {

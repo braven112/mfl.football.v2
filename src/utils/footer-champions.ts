@@ -36,7 +36,13 @@ import { getLeagueBySlug } from '../config/leagues';
 import { getActiveTeams, getCurrentBannerPath } from './league-assets';
 import { extractLeagueChampion } from './toilet-bowl-utils';
 import { getCurrentSeasonYear } from './league-year';
-import { AWARD_TYPES, type AwardSlug, type AwardSeason } from './afl-awards';
+import {
+  AWARD_TYPES,
+  attributeAwardYear,
+  type AwardSlug,
+  type AwardSeason,
+} from './afl-awards';
+import { chooseTeamName } from './team-names';
 import theleagueAssets from '../data/theleague.assets.json';
 import aflAwardsHistory from '../../data/afl-fantasy/awards-history.json';
 import aflAssets from '../../data/afl-fantasy/afl.assets.json';
@@ -53,7 +59,17 @@ export interface ChampionTitle {
 
 /** One champion team and everything it won that season. */
 export interface ChampionSpotlight {
+  /**
+   * Full team name. Used for the banner's alt text, which must NOT be
+   * shortened — a screen reader benefits from the whole name.
+   */
   team: string;
+  /**
+   * Display name via chooseTeamName(), capped at MAX_TEAM_NAME_LENGTH for the
+   * visible chip so the footer matches every other card surface. Only rendered
+   * when the team has no banner; the banner art carries the name otherwise.
+   */
+  teamDisplay: string;
   year: number;
   /** Sorted so the majors lead. Length > 1 renders the sweep ribbon. */
   titles: ChampionTitle[];
@@ -109,7 +125,16 @@ function aflSpotlights(year: number, prefix: string): ChampionSpotlight[] {
     if (!meta || !SWEEP_TIERS.has(meta.tier)) continue;
     if (!winner?.franchiseId) continue;
 
-    const bucket = byFranchise.get(winner.franchiseId) ?? {
+    // AFL franchise slots change hands, so a raw awards-history id is not
+    // necessarily the franchise that holds that slot today. Every other
+    // consumer in afl-awards.ts attributes before crediting; without it the
+    // card can pair a historical winner's NAME with the current occupant's
+    // BANNER. Returns null when the slot belonged to a former owner — that
+    // win is not this franchise's, so skip it.
+    const franchise = attributeAwardYear(winner.franchiseId, year);
+    if (!franchise) continue;
+
+    const bucket = byFranchise.get(franchise) ?? {
       name: winner.name ?? '',
       entries: [],
     };
@@ -120,7 +145,7 @@ function aflSpotlights(year: number, prefix: string): ChampionSpotlight[] {
       badge: badgePath(meta.badge),
       major: meta.tier === 'gold',
     });
-    byFranchise.set(winner.franchiseId, bucket);
+    byFranchise.set(franchise, bucket);
   }
 
   const spotlights: ChampionSpotlight[] = [];
@@ -150,8 +175,10 @@ function aflSpotlights(year: number, prefix: string): ChampionSpotlight[] {
     });
 
     const team = active.find((t: any) => t.id === franchiseId);
+    const fullName = bucket.name || team?.name || 'Unknown';
     spotlights.push({
-      team: bucket.name || team?.name || 'Unknown',
+      team: fullName,
+      teamDisplay: chooseTeamName({ fullName, aliases: (team as any)?.aliases ?? [] }),
       year,
       titles: ordered.map((e) => ({ label: e.label, badge: e.badge, major: e.major })),
       banner: getCurrentBannerPath(team) ?? null,
@@ -182,9 +209,11 @@ function theleagueSpotlights(year: number, prefix: string): ChampionSpotlight[] 
   );
   if (!team) return [];
 
+  const fullName = (team as any).name as string;
   return [
     {
-      team: (team as any).name,
+      team: fullName,
+      teamDisplay: chooseTeamName({ fullName, aliases: (team as any).aliases ?? [] }),
       year,
       titles: [{ label: 'Defending Champion', badge: null, major: true }],
       banner: getCurrentBannerPath(team) ?? null,
@@ -202,6 +231,10 @@ function theleagueSpotlights(year: number, prefix: string): ChampionSpotlight[] 
 export function getFooterChampions(slug: CanonicalLeagueSlug): ChampionSpotlight[] {
   const league = getLeagueBySlug(slug);
   if (!league) return [];
+  // Fail closed for draft-only leagues. Callers gate on leagueHasChampionBand(),
+  // but without this a best-ball slug falls through to the TheLeague branch and
+  // returns TheLeague's champion behind a dead /best-ball-1/playoffs link.
+  if (league.bestBall) return [];
   const prefix = `/${league.slug}`;
   const year = getCurrentSeasonYear();
 

@@ -456,16 +456,15 @@ export function getFranchiseTrophyCaseByTier(franchiseId: string): TrophyTierGro
 }
 
 /**
- * Active award types every current franchise competes for — shown as a
- * greyed-out locked placeholder when the franchise has never won them. Retired
- * awards (AFL Cup, AL Central, NL Pacific) are intentionally excluded: they only
- * appear when actually won. The team's own conference/division titles are added
- * per-franchise in getFranchiseTrophyRoom.
- */
-/**
- * The universal majors every franchise can chase, shown as locked placeholders
- * when unwon. NOT simply "every active award" — conference and division slots
- * are added per-franchise from that team's own assignment.
+ * The universal majors every franchise can chase, shown as a greyed-out locked
+ * placeholder when unwon. NOT simply "every active award" — the team's own
+ * conference and division slots are added per-franchise in
+ * getFranchiseTrophyRoom.
+ *
+ * (An earlier version of this comment called AL Central and NL Pacific
+ * "retired". They are not — only the AFL Cup carries `retired`. Those two are
+ * live divisions that merely fall outside the four-division map the franchise
+ * page currently uses.)
  *
  * A retired award must never appear here (it would render an unwinnable slot),
  * which is enforced below rather than left to whoever edits this list next.

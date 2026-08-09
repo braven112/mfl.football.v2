@@ -12,8 +12,7 @@
 
 import type { CanonicalLeagueSlug } from './leagues';
 import pageDirectory from '../data/page-directory.json';
-import { getTierForYear, D_LEAGUE, PREMIER_LEAGUE } from '../utils/afl-tier';
-import { getCurrentSeasonYear } from '../utils/league-year';
+import { getCurrentTierMembership, D_LEAGUE, PREMIER_LEAGUE } from '../utils/afl-tier';
 
 /**
  * The five columns, in order, for every full-management league.
@@ -63,6 +62,29 @@ const link = (entry: FooterLink | string): FooterLink =>
 export const AFL_ALL_PLAY_PATH = '/afl-fantasy/standings?view=all_play';
 
 /**
+ * Which league a `page-directory.json` path belongs to.
+ *
+ * Directory paths are inconsistently prefixed by design: AFL and best-ball
+ * entries carry their own prefix, and everything else — whether written
+ * `/theleague/lineup` or bare `/rosters` — is TheLeague's. A BARE path is NOT
+ * "shared": `/league-comparison` and `/search` are TheLeague-only routes, and
+ * re-prefixing them for another league produces a guaranteed 404.
+ *
+ * Applied to the curated deck as well as Deep Cuts. The deck is hand-written,
+ * so in principle it should never list a foreign id — but a 404 in the footer
+ * ships on every page, and `tests/footer-links.test.ts` resolves every link
+ * against src/pages/ to make sure neither path regresses.
+ */
+export function pathBelongsToLeague(
+  path: string,
+  slug: CanonicalLeagueSlug
+): boolean {
+  if (path.startsWith('/afl-fantasy')) return slug === 'afl-fantasy';
+  if (path.startsWith('/best-ball-1')) return slug === 'best-ball-1';
+  return slug === 'theleague';
+}
+
+/**
  * Name the all-play link after the tier the viewer actually plays in.
  *
  * Premier League is the default — for signed-out visitors, for anyone whose
@@ -74,13 +96,24 @@ export const AFL_ALL_PLAY_PATH = '/afl-fantasy/standings?view=all_play';
  * `franchiseId` is the signed JWT session only. Browsing as another team does
  * NOT relabel the link — the tier follows who you are, not who you're looking
  * at, so the label can't flicker as you click around other franchises.
+ *
+ * Reads getCurrentTierMembership() rather than keying off getCurrentSeasonYear():
+ * the season year rolls at Labor Day, but tier membership is written per season
+ * and rolled forward when a season completes. Between those two moments there
+ * is no row for the current season year, so a year-keyed lookup returns null
+ * and silently labels every D-League owner "Premier League".
+ *
+ * KNOWN GAP: two AFL pages (players, draft-predictor) set prerender = true, so
+ * there is no request at build time and this falls back to the default there.
+ * A D-League owner sees "D-League" everywhere except those two pages. Fixing it
+ * would mean making them SSR, which is a bigger call than a link label.
  */
 function applyTierLabel(
   columns: FooterColumn[],
   franchiseId: string | null
 ): FooterColumn[] {
   if (!franchiseId) return columns;
-  const tier = getTierForYear(franchiseId, getCurrentSeasonYear());
+  const tier = getCurrentTierMembership()?.[franchiseId] ?? null;
   if (tier !== D_LEAGUE) return columns;
   return columns.map((col) => ({
     ...col,
@@ -174,7 +207,9 @@ const AFL_COLUMNS: ColumnMap = {
     'afl-draft-predictor',
     { label: 'Keeper Report Card', soon: true },
     { id: 'afl-schedule-strength', label: 'The Gauntlet' },
-    'league-comparison',
+    // NO league-comparison: it lives at the bare path /league-comparison, which
+    // is TheLeague-only, and it is a salary-cap tool — AFL runs salaryCap:false.
+    // Prefixing it produced a 404 at /afl-fantasy/league-comparison.
   ],
   'Record Book': [
     { label: 'Championship History', soon: true },
@@ -274,6 +309,9 @@ export function getFooterColumns(
           if (l.path) return { label: l.label ?? l.path, path: l.path, soon: false };
           const entry = l.id ? DIR_BY_ID.get(l.id) : undefined;
           if (!entry || entry.visibility !== 'all') return null;
+          // Backstop against listing another league's route (see
+          // pathBelongsToLeague) — prefixing one 404s.
+          if (!pathBelongsToLeague(entry.path, slug)) return null;
           return { label: l.label ?? entry.title, path: entry.path, soon: false };
         })
         .filter((l): l is ResolvedFooterLink => l !== null),
@@ -300,25 +338,12 @@ export function getDeepCuts(
   // Search already sits in the utility bar; repeating it here reads as a bug.
   const UTILITY_PATHS = new Set(['/search']);
 
-  /**
-   * Which directory entries belong to which league, mirroring QuickLinks:
-   * AFL and best-ball entries carry their own prefix, and everything else
-   * (prefixed /theleague/... or bare /rosters) is TheLeague's. Getting this
-   * wrong would surface e.g. /salary-archive on AFL, which runs
-   * salaryCap:false and has no such page.
-   */
-  const belongsToLeague = (path: string): boolean => {
-    if (path.startsWith('/afl-fantasy')) return slug === 'afl-fantasy';
-    if (path.startsWith('/best-ball-1')) return slug === 'best-ball-1';
-    return slug === 'theleague';
-  };
-
   return DIRECTORY.filter((e) => {
     if (e.visibility !== 'all') return false;
     if (e.popularity > 20) return false;
     if (linked.has(e.path)) return false;
     if (UTILITY_PATHS.has(e.path)) return false;
-    if (!belongsToLeague(e.path)) return false;
+    if (!pathBelongsToLeague(e.path, slug)) return false;
     return true;
   })
     .sort((a, b) => b.popularity - a.popularity || a.title.localeCompare(b.title))

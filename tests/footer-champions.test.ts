@@ -86,6 +86,13 @@ describe('draft-only leagues', () => {
     expect(leagueHasChampionBand('afl-fantasy')).toBe(true);
   });
 
+  it('getFooterChampions fails closed for best-ball', () => {
+    // Callers gate on leagueHasChampionBand(), but the helper must not fall
+    // through to TheLeague's brackets and hand back a champion behind a dead
+    // /best-ball-1/playoffs link.
+    expect(getFooterChampions('best-ball-1')).toEqual([]);
+  });
+
   it('best-ball gets a draft-status card instead', () => {
     const draft = getFooterDraftStatus('best-ball-1');
     expect(draft).not.toBeNull();
@@ -188,5 +195,18 @@ describe('what counts as a Double', () => {
   it('consolation titles never count (2024 Drunk Indians is not a Double)', () => {
     // Premier League + NIT: the NIT is silver, so this stays a single title.
     expect(sizeOfCardContaining(2024, 'premier-league')).toBe(1);
+  });
+});
+
+describe('team names on champion cards', () => {
+  it('keeps the full name for alt text and a capped one for the visible chip', () => {
+    for (const slug of ['theleague', 'afl-fantasy'] as const) {
+      for (const s of getFooterChampions(slug)) {
+        expect(s.team.length).toBeGreaterThan(0);
+        expect(s.teamDisplay.length).toBeGreaterThan(0);
+        // MAX_TEAM_NAME_LENGTH is 15; the chip must respect it, alt need not.
+        expect(s.teamDisplay.length).toBeLessThanOrEqual(15);
+      }
+    }
   });
 });
