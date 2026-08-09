@@ -221,8 +221,28 @@ for (const year of targetYears) {
     continue;
   }
 
-  // Regression check: every field the committed file had must survive.
+  // Strong wrong-league detector: MFL franchise ids are generic (0001…), but
+  // every franchise's exact H2H and division records matching the committed
+  // feed means this is certainly the same league-season.
   const newById = new Map(newRows.map((r) => [r.id, r]));
+  const recordMismatches = [];
+  for (const oldRow of committedRows) {
+    const newRow = newById.get(oldRow.id);
+    for (const key of ['h2hw', 'h2hl', 'h2ht', 'divwlt']) {
+      if (oldRow[key] != null && newRow[key] != null && String(oldRow[key]) !== String(newRow[key])) {
+        recordMismatches.push(`${oldRow.id}.${key} ${oldRow[key]}→${newRow[key]}`);
+      }
+    }
+  }
+  if (recordMismatches.length) {
+    results.push({
+      year,
+      status: 'error',
+      detail: `record values differ from committed feed (wrong league?): ${recordMismatches.slice(0, 6).join(', ')}`,
+    });
+    console.log(label, `ERROR — record mismatch vs committed feed: ${recordMismatches.slice(0, 6).join(', ')}`);
+    continue;
+  }
   const lostFields = new Set();
   for (const oldRow of committedRows) {
     const newRow = newById.get(oldRow.id);
@@ -252,35 +272,37 @@ for (const year of targetYears) {
     continue;
   }
 
-  // Sanity: pf should roughly equal the old avgpf × games approximation.
-  // Warn-only (avgpf is rounded to 2dp), but a big disagreement on many
-  // franchises means this is the wrong data — fail the year.
+  // Diagnostic (not a gate — record-value identity above is the wrong-league
+  // check): how does exact pf compare to the avgpf × games approximation the
+  // site has been using? A consistent ratio ≠ 1 means the approximation was
+  // systematically off for this season (e.g. double-header weeks make games
+  // exceed the week count avgpf divides by), which is worth recording.
   let disagreements = 0;
+  const ratios = [];
   let sample = null;
   for (const oldRow of committedRows) {
     const newRow = newById.get(oldRow.id);
     const games = num(oldRow.h2hw) + num(oldRow.h2hl) + num(oldRow.h2ht);
     const approx = num(oldRow.avgpf) * games;
     const exact = num(newRow.pf);
-    if (approx > 0 && exact > 0 && Math.abs(exact - approx) / approx > 0.02) disagreements++;
-    if (!sample) sample = { id: oldRow.id, approx: approx.toFixed(2), exact: newRow.pf };
+    if (approx > 0 && exact > 0) {
+      ratios.push(exact / approx);
+      if (Math.abs(exact - approx) / approx > 0.02) disagreements++;
+    }
+    if (!sample) sample = { id: oldRow.id, games, avgpf: oldRow.avgpf, approx: approx.toFixed(2), exact: newRow.pf };
   }
-  if (disagreements > committedRows.length / 2) {
-    results.push({
-      year,
-      status: 'error',
-      detail: `pf disagrees with avgpf × games on ${disagreements}/${committedRows.length} franchises — wrong data?`,
-    });
-    console.log(label, `ERROR — pf vs avgpf × games disagrees on ${disagreements}/${committedRows.length} franchises`);
-    continue;
-  }
+  const meanRatio = ratios.length ? ratios.reduce((a, b) => a + b) / ratios.length : 0;
+  const ratioSpread = ratios.length ? Math.max(...ratios) - Math.min(...ratios) : 0;
 
   results.push({ year, status: 'ok', gainedFields, disagreements, sample });
-  console.log(
-    label,
-    `OK — pf verified (sample ${sample.id}: avgpf×games ${sample.approx} → pf ${sample.exact}` +
-    `${disagreements ? `; ${disagreements} franchise(s) differ >2%` : ''})`
-  );
+  console.log(label, `OK — records match committed feed; pf usable (sample ${sample.id}: ` +
+    `${sample.games} games × avgpf ${sample.avgpf} = ${sample.approx} vs exact pf ${sample.exact})`);
+  if (disagreements) {
+    console.log(
+      `  note: avgpf×games approximation was off >2% for ${disagreements}/${ratios.length} franchises ` +
+      `(pf/approx mean ${meanRatio.toFixed(4)}, spread ${ratioSpread.toFixed(4)})`
+    );
+  }
   console.log(`  gained fields: ${gainedFields.join(', ') || '(none)'}`);
 
   if (!DRY_RUN) {
