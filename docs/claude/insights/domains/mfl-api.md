@@ -1509,3 +1509,15 @@ league-blind smell. Regression test: `tests/trades-pending-league-teams.test.ts`
 **Production verdict (2026-07-21, same day):** the first scheduled fetches proved the codes HALF right — `IS_KEEPER=N` is accepted and returns data, but `IS_KEEPER=D` is REJECTED with an HTTP-200 body of `{"error":{"$t":"Invalid value for IS_KEEPER"}}`, which the roster-sync cron then committed over BOTH leagues' `adp-dynasty.json`, breaking every dynasty-ADP consumer and the `afl-hero-casting` test on every PR merge ref. Two lessons: (1) an MFL "success" response can be an error payload — both fetch scripts now carry an error-payload guard (`writeOut` in fetch-mfl-feeds.mjs, the fetch loop in fetch-adp.mjs) that refuses to overwrite a committed feed with a payload carrying `error` or missing `adp.player`; never remove it. (2) The correct dynasty letter code is still UNVERIFIED (`K`? something else? MFL egress is proxy-blocked from dev sandboxes) — until someone probes live, the dynasty fetch fails loudly every run and the committed file stays at its last good (unfiltered-aggregate) state.
 
 **Evidence:** `scripts/fetch-adp.mjs` (endpoints + guards), `scripts/fetch-mfl-feeds.mjs#writeOut`, error payloads committed to main by `chore: sync rosters` commits f81f049/213d418 on 2026-07-21, restored in PR #467.
+
+---
+
+## 2026-08-09 - leagueStandings ALL=1 Recovers Columns the League-Year Never Configured
+
+**Context:** AFL 2010–2022 committed standings.json had no `pf`/`pa` — only `avgpf`/`avgpa` — so the franchises index approximated career points.
+
+**Insight:** The plain `TYPE=leagueStandings` export returns only the columns that league-year had *configured* on its standings page, and refetching never changes that. Adding `ALL=1` returns the full column set for archive years — `pf`, `pa` (2013+), `vp`, `confpct`, `divpct`, and the `h2ht` that 2019–2022 were missing. `scripts/backfill-standings-points.mjs` (+ its request-file-triggered workflow) does a standings-only backfill this way, gated on every franchise's `h2hw`/`h2hl`/`h2ht`/`divwlt` values matching the committed feed — franchise *ids* (0001…) are generic across all MFL leagues and prove nothing.
+
+**Trap that looked like wrong-league data:** for 2010–2012, exact `pf` came back exactly 17/18 of `avgpf × (h2hw+h2hl+h2ht)` on all 24 franchises (spread <0.001). Those seasons played 18 H2H games in a 17-week span (one double-header week), and `avgpf` divides by weeks, not games — so the site's old approximation ran ~5.9% high. A tight, uniform ratio across every franchise means a denominator mismatch in the *approximation*, not foreign data; records matching the committed feed is the reliable identity check. 2003 has no points data at all on MFL (`pf` ".00" even with ALL=1).
+
+**Confidence: High** — verified by dry-run + written backfill across all 14 target years, full unit suite green.

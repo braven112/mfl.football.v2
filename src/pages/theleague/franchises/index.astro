@@ -130,14 +130,16 @@ const identityHref = (h: (typeof historicalIdentities)[number]): string => {
           class="franchise-card"
           style={f.currentColor ? `--accent: ${f.currentColor};` : ''}
         >
-          {f.currentBanner && (
-            <div class="banner">
-              <img src={f.currentBanner} alt="" loading="lazy" />
-            </div>
-          )}
           <div class="card-body">
-            <h2 class="name">{f.currentNameMedium || f.currentName}</h2>
-            {f.currentDivision && <p class="division">{f.currentDivision} Division</p>}
+            <div class="lockup">
+              {f.currentIcon && (
+                <img class="lockup-icon" src={f.currentIcon} alt="" loading="lazy" width="64" height="64" />
+              )}
+              <div class="lockup-text">
+                <h2 class="name">{f.currentNameMedium || f.currentName}</h2>
+                {f.currentDivision && <p class="division">{f.currentDivision} Division</p>}
+              </div>
+            </div>
             <dl class="stats">
               <div>
                 <dt>All-Time</dt>
@@ -246,14 +248,19 @@ const identityHref = (h: (typeof historicalIdentities)[number]): string => {
     color: inherit;
   }
 
-  .banner {
-    line-height: 0;
-    margin-bottom: 0.5rem;
+  .lockup {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
   }
-  .banner img {
-    width: 100%;
-    height: auto;
-    display: block;
+  .lockup-icon {
+    width: 64px;
+    height: 64px;
+    flex-shrink: 0;
+    object-fit: contain;
+  }
+  .lockup-text {
+    min-width: 0;
   }
 
   .card-body {

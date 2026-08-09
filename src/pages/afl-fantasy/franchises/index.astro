@@ -1,41 +1,88 @@
 ---
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../../components/theleague/Breadcrumbs.astro';
 import aflConfig from '../../../../data/afl-fantasy/afl.config.json';
-import { attributeAwardYear } from '../../../utils/afl-awards';
+import {
+  getFranchiseTitleProgress,
+  type TitleTypeKey,
+  type TitleTypeProgress,
+} from '../../../utils/afl-awards';
+import { getAflCareerStats, type AflCareerStats } from '../../../utils/afl-career-stats';
+import { getConferenceName, type ConferenceId } from '../../../utils/afl-conference';
 import { buildHistoricalIdentities } from '../../../utils/franchise-eras';
 
-// Optional championship history — graceful when not yet committed (PR #207).
-const champHistoryGlob = import.meta.glob<{
-  default: {
-    championships?: Array<{ year: number; champion: string; runnerUp: string }>;
-  };
-}>('../../../../data/afl-fantasy/championship-history.json', { eager: true });
+const { byFranchise, yearsCovered } = getAflCareerStats();
+const firstYear = yearsCovered[0];
+const lastYear = yearsCovered[yearsCovered.length - 1];
 
-const championships =
-  Object.values(champHistoryGlob)[0]?.default?.championships ?? [];
+type AflTeamConfig = (typeof aflConfig.teams)[number];
 
-// Build a "championships count" map keyed by current franchise ID. Historical
-// entries follow ownerHistory (attributeAwardYear) so a title won under a
-// franchise ID an owner has since left credits their current franchise
-// instead — or drops out entirely if that year belongs to a departed owner.
-const champsByFranchise = new Map<string, number>();
-for (const c of championships) {
-  const target = attributeAwardYear(c.champion, c.year);
-  if (!target) continue;
-  champsByFranchise.set(target, (champsByFranchise.get(target) ?? 0) + 1);
+interface CardRow {
+  team: AflTeamConfig;
+  stats: AflCareerStats | null;
+  /** Title types this franchise has won, prestige order. */
+  titles: TitleTypeProgress[];
+  aflTitles: number;
 }
 
-const teams = (aflConfig.teams ?? []).slice().sort((a, b) => {
-  // Premier League first, then D-League. Within each tier, alpha by name.
-  const tierA = a.tier === 'Premier League' ? 0 : 1;
-  const tierB = b.tier === 'Premier League' ? 0 : 1;
-  if (tierA !== tierB) return tierA - tierB;
-  return a.name.localeCompare(b.name);
+const rows: CardRow[] = (aflConfig.teams ?? []).map((team) => {
+  const progress = getFranchiseTitleProgress(team.franchiseId);
+  return {
+    team,
+    stats: byFranchise.get(team.franchiseId) ?? null,
+    titles: progress.types.filter((t) => t.won),
+    aflTitles: progress.types.find((t) => t.key === 'afl')?.years.length ?? 0,
+  };
 });
 
-const totalFranchises = teams.length;
-const premierCount = teams.filter(t => t.tier === 'Premier League').length;
-const dLeagueCount = teams.filter(t => t.tier === 'D-League').length;
+// TheLeague's sort — championships desc, then career wins desc — applied
+// within each conference section.
+const byTitlesThenWins = (a: CardRow, b: CardRow) =>
+  b.aflTitles - a.aflTitles || (b.stats?.wins ?? 0) - (a.stats?.wins ?? 0);
+
+const conferences = (['00', '01'] as ConferenceId[]).map((id) => ({
+  id,
+  name: getConferenceName(id),
+  rows: rows.filter((r) => r.team.conference === id).sort(byTitlesThenWins),
+}));
+
+function recordString(s: AflCareerStats | null): string {
+  if (!s) return '0-0';
+  return s.ties > 0 ? `${s.wins}-${s.losses}-${s.ties}` : `${s.wins}-${s.losses}`;
+}
+
+function winPct(s: AflCareerStats | null): string {
+  const total = s ? s.wins + s.losses + s.ties : 0;
+  if (!s || !total) return '.000';
+  const pct = (s.wins + s.ties * 0.5) / total;
+  return pct.toFixed(3).replace(/^0/, '');
+}
+
+const TITLE_EMOJI: Record<TitleTypeKey, string> = {
+  afl: '🏆',
+  premier: '👑',
+  conference: '🎖️',
+  division: '🛡',
+  dleague: '🥈',
+  nit: '🎗️',
+};
+
+const TITLE_TOOLTIP: Record<TitleTypeKey, string> = {
+  afl: 'AFL Champion',
+  premier: 'Premier League titles',
+  conference: 'Conference titles',
+  division: 'Division titles',
+  dleague: 'D-League titles',
+  nit: 'NIT titles',
+};
+
+const titleYears = (t: TitleTypeProgress): string =>
+  t.years.slice().sort((a, b) => a - b).join(', ');
+
+const pointsApproximate = rows.some((r) => r.stats?.pointsApproximate);
+const pointsMissingYears = [
+  ...new Set(rows.flatMap((r) => r.stats?.pointsMissingYears ?? [])),
+].sort((a, b) => a - b);
 
 // Every distinct historical identity across all franchises, newest-first —
 // grouped by ownerEra when set, otherwise by normalized name, skipping
@@ -48,76 +95,93 @@ const historicalIdentities = buildHistoricalIdentities(aflConfig.teams as any[])
 
 <TheLeagueLayout title="Franchises | AFL">
   <div class="franchises-page">
-    <header class="franchises-hero">
+    <header>
+      <Breadcrumbs items={[
+        { label: 'AFL Fantasy', href: '/afl-fantasy' },
+        { label: 'Franchises' },
+      ]} />
       <h1>AFL Franchises</h1>
-      <p class="subtitle">
-        {totalFranchises} teams across two tiers — {premierCount} in
-        Premier League, {dLeagueCount} in D-League. Click a team for its
-        per-franchise profile.
+      <p class="lede">
+        Career records, championships, and title honors for all
+        {rows.length} franchises — {conferences[0].rows.length} in the
+        American League, {conferences[1].rows.length} in the National
+        League — across {firstYear}–{lastYear}. Click a card for the full
+        franchise page.
       </p>
+      {pointsApproximate && (
+        <p class="points-note">Some seasons' points are approximated from per-game averages.</p>
+      )}
+      {pointsMissingYears.length > 0 && (
+        <p class="points-note">
+          MFL has no points data for {pointsMissingYears.join(', ')}; those
+          seasons count toward records but not points totals.
+        </p>
+      )}
     </header>
 
-    <section class="tier-section">
-      <h2 class="tier-title tier-title--premier">
-        Premier League
-        <span class="tier-count">{premierCount} teams</span>
-      </h2>
-      <div class="franchises-grid">
-        {teams.filter(t => t.tier === 'Premier League').map(team => (
-          <a class="franchise-card" href={`/afl-fantasy/franchises/${team.franchiseId}`}>
-            <div class="franchise-card__icon-wrap">
-              <img src={team.icon} alt={`${team.name} icon`} loading="lazy" />
-            </div>
-            <div class="franchise-card__body">
-              <h3 class="franchise-card__name">{team.name}</h3>
-              <div class="franchise-card__meta">
-                <span class="franchise-card__div">{team.division}</span>
-                {champsByFranchise.has(team.franchiseId) && (
-                  <span class="franchise-card__champs" title={`${champsByFranchise.get(team.franchiseId)} championship(s)`}>
-                    🏆 ×{champsByFranchise.get(team.franchiseId)}
-                  </span>
-                )}
+    {conferences.map((conf) => (
+      <section class="conference-section">
+        <h2 class="conference-title">
+          {conf.name}
+          <span class="conference-count">{conf.rows.length} teams</span>
+        </h2>
+        <div class="franchise-grid">
+          {conf.rows.map(({ team, stats, titles }) => (
+            <a
+              class="franchise-card"
+              href={`/afl-fantasy/franchises/${team.franchiseId}`}
+              style={team.colorPrimary ? `--accent: ${team.colorPrimary};` : ''}
+            >
+              <div class="card-body">
+                <div class="lockup">
+                  <img
+                    class="lockup-icon"
+                    src={team.icon}
+                    alt=""
+                    loading="lazy"
+                    width="64"
+                    height="64"
+                  />
+                  <div class="lockup-text">
+                    <h3 class="name">{team.nameMedium || team.name}</h3>
+                    <p class="division">{team.division} Division · {team.tier}</p>
+                  </div>
+                </div>
+                <dl class="stats">
+                  <div>
+                    <dt>All-Time</dt>
+                    <dd>{recordString(stats)} <span class="dim">({winPct(stats)})</span></dd>
+                  </div>
+                  <div>
+                    <dt>Seasons</dt>
+                    <dd>{stats?.seasons ?? 0}</dd>
+                  </div>
+                  <div>
+                    <dt>Points</dt>
+                    <dd>{Math.round(stats?.pointsFor ?? 0).toLocaleString()}</dd>
+                  </div>
+                </dl>
+                <ul class="badges" aria-label="Titles">
+                  {titles.map((t) => (
+                    <li
+                      class={`badge badge--${t.key}`}
+                      title={`${TITLE_TOOLTIP[t.key]}: ${titleYears(t)}`}
+                    >
+                      <span class="icon" aria-hidden="true">{TITLE_EMOJI[t.key]}</span>
+                      <span>{t.years.length}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
-            </div>
-          </a>
-        ))}
-      </div>
-    </section>
-
-    <section class="tier-section">
-      <h2 class="tier-title tier-title--dleague">
-        D-League
-        <span class="tier-count">{dLeagueCount} teams</span>
-      </h2>
-      <div class="franchises-grid">
-        {teams.filter(t => t.tier === 'D-League').map(team => (
-          <a class="franchise-card" href={`/afl-fantasy/franchises/${team.franchiseId}`}>
-            <div class="franchise-card__icon-wrap">
-              <img src={team.icon} alt={`${team.name} icon`} loading="lazy" />
-            </div>
-            <div class="franchise-card__body">
-              <h3 class="franchise-card__name">{team.name}</h3>
-              <div class="franchise-card__meta">
-                <span class="franchise-card__div">{team.division}</span>
-                {champsByFranchise.has(team.franchiseId) && (
-                  <span class="franchise-card__champs" title={`${champsByFranchise.get(team.franchiseId)} championship(s)`}>
-                    🏆 ×{champsByFranchise.get(team.franchiseId)}
-                  </span>
-                )}
-              </div>
-            </div>
-          </a>
-        ))}
-      </div>
-    </section>
+            </a>
+          ))}
+        </div>
+      </section>
+    ))}
 
     {historicalIdentities.length > 0 && (
-      <details class="historical-identities">
-        <summary>
-          <span class="historical-identities__chevron" aria-hidden="true">▸</span>
-          <span class="historical-identities__title">Former Identities</span>
-          <span class="historical-identities__count">{historicalIdentities.length} names</span>
-        </summary>
+      <section class="historical-identities">
+        <h2>Former Identities</h2>
         <p class="historical-identities__sub">
           Every name these clubs have played under — punitive last-place
           rebrands included. Each links to the franchise's name history.
@@ -133,7 +197,7 @@ const historicalIdentities = buildHistoricalIdentities(aflConfig.teams as any[])
             </li>
           ))}
         </ul>
-      </details>
+      </section>
     )}
   </div>
 </TheLeagueLayout>
@@ -142,31 +206,36 @@ const historicalIdentities = buildHistoricalIdentities(aflConfig.teams as any[])
   .franchises-page {
     max-width: 1200px;
     margin: 0 auto;
-    padding: var(--spacing-xl, 32px) var(--spacing-md, 16px);
+    padding: var(--spacing-xl, 32px) var(--spacing-md, 16px) var(--spacing-2xl, 48px);
   }
 
-  .franchises-hero {
-    text-align: center;
-    margin-bottom: var(--spacing-2xl, 48px);
+  header {
+    margin-bottom: var(--spacing-xl, 32px);
   }
 
-  .franchises-hero h1 {
-    font-size: 2.5rem;
-    margin-bottom: var(--spacing-sm, 8px);
+  h1 {
+    margin: 0.25rem 0 0.5rem;
+    font-size: clamp(1.75rem, 4vw, 2.5rem);
     color: var(--page-text, #1a1a1a);
   }
 
-  .subtitle {
+  .lede {
+    margin: 0;
     color: var(--content-text-muted, #6b7280);
-    max-width: 600px;
-    margin: 0 auto;
+    max-width: 60ch;
   }
 
-  .tier-section {
+  .points-note {
+    margin: var(--spacing-sm, 8px) 0 0;
+    font-size: 0.8125rem;
+    color: var(--content-text-muted, #6b7280);
+  }
+
+  .conference-section {
     margin-bottom: var(--spacing-2xl, 48px);
   }
 
-  .tier-title {
+  .conference-title {
     font-size: 1.5rem;
     margin-bottom: var(--spacing-lg, 24px);
     display: flex;
@@ -174,110 +243,168 @@ const historicalIdentities = buildHistoricalIdentities(aflConfig.teams as any[])
     gap: var(--spacing-md, 16px);
     padding-bottom: var(--spacing-sm, 8px);
     border-bottom: 2px solid var(--content-border, #e5e7eb);
-  }
-
-  .tier-title--premier {
     color: var(--league-accent, #c41e3a);
   }
 
-  .tier-count {
+  .conference-count {
     font-size: 0.875rem;
     font-weight: 400;
     color: var(--content-text-muted, #6b7280);
   }
 
-  .franchises-grid {
+  .franchise-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
     gap: var(--spacing-md, 16px);
   }
 
   .franchise-card {
+    --accent: var(--league-accent, #c41e3a);
     display: flex;
-    align-items: center;
-    gap: var(--spacing-md, 16px);
-    padding: var(--spacing-md, 16px);
+    flex-direction: column;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .card-body {
     background: var(--card-bg, #ffffff);
     border: 1px solid var(--content-border, #e5e7eb);
-    border-radius: 8px;
-    text-decoration: none;
-    color: var(--page-text, #1a1a1a);
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    border-radius: 0.75rem;
+    padding: 0.875rem 1rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+    flex: 1;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
   }
 
-  .franchise-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  }
-
-  :global(html.dark) .franchise-card {
+  :global(html.dark) .card-body {
     box-shadow: 0 0 0 1px var(--content-border, #555);
   }
 
-  :global(html.dark) .franchise-card:hover {
-    box-shadow: 0 0 0 1px var(--content-border, #555), 0 4px 12px rgba(0, 0, 0, 0.35);
+  .franchise-card:hover .card-body {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+    border-color: var(--accent);
   }
 
-  .franchise-card__icon-wrap {
-    width: 56px;
-    height: 56px;
-    flex-shrink: 0;
+  .lockup {
     display: flex;
     align-items: center;
-    justify-content: center;
+    gap: 0.75rem;
   }
 
-  .franchise-card__icon-wrap img {
-    max-width: 100%;
-    max-height: 100%;
+  .lockup-icon {
+    width: 64px;
+    height: 64px;
+    flex-shrink: 0;
     object-fit: contain;
   }
 
-  .franchise-card__body {
+  .lockup-text {
     min-width: 0;
-    flex: 1;
   }
 
-  .franchise-card__name {
-    font-size: 1rem;
-    font-weight: 700;
-    margin: 0 0 4px 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  .name {
+    margin: 0;
+    font-size: 1.125rem;
+    line-height: 1.2;
     color: var(--page-text, #1a1a1a);
   }
 
-  .franchise-card__meta {
-    display: flex;
-    gap: var(--spacing-sm, 8px);
-    font-size: 0.8125rem;
+  .division {
+    margin: 0.125rem 0 0;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
     color: var(--content-text-muted, #6b7280);
   }
 
-  .franchise-card__div {
-    background: var(--content-bg-muted, #f3f4f6);
-    padding: 2px 8px;
-    border-radius: 9999px;
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    margin: 0;
   }
 
-  .franchise-card__champs {
-    color: var(--afl-gold, #d97706);
+  .stats > div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+
+  .stats dt {
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--content-text-muted, #6b7280);
     font-weight: 600;
   }
 
-  .historical-identities {
-    margin-top: var(--spacing-xl, 32px);
-    padding-top: var(--spacing-lg, 24px);
-    border-top: 1px solid var(--border-color, #e5e7eb);
+  .stats dd {
+    margin: 0;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--page-text, inherit);
   }
 
-  .historical-identities summary {
+  .dim {
+    color: var(--content-text-muted, #6b7280);
+    font-weight: 400;
+  }
+
+  .badges {
     display: flex;
-    align-items: baseline;
-    gap: var(--spacing-sm, 8px);
-    cursor: pointer;
+    flex-wrap: wrap;
+    gap: 0.375rem;
     list-style: none;
+    margin: 0;
+    padding: 0;
+    margin-top: auto;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: var(--content-bg-muted, #f5f5f5);
+    color: var(--content-text-muted, #555);
+  }
+
+  .badge .icon { font-size: 0.875rem; line-height: 1; }
+  .badge--afl { background: #fff3c4; color: #7a5b00; }
+  .badge--premier { background: #f0e6f7; color: #4d2c66; }
+  .badge--conference { background: #e6f7e6; color: #1f5d2d; }
+  .badge--division { background: #d6e4ff; color: #1a3d7c; }
+  .badge--dleague { background: #e8e8ee; color: #3f3f50; }
+  .badge--nit { background: #ffe4e1; color: #8b2a1f; }
+
+  /* Award pills keep their light pastel/dark-text pairing in dark mode too —
+     both colors are hardcoded together so contrast stays fixed regardless of
+     theme (WCAG AA holds: e.g. #7a5b00 on #fff3c4 ≈ 5:1). Ring them so they
+     read as intentional chips rather than a light-mode leftover. */
+  :global(html.dark) .badge--afl,
+  :global(html.dark) .badge--premier,
+  :global(html.dark) .badge--conference,
+  :global(html.dark) .badge--division,
+  :global(html.dark) .badge--dleague,
+  :global(html.dark) .badge--nit {
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.18);
+  }
+
+  .historical-identities {
+    margin-top: var(--spacing-2xl, 48px);
+    padding-top: var(--spacing-lg, 24px);
+    border-top: 1px solid var(--content-border, #e5e7eb);
+  }
+
+  .historical-identities h2 {
+    margin: 0 0 0.25rem;
     /* AFL editorial section title — 0.9rem (UFC Sans Condensed compensation) */
     font-size: 0.9rem;
     font-weight: 700;
@@ -286,26 +413,6 @@ const historicalIdentities = buildHistoricalIdentities(aflConfig.teams as any[])
     padding-left: 0.625rem;
     border-left: 2px solid var(--league-accent, #c41e3a);
     color: var(--page-text, #111827);
-  }
-
-  .historical-identities summary::-webkit-details-marker {
-    display: none;
-  }
-
-  .historical-identities__chevron {
-    color: var(--content-text-muted, #6b7280);
-  }
-
-  .historical-identities[open] .historical-identities__chevron {
-    transform: rotate(90deg);
-  }
-
-  .historical-identities__count {
-    font-size: 0.8125rem;
-    font-weight: 400;
-    text-transform: none;
-    letter-spacing: normal;
-    color: var(--content-text-muted, #6b7280);
   }
 
   .historical-identities__sub {
@@ -332,7 +439,7 @@ const historicalIdentities = buildHistoricalIdentities(aflConfig.teams as any[])
     padding: 0.5rem 0.75rem;
     border-radius: 0.5rem;
     background: var(--card-bg, #ffffff);
-    border: 1px solid var(--border-color, #e5e7eb);
+    border: 1px solid var(--content-border, #e5e7eb);
     text-decoration: none;
     color: var(--page-text, #111827);
     font-size: 0.875rem;
