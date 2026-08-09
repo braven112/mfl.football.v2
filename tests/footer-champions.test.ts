@@ -4,6 +4,8 @@ import {
   getFooterDraftStatus,
   leagueHasChampionBand,
 } from '../src/utils/footer-champions';
+import awardsHistory from '../data/afl-fantasy/awards-history.json';
+import { AWARD_TYPES, type AwardSlug } from '../src/utils/afl-awards';
 
 /**
  * The footer's champions band groups titles by TEAM, not by trophy. These
@@ -93,5 +95,79 @@ describe('draft-only leagues', () => {
   it('full-management leagues get no draft-status card', () => {
     expect(getFooterDraftStatus('theleague')).toBeNull();
     expect(getFooterDraftStatus('afl-fantasy')).toBeNull();
+  });
+});
+
+/**
+ * What actually counts as a sweep, locked against real seasons.
+ *
+ * A Double needs two counting titles by the same team, and there are three
+ * routes to one: AFL Championship + division, Premier League + division, or
+ * two gold titles together. The conference title is the one that can't help —
+ * but only on a card that already has the Championship, since that's the only
+ * case where it's implied rather than earned separately.
+ */
+const BY_SLUG = new Map(AWARD_TYPES.map((a) => [a.slug, a]));
+const COUNTING_TIERS = new Set(['gold', 'conference', 'division']);
+
+/** Re-derives a season's cards from raw award data, mirroring the resolver. */
+function cardsFor(year: number) {
+  const season = (awardsHistory as any).seasons.find((s: any) => s.year === year);
+  const byFranchise = new Map<string, string[]>();
+  for (const [slug, w] of Object.entries<any>(season?.awards ?? {})) {
+    const meta = BY_SLUG.get(slug as AwardSlug);
+    if (!meta || !COUNTING_TIERS.has(meta.tier) || !w?.franchiseId) continue;
+    byFranchise.set(w.franchiseId, [...(byFranchise.get(w.franchiseId) ?? []), slug]);
+  }
+  return [...byFranchise.values()]
+    .filter((slugs) => slugs.some((s) => BY_SLUG.get(s as AwardSlug)!.tier === 'gold'))
+    .map((slugs) =>
+      slugs.includes('afl-championship')
+        ? slugs.filter((s) => s !== 'al-champion' && s !== 'nl-champion')
+        : slugs
+    );
+}
+
+const sizeOfCardContaining = (year: number, slug: string) =>
+  cardsFor(year).find((c) => c.includes(slug))?.length ?? 0;
+
+describe('what counts as a Double', () => {
+  it('AFL Championship + division is a Double (2024 Balls Deep)', () => {
+    const card = cardsFor(2024).find((c) => c.includes('afl-championship'))!;
+    expect(card.sort()).toEqual(['afl-championship', 'nl-east']);
+  });
+
+  it('Premier League + division is a Double (2019 Smokane FC)', () => {
+    const card = cardsFor(2019).find((c) => c.includes('premier-league'))!;
+    expect(card.sort()).toEqual(['al-north', 'premier-league']);
+  });
+
+  it('two gold titles together are a Double (2023 Drunk Indians)', () => {
+    const card = cardsFor(2023).find((c) => c.includes('afl-championship'))!;
+    expect(card.sort()).toEqual(['afl-championship', 'premier-league']);
+  });
+
+  it('AFL Cup + division is a Double — the Cup is gold too (2016)', () => {
+    expect(sizeOfCardContaining(2016, 'afl-cup')).toBe(2);
+  });
+
+  it('the conference title never inflates a Championship card (2025 is a Treble)', () => {
+    const card = cardsFor(2025).find((c) => c.includes('afl-championship'))!;
+    expect(card).not.toContain('nl-champion');
+    expect(card).toHaveLength(3);
+  });
+
+  it('a division title alone earns no card at all', () => {
+    // Every card must carry at least one gold title.
+    for (const year of [2025, 2024, 2023, 2022, 2021]) {
+      for (const card of cardsFor(year)) {
+        expect(card.some((s) => BY_SLUG.get(s as AwardSlug)!.tier === 'gold')).toBe(true);
+      }
+    }
+  });
+
+  it('consolation titles never count (2024 Drunk Indians is not a Double)', () => {
+    // Premier League + NIT: the NIT is silver, so this stays a single title.
+    expect(sizeOfCardContaining(2024, 'premier-league')).toBe(1);
   });
 });
