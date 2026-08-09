@@ -112,6 +112,22 @@ describe('computeSeasonPoints', () => {
     expect(maxCompletedWeek).toBe(3); // playoff week never counts as "completed"
   });
 
+  it('excludes matchup-less weeks that carry only top-level franchise blocks', () => {
+    // The 2026 feed's playoff weeks (15-17) have NO matchup entries at all —
+    // just 24 top-level franchise blocks. If those ever fill with scores they
+    // must not count as regular-season points.
+    const matchlessPlayoff = {
+      weeklyResults: {
+        week: '15',
+        franchise: [{ id: '0001', player: [{ id: '100', score: '31.0' }] }],
+      },
+    };
+    const regular = week('2', [{ franchises: [{ id: '0001', players: [['100', '6']] }] }]);
+    const { points, maxCompletedWeek } = computeSeasonPoints([matchlessPlayoff, regular]);
+    expect(points.get('100')).toBeCloseTo(6);
+    expect(maxCompletedWeek).toBe(2);
+  });
+
   it('skips entries whose week is missing or unparseable', () => {
     const badWeek = week('1', [{ franchises: [{ id: '0001', players: [['100', '50']] }] }]);
     delete badWeek.weeklyResults.week;
@@ -153,12 +169,29 @@ describe('keeper reconstruction', () => {
     expect([...getOpeningRosterPids([], rosters, '0001')].sort()).toEqual(['1', '2', '3']);
   });
 
-  it('never falls back to end-of-season rosters when week 1 exists', () => {
-    // Franchise 0002 is missing from week 1 — the final rosters.json must NOT
-    // stand in for its opening roster (it would count mid-season pickups as keeps).
+  it('never falls back to end-of-season rosters when week 1 has player data', () => {
+    // Franchise 0002 is missing from a populated week 1 — the final
+    // rosters.json must NOT stand in for its opening roster (it would count
+    // mid-season pickups as keeps).
     const raw = [week('1', [{ franchises: [{ id: '0001', players: [['1', '5']] }] }])];
     const rosters = rostersFeed({ '0002': ['9'] });
     expect(getOpeningRosterPids(raw, rosters, '0002').size).toBe(0);
+  });
+
+  it('a pre-season week-1 schedule shell (no player lists) falls through to rosters', () => {
+    // The committed 2026 feed already carries week 1 as a schedule shell:
+    // matchup franchises with id/isHome/spread but no players. That shell
+    // must not suppress the live-cycle rosters fallback.
+    const shell = {
+      weeklyResults: {
+        week: '1',
+        matchup: [
+          { franchise: [{ id: '0001' }, { id: '0002' }] },
+        ],
+      },
+    };
+    const rosters = rostersFeed({ '0001': ['1', '2', '3'] });
+    expect([...getOpeningRosterPids([shell], rosters, '0001')].sort()).toEqual(['1', '2', '3']);
   });
 
   it('parses draft picks and ignores passed picks', () => {
@@ -476,7 +509,36 @@ describe.runIf(hasRealFeeds)('integration: 2024→2025 cycle (real feeds)', () =
       expect(f.hits + f.misses + f.kdefNeutralKept + f.backupQbNeutralKept).toBe(f.keptCount);
       expect(f.optimalPoints).toBeGreaterThan(0);
     }
-    // 2025 had no 40-pt dominant K/DEF (max gap: Seahawks D, 31).
+    // 2025 had no 40-pt dominant K/DEF.
     expect(analysis.summary.kdefExceptions).toEqual([]);
+  });
+});
+
+const hasLiveFeeds =
+  existsSync(join(FEEDS_DIR, '2025/rosters.json')) &&
+  existsSync(join(FEEDS_DIR, '2026/rosters.json'));
+
+describe.runIf(hasLiveFeeds)('integration: 2025→2026 live cycle (real feeds)', () => {
+  const load = (rel: string) => JSON.parse(readFileSync(join(FEEDS_DIR, rel), 'utf-8'));
+
+  it('reconstructs declared keeper classes pre-season despite the week-1 schedule shell', () => {
+    const analysis = buildKeeperAnalysis({
+      prevRosters: load('2025/rosters.json'),
+      prevPlayers: load('2025/players.json'),
+      curPlayers: load('2026/players.json'),
+      curWeeklyRaw: load('2026/weekly-results-raw.json'),
+      curRosters: load('2026/rosters.json'),
+      curDraftResults: load('2026/draftResults.json'),
+    });
+    expect(analysis.franchises).toHaveLength(24);
+    // Pre-week-1 the cycle is a preview and every class is its declared keeps.
+    // Once the 2026 season starts this assertion naturally relaxes: preview
+    // flips off and keep counts come from the real week-1 rosters.
+    if (analysis.previewMode) {
+      for (const f of analysis.franchises) {
+        expect(f.keptCount).toBeGreaterThanOrEqual(6);
+        expect(f.keptCount).toBeLessThanOrEqual(7);
+      }
+    }
   });
 });

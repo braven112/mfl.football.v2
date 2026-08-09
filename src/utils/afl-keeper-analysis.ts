@@ -204,12 +204,13 @@ export function computeSeasonPoints(weeklyRaw: WeeklyResultsRaw): {
       asArray(m.franchise)
     );
     // Top-level franchise blocks (franchises idle that week) only belong in
-    // regular-season totals when the week itself is a regular-season week.
-    // Playoff weeks list eliminated franchises here with real scores — the
-    // 2025 feed's week 17 carries six of them, and counting them inflates
-    // "regular-season" totals and maxCompletedWeek.
-    const isRegularSeasonWeek = matchups.length === 0 || regularMatchups.length > 0;
-    if (isRegularSeasonWeek) {
+    // regular-season totals when the week itself is a regular-season week —
+    // i.e. it has at least one regular-season matchup. Playoff weeks list
+    // eliminated franchises here with real scores (2025's week 17 carries
+    // six as regularSeason:'0' matchups; 2026's weeks 15-17 have NO matchup
+    // entries at all, only 24 top-level blocks), and counting either shape
+    // inflates "regular-season" totals and maxCompletedWeek.
+    if (regularMatchups.length > 0) {
       franchises.push(...asArray(wr.franchise));
     }
 
@@ -304,16 +305,23 @@ export function getOpeningRosterPids(
 ): Set<string> {
   const weekOne = (curWeeklyRaw ?? []).find((e) => e?.weeklyResults?.week === '1');
   if (weekOne) {
-    const pids = new Set<string>();
     const franchises = [
       ...asArray(weekOne.weeklyResults.matchup).flatMap((m) => asArray(m.franchise)),
       ...asArray(weekOne.weeklyResults.franchise),
     ];
-    for (const fr of franchises) {
-      if (fr.id !== franchiseId) continue;
-      for (const p of asArray(fr.player)) if (p?.id) pids.add(p.id);
+    // Pre-season, the feed already carries a week-1 SCHEDULE SHELL: matchup
+    // franchises with id/isHome/spread but no player lists. Week 1 is only
+    // authoritative once ANY franchise carries players; a bare shell falls
+    // through to the rosters fallback below (live pre-draft cycle).
+    const weekOneHasPlayers = franchises.some((fr) => asArray(fr.player).some((p) => p?.id));
+    if (weekOneHasPlayers) {
+      const pids = new Set<string>();
+      for (const fr of franchises) {
+        if (fr.id !== franchiseId) continue;
+        for (const p of asArray(fr.player)) if (p?.id) pids.add(p.id);
+      }
+      return pids;
     }
-    return pids;
   }
   const franchise = curRosters?.rosters?.franchise?.find((f) => f.id === franchiseId);
   return new Set(asArray(franchise?.player).map((p) => p.id));

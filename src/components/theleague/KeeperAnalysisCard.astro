@@ -94,6 +94,11 @@ const efficiencyPct = Math.round(analysis.efficiency * 100);
           <td class="ka-table__pts">{previewMode ? '' : fmtPts(p.points)}</td>
           <td class="ka-table__badge">
             {p.kept && <span class="ka-pill ka-pill--kept">Kept</span>}
+            {!previewMode && p.badge === 'hit' && !p.optimal && (
+              <span class="ka-pill ka-pill--hit" title="Kept K/DEF or backup QB that outscored an optimal player the team let walk — an earned hit">
+                Hit
+              </span>
+            )}
             {!previewMode && p.badge === 'miss' && <span class="ka-pill ka-pill--miss">Miss</span>}
             {!previewMode && p.badge === 'got-away' && (
               <span class="ka-pill ka-pill--gotaway">Got away</span>
@@ -289,6 +294,11 @@ const efficiencyPct = Math.round(analysis.efficiency * 100);
   .ka-pill--kept {
     background: var(--league-accent, #c41e3a);
     color: var(--color-white, #ffffff);
+  }
+
+  .ka-pill--hit {
+    background: var(--badge-success-bg, #dcfce7);
+    color: var(--badge-success-text, #166534);
   }
 
   .ka-pill--miss {
