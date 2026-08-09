@@ -1,38 +1,36 @@
 {
-  "version": "1.0",
-  "encoding": "utf-8",
   "nflSchedule": {
     "week": "1",
     "matchup": [
       {
-        "gameSecondsRemaining": "3600",
-        "kickoff": "1788999600",
         "team": [
           {
-            "inRedZone": "0",
-            "rushDefenseRank": "",
-            "hasPossession": "0",
-            "score": "",
-            "passOffenseRank": "",
+            "rushOffenseRank": "",
             "isHome": "0",
             "id": "NEP",
-            "rushOffenseRank": "",
             "passDefenseRank": "",
-            "spread": "0"
+            "spread": "0",
+            "rushDefenseRank": "",
+            "inRedZone": "0",
+            "hasPossession": "0",
+            "passOffenseRank": "",
+            "score": ""
           },
           {
+            "spread": "0.0",
+            "passDefenseRank": "",
+            "rushOffenseRank": "",
+            "id": "SEA",
+            "isHome": "1",
             "hasPossession": "0",
             "passOffenseRank": "",
             "score": "",
             "rushDefenseRank": "",
-            "inRedZone": "0",
-            "passDefenseRank": "",
-            "spread": "0.0",
-            "rushOffenseRank": "",
-            "id": "SEA",
-            "isHome": "1"
+            "inRedZone": "0"
           }
-        ]
+        ],
+        "kickoff": "1788999600",
+        "gameSecondsRemaining": "3600"
       },
       {
         "kickoff": "1789086900",
@@ -44,76 +42,46 @@
             "passOffenseRank": "",
             "hasPossession": "0",
             "score": "",
-            "isHome": "0",
             "id": "SFO",
+            "isHome": "0",
             "rushOffenseRank": "",
             "passDefenseRank": "",
             "spread": "0"
           },
           {
-            "hasPossession": "0",
-            "passOffenseRank": "",
-            "score": "",
             "rushDefenseRank": "",
             "inRedZone": "0",
-            "spread": "0.0",
-            "passDefenseRank": "",
+            "passOffenseRank": "",
+            "hasPossession": "0",
+            "score": "",
             "id": "LAR",
             "isHome": "1",
-            "rushOffenseRank": ""
+            "rushOffenseRank": "",
+            "spread": "0.0",
+            "passDefenseRank": ""
           }
         ]
       },
       {
-        "gameSecondsRemaining": "3600",
         "kickoff": "1789318800",
+        "gameSecondsRemaining": "3600",
         "team": [
           {
-            "passDefenseRank": "",
-            "spread": "0",
-            "isHome": "0",
-            "id": "BAL",
-            "rushOffenseRank": "",
-            "passOffenseRank": "",
-            "hasPossession": "0",
-            "score": "",
+            "rushDefenseRank": "",
             "inRedZone": "0",
-            "rushDefenseRank": ""
+            "score": "",
+            "hasPossession": "0",
+            "passOffenseRank": "",
+            "id": "BAL",
+            "isHome": "0",
+            "rushOffenseRank": "",
+            "passDefenseRank": "",
+            "spread": "0"
           },
           {
-            "spread": "0.0",
-            "passDefenseRank": "",
             "isHome": "1",
             "id": "IND",
             "rushOffenseRank": "",
-            "hasPossession": "0",
-            "passOffenseRank": "",
-            "score": "",
-            "inRedZone": "0",
-            "rushDefenseRank": ""
-          }
-        ]
-      },
-      {
-        "kickoff": "1789318800",
-        "gameSecondsRemaining": "3600",
-        "team": [
-          {
-            "id": "TBB",
-            "isHome": "0",
-            "rushOffenseRank": "",
-            "spread": "0",
-            "passDefenseRank": "",
-            "rushDefenseRank": "",
-            "inRedZone": "0",
-            "hasPossession": "0",
-            "score": "",
-            "passOffenseRank": ""
-          },
-          {
-            "isHome": "1",
-            "id": "CIN",
-            "rushOffenseRank": "",
             "spread": "0.0",
             "passDefenseRank": "",
             "rushDefenseRank": "",
@@ -125,13 +93,43 @@
         ]
       },
       {
+        "team": [
+          {
+            "rushDefenseRank": "",
+            "inRedZone": "0",
+            "hasPossession": "0",
+            "passOffenseRank": "",
+            "score": "",
+            "rushOffenseRank": "",
+            "isHome": "0",
+            "id": "TBB",
+            "passDefenseRank": "",
+            "spread": "0"
+          },
+          {
+            "spread": "0.0",
+            "passDefenseRank": "",
+            "id": "CIN",
+            "rushOffenseRank": "",
+            "isHome": "1",
+            "passOffenseRank": "",
+            "hasPossession": "0",
+            "score": "",
+            "inRedZone": "0",
+            "rushDefenseRank": ""
+          }
+        ],
+        "kickoff": "1789318800",
+        "gameSecondsRemaining": "3600"
+      },
+      {
         "kickoff": "1789318800",
         "gameSecondsRemaining": "3600",
         "team": [
           {
-            "id": "NYJ",
             "isHome": "0",
             "rushOffenseRank": "",
+            "id": "NYJ",
             "passDefenseRank": "",
             "spread": "0",
             "inRedZone": "0",
@@ -141,180 +139,90 @@
             "passOffenseRank": ""
           },
           {
-            "passDefenseRank": "",
             "spread": "0.0",
+            "passDefenseRank": "",
             "rushOffenseRank": "",
             "id": "TEN",
             "isHome": "1",
-            "passOffenseRank": "",
-            "hasPossession": "0",
-            "score": "",
-            "inRedZone": "0",
-            "rushDefenseRank": ""
-          }
-        ]
-      },
-      {
-        "team": [
-          {
             "score": "",
             "hasPossession": "0",
             "passOffenseRank": "",
             "rushDefenseRank": "",
+            "inRedZone": "0"
+          }
+        ]
+      },
+      {
+        "kickoff": "1789318800",
+        "gameSecondsRemaining": "3600",
+        "team": [
+          {
+            "hasPossession": "0",
+            "score": "",
+            "passOffenseRank": "",
             "inRedZone": "0",
+            "rushDefenseRank": "",
             "spread": "0",
             "passDefenseRank": "",
-            "isHome": "0",
             "id": "CLE",
+            "isHome": "0",
             "rushOffenseRank": ""
           },
           {
-            "inRedZone": "0",
-            "rushDefenseRank": "",
-            "hasPossession": "0",
-            "passOffenseRank": "",
-            "score": "",
-            "id": "JAC",
-            "isHome": "1",
-            "rushOffenseRank": "",
             "spread": "0.0",
-            "passDefenseRank": ""
+            "passDefenseRank": "",
+            "rushOffenseRank": "",
+            "isHome": "1",
+            "id": "JAC",
+            "hasPossession": "0",
+            "score": "",
+            "passOffenseRank": "",
+            "rushDefenseRank": "",
+            "inRedZone": "0"
           }
-        ],
-        "gameSecondsRemaining": "3600",
-        "kickoff": "1789318800"
+        ]
       },
       {
-        "kickoff": "1789318800",
         "gameSecondsRemaining": "3600",
+        "kickoff": "1789318800",
         "team": [
           {
-            "inRedZone": "0",
-            "rushDefenseRank": "",
+            "spread": "0",
+            "passDefenseRank": "",
+            "isHome": "0",
+            "id": "ATL",
+            "rushOffenseRank": "",
             "hasPossession": "0",
             "score": "",
             "passOffenseRank": "",
-            "isHome": "0",
-            "rushOffenseRank": "",
-            "id": "ATL",
-            "spread": "0",
-            "passDefenseRank": ""
+            "inRedZone": "0",
+            "rushDefenseRank": ""
           },
           {
-            "isHome": "1",
-            "id": "PIT",
-            "rushOffenseRank": "",
-            "passDefenseRank": "",
-            "spread": "0.0",
+            "hasPossession": "0",
+            "score": "",
+            "passOffenseRank": "",
             "rushDefenseRank": "",
             "inRedZone": "0",
-            "score": "",
-            "hasPossession": "0",
-            "passOffenseRank": ""
+            "passDefenseRank": "",
+            "spread": "0.0",
+            "id": "PIT",
+            "isHome": "1",
+            "rushOffenseRank": ""
           }
         ]
       },
       {
         "team": [
           {
+            "passOffenseRank": "",
+            "hasPossession": "0",
+            "score": "",
+            "inRedZone": "0",
+            "rushDefenseRank": "",
             "passDefenseRank": "",
             "spread": "0",
-            "isHome": "0",
-            "rushOffenseRank": "",
             "id": "NOS",
-            "hasPossession": "0",
-            "passOffenseRank": "",
-            "score": "",
-            "rushDefenseRank": "",
-            "inRedZone": "0"
-          },
-          {
-            "passDefenseRank": "",
-            "spread": "0.0",
-            "rushOffenseRank": "",
-            "isHome": "1",
-            "id": "DET",
-            "hasPossession": "0",
-            "passOffenseRank": "",
-            "score": "",
-            "rushDefenseRank": "",
-            "inRedZone": "0"
-          }
-        ],
-        "gameSecondsRemaining": "3600",
-        "kickoff": "1789318800"
-      },
-      {
-        "team": [
-          {
-            "id": "CHI",
-            "isHome": "0",
-            "rushOffenseRank": "",
-            "passDefenseRank": "",
-            "spread": "0",
-            "inRedZone": "0",
-            "rushDefenseRank": "",
-            "passOffenseRank": "",
-            "hasPossession": "0",
-            "score": ""
-          },
-          {
-            "hasPossession": "0",
-            "passOffenseRank": "",
-            "score": "",
-            "rushDefenseRank": "",
-            "inRedZone": "0",
-            "spread": "0.0",
-            "passDefenseRank": "",
-            "rushOffenseRank": "",
-            "isHome": "1",
-            "id": "CAR"
-          }
-        ],
-        "kickoff": "1789318800",
-        "gameSecondsRemaining": "3600"
-      },
-      {
-        "team": [
-          {
-            "passDefenseRank": "",
-            "spread": "0",
-            "id": "BUF",
-            "rushOffenseRank": "",
-            "isHome": "0",
-            "hasPossession": "0",
-            "passOffenseRank": "",
-            "score": "",
-            "rushDefenseRank": "",
-            "inRedZone": "0"
-          },
-          {
-            "spread": "0.0",
-            "passDefenseRank": "",
-            "isHome": "1",
-            "id": "HOU",
-            "rushOffenseRank": "",
-            "hasPossession": "0",
-            "passOffenseRank": "",
-            "score": "",
-            "inRedZone": "0",
-            "rushDefenseRank": ""
-          }
-        ],
-        "kickoff": "1789318800",
-        "gameSecondsRemaining": "3600"
-      },
-      {
-        "team": [
-          {
-            "hasPossession": "0",
-            "score": "",
-            "passOffenseRank": "",
-            "rushDefenseRank": "",
-            "inRedZone": "0",
-            "passDefenseRank": "",
-            "spread": "0",
-            "id": "MIA",
             "rushOffenseRank": "",
             "isHome": "0"
           },
@@ -322,88 +230,118 @@
             "hasPossession": "0",
             "score": "",
             "passOffenseRank": "",
-            "inRedZone": "0",
             "rushDefenseRank": "",
+            "inRedZone": "0",
             "spread": "0.0",
             "passDefenseRank": "",
-            "id": "LVR",
-            "isHome": "1",
-            "rushOffenseRank": ""
+            "id": "DET",
+            "rushOffenseRank": "",
+            "isHome": "1"
           }
         ],
-        "kickoff": "1789331100",
+        "kickoff": "1789318800",
         "gameSecondsRemaining": "3600"
       },
       {
         "team": [
           {
+            "rushOffenseRank": "",
+            "id": "CHI",
+            "isHome": "0",
+            "passDefenseRank": "",
+            "spread": "0",
+            "rushDefenseRank": "",
+            "inRedZone": "0",
+            "hasPossession": "0",
+            "passOffenseRank": "",
+            "score": ""
+          },
+          {
             "passOffenseRank": "",
             "hasPossession": "0",
             "score": "",
-            "rushDefenseRank": "",
             "inRedZone": "0",
-            "spread": "0",
-            "passDefenseRank": "",
-            "id": "ARI",
-            "isHome": "0",
-            "rushOffenseRank": ""
-          },
-          {
-            "isHome": "1",
-            "id": "LAC",
-            "rushOffenseRank": "",
-            "passDefenseRank": "",
+            "rushDefenseRank": "",
             "spread": "0.0",
+            "passDefenseRank": "",
+            "id": "CAR",
+            "isHome": "1",
+            "rushOffenseRank": ""
+          }
+        ],
+        "gameSecondsRemaining": "3600",
+        "kickoff": "1789318800"
+      },
+      {
+        "team": [
+          {
             "rushDefenseRank": "",
             "inRedZone": "0",
             "hasPossession": "0",
             "score": "",
-            "passOffenseRank": ""
+            "passOffenseRank": "",
+            "isHome": "0",
+            "id": "BUF",
+            "rushOffenseRank": "",
+            "spread": "0",
+            "passDefenseRank": ""
+          },
+          {
+            "inRedZone": "0",
+            "rushDefenseRank": "",
+            "hasPossession": "0",
+            "score": "",
+            "passOffenseRank": "",
+            "rushOffenseRank": "",
+            "id": "HOU",
+            "isHome": "1",
+            "passDefenseRank": "",
+            "spread": "0.0"
           }
         ],
         "gameSecondsRemaining": "3600",
-        "kickoff": "1789331100"
+        "kickoff": "1789318800"
       },
       {
         "gameSecondsRemaining": "3600",
         "kickoff": "1789331100",
         "team": [
           {
-            "rushOffenseRank": "",
-            "id": "WAS",
-            "isHome": "0",
-            "spread": "0",
-            "passDefenseRank": "",
-            "inRedZone": "0",
-            "rushDefenseRank": "",
-            "hasPossession": "0",
-            "score": "",
-            "passOffenseRank": ""
-          },
-          {
             "rushDefenseRank": "",
             "inRedZone": "0",
-            "score": "",
             "hasPossession": "0",
             "passOffenseRank": "",
-            "isHome": "1",
+            "score": "",
+            "id": "MIA",
             "rushOffenseRank": "",
-            "id": "PHI",
+            "isHome": "0",
             "passDefenseRank": "",
-            "spread": "0.0"
+            "spread": "0"
+          },
+          {
+            "spread": "0.0",
+            "passDefenseRank": "",
+            "rushOffenseRank": "",
+            "isHome": "1",
+            "id": "LVR",
+            "passOffenseRank": "",
+            "hasPossession": "0",
+            "score": "",
+            "rushDefenseRank": "",
+            "inRedZone": "0"
           }
         ]
       },
       {
-        "gameSecondsRemaining": "3600",
         "kickoff": "1789331100",
+        "gameSecondsRemaining": "3600",
         "team": [
           {
             "passDefenseRank": "",
             "spread": "0",
-            "isHome": "0",
-            "id": "GBP",
+            "id": "ARI",
             "rushOffenseRank": "",
+            "isHome": "0",
             "hasPossession": "0",
             "passOffenseRank": "",
             "score": "",
@@ -411,16 +349,76 @@
             "inRedZone": "0"
           },
           {
+            "inRedZone": "0",
+            "rushDefenseRank": "",
+            "hasPossession": "0",
+            "passOffenseRank": "",
+            "score": "",
+            "isHome": "1",
+            "id": "LAC",
+            "rushOffenseRank": "",
+            "spread": "0.0",
+            "passDefenseRank": ""
+          }
+        ]
+      },
+      {
+        "kickoff": "1789331100",
+        "gameSecondsRemaining": "3600",
+        "team": [
+          {
+            "passDefenseRank": "",
+            "spread": "0",
+            "id": "WAS",
+            "rushOffenseRank": "",
+            "isHome": "0",
+            "hasPossession": "0",
+            "passOffenseRank": "",
+            "score": "",
+            "inRedZone": "0",
+            "rushDefenseRank": ""
+          },
+          {
+            "hasPossession": "0",
+            "score": "",
+            "passOffenseRank": "",
+            "inRedZone": "0",
+            "rushDefenseRank": "",
+            "passDefenseRank": "",
+            "spread": "0.0",
+            "rushOffenseRank": "",
+            "id": "PHI",
+            "isHome": "1"
+          }
+        ]
+      },
+      {
+        "kickoff": "1789331100",
+        "gameSecondsRemaining": "3600",
+        "team": [
+          {
             "rushDefenseRank": "",
             "inRedZone": "0",
             "passOffenseRank": "",
             "hasPossession": "0",
             "score": "",
+            "id": "GBP",
+            "isHome": "0",
+            "rushOffenseRank": "",
+            "spread": "0",
+            "passDefenseRank": ""
+          },
+          {
+            "spread": "0.0",
+            "passDefenseRank": "",
             "id": "MIN",
             "isHome": "1",
             "rushOffenseRank": "",
-            "passDefenseRank": "",
-            "spread": "0.0"
+            "hasPossession": "0",
+            "score": "",
+            "passOffenseRank": "",
+            "inRedZone": "0",
+            "rushDefenseRank": ""
           }
         ]
       },
@@ -429,16 +427,16 @@
         "gameSecondsRemaining": "3600",
         "team": [
           {
-            "isHome": "0",
-            "rushOffenseRank": "",
-            "id": "DAL",
-            "spread": "0",
-            "passDefenseRank": "",
             "rushDefenseRank": "",
             "inRedZone": "0",
             "score": "",
             "hasPossession": "0",
-            "passOffenseRank": ""
+            "passOffenseRank": "",
+            "rushOffenseRank": "",
+            "isHome": "0",
+            "id": "DAL",
+            "passDefenseRank": "",
+            "spread": "0"
           },
           {
             "passDefenseRank": "",
@@ -449,41 +447,43 @@
             "score": "",
             "hasPossession": "0",
             "passOffenseRank": "",
-            "inRedZone": "0",
-            "rushDefenseRank": ""
+            "rushDefenseRank": "",
+            "inRedZone": "0"
           }
         ]
       },
       {
         "team": [
           {
-            "passOffenseRank": "",
-            "hasPossession": "0",
-            "score": "",
-            "rushDefenseRank": "",
-            "inRedZone": "0",
-            "passDefenseRank": "",
-            "spread": "0",
             "isHome": "0",
             "id": "DEN",
-            "rushOffenseRank": ""
+            "rushOffenseRank": "",
+            "spread": "0",
+            "passDefenseRank": "",
+            "rushDefenseRank": "",
+            "inRedZone": "0",
+            "passOffenseRank": "",
+            "hasPossession": "0",
+            "score": ""
           },
           {
             "rushDefenseRank": "",
             "inRedZone": "0",
-            "score": "",
-            "hasPossession": "0",
             "passOffenseRank": "",
+            "hasPossession": "0",
+            "score": "",
+            "isHome": "1",
             "id": "KCC",
             "rushOffenseRank": "",
-            "isHome": "1",
-            "spread": "0.0",
-            "passDefenseRank": ""
+            "passDefenseRank": "",
+            "spread": "0.0"
           }
         ],
         "gameSecondsRemaining": "3600",
         "kickoff": "1789431300"
       }
     ]
-  }
+  },
+  "encoding": "utf-8",
+  "version": "1.0"
 }
