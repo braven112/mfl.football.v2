@@ -31,10 +31,12 @@ import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../config/leagues'
 interface Props {
   hideLeaguePrefix?: boolean;
   /**
-   * The viewer's franchise, used only to name the AFL all-play link after the
-   * tier they actually play in. Passed down from the layout, which already
-   * resolves it — the footer deliberately does no auth of its own, since it
-   * renders on prerendered pages too.
+   * The SIGNED-IN franchise, used only to name the AFL all-play link after the
+   * tier that owner plays in. Strictly the JWT session — the layout resolves
+   * it and passes it down, so the footer itself does no auth (it renders on
+   * prerendered pages, where there is no request to read). Never the
+   * preference cookie or ?myteam=: those are browse-as, not identity, and a
+   * tier label should follow who you ARE, not whose team you're viewing.
    */
   franchiseId?: string | null;
 }

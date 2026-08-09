@@ -70,6 +70,10 @@ export const AFL_ALL_PLAY_PATH = '/afl-fantasy/standings?view=all_play';
  * D-League owner sees "D-League" instead, because sending them to a link named
  * after a table they aren't in is the kind of small wrongness that makes a
  * footer feel generic.
+ *
+ * `franchiseId` is the signed JWT session only. Browsing as another team does
+ * NOT relabel the link — the tier follows who you are, not who you're looking
+ * at, so the label can't flicker as you click around other franchises.
  */
 function applyTierLabel(
   columns: FooterColumn[],
