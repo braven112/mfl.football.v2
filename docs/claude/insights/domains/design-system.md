@@ -1608,3 +1608,37 @@ theme for two reasons, and only one of them is catchable by tooling:
    Grep target when sweeping a page for dark-mode issues: `style="color:` and
    `style='color:` in `.astro`/`.ts` client scripts that build markup via
    string concatenation; the token guard test never sees these.
+
+---
+## 2026-08-09 - Inverse Surfaces Need Their Own Focus Ring and Theme-INVARIANT Tokens
+
+**Context:** Rebuilding the site footer, which sits on a dark league color
+(`--inverse-content-bg` in light, `--breadcrumb-bar-bg` in dark).
+
+**Insight:** Two distinct traps on any "dark panel inside a light page" surface:
+
+1. **The global focus ring can be invisible.** `tokens.css` sets
+   `:focus-visible { outline: 2px solid var(--color-primary) }`, and
+   `--color-primary` (#1c497c) IS TheLeague's light-mode footer background —
+   contrast 1.00:1, a literally invisible ring on every footer link. AFL navy
+   gives 1.84:1 and best-ball green 1.33:1, so all three leagues failed WCAG
+   2.4.7 on a component that renders on every page. Nothing catches this: the
+   token exists, the rule is valid, the value is just wrong *for that surface*.
+
+2. **Their tokens should NOT be a light/dark pair.** CLAUDE.md warns about
+   defining a token whose light and dark values differ and picking the wrong
+   one. The inverse case bites here: an inverse surface is dark in BOTH themes,
+   so white-on-dark values are correct in both. Defining `--footer-*` twice
+   (once in `tokens.css`, again in `tokens-dark.css`) would restate identical
+   values and invite them to drift apart.
+
+**Evidence:** `src/styles/tokens.css` — the `--footer-*` / `--trophy-*` family
+is defined once under `:root` with an explicit "do not add overrides in
+tokens-dark.css" note. `--footer-focus-ring` is re-pointed to white and applied
+via `.site-footer :where(a, button, [tabindex]):focus-visible`.
+
+**Recommendation:** When building any component on an inverse surface, (a)
+scope a `:focus-visible` override to it rather than trusting the global ring —
+check the ring color against the actual background, not against the page; and
+(b) define its token family once, with a comment saying why there is no dark
+block, so a future sweep doesn't "fix" the missing override.

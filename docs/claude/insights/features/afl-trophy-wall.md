@@ -385,3 +385,42 @@ so 2026 membership + `afl.config.json` team tiers stayed consistent.
 `TIER_SPLIT_FIRST_SEASON = 2018` in `src/utils/afl-tier.ts` — supersede any
 earlier "2020" or "2016" assumption found elsewhere (this file's own entry
 above was one such place).
+
+---
+## 2026-08-09 - Award Tiers Are the Lever for "What Counts"; Retirement Was Encoded by Omission
+
+**Context:** Building the footer's champions band, which groups a season's
+titles by team and names sweeps (Double / Treble).
+
+**Insight:** Three things the award model already knew, and one it didn't:
+
+1. **`tier` is the right lever for "does this count".** gold
+   (Championship / Cup / Premier League) → earns a card; conference + division
+   → ride along; silver (NIT, D-League) → excluded. Without excluding silver,
+   real 2024 reads Drunk Indians as a Double off Premier League + NIT, which is
+   a consolation bracket.
+2. **The conference title is implied by the Championship.** You cannot reach the
+   title game without winning your conference, so a card carrying
+   `afl-championship` must drop `al-champion`/`nl-champion` or it double-counts
+   one run — that's the difference between real 2025 rendering as a Quadruple
+   and the Treble it actually is.
+3. **The Cup's retirement lived only as an omission.** `ALWAYS_ACTIVE` (the
+   locked-placeholder set) and `TITLE_TYPES` (progress pips) both left
+   `afl-cup` out by hand. Nothing rendered it as winnable, but the reason was
+   unwritten — the next list to be added would not have known. It is now
+   `retired: 2016, replacedBy: 'premier-league'` on the AwardType, with
+   `ACTIVE_AWARD_TYPES` / `isAwardRetired()` exposed.
+
+**Consequence:** with the Cup gone, only two gold awards can ever coexist
+(Championship + Premier League — Cup 2015-16, Premier League 2018 on, never the
+same season), so **the Treble is the modern ceiling**: two gold plus a division.
+
+**Evidence:** `src/utils/afl-awards.ts` (`retired`, `ACTIVE_AWARD_TYPES`,
+`isAwardRetired`, the retired filter in `getFranchiseTrophyRoom`'s lockable
+set); `src/utils/footer-champions.ts` for the grouping; `tests/afl-awards.test.ts`
+and `tests/footer-champions.test.ts` pin both rules against real seasons.
+
+**Recommendation:** Anything that offers an award as *achievable* — locked
+placeholders, progress pips, admin pickers — must filter on `isAwardRetired()`,
+not on a hand-maintained list. Anything rendering *history* must not: past
+winners keep their badges and still count toward totals and tier ranks.
