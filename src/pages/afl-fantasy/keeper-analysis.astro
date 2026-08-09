@@ -44,6 +44,13 @@ const playerFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/20{2[4
 const draftFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/20{2[4-9],[3-9][0-9]}/draftResults.json', { eager: true });
 const weeklyRawFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/20{2[4-9],[3-9][0-9]}/weekly-results-raw.json', { eager: true });
 const fetchMetaFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/20{2[4-9],[3-9][0-9]}/fetch.meta.json', { eager: true });
+// Post-deadline July roster snapshots (16th-31st): between the keeper cut
+// deadline and the draft the roster IS the keeper class, so the first
+// all-at-7 snapshot is the official list. ~260KB/year — no bundle concern.
+const keeperSnapshotFeeds = import.meta.glob(
+  '../../../data/afl-fantasy/mfl-feeds/20{2[4-9],[3-9][0-9]}/roster-history/rosters-*-07-{1[6-9],[2-3][0-9]}.json',
+  { eager: true }
+);
 
 // Eager JSON glob modules expose the parsed JSON as `default` (plus named
 // top-level keys); unwrap to the plain object.
@@ -87,6 +94,16 @@ if (hasCycles && !availableYears.includes(selectedYear)) {
 }
 const prevYear = selectedYear - 1;
 
+// Keeper snapshots for the selected points season, dated from the glob keys.
+const keeperSnapshots = Object.entries(keeperSnapshotFeeds)
+  .map(([path, mod]) => {
+    const match = path.match(new RegExp(`/${selectedYear}/roster-history/rosters-(\\d{4}-\\d{2}-\\d{2})\\.json$`));
+    if (!match) return null;
+    const rosters = ((mod as { default?: MflRostersFeed })?.default ?? mod) as MflRostersFeed;
+    return { date: match[1], rosters };
+  })
+  .filter((s): s is { date: string; rosters: MflRostersFeed } => s !== null);
+
 const analysis: KeeperAnalysis = buildKeeperAnalysis({
   prevRosters: feed<MflRostersFeed>(rosterFeeds, prevYear, 'rosters.json') ?? {
     rosters: { franchise: [] },
@@ -96,6 +113,7 @@ const analysis: KeeperAnalysis = buildKeeperAnalysis({
   curWeeklyRaw: feed<WeeklyResultsRaw>(weeklyRawFeeds, selectedYear, 'weekly-results-raw.json'),
   curRosters: feed<MflRostersFeed>(rosterFeeds, selectedYear, 'rosters.json'),
   curDraftResults: feed<MflDraftResultsFeed>(draftFeeds, selectedYear, 'draftResults.json'),
+  keeperSnapshots,
 });
 const { previewMode } = analysis;
 
@@ -271,9 +289,21 @@ const kdefExceptionText =
           game weekends as the feeds refresh.
         </li>
         <li>
-          Keeper classes are reconstructed from MFL rosters: players who
-          finished {prevYear} on the roster and opened {selectedYear} on the
-          same roster without being drafted.
+          {analysis.keeperSource === 'official' ? (
+            <>
+              Keeper classes come straight from the post-deadline roster
+              snapshot ({analysis.keeperSnapshotDate}) — between the keeper
+              cut deadline and the draft, the roster <em>is</em> the keeper
+              class.
+            </>
+          ) : (
+            <>
+              Keeper classes are reconstructed from MFL rosters: players who
+              finished {prevYear} on the roster and opened {selectedYear} on
+              the same roster without being drafted (this cycle predates the
+              daily roster snapshot archive).
+            </>
+          )}
         </li>
         <li>
           Kickers and defenses are excluded from the optimal seven unless the

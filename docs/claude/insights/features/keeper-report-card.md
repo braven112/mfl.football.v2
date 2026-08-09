@@ -7,7 +7,24 @@ presentation in `KeeperAnalysisCard.astro`.
 
 ---
 
-## 2026-08-09 - Keepers Have No MFL Construct; Reconstruction Is the Source of Truth
+## 2026-08-09 - Official Keepers Come From Post-Deadline Roster Snapshots (When They Exist)
+
+**Insight:** Between the July 15 keeper cut deadline and the late-August
+conference drafts, a franchise's MFL roster IS its keeper class — so the
+daily `roster-history/rosters-<date>.json` snapshots contain the OFFICIAL
+keeper list, no inference needed. But the cuts process over several days
+after the deadline (2026: 10/24 franchises at 7 on the 15th, 19/24 on the
+16th, 24/24 on the **17th**), so the rule is "first snapshot on/after July
+16 where EVERY franchise has exactly `KEEPER_LIMIT` players"
+(`resolveOfficialKeepers`), not a fixed date. The page globs only the
+July 16–31 window (~260KB/year — bundle-safe) and falls back to
+reconstruction when no snapshot qualifies. The snapshot archive only
+began November 2025, so 2024→2025 always reconstructs. Cross-validated on
+2026: the official July-17 list and the reconstruction agree exactly,
+24/24 franchises. Official keeps are intersected with the prev-year
+roster (an offseason-trade-in isn't a hindsight call about YOUR roster).
+
+## 2026-08-09 - Keepers Have No MFL Construct; Reconstruction Is the Fallback Source
 
 **Context:** The AFL keeps 7 players per franchise, but MFL has no keeper
 feature for this league — keeps are implicit (whoever survives the offseason

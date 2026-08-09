@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   buildKeeperAnalysis,
@@ -13,6 +13,7 @@ import {
   gradeFranchise,
   KDEF_GAP_THRESHOLD,
   reconstructKeepers,
+  resolveOfficialKeepers,
   type MflPlayersFeed,
   type MflRostersFeed,
   type WeeklyResultsRaw,
@@ -225,6 +226,30 @@ describe('keeper reconstruction', () => {
     });
     expect([...(drafted.get('0001') ?? [])]).toEqual(['55']);
     expect([...(drafted.get('0002') ?? [])]).toEqual(['66']);
+  });
+});
+
+describe('resolveOfficialKeepers', () => {
+  const seven = (prefix: string) => Array.from({ length: 7 }, (_, i) => `${prefix}${i}`);
+
+  it('returns the first snapshot (by date) where every franchise has exactly 7', () => {
+    const unsettled = rostersFeed({ '0001': [...seven('a'), 'extra'], '0002': seven('b') });
+    const settled = rostersFeed({ '0001': seven('a'), '0002': seven('b') });
+    const later = rostersFeed({ '0001': seven('x'), '0002': seven('y') });
+    // Deliberately unsorted input — resolution must sort by date.
+    const result = resolveOfficialKeepers([
+      { date: '2026-07-20', rosters: later },
+      { date: '2026-07-16', rosters: unsettled },
+      { date: '2026-07-17', rosters: settled },
+    ]);
+    expect(result?.date).toBe('2026-07-17');
+    expect([...(result?.byFranchise.get('0001') ?? [])].sort()).toEqual(seven('a').sort());
+  });
+
+  it('returns null when no snapshot has settled to all-7', () => {
+    const unsettled = rostersFeed({ '0001': ['1', '2'] });
+    expect(resolveOfficialKeepers([{ date: '2026-07-16', rosters: unsettled }])).toBeNull();
+    expect(resolveOfficialKeepers([])).toBeNull();
   });
 });
 
@@ -470,6 +495,38 @@ describe('buildKeeperAnalysis', () => {
     expect(f1.keptCount).toBe(2);
   });
 
+  it('prefers an official snapshot over reconstruction and intersects with the prev roster', () => {
+    const seven = ['a1', 'a2', 'a3', 'k1', 'k2', 'k3', 'traded-in'];
+    const analysis = buildKeeperAnalysis({
+      // prev roster lacks 'traded-in' (acquired via offseason trade)
+      prevRosters: rostersFeed({ '0001': ['a1', 'a2', 'a3', 'k1', 'k2', 'k3', 'x1', 'x2'] }),
+      prevPlayers,
+      curWeeklyRaw: [],
+      // rosters.json fallback would say something different — must be ignored
+      curRosters: rostersFeed({ '0001': ['x1'] }),
+      keeperSnapshots: [{ date: '2026-07-17', rosters: rostersFeed({ '0001': seven }) }],
+    });
+    expect(analysis.keeperSource).toBe('official');
+    expect(analysis.keeperSnapshotDate).toBe('2026-07-17');
+    const f = analysis.franchises.find((fr) => fr.franchiseId === '0001')!;
+    // 6 of the 7 official keeps are on the prev roster; 'traded-in' is not.
+    expect(f.keptCount).toBe(6);
+    expect(f.players.some((p) => p.id === 'x1' && p.kept)).toBe(false);
+  });
+
+  it('falls back to reconstruction when no snapshot settles', () => {
+    const analysis = buildKeeperAnalysis({
+      prevRosters: rostersFeed({ '0001': ['a1', 'a2', 'a3'] }),
+      prevPlayers,
+      curWeeklyRaw: [],
+      curRosters: rostersFeed({ '0001': ['a1', 'a2'] }),
+      keeperSnapshots: [{ date: '2026-07-16', rosters: rostersFeed({ '0001': ['a1'] }) }],
+    });
+    expect(analysis.keeperSource).toBe('reconstructed');
+    expect(analysis.keeperSnapshotDate).toBeNull();
+    expect(analysis.franchises[0].keptCount).toBe(2);
+  });
+
   it('ranks franchises by kept points and fills the summary', () => {
     // Week-1 rosters define the opening rosters: 0001 kept a1+a2, 0002 kept
     // only b1 — b2 walked and scored 50 for an unrelated franchise.
@@ -541,6 +598,14 @@ const hasLiveFeeds =
 describe.runIf(hasLiveFeeds)('integration: 2025→2026 live cycle (real feeds)', () => {
   const load = (rel: string) => JSON.parse(readFileSync(join(FEEDS_DIR, rel), 'utf-8'));
 
+  const loadJulySnapshots = (year: string) => {
+    const dir = join(FEEDS_DIR, `${year}/roster-history`);
+    if (!existsSync(dir)) return [];
+    return readdirSync(dir)
+      .filter((f) => new RegExp(`^rosters-${year}-07-(1[6-9]|[2-3][0-9])\\.json$`).test(f))
+      .map((f) => ({ date: f.slice(8, 18), rosters: load(`${year}/roster-history/${f}`) }));
+  };
+
   it('reconstructs declared keeper classes pre-season despite the week-1 schedule shell', () => {
     const analysis = buildKeeperAnalysis({
       prevRosters: load('2025/rosters.json'),
@@ -551,6 +616,7 @@ describe.runIf(hasLiveFeeds)('integration: 2025→2026 live cycle (real feeds)',
       curDraftResults: load('2026/draftResults.json'),
     });
     expect(analysis.franchises).toHaveLength(24);
+    expect(analysis.keeperSource).toBe('reconstructed');
     // Pre-week-1 the cycle is a preview and every class is its declared keeps.
     // Once the 2026 season starts this assertion naturally relaxes: preview
     // flips off and keep counts come from the real week-1 rosters.
@@ -559,6 +625,26 @@ describe.runIf(hasLiveFeeds)('integration: 2025→2026 live cycle (real feeds)',
         expect(f.keptCount).toBeGreaterThanOrEqual(6);
         expect(f.keptCount).toBeLessThanOrEqual(7);
       }
+    }
+  });
+
+  it('uses the official post-deadline snapshot when July snapshots exist', () => {
+    const keeperSnapshots = loadJulySnapshots('2026');
+    if (keeperSnapshots.length === 0) return; // archive not present in this checkout
+    const analysis = buildKeeperAnalysis({
+      prevRosters: load('2025/rosters.json'),
+      prevPlayers: load('2025/players.json'),
+      curPlayers: load('2026/players.json'),
+      curWeeklyRaw: load('2026/weekly-results-raw.json'),
+      curRosters: load('2026/rosters.json'),
+      curDraftResults: load('2026/draftResults.json'),
+      keeperSnapshots,
+    });
+    expect(analysis.keeperSource).toBe('official');
+    // 2026 cuts settled two days after the July 15 deadline.
+    expect(analysis.keeperSnapshotDate).toBe('2026-07-17');
+    for (const f of analysis.franchises) {
+      expect(f.keptCount).toBe(7);
     }
   });
 });
