@@ -53,7 +53,7 @@ const efficiencyPct = Math.round(analysis.efficiency * 100);
           `${analysis.keptCount} kept`
         ) : (
           <>
-            <strong>{analysis.hits}/{analysis.keptCount}</strong> hits
+            <strong>{analysis.hits}/{analysis.hits + analysis.misses}</strong> hits
           </>
         )}
       </span>

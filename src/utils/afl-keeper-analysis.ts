@@ -196,6 +196,12 @@ export interface FranchiseAnalysis {
    * player covers six starters' byes (~6 starts); a second QB covers one.
    */
   benchKept: number;
+  /**
+   * Keeps that missed the optimal set but had no better alternative on the
+   * roster — a slot spent on nobody, not a decision anyone got wrong.
+   * `hits + misses + fillerKept === keptCount`.
+   */
+  fillerKept: number;
   /** PoR delivered by the best lineup-legal seven out of the players kept. */
   keptValue: number;
   /** PoR of the best lineup-legal seven the roster could have kept. */
@@ -751,16 +757,11 @@ export function gradeFranchise(
     const optimalEntry = optimalById.get(pid);
     const keptEntry = keptById.get(pid);
 
-    // Badges now key purely off membership in the optimal set. The old
-    // `no-slot` special case existed because a benched keep was worth zero;
-    // now bye-week cover is priced, so a bench keep competes on value like
-    // anyone else and needs no exemption. That also retires two mislabelling
-    // bugs the old slot-count check had (a 2nd QB graded `miss` when the
-    // whole QB room was below replacement; a below-replacement keep was
-    // excused as `no-slot` whenever its group happened to be full).
+    // Badge assignment happens after the loop — whether a non-optimal keep
+    // is a MISS depends on whether a better player was actually available,
+    // which is a franchise-level fact (see missIds below).
     let badge: KeeperBadge | null = null;
     if (isKept && optimalEntry) badge = 'hit';
-    else if (isKept) badge = 'miss';
     else if (optimalEntry) badge = 'got-away';
 
     return {
@@ -783,6 +784,24 @@ export function gradeFranchise(
     };
   });
 
+  // A keep only counts as a MISS when someone better actually got away.
+  // Every got-away displaced exactly one keep, so the count of misses is the
+  // count of got-aways — capped by how many non-optimal keeps there are.
+  //
+  // Without this, a thin roster whose ceiling holds only three players worth
+  // keeping graded "100% of optimal · 3/7 hits": it captured everything there
+  // was to capture, yet four keeps were branded misses for having no better
+  // alternative to pick. The remaining keeps are filler — a slot spent on
+  // nobody, which is not a decision anyone got wrong.
+  const gotAwayCount = optimal.filter((k) => !kept.has(k.pid)).length;
+  const nonOptimalKeeps = players
+    .filter((p) => p.kept && !p.optimal)
+    .sort((a, b) => a.pointsOverReplacement - b.pointsOverReplacement);
+  const missIds = new Set(
+    nonOptimalKeeps.slice(0, Math.min(nonOptimalKeeps.length, gotAwayCount)).map((p) => p.id)
+  );
+  for (const p of players) if (missIds.has(p.id)) p.badge = 'miss';
+
   const keptValue = keptBest.reduce((sum, k) => sum + k.value, 0);
   const optimalValue = optimal.reduce((sum, k) => sum + k.value, 0);
 
@@ -791,7 +810,9 @@ export function gradeFranchise(
     players,
     keptCount: kept.size,
     hits: players.filter((p) => p.badge === 'hit').length,
-    misses: players.filter((p) => p.badge === 'miss').length,
+    misses: missIds.size,
+    /** Keeps with no better alternative on the roster — not a wrong call. */
+    fillerKept: players.filter((p) => p.kept && !p.optimal && !missIds.has(p.id)).length,
     gotAway: players.filter((p) => p.badge === 'got-away').length,
     benchKept: keptBest.filter((k) => k.role === 'bench').length,
     keptValue,

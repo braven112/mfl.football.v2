@@ -250,7 +250,7 @@ const replacementIsEstimated = !analysis.summary.replacementFromFullPool;
             </span>
             <span class="ka-tile__big">{fmtEff(best.efficiency)} of optimal</span>
             <span class="ka-tile__stat">
-              {fmtPts(best.keptValue)} value over free · {best.hits}/{best.keptCount} hits
+              {fmtPts(best.keptValue)} value over free · {best.hits}/{best.hits + best.misses} hits
             </span>
           </div>
           <div class="ka-tile ka-tile--worst">
@@ -263,7 +263,7 @@ const replacementIsEstimated = !analysis.summary.replacementFromFullPool;
             </span>
             <span class="ka-tile__big">{fmtEff(worst.efficiency)} of optimal</span>
             <span class="ka-tile__stat">
-              {fmtPts(worst.keptValue)} value over free · {worst.hits}/{worst.keptCount} hits
+              {fmtPts(worst.keptValue)} value over free · {worst.hits}/{worst.hits + worst.misses} hits
             </span>
           </div>
           <div class="ka-tile">
@@ -362,6 +362,13 @@ const replacementIsEstimated = !analysis.summary.replacementFromFullPool;
         <li>
           A keep at or below replacement adds nothing, because you could have
           had that production for free.
+        </li>
+        <li>
+          A keep is only a <em>miss</em> when somebody better actually got
+          away. If your roster only had four players worth keeping and you
+          kept all four, the other slots were spent on nobody — that isn't a
+          decision anyone got wrong, so it isn't counted against you. The hit
+          tally is out of the calls that had a better answer available.
         </li>
         <li>
           Classes rank on the share of their own ceiling they captured, not on

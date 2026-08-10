@@ -495,16 +495,32 @@ describe('gradeFranchise', () => {
     replacement = NO_REP
   ) => gradeFranchise('0001', rosterSet, keptSet, pts, ids, replacement, 14);
 
-  it('partitions every keep into hit or miss — no exempt category', () => {
+  it('partitions every keep into hit, miss, or filler', () => {
     const analysis = grade(kept);
-    expect(analysis.hits + analysis.misses).toBe(analysis.keptCount);
+    expect(analysis.hits + analysis.misses + analysis.fillerKept).toBe(analysis.keptCount);
     expect(analysis.efficiency).toBeLessThanOrEqual(1);
+  });
+
+  it('only counts a miss when somebody better actually got away', () => {
+    // A thin roster: just two players clear replacement, and both were kept.
+    // The other keeps had no better alternative, so they are filler, not
+    // misses — the old rule branded them misses and produced the nonsense
+    // card "100% of optimal, 3/7 hits".
+    const thinRoster = new Set(['r1', 'r2', 'x1', 'k1']);
+    const thinKept = new Set(['r1', 'r2', 'x1', 'k1']);
+    const thinPoints = new Map([['r1', 400], ['r2', 380], ['x1', 5], ['k1', 5]]);
+    const replacement = { QB: 0, PK: 20, Def: 0, FLEX: 20 };
+    const a = gradeFranchise('0001', thinRoster, thinKept, thinPoints, byId, replacement, 14);
+    expect(a.gotAway).toBe(0);
+    expect(a.misses).toBe(0); // nothing better was available
+    expect(a.fillerKept).toBeGreaterThan(0);
+    expect(a.efficiency).toBe(1); // captured everything worth capturing
   });
 
   it('handles a 6-keep team without a phantom miss', () => {
     const analysis = grade(new Set(['q1', 'r1', 'r2', 'w1', 'w2', 't1']));
     expect(analysis.keptCount).toBe(6);
-    expect(analysis.hits + analysis.misses).toBe(6);
+    expect(analysis.hits + analysis.misses + analysis.fillerKept).toBe(6);
   });
 
   it('grades a below-replacement QB room without mislabelling the backup', () => {
@@ -518,7 +534,7 @@ describe('gradeFranchise', () => {
     const weakPoints = new Map([['q1', 10], ['q2', 5], ['r1', 400]]);
     const replacement = { QB: 20, PK: 0, Def: 0, FLEX: 0 };
     const analysis = gradeFranchise('0001', twoQbRoster, twoQbKept, weakPoints, byId, replacement, 14);
-    expect(analysis.hits + analysis.misses).toBe(analysis.keptCount);
+    expect(analysis.hits + analysis.misses + analysis.fillerKept).toBe(analysis.keptCount);
     expect(analysis.efficiency).toBeLessThanOrEqual(1);
   });
 
@@ -784,7 +800,7 @@ describe.runIf(hasRealFeeds)('integration: 2024→2025 cycle (real feeds)', () =
     for (const f of analysis.franchises) {
       expect(f.keptCount).toBeGreaterThanOrEqual(6);
       expect(f.keptCount).toBeLessThanOrEqual(7);
-      expect(f.hits + f.misses).toBe(f.keptCount);
+      expect(f.hits + f.misses + f.fillerKept).toBe(f.keptCount);
       expect(f.optimalValue).toBeGreaterThan(0);
       // No class may score above its own ceiling. This held only by luck
       // under the old raw-points model — Boondock Saints reached 100.49% on a
