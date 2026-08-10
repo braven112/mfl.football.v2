@@ -752,10 +752,26 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     if (btn) btn.classList.toggle('has-filters', count > 0);
   }
 
+  // "Rookies only" subsumes "Include rookies": while active, force the
+  // include toggle on (checked + disabled) so the two boxes can never
+  // contradict each other and the badge never counts an inert include-toggle
+  // deviation. The ONLY place the lock semantics live — every path that
+  // changes rookiesOnly (change handler, Clear Filters, DOM re-sync) calls
+  // this instead of hand-rolling the checked/disabled dance.
+  function applyRookiesOnlyLock() {
+    const includeEl = document.getElementById('show-rookies');
+    if (rookiesOnly) {
+      showRookies = true;
+      if (includeEl) { includeEl.checked = true; includeEl.disabled = true; }
+    } else if (includeEl) {
+      includeEl.disabled = false;
+    }
+  }
+
   function matchesBaseFilters(p, query) {
     if (!showRostered && isRosteredForView(p)) return false;
-    // rookiesOnly implies showRookies (the change handler forces it on), so
-    // the two branches can't both apply.
+    // rookiesOnly implies showRookies (applyRookiesOnlyLock forces it on),
+    // so the two branches can't both apply.
     if (rookiesOnly && !p.rookie) return false;
     if (!showRookies && p.rookie) return false;
     if (!passesAdvancedFilters(p)) return false;
@@ -1012,16 +1028,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     bind('show-rookies', (e) => { showRookies = e.target.checked; filterPlayers(); }, 'change');
     bind('rookies-only', (e) => {
       rookiesOnly = e.target.checked;
-      // "Rookies only" subsumes "Include rookies": force the include toggle
-      // on and lock it while active, so the UI never shows rookies under an
-      // unchecked "Include rookies" box.
-      const includeEl = document.getElementById('show-rookies');
-      if (rookiesOnly) {
-        showRookies = true;
-        if (includeEl) { includeEl.checked = true; includeEl.disabled = true; }
-      } else if (includeEl) {
-        includeEl.disabled = false;
-      }
+      applyRookiesOnlyLock();
       filterPlayers();
     }, 'change');
 
@@ -1040,9 +1047,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         const rosteredEl = document.getElementById('show-rostered');
         if (rosteredEl) rosteredEl.checked = false;
         const rookiesEl = document.getElementById('show-rookies');
-        if (rookiesEl) { rookiesEl.checked = true; rookiesEl.disabled = false; }
+        if (rookiesEl) rookiesEl.checked = true;
         const rookiesOnlyEl = document.getElementById('rookies-only');
         if (rookiesOnlyEl) rookiesOnlyEl.checked = false;
+        applyRookiesOnlyLock();
         filterPlayers();
       });
     }
@@ -1055,6 +1063,41 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         render();
       });
     }
+
+    // ── Re-sync filter state from the DOM before the first render ──
+    // Under Astro's ClientRouter this inline script executes ONCE per real
+    // page load: a view-transition navigation swaps in fresh SSR DOM
+    // (default attribute state — include-rookies checked, everything else
+    // clear) while this module's filter variables persist, and only init()
+    // re-runs via astro:page-load. Browsers can also restore form values
+    // across reloads. Either way, the swapped-in controls — not the
+    // persisted variables — are the truth at init time, so read every
+    // filter control back into state here; skipping this renders a table
+    // filtered by invisible state (e.g. rookies-only rows under an
+    // unchecked "Rookies only" box after navigating away and back).
+    const checkedOf = (id, dflt) => {
+      const el = document.getElementById(id);
+      return el ? el.checked : dflt;
+    };
+    const valueOf = (id) => document.getElementById(id)?.value ?? '';
+    showRostered = checkedOf('show-rostered', false);
+    rookiesOnly = checkedOf('rookies-only', false);
+    showRookies = checkedOf('show-rookies', true);
+    applyRookiesOnlyLock();
+    filterTeam = valueOf('filter-team');
+    filterAgeMin = numOrNull(valueOf('filter-age-min'));
+    filterAgeMax = numOrNull(valueOf('filter-age-max'));
+    filterHtMin = numOrNull(valueOf('filter-ht-min'));
+    filterHtMax = numOrNull(valueOf('filter-ht-max'));
+    filterWtMin = numOrNull(valueOf('filter-wt-min'));
+    filterWtMax = numOrNull(valueOf('filter-wt-max'));
+    filterExp = valueOf('filter-exp');
+    filterDraft = valueOf('filter-draft');
+    searchQuery = valueOf('player-search').trim();
+    filtersOpen = !!filtersPanel?.classList.contains('open');
+    activePosition = document.querySelector('#category-tabs .pos-pill.active')?.getAttribute('data-pos') || 'ALL';
+    const domConf = document.querySelector('#conf-switcher .conf-switch-btn.active')?.getAttribute('data-conf');
+    if (domConf) activeConf = domConf;
 
     filterPlayers();
   }

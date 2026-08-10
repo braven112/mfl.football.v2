@@ -813,12 +813,15 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         </div>
 
         <div class="filters-row-bottom">
+          <!-- autocomplete="off": Firefox restores checkbox state across
+               reloads, desyncing the restored DOM from the script's
+               re-initialized defaults (same hardening as the AFL page). -->
           <label class="filter-checkbox">
-            <input type="checkbox" id="show-rostered" />
+            <input type="checkbox" id="show-rostered" autocomplete="off" />
             <span>Include rostered</span>
           </label>
           <label class="filter-checkbox">
-            <input type="checkbox" id="show-rookies" />
+            <input type="checkbox" id="show-rookies" autocomplete="off" />
             <span>Include rookies</span>
           </label>
           <button class="filter-clear-btn" id="filter-clear-btn" type="button">Clear Filters</button>
@@ -2210,9 +2213,14 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       });
     }
 
-    // Include rostered toggle
+    // Include rostered toggle. State is read back from the checkbox at init:
+    // under Astro's ClientRouter this inline script runs once per real page
+    // load, so after a view-transition swap the fresh DOM (unchecked default)
+    // is the truth while the module's persisted variable may hold a stale
+    // true from the previous visit.
     const rosterCheck = document.getElementById('show-rostered');
     if (rosterCheck) {
+      showRostered = rosterCheck.checked;
       rosterCheck.addEventListener('change', (e) => {
         showRostered = e.target.checked;
         // Notify module script to re-inject ranking columns (column limit changes)
@@ -2221,9 +2229,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       });
     }
 
-    // Include rookies toggle
+    // Include rookies toggle (same DOM read-back as show-rostered above)
     const rookieCheck = document.getElementById('show-rookies');
     if (rookieCheck) {
+      showRookies = rookieCheck.checked;
       rookieCheck.addEventListener('change', (e) => {
         showRookies = e.target.checked;
         filterPlayers();
