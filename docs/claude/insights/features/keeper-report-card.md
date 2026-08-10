@@ -67,23 +67,44 @@ User-Decided Product Policy") were each hand-approximating the same thing —
 that raw fantasy points overstate what a keeper decision actually bought. All
 four were replaced. **Do not reinstate them.**
 
-**Insight:** Value is now `points − replacement_rate × weeks_rostered`, and the
-optimal seven is the highest-PoR lineup-legal set (1 QB / 1 PK / 1 Def / 6 flex
-from RB/WR/TE — from `league.json`'s `starters`). Each old rule dissolves:
+**Insight:** Value is `starts × (points/seasonWeeks − replacement_rate)`, and
+the optimal seven is the value-maximising lineup-legal set (1 QB / 1 PK / 1 Def
+/ 6 flex from RB/WR/TE — from `league.json`'s `starters`). Each old rule
+dissolves:
+
+**Charge a FULL season, not weeks rostered.** An earlier version used
+`replacement × weeksRostered`, which reduces value to
+`weeks × (rate − replacement)` and lets a hot small sample beat a full-season
+starter — Younghoe Koo (1 week, 9.7 points) made a real franchise's optimal
+seven and rendered as a green "Got away" row, and 17 of 168 optimal slots went
+to sub-8-week players. A keeper slot is a season-long commitment: if he missed
+games, the hole is his cost to carry. `REPLACEMENT_MIN_WEEKS` guards the
+*baseline* against churn; it does not guard the graded players.
 - **K/DEF exclusion + 40-point dominance threshold** → gone. A kicker's raw
-  154 is worth ~60 over replacement while a 328-point RB keeps ~305, so
-  kickers stop crowding optimal sevens on their own (4 of 24 under PoR vs
-  9 of 24 on raw points) and a genuinely dominant unit (Seattle's 2025
-  defense, 130 over replacement) correctly counts instead of needing an
-  escape hatch that never once fired.
-- **One-QB cap** → falls out of the lineup slots. A second QB has no slot, so
-  he is `no-slot`: never a miss, never credit.
+  total collapses toward replacement while a stud RB keeps most of his, so
+  K/DEF compete on value instead of needing an escape hatch that never once
+  fired. **Do NOT repeat the claim that this makes K/DEF rarer in optimal
+  sevens** — an earlier version of this file said "4 of 24 under PoR vs 9 of
+  24 on raw points," which was measured at `teamsPerPool = 24` and does not
+  reproduce at the correct conference-sized pool. Re-measured 2024→2025 at 12:
+  a PK appears in **11/24** optimal sevens and a Def in **10/24**. PoR prices
+  K/DEF honestly; it does not banish them. Any figure quoted here must name
+  the `teamsPerPool` it was measured at.
+- **One-QB cap** → falls out of the lineup slots, and bench keeps are PRICED
+  rather than zeroed. `BENCH_EXPECTED_STARTS` = 6 for FLEX, 1 for QB/PK/Def:
+  a seventh skill player covers the bye of any of the six flex starters, a
+  second QB only covers QB1's single bye. Treating both as zero (or equal)
+  misprices the most common keeper decision on the board.
 - **Earned hits for kept K/DEF / QB2** → gone with them.
 
-New invariant: `hits + misses + noSlotKept === keptCount`, and efficiency is
-bounded ≤1 **by construction** (both sides of the ratio come from the same
-slot-capped selection over the same values, and kept ⊆ roster). The old model
-held that bound only by luck — see the rounding entry below.
+New invariant: `hits + misses === keptCount` — with bench cover priced there
+is no exempt category, which also retired two mislabelling bugs the old
+slot-count check had (a 2nd QB graded `miss` when the whole QB room was below
+replacement; a below-replacement keep was excused whenever its group happened
+to be full). Efficiency is bounded ≤1 **by construction** (both sides use the
+same selection over the same values, and kept ⊆ roster). Selection is EXACT,
+not greedy: within a group, value depends only on how many you take, so
+enumerating per-group counts is cheap and needs no matroid argument.
 
 **Recommendation:** If a future request is "kickers shouldn't count" or
 "backup QBs distort this," check whether PoR already handles it before adding

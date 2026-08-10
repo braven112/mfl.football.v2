@@ -41,6 +41,26 @@ export type SlotGroup = keyof typeof LINEUP_SLOTS;
 
 const FLEX_POSITIONS = new Set(['RB', 'WR', 'TE']);
 
+/**
+ * Games a keeper who does NOT win a starting slot actually starts, by group.
+ *
+ * Bench keeps are not worthless and they are not equal to each other. A
+ * seventh skill player covers the bye of ANY of the six flex starters, so he
+ * is in the lineup roughly six times; a second quarterback only covers QB1's
+ * single bye (or an injury), so he plays about once. Treating both as zero —
+ * or both as equal — misprices the most common keeper decision on the board.
+ *
+ * Only the FIRST bench keep at a group earns this; a third QB or an eighth
+ * skill player is behind someone who already covers the bye, so he starts
+ * ~never and scores 0.
+ */
+export const BENCH_EXPECTED_STARTS: Record<SlotGroup, number> = {
+  QB: 1,
+  PK: 1,
+  Def: 1,
+  FLEX: 6,
+};
+
 /** Which starting slot a position competes for, or null if it can't start. */
 export function slotGroupFor(position: string): SlotGroup | null {
   if (FLEX_POSITIONS.has(position)) return 'FLEX';
@@ -147,7 +167,7 @@ export interface PlayerInfo {
 
 // --- Output shapes ---
 
-export type KeeperBadge = 'hit' | 'miss' | 'got-away' | 'no-slot';
+export type KeeperBadge = 'hit' | 'miss' | 'got-away';
 
 export interface AnalyzedPlayer extends PlayerInfo {
   /** Raw regular-season points — what the table's Pts column shows. */
@@ -157,8 +177,10 @@ export interface AnalyzedPlayer extends PlayerInfo {
   /** 1-based rank on this franchise's prev roster by raw points. */
   rank: number;
   kept: boolean;
-  /** In the lineup-legal, PoR-maximising best seven this roster could have kept. */
+  /** In the value-maximising keeper set this roster could have picked. */
   optimal: boolean;
+  /** Whether he fills a starting slot or covers byes; null if unplaced. */
+  role: KeeperRole | null;
   badge: KeeperBadge | null;
 }
 
@@ -170,11 +192,10 @@ export interface FranchiseAnalysis {
   misses: number;
   gotAway: number;
   /**
-   * Keeps with no starting slot left — never a miss, never credit. Usually a
-   * 2nd QB/PK/Def, but ALSO a 7th flex keep: the lineup starts six from
-   * RB/WR/TE, so keeping seven skill players leaves one on the bench.
+   * Keeps valued as bye-week cover rather than starters. A seventh skill
+   * player covers six starters' byes (~6 starts); a second QB covers one.
    */
-  noSlotKept: number;
+  benchKept: number;
   /** PoR delivered by the best lineup-legal seven out of the players kept. */
   keptValue: number;
   /** PoR of the best lineup-legal seven the roster could have kept. */
@@ -205,6 +226,12 @@ export interface KeeperAnalysisSummary {
    * and biases the baseline upward at thin positions.
    */
   replacementFromFullPool: boolean;
+  /**
+   * Groups whose observed pool was shallower than their startable slots, so
+   * replacement fell back to the worst visible player. Those groups' values
+   * are biased upward — the page says so rather than presenting them as fact.
+   */
+  replacementClamped: ReplacementClamped;
   totalHits: number;
   totalMisses: number;
   totalGotAway: number;
@@ -351,6 +378,14 @@ export function buildPlayersById(
 export type ReplacementLevels = Record<SlotGroup, number>;
 
 /**
+ * Groups where the observed pool was shallower than the number of startable
+ * slots, so replacement fell back to "the worst player we could see" — which
+ * is not a replacement level and biases that group's values upward. Surfaced
+ * so the page can say so instead of presenting the number as fact.
+ */
+export type ReplacementClamped = SlotGroup[];
+
+/**
  * Replacement level: the per-week rate of the best player at each slot group
  * you could NOT have started, i.e. the guy sitting one spot past the last
  * starting slot in your player pool.
@@ -390,10 +425,19 @@ export function computeReplacementLevels(
   /** Franchises competing for one player pool — a conference, not the league. */
   teamsPerPool: number,
   maxCompletedWeek: number,
-  ytdTotals?: Map<string, number>
-): ReplacementLevels {
+  ytdTotals?: Map<string, number>,
+  /**
+   * Weeks the YTD totals actually span. MFL's W=YTD includes playoff weeks
+   * (the 2025 feed is stamped week 18) while our points are regular-season
+   * only (week 14), so dividing a YTD total by maxCompletedWeek inflates
+   * replacement ~17% at every slot. Divide by the feed's own week instead so
+   * numerator and denominator share a basis.
+   */
+  ytdWeeks?: number
+): { levels: ReplacementLevels; clamped: ReplacementClamped } {
   const levels: ReplacementLevels = { QB: 0, PK: 0, Def: 0, FLEX: 0 };
-  if (teamsPerPool <= 0 || maxCompletedWeek <= 0) return levels;
+  const clamped: ReplacementClamped = [];
+  if (teamsPerPool <= 0 || maxCompletedWeek <= 0) return { levels, clamped };
 
   // Season totals for everyone we can see, preferring the full-pool feed.
   const useYtd = !!ytdTotals && ytdTotals.size > 0;
@@ -406,7 +450,7 @@ export function computeReplacementLevels(
     // definition; the rostered fallback must normalise by weeks rostered and
     // ignore short stints that would drag the baseline down.
     if (useYtd) {
-      rates[group].push(total / maxCompletedWeek);
+      rates[group].push(total / (ytdWeeks && ytdWeeks > 0 ? ytdWeeks : maxCompletedWeek));
     } else {
       const w = weeks.get(pid) ?? 0;
       if (w < Math.min(REPLACEMENT_MIN_WEEKS, maxCompletedWeek)) continue;
@@ -419,9 +463,10 @@ export function computeReplacementLevels(
     if (list.length === 0) continue;
     // Index of the first player past the last startable one in the pool.
     const startable = LINEUP_SLOTS[group] * teamsPerPool;
+    if (list.length <= startable) clamped.push(group);
     levels[group] = list[Math.min(startable, list.length - 1)] ?? 0;
   }
-  return levels;
+  return { levels, clamped };
 }
 
 /**
@@ -432,13 +477,96 @@ export function computeReplacementLevels(
 export function pointsOverReplacement(
   pid: string,
   points: Map<string, number>,
-  weeks: Map<string, number>,
   playersById: Map<string, PlayerInfo>,
-  replacement: ReplacementLevels
+  replacement: ReplacementLevels,
+  seasonWeeks: number,
+  /** Games he actually starts. Defaults to the full season (a starting keep). */
+  expectedStarts?: number
 ): number {
   const group = slotGroupFor(playersById.get(pid)?.position ?? '');
-  if (!group) return 0;
-  return (points.get(pid) ?? 0) - replacement[group] * (weeks.get(pid) ?? 0);
+  if (!group || seasonWeeks <= 0) return 0;
+  // A keeper slot is a SEASON-LONG commitment, so the charge is a full
+  // season of replacement — not one scaled to the weeks he happened to be
+  // rostered. Scaling by weeks rostered reduces value to
+  // `weeks × (rate − replacement)`, which lets a hot one-week sample beat a
+  // full-season starter: Younghoe Koo (1 week, 9.7 points) made a franchise's
+  // optimal seven and rendered as a "Got away" row. If a keeper missed games,
+  // the hole in the lineup is his cost to carry.
+  const rate = (points.get(pid) ?? 0) / seasonWeeks;
+  const starts = expectedStarts ?? seasonWeeks;
+  return starts * (rate - replacement[group]);
+}
+
+/** Where a keeper sits in the lineup: a starting slot, or bye-week cover. */
+export type KeeperRole = 'starter' | 'bench';
+
+export interface SelectedKeeper {
+  pid: string;
+  role: KeeperRole;
+  value: number;
+}
+
+/**
+ * The most valuable KEEPER_LIMIT-sized set from `pids`, given the lineup
+ * slots — and, unlike a pure starters-only model, crediting bye-week cover.
+ *
+ * Within a group the highest-rate players take the starting slots and the
+ * next one becomes bench cover, so a group's value depends only on HOW MANY
+ * of it you take. That makes exact selection cheap: enumerate the per-group
+ * counts (each capped at starters + 1 bench, since a further backup sits
+ * behind someone who already covers the bye) and keep the best total. No
+ * greedy heuristic, no matroid argument required.
+ */
+export function selectBestKeepers(
+  pids: Iterable<string>,
+  playersById: Map<string, PlayerInfo>,
+  valueOf: (pid: string, group: SlotGroup, role: KeeperRole) => number
+): SelectedKeeper[] {
+  const byGroup = new Map<SlotGroup, string[]>();
+  for (const pid of pids) {
+    const group = slotGroupFor(playersById.get(pid)?.position ?? '');
+    if (!group) continue;
+    (byGroup.get(group) ?? byGroup.set(group, []).get(group)!).push(pid);
+  }
+
+  const groups = [...byGroup.keys()];
+  // Rank each group by its starter-basis value, then precompute what taking
+  // exactly k of that group is worth (starters first, then one bench slot).
+  const ranked = new Map<SlotGroup, SelectedKeeper[]>();
+  for (const group of groups) {
+    const sorted = byGroup
+      .get(group)!
+      .sort((a, b) => valueOf(b, group, 'starter') - valueOf(a, group, 'starter') || a.localeCompare(b));
+    const cap = Math.min(sorted.length, LINEUP_SLOTS[group] + 1);
+    ranked.set(
+      group,
+      sorted.slice(0, cap).map((pid, i) => {
+        const role: KeeperRole = i < LINEUP_SLOTS[group] ? 'starter' : 'bench';
+        return { pid, role, value: valueOf(pid, group, role) };
+      })
+    );
+  }
+
+  let best: SelectedKeeper[] = [];
+  let bestValue = 0;
+  const walk = (gi: number, remaining: number, picked: SelectedKeeper[], total: number) => {
+    if (gi === groups.length) {
+      if (total > bestValue) {
+        bestValue = total;
+        best = [...picked];
+      }
+      return;
+    }
+    const list = ranked.get(groups[gi])!;
+    for (let k = 0; k <= Math.min(list.length, remaining); k++) {
+      const take = list.slice(0, k);
+      // A negative-value keep never helps, so stop extending this group.
+      if (k > 0 && take[k - 1].value <= 0) break;
+      walk(gi + 1, remaining - k, [...picked, ...take], total + take.reduce((sum, x) => sum + x.value, 0));
+    }
+  };
+  walk(0, KEEPER_LIMIT, [], 0);
+  return best;
 }
 
 /**
@@ -581,61 +709,35 @@ function rankByPoints(pids: Iterable<string>, points: Map<string, number>): stri
   );
 }
 
-/**
- * The most valuable lineup-legal seven from a set of players, by points over
- * replacement.
- *
- * Greedy is exact here: the slot caps form a partition matroid and we want
- * the max-weight independent set of size <= KEEPER_LIMIT, so taking the
- * highest-PoR player that still has a slot free is optimal at every step.
- *
- * Players at or below replacement are skipped — a keeper slot spent on
- * someone you could have had for free returned nothing, and counting him
- * would make a class look better for having kept more bodies.
- */
-export function selectBestSeven(
-  pids: Iterable<string>,
-  porOf: (pid: string) => number,
-  playersById: Map<string, PlayerInfo>
-): string[] {
-  const ranked = [...pids].sort((a, b) => porOf(b) - porOf(a) || a.localeCompare(b));
-  const used: Record<SlotGroup, number> = { QB: 0, PK: 0, Def: 0, FLEX: 0 };
-  const picked: string[] = [];
-  for (const pid of ranked) {
-    if (picked.length >= KEEPER_LIMIT) break;
-    if (porOf(pid) <= 0) continue;
-    const group = slotGroupFor(playersById.get(pid)?.position ?? '');
-    if (!group || used[group] >= LINEUP_SLOTS[group]) continue;
-    used[group] += 1;
-    picked.push(pid);
-  }
-  return picked;
-}
-
 /** Assemble one franchise's analyzed, ranked roster + grade tallies. */
 export function gradeFranchise(
   franchiseId: string,
   prevRosterPids: Set<string>,
   kept: Set<string>,
   points: Map<string, number>,
-  weeks: Map<string, number>,
   playersById: Map<string, PlayerInfo>,
-  replacement: ReplacementLevels
+  replacement: ReplacementLevels,
+  seasonWeeks: number
 ): FranchiseAnalysis {
-  const porOf = (pid: string) =>
-    pointsOverReplacement(pid, points, weeks, playersById, replacement);
+  const valueOf = (pid: string, _group: SlotGroup, role: KeeperRole) =>
+    pointsOverReplacement(
+      pid,
+      points,
+      playersById,
+      replacement,
+      seasonWeeks,
+      role === 'starter' ? seasonWeeks : BENCH_EXPECTED_STARTS[_group]
+    );
 
-  // The ceiling: the best lineup-legal seven this roster could have kept.
-  const optimal = selectBestSeven(prevRosterPids, porOf, playersById);
-  const optimalSet = new Set(optimal);
-  // What the keeper class actually delivered: the best lineup-legal seven
-  // out of the players they DID keep. Same function, same slot caps, so the
-  // numerator can never outrun the denominator.
-  const keptBest = selectBestSeven(kept, porOf, playersById);
-  const keptBestSet = new Set(keptBest);
+  // The ceiling: the best keeper set this roster could have picked.
+  const optimal = selectBestKeepers(prevRosterPids, playersById, valueOf);
+  const optimalById = new Map(optimal.map((k) => [k.pid, k]));
+  // What the class delivered: the same selection over the players kept, so
+  // the numerator can never outrun the denominator.
+  const keptBest = selectBestKeepers(kept, playersById, valueOf);
+  const keptById = new Map(keptBest.map((k) => [k.pid, k]));
 
-  // Rows stay ordered by raw points -- that is what the table column shows
-  // and what an owner scans for. PoR drives the grades, not the sort.
+  // Rows stay ordered by raw points — that is the column an owner scans.
   const ranked = rankByPoints(prevRosterPids, points);
 
   const players: AnalyzedPlayer[] = ranked.map((pid, i) => {
@@ -646,36 +748,43 @@ export function gradeFranchise(
       nflTeam: '',
     };
     const isKept = kept.has(pid);
-    const isOptimal = optimalSet.has(pid);
-    const por = porOf(pid);
-    const group = slotGroupFor(info.position);
+    const optimalEntry = optimalById.get(pid);
+    const keptEntry = keptById.get(pid);
 
-    // A keep only counts if it could actually take a starting slot. A second
-    // QB (or second kicker/defense) has nowhere to play, so he is neutral --
-    // never a miss, but never credit either.
-    const slotBlocked = isKept && !keptBestSet.has(pid) && group !== null &&
-      keptBest.filter((k) => slotGroupFor(playersById.get(k)?.position ?? '') === group).length >=
-        LINEUP_SLOTS[group];
-
+    // Badges now key purely off membership in the optimal set. The old
+    // `no-slot` special case existed because a benched keep was worth zero;
+    // now bye-week cover is priced, so a bench keep competes on value like
+    // anyone else and needs no exemption. That also retires two mislabelling
+    // bugs the old slot-count check had (a 2nd QB graded `miss` when the
+    // whole QB room was below replacement; a below-replacement keep was
+    // excused as `no-slot` whenever its group happened to be full).
     let badge: KeeperBadge | null = null;
-    if (isKept && isOptimal) badge = 'hit';
-    else if (isKept && slotBlocked) badge = 'no-slot';
+    if (isKept && optimalEntry) badge = 'hit';
     else if (isKept) badge = 'miss';
-    else if (isOptimal) badge = 'got-away';
+    else if (optimalEntry) badge = 'got-away';
 
     return {
       ...info,
       points: points.get(pid) ?? 0,
-      pointsOverReplacement: por,
+      // Displayed value is the starter basis — what he'd be worth holding a
+      // starting slot all season. The bench discount shows via `role`.
+      pointsOverReplacement: pointsOverReplacement(
+        pid,
+        points,
+        playersById,
+        replacement,
+        seasonWeeks
+      ),
+      role: (keptEntry ?? optimalEntry)?.role ?? null,
       rank: i + 1,
       kept: isKept,
-      optimal: isOptimal,
+      optimal: !!optimalEntry,
       badge,
     };
   });
 
-  const keptValue = keptBest.reduce((sum, pid) => sum + porOf(pid), 0);
-  const optimalValue = optimal.reduce((sum, pid) => sum + porOf(pid), 0);
+  const keptValue = keptBest.reduce((sum, k) => sum + k.value, 0);
+  const optimalValue = optimal.reduce((sum, k) => sum + k.value, 0);
 
   return {
     franchiseId,
@@ -684,7 +793,7 @@ export function gradeFranchise(
     hits: players.filter((p) => p.badge === 'hit').length,
     misses: players.filter((p) => p.badge === 'miss').length,
     gotAway: players.filter((p) => p.badge === 'got-away').length,
-    noSlotKept: players.filter((p) => p.badge === 'no-slot').length,
+    benchKept: keptBest.filter((k) => k.role === 'bench').length,
     keptValue,
     optimalValue,
     efficiency: optimalValue > 0 ? keptValue / optimalValue : 0,
@@ -734,13 +843,15 @@ export function buildKeeperAnalysis(input: BuildKeeperAnalysisInput): KeeperAnal
   );
 
   const ytdTotals = parsePlayerScoresYtd(input.curPlayerScoresYtd);
-  const replacement = computeReplacementLevels(
+  const ytdWeeks = Number.parseInt(input.curPlayerScoresYtd?.playerScores?.week ?? '', 10);
+  const { levels: replacement, clamped: replacementClamped } = computeReplacementLevels(
     points,
     weeks,
     playersById,
     input.teamsPerPool ?? prevFranchises.length,
     maxCompletedWeek,
-    ytdTotals
+    ytdTotals,
+    Number.isFinite(ytdWeeks) ? ytdWeeks : undefined
   );
 
   const franchises: FranchiseAnalysis[] = [];
@@ -765,7 +876,7 @@ export function buildKeeperAnalysis(input: BuildKeeperAnalysisInput): KeeperAnal
       kept = reconstructKeepers(prevPids, opening, drafted);
     }
     franchises.push(
-      gradeFranchise(franchise.id, prevPids, kept, points, weeks, playersById, replacement)
+      gradeFranchise(franchise.id, prevPids, kept, points, playersById, replacement, maxCompletedWeek)
     );
   }
 
@@ -790,6 +901,7 @@ export function buildKeeperAnalysis(input: BuildKeeperAnalysisInput): KeeperAnal
     worstFranchiseId: rankedFranchiseIds[rankedFranchiseIds.length - 1] ?? null,
     replacement,
     replacementFromFullPool: !!ytdTotals && ytdTotals.size > 0,
+    replacementClamped,
     totalHits: franchises.reduce((sum, f) => sum + f.hits, 0),
     totalMisses: franchises.reduce((sum, f) => sum + f.misses, 0),
     totalGotAway: franchises.reduce((sum, f) => sum + f.gotAway, 0),

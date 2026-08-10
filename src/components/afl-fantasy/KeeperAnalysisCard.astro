@@ -105,9 +105,9 @@ const efficiencyPct = Math.round(analysis.efficiency * 100);
             {!previewMode && p.badge === 'got-away' && (
               <span class="ka-pill ka-pill--gotaway">Got away</span>
             )}
-            {!previewMode && p.badge === 'no-slot' && (
-              <span class="ka-pill ka-pill--kdef" title="No starting slot left — a second QB, kicker or defense, or a seventh skill player when only six can start. Nowhere to play him, so the keep is neither a miss nor credit">
-                No slot
+            {!previewMode && p.role === 'bench' && (
+              <span class="ka-pill ka-pill--kdef" title="Valued as bye-week cover rather than a starter. A seventh skill player fills in for any of the six flex starters (~6 games); a second QB only covers QB1's bye (~1), so he is worth far less.">
+                Bench
               </span>
             )}
           </td>
