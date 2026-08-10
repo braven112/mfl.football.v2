@@ -735,7 +735,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       </div>
       <div class="toolbar-center"></div>
       <div class="toolbar-right">
-        <button class="filter-toggle-btn" id="filter-toggle-btn" type="button">
+        <button class="filter-toggle-btn" id="filter-toggle-btn" type="button" aria-expanded="false" aria-controls="filters-panel">
           <svg class="filter-toggle-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="4" y1="6" x2="20" y2="6" /><line x1="8" y1="12" x2="16" y2="12" /><line x1="11" y1="18" x2="13" y2="18" />
           </svg>
@@ -746,85 +746,87 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     </div>
 
     <!-- Collapsible Filters Panel -->
-    <div class="filters-panel" id="filters-panel">
-      <div class="filters-panel__inner">
-        <h3 class="filters-panel-title">Filters</h3>
-        <div class="filters-grid">
-          <div class="filter-group">
-            <label class="filter-label" for="filter-team">NFL Team</label>
-            <select id="filter-team" class="filter-select">
-              <option value="">All Teams</option>
-              {nflTeamsList.map(team => (
-                <option value={team}>{team}</option>
-              ))}
-            </select>
-          </div>
+    <div class="filters-panel" id="filters-panel" inert>
+      <div class="filters-panel__clip">
+        <div class="filters-panel__inner">
+          <h3 class="filters-panel-title">Filters</h3>
+          <div class="filters-grid">
+            <div class="filter-group">
+              <label class="filter-label" for="filter-team">NFL Team</label>
+              <select id="filter-team" class="filter-select">
+                <option value="">All Teams</option>
+                {nflTeamsList.map(team => (
+                  <option value={team}>{team}</option>
+                ))}
+              </select>
+            </div>
 
-          <div class="filter-group filter-group--age">
-            <label class="filter-label">Age Range</label>
-            <div class="filter-range">
-              <input type="number" id="filter-age-min" class="filter-input-num" placeholder="Min" min="18" max="50" />
-              <span class="filter-range__sep">&ndash;</span>
-              <input type="number" id="filter-age-max" class="filter-input-num" placeholder="Max" min="18" max="50" />
+            <div class="filter-group filter-group--age">
+              <label class="filter-label">Age Range</label>
+              <div class="filter-range">
+                <input type="number" id="filter-age-min" class="filter-input-num" placeholder="Min" min="18" max="50" />
+                <span class="filter-range__sep">&ndash;</span>
+                <input type="number" id="filter-age-max" class="filter-input-num" placeholder="Max" min="18" max="50" />
+              </div>
+            </div>
+
+            <div class="filter-group filter-group--ht">
+              <label class="filter-label">Height (in)</label>
+              <div class="filter-range">
+                <input type="number" id="filter-ht-min" class="filter-input-num" placeholder="Min" min="60" max="84" />
+                <span class="filter-range__sep">&ndash;</span>
+                <input type="number" id="filter-ht-max" class="filter-input-num" placeholder="Max" min="60" max="84" />
+              </div>
+            </div>
+
+            <div class="filter-group filter-group--wt">
+              <label class="filter-label">Weight (lbs)</label>
+              <div class="filter-range">
+                <input type="number" id="filter-wt-min" class="filter-input-num" placeholder="Min" min="150" max="400" />
+                <span class="filter-range__sep">&ndash;</span>
+                <input type="number" id="filter-wt-max" class="filter-input-num" placeholder="Max" min="150" max="400" />
+              </div>
+            </div>
+
+            <div class="filter-group">
+              <label class="filter-label" for="filter-exp">Experience</label>
+              <select id="filter-exp" class="filter-select">
+                <option value="">All</option>
+                <option value="rookie">Rookie</option>
+                <option value="1-2">1–2 years</option>
+                <option value="3-5">3–5 years</option>
+                <option value="6-10">6–10 years</option>
+                <option value="10+">10+ years</option>
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label class="filter-label" for="filter-draft">Draft Round</label>
+              <select id="filter-draft" class="filter-select">
+                <option value="">All</option>
+                <option value="1">Round 1</option>
+                <option value="2">Round 2</option>
+                <option value="3">Round 3</option>
+                <option value="4+">Round 4+</option>
+                <option value="udfa">Undrafted</option>
+              </select>
             </div>
           </div>
 
-          <div class="filter-group filter-group--ht">
-            <label class="filter-label">Height (in)</label>
-            <div class="filter-range">
-              <input type="number" id="filter-ht-min" class="filter-input-num" placeholder="Min" min="60" max="84" />
-              <span class="filter-range__sep">&ndash;</span>
-              <input type="number" id="filter-ht-max" class="filter-input-num" placeholder="Max" min="60" max="84" />
-            </div>
+          <div class="filters-row-bottom">
+            <!-- autocomplete="off": Firefox restores checkbox state across
+                 reloads, desyncing the restored DOM from the script's
+                 re-initialized defaults (same hardening as the AFL page). -->
+            <label class="filter-checkbox">
+              <input type="checkbox" id="show-rostered" autocomplete="off" />
+              <span>Include rostered</span>
+            </label>
+            <label class="filter-checkbox">
+              <input type="checkbox" id="show-rookies" autocomplete="off" />
+              <span>Include rookies</span>
+            </label>
+            <button class="filter-clear-btn" id="filter-clear-btn" type="button">Clear Filters</button>
           </div>
-
-          <div class="filter-group filter-group--wt">
-            <label class="filter-label">Weight (lbs)</label>
-            <div class="filter-range">
-              <input type="number" id="filter-wt-min" class="filter-input-num" placeholder="Min" min="150" max="400" />
-              <span class="filter-range__sep">&ndash;</span>
-              <input type="number" id="filter-wt-max" class="filter-input-num" placeholder="Max" min="150" max="400" />
-            </div>
-          </div>
-
-          <div class="filter-group">
-            <label class="filter-label" for="filter-exp">Experience</label>
-            <select id="filter-exp" class="filter-select">
-              <option value="">All</option>
-              <option value="rookie">Rookie</option>
-              <option value="1-2">1–2 years</option>
-              <option value="3-5">3–5 years</option>
-              <option value="6-10">6–10 years</option>
-              <option value="10+">10+ years</option>
-            </select>
-          </div>
-
-          <div class="filter-group">
-            <label class="filter-label" for="filter-draft">Draft Round</label>
-            <select id="filter-draft" class="filter-select">
-              <option value="">All</option>
-              <option value="1">Round 1</option>
-              <option value="2">Round 2</option>
-              <option value="3">Round 3</option>
-              <option value="4+">Round 4+</option>
-              <option value="udfa">Undrafted</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="filters-row-bottom">
-          <!-- autocomplete="off": Firefox restores checkbox state across
-               reloads, desyncing the restored DOM from the script's
-               re-initialized defaults (same hardening as the AFL page). -->
-          <label class="filter-checkbox">
-            <input type="checkbox" id="show-rostered" autocomplete="off" />
-            <span>Include rostered</span>
-          </label>
-          <label class="filter-checkbox">
-            <input type="checkbox" id="show-rookies" autocomplete="off" />
-            <span>Include rookies</span>
-          </label>
-          <button class="filter-clear-btn" id="filter-clear-btn" type="button">Clear Filters</button>
         </div>
       </div>
     </div>
@@ -2210,6 +2212,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         filtersOpen = !filtersOpen;
         filtersPanel.classList.toggle('open', filtersOpen);
         filterToggleBtn.classList.toggle('active', filtersOpen);
+        filterToggleBtn.setAttribute('aria-expanded', String(filtersOpen));
+        // Collapsed panel is visually clipped — keep it out of the tab order too
+        filtersPanel.inert = !filtersOpen;
       });
     }
 
@@ -2392,6 +2397,31 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     }
 
     // Player name click → open detail modal (delegated via shared utility in module script below)
+
+    // All of the state above lives in module scope and survives a ClientRouter
+    // swap, but the markup init() just re-bound was rendered fresh — every
+    // control is back at its default. Reseed from the DOM, or returning to the
+    // page renders a table still filtered by criteria the panel shows as
+    // cleared (and leaves the Filters toggle a dead click).
+    const domVal = (id) => document.getElementById(id)?.value || '';
+    // Mirrors this page's own range handlers, which treat a falsy parse as null.
+    const domNum = (id) => { const n = parseInt(domVal(id), 10); return (n && !isNaN(n)) ? n : null; };
+    const domChecked = (id) => !!document.getElementById(id)?.checked;
+    activePosition = document.querySelector('.pos-pill.active')?.getAttribute('data-pos') || 'ALL';
+    searchQuery = domVal('player-search');
+    showRostered = domChecked('show-rostered');
+    showRookies = domChecked('show-rookies');
+    filterTeam = domVal('filter-team');
+    filterExp = domVal('filter-exp');
+    filterDraft = domVal('filter-draft');
+    filterAgeMin = domNum('filter-age-min');
+    filterAgeMax = domNum('filter-age-max');
+    filterHtMin = domNum('filter-ht-min');
+    filterHtMax = domNum('filter-ht-max');
+    filterWtMin = domNum('filter-wt-min');
+    filterWtMax = domNum('filter-wt-max');
+    filtersOpen = filtersPanel ? filtersPanel.classList.contains('open') : false;
+    visibleCount = BATCH_SIZE;
 
     filterPlayers();
 
@@ -3344,14 +3374,30 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     line-height: 1;
   }
 
-  /* ── Collapsible Filters Panel ── */
+  /* ── Collapsible Filters Panel ──
+     Collapses via a 0fr → 1fr grid row rather than a fixed max-height: the
+     panel is ~600px tall once .filters-grid drops to one column on phones,
+     and any hardcoded cap clips it. The fr track always resolves to the
+     panel's real height, so it can never cut off. */
   .filters-panel {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: grid;
+    grid-template-rows: 0fr;
+    /* visibility (delayed to the end of the collapse) takes the clipped
+       controls out of the tab order everywhere; the panel's `inert` does the
+       same but is a no-op on iOS Safari below 15.4. */
+    visibility: hidden;
+    transition: grid-template-rows 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0s 0.3s;
   }
   .filters-panel.open {
-    max-height: 300px;
+    grid-template-rows: 1fr;
+    visibility: visible;
+    transition-delay: 0s;
+  }
+  /* Clip lives on a bare wrapper, not the card: the card's own padding and
+     border would floor the 0fr track and leave a sliver when collapsed. */
+  .filters-panel__clip {
+    min-height: 0;
+    overflow: hidden;
   }
   .filters-panel__inner {
     background: var(--content-bg, #fff);
@@ -3984,6 +4030,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
   /* Reduced motion */
   @media (prefers-reduced-motion: reduce) {
+    .filters-panel { transition: none; }
     .hero-spotlight__head {
       animation: none;
       opacity: 1;
