@@ -149,9 +149,26 @@ export interface KeeperAnalysisSummary {
   totalGotAway: number;
 }
 
+export interface KeeperSnapshot {
+  /** ISO date (YYYY-MM-DD) the snapshot was taken. */
+  date: string;
+  rosters: MflRostersFeed;
+}
+
 export interface KeeperAnalysis {
   franchises: FranchiseAnalysis[];
   summary: KeeperAnalysisSummary;
+  /**
+   * Where the keeper classes came from: 'official' = a post-deadline
+   * roster-history snapshot with every franchise at exactly KEEPER_LIMIT
+   * (the roster IS the keeps between the July 15 cut deadline and the
+   * late-August draft); 'reconstructed' = inferred from prev roster ∩
+   * opening roster − conference draft picks (cycles that predate the
+   * snapshot archive).
+   */
+  keeperSource: 'official' | 'reconstructed';
+  /** Snapshot date backing an 'official' source, else null. */
+  keeperSnapshotDate: string | null;
   /** True when the points season hasn't produced any scores yet (pre-week-1). */
   previewMode: boolean;
   /**
@@ -380,6 +397,38 @@ export function getUnitDraftedPidsByFranchise(
   return byFranchise;
 }
 
+/**
+ * The official keeper list from post-deadline roster snapshots.
+ *
+ * Between the keeper cut deadline and the draft, every franchise's MFL
+ * roster IS its keeper class — but the cuts process over several days
+ * after the deadline (2026: declarations due July 15, rosters settled to
+ * 24×7 on July 17). So: take the snapshots in date order and return the
+ * first one where EVERY expected franchise is present with exactly
+ * KEEPER_LIMIT players. Requiring coverage of `expectedFranchiseIds`
+ * (the prev-season roster's franchises) guards against a truncated
+ * snapshot payload qualifying with its missing franchises silently
+ * zeroed. Returns null when no snapshot qualifies (archive gaps,
+ * pre-2026 cycles, cuts that never settle inside the window).
+ */
+export function resolveOfficialKeepers(
+  snapshots: KeeperSnapshot[],
+  expectedFranchiseIds: Iterable<string>
+): { byFranchise: Map<string, Set<string>>; date: string } | null {
+  const expected = [...expectedFranchiseIds];
+  if (expected.length === 0) return null;
+  const sorted = [...snapshots].sort((a, b) => a.date.localeCompare(b.date));
+  for (const snapshot of sorted) {
+    const byFranchise = new Map<string, Set<string>>();
+    for (const fr of snapshot.rosters?.rosters?.franchise ?? []) {
+      byFranchise.set(fr.id, new Set(asArray(fr.player).map((p) => p.id)));
+    }
+    const settled = expected.every((fid) => byFranchise.get(fid)?.size === KEEPER_LIMIT);
+    if (settled) return { byFranchise, date: snapshot.date };
+  }
+  return null;
+}
+
 /** kept = prevRoster ∩ opening − drafted. */
 export function reconstructKeepers(
   prevRosterPids: Set<string>,
@@ -522,6 +571,13 @@ export interface BuildKeeperAnalysisInput {
   curWeeklyRaw?: WeeklyResultsRaw;
   curRosters?: MflRostersFeed;
   curDraftResults?: MflDraftResultsFeed;
+  /**
+   * Post-deadline roster-history snapshots for the points season (July
+   * window). When one qualifies as official (all franchises at exactly
+   * KEEPER_LIMIT), it becomes the keeper source and reconstruction is
+   * skipped.
+   */
+  keeperSnapshots?: KeeperSnapshot[];
 }
 
 /** Full page model for one cycle (prev-season rosters → cur-season points). */
@@ -531,17 +587,33 @@ export function buildKeeperAnalysis(input: BuildKeeperAnalysisInput): KeeperAnal
   const exceptions = computeKdefExceptions(points, playersById);
   const exceptionPositions = new Set(exceptions.map((e) => e.position));
   const unitDrafted = getUnitDraftedPidsByFranchise(input.curDraftResults);
+  const prevFranchises = input.prevRosters?.rosters?.franchise ?? [];
+  const official = resolveOfficialKeepers(
+    input.keeperSnapshots ?? [],
+    prevFranchises.map((f) => f.id)
+  );
 
   const franchises: FranchiseAnalysis[] = [];
-  for (const franchise of input.prevRosters?.rosters?.franchise ?? []) {
+  for (const franchise of prevFranchises) {
     const prevPids = new Set(asArray(franchise.player).map((p) => p.id));
     if (prevPids.size === 0) continue;
-    const opening = getOpeningRosterPids(input.curWeeklyRaw, input.curRosters, franchise.id);
-    const kept = reconstructKeepers(
-      prevPids,
-      opening,
-      unitDrafted.get(franchise.id) ?? new Set()
-    );
+    const drafted = unitDrafted.get(franchise.id) ?? new Set<string>();
+    let kept: Set<string>;
+    if (official) {
+      // The official list intersected with the prev roster (the page grades
+      // last season's roster, so a keep acquired via offseason trade isn't a
+      // hindsight call about it), minus the conference draft pool — a keep
+      // dropped after the settle date and re-drafted re-entered the pool,
+      // same invariant the reconstruction path enforces.
+      kept = new Set(
+        [...(official.byFranchise.get(franchise.id) ?? [])].filter(
+          (pid) => prevPids.has(pid) && !drafted.has(pid)
+        )
+      );
+    } else {
+      const opening = getOpeningRosterPids(input.curWeeklyRaw, input.curRosters, franchise.id);
+      kept = reconstructKeepers(prevPids, opening, drafted);
+    }
     franchises.push(
       gradeFranchise(franchise.id, prevPids, kept, points, playersById, exceptionPositions)
     );
@@ -567,5 +639,12 @@ export function buildKeeperAnalysis(input: BuildKeeperAnalysisInput): KeeperAnal
   };
 
   const previewMode = points.size === 0;
-  return { franchises, summary, previewMode, throughWeek: maxCompletedWeek };
+  return {
+    franchises,
+    summary,
+    previewMode,
+    throughWeek: maxCompletedWeek,
+    keeperSource: official ? 'official' : 'reconstructed',
+    keeperSnapshotDate: official?.date ?? null,
+  };
 }
