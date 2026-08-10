@@ -404,26 +404,26 @@ export function getUnitDraftedPidsByFranchise(
  * roster IS its keeper class — but the cuts process over several days
  * after the deadline (2026: declarations due July 15, rosters settled to
  * 24×7 on July 17). So: take the snapshots in date order and return the
- * first one where EVERY franchise carries exactly KEEPER_LIMIT players.
- * Returns null when no snapshot qualifies (archive gaps, pre-2026 cycles).
+ * first one where EVERY expected franchise is present with exactly
+ * KEEPER_LIMIT players. Requiring coverage of `expectedFranchiseIds`
+ * (the prev-season roster's franchises) guards against a truncated
+ * snapshot payload qualifying with its missing franchises silently
+ * zeroed. Returns null when no snapshot qualifies (archive gaps,
+ * pre-2026 cycles, cuts that never settle inside the window).
  */
 export function resolveOfficialKeepers(
-  snapshots: KeeperSnapshot[]
+  snapshots: KeeperSnapshot[],
+  expectedFranchiseIds: Iterable<string>
 ): { byFranchise: Map<string, Set<string>>; date: string } | null {
+  const expected = [...expectedFranchiseIds];
+  if (expected.length === 0) return null;
   const sorted = [...snapshots].sort((a, b) => a.date.localeCompare(b.date));
   for (const snapshot of sorted) {
-    const franchises = snapshot.rosters?.rosters?.franchise ?? [];
-    if (franchises.length === 0) continue;
     const byFranchise = new Map<string, Set<string>>();
-    let settled = true;
-    for (const fr of franchises) {
-      const pids = new Set(asArray(fr.player).map((p) => p.id));
-      if (pids.size !== KEEPER_LIMIT) {
-        settled = false;
-        break;
-      }
-      byFranchise.set(fr.id, pids);
+    for (const fr of snapshot.rosters?.rosters?.franchise ?? []) {
+      byFranchise.set(fr.id, new Set(asArray(fr.player).map((p) => p.id)));
     }
+    const settled = expected.every((fid) => byFranchise.get(fid)?.size === KEEPER_LIMIT);
     if (settled) return { byFranchise, date: snapshot.date };
   }
   return null;
@@ -587,23 +587,32 @@ export function buildKeeperAnalysis(input: BuildKeeperAnalysisInput): KeeperAnal
   const exceptions = computeKdefExceptions(points, playersById);
   const exceptionPositions = new Set(exceptions.map((e) => e.position));
   const unitDrafted = getUnitDraftedPidsByFranchise(input.curDraftResults);
-  const official = resolveOfficialKeepers(input.keeperSnapshots ?? []);
+  const prevFranchises = input.prevRosters?.rosters?.franchise ?? [];
+  const official = resolveOfficialKeepers(
+    input.keeperSnapshots ?? [],
+    prevFranchises.map((f) => f.id)
+  );
 
   const franchises: FranchiseAnalysis[] = [];
-  for (const franchise of input.prevRosters?.rosters?.franchise ?? []) {
+  for (const franchise of prevFranchises) {
     const prevPids = new Set(asArray(franchise.player).map((p) => p.id));
     if (prevPids.size === 0) continue;
+    const drafted = unitDrafted.get(franchise.id) ?? new Set<string>();
     let kept: Set<string>;
     if (official) {
-      // The official list intersected with the prev roster: the page grades
-      // last season's roster, so a keep acquired via offseason trade (not
-      // on this franchise's prev roster) isn't a hindsight call about it.
+      // The official list intersected with the prev roster (the page grades
+      // last season's roster, so a keep acquired via offseason trade isn't a
+      // hindsight call about it), minus the conference draft pool — a keep
+      // dropped after the settle date and re-drafted re-entered the pool,
+      // same invariant the reconstruction path enforces.
       kept = new Set(
-        [...(official.byFranchise.get(franchise.id) ?? [])].filter((pid) => prevPids.has(pid))
+        [...(official.byFranchise.get(franchise.id) ?? [])].filter(
+          (pid) => prevPids.has(pid) && !drafted.has(pid)
+        )
       );
     } else {
       const opening = getOpeningRosterPids(input.curWeeklyRaw, input.curRosters, franchise.id);
-      kept = reconstructKeepers(prevPids, opening, unitDrafted.get(franchise.id) ?? new Set());
+      kept = reconstructKeepers(prevPids, opening, drafted);
     }
     franchises.push(
       gradeFranchise(franchise.id, prevPids, kept, points, playersById, exceptionPositions)

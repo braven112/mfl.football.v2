@@ -232,24 +232,44 @@ describe('keeper reconstruction', () => {
 describe('resolveOfficialKeepers', () => {
   const seven = (prefix: string) => Array.from({ length: 7 }, (_, i) => `${prefix}${i}`);
 
+  const LEAGUE = ['0001', '0002'];
+
   it('returns the first snapshot (by date) where every franchise has exactly 7', () => {
     const unsettled = rostersFeed({ '0001': [...seven('a'), 'extra'], '0002': seven('b') });
     const settled = rostersFeed({ '0001': seven('a'), '0002': seven('b') });
     const later = rostersFeed({ '0001': seven('x'), '0002': seven('y') });
     // Deliberately unsorted input — resolution must sort by date.
-    const result = resolveOfficialKeepers([
-      { date: '2026-07-20', rosters: later },
-      { date: '2026-07-16', rosters: unsettled },
-      { date: '2026-07-17', rosters: settled },
-    ]);
+    const result = resolveOfficialKeepers(
+      [
+        { date: '2026-07-20', rosters: later },
+        { date: '2026-07-16', rosters: unsettled },
+        { date: '2026-07-17', rosters: settled },
+      ],
+      LEAGUE
+    );
     expect(result?.date).toBe('2026-07-17');
     expect([...(result?.byFranchise.get('0001') ?? [])].sort()).toEqual(seven('a').sort());
   });
 
+  it('rejects a truncated snapshot missing expected franchises', () => {
+    // 0001 is at exactly 7 but 0002 is absent — a partial payload must not
+    // qualify (it would zero out the missing franchises' keeps).
+    const partial = rostersFeed({ '0001': seven('a') });
+    const complete = rostersFeed({ '0001': seven('a'), '0002': seven('b') });
+    const result = resolveOfficialKeepers(
+      [
+        { date: '2026-07-16', rosters: partial },
+        { date: '2026-07-18', rosters: complete },
+      ],
+      LEAGUE
+    );
+    expect(result?.date).toBe('2026-07-18');
+  });
+
   it('returns null when no snapshot has settled to all-7', () => {
-    const unsettled = rostersFeed({ '0001': ['1', '2'] });
-    expect(resolveOfficialKeepers([{ date: '2026-07-16', rosters: unsettled }])).toBeNull();
-    expect(resolveOfficialKeepers([])).toBeNull();
+    const unsettled = rostersFeed({ '0001': ['1', '2'], '0002': seven('b') });
+    expect(resolveOfficialKeepers([{ date: '2026-07-16', rosters: unsettled }], LEAGUE)).toBeNull();
+    expect(resolveOfficialKeepers([], LEAGUE)).toBeNull();
   });
 });
 
@@ -512,6 +532,26 @@ describe('buildKeeperAnalysis', () => {
     // 6 of the 7 official keeps are on the prev roster; 'traded-in' is not.
     expect(f.keptCount).toBe(6);
     expect(f.players.some((p) => p.id === 'x1' && p.kept)).toBe(false);
+  });
+
+  it('official keeps still subtract the conference draft pool', () => {
+    // 'a3' appears in the official snapshot but was drafted by this
+    // franchise's conference — dropped after the settle date and re-drafted,
+    // so he re-entered the pool and can't be a keep.
+    const seven = ['a1', 'a2', 'a3', 'k1', 'k2', 'k3', 'k4'];
+    const analysis = buildKeeperAnalysis({
+      prevRosters: rostersFeed({ '0001': [...seven, 'x1'] }),
+      prevPlayers,
+      curWeeklyRaw: [],
+      keeperSnapshots: [{ date: '2026-07-17', rosters: rostersFeed({ '0001': seven }) }],
+      curDraftResults: {
+        draftResults: { draftUnit: [{ draftPick: [{ franchise: '0001', player: 'a3' }] }] },
+      },
+    });
+    expect(analysis.keeperSource).toBe('official');
+    const f = analysis.franchises.find((fr) => fr.franchiseId === '0001')!;
+    expect(f.keptCount).toBe(6);
+    expect(f.players.find((p) => p.id === 'a3')?.kept).toBe(false);
   });
 
   it('falls back to reconstruction when no snapshot settles', () => {
