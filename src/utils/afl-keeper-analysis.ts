@@ -217,9 +217,9 @@ export interface FranchiseAnalysis {
 
 export interface KeeperAnalysisSummary {
   /**
-   * Franchise ids ranked by efficiency desc (keptPoints breaks ties) — the
+   * Franchise ids ranked by efficiency desc (keptValue breaks ties) — the
    * page's single measure of a keeper class. See the sort in
-   * buildKeeperAnalysis for why it isn't raw kept points.
+   * buildKeeperAnalysis for why it isn't raw value.
    */
   rankedFranchiseIds: string[];
   bestFranchiseId: string | null;
