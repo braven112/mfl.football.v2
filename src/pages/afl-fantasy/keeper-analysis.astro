@@ -113,10 +113,14 @@ const keeperSnapshots = Object.entries(keeperSnapshotFeeds)
   })
   .filter((s): s is { date: string; rosters: MflRostersFeed } => s !== null);
 
-// Era-correct team branding for the ROSTER season (the keeper class's year).
+// Era-correct team branding for the POINTS season, not the roster season:
+// the keeper class is chosen by whoever owns the franchise in the keep year,
+// so a franchise that changed hands over the offseason (or rebranded) shows
+// its new identity — the 2025 owner picked the keeps off the 2024 roster,
+// and the card should carry their name, icon, and tier.
 const yearConfig = resolveConfigForYear(
   aflConfig as unknown as typeof aflConfig & { teams: TeamConfig[] },
-  prevYear
+  selectedYear
 );
 type AflTeamEntry = TeamConfig & { icon?: string; tier?: string; conference?: string };
 const teamsById = new Map<string, AflTeamEntry>(
