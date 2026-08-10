@@ -353,6 +353,47 @@ describe('computeReplacementLevels', () => {
     expect(naive).toBeGreaterThan(correct.QB); // the ~29% inflation that was shipping
   });
 
+  it('reports fromFullPool honestly — the flag must follow the decision', () => {
+    // Regression: the summary flag was computed from feed PRESENCE, so a
+    // refused feed still reported full-pool provenance and the page's
+    // estimated-baseline banner never fired. Same silent-misreport class the
+    // span check was written to kill, one level up.
+    const weeks = evenWeeks(pids);
+    const ytd = new Map([['q1', 360], ['q2', 270], ['q3', 180], ['q4', 90]]);
+    expect(computeReplacementLevels(points, weeks, byId, 2, 14, ytd, 18).fromFullPool).toBe(true);
+    expect(computeReplacementLevels(points, weeks, byId, 2, 14, ytd, Number.NaN).fromFullPool)
+      .toBe(false);
+    expect(computeReplacementLevels(points, weeks, byId, 2, 14).fromFullPool).toBe(false);
+  });
+
+  it('refuses a YTD feed whose numbers are implausible, not just its span', () => {
+    // A feed of SINGLE-WEEK scores stamped with a late week passes the span
+    // check while producing a replacement level ~18x too low — inflating
+    // every value on the page with no warning. W=YTD is unverified against
+    // live MFL, so the blast radius matters more than the elegance.
+    // The rostered pool must be deep enough to be a trustworthy comparator —
+    // a thin one legitimately clamps to the worst player kept, which a real
+    // full pool should undercut, so the guard deliberately stands down there.
+    const deep = playersFeed(
+      Array.from({ length: 10 }, (_, i) => [`d${i}`, `D, ${i}`, 'QB'] as [string, string, string])
+    );
+    const deepById = buildPlayersById(deep, undefined);
+    const ids = Array.from({ length: 10 }, (_, i) => `d${i}`);
+    const seasonPoints = new Map(ids.map((id, i) => [id, (10 - i) * 14] as [string, number]));
+    const seasonWeeks = evenWeeks(ids);
+    const measured = computeReplacementLevels(seasonPoints, seasonWeeks, deepById, 2, 14);
+    expect(measured.clamped).not.toContain('QB'); // comparator is real
+
+    // Same players, but the "YTD" payload is a single week of scores stamped
+    // week 18 — passes the span check, ~14x too low.
+    const oneWeekScores = new Map(ids.map((id, i) => [id, (10 - i)] as [string, number]));
+    const r = computeReplacementLevels(
+      seasonPoints, seasonWeeks, deepById, 2, 14, oneWeekScores, 18
+    );
+    expect(r.fromFullPool).toBe(false);
+    expect(r.levels).toEqual(measured.levels);
+  });
+
   it('refuses a YTD feed whose week span is unusable', () => {
     // MFL may stamp the feed week as the literal string "YTD" (parseInt =>
     // NaN) or as a week shorter than the regular season. Silently falling
@@ -441,6 +482,10 @@ describe('pointsOverReplacement', () => {
         'r1', points, byId, replacement, seasonWeeks, BENCH_EXPECTED_STARTS.FLEX
       );
       expect(bench).toBeLessThanOrEqual(starter);
+      // ...and STRICTLY less, in constant proportion. A flat clamp kept the
+      // ordering safe but priced a bench keep identically to a starter
+      // through Week 6, contradicting the pill that calls him worth less.
+      expect(bench / starter).toBeCloseTo(BENCH_EXPECTED_STARTS.FLEX / 14, 6);
     }
   });
 

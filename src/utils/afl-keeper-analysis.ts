@@ -54,6 +54,9 @@ const FLEX_POSITIONS = new Set(['RB', 'WR', 'TE']);
  * skill player is behind someone who already covers the bye, so he starts
  * ~never and scores 0.
  */
+/** Regular-season length the bench-start estimates are expressed over. */
+export const REGULAR_SEASON_WEEKS = 14;
+
 export const BENCH_EXPECTED_STARTS: Record<SlotGroup, number> = {
   QB: 1,
   PK: 1,
@@ -80,6 +83,15 @@ const REPLACEMENT_MIN_WEEKS = 8;
  * boundary player counts as a measured replacement level rather than a guess.
  */
 const MIN_OBSERVATIONS_PAST_SLOTS = 3;
+
+/**
+ * How far the full-pool YTD baseline may diverge from the rostered-pool
+ * estimate before we stop believing the feed. Wide on purpose: the YTD pool
+ * legitimately sits BELOW the rostered estimate (it can see free agents), so
+ * this is a blast-radius guard against a malformed feed, not a tight check.
+ */
+const YTD_PLAUSIBLE_MIN = 0.25;
+const YTD_PLAUSIBLE_MAX = 4;
 
 // --- Feed shapes (loose — MFL JSON is stringly typed) ---
 
@@ -239,9 +251,8 @@ export interface KeeperAnalysisSummary {
    */
   replacementFromFullPool: boolean;
   /**
-   * Groups whose observed pool was shallower than their startable slots, so
-   * replacement fell back to the worst visible player. Those groups' values
-   * are biased upward — the page says so rather than presenting them as fact.
+   * Groups with too few observations past the last startable slot for
+   * replacement to be a measurement rather than an estimate.
    */
   replacementClamped: ReplacementClamped;
   totalHits: number;
@@ -390,10 +401,10 @@ export function buildPlayersById(
 export type ReplacementLevels = Record<SlotGroup, number>;
 
 /**
- * Groups where the observed pool was shallower than the number of startable
- * slots, so replacement fell back to "the worst player we could see" — which
- * is not a replacement level and biases that group's values upward. Surfaced
- * so the page can say so instead of presenting the number as fact.
+ * Groups where too few players were observed past the last startable slot for
+ * the boundary player to count as a measurement — see
+ * MIN_OBSERVATIONS_PAST_SLOTS. Those groups' values are estimates, and the
+ * page says so instead of presenting them as fact.
  */
 export type ReplacementClamped = SlotGroup[];
 
@@ -439,58 +450,92 @@ export function computeReplacementLevels(
   maxCompletedWeek: number,
   ytdTotals?: Map<string, number>,
   /**
-   * Weeks the YTD totals actually span. MFL's W=YTD includes playoff weeks
-   * (the 2025 feed is stamped week 18) while our points are regular-season
-   * only (week 14), so dividing a YTD total by maxCompletedWeek inflates
-   * replacement ~17% at every slot. Divide by the feed's own week instead so
-   * numerator and denominator share a basis.
+   * Weeks the YTD totals span, from the feed's own `week` field. MFL's W=YTD
+   * includes playoff weeks while our points are regular-season only, so
+   * dividing a YTD total by maxCompletedWeek inflates replacement. A
+   * non-finite value (MFL may stamp the literal string "YTD") or a span
+   * shorter than the season means we cannot use the feed at all.
    */
   ytdWeeks?: number
-): { levels: ReplacementLevels; clamped: ReplacementClamped } {
+): { levels: ReplacementLevels; clamped: ReplacementClamped; fromFullPool: boolean } {
   const levels: ReplacementLevels = { QB: 0, PK: 0, Def: 0, FLEX: 0 };
   const clamped: ReplacementClamped = [];
-  if (teamsPerPool <= 0 || maxCompletedWeek <= 0) return { levels, clamped };
+  if (teamsPerPool <= 0 || maxCompletedWeek <= 0) {
+    return { levels, clamped, fromFullPool: false };
+  }
 
-  // Season totals for everyone we can see, preferring the full-pool feed —
-  // but ONLY when we know how many weeks those totals span. MFL may stamp the
-  // feed's week as the literal string "YTD", which parses to NaN; silently
-  // falling back to maxCompletedWeek would divide an 18-week total by 14 and
-  // inflate replacement ~29% with `replacementFromFullPool` still reporting
-  // true, so the page would never warn. A span shorter than the regular
-  // season is equally untrustworthy.
-  const ytdSpan = ytdWeeks && Number.isFinite(ytdWeeks) ? ytdWeeks : 0;
-  const ytdUsable = ytdSpan >= maxCompletedWeek;
-  const useYtd = !!ytdTotals && ytdTotals.size > 0 && ytdUsable;
-  const rates: Record<SlotGroup, number[]> = { QB: [], PK: [], Def: [], FLEX: [] };
-  const source = useYtd ? ytdTotals! : points;
-  for (const [pid, total] of source) {
-    const group = slotGroupFor(playersById.get(pid)?.position ?? '');
-    if (!group) continue;
-    // The YTD feed has no games-played, so its totals are full-season by
-    // definition; the rostered fallback must normalise by weeks rostered and
-    // ignore short stints that would drag the baseline down.
-    if (useYtd) {
-      rates[group].push(total / ytdSpan);
-    } else {
-      const w = weeks.get(pid) ?? 0;
-      if (w < Math.min(REPLACEMENT_MIN_WEEKS, maxCompletedWeek)) continue;
-      rates[group].push(total / w);
+  /** Rank a source's per-week rates by slot group. */
+  const ratesFrom = (fromYtd: boolean): Record<SlotGroup, number[]> => {
+    const rates: Record<SlotGroup, number[]> = { QB: [], PK: [], Def: [], FLEX: [] };
+    const source = fromYtd ? ytdTotals! : points;
+    for (const [pid, total] of source) {
+      const group = slotGroupFor(playersById.get(pid)?.position ?? '');
+      if (!group) continue;
+      if (fromYtd) {
+        // YTD totals carry no games-played, so they are season totals by
+        // definition — normalise by the span the feed reports.
+        rates[group].push(total / (ytdWeeks as number));
+      } else {
+        const w = weeks.get(pid) ?? 0;
+        if (w < Math.min(REPLACEMENT_MIN_WEEKS, maxCompletedWeek)) continue;
+        rates[group].push(total / w);
+      }
     }
+    return rates;
+  };
+
+  /** Boundary player at each group: the best one you could NOT have started. */
+  const levelsFrom = (rates: Record<SlotGroup, number[]>) => {
+    const out: ReplacementLevels = { QB: 0, PK: 0, Def: 0, FLEX: 0 };
+    const thin: ReplacementClamped = [];
+    for (const group of Object.keys(out) as SlotGroup[]) {
+      const list = rates[group].sort((a, b) => b - a);
+      if (list.length === 0) continue;
+      const startable = LINEUP_SLOTS[group] * teamsPerPool;
+      // Too few observations past the last startable slot to call this a
+      // measurement: with 13 kickers against 12 slots the "replacement
+      // kicker" is just the worst one anybody bothered to roster.
+      if (list.length < startable + MIN_OBSERVATIONS_PAST_SLOTS) thin.push(group);
+      out[group] = list[Math.min(startable, list.length - 1)] ?? 0;
+    }
+    return { out, thin };
+  };
+
+  const rostered = levelsFrom(ratesFrom(false));
+
+  const spanUsable =
+    !!ytdWeeks && Number.isFinite(ytdWeeks) && (ytdWeeks as number) >= maxCompletedWeek;
+  const hasYtd = !!ytdTotals && ytdTotals.size > 0 && spanUsable;
+  if (!hasYtd) {
+    clamped.push(...rostered.thin);
+    return { levels: rostered.out, clamped, fromFullPool: false };
   }
 
-  for (const group of Object.keys(levels) as SlotGroup[]) {
-    const list = rates[group].sort((a, b) => b - a);
-    if (list.length === 0) continue;
-    // Index of the first player past the last startable one in the pool.
-    const startable = LINEUP_SLOTS[group] * teamsPerPool;
-    // Clamped when we cannot see past the last startable slot, and equally
-    // when we can barely see past it: with 13 kickers against 12 slots the
-    // "replacement kicker" is the single worst one anybody rostered, which is
-    // an estimate, not a measurement.
-    if (list.length < startable + MIN_OBSERVATIONS_PAST_SLOTS) clamped.push(group);
-    levels[group] = list[Math.min(startable, list.length - 1)] ?? 0;
+  // A usable SPAN is not the same as usable DATA. `W=YTD` is unverified
+  // against live MFL, and a feed that is actually single-week scores stamped
+  // with a late week passes the span check while producing a replacement
+  // level ~18x too low — silently inflating every value on the page. Sanity
+  // check the full-pool answer against the rostered estimate, which we can
+  // always compute, and refuse the feed if they disagree wildly.
+  const ytd = levelsFrom(ratesFrom(true));
+  const rosteredThin = new Set(rostered.thin);
+  const implausible = (Object.keys(levels) as SlotGroup[]).some((g) => {
+    const est = rostered.out[g];
+    // Only compare against an estimate that is itself measured. A thin
+    // rostered pool clamps to the worst player anybody kept, which the deeper
+    // full pool SHOULD undercut by a wide margin — comparing against it would
+    // reject exactly the feed we want.
+    if (est <= 0 || rosteredThin.has(g)) return false;
+    const ratio = ytd.out[g] / est;
+    return ratio < YTD_PLAUSIBLE_MIN || ratio > YTD_PLAUSIBLE_MAX;
+  });
+  if (implausible) {
+    clamped.push(...rostered.thin);
+    return { levels: rostered.out, clamped, fromFullPool: false };
   }
-  return { levels, clamped };
+
+  clamped.push(...ytd.thin);
+  return { levels: ytd.out, clamped, fromFullPool: true };
 }
 
 /**
@@ -517,12 +562,18 @@ export function pointsOverReplacement(
   // optimal seven and rendered as a "Got away" row. If a keeper missed games,
   // the hole in the lineup is his cost to carry.
   const rate = (points.get(pid) ?? 0) / seasonWeeks;
-  // Clamp bench starts to the season length. BENCH_EXPECTED_STARTS.FLEX is 6,
-  // so before Week 6 an unclamped bench keep would be credited more starts
-  // than the season has had — making riding the bench worth MORE than
-  // starting, and breaking the precondition (starter multiplier >= bench
-  // multiplier) that makes selectBestKeepers exact.
-  const starts = Math.min(expectedStarts ?? seasonWeeks, seasonWeeks);
+  // Bench cover accrues WITH the season, so prorate it. A flat clamp to
+  // seasonWeeks kept the ordering safe but made a bench keep worth exactly
+  // as much as a starter through Week 6 — while the card's pill told the
+  // owner he was worth far less. Scaling by elapsed/full season holds the
+  // bench:starter ratio constant (6/14 for flex, 1/14 for QB) at every point
+  // in the year, and stays <= seasonWeeks because BENCH_EXPECTED_STARTS
+  // never exceeds REGULAR_SEASON_WEEKS — which is what keeps
+  // selectBestKeepers exact.
+  const starts =
+    expectedStarts === undefined
+      ? seasonWeeks
+      : Math.min(expectedStarts * (seasonWeeks / REGULAR_SEASON_WEEKS), seasonWeeks);
   return starts * (rate - replacement[group]);
 }
 
@@ -823,8 +874,14 @@ export function gradeFranchise(
   // figure the valuation itself rejects: a redundant QB2 with a big starter
   // number but ~1 game of real cover would outrank a modest flex and escape
   // the Miss badge, inverting the decision this page exists to price.
+  // Everything in keptBest has positive value, so the fallback only fires for
+  // keeps that are below replacement (negative starter basis — correctly
+  // worst) or crowded out of a group cap (positive starter basis, but worth
+  // ZERO to the class). Clamping the fallback at 0 keeps both arms on the
+  // same scale; without it a redundant third QB outranked the bye-cover keep
+  // that was actually doing something.
   const realisedValue = (p: AnalyzedPlayer) =>
-    keptById.get(p.id)?.value ?? p.pointsOverReplacement;
+    keptById.get(p.id)?.value ?? Math.min(0, p.pointsOverReplacement);
   const nonOptimalKeeps = players
     .filter((p) => p.kept && !p.optimal)
     .sort((a, b) => realisedValue(a) - realisedValue(b));
@@ -896,7 +953,11 @@ export function buildKeeperAnalysis(input: BuildKeeperAnalysisInput): KeeperAnal
 
   const ytdTotals = parsePlayerScoresYtd(input.curPlayerScoresYtd);
   const ytdWeeks = Number.parseInt(input.curPlayerScoresYtd?.playerScores?.week ?? '', 10);
-  const { levels: replacement, clamped: replacementClamped } = computeReplacementLevels(
+  const {
+    levels: replacement,
+    clamped: replacementClamped,
+    fromFullPool: replacementFromFullPool,
+  } = computeReplacementLevels(
     points,
     weeks,
     playersById,
@@ -952,7 +1013,7 @@ export function buildKeeperAnalysis(input: BuildKeeperAnalysisInput): KeeperAnal
     bestFranchiseId: rankedFranchiseIds[0] ?? null,
     worstFranchiseId: rankedFranchiseIds[rankedFranchiseIds.length - 1] ?? null,
     replacement,
-    replacementFromFullPool: !!ytdTotals && ytdTotals.size > 0,
+    replacementFromFullPool,
     replacementClamped,
     totalHits: franchises.reduce((sum, f) => sum + f.hits, 0),
     totalMisses: franchises.reduce((sum, f) => sum + f.misses, 0),

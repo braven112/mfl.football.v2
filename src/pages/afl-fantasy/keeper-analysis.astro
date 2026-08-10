@@ -197,6 +197,11 @@ const fmtEff = (n: number) => `${Math.round(n * 100)}%`;
 // Flagged only when replacement had to be estimated from rostered players —
 // the full-pool YTD feed is the real source, and a build that missed it grades
 // against a slightly generous baseline.
+// Slot groups use MFL's position codes; the table renders Def as DEF, so the
+// banner should too rather than leaking raw enum ids.
+const clampedLabel = analysis.summary.replacementClamped
+  .map((g) => (g === 'Def' ? 'DEF' : g === 'FLEX' ? 'RB/WR/TE' : g))
+  .join(', ');
 const replacementIsEstimated =
   !analysis.summary.replacementFromFullPool || analysis.summary.replacementClamped.length > 0;
 ---
@@ -288,7 +293,7 @@ const replacementIsEstimated =
           <p class="ka-summary__note">
             Replacement level is estimated this cycle — the full free-agent
             pool wasn't available when this built{analysis.summary.replacementClamped.length > 0 &&
-              `, and at ${analysis.summary.replacementClamped.join('/')} there were fewer players to compare against than starting slots`}.
+              `, and at ${clampedLabel} too few players were rostered long enough to measure it against`}.
             Grades may shift once a complete pool lands.
           </p>
         )}
