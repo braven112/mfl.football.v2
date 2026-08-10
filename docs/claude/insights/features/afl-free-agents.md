@@ -89,3 +89,31 @@ each, Burrow tops AL, Lamar tops NL, Pitts AL-only).
 **Recommendation:** Any future AFL availability surface should scope to one
 conference with an explicit switcher, defaulting to the viewer's own — don't
 annotate a merged list.
+
+## 2026-08-10 - Filter Defaults Don't Copy Across Leagues (Rookies)
+
+**Context:** Owners reported rookies (and their ADP) missing from the AFL FA
+list. The data was fine — 145 rookies in the snapshot, 72 with dynasty ADP —
+but the page copied TheLeague's "Include rookies" filter, which defaults to
+OFF because TheLeague rookies enter only through the rookie draft. In the
+AFL, rookies are ordinary addable free agents, so the inherited default hid
+the entire draft class.
+
+**Insight:** When cloning a sibling league's page, every filter DEFAULT is a
+league-policy decision, not shared UI — re-derive it from the league's rules
+rather than carrying it over. Two mechanics follow from a default flip:
+(1) the SSR counts/spotlight call (`conferenceScopedView({ includeRookies })`)
+must mirror the client's default state or the hero numbers pop on hydration;
+(2) the filter badge counts deviation-from-default, so a default-ON toggle
+increments the badge when UNchecked (`if (!showRookies) count++`) and
+"Clear Filters" must reset it back to checked, not false.
+
+**Evidence:** Fix in `src/pages/afl-fantasy/players.astro` (default
+`showRookies = true`, checkbox `checked`, inverted badge logic, new
+"Rookies only" checkbox that wins over the include toggle). TheLeague's page
+keeps its hidden-by-default behavior on purpose.
+
+**Recommendation:** Before shipping any new per-league wrapper of a shared
+page pattern, walk the filter defaults against that league's registry flags
+and rules (duplicate players, rookie entry path, keepers) — and keep SSR
+initial counts wired to the same defaults the client script initializes.

@@ -204,7 +204,11 @@ describe('conferenceScopedView', () => {
     expect(scoped.freeAgentsCount).toBe(view.freeAgentsCount);
   });
 
-  it('excludes rookies on request so SSR matches the client default filter state', () => {
+  // The AFL page's client default now SHOWS rookies, and its SSR call passes
+  // includeRookies: true to match — the option's default is also true, so the
+  // first assertion locks that parity. includeRookies: false stays supported
+  // for any page whose default filter hides rookies.
+  it('includes rookies by default (SSR/client parity) and can exclude them on request', () => {
     const players = [
       { id: 'r1', name: 'Rookie WR', position: 'WR', team: 'DAL', espnId: null, projected: 9, rostered: false, confs: [], rookie: true },
       { id: 'v1', name: 'Vet WR', position: 'WR', team: 'KC', espnId: null, projected: 5, rostered: false, confs: [], rookie: false },

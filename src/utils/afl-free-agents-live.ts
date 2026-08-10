@@ -166,9 +166,11 @@ export function applyLiveRosters(snapshot: FaSnapshot, rostersJson: unknown): Fa
  * "include rostered" toggle); only the derived counts/spotlight are scoped.
  * Pass a null confId (single shared pool) for league-wide numbers.
  *
- * `includeRookies: false` mirrors the page's default client filter state
- * (rookies hidden) — the SSR-rendered counts/spotlight must match what the
- * client's first render computes, or the numbers visibly pop on hydration.
+ * `includeRookies` must mirror the page's default client filter state — the
+ * SSR-rendered counts/spotlight must match what the client's first render
+ * computes, or the numbers visibly pop on hydration. The AFL page defaults to
+ * rookies INCLUDED (its "Include rookies" checkbox starts checked), so it
+ * passes true.
  */
 export function conferenceScopedView(
   view: FaView,
