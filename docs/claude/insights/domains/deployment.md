@@ -256,3 +256,21 @@ locks this contract — don't delete the page or flip it to prerender (a
 prerendered catch-all leaves the SSR manifest and resurrects the bug). To
 verify after routing changes: `pnpm build`, then confirm the spread route
 precedes the `status: 404` fallback in `.vercel/output/config.json`.
+
+## 2026-08-10 - Cloudflare Fronts the Apex Domains and Browser-Caches 404s (Root of "Fixes That Don't Take")
+
+**Context:** The recurring "missing team images" bug — broken NFL logo icons on roster/player pages that kept coming back despite repeated fixes.
+
+**Insight:** `www.afl-fantasy.com` / `www.theleague.us` are Cloudflare-proxied in front of Vercel. Cloudflare's Browser Cache TTL setting was overriding Vercel's `cache-control: max-age=0, must-revalidate` with `max-age=14400` — on ALL responses, including 404s. So one broken deploy window poisoned every visitor's browser cache for up to 4 hours *after* the origin was fixed, making each fix look like it failed. A missing static asset also doesn't get a plain 404: the SSR catch-all returns a ~100KB HTML page (which renders as the broken-image icon inside an `<img>`). Fixed 2026-08-10 by Brandon setting Browser Cache TTL → "Respect Existing Headers"; verified 200s and 404s now pass through `max-age=0`.
+
+**Evidence:** Same asset fetched two ways minutes apart: via `*.vercel.app` → `cache-control: public, max-age=0, must-revalidate`; via the apex → `server: cloudflare`, `cache-control: public, max-age=14400, must-revalidate`. A probe of a nonexistent logo path returned a 404 HTML page with the same 4h header.
+
+**Recommendation:** When a "fixed" asset bug keeps reappearing on phones, suspect client-side 404 caching before suspecting the fix. Diagnose with `mcp__Vercel__web_fetch_vercel_url` — the sandbox egress proxy blocks both the apex domains and `*.vercel.app` for curl/WebFetch, but the Vercel MCP fetch tool reaches both and returns full headers (`cf-cache-status`, `x-vercel-cache`, `age`). Compare apex vs `mflfootballv2-git-main-...vercel.app` responses to isolate Cloudflare's contribution. Page HTML fetches through Cloudflare hit a bot challenge; asset fetches don't.
+
+## 2026-08-10 - Git History Was Squashed on 2026-08-08; Archaeology Bottoms Out at d4f32d9
+
+**Context:** Tracing when `public/assets/nfl-logos/*.svg` entered the repo to explain why production 404'd them.
+
+**Insight:** The repo's history begins at `d4f32d9` (2026-08-08, authored "Schefter Bot") — a root commit that adds every file at once. `git log --follow`, `--diff-filter=A`, and `-S` searches all bottom out there and will misattribute long-existing code to that commit. Anything that "first appears" in d4f32d9 may be years old. Corollary discovered the same day: assets referenced by code but living only in local working trees (never committed) shipped as production 404s for weeks — `tests/nfl-logo-assets.test.ts` now guards the logo case by scanning every committed players feed for team codes and requiring a committed SVG for each.
+
+**Recommendation:** Don't date features by first-commit in this repo; treat d4f32d9 as an event horizon. For "does production have file X" questions, check `git ls-files` (tracked ≠ exists locally) and probe the deployed URL — not the working tree.
