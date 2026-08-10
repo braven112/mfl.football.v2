@@ -14,16 +14,17 @@ export interface Props {
   conferenceShort?: string;
   tier?: string;
   previewMode: boolean;
-  /** League-wide rank of this keeper class by kept points (1-based). */
+  /** League-wide rank of this keeper class by share of optimal (1-based). */
   classRank: number;
 }
 
 const { analysis, teamName, teamIcon, conferenceShort, tier, previewMode, classRank } = Astro.props;
 
-const isKdefPosition = (position: string) => position === 'PK' || position === 'Def';
-
-// Featured rows: everyone with a story (optimal ∪ kept ∪ raw top 7); the
-// rest of the roster collapses behind <details>. Preview mode (no points
+// Featured rows: everyone with a story (optimal ∪ kept); the rest of the
+// roster collapses behind <details>. Raw-top-seven membership deliberately
+// does NOT promote a row — its only effect was surfacing un-kept kickers,
+// defenses, and second QBs that the optimal seven excludes by design, which
+// is a non-decision nobody's keeper class turns on. Preview mode (no points
 // yet) shows only the keeper class, ordered by position then name.
 const POSITION_ORDER = ['QB', 'RB', 'WR', 'TE'];
 const positionSort = (a: AnalyzedPlayer, b: AnalyzedPlayer) => {
@@ -34,7 +35,7 @@ const positionSort = (a: AnalyzedPlayer, b: AnalyzedPlayer) => {
 
 const featured = previewMode
   ? analysis.players.filter((p) => p.kept).sort(positionSort)
-  : analysis.players.filter((p) => p.optimal || p.kept || p.rawTopSeven);
+  : analysis.players.filter((p) => p.optimal || p.kept);
 const rest = previewMode ? [] : analysis.players.filter((p) => !featured.includes(p));
 
 const fmtPts = (n: number) =>
@@ -52,7 +53,7 @@ const efficiencyPct = Math.round(analysis.efficiency * 100);
           `${analysis.keptCount} kept`
         ) : (
           <>
-            <strong>{analysis.hits}/{analysis.keptCount}</strong> hits
+            <strong>{analysis.hits}/{analysis.hits + analysis.misses}</strong> hits
           </>
         )}
       </span>
@@ -62,7 +63,8 @@ const efficiencyPct = Math.round(analysis.efficiency * 100);
       {tier && <span class="ka-card__chip ka-card__chip--tier">{tier}</span>}
       {!previewMode && (
         <span class="ka-card__grade-sub">
-          #{classRank} class · {fmtPts(analysis.keptPoints)} kept pts · {efficiencyPct}% of optimal
+          <strong>{efficiencyPct}% of optimal</strong> · #{classRank} class ·
+          {fmtPts(analysis.keptValue)} value over free
         </span>
       )}
     </div>
@@ -94,8 +96,8 @@ const efficiencyPct = Math.round(analysis.efficiency * 100);
           <td class="ka-table__pts">{previewMode ? '' : fmtPts(p.points)}</td>
           <td class="ka-table__badge">
             {p.kept && <span class="ka-pill ka-pill--kept">Kept</span>}
-            {!previewMode && p.badge === 'hit' && !p.optimal && (
-              <span class="ka-pill ka-pill--hit" title="Kept K/DEF or backup QB that outscored an optimal player the team let walk — an earned hit">
+            {!previewMode && p.badge === 'hit' && (
+              <span class="ka-pill ka-pill--hit" title="Kept one of the seven most valuable players this roster could have kept">
                 Hit
               </span>
             )}
@@ -103,17 +105,9 @@ const efficiencyPct = Math.round(analysis.efficiency * 100);
             {!previewMode && p.badge === 'got-away' && (
               <span class="ka-pill ka-pill--gotaway">Got away</span>
             )}
-            {!previewMode && p.badge === 'kdef-neutral' && (
-              <span class="ka-pill ka-pill--kdef">K/DEF</span>
-            )}
-            {!previewMode && p.badge === 'qb2-neutral' && (
-              <span class="ka-pill ka-pill--kdef" title="Second QB — nobody keeps two, so it's not a miss">
-                QB2
-              </span>
-            )}
-            {!previewMode && !p.kept && p.rawTopSeven && isKdefPosition(p.position) && (
-              <span class="ka-pill ka-pill--kdef" title="Cracked the raw top 7, but K/DEF are excluded from grading">
-                K/DEF
+            {!previewMode && p.role === 'bench' && (
+              <span class="ka-pill ka-pill--kdef" title="Valued as bye-week cover rather than a starter. A seventh skill player fills in for any of the six flex starters (~6 games); a second QB only covers QB1's bye (~1), so he is worth far less.">
+                Bench
               </span>
             )}
           </td>
@@ -328,8 +322,13 @@ const efficiencyPct = Math.round(analysis.efficiency * 100);
       padding: 0.75rem;
     }
 
+    /* Was display:none as a declutter, back when this line was only the
+       class rank and two supporting numbers. It now leads with % of
+       optimal — the measure the class is actually ranked on — so it has to
+       survive on mobile. Given its own row instead of hidden; .ka-card__meta
+       already wraps. */
     .ka-card__grade-sub {
-      display: none;
+      flex-basis: 100%;
     }
 
     .ka-table__badge {

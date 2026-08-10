@@ -60,7 +60,106 @@ week (≥1 non-`regularSeason:'0'` matchup, or no matchups at all). Ungated,
 read 17 on a 14-week regular season. Any script summing these feeds by hand
 (research one-offs included) has the same trap.
 
+## 2026-08-10 - SUPERSEDED: The Four Special Cases Became One Metric (Points Over Replacement)
+
+**Context:** The rules recorded in the next entry ("Grading Rules Are
+User-Decided Product Policy") were each hand-approximating the same thing —
+that raw fantasy points overstate what a keeper decision actually bought. All
+four were replaced. **Do not reinstate them.**
+
+**Insight:** Value is `starts × (points/seasonWeeks − replacement_rate)`, and
+the optimal seven is the value-maximising lineup-legal set (1 QB / 1 PK / 1 Def
+/ 6 flex from RB/WR/TE — from `league.json`'s `starters`). Each old rule
+dissolves:
+
+**Charge a FULL season, not weeks rostered.** An earlier version used
+`replacement × weeksRostered`, which reduces value to
+`weeks × (rate − replacement)` and lets a hot small sample beat a full-season
+starter — Younghoe Koo (1 week, 9.7 points) made a real franchise's optimal
+seven and rendered as a green "Got away" row, and 17 of 168 optimal slots went
+to sub-8-week players. A keeper slot is a season-long commitment: if he missed
+games, the hole is his cost to carry. `REPLACEMENT_MIN_WEEKS` guards the
+*baseline* against churn; it does not guard the graded players.
+- **K/DEF exclusion + 40-point dominance threshold** → gone. A kicker's raw
+  total collapses toward replacement while a stud RB keeps most of his, so
+  K/DEF compete on value instead of needing an escape hatch that never once
+  fired. **Do NOT repeat the claim that this makes K/DEF rarer in optimal
+  sevens** — an earlier version of this file said "4 of 24 under PoR vs 9 of
+  24 on raw points," which was measured at `teamsPerPool = 24` and does not
+  reproduce at the correct conference-sized pool. Re-measured 2024→2025 at 12:
+  a PK appears in **11/24** optimal sevens and a Def in **10/24**. PoR prices
+  K/DEF honestly; it does not banish them. Any figure quoted here must name
+  the `teamsPerPool` it was measured at.
+- **One-QB cap** → falls out of the lineup slots, and bench keeps are PRICED
+  rather than zeroed. `BENCH_EXPECTED_STARTS` = 6 for FLEX, 1 for QB/PK/Def:
+  a seventh skill player covers the bye of any of the six flex starters, a
+  second QB only covers QB1's single bye. Treating both as zero (or equal)
+  misprices the most common keeper decision on the board.
+- **Earned hits for kept K/DEF / QB2** → gone with them.
+
+New invariant: `hits + misses + fillerKept === keptCount` — with bench cover priced there
+is no exempt category, which also retired two mislabelling bugs the old
+slot-count check had (a 2nd QB graded `miss` when the whole QB room was below
+replacement; a below-replacement keep was excused whenever its group happened
+to be full). Efficiency is bounded ≤1 **by construction** (both sides use the
+same selection over the same values, and kept ⊆ roster). Selection is EXACT,
+not greedy: within a group, value depends only on how many you take, so
+enumerating per-group counts is cheap and needs no matroid argument.
+
+**Recommendation:** If a future request is "kickers shouldn't count" or
+"backup QBs distort this," check whether PoR already handles it before adding
+a rule. The whole point of the metric is that it needs no position policy.
+
+## 2026-08-10 - Replacement Level Is Sized By CONFERENCE (12), Not The League (24)
+
+**Context:** First PoR implementation used all 24 franchises as the pool.
+
+**Insight:** The AFL is two 12-team conferences that roster **independently
+from the same NFL universe** — the same player can sit on a roster in both at
+once (which is also why `computeSeasonPoints` dedupes `pid|week`, and why the
+free-agents page tracks availability per conference). A manager competes with
+11 rivals for starters, not 23, so startable slots are `LINEUP_SLOTS[g] × 12`.
+Using 24 put replacement roughly twice as deep and inflated every value over
+it: 2025 baselines moved QB 11.19→19.59/wk and FLEX 1.83→11.03/wk, and the
+grade spread went from 64–100% to 29–98%. A QB who scored 207 over 13 rostered
+weeks is correctly **below** replacement in a 12-team league.
+
+**Measured, not assumed:** the two conferences share ONE baseline on purpose.
+273 of ~306 rostered players appeared in both conferences in 2025, and
+computing replacement from either conference alone returns rates identical to
+the merged pool at every slot. Splitting it per conference is a guaranteed
+no-op. `teamsPerPool` is an input sized from the config's conference split, so
+realignment needs no code change.
+
+## 2026-08-10 - Ranking On Raw Totals Grades The Roster You Inherited
+
+**Insight:** Whatever the value metric, ranking classes by *absolute* value
+mostly measures roster quality, not decision quality — the optimal-seven
+ceiling swings ~2.1x from the league's thinnest roster to its deepest, which
+nobody chose. Ranking on raw kept points once labelled The Show the league's
+worst keeper class for capturing 89% of a thin roster's ceiling (9th-best
+decision-making), while a franchise that went a perfect 7-for-7 ranked third.
+Rank on the **share of its own ceiling** a class captured; break ties on
+absolute value captured, then franchise id for determinism.
+
+## 2026-08-10 - A Rounded Display Can Hide A Broken Invariant
+
+**Insight:** Boondock Saints sat at **100.49%** of optimal — kept value
+genuinely exceeding their own ceiling — and the page rendered a tidy "100%"
+because `Math.round` swallowed it. It was also deciding the #1 ranking, ahead
+of a team that had kept a literally perfect seven. The bug had shipped and
+looked fine.
+
+**Recommendation:** When a metric has a name that implies a bound ("% of
+optimal"), assert the bound in a test over the REAL committed feeds, not just
+fixtures — `expect(f.efficiency).toBeLessThanOrEqual(1)` across every
+franchise. Rounding hides violations exactly at the boundary where they matter.
+
 ## 2026-08-09 - Grading Rules Are User-Decided Product Policy (Don't "Fix" Them)
+
+> **SUPERSEDED 2026-08-10 by the points-over-replacement rewrite above.**
+> Kept for the data runs and reasoning, which explain why the rules existed.
+> The rules themselves are gone — do not restore them.
 
 **Insight:** Three rules came from explicit owner decisions backed by data
 runs — they are not bugs to simplify away:

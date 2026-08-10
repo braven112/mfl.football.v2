@@ -1521,3 +1521,17 @@ league-blind smell. Regression test: `tests/trades-pending-league-teams.test.ts`
 **Trap that looked like wrong-league data:** for 2010–2012, exact `pf` came back exactly 17/18 of `avgpf × (h2hw+h2hl+h2ht)` on all 24 franchises (spread <0.001). Those seasons played 18 H2H games in a 17-week span (one double-header week), and `avgpf` divides by weeks, not games — so the site's old approximation ran ~5.9% high. A tight, uniform ratio across every franchise means a denominator mismatch in the *approximation*, not foreign data; records matching the committed feed is the reliable identity check. 2003 has no points data at all on MFL (`pf` ".00" even with ALL=1).
 
 **Confidence: High** — verified by dry-run + written backfill across all 14 target years, full unit suite green.
+
+---
+
+## 2026-08-10 - `weekly-results-raw` Can't See Free Agents — `playerScores&W=YTD` Is the Only Full-Pool Source
+
+**Context:** The keeper report card needed replacement level ("what would a freely available player at this slot have returned?"), which by definition is set by players *nobody rostered*.
+
+**Insight:** `weekly-results-raw.json` records a player's score only for weeks he sat on some roster, so the free-agent pool is structurally invisible in it — you cannot compute replacement level, positional scarcity, or "best available" from that feed no matter how you slice it. Symptom when you try: the pool at thin positions comes up *shorter than the number of startable slots* (2025 had 21 QBs, 13 kickers and 18 defenses rostered 8+ weeks against 12 starting slots each in a 12-team pool), so a rank-based baseline clamps onto the worst player anyone happened to keep and biases replacement upward. The committed `playerScores.json` is **one week only** (`W` defaults to the current week). `TYPE=playerScores&W=YTD` returns season totals for every player in the pool and is now fetched as `playerScores-ytd.json` in `scripts/fetch-mfl-feeds.mjs`.
+
+**Caveat:** the YTD payload carries totals with **no games-played field**, so it can't be normalised per week — treat its totals as full-season and divide by `maxCompletedWeek` when you need a rate.
+
+**Recommendation:** Any feature reasoning about scarcity, replacement, or waiver-wire value must use the YTD feed and fall back visibly (not silently) when it's absent — `KeeperAnalysisSummary.replacementFromFullPool` drives an on-page note rather than letting an estimated baseline pass as fact. The `writeOut` error-payload guard already protects the committed file if MFL rejects `W=YTD`.
+
+**Unverified:** MFL egress is proxy-blocked from Claude Code web sandboxes (`CONNECT tunnel failed, response 403` for `www44.myfantasyleague.com` — same block noted in the `IS_KEEPER` entry above). `W=YTD` could not be probed live; the first CI fetch confirms it. Don't burn time trying to curl MFL from a web session — check `$HTTPS_PROXY/__agentproxy/status` and move on.

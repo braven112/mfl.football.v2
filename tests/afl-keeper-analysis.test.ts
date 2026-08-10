@@ -4,15 +4,19 @@ import { join } from 'node:path';
 import {
   buildKeeperAnalysis,
   buildPlayersById,
-  computeKdefExceptions,
-  computeOptimalSeven,
+  computeReplacementLevels,
   computeSeasonPoints,
   getDraftedPidsByFranchise,
   getUnitDraftedPidsByFranchise,
   getOpeningRosterPids,
   gradeFranchise,
-  KDEF_GAP_THRESHOLD,
+  LINEUP_SLOTS,
+  parsePlayerScoresYtd,
+  pointsOverReplacement,
   reconstructKeepers,
+  selectBestKeepers,
+  slotGroupFor,
+  BENCH_EXPECTED_STARTS,
   resolveOfficialKeepers,
   type MflPlayersFeed,
   type MflRostersFeed,
@@ -273,230 +277,489 @@ describe('resolveOfficialKeepers', () => {
   });
 });
 
-describe('K/DEF dominance rule', () => {
-  const players = playersFeed([
-    ['k1', 'Kicker, Alpha', 'PK'],
-    ['k2', 'Kicker, Beta', 'PK'],
-    ['d1', 'Patriots, New England', 'Def', 'NEP'],
-    ['d2', 'Bills, Buffalo', 'Def', 'BUF'],
-  ]);
-  const byId = buildPlayersById(players, undefined);
+// A flat replacement of 0 makes PoR == raw points, so a test can reason in
+// plain points except where slot caps are the point of the test.
+const NO_REPLACEMENT = { QB: 0, PK: 0, Def: 0, FLEX: 0 };
+/** Everyone rostered the same number of weeks, so PoR scales uniformly. */
+const evenWeeks = (pids: Iterable<string>, n = 14) =>
+  new Map([...pids].map((pid) => [pid, n]));
 
-  it(`no exception below the ${KDEF_GAP_THRESHOLD}-point gap`, () => {
-    const points = new Map([
-      ['k1', 150], ['k2', 110.1],
-      ['d1', 150], ['d2', 111],
-    ]);
-    expect(computeKdefExceptions(points, byId)).toEqual([]);
+describe('slotGroupFor', () => {
+  it('maps RB/WR/TE to the shared flex pool and the rest to their own slot', () => {
+    expect(['RB', 'WR', 'TE'].map(slotGroupFor)).toEqual(['FLEX', 'FLEX', 'FLEX']);
+    expect(slotGroupFor('QB')).toBe('QB');
+    expect(slotGroupFor('PK')).toBe('PK');
+    expect(slotGroupFor('Def')).toBe('Def');
   });
 
-  it('grants an exception at exactly the threshold', () => {
-    const points = new Map([
-      ['d1', 185], ['d2', 185 - KDEF_GAP_THRESHOLD],
-      ['k1', 100], ['k2', 90],
-    ]);
-    const exceptions = computeKdefExceptions(points, byId);
-    expect(exceptions).toHaveLength(1);
-    expect(exceptions[0]).toMatchObject({ position: 'Def', playerId: 'd1', gap: KDEF_GAP_THRESHOLD });
+  it('returns null for a position that cannot start', () => {
+    expect(slotGroupFor('?')).toBeNull();
+    expect(slotGroupFor('Coach')).toBeNull();
   });
 });
 
-describe('computeOptimalSeven', () => {
+describe('computeReplacementLevels', () => {
   const players = playersFeed([
-    ['q1', 'Quarterback, One', 'QB'],
-    ['r1', 'Runner, One', 'RB'],
-    ['r2', 'Runner, Two', 'RB'],
-    ['w1', 'Wideout, One', 'WR'],
-    ['w2', 'Wideout, Two', 'WR'],
-    ['t1', 'Tightend, One', 'TE'],
-    ['t2', 'Tightend, Two', 'TE'],
-    ['x1', 'Extra, One', 'WR'],
-    ['k1', 'Kicker, Alpha', 'PK'],
-    ['d1', 'Patriots, New England', 'Def', 'NEP'],
+    ['q1', 'Q, One', 'QB'], ['q2', 'Q, Two', 'QB'], ['q3', 'Q, Three', 'QB'], ['q4', 'Q, Four', 'QB'],
   ]);
   const byId = buildPlayersById(players, undefined);
-  const roster = new Set(['q1', 'r1', 'r2', 'w1', 'w2', 't1', 't2', 'x1', 'k1', 'd1']);
-  // K and DEF are the top-2 raw scorers.
-  const points = new Map([
-    ['k1', 300], ['d1', 290],
-    ['q1', 200], ['r1', 190], ['r2', 180], ['w1', 170], ['w2', 160], ['t1', 150],
-    ['t2', 140], ['x1', 130],
+  const pids = ['q1', 'q2', 'q3', 'q4'];
+  const points = new Map([['q1', 280], ['q2', 210], ['q3', 140], ['q4', 70]]);
+
+  it('sizes the pool by conference, not by the whole league', () => {
+    const deep = playersFeed(
+      Array.from({ length: 30 }, (_, i) => [`p${i}`, `P, ${i}`, 'QB'] as [string, string, string])
+    );
+    const deepById = buildPlayersById(deep, undefined);
+    const deepPoints = new Map(
+      Array.from({ length: 30 }, (_, i) => [`p${i}`, (30 - i) * 14] as [string, number])
+    );
+    const deepWeeks = evenWeeks(deepPoints.keys());
+    const perConference = computeReplacementLevels(deepPoints, deepWeeks, deepById, 12, 14).levels;
+    const wholeLeague = computeReplacementLevels(deepPoints, deepWeeks, deepById, 24, 14).levels;
+    expect(perConference.QB).toBeGreaterThan(wholeLeague.QB);
+    expect(perConference.QB).toBeCloseTo(30 - 12); // the 13th-best QB
+    expect(wholeLeague.QB).toBeCloseTo(30 - 24); // the 25th — far too deep
+  });
+
+  it('takes the best player past the last startable slot', () => {
+    const { levels } = computeReplacementLevels(points, evenWeeks(pids), byId, 2, 14);
+    expect(levels.QB).toBeCloseTo(10); // 2 QB slots => q3 sets it
+  });
+
+  it('ignores short stints that would drag the baseline down', () => {
+    const weeks = new Map([['q1', 14], ['q2', 14], ['q3', 2], ['q4', 14]]);
+    const { levels } = computeReplacementLevels(points, weeks, byId, 2, 14);
+    expect(levels.QB).toBeCloseTo(70 / 14);
+  });
+
+  it('reports which groups had to clamp instead of hiding it', () => {
+    // Only two QBs visible but two startable slots: there is no observable
+    // replacement, so the baseline degrades to the worst player we can see.
+    const weeks = evenWeeks(['q1', 'q2']);
+    const { levels, clamped } = computeReplacementLevels(points, weeks, byId, 2, 14);
+    expect(clamped).toContain('QB');
+    expect(levels.QB).toBeCloseTo(15); // q2 — biased high, hence the flag
+  });
+
+  it('divides YTD totals by the weeks the YTD feed actually spans', () => {
+    // MFL's W=YTD includes playoff weeks (feed stamped 18) while our points
+    // are regular-season only (14). Dividing by 14 inflates replacement.
+    const ytd = new Map([['q1', 360], ['q2', 270], ['q3', 180], ['q4', 90]]);
+    const weeks = evenWeeks(pids);
+    const correct = computeReplacementLevels(points, weeks, byId, 2, 14, ytd, 18).levels;
+    const naive = 180 / 14; // what dividing by the regular-season count would give
+    expect(correct.QB).toBeCloseTo(180 / 18);
+    expect(naive).toBeGreaterThan(correct.QB); // the ~29% inflation that was shipping
+  });
+
+  it('flags a slot group it observed nothing for, rather than grading against zero', () => {
+    // A zero-observation group used to `continue` past the thin check, so its
+    // replacement stayed 0 with clamped empty and fromFullPool true — every
+    // player at that position graded against a free replacement worth
+    // nothing, with no caveat on the page.
+    const noKickers = playersFeed([['q1', 'Q, One', 'QB'], ['r1', 'R, One', 'RB']]);
+    const ids = buildPlayersById(noKickers, undefined);
+    const pts = new Map([['q1', 280], ['r1', 200]]);
+    const { clamped } = computeReplacementLevels(pts, evenWeeks(['q1', 'r1']), ids, 2, 14);
+    expect(clamped).toContain('PK');
+    expect(clamped).toContain('Def');
+  });
+
+  it('reports fromFullPool honestly — the flag must follow the decision', () => {
+    // Regression: the summary flag was computed from feed PRESENCE, so a
+    // refused feed still reported full-pool provenance and the page's
+    // estimated-baseline banner never fired. The refusal cases below are the
+    // ones that used to lie; the no-feed case is included as the baseline.
+    const weeks = evenWeeks(pids);
+    const ytd = new Map([['q1', 360], ['q2', 270], ['q3', 180], ['q4', 90]]);
+    expect(computeReplacementLevels(points, weeks, byId, 2, 14, ytd, 18).fromFullPool).toBe(true);
+    expect(computeReplacementLevels(points, weeks, byId, 2, 14, ytd, Number.NaN).fromFullPool)
+      .toBe(false);
+    expect(computeReplacementLevels(points, weeks, byId, 2, 14).fromFullPool).toBe(false);
+  });
+
+  it('refuses a YTD feed whose numbers are implausible, not just its span', () => {
+    // A feed of SINGLE-WEEK scores stamped with a late week passes the span
+    // check while producing a replacement level ~18x too low — inflating
+    // every value on the page with no warning. W=YTD is unverified against
+    // live MFL, so the blast radius matters more than the elegance.
+    // The rostered pool must be deep enough to be a trustworthy comparator —
+    // a thin one legitimately clamps to the worst player kept, which a real
+    // full pool should undercut, so the guard deliberately stands down there.
+    const deep = playersFeed(
+      Array.from({ length: 10 }, (_, i) => [`d${i}`, `D, ${i}`, 'QB'] as [string, string, string])
+    );
+    const deepById = buildPlayersById(deep, undefined);
+    const ids = Array.from({ length: 10 }, (_, i) => `d${i}`);
+    const seasonPoints = new Map(ids.map((id, i) => [id, (10 - i) * 14] as [string, number]));
+    const seasonWeeks = evenWeeks(ids);
+    const measured = computeReplacementLevels(seasonPoints, seasonWeeks, deepById, 2, 14);
+    expect(measured.clamped).not.toContain('QB'); // comparator is real
+
+    // Same players, but the "YTD" payload is a single week of scores stamped
+    // week 18 — passes the span check, ~14x too low.
+    const oneWeekScores = new Map(ids.map((id, i) => [id, (10 - i)] as [string, number]));
+    const r = computeReplacementLevels(
+      seasonPoints, seasonWeeks, deepById, 2, 14, oneWeekScores, 18
+    );
+    expect(r.fromFullPool).toBe(false);
+    expect(r.levels).toEqual(measured.levels);
+  });
+
+  it('refuses a YTD feed whose week span is unusable', () => {
+    // MFL may stamp the feed week as the literal string "YTD" (parseInt =>
+    // NaN) or as a week shorter than the regular season. Silently falling
+    // back to maxCompletedWeek would divide an 18-week total by 14 and
+    // inflate replacement ~29% while replacementFromFullPool still reported
+    // true — so the page would never warn.
+    const weeks = evenWeeks(pids);
+    const ytd = new Map([['q1', 360], ['q2', 270], ['q3', 180], ['q4', 90]]);
+    const rosteredOnly = computeReplacementLevels(points, weeks, byId, 2, 14).levels;
+    // Unparseable week => must NOT use the YTD numbers at all.
+    expect(computeReplacementLevels(points, weeks, byId, 2, 14, ytd, Number.NaN).levels)
+      .toEqual(rosteredOnly);
+    // A span shorter than the regular season is equally untrustworthy.
+    expect(computeReplacementLevels(points, weeks, byId, 2, 14, ytd, 9).levels)
+      .toEqual(rosteredOnly);
+    // A valid span is used.
+    expect(computeReplacementLevels(points, weeks, byId, 2, 14, ytd, 18).levels.QB)
+      .toBeCloseTo(180 / 18);
+  });
+
+  it('prefers the full-pool YTD feed, which can see unrostered players', () => {
+    const weeks = evenWeeks(['q1', 'q2']);
+    const rosteredOnly = computeReplacementLevels(points, weeks, byId, 2, 14).levels;
+    const ytd = new Map([['q1', 280], ['q2', 210], ['q3', 140], ['q4', 70]]);
+    const fullPool = computeReplacementLevels(points, weeks, byId, 2, 14, ytd, 14).levels;
+    expect(fullPool.QB).toBeLessThan(rosteredOnly.QB);
+  });
+
+  it('is all zeros when there is no season yet', () => {
+    const { levels } = computeReplacementLevels(new Map(), new Map(), byId, 2, 0);
+    expect(levels).toEqual({ QB: 0, PK: 0, Def: 0, FLEX: 0 });
+  });
+});
+
+describe('parsePlayerScoresYtd', () => {
+  it('parses the feed and tolerates a single-object playerScore', () => {
+    expect(parsePlayerScoresYtd({ playerScores: { playerScore: { id: 'a', score: '12.5' } } }))
+      .toEqual(new Map([['a', 12.5]]));
+  });
+
+  it('returns undefined when absent or unusable, so callers fall back', () => {
+    expect(parsePlayerScoresYtd(undefined)).toBeUndefined();
+    expect(parsePlayerScoresYtd({ playerScores: { playerScore: [] } })).toBeUndefined();
+    expect(parsePlayerScoresYtd({ playerScores: { playerScore: [{ id: 'a', score: 'n/a' }] } }))
+      .toBeUndefined();
+  });
+});
+
+describe('pointsOverReplacement', () => {
+  const players = playersFeed([['k1', 'K, One', 'PK'], ['r1', 'R, One', 'RB']]);
+  const byId = buildPlayersById(players, undefined);
+
+  it('charges a FULL season of replacement — a keeper slot is season-long', () => {
+    // The bug this locks out: charging only the weeks a player was rostered
+    // reduced value to weeks x (rate - replacement), so a one-week sample
+    // outscored a full-season starter. Younghoe Koo (1 week, 9.7 pts) made a
+    // real franchise's optimal seven and rendered as "Got away".
+    const points = new Map([['r1', 20]]);
+    const replacement = { QB: 0, PK: 0, Def: 0, FLEX: 10 };
+    // 20 points across a 14-week season is far below a 10/wk replacement.
+    expect(pointsOverReplacement('r1', points, byId, replacement, 14)).toBeCloseTo(20 - 140);
+  });
+
+  it('prices bench cover by how often he actually starts', () => {
+    const points = new Map([['r1', 280]]);
+    const replacement = { QB: 0, PK: 0, Def: 0, FLEX: 10 };
+    const starter = pointsOverReplacement('r1', points, byId, replacement, 14);
+    const bench = pointsOverReplacement('r1', points, byId, replacement, 14, BENCH_EXPECTED_STARTS.FLEX);
+    expect(starter).toBeCloseTo(14 * (20 - 10));
+    expect(bench).toBeCloseTo(6 * (20 - 10));
+    expect(bench).toBeLessThan(starter);
+  });
+
+  it('never credits a bench keep more starts than the season has had', () => {
+    // Regression: BENCH_EXPECTED_STARTS.FLEX is 6, so before Week 6 an
+    // unclamped bench keep was credited 6 starts in a 1-5 week season —
+    // making riding the bench worth MORE than starting, and breaking the
+    // precondition that makes selectBestKeepers exact. The page defaults to
+    // the newest season with any points, so this was the live landing view
+    // for the first five weeks of every season.
+    const points = new Map([['r1', 200]]); // comfortably above replacement
+    const replacement = { QB: 0, PK: 0, Def: 0, FLEX: 5 };
+    for (const seasonWeeks of [1, 2, 3, 4, 5, 6, 14, 17]) {
+      // Call it the way gradeFranchise does. An earlier version of this test
+      // omitted expectedStarts for the starter — a signature no caller uses —
+      // so it validated a dead branch while production squared the starter
+      // multiplier (seasonWeeks^2/14) and made bench worth 6x starting in
+      // Week 1. Always exercise the production call shape.
+      const starter = pointsOverReplacement(
+        'r1', points, byId, replacement, seasonWeeks, undefined
+      );
+      const bench = pointsOverReplacement(
+        'r1', points, byId, replacement, seasonWeeks, BENCH_EXPECTED_STARTS.FLEX
+      );
+      // The starter must be worth a full season of starts, never prorated.
+      expect(starter).toBeCloseTo(seasonWeeks * (200 / seasonWeeks - 5), 6);
+      expect(bench).toBeLessThanOrEqual(starter);
+      // ...and STRICTLY less, in constant proportion. A flat clamp kept the
+      // ordering safe but priced a bench keep identically to a starter
+      // through Week 6, contradicting the pill that calls him worth less.
+      // Bench cover accrues with the season, capped by the byes that exist
+      // and by the games played: min(E*sw/14, E, sw) starts out of sw.
+      const expectedBenchStarts = Math.min(
+        (BENCH_EXPECTED_STARTS.FLEX * seasonWeeks) / 14,
+        BENCH_EXPECTED_STARTS.FLEX,
+        seasonWeeks
+      );
+      expect(bench / starter).toBeCloseTo(expectedBenchStarts / seasonWeeks, 6);
+    }
+  });
+
+  it('values a 7th skill keep well above a backup QB — he covers six byes', () => {
+    expect(BENCH_EXPECTED_STARTS.FLEX).toBeGreaterThan(BENCH_EXPECTED_STARTS.QB);
+    expect(BENCH_EXPECTED_STARTS.FLEX).toBe(6); // one per flex starter's bye
+    expect(BENCH_EXPECTED_STARTS.QB).toBe(1); // QB1's single bye
+  });
+});
+
+describe('selectBestKeepers', () => {
+  const players = playersFeed([
+    ['q1', 'Q, One', 'QB'], ['q2', 'Q, Two', 'QB'],
+    ['r1', 'R, One', 'RB'], ['r2', 'R, Two', 'RB'], ['r3', 'R, Three', 'RB'],
+    ['w1', 'W, One', 'WR'], ['w2', 'W, Two', 'WR'], ['w3', 'W, Three', 'WR'],
+    ['t1', 'T, One', 'TE'], ['t2', 'T, Two', 'TE'],
+    ['k1', 'K, One', 'PK'], ['d1', 'D, One', 'Def'],
   ]);
+  const byId = buildPlayersById(players, undefined);
+  const base = new Map<string, number>([
+    ['q1', 300], ['q2', 290],
+    ['r1', 200], ['r2', 190], ['r3', 180],
+    ['w1', 170], ['w2', 160], ['w3', 150],
+    ['t1', 140], ['t2', 130], ['k1', 120], ['d1', 110],
+  ]);
+  // Starter value is the raw number; bench value is discounted by role.
+  const valueOf = (pid: string, group: 'QB' | 'PK' | 'Def' | 'FLEX', role: 'starter' | 'bench') =>
+    (base.get(pid) ?? 0) * (role === 'starter' ? 1 : BENCH_EXPECTED_STARTS[group] / 14);
 
-  it('excludes K/DEF from optimal but keeps them in rawTopSeven', () => {
-    const { optimal, rawTopSeven } = computeOptimalSeven(roster, points, byId, new Set());
-    expect(optimal).toEqual(['q1', 'r1', 'r2', 'w1', 'w2', 't1', 't2']);
-    expect(rawTopSeven).toContain('k1');
-    expect(rawTopSeven).toContain('d1');
-    expect(rawTopSeven).toHaveLength(7);
+  it('never exceeds the keeper limit', () => {
+    expect(selectBestKeepers(base.keys(), byId, valueOf)).toHaveLength(7);
   });
 
-  it('includes an exception position in optimal', () => {
-    const { optimal } = computeOptimalSeven(roster, points, byId, new Set(['Def']));
-    expect(optimal).toContain('d1');
-    expect(optimal).not.toContain('k1');
-    expect(optimal).toHaveLength(7);
+  it('assigns starting slots first, then bye-week cover', () => {
+    const picked = selectBestKeepers(base.keys(), byId, valueOf);
+    const roles = Object.fromEntries(picked.map((k) => [k.pid, k.role]));
+    expect(roles['q1']).toBe('starter');
+    expect(Object.values(roles).filter((r) => r === 'starter').length).toBeLessThanOrEqual(7);
   });
 
-  it('caps the optimal seven at one QB (the roster top scorer)', () => {
-    const twoQbPlayers = playersFeed([
-      ['q1', 'Quarterback, One', 'QB'],
-      ['q2', 'Quarterback, Two', 'QB'],
-      ['r1', 'Runner, One', 'RB'],
-      ['r2', 'Runner, Two', 'RB'],
-      ['w1', 'Wideout, One', 'WR'],
-      ['w2', 'Wideout, Two', 'WR'],
-      ['t1', 'Tightend, One', 'TE'],
-      ['t2', 'Tightend, Two', 'TE'],
-    ]);
-    const twoQbById = buildPlayersById(twoQbPlayers, undefined);
-    const twoQbRoster = new Set(['q1', 'q2', 'r1', 'r2', 'w1', 'w2', 't1', 't2']);
-    // Both QBs are top-2 raw scorers; only q1 may enter the optimal seven.
-    const twoQbPoints = new Map([
-      ['q1', 300], ['q2', 290],
-      ['r1', 200], ['r2', 190], ['w1', 180], ['w2', 170], ['t1', 160], ['t2', 150],
-    ]);
-    const { optimal, rawTopSeven } = computeOptimalSeven(twoQbRoster, twoQbPoints, twoQbById, new Set());
-    expect(optimal).toContain('q1');
-    expect(optimal).not.toContain('q2');
-    expect(optimal).toHaveLength(7); // t2 backfills the slot
-    expect(optimal).toContain('t2');
-    expect(rawTopSeven).toContain('q2'); // raw view is unfiltered
+  it('fills the last slot with flex bye-cover ahead of a weak second QB', () => {
+    // Both are "backups", but a 7th flex covers six byes while a QB2 covers
+    // one, so at comparable value the flex bench slot wins. (With only seven
+    // keepers you can never fill all nine starting slots, so a bench pick
+    // only competes once a group has surplus beyond its cap.)
+    const weak = new Map(base).set('q1', 5).set('q2', 4);
+    const weakValue = (pid: string, group: 'QB' | 'PK' | 'Def' | 'FLEX', role: 'starter' | 'bench') =>
+      (weak.get(pid) ?? 0) * (role === 'starter' ? 1 : BENCH_EXPECTED_STARTS[group] / 14);
+    const pool = ['q1', 'q2', 'r1', 'r2', 'r3', 'w1', 'w2', 'w3', 't1'];
+    const picked = selectBestKeepers(pool, byId, weakValue);
+    const bench = picked.filter((k) => k.role === 'bench');
+    expect(bench).toHaveLength(1);
+    expect(bench[0].pid).not.toBe('q2');
+    expect(picked.map((k) => k.pid)).not.toContain('q2');
   });
 
-  it('breaks point ties deterministically by id', () => {
-    const tied = new Map(points);
-    tied.set('x1', 140); // tie with t2 at the 7th-slot boundary
-    const { optimal } = computeOptimalSeven(roster, tied, byId, new Set());
-    expect(optimal[6]).toBe('t2'); // 't2' < 'x1' — x1 misses the cut
-    expect(optimal).not.toContain('x1');
+  it('skips negative-value players entirely', () => {
+    const neg = (pid: string) => (pid === 'r1' ? -50 : 0);
+    expect(selectBestKeepers(['r1'], byId, () => neg('r1'))).toHaveLength(0);
+  });
+
+  it('ignores players with no startable position', () => {
+    const odd = playersFeed([['x1', 'X, One', 'Coach']]);
+    expect(selectBestKeepers(['x1'], buildPlayersById(odd, undefined), () => 100)).toHaveLength(0);
   });
 });
 
 describe('gradeFranchise', () => {
   const players = playersFeed([
-    ['q1', 'Quarterback, One', 'QB'],
-    ['r1', 'Runner, One', 'RB'],
-    ['r2', 'Runner, Two', 'RB'],
-    ['w1', 'Wideout, One', 'WR'],
-    ['w2', 'Wideout, Two', 'WR'],
-    ['t1', 'Tightend, One', 'TE'],
-    ['t2', 'Tightend, Two', 'TE'],
-    ['x1', 'Extra, One', 'WR'],
-    ['k1', 'Kicker, Alpha', 'PK'],
+    ['q1', 'Q, One', 'QB'], ['q2', 'Q, Two', 'QB'],
+    ['r1', 'R, One', 'RB'], ['r2', 'R, Two', 'RB'],
+    ['w1', 'W, One', 'WR'], ['w2', 'W, Two', 'WR'],
+    ['t1', 'T, One', 'TE'], ['t2', 'T, Two', 'TE'],
+    ['x1', 'X, One', 'WR'], ['k1', 'K, One', 'PK'],
   ]);
   const byId = buildPlayersById(players, undefined);
   const roster = new Set(['q1', 'r1', 'r2', 'w1', 'w2', 't1', 't2', 'x1', 'k1']);
   const points = new Map([
-    ['q1', 200], ['r1', 190], ['r2', 180], ['w1', 170], ['w2', 160], ['t1', 150],
-    ['t2', 140], ['x1', 130], ['k1', 120],
+    ['q1', 300], ['r1', 200], ['r2', 190], ['w1', 180], ['w2', 170],
+    ['t1', 160], ['t2', 150], ['x1', 30], ['k1', 120],
   ]);
-  // Optimal: q1 r1 r2 w1 w2 t1 t2. Kept: 5 optimal + x1 (miss) + k1 (neutral).
   const kept = new Set(['q1', 'r1', 'r2', 'w1', 'w2', 'x1', 'k1']);
+  const NO_REP = { QB: 0, PK: 0, Def: 0, FLEX: 0 };
+  const grade = (
+    keptSet: Set<string>,
+    pts = points,
+    rosterSet = roster,
+    ids = byId,
+    replacement = NO_REP
+  ) => gradeFranchise('0001', rosterSet, keptSet, pts, ids, replacement, 14);
 
-  it('partitions hits / misses / got-away / neutral correctly', () => {
-    const analysis = gradeFranchise('0001', roster, kept, points, byId, new Set());
-    expect(analysis.hits).toBe(5);
-    expect(analysis.misses).toBe(1); // x1
-    expect(analysis.gotAway).toBe(2); // t1, t2
-    expect(analysis.kdefNeutralKept).toBe(1); // k1 — not a miss
-    const byPid = Object.fromEntries(analysis.players.map((p) => [p.id, p.badge]));
-    expect(byPid['x1']).toBe('miss');
-    expect(byPid['k1']).toBe('kdef-neutral');
-    expect(byPid['t1']).toBe('got-away');
-    expect(byPid['q1']).toBe('hit');
+  it('partitions every keep into hit, miss, or filler', () => {
+    const analysis = grade(kept);
+    expect(analysis.hits + analysis.misses + analysis.fillerKept).toBe(analysis.keptCount);
+    expect(analysis.efficiency).toBeLessThanOrEqual(1);
+  });
+
+  it('only counts a miss when somebody better actually got away', () => {
+    // A thin roster: just two players clear replacement, and both were kept.
+    // The other keeps had no better alternative, so they are filler, not
+    // misses — the old rule branded them misses and produced the nonsense
+    // card "100% of optimal, 3/7 hits".
+    const thinRoster = new Set(['r1', 'r2', 'x1', 'k1']);
+    const thinKept = new Set(['r1', 'r2', 'x1', 'k1']);
+    const thinPoints = new Map([['r1', 400], ['r2', 380], ['x1', 5], ['k1', 5]]);
+    const replacement = { QB: 0, PK: 20, Def: 0, FLEX: 20 };
+    const a = gradeFranchise('0001', thinRoster, thinKept, thinPoints, byId, replacement, 14);
+    expect(a.gotAway).toBe(0);
+    expect(a.misses).toBe(0); // nothing better was available
+    expect(a.fillerKept).toBeGreaterThan(0);
+    expect(a.efficiency).toBe(1); // captured everything worth capturing
   });
 
   it('handles a 6-keep team without a phantom miss', () => {
-    const sixKept = new Set(['q1', 'r1', 'r2', 'w1', 'w2', 't1']);
-    const analysis = gradeFranchise('0001', roster, sixKept, points, byId, new Set());
+    const analysis = grade(new Set(['q1', 'r1', 'r2', 'w1', 'w2', 't1']));
     expect(analysis.keptCount).toBe(6);
-    expect(analysis.hits).toBe(6);
-    expect(analysis.misses).toBe(0);
-    expect(analysis.gotAway).toBe(1); // t2
+    expect(analysis.hits + analysis.misses + analysis.fillerKept).toBe(6);
   });
 
-  it('kept backup QB is neutral, not a miss; letting a backup QB walk is not got-away', () => {
-    const twoQbPlayers = playersFeed([
-      ['q1', 'Quarterback, One', 'QB'],
-      ['q2', 'Quarterback, Two', 'QB'],
+  it('grades a below-replacement QB room without mislabelling the backup', () => {
+    // Regression: the old slot-count check compared against players that had
+    // ALREADY been dropped for negative value, so when the whole QB room was
+    // below replacement BOTH quarterbacks came back `miss` — breaking the
+    // documented "a second QB is never a miss" invariant. With bench cover
+    // priced, there is no exempt category and the tally stays consistent.
+    const twoQbRoster = new Set(['q1', 'q2', 'r1']);
+    const twoQbKept = new Set(['q1', 'q2']);
+    const weakPoints = new Map([['q1', 10], ['q2', 5], ['r1', 400]]);
+    const replacement = { QB: 20, PK: 0, Def: 0, FLEX: 0 };
+    const analysis = gradeFranchise('0001', twoQbRoster, twoQbKept, weakPoints, byId, replacement, 14);
+    expect(analysis.hits + analysis.misses + analysis.fillerKept).toBe(analysis.keptCount);
+    expect(analysis.efficiency).toBeLessThanOrEqual(1);
+  });
+
+  it('does not prorate STARTERS — value must not depend on how far in we are', () => {
+    // The bug this locks out: gradeFranchise passes expectedStarts=seasonWeeks
+    // for starters, so an `expectedStarts === undefined` gate never fired and
+    // starters were prorated too, giving seasonWeeks^2/14. At Week 1 bench was
+    // worth 6x starting and the enumeration went badly suboptimal; the
+    // headline "value over free" was off by exactly seasonWeeks/14.
+    const solo = playersFeed([['r1', 'Runner, One', 'RB']]);
+    const soloById = buildPlayersById(solo, undefined);
+    const roster = new Set(['r1']);
+    const pts = new Map([['r1', 140]]); // 10/wk over a 14-week season
+    const replacement = { QB: 0, PK: 0, Def: 0, FLEX: 4 };
+    // A starter's value scales linearly with the season, never quadratically.
+    for (const sw of [1, 3, 7, 14]) {
+      const a = gradeFranchise('0001', roster, roster, pts, soloById, replacement, sw);
+      expect(a.keptValue).toBeCloseTo(sw * (140 / sw - 4), 6);
+    }
+  });
+
+  it('breaks Miss ties among crowded-out keeps by value, not by points', () => {
+    // Clamping crowded-out keeps to a flat 0 made them tie, and the stable
+    // sort then fell back to row order — points DESCENDING — so the better
+    // of two stockpiled kickers took the Miss badge.
+    // FOUR kickers: PK holds one starter + one bench, so TWO are crowded out
+    // and the comparator actually runs. With three, nonOptimalKeeps has a
+    // single element, .sort() never invokes the comparator, and the test
+    // passes with the tie-break reverted — which is exactly what happened.
+    const kk = playersFeed([
+      ['k1', 'Kick, One', 'PK'], ['k2', 'Kick, Two', 'PK'],
+      ['k3', 'Kick, Three', 'PK'], ['k4', 'Kick, Four', 'PK'],
       ['r1', 'Runner, One', 'RB'],
-      ['r2', 'Runner, Two', 'RB'],
-      ['w1', 'Wideout, One', 'WR'],
-      ['w2', 'Wideout, Two', 'WR'],
-      ['t1', 'Tightend, One', 'TE'],
-      ['t2', 'Tightend, Two', 'TE'],
-      ['x1', 'Extra, One', 'WR'],
     ]);
-    const twoQbById = buildPlayersById(twoQbPlayers, undefined);
-    const twoQbRoster = new Set(['q1', 'q2', 'r1', 'r2', 'w1', 'w2', 't1', 't2', 'x1']);
-    const twoQbPoints = new Map([
-      ['q1', 300], ['q2', 290],
-      ['r1', 200], ['r2', 190], ['w1', 180], ['w2', 170], ['t1', 160], ['t2', 150],
-      ['x1', 10],
+    const kkById = buildPlayersById(kk, undefined);
+    const roster = new Set(['k1', 'k2', 'k3', 'k4', 'r1']);
+    const kept = new Set(['k1', 'k2', 'k3', 'k4']);
+    const pts = new Map([
+      ['k1', 300], ['k2', 280], ['k3', 260], ['k4', 240], ['r1', 400],
     ]);
-    // Kept both QBs plus 5 of the optimal; t1 (160) and t2 (150) walked.
-    const twoQbKept = new Set(['q1', 'q2', 'r1', 'r2', 'w1', 'w2', 'x1']);
-    const analysis = gradeFranchise('0001', twoQbRoster, twoQbKept, twoQbPoints, twoQbById, new Set());
-    const byPid = Object.fromEntries(analysis.players.map((p) => [p.id, p.badge]));
-    // q2 (290) outscored t1 (160), the best optimal player let go → good keeper.
-    expect(byPid['q2']).toBe('hit');
-    expect(byPid['x1']).toBe('miss');
-    expect(analysis.gotAway).toBe(2); // t1, t2 — q2 never counts as got-away
-
-    // Same shape but the backup QB underperformed the walked alternative.
-    const weakQ2 = new Map(twoQbPoints);
-    weakQ2.set('q2', 120); // below t1's 160 and t2's 150
-    const analysis2 = gradeFranchise('0001', twoQbRoster, twoQbKept, weakQ2, twoQbById, new Set());
-    const byPid2 = Object.fromEntries(analysis2.players.map((p) => [p.id, p.badge]));
-    expect(byPid2['q2']).toBe('qb2-neutral'); // never a miss
-    expect(analysis2.backupQbNeutralKept).toBe(1);
-    expect(analysis2.misses).toBe(1); // only x1
+    const a = gradeFranchise('0001', roster, kept, pts, kkById, NO_REP, 14);
+    const missed = a.players.filter((p) => p.badge === 'miss').map((p) => p.id);
+    // Both k3 and k4 are worth zero to the class; the WORSE one takes the
+    // blame. Reverting the secondary sort key blames k3 instead.
+    expect(missed).toEqual(['k4']);
   });
 
-  it('kept K/DEF that outscored a walked optimal player grades a hit', () => {
-    const kdefPlayers = playersFeed([
-      ['q1', 'Quarterback, One', 'QB'],
-      ['r1', 'Runner, One', 'RB'],
-      ['r2', 'Runner, Two', 'RB'],
-      ['w1', 'Wideout, One', 'WR'],
-      ['w2', 'Wideout, Two', 'WR'],
-      ['t1', 'Tightend, One', 'TE'],
-      ['t2', 'Tightend, Two', 'TE'],
-      ['k1', 'Kicker, Alpha', 'PK'],
-    ]);
-    const kdefById = buildPlayersById(kdefPlayers, undefined);
-    const kdefRoster = new Set(['q1', 'r1', 'r2', 'w1', 'w2', 't1', 't2', 'k1']);
-    const kdefPoints = new Map([
-      ['q1', 300], ['r1', 200], ['r2', 190], ['w1', 180], ['w2', 170],
-      ['t1', 160], ['t2', 150], ['k1', 155],
-    ]);
-    // Kept the kicker over t2; k1 (155) outscored the walked t2 (150).
-    const keptWithK = new Set(['q1', 'r1', 'r2', 'w1', 'w2', 't1', 'k1']);
-    const analysis = gradeFranchise('0001', kdefRoster, keptWithK, kdefPoints, kdefById, new Set());
-    const byPid = Object.fromEntries(analysis.players.map((p) => [p.id, p.badge]));
-    expect(byPid['k1']).toBe('hit'); // the keep paid off
-    expect(analysis.hits).toBe(7);
-    expect(analysis.kdefNeutralKept).toBe(0);
-
-    // Kicker below the walked alternative stays neutral (never a miss).
-    const weakK = new Map(kdefPoints);
-    weakK.set('k1', 100);
-    const analysis2 = gradeFranchise('0001', kdefRoster, keptWithK, weakK, kdefById, new Set());
-    const byPid2 = Object.fromEntries(analysis2.players.map((p) => [p.id, p.badge]));
-    expect(byPid2['k1']).toBe('kdef-neutral');
-    expect(analysis2.misses).toBe(0);
+  it('credits a 7th skill keep as bench cover instead of zeroing it', () => {
+    const flexOnly = playersFeed(
+      Array.from({ length: 8 }, (_, i) => [`s${i}`, `Skill, ${i}`, 'RB'] as [string, string, string])
+    );
+    const flexById = buildPlayersById(flexOnly, undefined);
+    const flexRoster = new Set(Array.from({ length: 8 }, (_, i) => `s${i}`));
+    const flexKept = new Set(Array.from({ length: 7 }, (_, i) => `s${i}`));
+    const flexPoints = new Map(
+      Array.from({ length: 8 }, (_, i) => [`s${i}`, (8 - i) * 60] as [string, number])
+    );
+    const analysis = gradeFranchise('0001', flexRoster, flexKept, flexPoints, flexById, NO_REP, 14);
+    expect(analysis.benchKept).toBe(1);
+    const seventh = analysis.players.find((p) => p.id === 's6')!;
+    expect(seventh.role).toBe('bench');
+    expect(seventh.badge).toBe('hit'); // real value, not an exemption
+    expect(analysis.efficiency).toBeLessThanOrEqual(1);
   });
 
-  it('computes kept/optimal points and efficiency', () => {
-    const analysis = gradeFranchise('0001', roster, kept, points, byId, new Set());
-    expect(analysis.keptPoints).toBeCloseTo(200 + 190 + 180 + 170 + 160 + 130 + 120);
-    expect(analysis.optimalPoints).toBeCloseTo(200 + 190 + 180 + 170 + 160 + 150 + 140);
-    expect(analysis.efficiency).toBeCloseTo(analysis.keptPoints / analysis.optimalPoints);
+  it('values a kept kicker at its margin over replacement, not its raw total', () => {
+    const analysis = grade(
+      new Set(['q1', 'r1', 'r2', 'w1', 'w2', 't1', 'k1']), points, roster, byId,
+      { QB: 0, PK: 8, Def: 0, FLEX: 0 }
+    );
+    const k = analysis.players.find((p) => p.id === 'k1')!;
+    expect(k.points).toBe(120);
+    expect(k.pointsOverReplacement).toBeCloseTo(120 - 8 * 14);
+    expect(analysis.efficiency).toBeLessThanOrEqual(1);
+  });
+
+  it('never scores a class above its own ceiling', () => {
+    const full = new Set([...roster, 'q2']);
+    for (const s of [
+      new Set(['q1', 'q2']), new Set(['k1']),
+      new Set(['q1', 'r1', 'r2', 'w1', 'w2', 't1', 't2']),
+      new Set(['x1', 'k1', 'q1']), roster,
+    ]) {
+      expect(grade(s, points, full).efficiency).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('computes kept/optimal value and efficiency', () => {
+    const analysis = grade(kept);
+    expect(analysis.optimalValue).toBeGreaterThan(0);
+    expect(analysis.efficiency).toBeCloseTo(analysis.keptValue / analysis.optimalValue);
   });
 });
 
 describe('buildKeeperAnalysis', () => {
+  // Replacement level is defined by the players you could have had for free,
+  // so a fixture needs a pool deeper than the league's starting slots. These
+  // fillers sit at 1 point and never make a roster; they exist to put the
+  // baseline on the floor where a real league's would be.
+  const FILLERS = [
+    ...Array.from({ length: 3 }, (_, i) => [`g${i}`, `Filler, Q${i}`, 'QB'] as const),
+    ...Array.from({ length: 25 }, (_, i) => [`f${i}`, `Filler, F${i}`, 'RB'] as const),
+  ];
+  const deepPool = (real: Record<string, number>) => ({
+    playerScores: {
+      week: '14',
+      playerScore: [
+        ...Object.entries(real).map(([id, score]) => ({ id, score: String(score) })),
+        ...FILLERS.map(([id]) => ({ id, score: '1' })),
+      ],
+    },
+  });
+  const withFillers = (rows: Array<[string, string, string]>) =>
+    playersFeed([...rows, ...FILLERS.map((f) => [f[0], f[1], f[2]] as [string, string, string])]);
   const prevPlayers = playersFeed([
     ['a1', 'Ace, One', 'QB'], ['a2', 'Ace, Two', 'RB'], ['a3', 'Ace, Three', 'WR'],
     ['b1', 'Bench, One', 'QB'], ['b2', 'Bench, Two', 'RB'], ['b3', 'Bench, Three', 'WR'],
@@ -567,7 +830,7 @@ describe('buildKeeperAnalysis', () => {
     expect(analysis.franchises[0].keptCount).toBe(2);
   });
 
-  it('ranks franchises by kept points and fills the summary', () => {
+  it('ranks franchises by share of optimal and fills the summary', () => {
     // Week-1 rosters define the opening rosters: 0001 kept a1+a2, 0002 kept
     // only b1 — b2 walked and scored 50 for an unrelated franchise.
     const curWeeklyRaw = [
@@ -588,11 +851,80 @@ describe('buildKeeperAnalysis', () => {
       curRosters: rostersFeed({ '0001': ['a1', 'a2'], '0002': ['b1'] }),
     });
     expect(analysis.previewMode).toBe(false);
-    expect(analysis.summary.rankedFranchiseIds[0]).toBe('0001'); // 50 kept pts vs 5
+    expect(analysis.summary.rankedFranchiseIds[0]).toBe('0001'); // 100% of optimal vs 9%
     expect(analysis.summary.bestFranchiseId).toBe('0001');
     expect(analysis.summary.worstFranchiseId).toBe('0002');
     const f2 = analysis.franchises.find((f) => f.franchiseId === '0002')!;
     expect(f2.gotAway).toBeGreaterThan(0); // let b2 (50 pts) walk
+  });
+
+  it('ranks a maxed-out thin roster above a squandered loaded one', () => {
+    // The bug this locks out: ranking on raw kept points grades the roster a
+    // manager inherited, not the call they made with it. 0002 sits on a far
+    // better roster (300 available vs 100) and scores more kept points (150)
+    // while leaving half of it on the table; 0001 keeps literally the best
+    // pair available to it. The lower-scoring perfect class must rank first.
+    const curWeeklyRaw = [
+      week('1', [
+        {
+          franchises: [
+            { id: '0001', players: [['a1', '60'], ['a2', '40']] }, // kept the optimal 2 of 2
+            { id: '0002', players: [['b1', '150']] }, // kept 1 of an optimal 2
+            { id: '0003', players: [['b2', '150']] }, // b2 walked to another team
+          ],
+        },
+      ]),
+    ];
+    const analysis = buildKeeperAnalysis({
+      prevRosters: rostersFeed({ '0001': ['a1', 'a2'], '0002': ['b1', 'b2'] }),
+      prevPlayers: withFillers([
+        ['a1', 'Ace, One', 'QB'], ['a2', 'Ace, Two', 'RB'],
+        ['b1', 'Bench, One', 'QB'], ['b2', 'Bench, Two', 'RB'],
+      ]),
+      curWeeklyRaw,
+      curRosters: rostersFeed({ '0001': ['a1', 'a2'], '0002': ['b1'] }),
+      curPlayerScoresYtd: deepPool({ a1: 60, a2: 40, b1: 150, b2: 150 }),
+    });
+
+    const f1 = analysis.franchises.find((f) => f.franchiseId === '0001')!;
+    const f2 = analysis.franchises.find((f) => f.franchiseId === '0002')!;
+    expect(f1.efficiency).toBe(1); // captured its whole ceiling
+    expect(f2.efficiency).toBeLessThan(1); // left half of a better one behind
+    expect(f2.keptValue).toBeGreaterThan(f1.keptValue); // and yet...
+    expect(analysis.summary.rankedFranchiseIds[0]).toBe('0001');
+    expect(analysis.summary.bestFranchiseId).toBe('0001');
+    expect(analysis.summary.worstFranchiseId).toBe('0002');
+  });
+
+  it('breaks efficiency ties on kept points', () => {
+    // Same share of the ceiling, bigger ceiling captured — the better class.
+    const curWeeklyRaw = [
+      week('1', [
+        {
+          franchises: [
+            { id: '0001', players: [['a1', '50']] },
+            { id: '0002', players: [['b1', '100']] },
+            { id: '0003', players: [['a2', '50'], ['b2', '100']] }, // both walked
+          ],
+        },
+      ]),
+    ];
+    const analysis = buildKeeperAnalysis({
+      prevRosters: rostersFeed({ '0001': ['a1', 'a2'], '0002': ['b1', 'b2'] }),
+      prevPlayers: withFillers([
+        ['a1', 'Ace, One', 'QB'], ['a2', 'Ace, Two', 'RB'],
+        ['b1', 'Bench, One', 'QB'], ['b2', 'Bench, Two', 'RB'],
+      ]),
+      curWeeklyRaw,
+      curRosters: rostersFeed({ '0001': ['a1'], '0002': ['b1'] }),
+      curPlayerScoresYtd: deepPool({ a1: 50, a2: 50, b1: 100, b2: 100 }),
+    });
+
+    const f1 = analysis.franchises.find((f) => f.franchiseId === '0001')!;
+    const f2 = analysis.franchises.find((f) => f.franchiseId === '0002')!;
+    expect(f1.efficiency).toBeCloseTo(f2.efficiency); // both captured the same share
+    expect(f2.keptValue).toBeGreaterThan(f1.keptValue);
+    expect(analysis.summary.rankedFranchiseIds[0]).toBe('0002'); // bigger ceiling captured
   });
 });
 
@@ -623,11 +955,16 @@ describe.runIf(hasRealFeeds)('integration: 2024→2025 cycle (real feeds)', () =
     for (const f of analysis.franchises) {
       expect(f.keptCount).toBeGreaterThanOrEqual(6);
       expect(f.keptCount).toBeLessThanOrEqual(7);
-      expect(f.hits + f.misses + f.kdefNeutralKept + f.backupQbNeutralKept).toBe(f.keptCount);
-      expect(f.optimalPoints).toBeGreaterThan(0);
+      expect(f.hits + f.misses + f.fillerKept).toBe(f.keptCount);
+      expect(f.optimalValue).toBeGreaterThan(0);
+      // No class may score above its own ceiling. This held only by luck
+      // under the old raw-points model — Boondock Saints reached 100.49% on a
+      // backup QB's total. Under PoR both sides of the ratio come from the
+      // same slot-capped selection, so it holds by construction.
+      expect(f.efficiency).toBeLessThanOrEqual(1);
     }
-    // 2025 had no 40-pt dominant K/DEF.
-    expect(analysis.summary.kdefExceptions).toEqual([]);
+    // Replacement must be real, not a degenerate all-zero baseline.
+    expect(analysis.summary.replacement.FLEX).toBeGreaterThan(0);
   });
 });
 

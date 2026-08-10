@@ -21,9 +21,9 @@ import {
   AFL_KEEPER_ERA_FIRST_PREV_YEAR,
   buildKeeperAnalysis,
   computeSeasonPoints,
-  KDEF_GAP_THRESHOLD,
   type KeeperAnalysis,
   type MflDraftResultsFeed,
+  type MflPlayerScoresFeed,
   type MflPlayersFeed,
   type MflRostersFeed,
   type WeeklyResultsRaw,
@@ -35,18 +35,28 @@ const league = getLeagueContext(Astro.url);
 const baseUrl = getLeagueBaseUrl(league);
 
 // Committed MFL feeds, baked at build time (refreshed by roster-sync cron).
-// The year pattern matches 2024-2099 — the keeper era only
-// (AFL_KEEPER_ERA_FIRST_PREV_YEAR). A bare */ glob here bakes ~55MB of
-// pre-keeper-era JSON into the server bundle and pushes the Vercel function
-// past its 250MB uncompressed limit; the era filter keeps it to ~7MB.
-const rosterFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/20{2[4-9],[3-9][0-9]}/rosters.json', { eager: true });
-const playerFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/20{2[4-9],[3-9][0-9]}/players.json', { eager: true });
-const draftFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/20{2[4-9],[3-9][0-9]}/draftResults.json', { eager: true });
-const weeklyRawFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/20{2[4-9],[3-9][0-9]}/weekly-results-raw.json', { eager: true });
-const fetchMetaFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/20{2[4-9],[3-9][0-9]}/fetch.meta.json', { eager: true });
+//
+// ONE glob for every per-season feed this page reads — add a new feed by
+// adding its basename to the brace list, never by adding another
+// import.meta.glob call. Vite requires a literal pattern, so a repeated
+// year filter can't be factored into a shared constant; keeping the filter
+// to a single occurrence is the next best thing.
+//
+// That year filter is load-bearing: it matches 2024-2099, the keeper era
+// only (AFL_KEEPER_ERA_FIRST_PREV_YEAR), while AFL feeds go back to 2003.
+// A bare */ glob bakes ~55MB of pre-keeper-era JSON into the server bundle
+// and pushes the Vercel function past its 250MB uncompressed limit; the era
+// filter keeps it to ~7MB. tests/afl-keeper-feed-globs.test.ts fails the
+// build if any feed glob on this page loses the filter.
+const seasonFeeds = import.meta.glob(
+  '../../../data/afl-fantasy/mfl-feeds/20{2[4-9],[3-9][0-9]}/{rosters,players,draftResults,weekly-results-raw,playerScores-ytd,fetch.meta}.json',
+  { eager: true }
+);
 // Post-deadline July roster snapshots (16th-31st): between the keeper cut
 // deadline and the draft the roster IS the keeper class, so the first
 // all-at-7 snapshot is the official list. ~260KB/year — no bundle concern.
+// Separate from seasonFeeds only because it lives a directory deeper and is
+// keyed by snapshot date rather than by (year, filename).
 const keeperSnapshotFeeds = import.meta.glob(
   '../../../data/afl-fantasy/mfl-feeds/20{2[4-9],[3-9][0-9]}/roster-history/rosters-*-07-{1[6-9],[2-3][0-9]}.json',
   { eager: true }
@@ -54,8 +64,8 @@ const keeperSnapshotFeeds = import.meta.glob(
 
 // Eager JSON glob modules expose the parsed JSON as `default` (plus named
 // top-level keys); unwrap to the plain object.
-const feed = <T,>(feeds: Record<string, unknown>, year: number, file: string): T | undefined => {
-  const mod = feeds[`../../../data/afl-fantasy/mfl-feeds/${year}/${file}`] as
+const feed = <T,>(year: number, file: string): T | undefined => {
+  const mod = seasonFeeds[`../../../data/afl-fantasy/mfl-feeds/${year}/${file}`] as
     | { default?: T }
     | undefined;
   return (mod?.default ?? mod) as T | undefined;
@@ -63,14 +73,14 @@ const feed = <T,>(feeds: Record<string, unknown>, year: number, file: string): T
 
 // Cycles: points season Y where (Y-1) rosters + (Y) weekly results exist,
 // within the keeper era. Auto-grows as new seasons' feeds land.
-const availableYears = Object.keys(weeklyRawFeeds)
+const availableYears = Object.keys(seasonFeeds)
   .map((path) => path.match(/\/(\d{4})\/weekly-results-raw\.json$/)?.[1])
   .filter((y): y is string => !!y)
   .map((y) => parseInt(y, 10))
   .filter(
     (y) =>
       y - 1 >= AFL_KEEPER_ERA_FIRST_PREV_YEAR &&
-      !!feed<MflRostersFeed>(rosterFeeds, y - 1, 'rosters.json')
+      !!feed<MflRostersFeed>(y - 1, 'rosters.json')
   )
   .sort((a, b) => b - a);
 
@@ -78,7 +88,7 @@ const availableYears = Object.keys(weeklyRawFeeds)
 // before Week 1 that's the last completed cycle (full grades beat an empty
 // preview as the landing view).
 const yearHasPoints = (y: number) =>
-  computeSeasonPoints(feed<WeeklyResultsRaw>(weeklyRawFeeds, y, 'weekly-results-raw.json') ?? []).points.size > 0;
+  computeSeasonPoints(feed<WeeklyResultsRaw>(y, 'weekly-results-raw.json') ?? []).points.size > 0;
 const defaultYear =
   availableYears.find(yearHasPoints) ?? availableYears[availableYears.length - 1] ?? getCurrentSeasonYear();
 
@@ -104,19 +114,6 @@ const keeperSnapshots = Object.entries(keeperSnapshotFeeds)
   })
   .filter((s): s is { date: string; rosters: MflRostersFeed } => s !== null);
 
-const analysis: KeeperAnalysis = buildKeeperAnalysis({
-  prevRosters: feed<MflRostersFeed>(rosterFeeds, prevYear, 'rosters.json') ?? {
-    rosters: { franchise: [] },
-  },
-  prevPlayers: feed<MflPlayersFeed>(playerFeeds, prevYear, 'players.json'),
-  curPlayers: feed<MflPlayersFeed>(playerFeeds, selectedYear, 'players.json'),
-  curWeeklyRaw: feed<WeeklyResultsRaw>(weeklyRawFeeds, selectedYear, 'weekly-results-raw.json'),
-  curRosters: feed<MflRostersFeed>(rosterFeeds, selectedYear, 'rosters.json'),
-  curDraftResults: feed<MflDraftResultsFeed>(draftFeeds, selectedYear, 'draftResults.json'),
-  keeperSnapshots,
-});
-const { previewMode } = analysis;
-
 // Era-correct team branding for the ROSTER season (the keeper class's year).
 const yearConfig = resolveConfigForYear(
   aflConfig as unknown as typeof aflConfig & { teams: TeamConfig[] },
@@ -126,6 +123,40 @@ type AflTeamEntry = TeamConfig & { icon?: string; tier?: string; conference?: st
 const teamsById = new Map<string, AflTeamEntry>(
   (yearConfig.teams as AflTeamEntry[]).map((t) => [t.franchiseId, t])
 );
+
+// Replacement level is set by the players you could NOT have started, so the
+// pool is ONE CONFERENCE (12 teams) — not the 24 franchises this page lists.
+// The AFL's conferences roster independently from the same NFL universe (the
+// same player can sit on a roster in both at once), so a manager competes
+// with 11 rivals for starters, not 23. Sized from the config, not hardcoded.
+const conferenceSizes = new Map<string, number>();
+for (const t of yearConfig.teams as AflTeamEntry[]) {
+  const c = t.conference ?? '_';
+  conferenceSizes.set(c, (conferenceSizes.get(c) ?? 0) + 1);
+}
+// If a future config drops the `conference` field, every team buckets into
+// one group and teamsPerPool silently doubles — halving every replacement
+// level with no error. Fall back to half the league rather than the whole.
+const teamsPerPool =
+  conferenceSizes.size >= 2
+    ? Math.max(...conferenceSizes.values(), 1)
+    : Math.max(Math.round((yearConfig.teams as AflTeamEntry[]).length / 2), 1);
+
+const analysis: KeeperAnalysis = buildKeeperAnalysis({
+  prevRosters: feed<MflRostersFeed>(prevYear, 'rosters.json') ?? {
+    rosters: { franchise: [] },
+  },
+  prevPlayers: feed<MflPlayersFeed>(prevYear, 'players.json'),
+  curPlayers: feed<MflPlayersFeed>(selectedYear, 'players.json'),
+  curWeeklyRaw: feed<WeeklyResultsRaw>(selectedYear, 'weekly-results-raw.json'),
+  curRosters: feed<MflRostersFeed>(selectedYear, 'rosters.json'),
+  curDraftResults: feed<MflDraftResultsFeed>(selectedYear, 'draftResults.json'),
+  curPlayerScoresYtd: feed<MflPlayerScoresFeed>(selectedYear, 'playerScores-ytd.json'),
+  teamsPerPool,
+  keeperSnapshots,
+});
+const { previewMode } = analysis;
+
 // Card-width display names via the shared helper (nameMedium preference,
 // ≤15-char cap) — matches the other AFL card surfaces.
 const teamName = (fid: string) => {
@@ -145,7 +176,7 @@ const teamConference = (fid: string) => {
   return c && isValidConferenceId(c) ? getConferenceShort(c) : undefined;
 };
 
-const fetchMeta = feed<{ lastFetched?: string }>(fetchMetaFeeds, selectedYear, 'fetch.meta.json');
+const fetchMeta = feed<{ lastFetched?: string }>(selectedYear, 'fetch.meta.json');
 const lastFetched = fetchMeta?.lastFetched
   ? new Date(fetchMeta.lastFetched).toLocaleString('en-US', {
       month: 'short',
@@ -161,13 +192,18 @@ const best = analysis.franchises[0];
 const worst = analysis.franchises[analysis.franchises.length - 1];
 const fmtPts = (n: number) =>
   n.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const fmtEff = (n: number) => `${Math.round(n * 100)}%`;
 
-const kdefExceptionText =
-  analysis.summary.kdefExceptions.length > 0
-    ? analysis.summary.kdefExceptions
-        .map((e) => `${e.playerName} lapped the position by ${Math.round(e.gap)} points — skipping it counts as a real miss this year`)
-        .join('; ')
-    : `No kicker or defense finished ${KDEF_GAP_THRESHOLD}+ points clear of the position — they're excluded from grading`;
+// Flagged only when replacement had to be estimated from rostered players —
+// the full-pool YTD feed is the real source, and a build that missed it grades
+// against a slightly generous baseline.
+// Slot groups use MFL's position codes; the table renders Def as DEF, so the
+// banner should too rather than leaking raw enum ids.
+const clampedLabel = analysis.summary.replacementClamped
+  .map((g) => (g === 'Def' ? 'DEF' : g === 'FLEX' ? 'RB/WR/TE' : g))
+  .join(', ');
+const replacementIsEstimated =
+  !analysis.summary.replacementFromFullPool || analysis.summary.replacementClamped.length > 0;
 ---
 
 <TheLeagueLayout title={`Keeper Report Card ${selectedYear} | AFL`}>
@@ -186,8 +222,9 @@ const kdefExceptionText =
         <h1>Keeper Report Card</h1>
         <p class="ka-hero__sub">
           Every {prevYear} roster, re-ranked by {selectedYear} points. The
-          highlighted rows are the hindsight-optimal seven — the keeps are
-          graded against them. Hindsight is undefeated. Filed accordingly.
+          highlighted rows are the keeps that were actually worth a slot —
+          up to seven, and often fewer. Hindsight is undefeated. Filed
+          accordingly.
         </p>
         <p class="ka-hero__meta">
           {previewMode
@@ -224,20 +261,22 @@ const kdefExceptionText =
               )}
               {teamName(best.franchiseId)}
             </span>
+            <span class="ka-tile__big">{fmtEff(best.efficiency)} of optimal</span>
             <span class="ka-tile__stat">
-              {fmtPts(best.keptPoints)} pts · {best.hits}/{best.keptCount} hits
+              {fmtPts(best.keptValue)} value over free · {best.hits}/{best.hits + best.misses} hits
             </span>
           </div>
           <div class="ka-tile ka-tile--worst">
-            <span class="ka-tile__label">Toughest hindsight</span>
+            <span class="ka-tile__label">Worst keeper decisions</span>
             <span class="ka-tile__team">
               {teamIcon(worst.franchiseId) && (
                 <img src={teamIcon(worst.franchiseId)} alt="" loading="lazy" />
               )}
               {teamName(worst.franchiseId)}
             </span>
+            <span class="ka-tile__big">{fmtEff(worst.efficiency)} of optimal</span>
             <span class="ka-tile__stat">
-              {fmtPts(worst.keptPoints)} pts · {worst.hits}/{worst.keptCount} hits
+              {fmtPts(worst.keptValue)} value over free · {worst.hits}/{worst.hits + worst.misses} hits
             </span>
           </div>
           <div class="ka-tile">
@@ -249,17 +288,17 @@ const kdefExceptionText =
               {analysis.summary.totalGotAway} optimal keepers got away
             </span>
           </div>
-          <div class="ka-tile">
-            <span class="ka-tile__label">K/DEF watch</span>
-            <span class="ka-tile__big">
-              {analysis.summary.franchisesWithKdefInRawTopSeven} of {analysis.franchises.length}
-            </span>
-            <span class="ka-tile__stat">
-              raw top-7s crashed by a kicker or defense
-            </span>
-          </div>
         </div>
-        <p class="ka-summary__kdef-note">{kdefExceptionText}.</p>
+        {replacementIsEstimated && (
+          <p class="ka-summary__note">
+            Replacement level is estimated this cycle.
+            {!analysis.summary.replacementFromFullPool &&
+              ' The full free-agent pool wasn\u2019t available when this built.'}
+            {analysis.summary.replacementClamped.length > 0 &&
+              ` At ${clampedLabel} there were too few players to measure a replacement level against.`}
+            Grades may shift once a complete pool lands.
+          </p>
+        )}
       </section>
     )}
 
@@ -279,6 +318,15 @@ const kdefExceptionText =
 
     <footer class="ka-methodology">
       <h2>Methodology</h2>
+      <p class="ka-methodology__rubric">
+        <strong>How this is graded:</strong> every class is scored on
+        <em>% of optimal</em> — the value its keepers delivered over freely
+        available players, against the best seven that roster could have
+        kept. That grades the decision, not the inheritance: maxing out a
+        thin roster beats leaving points on a loaded one. Value over free and
+        hits are shown too, but the ranking is the percentage. Bench keeps
+        aren't written off — they're priced by how often they actually play.
+      </p>
       <ul>
         <li>
           Points are {selectedYear} regular-season fantasy points in AFL
@@ -306,25 +354,55 @@ const kdefExceptionText =
           )}
         </li>
         <li>
-          Kickers and defenses are excluded from the optimal seven unless the
-          position's top scorer finished {KDEF_GAP_THRESHOLD}+ points clear
-          of the runner-up (they still show as raw top-7 flags). But a
-          <em>kept</em> kicker or defense that outscored an optimal player
-          the team let walk counts as a hit — the keep paid off.
+          Value is <em>points over replacement</em>, not raw points. A player
+          is worth what he beat a freely available alternative by: the best
+          player at his position you could NOT have started. Your pool is your
+          own conference — 12 teams, each starting one QB, one kicker, one
+          defense and six from RB/WR/TE — because the two conferences roster
+          independently and the same player can sit on a roster in both. That
+          is why a kicker is worth a fraction of his raw total while a stud
+          running back keeps nearly all of his: most of a kicker's points
+          were available to anyone for nothing.
         </li>
         <li>
-          Only one QB counts toward the optimal seven — no team keeps two.
-          A kept backup QB is never a miss, and grades a hit if he outscored
-          an optimal player the team let walk.
+          The seven are lineup-legal — one QB, one kicker, one defense and
+          six from RB/WR/TE — and a keep who doesn't win a starting slot is
+          valued as <em>bye-week cover</em>, not written off. That matters
+          because backups aren't equal: a seventh skill player fills in for
+          any of your six flex starters, so he's in the lineup roughly six
+          times, while a second quarterback only covers QB1's single bye.
+          Bench keeps are marked <em>Bench</em> and earn value in proportion.
+          Kickers and defenses aren't excluded any more either; they simply
+          have to earn a place on value, and a genuinely dominant unit does.
+        </li>
+        <li>
+          A keep at or below replacement adds nothing, because you could have
+          had that production for free.
+        </li>
+        <li>
+          A keep is only a <em>miss</em> when somebody better actually got
+          away. If your roster only had four players worth keeping and you
+          kept all four, the other slots were spent on nobody — that isn't a
+          decision anyone got wrong, so it isn't counted against you. The hit
+          tally is out of the calls that had a better answer available.
+        </li>
+        <li>
+          Classes rank on the share of their own ceiling they captured, not on
+          raw totals — the ceiling swings about 2x across the league in a
+          given cycle, and nobody chose the roster they inherited. Ties break
+          on value captured, then franchise id.
         </li>
         <li>
           An earned hit doesn't erase the matching "got away" — keeping the
           kicker that beat your alternative and letting that alternative walk
-          are both facts, and both get shown. For the same reason a team
-          whose K/DEF or QB2 keeps outscored the skill-only optimal seven can
-          grade above 100% of optimal.
+          are both facts, and both get shown.
         </li>
-        <li>Ties at the seventh slot break by player id — hindsight is cruel but consistent.</li>
+        <li>
+          A roster can be worth fewer than seven keeps — if only four players
+          beat a free replacement, the optimal set is four and the spare slots
+          cost you nothing. Ties break by player id: hindsight is cruel but
+          consistent.
+        </li>
         <li>
           Numbers come straight from the season's MFL feeds; the judgment is
           Claude Schefter's. Per source: the source is the box score.
@@ -463,7 +541,7 @@ const kdefExceptionText =
     color: var(--content-text-muted, #6b7280);
   }
 
-  .ka-summary__kdef-note {
+  .ka-summary__note {
     margin: 0.75rem 0 0;
     font-size: 0.82rem;
     color: var(--content-text-muted, #6b7280);
@@ -480,6 +558,21 @@ const kdefExceptionText =
     margin-top: 2.5rem;
     border-top: 1px solid var(--content-border, #e5e7eb);
     padding-top: 1.25rem;
+  }
+
+  .ka-methodology__rubric {
+    margin: 0 0 0.85rem;
+    padding: 0.7rem 0.9rem;
+    border-left: 3px solid var(--league-accent, #c41e3a);
+    background: var(--content-bg-muted, #f9fafb);
+    border-radius: 0 8px 8px 0;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: var(--content-text-muted, #6b7280);
+  }
+
+  .ka-methodology__rubric strong {
+    color: var(--page-text, #1a1a1a);
   }
 
   .ka-methodology h2 {
