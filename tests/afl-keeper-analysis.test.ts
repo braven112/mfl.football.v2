@@ -309,11 +309,12 @@ describe('keeperValue', () => {
   });
 });
 
-// Starter value is the raw points; a backup gets the group's fixed share.
+// Starter value is the raw points; a backup gets the group's fixed share —
+// via the production helper, so the tests can't drift from the real formula.
 const creditValueOf =
   (base: Map<string, number>) =>
   (pid: string, group: 'QB' | 'PK' | 'Def' | 'FLEX', role: 'starter' | 'bench') =>
-    (base.get(pid) ?? 0) * (role === 'starter' ? 1 : BENCH_CREDIT[group]);
+    keeperValue(base.get(pid) ?? 0, group, role);
 
 describe('selectBestKeepers', () => {
   const players = playersFeed([
