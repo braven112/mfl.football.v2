@@ -358,6 +358,32 @@ describe('selectBestKeepers', () => {
     expect(picked.map((k) => k.pid)).not.toContain('q2');
   });
 
+  it('lets a big enough 7th flex displace a starting kicker — and not a lesser one', () => {
+    // The cross-group trade-off the credits exist to price: a flex backup
+    // banks 7/10 of his points, so once the 7th-best skill player clears
+    // PK-points / 0.7 he outbids the kicker for the last keeper slot. Locks
+    // the behavior so a future BENCH_CREDIT tweak can't flip it silently.
+    const pool = playersFeed([
+      ...Array.from({ length: 7 }, (_, i) => [`f${i}`, `Flex, ${i}`, 'RB'] as [string, string, string]),
+      ['pk', 'Kick, Er', 'PK'],
+    ]);
+    const poolById = buildPlayersById(pool, undefined);
+    const pids = [...Array.from({ length: 7 }, (_, i) => `f${i}`), 'pk'];
+    const flexPts: Array<[string, number]> = [
+      ['f0', 250], ['f1', 240], ['f2', 230], ['f3', 220], ['f4', 210], ['f5', 200], ['f6', 180],
+    ];
+    // 7th flex banks 0.7 × 180 = 126 > the kicker's 120 — kicker is out.
+    const cheapKicker = new Map<string, number>([...flexPts, ['pk', 120]]);
+    const withoutPk = selectBestKeepers(pids, poolById, creditValueOf(cheapKicker));
+    expect(withoutPk.map((k) => k.pid)).not.toContain('pk');
+    expect(withoutPk.find((k) => k.pid === 'f6')?.role).toBe('bench');
+    // At 130 the kicker beats the 126 bench credit — he's back in, f6 is out.
+    const betterKicker = new Map<string, number>([...flexPts, ['pk', 130]]);
+    const withPk = selectBestKeepers(pids, poolById, creditValueOf(betterKicker));
+    expect(withPk.map((k) => k.pid)).toContain('pk');
+    expect(withPk.map((k) => k.pid)).not.toContain('f6');
+  });
+
   it('skips zero- and negative-value players entirely', () => {
     expect(selectBestKeepers(['r1'], byId, () => 0)).toHaveLength(0);
     expect(selectBestKeepers(['r1'], byId, () => -50)).toHaveLength(0);
