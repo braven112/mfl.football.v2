@@ -2208,10 +2208,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     const filterToggleBtn = document.getElementById('filter-toggle-btn');
     const filtersPanel = document.getElementById('filters-panel');
     if (filterToggleBtn && filtersPanel) {
-      // A soft navigation back to this page re-runs init() against fresh
-      // (collapsed) markup while filtersOpen survives in module scope — reseed
-      // it from the DOM or the first click reads as a close and does nothing.
-      filtersOpen = filtersPanel.classList.contains('open');
       filterToggleBtn.addEventListener('click', () => {
         filtersOpen = !filtersOpen;
         filtersPanel.classList.toggle('open', filtersOpen);
@@ -2401,6 +2397,30 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     }
 
     // Player name click → open detail modal (delegated via shared utility in module script below)
+
+    // All of the state above lives in module scope and survives a ClientRouter
+    // swap, but the markup init() just re-bound was rendered fresh — every
+    // control is back at its default. Reseed from the DOM, or returning to the
+    // page renders a table still filtered by criteria the panel shows as
+    // cleared (and leaves the Filters toggle a dead click).
+    const domVal = (id) => document.getElementById(id)?.value || '';
+    const domNum = (id) => { const n = parseInt(domVal(id), 10); return Number.isFinite(n) ? n : null; };
+    const domChecked = (id) => !!document.getElementById(id)?.checked;
+    activePosition = document.querySelector('.pos-pill.active')?.getAttribute('data-pos') || 'ALL';
+    searchQuery = domVal('player-search');
+    showRostered = domChecked('show-rostered');
+    showRookies = domChecked('show-rookies');
+    filterTeam = domVal('filter-team');
+    filterExp = domVal('filter-exp');
+    filterDraft = domVal('filter-draft');
+    filterAgeMin = domNum('filter-age-min');
+    filterAgeMax = domNum('filter-age-max');
+    filterHtMin = domNum('filter-ht-min');
+    filterHtMax = domNum('filter-ht-max');
+    filterWtMin = domNum('filter-wt-min');
+    filterWtMax = domNum('filter-wt-max');
+    filtersOpen = filtersPanel ? filtersPanel.classList.contains('open') : false;
+    visibleCount = BATCH_SIZE;
 
     filterPlayers();
 
