@@ -1066,8 +1066,8 @@ const serializedConfig = JSON.stringify({
   // Failed logo → hide (theme-aware: dark mode renders via the CSS content
   // swap, which doesn't depend on the light src); onload restores so a
   // reused element self-heals. FA / FA* / UFA render the NFL shield.
-  const LOGO_ONERROR = "if(!document.documentElement.classList.contains('dark'))this.style.visibility='hidden'";
-  const LOGO_ONLOAD = "this.style.visibility=''";
+  const LOGO_ONERROR = "this.classList.add('nfl-logo-failed')";
+  const LOGO_ONLOAD = "this.classList.remove('nfl-logo-failed')";
   const logoCode = (team) => {
     const code = (team || 'FA').toUpperCase();
     return code.indexOf('FA') === 0 || code === 'UFA' ? 'FA' : code;

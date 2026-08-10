@@ -99,14 +99,12 @@ export function PlayerCell({
   // onLoad restores it: the hide is imperative state React won't reset, so a
   // reused instance whose src changes to a valid logo must self-heal.
   const handleLogoError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    // In dark mode the visible pixels come from the CSS content:url() swap,
-    // which doesn't depend on the light src — don't hide a working logo.
-    if (!document.documentElement.classList.contains('dark')) {
-      e.currentTarget.style.visibility = 'hidden';
-    }
+    // The nfl-logo-failed CSS (buildNflLogoDarkCss) hides the img except
+    // where the dark-mode content:url() swap still provides pixels.
+    e.currentTarget.classList.add('nfl-logo-failed');
   };
   const handleLogoLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    e.currentTarget.style.visibility = '';
+    e.currentTarget.classList.remove('nfl-logo-failed');
   };
 
   const sizeClass = size === 'compact' ? 'player-cell--compact' : '';

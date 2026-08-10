@@ -860,7 +860,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         <td class="cell-player">
           <div class="player-cell">
             <div class="player-cell__avatar${isDef ? ' player-cell__avatar--def' : ''}"${isDef ? '' : getAvatarStyle(p.team)}>
-              <img src="${headshot}" alt="" loading="lazy" decoding="async" onerror="${escapeAttr(buildOnerror(p.id, p.espnId))}" />
+              <img src="${headshot}" alt="" loading="lazy" decoding="async" onerror="${isDef ? escapeAttr(logoOnerror) : escapeAttr(buildOnerror(p.id, p.espnId))}" />
             </div>
             <div class="player-cell__info">
               <strong class="player-cell__name player-cell__name--clickable" data-player-modal="${modalJson}">${escapeAttr(p.name)}${rosteredDot}</strong>
