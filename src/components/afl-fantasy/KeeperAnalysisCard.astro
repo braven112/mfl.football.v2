@@ -96,7 +96,7 @@ const efficiencyPct = Math.round(analysis.efficiency * 100);
           <td class="ka-table__pts">{previewMode ? '' : fmtPts(p.points)}</td>
           <td class="ka-table__badge">
             {p.kept && <span class="ka-pill ka-pill--kept">Kept</span>}
-            {!previewMode && p.badge === 'hit' && !p.optimal && (
+            {!previewMode && p.badge === 'hit' && (
               <span class="ka-pill ka-pill--hit" title="Kept one of the seven most valuable players this roster could have kept">
                 Hit
               </span>

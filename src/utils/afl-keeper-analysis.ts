@@ -75,6 +75,12 @@ export function slotGroupFor(position: string): SlotGroup | null {
  */
 const REPLACEMENT_MIN_WEEKS = 8;
 
+/**
+ * How many players we need to see BEYOND the last startable slot before the
+ * boundary player counts as a measured replacement level rather than a guess.
+ */
+const MIN_OBSERVATIONS_PAST_SLOTS = 3;
+
 // --- Feed shapes (loose — MFL JSON is stringly typed) ---
 
 interface MflWeeklyPlayer {
@@ -445,8 +451,16 @@ export function computeReplacementLevels(
   const clamped: ReplacementClamped = [];
   if (teamsPerPool <= 0 || maxCompletedWeek <= 0) return { levels, clamped };
 
-  // Season totals for everyone we can see, preferring the full-pool feed.
-  const useYtd = !!ytdTotals && ytdTotals.size > 0;
+  // Season totals for everyone we can see, preferring the full-pool feed —
+  // but ONLY when we know how many weeks those totals span. MFL may stamp the
+  // feed's week as the literal string "YTD", which parses to NaN; silently
+  // falling back to maxCompletedWeek would divide an 18-week total by 14 and
+  // inflate replacement ~29% with `replacementFromFullPool` still reporting
+  // true, so the page would never warn. A span shorter than the regular
+  // season is equally untrustworthy.
+  const ytdSpan = ytdWeeks && Number.isFinite(ytdWeeks) ? ytdWeeks : 0;
+  const ytdUsable = ytdSpan >= maxCompletedWeek;
+  const useYtd = !!ytdTotals && ytdTotals.size > 0 && ytdUsable;
   const rates: Record<SlotGroup, number[]> = { QB: [], PK: [], Def: [], FLEX: [] };
   const source = useYtd ? ytdTotals! : points;
   for (const [pid, total] of source) {
@@ -456,7 +470,7 @@ export function computeReplacementLevels(
     // definition; the rostered fallback must normalise by weeks rostered and
     // ignore short stints that would drag the baseline down.
     if (useYtd) {
-      rates[group].push(total / (ytdWeeks && ytdWeeks > 0 ? ytdWeeks : maxCompletedWeek));
+      rates[group].push(total / ytdSpan);
     } else {
       const w = weeks.get(pid) ?? 0;
       if (w < Math.min(REPLACEMENT_MIN_WEEKS, maxCompletedWeek)) continue;
@@ -469,7 +483,11 @@ export function computeReplacementLevels(
     if (list.length === 0) continue;
     // Index of the first player past the last startable one in the pool.
     const startable = LINEUP_SLOTS[group] * teamsPerPool;
-    if (list.length <= startable) clamped.push(group);
+    // Clamped when we cannot see past the last startable slot, and equally
+    // when we can barely see past it: with 13 kickers against 12 slots the
+    // "replacement kicker" is the single worst one anybody rostered, which is
+    // an estimate, not a measurement.
+    if (list.length < startable + MIN_OBSERVATIONS_PAST_SLOTS) clamped.push(group);
     levels[group] = list[Math.min(startable, list.length - 1)] ?? 0;
   }
   return { levels, clamped };
@@ -499,7 +517,12 @@ export function pointsOverReplacement(
   // optimal seven and rendered as a "Got away" row. If a keeper missed games,
   // the hole in the lineup is his cost to carry.
   const rate = (points.get(pid) ?? 0) / seasonWeeks;
-  const starts = expectedStarts ?? seasonWeeks;
+  // Clamp bench starts to the season length. BENCH_EXPECTED_STARTS.FLEX is 6,
+  // so before Week 6 an unclamped bench keep would be credited more starts
+  // than the season has had — making riding the bench worth MORE than
+  // starting, and breaking the precondition (starter multiplier >= bench
+  // multiplier) that makes selectBestKeepers exact.
+  const starts = Math.min(expectedStarts ?? seasonWeeks, seasonWeeks);
   return starts * (rate - replacement[group]);
 }
 
@@ -767,8 +790,8 @@ export function gradeFranchise(
     return {
       ...info,
       points: points.get(pid) ?? 0,
-      // Displayed value is the starter basis — what he'd be worth holding a
-      // starting slot all season. The bench discount shows via `role`.
+      // Starter-basis value: what he'd be worth holding a starting slot all
+      // season. Used for ordering, not rendered — the card shows raw points.
       pointsOverReplacement: pointsOverReplacement(
         pid,
         points,
@@ -794,9 +817,17 @@ export function gradeFranchise(
   // alternative to pick. The remaining keeps are filler — a slot spent on
   // nobody, which is not a decision anyone got wrong.
   const gotAwayCount = optimal.filter((k) => !kept.has(k.pid)).length;
+  // Rank the candidates by what they were actually WORTH to this class — the
+  // role-aware value from keptBest where it exists, starter basis otherwise.
+  // Sorting on the starter-basis number instead would blame a keep by a
+  // figure the valuation itself rejects: a redundant QB2 with a big starter
+  // number but ~1 game of real cover would outrank a modest flex and escape
+  // the Miss badge, inverting the decision this page exists to price.
+  const realisedValue = (p: AnalyzedPlayer) =>
+    keptById.get(p.id)?.value ?? p.pointsOverReplacement;
   const nonOptimalKeeps = players
     .filter((p) => p.kept && !p.optimal)
-    .sort((a, b) => a.pointsOverReplacement - b.pointsOverReplacement);
+    .sort((a, b) => realisedValue(a) - realisedValue(b));
   const missIds = new Set(
     nonOptimalKeeps.slice(0, Math.min(nonOptimalKeeps.length, gotAwayCount)).map((p) => p.id)
   );

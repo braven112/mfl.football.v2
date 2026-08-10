@@ -97,7 +97,7 @@ games, the hole is his cost to carry. `REPLACEMENT_MIN_WEEKS` guards the
   misprices the most common keeper decision on the board.
 - **Earned hits for kept K/DEF / QB2** → gone with them.
 
-New invariant: `hits + misses === keptCount` — with bench cover priced there
+New invariant: `hits + misses + fillerKept === keptCount` — with bench cover priced there
 is no exempt category, which also retired two mislabelling bugs the old
 slot-count check had (a 2nd QB graded `miss` when the whole QB room was below
 replacement; a below-replacement keep was excused whenever its group happened

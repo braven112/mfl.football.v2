@@ -217,8 +217,9 @@ const replacementIsEstimated =
         <h1>Keeper Report Card</h1>
         <p class="ka-hero__sub">
           Every {prevYear} roster, re-ranked by {selectedYear} points. The
-          highlighted rows are the hindsight-optimal seven — the keeps are
-          graded against them. Hindsight is undefeated. Filed accordingly.
+          highlighted rows are the keeps that were actually worth a slot —
+          up to seven, and often fewer. Hindsight is undefeated. Filed
+          accordingly.
         </p>
         <p class="ka-hero__meta">
           {previewMode
@@ -389,7 +390,12 @@ const replacementIsEstimated =
           kicker that beat your alternative and letting that alternative walk
           are both facts, and both get shown.
         </li>
-        <li>Ties at the seventh slot break by player id — hindsight is cruel but consistent.</li>
+        <li>
+          A roster can be worth fewer than seven keeps — if only four players
+          beat a free replacement, the optimal set is four and the spare slots
+          cost you nothing. Ties break by player id: hindsight is cruel but
+          consistent.
+        </li>
         <li>
           Numbers come straight from the season's MFL feeds; the judgment is
           Claude Schefter's. Per source: the source is the box score.

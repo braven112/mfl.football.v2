@@ -348,10 +348,29 @@ describe('computeReplacementLevels', () => {
     const ytd = new Map([['q1', 360], ['q2', 270], ['q3', 180], ['q4', 90]]);
     const weeks = evenWeeks(pids);
     const correct = computeReplacementLevels(points, weeks, byId, 2, 14, ytd, 18).levels;
-    const wrong = computeReplacementLevels(points, weeks, byId, 2, 14, ytd).levels;
+    const naive = 180 / 14; // what dividing by the regular-season count would give
     expect(correct.QB).toBeCloseTo(180 / 18);
-    expect(wrong.QB).toBeCloseTo(180 / 14);
-    expect(wrong.QB).toBeGreaterThan(correct.QB); // the ~29% inflation
+    expect(naive).toBeGreaterThan(correct.QB); // the ~29% inflation that was shipping
+  });
+
+  it('refuses a YTD feed whose week span is unusable', () => {
+    // MFL may stamp the feed week as the literal string "YTD" (parseInt =>
+    // NaN) or as a week shorter than the regular season. Silently falling
+    // back to maxCompletedWeek would divide an 18-week total by 14 and
+    // inflate replacement ~29% while replacementFromFullPool still reported
+    // true — so the page would never warn.
+    const weeks = evenWeeks(pids);
+    const ytd = new Map([['q1', 360], ['q2', 270], ['q3', 180], ['q4', 90]]);
+    const rosteredOnly = computeReplacementLevels(points, weeks, byId, 2, 14).levels;
+    // Unparseable week => must NOT use the YTD numbers at all.
+    expect(computeReplacementLevels(points, weeks, byId, 2, 14, ytd, Number.NaN).levels)
+      .toEqual(rosteredOnly);
+    // A span shorter than the regular season is equally untrustworthy.
+    expect(computeReplacementLevels(points, weeks, byId, 2, 14, ytd, 9).levels)
+      .toEqual(rosteredOnly);
+    // A valid span is used.
+    expect(computeReplacementLevels(points, weeks, byId, 2, 14, ytd, 18).levels.QB)
+      .toBeCloseTo(180 / 18);
   });
 
   it('prefers the full-pool YTD feed, which can see unrostered players', () => {
@@ -405,6 +424,24 @@ describe('pointsOverReplacement', () => {
     expect(starter).toBeCloseTo(14 * (20 - 10));
     expect(bench).toBeCloseTo(6 * (20 - 10));
     expect(bench).toBeLessThan(starter);
+  });
+
+  it('never credits a bench keep more starts than the season has had', () => {
+    // Regression: BENCH_EXPECTED_STARTS.FLEX is 6, so before Week 6 an
+    // unclamped bench keep was credited 6 starts in a 1-5 week season —
+    // making riding the bench worth MORE than starting, and breaking the
+    // precondition that makes selectBestKeepers exact. The page defaults to
+    // the newest season with any points, so this was the live landing view
+    // for the first five weeks of every season.
+    const points = new Map([['r1', 200]]); // comfortably above replacement
+    const replacement = { QB: 0, PK: 0, Def: 0, FLEX: 5 };
+    for (const seasonWeeks of [1, 2, 3, 4, 5, 6, 14]) {
+      const starter = pointsOverReplacement('r1', points, byId, replacement, seasonWeeks);
+      const bench = pointsOverReplacement(
+        'r1', points, byId, replacement, seasonWeeks, BENCH_EXPECTED_STARTS.FLEX
+      );
+      expect(bench).toBeLessThanOrEqual(starter);
+    }
   });
 
   it('values a 7th skill keep well above a backup QB — he covers six byes', () => {
@@ -596,7 +633,7 @@ describe('buildKeeperAnalysis', () => {
   ];
   const deepPool = (real: Record<string, number>) => ({
     playerScores: {
-      week: 'YTD',
+      week: '14',
       playerScore: [
         ...Object.entries(real).map(([id, score]) => ({ id, score: String(score) })),
         ...FILLERS.map(([id]) => ({ id, score: '1' })),
