@@ -29,7 +29,7 @@ import CollegeLogoDarkStyles from '../../components/CollegeLogoDarkStyles.astro'
 import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
 import { resolveLeaguePath } from '../../utils/nav-utils';
 import { getLeagueBySlug } from '../../config/leagues';
-import { NFL_LOGO_ONERROR, positionOrder } from '../../constants/roster-constants';
+import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, positionOrder } from '../../constants/roster-constants';
 import { getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark, getPlayerAvatarStyleMaps } from '../../utils/nfl-team-colors';
 import '../../styles/player-cell.css';
 // Build-time-derived free-agent snapshot. All the heavy multi-year feed reads +
@@ -186,7 +186,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     <!-- Hero -->
     <div class="players-hero">
       <div class="hero-spotlight" id="hero-spotlight" aria-hidden="true" data-def={topFaIsDef ? 'true' : 'false'} data-def-player={topFaIsDef && topFaDefStar ? 'true' : 'false'}>
-        <img id="hero-spotlight-logo" class="hero-spotlight__logo" src={topFaLogo} alt="" loading="eager" decoding="async" onerror={NFL_LOGO_ONERROR} />
+        <img id="hero-spotlight-logo" class="hero-spotlight__logo" src={topFaLogo} alt="" loading="eager" decoding="async" onerror={NFL_LOGO_ONERROR} onload={NFL_LOGO_ONLOAD} />
         <img id="hero-spotlight-head" class="hero-spotlight__head" src={topFaHead} alt="" loading="eager" decoding="async" style={topFaHasHeadshot ? undefined : 'visibility:hidden'} onerror={topFaHeadOnerror} />
       </div>
       <!-- Rendered even with no initial topFa (just hidden): updateSpotlight()

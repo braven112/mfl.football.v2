@@ -19,7 +19,7 @@
  */
 
 import type { PlayerModalData } from './player-modal-trigger';
-import { DEFAULT_HEADSHOT_URL, NFL_LOGO_ONERROR, buildHeadshotOnerror, getNflLogoUrl, getPlayerHeadshot } from '../constants/roster-constants';
+import { DEFAULT_HEADSHOT_URL, NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, buildHeadshotOnerror, getNflLogoUrl, getPlayerHeadshot } from '../constants/roster-constants';
 import { normalizeTeamCode } from './nfl-logo';
 import { getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark } from './nfl-team-colors';
 
@@ -110,7 +110,7 @@ export function buildPlayerCellHTML(opts: PlayerCellOptions): string {
   let metaHtml = '';
   if (nflLogoUrl || position) {
     const logoPart = nflLogoUrl
-      ? `<img src="${esc(nflLogoUrl)}" alt="${esc(normalized || nflTeam || 'FA')} logo" class="player-meta__logo" loading="lazy" decoding="async" onerror="${esc(NFL_LOGO_ONERROR)}" />`
+      ? `<img src="${esc(nflLogoUrl)}" alt="${esc(normalized || nflTeam || 'FA')} logo" class="player-meta__logo" loading="lazy" decoding="async" onerror="${esc(NFL_LOGO_ONERROR)}" onload="${esc(NFL_LOGO_ONLOAD)}" />`
       : '';
     const statusSuffix = contractStatus ? ` - ${esc(contractStatus)}` : '';
     const posPart = position
@@ -126,7 +126,7 @@ export function buildPlayerCellHTML(opts: PlayerCellOptions): string {
 
   return `<div class="player-cell${sizeClass}${className ? ' ' + esc(className) : ''}">
   <div class="player-cell__avatar${defClass}"${avatarStyle}>
-    <img src="${esc(avatarSrc)}" alt="${esc(avatarAlt)}" loading="lazy" decoding="async" onerror="${esc(avatarOnerror)}" />
+    <img src="${esc(avatarSrc)}" alt="${esc(avatarAlt)}" loading="lazy" decoding="async" onerror="${esc(avatarOnerror)}"${isLogo ? ` onload="${esc(NFL_LOGO_ONLOAD)}"` : ''} />
   </div>
   <div class="player-cell__info">
     ${nameHtml}

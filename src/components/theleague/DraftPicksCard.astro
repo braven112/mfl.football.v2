@@ -90,7 +90,6 @@ const getPickNumber = (pick: DraftPrediction | ActualDraftPick): string => {
             </div>
             {actualPick && (
               <div class="draft-pick-row__icon-container">
-                <img src="/assets/nfl-logos/placeholder.png" alt={actualPick.currentTeamName} class="draft-pick-row__icon" onerror="this.onerror=null;this.style.visibility='hidden'" />
                 {actualPick.isTraded && actualPick.originalTeamIcon && (
                   <img
                     src={actualPick.originalTeamIcon}

@@ -11,7 +11,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import CollegeLogoDarkStyles from '../../components/CollegeLogoDarkStyles.astro';
 import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
 import { resolveLeaguePath } from '../../utils/nav-utils';
-import { NFL_LOGO_ONERROR, positionOrder } from '../../constants/roster-constants';
+import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, positionOrder } from '../../constants/roster-constants';
 import { getCurrentLeagueYear, getCurrentSeasonYear, getTestDateFromSearchParams } from '../../utils/league-year';
 import { getPlayerMap } from '../../utils/player-map';
 import { getNthDayOfMonth } from '../../utils/league-event-resolver';
@@ -653,7 +653,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
            ESPN headshot in front, NFL team logo watermark behind. Rehydrated
            client-side by updateSpotlight() whenever the list re-renders. -->
       <div class="hero-spotlight" id="hero-spotlight" aria-hidden="true" data-def={topFaIsDef ? 'true' : 'false'} data-def-player={topFaIsDef && topFaDefStar ? 'true' : 'false'}>
-        <img id="hero-spotlight-logo" class="hero-spotlight__logo" src={topFaLogo} alt="" loading="eager" decoding="async" onerror={NFL_LOGO_ONERROR} />
+        <img id="hero-spotlight-logo" class="hero-spotlight__logo" src={topFaLogo} alt="" loading="eager" decoding="async" onerror={NFL_LOGO_ONERROR} onload={NFL_LOGO_ONLOAD} />
         <img id="hero-spotlight-head" class="hero-spotlight__head" src={topFaHead} alt="" loading="eager" decoding="async" style={topFaHasHeadshot ? undefined : 'visibility:hidden'} onerror={topFaHeadOnerror} />
       </div>
       {topFa && (

@@ -99,7 +99,11 @@ export function PlayerCell({
   // onLoad restores it: the hide is imperative state React won't reset, so a
   // reused instance whose src changes to a valid logo must self-heal.
   const handleLogoError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    e.currentTarget.style.visibility = 'hidden';
+    // In dark mode the visible pixels come from the CSS content:url() swap,
+    // which doesn't depend on the light src — don't hide a working logo.
+    if (!document.documentElement.classList.contains('dark')) {
+      e.currentTarget.style.visibility = 'hidden';
+    }
   };
   const handleLogoLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
     e.currentTarget.style.visibility = '';

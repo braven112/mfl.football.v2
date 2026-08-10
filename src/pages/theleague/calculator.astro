@@ -1063,6 +1063,15 @@ const serializedConfig = JSON.stringify({
   const config = JSON.parse(
     document.getElementById('calculator-config').textContent
   );
+  // Failed logo → hide (theme-aware: dark mode renders via the CSS content
+  // swap, which doesn't depend on the light src); onload restores so a
+  // reused element self-heals. FA / FA* / UFA render the NFL shield.
+  const LOGO_ONERROR = "if(!document.documentElement.classList.contains('dark'))this.style.visibility='hidden'";
+  const LOGO_ONLOAD = "this.style.visibility=''";
+  const logoCode = (team) => {
+    const code = (team || 'FA').toUpperCase();
+    return code.indexOf('FA') === 0 || code === 'UFA' ? 'FA' : code;
+  };
   const {
     seasons = {},
     defaultSeason,
@@ -1231,10 +1240,10 @@ const serializedConfig = JSON.stringify({
             <span class="player-suggestion__meta">
               <span>
                 <img
-                  src="/assets/nfl-logos/${player.nflTeam ?? 'FA'}.svg"
-                  alt="${player.nflTeam ?? 'FA'}"
+                  src="/assets/nfl-logos/${logoCode(player.nflTeam)}.svg"
+                  alt="${logoCode(player.nflTeam)}"
                   class="player-suggestion__nfl-icon"
-                  onerror="this.onerror=null;this.style.visibility='hidden'"
+                  onerror="${LOGO_ONERROR}" onload="${LOGO_ONLOAD}"
                 />
               </span>
               <span>
@@ -1440,9 +1449,9 @@ New Salary: ${formatCurrency(newSalary)}
 Total Contract Length: ${totalYears} years
 Reference: ${referenceLabel}`;
 
-      const nflTeamCode = (selectedPlayer?.nflTeam || 'FA').toUpperCase();
+      const nflTeamCode = logoCode(selectedPlayer?.nflTeam);
       const nflLogoUrl = `/assets/nfl-logos/${nflTeamCode}.svg`;
-      const nflLogoMarkup = `<img src="${nflLogoUrl}" alt="${nflTeamCode}" class="salary-table__nfl-logo" onerror="this.onerror=null;this.style.visibility='hidden'" />`;
+      const nflLogoMarkup = `<img src="${nflLogoUrl}" alt="${nflTeamCode}" class="salary-table__nfl-logo" onerror="${LOGO_ONERROR}" onload="${LOGO_ONLOAD}" />`;
       const franchiseIcon = selectedPlayer?.icon ?? null;
       const iconMarkup = franchiseIcon
         ? `<img src="${franchiseIcon}" alt="${selectedPlayer?.teamName ?? 'Team'}" class="salary-table__icon" />`
