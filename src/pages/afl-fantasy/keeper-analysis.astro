@@ -162,12 +162,15 @@ const worst = analysis.franchises[analysis.franchises.length - 1];
 const fmtPts = (n: number) =>
   n.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
+// Only surfaced when a kicker/defense actually earned a dominance exception —
+// that changes how the keeps grade. The routine "nobody qualified" case isn't
+// worth a callout; the methodology note below covers the rule.
 const kdefExceptionText =
   analysis.summary.kdefExceptions.length > 0
     ? analysis.summary.kdefExceptions
         .map((e) => `${e.playerName} lapped the position by ${Math.round(e.gap)} points — skipping it counts as a real miss this year`)
         .join('; ')
-    : `No kicker or defense finished ${KDEF_GAP_THRESHOLD}+ points clear of the position — they're excluded from grading`;
+    : null;
 ---
 
 <TheLeagueLayout title={`Keeper Report Card ${selectedYear} | AFL`}>
@@ -249,17 +252,8 @@ const kdefExceptionText =
               {analysis.summary.totalGotAway} optimal keepers got away
             </span>
           </div>
-          <div class="ka-tile">
-            <span class="ka-tile__label">K/DEF watch</span>
-            <span class="ka-tile__big">
-              {analysis.summary.franchisesWithKdefInRawTopSeven} of {analysis.franchises.length}
-            </span>
-            <span class="ka-tile__stat">
-              raw top-7s crashed by a kicker or defense
-            </span>
-          </div>
         </div>
-        <p class="ka-summary__kdef-note">{kdefExceptionText}.</p>
+        {kdefExceptionText && <p class="ka-summary__kdef-note">{kdefExceptionText}.</p>}
       </section>
     )}
 
