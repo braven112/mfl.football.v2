@@ -3357,10 +3357,16 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   .filters-panel {
     display: grid;
     grid-template-rows: 0fr;
-    transition: grid-template-rows 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    /* visibility (delayed to the end of the collapse) takes the clipped
+       controls out of the tab order everywhere; the panel's `inert` does the
+       same but is a no-op on iOS Safari below 15.4. */
+    visibility: hidden;
+    transition: grid-template-rows 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0s 0.3s;
   }
   .filters-panel.open {
     grid-template-rows: 1fr;
+    visibility: visible;
+    transition-delay: 0s;
   }
   /* Clip lives on a bare wrapper, not the card: the card's own padding and
      border would floor the 0fr track and leave a sliver when collapsed. */

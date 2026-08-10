@@ -978,5 +978,9 @@ collapsed exactly 0px on both. Pre-fix mobile was pinned at 300px.
 **Recommendation:** New collapsibles get the grid-row pattern with a dedicated
 clip wrapper. When retrofitting one, verify BOTH states in a browser — open
 (panel box ≥ inner content box) and closed (box === 0). A collapsed panel is
-also still tabbable: mark it `inert` and put `aria-expanded`/`aria-controls`
-on the toggle, or keyboard users land in inputs clipped out of view.
+also still tabbable: mark it `inert`, put `aria-expanded`/`aria-controls` on
+the toggle, and pair the `inert` with `visibility: hidden` +
+`transition: … , visibility 0s 0.3s` (with `transition-delay: 0s` on the open
+state). The visibility rule is what actually covers iOS Safari below 15.4,
+where `inert` is a silent no-op; delaying it to the end of the collapse keeps
+the content on screen while the row animates shut.
