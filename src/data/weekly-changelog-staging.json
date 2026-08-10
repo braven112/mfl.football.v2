@@ -1,4 +1,13 @@
 {
   "weekOf": "2026-08-17",
-  "changes": []
+  "changes": [
+    {
+      "date": "2026-08-10",
+      "type": "bug-fix",
+      "summary": "The Free Agents page finally noticed the rookie draft happened. The 'Include rookies' filter stayed off year-round, so every undrafted rookie — guys who are legitimately sitting in the player pool right now — was invisible unless you flipped the checkbox yourself. The page now reads the draft results: before the rookie draft the class stays tucked away like always, and the moment real picks are in the books, the leftovers show up by default. Clearing filters respects whichever default the calendar says.",
+      "impact": "user",
+      "area": "free-agents",
+      "league": "theleague"
+    }
+  ]
 }
