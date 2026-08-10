@@ -51,3 +51,13 @@ Verified in page output: `estimatedCost` now has broad spread (not flat), with t
 **Evidence:** `src/utils/league-year.ts` now exports `getTestDateFromSearchParams(params)`; `getTestDateFromUrl()` delegates to it. `players.astro` computes the auction window from the test date's league year but loads data from real `currentYear`. Verified: `?testDate=2026-10-15` → Add, `?testDate=2026-04-01` → Bid.
 
 **Recommendation:** For any SSR page that should honor `?testDate=`, read it from `Astro.url.searchParams` via `getTestDateFromSearchParams`, never `getTestDateFromUrl()`. Scope the override to the phase/date logic only, not data-source selection.
+
+## 2026-08-10 - Seasonal Filter Defaults: Render Into the DOM, Count Deviation
+
+**Context:** Rookies should be hidden on `/theleague/players` before the rookie draft (the class is noise — they enter only through the draft) but shown by default once it's conducted (undrafted leftovers are real free agents).
+
+**Insight:** The page's filter state treats the DOM as source of truth — `init()` reads each control back (`showRookies = rookieCheck.checked`), and the post-ClientRouter reseed does the same via `domChecked()`. So a *seasonal* default needs exactly three touches, all keyed off one server-computed boolean: (1) render it into the markup (`checked={rookieDraftConducted}`) so both init paths pick it up for free; (2) make the filter badge count **deviation from the default** (`showRookies !== rookieDraftConducted`), not the checkbox being on; (3) make Clear Filters reset *to the default*, not to false. The phase signal is `isDraftConducted(draftResultsData)` from `src/utils/draft-utils.ts` — the draft-predictor's helper, which only counts real picks (MFL stubs unmade slots with empty player fields), applied to the current *league year's* `draftResults.json` feed. It flips true the day picks are made and back false when Feb 14 mints next year's empty draft. Also mirror the default into any server-rendered derivations (pill counts, hero spotlight) or first paint won't match the table.
+
+**Evidence:** `src/pages/theleague/players.astro` (rookieDraftConducted in frontmatter + define:vars); contrast `afl-fantasy/players.astro`, where rookies are unconditionally default-on with a static `checked` attribute because AFL rookies are addable FAs year-round.
+
+**Recommendation:** For any future phase-dependent filter default on these pages, compute one boolean server-side, render it as the control's initial state, and express badge/clear logic relative to it. Don't fork `isDraftConducted` — it already handles both leagues' draftUnit shapes.
