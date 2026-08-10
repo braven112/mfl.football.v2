@@ -1,5 +1,25 @@
 [
   {
+    "id": "division-titles-official-tiebreakers",
+    "date": "2026-08-10",
+    "category": "bug-fix",
+    "leagues": ["theleague"],
+    "icon": "trophy",
+    "title": "The Banner Recount: Six Division Titles Change Hands",
+    "summary": "The franchise history pages were crowning division winners with a homemade tiebreaker that leaned on raw points scored — which has never been how this league breaks ties. Every historical season has been re-scored against MFL's official standings order, the one computed with the real rulebook chain: win percentage, head-to-head, division record, all-play, then points. Six banners moved to their rightful owners, and a couple of playoff appearances came along for the ride.",
+    "description": [
+      "Somewhere along the way, the code that builds the franchise history pages started deciding division titles on its own — division record first, raw points-for as the tiebreak. That is not the rulebook, that has never been the rulebook, and MFL has been quietly holding the correct answer this whole time. The official standings order applies the league's actual tiebreaker chain: win percentage, then head-to-head, then division record, then all-play, then total points. We now defer to it, as the constitution — and common decency — demands.",
+      "The recount moved six banners. The <strong>Dark Magicians of Chaos</strong> take the 2016 Eastern crown that was wrongly hanging in the Fire Ready Aim facility — a 10-6 record beats 8-8, no tiebreaker required, which tells you how wrong the old math was. <strong>Fire Ready Aim</strong> gets 2019 Eastern back from the Wascawy Wabbits, the <strong>Wabbits</strong> in turn claim 2020 Eastern from Running Down The Dream and 2024 Eastern from Fire Ready Aim, <strong>Da Dangsters</strong> take 2025 Northwest off Vitside Mafia's wall, and the <strong>Gridiron Geeks</strong> pry 2025 Southwest away from Midwestside Connection.",
+      "Two more titles came off the books entirely: 2011 Northwest (claimed by the Pacific Pigskins under the old math) actually belonged to the Sabertooths, and 2017 Central (formerly the Mariachi Ninjas') belonged to the Devil Dogs — both won by previous regimes of current franchises, so per long-standing house rules they're credited to the era, not the current owner's trophy case.",
+      "Regular-season finishes across nearly every season shifted a spot or two as well, which rippled into the record books: a few \"best record\" and last-place honors moved to their rightful owners, and <strong>Cowboy Up</strong> — previously credited with zero playoff appearances in franchise history — turns out to have finished 6th and made the 2018 field. Congratulations on the retroactive relevance.",
+      "If your trophy case just got lighter: take it up with the constitution. If it got heavier: it was always yours, we just did the paperwork late."
+    ],
+    "excludeFromHero": true,
+    "links": [
+      { "label": "Franchise History", "href": "/theleague/franchises" }
+    ]
+  },
+  {
     "id": "afl-keeper-report-card",
     "date": "2026-08-09",
     "category": "new-page",

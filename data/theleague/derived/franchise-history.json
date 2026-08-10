@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-09T20:48:06.853Z",
+  "generatedAt": "2026-08-10T15:39:18.988Z",
   "yearsCovered": [
     2007,
     2008,
@@ -276,11 +276,11 @@
           "losses": 7,
           "ties": 0,
           "pointsFor": 1911.99,
-          "regSeasonRank": 7,
+          "regSeasonRank": 8,
           "divisionId": "03",
           "divisionName": "Eastern",
           "wonDivision": false,
-          "playoffResult": "playoffs"
+          "playoffResult": "missed"
         },
         {
           "year": 2023,
@@ -348,7 +348,7 @@
           "losses": 7,
           "ties": 0,
           "pointsFor": 2020.42,
-          "regSeasonRank": 4,
+          "regSeasonRank": 5,
           "divisionId": "03",
           "divisionName": "Eastern",
           "wonDivision": false,
@@ -384,7 +384,7 @@
           "losses": 11,
           "ties": 0,
           "pointsFor": 1706.28,
-          "regSeasonRank": 13,
+          "regSeasonRank": 15,
           "divisionId": "03",
           "divisionName": "Eastern",
           "wonDivision": false,
@@ -420,10 +420,10 @@
           "losses": 6,
           "ties": 0,
           "pointsFor": 1686.03,
-          "regSeasonRank": 6,
+          "regSeasonRank": 5,
           "divisionId": "03",
           "divisionName": "Eastern",
-          "wonDivision": false,
+          "wonDivision": true,
           "playoffResult": "runner-up"
         },
         {
@@ -438,7 +438,7 @@
           "losses": 11,
           "ties": 0,
           "pointsFor": 1665.69,
-          "regSeasonRank": 11,
+          "regSeasonRank": 12,
           "divisionId": "03",
           "divisionName": "Eastern",
           "wonDivision": false,
@@ -492,7 +492,7 @@
           "losses": 6,
           "ties": 0,
           "pointsFor": 1915.08,
-          "regSeasonRank": 4,
+          "regSeasonRank": 3,
           "divisionId": "03",
           "divisionName": "Eastern",
           "wonDivision": true,
@@ -510,7 +510,7 @@
           "losses": 4,
           "ties": 0,
           "pointsFor": 1974.82,
-          "regSeasonRank": 1,
+          "regSeasonRank": 3,
           "divisionId": "03",
           "divisionName": "East",
           "wonDivision": false,
@@ -528,7 +528,7 @@
           "losses": 5,
           "ties": 0,
           "pointsFor": 1902.17,
-          "regSeasonRank": 1,
+          "regSeasonRank": 2,
           "divisionId": "01",
           "divisionName": "Midwest",
           "wonDivision": true,
@@ -619,6 +619,11 @@
           "year": 2014,
           "divisionId": "03",
           "divisionName": "Eastern"
+        },
+        {
+          "year": 2016,
+          "divisionId": "03",
+          "divisionName": "Eastern"
         }
       ],
       "mvpAwards": [
@@ -634,7 +639,7 @@
       ],
       "jerryJonesAwards": [],
       "brockOsweilerAwards": [],
-      "playoffAppearances": 12,
+      "playoffAppearances": 11,
       "careerWins": 176,
       "careerLosses": 140,
       "careerTies": 0,
@@ -2010,9 +2015,9 @@
             "week": 16,
             "score": 145.99,
             "opponentScore": 103.45,
-            "isPlayoff": true,
-            "playoffRound": "Playoffs",
-            "playoffBracket": "championship",
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
             "sourceFranchiseId": null,
             "opponentSourceId": null,
             "bothAttributed": true
@@ -2868,9 +2873,9 @@
             "week": 15,
             "score": 100.74,
             "opponentScore": 161.28,
-            "isPlayoff": true,
-            "playoffRound": "Playoffs",
-            "playoffBracket": "championship",
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
             "sourceFranchiseId": null,
             "opponentSourceId": null,
             "bothAttributed": true
@@ -2978,9 +2983,9 @@
             "week": 16,
             "score": 122.22,
             "opponentScore": 106.8,
-            "isPlayoff": true,
-            "playoffRound": "Playoffs",
-            "playoffBracket": "championship",
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
             "sourceFranchiseId": null,
             "opponentSourceId": null,
             "bothAttributed": true
@@ -7931,7 +7936,7 @@
           "tier": "career",
           "awards": [
             {
-              "value": 12,
+              "value": 11,
               "suffix": "appearances"
             }
           ]
@@ -7946,23 +7951,6 @@
             {
               "value": 176,
               "suffix": "wins"
-            }
-          ]
-        },
-        {
-          "id": "best-record",
-          "name": "Top of the Standings",
-          "description": "Finished #1 in regular-season standings (best record).",
-          "icon": "🥇",
-          "tier": "season",
-          "awards": [
-            {
-              "year": 2011,
-              "label": "14-4"
-            },
-            {
-              "year": 2010,
-              "label": "13-5"
             }
           ]
         },
@@ -8040,11 +8028,11 @@
           "losses": 7,
           "ties": 0,
           "pointsFor": 1794.48,
-          "regSeasonRank": 8,
+          "regSeasonRank": 7,
           "divisionId": "00",
           "divisionName": "Northwest",
           "wonDivision": false,
-          "playoffResult": "missed"
+          "playoffResult": "playoffs"
         },
         {
           "year": 2023,
@@ -8112,7 +8100,7 @@
           "losses": 10,
           "ties": 0,
           "pointsFor": 1661.01,
-          "regSeasonRank": 10,
+          "regSeasonRank": 11,
           "divisionId": "00",
           "divisionName": "Northwest",
           "wonDivision": false,
@@ -8130,7 +8118,7 @@
           "losses": 6,
           "ties": 0,
           "pointsFor": 1706.34,
-          "regSeasonRank": 6,
+          "regSeasonRank": 4,
           "divisionId": "00",
           "divisionName": "Northwest",
           "wonDivision": true,
@@ -8148,7 +8136,7 @@
           "losses": 9,
           "ties": 0,
           "pointsFor": 1785.47,
-          "regSeasonRank": 10,
+          "regSeasonRank": 9,
           "divisionId": "00",
           "divisionName": "Northwest",
           "wonDivision": false,
@@ -8277,8 +8265,8 @@
           "regSeasonRank": 8,
           "divisionId": "00",
           "divisionName": "Northwest",
-          "wonDivision": true,
-          "playoffResult": "playoffs"
+          "wonDivision": false,
+          "playoffResult": "missed"
         },
         {
           "year": 2010,
@@ -8328,7 +8316,7 @@
           "losses": 10,
           "ties": 0,
           "pointsFor": 1392.82,
-          "regSeasonRank": 10,
+          "regSeasonRank": 9,
           "divisionId": "00",
           "divisionName": "Pacific",
           "wonDivision": false,
@@ -8346,7 +8334,7 @@
           "losses": 6,
           "ties": 0,
           "pointsFor": 1640.64,
-          "regSeasonRank": 4,
+          "regSeasonRank": 3,
           "divisionId": "00",
           "divisionName": "Pacific",
           "wonDivision": true,
@@ -8363,11 +8351,6 @@
           "year": 2007,
           "divisionId": "00",
           "divisionName": "Pacific"
-        },
-        {
-          "year": 2011,
-          "divisionId": "00",
-          "divisionName": "Northwest"
         },
         {
           "year": 2014,
@@ -9520,9 +9503,9 @@
             "week": 15,
             "score": 91.28,
             "opponentScore": 47.58,
-            "isPlayoff": true,
-            "playoffRound": "Playoffs",
-            "playoffBracket": "championship",
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
             "sourceFranchiseId": null,
             "opponentSourceId": null,
             "bothAttributed": true
@@ -11004,9 +10987,9 @@
             "week": 16,
             "score": 106.8,
             "opponentScore": 122.22,
-            "isPlayoff": true,
-            "playoffRound": "Playoffs",
-            "playoffBracket": "championship",
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
             "sourceFranchiseId": null,
             "opponentSourceId": null,
             "bothAttributed": true
@@ -16045,7 +16028,7 @@
           "losses": 12,
           "ties": 0,
           "pointsFor": 1764.33,
-          "regSeasonRank": 11,
+          "regSeasonRank": 12,
           "divisionId": "02",
           "divisionName": "Central",
           "wonDivision": false,
@@ -16153,7 +16136,7 @@
           "losses": 7,
           "ties": 0,
           "pointsFor": 1918.03,
-          "regSeasonRank": 5,
+          "regSeasonRank": 6,
           "divisionId": "02",
           "divisionName": "Central",
           "wonDivision": false,
@@ -16207,7 +16190,7 @@
           "losses": 5,
           "ties": 0,
           "pointsFor": 2083.14,
-          "regSeasonRank": 3,
+          "regSeasonRank": 5,
           "divisionId": "02",
           "divisionName": "Central",
           "wonDivision": false,
@@ -16243,7 +16226,7 @@
           "losses": 10,
           "ties": 0,
           "pointsFor": 1544.25,
-          "regSeasonRank": 10,
+          "regSeasonRank": 9,
           "divisionId": "02",
           "divisionName": "Central",
           "wonDivision": false,
@@ -16261,11 +16244,11 @@
           "losses": 7,
           "ties": 0,
           "pointsFor": 1673.46,
-          "regSeasonRank": 7,
+          "regSeasonRank": 6,
           "divisionId": "02",
           "divisionName": "Central",
           "wonDivision": false,
-          "playoffResult": "missed"
+          "playoffResult": "playoffs"
         },
         {
           "year": 2010,
@@ -16279,7 +16262,7 @@
           "losses": 6,
           "ties": 0,
           "pointsFor": 1785.73,
-          "regSeasonRank": 4,
+          "regSeasonRank": 3,
           "divisionId": "02",
           "divisionName": "Central",
           "wonDivision": true,
@@ -16315,7 +16298,7 @@
           "losses": 3,
           "ties": 0,
           "pointsFor": 1957.99,
-          "regSeasonRank": 1,
+          "regSeasonRank": 2,
           "divisionId": "02",
           "divisionName": "Central",
           "wonDivision": true,
@@ -16333,11 +16316,11 @@
           "losses": 8,
           "ties": 0,
           "pointsFor": 1601.8,
-          "regSeasonRank": 6,
+          "regSeasonRank": 8,
           "divisionId": "02",
           "divisionName": "Central",
           "wonDivision": false,
-          "playoffResult": "playoffs"
+          "playoffResult": "missed"
         }
       ],
       "championships": [
@@ -17547,9 +17530,9 @@
             "week": 15,
             "score": 146.8,
             "opponentScore": 129.88,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
+            "isPlayoff": true,
+            "playoffRound": "Playoffs",
+            "playoffBracket": "championship",
             "sourceFranchiseId": null,
             "opponentSourceId": "0011",
             "bothAttributed": false
@@ -17693,9 +17676,9 @@
             "week": 15,
             "score": 47.58,
             "opponentScore": 91.28,
-            "isPlayoff": true,
-            "playoffRound": "Playoffs",
-            "playoffBracket": "championship",
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
             "sourceFranchiseId": null,
             "opponentSourceId": null,
             "bothAttributed": true
@@ -20519,9 +20502,9 @@
             "week": 14,
             "score": 88.98,
             "opponentScore": 98.53,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
+            "isPlayoff": true,
+            "playoffRound": "Playoffs",
+            "playoffBracket": "championship",
             "sourceFranchiseId": null,
             "opponentSourceId": "0002",
             "bothAttributed": false
@@ -24496,10 +24479,6 @@
             {
               "year": 2016,
               "label": "14-2"
-            },
-            {
-              "year": 2008,
-              "label": "15-3"
             }
           ]
         },
@@ -24593,7 +24572,7 @@
           "regSeasonRank": 5,
           "divisionId": "03",
           "divisionName": "Eastern",
-          "wonDivision": true,
+          "wonDivision": false,
           "playoffResult": "playoffs"
         },
         {
@@ -24644,7 +24623,7 @@
           "losses": 11,
           "ties": 0,
           "pointsFor": 1546.8,
-          "regSeasonRank": 13,
+          "regSeasonRank": 12,
           "divisionId": "03",
           "divisionName": "Eastern",
           "wonDivision": false,
@@ -24662,7 +24641,7 @@
           "losses": 13,
           "ties": 0,
           "pointsFor": 1464.1,
-          "regSeasonRank": 16,
+          "regSeasonRank": 15,
           "divisionId": "03",
           "divisionName": "Eastern",
           "wonDivision": false,
@@ -24680,10 +24659,10 @@
           "losses": 6,
           "ties": 0,
           "pointsFor": 1711.44,
-          "regSeasonRank": 5,
+          "regSeasonRank": 3,
           "divisionId": "03",
           "divisionName": "Eastern",
-          "wonDivision": false,
+          "wonDivision": true,
           "playoffResult": "playoffs"
         },
         {
@@ -24698,7 +24677,7 @@
           "losses": 9,
           "ties": 0,
           "pointsFor": 1855.43,
-          "regSeasonRank": 9,
+          "regSeasonRank": 10,
           "divisionId": "03",
           "divisionName": "Eastern",
           "wonDivision": false,
@@ -24734,10 +24713,10 @@
           "losses": 8,
           "ties": 0,
           "pointsFor": 1595.13,
-          "regSeasonRank": 8,
+          "regSeasonRank": 7,
           "divisionId": "03",
           "divisionName": "Eastern",
-          "wonDivision": true,
+          "wonDivision": false,
           "playoffResult": "playoffs"
         },
         {
@@ -24824,7 +24803,7 @@
           "losses": 4,
           "ties": 0,
           "pointsFor": 1968.6,
-          "regSeasonRank": 2,
+          "regSeasonRank": 1,
           "divisionId": "03",
           "divisionName": "East",
           "wonDivision": true,
@@ -24865,22 +24844,17 @@
           "divisionName": "East"
         },
         {
-          "year": 2016,
-          "divisionId": "03",
-          "divisionName": "Eastern"
-        },
-        {
           "year": 2017,
           "divisionId": "03",
           "divisionName": "Eastern"
         },
         {
-          "year": 2023,
+          "year": 2019,
           "divisionId": "03",
           "divisionName": "Eastern"
         },
         {
-          "year": 2024,
+          "year": 2023,
           "divisionId": "03",
           "divisionName": "Eastern"
         }
@@ -27045,9 +27019,9 @@
             "week": 15,
             "score": 128.49,
             "opponentScore": 150.95,
-            "isPlayoff": true,
-            "playoffRound": "Playoffs",
-            "playoffBracket": "championship",
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
             "sourceFranchiseId": null,
             "opponentSourceId": null,
             "bothAttributed": true
@@ -28653,9 +28627,9 @@
             "week": 16,
             "score": 103.45,
             "opponentScore": 145.99,
-            "isPlayoff": true,
-            "playoffRound": "Playoffs",
-            "playoffBracket": "championship",
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
             "sourceFranchiseId": null,
             "opponentSourceId": null,
             "bothAttributed": true
@@ -30981,6 +30955,10 @@
             {
               "year": 2023,
               "label": "15-3"
+            },
+            {
+              "year": 2011,
+              "label": "14-4"
             }
           ]
         },
@@ -31008,10 +30986,6 @@
           "awards": [
             {
               "year": 2025,
-              "label": "#16"
-            },
-            {
-              "year": 2020,
               "label": "#16"
             }
           ]
@@ -31069,8 +31043,8 @@
           "regSeasonRank": 9,
           "divisionId": "01",
           "divisionName": "Southwest",
-          "wonDivision": true,
-          "playoffResult": "playoffs"
+          "wonDivision": false,
+          "playoffResult": "missed"
         },
         {
           "year": 2024,
@@ -31102,7 +31076,7 @@
           "losses": 7,
           "ties": 0,
           "pointsFor": 1752.34,
-          "regSeasonRank": 7,
+          "regSeasonRank": 5,
           "divisionId": "01",
           "divisionName": "Southwest",
           "wonDivision": true,
@@ -31120,7 +31094,7 @@
           "losses": 0,
           "ties": 0,
           "pointsFor": 1529.44,
-          "regSeasonRank": 15,
+          "regSeasonRank": 14,
           "divisionId": "01",
           "divisionName": "Southwest",
           "wonDivision": false,
@@ -31210,7 +31184,7 @@
           "losses": 10,
           "ties": 0,
           "pointsFor": 1571.15,
-          "regSeasonRank": 12,
+          "regSeasonRank": 11,
           "divisionId": "00",
           "divisionName": "Northwest",
           "wonDivision": false,
@@ -31246,7 +31220,7 @@
           "losses": 10,
           "ties": 0,
           "pointsFor": 1508.47,
-          "regSeasonRank": 11,
+          "regSeasonRank": 10,
           "divisionId": "00",
           "divisionName": "Northwest",
           "wonDivision": false,
@@ -31264,7 +31238,7 @@
           "losses": 13,
           "ties": 0,
           "pointsFor": 1345.99,
-          "regSeasonRank": 14,
+          "regSeasonRank": 11,
           "divisionId": "00",
           "divisionName": "Northwest",
           "wonDivision": false,
@@ -31311,11 +31285,6 @@
           "year": 2023,
           "divisionId": "01",
           "divisionName": "Southwest"
-        },
-        {
-          "year": 2025,
-          "divisionId": "01",
-          "divisionName": "Southwest"
         }
       ],
       "mvpAwards": [],
@@ -31329,7 +31298,7 @@
         }
       ],
       "brockOsweilerAwards": [],
-      "playoffAppearances": 4,
+      "playoffAppearances": 3,
       "careerWins": 92,
       "careerLosses": 120,
       "careerTies": 0,
@@ -37130,7 +37099,7 @@
           "regSeasonRank": 5,
           "divisionId": "00",
           "divisionName": "Northwest",
-          "wonDivision": true,
+          "wonDivision": false,
           "playoffResult": "playoffs"
         },
         {
@@ -37217,7 +37186,7 @@
           "losses": 13,
           "ties": 0,
           "pointsFor": 1513.28,
-          "regSeasonRank": 15,
+          "regSeasonRank": 16,
           "divisionId": "00",
           "divisionName": "Northwest",
           "wonDivision": false,
@@ -37235,7 +37204,7 @@
           "losses": 6,
           "ties": 0,
           "pointsFor": 1738.07,
-          "regSeasonRank": 4,
+          "regSeasonRank": 5,
           "divisionId": "00",
           "divisionName": "Northwest",
           "wonDivision": false,
@@ -37253,7 +37222,7 @@
           "losses": 11,
           "ties": 0,
           "pointsFor": 1609.46,
-          "regSeasonRank": 14,
+          "regSeasonRank": 13,
           "divisionId": "00",
           "divisionName": "Northwest",
           "wonDivision": false,
@@ -37343,7 +37312,7 @@
           "losses": 5,
           "ties": 0,
           "pointsFor": 1885.18,
-          "regSeasonRank": 1,
+          "regSeasonRank": 2,
           "divisionId": "00",
           "divisionName": "Northwest",
           "wonDivision": true,
@@ -37379,7 +37348,7 @@
           "losses": 13,
           "ties": 0,
           "pointsFor": 1508.38,
-          "regSeasonRank": 13,
+          "regSeasonRank": 14,
           "divisionId": "00",
           "divisionName": "Northwest",
           "wonDivision": false,
@@ -37401,11 +37370,6 @@
         },
         {
           "year": 2013,
-          "divisionId": "00",
-          "divisionName": "Northwest"
-        },
-        {
-          "year": 2025,
           "divisionId": "00",
           "divisionName": "Northwest"
         }
@@ -40742,9 +40706,9 @@
             "week": 16,
             "score": 79.68,
             "opponentScore": 124.04,
-            "isPlayoff": true,
-            "playoffRound": "Playoffs",
-            "playoffBracket": "championship",
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
             "sourceFranchiseId": null,
             "opponentSourceId": null,
             "bothAttributed": true
@@ -43591,10 +43555,32 @@
             {
               "year": 2022,
               "label": "0-0"
-            },
+            }
+          ]
+        },
+        {
+          "id": "worst-to-first",
+          "name": "Worst-to-First",
+          "description": "Finished last in the regular season, then made the playoffs the next year.",
+          "icon": "🦅",
+          "tier": "season",
+          "awards": [
             {
-              "year": 2013,
-              "label": "13-5"
+              "year": 2021,
+              "label": "from #16 in 2020"
+            }
+          ]
+        },
+        {
+          "id": "cellar-dweller",
+          "name": "Cellar Dweller",
+          "description": "Finished dead last in regular-season standings.",
+          "icon": "📉",
+          "tier": "season",
+          "awards": [
+            {
+              "year": 2020,
+              "label": "#16"
             }
           ]
         },
@@ -43684,7 +43670,7 @@
           "regSeasonRank": 1,
           "divisionId": "03",
           "divisionName": "Eastern",
-          "wonDivision": false,
+          "wonDivision": true,
           "playoffResult": "champion"
         },
         {
@@ -43699,7 +43685,7 @@
           "losses": 12,
           "ties": 0,
           "pointsFor": 1665.09,
-          "regSeasonRank": 12,
+          "regSeasonRank": 13,
           "divisionId": "03",
           "divisionName": "Eastern",
           "wonDivision": false,
@@ -43717,7 +43703,7 @@
           "losses": 0,
           "ties": 0,
           "pointsFor": 1715.4,
-          "regSeasonRank": 9,
+          "regSeasonRank": 10,
           "divisionId": "03",
           "divisionName": "Eastern",
           "wonDivision": false,
@@ -43756,7 +43742,7 @@
           "regSeasonRank": 1,
           "divisionId": "03",
           "divisionName": "Eastern",
-          "wonDivision": false,
+          "wonDivision": true,
           "playoffResult": "third-place"
         },
         {
@@ -43771,11 +43757,11 @@
           "losses": 7,
           "ties": 0,
           "pointsFor": 1896,
-          "regSeasonRank": 7,
+          "regSeasonRank": 8,
           "divisionId": "03",
           "divisionName": "Eastern",
-          "wonDivision": true,
-          "playoffResult": "playoffs"
+          "wonDivision": false,
+          "playoffResult": "missed"
         },
         {
           "year": 2018,
@@ -43843,7 +43829,7 @@
           "losses": 9,
           "ties": 0,
           "pointsFor": 1825.53,
-          "regSeasonRank": 7,
+          "regSeasonRank": 9,
           "divisionId": "02",
           "divisionName": "Central",
           "wonDivision": false,
@@ -43861,7 +43847,7 @@
           "losses": 9,
           "ties": 0,
           "pointsFor": 1711.04,
-          "regSeasonRank": 9,
+          "regSeasonRank": 10,
           "divisionId": "02",
           "divisionName": "Central",
           "wonDivision": false,
@@ -43897,7 +43883,7 @@
           "losses": 6,
           "ties": 0,
           "pointsFor": 1697.7,
-          "regSeasonRank": 6,
+          "regSeasonRank": 4,
           "divisionId": "02",
           "divisionName": "Central",
           "wonDivision": true,
@@ -43923,12 +43909,17 @@
           "divisionName": "Eastern"
         },
         {
-          "year": 2019,
+          "year": 2020,
           "divisionId": "03",
           "divisionName": "Eastern"
         },
         {
           "year": 2021,
+          "divisionId": "03",
+          "divisionName": "Eastern"
+        },
+        {
+          "year": 2024,
           "divisionId": "03",
           "divisionName": "Eastern"
         },
@@ -43951,7 +43942,7 @@
       ],
       "jerryJonesAwards": [],
       "brockOsweilerAwards": [],
-      "playoffAppearances": 7,
+      "playoffAppearances": 6,
       "careerWins": 139,
       "careerLosses": 87,
       "careerTies": 0,
@@ -45199,9 +45190,9 @@
             "week": 15,
             "score": 113.17,
             "opponentScore": 123.01,
-            "isPlayoff": true,
-            "playoffRound": "Playoffs",
-            "playoffBracket": "championship",
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
             "sourceFranchiseId": null,
             "opponentSourceId": "0011",
             "bothAttributed": false
@@ -45767,9 +45758,9 @@
             "week": 15,
             "score": 150.95,
             "opponentScore": 128.49,
-            "isPlayoff": true,
-            "playoffRound": "Playoffs",
-            "playoffBracket": "championship",
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
             "sourceFranchiseId": null,
             "opponentSourceId": null,
             "bothAttributed": true
@@ -46977,9 +46968,9 @@
             "week": 16,
             "score": 124.04,
             "opponentScore": 79.68,
-            "isPlayoff": true,
-            "playoffRound": "Playoffs",
-            "playoffBracket": "championship",
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
             "sourceFranchiseId": null,
             "opponentSourceId": null,
             "bothAttributed": true
@@ -50690,7 +50681,7 @@
           "tier": "career",
           "awards": [
             {
-              "value": 7,
+              "value": 6,
               "suffix": "appearances"
             }
           ]
@@ -50880,7 +50871,7 @@
           "losses": 0,
           "ties": 0,
           "pointsFor": 1544.37,
-          "regSeasonRank": 14,
+          "regSeasonRank": 15,
           "divisionId": "03",
           "divisionName": "Eastern",
           "wonDivision": false,
@@ -50919,7 +50910,7 @@
           "regSeasonRank": 3,
           "divisionId": "03",
           "divisionName": "Eastern",
-          "wonDivision": true,
+          "wonDivision": false,
           "playoffResult": "runner-up"
         },
         {
@@ -50934,7 +50925,7 @@
           "losses": 10,
           "ties": 0,
           "pointsFor": 1870.75,
-          "regSeasonRank": 11,
+          "regSeasonRank": 12,
           "divisionId": "03",
           "divisionName": "Eastern",
           "wonDivision": false,
@@ -50988,7 +50979,7 @@
           "losses": 9,
           "ties": 0,
           "pointsFor": 1742.85,
-          "regSeasonRank": 9,
+          "regSeasonRank": 10,
           "divisionId": "03",
           "divisionName": "Eastern",
           "wonDivision": false,
@@ -51006,7 +50997,7 @@
           "losses": 9,
           "ties": 0,
           "pointsFor": 1529.12,
-          "regSeasonRank": 9,
+          "regSeasonRank": 7,
           "divisionId": "03",
           "divisionName": "Eastern",
           "wonDivision": true,
@@ -51024,7 +51015,7 @@
           "losses": 9,
           "ties": 0,
           "pointsFor": 1528.15,
-          "regSeasonRank": 10,
+          "regSeasonRank": 9,
           "divisionId": "03",
           "divisionName": "Eastern",
           "wonDivision": false,
@@ -51039,11 +51030,6 @@
       "divisionTitles": [
         {
           "year": 2015,
-          "divisionId": "03",
-          "divisionName": "Eastern"
-        },
-        {
-          "year": 2020,
           "divisionId": "03",
           "divisionName": "Eastern"
         }
@@ -55794,7 +55780,7 @@
           "regSeasonRank": 8,
           "divisionId": "01",
           "divisionName": "Southwest",
-          "wonDivision": false,
+          "wonDivision": true,
           "playoffResult": "playoffs"
         },
         {
@@ -55827,7 +55813,7 @@
           "losses": 7,
           "ties": 0,
           "pointsFor": 1936.53,
-          "regSeasonRank": 5,
+          "regSeasonRank": 7,
           "divisionId": "01",
           "divisionName": "Southwest",
           "wonDivision": false,
@@ -55881,7 +55867,7 @@
           "losses": 11,
           "ties": 0,
           "pointsFor": 1570.48,
-          "regSeasonRank": 13,
+          "regSeasonRank": 12,
           "divisionId": "01",
           "divisionName": "Southwest",
           "wonDivision": false,
@@ -55935,7 +55921,7 @@
           "losses": 6,
           "ties": 0,
           "pointsFor": 1644.43,
-          "regSeasonRank": 4,
+          "regSeasonRank": 3,
           "divisionId": "01",
           "divisionName": "Southwest",
           "wonDivision": false,
@@ -55989,7 +55975,7 @@
           "losses": 12,
           "ties": 0,
           "pointsFor": 1545.47,
-          "regSeasonRank": 16,
+          "regSeasonRank": 15,
           "divisionId": "00",
           "divisionName": "Northwest",
           "wonDivision": false,
@@ -56004,6 +55990,11 @@
       "divisionTitles": [
         {
           "year": 2024,
+          "divisionId": "01",
+          "divisionName": "Southwest"
+        },
+        {
+          "year": 2025,
           "divisionId": "01",
           "divisionName": "Southwest"
         }
@@ -60403,10 +60394,6 @@
             {
               "year": 2016,
               "label": "#16"
-            },
-            {
-              "year": 2014,
-              "label": "#16"
             }
           ]
         }
@@ -60448,7 +60435,7 @@
           "regSeasonRank": 3,
           "divisionId": "00",
           "divisionName": "Northwest",
-          "wonDivision": false,
+          "wonDivision": true,
           "playoffResult": "third-place"
         },
         {
@@ -60499,7 +60486,7 @@
           "losses": 0,
           "ties": 0,
           "pointsFor": 1729.18,
-          "regSeasonRank": 8,
+          "regSeasonRank": 9,
           "divisionId": "00",
           "divisionName": "Northwest",
           "wonDivision": false,
@@ -60553,7 +60540,7 @@
           "losses": 12,
           "ties": 0,
           "pointsFor": 1775.96,
-          "regSeasonRank": 14,
+          "regSeasonRank": 15,
           "divisionId": "00",
           "divisionName": "Northwest",
           "wonDivision": false,
@@ -60589,7 +60576,7 @@
           "losses": 7,
           "ties": 0,
           "pointsFor": 1605.01,
-          "regSeasonRank": 7,
+          "regSeasonRank": 5,
           "divisionId": "00",
           "divisionName": "Northwest",
           "wonDivision": true,
@@ -60607,7 +60594,7 @@
           "losses": 9,
           "ties": 0,
           "pointsFor": 1600.33,
-          "regSeasonRank": 10,
+          "regSeasonRank": 9,
           "divisionId": "00",
           "divisionName": "Northwest",
           "wonDivision": false,
@@ -60625,7 +60612,7 @@
           "losses": 11,
           "ties": 0,
           "pointsFor": 1662.75,
-          "regSeasonRank": 12,
+          "regSeasonRank": 11,
           "divisionId": "01",
           "divisionName": "Southwest",
           "wonDivision": false,
@@ -60663,6 +60650,11 @@
         },
         {
           "year": 2024,
+          "divisionId": "00",
+          "divisionName": "Northwest"
+        },
+        {
+          "year": 2025,
           "divisionId": "00",
           "divisionName": "Northwest"
         }
@@ -62596,9 +62588,9 @@
             "week": 15,
             "score": 161.28,
             "opponentScore": 100.74,
-            "isPlayoff": true,
-            "playoffRound": "Playoffs",
-            "playoffBracket": "championship",
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
             "sourceFranchiseId": null,
             "opponentSourceId": null,
             "bothAttributed": true
@@ -64645,7 +64637,7 @@
           "losses": 9,
           "ties": 0,
           "pointsFor": 1679.13,
-          "regSeasonRank": 7,
+          "regSeasonRank": 8,
           "divisionId": "02",
           "divisionName": "Central",
           "wonDivision": false,
@@ -64663,7 +64655,7 @@
           "losses": 7,
           "ties": 0,
           "pointsFor": 1755.42,
-          "regSeasonRank": 5,
+          "regSeasonRank": 4,
           "divisionId": "02",
           "divisionName": "Central",
           "wonDivision": true,
@@ -64681,11 +64673,11 @@
           "losses": 7,
           "ties": 0,
           "pointsFor": 1681.43,
-          "regSeasonRank": 8,
+          "regSeasonRank": 7,
           "divisionId": "02",
           "divisionName": "Central",
           "wonDivision": false,
-          "playoffResult": "missed"
+          "playoffResult": "playoffs"
         },
         {
           "year": 2018,
@@ -64699,7 +64691,7 @@
           "losses": 11,
           "ties": 0,
           "pointsFor": 1472.58,
-          "regSeasonRank": 15,
+          "regSeasonRank": 14,
           "divisionId": "02",
           "divisionName": "Central",
           "wonDivision": false,
@@ -64720,8 +64712,8 @@
           "regSeasonRank": 9,
           "divisionId": "02",
           "divisionName": "Central",
-          "wonDivision": true,
-          "playoffResult": "playoffs"
+          "wonDivision": false,
+          "playoffResult": "missed"
         },
         {
           "year": 2016,
@@ -64735,7 +64727,7 @@
           "losses": 6,
           "ties": 0,
           "pointsFor": 1741.94,
-          "regSeasonRank": 5,
+          "regSeasonRank": 6,
           "divisionId": "02",
           "divisionName": "Central",
           "wonDivision": false,
@@ -64746,11 +64738,6 @@
       "runnerUps": [],
       "thirdPlaces": [],
       "divisionTitles": [
-        {
-          "year": 2017,
-          "divisionId": "02",
-          "divisionName": "Central"
-        },
         {
           "year": 2020,
           "divisionId": "02",
@@ -68688,7 +68675,7 @@
           "losses": 13,
           "ties": 0,
           "pointsFor": 1571.94,
-          "regSeasonRank": 12,
+          "regSeasonRank": 15,
           "divisionId": "02",
           "divisionName": "Central",
           "wonDivision": false,
@@ -68850,7 +68837,7 @@
           "losses": 8,
           "ties": 0,
           "pointsFor": 1721.72,
-          "regSeasonRank": 7,
+          "regSeasonRank": 8,
           "divisionId": "01",
           "divisionName": "Southwest",
           "wonDivision": false,
@@ -73138,7 +73125,7 @@
           "losses": 12,
           "ties": 0,
           "pointsFor": 1595.94,
-          "regSeasonRank": 13,
+          "regSeasonRank": 14,
           "divisionId": "00",
           "divisionName": "Northwest",
           "wonDivision": false,
@@ -73210,7 +73197,7 @@
           "losses": 10,
           "ties": 0,
           "pointsFor": 1634.96,
-          "regSeasonRank": 11,
+          "regSeasonRank": 10,
           "divisionId": "00",
           "divisionName": "Northwest",
           "wonDivision": false,
@@ -77074,7 +77061,7 @@
           "losses": 13,
           "ties": 0,
           "pointsFor": 1544.42,
-          "regSeasonRank": 13,
+          "regSeasonRank": 12,
           "divisionId": "02",
           "divisionName": "Central",
           "wonDivision": false,
@@ -77128,7 +77115,7 @@
           "losses": 0,
           "ties": 0,
           "pointsFor": 1523.82,
-          "regSeasonRank": 13,
+          "regSeasonRank": 12,
           "divisionId": "02",
           "divisionName": "Central",
           "wonDivision": false,
@@ -77146,7 +77133,7 @@
           "losses": 11,
           "ties": 0,
           "pointsFor": 1596.05,
-          "regSeasonRank": 12,
+          "regSeasonRank": 13,
           "divisionId": "02",
           "divisionName": "Central",
           "wonDivision": false,
@@ -77182,7 +77169,7 @@
           "losses": 12,
           "ties": 0,
           "pointsFor": 1554.68,
-          "regSeasonRank": 15,
+          "regSeasonRank": 14,
           "divisionId": "02",
           "divisionName": "Central",
           "wonDivision": false,
@@ -77200,11 +77187,11 @@
           "losses": 8,
           "ties": 0,
           "pointsFor": 1543.75,
-          "regSeasonRank": 8,
+          "regSeasonRank": 6,
           "divisionId": "02",
           "divisionName": "Central",
           "wonDivision": false,
-          "playoffResult": "missed"
+          "playoffResult": "playoffs"
         }
       ],
       "championships": [],
@@ -77248,7 +77235,7 @@
           "sourceFranchiseId": null
         }
       ],
-      "playoffAppearances": 0,
+      "playoffAppearances": 1,
       "careerWins": 39,
       "careerLosses": 83,
       "careerTies": 0,
@@ -80450,7 +80437,7 @@
           "losses": 13,
           "ties": 0,
           "pointsFor": 1526.25,
-          "regSeasonRank": 14,
+          "regSeasonRank": 13,
           "divisionId": "01",
           "divisionName": "Southwest",
           "wonDivision": false,
@@ -80504,7 +80491,7 @@
           "losses": 0,
           "ties": 0,
           "pointsFor": 1662.67,
-          "regSeasonRank": 10,
+          "regSeasonRank": 8,
           "divisionId": "01",
           "divisionName": "Southwest",
           "wonDivision": false,
@@ -80522,7 +80509,7 @@
           "losses": 9,
           "ties": 0,
           "pointsFor": 1586.56,
-          "regSeasonRank": 8,
+          "regSeasonRank": 7,
           "divisionId": "01",
           "divisionName": "Southwest",
           "wonDivision": false,
@@ -80558,7 +80545,7 @@
           "losses": 6,
           "ties": 0,
           "pointsFor": 1843.42,
-          "regSeasonRank": 3,
+          "regSeasonRank": 6,
           "divisionId": "01",
           "divisionName": "Southwest",
           "wonDivision": false,

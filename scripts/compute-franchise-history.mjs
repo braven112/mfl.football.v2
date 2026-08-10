@@ -268,16 +268,11 @@ function getChampionshipBracketSize(playoffBrackets) {
 function inferPlayoffParticipants(standingsRows, divisionTitleHolders, bracketSize) {
   if (!bracketSize) return [];
   const divWinnerIds = new Set([...divisionTitleHolders.values()].filter(Boolean));
-  const sorted = [...standingsRows].sort(
-    (a, b) =>
-      b.wins - a.wins ||
-      a.losses - b.losses ||
-      b.h2hPct - a.h2hPct ||
-      b.allPlayPct - a.allPlayPct ||
-      b.pointsFor - a.pointsFor
-  );
-  const divWinners = sorted.filter((r) => divWinnerIds.has(r.franchiseId));
-  const wildcards = sorted.filter((r) => !divWinnerIds.has(r.franchiseId));
+  // standingsRows are in MFL's official standings order (the feed arrives
+  // pre-sorted by the league's configured tiebreakers for that year), so
+  // "best record first" is simply feed order — no re-sort.
+  const divWinners = standingsRows.filter((r) => divWinnerIds.has(r.franchiseId));
+  const wildcards = standingsRows.filter((r) => !divWinnerIds.has(r.franchiseId));
   return [...divWinners, ...wildcards].slice(0, bracketSize).map((r) => r.franchiseId);
 }
 
@@ -533,7 +528,13 @@ for (const year of years) {
     });
   }
 
-  // Build standings rows
+  // Build standings rows. ORDER MATTERS: MFL's leagueStandings export
+  // arrives pre-sorted in the league's OFFICIAL standings order, computed
+  // with that year's configured tiebreakers (league.json standingsSort —
+  // PCT, H2H, DIVPCT, ALL_PLAY_PCT, PTS, ... per the rulebook). Several of
+  // those tiebreakers (head-to-head among tied teams especially) can't be
+  // reconstructed from the standings columns alone, so feed order is the
+  // source of truth for rank and division titles — never re-sort it.
   const standingsRows = toArray(standings.leagueStandings.franchise).map((f) => {
     const { w, l, t } = parseRecord(f.h2hwlt);
     const divTriple = parseRecord(f.divwlt);
@@ -543,8 +544,6 @@ for (const year of years) {
       losses: l,
       ties: t,
       pointsFor: parseNum(f.pf),
-      h2hPct: parseNum(f.h2hpct),
-      allPlayPct: parseNum(f.all_play_pct),
       divisionId: divisionMap.get(f.id),
       divisionWins: divTriple.w,
       divisionLosses: divTriple.l,
@@ -552,14 +551,8 @@ for (const year of years) {
     };
   });
 
-  // Compute regular-season rank by h2hPct then PF
-  const ranked = [...standingsRows].sort(
-    (a, b) =>
-      b.wins - a.wins ||
-      b.h2hPct - a.h2hPct ||
-      b.pointsFor - a.pointsFor
-  );
-  ranked.forEach((row, idx) => {
+  // Regular-season rank = MFL's official order.
+  standingsRows.forEach((row, idx) => {
     row.regSeasonRank = idx + 1;
   });
 
@@ -569,23 +562,18 @@ for (const year of years) {
   // appearance counts for the in-progress current season.
   const seasonHasGames = standingsRows.some((r) => r.wins + r.losses + r.ties > 0);
 
-  // Division titles — best record per division (tiebreak by PF)
+  // Division titles — the first team of each division in MFL's official
+  // standings order. MFL applies the league's real tiebreaker chain
+  // (PCT, H2H, DIVPCT, ALL_PLAY_PCT, PTS, ...); re-deriving the winner
+  // locally (the old divisionWins→wins→PF sort) flipped ten historical
+  // titles because raw PF was never the league's tiebreak.
   const divisionTitleHolders = new Map(); // divisionId -> franchiseId
   if (seasonHasGames) {
-    const byDiv = new Map();
-    standingsRows.forEach((row) => {
-      if (!row.divisionId) return;
-      if (!byDiv.has(row.divisionId)) byDiv.set(row.divisionId, []);
-      byDiv.get(row.divisionId).push(row);
-    });
-    for (const [divId, members] of byDiv) {
-      members.sort(
-        (a, b) =>
-          b.divisionWins - a.divisionWins ||
-          b.wins - a.wins ||
-          b.pointsFor - a.pointsFor
-      );
-      if (members[0]) divisionTitleHolders.set(divId, members[0].franchiseId);
+    for (const row of standingsRows) {
+      if (!row.divisionId) continue;
+      if (!divisionTitleHolders.has(row.divisionId)) {
+        divisionTitleHolders.set(row.divisionId, row.franchiseId);
+      }
     }
   }
 

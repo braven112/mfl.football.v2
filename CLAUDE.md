@@ -388,6 +388,20 @@ leagues. Rules that keep them cheap to add and impossible to break:
   pages in `src/pages/best-ball-1/` + a `tokens.css` accent block + tagged
   nav links + guard-test literals.
 
+## Standings order — MFL's feed IS the tiebreaker result, never re-sort
+
+MFL's `leagueStandings` export arrives pre-sorted in the league's OFFICIAL
+order, computed with that year's configured tiebreakers (`standingsSort` in
+league.json — PCT, H2H, DIVPCT, ALL_PLAY_PCT, PTS, … matching the rulebook).
+Head-to-head among tied teams can't be reconstructed from the standings
+columns, so any homemade re-sort is wrong by construction. Rank = feed index;
+division winner = first team of the division in feed order. A PF-heavy
+re-sort in `compute-franchise-history.mjs` flipped 8 historical TheLeague
+division titles (fixed Aug 2026); the same bug flipped 7 AFL titles (see the
+comment in `compute-afl-awards.mjs#divisionWinners`). The one sanctioned
+re-sort family is the constitution's all-play/tier tables in
+`src/utils/standings.ts`, which are deliberately a different ranking.
+
 ## Year rollover — two independent clocks
 
 Two dates drive year transitions and they are **not the same clock**:
