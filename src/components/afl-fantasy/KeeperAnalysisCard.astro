@@ -20,10 +20,11 @@ export interface Props {
 
 const { analysis, teamName, teamIcon, conferenceShort, tier, previewMode, classRank } = Astro.props;
 
-const isKdefPosition = (position: string) => position === 'PK' || position === 'Def';
-
-// Featured rows: everyone with a story (optimal ∪ kept ∪ raw top 7); the
-// rest of the roster collapses behind <details>. Preview mode (no points
+// Featured rows: everyone with a story (optimal ∪ kept); the rest of the
+// roster collapses behind <details>. Raw-top-seven membership deliberately
+// does NOT promote a row — its only effect was surfacing un-kept kickers,
+// defenses, and second QBs that the optimal seven excludes by design, which
+// is a non-decision nobody's keeper class turns on. Preview mode (no points
 // yet) shows only the keeper class, ordered by position then name.
 const POSITION_ORDER = ['QB', 'RB', 'WR', 'TE'];
 const positionSort = (a: AnalyzedPlayer, b: AnalyzedPlayer) => {
@@ -34,7 +35,7 @@ const positionSort = (a: AnalyzedPlayer, b: AnalyzedPlayer) => {
 
 const featured = previewMode
   ? analysis.players.filter((p) => p.kept).sort(positionSort)
-  : analysis.players.filter((p) => p.optimal || p.kept || p.rawTopSeven);
+  : analysis.players.filter((p) => p.optimal || p.kept);
 const rest = previewMode ? [] : analysis.players.filter((p) => !featured.includes(p));
 
 const fmtPts = (n: number) =>
@@ -109,11 +110,6 @@ const efficiencyPct = Math.round(analysis.efficiency * 100);
             {!previewMode && p.badge === 'qb2-neutral' && (
               <span class="ka-pill ka-pill--kdef" title="Second QB — nobody keeps two, so it's not a miss">
                 QB2
-              </span>
-            )}
-            {!previewMode && !p.kept && p.rawTopSeven && isKdefPosition(p.position) && (
-              <span class="ka-pill ka-pill--kdef" title="Cracked the raw top 7, but K/DEF are excluded from grading">
-                K/DEF
               </span>
             )}
           </td>
