@@ -48,6 +48,8 @@ const AREA_LABELS = {
   'admin': 'Admin',
   'schefter': 'Schefter Report',
   'draft': 'Draft',
+  'keeper-analysis': 'Keeper Report Card',
+  'awards': 'Awards & Trophies',
   'other': 'Other',
 };
 

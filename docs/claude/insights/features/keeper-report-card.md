@@ -41,6 +41,27 @@ Expect kickers/defenses to appear in optimal sevens on raw totals now (a
 120-point PK outranks a 110-point WR at his own slot) — that is intended
 under this model, not a regression.
 
+## 2026-08-10 - Team Branding Resolves To The POINTS Season, Not The Roster Season
+
+**Insight:** The card grades a decision made by whoever owns the franchise
+in the keep year, so `resolveConfigForYear` gets `selectedYear`, not
+`prevYear` — an offseason ownership change (0004: Baby Gate 2024 → Get off
+my Ditka 2025) must show the new owner's name/icon/tier on the keeps they
+picked. Same species of bug as the two-clocks year-rollover gotchas: the
+roster DATA is prev-year, the identity is keep-year. Two traps found in
+review:
+
+- `resolveConfigForYear` does NOT rewrite `tier` — the config field is the
+  CURRENT tier makeup and drifts from historical cycles at every
+  promotion/relegation cut (8 of 24 franchises differed between 2025 and
+  the current makeup). Year-correct tier chips come from
+  `getTierForYear` (`src/utils/afl-tier.ts`, backed by tier-history.json).
+- History era entries without a `conference` field fall back to the
+  franchise's CURRENT conference (`entry.conference ?? team.conference`).
+  No keeper-era franchise has switched AL/NL yet, but if one ever does,
+  the closing era entry must backfill `conference` or every
+  `resolveConfigForYear` consumer mislabels that era's chip.
+
 ## 2026-08-09 - Official Keepers Come From Post-Deadline Roster Snapshots (When They Exist)
 
 **Insight:** Between the July 15 keeper cut deadline and the late-August
