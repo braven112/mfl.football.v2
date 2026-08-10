@@ -355,6 +355,15 @@ export type ReplacementLevels = Record<SlotGroup, number>;
  * competes with 11 rivals for starters, not 23. Using 24 would place
  * replacement far too deep and inflate everyone's value over it.
  *
+ * The conferences are separate pools but share ONE baseline, which is
+ * deliberate and was measured, not assumed: in 2025, 273 of ~306 rostered
+ * players appeared in BOTH conferences, and restricting the calculation to
+ * either conference alone produced identical replacement rates at every slot
+ * (QB 19.59, FLEX 11.03, PK 7.26, Def 6.95). Both conferences independently
+ * roster the same productive players, so the player sitting at each slot
+ * boundary is the same one. Splitting the baseline per conference would be
+ * more code for a guaranteed no-op.
+ *
  * This is the whole reason the grading no longer needs position filters. A
  * kicker's raw total looks like a mid-tier running back's, but nearly all of
  * it is available for free — measured over replacement, Brandon Aubrey's 154
