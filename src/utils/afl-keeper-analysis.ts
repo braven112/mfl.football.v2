@@ -123,18 +123,21 @@ export interface FranchiseAnalysis {
   gotAway: number;
   /** Kept K/DEF in a non-exception season — shown, never counted as a miss. */
   kdefNeutralKept: number;
-  /** Kept backup QBs (beyond the team's best kept QB) — shown, never a miss. */
+  /**
+   * Kept backup QBs (beyond the team's best kept QB) — shown, never a miss
+   * and never a hit; their points are excluded from keptPoints entirely.
+   */
   backupQbNeutralKept: number;
   /** K/DEF that cracked the raw (unfiltered) top seven. */
   kdefRawTopSevenCount: number;
   keptPoints: number;
   optimalPoints: number;
   /**
-   * keptPoints / optimalPoints, 0..1+ (0 when optimalPoints is 0). The
-   * page's headline measure and its ranking key: it grades the keeper
-   * decision against the ceiling of the roster the manager actually had.
-   * Exceeds 1 when a kept K/DEF or backup QB beat the marginal optimal
-   * player — those add to keptPoints while optimalPoints stays skill-only.
+   * keptPoints / optimalPoints, 0..1 (0 when optimalPoints is 0). The page's
+   * headline measure and its ranking key: it grades the keeper decision
+   * against the ceiling of the roster the manager actually had. Backup-QB
+   * points are excluded from keptPoints (see gradeFranchise), which is what
+   * keeps a class from scoring above its own ceiling.
    */
   efficiency: number;
 }
@@ -534,10 +537,15 @@ export function gradeFranchise(
     const isBackupKeptQb = isKept && info.position === 'QB' && pid !== topKeptQb;
     const beatMarginalAlt = playerPoints > marginalAltPoints;
 
+    // A backup QB can only start on the starter's bye or an injury, so his
+    // season total was never actually available to the lineup — it can't pay
+    // off a keeper slot and never grades a hit. A kicker or defense DOES
+    // start every week, so a K/DEF that beat the marginal alternative is a
+    // real, earned hit.
     let badge: KeeperBadge | null = null;
     if (isKept && isOptimal) badge = 'hit';
     else if (isKept && isNeutralKdef) badge = beatMarginalAlt ? 'hit' : 'kdef-neutral';
-    else if (isBackupKeptQb) badge = beatMarginalAlt ? 'hit' : 'qb2-neutral';
+    else if (isBackupKeptQb) badge = 'qb2-neutral';
     else if (isKept) badge = 'miss';
     else if (isOptimal) badge = 'got-away';
 
@@ -552,8 +560,17 @@ export function gradeFranchise(
     };
   });
 
+  // Kept points count each QB slot ONCE: only the best kept QB contributes.
+  // A backup QB's season total is startable-in-theory only (bye weeks and
+  // injuries), so crediting it overstates what the keeper class actually put
+  // in lineups — and, because the optimal seven allows just one QB, crediting
+  // it also let a team's kept points exceed its own ceiling. Kickers and
+  // defenses keep counting in full: they start every week.
   const keptPlayers = players.filter((p) => p.kept);
-  const keptPoints = keptPlayers.reduce((sum, p) => sum + p.points, 0);
+  const keptPoints = keptPlayers.reduce(
+    (sum, p) => (p.badge === 'qb2-neutral' ? sum : sum + p.points),
+    0
+  );
   const optimalPoints = optimal.reduce((sum, pid) => sum + (points.get(pid) ?? 0), 0);
 
   return {

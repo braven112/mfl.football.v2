@@ -416,7 +416,7 @@ describe('gradeFranchise', () => {
     expect(analysis.gotAway).toBe(1); // t2
   });
 
-  it('kept backup QB is neutral, not a miss; letting a backup QB walk is not got-away', () => {
+  it('kept backup QB is always neutral — never a miss, never a hit, points uncounted', () => {
     const twoQbPlayers = playersFeed([
       ['q1', 'Quarterback, One', 'QB'],
       ['q2', 'Quarterback, Two', 'QB'],
@@ -439,10 +439,15 @@ describe('gradeFranchise', () => {
     const twoQbKept = new Set(['q1', 'q2', 'r1', 'r2', 'w1', 'w2', 'x1']);
     const analysis = gradeFranchise('0001', twoQbRoster, twoQbKept, twoQbPoints, twoQbById, new Set());
     const byPid = Object.fromEntries(analysis.players.map((p) => [p.id, p.badge]));
-    // q2 (290) outscored t1 (160), the best optimal player let go → good keeper.
-    expect(byPid['q2']).toBe('hit');
+    // q2 (290) outscored t1 (160), the best optimal player let go — but a
+    // backup QB only starts on a bye or an injury, so those points were never
+    // really in the lineup. Neutral, not a hit.
+    expect(byPid['q2']).toBe('qb2-neutral');
     expect(byPid['x1']).toBe('miss');
     expect(analysis.gotAway).toBe(2); // t1, t2 — q2 never counts as got-away
+    // ...and his 290 points are excluded from the class total.
+    expect(analysis.keptPoints).toBeCloseTo(300 + 200 + 190 + 180 + 170 + 10);
+    expect(analysis.efficiency).toBeLessThanOrEqual(1);
 
     // Same shape but the backup QB underperformed the walked alternative.
     const weakQ2 = new Map(twoQbPoints);
@@ -685,6 +690,11 @@ describe.runIf(hasRealFeeds)('integration: 2024→2025 cycle (real feeds)', () =
       expect(f.keptCount).toBeLessThanOrEqual(7);
       expect(f.hits + f.misses + f.kdefNeutralKept + f.backupQbNeutralKept).toBe(f.keptCount);
       expect(f.optimalPoints).toBeGreaterThan(0);
+      // No class may score above its own ceiling. Boondock Saints hit 100.49%
+      // before backup-QB points were excluded (Jayden Daniels as a QB2), which
+      // rounded to a clean "100%" on the page and put a class that missed one
+      // optimal keeper ahead of one that kept all seven.
+      expect(f.efficiency).toBeLessThanOrEqual(1);
     }
     // 2025 had no 40-pt dominant K/DEF.
     expect(analysis.summary.kdefExceptions).toEqual([]);

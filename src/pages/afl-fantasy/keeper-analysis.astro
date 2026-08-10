@@ -21,7 +21,6 @@ import {
   AFL_KEEPER_ERA_FIRST_PREV_YEAR,
   buildKeeperAnalysis,
   computeSeasonPoints,
-  KDEF_GAP_THRESHOLD,
   type KeeperAnalysis,
   type MflDraftResultsFeed,
   type MflPlayersFeed,
@@ -240,7 +239,7 @@ const kdefExceptionText =
             </span>
             <span class="ka-tile__big">{fmtEff(best.efficiency)} of optimal</span>
             <span class="ka-tile__stat">
-              {fmtPts(best.keptPoints)} kept pts · {best.hits}/{best.keptCount} hits
+              {fmtPts(best.keptPoints)} startable pts · {best.hits}/{best.keptCount} hits
             </span>
           </div>
           <div class="ka-tile ka-tile--worst">
@@ -253,7 +252,7 @@ const kdefExceptionText =
             </span>
             <span class="ka-tile__big">{fmtEff(worst.efficiency)} of optimal</span>
             <span class="ka-tile__stat">
-              {fmtPts(worst.keptPoints)} kept pts · {worst.hits}/{worst.keptCount} hits
+              {fmtPts(worst.keptPoints)} startable pts · {worst.hits}/{worst.keptCount} hits
             </span>
           </div>
           <div class="ka-tile">
@@ -291,8 +290,9 @@ const kdefExceptionText =
         <em>% of optimal</em> — the points its keepers actually scored
         against the best seven that roster could have kept. That grades the
         decision, not the inheritance: maxing out a thin roster beats
-        leaving points on a loaded one. Kept points and hits are shown too,
-        but the ranking is the percentage.
+        leaving points on a loaded one. Startable points and hits are shown
+        too, but the ranking is the percentage. Backup-QB points are left out
+        of the total — he only plays on a bye or an injury.
       </p>
       <ul>
         <li>
@@ -321,11 +321,11 @@ const kdefExceptionText =
           )}
         </li>
         <li>
-          Kickers and defenses are excluded from the optimal seven unless the
-          position's top scorer finished {KDEF_GAP_THRESHOLD}+ points clear
-          of the runner-up (they still show as raw top-7 flags). But a
-          <em>kept</em> kicker or defense that outscored an optimal player
-          the team let walk counts as a hit — the keep paid off.
+          Kickers and defenses sit out of the optimal seven — nobody burns a
+          keeper slot on one, so passing on one is never held against you.
+          But a <em>kept</em> kicker or defense that outscored an optimal
+          player the team let walk counts as a hit: they start every week, so
+          the keep paid off in real points.
         </li>
         <li>
           The optimal bar swings roughly 2x across the league in a given
@@ -335,16 +335,17 @@ const kdefExceptionText =
           Ties break on kept points, then franchise id.
         </li>
         <li>
-          Only one QB counts toward the optimal seven — no team keeps two.
-          A kept backup QB is never a miss, and grades a hit if he outscored
-          an optimal player the team let walk.
+          Only one QB counts, on both sides of the ratio. A backup quarterback
+          starts only on the starter's bye or after an injury, so his season
+          total was never really available to the lineup: a kept backup QB is
+          never a miss, never a hit, and <em>his points don't count toward the
+          class total at all</em>. Kickers and defenses are different — they
+          start every week, so their points count in full.
         </li>
         <li>
           An earned hit doesn't erase the matching "got away" — keeping the
           kicker that beat your alternative and letting that alternative walk
-          are both facts, and both get shown. For the same reason a team
-          whose K/DEF or QB2 keeps outscored the skill-only optimal seven can
-          grade above 100% of optimal.
+          are both facts, and both get shown.
         </li>
         <li>Ties at the seventh slot break by player id — hindsight is cruel but consistent.</li>
         <li>

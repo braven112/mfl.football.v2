@@ -14,7 +14,7 @@ export interface Props {
   conferenceShort?: string;
   tier?: string;
   previewMode: boolean;
-  /** League-wide rank of this keeper class by kept points (1-based). */
+  /** League-wide rank of this keeper class by share of optimal (1-based). */
   classRank: number;
 }
 
@@ -64,7 +64,7 @@ const efficiencyPct = Math.round(analysis.efficiency * 100);
       {!previewMode && (
         <span class="ka-card__grade-sub">
           <strong>{efficiencyPct}% of optimal</strong> · #{classRank} class ·
-          {fmtPts(analysis.keptPoints)} kept pts
+          {fmtPts(analysis.keptPoints)} startable pts
         </span>
       )}
     </div>
@@ -97,7 +97,7 @@ const efficiencyPct = Math.round(analysis.efficiency * 100);
           <td class="ka-table__badge">
             {p.kept && <span class="ka-pill ka-pill--kept">Kept</span>}
             {!previewMode && p.badge === 'hit' && !p.optimal && (
-              <span class="ka-pill ka-pill--hit" title="Kept K/DEF or backup QB that outscored an optimal player the team let walk — an earned hit">
+              <span class="ka-pill ka-pill--hit" title="Kept kicker or defense that outscored an optimal player the team let walk — an earned hit">
                 Hit
               </span>
             )}
@@ -109,7 +109,7 @@ const efficiencyPct = Math.round(analysis.efficiency * 100);
               <span class="ka-pill ka-pill--kdef">K/DEF</span>
             )}
             {!previewMode && p.badge === 'qb2-neutral' && (
-              <span class="ka-pill ka-pill--kdef" title="Second QB — nobody keeps two, so it's not a miss">
+              <span class="ka-pill ka-pill--kdef" title="Second QB — only starts on a bye or an injury, so it's never a miss and his points don't count toward the class total">
                 QB2
               </span>
             )}

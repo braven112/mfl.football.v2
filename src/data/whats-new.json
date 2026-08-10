@@ -1,41 +1,23 @@
 [
   {
-    "id": "afl-keeper-grading-rubric",
-    "date": "2026-08-10",
-    "category": "enhancement",
-    "icon": "history",
-    "title": "The Keeper Report Card Stops Grading You On Your Inheritance",
-    "summary": "The report card was ranking keeper classes by raw points, which mostly measured how loaded your roster already was. It now ranks on % of optimal — what you kept against the best seven you could have kept — and spells out the rubric in plain English at the bottom of the page. Two perfect classes finally got the credit, and one team stopped being called the league's worst for nearly maxing out a thin roster.",
-    "description": [
-      "Here is the thing about being told your keeper class was the best in the league: it should mean you made good decisions, not that you happened to be sitting on the best roster when the deadline hit. The report card was ranking classes by raw kept points, and raw kept points are mostly a measurement of what you already had. Across the 2024 → 2025 cycle, the best seven <em>available</em> ranged from 875 points on the thinnest roster to 1,842 on the deepest. That is a 2.1x spread nobody chose, and it was doing most of the work in the standings.",
-      "So the grades were saying strange things. <strong>The Show</strong> was labeled Toughest Hindsight — the worst keeper class in the AFL — for keeping 89% of what their roster could possibly have returned, which was ninth-best decision-making in the league. Meanwhile <strong>Boondock Saints</strong> and <strong>Drunk Indians</strong> both went a flawless 7-for-7 at 100% of optimal, kept literally the best seven available to them, and ranked second and third behind a team that had made a mistake.",
-      "Classes now rank on <em>% of optimal</em>: the points your keepers actually scored, divided by the best seven that roster could have kept. It grades the call instead of the collection. The Saints and the Indians go to the top where a perfect class belongs, Jewpacabra's 63% is the honest bottom, and The Show sits at ninth like they earned. Kept points and your hit tally are still on every card — they just stopped pretending to be the verdict.",
-      "The bottom of the page now spells out exactly how the grading works, right above the methodology, because a report card that does not tell you the rubric is just a number with an attitude. And the tile that used to read \"Toughest Hindsight\" now says what it means: <strong>Worst Keeper Decisions</strong>."
-    ],
-    "link": "/afl-fantasy/keeper-analysis",
-    "linkLabel": "See the new grades",
-    "image": "afl-keeper-grading-rubric.webp",
-    "imageAlt": "The Keeper Report Card's league summary tiles: Boondock Saints as best keeper class at 100% of optimal, Jewpacabra with the worst keeper decisions at 63%, and league-wide hit and miss totals, above franchise cards that now lead with their share of optimal.",
-    "leagues": ["afl"],
-    "excludeFromHero": true
-  },
-  {
     "id": "afl-keeper-report-card",
     "date": "2026-08-09",
     "category": "new-page",
     "icon": "history",
     "title": "The Keeper Report Card: Hindsight Is Undefeated",
-    "summary": "A new Claude Schefter report grades every AFL keeper class by the only judge that matters — what actually happened. Your 2024 roster re-ranked by 2025 points, the optimal seven highlighted, and every hit, miss, and the-one-that-got-away called out by name. Flip to 2026 to see this year's classes waiting for kickoff.",
+    "summary": "A new Claude Schefter report grades every AFL keeper class by the only judge that matters — what actually happened. Your 2024 roster re-ranked by 2025 points, the optimal seven highlighted, and every hit, miss, and the-one-that-got-away called out by name. Classes are scored on % of optimal, so the grade is about the call you made and not the roster you happened to inherit. Flip to 2026 to see this year's classes waiting for kickoff.",
     "description": [
       "You had all offseason. You studied the roster, you agonized over the seventh spot, you declared your keepers with the quiet confidence of a person who has definitely not just protected a running back about to lose his job in training camp. And then the season happened. The Keeper Report Card is where those two stories meet: every franchise's previous-season roster, re-ranked by what those players scored the <em>following</em> year, with the hindsight-optimal seven highlighted in green.",
-      "Every keep gets a verdict. Keep a top-seven scorer? <strong>Hit.</strong> Keep someone who finished ninth on your own roster? <strong>Miss.</strong> Let a top-seven scorer walk back into the draft pool? That's <strong>the one that got away</strong>, and yes, it's labeled in yellow so everyone can see it. The league summary up top crowns the best keeper class, names the toughest hindsight, and tallies the misses league-wide.",
-      "Two acts of mercy. First: kickers and defenses don't count against you. A kicker cracks somebody's raw top seven almost every year — nine teams' worth in 2025 alone — and nobody sane is burning a keeper slot on one. They're flagged, not graded, unless a unit ever laps its position by 40+ points, in which case skipping it becomes a real miss. No unit has ever pulled it off — the 2021 Patriots defense came closest and still missed by seven — but the door stays open. Second: only one quarterback counts toward the optimal seven, because no team keeps two — so a backup QB is never a miss and never 'got away.' And if you did keep a kicker, defense, or second QB and it outscored a player you let walk? That's a hit. The grade respects results.",
-      "The page defaults to the last finished season while we wait on kickoff. Once the 2026 games start, the grades go live and update all year — check back weekly to watch your genius (or your shame) accumulate in real time."
+      "Every keep gets a verdict. Keep a top-seven scorer? <strong>Hit.</strong> Keep someone who finished ninth on your own roster? <strong>Miss.</strong> Let a top-seven scorer walk back into the draft pool? That's <strong>the one that got away</strong>, and yes, it's labeled in yellow so everyone can see it. The league summary up top crowns the best keeper class, names the worst keeper decisions, and tallies the misses league-wide.",
+      "Here is the part that decides the table: every class is scored on <em>% of optimal</em> — the points your keepers actually put up, divided by the best seven that roster could have kept. Deliberately not raw points, because raw points mostly measure what you were already sitting on. In the 2024 → 2025 cycle the best available seven ranged from 875 points on the thinnest roster to 1,842 on the deepest, a 2.1x spread nobody chose, and ranking on it would just crown whoever inherited the most talent. The percentage grades the call instead: maxing out a thin roster beats leaving points on a loaded one. <strong>Drunk Indians</strong> kept literally the best seven available to them, which is what 100% and the top of the table look like.",
+      "Two acts of mercy. First: kickers and defenses don't count against you. Nobody sane burns a keeper slot on one, so they sit out of the optimal seven entirely and passing on one is never held against you. Keep a kicker or defense that outscored somebody you let walk, though, and it grades a hit — they start every week, so those points are as real as anybody's. Second: only one quarterback counts, so a backup QB is never a miss and never 'got away.'",
+      "That second one comes with arithmetic. A QB2 only plays on a bye week or after your starter gets hurt, so his season total was never really available to your lineup — which means he's never a hit either, and <strong>his points don't count toward your class total at all</strong>. Counting them was quietly letting a class score above its own ceiling: <strong>Boondock Saints</strong> sat at 100.49% of optimal on the strength of Jayden Daniels holding a clipboard, which rounded to a tidy \"100%\" and put them ahead of a team that had kept a genuinely perfect seven.",
+      "The bottom of the page spells out the whole rubric, because a report card that doesn't tell you how it grades is just a number with an attitude. The page defaults to the last finished season while we wait on kickoff. Once the 2026 games start, the grades go live and update all year — check back weekly to watch your genius (or your shame) accumulate in real time."
     ],
     "link": "/afl-fantasy/keeper-analysis",
     "linkLabel": "See the grades",
     "image": "keeper-report-card.webp",
-    "imageAlt": "The Keeper Report Card: league summary tiles for best and worst keeper classes above per-franchise rosters ranked by points with Kept, Miss, and Got Away badges.",
+    "imageAlt": "The Keeper Report Card: league summary tiles for the best keeper class and the worst keeper decisions, each scored as a share of optimal, above per-franchise rosters ranked by points with Kept, Miss, and Got Away badges.",
     "leagues": [
       "afl"
     ]
