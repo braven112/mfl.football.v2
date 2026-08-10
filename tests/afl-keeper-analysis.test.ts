@@ -306,6 +306,26 @@ describe('computeReplacementLevels', () => {
   const pids = ['q1', 'q2', 'q3', 'q4'];
   const points = new Map([['q1', 280], ['q2', 210], ['q3', 140], ['q4', 70]]);
 
+  it('sizes the pool by conference, not by the whole league', () => {
+    // Same league, same players — only the pool size differs. A 12-team
+    // conference makes replacement a BETTER player (fewer startable slots),
+    // so everyone's value over it is smaller. Grading the AFL as one
+    // 24-team pool would put replacement far too deep.
+    const deep = playersFeed(
+      Array.from({ length: 30 }, (_, i) => [`p${i}`, `P, ${i}`, 'QB'] as [string, string, string])
+    );
+    const deepById = buildPlayersById(deep, undefined);
+    const deepPoints = new Map(
+      Array.from({ length: 30 }, (_, i) => [`p${i}`, (30 - i) * 14] as [string, number])
+    );
+    const deepWeeks = evenWeeks(deepPoints.keys());
+    const perConference = computeReplacementLevels(deepPoints, deepWeeks, deepById, 12, 14);
+    const wholeLeague = computeReplacementLevels(deepPoints, deepWeeks, deepById, 24, 14);
+    expect(perConference.QB).toBeGreaterThan(wholeLeague.QB);
+    expect(perConference.QB).toBeCloseTo(30 - 12); // the 13th-best QB
+    expect(wholeLeague.QB).toBeCloseTo(30 - 24); // the 25th — far too deep
+  });
+
   it('takes the best player past the last startable slot', () => {
     const weeks = evenWeeks(pids);
     const levels = computeReplacementLevels(points, weeks, byId, 2, 14);

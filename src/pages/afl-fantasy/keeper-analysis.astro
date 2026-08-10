@@ -114,6 +114,28 @@ const keeperSnapshots = Object.entries(keeperSnapshotFeeds)
   })
   .filter((s): s is { date: string; rosters: MflRostersFeed } => s !== null);
 
+// Era-correct team branding for the ROSTER season (the keeper class's year).
+const yearConfig = resolveConfigForYear(
+  aflConfig as unknown as typeof aflConfig & { teams: TeamConfig[] },
+  prevYear
+);
+type AflTeamEntry = TeamConfig & { icon?: string; tier?: string; conference?: string };
+const teamsById = new Map<string, AflTeamEntry>(
+  (yearConfig.teams as AflTeamEntry[]).map((t) => [t.franchiseId, t])
+);
+
+// Replacement level is set by the players you could NOT have started, so the
+// pool is ONE CONFERENCE (12 teams) — not the 24 franchises this page lists.
+// The AFL's conferences roster independently from the same NFL universe (the
+// same player can sit on a roster in both at once), so a manager competes
+// with 11 rivals for starters, not 23. Sized from the config, not hardcoded.
+const conferenceSizes = new Map<string, number>();
+for (const t of yearConfig.teams as AflTeamEntry[]) {
+  const c = t.conference ?? '_';
+  conferenceSizes.set(c, (conferenceSizes.get(c) ?? 0) + 1);
+}
+const teamsPerPool = Math.max(...conferenceSizes.values(), 1);
+
 const analysis: KeeperAnalysis = buildKeeperAnalysis({
   prevRosters: feed<MflRostersFeed>(prevYear, 'rosters.json') ?? {
     rosters: { franchise: [] },
@@ -124,19 +146,11 @@ const analysis: KeeperAnalysis = buildKeeperAnalysis({
   curRosters: feed<MflRostersFeed>(selectedYear, 'rosters.json'),
   curDraftResults: feed<MflDraftResultsFeed>(selectedYear, 'draftResults.json'),
   curPlayerScoresYtd: feed<MflPlayerScoresFeed>(selectedYear, 'playerScores-ytd.json'),
+  teamsPerPool,
   keeperSnapshots,
 });
 const { previewMode } = analysis;
 
-// Era-correct team branding for the ROSTER season (the keeper class's year).
-const yearConfig = resolveConfigForYear(
-  aflConfig as unknown as typeof aflConfig & { teams: TeamConfig[] },
-  prevYear
-);
-type AflTeamEntry = TeamConfig & { icon?: string; tier?: string; conference?: string };
-const teamsById = new Map<string, AflTeamEntry>(
-  (yearConfig.teams as AflTeamEntry[]).map((t) => [t.franchiseId, t])
-);
 // Card-width display names via the shared helper (nameMedium preference,
 // ≤15-char cap) — matches the other AFL card surfaces.
 const teamName = (fid: string) => {
@@ -326,11 +340,13 @@ const replacementIsEstimated = !analysis.summary.replacementFromFullPool;
         <li>
           Value is <em>points over replacement</em>, not raw points. A player
           is worth what he beat a freely available alternative by: the best
-          player at his position you could NOT have started, given 24
-          franchises each starting one QB, one kicker, one defense and six
-          from RB/WR/TE. That is why a 154-point kicker is worth about 60
-          while a 328-point running back keeps nearly all of his — most of a
-          kicker's total is available to anyone for nothing.
+          player at his position you could NOT have started. Your pool is your
+          own conference — 12 teams, each starting one QB, one kicker, one
+          defense and six from RB/WR/TE — because the two conferences roster
+          independently and the same player can sit on a roster in both. That
+          is why a kicker is worth a fraction of his raw total while a stud
+          running back keeps nearly all of his: most of a kicker's points
+          were available to anyone for nothing.
         </li>
         <li>
           The seven are lineup-legal. A second quarterback, kicker, or defense

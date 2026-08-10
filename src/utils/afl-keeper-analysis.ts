@@ -347,7 +347,13 @@ export type ReplacementLevels = Record<SlotGroup, number>;
 /**
  * Replacement level: the per-week rate of the best player at each slot group
  * you could NOT have started, i.e. the guy sitting one spot past the last
- * league-wide starting slot.
+ * starting slot in your player pool.
+ *
+ * The pool is ONE CONFERENCE (12 teams), not the 24-franchise league. The
+ * AFL's two conferences draft independently from the same NFL player
+ * universe — the same player can be rostered in both at once — so a manager
+ * competes with 11 rivals for starters, not 23. Using 24 would place
+ * replacement far too deep and inflate everyone's value over it.
  *
  * This is the whole reason the grading no longer needs position filters. A
  * kicker's raw total looks like a mid-tier running back's, but nearly all of
@@ -366,12 +372,13 @@ export function computeReplacementLevels(
   points: Map<string, number>,
   weeks: Map<string, number>,
   playersById: Map<string, PlayerInfo>,
-  franchiseCount: number,
+  /** Franchises competing for one player pool — a conference, not the league. */
+  teamsPerPool: number,
   maxCompletedWeek: number,
   ytdTotals?: Map<string, number>
 ): ReplacementLevels {
   const levels: ReplacementLevels = { QB: 0, PK: 0, Def: 0, FLEX: 0 };
-  if (franchiseCount <= 0 || maxCompletedWeek <= 0) return levels;
+  if (teamsPerPool <= 0 || maxCompletedWeek <= 0) return levels;
 
   // Season totals for everyone we can see, preferring the full-pool feed.
   const useYtd = !!ytdTotals && ytdTotals.size > 0;
@@ -395,8 +402,8 @@ export function computeReplacementLevels(
   for (const group of Object.keys(levels) as SlotGroup[]) {
     const list = rates[group].sort((a, b) => b - a);
     if (list.length === 0) continue;
-    // Index of the first player past the last startable one league-wide.
-    const startable = LINEUP_SLOTS[group] * franchiseCount;
+    // Index of the first player past the last startable one in the pool.
+    const startable = LINEUP_SLOTS[group] * teamsPerPool;
     levels[group] = list[Math.min(startable, list.length - 1)] ?? 0;
   }
   return levels;
@@ -684,6 +691,13 @@ export interface BuildKeeperAnalysisInput {
    */
   keeperSnapshots?: KeeperSnapshot[];
   /**
+   * Franchises sharing one player pool. The AFL's conferences roster
+   * independently from the same NFL universe, so this is 12 (one
+   * conference), NOT the 24 franchises the page renders. Defaults to the
+   * franchise count for callers with a single undivided pool.
+   */
+  teamsPerPool?: number;
+  /**
    * MFL playerScores W=YTD for the points season — season totals for EVERY
    * player, not just rostered ones. Authoritative for replacement level,
    * because replacement is by definition set by players nobody kept. Omit
@@ -709,7 +723,7 @@ export function buildKeeperAnalysis(input: BuildKeeperAnalysisInput): KeeperAnal
     points,
     weeks,
     playersById,
-    prevFranchises.length,
+    input.teamsPerPool ?? prevFranchises.length,
     maxCompletedWeek,
     ytdTotals
   );
