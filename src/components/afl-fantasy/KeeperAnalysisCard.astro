@@ -63,7 +63,8 @@ const efficiencyPct = Math.round(analysis.efficiency * 100);
       {tier && <span class="ka-card__chip ka-card__chip--tier">{tier}</span>}
       {!previewMode && (
         <span class="ka-card__grade-sub">
-          #{classRank} class · {fmtPts(analysis.keptPoints)} kept pts · {efficiencyPct}% of optimal
+          <strong>{efficiencyPct}% of optimal</strong> · #{classRank} class ·
+          {fmtPts(analysis.keptPoints)} kept pts
         </span>
       )}
     </div>
@@ -324,8 +325,13 @@ const efficiencyPct = Math.round(analysis.efficiency * 100);
       padding: 0.75rem;
     }
 
+    /* Was display:none as a declutter, back when this line was only the
+       class rank and two supporting numbers. It now leads with % of
+       optimal — the measure the class is actually ranked on — so it has to
+       survive on mobile. Given its own row instead of hidden; .ka-card__meta
+       already wraps. */
     .ka-card__grade-sub {
-      display: none;
+      flex-basis: 100%;
     }
 
     .ka-table__badge {

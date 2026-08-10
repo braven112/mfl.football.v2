@@ -171,6 +171,7 @@ const best = analysis.franchises[0];
 const worst = analysis.franchises[analysis.franchises.length - 1];
 const fmtPts = (n: number) =>
   n.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const fmtEff = (n: number) => `${Math.round(n * 100)}%`;
 
 // Only surfaced when a kicker/defense actually earned a dominance exception —
 // that changes how the keeps grade. The routine "nobody qualified" case isn't
@@ -237,20 +238,22 @@ const kdefExceptionText =
               )}
               {teamName(best.franchiseId)}
             </span>
+            <span class="ka-tile__big">{fmtEff(best.efficiency)} of optimal</span>
             <span class="ka-tile__stat">
-              {fmtPts(best.keptPoints)} pts · {best.hits}/{best.keptCount} hits
+              {fmtPts(best.keptPoints)} kept pts · {best.hits}/{best.keptCount} hits
             </span>
           </div>
           <div class="ka-tile ka-tile--worst">
-            <span class="ka-tile__label">Toughest hindsight</span>
+            <span class="ka-tile__label">Worst keeper decisions</span>
             <span class="ka-tile__team">
               {teamIcon(worst.franchiseId) && (
                 <img src={teamIcon(worst.franchiseId)} alt="" loading="lazy" />
               )}
               {teamName(worst.franchiseId)}
             </span>
+            <span class="ka-tile__big">{fmtEff(worst.efficiency)} of optimal</span>
             <span class="ka-tile__stat">
-              {fmtPts(worst.keptPoints)} pts · {worst.hits}/{worst.keptCount} hits
+              {fmtPts(worst.keptPoints)} kept pts · {worst.hits}/{worst.keptCount} hits
             </span>
           </div>
           <div class="ka-tile">
@@ -283,6 +286,14 @@ const kdefExceptionText =
 
     <footer class="ka-methodology">
       <h2>Methodology</h2>
+      <p class="ka-methodology__rubric">
+        <strong>How this is graded:</strong> every class is scored on
+        <em>% of optimal</em> — the points its keepers actually scored
+        against the best seven that roster could have kept. That grades the
+        decision, not the inheritance: maxing out a thin roster beats
+        leaving points on a loaded one. Kept points and hits are shown too,
+        but the ranking is the percentage.
+      </p>
       <ul>
         <li>
           Points are {selectedYear} regular-season fantasy points in AFL
@@ -315,6 +326,13 @@ const kdefExceptionText =
           of the runner-up (they still show as raw top-7 flags). But a
           <em>kept</em> kicker or defense that outscored an optimal player
           the team let walk counts as a hit — the keep paid off.
+        </li>
+        <li>
+          The optimal bar swings roughly 2x across the league in a given
+          cycle (875 to 1,842 points in the 2024 → 2025 cycle), which is why
+          the ranking is a percentage and not raw kept points — otherwise the
+          standings would mostly reflect the roster a manager inherited.
+          Ties break on kept points, then franchise id.
         </li>
         <li>
           Only one QB counts toward the optimal seven — no team keeps two.
@@ -484,6 +502,21 @@ const kdefExceptionText =
     margin-top: 2.5rem;
     border-top: 1px solid var(--content-border, #e5e7eb);
     padding-top: 1.25rem;
+  }
+
+  .ka-methodology__rubric {
+    margin: 0 0 0.85rem;
+    padding: 0.7rem 0.9rem;
+    border-left: 3px solid var(--league-accent, #c41e3a);
+    background: var(--content-bg-muted, #f9fafb);
+    border-radius: 0 8px 8px 0;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: var(--content-text-muted, #6b7280);
+  }
+
+  .ka-methodology__rubric strong {
+    color: var(--page-text, #1a1a1a);
   }
 
   .ka-methodology h2 {

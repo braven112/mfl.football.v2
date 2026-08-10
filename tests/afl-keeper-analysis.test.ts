@@ -567,7 +567,7 @@ describe('buildKeeperAnalysis', () => {
     expect(analysis.franchises[0].keptCount).toBe(2);
   });
 
-  it('ranks franchises by kept points and fills the summary', () => {
+  it('ranks franchises by share of optimal and fills the summary', () => {
     // Week-1 rosters define the opening rosters: 0001 kept a1+a2, 0002 kept
     // only b1 — b2 walked and scored 50 for an unrelated franchise.
     const curWeeklyRaw = [
@@ -588,11 +588,71 @@ describe('buildKeeperAnalysis', () => {
       curRosters: rostersFeed({ '0001': ['a1', 'a2'], '0002': ['b1'] }),
     });
     expect(analysis.previewMode).toBe(false);
-    expect(analysis.summary.rankedFranchiseIds[0]).toBe('0001'); // 50 kept pts vs 5
+    expect(analysis.summary.rankedFranchiseIds[0]).toBe('0001'); // 100% of optimal vs 9%
     expect(analysis.summary.bestFranchiseId).toBe('0001');
     expect(analysis.summary.worstFranchiseId).toBe('0002');
     const f2 = analysis.franchises.find((f) => f.franchiseId === '0002')!;
     expect(f2.gotAway).toBeGreaterThan(0); // let b2 (50 pts) walk
+  });
+
+  it('ranks a maxed-out thin roster above a squandered loaded one', () => {
+    // The bug this locks out: ranking on raw kept points grades the roster a
+    // manager inherited, not the call they made with it. 0002 sits on a far
+    // better roster (300 available vs 100) and scores more kept points (150)
+    // while leaving half of it on the table; 0001 keeps literally the best
+    // pair available to it. The lower-scoring perfect class must rank first.
+    const curWeeklyRaw = [
+      week('1', [
+        {
+          franchises: [
+            { id: '0001', players: [['a1', '60'], ['a2', '40']] }, // kept the optimal 2 of 2
+            { id: '0002', players: [['b1', '150']] }, // kept 1 of an optimal 2
+            { id: '0003', players: [['b2', '150']] }, // b2 walked to another team
+          ],
+        },
+      ]),
+    ];
+    const analysis = buildKeeperAnalysis({
+      prevRosters: rostersFeed({ '0001': ['a1', 'a2'], '0002': ['b1', 'b2'] }),
+      prevPlayers,
+      curWeeklyRaw,
+      curRosters: rostersFeed({ '0001': ['a1', 'a2'], '0002': ['b1'] }),
+    });
+
+    const f1 = analysis.franchises.find((f) => f.franchiseId === '0001')!;
+    const f2 = analysis.franchises.find((f) => f.franchiseId === '0002')!;
+    expect(f1.efficiency).toBeCloseTo(1); // 100 of 100
+    expect(f2.efficiency).toBeCloseTo(0.5); // 150 of 300
+    expect(f2.keptPoints).toBeGreaterThan(f1.keptPoints); // and yet...
+    expect(analysis.summary.rankedFranchiseIds[0]).toBe('0001');
+    expect(analysis.summary.bestFranchiseId).toBe('0001');
+    expect(analysis.summary.worstFranchiseId).toBe('0002');
+  });
+
+  it('breaks efficiency ties on kept points', () => {
+    // Same share of the ceiling, bigger ceiling captured — the better class.
+    const curWeeklyRaw = [
+      week('1', [
+        {
+          franchises: [
+            { id: '0001', players: [['a1', '50']] },
+            { id: '0002', players: [['b1', '100']] },
+            { id: '0003', players: [['a2', '50'], ['b2', '100']] }, // both walked
+          ],
+        },
+      ]),
+    ];
+    const analysis = buildKeeperAnalysis({
+      prevRosters: rostersFeed({ '0001': ['a1', 'a2'], '0002': ['b1', 'b2'] }),
+      prevPlayers,
+      curWeeklyRaw,
+      curRosters: rostersFeed({ '0001': ['a1'], '0002': ['b1'] }),
+    });
+
+    const f1 = analysis.franchises.find((f) => f.franchiseId === '0001')!;
+    const f2 = analysis.franchises.find((f) => f.franchiseId === '0002')!;
+    expect(f1.efficiency).toBeCloseTo(f2.efficiency); // both captured half
+    expect(analysis.summary.rankedFranchiseIds[0]).toBe('0002'); // 100 kept pts vs 50
   });
 });
 

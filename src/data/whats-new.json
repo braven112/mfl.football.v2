@@ -1,5 +1,25 @@
 [
   {
+    "id": "afl-keeper-grading-rubric",
+    "date": "2026-08-10",
+    "category": "enhancement",
+    "icon": "history",
+    "title": "The Keeper Report Card Stops Grading You On Your Inheritance",
+    "summary": "The report card was ranking keeper classes by raw points, which mostly measured how loaded your roster already was. It now ranks on % of optimal — what you kept against the best seven you could have kept — and spells out the rubric in plain English at the bottom of the page. Two perfect classes finally got the credit, and one team stopped being called the league's worst for nearly maxing out a thin roster.",
+    "description": [
+      "Here is the thing about being told your keeper class was the best in the league: it should mean you made good decisions, not that you happened to be sitting on the best roster when the deadline hit. The report card was ranking classes by raw kept points, and raw kept points are mostly a measurement of what you already had. Across the 2024 → 2025 cycle, the best seven <em>available</em> ranged from 875 points on the thinnest roster to 1,842 on the deepest. That is a 2.1x spread nobody chose, and it was doing most of the work in the standings.",
+      "So the grades were saying strange things. <strong>The Show</strong> was labeled Toughest Hindsight — the worst keeper class in the AFL — for keeping 89% of what their roster could possibly have returned, which was ninth-best decision-making in the league. Meanwhile <strong>Boondock Saints</strong> and <strong>Drunk Indians</strong> both went a flawless 7-for-7 at 100% of optimal, kept literally the best seven available to them, and ranked second and third behind a team that had made a mistake.",
+      "Classes now rank on <em>% of optimal</em>: the points your keepers actually scored, divided by the best seven that roster could have kept. It grades the call instead of the collection. The Saints and the Indians go to the top where a perfect class belongs, Jewpacabra's 63% is the honest bottom, and The Show sits at ninth like they earned. Kept points and your hit tally are still on every card — they just stopped pretending to be the verdict.",
+      "The bottom of the page now spells out exactly how the grading works, right above the methodology, because a report card that does not tell you the rubric is just a number with an attitude. And the tile that used to read \"Toughest Hindsight\" now says what it means: <strong>Worst Keeper Decisions</strong>."
+    ],
+    "link": "/afl-fantasy/keeper-analysis",
+    "linkLabel": "See the new grades",
+    "image": "afl-keeper-grading-rubric.webp",
+    "imageAlt": "The Keeper Report Card's league summary tiles: Boondock Saints as best keeper class at 100% of optimal, Jewpacabra with the worst keeper decisions at 63%, and league-wide hit and miss totals, above franchise cards that now lead with their share of optimal.",
+    "leagues": ["afl"],
+    "excludeFromHero": true
+  },
+  {
     "id": "afl-keeper-report-card",
     "date": "2026-08-09",
     "category": "new-page",

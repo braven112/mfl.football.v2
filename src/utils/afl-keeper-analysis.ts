@@ -129,12 +129,22 @@ export interface FranchiseAnalysis {
   kdefRawTopSevenCount: number;
   keptPoints: number;
   optimalPoints: number;
-  /** keptPoints / optimalPoints, 0..1+ (0 when optimalPoints is 0). */
+  /**
+   * keptPoints / optimalPoints, 0..1+ (0 when optimalPoints is 0). The
+   * page's headline measure and its ranking key: it grades the keeper
+   * decision against the ceiling of the roster the manager actually had.
+   * Exceeds 1 when a kept K/DEF or backup QB beat the marginal optimal
+   * player — those add to keptPoints while optimalPoints stays skill-only.
+   */
   efficiency: number;
 }
 
 export interface KeeperAnalysisSummary {
-  /** Franchise ids ranked by keptPoints desc. */
+  /**
+   * Franchise ids ranked by efficiency desc (keptPoints breaks ties) — the
+   * page's single measure of a keeper class. See the sort in
+   * buildKeeperAnalysis for why it isn't raw kept points.
+   */
   rankedFranchiseIds: string[];
   bestFranchiseId: string | null;
   worstFranchiseId: string | null;
@@ -619,8 +629,21 @@ export function buildKeeperAnalysis(input: BuildKeeperAnalysisInput): KeeperAnal
     );
   }
 
+  // Rank by efficiency (share of the optimal seven captured), NOT by raw
+  // kept points. Raw points mostly measure how good the roster already was:
+  // across the 2024→2025 cycle the optimal-seven bar ranged from 875 to 1842
+  // points, a 2.1x spread nobody chose. Ranking on it called The Show the
+  // league's worst keeper class for keeping 89% of a thin roster's ceiling,
+  // while two franchises that went a perfect 7-for-7 at 100% of optimal
+  // ranked behind a team that had made a mistake. Efficiency grades the
+  // decision instead of the inheritance. Kept points break ties (same share
+  // of a bigger ceiling is the better class) before the id tiebreak keeps it
+  // deterministic.
   franchises.sort(
-    (a, b) => b.keptPoints - a.keptPoints || a.franchiseId.localeCompare(b.franchiseId)
+    (a, b) =>
+      b.efficiency - a.efficiency ||
+      b.keptPoints - a.keptPoints ||
+      a.franchiseId.localeCompare(b.franchiseId)
   );
 
   const rankedFranchiseIds = franchises.map((f) => f.franchiseId);
