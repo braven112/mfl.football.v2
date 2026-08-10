@@ -4,6 +4,14 @@
     {
       "date": "2026-08-10",
       "type": "bug-fix",
+      "summary": "The Keeper Report Card was crediting keeper decisions to the wrong regime — cards wore the roster year's branding, so a franchise that changed hands over the offseason showed the old owner's name on keeps the new owner picked (the 2024→2025 card said Can't Get Over the Baby Gate on calls Get off my Ditka made). Cards now wear the keep season's name, icon, and tier: the owner who made the call gets the credit, and the blame.",
+      "impact": "user",
+      "area": "keeper-analysis",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-10",
+      "type": "bug-fix",
       "summary": "For a few hours this morning, seven historical division titles quietly changed hands — the awards refresh bot started breaking division-record ties on raw points-for instead of the league's official standings order, and 2017's AL North banner walked from Smokane FC to Fullybaked. The rightful winners have been restored, the bot now respects MFL's official tie-breaks, and yes, the trophy audit that caught it is feeling very smug.",
       "impact": "user",
       "area": "awards",
