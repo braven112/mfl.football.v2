@@ -276,14 +276,8 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
 </TheLeagueLayout>
 
 <style>
-  /* ── Category color tokens (brightened 2026-07 to match the homepage row) ── */
-  :root {
-    --cat-new-page: #7c3aed;
-    --cat-new-feature: #15803d;
-    --cat-enhancement: #2563eb;
-    --cat-bug-fix: #dc2626;
-    --cat-league-event: #0369a1;
-  }
+  /* The --cat-* category palette lives in tokens.css / tokens-dark.css —
+     both themes, one definition. */
 
   /* ── Page shell ── */
   .wn-detail {
@@ -506,7 +500,7 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
     letter-spacing: 0.06em;
     padding: 0.175rem 0.5rem;
     border-radius: var(--radius-sm, 0.25rem);
-    color: #fff;
+    color: var(--cat-badge-ink, #fff);
     flex-shrink: 0;
   }
 

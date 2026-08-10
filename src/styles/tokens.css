@@ -212,6 +212,29 @@
 
   --color-accent: #2e8743;           /* Same as secondary for TheLeague */
 
+  /* What's New category palette — one definition, both themes.
+     Lived page-locally in three components until Aug 2026; only one of them
+     ever had a dark override, so two of the three shipped these light values
+     in dark mode. Tokens defined in a single theme pass design-token-guard
+     (it proves a token exists, not that it exists per-theme), so keep the
+     light block here and the dark block in tokens-dark.css in lockstep.
+     NOTE: the calendar palette (--cat-preseason / --cat-draft /
+     --cat-free-agency / --cat-regular-season) is an unrelated family that is
+     still declared page-locally — same prefix, different vocabulary. */
+  --cat-new-page: #7c3aed;           /* violet */
+  --cat-new-feature: #15803d;        /* green */
+  --cat-enhancement: #2563eb;        /* blue */
+  --cat-bug-fix: #dc2626;            /* red */
+  --cat-league-event: #0369a1;       /* sky */
+  --cat-badge-ink: #ffffff;          /* pill text — white on the deep light fills */
+
+  /* Freshness chip ("N just in" / the per-card marker). Deliberately neutral
+     rather than a category color: it sits directly beside the category pill,
+     so borrowing --cat-new-feature made the two render as identical twins on
+     new-feature entries. */
+  --wn-fresh-bg: #0f172a;
+  --wn-fresh-ink: #ffffff;
+
   /* Per-league brand accent — single token, value resolved by league.
      TheLeague = blue (default); AFL overrides to red in html[data-league="afl"].
      Used by homepage section icons, CTAs, and section-title left borders. */

@@ -4,6 +4,80 @@ Domain knowledge about design tokens, CSS variables, theming, and visual pattern
 
 ---
 
+## 2026-08-10 - A Token Defined in Only ONE Theme Passes the Guard and Still Breaks Dark Mode
+
+**Context:** The What's New surfaces (`WhatsNewRow.astro`, `WhatsNewIndexPage.astro`,
+`WhatsNewDetailPage.astro`) each carried their own copy of the same five
+`--cat-*` category color tokens. Only the row ever got an `html.dark` override.
+The other two shipped the *light* palette in dark mode for months — deep violet
+pills where the homepage showed brightened ones — and every test passed the
+whole time.
+
+**Insight:** `tests/design-token-guard.test.ts` proves a token is defined
+*somewhere*. It does not prove it's defined *per theme*. That's a different
+failure mode from the one CLAUDE.md documents:
+
+| Failure | Symptom | Caught by the guard? |
+|---|---|---|
+| Token defined nowhere | Hardcoded fallback renders in BOTH themes | Yes |
+| Token defined light-only | Light value renders in dark mode | **No** |
+
+The light-only case is the sneakier of the two, because light mode looks
+perfect and the token name reads like it's theme-aware. It hides especially
+well behind a *filled* pill — white-on-deep-violet is legible in dark mode,
+just wrong, so nobody files a bug. It only became visible when a *bare-text*
+badge using the same token landed at ~2:1 against the dark card.
+
+**Resolution:** the six `--cat-*` tokens now live once in `tokens.css` +
+`tokens-dark.css` and all three page-local copies are deleted. That's the
+actual fix — three copies of a two-theme pair is three chances to update one
+and forget the others, and no test can see the drift.
+
+**Recommendation:**
+- Page-local token blocks are a smell (see the `:root`-in-scoped-style gotcha
+  further down — tokens belong in `tokens.css` / `tokens-dark.css`). When you
+  genuinely must keep one, the light block and the dark block are a **pair**;
+  never add one without the other.
+- When the same token block is copy-pasted across sibling components, treat
+  divergence as the default assumption and diff them. Grep the token name and
+  compare the `html.dark` hit count against the `:root` hit count — an
+  imbalance is the bug.
+- Route every pill's ink through a companion ink token (`--cat-badge-ink`)
+  rather than a hardcoded `#fff`. Brightening a fill for dark mode silently
+  inverts what a readable ink is, and a literal `#fff` can't follow.
+- **Don't borrow a category color for a chip that sits next to the category
+  pill.** The freshness chip originally reused `--cat-new-feature`, so on
+  `new-feature` entries it rendered as a pixel-identical twin of the badge
+  beside it — reintroducing, in color, the duplication the change set out to
+  remove. It has its own neutral `--wn-fresh-bg` / `--wn-fresh-ink` pair now.
+  A chip that means "when" should never be colored by a token that means
+  "what".
+- **`--cat-` is a shared prefix covering two unrelated families.** These five
+  are What's New categories; `--cat-preseason` / `--cat-draft` /
+  `--cat-free-agency` / `--cat-regular-season` are *calendar event* categories
+  and are still declared page-locally in `WhatsNextCard.astro` and
+  `CalendarEventCard.astro`. Several consumers of that second family
+  (`AuctionStrip`, `AflPlayoffsHero`, `hero-resolver.ts`) sit outside those
+  components, so they silently render their `var(..., #fallback)` literal —
+  the same single-theme trap, still unfixed. Check which family you mean
+  before adding a `--cat-*` token.
+
+**Two adjacent gotchas from the same fix:**
+- **A bare `html.dark { }` rule inside a *scoped* Astro `<style>` gets scoped
+  and dies** (it compiles to `html.dark:where(.astro-hash)`), even though a
+  `:root { }` rule in that same block is left alone and reaches
+  `documentElement`. Asymmetric and easy to trip over. Working pattern for a
+  scoped file: `:global(html.dark) .page-wrapper { --token: ...; }` — custom
+  properties inherit, so hanging them off the wrapper covers the subtree.
+  Verify with `getComputedStyle`, not by reading the source.
+- **A badge that overlays user-supplied imagery needs its own fill.** These
+  cards absolutely-position the meta row across the thumbnail/content seam
+  (`transform: translateY(-60%)`), so a transparent badge's real backdrop is
+  whatever color that entry's screenshot happens to be — not the card. Contrast
+  reasoned against `--card-bg` is meaningless there. Filled pill, always.
+
+---
+
 ## 2026-07-05 - Dark-Mode Token-Mapping Gotchas (QA/polish pass)
 
 **Context:** A full light/dark × desktop/mobile QA sweep over every public page,

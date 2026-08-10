@@ -1,9 +1,18 @@
 /**
  * WhatsNewCard - Clickable card for a single What's New entry.
  *
- * Displays thumbnail (or no image area), category badge, optional "NEW" dot,
- * icon + title, date, and a 2-line-clamped summary. The entire card is a link
- * to the entry's detail page.
+ * Displays thumbnail (or no image area), category badge, optional "JUST IN"
+ * chip, icon + title, date, and a 2-line-clamped summary. The entire card is a
+ * link to the entry's detail page.
+ *
+ * The chip is deliberately NOT labelled "NEW" (the category badge already reads
+ * "New Page" / "New Feature", so the same word twice read as a duplicate) and
+ * NOT "UNREAD" (nothing tracks reads — `isNew` only compares publish date to
+ * the last-visit cookie). "Just in" claims exactly what the data supports.
+ *
+ * Styles: this island has no stylesheet of its own — every `.wn-card__*` rule
+ * lives in the `<style is:global>` block of WhatsNewIndexPage.astro, because
+ * React-rendered DOM never carries Astro's scoping attribute.
  */
 import type { EnrichedWhatsNewEntry } from '../../../utils/whats-new-helpers';
 import { WHATS_NEW_CATEGORY_LABELS } from '../../../types/whats-new';
@@ -81,9 +90,9 @@ export default function WhatsNewCard({ entry, featured, basePath = '/theleague',
             {WHATS_NEW_CATEGORY_LABELS[entry.category]}
           </span>
           {entry.isNew && (
-            <span className="wn-card__new-badge" title="New since your last visit">
+            <span className="wn-card__new-badge" title="Published since your last visit">
               <span className="wn-card__new-dot" aria-hidden="true" />
-              NEW
+              JUST IN
             </span>
           )}
         </div>

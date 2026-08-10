@@ -2,7 +2,7 @@
 /**
  * What's New index — shared implementation for both leagues.
  *
- * Server-rendered to read the whats_new_last_visit cookie for "NEW" badges.
+ * Server-rendered to read the whats_new_last_visit cookie for "just in" chips.
  * The interactive listing (filters, card grid, timeline sidebar) is a
  * React island. The page header stays as Astro HTML for SEO.
  *
@@ -48,7 +48,7 @@ const basePath = hideLeaguePrefix ? '' : `/${league.slug}`;
 
 const sorted = getVisibleWhatsNewEntries(Astro.request, league.navSlug);
 
-// Read the last-visit cookie for "NEW" badge computation
+// Read the last-visit cookie for "just in" chip computation
 const lastVisitCookie = Astro.cookies.get('whats_new_last_visit');
 const lastVisitDate = lastVisitCookie?.value ?? null;
 
@@ -72,7 +72,7 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
       <h1 class="whats-new-page__title">
         What's New
         {newCount > 0 && (
-          <span class="whats-new-page__new-count">{newCount} new</span>
+          <span class="whats-new-page__new-count">{newCount} just in</span>
         )}
       </h1>
       <p class="whats-new-page__subtitle">
@@ -95,14 +95,11 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
 </TheLeagueLayout>
 
 <style is:global>
-  /* ── Category color tokens (brightened 2026-07 to match the homepage row) ── */
-  :root {
-    --cat-new-page: #7c3aed;
-    --cat-new-feature: #15803d;
-    --cat-enhancement: #2563eb;
-    --cat-bug-fix: #dc2626;
-    --cat-league-event: #0369a1;
-  }
+  /* The --cat-* category palette and --wn-fresh-* chip tokens live in
+     tokens.css / tokens-dark.css — both themes, one definition.
+     This block is `is:global` because the card grid, filters and timeline are
+     rendered by the WhatsNewListing React island, whose DOM never carries
+     Astro's scoping attribute. */
 
   /* ── Page layout ── */
   .whats-new-page {
@@ -135,8 +132,8 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
     letter-spacing: 0.05em;
     padding: 0.2rem 0.6rem;
     border-radius: 9999px;
-    color: #fff;
-    background: var(--cat-new-feature, #2e8743);
+    color: var(--wn-fresh-ink);
+    background: var(--wn-fresh-bg);
   }
 
   .whats-new-page__subtitle {
@@ -203,7 +200,10 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
   }
 
   .wn-filters__tab--active {
-    color: #fff;
+    /* Covers the --all tab too: its fill is --color-primary, which is itself a
+       bright blue in dark mode, so the dark ink is the readable pairing there
+       as well (white on #3b82f6 only reaches 3.7:1). */
+    color: var(--cat-badge-ink, #fff);
     border-color: transparent;
   }
 
@@ -437,7 +437,7 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
     padding: var(--spacing-md, 1rem) var(--spacing-lg, 1.5rem) var(--spacing-lg, 1.5rem);
   }
 
-  /* Card meta row (badge + NEW) */
+  /* Card meta row (category badge + freshness chip) */
   .wn-card__meta {
     display: flex;
     align-items: center;
@@ -465,7 +465,7 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
     letter-spacing: 0.05em;
     padding: 0.15rem 0.5rem;
     border-radius: 9999px;
-    color: #fff;
+    color: var(--cat-badge-ink, #fff);
   }
 
   .wn-card__badge--new-page { background: var(--cat-new-page); }
@@ -474,22 +474,31 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
   .wn-card__badge--bug-fix { background: var(--cat-bug-fix); }
   .wn-card__badge--league-event { background: var(--cat-league-event); }
 
+  /* Filled pill, not bare text. On cards with a thumbnail the meta row is
+     absolutely positioned across the image/content seam (see the rule above),
+     so a transparent badge renders on top of whatever color the screenshot
+     happens to be — dark green on a violet hero image, Aug 2026. A solid pill
+     carries its own contrast over any thumbnail, in either theme. */
   .wn-card__new-badge {
     display: inline-flex;
     align-items: center;
-    gap: 0.25rem;
-    font-size: 0.6rem;
+    gap: 0.3rem;
+    font-size: 0.65rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: var(--cat-new-feature, #2e8743);
+    padding: 0.15rem 0.5rem;
+    border-radius: 9999px;
+    background: var(--wn-fresh-bg);
+    color: var(--wn-fresh-ink);
   }
 
   .wn-card__new-dot {
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: var(--cat-new-feature, #2e8743);
+    /* Inherit the pill's ink so the dot tracks it in both themes. */
+    background: currentColor;
     animation: wn-pulse 2s ease-in-out infinite;
   }
 

@@ -29,6 +29,21 @@ html.dark {
 
   --color-accent: #4ade80;           /* Green accent for dark mode (mirrors light: accent = secondary family) */
 
+  /* What's New category palette — dark half of the pair in tokens.css.
+     Accents lift so they read against the dark page; the pill ink flips to
+     near-black because the fills are now light. Never add one of these
+     without its light counterpart. */
+  --cat-new-page: #a78bfa;
+  --cat-new-feature: #4ade80;
+  --cat-enhancement: #60a5fa;
+  --cat-bug-fix: #f87171;
+  --cat-league-event: #38bdf8;
+  --cat-badge-ink: #0b0f16;
+
+  /* Freshness chip — inverts with the theme (light chip on the dark card). */
+  --wn-fresh-bg: #e2e8f0;
+  --wn-fresh-ink: #0b0f16;
+
   /* Header nav-icon strip — white icons on the dark header; hover stays
      green via --header-nav-icon-hover-color → --color-secondary (tokens.css). */
   --header-nav-icon-color: #ffffff;
