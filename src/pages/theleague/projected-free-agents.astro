@@ -510,6 +510,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 </TheLeagueLayout>
 
 <script define:vars={{ playerDataJson, posCountsJson, franchiseListJson, mflHost, nflAvatarBgJson, nflAvatarBorderJson, nflAvatarBgFallback, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback }}>
+  // Failed logo -> hide (never the broken-image icon, and no substitute crest;
+  // Cloudflare caches 404s browser-side for 4h, so clients must self-heal).
+  var logoOnerror = "this.onerror=null;this.style.visibility='hidden'";
   // All data is server-rendered from MFL feeds — not user input.
   // escapeAttr() is applied to all interpolated values for safety.
   const players = JSON.parse(playerDataJson);
@@ -611,7 +614,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
   function buildRow(p, index) {
     var isDef = p.position === 'DEF';
-    var nflLogo = (p.nflTeam && p.nflTeam !== 'FA')
+    var nflLogo = (p.nflTeam && p.nflTeam.indexOf('FA') !== 0)
       ? '/assets/nfl-logos/' + p.nflTeam + '.svg'
       : '/assets/nfl-logos/NFL.svg';
     var avatarSrc = isDef ? nflLogo : p.headshot;
@@ -648,7 +651,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
     var metaLogoHtml = isDef
       ? ''
-      : '<img src="' + escapeAttr(nflLogo) + '" alt="' + escapeAttr(p.nflTeam) + '" class="player-meta__logo" loading="lazy" decoding="async" />';
+      : '<img src="' + escapeAttr(nflLogo) + '" alt="' + escapeAttr(p.nflTeam) + '" class="player-meta__logo" loading="lazy" decoding="async" onerror="' + logoOnerror + '" />';
 
     return '<tr>'
       + '<td class="cell-rank">' + (index + 1) + '</td>'

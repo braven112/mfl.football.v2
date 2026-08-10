@@ -93,6 +93,15 @@ export function PlayerCell({
     }
   };
 
+  // Team logo failed (missing file, poisoned 404 cache) — hide it rather
+  // than render the broken-image icon. No substitute logo: a wrong crest is
+  // worse than none. visibility (not display) keeps the meta row's spacing.
+  const handleLogoError = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    img.onerror = null;
+    img.style.visibility = 'hidden';
+  };
+
   const sizeClass = size === 'compact' ? 'player-cell--compact' : '';
   const classes = ['player-cell', sizeClass, className].filter(Boolean).join(' ');
 
@@ -123,6 +132,7 @@ export function PlayerCell({
                 className="player-meta__logo"
                 loading="lazy"
                 decoding="async"
+                onError={handleLogoError}
               />
             )}
             {position && (

@@ -1289,9 +1289,13 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   }
 
   function getNflLogo(team) {
-    if (!team || team === 'FA') return '/assets/nfl-logos/NFL.svg';
+    // 'FA' / 'FA*' (conditional free agent) have no crest — use the shield.
+    if (!team || team.indexOf('FA') === 0) return '/assets/nfl-logos/NFL.svg';
     return `/assets/nfl-logos/${team}.svg`;
   }
+  // Failed logo → hide (never the broken-image icon, and no substitute crest;
+  // Cloudflare caches 404s browser-side for 4h, so clients must self-heal).
+  const logoOnerror = "this.onerror=null;this.style.visibility='hidden'";
 
   // Team-color gradient backdrop behind a headshot avatar (same treatment as
   // the player modal band). Precomputed server-side; FA/unknown → neutral blue.
@@ -1887,7 +1891,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             <div class="player-cell__info">
               <strong class="player-cell__name player-cell__name--clickable" data-player-modal="${modalJson}">${p.name}${rosteredDot}</strong>
               <div class="player-meta">
-                ${isDef ? '' : `<img src="${logo}" alt="${p.team}" class="player-meta__logo" />`}<span class="player-meta__pos">${posLabel}</span>
+                ${isDef ? '' : `<img src="${logo}" alt="${p.team}" class="player-meta__logo" onerror="${logoOnerror}" />`}<span class="player-meta__pos">${posLabel}</span>
               </div>
             </div>
           </div>

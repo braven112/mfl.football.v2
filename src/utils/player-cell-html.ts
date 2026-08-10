@@ -19,7 +19,7 @@
  */
 
 import type { PlayerModalData } from './player-modal-trigger';
-import { DEFAULT_HEADSHOT_URL, buildHeadshotOnerror, getNflLogoUrl, getPlayerHeadshot } from '../constants/roster-constants';
+import { DEFAULT_HEADSHOT_URL, NFL_LOGO_ONERROR, buildHeadshotOnerror, getNflLogoUrl, getPlayerHeadshot } from '../constants/roster-constants';
 import { normalizeTeamCode } from './nfl-logo';
 import { getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark } from './nfl-team-colors';
 
@@ -110,7 +110,7 @@ export function buildPlayerCellHTML(opts: PlayerCellOptions): string {
   let metaHtml = '';
   if (nflLogoUrl || position) {
     const logoPart = nflLogoUrl
-      ? `<img src="${esc(nflLogoUrl)}" alt="${esc(normalized || nflTeam || 'FA')} logo" class="player-meta__logo" loading="lazy" decoding="async" />`
+      ? `<img src="${esc(nflLogoUrl)}" alt="${esc(normalized || nflTeam || 'FA')} logo" class="player-meta__logo" loading="lazy" decoding="async" onerror="${esc(NFL_LOGO_ONERROR)}" />`
       : '';
     const statusSuffix = contractStatus ? ` - ${esc(contractStatus)}` : '';
     const posPart = position

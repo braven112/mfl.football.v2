@@ -157,6 +157,18 @@ export function getNflLogoUrl(teamCode?: string): string {
 }
 
 /**
+ * Inline onerror handler for team-logo <img> tags.
+ *
+ * A team logo must never render the browser's broken-image icon: the apex
+ * domains sit behind Cloudflare, which stamps `max-age=14400` on responses —
+ * including 404s — so a client that ever fetched a logo during a broken
+ * window keeps re-rendering the failure for up to 4 hours after the origin
+ * is fixed. On failure, hide the img (visibility, so the meta row's layout
+ * doesn't shift). No substitute logo: a wrong crest is worse than none.
+ */
+export const NFL_LOGO_ONERROR = "this.onerror=null;this.style.visibility='hidden'";
+
+/**
  * NFL team bye weeks (updated each season)
  * null = not yet determined
  */

@@ -473,9 +473,13 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     return `https://${mflHost}/player_photos_big_2014/${playerId}_thumb.jpg`;
   }
   function getNflLogo(team) {
-    if (!team || team === 'FA') return '/assets/nfl-logos/NFL.svg';
+    // 'FA' / 'FA*' (conditional free agent) have no crest — use the shield.
+    if (!team || team.indexOf('FA') === 0) return '/assets/nfl-logos/NFL.svg';
     return `/assets/nfl-logos/${team}.svg`;
   }
+  // Failed logo → hide (never the broken-image icon, and no substitute crest;
+  // Cloudflare caches 404s browser-side for 4h, so clients must self-heal).
+  const logoOnerror = "this.onerror=null;this.style.visibility='hidden'";
   const defaultHeadshot = `https://${mflHost}/player_photos_2010/no_photo_available.jpg`;
   function buildOnerror(mflId, espnId) {
     const college = espnId ? `https://a.espncdn.com/i/headshots/college-football/players/full/${espnId}.png` : null;
@@ -864,7 +868,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             <div class="player-cell__info">
               <strong class="player-cell__name player-cell__name--clickable" data-player-modal="${modalJson}">${escapeAttr(p.name)}${rosteredDot}</strong>
               <div class="player-meta">
-                ${isDef ? '' : `<img src="${logo}" alt="${escapeAttr(p.team)}" class="player-meta__logo" />`}<span class="player-meta__pos">${posLabel}</span>${confTag}
+                ${isDef ? '' : `<img src="${logo}" alt="${escapeAttr(p.team)}" class="player-meta__logo" onerror="${logoOnerror}" />`}<span class="player-meta__pos">${posLabel}</span>${confTag}
               </div>
             </div>
           </div>

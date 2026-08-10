@@ -29,7 +29,7 @@
  */
 
 import '../../styles/player-cell.css';
-import { buildHeadshotOnerror, getPlayerHeadshot } from '../../constants/roster-constants';
+import { NFL_LOGO_ONERROR, buildHeadshotOnerror, getPlayerHeadshot } from '../../constants/roster-constants';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
 import { getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark } from '../../utils/nfl-team-colors';
 import type { PlayerModalData } from '../../utils/player-modal-trigger';
@@ -164,6 +164,7 @@ const avatarStyle = avatarBg
             class="player-meta__logo"
             loading="lazy"
             decoding="async"
+            onerror={NFL_LOGO_ONERROR}
           />
         )}
         {position && <span class="player-meta__pos">{position}{contractStatus ? ` - ${contractStatus}` : ''}</span>}
