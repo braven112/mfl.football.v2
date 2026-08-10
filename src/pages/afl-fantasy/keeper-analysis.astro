@@ -35,18 +35,28 @@ const league = getLeagueContext(Astro.url);
 const baseUrl = getLeagueBaseUrl(league);
 
 // Committed MFL feeds, baked at build time (refreshed by roster-sync cron).
-// The year pattern matches 2024-2099 — the keeper era only
-// (AFL_KEEPER_ERA_FIRST_PREV_YEAR). A bare */ glob here bakes ~55MB of
-// pre-keeper-era JSON into the server bundle and pushes the Vercel function
-// past its 250MB uncompressed limit; the era filter keeps it to ~7MB.
-const rosterFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/20{2[4-9],[3-9][0-9]}/rosters.json', { eager: true });
-const playerFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/20{2[4-9],[3-9][0-9]}/players.json', { eager: true });
-const draftFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/20{2[4-9],[3-9][0-9]}/draftResults.json', { eager: true });
-const weeklyRawFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/20{2[4-9],[3-9][0-9]}/weekly-results-raw.json', { eager: true });
-const fetchMetaFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/20{2[4-9],[3-9][0-9]}/fetch.meta.json', { eager: true });
+//
+// ONE glob for every per-season feed this page reads — add a new feed by
+// adding its basename to the brace list, never by adding another
+// import.meta.glob call. Vite requires a literal pattern, so a repeated
+// year filter can't be factored into a shared constant; keeping the filter
+// to a single occurrence is the next best thing.
+//
+// That year filter is load-bearing: it matches 2024-2099, the keeper era
+// only (AFL_KEEPER_ERA_FIRST_PREV_YEAR), while AFL feeds go back to 2003.
+// A bare */ glob bakes ~55MB of pre-keeper-era JSON into the server bundle
+// and pushes the Vercel function past its 250MB uncompressed limit; the era
+// filter keeps it to ~7MB. tests/afl-keeper-feed-globs.test.ts fails the
+// build if any feed glob on this page loses the filter.
+const seasonFeeds = import.meta.glob(
+  '../../../data/afl-fantasy/mfl-feeds/20{2[4-9],[3-9][0-9]}/{rosters,players,draftResults,weekly-results-raw,fetch.meta}.json',
+  { eager: true }
+);
 // Post-deadline July roster snapshots (16th-31st): between the keeper cut
 // deadline and the draft the roster IS the keeper class, so the first
 // all-at-7 snapshot is the official list. ~260KB/year — no bundle concern.
+// Separate from seasonFeeds only because it lives a directory deeper and is
+// keyed by snapshot date rather than by (year, filename).
 const keeperSnapshotFeeds = import.meta.glob(
   '../../../data/afl-fantasy/mfl-feeds/20{2[4-9],[3-9][0-9]}/roster-history/rosters-*-07-{1[6-9],[2-3][0-9]}.json',
   { eager: true }
@@ -54,8 +64,8 @@ const keeperSnapshotFeeds = import.meta.glob(
 
 // Eager JSON glob modules expose the parsed JSON as `default` (plus named
 // top-level keys); unwrap to the plain object.
-const feed = <T,>(feeds: Record<string, unknown>, year: number, file: string): T | undefined => {
-  const mod = feeds[`../../../data/afl-fantasy/mfl-feeds/${year}/${file}`] as
+const feed = <T,>(year: number, file: string): T | undefined => {
+  const mod = seasonFeeds[`../../../data/afl-fantasy/mfl-feeds/${year}/${file}`] as
     | { default?: T }
     | undefined;
   return (mod?.default ?? mod) as T | undefined;
@@ -63,14 +73,14 @@ const feed = <T,>(feeds: Record<string, unknown>, year: number, file: string): T
 
 // Cycles: points season Y where (Y-1) rosters + (Y) weekly results exist,
 // within the keeper era. Auto-grows as new seasons' feeds land.
-const availableYears = Object.keys(weeklyRawFeeds)
+const availableYears = Object.keys(seasonFeeds)
   .map((path) => path.match(/\/(\d{4})\/weekly-results-raw\.json$/)?.[1])
   .filter((y): y is string => !!y)
   .map((y) => parseInt(y, 10))
   .filter(
     (y) =>
       y - 1 >= AFL_KEEPER_ERA_FIRST_PREV_YEAR &&
-      !!feed<MflRostersFeed>(rosterFeeds, y - 1, 'rosters.json')
+      !!feed<MflRostersFeed>(y - 1, 'rosters.json')
   )
   .sort((a, b) => b - a);
 
@@ -78,7 +88,7 @@ const availableYears = Object.keys(weeklyRawFeeds)
 // before Week 1 that's the last completed cycle (full grades beat an empty
 // preview as the landing view).
 const yearHasPoints = (y: number) =>
-  computeSeasonPoints(feed<WeeklyResultsRaw>(weeklyRawFeeds, y, 'weekly-results-raw.json') ?? []).points.size > 0;
+  computeSeasonPoints(feed<WeeklyResultsRaw>(y, 'weekly-results-raw.json') ?? []).points.size > 0;
 const defaultYear =
   availableYears.find(yearHasPoints) ?? availableYears[availableYears.length - 1] ?? getCurrentSeasonYear();
 
@@ -105,14 +115,14 @@ const keeperSnapshots = Object.entries(keeperSnapshotFeeds)
   .filter((s): s is { date: string; rosters: MflRostersFeed } => s !== null);
 
 const analysis: KeeperAnalysis = buildKeeperAnalysis({
-  prevRosters: feed<MflRostersFeed>(rosterFeeds, prevYear, 'rosters.json') ?? {
+  prevRosters: feed<MflRostersFeed>(prevYear, 'rosters.json') ?? {
     rosters: { franchise: [] },
   },
-  prevPlayers: feed<MflPlayersFeed>(playerFeeds, prevYear, 'players.json'),
-  curPlayers: feed<MflPlayersFeed>(playerFeeds, selectedYear, 'players.json'),
-  curWeeklyRaw: feed<WeeklyResultsRaw>(weeklyRawFeeds, selectedYear, 'weekly-results-raw.json'),
-  curRosters: feed<MflRostersFeed>(rosterFeeds, selectedYear, 'rosters.json'),
-  curDraftResults: feed<MflDraftResultsFeed>(draftFeeds, selectedYear, 'draftResults.json'),
+  prevPlayers: feed<MflPlayersFeed>(prevYear, 'players.json'),
+  curPlayers: feed<MflPlayersFeed>(selectedYear, 'players.json'),
+  curWeeklyRaw: feed<WeeklyResultsRaw>(selectedYear, 'weekly-results-raw.json'),
+  curRosters: feed<MflRostersFeed>(selectedYear, 'rosters.json'),
+  curDraftResults: feed<MflDraftResultsFeed>(selectedYear, 'draftResults.json'),
   keeperSnapshots,
 });
 const { previewMode } = analysis;
@@ -145,7 +155,7 @@ const teamConference = (fid: string) => {
   return c && isValidConferenceId(c) ? getConferenceShort(c) : undefined;
 };
 
-const fetchMeta = feed<{ lastFetched?: string }>(fetchMetaFeeds, selectedYear, 'fetch.meta.json');
+const fetchMeta = feed<{ lastFetched?: string }>(selectedYear, 'fetch.meta.json');
 const lastFetched = fetchMeta?.lastFetched
   ? new Date(fetchMeta.lastFetched).toLocaleString('en-US', {
       month: 'short',
