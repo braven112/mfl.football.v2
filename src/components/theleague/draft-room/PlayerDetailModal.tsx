@@ -8,6 +8,9 @@ import {
   DEFAULT_HEADSHOT_URL,
   getCollegeHeadshot,
   getPlayerImageUrl,
+  nflLogoErrorHandler,
+  nflLogoLoadHandler,
+  nflLogoRefCallback,
 } from '../../../constants/roster-constants';
 import {
   getPlayerAvatarBackground,
@@ -96,6 +99,7 @@ export function PlayerDetailModal({
   const normalizedTeam = player.nflTeam ? normalizeTeamCode(player.nflTeam) : '';
   const teamLogoUrl = normalizedTeam ? `/assets/nfl-logos/${normalizedTeam}.svg` : '';
   const avatarSrc = isDef && teamLogoUrl ? teamLogoUrl : player.headshot;
+  const avatarIsLogo = isDef && !!teamLogoUrl;
   const avatarStyle = {
     '--player-avatar-size': '64px',
     ...(isDef
@@ -172,7 +176,9 @@ export function PlayerDetailModal({
               src={avatarSrc}
               alt=""
               decoding="async"
-              onError={handleImgError}
+              onError={avatarIsLogo ? nflLogoErrorHandler : handleImgError}
+              onLoad={avatarIsLogo ? nflLogoLoadHandler : undefined}
+              ref={avatarIsLogo ? nflLogoRefCallback : undefined}
             />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>

@@ -19,7 +19,7 @@
  */
 
 import type { PlayerModalData } from './player-modal-trigger';
-import { DEFAULT_HEADSHOT_URL, buildHeadshotOnerror, getNflLogoUrl, getPlayerHeadshot } from '../constants/roster-constants';
+import { DEFAULT_HEADSHOT_URL, NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, buildHeadshotOnerror, getNflLogoUrl, getPlayerHeadshot } from '../constants/roster-constants';
 import { normalizeTeamCode } from './nfl-logo';
 import { getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark } from './nfl-team-colors';
 
@@ -110,7 +110,7 @@ export function buildPlayerCellHTML(opts: PlayerCellOptions): string {
   let metaHtml = '';
   if (nflLogoUrl || position) {
     const logoPart = nflLogoUrl
-      ? `<img src="${esc(nflLogoUrl)}" alt="${esc(normalized || nflTeam || 'FA')} logo" class="player-meta__logo" loading="lazy" decoding="async" />`
+      ? `<img src="${esc(nflLogoUrl)}" alt="${esc(normalized || nflTeam || 'FA')} logo" class="player-meta__logo" loading="lazy" decoding="async" onerror="${esc(NFL_LOGO_ONERROR)}" onload="${esc(NFL_LOGO_ONLOAD)}" />`
       : '';
     const statusSuffix = contractStatus ? ` - ${esc(contractStatus)}` : '';
     const posPart = position
@@ -121,12 +121,15 @@ export function buildPlayerCellHTML(opts: PlayerCellOptions): string {
 
   const avatarAlt = isDef ? `${nflTeam || 'DEF'} logo` : isLogoAvatar ? `${name} logo` : `${name} headshot`;
   // Logo avatars are static site assets, not headshots — don't chain into the
-  // college/MFL headshot fallback cascade if one 404s, just drop the src.
-  const avatarOnerror = isLogo ? 'this.onerror=null' : buildHeadshotOnerror(resolvedMflId, resolvedEspnId);
+  // college/MFL headshot fallback cascade if one 404s, hide the img instead.
+  // Matches what the src actually is: a DEF row with no resolvable team falls
+  // back to a headshot src and keeps the headshot cascade.
+  const avatarIsLogo = isLogoAvatar || (isDef && !!teamLogo);
+  const avatarOnerror = avatarIsLogo ? NFL_LOGO_ONERROR : buildHeadshotOnerror(resolvedMflId, resolvedEspnId);
 
   return `<div class="player-cell${sizeClass}${className ? ' ' + esc(className) : ''}">
   <div class="player-cell__avatar${defClass}"${avatarStyle}>
-    <img src="${esc(avatarSrc)}" alt="${esc(avatarAlt)}" loading="lazy" decoding="async" onerror="${esc(avatarOnerror)}" />
+    <img src="${esc(avatarSrc)}" alt="${esc(avatarAlt)}" loading="lazy" decoding="async" onerror="${esc(avatarOnerror)}"${avatarIsLogo ? ` onload="${esc(NFL_LOGO_ONLOAD)}"` : ''} />
   </div>
   <div class="player-cell__info">
     ${nameHtml}

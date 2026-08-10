@@ -85,6 +85,7 @@ export const TEAM_CODE_MAP: Record<string, string> = {
   'RAM': 'LAR', // Rams (historical MFL code)
   'STL': 'LAR', // St. Louis Rams → LA Rams
   'FA':  'NFL', // Free agent → NFL shield
+  'FA*': 'NFL', // Conditional free agent (MFL) → NFL shield
   'UFA': 'NFL', // Unrestricted free agent → NFL shield
 };
 

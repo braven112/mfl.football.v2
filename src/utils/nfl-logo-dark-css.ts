@@ -107,11 +107,15 @@ let cachedCss: string | null = null;
 export function buildNflLogoDarkCss(): string {
   if (cachedCss !== null) return cachedCss;
   const rules: string[] = [];
+  const swappedSrcs: string[] = [];
 
   // ESPN logos — always canonical.
   for (const code of getAllNFLTeamCodes()) {
     const dark = resolveNflDarkLogoUrl(code);
-    if (dark) rules.push(swapRule(getNFLTeamLogo(code), cssStringEscape(dark)));
+    if (dark) {
+      rules.push(swapRule(getNFLTeamLogo(code), cssStringEscape(dark)));
+      swappedSrcs.push(getNFLTeamLogo(code));
+    }
   }
 
   // Local SVGs — canonical codes plus every legacy alias filename.
@@ -120,7 +124,24 @@ export function buildNflLogoDarkCss(): string {
     const canonical = normalizeTeamCode(code);
     if (!canonical || canonical === 'NFL') continue;
     const dark = resolveNflDarkLogoUrl(canonical);
-    if (dark) rules.push(swapRule(`/assets/nfl-logos/${code}.svg`, cssStringEscape(dark)));
+    if (dark) {
+      rules.push(swapRule(`/assets/nfl-logos/${code}.svg`, cssStringEscape(dark)));
+      swappedSrcs.push(`/assets/nfl-logos/${code}.svg`);
+    }
+  }
+
+  // Failed-logo hide: logo <img>s tag themselves `nfl-logo-failed` via
+  // NFL_LOGO_ONERROR (roster-constants) when their src fails to load, and
+  // untag on a successful load. Hidden by default — a broken-image icon is
+  // never acceptable — EXCEPT in dark mode for srcs whose swap rule above
+  // provides pixels via content:url(), which doesn't depend on the light
+  // src loading. Pure CSS, so theme toggles re-evaluate automatically.
+  // (`visibility` keeps layout; the un-hide is scoped to the failed class
+  // so it can never leak an img out of a visibility-hidden ancestor.)
+  rules.push('img.nfl-logo-failed { visibility: hidden; }');
+  if (swappedSrcs.length) {
+    const selectors = swappedSrcs.map((src) => `[src="${cssStringEscape(src)}"]`).join(', ');
+    rules.push(`html.dark img.nfl-logo-failed:is(${selectors}) { visibility: visible; }`);
   }
 
   cachedCss = rules.join('\n');

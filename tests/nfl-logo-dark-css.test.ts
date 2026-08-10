@@ -34,10 +34,30 @@ describe('buildNflLogoDarkCss', () => {
       const n = normalizeTeamCode(c);
       return n && n !== 'NFL';
     }).length;
-    expect(lines).toHaveLength(canonical.length + localRules);
-    for (const line of lines) {
+    // ...plus the two failed-logo rules (base hide + dark un-hide for
+    // swapped srcs) appended at the end.
+    expect(lines).toHaveLength(canonical.length + localRules + 2);
+    const swapLines = lines.filter((l) => !l.includes('nfl-logo-failed'));
+    expect(swapLines).toHaveLength(canonical.length + localRules);
+    for (const line of swapLines) {
       expect(line.startsWith('html.dark img[src="')).toBe(true);
     }
+  });
+
+  it('hides failed logos, un-hiding them in dark mode only where a swap provides pixels', () => {
+    // NFL_LOGO_ONERROR tags a failed img with .nfl-logo-failed; the base rule
+    // hides it in either theme...
+    expect(css).toContain('img.nfl-logo-failed { visibility: hidden; }');
+    // ...and the dark-mode un-hide is scoped to exactly the srcs that have a
+    // content:url() swap rule (their pixels don't depend on the failed light
+    // src). Shield srcs (NFL.svg) have no swap, so they must NOT appear.
+    const unhide = css.split('\n').find((l) => l.includes(':is('));
+    expect(unhide).toBeDefined();
+    expect(unhide).toContain('html.dark img.nfl-logo-failed:is(');
+    expect(unhide).toContain('[src="/assets/nfl-logos/SF.svg"]');
+    expect(unhide).toContain(`[src="${getNFLTeamLogo('DAL')}"]`);
+    expect(unhide).not.toContain('NFL.svg');
+    expect(unhide?.endsWith('{ visibility: visible; }')).toBe(true);
   });
 
   it('swaps the ESPN light logo to the resolved dark variant', () => {

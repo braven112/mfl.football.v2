@@ -3,7 +3,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import Breadcrumbs from '../../components/theleague/Breadcrumbs.astro';
 import RelatedReports from '../../components/theleague/RelatedReports.astro';
 import leagueConfig from '../../data/theleague.config.json';
-import { DEFAULT_HEADSHOT_URL, getPlayerImageUrl } from '../../constants/roster-constants';
+import { DEFAULT_HEADSHOT_URL, NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, getNflLogoUrl, getPlayerImageUrl } from '../../constants/roster-constants';
 import { getCurrentSeasonYear } from '../../utils/league-year';
 import { getTeamIdentityForYear, chooseTeamName } from '../../utils/team-names';
 
@@ -235,23 +235,10 @@ const formatContract = (salary: number, years: number) => {
 };
 const formatPoints = (value: number) =>
   Number.isFinite(value) ? value.toFixed(1) : '0.0';
-const getNflLogo = (team: string) => {
-  let code = (team ?? '').toUpperCase() || 'FA';
-  // Normalize team codes that don't match logo filenames
-  const teamCodeMap: Record<string, string> = {
-    'TBB': 'TB',   // Tampa Bay Buccaneers
-    'GBP': 'GB',   // Green Bay Packers
-    'NEP': 'NE',   // New England Patriots
-    'KCC': 'KC',   // Kansas City Chiefs
-    'SFO': 'SF',   // San Francisco 49ers
-    'NOS': 'NO',   // New Orleans Saints
-    'SDC': 'LAC',  // San Diego Chargers → LA Chargers
-    'SD': 'LAC',   // San Diego Chargers → LA Chargers
-    'JAC': 'JAX',  // Jacksonville Jaguars
-  };
-  code = teamCodeMap[code] ?? code;
-  return `/assets/nfl-logos/${code}.svg`;
-};
+// Shared helper: normalizes every MFL/legacy alias and shields FA/FA*/UFA —
+// the hand-rolled map this replaced rendered /assets/nfl-logos/FA*.svg
+// verbatim for conditional free agents in the salary snapshots.
+const getNflLogo = (team: string) => getNflLogoUrl(team);
 ---
 
 <TheLeagueLayout title="MFL MVPs">
@@ -347,7 +334,7 @@ const getNflLogo = (team: string) => {
                                 <div>
                                   <h2 class="player-info__headline">{player.name}</h2>
                                   <p class="mvp-meta">
-                                    {nflLogo && <img src={nflLogo} alt={`${player.team ?? 'FA'} logo`} class="nfl-icon" loading="lazy" />}
+                                    {nflLogo && <img src={nflLogo} alt={`${player.team ?? 'FA'} logo`} class="nfl-icon" loading="lazy" onerror={NFL_LOGO_ONERROR} onload={NFL_LOGO_ONLOAD} />}
                                     <span>{player.position}</span>
                                   </p>
                                 </div>
@@ -418,7 +405,7 @@ const getNflLogo = (team: string) => {
                               <div>
                                 <h2>{player.name}</h2>
                                 <p class="mvp-meta">
-                                  {nflLogo && <img src={nflLogo} alt={`${player.team ?? 'FA'} logo`} class="nfl-icon" loading="lazy" />}
+                                  {nflLogo && <img src={nflLogo} alt={`${player.team ?? 'FA'} logo`} class="nfl-icon" loading="lazy" onerror={NFL_LOGO_ONERROR} onload={NFL_LOGO_ONLOAD} />}
                                   <span>{player.position}</span>
                                 </p>
                               </div>
@@ -481,6 +468,8 @@ const getNflLogo = (team: string) => {
                           alt={`${player.team ?? 'FA'} logo`}
                           class="nfl-icon"
                           loading="lazy"
+                          onerror={NFL_LOGO_ONERROR}
+                          onload={NFL_LOGO_ONLOAD}
                         />
                       )}
                       <span>{player.position}</span>
@@ -560,6 +549,8 @@ const getNflLogo = (team: string) => {
                                   alt={`${player.team ?? 'FA'} logo`}
                                   class="nfl-icon"
                                   loading="lazy"
+                                  onerror={NFL_LOGO_ONERROR}
+                                  onload={NFL_LOGO_ONLOAD}
                                 />
                               )}
                               <span>{player.position}</span>

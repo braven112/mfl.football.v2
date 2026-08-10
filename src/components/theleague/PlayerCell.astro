@@ -29,7 +29,7 @@
  */
 
 import '../../styles/player-cell.css';
-import { buildHeadshotOnerror, getPlayerHeadshot } from '../../constants/roster-constants';
+import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, buildHeadshotOnerror, getPlayerHeadshot } from '../../constants/roster-constants';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
 import { getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark } from '../../utils/nfl-team-colors';
 import type { PlayerModalData } from '../../utils/player-modal-trigger';
@@ -96,6 +96,9 @@ const resolvedEspnId = explicitEspnId ?? playerData?.espnId;
 // --- DEF handling ---
 const isDef = position?.toUpperCase() === 'DEF';
 const isLogo = isDef || isLogoAvatar;
+// The avatar handler must match what the src actually is: a DEF row with no
+// resolvable team falls back to a headshot src and keeps the headshot cascade.
+const avatarIsLogo = isLogoAvatar || (isDef && !!teamLogoUrl);
 const normalizedTeam = nflTeam ? normalizeTeamCode(nflTeam) : '';
 const teamLogoUrl = normalizedTeam ? `/assets/nfl-logos/${normalizedTeam}.svg` : '';
 
@@ -138,7 +141,8 @@ const avatarStyle = avatarBg
       alt={isDef ? `${nflTeam ?? 'DEF'} logo` : isLogoAvatar ? `${name} logo` : `${name} headshot`}
       loading="lazy"
       decoding="async"
-      onerror={isLogo ? 'this.onerror=null' : buildHeadshotOnerror(resolvedMflId, resolvedEspnId)}
+      onerror={avatarIsLogo ? NFL_LOGO_ONERROR : buildHeadshotOnerror(resolvedMflId, resolvedEspnId)}
+      onload={avatarIsLogo ? NFL_LOGO_ONLOAD : undefined}
     />
   </div>
   <div class="player-cell__info">
@@ -164,6 +168,8 @@ const avatarStyle = avatarBg
             class="player-meta__logo"
             loading="lazy"
             decoding="async"
+            onerror={NFL_LOGO_ONERROR}
+            onload={NFL_LOGO_ONLOAD}
           />
         )}
         {position && <span class="player-meta__pos">{position}{contractStatus ? ` - ${contractStatus}` : ''}</span>}

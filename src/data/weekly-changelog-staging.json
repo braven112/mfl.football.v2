@@ -20,6 +20,14 @@
     {
       "date": "2026-08-10",
       "type": "bug-fix",
+      "summary": "The great team-logo blackout is over — for good this time. Certain NFL crests (looking at you, Tampa Bay and New Orleans) kept rendering as broken-image icons on roster and player pages, and every fix seemed to wear off by morning. Turns out the logo files had never actually shipped with the site, and once they did, a 4-hour cache kept serving phones the old broken answer. The logos are now committed, guard-tested in CI (including old-timey codes like OAK and STL on historical rosters), and if one ever fails to load anyway, it now quietly disappears instead of leaving that sad torn-photo icon.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "both"
+    },
+    {
+      "date": "2026-08-10",
+      "type": "bug-fix",
       "summary": "Rookies were playing hide-and-seek on the AFL Free Agents page — an 'Include rookies' filter defaulted to off, so the entire draft class (and their ADP) was invisible unless you knew which checkbox to dig up. Rookies now show by default, ADP and all, and there's a new 'Rookies only' filter for when you want to scout nothing but the new blood.",
       "impact": "user",
       "area": "free-agents",

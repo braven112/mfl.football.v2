@@ -1,4 +1,5 @@
 ---
+import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD } from '../../constants/roster-constants';
 /**
  * ContractDeclarationModal — Inline contract declaration from the roster page
  *
@@ -55,7 +56,7 @@ import '../../styles/loading.css';
             <span class="cdm-hero__age" id="cdm-age-pill" hidden></span>
           </div>
           <div class="cdm-hero__meta">
-            <img class="cdm-hero__team-logo" id="cdm-nfl-logo" src="" alt="" />
+            <img class="cdm-hero__team-logo" id="cdm-nfl-logo" src="" alt="" onerror={NFL_LOGO_ONERROR} onload={NFL_LOGO_ONLOAD} />
             <span class="cdm-hero__meta-text" id="cdm-meta-text">&mdash;</span>
           </div>
           <div class="cdm-hero__sub" id="cdm-sub-text" hidden></div>

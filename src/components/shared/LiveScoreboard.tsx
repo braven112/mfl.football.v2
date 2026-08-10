@@ -27,6 +27,7 @@ import {
   winProbability,
 } from '../../utils/live-win-probability';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
+import { nflLogoErrorHandler, nflLogoLoadHandler, nflLogoRefCallback } from '../../constants/roster-constants';
 import { getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark } from '../../utils/nfl-team-colors';
 import { resolveTeamColorPair } from '../../utils/team-color-contrast';
 
@@ -368,7 +369,7 @@ function PlayerRow({ row, meta, side }: { row: LivePlayerRow; meta?: PlayerMeta;
         <img src={meta.headshot} alt="" loading="lazy"
              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
       )}
-      {isDef && team && <img className="ls-def-logo" src={nflLogoUrl(team)} alt="" loading="lazy" />}
+      {isDef && team && <img className="ls-def-logo" src={nflLogoUrl(team)} alt="" loading="lazy" onError={nflLogoErrorHandler} onLoad={nflLogoLoadHandler} ref={nflLogoRefCallback} />}
     </span>
   );
 

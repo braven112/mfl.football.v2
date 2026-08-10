@@ -18,6 +18,7 @@ import {
   type NflMatchup,
 } from '../../utils/nfl-matchups';
 import { normalizeTeamCode, getNFLTeamName, getNFLTeamLogo } from '../../utils/nfl-logo';
+import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD } from '../../constants/roster-constants';
 import collegeLogos from '../../data/college-logos.json';
 import {
   loadAflPlayerScores,
@@ -907,7 +908,8 @@ const pageConfig = {
                               alt={oppCode}
                               class="opponent-logo"
                               loading="lazy"
-                              onerror="this.style.display='none'"
+                              onerror={NFL_LOGO_ONERROR}
+                              onload={NFL_LOGO_ONLOAD}
                             />
                           </span>
                         ) : (

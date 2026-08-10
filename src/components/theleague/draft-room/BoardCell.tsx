@@ -1,6 +1,6 @@
 import React from 'react';
 import type { DraftRoomPick, DraftRoomPlayer, DraftRoomTeam } from '../../../types/draft-room';
-import { DEFAULT_HEADSHOT_URL, getCollegeHeadshot, getPlayerImageUrl } from '../../../constants/roster-constants';
+import { DEFAULT_HEADSHOT_URL, getCollegeHeadshot, getPlayerImageUrl, nflLogoErrorHandler, nflLogoLoadHandler, nflLogoRefCallback } from '../../../constants/roster-constants';
 import { normalizeTeamCode } from '../../../utils/nfl-logo';
 
 interface BoardCellProps {
@@ -75,6 +75,7 @@ export function BoardCell({ pick, player, team, teams, isCurrentPick, isUserTeam
   const normalizedTeam = player?.nflTeam ? normalizeTeamCode(player.nflTeam) : '';
   const teamLogoUrl = normalizedTeam ? `/assets/nfl-logos/${normalizedTeam}.svg` : '';
   const avatarSrc = isDef && teamLogoUrl ? teamLogoUrl : (player?.headshot ?? DEFAULT_HEADSHOT_URL);
+  const avatarIsLogo = isDef && !!teamLogoUrl;
 
   const handleImgError = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget;
@@ -112,7 +113,9 @@ export function BoardCell({ pick, player, team, teams, isCurrentPick, isUserTeam
           alt={isDef ? `${player?.nflTeam ?? 'DEF'} logo` : `${player?.name || ''} headshot`}
           loading="lazy"
           decoding="async"
-          onError={handleImgError}
+          onError={avatarIsLogo ? nflLogoErrorHandler : handleImgError}
+          onLoad={avatarIsLogo ? nflLogoLoadHandler : undefined}
+          ref={avatarIsLogo ? nflLogoRefCallback : undefined}
           className={avatarClass}
         />
         <span className="dr-cell__name">

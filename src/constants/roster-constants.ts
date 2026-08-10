@@ -157,6 +157,53 @@ export function getNflLogoUrl(teamCode?: string): string {
 }
 
 /**
+ * Inline onerror/onload handler pair for team-logo <img> tags.
+ *
+ * A team logo must never render the browser's broken-image icon: the apex
+ * domains sit behind Cloudflare, which (until the Aug 2026 settings fix)
+ * stamped `max-age=14400` on responses — including 404s — so a client that
+ * fetched a logo during a broken window kept re-rendering the failure long
+ * after the origin was fixed. On failure, hide the img (visibility, so the
+ * meta row's layout doesn't shift). No substitute logo: a wrong crest is
+ * worse than none.
+ *
+ * Two subtleties, both learned the hard way in this file's history:
+ * - Dark mode swaps a logo's pixels via `content: url(...)` (see
+ *   nfl-logo-dark-css.ts), which doesn't depend on the light src loading —
+ *   so a light-src failure must NOT hide an img whose dark swap is
+ *   rendering fine. That's why the handlers only toggle the
+ *   `nfl-logo-failed` class: the CSS in buildNflLogoDarkCss hides failed
+ *   logos generally but un-hides the ones whose dark swap provides pixels,
+ *   and pure CSS means theme toggles re-evaluate automatically.
+ * - Reused imgs (modals, hero spotlights — and any img born with src="",
+ *   which fires a load error per spec) must self-heal when a later src
+ *   assignment loads: pair every ONERROR with NFL_LOGO_ONLOAD. Never null
+ *   out onerror.
+ */
+export const NFL_LOGO_FAILED_CLASS = 'nfl-logo-failed';
+export const NFL_LOGO_ONERROR = `this.classList.add('${NFL_LOGO_FAILED_CLASS}')`;
+export const NFL_LOGO_ONLOAD = `this.classList.remove('${NFL_LOGO_FAILED_CLASS}')`;
+
+/**
+ * React equivalents of the inline pair. React attaches onError at hydration
+ * and does NOT replay events that fired before it — and a cached 404 (the
+ * poisoned-cache scenario the class exists for) typically resolves before
+ * hydration. `nflLogoRefCallback` closes that gap: pass it as `ref` so an
+ * already-failed img gets tagged when the island mounts.
+ */
+export function nflLogoErrorHandler(e: { currentTarget: HTMLImageElement }): void {
+  e.currentTarget.classList.add(NFL_LOGO_FAILED_CLASS);
+}
+export function nflLogoLoadHandler(e: { currentTarget: HTMLImageElement }): void {
+  e.currentTarget.classList.remove(NFL_LOGO_FAILED_CLASS);
+}
+export function nflLogoRefCallback(img: HTMLImageElement | null): void {
+  if (img && img.src && img.complete && img.naturalWidth === 0) {
+    img.classList.add(NFL_LOGO_FAILED_CLASS);
+  }
+}
+
+/**
  * NFL team bye weeks (updated each season)
  * null = not yet determined
  */

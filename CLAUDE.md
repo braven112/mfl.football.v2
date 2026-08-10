@@ -93,6 +93,33 @@ when swapping a hardcoded color to a token, verify the token's LIGHT value
 matches what was rendering — otherwise keep the light literal and override
 only under `html.dark` (see the admin-hub gate pills for the pattern).
 
+## NFL team logos — committed files, guard-tested, must never 404
+
+Every player cell renders self-hosted `/assets/nfl-logos/{CODE}.svg`. Two
+hard-won facts (Aug 2026 "missing team images" saga):
+
+- **The files are committed** in `public/assets/nfl-logos/` — one SVG per
+  canonical ESPN code AND per MFL/legacy alias (`TBB`, `NOS`, `OAK`, `RAM`,
+  `SDC`, `STL`, …), because several pages render the raw feed code without
+  normalizing. They were originally never committed (only existed in local
+  working trees), so production 404'd every light-mode logo for weeks.
+  `tests/nfl-logo-assets.test.ts` now fails CI if any code emitted by
+  `TEAM_CODE_MAP`/`getAllNFLTeamCodes` — or any `team` value appearing in any
+  committed players feed — lacks a valid SVG. Add a logo file + map entry
+  together, and never gitignore this directory.
+- **A logo 404 is cache-poisonous, not cosmetic.** The apex domains sit
+  behind Cloudflare, which stamps `cache-control: max-age=14400` on
+  responses *including 404s* — so one broken window keeps rendering broken
+  icons on owners' phones for up to 4 hours after the origin is fixed
+  (that's why past fixes "didn't take"). Defense in depth: player-cell logo
+  `<img>`s carry the `NFL_LOGO_ONERROR` fallback (roster-constants) — hide
+  the img on failure. No substitute crest (owner decision: a wrong logo is
+  worse than none). Dark mode is separate: the
+  `content: url()` swap fires no error event, which is why the dark logos
+  are prebuild-mirrored (see `nfl-logo-dark-css.ts`). If you're in the
+  Cloudflare dashboard anyway: Browser Cache TTL → "Respect Existing
+  Headers" would fix the 404 caching at the source.
+
 ## Player headshots on team colors — use the shared avatar helpers
 
 A player headshot on a team-color backdrop must go through

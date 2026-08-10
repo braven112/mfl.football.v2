@@ -16,6 +16,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { NflGame, NflScoreboardResponse } from '../../types/live-scoring';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
+import { nflLogoErrorHandler, nflLogoLoadHandler, nflLogoRefCallback } from '../../constants/roster-constants';
 
 const POLL_LIVE = 60_000;
 
@@ -42,7 +43,7 @@ function GameCard({ game }: { game: NflGame }) {
     const hasPoss = live && game.possession && game.possession === t.code;
     return (
       <div className="nfl-game__team">
-        {t.code && <img className="nfl-game__logo" src={nflLogoUrl(t.code)} alt="" loading="lazy" />}
+        {t.code && <img className="nfl-game__logo" src={nflLogoUrl(t.code)} alt="" loading="lazy" onError={nflLogoErrorHandler} onLoad={nflLogoLoadHandler} ref={nflLogoRefCallback} />}
         <span className="nfl-game__code">{t.code || 'TBD'}</span>
         {hasPoss && <span className="nfl-game__poss" aria-label="has possession">●</span>}
         <span className="nfl-game__score">{pre ? '' : t.score}</span>

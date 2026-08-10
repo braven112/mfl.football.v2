@@ -28,6 +28,7 @@ import { getDeclarations } from '../../utils/contract-storage';
 import { getCutList, getCredentialCapturedAt } from '../../utils/autocut-storage';
 import CutdownPlanPanel from '../../components/theleague/CutdownPlanPanel.astro';
 import type { RosterPlayer, MFLPlayerInfo } from '../../types/contract-eligibility';
+import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD } from '../../constants/roster-constants';
 import type { PositionNeed } from '../../utils/free-agent-needs';
 import type { ChartSlice } from '../scripts/chart-utils';
 import { getCurrentWeek } from '../../utils/current-week';
@@ -614,7 +615,8 @@ const getPlayerHeadshot = (mflId, espnId) => {
 };
 
 const getNflLogoUrl = (teamCode) => {
-  if (!teamCode || teamCode === 'FA') return '/assets/nfl-logos/NFL.svg';
+  // FA / FA* (conditional free agent) have no crest — use the shield.
+  if (!teamCode || teamCode.indexOf('FA') === 0) return '/assets/nfl-logos/NFL.svg';
   return `/assets/nfl-logos/${teamCode}.svg`;
 };
 
@@ -2599,6 +2601,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
                           src={getNflLogoUrl(player.gameOdds.opponent)}
                           alt={player.gameOdds.opponent}
                           class="opponent-logo"
+                          onerror={NFL_LOGO_ONERROR}
+                          onload={NFL_LOGO_ONLOAD}
                         />
                         <span class={`spread-badge ${!player.gameOdds.spreadAmount ? 'spread-neutral' : player.gameOdds.favoredTeam === player.gameOdds.opponent ? 'spread-underdog' : 'spread-favorite'}`}>
                         {!player.gameOdds.spreadAmount ? '-' : (player.gameOdds.favoredTeam === player.gameOdds.opponent ? '-' : '+') + player.gameOdds.spreadAmount}
@@ -5393,6 +5397,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
 <script>
   import { buildPlayerCellHTML } from '../../utils/player-cell-html';
+  import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD } from '../../constants/roster-constants';
   import { initPlayerModalTrigger } from '../../utils/player-modal-trigger';
   import { NFL_TEAM_CITIES, normalizeTeamCode } from '../../utils/nfl';
   import { getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark } from '../../utils/nfl-team-colors';
@@ -5564,7 +5569,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   };
 
   const getNflLogoUrl = (teamCode) => {
-    if (!teamCode || teamCode === 'FA') return '/assets/nfl-logos/NFL.svg';
+    // FA / FA* (conditional free agent) have no crest — use the shield.
+    if (!teamCode || teamCode.indexOf('FA') === 0) return '/assets/nfl-logos/NFL.svg';
     return `/assets/nfl-logos/${teamCode}.svg`;
   };
 
@@ -6843,7 +6849,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         return `
           <div class="chart-card">
             <div class="chart-card__header">
-              <img src="${getNflLogoUrl(team)}" alt="${team}" class="team-group__logo" />
+              <img src="${getNflLogoUrl(team)}" alt="${team}" class="team-group__logo" onerror="${NFL_LOGO_ONERROR}" onload="${NFL_LOGO_ONLOAD}" />
               <span class="team-group__name">${getNflTeamName(team)}</span>
             </div>
             <div class="team-group__players">
@@ -7185,7 +7191,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
           // Coach Mode Cells Construction
           const getLogoUrl = (team) => {
-            if (!team || team === 'FA') return '/assets/nfl-logos/NFL.svg';
+            // FA / FA* (conditional free agent) have no crest — use the shield.
+            if (!team || team.indexOf('FA') === 0) return '/assets/nfl-logos/NFL.svg';
             return `/assets/nfl-logos/${team}.svg`;
           };
 
@@ -7211,7 +7218,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
                       alt="${player.gameOdds.opponent}"
                       class="opponent-logo"
                       style="width: 20px; height: 20px; object-fit: contain;"
-                      onerror="this.style.display='none'"
+                      onerror="${NFL_LOGO_ONERROR}" onload="${NFL_LOGO_ONLOAD}"
                     />
                     <span class="spread-badge ${spreadClass}">
                     ${spreadDisplay}
@@ -7261,7 +7268,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
                     src="${getLogoUrl(player.gameOdds.opponent)}"
                     alt="${player.gameOdds.opponent}"
                     class="opponent-logo"
-                    onerror="this.style.display='none'"
+                    onerror="${NFL_LOGO_ONERROR}" onload="${NFL_LOGO_ONLOAD}"
                   />
                 ` : ''}
                 ${player.oppStats ? player.oppStats.avg : '-'}
