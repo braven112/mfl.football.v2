@@ -134,7 +134,13 @@ for (const t of yearConfig.teams as AflTeamEntry[]) {
   const c = t.conference ?? '_';
   conferenceSizes.set(c, (conferenceSizes.get(c) ?? 0) + 1);
 }
-const teamsPerPool = Math.max(...conferenceSizes.values(), 1);
+// If a future config drops the `conference` field, every team buckets into
+// one group and teamsPerPool silently doubles — halving every replacement
+// level with no error. Fall back to half the league rather than the whole.
+const teamsPerPool =
+  conferenceSizes.size >= 2
+    ? Math.max(...conferenceSizes.values(), 1)
+    : Math.max(Math.round((yearConfig.teams as AflTeamEntry[]).length / 2), 1);
 
 const analysis: KeeperAnalysis = buildKeeperAnalysis({
   prevRosters: feed<MflRostersFeed>(prevYear, 'rosters.json') ?? {
@@ -191,7 +197,8 @@ const fmtEff = (n: number) => `${Math.round(n * 100)}%`;
 // Flagged only when replacement had to be estimated from rostered players —
 // the full-pool YTD feed is the real source, and a build that missed it grades
 // against a slightly generous baseline.
-const replacementIsEstimated = !analysis.summary.replacementFromFullPool;
+const replacementIsEstimated =
+  !analysis.summary.replacementFromFullPool || analysis.summary.replacementClamped.length > 0;
 ---
 
 <TheLeagueLayout title={`Keeper Report Card ${selectedYear} | AFL`}>
@@ -278,9 +285,10 @@ const replacementIsEstimated = !analysis.summary.replacementFromFullPool;
         </div>
         {replacementIsEstimated && (
           <p class="ka-summary__note">
-            Replacement level is estimated from rostered players this cycle —
-            the full free-agent pool wasn't available when this built, so
-            grades may shift slightly once it is.
+            Replacement level is estimated this cycle — the full free-agent
+            pool wasn't available when this built{analysis.summary.replacementClamped.length > 0 &&
+              `, and at ${analysis.summary.replacementClamped.join('/')} there were fewer players to compare against than starting slots`}.
+            Grades may shift once a complete pool lands.
           </p>
         )}
       </section>
