@@ -320,20 +320,44 @@ export function isLeagueDraftOrderFinal(
  * and the AFL's two-element `draftUnit` array (one unit per conference).
  */
 export function isDraftConducted(draftResults: unknown): boolean {
+  return flattenDraftPicks(draftResults).some(isMadeSelection);
+}
+
+/**
+ * Whether the draft has FINISHED — every pick slot in the results carries a
+ * real player selection. Distinct from isDraftConducted, which flips true at
+ * the FIRST made pick: TheLeague's rookie draft is a multi-day slow draft,
+ * so "conducted" holds for days while picks remain on the board. Any gate
+ * that treats undrafted rookies as available (the free-agent page's default
+ * rookie filter) must use this stricter predicate — mid-draft, the remaining
+ * rookies are exactly the players about to be drafted, not free agents.
+ * MFL stubs unmade picks with an empty/placeholder player field, so "every
+ * listed slot has a real id" is the completion signal. Missing or empty
+ * results → false.
+ */
+export function isDraftComplete(draftResults: unknown): boolean {
+  const picks = flattenDraftPicks(draftResults);
+  return picks.length > 0 && picks.every(isMadeSelection);
+}
+
+/** Flatten both draftResults shapes (TheLeague's single draftUnit object and
+ * the AFL's per-conference draftUnit array) into one pick list. */
+function flattenDraftPicks(draftResults: unknown): DraftResultPick[] {
   const unitRaw = (draftResults as DraftResultsData | null | undefined)?.draftResults?.draftUnit as
     | { draftPick?: DraftResultPick | DraftResultPick[] }
     | Array<{ draftPick?: DraftResultPick | DraftResultPick[] }>
     | undefined;
   const units = Array.isArray(unitRaw) ? unitRaw : unitRaw ? [unitRaw] : [];
-  return units.some((unit) => {
+  return units.flatMap((unit) => {
     const picks = unit?.draftPick;
-    const pickArray = Array.isArray(picks) ? picks : picks ? [picks] : [];
-    // MFL stubs unmade picks with an empty/placeholder player field — only a
-    // real player id (digits, nonzero) counts as a made selection.
-    return pickArray.some(
-      (p) => p?.player && /^\d+$/.test(p.player) && parseInt(p.player, 10) > 0
-    );
+    return Array.isArray(picks) ? picks : picks ? [picks] : [];
   });
+}
+
+// MFL stubs unmade picks with an empty/placeholder player field — only a
+// real player id (digits, nonzero) counts as a made selection.
+function isMadeSelection(p: DraftResultPick): boolean {
+  return !!(p?.player && /^\d+$/.test(p.player) && parseInt(p.player, 10) > 0);
 }
 
 /**
