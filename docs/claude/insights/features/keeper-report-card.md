@@ -41,6 +41,15 @@ Expect kickers/defenses to appear in optimal sevens on raw totals now (a
 120-point PK outranks a 110-point WR at his own slot) — that is intended
 under this model, not a regression.
 
+## 2026-08-10 - Team Branding Resolves To The POINTS Season, Not The Roster Season
+
+**Insight:** The card grades a decision made by whoever owns the franchise
+in the keep year, so `resolveConfigForYear` gets `selectedYear`, not
+`prevYear` — an offseason ownership change (0004: Baby Gate 2024 → Get off
+my Ditka 2025) must show the new owner's name/icon/tier on the keeps they
+picked. Same species of bug as the two-clocks year-rollover gotchas: the
+roster DATA is prev-year, the identity is keep-year.
+
 ## 2026-08-09 - Official Keepers Come From Post-Deadline Roster Snapshots (When They Exist)
 
 **Insight:** Between the July 15 keeper cut deadline and the late-August
