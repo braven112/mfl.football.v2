@@ -102,6 +102,20 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
     --cat-enhancement: #2563eb;
     --cat-bug-fix: #dc2626;
     --cat-league-event: #0369a1;
+    --cat-badge-ink: #ffffff;   /* pill text — white on the deep light fills */
+  }
+
+  /* Dark mode: lift the accents so they read against the dark page, and flip
+     the pill ink to near-black now that the fills are light. Mirrors the
+     WhatsNewRow block verbatim so a card looks identical on the homepage and
+     here — before Aug 2026 this page shipped the light palette in dark mode. */
+  html.dark {
+    --cat-new-page: #a78bfa;
+    --cat-new-feature: #4ade80;
+    --cat-enhancement: #60a5fa;
+    --cat-bug-fix: #f87171;
+    --cat-league-event: #38bdf8;
+    --cat-badge-ink: #0b0f16;
   }
 
   /* ── Page layout ── */
@@ -135,7 +149,7 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
     letter-spacing: 0.05em;
     padding: 0.2rem 0.6rem;
     border-radius: 9999px;
-    color: #fff;
+    color: var(--cat-badge-ink, #fff);
     background: var(--cat-new-feature, #2e8743);
   }
 
@@ -203,7 +217,10 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
   }
 
   .wn-filters__tab--active {
-    color: #fff;
+    /* Covers the --all tab too: its fill is --color-primary, which is itself a
+       bright blue in dark mode, so the dark ink is the readable pairing there
+       as well (white on #3b82f6 only reaches 3.7:1). */
+    color: var(--cat-badge-ink, #fff);
     border-color: transparent;
   }
 
@@ -465,7 +482,7 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
     letter-spacing: 0.05em;
     padding: 0.15rem 0.5rem;
     border-radius: 9999px;
-    color: #fff;
+    color: var(--cat-badge-ink, #fff);
   }
 
   .wn-card__badge--new-page { background: var(--cat-new-page); }
@@ -490,7 +507,7 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
     padding: 0.15rem 0.5rem;
     border-radius: 9999px;
     background: var(--cat-new-feature);
-    color: #fff;
+    color: var(--cat-badge-ink, #fff);
   }
 
   .wn-card__new-dot {
