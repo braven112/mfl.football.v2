@@ -23,6 +23,7 @@ import {
   computeSeasonPoints,
   type KeeperAnalysis,
   type MflDraftResultsFeed,
+  type MflPlayerScoresFeed,
   type MflPlayersFeed,
   type MflRostersFeed,
   type WeeklyResultsRaw,
@@ -48,7 +49,7 @@ const baseUrl = getLeagueBaseUrl(league);
 // filter keeps it to ~7MB. tests/afl-keeper-feed-globs.test.ts fails the
 // build if any feed glob on this page loses the filter.
 const seasonFeeds = import.meta.glob(
-  '../../../data/afl-fantasy/mfl-feeds/20{2[4-9],[3-9][0-9]}/{rosters,players,draftResults,weekly-results-raw,fetch.meta}.json',
+  '../../../data/afl-fantasy/mfl-feeds/20{2[4-9],[3-9][0-9]}/{rosters,players,draftResults,weekly-results-raw,playerScores-ytd,fetch.meta}.json',
   { eager: true }
 );
 // Post-deadline July roster snapshots (16th-31st): between the keeper cut
@@ -122,6 +123,7 @@ const analysis: KeeperAnalysis = buildKeeperAnalysis({
   curWeeklyRaw: feed<WeeklyResultsRaw>(selectedYear, 'weekly-results-raw.json'),
   curRosters: feed<MflRostersFeed>(selectedYear, 'rosters.json'),
   curDraftResults: feed<MflDraftResultsFeed>(selectedYear, 'draftResults.json'),
+  curPlayerScoresYtd: feed<MflPlayerScoresFeed>(selectedYear, 'playerScores-ytd.json'),
   keeperSnapshots,
 });
 const { previewMode } = analysis;
@@ -172,15 +174,10 @@ const fmtPts = (n: number) =>
   n.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const fmtEff = (n: number) => `${Math.round(n * 100)}%`;
 
-// Only surfaced when a kicker/defense actually earned a dominance exception —
-// that changes how the keeps grade. The routine "nobody qualified" case isn't
-// worth a callout; the methodology note below covers the rule.
-const kdefExceptionText =
-  analysis.summary.kdefExceptions.length > 0
-    ? analysis.summary.kdefExceptions
-        .map((e) => `${e.playerName} lapped the position by ${Math.round(e.gap)} points — skipping it counts as a real miss this year`)
-        .join('; ')
-    : null;
+// Flagged only when replacement had to be estimated from rostered players —
+// the full-pool YTD feed is the real source, and a build that missed it grades
+// against a slightly generous baseline.
+const replacementIsEstimated = !analysis.summary.replacementFromFullPool;
 ---
 
 <TheLeagueLayout title={`Keeper Report Card ${selectedYear} | AFL`}>
@@ -239,7 +236,7 @@ const kdefExceptionText =
             </span>
             <span class="ka-tile__big">{fmtEff(best.efficiency)} of optimal</span>
             <span class="ka-tile__stat">
-              {fmtPts(best.keptPoints)} startable pts · {best.hits}/{best.keptCount} hits
+              {fmtPts(best.keptValue)} value over free · {best.hits}/{best.keptCount} hits
             </span>
           </div>
           <div class="ka-tile ka-tile--worst">
@@ -252,7 +249,7 @@ const kdefExceptionText =
             </span>
             <span class="ka-tile__big">{fmtEff(worst.efficiency)} of optimal</span>
             <span class="ka-tile__stat">
-              {fmtPts(worst.keptPoints)} startable pts · {worst.hits}/{worst.keptCount} hits
+              {fmtPts(worst.keptValue)} value over free · {worst.hits}/{worst.keptCount} hits
             </span>
           </div>
           <div class="ka-tile">
@@ -265,7 +262,13 @@ const kdefExceptionText =
             </span>
           </div>
         </div>
-        {kdefExceptionText && <p class="ka-summary__kdef-note">{kdefExceptionText}.</p>}
+        {replacementIsEstimated && (
+          <p class="ka-summary__note">
+            Replacement level is estimated from rostered players this cycle —
+            the full free-agent pool wasn't available when this built, so
+            grades may shift slightly once it is.
+          </p>
+        )}
       </section>
     )}
 
@@ -321,26 +324,30 @@ const kdefExceptionText =
           )}
         </li>
         <li>
-          Kickers and defenses sit out of the optimal seven — nobody burns a
-          keeper slot on one, so passing on one is never held against you.
-          But a <em>kept</em> kicker or defense that outscored an optimal
-          player the team let walk counts as a hit: they start every week, so
-          the keep paid off in real points.
+          Value is <em>points over replacement</em>, not raw points. A player
+          is worth what he beat a freely available alternative by: the best
+          player at his position you could NOT have started, given 24
+          franchises each starting one QB, one kicker, one defense and six
+          from RB/WR/TE. That is why a 154-point kicker is worth about 60
+          while a 328-point running back keeps nearly all of his — most of a
+          kicker's total is available to anyone for nothing.
         </li>
         <li>
-          The optimal bar swings roughly 2x across the league in a given
-          cycle (875 to 1,842 points in the 2024 → 2025 cycle), which is why
-          the ranking is a percentage and not raw kept points — otherwise the
-          standings would mostly reflect the roster a manager inherited.
-          Ties break on kept points, then franchise id.
+          The seven are lineup-legal. A second quarterback, kicker, or defense
+          has no slot to start in, so keeping one buys nothing no matter what
+          he scored — it's marked <em>No slot</em>, never a miss and never
+          credit. Kickers and defenses aren't excluded any more; they simply
+          have to earn a place on value, and a genuinely dominant unit does.
         </li>
         <li>
-          Only one QB counts, on both sides of the ratio. A backup quarterback
-          starts only on the starter's bye or after an injury, so his season
-          total was never really available to the lineup: a kept backup QB is
-          never a miss, never a hit, and <em>his points don't count toward the
-          class total at all</em>. Kickers and defenses are different — they
-          start every week, so their points count in full.
+          A keep at or below replacement adds nothing, because you could have
+          had that production for free.
+        </li>
+        <li>
+          Classes rank on the share of their own ceiling they captured, not on
+          raw totals — the ceiling swings about 2x across the league in a
+          given cycle, and nobody chose the roster they inherited. Ties break
+          on value captured, then franchise id.
         </li>
         <li>
           An earned hit doesn't erase the matching "got away" — keeping the
@@ -486,7 +493,7 @@ const kdefExceptionText =
     color: var(--content-text-muted, #6b7280);
   }
 
-  .ka-summary__kdef-note {
+  .ka-summary__note {
     margin: 0.75rem 0 0;
     font-size: 0.82rem;
     color: var(--content-text-muted, #6b7280);

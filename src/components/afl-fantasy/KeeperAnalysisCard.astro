@@ -64,7 +64,7 @@ const efficiencyPct = Math.round(analysis.efficiency * 100);
       {!previewMode && (
         <span class="ka-card__grade-sub">
           <strong>{efficiencyPct}% of optimal</strong> · #{classRank} class ·
-          {fmtPts(analysis.keptPoints)} startable pts
+          {fmtPts(analysis.keptValue)} value over free
         </span>
       )}
     </div>
@@ -97,7 +97,7 @@ const efficiencyPct = Math.round(analysis.efficiency * 100);
           <td class="ka-table__badge">
             {p.kept && <span class="ka-pill ka-pill--kept">Kept</span>}
             {!previewMode && p.badge === 'hit' && !p.optimal && (
-              <span class="ka-pill ka-pill--hit" title="Kept kicker or defense that outscored an optimal player the team let walk — an earned hit">
+              <span class="ka-pill ka-pill--hit" title="Kept one of the seven most valuable players this roster could have kept">
                 Hit
               </span>
             )}
@@ -105,12 +105,9 @@ const efficiencyPct = Math.round(analysis.efficiency * 100);
             {!previewMode && p.badge === 'got-away' && (
               <span class="ka-pill ka-pill--gotaway">Got away</span>
             )}
-            {!previewMode && p.badge === 'kdef-neutral' && (
-              <span class="ka-pill ka-pill--kdef">K/DEF</span>
-            )}
-            {!previewMode && p.badge === 'qb2-neutral' && (
-              <span class="ka-pill ka-pill--kdef" title="Second QB — only starts on a bye or an injury, so it's never a miss and his points don't count toward the class total">
-                QB2
+            {!previewMode && p.badge === 'no-slot' && (
+              <span class="ka-pill ka-pill--kdef" title="No starting slot left at this position — a second QB, kicker, or defense has nowhere to play, so the keep is neither a miss nor credit">
+                No slot
               </span>
             )}
           </td>

@@ -9,12 +9,13 @@
  *
  *   kept(F) = prevYearRoster(F) ∩ curYearOpeningRoster(F) − curYearDraftPicks(F)
  *
- * Kickers and team defenses are excluded from the optimal-seven grading
- * unless the league's #1 scorer at that position finished
- * KDEF_GAP_THRESHOLD+ points clear of #2 that season (positional-dominance
- * escape hatch — no unit has cleared it in the five seasons checked; the
- * closest was the 2021 Patriots defense at 33). They still surface as
- * neutral "raw top 7" flags.
+ * Classes are graded on POINTS OVER REPLACEMENT, not raw points. Raw points
+ * lie in two directions at once: they flatter a kicker (whose 154-point
+ * season is ~60 points better than a free one) and they flatter whoever
+ * inherited the deepest roster. PoR plus the real lineup slots fixes both,
+ * and it replaced four hand-written special cases that were each
+ * approximating some piece of it — the K/DEF exclusion, its dominance
+ * threshold, the one-QB cap, and the backup-QB points carve-out.
  *
  * Pure module: callers inject parsed feed JSON; no file/network I/O here.
  */
@@ -25,16 +26,32 @@ import { formatMflName } from './player-name-matching';
 /** First prev-season year of the keeper era (cycle = prevYear → prevYear+1). */
 export const AFL_KEEPER_ERA_FIRST_PREV_YEAR = 2024;
 
-/** #1-vs-#2 positional gap that makes a K/DEF gradable for a season. */
-export const KDEF_GAP_THRESHOLD = 40;
+/**
+ * Lineup slots one franchise starts each week. The AFL starts 9: one QB,
+ * one kicker, one defense, and six flex from RB/WR/TE.
+ *
+ * These caps are what make a keeper slot worth anything: a second QB has
+ * nowhere to play, so keeping one buys zero startable production no matter
+ * what he scored. The old MAX_OPTIMAL_QBS rule said the same thing by hand.
+ */
+export const LINEUP_SLOTS = { QB: 1, PK: 1, Def: 1, FLEX: 6 } as const;
+export type SlotGroup = keyof typeof LINEUP_SLOTS;
 
-const KDEF_POSITIONS = new Set(['PK', 'Def']);
+const FLEX_POSITIONS = new Set(['RB', 'WR', 'TE']);
+
+/** Which starting slot a position competes for, or null if it can't start. */
+export function slotGroupFor(position: string): SlotGroup | null {
+  if (FLEX_POSITIONS.has(position)) return 'FLEX';
+  if (position === 'QB' || position === 'PK' || position === 'Def') return position;
+  return null;
+}
 
 /**
- * No team keeps two QBs, so only a roster's top-scoring QB is eligible for
- * the optimal seven, and a kept backup QB is neutral — never a miss.
+ * Minimum weeks rostered before a player can set a replacement baseline.
+ * Someone rostered for two weeks is a churn artifact, not the guy you would
+ * actually have started all year.
  */
-export const MAX_OPTIMAL_QBS = 1;
+const REPLACEMENT_MIN_WEEKS = 8;
 
 // --- Feed shapes (loose — MFL JSON is stringly typed) ---
 
@@ -88,6 +105,34 @@ export interface MflDraftResultsFeed {
   };
 }
 
+/** MFL playerScores (W=YTD): season totals for every player in the pool. */
+export interface MflPlayerScoresFeed {
+  playerScores?: {
+    week?: string;
+    playerScore?: Array<{ id?: string; score?: string }> | { id?: string; score?: string };
+  };
+}
+
+/**
+ * Season totals from the YTD playerScores feed, keyed by player id.
+ * Returns undefined when the feed is absent or unusable so callers can fall
+ * back rather than silently grading against an empty baseline.
+ */
+export function parsePlayerScoresYtd(
+  feed: MflPlayerScoresFeed | undefined
+): Map<string, number> | undefined {
+  const rows = asArray(feed?.playerScores?.playerScore);
+  if (rows.length === 0) return undefined;
+  const totals = new Map<string, number>();
+  for (const row of rows) {
+    if (!row?.id) continue;
+    const score = Number.parseFloat(row.score ?? '');
+    if (!Number.isFinite(score)) continue;
+    totals.set(row.id, score);
+  }
+  return totals.size > 0 ? totals : undefined;
+}
+
 export interface PlayerInfo {
   id: string;
   /** Display name ("First Last" — converted from MFL "Last, First"). */
@@ -100,17 +145,18 @@ export interface PlayerInfo {
 
 // --- Output shapes ---
 
-export type KeeperBadge = 'hit' | 'miss' | 'got-away' | 'kdef-neutral' | 'qb2-neutral';
+export type KeeperBadge = 'hit' | 'miss' | 'got-away' | 'no-slot';
 
 export interface AnalyzedPlayer extends PlayerInfo {
+  /** Raw regular-season points — what the table's Pts column shows. */
   points: number;
-  /** 1-based rank on this franchise's prev roster by points (raw, all positions). */
+  /** Points above a freely available player at the same slot. Drives grades. */
+  pointsOverReplacement: number;
+  /** 1-based rank on this franchise's prev roster by raw points. */
   rank: number;
   kept: boolean;
-  /** In the (K/DEF-filtered) hindsight-optimal seven. */
+  /** In the lineup-legal, PoR-maximising best seven this roster could have kept. */
   optimal: boolean;
-  /** In the unfiltered raw top seven (powers the K/DEF flag). */
-  rawTopSeven: boolean;
   badge: KeeperBadge | null;
 }
 
@@ -121,23 +167,17 @@ export interface FranchiseAnalysis {
   hits: number;
   misses: number;
   gotAway: number;
-  /** Kept K/DEF in a non-exception season — shown, never counted as a miss. */
-  kdefNeutralKept: number;
+  /** Keeps with no starting slot left (a 2nd QB/PK/Def) — never a miss, never credit. */
+  noSlotKept: number;
+  /** PoR delivered by the best lineup-legal seven out of the players kept. */
+  keptValue: number;
+  /** PoR of the best lineup-legal seven the roster could have kept. */
+  optimalValue: number;
   /**
-   * Kept backup QBs (beyond the team's best kept QB) — shown, never a miss
-   * and never a hit; their points are excluded from keptPoints entirely.
-   */
-  backupQbNeutralKept: number;
-  /** K/DEF that cracked the raw (unfiltered) top seven. */
-  kdefRawTopSevenCount: number;
-  keptPoints: number;
-  optimalPoints: number;
-  /**
-   * keptPoints / optimalPoints, 0..1 (0 when optimalPoints is 0). The page's
-   * headline measure and its ranking key: it grades the keeper decision
-   * against the ceiling of the roster the manager actually had. Backup-QB
-   * points are excluded from keptPoints (see gradeFranchise), which is what
-   * keeps a class from scoring above its own ceiling.
+   * keptValue / optimalValue, 0..1 (0 when optimalValue is 0). The page's
+   * headline measure and ranking key. Bounded at 1 by construction: both
+   * sides are built by the same slot-capped selection over the same PoR
+   * values, and the kept set is a subset of the roster.
    */
   efficiency: number;
 }
@@ -151,12 +191,14 @@ export interface KeeperAnalysisSummary {
   rankedFranchiseIds: string[];
   bestFranchiseId: string | null;
   worstFranchiseId: string | null;
-  /** Franchises whose raw top seven contained ≥1 K/DEF. */
-  franchisesWithKdefInRawTopSeven: number;
-  /** Franchises that actually kept a K/DEF. */
-  franchisesThatKeptKdef: number;
-  /** Positions gradable this cycle under the dominance rule (usually empty). */
-  kdefExceptions: Array<{ position: string; playerId: string; playerName: string; gap: number }>;
+  /** Points-per-week a free replacement returned at each slot this season. */
+  replacement: ReplacementLevels;
+  /**
+   * True when replacement came from the full-pool YTD feed. False means it
+   * was estimated from rostered players only, which cannot see free agents
+   * and biases the baseline upward at thin positions.
+   */
+  replacementFromFullPool: boolean;
   totalHits: number;
   totalMisses: number;
   totalGotAway: number;
@@ -208,11 +250,13 @@ function asArray<T>(value: T[] | T | undefined | null): T[] {
  */
 const seasonPointsMemo = new WeakMap<
   WeeklyResultsRaw,
-  { points: Map<string, number>; maxCompletedWeek: number }
+  { points: Map<string, number>; weeks: Map<string, number>; maxCompletedWeek: number }
 >();
 
 export function computeSeasonPoints(weeklyRaw: WeeklyResultsRaw): {
   points: Map<string, number>;
+  /** Weeks the player was rostered by someone (the denominator for PoR). */
+  weeks: Map<string, number>;
   maxCompletedWeek: number;
 } {
   // The feed arrays come from eager import.meta.glob modules whose identity
@@ -264,11 +308,13 @@ export function computeSeasonPoints(weeklyRaw: WeeklyResultsRaw): {
   }
 
   const points = new Map<string, number>();
+  const weeks = new Map<string, number>();
   for (const [key, score] of perPlayerWeek) {
     const pid = key.slice(0, key.indexOf('|'));
     points.set(pid, (points.get(pid) ?? 0) + score);
+    weeks.set(pid, (weeks.get(pid) ?? 0) + 1);
   }
-  const result = { points, maxCompletedWeek };
+  const result = { points, weeks, maxCompletedWeek };
   if (weeklyRaw) seasonPointsMemo.set(weeklyRaw, result);
   return result;
 }
@@ -295,31 +341,82 @@ export function buildPlayersById(
   return byId;
 }
 
+/** Points-per-week a freely available player returns, by slot group. */
+export type ReplacementLevels = Record<SlotGroup, number>;
+
 /**
- * Positions (PK/Def) whose league #1 finished KDEF_GAP_THRESHOLD+ points
- * clear of #2 — gradable that season under the dominance rule.
+ * Replacement level: the per-week rate of the best player at each slot group
+ * you could NOT have started, i.e. the guy sitting one spot past the last
+ * league-wide starting slot.
+ *
+ * This is the whole reason the grading no longer needs position filters. A
+ * kicker's raw total looks like a mid-tier running back's, but nearly all of
+ * it is available for free — measured over replacement, Brandon Aubrey's 154
+ * points become ~60 while Christian McCaffrey's 328 stay ~305. The old
+ * K/DEF exclusion and its dominance-threshold escape hatch were hand-made
+ * approximations of this number.
+ *
+ * `ytdTotals` (MFL's playerScores W=YTD feed) is authoritative because it
+ * covers EVERY player, including the free agents that define replacement.
+ * Without it we fall back to the rostered pool, which can only see players
+ * somebody kept — that biases replacement upward at thin positions, so the
+ * fallback is an approximation, not an equivalent.
  */
-export function computeKdefExceptions(
+export function computeReplacementLevels(
   points: Map<string, number>,
-  playersById: Map<string, PlayerInfo>
-): KeeperAnalysisSummary['kdefExceptions'] {
-  const exceptions: KeeperAnalysisSummary['kdefExceptions'] = [];
-  for (const position of KDEF_POSITIONS) {
-    const ranked = [...points.entries()]
-      .filter(([pid]) => playersById.get(pid)?.position === position)
-      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
-    if (ranked.length < 2) continue;
-    const gap = ranked[0][1] - ranked[1][1];
-    if (gap >= KDEF_GAP_THRESHOLD) {
-      exceptions.push({
-        position,
-        playerId: ranked[0][0],
-        playerName: playersById.get(ranked[0][0])?.name ?? `Player #${ranked[0][0]}`,
-        gap,
-      });
+  weeks: Map<string, number>,
+  playersById: Map<string, PlayerInfo>,
+  franchiseCount: number,
+  maxCompletedWeek: number,
+  ytdTotals?: Map<string, number>
+): ReplacementLevels {
+  const levels: ReplacementLevels = { QB: 0, PK: 0, Def: 0, FLEX: 0 };
+  if (franchiseCount <= 0 || maxCompletedWeek <= 0) return levels;
+
+  // Season totals for everyone we can see, preferring the full-pool feed.
+  const useYtd = !!ytdTotals && ytdTotals.size > 0;
+  const rates: Record<SlotGroup, number[]> = { QB: [], PK: [], Def: [], FLEX: [] };
+  const source = useYtd ? ytdTotals! : points;
+  for (const [pid, total] of source) {
+    const group = slotGroupFor(playersById.get(pid)?.position ?? '');
+    if (!group) continue;
+    // The YTD feed has no games-played, so its totals are full-season by
+    // definition; the rostered fallback must normalise by weeks rostered and
+    // ignore short stints that would drag the baseline down.
+    if (useYtd) {
+      rates[group].push(total / maxCompletedWeek);
+    } else {
+      const w = weeks.get(pid) ?? 0;
+      if (w < Math.min(REPLACEMENT_MIN_WEEKS, maxCompletedWeek)) continue;
+      rates[group].push(total / w);
     }
   }
-  return exceptions;
+
+  for (const group of Object.keys(levels) as SlotGroup[]) {
+    const list = rates[group].sort((a, b) => b - a);
+    if (list.length === 0) continue;
+    // Index of the first player past the last startable one league-wide.
+    const startable = LINEUP_SLOTS[group] * franchiseCount;
+    levels[group] = list[Math.min(startable, list.length - 1)] ?? 0;
+  }
+  return levels;
+}
+
+/**
+ * A player's value over a freely available alternative, charged only for the
+ * weeks he was actually rostered — a half-season keeper is measured against
+ * half a season of replacement, not a full one.
+ */
+export function pointsOverReplacement(
+  pid: string,
+  points: Map<string, number>,
+  weeks: Map<string, number>,
+  playersById: Map<string, PlayerInfo>,
+  replacement: ReplacementLevels
+): number {
+  const group = slotGroupFor(playersById.get(pid)?.position ?? '');
+  if (!group) return 0;
+  return (points.get(pid) ?? 0) - replacement[group] * (weeks.get(pid) ?? 0);
 }
 
 /**
@@ -463,32 +560,34 @@ function rankByPoints(pids: Iterable<string>, points: Map<string, number>): stri
 }
 
 /**
- * The hindsight-optimal seven for a prev roster plus the unfiltered raw
- * top seven. Position rules:
- * - K/DEF excluded unless the position earned a dominance exception.
- * - At most one QB (the roster's top scorer) — no team keeps two.
+ * The most valuable lineup-legal seven from a set of players, by points over
+ * replacement.
+ *
+ * Greedy is exact here: the slot caps form a partition matroid and we want
+ * the max-weight independent set of size <= KEEPER_LIMIT, so taking the
+ * highest-PoR player that still has a slot free is optimal at every step.
+ *
+ * Players at or below replacement are skipped — a keeper slot spent on
+ * someone you could have had for free returned nothing, and counting him
+ * would make a class look better for having kept more bodies.
  */
-export function computeOptimalSeven(
-  prevRosterPids: Set<string>,
-  points: Map<string, number>,
-  playersById: Map<string, PlayerInfo>,
-  exceptionPositions: Set<string>
-): { optimal: string[]; rawTopSeven: string[] } {
-  const ranked = rankByPoints(prevRosterPids, points);
-  let qbsTaken = 0;
-  const eligible = ranked.filter((pid) => {
-    const position = playersById.get(pid)?.position ?? '?';
-    if (KDEF_POSITIONS.has(position) && !exceptionPositions.has(position)) return false;
-    if (position === 'QB') {
-      if (qbsTaken >= MAX_OPTIMAL_QBS) return false;
-      qbsTaken += 1;
-    }
-    return true;
-  });
-  return {
-    optimal: eligible.slice(0, KEEPER_LIMIT),
-    rawTopSeven: ranked.slice(0, KEEPER_LIMIT),
-  };
+export function selectBestSeven(
+  pids: Iterable<string>,
+  porOf: (pid: string) => number,
+  playersById: Map<string, PlayerInfo>
+): string[] {
+  const ranked = [...pids].sort((a, b) => porOf(b) - porOf(a) || a.localeCompare(b));
+  const used: Record<SlotGroup, number> = { QB: 0, PK: 0, Def: 0, FLEX: 0 };
+  const picked: string[] = [];
+  for (const pid of ranked) {
+    if (picked.length >= KEEPER_LIMIT) break;
+    if (porOf(pid) <= 0) continue;
+    const group = slotGroupFor(playersById.get(pid)?.position ?? '');
+    if (!group || used[group] >= LINEUP_SLOTS[group]) continue;
+    used[group] += 1;
+    picked.push(pid);
+  }
+  return picked;
 }
 
 /** Assemble one franchise's analyzed, ranked roster + grade tallies. */
@@ -497,30 +596,25 @@ export function gradeFranchise(
   prevRosterPids: Set<string>,
   kept: Set<string>,
   points: Map<string, number>,
+  weeks: Map<string, number>,
   playersById: Map<string, PlayerInfo>,
-  exceptionPositions: Set<string>
+  replacement: ReplacementLevels
 ): FranchiseAnalysis {
-  const { optimal, rawTopSeven } = computeOptimalSeven(
-    prevRosterPids,
-    points,
-    playersById,
-    exceptionPositions
-  );
+  const porOf = (pid: string) =>
+    pointsOverReplacement(pid, points, weeks, playersById, replacement);
+
+  // The ceiling: the best lineup-legal seven this roster could have kept.
+  const optimal = selectBestSeven(prevRosterPids, porOf, playersById);
   const optimalSet = new Set(optimal);
-  const rawTopSet = new Set(rawTopSeven);
+  // What the keeper class actually delivered: the best lineup-legal seven
+  // out of the players they DID keep. Same function, same slot caps, so the
+  // numerator can never outrun the denominator.
+  const keptBest = selectBestSeven(kept, porOf, playersById);
+  const keptBestSet = new Set(keptBest);
+
+  // Rows stay ordered by raw points -- that is what the table column shows
+  // and what an owner scans for. PoR drives the grades, not the sort.
   const ranked = rankByPoints(prevRosterPids, points);
-
-  // The marginal alternative: the lowest-scoring optimal player the team
-  // did NOT keep. A kept K/DEF or backup QB that outscored them was a good
-  // keeper in hindsight — grade it a hit, not a neutral.
-  const optimalNotKept = optimal.filter((pid) => !kept.has(pid));
-  const marginalAltPoints = optimalNotKept.length
-    ? Math.min(...optimalNotKept.map((pid) => points.get(pid) ?? 0))
-    : Infinity;
-
-  // A team's best-scoring kept QB grades normally; further kept QBs are
-  // backups — nobody keeps two, so they can never be a miss.
-  const topKeptQb = ranked.find((pid) => kept.has(pid) && playersById.get(pid)?.position === 'QB');
 
   const players: AnalyzedPlayer[] = ranked.map((pid, i) => {
     const info = playersById.get(pid) ?? {
@@ -529,49 +623,37 @@ export function gradeFranchise(
       position: '?',
       nflTeam: '',
     };
-    const playerPoints = points.get(pid) ?? 0;
     const isKept = kept.has(pid);
     const isOptimal = optimalSet.has(pid);
-    const isNeutralKdef =
-      KDEF_POSITIONS.has(info.position) && !exceptionPositions.has(info.position);
-    const isBackupKeptQb = isKept && info.position === 'QB' && pid !== topKeptQb;
-    const beatMarginalAlt = playerPoints > marginalAltPoints;
+    const por = porOf(pid);
+    const group = slotGroupFor(info.position);
 
-    // A backup QB can only start on the starter's bye or an injury, so his
-    // season total was never actually available to the lineup — it can't pay
-    // off a keeper slot and never grades a hit. A kicker or defense DOES
-    // start every week, so a K/DEF that beat the marginal alternative is a
-    // real, earned hit.
+    // A keep only counts if it could actually take a starting slot. A second
+    // QB (or second kicker/defense) has nowhere to play, so he is neutral --
+    // never a miss, but never credit either.
+    const slotBlocked = isKept && !keptBestSet.has(pid) && group !== null &&
+      keptBest.filter((k) => slotGroupFor(playersById.get(k)?.position ?? '') === group).length >=
+        LINEUP_SLOTS[group];
+
     let badge: KeeperBadge | null = null;
     if (isKept && isOptimal) badge = 'hit';
-    else if (isKept && isNeutralKdef) badge = beatMarginalAlt ? 'hit' : 'kdef-neutral';
-    else if (isBackupKeptQb) badge = 'qb2-neutral';
+    else if (isKept && slotBlocked) badge = 'no-slot';
     else if (isKept) badge = 'miss';
     else if (isOptimal) badge = 'got-away';
 
     return {
       ...info,
-      points: playerPoints,
+      points: points.get(pid) ?? 0,
+      pointsOverReplacement: por,
       rank: i + 1,
       kept: isKept,
       optimal: isOptimal,
-      rawTopSeven: rawTopSet.has(pid),
       badge,
     };
   });
 
-  // Kept points count each QB slot ONCE: only the best kept QB contributes.
-  // A backup QB's season total is startable-in-theory only (bye weeks and
-  // injuries), so crediting it overstates what the keeper class actually put
-  // in lineups — and, because the optimal seven allows just one QB, crediting
-  // it also let a team's kept points exceed its own ceiling. Kickers and
-  // defenses keep counting in full: they start every week.
-  const keptPlayers = players.filter((p) => p.kept);
-  const keptPoints = keptPlayers.reduce(
-    (sum, p) => (p.badge === 'qb2-neutral' ? sum : sum + p.points),
-    0
-  );
-  const optimalPoints = optimal.reduce((sum, pid) => sum + (points.get(pid) ?? 0), 0);
+  const keptValue = keptBest.reduce((sum, pid) => sum + porOf(pid), 0);
+  const optimalValue = optimal.reduce((sum, pid) => sum + porOf(pid), 0);
 
   return {
     franchiseId,
@@ -580,14 +662,10 @@ export function gradeFranchise(
     hits: players.filter((p) => p.badge === 'hit').length,
     misses: players.filter((p) => p.badge === 'miss').length,
     gotAway: players.filter((p) => p.badge === 'got-away').length,
-    kdefNeutralKept: players.filter((p) => p.badge === 'kdef-neutral').length,
-    backupQbNeutralKept: players.filter((p) => p.badge === 'qb2-neutral').length,
-    kdefRawTopSevenCount: players.filter(
-      (p) => p.rawTopSeven && KDEF_POSITIONS.has(p.position)
-    ).length,
-    keptPoints,
-    optimalPoints,
-    efficiency: optimalPoints > 0 ? keptPoints / optimalPoints : 0,
+    noSlotKept: players.filter((p) => p.badge === 'no-slot').length,
+    keptValue,
+    optimalValue,
+    efficiency: optimalValue > 0 ? keptValue / optimalValue : 0,
   };
 }
 
@@ -605,19 +683,35 @@ export interface BuildKeeperAnalysisInput {
    * skipped.
    */
   keeperSnapshots?: KeeperSnapshot[];
+  /**
+   * MFL playerScores W=YTD for the points season — season totals for EVERY
+   * player, not just rostered ones. Authoritative for replacement level,
+   * because replacement is by definition set by players nobody kept. Omit
+   * it and the baseline falls back to the rostered pool (see
+   * computeReplacementLevels).
+   */
+  curPlayerScoresYtd?: MflPlayerScoresFeed;
 }
 
 /** Full page model for one cycle (prev-season rosters → cur-season points). */
 export function buildKeeperAnalysis(input: BuildKeeperAnalysisInput): KeeperAnalysis {
   const playersById = buildPlayersById(input.prevPlayers, input.curPlayers);
-  const { points, maxCompletedWeek } = computeSeasonPoints(input.curWeeklyRaw ?? []);
-  const exceptions = computeKdefExceptions(points, playersById);
-  const exceptionPositions = new Set(exceptions.map((e) => e.position));
+  const { points, weeks, maxCompletedWeek } = computeSeasonPoints(input.curWeeklyRaw ?? []);
   const unitDrafted = getUnitDraftedPidsByFranchise(input.curDraftResults);
   const prevFranchises = input.prevRosters?.rosters?.franchise ?? [];
   const official = resolveOfficialKeepers(
     input.keeperSnapshots ?? [],
     prevFranchises.map((f) => f.id)
+  );
+
+  const ytdTotals = parsePlayerScoresYtd(input.curPlayerScoresYtd);
+  const replacement = computeReplacementLevels(
+    points,
+    weeks,
+    playersById,
+    prevFranchises.length,
+    maxCompletedWeek,
+    ytdTotals
   );
 
   const franchises: FranchiseAnalysis[] = [];
@@ -642,24 +736,21 @@ export function buildKeeperAnalysis(input: BuildKeeperAnalysisInput): KeeperAnal
       kept = reconstructKeepers(prevPids, opening, drafted);
     }
     franchises.push(
-      gradeFranchise(franchise.id, prevPids, kept, points, playersById, exceptionPositions)
+      gradeFranchise(franchise.id, prevPids, kept, points, weeks, playersById, replacement)
     );
   }
 
-  // Rank by efficiency (share of the optimal seven captured), NOT by raw
-  // kept points. Raw points mostly measure how good the roster already was:
-  // across the 2024→2025 cycle the optimal-seven bar ranged from 875 to 1842
-  // points, a 2.1x spread nobody chose. Ranking on it called The Show the
-  // league's worst keeper class for keeping 89% of a thin roster's ceiling,
-  // while two franchises that went a perfect 7-for-7 at 100% of optimal
-  // ranked behind a team that had made a mistake. Efficiency grades the
-  // decision instead of the inheritance. Kept points break ties (same share
-  // of a bigger ceiling is the better class) before the id tiebreak keeps it
-  // deterministic.
+  // Rank by efficiency — the share of its own ceiling a class captured — not
+  // by raw value. Raw totals mostly measure the roster a manager inherited:
+  // across the 2024→2025 cycle the ceiling ranged 2.1x from thinnest roster
+  // to deepest, which nobody chose. Ranking on it called The Show the
+  // league's worst class for nearly maxing out a thin roster while a perfect
+  // 7-for-7 finished third. Captured value breaks ties (the same share of a
+  // bigger ceiling is the better class), then id for determinism.
   franchises.sort(
     (a, b) =>
       b.efficiency - a.efficiency ||
-      b.keptPoints - a.keptPoints ||
+      b.keptValue - a.keptValue ||
       a.franchiseId.localeCompare(b.franchiseId)
   );
 
@@ -668,11 +759,8 @@ export function buildKeeperAnalysis(input: BuildKeeperAnalysisInput): KeeperAnal
     rankedFranchiseIds,
     bestFranchiseId: rankedFranchiseIds[0] ?? null,
     worstFranchiseId: rankedFranchiseIds[rankedFranchiseIds.length - 1] ?? null,
-    franchisesWithKdefInRawTopSeven: franchises.filter((f) => f.kdefRawTopSevenCount > 0).length,
-    franchisesThatKeptKdef: franchises.filter((f) =>
-      f.players.some((p) => p.kept && KDEF_POSITIONS.has(p.position))
-    ).length,
-    kdefExceptions: exceptions,
+    replacement,
+    replacementFromFullPool: !!ytdTotals && ytdTotals.size > 0,
     totalHits: franchises.reduce((sum, f) => sum + f.hits, 0),
     totalMisses: franchises.reduce((sum, f) => sum + f.misses, 0),
     totalGotAway: franchises.reduce((sum, f) => sum + f.gotAway, 0),

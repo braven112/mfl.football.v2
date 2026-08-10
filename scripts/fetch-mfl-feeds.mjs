@@ -519,6 +519,18 @@ const endpoints = [
     url: `${host}/${year}/export?TYPE=playerScores&L=${leagueId}&JSON=1`,
     parser: (t) => JSON.parse(t),
   },
+  {
+    // Season-to-date scores for EVERY player, not just rostered ones.
+    // weekly-results-raw only records points while a player sits on a roster,
+    // so it cannot see the free-agent pool — which makes it useless for
+    // computing replacement level. The keeper report card needs exactly that
+    // (see computeReplacementLevels in src/utils/afl-keeper-analysis.ts): a
+    // kicker's raw total is mostly replacement-level, and you can only know
+    // that by looking at the kickers nobody bothered to roster.
+    key: 'playerScores-ytd',
+    url: `${host}/${year}/export?TYPE=playerScores&L=${leagueId}&W=YTD&JSON=1`,
+    parser: (t) => JSON.parse(t),
+  },
 ];
 
 // Redact the APIKEY from anything logged — workflow logs are visible to
