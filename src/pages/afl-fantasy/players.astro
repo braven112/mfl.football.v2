@@ -347,16 +347,19 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         </div>
 
         <div class="filters-row-bottom">
+          <!-- autocomplete="off": Firefox restores checkbox state across
+               reloads, which would desync the restored DOM from the script's
+               re-initialized defaults (rookies shown, badge at 0). -->
           <label class="filter-checkbox">
-            <input type="checkbox" id="show-rostered" />
+            <input type="checkbox" id="show-rostered" autocomplete="off" />
             <span>Include rostered</span>
           </label>
           <label class="filter-checkbox">
-            <input type="checkbox" id="show-rookies" checked />
+            <input type="checkbox" id="show-rookies" autocomplete="off" checked />
             <span>Include rookies</span>
           </label>
           <label class="filter-checkbox">
-            <input type="checkbox" id="rookies-only" />
+            <input type="checkbox" id="rookies-only" autocomplete="off" />
             <span>Rookies only</span>
           </label>
           <button class="filter-clear-btn" id="filter-clear-btn" type="button">Clear Filters</button>
@@ -443,7 +446,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   // Rookies show by default on the AFL page (unlike TheLeague, where rookies
   // enter only through the rookie draft): the checkbox starts checked and
   // unchecking it counts as an active filter. "Rookies only" narrows the pool
-  // to rookies and wins over the include toggle when both are set.
+  // to rookies; checking it forces "Include rookies" back on (checked +
+  // disabled) so the two boxes can never contradict each other and the badge
+  // never counts an inert include-toggle deviation.
   let showRookies = true;
   let rookiesOnly = false;
   const BATCH_SIZE = 50;
@@ -749,11 +754,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
   function matchesBaseFilters(p, query) {
     if (!showRostered && isRosteredForView(p)) return false;
-    if (rookiesOnly) {
-      if (!p.rookie) return false;
-    } else if (!showRookies && p.rookie) {
-      return false;
-    }
+    // rookiesOnly implies showRookies (the change handler forces it on), so
+    // the two branches can't both apply.
+    if (rookiesOnly && !p.rookie) return false;
+    if (!showRookies && p.rookie) return false;
     if (!passesAdvancedFilters(p)) return false;
     if (query) {
       return p.name.toLowerCase().includes(query) || p.team.toLowerCase().includes(query);
@@ -1006,7 +1010,20 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     bind('filter-draft', (e) => { filterDraft = e.target.value; filterPlayers(); }, 'change');
     bind('show-rostered', (e) => { showRostered = e.target.checked; filterPlayers(); }, 'change');
     bind('show-rookies', (e) => { showRookies = e.target.checked; filterPlayers(); }, 'change');
-    bind('rookies-only', (e) => { rookiesOnly = e.target.checked; filterPlayers(); }, 'change');
+    bind('rookies-only', (e) => {
+      rookiesOnly = e.target.checked;
+      // "Rookies only" subsumes "Include rookies": force the include toggle
+      // on and lock it while active, so the UI never shows rookies under an
+      // unchecked "Include rookies" box.
+      const includeEl = document.getElementById('show-rookies');
+      if (rookiesOnly) {
+        showRookies = true;
+        if (includeEl) { includeEl.checked = true; includeEl.disabled = true; }
+      } else if (includeEl) {
+        includeEl.disabled = false;
+      }
+      filterPlayers();
+    }, 'change');
 
     // Clear filters
     const clearBtn = document.getElementById('filter-clear-btn');
@@ -1023,7 +1040,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         const rosteredEl = document.getElementById('show-rostered');
         if (rosteredEl) rosteredEl.checked = false;
         const rookiesEl = document.getElementById('show-rookies');
-        if (rookiesEl) rookiesEl.checked = true;
+        if (rookiesEl) { rookiesEl.checked = true; rookiesEl.disabled = false; }
         const rookiesOnlyEl = document.getElementById('rookies-only');
         if (rookiesOnlyEl) rookiesOnlyEl.checked = false;
         filterPlayers();
