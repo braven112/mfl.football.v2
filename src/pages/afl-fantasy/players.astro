@@ -1001,6 +1001,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     const filterToggle = document.getElementById('filter-toggle-btn');
     const filtersPanel = document.getElementById('filters-panel');
     if (filterToggle && filtersPanel) {
+      // A soft navigation back to this page re-runs init() against fresh
+      // (collapsed) markup while filtersOpen survives in module scope — reseed
+      // it from the DOM or the first click reads as a close and does nothing.
+      filtersOpen = filtersPanel.classList.contains('open');
       filterToggle.addEventListener('click', () => {
         filtersOpen = !filtersOpen;
         filtersPanel.classList.toggle('open', filtersOpen);
