@@ -2,7 +2,7 @@
 /**
  * What's New index — shared implementation for both leagues.
  *
- * Server-rendered to read the whats_new_last_visit cookie for "UNREAD" badges.
+ * Server-rendered to read the whats_new_last_visit cookie for "just in" chips.
  * The interactive listing (filters, card grid, timeline sidebar) is a
  * React island. The page header stays as Astro HTML for SEO.
  *
@@ -48,7 +48,7 @@ const basePath = hideLeaguePrefix ? '' : `/${league.slug}`;
 
 const sorted = getVisibleWhatsNewEntries(Astro.request, league.navSlug);
 
-// Read the last-visit cookie for "UNREAD" badge computation
+// Read the last-visit cookie for "just in" chip computation
 const lastVisitCookie = Astro.cookies.get('whats_new_last_visit');
 const lastVisitDate = lastVisitCookie?.value ?? null;
 
@@ -72,7 +72,7 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
       <h1 class="whats-new-page__title">
         What's New
         {newCount > 0 && (
-          <span class="whats-new-page__new-count">{newCount} unread</span>
+          <span class="whats-new-page__new-count">{newCount} just in</span>
         )}
       </h1>
       <p class="whats-new-page__subtitle">
@@ -95,28 +95,11 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
 </TheLeagueLayout>
 
 <style is:global>
-  /* ── Category color tokens (brightened 2026-07 to match the homepage row) ── */
-  :root {
-    --cat-new-page: #7c3aed;
-    --cat-new-feature: #15803d;
-    --cat-enhancement: #2563eb;
-    --cat-bug-fix: #dc2626;
-    --cat-league-event: #0369a1;
-    --cat-badge-ink: #ffffff;   /* pill text — white on the deep light fills */
-  }
-
-  /* Dark mode: lift the accents so they read against the dark page, and flip
-     the pill ink to near-black now that the fills are light. Mirrors the
-     WhatsNewRow block verbatim so a card looks identical on the homepage and
-     here — before Aug 2026 this page shipped the light palette in dark mode. */
-  html.dark {
-    --cat-new-page: #a78bfa;
-    --cat-new-feature: #4ade80;
-    --cat-enhancement: #60a5fa;
-    --cat-bug-fix: #f87171;
-    --cat-league-event: #38bdf8;
-    --cat-badge-ink: #0b0f16;
-  }
+  /* The --cat-* category palette and --wn-fresh-* chip tokens live in
+     tokens.css / tokens-dark.css — both themes, one definition.
+     This block is `is:global` because the card grid, filters and timeline are
+     rendered by the WhatsNewListing React island, whose DOM never carries
+     Astro's scoping attribute. */
 
   /* ── Page layout ── */
   .whats-new-page {
@@ -149,8 +132,8 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
     letter-spacing: 0.05em;
     padding: 0.2rem 0.6rem;
     border-radius: 9999px;
-    color: var(--cat-badge-ink, #fff);
-    background: var(--cat-new-feature, #2e8743);
+    color: var(--wn-fresh-ink);
+    background: var(--wn-fresh-bg);
   }
 
   .whats-new-page__subtitle {
@@ -454,7 +437,7 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
     padding: var(--spacing-md, 1rem) var(--spacing-lg, 1.5rem) var(--spacing-lg, 1.5rem);
   }
 
-  /* Card meta row (category badge + UNREAD) */
+  /* Card meta row (category badge + freshness chip) */
   .wn-card__meta {
     display: flex;
     align-items: center;
@@ -506,8 +489,8 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
     letter-spacing: 0.05em;
     padding: 0.15rem 0.5rem;
     border-radius: 9999px;
-    background: var(--cat-new-feature);
-    color: var(--cat-badge-ink, #fff);
+    background: var(--wn-fresh-bg);
+    color: var(--wn-fresh-ink);
   }
 
   .wn-card__new-dot {

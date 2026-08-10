@@ -276,27 +276,8 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
 </TheLeagueLayout>
 
 <style>
-  /* ── Category color tokens (brightened 2026-07 to match the homepage row) ── */
-  /* Astro leaves :root unscoped, so these land on documentElement. The dark
-     overrides hang off .wn-detail instead (a scoped style can't author a bare
-     html.dark rule) — every consumer lives inside that wrapper. */
-  :root {
-    --cat-new-page: #7c3aed;
-    --cat-new-feature: #15803d;
-    --cat-enhancement: #2563eb;
-    --cat-bug-fix: #dc2626;
-    --cat-league-event: #0369a1;
-    --cat-badge-ink: #ffffff;   /* pill text — white on the deep light fills */
-  }
-
-  :global(html.dark) .wn-detail {
-    --cat-new-page: #a78bfa;
-    --cat-new-feature: #4ade80;
-    --cat-enhancement: #60a5fa;
-    --cat-bug-fix: #f87171;
-    --cat-league-event: #38bdf8;
-    --cat-badge-ink: #0b0f16;
-  }
+  /* The --cat-* category palette lives in tokens.css / tokens-dark.css —
+     both themes, one definition. */
 
   /* ── Page shell ── */
   .wn-detail {

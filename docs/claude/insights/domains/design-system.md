@@ -28,18 +28,39 @@ well behind a *filled* pill — white-on-deep-violet is legible in dark mode,
 just wrong, so nobody files a bug. It only became visible when a *bare-text*
 badge using the same token landed at ~2:1 against the dark card.
 
+**Resolution:** the six `--cat-*` tokens now live once in `tokens.css` +
+`tokens-dark.css` and all three page-local copies are deleted. That's the
+actual fix — three copies of a two-theme pair is three chances to update one
+and forget the others, and no test can see the drift.
+
 **Recommendation:**
 - Page-local token blocks are a smell (see the `:root`-in-scoped-style gotcha
   further down — tokens belong in `tokens.css` / `tokens-dark.css`). When you
-  must keep one, the light block and the dark block are a **pair**; never add
-  one without the other.
+  genuinely must keep one, the light block and the dark block are a **pair**;
+  never add one without the other.
 - When the same token block is copy-pasted across sibling components, treat
-  divergence as the default assumption and diff them. Grep for the token name
-  and compare the `html.dark` hit count against the `:root` hit count — an
+  divergence as the default assumption and diff them. Grep the token name and
+  compare the `html.dark` hit count against the `:root` hit count — an
   imbalance is the bug.
-- Route every pill's ink through a companion `--cat-badge-ink` token rather
-  than a hardcoded `#fff`. Brightening a fill for dark mode silently inverts
-  what a readable ink is, and a literal `#fff` can't follow.
+- Route every pill's ink through a companion ink token (`--cat-badge-ink`)
+  rather than a hardcoded `#fff`. Brightening a fill for dark mode silently
+  inverts what a readable ink is, and a literal `#fff` can't follow.
+- **Don't borrow a category color for a chip that sits next to the category
+  pill.** The freshness chip originally reused `--cat-new-feature`, so on
+  `new-feature` entries it rendered as a pixel-identical twin of the badge
+  beside it — reintroducing, in color, the duplication the change set out to
+  remove. It has its own neutral `--wn-fresh-bg` / `--wn-fresh-ink` pair now.
+  A chip that means "when" should never be colored by a token that means
+  "what".
+- **`--cat-` is a shared prefix covering two unrelated families.** These five
+  are What's New categories; `--cat-preseason` / `--cat-draft` /
+  `--cat-free-agency` / `--cat-regular-season` are *calendar event* categories
+  and are still declared page-locally in `WhatsNextCard.astro` and
+  `CalendarEventCard.astro`. Several consumers of that second family
+  (`AuctionStrip`, `AflPlayoffsHero`, `hero-resolver.ts`) sit outside those
+  components, so they silently render their `var(..., #fallback)` literal —
+  the same single-theme trap, still unfixed. Check which family you mean
+  before adding a `--cat-*` token.
 
 **Two adjacent gotchas from the same fix:**
 - **A bare `html.dark { }` rule inside a *scoped* Astro `<style>` gets scoped

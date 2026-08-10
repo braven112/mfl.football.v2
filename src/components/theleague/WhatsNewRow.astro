@@ -25,7 +25,7 @@ interface Props {
   allReleasesLink?: string;
   /** Cache-busted sprite URL */
   spriteUrl?: string;
-  /** Last visit date for "UNREAD" badges (from cookie) */
+  /** Last visit date for "just in" chips (from cookie) */
   lastVisitDate?: string | null;
   /** Apex host shown in the card's fake browser bar (per-league) */
   urlHost?: string;
@@ -98,7 +98,7 @@ const enriched = enrichEntries(sorted.slice(0, count), lastVisitDate);
                 {entry.isNew && (
                   <span class="wnr-card__new-badge" title="Published since your last visit">
                     <span class="wnr-card__new-dot" aria-hidden="true" />
-                    UNREAD
+                    JUST IN
                   </span>
                 )}
               </div>
@@ -132,30 +132,12 @@ const enriched = enrichEntries(sorted.slice(0, count), lastVisitDate);
 
 <style>
   /* ── Section layout (mirrors WhatsNext.astro) ── */
-  /* Category color tokens scoped here (defined globally only in whats-new pages).
-     Brightened 2026-07 for punchier stripes/badges; dark mode brightens further
-     and flips the pill text to dark ink (see the html.dark block below). */
+  /* The --cat-* category palette and --wn-fresh-* chip tokens live in
+     tokens.css / tokens-dark.css — both themes, one definition. */
   .whats-new-row {
-    --cat-new-page: #7c3aed;      /* violet */
-    --cat-new-feature: #15803d;   /* green */
-    --cat-enhancement: #2563eb;   /* blue */
-    --cat-bug-fix: #dc2626;       /* red */
-    --cat-league-event: #0369a1;  /* sky */
-    --cat-badge-ink: #ffffff;     /* pill text — white on the deep light stripes */
     display: flex;
     flex-direction: column;
     gap: 1rem;
-  }
-
-  /* Dark mode: lift the accents so they glow against the dark card, and flip
-     the badge text to near-black since the pills are now light. */
-  :global(html.dark) .whats-new-row {
-    --cat-new-page: #a78bfa;
-    --cat-new-feature: #4ade80;
-    --cat-enhancement: #60a5fa;
-    --cat-bug-fix: #f87171;
-    --cat-league-event: #38bdf8;
-    --cat-badge-ink: #0b0f16;
   }
 
   .whats-new-row__header {
@@ -356,8 +338,8 @@ const enriched = enrichEntries(sorted.slice(0, count), lastVisitDate);
     letter-spacing: 0.05em;
     padding: 0.15rem 0.5rem;
     border-radius: 9999px;
-    background: var(--cat-new-feature);
-    color: var(--cat-badge-ink, #fff);
+    background: var(--wn-fresh-bg);
+    color: var(--wn-fresh-ink);
   }
 
   .wnr-card__new-dot {
