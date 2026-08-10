@@ -7,6 +7,40 @@ presentation in `KeeperAnalysisCard.astro`.
 
 ---
 
+## 2026-08-10 - Points Over Replacement Replaced By Fixed Backup Credits (Owner Decision)
+
+**Context:** One day after the PoR rewrite shipped, the owner reviewed the
+page and couldn't follow the grading anymore ("I don't understand how it
+works now"). A metric the league can't hold in its head fails at its actual
+job, however principled the math. **This is user-decided product policy —
+don't "fix" it back.**
+
+**Insight:** The value model is now raw points with fixed backup discounts,
+in `keeperValue` + `BENCH_CREDIT` (`afl-keeper-analysis.ts`):
+
+- A **starter** counts his full season points.
+- A **backup QB / PK / Def** counts **1/10** of his points (the starter's
+  bye plus a few matchup calls).
+- A **flex backup** (7th RB/WR/TE keep) counts **7/10** (he rotates in
+  across six starters' byes and matchups).
+- A third QB / eighth flex still counts 0 (`selectBestKeepers`' starters+1
+  group cap, unchanged).
+
+A **hit** = kept one of the lineup-legal seven with the most points valued
+this way — "you picked the player who scored the most and you could have
+started him." Everything structural from the PoR era survives: exact
+per-group-count selection, hit/miss/filler partition (`hits + misses +
+fillerKept === keptCount`), miss-only-when-someone-got-away, efficiency ≤ 1
+by construction, ranking on share of own ceiling. What's gone: replacement
+levels, the conference-sized pool (`teamsPerPool`), the `playerScores-ytd`
+feed (fetch entry removed from `fetch-mfl-feeds.mjs` — it existed solely
+for replacement level), mid-season bench proration (a fixed share of
+accrued points needs none), and the estimated-baseline page banner.
+
+Expect kickers/defenses to appear in optimal sevens on raw totals now (a
+120-point PK outranks a 110-point WR at his own slot) — that is intended
+under this model, not a regression.
+
 ## 2026-08-09 - Official Keepers Come From Post-Deadline Roster Snapshots (When They Exist)
 
 **Insight:** Between the July 15 keeper cut deadline and the late-August
@@ -62,6 +96,12 @@ read 17 on a 14-week regular season. Any script summing these feeds by hand
 
 ## 2026-08-10 - SUPERSEDED: The Four Special Cases Became One Metric (Points Over Replacement)
 
+> **SUPERSEDED same day by the fixed-backup-credit rewrite above.** PoR
+> lasted one review: technically sound, illegible to the league. Kept for
+> the data runs and the structural pieces that survived it (exact
+> selection, the miss/filler partition, efficiency bounded by
+> construction, ceiling-share ranking).
+
 **Context:** The rules recorded in the next entry ("Grading Rules Are
 User-Decided Product Policy") were each hand-approximating the same thing —
 that raw fantasy points overstate what a keeper decision actually bought. All
@@ -111,6 +151,11 @@ enumerating per-group counts is cheap and needs no matroid argument.
 a rule. The whole point of the metric is that it needs no position policy.
 
 ## 2026-08-10 - Replacement Level Is Sized By CONFERENCE (12), Not The League (24)
+
+> **SUPERSEDED by the fixed-backup-credit rewrite above** — there is no
+> replacement level anymore. Kept because the conference-vs-league pool
+> fact (two 12-team conferences rostering independently from one NFL
+> universe) still governs any future per-pool math on this page.
 
 **Context:** First PoR implementation used all 24 franchises as the pool.
 

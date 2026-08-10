@@ -4,6 +4,14 @@
     {
       "date": "2026-08-10",
       "type": "bug-fix",
+      "summary": "For a few hours this morning, seven historical division titles quietly changed hands — the awards refresh bot started breaking division-record ties on raw points-for instead of the league's official standings order, and 2017's AL North banner walked from Smokane FC to Fullybaked. The rightful winners have been restored, the bot now respects MFL's official tie-breaks, and yes, the trophy audit that caught it is feeling very smug.",
+      "impact": "user",
+      "area": "awards",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-10",
+      "type": "bug-fix",
       "summary": "Rookies were playing hide-and-seek on the AFL Free Agents page — an 'Include rookies' filter defaulted to off, so the entire draft class (and their ADP) was invisible unless you knew which checkbox to dig up. Rookies now show by default, ADP and all, and there's a new 'Rookies only' filter for when you want to scout nothing but the new blood.",
       "impact": "user",
       "area": "free-agents",

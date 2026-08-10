@@ -321,9 +321,11 @@ const DIVISION_NAME_SLUG = {
   pacific: 'nl-pacific',
 };
 
-// Division winners: top division win pct in each division (tie-break divpf,
-// then pf). Divisions are matched by NAME via DIVISION_NAME_SLUG; any name not
-// in that map is skipped.
+// Division winners: top division win pct in each division. Ties defer to
+// MFL's own ordering — the leagueStandings rows arrive in the league's
+// OFFICIAL final order, computed with the league's configured tie-breakers
+// (h2h/all-play, not raw points-for). Divisions are matched by NAME via
+// DIVISION_NAME_SLUG; any name not in that map is skipped.
 function divisionWinners(league, standings) {
   const out = {};
   const divisions = toArray(league?.league?.divisions?.division);
@@ -343,12 +345,14 @@ function divisionWinners(league, standings) {
   for (const [div, group] of byDiv) {
     const slug = DIVISION_NAME_SLUG[nameOfDiv.get(String(div)) ?? ''];
     if (!slug) continue; // unmapped division name — skip
-    group.sort(
-      (a, b) =>
-        divisionPct(b) - divisionPct(a) ||
-        parseNum(b.divpf) - parseNum(a.divpf) ||
-        parseNum(b.pf) - parseNum(a.pf)
-    );
+    // Stable sort by divpct ONLY: rows were pushed in feed order, so tied
+    // franchises keep MFL's official ranking. An explicit pf tie-break here
+    // flipped seven historical division titles on 2026-08-10 after the
+    // ALL=1 backfill corrected pf values — including 2017 al-north away
+    // from the owner-confirmed ground truth pinned in
+    // tests/afl-awards.test.ts. In every flipped case MFL's official order
+    // had the original winner ahead; raw pf is not the league's tie-break.
+    group.sort((a, b) => divisionPct(b) - divisionPct(a));
     const winner = group[0];
     if (winner && (divisionPct(winner) > 0 || parseNum(winner.pf) > 0)) {
       out[slug] = { franchiseId: winner.id, source: 'standings:divpct' };
