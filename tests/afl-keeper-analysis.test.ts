@@ -369,8 +369,8 @@ describe('computeReplacementLevels', () => {
   it('reports fromFullPool honestly — the flag must follow the decision', () => {
     // Regression: the summary flag was computed from feed PRESENCE, so a
     // refused feed still reported full-pool provenance and the page's
-    // estimated-baseline banner never fired. Same silent-misreport class the
-    // span check was written to kill, one level up.
+    // estimated-baseline banner never fired. The refusal cases below are the
+    // ones that used to lie; the no-feed case is included as the baseline.
     const weeks = evenWeeks(pids);
     const ytd = new Map([['q1', 360], ['q2', 270], ['q3', 180], ['q4', 90]]);
     expect(computeReplacementLevels(points, weeks, byId, 2, 14, ytd, 18).fromFullPool).toBe(true);
@@ -507,9 +507,14 @@ describe('pointsOverReplacement', () => {
       // ...and STRICTLY less, in constant proportion. A flat clamp kept the
       // ordering safe but priced a bench keep identically to a starter
       // through Week 6, contradicting the pill that calls him worth less.
-      expect(bench / starter).toBeCloseTo(
-        Math.min(BENCH_EXPECTED_STARTS.FLEX / 14, 1), 6
+      // Bench cover accrues with the season, capped by the byes that exist
+      // and by the games played: min(E*sw/14, E, sw) starts out of sw.
+      const expectedBenchStarts = Math.min(
+        (BENCH_EXPECTED_STARTS.FLEX * seasonWeeks) / 14,
+        BENCH_EXPECTED_STARTS.FLEX,
+        seasonWeeks
       );
+      expect(bench / starter).toBeCloseTo(expectedBenchStarts / seasonWeeks, 6);
     }
   });
 
@@ -666,18 +671,26 @@ describe('gradeFranchise', () => {
     // Clamping crowded-out keeps to a flat 0 made them tie, and the stable
     // sort then fell back to row order — points DESCENDING — so the better
     // of two stockpiled kickers took the Miss badge.
+    // FOUR kickers: PK holds one starter + one bench, so TWO are crowded out
+    // and the comparator actually runs. With three, nonOptimalKeeps has a
+    // single element, .sort() never invokes the comparator, and the test
+    // passes with the tie-break reverted — which is exactly what happened.
     const kk = playersFeed([
-      ['k1', 'Kick, One', 'PK'], ['k2', 'Kick, Two', 'PK'], ['k3', 'Kick, Three', 'PK'],
+      ['k1', 'Kick, One', 'PK'], ['k2', 'Kick, Two', 'PK'],
+      ['k3', 'Kick, Three', 'PK'], ['k4', 'Kick, Four', 'PK'],
       ['r1', 'Runner, One', 'RB'],
     ]);
     const kkById = buildPlayersById(kk, undefined);
-    const roster = new Set(['k1', 'k2', 'k3', 'r1']);
-    const kept = new Set(['k1', 'k2', 'k3']); // two kickers crowded out of one slot
-    const pts = new Map([['k1', 300], ['k2', 280], ['k3', 260], ['r1', 400]]);
+    const roster = new Set(['k1', 'k2', 'k3', 'k4', 'r1']);
+    const kept = new Set(['k1', 'k2', 'k3', 'k4']);
+    const pts = new Map([
+      ['k1', 300], ['k2', 280], ['k3', 260], ['k4', 240], ['r1', 400],
+    ]);
     const a = gradeFranchise('0001', roster, kept, pts, kkById, NO_REP, 14);
     const missed = a.players.filter((p) => p.badge === 'miss').map((p) => p.id);
-    // If any crowded-out kicker is blamed, it must be the least valuable one.
-    if (missed.length) expect(missed).not.toContain('k2');
+    // Both k3 and k4 are worth zero to the class; the WORSE one takes the
+    // blame. Reverting the secondary sort key blames k3 instead.
+    expect(missed).toEqual(['k4']);
   });
 
   it('credits a 7th skill keep as bench cover instead of zeroing it', () => {

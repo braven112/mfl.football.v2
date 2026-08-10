@@ -461,7 +461,13 @@ export function computeReplacementLevels(
   const levels: ReplacementLevels = { QB: 0, PK: 0, Def: 0, FLEX: 0 };
   const clamped: ReplacementClamped = [];
   if (teamsPerPool <= 0 || maxCompletedWeek <= 0) {
-    return { levels, clamped, fromFullPool: false };
+    // Nothing was measured at all, which is the least-measured case there is
+    // — report every group rather than an empty `clamped` that reads clean.
+    return {
+      levels,
+      clamped: Object.keys(levels) as ReplacementClamped,
+      fromFullPool: false,
+    };
   }
 
   /** Rank a source's per-week rates by slot group. */
@@ -580,7 +586,13 @@ export function pointsOverReplacement(
   const starts =
     expectedStarts === undefined
       ? seasonWeeks
-      : Math.min(expectedStarts * (seasonWeeks / REGULAR_SEASON_WEEKS), seasonWeeks);
+      : Math.min(
+          expectedStarts * (seasonWeeks / REGULAR_SEASON_WEEKS),
+          // Never more byes than exist, even if the season runs long...
+          expectedStarts,
+          // ...and never more games than have been played.
+          seasonWeeks
+        );
   return starts * (rate - replacement[group]);
 }
 
