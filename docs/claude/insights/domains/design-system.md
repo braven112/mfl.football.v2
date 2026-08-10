@@ -4,6 +4,59 @@ Domain knowledge about design tokens, CSS variables, theming, and visual pattern
 
 ---
 
+## 2026-08-10 - A Token Defined in Only ONE Theme Passes the Guard and Still Breaks Dark Mode
+
+**Context:** The What's New surfaces (`WhatsNewRow.astro`, `WhatsNewIndexPage.astro`,
+`WhatsNewDetailPage.astro`) each carried their own copy of the same five
+`--cat-*` category color tokens. Only the row ever got an `html.dark` override.
+The other two shipped the *light* palette in dark mode for months — deep violet
+pills where the homepage showed brightened ones — and every test passed the
+whole time.
+
+**Insight:** `tests/design-token-guard.test.ts` proves a token is defined
+*somewhere*. It does not prove it's defined *per theme*. That's a different
+failure mode from the one CLAUDE.md documents:
+
+| Failure | Symptom | Caught by the guard? |
+|---|---|---|
+| Token defined nowhere | Hardcoded fallback renders in BOTH themes | Yes |
+| Token defined light-only | Light value renders in dark mode | **No** |
+
+The light-only case is the sneakier of the two, because light mode looks
+perfect and the token name reads like it's theme-aware. It hides especially
+well behind a *filled* pill — white-on-deep-violet is legible in dark mode,
+just wrong, so nobody files a bug. It only became visible when a *bare-text*
+badge using the same token landed at ~2:1 against the dark card.
+
+**Recommendation:**
+- Page-local token blocks are a smell (see the `:root`-in-scoped-style gotcha
+  further down — tokens belong in `tokens.css` / `tokens-dark.css`). When you
+  must keep one, the light block and the dark block are a **pair**; never add
+  one without the other.
+- When the same token block is copy-pasted across sibling components, treat
+  divergence as the default assumption and diff them. Grep for the token name
+  and compare the `html.dark` hit count against the `:root` hit count — an
+  imbalance is the bug.
+- Route every pill's ink through a companion `--cat-badge-ink` token rather
+  than a hardcoded `#fff`. Brightening a fill for dark mode silently inverts
+  what a readable ink is, and a literal `#fff` can't follow.
+
+**Two adjacent gotchas from the same fix:**
+- **A bare `html.dark { }` rule inside a *scoped* Astro `<style>` gets scoped
+  and dies** (it compiles to `html.dark:where(.astro-hash)`), even though a
+  `:root { }` rule in that same block is left alone and reaches
+  `documentElement`. Asymmetric and easy to trip over. Working pattern for a
+  scoped file: `:global(html.dark) .page-wrapper { --token: ...; }` — custom
+  properties inherit, so hanging them off the wrapper covers the subtree.
+  Verify with `getComputedStyle`, not by reading the source.
+- **A badge that overlays user-supplied imagery needs its own fill.** These
+  cards absolutely-position the meta row across the thumbnail/content seam
+  (`transform: translateY(-60%)`), so a transparent badge's real backdrop is
+  whatever color that entry's screenshot happens to be — not the card. Contrast
+  reasoned against `--card-bg` is meaningless there. Filled pill, always.
+
+---
+
 ## 2026-07-05 - Dark-Mode Token-Mapping Gotchas (QA/polish pass)
 
 **Context:** A full light/dark × desktop/mobile QA sweep over every public page,
