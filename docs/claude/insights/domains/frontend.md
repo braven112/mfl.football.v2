@@ -942,3 +942,41 @@ path. Use `resolveDirectoryHref()`, then `resolveLeaguePath()` for the apex-host
 case. For "does this page exist for league X", test the prefix explicitly
 (`/afl-fantasy` → AFL, `/best-ball-1` → best-ball, anything else → TheLeague)
 rather than treating unprefixed as universal.
+
+---
+## 2026-08-10 - Collapsible Panels: `max-height` Caps Are a Mobile Time Bomb — Use `0fr → 1fr`, and Clip a Bare Wrapper
+
+**Context:** The Filters drawer on both leagues' Free Agents pages
+(`src/pages/{afl-fantasy,theleague}/players.astro`) opened to a hardcoded
+`max-height: 300px`. Fine for the 5-column desktop `.filters-grid`; on a phone
+that grid drops to one column, the panel is ~590px tall, and the bottom half
+(Experience, Draft Round, both include-toggles, Clear Filters) was clipped
+behind the player table with no scroll affordance.
+
+**Insight:** Two things, both non-obvious:
+
+1. Any fixed `max-height` open-state is measured against ONE breakpoint's
+   layout. Every responsive collapse in this repo written that way will clip
+   as soon as its content re-flows taller — a grid dropping columns, a longer
+   label, a new filter row. Animate `grid-template-rows: 0fr → 1fr` instead;
+   the fr track resolves to real content height at every viewport, so it
+   cannot cut off, and it still interpolates smoothly (flex factors < 1 scale
+   the track's base size, which is what makes the trick work).
+2. The `overflow: hidden` must live on a **bare** wrapper, not on the styled
+   card. A grid item's *minimum contribution* includes its padding, border,
+   and margin even when `min-height: 0` zeroes the content box — so putting
+   the clip on the card floors the collapsed track at padding+border+margin.
+   Here that was a visible 46px sliver above the table (measured, not
+   theorized), and it survives `align-self: start`.
+
+**Evidence:** Fix is `.filters-panel` (grid, `0fr`/`1fr`) → new
+`.filters-panel__clip` (`min-height: 0; overflow: hidden`) → `.filters-panel__inner`
+(the card, unchanged). Measured in headless Chromium at 430×932 and 1280×900:
+open panel 592/294px matching inner content 580/280px (`CLIPPED=false`),
+collapsed exactly 0px on both. Pre-fix mobile was pinned at 300px.
+
+**Recommendation:** New collapsibles get the grid-row pattern with a dedicated
+clip wrapper. When retrofitting one, verify BOTH states in a browser — open
+(panel box ≥ inner content box) and closed (box === 0). A collapsed panel is
+also still tabbable: mark it `inert` and put `aria-expanded`/`aria-controls`
+on the toggle, or keyboard users land in inputs clipped out of view.
