@@ -30,9 +30,11 @@ export const AFL_KEEPER_ERA_FIRST_PREV_YEAR = 2024;
  * Lineup slots one franchise starts each week. The AFL starts 9: one QB,
  * one kicker, one defense, and six flex from RB/WR/TE.
  *
- * These caps are what make a keeper slot worth anything: a second QB has
- * nowhere to play, so keeping one buys zero startable production no matter
- * what he scored. The old MAX_OPTIMAL_QBS rule said the same thing by hand.
+ * These caps are what make a keeper slot worth anything: a player with no
+ * free slot has nowhere to play, so keeping him buys zero startable
+ * production no matter what he scored. That covers a second QB (which the
+ * old MAX_OPTIMAL_QBS rule handled by hand) and equally a second kicker or
+ * defense, or a SEVENTH flex keep — only six of RB/WR/TE can start.
  */
 export const LINEUP_SLOTS = { QB: 1, PK: 1, Def: 1, FLEX: 6 } as const;
 export type SlotGroup = keyof typeof LINEUP_SLOTS;
@@ -167,7 +169,11 @@ export interface FranchiseAnalysis {
   hits: number;
   misses: number;
   gotAway: number;
-  /** Keeps with no starting slot left (a 2nd QB/PK/Def) — never a miss, never credit. */
+  /**
+   * Keeps with no starting slot left — never a miss, never credit. Usually a
+   * 2nd QB/PK/Def, but ALSO a 7th flex keep: the lineup starts six from
+   * RB/WR/TE, so keeping seven skill players leaves one on the bench.
+   */
   noSlotKept: number;
   /** PoR delivered by the best lineup-legal seven out of the players kept. */
   keptValue: number;

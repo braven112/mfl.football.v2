@@ -507,6 +507,29 @@ describe('gradeFranchise', () => {
     expect(analysis.efficiency).toBeLessThanOrEqual(1);
   });
 
+  it('marks a SEVENTH skill keep no-slot — only six of RB/WR/TE can start', () => {
+    // Found by the Copilot review of PR #492: the docs said "no slot" only
+    // covered a 2nd QB/PK/Def, but FLEX caps at 6 while the keeper limit is
+    // 7, so an all-skill keeper class always benches one.
+    const flexOnly = playersFeed(
+      Array.from({ length: 8 }, (_, i) => [`s${i}`, `Skill, ${i}`, 'RB'] as [string, string, string])
+    );
+    const flexById = buildPlayersById(flexOnly, undefined);
+    const flexRoster = new Set(Array.from({ length: 8 }, (_, i) => `s${i}`));
+    const flexKept = new Set(Array.from({ length: 7 }, (_, i) => `s${i}`));
+    const flexPoints = new Map(
+      Array.from({ length: 8 }, (_, i) => [`s${i}`, (8 - i) * 30] as [string, number])
+    );
+    const analysis = gradeFranchise(
+      '0001', flexRoster, flexKept, flexPoints, evenWeeks(flexRoster), flexById, NO_REPLACEMENT
+    );
+    expect(analysis.noSlotKept).toBe(1);
+    expect(analysis.misses).toBe(0); // benched by the cap is not a bad decision
+    expect(analysis.players.find((p) => p.id === 's6')?.badge).toBe('no-slot');
+    expect(analysis.hits + analysis.misses + analysis.noSlotKept).toBe(analysis.keptCount);
+    expect(analysis.efficiency).toBeLessThanOrEqual(1);
+  });
+
   it('values a kept kicker at its margin over replacement, not its raw total', () => {
     const withKicker = new Set(['q1', 'r1', 'r2', 'w1', 'w2', 't1', 'k1']);
     const replacement = { QB: 0, PK: 8, Def: 0, FLEX: 0 };
