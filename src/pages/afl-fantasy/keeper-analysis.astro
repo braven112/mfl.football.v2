@@ -23,7 +23,6 @@ import {
   computeSeasonPoints,
   type KeeperAnalysis,
   type MflDraftResultsFeed,
-  type MflPlayerScoresFeed,
   type MflPlayersFeed,
   type MflRostersFeed,
   type WeeklyResultsRaw,
@@ -49,7 +48,7 @@ const baseUrl = getLeagueBaseUrl(league);
 // filter keeps it to ~7MB. tests/afl-keeper-feed-globs.test.ts fails the
 // build if any feed glob on this page loses the filter.
 const seasonFeeds = import.meta.glob(
-  '../../../data/afl-fantasy/mfl-feeds/20{2[4-9],[3-9][0-9]}/{rosters,players,draftResults,weekly-results-raw,playerScores-ytd,fetch.meta}.json',
+  '../../../data/afl-fantasy/mfl-feeds/20{2[4-9],[3-9][0-9]}/{rosters,players,draftResults,weekly-results-raw,fetch.meta}.json',
   { eager: true }
 );
 // Post-deadline July roster snapshots (16th-31st): between the keeper cut
@@ -124,24 +123,6 @@ const teamsById = new Map<string, AflTeamEntry>(
   (yearConfig.teams as AflTeamEntry[]).map((t) => [t.franchiseId, t])
 );
 
-// Replacement level is set by the players you could NOT have started, so the
-// pool is ONE CONFERENCE (12 teams) — not the 24 franchises this page lists.
-// The AFL's conferences roster independently from the same NFL universe (the
-// same player can sit on a roster in both at once), so a manager competes
-// with 11 rivals for starters, not 23. Sized from the config, not hardcoded.
-const conferenceSizes = new Map<string, number>();
-for (const t of yearConfig.teams as AflTeamEntry[]) {
-  const c = t.conference ?? '_';
-  conferenceSizes.set(c, (conferenceSizes.get(c) ?? 0) + 1);
-}
-// If a future config drops the `conference` field, every team buckets into
-// one group and teamsPerPool silently doubles — halving every replacement
-// level with no error. Fall back to half the league rather than the whole.
-const teamsPerPool =
-  conferenceSizes.size >= 2
-    ? Math.max(...conferenceSizes.values(), 1)
-    : Math.max(Math.round((yearConfig.teams as AflTeamEntry[]).length / 2), 1);
-
 const analysis: KeeperAnalysis = buildKeeperAnalysis({
   prevRosters: feed<MflRostersFeed>(prevYear, 'rosters.json') ?? {
     rosters: { franchise: [] },
@@ -151,8 +132,6 @@ const analysis: KeeperAnalysis = buildKeeperAnalysis({
   curWeeklyRaw: feed<WeeklyResultsRaw>(selectedYear, 'weekly-results-raw.json'),
   curRosters: feed<MflRostersFeed>(selectedYear, 'rosters.json'),
   curDraftResults: feed<MflDraftResultsFeed>(selectedYear, 'draftResults.json'),
-  curPlayerScoresYtd: feed<MflPlayerScoresFeed>(selectedYear, 'playerScores-ytd.json'),
-  teamsPerPool,
   keeperSnapshots,
 });
 const { previewMode } = analysis;
@@ -193,17 +172,6 @@ const worst = analysis.franchises[analysis.franchises.length - 1];
 const fmtPts = (n: number) =>
   n.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const fmtEff = (n: number) => `${Math.round(n * 100)}%`;
-
-// Flagged only when replacement had to be estimated from rostered players —
-// the full-pool YTD feed is the real source, and a build that missed it grades
-// against a slightly generous baseline.
-// Slot groups use MFL's position codes; the table renders Def as DEF, so the
-// banner should too rather than leaking raw enum ids.
-const clampedLabel = analysis.summary.replacementClamped
-  .map((g) => (g === 'Def' ? 'DEF' : g === 'FLEX' ? 'RB/WR/TE' : g))
-  .join(', ');
-const replacementIsEstimated =
-  !analysis.summary.replacementFromFullPool || analysis.summary.replacementClamped.length > 0;
 ---
 
 <TheLeagueLayout title={`Keeper Report Card ${selectedYear} | AFL`}>
@@ -263,7 +231,7 @@ const replacementIsEstimated =
             </span>
             <span class="ka-tile__big">{fmtEff(best.efficiency)} of optimal</span>
             <span class="ka-tile__stat">
-              {fmtPts(best.keptValue)} value over free · {best.hits}/{best.hits + best.misses} hits
+              {fmtPts(best.keptValue)} keeper pts · {best.hits}/{best.hits + best.misses} hits
             </span>
           </div>
           <div class="ka-tile ka-tile--worst">
@@ -276,7 +244,7 @@ const replacementIsEstimated =
             </span>
             <span class="ka-tile__big">{fmtEff(worst.efficiency)} of optimal</span>
             <span class="ka-tile__stat">
-              {fmtPts(worst.keptValue)} value over free · {worst.hits}/{worst.hits + worst.misses} hits
+              {fmtPts(worst.keptValue)} keeper pts · {worst.hits}/{worst.hits + worst.misses} hits
             </span>
           </div>
           <div class="ka-tile">
@@ -289,16 +257,6 @@ const replacementIsEstimated =
             </span>
           </div>
         </div>
-        {replacementIsEstimated && (
-          <p class="ka-summary__note">
-            Replacement level is estimated this cycle.
-            {!analysis.summary.replacementFromFullPool &&
-              ' The full free-agent pool wasn\u2019t available when this built.'}
-            {analysis.summary.replacementClamped.length > 0 &&
-              ` At ${clampedLabel} there were too few players to measure a replacement level against.`}
-            Grades may shift once a complete pool lands.
-          </p>
-        )}
       </section>
     )}
 
@@ -319,13 +277,14 @@ const replacementIsEstimated =
     <footer class="ka-methodology">
       <h2>Methodology</h2>
       <p class="ka-methodology__rubric">
-        <strong>How this is graded:</strong> every class is scored on
-        <em>% of optimal</em> — the value its keepers delivered over freely
-        available players, against the best seven that roster could have
-        kept. That grades the decision, not the inheritance: maxing out a
-        thin roster beats leaving points on a loaded one. Value over free and
-        hits are shown too, but the ranking is the percentage. Bench keeps
-        aren't written off — they're priced by how often they actually play.
+        <strong>How this is graded:</strong> a keeper is worth the points he
+        scored in the games you could have started him. Every class is scored
+        on <em>% of optimal</em> — the keeper points its keeps banked against
+        the best seven that roster could have kept. That grades the decision,
+        not the inheritance: maxing out a thin roster beats leaving points on
+        a loaded one. Keeper points and hits are shown too, but the ranking
+        is the percentage. Backup keeps aren't written off — they're credited
+        the share of their points they'd realistically have played.
       </p>
       <ul>
         <li>
@@ -354,30 +313,23 @@ const replacementIsEstimated =
           )}
         </li>
         <li>
-          Value is <em>points over replacement</em>, not raw points. A player
-          is worth what he beat a freely available alternative by: the best
-          player at his position you could NOT have started. Your pool is your
-          own conference — 12 teams, each starting one QB, one kicker, one
-          defense and six from RB/WR/TE — because the two conferences roster
-          independently and the same player can sit on a roster in both. That
-          is why a kicker is worth a fraction of his raw total while a stud
-          running back keeps nearly all of his: most of a kicker's points
-          were available to anyone for nothing.
+          The optimal seven are lineup-legal — one QB, one kicker, one
+          defense and six from RB/WR/TE. A <em>Hit</em> means you kept one of
+          the seven most valuable players your roster had: the guys who
+          scored the most points in slots you could actually have started
+          them in.
         </li>
         <li>
-          The seven are lineup-legal — one QB, one kicker, one defense and
-          six from RB/WR/TE — and a keep who doesn't win a starting slot is
-          valued as <em>bye-week cover</em>, not written off. That matters
-          because backups aren't equal: a seventh skill player fills in for
-          any of your six flex starters, so he's in the lineup roughly six
-          times, while a second quarterback only covers QB1's single bye.
-          Bench keeps are marked <em>Bench</em> and earn value in proportion.
-          Kickers and defenses aren't excluded any more either; they simply
-          have to earn a place on value, and a genuinely dominant unit does.
-        </li>
-        <li>
-          A keep at or below replacement adds nothing, because you could have
-          had that production for free.
+          A keep who doesn't win a starting slot is a <em>backup</em>, and
+          backups aren't written off — they're credited the share of their
+          points they'd realistically have played. A seventh skill player
+          rotates in across six flex starters' byes and matchups, so he
+          counts <strong>7/10</strong> of his points; a second quarterback,
+          kicker, or defense only plays the starter's bye week and the odd
+          matchup call, so he counts <strong>1/10</strong>. Those keeps are
+          marked <em>Bench</em>. A third QB or an eighth skill player sits
+          behind someone who already covers those games and counts for
+          nothing.
         </li>
         <li>
           A keep is only a <em>miss</em> when somebody better actually got
@@ -393,14 +345,9 @@ const replacementIsEstimated =
           on value captured, then franchise id.
         </li>
         <li>
-          An earned hit doesn't erase the matching "got away" — keeping the
-          kicker that beat your alternative and letting that alternative walk
-          are both facts, and both get shown.
-        </li>
-        <li>
           A roster can be worth fewer than seven keeps — if only four players
-          beat a free replacement, the optimal set is four and the spare slots
-          cost you nothing. Ties break by player id: hindsight is cruel but
+          scored anything, the optimal set is four and the spare slots cost
+          you nothing. Ties break by player id: hindsight is cruel but
           consistent.
         </li>
         <li>
@@ -538,12 +485,6 @@ const replacementIsEstimated =
 
   .ka-tile__stat {
     font-size: 0.78rem;
-    color: var(--content-text-muted, #6b7280);
-  }
-
-  .ka-summary__note {
-    margin: 0.75rem 0 0;
-    font-size: 0.82rem;
     color: var(--content-text-muted, #6b7280);
   }
 

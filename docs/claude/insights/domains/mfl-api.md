@@ -1526,6 +1526,12 @@ league-blind smell. Regression test: `tests/trades-pending-league-teams.test.ts`
 
 ## 2026-08-10 - `weekly-results-raw` Can't See Free Agents — `playerScores&W=YTD` Is the Only Full-Pool Source
 
+> **Note (same day):** the keeper report card dropped points-over-replacement
+> for fixed backup credits (see `features/keeper-report-card.md`), so the
+> `playerScores-ytd` fetch entry was removed from `fetch-mfl-feeds.mjs` —
+> nothing consumes it today. The feed-shape facts below stay true and this
+> is still the recipe if a future feature needs full-pool scoring data.
+
 **Context:** The keeper report card needed replacement level ("what would a freely available player at this slot have returned?"), which by definition is set by players *nobody rostered*.
 
 **Insight:** `weekly-results-raw.json` records a player's score only for weeks he sat on some roster, so the free-agent pool is structurally invisible in it — you cannot compute replacement level, positional scarcity, or "best available" from that feed no matter how you slice it. Symptom when you try: the pool at thin positions comes up *shorter than the number of startable slots* (2025 had 21 QBs, 13 kickers and 18 defenses rostered 8+ weeks against 12 starting slots each in a 12-team pool), so a rank-based baseline clamps onto the worst player anyone happened to keep and biases replacement upward. The committed `playerScores.json` is **one week only** (`W` defaults to the current week). `TYPE=playerScores&W=YTD` returns season totals for every player in the pool and is now fetched as `playerScores-ytd.json` in `scripts/fetch-mfl-feeds.mjs`.

@@ -64,7 +64,7 @@ const efficiencyPct = Math.round(analysis.efficiency * 100);
       {!previewMode && (
         <span class="ka-card__grade-sub">
           <strong>{efficiencyPct}% of optimal</strong> · #{classRank} class ·
-          {fmtPts(analysis.keptValue)} value over free
+          {fmtPts(analysis.keptValue)} keeper pts
         </span>
       )}
     </div>
@@ -97,7 +97,7 @@ const efficiencyPct = Math.round(analysis.efficiency * 100);
           <td class="ka-table__badge">
             {p.kept && <span class="ka-pill ka-pill--kept">Kept</span>}
             {!previewMode && p.badge === 'hit' && (
-              <span class="ka-pill ka-pill--hit" title="Kept one of the seven most valuable players this roster could have kept">
+              <span class="ka-pill ka-pill--hit" title="Kept one of the seven players who scored the most points in slots this roster could actually have started them in">
                 Hit
               </span>
             )}
@@ -106,7 +106,7 @@ const efficiencyPct = Math.round(analysis.efficiency * 100);
               <span class="ka-pill ka-pill--gotaway">Got away</span>
             )}
             {!previewMode && p.role === 'bench' && (
-              <span class="ka-pill ka-pill--kdef" title="Valued as bye-week cover rather than a starter. A seventh skill player fills in for any of the six flex starters (~6 games); a second QB only covers QB1's bye (~1), so he is worth far less.">
+              <span class="ka-pill ka-pill--kdef" title="Valued as a backup, not a starter. A seventh skill player counts 7/10 of his points (he rotates in for byes and matchups across six flex starters); a second QB, kicker, or defense counts 1/10 (he only plays the starter's bye and the odd matchup call).">
                 Bench
               </span>
             )}
