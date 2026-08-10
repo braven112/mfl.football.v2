@@ -2,6 +2,14 @@
   "weekOf": "2026-08-10",
   "changes": [
     {
+      "date": "2026-08-10",
+      "type": "bug-fix",
+      "summary": "Rookies were playing hide-and-seek on the AFL Free Agents page — an 'Include rookies' filter defaulted to off, so the entire draft class (and their ADP) was invisible unless you knew which checkbox to dig up. Rookies now show by default, ADP and all, and there's a new 'Rookies only' filter for when you want to scout nothing but the new blood.",
+      "impact": "user",
+      "area": "free-agents",
+      "league": "afl"
+    },
+    {
       "date": "2026-08-09",
       "type": "style-tweak",
       "summary": "What's New cards stopped stuttering. A fresh article was tagged 'NEW PAGE' and then, an inch to the right, 'NEW' again in green — same word, two different meanings — and the green one was floating as bare text right where the screenshot ends, so on a purple thumbnail you couldn't read it at all. It's now a proper chip that says 'JUST IN', which is what it always meant: published since you last stopped by.",

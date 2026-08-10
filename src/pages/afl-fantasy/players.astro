@@ -116,9 +116,11 @@ const { activeConfId } = resolveConferenceSelection(
 );
 
 // Counts + hero spotlight scoped to the active conference (league-wide when
-// there's no conference structure). includeRookies:false mirrors the client
-// script's default filter state so the numbers don't pop on hydration.
-const scoped = conferenceScopedView(liveView, activeConfId, { includeRookies: false });
+// there's no conference structure). Rookies are included by default (AFL
+// rookies are addable free agents, and owners research them + their ADP
+// here), matching the client script's default filter state so the numbers
+// don't pop on hydration.
+const scoped = conferenceScopedView(liveView, activeConfId, { includeRookies: true });
 const faCounts = scoped.faCounts;
 const freeAgentsCount = scoped.freeAgentsCount;
 const topFa = scoped.topFa;
@@ -350,8 +352,12 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             <span>Include rostered</span>
           </label>
           <label class="filter-checkbox">
-            <input type="checkbox" id="show-rookies" />
+            <input type="checkbox" id="show-rookies" checked />
             <span>Include rookies</span>
+          </label>
+          <label class="filter-checkbox">
+            <input type="checkbox" id="rookies-only" />
+            <span>Rookies only</span>
           </label>
           <button class="filter-clear-btn" id="filter-clear-btn" type="button">Clear Filters</button>
         </div>
@@ -434,7 +440,12 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   let activePosition = 'ALL';
   let searchQuery = '';
   let showRostered = false;
-  let showRookies = false;
+  // Rookies show by default on the AFL page (unlike TheLeague, where rookies
+  // enter only through the rookie draft): the checkbox starts checked and
+  // unchecking it counts as an active filter. "Rookies only" narrows the pool
+  // to rookies and wins over the include toggle when both are set.
+  let showRookies = true;
+  let rookiesOnly = false;
   const BATCH_SIZE = 50;
 
   // Advanced filter state
@@ -720,7 +731,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     if (filterExp) count++;
     if (filterDraft) count++;
     if (showRostered) count++;
-    if (showRookies) count++;
+    if (!showRookies) count++;
+    if (rookiesOnly) count++;
     return count;
   }
 
@@ -737,7 +749,11 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
   function matchesBaseFilters(p, query) {
     if (!showRostered && isRosteredForView(p)) return false;
-    if (!showRookies && p.rookie) return false;
+    if (rookiesOnly) {
+      if (!p.rookie) return false;
+    } else if (!showRookies && p.rookie) {
+      return false;
+    }
     if (!passesAdvancedFilters(p)) return false;
     if (query) {
       return p.name.toLowerCase().includes(query) || p.team.toLowerCase().includes(query);
@@ -990,6 +1006,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     bind('filter-draft', (e) => { filterDraft = e.target.value; filterPlayers(); }, 'change');
     bind('show-rostered', (e) => { showRostered = e.target.checked; filterPlayers(); }, 'change');
     bind('show-rookies', (e) => { showRookies = e.target.checked; filterPlayers(); }, 'change');
+    bind('rookies-only', (e) => { rookiesOnly = e.target.checked; filterPlayers(); }, 'change');
 
     // Clear filters
     const clearBtn = document.getElementById('filter-clear-btn');
@@ -997,16 +1014,18 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       clearBtn.addEventListener('click', () => {
         filterTeam = ''; filterAgeMin = null; filterAgeMax = null;
         filterHtMin = null; filterHtMax = null; filterWtMin = null; filterWtMax = null;
-        filterExp = ''; filterDraft = ''; showRostered = false; showRookies = false;
+        filterExp = ''; filterDraft = ''; showRostered = false; showRookies = true; rookiesOnly = false;
         ['filter-team', 'filter-age-min', 'filter-age-max', 'filter-ht-min', 'filter-ht-max',
          'filter-wt-min', 'filter-wt-max', 'filter-exp', 'filter-draft'].forEach(id => {
           const el = document.getElementById(id);
           if (el) el.value = '';
         });
-        ['show-rostered', 'show-rookies'].forEach(id => {
-          const el = document.getElementById(id);
-          if (el) el.checked = false;
-        });
+        const rosteredEl = document.getElementById('show-rostered');
+        if (rosteredEl) rosteredEl.checked = false;
+        const rookiesEl = document.getElementById('show-rookies');
+        if (rookiesEl) rookiesEl.checked = true;
+        const rookiesOnlyEl = document.getElementById('rookies-only');
+        if (rookiesOnlyEl) rookiesOnlyEl.checked = false;
         filterPlayers();
       });
     }
