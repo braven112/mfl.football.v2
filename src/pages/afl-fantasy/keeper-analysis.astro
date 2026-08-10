@@ -291,9 +291,11 @@ const replacementIsEstimated =
         </div>
         {replacementIsEstimated && (
           <p class="ka-summary__note">
-            Replacement level is estimated this cycle — the full free-agent
-            pool wasn't available when this built{analysis.summary.replacementClamped.length > 0 &&
-              `, and at ${clampedLabel} too few players were rostered long enough to measure it against`}.
+            Replacement level is estimated this cycle.
+            {!analysis.summary.replacementFromFullPool &&
+              ' The full free-agent pool wasn\u2019t available when this built.'}
+            {analysis.summary.replacementClamped.length > 0 &&
+              ` At ${clampedLabel} there were too few players to measure a replacement level against.`}
             Grades may shift once a complete pool lands.
           </p>
         )}

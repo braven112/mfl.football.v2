@@ -353,6 +353,19 @@ describe('computeReplacementLevels', () => {
     expect(naive).toBeGreaterThan(correct.QB); // the ~29% inflation that was shipping
   });
 
+  it('flags a slot group it observed nothing for, rather than grading against zero', () => {
+    // A zero-observation group used to `continue` past the thin check, so its
+    // replacement stayed 0 with clamped empty and fromFullPool true — every
+    // player at that position graded against a free replacement worth
+    // nothing, with no caveat on the page.
+    const noKickers = playersFeed([['q1', 'Q, One', 'QB'], ['r1', 'R, One', 'RB']]);
+    const ids = buildPlayersById(noKickers, undefined);
+    const pts = new Map([['q1', 280], ['r1', 200]]);
+    const { clamped } = computeReplacementLevels(pts, evenWeeks(['q1', 'r1']), ids, 2, 14);
+    expect(clamped).toContain('PK');
+    expect(clamped).toContain('Def');
+  });
+
   it('reports fromFullPool honestly — the flag must follow the decision', () => {
     // Regression: the summary flag was computed from feed PRESENCE, so a
     // refused feed still reported full-pool provenance and the page's
@@ -476,16 +489,27 @@ describe('pointsOverReplacement', () => {
     // for the first five weeks of every season.
     const points = new Map([['r1', 200]]); // comfortably above replacement
     const replacement = { QB: 0, PK: 0, Def: 0, FLEX: 5 };
-    for (const seasonWeeks of [1, 2, 3, 4, 5, 6, 14]) {
-      const starter = pointsOverReplacement('r1', points, byId, replacement, seasonWeeks);
+    for (const seasonWeeks of [1, 2, 3, 4, 5, 6, 14, 17]) {
+      // Call it the way gradeFranchise does. An earlier version of this test
+      // omitted expectedStarts for the starter — a signature no caller uses —
+      // so it validated a dead branch while production squared the starter
+      // multiplier (seasonWeeks^2/14) and made bench worth 6x starting in
+      // Week 1. Always exercise the production call shape.
+      const starter = pointsOverReplacement(
+        'r1', points, byId, replacement, seasonWeeks, undefined
+      );
       const bench = pointsOverReplacement(
         'r1', points, byId, replacement, seasonWeeks, BENCH_EXPECTED_STARTS.FLEX
       );
+      // The starter must be worth a full season of starts, never prorated.
+      expect(starter).toBeCloseTo(seasonWeeks * (200 / seasonWeeks - 5), 6);
       expect(bench).toBeLessThanOrEqual(starter);
       // ...and STRICTLY less, in constant proportion. A flat clamp kept the
       // ordering safe but priced a bench keep identically to a starter
       // through Week 6, contradicting the pill that calls him worth less.
-      expect(bench / starter).toBeCloseTo(BENCH_EXPECTED_STARTS.FLEX / 14, 6);
+      expect(bench / starter).toBeCloseTo(
+        Math.min(BENCH_EXPECTED_STARTS.FLEX / 14, 1), 6
+      );
     }
   });
 
@@ -618,6 +642,42 @@ describe('gradeFranchise', () => {
     const analysis = gradeFranchise('0001', twoQbRoster, twoQbKept, weakPoints, byId, replacement, 14);
     expect(analysis.hits + analysis.misses + analysis.fillerKept).toBe(analysis.keptCount);
     expect(analysis.efficiency).toBeLessThanOrEqual(1);
+  });
+
+  it('does not prorate STARTERS — value must not depend on how far in we are', () => {
+    // The bug this locks out: gradeFranchise passes expectedStarts=seasonWeeks
+    // for starters, so an `expectedStarts === undefined` gate never fired and
+    // starters were prorated too, giving seasonWeeks^2/14. At Week 1 bench was
+    // worth 6x starting and the enumeration went badly suboptimal; the
+    // headline "value over free" was off by exactly seasonWeeks/14.
+    const solo = playersFeed([['r1', 'Runner, One', 'RB']]);
+    const soloById = buildPlayersById(solo, undefined);
+    const roster = new Set(['r1']);
+    const pts = new Map([['r1', 140]]); // 10/wk over a 14-week season
+    const replacement = { QB: 0, PK: 0, Def: 0, FLEX: 4 };
+    // A starter's value scales linearly with the season, never quadratically.
+    for (const sw of [1, 3, 7, 14]) {
+      const a = gradeFranchise('0001', roster, roster, pts, soloById, replacement, sw);
+      expect(a.keptValue).toBeCloseTo(sw * (140 / sw - 4), 6);
+    }
+  });
+
+  it('breaks Miss ties among crowded-out keeps by value, not by points', () => {
+    // Clamping crowded-out keeps to a flat 0 made them tie, and the stable
+    // sort then fell back to row order — points DESCENDING — so the better
+    // of two stockpiled kickers took the Miss badge.
+    const kk = playersFeed([
+      ['k1', 'Kick, One', 'PK'], ['k2', 'Kick, Two', 'PK'], ['k3', 'Kick, Three', 'PK'],
+      ['r1', 'Runner, One', 'RB'],
+    ]);
+    const kkById = buildPlayersById(kk, undefined);
+    const roster = new Set(['k1', 'k2', 'k3', 'r1']);
+    const kept = new Set(['k1', 'k2', 'k3']); // two kickers crowded out of one slot
+    const pts = new Map([['k1', 300], ['k2', 280], ['k3', 260], ['r1', 400]]);
+    const a = gradeFranchise('0001', roster, kept, pts, kkById, NO_REP, 14);
+    const missed = a.players.filter((p) => p.badge === 'miss').map((p) => p.id);
+    // If any crowded-out kicker is blamed, it must be the least valuable one.
+    if (missed.length) expect(missed).not.toContain('k2');
   });
 
   it('credits a 7th skill keep as bench cover instead of zeroing it', () => {

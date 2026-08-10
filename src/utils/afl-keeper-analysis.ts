@@ -490,8 +490,15 @@ export function computeReplacementLevels(
     const thin: ReplacementClamped = [];
     for (const group of Object.keys(out) as SlotGroup[]) {
       const list = rates[group].sort((a, b) => b - a);
-      if (list.length === 0) continue;
       const startable = LINEUP_SLOTS[group] * teamsPerPool;
+      if (list.length === 0) {
+        // Nothing observed at all: level stays 0, which would grade every
+        // player at this position against a free replacement worth nothing.
+        // Never silently — a zero-observation group is the least measured
+        // case there is.
+        thin.push(group);
+        continue;
+      }
       // Too few observations past the last startable slot to call this a
       // measurement: with 13 kickers against 12 slots the "replacement
       // kicker" is just the worst one anybody bothered to roster.
@@ -519,7 +526,7 @@ export function computeReplacementLevels(
   // always compute, and refuse the feed if they disagree wildly.
   const ytd = levelsFrom(ratesFrom(true));
   const rosteredThin = new Set(rostered.thin);
-  const implausible = (Object.keys(levels) as SlotGroup[]).some((g) => {
+  const implausible = (Object.keys(rostered.out) as SlotGroup[]).some((g) => {
     const est = rostered.out[g];
     // Only compare against an estimate that is itself measured. A thin
     // rostered pool clamps to the worst player anybody kept, which the deeper
@@ -806,7 +813,9 @@ export function gradeFranchise(
       playersById,
       replacement,
       seasonWeeks,
-      role === 'starter' ? seasonWeeks : BENCH_EXPECTED_STARTS[_group]
+      // undefined => full season. Passing seasonWeeks explicitly would send
+      // starters down the proration branch and square the multiplier.
+      role === 'starter' ? undefined : BENCH_EXPECTED_STARTS[_group]
     );
 
   // The ceiling: the best keeper set this roster could have picked.
@@ -884,7 +893,15 @@ export function gradeFranchise(
     keptById.get(p.id)?.value ?? Math.min(0, p.pointsOverReplacement);
   const nonOptimalKeeps = players
     .filter((p) => p.kept && !p.optimal)
-    .sort((a, b) => realisedValue(a) - realisedValue(b));
+    // Break the zero-ties by starter basis. Without it every crowded-out keep
+    // clamps to exactly 0 and the stable sort falls back to the row order —
+    // which is points DESCENDING, so the better of two stockpiled kickers
+    // took the Miss badge while the worse one rendered clean.
+    .sort(
+      (a, b) =>
+        realisedValue(a) - realisedValue(b) ||
+        a.pointsOverReplacement - b.pointsOverReplacement
+    );
   const missIds = new Set(
     nonOptimalKeeps.slice(0, Math.min(nonOptimalKeeps.length, gotAwayCount)).map((p) => p.id)
   );
