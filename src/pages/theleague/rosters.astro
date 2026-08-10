@@ -5397,6 +5397,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
 <script>
   import { buildPlayerCellHTML } from '../../utils/player-cell-html';
+  import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD } from '../../constants/roster-constants';
   import { initPlayerModalTrigger } from '../../utils/player-modal-trigger';
   import { NFL_TEAM_CITIES, normalizeTeamCode } from '../../utils/nfl';
   import { getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark } from '../../utils/nfl-team-colors';
@@ -6848,7 +6849,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         return `
           <div class="chart-card">
             <div class="chart-card__header">
-              <img src="${getNflLogoUrl(team)}" alt="${team}" class="team-group__logo" onerror="this.classList.add('nfl-logo-failed')" onload="this.classList.remove('nfl-logo-failed')" />
+              <img src="${getNflLogoUrl(team)}" alt="${team}" class="team-group__logo" onerror="${NFL_LOGO_ONERROR}" onload="${NFL_LOGO_ONLOAD}" />
               <span class="team-group__name">${getNflTeamName(team)}</span>
             </div>
             <div class="team-group__players">
@@ -7217,7 +7218,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
                       alt="${player.gameOdds.opponent}"
                       class="opponent-logo"
                       style="width: 20px; height: 20px; object-fit: contain;"
-                      onerror="this.classList.add('nfl-logo-failed')" onload="this.classList.remove('nfl-logo-failed')"
+                      onerror="${NFL_LOGO_ONERROR}" onload="${NFL_LOGO_ONLOAD}"
                     />
                     <span class="spread-badge ${spreadClass}">
                     ${spreadDisplay}
@@ -7267,7 +7268,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
                     src="${getLogoUrl(player.gameOdds.opponent)}"
                     alt="${player.gameOdds.opponent}"
                     class="opponent-logo"
-                    onerror="this.classList.add('nfl-logo-failed')" onload="this.classList.remove('nfl-logo-failed')"
+                    onerror="${NFL_LOGO_ONERROR}" onload="${NFL_LOGO_ONLOAD}"
                   />
                 ` : ''}
                 ${player.oppStats ? player.oppStats.avg : '-'}

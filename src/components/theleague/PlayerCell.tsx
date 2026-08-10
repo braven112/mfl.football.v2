@@ -7,6 +7,9 @@ import {
   getCollegeHeadshot,
   getPlayerHeadshot,
   getPlayerImageUrl,
+  nflLogoErrorHandler,
+  nflLogoLoadHandler,
+  nflLogoRefCallback,
 } from '../../constants/roster-constants';
 
 export interface PlayerCellProps {
@@ -98,14 +101,11 @@ export function PlayerCell({
   // worse than none. visibility (not display) keeps the meta row's spacing.
   // onLoad restores it: the hide is imperative state React won't reset, so a
   // reused instance whose src changes to a valid logo must self-heal.
-  const handleLogoError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    // The nfl-logo-failed CSS (buildNflLogoDarkCss) hides the img except
-    // where the dark-mode content:url() swap still provides pixels.
-    e.currentTarget.classList.add('nfl-logo-failed');
-  };
-  const handleLogoLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    e.currentTarget.classList.remove('nfl-logo-failed');
-  };
+  // The nfl-logo-failed CSS (buildNflLogoDarkCss) hides the img except
+  // where the dark-mode content:url() swap still provides pixels. The
+  // avatar is only a logo when a team logo URL actually resolved — a DEF
+  // row with no team falls back to a headshot src and keeps the cascade.
+  const avatarIsLogo = isDef && !!teamLogoUrl;
 
   const sizeClass = size === 'compact' ? 'player-cell--compact' : '';
   const classes = ['player-cell', sizeClass, className].filter(Boolean).join(' ');
@@ -121,8 +121,9 @@ export function PlayerCell({
           alt={isDef ? `${nflTeam ?? 'DEF'} logo` : `${name} headshot`}
           loading="lazy"
           decoding="async"
-          onError={isDef ? handleLogoError : handleImgError}
-          onLoad={isDef ? handleLogoLoad : undefined}
+          onError={avatarIsLogo ? nflLogoErrorHandler : handleImgError}
+          onLoad={avatarIsLogo ? nflLogoLoadHandler : undefined}
+          ref={avatarIsLogo ? nflLogoRefCallback : undefined}
         />
       </div>
       <div className="player-cell__info">
@@ -138,8 +139,9 @@ export function PlayerCell({
                 className="player-meta__logo"
                 loading="lazy"
                 decoding="async"
-                onError={handleLogoError}
-                onLoad={handleLogoLoad}
+                onError={nflLogoErrorHandler}
+                onLoad={nflLogoLoadHandler}
+                ref={nflLogoRefCallback}
               />
             )}
             {position && (

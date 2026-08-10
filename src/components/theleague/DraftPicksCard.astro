@@ -238,17 +238,6 @@ const getPickNumber = (pick: DraftPrediction | ActualDraftPick): string => {
     flex-shrink: 0;
   }
 
-  .draft-pick-row__icon--original {
-    position: absolute;
-    bottom: -4px;
-    right: -4px;
-    width: 1rem;
-    height: 1rem;
-    border: 1px solid var(--content-bg, #fff);
-    border-radius: 50%;
-    object-fit: contain;
-  }
-
   .draft-pick-row__details {
     display: flex;
     flex-direction: column;
@@ -346,13 +335,6 @@ const getPickNumber = (pick: DraftPrediction | ActualDraftPick): string => {
     .draft-pick-row__icon {
       width: 1.75rem;
       height: 1.75rem;
-    }
-
-    .draft-pick-row__icon--original {
-      width: 0.875rem;
-      height: 0.875rem;
-      bottom: -3px;
-      right: -3px;
     }
   }
 </style>

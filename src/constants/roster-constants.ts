@@ -180,8 +180,28 @@ export function getNflLogoUrl(teamCode?: string): string {
  *   assignment loads: pair every ONERROR with NFL_LOGO_ONLOAD. Never null
  *   out onerror.
  */
-export const NFL_LOGO_ONERROR = "this.classList.add('nfl-logo-failed')";
-export const NFL_LOGO_ONLOAD = "this.classList.remove('nfl-logo-failed')";
+export const NFL_LOGO_FAILED_CLASS = 'nfl-logo-failed';
+export const NFL_LOGO_ONERROR = `this.classList.add('${NFL_LOGO_FAILED_CLASS}')`;
+export const NFL_LOGO_ONLOAD = `this.classList.remove('${NFL_LOGO_FAILED_CLASS}')`;
+
+/**
+ * React equivalents of the inline pair. React attaches onError at hydration
+ * and does NOT replay events that fired before it — and a cached 404 (the
+ * poisoned-cache scenario the class exists for) typically resolves before
+ * hydration. `nflLogoRefCallback` closes that gap: pass it as `ref` so an
+ * already-failed img gets tagged when the island mounts.
+ */
+export function nflLogoErrorHandler(e: { currentTarget: HTMLImageElement }): void {
+  e.currentTarget.classList.add(NFL_LOGO_FAILED_CLASS);
+}
+export function nflLogoLoadHandler(e: { currentTarget: HTMLImageElement }): void {
+  e.currentTarget.classList.remove(NFL_LOGO_FAILED_CLASS);
+}
+export function nflLogoRefCallback(img: HTMLImageElement | null): void {
+  if (img && img.src && img.complete && img.naturalWidth === 0) {
+    img.classList.add(NFL_LOGO_FAILED_CLASS);
+  }
+}
 
 /**
  * NFL team bye weeks (updated each season)

@@ -96,6 +96,9 @@ const resolvedEspnId = explicitEspnId ?? playerData?.espnId;
 // --- DEF handling ---
 const isDef = position?.toUpperCase() === 'DEF';
 const isLogo = isDef || isLogoAvatar;
+// The avatar handler must match what the src actually is: a DEF row with no
+// resolvable team falls back to a headshot src and keeps the headshot cascade.
+const avatarIsLogo = isLogoAvatar || (isDef && !!teamLogoUrl);
 const normalizedTeam = nflTeam ? normalizeTeamCode(nflTeam) : '';
 const teamLogoUrl = normalizedTeam ? `/assets/nfl-logos/${normalizedTeam}.svg` : '';
 
@@ -138,8 +141,8 @@ const avatarStyle = avatarBg
       alt={isDef ? `${nflTeam ?? 'DEF'} logo` : isLogoAvatar ? `${name} logo` : `${name} headshot`}
       loading="lazy"
       decoding="async"
-      onerror={isLogo ? NFL_LOGO_ONERROR : buildHeadshotOnerror(resolvedMflId, resolvedEspnId)}
-      onload={isLogo ? NFL_LOGO_ONLOAD : undefined}
+      onerror={avatarIsLogo ? NFL_LOGO_ONERROR : buildHeadshotOnerror(resolvedMflId, resolvedEspnId)}
+      onload={avatarIsLogo ? NFL_LOGO_ONLOAD : undefined}
     />
   </div>
   <div class="player-cell__info">
