@@ -16,6 +16,7 @@ import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 import { getLeagueContext, getLeagueBaseUrl } from '../../utils/league-context';
 import { getCurrentSeasonYear } from '../../utils/league-year';
 import { getConferenceShort, isValidConferenceId } from '../../utils/afl-conference';
+import { getTierForYear } from '../../utils/afl-tier';
 import { chooseTeamName, resolveConfigForYear, type TeamConfig } from '../../utils/team-names';
 import {
   AFL_KEEPER_ERA_FIRST_PREV_YEAR,
@@ -117,7 +118,11 @@ const keeperSnapshots = Object.entries(keeperSnapshotFeeds)
 // the keeper class is chosen by whoever owns the franchise in the keep year,
 // so a franchise that changed hands over the offseason (or rebranded) shows
 // its new identity — the 2025 owner picked the keeps off the 2024 roster,
-// and the card should carry their name, icon, and tier.
+// and the card should carry their name, icon, and tier. The tier chip comes
+// from getTierForYear (tier-history.json), NOT the config's `tier` field:
+// resolveConfigForYear never rewrites tier, and the static field is the
+// CURRENT makeup, which drifts from any historical cycle after every
+// promotion/relegation cut.
 const yearConfig = resolveConfigForYear(
   aflConfig as unknown as typeof aflConfig & { teams: TeamConfig[] },
   selectedYear
@@ -271,7 +276,7 @@ const fmtEff = (n: number) => `${Math.round(n * 100)}%`;
           teamName={teamName(franchise.franchiseId)}
           teamIcon={teamIcon(franchise.franchiseId)}
           conferenceShort={teamConference(franchise.franchiseId)}
-          tier={teamsById.get(franchise.franchiseId)?.tier}
+          tier={getTierForYear(franchise.franchiseId, selectedYear) ?? undefined}
           previewMode={previewMode}
           classRank={i + 1}
         />
