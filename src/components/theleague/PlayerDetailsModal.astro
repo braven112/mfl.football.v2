@@ -43,7 +43,7 @@ const { class: className, hideContract = false } = Astro.props;
           <span class="pdm-hero__age" id="detail-age-pill"></span>
         </div>
         <div class="pdm-hero__meta">
-          <img class="pdm-hero__team-logo" id="detail-nfl-team-logo" src="" alt="" />
+          <img class="pdm-hero__team-logo" id="detail-nfl-team-logo" src="" alt="" onerror="this.onerror=null;this.style.visibility='hidden'" />
           <span class="pdm-hero__meta-text" id="detail-meta-text">&mdash;</span>
         </div>
         <div class="pdm-hero__sub" id="detail-sub-text">&mdash;</div>
@@ -111,7 +111,7 @@ const { class: className, hideContract = false } = Astro.props;
           <div class="pdm-detail" id="detail-row-draft">
             <span class="pdm-detail__label">Draft</span>
             <span class="pdm-detail__value pdm-detail__value--with-logo" id="detail-draft-value">
-              <img class="pdm-detail__logo" id="detail-draft-team-logo" src="" alt="" />
+              <img class="pdm-detail__logo" id="detail-draft-team-logo" src="" alt="" onerror="this.onerror=null;this.style.visibility='hidden'" />
               <span id="detail-draft-text">&mdash;</span>
             </span>
           </div>

@@ -614,7 +614,8 @@ const getPlayerHeadshot = (mflId, espnId) => {
 };
 
 const getNflLogoUrl = (teamCode) => {
-  if (!teamCode || teamCode === 'FA') return '/assets/nfl-logos/NFL.svg';
+  // FA / FA* (conditional free agent) have no crest — use the shield.
+  if (!teamCode || teamCode.indexOf('FA') === 0) return '/assets/nfl-logos/NFL.svg';
   return `/assets/nfl-logos/${teamCode}.svg`;
 };
 
@@ -5564,7 +5565,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   };
 
   const getNflLogoUrl = (teamCode) => {
-    if (!teamCode || teamCode === 'FA') return '/assets/nfl-logos/NFL.svg';
+    // FA / FA* (conditional free agent) have no crest — use the shield.
+    if (!teamCode || teamCode.indexOf('FA') === 0) return '/assets/nfl-logos/NFL.svg';
     return `/assets/nfl-logos/${teamCode}.svg`;
   };
 
@@ -7185,7 +7187,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
           // Coach Mode Cells Construction
           const getLogoUrl = (team) => {
-            if (!team || team === 'FA') return '/assets/nfl-logos/NFL.svg';
+            // FA / FA* (conditional free agent) have no crest — use the shield.
+            if (!team || team.indexOf('FA') === 0) return '/assets/nfl-logos/NFL.svg';
             return `/assets/nfl-logos/${team}.svg`;
           };
 

@@ -121,8 +121,8 @@ export function buildPlayerCellHTML(opts: PlayerCellOptions): string {
 
   const avatarAlt = isDef ? `${nflTeam || 'DEF'} logo` : isLogoAvatar ? `${name} logo` : `${name} headshot`;
   // Logo avatars are static site assets, not headshots — don't chain into the
-  // college/MFL headshot fallback cascade if one 404s, just drop the src.
-  const avatarOnerror = isLogo ? 'this.onerror=null' : buildHeadshotOnerror(resolvedMflId, resolvedEspnId);
+  // college/MFL headshot fallback cascade if one 404s, hide the img instead.
+  const avatarOnerror = isLogo ? NFL_LOGO_ONERROR : buildHeadshotOnerror(resolvedMflId, resolvedEspnId);
 
   return `<div class="player-cell${sizeClass}${className ? ' ' + esc(className) : ''}">
   <div class="player-cell__avatar${defClass}"${avatarStyle}>

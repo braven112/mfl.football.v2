@@ -447,7 +447,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
                       <>
                         <div class="lineup-slot__opp" aria-label={matchupLabel}>
                           <span class="lineup-slot__opp-prefix">{matchupPrefix}</span>
-                          <img src={`/assets/nfl-logos/${oppTeam}.svg`} alt="" aria-hidden="true" class="lineup-slot__opp-logo" width="16" height="16" />
+                          <img src={`/assets/nfl-logos/${oppTeam}.svg`} alt="" aria-hidden="true" class="lineup-slot__opp-logo" width="16" height="16" onerror="this.onerror=null;this.style.visibility='hidden'" />
                         </div>
                         {player.projection != null && (
                           <span class="lineup-slot__proj">{player.projection.toFixed(1)}</span>
@@ -502,7 +502,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
             ) : oppTeam ? (
               <div class="lineup-bench-row__opp" aria-label={matchupLabel}>
                 <span class="lineup-bench-row__opp-prefix">{matchupPrefix}</span>
-                <img src={`/assets/nfl-logos/${oppTeam}.svg`} alt="" aria-hidden="true" class="lineup-bench-row__opp-logo" width="14" height="14" />
+                <img src={`/assets/nfl-logos/${oppTeam}.svg`} alt="" aria-hidden="true" class="lineup-bench-row__opp-logo" width="14" height="14" onerror="this.onerror=null;this.style.visibility='hidden'" />
               </div>
             ) : null}
             {player.projection != null && (
@@ -779,7 +779,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
         gameHtml = `
           <div class="lineup-slot__opp" aria-label="${esc(matchupLabel)}">
             <span class="lineup-slot__opp-prefix">${matchupPrefix}</span>
-            <img src="/assets/nfl-logos/${esc(oppTeam)}.svg" alt="" aria-hidden="true" class="lineup-slot__opp-logo" width="16" height="16" />
+            <img src="/assets/nfl-logos/${esc(oppTeam)}.svg" alt="" aria-hidden="true" class="lineup-slot__opp-logo" width="16" height="16" onerror="this.onerror=null;this.style.visibility='hidden'" />
           </div>
           ${player.projection != null ? `<span class="lineup-slot__proj">${player.projection.toFixed(1)}</span>` : ''}
         `;
@@ -897,7 +897,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
           matchupHtml = `<span class="cdm-matchup cdm-matchup--bye">BYE</span>`;
         } else if (oppTeam) {
           matchupHtml = `<div class="cdm-matchup">
-            <img src="/assets/nfl-logos/${esc(oppTeam)}.svg" alt="${esc(oppTeam)}" class="cdm-matchup__logo" width="12" height="12" />
+            <img src="/assets/nfl-logos/${esc(oppTeam)}.svg" alt="${esc(oppTeam)}" class="cdm-matchup__logo" width="12" height="12" onerror="this.onerror=null;this.style.visibility='hidden'" />
             <span class="cdm-matchup__text"><span class="cdm-matchup__prefix">${isHome ? 'vs' : '@'}</span> ${esc(oppTeam)}</span>
           </div>`;
         }

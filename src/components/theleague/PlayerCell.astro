@@ -138,7 +138,7 @@ const avatarStyle = avatarBg
       alt={isDef ? `${nflTeam ?? 'DEF'} logo` : isLogoAvatar ? `${name} logo` : `${name} headshot`}
       loading="lazy"
       decoding="async"
-      onerror={isLogo ? 'this.onerror=null' : buildHeadshotOnerror(resolvedMflId, resolvedEspnId)}
+      onerror={isLogo ? NFL_LOGO_ONERROR : buildHeadshotOnerror(resolvedMflId, resolvedEspnId)}
     />
   </div>
   <div class="player-cell__info">

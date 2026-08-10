@@ -96,10 +96,13 @@ export function PlayerCell({
   // Team logo failed (missing file, poisoned 404 cache) — hide it rather
   // than render the broken-image icon. No substitute logo: a wrong crest is
   // worse than none. visibility (not display) keeps the meta row's spacing.
+  // onLoad restores it: the hide is imperative state React won't reset, so a
+  // reused instance whose src changes to a valid logo must self-heal.
   const handleLogoError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    const img = e.currentTarget;
-    img.onerror = null;
-    img.style.visibility = 'hidden';
+    e.currentTarget.style.visibility = 'hidden';
+  };
+  const handleLogoLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    e.currentTarget.style.visibility = '';
   };
 
   const sizeClass = size === 'compact' ? 'player-cell--compact' : '';
@@ -116,7 +119,8 @@ export function PlayerCell({
           alt={isDef ? `${nflTeam ?? 'DEF'} logo` : `${name} headshot`}
           loading="lazy"
           decoding="async"
-          onError={handleImgError}
+          onError={isDef ? handleLogoError : handleImgError}
+          onLoad={isDef ? handleLogoLoad : undefined}
         />
       </div>
       <div className="player-cell__info">
@@ -133,6 +137,7 @@ export function PlayerCell({
                 loading="lazy"
                 decoding="async"
                 onError={handleLogoError}
+                onLoad={handleLogoLoad}
               />
             )}
             {position && (

@@ -11,7 +11,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import CollegeLogoDarkStyles from '../../components/CollegeLogoDarkStyles.astro';
 import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
 import { resolveLeaguePath } from '../../utils/nav-utils';
-import { positionOrder } from '../../constants/roster-constants';
+import { NFL_LOGO_ONERROR, positionOrder } from '../../constants/roster-constants';
 import { getCurrentLeagueYear, getCurrentSeasonYear, getTestDateFromSearchParams } from '../../utils/league-year';
 import { getPlayerMap } from '../../utils/player-map';
 import { getNthDayOfMonth } from '../../utils/league-event-resolver';
@@ -577,7 +577,7 @@ const topFaIsDef = topFa?.position === 'DEF';
 // For a team defense, spotlight the team's marquee defender (if mapped) so the
 // hero shows a face over the logo watermark instead of a bare crest.
 const topFaDefStar = topFaIsDef ? getDefSpotlightPlayer(topFa?.team) : null;
-const topFaLogo = topFa && topFa.team && topFa.team !== 'FA'
+const topFaLogo = topFa && topFa.team && topFa.team.indexOf('FA') !== 0
   ? `/assets/nfl-logos/${topFa.team}.svg`
   : '/assets/nfl-logos/NFL.svg';
 // The hero headshot shows ESPN images only. When there's no ESPN image
@@ -613,7 +613,7 @@ const topFaHeadOnerror = topFaHeadEspnId
 // Build unique NFL teams list for team filter dropdown
 const nflTeamsSet = new Set<string>();
 for (const p of playerList) {
-  if (p.team && p.team !== 'FA') nflTeamsSet.add(p.team);
+  if (p.team && p.team.indexOf('FA') !== 0) nflTeamsSet.add(p.team);
 }
 const nflTeamsList = [...nflTeamsSet].sort();
 
@@ -653,7 +653,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
            ESPN headshot in front, NFL team logo watermark behind. Rehydrated
            client-side by updateSpotlight() whenever the list re-renders. -->
       <div class="hero-spotlight" id="hero-spotlight" aria-hidden="true" data-def={topFaIsDef ? 'true' : 'false'} data-def-player={topFaIsDef && topFaDefStar ? 'true' : 'false'}>
-        <img id="hero-spotlight-logo" class="hero-spotlight__logo" src={topFaLogo} alt="" loading="eager" decoding="async" />
+        <img id="hero-spotlight-logo" class="hero-spotlight__logo" src={topFaLogo} alt="" loading="eager" decoding="async" onerror={NFL_LOGO_ONERROR} />
         <img id="hero-spotlight-head" class="hero-spotlight__head" src={topFaHead} alt="" loading="eager" decoding="async" style={topFaHasHeadshot ? undefined : 'visibility:hidden'} onerror={topFaHeadOnerror} />
       </div>
       {topFa && (
@@ -661,7 +661,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           <span class="hero-spotlight__label" id="hero-spotlight-label">Top Free Agent</span>
           <span class="hero-spotlight__name" id="hero-spotlight-name">{topFaDefStar ? topFaDefStar.name : topFa.name}</span>
           <span class="hero-spotlight__meta" id="hero-spotlight-meta">
-            {(topFa.position === 'PK' ? 'K' : topFa.position)}{topFa.team && topFa.team !== 'FA' ? ` · ${topFa.team}` : ''}{topFa.projected != null ? ` · ${topFa.projected.toFixed(1)} pts` : ''}
+            {(topFa.position === 'PK' ? 'K' : topFa.position)}{topFa.team && topFa.team.indexOf('FA') !== 0 ? ` · ${topFa.team}` : ''}{topFa.projected != null ? ` · ${topFa.projected.toFixed(1)} pts` : ''}
           </span>
         </div>
       )}
@@ -999,7 +999,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   ></script>
 </TheLeagueLayout>
 
-<script define:vars={{ playerDataJson, hasProjected, hasLastYrPts, hasSnapCounts, faCountsJson, nflTeamsJson, hasSurplusData, hasAuctionData, isAuctionSeason, isAdmin, currentYear, mflHost, mflLeagueId, mflActionYear, franchiseNamesJson, franchiseBannersJson, defSpotlightJson, nflAvatarBgJson, nflAvatarBgFallback, nflAvatarBorderJson, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback }}>
+<script define:vars={{ playerDataJson, hasProjected, hasLastYrPts, hasSnapCounts, faCountsJson, nflTeamsJson, hasSurplusData, hasAuctionData, isAuctionSeason, isAdmin, currentYear, mflHost, mflLeagueId, mflActionYear, franchiseNamesJson, franchiseBannersJson, defSpotlightJson, nflAvatarBgJson, nflAvatarBgFallback, nflAvatarBorderJson, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, logoOnerror: NFL_LOGO_ONERROR }}>
   // define:vars creates const — copy to let so polling can update at runtime
   let _hasAuctionData = hasAuctionData;
   const players = JSON.parse(playerDataJson);
@@ -1293,9 +1293,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     if (!team || team.indexOf('FA') === 0) return '/assets/nfl-logos/NFL.svg';
     return `/assets/nfl-logos/${team}.svg`;
   }
-  // Failed logo → hide (never the broken-image icon, and no substitute crest;
-  // Cloudflare caches 404s browser-side for 4h, so clients must self-heal).
-  const logoOnerror = "this.onerror=null;this.style.visibility='hidden'";
 
   // Team-color gradient backdrop behind a headshot avatar (same treatment as
   // the player modal band). Precomputed server-side; FA/unknown → neutral blue.
@@ -1451,7 +1448,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     if (spotlightMetaEl) {
       const posLabel = p.position === 'PK' ? 'K' : p.position;
       const parts = [posLabel];
-      if (p.team && p.team !== 'FA') parts.push(p.team);
+      if (p.team && p.team.indexOf('FA') !== 0) parts.push(p.team);
       if (p.projected != null) parts.push(p.projected.toFixed(1) + ' pts');
       spotlightMetaEl.textContent = parts.join(' · ');
     }
@@ -1891,7 +1888,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             <div class="player-cell__info">
               <strong class="player-cell__name player-cell__name--clickable" data-player-modal="${modalJson}">${p.name}${rosteredDot}</strong>
               <div class="player-meta">
-                ${isDef ? '' : `<img src="${logo}" alt="${p.team}" class="player-meta__logo" onerror="${logoOnerror}" />`}<span class="player-meta__pos">${posLabel}</span>
+                ${isDef ? '' : `<img src="${escapeAttr(logo)}" alt="${escapeAttr(p.team)}" class="player-meta__logo" onerror="${escapeAttr(logoOnerror)}" />`}<span class="player-meta__pos">${posLabel}</span>
               </div>
             </div>
           </div>
