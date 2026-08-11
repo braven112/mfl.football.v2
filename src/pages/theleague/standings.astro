@@ -1,7 +1,7 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import UnifiedStandingsTable from '../../components/theleague/standings/StandingsTable.astro';
-import { COLUMNS, TIERING } from '../../components/theleague/standings/standings-table-config';
+import { COLUMNS, TIERING, DIVISION_BADGES } from '../../components/theleague/standings/standings-table-config';
 import StandingsViewSelector from '../../components/theleague/StandingsViewSelector.astro';
 import YearSelector from '../../components/theleague/YearSelector.astro';
 import {
@@ -19,6 +19,7 @@ import {
 } from '../../utils/team-preferences';
 import { getCurrentSeasonYear } from '../../utils/league-year';
 import { resolveConfigForYear, resolvePreferredTeamIdForYear, HISTORICAL_TEAM_ICON_FALLBACK } from '../../utils/team-names';
+import { applyHistoricalDivisions } from '../../utils/historical-divisions';
 import { getLeagueBySlug } from '../../config/leagues';
 import { getStandingsFeedWithLiveRefresh, type StandingsFeed } from '../../utils/live-standings';
 
@@ -27,6 +28,12 @@ const standingsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/sta
   eager: true,
 });
 const fetchMetaFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/fetch.meta.json', {
+  eager: true,
+});
+// Per-season division alignment. The league realigned repeatedly (2007-2010 ran
+// Pacific/Midwest/Central/Atlantic), so grouping an archived year by today's
+// map put the wrong teams together — see utils/historical-divisions.ts.
+const leagueFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/league.json', {
   eager: true,
 });
 
@@ -85,7 +92,12 @@ const lastFetched = isLiveStandings
 const franchises = selectedFeed.leagueStandings.franchise;
 
 // Resolve team identities for the selected year (e.g., Heavy Chevy for 2025, Dead Cap Walking for 2026)
-const yearResolvedConfig = resolveConfigForYear(leagueConfig, selectedYear);
+// then re-align divisions to that season's own league.json — resolveConfigForYear
+// handles names/icons/conference but NOT division.
+const yearResolvedConfig = applyHistoricalDivisions(
+  resolveConfigForYear(leagueConfig, selectedYear),
+  leagueFeeds[`../../../data/theleague/mfl-feeds/${selectedYear}/league.json`]
+);
 
 // Calculate standings for all views.
 //
@@ -150,7 +162,13 @@ const currentIdentityById = new Map(
 const lastYearChampions = previousFeed?.leagueStandings && !previousFeed.error
   ? getDivisionChampionDetails(
       previousFeed.leagueStandings.franchise,
-      resolveConfigForYear(leagueConfig, previousYear),
+      // Last season's own alignment — the defending-champion header is keyed by
+      // division name, so using today's map could file a champion under a
+      // division that didn't exist (or that a different team won) that year.
+      applyHistoricalDivisions(
+        resolveConfigForYear(leagueConfig, previousYear),
+        leagueFeeds[`../../../data/theleague/mfl-feeds/${previousYear}/league.json`]
+      ),
       { preserveFeedOrder: true }
     )
   : {};
@@ -168,13 +186,10 @@ for (const [divisionName, champ] of Object.entries(lastYearChampions)) {
   };
 }
 
-// Map each division to its compass badge artwork
-const divisionBadges: Record<string, string> = {
-  Northwest: '/assets/theleague/division-badges/northwest.svg',
-  Southwest: '/assets/theleague/division-badges/southwest.svg',
-  Central: '/assets/theleague/division-badges/central.svg',
-  East: '/assets/theleague/division-badges/east.svg',
-};
+// Compass badge artwork, keyed by DISPLAY name only — MFL's archived "Eastern"
+// is normalized to "East" by divisionAliases before it reaches the lookup.
+// See DIVISION_BADGES for why retired divisions are deliberately absent.
+const divisionBadges = DIVISION_BADGES;
 ---
 
 <TheLeagueLayout title="Standings">

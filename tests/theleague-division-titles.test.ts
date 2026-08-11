@@ -28,7 +28,11 @@ import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 import { isSeasonComplete } from '../scripts/lib/theleague-season-complete.mjs';
+import { aliasDivisionName } from '../src/utils/historical-divisions';
+import leagueConfig from '../src/data/theleague.config.json';
 import franchiseHistory from '../data/theleague/derived/franchise-history.json';
+
+const DIVISION_ALIASES = (leagueConfig as any).divisionAliases as Record<string, string>;
 
 const THELEAGUE = getLeagueBySlug('theleague');
 const ROOT = path.resolve(__dirname, '..');
@@ -98,8 +102,16 @@ function loadDivisionSeasons(): DivisionSeason[] {
     const franchises = toArray<any>(league?.league?.franchises?.franchise);
     const divisionOf = new Map(franchises.map((f) => [f.id, String(f.division)]));
     const nameOf = new Map(franchises.map((f) => [f.id, String(f.name).trim()]));
+    // Normalize through the league's divisionAliases, same as the pages and the
+    // franchise-history script. MFL's fourth division was renamed "Eastern" ->
+    // "East" in Aug 2026: archives still say "Eastern" until they're refetched,
+    // and a backfill run would flip them. Aliasing here means the CORRECTIONS
+    // table below matches either way instead of silently finding no season.
     const divisionNames = new Map(
-      toArray<any>(league?.league?.divisions?.division).map((d) => [String(d.id), d.name])
+      toArray<any>(league?.league?.divisions?.division).map((d) => [
+        String(d.id),
+        aliasDivisionName(String(d.name ?? '').trim(), DIVISION_ALIASES),
+      ])
     );
 
     const byDivision = new Map<string, any[]>();
@@ -113,7 +125,10 @@ function loadDivisionSeasons(): DivisionSeason[] {
       out.push({
         year: Number(year),
         divisionId,
-        divisionName: divisionNames.get(divisionId) ?? divisionId,
+        // `||` not `??`: aliasDivisionName returns '' for a missing name, which
+        // is not nullish, so `??` would leave the id fallback unreachable and
+        // failure messages would read "2015  :" instead of naming the division.
+        divisionName: divisionNames.get(divisionId) || divisionId,
         rows: divRows,
         nameOf,
       });
@@ -232,12 +247,12 @@ describe('the 10 corrected division titles', () => {
   const CORRECTIONS: [number, string, string][] = [
     [2011, 'Northwest', 'Sabertooths'],
     [2015, 'Central', 'Amish Rakefighters'],
-    [2016, 'Eastern', 'Dark Magicians of Chaos'],
+    [2016, 'East', 'Dark Magicians of Chaos'],
     [2017, 'Central', 'Devil Dogs'],
     [2018, 'Southwest', 'LBer-DeCleaters'],
-    [2019, 'Eastern', 'Fire Ready Aim'],
-    [2020, 'Eastern', 'Wascawy Wabbits'],
-    [2024, 'Eastern', 'Wascawy Wabbits'],
+    [2019, 'East', 'Fire Ready Aim'],
+    [2020, 'East', 'Wascawy Wabbits'],
+    [2024, 'East', 'Wascawy Wabbits'],
     [2025, 'Northwest', 'Da Dangsters'],
     [2025, 'Southwest', 'Gridiron Geeks'],
   ];

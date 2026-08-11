@@ -4,6 +4,14 @@
     {
       "date": "2026-08-11",
       "type": "bug-fix",
+      "summary": "Archived standings were showing the wrong divisions. Pull up 2015 and the site would group teams the way the league is organized TODAY — which is not how it was organized in 2015, or 2011, or 2008. Go back far enough and it got surreal: the 2007 season really had a Pacific, a Midwest and an Atlantic division, and the standings page was cheerfully sorting those teams into a Northwest and a Southwest that wouldn't exist for years. Twenty-one division races between 2007 and 2015 were showing a different winner than that team's own franchise page was — including the 2015 Central, the exact race we'd just spent a week proving belonged to the Amish Rakefighters. Every season now gets grouped the way it was actually played, straight from the league's own records, so the two finally tell the same story.",
+      "impact": "user",
+      "area": "standings",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-08-11",
+      "type": "bug-fix",
       "summary": "Settled a tiebreaker argument nobody knew we were having. Both rulebooks list 'Most Points Allowed' near the bottom of the standings tiebreakers — the idea being that if you're dead even with someone and you had to survive a tougher schedule of beatings, that should work in your favor. The code read it backwards and quietly rewarded the team that gave up FEWER points. Now a team that allowed more points wins that step, which means both the better spot in the standings and the earlier draft pick. Fair warning: this has never actually decided anything. In 76 seasons of TheLeague divisions and 106 of the AFL's, no tie has ever made it that far down the list. It's fixed for the day one finally does.",
       "impact": "user",
       "area": "standings",

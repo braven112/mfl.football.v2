@@ -122,6 +122,36 @@ export interface StandingsTableProps {
 // so the page never scrolls sideways. Secondary stats stay flagged and reappear
 // unchanged at ≥768px. The tier table is the exception: all four of its columns
 // are primary, so it keeps them and tightens widths in CSS instead.
+/**
+ * Compass badge artwork per division, keyed by the name MFL uses for that
+ * season — which is what the standings table renders now that archived years
+ * are grouped by their own league.json (see utils/historical-divisions.ts).
+ *
+ * MFL calls the fourth division "Eastern" in the 2012-2025 archives, but
+ * `divisionAliases` in theleague.config.json normalizes that to "East" before
+ * it ever reaches this map — so only the display name is keyed. If that alias
+ * were ever dropped, the current season would silently lose its badge;
+ * tests/historical-divisions.test.ts guards both halves.
+ *
+ * Divisions the league retired (Pacific / Midwest / Atlantic, 2007-2010) have
+ * no artwork and are deliberately absent: StandingsTable falls back to a plain
+ * division header when badgeSrc is undefined, which is the right outcome for a
+ * division that no longer exists.
+ *
+ * Note that 2007-2010's "Central" DOES get today's Central badge, even though
+ * its membership was different. That is intentional and not in tension with the
+ * above: badges are keyed on the division NAME, and Central is the one name the
+ * league has used continuously since 2007. The retired three are unbadged
+ * because no artwork exists for them, not because their rosters changed —
+ * mapping "Atlantic" onto a modern compass badge would invent a lineage.
+ */
+export const DIVISION_BADGES: Record<string, string> = {
+  Northwest: '/assets/theleague/division-badges/northwest.svg',
+  Southwest: '/assets/theleague/division-badges/southwest.svg',
+  Central: '/assets/theleague/division-badges/central.svg',
+  East: '/assets/theleague/division-badges/east.svg',
+};
+
 export const COLUMNS = {
   division: [
     { key: 'playoffBadge', header: 'Seed' },

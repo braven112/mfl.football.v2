@@ -4,6 +4,61 @@ Domain knowledge about MyFantasyLeague API integration.
 
 ---
 
+## 2026-08-11 - MFL Display Names Drift Across Seasons — Join on Ids, and Measure Labels Separately from Structure
+
+**Context:** Quantifying how badly archived standings were mis-grouped before
+fixing `resolveConfigForYear`'s missing division resolution. The first number I
+reported to the commissioner — "34 of 76 division-seasons show the wrong
+winner" — was wrong by more than half. The real figure was 21.
+
+**Insight:** Every MFL display name is per-season data that drifts, and joining
+on one inflates any divergence measurement. Division names alone changed twice
+in TheLeague (Pacific/Midwest/Central/Atlantic → Northwest/Southwest/Central/
+East in 2011 → "Eastern" in 2012), franchise names change constantly, and even
+the same division under the same commissioner gets re-spelled. **Franchise ids
+are the only stable join key** — and even those are only stable *within* an MFL
+league id, which pre-2016 changed every season.
+
+The 13 phantom "wrong winners" were division-seasons where the code had the
+right team and MFL had the right team, but my comparison looked up
+`ledger["2019|East"]` against a ledger that said `"2019|Eastern"`, got
+`undefined`, and scored it a mismatch. A silent lookup miss reads exactly like a
+real defect.
+
+**Two habits that would have caught it immediately:**
+
+1. **Compare partition structure and labels as separate metrics.** "Are the same
+   teams grouped together?" and "is the group called the same thing?" are
+   different questions with different fixes — one is a data-integrity bug, the
+   other is a display alias. Collapsing them produces a number that overstates
+   the first. Canonical signature for the structural half: sort ids within each
+   group, sort the groups, stringify.
+2. **Make lookup misses loud.** In a throwaway analysis script, `map.get(key)`
+   returning `undefined` should assert or print, never fall through to a
+   comparison — otherwise the missing-key case and the wrong-value case are
+   indistinguishable in the output.
+
+**Evidence:** `src/utils/historical-divisions.ts` (per-season alignment +
+`divisionAliases`); `tests/historical-divisions.test.ts` asserts 76/76
+agreement between the page and `franchise-history.json`. Note what that test
+does precisely, because it is the pattern worth copying: it *keys* on
+`year|divisionName` — unavoidable, since a division has no stable id across
+MFL league-years — but it **compares `sourceFranchiseId`**, and it asserts the
+key resolved (`expect(expected).toBeTruthy()`) before comparing. Naming both
+sides through the same alias map is what makes the key safe; the truthiness
+assert is what makes a miss loud instead of silent.
+
+**Recommendation:** Any "how many rows disagree" figure derived from MFL feeds
+across eras should join on franchise id and report structure and labels
+separately — and be re-derived before it goes in a commit message, a changelog,
+or in front of the commissioner. A number that shrinks by 40% after review costs
+more credibility than it saves time.
+
+**Confidence: High** — both figures verified directly against the committed
+feeds.
+
+---
+
 ## 2026-08-11 - `leagueStandings` Rows ARE the Official Order — Never Re-Sort Them
 
 **Context:** AFL historical division titles were being computed by sorting each
