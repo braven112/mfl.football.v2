@@ -1,5 +1,25 @@
 [
   {
+    "id": "theleague-division-titles-mfl-official-2026-08-11",
+    "date": "2026-08-11",
+    "title": "The Audit Comes for TheLeague: 8 Division Banners Change Hands, and 2022 Comes Back From the Dead",
+    "summary": "Same homebrew tiebreaker, same bad math — this time in TheLeague's record books. MFL's official standings are now the source of truth, eight division titles just moved, and an entire missing season got its wins back.",
+    "description": [
+      "Fresh off auditing the AFL's record books, we pointed the same flashlight at TheLeague. Same rot. The code crowning each division winner sorted by raw division record FIRST, which is not a thing the constitution says anywhere. Read the rulebook: division record is tiebreaker number two. Overall record wins the division. What that bug produced was ten seasons where a team with a worse record got the banner because it happened to beat up on its own division — 2020 Eastern went to a 12-6 club over a 14-4 one, and the 2025 Northwest and Southwest were both handed to the runner-up. Eight of those ten are banners you can actually see change hands on a franchise page; the other two (2015 Central, 2018 Southwest) went to teams from an earlier ownership era, so nobody's page was showing them either way.",
+      "So we did what we did for the AFL: stopped re-deriving history and went to the source. MFL applies the constitution's full tiebreaker chain itself, and its official standings order now decides every division title. If you want the single case that settles the argument, it's 2015 Central. Amish Rakefighters and The Executioners both finished 15-3, both went 4-2 in the division. The Executioners scored more points AND had the better all-play record, so every version of our math picked them. MFL picked Amish — because Amish swept the season series, 120.66-91.19 in Week 1 and 136.34-127.01 in Week 3. Head-to-head. Step one. It's the one tiebreaker our code could never see, because the standings feed doesn't carry it.",
+      "Then there was 2022, which the record books had simply lost. MFL's export for that season ships the win-loss columns in a different shape, and our reader was looking for the wrong one — so every franchise in TheLeague was carrying a 0-0-0 for 2022 while somehow having scored two thousand points. No division titles, no wins, no losses, a whole year of football filed under nothing. It's back: Vitside Mafia's 15-3, Dark Magicians' 14-4, all four division winners, and roughly a hundred and forty games returned to career records across the league.",
+      "We also went looking for the titles nobody could claim. Twenty-five division championships were won under a previous owner of a franchise slot — Amish Rakefighters, LBer-DeCleaters, Acer FC Edge, the Sabertooths — and because career stats follow the human and not the jersey, those banners had nowhere to live and were silently dropped from the record entirely. They're now written down under the names that won them, which is the necessary first step; putting them somewhere you can actually look at them is a job for another day. Meanwhile every standings page in TheLeague renders MFL's official order, and a regression suite locks all of it down so no homebrew math ever crawls back into the record books."
+    ],
+    "category": "bug-fix",
+    "link": "/theleague/standings",
+    "linkLabel": "See the corrected standings",
+    "icon": "trophy",
+    "excludeFromHero": true,
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
     "id": "afl-division-titles-mfl-official-2026-08-11",
     "date": "2026-08-11",
     "title": "The Record Books Get an Audit: 22 Division Titles Restored to Their Rightful Owners",

@@ -254,9 +254,30 @@ function h2hPctWithin(
 }
 
 /**
+ * Which way the "Most Points Allowed" step should cut.
+ *
+ * Commissioner ruling, 2026-08-11: allowing MORE points must BENEFIT the team,
+ * in every league and in both contexts — a better draft pick and a better
+ * standing. Those are opposite ends of the same ranking (draft order is reverse
+ * standings), so the step cannot have one direction; it is decoupled here.
+ *
+ *   'draft'     — more points allowed sorts EARLIER in a worst-first list,
+ *                 i.e. the better (earlier) draft pick.
+ *   'standings' — more points allowed sorts LATER in a worst-first list, so
+ *                 after the caller reverses it the team ranks HIGHER.
+ *
+ * Before the ruling both directions treated more points allowed as strictly
+ * worse, which meant a team that had been unlucky got punished twice.
+ */
+export type PointsAllowedFavors = 'draft' | 'standings';
+
+/**
  * Shared tail of every tiebreaker chain (worst picks first): Power Rank ->
  * total points -> all-play % -> victory points -> most points allowed ->
  * deterministic coin flip (franchise id). All scalar -> fully transitive.
+ *
+ * This tail only ever feeds the DRAFT direction (see sortByRecordReverse's
+ * cross-division path), so its points-allowed step is fixed at 'draft'.
  */
 function tailCompare(a: StandingsFranchise, b: StandingsFranchise): number {
   const pwr = numField(a.pwr) - numField(b.pwr);
@@ -267,7 +288,8 @@ function tailCompare(a: StandingsFranchise, b: StandingsFranchise): number {
   if (allPlay !== 0) return allPlay;
   const vp = numField(a.vp) - numField(b.vp);
   if (vp !== 0) return vp;
-  const pa = numField(b.pa) - numField(a.pa); // more points allowed = worse = earlier
+  // Most points allowed: more = earlier pick (the ruling's draft direction).
+  const pa = numField(b.pa) - numField(a.pa);
   if (pa !== 0) return pa;
   return a.id < b.id ? -1 : a.id > b.id ? 1 : 0; // deterministic coin flip
 }
@@ -284,12 +306,19 @@ function tailCompare(a: StandingsFranchise, b: StandingsFranchise): number {
  */
 function rankDivisionBlockWorstFirst(
   teams: StandingsFranchise[],
-  headToHead?: HeadToHeadMap
+  headToHead?: HeadToHeadMap,
+  paFavors: PointsAllowedFavors = 'draft'
 ): StandingsFranchise[] {
   if (teams.length <= 1) return [...teams];
 
   // Ordered chain. dir = +1 when a LOWER value is worse (picks earlier),
-  // dir = -1 when a HIGHER value is worse (only "most points allowed").
+  // dir = -1 when a HIGHER value is worse.
+  //
+  // "Most Points Allowed" is the one step whose direction depends on what this
+  // ranking feeds — see PointsAllowedFavors. In the draft direction the team
+  // that allowed more points sorts FIRST here (worst-first = earliest pick);
+  // in the standings direction it sorts LAST here, so that the caller's
+  // .reverse() puts it on TOP. Either way, allowing more points helps you.
   const steps: Array<{ val: (t: StandingsFranchise) => number; dir: 1 | -1 }> = [
     { val: (t) => h2hPctWithin(t, teams, headToHead), dir: 1 }, // head-to-head among current clubs
     { val: (t) => numField(t.divpct), dir: 1 }, // division %
@@ -298,7 +327,7 @@ function rankDivisionBlockWorstFirst(
     { val: (t) => numField(t.pf), dir: 1 }, // total points
     { val: (t) => numField(t.all_play_pct), dir: 1 }, // all-play %
     { val: (t) => numField(t.vp), dir: 1 }, // victory points
-    { val: (t) => numField(t.pa), dir: -1 }, // most points allowed (higher = worse)
+    { val: (t) => numField(t.pa), dir: paFavors === 'draft' ? -1 : 1 }, // most points allowed
   ];
 
   for (const step of steps) {
@@ -312,7 +341,9 @@ function rankDivisionBlockWorstFirst(
     // Worst value-group first, then restart the chain within each subgroup.
     const keys = [...groups.keys()].sort((a, b) => (step.dir === 1 ? a - b : b - a));
     const out: StandingsFranchise[] = [];
-    for (const k of keys) out.push(...rankDivisionBlockWorstFirst(groups.get(k)!, headToHead));
+    for (const k of keys) {
+      out.push(...rankDivisionBlockWorstFirst(groups.get(k)!, headToHead, paFavors));
+    }
     return out;
   }
 
@@ -421,7 +452,11 @@ export function rankDivisionStandingsBestFirst(
   }
   const out: StandingsFranchise[] = [];
   for (const pct of [...groups.keys()].sort((a, b) => b - a)) {
-    out.push(...rankDivisionBlockWorstFirst(groups.get(pct)!, headToHead).reverse());
+    // 'standings' — this is the best-first (seeding) direction, so the
+    // points-allowed step must land the higher-PA team on top after .reverse().
+    out.push(
+      ...rankDivisionBlockWorstFirst(groups.get(pct)!, headToHead, 'standings').reverse()
+    );
   }
   return out;
 }

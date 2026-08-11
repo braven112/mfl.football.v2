@@ -120,12 +120,26 @@ function feedOrderComparator(franchises: StandingsFranchise[]) {
     (index.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (index.get(b.id) ?? Number.MAX_SAFE_INTEGER);
 }
 
-// Division tiebreaker sequence for the default (legacy) path. NOTE: this is
-// NOT the AFL constitution's chain — it has no head-to-head or conference%
-// step, all-play is promoted above PWR/PF, and it prefers LOWER points
-// allowed where the constitution's step 8 is MOST points allowed. AFL pages
-// bypass it entirely via `preserveFeedOrder` (MFL's order is authoritative);
-// it remains only for TheLeague's default path, unchanged.
+// Division tiebreaker sequence for the default (legacy) path.
+//
+// It approximates TheLeague's chain (overall record → division record →
+// all-play → PF → PWR → VP → PA) but is NOT either league's real chain:
+//   - It cannot do step 1, head-to-head. The standings feed's h2h* columns only
+//     echo the overall record, so a true season-series comparison is impossible
+//     from this input. That step decided at least one real division title
+//     (2015 Central — see scripts/compute-franchise-history.mjs).
+//   - Against the AFL's chain it is further off: no conference% step, and
+//     all-play is promoted above PWR/PF.
+//
+// Its "Most Points Allowed" step DOES follow the 2026-08-11 ruling (more points
+// allowed ranks higher) — see the step itself below. It has never triggered in
+// 76 division-seasons.
+//
+// Both leagues now bypass it entirely via `preserveFeedOrder` — MFL applies the
+// constitution's tiebreakers itself and its row order is authoritative. This
+// function has NO remaining production callers; it survives only for the tests
+// that pin its behavior (tests/division-champions.test.ts,
+// tests/afl-structure.test.ts). Prefer `preserveFeedOrder` for anything new.
 function divisionTiebreaker(teams: TeamStanding[]): TeamStanding[] {
   if (teams.length <= 1) return teams;
 
@@ -164,9 +178,14 @@ function divisionTiebreaker(teams: TeamStanding[]): TeamStanding[] {
     const bVP = parseFloat(b.vp);
     if (aVP !== bVP) return bVP - aVP;
 
+    // Most Points Allowed — the team that gave up MORE points wins this step
+    // and ranks HIGHER. Commissioner ruling 2026-08-11: "most points allowed
+    // should benefit the team in all leagues." Both rulebooks have always read
+    // "Most Points Allowed"; this code used to prefer FEWER, punishing a team
+    // that had already been unlucky. See tests/points-allowed-tiebreaker.test.ts.
     const aPA = parseFloat(a.pa);
     const bPA = parseFloat(b.pa);
-    return aPA - bPA; // Lower PA is better
+    return bPA - aPA;
   });
 
   return sorted;
@@ -311,9 +330,14 @@ export function getLeagueStandings(
     const bVP = parseFloat(b.vp);
     if (aVP !== bVP) return bVP - aVP;
 
+    // Most Points Allowed — the team that gave up MORE points wins this step
+    // and ranks HIGHER. Commissioner ruling 2026-08-11: "most points allowed
+    // should benefit the team in all leagues." Both rulebooks have always read
+    // "Most Points Allowed"; this code used to prefer FEWER, punishing a team
+    // that had already been unlucky. See tests/points-allowed-tiebreaker.test.ts.
     const aPA = parseFloat(a.pa);
     const bPA = parseFloat(b.pa);
-    return aPA - bPA; // Lower PA is better
+    return bPA - aPA;
   });
 
   // Get non-division winners and sort by overall record
@@ -375,7 +399,9 @@ export function getAllPlayStandings(
 
     if (aAllPlay !== bAllPlay) return bAllPlay - aAllPlay;
 
-    // Tiebreaker: PF, PWR, VP, PA
+    // Tiebreaker: PF, PWR, VP, PA — TheLeague's Wild Card chain
+    // (All Play -> Total points -> Power Rank -> Victory Points ->
+    // Most Points Allowed).
     const aPF = parseFloat(a.pf);
     const bPF = parseFloat(b.pf);
     if (aPF !== bPF) return bPF - aPF;
@@ -388,9 +414,10 @@ export function getAllPlayStandings(
     const bVP = parseFloat(b.vp);
     if (aVP !== bVP) return bVP - aVP;
 
+    // Most Points Allowed — more allowed ranks HIGHER (ruling 2026-08-11).
     const aPA = parseFloat(a.pa);
     const bPA = parseFloat(b.pa);
-    return aPA - bPA;
+    return bPA - aPA;
   });
 }
 
@@ -456,7 +483,9 @@ export function getTierAllPlayStandings(
 
       if (aAllPlay !== bAllPlay) return bAllPlay - aAllPlay;
 
-      // Tiebreaker: PF, PWR, VP, PA
+      // Tiebreaker: PF, PWR, VP, PA — TheLeague's Wild Card chain
+      // (All Play -> Total points -> Power Rank -> Victory Points ->
+      // Most Points Allowed).
       const aPF = parseFloat(a.pf);
       const bPF = parseFloat(b.pf);
       if (aPF !== bPF) return bPF - aPF;
@@ -469,9 +498,10 @@ export function getTierAllPlayStandings(
       const bVP = parseFloat(b.vp);
       if (aVP !== bVP) return bVP - aVP;
 
+      // Most Points Allowed — more allowed ranks HIGHER (ruling 2026-08-11).
       const aPA = parseFloat(a.pa);
       const bPA = parseFloat(b.pa);
-      return aPA - bPA;
+      return bPA - aPA;
     });
   };
 

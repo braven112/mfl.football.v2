@@ -23,6 +23,7 @@ import {
   buildMilestonePost,
   mergeMilestonePosts,
 } from './lib/franchise-milestone-posts.mjs';
+import { isSeasonComplete } from './lib/theleague-season-complete.mjs';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -36,6 +37,11 @@ const OUTPUT_PATH = path.join(ROOT, THELEAGUE.dataPath, 'derived/franchise-histo
 const SCHEFTER_FEED_PATH = path.join(ROOT, 'src/data/theleague/schefter-feed.json');
 
 const INDIVIDUAL_AWARD_MIN_SALARY = 1_500_000;
+
+// Calendar year the season-complete gate compares against. Deliberately the
+// wall-clock year, NOT getCurrentLeagueYear() — this asks "has this season
+// finished in real time", which is independent of both rollover clocks.
+const CURRENT_YEAR = new Date().getFullYear();
 
 const readJson = (p) => {
   try {
@@ -57,6 +63,19 @@ const parseNum = (v) => {
 const parseRecord = (wlt) => {
   const [w, l, t] = String(wlt || '').split('-').map((s) => parseNum(s));
   return { w: w || 0, l: l || 0, t: t || 0 };
+};
+
+// Overall record off a leagueStandings row. MFL only emits the columns a given
+// league-year had configured for display, and TheLeague's 2022 export ships the
+// separate h2hw/h2hl/h2ht fields WITHOUT the combined h2hwlt string. Reading
+// h2hwlt alone made every 2022 franchise 0-0-0 despite ~2000 points scored,
+// which zeroed that season's `seasonHasGames` guard (no division titles at all)
+// and silently shortened every career W-L by a full season. Same fallback shape
+// as normalizeWLT in src/utils/standings.ts.
+const parseOverallRecord = (f) => {
+  const combined = parseRecord(f?.h2hwlt);
+  if (combined.w || combined.l || combined.t) return combined;
+  return { w: parseNum(f?.h2hw), l: parseNum(f?.h2hl), t: parseNum(f?.h2ht) };
 };
 
 // --- Discover available years ---
@@ -524,21 +543,27 @@ for (const year of years) {
   // Map franchiseId -> division for this year
   const divisionMap = new Map();
   const divisionNames = new Map();
+  const historicalNames = new Map();
   if (isValidFeed(leagueJson) && leagueJson.league) {
     toArray(leagueJson.league.divisions?.division).forEach((d) => {
       if (d.id != null && d.name) divisionNames.set(String(d.id), d.name);
     });
     toArray(leagueJson.league.franchises?.franchise).forEach((f) => {
       if (f.id) divisionMap.set(f.id, f.division);
+      // That season's MFL name — the only record of a franchise that has since
+      // folded, so the division-winner ledger below can still name it.
+      if (f.id && f.name) historicalNames.set(f.id, String(f.name).trim());
     });
   }
 
-  // Build standings rows
+  // Build standings rows. IMPORTANT: this array stays in MFL's feed order —
+  // see the division-titles block below, which depends on it.
   const standingsRows = toArray(standings.leagueStandings.franchise).map((f) => {
-    const { w, l, t } = parseRecord(f.h2hwlt);
+    const { w, l, t } = parseOverallRecord(f);
     const divTriple = parseRecord(f.divwlt);
     return {
       franchiseId: f.id,
+      historicalName: historicalNames.get(f.id) || null,
       wins: w,
       losses: l,
       ties: t,
@@ -569,30 +594,13 @@ for (const year of years) {
   // appearance counts for the in-progress current season.
   const seasonHasGames = standingsRows.some((r) => r.wins + r.losses + r.ties > 0);
 
-  // Division titles — best record per division (tiebreak by PF)
-  const divisionTitleHolders = new Map(); // divisionId -> franchiseId
-  if (seasonHasGames) {
-    const byDiv = new Map();
-    standingsRows.forEach((row) => {
-      if (!row.divisionId) return;
-      if (!byDiv.has(row.divisionId)) byDiv.set(row.divisionId, []);
-      byDiv.get(row.divisionId).push(row);
-    });
-    for (const [divId, members] of byDiv) {
-      members.sort(
-        (a, b) =>
-          b.divisionWins - a.divisionWins ||
-          b.wins - a.wins ||
-          b.pointsFor - a.pointsFor
-      );
-      if (members[0]) divisionTitleHolders.set(divId, members[0].franchiseId);
-    }
-  }
-
   // Championship results
   // Prefer MFL's bracket data when it has actual franchise winners; otherwise
   // fall back to the hand-curated championship-history.json. MFL's pre-2020
   // brackets are metadata-only.
+  //
+  // Resolved BEFORE division titles because isSeasonComplete uses a resolved
+  // champion as its "the postseason is over" signal.
   let champResult = getChampionshipResult(playoffBrackets);
   if (!champResult) {
     const manual = championshipManualByYear.get(year);
@@ -604,6 +612,54 @@ for (const year of years) {
       };
     }
   }
+
+  // ...and don't crown one MID-season either. A week-6 standings table is a
+  // perfectly valid ORDER, just not a FINAL one, and this script's output is
+  // committed to main nightly by schefter-trade-speculation.yml — so without
+  // this gate an in-progress season stamps four division titles onto the
+  // franchise pages and re-churns them every night as the standings move.
+  const seasonComplete = isSeasonComplete(year, champResult, CURRENT_YEAR);
+
+  // Division titles: MFL's leagueStandings rows arrive in the league's OFFICIAL
+  // final order — overall W-L-T% first, ties broken by the league's own
+  // configured tiebreakers (the constitution's chain: h2h -> div record ->
+  // all-play -> PF -> PWR -> VP -> most PA; see src/data/league-constitution.ts).
+  // The FIRST ROW of each division IS that division's winner.
+  //
+  // DO NOT SORT. The old `divisionWins -> wins -> pointsFor` sort made raw
+  // division record the PRIMARY key, which is tiebreaker #2 in the rulebook,
+  // not the ranking key. It miscredited 10 division titles between 2007 and
+  // 2025 — every one of them handing the title to a team with a WORSE overall
+  // record. It also cannot reproduce step 1 at all: in 2015 Central, Amish
+  // Rakefighters and The Executioners both finished 15-3-0 with identical 4-2-0
+  // division records, and MFL awarded it to Amish on the head-to-head sweep
+  // (W1 120.66-91.19, W3 136.34-127.01) despite Amish having LOWER all-play and
+  // LOWER points scored. The standings feed's h2h* columns only echo the
+  // overall record, so no local re-derivation can ever get that case right.
+  // tests/theleague-division-titles.test.ts locks winner === first feed row.
+  const divisionTitleHolders = new Map(); // divisionId -> franchiseId
+  const divisionWinnerLedger = []; // complete per-season record, incl. defunct
+  if (seasonHasGames && seasonComplete) {
+    const byDiv = new Map();
+    standingsRows.forEach((row) => {
+      if (!row.divisionId) return;
+      if (!byDiv.has(row.divisionId)) byDiv.set(row.divisionId, []);
+      byDiv.get(row.divisionId).push(row);
+    });
+    for (const [divId, members] of byDiv) {
+      const winner = members[0];
+      if (!winner) continue;
+      divisionTitleHolders.set(divId, winner.franchiseId);
+      divisionWinnerLedger.push({
+        divisionId: divId,
+        divisionName: divisionNames.get(divId) || divId,
+        franchiseId: winner.franchiseId,
+        name: winner.historicalName,
+      });
+    }
+    divisionWinnerLedger.sort((a, b) => String(a.divisionId).localeCompare(String(b.divisionId)));
+  }
+
   const playoffParticipants = getPlayoffParticipants(playoffBrackets);
   const playoffMatchupKeys = getPlayoffMatchupKeys(playoffBrackets);
 
@@ -612,7 +668,19 @@ for (const year of years) {
   // the participant list by re-running MFL's seeding logic (division winners
   // first, then wildcards by record) and keeping the top `teamsInvolved`
   // seeds — that's the actual size of the championship bracket per year.
-  if (playoffParticipants.size === 0 && seasonHasGames) {
+  //
+  // Gated on seasonComplete for the same reason division titles are, and it
+  // matters MORE here: this is the only branch that runs from week 1 with
+  // nothing real to read. The current year's bracket already declares its
+  // size (2026 says teamsInvolved: "7") long before a game is played, so
+  // ungated this credits seven franchises a playoff appearance in week 1 and
+  // reshuffles which seven every night as the standings move. It also got
+  // strictly worse once titles were gated: with divisionTitleHolders empty
+  // mid-season, the seeding logic loses its division-winner-first ordering
+  // and falls back to raw record. Real bracket-derived participants are NOT
+  // gated — those only exist once postseason games have actually been played,
+  // and they settle rather than churn.
+  if (playoffParticipants.size === 0 && seasonHasGames && seasonComplete) {
     const bracketSize = getChampionshipBracketSize(playoffBrackets);
     for (const fid of inferPlayoffParticipants(standingsRows, divisionTitleHolders, bracketSize)) {
       playoffParticipants.add(fid);
@@ -661,9 +729,15 @@ for (const year of years) {
     // games played AND zero points scored, MFL's standings still report
     // a regSeasonRank and mark a division leader by tiebreaker. Treat
     // those as "not played" so unplayed years don't claim a rank,
-    // division title, or playoff appearance. We require pointsFor==0
-    // too so we don't blow away historical 0-0 anomalies (e.g. Pigskins
-    // 2022 had no W/L recorded but 2k points scored).
+    // division title, or playoff appearance.
+    //
+    // The pointsFor==0 half of this condition used to be justified by
+    // "historical 0-0 anomalies (e.g. Pigskins 2022 had no W/L recorded but
+    // 2k points scored)". That was not an anomaly — it was the h2hwlt parse
+    // bug that parseOverallRecord now fixes, and the comment rationalizing it
+    // is why the bug survived so long. The condition stays because a genuine
+    // preseason row is 0-0-0 AND 0 points, so requiring both is still the
+    // right test; only the reasoning was wrong.
     const seasonNotStarted =
       row.wins === 0 && row.losses === 0 && row.ties === 0 && row.pointsFor === 0;
 
@@ -1065,6 +1139,22 @@ for (const year of years) {
     mvpFranchise: awards?.mvp?.franchiseId ?? null,
     jerryJonesFranchise: awards?.jerryJones?.franchiseId ?? null,
     brockOsweilerFranchise: awards?.osweiler?.franchiseId ?? null,
+    // Complete division-winner ledger for the season — every division gets an
+    // entry here even when no CURRENT franchise can claim the title.
+    // franchises[].divisionTitles is keyed by the current franchise id, so a
+    // title won during a previous owner's era (attributeYear returns null —
+    // e.g. Amish Rakefighters' 2011/2014/2015 Central titles on slot 0011,
+    // which the present Midwestside Connection owner did not win) had nowhere
+    // to live and vanished from the record entirely.
+    //
+    // `franchiseId` is the current claimant, or null when the title belongs to
+    // an era no present franchise owns; `name` always retains that season's MFL
+    // name. Same convention as the AFL's awards-history.json.
+    divisionWinners: divisionWinnerLedger.map((w) => ({
+      ...w,
+      franchiseId: attributeYear(w.franchiseId, year) || null,
+      sourceFranchiseId: w.franchiseId,
+    })),
   });
 }
 

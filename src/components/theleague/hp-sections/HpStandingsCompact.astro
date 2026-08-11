@@ -60,8 +60,9 @@ interface StandingRow {
 let rows: StandingRow[] = [];
 
 if (hasGamesPlayed) {
-  // In-season: use playoff seeding with full tiebreakers (division winners seeds 1-4)
-  const seeded = getLeagueStandings(franchises, config as any);
+  // In-season: seed off MFL's official standings order (division winners 1-4).
+  // preserveFeedOrder — MFL applies the constitution's tiebreakers itself.
+  const seeded = getLeagueStandings(franchises, config as any, { preserveFeedOrder: true });
   rows = seeded.map((t, idx) => {
     const team = teamMap.get(t.id);
     const record = t.h2hwlt ?? '0-0-0';

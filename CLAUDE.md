@@ -477,6 +477,57 @@ windows where the order is official, so they say "View Draft Order", never
 "predictor". Static copy (nav, page directory, Roger's prompt/seeds) should
 stay phase-neutral or state both phases.
 
+## Standings order — MFL is the source of truth; "most PA" is decoupled
+
+Two related rules, both from commissioner rulings in August 2026.
+
+**1. Never re-sort MFL's standings rows.** MFL's `leagueStandings` export
+returns rows in the league's OFFICIAL final order, with each league's
+constitution tiebreaker chain already applied — including head-to-head, which
+we cannot reproduce (the feed's `h2h*` columns only echo the overall record).
+The first row of each division IS that division's winner. Every standings,
+playoffs and homepage surface in BOTH leagues passes
+`{ preserveFeedOrder: true }` to `src/utils/standings.ts`; the awards scripts
+take `group[0]` in feed order. Homebrew tiebreakers miscredited 22 AFL and 10
+TheLeague division titles before this rule existed. The proof that MFL is
+applying the rulebook and we cannot is TheLeague's 2015 Central: two 15-3-0
+teams with identical 4-2-0 division records, where MFL credited the team with
+LOWER all-play and LOWER points because it swept the season series.
+`divisionTiebreaker` in standings.ts now has no production callers.
+
+**2. "Most Points Allowed" benefits the team — in BOTH directions.** The team
+that gave up more points wins that tiebreaker step, meaning it gets both the
+better standing and the better (earlier) draft pick. Those are opposite ends of
+one ranking, so the step is deliberately **decoupled**: see
+`PointsAllowedFavors` in `src/utils/afl-draft-utils.ts`
+(`rankDivisionBlockWorstFirst` takes `'draft'` vs `'standings'`). Do not
+"simplify" the two directions back into one — `tests/points-allowed-tiebreaker.test.ts`
+has a guard for exactly that. The step has never actually decided a real
+division title, so a regression here is invisible in the data.
+
+Caveat worth remembering: because standings order now comes from MFL, rule 2
+only governs OUR draft-order math. The live standings apply whatever MFL's
+`OPP_PTS` setting does, which is a league-settings question, not a code one.
+
+**Known gap (pre-existing, not yet fixed):** `resolveConfigForYear`
+(`src/utils/team-names.ts`) resolves a franchise's historical name/icon/
+conference but NOT its `division`, and the standings page groups on
+`getTeamConfig().division`. So `/theleague/standings?year=<past>` groups
+historical seasons by TODAY's alignment — 2007-2015 all disagree with the
+season's real `league.json`, including division NAMES (2007 was
+Pacific/Midwest/Central/Atlantic). Rule 1 above therefore holds for the awards
+scripts, which read each year's own `league.json`, but the archived-year view
+of the standings page can still show a division winner that contradicts
+`franchise-history.json`. Fix by resolving `division` per year from
+`league.json` before trusting that page for anything historical.
+
+Two traps this work surfaced, written up in full under `docs/claude/insights/`:
+a missing `h2hwlt` column parses to `0-0-0` instead of erroring and silently
+erased TheLeague's entire 2022 season (`domains/mfl-api.md`), and owner-scoped
+attribution drops awards won under a slot's previous owner — which reads
+exactly like "defunct franchise" and leads to the wrong fix
+(`features/franchise-history.md`).
+
 ## Page directory registry — required for every new page
 
 Adding a page to the site without adding it to
