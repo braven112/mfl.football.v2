@@ -50,7 +50,7 @@ export interface PlayerCellOptions {
   isLogoAvatar?: boolean;
 }
 
-function esc(str: string): string {
+function esc(str: string | null | undefined): string {
   // Some callers build this from a raw feed player record (e.g. the Cutdown
   // Plan panel's findAutocutPlayer lookup) where `name` isn't guaranteed —
   // str.replace on undefined/null used to throw and, with no try/catch above
