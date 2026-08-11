@@ -347,7 +347,7 @@ Runs independently, **Week 1 → Week 17**, all-play format.
 | ID | Team | Abbrev | Tier |
 |----|------|--------|------|
 | 0013 | Muck Juggling Micks | MICKS | D-League |
-| 0014 | Thundering Herd | HERD | D-League |
+| 0014 | A Bruin Pegs Me | PEGME | D-League |
 | 0016 | Swiftie 4 Life | SWIFTY | D-League |
 | 0018 | Jewpacabra | JEW | Premier League |
 | 0020 | The Boondock Saints | SAINTS | D-League |
