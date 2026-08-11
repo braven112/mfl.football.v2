@@ -10,7 +10,7 @@ import {
 import { getAflCareerStats, type AflCareerStats } from '../../../utils/afl-career-stats';
 import { getConferenceName, type ConferenceId } from '../../../utils/afl-conference';
 import { buildHistoricalIdentities } from '../../../utils/franchise-eras';
-import { stripBadgeYear } from '../../../utils/afl-badge';
+import { stripBadgeYear, namespaceBadgeIds } from '../../../utils/afl-badge';
 import { PREMIER_LEAGUE, D_LEAGUE, getTierLogo, getTierLogoDark } from '../../../utils/afl-tier-logo';
 import ThemeImage from '../../../components/ThemeImage.astro';
 
@@ -31,8 +31,13 @@ const BADGE_SVG: Record<string, string> = {};
 for (const [p, raw] of Object.entries(badgeSvgRaw)) {
   BADGE_SVG[p.split('/').pop() as string] = raw;
 }
-function timelessBadge(filename: string): string {
-  return stripBadgeYear(BADGE_SVG[filename] ?? '');
+// uid is franchiseId + title-type key — unique per card (each type renders at
+// most once per franchise) — so every inlined badge's internal ids (clip
+// paths, gradients) stay collision-free across the whole grid. See
+// namespaceBadgeIds' doc comment for why this matters even though today's
+// art makes the collision visually harmless.
+function timelessBadge(filename: string, uid: string): string {
+  return namespaceBadgeIds(stripBadgeYear(BADGE_SVG[filename] ?? ''), uid);
 }
 
 // Division names map to the same award slugs the franchise detail page uses
@@ -215,7 +220,7 @@ const historicalIdentities = buildHistoricalIdentities(aflConfig.teams as any[])
                 <ul class="badges" aria-label="Titles">
                   {titles.map((t) => (
                     <li
-                      class={`badge badge--${t.key}`}
+                      class="badge"
                       title={`${TITLE_TOOLTIP[t.key]}: ${titleYears(t)}`}
                     >
                       <span class="icon" aria-hidden="true">
@@ -227,7 +232,10 @@ const historicalIdentities = buildHistoricalIdentities(aflConfig.teams as any[])
                             class="badge-tier-logo"
                           />
                         ) : (
-                          <span class="badge-svg" set:html={timelessBadge(badgeFilenameFor(t.key, team) ?? '')} />
+                          <span
+                            class="badge-svg"
+                            set:html={timelessBadge(badgeFilenameFor(t.key, team) ?? '', `${team.franchiseId}-${t.key}`)}
+                          />
                         )}
                       </span>
                       <span>{t.years.length}</span>

@@ -70,3 +70,36 @@ export function stripBadgeYear(svg: string): string {
   out = out.replace(/<text\b[^>]*>[^<]*★[^<]*<\/text>/g, '');
   return out;
 }
+
+/**
+ * Make every `id="..."` in `svg` unique by suffixing it with `-${uid}`,
+ * rewriting the matching `href="#id"` / `url(#id)` references so they still
+ * resolve. Badge art beyond the year arc carries its own ids — shield badges
+ * (division/conference) define a `#sh` clip-path and a per-badge gradient,
+ * e.g. `#g_north` — that `stampBadgeYear`'s `uid` param doesn't touch because
+ * a franchise's own trophy wall only ever needs one instance of any given
+ * badge file live at once. A page that inlines the SAME badge file once per
+ * FRANCHISE (the franchises index's aggregate icons) doesn't have that
+ * luxury: today's art is identical across every instance so a duplicate id
+ * resolving to the first one in the DOM is harmless, but nothing prevents a
+ * future revision from giving divisions distinct clip shapes or gradients,
+ * at which point every instance but the first would silently render wrong.
+ * Namespacing on load removes the collision instead of relying on today's
+ * art staying uniform forever.
+ */
+export function namespaceBadgeIds(svg: string, uid: string): string {
+  if (!svg || !uid) return svg;
+  const ids = new Set<string>();
+  const idPattern = /\bid="([^"]+)"/g;
+  let match: RegExpExecArray | null;
+  while ((match = idPattern.exec(svg))) ids.add(match[1]);
+  let out = svg;
+  for (const id of ids) {
+    const escaped = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    out = out
+      .replace(new RegExp(`id="${escaped}"`, 'g'), `id="${id}-${uid}"`)
+      .replace(new RegExp(`href="#${escaped}"`, 'g'), `href="#${id}-${uid}"`)
+      .replace(new RegExp(`url\\(#${escaped}\\)`, 'g'), `url(#${id}-${uid})`);
+  }
+  return out;
+}
