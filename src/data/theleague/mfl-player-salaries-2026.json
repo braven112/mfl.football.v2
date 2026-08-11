@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-08-11T18:36:16.185Z"
+    "fetchedAt": "2026-08-11T19:47:53.025Z"
   },
   "players": [
     {
@@ -294,7 +294,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "WR"
         ],
@@ -309,6 +309,10 @@
         {
           "id": "16615",
           "name": "Nabers, Malik"
+        },
+        {
+          "id": "14122",
+          "name": "Slayton, Darius"
         }
       ]
     },
@@ -797,7 +801,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 2,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "RB"
         ],
@@ -808,12 +812,7 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": [
-        {
-          "id": "14823",
-          "name": "Dowdle, Rico"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "11675",
@@ -1083,7 +1082,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 1,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "RB"
         ],
@@ -1094,7 +1093,12 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "15742",
+          "name": "Warren, Jaylen"
+        }
+      ]
     },
     {
       "id": "13593",
@@ -1175,7 +1179,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "WR"
         ],
@@ -1186,12 +1190,7 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": [
-        {
-          "id": "13630",
-          "name": "Sutton, Courtland"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "17482",
@@ -1894,12 +1893,12 @@
       "gamesPlayed": null,
       "depthChartAhead": [
         {
-          "id": "14833",
-          "name": "Jeudy, Jerry"
-        },
-        {
           "id": "17501",
           "name": "Concepcion, KC"
+        },
+        {
+          "id": "14833",
+          "name": "Jeudy, Jerry"
         },
         {
           "id": "17500",
@@ -2139,7 +2138,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 5,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "RB"
         ],
@@ -2704,7 +2703,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 1,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "WR"
         ],
@@ -2715,7 +2714,12 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "17501",
+          "name": "Concepcion, KC"
+        }
+      ]
     },
     {
       "id": "0502",
@@ -2842,7 +2846,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 4,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "WR"
         ],
@@ -2857,10 +2861,6 @@
         {
           "id": "17071",
           "name": "McMillan, Tetairoa"
-        },
-        {
-          "id": "15759",
-          "name": "Metchie, John"
         },
         {
           "id": "16809",
@@ -2901,7 +2901,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": null,
-        "depthChartOrder": 3,
+        "depthChartOrder": 9,
         "fantasyPositions": [
           "WR"
         ],
@@ -2960,12 +2960,12 @@
       "gamesPlayed": null,
       "depthChartAhead": [
         {
-          "id": "13630",
-          "name": "Sutton, Courtland"
-        },
-        {
           "id": "15284",
           "name": "Waddle, Jaylen"
+        },
+        {
+          "id": "13630",
+          "name": "Sutton, Courtland"
         }
       ]
     },
@@ -3063,12 +3063,12 @@
       "gamesPlayed": null,
       "depthChartAhead": [
         {
-          "id": "13630",
-          "name": "Sutton, Courtland"
-        },
-        {
           "id": "15284",
           "name": "Waddle, Jaylen"
+        },
+        {
+          "id": "13630",
+          "name": "Sutton, Courtland"
         },
         {
           "id": "16619",
@@ -3535,7 +3535,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
         ],
@@ -3550,6 +3550,14 @@
         {
           "id": "17071",
           "name": "McMillan, Tetairoa"
+        },
+        {
+          "id": "16809",
+          "name": "Coker, Jalen"
+        },
+        {
+          "id": "16639",
+          "name": "Legette, Xavier"
         }
       ]
     },
@@ -4084,7 +4092,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 6,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
         ],
@@ -4143,7 +4151,7 @@
         "active": true,
         "position": "QB",
         "depthChartPosition": "QB",
-        "depthChartOrder": 1,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "QB"
         ],
@@ -4154,7 +4162,12 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "13113",
+          "name": "Watson, Deshaun"
+        }
+      ]
     },
     {
       "id": "17074",
@@ -4393,7 +4406,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 4,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "WR"
         ],
@@ -4609,7 +4622,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 3,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "WR"
         ],
@@ -4624,10 +4637,6 @@
         {
           "id": "16615",
           "name": "Nabers, Malik"
-        },
-        {
-          "id": "14974",
-          "name": "Mooney, Darnell"
         }
       ]
     },
@@ -4863,7 +4872,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 5,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
         ],
@@ -5388,7 +5397,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 7,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "WR"
         ],
@@ -5608,7 +5617,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 3,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "RB"
         ],
@@ -5619,7 +5628,12 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "17474",
+          "name": "Johnson, Emmett"
+        }
+      ]
     },
     {
       "id": "17269",
@@ -5717,7 +5731,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 4,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "WR"
         ],
@@ -5736,6 +5750,10 @@
         {
           "id": "16620",
           "name": "Worthy, Xavier"
+        },
+        {
+          "id": "17518",
+          "name": "Allen, Cyrus"
         }
       ]
     },
@@ -6099,7 +6117,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 5,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "TE"
         ],
@@ -7032,7 +7050,7 @@
         "status": "Active",
         "active": true,
         "position": "WR",
-        "depthChartPosition": "RWR",
+        "depthChartPosition": "LWR",
         "depthChartOrder": 1,
         "fantasyPositions": [
           "WR"
@@ -7176,7 +7194,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 3,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "RB"
         ],
@@ -7189,12 +7207,16 @@
       "gamesPlayed": null,
       "depthChartAhead": [
         {
+          "id": "15742",
+          "name": "Warren, Jaylen"
+        },
+        {
           "id": "14823",
           "name": "Dowdle, Rico"
         },
         {
-          "id": "15742",
-          "name": "Warren, Jaylen"
+          "id": "17048",
+          "name": "Johnson, Kaleb"
         }
       ]
     },
@@ -8364,7 +8386,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 6,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "WR"
         ],
@@ -8381,12 +8403,12 @@
           "name": "Nabers, Malik"
         },
         {
-          "id": "14974",
-          "name": "Mooney, Darnell"
-        },
-        {
           "id": "14122",
           "name": "Slayton, Darius"
+        },
+        {
+          "id": "14974",
+          "name": "Mooney, Darnell"
         }
       ]
     },
@@ -9201,12 +9223,12 @@
       "gamesPlayed": null,
       "depthChartAhead": [
         {
-          "id": "14833",
-          "name": "Jeudy, Jerry"
-        },
-        {
           "id": "17501",
           "name": "Concepcion, KC"
+        },
+        {
+          "id": "14833",
+          "name": "Jeudy, Jerry"
         },
         {
           "id": "17500",
@@ -9693,7 +9715,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 5,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
         ],
@@ -9712,10 +9734,6 @@
         {
           "id": "16620",
           "name": "Worthy, Xavier"
-        },
-        {
-          "id": "17086",
-          "name": "Royals, Jalen"
         }
       ]
     },
@@ -10214,7 +10232,7 @@
         "active": true,
         "position": "QB",
         "depthChartPosition": "QB",
-        "depthChartOrder": 2,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "QB"
         ],
@@ -10225,12 +10243,7 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": [
-        {
-          "id": "17031",
-          "name": "Sanders, Shedeur"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "16597",
@@ -10316,7 +10329,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 3,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "RB"
         ],
@@ -10808,7 +10821,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 4,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "WR"
         ],
@@ -11310,7 +11323,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 1,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "TE"
         ],
@@ -11579,7 +11592,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 3,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "WR"
         ],
@@ -11594,10 +11607,6 @@
         {
           "id": "17071",
           "name": "McMillan, Tetairoa"
-        },
-        {
-          "id": "15759",
-          "name": "Metchie, John"
         }
       ]
     },
@@ -12455,7 +12464,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 3,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "RB"
         ],
@@ -12474,6 +12483,10 @@
         {
           "id": "15721",
           "name": "White, Rachaad"
+        },
+        {
+          "id": "17478",
+          "name": "Allen, Kaytron"
         }
       ]
     },
@@ -12894,7 +12907,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 4,
+        "depthChartOrder": 9,
         "fantasyPositions": [
           "WR"
         ],
@@ -12911,8 +12924,16 @@
           "name": "Washington, Malik"
         },
         {
+          "id": "15788",
+          "name": "Tolbert, Jalen"
+        },
+        {
           "id": "17599",
           "name": "Douglas, Caleb"
+        },
+        {
+          "id": "17528",
+          "name": "Coleman, Kevin"
         }
       ]
     },
@@ -13000,7 +13021,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 4,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "RB"
         ],
@@ -13011,12 +13032,7 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": [
-        {
-          "id": "17049",
-          "name": "Smith, Brashard"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "17505",
@@ -13208,7 +13224,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 3,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
         ],
@@ -13223,6 +13239,10 @@
         {
           "id": "16684",
           "name": "Washington, Malik"
+        },
+        {
+          "id": "15788",
+          "name": "Tolbert, Jalen"
         }
       ]
     },
@@ -13656,7 +13676,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 4,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "RB"
         ],
@@ -14260,7 +14280,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 7,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "WR"
         ],
@@ -14277,16 +14297,12 @@
           "name": "Washington, Malik"
         },
         {
-          "id": "17599",
-          "name": "Douglas, Caleb"
-        },
-        {
-          "id": "17506",
-          "name": "Bell, Chris"
-        },
-        {
           "id": "15788",
           "name": "Tolbert, Jalen"
+        },
+        {
+          "id": "17599",
+          "name": "Douglas, Caleb"
         }
       ]
     },
@@ -14787,16 +14803,12 @@
       "gamesPlayed": null,
       "depthChartAhead": [
         {
-          "id": "14823",
-          "name": "Dowdle, Rico"
-        },
-        {
           "id": "15742",
           "name": "Warren, Jaylen"
         },
         {
-          "id": "17685",
-          "name": "Heidenreich, Eli"
+          "id": "14823",
+          "name": "Dowdle, Rico"
         }
       ]
     },
@@ -15122,7 +15134,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 1,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "WR"
         ],
@@ -15133,7 +15145,12 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "15284",
+          "name": "Waddle, Jaylen"
+        }
+      ]
     },
     {
       "id": "15789",
@@ -15260,7 +15277,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "WR"
         ],
@@ -15271,12 +15288,7 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": [
-        {
-          "id": "14833",
-          "name": "Jeudy, Jerry"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "17519",
@@ -15370,7 +15382,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 5,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "RB"
         ],
@@ -15389,10 +15401,6 @@
         {
           "id": "15721",
           "name": "White, Rachaad"
-        },
-        {
-          "id": "15713",
-          "name": "Ford, Jerome"
         }
       ]
     },
@@ -15900,7 +15908,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 5,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "RB"
         ],
@@ -16159,7 +16167,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": null,
-        "depthChartOrder": 6,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "WR"
         ],
@@ -16554,7 +16562,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 5,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
         ],
@@ -16883,12 +16891,12 @@
       "gamesPlayed": null,
       "depthChartAhead": [
         {
-          "id": "13630",
-          "name": "Sutton, Courtland"
-        },
-        {
           "id": "15284",
           "name": "Waddle, Jaylen"
+        },
+        {
+          "id": "13630",
+          "name": "Sutton, Courtland"
         },
         {
           "id": "16619",
@@ -16984,8 +16992,8 @@
           "WR"
         ],
         "experience": 3,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Questionable",
+        "injuryBodyPart": "Undisclosed",
         "gsisId": null
       },
       "nflverse": null,
@@ -17904,12 +17912,12 @@
       "gamesPlayed": null,
       "depthChartAhead": [
         {
-          "id": "14833",
-          "name": "Jeudy, Jerry"
-        },
-        {
           "id": "17501",
           "name": "Concepcion, KC"
+        },
+        {
+          "id": "14833",
+          "name": "Jeudy, Jerry"
         }
       ]
     },
@@ -17967,12 +17975,12 @@
           "name": "Worthy, Xavier"
         },
         {
-          "id": "17086",
-          "name": "Royals, Jalen"
-        },
-        {
           "id": "17518",
           "name": "Allen, Cyrus"
+        },
+        {
+          "id": "17086",
+          "name": "Royals, Jalen"
         }
       ]
     },
@@ -18207,7 +18215,7 @@
         "active": true,
         "position": "K",
         "depthChartPosition": "K",
-        "depthChartOrder": 2,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "K"
         ],
@@ -18391,7 +18399,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 5,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "WR"
         ],
@@ -18406,14 +18414,6 @@
         {
           "id": "16684",
           "name": "Washington, Malik"
-        },
-        {
-          "id": "17599",
-          "name": "Douglas, Caleb"
-        },
-        {
-          "id": "17506",
-          "name": "Bell, Chris"
         }
       ]
     },
@@ -18917,7 +18917,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 5,
+        "depthChartOrder": 6,
         "fantasyPositions": [
           "RB"
         ],
@@ -19314,7 +19314,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 3,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "RB"
         ],
