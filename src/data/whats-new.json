@@ -1,5 +1,75 @@
 [
   {
+    "id": "weekly-rollup-2026-08-10",
+    "date": "2026-08-10",
+    "title": "Weekly Fixes & Polish (Aug 8-10)",
+    "summary": "7 bug fixes and style improvements across rosters, what's new, other, design system & theming, and more.",
+    "description": [
+      "This week's 7 bug fixes and polish improvements touched the following areas of the site:",
+      "<strong>Rosters</strong> — The great team-logo blackout is over — for good this time. Certain NFL crests (looking at you, Tampa Bay and New Orleans) kept rendering as broken-image icons on roster and player pages, and every fix seemed to wear off by morning. Turns out the logo files had never actually shipped with the site, and once they did, a 4-hour cache kept serving phones the old broken answer. The logos are now committed, guard-tested in CI (including old-timey codes like OAK and STL on historical rosters), and if one ever fails to load anyway, it now quietly disappears instead of leaving that sad torn-photo icon.",
+      "<strong>What's New</strong> — What's New cards stopped stuttering. A fresh article was tagged 'NEW PAGE' and then, an inch to the right, 'NEW' again in green — same word, two different meanings — and the green one was floating as bare text right where the screenshot ends, so on a purple thumbnail you couldn't read it at all. It's now a proper chip that says 'JUST IN', which is what it always meant: published since you last stopped by. Dark mode finally reached the What's New pages. The category tags — New Page, Enhancement, Bug Fix — were painted in their daylight colors no matter which theme you were in, so the same article looked bright and legible on the homepage and went muddy the moment you opened the full list or clicked through to read it. All three surfaces now share one palette, and the filter buttons across the top got a contrast bump while we were in there.",
+      "<strong>Other</strong> — The Franchise History cards traded their full-width banner art for the crest-style icon lockup the AFL franchises page uses — same career records and award pills, tidier cards, and both leagues' franchise pages now share one design language.",
+      "<strong>Design System & Theming</strong> — NFL team and college logos no longer show up as broken-image icons in dark mode on spotty connections — the site now serves its own copies of the dark logo sets instead of leaning on ESPN's servers every time a page renders.",
+      "<strong>Free Agents</strong> — The Filters drawer on the Free Agents page opens all the way on a phone now. It used to stop dead partway through Weight, with Experience, Draft Round, the two include-toggles and the Clear Filters button all trapped behind the player table — the panel had a fixed height that only fit the desktop layout. It now sizes itself to whatever's inside it, on both leagues' pages. Free Agents no longer lies to you after you wander off and come back. Filter for 28-year-old Chiefs, go look at the standings, hit back — the table was still showing you those four guys, and the Filters button still claimed two filters were on, but the panel itself read empty with nothing to clear. The page now re-reads its own controls when you return, so the list matches what the filters say. Same fix retires two dead buttons on the way: the first click on Filters, and (in the AFL) the conference switcher, both used to do nothing at all on your first try after coming back."
+    ],
+    "category": "bug-fix",
+    "link": "/theleague/whats-new",
+    "linkLabel": "See all updates",
+    "icon": "wrench",
+    "excludeFromHero": true,
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "weekly-rollup-2026-08-10-afl",
+    "date": "2026-08-10",
+    "title": "Weekly Fixes & Polish (Aug 8-10)",
+    "summary": "13 bug fixes and style improvements across keeper report card, awards & trophies, rosters, free agents, and more.",
+    "description": [
+      "This week's 13 bug fixes and polish improvements touched the following areas of the site:",
+      "<strong>Keeper Report Card</strong> — The Keeper Report Card was crediting keeper decisions to the wrong regime — cards wore the roster year's branding, so a franchise that changed hands over the offseason showed the old owner's name on keeps the new owner picked (the 2024→2025 card said Can't Get Over the Baby Gate on calls Get off my Ditka made). Cards now wear the keep season's name, icon, and tier: the owner who made the call gets the credit, and the blame.",
+      "<strong>Awards & Trophies</strong> — For a few hours this morning, seven historical division titles quietly changed hands — the awards refresh bot started breaking division-record ties on raw points-for instead of the league's official standings order, and 2017's AL North banner walked from Smokane FC to Fullybaked. The rightful winners have been restored, the bot now respects MFL's official tie-breaks, and yes, the trophy audit that caught it is feeling very smug.",
+      "<strong>Rosters</strong> — The great team-logo blackout is over — for good this time. Certain NFL crests (looking at you, Tampa Bay and New Orleans) kept rendering as broken-image icons on roster and player pages, and every fix seemed to wear off by morning. Turns out the logo files had never actually shipped with the site, and once they did, a 4-hour cache kept serving phones the old broken answer. The logos are now committed, guard-tested in CI (including old-timey codes like OAK and STL on historical rosters), and if one ever fails to load anyway, it now quietly disappears instead of leaving that sad torn-photo icon.",
+      "<strong>Free Agents</strong> — Rookies were playing hide-and-seek on the AFL Free Agents page — an 'Include rookies' filter defaulted to off, so the entire draft class (and their ADP) was invisible unless you knew which checkbox to dig up. Rookies now show by default, ADP and all, and there's a new 'Rookies only' filter for when you want to scout nothing but the new blood. The AFL Free Agents page was hiding every player still rostered in the OTHER conference — so a guy dropped in your conference (looking at you, Kyle Pitts) never showed up as available. Availability is now tracked per conference, and roster moves hit the page within a minute of happening on MFL instead of waiting for the next site deploy. (The conference-scoped view that landed with this got its own What's New article.). The conference switcher on the Free Agents page lost its 'Yours' badge — you know which conference you play in, and the page already opens on it. The Filters drawer on the Free Agents page opens all the way on a phone now. It used to stop dead partway through Weight, with Experience, Draft Round, the two include-toggles and the Clear Filters button all trapped behind the player table — the panel had a fixed height that only fit the desktop layout. It now sizes itself to whatever's inside it, on both leagues' pages. Free Agents no longer lies to you after you wander off and come back. Filter for 28-year-old Chiefs, go look at the standings, hit back — the table was still showing you those four guys, and the Filters button still claimed two filters were on, but the panel itself read empty with nothing to clear. The page now re-reads its own controls when you return, so the list matches what the filters say. Same fix retires two dead buttons on the way: the first click on Filters, and (in the AFL) the conference switcher, both used to do nothing at all on your first try after coming back.",
+      "<strong>What's New</strong> — What's New cards stopped stuttering. A fresh article was tagged 'NEW PAGE' and then, an inch to the right, 'NEW' again in green — same word, two different meanings — and the green one was floating as bare text right where the screenshot ends, so on a purple thumbnail you couldn't read it at all. It's now a proper chip that says 'JUST IN', which is what it always meant: published since you last stopped by. Dark mode finally reached the What's New pages. The category tags — New Page, Enhancement, Bug Fix — were painted in their daylight colors no matter which theme you were in, so the same article looked bright and legible on the homepage and went muddy the moment you opened the full list or clicked through to read it. All three surfaces now share one palette, and the filter buttons across the top got a contrast bump while we were in there.",
+      "<strong>Design System & Theming</strong> — NFL team and college logos no longer show up as broken-image icons in dark mode on spotty connections — the site now serves its own copies of the dark logo sets instead of leaning on ESPN's servers every time a page renders.",
+      "<strong>Navigation & Routing</strong> — The footer's Keeper Report Card link went live — it was a grayed-out \"soon\" placeholder from the footer rebuild, and now it actually takes you to the new hindsight grades.",
+      "<strong>Other</strong> — The Keeper Report Card now reads keeper classes straight from the official post-deadline roster snapshot (the roster IS the keeps between the cut deadline and the draft) instead of inferring them — the methodology footnote names the snapshot date it used."
+    ],
+    "category": "bug-fix",
+    "link": "/afl-fantasy/whats-new",
+    "linkLabel": "See all updates",
+    "icon": "wrench",
+    "excludeFromHero": true,
+    "leagues": [
+      "afl"
+    ],
+    "image": "weekly-rollup-footer-keeper-link.webp",
+    "imageAlt": "The AFL footer: champions band over the five-column directory, with the Front Office column's Keeper Report Card link now live."
+  },
+  {
+    "id": "weekly-rollup-2026-08-10-bb1",
+    "date": "2026-08-10",
+    "title": "Weekly Fixes & Polish (Aug 8-10)",
+    "summary": "6 bug fixes and style improvements across rosters, what's new, design system & theming, free agents.",
+    "description": [
+      "This week's 6 bug fixes and polish improvements touched the following areas of the site:",
+      "<strong>Rosters</strong> — The great team-logo blackout is over — for good this time. Certain NFL crests (looking at you, Tampa Bay and New Orleans) kept rendering as broken-image icons on roster and player pages, and every fix seemed to wear off by morning. Turns out the logo files had never actually shipped with the site, and once they did, a 4-hour cache kept serving phones the old broken answer. The logos are now committed, guard-tested in CI (including old-timey codes like OAK and STL on historical rosters), and if one ever fails to load anyway, it now quietly disappears instead of leaving that sad torn-photo icon.",
+      "<strong>What's New</strong> — What's New cards stopped stuttering. A fresh article was tagged 'NEW PAGE' and then, an inch to the right, 'NEW' again in green — same word, two different meanings — and the green one was floating as bare text right where the screenshot ends, so on a purple thumbnail you couldn't read it at all. It's now a proper chip that says 'JUST IN', which is what it always meant: published since you last stopped by. Dark mode finally reached the What's New pages. The category tags — New Page, Enhancement, Bug Fix — were painted in their daylight colors no matter which theme you were in, so the same article looked bright and legible on the homepage and went muddy the moment you opened the full list or clicked through to read it. All three surfaces now share one palette, and the filter buttons across the top got a contrast bump while we were in there.",
+      "<strong>Design System & Theming</strong> — NFL team and college logos no longer show up as broken-image icons in dark mode on spotty connections — the site now serves its own copies of the dark logo sets instead of leaning on ESPN's servers every time a page renders.",
+      "<strong>Free Agents</strong> — The Filters drawer on the Free Agents page opens all the way on a phone now. It used to stop dead partway through Weight, with Experience, Draft Round, the two include-toggles and the Clear Filters button all trapped behind the player table — the panel had a fixed height that only fit the desktop layout. It now sizes itself to whatever's inside it, on both leagues' pages. Free Agents no longer lies to you after you wander off and come back. Filter for 28-year-old Chiefs, go look at the standings, hit back — the table was still showing you those four guys, and the Filters button still claimed two filters were on, but the panel itself read empty with nothing to clear. The page now re-reads its own controls when you return, so the list matches what the filters say. Same fix retires two dead buttons on the way: the first click on Filters, and (in the AFL) the conference switcher, both used to do nothing at all on your first try after coming back."
+    ],
+    "category": "bug-fix",
+    "link": "/best-ball-1/whats-new",
+    "linkLabel": "See all updates",
+    "icon": "wrench",
+    "excludeFromHero": true,
+    "leagues": [
+      "bb1"
+    ]
+  },
+  {
     "id": "afl-keeper-report-card",
     "date": "2026-08-09",
     "category": "new-page",
