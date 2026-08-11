@@ -36,7 +36,7 @@ DIVISION SETUP
 - American League North: Smokane FC (0001), Drunk Indians (0002), Get off my Ditka (0004), Da Dangsters (0006), Fullybaked (0010), Suh girls one cup (0012)
 - American League South: Team Minty Fresh (0003), Computer Jocks (0005), Avenging Amish (0007), Dicks out for Harambe (0008), Vitside Mafia (0009), Midwestside Connection (0011)
 - National League East: The Mariachi Ninjas (0015), Titsburgh Feelers (0017), Badd Boys (0019), Balls Deep (0022), The Show (0023), No Soup For You (0024)
-- National League West: Muck Juggling Micks (0013), Thundering Herd (0014), Swiftie 4 Life (0016), Jewpacabra (0018), The Boondock Saints (0020), Chatmaster (0021)
+- National League West: Muck Juggling Micks (0013), A Bruin Pegs Me (0014), Swiftie 4 Life (0016), Jewpacabra (0018), The Boondock Saints (0020), Chatmaster (0021)
 - Each team plays division opponents twice during the regular season.
 
 TEAM ROSTERS
