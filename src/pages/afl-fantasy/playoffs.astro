@@ -117,9 +117,10 @@ if (!yearResolvedConfig?.teams || yearResolvedConfig.teams.length === 0) {
   return Astro.redirect(`/afl-fantasy/playoffs?year=${defaultYear}`);
 }
 
-// Get conference standings for both conferences
-const conferenceAStandings = getConferenceStandings(franchises, yearResolvedConfig, '00');
-const conferenceBStandings = getConferenceStandings(franchises, yearResolvedConfig, '01');
+// Get conference standings for both conferences. MFL's feed order is the
+// AFL's official final order — preserve it instead of re-sorting locally.
+const conferenceAStandings = getConferenceStandings(franchises, yearResolvedConfig, '00', { preserveFeedOrder: true });
+const conferenceBStandings = getConferenceStandings(franchises, yearResolvedConfig, '01', { preserveFeedOrder: true });
 
 const getModuleData = (mod: any) =>
   mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
@@ -681,7 +682,9 @@ const findFinalGame = (bracketId: string) => {
 };
 
 // Get Premier League and D-League standings
-const tierAllPlayStandings = getTierAllPlayStandings(franchises, yearResolvedConfig);
+const tierAllPlayStandings = getTierAllPlayStandings(franchises, yearResolvedConfig, undefined, undefined, {
+  preserveFeedOrder: true,
+});
 const premierLeague = tierAllPlayStandings.find(t => t.tier === 'Premier League');
 const dLeague = tierAllPlayStandings.find(t => t.tier === 'D-League');
 

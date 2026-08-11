@@ -41,7 +41,7 @@ interface ChampionEntry {
 
 function topSeed(code: '00' | '01'): ChampionEntry | null {
   try {
-    const result = getConferenceStandings(standings, config, code);
+    const result = getConferenceStandings(standings, config, code, { preserveFeedOrder: true });
     const top = (result.allTeams ?? [])[0];
     if (!top) return null;
     const team = teamMap.get(top.id);

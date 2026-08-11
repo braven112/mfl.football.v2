@@ -205,11 +205,27 @@ const numField = (v: string | undefined): number => {
   return Number.isFinite(n) ? n : 0;
 };
 
-/** Overall won-lost-tied percentage ((W + 0.5T) / G), ties counted as half. */
+/**
+ * Overall won-lost-tied percentage ((W + 0.5T) / G), ties counted as half.
+ *
+ * Modern feeds carry the div/nondiv split; older ones ship only the combined
+ * record in h2hw/h2hl/h2ht (in MFL's standings export `h2h*` IS the overall
+ * record, not a head-to-head stat). Some feeds carry a PARTIAL split — 2003
+ * has `divw/divl/divt` all "0" and no `nondiv*` at all — so the fallback keys
+ * off whether the split actually accounts for any games, not merely whether
+ * its fields are present. Testing presence alone would read 2003 as 0-0-0 and
+ * collapse every team to the coin flip.
+ */
 function overallPct(f: StandingsFranchise): number {
-  const w = parseInt(f.divw || '0') + parseInt(f.nondivw || '0');
-  const l = parseInt(f.divl || '0') + parseInt(f.nondivl || '0');
-  const t = parseInt(f.divt || '0') + parseInt(f.nondivt || '0');
+  const splitW = parseInt(f.divw || '0') + parseInt(f.nondivw || '0');
+  const splitL = parseInt(f.divl || '0') + parseInt(f.nondivl || '0');
+  const splitT = parseInt(f.divt || '0') + parseInt(f.nondivt || '0');
+  const splitGames = splitW + splitL + splitT;
+  if (splitGames > 0) return (splitW + 0.5 * splitT) / splitGames;
+
+  const w = parseInt(f.h2hw || '0');
+  const l = parseInt(f.h2hl || '0');
+  const t = parseInt(f.h2ht || '0');
   const g = w + l + t;
   return g > 0 ? (w + 0.5 * t) / g : 0;
 }
@@ -381,6 +397,33 @@ function sortByRecordReverse(
     result.push(...rankTiedGroupWorstFirst(groups.get(pct)!, teamConfigs, headToHead));
   }
   return result;
+}
+
+/**
+ * Rank one division's teams BEST first per the constitution: overall W-L-T %
+ * is the primary key; equal-record sets run the division tiebreaker chain
+ * (head-to-head -> division % -> conference % -> PWR -> PF -> all-play ->
+ * VP -> most PA -> coin flip, eliminate-and-restart). This is the forward
+ * (standings) view of the same chain the draft predictor uses in reverse.
+ * Exported for verification against MFL's official feed order — MFL applies
+ * the same constitution rules, so the two should agree; treat MFL's order as
+ * authoritative when they don't (see tests/afl-division-titles.test.ts).
+ */
+export function rankDivisionStandingsBestFirst(
+  teams: StandingsFranchise[],
+  headToHead?: HeadToHeadMap
+): StandingsFranchise[] {
+  const groups = new Map<number, StandingsFranchise[]>();
+  for (const t of teams) {
+    const pct = overallPct(t);
+    if (!groups.has(pct)) groups.set(pct, []);
+    groups.get(pct)!.push(t);
+  }
+  const out: StandingsFranchise[] = [];
+  for (const pct of [...groups.keys()].sort((a, b) => b - a)) {
+    out.push(...rankDivisionBlockWorstFirst(groups.get(pct)!, headToHead).reverse());
+  }
+  return out;
 }
 
 /**

@@ -53,7 +53,7 @@ const hasGames = standings.some(f => parseFloat(f.pf ?? '0') > 0);
 
 let confResult: { conference: any; allTeams: Array<any> } | null = null;
 try {
-  confResult = getConferenceStandings(standings, config, conferenceCode);
+  confResult = getConferenceStandings(standings, config, conferenceCode, { preserveFeedOrder: true });
 } catch {
   confResult = null;
 }

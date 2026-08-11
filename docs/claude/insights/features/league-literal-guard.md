@@ -72,3 +72,25 @@ letting the script's own default apply. Where the script has no such
 fallback and *requires* a non-empty id (`fetch-mfl-feeds.mjs`,
 `fetch-trade-bait.mjs`), the workflow keeps a literal (documented inline,
 allowlisted in the guard test) rather than risk breaking a scheduled run.
+
+## Design: diverging behavior per league without naming the league
+
+When a util shared by both leagues needs to behave differently for one of
+them, the tempting fix is a league-aware branch inside the util — which means
+getting a league identity in there, which invites either a registry lookup in
+a leaf utility or (worse) the literal the guard exists to prevent.
+
+Prefer an **opt-in behavior flag on the util, passed by the callers that want
+it**. `src/utils/standings.ts` needed AFL pages to render MFL's official row
+order while TheLeague kept its local tiebreaker sort (2026-08-11). Instead of
+`if (league === 'afl-fantasy')`, the sorters take
+`opts: { preserveFeedOrder?: boolean }` and the five AFL callers pass
+`{ preserveFeedOrder: true }`. The util stays league-agnostic, the guard has
+nothing to catch, and — the real win — the default path is byte-identical for
+every existing caller, so the change carries no risk for the league that
+wasn't being fixed. `tests/afl-structure.test.ts` pins both paths against the
+same fixture (feed order deliberately contradicting every local metric), which
+proves the flag actually branches and that the default didn't move.
+
+Name the flag for the *behavior* (`preserveFeedOrder`), not the league
+(`aflMode`) — a behavior name stays correct when the second league adopts it.

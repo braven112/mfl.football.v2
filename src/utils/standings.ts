@@ -96,38 +96,36 @@ function getTeamConfig(franchiseId: string, config: LeagueConfig) {
   return config.teams.find(t => t.franchiseId === franchiseId);
 }
 
-// Compare two teams using a specific tiebreaker metric
-function compareBySingleMetric(a: TeamStanding, b: TeamStanding, metric: string): number {
-  const getValue = (team: TeamStanding, metric: string): number => {
-    switch (metric) {
-      case 'h2h':
-        return parseFloat(team['h2hpct' as keyof TeamStanding] as any);
-      case 'divpct':
-        return parseFloat(team.divpct);
-      case 'all_play':
-        return parseFloat(team.all_play_pct);
-      case 'pf':
-        return parseFloat(team.pf);
-      case 'pwr':
-        return parseFloat(team.pwr);
-      case 'vp':
-        return parseFloat(team.vp);
-      case 'pa':
-        return parseFloat(team.pa);
-      default:
-        return 0;
-    }
-  };
+/**
+ * Options accepted by the standings sorters.
+ *
+ * `preserveFeedOrder`: keep MFL's leagueStandings row order instead of
+ * re-sorting locally. MFL's export rows arrive in the league's OFFICIAL final
+ * order — overall record first, ties broken by the league's own configured
+ * tiebreaker chain — so for leagues where MFL is the source of truth (AFL,
+ * commissioner ruling 2026-08-11) the correct sort is no sort at all. The
+ * first row of each division is the division winner. Default (false) keeps
+ * the legacy local tiebreaker path byte-identical for existing callers.
+ */
+export type StandingsSortOptions = {
+  preserveFeedOrder?: boolean;
+};
 
-  const aVal = getValue(a, metric);
-  const bVal = getValue(b, metric);
-
-  // Lower PA is better, so negate for comparison
-  if (metric === 'pa') return aVal - bVal;
-  return bVal - aVal; // Descending order
+// Comparator that restores the original feed order of the input rows. A team
+// missing from the input (shouldn't happen — the rows ARE the input) sorts to
+// the end rather than winning a comparison against a real row.
+function feedOrderComparator(franchises: StandingsFranchise[]) {
+  const index = new Map(franchises.map((f, i) => [f.id, i]));
+  return (a: TeamStanding, b: TeamStanding) =>
+    (index.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (index.get(b.id) ?? Number.MAX_SAFE_INTEGER);
 }
 
-// Division tiebreaker sequence per rulebook
+// Division tiebreaker sequence for the default (legacy) path. NOTE: this is
+// NOT the AFL constitution's chain — it has no head-to-head or conference%
+// step, all-play is promoted above PWR/PF, and it prefers LOWER points
+// allowed where the constitution's step 8 is MOST points allowed. AFL pages
+// bypass it entirely via `preserveFeedOrder` (MFL's order is authoritative);
+// it remains only for TheLeague's default path, unchanged.
 function divisionTiebreaker(teams: TeamStanding[]): TeamStanding[] {
   if (teams.length <= 1) return teams;
 
@@ -174,44 +172,6 @@ function divisionTiebreaker(teams: TeamStanding[]): TeamStanding[] {
   return sorted;
 }
 
-// Wild card tiebreaker sequence per rulebook
-function wildCardTiebreaker(teams: TeamStanding[]): TeamStanding[] {
-  if (teams.length <= 1) return teams;
-
-  const sorted = [...teams];
-
-  sorted.sort((a, b) => {
-    // First compare by all-play record
-    const aAllPlay = parseFloat(a.all_play_pct);
-    const bAllPlay = parseFloat(b.all_play_pct);
-
-    if (aAllPlay !== bAllPlay) return bAllPlay - aAllPlay;
-
-    // Tiebreaker sequence: all_play, pf, pwr, vp, pa
-    const tiebreakers = ['pf', 'pwr', 'vp', 'pa'];
-
-    for (const tiebreaker of tiebreakers) {
-      let result = 0;
-
-      if (tiebreaker === 'pf') {
-        result = parseFloat(b.pf) - parseFloat(a.pf);
-      } else if (tiebreaker === 'pwr') {
-        result = parseFloat(b.pwr) - parseFloat(a.pwr);
-      } else if (tiebreaker === 'vp') {
-        result = parseFloat(b.vp) - parseFloat(a.vp);
-      } else if (tiebreaker === 'pa') {
-        result = parseFloat(a.pa) - parseFloat(b.pa); // Lower PA is better
-      }
-
-      if (result !== 0) return result;
-    }
-
-    return 0; // Coin flip
-  });
-
-  return sorted;
-}
-
 // Combine separate W/L/T fields into a "W-L-T" string when the combined field
 // is absent (pre-2004 MFL feeds ship only the separate fields).
 function normalizeWLT(combined: unknown, w: unknown, l: unknown, t: unknown): string {
@@ -251,9 +211,13 @@ export function enrichTeamStanding(franchise: StandingsFranchise, config: League
 }
 
 // Get division standings
-export function getDivisionStandings(franchises: StandingsFranchise[], config: LeagueConfig): DivisionStandings[] {
+export function getDivisionStandings(
+  franchises: StandingsFranchise[],
+  config: LeagueConfig,
+  opts: StandingsSortOptions = {}
+): DivisionStandings[] {
   // First get league standings to get seed information
-  const leagueStandings = getLeagueStandings(franchises, config);
+  const leagueStandings = getLeagueStandings(franchises, config, opts);
   const seedMap = new Map(leagueStandings.map(t => [t.id, t.seed]));
 
   const divisions: { [key: string]: TeamStanding[] } = {};
@@ -278,12 +242,18 @@ export function getDivisionStandings(franchises: StandingsFranchise[], config: L
     .filter(div => divisions[div])
     .map(div => ({
       name: div,
-      teams: divisionTiebreaker(divisions[div]),
+      // Grouping preserved the feed's row order, which IS the official
+      // division ranking when preserveFeedOrder is set — render as-is.
+      teams: opts.preserveFeedOrder ? divisions[div] : divisionTiebreaker(divisions[div]),
     }));
 }
 
 // Get league standings (all teams sorted by playoff seeding)
-export function getLeagueStandings(franchises: StandingsFranchise[], config: LeagueConfig): TeamStanding[] {
+export function getLeagueStandings(
+  franchises: StandingsFranchise[],
+  config: LeagueConfig,
+  opts: StandingsSortOptions = {}
+): TeamStanding[] {
   const standings = franchises.map(f => enrichTeamStanding(f, config));
 
   // Group by division
@@ -294,6 +264,22 @@ export function getLeagueStandings(franchises: StandingsFranchise[], config: Lea
     }
     divisions[standing.division].push(standing);
   });
+
+  if (opts.preserveFeedOrder) {
+    // MFL's row order is the official ranking: the first row of each division
+    // group is that division's winner, and cross-division ordering is simply
+    // the rows' original feed positions.
+    const byFeed = feedOrderComparator(franchises);
+    const winners = Object.values(divisions)
+      .map(divTeams => divTeams[0])
+      .sort(byFeed);
+    const winnerIds = new Set(winners.map(w => w.id));
+    const rest = standings.filter(team => !winnerIds.has(team.id)).sort(byFeed);
+    return [
+      ...winners.map((team, idx) => ({ ...team, seed: idx + 1 })),
+      ...rest.map((team, idx) => ({ ...team, seed: winners.length + idx + 1 })),
+    ];
+  }
 
   // Get division winners (one per division)
   const divisionWinners = Object.values(divisions)
@@ -360,10 +346,11 @@ export function getLeagueStandings(franchises: StandingsFranchise[], config: Lea
 export function getAllPlayStandings(
   franchises: StandingsFranchise[],
   config: LeagueConfig,
-  calculatedAllPlay?: Map<string, AllPlayRecord>
+  calculatedAllPlay?: Map<string, AllPlayRecord>,
+  opts: StandingsSortOptions = {}
 ): TeamStanding[] {
   // First get league standings to get seed information
-  const leagueStandings = getLeagueStandings(franchises, config);
+  const leagueStandings = getLeagueStandings(franchises, config, opts);
   const seedMap = new Map(leagueStandings.map(t => [t.id, t.seed]));
 
   const standings = franchises.map(franchise => {
@@ -418,10 +405,11 @@ export function getTierAllPlayStandings(
   franchises: StandingsFranchise[],
   config: LeagueConfig,
   calculatedAllPlay?: Map<string, AllPlayRecord>,
-  tierMembership?: Record<string, string> | null
+  tierMembership?: Record<string, string> | null,
+  opts: StandingsSortOptions = {}
 ): { tier: string; teams: TeamStanding[] }[] {
   // First get league standings to get seed information
-  const leagueStandings = getLeagueStandings(franchises, config);
+  const leagueStandings = getLeagueStandings(franchises, config, opts);
   const seedMap = new Map(leagueStandings.map(t => [t.id, t.seed]));
 
   const standings = franchises.map(franchise => {
@@ -498,7 +486,12 @@ export function getTierAllPlayStandings(
 }
 
 // Get conference standings (for leagues with conferences like AFL Fantasy)
-export function getConferenceStandings(franchises: StandingsFranchise[], config: LeagueConfig, conferenceCode: string) {
+export function getConferenceStandings(
+  franchises: StandingsFranchise[],
+  config: LeagueConfig,
+  conferenceCode: string,
+  opts: StandingsSortOptions = {}
+) {
   if (!config.conferences || !config.divisionToConference) {
     throw new Error('League config does not have conference structure');
   }
@@ -525,29 +518,35 @@ export function getConferenceStandings(franchises: StandingsFranchise[], config:
     divisionGroups[team.division].push(team);
   });
 
-  // Get division winners (one per division)
+  const byFeed = feedOrderComparator(franchises);
+
+  // Get division winners (one per division). With preserveFeedOrder, the
+  // first row of each division group (feed order) IS the official winner;
+  // cross-division ordering follows the rows' original feed positions.
   const divisionWinners = Object.values(divisionGroups)
-    .map(divTeams => divisionTiebreaker(divTeams)[0]);
+    .map(divTeams => (opts.preserveFeedOrder ? divTeams[0] : divisionTiebreaker(divTeams)[0]));
 
   // Sort division winners by overall record
-  const sortedDivWinners = divisionWinners.sort((a, b) => {
-    const aRecord = parseWLT(a.h2hwlt);
-    const bRecord = parseWLT(b.h2hwlt);
+  const sortedDivWinners = opts.preserveFeedOrder
+    ? divisionWinners.sort(byFeed)
+    : divisionWinners.sort((a, b) => {
+        const aRecord = parseWLT(a.h2hwlt);
+        const bRecord = parseWLT(b.h2hwlt);
 
-    if (aRecord.wins !== bRecord.wins) return bRecord.wins - aRecord.wins;
-    if (aRecord.losses !== bRecord.losses) return aRecord.losses - bRecord.losses;
+        if (aRecord.wins !== bRecord.wins) return bRecord.wins - aRecord.wins;
+        if (aRecord.losses !== bRecord.losses) return aRecord.losses - bRecord.losses;
 
-    // Tiebreakers
-    const aAllPlay = parseFloat(a.all_play_pct);
-    const bAllPlay = parseFloat(b.all_play_pct);
-    if (aAllPlay !== bAllPlay) return bAllPlay - aAllPlay;
+        // Tiebreakers
+        const aAllPlay = parseFloat(a.all_play_pct);
+        const bAllPlay = parseFloat(b.all_play_pct);
+        if (aAllPlay !== bAllPlay) return bAllPlay - aAllPlay;
 
-    const aPF = parseFloat(a.pf);
-    const bPF = parseFloat(b.pf);
-    if (aPF !== bPF) return bPF - aPF;
+        const aPF = parseFloat(a.pf);
+        const bPF = parseFloat(b.pf);
+        if (aPF !== bPF) return bPF - aPF;
 
-    return 0;
-  });
+        return 0;
+      });
 
   // Get non-division winners (wild card candidates)
   const wildCardCandidates = conferenceTeams.filter(
@@ -555,24 +554,26 @@ export function getConferenceStandings(franchises: StandingsFranchise[], config:
   );
 
   // Sort wild card candidates by overall record
-  const sortedWildCards = wildCardCandidates.sort((a, b) => {
-    const aRecord = parseWLT(a.h2hwlt);
-    const bRecord = parseWLT(b.h2hwlt);
+  const sortedWildCards = opts.preserveFeedOrder
+    ? wildCardCandidates.sort(byFeed)
+    : wildCardCandidates.sort((a, b) => {
+        const aRecord = parseWLT(a.h2hwlt);
+        const bRecord = parseWLT(b.h2hwlt);
 
-    if (aRecord.wins !== bRecord.wins) return bRecord.wins - aRecord.wins;
-    if (aRecord.losses !== bRecord.losses) return aRecord.losses - bRecord.losses;
+        if (aRecord.wins !== bRecord.wins) return bRecord.wins - aRecord.wins;
+        if (aRecord.losses !== bRecord.losses) return aRecord.losses - bRecord.losses;
 
-    // Tiebreakers
-    const aAllPlay = parseFloat(a.all_play_pct);
-    const bAllPlay = parseFloat(b.all_play_pct);
-    if (aAllPlay !== bAllPlay) return bAllPlay - aAllPlay;
+        // Tiebreakers
+        const aAllPlay = parseFloat(a.all_play_pct);
+        const bAllPlay = parseFloat(b.all_play_pct);
+        if (aAllPlay !== bAllPlay) return bAllPlay - aAllPlay;
 
-    const aPF = parseFloat(a.pf);
-    const bPF = parseFloat(b.pf);
-    if (aPF !== bPF) return bPF - aPF;
+        const aPF = parseFloat(a.pf);
+        const bPF = parseFloat(b.pf);
+        if (aPF !== bPF) return bPF - aPF;
 
-    return 0;
-  });
+        return 0;
+      });
 
   // Assign seeds within conference: division winners take the top seeds
   // (1..sortedDivWinners.length — 2 today, but 3 in the AFL's 2003-2012
@@ -591,8 +592,12 @@ export function getConferenceStandings(franchises: StandingsFranchise[], config:
 }
 
 // Get division champions (first-place team in each division by overall record + tiebreakers)
-export function getDivisionChampions(franchises: StandingsFranchise[], config: LeagueConfig): Record<string, string> {
-  const divStandings = getDivisionStandings(franchises, config);
+export function getDivisionChampions(
+  franchises: StandingsFranchise[],
+  config: LeagueConfig,
+  opts: StandingsSortOptions = {}
+): Record<string, string> {
+  const divStandings = getDivisionStandings(franchises, config, opts);
   const champions: Record<string, string> = {};
   for (const division of divStandings) {
     if (division.teams.length > 0) {
@@ -615,9 +620,10 @@ export interface DivisionChampion {
  */
 export function getDivisionChampionDetails(
   franchises: StandingsFranchise[],
-  config: LeagueConfig
+  config: LeagueConfig,
+  opts: StandingsSortOptions = {}
 ): Record<string, DivisionChampion> {
-  const divStandings = getDivisionStandings(franchises, config);
+  const divStandings = getDivisionStandings(franchises, config, opts);
   const champions: Record<string, DivisionChampion> = {};
   for (const division of divStandings) {
     if (division.teams.length > 0) {
@@ -629,8 +635,12 @@ export function getDivisionChampionDetails(
 }
 
 // Determine playoff status for seeding view
-export function getPlayoffSeeding(franchises: StandingsFranchise[], config: LeagueConfig): PlayoffSeeding {
-  const league = getLeagueStandings(franchises, config);
+export function getPlayoffSeeding(
+  franchises: StandingsFranchise[],
+  config: LeagueConfig,
+  opts: StandingsSortOptions = {}
+): PlayoffSeeding {
+  const league = getLeagueStandings(franchises, config, opts);
 
   return {
     divisionWinners: league.filter(t => t.seed && t.seed <= 4),

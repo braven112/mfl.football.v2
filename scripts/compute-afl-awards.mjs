@@ -9,17 +9,19 @@
  *   - nit               NIT-championship bracket
  *   - afl-cup           AFL Cup final (2016–2017 era; hand-entered — see note 2)
  *   - al-north/al-south/nl-east/nl-west (+ al-central/nl-pacific pre-2013)
- *                       top divpct in each division
+ *                       first row of each division in MFL's official
+ *                       leagueStandings order (MFL applies the constitution's
+ *                       tiebreakers itself — never re-sort here)
  *   - premier-league / dleague-champion   top of each all-play tier
  *                       (derived from tier-history.json — note 2)
  *
  * DATA SOURCING NOTES (load-bearing — read before editing):
  *
- *   1. The local pre-2024 caches under data/afl-fantasy/mfl-feeds/<year>/ are
- *      CONTAMINATED with TheLeague (13522) data, not AFL. Every year is
- *      validated against the canonical AFL franchise names (afl.config.json,
- *      stable franchise IDs) before its local cache is trusted; on mismatch
- *      the year is fetched online instead. 2024+ local caches are genuine AFL.
+ *   1. Some historical caches under data/afl-fantasy/mfl-feeds/<year>/ were
+ *      once CONTAMINATED with TheLeague (13522) data, not AFL. Every year's
+ *      league.json is validated before its local cache is trusted — its
+ *      league id must match that year's AFL league id (year-host-map.json);
+ *      on mismatch the year is fetched online instead.
  *
  *   2. Tier champions (Premier League / D-League) are derived from
  *      data/afl-fantasy/tier-history.json — the per-season tier source of truth
@@ -45,6 +47,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { fetchExport as sharedFetchExport, mflHostPrefix } from './lib/mfl-api.mjs';
+import { isSeasonComplete } from './lib/afl-season-complete.mjs';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -164,9 +167,16 @@ function currentIdForName(name) {
   return NAME_TO_ID?.get(String(name || '').trim().toLowerCase()) ?? null;
 }
 
-// A league.json is genuine AFL if at least one well-known franchise id maps to
-// its canonical AFL name (guards against the TheLeague-contaminated caches).
-async function isGenuineAfl(leagueJson) {
+// A league.json is genuine AFL if its own league id matches the expected AFL
+// league id for that year (year-host-map.json — the AFL was a fresh MFL league
+// every season pre-2016, so franchise ids/names are NOT stable that far back;
+// the TheLeague-contaminated caches carry TheLeague's id instead). Falls back
+// to the id→canonical-name majority check for caches missing a league id.
+async function isGenuineAfl(leagueJson, year) {
+  const cachedId = String(leagueJson?.league?.id ?? '');
+  if (cachedId && year != null) {
+    return cachedId === String(hostFor(year).leagueId);
+  }
   const canon = await loadCanonicalNames();
   const franchises = toArray(leagueJson?.league?.franchises?.franchise);
   if (!franchises.length) return false;
@@ -203,7 +213,7 @@ function fetchExport(year, type, extra = '') {
 
 async function loadLeague(year) {
   const local = await readJson(path.join(FEEDS_DIR, String(year), 'league.json'));
-  if (local && (await isGenuineAfl(local))) return local;
+  if (local && (await isGenuineAfl(local, year))) return local;
   if (ONLINE) {
     try {
       const online = await fetchExport(year, 'league');
@@ -222,7 +232,12 @@ async function loadStandings(year, leagueIsGenuineLocal) {
   }
   if (ONLINE) {
     try {
-      return await fetchExport(year, 'leagueStandings');
+      // ALL=1 for the same reason backfill-standings-points.mjs uses it: an
+      // archive year returns only the columns THAT league-year had configured
+      // for display, and a trimmed response (no pf/divpct/divwlt) would fail
+      // divisionWinners' played-season guard and silently drop that year's
+      // four division titles.
+      return await fetchExport(year, 'leagueStandings', '&ALL=1');
     } catch (err) {
       warn(`standings fetch ${year} failed: ${err.message}`);
     }
@@ -319,13 +334,22 @@ const DIVISION_NAME_SLUG = {
   east: 'nl-east',
   west: 'nl-west',
   pacific: 'nl-pacific',
+  // 2006 only: the NL's third division (slot 05) was called "Atlantic" for
+  // that one season — "Pacific" in both 2005 and 2007, same slot, same
+  // conference. It is the same division under a one-year name, so it earns
+  // the nl-pacific badge; without this entry 2006 silently credited five
+  // division titles instead of six. These seven names are the complete set
+  // ever used by the AFL (verified across every committed league.json).
+  atlantic: 'nl-pacific',
 };
 
-// Division winners: top division win pct in each division. Ties defer to
-// MFL's own ordering — the leagueStandings rows arrive in the league's
-// OFFICIAL final order, computed with the league's configured tie-breakers
-// (h2h/all-play, not raw points-for). Divisions are matched by NAME via
-// DIVISION_NAME_SLUG; any name not in that map is skipped.
+// Division winners: MFL's leagueStandings rows arrive in the league's
+// OFFICIAL final order — overall record first, ties broken by the league's
+// configured tiebreakers (the constitution's chain: h2h → div% → conf% →
+// PWR → PF → all-play → VP → most PA). The first row of each division IS
+// the division winner; the league's own MFL skin reads winners off exactly
+// that row (see mfl-feeds/2020/option07.json). Divisions are matched by
+// NAME via DIVISION_NAME_SLUG; any name not in that map is skipped.
 function divisionWinners(league, standings) {
   const out = {};
   const divisions = toArray(league?.league?.divisions?.division);
@@ -345,17 +369,15 @@ function divisionWinners(league, standings) {
   for (const [div, group] of byDiv) {
     const slug = DIVISION_NAME_SLUG[nameOfDiv.get(String(div)) ?? ''];
     if (!slug) continue; // unmapped division name — skip
-    // Stable sort by divpct ONLY: rows were pushed in feed order, so tied
-    // franchises keep MFL's official ranking. An explicit pf tie-break here
-    // flipped seven historical division titles on 2026-08-10 after the
-    // ALL=1 backfill corrected pf values — including 2017 al-north away
-    // from the owner-confirmed ground truth pinned in
-    // tests/afl-awards.test.ts. In every flipped case MFL's official order
-    // had the original winner ahead; raw pf is not the league's tie-break.
-    group.sort((a, b) => divisionPct(b) - divisionPct(a));
+    // DO NOT SORT. Rows were pushed in feed order, which is MFL's official
+    // final standings order with the constitution's tiebreakers already
+    // applied. Any local re-sort here is a re-derivation of history — the
+    // old divpct-primary sort (and a pf tiebreak before it) miscredited 22
+    // division titles between 2004 and 2025, fixed 2026-08-11.
+    // tests/afl-division-titles.test.ts locks winner === first feed row.
     const winner = group[0];
     if (winner && (divisionPct(winner) > 0 || parseNum(winner.pf) > 0)) {
-      out[slug] = { franchiseId: winner.id, source: 'standings:divpct' };
+      out[slug] = { franchiseId: winner.id, source: 'standings:mfl-order' };
     }
   }
   return out;
@@ -396,7 +418,7 @@ async function nameMap(league) {
 async function computeYear(year) {
   await loadCanonicalNames(); // ensures CANONICAL_NAMES + NAME_TO_ID are built
   const localLeague = await readJson(path.join(FEEDS_DIR, String(year), 'league.json'));
-  const localGenuine = localLeague ? await isGenuineAfl(localLeague) : false;
+  const localGenuine = localLeague ? await isGenuineAfl(localLeague, year) : false;
   const league = await loadLeague(year);
   if (!league) {
     warn(`${year}: no usable AFL league data, skipping`);
@@ -408,10 +430,16 @@ async function computeYear(year) {
   // Brackets (championship / cup / conference / NIT) are auto-derived only for
   // 2016+. Pre-2016 those titles are hand-curated from the official League
   // Awards table (and the manual-preserving merge keeps them). Division titles
-  // derive from standings for every year back to 2004.
+  // derive from standings for every year back to 2004 — but only once the
+  // season has actually finished (see isSeasonComplete).
+  const brackets = year >= 2016 ? await bracketWinners(year, localGenuine) : {};
+  const seasonComplete = isSeasonComplete(year, brackets, LAST_YEAR);
+  if (standings && !seasonComplete) {
+    log(`${year}: season still in progress — no division titles credited yet`);
+  }
   const awards = {
-    ...(year >= 2016 ? await bracketWinners(year, localGenuine) : {}),
-    ...(standings ? divisionWinners(league, standings) : {}),
+    ...brackets,
+    ...(standings && seasonComplete ? divisionWinners(league, standings) : {}),
     ...(await tierChampions(year)),
   };
 
@@ -523,9 +551,26 @@ async function main() {
 
   const seasons = [...byYear.values()].sort((a, b) => b.year - a.year);
   const output = {
+    // Always rewritten (not `existing?.$comment ||`) so the description of how
+    // titles are derived can never go stale — but it MUST keep documenting the
+    // hand-curated rows, because the merge in main() still depends on them and
+    // this prose is the only place a reader of the JSON learns they exist.
     $comment:
-      existing?.$comment ||
-      'AFL award winners per season. Generated by scripts/compute-afl-awards.mjs.',
+      'AFL award winners per season, 2003-present. Division titles are taken ' +
+      'straight from the FIRST ROW of each division in MFL’s official ' +
+      'leagueStandings order (source "standings:mfl-order") — MFL applies the ' +
+      'constitution’s tiebreakers itself, so nothing is re-sorted locally; see ' +
+      'tests/afl-division-titles.test.ts. League Champion (afl-championship), ' +
+      'AL/NL champions and the NIT are auto-derived for 2016+ from playoff ' +
+      'brackets matched by NAME. Premier League + D-League tier champions are ' +
+      `auto-derived from ${path.relative(ROOT, TIER_HISTORY_PATH)} (source ` +
+      '"tier-history"), superseding the legacy hand-entered ' +
+      '"manual:tier-champion" rows. Still HAND-ENTERED from the official League ' +
+      'Awards table (source "manual:league-awards" / "manual:champion-history") ' +
+      'and NEVER clobbered by a re-run: the AFL Cup (2015 knockout, 2016 ' +
+      'all-play), pre-2016 League Champions, and select pre-2016 conference ' +
+      'champions. A null franchiseId means the winner is a defunct/pre-2016 ' +
+      'franchise with no current page — the historical name is retained.',
     seasons,
   };
   await writeJson(OUTPUT_PATH, output);

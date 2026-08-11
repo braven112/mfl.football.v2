@@ -424,3 +424,62 @@ and `tests/footer-champions.test.ts` pin both rules against real seasons.
 placeholders, progress pips, admin pickers — must filter on `isAwardRetired()`,
 not on a hand-maintained list. Anything rendering *history* must not: past
 winners keep their badges and still count toward totals and tier ranks.
+
+---
+
+## 2026-08-11 - CORRECTION: division titles come from MFL's row order, and cache validation is by LEAGUE ID (supersedes gotchas 1 and 3 above)
+
+**Context:** Commissioner review of historical division titles. Two claims in
+the 2026-06-25 entry at the top of this file were wrong and actively
+misleading; both are corrected here.
+
+**CORRECTION to gotcha 3 ("pick the max per division, tie-break `divpf`, then
+`pf`").** That is not the league's rule and never was. The AFL constitution
+(`src/pages/afl-fantasy/docs/rules.html#standings-tiebreakers`) makes **overall
+W-L-T% the primary** key; division record is only tiebreaker #2, behind
+head-to-head. Sorting by `divpct` first — never mind a raw-`pf` tiebreak —
+miscredited **22 division titles between 2004 and 2025**, including 2025
+al-south (a 9-8 team over a 12-5 team) and 2017 nl-west (12-5 over 14-3). It
+also made Smokane FC look like the all-time trophy leader; the real leader is
+Drunk Indians, 19 to 17.
+
+The rule now: **`divisionWinners()` takes the first row of each division in
+MFL feed order and does not sort.** MFL's `leagueStandings` rows arrive in the
+league's official final order with the constitution's tiebreakers already
+applied (see the 2026-08-11 entry in `domains/mfl-api.md`). `source` changed
+from `standings:divpct` to `standings:mfl-order`. `divisionPct()` survives only
+as the "was this season actually played" guard.
+
+**CORRECTION to gotcha 1 ("validate a cached `league.json` against the
+canonical AFL names in `afl.config.json` (stable franchise IDs)").** Franchise
+ids are *not* owner-stable pre-2016 — the AFL was recreated as a brand-new MFL
+league every season, with its own id and its own franchise numbering (see
+`data/afl-fantasy/year-host-map.json`). The name-majority check therefore
+**rejected every 2004-2012 season as "contaminated"**, silently forcing those
+years online where they 403'd, so a decade of history quietly stopped
+recomputing. `isGenuineAfl(leagueJson, year)` now compares
+`leagueJson.league.id` against that year's expected AFL league id from
+`year-host-map.json`, falling back to the old name check only when a cache
+carries no league id. With that fixed, 2004-2012 recompute from the committed
+local feeds — which is where 10 of the 22 corrections came from.
+
+**Verification pattern worth reusing.** The repo already had a
+constitution-faithful tiebreaker chain built for the draft predictor
+(`src/utils/afl-draft-utils.ts`, worst-first). Rather than reimplementing it,
+`rankDivisionStandingsBestFirst` exposes the forward view, and
+`tests/afl-division-titles.test.ts` uses it to independently re-rank every
+division and assert agreement with MFL's row order — it agrees in all 100+
+division-seasons. Two implementations that must agree is a much stronger guard
+than one implementation nobody can check. Note `overallPct` needed a fallback
+to `h2hw/h2hl/h2ht` because pre-2020 feeds carry no `div*`/`nondiv*` split.
+
+**Gotcha for whoever changes attribution next:** the pinned ground truth in
+`tests/afl-awards.test.ts` moved (leader 0002 at 19, Smokane FC 0001 at 17),
+and 2023 Drunk Indians became a **Treble** in `tests/footer-champions.test.ts`
+(Championship + Premier League + the al-north title they'd been denied). Those
+pins are commissioner-confirmed — if one fails, investigate the data, don't
+re-derive the expectation.
+
+**Evidence:** `scripts/compute-afl-awards.mjs` (`divisionWinners`,
+`isGenuineAfl`); `tests/afl-division-titles.test.ts`;
+`data/afl-fantasy/awards-history.json`.

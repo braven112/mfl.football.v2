@@ -322,3 +322,69 @@ describe('getAllPlayStandings with calculatedAllPlay override', () => {
     expect(result[0].all_play_pct).toBe('0.833');
   });
 });
+
+// ---------------------------------------------------------------------------
+// preserveFeedOrder — MFL's official row order wins over the local tiebreaker
+// ---------------------------------------------------------------------------
+
+describe('preserveFeedOrder (MFL order is the source of truth)', () => {
+  // Feed order deliberately CONTRADICTS every local tiebreaker metric: within
+  // each division the first row has fewer wins, less PF, and worse divpct than
+  // the second — the default path would flip them; preserveFeedOrder must not.
+  const feed = [
+    makeFranchise('0002', 8, '1500'), // North — feed says winner despite 8 wins
+    makeFranchise('0001', 12, '2000'), // North — better on every local metric
+    makeFranchise('0003', 11, '1900'), // South winner
+    makeFranchise('0004', 6, '1300'),
+    makeFranchise('0006', 7, '1400'), // East — feed says winner
+    makeFranchise('0005', 10, '1800'), // East — better on every local metric
+    makeFranchise('0007', 9, '1700'), // West winner
+    makeFranchise('0008', 5, '1200'),
+  ];
+  const config = {
+    ...currentConfig,
+    teams: currentConfig.teams.filter((t) => Number(t.franchiseId) <= 8),
+  };
+
+  it('renders division rows in feed order, first row is the winner', () => {
+    const divisions = getDivisionStandings(feed, config, { preserveFeedOrder: true });
+    expect(divisions.find((d) => d.name === 'North')!.teams.map((t) => t.id)).toEqual([
+      '0002',
+      '0001',
+    ]);
+    expect(divisions.find((d) => d.name === 'East')!.teams.map((t) => t.id)).toEqual([
+      '0006',
+      '0005',
+    ]);
+  });
+
+  it('seeds division winners from feed order, remaining teams by feed position', () => {
+    const league = getLeagueStandings(feed, config, { preserveFeedOrder: true });
+    const winners = league.filter((t) => t.seed! <= 4).map((t) => t.id);
+    // One winner per division = first feed row of each division, ordered by
+    // feed position: 0002 (North), 0003 (South), 0006 (East), 0007 (West).
+    expect(winners).toEqual(['0002', '0003', '0006', '0007']);
+    // Non-winners follow in feed order.
+    expect(league.filter((t) => t.seed! > 4).map((t) => t.id)).toEqual([
+      '0001',
+      '0004',
+      '0005',
+      '0008',
+    ]);
+  });
+
+  it('builds conference seeds from feed order', () => {
+    const al = getConferenceStandings(feed, config, '00', { preserveFeedOrder: true });
+    expect(al.divisionWinners.map((t) => t.id)).toEqual(['0002', '0003']);
+    // Wild cards are the remaining conference teams in feed position order.
+    expect(al.wildCards.map((t) => t.id)).toEqual(['0001', '0004']);
+  });
+
+  it('default path (no option) still applies the local tiebreaker — TheLeague unchanged', () => {
+    const divisions = getDivisionStandings(feed, config);
+    expect(divisions.find((d) => d.name === 'North')!.teams.map((t) => t.id)).toEqual([
+      '0001',
+      '0002',
+    ]);
+  });
+});

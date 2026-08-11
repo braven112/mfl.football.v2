@@ -458,8 +458,16 @@ const endpoints = [
     parser: (t) => JSON.parse(t),
   },
   {
+    // ALL=1 returns every standings column regardless of what that league-YEAR
+    // had configured for display. Current years already return the full set, so
+    // this is a no-op for the routine sync; it matters for archive years pulled
+    // via the MFL_YEAR override, which otherwise come back trimmed (see
+    // docs/claude/insights/domains/mfl-api.md). Harmless either way — extra
+    // columns are ignored and enrichTeamStanding defaults anything missing.
+    // ALL=1 does NOT change row order, which matters now that AFL division
+    // titles are read straight off it (src/utils/standings.ts).
     key: 'standings',
-    url: withWeek(`${host}/${year}/export?TYPE=standings&L=${leagueId}&JSON=1`),
+    url: withWeek(`${host}/${year}/export?TYPE=standings&L=${leagueId}&JSON=1&ALL=1`),
     parser: (t) => JSON.parse(t),
   },
   {
