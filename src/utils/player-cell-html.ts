@@ -51,7 +51,11 @@ export interface PlayerCellOptions {
 }
 
 function esc(str: string): string {
-  return str
+  // Some callers build this from a raw feed player record (e.g. the Cutdown
+  // Plan panel's findAutocutPlayer lookup) where `name` isn't guaranteed —
+  // str.replace on undefined/null used to throw and, with no try/catch above
+  // it in the client render chain, take the whole roster page down with it.
+  return String(str ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')

@@ -9653,33 +9653,45 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     //    every marked player falls here, matching the pre-slate behavior where
     //    nothing executes.
     const buildAutocutBadgeMap = () => {
-      const map = new Map();
-      const slate = computeAutocutSlate();
-      // Rookies headed to open practice-squad spots — KEPT, not cut. Badged
-      // so the owner sees the automation's full plan on the roster rows.
-      slate.taxiMoves.forEach((move, i) => {
-        map.set(String(move.playerId), { kind: 'taxi', priority: i + 1 });
-      });
-      if (slate.cuts.length > 0) {
-        // slate.cuts is in execution order (taxi moves already consumed part
-        // of the overage); marked cuts come first, then newest-acquisition
-        // ("last-added") fill.
-        slate.cuts.forEach((cut, i) => {
-          map.set(String(cut.playerId), {
-            kind: 'cut',
-            priority: i + 1,
-            reason: cut.reason, // 'marked' | 'last-added'
-          });
+      // Guarded top to bottom: this runs unconditionally on every render for
+      // any owner viewing their own roster during the cut window (including
+      // the very first paint), with NO try/catch anywhere above it in the
+      // call chain — a throw here used to abort the entire page script,
+      // leaving rosterTableBody.innerHTML never set (blank roster page) and
+      // every listener/init after updateView() in the script never attached.
+      // Degrade to "no badges" instead of taking the whole page down with it.
+      try {
+        const map = new Map();
+        const slate = computeAutocutSlate();
+        // Rookies headed to open practice-squad spots — KEPT, not cut. Badged
+        // so the owner sees the automation's full plan on the roster rows.
+        slate.taxiMoves.forEach((move, i) => {
+          map.set(String(move.playerId), { kind: 'taxi', priority: i + 1 });
         });
+        if (slate.cuts.length > 0) {
+          // slate.cuts is in execution order (taxi moves already consumed part
+          // of the overage); marked cuts come first, then newest-acquisition
+          // ("last-added") fill.
+          slate.cuts.forEach((cut, i) => {
+            map.set(String(cut.playerId), {
+              kind: 'cut',
+              priority: i + 1,
+              reason: cut.reason, // 'marked' | 'last-added'
+            });
+          });
+        }
+        // Marked players not already in the slate → below-the-line "MARKED #N".
+        // getMarkedOnRoster() is priority-ordered, so these numbers continue
+        // past the cut line (and cover every marked player when overage ≤ 0).
+        getMarkedOnRoster().forEach((pid, i) => {
+          if (map.has(pid)) return;
+          map.set(pid, { kind: 'marked-below', priority: i + 1 });
+        });
+        return map;
+      } catch (err) {
+        console.error('[autocut] buildAutocutBadgeMap failed — showing roster without cut badges', err);
+        return new Map();
       }
-      // Marked players not already in the slate → below-the-line "MARKED #N".
-      // getMarkedOnRoster() is priority-ordered, so these numbers continue
-      // past the cut line (and cover every marked player when overage ≤ 0).
-      getMarkedOnRoster().forEach((pid, i) => {
-        if (map.has(pid)) return;
-        map.set(pid, { kind: 'marked-below', priority: i + 1 });
-      });
-      return map;
     };
 
     const buildAutocutBadgeHTML = (playerId, badgeMap) => {
@@ -10072,6 +10084,20 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         panel.hidden = true;
         return;
       }
+      // updateView() calls this unconditionally on every render, including
+      // the very first paint, with nothing above it in the call chain to
+      // catch a throw — an error here used to abort the whole page script
+      // (same failure class as buildAutocutBadgeMap above). Degrade to
+      // hiding the panel instead of taking the whole roster page down.
+      try {
+        renderCutdownPanelInner(panel);
+      } catch (err) {
+        console.error('[autocut] renderCutdownPanel failed — hiding Cutdown Plan panel', err);
+        panel.hidden = true;
+      }
+    };
+
+    const renderCutdownPanelInner = (panel) => {
       panel.hidden = false;
 
       const slate = computeAutocutSlate();
