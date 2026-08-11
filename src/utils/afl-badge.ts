@@ -57,8 +57,17 @@ export function stampBadgeYear(
 export function stripBadgeYear(svg: string): string {
   if (!svg) return '';
   let out = svg;
-  // Curved-arc badges: <text ...><textPath href="#yearArc">★ YYYY ★</textPath></text>
-  out = out.replace(/<text\b[^>]*><textPath\b[^>]*>[\s\S]*?<\/textPath><\/text>/g, '');
+  // Curved-arc badges: remove only the ★-wrapped <textPath>, not the whole
+  // enclosing <text>. A multi-arc badge (see the MULTI_ARC test fixture used
+  // for stampBadgeYear below) can carry a second, unrelated <textPath> — e.g.
+  // a curved label — sharing that same <text>; a wholesale `<text>...</text>`
+  // removal would delete it along with the year. Content is bounded to
+  // `[^<]*` (no nested tags) so this only ever matches the star-wrapped run.
+  out = out.replace(/<textPath\b[^>]*>[^<]*★[^<]*<\/textPath>/g, '');
+  // If that left its <text> wrapper completely empty (the common single-arc
+  // case), drop the now-empty wrapper too. A multi-arc <text> with a
+  // surviving second <textPath> won't match this (it isn't empty).
+  out = out.replace(/<text\b[^>]*><\/text>/g, '');
   // The <path id="yearArc" .../> that fed the textPath above is now dead
   // weight — nothing references it once its <textPath href="#yearArc"> is
   // gone. Left behind, its id collides with every other stripped instance of

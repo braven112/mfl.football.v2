@@ -98,6 +98,17 @@ describe('stripBadgeYear', () => {
     expect(out).not.toContain('2025');
   });
 
+  // Mirrors stampBadgeYear's own multi-arc coverage below: a badge with a
+  // second, non-year <textPath> sharing the year's <text> element must keep
+  // that label after stripping — only the ★-wrapped textPath goes.
+  it('strips only the year textPath in a multi-arc badge, leaving the label intact', () => {
+    const stripped = stripBadgeYear(MULTI_ARC);
+    expect(stripped).not.toContain('★');
+    expect(stripped).not.toContain('2025');
+    expect(stripped).toContain('href="#labelArc"');
+    expect(stripped).toContain('>LABEL</textPath>');
+  });
+
   it('leaves everything else in the badge untouched', () => {
     const withExtra = `<svg><circle r="1"></circle>${ARC.replace('<svg>', '').replace('</svg>', '')}</svg>`;
     expect(stripBadgeYear(withExtra)).toContain('<circle r="1">');

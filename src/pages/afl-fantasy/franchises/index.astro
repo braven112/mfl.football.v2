@@ -31,13 +31,20 @@ const BADGE_SVG: Record<string, string> = {};
 for (const [p, raw] of Object.entries(badgeSvgRaw)) {
   BADGE_SVG[p.split('/').pop() as string] = raw;
 }
+// Strip once per FILE up front (there are only ~13), not once per card — the
+// same badge file (e.g. afl-championship.svg) renders once per franchise
+// that's won it, and stripBadgeYear's output only depends on the filename.
+const STRIPPED_BADGE_SVG: Record<string, string> = {};
+for (const [filename, raw] of Object.entries(BADGE_SVG)) {
+  STRIPPED_BADGE_SVG[filename] = stripBadgeYear(raw);
+}
 // uid is franchiseId + title-type key — unique per card (each type renders at
 // most once per franchise) — so every inlined badge's internal ids (clip
 // paths, gradients) stay collision-free across the whole grid. See
 // namespaceBadgeIds' doc comment for why this matters even though today's
 // art makes the collision visually harmless.
 function timelessBadge(filename: string, uid: string): string {
-  return namespaceBadgeIds(stripBadgeYear(BADGE_SVG[filename] ?? ''), uid);
+  return namespaceBadgeIds(STRIPPED_BADGE_SVG[filename] ?? '', uid);
 }
 
 // Division names map to the same award slugs the franchise detail page uses
