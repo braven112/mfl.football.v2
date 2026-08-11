@@ -5377,6 +5377,45 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
 <ContractDeclarationModal />
 
+<!--
+  Diagnostic banner — TEMPORARY, remove once the rosters-page blank-screen
+  bug is confirmed fixed. window.onerror/unhandledrejection fire for ANY
+  uncaught error anywhere on the page, including a synchronous throw at the
+  very top of the big module script below (e.g. the config JSON.parse) that
+  would otherwise abort silently with nothing in the DOM to show for it.
+  Renders the actual error on-page so it's visible without opening devtools
+  — needed because reports of this bug have come from owners who can't get
+  to a console (mobile, non-technical).
+-->
+<script is:inline>
+  (function () {
+    function showDiagBanner(label, detail) {
+      if (document.getElementById('__diag_error_banner')) return;
+      var el = document.createElement('div');
+      el.id = '__diag_error_banner';
+      el.style.cssText =
+        'position:fixed;top:0;left:0;right:0;z-index:2147483647;' +
+        'background:#b91c1c;color:#fff;font:12px/1.5 -apple-system,monospace;' +
+        'padding:12px 16px;white-space:pre-wrap;word-break:break-word;' +
+        'max-height:50vh;overflow:auto;box-shadow:0 2px 8px rgba(0,0,0,.4);';
+      el.textContent =
+        'Page error caught — please screenshot this whole box and send it back:\n\n' +
+        label + '\n' + detail;
+      (document.body || document.documentElement).appendChild(el);
+    }
+    window.addEventListener('error', function (e) {
+      showDiagBanner(
+        e.message || 'Unknown error',
+        (e.error && e.error.stack) || (e.filename + ':' + e.lineno + ':' + e.colno)
+      );
+    });
+    window.addEventListener('unhandledrejection', function (e) {
+      var r = e.reason;
+      showDiagBanner('Unhandled promise rejection', (r && r.stack) || String(r));
+    });
+  })();
+</script>
+
 <script
   type="application/json"
   id="roster-config"
