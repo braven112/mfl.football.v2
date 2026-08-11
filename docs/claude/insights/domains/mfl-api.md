@@ -55,6 +55,49 @@ unfinished season) and for *verifying* MFL — log divergences, don't override.
 
 ---
 
+## 2026-08-11 - A Missing `h2hwlt` Reads as 0-0-0, Not as an Error — Always Fall Back to the Split Fields
+
+**Context:** Applying the "MFL order is truth" ruling to TheLeague surfaced a
+second, unrelated bug: the entire 2022 season was missing from
+`franchise-history.json`. No division titles, and every franchise carrying a
+0-0-0 record for the year despite ~2000 points scored.
+
+**Insight:** The column-set variance documented in the `ALL=1` entry below has a
+nastier consumer-side edge than "some columns are absent." MFL's standings rows
+carry the overall record **two ways** — the combined `h2hwlt` string
+("14-4-0") and the split `h2hw`/`h2hl`/`h2ht` fields — and which ones ship
+varies by league-year. TheLeague's 2022 export has the split fields but **no
+`h2hwlt` at all**. Code that reads only the combined field doesn't throw and
+doesn't warn: `String(undefined || '').split('-')` yields `0-0-0`, a perfectly
+valid-looking record. So the season silently becomes "played, but nobody won
+anything," which then trips every downstream `hasGamesPlayed`-style guard.
+
+The failure is invisible in aggregate — career totals just come up short by one
+season, and a division simply has no champion that year. It survived long enough
+that a comment in `compute-franchise-history.mjs` had already *rationalized* the
+symptom ("Pigskins 2022 had no W/L recorded but 2k points scored") as a
+historical anomaly rather than a parse bug.
+
+**Evidence:** `scripts/compute-franchise-history.mjs#parseOverallRecord` (falls
+back to the split fields when the combined string is absent or empty);
+`src/utils/standings.ts#normalizeWLT` already had the same fallback for pre-2004
+feeds — the two were written years apart and only one of them knew. Column
+availability per year for TheLeague 2007-2026 is pinned in
+`tests/theleague-division-titles.test.ts` ("the 2022 feed gap").
+
+**Recommendation:** Never read `h2hwlt`/`divwlt` alone. Parse the combined
+string, and if it comes back all zeros, fall back to the split fields before
+believing it. More generally: treat "a record parsed to 0-0-0" as *suspicious*
+rather than *empty* whenever the row has non-zero `pf` — that pairing is
+impossible in real data and is the cheapest available tripwire for this class of
+bug. A `pf > 0 && wins+losses+ties === 0` assertion in any new standings
+consumer would have caught this on day one.
+
+**Confidence: High** — the fix restored 144 games of career record across 15
+franchises and four division titles, verified against the raw feed.
+
+---
+
 ## 2026-07-15 - tradeBait Export Is Owner-Gated for Private Leagues — Empty ≠ Error
 
 **Context:** The AFL trade builder's live trade-block fetch parsed 0 franchises
