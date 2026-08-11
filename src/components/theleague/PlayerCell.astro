@@ -96,11 +96,19 @@ const resolvedEspnId = explicitEspnId ?? playerData?.espnId;
 // --- DEF handling ---
 const isDef = position?.toUpperCase() === 'DEF';
 const isLogo = isDef || isLogoAvatar;
-// The avatar handler must match what the src actually is: a DEF row with no
-// resolvable team falls back to a headshot src and keeps the headshot cascade.
-const avatarIsLogo = isLogoAvatar || (isDef && !!teamLogoUrl);
 const normalizedTeam = nflTeam ? normalizeTeamCode(nflTeam) : '';
 const teamLogoUrl = normalizedTeam ? `/assets/nfl-logos/${normalizedTeam}.svg` : '';
+// The avatar handler must match what the src actually is: a DEF row with no
+// resolvable team falls back to a headshot src and keeps the headshot cascade.
+// NOTE: this MUST stay below the `teamLogoUrl` declaration. `isLogoAvatar ||
+// (isDef && !!teamLogoUrl)` only short-circuits away from `teamLogoUrl` when
+// the row is a non-DEF player, so a DEF row read the const inside its temporal
+// dead zone and threw `ReferenceError: Cannot access 'teamLogoUrl' before
+// initialization`. Astro streams SSR responses (the Vercel adapter sets
+// supportsResponseStreaming), so the 200 + chunked headers are already on the
+// wire when the render throws — every rosters page load returned an empty body
+// with no platform error to show for it. See docs/claude/insights/domains/deployment.md.
+const avatarIsLogo = isLogoAvatar || (isDef && !!teamLogoUrl);
 
 // Prefer the caller-supplied headshot URL — server-side builders pick the
 // right endpoint (ESPN NFL direct, college-football, or MFL photo) based on
