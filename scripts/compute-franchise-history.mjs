@@ -668,7 +668,19 @@ for (const year of years) {
   // the participant list by re-running MFL's seeding logic (division winners
   // first, then wildcards by record) and keeping the top `teamsInvolved`
   // seeds — that's the actual size of the championship bracket per year.
-  if (playoffParticipants.size === 0 && seasonHasGames) {
+  //
+  // Gated on seasonComplete for the same reason division titles are, and it
+  // matters MORE here: this is the only branch that runs from week 1 with
+  // nothing real to read. The current year's bracket already declares its
+  // size (2026 says teamsInvolved: "7") long before a game is played, so
+  // ungated this credits seven franchises a playoff appearance in week 1 and
+  // reshuffles which seven every night as the standings move. It also got
+  // strictly worse once titles were gated: with divisionTitleHolders empty
+  // mid-season, the seeding logic loses its division-winner-first ordering
+  // and falls back to raw record. Real bracket-derived participants are NOT
+  // gated — those only exist once postseason games have actually been played,
+  // and they settle rather than churn.
+  if (playoffParticipants.size === 0 && seasonHasGames && seasonComplete) {
     const bracketSize = getChampionshipBracketSize(playoffBrackets);
     for (const fid of inferPlayoffParticipants(standingsRows, divisionTitleHolders, bracketSize)) {
       playoffParticipants.add(fid);
@@ -717,9 +729,15 @@ for (const year of years) {
     // games played AND zero points scored, MFL's standings still report
     // a regSeasonRank and mark a division leader by tiebreaker. Treat
     // those as "not played" so unplayed years don't claim a rank,
-    // division title, or playoff appearance. We require pointsFor==0
-    // too so we don't blow away historical 0-0 anomalies (e.g. Pigskins
-    // 2022 had no W/L recorded but 2k points scored).
+    // division title, or playoff appearance.
+    //
+    // The pointsFor==0 half of this condition used to be justified by
+    // "historical 0-0 anomalies (e.g. Pigskins 2022 had no W/L recorded but
+    // 2k points scored)". That was not an anomaly — it was the h2hwlt parse
+    // bug that parseOverallRecord now fixes, and the comment rationalizing it
+    // is why the bug survived so long. The condition stays because a genuine
+    // preseason row is 0-0-0 AND 0 points, so requiring both is still the
+    // right test; only the reasoning was wrong.
     const seasonNotStarted =
       row.wins === 0 && row.losses === 0 && row.ties === 0 && row.pointsFor === 0;
 

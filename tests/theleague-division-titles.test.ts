@@ -27,6 +27,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
+import { isSeasonComplete } from '../scripts/lib/theleague-season-complete.mjs';
 import franchiseHistory from '../data/theleague/derived/franchise-history.json';
 
 const THELEAGUE = getLeagueBySlug('theleague');
@@ -63,6 +64,12 @@ type DivisionSeason = {
   nameOf: Map<string, string>;
 };
 
+// Champion per season, so the filter below can mirror the script's gate.
+const CHAMPION_BY_YEAR = new Map<number, unknown>(
+  ((franchiseHistory as any).yearSummaries ?? []).map((y: any) => [y.year, y])
+);
+const CURRENT_YEAR = new Date().getFullYear();
+
 function loadDivisionSeasons(): DivisionSeason[] {
   const out: DivisionSeason[] = [];
   const years = readdirSync(FEEDS_DIR)
@@ -78,6 +85,15 @@ function loadDivisionSeasons(): DivisionSeason[] {
     if (!rows.length) continue;
     // Skip seasons with no football played (e.g. the upcoming year's shell).
     if (!rows.some((r) => { const x = overallRecord(r); return x.w + x.l + x.t > 0; })) continue;
+    // ...and skip the IN-PROGRESS season. This must mirror the script's gate
+    // exactly (seasonHasGames && seasonComplete) or the two sets diverge the
+    // moment week 1 of the current season resolves: the feeds would report a
+    // played season the ledger deliberately hasn't credited yet, and every
+    // count assertion below would go red from kickoff until a champion is
+    // crowned in late December. Same guard as tests/afl-division-titles.test.ts.
+    if (!isSeasonComplete(Number(year), CHAMPION_BY_YEAR.get(Number(year)), CURRENT_YEAR)) {
+      continue;
+    }
 
     const franchises = toArray<any>(league?.league?.franchises?.franchise);
     const divisionOf = new Map(franchises.map((f) => [f.id, String(f.division)]));
@@ -118,14 +134,20 @@ for (const summary of (franchiseHistory as any).yearSummaries ?? []) {
 
 describe('TheLeague division titles — MFL feed order is the source of truth', () => {
   it('found every division-season in the committed feeds', () => {
-    // 19 played seasons (2007-2025) x 4 divisions. A drop here means a feed
-    // went missing or a year silently stopped parsing.
-    expect(DIVISION_SEASONS.length).toBe(76);
+    // 19 completed seasons (2007-2025) x 4 divisions as of this writing. A
+    // FLOOR, not an equality — each finished season adds four more, and a
+    // hard 76 would turn this suite red every January.
+    expect(DIVISION_SEASONS.length).toBeGreaterThanOrEqual(76);
+    expect(DIVISION_SEASONS.length % 4).toBe(0);
     const years = new Set(DIVISION_SEASONS.map((d) => d.year));
     expect(Math.min(...years)).toBe(2007);
-    expect(Math.max(...years)).toBe(2025);
+    // Every completed season contributes exactly four divisions; a drop here
+    // means a feed went missing or a year silently stopped parsing.
     for (const year of years) {
-      expect(DIVISION_SEASONS.filter((d) => d.year === year).length).toBe(4);
+      expect(
+        DIVISION_SEASONS.filter((d) => d.year === year).length,
+        `${year} did not contribute exactly 4 divisions`
+      ).toBe(4);
     }
   });
 
@@ -294,7 +316,11 @@ describe('the 2022 feed gap', () => {
 
 describe('the division-winner ledger', () => {
   it('records a winner for every division-season, claimable or not', () => {
-    expect(LEDGER.size).toBe(76);
+    // Tie the ledger to the feeds rather than to a constant: the two sets must
+    // stay exactly in step, which is the real invariant and survives each new
+    // completed season. (76 as of 2007-2025.)
+    expect(LEDGER.size).toBeGreaterThanOrEqual(76);
+    expect(LEDGER.size).toBe(DIVISION_SEASONS.length);
   });
 
   it('names the historical franchise even when no current team can claim it', () => {
@@ -327,6 +353,43 @@ describe('the division-winner ledger', () => {
       }
     }
     expect(claimed.size).toBe([...LEDGER.values()].filter((e) => e.franchiseId).length);
+  });
+
+  it('excludes any in-progress season from BOTH sides of the comparison', () => {
+    // The time bomb this guards: the loader used to filter on "any games
+    // played" while the ledger is gated on "played AND complete". They agree
+    // today only because the current season hasn't kicked off. Once it does,
+    // a divergence would break four assertions at once — so assert the two
+    // gates agree on every year the feeds contain, not just historical ones.
+    for (const year of CHAMPION_BY_YEAR.keys()) {
+      const complete = isSeasonComplete(year, CHAMPION_BY_YEAR.get(year), CURRENT_YEAR);
+      const inFeeds = DIVISION_SEASONS.some((d) => d.year === year);
+      const inLedger = [...LEDGER.values()].some((e) => e.year === year);
+      expect(inLedger, `${year}: ledger disagrees with the season-complete gate`).toBe(
+        complete && inFeeds
+      );
+      if (!complete) {
+        expect(inFeeds, `${year} is incomplete and must not be loaded`).toBe(false);
+      }
+    }
+  });
+
+  it('credits no PLAYOFF APPEARANCES for an unfinished season either', () => {
+    // The division-title gate alone left the adjacent field churning: the
+    // current year's bracket declares its size before a game is played, so the
+    // participant inference would credit seven franchises a playoff appearance
+    // in week 1 and reshuffle which seven every night. Both are gated now.
+    for (const year of CHAMPION_BY_YEAR.keys()) {
+      if (isSeasonComplete(year, CHAMPION_BY_YEAR.get(year), CURRENT_YEAR)) continue;
+      for (const [id, fr] of Object.entries<any>((franchiseHistory as any).franchises)) {
+        const season = fr.yearByYear.find((y: any) => y.year === year);
+        if (!season) continue;
+        expect(
+          season.playoffResult,
+          `${id} ${fr.currentName} claims a ${year} playoff result mid-season`
+        ).toBe('missed');
+      }
+    }
   });
 
   it('credits no division titles for an unfinished season', () => {

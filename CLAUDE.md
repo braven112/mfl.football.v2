@@ -509,6 +509,18 @@ Caveat worth remembering: because standings order now comes from MFL, rule 2
 only governs OUR draft-order math. The live standings apply whatever MFL's
 `OPP_PTS` setting does, which is a league-settings question, not a code one.
 
+**Known gap (pre-existing, not yet fixed):** `resolveConfigForYear`
+(`src/utils/team-names.ts`) resolves a franchise's historical name/icon/
+conference but NOT its `division`, and the standings page groups on
+`getTeamConfig().division`. So `/theleague/standings?year=<past>` groups
+historical seasons by TODAY's alignment — 2007-2015 all disagree with the
+season's real `league.json`, including division NAMES (2007 was
+Pacific/Midwest/Central/Atlantic). Rule 1 above therefore holds for the awards
+scripts, which read each year's own `league.json`, but the archived-year view
+of the standings page can still show a division winner that contradicts
+`franchise-history.json`. Fix by resolving `division` per year from
+`league.json` before trusting that page for anything historical.
+
 Two traps this work surfaced, written up in full under `docs/claude/insights/`:
 a missing `h2hwlt` column parses to `0-0-0` instead of erroring and silently
 erased TheLeague's entire 2022 season (`domains/mfl-api.md`), and owner-scoped
