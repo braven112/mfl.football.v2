@@ -26,7 +26,9 @@ import { isSeasonComplete } from '../scripts/lib/afl-season-complete.mjs';
 import awardsHistory from '../data/afl-fantasy/awards-history.json';
 import aflConfig from '../data/afl-fantasy/afl.config.json';
 import yearHostMap from '../data/afl-fantasy/year-host-map.json';
+import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 
+const AFL_LEAGUE_ID = getLeagueBySlug('afl-fantasy').id;
 const ROOT = path.resolve(__dirname, '..');
 const FEEDS_DIR = path.join(ROOT, 'data/afl-fantasy/mfl-feeds');
 
@@ -91,7 +93,13 @@ function loadYears(): YearFeeds[] {
     const standingsPath = path.join(dir, 'standings.json');
     if (!existsSync(leaguePath) || !existsSync(standingsPath)) continue;
     const lg = JSON.parse(readFileSync(leaguePath, 'utf8'));
-    if (String(lg?.league?.id ?? '') !== String(hostYears[String(year)]?.leagueId ?? '')) continue;
+    // Same fallback as compute-afl-awards.mjs#hostFor: a year with no
+    // year-host-map entry uses the registry's default AFL league id (2016+ all
+    // live there). Falling back to '' instead would make every future year
+    // silently drop out of this whole suite while the script happily credited
+    // titles for it.
+    const expectedLeagueId = String(hostYears[String(year)]?.leagueId ?? AFL_LEAGUE_ID);
+    if (String(lg?.league?.id ?? '') !== expectedLeagueId) continue;
     const st = JSON.parse(readFileSync(standingsPath, 'utf8'));
     const rows = toArray(st?.leagueStandings?.franchise);
     if (!rows.length) continue;

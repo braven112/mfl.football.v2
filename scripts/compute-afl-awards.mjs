@@ -232,7 +232,12 @@ async function loadStandings(year, leagueIsGenuineLocal) {
   }
   if (ONLINE) {
     try {
-      return await fetchExport(year, 'leagueStandings');
+      // ALL=1 for the same reason backfill-standings-points.mjs uses it: an
+      // archive year returns only the columns THAT league-year had configured
+      // for display, and a trimmed response (no pf/divpct/divwlt) would fail
+      // divisionWinners' played-season guard and silently drop that year's
+      // four division titles.
+      return await fetchExport(year, 'leagueStandings', '&ALL=1');
     } catch (err) {
       warn(`standings fetch ${year} failed: ${err.message}`);
     }
