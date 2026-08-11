@@ -205,11 +205,15 @@ const numField = (v: string | undefined): number => {
   return Number.isFinite(n) ? n : 0;
 };
 
-/** Overall won-lost-tied percentage ((W + 0.5T) / G), ties counted as half. */
+/** Overall won-lost-tied percentage ((W + 0.5T) / G), ties counted as half.
+ * Historical feeds (pre-2020) ship only the overall h2hw/h2hl/h2ht fields,
+ * not the div/nondiv split — fall back to those (h2h* IS the overall record
+ * in MFL's standings export, not a head-to-head stat). */
 function overallPct(f: StandingsFranchise): number {
-  const w = parseInt(f.divw || '0') + parseInt(f.nondivw || '0');
-  const l = parseInt(f.divl || '0') + parseInt(f.nondivl || '0');
-  const t = parseInt(f.divt || '0') + parseInt(f.nondivt || '0');
+  const hasSplit = f.divw != null || f.nondivw != null;
+  const w = hasSplit ? parseInt(f.divw || '0') + parseInt(f.nondivw || '0') : parseInt(f.h2hw || '0');
+  const l = hasSplit ? parseInt(f.divl || '0') + parseInt(f.nondivl || '0') : parseInt(f.h2hl || '0');
+  const t = hasSplit ? parseInt(f.divt || '0') + parseInt(f.nondivt || '0') : parseInt(f.h2ht || '0');
   const g = w + l + t;
   return g > 0 ? (w + 0.5 * t) / g : 0;
 }
@@ -381,6 +385,33 @@ function sortByRecordReverse(
     result.push(...rankTiedGroupWorstFirst(groups.get(pct)!, teamConfigs, headToHead));
   }
   return result;
+}
+
+/**
+ * Rank one division's teams BEST first per the constitution: overall W-L-T %
+ * is the primary key; equal-record sets run the division tiebreaker chain
+ * (head-to-head -> division % -> conference % -> PWR -> PF -> all-play ->
+ * VP -> most PA -> coin flip, eliminate-and-restart). This is the forward
+ * (standings) view of the same chain the draft predictor uses in reverse.
+ * Exported for verification against MFL's official feed order — MFL applies
+ * the same constitution rules, so the two should agree; treat MFL's order as
+ * authoritative when they don't (see tests/afl-division-titles.test.ts).
+ */
+export function rankDivisionStandingsBestFirst(
+  teams: StandingsFranchise[],
+  headToHead?: HeadToHeadMap
+): StandingsFranchise[] {
+  const groups = new Map<number, StandingsFranchise[]>();
+  for (const t of teams) {
+    const pct = overallPct(t);
+    if (!groups.has(pct)) groups.set(pct, []);
+    groups.get(pct)!.push(t);
+  }
+  const out: StandingsFranchise[] = [];
+  for (const pct of [...groups.keys()].sort((a, b) => b - a)) {
+    out.push(...rankDivisionBlockWorstFirst(groups.get(pct)!, headToHead).reverse());
+  }
+  return out;
 }
 
 /**

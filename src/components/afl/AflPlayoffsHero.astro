@@ -41,7 +41,7 @@ interface SeedEntry {
 
 function buildConference(code: ConferenceId): { name: string; code: ConferenceId; logo: string; logoDark: string; seeds: SeedEntry[] } | null {
   try {
-    const result = getConferenceStandings(standings, config, code);
+    const result = getConferenceStandings(standings, config, code, { preserveFeedOrder: true });
     const top4 = (result.allTeams ?? []).slice(0, 4).map((t: any) => {
       const team = teamMap.get(t.id);
       return {

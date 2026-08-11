@@ -257,24 +257,31 @@ describe('getFranchiseTrophyRank', () => {
     expect(r.count).toBe(countFranchiseBadges('0001'));
   });
 
-  it('the trophy leader is 0001 (Smokane FC) at rank 1, untied — ground truth pin', () => {
+  it('the trophy leader is 0002 (Drunk Indians) at rank 1, untied — ground truth pin', () => {
     // GROUND TRUTH, verified against the awards data + owner-confirmed
-    // ownership boundaries (Smokane → Smokane FC is one owner since 2003,
-    // config `currentOwnerSince`). If this fails after an attribution change,
+    // ownership boundaries. If this fails after an attribution change,
     // the change silently re-credited or dropped real hardware — investigate
     // the data, don't re-derive the expectation from module output.
     //
-    // Pin dropped 20→19 on 2026-07-03: 2017's premier-league award (credited
-    // to Smokane FC) was removed. 2017 was confirmed to be ONE combined
-    // 24-team all-play table (its top 12 exactly match the 2018 Premier
-    // League roster from premierleague-2018.js) — there was no Premier
-    // League to be "champion" of that year, and Smokane FC actually finished
-    // 2nd in the combined table, not 1st. See TIER_COMPETITION_FIRST_SEASON
-    // in src/utils/afl-tier.ts.
-    const r = getFranchiseTrophyRank('0001');
-    expect(r.count).toBe(19);
-    expect(r.rank).toBe(1);
-    expect(r.tied).toBe(false);
+    // Pin history:
+    // - 2026-07-03: Smokane FC 20→19 (2017 premier-league removed; 2017 was
+    //   one combined 24-team all-play table, no Premier League that year —
+    //   see TIER_COMPETITION_FIRST_SEASON in src/utils/afl-tier.ts).
+    // - 2026-08-11 (commissioner-approved): division titles re-derived from
+    //   MFL's OFFICIAL leagueStandings order instead of the old divpct-first
+    //   sort — 22 historical titles moved. Smokane FC 19→17 (lost 2004/2011/
+    //   2024 al-north, gained 2009 al-north); Drunk Indians take the lead at
+    //   19 (gained 2004/2011/2023 al-north). MFL's order is the league's
+    //   source of truth; see tests/afl-division-titles.test.ts.
+    const leader = getFranchiseTrophyRank('0002');
+    expect(leader.count).toBe(19);
+    expect(leader.rank).toBe(1);
+    expect(leader.tied).toBe(false);
+
+    const smokane = getFranchiseTrophyRank('0001');
+    expect(smokane.count).toBe(17);
+    expect(smokane.rank).toBe(2);
+    expect(smokane.tied).toBe(false);
   });
 
   it('orders franchises by descending trophy count (rank tracks count)', () => {

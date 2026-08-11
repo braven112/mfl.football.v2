@@ -149,9 +149,12 @@ describe('what counts as a Double', () => {
     expect(card.sort()).toEqual(['al-north', 'premier-league']);
   });
 
-  it('two gold titles together are a Double (2023 Drunk Indians)', () => {
+  it('two gold titles plus the division make a Treble (2023 Drunk Indians)', () => {
+    // Championship + Premier League were always theirs; the al-north title
+    // joined on 2026-08-11 when division titles were re-derived from MFL's
+    // official standings order (Drunk Indians 11-6 topped Fullybaked 10-7).
     const card = cardsFor(2023).find((c) => c.includes('afl-championship'))!;
-    expect(card.sort()).toEqual(['afl-championship', 'premier-league']);
+    expect(card.sort()).toEqual(['afl-championship', 'al-north', 'premier-league']);
   });
 
   it('the retired AFL Cup still counts in historical seasons (2016)', () => {

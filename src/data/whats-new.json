@@ -1,5 +1,24 @@
 [
   {
+    "id": "afl-division-titles-mfl-official-2026-08-11",
+    "date": "2026-08-11",
+    "title": "The Record Books Get an Audit: 22 Division Titles Restored to Their Rightful Owners",
+    "summary": "Historical AFL division titles were being computed with a homebrew tiebreaker instead of the constitution. MFL's official standings are now the source of truth — and 22 banners just changed hands, from 2004 all the way to last season.",
+    "description": [
+      "Somewhere along the way, the site's record books started freelancing. When we backfilled two decades of AFL history, the code crowning each division's champion sorted by division record first — and at one point even used raw points-for as a tiebreaker. That's not how this league works. The constitution is clear: overall record wins the division, and ties run the full gauntlet — head-to-head, division record, conference record, Power Rank, points, all-play, victory points, most points allowed, coin flip. MFL has been applying those exact rules all along.",
+      "So we stopped re-deriving history and went to the source. MFL's official final standings now decide every division title, every season, 2004 through 2025 — and an independent recomputation using the constitution's own tiebreaker chain agrees with MFL in all 100-plus division-seasons on the books. The fallout: 22 division banners moved to their rightful owners. Dicks out for Harambe's 12-5 season finally beats a 9-8 record for the 2025 AL South crown. Chatmaster's 14-3 masterpiece in 2017 takes the NL West it always deserved. And the all-time trophy count has a new king: the Drunk Indians, at 19 pieces of hardware, with Smokane FC sliding to second at 17.",
+      "The standings pages got the same treatment — historical and current standings now render in MFL's official order on every AFL surface, so the trophy room, the standings page, and the playoff picture finally tell the same story. A regression suite now locks all of this in so no homebrew math ever sneaks back into the record books."
+    ],
+    "category": "bug-fix",
+    "link": "/afl-fantasy/standings",
+    "linkLabel": "See the corrected standings",
+    "icon": "trophy",
+    "excludeFromHero": true,
+    "leagues": [
+      "afl"
+    ]
+  },
+  {
     "id": "weekly-rollup-2026-08-10",
     "date": "2026-08-10",
     "title": "Weekly Fixes & Polish (Aug 8-10)",

@@ -458,8 +458,12 @@ const endpoints = [
     parser: (t) => JSON.parse(t),
   },
   {
+    // ALL=1 keeps the full column set (vp/confpct/all_play/…) in the export —
+    // the default trims columns the AFL tiebreaker cross-check needs
+    // (tests/afl-division-titles.test.ts). Extra columns are harmless to
+    // consumers: enrichTeamStanding defaults anything missing.
     key: 'standings',
-    url: withWeek(`${host}/${year}/export?TYPE=standings&L=${leagueId}&JSON=1`),
+    url: withWeek(`${host}/${year}/export?TYPE=standings&L=${leagueId}&JSON=1&ALL=1`),
     parser: (t) => JSON.parse(t),
   },
   {
