@@ -229,6 +229,9 @@ describe('corrected titles — pinned (commissioner-approved 2026-08-11)', () =>
     [2007, 'al-south', null, '420 All-Stars'],
     [2005, 'nl-west', null, 'Way More Funner'],
     [2005, 'nl-east', null, 'Cougs'],
+    // 2006's NL third division was named "Atlantic" for that one season; it
+    // was unmapped, so the season credited five titles instead of six.
+    [2006, 'nl-pacific', null, 'The Bandwagon'],
     [2004, 'al-north', '0002', 'Drunk Indians'],
     [2004, 'nl-pacific', null, 'The Blunt Bros.'],
   ];

@@ -334,6 +334,13 @@ const DIVISION_NAME_SLUG = {
   east: 'nl-east',
   west: 'nl-west',
   pacific: 'nl-pacific',
+  // 2006 only: the NL's third division (slot 05) was called "Atlantic" for
+  // that one season — "Pacific" in both 2005 and 2007, same slot, same
+  // conference. It is the same division under a one-year name, so it earns
+  // the nl-pacific badge; without this entry 2006 silently credited five
+  // division titles instead of six. These seven names are the complete set
+  // ever used by the AFL (verified across every committed league.json).
+  atlantic: 'nl-pacific',
 };
 
 // Division winners: MFL's leagueStandings rows arrive in the league's
