@@ -195,6 +195,32 @@ describe('applyHistoricalDivisions', () => {
     expect(applied.teams[0].division).toBe('Northwest');
   });
 
+  it('keeps an omitted franchise VISIBLE, not just on the right division', () => {
+    // The nastier half of the partial-feed case, and the one the test below
+    // originally missed by landing on the empty-list fallback. Here the feed
+    // names a real division (so `divisions` is non-empty) but omits one
+    // franchise, which keeps its configured division. getDivisionStandings
+    // filters on config.divisions, so if that leftover division isn't carried
+    // through, the team silently disappears from the standings table.
+    const config = {
+      teams: [
+        { franchiseId: '0001', division: 'Northwest' },
+        { franchiseId: '0002', division: 'Central' },
+      ],
+      divisions: ['Northwest', 'Central'],
+    };
+    const applied = applyHistoricalDivisions(config, {
+      league: {
+        divisions: { division: [{ id: '00', name: 'Pacific' }] },
+        franchises: { franchise: [{ id: '0002', division: '00' }] },
+      },
+    });
+    expect(applied.teams.find(t => t.franchiseId === '0002')!.division).toBe('Pacific');
+    expect(applied.teams.find(t => t.franchiseId === '0001')!.division).toBe('Northwest');
+    // Both must be renderable — feed-named first, then the carried-over one.
+    expect(applied.divisions).toEqual(['Pacific', 'Northwest']);
+  });
+
   it('drops divisions with no teams in them this season', () => {
     const config = { teams: [{ franchiseId: '0001', division: 'X' }], divisions: ['X'] };
     const applied = applyHistoricalDivisions(config, {

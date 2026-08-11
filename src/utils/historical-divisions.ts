@@ -136,8 +136,17 @@ export function applyHistoricalDivisions<
   // getDivisionStandings filters on membership anyway, but keeping the list
   // tight avoids advertising an empty division in any consumer that renders
   // `config.divisions` directly.
-  const populated = new Set(teams.map(t => t.division));
-  const divisions = resolved.divisions.filter(d => populated.has(d));
+  const populated = new Set(teams.map(t => t.division).filter(Boolean));
+  const fromFeed = resolved.divisions.filter(d => populated.has(d));
+
+  // Any division still populated but NOT named by the feed — i.e. held by a
+  // franchise the feed omitted, which kept its configured division above.
+  // `getDivisionStandings` treats `config.divisions` as the authoritative
+  // order and filters out anything missing from it, so leaving these off would
+  // drop those teams from the table entirely — exactly the vanishing act the
+  // per-team fallback exists to prevent. Feed order first, stragglers after.
+  const leftovers = [...populated].filter(d => !fromFeed.includes(d));
+  const divisions = [...fromFeed, ...leftovers];
 
   return {
     ...config,

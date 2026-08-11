@@ -186,8 +186,9 @@ for (const [divisionName, champ] of Object.entries(lastYearChampions)) {
   };
 }
 
-// Compass badge artwork per division — see DIVISION_BADGES for why both
-// "East" and "Eastern" are keyed, and why retired divisions are absent.
+// Compass badge artwork, keyed by DISPLAY name only — MFL's archived "Eastern"
+// is normalized to "East" by divisionAliases before it reaches the lookup.
+// See DIVISION_BADGES for why retired divisions are deliberately absent.
 const divisionBadges = DIVISION_BADGES;
 ---
 
