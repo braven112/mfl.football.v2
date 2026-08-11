@@ -340,7 +340,7 @@ Runs independently, **Week 1 → Week 17**, all-play format.
 | 0017 | Titsburgh Feelers | TITS | Premier League |
 | 0019 | Badd Boys | BADD | Premier League |
 | 0022 | Balls Deep | BALLS | Premier League |
-| 0023 | Cock Gobbler | DkLuvr | D-League |
+| 0023 | The Show | SHOW | D-League |
 | 0024 | No Soup For You | SOUP | Premier League |
 
 #### West Division
