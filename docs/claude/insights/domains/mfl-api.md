@@ -4,6 +4,57 @@ Domain knowledge about MyFantasyLeague API integration.
 
 ---
 
+## 2026-08-11 - `leagueStandings` Rows ARE the Official Order — Never Re-Sort Them
+
+**Context:** AFL historical division titles were being computed by sorting each
+division locally (division-record pct as the primary key, with a raw
+points-for tiebreak bolted on at one point). The league constitution makes
+overall W-L-T% primary and division record only tiebreaker #2 behind
+head-to-head. The homebrew sort miscredited 22 division titles across
+2004-2025 and changed who the all-time trophy leader appeared to be.
+
+**The finding:** MFL's `TYPE=leagueStandings` export returns rows in the
+league's **OFFICIAL final standings order**, with that league's configured
+tiebreaker chain already applied server-side. The first row of each division
+group IS the division winner. No local ranking is needed, and any local
+re-sort is a re-derivation of history that will eventually disagree with the
+league's own record book.
+
+Independent confirmation, two ways:
+- The league's own MFL skin reads division winners straight off the rendered
+  standings table by row position — `data/afl-fantasy/mfl-feeds/2020/option07.json`
+  does `document.querySelector(".report tr:nth-child(3|9|15|21) img")`, i.e.
+  row 1 of each six-team division block.
+- Re-ranking every division with the constitution's own chain (overall % →
+  h2h → div% → conf% → PWR → PF → all-play → VP → most PA) agrees with MFL's
+  row order in **all 100+ division-seasons on disk**, zero divergences.
+
+**Two traps that hide this:**
+
+1. **`ALL=1` changes the column set, not just the volume.** Without it the
+   export trims `vp`, `confpct`, and the `div*`/`nondiv*` splits. Any local
+   verification chain silently degrades to whatever columns survived — which
+   is how a wrong tiebreak looked plausible. `scripts/fetch-mfl-feeds.mjs` now
+   fetches standings with `&ALL=1`; extra columns are harmless because
+   `enrichTeamStanding` defaults anything missing.
+2. **Era-dependent fields.** Pre-2020 feeds ship only overall `h2hw/h2hl/h2ht`
+   and no `div*`/`nondiv*` split; `all_play_*` is absent before ~2017; 2003 has
+   almost nothing. Note that MFL's `h2h*` fields in this export are the
+   **overall** record, NOT a head-to-head stat — real head-to-head has to be
+   derived from `weekly-results-raw.json` (`buildHeadToHeadFromRaw`).
+
+**Evidence:** `scripts/compute-afl-awards.mjs#divisionWinners` (now takes
+`group[0]` in feed order, `source: "standings:mfl-order"`);
+`src/utils/standings.ts` `preserveFeedOrder` option;
+`tests/afl-division-titles.test.ts` pins winner === first feed row for every
+division-season and runs the constitution cross-check.
+
+**Recommendation:** When MFL is the league's source of truth, render its row
+order. Reserve local tiebreaker code for *projections* (draft order for an
+unfinished season) and for *verifying* MFL — log divergences, don't override.
+
+---
+
 ## 2026-07-15 - tradeBait Export Is Owner-Gated for Private Leagues — Empty ≠ Error
 
 **Context:** The AFL trade builder's live trade-block fetch parsed 0 franchises
