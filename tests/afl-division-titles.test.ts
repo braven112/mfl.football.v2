@@ -259,6 +259,12 @@ describe('constitution cross-check — the rulebook chain agrees with MFL', () =
   it('the constitution chain crowns the same winner as MFL feed order, every division, every year', () => {
     let checked = 0;
     for (const { year, byDivision, headToHead } of YEARS) {
+      // Finished seasons only, same gate as the script. The feed sync commits
+      // the current year's standings weekly from September on; cross-checking
+      // those would grade a half-played table, where rivals who haven't met
+      // yet fall back to a neutral .500 head-to-head and can legitimately
+      // disagree with MFL's order.
+      if (!isSeasonComplete(year, SEASONS.get(year), new Date().getFullYear())) continue;
       for (const [slug, rows] of byDivision) {
         if (!(divisionPct(rows[0]) > 0 || Number(rows[0].pf) > 0)) continue;
         if (ALLOWLIST.has(`${year} ${slug}`)) continue;
