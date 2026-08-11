@@ -51,10 +51,15 @@ for (const summary of (franchiseHistory as any).yearSummaries ?? []) {
   }
 }
 
-const YEARS = readdirSync(FEEDS_DIR)
+// Every season the feeds describe, in-progress included.
+const FEED_YEARS = readdirSync(FEEDS_DIR)
   .filter(d => /^\d{4}$/.test(d))
-  .sort()
-  .filter(y => [...LEDGER.keys()].some(k => k.startsWith(`${y}|`)));
+  .filter(y => existsSync(path.join(FEEDS_DIR, y, 'league.json')))
+  .sort();
+
+// Only seasons the ledger has crowned — the ledger comparison can't cover the
+// in-progress year, which by design has no division winners yet.
+const YEARS = FEED_YEARS.filter(y => [...LEDGER.keys()].some(k => k.startsWith(`${y}|`)));
 
 describe('aliasDivisionName — one implementation, two callers', () => {
   // The standings pages and scripts/compute-franchise-history.mjs both resolve
@@ -165,6 +170,55 @@ describe('parseHistoricalDivisions', () => {
     ).toBeNull();
   });
 
+  it('dedupes divisions that share a name', () => {
+    // getDivisionStandings maps over config.divisions, so a repeated name
+    // renders the division twice with each block holding the union of both
+    // divisions' teams. One MFL typo away, and league.json is refetched.
+    const parsed = parseHistoricalDivisions({
+      league: {
+        divisions: { division: [{ id: '00', name: 'East' }, { id: '01', name: 'East' }] },
+        franchises: {
+          franchise: [{ id: '0001', division: '00' }, { id: '0002', division: '01' }],
+        },
+      },
+    });
+    expect(parsed?.divisions).toEqual(['East']);
+  });
+
+  it('orders numerically so unpadded ids do not sort 1, 10, 2', () => {
+    const parsed = parseHistoricalDivisions({
+      league: {
+        divisions: {
+          division: [
+            { id: '10', name: 'Tenth' },
+            { id: '2', name: 'Second' },
+            { id: '1', name: 'First' },
+          ],
+        },
+        franchises: {
+          franchise: [
+            { id: '0001', division: '1' },
+            { id: '0002', division: '2' },
+            { id: '0003', division: '10' },
+          ],
+        },
+      },
+    });
+    expect(parsed?.divisions).toEqual(['First', 'Second', 'Tenth']);
+  });
+
+  it('unwraps a Vite glob namespace as well as a plain object', () => {
+    const inner = {
+      league: {
+        divisions: { division: [{ id: '00', name: 'Solo' }] },
+        franchises: { franchise: [{ id: '0001', division: '00' }] },
+      },
+    };
+    expect(parseHistoricalDivisions({ default: inner })).toEqual(
+      parseHistoricalDivisions(inner)
+    );
+  });
+
   it('tolerates MFL single-element collapse (object instead of array)', () => {
     const parsed = parseHistoricalDivisions({
       league: {
@@ -181,6 +235,19 @@ describe('applyHistoricalDivisions', () => {
     const config = resolveConfigForYear(leagueConfig as any, 2015);
     expect(applyHistoricalDivisions(config, null)).toBe(config);
     expect(applyHistoricalDivisions(config, { error: 'x' })).toBe(config);
+  });
+
+  it('degrades instead of throwing on a config with no teams', () => {
+    // The module header promises it never breaks a page; an .astro passing an
+    // any-shaped config is the one route that could violate that.
+    const feed = {
+      league: {
+        divisions: { division: [{ id: '00', name: 'Pacific' }] },
+        franchises: { franchise: [{ id: '0001', division: '00' }] },
+      },
+    };
+    expect(() => applyHistoricalDivisions({} as never, feed)).not.toThrow();
+    expect(() => applyHistoricalDivisions(undefined as never, feed)).not.toThrow();
   });
 
   it('keeps a franchise the feed omits on its configured division', () => {
@@ -287,10 +354,16 @@ describe('the standings page agrees with franchise history, every season', () =>
   });
 
   it('has badge artwork for every division rendered from 2011 on', () => {
-    // Regrouping by MFL's names means the table asks for badges by those names.
-    // MFL says "Eastern" where the config says "East", so a map missing either
-    // spelling silently un-badges seasons — including the current one.
-    for (const year of YEARS) {
+    // Regrouping by MFL's names means the table asks for badges by those names,
+    // and the archives say "Eastern" where the display name is "East" — so a
+    // broken alias silently un-badges seasons.
+    //
+    // Iterates FEED_YEARS, not YEARS: the in-progress season has no ledger
+    // entry, so a YEARS loop skipped 2026 entirely — the one season whose
+    // committed league.json still says "Eastern" and therefore the one that
+    // most depends on the alias. It was excluded from exactly the guard
+    // written to protect it.
+    for (const year of FEED_YEARS) {
       if (Number(year) < 2011) continue; // Pacific/Midwest/Atlantic are retired
       const rows = readFeed(year, 'standings.json')?.leagueStandings?.franchise;
       if (!rows) continue;
@@ -314,8 +387,9 @@ describe('the standings page agrees with franchise history, every season', () =>
     // say "Eastern" from 2012 on and will keep saying it even after MFL is
     // renamed, so divisionAliases is permanently load-bearing. If this fails,
     // the badge lookup breaks too (DIVISION_BADGES only keys "East").
+    // FEED_YEARS so the in-progress season is covered — see the badge test.
     const aliased = new Set<string>();
-    for (const year of YEARS) {
+    for (const year of FEED_YEARS) {
       const rows = readFeed(year, 'standings.json')?.leagueStandings?.franchise;
       if (!rows) continue;
       const config = applyHistoricalDivisions(

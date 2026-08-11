@@ -75,7 +75,16 @@ export function parseHistoricalDivisions(
   leagueFeed: unknown,
   aliases?: DivisionAliases | null
 ): HistoricalDivisions | null {
-  const feed = leagueFeed as { league?: Record<string, any>; error?: unknown } | undefined;
+  // Unwrap a Vite glob namespace. `import.meta.glob(..., { eager: true })`
+  // hands back the module, and whether the JSON's keys survive as named exports
+  // depends on Vite's json.stringify setting — under `'auto'` (today) they do,
+  // so `feed.league` resolves either way. If that ever flips, reading the
+  // namespace directly would find no `league`, return null, and silently revert
+  // the page to today's alignment with no error anywhere. Cheap to be explicit.
+  const raw = leagueFeed as Record<string, any> | undefined;
+  const feed = (raw && typeof raw === 'object' && 'default' in raw ? raw.default : raw) as
+    | { league?: Record<string, any>; error?: unknown }
+    | undefined;
   if (!feed || feed.error || !feed.league) return null;
 
   const divisionEntries = toArray<DivisionLike>(feed.league.divisions?.division)
@@ -95,9 +104,17 @@ export function parseHistoricalDivisions(
 
   // Order by MFL's division id — that's the order MFL itself presents them in,
   // and it keeps the rendered column order stable across a realignment.
-  const divisions = [...divisionEntries]
-    .sort((a, b) => a.id.localeCompare(b.id))
-    .map(d => d.name);
+  // Numeric-first so unpadded ids don't sort 1, 10, 2. Both leagues zero-pad
+  // today ("00".."05"), but the AFL port is planned and MFL is not obliged to.
+  const ordered = [...divisionEntries].sort(
+    (a, b) => Number(a.id) - Number(b.id) || a.id.localeCompare(b.id)
+  );
+
+  // Dedupe by NAME. getDivisionStandings maps over config.divisions, so a
+  // repeated name renders that division twice, each block holding the union of
+  // both divisions' teams. Committed data is clean, but league.json is
+  // refetched by roster-sync and this is one commissioner typo away.
+  const divisions = [...new Set(ordered.map(d => d.name))];
 
   return { divisions, byFranchiseId };
 }
@@ -124,8 +141,11 @@ export function applyHistoricalDivisions<
 >(config: T, leagueFeed: unknown): T {
   // Aliases come off the config itself, so callers can't forget to pass them
   // and drift from what the franchise-history script writes.
-  const resolved = parseHistoricalDivisions(leagueFeed, config.divisionAliases);
-  if (!resolved) return config;
+  const resolved = parseHistoricalDivisions(leagueFeed, config?.divisionAliases);
+  // Guard the one input that would throw rather than degrade — the module
+  // header promises this never breaks a page, and TypeScript can't help when
+  // an .astro passes an `any`-shaped config.
+  if (!resolved || !Array.isArray(config?.teams)) return config;
 
   const teams = config.teams.map(team => {
     const division = resolved.byFranchiseId[team.franchiseId];

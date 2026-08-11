@@ -125,7 +125,10 @@ function loadDivisionSeasons(): DivisionSeason[] {
       out.push({
         year: Number(year),
         divisionId,
-        divisionName: divisionNames.get(divisionId) ?? divisionId,
+        // `||` not `??`: aliasDivisionName returns '' for a missing name, which
+        // is not nullish, so `??` would leave the id fallback unreachable and
+        // failure messages would read "2015  :" instead of naming the division.
+        divisionName: divisionNames.get(divisionId) || divisionId,
         rows: divRows,
         nameOf,
       });

@@ -137,6 +137,13 @@ export interface StandingsTableProps {
  * no artwork and are deliberately absent: StandingsTable falls back to a plain
  * division header when badgeSrc is undefined, which is the right outcome for a
  * division that no longer exists.
+ *
+ * Note that 2007-2010's "Central" DOES get today's Central badge, even though
+ * its membership was different. That is intentional and not in tension with the
+ * above: badges are keyed on the division NAME, and Central is the one name the
+ * league has used continuously since 2007. The retired three are unbadged
+ * because no artwork exists for them, not because their rosters changed —
+ * mapping "Atlantic" onto a modern compass badge would invent a lineage.
  */
 export const DIVISION_BADGES: Record<string, string> = {
   Northwest: '/assets/theleague/division-badges/northwest.svg',

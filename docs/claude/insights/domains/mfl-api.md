@@ -39,9 +39,14 @@ real defect.
    indistinguishable in the output.
 
 **Evidence:** `src/utils/historical-divisions.ts` (per-season alignment +
-`divisionAliases`); `tests/historical-divisions.test.ts` joins the page against
-`franchise-history.json` on `sourceFranchiseId`, never on a name, and asserts
-76/76 agreement.
+`divisionAliases`); `tests/historical-divisions.test.ts` asserts 76/76
+agreement between the page and `franchise-history.json`. Note what that test
+does precisely, because it is the pattern worth copying: it *keys* on
+`year|divisionName` — unavoidable, since a division has no stable id across
+MFL league-years — but it **compares `sourceFranchiseId`**, and it asserts the
+key resolved (`expect(expected).toBeTruthy()`) before comparing. Naming both
+sides through the same alias map is what makes the key safe; the truthiness
+assert is what makes a miss loud instead of silent.
 
 **Recommendation:** Any "how many rows disagree" figure derived from MFL feeds
 across eras should join on franchise id and report structure and labels

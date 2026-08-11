@@ -41,7 +41,7 @@ DIVISION SETUP
 - Northwest Division: Pacific Pigskins, Da Dangsters, Computer Jocks, Vitside Mafia
 - Southwest Division: Dead Cap Walking, The Music City Mafia, Midwestside Connection, Gridiron Geeks
 - Central Division: Maverick, The Mariachi Ninjas, Bring the Pain, Cowboy Up
-- Eastern Division: Fire Ready Aim, Wascawy Wabbits, Dark Magicians of Chaos, Running Down The Dream
+- East Division: Fire Ready Aim, Wascawy Wabbits, Dark Magicians of Chaos, Running Down The Dream
 
 TEAM ROSTERS
 - Each team can have up to 22 players on their active roster, plus an additional 3 practice squad (taxi squad) spots.
