@@ -205,15 +205,27 @@ const numField = (v: string | undefined): number => {
   return Number.isFinite(n) ? n : 0;
 };
 
-/** Overall won-lost-tied percentage ((W + 0.5T) / G), ties counted as half.
- * Historical feeds (pre-2020) ship only the overall h2hw/h2hl/h2ht fields,
- * not the div/nondiv split — fall back to those (h2h* IS the overall record
- * in MFL's standings export, not a head-to-head stat). */
+/**
+ * Overall won-lost-tied percentage ((W + 0.5T) / G), ties counted as half.
+ *
+ * Modern feeds carry the div/nondiv split; older ones ship only the combined
+ * record in h2hw/h2hl/h2ht (in MFL's standings export `h2h*` IS the overall
+ * record, not a head-to-head stat). Some feeds carry a PARTIAL split — 2003
+ * has `divw/divl/divt` all "0" and no `nondiv*` at all — so the fallback keys
+ * off whether the split actually accounts for any games, not merely whether
+ * its fields are present. Testing presence alone would read 2003 as 0-0-0 and
+ * collapse every team to the coin flip.
+ */
 function overallPct(f: StandingsFranchise): number {
-  const hasSplit = f.divw != null || f.nondivw != null;
-  const w = hasSplit ? parseInt(f.divw || '0') + parseInt(f.nondivw || '0') : parseInt(f.h2hw || '0');
-  const l = hasSplit ? parseInt(f.divl || '0') + parseInt(f.nondivl || '0') : parseInt(f.h2hl || '0');
-  const t = hasSplit ? parseInt(f.divt || '0') + parseInt(f.nondivt || '0') : parseInt(f.h2ht || '0');
+  const splitW = parseInt(f.divw || '0') + parseInt(f.nondivw || '0');
+  const splitL = parseInt(f.divl || '0') + parseInt(f.nondivl || '0');
+  const splitT = parseInt(f.divt || '0') + parseInt(f.nondivt || '0');
+  const splitGames = splitW + splitL + splitT;
+  if (splitGames > 0) return (splitW + 0.5 * splitT) / splitGames;
+
+  const w = parseInt(f.h2hw || '0');
+  const l = parseInt(f.h2hl || '0');
+  const t = parseInt(f.h2ht || '0');
   const g = w + l + t;
   return g > 0 ? (w + 0.5 * t) / g : 0;
 }

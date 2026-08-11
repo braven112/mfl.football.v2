@@ -22,6 +22,7 @@ import {
   rankDivisionStandingsBestFirst,
   buildHeadToHeadFromRaw,
 } from '../src/utils/afl-draft-utils';
+import { isSeasonComplete } from '../scripts/lib/afl-season-complete.mjs';
 import awardsHistory from '../data/afl-fantasy/awards-history.json';
 import aflConfig from '../data/afl-fantasy/afl.config.json';
 import yearHostMap from '../data/afl-fantasy/year-host-map.json';
@@ -142,6 +143,12 @@ describe('division titles come from MFL official feed order', () => {
     for (const { year, byDivision, nameOf } of YEARS) {
       const awards = SEASONS.get(year);
       if (!awards) continue; // season not (yet) in awards history — e.g. in progress
+      // Mirror the script's own gate. A season can be PARTLY in the record
+      // book while still in progress: the AL/NL championship brackets resolve
+      // in week 16 but the AFL Championship not until week 17, so for one
+      // week each December the current year has an awards entry carrying
+      // conference titles and — correctly — no division titles yet.
+      if (!isSeasonComplete(year, awards, new Date().getFullYear())) continue;
       for (const [slug, rows] of byDivision) {
         const winner = rows[0];
         const award = awards[slug];
@@ -257,5 +264,39 @@ describe('constitution cross-check — the rulebook chain agrees with MFL', () =
     }
     // Guard against a vacuous pass if the feed loader ever comes back empty.
     expect(checked).toBeGreaterThan(100);
+  });
+});
+
+describe('overallPct feed-shape fallbacks (via rankDivisionStandingsBestFirst)', () => {
+  // Guards the partial-split case: 2003-shaped feeds carry divw/divl/divt as
+  // "0" with no nondiv* at all, so a presence-only check would read every team
+  // as 0-0-0 and collapse the ranking to the deterministic coin flip.
+  const row = (id: string, extra: Record<string, string>) =>
+    ({ id, fname: id, pf: '0', pa: '0', pwr: '0', vp: '0', all_play_pct: '0', ...extra }) as never;
+
+  it('uses the combined record when the split is present but empty (2003 shape)', () => {
+    const teams = [
+      row('0001', { divw: '0', divl: '0', divt: '0', h2hw: '4', h2hl: '13', h2ht: '0' }),
+      row('0002', { divw: '0', divl: '0', divt: '0', h2hw: '13', h2hl: '4', h2ht: '0' }),
+    ];
+    // 13-4 must outrank 4-13; a coin-flip collapse would order by id instead.
+    expect(rankDivisionStandingsBestFirst(teams).map((t) => t.id)).toEqual(['0002', '0001']);
+  });
+
+  it('uses the combined record when the split is absent entirely', () => {
+    const teams = [
+      row('0001', { h2hw: '5', h2hl: '12', h2ht: '0' }),
+      row('0002', { h2hw: '12', h2hl: '5', h2ht: '0' }),
+    ];
+    expect(rankDivisionStandingsBestFirst(teams).map((t) => t.id)).toEqual(['0002', '0001']);
+  });
+
+  it('prefers the split when it actually accounts for games', () => {
+    // Split says 0001 is better; the combined field disagrees. The split wins.
+    const teams = [
+      row('0001', { divw: '9', divl: '1', divt: '0', nondivw: '5', nondivl: '2', nondivt: '0', h2hw: '1', h2hl: '16', h2ht: '0' }),
+      row('0002', { divw: '2', divl: '8', divt: '0', nondivw: '1', nondivl: '6', nondivt: '0', h2hw: '16', h2hl: '1', h2ht: '0' }),
+    ];
+    expect(rankDivisionStandingsBestFirst(teams).map((t) => t.id)).toEqual(['0001', '0002']);
   });
 });
