@@ -80,6 +80,17 @@ describe('stripBadgeYear', () => {
     expect(out).not.toContain('<textPath');
   });
 
+  // The <path id="yearArc"> definition only exists to feed the textPath —
+  // once that's stripped, the path is dead weight AND a duplicate-id risk
+  // when the same badge is inlined many times on one page (e.g. one per
+  // franchise on the AFL franchises index). Must go too, not just the
+  // reference to it.
+  it('removes the now-unreferenced yearArc path definition', () => {
+    const out = stripBadgeYear(ARC);
+    expect(out).not.toContain('yearArc');
+    expect(out).not.toContain('<path');
+  });
+
   it('removes the ★ frame and year from a shield (flat text) badge', () => {
     const out = stripBadgeYear(SHIELD);
     expect(out).not.toContain('★');
@@ -97,7 +108,8 @@ describe('stripBadgeYear', () => {
 
   // Guard against badge-art drift: every shipped award badge must actually
   // lose its ★ year-stamp when stripped for a "timeless" (aggregate-count)
-  // display context.
+  // display context, and must not leave a dangling yearArc id behind (a
+  // duplicate-id risk once the same file is inlined many times on one page).
   it('actually strips the year from every shipped award badge', () => {
     const dir = path.resolve(__dirname, '../public/assets/afl/awards');
     const files = readdirSync(dir).filter((f) => f.endsWith('.svg'));
@@ -107,6 +119,7 @@ describe('stripBadgeYear', () => {
       const stripped = stripBadgeYear(raw);
       expect(stripped, `${f} did not change when stripped`).not.toBe(raw);
       expect(stripped, `${f} still contains a ★`).not.toContain('★');
+      expect(stripped, `${f} left a dangling yearArc id behind`).not.toContain('yearArc');
     }
   });
 });

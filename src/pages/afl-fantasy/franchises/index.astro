@@ -37,6 +37,15 @@ function timelessBadge(filename: string): string {
 
 // Division names map to the same award slugs the franchise detail page uses
 // for its own locked-placeholder slot (DIVISION_SLUG_BY_NAME in [id].astro).
+// Hard-mapped by name rather than keyed off team.conference because the AFL's
+// current 4-division layout strictly partitions divisions by conference
+// (North/South are always American League, East/West always National) — see
+// the divisions listed for `conferences` in afl.config.json. This is also why
+// only 4 of the 6 division award slugs are covered: al-central and nl-pacific
+// are retired (pre-2013) divisions no current team plays in — see the
+// division-structure gotcha in afl-awards.ts and the 2026-06-27 entry in
+// docs/claude/insights/features/afl-trophy-wall.md — so badgeFilenameFor()
+// correctly returns null for them rather than needing a slot that can't occur.
 const DIVISION_SLUG: Record<string, string> = {
   North: 'al-north',
   South: 'al-south',

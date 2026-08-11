@@ -58,8 +58,15 @@ export function stripBadgeYear(svg: string): string {
   if (!svg) return '';
   let out = svg;
   // Curved-arc badges: <text ...><textPath href="#yearArc">★ YYYY ★</textPath></text>
-  out = out.replace(/<text\b[^>]*><textPath\b[^>]*>[\s\S]*?<\/textPath><\/text>/, '');
+  out = out.replace(/<text\b[^>]*><textPath\b[^>]*>[\s\S]*?<\/textPath><\/text>/g, '');
+  // The <path id="yearArc" .../> that fed the textPath above is now dead
+  // weight — nothing references it once its <textPath href="#yearArc"> is
+  // gone. Left behind, its id collides with every other stripped instance of
+  // the same badge inlined on one page (e.g. the franchises index shows one
+  // afl-championship.svg per team that's won it), so remove the definition
+  // itself rather than just the reference to it.
+  out = out.replace(/<path\b[^>]*\bid="yearArc"[^>]*>(?:\s*<\/path>)?/g, '');
   // Shield badges: flat star-wrapped <text ...>★ YYYY ★</text>
-  out = out.replace(/<text\b[^>]*>[^<]*★[^<]*<\/text>/, '');
+  out = out.replace(/<text\b[^>]*>[^<]*★[^<]*<\/text>/g, '');
   return out;
 }
