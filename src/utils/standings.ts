@@ -128,11 +128,12 @@ function feedOrderComparator(franchises: StandingsFranchise[]) {
 //     echo the overall record, so a true season-series comparison is impossible
 //     from this input. That step decided at least one real division title
 //     (2015 Central — see scripts/compute-franchise-history.mjs).
-//   - It prefers LOWER points allowed, where both rulebooks say "Most Points
-//     Allowed" — a direction ambiguity nobody has resolved. It has never
-//     triggered in 76 division-seasons.
 //   - Against the AFL's chain it is further off: no conference% step, and
 //     all-play is promoted above PWR/PF.
+//
+// Its "Most Points Allowed" step DOES follow the 2026-08-11 ruling (more points
+// allowed ranks higher) — see the step itself below. It has never triggered in
+// 76 division-seasons.
 //
 // Both leagues now bypass it entirely via `preserveFeedOrder` — MFL applies the
 // constitution's tiebreakers itself and its row order is authoritative. This
@@ -398,7 +399,9 @@ export function getAllPlayStandings(
 
     if (aAllPlay !== bAllPlay) return bAllPlay - aAllPlay;
 
-    // Tiebreaker: PF, PWR, VP, PA
+    // Tiebreaker: PF, PWR, VP, PA — TheLeague's Wild Card chain
+    // (All Play -> Total points -> Power Rank -> Victory Points ->
+    // Most Points Allowed).
     const aPF = parseFloat(a.pf);
     const bPF = parseFloat(b.pf);
     if (aPF !== bPF) return bPF - aPF;
@@ -411,9 +414,10 @@ export function getAllPlayStandings(
     const bVP = parseFloat(b.vp);
     if (aVP !== bVP) return bVP - aVP;
 
+    // Most Points Allowed — more allowed ranks HIGHER (ruling 2026-08-11).
     const aPA = parseFloat(a.pa);
     const bPA = parseFloat(b.pa);
-    return aPA - bPA;
+    return bPA - aPA;
   });
 }
 
@@ -479,7 +483,9 @@ export function getTierAllPlayStandings(
 
       if (aAllPlay !== bAllPlay) return bAllPlay - aAllPlay;
 
-      // Tiebreaker: PF, PWR, VP, PA
+      // Tiebreaker: PF, PWR, VP, PA — TheLeague's Wild Card chain
+      // (All Play -> Total points -> Power Rank -> Victory Points ->
+      // Most Points Allowed).
       const aPF = parseFloat(a.pf);
       const bPF = parseFloat(b.pf);
       if (aPF !== bPF) return bPF - aPF;
@@ -492,9 +498,10 @@ export function getTierAllPlayStandings(
       const bVP = parseFloat(b.vp);
       if (aVP !== bVP) return bVP - aVP;
 
+      // Most Points Allowed — more allowed ranks HIGHER (ruling 2026-08-11).
       const aPA = parseFloat(a.pa);
       const bPA = parseFloat(b.pa);
-      return aPA - bPA;
+      return bPA - aPA;
     });
   };
 

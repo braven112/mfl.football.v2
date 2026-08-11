@@ -509,6 +509,13 @@ Caveat worth remembering: because standings order now comes from MFL, rule 2
 only governs OUR draft-order math. The live standings apply whatever MFL's
 `OPP_PTS` setting does, which is a league-settings question, not a code one.
 
+Two traps this work surfaced, written up in full under `docs/claude/insights/`:
+a missing `h2hwlt` column parses to `0-0-0` instead of erroring and silently
+erased TheLeague's entire 2022 season (`domains/mfl-api.md`), and owner-scoped
+attribution drops awards won under a slot's previous owner — which reads
+exactly like "defunct franchise" and leads to the wrong fix
+(`features/franchise-history.md`).
+
 ## Page directory registry — required for every new page
 
 Adding a page to the site without adding it to

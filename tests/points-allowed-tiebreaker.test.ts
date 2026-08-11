@@ -26,7 +26,11 @@ import {
   calculateAFLDraftOrder,
 } from '../src/utils/afl-draft-utils';
 import { calculateDraftOrder } from '../src/utils/draft-utils';
-import { getDivisionStandings } from '../src/utils/standings';
+import {
+  getDivisionStandings,
+  getAllPlayStandings,
+  getTierAllPlayStandings,
+} from '../src/utils/standings';
 
 // Two teams identical on every step of both chains EXCEPT points allowed.
 // 0002 allowed more (1900 v 1600) and must therefore win the tiebreak.
@@ -100,6 +104,31 @@ describe('most points allowed — standings direction (src/utils/standings.ts)',
     const divisions = getDivisionStandings(TIED_EXCEPT_PA as never[], config as never);
     expect(divisions[0].teams.map((t) => t.id)).toEqual(['0002', '0001']);
   });
+
+  // The all-play sorters are TheLeague's Wild Card chain (All Play -> Total
+  // points -> Power Rank -> Victory Points -> Most Points Allowed) and, unlike
+  // divisionTiebreaker, they ARE live: getAllPlayStandings backs the all-play
+  // view on the standings page and getTierAllPlayStandings backs the AFL's
+  // tier view. They were missed in the first pass at the ruling and kept
+  // ranking the lower-PA team higher — caught in review on PR #501.
+  it('applies the same direction in the all-play view', () => {
+    const ranked = getAllPlayStandings(TIED_EXCEPT_PA as never[], config as never);
+    expect(ranked.map((t) => t.id)).toEqual(['0002', '0001']);
+  });
+
+  it('applies the same direction in the tiered all-play view', () => {
+    const tiers = getTierAllPlayStandings(
+      TIED_EXCEPT_PA as never[],
+      config as never,
+      undefined,
+      // Only 'Premier League' / 'D-League' are honored as overrides; anything
+      // else falls back to config.tier and lands under 'Unknown'.
+      { '0001': 'Premier League', '0002': 'Premier League' }
+    );
+    const premier = tiers.find((t) => t.tier === 'Premier League');
+    expect(premier, 'expected a Premier League tier block').toBeTruthy();
+    expect(premier!.teams.map((t) => t.id)).toEqual(['0002', '0001']);
+  });
 });
 
 describe('most points allowed — draft direction', () => {
@@ -144,10 +173,13 @@ describe('most points allowed — draft direction', () => {
     expect(round2[0].franchiseId).toBe('0002');
   });
 
-  it('keeps the two directions decoupled — same input, opposite ends', () => {
-    // The whole point of the ruling: more points allowed is the BEST standing
-    // AND the FIRST pick. A single shared ordering cannot do both, so if these
-    // two ever agree, the decoupling has been undone.
+  it('keeps the two directions decoupled — one team wins both ends', () => {
+    // The whole point of the ruling: the SAME team (more points allowed) takes
+    // the BEST standing AND the FIRST pick. Draft order is reverse standings,
+    // so a single shared ordering mathematically cannot produce both — whoever
+    // tops the standings would necessarily pick last. These two agreeing on
+    // '0002' is therefore the proof that the step is still decoupled; if they
+    // ever DISAGREE, someone has re-merged the directions.
     const standingsBest = rankDivisionStandingsBestFirst(TIED_EXCEPT_PA as never[])[0].id;
     const teamConfigs = new Map([
       ['0001', { franchiseId: '0001', name: 'Fewer PA' }],

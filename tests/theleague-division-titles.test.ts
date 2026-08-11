@@ -228,6 +228,30 @@ describe('the 10 corrected division titles', () => {
     const entry = LEDGER.get(`${year}|${season!.divisionId}`);
     expect(entry.name).toBe(winner);
   });
+
+  it.each(CORRECTIONS)(
+    '%i %s: the old divisionWins-primary sort really would disagree',
+    (year, divisionName) => {
+      // Without this, the assertions above could pass vacuously — they'd hold
+      // even if someone reinstated the buggy sort, whenever it happened to
+      // agree with feed order. Replaying the exact old comparator proves each
+      // pinned case is one where the two genuinely diverge, so the suite has
+      // teeth. (Old rule: divisionWins -> wins -> pointsFor, all descending.)
+      const season = DIVISION_SEASONS.find(
+        (d) => d.year === year && d.divisionName === divisionName
+      )!;
+      const oldRuleWinner = [...season.rows].sort(
+        (a, b) =>
+          parseRecord(b.divwlt).w - parseRecord(a.divwlt).w ||
+          overallRecord(b).w - overallRecord(a).w ||
+          num(b.pf) - num(a.pf)
+      )[0];
+      expect(
+        season.nameOf.get(oldRuleWinner.id),
+        `${year} ${divisionName}: old rule agrees with MFL, so this is not a real correction`
+      ).not.toBe(season.nameOf.get(season.rows[0].id));
+    }
+  );
 });
 
 describe('the 2022 feed gap', () => {

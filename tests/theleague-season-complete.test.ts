@@ -29,8 +29,11 @@ describe('isSeasonComplete (TheLeague)', () => {
     // Kickoff through the regular season: standings exist, titles must not.
     expect(isSeasonComplete(2026, {}, 2026)).toBe(false);
     expect(isSeasonComplete(2026, null, 2026)).toBe(false);
-    // A result object with no champion yet (unplayed final) does not count —
-    // this is the shape getChampionshipResult returns mid-bracket.
+    // A result object that exists but names no champion does not count.
+    // getChampionshipResult itself returns null outright mid-bracket, but this
+    // shape IS reachable: the championship-history.json fallback builds
+    // `{ champion: manual.champion ?? null, ... }` whenever an entry has a
+    // runnerUp, so a hand-curated year missing its champion lands here.
     expect(isSeasonComplete(2026, { champion: null }, 2026)).toBe(false);
     // Runner-up/third place resolving is not enough on its own.
     expect(isSeasonComplete(2026, { champion: null, thirdPlace: '0001' }, 2026)).toBe(false);
