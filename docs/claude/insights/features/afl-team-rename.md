@@ -70,5 +70,42 @@ the site. `rebrand.group` also powers cross-franchise "same owner" links.
 
 **Punitive ledger (Brandon-confirmed):** 2019 Jesus Killers · 2020 Be Rough ·
 2021 Vit's Brother · (2022 skipped — cellar owner left) · 2023 Broke Back ·
-2024 Baby Gate · 2025 Cock Gobbler. Rule: D-League all-play last (official tier
-tables) → renamed next season. Pending: Thundering Herd owes a 2026 name.
+2024 Baby Gate · 2025 Cock Gobbler · 2026 A Bruin Pegs Me (Thundering Herd,
+0014). Rule: D-League all-play last (official tier tables) → renamed next
+season.
+
+## 2026-08-11 - Thundering Herd → A Bruin Pegs Me (0014), text-only rename before art existed
+
+**Context:** Franchise 0014 finished last in the D-League; Brandon renamed the
+franchise on MFL itself (name only — no icon/banner yet) and asked what else
+was needed in-repo.
+
+**Insight:** MFL-side renames don't propagate here at all — confirmed no
+prebuild step or CI workflow calls `sync-afl-asset-urls.mjs`/`sync-afl-assets.mjs`
+(`pnpm sync:afl*` are manual-only), and that script only touches icon/banner
+URLs anyway (pointing them at MFL's own CDN, which would break the
+self-hosted-art convention), never `name`. The text rename had to be hand-applied
+to `afl.config.json`, `afl.assets.json`, and `afl-constitution.ts` exactly per
+the existing playbook above, independent of when new art shows up.
+
+**Sequencing when art isn't ready yet:** closed out the old identity as a new
+`history[]` entry (`"Thundering Herd"`, `yearStart: 2007` — inferred as one
+past the prior history entry's `yearEnd: 2006`, `yearEnd: 2025`) but **left the
+live `icon`/`banner` fields pointing at the existing `herd.png` files** rather
+than blocking on artwork. `herd.png` stays valid indefinitely as the history
+entry's art regardless of when the live team gets new files, so nothing needs
+to be moved/renamed later — just swap the live `icon`/`banner` to new filenames
+whenever the art lands and leave the history entry alone.
+
+**The `currentOwnerSince` trap fired for real this time:** per the inference
+rule above, since the closing `history[]` entry's name ("Thundering Herd")
+no longer matches the new live `name`, `inferCurrentOwnerSince()` would have
+returned `history.yearEnd + 1` = 2026 — reading this purely cosmetic
+punishment as a brand-new owner and zeroing out the owner's 2007-2025 career
+stats/award credit. Set `"currentOwnerSince": 2007` explicitly (same owner,
+confirmed no ownership change coincided with the rename) to prevent this.
+**Also set `currentRebrand: { reason: "last-place", group: "a-bruin-pegs-me" }`
+on the live team object** (not just in a closed-out `history[]` entry like the
+0023 example above) — this is the field that makes the "💀 Last-Place Rebrand"
+badge show up while the punitive name is still current, before it's rolled
+into history next season.

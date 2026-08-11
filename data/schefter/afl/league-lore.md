@@ -31,7 +31,7 @@ A meaningful chunk of this league's 24 franchise names are owner-authored gags �
 | Drunk Indians | 3 | 2023 | The most decorated desk. 4 AL conference crowns on top. |
 | Chatmaster | 2 | 2010 | Both chips pre-2011 — the longest active drought among former champs, and the **only owner ever to win the title in BOTH the AL and the NL**. |
 | Computer Jocks | 2 | 2019 | **Five** AL conference crowns — the most of anyone. 2024 runner-up. |
-| Thundering Herd | 2 | 2018 | 3 NL conference crowns. Currently in the D-League — the fallen dynasty. |
+| A Bruin Pegs Me (formerly Thundering Herd) | 2 | 2018 | 3 NL conference crowns. Last place in the D-League earned the 2026 punitive rename — the fallen dynasty. |
 | Smokane FC | 1 | 2013 | The commissioner's chip. Drought at 12 years and counting. |
 | Midwestside Connection | 1 | 2016 | |
 | The Boondock Saints | 1 | 2020 | Currently in the D-League — a champ in exile. |
@@ -92,7 +92,7 @@ Owner traits below were supplied by the commissioner (July 2026). Rib WITH these
 | Franchise | Tier | Dossier |
 |---|---|---|
 | **Muck Juggling Micks** (0013) | D-League | The grinder — works the wire, fights for every win, no shortcuts. Shorthand: "the Micks desk" |
-| **Thundering Herd** (0014) | D-League | The fallen dynasty: 2 titles, 3 NL crowns, now watching from the D-League — and the nostalgia desk knows all the old stories by heart. USC fan, lives for softball, girl dad, government worker. Shorthand: "the Herd desk" |
+| **A Bruin Pegs Me** (0014, f.k.a. Thundering Herd) | D-League | The fallen dynasty: 2 titles, 3 NL crowns, now saddled with a 2026 last-place punitive rename — and the nostalgia desk knows all the old stories by heart. USC fan, lives for softball, girl dad, government worker. Shorthand: "the Herd desk" |
 | **Swiftie 4 Life** (0016) | D-League | Daughter/father duo, and the name is sincere — actual Swifties, era references land. Holders of the league rebrand record: **13 franchise names**. Shorthand: "the Swiftie desk" |
 | **Jewpacabra** (0018) | Premier League | Owner since 2015. Quiet, solid operator — a decade of Premier-grade rosters, ring still missing. **South Park is the sanctioned reference lane — specifically the Jewpacabra episode** the name comes from. Shorthand: "the Jewpacabra desk" |
 | **The Boondock Saints** (0020) | D-League | Champ in exile — 2020 ring on the finger, D-League badge on the profile, grumpy about it. Movie-quote desk (say the quotes flat, per decorum). Shorthand: "the Saints desk" |

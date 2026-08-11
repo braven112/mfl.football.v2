@@ -700,14 +700,22 @@
       "franchiseId": "0014",
       "colorPrimary": "#990000",
       "colorSecondary": "#ffc72c",
-      "name": "Thundering Herd",
-      "nameMedium": "Thundering Herd",
-      "nameShort": "The Herd",
-      "abbrev": "HERD",
+      "name": "A Bruin Pegs Me",
+      "nameMedium": "Bruin Pegs Me",
+      "nameShort": "Pegs Me",
+      "abbrev": "PEGME",
+      "currentOwnerSince": 2007,
+      "currentRebrand": {
+        "reason": "last-place",
+        "group": "a-bruin-pegs-me"
+      },
       "loaderQuips": [
         "Coaching the Thundering Herd's softball squad…"
       ],
       "aliases": [
+        "Pegs Me",
+        "Bruin Pegs Me",
+        "Thundering Herd",
         "Herd",
         "Thunderingherd"
       ],
@@ -737,6 +745,13 @@
           "banner": "/assets/afl/history/isis_banner.png",
           "yearStart": 2005,
           "yearEnd": 2006
+        },
+        {
+          "name": "Thundering Herd",
+          "icon": "https://mflfootballv2.vercel.app/assets/afl/icons/herd.png",
+          "banner": "https://mflfootballv2.vercel.app/assets/afl/banners/herd.png",
+          "yearStart": 2007,
+          "yearEnd": 2025
         }
       ]
     },
