@@ -17,6 +17,7 @@ import {
 } from '../../../utils/afl-awards';
 import { stampBadgeYear } from '../../../utils/afl-badge';
 import { getCurrentSeasonYear } from '../../../utils/league-year';
+import { segmentsForFranchiseRange as segmentsForFranchiseRangeUtil, type NameEra } from '../../../utils/afl-name-history';
 
 // Badge art loaded raw so the editable year can be stamped per win (an <img>
 // can't be edited per instance). These are build-time repo assets only — safe
@@ -189,91 +190,21 @@ const isOwner =
 // `rebrandGroup` (from config `rebrand`/`currentRebrand` tags) marks a
 // punitive last-place rename; a shared group value clusters eras that
 // belong to one owner's rebrand lineage, purely for display.
-type NameEra = {
-  name: string;
-  yearStart: number;
-  yearEnd: number;
-  icon?: string;
-  banner?: string;
-  isCurrent: boolean;
-  rebrandGroup?: string;
-  sourceFranchiseId?: string | null;
-};
-
 // Season year (Labor Day rollover), not calendar year — from January to
 // kickoff the "current" era should still label the season actually played.
 const CURRENT_YEAR = getCurrentSeasonYear();
 
 // Build the identity segments for one franchise ID within [rangeStart, rangeEnd],
 // filling any years not covered by its own `history` with its current name.
-function segmentsForFranchiseRange(
+// See src/utils/afl-name-history.ts for the implementation and the
+// season-clock-vs-identity-clock edge case it handles.
+const segmentsForFranchiseRange = (
   franchiseId: string,
   rangeStart: number,
   rangeEnd: number,
   finalSegmentIsCurrent: boolean
-): NameEra[] {
-  const t = (aflConfig.teams as any[]).find((x) => x.franchiseId === franchiseId);
-  if (!t) return [];
-  const isForeignSlot = franchiseId !== id;
-  const hist = Array.isArray(t.history)
-    ? [...t.history].sort((a: any, b: any) => a.yearStart - b.yearStart)
-    : [];
-
-  const clipped: NameEra[] = [];
-  for (const h of hist) {
-    const s = Math.max(h.yearStart, rangeStart);
-    const e = Math.min(h.yearEnd, rangeEnd);
-    if (s > e) continue;
-    clipped.push({
-      name: h.name,
-      yearStart: s,
-      yearEnd: e,
-      icon: h.icon,
-      banner: h.banner,
-      isCurrent: false,
-      rebrandGroup: h.rebrand?.group,
-      sourceFranchiseId: isForeignSlot ? franchiseId : null,
-    });
-  }
-
-  const segments: NameEra[] = [];
-  let cursor = rangeStart;
-  for (const seg of clipped) {
-    if (cursor < seg.yearStart) {
-      segments.push({
-        name: t.name,
-        yearStart: cursor,
-        yearEnd: seg.yearStart - 1,
-        icon: t.icon,
-        banner: t.banner,
-        isCurrent: false,
-        rebrandGroup: t.currentRebrand?.group,
-        sourceFranchiseId: isForeignSlot ? franchiseId : null,
-      });
-    }
-    segments.push(seg);
-    cursor = seg.yearEnd + 1;
-  }
-  if (cursor <= rangeEnd) {
-    segments.push({
-      name: t.name,
-      yearStart: cursor,
-      yearEnd: finalSegmentIsCurrent ? 9999 : rangeEnd,
-      icon: t.icon,
-      banner: t.banner,
-      isCurrent: finalSegmentIsCurrent,
-      rebrandGroup: t.currentRebrand?.group,
-      sourceFranchiseId: isForeignSlot ? franchiseId : null,
-    });
-  } else if (finalSegmentIsCurrent && segments.length > 0) {
-    // The last history entry runs through the current season (e.g. a punitive
-    // rename covering this year), so no trailing gap-fill segment was emitted —
-    // the final clipped era IS the current identity. Tag it so the page still
-    // shows a "Current" era.
-    segments[segments.length - 1].isCurrent = true;
-  }
-  return segments;
-}
+): NameEra[] =>
+  segmentsForFranchiseRangeUtil(aflConfig as any, id!, franchiseId, rangeStart, rangeEnd, finalSegmentIsCurrent);
 
 // The current OWNER's lineage (nameEras) and, separately, this slot's eras
 // that belonged to previous owners (priorOwnerEras). The boundary matches

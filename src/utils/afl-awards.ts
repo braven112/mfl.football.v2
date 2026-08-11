@@ -164,7 +164,7 @@ const TEAMS_WITH_OWNER_HISTORY = CURRENT_TEAMS.filter(
   (t) => Array.isArray(t.ownerHistory) && t.ownerHistory.length > 0
 );
 
-const normalizeIdentityName = (s: string | undefined | null): string =>
+export const normalizeIdentityName = (s: string | undefined | null): string =>
   (s || '').trim().toLowerCase().replace(/^the\s+/, '').replace(/\s+/g, ' ');
 
 /**
