@@ -80,7 +80,12 @@ const franchises = selectedFeed.leagueStandings.franchise;
 // Resolve team identities for the selected year (e.g., Heavy Chevy for 2025, Dead Cap Walking for 2026)
 const leagueConfig = resolveConfigForYear(leagueConfigRaw, selectedYear);
 
-const leagueStandings = getLeagueStandings(franchises, leagueConfig);
+// preserveFeedOrder: MFL's row order is the league's official standings order,
+// tiebreakers already applied. Seeds follow from it — division winners 1-4,
+// wild cards 5-7. Never re-sort locally.
+const leagueStandings = getLeagueStandings(franchises, leagueConfig, {
+  preserveFeedOrder: true,
+});
 
 const getModuleData = (mod: any) =>
   mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;

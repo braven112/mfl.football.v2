@@ -120,12 +120,25 @@ function feedOrderComparator(franchises: StandingsFranchise[]) {
     (index.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (index.get(b.id) ?? Number.MAX_SAFE_INTEGER);
 }
 
-// Division tiebreaker sequence for the default (legacy) path. NOTE: this is
-// NOT the AFL constitution's chain — it has no head-to-head or conference%
-// step, all-play is promoted above PWR/PF, and it prefers LOWER points
-// allowed where the constitution's step 8 is MOST points allowed. AFL pages
-// bypass it entirely via `preserveFeedOrder` (MFL's order is authoritative);
-// it remains only for TheLeague's default path, unchanged.
+// Division tiebreaker sequence for the default (legacy) path.
+//
+// It approximates TheLeague's chain (overall record → division record →
+// all-play → PF → PWR → VP → PA) but is NOT either league's real chain:
+//   - It cannot do step 1, head-to-head. The standings feed's h2h* columns only
+//     echo the overall record, so a true season-series comparison is impossible
+//     from this input. That step decided at least one real division title
+//     (2015 Central — see scripts/compute-franchise-history.mjs).
+//   - It prefers LOWER points allowed, where both rulebooks say "Most Points
+//     Allowed" — a direction ambiguity nobody has resolved. It has never
+//     triggered in 76 division-seasons.
+//   - Against the AFL's chain it is further off: no conference% step, and
+//     all-play is promoted above PWR/PF.
+//
+// Both leagues now bypass it entirely via `preserveFeedOrder` — MFL applies the
+// constitution's tiebreakers itself and its row order is authoritative. This
+// function has NO remaining production callers; it survives only for the tests
+// that pin its behavior (tests/division-champions.test.ts,
+// tests/afl-structure.test.ts). Prefer `preserveFeedOrder` for anything new.
 function divisionTiebreaker(teams: TeamStanding[]): TeamStanding[] {
   if (teams.length <= 1) return teams;
 

@@ -87,10 +87,23 @@ const franchises = selectedFeed.leagueStandings.franchise;
 // Resolve team identities for the selected year (e.g., Heavy Chevy for 2025, Dead Cap Walking for 2026)
 const yearResolvedConfig = resolveConfigForYear(leagueConfig, selectedYear);
 
-// Calculate standings for all views
-const divisionStandings = getDivisionStandings(franchises, yearResolvedConfig);
-const leagueStandings = getLeagueStandings(franchises, yearResolvedConfig);
-const allPlayStandings = getAllPlayStandings(franchises, yearResolvedConfig);
+// Calculate standings for all views.
+//
+// preserveFeedOrder: MFL's leagueStandings rows arrive in the league's OFFICIAL
+// order, with the constitution's tiebreaker chain already applied — including
+// head-to-head, which we cannot reproduce (the feed's h2h* columns only echo the
+// overall record). MFL is the source of truth for standings order; never
+// re-sort locally. See scripts/compute-franchise-history.mjs for the 2015
+// Central case that proves it.
+const divisionStandings = getDivisionStandings(franchises, yearResolvedConfig, {
+  preserveFeedOrder: true,
+});
+const leagueStandings = getLeagueStandings(franchises, yearResolvedConfig, {
+  preserveFeedOrder: true,
+});
+const allPlayStandings = getAllPlayStandings(franchises, yearResolvedConfig, undefined, {
+  preserveFeedOrder: true,
+});
 
 // Get view from query parameter (default to 'division')
 const view = (Astro.url.searchParams.get('view') ||
@@ -137,7 +150,8 @@ const currentIdentityById = new Map(
 const lastYearChampions = previousFeed?.leagueStandings && !previousFeed.error
   ? getDivisionChampionDetails(
       previousFeed.leagueStandings.franchise,
-      resolveConfigForYear(leagueConfig, previousYear)
+      resolveConfigForYear(leagueConfig, previousYear),
+      { preserveFeedOrder: true }
     )
   : {};
 
