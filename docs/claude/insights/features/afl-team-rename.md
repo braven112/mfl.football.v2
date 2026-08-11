@@ -88,6 +88,39 @@ self-hosted-art convention), never `name`. The text rename had to be hand-applie
 to `afl.config.json`, `afl.assets.json`, and `afl-constitution.ts` exactly per
 the existing playbook above, independent of when new art shows up.
 
+## 2026-08-11 - `aliases` left over from a *reverted* punitive rename leak into public display
+
+**Context:** Franchise `0023`'s punitive year ("Cock Gobbler", 2025) had already
+been closed into `history[]` and the live `name` reverted to "The Show" back on
+2026-06-27 (see above). Months later the live object still carried
+`aliases: ["Gobbler", "Gobblers", "Cock Gobbler"]`, left over from the revert.
+
+**Insight:** Rule 1's advice — "put the *old* name into `aliases` so
+search/lookups still resolve it" — is correct for an ordinary rebrand (old name
+stays useful to search by indefinitely), but a **punitive** rename is different:
+the "old" name being vacated is itself the temporary punishment, not an
+identity anyone wants surfaced going forward. Two live consumers read
+`aliases` directly and both leaked the punishment permanently:
+- `src/pages/afl-fantasy/franchises/[id].astro` renders `aka {team.aliases.join(', ')}`
+  right in the hero — so "aka Gobbler, Gobblers, Cock Gobbler" kept showing on
+  The Show's own page a year after the punishment ended.
+- `src/components/shared/assets/AssetsPage.astro` stuffs `aliases` into a
+  `data-aliases` attribute used for client-side search filtering, so typing
+  "Cock Gobbler" into the assets-gallery search still found The Show's assets.
+
+Neither `afl.config.json`'s `chooseTeamName()` consumers nor
+`afl-name-history.test.ts` (which asserts against `history[]`, not `aliases`)
+depend on the punitive nicknames staying in `aliases` — removing them is safe.
+
+**Recommendation:** When a punitive rename's live name reverts back to the
+pre-punishment identity, remove the punitive nickname(s) from the live
+`aliases` array in both `afl.config.json` and `afl.assets.json` at the same
+time (or in a prompt follow-up once the punishment year is confirmed over) —
+don't leave them as permanent aliases. The `history[]` entry (with its
+`rebrand` tag) is the correct permanent record; `aliases` is live-display
+surface area and should reflect only names people should still be able to
+find the team by today.
+
 **Sequencing when art isn't ready yet:** closed out the old identity as a new
 `history[]` entry (`"Thundering Herd"`, `yearStart: 2007` — inferred as one
 past the prior history entry's `yearEnd: 2006`, `yearEnd: 2025`) but **left the
