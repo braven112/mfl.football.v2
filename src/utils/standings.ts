@@ -111,7 +111,9 @@ export type StandingsSortOptions = {
   preserveFeedOrder?: boolean;
 };
 
-// Comparator that restores the original feed order of the input rows.
+// Comparator that restores the original feed order of the input rows. A team
+// missing from the input (shouldn't happen — the rows ARE the input) sorts to
+// the end rather than winning a comparison against a real row.
 function feedOrderComparator(franchises: StandingsFranchise[]) {
   const index = new Map(franchises.map((f, i) => [f.id, i]));
   return (a: TeamStanding, b: TeamStanding) =>
@@ -590,8 +592,12 @@ export function getConferenceStandings(
 }
 
 // Get division champions (first-place team in each division by overall record + tiebreakers)
-export function getDivisionChampions(franchises: StandingsFranchise[], config: LeagueConfig): Record<string, string> {
-  const divStandings = getDivisionStandings(franchises, config);
+export function getDivisionChampions(
+  franchises: StandingsFranchise[],
+  config: LeagueConfig,
+  opts: StandingsSortOptions = {}
+): Record<string, string> {
+  const divStandings = getDivisionStandings(franchises, config, opts);
   const champions: Record<string, string> = {};
   for (const division of divStandings) {
     if (division.teams.length > 0) {
@@ -614,9 +620,10 @@ export interface DivisionChampion {
  */
 export function getDivisionChampionDetails(
   franchises: StandingsFranchise[],
-  config: LeagueConfig
+  config: LeagueConfig,
+  opts: StandingsSortOptions = {}
 ): Record<string, DivisionChampion> {
-  const divStandings = getDivisionStandings(franchises, config);
+  const divStandings = getDivisionStandings(franchises, config, opts);
   const champions: Record<string, DivisionChampion> = {};
   for (const division of divStandings) {
     if (division.teams.length > 0) {
@@ -628,8 +635,12 @@ export function getDivisionChampionDetails(
 }
 
 // Determine playoff status for seeding view
-export function getPlayoffSeeding(franchises: StandingsFranchise[], config: LeagueConfig): PlayoffSeeding {
-  const league = getLeagueStandings(franchises, config);
+export function getPlayoffSeeding(
+  franchises: StandingsFranchise[],
+  config: LeagueConfig,
+  opts: StandingsSortOptions = {}
+): PlayoffSeeding {
+  const league = getLeagueStandings(franchises, config, opts);
 
   return {
     divisionWinners: league.filter(t => t.seed && t.seed <= 4),

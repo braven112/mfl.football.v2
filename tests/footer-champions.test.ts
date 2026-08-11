@@ -138,7 +138,7 @@ function cardsFor(year: number) {
 const sizeOfCardContaining = (year: number, slug: string) =>
   cardsFor(year).find((c) => c.includes(slug))?.length ?? 0;
 
-describe('what counts as a Double', () => {
+describe('what counts as a Double or Treble', () => {
   it('AFL Championship + division is a Double (2024 Balls Deep)', () => {
     const card = cardsFor(2024).find((c) => c.includes('afl-championship'))!;
     expect(card.sort()).toEqual(['afl-championship', 'nl-east']);
