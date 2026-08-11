@@ -88,6 +88,28 @@ self-hosted-art convention), never `name`. The text rename had to be hand-applie
 to `afl.config.json`, `afl.assets.json`, and `afl-constitution.ts` exactly per
 the existing playbook above, independent of when new art shows up.
 
+**Sequencing when art isn't ready yet:** closed out the old identity as a new
+`history[]` entry (`"Thundering Herd"`, `yearStart: 2007` — inferred as one
+past the prior history entry's `yearEnd: 2006`, `yearEnd: 2025`) but **left the
+live `icon`/`banner` fields pointing at the existing `herd.png` files** rather
+than blocking on artwork. `herd.png` stays valid indefinitely as the history
+entry's art regardless of when the live team gets new files, so nothing needs
+to be moved/renamed later — just swap the live `icon`/`banner` to new filenames
+whenever the art lands and leave the history entry alone.
+
+**The `currentOwnerSince` trap fired for real this time:** per the inference
+rule above, since the closing `history[]` entry's name ("Thundering Herd")
+no longer matches the new live `name`, `inferCurrentOwnerSince()` would have
+returned `history.yearEnd + 1` = 2026 — reading this purely cosmetic
+punishment as a brand-new owner and zeroing out the owner's 2007-2025 career
+stats/award credit. Set `"currentOwnerSince": 2007` explicitly (same owner,
+confirmed no ownership change coincided with the rename) to prevent this.
+**Also set `currentRebrand: { reason: "last-place", group: "a-bruin-pegs-me" }`
+on the live team object** (not just in a closed-out `history[]` entry like the
+0023 example above) — this is the field that makes the "💀 Last-Place Rebrand"
+badge show up while the punitive name is still current, before it's rolled
+into history next season.
+
 ## 2026-08-11 - `aliases` left over from a *reverted* punitive rename leak into public display
 
 **Context:** Franchise `0023`'s punitive year ("Cock Gobbler", 2025) had already
@@ -120,25 +142,3 @@ don't leave them as permanent aliases. The `history[]` entry (with its
 `rebrand` tag) is the correct permanent record; `aliases` is live-display
 surface area and should reflect only names people should still be able to
 find the team by today.
-
-**Sequencing when art isn't ready yet:** closed out the old identity as a new
-`history[]` entry (`"Thundering Herd"`, `yearStart: 2007` — inferred as one
-past the prior history entry's `yearEnd: 2006`, `yearEnd: 2025`) but **left the
-live `icon`/`banner` fields pointing at the existing `herd.png` files** rather
-than blocking on artwork. `herd.png` stays valid indefinitely as the history
-entry's art regardless of when the live team gets new files, so nothing needs
-to be moved/renamed later — just swap the live `icon`/`banner` to new filenames
-whenever the art lands and leave the history entry alone.
-
-**The `currentOwnerSince` trap fired for real this time:** per the inference
-rule above, since the closing `history[]` entry's name ("Thundering Herd")
-no longer matches the new live `name`, `inferCurrentOwnerSince()` would have
-returned `history.yearEnd + 1` = 2026 — reading this purely cosmetic
-punishment as a brand-new owner and zeroing out the owner's 2007-2025 career
-stats/award credit. Set `"currentOwnerSince": 2007` explicitly (same owner,
-confirmed no ownership change coincided with the rename) to prevent this.
-**Also set `currentRebrand: { reason: "last-place", group: "a-bruin-pegs-me" }`
-on the live team object** (not just in a closed-out `history[]` entry like the
-0023 example above) — this is the field that makes the "💀 Last-Place Rebrand"
-badge show up while the punitive name is still current, before it's rolled
-into history next season.
