@@ -212,10 +212,16 @@ function sortByRecordReverse(standings: StandingsFranchise[]): StandingsFranchis
       return aVP - bVP;
     }
 
-    // Tiebreaker 5: Points Against (lower is better, so reverse)
+    // Tiebreaker 5: Most Points Allowed — the team that gave up MORE points
+    // wins this step, so it lands earlier in this worst-first list and gets the
+    // better draft pick. Commissioner ruling 2026-08-11: "most points allowed
+    // should benefit the team in all leagues." The rulebook step has always
+    // read "Most Points Allowed"; this code used to prefer FEWER, handing the
+    // better pick to the team that had been luckier. See
+    // tests/points-allowed-tiebreaker.test.ts.
     const aPA = parseFloat(a.pa || '0');
     const bPA = parseFloat(b.pa || '0');
-    return aPA - bPA;
+    return bPA - aPA;
   });
 }
 

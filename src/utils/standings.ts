@@ -177,9 +177,14 @@ function divisionTiebreaker(teams: TeamStanding[]): TeamStanding[] {
     const bVP = parseFloat(b.vp);
     if (aVP !== bVP) return bVP - aVP;
 
+    // Most Points Allowed — the team that gave up MORE points wins this step
+    // and ranks HIGHER. Commissioner ruling 2026-08-11: "most points allowed
+    // should benefit the team in all leagues." Both rulebooks have always read
+    // "Most Points Allowed"; this code used to prefer FEWER, punishing a team
+    // that had already been unlucky. See tests/points-allowed-tiebreaker.test.ts.
     const aPA = parseFloat(a.pa);
     const bPA = parseFloat(b.pa);
-    return aPA - bPA; // Lower PA is better
+    return bPA - aPA;
   });
 
   return sorted;
@@ -324,9 +329,14 @@ export function getLeagueStandings(
     const bVP = parseFloat(b.vp);
     if (aVP !== bVP) return bVP - aVP;
 
+    // Most Points Allowed — the team that gave up MORE points wins this step
+    // and ranks HIGHER. Commissioner ruling 2026-08-11: "most points allowed
+    // should benefit the team in all leagues." Both rulebooks have always read
+    // "Most Points Allowed"; this code used to prefer FEWER, punishing a team
+    // that had already been unlucky. See tests/points-allowed-tiebreaker.test.ts.
     const aPA = parseFloat(a.pa);
     const bPA = parseFloat(b.pa);
-    return aPA - bPA; // Lower PA is better
+    return bPA - aPA;
   });
 
   // Get non-division winners and sort by overall record
