@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isLeagueDraftOrderFinal, isDraftConducted } from '../src/utils/draft-utils';
+import { isLeagueDraftOrderFinal, isDraftConducted, isDraftComplete } from '../src/utils/draft-utils';
 import type { ToiletBowlResult } from '../src/types/standings';
 
 const tb = (level: ToiletBowlResult['level'], id: string): ToiletBowlResult => ({
@@ -86,6 +86,80 @@ describe('isDraftConducted', () => {
   it('handles a single non-array pick', () => {
     expect(
       isDraftConducted({
+        draftResults: { draftUnit: { draftPick: { round: '01', pick: '01', player: '12345' } } },
+      })
+    ).toBe(true);
+  });
+});
+
+// The completion predicate gates surfaces that treat undrafted rookies as
+// available (the free-agent page's default rookie filter). The load-bearing
+// case is the multi-day slow draft: conducted (first pick in) must NOT imply
+// complete (every slot filled).
+describe('isDraftComplete', () => {
+  const results = (picks: Array<Record<string, string>>) => ({
+    draftResults: { draftUnit: { draftPick: picks } },
+  });
+
+  it('is false mid-draft — made picks alongside stubbed slots', () => {
+    const midDraft = results([
+      { round: '01', pick: '01', franchise: '0007', player: '17472' },
+      { round: '01', pick: '02', franchise: '0002', player: '' },
+      { round: '01', pick: '03', franchise: '0011' },
+    ]);
+    expect(isDraftConducted(midDraft)).toBe(true); // sanity: started…
+    expect(isDraftComplete(midDraft)).toBe(false); // …but not finished
+  });
+
+  it('is true once every pick slot carries a real selection', () => {
+    expect(
+      isDraftComplete(results([
+        { round: '01', pick: '01', franchise: '0007', player: '17472' },
+        { round: '01', pick: '02', franchise: '0002', player: '16205' },
+      ]))
+    ).toBe(true);
+  });
+
+  it('is false for an all-stubbed pre-draft board', () => {
+    expect(
+      isDraftComplete(results([
+        { round: '01', pick: '01', franchise: '0007', player: '' },
+        { round: '01', pick: '02', franchise: '0002' },
+      ]))
+    ).toBe(false);
+  });
+
+  it('is false when draft results are missing or empty', () => {
+    expect(isDraftComplete(null)).toBe(false);
+    expect(isDraftComplete({})).toBe(false);
+    expect(isDraftComplete(results([]))).toBe(false);
+  });
+
+  it("requires every conference to finish in the AFL's two-unit shape", () => {
+    const oneConferenceDone = {
+      draftResults: {
+        draftUnit: [
+          { unit: 'CONFERENCE00', draftPick: [{ round: '01', pick: '01', franchise: '0012', player: '17042' }] },
+          { unit: 'CONFERENCE01', draftPick: [{ round: '01', pick: '01', franchise: '0003', player: '' }] },
+        ],
+      },
+    };
+    expect(isDraftComplete(oneConferenceDone)).toBe(false);
+
+    const bothDone = {
+      draftResults: {
+        draftUnit: [
+          { unit: 'CONFERENCE00', draftPick: [{ round: '01', pick: '01', franchise: '0012', player: '17042' }] },
+          { unit: 'CONFERENCE01', draftPick: [{ round: '01', pick: '01', franchise: '0003', player: '17044' }] },
+        ],
+      },
+    };
+    expect(isDraftComplete(bothDone)).toBe(true);
+  });
+
+  it('handles a single non-array made pick', () => {
+    expect(
+      isDraftComplete({
         draftResults: { draftUnit: { draftPick: { round: '01', pick: '01', player: '12345' } } },
       })
     ).toBe(true);

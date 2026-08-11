@@ -25,6 +25,7 @@ import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
 import leagueConfig from '../../data/theleague.config.json';
 import { getLeagueBySlug } from '../../config/leagues';
 import { getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark, getPlayerAvatarStyleMaps } from '../../utils/nfl-team-colors';
+import { isDraftComplete } from '../../utils/draft-utils';
 import { DEF_SPOTLIGHT_PLAYERS, getDefSpotlightPlayer } from '../../data/theleague/def-spotlight-players';
 
 // Build franchise ID → short name map for auction high-bidder display
@@ -117,6 +118,10 @@ const auctionResultsModules = import.meta.glob(
   '../../../data/theleague/mfl-feeds/*/auctionResults.json',
   { eager: true }
 );
+const draftResultsModules = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/*/draftResults.json',
+  { eager: true }
+);
 const salaryAvgModules = import.meta.glob(
   '../../data/mfl-salary-averages-*.json',
   { eager: true }
@@ -137,6 +142,17 @@ const findForYear = (modules: Record<string, any>, yr: number) => {
 const playersData = findForYear(playerModules, currentYear);
 const projectedScoresData = findForYear(projectedScoresModules, currentYear);
 const rostersData = findForYear(rostersModules, currentYear);
+
+// Rookies enter TheLeague only through the rookie draft, so before it wraps
+// the class is noise on a free-agent page and the "Include rookies" filter
+// defaults off. Once this league year's draft is COMPLETE (every pick slot
+// carries a real selection — not merely started, it's a multi-day slow
+// draft), the undrafted leftovers are genuinely available players and the
+// filter flips to default-on. findForYear matches the exact league year only:
+// post-Feb-14, before the new year's feed exists, this falls back to false
+// (hidden) rather than reading last year's completed draft.
+const draftResultsData = findForYear(draftResultsModules, currentYear);
+const rookieDraftComplete = isDraftComplete(draftResultsData);
 
 // ADP data — current year only (blank until MFL has data)
 function buildAdpMap(modules: Record<string, any>): Map<string, number> {
@@ -563,8 +579,10 @@ playerList.sort((a, b) => {
 const hasProjected = projectedMap.size > 0;
 const hasLastYrPts = lastYrPtsMap.size > 0;
 
-// Count free agents by position for category tabs
-const freeAgents = playerList.filter(p => !p.rostered);
+// Count free agents by position for category tabs. Mirrors the client's
+// initial filter state: rookies only count once the draft is complete, so
+// the server-rendered pill counts (and hero spotlight) match the table.
+const freeAgents = playerList.filter(p => !p.rostered && (rookieDraftComplete || !p.rookie));
 const faCounts: Record<string, number> = { ALL: freeAgents.length };
 for (const p of freeAgents) {
   faCounts[p.position] = (faCounts[p.position] || 0) + 1;
@@ -618,7 +636,6 @@ for (const p of playerList) {
 const nflTeamsList = [...nflTeamsSet].sort();
 
 const playerDataJson = JSON.stringify(playerList);
-const faCountsJson = JSON.stringify(faCounts);
 const nflTeamsJson = JSON.stringify(nflTeamsList);
 const defSpotlightJson = JSON.stringify(DEF_SPOTLIGHT_PLAYERS);
 
@@ -822,7 +839,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
               <span>Include rostered</span>
             </label>
             <label class="filter-checkbox">
-              <input type="checkbox" id="show-rookies" autocomplete="off" />
+              <input type="checkbox" id="show-rookies" autocomplete="off" checked={rookieDraftComplete} />
               <span>Include rookies</span>
             </label>
             <button class="filter-clear-btn" id="filter-clear-btn" type="button">Clear Filters</button>
@@ -999,7 +1016,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   ></script>
 </TheLeagueLayout>
 
-<script define:vars={{ playerDataJson, hasProjected, hasLastYrPts, hasSnapCounts, faCountsJson, nflTeamsJson, hasSurplusData, hasAuctionData, isAuctionSeason, isAdmin, currentYear, mflHost, mflLeagueId, mflActionYear, franchiseNamesJson, franchiseBannersJson, defSpotlightJson, nflAvatarBgJson, nflAvatarBgFallback, nflAvatarBorderJson, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, logoOnerror: NFL_LOGO_ONERROR }}>
+<script define:vars={{ playerDataJson, hasProjected, hasLastYrPts, hasSnapCounts, nflTeamsJson, hasSurplusData, hasAuctionData, isAuctionSeason, isAdmin, currentYear, mflHost, mflLeagueId, mflActionYear, franchiseNamesJson, franchiseBannersJson, defSpotlightJson, nflAvatarBgJson, nflAvatarBgFallback, nflAvatarBorderJson, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, logoOnerror: NFL_LOGO_ONERROR, rookieDraftComplete }}>
   // define:vars creates const — copy to let so polling can update at runtime
   let _hasAuctionData = hasAuctionData;
   const players = JSON.parse(playerDataJson);
@@ -1016,7 +1033,11 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   let activePosition = 'ALL';
   let searchQuery = '';
   let showRostered = false;
-  let showRookies = false;
+  // Rookies default hidden until the league year's rookie draft is complete,
+  // then default shown (the leftovers are real free agents). The server
+  // renders the checkbox to match; deviating from the default is what counts
+  // as an "active filter" for the badge.
+  let showRookies = rookieDraftComplete;
   const BATCH_SIZE = 50;
   let lastAuctionFetchTime = 0;
   let auctionPollTimer = null;
@@ -1767,7 +1788,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     if (filterExp) count++;
     if (filterDraft) count++;
     if (showRostered) count++;
-    if (showRookies) count++;
+    if (showRookies !== rookieDraftComplete) count++;
     return count;
   }
 
@@ -1792,7 +1813,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         if (!(activeView === 'auction' && p.auctionBid != null)) return false;
       }
 
-      // Rookie filter (default on)
+      // Rookie filter (defaults hidden pre-draft, shown post-draft)
       if (!showRookies && p.rookie) return false;
 
       // Position filter
@@ -2340,7 +2361,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         filterExp = '';
         filterDraft = '';
         showRostered = false;
-        showRookies = false;
+        showRookies = rookieDraftComplete;
 
         // Reset DOM controls
         if (teamSelect) teamSelect.value = '';
@@ -2353,7 +2374,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         if (expSelect) expSelect.value = '';
         if (draftSelect) draftSelect.value = '';
         if (rosterCheck) rosterCheck.checked = false;
-        if (rookieCheck) rookieCheck.checked = false;
+        if (rookieCheck) rookieCheck.checked = rookieDraftComplete;
 
         document.dispatchEvent(new CustomEvent('rankings:rostered-changed'));
         filterPlayers();
