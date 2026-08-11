@@ -483,3 +483,39 @@ re-derive the expectation.
 **Evidence:** `scripts/compute-afl-awards.mjs` (`divisionWinners`,
 `isGenuineAfl`); `tests/afl-division-titles.test.ts`;
 `data/afl-fantasy/awards-history.json`.
+
+---
+
+## 2026-08-11 - Reusing badge art for an aggregate (non-dated) context: strip, don't blank
+
+**Context:** The AFL franchises index (`src/pages/afl-fantasy/franchises/index.astro`)
+showed title-type counts (AFL, Premier, Conference, Division, D-League, NIT) with
+generic emoji (🏆👑🎖️🛡🥈🎗️) — swapped them for the real branded badge art so a
+glance actually tells the types apart.
+
+**Insight 1: a card showing a lifetime count is not a "locked/unwon" placeholder,
+so `stampBadgeYear(svg, '')` is the wrong tool.** That call blanks the year but
+keeps the ★  ★ star frame rendering (right behavior for a locked trophy-room
+slot, where "un-won" still needs to look like an empty version of the same
+badge). An aggregate count icon needs the whole year element gone, stars
+included — added `stripBadgeYear(svg)` in `afl-badge.ts` as a sibling function
+rather than overloading `stampBadgeYear`'s year param with a third meaning.
+Verified via a drift-guard test (mirroring the existing stamp one) that it
+actually removes `★` from every shipped badge in `public/assets/afl/awards/`.
+
+**Insight 2: Premier League and D-League's OWN championship banners are the
+wrong art for a compact icon — they're layout-identical to the AFL medallion.**
+`premier-league.svg` / `dleague-champion.svg` are the same circular medallion
+frame as `afl-championship.svg` (same viewBox, same gold/navy ring construction
+— see gotcha 4 in the 2026-06-25 entry above about the "two AFL golds"), so at
+badge-icon size they read as "another AFL trophy," not "Premier League." The
+tier LOGO marks used elsewhere (`/assets/afl/premier.svg` /
+`/assets/afl/dleague.svg` + `-dark` variants, via `getTierLogo`/`getTierLogoDark`
+in `afl-tier-logo.ts` + `<ThemeImage>`, same pattern as the standings page promo
+strip) are visually distinct from the medallion and were the better fit for
+those two title types specifically. Conference/division shield art (`al-champion`,
+`al-north`, etc.) doesn't have this collision — shields and medallions are
+already distinct shapes — so only Premier/D-League needed the swap.
+
+**Evidence:** `src/utils/afl-badge.ts` (`stripBadgeYear`); `tests/afl-badge.test.ts`;
+`src/pages/afl-fantasy/franchises/index.astro` (`timelessBadge`, `badgeFilenameFor`).
