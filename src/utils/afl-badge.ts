@@ -46,3 +46,20 @@ export function stampBadgeYear(
   }
   return out;
 }
+
+/**
+ * Strip a badge's year-stamp element entirely — the ★ frame included, not
+ * just the year inside it — for a "timeless" display context (an aggregate
+ * trophy-count icon, a franchise-card summary) where no single win-year
+ * applies. `stampBadgeYear(svg, '')` blanks the year but leaves the ★  ★
+ * frame rendering; this removes the whole element so nothing shows.
+ */
+export function stripBadgeYear(svg: string): string {
+  if (!svg) return '';
+  let out = svg;
+  // Curved-arc badges: <text ...><textPath href="#yearArc">★ YYYY ★</textPath></text>
+  out = out.replace(/<text\b[^>]*><textPath\b[^>]*>[\s\S]*?<\/textPath><\/text>/, '');
+  // Shield badges: flat star-wrapped <text ...>★ YYYY ★</text>
+  out = out.replace(/<text\b[^>]*>[^<]*★[^<]*<\/text>/, '');
+  return out;
+}

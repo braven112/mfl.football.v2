@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
-import { stampBadgeYear } from '../src/utils/afl-badge';
+import { stampBadgeYear, stripBadgeYear } from '../src/utils/afl-badge';
 
 const ARC = `<svg><defs><path id="yearArc" d="M0 0"></path></defs><text><textPath href="#yearArc" startOffset="50%">★  2025  ★</textPath></text></svg>`;
 const SHIELD = `<svg><text x="130" y="270" fill="#c9a44c">★  2025  ★</text></svg>`;
@@ -68,6 +68,45 @@ describe('stampBadgeYear', () => {
       const stamped = stampBadgeYear(raw, 1999, `t-${f}`);
       expect(stamped, `${f} did not change when stamped`).not.toBe(raw);
       expect(stamped, `${f} year not stamped`).toContain('1999');
+    }
+  });
+});
+
+describe('stripBadgeYear', () => {
+  it('removes the ★ frame and year from an arc (textPath) badge', () => {
+    const out = stripBadgeYear(ARC);
+    expect(out).not.toContain('★');
+    expect(out).not.toContain('2025');
+    expect(out).not.toContain('<textPath');
+  });
+
+  it('removes the ★ frame and year from a shield (flat text) badge', () => {
+    const out = stripBadgeYear(SHIELD);
+    expect(out).not.toContain('★');
+    expect(out).not.toContain('2025');
+  });
+
+  it('leaves everything else in the badge untouched', () => {
+    const withExtra = `<svg><circle r="1"></circle>${ARC.replace('<svg>', '').replace('</svg>', '')}</svg>`;
+    expect(stripBadgeYear(withExtra)).toContain('<circle r="1">');
+  });
+
+  it('returns empty string for empty input', () => {
+    expect(stripBadgeYear('')).toBe('');
+  });
+
+  // Guard against badge-art drift: every shipped award badge must actually
+  // lose its ★ year-stamp when stripped for a "timeless" (aggregate-count)
+  // display context.
+  it('actually strips the year from every shipped award badge', () => {
+    const dir = path.resolve(__dirname, '../public/assets/afl/awards');
+    const files = readdirSync(dir).filter((f) => f.endsWith('.svg'));
+    expect(files.length).toBeGreaterThan(0);
+    for (const f of files) {
+      const raw = readFileSync(path.join(dir, f), 'utf8');
+      const stripped = stripBadgeYear(raw);
+      expect(stripped, `${f} did not change when stripped`).not.toBe(raw);
+      expect(stripped, `${f} still contains a ★`).not.toContain('★');
     }
   });
 });

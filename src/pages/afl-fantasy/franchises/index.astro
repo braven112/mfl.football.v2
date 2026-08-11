@@ -10,12 +10,63 @@ import {
 import { getAflCareerStats, type AflCareerStats } from '../../../utils/afl-career-stats';
 import { getConferenceName, type ConferenceId } from '../../../utils/afl-conference';
 import { buildHistoricalIdentities } from '../../../utils/franchise-eras';
+import { stripBadgeYear } from '../../../utils/afl-badge';
+import { PREMIER_LEAGUE, D_LEAGUE, getTierLogo, getTierLogoDark } from '../../../utils/afl-tier-logo';
+import ThemeImage from '../../../components/ThemeImage.astro';
 
 const { byFranchise, yearsCovered } = getAflCareerStats();
 const firstYear = yearsCovered[0];
 const lastYear = yearsCovered[yearsCovered.length - 1];
 
 type AflTeamConfig = (typeof aflConfig.teams)[number];
+
+// Badge art loaded raw (same pattern as the franchise detail page) so the
+// year stamp can be stripped for this "timeless" aggregate-count context —
+// the card shows a lifetime total, not a single win, so no year applies.
+const badgeSvgRaw = import.meta.glob<string>(
+  '../../../../public/assets/afl/awards/*.svg',
+  { query: '?raw', import: 'default', eager: true }
+);
+const BADGE_SVG: Record<string, string> = {};
+for (const [p, raw] of Object.entries(badgeSvgRaw)) {
+  BADGE_SVG[p.split('/').pop() as string] = raw;
+}
+function timelessBadge(filename: string): string {
+  return stripBadgeYear(BADGE_SVG[filename] ?? '');
+}
+
+// Division names map to the same award slugs the franchise detail page uses
+// for its own locked-placeholder slot (DIVISION_SLUG_BY_NAME in [id].astro).
+const DIVISION_SLUG: Record<string, string> = {
+  North: 'al-north',
+  South: 'al-south',
+  East: 'nl-east',
+  West: 'nl-west',
+};
+
+// Which badge art represents a title TYPE for a given team. Conference and
+// division each collapse several award slugs (any conference / any division
+// counts toward the type) — the card shows the team's OWN current conference
+// / division art, matching how the detail page picks a single locked slot.
+// Premier/D-League intentionally return null: their championship banners are
+// visually near-identical to the AFL championship banner (same medallion
+// layout), so those two render the tier LOGO instead (see the template).
+function badgeFilenameFor(key: TitleTypeKey, team: AflTeamConfig): string | null {
+  switch (key) {
+    case 'afl':
+      return 'afl-championship.svg';
+    case 'nit':
+      return 'nit.svg';
+    case 'conference':
+      return team.conference === '00' ? 'al-champion.svg' : 'nl-champion.svg';
+    case 'division': {
+      const slug = DIVISION_SLUG[team.division as string];
+      return slug ? `${slug}.svg` : null;
+    }
+    default:
+      return null;
+  }
+}
 
 interface CardRow {
   team: AflTeamConfig;
@@ -57,15 +108,6 @@ function winPct(s: AflCareerStats | null): string {
   const pct = (s.wins + s.ties * 0.5) / total;
   return pct.toFixed(3).replace(/^0/, '');
 }
-
-const TITLE_EMOJI: Record<TitleTypeKey, string> = {
-  afl: '🏆',
-  premier: '👑',
-  conference: '🎖️',
-  division: '🛡',
-  dleague: '🥈',
-  nit: '🎗️',
-};
 
 const TITLE_TOOLTIP: Record<TitleTypeKey, string> = {
   afl: 'AFL Champion',
@@ -167,7 +209,18 @@ const historicalIdentities = buildHistoricalIdentities(aflConfig.teams as any[])
                       class={`badge badge--${t.key}`}
                       title={`${TITLE_TOOLTIP[t.key]}: ${titleYears(t)}`}
                     >
-                      <span class="icon" aria-hidden="true">{TITLE_EMOJI[t.key]}</span>
+                      <span class="icon" aria-hidden="true">
+                        {t.key === 'premier' || t.key === 'dleague' ? (
+                          <ThemeImage
+                            src={getTierLogo(t.key === 'premier' ? PREMIER_LEAGUE : D_LEAGUE)}
+                            darkSrc={getTierLogoDark(t.key === 'premier' ? PREMIER_LEAGUE : D_LEAGUE)}
+                            alt=""
+                            class="badge-tier-logo"
+                          />
+                        ) : (
+                          <span class="badge-svg" set:html={timelessBadge(badgeFilenameFor(t.key, team) ?? '')} />
+                        )}
+                      </span>
                       <span>{t.years.length}</span>
                     </li>
                   ))}
@@ -367,34 +420,45 @@ const historicalIdentities = buildHistoricalIdentities(aflConfig.teams as any[])
   .badge {
     display: inline-flex;
     align-items: center;
-    gap: 0.25rem;
-    padding: 0.25rem 0.5rem;
+    gap: 0.3125rem;
+    padding: 0.125rem 0.5rem 0.125rem 0.1875rem;
     border-radius: 999px;
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 700;
     background: var(--content-bg-muted, #f5f5f5);
     color: var(--content-text-muted, #555);
   }
 
-  .badge .icon { font-size: 0.875rem; line-height: 1; }
-  .badge--afl { background: #fff3c4; color: #7a5b00; }
-  .badge--premier { background: #f0e6f7; color: #4d2c66; }
-  .badge--conference { background: #e6f7e6; color: #1f5d2d; }
-  .badge--division { background: #d6e4ff; color: #1a3d7c; }
-  .badge--dleague { background: #e8e8ee; color: #3f3f50; }
-  .badge--nit { background: #ffe4e1; color: #8b2a1f; }
+  /* The brand badge art (or tier logo) carries its own color now, so the
+     chip itself stays a neutral ring rather than a per-type pastel — a
+     colored pill behind full-color art fights the art instead of framing
+     it. Ring, not fill, keeps chips legible against html.dark's page bg. */
+  :global(html.dark) .badge {
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14);
+  }
 
-  /* Award pills keep their light pastel/dark-text pairing in dark mode too —
-     both colors are hardcoded together so contrast stays fixed regardless of
-     theme (WCAG AA holds: e.g. #7a5b00 on #fff3c4 ≈ 5:1). Ring them so they
-     read as intentional chips rather than a light-mode leftover. */
-  :global(html.dark) .badge--afl,
-  :global(html.dark) .badge--premier,
-  :global(html.dark) .badge--conference,
-  :global(html.dark) .badge--division,
-  :global(html.dark) .badge--dleague,
-  :global(html.dark) .badge--nit {
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.18);
+  .badge .icon {
+    display: flex;
+    align-items: center;
+    line-height: 0;
+  }
+
+  /* Award badge art (afl-championship / conference / division / nit) —
+     inlined raw SVG with its year stamp stripped (timeless aggregate count). */
+  .badge .icon :global(svg) {
+    display: block;
+    height: 22px;
+    width: auto;
+  }
+
+  /* Premier League / D-League tier logo — an <img> via ThemeImage, not
+     inline SVG, so it's sized directly rather than through the svg rule
+     above. Their championship banners look like the AFL medallion, so the
+     tier mark stands in for those two badge types instead. */
+  :global(.badge-tier-logo) {
+    height: 20px;
+    width: auto;
+    object-fit: contain;
   }
 
   .historical-identities {
