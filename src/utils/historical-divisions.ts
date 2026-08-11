@@ -38,6 +38,8 @@
  * behavior) rather than throwing or emitting an empty standings table.
  */
 
+import { aliasDivisionName, isUsableDivisionName } from './division-aliases.mjs';
+
 type FranchiseLike = { id?: string; division?: string | number };
 type DivisionLike = { id?: string | number; name?: string };
 
@@ -51,20 +53,18 @@ export type HistoricalDivisions = {
 /**
  * MFL name -> display name, e.g. `{ Eastern: 'East' }`. Lives in the league's
  * config (`divisionAliases`) so the pages and the franchise-history script
- * apply the same one. Keys starting with `_` are ignored so the JSON can carry
- * a `_comment`.
+ * apply the same one.
  */
 export type DivisionAliases = Record<string, string>;
 
+// Re-exported from the shared .mjs so this module stays the single import site
+// for page code. The implementation lives there because
+// scripts/compute-franchise-history.mjs needs the identical function and cannot
+// import a .ts — see division-aliases.mjs for why that matters.
+export { aliasDivisionName, isUsableDivisionName };
+
 const toArray = <T,>(v: T | T[] | null | undefined): T[] =>
   Array.isArray(v) ? v : v == null ? [] : [v];
-
-/** Resolve one MFL division name to its display name. */
-export function aliasDivisionName(name: string, aliases?: DivisionAliases | null): string {
-  if (!aliases) return name;
-  const mapped = aliases[name];
-  return typeof mapped === 'string' && !name.startsWith('_') ? mapped : name;
-}
 
 /**
  * Pull the per-season division map out of a raw MFL `league.json` payload.
@@ -79,8 +79,8 @@ export function parseHistoricalDivisions(
   if (!feed || feed.error || !feed.league) return null;
 
   const divisionEntries = toArray<DivisionLike>(feed.league.divisions?.division)
-    .filter(d => d?.id != null && typeof d.name === 'string' && d.name.trim() !== '')
-    .map(d => ({ id: String(d.id), name: aliasDivisionName(String(d.name).trim(), aliases) }));
+    .filter(d => d?.id != null && isUsableDivisionName(d.name))
+    .map(d => ({ id: String(d.id), name: aliasDivisionName(d.name, aliases) }));
   if (!divisionEntries.length) return null;
 
   const nameById = new Map(divisionEntries.map(d => [d.id, d.name]));

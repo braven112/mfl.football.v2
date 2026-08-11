@@ -24,6 +24,7 @@ import {
   mergeMilestonePosts,
 } from './lib/franchise-milestone-posts.mjs';
 import { isSeasonComplete } from './lib/theleague-season-complete.mjs';
+import { aliasDivisionName, isUsableDivisionName } from '../src/utils/division-aliases.mjs';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -101,15 +102,14 @@ if (championshipHistory?.championships) {
   }
 }
 
-// MFL division name -> this league's display name. Single source of truth is
-// theleague.config.json#divisionAliases, shared with the standings pages via
-// src/utils/historical-divisions.ts. Keys starting with "_" are metadata.
+// MFL division name -> this league's display name. The map lives in
+// theleague.config.json#divisionAliases and the FUNCTION is shared with the
+// standings pages (src/utils/division-aliases.mjs) rather than reimplemented
+// here — a second copy would be free to drift from the pages on whitespace,
+// non-string names or the metadata key, and the entire point of the alias is
+// that the ledger and the pages agree on what a division is called.
 const DIVISION_ALIASES = leagueConfig?.divisionAliases ?? {};
-const aliasDivision = (name) => {
-  const raw = String(name ?? '').trim();
-  const mapped = DIVISION_ALIASES[raw];
-  return typeof mapped === 'string' && !raw.startsWith('_') ? mapped : raw;
-};
+const aliasDivision = (name) => aliasDivisionName(name, DIVISION_ALIASES);
 
 const getIdentityForYear = (franchiseId, year) => {
   const team = currentTeams.find((t) => t.franchiseId === franchiseId);
@@ -557,10 +557,14 @@ for (const year of years) {
   if (isValidFeed(leagueJson) && leagueJson.league) {
     toArray(leagueJson.league.divisions?.division).forEach((d) => {
       // Alias MFL's name to the league's display name (divisionAliases in
-      // theleague.config.json — "Eastern" -> "East"). The standings pages apply
-      // the same map via applyHistoricalDivisions, so the ledger and the pages
-      // can never disagree about what a division is called.
-      if (d.id != null && d.name) divisionNames.set(String(d.id), aliasDivision(d.name));
+      // theleague.config.json — "Eastern" -> "East"). Both the filter and the
+      // alias are the SAME functions parseHistoricalDivisions uses, so the
+      // ledger and the pages cannot disagree about which names are usable or
+      // what they resolve to. (A plain `d.name` truthiness check accepted a
+      // whitespace-only name that the pages drop — that gap is closed here.)
+      if (d.id != null && isUsableDivisionName(d.name)) {
+        divisionNames.set(String(d.id), aliasDivision(d.name));
+      }
     });
     toArray(leagueJson.league.franchises?.franchise).forEach((f) => {
       if (f.id) divisionMap.set(f.id, f.division);

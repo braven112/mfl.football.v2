@@ -24,6 +24,8 @@ import path from 'node:path';
 import {
   parseHistoricalDivisions,
   applyHistoricalDivisions,
+  aliasDivisionName,
+  isUsableDivisionName,
 } from '../src/utils/historical-divisions';
 import { resolveConfigForYear } from '../src/utils/team-names';
 import { getDivisionStandings } from '../src/utils/standings';
@@ -53,6 +55,54 @@ const YEARS = readdirSync(FEEDS_DIR)
   .filter(d => /^\d{4}$/.test(d))
   .sort()
   .filter(y => [...LEDGER.keys()].some(k => k.startsWith(`${y}|`)));
+
+describe('aliasDivisionName — one implementation, two callers', () => {
+  // The standings pages and scripts/compute-franchise-history.mjs both resolve
+  // division names. They used to be separate copies, free to drift on exactly
+  // these edge cases; they now share src/utils/division-aliases.mjs. These pin
+  // the behavior that has to stay identical.
+  const ALIASES = { _comment: 'docs', Eastern: 'East' };
+
+  it('maps an aliased name and passes anything else through', () => {
+    expect(aliasDivisionName('Eastern', ALIASES)).toBe('East');
+    expect(aliasDivisionName('Central', ALIASES)).toBe('Central');
+  });
+
+  it('is a no-op on the display name itself — no double-mapping', () => {
+    expect(aliasDivisionName('East', ALIASES)).toBe('East');
+  });
+
+  it('trims, so padding cannot make the two callers disagree', () => {
+    expect(aliasDivisionName('  Eastern  ', ALIASES)).toBe('East');
+    expect(aliasDivisionName('  Central  ', ALIASES)).toBe('Central');
+  });
+
+  it('refuses metadata keys explicitly rather than by luck', () => {
+    // A real division never starts with "_", so an underscore-leading input is
+    // the JSON's _comment leaking in — it must not resolve to the comment text.
+    expect(aliasDivisionName('_comment', ALIASES)).toBe('_comment');
+  });
+
+  it('survives null/undefined/non-string input without throwing', () => {
+    expect(aliasDivisionName(undefined as never, ALIASES)).toBe('');
+    expect(aliasDivisionName(null as never, ALIASES)).toBe('');
+    expect(aliasDivisionName('Eastern', null)).toBe('Eastern');
+    expect(aliasDivisionName('Eastern', undefined)).toBe('Eastern');
+  });
+
+  it('ignores an alias whose value is empty or blank', () => {
+    expect(aliasDivisionName('Eastern', { Eastern: '   ' })).toBe('Eastern');
+    expect(aliasDivisionName('Eastern', { Eastern: '' })).toBe('Eastern');
+  });
+
+  it('agrees with isUsableDivisionName on what to drop', () => {
+    expect(isUsableDivisionName('East')).toBe(true);
+    expect(isUsableDivisionName('   ')).toBe(false);
+    expect(isUsableDivisionName('')).toBe(false);
+    expect(isUsableDivisionName(undefined)).toBe(false);
+    expect(isUsableDivisionName(42)).toBe(false);
+  });
+});
 
 describe('parseHistoricalDivisions', () => {
   it('reads the per-season map out of a real league.json', () => {
