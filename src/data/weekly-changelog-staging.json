@@ -4,6 +4,14 @@
     {
       "date": "2026-08-11",
       "type": "bug-fix",
+      "summary": "The AFL playoff bracket was seeding old seasons with today's map. Pull up 2005 and the page sorted everyone into the four divisions the league runs now — except 2005 had six, three per conference, with a Central and a Pacific that haven't existed in over a decade. Twelve conference races between 2003 and 2016 came out seeded differently on the playoffs page than on the standings page for that very same season, which is a neat trick for a site to pull on itself. The playoffs page now reads each season's real structure, the same way standings already did.",
+      "impact": "user",
+      "area": "playoffs",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-11",
+      "type": "bug-fix",
       "summary": "Archived standings were showing the wrong divisions. Pull up 2015 and the site would group teams the way the league is organized TODAY — which is not how it was organized in 2015, or 2011, or 2008. Go back far enough and it got surreal: the 2007 season really had a Pacific, a Midwest and an Atlantic division, and the standings page was cheerfully sorting those teams into a Northwest and a Southwest that wouldn't exist for years. Twenty-one division races between 2007 and 2015 were showing a different winner than that team's own franchise page was — including the 2015 Central, the exact race we'd just spent a week proving belonged to the Amish Rakefighters. Every season now gets grouped the way it was actually played, straight from the league's own records, so the two finally tell the same story.",
       "impact": "user",
       "area": "standings",

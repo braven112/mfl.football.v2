@@ -530,9 +530,22 @@ division name — notably `DIVISION_BADGES` — keys the DISPLAY name only; reti
 divisions (Pacific/Midwest/Atlantic) are intentionally unbadged so
 `StandingsTable` falls back to a plain header.
 
-**The AFL still needs this** — 2003-2018 are misgrouped there, but its
-`divisionToConference` map is also current-only, so fixing divisions without
-conferences would mis-map the 2003-2012 six-division era. Do both or neither.
+**The AFL already had its own version of this** — do NOT port
+`applyHistoricalDivisions` there. `src/utils/afl-structure.ts`
+(`extractSeasonStructure` + `applySeasonStructure`) has resolved the AFL's
+per-season divisions AND conferences from `league.json` for a while, which it
+must: the AFL re-parented divisions, not just renamed them (2003-2012 ran SIX,
+three per conference — North/Central/South American, East/West/Pacific
+National). Every AFL surface that groups by division or conference has to
+compose it after `resolveConfigForYear`, and
+`tests/afl-structure.test.ts` greps both AFL pages to enforce that — a helper
+existing is not the same as a page calling it, which is exactly how
+`/afl-fantasy/playoffs` ended up seeding 12 conference-seasons differently than
+`/afl-fantasy/standings` for the same year.
+
+Two leagues, two helpers, on purpose: TheLeague has no conferences and needs
+`divisionAliases`; the AFL has conferences and doesn't. Merging them would drag
+each league's special case into the other.
 
 Two traps this work surfaced, written up in full under `docs/claude/insights/`:
 a missing `h2hwlt` column parses to `0-0-0` instead of erroring and silently

@@ -14,6 +14,7 @@ import {
   type NormalizedBracket,
 } from '../../utils/playoffs';
 import { chooseTeamName, resolveConfigForYear, type TeamConfig } from '../../utils/team-names';
+import { extractSeasonStructure, applySeasonStructure } from '../../utils/afl-structure';
 import { getCurrentWeekForYear } from '../../utils/current-week';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 import {
@@ -68,6 +69,10 @@ const standingsFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/s
 const bracketFallbackFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/playoff-brackets.json', {
   eager: true,
 });
+// Per-season division/conference structure — see applySeasonStructure below.
+const leagueFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/league.json', {
+  eager: true,
+});
 const weeklyResultsFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/weekly-results.json', {
   eager: true,
 });
@@ -117,10 +122,23 @@ if (!yearResolvedConfig?.teams || yearResolvedConfig.teams.length === 0) {
   return Astro.redirect(`/afl-fantasy/playoffs?year=${defaultYear}`);
 }
 
+// Overlay the SELECTED season's division/conference structure from its league
+// feed, exactly as /afl-fantasy/standings does. resolveConfigForYear handles
+// identity but NOT division membership, and the AFL re-parented its divisions:
+// 2003-2012 ran SIX divisions, three per conference (North/Central/South in the
+// American, East/West/Pacific in the National) against today's four. Without
+// this, seeding an archived season groups it by today's map — 12 conference
+// seasons between 2003 and 2016 seeded differently than the standings page for
+// the same year, which is a self-contradiction, not just a cosmetic drift.
+const seasonStructure = extractSeasonStructure(
+  leagueFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/league.json`]
+);
+const seasonConfig = applySeasonStructure(yearResolvedConfig, seasonStructure);
+
 // Get conference standings for both conferences. MFL's feed order is the
 // AFL's official final order — preserve it instead of re-sorting locally.
-const conferenceAStandings = getConferenceStandings(franchises, yearResolvedConfig, '00', { preserveFeedOrder: true });
-const conferenceBStandings = getConferenceStandings(franchises, yearResolvedConfig, '01', { preserveFeedOrder: true });
+const conferenceAStandings = getConferenceStandings(franchises, seasonConfig, '00', { preserveFeedOrder: true });
+const conferenceBStandings = getConferenceStandings(franchises, seasonConfig, '01', { preserveFeedOrder: true });
 
 const getModuleData = (mod: any) =>
   mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;

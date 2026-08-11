@@ -10,6 +10,9 @@ import {
   getLeagueStandings,
 } from '../src/utils/standings';
 import type { StandingsFranchise } from '../src/types/standings';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
+import path from 'node:path';
+import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 import league2003 from '../data/afl-fantasy/mfl-feeds/2003/league.json';
 import league2025 from '../data/afl-fantasy/mfl-feeds/2025/league.json';
 
@@ -386,5 +389,114 @@ describe('preserveFeedOrder (MFL order is the source of truth)', () => {
       '0001',
       '0002',
     ]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Page wiring — every AFL surface that groups by division/conference must
+// overlay the season's own structure, not just resolve identities.
+// ---------------------------------------------------------------------------
+
+describe('AFL pages overlay the season structure', () => {
+  const ROOT = path.resolve(__dirname, '..');
+  const AFL = getLeagueBySlug('afl-fantasy');
+  const FEEDS = path.join(ROOT, AFL.dataPath, 'mfl-feeds');
+  const aflConfig = JSON.parse(
+    readFileSync(path.join(ROOT, AFL.dataPath, 'afl.config.json'), 'utf8')
+  );
+  const toArr = <T,>(v: T | T[] | null | undefined): T[] =>
+    Array.isArray(v) ? v : v == null ? [] : [v];
+
+  const YEARS = readdirSync(FEEDS)
+    .filter(d => /^\d{4}$/.test(d))
+    .filter(y => existsSync(path.join(FEEDS, y, 'league.json')))
+    .filter(y => existsSync(path.join(FEEDS, y, 'standings.json')))
+    .sort();
+
+  const load = (year: string) => {
+    const league = JSON.parse(readFileSync(path.join(FEEDS, year, 'league.json'), 'utf8'));
+    const rows = toArr<any>(
+      JSON.parse(readFileSync(path.join(FEEDS, year, 'standings.json'), 'utf8'))
+        ?.leagueStandings?.franchise
+    );
+    return { league, rows };
+  };
+
+  // Truth: the first feed row within each division as THAT season defined it.
+  const truthFor = (league: any, rows: any[]) => {
+    const nameById = new Map(
+      toArr<any>(league.league.divisions.division).map((d: any) => [String(d.id), d.name])
+    );
+    const divisionOf = new Map(
+      toArr<any>(league.league.franchises.franchise).map((f: any) => [
+        f.id,
+        nameById.get(String(f.division)),
+      ])
+    );
+    const names = [...new Set(nameById.values())] as string[];
+    return new Map(names.map(n => [n, rows.find(r => divisionOf.get(r.id) === n)?.id]));
+  };
+
+  it('covers every committed AFL season', () => {
+    expect(YEARS.length).toBeGreaterThanOrEqual(20);
+  });
+
+  it('reproduces every season’s real division winners once overlaid', () => {
+    let checked = 0;
+    for (const year of YEARS) {
+      const { league, rows } = load(year);
+      if (!rows.length) continue;
+      const config = applySeasonStructure(aflConfig, extractSeasonStructure(league));
+      const rendered = new Map(
+        getDivisionStandings(rows, config as any, { preserveFeedOrder: true }).map(d => [
+          d.name,
+          d.teams[0]?.id,
+        ])
+      );
+      for (const [division, winner] of truthFor(league, rows)) {
+        expect(rendered.get(division), `${year} ${division}`).toBe(winner);
+        checked++;
+      }
+    }
+    // 116 division-seasons across 2003-2026 — six divisions through 2012.
+    expect(checked).toBeGreaterThanOrEqual(116);
+  });
+
+  it('WOULD fail without the overlay — proving the assertion has teeth', () => {
+    // Today's four-division map can't even name Central or Pacific, so the
+    // 2003-2012 era loses two races a year outright on top of mis-grouping.
+    let wrong = 0;
+    for (const year of YEARS) {
+      const { league, rows } = load(year);
+      if (!rows.length) continue;
+      const rendered = new Map(
+        getDivisionStandings(rows, aflConfig as any, { preserveFeedOrder: true }).map(d => [
+          d.name,
+          d.teams[0]?.id,
+        ])
+      );
+      for (const [division, winner] of truthFor(league, rows)) {
+        if (rendered.get(division) !== winner) wrong++;
+      }
+    }
+    expect(wrong).toBeGreaterThan(0);
+  });
+
+  it('wires the overlay into BOTH the standings and playoffs pages', () => {
+    // The helper existing is not the same as a page using it: /afl-fantasy/
+    // playoffs resolved identities but never overlaid the structure, so it
+    // seeded 12 conference-seasons differently than /afl-fantasy/standings did
+    // for the same year. A source check is the only thing that catches a page
+    // silently dropping the call.
+    for (const page of ['standings', 'playoffs']) {
+      const src = readFileSync(path.join(ROOT, 'src/pages/afl-fantasy', `${page}.astro`), 'utf8');
+      expect(src, `${page}.astro must import the overlay`).toContain('extractSeasonStructure');
+      expect(src, `${page}.astro must apply the overlay`).toContain('applySeasonStructure');
+      // ...and must not hand the un-overlaid config to a grouping function.
+      expect(
+        /get(Conference|Division)Standings\(\s*franchises,\s*yearResolvedConfig/.test(src),
+        `${page}.astro groups with the un-overlaid config`
+      ).toBe(false);
+    }
   });
 });
