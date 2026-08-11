@@ -89,6 +89,12 @@ function badgeFilenameFor(key: TitleTypeKey, team: AflTeamConfig): string | null
   }
 }
 
+// Single source of truth for premier/dleague's tier logo (light + dark src
+// both derive from this) so the two ThemeImage props can't drift apart.
+function tierNameFor(key: 'premier' | 'dleague'): typeof PREMIER_LEAGUE | typeof D_LEAGUE {
+  return key === 'premier' ? PREMIER_LEAGUE : D_LEAGUE;
+}
+
 interface CardRow {
   team: AflTeamConfig;
   stats: AflCareerStats | null;
@@ -233,8 +239,8 @@ const historicalIdentities = buildHistoricalIdentities(aflConfig.teams as any[])
                       <span class="icon" aria-hidden="true">
                         {t.key === 'premier' || t.key === 'dleague' ? (
                           <ThemeImage
-                            src={getTierLogo(t.key === 'premier' ? PREMIER_LEAGUE : D_LEAGUE)}
-                            darkSrc={getTierLogoDark(t.key === 'premier' ? PREMIER_LEAGUE : D_LEAGUE)}
+                            src={getTierLogo(tierNameFor(t.key))}
+                            darkSrc={getTierLogoDark(tierNameFor(t.key))}
                             alt=""
                             class="badge-tier-logo"
                           />
