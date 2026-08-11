@@ -509,17 +509,30 @@ Caveat worth remembering: because standings order now comes from MFL, rule 2
 only governs OUR draft-order math. The live standings apply whatever MFL's
 `OPP_PTS` setting does, which is a league-settings question, not a code one.
 
-**Known gap (pre-existing, not yet fixed):** `resolveConfigForYear`
-(`src/utils/team-names.ts`) resolves a franchise's historical name/icon/
-conference but NOT its `division`, and the standings page groups on
-`getTeamConfig().division`. So `/theleague/standings?year=<past>` groups
-historical seasons by TODAY's alignment — 2007-2015 all disagree with the
-season's real `league.json`, including division NAMES (2007 was
-Pacific/Midwest/Central/Atlantic). Rule 1 above therefore holds for the awards
-scripts, which read each year's own `league.json`, but the archived-year view
-of the standings page can still show a division winner that contradicts
-`franchise-history.json`. Fix by resolving `division` per year from
-`league.json` before trusting that page for anything historical.
+**3. Division alignment is per-season too — `resolveConfigForYear` is not
+enough.** It resolves a franchise's historical name/icon/banner/conference but
+NOT its `division`, and every standings surface groups on
+`getTeamConfig().division`. Compose `applyHistoricalDivisions`
+(`src/utils/historical-divisions.ts`) after it, passing that season's
+`league.json`, or an archived year gets grouped by TODAY's map — which had 21 of
+76 TheLeague division-seasons (every year 2007-2015) showing a different winner
+than `franchise-history.json`, and invented divisions for 2007-2010 (the league
+actually ran Pacific/Midwest/Central/Atlantic). The helper is fail-safe: a
+missing or malformed feed leaves the config untouched.
+
+**Division display names go through `divisionAliases`** (in
+`theleague.config.json`, applied by both `applyHistoricalDivisions` and
+`compute-franchise-history.mjs`). MFL's archives call the fourth division
+"Eastern" from 2012 on; the league displays it as "East" (commissioner,
+2026-08-11). Committed archive feeds keep saying "Eastern" even after MFL is
+renamed, so this alias is permanent, not transitional. Anything keyed on a
+division name — notably `DIVISION_BADGES` — keys the DISPLAY name only; retired
+divisions (Pacific/Midwest/Atlantic) are intentionally unbadged so
+`StandingsTable` falls back to a plain header.
+
+**The AFL still needs this** — 2003-2018 are misgrouped there, but its
+`divisionToConference` map is also current-only, so fixing divisions without
+conferences would mis-map the 2003-2012 six-division era. Do both or neither.
 
 Two traps this work surfaced, written up in full under `docs/claude/insights/`:
 a missing `h2hwlt` column parses to `0-0-0` instead of erroring and silently

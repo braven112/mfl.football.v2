@@ -101,6 +101,16 @@ if (championshipHistory?.championships) {
   }
 }
 
+// MFL division name -> this league's display name. Single source of truth is
+// theleague.config.json#divisionAliases, shared with the standings pages via
+// src/utils/historical-divisions.ts. Keys starting with "_" are metadata.
+const DIVISION_ALIASES = leagueConfig?.divisionAliases ?? {};
+const aliasDivision = (name) => {
+  const raw = String(name ?? '').trim();
+  const mapped = DIVISION_ALIASES[raw];
+  return typeof mapped === 'string' && !raw.startsWith('_') ? mapped : raw;
+};
+
 const getIdentityForYear = (franchiseId, year) => {
   const team = currentTeams.find((t) => t.franchiseId === franchiseId);
   if (!team) return { name: franchiseId, icon: null, banner: null };
@@ -546,7 +556,11 @@ for (const year of years) {
   const historicalNames = new Map();
   if (isValidFeed(leagueJson) && leagueJson.league) {
     toArray(leagueJson.league.divisions?.division).forEach((d) => {
-      if (d.id != null && d.name) divisionNames.set(String(d.id), d.name);
+      // Alias MFL's name to the league's display name (divisionAliases in
+      // theleague.config.json — "Eastern" -> "East"). The standings pages apply
+      // the same map via applyHistoricalDivisions, so the ledger and the pages
+      // can never disagree about what a division is called.
+      if (d.id != null && d.name) divisionNames.set(String(d.id), aliasDivision(d.name));
     });
     toArray(leagueJson.league.franchises?.franchise).forEach((f) => {
       if (f.id) divisionMap.set(f.id, f.division);
