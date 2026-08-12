@@ -8,6 +8,7 @@ import {
   rivalryIntensity,
   canonicalRivalryPair,
   formatRivalryRecord,
+  formatSeasonRanges,
   MIN_RIVALRY_MEETINGS,
 } from '../../../utils/rivalries';
 
@@ -223,10 +224,9 @@ const incompleteSeasons = coverage
     {incompleteSeasons.length > 0 && (
       <p class="rivalries-caveat">
         <strong>Data note:</strong> MFL's archived exports for{' '}
-        {incompleteSeasons[0]}–{incompleteSeasons[incompleteSeasons.length - 1]} retain
-        postseason weeks only. Meetings from those regular seasons are absent
-        from every record on this page, so career totals under-count and lean
-        toward playoff games.
+        {formatSeasonRanges(incompleteSeasons)} retain postseason weeks only.
+        Meetings from those regular seasons are absent from every record on this
+        page, so career totals under-count and lean toward playoff games.
       </p>
     )}
   </div>

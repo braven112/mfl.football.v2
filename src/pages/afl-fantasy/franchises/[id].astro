@@ -22,6 +22,7 @@ import {
   computeRivalEntries,
   canonicalRivalryPair,
   formatRivalryRecord,
+  formatSeasonRanges,
 } from '../../../utils/rivalries';
 import { getCurrentSeasonYear } from '../../../utils/league-year';
 import { segmentsForFranchiseRange as segmentsForFranchiseRangeUtil, type NameEra } from '../../../utils/afl-name-history';
@@ -709,8 +710,8 @@ const hasHighlights = Boolean(
         {incompleteSeasons.length > 0 && (
           <p class="rivals-caveat">
             Head-to-head covers {h2hGamesRecorded} of {totalGames} career games.
-            MFL's archives for {incompleteSeasons[0]}–{incompleteSeasons[incompleteSeasons.length - 1]}{' '}
-            kept postseason weeks only, so these totals under-count those seasons.
+            MFL's archives for {formatSeasonRanges(incompleteSeasons)} kept
+            postseason weeks only, so these totals under-count those seasons.
           </p>
         )}
         <a class="rivals-more" href="/afl-fantasy/rivalries">See full rivalry matrix →</a>

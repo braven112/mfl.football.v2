@@ -9,6 +9,7 @@ import {
   parseRivalryPair,
   canonicalRivalryPair,
   formatRivalryRecord,
+  formatSeasonRanges,
   type Matchup,
 } from '../../../utils/rivalries';
 
@@ -287,9 +288,9 @@ const shortB = frB.currentNameShort || nameB;
           </div>
           {incompleteSeasons.length > 0 && (
             <p class="rivalry-caveat">
-              MFL's archives for {incompleteSeasons[0]}–{incompleteSeasons[incompleteSeasons.length - 1]}{' '}
-              retain postseason weeks only, so regular-season meetings from those
-              years are missing from this log.
+              MFL's archives for {formatSeasonRanges(incompleteSeasons)} retain
+              postseason weeks only, so regular-season meetings from those years
+              are missing from this log.
             </p>
           )}
         </section>

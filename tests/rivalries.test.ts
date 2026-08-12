@@ -9,6 +9,7 @@ import {
   tallyMeetings,
   formatRivalryRecord,
   MIN_RIVALRY_MEETINGS,
+  formatSeasonRanges,
   type Matchup,
 } from '../src/utils/rivalries';
 
@@ -137,5 +138,23 @@ describe('parity with the inline implementation it replaced', () => {
       const fr = history.franchises[id];
       expect(computeRivalEntries(fr.matchupHistory, id)).toEqual(inlineRanking(fr, id));
     }
+  });
+});
+
+describe('formatSeasonRanges', () => {
+  it('collapses contiguous runs and keeps gaps visible', () => {
+    // The AFL's real shape: 2003 is empty, 2004-2006 are complete, the hole
+    // resumes at 2007. A naive min-max would claim 2004-2006 are damaged too.
+    expect(formatSeasonRanges([2003, 2007, 2008, 2009, 2010, 2011, 2012, 2013,
+      2014, 2015, 2016, 2017, 2018, 2019])).toBe('2003, 2007–2019');
+  });
+
+  it('renders a lone season without a dash', () => {
+    expect(formatSeasonRanges([2016])).toBe('2016');
+  });
+
+  it('sorts, dedupes and handles an empty list', () => {
+    expect(formatSeasonRanges([2009, 2007, 2008, 2008])).toBe('2007–2009');
+    expect(formatSeasonRanges([])).toBe('');
   });
 });

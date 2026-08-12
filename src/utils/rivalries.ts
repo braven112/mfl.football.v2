@@ -141,3 +141,30 @@ export function parseRivalryPair(slug: string): [string, string] | null {
 /** `14-9` or `14-9-1` — ties only shown when they exist. */
 export const formatRivalryRecord = (wins: number, losses: number, ties: number): string =>
   ties > 0 ? `${wins}-${losses}-${ties}` : `${wins}-${losses}`;
+
+/**
+ * Collapse a year list into contiguous ranges: `[2003, 2007..2019]` reads as
+ * "2003, 2007–2019".
+ *
+ * Printing `min–max` instead would claim seasons the ledger actually has in
+ * full — the AFL's gap skips 2004-2006, which are complete — and a data caveat
+ * that overstates the damage is its own kind of wrong.
+ */
+export function formatSeasonRanges(years: number[]): string {
+  const sorted = [...new Set(years)].sort((a, b) => a - b);
+  if (sorted.length === 0) return '';
+  const ranges: string[] = [];
+  let start = sorted[0];
+  let prev = sorted[0];
+  for (const y of sorted.slice(1)) {
+    if (y === prev + 1) {
+      prev = y;
+      continue;
+    }
+    ranges.push(start === prev ? `${start}` : `${start}–${prev}`);
+    start = y;
+    prev = y;
+  }
+  ranges.push(start === prev ? `${start}` : `${start}–${prev}`);
+  return ranges.join(', ');
+}
