@@ -101,8 +101,20 @@ jobs:
         run: |
           node ./scripts/audit-mfl-schedule-availability.mjs \
             --league=${{ inputs.league }} \
-            --years=${{ steps.coverage.outputs.gap_years }} \
-            --dump-html=2016 || true
+            --years=${{ steps.coverage.outputs.gap_years }} || true
+
+      # The league pages carry an injected redirect script on the seasons that
+      # have not been cleaned, which is why their schedules read as empty to
+      # anything but a browser session that survives the redirect. Report which
+      # seasons are still affected and what is on them, and — separately —
+      # whether the schedule table is visible, i.e. recoverable right now.
+      - name: Scan league pages for injected scripts
+        if: steps.coverage.outputs.gaps == 'true'
+        run: |
+          node ./scripts/scan-mfl-page-injection.mjs \
+            --league=${{ inputs.league }} \
+            --years=${{ steps.coverage.outputs.gap_years }},2019,2020 \
+            --show || true
 
       - name: Recompute franchise history
         run: node ./scripts/compute-franchise-history.mjs --league=${{ inputs.league }}
