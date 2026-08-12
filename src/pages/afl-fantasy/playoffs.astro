@@ -73,6 +73,10 @@ const bracketFallbackFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-fee
 const leagueFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/league.json', {
   eager: true,
 });
+// Brackets rebuilt from schedule.json for seasons MFL only ever gave seeds for
+// (2003-2023). Advisory, never a substitute for real MFL data — see
+// scripts/reconstruct-afl-playoff-brackets.mjs.
+import reconstructedBracketsFile from '../../../data/afl-fantasy/derived/reconstructed-playoff-brackets.json';
 const weeklyResultsFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/weekly-results.json', {
   eager: true,
 });
@@ -282,11 +286,27 @@ const fallbackBracketIds = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
 const bracketIdsToFetch =
   bracketMetas.length > 0 ? bracketMetas.map(b => b.id) : fallbackBracketMetas.length > 0 ? fallbackBracketMetas.map((b: any) => b.id) : fallbackBracketIds;
 
+// Reconstructed brackets for this season, if any. MFL's own data always wins —
+// this is only consulted when the committed feed has no games for a bracket,
+// which is every season before 2024.
+const reconstructedForYear =
+  (reconstructedBracketsFile as any)?.seasons?.[String(selectedYear)] ?? {};
+let usedReconstructedBracket = false;
+
 const bracketDetails = await Promise.all(
   bracketIdsToFetch.map(async id => {
     const meta = bracketMetas.find(b => b.id === id);
     const fallbackRaw = fallbackBracketDetails?.[id];
-    return { id, meta, bracket: fallbackRaw ? normalizePlayoffBracket(fallbackRaw, meta) : null };
+    if (fallbackRaw) {
+      return { id, meta, bracket: normalizePlayoffBracket(fallbackRaw, meta), reconstructed: false };
+    }
+    const rebuilt = reconstructedForYear?.[id];
+    if (rebuilt) {
+      const bracket = normalizePlayoffBracket(rebuilt, meta);
+      if (bracket) usedReconstructedBracket = true;
+      return { id, meta, bracket, reconstructed: Boolean(bracket) };
+    }
+    return { id, meta, bracket: null, reconstructed: false };
   })
 );
 
@@ -917,7 +937,11 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
     <header class="playoff-hero">
       <div>
         <h1 class="hero-title">Playoff Brackets</h1>
-      
+        {usedReconstructedBracket && (
+          <p class="hero-note">
+            Rebuilt from the season schedule — MFL never recorded brackets this far back.
+          </p>
+        )}
       </div>
       <div class="view-selector">
         <button class={`view-tab ${tabView === 'winners' ? 'active' : ''}`} data-view="winners" title="Winners">
@@ -1382,6 +1406,17 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
     color: var(--content-text-muted, #475569);
     max-width: 720px;
     font-size: 0.98rem;
+  }
+
+  /* Shown only when a bracket came from the schedule reconstruction rather
+     than MFL's own export — an inference should never be silently presented
+     as the league's record. */
+  .hero-note {
+    margin: 0.35rem 0 0;
+    color: var(--content-text-muted, #475569);
+    max-width: 720px;
+    font-size: 0.85rem;
+    font-style: italic;
   }
 
   .season-row {
