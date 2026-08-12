@@ -48,6 +48,14 @@
       "impact": "user",
       "area": "navigation",
       "league": "theleague"
+    },
+    {
+      "date": "2026-08-12",
+      "type": "bug-fix",
+      "summary": "The homepage's \"Explore\" quick-links grid had the same cross-league leak as search — three of its eight tiles were quietly pointing at AFL pages (Rosters, Standings, Free Agents) instead of TheLeague's own, and clicking any of them dead-ended in a 404. The grid now only pulls from TheLeague's own page list.",
+      "impact": "user",
+      "area": "homepage",
+      "league": "theleague"
     }
   ]
 }

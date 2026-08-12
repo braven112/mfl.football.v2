@@ -1003,24 +1003,32 @@ doesn't 404 — it just silently lists every other league's pages alongside
 your own, and nothing breaks loudly enough to notice without cross-league
 testing. `QuickLinks.astro`'s AFL branch filters correctly
 (`p.path.startsWith('/${league.slug}/')`), but only in that branch — its
-TheLeague branch takes every `visibility: 'all'` entry with no path check at
-all, so it's exposed to the same class of bug (an AFL page popular enough to
-rank in the top 8 would show up in TheLeague's homepage quick links) even
-though it hasn't been observed to trigger yet. `search.astro` had no
-filtering of any kind in either direction.
+TheLeague branch took every `visibility: 'all'` entry with no path check at
+all. This was NOT theoretical: simulating the pin+sort algorithm against the
+real committed `page-directory.json` showed 3 of the 8 tiles on TheLeague's
+live homepage "Explore" grid were AFL pages (`afl-rosters`, `afl-standings`,
+`afl-players` — all higher-popularity than several TheLeague entries), each
+with a broken `/theleague/afl-fantasy/rosters`-style href. `search.astro` had
+no filtering of any kind in either direction.
 
-**Evidence:** Fixed by importing the already-existing, already-tested
-`pathBelongsToLeague(path, slug)` helper from `src/config/footer-config.ts`
-and filtering `allPages` through it before anything else touches the list
-(90 directory entries → 56 scoped to TheLeague, AFL keeper pages confirmed
-excluded). `tests/footer-links.test.ts` already exercises this helper against
-real `src/pages/` routes. Code review on the same PR then caught the exact
-`/theleague/theleague/lineup` failure mode too: the file's href was
-hand-built as `` `${basePath}${page.path}` `` with `basePath` hardcoded to
-`/theleague`, so the 13 directory entries already stored pre-prefixed
-(`/theleague/lineup`, `/theleague/pecking-order`, …) got double-prefixed into
-dead links. Swapped for `resolveDirectoryHref(page.path, 'theleague')`
-(`src/utils/nav-utils.ts`), which already exists for exactly this.
+**Evidence:** Fixed both consumers on the same PR. `search.astro`: import the
+already-existing, already-tested `pathBelongsToLeague(path, slug)` helper
+from `src/config/footer-config.ts` and filter `allPages` through it before
+anything else touches the list (90 directory entries → 56 scoped to
+TheLeague, AFL keeper pages confirmed excluded); `tests/footer-links.test.ts`
+already exercises this helper against real `src/pages/` routes. Code review
+on the same PR then caught the exact `/theleague/theleague/lineup` failure
+mode too: the file's href was hand-built as `` `${basePath}${page.path}` ``
+with `basePath` hardcoded to `/theleague`, so the 13 directory entries
+already stored pre-prefixed (`/theleague/lineup`, `/theleague/pecking-order`,
+…) got double-prefixed into dead links. Swapped for
+`resolveDirectoryHref(page.path, 'theleague')` (`src/utils/nav-utils.ts`),
+which already exists for exactly this. `QuickLinks.astro`: added the same
+`pathBelongsToLeague()` filter to the TheLeague branch's `visible` list, and
+replaced the hand-built `` `/${league.slug}${page.path}` `` href with
+`resolveDirectoryHref(page.path, league.navSlug)` wrapped in the existing
+`r()` (apex-host clean-URL) helper. The AFL branch's own filter and href
+construction were left untouched — verified separately correct.
 
 **Recommendation:** Any new file that imports `page-directory.json` directly
 (grep `from '.*page-directory.json'` / `from '.*page-directory'`) needs BOTH
