@@ -22,6 +22,7 @@ import { buildBracketKindResolver, isNitTitleBracket } from '../src/utils/afl-br
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 import reconstructed from '../data/afl-fantasy/derived/reconstructed-playoff-brackets.json';
 import championshipHistory from '../data/afl-fantasy/championship-history.json';
+import awardsHistory from '../data/afl-fantasy/awards-history.json';
 
 const AFL = getLeagueBySlug('afl-fantasy');
 const ROOT = path.resolve(__dirname, '..');
@@ -52,10 +53,12 @@ const teamsIn = (payload: any) =>
 
 /**
  * Every scored game the schedule has in a given week that a bracket could
- * legitimately contain. Two kinds of row are excluded, both MFL artifacts that
- * `pruneRound` drops for the same reason: a `0023 vs 0023` bye, and the stray
- * extra matchup linking two teams already scheduled that week. `phantom` counts
- * the latter so the exemption cannot quietly widen.
+ * legitimately contain. Two kinds of MFL artifact are excluded: a `0023 vs
+ * 0023` bye row, and the stray extra matchup linking two teams already
+ * scheduled that week. `phantom` counts the latter — three across every
+ * season, in weeks 14 of 2013, 2014 and 2015 — so the exemption cannot quietly
+ * widen. (`pruneRound` removes 2014's and 2015's; 2013's straddles two
+ * brackets and is simply never claimed.)
  */
 const scheduledGames = (year: string, week: number) => {
   const played = toArray<any>(
@@ -191,11 +194,52 @@ describe('reconstructed AFL brackets', () => {
     expect(final2019[0].playoffGame).toHaveLength(1);
   });
 
+  it('puts each conference’s teams in its own conference bracket', () => {
+    // The modern era splits the field into "AL Championship" and "NL
+    // Championship" brackets. Asserting only that both brackets EXIST would
+    // pass with the two swapped — and they were resolved by position in the
+    // feed array until 2026-08-12, which is exactly the bug that swap would be.
+    let checked = 0;
+    for (const year of years) {
+      const kindOf = kindResolverFor(year);
+      const league = readFeed(year, 'league.json')?.league;
+      const conferenceName = new Map(
+        toArray<any>(league?.conferences?.conference).map((c: any) => [String(c.id), String(c.name)])
+      );
+      const conferenceOfDivision = new Map(
+        toArray<any>(league?.divisions?.division).map((d: any) => [String(d.id), String(d.conference)])
+      );
+      const conferenceOfTeam = new Map(
+        toArray<any>(league?.franchises?.franchise).map((f: any) => [
+          f.id,
+          conferenceName.get(conferenceOfDivision.get(String(f.division)) ?? '') ?? '',
+        ])
+      );
+
+      for (const [id, payload] of Object.entries<any>(SEASONS[year])) {
+        const kind = kindOf(id);
+        if (kind !== 'al' && kind !== 'nl') continue;
+        const expected = kind === 'al' ? /^American\b/i : /^National\b/i;
+        for (const team of teamsIn(payload)) {
+          expect(
+            conferenceOfTeam.get(team),
+            `${year} bracket ${id} (${kind}) contains ${team} from the other conference`
+          ).toMatch(expected);
+        }
+        checked++;
+      }
+    }
+    // 2018-2023 each carry an AL and an NL bracket.
+    expect(checked, 'conference brackets checked').toBe(12);
+  });
+
   it('never puts the same franchise in a round twice', () => {
-    // Three archived rounds carry a stray matchup pairing two teams already
-    // scheduled that week (2014 + 2015 NIT week 14), and 2012 week 14 has an
-    // outright `0023 vs 0023` bye row — which rendered as a fifth
-    // quarterfinal, a team playing itself. pruneRound drops them.
+    // Weeks 14 of 2013, 2014 and 2015 each carry a stray matchup pairing two
+    // teams already scheduled that week (the three rows `phantomRows` pins
+    // below). Only 2014's and 2015's reach pruneRound — 2013's pair straddles
+    // the championship and NIT fields, so no bracket sees both teams. 2012
+    // week 14 adds an outright `0023 vs 0023` bye row, which rendered as a
+    // fifth quarterfinal with a team playing itself.
     for (const year of years) {
       for (const [id, payload] of Object.entries<any>(SEASONS[year])) {
         for (const round of toArray<any>(payload.playoffBracket.playoffRound)) {
@@ -270,7 +314,7 @@ describe('reconstructed AFL brackets', () => {
       // name, so 2018's winner is "Pubes" in the feed and "Suh girls, one cup"
       // in the ledger — the same team, id 0012.
       const awards = new Map(
-        ((require('../data/afl-fantasy/awards-history.json') as any).seasons ?? []).map(
+        (((awardsHistory as any).seasons ?? []) as any[]).map(
           (s: any) => [String(s.year), s.awards ?? {}]
         )
       );

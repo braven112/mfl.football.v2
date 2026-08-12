@@ -109,10 +109,16 @@ function describeShape(bracketMetas) {
   if (!titleWeek || titleTeams < 2) return null;
 
   if (titleTeams === 2) {
-    const conf = bracketMetas.filter((b) =>
-      /^(AL|NL)\s+Championship$/i.test(String(b?.name ?? '').trim())
-    );
-    if (conf.length !== 2) return null;
+    // Resolve each conference bracket by NAME, never by its position in the
+    // feed array. Every committed feed happens to list AL before NL, so a
+    // positional read works today and would silently swap both conferences'
+    // games the first time MFL reorders them — the same class of incidental-
+    // ordering bug this script exists to undo.
+    const named = (re) => bracketMetas.find((b) => re.test(String(b?.name ?? '').trim()));
+    const al = named(/^AL\s+Championship$/i);
+    const nl = named(/^NL\s+Championship$/i);
+    if (!al || !nl) return null;
+    const conf = [al, nl];
     const weeks = conf.map((b) => num(b.startWeek)).filter(Boolean);
     const teams = conf.reduce((sum, b) => sum + num(b.teamsInvolved), 0);
     if (weeks.length !== 2 || teams < 4) return null;
@@ -121,7 +127,7 @@ function describeShape(bracketMetas) {
       startWeek: Math.min(...weeks),
       finalWeek: titleWeek,
       teams,
-      conferenceBracketIds: conf.map((b) => String(b.id)),
+      conferenceBracketIds: { al: String(al.id), nl: String(nl.id) },
     };
   }
 
@@ -131,7 +137,7 @@ function describeShape(bracketMetas) {
     startWeek: titleWeek,
     finalWeek: titleWeek + rounds - 1,
     teams: titleTeams,
-    conferenceBracketIds: [],
+    conferenceBracketIds: null,
   };
 }
 
@@ -216,11 +222,19 @@ function searchChampionshipField(schedule, shape, knownFinal) {
 
 /**
  * A single-elimination round cannot contain the same franchise twice, but the
- * AFL's archived schedules do — three rounds carry a stray extra matchup that
- * links two teams already paired elsewhere that week (2014 and 2015 NIT week
- * 14), and 2012 week 14 carries an outright `0023 vs 0023` bye row. Left in,
- * they render as phantom games: 2012's quarterfinals showed five, one of them
- * a team playing itself.
+ * AFL's archived schedules do. Two distinct artifacts:
+ *
+ *   - A stray extra matchup linking two teams already paired elsewhere that
+ *     week. Weeks 14 of 2013, 2014 and 2015 each carry one (three rows total —
+ *     the count `tests/afl-reconstructed-brackets.test.ts` pins). Only 2014 and
+ *     2015 reach this function, because 2013's pair straddles the championship
+ *     and NIT fields, so no single bracket ever sees both teams; that row is
+ *     simply never claimed rather than pruned.
+ *   - An outright self-matchup bye row (`0023 vs 0023`, 2012 week 14), dropped
+ *     by the first filter below rather than by the duplicate logic.
+ *
+ * Left in, both render as phantom games: 2012's quarterfinals showed five, one
+ * of them a team playing itself.
  *
  * The redundant link is identifiable without guessing: it is the only game
  * whose BOTH sides also appear in another game that round, so dropping it
@@ -571,9 +585,19 @@ async function reconstructYear(year, knownFinal) {
     // of the teams playing them, which is why `field` carries it.
     const finalRound = walked.rounds[walked.rounds.length - 1];
     const earlier = walked.rounds.slice(0, -1);
-    const [alId, nlId] = shape.conferenceBracketIds;
+    const { al: alId, nl: nlId } = shape.conferenceBracketIds;
     const byConference = { [alId]: [], [nlId]: [] };
-    const confBracketFor = (conference) => (conference === '00' ? alId : nlId);
+
+    // Which conference id is the American League is read from that season's own
+    // conference NAMES, not assumed to be '00' — the id is just an index and
+    // the AFL has re-parented its conferences before. Falls back to the
+    // long-standing 00=AL / 01=NL convention only if the names are missing.
+    const americanConferenceId =
+      toArray(league?.league?.conferences?.conference).find((c) =>
+        /^American\b/i.test(String(c?.name ?? '').trim())
+      )?.id ?? '00';
+    const confBracketFor = (conference) =>
+      String(conference) === String(americanConferenceId) ? alId : nlId;
 
     for (const round of earlier) {
       const split = {};
