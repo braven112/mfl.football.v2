@@ -122,7 +122,14 @@ const toArray = (v) => (Array.isArray(v) ? v : v == null ? [] : [v]);
  * any one format properly. That comes after we know which URL to use.
  */
 function countPairings(body, contentType) {
-  // JSON: walk for any object holding a 2+ element `franchise` array.
+  // JSON: count only nodes reached through a `matchup` key that hold EXACTLY
+  // two franchises.
+  //
+  // The first version counted any object with a 2+ element `franchise` array,
+  // which made every flat `weeklyResults.franchise[]` payload — a 24-team score
+  // list with no opponents at all, the exact shape this whole investigation is
+  // about — report "1 pairing" and print HAS PAIRINGS. A detector that fires on
+  // the thing it is meant to rule out is worse than no detector.
   if (/json/i.test(contentType) || body.trimStart().startsWith('{')) {
     try {
       const data = JSON.parse(body);
@@ -130,9 +137,15 @@ function countPairings(body, contentType) {
       const walk = (node) => {
         if (!node || typeof node !== 'object') return;
         if (Array.isArray(node)) return node.forEach(walk);
-        const fr = toArray(node.franchise);
-        if (fr.length >= 2 && fr.every((f) => f && typeof f === 'object' && 'id' in f)) n++;
-        for (const v of Object.values(node)) walk(v);
+        for (const [key, value] of Object.entries(node)) {
+          if (key === 'matchup') {
+            for (const m of toArray(value)) {
+              const fr = toArray(m?.franchise);
+              if (fr.length === 2 && fr.every((f) => f && typeof f === 'object' && 'id' in f)) n++;
+            }
+          }
+          walk(value);
+        }
       };
       walk(data);
       return { pairings: n, note: '' };
@@ -172,11 +185,26 @@ const rows = [];
 for (const c of CANDIDATES) {
   let row = { name: c.name, status: '—', bytes: 0, pairings: 0, note: '' };
   try {
-    const res = await fetch(c.url, { headers: { 'User-Agent': UA, Accept: '*/*' } });
-    const body = await res.text();
+    // MFL rate-limits: the first run of this probe took 429s on 7 of 14 rows
+    // for one season, and a 429 is silently indistinguishable from "no data"
+    // in the results table. Back off and retry rather than record a false zero.
+    let res;
+    let body = '';
+    for (let attempt = 0; attempt < 3; attempt++) {
+      res = await fetch(c.url, { headers: { 'User-Agent': UA, Accept: '*/*' } });
+      body = await res.text();
+      if (res.status !== 429) break;
+      await sleep(5000 * (attempt + 1));
+    }
     const ct = res.headers.get('content-type') ?? '';
     const { pairings, note } = countPairings(body, ct);
-    row = { name: c.name, status: String(res.status), bytes: body.length, pairings, note };
+    row = {
+      name: c.name,
+      status: String(res.status),
+      bytes: body.length,
+      pairings,
+      note: res.status === 429 ? 'RATE LIMITED — result is not evidence' : note,
+    };
   } catch (err) {
     row.note = `error: ${err.message}`;
   }
@@ -185,7 +213,7 @@ for (const c of CANDIDATES) {
   console.log(
     `${row.name.padEnd(36)} ${row.status.padStart(3)}  ${String(row.bytes).padStart(8)}B  pairings=${String(row.pairings).padStart(3)}  ${row.note}${flag}`
   );
-  await sleep(700);
+  await sleep(1500);
 }
 
 const winners = rows.filter((r) => r.pairings > 0);
