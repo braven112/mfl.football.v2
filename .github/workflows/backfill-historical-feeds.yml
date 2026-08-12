@@ -83,13 +83,13 @@ jobs:
         id: coverage
         run: node ./scripts/report-h2h-coverage.mjs --league=${{ inputs.league }} --compare=/tmp/h2h-before.json
 
-      # A backfill that gained nothing is a question, not an answer: MFL gates
-      # exports on each league-year's display config (leagueStandings hid pf/pa
-      # until ALL=1), so "the schedule export is empty" does not establish that
-      # MFL has no schedule. Probe the other surfaces in the same run rather
-      # than concluding the data is gone.
-      - name: Probe other MFL surfaces (only when nothing was recovered)
-        if: steps.coverage.outputs.recovered == 'false'
+      # Any season still short of its weeks is an open question, so the probe
+      # keys off REMAINING GAPS rather than "did this run gain anything". The
+      # first authenticated run recovered 2024/2025 and therefore skipped this
+      # step entirely, leaving the 2007-2019 hole it exists to diagnose
+      # untested. Probes two gap years across both AFL bracket eras.
+      - name: Probe other MFL surfaces (whenever gaps remain)
+        if: steps.coverage.outputs.gaps == 'true'
         env:
           MFL_APIKEY: ${{ secrets.MFL_APIKEY }}
           MFL_API_KEY: ${{ secrets.MFL_API_KEY }}

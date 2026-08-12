@@ -132,12 +132,22 @@ if (before) {
 const out = lines.join('\n');
 console.log(out);
 
-// Tell the workflow whether this run actually gained anything, so it can decide
-// to go probe other MFL surfaces rather than quietly reporting a no-op.
-if (before && process.env.GITHUB_OUTPUT) {
+// Signals for the workflow.
+//
+// `gaps` — not `recovered` — is what should drive further investigation. The
+// first authenticated run recovered 2024 and 2025 (schedules that had never
+// been fetchable at all), so `recovered` was true and the probe step skipped
+// itself, even though the 2007-2019 hole it exists to diagnose was untouched.
+// Gaining something is not the same as closing the gap.
+if (process.env.GITHUB_OUTPUT) {
+  const gapSeasons = report.filter(
+    (r) => r.weeksInFeed && r.weeksWithGames > 0 && r.weeksWithGames < r.weeksInFeed - 1
+  );
   fs.appendFileSync(
     process.env.GITHUB_OUTPUT,
-    `recovered=${total > before.total ? 'true' : 'false'}\n`
+    `gaps=${gapSeasons.length > 0 ? 'true' : 'false'}\n` +
+      `gap_years=${gapSeasons.map((r) => r.year).join(',')}\n` +
+      (before ? `recovered=${total > before.total ? 'true' : 'false'}\n` : '')
   );
 }
 
