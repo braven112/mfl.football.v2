@@ -396,6 +396,47 @@ describe('reconstructed AFL brackets', () => {
     });
   });
 
+  describe('2015, checked against MFL’s own bracket pages', () => {
+    // The commissioner screenshotted every 2015 bracket off myfantasyleague.com
+    // (2026-08-12) and the reconstruction matched all eight, game for game and
+    // score for score. That is the strongest evidence this method has: one full
+    // season verified end to end against the source, covering the championship,
+    // the NIT and all six consolation/placement brackets. Pinned so a future
+    // change to the solver has to reproduce a season we know cold.
+    const FINALS: Array<[string, string, string, string]> = [
+      ['1', 'AFL Championship', '0005', '191.82'], // Computer Jocks
+      ['2', 'AFL Consolation Bracket (3rd)', '0001', '121.5'], // Smokane FC
+      ['3', 'AFL 5th Place Game', '0009', '118.08'], // Vitside Mafia
+      ['4', 'AFL 7rd Place Game', '0021', '118.86'], // Chatmaster
+      ['5', 'NIT Championship', '0006', '122.23'], // Da Dangsters
+      ['6', 'NIT Consolation Game', '0015', '108.2'], // The Mariachi Ninjas
+      ['7', 'NIT Consolation 1', '0002', '112.43'], // Drunk Indians
+      ['8', 'NIT Consolation 2', '0008', '111.78'], // The Nukes
+    ];
+
+    it.each(FINALS)('bracket %s (%s) is won by %s with %s', (id, _name, winner, points) => {
+      const final = SEASONS['2015'][id].playoffBracket.playoffRound.at(-1).playoffGame.at(-1);
+      const won = Number(final.home.points) >= Number(final.away.points) ? final.home : final.away;
+      expect(won.franchise_id).toBe(winner);
+      expect(won.points).toBe(points);
+    });
+
+    it('reproduces the championship quarterfinals exactly', () => {
+      const qf = SEASONS['2015']['1'].playoffBracket.playoffRound[0].playoffGame;
+      const seen = qf
+        .map((g: any) => `${g.home.franchise_id}:${g.home.points}v${g.away.franchise_id}:${g.away.points}`)
+        .sort();
+      expect(seen).toEqual(
+        [
+          '0016:140.94v0021:138.52', // 1 Incurable Chlamydia / 8 Chatmaster
+          '0004:126.22v0009:136.7', //  2 The Dude that Abides / 7 Vitside Mafia
+          '0001:98.38v0005:161.35', //  3 Smokane FC / 6 Computer Jocks
+          '0017:114.88v0013:119.67', // 4 Titsburgh Feelers / 5 Delirium Tremens
+        ].sort()
+      );
+    });
+  });
+
   it('leaves 2003, 2004 and 2011 unreconstructed rather than guessing', () => {
     // Their playoff fields were not top-N-per-conference (2003's bracket is
     // even named "Conference Championships"). All three already have curated
