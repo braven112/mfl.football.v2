@@ -2,6 +2,14 @@
   "$comment": "AFL Fantasy league championship history. Mirrors data/theleague/championship-history.json shape. Each entry maps a year to the franchise IDs (as they were AT THAT TIME) that finished 1st and 2nd. Names are recorded as they were AT THAT TIME — to find the franchise ID for an older year, cross-reference data/afl-fantasy/mfl-feeds/<year>/league.json. Backfilled from MFL playoffBracket/weeklyResults exports by scripts/backfill-afl-championship-history.mjs.",
   "championships": [
     {
+      "year": 2004,
+      "champion": "0017",
+      "runnerUp": "0020",
+      "championName": "Bukkake Warriors",
+      "runnerUpName": "Your Team Sucks",
+      "source": "commissioner-screenshot:mfl-bracket-page"
+    },
+    {
       "year": 2005,
       "champion": "0013",
       "runnerUp": "0001",
@@ -171,10 +179,9 @@
     }
   ],
   "$gaps": {
-    "$comment": "Years not yet backfilled. 2003 is permanently unrecoverable: the league played that season on Yahoo and only standings were entered into MFL, so no game has a score in any week. 2004 needs the AFL Championship bracket confirmed from MFL, because that season's field was not top-4-per-conference and the schedule alone leaves three structurally valid brackets.",
+    "$comment": "2003 is permanently unrecoverable: the league played that season on Yahoo and only standings were entered into MFL, so no game in any week carries a score. Every other season is on record.",
     "missingYears": [
-      2003,
-      2004
+      2003
     ]
   }
 }
