@@ -4,11 +4,12 @@ import { spriteUrl } from '../../utils/sprite-url';
 import allPages from '../../data/page-directory.json';
 import { getAuthUser, isCommissionerOrAdmin } from '../../utils/auth';
 import { pathBelongsToLeague } from '../../config/footer-config';
+import { resolveDirectoryHref } from '../../utils/nav-utils';
 
 const authUser = getAuthUser(Astro.request);
 const isAdmin = !!authUser && isCommissionerOrAdmin(authUser);
 
-// This directory is TheLeague-only (see hardcoded basePath below) — the
+// This directory is TheLeague-only (see resolveDirectoryHref below) — the
 // registry is a single global list shared with AFL/best-ball, so scope it
 // down to this league's own pages before doing anything else with it.
 const thisLeaguePages = allPages.filter(p => pathBelongsToLeague(p.path, 'theleague'));
@@ -29,8 +30,6 @@ const categories = [
   { id: 'tools', label: 'Tools' },
   { id: 'info', label: 'Info' },
 ];
-
-const basePath = '/theleague';
 ---
 
 <TheLeagueLayout title="Search | The League">
@@ -69,7 +68,7 @@ const basePath = '/theleague';
     <div class="directory__grid">
       {pages.map(page => (
         <a
-          href={`${basePath}${page.path}`}
+          href={resolveDirectoryHref(page.path, 'theleague')}
           class="directory__card"
           data-search={searchData[page.id]}
           data-category={page.category}

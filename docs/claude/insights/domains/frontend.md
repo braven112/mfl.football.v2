@@ -1010,12 +1010,20 @@ and never applied the equivalent check.
 and filtering `allPages` through it before anything else touches the list
 (90 directory entries → 56 scoped to TheLeague, AFL keeper pages confirmed
 excluded). `tests/footer-links.test.ts` already exercises this helper against
-real `src/pages/` routes.
+real `src/pages/` routes. Code review on the same PR then caught the exact
+`/theleague/theleague/lineup` failure mode too: the file's href was
+hand-built as `` `${basePath}${page.path}` `` with `basePath` hardcoded to
+`/theleague`, so the 13 directory entries already stored pre-prefixed
+(`/theleague/lineup`, `/theleague/pecking-order`, …) got double-prefixed into
+dead links. Swapped for `resolveDirectoryHref(page.path, 'theleague')`
+(`src/utils/nav-utils.ts`), which already exists for exactly this.
 
 **Recommendation:** Any new file that imports `page-directory.json` directly
-(grep `from '.*page-directory.json'` / `from '.*page-directory'`) must filter
-through `pathBelongsToLeague()` (or `resolveDirectoryHref`'s prefix logic) for
-its own league before rendering — don't assume a sibling component already
-did it just because the import is shared. There's no compile-time signal that
-catches an unfiltered directory read; it has to be checked by hand or with a
-cross-league smoke test of the page.
+(grep `from '.*page-directory.json'` / `from '.*page-directory'`) needs BOTH
+fixes, not just one: filter through `pathBelongsToLeague()` to scope which
+entries render, AND build every href through `resolveDirectoryHref()` rather
+than string-concatenating a prefix — the filter alone still leaves the
+already-prefixed subset of entries broken. Don't assume a sibling component
+already did either just because the import is shared; there's no
+compile-time signal that catches a missing filter or a hand-rolled href, so
+check by hand or with a cross-league smoke test of the page.
