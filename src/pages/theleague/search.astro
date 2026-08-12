@@ -3,12 +3,18 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import { spriteUrl } from '../../utils/sprite-url';
 import allPages from '../../data/page-directory.json';
 import { getAuthUser, isCommissionerOrAdmin } from '../../utils/auth';
+import { pathBelongsToLeague } from '../../config/footer-config';
 
 const authUser = getAuthUser(Astro.request);
 const isAdmin = !!authUser && isCommissionerOrAdmin(authUser);
 
+// This directory is TheLeague-only (see hardcoded basePath below) — the
+// registry is a single global list shared with AFL/best-ball, so scope it
+// down to this league's own pages before doing anything else with it.
+const thisLeaguePages = allPages.filter(p => pathBelongsToLeague(p.path, 'theleague'));
+
 // Filter out pages tagged "hidden" for non-admin users
-const pages = isAdmin ? allPages : allPages.filter(p => !p.tags.includes('hidden'));
+const pages = isAdmin ? thisLeaguePages : thisLeaguePages.filter(p => !p.tags.includes('hidden'));
 
 // Build search data server-side: title + description + tags joined into one lowercase string per entry
 const searchData: Record<string, string> = {};
