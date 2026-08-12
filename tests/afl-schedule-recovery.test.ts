@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+// @ts-expect-error - .mjs helper shared with the node scripts (see its header)
+import { bracketKindFromName } from '../src/utils/afl-bracket-kind.mjs';
 
 /**
  * Guards the regular-season schedules recovered from MFL's authenticated
@@ -40,11 +42,18 @@ describe('AFL schedules recovered from the authenticated schedule view', () => {
     const schedule = readJson(path.join(FEEDS, year, 'schedule.json'));
     const standings = readJson(path.join(FEEDS, year, 'standings.json'));
 
-    // Regular season only: the recovered weeks are those before the first
-    // playoff bracket starts. Standings W-L excludes postseason, so mixing the
-    // two in would guarantee a false mismatch.
+    // Regular season only — standings W-L excludes the postseason, so counting
+    // playoff games would guarantee a false mismatch.
+    //
+    // "First playoff week" is NOT min(startWeek): the AFL Cup is an in-season
+    // knockout whose brackets start in week 4 (2017 runs six of them from weeks
+    // 4-12). Taking the minimum treated weeks 4+ as postseason and left only
+    // weeks 1-3 to reconcile, failing all 24 franchises on a season whose data
+    // is perfectly good. Classify with the shared resolver the compute script
+    // uses, and ignore 'cup' for the same reason it does.
     const brackets = readJson(path.join(FEEDS, year, 'playoff-brackets.json'));
     const startWeeks = toArray<any>(brackets?.playoffBrackets?.playoffBracket)
+      .filter((b) => bracketKindFromName(b.name, String(b.id)) !== 'cup')
       .map((b) => Number(b.startWeek))
       .filter((n) => Number.isFinite(n) && n > 0);
     const firstPlayoffWeek = startWeeks.length ? Math.min(...startWeeks) : Infinity;

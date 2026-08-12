@@ -29,6 +29,8 @@
     "generate:vapid": "node scripts/generate-vapid-keys.mjs",
     "compute:franchise-history": "node scripts/compute-franchise-history.mjs",
     "compute:afl-franchise-history": "node scripts/compute-franchise-history.mjs --league=afl",
+    "recover:afl-schedule": "node scripts/recover-afl-schedule-from-html.mjs --league=afl",
+    "scan:mfl-injection": "node scripts/scan-mfl-page-injection.mjs --league=afl",
     "compute:afl-free-agents": "node scripts/compute-afl-free-agents.mjs",
     "compute:schedule-strength": "node scripts/compute-schedule-strength.mjs",
     "generate:pecking-order": "node scripts/generate-pecking-order.mjs",
