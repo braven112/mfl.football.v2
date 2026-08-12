@@ -40,6 +40,7 @@ import {
 } from './lib/franchise-milestone-posts.mjs';
 import { isSeasonComplete } from './lib/theleague-season-complete.mjs';
 import { aliasDivisionName, isUsableDivisionName } from '../src/utils/division-aliases.mjs';
+import { bracketKindFromName } from '../src/utils/afl-bracket-kind.mjs';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -77,6 +78,10 @@ const LEAGUE_TARGETS = {
   'afl-fantasy': {
     configPath: '@/afl.config.json',
     schefterFeedPath: '@/schefter-feed.json',
+    // Playoff brackets rebuilt from schedule.json for the 19 AFL seasons whose
+    // MFL export carries seeds only. Advisory, and only consulted when MFL's
+    // own bracket has no franchise ids to read — see the fallback chain below.
+    reconstructedBracketsPath: '@/derived/reconstructed-playoff-brackets.json',
     salaryAwards: false,
     badges: false,
     milestonePosts: false,
@@ -109,6 +114,9 @@ const LEAGUE_CONFIG_PATH = resolveTargetPath(TARGET.configPath);
 const CHAMPIONSHIP_HISTORY_PATH = path.join(ROOT, LEAGUE.dataPath, 'championship-history.json');
 const OUTPUT_PATH = path.join(ROOT, LEAGUE.dataPath, 'derived/franchise-history.json');
 const SCHEFTER_FEED_PATH = resolveTargetPath(TARGET.schefterFeedPath);
+const RECONSTRUCTED_BRACKETS_PATH = TARGET.reconstructedBracketsPath
+  ? resolveTargetPath(TARGET.reconstructedBracketsPath)
+  : null;
 
 const INDIVIDUAL_AWARD_MIN_SALARY = 1_500_000;
 
@@ -387,20 +395,56 @@ function inferPlayoffParticipants(standingsRows, divisionTitleHolders, bracketSi
 // playoff matchup that has actual scores. Key = "<week>:<smallerId>:<biggerId>"
 // so per-week matchup lookups are owner-direction independent. Used to tag
 // rivalry matchups with isPlayoff + a human-readable round name.
+// Which tournament a bracket id belongs to, and what to call its rounds.
+//
+// TheLeague runs two brackets and their ids are stable, so a literal map is
+// honest there. The AFL is the opposite: MFL renumbered its brackets twice
+// (id 2 is the NIT in 2003, unused 2004-2017, then the AL CONFERENCE bracket
+// from 2018), so reading id 2 as "consolation" labelled AFL conference
+// semifinals "Consolation R1" and their finals "3rd Place". The AFL therefore
+// classifies on the bracket NAME via the shared resolver that
+// /afl-fantasy/playoffs uses — one source of truth for what a bracket is.
+const BRACKET_LABELLERS = {
+  theleague: (bracketId) => {
+    if (bracketId === '1') return { tag: 'championship', final: 'Championship' };
+    if (bracketId === '2') return { tag: 'consolation', final: '3rd Place' };
+    return null;
+  },
+  'afl-fantasy': (bracketId, bracket) => {
+    const kind = bracketKindFromName(bracket?.name ?? bracket?.bracket_name, bracketId);
+    switch (kind) {
+      case 'championship':
+        return { tag: 'championship', final: 'Championship' };
+      case 'al':
+      case 'nl':
+        return { tag: 'conference', final: `${kind.toUpperCase()} Conference Championship` };
+      case 'nit':
+        return { tag: 'nit', final: 'NIT Championship' };
+      // The AFL Cup is an in-season knockout (weeks 4-12), not postseason.
+      // Tagging its games as playoff meetings would inflate every rivalry's
+      // playoff counter with midseason games.
+      case 'cup':
+      default:
+        return null;
+    }
+  },
+};
+
 function getPlayoffMatchupKeys(playoffBrackets) {
   const keys = new Map();
   if (!playoffBrackets) return keys;
-  const list = playoffBrackets.brackets || playoffBrackets.playoffBrackets?.brackets;
-  if (!list) return keys;
+  const list =
+    playoffBrackets.brackets || playoffBrackets.playoffBrackets?.brackets || playoffBrackets;
+  if (!list || typeof list !== 'object') return keys;
 
-  const TAGGED = [
-    { id: '1', tag: 'championship' },
-    { id: '2', tag: 'consolation' },
-  ];
+  const labeller = BRACKET_LABELLERS[LEAGUE_SLUG] ?? BRACKET_LABELLERS.theleague;
 
-  for (const { id: bracketId, tag } of TAGGED) {
+  for (const bracketId of Object.keys(list)) {
     const bracket = list[bracketId]?.playoffBracket;
     if (!bracket) continue;
+    const label = labeller(String(bracketId), bracket);
+    if (!label) continue;
+    const { tag, final: finalName } = label;
     const rounds = toArray(bracket.playoffRound);
     const totalRounds = rounds.length;
     rounds.forEach((round, idx) => {
@@ -408,10 +452,13 @@ function getPlayoffMatchupKeys(playoffBrackets) {
       const games = toArray(round.playoffGame);
       const isFinal = idx === totalRounds - 1;
       const isSemi = idx === totalRounds - 2 && totalRounds >= 2;
-      const roundName =
-        tag === 'consolation'
-          ? isFinal ? '3rd Place' : `Consolation R${idx + 1}`
-          : isFinal ? 'Championship' : isSemi ? 'Semifinal' : `Quarterfinal`;
+      const roundName = isFinal
+        ? finalName
+        : tag === 'consolation'
+          ? `Consolation R${idx + 1}`
+          : isSemi
+            ? 'Semifinal'
+            : 'Quarterfinal';
       games.forEach((game) => {
         const homeId = game.home?.franchise_id;
         const awayId = game.away?.franchise_id;
@@ -604,6 +651,12 @@ const ensureFranchise = (id) => {
   return franchiseMap.get(id);
 };
 
+// Reconstructed brackets are keyed by season under `seasons`; null for leagues
+// that have none.
+const reconstructedBracketsByYear = RECONSTRUCTED_BRACKETS_PATH
+  ? readJson(RECONSTRUCTED_BRACKETS_PATH)?.seasons ?? null
+  : null;
+
 const yearSummaries = []; // for the index page: champion/runner-up per year
 const h2hCoverage = []; // per-year "how complete is this season's H2H" audit trail
 
@@ -780,11 +833,26 @@ for (const year of years) {
   }
 
   // Same data gap on the matchup side: getPlayoffMatchupKeys can only tag
-  // games whose bracket entries carry franchise IDs. For pre-2020 years,
-  // walk the schedule from the championship bracket's startWeek onward and
-  // tag any participant-vs-participant game as a playoff meeting. The
-  // champion-vs-runner-up game gets re-labelled "Championship" by the
-  // post-process loop later.
+  // games whose bracket entries carry franchise IDs. Two fallbacks, best
+  // first.
+  //
+  // 1. Reconstructed brackets (AFL). Rebuilt from schedule.json by
+  //    scripts/reconstruct-afl-playoff-brackets.mjs and verified against
+  //    championship-history.json, so they name the actual round — a rivalry
+  //    page can say "NIT Championship" instead of a flat "Playoffs".
+  if (playoffMatchupKeys.size === 0 && reconstructedBracketsByYear) {
+    const season = reconstructedBracketsByYear[String(year)];
+    if (season) {
+      for (const [k, v] of getPlayoffMatchupKeys(season)) {
+        playoffMatchupKeys.set(k, v);
+      }
+    }
+  }
+
+  // 2. Schedule walk. Tags any participant-vs-participant game from the
+  //    championship bracket's startWeek onward, but can only call it
+  //    "Playoffs" — it does not know the bracket chain. The
+  //    champion-vs-runner-up game gets re-labelled by the post-process loop.
   if (playoffMatchupKeys.size === 0 && playoffParticipants.size >= 2) {
     for (const [k, v] of getPreFranchiseIdPlayoffMatchupKeys(
       playoffBrackets,
