@@ -9,10 +9,22 @@
  * single-elimination tournament seeded with the conference-qualified field.
  *
  * These tests exist because a reconstruction that looks plausible and is wrong
- * is worse than an empty state. Champions are pinned against three independent
- * sources that agree: the hand-curated championship-history.json, the AFL
- * awards ledger, and the commissioner's own confirmation of the 2005-2008
- * results.
+ * is worse than an empty state.
+ *
+ * A note on what is and is not independent evidence. `championship-history.json`
+ * looks like a second source but mostly is not: 18 of its 19 entries carry
+ * `source: "schedule:elimination-walk"`, meaning this same walk over this same
+ * schedule wrote them, so checking the walk against them cannot fail. The
+ * genuinely independent checks are:
+ *
+ *   - `awards-history.json` — hand-maintained, untouched by this work, and
+ *     compared by NAME because it stores each franchise's CURRENT id (2007's
+ *     champion is `0007` Chatmaster in that season's feed and `0021` in the
+ *     ledger — same team, renumbered).
+ *   - Commissioner screenshots of MFL's own bracket pages: 2005-2008 and 2019
+ *     title games, plus every bracket of 2011 and 2015.
+ *   - Conservation: every scored playoff-week game lands in exactly one
+ *     bracket, and every bracket ends with the team count MFL declares.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync, existsSync } from 'node:fs';
@@ -140,19 +152,54 @@ describe('reconstructed AFL brackets', () => {
     }
   });
 
+  const championOf = (year: string) => {
+    const final = SEASONS[year]['1'].playoffBracket.playoffRound.at(-1).playoffGame.at(-1);
+    if (final.home.result === 'W' || final.away.result === 'W') {
+      return (final.home.result === 'W' ? final.home : final.away).franchise_id;
+    }
+    return Number(final.home.points) >= Number(final.away.points)
+      ? final.home.franchise_id
+      : final.away.franchise_id;
+  };
+
   it('crowns the champion the league’s own record crowns', () => {
+    // Weak by construction for the 18 seasons this walk also wrote (see the
+    // file header) — it only bites on 2011, whose entry came from a screenshot.
+    // The awards-ledger check below is the independent one.
     for (const year of years) {
       const known = CHAMPS.get(year);
       if (!known) continue;
-      const final = SEASONS[year]['1'].playoffBracket.playoffRound.at(-1).playoffGame.at(-1);
-      const winner =
-        Number(final.home.points) >= Number(final.away.points)
-          ? final.home.franchise_id
-          : final.away.franchise_id;
-      expect(winner, `${year} reconstructed champion disagrees with the record`).toBe(
-        known.champion
-      );
+      expect(championOf(year), `${year} champion disagrees with the record`).toBe(known.champion);
     }
+  });
+
+  it('crowns the champion the awards ledger crowns', () => {
+    // Independent: awards-history.json is hand-maintained and untouched by this
+    // work. Compared by NAME — the ledger stores each franchise's CURRENT id,
+    // so 2007's Chatmaster is 0007 in that season's feed and 0021 in the ledger.
+    const ledger = new Map(
+      (((awardsHistory as any).seasons ?? []) as any[]).map((s: any) => [String(s.year), s.awards])
+    );
+    let checked = 0;
+    for (const year of years) {
+      const award = ledger.get(year)?.['afl-championship'];
+      if (!award?.name) continue;
+      const names = new Map<string, string>(
+        toArray<any>(readFeed(year, 'league.json')?.league?.franchises?.franchise).map((f: any) => [
+          f.id,
+          String(f.name),
+        ])
+      );
+      expect(names.get(championOf(year)), `${year} champion vs awards ledger`).toBe(
+        String(award.name)
+      );
+      checked++;
+    }
+    // Every reconstructed season carries a ledger name, so this covers all of
+    // them — including 2009, 2010, 2012, 2013 and 2014, which have no
+    // commissioner screenshot and whose championship-history entries this walk
+    // wrote itself.
+    expect(checked, 'seasons cross-checked against the awards ledger').toBe(years.length);
   });
 
   // Commissioner-verified from the league's own results pages (2026-08-12).
@@ -287,6 +334,63 @@ describe('reconstructed AFL brackets', () => {
       }
     });
 
+    it('fills every "Nth Round Losers" bracket with that round’s actual losers', () => {
+      // These brackets state their own cohort, so they can be checked outright
+      // rather than trusted to the depth-ordering heuristic. That matters: they
+      // hand out draft picks ("#1 Pick in 1st Round of 2005 Draft"), and 2005
+      // week 17 opens three same-size brackets at once with nothing but
+      // elimination depth separating them.
+      //
+      // This asserts the outcome, not the mechanism: it passes with the
+      // declared-cohort constraint removed, because on committed data the depth
+      // heuristic already lands these correctly. It is here to catch a wrong
+      // assignment however it arises.
+      //
+      // Residual risk, deliberately recorded: the 2007+ names ("NIT Consolation
+      // 1", "... 2L") declare no round, so those brackets remain ordering-only.
+      // Flipping the sort direction in reconstructConsolation moves 14 of them
+      // (down from 18 before the constraint) and is caught only by the 2011
+      // fixtures.
+      let checked = 0;
+      for (const year of years) {
+        const kindOf = kindResolverFor(year);
+        for (const meta of metasFor(year)) {
+          const round = /^(\d+)(?:st|nd|rd|th)\s+Round\b/i.exec(String(meta.name ?? '').trim());
+          if (!round || !SEASONS[year][String(meta.id)]) continue;
+
+          // Parent is the NIT title bracket for NIT-side names, else bracket 1.
+          const parentId =
+            kindOf(meta.id) === 'nit'
+              ? String(metasFor(year).find((m) => isNitTitleBracket(m.name))?.id)
+              : '1';
+          const parent = SEASONS[year][parentId];
+          const parentRound = toArray<any>(parent?.playoffBracket?.playoffRound)[
+            Number(round[1]) - 1
+          ];
+          if (!parentRound) continue;
+
+          const expectedLosers = new Set(
+            toArray<any>(parentRound.playoffGame).map((g: any) =>
+              Number(g.home.points) >= Number(g.away.points)
+                ? g.away.franchise_id
+                : g.home.franchise_id
+            )
+          );
+          const opening = SEASONS[year][String(meta.id)].playoffBracket.playoffRound[0];
+          for (const g of toArray<any>(opening.playoffGame)) {
+            for (const team of [g.home.franchise_id, g.away.franchise_id]) {
+              expect(
+                expectedLosers.has(team),
+                `${year} "${meta.name}" opens with ${team}, who did not lose round ${round[1]}`
+              ).toBe(true);
+            }
+          }
+          checked++;
+        }
+      }
+      expect(checked, 'declared-cohort brackets checked').toBeGreaterThanOrEqual(6);
+    });
+
     it('never overlaps the championship field', () => {
       // The two tournaments partition the league's 24 franchises. Their own
       // consolation brackets are drawn from their own side, so compare sides,
@@ -376,6 +480,17 @@ describe('reconstructed AFL brackets', () => {
         for (const [key, ids] of claimed) {
           expect(ids, `${year} ${key} claimed by multiple brackets`).toHaveLength(1);
         }
+        // Window from the bracket METAS and the schedule, not from the
+        // reconstruction's own output — deriving it from the output means a
+        // solver that dropped a whole leading or trailing week shrinks the
+        // window with it and is never looked for.
+        const declaredStart = Math.min(
+          ...metasFor(year)
+            .filter((m) => kindResolverFor(year)(m.id) !== 'cup')
+            .map((m) => Number(m.startWeek))
+            .filter((w) => w >= 13)
+        );
+        firstWeek = Math.min(firstWeek, declaredStart);
         for (let week = firstWeek; week <= lastWeek; week++) {
           const { games, phantom } = scheduledGames(year, week);
           phantomRows += phantom;
@@ -472,10 +587,12 @@ describe('reconstructed AFL brackets', () => {
         .sort();
       expect(seen).toEqual(
         [
-          '0016:140.94v0021:138.52', // 1 Incurable Chlamydia / 8 Chatmaster
-          '0004:126.22v0009:136.7', //  2 The Dude that Abides / 7 Vitside Mafia
-          '0001:98.38v0005:161.35', //  3 Smokane FC / 6 Computer Jocks
-          '0017:114.88v0013:119.67', // 4 Titsburgh Feelers / 5 Delirium Tremens
+          // home/away as MFL's own `isHome` flags them — the AFL schedule feed
+          // lists the away team first, so these read reversed from the seeds.
+          '0021:138.52v0016:140.94', // 8 Chatmaster (H) / 1 Incurable Chlamydia
+          '0009:136.7v0004:126.22', //  7 Vitside Mafia (H) / 2 The Dude that Abides
+          '0005:161.35v0001:98.38', //  6 Computer Jocks (H) / 3 Smokane FC
+          '0013:119.67v0017:114.88', // 5 Delirium Tremens (H) / 4 Titsburgh Feelers
         ].sort()
       );
     });

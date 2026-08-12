@@ -53,9 +53,16 @@
  * (docs/claude/insights/domains/mfl-api.md, 2026-07-04). Each entry is stamped
  * `reconstructed: true` so the page can label it.
  *
- * Every season with a known champion is verified against
- * data/afl-fantasy/championship-history.json; a reconstruction whose final
- * disagrees is DISCARDED rather than published.
+ * A reconstruction whose final disagrees with
+ * data/afl-fantasy/championship-history.json is DISCARDED rather than
+ * published. Note what that is and is not worth: this script WROTE 18 of that
+ * file's 19 entries (`source: "schedule:elimination-walk"`), so for those the
+ * check compares the walk to itself and cannot fail. It bites only on entries
+ * from an outside source — today just 2011, taken from MFL's own bracket page.
+ * The independent checks live in tests/afl-reconstructed-brackets.test.ts:
+ * the hand-maintained awards ledger, commissioner screenshots, and the
+ * conservation property that every playoff-week game lands in exactly one
+ * bracket.
  *
  * Usage:
  *   node scripts/reconstruct-afl-playoff-brackets.mjs
@@ -255,11 +262,17 @@ function pruneRound(candidates) {
 
   let counts = tally();
   while ([...counts.values()].some((n) => n > 1)) {
-    const index = real.findIndex(
+    const removable = real.filter(
       (g) => counts.get(g.home.franchise_id) > 1 && counts.get(g.away.franchise_id) > 1
     );
-    if (index === -1) return null; // duplicated, but not a removable cross-link
-    real.splice(index, 1);
+    // Exactly one candidate, or this is not the shape we claim to understand.
+    // Taking the first of several would delete REAL games and publish the
+    // phantoms instead — `[1v2, 3v4, 1v3, 2v4]` has four removable games and
+    // yields a different pair depending on feed order. Never happens on
+    // committed data (instrumented: zero ambiguous calls), and if it starts to,
+    // failing the walk is the right answer.
+    if (removable.length !== 1) return null;
+    real.splice(real.indexOf(removable[0]), 1);
     counts = tally();
   }
   return real;
@@ -289,10 +302,7 @@ function walkBracket(schedule, alive, startWeek, finalWeek) {
       const aPts = num(a.score);
       const bPts = num(b.score);
       if (aPts === 0 && bPts === 0) continue;
-      candidates.push({
-        home: { franchise_id: a.id, points: String(a.score ?? '') },
-        away: { franchise_id: b.id, points: String(b.score ?? '') },
-      });
+      candidates.push(toGame(sides));
     }
 
     const pruned = pruneRound(candidates);
@@ -301,13 +311,12 @@ function walkBracket(schedule, alive, startWeek, finalWeek) {
 
     const survivors = new Set();
     games.forEach((game) => {
-      const homeWins = num(game.home.points) >= num(game.away.points);
-      const winner = homeWins ? game.home.franchise_id : game.away.franchise_id;
+      const winner = winnerOf(game);
       survivors.add(winner);
       if (week === finalWeek) {
         finalGame = {
           champion: winner,
-          runnerUp: homeWins ? game.away.franchise_id : game.home.franchise_id,
+          runnerUp: loserOf(game),
         };
       }
     });
@@ -334,8 +343,41 @@ function bracketPayload(id, rounds) {
 
 const gameKey = (a, b) => [a, b].sort().join('|');
 const gameId = (game) => gameKey(game.home.franchise_id, game.away.franchise_id);
-const winnerOf = (g) => (num(g.home.points) >= num(g.away.points) ? g.home : g.away).franchise_id;
-const loserOf = (g) => (num(g.home.points) >= num(g.away.points) ? g.away : g.home).franchise_id;
+
+/**
+ * Turn a schedule matchup into a game, in MFL's own terms rather than by array
+ * position. Two fields carry that, and both were being ignored:
+ *
+ *  - `isHome` — every AFL schedule row lists the AWAY team first. All 2747
+ *    committed matchups are `sides[0].isHome === '0'`, so reading `sides[0]` as
+ *    the home team mirrored every reconstructed game against MFL's own 2024+
+ *    export and against the bracket pages these were verified from.
+ *  - `result` — MFL states the winner outright. It is present on all 2747 rows
+ *    and never disagrees with comparing points, so it costs nothing and settles
+ *    the archive's two exact ties, which a `>=` on points would otherwise award
+ *    by array position. One is load-bearing: 2005 week 17 `0008` 76.92 v `0024`
+ *    76.92 decides the "#1 Pick in 1st Round of 2005 Draft" bracket.
+ */
+function toGame(sides) {
+  const home = sides.find((s) => String(s?.isHome) === '1') ?? sides[1];
+  const away = sides.find((s) => s !== home) ?? sides[0];
+  const side = (s) => ({
+    franchise_id: s.id,
+    points: String(s.score ?? ''),
+    ...(s.result ? { result: String(s.result) } : {}),
+  });
+  return { home: side(home), away: side(away) };
+}
+
+/** MFL's own `result` flag decides; points are the fallback when it is absent. */
+const winnerSideOf = (g) => {
+  if (g.home.result === 'W' || g.away.result === 'W') {
+    return g.home.result === 'W' ? g.home : g.away;
+  }
+  return num(g.home.points) >= num(g.away.points) ? g.home : g.away;
+};
+const winnerOf = (g) => winnerSideOf(g).franchise_id;
+const loserOf = (g) => (winnerSideOf(g) === g.home ? g.away : g.home).franchise_id;
 
 /**
  * Every playoff-week game from the schedule that has a score, keyed by week.
@@ -353,10 +395,7 @@ function scheduleGamesByWeek(schedule) {
       const [a, b] = sides;
       if (a.id === b.id) continue;
       if (num(a.score) === 0 && num(b.score) === 0) continue;
-      games.push({
-        home: { franchise_id: a.id, points: String(a.score ?? '') },
-        away: { franchise_id: b.id, points: String(b.score ?? '') },
-      });
+      games.push(toGame(sides));
     }
     if (games.length) byWeek.set(week, games);
   }
@@ -395,7 +434,7 @@ function scheduleGamesByWeek(schedule) {
  * shows 2005's Da Dangsters 2nd when they finished 3rd. Only the games are
  * trustworthy.
  */
-function reconstructConsolation({ schedule, primary, metas, primaryIds, kindOf }) {
+function reconstructConsolation({ schedule, primary, metas, primaryIds, kindOf, primaryStartWeek }) {
   const consumed = new Set();
   const side = new Map(); // franchiseId -> 'nit' | 'championship'
   const exitWeek = new Map(); // franchiseId -> week it lost in a PRIMARY bracket
@@ -423,6 +462,17 @@ function reconstructConsolation({ schedule, primary, metas, primaryIds, kindOf }
       startWeek: num(m.startWeek),
       startWeekGames: num(m.startWeekGames),
       teamsInvolved: num(m.teamsInvolved),
+      // Several bracket names state their own cohort outright ("2nd Round NIT
+      // Losers Bracket" = the teams that lost round 2 of the NIT). Where they
+      // do, that beats the depth-ordering heuristic below, which is otherwise
+      // the only thing separating same-size brackets opening the same week —
+      // 2005 week 17 opens three 1-game brackets at once, awarding the #3
+      // first-rounder, the #2 second-rounder and the #3 second-rounder.
+      declaredExitWeek: (() => {
+        const round = /^(\d+)(?:st|nd|rd|th)\s+Round\b/i.exec(String(m.name ?? '').trim());
+        const start = primaryStartWeek?.[kindOf(m.id) === 'nit' ? 'nit' : 'championship'];
+        return round && start ? start + Number(round[1]) - 1 : null;
+      })(),
       rounds: [],
       alive: new Set(),
       teams: new Set(),
@@ -470,6 +520,18 @@ function reconstructConsolation({ schedule, primary, metas, primaryIds, kindOf }
       const games = availableAt(week, bracket.side).filter(
         (g) => bracket.alive.has(g.home.franchise_id) || bracket.alive.has(g.away.franchise_id)
       );
+      // Never let a continuation grow a bracket past the size MFL declares. The
+      // seeding pass below already checks this; without the same cap here, an
+      // open bracket sharing a live team with another bracket's opening game
+      // could swallow it (MFL genuinely mixes cohorts — 2005 bracket 9 is
+      // "1st Rd. NIT Losers & Week 16 Losers"). The stolen-from bracket would
+      // then silently seed on a wrong-depth group of the right size.
+      const grown = new Set(bracket.teams);
+      for (const g of games) {
+        grown.add(g.home.franchise_id);
+        grown.add(g.away.franchise_id);
+      }
+      if (bracket.teamsInvolved && grown.size > bracket.teamsInvolved) continue;
       if (games.length) bracket.claimedThisWeek = claim(bracket, week, games);
     }
 
@@ -501,10 +563,15 @@ function reconstructConsolation({ schedule, primary, metas, primaryIds, kindOf }
           );
           (groups.get(depth) ?? groups.set(depth, []).get(depth)).push(game);
         }
-        // Deepest run in the primary bracket goes to the lowest bracket id.
-        const match = [...groups.entries()]
+        // A name that declares its cohort picks that group outright; otherwise
+        // the deepest run in the primary bracket goes to the lowest bracket id.
+        const bySize = [...groups.entries()]
           .sort((a, b) => b[0] - a[0])
-          .find(([, games]) => games.length === bracket.startWeekGames);
+          .filter(([, games]) => games.length === bracket.startWeekGames);
+        const match =
+          bracket.declaredExitWeek == null
+            ? bySize[0]
+            : bySize.find(([depth]) => depth === bracket.declaredExitWeek);
         if (match) claim(bracket, week, match[1]);
       }
     }
@@ -638,7 +705,7 @@ async function reconstructYear(year, knownFinal) {
       const walkedNit = walkBracket(schedule, nitField, nitStart, nitStart + nitRounds - 1);
       if (walkedNit) {
         brackets[String(nitMeta.id)] = bracketPayload(nitMeta.id, walkedNit.rounds);
-        nit = { bracketId: String(nitMeta.id), champion: walkedNit.finalGame.champion };
+        nit = { bracketId: String(nitMeta.id), champion: walkedNit.finalGame.champion, startWeek: nitStart };
       }
     }
   }
@@ -650,6 +717,7 @@ async function reconstructYear(year, knownFinal) {
     metas,
     primaryIds,
     kindOf: buildBracketKindResolver(metas),
+    primaryStartWeek: { championship: shape.startWeek, nit: nit?.startWeek ?? 0 },
   });
   Object.assign(brackets, consolation.brackets);
 

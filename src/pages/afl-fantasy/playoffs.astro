@@ -78,6 +78,7 @@ const leagueFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/leag
 // scripts/reconstruct-afl-playoff-brackets.mjs.
 import reconstructedBracketsFile from '../../../data/afl-fantasy/derived/reconstructed-playoff-brackets.json';
 import { buildBracketKindResolver, isNitTitleBracket } from '../../utils/afl-bracket-kind.mjs';
+type BracketKind = 'al' | 'nl' | 'nit' | 'cup' | 'championship';
 const weeklyResultsFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/weekly-results.json', {
   eager: true,
 });
@@ -768,9 +769,18 @@ if (leagueChampGame?.winnerId) {
   });
 }
 
-// Conference Championships (Bracket 2 = AL, Bracket 3 = NL)
-const alChampGame = findFinalGame('2');
-const nlChampGame = findFinalGame('3');
+// Conference Championships. Resolved by bracket KIND, never by id: ids 2 and 3
+// are the AL/NL brackets only from 2018 on. Before that they are the AFL
+// Consolation/Losers bracket and the 5th-place game (or, in 2005, the NIT) —
+// which have no conference meaning at all, and which only became reachable
+// here once the reconstruction started populating those ids. Read as ids, 2015
+// paid a "AL Conference Championship" to its 3rd-place consolation winner.
+const conferenceFinal = (kind: BracketKind) => {
+  const id = bracketIdsToFetch.find(b => bracketKind(b) === kind);
+  return id ? findFinalGame(id) : undefined;
+};
+const alChampGame = conferenceFinal('al');
+const nlChampGame = conferenceFinal('nl');
 if (alChampGame?.winnerId) {
   playoffPrizes.push({
     label: 'AL Conference Championship',
