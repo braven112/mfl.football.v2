@@ -75,6 +75,51 @@ const isInvalidFeed = (data) =>
   data.error ||
   /Invalid league/i.test(JSON.stringify(data?.error || ''));
 
+const toArray = (v) => (Array.isArray(v) ? v : v == null ? [] : [v]);
+
+// A feed can be well-formed JSON, carry no `error` key, and still be useless.
+// AFL's archived 2007-2019 schedules are exactly that: `schedule.weeklySchedule`
+// is present with all 17 weeks, but the regular-season weeks hold ZERO matchup
+// entries (MFL only kept weeks 14-17). isInvalidFeed saw no `error` key, called
+// it "already valid", and every gap-fill run skipped it — so the hole was never
+// retried and ~60% of AFL's head-to-head history stayed missing.
+//
+// H2H pairings are the one thing rivalry/highlight pages cannot be derived
+// without (weekly-results.json is {franchiseId: score} with no opponent).
+//
+// "Empty" is too weak a test: AFL's 2016 schedule DOES carry weeks 14-17, so a
+// mere some()-has-pairings check passes and the 13 missing regular-season weeks
+// stay missing. What marks a hole is an EMPTY week sitting before a POPULATED
+// one. Trailing empty weeks are legitimate (season in progress, or a league
+// that plays fewer weeks than the feed lists), so only leading/interior gaps
+// count. Cost of a false positive: that year re-requests on each run — bounded,
+// and loud (the log says why), which beats caching a hole forever.
+const countsToGapFlag = (perWeekPairCounts) => {
+  const lastPopulated = perWeekPairCounts.findLastIndex((n) => n > 0);
+  if (lastPopulated < 0) return true; // nothing at all — definitely a gap
+  return perWeekPairCounts.slice(0, lastPopulated).some((n) => n === 0);
+};
+
+const schedulePairsPerWeek = (data) =>
+  toArray(data?.schedule?.weeklySchedule).map((wk) =>
+    toArray(wk.matchup).filter((m) => toArray(m.franchise).length >= 2).length
+  );
+
+const scheduleIsComplete = (data) => !countsToGapFlag(schedulePairsPerWeek(data));
+
+const totalPairs = (perWeek) => perWeek.reduce((a, b) => a + b, 0);
+
+// Raw weeklyResults comes back in two shapes: `matchup[]` (pairs, what we want)
+// and a flat `franchise[]` carrying only id/score/opt_pts — no opponent, no
+// result. The flat shape is what archive-year regular seasons return, and it
+// cannot be paired back up, so it counts as zero pairings for that week.
+const weeklyRawPairsPerWeek = (weeks) =>
+  toArray(weeks).map((wk) =>
+    toArray(wk?.weeklyResults?.matchup).filter((m) => toArray(m.franchise).length >= 2).length
+  );
+
+const weeklyRawIsComplete = (weeks) => !countsToGapFlag(weeklyRawPairsPerWeek(weeks));
+
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function fetchJson(url) {
@@ -99,7 +144,15 @@ async function fetchJson(url) {
 const SIMPLE_ENDPOINTS = [
   { type: 'league', file: 'league.json' },
   { type: 'leagueStandings', file: 'standings.json' },
-  { type: 'schedule', file: 'schedule.json' },
+  {
+    type: 'schedule',
+    file: 'schedule.json',
+    isComplete: scheduleIsComplete,
+    // Never trade a fuller cached schedule for a thinner fresh one: AFL's
+    // archive years already hold weeks 14-17, and MFL answering with less
+    // than that would otherwise wipe the playoff pairings we do have.
+    countPairs: (data) => totalPairs(schedulePairsPerWeek(data)),
+  },
   { type: 'transactions', file: 'transactions.json', extra: 'W=YTD&TRANS_TYPE=*' },
   { type: 'draftResults', file: 'draftResults.json' },
   { type: 'auctionResults', file: 'auctionResults.json' },
@@ -112,11 +165,22 @@ function buildUrl(host, year, leagueId, type, extra) {
 }
 
 // Attempt one endpoint, return outcome string + whether anything was written.
-async function attemptEndpoint(host, year, leagueId, type, file, extra, dest) {
+// `isComplete` / `countPairs` (optional) let an endpoint declare what "actually
+// has the data we need" means beyond "parsed and has no error key" — see
+// scheduleIsComplete.
+async function attemptEndpoint(
+  host, year, leagueId, type, file, extra, dest, { isComplete, countPairs } = {}
+) {
+  let cached = null;
   if (!FORCE && fs.existsSync(dest)) {
     const existing = readJson(dest);
     if (!isInvalidFeed(existing)) {
-      return { skipped: true, reason: 'already valid' };
+      if (isComplete && !isComplete(existing)) {
+        cached = existing;
+        console.log(`  ↻ ${file} — cached copy is missing weeks, refetching`);
+      } else {
+        return { skipped: true, reason: 'already valid' };
+      }
     }
   }
   if (DRY_RUN) {
@@ -127,6 +191,16 @@ async function attemptEndpoint(host, year, leagueId, type, file, extra, dest) {
     const result = await fetchJson(url);
     if (!result.ok) return { error: 'not JSON (HTML error page)' };
     if (isInvalidFeed(result.data)) return { error: 'invalid league' };
+    if (cached && countPairs) {
+      const before = countPairs(cached);
+      const after = countPairs(result.data);
+      if (after < before) {
+        return { skipped: true, reason: `kept cached copy (${before} pairings vs ${after} fresh)` };
+      }
+      if (after === before) {
+        return { skipped: true, reason: `refetch returned the same ${after} pairings — MFL has no more` };
+      }
+    }
     fs.writeFileSync(dest, JSON.stringify(result.data, null, 2));
     return { written: true, bytes: result.raw.length };
   } catch (err) {
@@ -142,10 +216,18 @@ async function fetchWeeklyResults(host, year, leagueId, yearDir) {
   const rawPath = path.join(yearDir, 'weekly-results-raw.json');
   const normPath = path.join(yearDir, 'weekly-results.json');
 
+  let cachedRaw = null;
   if (!FORCE && fs.existsSync(rawPath) && fs.existsSync(normPath)) {
     const existingRaw = readJson(rawPath);
     if (Array.isArray(existingRaw) && existingRaw.length > 0) {
-      return { skipped: true, reason: 'already cached' };
+      // Length alone is the same trap attemptEndpoint fell into: all 17 weeks
+      // can be present while the regular-season ones carry the flat, opponent-
+      // less franchise[] shape. Require actual pairings before calling it cached.
+      if (weeklyRawIsComplete(existingRaw)) {
+        return { skipped: true, reason: 'already cached' };
+      }
+      cachedRaw = existingRaw;
+      console.log('  ↻ weekly-results — cached copy is missing H2H pairings, refetching');
     }
   }
 
@@ -169,6 +251,19 @@ async function fetchWeeklyResults(host, year, leagueId, yearDir) {
 
   if (rawWeeks.length === 0) {
     return { error: 'no weeks returned' };
+  }
+
+  // Same no-regression guard as attemptEndpoint — a refetch that comes back
+  // with fewer pairings than we already hold must not overwrite the cache.
+  if (cachedRaw) {
+    const before = totalPairs(weeklyRawPairsPerWeek(cachedRaw));
+    const after = totalPairs(weeklyRawPairsPerWeek(rawWeeks));
+    if (after < before) {
+      return { skipped: true, reason: `kept cached copy (${before} pairings vs ${after} fresh)` };
+    }
+    if (after === before) {
+      return { skipped: true, reason: `refetch returned the same ${after} pairings — MFL has no more` };
+    }
   }
 
   fs.writeFileSync(rawPath, JSON.stringify(rawWeeks, null, 2));
@@ -218,10 +313,11 @@ for (const entry of yearList) {
   console.log(`\n[${entry.year}] host=${entry.host} leagueId=${entry.leagueId}`);
 
   // Simple per-endpoint loop
-  for (const { type, file, extra } of SIMPLE_ENDPOINTS) {
+  for (const { type, file, extra, isComplete, countPairs } of SIMPLE_ENDPOINTS) {
     const dest = path.join(yearDir, file);
     const outcome = await attemptEndpoint(
-      entry.host, entry.year, entry.leagueId, type, file, extra, dest
+      entry.host, entry.year, entry.leagueId, type, file, extra, dest,
+      { isComplete, countPairs }
     );
     if (outcome.skipped) { console.log(`  ◦ ${file} — ${outcome.reason}`); totalSkipped++; }
     else if (outcome.dryRun) { console.log(`  [dry-run] would fetch ${type} → ${file}`); totalDryRun++; }

@@ -2,16 +2,31 @@
 /**
  * Aggregate per-franchise career history from MFL feeds.
  *
- * Reads:
- *   data/theleague/mfl-feeds/<year>/standings.json     (regular-season W-L-T, PF)
- *   data/theleague/mfl-feeds/<year>/playoff-brackets.json  (championship + 3rd place)
- *   data/theleague/mfl-feeds/<year>/weekly-results.json    (highlights — best game, biggest blowout)
- *   data/theleague/mfl-feeds/<year>/league.json            (division assignments per year)
- *   data/theleague/mfl-player-salaries-<year>.json         (MVP / Jerry Jones / Brock Osweiler)
- *   src/data/theleague.config.json                         (current franchise identities)
+ * Multi-league since August 2026 — pass `--league=<slug>` (default `theleague`).
+ * Per-league paths and capabilities live in LEAGUE_TARGETS below; nothing else
+ * in this file may name a league.
+ *
+ * Reads (<data> = the league registry's dataPath):
+ *   <data>/mfl-feeds/<year>/standings.json         (regular-season W-L-T, PF)
+ *   <data>/mfl-feeds/<year>/playoff-brackets.json  (championship + 3rd place)
+ *   <data>/mfl-feeds/<year>/weekly-results.json    (single-game highlights)
+ *   <data>/mfl-feeds/<year>/schedule.json          (H2H pairings — rivalries)
+ *   <data>/mfl-feeds/<year>/league.json            (division assignments per year)
+ *   <data>/mfl-player-salaries-<year>.json         (TheLeague salary awards only)
+ *   the league's config json                       (current franchise identities)
  *
  * Writes:
- *   data/theleague/derived/franchise-history.json
+ *   <data>/derived/franchise-history.json
+ *
+ * AFL CAVEAT (read before trusting AFL rivalry/highlight numbers): MFL's
+ * archived schedule + weeklyResults exports for AFL 2007-2019 contain only
+ * weeks 14-17 — the regular-season weeks come back as a flat franchise[] with
+ * no opponent, so those meetings cannot be reconstructed. AFL career H2H
+ * therefore under-counts those years and skews toward postseason games until
+ * `node scripts/backfill-historical-feeds.mjs --league=afl` recovers them
+ * (that script now detects the hole instead of caching it). 2003 is scores-only
+ * and contributes nothing. Coverage is reported per year in this script's
+ * output so the gap is visible rather than silently baked into a career total.
  */
 
 import fs from 'node:fs';
@@ -29,13 +44,71 @@ import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
-const THELEAGUE = getLeagueBySlug('theleague');
-const FEEDS_DIR = path.join(ROOT, THELEAGUE.dataPath, 'mfl-feeds');
-const SALARIES_DIR = path.join(ROOT, THELEAGUE.dataPath);
-const LEAGUE_CONFIG_PATH = path.join(ROOT, 'src/data/theleague.config.json');
-const CHAMPIONSHIP_HISTORY_PATH = path.join(ROOT, THELEAGUE.dataPath, 'championship-history.json');
-const OUTPUT_PATH = path.join(ROOT, THELEAGUE.dataPath, 'derived/franchise-history.json');
-const SCHEFTER_FEED_PATH = path.join(ROOT, 'src/data/theleague/schefter-feed.json');
+
+// Per-league targets. Paths that the league registry already knows (dataPath)
+// come from it; the rest are declared here because they predate the registry
+// and live in league-specific spots. Capability flags gate the blocks that are
+// genuinely one league's concept rather than a shared one.
+//
+//   salaryAwards   MVP / Jerry Jones / Brock Osweiler, derived from the
+//                  per-year salary files. A TheLeague construct — the AFL runs
+//                  its own award pipeline (scripts/compute-afl-awards.mjs) and
+//                  renders it through the trophy wall, so recomputing a second,
+//                  differently-defined set here would put two contradictory
+//                  award lists on the same franchise page.
+//   badges         scripts/badges.mjs scores careers partly on those salary
+//                  awards, so it rides along with salaryAwards.
+//   milestonePosts Emits Schefter posts when a new award lands. Off for the AFL
+//                  until its badge set exists — otherwise the first run would
+//                  post a decade of backdated "milestones" to the live feed.
+// Paths are root-relative, except a leading `@/` which resolves against the
+// league registry's own dataPath — so a league whose files live under its data
+// directory never has to spell that directory out (the literal guard in
+// tests/league-literal-guard.test.ts rightly rejects that). TheLeague's config
+// and feed predate the registry and sit under src/data, so they stay explicit.
+const LEAGUE_TARGETS = {
+  theleague: {
+    configPath: 'src/data/theleague.config.json',
+    schefterFeedPath: 'src/data/theleague/schefter-feed.json',
+    salaryAwards: true,
+    badges: true,
+    milestonePosts: true,
+  },
+  'afl-fantasy': {
+    configPath: '@/afl.config.json',
+    schefterFeedPath: '@/schefter-feed.json',
+    salaryAwards: false,
+    badges: false,
+    milestonePosts: false,
+  },
+};
+
+const args = process.argv.slice(2);
+const leagueArg = args.find((a) => a.startsWith('--league='))?.slice('--league='.length);
+// `afl` is what every other script in this repo accepts on the command line;
+// the registry slug is `afl-fantasy`. Take both rather than making the caller
+// remember which script wants which.
+const LEAGUE_SLUG = leagueArg === 'afl' ? 'afl-fantasy' : leagueArg || 'theleague';
+const TARGET = LEAGUE_TARGETS[LEAGUE_SLUG];
+if (!TARGET) {
+  console.error(
+    `Unknown --league=${LEAGUE_SLUG}. Known: ${Object.keys(LEAGUE_TARGETS).join(', ')} (or the alias 'afl').`
+  );
+  process.exit(1);
+}
+
+const LEAGUE = getLeagueBySlug(LEAGUE_SLUG);
+const FEEDS_DIR = path.join(ROOT, LEAGUE.dataPath, 'mfl-feeds');
+const SALARIES_DIR = path.join(ROOT, LEAGUE.dataPath);
+const resolveTargetPath = (spec) =>
+  spec.startsWith('@/')
+    ? path.join(ROOT, LEAGUE.dataPath, spec.slice('@/'.length))
+    : path.join(ROOT, spec);
+
+const LEAGUE_CONFIG_PATH = resolveTargetPath(TARGET.configPath);
+const CHAMPIONSHIP_HISTORY_PATH = path.join(ROOT, LEAGUE.dataPath, 'championship-history.json');
+const OUTPUT_PATH = path.join(ROOT, LEAGUE.dataPath, 'derived/franchise-history.json');
+const SCHEFTER_FEED_PATH = resolveTargetPath(TARGET.schefterFeedPath);
 
 const INDIVIDUAL_AWARD_MIN_SALARY = 1_500_000;
 
@@ -532,6 +605,7 @@ const ensureFranchise = (id) => {
 };
 
 const yearSummaries = []; // for the index page: champion/runner-up per year
+const h2hCoverage = []; // per-year "how complete is this season's H2H" audit trail
 
 // Player-name lookup populated from each year's players.json as we process
 // trades. Only contains players that appear in trade ledgers — keeps the
@@ -731,8 +805,10 @@ for (const year of years) {
   if (champResult?.runnerUp) playoffParticipants.add(champResult.runnerUp);
   if (champResult?.thirdPlace) playoffParticipants.add(champResult.thirdPlace);
 
-  // Awards from salaries
-  const awards = computeAwardsForYear(salaryData);
+  // Awards from salaries — TheLeague-only concept, see LEAGUE_TARGETS. Left
+  // null elsewhere so every `awards?.` consumer below degrades to "no award"
+  // rather than needing its own league check.
+  const awards = TARGET.salaryAwards ? computeAwardsForYear(salaryData) : null;
 
   // Per-franchise per-year row — apply ownerHistory attribution so years
   // follow the human owner across franchise-ID changes.
@@ -1148,6 +1224,30 @@ for (const year of years) {
     }
   }
 
+  // How much of this season's head-to-head actually made it into the ledger.
+  // MFL's archives are not uniformly complete (AFL 2007-2019 is playoff-weeks
+  // only), and a career W-L silently assembled from 20% of a season looks
+  // exactly like a real one. Recording the shortfall per year keeps the gap
+  // inspectable from the derived file instead of requiring a re-audit of the
+  // raw feeds to notice it.
+  const h2hWeeks = new Set([...matchupSeen].map((k) => k.split(':')[0]));
+  const expectedGames = seasonHasGames
+    ? Math.round((standingsRows.length * h2hWeeks.size) / 2)
+    : 0;
+  h2hCoverage.push({
+    year,
+    // A season nobody has played yet is empty for a legitimate reason; without
+    // this the current year trips the incompleteness warning on every run and
+    // teaches everyone to ignore it.
+    seasonStarted: seasonHasGames,
+    gamesRecorded: matchupSeen.size,
+    weeksWithGames: h2hWeeks.size,
+    // Weeks the feed claims the season had, so "4 of 17" reads as a hole
+    // rather than as a short season.
+    weeksInFeed: toArray(schedule?.schedule?.weeklySchedule).length || null,
+    expectedGamesForCoveredWeeks: expectedGames,
+  });
+
   yearSummaries.push({
     year,
     leagueSize: standingsRows.length,
@@ -1255,9 +1355,11 @@ for (const [id, fr] of franchiseMap) {
 // Phase 3: badge engine. Each franchise's earned badges are derived from the
 // already-aggregated stats above + cross-franchise context (league records,
 // per-year leaders, league size per year).
-const badgeContext = buildBadgeContext(franchises, yearSummaries);
-for (const fid of Object.keys(franchises)) {
-  franchises[fid].badges = computeBadgesFor(franchises[fid], badgeContext);
+if (TARGET.badges) {
+  const badgeContext = buildBadgeContext(franchises, yearSummaries);
+  for (const fid of Object.keys(franchises)) {
+    franchises[fid].badges = computeBadgesFor(franchises[fid], badgeContext);
+  }
 }
 
 // Phase 5: Schefter milestone posts. The previously-committed
@@ -1265,7 +1367,9 @@ for (const fid of Object.keys(franchises)) {
 // (fresh checkout / first run) we silently seed and emit nothing so we
 // don't flood the feed with retroactive posts for every existing badge.
 const previousOutput = readJson(OUTPUT_PATH);
-if (!previousOutput?.franchises) {
+if (!TARGET.milestonePosts) {
+  console.log(`[franchise-history] milestone posts disabled for ${LEAGUE_SLUG}`);
+} else if (!previousOutput?.franchises) {
   console.log('[franchise-history] no previous snapshot — milestone diff skipped (silent seed)');
 } else {
   const newAwards = diffNewAwards(previousOutput.franchises, franchises);
@@ -1307,8 +1411,10 @@ if (!previousOutput?.franchises) {
 
 const output = {
   generatedAt: new Date().toISOString(),
+  league: LEAGUE_SLUG,
   yearsCovered: years.filter((y) => franchiseMap.size > 0),
   yearSummaries,
+  h2hCoverage,
   franchises,
   playerNames: playerNameLookup,
 };
@@ -1320,3 +1426,28 @@ const champCount = yearSummaries.filter((y) => y.champion).length;
 console.log(
   `[franchise-history] wrote ${OUTPUT_PATH}: ${Object.keys(franchises).length} franchises, ${years.length} years scanned, ${champCount} championship years`
 );
+
+// Name the incomplete seasons out loud. A career record assembled from a
+// half-ingested archive is indistinguishable from a complete one once it is
+// rendered, so the run that builds it is the right place to say so.
+const started = h2hCoverage.filter((c) => c.seasonStarted);
+const thinYears = started.filter(
+  (c) => c.weeksInFeed && c.weeksWithGames > 0 && c.weeksWithGames < c.weeksInFeed - 1
+);
+const emptyYears = started.filter((c) => c.gamesRecorded === 0);
+if (thinYears.length || emptyYears.length) {
+  console.warn(
+    `[franchise-history] INCOMPLETE head-to-head coverage — rivalry/highlight totals under-count:`
+  );
+  for (const c of emptyYears) {
+    console.warn(`  ${c.year}: no H2H games at all`);
+  }
+  for (const c of thinYears) {
+    console.warn(
+      `  ${c.year}: ${c.gamesRecorded} games across ${c.weeksWithGames}/${c.weeksInFeed} weeks`
+    );
+  }
+  console.warn(
+    `  Recover with: node scripts/backfill-historical-feeds.mjs --league=${LEAGUE_SLUG === 'afl-fantasy' ? 'afl' : LEAGUE_SLUG}`
+  );
+}
