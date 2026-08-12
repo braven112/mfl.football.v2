@@ -142,6 +142,61 @@ export function parseRivalryPair(slug: string): [string, string] | null {
 export const formatRivalryRecord = (wins: number, losses: number, ties: number): string =>
   ties > 0 ? `${wins}-${losses}-${ties}` : `${wins}-${losses}`;
 
+/** One season's head-to-head completeness, as recorded by the aggregator. */
+export type CoverageSeason = {
+  year: number;
+  seasonStarted?: boolean;
+  gamesRecorded?: number;
+  weeksWithGames?: number;
+  weeksInFeed?: number | null;
+};
+
+/** Seasons whose head-to-head the archives only partly cover. */
+export function incompleteCoverageSeasons(coverage: CoverageSeason[]): CoverageSeason[] {
+  return (coverage ?? []).filter(
+    (c) =>
+      c.seasonStarted &&
+      c.weeksInFeed &&
+      (c.weeksWithGames ?? 0) > 0 &&
+      (c.weeksWithGames ?? 0) < c.weeksInFeed - 1
+  );
+}
+
+/**
+ * A precise sentence describing what is missing, for display on any surface
+ * that shows career head-to-head.
+ *
+ * Deliberately NOT "postseason weeks only": that was true of 2007-2011 and
+ * 2016-2019 but wrong about 2012-2015, which are missing weeks 1-3 and hold
+ * the other fourteen. Blanket wording that overstates the damage is its own
+ * inaccuracy, and this text sits next to real numbers that contradict it.
+ *
+ * Established exhaustively against MFL in August 2026 — see
+ * docs/claude/insights/domains/mfl-api.md. The games are not retrievable, so
+ * this is permanent copy, not a placeholder.
+ */
+export function describeCoverageGap(coverage: CoverageSeason[]): string | null {
+  const seasons = incompleteCoverageSeasons(coverage);
+  if (seasons.length === 0) return null;
+
+  const missingWeeks = (c: CoverageSeason) => (c.weeksInFeed ?? 0) - (c.weeksWithGames ?? 0);
+  const mostlyMissing = seasons.filter((c) => missingWeeks(c) > 6);
+  const partlyMissing = seasons.filter((c) => missingWeeks(c) <= 6);
+
+  const parts: string[] = [];
+  if (mostlyMissing.length) {
+    parts.push(
+      `${formatSeasonRanges(mostlyMissing.map((c) => c.year))} retain only their postseason weeks`
+    );
+  }
+  if (partlyMissing.length) {
+    parts.push(
+      `${formatSeasonRanges(partlyMissing.map((c) => c.year))} are missing their opening weeks`
+    );
+  }
+  return `MFL's archives for these seasons are incomplete — ${parts.join(', and ')}.`;
+}
+
 /**
  * Collapse a year list into contiguous ranges: `[2003, 2007..2019]` reads as
  * "2003, 2007–2019".

@@ -8,7 +8,7 @@ import {
   rivalryIntensity,
   canonicalRivalryPair,
   formatRivalryRecord,
-  formatSeasonRanges,
+  describeCoverageGap,
   MIN_RIVALRY_MEETINGS,
 } from '../../../utils/rivalries';
 
@@ -122,9 +122,7 @@ const byConference = conferences.map((c) => ({
 }));
 
 const coverage: Array<any> = ((franchiseHistory as any).h2hCoverage ?? []) as any[];
-const incompleteSeasons = coverage
-  .filter((c) => c.seasonStarted && c.weeksInFeed && c.weeksWithGames < c.weeksInFeed - 1)
-  .map((c) => c.year);
+const coverageNote = describeCoverageGap(coverage);
 ---
 
 <TheLeagueLayout title="Rivalry Matrix | AFL Fantasy">
@@ -221,12 +219,11 @@ const incompleteSeasons = coverage
       </section>
     ))}
 
-    {incompleteSeasons.length > 0 && (
+    {coverageNote && (
       <p class="rivalries-caveat">
-        <strong>Data note:</strong> MFL's archived exports for{' '}
-        {formatSeasonRanges(incompleteSeasons)} retain postseason weeks only.
-        Meetings from those regular seasons are absent from every record on this
-        page, so career totals under-count and lean toward playoff games.
+        <strong>Data note:</strong> {coverageNote} Those meetings are absent
+        from MFL itself, so every record on this page counts only the games
+        that survive in the league's archive.
       </p>
     )}
   </div>

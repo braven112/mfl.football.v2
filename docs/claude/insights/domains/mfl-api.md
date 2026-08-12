@@ -1714,3 +1714,56 @@ league-blind smell. Regression test: `tests/trades-pending-league-teams.test.ts`
 - `tests/afl-bracket-kind.test.ts` — runs the name classifier over every committed feed
 
 **Recommendation:** Before concluding an MFL export "doesn't have" historical data, check whether the underlying games exist in `schedule.json` and only the grouping is missing. That was true here for twenty seasons across four different bracket families.
+
+---
+
+## 2026-08-12 - MFL's Schedule Export Is Owner-Gated, And Its Archives Are Genuinely Partial
+
+**Context:** The AFL's 2007-2019 regular-season head-to-head pairings were
+missing. Rivalry pages need them; nothing else in any committed feed carries an
+opponent (`weekly-results.json` is `{franchiseId: score}`). Establishing whether
+MFL still had them took six workflow runs and produced three wrong answers
+first, so the method matters as much as the result.
+
+**Insight — two separate facts, both load-bearing:**
+
+1. **`TYPE=schedule` is private-league gated.** MFL's own docs say "Private
+   league access restricted to league owners." An unauthenticated request does
+   NOT error — it returns the week skeleton with matchups stripped
+   (`{"week":"1"}`, no `matchup` key), which is byte-for-byte indistinguishable
+   from "MFL no longer has this data." Every request we had ever made was
+   anonymous. Adding `APIKEY` immediately recovered 2024 and 2025 schedules that
+   had never been fetchable. **`APIKEY` authenticates the export API only — HTML
+   pages still answer as `Guest ( Login )`.**
+
+2. **Even authenticated, the archives are partial, and this is final.** Per-week
+   audit across all 13 seasons: 2007-2011 and 2016-2019 hold only weeks 14-17;
+   2012-2015 hold 14 of 17 (missing weeks 1-3). Identical results from
+   season-wide, per-week, `ALL=1`, XML, and `liveScoring`. The rendered
+   "Weekly Results" page returns 35-49KB for an empty week with ZERO matchup
+   rows. There is no second source. Do not re-litigate this.
+
+**Three false negatives/positives worth learning from:**
+
+- Concluding "the data is gone" from two empty responses on ONE endpoint. It was
+  an auth problem, not an absence.
+- A detector that looked for `F=####` links in the HTML, found none, and was read
+  as proof of absence — too weak; schedule tables print team NAMES.
+- A detector that counted franchise names anywhere on the page and scored 24/24
+  — on the **transactions** page, whose filter menus list every team, reached via
+  a *guessed* `O=03`. This one produced a confident, wrong "the games are there".
+
+**Recommendation:** When probing an undocumented surface, (a) send credentials
+before concluding absence — a stripped payload and a missing one look identical;
+(b) discover URLs from the site's own navigation rather than guessing option
+codes; (c) make the positive test specific to the thing you want (a scoreboard
+signature: two different team names within a short span containing a decimal
+score), because a loose test on the wrong page is how you get a confident wrong
+answer; and (d) treat HTTP 429 as INCONCLUSIVE, never as zero — MFL rate-limits
+hard and a 429 body is 4 bytes.
+
+**Evidence:** `scripts/audit-mfl-schedule-availability.mjs` (per-season, per-week,
+with the strict HTML test), surfaced by the backfill workflow whenever gaps
+remain. `franchise-history.json#h2hCoverage` records the shortfall per season so
+the UI can state it precisely rather than blanket-claiming "postseason only",
+which is wrong for 2012-2015.

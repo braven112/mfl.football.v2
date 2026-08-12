@@ -10,6 +10,8 @@ import {
   formatRivalryRecord,
   MIN_RIVALRY_MEETINGS,
   formatSeasonRanges,
+  describeCoverageGap,
+  incompleteCoverageSeasons,
   type Matchup,
 } from '../src/utils/rivalries';
 
@@ -156,5 +158,36 @@ describe('formatSeasonRanges', () => {
   it('sorts, dedupes and handles an empty list', () => {
     expect(formatSeasonRanges([2009, 2007, 2008, 2008])).toBe('2007–2009');
     expect(formatSeasonRanges([])).toBe('');
+  });
+});
+
+describe('describeCoverageGap', () => {
+  // The real AFL shape, established against MFL in August 2026: 2007-2011 and
+  // 2016-2019 kept only weeks 14-17, while 2012-2015 kept 14 of 17.
+  const AFL_COVERAGE = [
+    ...[2007, 2008, 2009, 2010, 2011].map((year) => ({ year, seasonStarted: true, weeksWithGames: 4, weeksInFeed: 17 })),
+    ...[2012, 2013, 2014, 2015].map((year) => ({ year, seasonStarted: true, weeksWithGames: 14, weeksInFeed: 17 })),
+    ...[2016, 2017, 2018, 2019].map((year) => ({ year, seasonStarted: true, weeksWithGames: 4, weeksInFeed: 17 })),
+    { year: 2020, seasonStarted: true, weeksWithGames: 17, weeksInFeed: 17 },
+    { year: 2026, seasonStarted: false, weeksWithGames: 0, weeksInFeed: 18 },
+  ];
+
+  it('does not claim postseason-only for seasons that kept 14 of 17 weeks', () => {
+    const note = describeCoverageGap(AFL_COVERAGE)!;
+    expect(note).toContain('2007–2011, 2016–2019 retain only their postseason weeks');
+    expect(note).toContain('2012–2015 are missing their opening weeks');
+    // The bug this replaced: one blanket "postseason weeks only" covering all 13.
+    expect(note).not.toMatch(/2007–2019 retain only their postseason/);
+  });
+
+  it('ignores complete seasons and seasons that have not started', () => {
+    const years = incompleteCoverageSeasons(AFL_COVERAGE).map((c) => c.year);
+    expect(years).not.toContain(2020);
+    expect(years).not.toContain(2026);
+  });
+
+  it('returns null when every season is complete', () => {
+    expect(describeCoverageGap([{ year: 2020, seasonStarted: true, weeksWithGames: 17, weeksInFeed: 17 }])).toBeNull();
+    expect(describeCoverageGap([])).toBeNull();
   });
 });

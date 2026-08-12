@@ -9,7 +9,7 @@ import {
   parseRivalryPair,
   canonicalRivalryPair,
   formatRivalryRecord,
-  formatSeasonRanges,
+  describeCoverageGap,
   type Matchup,
 } from '../../../utils/rivalries';
 
@@ -138,9 +138,7 @@ const tradeDateLabel = (t: Trade): string =>
 // Seasons whose head-to-head the archives only partly cover. Shown as a
 // footnote because this page's meeting log is exactly what goes missing.
 const coverage: Array<any> = ((franchiseHistory as any).h2hCoverage ?? []) as any[];
-const incompleteSeasons = coverage
-  .filter((c) => c.seasonStarted && c.weeksInFeed && c.weeksWithGames < c.weeksInFeed - 1)
-  .map((c) => c.year);
+const coverageNote = describeCoverageGap(coverage);
 
 const nameA = frA.currentNameMedium || frA.currentName;
 const nameB = frB.currentNameMedium || frB.currentName;
@@ -286,12 +284,9 @@ const shortB = frB.currentNameShort || nameB;
               </tbody>
             </table>
           </div>
-          {incompleteSeasons.length > 0 && (
-            <p class="rivalry-caveat">
-              MFL's archives for {formatSeasonRanges(incompleteSeasons)} retain
-              postseason weeks only, so regular-season meetings from those years
-              are missing from this log.
-            </p>
+          {coverageNote && (
+            <p class="rivalry-caveat">{coverageNote} Meetings from those weeks
+              are missing from this log.</p>
           )}
         </section>
 

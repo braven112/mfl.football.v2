@@ -22,7 +22,7 @@ import {
   computeRivalEntries,
   canonicalRivalryPair,
   formatRivalryRecord,
-  formatSeasonRanges,
+  describeCoverageGap,
 } from '../../../utils/rivalries';
 import { getCurrentSeasonYear } from '../../../utils/league-year';
 import { segmentsForFranchiseRange as segmentsForFranchiseRangeUtil, type NameEra } from '../../../utils/afl-name-history';
@@ -369,9 +369,7 @@ const topRivals = fr ? computeRivalEntries(fr.matchupHistory, id!).slice(0, 5) :
 // record above (389 games vs 233 for franchise 0001). Saying so beats letting
 // an owner discover the discrepancy and conclude the site is broken.
 const coverage: Array<any> = ((franchiseHistory as any).h2hCoverage ?? []) as any[];
-const incompleteSeasons = coverage
-  .filter((c) => c.seasonStarted && c.weeksInFeed && c.weeksWithGames < c.weeksInFeed - 1)
-  .map((c) => c.year);
+const coverageNote = describeCoverageGap(coverage);
 const h2hGamesRecorded = fr
   ? Object.values(fr.headToHead ?? {}).reduce(
       (sum: number, v: any) => sum + v.wins + v.losses + v.ties,
@@ -707,11 +705,10 @@ const hasHighlights = Boolean(
             );
           })}
         </ul>
-        {incompleteSeasons.length > 0 && (
+        {coverageNote && (
           <p class="rivals-caveat">
             Head-to-head covers {h2hGamesRecorded} of {totalGames} career games.
-            MFL's archives for {formatSeasonRanges(incompleteSeasons)} kept
-            postseason weeks only, so these totals under-count those seasons.
+            {' '}{coverageNote}
           </p>
         )}
         <a class="rivals-more" href="/afl-fantasy/rivalries">See full rivalry matrix →</a>

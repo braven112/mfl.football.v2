@@ -6,11 +6,12 @@
  *
  * Read-only. Writes nothing.
  *
- * Why this exists: probe-mfl-schedule-sources.mjs sampled two seasons at one
- * week each and hit MFL rate limits on half its rows, so its "no data" answers
- * were not trustworthy for the years it flagged. This walks EVERY season and
- * reports the per-week shape, which is the only way to say "MFL has 42 games
- * for 2010 and no more" rather than inferring it from a sample.
+ * Why this exists: an earlier probe sampled two seasons at one week each and
+ * hit MFL rate limits on half its rows, so its "no data" answers were not
+ * trustworthy for the years it flagged (it has since been deleted in favour of
+ * this). This walks EVERY season and reports the per-week shape, which is the
+ * only way to say "MFL has 42 games for 2010 and no more" rather than
+ * inferring it from a sample.
  *
  * Two questions, answered separately:
  *
