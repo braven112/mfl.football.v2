@@ -2,6 +2,150 @@
   "$comment": "AFL Fantasy league championship history. Mirrors data/theleague/championship-history.json shape. Each entry maps a year to the franchise IDs (as they were AT THAT TIME) that finished 1st and 2nd. Names are recorded as they were AT THAT TIME — to find the franchise ID for an older year, cross-reference data/afl-fantasy/mfl-feeds/<year>/league.json. Backfilled from MFL playoffBracket/weeklyResults exports by scripts/backfill-afl-championship-history.mjs.",
   "championships": [
     {
+      "year": 2005,
+      "champion": "0013",
+      "runnerUp": "0001",
+      "championName": "Cougs",
+      "runnerUpName": "Smokane",
+      "source": "schedule:elimination-walk"
+    },
+    {
+      "year": 2006,
+      "champion": "0003",
+      "runnerUp": "0015",
+      "championName": "Marriedwithchildren",
+      "runnerUpName": "The Blunt Bros.",
+      "source": "schedule:elimination-walk"
+    },
+    {
+      "year": 2007,
+      "champion": "0007",
+      "runnerUp": "0020",
+      "championName": "Chatmaster",
+      "runnerUpName": "Limp Ditkas",
+      "source": "schedule:elimination-walk"
+    },
+    {
+      "year": 2008,
+      "champion": "0023",
+      "runnerUp": "0006",
+      "championName": "No Frills",
+      "runnerUpName": "More Cowbell",
+      "source": "schedule:elimination-walk"
+    },
+    {
+      "year": 2009,
+      "champion": "0016",
+      "runnerUp": "0006",
+      "championName": "Brady's Bastards",
+      "runnerUpName": "More Cowbell",
+      "source": "schedule:elimination-walk"
+    },
+    {
+      "year": 2010,
+      "champion": "0021",
+      "runnerUp": "0003",
+      "championName": "Chatmaster",
+      "runnerUpName": "Marriedwithchildren",
+      "source": "schedule:elimination-walk"
+    },
+    {
+      "year": 2012,
+      "champion": "0002",
+      "runnerUp": "0016",
+      "championName": "Drunk Indians",
+      "runnerUpName": "Brady's Bastards",
+      "source": "schedule:elimination-walk"
+    },
+    {
+      "year": 2013,
+      "champion": "0001",
+      "runnerUp": "0013",
+      "championName": "Smokane FC",
+      "runnerUpName": "Delirium Tremens",
+      "source": "schedule:elimination-walk"
+    },
+    {
+      "year": 2014,
+      "champion": "0019",
+      "runnerUp": "0005",
+      "championName": "Cliffside Killer Clowns",
+      "runnerUpName": "booyakasha",
+      "source": "schedule:elimination-walk"
+    },
+    {
+      "year": 2015,
+      "champion": "0005",
+      "runnerUp": "0013",
+      "championName": "Computer Jocks",
+      "runnerUpName": "Delirium Tremens",
+      "source": "schedule:elimination-walk"
+    },
+    {
+      "year": 2016,
+      "champion": "0011",
+      "runnerUp": "0013",
+      "championName": "Midwestside Connection",
+      "runnerUpName": "Delirium Tremens",
+      "source": "schedule:elimination-walk"
+    },
+    {
+      "year": 2017,
+      "champion": "0014",
+      "runnerUp": "0001",
+      "championName": "Thundering Herd",
+      "runnerUpName": "Smokane FC",
+      "source": "schedule:elimination-walk"
+    },
+    {
+      "year": 2018,
+      "champion": "0014",
+      "runnerUp": "0005",
+      "championName": "Thundering Herd",
+      "runnerUpName": "Computer Jocks",
+      "source": "schedule:elimination-walk"
+    },
+    {
+      "year": 2019,
+      "champion": "0005",
+      "runnerUp": "0014",
+      "championName": "Computer Jocks",
+      "runnerUpName": "Thundering Herd",
+      "source": "schedule:elimination-walk"
+    },
+    {
+      "year": 2020,
+      "champion": "0020",
+      "runnerUp": "0005",
+      "championName": "The Boondock Saints",
+      "runnerUpName": "Computer Jocks",
+      "source": "schedule:elimination-walk"
+    },
+    {
+      "year": 2021,
+      "champion": "0008",
+      "runnerUp": "0021",
+      "championName": "Dicks out for Harambe",
+      "runnerUpName": "Chatmaster",
+      "source": "schedule:elimination-walk"
+    },
+    {
+      "year": 2022,
+      "champion": "0002",
+      "runnerUp": "0020",
+      "championName": "Drunk Indians",
+      "runnerUpName": "The Boondock Saints",
+      "source": "schedule:elimination-walk"
+    },
+    {
+      "year": 2023,
+      "champion": "0002",
+      "runnerUp": "0017",
+      "championName": "Drunk Indians",
+      "runnerUpName": "Titsburgh Feelers",
+      "source": "schedule:elimination-walk"
+    },
+    {
       "year": 2024,
       "champion": "0022",
       "runnerUp": "0005",
@@ -23,25 +167,7 @@
     "missingYears": [
       2003,
       2004,
-      2005,
-      2006,
-      2007,
-      2008,
-      2009,
-      2010,
-      2011,
-      2012,
-      2013,
-      2014,
-      2015,
-      2016,
-      2017,
-      2018,
-      2019,
-      2020,
-      2021,
-      2022,
-      2023
+      2011
     ]
   }
 }
