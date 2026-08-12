@@ -164,6 +164,43 @@ function championshipField(league, standingsRows, teams) {
 }
 
 /**
+ * A single-elimination round cannot contain the same franchise twice, but the
+ * AFL's archived schedules do — three rounds carry a stray extra matchup that
+ * links two teams already paired elsewhere that week (2014 and 2015 NIT week
+ * 14), and 2012 week 14 carries an outright `0023 vs 0023` bye row. Left in,
+ * they render as phantom games: 2012's quarterfinals showed five, one of them
+ * a team playing itself.
+ *
+ * The redundant link is identifiable without guessing: it is the only game
+ * whose BOTH sides also appear in another game that round, so dropping it
+ * leaves every team with exactly one opponent. Anything still duplicated after
+ * that is genuinely ambiguous and fails the walk.
+ */
+function pruneRound(candidates) {
+  const real = candidates.filter((g) => g.home.franchise_id !== g.away.franchise_id);
+  const tally = () => {
+    const counts = new Map();
+    for (const g of real) {
+      for (const id of [g.home.franchise_id, g.away.franchise_id]) {
+        counts.set(id, (counts.get(id) ?? 0) + 1);
+      }
+    }
+    return counts;
+  };
+
+  let counts = tally();
+  while ([...counts.values()].some((n) => n > 1)) {
+    const index = real.findIndex(
+      (g) => counts.get(g.home.franchise_id) > 1 && counts.get(g.away.franchise_id) > 1
+    );
+    if (index === -1) return null; // duplicated, but not a removable cross-link
+    real.splice(index, 1);
+    counts = tally();
+  }
+  return real;
+}
+
+/**
  * Walk the schedule as single elimination, collecting the games per week.
  * Returns rounds plus the final game, or null if the shape doesn't hold —
  * a partial or ambiguous walk is not published.
@@ -177,8 +214,7 @@ function walkBracket(schedule, alive, startWeek, finalWeek) {
   for (let week = startWeek; week <= finalWeek; week++) {
     const entry = weeks.find((w) => num(w.week) === week);
     if (!entry) return null;
-    const games = [];
-    const survivors = new Set();
+    const candidates = [];
 
     for (const matchup of toArray(entry.matchup)) {
       const sides = toArray(matchup.franchise);
@@ -188,18 +224,29 @@ function walkBracket(schedule, alive, startWeek, finalWeek) {
       const aPts = num(a.score);
       const bPts = num(b.score);
       if (aPts === 0 && bPts === 0) continue;
-      const winner = aPts >= bPts ? a : b;
-      const loser = aPts >= bPts ? b : a;
-      survivors.add(winner.id);
-      games.push({
-        game_id: `r${week}g${games.length + 1}`,
+      candidates.push({
         home: { franchise_id: a.id, points: String(a.score ?? '') },
         away: { franchise_id: b.id, points: String(b.score ?? '') },
       });
-      if (week === finalWeek) finalGame = { champion: winner.id, runnerUp: loser.id };
     }
 
-    if (!games.length) return null;
+    const pruned = pruneRound(candidates);
+    if (!pruned?.length) return null;
+    const games = pruned.map((g, i) => ({ game_id: `r${week}g${i + 1}`, ...g }));
+
+    const survivors = new Set();
+    games.forEach((game) => {
+      const homeWins = num(game.home.points) >= num(game.away.points);
+      const winner = homeWins ? game.home.franchise_id : game.away.franchise_id;
+      survivors.add(winner);
+      if (week === finalWeek) {
+        finalGame = {
+          champion: winner,
+          runnerUp: homeWins ? game.away.franchise_id : game.home.franchise_id,
+        };
+      }
+    });
+
     rounds.push({ week: String(week), playoffGame: games });
     remaining = survivors;
   }
@@ -281,7 +328,34 @@ async function reconstructYear(year, knownChampion) {
     brackets['1'] = bracketPayload('1', [finalRound]);
   }
 
-  return { brackets, finalGame: walked.finalGame, rounds: walked.rounds.length };
+  // --- NIT ------------------------------------------------------------------
+  // The consolation tournament for everyone who missed the championship field:
+  // 16 of the AFL's 24 franchises, so for most owners it IS their postseason.
+  // Its field is the exact complement of the championship field, which is what
+  // makes it recoverable — no extra seeding assumption needed.
+  //
+  // Found by NAME, never by id: the NIT is bracket 3 in 2005, 4 in 2006, 5 in
+  // 2007-2017 and 6 in 2018+. Hardcoding an id would silently walk a different
+  // tournament.
+  const nitMeta = metas.find((b) => /^NIT(\s+Championship)?$/i.test(String(b?.name ?? '').trim()));
+  let nit = null;
+  if (nitMeta) {
+    const nitStart = num(nitMeta.startWeek);
+    const nitTeams = num(nitMeta.teamsInvolved);
+    const inChampionship = new Set(field.keys());
+    const nitField = rows.map((r) => r.id).filter((id) => !inChampionship.has(id));
+
+    if (nitStart && nitTeams >= 2 && nitField.length === nitTeams) {
+      const nitRounds = Math.max(1, Math.ceil(Math.log2(nitTeams)));
+      const walkedNit = walkBracket(schedule, nitField, nitStart, nitStart + nitRounds - 1);
+      if (walkedNit) {
+        brackets[String(nitMeta.id)] = bracketPayload(nitMeta.id, walkedNit.rounds);
+        nit = { bracketId: String(nitMeta.id), champion: walkedNit.finalGame.champion };
+      }
+    }
+  }
+
+  return { brackets, finalGame: walked.finalGame, rounds: walked.rounds.length, nit };
 }
 
 async function main() {
@@ -308,7 +382,8 @@ async function main() {
     out[String(year)] = result.brackets;
     built++;
     log(
-      `${year}: ${result.rounds} rounds, ${Object.keys(result.brackets).length} bracket(s) — champion ${result.finalGame.champion}`
+      `${year}: ${result.rounds} rounds, ${Object.keys(result.brackets).length} bracket(s) — champion ${result.finalGame.champion}` +
+        (result.nit ? `, NIT #${result.nit.bracketId} champion ${result.nit.champion}` : ', NIT not recovered')
     );
   }
 

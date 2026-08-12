@@ -2,6 +2,22 @@
   "weekOf": "2026-08-17",
   "changes": [
     {
+      "date": "2026-08-12",
+      "type": "bug-fix",
+      "summary": "Eighteen years of AFL playoffs came back from the dead. Pick any season before 2024 and the brackets page said \"Bracket data not available\" — for the championship, for the NIT, for all of it. Turns out the games were never missing. MFL's bracket export only ever handed us seed numbers for those years, but the schedule had every playoff week sitting right there, fully scored, the whole time. The page now walks those weeks back into a bracket, so 2005 through 2023 finally show real matchups with real teams and real point totals: Cougs over Smokane, Chatmaster over the Limp Ditkas, No Frills over More Cowbell. Four seasons stay blank on purpose — 2003, 2004 and 2011 ran fields we can't reconstruct without guessing, and we'd rather show you nothing than show you a final that never happened.",
+      "impact": "user",
+      "area": "playoffs",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-12",
+      "type": "bug-fix",
+      "summary": "The NIT tab was empty for fifteen seasons, and the reason is deeply stupid. The page decided which brackets were the championship and which were the NIT by their ID number — brackets 1 through 5 were the big dance, 6 through 9 were the NIT. That's true from 2018 on. It is not true for 2005 (NIT is bracket 3), or 2006 (bracket 4), or anything from 2007 to 2017 (bracket 5). So for fifteen years the NIT was quietly filed under Championship while the NIT tab sat there with nothing in it. The page now goes by the bracket's actual name, which has said \"NIT\" on it since 2003. The NIT Champion payout shows up for those seasons too, and the AFL Cup — an in-season thing from the 2012-2016 era that MFL never exported a single game for — stopped padding the page with seven empty cards.",
+      "impact": "user",
+      "area": "playoffs",
+      "league": "afl"
+    },
+    {
       "date": "2026-08-11",
       "type": "bug-fix",
       "summary": "The AFL playoff bracket was seeding old seasons with today's map. Pull up 2005 and the page sorted everyone into the four divisions the league runs now — except 2005 had six, three per conference, with a Central and a Pacific that haven't existed in over a decade. Twelve conference races between 2003 and 2016 came out seeded differently on the playoffs page than on the standings page for that very same season, which is a neat trick for a site to pull on itself. The playoffs page now reads each season's real structure, the same way standings already did.",

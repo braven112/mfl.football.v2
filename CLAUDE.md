@@ -554,6 +554,45 @@ attribution drops awards won under a slot's previous owner — which reads
 exactly like "defunct franchise" and leads to the wrong fix
 (`features/franchise-history.md`).
 
+## AFL playoff brackets — reconstructed games, and ids that lie
+
+MFL's `playoffBracket` export carries seeds only for 2003-2023 — no franchise
+ids, no points — so `/afl-fantasy/playoffs` rendered "Bracket data not
+available" for every season before 2024. The GAMES were never missing:
+`schedule.json` has every playoff week fully scored.
+
+- **`scripts/reconstruct-afl-playoff-brackets.mjs`** walks those weeks as a
+  single-elimination tournament and writes
+  `data/afl-fantasy/derived/reconstructed-playoff-brackets.json` in MFL's own
+  `brackets` shape. The page consults it **only** when the committed feed has
+  no games for a bracket — real MFL data always wins. 18 seasons recovered
+  (championship + NIT); 2003, 2004 and 2011 are deliberately left empty
+  because their fields weren't top-N-per-conference and a plausible-but-wrong
+  bracket is worse than an empty one.
+- **The bracket shape is era-dependent.** 2003-2017 bracket "1" IS the 8-team
+  field; 2018+ it is only the 2-team final fed by separate AL/NL brackets.
+  Seeding the modern shape with the old assumption produced the wrong 2019
+  champion during development. `describePlayoffShape` handles this.
+- **Archived schedules contain rounds that aren't valid rounds.** 2012 week 14
+  has an outright `0023 vs 0023` bye row; 2014 and 2015 NIT week 14 each carry
+  a stray matchup pairing two teams already scheduled that week. `pruneRound`
+  drops them — without it, 2012 rendered five quarterfinals, one of them a team
+  playing itself.
+- **Bracket ids do not mean the same thing across seasons.** The NIT is bracket
+  3 in 2005, 4 in 2006, 5 in 2007-2017 and 6 from 2018 on; ids 2/3 are the
+  AL/NL brackets only in the modern era (in 2005 they're the AFL Losers Bracket
+  and the NIT). Classify with `src/utils/afl-bracket-kind.ts`, never with an id
+  range — the page's old hardcoded `winners = 1-5 / NIT = 6-9` split filed every
+  pre-2018 NIT under the Championship tab and left the NIT tab empty.
+  `tests/afl-bracket-kind.test.ts` runs the classifier over every committed feed
+  and greps the page to stop an id list creeping back in.
+
+Champions are pinned in `tests/afl-reconstructed-brackets.test.ts` against
+three independent sources that agree: `championship-history.json`, the awards
+ledger, and the commissioner's own confirmation of the 2005-2008 results. A
+reconstruction that looks plausible and is wrong is the failure mode here, so
+add fixture pins rather than loosening assertions.
+
 ## Page directory registry — required for every new page
 
 Adding a page to the site without adding it to

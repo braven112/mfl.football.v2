@@ -138,11 +138,116 @@ describe('reconstructed AFL brackets', () => {
     // final fed by separate conference brackets. Getting this backwards seeds
     // the walk with the top ONE team per conference and produced the wrong
     // 2019 champion during development.
-    expect(Object.keys(SEASONS['2005'])).toEqual(['1']);
-    expect(Object.keys(SEASONS['2019']).sort()).toEqual(['1', '2', '3']);
+    // (Bracket 3 in 2005 and 6 in 2019 are the NIT — covered below.)
+    expect(Object.keys(SEASONS['2005']).sort()).toEqual(['1', '3']);
+    expect(SEASONS['2005']['1'].playoffBracket.playoffRound).toHaveLength(3);
+
+    expect(Object.keys(SEASONS['2019']).sort()).toEqual(['1', '2', '3', '6']);
     const final2019 = SEASONS['2019']['1'].playoffBracket.playoffRound;
     expect(final2019).toHaveLength(1);
     expect(final2019[0].playoffGame).toHaveLength(1);
+  });
+
+  it('never puts the same franchise in a round twice', () => {
+    // Three archived rounds carry a stray matchup pairing two teams already
+    // scheduled that week (2014 + 2015 NIT week 14), and 2012 week 14 has an
+    // outright `0023 vs 0023` bye row — which rendered as a fifth
+    // quarterfinal, a team playing itself. pruneRound drops them.
+    for (const year of years) {
+      for (const [id, payload] of Object.entries<any>(SEASONS[year])) {
+        for (const round of toArray<any>(payload.playoffBracket.playoffRound)) {
+          const seen = new Set<string>();
+          for (const game of toArray<any>(round.playoffGame)) {
+            for (const side of [game.home.franchise_id, game.away.franchise_id]) {
+              expect(
+                seen.has(side),
+                `${year} bracket ${id} week ${round.week}: ${side} plays twice`
+              ).toBe(false);
+              seen.add(side);
+            }
+          }
+        }
+      }
+    }
+    // The case that shipped broken: 2012's quarterfinals are four games.
+    expect(SEASONS['2012']['1'].playoffBracket.playoffRound[0].playoffGame).toHaveLength(4);
+  });
+
+  describe('the NIT', () => {
+    // 16 of the AFL's 24 franchises, so for most owners this IS their
+    // postseason. Its field is the exact complement of the championship field,
+    // which is why it needs no seeding assumption of its own.
+    const nitBracketFor = (year: string) => {
+      // Located by round count, not id — the NIT is bracket 3 in 2005, 4 in
+      // 2006, 5 in 2007-2017 and 6 in 2018+, and it is the only 4-round bracket.
+      let best: any = null;
+      for (const [id, payload] of Object.entries<any>(SEASONS[year])) {
+        const rounds = payload.playoffBracket.playoffRound.length;
+        if (!best || rounds > best.rounds) best = { id, rounds, payload };
+      }
+      return best;
+    };
+
+    it('is reconstructed for every season, with a full 16-team shape', () => {
+      for (const year of years) {
+        const nit = nitBracketFor(year);
+        expect(nit.rounds, `${year} has no 4-round NIT bracket`).toBe(4);
+        const games = nit.payload.playoffBracket.playoffRound.map(
+          (r: any) => r.playoffGame.length
+        );
+        // 16 teams single-elimination: 8 -> 4 -> 2 -> 1.
+        expect(games, `${year} NIT round sizes`).toEqual([8, 4, 2, 1]);
+      }
+    });
+
+    it('never overlaps the championship field', () => {
+      for (const year of years) {
+        const nitId = nitBracketFor(year).id;
+        const ids = (payload: any) =>
+          new Set<string>(
+            toArray<any>(payload.playoffBracket.playoffRound).flatMap((r: any) =>
+              toArray<any>(r.playoffGame).flatMap((g: any) => [
+                g.home.franchise_id,
+                g.away.franchise_id,
+              ])
+            )
+          );
+        const nitTeams = ids(SEASONS[year][nitId]);
+        for (const [id, payload] of Object.entries<any>(SEASONS[year])) {
+          if (id === nitId) continue;
+          for (const team of ids(payload)) {
+            expect(
+              nitTeams.has(team),
+              `${year}: ${team} appears in both the NIT and bracket ${id}`
+            ).toBe(false);
+          }
+        }
+      }
+    });
+
+    it('crowns the NIT champion the awards ledger crowns', () => {
+      // Compared by franchise id: the ledger stores each franchise's CURRENT
+      // name, so 2018's winner is "Pubes" in the feed and "Suh girls, one cup"
+      // in the ledger — the same team, id 0012.
+      const awards = new Map(
+        ((require('../data/afl-fantasy/awards-history.json') as any).seasons ?? []).map(
+          (s: any) => [String(s.year), s.awards ?? {}]
+        )
+      );
+      let checked = 0;
+      for (const year of years) {
+        const ref = (awards.get(year) as any)?.nit;
+        if (!ref?.franchiseId) continue;
+        const final = nitBracketFor(year).payload.playoffBracket.playoffRound.at(-1).playoffGame.at(-1);
+        const winner =
+          Number(final.home.points) >= Number(final.away.points)
+            ? final.home.franchise_id
+            : final.away.franchise_id;
+        expect(winner, `${year} NIT champion`).toBe(ref.franchiseId);
+        checked++;
+      }
+      expect(checked).toBeGreaterThan(0);
+    });
   });
 
   it('leaves 2003, 2004 and 2011 unreconstructed rather than guessing', () => {

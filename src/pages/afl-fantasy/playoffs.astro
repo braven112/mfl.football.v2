@@ -77,6 +77,7 @@ const leagueFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/leag
 // (2003-2023). Advisory, never a substitute for real MFL data — see
 // scripts/reconstruct-afl-playoff-brackets.mjs.
 import reconstructedBracketsFile from '../../../data/afl-fantasy/derived/reconstructed-playoff-brackets.json';
+import { buildBracketKindResolver, isNitTitleBracket } from '../../utils/afl-bracket-kind';
 const weeklyResultsFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/weekly-results.json', {
   eager: true,
 });
@@ -343,8 +344,13 @@ const bracketMode: BracketMode = availableModes.includes(requestedMode as Bracke
   ? (requestedMode as BracketMode)
   : 'projected';
 
-const winnersSet = new Set(['1', '2', '3', '4', '5']);
-const toiletSet = new Set(['6', '7', '8', '9']);
+// Bracket ids do not mean the same thing across eras — see afl-bracket-kind.ts.
+const bracketNameById = new Map<string, string>(
+  [...(fallbackBracketMetas as any[]), ...bracketMetas]
+    .filter((b: any) => b?.id && b?.name)
+    .map((b: any) => [String(b.id), String(b.name)])
+);
+const bracketKind = buildBracketKindResolver(fallbackBracketMetas as any[], bracketMetas);
 
 const weeksNeeded = Array.from(
   new Set(sortedBrackets.flatMap(bracket => bracket.rounds.map(round => round.week)).filter(Boolean))
@@ -378,16 +384,14 @@ weeklyResultsEntries.forEach(([week, result]) => {
 const resolvedGames = new Map<string, { home?: SeededTeam; away?: SeededTeam; winner?: SeededTeam; loser?: SeededTeam }>();
 
 const getSeedMapForBracket = (bracketId: string) => {
-  // AFL structure:
-  // Bracket 1: AFL Championship (uses top 2 from each conference)
-  // Bracket 2: AL Championship (uses AL conference seeds 1-4)
-  // Bracket 3: NL Championship (uses NL conference seeds 1-4)
-  // Brackets 4-5: Placement games (uses conference seeds)
-  // Brackets 6-9: NIT brackets (uses NIT standings)
-  if (bracketId === '2') return alSeeds; // AL Championship
-  if (bracketId === '3') return nlSeeds; // NL Championship
-  if (['6', '7', '8', '9'].includes(bracketId)) return nitSeeds; // NIT
-  return championshipSeeds; // AFL Championship and placement games
+  // Keyed off bracketKind rather than the id, because the id↔meaning mapping
+  // changed twice (see the bracketKind comment). The AFL Championship and the
+  // placement games share the championship seeds.
+  const kind = bracketKind(bracketId);
+  if (kind === 'al') return alSeeds;
+  if (kind === 'nl') return nlSeeds;
+  if (kind === 'nit') return nitSeeds;
+  return championshipSeeds;
 };
 
 const formatPlaceholder = (ref: any, slot: 'home' | 'away') => {
@@ -665,8 +669,12 @@ const buildBracketViews = () => {
 const bracketViews = buildBracketViews();
 const filteredBrackets = bracketViews.filter(bracket => {
   if (tabView === 'prizes') return false;
-  if (tabView === 'winners') return winnersSet.has(bracket.id);
-  return toiletSet.has(bracket.id) || (!winnersSet.has(bracket.id) && bracket.id !== '2');
+  const kind = bracketKind(bracket.id);
+  if (kind === 'nit') return tabView === 'toilet';
+  // The AFL Cup is an in-season competition, and MFL never exported its games.
+  // Keep it off the postseason tabs unless a season actually has them.
+  if (kind === 'cup') return tabView === 'winners' && bracket.rounds.length > 0;
+  return tabView === 'winners';
 });
 const hasBrackets = filteredBrackets.length > 0;
 
@@ -820,8 +828,16 @@ wildCards.forEach(wildCard => {
   });
 });
 
-// NIT Champion (find which NIT bracket has a winner)
-const nitBrackets = ['6', '7', '8', '9'];
+// NIT Champion (find which NIT bracket has a winner). The title bracket is
+// named "NIT" (2003-2006) or "NIT Championship" (2007+); the rest are
+// consolation/placement rounds, so sort the real one to the front before the
+// first-winner-wins loop below.
+const nitBrackets = bracketIdsToFetch
+  .filter(id => bracketKind(id) === 'nit')
+  .sort((a, b) => {
+    const rank = (id: string) => (isNitTitleBracket(bracketNameById.get(String(id))) ? 0 : 1);
+    return rank(a) - rank(b) || Number(a) - Number(b);
+  });
 let nitChampionId: string | undefined;
 let nitFinalists: string[] = []; // Track teams still competing for NIT
 for (const bracketId of nitBrackets) {
@@ -1256,8 +1272,15 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
               {/* Championship game below earlier rounds (if 4+ rounds) */}
               {bracket.roundsView.length >= 4 && (
                 <div class="championship-highlight">
-                  <h2 class="bracket-title">NIT Championship</h2>
-                  <p class="round-label">Week 18</p>
+                  {/* Title and week come from the bracket, not a constant: this
+                      block used to say "NIT Championship / Week 18" for any
+                      4-round bracket, which is wrong for 2003-2006 (the bracket
+                      is named just "NIT") and for every reconstructed season
+                      (their finals are week 17). */}
+                  <h2 class="bracket-title">{bracket.name || `Bracket ${bracket.id}`}</h2>
+                  <p class="round-label">
+                    Week {bracket.rounds[bracket.rounds.length - 1]?.week ?? '?'}
+                  </p>
                   <div class="championship-game">
                     {bracket.roundsView[bracket.roundsView.length - 1].map(game => {
                       const homeId = game.home.team?.id || '';
