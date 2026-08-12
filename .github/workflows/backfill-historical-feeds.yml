@@ -1,22 +1,43 @@
 name: Backfill Historical MFL Feeds
 
-# Manually-triggered one-off (or as-needed) backfill for missing/invalid
-# historical seasons. Pulls every gap year listed in the current league.json's
-# history.league array, then regenerates franchise-history.json and commits
-# any resulting changes back to whatever branch the workflow was launched on.
+# Manually-triggered backfill for missing/incomplete historical seasons. Pulls
+# every gap year listed in the chosen league's current league.json history,
+# regenerates franchise-history.json, and commits anything new back to the
+# branch the workflow was launched on.
 #
-# Run from the GitHub Actions UI, picking the branch you want to backfill
-# (e.g. claude/fantasy-football-ideas-M2Ga7).
+# Run from the GitHub Actions UI (Actions -> this workflow -> "Run workflow"),
+# picking the branch and the league. This runs on GitHub's runners because they
+# can reach myfantasyleague.com; a sandboxed dev environment often cannot.
+#
+# WHAT TO EXPECT FOR THE AFL: MFL's archived exports for 2007-2019 return the
+# regular-season weeks as bare `{"week":"1"}` elements with no matchup key, so
+# only the postseason weeks are on disk and every rivalry record under-counts
+# those seasons. The script now (a) stops treating a hole as a valid cache and
+# (b) falls back to per-week `TYPE=schedule&W=n` requests, which have never been
+# tried. Whether MFL still holds those pairings is genuinely unknown — the job
+# summary prints a before/after coverage table so the answer is unambiguous
+# either way. If nothing comes back, the data is gone and the pages keep saying
+# so; they are not reconstructable (AFL teams play multiple games in some weeks,
+# so there is no unique schedule that fits the scores and standings).
 on:
   workflow_dispatch:
     inputs:
+      league:
+        description: 'Which league to backfill'
+        required: true
+        type: choice
+        options:
+          - afl
+          - theleague
+        default: afl
       force:
         description: 'Refetch every year, even ones already cached as valid'
         required: false
-        default: 'false'
+        type: boolean
+        default: false
 
 concurrency:
-  group: backfill-historical-feeds
+  group: backfill-historical-feeds-${{ inputs.league }}
   cancel-in-progress: false
 
 permissions:
@@ -25,6 +46,9 @@ permissions:
 jobs:
   backfill:
     runs-on: ubuntu-latest
+    # Per-week schedule repair adds up to 13 requests/season across 13 seasons
+    # at 500ms apiece, on top of 17 weeklyResults calls per gap year.
+    timeout-minutes: 60
     steps:
       - name: Checkout (current branch)
         uses: actions/checkout@v6
@@ -36,24 +60,43 @@ jobs:
       - name: Setup pnpm + Node + install
         uses: ./.github/actions/setup
 
+      # Snapshot coverage BEFORE touching anything, so the summary can show
+      # exactly what this run recovered rather than just a final total.
+      - name: Snapshot head-to-head coverage (before)
+        run: node ./scripts/report-h2h-coverage.mjs --league=${{ inputs.league }} --json > /tmp/h2h-before.json
+
       - name: Backfill historical feeds
         run: |
           if [ "${{ inputs.force }}" = "true" ]; then
-            node ./scripts/backfill-historical-feeds.mjs --force
+            node ./scripts/backfill-historical-feeds.mjs --league=${{ inputs.league }} --force
           else
-            node ./scripts/backfill-historical-feeds.mjs
+            node ./scripts/backfill-historical-feeds.mjs --league=${{ inputs.league }}
           fi
 
-      - name: Recompute franchise history
-        run: node ./scripts/compute-franchise-history.mjs
+      - name: Report what was recovered
+        run: node ./scripts/report-h2h-coverage.mjs --league=${{ inputs.league }} --compare=/tmp/h2h-before.json
 
-      # schefter-feed.json picks up any new milestone posts emitted by
-      # the compute step (Phase 5 — badge crossings auto-post).
+      - name: Recompute franchise history
+        run: node ./scripts/compute-franchise-history.mjs --league=${{ inputs.league }}
+
+      # Paths differ per league: TheLeague's schefter feed lives under src/data
+      # and picks up milestone posts from the compute step; the AFL's feed sits
+      # in its data directory and emits no milestones (see LEAGUE_TARGETS in
+      # scripts/compute-franchise-history.mjs).
+      - name: Resolve paths to commit
+        id: paths
+        run: |
+          if [ "${{ inputs.league }}" = "theleague" ]; then
+            echo "add=data/theleague/mfl-feeds/ data/theleague/derived/ src/data/theleague/schefter-feed.json" >> "$GITHUB_OUTPUT"
+          else
+            echo "add=data/afl-fantasy/mfl-feeds/ data/afl-fantasy/derived/" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Commit and push
         uses: ./.github/actions/commit-push
         with:
-          add-paths: 'data/theleague/mfl-feeds/ data/theleague/derived/ src/data/theleague/schefter-feed.json'
-          commit-message: 'chore: backfill historical MFL feeds + recompute franchise history'
+          add-paths: ${{ steps.paths.outputs.add }}
+          commit-message: 'chore: backfill historical MFL feeds + recompute franchise history (${{ inputs.league }})'
           no-changes-message: 'No new historical data picked up — nothing to commit.'
           git-user-name: 'Historical Feed Backfill Bot'
           push-ref: ${{ github.ref_name }}
