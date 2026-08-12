@@ -10,8 +10,9 @@
  * rendered output stays pixel-identical to the originals.
  */
 import { spriteUrl } from '../../../utils/sprite-url';
-import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { resolveLeaguePath, resolveDirectoryHref } from '../../../utils/nav-utils';
 import { getLeagueBySlug, type CanonicalLeagueSlug } from '../../../config/leagues';
+import { pathBelongsToLeague } from '../../../config/footer-config';
 
 interface Props {
   league: CanonicalLeagueSlug;
@@ -61,8 +62,13 @@ if (isAfl) {
     .filter(p => p.id !== 'afl-homepage' && p.id !== 'homepage');
   pages = [...leaguePages].sort((a, b) => b.popularity - a.popularity).slice(0, 8);
 } else {
-  // Filter to visible, non-admin pages (except for authenticated users)
-  const visible = allPages.filter(p => p.visibility === 'all' && p.id !== 'homepage' && p.id !== 'new-hp');
+  // Filter to this league's own pages, visible, non-admin (except for
+  // authenticated users). page-directory.json is shared across leagues —
+  // without the pathBelongsToLeague() check, AFL-only pages leak into
+  // TheLeague's homepage grid (and vice versa for best-ball).
+  const visible = allPages
+    .filter(p => pathBelongsToLeague(p.path, leagueSlug))
+    .filter(p => p.visibility === 'all' && p.id !== 'homepage' && p.id !== 'new-hp');
 
   // Sort: logged-in users get "my-team" tools first, then by popularity
   const sorted = [...visible].sort((a, b) => {
@@ -84,7 +90,8 @@ if (isAfl) {
 }
 
 const ctaHref = isAfl ? `/${league.slug}` : r(`/${league.slug}/search`);
-const cardHref = (page: PageEntry) => (isAfl ? page.path : r(`/${league.slug}${page.path}`));
+const cardHref = (page: PageEntry) =>
+  isAfl ? page.path : r(resolveDirectoryHref(page.path, league.navSlug));
 ---
 
 <section class={cls} aria-label="Quick links">

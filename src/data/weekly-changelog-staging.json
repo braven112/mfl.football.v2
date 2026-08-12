@@ -40,6 +40,22 @@
       "impact": "user",
       "area": "other",
       "league": "afl"
+    },
+    {
+      "date": "2026-08-12",
+      "type": "bug-fix",
+      "summary": "Search on TheLeague's site was pulling AFL-only pages into its results — type \"keeper\" looking for a rules question and you'd land on the AFL's Keeper Planner instead, a page that doesn't even apply to TheLeague's roster rules. The site directory is shared infrastructure across both leagues; TheLeague's search now only shows TheLeague's own pages.",
+      "impact": "user",
+      "area": "navigation",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-08-12",
+      "type": "bug-fix",
+      "summary": "The homepage's \"Explore\" quick-links grid had the same cross-league leak as search — three of its eight tiles were quietly pointing at AFL pages (Rosters, Standings, Free Agents) instead of TheLeague's own, and clicking any of them dead-ended in a 404. The grid now only pulls from TheLeague's own page list.",
+      "impact": "user",
+      "area": "homepage",
+      "league": "theleague"
     }
   ]
 }
