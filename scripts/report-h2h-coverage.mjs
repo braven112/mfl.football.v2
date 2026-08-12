@@ -132,6 +132,15 @@ if (before) {
 const out = lines.join('\n');
 console.log(out);
 
+// Tell the workflow whether this run actually gained anything, so it can decide
+// to go probe other MFL surfaces rather than quietly reporting a no-op.
+if (before && process.env.GITHUB_OUTPUT) {
+  fs.appendFileSync(
+    process.env.GITHUB_OUTPUT,
+    `recovered=${total > before.total ? 'true' : 'false'}\n`
+  );
+}
+
 // Also write to the Actions job summary when running in CI, so the result is
 // visible without opening the log.
 if (process.env.GITHUB_STEP_SUMMARY) {

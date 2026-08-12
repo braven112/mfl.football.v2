@@ -1,0 +1,63 @@
+name: Probe MFL Schedule Sources
+
+# Read-only diagnostic. Writes nothing, commits nothing.
+#
+# Answers one question before we build anything on the answer: is there ANY MFL
+# surface still serving head-to-head pairings for a season whose `TYPE=schedule`
+# export comes back empty? AFL 2007-2019 regular-season weeks return bare
+# `{"week":"1"}`, and both requests tried so far (season-wide and per-week) came
+# back empty — which is not the same as the data being gone.
+#
+# This repo already has the counter-example: MFL's leagueStandings export
+# omitted pf/pa for AFL 2010-2022 until `ALL=1` was passed, because exports are
+# gated on each league-year's DISPLAY CONFIG rather than on what MFL stores.
+# The probe tries that same trick on the schedule endpoint, plus the XML encoder
+# (a JSON `{"week":"1"}` is exactly what you'd get if the encoder dropped an
+# element it thought was empty), plus liveScoring, plus the rendered HTML pages.
+#
+# Read the job summary: any row with a non-zero Pairings count is the request
+# the backfill should be making.
+on:
+  workflow_dispatch:
+    inputs:
+      league:
+        description: 'League to probe'
+        required: true
+        type: choice
+        options:
+          - afl
+          - theleague
+        default: afl
+      year:
+        description: 'Season to probe (a year whose regular season is missing)'
+        required: true
+        default: '2016'
+      week:
+        description: 'Week to probe (one that has no pairings on disk)'
+        required: true
+        default: '5'
+
+concurrency:
+  group: probe-mfl-schedule-sources
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm + Node + install
+        uses: ./.github/actions/setup
+
+      - name: Probe every known MFL surface for pairings
+        run: |
+          node ./scripts/probe-mfl-schedule-sources.mjs \
+            --league=${{ inputs.league }} \
+            --year=${{ inputs.year }} \
+            --week=${{ inputs.week }}
