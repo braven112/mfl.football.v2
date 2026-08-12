@@ -1271,7 +1271,7 @@ Champion = franchise with higher `points`. Multi-round brackets have `playoffRou
 | 2015 | www44 | 14236 |
 | 2016-2025 | www44 | 19621 |
 
-**CAUTION:** The cached 2011 AFL data (`data/afl-fantasy/mfl-feeds/2011/`) was fetched with league ID `48815` (incorrect — that's a TheLeague year ID). The correct 2011 AFL league ID is `36377` on `www49`. A re-fetch with the correct ID is needed.
+**~~CAUTION:~~ RESOLVED 2026-08-12.** This entry used to warn that the cached 2011 AFL data (`data/afl-fantasy/mfl-feeds/2011/`) had been fetched with league ID `48815` (a TheLeague year ID) and needed a re-fetch. It has since been corrected: `data/afl-fantasy/mfl-feeds/2011/league.json` now reads `id: 36377`, `name: "American Football League"`, 24 franchises, matching the `history.league[]` URL exactly. Independently confirmed by reconstructing all ten of 2011's playoff brackets from that feed's `schedule.json` and matching them game-for-game against MFL's own bracket pages. **Do not re-fetch 2011 on the strength of this warning.**
 
 **Finding 6: Authentication — historical bracket and weeklyResults reads are public (no auth required).** These are `TYPE=export` read-only endpoints. No cookie or API key needed for past seasons.
 
@@ -1690,3 +1690,27 @@ league-blind smell. Regression test: `tests/trades-pending-league-teams.test.ts`
 **Recommendation:** Any future feature reasoning about scarcity, replacement, or waiver-wire value must use the YTD feed and fall back visibly (not silently) when it's absent — the removed PoR implementation did this with a `replacementFromFullPool` summary flag driving an on-page note rather than letting an estimated baseline pass as fact; copy that pattern. Guard the fetch's parser against MFL's HTTP-200 error bodies so a rejected `W=YTD` can't overwrite a good committed feed (the deleted entry's parser refused zero-row payloads).
 
 **Unverified:** MFL egress is proxy-blocked from Claude Code web sandboxes (`CONNECT tunnel failed, response 403` for `www44.myfantasyleague.com` — same block noted in the `IS_KEEPER` entry above). `W=YTD` could not be probed live; the first CI fetch confirms it. Don't burn time trying to curl MFL from a web session — check `$HTTPS_PROXY/__agentproxy/status` and move on.
+
+---
+
+## 2026-08-12 - Seed-Only Playoff Brackets Are Fully Recoverable From `schedule.json` — and Bracket IDs Lie
+
+**Context:** `/afl-fantasy/playoffs` rendered "Bracket data not available" for every season before 2024. The 2026-05-10 entry above documents *why* (pre-2020 `playoffBracket` returns seeds only) and recommends `weeklyResults` as the fallback for identifying the championship game. That recommendation is right as far as it goes, but it recovers one game per season. The whole postseason is recoverable.
+
+**Insight 1 — the games were never missing; only the structure was.** `schedule.json` carries every playoff week fully scored for every season on record. What the seed-only export withholds is solely the mapping of games→brackets. Reconstruct it by walking the schedule as a single-elimination tournament seeded with the qualifying field, and emit MFL's own `brackets` shape so the existing renderer consumes it unchanged. This recovered 19 seasons × every declared bracket (championship, NIT, and all consolation/placement brackets) — roughly 40 games a season, versus one from the `weeklyResults` approach.
+
+**Insight 2 — `bracketWinnerTitle` is NOT a finishing position.** The AFL wrote custom titles into its brackets for years ("#1 Pick in 2nd Round", "*NIT 3rd Place or 6th Place", "3rd Place"), and MFL's own results page renders a custom title as a placement it does not mean. That is why MFL lists 2005's Da Dangsters as **2nd** when they actually finished **3rd** — they won the AFL Losers Bracket, whose winner takes third; second is the title-game loser. Never derive standings, placements, or awards from this field. Only the games are trustworthy. (A guard test greps the reconstruction script to keep the string out.)
+
+**Insight 3 — bracket IDs do not mean the same thing across seasons.** The 2026-05-10 entry says "Bracket ID `1` is always the league championship bracket." That is true in the sense that bracket 1 is always the *title*, but its **shape changes**: 2003-2017 bracket 1 IS the 8-team field (three rounds); from 2018 it is only the 2-team FINAL, fed by separate "AL Championship" / "NL Championship" brackets. Reading bracket 1 as the field in the modern era seeds a walk with the top ONE team per conference and produces the wrong champion. The NIT moves too — bracket 3 in 2005, 4 in 2006, 5 in 2007-2017, 6 from 2018 — and ids 2/3 are the conference brackets only in the modern era (in 2005 they are the AFL Losers Bracket and the NIT). Classify by bracket **name**, never by an id range (`src/utils/afl-bracket-kind.mjs`).
+
+**Insight 4 — the standings row order does not always describe the playoff field.** `leagueStandings` rows are the official final order (see the 2026-08-11 entry), but "who qualified" is a different question. In 2004 and 2011 the AFL ran six divisions into an eight-team bracket, so division winners took most of the slots and teams *outside the top eight* qualified ahead of better records (2011 seeded a 8-10 team). Any code that infers a playoff field from standings order must be able to detect its own failure — a seeded walk that finds only some of its opening games with teams left idle is the tell.
+
+**Insight 5 — archived schedules contain rows that are not games.** 2012 week 14 has an outright `0023 vs 0023` self-matchup (an MFL bye row); 2013, 2014 and 2015 week 14 each carry a stray extra matchup pairing two teams already scheduled that week. Left in, they render as phantom games — 2012 showed five quarterfinals, one of them a team playing itself. Filter self-matchups, and treat a franchise appearing twice in one round as a data artifact, not a tournament.
+
+**Evidence:**
+- `scripts/reconstruct-afl-playoff-brackets.mjs` (`walkBracket`, `pruneRound`, `reconstructConsolation`, `searchChampionshipField`)
+- `data/afl-fantasy/derived/reconstructed-playoff-brackets.json` — output, never written into `mfl-feeds/`
+- `tests/afl-reconstructed-brackets.test.ts` — asserts every scored game in the playoff weeks lands in exactly one bracket
+- `tests/afl-bracket-kind.test.ts` — runs the name classifier over every committed feed
+
+**Recommendation:** Before concluding an MFL export "doesn't have" historical data, check whether the underlying games exist in `schedule.json` and only the grouping is missing. That was true here for twenty seasons across four different bracket families.
