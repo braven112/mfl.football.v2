@@ -17,12 +17,26 @@
  *   1. EXPORT — does `TYPE=schedule` (authenticated) carry regular-season
  *      matchups? Reported as a per-week pairing map, so a season that holds
  *      only weeks 14-17 is visible as such rather than as a single total.
- *   2. HTML — MFL's rendered schedule page frequently outlives its export.
- *      The earlier probe only looked for `F=####` links and found none, which
- *      is weak evidence: a schedule table is far more likely to print team
- *      NAMES. This counts occurrences of that season's actual franchise names
- *      (from the committed league.json) and reports how many appear, so a page
- *      that really does list the matchups announces itself.
+ *   2. HTML — MFL's rendered site sometimes outlives its export. Two earlier
+ *      detectors both produced confident WRONG answers here, so this one is
+ *      deliberately strict:
+ *
+ *        - v1 looked for `F=####` links, found none, and was read as "nothing
+ *          there". Too weak: a schedule table prints team NAMES, not id links.
+ *        - v2 counted franchise names anywhere on the page and scored 24/24 —
+ *          on the TRANSACTIONS page, because its filter menus list every team.
+ *          The URL was a guessed `O=03`, and the guess was simply wrong.
+ *
+ *      So: discover the page from MFL's own navigation (it labels one
+ *      "Fantasy Schedule" and one "Weekly Results") rather than guessing a
+ *      code, request it for a week the export has NOTHING for, and require an
+ *      actual scoreboard signature — two DIFFERENT franchise names within a
+ *      short span containing a decimal score. Name mentions alone no longer
+ *      count for anything.
+ *
+ *      Note the site answers as `Guest ( Login )`: APIKEY authenticates the
+ *      export API, not HTML pages. If a private league hides its schedule from
+ *      guests, no amount of parsing will help and this will report zero rows.
  *
  * Usage:
  *   node scripts/audit-mfl-schedule-availability.mjs --league=afl
@@ -121,6 +135,61 @@ const stripTags = (html) =>
     .replace(/\s+/g, ' ')
     .trim();
 
+/**
+ * Find the page MFL itself calls the schedule, instead of guessing an O= code.
+ *
+ * The first attempt hardcoded `O=03` and got the TRANSACTIONS page, whose
+ * filter menus happen to list every franchise name — so a "how many team names
+ * appear" test scored 24/24 and reported the schedule as found. Twice now a
+ * loose detector has produced a confident wrong answer, so this reads MFL's own
+ * navigation and follows the labelled link.
+ */
+function findNavLinks(html, baseHost, year) {
+  const out = [];
+  const re = /<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  let m;
+  while ((m = re.exec(html))) {
+    const label = stripTags(m[2]).trim();
+    if (!label) continue;
+    if (!/(fantasy\s*schedule|weekly\s*results|^schedule$|^scores$)/i.test(label)) continue;
+    let href = m[1].replace(/&amp;/g, '&');
+    if (href.startsWith('//')) href = `https:${href}`;
+    else if (href.startsWith('/')) href = `https://${baseHost}${href}`;
+    else if (!/^https?:/i.test(href)) href = `https://${baseHost}/${year}/${href}`;
+    out.push({ label, href });
+  }
+  return out;
+}
+
+/**
+ * Does this page actually show MATCHUPS?
+ *
+ * Specific on purpose: requires two DIFFERENT franchise names close together
+ * with a decimal score between or beside them — the signature of a scoreboard
+ * row. Merely containing team names is what fooled the previous two checks.
+ */
+function matchupSignature(text, names) {
+  const found = names.filter((n) => text.includes(n));
+  if (found.length < 2) return { rows: 0, namesFound: found.length };
+  let rows = 0;
+  // Walk name occurrences in document order; count adjacent pairs of DIFFERENT
+  // names separated by a short span that contains a decimal number.
+  const hits = [];
+  for (const n of found) {
+    let i = -1;
+    while ((i = text.indexOf(n, i + 1)) !== -1) hits.push({ name: n, at: i });
+  }
+  hits.sort((a, b) => a.at - b.at);
+  for (let i = 0; i + 1 < hits.length; i++) {
+    const a = hits[i];
+    const b = hits[i + 1];
+    if (a.name === b.name) continue;
+    const span = text.slice(a.at, b.at + b.name.length);
+    if (span.length <= 160 && /\d+\.\d/.test(span)) rows++;
+  }
+  return { rows, namesFound: found.length };
+}
+
 const rows = [];
 console.log(`Auditing ${SLUG} schedule availability — ${YEARS.length} season(s)`);
 console.log(MFL_API_KEY ? 'APIKEY present.\n' : 'NO APIKEY — private-league reads will be stripped.\n');
@@ -153,20 +222,35 @@ for (const year of YEARS) {
   // where a second source would change anything.
   let html = null;
   if (!rateLimited && emptyWeeks.length > 0 && filledWeeks.length > 0) {
-    const htmlUrl = `https://${host}/${year}/options?L=${lid}&O=03`;
-    const r = await fetchWithBackoff(htmlUrl);
-    if (r.status === 200) {
-      const text = stripTags(r.body);
-      const names = franchiseNames(year);
-      const present = names.filter((n) => text.includes(n));
-      html = { bytes: r.body.length, namesTotal: names.length, namesFound: present.length };
-      if (String(year) === String(DUMP_HTML_YEAR)) {
-        console.log(`\n--- HTML sample for ${year} (first 1200 chars of text) ---`);
-        console.log(text.slice(0, 1200));
-        console.log('--- end sample ---\n');
-      }
-    }
+    const names = franchiseNames(year);
+    const emptyWeek = emptyWeeks[Math.floor(emptyWeeks.length / 2)];
+
+    // Ask MFL where its schedule lives rather than guessing an O= code.
+    const home = await fetchWithBackoff(`https://${host}/${year}/home/${lid}`);
+    const navLinks = home.status === 200 ? findNavLinks(home.body, host, year) : [];
     await sleep(1200);
+
+    // Try each labelled candidate for a week the export has nothing for.
+    const candidates = [];
+    for (const link of navLinks.slice(0, 4)) {
+      const url = link.href + (link.href.includes('?') ? '&' : '?') + `W=${emptyWeek}`;
+      const r = await fetchWithBackoff(url);
+      if (r.status === 200) {
+        const text = stripTags(r.body);
+        const sig = matchupSignature(text, names);
+        candidates.push({ label: link.label, url, bytes: r.body.length, ...sig });
+        if (String(year) === String(DUMP_HTML_YEAR)) {
+          console.log(`\n--- ${year} "${link.label}" (week ${emptyWeek}) ${r.body.length}B, ${sig.rows} matchup-like rows ---`);
+          console.log(text.slice(0, 900));
+          console.log('--- end ---\n');
+        }
+      }
+      await sleep(1500);
+    }
+    const best = candidates.sort((a, b) => b.rows - a.rows)[0] ?? null;
+    html = best
+      ? { bytes: best.bytes, namesTotal: names.length, namesFound: best.namesFound, rows: best.rows, label: best.label, week: emptyWeek }
+      : { bytes: 0, namesTotal: names.length, namesFound: 0, rows: 0, label: 'no nav link found', week: emptyWeek };
   }
 
   rows.push({ year, status, rateLimited, total, filledWeeks, emptyWeeks, html, parseNote });
@@ -174,7 +258,7 @@ for (const year of YEARS) {
     ? `weeks with games: ${filledWeeks.join(',') || 'none'}${emptyWeeks.length ? ` | empty: ${emptyWeeks.join(',')}` : ''}`
     : parseNote || 'no weeklySchedule';
   const htmlNote = html
-    ? ` | HTML ${html.bytes}B, ${html.namesFound}/${html.namesTotal} team names`
+    ? ` | HTML "${html.label}" wk${html.week} ${html.bytes}B, ${html.rows} matchup rows (${html.namesFound}/${html.namesTotal} names)`
     : '';
   console.log(
     `${year}  HTTP ${rateLimited ? '429(RATE LIMITED)' : status}  pairings=${String(total).padStart(3)}  ${weekSummary}${htmlNote}`
@@ -184,7 +268,10 @@ for (const year of YEARS) {
 
 const limited = rows.filter((r) => r.rateLimited);
 const short = rows.filter((r) => !r.rateLimited && r.emptyWeeks.length > 0 && r.total > 0);
-const htmlPromising = rows.filter((r) => r.html && r.html.namesFound >= r.html.namesTotal / 2);
+// A page qualifies only if it shows MATCHUP ROWS for a week the export has
+// nothing for. Name mentions alone scored 24/24 on the transactions page and
+// produced a confident wrong answer — that bar is now off the table.
+const htmlPromising = rows.filter((r) => r.html && r.html.rows >= 6);
 
 console.log('\n--- verdict ---');
 if (limited.length) {
@@ -197,26 +284,26 @@ console.log(
 );
 console.log(
   htmlPromising.length
-    ? `HTML schedule page LOOKS POPULATED for: ${htmlPromising.map((r) => r.year).join(', ')} — worth parsing.`
-    : 'HTML schedule page does not contain the franchise names — no second source.'
+    ? `HTML page SHOWS MATCHUPS for: ${htmlPromising.map((r) => `${r.year} (${r.html.rows} rows via "${r.html.label}")`).join(', ')} — parse it.`
+    : 'No HTML page renders matchups for an empty week — the site is Guest-only for private leagues, so there is no second source.'
 );
 
 if (process.env.GITHUB_STEP_SUMMARY) {
   const md = [
     `### MFL schedule availability — ${SLUG}`,
     '',
-    '| Season | HTTP | Pairings | Weeks with games | Empty weeks | HTML team names |',
+    '| Season | HTTP | Pairings | Weeks with games | Empty weeks | HTML matchup rows |',
     '|---|---:|---:|---|---|---|',
     ...rows.map(
       (r) =>
-        `| ${r.year} | ${r.rateLimited ? '**429**' : r.status} | ${r.total} | ${r.filledWeeks.join(', ') || '—'} | ${r.emptyWeeks.join(', ') || '—'} | ${r.html ? `${r.html.namesFound}/${r.html.namesTotal}` : '—'} |`
+        `| ${r.year} | ${r.rateLimited ? '**429**' : r.status} | ${r.total} | ${r.filledWeeks.join(', ') || '—'} | ${r.emptyWeeks.join(', ') || '—'} | ${r.html ? `${r.html.rows} rows (${r.html.label})` : '—'} |`
     ),
     '',
     limited.length ? `⚠️ Rate limited (inconclusive): ${limited.map((r) => r.year).join(', ')}` : '',
     short.length ? `Export short for: ${short.map((r) => r.year).join(', ')}` : '',
     htmlPromising.length
-      ? `**HTML page looks populated for: ${htmlPromising.map((r) => r.year).join(', ')} — parse it.**`
-      : 'HTML schedule page carries none of the franchise names — no second source.',
+      ? `**HTML page SHOWS MATCHUPS for: ${htmlPromising.map((r) => r.year).join(', ')} — parse it.**`
+      : 'No HTML page renders matchups for an empty week (site is Guest-only for private leagues).',
   ]
     .filter(Boolean)
     .join('\n');
