@@ -88,16 +88,21 @@ jobs:
       # first authenticated run recovered 2024/2025 and therefore skipped this
       # step entirely, leaving the 2007-2019 hole it exists to diagnose
       # untested. Probes two gap years across both AFL bracket eras.
-      - name: Probe other MFL surfaces (whenever gaps remain)
+      # Walks EVERY season rather than sampling two, and reports the per-week
+      # shape — the only way to say "MFL has 42 games for 2010 and no more"
+      # instead of inferring it from one week. Also checks the rendered
+      # schedule page for that season's franchise NAMES, which is the test the
+      # earlier F=#### link check was too weak to make.
+      - name: Audit what MFL will actually serve (whenever gaps remain)
         if: steps.coverage.outputs.gaps == 'true'
         env:
           MFL_APIKEY: ${{ secrets.MFL_APIKEY }}
           MFL_API_KEY: ${{ secrets.MFL_API_KEY }}
         run: |
-          for spec in "${{ inputs.league }}:2016:5" "${{ inputs.league }}:2010:5"; do
-            IFS=':' read -r lg yr wk <<< "$spec"
-            node ./scripts/probe-mfl-schedule-sources.mjs --league="$lg" --year="$yr" --week="$wk" || true
-          done
+          node ./scripts/audit-mfl-schedule-availability.mjs \
+            --league=${{ inputs.league }} \
+            --years=${{ steps.coverage.outputs.gap_years }} \
+            --dump-html=2016 || true
 
       - name: Recompute franchise history
         run: node ./scripts/compute-franchise-history.mjs --league=${{ inputs.league }}
