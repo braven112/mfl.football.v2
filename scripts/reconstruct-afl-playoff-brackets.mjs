@@ -165,6 +165,56 @@ function championshipField(league, standingsRows, teams) {
 }
 
 /**
+ * Recover the championship field from the schedule when the standings cannot
+ * seed it.
+ *
+ * `championshipField` assumes the bracket is the top N of each conference in
+ * standings order. That holds for sixteen of the eighteen reconstructable
+ * seasons, but not 2004 or 2011: six divisions fed an eight-team bracket, so
+ * division winners took most of the slots and a team well down the table got in
+ * ahead of better records (2011's Midwestside Connection and Way More Funner,
+ * neither in the standings' top eight). Seeded wrong, the walk finds only two of
+ * its four opening games and bails.
+ *
+ * The exact qualification rule is not recoverable from the feed, and it does not
+ * need to be. A valid bracket is its own fingerprint: pick `teams / 2` games
+ * from the opening week whose winners pair off into real games the following
+ * week, and so on down to one. For 2004 and 2011 that leaves exactly three
+ * candidates each — the championship plus two halves of the 16-team NIT, which
+ * are structurally identical — so the known final decides between them. If the
+ * champion and runner-up are not on record, nothing is published.
+ */
+function searchChampionshipField(schedule, shape, knownFinal) {
+  if (!knownFinal?.champion || !knownFinal?.runnerUp) return null;
+  const opening = pruneRound(scheduleGamesByWeek(schedule).get(shape.startWeek) ?? []) ?? [];
+  const pick = Math.floor(shape.teams / 2);
+  // Guard the combinatorics: a 24-team league opens with 12 games (495 subsets).
+  if (pick < 1 || opening.length > 24 || opening.length < pick) return null;
+
+  const matches = [];
+  const combine = (start, chosen) => {
+    if (matches.length > 1) return; // already ambiguous, stop early
+    if (chosen.length === pick) {
+      const teams = new Set(chosen.flatMap((g) => [g.home.franchise_id, g.away.franchise_id]));
+      if (teams.size !== shape.teams) return;
+      const walked = walkBracket(schedule, teams, shape.startWeek, shape.finalWeek);
+      if (
+        walked &&
+        walked.finalGame.champion === knownFinal.champion &&
+        walked.finalGame.runnerUp === knownFinal.runnerUp
+      ) {
+        matches.push({ teams, walked });
+      }
+      return;
+    }
+    for (let i = start; i < opening.length; i++) combine(i + 1, [...chosen, opening[i]]);
+  };
+  combine(0, []);
+
+  return matches.length === 1 ? matches[0] : null;
+}
+
+/**
  * A single-elimination round cannot contain the same franchise twice, but the
  * AFL's archived schedules do — three rounds carry a stray extra matchup that
  * links two teams already paired elsewhere that week (2014 and 2015 NIT week
@@ -466,7 +516,7 @@ function reconstructConsolation({ schedule, primary, metas, primaryIds, kindOf }
   return { brackets, unclaimed };
 }
 
-async function reconstructYear(year, knownChampion) {
+async function reconstructYear(year, knownFinal) {
   const dir = path.join(FEEDS_DIR, String(year));
   const bracketFeed = await readJson(path.join(dir, 'playoff-brackets.json'));
   if (!bracketFeed) return null;
@@ -486,15 +536,30 @@ async function reconstructYear(year, knownChampion) {
   const rows = toArray(standings?.leagueStandings?.franchise);
   if (!league || !rows.length || !schedule) return { skipped: 'missing league/standings/schedule' };
 
-  const field = championshipField(league, rows, shape.teams);
-  if (!field) return { skipped: 'could not seed the championship field' };
+  let field = championshipField(league, rows, shape.teams);
+  let walked = field ? walkBracket(schedule, field.keys(), shape.startWeek, shape.finalWeek) : null;
 
-  const walked = walkBracket(schedule, field.keys(), shape.startWeek, shape.finalWeek);
+  if (!walked && shape.era === 'single') {
+    // The standings did not describe this season's field — see
+    // searchChampionshipField. Only reachable with a champion AND runner-up on
+    // record, so it can never invent a bracket.
+    const recovered = searchChampionshipField(schedule, shape, knownFinal);
+    if (recovered) {
+      // Conference is only consulted in the split era, so an empty tag is fine.
+      field = new Map([...recovered.teams].map((id) => [id, '']));
+      walked = recovered.walked;
+      log(`${year}: standings could not seed the field; recovered it from the schedule`);
+    }
+  }
+
+  if (!field) return { skipped: 'could not seed the championship field' };
   if (!walked) return { skipped: 'elimination walk did not resolve' };
 
   // Refuse to publish a reconstruction that contradicts the known champion.
-  if (knownChampion && walked.finalGame.champion !== knownChampion) {
-    return { skipped: `walk champion ${walked.finalGame.champion} != known ${knownChampion}` };
+  if (knownFinal?.champion && walked.finalGame.champion !== knownFinal.champion) {
+    return {
+      skipped: `walk champion ${walked.finalGame.champion} != known ${knownFinal.champion}`,
+    };
   }
 
   const brackets = {};
@@ -578,8 +643,10 @@ async function reconstructYear(year, knownChampion) {
 
 async function main() {
   const championsFile = await readJson(CHAMPIONS_PATH);
-  const knownChampions = new Map(
-    (championsFile?.championships ?? []).map((c) => [c.year, c.champion])
+  // The whole entry, not just the champion: recovering 2004/2011's field from
+  // the schedule needs the runner-up too (see searchChampionshipField).
+  const knownFinals = new Map(
+    (championsFile?.championships ?? []).map((c) => [c.year, c])
   );
 
   const years = SINGLE_YEAR
@@ -591,7 +658,7 @@ async function main() {
   const skipped = [];
 
   for (const year of years) {
-    const result = await reconstructYear(year, knownChampions.get(year));
+    const result = await reconstructYear(year, knownFinals.get(year));
     if (!result) continue;
     if (result.skipped) {
       skipped.push(`${year} (${result.skipped})`);

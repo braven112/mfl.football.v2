@@ -565,10 +565,23 @@ available" for every season before 2024. The GAMES were never missing:
   single-elimination tournament and writes
   `data/afl-fantasy/derived/reconstructed-playoff-brackets.json` in MFL's own
   `brackets` shape. The page consults it **only** when the committed feed has
-  no games for a bracket — real MFL data always wins. 18 seasons recovered
-  (championship + NIT); 2003, 2004 and 2011 are deliberately left empty
-  because their fields weren't top-N-per-conference and a plausible-but-wrong
-  bracket is worse than an empty one.
+  no games for a bracket — real MFL data always wins. 19 seasons recovered,
+  every declared postseason bracket in each.
+- **The standings do not always describe the field.** `championshipField` takes
+  the top N of each conference in standings order, which is right for 17 of the
+  19 seasons — but 2004 and 2011 ran six divisions into an eight-team bracket,
+  so division winners took most of the slots and teams outside the top eight
+  qualified ahead of better records. Seeded wrong, the walk finds two of its
+  four opening games and bails. `searchChampionshipField` recovers the field by
+  fingerprinting the bracket's shape against the schedule (pick `teams/2`
+  opening games whose winners pair off into real games the next week, down to
+  one) and accepting a candidate **only** if its final matches the champion AND
+  runner-up on record. 2011 is recovered this way and verified game-for-game
+  against MFL's own bracket pages. 2004 stays empty because its champion isn't
+  on record, so its three structurally valid candidates can't be told apart.
+  **2003 is permanently unrecoverable** — the league played that season on
+  Yahoo and only standings were entered into MFL, so no game in any week has a
+  score. Don't spend time on it.
 - **The bracket shape is era-dependent.** 2003-2017 bracket "1" IS the 8-team
   field; 2018+ it is only the 2-team final fed by separate AL/NL brackets.
   Seeding the modern shape with the old assumption produced the wrong 2019

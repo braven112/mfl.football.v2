@@ -50,6 +50,14 @@
       "source": "schedule:elimination-walk"
     },
     {
+      "year": 2011,
+      "champion": "0013",
+      "runnerUp": "0002",
+      "championName": "Delirium Tremens",
+      "runnerUpName": "Drunk Indians",
+      "source": "commissioner-screenshot:mfl-bracket-page"
+    },
+    {
       "year": 2012,
       "champion": "0002",
       "runnerUp": "0016",
@@ -163,11 +171,10 @@
     }
   ],
   "$gaps": {
-    "$comment": "Years not yet backfilled. Run with --online in a network-enabled environment to fill them in.",
+    "$comment": "Years not yet backfilled. 2003 is permanently unrecoverable: the league played that season on Yahoo and only standings were entered into MFL, so no game has a score in any week. 2004 needs the AFL Championship bracket confirmed from MFL, because that season's field was not top-4-per-conference and the schedule alone leaves three structurally valid brackets.",
     "missingYears": [
       2003,
-      2004,
-      2011
+      2004
     ]
   }
 }

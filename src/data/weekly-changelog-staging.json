@@ -4,7 +4,15 @@
     {
       "date": "2026-08-12",
       "type": "bug-fix",
-      "summary": "Eighteen years of AFL playoffs came back from the dead. Pick any season before 2024 and the brackets page said \"Bracket data not available\" — for the championship, for the NIT, for all of it. Turns out the games were never missing. MFL's bracket export only ever handed us seed numbers for those years, but the schedule had every playoff week sitting right there, fully scored, the whole time. The page now walks those weeks back into a bracket, so 2005 through 2023 finally show real matchups with real teams and real point totals: Cougs over Smokane, Chatmaster over the Limp Ditkas, No Frills over More Cowbell. Four seasons stay blank on purpose — 2003, 2004 and 2011 ran fields we can't reconstruct without guessing, and we'd rather show you nothing than show you a final that never happened.",
+      "summary": "2011 finally has a playoff bracket, and it took some doing. Every other season we rebuilt by assuming the playoff field was the top four in each conference — which is how the AFL seeds it, except in 2011, when six divisions fed an eight-team bracket and two teams from outside the top eight got in on division titles. Feed the wrong eight teams into a bracket and it falls apart immediately, which is exactly what happened. So instead of guessing the qualification rule, the site now works backward from the shape: find the four week-14 games whose winners play each other in week 15, whose winners meet in week 16. Only one arrangement of that season's games fits, and it turned out to be Delirium Tremens over Drunk Indians 154.94 to 147.95. All ten of 2011's brackets are now on the page, from the title game down to NIT Consolation 2L, and every one was checked against the league's own bracket pages. 2003 stays blank forever — that was the Yahoo year, and MFL never had the games.",
+      "impact": "user",
+      "area": "playoffs",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-12",
+      "type": "bug-fix",
+      "summary": "Eighteen years of AFL playoffs came back from the dead. Pick any season before 2024 and the brackets page said \"Bracket data not available\" — for the championship, for the NIT, for all of it. Turns out the games were never missing. MFL's bracket export only ever handed us seed numbers for those years, but the schedule had every playoff week sitting right there, fully scored, the whole time. The page now walks those weeks back into a bracket, so 2005 through 2023 finally show real matchups with real teams and real point totals: Cougs over Smokane, Chatmaster over the Limp Ditkas, No Frills over More Cowbell. Two seasons stay blank: 2003 was the year the league played on Yahoo, so MFL never had the games at all, and 2004 ran a field we can't pin down without guessing — we'd rather show you nothing than show you a final that never happened.",
       "impact": "user",
       "area": "playoffs",
       "league": "afl"

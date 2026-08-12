@@ -84,7 +84,7 @@ describe('reconstructed AFL brackets', () => {
   const years = Object.keys(SEASONS).sort();
 
   it('covers the seasons MFL left empty, and only those', () => {
-    expect(years.length).toBeGreaterThanOrEqual(18);
+    expect(years.length).toBeGreaterThanOrEqual(19);
     for (const year of years) {
       const feed = readFeed(year, 'playoff-brackets.json');
       // Never shadow a season MFL actually reported (2024-25).
@@ -437,11 +437,56 @@ describe('reconstructed AFL brackets', () => {
     });
   });
 
-  it('leaves 2003, 2004 and 2011 unreconstructed rather than guessing', () => {
-    // Their playoff fields were not top-N-per-conference (2003's bracket is
-    // even named "Conference Championships"). All three already have curated
-    // champions, so a guess could only overwrite known-good data.
-    for (const year of ['2003', '2004', '2011']) {
+  describe('2011, recovered from the schedule and checked against MFL', () => {
+    // 2011's field was not top-4-per-conference, so the standings seed the walk
+    // with the wrong eight and it bails. searchChampionshipField recovers the
+    // real field by fingerprinting the bracket's shape against the schedule and
+    // requiring the known final. The commissioner then screenshotted all ten
+    // brackets off myfantasyleague.com (2026-08-12) and every game matched.
+    const FINALS: Array<[string, string, string]> = [
+      ['1', '0013', '154.94'], // AFL Championship — Delirium Tremens
+      ['2', '0010', '128.31'], // AFL Consolation (3rd) — Fullybaked
+      ['3', '0022', '156.51'], // AFL 5th Place — Way More Funner
+      ['4', '0020', '109.64'], // AFL 7rd Place — The Boondock Saints
+      ['5', '0006', '148.93'], // NIT Championship — Whitman's Wonders
+      ['6', '0014', '156.42'], // NIT Consolation Game — Thundering Herd
+      ['7', '0008', '132.65'], // NIT Consolation 1 — The Nukes
+      ['8', '0023', '160.47'], // NIT Consolation 2 — No Frills
+      ['9', '0017', '158.21'], // NIT Consolation 1L — Blitzkrieg
+      ['10', '0003', '143.3'], // NIT Consolation 2L — Level 3 Inception
+    ];
+
+    it.each(FINALS)('bracket %s is won by %s with %s', (id, winner, points) => {
+      const final = SEASONS['2011'][id].playoffBracket.playoffRound.at(-1).playoffGame.at(-1);
+      const won = Number(final.home.points) >= Number(final.away.points) ? final.home : final.away;
+      expect(won.franchise_id).toBe(winner);
+      expect(won.points).toBe(points);
+    });
+
+    it('recovers a field the standings do not describe', () => {
+      // The proof that the fallback earned its keep: two of these eight are
+      // outside the standings' top eight, so no seeding rule we can derive from
+      // the feed would have picked them.
+      const qf = SEASONS['2011']['1'].playoffBracket.playoffRound[0].playoffGame;
+      const field = new Set(qf.flatMap((g: any) => [g.home.franchise_id, g.away.franchise_id]));
+      expect([...field].sort()).toEqual(
+        ['0013', '0022', '0010', '0011', '0009', '0002', '0021', '0020'].sort()
+      );
+
+      const rows = toArray<any>(readFeed('2011', 'standings.json')?.leagueStandings?.franchise);
+      const topEight = new Set(rows.slice(0, 8).map((r) => r.id));
+      const outsiders = [...field].filter((id) => !topEight.has(id));
+      expect(outsiders.length, 'qualifiers from outside the standings top 8').toBe(2);
+    });
+  });
+
+  it('leaves 2003 and 2004 unreconstructed rather than guessing', () => {
+    // 2003 is permanently unrecoverable: the league played that season on Yahoo
+    // and only standings were entered into MFL, so not one game in any week
+    // carries a score. 2004's field, like 2011's, was not top-N-per-conference,
+    // and its champion is not on record — so searchChampionshipField has no
+    // final to disambiguate its three structurally valid candidates.
+    for (const year of ['2003', '2004']) {
       expect(SEASONS[year], `${year} should not be reconstructed`).toBeUndefined();
     }
   });
