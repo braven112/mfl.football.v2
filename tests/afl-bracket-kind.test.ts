@@ -16,7 +16,7 @@ import {
   bracketKindFromName,
   buildBracketKindResolver,
   isNitTitleBracket,
-} from '../src/utils/afl-bracket-kind';
+} from '../src/utils/afl-bracket-kind.mjs';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 
 const FEEDS = path.join(path.resolve(__dirname, '..'), getLeagueBySlug('afl-fantasy').dataPath, 'mfl-feeds');

@@ -12,6 +12,14 @@
     {
       "date": "2026-08-12",
       "type": "bug-fix",
+      "summary": "The consolation brackets are back too, which is the half of the postseason that actually decided things. The AFL Losers Bracket, the 3rd and 5th and 7th place games, and that magnificent tower of NIT losers brackets that handed out draft picks — all of it was blank for every season before 2024, and all of it is now filled in from the schedule. Worth knowing while you browse: MFL's own results page lies about finishing order for these years. The league wrote custom titles into its brackets, MFL read those titles as placements, and so it lists Da Dangsters second in 2005 when they actually finished third — they won the Losers Bracket. Second place was Smokane, who lost the title game to the Cougs. The brackets now on the page are built from games, not titles, so they show what actually happened.",
+      "impact": "user",
+      "area": "playoffs",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-12",
+      "type": "bug-fix",
       "summary": "The NIT tab was empty for fifteen seasons, and the reason is deeply stupid. The page decided which brackets were the championship and which were the NIT by their ID number — brackets 1 through 5 were the big dance, 6 through 9 were the NIT. That's true from 2018 on. It is not true for 2005 (NIT is bracket 3), or 2006 (bracket 4), or anything from 2007 to 2017 (bracket 5). So for fifteen years the NIT was quietly filed under Championship while the NIT tab sat there with nothing in it. The page now goes by the bracket's actual name, which has said \"NIT\" on it since 2003. The NIT Champion payout shows up for those seasons too, and the AFL Cup — an in-season thing from the 2012-2016 era that MFL never exported a single game for — stopped padding the page with seven empty cards.",
       "impact": "user",
       "area": "playoffs",

@@ -15,23 +15,29 @@
  * split the tabs on hardcoded id ranges (winners 1-5, toilet 6-9) — correct
  * only from 2018 on, which filed every pre-2018 NIT under the Championship tab
  * and left the NIT tab empty.
+ *
+ * WHY .mjs: the playoffs page (TypeScript) and
+ * `scripts/reconstruct-afl-playoff-brackets.mjs` both classify brackets, and a
+ * node script cannot import a .ts. Two copies would be free to drift on exactly
+ * the seasons nobody looks at. Same pattern as division-aliases.mjs.
+ *
+ * @typedef {'al' | 'nl' | 'nit' | 'cup' | 'championship'} BracketKind
  */
-export type BracketKind = 'al' | 'nl' | 'nit' | 'cup' | 'championship';
-
-export interface BracketMetaLike {
-  id?: string | number;
-  name?: string;
-}
 
 /** Modern-era ids, used only when a bracket arrives with no name at all. */
-function kindFromId(id: string): BracketKind {
+function kindFromId(id) {
   if (['6', '7', '8', '9'].includes(id)) return 'nit';
   if (id === '2') return 'al';
   if (id === '3') return 'nl';
   return 'championship';
 }
 
-export function bracketKindFromName(name: string | undefined, id: string): BracketKind {
+/**
+ * @param {string | undefined} name
+ * @param {string} id
+ * @returns {BracketKind}
+ */
+export function bracketKindFromName(name, id) {
   const label = String(name ?? '').trim();
   if (!label) return kindFromId(String(id));
   if (/\bNIT\b/i.test(label)) return 'nit';
@@ -47,11 +53,12 @@ export function bracketKindFromName(name: string | undefined, id: string): Brack
 /**
  * Build a `(bracketId) => BracketKind` lookup from whatever metas a season has.
  * Later sources win, so pass the live metas after the cached fallback ones.
+ *
+ * @param {...(Array<{id?: string | number, name?: string}> | null | undefined)} metaSources
+ * @returns {(id: string | number) => BracketKind}
  */
-export function buildBracketKindResolver(
-  ...metaSources: Array<BracketMetaLike[] | undefined | null>
-): (id: string | number) => BracketKind {
-  const names = new Map<string, string>();
+export function buildBracketKindResolver(...metaSources) {
+  const names = new Map();
   for (const metas of metaSources) {
     for (const meta of metas ?? []) {
       if (meta?.id == null || !meta?.name) continue;
@@ -64,7 +71,9 @@ export function buildBracketKindResolver(
 /**
  * True for the bracket that actually crowns the NIT champion, as opposed to its
  * consolation and placement rounds ("NIT Consolation 1", "NIT 3rd Place Game").
+ *
+ * @param {string | undefined} name
  */
-export function isNitTitleBracket(name: string | undefined): boolean {
+export function isNitTitleBracket(name) {
   return /^NIT(\s+Championship)?$/i.test(String(name ?? '').trim());
 }

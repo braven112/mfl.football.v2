@@ -581,11 +581,33 @@ available" for every season before 2024. The GAMES were never missing:
 - **Bracket ids do not mean the same thing across seasons.** The NIT is bracket
   3 in 2005, 4 in 2006, 5 in 2007-2017 and 6 from 2018 on; ids 2/3 are the
   AL/NL brackets only in the modern era (in 2005 they're the AFL Losers Bracket
-  and the NIT). Classify with `src/utils/afl-bracket-kind.ts`, never with an id
+  and the NIT). Classify with `src/utils/afl-bracket-kind.mjs`, never with an id
   range — the page's old hardcoded `winners = 1-5 / NIT = 6-9` split filed every
   pre-2018 NIT under the Championship tab and left the NIT tab empty.
   `tests/afl-bracket-kind.test.ts` runs the classifier over every committed feed
   and greps the page to stop an id list creeping back in.
+- **The consolation/placement brackets are solved, not seeded.** Their fields
+  are made of losers, so `reconstructConsolation` walks forward consuming the
+  games the championship and NIT walks left behind: an open bracket first claims
+  any game involving a team it still has alive (this is how late entrants join —
+  the AFL Consolation Bracket is 4 quarterfinal losers in week 15 plus the 2
+  semifinal losers in week 16), then whatever remains is grouped by how deep its
+  teams got in the primary bracket and handed to the brackets starting that
+  week, deepest run to the lowest bracket id. That last rule is load-bearing:
+  2005 week 17 starts three different 1-game brackets at once and only
+  elimination depth tells them apart, and they award different draft picks.
+  The correctness proof is that **every scored game in the playoff weeks lands
+  in exactly one bracket** — `tests/afl-reconstructed-brackets.test.ts` asserts
+  it, so a mis-assignment surfaces as a leftover rather than as a plausible
+  wrong bracket.
+
+**Never read a finishing position out of `bracketWinnerTitle`.** The AFL wrote
+custom bracket titles for years ("#1 Pick in 2nd Round", "*NIT 3rd Place or 6th
+Place"), and MFL renders a custom title as a placement it does not mean — which
+is why the league's own results page shows 2005's Da Dangsters in 2nd when they
+finished 3rd (they won the AFL Losers Bracket; 2nd is the title-game loser).
+Only the games are trustworthy. A guard test greps the reconstruction script for
+`bracketWinnerTitle` to keep it out.
 
 Champions are pinned in `tests/afl-reconstructed-brackets.test.ts` against
 three independent sources that agree: `championship-history.json`, the awards

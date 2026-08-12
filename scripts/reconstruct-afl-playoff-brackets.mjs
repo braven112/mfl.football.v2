@@ -66,6 +66,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
+import { buildBracketKindResolver } from '../src/utils/afl-bracket-kind.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -267,6 +268,204 @@ function bracketPayload(id, rounds) {
   };
 }
 
+const gameKey = (a, b) => [a, b].sort().join('|');
+const gameId = (game) => gameKey(game.home.franchise_id, game.away.franchise_id);
+const winnerOf = (g) => (num(g.home.points) >= num(g.away.points) ? g.home : g.away).franchise_id;
+const loserOf = (g) => (num(g.home.points) >= num(g.away.points) ? g.away : g.home).franchise_id;
+
+/**
+ * Every playoff-week game from the schedule that has a score, keyed by week.
+ * Self-matchups (MFL bye rows) and unplayed games are dropped here so the
+ * consolation solver never has to reason about them.
+ */
+function scheduleGamesByWeek(schedule) {
+  const byWeek = new Map();
+  for (const entry of toArray(schedule?.schedule?.weeklySchedule)) {
+    const week = num(entry.week);
+    const games = [];
+    for (const matchup of toArray(entry.matchup)) {
+      const sides = toArray(matchup.franchise);
+      if (sides.length !== 2) continue;
+      const [a, b] = sides;
+      if (a.id === b.id) continue;
+      if (num(a.score) === 0 && num(b.score) === 0) continue;
+      games.push({
+        home: { franchise_id: a.id, points: String(a.score ?? '') },
+        away: { franchise_id: b.id, points: String(b.score ?? '') },
+      });
+    }
+    if (games.length) byWeek.set(week, games);
+  }
+  return byWeek;
+}
+
+/**
+ * Rebuild the consolation and placement brackets — the AFL Losers/Consolation
+ * bracket, the 3rd/5th/7th place games, and the deep stack of NIT losers
+ * brackets that decide draft order. Between them they cover roughly half of
+ * every season's postseason games, and they are the brackets that determine
+ * where a team actually FINISHED.
+ *
+ * They cannot be seeded from the standings the way the championship and NIT
+ * are, because their fields are made of losers. So this walks forward week by
+ * week, consuming the games the primary brackets did not:
+ *
+ *   1. Continuation — an open bracket claims any unconsumed game on its own
+ *      side involving a team it still has alive. This is what lets late
+ *      entrants join (the AFL Consolation Bracket is 6 teams: 4 quarterfinal
+ *      losers in week 15, then the 2 semifinal losers drop in for week 16).
+ *   2. Seeding — whatever is left is grouped by how deep its teams got in the
+ *      primary bracket, and handed to the brackets that start that week.
+ *
+ * Step 2's grouping is load-bearing, not cosmetic. 2005 week 17 has three
+ * different 1-game brackets starting at once ("3rd Round NIT Losers", "2nd and
+ * 3rd Round NIT Losers", "1st Rd. NIT Losers & Week 16 Losers") and nothing but
+ * elimination depth distinguishes them — they award the #3 first-rounder, the
+ * #2 second-rounder and the #3 second-rounder respectively, so guessing would
+ * hand out the wrong draft picks. Teams that survived longer in the primary
+ * bracket go to the lower-numbered (higher-placing) bracket.
+ *
+ * Deliberately NOT used anywhere: `bracketWinnerTitle`. The AFL wrote custom
+ * titles into these brackets for years and MFL renders a custom title as a
+ * finishing position it does not mean, which is why its own placement table
+ * shows 2005's Da Dangsters 2nd when they finished 3rd. Only the games are
+ * trustworthy.
+ */
+function reconstructConsolation({ schedule, primary, metas, primaryIds, kindOf }) {
+  const consumed = new Set();
+  const side = new Map(); // franchiseId -> 'nit' | 'championship'
+  const exitWeek = new Map(); // franchiseId -> week it lost in a PRIMARY bracket
+
+  for (const [id, payload] of Object.entries(primary)) {
+    const bracketSide = kindOf(id) === 'nit' ? 'nit' : 'championship';
+    for (const round of toArray(payload.playoffBracket.playoffRound)) {
+      for (const game of toArray(round.playoffGame)) {
+        consumed.add(`${round.week}:${gameId(game)}`);
+        side.set(game.home.franchise_id, bracketSide);
+        side.set(game.away.franchise_id, bracketSide);
+        exitWeek.set(loserOf(game), num(round.week));
+      }
+    }
+  }
+  if (!side.size) return { brackets: {}, unclaimed: [] };
+
+  const candidates = metas
+    .filter((m) => !primaryIds.has(String(m.id)))
+    .filter((m) => kindOf(m.id) === 'nit' || kindOf(m.id) === 'championship')
+    .filter((m) => num(m.startWeek) > 0 && num(m.startWeekGames) > 0)
+    .map((m) => ({
+      id: String(m.id),
+      side: kindOf(m.id) === 'nit' ? 'nit' : 'championship',
+      startWeek: num(m.startWeek),
+      startWeekGames: num(m.startWeekGames),
+      teamsInvolved: num(m.teamsInvolved),
+      rounds: [],
+      alive: new Set(),
+      teams: new Set(),
+    }))
+    .sort((a, b) => a.startWeek - b.startWeek || Number(a.id) - Number(b.id));
+
+  const byWeek = scheduleGamesByWeek(schedule);
+  const playoffWeeks = [...byWeek.keys()]
+    .filter((w) => w >= Math.min(...candidates.map((c) => c.startWeek)))
+    .sort((a, b) => a - b);
+
+  // Only games between two teams on the same side are postseason bracket games;
+  // in 2021-2023 the whole league still plays a regular-season week 14.
+  const availableAt = (week, wantSide) =>
+    (byWeek.get(week) ?? []).filter(
+      (g) =>
+        !consumed.has(`${week}:${gameId(g)}`) &&
+        side.get(g.home.franchise_id) === wantSide &&
+        side.get(g.away.franchise_id) === wantSide
+    );
+
+  const claim = (bracket, week, games) => {
+    const pruned = pruneRound(games);
+    if (!pruned?.length) return false;
+    bracket.alive = new Set();
+    for (const [i, game] of pruned.entries()) {
+      consumed.add(`${week}:${gameId(game)}`);
+      bracket.teams.add(game.home.franchise_id);
+      bracket.teams.add(game.away.franchise_id);
+      bracket.alive.add(winnerOf(game));
+      game.game_id = `r${week}g${i + 1}`;
+    }
+    bracket.rounds.push({
+      week: String(week),
+      playoffGame: pruned.map((g) => ({ game_id: g.game_id, home: g.home, away: g.away })),
+    });
+    return true;
+  };
+
+  for (const week of playoffWeeks) {
+    for (const bracket of candidates) bracket.claimedThisWeek = false;
+
+    for (const bracket of candidates) {
+      if (!bracket.rounds.length || !bracket.alive.size) continue;
+      const games = availableAt(week, bracket.side).filter(
+        (g) => bracket.alive.has(g.home.franchise_id) || bracket.alive.has(g.away.franchise_id)
+      );
+      if (games.length) bracket.claimedThisWeek = claim(bracket, week, games);
+    }
+
+    for (const wantSide of ['championship', 'nit']) {
+      // Brackets opening this week first, then any already-open bracket that
+      // found no continuation game and still has room for a fresh cohort.
+      // 2006's "AFL Losers Bracket Placing Games" is 4 teams playing two
+      // unconnected games a week apart — its week-17 pair are the losers of the
+      // main consolation bracket's week-16 round, not survivors of its own.
+      const claimants = [
+        ...candidates.filter(
+          (c) => c.side === wantSide && c.startWeek === week && !c.rounds.length
+        ),
+        ...candidates.filter(
+          (c) =>
+            c.side === wantSide &&
+            c.rounds.length &&
+            !c.claimedThisWeek &&
+            c.teams.size < c.teamsInvolved
+        ),
+      ];
+
+      for (const bracket of claimants) {
+        const groups = new Map();
+        for (const game of availableAt(week, wantSide)) {
+          const depth = Math.max(
+            exitWeek.get(game.home.franchise_id) ?? 0,
+            exitWeek.get(game.away.franchise_id) ?? 0
+          );
+          (groups.get(depth) ?? groups.set(depth, []).get(depth)).push(game);
+        }
+        // Deepest run in the primary bracket goes to the lowest bracket id.
+        const match = [...groups.entries()]
+          .sort((a, b) => b[0] - a[0])
+          .find(([, games]) => games.length === bracket.startWeekGames);
+        if (match) claim(bracket, week, match[1]);
+      }
+    }
+  }
+
+  const brackets = {};
+  for (const bracket of candidates) {
+    if (!bracket.rounds.length) continue;
+    // A bracket that did not end up with the number of teams MFL says it has is
+    // a mis-assignment, not a discovery. Drop it rather than publish it.
+    if (bracket.teamsInvolved && bracket.teams.size !== bracket.teamsInvolved) continue;
+    brackets[bracket.id] = bracketPayload(bracket.id, bracket.rounds);
+  }
+
+  const unclaimed = [];
+  for (const week of playoffWeeks) {
+    for (const game of byWeek.get(week) ?? []) {
+      if (consumed.has(`${week}:${gameId(game)}`)) continue;
+      if (side.get(game.home.franchise_id) !== side.get(game.away.franchise_id)) continue;
+      unclaimed.push(`w${week} ${gameId(game)}`);
+    }
+  }
+  return { brackets, unclaimed };
+}
+
 async function reconstructYear(year, knownChampion) {
   const dir = path.join(FEEDS_DIR, String(year));
   const bracketFeed = await readJson(path.join(dir, 'playoff-brackets.json'));
@@ -355,7 +554,26 @@ async function reconstructYear(year, knownChampion) {
     }
   }
 
-  return { brackets, finalGame: walked.finalGame, rounds: walked.rounds.length, nit };
+  const primaryIds = new Set(Object.keys(brackets));
+  const consolation = reconstructConsolation({
+    schedule,
+    primary: brackets,
+    metas,
+    primaryIds,
+    kindOf: buildBracketKindResolver(metas),
+  });
+  Object.assign(brackets, consolation.brackets);
+
+  return {
+    brackets,
+    finalGame: walked.finalGame,
+    rounds: walked.rounds.length,
+    nit,
+    consolation: {
+      count: Object.keys(consolation.brackets).length,
+      unclaimed: consolation.unclaimed,
+    },
+  };
 }
 
 async function main() {
@@ -383,7 +601,11 @@ async function main() {
     built++;
     log(
       `${year}: ${result.rounds} rounds, ${Object.keys(result.brackets).length} bracket(s) — champion ${result.finalGame.champion}` +
-        (result.nit ? `, NIT #${result.nit.bracketId} champion ${result.nit.champion}` : ', NIT not recovered')
+        (result.nit ? `, NIT #${result.nit.bracketId} champion ${result.nit.champion}` : ', NIT not recovered') +
+        `, ${result.consolation.count} consolation` +
+        (result.consolation.unclaimed.length
+          ? ` — UNCLAIMED: ${result.consolation.unclaimed.join(', ')}`
+          : '')
     );
   }
 

@@ -18,6 +18,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { normalizePlayoffBracket } from '../src/utils/playoffs';
+import { buildBracketKindResolver, isNitTitleBracket } from '../src/utils/afl-bracket-kind.mjs';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 import reconstructed from '../data/afl-fantasy/derived/reconstructed-playoff-brackets.json';
 import championshipHistory from '../data/afl-fantasy/championship-history.json';
@@ -37,6 +38,47 @@ const readFeed = (year: string, file: string) => {
 };
 const toArray = <T,>(v: T | T[] | null | undefined): T[] =>
   Array.isArray(v) ? v : v == null ? [] : [v];
+
+const metasFor = (year: string) =>
+  toArray<any>(readFeed(year, 'playoff-brackets.json')?.playoffBrackets?.playoffBracket);
+const kindResolverFor = (year: string) => buildBracketKindResolver(metasFor(year));
+
+const teamsIn = (payload: any) =>
+  new Set<string>(
+    toArray<any>(payload.playoffBracket.playoffRound).flatMap((r: any) =>
+      toArray<any>(r.playoffGame).flatMap((g: any) => [g.home.franchise_id, g.away.franchise_id])
+    )
+  );
+
+/**
+ * Every scored game the schedule has in a given week that a bracket could
+ * legitimately contain. Two kinds of row are excluded, both MFL artifacts that
+ * `pruneRound` drops for the same reason: a `0023 vs 0023` bye, and the stray
+ * extra matchup linking two teams already scheduled that week. `phantom` counts
+ * the latter so the exemption cannot quietly widen.
+ */
+const scheduledGames = (year: string, week: number) => {
+  const played = toArray<any>(
+    toArray<any>(readFeed(year, 'schedule.json')?.schedule?.weeklySchedule).find(
+      (w) => Number(w.week) === week
+    )?.matchup
+  )
+    .map((m) => toArray<any>(m.franchise))
+    .filter((f) => f.length === 2 && f[0].id !== f[1].id)
+    .filter((f) => Number(f[0].score) || Number(f[1].score));
+
+  const appearances = new Map<string, number>();
+  for (const f of played) {
+    for (const side of f) appearances.set(side.id, (appearances.get(side.id) ?? 0) + 1);
+  }
+  const real = played.filter(
+    (f) => appearances.get(f[0].id) === 1 || appearances.get(f[1].id) === 1
+  );
+  return {
+    games: real.map((f) => [f[0].id, f[1].id].sort().join('|')),
+    phantom: played.length - real.length,
+  };
+};
 
 describe('reconstructed AFL brackets', () => {
   const years = Object.keys(SEASONS).sort();
@@ -111,10 +153,12 @@ describe('reconstructed AFL brackets', () => {
   });
 
   // Commissioner-verified from the league's own results pages (2026-08-12).
-  // 2005 and 2008 are the load-bearing pair: the official placement table lists
-  // a DIFFERENT second place (Da Dangsters / Dan Marino's Tan Isotoners) because
-  // AFL finishing order comes from the consolation bracket, not from losing the
-  // title game. The title game itself is what these pin.
+  // These beat MFL's placement table, which cannot be trusted for the AFL: the
+  // league used custom bracketWinnerTitle labels extensively, and MFL renders a
+  // custom title as a finishing position it does not mean. That is why 2005's
+  // table shows Da Dangsters 2nd when they actually finished THIRD — they won
+  // the AFL Losers Bracket, whose winner takes 3rd place. Second place is the
+  // title-game loser, which is what these pin.
   const TITLE_GAMES: Array<[string, string, string]> = [
     ['2005', '0013', '0001'], // Cougs def. Smokane
     ['2006', '0003', '0015'], // Marriedwithchildren def. The Blunt Bros.
@@ -138,11 +182,10 @@ describe('reconstructed AFL brackets', () => {
     // final fed by separate conference brackets. Getting this backwards seeds
     // the walk with the top ONE team per conference and produced the wrong
     // 2019 champion during development.
-    // (Bracket 3 in 2005 and 6 in 2019 are the NIT — covered below.)
-    expect(Object.keys(SEASONS['2005']).sort()).toEqual(['1', '3']);
     expect(SEASONS['2005']['1'].playoffBracket.playoffRound).toHaveLength(3);
-
-    expect(Object.keys(SEASONS['2019']).sort()).toEqual(['1', '2', '3', '6']);
+    expect(SEASONS['2005']['2']).toBeTruthy(); // AFL Losers Bracket, not the AL
+    expect(SEASONS['2019']['2']).toBeTruthy(); // AL Championship
+    expect(SEASONS['2019']['3']).toBeTruthy(); // NL Championship
     const final2019 = SEASONS['2019']['1'].playoffBracket.playoffRound;
     expect(final2019).toHaveLength(1);
     expect(final2019[0].playoffGame).toHaveLength(1);
@@ -178,14 +221,14 @@ describe('reconstructed AFL brackets', () => {
     // postseason. Its field is the exact complement of the championship field,
     // which is why it needs no seeding assumption of its own.
     const nitBracketFor = (year: string) => {
-      // Located by round count, not id — the NIT is bracket 3 in 2005, 4 in
-      // 2006, 5 in 2007-2017 and 6 in 2018+, and it is the only 4-round bracket.
-      let best: any = null;
-      for (const [id, payload] of Object.entries<any>(SEASONS[year])) {
-        const rounds = payload.playoffBracket.playoffRound.length;
-        if (!best || rounds > best.rounds) best = { id, rounds, payload };
-      }
-      return best;
+      // Located by NAME — the NIT is bracket 3 in 2005, 4 in 2006, 5 in
+      // 2007-2017 and 6 in 2018+, and its own consolation brackets are named
+      // "NIT ..." too, so only the title bracket qualifies.
+      const meta = toArray<any>(
+        readFeed(year, 'playoff-brackets.json')?.playoffBrackets?.playoffBracket
+      ).find((b) => isNitTitleBracket(b?.name));
+      const payload = SEASONS[year][String(meta?.id)];
+      return { id: String(meta?.id), rounds: payload?.playoffBracket.playoffRound.length, payload };
     };
 
     it('is reconstructed for every season, with a full 16-team shape', () => {
@@ -201,26 +244,23 @@ describe('reconstructed AFL brackets', () => {
     });
 
     it('never overlaps the championship field', () => {
+      // The two tournaments partition the league's 24 franchises. Their own
+      // consolation brackets are drawn from their own side, so compare sides,
+      // not individual brackets.
       for (const year of years) {
-        const nitId = nitBracketFor(year).id;
-        const ids = (payload: any) =>
-          new Set<string>(
-            toArray<any>(payload.playoffBracket.playoffRound).flatMap((r: any) =>
-              toArray<any>(r.playoffGame).flatMap((g: any) => [
-                g.home.franchise_id,
-                g.away.franchise_id,
-              ])
-            )
-          );
-        const nitTeams = ids(SEASONS[year][nitId]);
+        const kindOf = kindResolverFor(year);
+        const sideTeams = { nit: new Set<string>(), championship: new Set<string>() };
         for (const [id, payload] of Object.entries<any>(SEASONS[year])) {
-          if (id === nitId) continue;
-          for (const team of ids(payload)) {
-            expect(
-              nitTeams.has(team),
-              `${year}: ${team} appears in both the NIT and bracket ${id}`
-            ).toBe(false);
-          }
+          const bucket = kindOf(id) === 'nit' ? 'nit' : 'championship';
+          for (const team of teamsIn(payload)) sideTeams[bucket].add(team);
+        }
+        expect(sideTeams.nit.size, `${year} NIT side`).toBe(16);
+        expect(sideTeams.championship.size, `${year} championship side`).toBe(8);
+        for (const team of sideTeams.nit) {
+          expect(
+            sideTeams.championship.has(team),
+            `${year}: ${team} plays on both sides of the postseason`
+          ).toBe(false);
         }
       }
     });
@@ -247,6 +287,112 @@ describe('reconstructed AFL brackets', () => {
         checked++;
       }
       expect(checked).toBeGreaterThan(0);
+    });
+  });
+
+  describe('the consolation and placement brackets', () => {
+    // These are the brackets that decide where a team actually FINISHED, and
+    // for the NIT side they decide draft order. They cannot be seeded from the
+    // standings — their fields are made of losers — so they are solved by
+    // consuming the games the championship and NIT walks left behind. The proof
+    // that the solve is right is that nothing is left over.
+
+    it('reconstructs every postseason bracket the season declared', () => {
+      for (const year of years) {
+        const kindOf = kindResolverFor(year);
+        const declared = metasFor(year)
+          .filter((b) => kindOf(b.id) !== 'cup')
+          .filter((b) => Number(b.startWeek) >= 13)
+          .map((b) => String(b.id))
+          .sort();
+        expect(Object.keys(SEASONS[year]).sort(), `${year} bracket coverage`).toEqual(declared);
+      }
+    });
+
+    it('assigns every playoff game to exactly one bracket, and invents none', () => {
+      // The whole method rests on this. A game claimed twice means two brackets
+      // are showing the same matchup; a game left over means a bracket is
+      // missing a round, or the wrong teams were seeded into one.
+      let phantomRows = 0;
+      for (const year of years) {
+        const claimed = new Map<string, string[]>();
+        let firstWeek = Infinity;
+        let lastWeek = 0;
+        for (const [id, payload] of Object.entries<any>(SEASONS[year])) {
+          for (const round of toArray<any>(payload.playoffBracket.playoffRound)) {
+            const week = Number(round.week);
+            firstWeek = Math.min(firstWeek, week);
+            lastWeek = Math.max(lastWeek, week);
+            for (const g of toArray<any>(round.playoffGame)) {
+              const key = `${week}:${[g.home.franchise_id, g.away.franchise_id].sort().join('|')}`;
+              claimed.set(key, [...(claimed.get(key) ?? []), id]);
+            }
+          }
+        }
+        for (const [key, ids] of claimed) {
+          expect(ids, `${year} ${key} claimed by multiple brackets`).toHaveLength(1);
+        }
+        for (let week = firstWeek; week <= lastWeek; week++) {
+          const { games, phantom } = scheduledGames(year, week);
+          phantomRows += phantom;
+          for (const pair of games) {
+            expect(
+              claimed.has(`${week}:${pair}`),
+              `${year} week ${week}: ${pair} was played but belongs to no bracket`
+            ).toBe(true);
+          }
+        }
+      }
+      // 2013, 2014 and 2015 week 14. If this number moves, a real game is being
+      // written off as an artifact — check the schedule before touching it.
+      expect(phantomRows, 'schedule rows excluded as duplicates').toBe(3);
+    });
+
+    it('gives each bracket the number of teams MFL says it has', () => {
+      for (const year of years) {
+        const metas = new Map(metasFor(year).map((b) => [String(b.id), b]));
+        for (const [id, payload] of Object.entries<any>(SEASONS[year])) {
+          const expected = Number(metas.get(id)?.teamsInvolved);
+          if (!expected) continue;
+          expect(teamsIn(payload).size, `${year} bracket ${id} (${metas.get(id)?.name})`).toBe(
+            expected
+          );
+        }
+      }
+    });
+
+    // The load-bearing pins, and the reason to trust the solve. The AFL's own
+    // results pages list Da Dangsters 2nd in 2005 and Dan Marino's Tan Isotoners
+    // 2nd in 2008 — both wrong, an artifact of MFL rendering the league's custom
+    // bracket titles as finishing positions. Each actually won the consolation
+    // bracket, i.e. finished THIRD. The reconstruction lands on exactly those
+    // two teams from the schedule alone, which is independent corroboration of
+    // both the solve and the commissioner's correction.
+    it.each([
+      ['2005', '2', '0021'], // AFL Losers Bracket — Da Dangsters
+      ['2008', '2', '0013'], // AFL Consolation Bracket — Dan Marino's Tan Isotoners
+    ])('%s bracket %s is won by %s', (year, bracketId, winner) => {
+      const final = SEASONS[year][bracketId].playoffBracket.playoffRound.at(-1).playoffGame.at(-1);
+      const won =
+        Number(final.home.points) >= Number(final.away.points) ? final.home : final.away;
+      expect(won.franchise_id).toBe(winner);
+      // ...and they are NOT the team that lost the title game, which is 2nd.
+      const title = SEASONS[year]['1'].playoffBracket.playoffRound.at(-1).playoffGame.at(-1);
+      const runnerUp =
+        Number(title.home.points) >= Number(title.away.points) ? title.away : title.home;
+      expect(runnerUp.franchise_id).not.toBe(winner);
+    });
+
+    it('never reads a finishing position out of MFL bracket titles', () => {
+      // The AFL wrote custom bracketWinnerTitle strings for years ("#1 Pick in
+      // 2nd Round", "*NIT 3rd Place or 6th Place"), and MFL renders them as
+      // placements they do not mean. The solver must key off games only.
+      const script = readFileSync(
+        path.join(ROOT, 'scripts/reconstruct-afl-playoff-brackets.mjs'),
+        'utf8'
+      );
+      const code = script.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '');
+      expect(code).not.toContain('bracketWinnerTitle');
     });
   });
 

@@ -77,7 +77,7 @@ const leagueFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/leag
 // (2003-2023). Advisory, never a substitute for real MFL data — see
 // scripts/reconstruct-afl-playoff-brackets.mjs.
 import reconstructedBracketsFile from '../../../data/afl-fantasy/derived/reconstructed-playoff-brackets.json';
-import { buildBracketKindResolver, isNitTitleBracket } from '../../utils/afl-bracket-kind';
+import { buildBracketKindResolver, isNitTitleBracket } from '../../utils/afl-bracket-kind.mjs';
 const weeklyResultsFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/weekly-results.json', {
   eager: true,
 });
@@ -344,7 +344,7 @@ const bracketMode: BracketMode = availableModes.includes(requestedMode as Bracke
   ? (requestedMode as BracketMode)
   : 'projected';
 
-// Bracket ids do not mean the same thing across eras — see afl-bracket-kind.ts.
+// Bracket ids do not mean the same thing across eras — see afl-bracket-kind.mjs.
 const bracketNameById = new Map<string, string>(
   [...(fallbackBracketMetas as any[]), ...bracketMetas]
     .filter((b: any) => b?.id && b?.name)
