@@ -1001,9 +1001,13 @@ link (`/theleague/theleague/lineup`). This is the sharper failure mode of the
 same root cause: a consumer that never calls a league-scoping filter at all
 doesn't 404 — it just silently lists every other league's pages alongside
 your own, and nothing breaks loudly enough to notice without cross-league
-testing. `QuickLinks.astro` already filtered correctly
-(`p.path.startsWith('/${league.slug}/')`); `search.astro` was written later
-and never applied the equivalent check.
+testing. `QuickLinks.astro`'s AFL branch filters correctly
+(`p.path.startsWith('/${league.slug}/')`), but only in that branch — its
+TheLeague branch takes every `visibility: 'all'` entry with no path check at
+all, so it's exposed to the same class of bug (an AFL page popular enough to
+rank in the top 8 would show up in TheLeague's homepage quick links) even
+though it hasn't been observed to trigger yet. `search.astro` had no
+filtering of any kind in either direction.
 
 **Evidence:** Fixed by importing the already-existing, already-tested
 `pathBelongsToLeague(path, slug)` helper from `src/config/footer-config.ts`
