@@ -984,3 +984,38 @@ the toggle, and pair the `inert` with `visibility: hidden` +
 state). The visibility rule is what actually covers iOS Safari below 15.4,
 where `inert` is a silent no-op; delaying it to the end of the collapse keeps
 the content on screen while the row animates shut.
+
+---
+## 2026-08-12 - A `page-directory.json` Consumer Can Skip League Filtering Entirely, Not Just Get the Prefix Wrong
+
+**Context:** `src/pages/theleague/search.astro` (TheLeague's site search / page
+directory) rendered `allPages` straight from `page-directory.json` with only an
+admin/`hidden`-tag filter — no league filter at all. Every AFL-only entry
+(`/afl-fantasy/keepers`, `/afl-fantasy/keeper-analysis`, …) showed up as a
+TheLeague search result, e.g. searching "keeper" on TheLeague surfaced the
+AFL Keeper Planner, a page with no bearing on TheLeague's rules.
+
+**Insight:** The 2026-08-09 entry above documents that directory paths are
+inconsistently prefixed and that mis-handling the prefix produces a broken
+link (`/theleague/theleague/lineup`). This is the sharper failure mode of the
+same root cause: a consumer that never calls a league-scoping filter at all
+doesn't 404 — it just silently lists every other league's pages alongside
+your own, and nothing breaks loudly enough to notice without cross-league
+testing. `QuickLinks.astro` already filtered correctly
+(`p.path.startsWith('/${league.slug}/')`); `search.astro` was written later
+and never applied the equivalent check.
+
+**Evidence:** Fixed by importing the already-existing, already-tested
+`pathBelongsToLeague(path, slug)` helper from `src/config/footer-config.ts`
+and filtering `allPages` through it before anything else touches the list
+(90 directory entries → 56 scoped to TheLeague, AFL keeper pages confirmed
+excluded). `tests/footer-links.test.ts` already exercises this helper against
+real `src/pages/` routes.
+
+**Recommendation:** Any new file that imports `page-directory.json` directly
+(grep `from '.*page-directory.json'` / `from '.*page-directory'`) must filter
+through `pathBelongsToLeague()` (or `resolveDirectoryHref`'s prefix logic) for
+its own league before rendering — don't assume a sibling component already
+did it just because the import is shared. There's no compile-time signal that
+catches an unfiltered directory read; it has to be checked by hand or with a
+cross-league smoke test of the page.

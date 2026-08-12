@@ -40,6 +40,14 @@
       "impact": "user",
       "area": "other",
       "league": "afl"
+    },
+    {
+      "date": "2026-08-12",
+      "type": "bug-fix",
+      "summary": "Search on TheLeague's site was pulling AFL-only pages into its results — type \"keeper\" looking for a rules question and you'd land on the AFL's Keeper Planner instead, a page that doesn't even apply to TheLeague's roster rules. The site directory is shared infrastructure across both leagues; TheLeague's search now only shows TheLeague's own pages.",
+      "impact": "user",
+      "area": "navigation",
+      "league": "theleague"
     }
   ]
 }
