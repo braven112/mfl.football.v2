@@ -1,0 +1,654 @@
+/**
+ * AFL playoff brackets rebuilt from schedule.json.
+ *
+ * MFL's playoffBracket export carries seeds only for 2003-2023 — no franchise
+ * ids, no points — so /afl-fantasy/playoffs rendered "Bracket data not
+ * available" for every season before 2024. The GAMES were never missing:
+ * schedule.json has every playoff week fully scored.
+ * scripts/reconstruct-afl-playoff-brackets.mjs walks them as a
+ * single-elimination tournament seeded with the conference-qualified field.
+ *
+ * These tests exist because a reconstruction that looks plausible and is wrong
+ * is worse than an empty state.
+ *
+ * A note on what is and is not independent evidence. `championship-history.json`
+ * looks like a second source but mostly is not: 18 of its 19 entries carry
+ * `source: "schedule:elimination-walk"`, meaning this same walk over this same
+ * schedule wrote them, so checking the walk against them cannot fail. The
+ * genuinely independent checks are:
+ *
+ *   - `awards-history.json` — hand-maintained, untouched by this work, and
+ *     compared by NAME because it stores each franchise's CURRENT id (2007's
+ *     champion is `0007` Chatmaster in that season's feed and `0021` in the
+ *     ledger — same team, renumbered).
+ *   - Commissioner screenshots of MFL's own bracket pages: 2005-2008 and 2019
+ *     title games, plus every bracket of 2011 and 2015.
+ *   - Conservation: every scored playoff-week game lands in exactly one
+ *     bracket, and every bracket ends with the team count MFL declares.
+ */
+import { describe, it, expect } from 'vitest';
+import { readFileSync, existsSync } from 'node:fs';
+import path from 'node:path';
+import { normalizePlayoffBracket } from '../src/utils/playoffs';
+import { buildBracketKindResolver, isNitTitleBracket } from '../src/utils/afl-bracket-kind.mjs';
+import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
+import reconstructed from '../data/afl-fantasy/derived/reconstructed-playoff-brackets.json';
+import championshipHistory from '../data/afl-fantasy/championship-history.json';
+import awardsHistory from '../data/afl-fantasy/awards-history.json';
+
+const AFL = getLeagueBySlug('afl-fantasy');
+const ROOT = path.resolve(__dirname, '..');
+const FEEDS = path.join(ROOT, AFL.dataPath, 'mfl-feeds');
+
+const SEASONS = (reconstructed as any).seasons as Record<string, any>;
+const CHAMPS = new Map(
+  ((championshipHistory as any).championships ?? []).map((c: any) => [String(c.year), c])
+);
+
+const readFeed = (year: string, file: string) => {
+  const p = path.join(FEEDS, year, file);
+  return existsSync(p) ? JSON.parse(readFileSync(p, 'utf8')) : null;
+};
+const toArray = <T,>(v: T | T[] | null | undefined): T[] =>
+  Array.isArray(v) ? v : v == null ? [] : [v];
+
+const metasFor = (year: string) =>
+  toArray<any>(readFeed(year, 'playoff-brackets.json')?.playoffBrackets?.playoffBracket);
+const kindResolverFor = (year: string) => buildBracketKindResolver(metasFor(year));
+
+const teamsIn = (payload: any) =>
+  new Set<string>(
+    toArray<any>(payload.playoffBracket.playoffRound).flatMap((r: any) =>
+      toArray<any>(r.playoffGame).flatMap((g: any) => [g.home.franchise_id, g.away.franchise_id])
+    )
+  );
+
+/**
+ * Every scored game the schedule has in a given week that a bracket could
+ * legitimately contain. Two kinds of MFL artifact are excluded: a `0023 vs
+ * 0023` bye row, and the stray extra matchup linking two teams already
+ * scheduled that week. `phantom` counts the latter — three across every
+ * season, in weeks 14 of 2013, 2014 and 2015 — so the exemption cannot quietly
+ * widen. (`pruneRound` removes 2014's and 2015's; 2013's straddles two
+ * brackets and is simply never claimed.)
+ */
+const scheduledGames = (year: string, week: number) => {
+  const played = toArray<any>(
+    toArray<any>(readFeed(year, 'schedule.json')?.schedule?.weeklySchedule).find(
+      (w) => Number(w.week) === week
+    )?.matchup
+  )
+    .map((m) => toArray<any>(m.franchise))
+    .filter((f) => f.length === 2 && f[0].id !== f[1].id)
+    .filter((f) => Number(f[0].score) || Number(f[1].score));
+
+  const appearances = new Map<string, number>();
+  for (const f of played) {
+    for (const side of f) appearances.set(side.id, (appearances.get(side.id) ?? 0) + 1);
+  }
+  const real = played.filter(
+    (f) => appearances.get(f[0].id) === 1 || appearances.get(f[1].id) === 1
+  );
+  return {
+    games: real.map((f) => [f[0].id, f[1].id].sort().join('|')),
+    phantom: played.length - real.length,
+  };
+};
+
+describe('reconstructed AFL brackets', () => {
+  const years = Object.keys(SEASONS).sort();
+
+  it('covers the seasons MFL left empty, and only those', () => {
+    expect(years.length).toBeGreaterThanOrEqual(19);
+    for (const year of years) {
+      const feed = readFeed(year, 'playoff-brackets.json');
+      // Never shadow a season MFL actually reported (2024-25).
+      expect(
+        Object.keys(feed?.brackets ?? {}).length,
+        `${year} has real MFL bracket data and must not be reconstructed`
+      ).toBe(0);
+    }
+  });
+
+  it('produces brackets the page renderer accepts', () => {
+    for (const year of years) {
+      for (const [id, payload] of Object.entries<any>(SEASONS[year])) {
+        const normalized = normalizePlayoffBracket(payload, { id });
+        expect(normalized, `${year} bracket ${id} failed to normalize`).toBeTruthy();
+        expect(normalized!.rounds.length).toBeGreaterThan(0);
+        for (const round of normalized!.rounds) {
+          expect(round.games.length).toBeGreaterThan(0);
+          for (const game of round.games) {
+            // Both sides must be concrete franchises with scores — a seed-only
+            // ref is exactly what made MFL's own export useless here.
+            expect(game.home.franchise_id).toMatch(/^\d{4}$/);
+            expect(game.away.franchise_id).toMatch(/^\d{4}$/);
+            expect(Number(game.home.points)).toBeGreaterThan(0);
+            expect(Number(game.away.points)).toBeGreaterThan(0);
+          }
+        }
+      }
+    }
+  });
+
+  it('every emitted game is a real game from that season’s schedule', () => {
+    // The whole method rests on these being actual results, not simulated ones.
+    for (const year of years) {
+      const weeks = toArray<any>(readFeed(year, 'schedule.json')?.schedule?.weeklySchedule);
+      for (const payload of Object.values<any>(SEASONS[year])) {
+        for (const round of toArray<any>(payload.playoffBracket.playoffRound)) {
+          const scheduled = toArray<any>(
+            weeks.find((w) => String(w.week) === String(round.week))?.matchup
+          ).map((m) => toArray<any>(m.franchise).map((f) => f.id).sort().join('|'));
+          for (const game of toArray<any>(round.playoffGame)) {
+            const key = [game.home.franchise_id, game.away.franchise_id].sort().join('|');
+            expect(
+              scheduled,
+              `${year} week ${round.week}: ${key} is not a real matchup`
+            ).toContain(key);
+          }
+        }
+      }
+    }
+  });
+
+  const championOf = (year: string) => {
+    const final = SEASONS[year]['1'].playoffBracket.playoffRound.at(-1).playoffGame.at(-1);
+    if (final.home.result === 'W' || final.away.result === 'W') {
+      return (final.home.result === 'W' ? final.home : final.away).franchise_id;
+    }
+    return Number(final.home.points) >= Number(final.away.points)
+      ? final.home.franchise_id
+      : final.away.franchise_id;
+  };
+
+  it('crowns the champion the league’s own record crowns', () => {
+    // Weak by construction for the 18 seasons this walk also wrote (see the
+    // file header) — it only bites on 2011, whose entry came from a screenshot.
+    // The awards-ledger check below is the independent one.
+    for (const year of years) {
+      const known = CHAMPS.get(year);
+      if (!known) continue;
+      expect(championOf(year), `${year} champion disagrees with the record`).toBe(known.champion);
+    }
+  });
+
+  it('crowns the champion the awards ledger crowns', () => {
+    // Independent: awards-history.json is hand-maintained and untouched by this
+    // work. Compared by NAME — the ledger stores each franchise's CURRENT id,
+    // so 2007's Chatmaster is 0007 in that season's feed and 0021 in the ledger.
+    const ledger = new Map(
+      (((awardsHistory as any).seasons ?? []) as any[]).map((s: any) => [String(s.year), s.awards])
+    );
+    let checked = 0;
+    for (const year of years) {
+      const award = ledger.get(year)?.['afl-championship'];
+      if (!award?.name) continue;
+      const names = new Map<string, string>(
+        toArray<any>(readFeed(year, 'league.json')?.league?.franchises?.franchise).map((f: any) => [
+          f.id,
+          String(f.name),
+        ])
+      );
+      expect(names.get(championOf(year)), `${year} champion vs awards ledger`).toBe(
+        String(award.name)
+      );
+      checked++;
+    }
+    // Every reconstructed season carries a ledger name, so this covers all of
+    // them — including 2009, 2010, 2012, 2013 and 2014, which have no
+    // commissioner screenshot and whose championship-history entries this walk
+    // wrote itself.
+    expect(checked, 'seasons cross-checked against the awards ledger').toBe(years.length);
+  });
+
+  // Commissioner-verified from the league's own results pages (2026-08-12).
+  // These beat MFL's placement table, which cannot be trusted for the AFL: the
+  // league used custom bracketWinnerTitle labels extensively, and MFL renders a
+  // custom title as a finishing position it does not mean. That is why 2005's
+  // table shows Da Dangsters 2nd when they actually finished THIRD — they won
+  // the AFL Losers Bracket, whose winner takes 3rd place. Second place is the
+  // title-game loser, which is what these pin.
+  const TITLE_GAMES: Array<[string, string, string]> = [
+    ['2005', '0013', '0001'], // Cougs def. Smokane
+    ['2006', '0003', '0015'], // Marriedwithchildren def. The Blunt Bros.
+    ['2007', '0007', '0020'], // Chatmaster def. Limp Ditkas
+    ['2008', '0023', '0006'], // No Frills def. More Cowbell
+    ['2019', '0005', '0014'], // Computer Jocks def. Thundering Herd
+  ];
+
+  it.each(TITLE_GAMES)('%s title game: %s beat %s', (year, champion, runnerUp) => {
+    const final = SEASONS[year]['1'].playoffBracket.playoffRound.at(-1).playoffGame.at(-1);
+    const [win, lose] =
+      Number(final.home.points) >= Number(final.away.points)
+        ? [final.home, final.away]
+        : [final.away, final.home];
+    expect(win.franchise_id).toBe(champion);
+    expect(lose.franchise_id).toBe(runnerUp);
+  });
+
+  it('splits the modern era into AL, NL and a final; keeps the old era whole', () => {
+    // 2003-2017 bracket 1 IS the 8-team field; 2018+ it is only the 2-team
+    // final fed by separate conference brackets. Getting this backwards seeds
+    // the walk with the top ONE team per conference and produced the wrong
+    // 2019 champion during development.
+    expect(SEASONS['2005']['1'].playoffBracket.playoffRound).toHaveLength(3);
+    expect(SEASONS['2005']['2']).toBeTruthy(); // AFL Losers Bracket, not the AL
+    expect(SEASONS['2019']['2']).toBeTruthy(); // AL Championship
+    expect(SEASONS['2019']['3']).toBeTruthy(); // NL Championship
+    const final2019 = SEASONS['2019']['1'].playoffBracket.playoffRound;
+    expect(final2019).toHaveLength(1);
+    expect(final2019[0].playoffGame).toHaveLength(1);
+  });
+
+  it('puts each conference’s teams in its own conference bracket', () => {
+    // The modern era splits the field into "AL Championship" and "NL
+    // Championship" brackets. Asserting only that both brackets EXIST would
+    // pass with the two swapped — and they were resolved by position in the
+    // feed array until 2026-08-12, which is exactly the bug that swap would be.
+    let checked = 0;
+    for (const year of years) {
+      const kindOf = kindResolverFor(year);
+      const league = readFeed(year, 'league.json')?.league;
+      const conferenceName = new Map(
+        toArray<any>(league?.conferences?.conference).map((c: any) => [String(c.id), String(c.name)])
+      );
+      const conferenceOfDivision = new Map(
+        toArray<any>(league?.divisions?.division).map((d: any) => [String(d.id), String(d.conference)])
+      );
+      const conferenceOfTeam = new Map(
+        toArray<any>(league?.franchises?.franchise).map((f: any) => [
+          f.id,
+          conferenceName.get(conferenceOfDivision.get(String(f.division)) ?? '') ?? '',
+        ])
+      );
+
+      for (const [id, payload] of Object.entries<any>(SEASONS[year])) {
+        const kind = kindOf(id);
+        if (kind !== 'al' && kind !== 'nl') continue;
+        const expected = kind === 'al' ? /^American\b/i : /^National\b/i;
+        for (const team of teamsIn(payload)) {
+          expect(
+            conferenceOfTeam.get(team),
+            `${year} bracket ${id} (${kind}) contains ${team} from the other conference`
+          ).toMatch(expected);
+        }
+        checked++;
+      }
+    }
+    // 2018-2023 each carry an AL and an NL bracket.
+    expect(checked, 'conference brackets checked').toBe(12);
+  });
+
+  it('never puts the same franchise in a round twice', () => {
+    // Weeks 14 of 2013, 2014 and 2015 each carry a stray matchup pairing two
+    // teams already scheduled that week (the three rows `phantomRows` pins
+    // below). Only 2014's and 2015's reach pruneRound — 2013's pair straddles
+    // the championship and NIT fields, so no bracket sees both teams. 2012
+    // week 14 adds an outright `0023 vs 0023` bye row, which rendered as a
+    // fifth quarterfinal with a team playing itself.
+    for (const year of years) {
+      for (const [id, payload] of Object.entries<any>(SEASONS[year])) {
+        for (const round of toArray<any>(payload.playoffBracket.playoffRound)) {
+          const seen = new Set<string>();
+          for (const game of toArray<any>(round.playoffGame)) {
+            for (const side of [game.home.franchise_id, game.away.franchise_id]) {
+              expect(
+                seen.has(side),
+                `${year} bracket ${id} week ${round.week}: ${side} plays twice`
+              ).toBe(false);
+              seen.add(side);
+            }
+          }
+        }
+      }
+    }
+    // The case that shipped broken: 2012's quarterfinals are four games.
+    expect(SEASONS['2012']['1'].playoffBracket.playoffRound[0].playoffGame).toHaveLength(4);
+  });
+
+  describe('the NIT', () => {
+    // 16 of the AFL's 24 franchises, so for most owners this IS their
+    // postseason. Its field is the exact complement of the championship field,
+    // which is why it needs no seeding assumption of its own.
+    const nitBracketFor = (year: string) => {
+      // Located by NAME — the NIT is bracket 3 in 2005, 4 in 2006, 5 in
+      // 2007-2017 and 6 in 2018+, and its own consolation brackets are named
+      // "NIT ..." too, so only the title bracket qualifies.
+      const meta = toArray<any>(
+        readFeed(year, 'playoff-brackets.json')?.playoffBrackets?.playoffBracket
+      ).find((b) => isNitTitleBracket(b?.name));
+      const payload = SEASONS[year][String(meta?.id)];
+      return { id: String(meta?.id), rounds: payload?.playoffBracket.playoffRound.length, payload };
+    };
+
+    it('is reconstructed for every season, with a full 16-team shape', () => {
+      for (const year of years) {
+        const nit = nitBracketFor(year);
+        expect(nit.rounds, `${year} has no 4-round NIT bracket`).toBe(4);
+        const games = nit.payload.playoffBracket.playoffRound.map(
+          (r: any) => r.playoffGame.length
+        );
+        // 16 teams single-elimination: 8 -> 4 -> 2 -> 1.
+        expect(games, `${year} NIT round sizes`).toEqual([8, 4, 2, 1]);
+      }
+    });
+
+    it('fills every "Nth Round Losers" bracket with that round’s actual losers', () => {
+      // These brackets state their own cohort, so they can be checked outright
+      // rather than trusted to the depth-ordering heuristic. That matters: they
+      // hand out draft picks ("#1 Pick in 1st Round of 2005 Draft"), and 2005
+      // week 17 opens three same-size brackets at once with nothing but
+      // elimination depth separating them.
+      //
+      // This asserts the outcome, not the mechanism: it passes with the
+      // declared-cohort constraint removed, because on committed data the depth
+      // heuristic already lands these correctly. It is here to catch a wrong
+      // assignment however it arises.
+      //
+      // Residual risk, deliberately recorded: the 2007+ names ("NIT Consolation
+      // 1", "... 2L") declare no round, so those brackets remain ordering-only.
+      // Flipping the sort direction in reconstructConsolation moves 14 of them
+      // (down from 18 before the constraint) and is caught only by the 2011
+      // fixtures.
+      let checked = 0;
+      for (const year of years) {
+        const kindOf = kindResolverFor(year);
+        for (const meta of metasFor(year)) {
+          const round = /^(\d+)(?:st|nd|rd|th)\s+Round\b/i.exec(String(meta.name ?? '').trim());
+          if (!round || !SEASONS[year][String(meta.id)]) continue;
+
+          // Parent is the NIT title bracket for NIT-side names, else bracket 1.
+          const parentId =
+            kindOf(meta.id) === 'nit'
+              ? String(metasFor(year).find((m) => isNitTitleBracket(m.name))?.id)
+              : '1';
+          const parent = SEASONS[year][parentId];
+          const parentRound = toArray<any>(parent?.playoffBracket?.playoffRound)[
+            Number(round[1]) - 1
+          ];
+          if (!parentRound) continue;
+
+          const expectedLosers = new Set(
+            toArray<any>(parentRound.playoffGame).map((g: any) =>
+              Number(g.home.points) >= Number(g.away.points)
+                ? g.away.franchise_id
+                : g.home.franchise_id
+            )
+          );
+          const opening = SEASONS[year][String(meta.id)].playoffBracket.playoffRound[0];
+          for (const g of toArray<any>(opening.playoffGame)) {
+            for (const team of [g.home.franchise_id, g.away.franchise_id]) {
+              expect(
+                expectedLosers.has(team),
+                `${year} "${meta.name}" opens with ${team}, who did not lose round ${round[1]}`
+              ).toBe(true);
+            }
+          }
+          checked++;
+        }
+      }
+      expect(checked, 'declared-cohort brackets checked').toBeGreaterThanOrEqual(6);
+    });
+
+    it('never overlaps the championship field', () => {
+      // The two tournaments partition the league's 24 franchises. Their own
+      // consolation brackets are drawn from their own side, so compare sides,
+      // not individual brackets.
+      for (const year of years) {
+        const kindOf = kindResolverFor(year);
+        const sideTeams = { nit: new Set<string>(), championship: new Set<string>() };
+        for (const [id, payload] of Object.entries<any>(SEASONS[year])) {
+          const bucket = kindOf(id) === 'nit' ? 'nit' : 'championship';
+          for (const team of teamsIn(payload)) sideTeams[bucket].add(team);
+        }
+        expect(sideTeams.nit.size, `${year} NIT side`).toBe(16);
+        expect(sideTeams.championship.size, `${year} championship side`).toBe(8);
+        for (const team of sideTeams.nit) {
+          expect(
+            sideTeams.championship.has(team),
+            `${year}: ${team} plays on both sides of the postseason`
+          ).toBe(false);
+        }
+      }
+    });
+
+    it('crowns the NIT champion the awards ledger crowns', () => {
+      // Compared by franchise id: the ledger stores each franchise's CURRENT
+      // name, so 2018's winner is "Pubes" in the feed and "Suh girls, one cup"
+      // in the ledger — the same team, id 0012.
+      const awards = new Map(
+        (((awardsHistory as any).seasons ?? []) as any[]).map(
+          (s: any) => [String(s.year), s.awards ?? {}]
+        )
+      );
+      let checked = 0;
+      for (const year of years) {
+        const ref = (awards.get(year) as any)?.nit;
+        if (!ref?.franchiseId) continue;
+        const final = nitBracketFor(year).payload.playoffBracket.playoffRound.at(-1).playoffGame.at(-1);
+        const winner =
+          Number(final.home.points) >= Number(final.away.points)
+            ? final.home.franchise_id
+            : final.away.franchise_id;
+        expect(winner, `${year} NIT champion`).toBe(ref.franchiseId);
+        checked++;
+      }
+      expect(checked).toBeGreaterThan(0);
+    });
+  });
+
+  describe('the consolation and placement brackets', () => {
+    // These are the brackets that decide where a team actually FINISHED, and
+    // for the NIT side they decide draft order. They cannot be seeded from the
+    // standings — their fields are made of losers — so they are solved by
+    // consuming the games the championship and NIT walks left behind. The proof
+    // that the solve is right is that nothing is left over.
+
+    it('reconstructs every postseason bracket the season declared', () => {
+      for (const year of years) {
+        const kindOf = kindResolverFor(year);
+        const declared = metasFor(year)
+          .filter((b) => kindOf(b.id) !== 'cup')
+          .filter((b) => Number(b.startWeek) >= 13)
+          .map((b) => String(b.id))
+          .sort();
+        expect(Object.keys(SEASONS[year]).sort(), `${year} bracket coverage`).toEqual(declared);
+      }
+    });
+
+    it('assigns every playoff game to exactly one bracket, and invents none', () => {
+      // The whole method rests on this. A game claimed twice means two brackets
+      // are showing the same matchup; a game left over means a bracket is
+      // missing a round, or the wrong teams were seeded into one.
+      let phantomRows = 0;
+      for (const year of years) {
+        const claimed = new Map<string, string[]>();
+        let firstWeek = Infinity;
+        let lastWeek = 0;
+        for (const [id, payload] of Object.entries<any>(SEASONS[year])) {
+          for (const round of toArray<any>(payload.playoffBracket.playoffRound)) {
+            const week = Number(round.week);
+            firstWeek = Math.min(firstWeek, week);
+            lastWeek = Math.max(lastWeek, week);
+            for (const g of toArray<any>(round.playoffGame)) {
+              const key = `${week}:${[g.home.franchise_id, g.away.franchise_id].sort().join('|')}`;
+              claimed.set(key, [...(claimed.get(key) ?? []), id]);
+            }
+          }
+        }
+        for (const [key, ids] of claimed) {
+          expect(ids, `${year} ${key} claimed by multiple brackets`).toHaveLength(1);
+        }
+        // Window from the bracket METAS and the schedule, not from the
+        // reconstruction's own output — deriving it from the output means a
+        // solver that dropped a whole leading or trailing week shrinks the
+        // window with it and is never looked for.
+        const declaredStart = Math.min(
+          ...metasFor(year)
+            .filter((m) => kindResolverFor(year)(m.id) !== 'cup')
+            .map((m) => Number(m.startWeek))
+            .filter((w) => w >= 13)
+        );
+        firstWeek = Math.min(firstWeek, declaredStart);
+        for (let week = firstWeek; week <= lastWeek; week++) {
+          const { games, phantom } = scheduledGames(year, week);
+          phantomRows += phantom;
+          for (const pair of games) {
+            expect(
+              claimed.has(`${week}:${pair}`),
+              `${year} week ${week}: ${pair} was played but belongs to no bracket`
+            ).toBe(true);
+          }
+        }
+      }
+      // 2013, 2014 and 2015 week 14. If this number moves, a real game is being
+      // written off as an artifact — check the schedule before touching it.
+      expect(phantomRows, 'schedule rows excluded as duplicates').toBe(3);
+    });
+
+    it('gives each bracket the number of teams MFL says it has', () => {
+      for (const year of years) {
+        const metas = new Map(metasFor(year).map((b) => [String(b.id), b]));
+        for (const [id, payload] of Object.entries<any>(SEASONS[year])) {
+          const expected = Number(metas.get(id)?.teamsInvolved);
+          if (!expected) continue;
+          expect(teamsIn(payload).size, `${year} bracket ${id} (${metas.get(id)?.name})`).toBe(
+            expected
+          );
+        }
+      }
+    });
+
+    // The load-bearing pins, and the reason to trust the solve. The AFL's own
+    // results pages list Da Dangsters 2nd in 2005 and Dan Marino's Tan Isotoners
+    // 2nd in 2008 — both wrong, an artifact of MFL rendering the league's custom
+    // bracket titles as finishing positions. Each actually won the consolation
+    // bracket, i.e. finished THIRD. The reconstruction lands on exactly those
+    // two teams from the schedule alone, which is independent corroboration of
+    // both the solve and the commissioner's correction.
+    it.each([
+      ['2005', '2', '0021'], // AFL Losers Bracket — Da Dangsters
+      ['2008', '2', '0013'], // AFL Consolation Bracket — Dan Marino's Tan Isotoners
+    ])('%s bracket %s is won by %s', (year, bracketId, winner) => {
+      const final = SEASONS[year][bracketId].playoffBracket.playoffRound.at(-1).playoffGame.at(-1);
+      const won =
+        Number(final.home.points) >= Number(final.away.points) ? final.home : final.away;
+      expect(won.franchise_id).toBe(winner);
+      // ...and they are NOT the team that lost the title game, which is 2nd.
+      const title = SEASONS[year]['1'].playoffBracket.playoffRound.at(-1).playoffGame.at(-1);
+      const runnerUp =
+        Number(title.home.points) >= Number(title.away.points) ? title.away : title.home;
+      expect(runnerUp.franchise_id).not.toBe(winner);
+    });
+
+    it('never reads a finishing position out of MFL bracket titles', () => {
+      // The AFL wrote custom bracketWinnerTitle strings for years ("#1 Pick in
+      // 2nd Round", "*NIT 3rd Place or 6th Place"), and MFL renders them as
+      // placements they do not mean. The solver must key off games only.
+      const script = readFileSync(
+        path.join(ROOT, 'scripts/reconstruct-afl-playoff-brackets.mjs'),
+        'utf8'
+      );
+      const code = script.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '');
+      expect(code).not.toContain('bracketWinnerTitle');
+    });
+  });
+
+  describe('2015, checked against MFL’s own bracket pages', () => {
+    // The commissioner screenshotted every 2015 bracket off myfantasyleague.com
+    // (2026-08-12) and the reconstruction matched all eight, game for game and
+    // score for score. That is the strongest evidence this method has: one full
+    // season verified end to end against the source, covering the championship,
+    // the NIT and all six consolation/placement brackets. Pinned so a future
+    // change to the solver has to reproduce a season we know cold.
+    const FINALS: Array<[string, string, string, string]> = [
+      ['1', 'AFL Championship', '0005', '191.82'], // Computer Jocks
+      ['2', 'AFL Consolation Bracket (3rd)', '0001', '121.5'], // Smokane FC
+      ['3', 'AFL 5th Place Game', '0009', '118.08'], // Vitside Mafia
+      ['4', 'AFL 7rd Place Game', '0021', '118.86'], // Chatmaster
+      ['5', 'NIT Championship', '0006', '122.23'], // Da Dangsters
+      ['6', 'NIT Consolation Game', '0015', '108.2'], // The Mariachi Ninjas
+      ['7', 'NIT Consolation 1', '0002', '112.43'], // Drunk Indians
+      ['8', 'NIT Consolation 2', '0008', '111.78'], // The Nukes
+    ];
+
+    it.each(FINALS)('bracket %s (%s) is won by %s with %s', (id, _name, winner, points) => {
+      const final = SEASONS['2015'][id].playoffBracket.playoffRound.at(-1).playoffGame.at(-1);
+      const won = Number(final.home.points) >= Number(final.away.points) ? final.home : final.away;
+      expect(won.franchise_id).toBe(winner);
+      expect(won.points).toBe(points);
+    });
+
+    it('reproduces the championship quarterfinals exactly', () => {
+      const qf = SEASONS['2015']['1'].playoffBracket.playoffRound[0].playoffGame;
+      const seen = qf
+        .map((g: any) => `${g.home.franchise_id}:${g.home.points}v${g.away.franchise_id}:${g.away.points}`)
+        .sort();
+      expect(seen).toEqual(
+        [
+          // home/away as MFL's own `isHome` flags them — the AFL schedule feed
+          // lists the away team first, so these read reversed from the seeds.
+          '0021:138.52v0016:140.94', // 8 Chatmaster (H) / 1 Incurable Chlamydia
+          '0009:136.7v0004:126.22', //  7 Vitside Mafia (H) / 2 The Dude that Abides
+          '0005:161.35v0001:98.38', //  6 Computer Jocks (H) / 3 Smokane FC
+          '0013:119.67v0017:114.88', // 5 Delirium Tremens (H) / 4 Titsburgh Feelers
+        ].sort()
+      );
+    });
+  });
+
+  describe('2011, recovered from the schedule and checked against MFL', () => {
+    // 2011's field was not top-4-per-conference, so the standings seed the walk
+    // with the wrong eight and it bails. searchChampionshipField recovers the
+    // real field by fingerprinting the bracket's shape against the schedule and
+    // requiring the known final. The commissioner then screenshotted all ten
+    // brackets off myfantasyleague.com (2026-08-12) and every game matched.
+    const FINALS: Array<[string, string, string]> = [
+      ['1', '0013', '154.94'], // AFL Championship — Delirium Tremens
+      ['2', '0010', '128.31'], // AFL Consolation (3rd) — Fullybaked
+      ['3', '0022', '156.51'], // AFL 5th Place — Way More Funner
+      ['4', '0020', '109.64'], // AFL 7rd Place — The Boondock Saints
+      ['5', '0006', '148.93'], // NIT Championship — Whitman's Wonders
+      ['6', '0014', '156.42'], // NIT Consolation Game — Thundering Herd
+      ['7', '0008', '132.65'], // NIT Consolation 1 — The Nukes
+      ['8', '0023', '160.47'], // NIT Consolation 2 — No Frills
+      ['9', '0017', '158.21'], // NIT Consolation 1L — Blitzkrieg
+      ['10', '0003', '143.3'], // NIT Consolation 2L — Level 3 Inception
+    ];
+
+    it.each(FINALS)('bracket %s is won by %s with %s', (id, winner, points) => {
+      const final = SEASONS['2011'][id].playoffBracket.playoffRound.at(-1).playoffGame.at(-1);
+      const won = Number(final.home.points) >= Number(final.away.points) ? final.home : final.away;
+      expect(won.franchise_id).toBe(winner);
+      expect(won.points).toBe(points);
+    });
+
+    it('recovers a field the standings do not describe', () => {
+      // The proof that the fallback earned its keep: two of these eight are
+      // outside the standings' top eight, so no seeding rule we can derive from
+      // the feed would have picked them.
+      const qf = SEASONS['2011']['1'].playoffBracket.playoffRound[0].playoffGame;
+      const field = new Set(qf.flatMap((g: any) => [g.home.franchise_id, g.away.franchise_id]));
+      expect([...field].sort()).toEqual(
+        ['0013', '0022', '0010', '0011', '0009', '0002', '0021', '0020'].sort()
+      );
+
+      const rows = toArray<any>(readFeed('2011', 'standings.json')?.leagueStandings?.franchise);
+      const topEight = new Set(rows.slice(0, 8).map((r) => r.id));
+      const outsiders = [...field].filter((id) => !topEight.has(id));
+      expect(outsiders.length, 'qualifiers from outside the standings top 8').toBe(2);
+    });
+  });
+
+  it('leaves 2003 and 2004 unreconstructed rather than guessing', () => {
+    // 2003 is permanently unrecoverable: the league played that season on Yahoo
+    // and only standings were entered into MFL, so not one game in any week
+    // carries a score. 2004's field, like 2011's, was not top-N-per-conference,
+    // and its champion is not on record — so searchChampionshipField has no
+    // final to disambiguate its three structurally valid candidates.
+    for (const year of ['2003', '2004']) {
+      expect(SEASONS[year], `${year} should not be reconstructed`).toBeUndefined();
+    }
+  });
+});

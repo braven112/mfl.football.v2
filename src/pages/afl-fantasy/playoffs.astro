@@ -14,6 +14,7 @@ import {
   type NormalizedBracket,
 } from '../../utils/playoffs';
 import { chooseTeamName, resolveConfigForYear, type TeamConfig } from '../../utils/team-names';
+import { extractSeasonStructure, applySeasonStructure } from '../../utils/afl-structure';
 import { getCurrentWeekForYear } from '../../utils/current-week';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 import {
@@ -68,6 +69,16 @@ const standingsFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/s
 const bracketFallbackFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/playoff-brackets.json', {
   eager: true,
 });
+// Per-season division/conference structure — see applySeasonStructure below.
+const leagueFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/league.json', {
+  eager: true,
+});
+// Brackets rebuilt from schedule.json for seasons MFL only ever gave seeds for
+// (2003-2023). Advisory, never a substitute for real MFL data — see
+// scripts/reconstruct-afl-playoff-brackets.mjs.
+import reconstructedBracketsFile from '../../../data/afl-fantasy/derived/reconstructed-playoff-brackets.json';
+import { buildBracketKindResolver, isNitTitleBracket } from '../../utils/afl-bracket-kind.mjs';
+type BracketKind = 'al' | 'nl' | 'nit' | 'cup' | 'championship';
 const weeklyResultsFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/weekly-results.json', {
   eager: true,
 });
@@ -117,10 +128,23 @@ if (!yearResolvedConfig?.teams || yearResolvedConfig.teams.length === 0) {
   return Astro.redirect(`/afl-fantasy/playoffs?year=${defaultYear}`);
 }
 
+// Overlay the SELECTED season's division/conference structure from its league
+// feed, exactly as /afl-fantasy/standings does. resolveConfigForYear handles
+// identity but NOT division membership, and the AFL re-parented its divisions:
+// 2003-2012 ran SIX divisions, three per conference (North/Central/South in the
+// American, East/West/Pacific in the National) against today's four. Without
+// this, seeding an archived season groups it by today's map — 12 conference
+// seasons between 2003 and 2016 seeded differently than the standings page for
+// the same year, which is a self-contradiction, not just a cosmetic drift.
+const seasonStructure = extractSeasonStructure(
+  leagueFeeds[`../../../data/afl-fantasy/mfl-feeds/${selectedYear}/league.json`]
+);
+const seasonConfig = applySeasonStructure(yearResolvedConfig, seasonStructure);
+
 // Get conference standings for both conferences. MFL's feed order is the
 // AFL's official final order — preserve it instead of re-sorting locally.
-const conferenceAStandings = getConferenceStandings(franchises, yearResolvedConfig, '00', { preserveFeedOrder: true });
-const conferenceBStandings = getConferenceStandings(franchises, yearResolvedConfig, '01', { preserveFeedOrder: true });
+const conferenceAStandings = getConferenceStandings(franchises, seasonConfig, '00', { preserveFeedOrder: true });
+const conferenceBStandings = getConferenceStandings(franchises, seasonConfig, '01', { preserveFeedOrder: true });
 
 const getModuleData = (mod: any) =>
   mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
@@ -264,11 +288,27 @@ const fallbackBracketIds = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
 const bracketIdsToFetch =
   bracketMetas.length > 0 ? bracketMetas.map(b => b.id) : fallbackBracketMetas.length > 0 ? fallbackBracketMetas.map((b: any) => b.id) : fallbackBracketIds;
 
+// Reconstructed brackets for this season, if any. MFL's own data always wins —
+// this is only consulted when the committed feed has no games for a bracket,
+// which is every season before 2024.
+const reconstructedForYear =
+  (reconstructedBracketsFile as any)?.seasons?.[String(selectedYear)] ?? {};
+let usedReconstructedBracket = false;
+
 const bracketDetails = await Promise.all(
   bracketIdsToFetch.map(async id => {
     const meta = bracketMetas.find(b => b.id === id);
     const fallbackRaw = fallbackBracketDetails?.[id];
-    return { id, meta, bracket: fallbackRaw ? normalizePlayoffBracket(fallbackRaw, meta) : null };
+    if (fallbackRaw) {
+      return { id, meta, bracket: normalizePlayoffBracket(fallbackRaw, meta), reconstructed: false };
+    }
+    const rebuilt = reconstructedForYear?.[id];
+    if (rebuilt) {
+      const bracket = normalizePlayoffBracket(rebuilt, meta);
+      if (bracket) usedReconstructedBracket = true;
+      return { id, meta, bracket, reconstructed: Boolean(bracket) };
+    }
+    return { id, meta, bracket: null, reconstructed: false };
   })
 );
 
@@ -305,8 +345,13 @@ const bracketMode: BracketMode = availableModes.includes(requestedMode as Bracke
   ? (requestedMode as BracketMode)
   : 'projected';
 
-const winnersSet = new Set(['1', '2', '3', '4', '5']);
-const toiletSet = new Set(['6', '7', '8', '9']);
+// Bracket ids do not mean the same thing across eras — see afl-bracket-kind.mjs.
+const bracketNameById = new Map<string, string>(
+  [...(fallbackBracketMetas as any[]), ...bracketMetas]
+    .filter((b: any) => b?.id && b?.name)
+    .map((b: any) => [String(b.id), String(b.name)])
+);
+const bracketKind = buildBracketKindResolver(fallbackBracketMetas as any[], bracketMetas);
 
 const weeksNeeded = Array.from(
   new Set(sortedBrackets.flatMap(bracket => bracket.rounds.map(round => round.week)).filter(Boolean))
@@ -340,16 +385,14 @@ weeklyResultsEntries.forEach(([week, result]) => {
 const resolvedGames = new Map<string, { home?: SeededTeam; away?: SeededTeam; winner?: SeededTeam; loser?: SeededTeam }>();
 
 const getSeedMapForBracket = (bracketId: string) => {
-  // AFL structure:
-  // Bracket 1: AFL Championship (uses top 2 from each conference)
-  // Bracket 2: AL Championship (uses AL conference seeds 1-4)
-  // Bracket 3: NL Championship (uses NL conference seeds 1-4)
-  // Brackets 4-5: Placement games (uses conference seeds)
-  // Brackets 6-9: NIT brackets (uses NIT standings)
-  if (bracketId === '2') return alSeeds; // AL Championship
-  if (bracketId === '3') return nlSeeds; // NL Championship
-  if (['6', '7', '8', '9'].includes(bracketId)) return nitSeeds; // NIT
-  return championshipSeeds; // AFL Championship and placement games
+  // Keyed off bracketKind rather than the id, because the id↔meaning mapping
+  // changed twice (see the bracketKind comment). The AFL Championship and the
+  // placement games share the championship seeds.
+  const kind = bracketKind(bracketId);
+  if (kind === 'al') return alSeeds;
+  if (kind === 'nl') return nlSeeds;
+  if (kind === 'nit') return nitSeeds;
+  return championshipSeeds;
 };
 
 const formatPlaceholder = (ref: any, slot: 'home' | 'away') => {
@@ -627,8 +670,12 @@ const buildBracketViews = () => {
 const bracketViews = buildBracketViews();
 const filteredBrackets = bracketViews.filter(bracket => {
   if (tabView === 'prizes') return false;
-  if (tabView === 'winners') return winnersSet.has(bracket.id);
-  return toiletSet.has(bracket.id) || (!winnersSet.has(bracket.id) && bracket.id !== '2');
+  const kind = bracketKind(bracket.id);
+  if (kind === 'nit') return tabView === 'toilet';
+  // The AFL Cup is an in-season competition, and MFL never exported its games.
+  // Keep it off the postseason tabs unless a season actually has them.
+  if (kind === 'cup') return tabView === 'winners' && bracket.rounds.length > 0;
+  return tabView === 'winners';
 });
 const hasBrackets = filteredBrackets.length > 0;
 
@@ -722,9 +769,18 @@ if (leagueChampGame?.winnerId) {
   });
 }
 
-// Conference Championships (Bracket 2 = AL, Bracket 3 = NL)
-const alChampGame = findFinalGame('2');
-const nlChampGame = findFinalGame('3');
+// Conference Championships. Resolved by bracket KIND, never by id: ids 2 and 3
+// are the AL/NL brackets only from 2018 on. Before that they are the AFL
+// Consolation/Losers bracket and the 5th-place game (or, in 2005, the NIT) —
+// which have no conference meaning at all, and which only became reachable
+// here once the reconstruction started populating those ids. Read as ids, 2015
+// paid a "AL Conference Championship" to its 3rd-place consolation winner.
+const conferenceFinal = (kind: BracketKind) => {
+  const id = bracketIdsToFetch.find(b => bracketKind(b) === kind);
+  return id ? findFinalGame(id) : undefined;
+};
+const alChampGame = conferenceFinal('al');
+const nlChampGame = conferenceFinal('nl');
 if (alChampGame?.winnerId) {
   playoffPrizes.push({
     label: 'AL Conference Championship',
@@ -782,8 +838,16 @@ wildCards.forEach(wildCard => {
   });
 });
 
-// NIT Champion (find which NIT bracket has a winner)
-const nitBrackets = ['6', '7', '8', '9'];
+// NIT Champion (find which NIT bracket has a winner). The title bracket is
+// named "NIT" (2003-2006) or "NIT Championship" (2007+); the rest are
+// consolation/placement rounds, so sort the real one to the front before the
+// first-winner-wins loop below.
+const nitBrackets = bracketIdsToFetch
+  .filter(id => bracketKind(id) === 'nit')
+  .sort((a, b) => {
+    const rank = (id: string) => (isNitTitleBracket(bracketNameById.get(String(id))) ? 0 : 1);
+    return rank(a) - rank(b) || Number(a) - Number(b);
+  });
 let nitChampionId: string | undefined;
 let nitFinalists: string[] = []; // Track teams still competing for NIT
 for (const bracketId of nitBrackets) {
@@ -899,7 +963,11 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
     <header class="playoff-hero">
       <div>
         <h1 class="hero-title">Playoff Brackets</h1>
-      
+        {usedReconstructedBracket && (
+          <p class="hero-note">
+            Rebuilt from the season schedule — MFL never recorded brackets this far back.
+          </p>
+        )}
       </div>
       <div class="view-selector">
         <button class={`view-tab ${tabView === 'winners' ? 'active' : ''}`} data-view="winners" title="Winners">
@@ -1214,8 +1282,15 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
               {/* Championship game below earlier rounds (if 4+ rounds) */}
               {bracket.roundsView.length >= 4 && (
                 <div class="championship-highlight">
-                  <h2 class="bracket-title">NIT Championship</h2>
-                  <p class="round-label">Week 18</p>
+                  {/* Title and week come from the bracket, not a constant: this
+                      block used to say "NIT Championship / Week 18" for any
+                      4-round bracket, which is wrong for 2003-2006 (the bracket
+                      is named just "NIT") and for every reconstructed season
+                      (their finals are week 17). */}
+                  <h2 class="bracket-title">{bracket.name || `Bracket ${bracket.id}`}</h2>
+                  <p class="round-label">
+                    Week {bracket.rounds[bracket.rounds.length - 1]?.week ?? '?'}
+                  </p>
                   <div class="championship-game">
                     {bracket.roundsView[bracket.roundsView.length - 1].map(game => {
                       const homeId = game.home.team?.id || '';
@@ -1364,6 +1439,17 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
     color: var(--content-text-muted, #475569);
     max-width: 720px;
     font-size: 0.98rem;
+  }
+
+  /* Shown only when a bracket came from the schedule reconstruction rather
+     than MFL's own export — an inference should never be silently presented
+     as the league's record. */
+  .hero-note {
+    margin: 0.35rem 0 0;
+    color: var(--content-text-muted, #475569);
+    max-width: 720px;
+    font-size: 0.85rem;
+    font-style: italic;
   }
 
   .season-row {

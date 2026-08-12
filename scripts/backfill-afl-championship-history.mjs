@@ -183,6 +183,66 @@ function extractFromWeeklyResults(weeklyResults, championshipWeek) {
   return null;
 }
 
+/**
+ * Recover champion + runner-up by walking the season's schedule.
+ *
+ * This is the path that works for 2003-2023, where MFL's playoffBracket export
+ * carries seeds only — no franchise ids, no points. The GAMES were there the
+ * whole time: schedule.json has every playoff week fully scored. The cached
+ * weekly-results.json cannot substitute (it is a compact {week, scores} shape
+ * with no isPlayoff flags and empty score maps for these years).
+ *
+ * Why an elimination walk rather than "who won in the final week": the NIT runs
+ * concurrently on the same weeks, and its champion also wins three straight. The
+ * two are only separable by knowing WHO was in the championship field, which is
+ * the top `teamsInvolved / 2` of each conference by that season's own standings
+ * order — hence the seeded `field`.
+ *
+ * @param {object} schedule  Parsed schedule.json.
+ * @param {Set<string>} field  Franchise ids in the championship bracket.
+ * @param {number} startWeek  First playoff week.
+ * @param {number} finalWeek  Week the title game is played.
+ */
+function extractFromSchedule(schedule, field, startWeek, finalWeek) {
+  if (!field?.size || !startWeek || !finalWeek || finalWeek < startWeek) return null;
+  const weeks = toArray(schedule?.schedule?.weeklySchedule);
+  let alive = new Set(field);
+  let finalGame = null;
+
+  for (let week = startWeek; week <= finalWeek; week++) {
+    const entry = weeks.find((w) => parseNum(w.week) === week);
+    if (!entry) return null;
+    const survivors = new Set();
+    let played = 0;
+
+    for (const matchup of toArray(entry.matchup)) {
+      const franchises = toArray(matchup.franchise);
+      if (franchises.length !== 2) continue;
+      const [a, b] = franchises;
+      // Both sides must still be alive in this bracket — that is what keeps
+      // NIT and consolation games out of the walk.
+      if (!alive.has(a.id) || !alive.has(b.id)) continue;
+      const aPts = parseNum(a.score);
+      const bPts = parseNum(b.score);
+      if (aPts === 0 && bPts === 0) continue; // unplayed
+      const winner = aPts >= bPts ? a : b;
+      const loser = aPts >= bPts ? b : a;
+      survivors.add(winner.id);
+      played++;
+      if (week === finalWeek) finalGame = { champion: winner.id, runnerUp: loser.id };
+    }
+
+    if (!played) return null; // bracket didn't run this week — shape is not what we assumed
+    alive = survivors;
+  }
+
+  // A clean single-elimination walk ends with exactly one team standing.
+  if (!finalGame || alive.size !== 1 || alive.values().next().value !== finalGame.champion) {
+    return null;
+  }
+  return { ...finalGame, source: 'schedule:elimination-walk' };
+}
+
 async function loadFranchiseNames(year) {
   const leaguePath = path.join(FEEDS_DIR, String(year), 'league.json');
   const data = await readJson(leaguePath);
@@ -194,15 +254,34 @@ async function loadFranchiseNames(year) {
   return map;
 }
 
-// Cross-check that the cached year actually corresponds to AFL by comparing
-// the cached fetch.meta.json's leagueId against the canonical map.
+// Cross-check that the cached year actually corresponds to AFL.
+//
+// Ask the FEED, not the sidecar. league.json carries the league's own id, which
+// is the same thing compute-afl-awards.mjs#isGenuineAfl validates against and
+// for the same reason: fetch.meta.json is written by the fetcher and has gone
+// stale on this repo's committed caches. It records TheLeague's ids (48815 for
+// 2011-2012, 13522 for 2016-2023) beside feeds whose league.json correctly says
+// 36377 / 26792 / 19621 and whose name is "American Football League". Trusting
+// the sidecar rejected 21 seasons of perfectly good data and is why $gaps has
+// listed 2003-2023 as un-backfillable while the champions were sitting on disk.
+//
+// fetch.meta.json is still consulted as a fallback for a year whose league.json
+// is missing or has no id — a wrong-league sidecar is weak evidence, but it's
+// better than none when there's nothing else to check.
 async function detectCacheLeagueIdMismatch(year, hostMap) {
   const expected = hostMap.years[String(year)]?.leagueId;
   if (!expected) return null;
+
+  const league = await readJson(path.join(FEEDS_DIR, String(year), 'league.json'));
+  const feedId = league?.league?.id ? String(league.league.id) : null;
+  if (feedId) {
+    return feedId === String(expected) ? null : { cached: feedId, expected, source: 'league.json' };
+  }
+
   const meta = await readJson(path.join(FEEDS_DIR, String(year), 'fetch.meta.json'));
   const cached = meta?.leagueId;
-  if (cached && cached !== expected) {
-    return { cached, expected };
+  if (cached && String(cached) !== String(expected)) {
+    return { cached, expected, source: 'fetch.meta.json (no league.json to check)' };
   }
   return null;
 }
@@ -272,9 +351,119 @@ async function backfillYearOffline(year) {
     if (result) return { year, ...result };
   }
   // weekly-results.json on disk is the compact form (week+scores) — not
-  // useful for championship participants because it lacks isPlayoff. Fall
-  // through.
-  return null;
+  // useful for championship participants because it lacks isPlayoff.
+  //
+  // Fall back to walking the schedule, which is the only on-disk source with
+  // real playoff results for 2003-2023.
+  const shape = describePlayoffShape(bracketCached);
+  if (!shape) return null;
+  const { startWeek, finalWeek, teams } = shape;
+
+  const field = await championshipField(year, teams);
+  if (!field) return null;
+
+  const schedule = await readJson(path.join(yearDir, 'schedule.json'));
+  if (!schedule) return null;
+
+  const walked = extractFromSchedule(schedule, field, startWeek, finalWeek);
+  return walked ? { year, ...walked } : null;
+}
+
+/**
+ * Work out the shape of a season's championship playoff — which weeks it spans
+ * and how many teams are in it.
+ *
+ * Bracket "1" is the title in every AFL season on record, but it does NOT
+ * describe the same thing across eras, and reading it naively gets the wrong
+ * answer rather than no answer:
+ *
+ *   2003-2017  bracket 1 IS the whole field — 8 teams, week 14, three rounds.
+ *   2018+      bracket 1 is only the 2-team FINAL. The field lives in the
+ *              separate "AL Championship" and "NL Championship" brackets
+ *              (4 teams each), whose winners meet in bracket 1.
+ *
+ * Treating 2019's bracket 1 as the field means seeding the walk with the top
+ * ONE team per conference — i.e. assuming the top seed always wins its
+ * conference bracket. It doesn't: that produced "No Soup For You" for 2019
+ * where the league's own record says Computer Jocks.
+ *
+ * Never derive the final week from `startWeekGames` — that counts games in
+ * round one, not rounds, so an 8-team bracket starting week 14 computes to
+ * week 17 when its final is week 16.
+ */
+function describePlayoffShape(bracketCached) {
+  const brackets = toArray(bracketCached?.playoffBrackets?.playoffBracket);
+  const title = brackets.find((b) => String(b?.id) === '1');
+  if (!title) return null;
+
+  const titleWeek = parseNum(title.startWeek);
+  const titleTeams = parseNum(title.teamsInvolved);
+  if (!titleWeek || titleTeams < 2) return null;
+
+  // Modern era: the title bracket is just the final, so find the conference
+  // brackets that feed it and start the walk there.
+  if (titleTeams === 2) {
+    const conferenceBrackets = brackets.filter((b) =>
+      /^(AL|NL)\s+Championship$/i.test(String(b?.name ?? '').trim())
+    );
+    if (conferenceBrackets.length === 2) {
+      const weeks = conferenceBrackets.map((b) => parseNum(b.startWeek)).filter(Boolean);
+      const teams = conferenceBrackets.reduce((sum, b) => sum + parseNum(b.teamsInvolved), 0);
+      if (weeks.length === 2 && teams >= 4) {
+        return { startWeek: Math.min(...weeks), finalWeek: titleWeek, teams };
+      }
+    }
+    // A 2-team title bracket with no conference brackets to feed it is a shape
+    // we don't understand — bail rather than guess at the field.
+    return null;
+  }
+
+  const rounds = Math.max(1, Math.ceil(Math.log2(titleTeams)));
+  return { startWeek: titleWeek, finalWeek: titleWeek + rounds - 1, teams: titleTeams };
+}
+
+/**
+ * The `teams` franchises that actually made the championship bracket: the top
+ * `teams / 2` of each conference in that season's own standings order.
+ *
+ * Uses the season's own division/conference structure — today's four-division
+ * map would pick the wrong teams for 2003-2012, when the AFL ran six divisions
+ * across the same two conferences.
+ */
+async function championshipField(year, teams) {
+  const yearDir = path.join(FEEDS_DIR, String(year));
+  const league = await readJson(path.join(yearDir, 'league.json'));
+  const standings = await readJson(path.join(yearDir, 'standings.json'));
+  const rows = toArray(standings?.leagueStandings?.franchise);
+  if (!league?.league || !rows.length) return null;
+
+  const conferenceOfDivision = new Map();
+  for (const division of toArray(league.league.divisions?.division)) {
+    if (division?.id != null && division.conference != null) {
+      conferenceOfDivision.set(String(division.id), String(division.conference));
+    }
+  }
+  const conferenceOfFranchise = new Map();
+  for (const franchise of toArray(league.league.franchises?.franchise)) {
+    const conference = conferenceOfDivision.get(String(franchise?.division));
+    if (franchise?.id && conference) conferenceOfFranchise.set(franchise.id, conference);
+  }
+  if (!conferenceOfFranchise.size) return null;
+
+  // MFL's standings rows are already in the league's official final order, so
+  // "top N of a conference" is just the first N rows belonging to it.
+  const perConference = Math.max(1, Math.floor(teams / 2));
+  const counts = new Map();
+  const field = new Set();
+  for (const row of rows) {
+    const conference = conferenceOfFranchise.get(row.id);
+    if (!conference) continue;
+    const seen = counts.get(conference) ?? 0;
+    if (seen >= perConference) continue;
+    counts.set(conference, seen + 1);
+    field.add(row.id);
+  }
+  return field.size === teams ? field : null;
 }
 
 // --- Driver -------------------------------------------------------------------
@@ -314,7 +503,7 @@ async function main() {
     const mismatch = await detectCacheLeagueIdMismatch(year, hostMap);
     if (mismatch) {
       warn(
-        `${year} cached fetch.meta.json says leagueId=${mismatch.cached} but expected ${mismatch.expected} — cache is suspect, will not use offline`
+        `${year} ${mismatch.source} says leagueId=${mismatch.cached} but expected ${mismatch.expected} — cache is suspect, will not use offline`
       );
     }
 
