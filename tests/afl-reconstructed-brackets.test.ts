@@ -99,7 +99,7 @@ describe('reconstructed AFL brackets', () => {
   const years = Object.keys(SEASONS).sort();
 
   it('covers the seasons MFL left empty, and only those', () => {
-    expect(years.length).toBeGreaterThanOrEqual(19);
+    expect(years.length).toBeGreaterThanOrEqual(20);
     for (const year of years) {
       const feed = readFeed(year, 'playoff-brackets.json');
       // Never shadow a season MFL actually reported (2024-25).
@@ -641,14 +641,44 @@ describe('reconstructed AFL brackets', () => {
     });
   });
 
-  it('leaves 2003 and 2004 unreconstructed rather than guessing', () => {
-    // 2003 is permanently unrecoverable: the league played that season on Yahoo
-    // and only standings were entered into MFL, so not one game in any week
-    // carries a score. 2004's field, like 2011's, was not top-N-per-conference,
-    // and its champion is not on record — so searchChampionshipField has no
-    // final to disambiguate its three structurally valid candidates.
-    for (const year of ['2003', '2004']) {
-      expect(SEASONS[year], `${year} should not be reconstructed`).toBeUndefined();
-    }
+  describe('2004, recovered from the NIT field up', () => {
+    // Like 2011, 2004's championship field was not top-N-per-conference, so the
+    // standings seed the walk with the wrong eight. The commissioner's NIT and
+    // AFL Losers Bracket screenshots (2026-08-12) settled it without ever
+    // showing the championship bracket: the 16 NIT teams are the exact
+    // complement of the championship field, and the 6-team losers bracket
+    // accounts for six of the remaining eight, leaving only the two finalists.
+    // MFL's own `result` flag named the winner.
+    it('fields the complement of the NIT', () => {
+      const qf = SEASONS['2004']['1'].playoffBracket.playoffRound[0].playoffGame;
+      const field = new Set(qf.flatMap((g: any) => [g.home.franchise_id, g.away.franchise_id]));
+      expect([...field].sort()).toEqual(
+        ['0002', '0004', '0006', '0012', '0013', '0015', '0017', '0020'].sort()
+      );
+      const nitId = String(metasFor('2004').find((m) => isNitTitleBracket(m.name))?.id);
+      for (const team of teamsIn(SEASONS['2004'][nitId])) {
+        expect(field.has(team), `${team} plays on both sides of 2004`).toBe(false);
+      }
+    });
+
+    // Verified game-for-game against the screenshots: all 15 NIT games and all
+    // 5 AFL Losers Bracket games.
+    it.each([
+      ['1', '0017', '133.6'], // AFL Championships — Bukkake Warriors
+      ['2', '0006', '118.06'], // AFL Losers Bracket (3rd) — Taco Hell
+      ['3', '0007', '132.84'], // NIT — Chatmaster
+    ])('bracket %s is won by %s with %s', (id, winner, points) => {
+      const final = SEASONS['2004'][id].playoffBracket.playoffRound.at(-1).playoffGame.at(-1);
+      const won = Number(final.home.points) >= Number(final.away.points) ? final.home : final.away;
+      expect(won.franchise_id).toBe(winner);
+      expect(won.points).toBe(points);
+    });
+  });
+
+  it('leaves 2003 unreconstructed rather than guessing', () => {
+    // Permanently unrecoverable: the league played that season on Yahoo and only
+    // standings were entered into MFL, so not one game in any week carries a
+    // score. No screenshot can fix this one.
+    expect(SEASONS['2003'], '2003 should not be reconstructed').toBeUndefined();
   });
 });
