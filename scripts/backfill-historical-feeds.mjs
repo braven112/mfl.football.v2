@@ -159,10 +159,25 @@ const SIMPLE_ENDPOINTS = [
   { type: 'playoffBrackets', file: 'playoff-brackets.json' },
 ];
 
+// MFL's schedule export is owner-gated: "Private league access restricted to
+// league owners." Without an APIKEY a private league's archived seasons return
+// the week skeleton with the matchups stripped — `{"week":"1"}` and no matchup
+// key — which looks exactly like "MFL no longer has this data" and is why the
+// AFL's 2007-2019 regular season appeared lost. Same env spelling as
+// fetch-mfl-feeds.mjs / fetch-trade-bait.mjs; both are accepted because the
+// workflows disagree about which one they export.
+const getNonEmpty = (v) => (typeof v === 'string' && v.trim() ? v.trim() : null);
+const MFL_API_KEY =
+  getNonEmpty(process.env.MFL_APIKEY) || getNonEmpty(process.env.MFL_API_KEY);
+
 function buildUrl(host, year, leagueId, type, extra) {
   const base = `https://${host}/${year}/export?TYPE=${type}&L=${leagueId}&JSON=1`;
-  return extra ? `${base}&${extra}` : base;
+  const withExtra = extra ? `${base}&${extra}` : base;
+  return MFL_API_KEY ? `${withExtra}&APIKEY=${encodeURIComponent(MFL_API_KEY)}` : withExtra;
 }
+
+// Workflow logs are visible to anyone who can see the repo — never print a key.
+const redactUrl = (url) => String(url).replace(/APIKEY=[^&]+/, 'APIKEY=***');
 
 // Attempt one endpoint, return outcome string + whether anything was written.
 // `isComplete` / `countPairs` (optional) let an endpoint declare what "actually
@@ -363,6 +378,12 @@ const yearList = historyEntries
 
 console.log(`Found ${yearList.length} historical league entries.`);
 console.log(`Mode: ${DRY_RUN ? 'dry-run' : FORCE ? 'force-refetch' : 'fill gaps only'}`);
+console.log(
+  MFL_API_KEY
+    ? 'Auth: APIKEY present — private-league schedules should resolve.'
+    : 'Auth: NO APIKEY. MFL restricts private-league schedule exports to owners, ' +
+      'so archived seasons will return weeks with no matchups. Set MFL_APIKEY to fix.'
+);
 
 let totalWritten = 0;
 let totalSkipped = 0;

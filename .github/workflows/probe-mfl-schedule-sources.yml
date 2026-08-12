@@ -56,6 +56,9 @@ jobs:
         uses: ./.github/actions/setup
 
       - name: Probe every known MFL surface for pairings
+        env:
+          MFL_APIKEY: ${{ secrets.MFL_APIKEY }}
+          MFL_API_KEY: ${{ secrets.MFL_API_KEY }}
         run: |
           node ./scripts/probe-mfl-schedule-sources.mjs \
             --league=${{ inputs.league }} \

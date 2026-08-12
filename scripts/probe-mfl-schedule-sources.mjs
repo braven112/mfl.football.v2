@@ -66,12 +66,32 @@ const LID = entry.leagueId;
 const UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
+// MFL's own docs for TYPE=schedule: "Private league access restricted to league
+// owners." An unauthenticated request against a private league's archive
+// returns the week skeleton with matchups stripped, which is indistinguishable
+// from the data being gone. Probing with AND without the key is the whole point
+// — the difference between the two rows IS the diagnosis.
+const getNonEmpty = (v) => (typeof v === 'string' && v.trim() ? v.trim() : null);
+const MFL_API_KEY =
+  getNonEmpty(process.env.MFL_APIKEY) || getNonEmpty(process.env.MFL_API_KEY);
+const KEY_QS = MFL_API_KEY ? `&APIKEY=${encodeURIComponent(MFL_API_KEY)}` : '';
+
 const exp = (qs) => `https://${HOST}/${YEAR}/export?L=${LID}&${qs}`;
+const expAuth = (qs) => `${exp(qs)}${KEY_QS}`;
+
+// Never print a key: workflow logs are visible to anyone who can read the repo.
+const redact = (url) => String(url).replace(/APIKEY=[^&]+/, 'APIKEY=***');
 
 const CANDIDATES = [
   // --- baselines: what we already fetch, to prove the probe agrees with reality
   { name: 'schedule (season, JSON)', url: exp('TYPE=schedule&JSON=1') },
   { name: 'schedule (week, JSON)', url: exp(`TYPE=schedule&JSON=1&W=${WEEK}`) },
+
+  // --- hypothesis 0 (most likely): the league is private and we never sent a key
+  { name: 'schedule (season, JSON, APIKEY)', url: expAuth('TYPE=schedule&JSON=1') },
+  { name: 'schedule (week, JSON, APIKEY)', url: expAuth(`TYPE=schedule&JSON=1&W=${WEEK}`) },
+  { name: 'schedule (week, XML, APIKEY)', url: expAuth(`TYPE=schedule&W=${WEEK}`) },
+  { name: 'weeklyResults (week, JSON, APIKEY)', url: expAuth(`TYPE=weeklyResults&JSON=1&W=${WEEK}`) },
 
   // --- hypothesis 1: display-config gating, same as leagueStandings/ALL=1
   { name: 'schedule (season, JSON, ALL=1)', url: exp('TYPE=schedule&JSON=1&ALL=1') },
@@ -140,7 +160,13 @@ function countPairings(body, contentType) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-console.log(`Probing ${SLUG} ${YEAR} week ${WEEK} — host=${HOST} L=${LID}\n`);
+console.log(`Probing ${SLUG} ${YEAR} week ${WEEK} — host=${HOST} L=${LID}`);
+console.log(
+  MFL_API_KEY
+    ? 'APIKEY present — authenticated rows are live.\n'
+    : 'NO APIKEY set: the authenticated rows below are duplicates of the ' +
+      'unauthenticated ones and prove nothing. Set MFL_APIKEY.\n'
+);
 
 const rows = [];
 for (const c of CANDIDATES) {

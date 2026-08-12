@@ -65,7 +65,13 @@ jobs:
       - name: Snapshot head-to-head coverage (before)
         run: node ./scripts/report-h2h-coverage.mjs --league=${{ inputs.league }} --json > /tmp/h2h-before.json
 
+      # MFL restricts private-league schedule exports to league owners. Without
+      # the key, archived seasons return weeks with the matchups stripped, which
+      # reads as "MFL doesn't have it" — that is what stalled the AFL backfill.
       - name: Backfill historical feeds
+        env:
+          MFL_APIKEY: ${{ secrets.MFL_APIKEY }}
+          MFL_API_KEY: ${{ secrets.MFL_API_KEY }}
         run: |
           if [ "${{ inputs.force }}" = "true" ]; then
             node ./scripts/backfill-historical-feeds.mjs --league=${{ inputs.league }} --force
@@ -84,6 +90,9 @@ jobs:
       # than concluding the data is gone.
       - name: Probe other MFL surfaces (only when nothing was recovered)
         if: steps.coverage.outputs.recovered == 'false'
+        env:
+          MFL_APIKEY: ${{ secrets.MFL_APIKEY }}
+          MFL_API_KEY: ${{ secrets.MFL_API_KEY }}
         run: |
           for spec in "${{ inputs.league }}:2016:5" "${{ inputs.league }}:2010:5"; do
             IFS=':' read -r lg yr wk <<< "$spec"
