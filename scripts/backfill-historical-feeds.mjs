@@ -210,6 +210,68 @@ async function attemptEndpoint(
   }
 }
 
+// Last resort for a schedule MFL will not serve whole.
+//
+// The season-wide `TYPE=schedule` call is the ONLY one we have ever made, and
+// for AFL 2007-2019 it answers with bare `{"week":"1"}` elements — no matchup
+// key at all — for every regular-season week. Those pairings exist nowhere else
+// in any committed feed, and they cannot be reconstructed: AFL teams play more
+// than one game in some weeks (the in-season Cup), so there is no one-game-per-
+// week matching to solve and no conservation law to pin a unique answer.
+//
+// `TYPE=schedule&W=n` is a different query against the same archive, and MFL's
+// per-week and season-wide exports are not always backed by the same stored
+// record. It costs one request per missing week and is the only untried way to
+// get the real games rather than invented ones. If it returns nothing either,
+// the data is genuinely gone and we say so.
+async function repairScheduleByWeek(host, year, leagueId, dest, maxWeek = 17) {
+  const existing = readJson(dest);
+  const perWeek = schedulePairsPerWeek(existing);
+  const missing = [];
+  const lastPopulated = perWeek.findLastIndex((n) => n > 0);
+  for (let i = 0; i < Math.max(perWeek.length, maxWeek); i++) {
+    // Only chase weeks before the last populated one — trailing empties are a
+    // season in progress, not a hole.
+    if (i < lastPopulated && (perWeek[i] ?? 0) === 0) missing.push(i + 1);
+  }
+  if (missing.length === 0) return { skipped: true, reason: 'no week-level gaps' };
+  if (DRY_RUN) return { dryRun: true, weeksToFetch: missing.length };
+
+  const byWeek = new Map(
+    toArray(existing?.schedule?.weeklySchedule).map((wk) => [String(wk.week), wk])
+  );
+  let recovered = 0;
+  for (const week of missing) {
+    try {
+      const result = await fetchJson(buildUrl(host, year, leagueId, 'schedule', `W=${week}`));
+      if (!result.ok || isInvalidFeed(result.data)) continue;
+      const fetched = toArray(result.data?.schedule?.weeklySchedule).find(
+        (wk) => String(wk.week) === String(week)
+      );
+      const pairs = toArray(fetched?.matchup).filter((m) => toArray(m.franchise).length >= 2);
+      if (pairs.length === 0) continue;
+      byWeek.set(String(week), fetched);
+      recovered += pairs.length;
+    } catch {
+      // A single bad week must not abort the rest.
+    }
+    await sleep(500);
+  }
+
+  if (recovered === 0) {
+    return { skipped: true, reason: `per-week schedule empty for ${missing.length} week(s) — MFL has no record` };
+  }
+  const merged = {
+    ...(existing ?? {}),
+    schedule: {
+      ...(existing?.schedule ?? {}),
+      weeklySchedule: [...byWeek.values()].sort((a, b) => Number(a.week) - Number(b.week)),
+    },
+  };
+  fs.writeFileSync(dest, JSON.stringify(merged, null, 2));
+  return { written: true, recovered, weeks: missing.length };
+}
+
 // Fetch all 17 weeks of weekly results and produce both raw and normalized
 // outputs, matching the format produced by scripts/fetch-mfl-feeds.mjs.
 async function fetchWeeklyResults(host, year, leagueId, yearDir) {
@@ -323,6 +385,23 @@ for (const entry of yearList) {
     else if (outcome.dryRun) { console.log(`  [dry-run] would fetch ${type} → ${file}`); totalDryRun++; }
     else if (outcome.written) { console.log(`  ✓ ${type} → ${file} (${outcome.bytes} bytes)`); totalWritten++; }
     else if (outcome.error) { console.log(`  ✗ ${type} → ${outcome.error}`); totalErrors++; }
+
+    // A season-wide schedule that came back with interior holes gets one more
+    // chance, week by week. These are the head-to-head pairings the rivalry
+    // pages are built from, and nothing else can supply them.
+    if (type === 'schedule') {
+      const repair = await repairScheduleByWeek(entry.host, entry.year, entry.leagueId, dest);
+      if (repair.written) {
+        console.log(`  ✓ schedule (per-week) → recovered ${repair.recovered} matchups across ${repair.weeks} week(s)`);
+        totalWritten++;
+      } else if (repair.dryRun) {
+        console.log(`  [dry-run] would fetch ${repair.weeksToFetch} individual schedule week(s)`);
+        totalDryRun++;
+      } else if (repair.skipped && repair.reason !== 'no week-level gaps') {
+        console.log(`  ◦ schedule (per-week) — ${repair.reason}`);
+        totalSkipped++;
+      }
+    }
   }
 
   // Weekly results: special-cased because it needs 17 separate fetches.
