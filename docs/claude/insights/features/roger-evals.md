@@ -122,3 +122,52 @@ presence on date-sensitive cases.
 **Recommendation:** When adding a field or rule to the fixture meta-test, add
 the matching guard to `promoteCases()` in the same commit. They're two halves
 of one contract.
+
+## 2026-08-13 — A `mustNotMatch` on the wrong answer can fire on a RIGHT answer
+
+**Context:** Writing regression cases for two rules bugs — taxi/IR players
+counting toward the 20-player minimum, and the 5th-year option paying the top
+10 positional average (Rookie Extensions pay top 5).
+
+**Insight:** The obvious deterministic guard for "Roger said no, the answer is
+yes" is `mustNotMatch: ["does not count"]`, and for the taxi case that's safe:
+no correct answer needs the phrase. But the same instinct applied to the
+team-option case — `mustNotMatch: ["top 5"]` — would fail the *best* answers.
+The two rules are adjacent and mutually exclusive, so a genuinely good answer
+contrasts them explicitly ("top 10, not the top 5 the extension formula uses"),
+and the guard cannot tell that from a cross-wired one. `mustNotMatch` matches
+substrings, not claims.
+
+**Evidence:** `team-option-salary-top10` deliberately ships with only
+`mustMatch: ["top\\s*(10|ten)"]` plus `judge: true`, while
+`taxi-counts-toward-minimum` and `ir-counts-toward-minimum` carry
+`mustNotMatch` guards on the "does not count" phrasings that actually shipped.
+
+**Recommendation:** Before adding a `mustNotMatch`, ask whether a *correct*
+answer might quote the wrong value to contrast against it. If yes, drop the
+regex and push the discrimination into the judge — and write the `reference`
+so it names the confusable wrong answer ("do not confuse this with the Rookie
+Extension formula, which uses the top 5"). A judge told what the trap is
+catches cross-wiring; a judge told only the right answer tends to accept any
+response containing it.
+
+## 2026-08-13 — The "I don't see that in the constitution" instruction only covers silence
+
+**Context:** Both August 2026 rules bugs were Roger asserting a confident wrong
+ruling, despite a prompt that says to answer ONLY from the constitution and to
+say "I don't see that in the constitution" otherwise.
+
+**Insight:** That instruction is read as a test for *absence*, and neither bug
+was an absence. The 20-player rule was present but ambiguous — it said "20
+players under contract" without stating whether taxi/IR counted — so the model
+resolved the ambiguity by reasoning from the adjacent 22-man roster limit and
+produced a fluent, well-argued, wrong answer. Ambiguity does not trip the
+honesty guard; it invites inference. This means an eval that only probes for
+*missing* rules (the `not-in-constitution` category) cannot surface this class
+at all.
+
+**Recommendation:** When triaging a Roger bug, first classify it: wrong recall
+(fix the answer), absence (fix the refusal), or ambiguity (fix the rulebook).
+Only the third is a constitution edit, and it's the one that looks most like a
+model failure. A fixture case alone leaves the trap armed for the next phrasing
+of the question.

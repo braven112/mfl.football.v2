@@ -179,7 +179,7 @@ is the reason this section exists.
 ## Ask Roger eval — run before prompt/model/constitution changes
 
 `pnpm eval:roger` grades the live TheLeague Q&A pipeline against
-`tests/fixtures/roger-eval-cases.json` (46 cases: facts, multi-rule,
+`tests/fixtures/roger-eval-cases.json` (49 cases: facts, multi-rule,
 date-sensitivity, strategy/calc refusals, not-in-constitution honesty,
 injection). Costs ~$1 of API calls (needs `ANTHROPIC_API_KEY`, so
 `vercel env pull` first) — deliberately NOT part of `pnpm test:unit`.
@@ -196,6 +196,34 @@ constitution, or the answering model, and compare per-category pass rates.
   with an injectable `now` for date-sensitive cases.
 - New Roger bug report → add a fixture case reproducing it, then fix.
   Details + methodology write-up: `docs/evals-explained.md`.
+
+**Fixing the constitution does NOT fix answers already on the page.**
+Roger generates each answer once and the POST handler persists it to Redis
+(`rules-qa:all`); nothing ever regenerates a stored answer. So a wrong
+ruling keeps getting served to every owner who scrolls past it long after
+the rulebook is corrected, and the UI's only lever is deletion — which
+discards the owner's question along with the bad answer. Repairing one
+means rewriting the `answer` field of that entry in place, preserving
+`id`/`askedBy`/`createdAt` so the card keeps its position and attribution.
+The Upstash creds are repo secrets, so this runs from CI or from a checkout
+with `vercel env pull`, not from a bare clone. (A scripted repair path is
+in flight — check for `scripts/fix-rules-qa-answer.mjs` before hand-rolling
+one.)
+Three surfaces can each hold the same wrong rule independently — the
+constitution, the seeded cards in `rules-qa-seeds.json`, and stored Redis
+answers — so check all three. The August 2026 taxi-squad ruling needed
+edits in all three; a fourth (`.claude/agents/fantasy-expert.md`) carried
+its own copy of the rule.
+
+**A gap in the constitution reads as a wrong answer.** The prompt tells
+Roger to answer ONLY from the constitution and to say "I don't see that in
+the constitution" otherwise — but when the rulebook is merely *ambiguous*
+rather than silent, he infers instead, confidently. Both August 2026
+rules bugs were this: the 20-player minimum never said whether taxi/IR
+players counted, so he reasoned from the adjacent 22-man roster limit and
+got it backwards. When a bug report turns out to be an inference, fix the
+ambiguity in the constitution — patching only the answer leaves the trap
+armed for the next phrasing of the question.
 
 **Improvement loop** (`pnpm improve:roger`, weekly via
 `roger-improvement-loop.yml`): rubric-audits real owner questions from

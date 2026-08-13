@@ -36,7 +36,7 @@ Notice these have very different verification costs. Contract 3 is a regex. Cont
 
 ## Step 2: Build the golden dataset
 
-The dataset is a set of cases, each pairing an input with a machine-checkable expectation. Roger's lives in a JSON fixture — 46 cases across seven categories. A representative case:
+The dataset is a set of cases, each pairing an input with a machine-checkable expectation. Roger's lives in a JSON fixture — 49 cases across seven categories. A representative case:
 
 ```json
 {
@@ -140,7 +140,7 @@ Two safeguards worth stating in an interview because they're the difference betw
 
 ## Pitfalls worth naming
 
-- **Overfitting to the eval.** Iterate on the prompt against the same 46 cases long enough and you optimize for the cases, not the capability. Rotate in fresh real-traffic cases; treat a suspiciously perfect score as a question, not an achievement.
+- **Overfitting to the eval.** Iterate on the prompt against the same 49 cases long enough and you optimize for the cases, not the capability. Rotate in fresh real-traffic cases; treat a suspiciously perfect score as a question, not an achievement.
 - **Saturation.** When every category sits at 100% for months, the eval has stopped discriminating. Add harder cases; that's a graduation, not a problem.
 - **Testing what's easy over what matters.** Format checks are cheap, so eval suites drift toward being 80% format checks. Roger's dataset intentionally weights the hard, high-stakes stuff: multi-rule reasoning, date logic, refusals.
 - **Trusting the judge blindly.** The judge is a model with failure modes. Spot-audit its verdicts, especially any that gate a launch decision.
