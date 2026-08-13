@@ -167,10 +167,11 @@ for (const wk of toArray(weekly?.weeks)) {
 // --- Parse ---
 // Rows start with a franchise name; games are matched anywhere in the row, in
 // document order. Layout is deliberately ignored (see header).
-// The abbreviation is matched case-INSENSITIVELY: MFL stores whatever the owner
-// typed, and 2013 has franchises abbreviated `boo` and `Chat`. An uppercase-only
-// class silently skipped every one of their games.
-const GAME_RE = /\b([WLT])\s+(@?)([A-Za-z0-9]+)\s*\(\s*([\d.]+)\s*-\s*([\d.]+)\s*\)/g;
+// The abbreviation is matched case-INSENSITIVELY and may contain punctuation:
+// MFL stores whatever the owner typed, and the AFL's archives hold `boo`, `Chat`
+// (2013) and `St.` (2011). An uppercase-alphanumeric-only class silently skipped
+// every one of their games. The surrounding `[WLT] ` and `(n-n)` keep it tight.
+const GAME_RE = /\b([WLT])\s+(@?)([A-Za-z0-9][A-Za-z0-9.'-]*)\s*\(\s*([\d.]+)\s*-\s*([\d.]+)\s*\)/g;
 
 // Longest name first: one franchise name can be a prefix of another ("Balls
 // Deep" / "Balls Deep II"), and a shortest-match would silently file the
@@ -186,16 +187,32 @@ const headerWeeks = headerLine
   ? headerLine.split('\t').slice(1).map((c) => Number(c.trim())).filter(Number.isFinite)
   : [];
 
-// A franchise's row is its name line plus any continuation lines. Lines are
+/**
+ * The franchise a line starts a row for, or null if it continues the previous
+ * one. The label column is not stable across seasons: 2013-2015 print the full
+ * team name, 2011 prints the ABBREVIATION ("SFC", "St."). Continuation lines
+ * always start with a game token, so neither test can be fooled by one.
+ */
+const rowOwner = (line) => {
+  const first = line.split('\t')[0].trim();
+  if (first && line.includes('\t')) {
+    const byAbbrev = idByAbbrev.get(first.toUpperCase());
+    if (byAbbrev) return byAbbrev;
+  }
+  const nameMatch = namesByLength.find((n) => line.startsWith(n));
+  return nameMatch ? idByName.get(nameMatch) : null;
+};
+
+// A franchise's row is its label line plus any continuation lines. Lines are
 // rejoined with '\n' (NOT stripped) because a newline is the within-cell
 // separator for doubleheaders — collapsing it would merge two games into one
 // cell and lose the week boundary.
 const rowsByFranchise = new Map();
 let current = null;
 for (const line of lines) {
-  const nameMatch = namesByLength.find((n) => line.startsWith(n));
-  if (nameMatch) {
-    current = idByName.get(nameMatch);
+  const owner = rowOwner(line);
+  if (owner) {
+    current = owner;
     if (!rowsByFranchise.has(current)) rowsByFranchise.set(current, []);
     rowsByFranchise.get(current).push(line);
     continue;
