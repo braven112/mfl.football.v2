@@ -2,12 +2,17 @@
  * Rules Q&A answer corrector — rewrites a stored "Ask Roger" answer in place.
  *
  * Roger's answers are generated once and then persisted forever: the POST
- * handler writes each Q&A into the Redis list at `rules-qa:all`, and the
- * rules-chat page renders that list verbatim. Nothing re-generates an old
- * answer, so fixing the constitution does NOT fix an answer already on the
- * page — a wrong ruling keeps being served to every owner who scrolls past it.
- * The only alternative the UI offers is deletion, which loses the owner's
- * question along with the bad answer.
+ * handler writes each Q&A into `rules-qa:all` and the rules-chat page renders
+ * it verbatim. Nothing re-generates an old answer, so fixing the constitution
+ * does NOT fix an answer already on the page — a wrong ruling keeps being
+ * served to every owner who scrolls past it. The only alternative the UI
+ * offers is deletion, which loses the owner's question along with the bad
+ * answer.
+ *
+ * STORAGE SHAPE: `rules-qa:all` holds a JSON array serialized under a plain
+ * string key, read and written with GET/SET. It is NOT a Redis list — LPUSH /
+ * LRANGE are the wrong tools for it, and a partial-write helper would corrupt
+ * it. Read the whole array, modify, write the whole array back.
  *
  * This script edits the answer field in place, preserving the entry's id,
  * askedBy and createdAt so the card stays where it is in the feed with the

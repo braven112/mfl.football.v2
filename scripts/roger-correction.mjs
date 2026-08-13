@@ -7,8 +7,11 @@
  * enough — the people who acted on the wrong answer never see the diff. This
  * script is the deliberate manual path for walking one back in the group chat.
  *
- * It is intentionally NOT automated and NOT wired to a workflow: a correction
- * is a commissioner-reviewed act, and the copy is hand-written each time.
+ * It is intentionally NOT scheduled and never fires on its own: a correction is
+ * a commissioner-reviewed act, and the copy is hand-written each time.
+ * `.github/workflows/roger-correction.yml` exists only to supply
+ * GROUPME_ROGER_BOT_ID, which is a repo secret and so is absent from most local
+ * checkouts — it runs this script, it does not decide when a correction is due.
  *
  * SAFETY: dry-run is the DEFAULT. GroupMe has no dedup and no unsend, so the
  * live post requires an explicit --send. Re-running with --send posts again.
