@@ -39,6 +39,10 @@ const REDIS_KEY = 'rules-qa:all';
  * text with light markdown, and a rulebook link on the final line using an
  * anchor from RULEBOOK_ANCHORS.
  *
+ * Keep old entries after they've been applied — they're the audit trail of
+ * which answers were wrong and what replaced them, and re-running one is a
+ * no-op once the stored answer already matches.
+ *
  * @type {Record<string, { redisKey: string, match: RegExp, answer: string }>}
  */
 const FIXES = {
@@ -79,6 +83,17 @@ async function main() {
   }
   const entry = FIXES[fix];
 
+  // Every Roger answer must close with a rulebook link — the rules-chat card
+  // renders it as the "Read the full rule" affordance, and a correction that
+  // drops it looks broken next to every other answer on the page. Checked
+  // before touching Redis so a malformed correction fails loudly, not halfway.
+  const lastLine = entry.answer.trimEnd().split('\n').pop() ?? '';
+  if (!/^\[[^\]]+\]\(\/theleague\/rules(#[a-z0-9-]+)?\)$/.test(lastLine)) {
+    console.error(`${TAG} correction "${fix}" must end with a [text](/theleague/rules#anchor) line.`);
+    console.error(`${TAG} last line was: ${JSON.stringify(lastLine)}`);
+    process.exit(1);
+  }
+
   const redis = getRedisConfig();
   if (!redis) {
     console.error(`${TAG} No Redis credentials in env (UPSTASH_REDIS_REST_URL / KV_REST_API_URL + token).`);
@@ -108,7 +123,11 @@ async function main() {
     console.error(
       `${TAG} matcher resolved ${matches.length} entries (need exactly 1). Refusing to write.`
     );
-    for (const { qa } of matches) console.error(`  - ${qa.id}: ${qa.question}`);
+    if (matches.length) console.error('');
+    for (const { qa } of matches) {
+      const q = qa.question.length > 80 ? `${qa.question.slice(0, 80)}…` : qa.question;
+      console.error(`  ${qa.id}: ${q}`);
+    }
     process.exit(1);
   }
 

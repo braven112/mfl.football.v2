@@ -199,6 +199,7 @@
       "reference": "Yes. Every player signed to the franchise counts toward the 20-player minimum regardless of where he sits — active roster, practice squad (taxi squad), or injured reserve. IR players are under contract and their salaries count 100% against the cap."
     },
     {
+      "$comment": "Graded with mustMatch + judge and deliberately NO mustNotMatch on 'top 5' — unlike the taxi/IR cases below, a CORRECT answer here may quote the wrong value to contrast the two adjacent formulas ('top 10, not the top 5 extensions use'), which a regex cannot tell apart from a cross-wired answer. The reference names the trap so the judge catches the cross-wire instead. See docs/claude/insights/features/roger-evals.md.",
       "id": "team-option-salary-top10",
       "category": "multi-rule",
       "question": "What salary does a 1st-round pick get if I exercise his 5th-year team option?",

@@ -10,8 +10,9 @@ name: Roger Correction
 # correction slug to send. That path filter IS the idempotency guard: pushing
 # unrelated commits cannot re-fire the job, and GroupMe has no unsend. To send
 # a correction: write the slug into the sentinel and push it. To retire it:
-# delete the sentinel in a later commit (deleting it does not re-trigger, since
-# the run reads the slug and exits cleanly when the file is absent).
+# delete the sentinel in a later commit — that deletion DOES fire the workflow
+# (a delete is a change to the filtered path), but the run then resolves an
+# empty slug and the `if` guard skips the send step, so no second post goes out.
 #
 # workflow_dispatch is offered too, for manual sends once this file is on the
 # default branch.
