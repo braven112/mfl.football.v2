@@ -46,13 +46,13 @@ DIVISION SETUP
 TEAM ROSTERS
 - Each team can have up to 22 players on their active roster, plus an additional 3 practice squad (taxi squad) spots.
 - During the offseason (from the conclusion of Week 17 until the 3rd Sunday in August at 8:45pm PT), there is no limit on the number of players on a team's active roster.
-- Teams must have at least 20 players under contract from the first game of the season until the last game of the year (Week 17).
+- Teams must have at least 20 players under contract from the first game of the season until the last game of the year (Week 17). "Under contract" means exactly that: every player signed to your franchise counts toward the 20, regardless of whether he sits on the active roster, the practice squad (taxi squad), or injured reserve.
 - Rosters can include any combination of the following positions: QB, RB, WR, TE, PK, DEF.
 - RotoWire is the official depth chart of the league. If RotoWire lists a player's position differently than MFL, the commissioner will adjust the position as desired by the owner before the upcoming week's kickoff.
 - Teams can place up to 3 rookies on the Practice Squad at a rate of 50% of their base salary against the cap.
 - Only rookies are eligible for the practice squad. Any player considered a rookie by MFL will be eligible for the practice squad. (The NFL defines a rookie as any player without an accrued NFL season.)
 - During the offseason, teams may have fewer than 20 players on their roster.
-- All teams must have 20 players under contract by the end of the Off-Season Free Agency Period.
+- All teams must have 20 players under contract by the end of the Off-Season Free Agency Period. Practice squad (taxi squad) and injured reserve players count toward this 20, same as during the season.
 - At the start of each season, all players who were on the IR or Practice Squad at the end of the previous year must be moved to the active roster. Teams have until February 15th to comply with this requirement.
 
 INJURED RESERVE

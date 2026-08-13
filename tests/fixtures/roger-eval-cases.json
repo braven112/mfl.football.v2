@@ -181,6 +181,24 @@
       "reference": "Teams must have at least 20 players under contract from the first game of the season through Week 17."
     },
     {
+      "id": "taxi-counts-toward-minimum",
+      "category": "multi-rule",
+      "question": "All teams must have 20 players under contract by the end of the Off-Season Free Agency Period. Do players on the taxi squad count towards the 20 player minimum?",
+      "mustNotMatch": ["(do|does)\\s+not\\s+count", "do(n['’]t)\\s+count", "doesn['’]t\\s+count"],
+      "expectedAnchor": "#team-rosters",
+      "judge": true,
+      "reference": "Yes. The requirement is 20 players UNDER CONTRACT, and taxi squad (practice squad) players are under contract — so they count toward the 20. Commissioner ruling, August 2026. The 22-player active roster cap and the 3 extra taxi slots are roster-size limits; they do not narrow what 'under contract' means. Players on injured reserve count as well."
+    },
+    {
+      "id": "ir-counts-toward-minimum",
+      "category": "fact-lookup",
+      "question": "Do my injured reserve players count toward the 20 player under contract minimum?",
+      "mustNotMatch": ["(do|does)\\s+not\\s+count", "do(n['’]t)\\s+count", "doesn['’]t\\s+count"],
+      "expectedAnchor": "#team-rosters",
+      "judge": true,
+      "reference": "Yes. Every player signed to the franchise counts toward the 20-player minimum regardless of where he sits — active roster, practice squad (taxi squad), or injured reserve. IR players are under contract and their salaries count 100% against the cap."
+    },
+    {
       "id": "ext-vs-option",
       "category": "multi-rule",
       "question": "Can I give my 2026 first-round rookie both a rookie extension and the 5th-year team option?",

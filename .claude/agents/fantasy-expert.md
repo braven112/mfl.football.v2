@@ -58,7 +58,7 @@ Always read the current year's data before making recommendations.
 
 ### Roster Configuration
 - **22 active roster** + 3 taxi squad + unlimited IR = 75 total capacity
-- Must have at least 20 players under contract from Week 1 through Week 17
+- Must have at least 20 players under contract from Week 1 through Week 17. Taxi squad and IR players COUNT toward the 20 — the test is "under contract," not "on the active roster" (commissioner ruling, Aug 2026)
 - Offseason: no roster limit (can exceed 22)
 - Must cut to 22 by 3rd Sunday in August (8:45 PM PT)
 - Roster positions: QB, RB, WR, TE, PK, DEF (any combination)
