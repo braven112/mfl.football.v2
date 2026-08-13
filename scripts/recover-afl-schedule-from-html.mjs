@@ -118,11 +118,16 @@ for (const wk of toArray(weekly?.weeks)) {
 // document order. Layout is deliberately ignored (see header).
 const GAME_RE = /\b([WLT])\s+(@?)([A-Z0-9]+)\s*\(\s*([\d.]+)\s*-\s*([\d.]+)\s*\)/g;
 
+// Longest name first: one franchise name can be a prefix of another ("Balls
+// Deep" / "Balls Deep II"), and a shortest-match would silently file the
+// longer team's whole season under the shorter one.
+const namesByLength = [...idByName.keys()].sort((a, b) => b.length - a.length);
+
 const lines = raw.split('\n');
 const rowsByFranchise = new Map();
 let current = null;
 for (const line of lines) {
-  const nameMatch = [...idByName.keys()].find((n) => line.startsWith(n));
+  const nameMatch = namesByLength.find((n) => line.startsWith(n));
   if (nameMatch) {
     current = idByName.get(nameMatch);
     if (!rowsByFranchise.has(current)) rowsByFranchise.set(current, []);
@@ -200,13 +205,38 @@ for (const g of parsedGames) {
   byKey.get(key).push(g);
 }
 
+/** That franchise's score in that week, per MFL's own weekly results. */
+const officialScore = (fid, week) => {
+  const s = toArray(weekly?.weeks).find((x) => Number(x.week) === week)?.scores?.[fid];
+  return s == null ? null : Number(s).toFixed(2);
+};
+
 const games = [];
+const corroborated = [];
 for (const [key, sides] of byKey) {
   const [a, b] = sides;
   if (sides.length !== 2) {
-    problems.push(`${key}: seen from ${sides.length} side(s), expected exactly 2`);
-    // A one-sided game is still usable if it parsed cleanly, but it is a
-    // symptom of truncated input, so it is reported and kept out.
+    // Normally every game appears twice — once from each franchise's row — and
+    // the two must agree. A single side usually means the paste was truncated
+    // mid-token (the 2019 source lost its final closing paren that way), which
+    // should not cost an otherwise clean 204-game season.
+    //
+    // Accept a lone side only when MFL's own weekly-results.json independently
+    // confirms BOTH franchises' scores for that week. That is corroboration
+    // from a different feed rather than trust in the parse.
+    if (sides.length === 1) {
+      const g = sides[0];
+      const homeOk = officialScore(g.home, g.week) === g.homeScore.toFixed(2);
+      const awayOk = officialScore(g.away, g.week) === g.awayScore.toFixed(2);
+      if (homeOk && awayOk) {
+        games.push({ week: g.week, home: g.home, away: g.away, homeScore: g.homeScore, awayScore: g.awayScore });
+        corroborated.push(key);
+        continue;
+      }
+    }
+    problems.push(
+      `${key}: seen from ${sides.length} side(s), expected 2, and weekly-results.json does not corroborate both scores`
+    );
     continue;
   }
   const mirrored =
@@ -254,6 +284,12 @@ for (const f of toArray(standings?.leagueStandings?.franchise)) {
 // --- Report ---
 const weeks = [...new Set(games.map((g) => g.week))].sort((a, b) => a - b);
 console.log(`Recovered ${games.length} games for ${SLUG} ${YEAR} across weeks ${weeks.join(', ')}`);
+if (corroborated.length) {
+  console.log(
+    `${corroborated.length} game(s) appeared from one side only and were accepted on ` +
+    `weekly-results corroboration: ${corroborated.join(', ')}`
+  );
+}
 if (problems.length) {
   console.log(`\n${problems.length} parse problem(s):`);
   for (const p of problems.slice(0, 20)) console.log(`  ${p}`);
