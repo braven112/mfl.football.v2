@@ -172,9 +172,31 @@ event dates in the past. Fixing one does not fix the other.
      on a sub-day delta rounds "tomorrow evening" up to 1 and combines with
      a permissive window to post "TODAY" a day early.
 
-Historical note: both bugs fired together in April 2026 — Roger posted
-"TODAY: NFL Draft" on Wednesday when the draft was Thursday. The post-mortem
-is the reason this section exists.
+   - Roger's reminders honor **quiet hours** (23:00–06:59 PT) like every
+     other GroupMe lane. The gate wraps all of `scanEventReminders`, not
+     just the send: the feed post id is the dedup key, so writing the post
+     during quiet hours and skipping only the webhook would swallow the
+     notification permanently. Skipping outright is safe because
+     `shouldFireReminder` accepts the target day OR one day late.
+
+   - **The reminder event list is not a place to write a date.** The AFL
+     events in `compute-league-events.mjs` must resolve from the same rules
+     as `src/data/afl-fantasy/league-events.json` (which drives
+     `/afl-fantasy/calendar`), because Roger's post links to that calendar
+     and any drift is visible to owners in one click. The AFL drafts are
+     Labor-Day-anchored — `saturday-before-labor-day-weekend` (AL, Labor
+     Day − 9) and `sunday-before-labor-day-weekend` (NL, Labor Day − 8) —
+     never fixed calendar dates. Note the *rules doc*
+     (`docs/claude/afl-rules.md`) still says "Annual draft window: August 20
+     – August 25", which contradicts the drafts the league actually holds;
+     don't copy dates out of it into code.
+
+Historical note: the first two bugs fired together in April 2026 — Roger
+posted "TODAY: NFL Draft" on Wednesday when the draft was Thursday. The
+post-mortem is the reason this section exists. The other two fired together
+in August 2026: Roger woke the AFL at 1:00am PT to announce the draft was
+one week away, when it was sixteen days out.
+`tests/roger-afl-draft-reminder.test.ts` locks both in.
 
 ## Ask Roger eval — run before prompt/model/constitution changes
 
