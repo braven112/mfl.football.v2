@@ -20,19 +20,35 @@
  * `W`/`L`/`T` is the result, `@` marks an away game, the abbreviation is the
  * OPPONENT, and the parenthesised pair is (our score - their score).
  *
- * WEEK NUMBERS ARE NOT PARSED FROM LAYOUT. The pasted text has no reliable
- * cell boundaries, so each game's week is recovered by matching its own-score
- * against that franchise's per-week score in the committed
- * weekly-results.json. That is a join against data MFL already gave us, which
- * makes the week assignment evidence rather than a guess — and it means a
- * mis-parsed score cannot silently land in the wrong week; it fails to match
- * at all.
+ * WEEKS COME FROM THE TABLE'S TAB LAYOUT, CROSS-CHECKED AGAINST SCORES.
+ *
+ * The view is a real table: TAB separates week cells, and a newline separates
+ * the two games inside a cell on the weeks the AFL plays doubleheaders. So
+ * splitting a franchise's whole row on TAB yields its weeks in order.
+ *
+ * An earlier version instead derived each week by matching the game's own-score
+ * against weekly-results.json. That worked for 2017 and 2019 and is a stronger
+ * signal where it applies — but it is not available everywhere: 2015's
+ * weekly-results has NO scores at all for weeks 1-3 and only 2-4 franchises for
+ * weeks 9-13, which is precisely the season we need. Layout is the primary
+ * source; the score join runs as a CROSS-CHECK wherever MFL does have the
+ * score, and a disagreement is a hard failure rather than a warning.
+ *
+ * Layout alone is not trusted blindly. Three independent shapes have to agree
+ * before anything is written (see below), and the per-franchise game COUNT is
+ * checked against the official record, so a mangled tab that merges or splits a
+ * cell shows up as a wrong count rather than as a plausible wrong week.
  *
  * Nothing is written unless every check passes:
- *   - every game appears from BOTH sides with mirrored scores
- *   - every game's week resolves unambiguously from the score join
+ *   - every game appears from BOTH sides with mirrored scores (a one-sided game
+ *     is accepted only when weekly-results.json corroborates BOTH scores)
+ *   - the score join agrees with the layout wherever MFL still has the score
+ *   - each franchise's parsed GAME COUNT equals its official games played
  *   - each franchise's resulting W-L-T equals standings.json exactly
- *   - existing (postseason) weeks are never overwritten
+ *   - every game MFL still holds is reproduced at the same week and score
+ *
+ * Writes are additive per game: MFL's own matchups are never overwritten, and
+ * only games MFL is missing get added.
  *
  * Usage:
  *   node scripts/recover-afl-schedule-from-html.mjs --league=afl --year=2019
@@ -78,10 +94,24 @@ const YEAR_DIR = path.join(ROOT, league.dataPath, 'mfl-feeds', YEAR);
 const SOURCE = path.join(ROOT, league.dataPath, 'schedule-recovery', `${YEAR}.txt`);
 const SCHEDULE_PATH = path.join(YEAR_DIR, 'schedule.json');
 
-const raw = fs.existsSync(SOURCE) ? fs.readFileSync(SOURCE, 'utf8') : null;
-if (!raw) {
+const rawSource = fs.existsSync(SOURCE) ? fs.readFileSync(SOURCE, 'utf8') : null;
+if (!rawSource) {
   console.error(`No saved schedule text at ${SOURCE}`);
   process.exit(1);
+}
+
+// A copy/paste of this table is routinely cut off mid-token on the very last
+// game — 2019, 2014 and 2013 all arrived missing nothing but the final ')'. That
+// one character costs the season two franchises' records, which reads as a data
+// problem rather than a clipboard one. Close it, and let the ordinary checks
+// decide whether the game was real: the opponent's own row has to state the same
+// two scores, and all 24 records still have to reconcile.
+const TRUNCATED_TAIL = /([WLT]\s+@?[A-Z0-9]+\s*\(\s*[\d.]+\s*-\s*[\d.]+)\s*$/i;
+const raw = TRUNCATED_TAIL.test(rawSource.trimEnd())
+  ? `${rawSource.trimEnd()})\n`
+  : rawSource;
+if (raw !== rawSource) {
+  console.log("Source ends mid-token; closed the final game's parenthesis before parsing.");
 }
 
 const leagueJson = readJson(path.join(YEAR_DIR, 'league.json'));
@@ -96,6 +126,27 @@ const idByName = new Map();
 for (const f of franchises) {
   if (f.abbrev) idByAbbrev.set(String(f.abbrev).trim().toUpperCase(), f.id);
   if (f.name) idByName.set(String(f.name).trim(), f.id);
+}
+
+// Some archived league.json rows carry no abbrev at all (2013's Vinegar Strokes
+// is one), while the schedule view still prints one. Bind such a franchise by
+// elimination, and ONLY when the match is forced — exactly one franchise short
+// an abbrev and exactly one abbreviation in the paste that nothing claims. Any
+// other shape stays unresolved and surfaces as a parse problem rather than a
+// guess.
+const abbrevless = franchises.filter((f) => !f.abbrev).map((f) => f.id);
+if (abbrevless.length) {
+  const seen = new Set();
+  let m;
+  const scan = /\b[WLT]\s+@?([A-Za-z0-9]+)\s*\(\s*[\d.]+\s*-\s*[\d.]+\s*\)/g;
+  while ((m = scan.exec(raw))) seen.add(m[1].toUpperCase());
+  const unclaimed = [...seen].filter((a) => !idByAbbrev.has(a));
+  if (abbrevless.length === 1 && unclaimed.length === 1) {
+    idByAbbrev.set(unclaimed[0], abbrevless[0]);
+    console.log(
+      `league.json has no abbreviation for franchise ${abbrevless[0]}; bound it to "${unclaimed[0]}" by elimination.`
+    );
+  }
 }
 
 // --- Per-franchise, per-week scores from the committed feed. This is what
@@ -116,7 +167,10 @@ for (const wk of toArray(weekly?.weeks)) {
 // --- Parse ---
 // Rows start with a franchise name; games are matched anywhere in the row, in
 // document order. Layout is deliberately ignored (see header).
-const GAME_RE = /\b([WLT])\s+(@?)([A-Z0-9]+)\s*\(\s*([\d.]+)\s*-\s*([\d.]+)\s*\)/g;
+// The abbreviation is matched case-INSENSITIVELY: MFL stores whatever the owner
+// typed, and 2013 has franchises abbreviated `boo` and `Chat`. An uppercase-only
+// class silently skipped every one of their games.
+const GAME_RE = /\b([WLT])\s+(@?)([A-Za-z0-9]+)\s*\(\s*([\d.]+)\s*-\s*([\d.]+)\s*\)/g;
 
 // Longest name first: one franchise name can be a prefix of another ("Balls
 // Deep" / "Balls Deep II"), and a shortest-match would silently file the
@@ -124,6 +178,18 @@ const GAME_RE = /\b([WLT])\s+(@?)([A-Z0-9]+)\s*\(\s*([\d.]+)\s*-\s*([\d.]+)\s*\)
 const namesByLength = [...idByName.keys()].sort((a, b) => b.length - a.length);
 
 const lines = raw.split('\n');
+
+// Week numbers from the header row ("Franchise/Week<TAB>1<TAB>2<TAB>…").
+// Falling back to positional numbering keeps a header-less paste usable.
+const headerLine = lines.find((l) => /^Franchise\s*\/\s*Week/i.test(l));
+const headerWeeks = headerLine
+  ? headerLine.split('\t').slice(1).map((c) => Number(c.trim())).filter(Number.isFinite)
+  : [];
+
+// A franchise's row is its name line plus any continuation lines. Lines are
+// rejoined with '\n' (NOT stripped) because a newline is the within-cell
+// separator for doubleheaders — collapsing it would merge two games into one
+// cell and lose the week boundary.
 const rowsByFranchise = new Map();
 let current = null;
 for (const line of lines) {
@@ -131,7 +197,7 @@ for (const line of lines) {
   if (nameMatch) {
     current = idByName.get(nameMatch);
     if (!rowsByFranchise.has(current)) rowsByFranchise.set(current, []);
-    rowsByFranchise.get(current).push(line.slice(nameMatch.length));
+    rowsByFranchise.get(current).push(line);
     continue;
   }
   if (current) rowsByFranchise.get(current).push(line);
@@ -139,62 +205,67 @@ for (const line of lines) {
 
 const problems = [];
 const parsedGames = []; // { week, home, away, homeScore, awayScore, from }
+const gameCountByFranchise = new Map();
+
+/** That franchise's score that week per MFL, or null when MFL has no record. */
+const knownScore = (fid, week) => {
+  const s = toArray(weekly?.weeks).find((x) => Number(x.week) === week)?.scores?.[fid];
+  return s == null ? null : Number(s).toFixed(2);
+};
 
 for (const [fid, rowLines] of rowsByFranchise) {
-  const text = rowLines.join(' ');
-  const seenScores = new Map(); // score -> how many times used, for doubleheaders
-  let m;
-  GAME_RE.lastIndex = 0;
-  while ((m = GAME_RE.exec(text))) {
-    const [, , atSign, oppAbbrev, ownStr, oppStr] = m;
-    const oppId = idByAbbrev.get(oppAbbrev.toUpperCase());
-    if (!oppId) {
-      problems.push(`${fid}: unknown opponent abbreviation "${oppAbbrev}"`);
-      continue;
-    }
-    const ownScore = Number(ownStr);
-    const oppScore = Number(oppStr);
+  // TAB splits week cells; the franchise name occupies cell 0.
+  const cells = rowLines.join('\n').split('\t').slice(1);
+  let count = 0;
 
-    // Resolve the week by score join. Doubleheaders share an own-score, so a
-    // score mapping to one week can legitimately be used twice.
-    const candidates = scoreToWeeks.get(fid)?.get(ownScore.toFixed(2)) ?? [];
-    if (candidates.length === 0) {
-      problems.push(
-        `${fid}: scored ${ownScore} vs ${oppAbbrev}, but no week in weekly-results.json has that score`
-      );
-      continue;
-    }
-    let week;
-    if (candidates.length === 1) {
-      week = candidates[0];
-    } else {
-      // Ambiguous own-score: disambiguate by the opponent's score that week.
-      const viable = candidates.filter((w) => {
-        const oppWeekScore = toArray(weekly?.weeks).find((x) => Number(x.week) === w)?.scores?.[oppId];
-        return oppWeekScore != null && Number(oppWeekScore).toFixed(2) === oppScore.toFixed(2);
-      });
-      if (viable.length !== 1) {
+  cells.forEach((cell, idx) => {
+    const week = headerWeeks[idx] ?? idx + 1;
+    let m;
+    GAME_RE.lastIndex = 0;
+    while ((m = GAME_RE.exec(cell))) {
+      const [, , atSign, oppAbbrev, ownStr, oppStr] = m;
+      const oppId = idByAbbrev.get(oppAbbrev.toUpperCase());
+      if (!oppId) {
+        problems.push(`${fid}: unknown opponent abbreviation "${oppAbbrev}"`);
+        continue;
+      }
+      const ownScore = Number(ownStr);
+      const oppScore = Number(oppStr);
+      count++;
+
+      // Cross-check the layout-derived week against MFL's own weekly scores
+      // wherever it has them. A disagreement means the table was misread, so it
+      // fails rather than warns. Where MFL has no score (2015 weeks 1-3 hold
+      // none at all) the layout stands on its own and the record reconciliation
+      // below is what catches an error.
+      const own = knownScore(fid, week);
+      if (own !== null && own !== ownScore.toFixed(2)) {
         problems.push(
-          `${fid}: score ${ownScore} vs ${oppAbbrev} matches ${candidates.length} weeks and the opponent score does not disambiguate`
+          `${fid}: parsed ${ownScore} in week ${week} vs ${oppAbbrev}, but weekly-results says ${own}`
         );
         continue;
       }
-      week = viable[0];
+      const opp = knownScore(oppId, week);
+      if (opp !== null && opp !== oppScore.toFixed(2)) {
+        problems.push(
+          `${fid} week ${week}: parsed opponent ${oppAbbrev} at ${oppScore}, but weekly-results says ${opp}`
+        );
+        continue;
+      }
+
+      const isAway = atSign === '@';
+      parsedGames.push({
+        week,
+        home: isAway ? oppId : fid,
+        away: isAway ? fid : oppId,
+        homeScore: isAway ? oppScore : ownScore,
+        awayScore: isAway ? ownScore : oppScore,
+        from: fid,
+      });
     }
+  });
 
-    const useKey = `${week}:${ownScore.toFixed(2)}`;
-    seenScores.set(useKey, (seenScores.get(useKey) ?? 0) + 1);
-
-    const isAway = atSign === '@';
-    parsedGames.push({
-      week,
-      home: isAway ? oppId : fid,
-      away: isAway ? fid : oppId,
-      homeScore: isAway ? oppScore : ownScore,
-      awayScore: isAway ? ownScore : oppScore,
-      from: fid,
-    });
-  }
+  gameCountByFranchise.set(fid, count);
 }
 
 // --- Reconcile the two sides of every game ---
@@ -279,7 +350,128 @@ for (const f of toArray(standings?.leagueStandings?.franchise)) {
       `  ${f.id}: parsed ${got.w}-${got.l}-${got.t}, MFL standings say ${want.w}-${want.l}-${want.t}`
     );
   }
+
+  // Game COUNT is checked separately from the W-L. Weeks now come from tab
+  // positions, so a mangled tab could merge two cells or split one — moving a
+  // game to the wrong week WITHOUT changing anyone's win total, which the
+  // record check alone would wave through. A count that disagrees with the
+  // official games-played is the signal that the table was misread.
+  const wantGames = want.w + want.l + want.t;
+  const parsedCount = gameCountByFranchise.get(f.id) ?? 0;
+  if (wantGames > 0 && parsedCount !== wantGames) {
+    recordMismatches.push(
+      `  ${f.id}: parsed ${parsedCount} games from the table, MFL standings say ${wantGames} played`
+    );
+  }
 }
+
+// --- Arbitration against the regular-season games MFL still holds ---
+//
+// Whatever MFL holds for a week the paste also covers ought to be free ground
+// truth. For 2015 it is not, and the reason matters:
+//
+// MFL's stored regular season for 2012-2015 is SYNTHETIC. All four seasons have
+// byte-identical per-week game counts (8,8,12,6,5,2,2,1,1,1 for weeks 4-13),
+// and in every week the number of matchups is exactly half the number of
+// franchises that have a score that week — the fingerprint of pairing whoever
+// has a score with whoever else has one, not of a real schedule surviving
+// partial loss. Four different NFL seasons do not share a game-count shape by
+// chance. Every score in those rows is correct; the OPPONENTS are invented.
+//
+// So a plain "MFL wins" veto would reject the real schedule in favour of a
+// fabricated one. Instead the official standings arbitrate, because MFL
+// computed them from the true schedule: the paste is already required to
+// reproduce every franchise's W-L-T and games-played exactly, so if swapping a
+// contested MFL game in breaks a record, that game cannot be real. Refuting even
+// one is enough to condemn the season's stored regular season — but if NOTHING
+// is refuted, the two sources disagree in a way the records cannot settle, and
+// that fails rather than silently overriding MFL.
+const existingSchedule = readJson(SCHEDULE_PATH);
+const existingGames = new Map();
+for (const wk of toArray(existingSchedule?.schedule?.weeklySchedule)) {
+  for (const m of toArray(wk.matchup)) {
+    const fr = toArray(m.franchise);
+    if (fr.length !== 2) continue;
+    const key = `${Number(wk.week)}:${[fr[0].id, fr[1].id].sort().join(':')}`;
+    existingGames.set(
+      key,
+      Object.fromEntries(fr.map((f) => [f.id, Number(f.score).toFixed(2)]))
+    );
+  }
+}
+
+const parsedByKey = new Map(
+  games.map((g) => [`${g.week}:${[g.home, g.away].sort().join(':')}`, g])
+);
+// Only the regular season is comparable: the paste is the regular-season view,
+// so MFL's postseason weeks are legitimately absent from it and are never
+// touched. The playoff reconstruction depends on those weeks and they verify
+// against three independent sources, so the corruption above is regular-season
+// only.
+const parsedWeeks = new Set(games.map((g) => g.week));
+
+/** The result (`w`/`l`/`t`) `fid` gets from the paste in `week`. */
+const pasteResultsFor = (fid, week) =>
+  games
+    .filter((g) => g.week === week && (g.home === fid || g.away === fid))
+    .map((g) => {
+      const own = g.home === fid ? g.homeScore : g.awayScore;
+      const opp = g.home === fid ? g.awayScore : g.homeScore;
+      return own > opp ? 'w' : own < opp ? 'l' : 't';
+    });
+
+const confirmedByMfl = [];
+const refuted = [];
+const undecided = [];
+for (const [key, known] of existingGames) {
+  const week = Number(key.split(':')[0]);
+  if (!parsedWeeks.has(week)) continue;
+  const [a, b] = key.split(':').slice(1);
+  const g = parsedByKey.get(key);
+  if (g && known[g.home] === g.homeScore.toFixed(2) && known[g.away] === g.awayScore.toFixed(2)) {
+    confirmedByMfl.push(key);
+    continue;
+  }
+
+  // Contested. Ask whether MFL's version of this game can coexist with the
+  // official records: under it, `a` played `b` that week, so `a`'s result for
+  // the week is fixed by these two scores. The paste already reproduces `a`'s
+  // official record exactly, so a different result here means a different
+  // season record — i.e. MFL's game cannot be real.
+  const sa = Number(known[a]);
+  const sb = Number(known[b]);
+  const mflResult = (own, opp) => (own > opp ? 'w' : own < opp ? 'l' : 't');
+  const flips = [
+    [a, mflResult(sa, sb)],
+    [b, mflResult(sb, sa)],
+  ].filter(([fid, res]) => {
+    const fromPaste = pasteResultsFor(fid, week);
+    // One game that week: a different result changes the record. Two (a
+    // doubleheader): MFL's single game cannot account for both, so it is
+    // refuted whenever it fails to match either of them.
+    return fromPaste.length !== 1 || fromPaste[0] !== res;
+  });
+
+  const detail =
+    `  wk${week} ${a} v ${b} (${known[a]}-${known[b]}): ` +
+    (g
+      ? `paste has this pairing at ${g.homeScore}-${g.awayScore}`
+      : (() => {
+          const elsewhere = games
+            .filter((x) => [x.home, x.away].sort().join(':') === `${a}:${b}`)
+            .map((x) => `wk${x.week}`);
+          return elsewhere.length
+            ? `paste puts this pairing at ${elsewhere.join(', ')} instead`
+            : 'paste has no such game in any week';
+        })());
+
+  if (flips.length) {
+    refuted.push(`${detail} — would change ${flips.map(([f]) => f).join(', ')}'s official record`);
+  } else {
+    undecided.push(`${detail} — record-neutral`);
+  }
+}
+const mflRegularSeasonIsSynthetic = refuted.length > 0;
 
 // --- Report ---
 const weeks = [...new Set(games.map((g) => g.week))].sort((a, b) => a - b);
@@ -302,7 +494,44 @@ if (recordMismatches.length) {
   console.log('Every franchise W-L-T matches MFL standings exactly.');
 }
 
-const ok = problems.length === 0 && recordMismatches.length === 0;
+const contested = refuted.length + undecided.length;
+if (confirmedByMfl.length || contested) {
+  console.log(
+    `\nAgainst the ${confirmedByMfl.length + contested} regular-season game(s) MFL still stores: ` +
+      `${confirmedByMfl.length} reproduced exactly, ${contested} contested.`
+  );
+}
+if (contested) {
+  if (refuted.length) {
+    console.log(
+      `\n${refuted.length} of MFL's stored game(s) are REFUTED by the official standings ` +
+        `(the paste reproduces all 24 records; these cannot):`
+    );
+    refuted.slice(0, 15).forEach((d) => console.log(d));
+    if (refuted.length > 15) console.log(`  … ${refuted.length - 15} more`);
+    console.log(
+      `\n${undecided.length} further contested game(s) are record-neutral, so the standings ` +
+        `cannot speak to them individually.`
+    );
+    console.log(
+      `\n=> MFL's stored ${YEAR} REGULAR SEASON is not real data. The paste replaces weeks ` +
+        `${weeks.join(', ')}; the postseason weeks are left untouched.`
+    );
+  } else {
+    console.log(
+      `\n${undecided.length} contested game(s), NONE refuted by the standings — the two sources ` +
+        `disagree and the records cannot arbitrate. Refusing to overwrite MFL on a hunch:`
+    );
+    undecided.slice(0, 15).forEach((d) => console.log(d));
+  }
+}
+
+// A contested season is only allowed through when the records actually refute
+// MFL's version. Contested-but-unrefutable stops the run.
+const ok =
+  problems.length === 0 &&
+  recordMismatches.length === 0 &&
+  (contested === 0 || mflRegularSeasonIsSynthetic);
 console.log(`\nVerdict: ${ok ? 'VERIFIED' : 'FAILED — nothing will be written'}`);
 if (!ok) process.exit(1);
 if (!WRITE) {
@@ -315,23 +544,47 @@ const schedule = readJson(SCHEDULE_PATH) ?? { schedule: { weeklySchedule: [] } }
 const existing = toArray(schedule.schedule?.weeklySchedule);
 const existingByWeek = new Map(existing.map((wk) => [String(wk.week), wk]));
 
+const asMatchup = (g) => ({
+  franchise: [
+    { id: g.home, score: g.homeScore.toFixed(2), isHome: '1', result: g.homeScore > g.awayScore ? 'W' : g.homeScore < g.awayScore ? 'L' : 'T' },
+    { id: g.away, score: g.awayScore.toFixed(2), isHome: '0', result: g.awayScore > g.homeScore ? 'W' : g.awayScore < g.homeScore ? 'L' : 'T' },
+  ],
+});
+
+// Two modes, decided by the arbitration above and never by a flag:
+//
+//  - Nothing contested: MFL's own matchups stand and the paste only fills the
+//    gaps. The merge is per GAME, not per week — a week that keeps a handful of
+//    its games and loses the rest must still gain the rest.
+//  - MFL's regular season refuted: its weeks are replaced wholesale, because a
+//    fabricated pairing is worse than a missing one. Only weeks the paste
+//    covers are touched, so the postseason is untouched either way.
 let added = 0;
+let replaced = 0;
 for (const week of weeks) {
   const key = String(week);
-  const already = toArray(existingByWeek.get(key)?.matchup).filter(
-    (m) => toArray(m.franchise).length >= 2
+  const existingMatchups = toArray(existingByWeek.get(key)?.matchup);
+  const weekGames = games.filter((g) => g.week === week);
+
+  if (mflRegularSeasonIsSynthetic) {
+    replaced += existingMatchups.filter((m) => toArray(m.franchise).length === 2).length;
+    existingByWeek.set(key, { week: key, matchup: weekGames.map(asMatchup) });
+    added += weekGames.length;
+    continue;
+  }
+
+  const held = new Set(
+    existingMatchups
+      .map((m) => toArray(m.franchise))
+      .filter((fr) => fr.length === 2)
+      .map((fr) => [fr[0].id, fr[1].id].sort().join(':'))
   );
-  if (already.length > 0) continue; // MFL's own data wins, always
-  const matchup = games
-    .filter((g) => g.week === week)
-    .map((g) => ({
-      franchise: [
-        { id: g.home, score: g.homeScore.toFixed(2), isHome: '1', result: g.homeScore > g.awayScore ? 'W' : g.homeScore < g.awayScore ? 'L' : 'T' },
-        { id: g.away, score: g.awayScore.toFixed(2), isHome: '0', result: g.awayScore > g.homeScore ? 'W' : g.awayScore < g.homeScore ? 'L' : 'T' },
-      ],
-    }));
-  existingByWeek.set(key, { week: key, matchup });
-  added += matchup.length;
+  const fresh = weekGames
+    .filter((g) => !held.has([g.home, g.away].sort().join(':')))
+    .map(asMatchup);
+  if (fresh.length === 0) continue;
+  existingByWeek.set(key, { week: key, matchup: [...existingMatchups, ...fresh] });
+  added += fresh.length;
 }
 
 schedule.schedule = schedule.schedule ?? {};
@@ -339,4 +592,7 @@ schedule.schedule.weeklySchedule = [...existingByWeek.values()].sort(
   (a, b) => Number(a.week) - Number(b.week)
 );
 fs.writeFileSync(SCHEDULE_PATH, JSON.stringify(schedule, null, 2));
-console.log(`Wrote ${added} matchups into ${SCHEDULE_PATH}`);
+console.log(
+  `Wrote ${added} matchups into ${SCHEDULE_PATH}` +
+    (replaced ? `, replacing ${replaced} refuted regular-season matchup(s)` : '')
+);
