@@ -202,12 +202,13 @@ Roger generates each answer once and the POST handler persists it to Redis
 (`rules-qa:all`); nothing ever regenerates a stored answer. So a wrong
 ruling keeps getting served to every owner who scrolls past it long after
 the rulebook is corrected, and the UI's only lever is deletion — which
-discards the owner's question along with the bad answer. Use
-`scripts/fix-rules-qa-answer.mjs` (dry-run by default, `--apply` to write,
-run via `fix-rules-qa-answer.yml` since the Upstash creds are repo
-secrets). It rewrites the `answer` field in place, preserving
-`id`/`askedBy`/`createdAt` so the card keeps its position and attribution,
-and refuses to write unless its question regex matches exactly one entry.
+discards the owner's question along with the bad answer. Repairing one
+means rewriting the `answer` field of that entry in place, preserving
+`id`/`askedBy`/`createdAt` so the card keeps its position and attribution.
+The Upstash creds are repo secrets, so this runs from CI or from a checkout
+with `vercel env pull`, not from a bare clone. (A scripted repair path is
+in flight — check for `scripts/fix-rules-qa-answer.mjs` before hand-rolling
+one.)
 Three surfaces can each hold the same wrong rule independently — the
 constitution, the seeded cards in `rules-qa-seeds.json`, and stored Redis
 answers — so check all three. The August 2026 taxi-squad ruling needed
