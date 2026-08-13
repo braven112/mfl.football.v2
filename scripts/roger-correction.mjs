@@ -56,6 +56,22 @@ const CORRECTIONS = {
       RULES_URL,
     ].join('\n'),
   },
+  'team-option-top-10': {
+    league: 'theleague',
+    text: [
+      'Another one for the correction file, and this one has been sitting out there for five months.',
+      '',
+      'The pinned League Office explainer on the 5th-year team option said the option salary is the top 5 positional average. It is not. It is the top 10.',
+      '',
+      "The constitution has said top 10 the whole time — so has the rules page, and so has every salary number the site has ever calculated for you. It was the explainer card that was wrong, which is the worst place for it to be wrong, because that's the one people read instead of the rulebook.",
+      '',
+      "What almost certainly happened: the Rookie Extension formula DOES use the top 5 positional average, and the two rules live next to each other and are mutually exclusive on the same player. Someone crossed the wires. Top 5 for a Rookie Extension, top 10 for a 5th-year option — different numbers, on purpose.",
+      '',
+      "The card is fixed. If you've been doing 2026 first-rounder math off that number, redo it — the option is more expensive than you were told.",
+      '',
+      `${leagueOrigin(theleague)}/theleague/rules#first-round-team-option`,
+    ].join('\n'),
+  },
 };
 
 function parseArgs(argv) {

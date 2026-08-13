@@ -199,6 +199,15 @@
       "reference": "Yes. Every player signed to the franchise counts toward the 20-player minimum regardless of where he sits — active roster, practice squad (taxi squad), or injured reserve. IR players are under contract and their salaries count 100% against the cap."
     },
     {
+      "id": "team-option-salary-top10",
+      "category": "multi-rule",
+      "question": "What salary does a 1st-round pick get if I exercise his 5th-year team option?",
+      "mustMatch": ["top\\s*(10|ten)"],
+      "expectedAnchor": "#first-round-team-option",
+      "judge": true,
+      "reference": "The 5th-year option salary is the average of the top 10 salaries at the player's position. Do not confuse this with the Rookie Extension formula, which uses the top 5 positional average — the two rules use different numbers, and they are mutually exclusive on the same player."
+    },
+    {
       "id": "ext-vs-option",
       "category": "multi-rule",
       "question": "Can I give my 2026 first-round rookie both a rookie extension and the 5th-year team option?",

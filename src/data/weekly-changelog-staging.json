@@ -4,6 +4,14 @@
     {
       "date": "2026-08-13",
       "type": "bug-fix",
+      "summary": "The pinned League Office card explaining the 5th-year team option had the price wrong, and had it wrong since March. It said the option salary is the top 5 positional average. It's the top 10 — which is what the constitution has always said, what the rules page has always said, and what the site's own salary math has always calculated. Only the explainer was off. The likely culprit is that the Rookie Extension formula genuinely does use the top 5 positional average, the two rules sit next to each other, and they're mutually exclusive on the same player, so it's a very easy wire to cross. Different numbers, on purpose. If you did any 2026 first-rounder planning off that card, the option is pricier than you were told.",
+      "impact": "user",
+      "area": "rules",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-08-13",
+      "type": "bug-fix",
       "summary": "Roger blew a call, and the constitution is why. Gridiron Geeks asked whether taxi squad players count toward the 20-player-under-contract minimum, and Roger said no — reasoning, quite confidently, that the taxi squad is a separate animal from the 22-man active roster. It is separate. That was never the question. The rule says 20 players UNDER CONTRACT, and a taxi squad rookie is under contract, which is exactly why he's eating half his base salary against your cap. Same for anyone parked on IR. The Commissioner has ruled: if he's signed to your franchise, he counts, wherever he's sitting. The rulebook now says so in plain English instead of leaving a chatbot to infer it, and Roger's test suite has a case for this one so he can't talk himself back into it.",
       "impact": "user",
       "area": "rules",
