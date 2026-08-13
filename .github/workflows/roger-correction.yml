@@ -1,0 +1,65 @@
+name: Roger Correction
+
+# Delivers a hand-authored "Ask Roger got that wrong" post to the league
+# GroupMe. The copy lives in scripts/roger-correction.mjs (CORRECTIONS map);
+# this workflow exists only because GROUPME_ROGER_BOT_ID is a repo secret and
+# is therefore not available in every local or sandboxed checkout.
+#
+# TRIGGER — deliberately NOT "on: push to a branch". The push trigger is gated
+# on the sentinel file `.github/roger-correction-send`, whose contents are the
+# correction slug to send. That path filter IS the idempotency guard: pushing
+# unrelated commits cannot re-fire the job, and GroupMe has no unsend. To send
+# a correction: write the slug into the sentinel and push it. To retire it:
+# delete the sentinel in a later commit (deleting it does not re-trigger, since
+# the run reads the slug and exits cleanly when the file is absent).
+#
+# workflow_dispatch is offered too, for manual sends once this file is on the
+# default branch.
+
+on:
+  push:
+    paths:
+      - '.github/roger-correction-send'
+  workflow_dispatch:
+    inputs:
+      correction:
+        description: 'Correction slug (see CORRECTIONS in scripts/roger-correction.mjs)'
+        required: true
+        type: string
+
+concurrency:
+  group: roger-correction
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Resolve correction slug
+        id: slug
+        run: |
+          if [ -n "${{ inputs.correction }}" ]; then
+            slug="${{ inputs.correction }}"
+          elif [ -f .github/roger-correction-send ]; then
+            slug="$(tr -d '[:space:]' < .github/roger-correction-send)"
+          else
+            echo "No sentinel file and no dispatch input — nothing to send."
+            echo "slug=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "Resolved correction slug: $slug"
+          echo "slug=$slug" >> "$GITHUB_OUTPUT"
+
+      - name: Send correction to GroupMe
+        if: steps.slug.outputs.slug != ''
+        env:
+          TZ: America/Los_Angeles
+          GROUPME_ROGER_BOT_ID: ${{ secrets.GROUPME_ROGER_BOT_ID }}
+        run: node scripts/roger-correction.mjs --correction "${{ steps.slug.outputs.slug }}" --send
