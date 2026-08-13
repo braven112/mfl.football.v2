@@ -39,6 +39,7 @@
 
 import { getLeagueBySlug, leagueOrigin } from '../src/config/leagues-data.mjs';
 import { postToGroupMe } from './lib/groupme.mjs';
+import { pathToFileURL } from 'node:url';
 import { getRedisConfig, redisCommand } from './lib/redis.mjs';
 
 const TAG = '[roger-correction]';
@@ -101,8 +102,9 @@ function parseArgs(argv) {
  * Release a claim after a KNOWN non-delivery. Without this, a rotated bot id or
  * a 4xx from GroupMe would burn the slug permanently: the claim outlives the
  * failed run, and the workflow — the only caller holding the GroupMe secret —
- * cannot pass --force. A `fetch-error` is deliberately NOT released, because a
- * request that threw mid-flight may still have been delivered.
+ * can only pass --force via a deliberate dispatch. See isKnownNonDelivery for
+ * exactly which outcomes qualify; ambiguous ones (5xx, http-0, fetch-error)
+ * keep the claim, because a duplicate correction is worse than a stuck one.
  */
 async function releaseClaim(slug, reason) {
   const redis = getRedisConfig();
@@ -211,19 +213,37 @@ async function main() {
 
 /**
  * A GroupMe non-delivery we can be SURE about, so the send claim is safe to
- * release. `fetch-error` is excluded on purpose: a request that threw
- * mid-flight may still have reached GroupMe, and re-posting to the whole
- * league is worse than a stuck claim a human can clear with --force.
+ * release. The bar is "GroupMe definitively rejected this", not merely "the
+ * run failed" — releasing a claim on an ambiguous outcome is what re-posts an
+ * un-unsendable message to sixteen owners.
+ *
+ * Released: `no-bot-id` (never left the process) and 4xx (GroupMe parsed the
+ * request and refused it).
+ *
+ * NOT released — all ambiguous, all could have been delivered:
+ *  - 5xx: the bot endpoint can accept and fan out a message and still return
+ *    500 from something downstream.
+ *  - `http-0`: groupme.mjs falls back to status 0 when it cannot read one,
+ *    i.e. we do not know what happened.
+ *  - `fetch-error`: a request that threw mid-flight may still have landed.
+ *
+ * A stuck claim is a human clearing it with --force. A wrongly released one is
+ * a duplicate correction. Prefer the stuck claim every time.
+ *
  * Exported for tests — this predicate decides whether a correction can be
  * re-sent, so a silent regression here is expensive in both directions.
  */
 export function isKnownNonDelivery(reason) {
-  return reason === 'no-bot-id' || (typeof reason === 'string' && reason.startsWith('http-'));
+  return reason === 'no-bot-id' || (typeof reason === 'string' && /^http-4\d\d$/.test(reason));
 }
 
 export { CORRECTIONS };
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// pathToFileURL, not a `file://` template: a path containing a space (or any
+// character URL-encoded in import.meta.url) makes the string compare unequal,
+// and main() is then silently skipped — a green run that posted nothing, which
+// is the one outcome this whole script is built to prevent.
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch((err) => {
     console.error(`${TAG} ${err.stack || err.message}`);
     process.exit(1);

@@ -51,19 +51,29 @@ describe('idsOf — concurrent-write fingerprint', () => {
     expect(idsOf([{ id: 'qa_1' }, {}, null])).not.toBe(idsOf([{ id: 'qa_1' }]));
   });
 
-  it('cannot be spoofed by an id containing the separator', () => {
-    // Two different arrays must never collide into the same fingerprint.
-    expect(idsOf([{ id: 'a' }, { id: 'b' }])).not.toBe(idsOf([{ id: 'a b' }]));
+  it('cannot be spoofed by an id containing any candidate separator', () => {
+    // A delimiter-join is forgeable: an id containing the delimiter collapses
+    // two entries into one, so a real concurrent write looks unchanged and the
+    // script clobbers it. An earlier version joined on NUL and this test used a
+    // SPACE, so it passed while the actual hole was wide open. Exercise every
+    // plausible separator, including the one previously used.
+    const two = idsOf([{ id: 'a' }, { id: 'b' }]);
+    for (const sep of [String.fromCharCode(0), ' ', ',', '|', '"', '\\', '\n']) {
+      expect(idsOf([{ id: `a${sep}b` }]), `separator ${JSON.stringify(sep)}`).not.toBe(two);
+    }
   });
 
-  it('the script source contains no literal NUL byte', () => {
-    // A raw NUL makes git treat the script as binary, so its diffs render as
-    // "Bin N -> M bytes" and a rebase conflict cannot be resolved by hand.
-    // This regressed once already; the separator must stay an escape.
-    const src = readFileSync(
-      new URL('../scripts/fix-rules-qa-answer.mjs', import.meta.url),
-      'utf8'
-    );
+  it.each([
+    '../scripts/fix-rules-qa-answer.mjs',
+    '../scripts/roger-correction.mjs',
+    './roger-correction-guards.test.ts',
+  ])('%s contains no literal NUL byte', (rel) => {
+    // A raw NUL makes git treat the file as binary, so its diffs render as
+    // "Bin N -> M bytes" and a rebase conflict cannot be resolved by hand —
+    // which contradicts the repo's rebase-and-resolve policy. This regressed
+    // once already (a NUL slipped in as a join separator), and this test file
+    // is as exposed as the scripts it guards, so it checks itself too.
+    const src = readFileSync(new URL(rel, import.meta.url), 'utf8');
     expect(src.includes(String.fromCharCode(0))).toBe(false);
   });
 });
@@ -73,10 +83,24 @@ describe('isKnownNonDelivery — when a send claim may be released', () => {
     expect(isKnownNonDelivery('no-bot-id')).toBe(true);
   });
 
-  it('releases on any HTTP status, which GroupMe returned and rejected', () => {
+  it('releases on 4xx — GroupMe parsed the request and refused it', () => {
+    expect(isKnownNonDelivery('http-400')).toBe(true);
     expect(isKnownNonDelivery('http-401')).toBe(true);
     expect(isKnownNonDelivery('http-404')).toBe(true);
-    expect(isKnownNonDelivery('http-500')).toBe(true);
+    expect(isKnownNonDelivery('http-429')).toBe(true);
+  });
+
+  it('KEEPS the claim on 5xx — GroupMe can deliver and still return 500', () => {
+    // The bot endpoint can accept and fan out a message, then fail downstream.
+    // Releasing here lets a re-dispatch post the correction to the league a
+    // second time, and GroupMe has no unsend.
+    expect(isKnownNonDelivery('http-500')).toBe(false);
+    expect(isKnownNonDelivery('http-502')).toBe(false);
+    expect(isKnownNonDelivery('http-503')).toBe(false);
+  });
+
+  it('KEEPS the claim on http-0 — groupme.mjs could not read a status at all', () => {
+    expect(isKnownNonDelivery('http-0')).toBe(false);
   });
 
   it('KEEPS the claim on a fetch error — the post may have landed', () => {

@@ -34,6 +34,17 @@ on:
         description: 'Correction slug (see CORRECTIONS in scripts/roger-correction.mjs)'
         required: true
         type: string
+      force:
+        # The escape hatch for a stuck claim. A correction whose send ended
+        # ambiguously (5xx, unreadable status, network throw) keeps its claim on
+        # purpose, and this job is the only caller holding the GroupMe secret —
+        # without this input that correction could never be re-sent. Dispatch
+        # only, never the sentinel path, and CHECK GROUPME FIRST: this exists to
+        # recover a message that did not land, not to repeat one that did.
+        description: 'Re-send even if already claimed/sent — verify in GroupMe first'
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: roger-correction
@@ -86,6 +97,8 @@ jobs:
         env:
           TZ: America/Los_Angeles
           SLUG: ${{ steps.slug.outputs.slug }}
+          # Only a manual dispatch can set this; the sentinel path never does.
+          FORCE: ${{ inputs.force }}
           GROUPME_ROGER_BOT_ID: ${{ secrets.GROUPME_ROGER_BOT_ID }}
           # The script claims roger:correction:sent:<slug> before posting, so a
           # re-fired run cannot double-post to the league.
@@ -93,4 +106,10 @@ jobs:
           UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
           KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
           KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
-        run: node scripts/roger-correction.mjs --correction "$SLUG" --send
+        run: |
+          if [ "$FORCE" = "true" ]; then
+            echo "::warning::--force requested: this will re-post even if already sent."
+            node scripts/roger-correction.mjs --correction "$SLUG" --send --force
+          else
+            node scripts/roger-correction.mjs --correction "$SLUG" --send
+          fi

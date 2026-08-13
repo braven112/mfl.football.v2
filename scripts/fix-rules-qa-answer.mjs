@@ -30,6 +30,7 @@
  *   node scripts/fix-rules-qa-answer.mjs --fix taxi-squad-20-minimum --apply
  */
 
+import { pathToFileURL } from 'node:url';
 import { getRedisConfig, redisCommand } from './lib/redis.mjs';
 
 const TAG = '[fix-rules-qa]';
@@ -73,15 +74,22 @@ const FIXES = {
  * concurrent write between our read and our write. Returns null for anything
  * that is not an array so a corrupt re-read compares unequal and aborts.
  *
- * Separator is an ESCAPE, never a literal NUL byte: a raw NUL in the source
- * makes git treat this file as binary, which turns every future diff into
- * "Bin N -> M bytes" and leaves a rebase conflict here unresolvable by hand.
+ * JSON.stringify, not a delimiter-join: ANY separator is forgeable by an id
+ * that contains it, collapsing two entries into one so a real concurrent write
+ * looks unchanged. JSON quotes and escapes each id, so ["a","b"] can never
+ * serialize the same as a single id built from "a" + separator + "b". Ids are
+ * alphanumeric today, so this guards a future id format rather than a live
+ * hole — but the failure it prevents is a silently clobbered owner question,
+ * which is invisible after the fact.
+ *
+ * It also keeps a literal NUL byte out of this file: a raw NUL makes git treat
+ * the source as binary, turning every future diff into "Bin N -> M bytes".
  *
  * Exported for tests — this is the only thing standing between a slow run and
  * a silently clobbered owner question.
  */
 export function idsOf(arr) {
-  return Array.isArray(arr) ? arr.map((x) => x?.id).join('\u0000') : null;
+  return Array.isArray(arr) ? JSON.stringify(arr.map((x) => x?.id ?? null)) : null;
 }
 
 function parseArgs(argv) {
@@ -212,7 +220,11 @@ async function main() {
 
 export { FIXES };
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// pathToFileURL, not a `file://` template: a path containing a space (or any
+// character URL-encoded in import.meta.url) makes the string compare unequal,
+// and main() is then silently skipped — a green run that posted nothing, which
+// is the one outcome this whole script is built to prevent.
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch((err) => {
     console.error(`${TAG} ${err.stack || err.message}`);
     process.exit(1);
