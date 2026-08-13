@@ -236,6 +236,31 @@ Never auto-promote or let the judge author ground truth. Prompt
 suggestions land in `latest-report.md`; after applying one, run
 `pnpm eval:roger`.
 
+**Detection without delivery is not a loop.** The audit caught the August
+2026 taxi-squad ruling correctly on 2026-07-27 and the proposal sat at
+`"reviewed": false` for 17 days, because committing a report to the repo
+notifies nobody. `scripts/roger-improvement-notify.mjs` (`pnpm notify:roger`,
+last step of the workflow) closes that: it reads **state** — whatever is
+unreviewed right now, not what this run found — and files one GitHub issue
+per pending proposal (deduped on the exact title, weekly aging comment after
+that) plus one GroupMe **DM to the commissioner**. Rules:
+
+- **Never the league chat.** Every `*_BOT_ID` path posts to all owners, and
+  this signal has a real false-positive rate — in the report this was built
+  from, one of two "failures" was an answer the judge itself called correct
+  that tripped a link-formatting check. DMs need `GROUPME_SERVICE_TOKEN` (a
+  user token; bots cannot DM) plus `GROUPME_COMMISSIONER_USER_ID` — find the
+  latter with `node scripts/roger-improvement-notify.mjs --list-members`.
+  Without it the issue still files and the step logs a `::warning::`.
+- **Silence when clean.** A weekly "all good" ping trains people to ignore
+  the channel. Zero pending + zero judge errors = no issue, no DM, exit 0.
+- **Closing an issue does not dismiss a proposal** — the notifier reads
+  `proposed-cases.json`, so it re-files next week. `"reviewed": true` (or
+  deleting the entry) is the only real off switch.
+- Body-building is pure and tested in `tests/roger-improvement-notify.test.ts`;
+  keep it that way rather than growing the inline `node -e` pattern some of
+  the older workflows use. Preview any change with `pnpm notify:roger --dry-run`.
+
 ## NFL Draft date source of truth
 
 - **Authoritative:** `src/data/theleague/nfl-draft-dates-fetched.json` —

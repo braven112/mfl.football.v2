@@ -67,6 +67,7 @@
     "eval:roger": "vitest run --config vitest.eval.config.ts tests/eval/roger.eval.ts",
     "eval:cutwatch": "vitest run --config vitest.eval.config.ts tests/eval/cut-watch.eval.ts",
     "improve:roger": "tsx scripts/roger-improvement-loop.ts",
+    "notify:roger": "node scripts/roger-improvement-notify.mjs",
     "test:e2e": "node tests/e2e-cookie-test.mjs",
     "test:watch": "vitest",
     "test:mfl-integration": "tsx tests/mfl-write-integration.test.ts",

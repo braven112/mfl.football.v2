@@ -4,6 +4,14 @@
     {
       "date": "2026-08-13",
       "type": "bug-fix",
+      "summary": "Roger's weekly self-audit now tells somebody when it finds something. It turns out the audit had already caught the taxi squad blunder on July 27th — two days after the question was asked — and written a perfectly accurate diagnosis of it into a file in the repo, where it sat for seventeen days until the wrong answer got noticed in the group chat instead. The detection was never the problem. The delivery was: the job committed its homework and went back to sleep. Findings now open a GitHub issue that stays open, nags weekly with a running day count, and DMs the commissioner directly rather than blasting the league chat about a bot's internal book-keeping. When there's nothing to report it says nothing at all, which is the only way a weekly alert stays worth reading.",
+      "impact": "admin",
+      "area": "rules",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-08-13",
+      "type": "bug-fix",
       "summary": "The pinned League Office card explaining the 5th-year team option had the price wrong, and had it wrong since March. It said the option salary is the top 5 positional average. It's the top 10 — which is what the constitution has always said, what the rules page has always said, and what the site's own salary math has always calculated. Only the explainer was off. The likely culprit is that the Rookie Extension formula genuinely does use the top 5 positional average, the two rules sit next to each other, and they're mutually exclusive on the same player, so it's a very easy wire to cross. Different numbers, on purpose. If you did any 2026 first-rounder planning off that card, the option is pricier than you were told.",
       "impact": "user",
       "area": "rules",
