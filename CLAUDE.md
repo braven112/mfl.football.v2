@@ -243,15 +243,20 @@ notifies nobody. `scripts/roger-improvement-notify.mjs` (`pnpm notify:roger`,
 last step of the workflow) closes that: it reads **state** — whatever is
 unreviewed right now, not what this run found — and files one GitHub issue
 per pending proposal (deduped on the exact title, weekly aging comment after
-that) plus one GroupMe **DM to the commissioner**. Rules:
+that) plus a **GroupMe post to the league** via `GROUPME_ROGER_BOT_ID`. The
+two channels have different audiences and must not be collapsed:
 
-- **Never the league chat.** Every `*_BOT_ID` path posts to all owners, and
-  this signal has a real false-positive rate — in the report this was built
-  from, one of two "failures" was an answer the judge itself called correct
-  that tripped a link-formatting check. DMs need `GROUPME_SERVICE_TOKEN` (a
-  user token; bots cannot DM) plus `GROUPME_COMMISSIONER_USER_ID` — find the
-  latter with `node scripts/roger-improvement-notify.mjs --list-members`.
-  Without it the issue still files and the step logs a `::warning::`.
+- **The issue is for whoever closes it out** — ids, judge verdict, review
+  steps, nagged weekly until `"reviewed": true`.
+- **The post is for owners**, and says only what they can act on: a stored
+  answer they may have read is suspect, don't rely on it yet. No proposal
+  ids, no GitHub links. It fires **only for findings new that run** — the
+  weekly nag stays on the issue rather than buzzing 12 phones — and never
+  for operational errors (a wedged `ANTHROPIC_API_KEY` is not league news;
+  it goes to the log and a `::warning::`). "New" is derived from whether the
+  issue had to be *created* vs merely commented, so there's no extra state
+  file; if `gh` is down nothing counts as new and the post is skipped rather
+  than re-announced.
 - **Silence when clean.** A weekly "all good" ping trains people to ignore
   the channel. Zero pending + zero judge errors = no issue, no DM, exit 0.
 - **Closing an issue does not dismiss a proposal** — the notifier reads

@@ -12,14 +12,17 @@
  * can lock the invariants without network, filesystem, or a GroupMe token.
  * The I/O shell lives in scripts/roger-improvement-notify.mjs.
  *
- * Two channels, deliberately different jobs:
- *   - GitHub issue = durable STATE. An unreviewed proposal is work-in-
- *     progress; an open issue is the only artifact here that is still
- *     visibly open on day 17. This is the actual fix.
- *   - GroupMe DM = the ALARM. Commissioner-only, never the league chat:
- *     the signal has a real false-positive rate (an answer the judge itself
- *     called correct still failed a link-formatting check), and 12 owners
- *     who can't act on it shouldn't absorb that.
+ * Two channels, deliberately different jobs and different audiences:
+ *   - GitHub issue = durable STATE, for whoever closes it out. An unreviewed
+ *     proposal is work-in-progress; an open issue is the only artifact here
+ *     that is still visibly open on day 17. This is the actual fix, and it
+ *     carries the ids, the judge's verdict and the review steps.
+ *   - GroupMe league post = the HEADS-UP, for owners. A stored answer nobody
+ *     regenerates is still being served to anyone who scrolls past it, so the
+ *     league's stake is "don't rely on that answer yet" — not the audit
+ *     mechanics. Deliberately narrower than the issue: only NEWLY-found
+ *     answers (the weekly nag stays on the issue, where it doesn't buzz 12
+ *     phones), and never judge/operational errors.
  */
 
 import { calendarDaysUntil } from './roger-reminder-window.mjs';
@@ -27,8 +30,8 @@ import { calendarDaysUntil } from './roger-reminder-window.mjs';
 /** GroupMe hard-caps a message at 1000 chars; stay under it with room to spare. */
 export const GROUPME_MAX_CHARS = 900;
 
-/** How much of an owner's question to quote in the (length-capped) DM. */
-const DM_QUESTION_CHARS = 120;
+/** How much of an owner's question to quote in the (length-capped) group post. */
+const QUESTION_PREVIEW_CHARS = 160;
 
 /** A judge error older than this is from a previous run, not the one that just finished. */
 export const JUDGE_ERROR_WINDOW_HOURS = 24;
@@ -222,41 +225,46 @@ export function buildBumpComment(proposal, { runUrl, now } = {}) {
 }
 
 /**
- * The commissioner DM. Plain text (GroupMe renders no markdown), hard-capped,
- * and deliberately terse — it is an alarm pointing at the issue list, not a
- * replacement for it.
+ * The league-chat post. Plain text (GroupMe renders no markdown) and
+ * hard-capped.
+ *
+ * Written for OWNERS, not for the commissioner. That distinction drives every
+ * choice here: no proposal ids, no GitHub links, no "needs your review" — the
+ * league can't action any of that. What an owner gets from this is the one
+ * thing that genuinely affects them, straight out of CLAUDE.md's "fixing the
+ * constitution does NOT fix answers already on the page": a stored answer they
+ * may have already read is suspect, so don't rely on it until it's ruled on.
+ *
+ * Judge errors are deliberately NOT included. "ANTHROPIC_API_KEY is wedged" is
+ * operations, and it goes to the logs and the workflow annotation where the
+ * person who can fix it will see it.
  */
-export function buildDmText(pending, { issuesUrl, judgeErrors = [], now } = {}) {
-  const count = pending.length;
-  const lines = [];
+export function buildGroupPostText(newFindings, { now } = {}) {
+  const count = newFindings.length;
+  if (count === 0) return null;
 
-  if (count > 0) {
-    lines.push(
-      `Ask Roger audit: ${count} finding${count === 1 ? '' : 's'} need${count === 1 ? 's' : ''} your review.`,
-      ''
-    );
-    for (const p of pending.slice(0, 3)) {
-      const days = ageInDays(p.proposedAt, now ?? new Date());
-      lines.push(`"${oneLine(p.case?.question, DM_QUESTION_CHARS)}"`);
-      lines.push(`  pending ${describeAge(days)} · ${p.id}`);
-    }
-    if (count > 3) lines.push(`  …and ${count - 3} more.`);
-    lines.push('');
+  const lines = [
+    count === 1
+      ? "Roger flagged one of his own answers. His weekly self-check thinks he got this wrong:"
+      : `Roger flagged ${count} of his own answers. His weekly self-check thinks he got these wrong:`,
+    '',
+  ];
+
+  for (const p of newFindings.slice(0, 3)) {
+    lines.push(`"${oneLine(p.case?.question, QUESTION_PREVIEW_CHARS)}"`);
   }
+  if (count > 3) lines.push(`…and ${count - 3} more.`);
 
-  if (judgeErrors.length > 0) {
-    lines.push(
-      `Heads up: the judge errored on ${judgeErrors.length} answer${judgeErrors.length === 1 ? '' : 's'} this run ` +
-        '(check ANTHROPIC_API_KEY / rate limits) — those went ungraded.',
-      ''
-    );
-  }
+  lines.push(
+    '',
+    count === 1
+      ? "Don't lean on that answer until Brandon rules on it — the fix usually means clarifying the constitution, not just correcting Roger."
+      : "Don't lean on those answers until Brandon rules on them — the fix usually means clarifying the constitution, not just correcting Roger."
+  );
 
-  if (issuesUrl) lines.push(`Review: ${issuesUrl}`);
-
-  // Cap the whole message, not each line — GroupMe silently rejects an
-  // over-length post, which would make this alarm fail exactly when a big
-  // backlog made it most worth sending.
+  // Cap the whole message, not each line — GroupMe rejects an over-length
+  // post, which would drop the alert exactly when a big batch made it most
+  // worth sending.
   const text = lines.join('\n').trim();
   if (text.length <= GROUPME_MAX_CHARS) return text;
   return `${text.slice(0, GROUPME_MAX_CHARS - 1).trimEnd()}…`;

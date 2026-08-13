@@ -65,17 +65,14 @@ jobs:
       # told nobody — the finding sat unreviewed for 17 days until the
       # commissioner noticed the wrong answer in the group chat. This step is
       # the delivery half: a GitHub issue per unreviewed proposal (the durable
-      # record) plus one commissioner DM (the alarm). Silent when nothing is
-      # pending. `always()` so a failed audit still surfaces the backlog.
-      #
-      # GROUPME_COMMISSIONER_USER_ID is the DM recipient — find it with
-      # `node scripts/roger-improvement-notify.mjs --list-members`. Without it
-      # the issue is still filed and the step logs a ::warning:: instead.
+      # record, nagged weekly) plus a league GroupMe post for findings that are
+      # NEW this run (the heads-up — a stored wrong answer is still being
+      # served to anyone who scrolls past it). Silent when nothing is pending.
+      # `always()` so a failed audit still surfaces the backlog.
       - name: Notify on unreviewed findings
         if: always()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GROUPME_SERVICE_TOKEN: ${{ secrets.GROUPME_SERVICE_TOKEN }}
-          GROUPME_COMMISSIONER_USER_ID: ${{ secrets.GROUPME_COMMISSIONER_USER_ID }}
+          GROUPME_ROGER_BOT_ID: ${{ secrets.GROUPME_ROGER_BOT_ID }}
           TZ: America/Los_Angeles
         run: node scripts/roger-improvement-notify.mjs

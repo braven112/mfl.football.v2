@@ -20,7 +20,7 @@ import {
   buildIssueTitle,
   buildIssueBody,
   buildBumpComment,
-  buildDmText,
+  buildGroupPostText,
   ageInDays,
   describeAge,
   fenced,
@@ -224,40 +224,52 @@ describe('buildBumpComment — the weekly nag that closes the 17-day gap', () =>
   });
 });
 
-describe('buildDmText', () => {
-  it('is terse, names the question, and points at the issue list', () => {
-    const text = buildDmText([proposal()], { issuesUrl: 'https://example.test/issues', now: NOW });
-    expect(text).toContain('1 finding needs your review');
+describe('buildGroupPostText — written for owners, not the commissioner', () => {
+  it('leads with the flagged answer and tells owners not to rely on it', () => {
+    const text = buildGroupPostText([proposal()], { now: NOW })!;
+    expect(text).toContain('Roger flagged one of his own answers');
     expect(text).toContain('taxi squad');
-    expect(text).toContain('pending 17 days');
-    expect(text).toContain('https://example.test/issues');
+    expect(text).toContain("Don't lean on that answer");
+  });
+
+  it('leaks no audit mechanics into the league chat', () => {
+    // Proposal ids, GitHub links and eval-dataset jargon are commissioner
+    // concerns; 12 owners can neither action nor see them.
+    const text = buildGroupPostText([proposal()], { now: NOW })!;
+    expect(text).not.toContain('live-qa_abc');
+    expect(text).not.toContain('qa_abc');
+    expect(text).not.toContain('github');
+    expect(text.toLowerCase()).not.toContain('proposal');
+    expect(text.toLowerCase()).not.toContain('review');
+  });
+
+  it('returns null when nothing is newly found, so the league stays quiet', () => {
+    // A proposal that merely aged another week is already announced — its nag
+    // belongs on the issue, not on 12 phones.
+    expect(buildGroupPostText([], { now: NOW })).toBeNull();
   });
 
   it('pluralizes and caps the detail list', () => {
     const many = Array.from({ length: 6 }, (_, i) => proposal({ id: `live-qa_${i}` }));
-    const text = buildDmText(many, { issuesUrl: 'https://example.test/issues', now: NOW });
-    expect(text).toContain('6 findings need your review');
+    const text = buildGroupPostText(many, { now: NOW })!;
+    expect(text).toContain('Roger flagged 6 of his own answers');
     expect(text).toContain('…and 3 more.');
+    expect(text).toContain("Don't lean on those answers");
   });
 
   it('stays under the GroupMe length cap even with a large hostile backlog', () => {
     const many = Array.from({ length: 40 }, (_, i) =>
       proposal({ id: `live-qa_${i}`, case: { ...proposal().case, question: 'x'.repeat(600) } })
     );
-    const text = buildDmText(many, { issuesUrl: 'https://example.test/issues', now: NOW });
+    const text = buildGroupPostText(many, { now: NOW })!;
     expect(text.length).toBeLessThanOrEqual(GROUPME_MAX_CHARS);
   });
 
-  it('reports judge errors on their own, with no pending proposals', () => {
-    const text = buildDmText([], { issuesUrl: 'https://example.test/issues', judgeErrors: ['qa_x'], now: NOW });
-    expect(text).toContain('judge errored on 1 answer');
-    expect(text).not.toContain('needs your review');
-  });
-
   it('collapses a multi-line question onto one line', () => {
-    const text = buildDmText([proposal({ case: { ...proposal().case, question: 'line one\nline two' } })], {
-      now: NOW,
-    });
+    const text = buildGroupPostText(
+      [proposal({ case: { ...proposal().case, question: 'line one\nline two' } })],
+      { now: NOW }
+    )!;
     expect(text).toContain('"line one line two"');
   });
 });
