@@ -40,11 +40,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      # Inputs reach the shell through env, never `${{ }}` splicing into the
+      # script body — a dispatch input is attacker-controlled text and this job
+      # holds live Redis credentials. Splicing also breaks on a plain double
+      # quote.
       - name: Resolve fix slug
         id: slug
+        env:
+          FIX_INPUT: ${{ inputs.fix }}
         run: |
-          if [ -n "${{ inputs.fix }}" ]; then
-            slug="${{ inputs.fix }}"
+          if [ -n "$FIX_INPUT" ]; then
+            slug="$FIX_INPUT"
           elif [ -f .github/rules-qa-fix-send ]; then
             slug="$(tr -d '[:space:]' < .github/rules-qa-fix-send)"
           else
@@ -52,6 +63,12 @@ jobs:
             echo "slug=" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          case "$slug" in
+            *[!a-z0-9-]*)
+              echo "Refusing slug with unexpected characters: $slug" >&2
+              exit 1
+              ;;
+          esac
           echo "Resolved fix slug: $slug"
           echo "slug=$slug" >> "$GITHUB_OUTPUT"
 
@@ -59,8 +76,9 @@ jobs:
         if: steps.slug.outputs.slug != ''
         env:
           TZ: America/Los_Angeles
+          SLUG: ${{ steps.slug.outputs.slug }}
           UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
           UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
           KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
           KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
-        run: node scripts/fix-rules-qa-answer.mjs --fix "${{ steps.slug.outputs.slug }}" --apply
+        run: node scripts/fix-rules-qa-answer.mjs --fix "$SLUG" --apply

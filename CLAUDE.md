@@ -179,7 +179,7 @@ is the reason this section exists.
 ## Ask Roger eval — run before prompt/model/constitution changes
 
 `pnpm eval:roger` grades the live TheLeague Q&A pipeline against
-`tests/fixtures/roger-eval-cases.json` (46 cases: facts, multi-rule,
+`tests/fixtures/roger-eval-cases.json` (49 cases: facts, multi-rule,
 date-sensitivity, strategy/calc refusals, not-in-constitution honesty,
 injection). Costs ~$1 of API calls (needs `ANTHROPIC_API_KEY`, so
 `vercel env pull` first) — deliberately NOT part of `pnpm test:unit`.

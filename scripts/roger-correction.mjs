@@ -14,19 +14,37 @@
  * checkouts — it runs this script, it does not decide when a correction is due.
  *
  * SAFETY: dry-run is the DEFAULT. GroupMe has no dedup and no unsend, so the
- * live post requires an explicit --send. Re-running with --send posts again.
+ * live post requires an explicit --send.
+ *
+ * IDEMPOTENCY is stateful, not trigger-shaped. Each slug claims
+ * `roger:correction:sent:<slug>` in Redis via SET NX before posting, and a
+ * claimed slug refuses to post again. This deliberately does NOT rely on the
+ * workflow's sentinel path filter: a `push` evaluates `paths` against the
+ * commits in the push, so any history rewrite that re-delivers the sentinel
+ * commit — exactly what this repo's mandated `git rebase origin/main` +
+ * `--force-with-lease` does — re-fires the job with the sentinel still at HEAD
+ * and would post to the whole league a second time. `--force` overrides the
+ * claim for the rare deliberate re-send. Without Redis credentials the claim
+ * cannot be made, and --send refuses rather than posting unguarded.
  *
  * Usage (preview the exact text, no network):
  *   node scripts/roger-correction.mjs --correction taxi-squad-20-minimum
  *
- * Usage (live, needs GROUPME_ROGER_BOT_ID in env):
+ * Usage (live, needs GROUPME_ROGER_BOT_ID + Redis creds in env):
  *   node scripts/roger-correction.mjs --correction taxi-squad-20-minimum --send
+ *
+ * Usage (deliberate re-send of an already-posted correction):
+ *   node scripts/roger-correction.mjs --correction <slug> --send --force
  */
 
 import { getLeagueBySlug, leagueOrigin } from '../src/config/leagues-data.mjs';
 import { postToGroupMe } from './lib/groupme.mjs';
+import { getRedisConfig, redisCommand } from './lib/redis.mjs';
 
 const TAG = '[roger-correction]';
+
+/** Redis key claimed before a correction posts, so a re-run cannot double-post. */
+const sentKey = (slug) => `roger:correction:sent:${slug}`;
 
 const theleague = getLeagueBySlug('theleague');
 const RULES_URL = `${leagueOrigin(theleague)}/theleague/rules#team-rosters`;
@@ -40,11 +58,17 @@ const RULES_URL = `${leagueOrigin(theleague)}/theleague/rules#team-rosters`;
  * Keep old entries after they've been sent — they're the public record of
  * what Roger has had to walk back.
  *
- * @type {Record<string, { league: 'theleague', text: string }>}
+ * `sentAt` records a delivery that already happened. It is the durable half of
+ * the double-post guard: the Redis claim below covers a re-run before anyone
+ * commits, while `sentAt` survives a flushed cache, a rotated Redis, or a fresh
+ * clone. Stamp it in the same commit that retires the sentinel.
+ *
+ * @type {Record<string, { league: 'theleague', sentAt?: string, text: string }>}
  */
 const CORRECTIONS = {
   'taxi-squad-20-minimum': {
     league: 'theleague',
+    sentAt: '2026-08-13',
     text: [
       "Correction, and it's on me.",
       '',
@@ -62,18 +86,47 @@ const CORRECTIONS = {
 };
 
 function parseArgs(argv) {
-  const args = { correction: null, send: false };
+  const args = { correction: null, send: false, force: false };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === '--send') args.send = true;
+    else if (arg === '--force') args.force = true;
     else if (arg === '--correction') args.correction = argv[++i];
     else if (arg.startsWith('--correction=')) args.correction = arg.slice('--correction='.length);
   }
   return args;
 }
 
+/**
+ * Claim the slug so a re-run cannot double-post. Returns true when this run
+ * owns the send. `SET key value NX` returns 'OK' on a fresh claim and null when
+ * the key already exists.
+ */
+async function claimSend(slug, force) {
+  const redis = getRedisConfig();
+  if (!redis) {
+    console.error(
+      `${TAG} No Redis credentials in env — cannot claim ${sentKey(slug)}, refusing to post unguarded.`
+    );
+    return false;
+  }
+  if (force) {
+    await redisCommand(redis, ['SET', sentKey(slug), new Date().toISOString()]);
+    console.warn(`${TAG} --force: overwriting the send claim for "${slug}".`);
+    return true;
+  }
+  const claimed = await redisCommand(redis, ['SET', sentKey(slug), new Date().toISOString(), 'NX']);
+  if (claimed !== 'OK') {
+    console.error(
+      `${TAG} "${slug}" has already been posted (${sentKey(slug)} exists). Re-run with --force to send it again.`
+    );
+    return false;
+  }
+  return true;
+}
+
 async function main() {
-  const { correction, send } = parseArgs(process.argv.slice(2));
+  const { correction, send, force } = parseArgs(process.argv.slice(2));
 
   if (!correction) {
     console.error(`${TAG} --correction <slug> is required. Available: ${Object.keys(CORRECTIONS).join(', ')}`);
@@ -90,6 +143,18 @@ async function main() {
   console.log('─'.repeat(72));
   console.log(entry.text);
   console.log('─'.repeat(72));
+
+  if (send && entry.sentAt && !force) {
+    console.error(
+      `${TAG} "${correction}" was already delivered on ${entry.sentAt} (see its sentAt). Re-run with --force to send it again.`
+    );
+    process.exit(1);
+  }
+
+  // Claim BEFORE posting: a crash between claim and post costs one un-sent
+  // correction (recoverable with --force), whereas claiming after a successful
+  // post would leave a crashed run free to re-post to the whole league.
+  if (send && !(await claimSend(correction, force))) process.exit(1);
 
   const result = await postToGroupMe({
     botId: process.env.GROUPME_ROGER_BOT_ID,

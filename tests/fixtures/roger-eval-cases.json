@@ -181,22 +181,21 @@
       "reference": "Teams must have at least 20 players under contract from the first game of the season through Week 17."
     },
     {
+      "$comment": "No mustNotMatch on the 'does not count' phrasings that originally shipped, even though they read like the obvious guard. The best answers contrast the two limits — 'they count toward the 20, but they don't count against your 22-man active roster' — and a negated-count regex fails that correct answer exactly as it fails the wrong one. The reference names the trap so the judge discriminates instead. Same reasoning as team-option-salary-top10 below; see docs/claude/insights/features/roger-evals.md.",
       "id": "taxi-counts-toward-minimum",
       "category": "multi-rule",
       "question": "All teams must have 20 players under contract by the end of the Off-Season Free Agency Period. Do players on the taxi squad count towards the 20 player minimum?",
-      "mustNotMatch": ["(do|does)\\s+not\\s+count", "do(n['’]t)\\s+count", "doesn['’]t\\s+count"],
       "expectedAnchor": "#team-rosters",
       "judge": true,
-      "reference": "Yes. The requirement is 20 players UNDER CONTRACT, and taxi squad (practice squad) players are under contract — so they count toward the 20. Commissioner ruling, August 2026. The 22-player active roster cap and the 3 extra taxi slots are roster-size limits; they do not narrow what 'under contract' means. Players on injured reserve count as well."
+      "reference": "Yes. The requirement is 20 players UNDER CONTRACT, and taxi squad (practice squad) players are under contract — so they count toward the 20. Commissioner ruling, August 2026. The 22-player active roster cap and the 3 extra taxi slots are roster-size limits; they do not narrow what 'under contract' means. Players on injured reserve count as well. GRADE AS WRONG any answer concluding taxi squad players do NOT count toward the 20, or that the 20 must be filled from the 22 active spots alone — that was the original incorrect ruling. An answer may correctly note that taxi players do not occupy active-roster spots, so long as its answer to the question asked is yes."
     },
     {
       "id": "ir-counts-toward-minimum",
       "category": "fact-lookup",
       "question": "Do my injured reserve players count toward the 20 player under contract minimum?",
-      "mustNotMatch": ["(do|does)\\s+not\\s+count", "do(n['’]t)\\s+count", "doesn['’]t\\s+count"],
       "expectedAnchor": "#team-rosters",
       "judge": true,
-      "reference": "Yes. Every player signed to the franchise counts toward the 20-player minimum regardless of where he sits — active roster, practice squad (taxi squad), or injured reserve. IR players are under contract and their salaries count 100% against the cap."
+      "reference": "Yes. Every player signed to the franchise counts toward the 20-player minimum regardless of where he sits — active roster, practice squad (taxi squad), or injured reserve. IR players are under contract and their salaries count 100% against the cap. GRADE AS WRONG any answer concluding IR players do NOT count toward the 20."
     },
     {
       "$comment": "Graded with mustMatch + judge and deliberately NO mustNotMatch on 'top 5' — unlike the taxi/IR cases below, a CORRECT answer here may quote the wrong value to contrast the two adjacent formulas ('top 10, not the top 5 extensions use'), which a regex cannot tell apart from a cross-wired answer. The reference names the trap so the judge catches the cross-wire instead. See docs/claude/insights/features/roger-evals.md.",
