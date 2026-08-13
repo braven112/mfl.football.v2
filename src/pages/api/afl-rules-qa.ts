@@ -72,10 +72,11 @@ async function resolveTeamName(franchiseId: string): Promise<string | null> {
   return aflTeams.find((t) => t.franchiseId === franchiseId)?.name ?? null;
 }
 
-export const { GET, POST, DELETE } = createRulesQAHandlers({
+export const { GET, POST, PATCH, DELETE } = createRulesQAHandlers({
   logTag: 'afl-rules-qa',
   redisKey: 'afl-rules-qa:all',
   rateLimitKeyPrefix: 'afl-rules-qa:rate',
+  flagKeyPrefix: 'afl-rules-qa:flags',
   idPrefix: 'afl_qa',
   leagueId: aflLeague.id,
   seedData: seedData as RulesQA[],

@@ -209,6 +209,17 @@ The Upstash creds are repo secrets, so this runs from CI or from a checkout
 with `vercel env pull`, not from a bare clone. (A scripted repair path is
 in flight — check for `scripts/fix-rules-qa-answer.mjs` before hand-rolling
 one.)
+Owners can now say so themselves: every card carries a "This answer looks
+wrong" button (`PATCH` on the rules-qa endpoint, storage in
+`src/utils/rules-qa-flags.ts`). It is the non-destructive counterpart to
+delete — the Q&A keeps its id, position and attribution. Load-bearing bits:
+flags live in their OWN keys (`<prefix>:<qaId>` hash keyed by franchiseId,
+plus a `<prefix>:index` set) so the Q&A array the improvement loop and repair
+scripts read is untouched, one owner can't inflate a count, and two owners
+flagging at once can't clobber each other. Flags work on **pre-seeded cards
+too** — the 5th-year option bug was in a seed. Flagger names and reasons are
+admin-only; everyone else sees the count.
+
 Three surfaces can each hold the same wrong rule independently — the
 constitution, the seeded cards in `rules-qa-seeds.json`, and stored Redis
 answers — so check all three. The August 2026 taxi-squad ruling needed

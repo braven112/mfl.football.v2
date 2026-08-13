@@ -14,8 +14,26 @@ import {
   type AuthUser,
 } from './auth';
 import { findBestMatch } from './rules-qa-matching';
-import type { RulesQA, AskQuestionRequest } from '../types/rules-qa';
+import type {
+  RulesQA,
+  RulesQAWithFlags,
+  AskQuestionRequest,
+  FlagAnswerRequest,
+} from '../types/rules-qa';
 import { getRedis, type RedisClient } from './redis-client';
+import { checkRateLimit } from './rate-limit';
+import {
+  readAllFlags,
+  setFlag,
+  clearFlag,
+  parseFlagHash,
+  summarizeFlags,
+  normalizeReason,
+  flagHashKey,
+  flagIndexKey,
+  FLAG_RATE_LIMIT_MAX,
+  FLAG_RATE_LIMIT_WINDOW,
+} from './rules-qa-flags';
 
 const RATE_LIMIT_MAX = 5;
 const RATE_LIMIT_WINDOW = 3600;
@@ -27,6 +45,8 @@ export interface RulesQAConfig {
   redisKey: string;
   /** Redis key prefix for per-franchise rate limiting */
   rateLimitKeyPrefix: string;
+  /** Redis key prefix for owner "looks wrong" flags (see rules-qa-flags.ts) */
+  flagKeyPrefix: string;
   /** Prefix on the generated Q&A id */
   idPrefix: string;
   /** League id from the registry — used for cross-league auth gate */
@@ -142,15 +162,43 @@ function requireLeagueAuth(request: Request, leagueId: string): AuthUser | Respo
 export function createRulesQAHandlers(config: RulesQAConfig): {
   GET: APIRoute;
   POST: APIRoute;
+  PATCH: APIRoute;
   DELETE: APIRoute;
 } {
   const GET: APIRoute = async ({ request }) => {
     const auth = requireLeagueAuth(request, config.leagueId);
     if (auth instanceof Response) return auth;
+    const user = auth;
 
     const redis = await getRedis();
-    const items = await getAllQAs(redis, config.redisKey, config.seedData);
-    items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const stored = await getAllQAs(redis, config.redisKey, config.seedData);
+    stored.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    let items: RulesQAWithFlags[] = stored;
+    if (redis) {
+      try {
+        const flags = await readAllFlags(redis, config.flagKeyPrefix);
+        if (flags.size > 0) {
+          const isAdmin = isCommissionerOrAdmin(user);
+          items = stored.map((qa) => {
+            const records = flags.get(qa.id);
+            if (!records) return qa;
+            return {
+              ...qa,
+              flags: summarizeFlags(records, {
+                viewerFranchiseId: user.franchiseId ?? null,
+                includeFlaggers: isAdmin,
+              }),
+            };
+          });
+        }
+      } catch (e) {
+        // Flags are decoration on top of the answers. A flag-store failure
+        // must not blank the board — serve the Q&As without them.
+        console.warn(`[${config.logTag}] Failed to load flags:`, e);
+      }
+    }
+
     return jsonResponse({ items });
   };
 
@@ -234,6 +282,105 @@ export function createRulesQAHandlers(config: RulesQAConfig): {
     return jsonResponse({ qa: newQA, wasDuplicate: false });
   };
 
+  /**
+   * Report an answer as wrong (or withdraw that report).
+   *
+   * The non-destructive counterpart to DELETE: any authenticated owner in the
+   * league can flag, and the Q&A — question, attribution, position — survives
+   * intact. Deleting was previously the only lever, and it discards the
+   * owner's question along with the bad answer.
+   */
+  const PATCH: APIRoute = async ({ request }) => {
+    const auth = requireLeagueAuth(request, config.leagueId);
+    if (auth instanceof Response) return auth;
+    const user = auth;
+    if (!user.franchiseId) {
+      return jsonResponse({ error: 'Authentication required' }, 401);
+    }
+
+    let body: FlagAnswerRequest;
+    try {
+      body = await request.json();
+    } catch {
+      return jsonResponse({ error: 'Invalid request body' }, 400);
+    }
+
+    const id = body.id?.trim();
+    if (!id) return jsonResponse({ error: 'Missing Q&A id' }, 400);
+    if (typeof body.flagged !== 'boolean') {
+      return jsonResponse({ error: 'Missing "flagged" boolean' }, 400);
+    }
+
+    const redis = await getRedis();
+    if (!redis) return jsonResponse({ error: 'Storage unavailable' }, 503);
+
+    // The id must name a real Q&A. Without this, any string becomes a Redis
+    // key — an unbounded write primitive for any authenticated owner, and a
+    // pile of orphan keys the index would happily serve back.
+    const allQAs = await getAllQAs(redis, config.redisKey, config.seedData);
+    if (!allQAs.some((qa) => qa.id === id)) {
+      return jsonResponse({ error: 'Q&A not found' }, 404);
+    }
+
+    // Only rate-limit NEW flags. Withdrawing is always allowed, so nobody can
+    // get stuck having reported something they no longer stand behind.
+    if (body.flagged) {
+      const limit = await checkRateLimit(
+        `${config.logTag}-flag`,
+        user.franchiseId,
+        FLAG_RATE_LIMIT_MAX,
+        FLAG_RATE_LIMIT_WINDOW
+      );
+      if (!limit.allowed) {
+        return jsonResponse(
+          { error: "That's a lot of reports in one hour. Give the commissioner a chance to work through them." },
+          429
+        );
+      }
+    }
+
+    try {
+      if (body.flagged) {
+        const teamName =
+          (await config.resolveTeamName(user.franchiseId)) ?? user.name ?? 'Unknown';
+        await setFlag(redis, {
+          prefix: config.flagKeyPrefix,
+          qaId: id,
+          franchiseId: user.franchiseId,
+          teamName,
+          reason: normalizeReason(body.reason),
+          at: new Date().toISOString(),
+        });
+      } else {
+        await clearFlag(redis, {
+          prefix: config.flagKeyPrefix,
+          qaId: id,
+          franchiseId: user.franchiseId,
+        });
+      }
+
+      // Re-read rather than computing the new state locally: two owners can
+      // flag the same answer concurrently, and the count we hand back should
+      // be the real one.
+      const records = parseFlagHash(
+        (await redis.hgetall<unknown>(flagHashKey(config.flagKeyPrefix, id))) as Record<
+          string,
+          unknown
+        > | null
+      );
+      return jsonResponse({
+        id,
+        flags: summarizeFlags(records, {
+          viewerFranchiseId: user.franchiseId,
+          includeFlaggers: isCommissionerOrAdmin(user),
+        }),
+      });
+    } catch (e) {
+      console.error(`[${config.logTag}] Failed to update flag:`, e);
+      return jsonResponse({ error: 'Failed to update report' }, 500);
+    }
+  };
+
   const DELETE: APIRoute = async ({ request }) => {
     const auth = requireLeagueAuth(request, config.leagueId);
     if (auth instanceof Response) return auth;
@@ -265,6 +412,15 @@ export function createRulesQAHandlers(config: RulesQAConfig): {
         return jsonResponse({ error: 'Q&A not found' }, 404);
       }
       await redis.set(config.redisKey, updated);
+      // Drop any flags with it, so a future Q&A that somehow reuses the id
+      // can't inherit a stale report — and the index doesn't accumulate
+      // entries pointing at answers that no longer exist.
+      try {
+        await redis.del(flagHashKey(config.flagKeyPrefix, id));
+        await redis.srem(flagIndexKey(config.flagKeyPrefix), id);
+      } catch (e) {
+        console.warn(`[${config.logTag}] Deleted Q&A but failed to clear its flags:`, e);
+      }
       return jsonResponse({ deleted: true, id });
     } catch (e) {
       console.error(`[${config.logTag}] Failed to delete from Redis:`, e);
@@ -272,5 +428,5 @@ export function createRulesQAHandlers(config: RulesQAConfig): {
     }
   };
 
-  return { GET, POST, DELETE };
+  return { GET, POST, PATCH, DELETE };
 }
