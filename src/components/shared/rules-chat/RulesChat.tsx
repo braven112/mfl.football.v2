@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import type { RulesQA } from '../../../types/rules-qa';
+import type { RulesQA, RulesQAWithFlags } from '../../../types/rules-qa';
 import { filterByRelevance, wordOverlapScore } from '../../../utils/rules-qa-matching';
 import { useLoadingState } from '../../../hooks/useLoadingState';
 import { ThinkingDots, BrandedMoment } from '../loading/loading-react';
@@ -28,7 +28,7 @@ interface Props {
 }
 
 export default function RulesChat({ preSeeded, isAuthenticated, isAdmin, teamIcons, apiEndpoint = '/api/rules-qa' }: Props) {
-  const [allQAs, setAllQAs] = useState<RulesQA[]>(preSeeded);
+  const [allQAs, setAllQAs] = useState<RulesQAWithFlags[]>(preSeeded);
   const [searchText, setSearchText] = useState('');
   const { isLoading, tier, start: startLoading, stop: stopLoading } = useLoadingState('content');
   const [error, setError] = useState<string | null>(null);
@@ -50,11 +50,16 @@ export default function RulesChat({ preSeeded, isAuthenticated, isAdmin, teamIco
       .then(r => r.json())
       .then(data => {
         if (data.items && Array.isArray(data.items)) {
+          const items = data.items as RulesQAWithFlags[];
           // Merge: dynamic items that aren't in the seed set
           const seedIds = new Set(preSeeded.map(q => q.id));
-          const dynamic = (data.items as RulesQA[]).filter(q => !seedIds.has(q.id));
+          const dynamic = items.filter(q => !seedIds.has(q.id));
+          // Flags live server-side and can land on a SEEDED card too (the
+          // August 2026 top-5/top-10 bug was in a seed), so carry them across
+          // rather than only taking the dynamic rows.
+          const flagsById = new Map(items.filter(q => q.flags).map(q => [q.id, q.flags!]));
           setAllQAs(prev => {
-            const merged = [...dynamic, ...prev];
+            const merged = [...dynamic, ...prev.map(q => (flagsById.has(q.id) ? { ...q, flags: flagsById.get(q.id) } : q))];
             merged.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
             return merged;
           });
@@ -114,6 +119,33 @@ export default function RulesChat({ preSeeded, isAuthenticated, isAdmin, teamIco
       stopLoading();
     }
   }, [isAuthenticated, apiEndpoint, startLoading, stopLoading]);
+
+  /**
+   * Report an answer as wrong, or withdraw that report.
+   *
+   * The server's response is authoritative for the new count — two owners can
+   * flag the same answer at once, so optimistically incrementing locally would
+   * show the wrong number until reload.
+   */
+  const handleFlag = useCallback(async (id: string, flagged: boolean, reason?: string) => {
+    try {
+      const res = await fetch(apiEndpoint, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, flagged, reason }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'Failed to report this answer');
+        return;
+      }
+      setError(null);
+      setAllQAs(prev => prev.map(qa => (qa.id === id ? { ...qa, flags: data.flags } : qa)));
+    } catch {
+      setError('Failed to report this answer. Please try again.');
+    }
+  }, [apiEndpoint]);
 
   const handleDelete = useCallback(async (id: string) => {
     if (!confirm('Delete this Q&A? This cannot be undone.')) return;
@@ -192,6 +224,7 @@ export default function RulesChat({ preSeeded, isAuthenticated, isAdmin, teamIco
               isAdmin={isAdmin}
               teamIcon={qa.askedBy ? iconMap[qa.askedBy.franchiseId] : undefined}
               onDelete={isAdmin && !qa.isPreSeeded ? handleDelete : undefined}
+              onFlag={isAuthenticated ? handleFlag : undefined}
             />
           ))
         )}

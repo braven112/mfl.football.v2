@@ -31,10 +31,11 @@ async function resolveTeamName(franchiseId: string): Promise<string | null> {
   }
 }
 
-export const { GET, POST, DELETE } = createRulesQAHandlers({
+export const { GET, POST, PATCH, DELETE } = createRulesQAHandlers({
   logTag: 'rules-qa',
   redisKey: 'rules-qa:all',
   rateLimitKeyPrefix: 'rules-qa:rate',
+  flagKeyPrefix: 'rules-qa:flags',
   idPrefix: 'qa',
   leagueId: LEAGUES.theleague.id,
   seedData: seedData as RulesQA[],
