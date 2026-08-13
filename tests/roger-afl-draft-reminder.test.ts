@@ -10,8 +10,10 @@ import { resolve } from 'node:path';
  *
  *   1. WRONG DATE. scripts/compute-league-events.mjs carried an
  *      `afl-draft-window-opens` event pinned to a hardcoded Aug 20 (lifted
- *      from the "Annual draft window: August 20 – August 25" line in
- *      docs/claude/afl-rules.md). The league actually drafts on the
+ *      from an "Annual draft window" line that the constitution, the rules
+ *      page and docs/claude/afl-rules.md all carried, and which described a
+ *      window the league has never drafted in — since corrected to "the
+ *      weekend before Labor Day weekend"). The league actually drafts on the
  *      Labor-Day-anchored weekend — Sat Aug 29 (AL) and Sun Aug 30 (NL) in
  *      2026 — which is what /afl-fantasy/calendar renders from
  *      src/data/afl-fantasy/league-events.json. The reminder fired 16 days

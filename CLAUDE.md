@@ -186,10 +186,13 @@ event dates in the past. Fixing one does not fix the other.
      and any drift is visible to owners in one click. The AFL drafts are
      Labor-Day-anchored — `saturday-before-labor-day-weekend` (AL, Labor
      Day − 9) and `sunday-before-labor-day-weekend` (NL, Labor Day − 8) —
-     never fixed calendar dates. Note the *rules doc*
-     (`docs/claude/afl-rules.md`) still says "Annual draft window: August 20
-     – August 25", which contradicts the drafts the league actually holds;
-     don't copy dates out of it into code.
+     never fixed calendar dates. The bad Aug 20 came from an "Annual draft
+     window: August 20 – August 25" line that three rulebook surfaces
+     carried (`src/data/afl-constitution.ts` ×2, `docs/claude/afl-rules.md`,
+     `src/pages/afl-fantasy/docs/rules.html`) describing a window the league
+     has never drafted in. All now state the Labor Day rule in words
+     (commissioner, 2026-08-13). Not audited: stored answers under the
+     `afl-rules-qa:all` Redis key, which needs Upstash creds.
 
 Historical note: the first two bugs fired together in April 2026 — Roger
 posted "TODAY: NFL Draft" on Wednesday when the draft was Thursday. The
