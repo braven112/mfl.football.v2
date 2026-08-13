@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-08-13T13:18:51.878Z"
+    "fetchedAt": "2026-08-13T15:38:26.021Z"
   },
   "players": [
     {
@@ -898,7 +898,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "WR"
         ],
@@ -1553,8 +1553,8 @@
           "RB"
         ],
         "experience": 5,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Questionable",
+        "injuryBodyPart": "Hamstring",
         "gsisId": null
       },
       "nflverse": null,
@@ -4923,7 +4923,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 4,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "WR"
         ],
@@ -6699,7 +6699,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 1,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "RB"
         ],
@@ -6710,7 +6710,12 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "15972",
+          "name": "Mason, Jordan"
+        }
+      ]
     },
     {
       "id": "17077",
@@ -7051,7 +7056,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 2,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "RB"
         ],
@@ -7062,12 +7067,7 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": [
-        {
-          "id": "13319",
-          "name": "Jones, Aaron"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "15282",
@@ -8336,12 +8336,12 @@
       "gamesPlayed": null,
       "depthChartAhead": [
         {
-          "id": "13319",
-          "name": "Jones, Aaron"
-        },
-        {
           "id": "15972",
           "name": "Mason, Jordan"
+        },
+        {
+          "id": "13319",
+          "name": "Jones, Aaron"
         }
       ]
     },
@@ -11374,7 +11374,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 2,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "TE"
         ],
