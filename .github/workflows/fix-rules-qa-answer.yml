@@ -6,7 +6,11 @@ name: Fix Rules Q&A Answer
 #
 # Same sentinel design as the Roger Correction workflow: the push trigger is
 # gated on `.github/rules-qa-fix-send`, whose contents are the fix slug. The
-# path filter is what stops ordinary pushes from re-running a write. Deleting
+# path filter stops ORDINARY pushes from re-running a write — it is not an
+# idempotency guard, since a history rewrite that re-delivers the sentinel
+# commit re-fires the job (see the Roger Correction header). That is tolerable
+# here only because this write is genuinely idempotent: the script no-ops when
+# the stored answer already matches. Deleting
 # the sentinel to retire a fix DOES fire the workflow (a delete is a change to
 # the filtered path), but the run resolves an empty slug and the `if` guard
 # skips the write step. Unlike the GroupMe post this write is also idempotent

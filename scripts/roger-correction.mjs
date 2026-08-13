@@ -98,6 +98,26 @@ function parseArgs(argv) {
 }
 
 /**
+ * Release a claim after a KNOWN non-delivery. Without this, a rotated bot id or
+ * a 4xx from GroupMe would burn the slug permanently: the claim outlives the
+ * failed run, and the workflow — the only caller holding the GroupMe secret —
+ * cannot pass --force. A `fetch-error` is deliberately NOT released, because a
+ * request that threw mid-flight may still have been delivered.
+ */
+async function releaseClaim(slug, reason) {
+  const redis = getRedisConfig();
+  if (!redis) return;
+  try {
+    await redisCommand(redis, ['DEL', sentKey(slug)]);
+    console.warn(`${TAG} released the claim for "${slug}" after a known non-delivery (${reason}).`);
+  } catch (err) {
+    console.error(
+      `${TAG} could not release ${sentKey(slug)} (${err.message}) — re-send will need --force.`
+    );
+  }
+}
+
+/**
  * Claim the slug so a re-run cannot double-post. Returns true when this run
  * owns the send. `SET key value NX` returns 'OK' on a fresh claim and null when
  * the key already exists.
@@ -151,6 +171,13 @@ async function main() {
     process.exit(1);
   }
 
+  // Check the bot id before claiming, so the most likely non-delivery (secret
+  // unset or rotated) never burns the claim in the first place.
+  if (send && !process.env.GROUPME_ROGER_BOT_ID) {
+    console.error(`${TAG} GROUPME_ROGER_BOT_ID not set — nothing posted, claim untouched.`);
+    process.exit(1);
+  }
+
   // Claim BEFORE posting: a crash between claim and post costs one un-sent
   // correction (recoverable with --force), whereas claiming after a successful
   // post would leave a crashed run free to re-post to the whole league.
@@ -169,11 +196,36 @@ async function main() {
   });
 
   // A --send that didn't land is a failure worth a non-zero exit; a dry run
-  // is not.
-  if (send && !result.posted) process.exit(1);
+  // is not. Release the claim first when we KNOW it didn't deliver, so the
+  // correction stays sendable through CI without a --force it cannot pass.
+  if (send && !result.posted) {
+    if (isKnownNonDelivery(result.reason)) await releaseClaim(correction, result.reason);
+    else if (result.reason === 'fetch-error') {
+      console.error(
+        `${TAG} claim for "${correction}" left in place — the request may have been delivered. Verify in GroupMe, then re-send with --force if it was not.`
+      );
+    }
+    process.exit(1);
+  }
 }
 
-main().catch((err) => {
-  console.error(`${TAG} ${err.stack || err.message}`);
-  process.exit(1);
-});
+/**
+ * A GroupMe non-delivery we can be SURE about, so the send claim is safe to
+ * release. `fetch-error` is excluded on purpose: a request that threw
+ * mid-flight may still have reached GroupMe, and re-posting to the whole
+ * league is worse than a stuck claim a human can clear with --force.
+ * Exported for tests — this predicate decides whether a correction can be
+ * re-sent, so a silent regression here is expensive in both directions.
+ */
+export function isKnownNonDelivery(reason) {
+  return reason === 'no-bot-id' || (typeof reason === 'string' && reason.startsWith('http-'));
+}
+
+export { CORRECTIONS };
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main().catch((err) => {
+    console.error(`${TAG} ${err.stack || err.message}`);
+    process.exit(1);
+  });
+}

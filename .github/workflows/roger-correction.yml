@@ -7,12 +7,19 @@ name: Roger Correction
 #
 # TRIGGER — deliberately NOT "on: push to a branch". The push trigger is gated
 # on the sentinel file `.github/roger-correction-send`, whose contents are the
-# correction slug to send. That path filter IS the idempotency guard: pushing
-# unrelated commits cannot re-fire the job, and GroupMe has no unsend. To send
-# a correction: write the slug into the sentinel and push it. To retire it:
-# delete the sentinel in a later commit — that deletion DOES fire the workflow
-# (a delete is a change to the filtered path), but the run then resolves an
-# empty slug and the `if` guard skips the send step, so no second post goes out.
+# correction slug to send. To send a correction: write the slug into the
+# sentinel and push it. To retire it: delete the sentinel in a later commit —
+# that deletion DOES fire the workflow (a delete is a change to the filtered
+# path), but the run resolves an empty slug and the `if` guard skips the send.
+#
+# THE PATH FILTER IS NOT AN IDEMPOTENCY GUARD. It stops UNRELATED pushes from
+# re-firing the job, and nothing more. `push` evaluates `paths` against the
+# commits in the push, so any history rewrite that re-delivers the sentinel
+# commit — precisely what this repo's mandated `git rebase origin/main` +
+# `--force-with-lease` does — fires the job again with the sentinel still at
+# HEAD. GroupMe has no unsend, so the real guard is stateful and lives in the
+# script: a `SET NX` claim on `roger:correction:sent:<slug>` plus a `sentAt`
+# stamp on the entry. Do not weaken either one on the strength of this filter.
 #
 # workflow_dispatch is offered too, for manual sends once this file is on the
 # default branch.
