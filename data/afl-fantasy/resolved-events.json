@@ -1,5 +1,5 @@
 {
-  "computedAt": "2026-08-14T16:38:42.491Z",
+  "computedAt": "2026-08-14T17:15:37.803Z",
   "leagueYear": 2026,
   "events": [
     {
@@ -22,16 +22,24 @@
       "id": "afl-trade-deadline",
       "name": "AFL Trade Deadline",
       "tier": "major",
-      "startDate": "2026-11-11T08:00:00.000Z",
-      "daysUntil": 89,
+      "startDate": "2026-11-18T08:00:00.000Z",
+      "daysUntil": 96,
       "isPast": false
     },
     {
-      "id": "afl-draft-window-opens",
-      "name": "AFL Annual Draft Window",
+      "id": "afl-al-draft",
+      "name": "AFL American League Draft",
       "tier": "major",
-      "startDate": "2026-08-20T07:00:00.000Z",
-      "daysUntil": 6,
+      "startDate": "2026-08-29T07:00:00.000Z",
+      "daysUntil": 15,
+      "isPast": false
+    },
+    {
+      "id": "afl-nl-draft",
+      "name": "AFL National League Draft",
+      "tier": "standard",
+      "startDate": "2026-08-30T07:00:00.000Z",
+      "daysUntil": 16,
       "isPast": false
     },
     {

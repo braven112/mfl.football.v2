@@ -20,6 +20,14 @@
     {
       "date": "2026-08-13",
       "type": "bug-fix",
+      "summary": "At 1:00 in the morning, Roger woke up the AFL to announce the draft was one week away. Two things wrong with that sentence. The draft is not one week away — the AL board goes live Saturday August 29 and the NL email draft opens the next morning, which is sixteen days out, and which is what the calendar has said the whole time. Roger was reading off a hardcoded August 20 that traces back to an old \"annual draft window\" line and matches nothing the league actually does. He now reads the same Labor Day math the calendar does, so there is exactly one draft date in the building. And the 1am part: every other thing Schefter sends respects overnight quiet hours. Roger's reminders somehow never got the memo, so whenever a countdown came due — 1am, 3am, whenever the scanner happened to tick — your phone found out. He now holds until 7am like everyone else. The two bogus countdown posts have been pulled from the feed. The GroupMe messages, unfortunately, are forever. While we were in there: the rulebook itself was the original source of the bad date. \"Annual draft window: August 20 – August 25\" has been sitting in the constitution, the rules page, and Roger's reference copy for years, describing a window the league has never actually drafted in. Per the Commissioner, the draft is always the weekend BEFORE Labor Day weekend — AL on the Saturday, NL on the Sunday morning after. All three now say that, in those words, so nothing downstream has to guess a date again. And one more, caught while reviewing the fix: Roger had the trade deadline wrong too, by exactly a week. He was set to start the countdown for November 11th. The deadline is November 18th — the Wednesday between Weeks 10 and 11, which is what the calendar has always shown. Same root cause, same fix.",
+      "impact": "user",
+      "area": "schefter",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-13",
+      "type": "bug-fix",
       "summary": "The pinned League Office card explaining the 5th-year team option had the price wrong, and had it wrong since March. It said the option salary is the top 5 positional average. It's the top 10 — which is what the constitution has always said, what the rules page has always said, and what the site's own salary math has always calculated. Only the explainer was off. The likely culprit is that the Rookie Extension formula genuinely does use the top 5 positional average, the two rules sit next to each other, and they're mutually exclusive on the same player, so it's a very easy wire to cross. Different numbers, on purpose. If you did any 2026 first-rounder planning off that card, the option is pricier than you were told.",
       "impact": "user",
       "area": "rules",

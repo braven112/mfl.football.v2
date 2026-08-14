@@ -1838,6 +1838,21 @@ async function scanEventReminders(league) {
     return 0;
   }
 
+  // Quiet hours (23:00–06:59 PT) — every other GroupMe lane already honors
+  // this; Roger's reminders did not, so the 15-minute scan cron fired them
+  // at whatever hour the touch first came due (the Aug 2026 AFL draft
+  // reminder went out at 1:00am PT).
+  //
+  // The gate deliberately wraps the WHOLE function rather than just the
+  // GroupMe send: the feed post id is the dedup key, so writing the post now
+  // and skipping the send would swallow the notification forever. Skipping
+  // outright is safe because shouldFireReminder accepts the target day OR one
+  // day late, so the first post-07:00 PT tick still fires the same touch.
+  if (isQuietHours(new Date())) {
+    console.log(`  Quiet hours — holding ${league.slug} reminders until 07:00 PT`);
+    return 0;
+  }
+
   // Read resolved events (per-league path)
   const eventsPath = league.eventsPath;
   let eventsData;

@@ -51,7 +51,7 @@ disagree, the constitution wins for *rules*; the MFL feeds win for *live data*.
 | League dues deadline | April 1 |
 | Keeper selection deadline (7 keepers) | July 15 |
 | Trade deadline | Wednesday between Week 10 and 11 |
-| Annual draft window | August 20 – August 25 |
+| Annual draft | Weekend before Labor Day weekend — AL drafts Saturday, NL drafts Sunday |
 | Last day to move players from IR to active roster | Super Bowl Sunday |
 
 ---

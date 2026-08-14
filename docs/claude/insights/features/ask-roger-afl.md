@@ -16,6 +16,50 @@ The rules text is embedded directly in the API's system prompt — see `src/data
 
 When updating the constitution, update both. The HTML is the source of truth for prose; the `.ts` version may include factually-true clarifications that aren't in the written constitution (e.g., cross-conference trades banned, conferences draft separately) — flag these clearly in the `.ts` file so future edits don't strip them.
 
+### "Both" is actually three files, and the `.ts` repeats itself
+
+The sync list above undercounts. Correcting one AFL rule in August 2026 took
+edits in **four places**, and grepping for the rule text is the only reliable
+way to find them all:
+
+| File | Why it has a copy |
+|------|-------------------|
+| `src/pages/afl-fantasy/docs/rules.html` | prose rendered to owners |
+| `src/data/afl-constitution.ts` — `IMPORTANT DATES` | LLM prompt, summary table |
+| `src/data/afl-constitution.ts` — topic section (`DRAFT`, `KEEPERS`, …) | LLM prompt, detail |
+| `docs/claude/afl-rules.md` | developer/agent reference |
+
+The two hits inside `afl-constitution.ts` are the easy miss: the file states
+date-shaped rules once in the `IMPORTANT DATES` block near the top and again in
+the relevant topic section 70 lines down. Fixing only the first leaves the
+prompt self-contradictory, which is worse than leaving it wrong — the model
+picks whichever copy it likes.
+
+`src/data/afl-rules-qa-seeds.json` is a fifth possible location. It happened not
+to carry the draft date, but seeded answer cards do embed rulings verbatim, so
+grep it too rather than assuming.
+
+## The calendar and Roger's reminders resolve dates through two separate engines
+
+`/afl-fantasy/calendar` resolves event dates through
+`src/utils/league-event-resolver.ts` (TypeScript, reads
+`src/data/afl-fantasy/league-events.json`). Roger's GroupMe reminders resolve
+them through `scripts/compute-league-events.mjs` (plain node, its own
+`AFL_EVENTS` list and its own `resolveDate` switch).
+
+They cannot import from each other — the scanner is a `.mjs` run by GitHub
+Actions with no TS build step — so **the rule names and their math are
+duplicated by hand**, and nothing structural keeps them aligned. In August 2026
+they disagreed by nine days: the calendar computed the drafts from Labor Day
+while the reminder list carried a hardcoded `month: 8, day: 20`. Roger posted
+"one week until the draft" 16 days out, linking to the calendar that
+contradicted him — the drift was visible to owners in one click.
+
+When adding or changing an event on either side, change both and name the rule
+identically in each. `tests/roger-afl-draft-reminder.test.ts` asserts the shared
+rule names exist on both sides and that no AFL draft event uses a fixed date,
+which is the cheapest available substitute for real shared code.
+
 ## Per-league GroupMe bot routing
 
 Scripts that scan multiple leagues (`scripts/schefter-scan.mjs`) route GroupMe posts to per-league bots via env-var lookup. The convention:

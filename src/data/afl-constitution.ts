@@ -29,7 +29,7 @@ IMPORTANT DATES
 - League dues deadline: April 1
 - Keeper selection deadline (7 keepers): July 15
 - Trade deadline: Wednesday between Week 10 and 11
-- Annual draft window: August 20 – August 25
+- Annual draft: the weekend BEFORE Labor Day weekend. The American League drafts on the Saturday, the National League on the Sunday. This is not a fixed calendar date — it moves with Labor Day every year.
 - Last day to move players from IR to active roster: Super Bowl Sunday
 
 DIVISION SETUP
@@ -98,7 +98,7 @@ DRAFT
 - The conference champion is forced to the last pick (12th) in their conference.
 - NIT bonus (Round 1 only): points are awarded based on base draft position, ranging from 12 points for the worst record down to 1 point for the conference champion. The top 5 NIT finishers leaguewide receive an additional +1.5 points. Round 1 is reordered by total points (most points = pick 1). If a tie remains, the team with the higher original draft position gets the higher pick.
 - Rounds 2–9 follow the base reverse-standings order; the NIT bonus does NOT carry over to later rounds.
-- Annual draft window: August 20–25.
+- Draft timing: the weekend BEFORE Labor Day weekend, never a fixed calendar date. The American League drafts live on the Saturday; the National League runs its email draft beginning 9:00am PT the following Sunday. Because Labor Day is the first Monday in September, the AL draft falls on the Saturday nine days before Labor Day and the NL draft on the Sunday eight days before it.
 
 SCHEDULE
 - 17-game schedule per franchise.
