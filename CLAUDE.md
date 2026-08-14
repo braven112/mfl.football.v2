@@ -220,6 +220,17 @@ flagging at once can't clobber each other. Flags work on **pre-seeded cards
 too** — the 5th-year option bug was in a seed. Flagger names and reasons are
 admin-only; everyone else sees the count.
 
+Reports feed the SAME weekly delivery as the judge's findings
+(`roger-improvement-notify.mjs` reads the flag store directly, so the notify
+workflow step needs the Upstash secrets). A reported answer opens its own
+GitHub issue and joins the league post. **Clearing the flags — the admin
+"Mark reports handled" button — is what stops the nag; closing the issue does
+not**, because the notifier reads Redis, not GitHub. Redis key prefixes and
+seed filenames for both leagues live in `src/config/rules-qa-keys.mjs` so the
+TS endpoints and the plain-node notifier can't drift apart; note `seedFile`
+is a bare basename joined with `SEED_DIR`, because the full AFL path contains
+`data/afl` and the league-literal guard forbids it.
+
 Three surfaces can each hold the same wrong rule independently — the
 constitution, the seeded cards in `rules-qa-seeds.json`, and stored Redis
 answers — so check all three. The August 2026 taxi-squad ruling needed

@@ -67,12 +67,20 @@ jobs:
       # the delivery half: a GitHub issue per unreviewed proposal (the durable
       # record, nagged weekly) plus a league GroupMe post for findings that are
       # NEW this run (the heads-up — a stored wrong answer is still being
-      # served to anyone who scrolls past it). Silent when nothing is pending.
+      # served to anyone who scrolls past it). Covers BOTH finding sources: the
+      # judge's weekly audit and owners hitting "this answer looks wrong".
+      # Silent when nothing is pending.
       # `always()` so a failed audit still surfaces the backlog.
       - name: Notify on unreviewed findings
         if: always()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GROUPME_ROGER_BOT_ID: ${{ secrets.GROUPME_ROGER_BOT_ID }}
+          # Owner "this answer looks wrong" reports live in the flag store, not
+          # in a committed file — without these the report half is skipped.
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
           TZ: America/Los_Angeles
         run: node scripts/roger-improvement-notify.mjs

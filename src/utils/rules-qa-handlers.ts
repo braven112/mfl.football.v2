@@ -26,6 +26,7 @@ import {
   readAllFlags,
   setFlag,
   clearFlag,
+  clearAllFlags,
   parseFlagHash,
   summarizeFlags,
   normalizeReason,
@@ -307,7 +308,14 @@ export function createRulesQAHandlers(config: RulesQAConfig): {
 
     const id = body.id?.trim();
     if (!id) return jsonResponse({ error: 'Missing Q&A id' }, 400);
-    if (typeof body.flagged !== 'boolean') {
+
+    // `resolve` is the commissioner clearing every report on an answer. It is
+    // checked before `flagged` because the two are alternatives, not modifiers.
+    const resolving = body.resolve === true;
+    if (resolving && !isCommissionerOrAdmin(user)) {
+      return jsonResponse({ error: 'Admin access required' }, 403);
+    }
+    if (!resolving && typeof body.flagged !== 'boolean') {
       return jsonResponse({ error: 'Missing "flagged" boolean' }, 400);
     }
 
@@ -323,8 +331,9 @@ export function createRulesQAHandlers(config: RulesQAConfig): {
     }
 
     // Only rate-limit NEW flags. Withdrawing is always allowed, so nobody can
-    // get stuck having reported something they no longer stand behind.
-    if (body.flagged) {
+    // get stuck having reported something they no longer stand behind, and
+    // resolving is admin-only and already gated.
+    if (!resolving && body.flagged) {
       const limit = await checkRateLimit(
         `${config.logTag}-flag`,
         user.franchiseId,
@@ -340,7 +349,9 @@ export function createRulesQAHandlers(config: RulesQAConfig): {
     }
 
     try {
-      if (body.flagged) {
+      if (resolving) {
+        await clearAllFlags(redis, { prefix: config.flagKeyPrefix, qaId: id });
+      } else if (body.flagged) {
         const teamName =
           (await config.resolveTeamName(user.franchiseId)) ?? user.name ?? 'Unknown';
         await setFlag(redis, {

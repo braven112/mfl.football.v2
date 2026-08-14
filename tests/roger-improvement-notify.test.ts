@@ -21,6 +21,9 @@ import {
   buildIssueBody,
   buildBumpComment,
   buildGroupPostText,
+  buildReportIssueTitle,
+  buildReportIssueBody,
+  buildReportBumpComment,
   ageInDays,
   describeAge,
   fenced,
@@ -271,5 +274,126 @@ describe('buildGroupPostText — written for owners, not the commissioner', () =
       { now: NOW }
     )!;
     expect(text).toContain('"line one line two"');
+  });
+});
+
+function report(over: Record<string, unknown> = {}) {
+  return {
+    league: 'theleague',
+    leagueLabel: 'TheLeague',
+    qaId: 'qa_seed_option',
+    question: 'What is the 5th-year team option?',
+    records: [
+      { franchiseId: '0002', teamName: 'Gridiron Geeks', reason: 'the option is the top 10 average, not top 5', at: '2026-07-27T10:00:00.000Z' },
+      { franchiseId: '0007', teamName: 'Dynasty Warriors', reason: null, at: '2026-08-01T10:00:00.000Z' },
+    ],
+    ...over,
+  };
+}
+
+describe('owner-reported answers — the second finding source', () => {
+  it('titles by league and Q&A id so dedupe is exact', () => {
+    expect(buildReportIssueTitle(report())).toBe('Ask Roger: TheLeague owners reported answer qa_seed_option');
+  });
+
+  it('carries the question, every reporter, and their reasons', () => {
+    const body = buildReportIssueBody(report(), { runUrl: 'https://example.test/run/9', now: NOW });
+    expect(body).toContain('qa_seed_option');
+    expect(body).toContain('5th-year team option');
+    expect(body).toContain('Gridiron Geeks');
+    expect(body).toContain('top 10 average, not top 5');
+    expect(body).toContain('Dynasty Warriors');
+    expect(body).toContain('no reason given');
+    expect(body).toContain('https://example.test/run/9');
+  });
+
+  it('ages from the OLDEST report, not the newest', () => {
+    // The first person to notice is the one whose wait matters.
+    const body = buildReportIssueBody(report(), { now: NOW });
+    expect(body).toContain('17 days');
+  });
+
+  it('says that clearing the flags — not closing the issue — stops the nag', () => {
+    const body = buildReportIssueBody(report(), { now: NOW });
+    expect(body).toContain('Mark reports handled');
+    expect(body).toContain('closing the issue alone does not');
+  });
+
+  it('tells the reader to fix an ambiguous constitution, not just the answer', () => {
+    expect(buildReportIssueBody(report(), { now: NOW })).toContain('constitution is ambiguous');
+  });
+
+  it('fences an owner-authored reason so it cannot inject markdown', () => {
+    const hostile = report({
+      records: [{ franchiseId: '0002', teamName: 'X', reason: '``` \n## Injected', at: '2026-08-01T10:00:00.000Z' }],
+    });
+    const body = buildReportIssueBody(hostile, { now: NOW });
+    expect(body).toContain('````text');
+  });
+
+  it('bumps with the outstanding count and age', () => {
+    const c = buildReportBumpComment(report(), { now: NOW });
+    expect(c).toContain('17 days');
+    expect(c).toContain('2 reports outstanding');
+  });
+});
+
+describe('buildGroupPostText with owner reports', () => {
+  it('names owner reports separately from the judge\'s own findings', () => {
+    // "a teammate says this is wrong" and "the bot's self-check says this is
+    // wrong" carry different weight; the league should be able to tell which.
+    const text = buildGroupPostText([], { ownerReports: [report()], now: NOW })!;
+    expect(text).toContain("An owner reported one of Roger's answers as wrong");
+    expect(text).toContain('5th-year team option');
+    expect(text).not.toContain('self-check');
+  });
+
+  it('emits both sections when both sources fired in one run', () => {
+    const text = buildGroupPostText([proposal()], { ownerReports: [report()], now: NOW })!;
+    expect(text).toContain('Roger flagged one of his own answers');
+    expect(text).toContain("An owner reported one of Roger's answers");
+  });
+
+  it('pluralizes and caps the owner-report list', () => {
+    const many = Array.from({ length: 5 }, (_, i) => report({ qaId: `qa_${i}` }));
+    const text = buildGroupPostText([], { ownerReports: many, now: NOW })!;
+    expect(text).toContain("Owners reported 5 of Roger's answers as wrong");
+    expect(text).toContain('…and 2 more.');
+  });
+
+  it('leaks no reporter identities into the league chat', () => {
+    // Reporter names are admin-only on the site and in the issue; the chat
+    // post must not undo that.
+    const text = buildGroupPostText([], { ownerReports: [report()], now: NOW })!;
+    expect(text).not.toContain('Gridiron Geeks');
+    expect(text).not.toContain('Dynasty Warriors');
+  });
+
+  it('stays silent when neither source has anything new', () => {
+    expect(buildGroupPostText([], { ownerReports: [], now: NOW })).toBeNull();
+  });
+
+  it('stays under the GroupMe cap with both sources at full tilt', () => {
+    const findings = Array.from({ length: 20 }, (_, i) => proposal({ id: `live-${i}` }));
+    const reports = Array.from({ length: 20 }, (_, i) =>
+      report({ qaId: `qa_${i}`, question: 'y'.repeat(400) })
+    );
+    const text = buildGroupPostText(findings, { ownerReports: reports, now: NOW })!;
+    expect(text.length).toBeLessThanOrEqual(GROUPME_MAX_CHARS);
+  });
+});
+
+describe('hasSomethingToReport with owner reports', () => {
+  it('reports an owner flag even with no proposals and no judge errors', () => {
+    expect(hasSomethingToReport([], [], [report()])).toBe(true);
+  });
+
+  it('stays silent when all three sources are empty', () => {
+    expect(hasSomethingToReport([], [], [])).toBe(false);
+  });
+
+  it('defaults ownerReports so existing two-arg callers still work', () => {
+    expect(hasSomethingToReport([], [])).toBe(false);
+    expect(hasSomethingToReport([proposal()], [])).toBe(true);
   });
 });

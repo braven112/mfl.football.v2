@@ -8,6 +8,7 @@ import { createRulesQAHandlers } from '../../utils/rules-qa-handlers';
 import seedData from '../../data/afl-rules-qa-seeds.json';
 import { AFL_CONSTITUTION } from '../../data/afl-constitution';
 import { LEAGUES } from '../../config/leagues-data.mjs';
+import { RULES_QA_KEYS } from '../../config/rules-qa-keys.mjs';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 import type { RulesQA } from '../../types/rules-qa';
 
@@ -74,9 +75,9 @@ async function resolveTeamName(franchiseId: string): Promise<string | null> {
 
 export const { GET, POST, PATCH, DELETE } = createRulesQAHandlers({
   logTag: 'afl-rules-qa',
-  redisKey: 'afl-rules-qa:all',
-  rateLimitKeyPrefix: 'afl-rules-qa:rate',
-  flagKeyPrefix: 'afl-rules-qa:flags',
+  redisKey: RULES_QA_KEYS['afl-fantasy'].answers,
+  rateLimitKeyPrefix: RULES_QA_KEYS['afl-fantasy'].rateLimit,
+  flagKeyPrefix: RULES_QA_KEYS['afl-fantasy'].flags,
   idPrefix: 'afl_qa',
   leagueId: aflLeague.id,
   seedData: seedData as RulesQA[],

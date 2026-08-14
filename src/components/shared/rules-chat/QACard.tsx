@@ -10,6 +10,8 @@ interface Props {
   onDelete?: (id: string) => void;
   /** Present when the viewer is signed in and may report this answer. */
   onFlag?: (id: string, flagged: boolean, reason?: string) => Promise<void> | void;
+  /** Admin-only: clear every report on this answer once it's been dealt with. */
+  onResolveFlags?: (id: string) => Promise<void> | void;
 }
 
 function timeAgo(dateStr: string): string {
@@ -84,7 +86,7 @@ function renderAnswer(text: string): React.ReactNode[] {
   });
 }
 
-export default function QACard({ qa, isNew, isAdmin, teamIcon, onDelete, onFlag }: Props) {
+export default function QACard({ qa, isNew, isAdmin, teamIcon, onDelete, onFlag, onResolveFlags }: Props) {
   const askerName = qa.askedBy?.teamName ?? 'League Office';
   const isLeagueOffice = !qa.askedBy;
 
@@ -103,6 +105,17 @@ export default function QACard({ qa, isNew, isAdmin, teamIcon, onDelete, onFlag 
       await onFlag(qa.id, true, reason);
       setShowReport(false);
       setReason('');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const resolveReports = async () => {
+    if (!onResolveFlags || busy) return;
+    if (!confirm('Mark these reports as handled? This clears them for everyone — the Q&A itself stays.')) return;
+    setBusy(true);
+    try {
+      await onResolveFlags(qa.id);
     } finally {
       setBusy(false);
     }
@@ -165,14 +178,21 @@ export default function QACard({ qa, isNew, isAdmin, teamIcon, onDelete, onFlag 
       )}
 
       {isAdmin && flags?.flaggers && flags.flaggers.length > 0 && (
-        <ul className="rqa-card__flaggers">
-          {flags.flaggers.map((f) => (
-            <li key={f.franchiseId}>
-              <strong>{f.teamName}</strong>
-              {f.reason ? <span> — {f.reason}</span> : <span className="rqa-card__flag-noreason"> — no reason given</span>}
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul className="rqa-card__flaggers">
+            {flags.flaggers.map((f) => (
+              <li key={f.franchiseId}>
+                <strong>{f.teamName}</strong>
+                {f.reason ? <span> — {f.reason}</span> : <span className="rqa-card__flag-noreason"> — no reason given</span>}
+              </li>
+            ))}
+          </ul>
+          {onResolveFlags && (
+            <button type="button" className="rqa-card__resolve-btn" onClick={resolveReports} disabled={busy}>
+              {busy ? 'Working…' : 'Mark reports handled'}
+            </button>
+          )}
+        </>
       )}
 
       {onFlag && (

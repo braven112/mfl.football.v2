@@ -507,6 +507,20 @@ const teamIcons = aflConfig.teams.map((t: { franchiseId: string; icon: string })
     line-height: 1.5;
   }
   .rqa-card__flag-noreason { color: var(--color-gray-400, #9ca3af); }
+  .rqa-card__resolve-btn {
+    margin-top: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    background: none;
+    border: 1px solid var(--color-gray-200, #e5e7eb);
+    border-radius: var(--radius-sm, 0.25rem);
+    color: var(--color-gray-500, #6b7280);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .rqa-card__resolve-btn:hover:not(:disabled) { color: var(--color-gray-700, #374151); }
+  .rqa-card__resolve-btn:disabled { opacity: 0.6; cursor: default; }
+  html.dark .rqa-card__resolve-btn { border-color: var(--content-border, #374151); }
   .rqa-card__report { margin-top: 0.5rem; }
   .rqa-card__report-btn,
   .rqa-card__report-cancel {

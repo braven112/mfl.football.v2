@@ -50,6 +50,11 @@ export interface FlagAnswerRequest {
   /** true = report this answer, false = withdraw my report. */
   flagged: boolean;
   reason?: string;
+  /**
+   * Admin-only: clear EVERY report on this answer (the commissioner marking it
+   * handled). Ignored for non-admins. When set, `flagged` is not consulted.
+   */
+  resolve?: boolean;
 }
 
 export interface FlagAnswerResponse {

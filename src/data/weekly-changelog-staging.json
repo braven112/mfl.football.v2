@@ -2,6 +2,14 @@
   "weekOf": "2026-08-17",
   "changes": [
     {
+      "date": "2026-08-14",
+      "type": "bug-fix",
+      "summary": "Reporting a wrong answer now actually reaches the Commissioner. When the report button shipped, hitting it wrote the report to the database and put a red banner on the card — which is useful if somebody happens to be looking at that card, and useless otherwise. Reports now ride the same weekly channel as Roger's own self-audit: a reported answer gets posted to the group chat the week it's flagged and opens a tracked item that keeps nagging until it's dealt with. There's also finally a way to mark one handled, which clears the banner for everyone once the rulebook and the answer agree again.",
+      "impact": "user",
+      "area": "rules",
+      "league": "theleague"
+    },
+    {
       "date": "2026-08-13",
       "type": "bug-fix",
       "summary": "Roger now tells you when he thinks he blew a call. His weekly self-audit had already caught the taxi squad blunder on July 27th — two days after the question was asked — and written a perfectly accurate diagnosis of it into a file in the repo, where it sat for seventeen days until the wrong answer got noticed in the group chat instead. The detection was never the problem. The delivery was: the job did its homework and went back to sleep. Now a flagged answer posts to the group chat the week it's found, so you know not to lean on it before Brandon rules. Repeat nagging stays on the commissioner's to-do list rather than your phone, and a quiet week posts nothing at all.",

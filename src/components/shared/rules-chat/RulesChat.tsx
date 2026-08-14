@@ -147,6 +147,27 @@ export default function RulesChat({ preSeeded, isAuthenticated, isAdmin, teamIco
     }
   }, [apiEndpoint]);
 
+  /** Admin-only: clear every report on an answer once it has been dealt with. */
+  const handleResolveFlags = useCallback(async (id: string) => {
+    try {
+      const res = await fetch(apiEndpoint, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, flagged: false, resolve: true }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'Failed to clear the reports');
+        return;
+      }
+      setError(null);
+      setAllQAs(prev => prev.map(qa => (qa.id === id ? { ...qa, flags: data.flags } : qa)));
+    } catch {
+      setError('Failed to clear the reports. Please try again.');
+    }
+  }, [apiEndpoint]);
+
   const handleDelete = useCallback(async (id: string) => {
     if (!confirm('Delete this Q&A? This cannot be undone.')) return;
 
@@ -225,6 +246,7 @@ export default function RulesChat({ preSeeded, isAuthenticated, isAdmin, teamIco
               teamIcon={qa.askedBy ? iconMap[qa.askedBy.franchiseId] : undefined}
               onDelete={isAdmin && !qa.isPreSeeded ? handleDelete : undefined}
               onFlag={isAuthenticated ? handleFlag : undefined}
+              onResolveFlags={isAdmin ? handleResolveFlags : undefined}
             />
           ))
         )}

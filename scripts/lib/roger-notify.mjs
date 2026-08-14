@@ -239,10 +239,28 @@ export function buildBumpComment(proposal, { runUrl, now } = {}) {
  * operations, and it goes to the logs and the workflow annotation where the
  * person who can fix it will see it.
  */
-export function buildGroupPostText(newFindings, { now } = {}) {
+export function buildGroupPostText(newFindings, { ownerReports = [], now } = {}) {
   const count = newFindings.length;
-  if (count === 0) return null;
+  if (count === 0 && ownerReports.length === 0) return null;
 
+  const lines = [];
+  if (count > 0) lines.push(...judgeFindingLines(newFindings, now));
+  if (ownerReports.length > 0) {
+    if (lines.length > 0) lines.push('');
+    lines.push(...ownerReportLines(ownerReports));
+  }
+
+  // Cap the whole message, not each line — GroupMe rejects an over-length
+  // post, which would drop the alert exactly when a big batch made it most
+  // worth sending.
+  const text = lines.join('\n').trim();
+  if (text.length <= GROUPME_MAX_CHARS) return text;
+  return `${text.slice(0, GROUPME_MAX_CHARS - 1).trimEnd()}…`;
+}
+
+/** Judge-found answers: Roger's own weekly self-check disagreeing with him. */
+function judgeFindingLines(newFindings, now) {
+  const count = newFindings.length;
   const lines = [
     count === 1
       ? "Roger flagged one of his own answers. His weekly self-check thinks he got this wrong:"
@@ -261,13 +279,111 @@ export function buildGroupPostText(newFindings, { now } = {}) {
       ? "Don't lean on that answer until Brandon rules on it — the fix usually means clarifying the constitution, not just correcting Roger."
       : "Don't lean on those answers until Brandon rules on them — the fix usually means clarifying the constitution, not just correcting Roger."
   );
+  return lines;
+}
 
-  // Cap the whole message, not each line — GroupMe rejects an over-length
-  // post, which would drop the alert exactly when a big batch made it most
-  // worth sending.
-  const text = lines.join('\n').trim();
-  if (text.length <= GROUPME_MAX_CHARS) return text;
-  return `${text.slice(0, GROUPME_MAX_CHARS - 1).trimEnd()}…`;
+/**
+ * Owner-reported answers. Named as owner reports rather than folded in with
+ * the judge's findings on purpose — "a teammate says this is wrong" and "the
+ * bot's self-check says this is wrong" carry different weight, and the league
+ * should be able to tell which it is reading.
+ */
+function ownerReportLines(reports) {
+  const n = reports.length;
+  const lines = [
+    n === 1
+      ? 'An owner reported one of Roger\'s answers as wrong:'
+      : `Owners reported ${n} of Roger's answers as wrong:`,
+    '',
+  ];
+  for (const r of reports.slice(0, 3)) {
+    lines.push(`"${oneLine(r.question, QUESTION_PREVIEW_CHARS)}"`);
+  }
+  if (n > 3) lines.push(`…and ${n - 3} more.`);
+  lines.push('', 'Flagged on the card so nobody else gets caught by it. Brandon has the details.');
+  return lines;
+}
+
+// ---------------------------------------------------------------------------
+// Owner-reported answers ("this answer looks wrong")
+//
+// Second finding source, same delivery. The judge finds what it finds weekly;
+// owners find what they hit in practice, and the August 2026 5th-year option
+// bug — a hand-written seed card wrong for ~5 months — is the kind only a
+// human notices. Both feed the same issue-and-post pipeline so neither can
+// rot in a store nobody opens.
+
+/** @typedef {{ league: string, leagueLabel: string, qaId: string, question: string, records: Array<{teamName: string, reason: string|null, at: string}> }} OwnerReport */
+
+export function buildReportIssueTitle(report) {
+  return `Ask Roger: ${report.leagueLabel} owners reported answer ${report.qaId}`;
+}
+
+export function buildReportIssueBody(report, { runUrl, now } = {}) {
+  const oldest = report.records[0];
+  const days = ageInDays(oldest?.at, now ?? new Date());
+  const lines = [
+    `**${report.records.length} owner${report.records.length === 1 ? '' : 's'}** reported this Ask Roger answer as wrong`,
+    `in ${report.leagueLabel}. Unlike a judge finding, this is a human saying the rulebook and the`,
+    'answer disagree — worth reading before anything else.',
+    '',
+    '| | |',
+    '|---|---|',
+    `| Q&A id | \`${report.qaId}\` |`,
+    `| League | ${report.leagueLabel} |`,
+    `| Reports | ${report.records.length} |`,
+    `| Oldest report | ${oldest?.at || 'unknown'} (${describeAge(days)} ago) |`,
+    runUrl ? `| Workflow run | [logs](${runUrl}) |` : null,
+    '',
+    '**The question**',
+    '',
+    fenced(report.question),
+    '',
+    '**Who reported it, and why**',
+    '',
+  ].filter((l) => l !== null);
+
+  for (const r of report.records) {
+    if (r.reason) {
+      lines.push(`- **${r.teamName}** said:`);
+      // Indent the fence so it nests under the bullet instead of ending the list.
+      lines.push('', `  ${fenced(r.reason).split('\n').join('\n  ')}`, '');
+    } else {
+      lines.push(`- **${r.teamName}** — _no reason given_`);
+    }
+  }
+
+  lines.push(
+    '',
+    '### To close this out',
+    '',
+    '1. Check the answer against `src/data/league-constitution.ts`.',
+    '2. If the answer is wrong because the **constitution is ambiguous**, fix the constitution —',
+    '   patching only the answer leaves the trap armed for the next phrasing of the question.',
+    '3. Correcting the rulebook does NOT rewrite the stored answer. Repair the stored `answer`',
+    '   in place, preserving `id`/`askedBy`/`createdAt` so the card keeps its position.',
+    '4. Clear the reports with **Mark reports handled** on the card. That is what stops this',
+    '   issue being re-filed — closing the issue alone does not, because the notifier reads the',
+    '   flag store, not GitHub.',
+    '',
+    '_Reporter names and reasons are admin-only on the site; they appear here because this issue',
+    'is for the commissioner._'
+  );
+
+  return lines.join('\n');
+}
+
+export function buildReportBumpComment(report, { runUrl, now } = {}) {
+  const days = ageInDays(report.records[0]?.at, now ?? new Date());
+  return [
+    `Still reported — **${describeAge(days)}** since the first owner flagged it, ` +
+      `${report.records.length} report${report.records.length === 1 ? '' : 's'} outstanding.`,
+    '',
+    'Clear them with **Mark reports handled** on the card once the answer is sorted.',
+    runUrl ? `\nWorkflow run: ${runUrl}` : '',
+  ]
+    .join('\n')
+    .trimEnd();
 }
 
 /**
@@ -276,6 +392,6 @@ export function buildGroupPostText(newFindings, { now } = {}) {
  * A weekly "all good" ping trains people to ignore the channel, so silence is
  * the correct output whenever there is no pending review and nothing errored.
  */
-export function hasSomethingToReport(pending, judgeErrors) {
-  return pending.length > 0 || judgeErrors.length > 0;
+export function hasSomethingToReport(pending, judgeErrors, ownerReports = []) {
+  return pending.length > 0 || judgeErrors.length > 0 || ownerReports.length > 0;
 }

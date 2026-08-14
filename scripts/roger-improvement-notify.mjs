@@ -44,6 +44,8 @@ import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { postToGroupMe } from './lib/groupme.mjs';
+import { getRedisConfig, redisCommand } from './lib/redis.mjs';
+import { ALL_RULES_QA_LEAGUES, SEED_DIR } from '../src/config/rules-qa-keys.mjs';
 import {
   pendingProposals,
   recentJudgeErrors,
@@ -52,6 +54,9 @@ import {
   buildIssueBody,
   buildBumpComment,
   buildGroupPostText,
+  buildReportIssueTitle,
+  buildReportIssueBody,
+  buildReportBumpComment,
   ageInDays,
   describeAge,
 } from './lib/roger-notify.mjs';
@@ -151,6 +156,110 @@ function openIssuesByTitle() {
 }
 
 /**
+ * Owner "this answer looks wrong" reports, across every league with an Ask
+ * Roger surface.
+ *
+ * Read straight from the flag store rather than from a committed file: flags
+ * are written by owners in real time, so there is no repo artifact to read,
+ * and letting them sit in Redis until someone opens the page is exactly the
+ * silent-detection failure this whole script exists to remove.
+ *
+ * Redis is optional here — no credentials means no report section, not a
+ * crash, so the proposal half of the notification still goes out.
+ */
+async function readOwnerReports() {
+  const config = getRedisConfig();
+  if (!config) {
+    console.log(`${TAG} no Redis credentials — skipping owner-reported answers.`);
+    return [];
+  }
+
+  /** @type {import('./lib/roger-notify.mjs').OwnerReport[]} */
+  const reports = [];
+  for (const [slug, keys] of ALL_RULES_QA_LEAGUES) {
+    let flaggedIds;
+    try {
+      flaggedIds = await redisCommand(config, ['SMEMBERS', `${keys.flags}:index`]);
+    } catch (err) {
+      console.warn(`${TAG} could not read ${keys.label} flags: ${err.message}`);
+      continue;
+    }
+    if (!Array.isArray(flaggedIds) || flaggedIds.length === 0) continue;
+
+    const questions = await loadQuestionIndex(config, keys);
+    for (const qaId of flaggedIds) {
+      let raw;
+      try {
+        raw = await redisCommand(config, ['HGETALL', `${keys.flags}:${qaId}`]);
+      } catch (err) {
+        console.warn(`${TAG} could not read flags for ${qaId}: ${err.message}`);
+        continue;
+      }
+      const records = parseHgetall(raw);
+      // An emptied hash can linger in the index; treat it as unflagged rather
+      // than filing an issue for a report nobody actually made.
+      if (records.length === 0) continue;
+      reports.push({
+        league: slug,
+        leagueLabel: keys.label,
+        qaId,
+        question: questions.get(qaId) ?? '(question no longer on file)',
+        records,
+      });
+    }
+  }
+  return reports;
+}
+
+/** qaId -> question text, from the league's stored answers plus its seed cards. */
+async function loadQuestionIndex(config, keys) {
+  const index = new Map();
+  try {
+    const seeds = JSON.parse(readFileSync(join(repoRoot, SEED_DIR, keys.seedFile), 'utf8'));
+    for (const qa of seeds) if (qa?.id) index.set(qa.id, qa.question ?? '');
+  } catch (err) {
+    console.warn(`${TAG} could not read ${keys.seedFile}: ${err.message}`);
+  }
+  try {
+    const stored = await redisCommand(config, ['GET', keys.answers]);
+    const parsed = typeof stored === 'string' ? JSON.parse(stored) : stored;
+    if (Array.isArray(parsed)) for (const qa of parsed) if (qa?.id) index.set(qa.id, qa.question ?? '');
+  } catch (err) {
+    console.warn(`${TAG} could not read ${keys.answers}: ${err.message}`);
+  }
+  return index;
+}
+
+/**
+ * Upstash REST returns HGETALL as a flat [field, value, ...] array. Values are
+ * JSON strings written by setFlag; anything unparseable is dropped rather than
+ * thrown, matching parseFlagHash on the app side.
+ */
+function parseHgetall(raw) {
+  const records = [];
+  if (!Array.isArray(raw)) return records;
+  for (let i = 0; i + 1 < raw.length; i += 2) {
+    const franchiseId = String(raw[i]);
+    let value = raw[i + 1];
+    if (typeof value === 'string') {
+      try {
+        value = JSON.parse(value);
+      } catch {
+        continue;
+      }
+    }
+    if (!value || typeof value !== 'object') continue;
+    records.push({
+      franchiseId,
+      teamName: typeof value.teamName === 'string' && value.teamName ? value.teamName : 'Unknown team',
+      reason: typeof value.reason === 'string' && value.reason ? value.reason : null,
+      at: typeof value.at === 'string' ? value.at : '',
+    });
+  }
+  return records.sort((a, b) => a.at.localeCompare(b.at));
+}
+
+/**
  * File-or-bump one issue per pending proposal.
  *
  * `newlyFiled` is what gates the league-chat post: an issue we had to CREATE
@@ -207,6 +316,57 @@ function syncIssues(pending, now) {
   return { outcomes, newlyFiled };
 }
 
+/**
+ * File-or-bump one issue per reported answer. Same dedupe-by-title and
+ * newly-filed-gates-the-post contract as syncIssues; kept separate because the
+ * title, body and closing steps differ (an owner report is closed by clearing
+ * the flags, not by reviewing a proposal).
+ */
+function syncReportIssues(reports, now) {
+  const outcomes = [];
+  const newlyFiled = [];
+  if (reports.length === 0) return { outcomes, newlyFiled };
+  if (dryRun) {
+    for (const r of reports) {
+      outcomes.push(`would file/bump: ${buildReportIssueTitle(r)}`);
+      console.log(`\n--- report issue body for ${r.qaId} ---\n${buildReportIssueBody(r, { runUrl: runUrl(), now })}\n`);
+    }
+    return { outcomes, newlyFiled: reports };
+  }
+
+  ensureLabel();
+  let existing;
+  try {
+    existing = openIssuesByTitle();
+  } catch (err) {
+    console.warn(`${TAG} could not list issues (${err.message}) — skipping report issues.`);
+    return { outcomes, newlyFiled };
+  }
+
+  for (const report of reports) {
+    const title = buildReportIssueTitle(report);
+    const number = existing.get(title);
+    try {
+      if (number) {
+        gh(['issue', 'comment', String(number), '--body', buildReportBumpComment(report, { runUrl: runUrl(), now })]);
+        outcomes.push(`bumped #${number} (${report.qaId}, ${report.records.length} report(s))`);
+      } else {
+        const url = gh([
+          'issue', 'create',
+          '--title', title,
+          '--label', ISSUE_LABEL,
+          '--body', buildReportIssueBody(report, { runUrl: runUrl(), now }),
+        ]).trim();
+        outcomes.push(`filed ${url || title}`);
+        newlyFiled.push(report);
+      }
+    } catch (err) {
+      console.warn(`${TAG} report issue sync failed for ${report.qaId}: ${err.message}`);
+    }
+  }
+  return { outcomes, newlyFiled };
+}
+
 async function main() {
   const now = new Date();
   const proposalsFile = readJson(PROPOSALS_PATH, { proposals: [] });
@@ -214,14 +374,15 @@ async function main() {
 
   const pending = pendingProposals(proposalsFile.proposals);
   const judgeErrors = recentJudgeErrors(ledger, now);
+  const ownerReports = await readOwnerReports();
 
-  if (!hasSomethingToReport(pending, judgeErrors)) {
-    console.log(`${TAG} nothing pending review and no judge errors — no notification sent.`);
+  if (!hasSomethingToReport(pending, judgeErrors, ownerReports)) {
+    console.log(`${TAG} nothing pending review, no owner reports, no judge errors — no notification sent.`);
     return;
   }
 
   console.log(
-    `${TAG} ${pending.length} proposal(s) awaiting review` +
+    `${TAG} ${pending.length} proposal(s) awaiting review, ${ownerReports.length} owner-reported answer(s)` +
       `${judgeErrors.length > 0 ? `, ${judgeErrors.length} judge error(s) this run` : ''}.`
   );
   if (judgeErrors.length > 0) {
@@ -229,12 +390,13 @@ async function main() {
   }
 
   const { outcomes, newlyFiled } = syncIssues(pending, now);
-  for (const outcome of outcomes) console.log(`${TAG} ${outcome}`);
-  const issuesDelivered = outcomes.length > 0;
+  const reportSync = syncReportIssues(ownerReports, now);
+  for (const outcome of [...outcomes, ...reportSync.outcomes]) console.log(`${TAG} ${outcome}`);
+  const issuesDelivered = outcomes.length + reportSync.outcomes.length > 0;
 
-  // Only NEW findings reach the league chat. A proposal that merely aged
-  // another week is already announced; its nag belongs on the issue.
-  const text = buildGroupPostText(newlyFiled, { now });
+  // Only NEW findings reach the league chat. Anything that merely aged another
+  // week is already announced; its nag belongs on the issue.
+  const text = buildGroupPostText(newlyFiled, { ownerReports: reportSync.newlyFiled, now });
   let posted = false;
 
   if (!text) {
@@ -259,7 +421,10 @@ async function main() {
         console.log(
           `::warning::GroupMe post skipped — GROUPME_ROGER_BOT_ID not set. ${issueFallback}`
         ),
-      onPosted: () => console.log(`${TAG} posted ${newlyFiled.length} new finding(s) to the league chat.`),
+      onPosted: () =>
+        console.log(
+          `${TAG} posted ${newlyFiled.length} new finding(s) and ${reportSync.newlyFiled.length} new report(s) to the league chat.`
+        ),
       onHttpError: (status) => console.warn(`${TAG} GroupMe post failed: HTTP ${status}`),
       onFetchError: (err) => console.warn(`${TAG} GroupMe post failed: ${err.message}`),
     }));

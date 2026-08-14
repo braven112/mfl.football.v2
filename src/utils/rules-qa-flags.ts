@@ -165,6 +165,22 @@ export async function clearFlag(
 }
 
 /**
+ * Clear EVERY flag on a Q&A — the commissioner marking a report handled.
+ *
+ * This is what stops the nag. An owner can only withdraw their own flag, so
+ * without an admin resolve the weekly notifier would re-file an issue for a
+ * report that has already been dealt with, forever. Distinct from DELETE: the
+ * Q&A itself survives, which is the whole point of flagging over deleting.
+ */
+export async function clearAllFlags(
+  redis: RedisClient,
+  { prefix, qaId }: { prefix: string; qaId: string }
+): Promise<void> {
+  await redis.del(flagHashKey(prefix, qaId));
+  await redis.srem(flagIndexKey(prefix), qaId);
+}
+
+/**
  * Flag records for every currently-flagged Q&A, as qaId -> records.
  *
  * Reads the index first and then only the hashes it names, so an unflagged

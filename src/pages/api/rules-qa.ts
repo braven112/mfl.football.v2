@@ -12,6 +12,7 @@ import {
   THELEAGUE_RULES_QA_DATE_SUFFIX,
 } from '../../data/rules-qa-system-prompt';
 import { LEAGUES } from '../../config/leagues-data.mjs';
+import { RULES_QA_KEYS } from '../../config/rules-qa-keys.mjs';
 import type { RulesQA } from '../../types/rules-qa';
 
 // System prompt lives in src/data/rules-qa-system-prompt.ts so the eval
@@ -33,9 +34,9 @@ async function resolveTeamName(franchiseId: string): Promise<string | null> {
 
 export const { GET, POST, PATCH, DELETE } = createRulesQAHandlers({
   logTag: 'rules-qa',
-  redisKey: 'rules-qa:all',
-  rateLimitKeyPrefix: 'rules-qa:rate',
-  flagKeyPrefix: 'rules-qa:flags',
+  redisKey: RULES_QA_KEYS.theleague.answers,
+  rateLimitKeyPrefix: RULES_QA_KEYS.theleague.rateLimit,
+  flagKeyPrefix: RULES_QA_KEYS.theleague.flags,
   idPrefix: 'qa',
   leagueId: LEAGUES.theleague.id,
   seedData: seedData as RulesQA[],
