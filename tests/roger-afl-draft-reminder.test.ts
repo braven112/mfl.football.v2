@@ -33,13 +33,40 @@ const read = (p: string) => readFileSync(resolve(projectRoot, p), 'utf8');
 const AL_RULE = 'saturday-before-labor-day-weekend';
 const NL_RULE = 'sunday-before-labor-day-weekend';
 
+/**
+ * Pull the day offset out of a resolver's `afl-trade-deadline` case so the two
+ * engines can be compared without executing either (the .mjs writes files on
+ * import; the .ts builds Dates in the test runner's own timezone).
+ */
+function aflDeadlineOffset(src: string): number | null {
+  // Comment lines are stripped first. Both cases explain the offset in prose
+  // ("kickoff + 10*7 - 1"), and scanning the raw text matched the COMMENT
+  // instead of the code — a mutation of the real offset left this green.
+  const code = src
+    .split('\n')
+    .filter(line => !line.trim().startsWith('//') && !line.trim().startsWith('*'))
+    .join('\n');
+  const caseStart = code.indexOf(`case 'afl-trade-deadline'`);
+  if (caseStart === -1) return null;
+  const body = code.slice(caseStart, caseStart + 600);
+  const match = body.match(/getDate\(\)\s*\+\s*10\s*\*\s*7\s*-\s*(\d+)/);
+  return match ? 10 * 7 - Number(match[1]) : null;
+}
+
 describe('AFL draft reminders — date source', () => {
   const computeSrc = read('scripts/compute-league-events.mjs');
-  const aflEventsBlock =
-    computeSrc.slice(
-      computeSrc.indexOf('const AFL_EVENTS'),
-      computeSrc.indexOf('// ── Resolve dates ──'),
-    ) || computeSrc;
+  const blockStart = computeSrc.indexOf('const AFL_EVENTS');
+  const blockEnd = computeSrc.indexOf('// ── Resolve dates ──');
+
+  it('locates the AFL_EVENTS block', () => {
+    // Without this, a rename of either marker would silently widen the slice
+    // to the whole file (or empty it) and every assertion below would still
+    // pass while no longer scoped to the AFL list.
+    expect(blockStart).toBeGreaterThan(-1);
+    expect(blockEnd).toBeGreaterThan(blockStart);
+  });
+
+  const aflEventsBlock = computeSrc.slice(blockStart, blockEnd);
 
   it('anchors both AFL draft reminders to the Labor Day rules', () => {
     expect(aflEventsBlock).toContain(`id: 'afl-al-draft'`);
@@ -82,12 +109,33 @@ describe('AFL draft reminders — date source', () => {
     expect(draftIds.sort()).toEqual(['afl-al-draft', 'afl-nl-draft']);
   });
 
-  it('carries no reminder posts for the retired draft-window event', () => {
-    const feed = JSON.parse(read('data/afl-fantasy/schefter-feed.json'));
-    const stale = feed.posts.filter((p: { id: string }) =>
-      p.id.startsWith('roger_afl-draft-window-opens_'),
+  // Deliberately NOT asserted here: that data/afl-fantasy/schefter-feed.json
+  // carries no `roger_afl-draft-window-opens_*` posts. That file is written by
+  // a cron every 15 minutes and its documented conflict policy is take-theirs,
+  // so the assertion would redden in an unrelated PR the first time a rebase
+  // restored an old snapshot. The cleanup is a one-time fact; the ongoing
+  // invariant is the event list above, which is guarded.
+
+  it('anchors the AFL trade deadline to the same rule as the calendar', () => {
+    // Same defect class as the draft window, found during review of this PR:
+    // the reminder path derived the AFL deadline from TheLeague's
+    // `friday-before-week-11` anchor and landed a week early.
+    expect(aflEventsBlock).toContain(`rule: 'afl-trade-deadline'`);
+    expect(aflEventsBlock).not.toContain('wednesday-before-week-11');
+    expect(read('src/utils/league-event-resolver.ts')).toContain(
+      `case 'afl-trade-deadline'`,
     );
-    expect(stale).toEqual([]);
+  });
+
+  it('resolves the AFL trade deadline to the day before Week 11 kicks off', () => {
+    // Week N Thursday is kickoff + (N-1)*7, so the Wednesday between Weeks 10
+    // and 11 is kickoff + 10*7 - 1. The old math used -8, which is the
+    // Wednesday between Weeks 9 and 10.
+    expect(aflDeadlineOffset(computeSrc)).toBe(10 * 7 - 1);
+    // …and that the calendar's resolver computes the identical offset.
+    expect(aflDeadlineOffset(read('src/utils/league-event-resolver.ts'))).toBe(
+      10 * 7 - 1,
+    );
   });
 });
 

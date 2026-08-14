@@ -51,11 +51,21 @@ function resolveDate(rule, year) {
       const kickoff = new Date(ld.getFullYear(), ld.getMonth(), ld.getDate() + 3);
       return new Date(kickoff.getFullYear(), kickoff.getMonth(), kickoff.getDate() + 10 * 7 - 6);
     }
-    case 'wednesday-before-week-11': {
-      // AFL trade deadline: Wednesday between Week 10 and Week 11 = friday-before-week-11 minus 2 days
+    case 'afl-trade-deadline': {
+      // AFL trade deadline: the Wednesday between Week 10 and Week 11 — i.e.
+      // the day before Week 11's Thursday, kickoff + 10*7 - 1.
+      //
+      // This was `kickoff + 10*7 - 8` until Aug 2026, derived as "TheLeague's
+      // friday-before-week-11 minus 2 days". That anchor belongs to a
+      // different league's rule and lands a full week early: for 2026 it gave
+      // Wed Nov 11 (the Wednesday between Weeks 9 and 10) while
+      // /afl-fantasy/calendar rendered Wed Nov 18. Same drift as the draft
+      // window bug, on a major-tier event, so all four touches fired early.
+      // Mirrors the `afl-trade-deadline` rule in
+      // src/utils/league-event-resolver.ts — same name on both sides on purpose.
       const ld = getLaborDay(year);
       const kickoff = new Date(ld.getFullYear(), ld.getMonth(), ld.getDate() + 3);
-      return new Date(kickoff.getFullYear(), kickoff.getMonth(), kickoff.getDate() + 10 * 7 - 8);
+      return new Date(kickoff.getFullYear(), kickoff.getMonth(), kickoff.getDate() + 10 * 7 - 1);
     }
     case 'after-week-16': {
       const ld = getLaborDay(year);
@@ -150,7 +160,7 @@ async function loadThrowbackEvents() {
 const AFL_EVENTS = [
   { id: 'afl-league-dues', name: 'AFL League Dues', startRule: { type: 'fixed', month: 4, day: 1 }, tier: 'major' },
   { id: 'afl-keeper-deadline', name: 'AFL Keeper Deadline', startRule: { type: 'fixed', month: 7, day: 15 }, tier: 'major' },
-  { id: 'afl-trade-deadline', name: 'AFL Trade Deadline', startRule: { type: 'computed', rule: 'wednesday-before-week-11' }, tier: 'major' },
+  { id: 'afl-trade-deadline', name: 'AFL Trade Deadline', startRule: { type: 'computed', rule: 'afl-trade-deadline' }, tier: 'major' },
   // The AFL drafts are NOT a fixed calendar date. Until Aug 2026 this list
   // carried an `afl-draft-window-opens` event pinned to a hardcoded Aug 20
   // (copied from the "Annual draft window: August 20 – August 25" line in
