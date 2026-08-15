@@ -114,13 +114,18 @@ async function tryLoadJSON(p) {
 /**
  * Team + structure config for one league.
  *
- * Only the CURRENT season is ever ranked, so today's config is the right
- * structure — the per-season overlays (`src/utils/afl-structure.ts`) exist for
- * archive years, which this column never renders.
+ * Always TODAY's config, whatever `--year` says. That is exactly right for the
+ * Tuesday run, which is always ranking the season in progress. It is a known
+ * limitation when backfilling an old season with `--year`: names, icons and
+ * division alignment come out as they are now, not as they were then. The
+ * per-season overlays that fix that (`resolveConfigForYear` +
+ * `applySeasonStructure`, which the AFL needs because it has re-parented
+ * divisions between conferences) are page-side TypeScript; wiring them in here
+ * is the work to do if this column ever backfills seasons in bulk.
  *
- * `conferenceOf` is null for TheLeague (four flat divisions) and resolves the
- * AFL's conference code to its display name, so a division heading can say
- * which half of the league it belongs to.
+ * `conferenceOfDivision` is null for TheLeague (four flat divisions) and
+ * resolves the AFL's division to its conference display name, so a division
+ * heading can say which half of the league it belongs to.
  */
 async function loadTeamsConfig(league) {
   const cfg = await loadJSON(path.join(projectRoot, ...league.configPath.split('/')));
@@ -176,7 +181,7 @@ function issueFilePath(league, year, week) {
  * predate schedule.json being fetched for that league. Schedule wins where
  * both have a week; raw fills the rest.
  */
-function buildPairings(schedule, rawWeekly) {
+export function buildPairings(schedule, rawWeekly) {
   const byWeek = new Map();
   for (const entry of (rawWeekly || [])) {
     const wk = int(entry?.weeklyResults?.week);
@@ -210,7 +215,7 @@ function buildPairings(schedule, rawWeekly) {
  * `gamesCounted` is what the blurb quotes ("3-1 over their last 4"), so a
  * double-header week reads honestly instead of dropping a game on the floor.
  */
-function rollingRecord(pairings, weeklyResults, franchiseId, throughWeek, weeks = 3) {
+export function rollingRecord(pairings, weeklyResults, franchiseId, throughWeek, weeks = 3) {
   const weekScores = new Map();
   for (const w of (weeklyResults?.weeks || [])) {
     weekScores.set(int(w.week), w.scores || {});

@@ -110,9 +110,13 @@ advertised. Three things were not, and all three were in places the original
   "American League · North". TheLeague emits no `conference` key at all, so its
   headings are untouched.
 
-Only the CURRENT season is ever ranked, so the generator reads today's config
-rather than composing `applySeasonStructure` — the per-season AFL structure
-overlays exist for archive years, which this column never renders.
+The generator reads TODAY's config regardless of `--year`, which is right for
+the Tuesday run (always the season in progress) and a known limitation when
+backfilling: a seeded old season gets current names, icons and division
+alignment. The per-season overlays that would fix it (`resolveConfigForYear` +
+`applySeasonStructure` — the AFL has re-parented divisions between conferences,
+not just renamed them) are page-side TypeScript and are the work to do if this
+column ever backfills seasons in bulk.
 
 **Also league-specific and easy to miss:** the GroupMe bot env var
 (`GROUPME_AFL_SCHEFTER_BOT_ID`), and the announcement URL, which must go

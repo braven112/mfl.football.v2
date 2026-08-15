@@ -94,12 +94,26 @@ export interface Props {
   league?: LeagueSlug;
 }
 
-const { issue, league = 'theleague' } = Astro.props as Props;
-
 const CONFIGS: Partial<Record<LeagueSlug, { teams: any[] }>> = {
   theleague: theleagueConfig as any,
   afl: aflConfig as any,
 };
+
+/**
+ * The issue JSON records the league that generated it (canonical slug), so a
+ * page that forgets the prop still renders against the right franchise config
+ * rather than silently drawing AFL rankings with TheLeague's names and icons —
+ * franchise ids collide across leagues, so that failure looks like real data.
+ * The prop still wins when both are present.
+ */
+const ISSUE_SLUG_TO_NAV: Record<string, LeagueSlug> = {
+  theleague: 'theleague',
+  'afl-fantasy': 'afl',
+};
+
+const { issue, league: leagueProp } = Astro.props as Props;
+const league: LeagueSlug =
+  leagueProp ?? (issue.league ? ISSUE_SLUG_TO_NAV[issue.league] : undefined) ?? 'theleague';
 
 // Build franchise lookup for icons/colors
 const teams = new Map<string, any>();
