@@ -261,3 +261,21 @@ crest asset or adding an `iconDark`; the test fails until the manifest is
 regenerated. And prefer real `iconDark` art whenever someone is willing to draw
 it — the stroke is a legibility floor, not a substitute for a logo designed for
 dark mode.
+
+**Per-team stroke color (`iconStrokeDark`, 2026-08-15).** White is the default
+but not always right: Midwestside's crest is a gold ring on black, and a white
+outline read as a foreign border bolted onto someone else's logo. `iconStrokeDark`
+on the team config overrides the color (they use their own `#ffcd00`). Two
+design points worth keeping:
+
+- The override lives in the LEAGUE CONFIG, not the manifest. The manifest is
+  generated output and must stay purely derived — putting a hand-picked color
+  in it would be destroyed by the next `pnpm measure:crest-contrast` run.
+  `TeamIconDarkStyles` joins the two by franchiseId at build time.
+- An override color must itself clear 3:1 on the dark card, or the stroke
+  can't separate the logo from the background — that's the whole job. The test
+  enforces it, and also fails on an `iconStrokeDark` set for a team that isn't
+  in the stroke manifest at all (dead config that looks live).
+
+`buildCrestDarkStrokeCss` groups selectors by color, so the default-white
+crests still collapse into one rule and only overrides get their own.

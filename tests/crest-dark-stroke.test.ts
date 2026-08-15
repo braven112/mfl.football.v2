@@ -6,7 +6,12 @@ import {
   buildManifest,
   STROKE_THRESHOLD,
 } from '../scripts/measure-crest-contrast.mjs';
-import { buildCrestDarkStrokeCss, CREST_STROKE_FILTER } from '../src/utils/crest-dark-stroke-css';
+import {
+  buildCrestDarkStrokeCss,
+  CREST_STROKE_FILTER,
+  crestStrokeFilter,
+  DEFAULT_CREST_STROKE_COLOR,
+} from '../src/utils/crest-dark-stroke-css';
 
 const ROOT = path.resolve(__dirname, '..');
 const manifest = JSON.parse(
@@ -88,5 +93,62 @@ describe('buildCrestDarkStrokeCss', () => {
 
   it('returns empty string when nothing qualifies', () => {
     expect(buildCrestDarkStrokeCss([])).toBe('');
+  });
+
+  it('honors a per-team stroke color and groups the rest under the default', () => {
+    const css = buildCrestDarkStrokeCss([
+      { icon: '/a.png', strokeColor: '#ffcd00' },
+      { icon: '/b.png' },
+      { icon: '/c.png' },
+    ]);
+    expect(css).toContain(crestStrokeFilter('#ffcd00'));
+    expect(css).toContain(crestStrokeFilter(DEFAULT_CREST_STROKE_COLOR));
+    // b and c share the default color, so they collapse into one rule.
+    expect(css.match(/filter:/g)).toHaveLength(2);
+    expect(css).toContain('[src="/b.png"],\nhtml.dark img.team-icon-cell[src="/c.png"]');
+  });
+});
+
+describe('iconStrokeDark overrides', () => {
+  const configs: Record<string, any> = { theleague: theleagueConfig, afl: aflConfig };
+
+  it('only sets iconStrokeDark on teams that actually get a stroke', () => {
+    // An override on a team that is never stroked is dead config — it reads as
+    // if it were doing something, and nothing would reveal that it isn't.
+    const stroked = new Set(manifest.needsStroke.map((e: any) => `${e.league}:${e.franchiseId}`));
+    for (const [slug, cfg] of Object.entries(configs)) {
+      for (const t of cfg.teams ?? []) {
+        if (!t.iconStrokeDark) continue;
+        expect(
+          stroked.has(`${slug}:${t.franchiseId}`),
+          `${slug} ${t.name} sets iconStrokeDark but is not in the stroke manifest`,
+        ).toBe(true);
+      }
+    }
+  });
+
+  it('every override color itself clears 3:1 on the dark card', () => {
+    // A stroke that doesn't contrast with the card cannot separate the logo
+    // from it — the whole point of the override is legibility, not decoration.
+    const lum = ([r, g, b]: number[]) => {
+      const f = (c: number) => {
+        const s = c / 255;
+        return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+      };
+      return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+    };
+    const bg = lum([0x26, 0x26, 0x26]);
+
+    for (const [slug, cfg] of Object.entries(configs)) {
+      for (const t of cfg.teams ?? []) {
+        if (!t.iconStrokeDark) continue;
+        const hex = String(t.iconStrokeDark).trim();
+        expect(hex, `${slug} ${t.name}: expected a #rrggbb color`).toMatch(/^#[0-9a-f]{6}$/i);
+        const rgb = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+        const l = lum(rgb);
+        const ratio = (Math.max(l, bg) + 0.05) / (Math.min(l, bg) + 0.05);
+        expect(ratio, `${slug} ${t.name}: ${hex} is ${ratio.toFixed(2)}:1 on #262626`).toBeGreaterThanOrEqual(3);
+      }
+    }
   });
 });
