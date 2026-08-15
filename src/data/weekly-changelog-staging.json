@@ -6,6 +6,14 @@
   "changes": [
     {
       "date": "2026-08-15",
+      "type": "style-tweak",
+      "summary": "Fullybaked and the Avenging Amish get their dark-mode logos. Both crests were drawn on a white puck, which looked fine all day and then sat on your dark screen at night like somebody left the lights on in one window. Same artwork, navy backdrop, swapped automatically the moment the site goes dark — so the icons now blend into the card instead of punching a hole in it. Vitside Mafia got this treatment a while back. Everyone else who needs it is getting by on the thin outline for now, and drops it the moment real dark artwork shows up.",
+      "impact": "user",
+      "area": "other",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-15",
       "type": "bug-fix",
       "summary": "Every AFL team logo on the site was being fetched from a second address instead of the page you were already on. It worked, but it meant your phone had to go open a whole separate connection just to draw a handful of 100-pixel crests — and on a cell signal they'd still be arriving well after everything else had finished. Nobody would have called it a bug; it just felt like the logos were slow. They're now served from the same place as the rest of the page, which also means they can't go missing if that other address ever moves. Roughly a dozen of them on the homepage, two dozen on the standings page.",
       "impact": "user",
