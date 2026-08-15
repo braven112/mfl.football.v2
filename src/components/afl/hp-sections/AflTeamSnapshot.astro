@@ -346,14 +346,18 @@ const metrics: MetricDef[] = inferredVariant === 'in-season'
     max-width: 100%;
   }
 
-  /* The AFL badge SVGs carry their own width/height attributes (premier-dark is
-     "200%", al-dark is "10") — pin both here so they can't leak through.
-     Matching on HEIGHT alone doesn't optically match: the conference marks are
-     ~2:1 while the tier crests are taller than wide, so an AL badge the same
-     height as the Premier crest carries roughly twice the visual mass. The
-     width cap is what evens them up — it's slack for the crests (32px wide at
-     full height) and binds on the conference marks, which object-fit then
-     scales down to about the same apparent size. */
+  /* Matching on HEIGHT alone doesn't optically match: the conference marks are
+     ~2:1 (viewBox 339.2x169.2) while the tier crests are taller than wide
+     (270.2x338.9), so an AL badge the same height as the Premier crest carries
+     roughly twice the visual mass. The width cap is what evens them up — it's
+     slack for the crests (32px wide at full height) and binds on the conference
+     marks, which object-fit then scales down to about the same apparent size.
+
+     Known, pre-existing: the `-dark` variants pad their viewBox with empty
+     space around identical artwork, so they draw ~15% smaller than their light
+     counterparts in the same box. Not fixed here: it affects every consumer of
+     these assets, so normalizing the viewBoxes wants its own pass. See the
+     design-system insight for the measurements. */
   :global(.afl-snapshot__card-logo) {
     height: 100%;
     width: auto;
