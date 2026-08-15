@@ -136,8 +136,12 @@ describe('theleague config dark icon rollout', () => {
       ),
     );
     // Dangsters, Maverick, Dead Cap Walking, Ninjas, Music City,
-    // Fire Ready Aim, Bring The Pain, Wabbits, Computer Jocks
-    const LAUNCH_FIDS = ['0002', '0003', '0004', '0005', '0006', '0007', '0008', '0009', '0010'];
+    // Fire Ready Aim, Bring The Pain, Wabbits.
+    // Computer Jocks (0010) was a tenth until Aug 2026: its `_dark.png` was the
+    // light artwork with a white ring painted on, which is precisely what the
+    // generated stroke does — so it dropped the file and took the stroke in the
+    // team's own green instead, matching the AFL's identical crest.
+    const LAUNCH_FIDS = ['0002', '0003', '0004', '0005', '0006', '0007', '0008', '0009'];
     for (const fid of LAUNCH_FIDS) {
       const team = byId.get(fid);
       expect(team?.iconDark, `franchise ${fid} should have iconDark`).toBe(
