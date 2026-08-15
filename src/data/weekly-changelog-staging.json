@@ -5,6 +5,14 @@
   "featuredImageLeague": "afl",
   "changes": [
     {
+      "date": "2026-08-15",
+      "type": "style-tweak",
+      "summary": "The standings cards on both homepages swapped team names for team logos. On a phone the team column was eating half the row to spell out names you already know by their crest, which squeezed the numbers you actually came for. Now it's the logo, and the records and points get room to breathe. Teams that have a dark-mode version of their logo still switch to it automatically at night. Hover a crest — or ask a screen reader — and you still get the name.",
+      "impact": "user",
+      "area": "homepage",
+      "league": "both"
+    },
+    {
       "date": "2026-08-14",
       "type": "style-tweak",
       "summary": "The Pecking Order's award cards stopped color-coding by team and started color-coding by meaning. Heater of the Week now runs a hot orange-red edge, Cooler of the Week an ice blue one, and the Bench Blunder gets pink \u2014 so the three you actually scan for are findable without reading the labels. Every other award still wears the winning franchise's color, and all of them are picked to stay legible in dark mode.",

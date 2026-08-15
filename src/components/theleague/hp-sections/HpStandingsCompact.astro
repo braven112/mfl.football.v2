@@ -10,6 +10,7 @@ import { getCurrentSeasonYear } from '../../../utils/league-year';
 import { getContextualRows } from '../../../utils/homepage-dashboard';
 import { getLeagueStandings } from '../../../utils/standings';
 import type { TeamSummary } from '../../../utils/league-summary-utils';
+import TeamIconCell from '../../TeamIconCell.astro';
 import config from '../../../data/theleague.config.json';
 
 interface Props {
@@ -54,7 +55,7 @@ interface StandingRow {
   pf: number;
   capSpace: number;
   isUser: boolean;
-  color: string;
+  icon?: string;
 }
 
 let rows: StandingRow[] = [];
@@ -86,7 +87,7 @@ if (hasGamesPlayed) {
       pf,
       capSpace: capMap.get(t.id) ?? 0,
       isUser: t.id === userFranchiseId,
-      color: team?.color ?? 'var(--color-primary, #1c497c)',
+      icon: team?.icon,
     };
   });
 } else {
@@ -112,7 +113,7 @@ if (hasGamesPlayed) {
         pf: 0,
         capSpace: ts.metrics.capSpace?.[0] ?? 0,
         isUser: ts.franchiseId === userFranchiseId,
-        color: team?.color ?? 'var(--color-primary, #1c497c)',
+        icon: team?.icon,
       };
     })
     .sort((a, b) => b.capSpace - a.capSpace);
@@ -199,8 +200,7 @@ const formatCap = (v: number) => {
           <tr class:list={['hp-standings__row', { 'hp-standings__row--user': row.isUser }]}>
             <td class="hp-standings__td hp-standings__td--rank">{row.rank}</td>
             <td class="hp-standings__td hp-standings__td--team">
-              <span class="hp-standings__team-indicator" style={`background: ${row.color}`} aria-hidden="true"></span>
-              <span class={row.isUser ? 'hp-standings__team-name--bold' : ''}>{row.name}</span>
+              <TeamIconCell icon={row.icon} name={row.name} emphasis={row.isUser} />
             </td>
             {hasGamesPlayed && (
               <td class="hp-standings__td hp-standings__td--record">{row.record}</td>
@@ -226,6 +226,8 @@ const formatCap = (v: number) => {
   .hp-standings {
     --dh-accent: var(--color-primary, #1c497c);
     --dh-highlight-bg: color-mix(in srgb, var(--dh-accent) 6%, transparent);
+    /* Crest size for the team column (see TeamIconCell). */
+    --team-icon-size: 2.25rem;
     background: var(--card-bg, #fff);
     border: 1px solid var(--content-border, #e2e8f0);
     border-radius: var(--radius-md, 0.5rem);
@@ -300,6 +302,9 @@ const formatCap = (v: number) => {
   }
 
   .hp-standings__th--rank { width: 2rem; text-align: center; }
+  /* Crest-only column: shrink to content so the slack goes to the stat
+     columns instead of stranding the crest next to a wide empty gap. */
+  .hp-standings__th--team { width: 1%; }
   .hp-standings__th--record,
   .hp-standings__th--pf,
   .hp-standings__th--cap { text-align: right; }
@@ -347,17 +352,6 @@ const formatCap = (v: number) => {
     color: var(--color-gray-800, #1f2937);
   }
 
-  .hp-standings__team-indicator {
-    width: 3px;
-    height: 0.875rem;
-    border-radius: 2px;
-    flex-shrink: 0;
-  }
-
-  .hp-standings__team-name--bold {
-    font-weight: 700;
-  }
-
   .hp-standings__td--record {
     text-align: right;
     color: var(--color-gray-700, #374151);
@@ -391,6 +385,10 @@ const formatCap = (v: number) => {
     .hp-standings__th--pf,
     .hp-standings__td--pf {
       display: none;
+    }
+
+    .hp-standings {
+      --team-icon-size: 2rem;
     }
   }
 </style>

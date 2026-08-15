@@ -1,0 +1,73 @@
+---
+/**
+ * TeamIconCell — a team's identity rendered as its crest instead of its name.
+ *
+ * Used by the compact homepage standings cards, where the team column is the
+ * widest thing on a phone and the crest reads faster than the text. The team
+ * NAME is still exposed to assistive tech (and to a hover tooltip) via `alt` /
+ * `title`, so replacing the text is a visual change only.
+ *
+ * Dark mode needs nothing here: `TeamIconDarkStyles` (shared layout <head>)
+ * emits a global `html.dark img[src="<light>"] { content: url("<dark>") }`
+ * rule for every team that declares an `iconDark`, so a plain <img> keyed on
+ * the config's `icon` picks up the dark crest automatically. Do NOT pick a
+ * theme's src here — with theme preference 'auto' the server can't know the
+ * resolved theme (see src/utils/team-icon-dark-css.ts). Teams with no
+ * `iconDark` keep their light crest in both themes, exactly as elsewhere.
+ *
+ * Sizing is driven by `--team-icon-size`, set by the calling card so each one
+ * keeps its own row rhythm and mobile breakpoint.
+ *
+ * @example
+ * ```astro
+ * <TeamIconCell icon={row.icon} name={row.name} emphasis={row.isUser} />
+ * ```
+ */
+export interface Props {
+  /** Light-mode crest from the league config (`team.icon`). */
+  icon?: string;
+  /** Team display name — the accessible name, and the fallback when there's no crest. */
+  name: string;
+  /** Bolds the text fallback (used for the signed-in owner's row). */
+  emphasis?: boolean;
+}
+
+const { icon, name, emphasis = false } = Astro.props;
+---
+
+{icon ? (
+  <img
+    src={icon}
+    alt={name}
+    title={name}
+    class="team-icon-cell"
+    loading="lazy"
+    decoding="async"
+  />
+) : (
+  <span class:list={['team-icon-cell__fallback', { 'team-icon-cell__fallback--bold': emphasis }]}>
+    {name}
+  </span>
+)}
+
+<style>
+  .team-icon-cell {
+    display: block;
+    width: var(--team-icon-size, 1.75rem);
+    height: var(--team-icon-size, 1.75rem);
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+
+  /* No crest configured — degrade to the name rather than an empty cell. */
+  .team-icon-cell__fallback {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .team-icon-cell__fallback--bold {
+    font-weight: 700;
+  }
+</style>
