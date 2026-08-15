@@ -113,6 +113,9 @@ if (hasGamesPlayed) {
         pf: 0,
         capSpace: ts.metrics.capSpace?.[0] ?? 0,
         isUser: ts.franchiseId === userFranchiseId,
+        // Deliberately the config icon rather than `ts.teamIcon`: the dark-mode
+        // swap and stroke rules key on the exact config `icon` string, so
+        // sourcing it anywhere else risks a src that no rule matches.
         icon: team?.icon,
       };
     })

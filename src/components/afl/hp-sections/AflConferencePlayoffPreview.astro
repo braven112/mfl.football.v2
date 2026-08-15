@@ -291,6 +291,13 @@ const visible = rows.slice(0, 6);
     color: var(--color-gray-500, #6b7280);
   }
 
+  /* An <img> doesn't answer to `color`, so the crest stayed fully saturated in
+     a row whose other cells were dimmed — the row read as half-eliminated.
+     Match the text's recession with opacity instead. */
+  .afl-conf__row--out :global(.team-icon-cell) {
+    opacity: 0.55;
+  }
+
   .afl-conf__td {
     padding: 0.4375rem 0.5rem;
     border-bottom: 1px solid var(--color-gray-50, #f9fafb);

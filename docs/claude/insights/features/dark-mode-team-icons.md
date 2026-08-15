@@ -217,3 +217,47 @@ above, set those new `iconDark` values as RELATIVE paths even though the AFL's
 coverage — `tests/team-icon-dark-styles.test.ts` validates that every declared
 `iconDark` points at a real file, not that any given team declares one — so a
 gap like this is invisible until you look at a dark-mode screenshot.
+
+---
+
+## 2026-08-15 - When there's no `iconDark` to swap to: measure, then stroke
+
+**Context:** the crest-only standings cards (entry above) needed AFL crests to
+survive a dark card, and 23 of 24 AFL teams have no `iconDark`. Hand-authoring
+23 dark logos wasn't on the table; the crest still had to name the row.
+
+**Measure first, don't eyeball.** `scripts/measure-crest-contrast.mjs`
+(`pnpm measure:crest-contrast`, `--report` to print scores) decodes each crest
+with `sharp` and scores it as the fraction of OPAQUE pixels clearing 3:1
+against `--card-surface` (`#262626`). Under 0.5 — less than half the logo
+legible — it goes in `src/data/crest-dark-stroke-manifest.json`. That caught 14
+AFL and 4 TheLeague crests, from Badd Boys at 13% up to Running down the Dream
+at 48%. The scores are a good sanity check on the whole system: the teams
+TheLeague's humans chose to draw `iconDark` art for are almost exactly the ones
+that score worst, which is the correlation you'd hope for.
+
+**Stroke, don't plate.** `src/utils/crest-dark-stroke-css.ts` emits four
+stacked cardinal `drop-shadow()`s, which is the only CSS that follows an
+image's ALPHA silhouette. `outline`, `border`, and a background plate all draw
+the crest's bounding BOX — on a transparent PNG that's a white square around
+the logo, which is worse than the problem you started with. The shadows
+compose (each applies to the previous result), so four is enough for a
+continuous ~1px ring.
+
+**A team must never get both.** The manifest excludes any team with an
+`iconDark`, because a hand-drawn dark logo does not want a white ring around
+it. `tests/crest-dark-stroke.test.ts` asserts that, re-measures the committed
+assets to catch manifest drift, and checks each listed `icon` still matches its
+config string exactly (the selector is an exact `src` match, so a drifted icon
+path silently stops applying the stroke rather than erroring).
+
+**Scoped to `img.team-icon-cell`, on purpose.** Unlike the dark-swap rules,
+this is NOT global. A surface showing a crest NEXT TO a name doesn't have the
+problem — the name carries identity — and a white ring there is just noise.
+Only surfaces where the crest is the sole identifier opt in, via the class.
+
+**Recommendation:** re-run `pnpm measure:crest-contrast` after replacing any
+crest asset or adding an `iconDark`; the test fails until the manifest is
+regenerated. And prefer real `iconDark` art whenever someone is willing to draw
+it — the stroke is a legibility floor, not a substitute for a logo designed for
+dark mode.
