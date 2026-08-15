@@ -7,6 +7,14 @@
  * during the offseason, surfaces keeper status. Guests see a team picker prompt.
  */
 import { spriteUrl } from '../../../utils/sprite-url';
+import ThemeImage from '../../ThemeImage.astro';
+import { getTierLogo, getTierLogoDark, PREMIER_LEAGUE, D_LEAGUE } from '../../../utils/afl-tier-logo';
+import {
+  getConferenceLogo,
+  getConferenceLogoDark,
+  getConferenceShort,
+  isValidConferenceId,
+} from '../../../utils/afl-conference';
 
 interface Team {
   franchiseId: string;
@@ -54,8 +62,40 @@ interface MetricDef {
   sub: string;
   href: string;
   icon?: string;
+  /** Branded mark rendered in place of the sprite icon (light variant). */
+  logo?: string;
+  /** Dark-mode variant of `logo`. Required whenever `logo` is set. */
+  logoDark?: string;
+  /** Accessible name for the branded mark — empty string keeps it decorative. */
+  logoAlt?: string;
   alert?: boolean;
 }
+
+/* Tier and conference are branded in this league — swap the generic sprite for
+   the real mark when we can resolve one. Both are theme-paired assets, so they
+   go through ThemeImage (SSR can't know the resolved theme). An unknown tier or
+   a conference id MFL hasn't given us falls back to the sprite icon. */
+const tierName = userTeam?.tier === PREMIER_LEAGUE
+  ? PREMIER_LEAGUE
+  : userTeam?.tier === D_LEAGUE
+    ? D_LEAGUE
+    : null;
+
+const tierLogo = tierName
+  ? { logo: getTierLogo(tierName), logoDark: getTierLogoDark(tierName), logoAlt: `${tierName} logo` }
+  : {};
+
+const conferenceId = userTeam?.conference && isValidConferenceId(userTeam.conference)
+  ? userTeam.conference
+  : null;
+
+const conferenceLogo = conferenceId
+  ? {
+      logo: getConferenceLogo(conferenceId),
+      logoDark: getConferenceLogoDark(conferenceId),
+      logoAlt: `${getConferenceShort(conferenceId)} logo`,
+    }
+  : {};
 
 const metrics: MetricDef[] = inferredVariant === 'in-season'
   ? [
@@ -68,10 +108,11 @@ const metrics: MetricDef[] = inferredVariant === 'in-season'
       },
       {
         label: 'Tier',
-        value: userTeam?.tier === 'Premier League' ? 'Premier' : userTeam?.tier === 'D-League' ? 'D-League' : '—',
+        value: tierName === PREMIER_LEAGUE ? 'Premier' : tierName === D_LEAGUE ? 'D-League' : '—',
         sub: 'this season',
         href: '/afl-fantasy/standings?view=tier',
         icon: 'trophy',
+        ...tierLogo,
       },
       {
         label: 'Roster',
@@ -92,17 +133,19 @@ const metrics: MetricDef[] = inferredVariant === 'in-season'
   : [
       {
         label: 'Tier',
-        value: userTeam?.tier === 'Premier League' ? 'Premier' : userTeam?.tier === 'D-League' ? 'D-League' : '—',
+        value: tierName === PREMIER_LEAGUE ? 'Premier' : tierName === D_LEAGUE ? 'D-League' : '—',
         sub: 'this season',
         href: '/afl-fantasy/standings?view=tier',
         icon: 'trophy',
+        ...tierLogo,
       },
       {
         label: 'Conference',
-        value: userTeam?.conference === '00' ? 'AL' : userTeam?.conference === '01' ? 'NL' : '—',
+        value: conferenceId ? getConferenceShort(conferenceId) : '—',
         sub: userTeam?.division ?? '',
         href: '/afl-fantasy/standings',
         icon: 'star',
+        ...conferenceLogo,
       },
       {
         label: 'Keepers',
@@ -144,11 +187,22 @@ const metrics: MetricDef[] = inferredVariant === 'in-season'
     <div class="afl-snapshot__grid">
       {metrics.map(m => (
         <a href={m.href} class="afl-snapshot__card">
-          {m.icon && (
-            <svg class="afl-snapshot__card-icon" width="14" height="14" aria-hidden="true">
-              <use href={`${spriteUrl}#icon-${m.icon}`} />
-            </svg>
-          )}
+          <span class="afl-snapshot__card-mark">
+            {m.logo && m.logoDark ? (
+              <ThemeImage
+                src={m.logo}
+                darkSrc={m.logoDark}
+                alt={m.logoAlt ?? ''}
+                class="afl-snapshot__card-logo"
+                loading="lazy"
+                decoding="async"
+              />
+            ) : m.icon && (
+              <svg class="afl-snapshot__card-icon" width="14" height="14" aria-hidden="true">
+                <use href={`${spriteUrl}#icon-${m.icon}`} />
+              </svg>
+            )}
+          </span>
           <span class:list={['afl-snapshot__card-value', { 'afl-snapshot__card-value--alert': m.alert }]}>{m.value}</span>
           <span class="afl-snapshot__card-label">{m.label}</span>
           <span class="afl-snapshot__card-sub">{m.sub}</span>
@@ -268,6 +322,24 @@ const metrics: MetricDef[] = inferredVariant === 'in-season'
 
   .afl-snapshot__card:hover {
     background: var(--color-gray-100, #f3f4f6);
+  }
+
+  /* Fixed-height slot so a branded mark and a sprite icon leave the value/label
+     stack sitting at the same height across all four cards. */
+  .afl-snapshot__card-mark {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 1.75rem;
+  }
+
+  /* The AFL badge SVGs carry their own width/height attributes (premier-dark is
+     "200%", al-dark is "10") — pin both here so they can't leak through. */
+  :global(.afl-snapshot__card-logo) {
+    height: 1.75rem;
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
   }
 
   .afl-snapshot__card-icon {
