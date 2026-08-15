@@ -1821,3 +1821,41 @@ Midwestside `#ffcd00` = 1.50:1 on white, Mavericks `#c4b060` = 2.16:1.
 foreground; only bypass it for a full-bleed color fill with text on top.
 `tests/team-accent-css.test.ts` fails the build if any franchise in any league
 drops below 3:1 in either theme.
+
+## 2026-08-15 - Two Badges at the Same Height Are Not the Same Size — Cap the Other Axis
+
+**Context:** Putting the AFL tier crest (`premier.svg`, `dleague.svg`) and the
+conference mark (`conferences/al.svg`, `nl.svg`) side by side as the headline of
+two adjacent tiles on the AFL homepage's My Team card.
+
+**Insight:** Sizing both to a shared height is the reflex, and it looks wrong.
+The conference marks are ~2:1 (`viewBox="0 0 339.2 169.2"`) while the tier
+crests are taller than wide (`0 0 270.2 338.9`), so at a shared 40px height the
+AL badge rendered 80×40 against the crest's 32×40 — roughly twice the visual
+mass, and it reads as a mistake rather than a hierarchy. What evens two
+different-ratio marks up is constraining BOTH axes and letting `object-fit:
+contain` pick the binding one: `height: 100%; width: auto; max-width: min(100%,
+3.25rem)`. The cap is slack for the crest (unchanged) and binds on the
+conference mark, which then draws at 52×26. Geometric mean — a decent proxy for
+apparent size — lands at 35.8 vs 36.8, i.e. matched. The single rule needs no
+per-asset flag and absorbs any future wide mark.
+
+**Evidence:** Measured in the live page rather than eyeballed, which is worth
+doing when the whole question is "do these look the same": read each `<img>`'s
+`getBoundingClientRect()` and `naturalWidth/Height`, apply the contain scale
+(`min(box.w/nat.w, box.h/nat.h)`), and print the drawn size. Before: `Premier
+League: 32x40 | American League: 80x40`. After: `32x40 | 52x26`.
+
+**Gotcha — these SVGs carry lying width/height attributes.** `premier-dark.svg`
+declares `width="200%" height="200%"` and `al-dark.svg` declares `width="10"`
+(the light variants declare neither). Any consumer that sets only one axis in
+CSS lets the other leak through from the attribute, and the light/dark pair then
+renders at different sizes — a bug that only appears when you toggle the theme.
+Pin both axes in CSS for these assets. The existing call sites got this right by
+accident (`.afl-tiers__logo` sets `height` + `width: auto`); treat it as a rule,
+not a coincidence.
+
+**Recommendation:** When a design puts two branded marks in equivalent slots,
+check their viewBox ratios before picking a sizing rule. Equal height is only
+correct for marks that share a ratio; otherwise constrain both axes and verify
+with drawn pixel sizes, not by looking at a screenshot.
