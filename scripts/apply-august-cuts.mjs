@@ -91,13 +91,20 @@ import {
   buildRookiePriorityFromFeeds,
   ACTIVE_ROSTER_STATUS,
 } from '../src/utils/august-cut-selection-core.mjs';
-import { getLeagueBySlug, DEFAULT_LEAGUE_SLUG } from '../src/config/leagues-data.mjs';
+import { getLeagueBySlug, DEFAULT_LEAGUE_SLUG, leagueUrl } from '../src/config/leagues-data.mjs';
 // Shared franchise-id normalization (matches auth.ts / autocut-storage.ts).
 import { normalizeFranchiseId as pad4 } from '../src/utils/franchise-id.mjs';
 
 const LEAGUE = getLeagueBySlug(DEFAULT_LEAGUE_SLUG);
 const LEAGUE_ID = LEAGUE.id;
 const TAG = '[apply-august-cuts]';
+
+// Owner-facing links in the Roger touches. leagueUrl drops the redundant
+// league path prefix on the league's own apex host (the apex serves the bare
+// path; the prefixed form only resolves via a 301) and pins the canonical
+// cookie-safe www host, so the link doesn't open logged-out.
+const ROSTERS_URL = leagueUrl(LEAGUE, `/${LEAGUE.slug}/rosters`);
+const SITE_HOST = new URL(leagueUrl(LEAGUE)).host;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -543,8 +550,8 @@ async function runValidateOnly({ redis, year, plans, names, daysUntil, dryRun })
     const when = daysUntil === 1 ? 'tomorrow' : `in ${daysUntil} days`;
     const text =
       `🚨 Roster cutdown is ${when} (8:45pm PT). ${plans.length} team(s) are over the 22-man limit. ` +
-      `Auto-cuts are set to run at the deadline, but these teams need to log in at theleague.us once so their cuts can execute: ${teams}. ` +
-      `Review your plan at theleague.us/theleague/rosters.`;
+      `Auto-cuts are set to run at the deadline, but these teams need to log in at ${SITE_HOST} once so their cuts can execute: ${teams}. ` +
+      `Review your plan at ${ROSTERS_URL}`;
     await postRogerTouch(text, dryRun);
   }
   return results;
@@ -586,7 +593,7 @@ async function runRehearse({ redis, year, plans, cutdownDate, dryRun }) {
     const text =
       `📋 Roster cutdown is tomorrow at 8:45pm PT. ${plans.length} team(s) are over the 22-man limit — ` +
       taxiNote +
-      `Check your Cutdown Plan at theleague.us/theleague/rosters before then.`;
+      `Check your Cutdown Plan before then: ${ROSTERS_URL}`;
     await postRogerTouch(text, dryRun);
   } else {
     console.log(`${TAG} rehearse: every roster is at/under the limit — no GroupMe summary needed.`);

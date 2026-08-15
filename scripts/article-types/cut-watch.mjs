@@ -26,7 +26,7 @@ import path from 'node:path';
 import { loadTeams, flipName, normalizePosition, formatDefName, formatSalary, resolveDataDir } from '../article-utils/data-loaders.mjs';
 import { buildCachedSystem } from '../article-utils/ai-client.mjs';
 import { isCutWindow } from '../article-utils/season-guards.mjs';
-import { LEAGUES, leagueOrigin, DEFAULT_LEAGUE_SLUG } from '../../src/config/leagues-data.mjs';
+import { LEAGUES, leagueUrl, DEFAULT_LEAGUE_SLUG } from '../../src/config/leagues-data.mjs';
 import { getAugustCutdownDay, calendarDaysUntilCutdown, ptDateParts } from '../lib/august-cutdown.mjs';
 import { getRedisConfig, redisCommand } from '../lib/redis.mjs';
 import { normalizeFranchiseId } from '../../src/utils/franchise-id.mjs';
@@ -521,9 +521,6 @@ export function buildGroupMePromo(post, enrichment, { league = 'theleague', now 
   const overLimit = enrichment?.overLimit ?? [];
   if (overLimit.length === 0) return null;
 
-  // Canonical host (cookie-safe) via leagueOrigin — never domains[0] ad hoc,
-  // or links in GroupMe open logged-out (session cookies are host-only).
-  const publicOrigin = leagueOrigin(LEAGUES[league]);
   const totalExcess = overLimit.reduce((sum, t) => sum + t.over, 0);
 
   // Prefer to call out the worst offender WITHOUT a filed cutdown plan —
@@ -566,7 +563,12 @@ export function buildGroupMePromo(post, enrichment, { league = 'theleague', now 
     `🚨 CUT WATCH — ${worst.name}: ${worst.over} over the ${ACTIVE_ROSTER_LIMIT}-man limit` +
     `${descriptor}.${spread} ` +
     `Cutdown is Aug ${deadlineDay} (${countdown}). Today's chopping block:\n` +
-    `${publicOrigin}${post.link}`
+    // leagueUrl, not origin + post.link: the feed link carries the league
+    // prefix (the real route on the shared host), which is redundant on the
+    // league's own apex domain — concatenating ships /theleague/theleague/…
+    // shaped URLs that only resolve via a 301. It also pins the canonical
+    // (cookie-safe) host, so the link doesn't open logged-out.
+    leagueUrl(LEAGUES[league], post.link)
   );
 }
 

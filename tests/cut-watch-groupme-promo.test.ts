@@ -71,8 +71,11 @@ describe('buildGroupMePromo (cut-watch)', () => {
     expect(text).toContain('2 teams still need to shed 8 players combined');
     // Deadline is data-driven (3rd Sunday of August = Aug 16 in 2026).
     expect(text).toContain('Cutdown is Aug 16');
-    // Canonical (cookie-safe) host — leagueOrigin, never bare domains[0].
-    expect(text).toContain('https://www.theleague.us/theleague/news/sf_2026_cut_watch_0720');
+    // Canonical (cookie-safe) host — leagueOrigin, never bare domains[0] —
+    // and NO redundant /theleague prefix: the apex host serves the bare path,
+    // so the prefixed form only resolves via a 301 (leagueUrl strips it).
+    expect(text).toContain('https://www.theleague.us/news/sf_2026_cut_watch_0720');
+    expect(text).not.toContain('/theleague/news/');
   });
 
   it('picks the worst offender even when enrichment arrives unsorted', () => {

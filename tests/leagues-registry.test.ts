@@ -8,6 +8,10 @@ import {
   getLeagueByPath,
   leagueHasFeature,
   buildHostToSlugMap,
+  leagueUrl,
+  stripLeaguePrefix,
+  ensureLeaguePrefix,
+  SHARED_APP_ORIGIN,
 } from '../src/config/leagues';
 import { HOST_TO_SLUG } from '../src/utils/league-host-map';
 import { getLeagueContext } from '../src/utils/league-context';
@@ -96,6 +100,95 @@ describe('host map derived from registry', () => {
       for (const d of league.domains) {
         expect(map[d]).toBe(league.slug);
       }
+    }
+  });
+});
+
+describe('leagueUrl / stripLeaguePrefix', () => {
+  const theleague = getLeagueBySlug('theleague')!;
+  const afl = getLeagueBySlug('afl-fantasy')!;
+  const bestBall = getLeagueBySlug('best-ball-1')!;
+
+  it('drops the league\'s own redundant prefix on its apex host', () => {
+    // The bug this guards: GroupMe posts and article promos read
+    // "theleague.us/theleague/calendar", which only resolves via a 301.
+    expect(leagueUrl(theleague, '/theleague/calendar')).toBe(
+      'https://www.theleague.us/calendar',
+    );
+    expect(leagueUrl(afl, '/afl-fantasy/news/sf_x')).toBe(
+      'https://www.afl-fantasy.com/news/sf_x',
+    );
+  });
+
+  it('keeps a CROSS-league prefix — only the league\'s own slug is stripped', () => {
+    expect(leagueUrl(theleague, '/afl-fantasy/standings')).toBe(
+      'https://www.theleague.us/afl-fantasy/standings',
+    );
+  });
+
+  it('preserves query strings and hashes', () => {
+    expect(leagueUrl(theleague, '/theleague/trade-builder?b=0003')).toBe(
+      'https://www.theleague.us/trade-builder?b=0003',
+    );
+    expect(stripLeaguePrefix(theleague, '/theleague?post=x')).toBe('/?post=x');
+    expect(stripLeaguePrefix(theleague, '/theleague#top')).toBe('/#top');
+  });
+
+  it('maps the bare league root to /', () => {
+    expect(leagueUrl(theleague, '/theleague')).toBe('https://www.theleague.us/');
+    expect(leagueUrl(theleague)).toBe('https://www.theleague.us/');
+  });
+
+  it('leaves an already-unprefixed path alone', () => {
+    expect(leagueUrl(theleague, '/schefter/tip')).toBe('https://www.theleague.us/schefter/tip');
+  });
+
+  it('does not strip mid-segment on a slug-lookalike path', () => {
+    expect(stripLeaguePrefix(theleague, '/theleague-archive/2019')).toBe(
+      '/theleague-archive/2019',
+    );
+  });
+
+  it('keeps the prefix for path-only leagues (no apex domain)', () => {
+    expect(leagueUrl(bestBall, '/best-ball-1/draft')).toBe(
+      `${SHARED_APP_ORIGIN}/best-ball-1/draft`,
+    );
+  });
+
+  it('ADDS the prefix for a path-only league given a bare path', () => {
+    // The shared host has no middleware rewrite, so an unprefixed path 404s.
+    // leagueUrl is total in both directions: strip on apex, ensure on shared.
+    expect(leagueUrl(bestBall, '/draft')).toBe(`${SHARED_APP_ORIGIN}/best-ball-1/draft`);
+    expect(leagueUrl(bestBall)).toBe(`${SHARED_APP_ORIGIN}/best-ball-1`);
+    expect(leagueUrl(bestBall, '/')).toBe(`${SHARED_APP_ORIGIN}/best-ball-1`);
+  });
+
+  it('never double-prefixes a cross-league path onto a path-only league', () => {
+    expect(leagueUrl(bestBall, '/theleague/rosters')).toBe(
+      `${SHARED_APP_ORIGIN}/theleague/rosters`,
+    );
+    expect(ensureLeaguePrefix(bestBall, '/afl-fantasy/standings')).toBe(
+      '/afl-fantasy/standings',
+    );
+  });
+
+  it('ensureLeaguePrefix is idempotent and mirrors stripLeaguePrefix', () => {
+    for (const p of ['/calendar', '/best-ball-1/calendar', '/', '/best-ball-1']) {
+      const once = ensureLeaguePrefix(bestBall, p);
+      expect(ensureLeaguePrefix(bestBall, once)).toBe(once);
+      expect(once.startsWith('/best-ball-1')).toBe(true);
+    }
+    // Round-trip: ensure ∘ strip is identity on the prefixed form.
+    expect(ensureLeaguePrefix(theleague, stripLeaguePrefix(theleague, '/theleague/rosters')))
+      .toBe('/theleague/rosters');
+  });
+
+  it('uses the canonical (cookie-safe) www host, never bare domains[0]', () => {
+    for (const league of ALL_LEAGUES) {
+      if (league.domains.length === 0) continue;
+      expect(leagueUrl(league, `/${league.slug}/rosters`)).toBe(
+        `https://${league.canonicalDomain}/rosters`,
+      );
     }
   });
 });
