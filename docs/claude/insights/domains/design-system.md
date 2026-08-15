@@ -1821,3 +1821,115 @@ Midwestside `#ffcd00` = 1.50:1 on white, Mavericks `#c4b060` = 2.16:1.
 foreground; only bypass it for a full-bleed color fill with text on top.
 `tests/team-accent-css.test.ts` fails the build if any franchise in any league
 drops below 3:1 in either theme.
+
+## 2026-08-15 - Two Badges at the Same Height Are Not the Same Size — Cap the Other Axis
+
+**Context:** Putting the AFL tier crest (`premier.svg`, `dleague.svg`) and the
+conference mark (`conferences/al.svg`, `nl.svg`) side by side as the headline of
+two adjacent tiles on the AFL homepage's My Team card.
+
+**Insight:** Sizing both to a shared height is the reflex, and it looks wrong.
+The conference marks are ~2:1 (`viewBox="0 0 339.2 169.2"`) while the tier
+crests are taller than wide (`0 0 270.2 338.9`), so at a shared 40px height the
+AL badge rendered 80×40 against the crest's 32×40 — roughly twice the visual
+mass, and it reads as a mistake rather than a hierarchy. What evens two
+different-ratio marks up is constraining BOTH axes and letting `object-fit:
+contain` pick the binding one: `height: 100%; width: auto; max-width: min(100%,
+3.25rem)`. The cap is slack for the crest (unchanged) and binds on the
+conference mark, which then draws at 52×26. Geometric mean — a decent proxy for
+apparent size — lands at 35.8 vs 36.8, i.e. matched. The single rule needs no
+per-asset flag and absorbs any future wide mark.
+
+**Evidence:** Measured in the live page rather than eyeballed, which is worth
+doing when the whole question is "do these look the same": read each `<img>`'s
+`getBoundingClientRect()` and `naturalWidth/Height`, apply the contain scale
+(`min(box.w/nat.w, box.h/nat.h)`), and print the drawn size. Before: `Premier
+League: 32x40 | American League: 80x40`. After: `32x40 | 52x26`.
+
+**Gotcha — the `-dark` variants draw smaller, and by DIFFERENT amounts, which
+is what breaks an optical match.** Measured as rendered ink (alpha bounding box
+in the real slot), not `getBoundingClientRect`:
+
+| asset | drawn box | visible ink | geo. mean |
+|---|---|---|---|
+| `premier.svg` | 32.0x40.0 | 30.4x40.0 | 34.9 |
+| `al.svg` | 52.0x26.0 | 51.1x23.8 | 34.9 |
+| `premier-dark.svg` | 33.1x40.0 | 27.2x35.4 | 31.0 |
+| `al-dark.svg` | 52.0x27.1 | 50.3x24.1 | 34.8 |
+
+Light mode matches (34.9 vs 34.9). Dark mode does not (31.0 vs 34.8, ~11%
+apart) — i.e. the tuning silently only half-applies. The cause is transparent
+padding baked into the dark viewBoxes, in unequal amounts: `premier-dark` gets
+30 units of slack per side (`-30 -30 330.2 398.9` around 270.2x338.9 of art),
+`dleague-dark` gets asymmetric slack (`-55 -30 332 408.1`), and `al-dark` /
+`nl-dark` only 8 (`-8 -8 355.2 185.2`). `object-fit: contain` fits the PADDED
+box, so a 30-unit-padded crest loses ~13% of its ink while an 8-unit-padded
+wordmark loses ~1%. Toggling the theme visibly shrinks the crest while its
+neighbor barely moves.
+
+**The padding is NOT dead space — it holds a halo, and that mattered.** An
+early pass here concluded it was, on the evidence that `getBBox()` reports the
+pair's ink as identical (`premier.svg` and `premier-dark.svg` both `14.4 -0.0
+231.2 338.9`). That conclusion is wrong and it is recorded because acting on it
+caused the second bug below: `getBBox()` returns the GEOMETRY box, excluding
+stroke and filters, and the halo every dark badge paints so it reads on a dark
+surface is exactly that — a stroke, and a `feMorphology` dilate on the crest.
+The padding is sized to hold it. Centering is fine
+(ink center offset is ≤0.9% of box on every asset), so nothing shifts sideways
+on toggle; only scale is affected.
+
+**Fixed in the ASSETS, not in CSS.** The four `-dark` viewBoxes were
+re-authored to reproduce their light counterpart's ink-to-viewBox relationship
+— the only layer that fixes it everywhere, since the discrepancy was live at
+every other call site too — `.afl-tiers__logo`, `.badge-tier-logo` (20px),
+`.promo-reg-logo` (50px), `.afl-playoffs-hero__bracket-logo`, StandingsTable's
+`.tier-logo`/`.conference-logo`/`.division-conf-logo`,
+`AflConferencePlayoffPreview`'s `.afl-conf__logo`, the sidenav tier crest
+(`AFL_TIER_LINKS` in `NavLinks.astro`), and `AflEventHero` — and all of them
+constrain with `height: X; width: auto`, so normalizing the
+height fraction corrects each identically. Rendered ink in the real slot after
+the fix: premier 34.9 light / 34.9 dark, al and nl 34.9 / 35.5, dleague 36.0 /
+34.7. The dleague gap is artwork — its dark drawing is genuinely narrower — and
+closing it means re-drawing, not moving a viewBox.
+
+**`AflEventHero` makes this a LIGHT-mode change too.** Its panel is navy in
+both themes, so it deliberately pins the dark badge on (`:global(.afl-event-hero
+.afl-event-hero__badge.theme-img--dark) { display: block }`) regardless of
+`html.dark`. Any edit to a `-dark` badge therefore ships to a light-mode surface
+as well — worth checking the hero whenever you touch these files, and worth
+saying out loud in a changelog entry that otherwise reads "dark mode only".
+
+**The trap inside the trap: `getBBox()` does not include stroke, and the halo
+IS a stroke.** The first attempt at this fix normalized against `getBBox()`,
+which reported the dark ink as byte-identical to the light ink and therefore
+"prove" the padding was dead space. It is not. Every `-dark` file paints a
+white halo as a stroke on its paths so the mark reads on a dark surface, and
+`getBBox()` returns the geometry box with the stroke excluded — so the padding
+those viewBoxes carried was there to hold the halo, and normalizing to the
+light viewBox clipped it on all four assets (measured overflow at a 40px
+render: al/nl 1.19px off the left edge, premier 0.85px off the top, dleague
+clipped on all four sides). It shipped looking fine in a screenshot because a
+1px shaved off a white outline is invisible until you go looking.
+
+Measure with an ALPHA bounding box over rendered pixels instead: render the SVG
+large with `omitBackground: true`, scan the alpha channel for the extent, and
+map back to user units through the viewBox. That counts stroke, filters, and
+anything else that actually puts pixels down. Then solve each dark viewBox so
+its true ink reproduces the light variant's fill fractions and margins, and
+assert containment (`X <= inkX && X+W >= inkX+inkW`, both axes) rather than
+trusting the arithmetic.
+
+**Method note — three wrong turns, each measuring the wrong thing.** First
+claim: the dark files declare bogus `width="200%"` / `width="10"` root
+attributes. They don't — that came from grepping the head of each file, which
+matched `width`/`height` on *child* elements. Second: measuring with
+`getBoundingClientRect()` + `naturalWidth/Height` + the contain scale, which
+measures the padded BOX, reports `32x40 | 52x26`, and shows a perfect match
+while the dark mismatch sits undetected. Third: `getBBox()`, which finds the
+mismatch but misses the stroke and leads to a fix that clips. Only the alpha
+bbox answers the question that was actually being asked.
+
+**Recommendation:** When a design puts two branded marks in equivalent slots,
+check their viewBox ratios before picking a sizing rule. Equal height is only
+correct for marks that share a ratio; otherwise constrain both axes and verify
+with drawn pixel sizes, not by looking at a screenshot.

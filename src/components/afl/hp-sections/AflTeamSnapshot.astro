@@ -7,6 +7,15 @@
  * during the offseason, surfaces keeper status. Guests see a team picker prompt.
  */
 import { spriteUrl } from '../../../utils/sprite-url';
+import ThemeImage from '../../ThemeImage.astro';
+import { getTierLogo, getTierLogoDark, PREMIER_LEAGUE, D_LEAGUE } from '../../../utils/afl-tier-logo';
+import {
+  getConferenceLogo,
+  getConferenceLogoDark,
+  getConferenceName,
+  getConferenceShort,
+  isValidConferenceId,
+} from '../../../utils/afl-conference';
 
 interface Team {
   franchiseId: string;
@@ -54,8 +63,53 @@ interface MetricDef {
   sub: string;
   href: string;
   icon?: string;
+  /**
+   * Branded mark that REPLACES the sprite icon + text headline (light variant).
+   * `value` stays populated regardless — it's what renders when no mark
+   * resolves, and the alt-text fallback. NOTE `alert` has no effect on a tile
+   * that resolves a mark: the red styling lives on the text headline the mark
+   * replaced. Only tier and conference use marks today and neither can alert;
+   * a metric that needs both wants a badge on the mark, not a color swap.
+   */
+  logo?: string;
+  /** Dark-mode variant of `logo`. Required whenever `logo` is set. */
+  logoDark?: string;
+  /**
+   * Accessible name for the mark, read in place of the headline it replaced.
+   * Deliberately the FULL name ("American League") where `value` is the
+   * abbreviation the tile used to show ("AL") — the badge is unambiguous to
+   * look at, so the screen-reader copy can afford to be the unabbreviated one.
+   */
+  logoAlt?: string;
   alert?: boolean;
 }
+
+/* Tier and conference are branded in this league, and the badge says "Premier"
+   / "AL" better than the word does — so the mark takes the headline slot rather
+   than sitting above it as an icon. Both are theme-paired assets, so they go
+   through ThemeImage (SSR can't know the resolved theme). An unknown tier or a
+   conference id MFL hasn't given us falls back to the sprite + text headline. */
+const tierName = userTeam?.tier === PREMIER_LEAGUE
+  ? PREMIER_LEAGUE
+  : userTeam?.tier === D_LEAGUE
+    ? D_LEAGUE
+    : null;
+
+const tierLogo = tierName
+  ? { logo: getTierLogo(tierName), logoDark: getTierLogoDark(tierName), logoAlt: tierName }
+  : {};
+
+const conferenceId = userTeam?.conference && isValidConferenceId(userTeam.conference)
+  ? userTeam.conference
+  : null;
+
+const conferenceLogo = conferenceId
+  ? {
+      logo: getConferenceLogo(conferenceId),
+      logoDark: getConferenceLogoDark(conferenceId),
+      logoAlt: getConferenceName(conferenceId),
+    }
+  : {};
 
 const metrics: MetricDef[] = inferredVariant === 'in-season'
   ? [
@@ -68,10 +122,11 @@ const metrics: MetricDef[] = inferredVariant === 'in-season'
       },
       {
         label: 'Tier',
-        value: userTeam?.tier === 'Premier League' ? 'Premier' : userTeam?.tier === 'D-League' ? 'D-League' : '—',
+        value: tierName === PREMIER_LEAGUE ? 'Premier' : tierName === D_LEAGUE ? 'D-League' : '—',
         sub: 'this season',
         href: '/afl-fantasy/standings?view=tier',
         icon: 'trophy',
+        ...tierLogo,
       },
       {
         label: 'Roster',
@@ -92,17 +147,19 @@ const metrics: MetricDef[] = inferredVariant === 'in-season'
   : [
       {
         label: 'Tier',
-        value: userTeam?.tier === 'Premier League' ? 'Premier' : userTeam?.tier === 'D-League' ? 'D-League' : '—',
+        value: tierName === PREMIER_LEAGUE ? 'Premier' : tierName === D_LEAGUE ? 'D-League' : '—',
         sub: 'this season',
         href: '/afl-fantasy/standings?view=tier',
         icon: 'trophy',
+        ...tierLogo,
       },
       {
         label: 'Conference',
-        value: userTeam?.conference === '00' ? 'AL' : userTeam?.conference === '01' ? 'NL' : '—',
+        value: conferenceId ? getConferenceShort(conferenceId) : '—',
         sub: userTeam?.division ?? '',
         href: '/afl-fantasy/standings',
         icon: 'star',
+        ...conferenceLogo,
       },
       {
         label: 'Keepers',
@@ -144,12 +201,30 @@ const metrics: MetricDef[] = inferredVariant === 'in-season'
     <div class="afl-snapshot__grid">
       {metrics.map(m => (
         <a href={m.href} class="afl-snapshot__card">
-          {m.icon && (
-            <svg class="afl-snapshot__card-icon" width="14" height="14" aria-hidden="true">
-              <use href={`${spriteUrl}#icon-${m.icon}`} />
-            </svg>
+          {m.logo && m.logoDark ? (
+            <span class="afl-snapshot__card-headline">
+              {/* eager, not lazy: this card sits directly under the hero and the
+                  mark IS the tile's headline, so deferring it pops the tile in
+                  after paint. Two small SVGs (the theme pair) is a cheap trade. */}
+              <ThemeImage
+                src={m.logo}
+                darkSrc={m.logoDark}
+                alt={m.logoAlt ?? m.value}
+                class="afl-snapshot__card-logo"
+                loading="eager"
+                decoding="async"
+              />
+            </span>
+          ) : (
+            <Fragment>
+              {m.icon && (
+                <svg class="afl-snapshot__card-icon" width="14" height="14" aria-hidden="true">
+                  <use href={`${spriteUrl}#icon-${m.icon}`} />
+                </svg>
+              )}
+              <span class:list={['afl-snapshot__card-value', { 'afl-snapshot__card-value--alert': m.alert }]}>{m.value}</span>
+            </Fragment>
           )}
-          <span class:list={['afl-snapshot__card-value', { 'afl-snapshot__card-value--alert': m.alert }]}>{m.value}</span>
           <span class="afl-snapshot__card-label">{m.label}</span>
           <span class="afl-snapshot__card-sub">{m.sub}</span>
         </a>
@@ -268,6 +343,48 @@ const metrics: MetricDef[] = inferredVariant === 'in-season'
 
   .afl-snapshot__card:hover {
     background: var(--color-gray-100, #f3f4f6);
+  }
+
+  /* The branded mark stands in for BOTH the sprite icon and the text headline,
+     so its slot is sized to what those two measured together (14px icon +
+     0.125rem gap + the value's 1.5rem line box) — that keeps every card's
+     label/sub rows on the same baseline whether it shows a mark or text. */
+  .afl-snapshot__card-headline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Spelled out rather than folded to 2.5rem so the dependency is visible:
+       change the sprite size, the card gap, or the value's font-size and this
+       has to move with them or the branded tiles drift off the text tiles. */
+    height: calc(14px + 0.125rem + 1.25rem * 1.2);
+    max-width: 100%;
+  }
+
+  /* Matching on HEIGHT alone doesn't optically match: the conference marks are
+     ~2:1 (viewBox 339.2x169.2) while the tier crests are taller than wide
+     (270.2x338.9), so an AL badge the same height as the Premier crest carries
+     roughly twice the visual mass. The width cap is what evens them up — it's
+     slack for the crests (32px wide at full height) and binds on the conference
+     marks, which object-fit then scales down to about the same apparent size.
+
+     The cap only works because the light and dark variants agree on size, and
+     they didn't: the `-dark` files pad their viewBox to hold a white halo, and
+     the crest padded far more than the conference mark (~11% undersized vs
+     ~2%), so dark mode drew them at different weights. Their viewBoxes were
+     re-solved in this change — NOT to match the light viewBox, which clips the
+     halo, but so their true rendered ink reproduces the light twin's fill.
+     `tests/afl-badge-viewbox.test.ts` locks it; if a new badge lands here, run
+     `node scripts/measure-afl-badge-ink.mjs` rather than trusting the cap. */
+  :global(.afl-snapshot__card-logo) {
+    height: 100%;
+    width: auto;
+    /* Plain length, not min(100%, …): the headline already caps at 100%, and a
+       percentage inside min() on a flex item in a shrink-to-fit parent is the
+       case engines disagree on when resolving an indefinite percentage. 52px is
+       always the binding term anyway — the card's content box is ~99px even at
+       320px — so the percentage only added risk. */
+    max-width: 3.25rem;
+    object-fit: contain;
   }
 
   .afl-snapshot__card-icon {
