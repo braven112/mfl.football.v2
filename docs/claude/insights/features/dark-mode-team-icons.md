@@ -309,3 +309,28 @@ an absolute URL keeps its dark swap and stroke.
 round trip that was broken — the bug was invisible in every screenshot. Test
 crest changes with NO route interception, and assert `crossOriginReqs === 0`
 plus `naturalWidth > 0` per crest rather than eyeballing the render.
+
+**Threshold calibration: the 0.35–0.50 band was 5-for-5 wrong (2026-08-15).**
+The 0.5 cutoff was picked a priori as "less than half the logo is legible."
+In review the commissioner opted out every crest that landed between 0.35 and
+0.50 — Cowboy Up 0.353, Team Minty Fresh 0.368, Dark Magicians 0.370, Get off
+my Ditka 0.389 — and disputed nothing below 0.35. A pixel-average is a decent
+candidate-finder but a poor judge: it counts a crest's total dark area without
+knowing that a bright focal element (a face, a shield, a bold interior) already
+does the separating work a stroke would provide.
+
+Two things follow. First, `iconStrokeDark: false` exists because the
+measurement needs a human override, and that override is load-bearing, not a
+nicety. Second, when a threshold accumulates opt-outs that all cluster in one
+band, that's evidence the threshold is wrong, not that the exceptions are
+special — prefer re-tuning it (~0.35 here) over growing a correction list,
+since the list has to be maintained forever and reads as arbitrary to whoever
+finds it next. Left at 0.5 for now at the commissioner's preference; the
+opt-outs carry it.
+
+**Real artwork always supersedes the stroke.** When Fullybaked (0.452) got a
+hand-drawn `iconDark`, it left the manifest automatically — `measureAllCrests`
+skips any team with a dark variant — so no opt-out was needed and none should
+be added. The guard test asserts the two are mutually exclusive. The fix for a
+flagged crest is, in order: draw the dark variant, else pick a franchise-colored
+stroke, else opt out.
