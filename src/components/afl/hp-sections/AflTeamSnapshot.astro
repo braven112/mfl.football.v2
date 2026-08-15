@@ -65,13 +65,21 @@ interface MetricDef {
   icon?: string;
   /**
    * Branded mark that REPLACES the sprite icon + text headline (light variant).
-   * The mark is the headline, so `logoAlt` carries the value the text would
-   * have said — `value` stays populated as the fallback when no mark resolves.
+   * `value` stays populated regardless — it's what renders when no mark
+   * resolves, and the alt-text fallback. NOTE `alert` has no effect on a tile
+   * that resolves a mark: the red styling lives on the text headline the mark
+   * replaced. Only tier and conference use marks today and neither can alert;
+   * a metric that needs both wants a badge on the mark, not a color swap.
    */
   logo?: string;
   /** Dark-mode variant of `logo`. Required whenever `logo` is set. */
   logoDark?: string;
-  /** Accessible name for the mark — reads out in place of the dropped headline. */
+  /**
+   * Accessible name for the mark, read in place of the headline it replaced.
+   * Deliberately the FULL name ("American League") where `value` is the
+   * abbreviation the tile used to show ("AL") — the badge is unambiguous to
+   * look at, so the screen-reader copy can afford to be the unabbreviated one.
+   */
   logoAlt?: string;
   alert?: boolean;
 }
@@ -195,12 +203,15 @@ const metrics: MetricDef[] = inferredVariant === 'in-season'
         <a href={m.href} class="afl-snapshot__card">
           {m.logo && m.logoDark ? (
             <span class="afl-snapshot__card-headline">
+              {/* eager, not lazy: this card sits directly under the hero and the
+                  mark IS the tile's headline, so deferring it pops the tile in
+                  after paint. Two small SVGs (the theme pair) is a cheap trade. */}
               <ThemeImage
                 src={m.logo}
                 darkSrc={m.logoDark}
                 alt={m.logoAlt ?? m.value}
                 class="afl-snapshot__card-logo"
-                loading="lazy"
+                loading="eager"
                 decoding="async"
               />
             </span>
@@ -342,7 +353,10 @@ const metrics: MetricDef[] = inferredVariant === 'in-season'
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 2.5rem;
+    /* Spelled out rather than folded to 2.5rem so the dependency is visible:
+       change the sprite size, the card gap, or the value's font-size and this
+       has to move with them or the branded tiles drift off the text tiles. */
+    height: calc(14px + 0.125rem + 1.25rem * 1.2);
     max-width: 100%;
   }
 
@@ -361,7 +375,12 @@ const metrics: MetricDef[] = inferredVariant === 'in-season'
   :global(.afl-snapshot__card-logo) {
     height: 100%;
     width: auto;
-    max-width: min(100%, 3.25rem);
+    /* Plain length, not min(100%, …): the headline already caps at 100%, and a
+       percentage inside min() on a flex item in a shrink-to-fit parent is the
+       case engines disagree on when resolving an indefinite percentage. 52px is
+       always the binding term anyway — the card's content box is ~99px even at
+       320px — so the percentage only added risk. */
+    max-width: 3.25rem;
     object-fit: contain;
   }
 

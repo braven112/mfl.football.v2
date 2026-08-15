@@ -1846,31 +1846,50 @@ doing when the whole question is "do these look the same": read each `<img>`'s
 (`min(box.w/nat.w, box.h/nat.h)`), and print the drawn size. Before: `Premier
 League: 32x40 | American League: 80x40`. After: `32x40 | 52x26`.
 
-**Gotcha — the `-dark` variants render ~15% smaller than the light ones.**
-Measured, not assumed: rendering each asset and reading `getBBox()` shows the
-ink is *identical* between the pair — `premier.svg` and `premier-dark.svg` both
-draw `14.4 -0.0 231.2 338.9`, `al.svg` and `al-dark.svg` both draw
-`0.0 8.3 333.5 154.9`. What differs is the viewBox: the dark files pad theirs
-with empty space (`0 0 270.2 338.9` → `-30 -30 330.2 398.9`;
-`0 0 339.2 169.2` → `-8 -8 355.2 185.2`). There is no halo or outline out
-there to justify the bleed. So at a fixed CSS box the dark crest draws 34px
-tall where the light one draws 40px, and `dleague-dark` is worse — its viewBox
-origin is asymmetric (`-55 -30`), which also shifts the mark ~3.6px right of
-where the light one sits.
+**Gotcha — the `-dark` variants draw smaller, and by DIFFERENT amounts, which
+is what breaks an optical match.** Measured as rendered ink (alpha bounding box
+in the real slot), not `getBoundingClientRect`:
 
-This is pre-existing and affects every consumer of these assets (the standings
-promo, the franchises grid, the trophy wall, the AFL heroes), not just the
-homepage card — you only notice it by toggling the theme, which is why it has
-survived. The real fix is normalizing the dark viewBoxes to match their light
-counterparts; that is an asset change with a blast radius across all of those
-surfaces, so it wants its own pass with screenshots rather than riding along
-with a layout change.
+| asset | drawn box | visible ink | geo. mean |
+|---|---|---|---|
+| `premier.svg` | 32.0x40.0 | 30.4x40.0 | 34.9 |
+| `al.svg` | 52.0x26.0 | 51.1x23.8 | 34.9 |
+| `premier-dark.svg` | 33.1x40.0 | 27.2x35.4 | 31.0 |
+| `al-dark.svg` | 52.0x27.1 | 50.3x24.1 | 34.8 |
 
-**Method note:** the first version of this insight claimed the dark files
-declared bogus `width="200%"` / `width="10"` attributes. They don't — that came
-from grepping the first few hundred bytes of each file, which matched
-`width`/`height` on *child* elements inside the artwork. Scope the match to the
-root `<svg …>` tag, or better, measure what actually renders.
+Light mode matches (34.9 vs 34.9). Dark mode does not (31.0 vs 34.8, ~11%
+apart) — i.e. the tuning silently only half-applies. The cause is transparent
+padding baked into the dark viewBoxes, in unequal amounts: `premier-dark` gets
+30 units of slack per side (`-30 -30 330.2 398.9` around 270.2x338.9 of art),
+`dleague-dark` gets asymmetric slack (`-55 -30 332 408.1`), and `al-dark` /
+`nl-dark` only 8 (`-8 -8 355.2 185.2`). `object-fit: contain` fits the PADDED
+box, so a 30-unit-padded crest loses ~13% of its ink while an 8-unit-padded
+wordmark loses ~1%. Toggling the theme visibly shrinks the crest while its
+neighbor barely moves.
+
+The ink itself is identical between the pair — `premier.svg` and
+`premier-dark.svg` both draw `14.4 -0.0 231.2 338.9` — so the padding is dead
+space, not a halo or outline bleed that would justify it. Centering is fine
+(ink center offset is ≤0.9% of box on every asset), so nothing shifts sideways
+on toggle; only scale is affected.
+
+The fix belongs in the ASSETS — re-author the `-dark` viewBoxes to describe the
+same extents as their light counterparts (correction factors: premier x1.13,
+dleague x1.17, al/nl x1.00). Compensating in one component's CSS just moves the
+problem, because the discrepancy is live at every other call site too
+(`.afl-tiers__logo`, `.badge-tier-logo`, `.promo-reg-logo`,
+`.afl-playoffs-hero__bracket-logo`).
+
+**Method note — two wrong turns, both about measuring the wrong thing.** The
+first version of this insight claimed the dark files declare bogus
+`width="200%"` / `width="10"` root attributes. They don't: that came from
+grepping the head of each file, which matched `width`/`height` on *child*
+elements inside the artwork. The second version measured with
+`getBoundingClientRect()` + `naturalWidth/Height` + the contain scale — which
+measures the padded BOX, reports `32x40 | 52x26`, and therefore shows a perfect
+match while the dark mode mismatch sits right there undetected. Only an alpha
+bounding box over the rendered pixels surfaces it. When the question is "do
+these two marks look the same size," measure ink, not boxes.
 
 **Recommendation:** When a design puts two branded marks in equivalent slots,
 check their viewBox ratios before picking a sizing rule. Equal height is only
