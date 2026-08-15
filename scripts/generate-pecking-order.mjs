@@ -172,6 +172,15 @@ function issueFilePath(league, year, week) {
 // ─── Helpers ───────────────────────────────────────────────────────
 
 /**
+ * MFL collapses a one-element list to a bare object — a week with a single
+ * matchup, a bracket with a single franchise. Every list read out of a raw feed
+ * has to go through here or it throws on `.map` the first time a league-year
+ * has a short week (AFL 2012 week 13 is the committed example, and it crashed
+ * the generator outright before this existed).
+ */
+const asArray = (x) => (Array.isArray(x) ? x : x == null ? [] : [x]);
+
+/**
  * Every week's H2H pairings, keyed by week: Map<week, Array<{ id, isHome }[]>>.
  *
  * Two sources, because neither covers both jobs. schedule.json is the only
@@ -183,20 +192,21 @@ function issueFilePath(league, year, week) {
  */
 export function buildPairings(schedule, rawWeekly) {
   const byWeek = new Map();
-  for (const entry of (rawWeekly || [])) {
+  const pairingsOf = (matchup) =>
+    asArray(matchup)
+      .map(m => asArray(m?.franchise).map(f => ({ id: f.id, isHome: f.isHome })))
+      .filter(g => g.length === 2);
+
+  for (const entry of asArray(rawWeekly)) {
     const wk = int(entry?.weeklyResults?.week);
     if (!wk) continue;
-    const games = (entry.weeklyResults.matchup || [])
-      .map(m => (m.franchise || []).map(f => ({ id: f.id, isHome: f.isHome })))
-      .filter(g => g.length === 2);
+    const games = pairingsOf(entry.weeklyResults.matchup);
     if (games.length) byWeek.set(wk, games);
   }
-  for (const w of (schedule?.schedule?.weeklySchedule || [])) {
-    const wk = int(w.week);
+  for (const w of asArray(schedule?.schedule?.weeklySchedule)) {
+    const wk = int(w?.week);
     if (!wk) continue;
-    const games = (w.matchup || [])
-      .map(m => (m.franchise || []).map(f => ({ id: f.id, isHome: f.isHome })))
-      .filter(g => g.length === 2);
+    const games = pairingsOf(w.matchup);
     if (games.length) byWeek.set(wk, games);
   }
   return byWeek;
@@ -217,7 +227,7 @@ export function buildPairings(schedule, rawWeekly) {
  */
 export function rollingRecord(pairings, weeklyResults, franchiseId, throughWeek, weeks = 3) {
   const weekScores = new Map();
-  for (const w of (weeklyResults?.weeks || [])) {
+  for (const w of asArray(weeklyResults?.weeks)) {
     weekScores.set(int(w.week), w.scores || {});
   }
   const games = [];
@@ -264,7 +274,7 @@ async function loadPreviousRankings(league, year, week) {
 // ─── Awards (deterministic; templated blurbs as fallback) ───────────
 
 function findStatOfWeek({ teams, weeklyResults, week }) {
-  const wk = (weeklyResults?.weeks || []).find(w => int(w.week) === week);
+  const wk = asArray(weeklyResults?.weeks).find(w => int(w?.week) === week);
   if (!wk?.scores) return null;
   let topFid = null, topScore = -Infinity;
   for (const [fid, s] of Object.entries(wk.scores)) {
@@ -282,11 +292,11 @@ function findStatOfWeek({ teams, weeklyResults, week }) {
 }
 
 function findBenchBlunder({ teams, rawWeekly, week }) {
-  const wk = (rawWeekly || []).find(w => int(w?.weeklyResults?.week) === week);
+  const wk = asArray(rawWeekly).find(w => int(w?.weeklyResults?.week) === week);
   if (!wk) return null;
   let worstFid = null, worstGap = -Infinity, worstActual = 0, worstOptimal = 0;
-  for (const m of (wk.weeklyResults?.matchup || [])) {
-    for (const f of (m.franchise || [])) {
+  for (const m of asArray(wk.weeklyResults?.matchup)) {
+    for (const f of asArray(m?.franchise)) {
       const actual = num(f.score, NaN);
       const optimal = num(f.opt_pts, NaN);
       if (!Number.isFinite(actual) || !Number.isFinite(optimal)) continue;
@@ -489,7 +499,7 @@ export async function generatePeckingOrder({ league, year, week, useAI = false }
   const pairings = buildPairings(schedule, rawWeekly);
 
   const standingsByFid = new Map();
-  for (const f of (standings?.leagueStandings?.franchise || [])) {
+  for (const f of asArray(standings?.leagueStandings?.franchise)) {
     standingsByFid.set(f.id, f);
   }
 

@@ -39,28 +39,41 @@ bad.
 
 ---
 
-## 2026-08-15 - The AFL Plays Double-Headers; "Last 3 Games" and "Last 3 Weeks" Are Not the Same Window
+## 2026-08-15 - BOTH Leagues Play Double-Headers; "Last 3 Games" and "Last 3 Weeks" Are Not the Same Window
 
 **Context:** `rollingRecord` took the last 3 GAMES off the H2H list. The
 composite's form half is rolling-3-WEEK PPG (`rollingAvgPF`), which reads one
 score per week.
 
-**Insight:** AFL weeks 1, 2 and 13 of 2025 are double-headers — 24 matchup
-entries for 24 teams, each team appearing twice against two different
-opponents, with the SAME weekly score counted in both games. A last-3-games
-window there covers about a week and a half while the PPG printed beside it
-covers three weeks, so the card's own two numbers describe different stretches.
-TheLeague plays once a week, so the bug is invisible on that side.
+**Insight:** a double-header week lists a franchise twice, against two different
+opponents, with the SAME weekly score counted in both games. In 2025 the AFL
+plays them in weeks 1, 2 and 13 — and **TheLeague plays them in weeks 1, 2, 3
+and 13.** Assuming a 16-team league is one-game-a-week is wrong, and it was
+wrong in this repo's own commit message before the feed was actually checked:
 
-`rollingRecord` now windows by the last N weeks the franchise actually played
-(distinct weeks with a scored game, so byes and feed gaps don't consume the
-window) and reports `gamesCounted` — a double-header reads "3-1 over their last
-4" instead of dropping a game. For a one-game-a-week league the two definitions
-are identical, which is the regression check: TheLeague's ranks and metrics are
-byte-identical before and after.
+```js
+// weeks where a franchise appears more than once
+const ids = matchups.flatMap(m => m.franchise.map(f => f.id));
+ids.filter((v, i) => ids.indexOf(v) !== i);
+```
 
-**Watch for this anywhere else a window is expressed in games:** the AFL's
-schedule shape makes "last N games" and "last N weeks" diverge without warning.
+A last-3-GAMES window silently drops a real game whenever it reaches into one of
+those weeks, while the PPG printed beside it still counts it. `rollingRecord`
+now windows by the last N weeks the franchise actually played (distinct weeks
+with a scored game, so byes don't consume the window) and reports
+`gamesCounted`, so it reads "2-2 over their last 4".
+
+**It only bites when the window reaches a double-header**, which is why it hid:
+in TheLeague's Week 16 issue exactly two of sixteen franchises change (0009 and
+0007, both idle in week 15, so their last three PLAYED weeks reach back to the
+week-13 double-header). Everyone else is unaffected, and no ranking moves at
+all — the composite never used the record. `tests/pecking-order-rolling-record.test.ts`
+pins those two franchises against the committed feed.
+
+**The lesson that generalizes:** "output is unchanged for the other league" is
+not established by diffing the ranks. The record lives in the blurb text, and
+the first check only compared rank/composite/PPG — which genuinely were
+identical — so the change looked inert. Diff the field you actually changed.
 
 ---
 
@@ -86,6 +99,14 @@ season's FINAL standings, not the standings as of the target week, so an
 archived issue's all-play % is end-of-season. That's fine for a live Tuesday
 run (the feed is current) and worth knowing before reading too much into a
 seeded issue's numbers.
+
+**Every list read out of a raw feed needs `asArray`.** MFL collapses a
+one-element list to a bare object, so a week with a single matchup arrives as
+`matchup: {...}`. `data/afl-fantasy/mfl-feeds/2012/weekly-results-raw.json` has
+one, and it crashed the generator outright (`.map is not a function`) on any
+backfill run that touched 2012 — a hard failure, not a data-quality wobble. The
+committed current-year feeds all happen to have multi-matchup weeks, which is
+why nothing caught it until an old year was tried.
 
 ---
 
