@@ -54,7 +54,8 @@ export function buildFactSheet({ issue, teams }) {
 
   // ─ Rankings table ─
   lines.push('=== RANKINGS (1-16) ===');
-  lines.push('Format: rank | team | trend | rolling-3wk record | rolling-3wk PPG | streak | season PPG');
+  lines.push('Ranking formula: 50% all-play record + 50% last-3-weeks scoring. Season PPG is context only.');
+  lines.push('Format: rank | team | trend | all-play % | rolling-3wk record | rolling-3wk PPG | streak | season PPG');
   for (const r of issue.rankings) {
     const team = teams.get(r.franchiseId);
     const name = team?.nameMedium ?? team?.name ?? r.franchiseId;
@@ -67,12 +68,13 @@ export function buildFactSheet({ issue, teams }) {
           : `down ${r.rank - r.previousRank} (was #${r.previousRank})`;
     const ppg = r.metrics.rolling3Ppg != null ? r.metrics.rolling3Ppg.toFixed(1) : '—';
     const seasonPpg = r.metrics.seasonPpg != null ? r.metrics.seasonPpg.toFixed(1) : '—';
+    const allPlay = r.metrics.allPlayPct != null ? `${(r.metrics.allPlayPct * 100).toFixed(1)}% all-play` : '—';
     const factsForBlurb = r.factsForBlurb || {}; // optional caller enrichment
     const recStr = factsForBlurb.last3Record ? `${factsForBlurb.last3Record.wins}-${factsForBlurb.last3Record.losses}${factsForBlurb.last3Record.ties ? `-${factsForBlurb.last3Record.ties}` : ''} L3` : '—';
     const streakStr = factsForBlurb.streak && factsForBlurb.streak.length >= 2
       ? `${factsForBlurb.streak.type}${factsForBlurb.streak.length}`
       : 'no active streak';
-    lines.push(`#${r.rank} | ${name} | ${trend} | ${recStr} | ${ppg} PPG L3 | ${streakStr} | ${seasonPpg} season PPG`);
+    lines.push(`#${r.rank} | ${name} | ${trend} | ${allPlay} | ${recStr} | ${ppg} PPG L3 | ${streakStr} | ${seasonPpg} season PPG`);
   }
   lines.push('');
 
@@ -111,7 +113,7 @@ Your job: rewrite the issue's HEADLINE, LEDE, and a one-sentence BLURB for each 
 
 VOICE RULES
 - Schefter: confident, punchy, opinionated. "League sources tell me…", "Boom.", "Money is nice, but championships are better."
-- One blurb per team max. Specific. Reference the team's L3 record, PPG, streak, or trend from the fact sheet.
+- One blurb per team max. Specific. Reference the team's all-play %, L3 record, PPG, streak, or trend from the fact sheet.
 - Lede: 2-3 sentences. Frame the week's biggest story (rise to #1, fall, hot streak, blowup).
 - Headline: ≤100 chars, punchy, no period. Bias toward action verbs.
 

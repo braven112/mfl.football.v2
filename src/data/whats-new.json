@@ -1,5 +1,28 @@
 [
   {
+    "id": "pecking-order-allplay-formula-2026-08-14",
+    "date": "2026-08-14",
+    "category": "enhancement",
+    "icon": "rank",
+    "title": "The Pecking Order Stops Grading on Five Curves",
+    "summary": "Two things decide the rankings now: your all-play record and your last three weeks. Fifty-fifty, and the team colors are finally readable in dark mode.",
+    "description": [
+      "The Pecking Order used to blend five ingredients — recent form, head-to-head record, all-play percentage, season PPG and average margin — which sounds thorough and mostly meant nothing moved. Two of those five measure the same thing twice (season PPG and margin are both \"you score a lot\"), and head-to-head record is the one number the whole column exists to look past. Win a shootout by half a point and lose a 130-point week to the league leader, and the old formula quietly rewarded you for both.",
+      "It is now half your all-play record and half your last three weeks. All-play asks the only fair season-long question there is: if you played everybody every week, how often would you win? The rolling three-week scoring average asks the other one: are you any good right now? Nothing else votes. Season PPG and average margin still show on every card as context — they just do not move you anymore.",
+      "Both halves are scaled against the field before they are added, so fifty-fifty means fifty-fifty. On an absolute scale a league full of all-play numbers bunched between .300 and .700 would have quietly counted for about half as much as the scoring side, which is exactly the kind of thing that hides in a five-ingredient blend.",
+      "The visible effect: teams whose record is better than their football stop coasting, and teams getting beaten by the schedule stop being buried. In this week's issue Da Dangsters climb to #3 on a .710 all-play, and Wascawy Wabbits — a .659 all-play team scoring 93 a week lately — sit at #8, which is exactly the argument the two halves are supposed to have.",
+      "Separately, and long overdue: every team accent on the page was being rendered in the franchise's raw brand color, which is fine until dark mode. Bring The Pain is near-black and Cowboy Up is navy, so their rank numbers were effectively invisible on a dark card; in light mode Midwestside's yellow had the same problem against white. Every franchise color on the site now resolves to a version that stays readable on whatever theme you're in, brand-accurate where it already worked, nudged only where it did not."
+    ],
+    "image": "pecking-order-formula.webp",
+    "imageAlt": "The Pecking Order Week 17 rankings in dark mode, each card showing a readable team-colored rank number alongside the team's all-play percentage, last-three-week PPG, season PPG and composite score.",
+    "link": "/theleague/pecking-order",
+    "linkLabel": "See this week's rankings",
+    "excludeFromHero": true,
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
     "id": "rules-qa-report-answer-2026-08-13",
     "date": "2026-08-13",
     "category": "enhancement",

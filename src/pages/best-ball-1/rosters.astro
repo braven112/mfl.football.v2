@@ -13,6 +13,7 @@ import { getLeagueBySlug } from '../../config/leagues';
 import { getLeagueYearForSlug, getCurrentLeagueYear } from '../../utils/league-year';
 import { buildDraftPlayers } from '../../utils/build-draft-players';
 import { fetchOfficialDraftSession } from '../../utils/best-ball-draft';
+import { teamAccentVar } from '../../utils/team-accent-css';
 
 export const prerender = false;
 
@@ -66,7 +67,9 @@ const rosters = (bb1Config.teams ?? []).map((team: any) => {
     franchiseId: team.franchiseId,
     name: team.name,
     abbrev: team.abbrev || '',
-    colorPrimary: team.colorPrimary || 'var(--league-accent, #0e8a5f)',
+    // Theme-aware accent token — the card heading's rule sits on a card in
+    // both themes (src/utils/team-accent-css.ts).
+    accent: teamAccentVar(team.franchiseId, 'var(--league-accent, #0e8a5f)'),
     entries: sorted,
   };
 });
@@ -100,7 +103,7 @@ const hasAnyPicks = madePicks.length > 0;
       {
         rosters.map((team) => (
           <section class="bb-rosters__card">
-            <h2 style={`border-color: ${team.colorPrimary}`}>
+            <h2 style={`border-color: ${team.accent}`}>
               {team.name}
               <span class="bb-rosters__count">{team.entries.length}/25</span>
             </h2>

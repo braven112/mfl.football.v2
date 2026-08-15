@@ -1,0 +1,21 @@
+---
+/**
+ * Global franchise accent tokens.
+ *
+ * Included once in the shared layout <head>, beside TeamIconDarkStyles and
+ * NflLogoDarkStyles. Defines `--team-accent-<franchiseId>` for every franchise
+ * in every league, with an `html.dark` override, so any surface tinting by
+ * franchise picks up a color that clears 3:1 on the theme being rendered.
+ *
+ * Every league's block ships (they're scoped by `data-league`, and the whole
+ * sheet is a couple of KB) so a page rendering another league's teams — a
+ * cross-league comparison, a shared component — still resolves its colors.
+ *
+ * See src/utils/team-accent-css.ts for the rationale and usage.
+ */
+import { buildTeamAccentCss } from '../utils/team-accent-css';
+
+const css = buildTeamAccentCss();
+---
+
+{css && <style is:inline set:html={css} />}

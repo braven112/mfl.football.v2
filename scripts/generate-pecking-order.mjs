@@ -429,14 +429,12 @@ export async function generatePeckingOrder({ year, week, useAI = false }) {
     trend: r.trend,
     metrics: {
       composite: round2(r.composite),
+      allPlayPct: r.allPlayPct == null ? null : r.allPlayPct,
       rolling3Ppg: r.rolling3Ppg == null ? null : round2(r.rolling3Ppg),
       seasonPpg: round2(r.seasonPpg),
       avgMargin: r.avgMargin == null ? null : round2(r.avgMargin),
-      formScore: round2(r.formScore),
-      recordScore: round2(r.recordScore),
       allPlayScore: round2(r.allPlayScore),
-      seasonPpgScore: round2(r.seasonPpgScore),
-      marginScore: round2(r.marginScore),
+      formScore: round2(r.formScore),
     },
   }));
 

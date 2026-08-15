@@ -501,3 +501,42 @@ h1: Page title
 **Recommendation:** Audit the remaining consumers for missing local rules, or promote one shared global utility so this class stops being a per-component trap (background task spawned 2026-07-06). Until that lands, any NEW aria-live region must ship its own rule.
 
 **Evidence:** Playwright screenshot of the draft room after a simulated pick: "Pick 1.03: Cowboy Up selects Jeremiyah Love, RB" rendered as plain text above the timer banner. Fixed in the pick-reveal splash PR. (Copilot review corrected an earlier draft of this insight that overstated the gap as "defined nowhere".)
+
+---
+## 2026-08-14 - ΔE Answers "Different?", Not "Readable?" — Use the WCAG Ratio for Foreground-on-Surface
+
+**Context:** Making franchise accent colors legible in both themes. The repo
+already had `src/utils/team-color-contrast.ts`, whose `ensureLegibleOn()` nudges
+a color until it clears a **ΔE (CIE76)** threshold against a background.
+
+**Insight:** ΔE and contrast ratio measure different things, and only one of
+them predicts readability. Cowboy Up's navy `#0d2b56` on the dark card
+`#262626` is ΔE ≈ 21 — comfortably "distinct" by the existing threshold of 18 —
+while its WCAG contrast ratio is **1.08:1**, i.e. invisible. ΔE is the right
+tool for the job it was written for (two team colors that must not be confused
+with each other in a matchup bar); it is the wrong tool for "can this be read
+against its background". Those helpers now sit side by side: `ensureLegibleOn`
+(ΔE, distinctness) and `ensureContrastOn` (WCAG ratio, readability).
+
+**Threshold:** 3:1 is the correct floor here, not 4.5:1 — the accent paints a
+28px bold numeral (WCAG "large text") and non-text UI (borders, chart strokes).
+Forcing 4.5:1 on brand colors distorts them badly (Midwestside's yellow turns
+brown) for no conformance gain. Small bold text is a different story: the
+trend-delta glyphs are 11px, so they need 4.5:1, which is why the old
+`#16a34a` green (3.1:1 on white) had to darken to `#15803d`.
+
+**Evidence / gotcha — measure against the surface that's actually behind the
+element.** TheLeague's `--card-bg` in dark mode is a *gradient*
+(`radial-gradient(… rgb(74 83 121 / 50%), #262626 62%)`), so `getComputedStyle`
+reports `background-color: rgba(0,0,0,0)` and a naive measurement silently
+falls back to the page floor `#121212` — which flatters every ratio by ~1
+point. The gradient's lightest point is `#383d50`, where several accents that
+pass on `#262626` (3.07:1) would fail (2.18:1). Interpolating the gradient at
+the numeral's actual position gives ≈`#282829`, so `#262626` is the honest
+reference — but that's a calculation someone has to do, not something the
+browser will hand over.
+
+**Recommendation:** For any "is this readable" question use `contrastRatio()` /
+`ensureContrastOn()`; keep ΔE for "are these two colors distinguishable". When
+the surface is a gradient, resolve the color at the element's own position
+rather than trusting a computed `background-color`.

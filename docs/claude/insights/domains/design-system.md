@@ -1772,3 +1772,52 @@ lives in before using it in a theme-agnostic rule.
 unchanged, all dark behavior in `:global(html.dark)` blocks. Verified with
 `getComputedStyle` on the running page: panel `rgb(22,40,60)`, rows
 `rgb(29,51,73)`, borders `rgb(46,69,96)`.
+---
+## 2026-08-14 - Franchise Foreground Colors Are a Theme-Pair TOKEN, Not a Config Hex
+
+**Context:** The Pecking Order rendered rank numerals and card edges in each
+franchise's raw `color`, which made half the column invisible in dark mode. The
+fix had to be site-wide, not page-local.
+
+**Insight:** A franchise color has two jobs and they need different plumbing.
+
+- **Background fill** (deep-ink composite heroes, pick-reveal, dead-money) —
+  white text sits ON the color, so the color itself can be anything dark. The
+  existing `franchise-brand` / `getNflTeamColors` path is correct there.
+- **Foreground** (text, numerals, borders, chart lines, legend swatches) — the
+  color sits ON a card, so it must clear 3:1 against that card *in the theme
+  being rendered*, and the server can't know the theme (preference 'auto'
+  resolves client-side). A frontmatter hex is therefore always wrong for
+  somebody.
+
+That second case is now `--team-accent-<franchiseId>`, a global custom property
+emitted per league by `src/utils/team-accent-css.ts` (light values plus an
+`html.dark` block, scoped `html[data-league="…"]` because franchise ids collide
+across leagues). Values come from `getTeamAccentPair`, which starts from the
+config's hand-tuned `colorPrimaryDark` on dark surfaces and only nudges
+lightness when a color still misses the floor — so colors that already worked
+stay byte-identical.
+
+**Evidence:** Before the sweep, TheLeague accents on the dark card: Bring The
+Pain `#1a1a1a` = 1.15:1, Cowboy Up `#0d2b56` = 1.08:1, Wascawy Wabbits
+`#5c5c5c` = 2.26:1. Light mode was broken too and nobody had noticed:
+Midwestside `#ffcd00` = 1.50:1 on white, Mavericks `#c4b060` = 2.16:1.
+
+**Two traps this surfaced:**
+
+1. **An inline `style` can't be overridden by a dark-mode rule.** The first
+   attempt set `--pr-accent` inline per card and tried to swap it under
+   `:global(html.dark)` — inline always wins. Either emit BOTH values inline
+   and have CSS choose (`--x-light`/`--x-dark`), or, better, have the inline
+   style reference a var that is itself theme-switched. The token layer makes
+   the second option free.
+2. **`var()` does not resolve in an SVG presentation attribute.**
+   `polyline.setAttribute('stroke', 'var(--team-accent-0001)')` renders nothing;
+   `polyline.style.stroke = 'var(--team-accent-0001)'` works. Done via `style`,
+   client-drawn charts follow the theme with no redraw and no theme listener
+   (`OwnerActivityReport.astro`).
+
+**Recommendation:** Reach for `teamAccentVar(fid)` for any new franchise-tinted
+foreground; only bypass it for a full-bleed color fill with text on top.
+`tests/team-accent-css.test.ts` fails the build if any franchise in any league
+drops below 3:1 in either theme.

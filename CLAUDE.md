@@ -93,6 +93,34 @@ when swapping a hardcoded color to a token, verify the token's LIGHT value
 matches what was rendering — otherwise keep the light literal and override
 only under `html.dark` (see the admin-hub gate pills for the pattern).
 
+## Franchise colors as foreground — use the accent token, never the raw hex
+
+A team color used as FOREGROUND (text, a rank numeral, a border, a chart line,
+a legend swatch) must come from the site-wide token `--team-accent-<franchiseId>`,
+via `teamAccentVar(fid)` (`src/utils/team-accent-css.ts`). The token carries a
+light value and an `html.dark` override, both forced to clear 3:1 against that
+theme's card surface by `getTeamAccentPair` (`src/utils/team-colors.ts`).
+
+Raw config colors cannot do this: several franchises wear a near-black or navy
+primary that lands ~1.1:1 on a dark card (Bring The Pain, Cowboy Up), and the
+yellows/golds do the same on a white one (Midwestside at 1.5:1). That's how the
+Pecking Order shipped invisible rank numbers in dark mode (August 2026).
+
+- **Never pick a theme's color in frontmatter.** With theme preference 'auto'
+  the server doesn't know the resolved theme; a CSS custom property keyed on
+  `html.dark` does. Same reasoning as the NFL logo / league icon dark swaps.
+- **Client-drawn marks must set colors via `style`, not `setAttribute`** —
+  `var()` resolves in a style declaration, never in an SVG presentation
+  attribute (see `OwnerActivityReport.astro`'s polylines). Done that way, charts
+  follow the theme with no redraw.
+- Blocks are scoped `html[data-league="…"]` because franchise ids collide
+  across leagues (both TheLeague and the AFL have an 0001).
+- The exception is a team color used as a BACKGROUND FILL with white text on
+  top (deep-ink composite heroes, pick-reveal, dead-money) — different contrast
+  question, different rule; see the player-headshot section below.
+- `tests/team-accent-css.test.ts` fails the build if any franchise in any league
+  falls under 3:1 in either theme, or if the layout drops `TeamAccentStyles`.
+
 ## NFL team logos — committed files, guard-tested, must never 404
 
 Every player cell renders self-hosted `/assets/nfl-logos/{CODE}.svg`. Two
