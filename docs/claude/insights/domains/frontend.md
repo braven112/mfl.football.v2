@@ -1080,3 +1080,15 @@ the new specificity. Prefer `object-fit: contain` over a bare `width`/`height`
 pair on any logo or crest — the AFL/NFL marks are not square, and forcing a
 square box distorts them (which is what the sidenav had been doing to the
 light-mode crest all along, unnoticed, because the rule was working).
+
+**Addendum (2026-08-15, review of the same PR):** `ThemeImage`'s hidden
+variant defaults to `loading="lazy"`, and a lazy image that is `display: none`
+is **never fetched** — so at the instant a theme flip makes it visible, it is
+an empty box that then pops in. Measured on the sidenav crest: hidden variant
+`complete: false` under lazy, `complete: true` under eager, with a ~1.5s fill
+after the flip on a 44KB SVG. This is latent in EVERY `ThemeImage` consumer;
+it just bites hardest when the theme toggle shares a viewport with the image
+(the nav crest sits in the same drawer as `ThemeToggle`). Pass
+`loading="eager"` for any `ThemeImage` in above-the-fold chrome. Also pass
+`width`/`height` — the intrinsic attributes give the element a size floor that
+survives the scoped CSS rule dying, which is the failure mode described above.

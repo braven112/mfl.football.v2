@@ -285,7 +285,22 @@ const sectionRenderInfo = visibleSections.map((section) => {
                     >
                       <span class="nav-links__icon" aria-hidden="true">
                         {iconUrl && iconDarkUrl ? (
-                          <ThemeImage src={iconUrl} darkSrc={iconDarkUrl} alt="" loading="lazy" />
+                          /* eager, not lazy: the inactive variant is display:none, and a
+                             lazy hidden image is never fetched — so flipping the theme
+                             would show an empty box until it loads. The ThemeToggle sits
+                             in this same drawer (NavFooter), so that pop is right under
+                             the user's cursor. Nav chrome is above the fold regardless.
+                             width/height give the crest a 24px floor that survives the
+                             scoped sizing rule going dead again — which is the exact bug
+                             this component is being fixed for. */
+                          <ThemeImage
+                            src={iconUrl}
+                            darkSrc={iconDarkUrl}
+                            alt=""
+                            width={24}
+                            height={24}
+                            loading="eager"
+                          />
                         ) : (
                           <svg width="24" height="24" viewBox="0 0 24 24">
                             <use href={`${spriteUrl}#icon-${icon}`} />
