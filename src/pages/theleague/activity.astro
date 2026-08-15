@@ -238,7 +238,7 @@ const chartTeams = leagueConfig.teams.map((team) => ({
 	// Site-wide accent token, not the raw config color: chart lines and legend
 	// swatches sit on a card in both themes, and several franchise colors miss
 	// 3:1 on one of them (src/utils/team-accent-css.ts).
-	color: teamAccentVar(team.franchiseId),
+	color: teamAccentVar(team.franchiseId, 'var(--color-primary, #1c497c)'),
 	icon: team.icon,
 	values: pageViewData.dates.map((d) => pageViewData.data[d]?.[team.franchiseId] ?? 0),
 }));
