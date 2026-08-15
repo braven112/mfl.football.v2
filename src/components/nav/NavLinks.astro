@@ -23,6 +23,8 @@ import { getAFLPreference, getAFLTeamData } from '../../utils/team-preferences';
 import { resolveLeaguePath, getLeaguePrefix } from '../../utils/nav-utils';
 import { spriteUrl } from '../../utils/sprite-url';
 import { getLeaguePhase } from '../../utils/league-phase';
+import { getTierLogo, getTierLogoDark, PREMIER_LEAGUE, D_LEAGUE } from '../../utils/afl-tier-logo';
+import ThemeImage from '../ThemeImage.astro';
 
 interface Props extends NavLinksProps {
   /** Admin franchise IDs for visibility checks */
@@ -48,14 +50,21 @@ const {
 
 const aflPreference = league === 'afl' ? getAFLPreference(Astro.cookies) : null;
 
+// Tier marks come from the shared afl-tier-logo helpers (self-hosted, and the
+// only source with hand-authored dark variants). The nav previously pointed at
+// a single remote light-mode SVG, which rendered a dark-on-dark logo in dark
+// mode — SSR can't know the resolved theme, so both variants render and CSS
+// picks (see ThemeImage + the .theme-img rules below).
 const AFL_TIER_LINKS = {
-  'Premier League': {
-    label: 'Premier League',
-    iconUrl: 'https://mfl.football/afl-fantasy.com/images/league_logo/premier.svg',
+  [PREMIER_LEAGUE]: {
+    label: PREMIER_LEAGUE,
+    iconUrl: getTierLogo(PREMIER_LEAGUE),
+    iconDarkUrl: getTierLogoDark(PREMIER_LEAGUE),
   },
-  'D-League': {
-    label: 'D-League',
-    iconUrl: 'https://mfl.football/afl-fantasy.com/images/league_logo/dleague.svg',
+  [D_LEAGUE]: {
+    label: D_LEAGUE,
+    iconUrl: getTierLogo(D_LEAGUE),
+    iconDarkUrl: getTierLogoDark(D_LEAGUE),
   },
 } as const;
 
@@ -94,10 +103,14 @@ function getLabel(link: NavLink, lg: LeagueSlug): string {
   return link.label;
 }
 
-function getAflCompetitionOverride(link: NavLink, lg: LeagueSlug, fid?: string): { label: string; iconUrl: string } | null {
+function getAflCompetitionOverride(
+  link: NavLink,
+  lg: LeagueSlug,
+  fid?: string,
+): { label: string; iconUrl: string; iconDarkUrl: string } | null {
   if (lg !== 'afl' || link.id !== 'premier-league') return null;
   const tier = aflPreference?.competitionId || (fid ? getAFLTeamData(fid)?.tier : null);
-  return AFL_TIER_LINKS[tier as keyof typeof AFL_TIER_LINKS] ?? AFL_TIER_LINKS['Premier League'];
+  return AFL_TIER_LINKS[tier as keyof typeof AFL_TIER_LINKS] ?? AFL_TIER_LINKS[PREMIER_LEAGUE];
 }
 
 function getIcon(link: NavLink, lg: LeagueSlug): string {
@@ -252,6 +265,7 @@ const sectionRenderInfo = visibleSections.map((section) => {
                 const label = aflOverride?.label ?? getLabel(link, league);
                 const icon = getIcon(link, league);
                 const iconUrl = aflOverride?.iconUrl ?? null;
+                const iconDarkUrl = aflOverride?.iconDarkUrl ?? null;
                 const active = isActive(link, currentPath, league);
                 const isExternal = link.external;
                 const isAdminLink = link.visibility === 'admin';
@@ -270,8 +284,8 @@ const sectionRenderInfo = visibleSections.map((section) => {
                       aria-current={active ? 'page' : undefined}
                     >
                       <span class="nav-links__icon" aria-hidden="true">
-                        {iconUrl ? (
-                          <img src={iconUrl} alt="" loading="lazy" />
+                        {iconUrl && iconDarkUrl ? (
+                          <ThemeImage src={iconUrl} darkSrc={iconDarkUrl} alt="" loading="lazy" />
                         ) : (
                           <svg width="24" height="24" viewBox="0 0 24 24">
                             <use href={`${spriteUrl}#icon-${icon}`} />
@@ -485,9 +499,30 @@ const sectionRenderInfo = visibleSections.map((section) => {
     fill: var(--color-primary, #1c497c);
   }
 
-  .nav-links__icon img {
+  /* :global(img) because the AFL tier mark is rendered by <ThemeImage>, so
+     the element carries THAT component's scope attribute, not this one — a
+     plain `.nav-links__icon img` never matches it and the crest overflows
+     its 24px slot at natural aspect. object-fit keeps it undistorted. */
+  .nav-links__icon :global(img) {
     width: 24px;
     height: 24px;
+    object-fit: contain;
+    display: block;
+  }
+
+  /* ThemeImage renders BOTH variants (SSR can never resolve the theme) and
+     theme-image.css hides the inactive one — but that rule and the sizing
+     rule above land on the same specificity, so which wins comes down to
+     stylesheet order. Restate the swap here so it's not load-order luck. */
+  .nav-links__icon :global(img.theme-img--dark) {
+    display: none;
+  }
+
+  :global(html.dark) .nav-links__icon :global(img.theme-img--light) {
+    display: none;
+  }
+
+  :global(html.dark) .nav-links__icon :global(img.theme-img--dark) {
     display: block;
   }
 
