@@ -1867,22 +1867,37 @@ box, so a 30-unit-padded crest loses ~13% of its ink while an 8-unit-padded
 wordmark loses ~1%. Toggling the theme visibly shrinks the crest while its
 neighbor barely moves.
 
-The ink itself is identical between the pair — `premier.svg` and
-`premier-dark.svg` both draw `14.4 -0.0 231.2 338.9` — so the padding is dead
-space, not a halo or outline bleed that would justify it. Centering is fine
+**The padding is NOT dead space — it holds a halo, and that mattered.** An
+early pass here concluded it was, on the evidence that `getBBox()` reports the
+pair's ink as identical (`premier.svg` and `premier-dark.svg` both `14.4 -0.0
+231.2 338.9`). That conclusion is wrong and it is recorded because acting on it
+caused the second bug below: `getBBox()` returns the GEOMETRY box, excluding
+stroke and filters, and the halo every dark badge paints so it reads on a dark
+surface is exactly that — a stroke, and a `feMorphology` dilate on the crest.
+The padding is sized to hold it. Centering is fine
 (ink center offset is ≤0.9% of box on every asset), so nothing shifts sideways
 on toggle; only scale is affected.
 
 **Fixed in the ASSETS, not in CSS.** The four `-dark` viewBoxes were
 re-authored to reproduce their light counterpart's ink-to-viewBox relationship
 — the only layer that fixes it everywhere, since the discrepancy was live at
-every other call site too (`.afl-tiers__logo`, `.badge-tier-logo`,
-`.promo-reg-logo`, `.afl-playoffs-hero__bracket-logo`, and the sidenav crest)
-and all of them constrain with `height: X; width: auto`, so normalizing the
+every other call site too — `.afl-tiers__logo`, `.badge-tier-logo` (20px),
+`.promo-reg-logo` (50px), `.afl-playoffs-hero__bracket-logo`, StandingsTable's
+`.tier-logo`/`.conference-logo`/`.division-conf-logo`,
+`AflConferencePlayoffPreview`'s `.afl-conf__logo`, the sidenav tier crest
+(`AFL_TIER_LINKS` in `NavLinks.astro`), and `AflEventHero` — and all of them
+constrain with `height: X; width: auto`, so normalizing the
 height fraction corrects each identically. Rendered ink in the real slot after
 the fix: premier 34.9 light / 34.9 dark, al and nl 34.9 / 35.5, dleague 36.0 /
 34.7. The dleague gap is artwork — its dark drawing is genuinely narrower — and
 closing it means re-drawing, not moving a viewBox.
+
+**`AflEventHero` makes this a LIGHT-mode change too.** Its panel is navy in
+both themes, so it deliberately pins the dark badge on (`:global(.afl-event-hero
+.afl-event-hero__badge.theme-img--dark) { display: block }`) regardless of
+`html.dark`. Any edit to a `-dark` badge therefore ships to a light-mode surface
+as well — worth checking the hero whenever you touch these files, and worth
+saying out loud in a changelog entry that otherwise reads "dark mode only".
 
 **The trap inside the trap: `getBBox()` does not include stroke, and the halo
 IS a stroke.** The first attempt at this fix normalized against `getBBox()`,
