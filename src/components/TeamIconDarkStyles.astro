@@ -31,6 +31,9 @@ import { buildCrestDarkStrokeCss } from '../utils/crest-dark-stroke-css';
 function withStrokeColors(league: string, teams: any[]) {
   // `iconStrokeDark: false` is an opt-out, so test for presence of the key
   // rather than truthiness — `filter(t => t.iconStrokeDark)` would drop it.
+  // Teams that never set the key stay OUT of this map entirely, which is what
+  // makes them fall through to the default white stroke downstream; a `false`
+  // value does enter the map and is skipped by buildCrestDarkStrokeCss.
   const colorByFranchise = new Map<string, string | false>(
     teams
       .filter((t) => t?.iconStrokeDark !== undefined)

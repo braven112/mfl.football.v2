@@ -23,11 +23,14 @@ const configPath = path.join(projectRoot, AFL_DATA_PATH, 'afl.config.json');
  * team columns on cellular (Aug 2026). The files are committed under public/,
  * so store the same-origin path instead.
  *
- * Applied to the value BEFORE comparison as well as before assignment, so a
- * normalized config doesn't read as "changed" on every run and get rewritten
- * back to the absolute form.
+ * The INCOMING value is normalized once, and that normalized form is what gets
+ * both compared and assigned. That ordering is the point: an already-normalized
+ * config compares equal and is left alone, instead of reading as "changed" on
+ * every run and being rewritten back to the absolute form.
  *
- * External hosts (blob storage, anything not ours) pass through untouched.
+ * Only `/assets/*` is ours. External hosts (blob storage, third-party CDNs) and
+ * non-URL values pass through untouched — rewriting those to a same-origin path
+ * would 404.
  */
 const toSameOriginAsset = (url) => {
   if (!url || !/^https?:\/\//i.test(url)) return url ?? '';

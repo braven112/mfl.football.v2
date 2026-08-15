@@ -104,6 +104,11 @@ export async function measureAllCrests() {
     for (const team of config.teams ?? []) {
       if (!team.icon) continue;
       // A hand-authored dark variant always wins — never stroke those.
+      // Note what the manifest therefore is and isn't: it records what the
+      // PIXELS measure, so a team can appear here and still render un-stroked
+      // because its config sets `iconStrokeDark: false`. That opt-out is applied
+      // at CSS-build time, deliberately not baked in here — regenerating this
+      // file must never silently drop a human's override.
       if (team.iconDark) {
         results.push({ league: slug, franchiseId: team.franchiseId, name: team.name, icon: team.icon, hasIconDark: true, legible: null });
         continue;
