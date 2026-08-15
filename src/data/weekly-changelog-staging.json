@@ -168,6 +168,14 @@
       "impact": "user",
       "area": "rosters",
       "league": "afl"
+    },
+    {
+      "date": "2026-08-15",
+      "type": "bug-fix",
+      "summary": "In dark mode, the Premier League link in the sidebar menu was a crest you couldn't see. The badge is navy, the dark menu is navy, and the two met in the middle — leaving a label with a smudge where its logo should be. The rest of the site has had a dark version of that crest for a while, ringed with a halo so it reads against a dark background; the menu was the one place still loading the light-mode file off an old external address. It now uses the same artwork everything else does, D-League included, and it's served from our own site rather than fetched from elsewhere. Light mode is unchanged, except the crest no longer gets squashed into a square.",
+      "impact": "user",
+      "area": "navigation",
+      "league": "afl"
     }
   ]
 }
