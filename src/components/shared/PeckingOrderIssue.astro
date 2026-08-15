@@ -1,16 +1,25 @@
 ---
 /**
- * PeckingOrderIssue — renders a single weekly issue of The Pecking Order,
- * TheLeague's Tuesday-morning power-rankings column.
+ * PeckingOrderIssue — renders a single weekly issue of The Pecking Order, the
+ * Tuesday-morning power-rankings column. Shared by both leagues; the per-league
+ * pages are thin wrappers that pass their own issue JSON and navSlug.
  *
  * Driven entirely by the JSON document at
- * data/theleague/pecking-order/<year>-<week>.json (written by
+ * <dataPath>/pecking-order/<year>-<week>.json (written by
  * scripts/generate-pecking-order.mjs). Blurbs arrive Schefter-voiced when
  * the generator ran with an API key, templated otherwise — the shape is
  * identical either way.
+ *
+ * Nothing here assumes a field size: TheLeague ranks 16, the AFL 24, and the
+ * AFL's four divisions arrive tagged with their conference (franchise ids
+ * collide across leagues, which is also why the accent tokens are scoped by
+ * `data-league` rather than resolved here).
  */
-import leagueConfig from '../../data/theleague.config.json';
+import theleagueConfig from '../../data/theleague.config.json';
+import aflConfig from '../../../data/afl-fantasy/afl.config.json';
+import type { LeagueSlug } from '../../types/nav';
 import { teamAccentVar } from '../../utils/team-accent-css';
+import { getLeaguePrefix, resolveLeaguePath } from '../../utils/nav-utils';
 
 export interface RankingRow {
   rank: number;
@@ -54,6 +63,7 @@ export interface StandingsTeamRow {
 }
 
 export interface PeckingOrderData {
+  league?: string;
   year: number;
   week: number;
   publishedAt: string;
@@ -73,22 +83,36 @@ export interface PeckingOrderData {
     matchupOfWeek: AwardCard | null;
   };
   standings: {
-    divisions: { name: string; teams: StandingsTeamRow[] }[];
+    divisions: { name: string; conference?: string; teams: StandingsTeamRow[] }[];
     allPlay: { franchiseId: string; name: string; nameMedium: string; abbrev: string; division: string; allPlayPct: number; allPlayWLT: string; pf: number }[];
   };
 }
 
 export interface Props {
   issue: PeckingOrderData;
+  /** Nav slug of the league this issue belongs to. */
+  league?: LeagueSlug;
 }
 
-const { issue } = Astro.props as Props;
+const { issue, league = 'theleague' } = Astro.props as Props;
+
+const CONFIGS: Partial<Record<LeagueSlug, { teams: any[] }>> = {
+  theleague: theleagueConfig as any,
+  afl: aflConfig as any,
+};
 
 // Build franchise lookup for icons/colors
 const teams = new Map<string, any>();
-for (const t of (leagueConfig as any).teams) {
+for (const t of (CONFIGS[league] ?? theleagueConfig as any).teams) {
   teams.set(t.franchiseId, t);
 }
+
+// Franchise links are internal routes (/afl-fantasy/franchises/0001); on a
+// league's own apex host the prefix is redundant and gets stripped, same as
+// Breadcrumbs does.
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const franchiseHref = (franchiseId: string) =>
+  resolveLeaguePath(`${getLeaguePrefix(league)}/franchises/${franchiseId}`, hideLeaguePrefix);
 
 /**
  * Brand accent for a card — the site-wide franchise token, not the raw config
@@ -155,7 +179,7 @@ const methodology = issue.methodology
     <p class="pr-hero__lede">{issue.lede}</p>
   </header>
 
-  <section class="pr-section" aria-label="The Pecking Order 1-16">
+  <section class="pr-section" aria-label={`The Pecking Order 1-${issue.rankings.length}`}>
     <h2 class="pr-section__title pr-section__title--brand">
       <img
         class="pr-section__avatar"
@@ -184,13 +208,13 @@ const methodology = issue.methodology
                 </div>
               )}
             </div>
+            <div class="pr-card__crest">
+              {team?.icon && <img class="pr-card__icon" src={team.icon} alt="" loading="lazy" width="32" height="32" />}
+            </div>
             <div class="pr-card__body">
-              <div class="pr-card__heading">
-                {team?.icon && <img class="pr-card__icon" src={team.icon} alt="" loading="lazy" width="32" height="32" />}
-                <h3 class="pr-card__name">
-                  <a href={`/theleague/franchises/${row.franchiseId}`}>{team?.name ?? row.franchiseId}</a>
-                </h3>
-              </div>
+              <h3 class="pr-card__name">
+                <a href={franchiseHref(row.franchiseId)}>{team?.name ?? row.franchiseId}</a>
+              </h3>
               <p class="pr-card__blurb">{row.blurb}</p>
               <div class="pr-card__metrics">
                 {row.metrics.allPlayPct != null && (
@@ -251,7 +275,9 @@ const methodology = issue.methodology
         <div class="pr-standings__col">
           {issue.standings.divisions.map(div => (
             <div class="pr-table-block">
-              <h3 class="pr-table-block__title">{div.name}</h3>
+              <h3 class="pr-table-block__title">
+                {div.conference && <span class="pr-table-block__conf">{div.conference} · </span>}{div.name}
+              </h3>
               <div class="pr-table-wrap">
                 <table class="pr-table">
                   <thead>
@@ -307,10 +333,12 @@ const methodology = issue.methodology
 </article>
 
 <style>
+/* No container of its own: <main> in the layout is already the site's content
+   column (1232px, centered, with its own padding), so a second centered
+   1100px box inside it inset this column ~47px from where every other page's
+   content starts. Fill main and the left edge matches the rest of the site. */
 .pr-issue {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 1.5rem 1rem 4rem;
+  padding: 1.5rem 0 4rem;
 
   /* Award edge colors that mean something rather than naming a team: cold blue
      for the cooler, hot orange-red for the heater, pink for the bench blunder.
@@ -376,15 +404,23 @@ const methodology = issue.methodology
   border-left: 3px solid var(--color-primary, #2563eb);
   padding-left: 0.6rem;
 }
+/* Schefter's avatar rides in the left gutter rather than in the text flow, so
+   this heading starts on the same edge as the breadcrumbs, the headline, the
+   lede and every card below it. It is decorative (aria-hidden), so once the
+   viewport is too narrow for a gutter it drops out entirely — falling back to
+   inline would put the one heading on the page back out of line. */
 .pr-section__title--brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.6rem;
+  position: relative;
+  display: block;
   border-left: none;
   padding-left: 0;
   font-size: 1.75rem;
 }
 .pr-section__avatar {
+  position: absolute;
+  right: calc(100% + 0.6rem);
+  top: 50%;
+  transform: translateY(-50%);
   width: 36px;
   height: 36px;
   border-radius: 50%;
@@ -392,6 +428,11 @@ const methodology = issue.methodology
   flex-shrink: 0;
   border: 2px solid var(--content-border, #e5e7eb);
   background: var(--content-bg-muted, #f3f4f6);
+}
+/* main is 1232px + ~19px padding; below ~1300px there is no room to the left
+   of the text for a 36px avatar plus its gap. */
+@media (max-width: 1300px) {
+  .pr-section__avatar { display: none; }
 }
 
 .pr-rankings {
@@ -401,10 +442,14 @@ const methodology = issue.methodology
   display: grid;
   gap: 0.6rem;
 }
+/* rank | crest | text. The crest gets its OWN fixed-width column rather than
+   sitting inline with the team name, so the name, the blurb and the metric row
+   share one left edge — and a franchise with no icon file leaves an empty cell
+   instead of sliding its card out of line with the rest of the column. */
 .pr-card {
   display: grid;
-  grid-template-columns: 4.5rem 1fr;
-  gap: 1rem;
+  grid-template-columns: 3.5rem 2rem 1fr;
+  column-gap: 0.75rem;
   align-items: center;
   padding: 0.85rem;
   border: 1px solid var(--content-border, #e5e7eb);
@@ -439,16 +484,20 @@ const methodology = issue.methodology
 :global(html.dark) .pr-card__trend--up { color: var(--color-success-dark, #6ee7b7); }
 :global(html.dark) .pr-card__trend--down { color: var(--color-error-dark, #fca5a5); }
 .pr-card__trend--flat { color: var(--content-text-muted, #6b7280); }
-.pr-card__heading {
+.pr-card__crest {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.25rem;
+  justify-content: center;
 }
-.pr-card__icon { border-radius: 0.25rem; }
+.pr-card__icon {
+  border-radius: 0.25rem;
+  width: 2rem;
+  height: 2rem;
+  object-fit: contain;
+}
 .pr-card__name {
   font-size: 1.05rem;
-  margin: 0;
+  margin: 0 0 0.25rem;
   font-weight: 700;
 }
 .pr-card__name a { color: inherit; text-decoration: none; }
@@ -535,6 +584,10 @@ const methodology = issue.methodology
   color: var(--content-text-muted, #6b7280);
   margin: 0 0 0.4rem;
 }
+/* Conference qualifier on a division heading (AFL only — TheLeague's four
+   divisions have no parent). Lighter than the division itself so the eye lands
+   on the part that changes between blocks. */
+.pr-table-block__conf { font-weight: 400; opacity: 0.75; }
 .pr-table-wrap { overflow-x: auto; }
 .pr-table {
   width: 100%;

@@ -1,17 +1,17 @@
 ---
 /**
- * The Pecking Order — current week (latest published issue).
+ * The Pecking Order (AFL) — current week (latest published issue).
  *
- * Reads all pecking-order JSON issues via Vite glob and picks the highest
- * (year, week) combination. Permalink to a specific issue lives at
- * /theleague/pecking-order/[year]/[week].
+ * Thin wrapper over the shared issue component: reads all AFL pecking-order
+ * JSON issues via Vite glob and picks the highest (year, week). Permalink to a
+ * specific issue lives at /afl-fantasy/pecking-order/[year]/[week].
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import Breadcrumbs from '../../../components/theleague/Breadcrumbs.astro';
 import PeckingOrderIssue, { type PeckingOrderData } from '../../../components/shared/PeckingOrderIssue.astro';
 
 const issueFiles = import.meta.glob<PeckingOrderData>(
-  '../../../../data/theleague/pecking-order/*.json',
+  '../../../../data/afl-fantasy/pecking-order/*.json',
   { eager: true, import: 'default' }
 );
 
@@ -36,20 +36,20 @@ const olderIssues = issues.slice(1);
 <TheLeagueLayout title={latest ? `${latest.data.headline} · The Pecking Order · Week ${latest.week}` : 'The Pecking Order'}>
   <div class="pr-page">
     <Breadcrumbs items={[
-      { label: 'The League', href: '/theleague' },
+      { label: 'AFL', href: '/afl-fantasy' },
       { label: 'The Pecking Order' },
     ]} />
 
     {latest ? (
       <>
-        <PeckingOrderIssue issue={latest.data} league="theleague" />
+        <PeckingOrderIssue issue={latest.data} league="afl" />
         {olderIssues.length > 0 && (
           <aside class="pr-archive">
             <h2 class="pr-archive__title">Past Issues</h2>
             <ul class="pr-archive__list">
               {olderIssues.map(i => (
                 <li>
-                  <a href={`/theleague/pecking-order/${i.year}/${i.week}`}>
+                  <a href={`/afl-fantasy/pecking-order/${i.year}/${i.week}`}>
                     Week {i.week} · {i.year} — {i.data.headline}
                   </a>
                 </li>
@@ -63,7 +63,7 @@ const olderIssues = issues.slice(1);
         <h1>The Pecking Order — Coming Soon</h1>
         <p>
           The first weekly issue publishes Tuesday morning during the season.
-          Run <code>pnpm generate:pecking-order --year YYYY --week N</code> to seed an issue.
+          Run <code>pnpm generate:pecking-order --league afl-fantasy --year YYYY --week N</code> to seed an issue.
         </p>
       </section>
     )}
@@ -88,7 +88,7 @@ const olderIssues = issues.slice(1);
   gap: 0.4rem;
 }
 .pr-archive__list a {
-  color: var(--color-gray-900, #111827);
+  color: var(--page-text, #111827);
   text-decoration: none;
 }
 .pr-archive__list a:hover { text-decoration: underline; }
