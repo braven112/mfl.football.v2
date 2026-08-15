@@ -205,6 +205,78 @@ export function leagueOrigin(league) {
   return domain ? `https://${domain}` : null;
 }
 
+/**
+ * Strip a league's OWN path prefix from an internal path.
+ *
+ * Internal routes are stored prefixed (`/theleague/calendar`) because that's
+ * the real Astro route and the only form that works on the shared host. On the
+ * league's apex domain the prefix is redundant — middleware rewrites `/calendar`
+ * and vercel.json 301s `/theleague/calendar` back to it — so an absolute link
+ * built by naive concatenation reads `https://www.theleague.us/theleague/calendar`
+ * and costs a redirect hop.
+ *
+ * Only the league's own slug is stripped: a cross-league link
+ * (`/afl-fantasy/...` in a TheLeague post) must keep its prefix to resolve.
+ *
+ * @param {{ slug: string }} league Registry entry.
+ * @param {string} path Internal path, with or without the prefix.
+ */
+export function stripLeaguePrefix(league, path) {
+  const prefix = `/${league.slug}`;
+  if (path === prefix) return '/';
+  if (!path.startsWith(prefix)) return path;
+  const rest = path.slice(prefix.length);
+  // Boundary-checked so `/theleague-foo` isn't mangled mid-segment.
+  if (!/^[/?#]/.test(rest)) return path;
+  return rest.startsWith('/') ? rest : `/${rest}`;
+}
+
+/** True when `path` already starts with SOME league's slug prefix. */
+function hasAnyLeaguePrefix(path) {
+  return ALL_LEAGUES.some((l) => stripLeaguePrefix(l, path) !== path);
+}
+
+/**
+ * The mirror of stripLeaguePrefix: guarantee a league-local path carries its
+ * prefix, which is what routes on the SHARED host (mfl.football) — the only
+ * place a league without its own apex domain is reachable.
+ *
+ * A path already prefixed for ANY league is returned untouched, so a
+ * cross-league link never gets double-prefixed onto the wrong league.
+ *
+ * @param {{ slug: string }} league Registry entry.
+ * @param {string} path Internal path, with or without the prefix.
+ */
+export function ensureLeaguePrefix(league, path) {
+  if (hasAnyLeaguePrefix(path)) return path;
+  return path === '/' ? `/${league.slug}` : `/${league.slug}${path}`;
+}
+
+/**
+ * THE way to build an absolute URL to a page for a league — canonical host
+ * (see leagueOrigin) plus the path in whichever form that host actually routes.
+ * Never concatenate an origin and a path by hand.
+ *
+ * Total in both directions, so callers don't have to know which kind of league
+ * they hold: on a league's own apex domain the prefix is redundant and gets
+ * STRIPPED; on the shared host (path-only leagues — no apex domain) it is
+ * required and gets ADDED. Pass either form and get a URL that resolves.
+ *
+ * @param {{ slug: string, canonicalDomain?: string, domains?: string[] }} league
+ * @param {string} [path] Internal path (prefixed or not), e.g. '/theleague/calendar'.
+ */
+export function leagueUrl(league, path = '/') {
+  // Already absolute (or protocol-relative) — pass through untouched. Feed
+  // links are not always internal: `post.link` on an ESPN item is a full
+  // https:// URL, and treating one as a path would emit the nonsense
+  // `https://www.theleague.us/https://www.espn.com/...`.
+  if (/^([a-z][a-z0-9+.-]*:)?\/\//i.test(path)) return path;
+  const withSlash = path.startsWith('/') ? path : `/${path}`;
+  const origin = leagueOrigin(league);
+  if (!origin) return `${SHARED_APP_ORIGIN}${ensureLeaguePrefix(league, withSlash)}`;
+  return `${origin}${stripLeaguePrefix(league, withSlash)}`;
+}
+
 /** Apex hostname → canonical slug map, derived from each league's domains. */
 export function buildHostToSlugMap() {
   /** @type {Record<string, string>} */

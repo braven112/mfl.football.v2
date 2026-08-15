@@ -128,7 +128,12 @@ import {
 import { checkGroupMeQuality, RELAXED_QUALITY_THRESHOLD } from './lib/schefter-quality-gate.mjs';
 import { getRedisConfig, createUpstashClient } from './lib/redis.mjs';
 import { postToGroupMe as sharedPostToGroupMe } from './lib/groupme.mjs';
-import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
+import {
+  getLeagueBySlug,
+  buildHostToSlugMap,
+  stripLeaguePrefix,
+  ensureLeaguePrefix,
+} from '../src/config/leagues-data.mjs';
 import { getSchefterLeague } from './lib/schefter-leagues.mjs';
 import {
   getPtHour,
@@ -162,6 +167,8 @@ const SCHEFTER_LEAGUE = getSchefterLeague(parseLeagueArg());
 // ── Constants ──
 
 const LEAGUE_SLUG = SCHEFTER_LEAGUE.registrySlug;
+// The raw registry entry (slug + domains) — what the URL-prefix helpers take.
+const SCHEFTER_LEAGUE_REGISTRY = getLeagueBySlug(LEAGUE_SLUG);
 const LEAGUE_ID = SCHEFTER_LEAGUE.leagueId;
 // Redis keys below are league-scoped via schefterKey(NAV_SLUG, …): TheLeague
 // keeps its legacy unprefixed keys; any other league gets schefter:<navSlug>:*.
@@ -321,12 +328,89 @@ const FRIDAY_WEEKDAY_INDEX = 5; // 0=Sun … 5=Fri
 // Public URL of the tip page — appended to every GroupMe rumor post so
 // owners always have a one-tap path to whisper back with intel. The feed
 // card renders the same destination via post.link / post.linkLabel.
-// On theleague.us, vercel.json 301s /theleague/:path* → /:path*, so the
-// canonical path is /schefter/tip.
-const TIP_PAGE_PATH = '/schefter/tip';
+//
+// PREFIXED, like every other feed link: `post.link` is persisted and rendered
+// raw by the Schefter cards, and the bare `/schefter/tip` only resolves on a
+// league apex host (the middleware rewrite) — on mfl.football it falls through
+// to the 404 catch-all. publicUrl() strips the prefix for the apex-host
+// absolute form, so the GroupMe CTA still reads `.../schefter/tip`.
+const TIP_PAGE_PATH = `/${LEAGUE_SLUG}/schefter/tip`;
 const TIP_PAGE_LINK_LABEL = 'Got a tip? Whisper to Schefter →';
-const PUBLIC_BASE_URL = (process.env.SCHEFTER_PUBLIC_BASE_URL || SCHEFTER_LEAGUE.baseUrl).replace(/\/+$/, '');
-const TIP_PAGE_ABSOLUTE_URL = `${PUBLIC_BASE_URL}${TIP_PAGE_PATH}`;
+/**
+ * Origin (+ optional path prefix) a route can be appended to. A base URL is
+ * not a place to carry a query or fragment: concatenating a route after one
+ * yields `https://www.theleague.us?x=1/theleague/schefter/tip`, which is
+ * simply a broken link. Drop them, along with any trailing slash, so the
+ * concatenation below is always well-formed.
+ *
+ * Throws on an unparseable value rather than limping on: this base is pasted
+ * into the CTA of every post the run ships, so a typo'd override would quietly
+ * poison a whole slate of GroupMe messages. Better to die at startup.
+ */
+function normalizeBaseUrl(raw) {
+  const trimmed = String(raw).replace(/\/+$/, '');
+  let u;
+  try {
+    u = new URL(trimmed);
+  } catch {
+    throw new Error(
+      `SCHEFTER_PUBLIC_BASE_URL is not a valid absolute URL: ${JSON.stringify(raw)}`,
+    );
+  }
+  return `${u.origin}${u.pathname}`.replace(/\/+$/, '');
+}
+
+const PUBLIC_BASE_URL = normalizeBaseUrl(
+  process.env.SCHEFTER_PUBLIC_BASE_URL || SCHEFTER_LEAGUE.baseUrl,
+);
+
+/**
+ * Is `PUBLIC_BASE_URL` the ROOT of one of THIS league's own apex hosts — i.e.
+ * a base where the middleware rewrite actually runs, so the bare path resolves?
+ *
+ * Registry-derived (buildHostToSlugMap), not a string compare against the
+ * canonical origin: an operator can spell the same host a dozen equivalent
+ * ways — bare apex, uppercase, http://, an explicit :443 — and every one of
+ * them must still strip.
+ *
+ * But hostname alone is not enough. The rewrite is served at the domain root
+ * on the standard port, so a non-default port (`:444`) or a path-suffixed base
+ * (`https://www.theleague.us/preview`) is NOT the apex even though it shares a
+ * hostname — stripping there produces a path nothing serves. Those, like
+ * mfl.football and *.vercel.app previews, need the prefix kept.
+ *
+ * `new URL()` normalizes a scheme's default port to '', so any port left over
+ * is by definition non-default.
+ */
+const HOST_TO_LEAGUE_SLUG = buildHostToSlugMap();
+function isOwnApexBase(baseUrl) {
+  let u;
+  try {
+    u = new URL(baseUrl);
+  } catch {
+    return false;
+  }
+  if (u.port !== '') return false;
+  if (u.pathname !== '/') return false;
+  return HOST_TO_LEAGUE_SLUG[u.hostname.toLowerCase()] === LEAGUE_SLUG;
+}
+const PUBLIC_BASE_IS_OWN_APEX = isOwnApexBase(PUBLIC_BASE_URL);
+
+/**
+ * Absolute URL for a GroupMe CTA, from the PREFIXED internal path every feed
+ * link carries. Symmetric, and it keeps the operator's chosen origin rather
+ * than substituting the canonical one:
+ *   - own apex host  → STRIP the prefix (redundant; the prefixed form only
+ *     resolves via a 301, so pasting it ships `theleague.us/theleague/...`)
+ *   - anything else  → ENSURE the prefix (shared host / preview deploys have
+ *     no rewrite, so the bare path 404s)
+ */
+const publicUrl = (p) =>
+  PUBLIC_BASE_IS_OWN_APEX
+    ? `${PUBLIC_BASE_URL}${stripLeaguePrefix(SCHEFTER_LEAGUE_REGISTRY, p)}`
+    : `${PUBLIC_BASE_URL}${ensureLeaguePrefix(SCHEFTER_LEAGUE_REGISTRY, p)}`;
+
+const TIP_PAGE_ABSOLUTE_URL = publicUrl(TIP_PAGE_PATH);
 
 // Trade-bait rumors send readers to the Trade Builder instead of the tip
 // page — the owner has publicly listed players, so the natural next click
@@ -391,7 +475,7 @@ function resolveCta(primaryBucket) {
       link: path,
       linkLabel: TRADE_BUILDER_LINK_LABEL,
       groupMePrefix: TRADE_BUILDER_GROUPME_PREFIX,
-      groupMeUrl: `${PUBLIC_BASE_URL}${path}`,
+      groupMeUrl: publicUrl(path),
     };
   }
   return {
@@ -431,7 +515,7 @@ function buildDirectedCta(beat) {
     link: path,
     linkLabel: `${franchiseShort} desk — your move →`,
     groupMePrefix: `${franchiseShort} desk — your move:`,
-    groupMeUrl: `${PUBLIC_BASE_URL}${path}`,
+    groupMeUrl: publicUrl(path),
   };
 }
 

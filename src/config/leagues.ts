@@ -15,6 +15,9 @@ import {
   getLeagueById as rawGetById,
   getLeagueByPath as rawGetByPath,
   leagueOrigin as rawLeagueOrigin,
+  leagueUrl as rawLeagueUrl,
+  stripLeaguePrefix as rawStripLeaguePrefix,
+  ensureLeaguePrefix as rawEnsureLeaguePrefix,
   buildHostToSlugMap,
   defaultMflWriteHost,
   SHARED_APP_ORIGIN,
@@ -135,6 +138,28 @@ export function getLeagueByNavSlug(navSlug: LeagueSlug): LeagueDefinition {
  */
 export function leagueOrigin(league: LeagueDefinition): string | null {
   return rawLeagueOrigin(league) as string | null;
+}
+
+/**
+ * Absolute URL to a page for a league, with the league's own redundant path
+ * prefix stripped (`/theleague/calendar` on www.theleague.us → `/calendar`).
+ * Use this instead of concatenating leagueOrigin() with a prefixed path.
+ */
+export function leagueUrl(league: LeagueDefinition, path?: string): string {
+  return rawLeagueUrl(league, path) as string;
+}
+
+/** Strip a league's own path prefix from an internal path. See leagueUrl(). */
+export function stripLeaguePrefix(league: LeagueDefinition, path: string): string {
+  return rawStripLeaguePrefix(league, path) as string;
+}
+
+/**
+ * Mirror of stripLeaguePrefix — guarantee a league-local path carries its
+ * prefix (what routes on the shared host). Cross-league paths pass through.
+ */
+export function ensureLeaguePrefix(league: LeagueDefinition, path: string): string {
+  return rawEnsureLeaguePrefix(league, path) as string;
 }
 
 export { buildHostToSlugMap, defaultMflWriteHost, SHARED_APP_ORIGIN };

@@ -148,23 +148,30 @@ describe('rumor-scan LLM prompt — one topic per post', () => {
 describe('rumor-scan tip-page link — every post sends readers back to /tip', () => {
   const src = read('scripts/schefter-rumor-scan.mjs');
 
-  it('defines the tip page path constant (canonical /schefter/tip on theleague.us)', () => {
-    expect(src).toMatch(/const\s+TIP_PAGE_PATH\s*=\s*['"]\/schefter\/tip['"]/);
+  it('defines the tip page path constant, league-PREFIXED', () => {
+    // Prefixed, not the bare /schefter/tip it used to be: post.link is
+    // persisted and rendered raw, and the bare path only resolves on a league
+    // apex host — on mfl.football it hits the 404 catch-all. publicUrl()
+    // strips the prefix again for the apex-host absolute form.
+    expect(src).toMatch(/const\s+TIP_PAGE_PATH\s*=\s*`\/\$\{LEAGUE_SLUG\}\/schefter\/tip`/);
+    expect(src).not.toMatch(/const\s+TIP_PAGE_PATH\s*=\s*['"]\/schefter\/tip['"]/);
   });
 
   it('defines a user-facing CTA label', () => {
     expect(src).toMatch(/const\s+TIP_PAGE_LINK_LABEL\s*=\s*['"]Got a tip\? Whisper to Schefter →['"]/);
   });
 
-  it('derives an absolute tip-page URL from SCHEFTER_PUBLIC_BASE_URL (defaults to theleague.us)', () => {
+  it('derives an absolute tip-page URL from SCHEFTER_PUBLIC_BASE_URL', () => {
     expect(src).toMatch(/process\.env\.SCHEFTER_PUBLIC_BASE_URL/);
-    expect(src).toMatch(/https:\/\/theleague\.us/);
-    expect(src).toMatch(/const\s+TIP_PAGE_ABSOLUTE_URL\s*=/);
+    // Default origin comes from the registry (canonical www host), not a
+    // hardcoded apex literal.
+    expect(src).toMatch(/SCHEFTER_LEAGUE\.baseUrl/);
+    expect(src).toMatch(/const\s+TIP_PAGE_ABSOLUTE_URL\s*=\s*publicUrl\(TIP_PAGE_PATH\)/);
   });
 
   it('attaches link + linkLabel to every feed post it generates', () => {
     // Default CTA for non-trade-bait posts still resolves to the tip page.
-    expect(src).toMatch(/const\s+TIP_PAGE_PATH\s*=\s*['"]\/schefter\/tip['"]/);
+    expect(src).toMatch(/const\s+TIP_PAGE_PATH\s*=\s*`\/\$\{LEAGUE_SLUG\}\/schefter\/tip`/);
     expect(src).toMatch(/const\s+TIP_PAGE_LINK_LABEL\s*=/);
     // Post builder pulls link/linkLabel from a per-beat CTA object, which
     // falls back to the tip-page default for everything that isn't

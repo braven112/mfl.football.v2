@@ -16,7 +16,7 @@ import path from 'node:path';
 import { buildCachedSystem } from '../article-utils/ai-client.mjs';
 import { isRegularSeasonOrPlayoffs } from '../article-utils/season-guards.mjs';
 import { resolveMainRepo } from '../article-utils/data-loaders.mjs';
-import { LEAGUES, leagueOrigin } from '../../src/config/leagues-data.mjs';
+import { LEAGUES, leagueUrl } from '../../src/config/leagues-data.mjs';
 
 function leagueMeta(league) {
   const reg = LEAGUES[league];
@@ -25,9 +25,13 @@ function leagueMeta(league) {
     dataRoot: reg.dataPath,
     baseUrl: `/${reg.slug}`,
     displayName: reg.name,
-    // Canonical (cookie-safe) host for the absolute GroupMe link — session
-    // cookies are host-only, so domains[0] (bare apex) opens logged-out.
-    publicOrigin: leagueOrigin(reg),
+    /**
+     * Absolute URL for a feed path. leagueUrl pins the canonical (cookie-safe)
+     * host AND drops the league prefix the path carries for the shared host —
+     * hand-concatenating an origin with `/theleague/news/…` ships
+     * `theleague.us/theleague/news/…`, which only resolves via a 301.
+     */
+    publicUrl: (p) => leagueUrl(reg, p),
   };
 }
 
@@ -213,6 +217,6 @@ export function buildGroupMePromo(post, enrichment, { league = 'theleague' } = {
   return (
     `🚨 THE GAUNTLET — Week ${week}. Nobody has a rougher road ahead than ` +
     `${hardest.name} (difficulty ${hardest.difficulty}/100). ${easiest.name} gets the cupcake run. ` +
-    `Full rankings + week-by-week heat map:\n${meta.publicOrigin}${post.link}`
+    `Full rankings + week-by-week heat map:\n${meta.publicUrl(post.link)}`
   );
 }

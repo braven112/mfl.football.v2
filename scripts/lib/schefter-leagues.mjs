@@ -28,7 +28,7 @@
 
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { getLeagueBySlug } from '../../src/config/leagues-data.mjs';
+import { getLeagueBySlug, leagueOrigin, leagueUrl } from '../../src/config/leagues-data.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
 
@@ -46,8 +46,17 @@ export function buildSchefterLeague(registrySlug, overrides) {
     registrySlug: reg.slug,
     leagueId: reg.id,
     playersPath: (year) => path.join(projectRoot, reg.dataPath, 'mfl-feeds', String(year), 'players.json'),
-    baseUrl: `https://${reg.domains[0]}`,
-    calendarUrl: `https://${reg.domains[0]}/calendar`,
+    // Canonical (cookie-safe) host — leagueOrigin, never domains[0] ad hoc:
+    // session cookies are host-only, so a bare-apex link opens logged-out.
+    baseUrl: leagueOrigin(reg),
+    calendarUrl: leagueUrl(reg, `/${reg.slug}/calendar`),
+    /**
+     * Absolute URL for an internal path. Takes the PREFIXED route
+     * (`/theleague/calendar`) and drops the prefix on the league's own apex
+     * host — never concatenate baseUrl with a prefixed path by hand, or the
+     * post ships `theleague.us/theleague/calendar` and burns a 301.
+     */
+    url: (p) => leagueUrl(reg, p),
     feedPath: path.join(projectRoot, reg.schefterFeedPath),
     configPath: path.join(projectRoot, reg.configPath),
     ...overrides,

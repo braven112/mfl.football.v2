@@ -274,3 +274,45 @@ precedes the `status: 404` fallback in `.vercel/output/config.json`.
 **Insight:** The repo's history begins at `d4f32d9` (2026-08-08, authored "Schefter Bot") — a root commit that adds every file at once. `git log --follow`, `--diff-filter=A`, and `-S` searches all bottom out there and will misattribute long-existing code to that commit. Anything that "first appears" in d4f32d9 may be years old. Corollary discovered the same day: assets referenced by code but living only in local working trees (never committed) shipped as production 404s for weeks — `tests/nfl-logo-assets.test.ts` now guards the logo case by scanning every committed players feed for team codes and requiring a committed SVG for each.
 
 **Recommendation:** Don't date features by first-commit in this repo; treat d4f32d9 as an event horizon. For "does production have file X" questions, check `git ls-files` (tracked ≠ exists locally) and probe the deployed URL — not the working tree.
+
+## 2026-08-14 - The Apex-Prefix Strip Is a Producer Problem, Not Just a Router One
+
+**Context:** Every owner-facing link Roger and Schefter posted to GroupMe read
+`theleague.us/theleague/calendar` / `afl-fantasy.com/afl-fantasy/news`. Six
+independent producers had each hand-rolled the same concatenation —
+`` `${leagueOrigin(reg)}${post.link}` ``, `` `${league.baseUrl}${link}` ``,
+`` `${PUBLIC_BASE_URL}${path}` ``, plus two hardcoded strings in the
+August-cut touches and a prefixed `newsPath` in the announce targets.
+
+**Insight:** The prefix duplication is invisible to every test that checks
+"does the link work," because vercel.json 301s `/theleague/:path*` → `/:path*`
+on the apex hosts. It only shows up by *reading* the posted message. That is
+why it survived: the routing layer (middleware rewrite + 301) was built and
+tested to make both forms resolve, which quietly removed the pressure on
+producers to emit the right one. Two forms of the same URL are both correct to
+the router and only one is correct to a human.
+
+The asymmetry that makes this subtle: internal routes MUST stay prefixed in
+stored data (`post.link`) — the Schefter cards render `post.link` raw, and an
+unprefixed path 404s on the shared host (verified locally: `/schefter/tip` →
+404, `/theleague/schefter/tip` → 302). Only the *absolute* form gets stripped.
+So "just store the clean path" is the wrong fix and creates the inverse bug —
+which the feed's tip link already has today.
+
+Same class of bug as the `domains[0]` vs `leagueOrigin` cookie-safety rule, and
+they travel together: a file that hand-built one usually hand-built the other.
+`scripts/lib/schefter-leagues.mjs` had both (bare-apex `baseUrl` AND prefixed
+concatenation).
+
+**Recommendation:** `leagueUrl(league, path)` in `leagues-data.mjs` is the only
+sanctioned builder — it strips the league's OWN slug (never a cross-league one:
+`/afl-fantasy/*` inside a TheLeague post must keep its prefix to resolve) and
+pins the canonical www host. Path-only leagues (no apex domain) fall back to
+`SHARED_APP_ORIGIN` and KEEP their prefix. Where a base URL is env-overridable
+(`SCHEFTER_PUBLIC_BASE_URL` for preview deploys), strip ONLY when the base is
+this league's apex — a preview host needs the prefix. `tests/league-url-prefix.test.ts`
+guards it by running the real builders and asserting no `<domain>/<slug>` pair
+appears; a source-grep-only guard would have missed the hardcoded strings.
+When auditing this class, grep for the *shape* (`}${post.link}`, `}${path}`,
+`}${link}`) rather than for any one domain literal — five of the six sites had
+no domain literal in them at all.

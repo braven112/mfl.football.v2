@@ -11,8 +11,11 @@
  * NOTHING here touches the filesystem, the network, or secrets — those live in
  * the script (feed paths, GroupMe bot ids) and the endpoint (workflow dispatch).
  * `.mjs` so plain `node` scripts and the Astro/TS runtime can both import it,
- * the same way `src/config/leagues-data.mjs` is shared.
+ * the same way `src/config/leagues-data.mjs` is shared — which is also the only
+ * import here, and is itself pure/dependency-free.
  */
+
+import { getLeagueBySlug, leagueUrl } from '../config/leagues-data.mjs';
 
 // GroupMe rejects bot messages over 1000 chars. Headline is a feed card field
 // (~60 chars by design); we cap generously so a runaway paste fails fast.
@@ -33,21 +36,25 @@ export const DEFAULT_BODY =
  * Display metadata per announce target — no fs paths, no secrets. The CLI script
  * extends these with `feedPath` + `botId`; the endpoint uses them as-is for the
  * preview deep link. `label` is for the admin UI league picker.
+ *
+ * `baseUrl` + `newsPath` are DERIVED from the registry, never hand-written: the
+ * deep link ships in a GroupMe message, so it must use the canonical cookie-safe
+ * host (session cookies are host-only — a bare-apex link opens logged-out) and
+ * must not carry the league's own redundant path prefix. `leagueUrl` handles
+ * both; splitting its output back into origin + path keeps the existing
+ * `buildDeepLink({ baseUrl, newsPath, postId })` contract intact.
+ *
  * @type {Record<string, { navSlug: 'theleague'|'afl', baseUrl: string, newsPath: string, label: string }>}
  */
+function announceTarget(registrySlug, navSlug, label) {
+  const league = getLeagueBySlug(registrySlug);
+  const news = new URL(leagueUrl(league, `/${league.slug}/news`));
+  return { navSlug, baseUrl: news.origin, newsPath: news.pathname, label };
+}
+
 export const ANNOUNCE_TARGETS = {
-  theleague: {
-    navSlug: 'theleague',
-    baseUrl: 'https://theleague.us',
-    newsPath: '/news',
-    label: 'The League',
-  },
-  afl: {
-    navSlug: 'afl',
-    baseUrl: 'https://afl-fantasy.com',
-    newsPath: '/afl-fantasy/news',
-    label: 'AFL',
-  },
+  theleague: announceTarget('theleague', 'theleague', 'The League'),
+  afl: announceTarget('afl-fantasy', 'afl', 'AFL'),
 };
 
 /**

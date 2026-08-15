@@ -30,7 +30,9 @@ export function updateFranchiseLinks(scope = document) {
   }
 
   if (gmCentralLink) {
-    const newHref = `https://www.theleague.us/theleague/rosters?myteam=${window.franchise_id}`;
+    // No /theleague prefix: this is the league's own apex host, which serves
+    // the bare path — the prefixed form only resolves via a 301.
+    const newHref = `https://www.theleague.us/rosters?myteam=${window.franchise_id}`;
     if (DEBUG) {
       console.log('[franchiseLinks] Updating href to:', newHref);
     }

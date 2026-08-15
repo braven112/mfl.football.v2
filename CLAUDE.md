@@ -73,6 +73,46 @@ domain is a one-entry change in `leagues-data.mjs`.
 and .github/workflows/ for the forbidden literals and fails the build if one
 creeps back in outside its small, documented allowlist.
 
+### Absolute URLs — always `leagueUrl()`, never origin + path
+
+Internal routes are stored PREFIXED (`/theleague/calendar`) because that's the
+real Astro route and the only form that resolves on the shared host. A league's
+own apex domain serves the BARE path (middleware rewrite), and vercel.json 301s
+the prefixed form back to it. So concatenating an origin with a prefixed path —
+`` `${leagueOrigin(reg)}${post.link}` `` — ships owner-facing links that read
+`theleague.us/theleague/calendar` and burn a redirect hop. That was live in
+Roger's reminders, Schefter's Trade Builder CTAs, both article GroupMe promos,
+the August-cut touches, and the AFL announcement deep link (fixed Aug 2026).
+
+`leagueUrl(league, path)` in the registry is THE builder, and it is total in
+both directions so callers don't have to know which kind of league they hold:
+on a league's own apex domain the prefix is redundant and gets STRIPPED; on the
+shared host (path-only leagues like best-ball, which have no apex domain) it is
+required and gets ADDED via `ensureLeaguePrefix`. Pass either form, get a URL
+that resolves. It never touches a CROSS-league prefix (`/afl-fantasy/*` in a
+TheLeague post must keep its prefix), and it pins the canonical cookie-safe
+`www.` host from `leagueOrigin` — that host rule and the prefix rule travel
+together, since a file that hand-built one usually hand-built the other
+(`schefter-leagues.mjs` and `ANNOUNCE_TARGETS` each had both).
+
+The Schefter league table exposes it
+per-league as `league.url(path)`; `scripts/schefter-rumor-scan.mjs` wraps it in
+`publicUrl()` so a `SCHEFTER_PUBLIC_BASE_URL` override (preview deploys,
+mfl.football) still keeps the prefix — stripping is only correct on the apex.
+`tests/league-url-prefix.test.ts` runs the real builders and fails on any
+doubled prefix.
+
+Note the feed's `post.link` must ALWAYS keep the prefix — it's the internal
+route, it gets persisted, and the Schefter cards render it raw, so an
+unprefixed path bakes a permanent 404 on mfl.football. Only the absolute
+(GroupMe / deep-link) form gets stripped. The rumor scanner's tip CTA had this
+backwards until Aug 2026 (`TIP_PAGE_PATH = '/schefter/tip'`).
+
+Detecting "is this base URL my own apex host" must go through
+`buildHostToSlugMap()`, never a string compare against the canonical origin —
+`https://theleague.us`, `https://WWW.THELEAGUE.US`, `http://...` and
+`...:443` are all the same host and must all strip.
+
 ## Design tokens — every var(--x) must reference a token that exists
 
 The theme system is `src/styles/tokens.css` (light) + `tokens-dark.css`

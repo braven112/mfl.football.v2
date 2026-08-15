@@ -1909,13 +1909,13 @@ async function scanEventReminders(league) {
           link = '/theleague/throwback-settings';
           linkLabel = 'Pick your era';
         }
-        groupMeUrlOverrides.set(postId, `${league.baseUrl}${link}`);
+        groupMeUrlOverrides.set(postId, league.url(link));
       } else {
         const template = pickRogerTemplate(touch.id, event.id);
         const days = String(event.daysUntil);
         headline = template.h.replace(/\{event\}/g, event.name).replace(/\{name\}/g, event.name).replace(/\{days\}/g, days);
         body = template.b.replace(/\{event\}/g, event.name).replace(/\{name\}/g, event.name).replace(/\{days\}/g, days);
-        link = league.slug === 'afl' ? '/afl-fantasy/calendar' : '/theleague/calendar';
+        link = `/${league.registrySlug}/calendar`;
         linkLabel = 'View calendar';
       }
 
