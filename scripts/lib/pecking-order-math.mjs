@@ -82,7 +82,13 @@ export function computePeckingOrder({ franchiseIds, standingsByFid, weeklyResult
       rolling3Ppg: rollingAvgPF(weeklyResults, fid, week, 3) ?? seasonPpg,
       seasonPpg,
       avgMargin: avgMargin(s),
-      allPlayPct: num(s?.all_play_pct, 0.5),
+      // NaN, not a .500 stand-in: a missing all-play must not become a real
+      // data point in the min-max range. A phantom .500 in a league whose real
+      // spread is .600-.800 would redefine the minimum, flattening the gaps
+      // between every team that HAS data. minMax01 skips non-finite values when
+      // it computes the range, then places them at the midpoint — which is the
+      // same treatment the form component already gets.
+      allPlayPct: num(s?.all_play_pct, NaN),
     };
   });
 

@@ -69,6 +69,10 @@ export function teamAccentVar(franchiseId: string, fallback?: string): string {
 const isSafeFranchiseId = (id: unknown): id is string =>
   typeof id === 'string' && /^[A-Za-z0-9_-]{1,16}$/.test(id);
 
+/** Accent values must be a plain 6-digit hex before they're written into CSS. */
+const isHexColor = (value: unknown): value is string =>
+  typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value.trim());
+
 /**
  * Build the accent stylesheet for one league (or every league when omitted).
  * Returns '' when a league has no usable teams, so the caller can skip the
@@ -86,9 +90,17 @@ export function buildTeamAccentCss(league?: LeagueSlug): string {
     const dark: string[] = [];
     for (const t of teams) {
       const pair = getTeamAccentPair(t.franchiseId, slug);
+      // Values are validated, not trusted: `ensureContrastOn` returns anything
+      // it can't measure untouched, so a malformed config color would otherwise
+      // ride straight into the stylesheet — emitting a broken declaration at
+      // best, and at worst carrying whatever the config author put there into
+      // a raw <style>. A franchise whose color fails this simply gets no token
+      // and falls back to the `var()` default at the call site.
+      if (!isHexColor(pair.light) || !isHexColor(pair.dark)) continue;
       light.push(`${teamAccentProperty(t.franchiseId)}:${pair.light}`);
       dark.push(`${teamAccentProperty(t.franchiseId)}:${pair.dark}`);
     }
+    if (light.length === 0) continue;
 
     // html.dark[data-league] (0,2,1) outranks html[data-league] (0,1,1), so the
     // dark block wins wherever the theme class is set.

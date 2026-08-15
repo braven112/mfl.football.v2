@@ -96,6 +96,18 @@ describe('buildTeamAccentCss', () => {
       expect(d.split(':')[1]).toMatch(/^#[0-9a-f]{6}$/i);
     }
   });
+
+  it('emits nothing that isn\'t a hex pair, whatever the config says', () => {
+    // ensureContrastOn returns anything it can't measure untouched, so a
+    // malformed config color would otherwise land in a raw <style> element.
+    // Every id/value that survives into the sheet must be inert.
+    const idsInSheet = [...css.matchAll(/--team-accent-([^:]+):/g)].map((m) => m[1]);
+    expect(idsInSheet.length).toBeGreaterThan(0);
+    for (const id of idsInSheet) expect(id).toMatch(/^[A-Za-z0-9_-]{1,16}$/);
+    expect(css).not.toMatch(/[<>]/);
+    // Braces only ever close a block we opened — no stray declaration syntax.
+    expect(css.split('{').length).toBe(css.split('}').length);
+  });
 });
 
 describe('every franchise accent is readable on its own league card', () => {

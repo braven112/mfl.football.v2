@@ -199,12 +199,31 @@ describe('computePeckingOrder', () => {
     const ranked = computePeckingOrder({ franchiseIds: fids, standingsByFid: standings, weeklyResults: weekly, week: 1 });
     for (const row of ranked) expect(Number.isFinite(row.composite)).toBe(true);
     const ghost = ranked.find((r: any) => r.fid === '0099')!;
-    // Defaults to a .500 all-play and the midpoint form score — mid-pack, and
-    // its null metrics are what the card checks before rendering them.
+    expect(ghost.allPlayPct).toBeNull();
+    // Midpoint on both components — mid-pack, and its null metrics are what
+    // the card checks before rendering them.
     expect(ghost.composite).toBeCloseTo(50, 8);
     expect(ghost.rolling3Ppg).toBeNull();
     expect(ghost.seasonPpg).toBeNull();
     expect(ghost.avgMargin).toBeNull();
+  });
+
+  it('a missing all-play does not redefine the league range', () => {
+    // Real spread is .600-.800. A franchise with no standings row must not
+    // pull the minimum down to .500 and flatten the teams that do have data.
+    const fids = ['0001', '0002', '0099'];
+    const withGhost = new Map<string, any>([
+      ['0001', { id: '0001', all_play_pct: '.800', h2hw: '4', h2hl: '1', h2ht: '0', pf: '600', pa: '500' }],
+      ['0002', { id: '0002', all_play_pct: '.600', h2hw: '3', h2hl: '2', h2ht: '0', pf: '560', pa: '540' }],
+    ]);
+    const weekly = { weeks: [{ week: 1, scores: { '0001': 120, '0002': 110, '0099': 115 } }] };
+    const ranked = computePeckingOrder({ franchiseIds: fids, standingsByFid: withGhost, weeklyResults: weekly, week: 1 });
+
+    const byId = new Map(ranked.map((r: any) => [r.fid, r]));
+    // The two real teams still span the full 0-100 all-play scale.
+    expect(byId.get('0001')!.allPlayScore).toBeCloseTo(100, 8);
+    expect(byId.get('0002')!.allPlayScore).toBeCloseTo(0, 8);
+    expect(byId.get('0099')!.allPlayScore).toBeCloseTo(50, 8);
   });
 
   it('all-play carries a team a hair behind on recent scoring', () => {
