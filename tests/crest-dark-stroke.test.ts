@@ -71,9 +71,14 @@ describe('crest dark-mode stroke manifest', () => {
 });
 
 describe('buildCrestDarkStrokeCss', () => {
-  it('scopes to crest-only cells under html.dark and applies the stroke', () => {
+  it('applies to every crest img under html.dark, not just one component', () => {
+    // Keyed on src alone (like the dark swap) so the stroke reaches all ~20
+    // crest call sites — Astro, React islands, and client-built HTML — without
+    // touching any of them. A per-component selector left the same franchise
+    // ringed on one page and bare on another.
     const css = buildCrestDarkStrokeCss([{ icon: '/assets/x.png', franchiseId: '0001' }]);
-    expect(css).toContain('html.dark img.team-icon-cell[src="/assets/x.png"]');
+    expect(css).toContain('html.dark img[src="/assets/x.png"]');
+    expect(css).not.toContain('team-icon-cell');
     expect(css).toContain(CREST_STROKE_FILTER);
   });
 
@@ -105,7 +110,7 @@ describe('buildCrestDarkStrokeCss', () => {
     expect(css).toContain(crestStrokeFilter(DEFAULT_CREST_STROKE_COLOR));
     // b and c share the default color, so they collapse into one rule.
     expect(css.match(/filter:/g)).toHaveLength(2);
-    expect(css).toContain('[src="/b.png"],\nhtml.dark img.team-icon-cell[src="/c.png"]');
+    expect(css).toContain('[src="/b.png"],\nhtml.dark img[src="/c.png"]');
   });
 });
 

@@ -251,10 +251,15 @@ assets to catch manifest drift, and checks each listed `icon` still matches its
 config string exactly (the selector is an exact `src` match, so a drifted icon
 path silently stops applying the stroke rather than erroring).
 
-**Scoped to `img.team-icon-cell`, on purpose.** Unlike the dark-swap rules,
-this is NOT global. A surface showing a crest NEXT TO a name doesn't have the
-problem — the name carries identity — and a white ring there is just noise.
-Only surfaces where the crest is the sole identifier opt in, via the class.
+**Global, keyed on `src` alone — the initial scoping was wrong.** It first
+shipped scoped to `img.team-icon-cell`, reasoning that a crest shown NEXT TO a
+name doesn't need help because the name carries identity. Two problems, both
+found by the commissioner on real pages: a near-black logo on a dark card is
+still hard to make out even when labelled, and the same franchise then wore a
+ring on the homepage and none on `/afl-fantasy/standings`, which reads as a
+rendering bug rather than a treatment. Consistency beat the theory. Keying on
+`src` like the dark swap is also what reaches all ~20 crest call sites —
+Astro, React islands, and client-built HTML — with no markup changes.
 
 **Recommendation:** re-run `pnpm measure:crest-contrast` after replacing any
 crest asset or adding an `iconDark`; the test fails until the manifest is
@@ -279,3 +284,28 @@ design points worth keeping:
 
 `buildCrestDarkStrokeCss` groups selectors by color, so the default-white
 crests still collapse into one rule and only overrides get their own.
+
+**Same-origin crest srcs — fix it in the config AND the sync script (2026-08-15).**
+The AFL configs stored every `icon`/`banner` as an absolute
+`https://mflfootballv2.vercel.app/...` URL, so every page fetched its crests
+cross-origin: a second DNS+TLS connection for assets already committed under
+`public/`. On cellular they were still in flight after the card painted, which
+on the crest-only standings cards rendered as blank team columns. All 48 asset
+URLs are now same-origin paths.
+
+The trap: `scripts/sync-afl-asset-urls.mjs` copies `icon`/`banner` straight
+from MFL's league feed, and MFL stores the ABSOLUTE form (that's what we
+upload to it). Normalizing only the config would be silently undone by the
+next `pnpm sync:afl`, and the diff would look like a routine asset sync. The
+script now normalizes on read AND before comparison, so a normalized config
+doesn't read as "changed" every run.
+
+`iconSrcVariants()` in `team-icon-dark-css.ts` still emits selectors for BOTH
+forms. Belt and braces: any surface, feed, or historical entry still carrying
+an absolute URL keeps its dark swap and stroke.
+
+**Verification that actually catches this:** local runs had been intercepting
+`mflfootballv2.vercel.app` and serving from `public/`, which is precisely the
+round trip that was broken — the bug was invisible in every screenshot. Test
+crest changes with NO route interception, and assert `crossOriginReqs === 0`
+plus `naturalWidth > 0` per crest rather than eyeballing the render.

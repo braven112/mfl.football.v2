@@ -7,12 +7,18 @@
  * the AFL (1 of 24 teams has an `iconDark`) — by stroking the crest's
  * silhouette white so a near-black logo still reads on the dark card.
  *
- * Why it matters here specifically: the compact homepage standings cards
- * render the crest INSTEAD of the team name, so the crest is the row's only
- * identifier. A crest that fades into the card doesn't look slightly worse —
- * the row stops saying which team it is. Surfaces that show a crest NEXT TO a
- * name don't have that problem, which is why this is scoped to
- * `img.team-icon-cell` rather than every team icon on the site.
+ * Applies to EVERY team crest on the site, not just the crest-only standings
+ * cards it was built for. It was scoped to `img.team-icon-cell` at first, on
+ * the theory that a crest shown NEXT TO a name has no legibility problem. That
+ * was wrong twice over: a near-black logo on a dark card is still hard to make
+ * out even when labelled, and — worse — the same franchise then wore a ring on
+ * the homepage and none on the standings page, which reads as a rendering bug
+ * rather than a deliberate treatment. Consistency is the point.
+ *
+ * Keying on `src` alone (like the dark swap) is also what makes this reach
+ * every call site: crests render from ~20 places across Astro components,
+ * React islands, and client-side HTML string builders, and a global stylesheet
+ * covers all three with no markup changes.
  *
  * Which crests qualify is measured, not eyeballed: `scripts/measure-crest-contrast.mjs`
  * scores each crest by the fraction of its opaque pixels clearing 3:1 against
@@ -71,7 +77,11 @@ export interface CrestDarkStrokeOptions {
    * same reasoning as `team-icon-dark-css.ts`.
    */
   franchiseIconDir?: string;
-  /** Restrict the rule to this selector. Defaults to the crest-only cell. */
+  /**
+   * Element selector the rule applies to. Defaults to every `img`, matching
+   * the dark-swap rules, so the stroke reaches all ~20 crest call sites.
+   * Narrow it only if a surface ever needs to opt out wholesale.
+   */
   selector?: string;
 }
 
@@ -116,7 +126,7 @@ export function buildCrestDarkStrokeCss(
   entries: CrestStrokeEntry[],
   options: CrestDarkStrokeOptions = {},
 ): string {
-  const selector = options.selector ?? 'img.team-icon-cell';
+  const selector = options.selector ?? 'img';
 
   // Group by stroke color so crests sharing the default white still collapse
   // into one rule; a team with an `iconStrokeDark` gets its own.
