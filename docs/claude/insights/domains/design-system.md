@@ -1873,12 +1873,23 @@ space, not a halo or outline bleed that would justify it. Centering is fine
 (ink center offset is ≤0.9% of box on every asset), so nothing shifts sideways
 on toggle; only scale is affected.
 
-The fix belongs in the ASSETS — re-author the `-dark` viewBoxes to describe the
-same extents as their light counterparts (correction factors: premier x1.13,
-dleague x1.17, al/nl x1.00). Compensating in one component's CSS just moves the
-problem, because the discrepancy is live at every other call site too
-(`.afl-tiers__logo`, `.badge-tier-logo`, `.promo-reg-logo`,
-`.afl-playoffs-hero__bracket-logo`).
+**Fixed in the ASSETS, not in CSS.** The four `-dark` viewBoxes were
+re-authored to reproduce their light counterpart's ink-to-viewBox relationship,
+which is the only layer that fixes it everywhere — the discrepancy was live at
+every other call site too (`.afl-tiers__logo`, `.badge-tier-logo`,
+`.promo-reg-logo`, `.afl-playoffs-hero__bracket-logo`), and all of them
+constrain with `height: X; width: auto`, so normalizing the height fraction
+corrects each identically. `premier-dark` and `al`/`nl-dark` had ink identical
+to their light twins, so they simply took the light viewBox verbatim and now
+match exactly (0.0% delta). `dleague-dark` needed a computed box
+(`-23.9047 0 269.671 348.1`) because its artwork genuinely differs — 247.7 ink
+units wide against the light mark's 271.7 — so it lands at 0% on ink height and
+-4.5% on geometric mean. Closing that last gap means re-drawing the art, not
+moving a viewBox.
+
+To recompute if a badge is ever re-exported: take the light variant's
+`inkH/vbH`, `inkW/vbW` and margin fractions, then solve the dark variant's
+viewBox so its ink reproduces them.
 
 **Method note — two wrong turns, both about measuring the wrong thing.** The
 first version of this insight claimed the dark files declare bogus

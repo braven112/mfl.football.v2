@@ -367,11 +367,13 @@ const metrics: MetricDef[] = inferredVariant === 'in-season'
      slack for the crests (32px wide at full height) and binds on the conference
      marks, which object-fit then scales down to about the same apparent size.
 
-     Known, pre-existing: the `-dark` variants pad their viewBox with empty
-     space around identical artwork, so they draw ~15% smaller than their light
-     counterparts in the same box. Not fixed here: it affects every consumer of
-     these assets, so normalizing the viewBoxes wants its own pass. See the
-     design-system insight for the measurements. */
+     The cap only works because the light and dark variants now agree on size:
+     the `-dark` files used to pad their viewBox with empty space (unequally —
+     30 units around the crest, 8 around the conference mark), which fits the
+     padding rather than the art and left dark mode ~11% off. Their viewBoxes
+     were normalized against the light ones in this change. If a new badge
+     lands here, check that pairing before trusting the cap — see the
+     design-system insight for the measurement method. */
   :global(.afl-snapshot__card-logo) {
     height: 100%;
     width: auto;
