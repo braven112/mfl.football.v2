@@ -3,6 +3,14 @@
   "changes": [
     {
       "date": "2026-08-14",
+      "type": "style-tweak",
+      "summary": "The Pecking Order's award cards stopped color-coding by team and started color-coding by meaning. Heater of the Week now runs a hot orange-red edge, Cooler of the Week an ice blue one, and the Bench Blunder gets pink — so the three you actually scan for are findable without reading the labels. Every other award still wears the winning franchise's color, and all of them are picked to stay legible in dark mode.",
+      "impact": "user",
+      "area": "other",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-08-14",
       "type": "bug-fix",
       "summary": "Every link Roger and Schefter drop in the group chat said the league's name twice. theleague.us/theleague/calendar. afl-fantasy.com/afl-fantasy/news. They worked — a redirect quietly cleaned it up on the way through — but you were reading the ugly version, and every tap paid for a round trip it didn't need. The folder name only exists so both leagues can share one site; on your own league's domain it's noise. Roger's countdowns, Schefter's Trade Builder invites, the Cut Watch and Gauntlet links, and the cutdown-deadline nags now all point straight at the clean address. The links also got pinned to the same address you actually browse, so they should stop occasionally opening you logged out.",
       "impact": "user",

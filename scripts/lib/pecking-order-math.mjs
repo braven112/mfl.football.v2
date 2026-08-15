@@ -5,12 +5,19 @@
  * Pecking Order column. Extracted from the generator so the algorithm is
  * unit-testable and the weights live in exactly one place.
  *
- * Composite score per franchise (each component normalized 0-100):
- *   35% — recent form     (rolling-3-week PPG)
- *   25% — record          (head-to-head win %)
- *   20% — all-play %      (luck-adjusted strength)
- *   10% — season PPG      (full-season scoring baseline)
- *   10% — average margin  (season point differential per game)
+ * Composite score per franchise (each component min-max normalized 0-100):
+ *   50% — all-play %      (luck-adjusted season-long strength)
+ *   50% — recent form     (rolling-3-week PPG)
+ *
+ * Both components are min-max normalized within the league so the 50/50 split
+ * is true by spread. Leaving all-play on its absolute 0-100 scale would give it
+ * roughly half the influence of the min-max'd form component, since a season's
+ * all-play percentages bunch in the middle (~.300-.700) while a min-max scale
+ * always runs the full 0-100.
+ *
+ * Season PPG, average margin and head-to-head record are still computed and
+ * carried on each row — the column displays them as context — but they no
+ * longer move the ranking.
  *
  * Data shapes (MFL feeds on disk):
  *   weeklyResults — { weeks: [{ week: 1, scores: { '0001': 111.5, ... } }] }
@@ -22,22 +29,16 @@ import { num, int, rollingAvgPF, seasonAvgPF, minMax01 } from './team-strength.m
 
 /** Component weights — must sum to 1.0. Exposed for the page's methodology line. */
 export const PECKING_ORDER_WEIGHTS = {
-  form: 0.35,
-  record: 0.25,
-  allPlay: 0.2,
-  seasonPpg: 0.1,
-  margin: 0.1,
+  allPlay: 0.5,
+  form: 0.5,
 };
 
 /** Human-readable methodology string, derived from the weights so it can't drift. */
 export function describeMethodology(weights = PECKING_ORDER_WEIGHTS) {
   const pct = (x) => `${Math.round(x * 100)}%`;
   return (
-    `${pct(weights.form)} recent form (rolling-3wk PPG) · ` +
-    `${pct(weights.record)} record · ` +
-    `${pct(weights.allPlay)} all-play % · ` +
-    `${pct(weights.seasonPpg)} season PPG · ` +
-    `${pct(weights.margin)} avg margin`
+    `${pct(weights.allPlay)} all-play record · ` +
+    `${pct(weights.form)} last 3 weeks (rolling-3wk PPG)`
   );
 }
 
@@ -69,9 +70,8 @@ export function avgMargin(s) {
  * @param {Map<string, object>} args.standingsByFid — MFL standings rows.
  * @param {object} args.weeklyResults — weekly-results.json shape.
  * @param {number} args.week — rank through this completed week.
- * @returns {Array<{ rank, fid, composite, formScore, recordScore, allPlayScore,
- *   seasonPpgScore, marginScore, rolling3Ppg, seasonPpg, avgMargin }>}
- *   sorted best (rank 1) first.
+ * @returns {Array<{ rank, fid, composite, allPlayScore, formScore, allPlayPct,
+ *   rolling3Ppg, seasonPpg, avgMargin }>} sorted best (rank 1) first.
  */
 export function computePeckingOrder({ franchiseIds, standingsByFid, weeklyResults, week }) {
   const rows = franchiseIds.map((fid) => {
@@ -82,31 +82,26 @@ export function computePeckingOrder({ franchiseIds, standingsByFid, weeklyResult
       rolling3Ppg: rollingAvgPF(weeklyResults, fid, week, 3) ?? seasonPpg,
       seasonPpg,
       avgMargin: avgMargin(s),
-      h2hPct: num(s?.h2hpct, 0.5),
-      allPlayPct: num(s?.all_play_pct, 0.5),
+      // NaN, not a .500 stand-in: a missing all-play must not become a real
+      // data point in the min-max range. A phantom .500 in a league whose real
+      // spread is .600-.800 would redefine the minimum, flattening the gaps
+      // between every team that HAS data. minMax01 skips non-finite values when
+      // it computes the range, then places them at the midpoint — which is the
+      // same treatment the form component already gets.
+      allPlayPct: num(s?.all_play_pct, NaN),
     };
   });
 
+  const allPlayScores = minMax01(rows.map((r) => r.allPlayPct));
   const formScores = minMax01(rows.map((r) => r.rolling3Ppg));
-  const seasonPpgScores = minMax01(rows.map((r) => r.seasonPpg));
-  const marginScores = minMax01(rows.map((r) => (r.avgMargin == null ? NaN : r.avgMargin)));
-  const recordScores = rows.map((r) => r.h2hPct * 100);
-  const allPlayScores = rows.map((r) => r.allPlayPct * 100);
 
   const W = PECKING_ORDER_WEIGHTS;
   const indexed = rows.map((r, i) => ({
     fid: r.fid,
-    composite:
-      W.form * formScores[i] +
-      W.record * recordScores[i] +
-      W.allPlay * allPlayScores[i] +
-      W.seasonPpg * seasonPpgScores[i] +
-      W.margin * marginScores[i],
-    formScore: formScores[i],
-    recordScore: recordScores[i],
+    composite: W.allPlay * allPlayScores[i] + W.form * formScores[i],
     allPlayScore: allPlayScores[i],
-    seasonPpgScore: seasonPpgScores[i],
-    marginScore: marginScores[i],
+    formScore: formScores[i],
+    allPlayPct: Number.isFinite(r.allPlayPct) ? r.allPlayPct : null,
     rolling3Ppg: Number.isFinite(r.rolling3Ppg) ? r.rolling3Ppg : null,
     seasonPpg: Number.isFinite(r.seasonPpg) ? r.seasonPpg : null,
     avgMargin: r.avgMargin,

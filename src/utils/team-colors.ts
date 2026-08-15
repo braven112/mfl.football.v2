@@ -21,6 +21,7 @@ import theleagueConfig from '../data/theleague.config.json';
 import aflConfig from '../../data/afl-fantasy/afl.config.json';
 import bb1Config from '../../data/best-ball-1/bb1.config.json';
 import type { LeagueSlug } from '../types/nav';
+import { ensureContrastOn, AA_LARGE_TEXT_RATIO } from './team-color-contrast';
 
 // Re-exported for existing importers; the union itself lives in types/nav.
 export type { LeagueSlug };
@@ -32,6 +33,8 @@ export interface TeamColors {
   secondary?: string;
   tertiary?: string;
   quaternary?: string;
+  /** Hand-tuned primary for dark surfaces (config `colorPrimaryDark`). */
+  primaryDark?: string;
 }
 
 /** Neutral fallback when a franchise/league is unknown. */
@@ -46,6 +49,7 @@ function buildMap(teams: any[]): Record<string, TeamColors> {
       secondary: team.colorSecondary,
       tertiary: team.colorTertiary,
       quaternary: team.colorQuaternary,
+      primaryDark: team.colorPrimaryDark,
     };
   }
   return map;
@@ -112,6 +116,54 @@ export function getTeamColorQuaternary(
   league: LeagueSlug = 'theleague',
 ): string | undefined {
   return entry(franchiseId, league).quaternary;
+}
+
+/**
+ * Card surface each league's `--card-bg` token resolves to in dark mode
+ * (tokens-dark.css). TheLeague's is a gradient — its base color is used.
+ * best-ball inherits the generic dark card.
+ */
+const DARK_CARD_SURFACE: Record<LeagueSlug, string> = {
+  theleague: '#262626',
+  afl: '#16283c',
+  bb1: '#262626',
+};
+/** Light `--card-bg` is white for every league (tokens.css). */
+const LIGHT_CARD_SURFACE = '#ffffff';
+
+export interface TeamAccentPair {
+  /** Readable on a light card. */
+  light: string;
+  /** Readable on a dark card. */
+  dark: string;
+}
+
+/**
+ * A team's accent color for each theme, both guaranteed readable on that
+ * theme's card surface.
+ *
+ * Raw brand colors can't do this job alone: a third of the league wears a
+ * near-black or navy primary that vanishes on a dark card (1.1:1), and the
+ * bright yellows/golds vanish on a white one (1.5:1). Dark mode starts from the
+ * config's hand-tuned `colorPrimaryDark` when the team has one; either theme's
+ * color is then nudged in lightness only if it still misses `minRatio`, so
+ * colors that already pass stay exactly on-brand.
+ *
+ * Default 3:1 is the WCAG AA floor for large text and non-text UI (borders,
+ * bars, big numerals) — pass `AA_BODY_TEXT_RATIO` for accents used as body copy.
+ */
+export function getTeamAccentPair(
+  franchiseId: string,
+  league: LeagueSlug = 'theleague',
+  minRatio: number = AA_LARGE_TEXT_RATIO,
+): TeamAccentPair {
+  const e = entry(franchiseId, league);
+  const base = e.graph ?? e.primary ?? GRAY;
+  const baseDark = e.primaryDark ?? base;
+  return {
+    light: ensureContrastOn(base, LIGHT_CARD_SURFACE, minRatio),
+    dark: ensureContrastOn(baseDark, DARK_CARD_SURFACE[league] ?? '#262626', minRatio),
+  };
 }
 
 /**

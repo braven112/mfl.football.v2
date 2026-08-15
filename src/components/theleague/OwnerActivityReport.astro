@@ -35,6 +35,12 @@ interface TxLeaderboardEntry {
 interface ChartTeam {
 	id: string;
 	name: string;
+	/**
+	 * Line/swatch color. Prefer a theme-aware `var(--team-accent-<id>)`
+	 * reference (see src/utils/team-accent-css.ts) over a raw hex — every use
+	 * of it here lands in a style declaration, so var() resolves and the chart
+	 * follows the theme without a redraw.
+	 */
 	color: string;
 	icon: string;
 	values: number[];
@@ -369,7 +375,10 @@ const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 				const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
 				polyline.setAttribute('points', points);
 				polyline.setAttribute('fill', 'none');
-				polyline.setAttribute('stroke', t.color);
+				// style, not setAttribute: a team color may arrive as a
+				// var(--team-accent-…) reference (theme-aware), and var() is only
+				// resolved in a style declaration, never in a presentation attribute.
+				polyline.style.stroke = t.color;
 				polyline.setAttribute('stroke-width', '2');
 				polyline.setAttribute('stroke-linejoin', 'round');
 				polyline.setAttribute('stroke-linecap', 'round');

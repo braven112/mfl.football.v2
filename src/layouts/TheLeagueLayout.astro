@@ -25,6 +25,7 @@ import TheLeagueFooter from '../components/theleague/Footer.astro';
 import NavDrawer from '../components/nav/NavDrawer.astro';
 import TeamIconDarkStyles from '../components/TeamIconDarkStyles.astro';
 import NflLogoDarkStyles from '../components/NflLogoDarkStyles.astro';
+import TeamAccentStyles from '../components/TeamAccentStyles.astro';
 import ThemeScript from '../components/ThemeScript.astro';
 import { getThemePreference } from '../utils/theme-preference';
 import TradeAlertModal from '../components/theleague/TradeAlertModal.astro';
@@ -278,6 +279,7 @@ const themePref = getThemePreference(Astro.cookies);
 		<title>{title}</title>
 		<TeamIconDarkStyles />
 		<NflLogoDarkStyles />
+		<TeamAccentStyles />
 		<ClientRouter />
 	</head>
 	<body>

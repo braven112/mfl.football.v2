@@ -105,6 +105,63 @@ export function relativeLuminance(hex: string): number {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
+/**
+ * WCAG 2.1 contrast ratio between two colors (1 = identical, 21 = black/white).
+ *
+ * Use this — not `colorDistance` — when the question is "can a person read
+ * this?". ΔE answers "do these look like different colors?", which a brand
+ * color can pass while still being unreadable (a navy on near-black are
+ * perceptually distinct hues at a 1.1:1 contrast ratio).
+ *
+ * Returns NaN if either input isn't a 6-digit hex. `parseHex` substitutes a
+ * default color for garbage, which is fine for a gradient but would hand back a
+ * confident, meaningless ratio here — and a wrong PASS is exactly what an
+ * accessibility check must never do. NaN fails every `>=` comparison, so a
+ * caller that ignores this can only end up more conservative, never less.
+ */
+export function contrastRatio(a: string, b: string): number {
+  if (!isHex(a) || !isHex(b)) return NaN;
+  const la = relativeLuminance(a);
+  const lb = relativeLuminance(b);
+  const [hi, lo] = la > lb ? [la, lb] : [lb, la];
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+/** WCAG AA floor for large text (≥18.66px bold / 24px) and non-text UI. */
+export const AA_LARGE_TEXT_RATIO = 3;
+/** WCAG AA floor for body text. */
+export const AA_BODY_TEXT_RATIO = 4.5;
+
+/**
+ * Lighten (on a dark background) or darken (on a light one) `color` until it
+ * clears `minRatio` against `background`. Returns the color untouched when it
+ * already passes, so brand colors that are legible stay exactly on-brand.
+ *
+ * Steps in small increments and returns the first passing shade — the point is
+ * a readable color that still reads as the team's, not maximum contrast.
+ *
+ * An unusable `color` or `background` (not a 6-digit hex) returns the color
+ * untouched: with no measurable surface there's no shade to aim for, and
+ * shifting blind would mangle a brand color to no purpose. Without the
+ * background guard, `contrastRatio`'s NaN would fail every comparison and drive
+ * the loop all the way to pure white or black.
+ */
+export function ensureContrastOn(
+  color: string,
+  background: string,
+  minRatio: number = AA_LARGE_TEXT_RATIO,
+): string {
+  if (!isHex(color) || !isHex(background)) return color;
+  if (contrastRatio(color, background) >= minRatio) return color;
+  const dir = relativeLuminance(background) < 0.5 ? 1 : -1; // dark bg → lighten
+  let out = color;
+  for (let step = 0.05; step <= 1.0001; step += 0.05) {
+    out = shiftLightness(color, dir * step);
+    if (contrastRatio(out, background) >= minRatio) return out;
+  }
+  return out; // pure white/black — the best this background allows
+}
+
 /** Mix a color toward white (amount>0) or black (amount<0); amount in -1..1. */
 export function shiftLightness(hex: string, amount: number): string {
   const [r, g, b] = parseHex(hex);

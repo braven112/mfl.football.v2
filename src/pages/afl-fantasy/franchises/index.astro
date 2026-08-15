@@ -13,6 +13,7 @@ import { buildHistoricalIdentities } from '../../../utils/franchise-eras';
 import { stripBadgeYear, namespaceBadgeIds } from '../../../utils/afl-badge';
 import { PREMIER_LEAGUE, D_LEAGUE, getTierLogo, getTierLogoDark } from '../../../utils/afl-tier-logo';
 import ThemeImage from '../../../components/ThemeImage.astro';
+import { teamAccentVar } from '../../../utils/team-accent-css';
 
 const { byFranchise, yearsCovered } = getAflCareerStats();
 const firstYear = yearsCovered[0];
@@ -199,7 +200,7 @@ const historicalIdentities = buildHistoricalIdentities(aflConfig.teams as any[])
             <a
               class="franchise-card"
               href={`/afl-fantasy/franchises/${team.franchiseId}`}
-              style={team.colorPrimary ? `--accent: ${team.colorPrimary};` : ''}
+              style={`--accent: ${teamAccentVar(team.franchiseId, 'var(--league-accent, #c41e3a)')};`}
             >
               <div class="card-body">
                 <div class="lockup">

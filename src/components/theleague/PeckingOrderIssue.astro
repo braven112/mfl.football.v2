@@ -10,6 +10,7 @@
  * identical either way.
  */
 import leagueConfig from '../../data/theleague.config.json';
+import { teamAccentVar } from '../../utils/team-accent-css';
 
 export interface RankingRow {
   rank: number;
@@ -21,12 +22,10 @@ export interface RankingRow {
     composite: number | null;
     rolling3Ppg: number | null;
     seasonPpg: number | null;
+    allPlayPct?: number | null;
     avgMargin?: number | null;
-    formScore?: number | null;
-    recordScore?: number | null;
     allPlayScore?: number | null;
-    seasonPpgScore?: number | null;
-    marginScore?: number | null;
+    formScore?: number | null;
   };
 }
 
@@ -91,6 +90,34 @@ for (const t of (leagueConfig as any).teams) {
   teams.set(t.franchiseId, t);
 }
 
+/**
+ * Brand accent for a card — the site-wide franchise token, not the raw config
+ * color. It paints the rank numeral (28px bold — WCAG "large text") and the
+ * card's brand edge, so it has to clear 3:1 on whichever theme is rendering;
+ * the token carries a value per theme (src/utils/team-accent-css.ts). Raw
+ * brand colors miss that badly in one direction or the other — Bring The
+ * Pain's near-black is 1.2:1 on a dark card, Midwestside's yellow 1.5:1 on a
+ * white one.
+ */
+const accentStyle = (franchiseId: string | undefined) =>
+  `--pr-accent: ${teamAccentVar(franchiseId ?? '', 'var(--color-primary, #2563eb)')}`;
+
+/**
+ * Three awards carry a meaning-colored edge instead of the winner's brand
+ * color — cold blue for the cooler, hot orange-red for the heater, pink for
+ * the bench blunder. The values are theme-pair tokens declared on `.pr-issue`
+ * below (a raw hex here would be stuck on one theme); everything else keeps
+ * the franchise accent.
+ */
+const AWARD_ACCENTS: Record<string, string> = {
+  coolerOfWeek: 'var(--pr-award-cooler)',
+  heaterOfWeek: 'var(--pr-award-heater)',
+  benchBlunder: 'var(--pr-award-blunder)',
+};
+
+const awardAccentStyle = (key: string, franchiseId: string | undefined) =>
+  AWARD_ACCENTS[key] ? `--pr-accent: ${AWARD_ACCENTS[key]}` : accentStyle(franchiseId);
+
 const trendGlyph = (t: 'up' | 'down' | 'flat') =>
   t === 'up' ? '▲' : t === 'down' ? '▼' : '–';
 
@@ -108,8 +135,11 @@ const orderedAwards: { key: string; card: AwardCard | null }[] = [
   { key: 'cutOfShame',     card: issue.awards.cutOfShame },
 ];
 
+// Issues carry the methodology they were generated under, so an archived issue
+// keeps describing its own math. The fallback matches describeMethodology()
+// (scripts/lib/pecking-order-math.mjs) for issues written before that field.
 const methodology = issue.methodology
-  ?? '35% recent form (rolling-3wk PPG) · 25% record · 20% all-play % · 10% season PPG · 10% avg margin';
+  ?? '50% all-play record · 50% last 3 weeks (rolling-3wk PPG)';
 ---
 
 <article class="pr-issue">
@@ -141,9 +171,8 @@ const methodology = issue.methodology
     <ol class="pr-rankings">
       {issue.rankings.map(row => {
         const team = teams.get(row.franchiseId);
-        const accent = team?.color || 'var(--color-primary, #2563eb)';
         return (
-          <li class="pr-card" style={`--pr-accent: ${accent}`}>
+          <li class="pr-card" style={accentStyle(row.franchiseId)}>
             <div class="pr-card__rank">
               <div class="pr-card__rank-num">{row.rank}</div>
               {row.previousRank != null && (
@@ -164,6 +193,9 @@ const methodology = issue.methodology
               </div>
               <p class="pr-card__blurb">{row.blurb}</p>
               <div class="pr-card__metrics">
+                {row.metrics.allPlayPct != null && (
+                  <span class="pr-card__metric"><span>All-play</span><strong>{(row.metrics.allPlayPct * 100).toFixed(1)}%</strong></span>
+                )}
                 {row.metrics.rolling3Ppg != null && (
                   <span class="pr-card__metric"><span>L3 PPG</span><strong>{row.metrics.rolling3Ppg.toFixed(1)}</strong></span>
                 )}
@@ -187,13 +219,12 @@ const methodology = issue.methodology
   <section class="pr-section" aria-label="Weekly awards">
     <h2 class="pr-section__title">Awards</h2>
     <div class="pr-awards">
-      {orderedAwards.filter(a => a.card).map(({ card }) => {
+      {orderedAwards.filter(a => a.card).map(({ key, card }) => {
         const fid = card!.franchiseId ?? card!.homeId;
         const team = fid ? teams.get(fid) : null;
         const second = card!.awayId ? teams.get(card!.awayId) : null;
-        const accent = team?.color ?? 'var(--color-primary, #2563eb)';
         return (
-          <div class="pr-award" style={`--pr-accent: ${accent}`}>
+          <div class="pr-award" style={awardAccentStyle(key, fid)}>
             <div class="pr-award__title">{card!.title}</div>
             <div class="pr-award__recipient">
               {team?.icon && <img src={team.icon} alt="" loading="lazy" width="28" height="28" />}
@@ -280,6 +311,19 @@ const methodology = issue.methodology
   max-width: 1100px;
   margin: 0 auto;
   padding: 1.5rem 1rem 4rem;
+
+  /* Award edge colors that mean something rather than naming a team: cold blue
+     for the cooler, hot orange-red for the heater, pink for the bench blunder.
+     Light values first, dark below — each side clears 3:1 on its own card
+     surface (5.2:1 / 5.2:1 / 6.0:1 on white, 6.0:1 / 6.7:1 / 5.7:1 on #262626). */
+  --pr-award-cooler: #2563eb;
+  --pr-award-heater: #c2410c;
+  --pr-award-blunder: #be185d;
+}
+:global(html.dark) .pr-issue {
+  --pr-award-cooler: #60a5fa;
+  --pr-award-heater: #fb923c;
+  --pr-award-blunder: #f472b6;
 }
 .pr-hero {
   border-bottom: 1px solid var(--content-border, #e5e7eb);
@@ -387,8 +431,13 @@ const methodology = issue.methodology
   font-size: 0.7rem;
   font-weight: 700;
 }
-.pr-card__trend--up { color: #16a34a; }
-.pr-card__trend--down { color: #dc2626; }
+/* The delta is 11px bold — small text, so it needs 4.5:1 in both themes. Light
+   literals are darkened from the old #16a34a/#dc2626 (3.1:1 / 4.5:1 on white);
+   dark mode takes the token pair, which is tuned for a dark surface. */
+.pr-card__trend--up { color: #15803d; }
+.pr-card__trend--down { color: #b91c1c; }
+:global(html.dark) .pr-card__trend--up { color: var(--color-success-dark, #6ee7b7); }
+:global(html.dark) .pr-card__trend--down { color: var(--color-error-dark, #fca5a5); }
 .pr-card__trend--flat { color: var(--content-text-muted, #6b7280); }
 .pr-card__heading {
   display: flex;

@@ -7,8 +7,14 @@ import {
   forceContrast,
   ensureLegibleOn,
   resolveTeamColorPair,
+  contrastRatio,
+  ensureContrastOn,
+  AA_LARGE_TEXT_RATIO,
+  AA_BODY_TEXT_RATIO,
   DEFAULT_MIN_CONTRAST,
 } from '../src/utils/team-color-contrast';
+import { getTeamAccentPair } from '../src/utils/team-colors';
+import theleagueConfig from '../src/data/theleague.config.json';
 
 describe('colorDistance', () => {
   it('is 0 for identical colors and large for black↔white', () => {
@@ -104,5 +110,88 @@ describe('resolveTeamColorPair', () => {
     const r = resolveTeamColorPair(undefined, undefined);
     expect(r.home).toMatch(/^#[0-9a-f]{6}$/i);
     expect(r.away).toMatch(/^#[0-9a-f]{6}$/i);
+  });
+});
+
+describe('contrastRatio', () => {
+  it('spans 1 (identical) to 21 (black on white)', () => {
+    expect(contrastRatio('#123456', '#123456')).toBeCloseTo(1, 6);
+    expect(contrastRatio('#000000', '#ffffff')).toBeCloseTo(21, 1);
+  });
+
+  it('is symmetric', () => {
+    expect(contrastRatio('#cc2936', '#262626')).toBeCloseTo(contrastRatio('#262626', '#cc2936'), 10);
+  });
+
+  it('returns NaN rather than a confident wrong answer for non-hex input', () => {
+    // parseHex substitutes a default color for garbage; a ratio computed off
+    // that would be a meaningless PASS. NaN fails every >= comparison instead.
+    expect(contrastRatio('var(--x)', '#262626')).toBeNaN();
+    expect(contrastRatio('#262626', 'rgb(38,38,38)')).toBeNaN();
+    expect(contrastRatio('#262626', undefined as any)).toBeNaN();
+    expect(contrastRatio('#fff', '#262626')).toBeNaN(); // 3-digit shorthand
+  });
+
+  it('catches what ΔE misses — distinct hues that are still unreadable', () => {
+    // Cowboy Up navy on the dark card: clearly a different color, invisible.
+    expect(colorDistance('#0d2b56', '#262626')).toBeGreaterThan(18);
+    expect(contrastRatio('#0d2b56', '#262626')).toBeLessThan(1.2);
+  });
+});
+
+describe('ensureContrastOn', () => {
+  it('leaves a color that already passes untouched', () => {
+    expect(ensureContrastOn('#ffcd00', '#262626', AA_LARGE_TEXT_RATIO)).toBe('#ffcd00');
+  });
+
+  it('lightens on a dark background until the floor is cleared', () => {
+    const out = ensureContrastOn('#1a1a1a', '#262626', AA_LARGE_TEXT_RATIO);
+    expect(contrastRatio(out, '#262626')).toBeGreaterThanOrEqual(AA_LARGE_TEXT_RATIO);
+    expect(relativeLuminance(out)).toBeGreaterThan(relativeLuminance('#1a1a1a'));
+  });
+
+  it('darkens on a light background until the floor is cleared', () => {
+    const out = ensureContrastOn('#ffcd00', '#ffffff', AA_LARGE_TEXT_RATIO);
+    expect(contrastRatio(out, '#ffffff')).toBeGreaterThanOrEqual(AA_LARGE_TEXT_RATIO);
+    expect(relativeLuminance(out)).toBeLessThan(relativeLuminance('#ffcd00'));
+  });
+
+  it('honors a stricter body-text floor', () => {
+    const out = ensureContrastOn('#4b92db', '#ffffff', AA_BODY_TEXT_RATIO);
+    expect(contrastRatio(out, '#ffffff')).toBeGreaterThanOrEqual(AA_BODY_TEXT_RATIO);
+  });
+
+  it('passes non-hex input through untouched', () => {
+    expect(ensureContrastOn('var(--x)', '#262626')).toBe('var(--x)');
+  });
+
+  it('leaves the color alone when the BACKGROUND is unmeasurable', () => {
+    // Without this guard the NaN ratio fails every comparison and the loop
+    // walks the color all the way to white.
+    expect(ensureContrastOn('#cc2936', 'var(--card-bg)')).toBe('#cc2936');
+    expect(ensureContrastOn('#cc2936', 'radial-gradient(#fff, #000)')).toBe('#cc2936');
+  });
+});
+
+describe('franchise accents are readable in both themes', () => {
+  // Guards the Pecking Order's rank numerals and brand edges, which take their
+  // color straight from getTeamAccentPair. Before this rule, seven TheLeague
+  // franchises rendered their accent below 3:1 on the dark card — Bring The
+  // Pain's near-black at 1.15:1, Cowboy Up's navy at 1.08:1.
+  const SURFACES = { light: '#ffffff', dark: '#262626' };
+
+  it.each((theleagueConfig as any).teams.map((t: any) => [t.nameMedium ?? t.franchiseId, t.franchiseId]))(
+    '%s clears 3:1 on both card surfaces',
+    (_name: string, franchiseId: string) => {
+      const { light, dark } = getTeamAccentPair(franchiseId, 'theleague');
+      expect(contrastRatio(light, SURFACES.light)).toBeGreaterThanOrEqual(AA_LARGE_TEXT_RATIO);
+      expect(contrastRatio(dark, SURFACES.dark)).toBeGreaterThanOrEqual(AA_LARGE_TEXT_RATIO);
+    },
+  );
+
+  it('falls back to a readable accent for an unknown franchise', () => {
+    const { light, dark } = getTeamAccentPair('9999', 'theleague');
+    expect(contrastRatio(light, SURFACES.light)).toBeGreaterThanOrEqual(AA_LARGE_TEXT_RATIO);
+    expect(contrastRatio(dark, SURFACES.dark)).toBeGreaterThanOrEqual(AA_LARGE_TEXT_RATIO);
   });
 });
