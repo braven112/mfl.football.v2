@@ -8,6 +8,7 @@ import {
 } from '../scripts/measure-crest-contrast.mjs';
 import {
   buildCrestDarkStrokeCss,
+  withStrokeColors,
   CREST_STROKE_FILTER,
   crestStrokeFilter,
   DEFAULT_CREST_STROKE_COLOR,
@@ -117,17 +118,34 @@ describe('buildCrestDarkStrokeCss', () => {
 describe('iconStrokeDark overrides', () => {
   const configs: Record<string, any> = { theleague: theleagueConfig, afl: aflConfig };
 
-  it('only sets iconStrokeDark on teams that actually get a stroke', () => {
-    // An override on a team that is never stroked is dead config — it reads as
-    // if it were doing something, and nothing would reveal that it isn't.
+  it('only opts OUT teams the measurement actually flagged', () => {
+    // `false` says "don't stroke this" — on a crest that was never going to be
+    // stroked it is dead config: it reads as if it were doing something, and
+    // nothing would reveal that it isn't. A COLOR is different; it opts an
+    // unflagged crest in (see the next test).
     const stroked = new Set(manifest.needsStroke.map((e: any) => `${e.league}:${e.franchiseId}`));
+    for (const [slug, cfg] of Object.entries(configs)) {
+      for (const t of cfg.teams ?? []) {
+        if (t.iconStrokeDark !== false) continue;
+        expect(
+          stroked.has(`${slug}:${t.franchiseId}`),
+          `${slug} ${t.name} sets iconStrokeDark: false but is not in the stroke manifest`,
+        ).toBe(true);
+      }
+    }
+  });
+
+  it('never sets iconStrokeDark on a team that has an iconDark', () => {
+    // Real dark artwork swaps; stroking as well rings a crest already drawn for
+    // dark mode. The manifest enforces this for measured crests, so the opt-in
+    // path is the only way it could sneak back in.
     for (const [slug, cfg] of Object.entries(configs)) {
       for (const t of cfg.teams ?? []) {
         if (t.iconStrokeDark === undefined) continue;
         expect(
-          stroked.has(`${slug}:${t.franchiseId}`),
-          `${slug} ${t.name} sets iconStrokeDark but is not in the stroke manifest`,
-        ).toBe(true);
+          t.iconDark,
+          `${slug} ${t.name} has both iconDark and iconStrokeDark`,
+        ).toBeUndefined();
       }
     }
   });
@@ -150,6 +168,65 @@ describe('iconStrokeDark overrides', () => {
     ]);
     expect(css).toContain('[src="https://mflfootballv2.vercel.app/assets/afl/icons/badd_boys.png"]');
     expect(css).toContain('[src="/assets/afl/icons/badd_boys.png"]');
+  });
+
+  it('carries a measured crest through with its config color', () => {
+    const teams = [{ franchiseId: '0005', icon: '/cpu.png', iconStrokeDark: '#2b972b' }];
+    const entries = withStrokeColors('afl', teams, {
+      needsStroke: [{ league: 'afl', franchiseId: '0005', icon: '/cpu.png', legible: 0.31 }],
+    });
+    expect(entries).toHaveLength(1);
+    expect(entries[0].strokeColor).toBe('#2b972b');
+    expect(buildCrestDarkStrokeCss(entries)).toContain(crestStrokeFilter('#2b972b'));
+  });
+
+  it('opts an unmeasured crest IN when its config names a color', () => {
+    // The score counts legible PIXELS, so a crest that is bright through the
+    // middle and dark around its rim clears the threshold while the silhouette
+    // it presents to the card still dissolves into it (Jewpacabra, 68%).
+    const teams = [{ franchiseId: '0018', icon: '/jew.png', iconStrokeDark: '#0cc77c' }];
+    const css = buildCrestDarkStrokeCss(withStrokeColors('afl', teams, { needsStroke: [] }));
+    expect(css).toContain('[src="/jew.png"]');
+    expect(css).toContain(crestStrokeFilter('#0cc77c'));
+  });
+
+  it('does not opt in on false, or over an iconDark', () => {
+    // `false` on an unmeasured crest has nothing to opt out of, and a team with
+    // real dark artwork swaps rather than being ringed.
+    const css = buildCrestDarkStrokeCss(
+      withStrokeColors(
+        'afl',
+        [
+          { franchiseId: '0001', icon: '/a.png', iconStrokeDark: false },
+          { franchiseId: '0002', icon: '/b.png', iconStrokeDark: '#0cc77c', iconDark: '/b-dark.png' },
+        ],
+        { needsStroke: [] },
+      ),
+    );
+    expect(css).toBe('');
+  });
+
+  it('ignores manifest entries from another league', () => {
+    // Franchise ids collide across leagues — both have an 0011.
+    const entries = withStrokeColors('afl', [], {
+      needsStroke: [{ league: 'theleague', franchiseId: '0011', icon: '/mw.png', legible: 0.24 }],
+    });
+    expect(entries).toEqual([]);
+  });
+
+  it('gives every config opt-in a rule in the real emitted CSS', () => {
+    // The end-to-end check: a hand-picked color in a committed config must
+    // actually reach the stylesheet, whether or not the measurement flagged it.
+    for (const [slug, cfg] of Object.entries(configs)) {
+      const css = buildCrestDarkStrokeCss(withStrokeColors(slug, cfg.teams));
+      for (const t of cfg.teams ?? []) {
+        if (!t.iconStrokeDark) continue;
+        expect(css, `${slug} ${t.name}: no rule emitted`).toContain(`[src="${t.icon}"]`);
+        expect(css, `${slug} ${t.name}: color not applied`).toContain(
+          crestStrokeFilter(t.iconStrokeDark),
+        );
+      }
+    }
   });
 
   it('every override color itself clears 3:1 on the dark card', () => {
