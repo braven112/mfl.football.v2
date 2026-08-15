@@ -197,8 +197,12 @@ export interface TeamConfig {
    * color separates the logo from the dark card as well as white does and
    * keeps the team's identity (Midwestside's gold). Must itself clear 3:1 on
    * the dark card; `tests/crest-dark-stroke.test.ts` enforces that.
+   *
+   * `false` opts the crest out of the stroke entirely, for a logo the pixel
+   * measurement flags but that reads fine to a human (Dark Magicians). The
+   * measurement is a filter, not the final word.
    */
-  iconStrokeDark?: string;
+  iconStrokeDark?: string | false;
   banner?: string;
   groupMe?: string;
   /** Optional dark-mode variant of `groupMe`. Not yet consumed anywhere — reserved for a future GroupMe-crest dark swap, mirroring `iconDark`. */

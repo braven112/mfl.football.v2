@@ -38,6 +38,8 @@
  * <TeamIconCell icon={row.icon} name={row.name} emphasis={row.isUser} />
  * ```
  */
+import { preferredIconSrc } from '../utils/team-icon-dark-css';
+
 export interface Props {
   /** Light-mode crest from the league config (`team.icon`). */
   icon?: string;
@@ -48,12 +50,20 @@ export interface Props {
 }
 
 const { icon, name, emphasis = false } = Astro.props;
+
+// Render our own assets same-origin. The AFL configs store absolute
+// production URLs, which made the homepage open a second DNS+TLS connection
+// just for crests — on cellular they were still in flight long after the rest
+// of the card had painted, so the team column simply looked empty. The dark
+// swap and stroke rules match both forms (see iconSrcVariants), so
+// normalizing here does not cost the crest its dark-mode treatment.
+const src = icon ? preferredIconSrc(icon) : undefined;
 ---
 
-{icon ? (
+{src ? (
   <>
     <img
-      src={icon}
+      src={src}
       alt={name}
       class="team-icon-cell"
       loading="lazy"

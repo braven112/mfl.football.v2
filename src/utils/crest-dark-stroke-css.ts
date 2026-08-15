@@ -37,6 +37,8 @@
  * the shared layout <head> — one stylesheet, no per-instance duplication.
  */
 
+import { iconSrcVariants } from './team-icon-dark-css';
+
 export interface CrestStrokeEntry {
   /** Light-mode `icon` src exactly as it appears in the league config. */
   icon: string;
@@ -51,8 +53,14 @@ export interface CrestStrokeEntry {
    *
    * The color must clear 3:1 against the dark card itself, or the stroke can't
    * do its job. `tests/crest-dark-stroke.test.ts` enforces that.
+   *
+   * `false` opts the crest OUT of the stroke entirely — for a logo the pixel
+   * measurement scores low but that a human can see reads fine as-is (a dark
+   * crest with its own bright interior detail, say). The measurement is a
+   * useful filter, not the final word; this is the override for when it's
+   * wrong.
    */
-  strokeColor?: string;
+  strokeColor?: string | false;
 }
 
 export interface CrestDarkStrokeOptions {
@@ -116,10 +124,12 @@ export function buildCrestDarkStrokeCss(
 
   for (const entry of entries) {
     if (!entry?.icon) continue;
+    if (entry.strokeColor === false) continue; // explicit opt-out
     const color = entry.strokeColor || DEFAULT_CREST_STROKE_COLOR;
     if (!byColor.has(color)) byColor.set(color, new Set<string>());
     const srcs = byColor.get(color)!;
-    srcs.add(entry.icon);
+    // Match whichever form the call site rendered — see iconSrcVariants.
+    for (const variant of iconSrcVariants(entry.icon)) srcs.add(variant);
     if (options.franchiseIconDir && entry.franchiseId) {
       const dir = options.franchiseIconDir.replace(/\/+$/, '');
       srcs.add(`${dir}/${entry.franchiseId}.png`);

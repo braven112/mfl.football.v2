@@ -118,13 +118,33 @@ describe('iconStrokeDark overrides', () => {
     const stroked = new Set(manifest.needsStroke.map((e: any) => `${e.league}:${e.franchiseId}`));
     for (const [slug, cfg] of Object.entries(configs)) {
       for (const t of cfg.teams ?? []) {
-        if (!t.iconStrokeDark) continue;
+        if (t.iconStrokeDark === undefined) continue;
         expect(
           stroked.has(`${slug}:${t.franchiseId}`),
           `${slug} ${t.name} sets iconStrokeDark but is not in the stroke manifest`,
         ).toBe(true);
       }
     }
+  });
+
+  it('opting out with false removes the crest from the emitted CSS', () => {
+    const css = buildCrestDarkStrokeCss([
+      { icon: '/keep.png' },
+      { icon: '/optout.png', strokeColor: false },
+    ]);
+    expect(css).toContain('[src="/keep.png"]');
+    expect(css).not.toContain('/optout.png');
+  });
+
+  it('matches both the absolute and same-origin form of an AFL icon', () => {
+    // TeamIconCell renders the same-origin path; other surfaces render the raw
+    // absolute config value. A rule that only covered one would silently skip
+    // the other.
+    const css = buildCrestDarkStrokeCss([
+      { icon: 'https://mflfootballv2.vercel.app/assets/afl/icons/badd_boys.png' },
+    ]);
+    expect(css).toContain('[src="https://mflfootballv2.vercel.app/assets/afl/icons/badd_boys.png"]');
+    expect(css).toContain('[src="/assets/afl/icons/badd_boys.png"]');
   });
 
   it('every override color itself clears 3:1 on the dark card', () => {
@@ -141,7 +161,8 @@ describe('iconStrokeDark overrides', () => {
 
     for (const [slug, cfg] of Object.entries(configs)) {
       for (const t of cfg.teams ?? []) {
-        if (!t.iconStrokeDark) continue;
+        // `false` is an opt-out, not a color — nothing to contrast-check.
+        if (!t.iconStrokeDark || t.iconStrokeDark === false) continue;
         const hex = String(t.iconStrokeDark).trim();
         expect(hex, `${slug} ${t.name}: expected a #rrggbb color`).toMatch(/^#[0-9a-f]{6}$/i);
         const rgb = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));

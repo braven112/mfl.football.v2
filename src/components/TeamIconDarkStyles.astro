@@ -29,8 +29,12 @@ import { buildCrestDarkStrokeCss } from '../utils/crest-dark-stroke-css';
  * manifest — regenerating it can never clobber a hand-picked color.
  */
 function withStrokeColors(league: string, teams: any[]) {
-  const colorByFranchise = new Map<string, string>(
-    teams.filter((t) => t?.iconStrokeDark).map((t) => [t.franchiseId, t.iconStrokeDark]),
+  // `iconStrokeDark: false` is an opt-out, so test for presence of the key
+  // rather than truthiness — `filter(t => t.iconStrokeDark)` would drop it.
+  const colorByFranchise = new Map<string, string | false>(
+    teams
+      .filter((t) => t?.iconStrokeDark !== undefined)
+      .map((t) => [t.franchiseId, t.iconStrokeDark]),
   );
   return strokeManifest.needsStroke
     .filter((e) => e.league === league)
