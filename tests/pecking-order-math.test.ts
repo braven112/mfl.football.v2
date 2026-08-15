@@ -160,6 +160,53 @@ describe('computePeckingOrder', () => {
     expect(ranked[0].composite).toBeCloseTo(ranked[1].composite, 8);
   });
 
+  // Both components are min-max normalized, so degenerate inputs (everyone
+  // tied, one team, a franchise with no data at all) collapse the scale. The
+  // math has to stay finite and ordered rather than dividing by a zero range.
+  it('gives everyone the midpoint when the whole league is tied', () => {
+    const fids = ['0001', '0002', '0003'];
+    const standings = new Map(
+      fids.map((id) => [id, { id, all_play_pct: '.500', h2hw: '1', h2hl: '1', h2ht: '0', pf: '300', pa: '300' }]),
+    );
+    const weekly = { weeks: [{ week: 1, scores: { '0001': 100, '0002': 100, '0003': 100 } }] };
+    const ranked = computePeckingOrder({ franchiseIds: fids, standingsByFid: standings, weeklyResults: weekly, week: 1 });
+    expect(ranked.map((r: any) => r.composite)).toEqual([50, 50, 50]);
+    expect(ranked.map((r: any) => r.rank)).toEqual([1, 2, 3]);
+  });
+
+  it('handles a one-franchise league without dividing by a zero range', () => {
+    const ranked = computePeckingOrder({
+      franchiseIds: ['0001'],
+      standingsByFid: new Map([
+        ['0001', { id: '0001', all_play_pct: '.650', h2hw: '3', h2hl: '2', h2ht: '0', pf: '400', pa: '350' }],
+      ]),
+      weeklyResults: { weeks: [{ week: 1, scores: { '0001': 120 } }] },
+      week: 1,
+    });
+    expect(ranked).toHaveLength(1);
+    expect(ranked[0].rank).toBe(1);
+    expect(ranked[0].composite).toBe(50);
+  });
+
+  it('keeps a franchise with no standings row and no scores out of the way, not NaN', () => {
+    const fids = ['0001', '0002', '0099'];
+    const standings = new Map<string, any>([
+      ['0001', { id: '0001', all_play_pct: '.800', h2hw: '4', h2hl: '1', h2ht: '0', pf: '600', pa: '500' }],
+      ['0002', { id: '0002', all_play_pct: '.200', h2hw: '1', h2hl: '4', h2ht: '0', pf: '475', pa: '575' }],
+      // '0099' is in the league but absent from the feed entirely.
+    ]);
+    const weekly = { weeks: [{ week: 1, scores: { '0001': 130, '0002': 90 } }] };
+    const ranked = computePeckingOrder({ franchiseIds: fids, standingsByFid: standings, weeklyResults: weekly, week: 1 });
+    for (const row of ranked) expect(Number.isFinite(row.composite)).toBe(true);
+    const ghost = ranked.find((r: any) => r.fid === '0099')!;
+    // Defaults to a .500 all-play and the midpoint form score — mid-pack, and
+    // its null metrics are what the card checks before rendering them.
+    expect(ghost.composite).toBeCloseTo(50, 8);
+    expect(ghost.rolling3Ppg).toBeNull();
+    expect(ghost.seasonPpg).toBeNull();
+    expect(ghost.avgMargin).toBeNull();
+  });
+
   it('all-play carries a team a hair behind on recent scoring', () => {
     // 0006 is 5 PPG hotter than 0005 over the last three weeks, but 0007's
     // 140-point weeks stretch the form scale, so that edge is worth little —

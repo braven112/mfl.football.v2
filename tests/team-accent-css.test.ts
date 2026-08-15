@@ -63,10 +63,15 @@ describe('buildTeamAccentCss', () => {
       expect(css).toContain(`html[data-league="${slug}"]{`);
       expect(css).toContain(`html.dark[data-league="${slug}"]{`);
     }
-    // TheLeague's 0001 (Pigskins red) and the AFL's 0001 are different teams.
-    const tl = getTeamAccentPair('0001', 'theleague');
-    const afl = getTeamAccentPair('0001', 'afl');
-    expect(tl.light).not.toBe(afl.light);
+    // TheLeague's 0001 and the AFL's 0001 are different teams, so each league's
+    // block must carry its own declaration for that id. Asserting the VALUES
+    // differ would be wrong — two franchises can legitimately resolve to the
+    // same readable hex without the scoping being broken.
+    for (const slug of ['theleague', 'afl'] as const) {
+      const block = css.slice(css.indexOf(`html[data-league="${slug}"]{`));
+      const declaration = `${teamAccentProperty('0001')}:${getTeamAccentPair('0001', slug).light}`;
+      expect(block.slice(0, block.indexOf('}')), `${slug} block`).toContain(declaration);
+    }
   });
 
   it('orders the dark block after the light one so it wins the cascade', () => {

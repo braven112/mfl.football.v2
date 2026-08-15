@@ -59,7 +59,13 @@ export function teamAccentVar(franchiseId: string, fallback?: string): string {
   return fallback ? `var(${prop}, ${fallback})` : `var(${prop})`;
 }
 
-/** Franchise ids are MFL's zero-padded digits — refuse anything else into CSS. */
+/**
+ * Only ids that are safe as a CSS custom-property name get a declaration.
+ * In practice every league's ids are MFL's zero-padded digits ('0001'); the
+ * allowlist is a little wider than that so a future id scheme doesn't silently
+ * lose its colors, but it still refuses anything that could close the
+ * declaration or the surrounding <style> element.
+ */
 const isSafeFranchiseId = (id: unknown): id is string =>
   typeof id === 'string' && /^[A-Za-z0-9_-]{1,16}$/.test(id);
 

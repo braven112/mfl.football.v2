@@ -112,8 +112,15 @@ export function relativeLuminance(hex: string): number {
  * this?". ΔE answers "do these look like different colors?", which a brand
  * color can pass while still being unreadable (a navy on near-black are
  * perceptually distinct hues at a 1.1:1 contrast ratio).
+ *
+ * Returns NaN if either input isn't a 6-digit hex. `parseHex` substitutes a
+ * default color for garbage, which is fine for a gradient but would hand back a
+ * confident, meaningless ratio here — and a wrong PASS is exactly what an
+ * accessibility check must never do. NaN fails every `>=` comparison, so a
+ * caller that ignores this can only end up more conservative, never less.
  */
 export function contrastRatio(a: string, b: string): number {
+  if (!isHex(a) || !isHex(b)) return NaN;
   const la = relativeLuminance(a);
   const lb = relativeLuminance(b);
   const [hi, lo] = la > lb ? [la, lb] : [lb, la];
@@ -132,13 +139,19 @@ export const AA_BODY_TEXT_RATIO = 4.5;
  *
  * Steps in small increments and returns the first passing shade — the point is
  * a readable color that still reads as the team's, not maximum contrast.
+ *
+ * An unusable `color` or `background` (not a 6-digit hex) returns the color
+ * untouched: with no measurable surface there's no shade to aim for, and
+ * shifting blind would mangle a brand color to no purpose. Without the
+ * background guard, `contrastRatio`'s NaN would fail every comparison and drive
+ * the loop all the way to pure white or black.
  */
 export function ensureContrastOn(
   color: string,
   background: string,
   minRatio: number = AA_LARGE_TEXT_RATIO,
 ): string {
-  if (!isHex(color)) return color;
+  if (!isHex(color) || !isHex(background)) return color;
   if (contrastRatio(color, background) >= minRatio) return color;
   const dir = relativeLuminance(background) < 0.5 ? 1 : -1; // dark bg → lighten
   let out = color;

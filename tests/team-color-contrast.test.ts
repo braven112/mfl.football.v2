@@ -123,6 +123,15 @@ describe('contrastRatio', () => {
     expect(contrastRatio('#cc2936', '#262626')).toBeCloseTo(contrastRatio('#262626', '#cc2936'), 10);
   });
 
+  it('returns NaN rather than a confident wrong answer for non-hex input', () => {
+    // parseHex substitutes a default color for garbage; a ratio computed off
+    // that would be a meaningless PASS. NaN fails every >= comparison instead.
+    expect(contrastRatio('var(--x)', '#262626')).toBeNaN();
+    expect(contrastRatio('#262626', 'rgb(38,38,38)')).toBeNaN();
+    expect(contrastRatio('#262626', undefined as any)).toBeNaN();
+    expect(contrastRatio('#fff', '#262626')).toBeNaN(); // 3-digit shorthand
+  });
+
   it('catches what ΔE misses — distinct hues that are still unreadable', () => {
     // Cowboy Up navy on the dark card: clearly a different color, invisible.
     expect(colorDistance('#0d2b56', '#262626')).toBeGreaterThan(18);
@@ -154,6 +163,13 @@ describe('ensureContrastOn', () => {
 
   it('passes non-hex input through untouched', () => {
     expect(ensureContrastOn('var(--x)', '#262626')).toBe('var(--x)');
+  });
+
+  it('leaves the color alone when the BACKGROUND is unmeasurable', () => {
+    // Without this guard the NaN ratio fails every comparison and the loop
+    // walks the color all the way to white.
+    expect(ensureContrastOn('#cc2936', 'var(--card-bg)')).toBe('#cc2936');
+    expect(ensureContrastOn('#cc2936', 'radial-gradient(#fff, #000)')).toBe('#cc2936');
   });
 });
 
