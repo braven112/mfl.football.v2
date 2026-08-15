@@ -144,6 +144,14 @@
       "impact": "user",
       "area": "homepage",
       "league": "theleague"
+    },
+    {
+      "date": "2026-08-14",
+      "type": "bug-fix",
+      "summary": "Managing a player in dark mode was a flashbang. Tap the three dots next to anyone on your AFL roster and the action menu came up as a stark white card — and worse, the player's name came up white ON that white card, so the one thing you needed to read was the one thing you couldn't. The card, the four action rows, the confirmation copy and the success and error banners now all wear the same navy the rest of the site does, with the AFL red showing up on hover where it belongs. Light mode looks exactly like it did yesterday.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "afl"
     }
   ]
 }

@@ -1716,3 +1716,59 @@ scope a `:focus-visible` override to it rather than trusting the global ring —
 check the ring color against the actual background, not against the page; and
 (b) define its token family once, with a comment saying why there is no dark
 block, so a future sweep doesn't "fix" the missing override.
+
+---
+
+## 2026-08-14 - Half-Tokenized Components Fail Worse Than Fully Hardcoded Ones
+
+**Context:** The AFL player action modal (`AFLActionModal.astro`) rendered in
+dark mode as a white card with near-white text on it — the player's name was
+invisible. Nothing in the component was "wrong" in isolation.
+
+**Insight:** The component was *half* tokenized. Its ink came from
+`var(--color-gray-900, #111827)` / `--color-gray-600` (which invert to light
+values under `html.dark`), while its surfaces were literals (`background: #fff`,
+`border: 1px solid #e5e7eb`, pastel `#fef2f2` / `#ecfdf5` alert fills) that
+cannot invert. Light mode is pixel-perfect, so it ships and stays shipped.
+
+That's a third row for the table in the 2026-08-10 entry above:
+
+| Failure | Symptom | Caught by the guard? |
+|---|---|---|
+| Token defined nowhere | Hardcoded fallback renders in BOTH themes | Yes |
+| Token defined light-only | Light value renders in dark mode | No |
+| **Ink tokenized, surface hardcoded** | **Inverted ink lands on a fixed light surface — worst contrast of the three** | **No** |
+
+The tell is a component with *some* `var(--color-gray-*)` and *some* raw hex in
+the same style block. Grep a suspect component for `#fff`/`#f9fafb`/`#e5e7eb`
+next to `var(--color-`; the mixture is the bug, regardless of which half looks
+correct.
+
+**Fix pattern (preserves light mode exactly):** for each literal, check whether
+the token's LIGHT value matches it byte-for-byte. `#6b7280` IS `--color-gray-500`,
+`#374151` IS `--color-gray-700`, `#fff` IS `--card-bg` — those swap to tokens
+with zero light-mode risk and invert for free. Where the light values differ
+(`#e5e7eb` vs `--color-gray-200`'s `#dddedf`), keep the literal and add a
+`:global(html.dark)` override instead. Don't tokenize on name plausibility.
+
+**AFL dark collapses the card/panel elevation ramp — nested surfaces need
+`--color-surface-3`.** Under `html.dark[data-league="afl"]`, `--card-bg`,
+`--card-surface`, `--content-bg` and `--color-surface-2` are all the SAME value
+(`#16283c`). So a child card painted with `--card-bg` inside a panel painted
+with `--card-bg` is invisible — which is exactly what the modal's four action
+rows did once the panel was themed. The elevated step is `--color-surface-3`
+(`#1d3349` AFL, `#2a2a2a` generic dark), with `--content-border` for the edge.
+Generic `html.dark` hides this: there `--card-bg` is a gradient over `#262626`
+and surface-3 is `#2a2a2a`, different enough to look fine. Test nested surfaces
+on the AFL palette, not TheLeague's.
+
+**Corollary:** `--color-surface-3` is defined ONLY in `tokens-dark.css` — it has
+no `:root` value. It passes `design-token-guard` (which asks whether a token is
+defined *anywhere*) but renders its fallback in light mode. Dark-only tokens are
+safe *only* inside a `:global(html.dark)` block. Check which theme file a token
+lives in before using it in a theme-agnostic rule.
+
+**Evidence:** `src/components/afl-fantasy/AFLActionModal.astro` — light rules
+unchanged, all dark behavior in `:global(html.dark)` blocks. Verified with
+`getComputedStyle` on the running page: panel `rgb(22,40,60)`, rows
+`rgb(29,51,73)`, borders `rgb(46,69,96)`.
