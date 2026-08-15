@@ -191,15 +191,18 @@ export interface TeamConfig {
   iconDark?: string;
   /**
    * Optional color for the dark-mode legibility stroke, overriding the default
-   * white (see src/utils/crest-dark-stroke-css.ts). Only consulted for crests
-   * the contrast measurement flagged AND that have no `iconDark` — a team with
-   * real dark artwork is never stroked. Use it when the franchise's own trim
-   * color separates the logo from the dark card as well as white does and
-   * keeps the team's identity (Midwestside's gold). Must itself clear 3:1 on
-   * the dark card; `tests/crest-dark-stroke.test.ts` enforces that.
+   * white (see src/utils/crest-dark-stroke-css.ts). Never applies to a team
+   * with an `iconDark` — real dark artwork swaps instead of being stroked. Use
+   * it when the franchise's own trim color separates the logo from the dark
+   * card as well as white does and keeps the team's identity (Midwestside's
+   * gold). Must itself clear 3:1 on the dark card;
+   * `tests/crest-dark-stroke.test.ts` enforces that.
    *
-   * `false` opts the crest out of the stroke entirely, for a logo the pixel
-   * measurement flags but that reads fine to a human (Dark Magicians). The
+   * Overrides the contrast measurement in both directions. `false` opts a
+   * flagged crest out of the stroke entirely, for a logo the pixel measurement
+   * flags but that reads fine to a human (Dark Magicians). A color on a crest
+   * the measurement did NOT flag opts it in, for a logo that is legible by
+   * pixel count but presents a dark rim to the card (Jewpacabra). The
    * measurement is a filter, not the final word.
    */
   iconStrokeDark?: string | false;
