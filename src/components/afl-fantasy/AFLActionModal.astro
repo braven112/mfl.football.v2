@@ -535,17 +535,37 @@
     cursor: pointer;
   }
 
+  /* Dark: the page is already dark, so the mandated frosted scrim goes
+     deeper (pure black, higher alpha) to separate the panel from the page.
+     Blur is preserved per the modal-backdrop standard — same recipe as
+     TheLeague's ContractDeclarationModal overlay. */
+  :global(html.dark) .afl-action-modal__overlay {
+    background: rgba(0, 0, 0, 0.6);
+  }
+
   .afl-action-modal__content {
     position: relative;
     width: 100%;
     max-width: 460px;
     max-height: 90vh;
     overflow-y: auto;
-    background: #fff;
+    /* --card-bg resolves to --color-white (#fff) in light → pixel-identical;
+       becomes the themed card surface in dark (AFL navy #16283c, or
+       TheLeague's radial gradient). background is SHORTHAND because the
+       generic dark token is a gradient, not a flat color. */
+    background: var(--card-bg, #fff);
     border-radius: 0.75rem;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
     padding: 1.25rem;
     animation: aam-pop 140ms ease-out;
+  }
+
+  /* Hairline border is dark-only (via box-shadow spread so it costs no
+     layout box) — lifts the panel off the navy page. */
+  :global(html.dark) .afl-action-modal__content {
+    box-shadow:
+      0 25px 50px -12px rgba(0, 0, 0, 0.6),
+      0 0 0 1px var(--content-border, #2e4560);
   }
 
   @keyframes aam-pop {
@@ -687,6 +707,12 @@
     border-top: 1px solid var(--color-gray-100, #f3f4f6);
   }
 
+  /* gray-100 inverts to the panel's own surface in dark, so the divider
+     would vanish — point it at the border token instead. */
+  :global(html.dark) .aam-section {
+    border-top-color: var(--content-border, #2e4560);
+  }
+
   .aam-section__title {
     margin: 0 0 0.625rem;
     padding-left: 0.625rem;
@@ -713,10 +739,10 @@
     gap: 0.875rem;
     width: 100%;
     padding: 0.75rem 0.875rem;
-    background: #fff;
+    background: var(--card-bg, #fff);
     border: 1px solid #e5e7eb;
     border-radius: 0.5rem;
-    color: #111827;
+    color: var(--color-gray-900, #111827);
     text-align: left;
     cursor: pointer;
     transition: background-color 120ms ease, border-color 120ms ease;
@@ -728,12 +754,25 @@
 
   .aam-action:hover:not(:disabled) {
     background: #f9fafb;
-    border-color: #c41e3a;
+    border-color: var(--league-accent, #c41e3a);
   }
 
   .aam-action:focus-visible {
-    outline: 2px solid #c41e3a;
+    outline: 2px solid var(--league-accent, #c41e3a);
     outline-offset: 1px;
+  }
+
+  /* Dark: --card-bg equals the panel surface, so rows would disappear into
+     it. Step them up to the elevated surface with a visible border, and
+     tint the hover with the league accent (AFL red brightens to #ef5350). */
+  :global(html.dark) .aam-action {
+    background: var(--color-surface-3, #2a2a2a);
+    border-color: var(--content-border, #2e4560);
+  }
+
+  :global(html.dark) .aam-action:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--league-accent, #ef5350) 14%, var(--color-surface-3, #2a2a2a));
+    border-color: var(--league-accent, #ef5350);
   }
 
   /* Icon tile — same sizing/treatment as cdm-action-option__icon. SVG inside
@@ -775,14 +814,16 @@
 
   .aam-action__desc {
     font-size: 0.75rem;
-    color: #6b7280;
+    /* light value is #6b7280 — identical to what was hardcoded */
+    color: var(--color-gray-500, #6b7280);
   }
 
   .aam-confirm__copy {
     margin: 0 0 1rem;
     font-size: 0.9375rem;
     line-height: 1.5;
-    color: #374151;
+    /* light value is #374151 — identical to what was hardcoded */
+    color: var(--color-gray-700, #374151);
   }
 
   .aam-error,
@@ -805,6 +846,21 @@
     border: 1px solid #a7f3d0;
   }
 
+  /* Dark: the pastel fills read as white blocks on the navy panel — rebuild
+     them as translucent tints of the semantic colors with light-red/green
+     text (--color-*-dark inverts to the light step in dark mode). */
+  :global(html.dark) .aam-error {
+    background: color-mix(in srgb, var(--color-error, #f87171) 22%, var(--content-bg-muted, #181818));
+    border-color: color-mix(in srgb, var(--color-error, #f87171) 40%, transparent);
+    color: var(--color-error-dark, #fca5a5);
+  }
+
+  :global(html.dark) .aam-success {
+    background: color-mix(in srgb, var(--color-success, #34d399) 22%, var(--content-bg-muted, #181818));
+    border-color: color-mix(in srgb, var(--color-success, #34d399) 40%, transparent);
+    color: var(--color-success-dark, #6ee7b7);
+  }
+
   .aam-confirm__actions {
     display: flex;
     justify-content: flex-end;
@@ -825,14 +881,16 @@
     cursor: not-allowed;
   }
 
+  /* All three grays below match their light token values exactly, so light
+     mode is pixel-identical and dark inverts for free. */
   .aam-btn--ghost {
     background: transparent;
-    color: #4b5563;
-    border-color: #d1d5db;
+    color: var(--color-gray-600, #4b5563);
+    border-color: var(--color-gray-300, #d1d5db);
   }
 
   .aam-btn--ghost:hover:not(:disabled) {
-    background: #f3f4f6;
+    background: var(--color-gray-100, #f3f4f6);
   }
 
   .aam-btn--primary {
