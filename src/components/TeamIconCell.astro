@@ -3,9 +3,15 @@
  * TeamIconCell — a team's identity rendered as its crest instead of its name.
  *
  * Used by the compact homepage standings cards, where the team column is the
- * widest thing on a phone and the crest reads faster than the text. The team
- * NAME is still exposed to assistive tech (and to a hover tooltip) via `alt` /
- * `title`, so replacing the text is a visual change only.
+ * widest thing on a phone and the crest reads faster than the text.
+ *
+ * The team NAME survives the swap in two distinct ways, which are not
+ * interchangeable: `alt` is the image's ACCESSIBLE NAME (what a screen reader
+ * announces for the row, and what shows if the crest fails to load), while
+ * `title` is only a hover tooltip for sighted mouse users — it is not a
+ * reliable assistive-tech mechanism and is deliberately not load-bearing here.
+ * Touch users get neither, so never move information a row depends on into
+ * `title` alone.
  *
  * Dark mode needs nothing here: `TeamIconDarkStyles` (shared layout <head>)
  * emits a global `html.dark img[src="<light>"] { content: url("<dark>") }`
