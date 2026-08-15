@@ -182,3 +182,38 @@ so "permanently missing" must NEVER be inferred from one build's 404s (an
 earlier iteration did exactly that and would have randomly dropped a real
 team's dark swap for a whole deploy). Curate permanent 404s by hand; let
 transient ones fall back to the remote ESPN URL via the manifest mechanism.
+
+---
+
+## 2026-08-15 - The swap is free at a new call site — but AFL's coverage gap sets the ceiling
+
+**Context:** The three compact homepage standings cards were changed to render
+the team crest INSTEAD of the team name, via a new shared `TeamIconCell.astro`.
+
+**The good half — nothing to wire up.** Because the swap is a global stylesheet
+keyed on the exact `icon` src, a brand-new component that renders a plain
+`<img src={team.icon}>` inherits dark mode with zero additional code. No
+`ThemeImage`, no `darkSrc` prop, no server-side theme pick (which would be wrong
+under `theme_pref=auto` anyway). Confirmed in-browser rather than assumed, by
+reading `getComputedStyle(img).content` on every crest in the rendered cards
+under `html.dark` — a worthwhile check, since a mismatched src fails silently by
+just rendering the light icon.
+
+**The catch — coverage is wildly asymmetric between the leagues.** TheLeague has
+`iconDark` on 11 of 16 teams; the AFL has it on **1 of 24** (Vitside Mafia). For
+surfaces where the crest sits beside the team NAME that's cosmetic — a dim logo
+next to readable text. On a crest-ONLY surface the crest is the sole identifier,
+so a dark-dominant AFL logo (Badd Boys, e.g.) on the navy card is the difference
+between "slightly muted" and "which team is that." The swap system was working
+exactly as designed; the assets just don't exist.
+
+**Recommendation:** Before building any UI where a team crest REPLACES the team
+name, check `iconDark` coverage for that league first —
+`teams.filter(t => t.iconDark).length` against `teams.length`. If coverage is
+thin, either populate the missing `iconDark` assets as part of the same change,
+or keep the name alongside the crest for that league. Per the 2026-07-09 entry
+above, set those new `iconDark` values as RELATIVE paths even though the AFL's
+`icon` fields are absolute production URLs. Note also that no test enforces
+coverage — `tests/team-icon-dark-styles.test.ts` validates that every declared
+`iconDark` points at a real file, not that any given team declares one — so a
+gap like this is invisible until you look at a dark-mode screenshot.

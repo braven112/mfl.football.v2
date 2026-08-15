@@ -1092,3 +1092,47 @@ it just bites hardest when the theme toggle shares a viewport with the image
 `loading="eager"` for any `ThemeImage` in above-the-fold chrome. Also pass
 `width`/`height` — the intrinsic attributes give the element a size floor that
 survives the scoped CSS rule dying, which is the failure mode described above.
+
+---
+
+## 2026-08-15 - Replacing a Table Column's Text With a Fixed-Size Element Leaves the Column Hogging the Slack
+
+**Context:** Swapping the team NAME for the team CREST in the three compact
+homepage standings cards (`HpStandingsCompact`, `AflStandingsCompact`,
+`AflConferencePlayoffPreview`). The markup change was trivial — drop the name
+span, render a ~32px `<img>`. The first render looked broken anyway: the crest
+sat alone at the left of a Team column roughly 170px wider than the crest, with
+a canyon of whitespace between it and the Record column.
+
+**Insight:** These tables are `width: 100%` with default `table-layout: auto`.
+The auto algorithm distributes the table's surplus width across columns in
+proportion to their *content* width, and the Team column had been the widest
+content by far (a team name), so it kept receiving nearly all the slack even
+after its content shrank to a 32px image. Nothing about the cell was wrong —
+the column simply inherited a share of the surplus sized for text that no
+longer exists. `width: 1%` on that column's `<th>` fixes it: under auto layout
+a percentage below the column's min-content width acts as "shrink to content",
+so the surplus redistributes to the numeric columns, which is where you want it
+on a stat table anyway.
+
+Note this is the mirror image of the 2026-07-07 `max-width: 0` insight in the
+same AFL component. Both are auto-layout width traps in the Team column, and
+they pull opposite ways: an explicit `max-width: 0` is honored as a hard cap and
+*collapses* the column to nothing, while a percentage `width` is a soft hint the
+min-content width overrides, which *shrinks* it to fit. Use `width: 1%` for
+shrink-to-content; never `max-width: 0`.
+
+**Evidence:** 430px-wide Playwright shots of all three cards, before and after,
+in both themes. Before: crest at x≈160 with Record at x≈330. After: the stat
+columns spread across the freed width and the row reads left-to-right without
+the gap. The same one-line rule (`.<block>__th--team { width: 1% }`) fixed all
+three cards, which is itself the tell that this is a layout-algorithm property
+and not a per-card styling mistake.
+
+**Recommendation:** Any time you replace a table cell's text with a
+fixed-dimension element (icon, avatar, sparkline, badge), add
+`width: 1%` to that column's `<th>` in the same change. Don't judge it from the
+markup — auto-layout column widths are invisible in the DOM, so take a
+screenshot at a real narrow viewport. And size the replacement element
+generously while you're there: an icon chosen to match the old text's line
+height usually looks undersized once it's the only thing identifying the row.
