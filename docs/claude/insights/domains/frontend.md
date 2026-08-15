@@ -1039,3 +1039,44 @@ already-prefixed subset of entries broken. Don't assume a sibling component
 already did either just because the import is shared; there's no
 compile-time signal that catches a missing filter or a hand-rolled href, so
 check by hand or with a cross-league smoke test of the page.
+
+---
+
+## 2026-08-15 - A Child Component's Markup Escapes the Parent's Scoped Styles — Swapping an Inline Tag for a Component Silently Kills Its Rules
+
+**Context:** Fixing the AFL tier crest in the sidenav
+(`src/components/nav/NavLinks.astro`), which shipped a single remote
+light-mode SVG and went invisible on the dark drawer. The fix swapped the
+inline `<img src={iconUrl}>` for `<ThemeImage src darkSrc>` so both variants
+render and CSS picks per `html.dark`.
+
+**Insight:** This is the `set:html` trap (2026-07-03) with a different
+trigger, and it's easier to miss because nothing about the markup looks
+dynamic. Astro compiles a scoped `.parent img { … }` to
+`.parent img[data-astro-cid-PARENT]`, and the `<img>` emitted by a CHILD
+component carries the CHILD's cid — so the rule stops matching the moment
+you replace an inline tag with a component that renders that tag. The
+existing `.nav-links__icon img { width: 24px; height: 24px }` went dead on
+the swap, and the failure was near-silent: the parent is a 24px flex box, so
+flex-shrink still pinned the width to 24 and only the HEIGHT blew out (24×30
+for a 0.8-aspect crest). It reads as "the logo looks a bit big," not as
+"an entire CSS rule is no longer applying." Measure
+`getBoundingClientRect()` in the browser rather than trusting that the
+declared `height` took.
+
+Second-order trap specific to `ThemeImage`: once you re-target the rule as
+`.parent :global(img)`, it lands on the same specificity as
+`theme-image.css`'s `html.dark .theme-img--dark` — both (0,2,1) counting the
+scope attribute — so which one wins is stylesheet order, not cascade intent.
+A `display` declaration in the sizing rule then has a real chance of pinning
+both variants visible or both hidden. Restate the three-line light/dark swap
+locally instead of relying on the tie breaking your way.
+
+**Recommendation:** When replacing an inline element with a component that
+renders it, grep the parent's `<style>` block for rules targeting that
+element and re-anchor each as `<scoped-parent> :global(<element>)`. If the
+component is `ThemeImage`, also copy its swap rules down into the parent at
+the new specificity. Prefer `object-fit: contain` over a bare `width`/`height`
+pair on any logo or crest — the AFL/NFL marks are not square, and forcing a
+square box distorts them (which is what the sidenav had been doing to the
+light-mode crest all along, unnoticed, because the rule was working).
