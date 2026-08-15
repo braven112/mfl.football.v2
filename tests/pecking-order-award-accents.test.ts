@@ -12,7 +12,7 @@ import { contrastRatio, AA_LARGE_TEXT_RATIO } from '../src/utils/team-color-cont
  * in whichever theme it was picked in and wash out in the other.
  */
 
-const COMPONENT = resolve(__dirname, '../src/components/theleague/PeckingOrderIssue.astro');
+const COMPONENT = resolve(__dirname, '../src/components/shared/PeckingOrderIssue.astro');
 const source = readFileSync(COMPONENT, 'utf-8');
 
 /** Card surfaces the award edge sits on (tokens.css / tokens-dark.css --card-bg). */

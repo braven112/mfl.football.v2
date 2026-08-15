@@ -117,7 +117,12 @@ jobs:
             # post) and posts its own GroupMe announcement on a fresh write.
             # It self-skips in the offseason and when the week's issue file
             # already exists, so the year-round Tuesday cron is safe.
-            node scripts/generate-pecking-order.mjs --publish $WEEK_ARG
+            #
+            # One league per invocation, sequential: each league has its own
+            # season clock, its own completed week and its own Schefter bot, and
+            # a failure on one must not cost the other its issue.
+            node scripts/generate-pecking-order.mjs --league theleague --publish $WEEK_ARG
+            node scripts/generate-pecking-order.mjs --league afl-fantasy --publish $WEEK_ARG || echo "AFL pecking order failed (non-fatal)"
           elif [ "$ARTICLE_TYPE" = "schedule-strength" ]; then
             # The Gauntlet runs for BOTH leagues: compute fresh derived data
             # first (the article reads the derived JSON, never raw feeds), then
@@ -156,7 +161,7 @@ jobs:
           if [ "$ARTICLE_TYPE" = "schedule-strength" ]; then
             FILES="$FILES,data/afl-fantasy/schefter-feed.json,data/theleague/derived,data/afl-fantasy/derived"
           elif [ "$ARTICLE_TYPE" = "pecking-order" ]; then
-            FILES="data/theleague/pecking-order"
+            FILES="data/theleague/pecking-order,data/afl-fantasy/pecking-order"
           fi
           node scripts/commit-feed-and-push.mjs \
             --branch main \

@@ -1,18 +1,22 @@
 #!/usr/bin/env node
 /**
- * The Pecking Order — Tuesday-morning weekly column generator (TheLeague).
+ * The Pecking Order — Tuesday-morning weekly column generator.
  *
  * Reads committed MFL feeds (weekly results + standings + schedule) for the
- * target year/week and writes a structured JSON issue to
- * <dataPath>/pecking-order/<year>-<week>.json that the
- * /theleague/pecking-order pages render.
+ * target league/year/week and writes a structured JSON issue to
+ * <dataPath>/pecking-order/<year>-<week>.json that the league's
+ * /<league>/pecking-order pages render.
  *
  * Usage:
  *   pnpm generate:pecking-order                        # auto year/week (Labor Day season clock + last completed week)
+ *   pnpm generate:pecking-order --league afl-fantasy
  *   pnpm generate:pecking-order --year 2025 --week 14
  *   pnpm generate:pecking-order --year 2025 --week 14 --regenerate
  *   pnpm generate:pecking-order --dry-run --year 2025 --week 14
  *   pnpm generate:pecking-order --publish              # also post the GroupMe announcement on a fresh write
+ *
+ * One league per invocation (the workflow runs them as sequential steps), so a
+ * failed AFL run can never take TheLeague's issue down with it.
  *
  * Voice: Schefter-voiced headline/lede/blurbs via ANTHROPIC_API_KEY, with a
  * deterministic templated fallback when the key is unset or the AI output
@@ -25,7 +29,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { LEAGUES, leagueOrigin } from '../src/config/leagues-data.mjs';
+import { LEAGUES, leagueUrl } from '../src/config/leagues-data.mjs';
 import { callAnthropic } from './article-utils/ai-client.mjs';
 import { getCompletedWeek } from './article-utils/week-resolver.mjs';
 import { currentSeasonYear } from './lib/schefter-recurrence-ledger.mjs';
@@ -46,20 +50,28 @@ import { num, int } from './lib/team-strength.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 
-// The Pecking Order is TheLeague-only for v1. An AFL edition would need its
-// own voice/lore pass plus tier-aware framing (Premier/Championship), but the
-// math + page component are league-agnostic already.
-const LEAGUE = LEAGUES.theleague;
-
 const COLUMN_NAME = 'The Pecking Order';
+
+/** Leagues that publish the column. Best-ball drafts no games, so no rankings. */
+const VALID_LEAGUES = ['theleague', 'afl-fantasy'];
+
+/**
+ * Per-league Schefter GroupMe bot. Roger's bots are never a fallback — he owns
+ * deadlines, Schefter owns the column (same split as the article generator).
+ */
+const GROUPME_BOT_ENV = {
+  theleague: 'GROUPME_SCHEFTER_BOT_ID',
+  'afl-fantasy': 'GROUPME_AFL_SCHEFTER_BOT_ID',
+};
 
 // ─── CLI ───────────────────────────────────────────────────────────
 
 function parseArgs() {
   const args = process.argv.slice(2);
-  const opts = { year: null, week: null, dryRun: false, regenerate: false, ai: null, publish: false };
+  const opts = { league: 'theleague', year: null, week: null, dryRun: false, regenerate: false, ai: null, publish: false };
   for (let i = 0; i < args.length; i++) {
     switch (args[i]) {
+      case '--league': opts.league = args[++i]; break;
       case '--year': opts.year = parseInt(args[++i], 10); break;
       case '--week': opts.week = parseInt(args[++i], 10); break;
       case '--dry-run': opts.dryRun = true; break;
@@ -73,11 +85,16 @@ function parseArgs() {
         process.exit(0);
     }
   }
+  if (!VALID_LEAGUES.includes(opts.league)) {
+    console.error(`Unknown --league ${opts.league}. Valid leagues: ${VALID_LEAGUES.join(', ')}`);
+    process.exit(1);
+  }
   return opts;
 }
 
 function printUsage() {
-  console.log(`Usage: node scripts/generate-pecking-order.mjs [--year YYYY] [--week N] [--dry-run] [--regenerate] [--publish] [--ai|--no-ai]`);
+  console.log(`Usage: node scripts/generate-pecking-order.mjs [--league SLUG] [--year YYYY] [--week N] [--dry-run] [--regenerate] [--publish] [--ai|--no-ai]`);
+  console.log(`  --league   ${VALID_LEAGUES.join(' | ')} (default theleague)`);
   console.log(`  default    year = current season (Labor Day clock), week = last completed week`);
   console.log(`  --publish  Post the GroupMe announcement when a new issue is written`);
   console.log(`  --ai       Force Schefter voice (requires ANTHROPIC_API_KEY)`);
@@ -94,8 +111,24 @@ async function tryLoadJSON(p) {
   try { return await loadJSON(p); } catch { return null; }
 }
 
-async function loadTeamsConfig() {
-  const cfg = await loadJSON(path.join(projectRoot, ...LEAGUE.configPath.split('/')));
+/**
+ * Team + structure config for one league.
+ *
+ * Always TODAY's config, whatever `--year` says. That is exactly right for the
+ * Tuesday run, which is always ranking the season in progress. It is a known
+ * limitation when backfilling an old season with `--year`: names, icons and
+ * division alignment come out as they are now, not as they were then. The
+ * per-season overlays that fix that (`resolveConfigForYear` +
+ * `applySeasonStructure`, which the AFL needs because it has re-parented
+ * divisions between conferences) are page-side TypeScript; wiring them in here
+ * is the work to do if this column ever backfills seasons in bulk.
+ *
+ * `conferenceOfDivision` is null for TheLeague (four flat divisions) and
+ * resolves the AFL's division to its conference display name, so a division
+ * heading can say which half of the league it belongs to.
+ */
+async function loadTeamsConfig(league) {
+  const cfg = await loadJSON(path.join(projectRoot, ...league.configPath.split('/')));
   const teams = new Map();
   for (const t of cfg.teams) {
     teams.set(t.franchiseId, {
@@ -105,44 +138,104 @@ async function loadTeamsConfig() {
       nameShort: t.nameShort ?? t.name,
       abbrev: t.abbrev,
       aliases: t.aliases,
-      color: t.color,
+      color: t.color ?? t.colorPrimary,
       division: t.division,
+      conference: t.conference,
       icon: t.icon,
       banner: t.banner,
     });
   }
-  return { teams, divisions: cfg.divisions };
+  // AFL: divisions live under conferences ({ name, code, divisions: [...] }).
+  const divisionToConference = new Map();
+  for (const conf of (cfg.conferences || [])) {
+    for (const div of (conf.divisions || [])) divisionToConference.set(div, conf.name);
+  }
+  return {
+    teams,
+    divisions: cfg.divisions,
+    conferenceOfDivision: (name) => divisionToConference.get(name) ?? null,
+  };
 }
 
-function feedDir(year) {
-  return path.join(projectRoot, ...LEAGUE.dataPath.split('/'), 'mfl-feeds', String(year));
+function feedDir(league, year) {
+  return path.join(projectRoot, ...league.dataPath.split('/'), 'mfl-feeds', String(year));
 }
 
-function peckingOrderDir() {
-  return path.join(projectRoot, ...LEAGUE.dataPath.split('/'), 'pecking-order');
+function peckingOrderDir(league) {
+  return path.join(projectRoot, ...league.dataPath.split('/'), 'pecking-order');
 }
 
-function issueFilePath(year, week) {
-  return path.join(peckingOrderDir(), `${year}-${String(week).padStart(2, '0')}.json`);
+function issueFilePath(league, year, week) {
+  return path.join(peckingOrderDir(league), `${year}-${String(week).padStart(2, '0')}.json`);
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────
 
-/** Last-N record from H2H: { wins, losses, ties }. Reads schedule + weekly-results. */
-function rollingRecord(schedule, weeklyResults, franchiseId, throughWeek, n = 3) {
-  const ws = schedule?.schedule?.weeklySchedule || [];
+/**
+ * MFL collapses a one-element list to a bare object — a week with a single
+ * matchup, a bracket with a single franchise. Every list read out of a raw feed
+ * has to go through here or it throws on `.map` the first time a league-year
+ * has a short week (AFL 2012 week 13 is the committed example, and it crashed
+ * the generator outright before this existed).
+ */
+const asArray = (x) => (Array.isArray(x) ? x : x == null ? [] : [x]);
+
+/**
+ * Every week's H2H pairings, keyed by week: Map<week, Array<{ id, isHome }[]>>.
+ *
+ * Two sources, because neither covers both jobs. schedule.json is the only
+ * forward-looking one — it has next week's matchup, which is what Matchup of
+ * the Week previews. weekly-results-raw.json only has weeks already played,
+ * but it exists for every league-year on disk, including the AFL seasons that
+ * predate schedule.json being fetched for that league. Schedule wins where
+ * both have a week; raw fills the rest.
+ */
+export function buildPairings(schedule, rawWeekly) {
+  const byWeek = new Map();
+  const pairingsOf = (matchup) =>
+    asArray(matchup)
+      .map(m => asArray(m?.franchise).map(f => ({ id: f.id, isHome: f.isHome })))
+      .filter(g => g.length === 2);
+
+  for (const entry of asArray(rawWeekly)) {
+    const wk = int(entry?.weeklyResults?.week);
+    if (!wk) continue;
+    const games = pairingsOf(entry.weeklyResults.matchup);
+    if (games.length) byWeek.set(wk, games);
+  }
+  for (const w of asArray(schedule?.schedule?.weeklySchedule)) {
+    const wk = int(w?.week);
+    if (!wk) continue;
+    const games = pairingsOf(w.matchup);
+    if (games.length) byWeek.set(wk, games);
+  }
+  return byWeek;
+}
+
+/**
+ * Record over the last N weeks this franchise played: { wins, losses, ties }.
+ *
+ * Windowed by WEEK rather than by game, to stay in step with the form half of
+ * the composite (rolling-3-week PPG). The AFL plays double-headers — two
+ * opponents, one score, in weeks 1, 2 and 13 of 2025 — so a last-3-GAMES window
+ * would cover barely a week and a half there while the PPG beside it covered
+ * three. For a league that plays once a week the two definitions are identical,
+ * which is why TheLeague's numbers don't move.
+ *
+ * `gamesCounted` is what the blurb quotes ("3-1 over their last 4"), so a
+ * double-header week reads honestly instead of dropping a game on the floor.
+ */
+export function rollingRecord(pairings, weeklyResults, franchiseId, throughWeek, weeks = 3) {
   const weekScores = new Map();
-  for (const w of (weeklyResults?.weeks || [])) {
+  for (const w of asArray(weeklyResults?.weeks)) {
     weekScores.set(int(w.week), w.scores || {});
   }
   const games = [];
-  for (const w of ws) {
-    const wk = int(w.week);
+  for (const [wk, matchups] of pairings.entries()) {
     if (wk > throughWeek) continue;
     const scores = weekScores.get(wk);
     if (!scores) continue;
-    for (const m of (w.matchup || [])) {
-      const fs = m.franchise || [];
+    for (const fs of matchups) {
       const me = fs.find(f => f.id === franchiseId);
       if (!me) continue;
       const opp = fs.find(f => f.id !== franchiseId);
@@ -154,7 +247,11 @@ function rollingRecord(schedule, weeklyResults, franchiseId, throughWeek, n = 3)
     }
   }
   games.sort((a, b) => a.wk - b.wk);
-  const slice = games.slice(-n);
+  // Bye weeks and missing feeds are skipped, not counted: take the last N weeks
+  // the team actually has a scored game in.
+  const playedWeeks = [...new Set(games.map(g => g.wk))].slice(-weeks);
+  const window = new Set(playedWeeks);
+  const slice = games.filter(g => window.has(g.wk));
   let wins = 0, losses = 0, ties = 0;
   for (const g of slice) {
     if (g.myScore > g.oppScore) wins++;
@@ -166,9 +263,9 @@ function rollingRecord(schedule, weeklyResults, franchiseId, throughWeek, n = 3)
 
 // ─── Trend (vs. previous week) ──────────────────────────────────────
 
-async function loadPreviousRankings(year, week) {
+async function loadPreviousRankings(league, year, week) {
   for (let w = week - 1; w >= 1; w--) {
-    const prior = await tryLoadJSON(issueFilePath(year, w));
+    const prior = await tryLoadJSON(issueFilePath(league, year, w));
     if (prior?.rankings?.length) return { week: w, rankings: prior.rankings };
   }
   return null;
@@ -177,7 +274,7 @@ async function loadPreviousRankings(year, week) {
 // ─── Awards (deterministic; templated blurbs as fallback) ───────────
 
 function findStatOfWeek({ teams, weeklyResults, week }) {
-  const wk = (weeklyResults?.weeks || []).find(w => int(w.week) === week);
+  const wk = asArray(weeklyResults?.weeks).find(w => int(w?.week) === week);
   if (!wk?.scores) return null;
   let topFid = null, topScore = -Infinity;
   for (const [fid, s] of Object.entries(wk.scores)) {
@@ -195,11 +292,11 @@ function findStatOfWeek({ teams, weeklyResults, week }) {
 }
 
 function findBenchBlunder({ teams, rawWeekly, week }) {
-  const wk = (rawWeekly || []).find(w => int(w?.weeklyResults?.week) === week);
+  const wk = asArray(rawWeekly).find(w => int(w?.weeklyResults?.week) === week);
   if (!wk) return null;
   let worstFid = null, worstGap = -Infinity, worstActual = 0, worstOptimal = 0;
-  for (const m of (wk.weeklyResults?.matchup || [])) {
-    for (const f of (m.franchise || [])) {
+  for (const m of asArray(wk.weeklyResults?.matchup)) {
+    for (const f of asArray(m?.franchise)) {
       const actual = num(f.score, NaN);
       const optimal = num(f.opt_pts, NaN);
       if (!Number.isFinite(actual) || !Number.isFinite(optimal)) continue;
@@ -245,15 +342,12 @@ function findHeaterAndCooler({ teams, standingsByFid }) {
   return { heater, cooler };
 }
 
-function findMatchupOfWeek({ teams, schedule, rankings, week }) {
-  const ws = schedule?.schedule?.weeklySchedule || [];
-  const next = ws.find(w => int(w.week) === week + 1);
+function findMatchupOfWeek({ teams, pairings, rankings, week }) {
+  const next = pairings.get(week + 1);
   if (!next) return null;
   const rankByFid = new Map(rankings.map(r => [r.franchiseId, r.rank]));
   let pick = null, pickScore = Infinity;
-  for (const m of (next.matchup || [])) {
-    const fs = m.franchise || [];
-    if (fs.length !== 2) continue;
+  for (const fs of next) {
     const [a, b] = fs;
     const ra = rankByFid.get(a.id);
     const rb = rankByFid.get(b.id);
@@ -312,7 +406,7 @@ function rankingBlurb(row, standingsByFid) {
 
 // ─── Standings snapshot ─────────────────────────────────────────────
 
-function buildStandingsSnapshot({ teams, divisions, standingsByFid }) {
+function buildStandingsSnapshot({ teams, divisions, conferenceOfDivision, standingsByFid }) {
   const byDivision = new Map();
   for (const div of divisions) byDivision.set(div, []);
   for (const [fid, t] of teams.entries()) {
@@ -330,6 +424,8 @@ function buildStandingsSnapshot({ teams, divisions, standingsByFid }) {
   }
   const divisionsOut = divisions.map(name => ({
     name,
+    // Omitted entirely for a flat league, so the page renders a bare heading.
+    ...(conferenceOfDivision(name) ? { conference: conferenceOfDivision(name) } : {}),
     teams: (byDivision.get(name) || []).slice().sort((a, b) => {
       if (b.wins !== a.wins) return b.wins - a.wins;
       return b.pf - a.pf;
@@ -389,9 +485,9 @@ function buildHeadlineAndLede({ teams, rankings, awards, week }) {
 
 // ─── Main ──────────────────────────────────────────────────────────
 
-export async function generatePeckingOrder({ year, week, useAI = false }) {
-  const dir = feedDir(year);
-  const teamsConfig = await loadTeamsConfig();
+export async function generatePeckingOrder({ league, year, week, useAI = false }) {
+  const dir = feedDir(league, year);
+  const teamsConfig = await loadTeamsConfig(league);
 
   const [weeklyResults, rawWeekly, standings, schedule] = await Promise.all([
     loadJSON(path.join(dir, 'weekly-results.json')),
@@ -400,8 +496,10 @@ export async function generatePeckingOrder({ year, week, useAI = false }) {
     tryLoadJSON(path.join(dir, 'schedule.json')),
   ]);
 
+  const pairings = buildPairings(schedule, rawWeekly);
+
   const standingsByFid = new Map();
-  for (const f of (standings?.leagueStandings?.franchise || [])) {
+  for (const f of asArray(standings?.leagueStandings?.franchise)) {
     standingsByFid.set(f.id, f);
   }
 
@@ -414,7 +512,7 @@ export async function generatePeckingOrder({ year, week, useAI = false }) {
   });
 
   // Trend vs previous published issue
-  const previous = await loadPreviousRankings(year, week);
+  const previous = await loadPreviousRankings(league, year, week);
   const ranked = attachTrend(rawRankings, previous);
 
   // Awards
@@ -440,7 +538,7 @@ export async function generatePeckingOrder({ year, week, useAI = false }) {
 
   const matchupOfWeek = findMatchupOfWeek({
     teams: teamsConfig.teams,
-    schedule,
+    pairings,
     rankings: namedRankings,
     week,
   });
@@ -448,7 +546,7 @@ export async function generatePeckingOrder({ year, week, useAI = false }) {
   // Templated blurbs (deterministic fallback voice). Structured facts ride
   // along so the AI fact sheet can reference them; stripped before write.
   const rankings = namedRankings.map(r => {
-    const last3Record = rollingRecord(schedule, weeklyResults, r.franchiseId, week, 3);
+    const last3Record = rollingRecord(pairings, weeklyResults, r.franchiseId, week, 3);
     const factsForBlurb = { last3Record, streak: parseStreak(standingsByFid.get(r.franchiseId)?.strk) };
     const withFacts = { ...r, factsForBlurb };
     return { ...withFacts, blurb: rankingBlurb(withFacts, standingsByFid) };
@@ -467,6 +565,7 @@ export async function generatePeckingOrder({ year, week, useAI = false }) {
   const standingsSnapshot = buildStandingsSnapshot({
     teams: teamsConfig.teams,
     divisions: teamsConfig.divisions,
+    conferenceOfDivision: teamsConfig.conferenceOfDivision,
     standingsByFid,
   });
 
@@ -480,6 +579,7 @@ export async function generatePeckingOrder({ year, week, useAI = false }) {
   const generatedAt = new Date().toISOString();
 
   let issue = {
+    league: league.slug,
     year,
     week,
     publishedAt: generatedAt,
@@ -494,7 +594,7 @@ export async function generatePeckingOrder({ year, week, useAI = false }) {
   };
 
   if (useAI) {
-    issue = await applySchefterVoice(issue, teamsConfig.teams);
+    issue = await applySchefterVoice(issue, teamsConfig.teams, league);
   }
 
   // Strip transient fact-bag from output rows
@@ -503,12 +603,16 @@ export async function generatePeckingOrder({ year, week, useAI = false }) {
   return { issue, teams: teamsConfig.teams };
 }
 
-async function applySchefterVoice(issue, teams) {
-  const factSheet = buildFactSheet({ issue, teams });
+async function applySchefterVoice(issue, teams, league) {
+  const factSheet = buildFactSheet({ issue, teams, leagueName: league.name });
   console.log('  Calling Claude for Schefter voice…');
   let aiOutput;
   try {
-    aiOutput = await callAnthropic(getSystemPrompt(), getUserPrompt(factSheet), 4000);
+    aiOutput = await callAnthropic(
+      getSystemPrompt(league.name),
+      getUserPrompt(factSheet, issue.rankings.length),
+      4000,
+    );
   } catch (err) {
     console.warn(`  [warn] AI call failed (${err.message}). Keeping templated voice.`);
     return issue;
@@ -538,7 +642,7 @@ function round2(x) {
 
 // ─── GroupMe announcement ──────────────────────────────────────────
 
-export function buildGroupMeAnnouncement(issue, teams) {
+export function buildGroupMeAnnouncement(issue, teams, league) {
   const top = issue.rankings[0];
   const topTeam = teams.get(top.franchiseId);
   const arrow = top.previousRank == null || top.previousRank === top.rank
@@ -552,18 +656,21 @@ export function buildGroupMeAnnouncement(issue, teams) {
   ];
   if (issue.awards?.statOfWeek) lines.push(`🏆 ${issue.awards.statOfWeek.blurb}`);
   if (issue.awards?.benchBlunder) lines.push(`🪑 ${issue.awards.benchBlunder.blurb}`);
-  const origin = leagueOrigin(LEAGUE);
-  lines.push(`Full rankings, awards, and standings ▸ ${origin}/pecking-order`);
+  // leagueUrl is total in both directions: it strips the prefix on a league's
+  // own apex host and adds one on the shared host, so the link never burns a
+  // redirect hop or 404s.
+  lines.push(`Full rankings, awards, and standings ▸ ${leagueUrl(league, '/pecking-order')}`);
   return lines.join('\n');
 }
 
-async function postAnnouncement(issue, teams) {
-  const text = buildGroupMeAnnouncement(issue, teams);
+async function postAnnouncement(issue, teams, league) {
+  const text = buildGroupMeAnnouncement(issue, teams, league);
+  const botEnv = GROUPME_BOT_ENV[league.slug];
   const { posted } = await postToGroupMe({
-    botId: process.env.GROUPME_SCHEFTER_BOT_ID,
+    botId: process.env[botEnv],
     text,
     checkStatus: true,
-    onMissingBotId: () => console.log('  [groupme] GROUPME_SCHEFTER_BOT_ID not set — skipping announcement.'),
+    onMissingBotId: () => console.log(`  [groupme] ${botEnv} not set — skipping announcement.`),
     onPosted: () => console.log('  [groupme] announcement posted.'),
     onHttpError: (status) => console.warn(`  [groupme] announcement failed: HTTP ${status}`),
     onFetchError: (err) => console.warn(`  [groupme] announcement failed: ${err.message}`),
@@ -573,6 +680,7 @@ async function postAnnouncement(issue, teams) {
 
 async function main() {
   const opts = parseArgs();
+  const league = LEAGUES[opts.league];
 
   const year = opts.year ?? currentSeasonYear();
 
@@ -580,18 +688,18 @@ async function main() {
   // from the feeds. No completed week (offseason / pre-Week-1) → clean exit.
   let week = opts.week;
   if (week == null) {
-    const weeklyResults = await tryLoadJSON(path.join(feedDir(year), 'weekly-results.json'));
-    const teamsConfig = await loadTeamsConfig();
+    const weeklyResults = await tryLoadJSON(path.join(feedDir(league, year), 'weekly-results.json'));
+    const teamsConfig = await loadTeamsConfig(league);
     week = getCompletedWeek(weeklyResults ?? { weeks: [] }, teamsConfig.teams.size || 16);
     if (!week) {
-      console.log(`  [skip] No completed week in ${year} feeds yet (offseason). Exiting cleanly.`);
+      console.log(`  [skip] No completed week in ${league.name} ${year} feeds yet (offseason). Exiting cleanly.`);
       return;
     }
   }
 
-  console.log(`🐔 ${COLUMN_NAME} — ${year} Week ${week}\n`);
+  console.log(`🐔 ${COLUMN_NAME} — ${league.name} ${year} Week ${week}\n`);
 
-  const outPath = issueFilePath(year, week);
+  const outPath = issueFilePath(league, year, week);
   if (!opts.regenerate && !opts.dryRun) {
     const existing = await tryLoadJSON(outPath);
     if (existing) {
@@ -608,17 +716,17 @@ async function main() {
       : Boolean(process.env.ANTHROPIC_API_KEY);
   console.log(`  Voice: ${useAI ? 'schefter (AI)' : 'templated'}`);
 
-  const { issue, teams } = await generatePeckingOrder({ year, week, useAI });
+  const { issue, teams } = await generatePeckingOrder({ league, year, week, useAI });
 
   if (opts.dryRun) {
     console.log('--- DRY RUN ---');
     console.log(JSON.stringify(issue, null, 2));
     console.log('--- GROUPME PREVIEW ---');
-    console.log(buildGroupMeAnnouncement(issue, teams));
+    console.log(buildGroupMeAnnouncement(issue, teams, league));
     return;
   }
 
-  await fs.mkdir(peckingOrderDir(), { recursive: true });
+  await fs.mkdir(peckingOrderDir(league), { recursive: true });
   await fs.writeFile(outPath, JSON.stringify(issue, null, 2) + '\n', 'utf8');
   console.log(`  ✓ Wrote ${path.relative(projectRoot, outPath)}`);
   console.log(`  Headline: ${issue.headline}`);
@@ -630,7 +738,7 @@ async function main() {
   // Announce only on a fresh write (dedup above guarantees this) so a re-run
   // can never re-buzz the chat. Missing bot id skips silently by design.
   if (opts.publish) {
-    await postAnnouncement(issue, teams);
+    await postAnnouncement(issue, teams, league);
   }
 }
 

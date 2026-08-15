@@ -43,19 +43,26 @@ const CURLY_QUOTE_RE = /[‘’“”]/;
  * @param {object} args
  * @param {object} args.issue — partial issue (rankings + awards), pre-AI.
  * @param {Map<string, object>} args.teams — franchiseId → team config.
+ * @param {string} [args.leagueName] — league this issue belongs to.
  * @returns {string} Plaintext fact sheet.
  */
-export function buildFactSheet({ issue, teams }) {
+export function buildFactSheet({ issue, teams, leagueName = 'TheLeague' }) {
+  const size = issue.rankings.length;
   const lines = [];
   lines.push(`THE PECKING ORDER FACT SHEET — ${issue.year} Week ${issue.week}`);
   lines.push('');
-  lines.push('League: TheLeague (16 dynasty franchises). Voice: Claude Schefter.');
+  lines.push(`League: ${leagueName} (${size} dynasty franchises). Voice: Claude Schefter.`);
   lines.push('');
 
   // ─ Rankings table ─
-  lines.push('=== RANKINGS (1-16) ===');
+  lines.push(`=== RANKINGS (1-${size}) ===`);
   lines.push('Ranking formula: 50% all-play record + 50% last-3-weeks scoring. Season PPG is context only.');
-  lines.push('Format: rank | team | trend | all-play % | rolling-3wk record | rolling-3wk PPG | streak | season PPG');
+  // The blurb key is on every row because the response is keyed by franchiseId
+  // and nothing else in the sheet carries one. Without it the model invents
+  // keys (or keys by team name), every blurb misses its row in applyAIVoice,
+  // and the whole column silently falls back to templated voice — which is
+  // exactly what shipped from launch until 2026-08-14.
+  lines.push('Format: rank | team | trend | all-play % | rolling-3wk record | rolling-3wk PPG | streak | season PPG | blurb key');
   for (const r of issue.rankings) {
     const team = teams.get(r.franchiseId);
     const name = team?.nameMedium ?? team?.name ?? r.franchiseId;
@@ -74,7 +81,7 @@ export function buildFactSheet({ issue, teams }) {
     const streakStr = factsForBlurb.streak && factsForBlurb.streak.length >= 2
       ? `${factsForBlurb.streak.type}${factsForBlurb.streak.length}`
       : 'no active streak';
-    lines.push(`#${r.rank} | ${name} | ${trend} | ${allPlay} | ${recStr} | ${ppg} PPG L3 | ${streakStr} | ${seasonPpg} season PPG`);
+    lines.push(`#${r.rank} | ${name} | ${trend} | ${allPlay} | ${recStr} | ${ppg} PPG L3 | ${streakStr} | ${seasonPpg} season PPG | blurb key: ${r.franchiseId}`);
   }
   lines.push('');
 
@@ -94,9 +101,9 @@ export function buildFactSheet({ issue, teams }) {
 
   // ─ Allowed name tokens (helps the model not invent) ─
   lines.push('=== ALLOWED FRANCHISE NAME TOKENS ===');
-  for (const [, t] of teams) {
+  for (const [fid, t] of teams) {
     const aliases = (t.aliases || []).join(', ');
-    lines.push(`- ${t.name} (also: ${[t.nameMedium, t.nameShort, t.abbrev, aliases].filter(Boolean).join(', ')})`);
+    lines.push(`- [${fid}] ${t.name} (also: ${[t.nameMedium, t.nameShort, t.abbrev, aliases].filter(Boolean).join(', ')})`);
   }
   lines.push('');
 
@@ -109,7 +116,7 @@ const TYPE_SPECIFIC_PROMPT = `
 
 ARTICLE TYPE: The Pecking Order — the Tuesday-morning power-rankings column.
 
-Your job: rewrite the issue's HEADLINE, LEDE, and a one-sentence BLURB for each of the 16 franchises in Schefter voice. Re-voice the AWARD blurbs in the same style.
+Your job: rewrite the issue's HEADLINE, LEDE, and a one-sentence BLURB for every franchise in the fact sheet's rankings table, in Schefter voice. Re-voice the AWARD blurbs in the same style.
 
 VOICE RULES
 - Schefter: confident, punchy, opinionated. "League sources tell me…", "Boom.", "Money is nice, but championships are better."
@@ -128,11 +135,19 @@ LENGTH
 - lede: ≤600 chars
 - each blurb: ≤240 chars`;
 
-export function getSystemPrompt() {
-  return buildCachedSystem(TYPE_SPECIFIC_PROMPT);
+/**
+ * The shared base block (ai-client.mjs) introduces Schefter as TheLeague's beat
+ * reporter and is deliberately left alone — it is the cache-eligible half of the
+ * system prompt. The league gets named in the per-issue half instead, so an AFL
+ * issue can't inherit the wrong league's name in its copy.
+ */
+export function getSystemPrompt(leagueName = 'TheLeague') {
+  return buildCachedSystem(
+    `${TYPE_SPECIFIC_PROMPT}\n\nLEAGUE: this issue covers ${leagueName}. Never name any other league.`,
+  );
 }
 
-export function getUserPrompt(factSheet) {
+export function getUserPrompt(factSheet, franchiseCount = 16) {
   return `Rewrite this week's Pecking Order issue using ONLY data from the fact sheet below.
 
 ${factSheet}
@@ -155,7 +170,8 @@ OUTPUT FORMAT — respond with ONLY valid JSON, no markdown fences:
 }
 
 REQUIREMENTS
-- Provide a blurb for ALL 16 franchiseIds present in the fact sheet rankings table.
+- Provide a blurb for ALL ${franchiseCount} franchises in the fact sheet rankings table.
+- Key every blurb by the exact "blurb key" printed on that team's row (e.g. "0001"). A key that is not one of those strings is discarded.
 - Each blurb must contain a recognizable token for THAT franchise (e.g., the nameMedium).
 - Do not invent stats or names not present in the fact sheet.`;
 }
