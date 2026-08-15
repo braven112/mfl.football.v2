@@ -5,6 +5,22 @@
   "featuredImageLeague": "afl",
   "changes": [
     {
+      "date": "2026-08-15",
+      "type": "bug-fix",
+      "summary": "Every AFL team logo on the site was being fetched from a second address instead of the page you were already on. It worked, but it meant your phone had to go open a whole separate connection just to draw a handful of 100-pixel crests — and on a cell signal they'd still be arriving well after everything else had finished. Nobody would have called it a bug; it just felt like the logos were slow. They're now served from the same place as the rest of the page, which also means they can't go missing if that other address ever moves. Roughly a dozen of them on the homepage, two dozen on the standings page.",
+      "impact": "user",
+      "area": "other",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-15",
+      "type": "style-tweak",
+      "summary": "The standings cards on both homepages swapped team names for team logos. On a phone the team column was eating half the row to spell out names you already know by their crest, which squeezed the numbers you actually came for. Now it's the logo, and the records and points get room to breathe. Dark mode got the harder half of this problem: a good chunk of the league wears a black or near-black logo, and once the crest is the only thing naming the row, a black logo on a black card names nothing. Every crest was measured against the dark card, and the ones that failed now get a thin white outline traced around the logo itself — so Badd Boys and Da Dangsters and the rest stay readable at night without anybody having to redraw them. Teams that already have a proper dark-mode logo still just switch to it. Screen readers still read the team name, and if a logo ever fails to load the name comes back in its place.",
+      "impact": "user",
+      "area": "homepage",
+      "league": "both"
+    },
+    {
       "date": "2026-08-14",
       "type": "style-tweak",
       "summary": "The Pecking Order's award cards stopped color-coding by team and started color-coding by meaning. Heater of the Week now runs a hot orange-red edge, Cooler of the Week an ice blue one, and the Bench Blunder gets pink \u2014 so the three you actually scan for are findable without reading the labels. Every other award still wears the winning franchise's color, and all of them are picked to stay legible in dark mode.",

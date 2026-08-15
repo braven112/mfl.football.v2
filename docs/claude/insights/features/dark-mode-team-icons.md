@@ -182,3 +182,155 @@ so "permanently missing" must NEVER be inferred from one build's 404s (an
 earlier iteration did exactly that and would have randomly dropped a real
 team's dark swap for a whole deploy). Curate permanent 404s by hand; let
 transient ones fall back to the remote ESPN URL via the manifest mechanism.
+
+---
+
+## 2026-08-15 - The swap is free at a new call site — but AFL's coverage gap sets the ceiling
+
+**Context:** The three compact homepage standings cards were changed to render
+the team crest INSTEAD of the team name, via a new shared `TeamIconCell.astro`.
+
+**The good half — nothing to wire up.** Because the swap is a global stylesheet
+keyed on the exact `icon` src, a brand-new component that renders a plain
+`<img src={team.icon}>` inherits dark mode with zero additional code. No
+`ThemeImage`, no `darkSrc` prop, no server-side theme pick (which would be wrong
+under `theme_pref=auto` anyway). Confirmed in-browser rather than assumed, by
+reading `getComputedStyle(img).content` on every crest in the rendered cards
+under `html.dark` — a worthwhile check, since a mismatched src fails silently by
+just rendering the light icon.
+
+**The catch — coverage is wildly asymmetric between the leagues.** TheLeague has
+`iconDark` on 11 of 16 teams; the AFL has it on **1 of 24** (Vitside Mafia). For
+surfaces where the crest sits beside the team NAME that's cosmetic — a dim logo
+next to readable text. On a crest-ONLY surface the crest is the sole identifier,
+so a dark-dominant AFL logo (Badd Boys, e.g.) on the navy card is the difference
+between "slightly muted" and "which team is that." The swap system was working
+exactly as designed; the assets just don't exist.
+
+**Recommendation:** Before building any UI where a team crest REPLACES the team
+name, check `iconDark` coverage for that league first —
+`teams.filter(t => t.iconDark).length` against `teams.length`. If coverage is
+thin, either populate the missing `iconDark` assets as part of the same change,
+or keep the name alongside the crest for that league. Per the 2026-07-09 entry
+above, set those new `iconDark` values as RELATIVE paths even though the AFL's
+`icon` fields are absolute production URLs. Note also that no test enforces
+coverage — `tests/team-icon-dark-styles.test.ts` validates that every declared
+`iconDark` points at a real file, not that any given team declares one — so a
+gap like this is invisible until you look at a dark-mode screenshot.
+
+---
+
+## 2026-08-15 - When there's no `iconDark` to swap to: measure, then stroke
+
+**Context:** the crest-only standings cards (entry above) needed AFL crests to
+survive a dark card, and 23 of 24 AFL teams have no `iconDark`. Hand-authoring
+23 dark logos wasn't on the table; the crest still had to name the row.
+
+**Measure first, don't eyeball.** `scripts/measure-crest-contrast.mjs`
+(`pnpm measure:crest-contrast`, `--report` to print scores) decodes each crest
+with `sharp` and scores it as the fraction of OPAQUE pixels clearing 3:1
+against `--card-surface` (`#262626`). Under 0.5 — less than half the logo
+legible — it goes in `src/data/crest-dark-stroke-manifest.json`. That caught 14
+AFL and 4 TheLeague crests, from Badd Boys at 13% up to Running down the Dream
+at 48%. The scores are a good sanity check on the whole system: the teams
+TheLeague's humans chose to draw `iconDark` art for are almost exactly the ones
+that score worst, which is the correlation you'd hope for.
+
+**Stroke, don't plate.** `src/utils/crest-dark-stroke-css.ts` emits four
+stacked cardinal `drop-shadow()`s, which is the only CSS that follows an
+image's ALPHA silhouette. `outline`, `border`, and a background plate all draw
+the crest's bounding BOX — on a transparent PNG that's a white square around
+the logo, which is worse than the problem you started with. The shadows
+compose (each applies to the previous result), so four is enough for a
+continuous ~1px ring.
+
+**A team must never get both.** The manifest excludes any team with an
+`iconDark`, because a hand-drawn dark logo does not want a white ring around
+it. `tests/crest-dark-stroke.test.ts` asserts that, re-measures the committed
+assets to catch manifest drift, and checks each listed `icon` still matches its
+config string exactly (the selector is an exact `src` match, so a drifted icon
+path silently stops applying the stroke rather than erroring).
+
+**Global, keyed on `src` alone — the initial scoping was wrong.** It first
+shipped scoped to `img.team-icon-cell`, reasoning that a crest shown NEXT TO a
+name doesn't need help because the name carries identity. Two problems, both
+found by the commissioner on real pages: a near-black logo on a dark card is
+still hard to make out even when labelled, and the same franchise then wore a
+ring on the homepage and none on `/afl-fantasy/standings`, which reads as a
+rendering bug rather than a treatment. Consistency beat the theory. Keying on
+`src` like the dark swap is also what reaches all ~20 crest call sites —
+Astro, React islands, and client-built HTML — with no markup changes.
+
+**Recommendation:** re-run `pnpm measure:crest-contrast` after replacing any
+crest asset or adding an `iconDark`; the test fails until the manifest is
+regenerated. And prefer real `iconDark` art whenever someone is willing to draw
+it — the stroke is a legibility floor, not a substitute for a logo designed for
+dark mode.
+
+**Per-team stroke color (`iconStrokeDark`, 2026-08-15).** White is the default
+but not always right: Midwestside's crest is a gold ring on black, and a white
+outline read as a foreign border bolted onto someone else's logo. `iconStrokeDark`
+on the team config overrides the color (they use their own `#ffcd00`). Two
+design points worth keeping:
+
+- The override lives in the LEAGUE CONFIG, not the manifest. The manifest is
+  generated output and must stay purely derived — putting a hand-picked color
+  in it would be destroyed by the next `pnpm measure:crest-contrast` run.
+  `TeamIconDarkStyles` joins the two by franchiseId at build time.
+- An override color must itself clear 3:1 on the dark card, or the stroke
+  can't separate the logo from the background — that's the whole job. The test
+  enforces it, and also fails on an `iconStrokeDark` set for a team that isn't
+  in the stroke manifest at all (dead config that looks live).
+
+`buildCrestDarkStrokeCss` groups selectors by color, so the default-white
+crests still collapse into one rule and only overrides get their own.
+
+**Same-origin crest srcs — fix it in the config AND the sync script (2026-08-15).**
+The AFL configs stored every `icon`/`banner` as an absolute
+`https://mflfootballv2.vercel.app/...` URL, so every page fetched its crests
+cross-origin: a second DNS+TLS connection for assets already committed under
+`public/`. On cellular they were still in flight after the card painted, which
+on the crest-only standings cards rendered as blank team columns. All 48 asset
+URLs are now same-origin paths.
+
+The trap: `scripts/sync-afl-asset-urls.mjs` copies `icon`/`banner` straight
+from MFL's league feed, and MFL stores the ABSOLUTE form (that's what we
+upload to it). Normalizing only the config would be silently undone by the
+next `pnpm sync:afl`, and the diff would look like a routine asset sync. The
+script now normalizes on read AND before comparison, so a normalized config
+doesn't read as "changed" every run.
+
+`iconSrcVariants()` in `team-icon-dark-css.ts` still emits selectors for BOTH
+forms. Belt and braces: any surface, feed, or historical entry still carrying
+an absolute URL keeps its dark swap and stroke.
+
+**Verification that actually catches this:** local runs had been intercepting
+`mflfootballv2.vercel.app` and serving from `public/`, which is precisely the
+round trip that was broken — the bug was invisible in every screenshot. Test
+crest changes with NO route interception, and assert `crossOriginReqs === 0`
+plus `naturalWidth > 0` per crest rather than eyeballing the render.
+
+**Threshold calibration: the 0.35–0.50 band was 5-for-5 wrong (2026-08-15).**
+The 0.5 cutoff was picked a priori as "less than half the logo is legible."
+In review the commissioner opted out every crest that landed between 0.35 and
+0.50 — Cowboy Up 0.353, Team Minty Fresh 0.368, Dark Magicians 0.370, Get off
+my Ditka 0.389 — and disputed nothing below 0.35. A pixel-average is a decent
+candidate-finder but a poor judge: it counts a crest's total dark area without
+knowing that a bright focal element (a face, a shield, a bold interior) already
+does the separating work a stroke would provide.
+
+Two things follow. First, `iconStrokeDark: false` exists because the
+measurement needs a human override, and that override is load-bearing, not a
+nicety. Second, when a threshold accumulates opt-outs that all cluster in one
+band, that's evidence the threshold is wrong, not that the exceptions are
+special — prefer re-tuning it (~0.35 here) over growing a correction list,
+since the list has to be maintained forever and reads as arbitrary to whoever
+finds it next. Left at 0.5 for now at the commissioner's preference; the
+opt-outs carry it.
+
+**Real artwork always supersedes the stroke.** When Fullybaked (0.452) got a
+hand-drawn `iconDark`, it left the manifest automatically — `measureAllCrests`
+skips any team with a dark variant — so no opt-out was needed and none should
+be added. The guard test asserts the two are mutually exclusive. The fix for a
+flagged crest is, in order: draw the dark variant, else pick a franchise-colored
+stroke, else opt out.

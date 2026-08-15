@@ -11,7 +11,11 @@
 import { describe, it, expect } from 'vitest';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { buildTeamIconDarkCss } from '../src/utils/team-icon-dark-css';
+import {
+  buildTeamIconDarkCss,
+  iconSrcVariants,
+  preferredIconSrc,
+} from '../src/utils/team-icon-dark-css';
 import theleagueConfig from '../src/data/theleague.config.json';
 import aflConfig from '../data/afl-fantasy/afl.config.json';
 
@@ -139,6 +143,65 @@ describe('theleague config dark icon rollout', () => {
       expect(team?.iconDark, `franchise ${fid} should have iconDark`).toBe(
         team?.icon?.replace(/\.png$/, '_dark.png'),
       );
+    }
+  });
+});
+
+/**
+ * The absolute-vs-same-origin split. These two helpers are the whole reason a
+ * crest can be RENDERED at one URL and STYLED by a selector written for
+ * another, so they are unit-tested directly rather than only through the
+ * generators — a silent regression here re-introduces either the cross-origin
+ * latency that blanked the AFL team columns, or a dark swap that stops
+ * matching, and neither surfaces as a test failure anywhere else.
+ */
+describe('iconSrcVariants', () => {
+  it('returns both the absolute and same-origin form of an AFL icon', () => {
+    const abs = 'https://mflfootballv2.vercel.app/assets/afl/icons/badd_boys.png';
+    const variants = iconSrcVariants(abs);
+    expect(variants).toContain(abs);
+    expect(variants).toContain('/assets/afl/icons/badd_boys.png');
+    expect(variants).toHaveLength(2);
+  });
+
+  it('returns a single form for an already-relative icon', () => {
+    const rel = '/assets/theleague/icons/da_dangsters.png';
+    expect(iconSrcVariants(rel)).toEqual([rel]);
+  });
+
+  it('passes an unparseable value through rather than throwing', () => {
+    expect(iconSrcVariants('not a url')).toEqual(['not a url']);
+  });
+});
+
+describe('preferredIconSrc', () => {
+  it('normalizes our own asset URLs to same-origin', () => {
+    expect(preferredIconSrc('https://mflfootballv2.vercel.app/assets/afl/icons/smokane.png'))
+      .toBe('/assets/afl/icons/smokane.png');
+  });
+
+  it('leaves a relative path untouched', () => {
+    expect(preferredIconSrc('/assets/afl/icons/smokane.png')).toBe('/assets/afl/icons/smokane.png');
+  });
+
+  it('leaves a genuinely external host absolute', () => {
+    // Only /assets/* is ours. Blob storage and third-party CDNs must not be
+    // rewritten to a same-origin path that would 404.
+    const external = 'https://uhyqublxrbcezhyu.public.blob.vercel-storage.com/logo.png';
+    expect(preferredIconSrc(external)).toBe(external);
+  });
+
+  it('every rendered form it produces is still matched by a generated rule', () => {
+    // The contract that actually matters: whatever preferredIconSrc emits for a
+    // team must appear as a selector in the dark-swap CSS, or that team renders
+    // its light crest forever in dark mode.
+    for (const cfg of [theleagueConfig, aflConfig] as any[]) {
+      const css = buildTeamIconDarkCss(cfg.teams, { franchiseIconDir: '/assets/x' });
+      for (const team of cfg.teams ?? []) {
+        if (!team.icon || !team.iconDark) continue;
+        expect(css, `${team.name}: rendered src has no swap rule`)
+          .toContain(`img[src="${preferredIconSrc(team.icon)}"]`);
+      }
     }
   });
 });

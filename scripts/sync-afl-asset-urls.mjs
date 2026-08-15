@@ -16,6 +16,33 @@ const leagueFeedPath = path.join(projectRoot, AFL_DATA_PATH, 'mfl-feeds', '2025'
 const configPath = path.join(projectRoot, AFL_DATA_PATH, 'afl.config.json');
 
 /**
+ * MFL stores each franchise's icon/banner as an ABSOLUTE URL to our own
+ * production deployment, because that's the form we upload to MFL. Writing
+ * that straight back into the config makes every page fetch its crests
+ * cross-origin — a second DNS+TLS connection whose latency showed up as blank
+ * team columns on cellular (Aug 2026). The files are committed under public/,
+ * so store the same-origin path instead.
+ *
+ * The INCOMING value is normalized once, and that normalized form is what gets
+ * both compared and assigned. That ordering is the point: an already-normalized
+ * config compares equal and is left alone, instead of reading as "changed" on
+ * every run and being rewritten back to the absolute form.
+ *
+ * Only `/assets/*` is ours. External hosts (blob storage, third-party CDNs) and
+ * non-URL values pass through untouched — rewriting those to a same-origin path
+ * would 404.
+ */
+const toSameOriginAsset = (url) => {
+  if (!url || !/^https?:\/\//i.test(url)) return url ?? '';
+  try {
+    const parsed = new URL(url);
+    return parsed.pathname.startsWith('/assets/') ? parsed.pathname : url;
+  } catch {
+    return url;
+  }
+};
+
+/**
  * Main execution
  */
 const run = async () => {
@@ -59,8 +86,8 @@ const run = async () => {
 
       const oldIcon = team.icon;
       const oldBanner = team.banner;
-      const newIcon = mflData.icon;
-      const newBanner = mflData.banner;
+      const newIcon = toSameOriginAsset(mflData.icon);
+      const newBanner = toSameOriginAsset(mflData.banner);
 
       // Only update if URLs have changed
       if (oldIcon !== newIcon || oldBanner !== newBanner) {

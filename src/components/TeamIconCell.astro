@@ -1,0 +1,123 @@
+---
+/**
+ * TeamIconCell — a team's identity rendered as its crest instead of its name.
+ *
+ * Used by the compact homepage standings cards, where the team column is the
+ * widest thing on a phone and the crest reads faster than the text.
+ *
+ * ACCESSIBLE NAME: `alt` carries the team name, and it is the ONLY mechanism
+ * doing so. Deliberately no `title` — with a non-empty `alt`, `title` becomes
+ * the image's accessible *description*, which NVDA and JAWS announce on top of
+ * the name, so every row got read twice ("Da Dangsters, image, Da Dangsters").
+ * It also bought nothing for the audience this change targets: `title` is
+ * mouse-hover only, so phone and keyboard users never saw it. Never move
+ * information a row depends on into `title`.
+ *
+ * FAILURE PATH: if the crest 404s, `onerror` reveals the name text instead of
+ * leaving an empty cell. That matters more here than at a normal call site —
+ * the crest is the row's ONLY identifier, so a broken image doesn't degrade
+ * the row, it erases it. Worth keeping: every AFL config points `icon` at an
+ * absolute `mflfootballv2.vercel.app` URL (a long-standing quirk — see
+ * docs/claude/insights/features/dark-mode-team-icons.md), so these are
+ * cross-origin fetches, and per CLAUDE.md a logo 404 behind Cloudflare stays
+ * cached for up to 4 hours.
+ *
+ * DARK MODE needs nothing here. `TeamIconDarkStyles` (shared layout <head>)
+ * emits a global `html.dark img[src="<light>"] { content: url("<dark>") }`
+ * rule for every team with an `iconDark`, and a white-stroke rule for the
+ * crests measured as illegible on a dark card that have no dark variant. Both
+ * key off this element's `src` and its `team-icon-cell` class, so a plain
+ * <img> picks them up automatically. Do NOT pick a theme's src server-side —
+ * with theme preference 'auto' the server can't know the resolved theme.
+ *
+ * Sizing is driven by `--team-icon-size`, set by the calling card so each one
+ * keeps its own row rhythm and mobile breakpoint.
+ *
+ * @example
+ * ```astro
+ * <TeamIconCell icon={row.icon} name={row.name} emphasis={row.isUser} />
+ * ```
+ */
+import { preferredIconSrc } from '../utils/team-icon-dark-css';
+
+export interface Props {
+  /** Light-mode crest from the league config (`team.icon`). */
+  icon?: string;
+  /** Team display name — the accessible name, and the visible fallback. */
+  name: string;
+  /** Bolds the name text when it is what renders (no crest, or crest failed). */
+  emphasis?: boolean;
+}
+
+const { icon, name, emphasis = false } = Astro.props;
+
+// Render our own assets same-origin. The AFL configs store absolute
+// production URLs, which made the homepage open a second DNS+TLS connection
+// just for crests — on cellular they were still in flight long after the rest
+// of the card had painted, so the team column simply looked empty. The dark
+// swap and stroke rules match both forms (see iconSrcVariants), so
+// normalizing here does not cost the crest its dark-mode treatment.
+const src = icon ? preferredIconSrc(icon) : undefined;
+---
+
+{src ? (
+  <>
+    <img
+      src={src}
+      alt={name}
+      class="team-icon-cell"
+      loading="lazy"
+      decoding="async"
+      onerror="this.hidden=true;const f=this.nextElementSibling;if(f)f.hidden=false;"
+    />
+    <span class:list={['team-icon-cell__fallback', { 'team-icon-cell__fallback--bold': emphasis }]} hidden>
+      {name}
+    </span>
+  </>
+) : (
+  <span class:list={['team-icon-cell__fallback', { 'team-icon-cell__fallback--bold': emphasis }]}>
+    {name}
+  </span>
+)}
+
+<style>
+  .team-icon-cell {
+    display: block;
+    width: var(--team-icon-size, 1.75rem);
+    height: var(--team-icon-size, 1.75rem);
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+
+  /* No crest configured, or the crest failed to load — show the name rather
+     than an empty cell.
+
+     NOTE these truncation properties are currently a no-op, and that is
+     inherited behavior, not an oversight: under `table-layout: auto` the
+     `width: 1%` on the team column is a hint that min-content overrides, and
+     `nowrap` makes min-content the full string — so a long name WIDENS the
+     column instead of ellipsizing. Two of the three calling cards have no
+     `overflow-x` wrapper, so there it would become page-level horizontal
+     scroll. Team names are short enough that this has never bitten, and the
+     same caveat existed on the name spans these replaced (see the 2026-07-07
+     frontend insight). If it ever does bite, give this a real bound in `ch`
+     or switch the table to `table-layout: fixed` — do not rely on the rules
+     below as-is. */
+  .team-icon-cell__fallback {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .team-icon-cell__fallback--bold {
+    font-weight: 700;
+  }
+
+  /* `hidden` must beat the class's own `display`, hence the attribute
+     selector — `.team-icon-cell` alone would keep a failed image displayed. */
+  .team-icon-cell[hidden],
+  .team-icon-cell__fallback[hidden] {
+    display: none;
+  }
+</style>

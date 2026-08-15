@@ -43,6 +43,45 @@ function cssStringEscape(value: string): string {
 }
 
 /**
+ * Every form a given config `icon` may be RENDERED as, so an exact-src
+ * selector matches whichever one a call site chose.
+ *
+ * The AFL configs store absolute production URLs
+ * (`https://mflfootballv2.vercel.app/assets/afl/icons/x.png`) even though the
+ * files are committed under `public/`. Call sites that render the raw config
+ * value therefore make a cross-origin request; call sites that normalize it to
+ * the same-origin path (as `TeamIconCell` does, so the crest isn't gated on a
+ * second DNS+TLS handshake) render the bare pathname. Both must carry the dark
+ * swap, or normalizing a src silently disables dark mode for that surface.
+ */
+export function iconSrcVariants(icon: string): string[] {
+  const variants = new Set<string>([icon]);
+  if (/^https?:\/\//i.test(icon)) {
+    try {
+      variants.add(new URL(icon).pathname);
+    } catch {
+      /* not a parseable URL — the raw value is the only form */
+    }
+  }
+  return [...variants];
+}
+
+/**
+ * The form a call site should RENDER: same-origin whenever the asset is one of
+ * ours, so it rides the page's existing connection. Falls back to the raw
+ * value for genuinely external hosts.
+ */
+export function preferredIconSrc(icon: string): string {
+  if (!/^https?:\/\//i.test(icon)) return icon;
+  try {
+    const url = new URL(icon);
+    return url.pathname.startsWith('/assets/') ? url.pathname : icon;
+  } catch {
+    return icon;
+  }
+}
+
+/**
  * Build the dark-mode swap CSS for a list of teams. Returns an empty string
  * when no team declares an `iconDark` (the caller can skip the <style> tag).
  */
@@ -54,7 +93,7 @@ export function buildTeamIconDarkCss(
   for (const team of teams) {
     if (!team?.icon || !team.iconDark) continue;
     const darkUrl = cssStringEscape(team.iconDark);
-    const srcs = new Set<string>([team.icon]);
+    const srcs = new Set<string>(iconSrcVariants(team.icon));
     if (options.franchiseIconDir && team.franchiseId) {
       const dir = options.franchiseIconDir.replace(/\/+$/, '');
       srcs.add(`${dir}/${team.franchiseId}.png`);

@@ -78,7 +78,8 @@
     "type-check": "pnpm --filter './packages/*' type-check",
     "clean": "pnpm --parallel --filter './packages/*' clean",
     "party:dev": "partykit dev",
-    "party:deploy": "partykit deploy"
+    "party:deploy": "partykit deploy",
+    "measure:crest-contrast": "node scripts/measure-crest-contrast.mjs"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

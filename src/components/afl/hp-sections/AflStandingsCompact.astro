@@ -14,6 +14,7 @@ import { chooseTeamName } from '../../../utils/team-names';
 import { getTierLogo, getTierLogoDark } from '../../../utils/afl-tier-logo';
 import { formatPoints } from '../../../utils/formatters';
 import ThemeImage from '../../ThemeImage.astro';
+import TeamIconCell from '../../TeamIconCell.astro';
 
 interface Team {
   franchiseId: string;
@@ -28,6 +29,7 @@ interface Team {
 interface StandingRow {
   franchiseId: string;
   name: string;
+  icon?: string;
   rank: number;
   allPlayRecord: string;
   allPlayPct: number;
@@ -64,6 +66,7 @@ function makeRows(): StandingRow[] {
     return {
       franchiseId: f.id,
       name: displayName,
+      icon: team?.icon,
       rank: 0,
       allPlayRecord: f.all_play_wlt ?? '0-0-0',
       allPlayPct: parseFloat(f.all_play_pct ?? '0'),
@@ -209,7 +212,7 @@ if (userRow) {
           <tr class:list={['afl-tiers__row', { 'afl-tiers__row--user': row.isUser }]}>
             <td class="afl-tiers__td afl-tiers__td--rank">{row.rank}</td>
             <td class="afl-tiers__td afl-tiers__td--team">
-              <span class={row.isUser ? 'afl-tiers__team-name--bold' : ''}>{row.name}</span>
+              <TeamIconCell icon={row.icon} name={row.name} emphasis={row.isUser} />
             </td>
             {hasGames && (
               <td class="afl-tiers__td afl-tiers__td--ap">
@@ -229,6 +232,8 @@ if (userRow) {
   .afl-tiers {
     --afl-accent: var(--league-accent, #c41e3a);
     --afl-highlight-bg: color-mix(in srgb, var(--afl-accent) 6%, transparent);
+    /* Crest size for the team column (see TeamIconCell). */
+    --team-icon-size: 2.25rem;
     background: var(--card-bg, #fff);
     border: 1px solid var(--content-border, #e2e8f0);
     border-radius: var(--radius-md, 0.5rem);
@@ -313,6 +318,9 @@ if (userRow) {
   }
 
   .afl-tiers__th--rank { width: 2rem; text-align: center; }
+  /* Crest-only column: shrink to content so the slack goes to the stat
+     columns instead of stranding the crest next to a wide empty gap. */
+  .afl-tiers__th--team { width: 1%; }
   .afl-tiers__th--ap,
   .afl-tiers__th--pf { text-align: right; }
 
@@ -349,10 +357,6 @@ if (userRow) {
   .afl-tiers__td--team {
     font-weight: 500;
     color: var(--color-gray-800, #1f2937);
-  }
-
-  .afl-tiers__team-name--bold {
-    font-weight: 700;
   }
 
   .afl-tiers__td--ap,
@@ -444,22 +448,8 @@ if (userRow) {
       padding-right: 0.375rem;
     }
 
-    /* Latent truncation guard. Note this only actually clips if the cell is
-       ever given a definite width: in the current `table-layout: auto` table
-       the `max-width: 100%` resolves against a content-derived width and is a
-       no-op, so long names would widen the column rather than ellipsize. Kept
-       for parity with the sibling card (whose span rule is likewise a no-op —
-       see the 2026-07-07 frontend insight); Premier League names are short so
-       there's no overflow today. If overflow ever appears, switch this table
-       to `table-layout: fixed` with sized columns or give the cell a concrete
-       cap — do NOT rely on this rule as-is. */
-    .afl-tiers__td--team > span:first-child {
-      display: inline-block;
-      max-width: 100%;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      vertical-align: bottom;
+    .afl-tiers {
+      --team-icon-size: 2rem;
     }
   }
 </style>
