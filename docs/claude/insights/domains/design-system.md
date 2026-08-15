@@ -1874,33 +1874,45 @@ space, not a halo or outline bleed that would justify it. Centering is fine
 on toggle; only scale is affected.
 
 **Fixed in the ASSETS, not in CSS.** The four `-dark` viewBoxes were
-re-authored to reproduce their light counterpart's ink-to-viewBox relationship,
-which is the only layer that fixes it everywhere — the discrepancy was live at
+re-authored to reproduce their light counterpart's ink-to-viewBox relationship
+— the only layer that fixes it everywhere, since the discrepancy was live at
 every other call site too (`.afl-tiers__logo`, `.badge-tier-logo`,
-`.promo-reg-logo`, `.afl-playoffs-hero__bracket-logo`), and all of them
-constrain with `height: X; width: auto`, so normalizing the height fraction
-corrects each identically. `premier-dark` and `al`/`nl-dark` had ink identical
-to their light twins, so they simply took the light viewBox verbatim and now
-match exactly (0.0% delta). `dleague-dark` needed a computed box
-(`-23.9047 0 269.671 348.1`) because its artwork genuinely differs — 247.7 ink
-units wide against the light mark's 271.7 — so it lands at 0% on ink height and
--4.5% on geometric mean. Closing that last gap means re-drawing the art, not
-moving a viewBox.
+`.promo-reg-logo`, `.afl-playoffs-hero__bracket-logo`, and the sidenav crest)
+and all of them constrain with `height: X; width: auto`, so normalizing the
+height fraction corrects each identically. Rendered ink in the real slot after
+the fix: premier 34.9 light / 34.9 dark, al and nl 34.9 / 35.5, dleague 36.0 /
+34.7. The dleague gap is artwork — its dark drawing is genuinely narrower — and
+closing it means re-drawing, not moving a viewBox.
 
-To recompute if a badge is ever re-exported: take the light variant's
-`inkH/vbH`, `inkW/vbW` and margin fractions, then solve the dark variant's
-viewBox so its ink reproduces them.
+**The trap inside the trap: `getBBox()` does not include stroke, and the halo
+IS a stroke.** The first attempt at this fix normalized against `getBBox()`,
+which reported the dark ink as byte-identical to the light ink and therefore
+"prove" the padding was dead space. It is not. Every `-dark` file paints a
+white halo as a stroke on its paths so the mark reads on a dark surface, and
+`getBBox()` returns the geometry box with the stroke excluded — so the padding
+those viewBoxes carried was there to hold the halo, and normalizing to the
+light viewBox clipped it on all four assets (measured overflow at a 40px
+render: al/nl 1.19px off the left edge, premier 0.85px off the top, dleague
+clipped on all four sides). It shipped looking fine in a screenshot because a
+1px shaved off a white outline is invisible until you go looking.
 
-**Method note — two wrong turns, both about measuring the wrong thing.** The
-first version of this insight claimed the dark files declare bogus
-`width="200%"` / `width="10"` root attributes. They don't: that came from
-grepping the head of each file, which matched `width`/`height` on *child*
-elements inside the artwork. The second version measured with
-`getBoundingClientRect()` + `naturalWidth/Height` + the contain scale — which
-measures the padded BOX, reports `32x40 | 52x26`, and therefore shows a perfect
-match while the dark mode mismatch sits right there undetected. Only an alpha
-bounding box over the rendered pixels surfaces it. When the question is "do
-these two marks look the same size," measure ink, not boxes.
+Measure with an ALPHA bounding box over rendered pixels instead: render the SVG
+large with `omitBackground: true`, scan the alpha channel for the extent, and
+map back to user units through the viewBox. That counts stroke, filters, and
+anything else that actually puts pixels down. Then solve each dark viewBox so
+its true ink reproduces the light variant's fill fractions and margins, and
+assert containment (`X <= inkX && X+W >= inkX+inkW`, both axes) rather than
+trusting the arithmetic.
+
+**Method note — three wrong turns, each measuring the wrong thing.** First
+claim: the dark files declare bogus `width="200%"` / `width="10"` root
+attributes. They don't — that came from grepping the head of each file, which
+matched `width`/`height` on *child* elements. Second: measuring with
+`getBoundingClientRect()` + `naturalWidth/Height` + the contain scale, which
+measures the padded BOX, reports `32x40 | 52x26`, and shows a perfect match
+while the dark mismatch sits undetected. Third: `getBBox()`, which finds the
+mismatch but misses the stroke and leads to a fix that clips. Only the alpha
+bbox answers the question that was actually being asked.
 
 **Recommendation:** When a design puts two branded marks in equivalent slots,
 check their viewBox ratios before picking a sizing rule. Equal height is only
