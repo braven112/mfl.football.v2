@@ -46,9 +46,9 @@ describe('team-colors', () => {
     });
 
     it('reads AFL brand colors with the league argument', () => {
-      // Thundering Herd -> USC cardinal + gold.
-      expect(getTeamColorPrimary('0014', 'afl')).toBe('#990000');
-      expect(getTeamColorSecondary('0014', 'afl')).toBe('#ffc72c');
+      // A Bruin Pegs Me -> UCLA navy + gold, matching the rebrand art.
+      expect(getTeamColorPrimary('0014', 'afl')).toBe('#002244');
+      expect(getTeamColorSecondary('0014', 'afl')).toBe('#e59923');
     });
 
     it('getTeamColors returns the defined palette in order', () => {
