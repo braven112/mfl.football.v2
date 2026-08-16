@@ -362,3 +362,54 @@ skips any team with a dark variant — so no opt-out was needed and none should
 be added. The guard test asserts the two are mutually exclusive. The fix for a
 flagged crest is, in order: draw the dark variant, else pick a franchise-colored
 stroke, else opt out.
+
+---
+
+## 2026-08-15 - The measurement's false NEGATIVES are the ones nobody looks for
+
+**Context:** Micks, Titsburgh and Swiftie got dark treatments. None of the three
+was in `crest-dark-stroke-manifest.json` — the measurement had cleared all of
+them, correctly by its own definition.
+
+**The blind spot is structural, not a tuning problem.** The entry above tunes
+the threshold for false POSITIVES (crests flagged that didn't need it, all
+clustered in 0.35–0.50). This is the other direction, and it can't be fixed by
+moving the threshold at all: the score counts *how many* pixels are legible, not
+*where* they are. A crest that's bright through the middle and dark around its
+rim scores comfortably while the silhouette it actually presents to the card is
+a dark edge on a dark card. Micks (green leprechaun) and Titsburgh (bright
+gray-and-white) both read fine at a glance and both had a black outer ring that
+dissolved. Jewpacabra was the same shape of bug and is already handled in code;
+what this branch establishes is that it's a recurring class, not a one-off.
+
+A cheap manual check when adding any crest-only surface: look at the crest's
+RIM against `--card-surface`, separately from the crest as a whole. The score
+can't see the distinction and won't warn you.
+
+**Judge a stroke at render size, on the real card color — never zoomed.** The
+`drop-shadow` ring is `0.5px`. Reviewed at 180px it looks like a deliberate
+outline; at the 40px crests actually render on the draft board and standings
+cards it's close to invisible. An A/B built as a fixed-position overlay in the
+page — same image twice, `filter: none` vs the computed filter, at 40/64/100px,
+on `getComputedStyle(document.documentElement).getPropertyValue('--card-surface')`
+— takes one `javascript_tool` call and is the only view that answers "does this
+change anything where it ships." It reversed the read on Swiftie: the stroke is
+real and correct, but its rim is a pale rose that never dissolved, so the ring
+tightens a soft edge rather than rescuing an illegible one. That's a fine reason
+to keep it and a bad reason to claim a legibility fix.
+
+**Verify BOTH properties to prove the two systems stayed exclusive.** The guard
+test asserts mutual exclusivity in config; at render time it costs one call to
+confirm it survived — read `content` AND `filter` on the live crests. A crest
+wearing both would show a `url(...)` content and a `drop-shadow` filter
+simultaneously, which is the "ring around hand-drawn dark art" bug the whole
+exclusion rule exists to prevent, and it fails silently and looks merely ugly.
+
+**No manifest regeneration is needed in either of these cases**, despite the
+recommendation above — worth knowing so a green suite isn't mistaken for a
+skipped step. Adding `iconDark` to a team the measurement never flagged leaves
+the manifest unchanged (it was already absent), and REPLACING an existing
+`*_dark.png` can't move it either, because `measureAllCrests` scores the LIGHT
+icon and skips any team with a dark variant entirely. Re-run
+`pnpm measure:crest-contrast` when a LIGHT crest asset changes, or when a team
+that WAS in the manifest gains an `iconDark`.
