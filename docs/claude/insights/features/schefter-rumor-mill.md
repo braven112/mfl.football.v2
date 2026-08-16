@@ -76,3 +76,41 @@ from the recurrence ledger's current ISO week) drops the bar from 6 to
 `RELAXED_QUALITY_THRESHOLD` (3). The recurrence ledger is the correct
 "have we posted about this" source precisely because it's stamped only on
 delivery. Scores 1-2 always suppress.
+
+## 2026-08-15 - An early `return` past the trailing sanitizer is invisible in review
+
+**Context:** A post named a second franchise, which the trade playbook forbids.
+Root-causing it turned up a second, wider leak that had been live far longer.
+
+**Insight:** `anonymizeTips` is ~300 lines of scope-resolution branches, most
+of which `return safe` the moment they've classified a tip. The franchise-name
+redaction runs at the **bottom** of the function. Every branch that returns
+above it therefore ships the tipster's raw text straight to the prompt — and
+`league-wide` and `commish` did exactly that, for months, with current
+franchise names intact. Those are the two scopes whose entire purpose is "this
+isn't pinned to anybody."
+
+This reads as correct in review because the sanitizer *is* there and *is*
+called; nothing at the return sites hints that they're skipping it. The
+`namingPolicy === 'never'` branch happened to carry its own redaction call,
+which made the pattern look deliberate rather than accidental.
+
+**The general shape:** a sanitizer placed at a function's exit is only as good
+as the function's control flow is linear. In a long classifier with many early
+returns, "sanitize on the way out" is not a policy — it's a coincidence that
+holds for whichever paths happen to fall through.
+
+**Trap for the fix, too:** the sanitizer's **input set** is the actual privacy
+boundary, not its regex. This one harvested only the four current name fields
+off each team, so ~250 retired names and ~90 aliases across the two configs
+were invisible to it — a punitive rebrand identifies a team better than its
+current name does. Over-matching is the safe direction here: a stray hit fuzzes
+a word to `[a team]`, a miss leaks an identity.
+
+**Recommendation:** When adding a scope branch to `anonymizeTips`, redact
+explicitly in that branch rather than trusting the tail. When adding a name
+field to a league config, ask whether the redactor's harvest reads it.
+`tests/schefter-franchise-name-redaction.test.ts` runs the real configs
+through the anonymizer and fails on any surviving alias or retired name, which
+catches the config half but not a new early return — that stays a review
+concern.
