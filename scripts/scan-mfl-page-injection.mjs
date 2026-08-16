@@ -67,6 +67,21 @@ const readJson = (p) => {
 };
 const toArray = (v) => (Array.isArray(v) ? v : v == null ? [] : [v]);
 
+// The host comes out of a committed config file, which CodeQL flags as a
+// file-to-network flow. It is our own repo data, but the guard is worth having
+// on its own terms: a typo'd or badly-edited year-host-map would otherwise send
+// these scripts at an arbitrary host, and both of them fetch pages we then
+// parse and report on. Constrain the target to MFL before any request.
+const MFL_HOST_RE = /^[a-z0-9-]+\.myfantasyleague\.com$/i;
+const resolveMflHost = (raw) => {
+  const host = String(raw ?? '').trim().toLowerCase();
+  const full = host.includes('.') ? host : `${host}.myfantasyleague.com`;
+  if (!MFL_HOST_RE.test(full)) {
+    throw new Error(`Refusing to fetch non-MFL host from year-host-map: ${JSON.stringify(raw)}`);
+  }
+  return full;
+};
+
 const hostMap = readJson(path.join(ROOT, league.dataPath, 'year-host-map.json'));
 const yearsArg = argOf('years', null);
 const YEARS = yearsArg
@@ -182,7 +197,7 @@ const rows = [];
 for (const year of YEARS) {
   const entry = hostMap?.years?.[year];
   if (!entry) continue;
-  const host = entry.host.includes('.') ? entry.host : `${entry.host}.myfantasyleague.com`;
+  const host = resolveMflHost(entry.host);
   const lid = entry.leagueId;
   const names = franchiseNames(year);
 
