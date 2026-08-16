@@ -14,7 +14,7 @@ import Breadcrumbs from '../../../components/theleague/Breadcrumbs.astro';
 import SchefterReactionBar from '../../../components/shared/SchefterReactionBar.tsx';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import feedData from '../../../../data/afl-fantasy/schefter-feed.json';
-import type { SchefterFeed } from '../../../types/schefter';
+import type { SchefterFeed, SchefterPost } from '../../../types/schefter';
 import '../../../styles/schefter-feed.css';
 import GauntletArticleSection from '../../../components/shared/schedule-strength/GauntletArticleSection.astro';
 import type { GauntletDerived } from '../../../utils/schedule-strength';
@@ -27,9 +27,31 @@ const gauntletFiles = import.meta.glob<GauntletDerived>(
   { import: 'default' }
 );
 
+// Posts older than the active window live in per-year archive files (see
+// scripts/lib/schefter-archive.mjs). Lazy glob so permalinks to archived
+// articles keep resolving without bundling the archive into this chunk.
+const archiveFiles = import.meta.glob<{ posts?: SchefterPost[] } | SchefterPost[]>(
+  '../../../../data/afl-fantasy/schefter-archive/*.json',
+  { import: 'default' }
+);
+
 const { id } = Astro.params;
 const feed = feedData as SchefterFeed;
-const post = feed.posts.find(p => p.type === 'article' && p.id === id && p.content);
+const isArticle = (p: SchefterPost) => p.type === 'article' && p.id === id && !!p.content;
+let post = feed.posts.find(isArticle);
+
+if (!post) {
+  const years = Object.keys(archiveFiles).sort().reverse();
+  for (const key of years) {
+    const data = await archiveFiles[key]();
+    const posts = Array.isArray(data) ? data : (data?.posts ?? []);
+    const hit = (posts as SchefterPost[]).find(isArticle);
+    if (hit) {
+      post = hit;
+      break;
+    }
+  }
+}
 
 if (!post) {
   return Astro.redirect('/afl-fantasy/news');

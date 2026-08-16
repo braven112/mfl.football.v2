@@ -127,3 +127,69 @@ describe('mergeByPath', () => {
     expect(JSON.parse(out).posts.map((p: any) => p.id)).toEqual(['b']);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Archival watermark — resurrection protection
+// ---------------------------------------------------------------------------
+//
+// The weekly archiver (scripts/lib/schefter-archive.mjs) removes old posts
+// from the active feed and stamps `archivedThroughTimestamp`. Every
+// 15-minute scan job races it with a copy of the feed from BEFORE the
+// archive run, and the plain union would re-add ("resurrect") every
+// archived post. The watermark filter is what makes archival correct under
+// any interleaving — these tests are the contract.
+
+describe('mergeFeed archival watermark', () => {
+  const olderPost = post('old', '2026-03-01T00:00:00Z');
+  const newerPost = post('new', '2026-08-01T00:00:00Z');
+
+  it('does not resurrect archived posts from a stale origin copy', () => {
+    // theirs: pre-archive copy still holding the old post
+    const theirs = { posts: [newerPost, olderPost] };
+    // ours: post-archive feed with the watermark
+    const ours = { archivedThroughTimestamp: '2026-03-01T00:00:00Z', posts: [newerPost] };
+    const merged = mergeFeed(theirs, ours);
+    expect(merged.posts.map((p: any) => p.id)).toEqual(['new']);
+    expect(merged.archivedThroughTimestamp).toBe('2026-03-01T00:00:00Z');
+  });
+
+  it('does not resurrect when OURS is the stale side', () => {
+    const theirs = { archivedThroughTimestamp: '2026-03-01T00:00:00Z', posts: [newerPost] };
+    const ours = { posts: [newerPost, olderPost] };
+    const merged = mergeFeed(theirs, ours);
+    expect(merged.posts.map((p: any) => p.id)).toEqual(['new']);
+    expect(merged.archivedThroughTimestamp).toBe('2026-03-01T00:00:00Z');
+  });
+
+  it('keeps posts strictly newer than the watermark and drops ties', () => {
+    const boundary = post('boundary', '2026-03-01T00:00:00Z');
+    const after = post('after', '2026-03-01T00:00:01Z');
+    const theirs = { posts: [boundary, after] };
+    const ours = { archivedThroughTimestamp: '2026-03-01T00:00:00Z', posts: [after] };
+    const merged = mergeFeed(theirs, ours);
+    expect(merged.posts.map((p: any) => p.id)).toEqual(['after']);
+  });
+
+  it('never drops posts with unparseable timestamps', () => {
+    const undated = { id: 'undated', headline: 'x' };
+    const theirs = { posts: [undated] };
+    const ours = { archivedThroughTimestamp: '2026-03-01T00:00:00Z', posts: [newerPost] };
+    const merged = mergeFeed(theirs, ours);
+    expect(merged.posts.map((p: any) => p.id).sort()).toEqual(['new', 'undated']);
+  });
+
+  it('takes the max watermark when both sides carry one', () => {
+    const theirs = { archivedThroughTimestamp: '2026-02-01T00:00:00Z', posts: [newerPost] };
+    const ours = { archivedThroughTimestamp: '2026-04-01T00:00:00Z', posts: [newerPost] };
+    const merged = mergeFeed(theirs, ours);
+    expect(merged.archivedThroughTimestamp).toBe('2026-04-01T00:00:00Z');
+  });
+
+  it('feeds without a watermark merge exactly as before', () => {
+    const theirs = { posts: [olderPost] };
+    const ours = { posts: [newerPost] };
+    const merged = mergeFeed(theirs, ours);
+    expect(merged.posts.map((p: any) => p.id)).toEqual(['new', 'old']);
+    expect('archivedThroughTimestamp' in merged).toBe(false);
+  });
+});

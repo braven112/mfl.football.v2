@@ -17,8 +17,8 @@
  *     slow CDN can never hang or break an unfurl.
  */
 
-import { readFileSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { readFileSync, statSync, readdirSync } from 'node:fs';
+import { join, dirname } from 'node:path';
 import satori from 'satori';
 import { Resvg } from '@resvg/resvg-js';
 import type { SchefterFeed, SchefterPost } from '../types/schefter';
@@ -78,12 +78,47 @@ function getFeedIndex(league: OgLeague): Map<string, SchefterPost> {
   return byId;
 }
 
+// ── Archive fallback ─────────────────────────────────────────────────────
+// Posts older than the active window live in `schefter-archive/<year>.json`
+// next to each feed (scripts/lib/schefter-archive.mjs). Old GroupMe/social
+// links keep requesting their OG images long after the post rotates out, so
+// a miss on the active feed falls through to the archives. Loaded lazily and
+// cached per league — archives are frozen between weekly archive runs, and
+// every archive commit redeploys, so no mtime tracking is needed.
+
+const archiveCache = new Map<OgLeague, Map<string, SchefterPost>>();
+
+function getArchiveIndex(league: OgLeague): Map<string, SchefterPost> {
+  const cached = archiveCache.get(league);
+  if (cached) return cached;
+  const byId = new Map<string, SchefterPost>();
+  const dir = join(process.cwd(), dirname(FEED_PATHS[league]), 'schefter-archive');
+  try {
+    const files = readdirSync(dir).filter((f) => /^\d{4}\.json$/.test(f));
+    for (const file of files) {
+      try {
+        const posts = JSON.parse(readFileSync(join(dir, file), 'utf-8')) as SchefterPost[];
+        for (const post of posts ?? []) {
+          if (post?.id && !byId.has(post.id)) byId.set(post.id, post);
+        }
+      } catch {
+        // Skip an unreadable year file rather than losing the whole index.
+      }
+    }
+  } catch {
+    // No archive directory yet — empty index.
+  }
+  archiveCache.set(league, byId);
+  return byId;
+}
+
 /** Look a post up by id across both leagues' feeds. ESPN wire posts are
  *  mirrored into BOTH feeds with the same id, so the caller's league (from
  *  the ?league= hint on the image URL) is checked first — otherwise a
  *  shared wire post linked from the AFL page would render TheLeague
- *  branding. Returns null for unknown ids so the endpoint can 404 instead
- *  of rendering arbitrary requests. */
+ *  branding. Falls back to the season archives for posts older than the
+ *  active window. Returns null for unknown ids so the endpoint can 404
+ *  instead of rendering arbitrary requests. */
 export function findSchefterPost(
   postId: string,
   preferredLeague: OgLeague = 'theleague'
@@ -91,6 +126,10 @@ export function findSchefterPost(
   const order: OgLeague[] = [preferredLeague, ...OG_LEAGUES.filter((l) => l !== preferredLeague)];
   for (const league of order) {
     const post = getFeedIndex(league).get(postId);
+    if (post) return { post, league };
+  }
+  for (const league of order) {
+    const post = getArchiveIndex(league).get(postId);
     if (post) return { post, league };
   }
   return null;

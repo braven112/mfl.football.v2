@@ -28,6 +28,16 @@ export const WHATS_NEW_ACTIVE_MAX = 40;
 export const WHATS_NEW_ARCHIVE_DIR = 'src/data/whats-new-archive';
 
 /**
+ * Max posts kept in each league's active schefter-feed.json. Everything
+ * older moves to `schefter-archive/<year>.json` next to the feed (see
+ * scripts/lib/schefter-archive.mjs) and stays reachable through the
+ * article-permalink and OG fallbacks. ~300 ≈ a month of peak-season posts
+ * — several "load more" pages of feed UI — while keeping the file (and the
+ * news page's server-rendered card count and reaction pipeline) bounded.
+ */
+export const SCHEFTER_ACTIVE_MAX = 300;
+
+/**
  * The AFL keeper window: any snapshot dated July 16-31 (any year) is the
  * official keeper record and must never be pruned — and the daily snapshot
  * writer must never SKIP a write inside this window either, or an unchanged

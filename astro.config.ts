@@ -38,6 +38,11 @@ export default defineConfig({
       'public/assets/logos/afl-logo-dark.svg',
       'src/data/theleague/schefter-feed.json',
       'data/afl-fantasy/schefter-feed.json',
+      // Season archives the OG renderer falls back to for posts older than
+      // the active window (scripts/lib/schefter-archive.mjs). One glob per
+      // league — the year files rotate in annually.
+      'src/data/theleague/schefter-archive/*.json',
+      'data/afl-fantasy/schefter-archive/*.json',
     ],
     // Keeps the file tracer's unresolvable-path fallback from shipping 20
     // years of archived feeds in every request's function. See the module for

@@ -29,9 +29,33 @@ const gauntletFiles = import.meta.glob<GauntletDerived>(
   { import: 'default' }
 );
 
+// Posts older than the active window live in per-year archive files (see
+// scripts/lib/schefter-archive.mjs). Lazy glob: an archive year is only
+// loaded when the active feed misses, so permalinks to archived articles
+// keep resolving without the archive riding in this page's chunk.
+const archiveFiles = import.meta.glob<{ posts?: SchefterPost[] } | SchefterPost[]>(
+  '../../../data/theleague/schefter-archive/*.json',
+  { import: 'default' }
+);
+
 const { id } = Astro.params;
 const feed = feedData as SchefterFeed;
-const post = feed.posts.find(p => p.type === 'article' && p.id === id && (p.content || p.grades));
+const isArticle = (p: SchefterPost) => p.type === 'article' && p.id === id && (p.content || p.grades);
+let post = feed.posts.find(isArticle);
+
+if (!post) {
+  // Newest archive year first — recent rollouts are the likeliest hits.
+  const years = Object.keys(archiveFiles).sort().reverse();
+  for (const key of years) {
+    const data = await archiveFiles[key]();
+    const posts = Array.isArray(data) ? data : (data?.posts ?? []);
+    const hit = (posts as SchefterPost[]).find(isArticle);
+    if (hit) {
+      post = hit;
+      break;
+    }
+  }
+}
 
 if (!post) {
   return Astro.redirect('/theleague/news');
