@@ -231,11 +231,19 @@ describe('rumor-scan text redaction — franchise names cannot leak through tip 
     // eight real AFL names survived redaction. And replacing per-token
     // re-scans earlier output, turning a normalized "Smokane FC" into
     // "Smokane FC FC". One alternation, lookaround-delimited, fixes both.
+    // The left guard lives in LEFT_EDGE_GUARD since it grew a "/" clause (so a
+    // name cannot start inside a URL path segment), so the region must cover
+    // the constant too — grepping only the function body would pass happily
+    // after the edge logic was lifted out of it.
+    const consts = src.match(/const LEFT_EDGE_GUARD = [\s\S]+?;/);
     const fn = src.match(/function\s+buildFranchiseNameMatcher[\s\S]+?\n\}/);
+    expect(consts).not.toBeNull();
     expect(fn).not.toBeNull();
-    expect(fn![0]).toMatch(/\(\?<!\\\\w\)/);
-    expect(fn![0]).toMatch(/\(\?!\\\\w\)/);
-    expect(fn![0]).not.toMatch(/\\\\b/);
+    const region = `${consts![0]}\n${fn![0]}`;
+    expect(region).toMatch(/\(\?<!\[\\\\w\/\]\)/);
+    expect(region).toMatch(/\(\?!\\\\w\)/);
+    expect(region).not.toMatch(/\\\\b/);
+    expect(fn![0]).toMatch(/LEFT_EDGE_GUARD/);
     expect(fn![0]).toMatch(/join\('\|'\)/);
   });
 

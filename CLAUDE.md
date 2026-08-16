@@ -627,10 +627,57 @@ harvest it runs on is load-bearing, not bookkeeping:
   name) to the canonical name; redact everything else. Comparing the one
   string fuzzes the kept team's own nicknames and lets Schefter print
   last-season's punishment name for a team he's allowed to name.
-- Over-matching is the safe direction — a stray hit fuzzes a word to
-  `[a team]`, a miss leaks an identity.
+- Over-matching is the safe direction — a miss leaks an identity — but it is
+  **not free, and the old "a stray hit just fuzzes a word" framing was wrong**.
+  `[a team]` is a SEMANTIC INSERTION: it asserts a franchise reference where
+  none existed, and HARD RULES 2/3 then order the LLM to make the tip's content
+  survive the fuzz, so the model invents a team's involvement out of "put out
+  feelers". A leak names the wrong team; this fabricates one on a tip nobody
+  scoped to a franchise. Because the harvest floor is two characters and
+  matching is case-insensitive, ~40 real name forms are ordinary words, and
+  every one of these was live (Aug 2026): "Deal is dead." → "Deal is [a team]."
+  (`DEAD`), "a heavy favorite" (`Heavy`), "put out feelers" (AFL `Feelers`),
+  "headed to the Saints" (AFL `Saints` — an NFL club), "Swift is being shopped"
+  (AFL `Swift` — an NFL player).
+  The relaxation is **two gates, and both must pass**, because two different
+  questions are involved and only one is answerable by hand:
+  - `AMBIGUOUS_NAME_TOKENS` (curated) — "is this an ordinary English word?"
+    Judgment; not derivable. Team-flavored forms that merely happen to be
+    words ("Mafia", "Generals", "Pigs") stay out.
+  - `computeRelaxableTokens` (derived from the configs) — "is this a name
+    people currently CALL the team?" A token relaxes only if EVERY appearance
+    across both leagues is an MFL `abbrev` or a RETIRED `history[]` form. The
+    moment any franchise wears it as a live `name`/`nameMedium`/`nameShort`/
+    alias it is blocked everywhere. Currently 21 relax, 12 are blocked
+    (`saints`, `balls`, `feelers`, `herd`, `chat`, `swift`, `fire`, `pain`,
+    `indians`, `cowboy`, `dream`, `baked`). This half **self-maintains**:
+    rename a team to "Fire" and `fire` drops out on its own.
+
+  Then `readsAsOrdinaryProse` relaxes on **case alone** — lowercase passes,
+  any capital redacts. Two relaxations were tried and reverted, both because
+  they leaked real franchises: relaxing sentence-initial capitals (destroys
+  the only signal there is, and that position is where a tipster names a team
+  as the subject — five AFL franchises leaked), and relaxing every ambiguous
+  token regardless of whether it is a live nickname ("hearing saints is
+  shopping a tight end" reached the prompt intact). Don't re-litigate either
+  without re-running the sweep.
+
+  Two more things hold it together: multi-word tokens match with
+  `withFlexibleSeparators`, because "dead-cap" otherwise misses "Dead Cap"
+  entirely and falls apart into `dead`, letting the FULL name through — every
+  Set lookup therefore goes through `canonicalizeNameKey` or the kept team's
+  own hyphenated name gets demoted to `[a team]`. The separator set is
+  space/hyphen/underscore/slash **plus a period only when not followed by
+  whitespace**: a period is also a full stop, so widening it naively welds
+  "The deal is dead. Cap space is tight." into one phantom team. And the prose check runs
+  **before** the keep-franchise branches, or an ordinary word that is one of
+  the kept team's own forms gets rewritten to that team's display name ("the
+  deal is Dead Cap Walking"), the same fabrication wearing a real name.
   `tests/schefter-franchise-name-redaction.test.ts` runs the real configs
-  through the anonymizer and fails on any surviving alias or retired name.
+  through the anonymizer and fails on any surviving alias or retired name —
+  one tip per token, each placed mid-sentence in its config casing, because a
+  bare `tokens.join(' / ')` cannot express position and position is now
+  load-bearing.
 
 ### Former-name callbacks — the bit is the pairing, and it expires
 
