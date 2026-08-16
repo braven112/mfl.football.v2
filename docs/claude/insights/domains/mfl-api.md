@@ -1717,7 +1717,18 @@ league-blind smell. Regression test: `tests/trades-pending-league-teams.test.ts`
 
 ---
 
-## 2026-08-12 - MFL's Schedule Export Is Owner-Gated, And Its Archives Are Genuinely Partial
+## 2026-08-12 - MFL's Schedule Export Is Owner-Gated, And Its Archives Are Partial
+
+> **CORRECTED 2026-08-16 — point 2 below was WRONG, and it was the confident
+> kind of wrong.** "The archives are partial and this is final. Do not
+> re-litigate this." was written after an exhaustive audit of the EXPORT API,
+> and it held for that surface. It did not hold for the site. Every one of
+> 2007-2019 was recovered in full from the authenticated *rendered* schedule
+> view ("Fantasy Schedule → By Franchise"), which prints games the export
+> refuses to. See the 2026-08-16 section below. Read point 1 — it is still
+> exactly right — then read the correction. Leaving the original text intact
+> deliberately: the reasoning was sound and the conclusion was still false,
+> which is the lesson.
 
 **Context:** The AFL's 2007-2019 regular-season head-to-head pairings were
 missing. Rivalry pages need them; nothing else in any committed feed carries an
@@ -1767,3 +1778,90 @@ with the strict HTML test), surfaced by the backfill workflow whenever gaps
 remain. `franchise-history.json#h2hCoverage` records the shortfall per season so
 the UI can state it precisely rather than blanket-claiming "postseason only",
 which is wrong for 2012-2015.
+
+## 2026-08-16 - Archived Regular Seasons Are Recoverable From the Rendered Schedule View — And MFL Can Serve FABRICATED Pairings
+
+**Context:** Follow-on from the 2026-08-12 entry, which concluded the AFL's
+2007-2019 regular-season pairings were gone. They were not. All thirteen
+seasons plus 2007-2009 were recovered, taking the AFL from 2,763 to 5,507
+head-to-head games. Two findings, and the second is the dangerous one.
+
+**1. The rendered schedule view holds what the export does not.**
+`TYPE=schedule` returns archived regular-season weeks with matchups stripped
+even WITH `APIKEY`. But the site's own "Fantasy Schedule → By Franchise" page,
+viewed by a logged-in league member, prints every game as
+`W @CSKA (153.96-105.19)` — result, `@` for away, opponent, own score, their
+score. Pasting that table into a text file and parsing it recovers the season
+exactly. Two independent surfaces, two different answers, same credentials:
+**an export saying "no" is evidence about the export, not about MFL.**
+
+The parser is `scripts/recover-afl-schedule-from-html.mjs`. What the AFL's own
+archives threw at it, each found by a season that would not parse — expect more:
+
+- Rows keyed by team NAME (2013-2015) or by ABBREVIATION (2011, 2009).
+- Mixed-case (`boo`, `Chat`) and punctuated (`St.`) abbreviations.
+- Franchises with NO abbrev in `league.json`, where MFL generates the opponent
+  label from the name in two shapes *in the same table*: the name truncated
+  (`Fullyba`, `Chatmas`) and the name's initials (`TBB`, `DMTI`, `420A` — a
+  leading numeric word is kept whole). 2008 has no abbrevs at all, all 24.
+- A header row that arrived as `ranchise/Week`, having lost its first
+  character — so the header is found by SHAPE (every cell after the first is a
+  number), never by its label.
+- Pastes truncated mid-token, missing only the final `)`.
+- Doubleheader weeks: one score, two opponents, so a franchise's weekly cell
+  holds two games separated by a newline while TABs separate weeks. Weeks come
+  from the TAB layout; the score-join against `weekly-results.json` is a
+  cross-check, not the primary signal (2015's weekly-results has no scores at
+  all for weeks 1-3).
+
+**2. MFL served 46 regular-season matchups per season for 2012-2015 whose
+SCORES were correct and whose OPPONENTS were invented.**
+
+This is worse than missing data. It validates against every cheap check: the
+scores agree with `weekly-results.json` exactly, each franchise appears once
+per week, and the weeks are real. Three things exposed it:
+
+- All four seasons had byte-identical per-week matchup counts
+  (8,8,12,6,5,2,2,1,1,1 for weeks 4-13). Four different NFL seasons cannot
+  share a game-count shape by chance.
+- In every week, `matchups × 2 === franchises holding a score that week` —
+  the fingerprint of pairing off whoever has a score, not of a real schedule
+  partially surviving.
+- 2012 was impossible on its own terms: franchise 0003 collected 7 wins from a
+  46-game subset against an official season total of 6. **A subset of a season
+  can never out-count the season.** That check is cheap and worth running on
+  any partial feed.
+
+**The arbiter is the standings, and it is decisive.** MFL computes `h2hwlt`
+from the true schedule, so a recovered season is required to reproduce all 24
+records AND every franchise's official games-played exactly. Once it does,
+any stored game the recovery contradicts can be tested: swap it in, and if a
+franchise's record moves, that game cannot be real. 24 of 2015's 46 were
+refuted that way; 2013, 2014 and 2012 refuted 29, 28 and 27. Twenty-four
+simultaneous record constraints cannot come out right by accident, which is
+what makes this stronger than spot-checking games.
+
+**Do not let a "MFL wins" rule stand unconditionally.** The obvious policy —
+never overwrite MFL's own data — would have preserved fabricated pairings and
+rejected the real schedule. The recovery script arbitrates instead: contested
+games are decided by the records, and if NOTHING is refuted it fails rather
+than overwriting on a hunch.
+
+**Recommendation:** (a) When an export says data is absent, try the rendered
+page before concluding anything — they disagree. (b) Never trust a partial
+archived feed's *pairings* just because its *scores* check out; score
+agreement is not pairing agreement. (c) Reconcile against `leagueStandings`,
+which is the only independent witness to who actually played whom. (d) Watch
+for a repeated structural shape across seasons — it means a generator, not
+history.
+
+**Evidence:** `scripts/recover-afl-schedule-from-html.mjs` (parser +
+arbitration), `scripts/purge-fabricated-afl-schedule-weeks.mjs` (evidence-gated
+removal for any season no paste replaced — currently flags nothing),
+`tests/afl-schedule-recovery.test.ts` (replays every recovered season and
+asserts all 24 W-L-T against MFL's standings, so a silent corruption fails CI).
+Sources are committed under `data/afl-fantasy/schedule-recovery/<year>.txt`.
+
+**Still unrecoverable:** 2003. The league played that season on Yahoo and only
+standings were entered into MFL, so no game in any week has a score. There is
+nothing behind it — don't spend time, and don't ask for a screenshot.
