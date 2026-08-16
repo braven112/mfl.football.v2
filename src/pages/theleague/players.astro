@@ -1920,7 +1920,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       const htDisplay = p.height ? Math.floor(p.height / 12) + "'" + (p.height % 12) + '"' : '-';
       const wtDisplay = p.weight ? p.weight + '' : '-';
       html += `<td class="cell-sm col-always-profile">${p.draftRd != null ? 'Rd ' + p.draftRd : '<span class="na">-</span>'}</td>
-        <td class="cell-college col-group--stats">${p.collegeLogo ? `<img src="${p.collegeLogo}" alt="${p.college}" title="${p.college}" class="college-logo" loading="lazy" decoding="async" />` : (p.college ? p.college : '<span class="na">-</span>')}</td>
+        <td class="cell-college col-group--stats">${p.collegeLogo ? `<img src="${p.collegeLogo}" alt="${p.college}" title="${p.college}" class="college-logo" loading="lazy" decoding="async" onerror="this.style.display='none'" />` : (p.college ? `<span class="na" title="${p.college}">-</span>` : '<span class="na">-</span>')}</td>
         <td class="cell-sm col-always-profile">${htDisplay}</td>
         <td class="cell-sm col-always-profile">${wtDisplay}</td>`;
 

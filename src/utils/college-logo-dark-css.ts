@@ -76,7 +76,12 @@ const NCAA_DARK_URL_RE = /^https:\/\/a\.espncdn\.com\/i\/teamlogos\/ncaa\/500-da
  * log's `✗ <id>: HTTP 404` lines across consecutive deploys identify them.
  */
 export const KNOWN_MISSING_NCAA_DARK_IDS: readonly string[] = [
-  '2347', // Louisiana / Louisiana-Lafayette
+  // As of Aug 2026 these three also 404 on the LIGHT cut, so college-logos.json
+  // no longer references them at all (Malone/Manitoba have null logos; the
+  // Louisiana entries were re-pointed from 2347 — actually Louisiana Christian,
+  // a mis-mapping — to the Ragin' Cajuns' real id, 309). Kept as a guard in
+  // case a future data refresh resurrects the URLs.
+  '2347', // Louisiana Christian University
   '556', // Malone University
   '2770', // Manitoba
 ];

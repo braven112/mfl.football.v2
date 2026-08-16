@@ -1200,7 +1200,7 @@ const pageConfig = {
                 <article class="chart-card">
                   <header class="chart-card__header chart-card__header--group">
                     {assets?.logo ? (
-                      <img src={assets.logo} alt={group.key} class="team-group__logo" />
+                      <img src={assets.logo} alt={group.key} class="team-group__logo" onerror="this.style.display='none'" />
                     ) : (
                       <div class="team-group__logo team-group__logo--fallback">
                         {group.key[0] ?? '?'}

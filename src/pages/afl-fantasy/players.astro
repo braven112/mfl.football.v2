@@ -873,7 +873,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         <td class="cell-age">${p.age ?? '-'}</td>
         <td class="cell-sm">${p.exp != null ? p.exp : '-'}</td>
         <td class="cell-sm">${p.draftRd != null ? 'Rd ' + p.draftRd : '<span class="na">-</span>'}</td>
-        <td class="cell-college">${p.collegeLogo ? `<img src="${p.collegeLogo}" alt="${escapeAttr(p.college || '')}" title="${escapeAttr(p.college || '')}" class="college-logo" loading="lazy" decoding="async" />` : (p.college ? escapeAttr(p.college) : '<span class="na">-</span>')}</td>
+        <td class="cell-college">${p.collegeLogo ? `<img src="${p.collegeLogo}" alt="${escapeAttr(p.college || '')}" title="${escapeAttr(p.college || '')}" class="college-logo" loading="lazy" decoding="async" onerror="this.style.display='none'" />` : (p.college ? `<span class="na" title="${escapeAttr(p.college)}">-</span>` : '<span class="na">-</span>')}</td>
         <td class="cell-sm">${htDisplay}</td>
         <td class="cell-sm">${wtDisplay}</td>`;
 
