@@ -418,23 +418,16 @@ const methodology = issue.methodology
   border-left: 3px solid var(--color-primary, #2563eb);
   padding-left: 0.6rem;
 }
-/* Schefter's avatar rides in the left gutter rather than in the text flow, so
-   this heading starts on the same edge as the breadcrumbs, the headline, the
-   lede and every card below it. It is decorative (aria-hidden), so once the
-   viewport is too narrow for a gutter it drops out entirely — falling back to
-   inline would put the one heading on the page back out of line. */
+/* Avatar + heading, in normal flow, starting on the page's content edge. */
 .pr-section__title--brand {
-  position: relative;
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
   border-left: none;
   padding-left: 0;
   font-size: 1.75rem;
 }
 .pr-section__avatar {
-  position: absolute;
-  right: calc(100% + 0.6rem);
-  top: 50%;
-  transform: translateY(-50%);
   width: 36px;
   height: 36px;
   border-radius: 50%;
@@ -442,11 +435,6 @@ const methodology = issue.methodology
   flex-shrink: 0;
   border: 2px solid var(--content-border, #e5e7eb);
   background: var(--content-bg-muted, #f3f4f6);
-}
-/* main is 1232px + ~19px padding; below ~1300px there is no room to the left
-   of the text for a 36px avatar plus its gap. */
-@media (max-width: 1300px) {
-  .pr-section__avatar { display: none; }
 }
 
 .pr-rankings {

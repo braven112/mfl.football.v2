@@ -5,6 +5,14 @@
   "featuredImageLeague": "afl",
   "changes": [
     {
+      "date": "2026-08-15",
+      "type": "bug-fix",
+      "summary": "Schefter's headshot on The Pecking Order stopped floating out in the margin. The little round photo beside the \"The Pecking Order\" heading was parked in the gutter to the left of the page on purpose — the idea being that the heading text would then line up dead even with the headline, the breadcrumbs and the ranking cards below it. Nice idea, wrong measurement: the page's column has about 19 pixels of room on that side and the photo needed 50, so on any screen wide enough to show it at all, it sat outside the layout entirely — a disembodied head hovering off in the left margin with nothing above or below it. It's back in the heading now, starting on the same left edge as everything else and reading like a byline. It also shows up on phones, which it never did before: the old version hid itself on anything under 1300 pixels wide, because below that there was no margin left to hide in.",
+      "impact": "user",
+      "area": "rankings",
+      "league": "both"
+    },
+    {
       "date": "2026-08-16",
       "type": "bug-fix",
       "summary": "Roger's links in the group chat work again. When he ended a sentence with a link — \"Review your plan at theleague.us/rosters.\" — GroupMe grabbed the period along with the address and sent everyone who tapped it to a page that doesn't exist. The roster-cutdown reminder is the one owners actually noticed, since it's the message telling seven teams to go log in and fix their roster. Two fixes, because one wasn't enough: every bot message now gets the trailing period trimmed off the link on the way out, and the site itself now catches a link that arrives with a period stuck to it and quietly sends you to the right page instead of a dead end. That second half matters, because the messages already sitting in the chat can't be edited — and it works for links you paste into a text message or an email too.",
