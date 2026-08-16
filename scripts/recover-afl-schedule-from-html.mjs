@@ -128,23 +128,44 @@ for (const f of franchises) {
   if (f.name) idByName.set(String(f.name).trim(), f.id);
 }
 
-// Some archived league.json rows carry no abbrev at all (2013's Vinegar Strokes
-// is one), while the schedule view still prints one. Bind such a franchise by
-// elimination, and ONLY when the match is forced — exactly one franchise short
-// an abbrev and exactly one abbreviation in the paste that nothing claims. Any
-// other shape stays unresolved and surfaces as a parse problem rather than a
-// guess.
-const abbrevless = franchises.filter((f) => !f.abbrev).map((f) => f.id);
+// Some archived league.json rows carry no abbrev at all — 2013's Vinegar
+// Strokes, 2010's Fullybaked and Chatmaster — while the schedule view still
+// prints something in the opponent column. What it prints varies: 2013 shows a
+// real abbreviation ("VS"), 2010 shows the team NAME truncated to seven
+// characters ("Fullyba", "Chatmas"). Both have to resolve, and neither may
+// resolve by guessing.
+//
+// Two forced rules, in order. A token that is a prefix of exactly one
+// abbrev-less franchise's name IS that franchise. Then, if a single franchise
+// and a single token are still unclaimed, they must be each other. Anything
+// left over stays unresolved and surfaces as a parse problem.
+const abbrevless = franchises.filter((f) => !f.abbrev);
 if (abbrevless.length) {
   const seen = new Set();
   let m;
-  const scan = /\b[WLT]\s+@?([A-Za-z0-9]+)\s*\(\s*[\d.]+\s*-\s*[\d.]+\s*\)/g;
+  const scan = /\b[WLT]\s+@?([A-Za-z0-9][A-Za-z0-9.'-]*)\s*\(\s*[\d.]+\s*-\s*[\d.]+\s*\)/g;
   while ((m = scan.exec(raw))) seen.add(m[1].toUpperCase());
-  const unclaimed = [...seen].filter((a) => !idByAbbrev.has(a));
-  if (abbrevless.length === 1 && unclaimed.length === 1) {
-    idByAbbrev.set(unclaimed[0], abbrevless[0]);
+
+  let unclaimed = [...seen].filter((a) => !idByAbbrev.has(a));
+  let pending = [...abbrevless];
+
+  for (const token of [...unclaimed]) {
+    const hits = pending.filter((f) => String(f.name).toUpperCase().startsWith(token));
+    if (hits.length !== 1) continue;
+    idByAbbrev.set(token, hits[0].id);
     console.log(
-      `league.json has no abbreviation for franchise ${abbrevless[0]}; bound it to "${unclaimed[0]}" by elimination.`
+      `league.json has no abbreviation for franchise ${hits[0].id} (${hits[0].name}); ` +
+        `bound it to "${token}", the only name it can be a prefix of.`
+    );
+    pending = pending.filter((f) => f.id !== hits[0].id);
+    unclaimed = unclaimed.filter((a) => a !== token);
+  }
+
+  if (pending.length === 1 && unclaimed.length === 1) {
+    idByAbbrev.set(unclaimed[0], pending[0].id);
+    console.log(
+      `league.json has no abbreviation for franchise ${pending[0].id} (${pending[0].name}); ` +
+        `bound it to "${unclaimed[0]}" by elimination.`
     );
   }
 }
