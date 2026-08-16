@@ -279,8 +279,36 @@ design points worth keeping:
   `TeamIconDarkStyles` joins the two by franchiseId at build time.
 - An override color must itself clear 3:1 on the dark card, or the stroke
   can't separate the logo from the background — that's the whole job. The test
-  enforces it, and also fails on an `iconStrokeDark` set for a team that isn't
-  in the stroke manifest at all (dead config that looks live).
+  enforces it.
+
+**The config overrides the measurement in BOTH directions (2026-08-15).** An
+earlier version of this note said the test rejects an `iconStrokeDark` on a team
+that isn't in the stroke manifest, as dead config. That is only true of `false`
+— a `false` on an unflagged crest has nothing to opt out of, so it reads as if
+it were doing something when it isn't, and `tests/crest-dark-stroke.test.ts`
+fails it. A **color** on an unflagged crest is the opposite: it opts that crest
+IN, and `withStrokeColors` has a dedicated path for it.
+
+That path exists because the score counts legible PIXELS, which is the wrong
+question at the silhouette's edge. A crest that is bright through the middle and
+dark around its rim clears the threshold comfortably while the outline it
+actually presents to the card dissolves into it — Jewpacabra at 68% is the
+motivating case. So "not in the manifest" is not a verdict that a crest needs no
+ring; it's the absence of one.
+
+**But the opt-in has a second, non-legibility use, and it's worth naming so the
+first one doesn't get overstated.** Suh girls, one cup measures **85%** legible
+— comfortably readable on a dark card, no rim problem, nothing to rescue. It
+carries `#ff769f` anyway, because hot pink is the team's color and the ring
+reads as a signature there rather than a fix (commissioner, 2026-08-15). Check
+the actual score with `pnpm measure:crest-contrast --report` before writing a
+legibility rationale into a changelog or a commit message: at 85% that story is
+simply false, and this note said it about Suh girls for exactly one commit
+before the number was looked up. Either reason is a legitimate opt-in; they just
+aren't the same reason.
+
+The 3:1 contrast check applies either way — it runs over every config color,
+opt-in or override, legibility-motivated or not.
 
 `buildCrestDarkStrokeCss` groups selectors by color, so the default-white
 crests still collapse into one rule and only overrides get their own.
