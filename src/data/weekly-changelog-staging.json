@@ -5,6 +5,14 @@
   "featuredImageLeague": "afl",
   "changes": [
     {
+      "date": "2026-08-16",
+      "type": "bug-fix",
+      "summary": "Both sites got lighter on their feet. Every page request was quietly hauling around twenty years of archived league feeds — every roster, every box score, every player list back to 2004 — loaded fresh whether you were looking at last Sunday or the Bush administration. It was 165 megabytes of luggage, and the worst part is we were carrying two copies of it: the pages that show old seasons already have their own, so the second set was along for the ride and nothing more. The site had grown so heavy it had actually stopped being able to deploy. Now only the last three seasons ride along and the archives are pulled up when something actually asks for them, which cut the whole thing roughly in half. Nothing you can see has changed — every season is still there, still complete — it just gets there faster.",
+      "impact": "user",
+      "area": "other",
+      "league": "both"
+    },
+    {
       "date": "2026-08-15",
       "type": "bug-fix",
       "summary": "Schefter stopped chewing holes in his own tips. To keep him from naming a team he's not allowed to name, every tip gets scrubbed before he reads it — any franchise name in the text is swapped out for \"[a team].\" Trouble is, the list of names he watches for includes short ones that are also just... words. \"Dead Cap Walking\" goes by DEAD in the standings and spent six seasons as Heavy Chevy, so a tip reading \"deal is dead, but he's a heavy favorite to be cut\" reached him as \"deal is [a team], but he's a [a team] favorite.\" Worse than gibberish: he's under orders to make sure the substance of a tip survives the scrub, so he'd go hunting for the team that wasn't there and write one into the story. Retired names and standings abbreviations now go through untouched when they're plainly being used as words — lowercase, in the middle of a sentence. Nicknames anybody still uses are a different matter and stay locked down, so \"put out feelers\" is still going to come back fuzzed. Titsburgh Feelers will live.",
