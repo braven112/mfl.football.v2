@@ -561,8 +561,8 @@ describe('franchise-name redaction — ordinary prose survives the fuzz', () => 
     ['There is a gap at running back.'],
     ['That pick is a rock solid value.'],
     ['The art of the deal is lost on him.'],
-    ['Fire sale incoming and the pain is real.'],
-    ['Dream scenario for that roster.'],
+    ['The fire sale is on and the pain is real.'],
+    ['That would be a dream scenario for this roster.'],
   ])('leaves %s untouched (TheLeague)', async (text) => {
     expect(await scrub(text, LEAGUE)).toBe(text);
   });
@@ -574,8 +574,7 @@ describe('franchise-name redaction — ordinary prose survives the fuzz', () => 
     ['That roster is a mint condition contender.'],
     ['He wants to show he belongs.'],
     ['A married man with three kids does not do that.'],
-    ['Balls to the wall approach on this rebuild.'],
-    ['Swift is being shopped after the trade deadline.'],
+    ['He is going balls to the wall on this rebuild.'],
   ])('leaves %s untouched (AFL)', async (text) => {
     expect(await scrub(text, AFL)).toBe(text);
   });
@@ -597,6 +596,29 @@ describe('franchise-name redaction — ordinary prose survives the fuzz', () => 
     ['Word is Chat wants a quarterback.'],
   ])('still redacts a mid-sentence capital in %s (AFL)', async (text) => {
     expect(await scrub(text, AFL)).toContain('[a team]');
+  });
+
+  // A capital that only LOOKS like grammar still redacts. Relaxing
+  // sentence-initial capitals was tried and reverted: the position destroys
+  // the only signal available, and it is also where a tipster names a team as
+  // the subject. Each of these leaked its franchise outright against the live
+  // configs. The cost is real and accepted — "Fire sale incoming." gets eaten,
+  // which is why the passing cases above phrase it mid-sentence.
+  it.each([
+    ['Saints are shopping a tight end.'],
+    ['Feelers wants a quarterback.'],
+    ['Balls is rebuilding this year.'],
+    ['Herd has been quiet.'],
+    ['Chat is shopping a RB.'],
+  ])('still redacts sentence-initial %s (AFL)', async (text) => {
+    expect(await scrub(text, AFL)).toContain('[a team]');
+  });
+
+  it.each([
+    ['Dead money is everywhere on that roster.'],
+    ['Fire sale incoming.'],
+  ])('still redacts sentence-initial %s (TheLeague)', async (text) => {
+    expect(await scrub(text, LEAGUE)).toContain('[a team]');
   });
 
   it('still redacts the distinctive multi-word form in any casing', async () => {
