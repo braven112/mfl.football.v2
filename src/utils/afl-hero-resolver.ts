@@ -732,10 +732,14 @@ function featureToHero(entry: WhatsNewEntry): HeroContent {
     link: entry.link ?? `/afl-fantasy/whats-new/${entry.id}`,
     linkLabel: entry.linkLabel ?? (entry.link ? 'Check it out' : 'Read the full story'),
     icon: entry.icon,
-    // --league-accent, not --color-secondary: this is the AFL's own hero and
-    // --color-secondary is TheLeague's brand green, which the AFL theme never
-    // overrides. Every other accent in this file is either a --cat-* category
-    // color or --color-primary (deliberately left blue for the AFL).
+    // --league-accent, not --color-secondary (TheLeague's brand green, which
+    // the AFL theme never overrides).
+    //
+    // NOT currently rendered: AflEventHero reads `--ev-accent` off the VIEW
+    // object (`accent: ACCENT_GOLD` in featureToView), and `accentColor` on
+    // the content object is only consumed by TheLeague's SeasonDailyHero /
+    // HeroBanner. So this was never a visible green — it is a latent trap in
+    // the HeroContent contract, fixed so it can't become one.
     accentColor: 'var(--league-accent, #c41e3a)',
     image: entry.image,
     imageAlt: entry.imageAlt,

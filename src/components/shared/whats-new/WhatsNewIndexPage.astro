@@ -569,7 +569,8 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
      TheLeague's green. Hence a light rule and a dark rule, not one.
      Plain selectors, not :global(): this block is is:global already, where
      :global() ships as dead literal CSS. */
-  html[data-league='afl'] .wn-card:hover .wn-card__read-more {
+  html[data-league='afl'] .wn-card:hover .wn-card__read-more,
+  html[data-league='bb1'] .wn-card:hover .wn-card__read-more {
     color: var(--league-accent, #c41e3a);
   }
 
