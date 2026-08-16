@@ -40,7 +40,11 @@ import {
 } from './lib/franchise-milestone-posts.mjs';
 import { isSeasonComplete } from './lib/theleague-season-complete.mjs';
 import { aliasDivisionName, isUsableDivisionName } from '../src/utils/division-aliases.mjs';
-import { bracketKindFromName } from '../src/utils/afl-bracket-kind.mjs';
+import {
+  bracketKindFromName,
+  placementFromName,
+  placementLabel,
+} from '../src/utils/afl-bracket-kind.mjs';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -414,18 +418,17 @@ const BRACKET_LABELLERS = {
     const name = bracket?.name ?? bracket?.bracket_name;
     const kind = bracketKindFromName(name, bracketId);
 
-    // The kind resolver answers "which tab does this bracket belong to", so it
-    // correctly calls "AFL 3rd Place Game" a championship-FAMILY bracket. That
-    // is the right answer to its question and the wrong one for a round label:
-    // labelling that bracket's final "Championship" told owners a franchise had
-    // played for the title when it played for third. The AFL runs up to six
-    // placement brackets a season (3rd/4th/5th place, both families), so read
-    // the placement out of the bracket's own name when it states one.
-    const placement = /(\d+)(?:st|nd|rd|th)\s+place/i.exec(String(name ?? ''));
-    if (placement && kind !== 'cup' && kind !== null) {
-      const n = Number(placement[1]);
-      const suffix = n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th';
-      return { tag: kind === 'nit' ? 'nit' : 'consolation', final: `${n}${suffix} Place Game` };
+    // A kind is which TAB a bracket belongs on, not what it decides — and
+    // `championship` is its fallthrough, so it covers "AFL 3rd Place Game" as
+    // well as the real final. Titling every championship-kind bracket's final
+    // "Championship" told owners a franchise had played for the title when it
+    // played for third. Ask the bracket's own name what it decides.
+    const placement = placementFromName(name);
+    if (placement !== null && kind !== 'cup') {
+      return {
+        tag: kind === 'nit' ? 'nit' : 'consolation',
+        final: placementLabel(placement),
+      };
     }
 
     switch (kind) {
