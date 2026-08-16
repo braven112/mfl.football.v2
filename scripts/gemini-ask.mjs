@@ -17,7 +17,12 @@
 //   EXPLORE (no globs) — Gemini greps the repo itself. Usually best: it picks
 //   what to read, so you don't have to guess a glob, and nothing large is ever
 //   assembled in this process.
-//     node scripts/gemini-ask.mjs -p "every caller of stripLinkAdjacentPunctuation?"
+//     node scripts/gemini-ask.mjs -p "every caller of leagueUrl outside the registry?"
+//
+//   NOTE: keep example prompts free of pinned-call-site function names.
+//   tests/link-punctuation.test.ts greps src/ and scripts/ for one such name
+//   and treats any hit as a call site — an example string in a comment fails
+//   the build. That guard is deliberately blunt; don't loosen it for a comment.
 //
 //   CORPUS (globs) — pin the exact file set when the question is "across
 //   precisely these" and you don't want it wandering.
@@ -183,7 +188,7 @@ function main() {
   // workspace itself, so handing it a question with no corpus is both valid
   // and usually the better call — it decides what to read, which beats
   // guessing a glob, and nothing large ever crosses into this process.
-  // (Verified: asked for every caller of stripLinkAdjacentPunctuation with no
+  // (Verified: asked for every caller of the GroupMe link sanitizer with no
   // files passed, and it returned exactly the three pinned call sites.)
   const files = collectFiles(args.patterns);
   const explore = !files.length && !stdinText.trim();
