@@ -16,6 +16,7 @@
 //   node scripts/pr-review-external.mjs --pr <number> [--providers gemini,openai] [--dry-run]
 
 import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { runProvider, PROVIDERS } from './lib/pr-review-providers.mjs';
 
 // Marker on the posted comment. Used to find-and-update rather than append a
@@ -34,6 +35,43 @@ const EXCLUDED_PATHS = [
   ':(exclude)src/data/salary-history/**',
   ':(exclude)public/assets/**',
 ];
+
+/**
+ * Repo conventions handed to context-using lenses only.
+ *
+ * Sourced from GEMINI.md's "Landmines" section rather than restated here, so
+ * there is one place to maintain it and the reviewers can't drift from what
+ * the repo actually tells its assistants.
+ *
+ * Deliberately NOT the whole of CLAUDE.md. Two reasons. The mechanical rules
+ * below make a reviewer catch MORE (a leagueUrl() violation flagged is a
+ * violation that's real). The rationale-for-oddities sections would make it
+ * catch LESS — a reviewer told "preserveFeedOrder is deliberate" will never
+ * ask whether it should be. Suppressing findings is the expensive direction
+ * to be wrong in, so it stays out.
+ */
+function loadRepoContext() {
+  const geminiMd = new URL('../GEMINI.md', import.meta.url);
+  let text;
+  try {
+    text = readFileSync(geminiMd, 'utf8');
+  } catch {
+    console.warn('GEMINI.md not readable — reviewers run without repo context.');
+    return '';
+  }
+
+  // Slice the Landmines section: from its heading to the next h2.
+  const start = text.indexOf('## Landmines');
+  if (start === -1) {
+    console.warn('GEMINI.md has no "## Landmines" section — reviewers run without repo context.');
+    return '';
+  }
+  const rest = text.slice(start);
+  const nextHeading = rest.indexOf('\n## ', 1);
+  const section = nextHeading === -1 ? rest : rest.slice(0, nextHeading);
+
+  return `Repo conventions you should assume are intentional and enforced by CI guard tests. A change that violates one of these is a real finding:\n\n${section.trim()}`;
+}
 
 function parseArgs(argv) {
   const args = { providers: ['gemini', 'openai'], dryRun: false, pr: null, base: 'origin/main' };
@@ -73,7 +111,8 @@ function renderSection(result) {
   const truncNote = result.truncated
     ? '\n\n_Note: the diff was truncated — coverage is partial._'
     : '';
-  return `### ${result.label}\n\n<sub>\`${result.model}\`</sub>\n\n${result.text}${truncNote}`;
+  const focus = result.focus ? ` · lens: **${result.focus}**` : '';
+  return `### ${result.label}\n\n<sub>\`${result.model}\`${focus}</sub>\n\n${result.text}${truncNote}`;
 }
 
 function buildComment(results) {
@@ -139,10 +178,7 @@ async function main() {
   }
   console.log(`Diff: ${diff.length} bytes across providers: ${args.providers.join(', ')}`);
 
-  const context =
-    'This repo has strict guard tests. Pay particular attention to: hardcoded league ids ' +
-    "(must come from the league registry), absolute URLs built by string concatenation (must use leagueUrl()), " +
-    'CSS var() references to tokens that are never defined, and tests that assert on source text rather than behavior.';
+  const context = loadRepoContext();
 
   // Providers run concurrently and independently — neither can suppress the other.
   const results = await Promise.all(

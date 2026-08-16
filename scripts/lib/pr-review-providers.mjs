@@ -24,15 +24,71 @@
 export const MAX_DIFF_BYTES = 200_000;
 
 /**
- * Shared reviewer instructions.
+ * Per-provider review lenses.
+ *
+ * WHY LENSES: three models given one identical prompt produce heavily
+ * correlated findings — you pay N times for close to 1x coverage. Distinct
+ * mandates guarantee distinct coverage even if the models are equally
+ * capable, so this is a decorrelation play first and a capability play second.
+ *
+ * The assignment does lean on a real asymmetry, though:
+ *
+ * - Gemini gets the cross-cutting lens because it has the context budget to
+ *   hold the diff AND the repo's conventions at once. That lens is the one
+ *   that NEEDS repo context to work — "you missed a call site" is unanswerable
+ *   without knowing what the call sites are.
+ *
+ * - Codex gets the correctness/security lens and is deliberately kept
+ *   context-free. The whole value of an outside reviewer is that it doesn't
+ *   share this repo's priors; feed it CLAUDE.md and it starts reviewing for
+ *   conformance to documented intent instead of asking whether the intent is
+ *   right. Several of this repo's worst bugs were rules that were themselves
+ *   wrong (the AFL draft window three rulebook surfaces agreed on, describing
+ *   a window the league had never drafted in). Keep one reviewer able to see
+ *   that.
+ */
+export const LENSES = {
+  gemini: {
+    focus: 'cross-cutting consistency',
+    usesRepoContext: true,
+    instructions: `Your assigned lens is CROSS-CUTTING CONSISTENCY. Other reviewers cover line-level correctness and security — do not duplicate them.
+
+Look for:
+- Call sites the change missed. If a function's signature, contract, or return shape changed, are ALL callers updated?
+- Half-applied refactors — a pattern introduced in one file but not its siblings.
+- Contradictions with conventions visible elsewhere in the diff or stated below.
+- Changes that will silently diverge from a parallel implementation (this codebase runs two leagues with near-identical page pairs; a fix applied to one and not the other is a real and recurring bug here).
+- Docs, tests, or registries that should have been updated alongside the code.`,
+  },
+  openai: {
+    focus: 'correctness & security',
+    usesRepoContext: false,
+    instructions: `Your assigned lens is CORRECTNESS AND SECURITY. Another reviewer covers architectural consistency — do not duplicate it.
+
+Look for:
+- Null/undefined dereferences, off-by-one errors, wrong operators, inverted conditions.
+- Unhandled promise rejections, swallowed errors, error paths that report success.
+- Injection (shell, SQL, path traversal), unsafe interpolation, SSRF, auth bypass.
+- Race conditions, TOCTOU, concurrent-write clobbering.
+- Edge cases: empty input, single-element collections, unicode, very large input.
+
+You have deliberately NOT been given this repo's conventions document. If something looks wrong, say so even if it looks intentional — an outside perspective that questions the premise is exactly what you are here for.`,
+  },
+};
+
+/**
+ * Build reviewer instructions for one lens.
  *
  * The severity vocabulary is load-bearing: `/live` tallies findings by these
  * three labels to decide whether to block the merge, so a provider that
  * invents its own severity words silently reads as a clean pass.
  */
-export const REVIEW_SYSTEM_PROMPT = `You are a senior code reviewer on a production Astro + React + TypeScript codebase.
+export function buildSystemPrompt(lens) {
+  return `You are a senior code reviewer on a production Astro + React + TypeScript codebase.
 
-Review the supplied diff for bugs, logic errors, security issues, and missed edge cases.
+Review the supplied diff for problems.
+
+${lens?.instructions ?? ''}
 
 Output format — use these EXACT headings, and omit a heading entirely if it has no findings:
 
@@ -50,7 +106,9 @@ Rules:
 - Do NOT comment on formatting or code style. Automated tooling and other reviewers cover it.
 - Do NOT restate what the diff does. Only report problems.
 - If you find nothing, reply with exactly: NO FINDINGS
-- Be direct and specific. A vague concern is worse than no concern.`;
+- Be direct and specific. A vague concern is worse than no concern.
+- You are ADVISORY. Your findings are adjudicated by a reviewer who owns this codebase and may reject them with reasons. Argue your case in the finding; don't hedge to seem agreeable.`;
+}
 
 /**
  * List model ids this API key can call, newest-looking first.
@@ -202,17 +260,33 @@ export async function runProvider(name, { diff, context = '', env = process.env 
   }
 
   const model = env[`${name.toUpperCase()}_REVIEW_MODEL`] || provider.defaultModel;
+  const lens = LENSES[name];
   const { diff: capped, truncated } = capDiff(diff);
-  const user = `${context ? `${context}\n\n` : ''}Diff under review:\n\n\`\`\`diff\n${capped}\n\`\`\``;
+
+  // Repo context goes only to lenses that need it. See the LENSES comment:
+  // the cross-cutting lens is unanswerable without knowing the conventions,
+  // while the correctness lens is deliberately kept naive so one reviewer can
+  // still question a premise the rest of us take for granted.
+  const wantsContext = Boolean(lens?.usesRepoContext);
+  const preamble = wantsContext && context ? `${context}\n\n` : '';
+  const user = `${preamble}Diff under review:\n\n\`\`\`diff\n${capped}\n\`\`\``;
 
   try {
     const text = await provider.call({
       apiKey,
       model,
-      system: REVIEW_SYSTEM_PROMPT,
+      system: buildSystemPrompt(lens),
       user,
     });
-    return { name, label: provider.label, status: 'ok', model, truncated, text };
+    return {
+      name,
+      label: provider.label,
+      status: 'ok',
+      model,
+      truncated,
+      text,
+      focus: lens?.focus,
+    };
   } catch (error) {
     return {
       name,

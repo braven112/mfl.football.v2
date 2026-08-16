@@ -70,7 +70,13 @@ jobs:
           # for an advisory reviewer, silently tracking the current stable model
           # beats a pin that goes dead. On a 404 the script lists what the key
           # can actually call, so pinning later is a copy-paste.
-          GEMINI_REVIEW_MODEL: gemini-pro-latest
+          #
+          # Flash, not Pro: the Gemini API free tier grants Pro models a quota
+          # of ZERO (429 "free_tier_input_token_count, limit: 0"). A consumer
+          # Gemini subscription does not change that — API billing is a
+          # separate meter. Once billing is enabled on the key's project,
+          # gemini-pro-latest is a one-line upgrade here.
+          GEMINI_REVIEW_MODEL: gemini-flash-latest
           OPENAI_REVIEW_MODEL: gpt-5
           GH_TOKEN: ${{ github.token }}
           # workflow_dispatch inputs are free-form strings. Bind them to env
