@@ -65,6 +65,14 @@ const AFL_DIRS = [
 ];
 
 /**
+ * AFL-only files that live outside those trees. `afl-hero-resolver.ts` sits in
+ * src/utils/ and emits `accentColor` strings straight into the AFL homepage
+ * hero — it shipped `var(--color-secondary)` for the What's New hero. A
+ * directory-shaped guard misses it, so name it explicitly.
+ */
+const AFL_FILES = [path.join(SRC, 'utils', 'afl-hero-resolver.ts')];
+
+/**
  * SHARED stylesheets that AFL pages import. A green here renders on the AFL
  * just as surely as one in an AFL-only file — `schefter-feed.css` is imported
  * by both leagues' index/news/news-detail pages, and its article and external
@@ -137,6 +145,16 @@ const ALLOWLIST = new Map<string, string>([
       'in an applied rule.',
   ],
   [
+    'utils/afl-hero-resolver.ts:#2e8743',
+    'Two categorical uses, neither brand voice. ACCENT_GREEN is one entry in ' +
+      'the AFL hero MOOD palette (gold / red / green / amber / steel), raw ' +
+      'strings by design because they flow into --ev-accent as inline custom ' +
+      'properties; green marks the waiver-day "claims run" hero. The other is ' +
+      'the fallback on --cat-free-agency, a calendar-category color shared ' +
+      'with TheLeague hero resolver. The brand leak in this file was the ' +
+      'What\'s New hero accent, now --league-accent.',
+  ],
+  [
     'pages/afl-fantasy/players.astro:#4ade80',
     'Conference tag chip. Its own light/dark pair (#15803d / #4ade80) rather ' +
       'than a --color-secondary reference, and it is a categorical tag color, ' +
@@ -160,8 +178,10 @@ describe('AFL brand-green guard', () => {
   it('no AFL-only file styles against TheLeague brand green', () => {
     const violations: string[] = [];
 
-    for (const dir of AFL_DIRS) {
-      for (const file of walk(dir)) {
+    const targets = [...AFL_DIRS.flatMap(d => walk(d)), ...AFL_FILES.filter(f => fs.existsSync(f))];
+
+    {
+      for (const file of targets) {
         const rel = path.relative(SRC, file).split(path.sep).join('/');
         const lines = fs.readFileSync(file, 'utf8').split('\n');
 

@@ -732,7 +732,11 @@ function featureToHero(entry: WhatsNewEntry): HeroContent {
     link: entry.link ?? `/afl-fantasy/whats-new/${entry.id}`,
     linkLabel: entry.linkLabel ?? (entry.link ? 'Check it out' : 'Read the full story'),
     icon: entry.icon,
-    accentColor: 'var(--color-secondary, #2e8743)',
+    // --league-accent, not --color-secondary: this is the AFL's own hero and
+    // --color-secondary is TheLeague's brand green, which the AFL theme never
+    // overrides. Every other accent in this file is either a --cat-* category
+    // color or --color-primary (deliberately left blue for the AFL).
+    accentColor: 'var(--league-accent, #c41e3a)',
     image: entry.image,
     imageAlt: entry.imageAlt,
     kicker: WHATS_NEW_CATEGORY_LABELS[entry.category],
