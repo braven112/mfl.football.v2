@@ -15,6 +15,8 @@
  * franchise.
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 // @ts-ignore — sibling .mjs module, no .d.ts
 import {
   resolveCallbackPhase,
@@ -331,15 +333,13 @@ describe('real configs — every last-season rename is actually reachable', () =
   // that every franchise whose history closes at last season can produce a
   // callback — so a franchise going silently ineligible fails here rather
   // than just quietly never firing.
-  const fs = require('node:fs');
-  const path = require('node:path');
 
   for (const [label, configPath] of [
     ['theleague', 'src/data/theleague.config.json'],
     ['afl-fantasy', 'data/afl-fantasy/afl.config.json'],
   ] as const) {
     it(`${label}: no last-season rename is suppressed by its own aliases`, () => {
-      const raw = JSON.parse(fs.readFileSync(path.join(process.cwd(), configPath), 'utf8'));
+      const raw = JSON.parse(readFileSync(path.join(process.cwd(), configPath), 'utf8'));
       const owners = new Map<string, Set<string>>();
       const claim = (v: unknown, fid: string) => {
         if (typeof v !== 'string' || v.trim().length < 2) return;
@@ -379,8 +379,8 @@ describe('real configs — every last-season rename is actually reachable', () =
 });
 
 describe('the prompt rule requires the pairing', () => {
-  const src = require('node:fs').readFileSync(
-    require('node:path').join(process.cwd(), 'scripts/schefter-rumor-scan.mjs'),
+  const src = readFileSync(
+    path.join(process.cwd(), 'scripts/schefter-rumor-scan.mjs'),
     'utf8',
   );
 

@@ -708,22 +708,70 @@ function collectFranchiseNameTokens(teams) {
 }
 
 /**
- * Lower-cased set of every name token owned by the franchise that answers to
- * `displayName`. Used by the redactor to treat one franchise's many names as
- * one identity.
+ * Who CURRENTLY answers to each name form or alias, as `lowerName → Set<fid>`.
+ * History is deliberately excluded: this map answers "is some live franchise
+ * using this name right now", which is what decides whether a name may be
+ * normalized onto another team.
+ */
+function buildCurrentNameOwners(teams) {
+  const owners = new Map();
+  const claim = (value, fid) => {
+    if (typeof value !== 'string' || value.trim().length < 2) return;
+    const key = value.trim().toLowerCase();
+    if (!owners.has(key)) owners.set(key, new Set());
+    owners.get(key).add(fid);
+  };
+  for (const [fid, team] of teams) {
+    for (const field of ['name', 'nameMedium', 'nameShort', 'abbrev']) claim(team?.[field], fid);
+    for (const alias of Array.isArray(team?.aliases) ? team.aliases : []) claim(alias, fid);
+  }
+  return owners;
+}
+
+/**
+ * Lower-cased set of name tokens the franchise answering to `displayName` may
+ * have NORMALIZED to that name. Used by the redactor to treat one franchise's
+ * many names as one identity.
+ *
+ * A franchise does not get to claim a name another franchise is currently
+ * using, even one sitting in its own `history[]`. TheLeague's "Midwestside
+ * Connection" is 0010's former name and **0011's current one**, so with a
+ * post scoped to 0010, a genuine mention of 0011 was being rewritten as
+ * "Jocks" — not leaked, but actively misattributed to the wrong team, which
+ * is worse. Those tokens fall through to "[a team]" instead.
+ *
+ * Resolution goes through CURRENT names first because `keepFranchise` is
+ * always a current display form, and a historical name can collide with
+ * another team's live one — matching on the full token set would hand the
+ * keep-name to whichever franchise the Map happened to iterate first.
  *
  * Returns just the name itself when no franchise claims it, so an unknown
  * keep-name is still honored literally rather than silently redacted.
  */
-function franchiseTokensOwning(teams, displayName) {
+function franchiseTokensOwning(teams, displayName, currentOwners) {
   const target = displayName.trim().toLowerCase();
-  for (const [fid, team] of teams) {
-    const own = collectFranchiseNameTokens(new Map([[fid, team]]));
-    if (own.some((t) => t.toLowerCase() === target)) {
-      return new Set(own.map((t) => t.toLowerCase()));
+  let ownerFid = null;
+  const liveOwners = currentOwners.get(target);
+  if (liveOwners && liveOwners.size > 0) {
+    [ownerFid] = liveOwners;
+  } else {
+    for (const [fid, team] of teams) {
+      const own = collectFranchiseNameTokens(new Map([[fid, team]]));
+      if (own.some((t) => t.toLowerCase() === target)) { ownerFid = fid; break; }
     }
   }
-  return new Set([target]);
+  if (ownerFid === null) return new Set([target]);
+
+  const own = collectFranchiseNameTokens(new Map([[ownerFid, teams.get(ownerFid)]]));
+  const usedByAnotherLiveTeam = (lower) => {
+    const owners = currentOwners.get(lower);
+    return Boolean(owners) && [...owners].some((id) => id !== ownerFid);
+  };
+  return new Set(
+    own
+      .map((t) => t.toLowerCase())
+      .filter((lower) => lower === target || !usedByAnotherLiveTeam(lower)),
+  );
 }
 
 function escapeRegExp(s) {
@@ -787,7 +835,11 @@ function getRedactionContext(teams) {
   let ctx = redactionCache.get(teams);
   if (!ctx) {
     const tokens = collectFranchiseNameTokens(teams);
-    ctx = { matcher: buildFranchiseNameMatcher(tokens), ownedBy: new Map() };
+    ctx = {
+      matcher: buildFranchiseNameMatcher(tokens),
+      currentOwners: buildCurrentNameOwners(teams),
+      ownedBy: new Map(),
+    };
     redactionCache.set(teams, ctx);
   }
   return ctx;
@@ -795,7 +847,7 @@ function getRedactionContext(teams) {
 
 function redactFranchiseNamesInText(text, teams, { keepFranchise } = {}) {
   if (typeof text !== 'string' || text.length === 0) return text;
-  const { matcher, ownedBy } = getRedactionContext(teams);
+  const { matcher, ownedBy, currentOwners } = getRedactionContext(teams);
   if (!matcher) return text;
   const keepName = typeof keepFranchise === 'string' && keepFranchise.trim().length > 0
     ? keepFranchise.trim()
@@ -803,7 +855,9 @@ function redactFranchiseNamesInText(text, teams, { keepFranchise } = {}) {
   const keepLower = keepName ? keepName.toLowerCase() : null;
   let keepTokens = new Set();
   if (keepName) {
-    if (!ownedBy.has(keepLower)) ownedBy.set(keepLower, franchiseTokensOwning(teams, keepName));
+    if (!ownedBy.has(keepLower)) {
+      ownedBy.set(keepLower, franchiseTokensOwning(teams, keepName, currentOwners));
+    }
     keepTokens = ownedBy.get(keepLower);
   }
   return text.replace(matcher, (match) => {

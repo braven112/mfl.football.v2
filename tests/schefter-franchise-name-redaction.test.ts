@@ -323,6 +323,48 @@ describe('franchise-name redaction — single pass, no self-corruption', () => {
   });
 });
 
+describe('franchise-name redaction — a kept franchise cannot claim a live rival\'s name', () => {
+  // The mirror image of the pickFormerName ownership bug, and worse than a
+  // leak: "Midwestside Connection" is 0010's FORMER name and 0011's CURRENT
+  // one, so normalizing every token in 0010's history onto the kept name
+  // rewrote a genuine mention of 0011 as "Jocks" — misattributing a real
+  // team rather than fuzzing it.
+  const collidingTeams = new Map<string, TeamEntry>([
+    ['0010', {
+      name: 'Computer Jocks',
+      nameShort: 'Jocks',
+      division: 'NW',
+      history: [{ name: 'Midwestside Connection', yearStart: 2011, yearEnd: 2015 }],
+    }],
+    ['0011', { name: 'Midwestside Connection', nameShort: 'Midwestside', division: 'NW' }],
+  ]);
+
+  const scopedTo = async (text: string, hint: string) => {
+    const now = Date.now();
+    const out = await anonymizeTips(
+      [
+        { id: 't1', source: 'web', topic: 'roster', text, franchiseHint: hint, submittedAt: now },
+        { id: 't2', source: 'web', topic: 'roster', text: 'same', franchiseHint: hint, submittedAt: now },
+      ],
+      collidingTeams,
+    );
+    return out[0];
+  };
+
+  it('fuzzes the live rival instead of renaming it to the kept franchise', async () => {
+    const safe = await scopedTo('Hearing Jocks and Midwestside Connection are talking', '0010');
+    expect(safe.scope.franchise).toBe('Jocks');
+    expect(safe.text).toBe('Hearing Jocks and [a team] are talking');
+    expect(safe.text).not.toMatch(/Jocks and Jocks/);
+  });
+
+  it('still lets the franchise that actually owns the name be named', async () => {
+    const safe = await scopedTo('Hearing Midwestside Connection are shopping', '0011');
+    expect(safe.scope.franchise).toBe('Midwestside');
+    expect(safe.text).toBe('Hearing Midwestside are shopping');
+  });
+});
+
 describe('franchise-name redaction — source guards', () => {
   it('loadTeams carries aliases and history into the teams map', () => {
     // The redactor can only scrub what loadTeams hands it. Dropping either
