@@ -2112,3 +2112,27 @@ One more non-text contrast note from the same round: `--content-bg-accent` is
 `#66abea` in light — a saturated mid-blue, not a neutral. Nothing clears 3:1 as
 a fill on it (the old TheLeague-green progress bar managed 1.84:1). For a
 progress track or any recessed strip, `--content-bg-muted` is the right token.
+
+**Where this actually lives: the SHARED component layer, not the AFL tree.**
+Round three found four more, none of them in an `afl-*` directory:
+`AssetsPage.astro` (AFL tier badge), `WhatsNewIndexPage.astro` (card read-more
+hover), `schefter-feed-compact.css` (Roger's reply rail), and `NavHeader.astro`
+(the league-switcher checkmark — on every page of both leagues). The lesson is
+that "AFL pages wearing TheLeague green" is mostly not an AFL-page problem; it
+is shared chrome that no per-league override was ever written for.
+
+Two aliases do the smuggling, and neither contains the word "secondary" at the
+call site:
+
+- `--secondary-color` → `var(--color-secondary)`. Green, both themes.
+- `--accent-link-hover-text-color` → `--link-color-accent-hover` → green in AFL
+  **light** only, because just `html.dark[data-league="afl"]` pins it red. This
+  is the same token the playoffs fix leans on for dark, which is exactly why it
+  is dangerous: correct in one theme, TheLeague's brand in the other.
+
+So when auditing, chase the alias chain to a literal before deciding a token is
+league-safe, and treat a token that only ONE theme block overrides as
+half-defined. `tests/afl-brand-green-guard.test.ts` now scans the shared files
+for all three names — but its shared-file check only asserts that *an* AFL
+override exists, so a wrong selector or an override on the wrong property still
+passes. It narrows the gap; it does not close it.

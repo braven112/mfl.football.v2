@@ -384,6 +384,13 @@ const directTarget = switchTargets[0];
     color: var(--secondary-color, #2e8743);
   }
 
+  /* --secondary-color is an alias of TheLeague's --color-secondary, which the
+     AFL theme never overrides — so the AFL league switcher was marking the
+     current league in TheLeague's green. Icon, so non-text contrast applies. */
+  :global(html[data-league='afl']) .nav-header__switch-check {
+    color: var(--league-accent, #c41e3a);
+  }
+
   /* Close button */
   .nav-header__close-btn {
     display: flex;

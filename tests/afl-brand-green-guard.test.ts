@@ -75,7 +75,12 @@ const AFL_DIRS = [
  * A bare --color-secondary rule is therefore only a violation if the file has
  * no AFL override for the same property — which is what this checks.
  */
-const SHARED_STYLESHEETS = [path.join(SRC, 'styles', 'schefter-feed.css')];
+const SHARED_STYLESHEETS = [
+  path.join(SRC, 'styles', 'schefter-feed.css'),
+  path.join(SRC, 'styles', 'schefter-feed-compact.css'),
+  path.join(SRC, 'components', 'nav', 'NavHeader.astro'),
+  path.join(SRC, 'components', 'shared', 'whats-new', 'WhatsNewIndexPage.astro'),
+];
 
 /**
  * TheLeague's brand green: the tokens, and the literal values they resolve to.
@@ -202,7 +207,11 @@ describe('AFL brand-green guard', () => {
       if (!fs.existsSync(file)) continue;
       const rel = path.relative(SRC, file).split(path.sep).join('/');
       const css = fs.readFileSync(file, 'utf8');
-      if (!/--color-secondary/.test(css)) continue;
+      // --secondary-color and --accent-link-hover-text-color are the same green
+      // by another name: the first aliases --color-secondary directly, the
+      // second chains through --link-color-accent-hover, which ONLY
+      // html.dark[data-league="afl"] pins red — in AFL light it is still green.
+      if (!/--color-secondary|--secondary-color|--accent-link-hover-text-color/.test(css)) continue;
 
       // The file uses TheLeague's green somewhere, which is fine on TheLeague.
       // It must then also carry an AFL-scoped override so the AFL doesn't

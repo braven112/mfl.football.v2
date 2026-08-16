@@ -564,6 +564,19 @@ Astro.cookies.set('whats_new_last_visit', new Date().toISOString().slice(0, 10),
     color: var(--accent-link-hover-text-color, #3c9950);
   }
 
+  /* --accent-link-hover-text-color chains to --link-color-accent-hover, which
+     only html.dark[data-league="afl"] pins red — in AFL LIGHT it is still
+     TheLeague's green. Hence a light rule and a dark rule, not one.
+     Plain selectors, not :global(): this block is is:global already, where
+     :global() ships as dead literal CSS. */
+  html[data-league='afl'] .wn-card:hover .wn-card__read-more {
+    color: var(--league-accent, #c41e3a);
+  }
+
+  html.dark[data-league='afl'] .wn-card:hover .wn-card__read-more {
+    color: var(--link-color-accent-hover, #ff8a80);
+  }
+
   /* ── Timeline sidebar ── */
   .wn-timeline {
     position: sticky;

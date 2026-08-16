@@ -354,6 +354,13 @@
   border-left-color: var(--color-secondary, #2e8743);
 }
 
+/* --color-secondary is TheLeague's brand green and the AFL theme never
+   overrides it, so Roger's replies in the AFL compact feed inherit it.
+   Scoped, not swapped — the green is right on TheLeague. Border is non-text. */
+html[data-league='afl'] .sfc-reply--roger .sfc-reply__content {
+  border-left-color: var(--league-accent, #c41e3a);
+}
+
 /* ── Typing Indicator ── */
 .sfc-typing {
   display: flex;
