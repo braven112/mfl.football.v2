@@ -784,6 +784,38 @@ function escapeRegExp(s) {
 }
 
 /**
+ * A franchise name written with a hyphen or an underscore is the same name.
+ * "Dead Cap" is 0004's `nameMedium`; a tipster typing "dead-cap is over the
+ * limit" means exactly that team, but a literal space in the pattern misses
+ * it. The token then falls apart into its pieces, and `dead` on its own is an
+ * ordinary word the relaxation lets through — so the FULL name survived
+ * intact, which is worse than the single-word case the relaxation was scoped
+ * to allow ("balls-deep is rebuilding", "dead-cap is over the limit").
+ *
+ * Widening the separator is safe in a way that widening a word is not: it
+ * cannot match anything a literal space wouldn't, except the same name under
+ * different punctuation. Runs collapse, so "dead  --  cap" matches too.
+ *
+ * Applied to the ESCAPED token, which is fine because `escapeRegExp` leaves
+ * whitespace alone.
+ */
+function withFlexibleSeparators(escaped) {
+  return escaped.replace(/\s+/g, '[\\s\\-_]+');
+}
+
+/**
+ * Lower-cased with separator runs collapsed to a single space, so a match and
+ * a config form compare equal regardless of how the tipster punctuated it.
+ * Both the keep-franchise identity check and the alias-normalization lookup go
+ * through this — without it, `withFlexibleSeparators` would match "dead-cap"
+ * and then fail every Set lookup keyed on "dead cap", quietly demoting the
+ * KEPT franchise's own name to "[a team]".
+ */
+function canonicalizeNameKey(s) {
+  return s.trim().toLowerCase().replace(/[\s\-_]+/g, ' ');
+}
+
+/**
  * Boundary-matched alternation over every franchise name token, longest form
  * first. Two deliberate choices, each of which was a live bug:
  *
@@ -815,7 +847,7 @@ function buildFranchiseNameMatcher(tokens) {
       // itself a word character. Punctuation is already its own boundary.
       const left = /^\w/.test(t) ? '(?<!\\w)' : '';
       const right = /\w$/.test(t) ? '(?!\\w)' : '';
-      return `${left}${escapeRegExp(t)}${right}`;
+      return `${left}${withFlexibleSeparators(escapeRegExp(t))}${right}`;
     })
     .join('|');
   return new RegExp(`(?:${alternation})`, 'gi');
@@ -899,6 +931,58 @@ export const AMBIGUOUS_NAME_TOKENS = new Set([
 ]);
 
 /**
+ * Narrow `AMBIGUOUS_NAME_TOKENS` to the forms it is actually safe to relax.
+ *
+ * Two different questions decide that, and only one of them is answerable by
+ * a human writing a list:
+ *
+ *   1. "Is this an ordinary English word?" — judgment, not derivable.
+ *      That is what `AMBIGUOUS_NAME_TOKENS` above encodes.
+ *   2. "Is this a name people currently CALL the team?" — derivable, and it
+ *      changes every time a franchise renames. That is this function.
+ *
+ * A token is relaxable only when every one of its appearances across BOTH
+ * leagues is incidental: an MFL `abbrev` (a 3-5 char code nobody types in
+ * prose) or any field on a RETIRED `history[]` entry. The moment some
+ * franchise wears it as a current `name`/`nameMedium`/`nameShort`/alias — the
+ * forms an owner actually writes — it is blocked everywhere, because a
+ * lowercase bare nickname identifies that team to any reader.
+ *
+ * Found by the Codex reviewer on PR #547: with the flat list, "hearing saints
+ * is shopping a tight end" reached the prompt intact, and `Saints` is AFL
+ * 0020's `nameShort`. Same for `balls`, `feelers`, `herd`, `chat`, `swift`,
+ * `fire`, `pain`, `indians`, `cowboy`, `dream`, `baked`.
+ *
+ * Blocking is global rather than per-franchise on purpose: a token that is
+ * one team's dead abbreviation and another's live nickname must lose, and
+ * `abbrev` is treated as incidental even when current because it is a code,
+ * not a name. All three originally reported cases (`dead`, `heavy`, `chevy`)
+ * survive this filter — 0004 wears `DEAD` as an abbrev and retired
+ * "Heavy Chevy" years ago.
+ */
+export function computeRelaxableTokens(teams) {
+  const relaxable = new Set();
+  const blocked = new Set();
+  const claim = (value, incidental) => {
+    if (typeof value !== 'string') return;
+    const key = value.trim().toLowerCase();
+    if (!AMBIGUOUS_NAME_TOKENS.has(key)) return;
+    (incidental ? relaxable : blocked).add(key);
+  };
+  for (const team of teams.values()) {
+    for (const field of ['name', 'nameMedium', 'nameShort']) claim(team?.[field], false);
+    for (const alias of Array.isArray(team?.aliases) ? team.aliases : []) claim(alias, false);
+    claim(team?.abbrev, true);
+    for (const h of Array.isArray(team?.history) ? team.history : []) {
+      for (const field of ['name', 'nameMedium', 'nameShort', 'abbrev']) claim(h?.[field], true);
+      for (const alias of Array.isArray(h?.aliases) ? h.aliases : []) claim(alias, true);
+    }
+  }
+  for (const b of blocked) relaxable.delete(b);
+  return relaxable;
+}
+
+/**
  * Whether this match of an ambiguous token reads as an ordinary word rather
  * than a franchise mention. The test is CASE ALONE: lowercase relaxes,
  * anything capitalized still redacts.
@@ -926,8 +1010,8 @@ export const AMBIGUOUS_NAME_TOKENS = new Set([
  * mid-sentence collisions ("Saints" the AFL franchise vs. the NFL club,
  * "Swift" the franchise vs. the running back).
  */
-function readsAsOrdinaryProse(match) {
-  if (!AMBIGUOUS_NAME_TOKENS.has(match.toLowerCase())) return false;
+function readsAsOrdinaryProse(match, relaxable) {
+  if (!relaxable.has(match.toLowerCase())) return false;
   return !/^[A-Z]/.test(match);
 }
 
@@ -940,6 +1024,7 @@ function getRedactionContext(teams) {
       size: teams.size,
       matcher: buildFranchiseNameMatcher(tokens),
       currentOwners: buildCurrentNameOwners(teams),
+      relaxable: computeRelaxableTokens(teams),
       ownedBy: new Map(),
     };
     redactionCache.set(teams, ctx);
@@ -949,28 +1034,34 @@ function getRedactionContext(teams) {
 
 function redactFranchiseNamesInText(text, teams, { keepFranchise } = {}) {
   if (typeof text !== 'string' || text.length === 0) return text;
-  const { matcher, ownedBy, currentOwners } = getRedactionContext(teams);
+  const { matcher, ownedBy, currentOwners, relaxable } = getRedactionContext(teams);
   if (!matcher) return text;
   const keepName = typeof keepFranchise === 'string' && keepFranchise.trim().length > 0
     ? keepFranchise.trim()
     : null;
-  const keepLower = keepName ? keepName.toLowerCase() : null;
+  const keepLower = keepName ? canonicalizeNameKey(keepName) : null;
   let keepTokens = new Set();
   if (keepName) {
     if (!ownedBy.has(keepLower)) {
-      ownedBy.set(keepLower, franchiseTokensOwning(teams, keepName, currentOwners));
+      ownedBy.set(
+        keepLower,
+        new Set(
+          [...franchiseTokensOwning(teams, keepName, currentOwners)]
+            .map(canonicalizeNameKey),
+        ),
+      );
     }
     keepTokens = ownedBy.get(keepLower);
   }
   return text.replace(matcher, (match) => {
-    const lower = match.toLowerCase();
+    const lower = canonicalizeNameKey(match);
     // FIRST, before any keep-franchise handling. An ordinary word that happens
     // to be one of the KEPT franchise's own forms would otherwise fall into
     // the normalize branch below and be rewritten to that team's display name
     // — so a tip scoped to Dead Cap Walking turns "the deal is dead" into
     // "the deal is Dead Cap Walking". That is the same fabrication as
     // "[a team]" with a specific team's name on it, which is strictly worse.
-    if (readsAsOrdinaryProse(match)) return match;
+    if (readsAsOrdinaryProse(match, relaxable)) return match;
     // Already the canonical name — leave it exactly as the tipster wrote it.
     if (keepLower && lower === keepLower) return match;
     // Another name for the franchise we ARE allowed to name: normalize to the

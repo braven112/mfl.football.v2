@@ -639,18 +639,37 @@ harvest it runs on is load-bearing, not bookkeeping:
   (`DEAD`), "a heavy favorite" (`Heavy`), "put out feelers" (AFL `Feelers`),
   "headed to the Saints" (AFL `Saints` — an NFL club), "Swift is being shopped"
   (AFL `Swift` — an NFL player).
-  `AMBIGUOUS_NAME_TOKENS` + `readsAsOrdinaryProse` relax exactly those tokens,
-  and only in the two positions a proper noun cannot occupy — lowercase, or
-  capitalized solely because a sentence started there. Capitalized mid-sentence
-  still redacts, so a deliberate mention is untouched. Three things hold it
-  together: an entry must be a real config form; its franchise must keep a
-  non-ambiguous form (so a rename to a plain word can't strip a team of all
-  protection — "Balls" relaxes only because "Balls Deep" doesn't); and the
-  check runs **before** the keep-franchise branches, or an ordinary word that
-  is one of the kept team's own forms gets rewritten to that team's display
-  name ("the deal is Dead Cap Walking"), which is the same fabrication wearing
-  a real name. Two collisions are unresolvable and deliberately still redact
-  when capitalized mid-sentence: `Saints` and `Swift`.
+  The relaxation is **two gates, and both must pass**, because two different
+  questions are involved and only one is answerable by hand:
+  - `AMBIGUOUS_NAME_TOKENS` (curated) — "is this an ordinary English word?"
+    Judgment; not derivable. Team-flavored forms that merely happen to be
+    words ("Mafia", "Generals", "Pigs") stay out.
+  - `computeRelaxableTokens` (derived from the configs) — "is this a name
+    people currently CALL the team?" A token relaxes only if EVERY appearance
+    across both leagues is an MFL `abbrev` or a RETIRED `history[]` form. The
+    moment any franchise wears it as a live `name`/`nameMedium`/`nameShort`/
+    alias it is blocked everywhere. Currently 21 relax, 12 are blocked
+    (`saints`, `balls`, `feelers`, `herd`, `chat`, `swift`, `fire`, `pain`,
+    `indians`, `cowboy`, `dream`, `baked`). This half **self-maintains**:
+    rename a team to "Fire" and `fire` drops out on its own.
+
+  Then `readsAsOrdinaryProse` relaxes on **case alone** — lowercase passes,
+  any capital redacts. Two relaxations were tried and reverted, both because
+  they leaked real franchises: relaxing sentence-initial capitals (destroys
+  the only signal there is, and that position is where a tipster names a team
+  as the subject — five AFL franchises leaked), and relaxing every ambiguous
+  token regardless of whether it is a live nickname ("hearing saints is
+  shopping a tight end" reached the prompt intact). Don't re-litigate either
+  without re-running the sweep.
+
+  Two more things hold it together: multi-word tokens match with
+  `withFlexibleSeparators`, because "dead-cap" otherwise misses "Dead Cap"
+  entirely and falls apart into `dead`, letting the FULL name through — every
+  Set lookup therefore goes through `canonicalizeNameKey` or the kept team's
+  own hyphenated name gets demoted to `[a team]`; and the prose check runs
+  **before** the keep-franchise branches, or an ordinary word that is one of
+  the kept team's own forms gets rewritten to that team's display name ("the
+  deal is Dead Cap Walking"), the same fabrication wearing a real name.
   `tests/schefter-franchise-name-redaction.test.ts` runs the real configs
   through the anonymizer and fails on any surviving alias or retired name —
   one tip per token, each placed mid-sentence in its config casing, because a

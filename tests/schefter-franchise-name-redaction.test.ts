@@ -18,7 +18,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 // @ts-ignore — sibling .mjs module, no .d.ts
-import { anonymizeTips, AMBIGUOUS_NAME_TOKENS } from '../scripts/schefter-rumor-scan.mjs';
+import { anonymizeTips, AMBIGUOUS_NAME_TOKENS, computeRelaxableTokens } from '../scripts/schefter-rumor-scan.mjs';
 
 const SCANNER_SRC = readFileSync(
   path.join(process.cwd(), 'scripts/schefter-rumor-scan.mjs'),
@@ -561,20 +561,17 @@ describe('franchise-name redaction — ordinary prose survives the fuzz', () => 
     ['There is a gap at running back.'],
     ['That pick is a rock solid value.'],
     ['The art of the deal is lost on him.'],
-    ['The fire sale is on and the pain is real.'],
-    ['That would be a dream scenario for this roster.'],
+    ['He has some dead weight on that roster.'],
   ])('leaves %s untouched (TheLeague)', async (text) => {
     expect(await scrub(text, LEAGUE)).toBe(text);
   });
 
   it.each([
     ['There is smoke around this one.'],
-    ['Owner put out feelers about a trade.'],
-    ['The chat has been quiet all week.'],
     ['That roster is a mint condition contender.'],
     ['He wants to show he belongs.'],
     ['A married man with three kids does not do that.'],
-    ['He is going balls to the wall on this rebuild.'],
+    ['That was a drunk pick if I ever saw one.'],
   ])('leaves %s untouched (AFL)', async (text) => {
     expect(await scrub(text, AFL)).toBe(text);
   });
@@ -621,6 +618,32 @@ describe('franchise-name redaction — ordinary prose survives the fuzz', () => 
     expect(await scrub(text, LEAGUE)).toContain('[a team]');
   });
 
+  // Caught by the Codex reviewer on PR #547. These are LOWERCASE — the
+  // position the relaxation exists to allow — but each token is a name people
+  // currently call the team, so `computeRelaxableTokens` blocks it. Without
+  // that filter every one of these reached the prompt intact.
+  it.each([
+    ['hearing saints is shopping a tight end.'],
+    ['word is chat wants a quarterback.'],
+    ['owner put out feelers about a trade.'],
+    ['herd is quiet this week.'],
+    ['balls is rebuilding.'],
+    ['swift is being shopped.'],
+    ['the indians are shopping a RB.'],
+    ['baked is over the cap.'],
+  ])('redacts lowercase %s — a live nickname, not a word (AFL)', async (text) => {
+    expect(await scrub(text, AFL)).toContain('[a team]');
+  });
+
+  it.each([
+    ['the fire sale is on.'],
+    ['bring the pain is what he said.'],
+    ['that would be a dream scenario.'],
+    ['cowboy is shopping a TE.'],
+  ])('redacts lowercase %s — a live nickname, not a word (TheLeague)', async (text) => {
+    expect(await scrub(text, LEAGUE)).toContain('[a team]');
+  });
+
   it('still redacts the distinctive multi-word form in any casing', async () => {
     // "Heavy" relaxes; "Heavy Chevy" — the form that actually identifies the
     // franchise — must not, even lowercased and sentence-initial.
@@ -631,6 +654,44 @@ describe('franchise-name redaction — ordinary prose survives the fuzz', () => 
     ]) {
       expect(await scrub(text, LEAGUE)).toContain('[a team]');
     }
+  });
+
+  // Caught by the Codex reviewer on PR #547. A multi-word token holds a
+  // literal space, so "dead-cap" missed "Dead Cap" entirely and fell apart
+  // into "dead" — an ambiguous word the relaxation lets through. The FULL
+  // franchise name therefore survived, which is a worse leak than the
+  // single-word case the relaxation was scoped to permit, and the relaxation
+  // is what caused it (before, "dead-cap" degraded to "[a team]-cap").
+  it.each([
+    ['balls-deep is rebuilding.'],
+    ['Balls-Deep is rebuilding.'],
+  ])('redacts a hyphenated multi-word name in %s (AFL)', async (text) => {
+    expect(await scrub(text, AFL)).toContain('[a team]');
+  });
+
+  it.each([
+    ['dead-cap is over the limit.'],
+    ['dead_cap is over the limit.'],
+    ['heavy-chevy are shopping a TE.'],
+    ['dead  --  cap is over the limit.'],
+  ])('redacts a hyphenated multi-word name in %s (TheLeague)', async (text) => {
+    expect(await scrub(text, LEAGUE)).toContain('[a team]');
+  });
+
+  it('does not fuzz the KEPT franchise when its own name is hyphenated', async () => {
+    // The separator widening has to be mirrored in the Set lookups, or a
+    // match on "dead-cap" fails every key built from "dead cap" and the team
+    // the post is ALLOWED to name gets demoted to "[a team]".
+    const now = Date.now();
+    const out = await anonymizeTips(
+      [
+        { id: 't1', source: 'web', topic: 'roster', text: 'dead-cap is shopping a TE', franchiseHint: '0004', submittedAt: now },
+        { id: 't2', source: 'web', topic: 'roster', text: 'Heard the same', franchiseHint: '0004', submittedAt: now },
+      ],
+      LEAGUE,
+    );
+    expect(out[0].scope.kind).toBe('franchise-multi-source');
+    expect(out[0].text).not.toContain('[a team]');
   });
 
   it('catches a bare ambiguous alias through the franchise\'s longer form', async () => {
@@ -675,10 +736,15 @@ describe('franchise-name redaction — ambiguous-token list invariants', () => {
         const add = (v: unknown) => {
           if (typeof v === 'string' && v.trim().length >= 2) forms.push(v.trim());
         };
+        // Aliases live on history entries too — 0004's "Heavy Chevy" retired
+        // carrying aliases ["Heavy", "Chevy"] — and production harvests both.
+        // Reading them off `t` only made these invariants measure a NARROWER
+        // token surface than the code they constrain, which is the one thing
+        // an invariant test must never do.
         for (const form of [t, ...(t.history ?? [])]) {
           for (const f of ['name', 'nameMedium', 'nameShort', 'abbrev']) add(form?.[f]);
+          for (const a of form?.aliases ?? []) add(a);
         }
-        for (const a of t.aliases ?? []) add(a);
         out.set(`${league}:${t.franchiseId}`, forms);
       }
     }
@@ -696,19 +762,51 @@ describe('franchise-name redaction — ambiguous-token list invariants', () => {
     expect(stale).toEqual([]);
   });
 
-  it('never leaves a franchise with only ambiguous name forms', () => {
+  it('never leaves a franchise with only relaxable name forms', () => {
     // The safety invariant. Relaxing a token is only acceptable because the
-    // franchise keeps a distinctive form that still catches a real mention —
-    // "Balls" relaxes because "Balls Deep" does not. A future rename to a
-    // wholly ordinary word would strip a team of all protection, and this is
-    // what refuses it.
+    // franchise keeps a form that still catches a real mention. Keyed on the
+    // RELAXABLE set, not the raw ambiguous list — a blocked token like
+    // "saints" never relaxes, so it protects its franchise just fine and
+    // counting it as a hole would be wrong.
     const unprotected: string[] = [];
-    for (const [key, forms] of formsByFranchise()) {
-      if (forms.length === 0) continue;
-      const distinctive = forms.filter((f) => !AMBIGUOUS_NAME_TOKENS.has(f.toLowerCase()));
-      if (distinctive.length === 0) unprotected.push(key);
+    for (const [league, configPath] of CONFIGS) {
+      const raw = JSON.parse(readFileSync(path.join(process.cwd(), configPath), 'utf8'));
+      const teams = new Map<string, TeamEntry>();
+      for (const t of raw.teams ?? []) teams.set(t.franchiseId, t as TeamEntry);
+      const relaxable = computeRelaxableTokens(teams);
+      for (const [key, forms] of formsByFranchise()) {
+        if (!key.startsWith(`${league}:`) || forms.length === 0) continue;
+        if (forms.every((f) => relaxable.has(f.toLowerCase()))) unprotected.push(key);
+      }
     }
     expect(unprotected).toEqual([]);
+  });
+
+  it('relaxes only forms that are incidental in EVERY franchise', () => {
+    // The derived half of the rule, and the reason it self-maintains: a token
+    // is relaxable only if no franchise wears it as a current name/alias.
+    // Rename a team to "Fire" and `fire` must drop out of the set on its own,
+    // with no list to remember to edit.
+    for (const [league, configPath] of CONFIGS) {
+      const raw = JSON.parse(readFileSync(path.join(process.cwd(), configPath), 'utf8'));
+      const teams = new Map<string, TeamEntry>();
+      for (const t of raw.teams ?? []) teams.set(t.franchiseId, t as TeamEntry);
+      const relaxable = computeRelaxableTokens(teams);
+
+      for (const t of raw.teams ?? []) {
+        const current: string[] = [];
+        for (const f of ['name', 'nameMedium', 'nameShort']) {
+          if (typeof t[f] === 'string') current.push(t[f]);
+        }
+        for (const a of t.aliases ?? []) if (typeof a === 'string') current.push(a);
+        for (const form of current) {
+          expect(
+            relaxable.has(form.trim().toLowerCase()),
+            `${league}:${t.franchiseId} wears "${form}" as a current name — it must never relax`,
+          ).toBe(false);
+        }
+      }
+    }
   });
 
   it('is all lowercase, since lookup is keyed on the lowercased match', () => {
