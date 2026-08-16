@@ -114,3 +114,95 @@ field to a league config, ask whether the redactor's harvest reads it.
 through the anonymizer and fails on any surviving alias or retired name, which
 catches the config half but not a new early return — that stays a review
 concern.
+
+## 2026-08-15 - The system prompt is a second, unredactable leak channel
+
+**Context:** Follow-on to the entry above. Every fix there operates on the
+per-tip payload. The prompt those payloads are pasted into was never in scope.
+
+**Insight:** `redactFranchiseNamesInText` cannot reach the system prompt. The
+prompt is assembled once, in source, and sent on **every** call — including the
+anonymous-scope posts (`division`, `league-wide`, `hotseat`) whose entire point
+is that no franchise may be named. So a real team name written into a rule's
+few-shot examples is handed to the model on exactly the calls that forbid it,
+and no amount of payload hygiene touches it.
+
+Three separate rules had one. Rule 30's was caught when it was written (a
+current↔former pairing, the sharpest form). Rule 4b's was not: `[Geeks]` —
+0013's own alias — appeared **thirteen times** in the explicit-pick voice
+examples, so the highest-frequency real name in the prompt was the one nobody
+flagged. Rules 15/16 addressed a GroupMe author as "Dead Cap", which is 0004's
+`nameShort` wearing a chat handle's clothes.
+
+**Why the bracket convention hid it:** `[Geeks]` *looks* like a slot to fill,
+which reads as obviously-a-placeholder to a human skimming the rule. It is
+still a real franchise name in the token stream.
+
+**The guard-scoping lesson, which generalizes past this feature:** the original
+test sliced from `'30. FORMER-NAME CALLBACK'` to the block's end and asserted no
+real name appeared *there*. It passed for months while twelve `[Geeks]` sat
+~170 lines above the slice. A guard scoped to the rule that motivated it
+certifies that rule and quietly implies the file. Scope the guard to the
+**blast radius** — here, the whole always-sent block — not to the bug.
+
+**The block was not the only region, either.** A first pass at this guard
+scanned HARD RULES and stopped there — and `buildTradeOfferPlaybook()`, which
+is concatenated onto the very same `system` string whenever a batch holds a
+trade offer, had named "Pacific Pigskins" and "Midwestside Connection" in four
+worked examples the whole time. Scoping a guard to *a* region repeats the
+original mistake one level up. The unit that matters is **every string the
+model is ever shown**, so the test now iterates a `regions` map and any new
+prompt chunk gets added to it.
+
+**Two matching details that decide whether the guard is worth having:**
+
+- **Match on token boundaries, not substrings.** A raw `includes` reports
+  "CHAT" (AFL 0021's abbrev) inside "CHATTER" and "FRA" inside "FRANCHISE".
+  Those false positives are what force the length floor up to 4 — which then
+  blinds the guard to every short abbreviation (`GG`, `BTP`, `DCW`). Switching
+  to the redactor's own `(?<!\w)…(?!\w)` pair drops the false positives to
+  zero at a floor of 2, so the guard covers 328 forms instead of 299. Use the
+  lookarounds rather than `\b` for the reason CLAUDE.md gives: a word boundary
+  cannot exist after a name ending in punctuation, so `\bBe Rough!\b` matches
+  nothing.
+- **Case handling should NOT be copied from the redactor.** Production matches
+  `gi` everywhere, which is right for a redactor (over-matching a tip is safe)
+  and wrong for a guard: at a floor of 2 the token list holds `DEAD`, `CHAT`,
+  `GRID`, `Pain`, `Fire`, `Heavy`, so an `i` flag flags ordinary prompt prose
+  and the guard becomes unrunnable. But pure case-sensitivity misses a
+  lowercase `"pacific pigskins"`. Split on **distinctiveness** instead —
+  multi-word or >= 8 chars matches case-insensitively, short abbreviations must
+  match exactly. 194 of 328 forms qualify, still zero false positives. This is
+  the one place the guard deliberately diverges from the production matcher;
+  say so in a comment, because "reuse the production matcher" is the obvious
+  and wrong review suggestion.
+- **Assert both slice indices, not just that the slice is non-empty.** The two
+  failure directions are asymmetric and neither raises. A renamed START anchor
+  gives `indexOf === -1`, and `slice(-1, end)` collapses to nothing — green
+  test, empty region. A renamed END anchor gives `slice(start, -1)`, which
+  *expands* to nearly the whole file. Check `start >= 0` and `end > start` by
+  hand; a `toContain` sanity assertion on the region's own text is a good
+  second belt.
+
+**Recommendation:** Never write a real franchise name, alias, retired name, or
+owner's personal name into prompt example text; invent one
+(`Griffins`, `Sandlot`, `Harbor City Kraken`) and say in the rule that it is
+invented. `tests/schefter-former-name-callback.test.ts` now scans every prompt
+region against 328 name forms harvested exactly the way
+`collectFranchiseNameTokens` harvests them, floor included — the redactor's
+input set IS the privacy boundary, so the guard's must never be narrower.
+Two gaps it still cannot close: **owner personal names** (the configs carry
+none — the only list is a comment map in `src/utils/groupme-storage.ts`, so
+"Jomar" was caught by review, not CI), and the **per-league lore files**
+appended to the same prompt, which name owners and franchises by design. When
+adding a rule, assume the guard will not save you from either.
+
+**Postscript — the redactor had the same blind spot in production.** Chasing
+the test's harvest turned up that `collectFranchiseNameTokens` read
+`team.aliases` but not the `aliases` on each `history[]` entry. Exactly one
+franchise is affected and it is the worst possible one: 0004's "Heavy Chevy"
+retired carrying `aliases: ["Heavy", "Chevy"]`, so a tip that said "Chevy"
+reached the prompt un-fuzzed. Same lesson as the entry above — the harvest is
+the privacy boundary — one level deeper into the config schema than anyone
+looked the first time. Fixed by iterating `[team, ...history]` for aliases the
+way the name fields already were.
