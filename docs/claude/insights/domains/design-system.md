@@ -2054,3 +2054,28 @@ color in both themes (`#c41e3a` light, `#ef5350` dark), so a fill that carries
 white text at 5.8:1 in light drops to 3.5:1 in dark. Flip the text to dark ink
 (`#2a0808`, the pattern `.kp-btn--danger` already uses) rather than pinning the
 light red.
+
+**Follow-up from review (same PR).** Two things the first pass missed, both
+found by an independent reviewer, both worth generalizing:
+
+- **Grep the token name AND the literal hex.** The same page's live-refresh
+  progress bar hardcoded `linear-gradient(90deg, #1c497c, #2e8743)` —
+  TheLeague's blue-to-green brand pair, with no `var()` anywhere for a
+  token-name grep to catch. It renders only on `[data-status='live']` cards,
+  so it also survived every screenshot taken outside a live week. Anything
+  gated behind a live/in-progress state needs its styles read, not screenshotted.
+- **`--link-color-accent-hover` is NOT red on AFL light.** Only
+  `html.dark[data-league="afl"]` pins it (`#ff8a80`); in AFL light it is still
+  TheLeague's `#2e8743`. It is the right token for a dark-mode-only override
+  (6.6:1 vs `--league-accent`'s 4.29:1 at 16px), but folding a light+dark pair
+  into that single token reintroduces the green. Check a link token's value in
+  *both* AFL themes before consolidating.
+
+`tests/afl-brand-green-guard.test.ts` now enforces the whole rule: it scans the
+AFL-only trees for `--color-secondary` and TheLeague's unambiguous brand-green
+hexes, with an allowlist that documents why each sanctioned green is semantic
+or categorical rather than brand. Two notes if you extend it — `#10b981` is
+deliberately absent from the forbidden list (it is `--color-secondary` in dark
+but also `--color-success` in light, so it cannot distinguish the bug from the
+correct usage), and the scanner needs real block-comment state, since a wrapped
+sentence inside `/* … */` often starts with an ordinary word rather than `*`.
