@@ -35,10 +35,11 @@ const CURRENT_ERA = '20{2[5-9],[3-9][0-9]}';
 const KEEPER_ERA = '20{2[4-9],[3-9][0-9]}';
 
 const ALLOWLIST_BARE_YEAR = new Set([
-  // Renders all ~20 seasons via its season selector; Phase 3 of the storage
-  // work moves the historical payloads to derived snapshots.
-  'src/pages/theleague/rosters.astro',
   // ?year= browsing back to 2010; players.json is needed per selected year.
+  // (theleague/rosters.astro left this list when Phase 3 landed: its
+  // historical payloads now come from the derived snapshot written by
+  // scripts/compute-roster-season-payloads.mjs, and its feed globs are
+  // current-era filtered.)
   'src/pages/afl-fantasy/rosters.astro',
 ]);
 
