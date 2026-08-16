@@ -43,11 +43,29 @@ jobs:
     # job would post a comment saying nothing was reviewed. Skip it outright.
     if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name == 'workflow_dispatch'
     steps:
+      # Runs BEFORE checkout, because the PR number is interpolated into the
+      # checkout ref below. A dispatch input is a free-form string, and a ref
+      # is not a place to discover that.
+      - name: Validate dispatch input
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          PR_INPUT: ${{ inputs.pr }}
+        run: |
+          case "$PR_INPUT" in
+            ''|*[!0-9]*) echo "::error::pr input must be digits only, got: $PR_INPUT"; exit 1 ;;
+          esac
+          echo "PR input OK: $PR_INPUT"
+
       - name: Checkout
         uses: actions/checkout@v6
         with:
           # Full history so the three-dot diff against origin/main resolves.
           fetch-depth: 0
+          # On workflow_dispatch there is no PR context, so without this the
+          # job would check out the dispatch ref (usually main), diff it
+          # against main for an empty result, and post that emptiness to the
+          # PR named in the input — a clean review of the wrong thing.
+          ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/pull/{0}/head', inputs.pr) || '' }}
 
       - name: Use Node.js
         uses: actions/setup-node@v6

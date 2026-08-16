@@ -243,7 +243,10 @@ export const PROVIDERS = {
  * so it says so inline — the model should know its coverage is partial.
  */
 export function capDiff(diff, maxBytes = MAX_DIFF_BYTES) {
-  if (diff.length <= maxBytes) return { diff, truncated: false };
+  // Measure BYTES, not string length: .length counts UTF-16 code units, so a
+  // diff full of non-ASCII (this repo carries team names and emoji) would sail
+  // past a cap that is documented in bytes.
+  if (Buffer.byteLength(diff, 'utf8') <= maxBytes) return { diff, truncated: false };
   return {
     diff:
       diff.slice(0, maxBytes) +

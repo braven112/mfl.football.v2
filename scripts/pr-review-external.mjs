@@ -142,9 +142,16 @@ ${body}
 function postComment(pr, body) {
   const repo = sh('gh', ['repo', 'view', '--json', 'nameWithOwner', '-q', '.nameWithOwner']).trim();
 
+  // --slurp is required with --paginate: without it gh concatenates one JSON
+  // array PER PAGE, which JSON.parse rejects as soon as a PR passes 100
+  // comments. The failure mode is nasty — the review would stop posting
+  // entirely on exactly the long-running PRs that most need it. With --slurp
+  // the result is an array of pages, hence the flat().
   const existing = JSON.parse(
-    sh('gh', ['api', `repos/${repo}/issues/${pr}/comments`, '--paginate'])
-  ).find((c) => typeof c.body === 'string' && c.body.includes(COMMENT_MARKER));
+    sh('gh', ['api', `repos/${repo}/issues/${pr}/comments`, '--paginate', '--slurp'])
+  )
+    .flat()
+    .find((c) => typeof c.body === 'string' && c.body.includes(COMMENT_MARKER));
 
   const [method, path, label] = existing
     ? ['PATCH', `repos/${repo}/issues/comments/${existing.id}`, `Updated existing review comment (${existing.id}).`]
