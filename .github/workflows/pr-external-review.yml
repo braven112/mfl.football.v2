@@ -1,0 +1,81 @@
+name: External PR Review
+
+# Independent (non-Claude) reviewers — Gemini and OpenAI — run here rather than
+# as in-session subagents of `/live`. The CLIs those agents wrap authenticate
+# interactively against a personal subscription, which cannot work headless, so
+# the in-session Codex reviewer silently no-ops in the Claude cloud workflow and
+# review coverage drops to Claude alone without anyone noticing.
+#
+# Running in Actions makes the reviewers a property of the PR: identical
+# coverage whether `/live` was launched from a laptop or from a cloud agent.
+# `/live` reads the findings off the PR, the same way it already reads Copilot's.
+#
+# Model ids are pinned here on purpose — they churn faster than the script does,
+# and a 404 from either API almost always means the id below needs bumping.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: "PR number to review"
+        required: true
+      providers:
+        description: "Comma-separated: gemini,openai"
+        required: false
+        default: "gemini,openai"
+
+concurrency:
+  # Supersede an in-flight review when the branch is pushed again — the older
+  # run would post findings against a diff that no longer exists.
+  group: pr-external-review-${{ github.event.pull_request.number || inputs.pr }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    # Forked PRs don't get repo secrets, so both providers would skip and the
+    # job would post a comment saying nothing was reviewed. Skip it outright.
+    if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          # Full history so the three-dot diff against origin/main resolves.
+          fetch-depth: 0
+
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      # No dependency install — the reviewer script is dependency-free raw
+      # fetch (same pattern as scripts/article-utils/ai-client.mjs). Keeps this
+      # job fast so review findings land while the PR is still being looked at.
+
+      - name: Resolve base branch
+        run: git fetch origin main --depth=0 || git fetch origin main
+
+      - name: Run external reviewers
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          # Bump these when a provider starts 404-ing on the model id.
+          GEMINI_REVIEW_MODEL: gemini-2.5-pro
+          OPENAI_REVIEW_MODEL: gpt-5
+          GH_TOKEN: ${{ github.token }}
+          # workflow_dispatch inputs are free-form strings. Bind them to env
+          # rather than interpolating into the run: script, so they can't break
+          # out of the command. The script validates both before use.
+          PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr }}
+          PROVIDERS: ${{ inputs.providers || 'gemini,openai' }}
+        run: |
+          node scripts/pr-review-external.mjs \
+            --pr "$PR_NUMBER" \
+            --base origin/main \
+            --providers "$PROVIDERS"

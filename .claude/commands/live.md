@@ -1,4 +1,4 @@
-Push the current branch, create a PR, run parallel Claude + Codex reviews, auto-approve if both pass, enable auto-merge, then monitor until the PR is merged.
+Push the current branch, create a PR, gather reviews from Claude (in-session) plus Gemini, Codex and Copilot (on the PR), auto-approve if all pass, enable auto-merge, then monitor until the PR is merged.
 
 ## Steps
 
@@ -53,37 +53,49 @@ EOF
 
 Capture the PR number and URL. Print the PR URL as a clickable link.
 
-### 5. Run parallel code reviews
+### 5. Run the Claude code review
 
-Launch **both reviewers at the same time** in a single message (two Agent tool calls):
-
-**Reviewer 1 — Claude (`/code-review` skill):**
+**Claude (`/code-review` skill):**
 - Run `/code-review --comment` to review the diff and post inline PR comments
 - Focus: correctness bugs, design token compliance, CLAUDE.md guideline adherence, TypeScript safety
 
-**Reviewer 2 — Codex (`codex:codex-rescue` agent):**
-- Prompt: "You are a senior code reviewer. Review the following diff for bugs, logic errors, security issues, and missed edge cases. Be direct — list Critical issues (blocks ship), Important issues (should fix soon), and Suggestions (optional). Do not comment on style.\n\nDiff:\n```\n$(git diff main...HEAD)\n```"
-- Use `subagent_type: "codex:codex-rescue"` on the Agent tool call
-- Focus: independent second opinion on correctness and logic — Codex reasons differently from Claude so it catches different things
+This is the only reviewer you invoke in-session. Gemini and Codex now run in CI (step 6) — **do not** spawn `codex:codex-rescue` here.
 
-Wait for **both** to complete before evaluating.
+> **Why they moved.** Those reviewers wrap CLIs that authenticate interactively against a personal subscription. That works on a laptop and cannot work headless, so in the Claude cloud workflow the Codex subagent would silently no-op and coverage would quietly drop to Claude alone. In CI they authenticate by repo secret, so coverage is identical no matter where `/live` was launched.
 
-### 6. Collect GitHub Copilot review feedback
+### 6. Collect the external reviewers (Gemini + Codex)
 
-Copilot auto-reviews most PRs and adds inline comments separately from the agent reviewers above. Fetch its findings so they're factored into the same decision:
+`.github/workflows/pr-external-review.yml` runs on every PR push and posts a single sticky comment containing both reviewers' findings, under `## Critical` / `## Important` / `## Suggestions` headings.
+
+Wait for the run to finish, then fetch it:
+
+```bash
+gh run list --workflow=pr-external-review.yml --branch "$(git branch --show-current)" --limit 1
+gh pr view <PR_NUMBER> --json comments --jq '.comments[] | select(.body | contains("<!-- external-pr-review -->")) | .body'
+```
+
+If the workflow hasn't completed yet, wait for it (`gh run watch`) rather than proceeding — skipping it is what the move to CI was meant to prevent.
+
+Two states that are **not** a clean pass, and must be surfaced to the user rather than counted as zero findings:
+- A section reading "⚠️ **Reviewer failed to run**" — that reviewer did not review anything.
+- A section reading "Skipped — `GEMINI_API_KEY` not set" — the secret is missing.
+
+### 6a. Collect GitHub Copilot review feedback
+
+Copilot auto-reviews most PRs and adds inline comments separately from the reviewers above. Fetch its findings so they're factored into the same decision:
 
 ```bash
 gh pr view <PR_NUMBER> --json reviews --jq '.reviews[] | select(.author.login == "copilot-pull-request-reviewer") | .body' | head -200
 gh api repos/<owner>/<repo>/pulls/<PR_NUMBER>/comments --jq '[.[] | select(.user.login == "Copilot") | {path: .path, line: .line, body: .body}]'
 ```
 
-Each Copilot inline comment counts as a finding. Classify each by your own judgment (Critical / Important / Suggestion) since Copilot doesn't label severity — use the same bar Claude and Codex would.
+Each Copilot inline comment counts as a finding. Classify each by your own judgment (Critical / Important / Suggestion) since Copilot doesn't label severity — use the same bar the other reviewers would.
 
 If no Copilot review has appeared yet (it can lag a minute), retry once after 30 seconds. If still nothing, note "Copilot: no review posted" and proceed.
 
 ### 7. Evaluate review results
 
-Tally findings across ALL THREE reviewers:
+Tally findings across ALL FOUR reviewers:
 
 - **Any Critical findings** → present the findings to the user, stop auto-approve, ask: "Fix these before merging?" Do not proceed until user confirms.
 - **Important findings only** → summarize them, note they should be addressed soon, but proceed with auto-approve.
@@ -97,24 +109,27 @@ Show a brief summary table:
 Review Results
 ─────────────────────────────
 Claude:   [Critical: N | Important: N | Suggestions: N]
+Gemini:   [Critical: N | Important: N | Suggestions: N]
 Codex:    [Critical: N | Important: N | Suggestions: N]
 Copilot:  [Critical: N | Important: N | Suggestions: N]
 Decision: [Proceeding / Blocked on N critical issue(s)]
 ```
 
+Use `did not run` rather than `0` for any reviewer that errored or was skipped — a failed reviewer and a clean reviewer must never render identically.
+
 ### 7a. Re-review loop after fixes
 
-If you applied fixes for Critical/Important findings, re-run the Claude reviewer (and optionally Codex) on the new commit to confirm:
+If you applied fixes for Critical/Important findings, re-run the Claude reviewer on the new commit to confirm:
 1. All prior findings are now FIXED
 2. No new issues introduced by the refactor
 
-Re-fetch Copilot comments too — Copilot re-reviews on push. Loop until all three reviewers are clean OR the user explicitly waives a remaining finding.
+Pushing the fixes re-triggers the external-review workflow and Copilot, so re-fetch both (step 6 and 6a) against the new commit. Loop until all four reviewers are clean OR the user explicitly waives a remaining finding.
 
 ### 8. Auto-approve the PR
 
-If no Critical issues from either reviewer:
+If no Critical issues from any reviewer:
 ```bash
-gh pr review <PR_NUMBER> --approve --body "Reviewed by Claude Code + Codex — no critical issues found. CI must pass before merge."
+gh pr review <PR_NUMBER> --approve --body "Reviewed by Claude Code + Gemini + Codex — no critical issues found. CI must pass before merge."
 ```
 
 ### 9. Enable auto-merge
@@ -132,7 +147,7 @@ gh pr merge <PR_NUMBER> --squash --admin
 ```
 
 Only do this when:
-- All Critical/Important findings from Claude, Codex, AND Copilot are resolved
+- All Critical/Important findings from Claude, Gemini, Codex, AND Copilot are resolved
 - Every required status check is SUCCESS
 - The user has authorized the admin merge (either explicitly this session or via standing instruction)
 
