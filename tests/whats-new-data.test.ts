@@ -392,6 +392,67 @@ describe('weekly-changelog-staging.json league scoping', () => {
     ).toEqual([]);
   });
 
+  // The rollup groups changes by `area` and prints `AREA_LABELS[area] || area`
+  // as a section heading. That fallback means a typo'd slug does NOT fail the
+  // Monday job — it ships the raw slug as a heading in the article owners read
+  // ("free-agent — ..." instead of "Free Agents — ..."). Read the vocabulary
+  // out of the script's own source rather than restating it, for the same
+  // reason VALID_STAGING_LEAGUES is derived: a second copy of the list is a
+  // second thing to forget to update.
+  const ROLLUP_SCRIPT = resolve(__dirname, '../scripts/weekly-changelog-rollup.mjs');
+  const VALID_AREAS = (() => {
+    const src = readFileSync(ROLLUP_SCRIPT, 'utf-8');
+    const block = src.match(/const AREA_LABELS = \{([\s\S]*?)\n\};/);
+    if (!block) throw new Error('Could not find AREA_LABELS in weekly-changelog-rollup.mjs');
+    return [...block[1].matchAll(/^\s*'([^']+)'\s*:/gm)].map((m) => m[1]);
+  })();
+
+  it('parses a non-trivial area vocabulary out of the rollup script', () => {
+    // Guards the regex above: if the script is reformatted so the match breaks,
+    // fail here rather than silently validating every change against [].
+    expect(VALID_AREAS.length).toBeGreaterThan(5);
+    expect(VALID_AREAS).toContain('other');
+  });
+
+  it('every staged change uses an area the rollup can label', () => {
+    const bad = changes
+      .filter((c) => !c.area || !VALID_AREAS.includes(c.area))
+      .map((c) => `${JSON.stringify(c.area)} — "${String(c.summary ?? '').slice(0, 50)}..."`);
+    expect(
+      bad,
+      `Staged changes must use an area slug defined in AREA_LABELS ` +
+        `(scripts/weekly-changelog-rollup.mjs). Unknown slugs don't fail the rollup — ` +
+        `they render raw as a section heading in the published entry. ` +
+        `Valid: ${VALID_AREAS.join(' | ')}`,
+    ).toEqual([]);
+  });
+
+  it('every staged change has a valid date, type, and impact', () => {
+    const VALID_TYPES = ['bug-fix', 'style-tweak'];
+    const VALID_IMPACTS = ['user', 'admin'];
+    const problems: string[] = [];
+    for (const c of changes) {
+      const label = `"${String(c.summary ?? '(no summary)').slice(0, 40)}..."`;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(c.date ?? '')) {
+        problems.push(`${label} date: ${JSON.stringify(c.date)} (want YYYY-MM-DD)`);
+      }
+      if (!VALID_TYPES.includes(c.type)) {
+        problems.push(`${label} type: ${JSON.stringify(c.type)} (want ${VALID_TYPES.join(' | ')})`);
+      }
+      if (!VALID_IMPACTS.includes(c.impact)) {
+        problems.push(
+          `${label} impact: ${JSON.stringify(c.impact)} (want ${VALID_IMPACTS.join(' | ')})`,
+        );
+      }
+    }
+    expect(
+      problems,
+      'Staged changelog entries must carry the fields CLAUDE.md specifies. ' +
+        'Anything bigger than a bug-fix or style-tweak belongs in whats-new.json ' +
+        'as its own entry, not in the weekly rollup.',
+    ).toEqual([]);
+  });
+
   it('featuredImage (when set) declares which league the screenshot belongs to', () => {
     if (!staging.featuredImage) return;
     expect(
