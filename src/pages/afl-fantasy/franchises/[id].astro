@@ -364,17 +364,23 @@ const seasonsPlayed = fr
 
 const topRivals = fr ? computeRivalEntries(fr.matchupHistory, id!).slice(0, 5) : [];
 
-// How much head-to-head the ledger actually holds. AFL 2007-2019 archives are
-// postseason-only, so rivalry records legitimately disagree with the career
-// record above (389 games vs 233 for franchise 0001). Saying so beats letting
-// an owner discover the discrepancy and conclude the site is broken.
+// How much head-to-head the ledger actually holds, stated against the career
+// record so an owner who notices the two disagree is told why rather than
+// concluding the site is broken.
+//
+// Count REGULAR-SEASON meetings only. The career record above comes from the
+// standings feed, which excludes the postseason, so summing `headToHead` —
+// which includes it — compares two different things. That went unnoticed while
+// the archives were missing games and the numerator was small; once 2007-2019
+// were recovered it rendered "covers 462 of 389 career games", which is
+// nonsense. For franchise 0001 the honest numbers are 372 of 389, and the
+// 17-game gap is exactly 2003, the one season with no head-to-head at all.
 const coverage: Array<any> = ((franchiseHistory as any).h2hCoverage ?? []) as any[];
 const coverageNote = describeCoverageGap(coverage);
 const h2hGamesRecorded = fr
-  ? Object.values(fr.headToHead ?? {}).reduce(
-      (sum: number, v: any) => sum + v.wins + v.losses + v.ties,
-      0
-    )
+  ? Object.values(fr.matchupHistory ?? {})
+      .flat()
+      .filter((m: any) => !m.isPlayoff).length
   : 0;
 
 const opponentMeta: Record<string, any> = Object.fromEntries(

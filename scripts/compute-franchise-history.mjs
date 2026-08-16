@@ -1122,10 +1122,36 @@ for (const year of years) {
     }
   };
 
+  // Which weeks schedule.json actually carries pairings for. Where it does,
+  // it WINS — see the loop below.
+  const scheduleCoveredWeeks = new Set();
+  for (const wk of toArray(schedule?.schedule?.weeklySchedule ?? [])) {
+    const weekNum = Number(wk.week);
+    if (!weekNum) continue;
+    if (toArray(wk.matchup).some((m) => toArray(m?.franchise).length === 2)) {
+      scheduleCoveredWeeks.add(weekNum);
+    }
+  }
+
   const weeklyRaw = readJson(path.join(yearDir, 'weekly-results-raw.json'));
   if (Array.isArray(weeklyRaw)) {
     for (const wkPayload of weeklyRaw) {
       const weekNum = parseNum(wkPayload?.weeklyResults?.week);
+      // schedule.json is the authority for any week it covers, and weeklyRaw is
+      // only allowed to fill weeks it does not.
+      //
+      // This is not a style preference. MFL served the AFL fabricated pairings
+      // for 2012-2015 — correct scores, invented opponents — in BOTH feeds, and
+      // recordMatchup dedupes on (week, franchiseA, franchiseB), so a fabricated
+      // pairing and the real one carry different keys and BOTH were recorded.
+      // Repairing schedule.json alone left 173 phantom meetings in the AFL's
+      // rivalry records. schedule.json is the copy we can verify — every stored
+      // AFL season replays to MFL's own standings exactly
+      // (tests/afl-schedule-integrity.test.ts) — so it is the one to trust.
+      //
+      // A no-op for TheLeague: 3,215 of its weeklyRaw pairings sit inside
+      // schedule-covered weeks and every one already agrees.
+      if (scheduleCoveredWeeks.has(weekNum)) continue;
       const matchups = toArray(wkPayload?.weeklyResults?.matchup);
       for (const m of matchups) {
         const fr = toArray(m?.franchise);
