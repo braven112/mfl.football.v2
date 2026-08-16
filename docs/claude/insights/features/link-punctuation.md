@@ -14,9 +14,21 @@ The instinct in this repo is a guard test that greps templates (that is how
 here: most GroupMe text is composed at runtime, and Schefter's LLM-written
 bodies routinely end a sentence on a link. A static scan can only see the
 templates, which were already clean — the bug would have kept shipping from
-model output. Put the normalization on the single send choke point and grep
-the *call sites* instead, which is what `tests/link-punctuation.test.ts`
-does (`expect(read(file)).toContain('stripLinkAdjacentPunctuation')`).
+model output. Put the normalization on the single send choke point instead.
+
+**But do not then grep the choke point to prove it is wired.** That was the
+first instinct here and it is worthless: `expect(read(file)).toContain(
+'stripLinkAdjacentPunctuation')` is satisfied by the `import` line, so
+`postAsBot` could go back to posting raw `text` with the suite fully green.
+Review caught it by mutation-testing, not by reading. Spy on `fetch` and
+assert the bytes that actually get POSTed.
+
+The generalized lesson, which cost two review rounds to learn: a grep proves
+a *token exists in a file*, never that a code path runs. It fails silently in
+both directions — satisfied by imports and comments, and blind to a branch
+neutered with `if (false)`. Any invariant worth a comment is worth executing:
+extract the decision into a pure function, or alias the virtual module (see
+the middleware section below) and call the real thing.
 
 Corollary for picking the choke point: `scripts/lib/groupme.mjs#postToGroupMe`
 already funnels all nine node lanes, so one edit covered Roger, the rumor
@@ -65,9 +77,13 @@ evaporates before the assertion.
 ## Middleware redirects sit in the `status: 404` fallback blast radius
 
 The 2026-07-21 deployment insight is about page-level `Astro.redirect()`, but
-a middleware `context.redirect()` returned *before* `next()` is the same
-shape — a 3xx with an empty body, which is exactly the response that has
-nothing to fall back on when Vercel's route-level `status` overrides it.
+a redirect returned from middleware *before* `next()` is the same shape — a
+3xx with an empty body, which is exactly the response that has nothing to
+fall back on when Vercel's route-level `status` overrides it. (This one ships
+a hand-built `Response` rather than `context.redirect()`, so it can carry
+`Cache-Control: no-store`; Astro's own `redirect()` is literally
+`new Response(null, { status, headers: { Location } })`, so the two are
+equivalent apart from that header — and equally exposed here.)
 `src/pages/[...path].astro` is what saves it. Verified for this change:
 after `pnpm build`, `.vercel/output/config.json` route 206
 (`^(?:/(.*?))?/?$`, no forced status) precedes route 207
@@ -83,3 +99,20 @@ which is the trap — but `git` classified `tests/link-punctuation.test.ts` as
 binary (`Bin 0 -> 7640 bytes` in `--stat`, no diffs, no review possible).
 Always write the escape sequence. `file <path>` reporting `data` instead of
 `JavaScript source`, or a `Bin` entry in `git diff --stat`, is the tell.
+
+## Testing Astro middleware: alias the virtual module
+
+`src/middleware.ts` imports `defineMiddleware` from `astro:middleware`, a
+virtual module vitest cannot resolve — which is why the wiring was grep-only
+for two rounds. The fix is three lines: `tests/stubs/astro-middleware.ts`
+exporting an identity function, plus an alias in `vitest.config.ts`. The stub
+is faithful rather than a simplification — the real `defineMiddleware` is a
+typing helper that returns its handler unchanged (verified against
+astro@7.1.3). With it, a test imports `onRequest`, hands it a plain object
+context (`{ request: { method }, url, locals }`) and a `vi.fn()` for `next`,
+and asserts the real `Response`: status, `Location`, `Cache-Control`, and
+that `next` was not called.
+
+Reach for this any time middleware behavior needs a test. It also makes the
+negative cases assertable — that a POST falls through, that a clean path
+calls `next()` exactly once — which is where the grep version was blindest.
