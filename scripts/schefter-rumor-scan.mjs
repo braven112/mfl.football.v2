@@ -857,6 +857,83 @@ function buildFranchiseNameMatcher(tokens) {
  */
 const redactionCache = new WeakMap();
 
+/**
+ * Franchise name forms that are ALSO ordinary words a tipster uses in ordinary
+ * football prose. Matched case-insensitively at a floor of two characters, the
+ * harvest turns these into a shredder aimed at the tip's own content:
+ *
+ *   "Deal is dead."               → "Deal is [a team]."          (DEAD, 0004 abbrev)
+ *   "He is a heavy favorite"      → "a [a team] favorite"        (Heavy, 0004 retired nameShort)
+ *   "Owner put out feelers"       → "put out [a team]"           (Feelers, AFL 0017 alias)
+ *   "headed to the Saints"        → "the [a team]"               (Saints, AFL 0020 — an NFL team)
+ *   "Swift is being shopped"      → "[a team] is being shopped"  (Swift, AFL 0016 — an NFL player)
+ *
+ * CLAUDE.md's "over-matching is the safe direction" is still right, but it was
+ * written assuming a stray hit merely fuzzes a word. It does something worse:
+ * "[a team]" is a SEMANTIC INSERTION. It asserts that a franchise reference
+ * existed where none did, and HARD RULES 2/3 then order the LLM to make the
+ * tip's content survive the fuzz — so the model dutifully invents a team's
+ * involvement out of "put out feelers". A leak names the wrong team; this
+ * fabricates one, on a tip nobody scoped to a franchise at all.
+ *
+ * The relaxation is deliberately narrow — a token in here is not dropped, it
+ * only stops matching in the two positions where it CANNOT be a proper noun
+ * (see `readsAsOrdinaryProse`). Capitalized mid-sentence, it still redacts.
+ *
+ * Inclusion test: would this word plausibly appear in a fantasy-football tip
+ * in a NON-team sense? Team-flavored forms that merely happen to be words
+ * ("Mafia", "Generals", "Ninjas", "Pigs") stay out — nobody writes those in
+ * prose. Every entry must be a real config form, and its franchise must keep
+ * a non-ambiguous form; `tests/schefter-franchise-name-redaction.test.ts`
+ * enforces both against the live configs, so a rename cannot quietly add an
+ * entry here that strips a franchise of all protection.
+ */
+export const AMBIGUOUS_NAME_TOKENS = new Set([
+  // TheLeague
+  'art', 'chevy', 'cowboy', 'dead', 'dogs', 'dream', 'fire', 'gap', 'grid',
+  'heavy', 'music', 'pain', 'rock',
+  // AFL
+  'baked', 'ballers', 'balls', 'bastards', 'chat', 'clowns', 'drunk',
+  'dummies', 'feelers', 'herd', 'indians', 'married', 'mint', 'reckless',
+  'saints', 'shit', 'show', 'smoke', 'swift', 'wonders',
+]);
+
+/**
+ * True when `offset` begins a sentence, so a capital letter there is grammar
+ * rather than evidence of a proper noun. Without this the relaxation misses
+ * the most common shape a tip takes — "Fire sale incoming.", "Dream scenario
+ * for that roster.", "Balls to the wall on this rebuild." are all openers, and
+ * tips are short enough that sentence-initial is a large share of positions.
+ */
+function isSentenceInitial(text, offset) {
+  for (let i = offset - 1; i >= 0; i -= 1) {
+    const ch = text[i];
+    if (ch === ' ' || ch === '\t') continue;
+    // An opening quote or bracket still leaves the word sentence-initial.
+    return '.!?\n\r"“‘\'(['.includes(ch);
+  }
+  return true; // start of string
+}
+
+/**
+ * Whether this match of an ambiguous token reads as an ordinary word rather
+ * than a franchise mention. Only two positions qualify, and both are ones a
+ * proper noun cannot occupy: lowercase anywhere, or capitalized solely because
+ * a sentence started there.
+ *
+ * Everything else still redacts — "the DEAD front office" and "talks with
+ * Heavy" are mid-sentence capitals, which is what a deliberate team reference
+ * looks like. The two genuinely unresolvable collisions ("Saints" the AFL
+ * franchise vs. the NFL club, "Swift" the franchise vs. the running back) are
+ * left redacting when capitalized mid-sentence; no lexical rule separates
+ * them, and privacy keeps the tie.
+ */
+function readsAsOrdinaryProse(match, text, offset) {
+  if (!AMBIGUOUS_NAME_TOKENS.has(match.toLowerCase())) return false;
+  if (!/^[A-Z]/.test(match)) return true;
+  return isSentenceInitial(text, offset);
+}
+
 function getRedactionContext(teams) {
   let ctx = redactionCache.get(teams);
   if (ctx && ctx.size !== teams.size) ctx = null;
@@ -888,8 +965,17 @@ function redactFranchiseNamesInText(text, teams, { keepFranchise } = {}) {
     }
     keepTokens = ownedBy.get(keepLower);
   }
-  return text.replace(matcher, (match) => {
+  // The matcher is built with `(?:…)` alternation and no capture groups, so
+  // replace() calls back with (match, offset, wholeString).
+  return text.replace(matcher, (match, offset, whole) => {
     const lower = match.toLowerCase();
+    // FIRST, before any keep-franchise handling. An ordinary word that happens
+    // to be one of the KEPT franchise's own forms would otherwise fall into
+    // the normalize branch below and be rewritten to that team's display name
+    // — so a tip scoped to Dead Cap Walking turns "the deal is dead" into
+    // "the deal is Dead Cap Walking". That is the same fabrication as
+    // "[a team]" with a specific team's name on it, which is strictly worse.
+    if (readsAsOrdinaryProse(match, whole, offset)) return match;
     // Already the canonical name — leave it exactly as the tipster wrote it.
     if (keepLower && lower === keepLower) return match;
     // Another name for the franchise we ARE allowed to name: normalize to the

@@ -107,6 +107,11 @@ were invisible to it — a punitive rebrand identifies a team better than its
 current name does. Over-matching is the safe direction here: a stray hit fuzzes
 a word to `[a team]`, a miss leaks an identity.
 
+> **Superseded in part — see 2026-08-15 "A redaction placeholder is a semantic
+> insertion" below.** The direction is still right, but "a stray hit fuzzes a
+> word" is not what a stray hit does, and the cost of over-matching was being
+> undercounted on the strength of that phrase.
+
 **Recommendation:** When adding a scope branch to `anonymizeTips`, redact
 explicitly in that branch rather than trusting the tail. When adding a name
 field to a league config, ask whether the redactor's harvest reads it.
@@ -206,3 +211,75 @@ reached the prompt un-fuzzed. Same lesson as the entry above — the harvest is
 the privacy boundary — one level deeper into the config schema than anyone
 looked the first time. Fixed by iterating `[team, ...history]` for aliases the
 way the name fields already were.
+## 2026-08-15 - A redaction placeholder is a semantic insertion, not a neutral garble
+
+**Context:** Hardening the franchise-name redactor (entry above) left it
+matching every name form at a 2-character floor, case-insensitively. Auditing
+the false-positive side turned out to matter far more than expected.
+
+**Insight:** The rule everyone reasoned from — "over-matching is safe, a stray
+hit just fuzzes a word" — quietly mis-prices the trade. `[a team]` is not a
+redaction mark, it is a **claim**: it asserts that a franchise reference existed
+at that position. And HARD RULES 2/3 then explicitly order the LLM to make the
+tip's content survive the fuzz. So the model does what it was told — it goes
+looking for the team that isn't there and writes one into the story.
+
+A leak names the *wrong* team. Over-matching **fabricates one** on a tip nobody
+scoped to a franchise at all. Those are not the same failure, and the second one
+is not obviously the cheaper of the two.
+
+The volume was the surprise. ~40 of 328 name forms across the two configs are
+ordinary words, and each one was shredding real prose:
+
+```
+"Deal is dead."            → "Deal is [a team]."           (DEAD,    0004 abbrev)
+"a heavy favorite"         → "a [a team] favorite"         (Heavy,   0004 retired nameShort)
+"Owner put out feelers"    → "put out [a team]"            (Feelers, AFL 0017 alias)
+"headed to the Saints"     → "the [a team]"                (Saints,  AFL 0020 — an NFL club)
+"Swift is being shopped"   → "[a team] is being shopped"   (Swift,   AFL 0016 — an NFL player)
+```
+
+The last two are the ones that should have been caught sooner: the harvest
+collides with **NFL team names and player surnames**, which is the exact
+vocabulary a fantasy tip is made of. 18 of 18 probe sentences came back mangled.
+
+**Three things that generalize past this bug:**
+
+1. **A guard's matching rules do not transfer to production, in either
+   direction.** `tests/schefter-former-name-callback.test.ts` splits on
+   distinctiveness (case-insensitive for long/multi-word, case-exact for short
+   abbreviations) and documents that copying the production matcher would be
+   wrong. The *reverse* import is equally wrong and less obvious: the guard
+   scans our own prompt prose, which we capitalize properly, while the redactor
+   scans owner-typed tips, which are casually lowercase. The same rule is safe
+   in one and a leak in the other.
+2. **When a token is both an ordinary word and a real identifier, no lexical
+   rule separates them** — the ambiguity is positional. What worked was
+   relaxing only in the two positions a proper noun cannot occupy: lowercase,
+   or capitalized solely because a sentence started. `Saints` and `Swift` stay
+   unresolvable when capitalized mid-sentence; privacy keeps that tie.
+3. **Relaxing a token is only safe if the franchise keeps a distinctive one.**
+   `Balls` relaxes because `Balls Deep` doesn't; `dream` can never redact on
+   its own (it's stored lowercase) but `The Dream` covers the real phrasing.
+   That residual-coverage invariant is the thing to test, because a future
+   rename to a plain word is what would quietly strip a team of all protection.
+
+**Evidence:** `AMBIGUOUS_NAME_TOKENS` / `readsAsOrdinaryProse` /
+`isSentenceInitial` in `scripts/schefter-rumor-scan.mjs`. Note the ordering
+constraint in `redactFranchiseNamesInText`: the prose check must run **before**
+the keep-franchise branches, or an ordinary word that is one of the *kept*
+team's own forms gets normalized to that team's display name — "the deal is
+Dead Cap Walking", the same fabrication wearing a real name.
+
+**Also worth knowing:** the input redactor is the ONLY mechanical layer.
+`sanitizeAiPost` screens meta-commentary, not franchise names — so there is no
+output-side net, and false negatives stay genuinely expensive. That asymmetry is
+real; it just isn't infinite.
+
+**Recommendation:** Before widening any sanitizer that substitutes a
+*meaningful* token, probe the false-positive side against real prose, not just
+the leak side against real configs — one tip per token, each placed
+mid-sentence, since position is load-bearing and a `tokens.join(' / ')` sweep
+cannot express it. And when a doc rule justifies a bias with an assertion about
+what the failure mode *is* ("just fuzzes a word"), check the assertion before
+inheriting the bias.

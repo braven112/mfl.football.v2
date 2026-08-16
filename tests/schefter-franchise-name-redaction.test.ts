@@ -18,7 +18,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 // @ts-ignore — sibling .mjs module, no .d.ts
-import { anonymizeTips } from '../scripts/schefter-rumor-scan.mjs';
+import { anonymizeTips, AMBIGUOUS_NAME_TOKENS } from '../scripts/schefter-rumor-scan.mjs';
 
 const SCANNER_SRC = readFileSync(
   path.join(process.cwd(), 'scripts/schefter-rumor-scan.mjs'),
@@ -217,19 +217,46 @@ describe('franchise-name redaction — real league configs', () => {
       }
       expect(tokens.length).toBeGreaterThan(0);
 
-      const out = await anonymizeTips(
-        [{ id: 't1', source: 'web', topic: 'roster', text: tokens.join(' / '), submittedAt: Date.now() }],
-        realTeams,
+      // Each token is placed MID-SENTENCE in its own config casing — the
+      // position and form a deliberate franchise mention actually takes.
+      //
+      // This used to join every token with " / " and scan the result once.
+      // That construction cannot express position, and position is now load-
+      // bearing: `readsAsOrdinaryProse` deliberately lets an ambiguous token
+      // through when it is lowercase or sentence-initial, because there it is
+      // a word rather than a name ("Deal is dead."). A bare join would report
+      // those deliberate pass-throughs as leaks while ALSO never testing the
+      // one position that matters. One tip per token is the honest guard.
+      const leaked: string[] = [];
+      for (const tok of new Set(tokens)) {
+        const out = await anonymizeTips(
+          [{
+            id: 't1',
+            source: 'web',
+            topic: 'roster',
+            text: `Hearing ${tok} is shopping a tight end.`,
+            submittedAt: Date.now(),
+          }],
+          realTeams,
+        );
+        // Detect leaks with a plain substring check, NOT the boundary regex the
+        // redactor uses. Sharing that construct made this test blind to exactly
+        // the bug it exists to catch: `\b` cannot match after a token ending in
+        // punctuation, so "The Blunt Bros." and "Be Rough!" both survived
+        // redaction AND went unreported here. A guard must not assume the same
+        // thing as the code it guards.
+        if (out[0].text.toLowerCase().includes(tok.toLowerCase())) leaked.push(tok);
+      }
+      // The one permitted survivor class: a config form stored already in
+      // lowercase is indistinguishable from prose by construction, so an
+      // ambiguous one can never redact on its own. TheLeague's `dream` alias
+      // is the only instance, and franchise 0016 keeps "The Dream" / "Running
+      // Down The Dream" / "Silver Bullets" / "RDTD", which is what a real
+      // mention ("hearing the dream is shopping") actually matches.
+      const permitted = leaked.filter(
+        (tok) => tok === tok.toLowerCase() && AMBIGUOUS_NAME_TOKENS.has(tok),
       );
-      // Detect leaks with a plain substring check, NOT the boundary regex the
-      // redactor uses. Sharing that construct made this test blind to exactly
-      // the bug it exists to catch: `\b` cannot match after a token ending in
-      // punctuation, so "The Blunt Bros." and "Be Rough!" both survived
-      // redaction AND went unreported here. A guard must not assume the same
-      // thing as the code it guards.
-      const haystack = out[0].text.toLowerCase();
-      const leaked = [...new Set(tokens)].filter((tok) => haystack.includes(tok.toLowerCase()));
-      expect(leaked).toEqual([]);
+      expect(leaked.filter((tok) => !permitted.includes(tok))).toEqual([]);
     });
   }
 });
@@ -464,5 +491,205 @@ describe('franchise-name redaction — source guards', () => {
     expect(fn![0]).toMatch(/\(\?<!\\\\w\)/);
     expect(fn![0]).toMatch(/\(\?!\\\\w\)/);
     expect(fn![0]).not.toMatch(/\\\\b/);
+  });
+});
+
+/**
+ * Over-redaction — the fuzz must not eat the tip's own content.
+ *
+ * The harvest takes every name form at a floor of two characters and matches
+ * it case-insensitively, so ordinary football prose was being shredded by
+ * franchise abbreviations and retired nicknames that are also plain English
+ * words. Verified live against the real configs before the fix:
+ *
+ *   "Deal is dead."           → "Deal is [a team]."          (DEAD,    0004 abbrev)
+ *   "a heavy favorite"        → "a [a team] favorite"        (Heavy,   0004 retired nameShort)
+ *   "a chevy in a ferrari league" → "a [a team] in a ..."    (Chevy,   0004 retired alias)
+ *   "Owner put out feelers"   → "put out [a team]"           (Feelers, AFL 0017 alias)
+ *   "headed to the Saints"    → "the [a team]"               (Saints,  AFL 0020 — an NFL club)
+ *   "Swift is being shopped"  → "[a team] is being shopped"  (Swift,   AFL 0016 — an NFL player)
+ *
+ * CLAUDE.md's "over-matching is the safe direction" assumed a stray hit merely
+ * fuzzes a word. It does something worse: "[a team]" ASSERTS a franchise
+ * reference where none existed, and HARD RULES 2/3 then tell the LLM to make
+ * the tip's content survive the fuzz — so it invents a team's involvement out
+ * of "put out feelers". A leak names the wrong team; this fabricates one on a
+ * tip nobody scoped to a franchise.
+ *
+ * The relaxation is deliberately narrow. An ambiguous token is not dropped; it
+ * stops matching only where it cannot be a proper noun — lowercase, or
+ * capitalized solely because a sentence began there.
+ */
+describe('franchise-name redaction — ordinary prose survives the fuzz', () => {
+  const realTeams = (configPath: string) => {
+    const raw = JSON.parse(readFileSync(path.join(process.cwd(), configPath), 'utf8'));
+    const map = new Map<string, TeamEntry>();
+    for (const t of raw.teams ?? []) {
+      map.set(t.franchiseId, {
+        name: t.name,
+        nameMedium: t.nameMedium,
+        nameShort: t.nameShort,
+        abbrev: t.abbrev,
+        division: t.division,
+        aliases: Array.isArray(t.aliases) ? t.aliases : [],
+        history: Array.isArray(t.history) ? t.history : [],
+      });
+    }
+    return map;
+  };
+  const LEAGUE = realTeams('src/data/theleague.config.json');
+  const AFL = realTeams('data/afl-fantasy/afl.config.json');
+
+  const scrub = async (text: string, teams: Map<string, TeamEntry>) => {
+    const out = await anonymizeTips(
+      [{ id: 't1', source: 'web', topic: 'roster', text, submittedAt: Date.now() }],
+      teams,
+    );
+    return out[0].text;
+  };
+
+  // The three reported cases, verbatim.
+  it.each([
+    ['Deal is dead. Somebody may still move.'],
+    ['He is a heavy favorite to be cut.'],
+    ['That contract is a chevy in a ferrari league.'],
+  ])('leaves %s untouched (TheLeague)', async (text) => {
+    expect(await scrub(text, LEAGUE)).toBe(text);
+  });
+
+  it.each([
+    ['There is a gap at running back.'],
+    ['That pick is a rock solid value.'],
+    ['The art of the deal is lost on him.'],
+    ['Fire sale incoming and the pain is real.'],
+    ['Dream scenario for that roster.'],
+  ])('leaves %s untouched (TheLeague)', async (text) => {
+    expect(await scrub(text, LEAGUE)).toBe(text);
+  });
+
+  it.each([
+    ['There is smoke around this one.'],
+    ['Owner put out feelers about a trade.'],
+    ['The chat has been quiet all week.'],
+    ['That roster is a mint condition contender.'],
+    ['He wants to show he belongs.'],
+    ['A married man with three kids does not do that.'],
+    ['Balls to the wall approach on this rebuild.'],
+    ['Swift is being shopped after the trade deadline.'],
+  ])('leaves %s untouched (AFL)', async (text) => {
+    expect(await scrub(text, AFL)).toBe(text);
+  });
+
+  // The other half of the contract: relaxing these tokens must not cost a
+  // real mention. Capitalized mid-sentence is what a deliberate franchise
+  // reference looks like, and it still redacts.
+  it.each([
+    ['Talks with Heavy fell apart.'],
+    ['The DEAD front office is quiet.'],
+    ['Sources say Chevy wants out.'],
+  ])('still redacts a mid-sentence capital in %s', async (text) => {
+    expect(await scrub(text, LEAGUE)).toContain('[a team]');
+  });
+
+  it.each([
+    ['Hearing Feelers is shopping a tight end.'],
+    ['Sources say Balls is rebuilding.'],
+    ['Word is Chat wants a quarterback.'],
+  ])('still redacts a mid-sentence capital in %s (AFL)', async (text) => {
+    expect(await scrub(text, AFL)).toContain('[a team]');
+  });
+
+  it('still redacts the distinctive multi-word form in any casing', async () => {
+    // "Heavy" relaxes; "Heavy Chevy" — the form that actually identifies the
+    // franchise — must not, even lowercased and sentence-initial.
+    for (const text of [
+      'heavy chevy are shopping a TE',
+      'Heavy Chevy are shopping a TE',
+      'dead cap walking is over the cap',
+    ]) {
+      expect(await scrub(text, LEAGUE)).toContain('[a team]');
+    }
+  });
+
+  it('catches a bare ambiguous alias through the franchise\'s longer form', async () => {
+    // 0016's `dream` alias is stored lowercase, so it can never redact alone.
+    // What a real mention looks like is "the dream", which "The Dream" covers.
+    expect(await scrub('Hearing the dream is shopping a TE', LEAGUE))
+      .toBe('Hearing [a team] is shopping a TE');
+  });
+
+  it('does not rewrite an ordinary word into the KEPT franchise\'s name', async () => {
+    // Ordering guard. `readsAsOrdinaryProse` has to run BEFORE the keep-
+    // franchise normalize branch: "dead" is one of 0004's own forms, so on a
+    // tip scoped to Dead Cap Walking the normalize branch would turn
+    // "the deal is dead" into "the deal is Dead Cap Walking" — the same
+    // fabrication as "[a team]", with a specific team's name on it.
+    const now = Date.now();
+    const out = await anonymizeTips(
+      [
+        { id: 't1', source: 'web', topic: 'roster', text: 'The deal is dead but he is a heavy favorite', franchiseHint: '0004', submittedAt: now },
+        { id: 't2', source: 'web', topic: 'roster', text: 'Heard the same', franchiseHint: '0004', submittedAt: now },
+      ],
+      LEAGUE,
+    );
+    expect(out[0].scope.kind).toBe('franchise-multi-source');
+    expect(out[0].text).toBe('The deal is dead but he is a heavy favorite');
+  });
+});
+
+describe('franchise-name redaction — ambiguous-token list invariants', () => {
+  const CONFIGS = [
+    ['theleague', 'src/data/theleague.config.json'],
+    ['afl-fantasy', 'data/afl-fantasy/afl.config.json'],
+  ] as const;
+
+  /** Every name form the redactor harvests, grouped by franchise. */
+  const formsByFranchise = () => {
+    const out = new Map<string, string[]>();
+    for (const [league, configPath] of CONFIGS) {
+      const raw = JSON.parse(readFileSync(path.join(process.cwd(), configPath), 'utf8'));
+      for (const t of raw.teams ?? []) {
+        const forms: string[] = [];
+        const add = (v: unknown) => {
+          if (typeof v === 'string' && v.trim().length >= 2) forms.push(v.trim());
+        };
+        for (const form of [t, ...(t.history ?? [])]) {
+          for (const f of ['name', 'nameMedium', 'nameShort', 'abbrev']) add(form?.[f]);
+        }
+        for (const a of t.aliases ?? []) add(a);
+        out.set(`${league}:${t.franchiseId}`, forms);
+      }
+    }
+    return out;
+  };
+
+  it('every entry is a real config name form', () => {
+    // Anti-rot in the removal direction: a franchise rename that retires one
+    // of these names leaves a dead entry quietly relaxing nothing, and the
+    // next reader cannot tell which entries are still load-bearing.
+    const live = new Set(
+      [...formsByFranchise().values()].flat().map((f) => f.toLowerCase()),
+    );
+    const stale = [...AMBIGUOUS_NAME_TOKENS].filter((tok) => !live.has(tok));
+    expect(stale).toEqual([]);
+  });
+
+  it('never leaves a franchise with only ambiguous name forms', () => {
+    // The safety invariant. Relaxing a token is only acceptable because the
+    // franchise keeps a distinctive form that still catches a real mention —
+    // "Balls" relaxes because "Balls Deep" does not. A future rename to a
+    // wholly ordinary word would strip a team of all protection, and this is
+    // what refuses it.
+    const unprotected: string[] = [];
+    for (const [key, forms] of formsByFranchise()) {
+      if (forms.length === 0) continue;
+      const distinctive = forms.filter((f) => !AMBIGUOUS_NAME_TOKENS.has(f.toLowerCase()));
+      if (distinctive.length === 0) unprotected.push(key);
+    }
+    expect(unprotected).toEqual([]);
+  });
+
+  it('is all lowercase, since lookup is keyed on the lowercased match', () => {
+    expect([...AMBIGUOUS_NAME_TOKENS].filter((t) => t !== t.toLowerCase())).toEqual([]);
   });
 });

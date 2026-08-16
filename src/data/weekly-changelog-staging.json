@@ -7,6 +7,14 @@
     {
       "date": "2026-08-15",
       "type": "bug-fix",
+      "summary": "Schefter stopped chewing holes in his own tips. To keep him from naming a team he's not allowed to name, every tip gets scrubbed before he reads it — any franchise name in the text is swapped out for \"[a team].\" Trouble is, the list of names he watches for includes short ones that are also just... words. \"Dead Cap Walking\" answers to DEAD, and used to be Heavy Chevy. Over in the AFL, Titsburgh Feelers answers to Feelers, The Boondock Saints to Saints, Swiftie 4 Life to Swift. So a tip reading \"deal is dead, but he's a heavy favorite to be cut\" reached him as \"deal is [a team], but he's a [a team] favorite\" — and \"put out feelers\" and \"headed to the Saints\" got the same treatment. Worse than gibberish: he's under orders to make sure the substance of a tip survives the scrub, so he'd go looking for the team that wasn't there and write one into the story. Those words now go through untouched when they're being used as words. Say a team's name like you mean it — mid-sentence, capitalized — and he still can't print it.",
+      "impact": "user",
+      "area": "other",
+      "league": "both"
+    },
+    {
+      "date": "2026-08-15",
+      "type": "bug-fix",
       "summary": "Schefter's headshot on The Pecking Order stopped floating out in the margin. The little round photo beside the \"The Pecking Order\" heading was parked in the gutter to the left of the page on purpose — the idea being that the heading text would then line up dead even with the headline, the breadcrumbs and the ranking cards below it. Nice idea, wrong measurement: the page's column has about 19 pixels of room on that side and the photo needed 50, so on any screen wide enough to show it at all, it sat outside the layout entirely — a disembodied head hovering off in the left margin with nothing above or below it. It's back in the heading now, starting on the same left edge as everything else and reading like a byline. It also shows up on phones, which it never did before: the old version hid itself on anything under 1300 pixels wide, because below that there was no margin left to hide in.",
       "impact": "user",
       "area": "rankings",

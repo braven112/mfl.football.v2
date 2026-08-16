@@ -627,10 +627,35 @@ harvest it runs on is load-bearing, not bookkeeping:
   name) to the canonical name; redact everything else. Comparing the one
   string fuzzes the kept team's own nicknames and lets Schefter print
   last-season's punishment name for a team he's allowed to name.
-- Over-matching is the safe direction — a stray hit fuzzes a word to
-  `[a team]`, a miss leaks an identity.
+- Over-matching is the safe direction — a miss leaks an identity — but it is
+  **not free, and the old "a stray hit just fuzzes a word" framing was wrong**.
+  `[a team]` is a SEMANTIC INSERTION: it asserts a franchise reference where
+  none existed, and HARD RULES 2/3 then order the LLM to make the tip's content
+  survive the fuzz, so the model invents a team's involvement out of "put out
+  feelers". A leak names the wrong team; this fabricates one on a tip nobody
+  scoped to a franchise. Because the harvest floor is two characters and
+  matching is case-insensitive, ~40 real name forms are ordinary words, and
+  every one of these was live (Aug 2026): "Deal is dead." → "Deal is [a team]."
+  (`DEAD`), "a heavy favorite" (`Heavy`), "put out feelers" (AFL `Feelers`),
+  "headed to the Saints" (AFL `Saints` — an NFL club), "Swift is being shopped"
+  (AFL `Swift` — an NFL player).
+  `AMBIGUOUS_NAME_TOKENS` + `readsAsOrdinaryProse` relax exactly those tokens,
+  and only in the two positions a proper noun cannot occupy — lowercase, or
+  capitalized solely because a sentence started there. Capitalized mid-sentence
+  still redacts, so a deliberate mention is untouched. Three things hold it
+  together: an entry must be a real config form; its franchise must keep a
+  non-ambiguous form (so a rename to a plain word can't strip a team of all
+  protection — "Balls" relaxes only because "Balls Deep" doesn't); and the
+  check runs **before** the keep-franchise branches, or an ordinary word that
+  is one of the kept team's own forms gets rewritten to that team's display
+  name ("the deal is Dead Cap Walking"), which is the same fabrication wearing
+  a real name. Two collisions are unresolvable and deliberately still redact
+  when capitalized mid-sentence: `Saints` and `Swift`.
   `tests/schefter-franchise-name-redaction.test.ts` runs the real configs
-  through the anonymizer and fails on any surviving alias or retired name.
+  through the anonymizer and fails on any surviving alias or retired name —
+  one tip per token, each placed mid-sentence in its config casing, because a
+  bare `tokens.join(' / ')` cannot express position and position is now
+  load-bearing.
 
 ### Former-name callbacks — the bit is the pairing, and it expires
 
