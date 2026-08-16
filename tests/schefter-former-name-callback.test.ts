@@ -238,6 +238,22 @@ describe('pickFormerName — last season only', () => {
     expect(pickFormerName(bruin, owners, { ...LAST, franchiseId: '0014' })).toBeNull();
   });
 
+  it('normalizes case in the Set/array fallback shape', () => {
+    // The fallback lower-cases the name it is testing but used to compare it
+    // against raw Set values, so a Set of display-cased names silently matched
+    // nothing — quietly re-enabling callbacks to names a live franchise owns.
+    const jocks = {
+      franchiseId: '0010',
+      name: 'Computer Jocks',
+      history: [{ name: 'Midwestside Connection', yearEnd: 2025 }],
+    };
+    const opts = { lastSeason: 2025, franchiseId: '0010' };
+    expect(pickFormerName(jocks, new Set(['Midwestside Connection']), opts)).toBeNull();
+    expect(pickFormerName(jocks, new Set(['midwestside connection']), opts)).toBeNull();
+    expect(pickFormerName(jocks, ['Midwestside Connection'], opts)).toBeNull();
+    expect(pickFormerName(jocks, new Set(), opts)).not.toBeNull();
+  });
+
   it('refuses a non-integer lastSeason rather than coercing', () => {
     expect(pickFormerName(DEAD_CAP, new Map(), { lastSeason: '2025' as never })).toBeNull();
     expect(pickFormerName(DEAD_CAP, new Map(), { lastSeason: NaN })).toBeNull();

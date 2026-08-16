@@ -255,6 +255,51 @@ describe('franchise-name redaction — names ending in punctuation', () => {
     );
     expect(out[0].text).toBe('The PlainNamed guy called');
   });
+
+  it('redacts a punctuation-ending name even when a word is glued to it', async () => {
+    // The second-order version of the same bug. Wrapping every token in a
+    // blanket `(?!\w)` fixes "Bros. are" but not "Bros.are" — the `.` is
+    // followed by `a`, the lookahead fails, and the whole name survives.
+    // A token that already ends in punctuation carries its own delimiter and
+    // must not get a right guard at all.
+    const out = await anonymizeTips(
+      [{ id: 't1', source: 'web', topic: 'roster', text: 'I hear The Blunt Bros.are done and Lucky Buck$are next', submittedAt: Date.now() }],
+      punctTeams,
+    );
+    expect(out[0].text).toBe('I hear [a team]are done and [a team]are next');
+  });
+});
+
+describe('franchise-name redaction — trade-bait owner comments', () => {
+  const baitTeams = new Map<string, TeamEntry>([
+    ['0001', { name: 'Pacific Pigskins', nameShort: 'Pigskins', division: 'NW' }],
+    ['0002', { name: 'Nashville Geeks', nameShort: 'Geeks', division: 'NW' }],
+  ]);
+
+  const bait = async (ownerWillGiveUp: string, ownerWillTake: string) => {
+    const out = await anonymizeTips(
+      [{
+        id: 'b', source: 'trade_bait', topic: 'trade', franchiseHint: '0001',
+        author: 'Pigskins', attributable: true, submittedAt: Date.now(),
+        meta: { adds: [], byPos: {}, totalAdds: 0, ownerWillGiveUp, ownerWillTake },
+      }],
+      baitTeams,
+    );
+    return out[0];
+  };
+
+  it('fuzzes a counterparty named in the owner\'s own MFL comment', async () => {
+    // Naming the LISTING team is the point of this scope — they published it.
+    // The team they name in the comment did not, and gets no say.
+    const safe = await bait('Call Nashville Geeks only', 'Anything from the Geeks');
+    expect(safe.meta.ownerWillGiveUp).toBe('Call [a team] only');
+    expect(safe.meta.ownerWillTake).toBe('Anything from the [a team]');
+  });
+
+  it('leaves the listing team\'s own name intact', async () => {
+    const safe = await bait('Pigskins are selling', 'Anything');
+    expect(safe.meta.ownerWillGiveUp).toBe('Pigskins are selling');
+  });
 });
 
 describe('franchise-name redaction — every field the LLM sees, not just text', () => {

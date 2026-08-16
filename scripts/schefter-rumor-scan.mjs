@@ -782,13 +782,19 @@ function escapeRegExp(s) {
  * Boundary-matched alternation over every franchise name token, longest form
  * first. Two deliberate choices, each of which was a live bug:
  *
- * 1. **`(?<!\w) … (?!\w)`, not `\b … \b`.** A word boundary is defined
- *    between a word and a non-word character, so it cannot exist after a
- *    token that ENDS in punctuation — `\bThe Blunt Bros\.\b` never matches
- *    "The Blunt Bros." followed by a space. Eight real AFL names die that
- *    way, including the punitive "Be Rough!" and "Lucky Buck$". The negative
- *    lookarounds assert "not glued to a word character" instead, which is
- *    the property actually wanted and is total over every token shape.
+ * 1. **Per-token edge guards, not `\b … \b` and not a blanket lookaround.**
+ *    A word boundary is defined between a word and a non-word character, so
+ *    it cannot exist after a token that ENDS in punctuation — `\bThe Blunt
+ *    Bros\.\b` never matches "The Blunt Bros." at all. Eight real AFL names
+ *    die that way, including the punitive "Be Rough!" and "Lucky Buck$".
+ *
+ *    But wrapping every token in `(?<!\w) … (?!\w)` fixes only the common
+ *    case and reintroduces the same defect at the seam: "The Blunt
+ *    Bros.are done" leaves `.` followed by `a`, so the trailing `(?!\w)`
+ *    fails and the whole name survives. The guard has to depend on the
+ *    token's own edges — a token that already ENDS in punctuation carries
+ *    its own delimiter and needs no right guard; one that ends in a word
+ *    character does. Same on the left.
  * 2. **ONE alternation, not a replace() per token.** Sequential passes
  *    re-scan their own output: with "Smokane" kept and normalized to
  *    "Smokane FC", the later "Smokane" pass matches inside the "Smokane FC"
@@ -798,8 +804,16 @@ function escapeRegExp(s) {
  */
 function buildFranchiseNameMatcher(tokens) {
   if (tokens.length === 0) return null;
-  const alternation = tokens.map((t) => escapeRegExp(t)).join('|');
-  return new RegExp(`(?<!\\w)(?:${alternation})(?!\\w)`, 'gi');
+  const alternation = tokens
+    .map((t) => {
+      // Only assert "not glued to a word character" on an edge that is
+      // itself a word character. Punctuation is already its own boundary.
+      const left = /^\w/.test(t) ? '(?<!\\w)' : '';
+      const right = /\w$/.test(t) ? '(?!\\w)' : '';
+      return `${left}${escapeRegExp(t)}${right}`;
+    })
+    .join('|');
+  return new RegExp(`(?:${alternation})`, 'gi');
 }
 
 /**
@@ -828,14 +842,23 @@ function buildFranchiseNameMatcher(tokens) {
  * once per tip per field, so recomputing them made the scrub
  * O(tips × fields × franchises). Keyed on the Map identity, which the scanner
  * builds once per run.
+ *
+ * CONTRACT: the `teams` map is treated as IMMUTABLE once redaction has seen
+ * it. Mutating a team in place, or adding one, after the first scrub will not
+ * invalidate the cache and the new name will not be redacted. Every caller
+ * builds the map once per run via `loadTeams()` and never touches it again;
+ * keep it that way. The `size` check below catches the add/remove case
+ * cheaply, but nothing catches in-place edits — don't rely on it.
  */
 const redactionCache = new WeakMap();
 
 function getRedactionContext(teams) {
   let ctx = redactionCache.get(teams);
+  if (ctx && ctx.size !== teams.size) ctx = null;
   if (!ctx) {
     const tokens = collectFranchiseNameTokens(teams);
     ctx = {
+      size: teams.size,
       matcher: buildFranchiseNameMatcher(tokens),
       currentOwners: buildCurrentNameOwners(teams),
       ownedBy: new Map(),
@@ -912,6 +935,14 @@ function redactSafePayload(safe, teams) {
   if (typeof safe.author === 'string' && !safe.attributable) safe.author = scrub(safe.author);
   if (typeof safe.threadFollowup?.parentHeadlineSnippet === 'string') {
     safe.threadFollowup.parentHeadlineSnippet = scrub(safe.threadFollowup.parentHeadlineSnippet);
+  }
+  // Trade-bait carries the owner's own MFL comments. Naming the LISTING team
+  // is the whole point of this scope, but the owner typed these by hand and
+  // routinely names a counterparty in them ("Call the Geeks only") — that
+  // second team gets no say and no consent signal, so it fuzzes like any
+  // other. They reach the prompt through the same JSON.stringify as `text`.
+  for (const field of ['ownerWillGiveUp', 'ownerWillTake']) {
+    if (typeof safe.meta?.[field] === 'string') safe.meta[field] = scrub(safe.meta[field]);
   }
   return safe;
 }

@@ -142,9 +142,12 @@ export function pickFormerName(team, nameOwners, { lastSeason, franchiseId } = {
     }
     // Set / array fallback: no ownership information, so the best we can do is
     // treat the subject's own aliases as its own and everything else as taken.
-    const flat = nameOwners instanceof Set
-      ? nameOwners
-      : new Set((nameOwners ?? []).map((n) => String(n).toLowerCase()));
+    // Both shapes get lower-cased — a Set of display-cased names was silently
+    // never matching, which quietly re-enabled callbacks to names another live
+    // franchise owns.
+    const flat = new Set(
+      [...(nameOwners ?? [])].map((n) => String(n).trim().toLowerCase()),
+    );
     return flat.has(lower) && !ownAliases.has(lower);
   };
 
