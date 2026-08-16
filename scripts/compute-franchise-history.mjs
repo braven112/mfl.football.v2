@@ -411,7 +411,23 @@ const BRACKET_LABELLERS = {
     return null;
   },
   'afl-fantasy': (bracketId, bracket) => {
-    const kind = bracketKindFromName(bracket?.name ?? bracket?.bracket_name, bracketId);
+    const name = bracket?.name ?? bracket?.bracket_name;
+    const kind = bracketKindFromName(name, bracketId);
+
+    // The kind resolver answers "which tab does this bracket belong to", so it
+    // correctly calls "AFL 3rd Place Game" a championship-FAMILY bracket. That
+    // is the right answer to its question and the wrong one for a round label:
+    // labelling that bracket's final "Championship" told owners a franchise had
+    // played for the title when it played for third. The AFL runs up to six
+    // placement brackets a season (3rd/4th/5th place, both families), so read
+    // the placement out of the bracket's own name when it states one.
+    const placement = /(\d+)(?:st|nd|rd|th)\s+place/i.exec(String(name ?? ''));
+    if (placement && kind !== 'cup' && kind !== null) {
+      const n = Number(placement[1]);
+      const suffix = n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th';
+      return { tag: kind === 'nit' ? 'nit' : 'consolation', final: `${n}${suffix} Place Game` };
+    }
+
     switch (kind) {
       case 'championship':
         return { tag: 'championship', final: 'Championship' };
@@ -439,10 +455,22 @@ function getPlayoffMatchupKeys(playoffBrackets) {
 
   const labeller = BRACKET_LABELLERS[LEAGUE_SLUG] ?? BRACKET_LABELLERS.theleague;
 
+  // The GAMES live under `brackets[id].playoffBracket`, which carries only
+  // `playoffRound` and `bracket_id`. The NAMES live in a separate metadata
+  // array, `playoffBrackets.playoffBracket[]`. Reading `.name` off the games
+  // node therefore always yielded undefined, and the AFL labeller silently fell
+  // back to classifying by id — the exact thing its comment says is wrong,
+  // because MFL renumbered the AFL's brackets twice. In 2024 that tagged the
+  // "AFL 3rd Place Game" and the "NIT 4th Place Game" as "Championship".
+  const bracketNames = new Map(
+    toArray(playoffBrackets.playoffBrackets?.playoffBracket).map((b) => [String(b.id), b.name])
+  );
+
   for (const bracketId of Object.keys(list)) {
     const bracket = list[bracketId]?.playoffBracket;
     if (!bracket) continue;
-    const label = labeller(String(bracketId), bracket);
+    const named = { ...bracket, name: bracketNames.get(String(bracketId)) ?? bracket.name };
+    const label = labeller(String(bracketId), named);
     if (!label) continue;
     const { tag, final: finalName } = label;
     const rounds = toArray(bracket.playoffRound);
@@ -1325,9 +1353,6 @@ for (const year of years) {
   // inspectable from the derived file instead of requiring a re-audit of the
   // raw feeds to notice it.
   const h2hWeeks = new Set([...matchupSeen].map((k) => k.split(':')[0]));
-  const expectedGames = seasonHasGames
-    ? Math.round((standingsRows.length * h2hWeeks.size) / 2)
-    : 0;
   h2hCoverage.push({
     year,
     // A season nobody has played yet is empty for a legitimate reason; without
@@ -1339,7 +1364,12 @@ for (const year of years) {
     // Weeks the feed claims the season had, so "4 of 17" reads as a hole
     // rather than as a short season.
     weeksInFeed: toArray(schedule?.schedule?.weeklySchedule).length || null,
-    expectedGamesForCoveredWeeks: expectedGames,
+    // No `expectedGamesForCoveredWeeks` here on purpose. It assumed one game
+    // per franchise per week, which is wrong for the AFL (doubleheaders: 204
+    // claimed against 258 actual) and wrong for TheLeague too (128 vs 165). It
+    // had no consumers, and a completeness signal that is wrong in both
+    // leagues is worse than no signal. weeksWithGames/weeksInFeed drive the
+    // real coverage logic in src/utils/rivalries.ts.
   });
 
   yearSummaries.push({

@@ -243,11 +243,17 @@ async function repairScheduleByWeek(host, year, leagueId, dest, maxWeek = 17) {
   const existing = readJson(dest);
   const perWeek = schedulePairsPerWeek(existing);
   const missing = [];
+  // -1 means NO week has pairings, which is the fully-stripped archive this
+  // repair exists for. Treating that as "last populated = -1" made `i < -1`
+  // vacuously false, so `missing` stayed empty and the fallback reported "no
+  // week-level gaps" on precisely the season countsToGapFlag calls a definite
+  // gap. When nothing is populated, every week is a candidate.
   const lastPopulated = perWeek.findLastIndex((n) => n > 0);
+  const chaseThrough = lastPopulated === -1 ? Math.max(perWeek.length, maxWeek) : lastPopulated;
   for (let i = 0; i < Math.max(perWeek.length, maxWeek); i++) {
-    // Only chase weeks before the last populated one — trailing empties are a
-    // season in progress, not a hole.
-    if (i < lastPopulated && (perWeek[i] ?? 0) === 0) missing.push(i + 1);
+    // Otherwise only chase weeks before the last populated one — trailing
+    // empties are a season in progress, not a hole.
+    if (i < chaseThrough && (perWeek[i] ?? 0) === 0) missing.push(i + 1);
   }
   if (missing.length === 0) return { skipped: true, reason: 'no week-level gaps' };
   if (DRY_RUN) return { dryRun: true, weeksToFetch: missing.length };
