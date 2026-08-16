@@ -596,20 +596,32 @@ the LLM not to, this makes it unable to. It scrubs franchise mentions out of
 the tipster's raw `text` before the text reaches the prompt, so the token
 harvest it runs on is load-bearing, not bookkeeping:
 
-- **Harvest `history[]` and `aliases[]`, not just the four current name
-  fields.** A retired name identifies a franchise as well as the current one
-  and *better* in the AFL, where the last-place punitive rebrands are recent
-  and memorable. That gap shipped "Hearing Balls Deep and a former Cock
-  Gobbler front office…" (Aug 2026) — a second team named in a post allowed
-  to name exactly one, because "Cock Gobbler" is The Show's 2025 rebrand and
-  lived only in `history[]`. Both configs are deep here: ~250 retired name
-  forms and ~90 aliases across the two leagues. `loadTeams` has to carry both
-  fields through or the harvest can't see them.
-- **Every early `return safe` in the web-tip path needs its own redaction
-  call.** The fall-through at the bottom of `anonymizeTips` doesn't cover
-  branches that return above it — `league-wide` and `commish` returned raw
-  text for months. Those are the scopes that need it most: league-wide means
-  "not pinned to anybody."
+- **Harvest `history[]` (all four name fields per entry) AND `aliases[]`, not
+  just the four current name fields.** A retired name identifies a franchise as
+  well as the current one and *better* in the AFL, where the last-place
+  punitive rebrands are recent and memorable. That gap shipped "Hearing Balls
+  Deep and a former Cock Gobbler front office…" (Aug 2026) — a second team
+  named in a post allowed to name exactly one, because "Cock Gobbler" is The
+  Show's 2025 rebrand and lived only in `history[]`. Both configs are deep
+  here: ~250 retired name forms and ~90 aliases across the two leagues.
+  `loadTeams` has to carry both fields through or the harvest can't see them.
+- **Redact the RESULT, never inside the scope classifier.** `resolveTipScope`
+  returns from a dozen branches; a scrub at its tail only protects whichever
+  paths fall through, and `league-wide` and `commish` returned raw text for
+  months for exactly that reason. `redactSafePayload` runs on whatever the
+  classifier hands back, so a new branch is safe by default. It also covers
+  **every** free-text field, not just `text` —
+  `threadFollowup.parentHeadlineSnippet` is lifted from a published post that
+  may legitimately have named a franchise and pinned onto a tip that's fully
+  anonymous, and it reaches the prompt through the same `JSON.stringify`.
+- **Match with `(?<!\w) … (?!\w)`, never `\b … \b`.** A word boundary can't
+  exist after a token ending in punctuation, so `\bBe Rough!\b` matches
+  nothing — eight real AFL names (`The Blunt Bros.`, `Lucky Buck$`,
+  `Be Rough!`, …) survived redaction verbatim. And run ONE alternation pass,
+  not a `replace()` per token: sequential passes re-scan their own output, so
+  normalizing "Smokane" → "Smokane FC" then matching "Smokane" again yields
+  "Smokane FC FC". Guard tests must not rebuild the same regex to detect
+  leaks — ours did, and was blind to precisely the bug it guarded.
 - **`keepFranchise` is one display name but a franchise owns many.** Resolve
   it to the franchise and normalize that team's other forms (alias, retired
   name) to the canonical name; redact everything else. Comparing the one
@@ -652,6 +664,12 @@ HARD RULE 30 (commissioner, 2026-08-15):
 
 Applies to EVERY rename, not just the AFL's last-place punishments —
 `punitive` is a voice flag (lean into the sentence lore) not a gate.
+**Name collisions need an OWNERSHIP map, not a set of taken names.** A
+franchise keeps its own retired name in `aliases` so people can still search
+by it (the documented convention), so a flat "these names are in use" set
+can't tell "another team has this" from "this team kept its own nickname" —
+and it silently zeroed out AFL 0014's callback, the league's current punitive
+rename, while two quieter renames worked fine.
 Two `history[]` rows look like renames and aren't: **re-skins** that repeat
 the current name under a new icon (nearly every TheLeague franchise has one —
 "the Pigskins, formerly the Pigskins") and **names that moved between

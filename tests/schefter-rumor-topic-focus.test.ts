@@ -213,7 +213,7 @@ describe('rumor-scan text redaction — franchise names cannot leak through tip 
   it('replaces matched franchise names with a generic "[a team]" placeholder', () => {
     const fn = src.match(/function\s+redactFranchiseNamesInText[\s\S]+?\n\}/);
     expect(fn).not.toBeNull();
-    expect(fn![0]).toMatch(/replace\(re,\s*['"]\[a team\]['"]\)/);
+    expect(fn![0]).toMatch(/return\s+['"]\[a team\]['"];/);
   });
 
   it('keeps the named franchise on multi-source scope, redacts everything else', () => {
@@ -224,18 +224,30 @@ describe('rumor-scan text redaction — franchise names cannot leak through tip 
     expect(fn![0]).toMatch(/keepFranchise/);
   });
 
-  it('uses word-boundary case-insensitive regex (so "Geeks" matches but "geeky" does not)', () => {
-    const fn = src.match(/function\s+redactFranchiseNamesInText[\s\S]+?\n\}/);
+  it('matches on non-word lookarounds in ONE pass, not \\b per token', () => {
+    // Was: `new RegExp(\`\\b${escapeRegExp(token)}\\b\`, 'gi')` per token.
+    // Both halves of that were bugs. A word boundary cannot exist after a
+    // token ending in punctuation, so `\bBe Rough!\b` matched nothing and
+    // eight real AFL names survived redaction. And replacing per-token
+    // re-scans earlier output, turning a normalized "Smokane FC" into
+    // "Smokane FC FC". One alternation, lookaround-delimited, fixes both.
+    const fn = src.match(/function\s+buildFranchiseNameMatcher[\s\S]+?\n\}/);
     expect(fn).not.toBeNull();
-    expect(fn![0]).toMatch(/new RegExp\(`\\\\b\$\{escapeRegExp\(token\)\}\\\\b`,\s*['"]gi['"]\)/);
+    expect(fn![0]).toMatch(/\(\?<!\\\\w\)/);
+    expect(fn![0]).toMatch(/\(\?!\\\\w\)/);
+    expect(fn![0]).not.toMatch(/\\\\b/);
+    expect(fn![0]).toMatch(/join\('\|'\)/);
   });
 
-  it('runs redaction at the end of the web-tip anonymization path', () => {
-    // The keep-franchise lookup uses the just-set safe.scope so the
-    // multi-source named franchise survives while every other team
-    // gets stripped from the raw text the LLM sees.
-    expect(src).toMatch(/safe\.scope\?\.kind\s*===\s*['"]franchise-multi-source['"]/);
-    expect(src).toMatch(/safe\.text\s*=\s*redactFranchiseNamesInText\(safe\.text,\s*teams,/);
+  it('redacts the finished payload rather than inside the scope classifier', () => {
+    // The scrub used to live at the tail of the classifier, which only
+    // protected paths that fell through — league-wide and commish returned
+    // raw text for months. Now it runs on whatever the classifier returns,
+    // across every free-text field, so a new scope branch is safe by default.
+    expect(src).toMatch(/function\s+redactSafePayload\(safe,\s*teams\)/);
+    expect(src).toMatch(/redactSafePayload\(await\s+resolveTipScope\(tip\),\s*teams\)/);
+    expect(src).toMatch(/NAMING_ALLOWED_SCOPES/);
+    expect(src).toMatch(/threadFollowup\.parentHeadlineSnippet\s*=\s*scrub\(/);
   });
 });
 

@@ -209,12 +209,118 @@ describe('franchise-name redaction — real league configs', () => {
         [{ id: 't1', source: 'web', topic: 'roster', text: tokens.join(' / '), submittedAt: Date.now() }],
         realTeams,
       );
-      const leaked = [...new Set(tokens)].filter((tok) =>
-        new RegExp(`\\b${tok.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(out[0].text),
-      );
+      // Detect leaks with a plain substring check, NOT the boundary regex the
+      // redactor uses. Sharing that construct made this test blind to exactly
+      // the bug it exists to catch: `\b` cannot match after a token ending in
+      // punctuation, so "The Blunt Bros." and "Be Rough!" both survived
+      // redaction AND went unreported here. A guard must not assume the same
+      // thing as the code it guards.
+      const haystack = out[0].text.toLowerCase();
+      const leaked = [...new Set(tokens)].filter((tok) => haystack.includes(tok.toLowerCase()));
       expect(leaked).toEqual([]);
     });
   }
+});
+
+describe('franchise-name redaction — names ending in punctuation', () => {
+  // `\b` is a boundary between a word and a non-word char, so it cannot exist
+  // after a token that ENDS in punctuation — `\bBe Rough!\b` matches nothing.
+  // Eight real AFL names died this way, several of them punitive rebrands.
+  const punctTeams = new Map<string, TeamEntry>([
+    ['0001', { name: 'The Blunt Bros.', nameShort: 'Blunt Bros.', division: 'NL' }],
+    ['0002', { name: 'Lucky Buck$', division: 'NL' }],
+    ['0003', { name: 'Be Rough!', division: 'NL' }],
+    ['0004', { name: 'Be Gentle. It\'s my first time.', division: 'NL' }],
+    ['0005', { name: 'Plain Name', division: 'NL' }],
+  ]);
+
+  it.each([
+    ['The Blunt Bros.', 'The Blunt Bros. are shopping a TE'],
+    ['Lucky Buck$', 'Hearing Lucky Buck$ is in the market'],
+    ['Be Rough!', 'Be Rough! has been quiet'],
+    ['Be Gentle. It\'s my first time.', 'Word is Be Gentle. It\'s my first time. wants out'],
+  ])('redacts %s', async (name, text) => {
+    const out = await anonymizeTips(
+      [{ id: 't1', source: 'web', topic: 'roster', text, submittedAt: Date.now() }],
+      punctTeams,
+    );
+    expect(out[0].text.toLowerCase()).not.toContain(name.toLowerCase());
+    expect(out[0].text).toContain('[a team]');
+  });
+
+  it('still refuses to match a name glued to a longer word', async () => {
+    const out = await anonymizeTips(
+      [{ id: 't1', source: 'web', topic: 'roster', text: 'The PlainNamed guy called', submittedAt: Date.now() }],
+      punctTeams,
+    );
+    expect(out[0].text).toBe('The PlainNamed guy called');
+  });
+});
+
+describe('franchise-name redaction — every field the LLM sees, not just text', () => {
+  it('scrubs threadFollowup.parentHeadlineSnippet on an anonymous tip', async () => {
+    // The snippet is lifted from a PUBLISHED post, which may legitimately have
+    // named a franchise, then pinned onto a tip that may be fully anonymous.
+    // It reaches the prompt through the same JSON.stringify as `text`.
+    const feed = [{ id: 'p1', body: 'The Nashville Geeks are shopping a tight end. Developing.' }];
+    const out = await anonymizeTips(
+      [{ id: 'c', source: 'web', topic: 'roster', text: 'nothing identifying', repliesToPostId: 'p1', submittedAt: Date.now() }],
+      teams,
+      feed,
+    );
+    expect(out[0].scope.kind).toBe('league-wide');
+    expect(out[0].threadFollowup.parentHeadlineSnippet).not.toMatch(/Nashville Geeks/i);
+    expect(out[0].threadFollowup.parentHeadlineSnippet).toContain('[a team]');
+  });
+
+  it('keeps the scoped franchise in the snippet when naming is allowed', async () => {
+    const feed = [{ id: 'p1', body: 'The Pacific Pigskins are shopping a tight end.' }];
+    const now = Date.now();
+    const out = await anonymizeTips(
+      [
+        { id: 't1', source: 'web', topic: 'roster', text: 'more on this', franchiseHint: '0001', repliesToPostId: 'p1', submittedAt: now },
+        { id: 't2', source: 'web', topic: 'roster', text: 'same', franchiseHint: '0001', submittedAt: now },
+      ],
+      teams,
+      feed,
+    );
+    expect(out[0].scope.kind).toBe('franchise-multi-source');
+    expect(out[0].threadFollowup.parentHeadlineSnippet).toContain('Pigskins');
+  });
+});
+
+describe('franchise-name redaction — single pass, no self-corruption', () => {
+  // Sequential per-token replaces re-scan their own output: once "Smokane" is
+  // normalized to "Smokane FC", a later "Smokane" pass matches inside what was
+  // just written. One alternation pass visits each position exactly once.
+  const longNameTeams = new Map<string, TeamEntry>([
+    ['0001', { name: 'Smokane FC', aliases: ['Smokane'], division: 'NW' }],
+    ['0002', { name: 'The Show', aliases: ['Show'], division: 'NW' }],
+  ]);
+
+  const twice = async (text: string, hint: string) => {
+    const now = Date.now();
+    const out = await anonymizeTips(
+      [
+        { id: 't1', source: 'web', topic: 'roster', text, franchiseHint: hint, submittedAt: now },
+        { id: 't2', source: 'web', topic: 'roster', text: 'same', franchiseHint: hint, submittedAt: now },
+      ],
+      longNameTeams,
+    );
+    return out[0];
+  };
+
+  it('does not double a canonical name that contains one of its own aliases', async () => {
+    expect((await twice('Smokane FC are shopping a TE', '0001')).text)
+      .toBe('Smokane FC are shopping a TE');
+    expect((await twice('The Show is in the market', '0002')).text)
+      .toBe('The Show is in the market');
+  });
+
+  it('still normalizes a bare alias up to the canonical name', async () => {
+    expect((await twice('Smokane are shopping a TE', '0001')).text)
+      .toBe('Smokane FC are shopping a TE');
+  });
 });
 
 describe('franchise-name redaction — source guards', () => {
@@ -233,5 +339,26 @@ describe('franchise-name redaction — source guards', () => {
     expect(fn).not.toBeNull();
     expect(fn![0]).toMatch(/team\?\.history/);
     expect(fn![0]).toMatch(/team\?\.aliases/);
+  });
+
+  it('redaction is applied to the RESULT, not inside the scope classifier', () => {
+    // The structural guarantee. resolveTipScope returns from a dozen branches;
+    // redacting inside it means each new branch must remember to, which is how
+    // league-wide and commish shipped raw text for months. If someone moves
+    // the scrub back inside the classifier, this fails.
+    expect(SCANNER_SRC).toMatch(/function redactSafePayload\(safe, teams\)/);
+    expect(SCANNER_SRC).toMatch(/redactSafePayload\(await resolveTipScope\(tip\), teams\)/);
+    // ...and no scope branch re-implements it inline.
+    const classifier = SCANNER_SRC.match(/const resolveTipScope = async \(tip\) => \{[\s\S]+?\n  \};/);
+    expect(classifier).not.toBeNull();
+    expect(classifier![0]).not.toMatch(/redactFranchiseNamesInText\(/);
+  });
+
+  it('matches on non-word lookarounds, never \\b (which cannot follow punctuation)', () => {
+    const fn = SCANNER_SRC.match(/function buildFranchiseNameMatcher[\s\S]+?\n\}/);
+    expect(fn).not.toBeNull();
+    expect(fn![0]).toMatch(/\(\?<!\\\\w\)/);
+    expect(fn![0]).toMatch(/\(\?!\\\\w\)/);
+    expect(fn![0]).not.toMatch(/\\\\b/);
   });
 });

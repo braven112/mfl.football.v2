@@ -113,25 +113,47 @@ function nameForms(entry) {
  *     0010's old name and 0011's CURRENT one. A callback there points at a
  *     live team that isn't the subject — worse than no callback.
  *
- * `takenNames` carries every name form and alias currently in use league-wide
- * so both cases are excluded.
+ * `nameOwners` maps each in-use name/alias (lower-cased) to the set of
+ * franchise ids using it. It must be an OWNERSHIP map rather than a flat set
+ * of taken names, because a franchise routinely keeps its own retired name in
+ * `aliases` so people can still search by it — AFL 0014 carries "Thundering
+ * Herd" that way. A flat set can't tell "another team has this name" from
+ * "this team kept its own old nickname", so it suppressed 0014's callback
+ * entirely: the league's current punitive rename, silently ineligible.
  */
-export function pickFormerName(team, takenNames, { lastSeason } = {}) {
+export function pickFormerName(team, nameOwners, { lastSeason, franchiseId } = {}) {
   if (!Number.isInteger(lastSeason)) return null;
   const history = Array.isArray(team?.history) ? team.history : [];
   if (history.length === 0) return null;
 
-  const taken = takenNames instanceof Set
-    ? takenNames
-    : new Set((takenNames ?? []).map((n) => String(n).toLowerCase()));
   const ownCurrent = new Set(nameForms(team).map((n) => n.toLowerCase()));
+  const ownAliases = new Set(
+    (Array.isArray(team?.aliases) ? team.aliases : [])
+      .filter((a) => typeof a === 'string')
+      .map((a) => a.trim().toLowerCase()),
+  );
+
+  /** Is this name in use by a franchise OTHER than the subject? */
+  const claimedByAnotherTeam = (lower) => {
+    if (nameOwners instanceof Map) {
+      const owners = nameOwners.get(lower);
+      if (!owners) return false;
+      return [...owners].some((id) => id !== franchiseId);
+    }
+    // Set / array fallback: no ownership information, so the best we can do is
+    // treat the subject's own aliases as its own and everything else as taken.
+    const flat = nameOwners instanceof Set
+      ? nameOwners
+      : new Set((nameOwners ?? []).map((n) => String(n).toLowerCase()));
+    return flat.has(lower) && !ownAliases.has(lower);
+  };
 
   const candidates = history
     .filter((h) => typeof h?.name === 'string' && h.name.trim().length >= 2)
     // Last season and last season only. Not `>=`, not "most recent".
     .filter((h) => h.yearEnd === lastSeason)
     .filter((h) => !ownCurrent.has(h.name.trim().toLowerCase()))
-    .filter((h) => !taken.has(h.name.trim().toLowerCase()));
+    .filter((h) => !claimedByAnotherTeam(h.name.trim().toLowerCase()));
 
   return candidates[0] ?? null;
 }
@@ -148,7 +170,8 @@ export function pickFormerName(team, takenNames, { lastSeason } = {}) {
  */
 export function buildFormerNameCallback(team, {
   currentName,
-  takenNames,
+  nameOwners,
+  franchiseId,
   now = new Date(),
   rng = Math.random,
 } = {}) {
@@ -160,7 +183,10 @@ export function buildFormerNameCallback(team, {
   // The ONLY name in play is the one the franchise wore last season. The
   // window is the season after the rename, one season, and then the name is
   // retired from the bit for good.
-  const former = pickFormerName(team, takenNames, { lastSeason: season - 1 });
+  const former = pickFormerName(team, nameOwners, {
+    lastSeason: season - 1,
+    franchiseId: franchiseId ?? team.franchiseId,
+  });
   if (!former) return null;
 
   const odds = CALLBACK_ODDS[phase] ?? 0;

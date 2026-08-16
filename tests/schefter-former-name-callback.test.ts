@@ -81,7 +81,7 @@ describe('callback eligibility — one season, any kind of rename', () => {
   it('fires for a VOLUNTARY rename (Heavy Chevy → Dead Cap Walking)', () => {
     const out = buildFormerNameCallback(DEAD_CAP, {
       currentName: 'Dead Cap',
-      takenNames: new Set(),
+      nameOwners: new Map(),
       now: PRESEASON_2026,
       rng: always,
     });
@@ -97,7 +97,7 @@ describe('callback eligibility — one season, any kind of rename', () => {
   it('fires for a PUNITIVE rename and flags it as such', () => {
     const out = buildFormerNameCallback(THE_SHOW, {
       currentName: 'The Show',
-      takenNames: new Set(),
+      nameOwners: new Map(),
       now: PRESEASON_2026,
       rng: always,
     });
@@ -107,7 +107,7 @@ describe('callback eligibility — one season, any kind of rename', () => {
   it('goes silent from week 4 on, no matter how the dice land', () => {
     const out = buildFormerNameCallback(DEAD_CAP, {
       currentName: 'Dead Cap',
-      takenNames: new Set(),
+      nameOwners: new Map(),
       now: WEEK_4_2026,
       rng: always,
     });
@@ -117,7 +117,7 @@ describe('callback eligibility — one season, any kind of rename', () => {
   it('covers ONE season only — the 2025 rename is dead to us in 2027', () => {
     const out = buildFormerNameCallback(DEAD_CAP, {
       currentName: 'Dead Cap',
-      takenNames: new Set(),
+      nameOwners: new Map(),
       now: at('2027-08-15'),
       rng: always,
     });
@@ -131,7 +131,7 @@ describe('callback eligibility — one season, any kind of rename', () => {
     const ancientOnly = { name: 'Dead Cap Walking', history: [DEAD_CAP.history[0]] };
     const out = buildFormerNameCallback(ancientOnly, {
       currentName: 'Dead Cap',
-      takenNames: new Set(),
+      nameOwners: new Map(),
       now: PRESEASON_2026,
       rng: always,
     });
@@ -143,7 +143,7 @@ describe('callback eligibility — one season, any kind of rename', () => {
     for (const now of [OFFSEASON_2026, PRESEASON_2026, WEEK_2_2026]) {
       expect(buildFormerNameCallback(twoAgo, {
         currentName: 'Dead Cap',
-        takenNames: new Set(),
+        nameOwners: new Map(),
         now,
         rng: always,
       })).toBeNull();
@@ -151,7 +151,7 @@ describe('callback eligibility — one season, any kind of rename', () => {
   });
 
   it('respects the dice — a roll above the phase odds produces nothing', () => {
-    const opts = { currentName: 'Dead Cap', takenNames: new Set(), now: OFFSEASON_2026 };
+    const opts = { currentName: 'Dead Cap', nameOwners: new Map(), now: OFFSEASON_2026 };
     expect(buildFormerNameCallback(DEAD_CAP, { ...opts, rng: () => 0.99 })).toBeNull();
     expect(buildFormerNameCallback(DEAD_CAP, { ...opts, rng: () => 0 })).not.toBeNull();
   });
@@ -193,15 +193,53 @@ describe('pickFormerName — last season only', () => {
     expect(pickFormerName(pigskins, new Set(), LAST)).toBeNull();
   });
 
-  it('ignores a former name another franchise currently wears', () => {
+  it('ignores a former name ANOTHER franchise currently wears', () => {
     // "Midwestside Connection" is 0010's old name and 0011's current one —
     // a callback there points at a live team that isn't the subject.
     const jocks = {
+      franchiseId: '0010',
       name: 'Computer Jocks',
       history: [{ name: 'Midwestside Connection', yearStart: 2011, yearEnd: 2025 }],
     };
-    expect(pickFormerName(jocks, new Set(['midwestside connection']), LAST)).toBeNull();
-    expect(pickFormerName(jocks, new Set(), LAST)).not.toBeNull();
+    const owners = new Map([['midwestside connection', new Set(['0011'])]]);
+    expect(pickFormerName(jocks, owners, { ...LAST, franchiseId: '0010' })).toBeNull();
+    expect(pickFormerName(jocks, new Map(), { ...LAST, franchiseId: '0010' })).not.toBeNull();
+  });
+
+  it('does NOT let a franchise\'s OWN leftover alias suppress its own rename', () => {
+    // The regression: AFL 0014 renamed Thundering Herd -> A Bruin Pegs Me and
+    // kept "Thundering Herd" in its own `aliases` so people can still search
+    // by it — which is the documented convention. A flat set of taken names
+    // can't tell that apart from another team owning the name, so 0014's
+    // callback vanished: the league's current punitive rename, silently
+    // ineligible while two quieter renames worked.
+    const bruin = {
+      franchiseId: '0014',
+      name: 'A Bruin Pegs Me',
+      nameShort: 'Pegs Me',
+      aliases: ['Pegs Me', 'Bruin', 'Thundering Herd', 'Herd'],
+      history: [{ name: 'Thundering Herd', yearStart: 2007, yearEnd: 2025 }],
+    };
+    const owners = new Map([['thundering herd', new Set(['0014'])], ['herd', new Set(['0014'])]]);
+    expect(pickFormerName(bruin, owners, { ...LAST, franchiseId: '0014' })?.name)
+      .toBe('Thundering Herd');
+  });
+
+  it('still blocks when the name is shared with another team', () => {
+    const bruin = {
+      franchiseId: '0014',
+      name: 'A Bruin Pegs Me',
+      aliases: ['Thundering Herd'],
+      history: [{ name: 'Thundering Herd', yearStart: 2007, yearEnd: 2025 }],
+    };
+    const owners = new Map([['thundering herd', new Set(['0014', '0009'])]]);
+    expect(pickFormerName(bruin, owners, { ...LAST, franchiseId: '0014' })).toBeNull();
+  });
+
+  it('refuses a non-integer lastSeason rather than coercing', () => {
+    expect(pickFormerName(DEAD_CAP, new Map(), { lastSeason: '2025' as never })).toBeNull();
+    expect(pickFormerName(DEAD_CAP, new Map(), { lastSeason: NaN })).toBeNull();
+    expect(pickFormerName(DEAD_CAP, new Map(), { lastSeason: 2025.5 })).toBeNull();
   });
 });
 
@@ -285,6 +323,59 @@ describe('callback containment — naming-allowed scopes only', () => {
     expect(out[0].scope.kind).toBe('franchise-multi-source');
     expect(out[0].formerName).toBeUndefined();
   });
+});
+
+describe('real configs — every last-season rename is actually reachable', () => {
+  // The 0014 bug was invisible in unit tests because it only appeared with a
+  // real config's leftover aliases. This walks both live configs and asserts
+  // that every franchise whose history closes at last season can produce a
+  // callback — so a franchise going silently ineligible fails here rather
+  // than just quietly never firing.
+  const fs = require('node:fs');
+  const path = require('node:path');
+
+  for (const [label, configPath] of [
+    ['theleague', 'src/data/theleague.config.json'],
+    ['afl-fantasy', 'data/afl-fantasy/afl.config.json'],
+  ] as const) {
+    it(`${label}: no last-season rename is suppressed by its own aliases`, () => {
+      const raw = JSON.parse(fs.readFileSync(path.join(process.cwd(), configPath), 'utf8'));
+      const owners = new Map<string, Set<string>>();
+      const claim = (v: unknown, fid: string) => {
+        if (typeof v !== 'string' || v.trim().length < 2) return;
+        const k = v.trim().toLowerCase();
+        if (!owners.has(k)) owners.set(k, new Set());
+        owners.get(k)!.add(fid);
+      };
+      for (const t of raw.teams ?? []) {
+        for (const f of ['name', 'nameMedium', 'nameShort', 'abbrev']) claim(t[f], t.franchiseId);
+        for (const a of t.aliases ?? []) claim(a, t.franchiseId);
+      }
+
+      const currentForms = (t: any) => new Set(
+        ['name', 'nameMedium', 'nameShort', 'abbrev']
+          .map((f) => t[f])
+          .filter((v): v is string => typeof v === 'string')
+          .map((v) => v.trim().toLowerCase()),
+      );
+
+      const suppressed: string[] = [];
+      for (const t of raw.teams ?? []) {
+        // A genuine rename: history closes at 2025 under a name the team no
+        // longer uses. (Re-skin rows repeating the current name don't count.)
+        const own = currentForms(t);
+        const renamed = (t.history ?? []).some(
+          (h: any) => h?.yearEnd === 2025
+            && typeof h.name === 'string'
+            && !own.has(h.name.trim().toLowerCase()),
+        );
+        if (!renamed) continue;
+        const got = pickFormerName(t, owners, { lastSeason: 2025, franchiseId: t.franchiseId });
+        if (!got) suppressed.push(`${t.franchiseId} ${t.name}`);
+      }
+      expect(suppressed).toEqual([]);
+    });
+  }
 });
 
 describe('the prompt rule requires the pairing', () => {

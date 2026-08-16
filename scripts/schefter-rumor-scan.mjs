@@ -731,6 +731,30 @@ function escapeRegExp(s) {
 }
 
 /**
+ * Boundary-matched alternation over every franchise name token, longest form
+ * first. Two deliberate choices, each of which was a live bug:
+ *
+ * 1. **`(?<!\w) … (?!\w)`, not `\b … \b`.** A word boundary is defined
+ *    between a word and a non-word character, so it cannot exist after a
+ *    token that ENDS in punctuation — `\bThe Blunt Bros\.\b` never matches
+ *    "The Blunt Bros." followed by a space. Eight real AFL names die that
+ *    way, including the punitive "Be Rough!" and "Lucky Buck$". The negative
+ *    lookarounds assert "not glued to a word character" instead, which is
+ *    the property actually wanted and is total over every token shape.
+ * 2. **ONE alternation, not a replace() per token.** Sequential passes
+ *    re-scan their own output: with "Smokane" kept and normalized to
+ *    "Smokane FC", the later "Smokane" pass matches inside the "Smokane FC"
+ *    an earlier pass just wrote, yielding "Smokane FC FC" ("The Show" →
+ *    "The The Show" the same way). A single pass visits each position once,
+ *    and alternation is ordered so the longest name wins there.
+ */
+function buildFranchiseNameMatcher(tokens) {
+  if (tokens.length === 0) return null;
+  const alternation = tokens.map((t) => escapeRegExp(t)).join('|');
+  return new RegExp(`(?<!\\w)(?:${alternation})(?!\\w)`, 'gi');
+}
+
+/**
  * Redact franchise-name mentions from anonymized tip text.
  *
  * The safe.scope guides what stays:
@@ -749,27 +773,93 @@ function escapeRegExp(s) {
  * through verbatim, so a tipster's nickname or last-season's punitive
  * rebrand never becomes the label Schefter prints.
  */
+/**
+ * Per-teams-map cache for the two expensive derivations — the token harvest
+ * (plus its compiled matcher) and the per-franchise token sets keyed by
+ * display name. Both are pure functions of the config, but the redactor runs
+ * once per tip per field, so recomputing them made the scrub
+ * O(tips × fields × franchises). Keyed on the Map identity, which the scanner
+ * builds once per run.
+ */
+const redactionCache = new WeakMap();
+
+function getRedactionContext(teams) {
+  let ctx = redactionCache.get(teams);
+  if (!ctx) {
+    const tokens = collectFranchiseNameTokens(teams);
+    ctx = { matcher: buildFranchiseNameMatcher(tokens), ownedBy: new Map() };
+    redactionCache.set(teams, ctx);
+  }
+  return ctx;
+}
+
 function redactFranchiseNamesInText(text, teams, { keepFranchise } = {}) {
   if (typeof text !== 'string' || text.length === 0) return text;
-  const tokens = collectFranchiseNameTokens(teams);
-  if (tokens.length === 0) return text;
+  const { matcher, ownedBy } = getRedactionContext(teams);
+  if (!matcher) return text;
   const keepName = typeof keepFranchise === 'string' && keepFranchise.trim().length > 0
     ? keepFranchise.trim()
     : null;
   const keepLower = keepName ? keepName.toLowerCase() : null;
-  const keepTokens = keepName ? franchiseTokensOwning(teams, keepName) : new Set();
-  let out = text;
-  for (const token of tokens) {
-    const lower = token.toLowerCase();
-    if (keepLower && lower === keepLower) continue;
-    const re = new RegExp(`\\b${escapeRegExp(token)}\\b`, 'gi');
-    if (keepTokens.has(lower)) {
-      out = out.replace(re, keepName);
-      continue;
-    }
-    out = out.replace(re, '[a team]');
+  let keepTokens = new Set();
+  if (keepName) {
+    if (!ownedBy.has(keepLower)) ownedBy.set(keepLower, franchiseTokensOwning(teams, keepName));
+    keepTokens = ownedBy.get(keepLower);
   }
-  return out;
+  return text.replace(matcher, (match) => {
+    const lower = match.toLowerCase();
+    // Already the canonical name — leave it exactly as the tipster wrote it.
+    if (keepLower && lower === keepLower) return match;
+    // Another name for the franchise we ARE allowed to name: normalize to the
+    // canonical form so a nickname or last season's rebrand never becomes the
+    // label Schefter prints.
+    if (keepTokens.has(lower)) return keepName;
+    return '[a team]';
+  });
+}
+
+/**
+ * Scopes whose whole point is that the franchise stays unidentified. Anything
+ * NOT in this set is either allowed to name its franchise or has no free text.
+ */
+const NAMING_ALLOWED_SCOPES = new Set([
+  'franchise-multi-source',
+  'franchise-explicit-pick',
+  'trade-bait',
+]);
+
+/**
+ * THE redaction point. Applied once to the finished payload, after scope
+ * resolution, to EVERY free-text field the LLM will see.
+ *
+ * This is deliberately not done inside the scope branches. `resolveTipScope`
+ * is a long classifier with a dozen early returns, and a sanitizer sitting at
+ * its tail only protects whichever paths happen to fall through — `league-wide`
+ * and `commish` returned raw text for months for exactly that reason. Sanitizing
+ * the RESULT instead of trusting the control flow makes the guarantee total,
+ * and makes a new scope branch safe by default.
+ *
+ * `threadFollowup.parentHeadlineSnippet` is the field that proved the point: it
+ * is lifted from a PUBLISHED post, which may legitimately have named a
+ * franchise, and pinned onto a tip that may be fully anonymous. It reaches the
+ * prompt through the same JSON.stringify as `text`, so it needs the same scrub.
+ */
+function redactSafePayload(safe, teams) {
+  // GroupMe is public by design — the author @'d Schefter in the group chat
+  // and HARD RULE 6 encourages naming them. Nothing to fuzz.
+  if (safe?.scope?.kind === 'groupme-public') return safe;
+
+  const keepFranchise = NAMING_ALLOWED_SCOPES.has(safe?.scope?.kind)
+    ? safe.scope.franchise
+    : null;
+  const scrub = (v) => redactFranchiseNamesInText(v, teams, { keepFranchise });
+
+  if (typeof safe.text === 'string') safe.text = scrub(safe.text);
+  if (typeof safe.author === 'string' && !safe.attributable) safe.author = scrub(safe.author);
+  if (typeof safe.threadFollowup?.parentHeadlineSnippet === 'string') {
+    safe.threadFollowup.parentHeadlineSnippet = scrub(safe.threadFollowup.parentHeadlineSnippet);
+  }
+  return safe;
 }
 
 // ── GroupMe ──
@@ -893,24 +983,33 @@ export async function anonymizeTips(tips, teams, feedPosts = [], now = new Date(
       : [],
   );
 
-  // Every name form + alias currently in use, league-wide. Former-name
-  // callbacks check against this so a retired name that another franchise
-  // has since adopted (TheLeague's "Midwestside Connection" moved from 0010
-  // to 0011) never becomes a callback pointing at a live team.
-  const takenNames = new Set();
-  for (const team of teams.values()) {
-    for (const field of ['name', 'nameMedium', 'nameShort', 'abbrev']) {
-      const v = team?.[field];
-      if (typeof v === 'string' && v.trim().length >= 2) takenNames.add(v.trim().toLowerCase());
-    }
-    for (const alias of Array.isArray(team?.aliases) ? team.aliases : []) {
-      if (typeof alias === 'string' && alias.trim().length >= 2) takenNames.add(alias.trim().toLowerCase());
-    }
+  // Who currently answers to each in-use name/alias, league-wide. This is an
+  // ownership map rather than a flat set of taken names on purpose: a
+  // franchise usually keeps its own retired name in `aliases` so people can
+  // still search by it, and a flat set can't distinguish "another team has
+  // this name" from "this team kept its own old nickname". Former-name
+  // callbacks need the former (TheLeague's "Midwestside Connection" moved
+  // from 0010 to 0011, so it must never become 0010's callback) without
+  // tripping over the latter.
+  const nameOwners = new Map();
+  const claim = (value, fid) => {
+    if (typeof value !== 'string' || value.trim().length < 2) return;
+    const key = value.trim().toLowerCase();
+    if (!nameOwners.has(key)) nameOwners.set(key, new Set());
+    nameOwners.get(key).add(fid);
+  };
+  for (const [fid, team] of teams) {
+    for (const field of ['name', 'nameMedium', 'nameShort', 'abbrev']) claim(team?.[field], fid);
+    for (const alias of Array.isArray(team?.aliases) ? team.aliases : []) claim(alias, fid);
   }
-  const formerNameFor = (team, currentName) =>
-    buildFormerNameCallback(team, { currentName, takenNames, now }) ?? undefined;
+  const formerNameFor = (team, currentName, franchiseId) =>
+    buildFormerNameCallback(team, { currentName, nameOwners, franchiseId, now }) ?? undefined;
 
-  return Promise.all(tips.map(async (tip) => {
+  // Scope resolution and redaction are deliberately separate stages: this
+  // classifier returns early from a dozen branches, so redacting inside it
+  // means every future branch has to remember to. `redactSafePayload` runs on
+  // whatever comes back, so it cannot be skipped.
+  const resolveTipScope = async (tip) => {
     const submittedAt = tip.submittedAt ?? refMs;
     const ageMs = Math.max(0, refMs - submittedAt);
     const ageDays = Math.floor(ageMs / (24 * 60 * 60 * 1000));
@@ -1035,7 +1134,7 @@ export async function anonymizeTips(tips, teams, feedPosts = [], now = new Date(
       // Former-name callback (HARD RULE 30) — only ever attached to a scope
       // that is already allowed to name this franchise, so the bit can never
       // become a back door to identifying a team Schefter must keep anonymous.
-      safe.formerName = formerNameFor(team, franchiseName);
+      safe.formerName = formerNameFor(team, franchiseName, hint);
       if (tip.meta && typeof tip.meta === 'object') {
         safe.meta = {
           adds: Array.isArray(tip.meta.adds) ? tip.meta.adds : [],
@@ -1083,13 +1182,6 @@ export async function anonymizeTips(tips, teams, feedPosts = [], now = new Date(
     const hint = tip.franchiseHint;
     if (!hint || hint === 'league-wide') {
       safe.scope = { kind: 'league-wide' };
-      // These two branches return before the fall-through redaction at the
-      // bottom of this function, so they have to scrub their own text — and
-      // they are the scopes that need it MOST. League-wide means "this isn't
-      // pinned to anybody"; shipping the tipster's raw text with a franchise
-      // name still in it hands the LLM the one detail the scope exists to
-      // withhold.
-      safe.text = redactFranchiseNamesInText(safe.text, teams, { keepFranchise: null });
       return safe;
     }
 
@@ -1098,7 +1190,6 @@ export async function anonymizeTips(tips, teams, feedPosts = [], now = new Date(
       // Schefter can reference "the commissioner" without naming the franchise.
       // The office being public is exactly why the FRANCHISE stays fuzzed.
       safe.scope = { kind: 'commish' };
-      safe.text = redactFranchiseNamesInText(safe.text, teams, { keepFranchise: null });
       return safe;
     }
 
@@ -1112,7 +1203,6 @@ export async function anonymizeTips(tips, teams, feedPosts = [], now = new Date(
         topicPolicy.scopeFloor === 'tier' && team?.tier
           ? { kind: 'tier', tier: team.tier }
           : { kind: 'league-wide' };
-      safe.text = redactFranchiseNamesInText(safe.text, teams, { keepFranchise: null });
       return safe;
     }
     if (multiSourceFranchises.has(hint) && topicPolicy.namingPolicy !== 'explicit-pick-only') {
@@ -1125,7 +1215,7 @@ export async function anonymizeTips(tips, teams, feedPosts = [], now = new Date(
         sourceCount: webFranchiseCounts.get(hint),
         nameCount30d,
       };
-      safe.formerName = formerNameFor(team, safe.scope.franchise);
+      safe.formerName = formerNameFor(team, safe.scope.franchise, hint);
     } else if (
       team &&
       tip.source === 'web' &&
@@ -1147,7 +1237,7 @@ export async function anonymizeTips(tips, teams, feedPosts = [], now = new Date(
         division: team?.division,
         nameCount30d,
       };
-      safe.formerName = formerNameFor(team, safe.scope.franchise);
+      safe.formerName = formerNameFor(team, safe.scope.franchise, hint);
     } else {
       // Single-source about a specific team without consent signal (no
       // hashedOwnerId / no team config / over rate limit) — generalize.
@@ -1200,18 +1290,14 @@ export async function anonymizeTips(tips, teams, feedPosts = [], now = new Date(
     // Text redaction — strip franchise mentions from `text` so the LLM can't
     // leak a name even when the tipster typed one in. Multi-source scope
     // keeps the named franchise (HARD RULE 4 lets Schefter use it); every
-    // other scope fuzzes to "[a team]" for ALL franchise names. GroupMe and
-    // trade_offer paths returned earlier and bypass this block.
-    const keepFranchise = (
-      safe.scope?.kind === 'franchise-multi-source' ||
-      safe.scope?.kind === 'franchise-explicit-pick'
-    )
-      ? safe.scope.franchise
-      : null;
-    safe.text = redactFranchiseNamesInText(safe.text, teams, { keepFranchise });
-
+    // other scope fuzzes to "[a team]" for ALL franchise names. The scrub
+    // itself now happens once in redactSafePayload, below.
     return safe;
-  }));
+  };
+
+  return Promise.all(
+    tips.map(async (tip) => redactSafePayload(await resolveTipScope(tip), teams)),
+  );
 }
 
 // ── Topic-bucket selection ──
