@@ -65,8 +65,12 @@ jobs:
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          # Bump these when a provider starts 404-ing on the model id.
-          GEMINI_REVIEW_MODEL: gemini-2.5-pro
+          # Floating aliases on purpose. A pinned id (gemini-2.5-pro) was
+          # retired for new API consumers between writing this and first run —
+          # for an advisory reviewer, silently tracking the current stable model
+          # beats a pin that goes dead. On a 404 the script lists what the key
+          # can actually call, so pinning later is a copy-paste.
+          GEMINI_REVIEW_MODEL: gemini-pro-latest
           OPENAI_REVIEW_MODEL: gpt-5
           GH_TOKEN: ${{ github.token }}
           # workflow_dispatch inputs are free-form strings. Bind them to env
