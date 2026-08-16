@@ -112,9 +112,14 @@ const URL_WITH_TRAILING_PUNCTUATION = new RegExp(
  * autolinked URL. Input that is not a non-empty string is returned as-is, so
  * callers can stay unguarded.
  *
- * @param {string} text
- * @returns {string} the sanitized text — or the input untouched when it is
- *   not a string, is empty, or exceeds `MAX_SANITIZE_LENGTH`.
+ * Generic on purpose: a `string` in gives a `string` out, and anything else
+ * comes back as itself. Annotating this `@returns {string}` would lie to
+ * editors and to TS about the passthrough branch.
+ *
+ * @template T
+ * @param {T} text
+ * @returns {T} the sanitized text — or the input untouched when it is not a
+ *   string, is empty, or exceeds `MAX_SANITIZE_LENGTH`.
  */
 export function stripLinkAdjacentPunctuation(text) {
   if (typeof text !== 'string' || text.length === 0) return text;
