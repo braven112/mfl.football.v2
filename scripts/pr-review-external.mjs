@@ -73,8 +73,12 @@ function loadRepoContext() {
   return `Repo conventions you should assume are intentional and enforced by CI guard tests. A change that violates one of these is a real finding:\n\n${section.trim()}`;
 }
 
+// Gemini only by default. OpenAI has NO free tier — it is pay-as-you-go only,
+// and a ChatGPT subscription grants no API credit — so including it by default
+// guarantees a permanently-failing reviewer. It stays in the registry so
+// `--providers gemini,openai` works if a funded key ever exists.
 function parseArgs(argv) {
-  const args = { providers: ['gemini', 'openai'], dryRun: false, pr: null, base: 'origin/main' };
+  const args = { providers: ['gemini'], dryRun: false, pr: null, base: 'origin/main' };
   for (let i = 2; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === '--dry-run') args.dryRun = true;
@@ -171,6 +175,21 @@ async function main() {
     process.exit(1);
   }
 
+  // Nothing configured — exit clean and SILENT. This repo runs its external
+  // reviewers on free-tier quota only, so "no key present" is the expected
+  // steady state, not an error. Failing red or posting an "everything was
+  // skipped" comment on every PR would train the user to ignore both signals,
+  // which is worse than having no external reviewer at all.
+  const configured = args.providers.filter((p) => process.env[PROVIDERS[p].envKey]);
+  if (configured.length === 0) {
+    console.log(
+      `No API keys configured (${args.providers
+        .map((p) => PROVIDERS[p].envKey)
+        .join(', ')}). External review skipped — Claude and Copilot still review this PR.`
+    );
+    return;
+  }
+
   const diff = collectDiff(args.base);
   if (!diff.trim()) {
     console.log('No reviewable diff (all changes excluded or branch is empty). Nothing to do.');
@@ -199,11 +218,15 @@ async function main() {
 
   postComment(args.pr, comment);
 
-  // Exit non-zero only if EVERY provider failed outright — a partial outage
-  // shouldn't fail the check and block an otherwise-reviewable PR.
-  if (results.every((r) => r.status === 'error')) {
-    console.error('\nAll review providers failed.');
-    process.exit(1);
+  // Never exit non-zero on a provider failure. These reviewers are ADVISORY and
+  // run on free-tier quota, so a 429 is an ordinary Tuesday — failing the check
+  // would let an exhausted daily quota block shipping. The failure is already
+  // visible where it matters: an annotation here, and a "Reviewer failed to
+  // run" section in the PR comment that `/live` is required to surface rather
+  // than count as a clean pass.
+  const failed = results.filter((r) => r.status === 'error');
+  if (failed.length) {
+    console.log(`\n::warning::External review degraded — ${failed.map((r) => r.label).join(', ')} did not run.`);
   }
 }
 

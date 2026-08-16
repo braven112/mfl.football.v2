@@ -22,9 +22,9 @@ on:
         description: "PR number to review"
         required: true
       providers:
-        description: "Comma-separated: gemini,openai"
+        description: "Comma-separated: gemini,openai (openai needs a funded key — no free tier)"
         required: false
-        default: "gemini,openai"
+        default: "gemini"
 
 concurrency:
   # Supersede an in-flight review when the branch is pushed again — the older
@@ -83,7 +83,9 @@ jobs:
           # rather than interpolating into the run: script, so they can't break
           # out of the command. The script validates both before use.
           PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr }}
-          PROVIDERS: ${{ inputs.providers || 'gemini,openai' }}
+          # Gemini only: OpenAI has no free tier, so including it by default
+          # guarantees a permanently-failing reviewer.
+          PROVIDERS: ${{ inputs.providers || 'gemini' }}
         run: |
           node scripts/pr-review-external.mjs \
             --pr "$PR_NUMBER" \

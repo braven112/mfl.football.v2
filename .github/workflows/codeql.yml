@@ -1,0 +1,58 @@
+name: CodeQL
+
+# Static security analysis. Free for public repositories, which this one is.
+#
+# This exists to cover the correctness-and-security lens that the Codex
+# reviewer was going to hold. That reviewer needs a funded OpenAI key — there
+# is no free tier — so the lens would otherwise be uncovered by anything but
+# Claude's own review. CodeQL is not a substitute for a reasoning model, but
+# it is very good at exactly the mechanical class Codex was assigned:
+# injection, path traversal, unsafe deserialization, tainted-input flows.
+#
+# Results appear in the Security tab and as PR annotations, so `/live` can
+# read them the same way it reads Copilot and the external reviewers.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    # Weekly full scan, Monday ~09:40 PT. Catches newly-published queries
+    # firing on code that hasn't changed. Off the top of the hour to avoid
+    # the cron stampede the other workflows in this repo already contend with.
+    - cron: "40 16 * * 1"
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          # security-extended adds lower-severity security queries beyond the
+          # default set. Deliberately NOT security-and-quality — the quality
+          # pack is heavy on style findings this repo already covers with its
+          # own guard tests, and noise is what kills adoption of a scanner.
+          queries: security-extended
+
+      # No build step: CodeQL analyzes JS/TS from source. Running the real
+      # Astro build here would add minutes and pull in network fetches from
+      # scripts/prebuild.mjs for no analytical benefit.
+      - name: Analyze
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:javascript-typescript"

@@ -59,26 +59,37 @@ Capture the PR number and URL. Print the PR URL as a clickable link.
 - Run `/code-review --comment` to review the diff and post inline PR comments
 - Focus: correctness bugs, design token compliance, CLAUDE.md guideline adherence, TypeScript safety
 
-This is the only reviewer you invoke in-session. Gemini and Codex now run in CI (step 6) — **do not** spawn `codex:codex-rescue` here.
+**Also cover the cross-cutting lens yourself.** The external reviewers run on free-tier quota and may not run at all, so do not assume Gemini covered this:
+- Call sites the change missed — if a signature, contract or return shape changed, are ALL callers updated?
+- Half-applied refactors: a pattern introduced in one file but not its siblings.
+- **The two-league page pairs drifting apart.** TheLeague and AFL have near-identical sibling pages (`theleague/players.astro` / `afl-fantasy/players.astro`, both lineup pages, both draft predictors). A fix applied to one and not the other is a recurring bug class here, and it is invisible in a diff that only touches one of them.
+- Registries a new page must be added to: `src/data/page-directory.json` (10+ tags) and `src/data/whats-new.json`.
+
+This is the only reviewer you invoke in-session. Gemini and Codex run in CI (step 6) — **do not** spawn `codex:codex-rescue` here.
 
 > **Why they moved.** Those reviewers wrap CLIs that authenticate interactively against a personal subscription. That works on a laptop and cannot work headless, so in the Claude cloud workflow the Codex subagent would silently no-op and coverage would quietly drop to Claude alone. In CI they authenticate by repo secret, so coverage is identical no matter where `/live` was launched.
 
-### 6. Collect the external reviewers (Gemini + Codex)
+### 6. Collect the external reviewers (Gemini)
 
-`.github/workflows/pr-external-review.yml` runs on every PR push and posts a single sticky comment containing both reviewers' findings, under `## Critical` / `## Important` / `## Suggestions` headings.
+`.github/workflows/pr-external-review.yml` runs on every PR push and posts a sticky comment with the external reviewers' findings, under `## Critical` / `## Important` / `## Suggestions` headings.
 
-Wait for the run to finish, then fetch it:
+**This reviewer is best-effort.** It runs on free-tier API quota, so a 429 is routine and the job deliberately does NOT fail when it happens. If no comment was posted, the reviewer simply didn't run — say so, treat the lens as uncovered by anyone but you (step 5), and proceed. Do not wait on it indefinitely and do not treat its absence as a problem to fix.
+
+Wait briefly for the run, then fetch it:
 
 ```bash
 gh run list --workflow=pr-external-review.yml --branch "$(git branch --show-current)" --limit 1
 gh pr view <PR_NUMBER> --json comments --jq '.comments[] | select(.body | contains("<!-- external-pr-review -->")) | .body'
 ```
 
-If the workflow hasn't completed yet, wait for it (`gh run watch`) rather than proceeding — skipping it is what the move to CI was meant to prevent.
+If the workflow is still running, give it one `gh run watch`; if it's quota-blocked or no comment appears, move on.
 
-Two states that are **not** a clean pass, and must be surfaced to the user rather than counted as zero findings:
-- A section reading "⚠️ **Reviewer failed to run**" — that reviewer did not review anything.
-- A section reading "Skipped — `GEMINI_API_KEY` not set" — the secret is missing.
+Three states that are **not** a clean pass, and must be reported rather than counted as zero findings:
+- "⚠️ **Reviewer failed to run**" — usually a 429. That reviewer reviewed nothing.
+- "Skipped — `GEMINI_API_KEY` not set" — no key configured.
+- No comment at all — the workflow skipped because nothing was configured.
+
+In every one of those cases the honest line is "Gemini: did not run", never "Gemini: clean".
 
 ### 6a. Collect GitHub Copilot review feedback
 
@@ -92,6 +103,18 @@ gh api repos/<owner>/<repo>/pulls/<PR_NUMBER>/comments --jq '[.[] | select(.user
 Each Copilot inline comment counts as a finding. Classify each by your own judgment (Critical / Important / Suggestion) since Copilot doesn't label severity — use the same bar the other reviewers would.
 
 If no Copilot review has appeared yet (it can lag a minute), retry once after 30 seconds. If still nothing, note "Copilot: no review posted" and proceed.
+
+### 6b. Collect CodeQL findings
+
+`.github/workflows/codeql.yml` runs static security analysis on every PR (free — this repo is public). It covers the injection / traversal / tainted-flow class that the Codex reviewer would have held.
+
+```bash
+gh pr checks <PR_NUMBER> | grep -i codeql
+gh api repos/braven112/mfl.football.v2/code-scanning/alerts \
+  --jq '[.[] | select(.state=="open") | {rule: .rule.id, sev: .rule.severity, path: .most_recent_instance.location.path, line: .most_recent_instance.location.start_line}]'
+```
+
+CodeQL findings are machine-generated and precise about *what* they matched, but not about whether it matters here — adjudicate them like any other advisory finding in step 7. If the alerts API returns 403/404, note "CodeQL: not available" and move on rather than chasing scopes.
 
 ### 7. Adjudicate the findings
 
