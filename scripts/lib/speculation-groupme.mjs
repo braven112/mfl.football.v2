@@ -24,6 +24,8 @@
  * so we direct readers back to the feed entry itself.
  */
 
+import { stripLinkAdjacentPunctuation } from '../../src/utils/link-punctuation.mjs';
+
 const GROUPME_POST_URL = 'https://api.groupme.com/v3/bots/post';
 
 const SPECULATION_CTA_PREFIX = 'Read the speculation →';
@@ -82,7 +84,11 @@ export function buildSpeculationGroupMeText({ body, postId, publicBaseUrl }) {
     throw new Error('buildSpeculationGroupMeText: body is required');
   }
   const url = buildSpeculationDeepLink({ postId, publicBaseUrl });
-  return `${body}\n\n${SPECULATION_CTA_PREFIX} ${url}`;
+  // The body is LLM-written and regularly ends a sentence right after a link,
+  // so scrub the whole composed message rather than just the CTA line. Done
+  // here (not at POST time) so the returned `text` — which the dry-run log and
+  // the unit tests both read — is the exact payload.
+  return stripLinkAdjacentPunctuation(`${body}\n\n${SPECULATION_CTA_PREFIX} ${url}`);
 }
 
 /**

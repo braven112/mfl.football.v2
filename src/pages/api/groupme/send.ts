@@ -13,6 +13,7 @@ import type { APIRoute } from 'astro';
 import { getAuthUser } from '../../../utils/auth';
 import { postAsBot } from '../../../utils/groupme-client';
 import { checkSendRateLimit, loadTeamConfig } from '../../../utils/groupme-storage';
+import { truncateForGroupMe } from '../../../utils/link-punctuation.mjs';
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -60,10 +61,9 @@ export const POST: APIRoute = async ({ request }) => {
     }
   }
 
-  // Trim to GroupMe's 1000 char limit
-  if (finalText.length > 1000) {
-    finalText = finalText.slice(0, 997) + '...';
-  }
+  // Trim to GroupMe's 1000 char limit. Shared helper because the marker has to
+  // survive postAsBot's punctuation stripping — see truncateForGroupMe.
+  finalText = truncateForGroupMe(finalText);
 
   const success = await postAsBot(finalText);
   if (!success) return json({ error: 'Failed to send message to GroupMe' }, 502);

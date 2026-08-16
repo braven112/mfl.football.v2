@@ -17,6 +17,10 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': '/src',
+      // Lets tests import src/middleware.ts and exercise onRequest directly.
+      // Without this the inbound redirect could only be grep-tested, which is
+      // how a neutered branch and a dropped Location header both stayed green.
+      'astro:middleware': new URL('./tests/stubs/astro-middleware.ts', import.meta.url).pathname,
     },
   },
 });

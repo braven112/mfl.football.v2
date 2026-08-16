@@ -386,7 +386,7 @@ async function postRogerTouch(text, dryRun) {
     text,
     dryRun,
     checkStatus: true,
-    onDryRun: () => console.log(`${TAG} [dry-run] GroupMe:\n${text}`),
+    onDryRun: (sent) => console.log(`${TAG} [dry-run] GroupMe:\n${sent}`),
     onMissingBotId: () => console.warn(`${TAG} GROUPME_ROGER_BOT_ID not set — skipping GroupMe post:\n${text}`),
     onPosted: () => console.log(`${TAG} GroupMe touch posted`),
     onHttpError: (status) => console.warn(`${TAG} GroupMe post failed: HTTP ${status}`),
