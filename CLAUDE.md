@@ -981,6 +981,50 @@ ledger, and the commissioner's own confirmation of the 2005-2008 results. A
 reconstruction that looks plausible and is wrong is the failure mode here, so
 add fixture pins rather than loosening assertions.
 
+## Bulk-context questions — offload to `gemini-ask`, don't read the corpus
+
+`scripts/gemini-ask.mjs` answers questions that require reading a lot to say a
+little. Reading a corpus in-session costs context proportional to the CORPUS;
+asking through this costs context proportional to the ANSWER. `docs/claude/`
+alone is ~1MB across 60 files and `data/` is ~161MB, so the difference is not
+marginal.
+
+Reach for it when the question is "across all of X, which/where/how many" —
+call-site sweeps, doc surveys, shape audits over committed feeds, "does any
+league config still do Y". Do NOT reach for it when you already know the file:
+a single Read is cheaper and exact.
+
+```bash
+# EXPLORE (preferred) — Gemini greps the repo itself; no glob guessing
+node scripts/gemini-ask.mjs -p "every caller of stripLinkAdjacentPunctuation?"
+
+# CORPUS — pin an exact file set
+node scripts/gemini-ask.mjs -p "which mention leagueUrl?" 'docs/claude/**/*.md'
+
+# STDIN — content not on disk
+git diff | node scripts/gemini-ask.mjs -p "summarize the risk here"
+
+# --list previews what CORPUS mode would send, without spending quota
+```
+
+Four things that will bite:
+
+- **It is a different model with no CLAUDE.md priors.** Treat answers as
+  leads, not facts. It cites `path:line` precisely so you can verify the one
+  thing you're about to act on — do that before editing anything. It has
+  already been caught confidently asserting a version of `actions/checkout`
+  doesn't exist while running on it.
+- **Explore mode is agentic** — it greps and reads on its own, so the file set
+  you pass is a floor, not a ceiling. That's usually good, but it means
+  `--max-bytes` does not bound what it actually reads.
+- **Quota is shared with CI.** The same free-tier key backs
+  `.github/workflows/pr-external-review.yml`. A heavy sweep can make that day's
+  PR reviews 429 — they degrade to "did not run" rather than failing, but
+  that's the cause if you see it.
+- **Two CLIs are installed.** node 20 has a broken v0.23.0; node 22 has the
+  working one. The script resolves the newest nvm binary itself, so always go
+  through the script rather than calling `gemini` directly.
+
 ## Page directory registry — required for every new page
 
 Adding a page to the site without adding it to
