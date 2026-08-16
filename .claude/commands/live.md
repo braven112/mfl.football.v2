@@ -1,4 +1,14 @@
-Push the current branch, create a PR, gather advisory reviews from Gemini, Codex and Copilot (on the PR) alongside Claude's own (in-session), adjudicate the findings yourself, auto-approve if nothing confirmed-critical remains, enable auto-merge, then monitor until the PR is merged.
+Push the current branch, create a PR, gather advisory reviews (Claude + Codex in-session, Gemini + CodeQL + Copilot on the PR), adjudicate the findings yourself, auto-approve if nothing confirmed-critical remains, enable auto-merge, then monitor until the PR is merged.
+
+**Reviewer lineup and what each costs.** No reviewer here bills money; every one is either a subscription you already hold or free tier. Never add one that needs a funded API key.
+
+| Reviewer | Where | Lens | Cost |
+|---|---|---|---|
+| Claude | in-session | correctness + cross-cutting (step 5) | Claude subscription |
+| Codex | in-session, **laptop only** | correctness & security | ChatGPT Pro |
+| Gemini | CI | cross-cutting consistency | Gemini API free tier |
+| CodeQL | CI | static security analysis | free (public repo) |
+| Copilot | CI | line-level defects | included |
 
 ## Steps
 
@@ -65,11 +75,24 @@ Capture the PR number and URL. Print the PR URL as a clickable link.
 - **The two-league page pairs drifting apart.** TheLeague and AFL have near-identical sibling pages (`theleague/players.astro` / `afl-fantasy/players.astro`, both lineup pages, both draft predictors). A fix applied to one and not the other is a recurring bug class here, and it is invisible in a diff that only touches one of them.
 - Registries a new page must be added to: `src/data/page-directory.json` (10+ tags) and `src/data/whats-new.json`.
 
-This is the only reviewer you invoke in-session. Gemini and Codex run in CI (step 6) — **do not** spawn `codex:codex-rescue` here.
+### 5a. Codex reviewer (local only, free)
 
-> **Why they moved.** Those reviewers wrap CLIs that authenticate interactively against a personal subscription. That works on a laptop and cannot work headless, so in the Claude cloud workflow the Codex subagent would silently no-op and coverage would quietly drop to Claude alone. In CI they authenticate by repo secret, so coverage is identical no matter where `/live` was launched.
+The `codex` CLI authenticates against a ChatGPT Pro subscription (`auth_mode: chatgpt`), so it costs nothing to run — but only where the CLI exists and is authed, which is a laptop and not the Claude cloud sandbox.
 
-### 6. Collect the external reviewers (Gemini)
+Check first, and do not assume:
+
+```bash
+codex --version 2>/dev/null && python3 -c "import json,os;print(json.load(open(os.path.expanduser('~/.codex/auth.json')))['auth_mode'])" 2>/dev/null
+```
+
+- **If both succeed** → run the `codex:codex-rescue` agent with the correctness-and-security lens: "You are a senior code reviewer. Review this diff for bugs, logic errors, security issues, and missed edge cases — null/undefined, off-by-one, inverted conditions, unhandled rejections, injection, races, edge cases. Do not comment on style. List findings as Critical / Important / Suggestions with `path:line`. If you find nothing, say NO FINDINGS."
+- **If either fails** → record **"Codex: did not run (CLI unavailable)"** and continue.
+
+> **This reporting is the whole point.** The original bug was not that Codex ran locally — it was that when it silently no-opped, `/live` counted it as a clean pass and coverage dropped to Claude alone with nobody noticing. A loudly-absent reviewer is fine. A silently-absent one is not. Never write "Codex: 0 findings" when you did not run it.
+
+Do **not** put Codex in CI: the OpenAI API has no free tier and a ChatGPT subscription grants no API credit, so a CI Codex reviewer can only ever 429.
+
+### 6. Collect the external reviewer (Gemini)
 
 `.github/workflows/pr-external-review.yml` runs on every PR push and posts a sticky comment with the external reviewers' findings, under `## Critical` / `## Important` / `## Suggestions` headings.
 
@@ -118,7 +141,7 @@ CodeQL findings are machine-generated and precise about *what* they matched, but
 
 ### 7. Adjudicate the findings
 
-**You are the decision maker. Gemini, Codex and Copilot are advisors.**
+**You are the decision maker. Codex, Gemini, CodeQL and Copilot are advisors.**
 
 Their findings are input, not verdicts. None of them can see `CLAUDE.md`, the
 guard tests, or the history behind a deliberate-looking oddity, so they will
@@ -155,7 +178,7 @@ Confirmed
 Rejected
   <finding>  — <why it isn't a problem>    (Gemini)
 Reviewers
-  Claude ✓   Gemini ✓   Codex did not run   Copilot ✓
+  Claude ✓   Codex did not run (cloud)   Gemini ✓   CodeQL ✓   Copilot ✓
 Decision: <Proceeding / Blocked on N confirmed critical>
 ```
 
