@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-16T07:27:24.409Z",
+  "generatedAt": "2026-08-16T07:34:25.307Z",
   "league": "afl-fantasy",
   "yearsCovered": [
     2003,
@@ -1176,10 +1176,10 @@
     {
       "year": 2012,
       "seasonStarted": true,
-      "gamesRecorded": 87,
-      "weeksWithGames": 14,
+      "gamesRecorded": 301,
+      "weeksWithGames": 17,
       "weeksInFeed": 17,
-      "expectedGamesForCoveredWeeks": 168
+      "expectedGamesForCoveredWeeks": 204
     },
     {
       "year": 2013,
@@ -1844,33 +1844,33 @@
       },
       "headToHead": {
         "0011": {
-          "wins": 12,
+          "wins": 13,
           "losses": 9,
           "ties": 0
         },
         "0005": {
-          "wins": 17,
-          "losses": 9,
+          "wins": 18,
+          "losses": 10,
           "ties": 0
         },
         "0002": {
           "wins": 15,
-          "losses": 14,
+          "losses": 16,
           "ties": 0
         },
         "0008": {
-          "wins": 12,
+          "wins": 13,
           "losses": 9,
           "ties": 0
         },
         "0010": {
-          "wins": 21,
+          "wins": 22,
           "losses": 13,
           "ties": 0
         },
         "0024": {
           "wins": 5,
-          "losses": 5,
+          "losses": 6,
           "ties": 0
         },
         "0023": {
@@ -1880,12 +1880,12 @@
         },
         "0013": {
           "wins": 2,
-          "losses": 5,
+          "losses": 6,
           "ties": 0
         },
         "0012": {
           "wins": 13,
-          "losses": 14,
+          "losses": 15,
           "ties": 0
         },
         "0017": {
@@ -1895,27 +1895,27 @@
         },
         "0003": {
           "wins": 10,
-          "losses": 12,
+          "losses": 13,
           "ties": 0
         },
         "0007": {
-          "wins": 8,
+          "wins": 9,
           "losses": 10,
           "ties": 0
         },
         "0004": {
           "wins": 21,
-          "losses": 10,
+          "losses": 12,
           "ties": 0
         },
         "0006": {
-          "wins": 17,
+          "wins": 18,
           "losses": 11,
           "ties": 0
         },
         "0009": {
           "wins": 9,
-          "losses": 12,
+          "losses": 13,
           "ties": 0
         },
         "0019": {
@@ -1948,8 +1948,13 @@
           "losses": 2,
           "ties": 0
         },
+        "0021": {
+          "wins": 0,
+          "losses": 1,
+          "ties": 0
+        },
         "0014": {
-          "wins": 1,
+          "wins": 2,
           "losses": 3,
           "ties": 0
         }
@@ -2045,6 +2050,18 @@
             "week": 5,
             "score": 97.5,
             "opponentScore": 112.08,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
+            "week": 5,
+            "score": 138.78,
+            "opponentScore": 109.84,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -2311,6 +2328,30 @@
             "week": 12,
             "score": 93.11,
             "opponentScore": 77.86,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0005",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 1,
+            "score": 127.98,
+            "opponentScore": 98.9,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0005",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 3,
+            "score": 109.11,
+            "opponentScore": 120.89,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -2589,6 +2630,30 @@
             "week": 10,
             "score": 157.62,
             "opponentScore": 123.81,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
+            "week": 2,
+            "score": 116.81,
+            "opponentScore": 140.16,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
+            "week": 12,
+            "score": 120.68,
+            "opponentScore": 128.52,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -2923,6 +2988,18 @@
             "bothAttributed": false
           },
           {
+            "year": 2012,
+            "week": 8,
+            "score": 139.12,
+            "opponentScore": 84.2,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0008",
+            "bothAttributed": false
+          },
+          {
             "year": 2013,
             "week": 5,
             "score": 118.42,
@@ -3229,6 +3306,18 @@
             "week": 13,
             "score": 126.72,
             "opponentScore": 112.26,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
+            "week": 13,
+            "score": 120.9,
+            "opponentScore": 112.69,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -3599,6 +3688,18 @@
             "bothAttributed": false
           },
           {
+            "year": 2012,
+            "week": 12,
+            "score": 120.68,
+            "opponentScore": 130.29,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0024",
+            "bothAttributed": false
+          },
+          {
             "year": 2013,
             "week": 6,
             "score": 136.16,
@@ -3748,6 +3849,18 @@
           },
           {
             "year": 2012,
+            "week": 3,
+            "score": 109.11,
+            "opponentScore": 128.9,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0013",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
             "week": 7,
             "score": 86.87,
             "opponentScore": 130.03,
@@ -3852,6 +3965,18 @@
             "isPlayoff": true,
             "playoffRound": "Quarterfinal",
             "playoffBracket": "championship",
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
+            "week": 6,
+            "score": 140.98,
+            "opponentScore": 144.95,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
             "sourceFranchiseId": null,
             "opponentSourceId": null,
             "bothAttributed": true
@@ -4365,6 +4490,18 @@
             "bothAttributed": false
           },
           {
+            "year": 2012,
+            "week": 10,
+            "score": 110.49,
+            "opponentScore": 115.09,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0003",
+            "bothAttributed": false
+          },
+          {
             "year": 2013,
             "week": 13,
             "score": 161.38,
@@ -4587,6 +4724,18 @@
             "week": 7,
             "score": 95.23,
             "opponentScore": 97.13,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0007",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 9,
+            "score": 155.18,
+            "opponentScore": 115.24,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -4829,6 +4978,30 @@
             "week": 13,
             "score": 126.72,
             "opponentScore": 113.76,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0004",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 4,
+            "score": 77.54,
+            "opponentScore": 138.83,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0004",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 13,
+            "score": 120.9,
+            "opponentScore": 151.31,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -5199,6 +5372,18 @@
             "bothAttributed": false
           },
           {
+            "year": 2012,
+            "week": 11,
+            "score": 148.72,
+            "opponentScore": 113.55,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0006",
+            "bothAttributed": false
+          },
+          {
             "year": 2013,
             "week": 7,
             "score": 135.06,
@@ -5529,6 +5714,18 @@
             "week": 4,
             "score": 113.74,
             "opponentScore": 149.9,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
+            "week": 7,
+            "score": 86.87,
+            "opponentScore": 99.39,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -6005,7 +6202,33 @@
             "bothAttributed": true
           }
         ],
+        "0021": [
+          {
+            "year": 2012,
+            "week": 1,
+            "score": 127.98,
+            "opponentScore": 142.52,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          }
+        ],
         "0014": [
+          {
+            "year": 2012,
+            "week": 2,
+            "score": 116.81,
+            "opponentScore": 107.85,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
           {
             "year": 2013,
             "week": 9,
@@ -11286,28 +11509,28 @@
       },
       "headToHead": {
         "0003": {
-          "wins": 16,
+          "wins": 18,
           "losses": 4,
           "ties": 0
         },
         "0004": {
           "wins": 17,
-          "losses": 9,
-          "ties": 0
-        },
-        "0008": {
-          "wins": 14,
           "losses": 10,
           "ties": 0
         },
+        "0008": {
+          "wins": 15,
+          "losses": 11,
+          "ties": 0
+        },
         "0002": {
-          "wins": 17,
+          "wins": 18,
           "losses": 14,
           "ties": 0
         },
         "0001": {
           "wins": 13,
-          "losses": 21,
+          "losses": 22,
           "ties": 0
         },
         "0019": {
@@ -11326,17 +11549,17 @@
           "ties": 0
         },
         "0009": {
-          "wins": 12,
+          "wins": 13,
           "losses": 12,
           "ties": 0
         },
         "0007": {
-          "wins": 17,
+          "wins": 18,
           "losses": 6,
           "ties": 0
         },
         "0022": {
-          "wins": 5,
+          "wins": 6,
           "losses": 5,
           "ties": 0
         },
@@ -11346,23 +11569,23 @@
           "ties": 0
         },
         "0012": {
-          "wins": 16,
+          "wins": 17,
           "losses": 8,
           "ties": 0
         },
         "0011": {
           "wins": 9,
-          "losses": 12,
+          "losses": 13,
           "ties": 0
         },
         "0005": {
-          "wins": 9,
+          "wins": 10,
           "losses": 12,
           "ties": 0
         },
         "0006": {
           "wins": 17,
-          "losses": 15,
+          "losses": 17,
           "ties": 0
         },
         "0017": {
@@ -11372,7 +11595,7 @@
         },
         "0023": {
           "wins": 1,
-          "losses": 1,
+          "losses": 2,
           "ties": 0
         },
         "0020": {
@@ -11387,17 +11610,17 @@
         },
         "0018": {
           "wins": 1,
+          "losses": 1,
+          "ties": 0
+        },
+        "0016": {
+          "wins": 4,
           "losses": 0,
           "ties": 0
         },
         "0015": {
           "wins": 1,
           "losses": 4,
-          "ties": 0
-        },
-        "0016": {
-          "wins": 3,
-          "losses": 0,
           "ties": 0
         }
       },
@@ -11480,6 +11703,30 @@
             "week": 12,
             "score": 175.03,
             "opponentScore": 95.46,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0003",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 1,
+            "score": 142.64,
+            "opponentScore": 104.18,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0003",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 3,
+            "score": 111.6,
+            "opponentScore": 91.45,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -11698,6 +11945,18 @@
             "week": 5,
             "score": 149.58,
             "opponentScore": 125.51,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0004",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 5,
+            "score": 86.46,
+            "opponentScore": 173.2,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -12033,9 +12292,33 @@
           },
           {
             "year": 2012,
+            "week": 2,
+            "score": 122.54,
+            "opponentScore": 94.75,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0008",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
             "week": 5,
             "score": 86.46,
             "opponentScore": 133.36,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0008",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 12,
+            "score": 117.96,
+            "opponentScore": 158.23,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -12290,6 +12573,18 @@
             "week": 8,
             "score": 161.2,
             "opponentScore": 120.79,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
+            "week": 8,
+            "score": 143.96,
+            "opponentScore": 116.28,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -12724,6 +13019,18 @@
             "week": 13,
             "score": 112.26,
             "opponentScore": 126.72,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
+            "week": 13,
+            "score": 112.69,
+            "opponentScore": 120.9,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -13365,6 +13672,18 @@
           },
           {
             "year": 2012,
+            "week": 10,
+            "score": 139.98,
+            "opponentScore": 128.26,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
             "week": 14,
             "score": 147.23,
             "opponentScore": 140.98,
@@ -13642,6 +13961,18 @@
             "bothAttributed": false
           },
           {
+            "year": 2012,
+            "week": 11,
+            "score": 112.96,
+            "opponentScore": 111.16,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0007",
+            "bothAttributed": false
+          },
+          {
             "year": 2013,
             "week": 2,
             "score": 113.04,
@@ -13872,6 +14203,18 @@
             "bothAttributed": false
           },
           {
+            "year": 2012,
+            "week": 12,
+            "score": 117.96,
+            "opponentScore": 70.99,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0022",
+            "bothAttributed": false
+          },
+          {
             "year": 2015,
             "week": 1,
             "score": 141.79,
@@ -14084,6 +14427,18 @@
             "week": 7,
             "score": 107.94,
             "opponentScore": 106.78,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
+            "week": 9,
+            "score": 161.33,
+            "opponentScore": 115.04,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -14418,6 +14773,18 @@
             "bothAttributed": true
           },
           {
+            "year": 2012,
+            "week": 7,
+            "score": 81.85,
+            "opponentScore": 128.23,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
             "year": 2013,
             "week": 3,
             "score": 141.73,
@@ -14628,6 +14995,18 @@
             "week": 6,
             "score": 126.86,
             "opponentScore": 175.98,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0005",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 6,
+            "score": 111.74,
+            "opponentScore": 99.19,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -14962,6 +15341,30 @@
             "bothAttributed": false
           },
           {
+            "year": 2012,
+            "week": 4,
+            "score": 135.43,
+            "opponentScore": 161.33,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0006",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 13,
+            "score": 112.69,
+            "opponentScore": 175.84,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0006",
+            "bothAttributed": false
+          },
+          {
             "year": 2013,
             "week": 5,
             "score": 130.92,
@@ -15278,6 +15681,18 @@
             "bothAttributed": false
           },
           {
+            "year": 2012,
+            "week": 1,
+            "score": 142.64,
+            "opponentScore": 182.5,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0023",
+            "bothAttributed": false
+          },
+          {
             "year": 2013,
             "week": 6,
             "score": 129.59,
@@ -15378,6 +15793,68 @@
             "sourceFranchiseId": null,
             "opponentSourceId": "0018",
             "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 3,
+            "score": 111.6,
+            "opponentScore": 134.12,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0018",
+            "bothAttributed": false
+          }
+        ],
+        "0016": [
+          {
+            "year": 2012,
+            "week": 2,
+            "score": 122.54,
+            "opponentScore": 91.86,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0016",
+            "bothAttributed": false
+          },
+          {
+            "year": 2016,
+            "week": 14,
+            "score": 107.54,
+            "opponentScore": 93.44,
+            "isPlayoff": true,
+            "playoffRound": "Quarterfinal",
+            "playoffBracket": "championship",
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0016",
+            "bothAttributed": false
+          },
+          {
+            "year": 2022,
+            "week": 15,
+            "score": 191.86,
+            "opponentScore": 117.96,
+            "isPlayoff": true,
+            "playoffRound": "Quarterfinal",
+            "playoffBracket": "nit",
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2025,
+            "week": 15,
+            "score": 145.42,
+            "opponentScore": 117.46,
+            "isPlayoff": true,
+            "playoffRound": "Quarterfinal",
+            "playoffBracket": "nit",
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
           }
         ],
         "0015": [
@@ -15437,44 +15914,6 @@
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          }
-        ],
-        "0016": [
-          {
-            "year": 2016,
-            "week": 14,
-            "score": 107.54,
-            "opponentScore": 93.44,
-            "isPlayoff": true,
-            "playoffRound": "Quarterfinal",
-            "playoffBracket": "championship",
-            "sourceFranchiseId": null,
-            "opponentSourceId": "0016",
-            "bothAttributed": false
-          },
-          {
-            "year": 2022,
-            "week": 15,
-            "score": 191.86,
-            "opponentScore": 117.96,
-            "isPlayoff": true,
-            "playoffRound": "Quarterfinal",
-            "playoffBracket": "nit",
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          },
-          {
-            "year": 2025,
-            "week": 15,
-            "score": 145.42,
-            "opponentScore": 117.46,
-            "isPlayoff": true,
-            "playoffRound": "Quarterfinal",
-            "playoffBracket": "nit",
             "sourceFranchiseId": null,
             "opponentSourceId": null,
             "bothAttributed": true
@@ -16138,28 +16577,28 @@
       },
       "headToHead": {
         "0005": {
-          "wins": 12,
+          "wins": 14,
           "losses": 11,
           "ties": 0
         },
         "0011": {
-          "wins": 10,
+          "wins": 11,
           "losses": 8,
           "ties": 0
         },
         "0001": {
-          "wins": 14,
+          "wins": 16,
           "losses": 15,
           "ties": 0
         },
         "0010": {
           "wins": 14,
-          "losses": 17,
+          "losses": 18,
           "ties": 0
         },
         "0008": {
           "wins": 15,
-          "losses": 11,
+          "losses": 12,
           "ties": 0
         },
         "0023": {
@@ -16168,7 +16607,7 @@
           "ties": 0
         },
         "0021": {
-          "wins": 3,
+          "wins": 4,
           "losses": 0,
           "ties": 0
         },
@@ -16183,38 +16622,38 @@
           "ties": 0
         },
         "0012": {
-          "wins": 20,
+          "wins": 21,
           "losses": 12,
           "ties": 0
         },
         "0004": {
-          "wins": 17,
+          "wins": 19,
           "losses": 8,
           "ties": 0
         },
         "0007": {
-          "wins": 7,
+          "wins": 8,
           "losses": 11,
           "ties": 0
         },
         "0009": {
-          "wins": 12,
+          "wins": 13,
           "losses": 7,
           "ties": 0
         },
         "0003": {
           "wins": 10,
-          "losses": 8,
+          "losses": 9,
           "ties": 0
         },
         "0006": {
-          "wins": 19,
+          "wins": 20,
           "losses": 13,
           "ties": 0
         },
         "0014": {
           "wins": 1,
-          "losses": 3,
+          "losses": 4,
           "ties": 0
         },
         "0015": {
@@ -16223,7 +16662,7 @@
           "ties": 0
         },
         "0024": {
-          "wins": 1,
+          "wins": 2,
           "losses": 5,
           "ties": 0
         },
@@ -16233,7 +16672,7 @@
           "ties": 0
         },
         "0013": {
-          "wins": 3,
+          "wins": 4,
           "losses": 3,
           "ties": 0
         },
@@ -16353,9 +16792,33 @@
           },
           {
             "year": 2012,
+            "week": 4,
+            "score": 155.66,
+            "opponentScore": 134.58,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0005",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
             "week": 5,
             "score": 158.06,
             "opponentScore": 155.87,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0005",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 13,
+            "score": 128.64,
+            "opponentScore": 96.04,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -16606,6 +17069,18 @@
             "bothAttributed": true
           },
           {
+            "year": 2012,
+            "week": 6,
+            "score": 141.86,
+            "opponentScore": 87.95,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
             "year": 2013,
             "week": 2,
             "score": 125.96,
@@ -16816,6 +17291,30 @@
             "week": 10,
             "score": 123.81,
             "opponentScore": 157.62,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
+            "week": 2,
+            "score": 140.16,
+            "opponentScore": 116.81,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
+            "week": 12,
+            "score": 128.52,
+            "opponentScore": 120.68,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -17142,6 +17641,18 @@
             "week": 8,
             "score": 120.79,
             "opponentScore": 161.2,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
+            "week": 8,
+            "score": 116.28,
+            "opponentScore": 143.96,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -17572,6 +18083,18 @@
             "bothAttributed": false
           },
           {
+            "year": 2012,
+            "week": 13,
+            "score": 128.64,
+            "opponentScore": 148.18,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0008",
+            "bothAttributed": false
+          },
+          {
             "year": 2013,
             "week": 7,
             "score": 122.82,
@@ -17936,6 +18459,18 @@
             "bothAttributed": true
           },
           {
+            "year": 2012,
+            "week": 3,
+            "score": 148.62,
+            "opponentScore": 105.34,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
             "year": 2015,
             "week": 6,
             "score": 119,
@@ -18270,6 +18805,18 @@
             "week": 5,
             "score": 131.2,
             "opponentScore": 75.57,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
+            "week": 5,
+            "score": 158.06,
+            "opponentScore": 99.87,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -18629,6 +19176,30 @@
           },
           {
             "year": 2012,
+            "week": 1,
+            "score": 167.87,
+            "opponentScore": 146.82,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0004",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 3,
+            "score": 148.62,
+            "opponentScore": 118.22,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0004",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
             "week": 7,
             "score": 123.2,
             "opponentScore": 109.44,
@@ -18930,6 +19501,18 @@
             "bothAttributed": false
           },
           {
+            "year": 2012,
+            "week": 7,
+            "score": 123.2,
+            "opponentScore": 95.02,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0007",
+            "bothAttributed": false
+          },
+          {
             "year": 2013,
             "week": 13,
             "score": 89.07,
@@ -19140,6 +19723,18 @@
             "week": 6,
             "score": 141.86,
             "opponentScore": 112.63,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
+            "week": 9,
+            "score": 120.37,
+            "opponentScore": 66.16,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -19379,6 +19974,18 @@
           },
           {
             "year": 2012,
+            "week": 11,
+            "score": 75.94,
+            "opponentScore": 138.95,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0003",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
             "week": 12,
             "score": 128.52,
             "opponentScore": 119.45,
@@ -19576,6 +20183,18 @@
             "week": 9,
             "score": 126.04,
             "opponentScore": 141.27,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0006",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 10,
+            "score": 133.51,
+            "opponentScore": 107.86,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -19946,6 +20565,18 @@
             "bothAttributed": true
           },
           {
+            "year": 2012,
+            "week": 12,
+            "score": 128.52,
+            "opponentScore": 130.97,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
             "year": 2013,
             "week": 5,
             "score": 164.96,
@@ -20041,6 +20672,18 @@
             "isPlayoff": true,
             "playoffRound": "Quarterfinal",
             "playoffBracket": "championship",
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0024",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 2,
+            "score": 140.16,
+            "opponentScore": 94.07,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
             "sourceFranchiseId": null,
             "opponentSourceId": "0024",
             "bothAttributed": false
@@ -20177,6 +20820,18 @@
             "isPlayoff": true,
             "playoffRound": "Championship",
             "playoffBracket": "championship",
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0013",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 1,
+            "score": 167.87,
+            "opponentScore": 124.3,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
             "sourceFranchiseId": null,
             "opponentSourceId": "0013",
             "bothAttributed": false
@@ -21262,7 +21917,7 @@
       },
       "headToHead": {
         "0017": {
-          "wins": 10,
+          "wins": 11,
           "losses": 12,
           "ties": 0
         },
@@ -21277,7 +21932,7 @@
           "ties": 0
         },
         "0005": {
-          "wins": 7,
+          "wins": 8,
           "losses": 4,
           "ties": 0
         },
@@ -21287,12 +21942,12 @@
           "ties": 0
         },
         "0014": {
-          "wins": 17,
-          "losses": 14,
+          "wins": 18,
+          "losses": 15,
           "ties": 0
         },
         "0018": {
-          "wins": 18,
+          "wins": 19,
           "losses": 9,
           "ties": 0
         },
@@ -21312,7 +21967,7 @@
           "ties": 0
         },
         "0001": {
-          "wins": 2,
+          "wins": 3,
           "losses": 2,
           "ties": 0
         },
@@ -21323,7 +21978,7 @@
         },
         "0002": {
           "wins": 3,
-          "losses": 2,
+          "losses": 3,
           "ties": 0
         },
         "0003": {
@@ -21332,18 +21987,18 @@
           "ties": 0
         },
         "0004": {
-          "wins": 3,
+          "wins": 4,
           "losses": 5,
           "ties": 0
         },
         "0019": {
           "wins": 12,
-          "losses": 3,
+          "losses": 4,
           "ties": 0
         },
         "0016": {
           "wins": 17,
-          "losses": 10,
+          "losses": 11,
           "ties": 0
         },
         "0023": {
@@ -21353,26 +22008,26 @@
         },
         "0020": {
           "wins": 15,
-          "losses": 8,
+          "losses": 9,
           "ties": 0
         },
         "0024": {
-          "wins": 12,
-          "losses": 8,
+          "wins": 13,
+          "losses": 9,
           "ties": 0
         },
         "0013": {
-          "wins": 15,
-          "losses": 13,
+          "wins": 16,
+          "losses": 14,
           "ties": 0
         },
         "0022": {
           "wins": 10,
-          "losses": 7,
+          "losses": 8,
           "ties": 0
         },
         "0015": {
-          "wins": 9,
+          "wins": 10,
           "losses": 4,
           "ties": 0
         },
@@ -21437,6 +22092,18 @@
             "week": 6,
             "score": 124.14,
             "opponentScore": 113.72,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0017",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 6,
+            "score": 163.95,
+            "opponentScore": 119.99,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -21931,6 +22598,18 @@
             "bothAttributed": false
           },
           {
+            "year": 2012,
+            "week": 2,
+            "score": 100.26,
+            "opponentScore": 85.26,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0005",
+            "bothAttributed": false
+          },
+          {
             "year": 2013,
             "week": 1,
             "score": 138.22,
@@ -22119,6 +22798,30 @@
             "week": 12,
             "score": 124.17,
             "opponentScore": 93,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
+            "week": 1,
+            "score": 142.52,
+            "opponentScore": 124.63,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
+            "week": 3,
+            "score": 105.34,
+            "opponentScore": 108.32,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -22457,6 +23160,18 @@
             "week": 8,
             "score": 82.58,
             "opponentScore": 122.96,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0018",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 8,
+            "score": 119.44,
+            "opponentScore": 111.71,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -23131,6 +23846,18 @@
             "sourceFranchiseId": "0007",
             "opponentSourceId": null,
             "bothAttributed": true
+          },
+          {
+            "year": 2012,
+            "week": 1,
+            "score": 142.52,
+            "opponentScore": 127.98,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
           }
         ],
         "0021": [
@@ -23205,6 +23932,18 @@
             "playoffRound": "Quarterfinal",
             "playoffBracket": "championship",
             "sourceFranchiseId": "0007",
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
+            "week": 3,
+            "score": 105.34,
+            "opponentScore": 148.62,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
             "opponentSourceId": null,
             "bothAttributed": true
           },
@@ -23357,6 +24096,18 @@
             "bothAttributed": false
           },
           {
+            "year": 2012,
+            "week": 12,
+            "score": 117.9,
+            "opponentScore": 117.15,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0004",
+            "bothAttributed": false
+          },
+          {
             "year": 2014,
             "week": 17,
             "score": 124.67,
@@ -23435,6 +24186,18 @@
             "week": 9,
             "score": 117.35,
             "opponentScore": 112.39,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0019",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 10,
+            "score": 111.28,
+            "opponentScore": 182.86,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -23617,6 +24380,18 @@
             "week": 13,
             "score": 141.28,
             "opponentScore": 138.77,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0016",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 13,
+            "score": 104.81,
+            "opponentScore": 121.92,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -24193,6 +24968,18 @@
             "bothAttributed": true
           },
           {
+            "year": 2012,
+            "week": 11,
+            "score": 119.46,
+            "opponentScore": 130.38,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
             "year": 2013,
             "week": 13,
             "score": 115.5,
@@ -24460,6 +25247,30 @@
           },
           {
             "year": 2012,
+            "week": 2,
+            "score": 100.26,
+            "opponentScore": 94.07,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0024",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 12,
+            "score": 117.9,
+            "opponentScore": 130.29,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0024",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
             "week": 15,
             "score": 101.24,
             "opponentScore": 119.98,
@@ -24696,6 +25507,30 @@
             "isPlayoff": true,
             "playoffRound": "Semifinal",
             "playoffBracket": "championship",
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0013",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 4,
+            "score": 146.92,
+            "opponentScore": 145.94,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0013",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 13,
+            "score": 104.81,
+            "opponentScore": 111.8,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
             "sourceFranchiseId": null,
             "opponentSourceId": "0013",
             "bothAttributed": false
@@ -25027,6 +25862,18 @@
             "bothAttributed": false
           },
           {
+            "year": 2012,
+            "week": 9,
+            "score": 121.99,
+            "opponentScore": 136.08,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0022",
+            "bothAttributed": false
+          },
+          {
             "year": 2013,
             "week": 13,
             "score": 115.5,
@@ -25219,6 +26066,18 @@
             "sourceFranchiseId": null,
             "opponentSourceId": "0015",
             "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 5,
+            "score": 135.7,
+            "opponentScore": 120.1,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
           },
           {
             "year": 2012,
@@ -28488,23 +29347,23 @@
           "ties": 0
         },
         "0015": {
-          "wins": 11,
+          "wins": 12,
           "losses": 7,
           "ties": 0
         },
         "0023": {
           "wins": 6,
-          "losses": 7,
+          "losses": 8,
           "ties": 0
         },
         "0022": {
-          "wins": 12,
+          "wins": 13,
           "losses": 6,
           "ties": 0
         },
         "0013": {
-          "wins": 12,
-          "losses": 16,
+          "wins": 13,
+          "losses": 17,
           "ties": 0
         },
         "0011": {
@@ -28514,16 +29373,16 @@
         },
         "0018": {
           "wins": 16,
-          "losses": 11,
+          "losses": 12,
           "ties": 0
         },
         "0004": {
           "wins": 2,
-          "losses": 5,
+          "losses": 6,
           "ties": 0
         },
         "0002": {
-          "wins": 3,
+          "wins": 4,
           "losses": 0,
           "ties": 0
         },
@@ -28539,12 +29398,12 @@
         },
         "0005": {
           "wins": 2,
-          "losses": 3,
+          "losses": 4,
           "ties": 0
         },
         "0016": {
           "wins": 20,
-          "losses": 9,
+          "losses": 10,
           "ties": 0
         },
         "0008": {
@@ -28553,8 +29412,8 @@
           "ties": 0
         },
         "0021": {
-          "wins": 12,
-          "losses": 16,
+          "wins": 13,
+          "losses": 17,
           "ties": 0
         },
         "0003": {
@@ -28563,18 +29422,18 @@
           "ties": 0
         },
         "0024": {
-          "wins": 4,
-          "losses": 12,
+          "wins": 5,
+          "losses": 13,
           "ties": 0
         },
         "0017": {
-          "wins": 7,
+          "wins": 8,
           "losses": 8,
           "ties": 0
         },
         "0019": {
           "wins": 4,
-          "losses": 8,
+          "losses": 9,
           "ties": 0
         },
         "0006": {
@@ -28583,13 +29442,13 @@
           "ties": 0
         },
         "0020": {
-          "wins": 8,
+          "wins": 9,
           "losses": 13,
           "ties": 0
         },
         "0001": {
           "wins": 3,
-          "losses": 1,
+          "losses": 2,
           "ties": 0
         },
         "0009": {
@@ -28685,6 +29544,18 @@
             "sourceFranchiseId": null,
             "opponentSourceId": "0015",
             "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 7,
+            "score": 128.48,
+            "opponentScore": 122.75,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
           },
           {
             "year": 2012,
@@ -28881,6 +29752,18 @@
             "bothAttributed": false
           },
           {
+            "year": 2012,
+            "week": 10,
+            "score": 92.78,
+            "opponentScore": 154.98,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0023",
+            "bothAttributed": false
+          },
+          {
             "year": 2013,
             "week": 2,
             "score": 149.34,
@@ -29031,6 +29914,18 @@
             "week": 11,
             "score": 131.77,
             "opponentScore": 101.45,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0022",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 11,
+            "score": 104.85,
+            "opponentScore": 97.43,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -29261,6 +30156,30 @@
             "week": 10,
             "score": 112.1,
             "opponentScore": 149.21,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0013",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 2,
+            "score": 107.85,
+            "opponentScore": 113.22,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0013",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 12,
+            "score": 130.97,
+            "opponentScore": 101.02,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -29621,6 +30540,18 @@
             "bothAttributed": false
           },
           {
+            "year": 2012,
+            "week": 5,
+            "score": 108.26,
+            "opponentScore": 130.55,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0018",
+            "bothAttributed": false
+          },
+          {
             "year": 2013,
             "week": 1,
             "score": 149.52,
@@ -29936,6 +30867,18 @@
           },
           {
             "year": 2012,
+            "week": 1,
+            "score": 124.63,
+            "opponentScore": 146.82,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0004",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
             "week": 4,
             "score": 107.58,
             "opponentScore": 138.83,
@@ -30016,6 +30959,18 @@
             "isPlayoff": true,
             "playoffRound": "Semifinal",
             "playoffBracket": "nit",
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
+            "week": 12,
+            "score": 130.97,
+            "opponentScore": 128.52,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
             "sourceFranchiseId": null,
             "opponentSourceId": null,
             "bothAttributed": true
@@ -30231,6 +31186,18 @@
             "bothAttributed": false
           },
           {
+            "year": 2012,
+            "week": 3,
+            "score": 108.32,
+            "opponentScore": 120.89,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0005",
+            "bothAttributed": false
+          },
+          {
             "year": 2015,
             "week": 4,
             "score": 85.87,
@@ -30288,6 +31255,18 @@
             "isPlayoff": true,
             "playoffRound": "Quarterfinal",
             "playoffBracket": "championship",
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0016",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 6,
+            "score": 110.79,
+            "opponentScore": 142.57,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
             "sourceFranchiseId": null,
             "opponentSourceId": "0016",
             "bothAttributed": false
@@ -30661,6 +31640,30 @@
             "week": 12,
             "score": 93,
             "opponentScore": 124.17,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
+            "week": 1,
+            "score": 124.63,
+            "opponentScore": 142.52,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
+            "week": 3,
+            "score": 108.32,
+            "opponentScore": 105.34,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -31093,6 +32096,30 @@
             "bothAttributed": false
           },
           {
+            "year": 2012,
+            "week": 4,
+            "score": 107.58,
+            "opponentScore": 132.16,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0024",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 13,
+            "score": 139.62,
+            "opponentScore": 136.29,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0024",
+            "bothAttributed": false
+          },
+          {
             "year": 2013,
             "week": 7,
             "score": 110.72,
@@ -31275,6 +32302,18 @@
             "bothAttributed": false
           },
           {
+            "year": 2012,
+            "week": 9,
+            "score": 100.5,
+            "opponentScore": 51.8,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0017",
+            "bothAttributed": false
+          },
+          {
             "year": 2013,
             "week": 13,
             "score": 100.67,
@@ -31449,6 +32488,18 @@
             "week": 8,
             "score": 131.39,
             "opponentScore": 34.8,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0019",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 8,
+            "score": 92.36,
+            "opponentScore": 97.18,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -31645,6 +32696,18 @@
             "week": 13,
             "score": 78.45,
             "opponentScore": 121.5,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
+            "week": 13,
+            "score": 139.62,
+            "opponentScore": 89.95,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -31894,6 +32957,18 @@
           }
         ],
         "0001": [
+          {
+            "year": 2012,
+            "week": 2,
+            "score": 107.85,
+            "opponentScore": 116.81,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
           {
             "year": 2013,
             "week": 9,
@@ -32940,7 +34015,7 @@
         },
         "0024": {
           "wins": 7,
-          "losses": 8,
+          "losses": 9,
           "ties": 0
         },
         "0005": {
@@ -32949,18 +34024,18 @@
           "ties": 0
         },
         "0015": {
-          "wins": 10,
-          "losses": 8,
+          "wins": 11,
+          "losses": 9,
           "ties": 0
         },
         "0007": {
           "wins": 3,
-          "losses": 0,
+          "losses": 1,
           "ties": 0
         },
         "0013": {
           "wins": 9,
-          "losses": 14,
+          "losses": 15,
           "ties": 0
         },
         "0004": {
@@ -32970,22 +34045,22 @@
         },
         "0012": {
           "wins": 3,
-          "losses": 4,
+          "losses": 5,
           "ties": 0
         },
         "0021": {
-          "wins": 7,
+          "wins": 8,
           "losses": 14,
           "ties": 0
         },
         "0022": {
           "wins": 9,
-          "losses": 11,
+          "losses": 12,
           "ties": 0
         },
         "0009": {
           "wins": 5,
-          "losses": 3,
+          "losses": 4,
           "ties": 0
         },
         "0001": {
@@ -32994,33 +34069,33 @@
           "ties": 0
         },
         "0017": {
-          "wins": 8,
-          "losses": 10,
+          "wins": 9,
+          "losses": 11,
           "ties": 0
         },
         "0019": {
           "wins": 13,
-          "losses": 4,
+          "losses": 6,
           "ties": 0
         },
         "0016": {
           "wins": 14,
-          "losses": 8,
+          "losses": 9,
           "ties": 0
         },
         "0023": {
           "wins": 9,
-          "losses": 8,
+          "losses": 9,
           "ties": 0
         },
         "0018": {
           "wins": 13,
-          "losses": 9,
+          "losses": 10,
           "ties": 0
         },
         "0014": {
           "wins": 13,
-          "losses": 8,
+          "losses": 9,
           "ties": 0
         },
         "0008": {
@@ -33029,7 +34104,7 @@
           "ties": 0
         },
         "0011": {
-          "wins": 0,
+          "wins": 1,
           "losses": 3,
           "ties": 0
         },
@@ -33218,6 +34293,18 @@
             "week": 9,
             "score": 117.01,
             "opponentScore": 93.9,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0024",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 10,
+            "score": 139.18,
+            "opponentScore": 141.37,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -33518,6 +34605,30 @@
             "bothAttributed": false
           },
           {
+            "year": 2012,
+            "week": 1,
+            "score": 114.7,
+            "opponentScore": 115.39,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
+            "week": 3,
+            "score": 134.21,
+            "opponentScore": 122.86,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
             "year": 2013,
             "week": 7,
             "score": 143.86,
@@ -33700,6 +34811,18 @@
             "bothAttributed": true
           },
           {
+            "year": 2012,
+            "week": 3,
+            "score": 134.21,
+            "opponentScore": 175.74,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0007",
+            "bothAttributed": false
+          },
+          {
             "year": 2014,
             "week": 15,
             "score": 115.04,
@@ -33742,6 +34865,18 @@
             "week": 8,
             "score": 96.72,
             "opponentScore": 151.8,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0013",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 8,
+            "score": 101.84,
+            "opponentScore": 129.75,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -34090,6 +35225,18 @@
             "bothAttributed": true
           },
           {
+            "year": 2012,
+            "week": 12,
+            "score": 101.15,
+            "opponentScore": 122.16,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
             "year": 2013,
             "week": 4,
             "score": 93.18,
@@ -34171,6 +35318,18 @@
             "isPlayoff": true,
             "playoffRound": "Quarterfinal",
             "playoffBracket": "championship",
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
+            "week": 11,
+            "score": 130.38,
+            "opponentScore": 119.46,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
             "sourceFranchiseId": null,
             "opponentSourceId": null,
             "bothAttributed": true
@@ -34431,6 +35590,18 @@
           },
           {
             "year": 2012,
+            "week": 5,
+            "score": 81.99,
+            "opponentScore": 98.62,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0022",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
             "week": 15,
             "score": 104.69,
             "opponentScore": 129.36,
@@ -34660,6 +35831,18 @@
             "bothAttributed": true
           },
           {
+            "year": 2012,
+            "week": 2,
+            "score": 109.76,
+            "opponentScore": 123.97,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
             "year": 2013,
             "week": 7,
             "score": 143.86,
@@ -34800,6 +35983,30 @@
             "week": 13,
             "score": 121.5,
             "opponentScore": 119.77,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0017",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 4,
+            "score": 147.86,
+            "opponentScore": 130.87,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0017",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 13,
+            "score": 89.95,
+            "opponentScore": 104.44,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -35026,6 +36233,30 @@
             "bothAttributed": false
           },
           {
+            "year": 2012,
+            "week": 2,
+            "score": 109.76,
+            "opponentScore": 145.33,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0019",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 12,
+            "score": 101.15,
+            "opponentScore": 128.72,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0019",
+            "bothAttributed": false
+          },
+          {
             "year": 2013,
             "week": 8,
             "score": 117.61,
@@ -35212,6 +36443,18 @@
             "week": 4,
             "score": 126.59,
             "opponentScore": 98.56,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0016",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 7,
+            "score": 118.01,
+            "opponentScore": 133.66,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -35486,6 +36729,18 @@
             "bothAttributed": false
           },
           {
+            "year": 2012,
+            "week": 6,
+            "score": 73.81,
+            "opponentScore": 112.82,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0023",
+            "bothAttributed": false
+          },
+          {
             "year": 2013,
             "week": 5,
             "score": 94.82,
@@ -35684,6 +36939,18 @@
             "week": 7,
             "score": 157.14,
             "opponentScore": 91.75,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0018",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 9,
+            "score": 106.08,
+            "opponentScore": 165.78,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -35950,6 +37217,18 @@
             "week": 13,
             "score": 121.5,
             "opponentScore": 78.45,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
+            "week": 13,
+            "score": 89.95,
+            "opponentScore": 139.62,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -36285,6 +37564,18 @@
           }
         ],
         "0011": [
+          {
+            "year": 2012,
+            "week": 1,
+            "score": 114.7,
+            "opponentScore": 109.91,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
           {
             "year": 2013,
             "week": 15,
@@ -37063,23 +38354,23 @@
       },
       "headToHead": {
         "0004": {
-          "wins": 12,
+          "wins": 13,
           "losses": 14,
           "ties": 0
         },
         "0005": {
           "wins": 7,
-          "losses": 9,
+          "losses": 10,
           "ties": 0
         },
         "0017": {
           "wins": 1,
-          "losses": 3,
+          "losses": 4,
           "ties": 0
         },
         "0008": {
           "wins": 10,
-          "losses": 9,
+          "losses": 10,
           "ties": 0
         },
         "0018": {
@@ -37088,7 +38379,7 @@
           "ties": 0
         },
         "0020": {
-          "wins": 4,
+          "wins": 5,
           "losses": 3,
           "ties": 0
         },
@@ -37099,21 +38390,21 @@
         },
         "0019": {
           "wins": 3,
-          "losses": 1,
+          "losses": 2,
           "ties": 0
         },
         "0001": {
-          "wins": 13,
+          "wins": 14,
           "losses": 11,
           "ties": 0
         },
         "0007": {
-          "wins": 9,
-          "losses": 8,
+          "wins": 10,
+          "losses": 9,
           "ties": 0
         },
         "0015": {
-          "wins": 3,
+          "wins": 4,
           "losses": 1,
           "ties": 0
         },
@@ -37124,7 +38415,7 @@
         },
         "0009": {
           "wins": 6,
-          "losses": 12,
+          "losses": 14,
           "ties": 0
         },
         "0023": {
@@ -37133,22 +38424,22 @@
           "ties": 0
         },
         "0011": {
-          "wins": 8,
+          "wins": 10,
           "losses": 11,
           "ties": 0
         },
         "0002": {
           "wins": 6,
-          "losses": 19,
+          "losses": 20,
           "ties": 0
         },
         "0010": {
           "wins": 7,
-          "losses": 15,
+          "losses": 16,
           "ties": 0
         },
         "0003": {
-          "wins": 5,
+          "wins": 6,
           "losses": 12,
           "ties": 0
         },
@@ -37159,7 +38450,7 @@
         },
         "0006": {
           "wins": 11,
-          "losses": 10,
+          "losses": 11,
           "ties": 0
         },
         "0024": {
@@ -37221,6 +38512,18 @@
             "week": 10,
             "score": 137.6,
             "opponentScore": 120.28,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0004",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 11,
+            "score": 134.1,
+            "opponentScore": 133.83,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -37519,6 +38822,18 @@
             "bothAttributed": false
           },
           {
+            "year": 2012,
+            "week": 10,
+            "score": 137.6,
+            "opponentScore": 153.22,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0005",
+            "bothAttributed": false
+          },
+          {
             "year": 2013,
             "week": 2,
             "score": 109.64,
@@ -37701,6 +39016,18 @@
             "bothAttributed": false
           },
           {
+            "year": 2012,
+            "week": 3,
+            "score": 111.03,
+            "opponentScore": 133.9,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0017",
+            "bothAttributed": false
+          },
+          {
             "year": 2016,
             "week": 16,
             "score": 117.18,
@@ -37782,6 +39109,18 @@
             "isPlayoff": true,
             "playoffRound": "NIT Championship",
             "playoffBracket": "nit",
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0008",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 7,
+            "score": 128.53,
+            "opponentScore": 129.88,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
             "sourceFranchiseId": null,
             "opponentSourceId": "0008",
             "bothAttributed": false
@@ -38079,6 +39418,18 @@
             "bothAttributed": true
           },
           {
+            "year": 2012,
+            "week": 12,
+            "score": 122.16,
+            "opponentScore": 101.15,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
             "year": 2013,
             "week": 4,
             "score": 82.35,
@@ -38216,6 +39567,18 @@
           },
           {
             "year": 2012,
+            "week": 2,
+            "score": 143.84,
+            "opponentScore": 145.33,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0019",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
             "week": 9,
             "score": 115.04,
             "opponentScore": 94.39,
@@ -38272,6 +39635,18 @@
             "isPlayoff": true,
             "playoffRound": "Quarterfinal",
             "playoffBracket": "championship",
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
+            "week": 6,
+            "score": 144.95,
+            "opponentScore": 140.98,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
             "sourceFranchiseId": null,
             "opponentSourceId": null,
             "bothAttributed": true
@@ -38580,6 +39955,30 @@
           },
           {
             "year": 2012,
+            "week": 1,
+            "score": 129.2,
+            "opponentScore": 124.5,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0007",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 3,
+            "score": 111.03,
+            "opponentScore": 175.74,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0007",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
             "week": 7,
             "score": 128.53,
             "opponentScore": 95.02,
@@ -38762,6 +40161,18 @@
           },
           {
             "year": 2012,
+            "week": 1,
+            "score": 129.2,
+            "opponentScore": 115.39,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
             "week": 8,
             "score": 122.13,
             "opponentScore": 121.85,
@@ -38889,6 +40300,30 @@
             "week": 13,
             "score": 93.2,
             "opponentScore": 157.04,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
+            "week": 4,
+            "score": 82.32,
+            "opponentScore": 113.7,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
+            "week": 13,
+            "score": 105.49,
+            "opponentScore": 143.92,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -39190,6 +40625,30 @@
           },
           {
             "year": 2012,
+            "week": 2,
+            "score": 143.84,
+            "opponentScore": 125.49,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
+            "week": 12,
+            "score": 122.16,
+            "opponentScore": 92.16,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
             "week": 14,
             "score": 83.29,
             "opponentScore": 175.47,
@@ -39399,6 +40858,18 @@
             "week": 5,
             "score": 75.57,
             "opponentScore": 131.2,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
+            "week": 5,
+            "score": 99.87,
+            "opponentScore": 158.06,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -39709,6 +41180,18 @@
             "bothAttributed": true
           },
           {
+            "year": 2012,
+            "week": 9,
+            "score": 115.04,
+            "opponentScore": 161.33,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
             "year": 2013,
             "week": 13,
             "score": 95.44,
@@ -39988,6 +41471,18 @@
           },
           {
             "year": 2012,
+            "week": 8,
+            "score": 122.13,
+            "opponentScore": 119.94,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0003",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
             "week": 11,
             "score": 134.1,
             "opponentScore": 138.95,
@@ -40223,6 +41718,18 @@
             "week": 13,
             "score": 93.2,
             "opponentScore": 139.28,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0006",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 13,
+            "score": 105.49,
+            "opponentScore": 175.84,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -41068,16 +42575,16 @@
       "headToHead": {
         "0010": {
           "wins": 10,
-          "losses": 9,
+          "losses": 10,
           "ties": 0
         },
         "0003": {
           "wins": 17,
-          "losses": 8,
+          "losses": 9,
           "ties": 0
         },
         "0001": {
-          "wins": 9,
+          "wins": 10,
           "losses": 8,
           "ties": 0
         },
@@ -41088,16 +42595,16 @@
         },
         "0002": {
           "wins": 6,
-          "losses": 11,
+          "losses": 12,
           "ties": 0
         },
         "0020": {
-          "wins": 3,
+          "wins": 4,
           "losses": 5,
           "ties": 0
         },
         "0011": {
-          "wins": 18,
+          "wins": 20,
           "losses": 9,
           "ties": 0
         },
@@ -41107,7 +42614,7 @@
           "ties": 0
         },
         "0012": {
-          "wins": 12,
+          "wins": 14,
           "losses": 6,
           "ties": 0
         },
@@ -41117,18 +42624,18 @@
           "ties": 0
         },
         "0007": {
-          "wins": 20,
-          "losses": 8,
+          "wins": 21,
+          "losses": 9,
           "ties": 0
         },
         "0006": {
-          "wins": 6,
+          "wins": 7,
           "losses": 9,
           "ties": 0
         },
         "0004": {
           "wins": 8,
-          "losses": 14,
+          "losses": 15,
           "ties": 0
         },
         "0016": {
@@ -41137,12 +42644,12 @@
           "ties": 0
         },
         "0008": {
-          "wins": 10,
+          "wins": 11,
           "losses": 10,
           "ties": 0
         },
         "0005": {
-          "wins": 12,
+          "wins": 13,
           "losses": 11,
           "ties": 0
         },
@@ -41151,8 +42658,18 @@
           "losses": 1,
           "ties": 0
         },
-        "0019": {
+        "0017": {
           "wins": 5,
+          "losses": 0,
+          "ties": 0
+        },
+        "0015": {
+          "wins": 1,
+          "losses": 2,
+          "ties": 0
+        },
+        "0019": {
+          "wins": 6,
           "losses": 1,
           "ties": 0
         },
@@ -41161,18 +42678,8 @@
           "losses": 1,
           "ties": 0
         },
-        "0015": {
-          "wins": 0,
-          "losses": 2,
-          "ties": 0
-        },
         "0024": {
           "wins": 1,
-          "losses": 0,
-          "ties": 0
-        },
-        "0017": {
-          "wins": 4,
           "losses": 0,
           "ties": 0
         },
@@ -41216,6 +42723,18 @@
             "isPlayoff": true,
             "playoffRound": "Quarterfinal",
             "playoffBracket": "conference",
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
+            "week": 10,
+            "score": 128.26,
+            "opponentScore": 139.98,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
             "sourceFranchiseId": null,
             "opponentSourceId": null,
             "bothAttributed": true
@@ -41431,6 +42950,18 @@
             "week": 6,
             "score": 107.61,
             "opponentScore": 79.33,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0003",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 6,
+            "score": 112.63,
+            "opponentScore": 173.34,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -41733,6 +43264,18 @@
             "week": 4,
             "score": 149.9,
             "opponentScore": 113.74,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
+            "week": 7,
+            "score": 99.39,
+            "opponentScore": 86.87,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -42081,6 +43624,18 @@
             "bothAttributed": true
           },
           {
+            "year": 2012,
+            "week": 9,
+            "score": 66.16,
+            "opponentScore": 120.37,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
             "year": 2013,
             "week": 2,
             "score": 119.82,
@@ -42263,6 +43818,18 @@
             "bothAttributed": true
           },
           {
+            "year": 2012,
+            "week": 2,
+            "score": 123.97,
+            "opponentScore": 109.76,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
             "year": 2013,
             "week": 7,
             "score": 88.29,
@@ -42365,6 +43932,30 @@
             "week": 12,
             "score": 131.44,
             "opponentScore": 93.42,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
+            "week": 1,
+            "score": 111.69,
+            "opponentScore": 109.91,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
+            "week": 3,
+            "score": 140.02,
+            "opponentScore": 114.18,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -42785,6 +44376,30 @@
             "bothAttributed": true
           },
           {
+            "year": 2012,
+            "week": 4,
+            "score": 113.7,
+            "opponentScore": 82.32,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
+            "week": 13,
+            "score": 143.92,
+            "opponentScore": 105.49,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
             "year": 2013,
             "week": 5,
             "score": 125.44,
@@ -43033,6 +44648,30 @@
             "week": 10,
             "score": 107.81,
             "opponentScore": 89,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0007",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 2,
+            "score": 123.97,
+            "opponentScore": 120.33,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0007",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 12,
+            "score": 147.14,
+            "opponentScore": 170.9,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -43368,6 +45007,18 @@
           },
           {
             "year": 2012,
+            "week": 5,
+            "score": 130.09,
+            "opponentScore": 112.22,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0006",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
             "week": 15,
             "score": 94.13,
             "opponentScore": 86.93,
@@ -43541,6 +45192,18 @@
             "week": 8,
             "score": 75.68,
             "opponentScore": 108.98,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0004",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 8,
+            "score": 108.32,
+            "opponentScore": 139.88,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -43877,6 +45540,18 @@
             "bothAttributed": false
           },
           {
+            "year": 2012,
+            "week": 11,
+            "score": 128.84,
+            "opponentScore": 124.43,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0008",
+            "bothAttributed": false
+          },
+          {
             "year": 2013,
             "week": 3,
             "score": 86.13,
@@ -44111,6 +45786,18 @@
             "week": 13,
             "score": 157.04,
             "opponentScore": 98.8,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0005",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 13,
+            "score": 143.92,
+            "opponentScore": 96.04,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -44397,7 +46084,119 @@
             "bothAttributed": false
           }
         ],
+        "0017": [
+          {
+            "year": 2012,
+            "week": 1,
+            "score": 111.69,
+            "opponentScore": 93.92,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0017",
+            "bothAttributed": false
+          },
+          {
+            "year": 2014,
+            "week": 14,
+            "score": 117.18,
+            "opponentScore": 114.41,
+            "isPlayoff": true,
+            "playoffRound": "Quarterfinal",
+            "playoffBracket": "championship",
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2015,
+            "week": 6,
+            "score": 142.54,
+            "opponentScore": 116.71,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2015,
+            "week": 17,
+            "score": 118.08,
+            "opponentScore": 97.78,
+            "isPlayoff": true,
+            "playoffRound": "NL Conference Championship",
+            "playoffBracket": "conference",
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2017,
+            "week": 1,
+            "score": 125.74,
+            "opponentScore": 76.16,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          }
+        ],
+        "0015": [
+          {
+            "year": 2012,
+            "week": 3,
+            "score": 140.02,
+            "opponentScore": 122.86,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2014,
+            "week": 6,
+            "score": 99.68,
+            "opponentScore": 119.28,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2018,
+            "week": 15,
+            "score": 116.89,
+            "opponentScore": 124.92,
+            "isPlayoff": true,
+            "playoffRound": "Quarterfinal",
+            "playoffBracket": "nit",
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          }
+        ],
         "0019": [
+          {
+            "year": 2012,
+            "week": 12,
+            "score": 147.14,
+            "opponentScore": 128.72,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0019",
+            "bothAttributed": false
+          },
           {
             "year": 2013,
             "week": 6,
@@ -44533,32 +46332,6 @@
             "bothAttributed": true
           }
         ],
-        "0015": [
-          {
-            "year": 2014,
-            "week": 6,
-            "score": 99.68,
-            "opponentScore": 119.28,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          },
-          {
-            "year": 2018,
-            "week": 15,
-            "score": 116.89,
-            "opponentScore": 124.92,
-            "isPlayoff": true,
-            "playoffRound": "Quarterfinal",
-            "playoffBracket": "nit",
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          }
-        ],
         "0024": [
           {
             "year": 2014,
@@ -44571,56 +46344,6 @@
             "sourceFranchiseId": null,
             "opponentSourceId": "0024",
             "bothAttributed": false
-          }
-        ],
-        "0017": [
-          {
-            "year": 2014,
-            "week": 14,
-            "score": 117.18,
-            "opponentScore": 114.41,
-            "isPlayoff": true,
-            "playoffRound": "Quarterfinal",
-            "playoffBracket": "championship",
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          },
-          {
-            "year": 2015,
-            "week": 6,
-            "score": 142.54,
-            "opponentScore": 116.71,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          },
-          {
-            "year": 2015,
-            "week": 17,
-            "score": 118.08,
-            "opponentScore": 97.78,
-            "isPlayoff": true,
-            "playoffRound": "NL Conference Championship",
-            "playoffBracket": "conference",
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          },
-          {
-            "year": 2017,
-            "week": 1,
-            "score": 125.74,
-            "opponentScore": 76.16,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
           }
         ],
         "0021": [
@@ -45295,23 +47018,23 @@
           "ties": 0
         },
         "0008": {
-          "wins": 14,
+          "wins": 15,
           "losses": 10,
           "ties": 0
         },
         "0019": {
           "wins": 2,
-          "losses": 3,
+          "losses": 4,
           "ties": 0
         },
         "0010": {
-          "wins": 11,
+          "wins": 12,
           "losses": 7,
           "ties": 0
         },
         "0002": {
           "wins": 8,
-          "losses": 6,
+          "losses": 7,
           "ties": 0
         },
         "0022": {
@@ -45321,7 +47044,7 @@
         },
         "0009": {
           "wins": 9,
-          "losses": 18,
+          "losses": 20,
           "ties": 0
         },
         "0023": {
@@ -45330,27 +47053,27 @@
           "ties": 0
         },
         "0007": {
-          "wins": 19,
+          "wins": 21,
           "losses": 8,
           "ties": 0
         },
         "0012": {
           "wins": 11,
-          "losses": 8,
+          "losses": 10,
           "ties": 0
         },
         "0001": {
           "wins": 8,
-          "losses": 6,
+          "losses": 7,
           "ties": 0
         },
         "0006": {
-          "wins": 6,
+          "wins": 7,
           "losses": 9,
           "ties": 0
         },
         "0004": {
-          "wins": 7,
+          "wins": 8,
           "losses": 11,
           "ties": 0
         },
@@ -45361,22 +47084,22 @@
         },
         "0005": {
           "wins": 7,
-          "losses": 17,
+          "losses": 18,
           "ties": 0
         },
         "0003": {
-          "wins": 14,
+          "wins": 15,
           "losses": 10,
           "ties": 0
         },
         "0015": {
-          "wins": 2,
+          "wins": 3,
           "losses": 1,
           "ties": 0
         },
         "0017": {
           "wins": 1,
-          "losses": 1,
+          "losses": 2,
           "ties": 0
         },
         "0024": {
@@ -45386,7 +47109,7 @@
         },
         "0020": {
           "wins": 3,
-          "losses": 0,
+          "losses": 1,
           "ties": 0
         },
         "0014": {
@@ -45531,6 +47254,18 @@
             "week": 7,
             "score": 117.03,
             "opponentScore": 81.85,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0008",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 9,
+            "score": 157.27,
+            "opponentScore": 115.31,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -45817,6 +47552,18 @@
             "bothAttributed": false
           },
           {
+            "year": 2012,
+            "week": 3,
+            "score": 114.18,
+            "opponentScore": 157.3,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0019",
+            "bothAttributed": false
+          },
+          {
             "year": 2014,
             "week": 6,
             "score": 130.79,
@@ -45898,6 +47645,18 @@
             "isPlayoff": true,
             "playoffRound": "Semifinal",
             "playoffBracket": "conference",
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
+            "week": 7,
+            "score": 128.23,
+            "opponentScore": 81.85,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
             "sourceFranchiseId": null,
             "opponentSourceId": null,
             "bothAttributed": true
@@ -46104,6 +47863,18 @@
             "isPlayoff": true,
             "playoffRound": "Semifinal",
             "playoffBracket": "championship",
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
+            "week": 6,
+            "score": 87.95,
+            "opponentScore": 141.86,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
             "sourceFranchiseId": null,
             "opponentSourceId": null,
             "bothAttributed": true
@@ -46357,6 +48128,30 @@
             "week": 12,
             "score": 93.42,
             "opponentScore": 131.44,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
+            "week": 1,
+            "score": 109.91,
+            "opponentScore": 111.69,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
+            "week": 3,
+            "score": 114.18,
+            "opponentScore": 140.02,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -46741,6 +48536,30 @@
             "bothAttributed": false
           },
           {
+            "year": 2012,
+            "week": 4,
+            "score": 142.03,
+            "opponentScore": 99.15,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0007",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 13,
+            "score": 123.45,
+            "opponentScore": 123.28,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0007",
+            "bothAttributed": false
+          },
+          {
             "year": 2013,
             "week": 7,
             "score": 89.23,
@@ -47068,6 +48887,30 @@
           },
           {
             "year": 2012,
+            "week": 2,
+            "score": 125.49,
+            "opponentScore": 143.84,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
+            "week": 12,
+            "score": 92.16,
+            "opponentScore": 122.16,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
             "week": 14,
             "score": 175.47,
             "opponentScore": 83.29,
@@ -47285,6 +49128,18 @@
             "bothAttributed": true
           },
           {
+            "year": 2012,
+            "week": 5,
+            "score": 109.84,
+            "opponentScore": 138.78,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
             "year": 2013,
             "week": 3,
             "score": 106.59,
@@ -47447,6 +49302,18 @@
             "week": 8,
             "score": 132.72,
             "opponentScore": 110.48,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0006",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 8,
+            "score": 131.31,
+            "opponentScore": 88.75,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -47629,6 +49496,18 @@
             "week": 9,
             "score": 99.63,
             "opponentScore": 123.88,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0004",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 10,
+            "score": 140.54,
+            "opponentScore": 120.28,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -47941,6 +49820,18 @@
             "bothAttributed": false
           },
           {
+            "year": 2012,
+            "week": 11,
+            "score": 94.44,
+            "opponentScore": 125.74,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0005",
+            "bothAttributed": false
+          },
+          {
             "year": 2013,
             "week": 2,
             "score": 175.46,
@@ -48231,6 +50122,18 @@
             "bothAttributed": false
           },
           {
+            "year": 2012,
+            "week": 13,
+            "score": 123.45,
+            "opponentScore": 115.82,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0003",
+            "bothAttributed": false
+          },
+          {
             "year": 2013,
             "week": 5,
             "score": 135.39,
@@ -48510,6 +50413,18 @@
         "0015": [
           {
             "year": 2012,
+            "week": 2,
+            "score": 125.49,
+            "opponentScore": 105.61,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
             "week": 5,
             "score": 109.84,
             "opponentScore": 120.1,
@@ -48546,6 +50461,18 @@
           }
         ],
         "0017": [
+          {
+            "year": 2012,
+            "week": 12,
+            "score": 92.16,
+            "opponentScore": 135.06,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0017",
+            "bothAttributed": false
+          },
           {
             "year": 2012,
             "week": 15,
@@ -48622,6 +50549,18 @@
           }
         ],
         "0020": [
+          {
+            "year": 2012,
+            "week": 1,
+            "score": 109.91,
+            "opponentScore": 114.7,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
           {
             "year": 2013,
             "week": 15,
@@ -49226,32 +51165,77 @@
       "headToHead": {
         "0007": {
           "wins": 4,
-          "losses": 0,
+          "losses": 1,
           "ties": 0
         },
         "0011": {
           "wins": 1,
-          "losses": 2,
+          "losses": 3,
           "ties": 0
         },
         "0021": {
           "wins": 4,
-          "losses": 8,
+          "losses": 9,
           "ties": 0
         },
         "0012": {
           "wins": 1,
-          "losses": 2,
+          "losses": 3,
           "ties": 0
         },
         "0024": {
-          "wins": 11,
+          "wins": 12,
           "losses": 10,
           "ties": 0
         },
         "0014": {
           "wins": 6,
+          "losses": 9,
+          "ties": 0
+        },
+        "0020": {
+          "wins": 7,
+          "losses": 9,
+          "ties": 0
+        },
+        "0017": {
+          "wins": 15,
+          "losses": 14,
+          "ties": 0
+        },
+        "0009": {
+          "wins": 2,
+          "losses": 1,
+          "ties": 0
+        },
+        "0019": {
+          "wins": 14,
+          "losses": 10,
+          "ties": 0
+        },
+        "0022": {
+          "wins": 12,
+          "losses": 12,
+          "ties": 0
+        },
+        "0013": {
+          "wins": 6,
           "losses": 8,
+          "ties": 0
+        },
+        "0016": {
+          "wins": 7,
+          "losses": 10,
+          "ties": 0
+        },
+        "0018": {
+          "wins": 9,
+          "losses": 7,
+          "ties": 0
+        },
+        "0023": {
+          "wins": 17,
+          "losses": 9,
           "ties": 0
         },
         "0001": {
@@ -49264,16 +51248,6 @@
           "losses": 1,
           "ties": 0
         },
-        "0013": {
-          "wins": 5,
-          "losses": 8,
-          "ties": 0
-        },
-        "0018": {
-          "wins": 9,
-          "losses": 6,
-          "ties": 0
-        },
         "0008": {
           "wins": 3,
           "losses": 1,
@@ -49282,41 +51256,6 @@
         "0003": {
           "wins": 1,
           "losses": 6,
-          "ties": 0
-        },
-        "0019": {
-          "wins": 14,
-          "losses": 8,
-          "ties": 0
-        },
-        "0016": {
-          "wins": 7,
-          "losses": 9,
-          "ties": 0
-        },
-        "0017": {
-          "wins": 15,
-          "losses": 12,
-          "ties": 0
-        },
-        "0022": {
-          "wins": 11,
-          "losses": 12,
-          "ties": 0
-        },
-        "0020": {
-          "wins": 6,
-          "losses": 8,
-          "ties": 0
-        },
-        "0023": {
-          "wins": 17,
-          "losses": 8,
-          "ties": 0
-        },
-        "0009": {
-          "wins": 2,
-          "losses": 0,
           "ties": 0
         },
         "0004": {
@@ -49347,6 +51286,18 @@
             "week": 4,
             "score": 102.25,
             "opponentScore": 99.15,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0007",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 12,
+            "score": 116.22,
+            "opponentScore": 170.9,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -49394,6 +51345,18 @@
         "0011": [
           {
             "year": 2012,
+            "week": 2,
+            "score": 105.61,
+            "opponentScore": 125.49,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
             "week": 5,
             "score": 120.1,
             "opponentScore": 109.84,
@@ -49430,6 +51393,18 @@
           }
         ],
         "0021": [
+          {
+            "year": 2012,
+            "week": 5,
+            "score": 120.1,
+            "opponentScore": 135.7,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
           {
             "year": 2012,
             "week": 6,
@@ -49578,6 +51553,18 @@
         "0012": [
           {
             "year": 2012,
+            "week": 1,
+            "score": 115.39,
+            "opponentScore": 129.2,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
             "week": 8,
             "score": 121.85,
             "opponentScore": 122.13,
@@ -49614,6 +51601,18 @@
           }
         ],
         "0024": [
+          {
+            "year": 2012,
+            "week": 6,
+            "score": 126.17,
+            "opponentScore": 113.31,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0024",
+            "bothAttributed": false
+          },
           {
             "year": 2012,
             "week": 14,
@@ -49870,6 +51869,18 @@
         "0014": [
           {
             "year": 2012,
+            "week": 7,
+            "score": 122.75,
+            "opponentScore": 128.48,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2012,
             "week": 15,
             "score": 33.29,
             "opponentScore": 99.41,
@@ -50037,24 +52048,12 @@
             "bothAttributed": true
           }
         ],
-        "0001": [
+        "0020": [
           {
-            "year": 2013,
-            "week": 4,
-            "score": 105.72,
-            "opponentScore": 155.98,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          },
-          {
-            "year": 2015,
+            "year": 2012,
             "week": 1,
-            "score": 104.35,
-            "opponentScore": 141.49,
+            "score": 115.39,
+            "opponentScore": 114.7,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -50063,256 +52062,22 @@
             "bothAttributed": true
           },
           {
-            "year": 2022,
-            "week": 16,
-            "score": 89.47,
-            "opponentScore": 71.64,
-            "isPlayoff": true,
-            "playoffRound": "Quarterfinal",
-            "playoffBracket": "nit",
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          }
-        ],
-        "0005": [
-          {
-            "year": 2013,
-            "week": 6,
-            "score": 98.83,
-            "opponentScore": 119.04,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": "0005",
-            "bothAttributed": false
-          },
-          {
-            "year": 2015,
-            "week": 6,
-            "score": 120.09,
-            "opponentScore": 99.28,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          }
-        ],
-        "0013": [
-          {
-            "year": 2013,
-            "week": 13,
-            "score": 149.22,
-            "opponentScore": 113.38,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": "0013",
-            "bothAttributed": false
-          },
-          {
-            "year": 2013,
-            "week": 14,
-            "score": 141.34,
-            "opponentScore": 214.24,
-            "isPlayoff": true,
-            "playoffRound": "Quarterfinal",
-            "playoffBracket": "championship",
-            "sourceFranchiseId": null,
-            "opponentSourceId": "0013",
-            "bothAttributed": false
-          },
-          {
-            "year": 2014,
-            "week": 13,
-            "score": 117.5,
-            "opponentScore": 154.41,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": "0013",
-            "bothAttributed": false
-          },
-          {
-            "year": 2015,
+            "year": 2012,
             "week": 3,
-            "score": 93.7,
-            "opponentScore": 181.01,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": "0013",
-            "bothAttributed": false
-          },
-          {
-            "year": 2017,
-            "week": 2,
-            "score": 130.16,
-            "opponentScore": 123.08,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": "0013",
-            "bothAttributed": false
-          },
-          {
-            "year": 2018,
-            "week": 14,
-            "score": 118.27,
-            "opponentScore": 93.71,
-            "isPlayoff": true,
-            "playoffRound": "Quarterfinal",
-            "playoffBracket": "nit",
-            "sourceFranchiseId": null,
-            "opponentSourceId": "0013",
-            "bothAttributed": false
-          },
-          {
-            "year": 2019,
-            "week": 2,
-            "score": 98.58,
-            "opponentScore": 111.15,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": "0013",
-            "bothAttributed": false
-          },
-          {
-            "year": 2020,
-            "week": 2,
-            "score": 137.97,
-            "opponentScore": 159.54,
+            "score": 122.86,
+            "opponentScore": 134.21,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
             "sourceFranchiseId": null,
             "opponentSourceId": null,
             "bothAttributed": true
-          },
-          {
-            "year": 2021,
-            "week": 2,
-            "score": 91.48,
-            "opponentScore": 111.37,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          },
-          {
-            "year": 2022,
-            "week": 2,
-            "score": 120.88,
-            "opponentScore": 123.95,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          },
-          {
-            "year": 2023,
-            "week": 2,
-            "score": 113.92,
-            "opponentScore": 101.8,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          },
-          {
-            "year": 2024,
-            "week": 2,
-            "score": 137.3,
-            "opponentScore": 128.7,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          },
-          {
-            "year": 2025,
-            "week": 2,
-            "score": 157.43,
-            "opponentScore": 169.18,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          }
-        ],
-        "0018": [
-          {
-            "year": 2013,
-            "week": 2,
-            "score": 68.64,
-            "opponentScore": 100.97,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": "0018",
-            "bothAttributed": false
           },
           {
             "year": 2013,
-            "week": 15,
-            "score": 97.66,
-            "opponentScore": 172.28,
-            "isPlayoff": true,
-            "playoffRound": "Quarterfinal",
-            "playoffBracket": "conference",
-            "sourceFranchiseId": null,
-            "opponentSourceId": "0018",
-            "bothAttributed": false
-          },
-          {
-            "year": 2014,
-            "week": 2,
-            "score": 66.03,
-            "opponentScore": 108.24,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": "0018",
-            "bothAttributed": false
-          },
-          {
-            "year": 2014,
-            "week": 5,
-            "score": 115.06,
-            "opponentScore": 98.67,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": "0018",
-            "bothAttributed": false
-          },
-          {
-            "year": 2015,
-            "week": 13,
-            "score": 132.3,
-            "opponentScore": 124.07,
+            "week": 7,
+            "score": 115.36,
+            "opponentScore": 143.86,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -50320,195 +52085,11 @@
             "opponentSourceId": null,
             "bothAttributed": true
           },
-          {
-            "year": 2015,
-            "week": 17,
-            "score": 108.2,
-            "opponentScore": 78.08,
-            "isPlayoff": true,
-            "playoffRound": "NIT Championship",
-            "playoffBracket": "nit",
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          },
-          {
-            "year": 2017,
-            "week": 13,
-            "score": 149.66,
-            "opponentScore": 105.68,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          },
-          {
-            "year": 2019,
-            "week": 13,
-            "score": 73.49,
-            "opponentScore": 148.61,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          },
-          {
-            "year": 2020,
-            "week": 3,
-            "score": 130.7,
-            "opponentScore": 121.03,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          },
-          {
-            "year": 2021,
-            "week": 3,
-            "score": 124.47,
-            "opponentScore": 161.52,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          },
-          {
-            "year": 2022,
-            "week": 3,
-            "score": 103.48,
-            "opponentScore": 126.85,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          },
-          {
-            "year": 2023,
-            "week": 12,
-            "score": 137.98,
-            "opponentScore": 130.26,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          },
-          {
-            "year": 2024,
-            "week": 13,
-            "score": 135.47,
-            "opponentScore": 96.86,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          },
-          {
-            "year": 2025,
-            "week": 13,
-            "score": 118.08,
-            "opponentScore": 97.28,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          },
-          {
-            "year": 2025,
-            "week": 16,
-            "score": 193.66,
-            "opponentScore": 94.15,
-            "isPlayoff": true,
-            "playoffRound": "NL Conference Championship",
-            "playoffBracket": "conference",
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          }
-        ],
-        "0008": [
           {
             "year": 2013,
-            "week": 16,
-            "score": 123.3,
-            "opponentScore": 115.4,
-            "isPlayoff": true,
-            "playoffRound": "Championship",
-            "playoffBracket": "championship",
-            "sourceFranchiseId": null,
-            "opponentSourceId": "0008",
-            "bothAttributed": false
-          },
-          {
-            "year": 2015,
-            "week": 14,
-            "score": 130.48,
-            "opponentScore": 116.99,
-            "isPlayoff": true,
-            "playoffRound": "Quarterfinal",
-            "playoffBracket": "championship",
-            "sourceFranchiseId": null,
-            "opponentSourceId": "0008",
-            "bothAttributed": false
-          },
-          {
-            "year": 2017,
-            "week": 14,
-            "score": 106.87,
-            "opponentScore": 122.34,
-            "isPlayoff": true,
-            "playoffRound": "Quarterfinal",
-            "playoffBracket": "championship",
-            "sourceFranchiseId": null,
-            "opponentSourceId": "0008",
-            "bothAttributed": false
-          },
-          {
-            "year": 2020,
-            "week": 14,
-            "score": 142.38,
-            "opponentScore": 120.41,
-            "isPlayoff": true,
-            "playoffRound": "Quarterfinal",
-            "playoffBracket": "nit",
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          }
-        ],
-        "0003": [
-          {
-            "year": 2013,
-            "week": 1,
-            "score": 126.91,
-            "opponentScore": 135.78,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          },
-          {
-            "year": 2014,
-            "week": 1,
-            "score": 128.03,
-            "opponentScore": 137.06,
+            "week": 9,
+            "score": 79.94,
+            "opponentScore": 123.46,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -50520,117 +52101,19 @@
             "year": 2014,
             "week": 7,
             "score": 104.04,
-            "opponentScore": 119.48,
+            "opponentScore": 54.47,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
             "sourceFranchiseId": null,
             "opponentSourceId": null,
             "bothAttributed": true
-          },
-          {
-            "year": 2016,
-            "week": 14,
-            "score": 59.46,
-            "opponentScore": 67.3,
-            "isPlayoff": true,
-            "playoffRound": "Quarterfinal",
-            "playoffBracket": "championship",
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          },
-          {
-            "year": 2019,
-            "week": 17,
-            "score": 142.72,
-            "opponentScore": 133.23,
-            "isPlayoff": true,
-            "playoffRound": "NIT Championship",
-            "playoffBracket": "nit",
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          },
-          {
-            "year": 2021,
-            "week": 18,
-            "score": 123.7,
-            "opponentScore": 126.94,
-            "isPlayoff": true,
-            "playoffRound": "NIT Championship",
-            "playoffBracket": "nit",
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          },
-          {
-            "year": 2022,
-            "week": 15,
-            "score": 75.53,
-            "opponentScore": 120.34,
-            "isPlayoff": true,
-            "playoffRound": "Quarterfinal",
-            "playoffBracket": "nit",
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          }
-        ],
-        "0019": [
-          {
-            "year": 2013,
-            "week": 1,
-            "score": 126.91,
-            "opponentScore": 85.06,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": "0019",
-            "bothAttributed": false
-          },
-          {
-            "year": 2013,
-            "week": 6,
-            "score": 98.83,
-            "opponentScore": 69.7,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": "0019",
-            "bothAttributed": false
           },
           {
             "year": 2014,
-            "week": 1,
-            "score": 128.03,
-            "opponentScore": 184.86,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": "0019",
-            "bothAttributed": false
-          },
-          {
-            "year": 2014,
-            "week": 6,
-            "score": 119.28,
-            "opponentScore": 157.56,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": "0019",
-            "bothAttributed": false
-          },
-          {
-            "year": 2015,
-            "week": 6,
-            "score": 120.09,
-            "opponentScore": 116.62,
+            "week": 9,
+            "score": 97.52,
+            "opponentScore": 115.01,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -50640,359 +52123,21 @@
           },
           {
             "year": 2015,
-            "week": 10,
-            "score": 122.18,
-            "opponentScore": 112.4,
+            "week": 9,
+            "score": 110.77,
+            "opponentScore": 110.76,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
             "sourceFranchiseId": null,
             "opponentSourceId": null,
             "bothAttributed": true
-          },
-          {
-            "year": 2017,
-            "week": 3,
-            "score": 60.69,
-            "opponentScore": 109.73,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          },
-          {
-            "year": 2017,
-            "week": 6,
-            "score": 135.52,
-            "opponentScore": 143.07,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          },
-          {
-            "year": 2019,
-            "week": 3,
-            "score": 151.48,
-            "opponentScore": 116.01,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          },
-          {
-            "year": 2019,
-            "week": 6,
-            "score": 110.45,
-            "opponentScore": 99.62,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          },
-          {
-            "year": 2020,
-            "week": 6,
-            "score": 90.92,
-            "opponentScore": 162.96,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          },
-          {
-            "year": 2020,
-            "week": 13,
-            "score": 119.3,
-            "opponentScore": 99.62,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          },
-          {
-            "year": 2021,
-            "week": 6,
-            "score": 140.47,
-            "opponentScore": 83.17,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          },
-          {
-            "year": 2021,
-            "week": 13,
-            "score": 112.18,
-            "opponentScore": 91.88,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          },
-          {
-            "year": 2022,
-            "week": 6,
-            "score": 82.23,
-            "opponentScore": 107.17,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          },
-          {
-            "year": 2022,
-            "week": 13,
-            "score": 124.81,
-            "opponentScore": 138.67,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          },
-          {
-            "year": 2023,
-            "week": 6,
-            "score": 121.38,
-            "opponentScore": 85.84,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          },
-          {
-            "year": 2023,
-            "week": 13,
-            "score": 140.5,
-            "opponentScore": 127.59,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          },
-          {
-            "year": 2024,
-            "week": 3,
-            "score": 132.42,
-            "opponentScore": 151.07,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          },
-          {
-            "year": 2024,
-            "week": 7,
-            "score": 135.57,
-            "opponentScore": 109.91,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          },
-          {
-            "year": 2025,
-            "week": 3,
-            "score": 167.32,
-            "opponentScore": 97.77,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          },
-          {
-            "year": 2025,
-            "week": 7,
-            "score": 158.21,
-            "opponentScore": 148.71,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          }
-        ],
-        "0016": [
-          {
-            "year": 2013,
-            "week": 2,
-            "score": 68.64,
-            "opponentScore": 166.62,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": "0016",
-            "bothAttributed": false
-          },
-          {
-            "year": 2014,
-            "week": 2,
-            "score": 66.03,
-            "opponentScore": 98.73,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": "0016",
-            "bothAttributed": false
-          },
-          {
-            "year": 2014,
-            "week": 14,
-            "score": 82.46,
-            "opponentScore": 146.62,
-            "isPlayoff": true,
-            "playoffRound": "Quarterfinal",
-            "playoffBracket": "championship",
-            "sourceFranchiseId": null,
-            "opponentSourceId": "0016",
-            "bothAttributed": false
           },
           {
             "year": 2015,
-            "week": 13,
-            "score": 132.3,
-            "opponentScore": 144.88,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": "0016",
-            "bothAttributed": false
-          },
-          {
-            "year": 2017,
-            "week": 13,
-            "score": 149.66,
-            "opponentScore": 124.59,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": "0016",
-            "bothAttributed": true
-          },
-          {
-            "year": 2017,
-            "week": 15,
-            "score": 165,
-            "opponentScore": 151.17,
-            "isPlayoff": true,
-            "playoffRound": "Quarterfinal",
-            "playoffBracket": "nit",
-            "sourceFranchiseId": null,
-            "opponentSourceId": "0016",
-            "bothAttributed": true
-          },
-          {
-            "year": 2018,
-            "week": 17,
-            "score": 72.82,
-            "opponentScore": 123.36,
-            "isPlayoff": true,
-            "playoffRound": "NIT Championship",
-            "playoffBracket": "nit",
-            "sourceFranchiseId": null,
-            "opponentSourceId": "0016",
-            "bothAttributed": true
-          },
-          {
-            "year": 2019,
-            "week": 13,
-            "score": 73.49,
-            "opponentScore": 111.75,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": "0016",
-            "bothAttributed": false
-          },
-          {
-            "year": 2019,
-            "week": 15,
-            "score": 128.12,
-            "opponentScore": 113.22,
-            "isPlayoff": true,
-            "playoffRound": "Quarterfinal",
-            "playoffBracket": "nit",
-            "sourceFranchiseId": null,
-            "opponentSourceId": "0016",
-            "bothAttributed": false
-          },
-          {
-            "year": 2020,
-            "week": 3,
-            "score": 130.7,
-            "opponentScore": 145.09,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": "0016",
-            "bothAttributed": false
-          },
-          {
-            "year": 2021,
-            "week": 3,
-            "score": 124.47,
-            "opponentScore": 74.9,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": "0016",
-            "bothAttributed": false
-          },
-          {
-            "year": 2021,
-            "week": 15,
-            "score": 96.72,
-            "opponentScore": 81.28,
-            "isPlayoff": true,
-            "playoffRound": "Quarterfinal",
-            "playoffBracket": "nit",
-            "sourceFranchiseId": null,
-            "opponentSourceId": "0016",
-            "bothAttributed": false
-          },
-          {
-            "year": 2022,
-            "week": 3,
-            "score": 103.48,
-            "opponentScore": 117.27,
+            "week": 11,
+            "score": 114.68,
+            "opponentScore": 121.78,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -51001,10 +52146,70 @@
             "bothAttributed": true
           },
           {
-            "year": 2023,
+            "year": 2017,
             "week": 12,
-            "score": 137.98,
-            "opponentScore": 116.48,
+            "score": 85.02,
+            "opponentScore": 125.26,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2019,
+            "week": 12,
+            "score": 156.27,
+            "opponentScore": 134.68,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2020,
+            "week": 12,
+            "score": 75.06,
+            "opponentScore": 170.13,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2021,
+            "week": 12,
+            "score": 147.92,
+            "opponentScore": 115.87,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2022,
+            "week": 12,
+            "score": 77.46,
+            "opponentScore": 103,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2023,
+            "week": 3,
+            "score": 142.26,
+            "opponentScore": 146.64,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -51014,9 +52219,9 @@
           },
           {
             "year": 2024,
-            "week": 13,
-            "score": 135.47,
-            "opponentScore": 98.31,
+            "week": 9,
+            "score": 130.72,
+            "opponentScore": 129.23,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -51026,9 +52231,9 @@
           },
           {
             "year": 2025,
-            "week": 13,
-            "score": 118.08,
-            "opponentScore": 148.37,
+            "week": 9,
+            "score": 125.52,
+            "opponentScore": 75.37,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -51038,6 +52243,30 @@
           }
         ],
         "0017": [
+          {
+            "year": 2012,
+            "week": 2,
+            "score": 105.61,
+            "opponentScore": 147.97,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0017",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 12,
+            "score": 116.22,
+            "opponentScore": 135.06,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0017",
+            "bothAttributed": false
+          },
           {
             "year": 2013,
             "week": 4,
@@ -51363,7 +52592,347 @@
             "bothAttributed": true
           }
         ],
+        "0009": [
+          {
+            "year": 2012,
+            "week": 3,
+            "score": 122.86,
+            "opponentScore": 140.02,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2014,
+            "week": 6,
+            "score": 119.28,
+            "opponentScore": 99.68,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2018,
+            "week": 15,
+            "score": 124.92,
+            "opponentScore": 116.89,
+            "isPlayoff": true,
+            "playoffRound": "Quarterfinal",
+            "playoffBracket": "nit",
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          }
+        ],
+        "0019": [
+          {
+            "year": 2012,
+            "week": 4,
+            "score": 102.25,
+            "opponentScore": 135.49,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0019",
+            "bothAttributed": false
+          },
+          {
+            "year": 2012,
+            "week": 13,
+            "score": 103.05,
+            "opponentScore": 125.53,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0019",
+            "bothAttributed": false
+          },
+          {
+            "year": 2013,
+            "week": 1,
+            "score": 126.91,
+            "opponentScore": 85.06,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0019",
+            "bothAttributed": false
+          },
+          {
+            "year": 2013,
+            "week": 6,
+            "score": 98.83,
+            "opponentScore": 69.7,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0019",
+            "bothAttributed": false
+          },
+          {
+            "year": 2014,
+            "week": 1,
+            "score": 128.03,
+            "opponentScore": 184.86,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0019",
+            "bothAttributed": false
+          },
+          {
+            "year": 2014,
+            "week": 6,
+            "score": 119.28,
+            "opponentScore": 157.56,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0019",
+            "bothAttributed": false
+          },
+          {
+            "year": 2015,
+            "week": 6,
+            "score": 120.09,
+            "opponentScore": 116.62,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2015,
+            "week": 10,
+            "score": 122.18,
+            "opponentScore": 112.4,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2017,
+            "week": 3,
+            "score": 60.69,
+            "opponentScore": 109.73,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2017,
+            "week": 6,
+            "score": 135.52,
+            "opponentScore": 143.07,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2019,
+            "week": 3,
+            "score": 151.48,
+            "opponentScore": 116.01,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2019,
+            "week": 6,
+            "score": 110.45,
+            "opponentScore": 99.62,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2020,
+            "week": 6,
+            "score": 90.92,
+            "opponentScore": 162.96,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2020,
+            "week": 13,
+            "score": 119.3,
+            "opponentScore": 99.62,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2021,
+            "week": 6,
+            "score": 140.47,
+            "opponentScore": 83.17,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2021,
+            "week": 13,
+            "score": 112.18,
+            "opponentScore": 91.88,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2022,
+            "week": 6,
+            "score": 82.23,
+            "opponentScore": 107.17,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2022,
+            "week": 13,
+            "score": 124.81,
+            "opponentScore": 138.67,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2023,
+            "week": 6,
+            "score": 121.38,
+            "opponentScore": 85.84,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2023,
+            "week": 13,
+            "score": 140.5,
+            "opponentScore": 127.59,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2024,
+            "week": 3,
+            "score": 132.42,
+            "opponentScore": 151.07,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2024,
+            "week": 7,
+            "score": 135.57,
+            "opponentScore": 109.91,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2025,
+            "week": 3,
+            "score": 167.32,
+            "opponentScore": 97.77,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2025,
+            "week": 7,
+            "score": 158.21,
+            "opponentScore": 148.71,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          }
+        ],
         "0022": [
+          {
+            "year": 2012,
+            "week": 8,
+            "score": 121.85,
+            "opponentScore": 110.28,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0022",
+            "bothAttributed": false
+          },
           {
             "year": 2013,
             "week": 5,
@@ -51641,108 +53210,108 @@
             "bothAttributed": true
           }
         ],
-        "0020": [
+        "0013": [
           {
-            "year": 2013,
-            "week": 7,
-            "score": 115.36,
-            "opponentScore": 143.86,
+            "year": 2012,
+            "week": 9,
+            "score": 119.47,
+            "opponentScore": 92.13,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
             "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
+            "opponentSourceId": "0013",
+            "bothAttributed": false
           },
           {
             "year": 2013,
-            "week": 9,
-            "score": 79.94,
-            "opponentScore": 123.46,
+            "week": 13,
+            "score": 149.22,
+            "opponentScore": 113.38,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
             "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
+            "opponentSourceId": "0013",
+            "bothAttributed": false
+          },
+          {
+            "year": 2013,
+            "week": 14,
+            "score": 141.34,
+            "opponentScore": 214.24,
+            "isPlayoff": true,
+            "playoffRound": "Quarterfinal",
+            "playoffBracket": "championship",
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0013",
+            "bothAttributed": false
           },
           {
             "year": 2014,
-            "week": 7,
-            "score": 104.04,
-            "opponentScore": 54.47,
+            "week": 13,
+            "score": 117.5,
+            "opponentScore": 154.41,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
             "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          },
-          {
-            "year": 2014,
-            "week": 9,
-            "score": 97.52,
-            "opponentScore": 115.01,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
+            "opponentSourceId": "0013",
+            "bothAttributed": false
           },
           {
             "year": 2015,
-            "week": 9,
-            "score": 110.77,
-            "opponentScore": 110.76,
+            "week": 3,
+            "score": 93.7,
+            "opponentScore": 181.01,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
             "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
-          },
-          {
-            "year": 2015,
-            "week": 11,
-            "score": 114.68,
-            "opponentScore": 121.78,
-            "isPlayoff": false,
-            "playoffRound": null,
-            "playoffBracket": null,
-            "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
+            "opponentSourceId": "0013",
+            "bothAttributed": false
           },
           {
             "year": 2017,
-            "week": 12,
-            "score": 85.02,
-            "opponentScore": 125.26,
+            "week": 2,
+            "score": 130.16,
+            "opponentScore": 123.08,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
             "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
+            "opponentSourceId": "0013",
+            "bothAttributed": false
+          },
+          {
+            "year": 2018,
+            "week": 14,
+            "score": 118.27,
+            "opponentScore": 93.71,
+            "isPlayoff": true,
+            "playoffRound": "Quarterfinal",
+            "playoffBracket": "nit",
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0013",
+            "bothAttributed": false
           },
           {
             "year": 2019,
-            "week": 12,
-            "score": 156.27,
-            "opponentScore": 134.68,
+            "week": 2,
+            "score": 98.58,
+            "opponentScore": 111.15,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
             "sourceFranchiseId": null,
-            "opponentSourceId": null,
-            "bothAttributed": true
+            "opponentSourceId": "0013",
+            "bothAttributed": false
           },
           {
             "year": 2020,
-            "week": 12,
-            "score": 75.06,
-            "opponentScore": 170.13,
+            "week": 2,
+            "score": 137.97,
+            "opponentScore": 159.54,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -51752,9 +53321,9 @@
           },
           {
             "year": 2021,
-            "week": 12,
-            "score": 147.92,
-            "opponentScore": 115.87,
+            "week": 2,
+            "score": 91.48,
+            "opponentScore": 111.37,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -51764,9 +53333,9 @@
           },
           {
             "year": 2022,
-            "week": 12,
-            "score": 77.46,
-            "opponentScore": 103,
+            "week": 2,
+            "score": 120.88,
+            "opponentScore": 123.95,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -51776,9 +53345,9 @@
           },
           {
             "year": 2023,
-            "week": 3,
-            "score": 142.26,
-            "opponentScore": 146.64,
+            "week": 2,
+            "score": 113.92,
+            "opponentScore": 101.8,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -51788,9 +53357,9 @@
           },
           {
             "year": 2024,
-            "week": 9,
-            "score": 130.72,
-            "opponentScore": 129.23,
+            "week": 2,
+            "score": 137.3,
+            "opponentScore": 128.7,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -51800,9 +53369,9 @@
           },
           {
             "year": 2025,
-            "week": 9,
-            "score": 125.52,
-            "opponentScore": 75.37,
+            "week": 2,
+            "score": 157.43,
+            "opponentScore": 169.18,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -51811,7 +53380,419 @@
             "bothAttributed": true
           }
         ],
+        "0016": [
+          {
+            "year": 2012,
+            "week": 10,
+            "score": 119.14,
+            "opponentScore": 121.65,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0016",
+            "bothAttributed": false
+          },
+          {
+            "year": 2013,
+            "week": 2,
+            "score": 68.64,
+            "opponentScore": 166.62,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0016",
+            "bothAttributed": false
+          },
+          {
+            "year": 2014,
+            "week": 2,
+            "score": 66.03,
+            "opponentScore": 98.73,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0016",
+            "bothAttributed": false
+          },
+          {
+            "year": 2014,
+            "week": 14,
+            "score": 82.46,
+            "opponentScore": 146.62,
+            "isPlayoff": true,
+            "playoffRound": "Quarterfinal",
+            "playoffBracket": "championship",
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0016",
+            "bothAttributed": false
+          },
+          {
+            "year": 2015,
+            "week": 13,
+            "score": 132.3,
+            "opponentScore": 144.88,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0016",
+            "bothAttributed": false
+          },
+          {
+            "year": 2017,
+            "week": 13,
+            "score": 149.66,
+            "opponentScore": 124.59,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0016",
+            "bothAttributed": true
+          },
+          {
+            "year": 2017,
+            "week": 15,
+            "score": 165,
+            "opponentScore": 151.17,
+            "isPlayoff": true,
+            "playoffRound": "Quarterfinal",
+            "playoffBracket": "nit",
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0016",
+            "bothAttributed": true
+          },
+          {
+            "year": 2018,
+            "week": 17,
+            "score": 72.82,
+            "opponentScore": 123.36,
+            "isPlayoff": true,
+            "playoffRound": "NIT Championship",
+            "playoffBracket": "nit",
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0016",
+            "bothAttributed": true
+          },
+          {
+            "year": 2019,
+            "week": 13,
+            "score": 73.49,
+            "opponentScore": 111.75,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0016",
+            "bothAttributed": false
+          },
+          {
+            "year": 2019,
+            "week": 15,
+            "score": 128.12,
+            "opponentScore": 113.22,
+            "isPlayoff": true,
+            "playoffRound": "Quarterfinal",
+            "playoffBracket": "nit",
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0016",
+            "bothAttributed": false
+          },
+          {
+            "year": 2020,
+            "week": 3,
+            "score": 130.7,
+            "opponentScore": 145.09,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0016",
+            "bothAttributed": false
+          },
+          {
+            "year": 2021,
+            "week": 3,
+            "score": 124.47,
+            "opponentScore": 74.9,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0016",
+            "bothAttributed": false
+          },
+          {
+            "year": 2021,
+            "week": 15,
+            "score": 96.72,
+            "opponentScore": 81.28,
+            "isPlayoff": true,
+            "playoffRound": "Quarterfinal",
+            "playoffBracket": "nit",
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0016",
+            "bothAttributed": false
+          },
+          {
+            "year": 2022,
+            "week": 3,
+            "score": 103.48,
+            "opponentScore": 117.27,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2023,
+            "week": 12,
+            "score": 137.98,
+            "opponentScore": 116.48,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2024,
+            "week": 13,
+            "score": 135.47,
+            "opponentScore": 98.31,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2025,
+            "week": 13,
+            "score": 118.08,
+            "opponentScore": 148.37,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          }
+        ],
+        "0018": [
+          {
+            "year": 2012,
+            "week": 11,
+            "score": 75.36,
+            "opponentScore": 135.78,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0018",
+            "bothAttributed": false
+          },
+          {
+            "year": 2013,
+            "week": 2,
+            "score": 68.64,
+            "opponentScore": 100.97,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0018",
+            "bothAttributed": false
+          },
+          {
+            "year": 2013,
+            "week": 15,
+            "score": 97.66,
+            "opponentScore": 172.28,
+            "isPlayoff": true,
+            "playoffRound": "Quarterfinal",
+            "playoffBracket": "conference",
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0018",
+            "bothAttributed": false
+          },
+          {
+            "year": 2014,
+            "week": 2,
+            "score": 66.03,
+            "opponentScore": 108.24,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0018",
+            "bothAttributed": false
+          },
+          {
+            "year": 2014,
+            "week": 5,
+            "score": 115.06,
+            "opponentScore": 98.67,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0018",
+            "bothAttributed": false
+          },
+          {
+            "year": 2015,
+            "week": 13,
+            "score": 132.3,
+            "opponentScore": 124.07,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2015,
+            "week": 17,
+            "score": 108.2,
+            "opponentScore": 78.08,
+            "isPlayoff": true,
+            "playoffRound": "NIT Championship",
+            "playoffBracket": "nit",
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2017,
+            "week": 13,
+            "score": 149.66,
+            "opponentScore": 105.68,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2019,
+            "week": 13,
+            "score": 73.49,
+            "opponentScore": 148.61,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2020,
+            "week": 3,
+            "score": 130.7,
+            "opponentScore": 121.03,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2021,
+            "week": 3,
+            "score": 124.47,
+            "opponentScore": 161.52,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2022,
+            "week": 3,
+            "score": 103.48,
+            "opponentScore": 126.85,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2023,
+            "week": 12,
+            "score": 137.98,
+            "opponentScore": 130.26,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2024,
+            "week": 13,
+            "score": 135.47,
+            "opponentScore": 96.86,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2025,
+            "week": 13,
+            "score": 118.08,
+            "opponentScore": 97.28,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2025,
+            "week": 16,
+            "score": 193.66,
+            "opponentScore": 94.15,
+            "isPlayoff": true,
+            "playoffRound": "NL Conference Championship",
+            "playoffBracket": "conference",
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          }
+        ],
         "0023": [
+          {
+            "year": 2012,
+            "week": 13,
+            "score": 103.05,
+            "opponentScore": 158.64,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0023",
+            "bothAttributed": false
+          },
           {
             "year": 2013,
             "week": 8,
@@ -52113,12 +54094,12 @@
             "bothAttributed": true
           }
         ],
-        "0009": [
+        "0001": [
           {
-            "year": 2014,
-            "week": 6,
-            "score": 119.28,
-            "opponentScore": 99.68,
+            "year": 2013,
+            "week": 4,
+            "score": 105.72,
+            "opponentScore": 155.98,
             "isPlayoff": false,
             "playoffRound": null,
             "playoffBracket": null,
@@ -52127,10 +54108,184 @@
             "bothAttributed": true
           },
           {
-            "year": 2018,
+            "year": 2015,
+            "week": 1,
+            "score": 104.35,
+            "opponentScore": 141.49,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2022,
+            "week": 16,
+            "score": 89.47,
+            "opponentScore": 71.64,
+            "isPlayoff": true,
+            "playoffRound": "Quarterfinal",
+            "playoffBracket": "nit",
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          }
+        ],
+        "0005": [
+          {
+            "year": 2013,
+            "week": 6,
+            "score": 98.83,
+            "opponentScore": 119.04,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0005",
+            "bothAttributed": false
+          },
+          {
+            "year": 2015,
+            "week": 6,
+            "score": 120.09,
+            "opponentScore": 99.28,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          }
+        ],
+        "0008": [
+          {
+            "year": 2013,
+            "week": 16,
+            "score": 123.3,
+            "opponentScore": 115.4,
+            "isPlayoff": true,
+            "playoffRound": "Championship",
+            "playoffBracket": "championship",
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0008",
+            "bothAttributed": false
+          },
+          {
+            "year": 2015,
+            "week": 14,
+            "score": 130.48,
+            "opponentScore": 116.99,
+            "isPlayoff": true,
+            "playoffRound": "Quarterfinal",
+            "playoffBracket": "championship",
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0008",
+            "bothAttributed": false
+          },
+          {
+            "year": 2017,
+            "week": 14,
+            "score": 106.87,
+            "opponentScore": 122.34,
+            "isPlayoff": true,
+            "playoffRound": "Quarterfinal",
+            "playoffBracket": "championship",
+            "sourceFranchiseId": null,
+            "opponentSourceId": "0008",
+            "bothAttributed": false
+          },
+          {
+            "year": 2020,
+            "week": 14,
+            "score": 142.38,
+            "opponentScore": 120.41,
+            "isPlayoff": true,
+            "playoffRound": "Quarterfinal",
+            "playoffBracket": "nit",
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          }
+        ],
+        "0003": [
+          {
+            "year": 2013,
+            "week": 1,
+            "score": 126.91,
+            "opponentScore": 135.78,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2014,
+            "week": 1,
+            "score": 128.03,
+            "opponentScore": 137.06,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2014,
+            "week": 7,
+            "score": 104.04,
+            "opponentScore": 119.48,
+            "isPlayoff": false,
+            "playoffRound": null,
+            "playoffBracket": null,
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2016,
+            "week": 14,
+            "score": 59.46,
+            "opponentScore": 67.3,
+            "isPlayoff": true,
+            "playoffRound": "Quarterfinal",
+            "playoffBracket": "championship",
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2019,
+            "week": 17,
+            "score": 142.72,
+            "opponentScore": 133.23,
+            "isPlayoff": true,
+            "playoffRound": "NIT Championship",
+            "playoffBracket": "nit",
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2021,
+            "week": 18,
+            "score": 123.7,
+            "opponentScore": 126.94,
+            "isPlayoff": true,
+            "playoffRound": "NIT Championship",
+            "playoffBracket": "nit",
+            "sourceFranchiseId": null,
+            "opponentSourceId": null,
+            "bothAttributed": true
+          },
+          {
+            "year": 2022,
             "week": 15,
-            "score": 124.92,
-            "opponentScore": 116.89,
+            "score": 75.53,
+            "opponentScore": 120.34,
             "isPlayoff": true,
             "playoffRound": "Quarterfinal",
             "playoffBracket": "nit",
