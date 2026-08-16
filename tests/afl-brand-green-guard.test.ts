@@ -30,6 +30,24 @@
  *   - categorical palette (position colors) -> leave it alone
  * The allowlist below carries the second and third kinds, each with a reason.
  * Adding an entry is a design decision — write down why.
+ *
+ * KNOWN LIMITATIONS — this is a string scanner, not a CSS parser, and these
+ * were all demonstrated against it rather than guessed at. It is a net for the
+ * likely mistake, not a proof of absence:
+ *   - Color FUNCTIONS beyond the two rgb() spellings listed below slip past:
+ *     `hsl(134 49% 35%)` is the same green and is not matched.
+ *   - `#10b981` is deliberately absent (see FORBIDDEN) — it is
+ *     --color-secondary in dark but --color-success in light, so it cannot
+ *     tell a bug from correct usage.
+ *   - `--link-color-hover` resolves to --color-secondary in AFL LIGHT (only
+ *     html.dark[data-league="afl"] pins it red), but it is a legitimate token
+ *     to reference, so it is not forbidden outright. Check its light value if
+ *     you reach for it on an AFL surface.
+ *   - The allowlist is keyed file+needle, not file+line, so a NEW violation in
+ *     an already-allowlisted file passes. Keep allowlisted files small and
+ *     re-read them when they change.
+ *   - A line that opens a block comment after real code
+ *     (`color: #2e8743; /* note`) is skipped from that line on.
  */
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
@@ -47,6 +65,19 @@ const AFL_DIRS = [
 ];
 
 /**
+ * SHARED stylesheets that AFL pages import. A green here renders on the AFL
+ * just as surely as one in an AFL-only file — `schefter-feed.css` is imported
+ * by both leagues' index/news/news-detail pages, and its article and external
+ * card accents were still TheLeague green after the first sweep of this PR.
+ *
+ * The rule for these files is different: TheLeague's green is CORRECT on
+ * TheLeague, so the fix is an `html[data-league="afl"]` override, not a swap.
+ * A bare --color-secondary rule is therefore only a violation if the file has
+ * no AFL override for the same property — which is what this checks.
+ */
+const SHARED_STYLESHEETS = [path.join(SRC, 'styles', 'schefter-feed.css')];
+
+/**
  * TheLeague's brand green: the tokens, and the literal values they resolve to.
  *
  * Deliberately NOT listed: `#10b981`. It is --color-secondary's DARK value,
@@ -58,7 +89,11 @@ const AFL_DIRS = [
  */
 const FORBIDDEN = [
   '--color-secondary',       // also catches --color-secondary-light
+  '--btn-secondary-bg',      // tokens.css:365 — alias: var(--color-secondary)
+  '--secondary-color',       // tokens.css:544 — alias: var(--color-secondary)
   '#2e8743',                 // tokens.css   --color-secondary (light)
+  'rgb(46, 135, 67)',        // #2e8743 in rgb() form
+  'rgb(46,135,67)',
   '#3c9950',                 // tokens.css   --color-secondary-light
   '#4ade80',                 // tokens-dark.css --color-secondary-light
 ];
@@ -81,6 +116,22 @@ const ALLOWLIST = new Map<string, string>([
       '--btn-secondary-bg references above — same categorical-palette reason.',
   ],
   [
+    'pages/afl-fantasy/lineup.astro:--btn-secondary-bg',
+    'Alias of --color-secondary, used for --lineup-submit-ready in the same ' +
+      'categorical token block as the position palette above. Same reason.',
+  ],
+  [
+    'pages/afl-fantasy/docs/fantasy-league-design-spec.md:--color-secondary',
+    'Prose, not styling. The doc describes a --color-secondary-500 scale from ' +
+      'an early design spec — a different token family from the site\'s ' +
+      '--color-secondary — and applies no CSS to anything.',
+  ],
+  [
+    'pages/afl-fantasy/docs/fantasy-league-design-spec.md:#4ade80',
+    'Same design-spec prose: the hex appears in a documented color scale, not ' +
+      'in an applied rule.',
+  ],
+  [
     'pages/afl-fantasy/players.astro:#4ade80',
     'Conference tag chip. Its own light/dark pair (#15803d / #4ade80) rather ' +
       'than a --color-secondary reference, and it is a categorical tag color, ' +
@@ -93,7 +144,9 @@ function walk(dir: string, out: string[] = []): string[] {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) walk(full, out);
-    else if (/\.(astro|css|tsx?|jsx?)$/.test(entry.name)) out.push(full);
+    // .html / .md included: src/pages/afl-fantasy/docs/rules.html is a real AFL
+    // page and can carry an inline style="color:#2e8743" the same as any .astro.
+    else if (/\.(astro|css|tsx?|jsx?|html|md)$/.test(entry.name)) out.push(full);
   }
   return out;
 }
@@ -140,6 +193,29 @@ describe('AFL brand-green guard', () => {
         `an ALLOWLIST entry in this file explaining why the green is correct.\n\n` +
         violations.join('\n'),
     ).toEqual([]);
+  });
+
+  it('shared stylesheets imported by AFL pages carry an AFL accent override', () => {
+    const missing: string[] = [];
+
+    for (const file of SHARED_STYLESHEETS) {
+      if (!fs.existsSync(file)) continue;
+      const rel = path.relative(SRC, file).split(path.sep).join('/');
+      const css = fs.readFileSync(file, 'utf8');
+      if (!/--color-secondary/.test(css)) continue;
+
+      // The file uses TheLeague's green somewhere, which is fine on TheLeague.
+      // It must then also carry an AFL-scoped override so the AFL doesn't
+      // inherit it.
+      if (!/html\[data-league=['"]afl['"]\]/.test(css)) {
+        missing.push(
+          `${rel} — uses --color-secondary but has no html[data-league="afl"] override, ` +
+            `so AFL pages importing it render TheLeague green.`,
+        );
+      }
+    }
+
+    expect(missing, missing.join('\n')).toEqual([]);
   });
 
   it('the allowlist has no stale entries', () => {

@@ -2079,3 +2079,36 @@ deliberately absent from the forbidden list (it is `--color-secondary` in dark
 but also `--color-success` in light, so it cannot distinguish the bug from the
 correct usage), and the scanner needs real block-comment state, since a wrapped
 sentence inside `/* … */` often starts with an ordinary word rather than `*`.
+
+**Third round, and the one with the widest blast radius: SHARED stylesheets.**
+`src/styles/schefter-feed.css` is imported by `{theleague,afl-fantasy}/index`,
+`/news`, and `/news/[id]` — six pages, two leagues, one file — and its article
+and external-post accents were still `var(--color-secondary, #2e8743)`. A guard
+that walks only `pages/afl-fantasy` and `components/afl*` cannot see it, which
+is exactly how it survived the first two rounds of this PR.
+
+The fix for a shared file is NOT the fix for an AFL-only file. TheLeague's
+green is *correct* on TheLeague, so swapping the token would just move the bug
+across the border. Scope it instead:
+
+```css
+html[data-league='afl'] .sf-post--article { border-left-color: var(--league-accent); }
+```
+
+`tests/afl-brand-green-guard.test.ts` encodes the distinction — for files in
+`SHARED_STYLESHEETS` it asserts that any file using `--color-secondary` also
+carries an `html[data-league="afl"]` override, rather than banning the token.
+
+**Measurement trap that cost real time here.** Reading contrast after
+`html.classList.remove('dark')` gives *plausible, wrong* numbers on any page
+whose surfaces re-resolve from `prefers-color-scheme` — the Schefter card
+measured 2.56:1 in "light" while its stylesheet plainly said `--card-bg: #fff`,
+because the pane's own scheme was dark and the site's `auto` preference won.
+Set the browser's color scheme (`resize_window { colorScheme: 'light' }`) and
+reload, rather than toggling the class. The tell is a computed background that
+contradicts the only CSS rule that matches the element.
+
+One more non-text contrast note from the same round: `--content-bg-accent` is
+`#66abea` in light — a saturated mid-blue, not a neutral. Nothing clears 3:1 as
+a fill on it (the old TheLeague-green progress bar managed 1.84:1). For a
+progress track or any recessed strip, `--content-bg-muted` is the right token.
