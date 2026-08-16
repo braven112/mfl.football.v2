@@ -3260,9 +3260,12 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     transform: scale(1.1);
   }
 
+  /* Match the active .view-tab / .mode-btn treatment exactly — same
+     --color-primary ring and tint, so every selected control on this card
+     reads as one blue in both themes. */
   .team-icon-btn[data-active="true"] {
-    background: var(--color-gray-50, #f9fafb);
-    box-shadow: var(--box-shadow-focus-ring);
+    background: color-mix(in srgb, var(--color-primary, #1c497c) 12%, var(--content-bg, white));
+    border-color: var(--color-primary, #1c497c);
   }
 
   .team-icon-img {
