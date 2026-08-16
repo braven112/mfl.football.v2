@@ -120,7 +120,7 @@ Copilot auto-reviews most PRs and adds inline comments separately from the revie
 
 ```bash
 gh pr view <PR_NUMBER> --json reviews --jq '.reviews[] | select(.author.login == "copilot-pull-request-reviewer") | .body' | head -200
-gh api repos/<owner>/<repo>/pulls/<PR_NUMBER>/comments --jq '[.[] | select(.user.login == "Copilot") | {path: .path, line: .line, body: .body}]'
+gh api repos/{owner}/{repo}/pulls/<PR_NUMBER>/comments --jq '[.[] | select(.user.login == "Copilot") | {path: .path, line: .line, body: .body}]'
 ```
 
 Each Copilot inline comment counts as a finding. Classify each by your own judgment (Critical / Important / Suggestion) since Copilot doesn't label severity — use the same bar the other reviewers would.
@@ -133,7 +133,7 @@ If no Copilot review has appeared yet (it can lag a minute), retry once after 30
 
 ```bash
 gh pr checks <PR_NUMBER> | grep -i codeql
-gh api repos/braven112/mfl.football.v2/code-scanning/alerts \
+gh api repos/{owner}/{repo}/code-scanning/alerts \
   --jq '[.[] | select(.state=="open") | {rule: .rule.id, sev: .rule.severity, path: .most_recent_instance.location.path, line: .most_recent_instance.location.start_line}]'
 ```
 
@@ -165,6 +165,16 @@ Be genuinely open here — an outside reviewer questioning a premise is the
 point, not noise. Several of this repo's worst bugs were rules that were
 themselves wrong. "CLAUDE.md says so" is a reason to check the rule, not
 automatically to dismiss the finding.
+
+**Watch for knowledge-cutoff findings specifically.** The advisory models have
+older training data than this repo's dependencies. On PR #544 Gemini filed two
+CRITICAL findings claiming `actions/checkout@v6` and `actions/setup-node@v6`
+do not exist and "only exist up to v4" — while running inside a job whose own
+Checkout step had just succeeded on v6, in a repo that uses v6 in 29 places.
+Under the old tally-the-severities rule those two would have blocked the merge.
+Any finding of the form "X does not exist" or "X is not a valid version" needs
+a check against reality (does it run? is it already used elsewhere?) before it
+counts for anything.
 
 Present your adjudication, showing rejections as well as accepts — a rejected
 finding the user disagrees with is exactly what they need to see:
