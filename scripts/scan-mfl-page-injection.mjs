@@ -132,7 +132,7 @@ function scanHtml(html) {
   }
 
   // Inline scripts matching any redirect/obfuscation pattern.
-  const inlineRe = /<script\b(?![^>]*\bsrc\s*=)[^>]*>([\s\S]*?)<\/script>/gi;
+  const inlineRe = /<script\b(?![^>]*\bsrc\s*=)[^>]*>([\s\S]*?)<\/script\s*>/gi;
   while ((m = inlineRe.exec(html))) {
     const body = m[1];
     if (!body.trim()) continue;
@@ -157,7 +157,7 @@ function scanHtml(html) {
 /** Does the schedule table survive on this page? */
 function scheduleSignal(html, names) {
   const text = html
-    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<script[\s\S]*?<\/script\s*>/gi, ' ')
     .replace(/<[^>]+>/g, ' ')
     .replace(/&nbsp;/g, ' ')
     .replace(/\s+/g, ' ');
@@ -242,6 +242,14 @@ console.log(
 const offHosts = [...new Set(dirty.flatMap((r) => r.findings.map((f) => f.host).filter(Boolean)))];
 if (offHosts.length) console.log(`Unexpected hosts referenced: ${offHosts.join(', ')}`);
 
+// Anything derived from a fetched page is escaped before it reaches the CI job
+// summary. This tool exists to report on pages that may be hostile, so letting
+// their markup through unescaped would let a compromised page write its own
+// findings into our Actions output. Pipes break the table; backticks and angle
+// brackets let it style itself.
+const mdCell = (v) =>
+  String(v ?? '').replace(/[|`<>\\]/g, (c) => '\\' + c).replace(/\r?\n/g, ' ').slice(0, 300);
+
 if (process.env.GITHUB_STEP_SUMMARY) {
   const md = [
     `### MFL page injection scan — ${SLUG}`,
@@ -250,11 +258,11 @@ if (process.env.GITHUB_STEP_SUMMARY) {
     '|---|---|---:|---:|---:|---|',
     ...rows.map(
       (r) =>
-        `| ${r.year} | ${r.page} | ${r.status} | ${r.bytes} | ${r.games} | ${r.findings.length ? `**${r.findings.map((f) => f.kind).join('; ')}**` : '—'} |`
+        `| ${r.year} | ${r.page} | ${mdCell(r.status)} | ${r.bytes} | ${r.games} | ${r.findings.length ? `**${mdCell(r.findings.map((f) => f.kind).join('; '))}**` : '—'} |`
     ),
     '',
     dirty.length ? `**Injection found on:** ${[...new Set(dirty.map((r) => `${r.year}/${r.page}`))].join(', ')}` : 'No injected scripts detected.',
-    offHosts.length ? `**Unexpected hosts:** ${offHosts.join(', ')}` : '',
+    offHosts.length ? `**Unexpected hosts:** ${offHosts.map(mdCell).join(', ')}` : '',
     recoverable.length ? `**Recoverable now:** ${[...new Set(recoverable.map((r) => r.year))].join(', ')}` : '',
   ]
     .filter(Boolean)
