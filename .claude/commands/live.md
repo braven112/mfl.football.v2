@@ -1,4 +1,4 @@
-Push the current branch, create a PR, gather reviews from Claude (in-session) plus Gemini, Codex and Copilot (on the PR), auto-approve if all pass, enable auto-merge, then monitor until the PR is merged.
+Push the current branch, create a PR, gather advisory reviews from Gemini, Codex and Copilot (on the PR) alongside Claude's own (in-session), adjudicate the findings yourself, auto-approve if nothing confirmed-critical remains, enable auto-merge, then monitor until the PR is merged.
 
 ## Steps
 
@@ -93,43 +93,83 @@ Each Copilot inline comment counts as a finding. Classify each by your own judgm
 
 If no Copilot review has appeared yet (it can lag a minute), retry once after 30 seconds. If still nothing, note "Copilot: no review posted" and proceed.
 
-### 7. Evaluate review results
+### 7. Adjudicate the findings
 
-Tally findings across ALL FOUR reviewers:
+**You are the decision maker. Gemini, Codex and Copilot are advisors.**
 
-- **Any Critical findings** → present the findings to the user, stop auto-approve, ask: "Fix these before merging?" Do not proceed until user confirms.
-- **Important findings only** → summarize them, note they should be addressed soon, but proceed with auto-approve.
-- **Suggestions / clean pass** → proceed directly.
+Their findings are input, not verdicts. None of them can see `CLAUDE.md`, the
+guard tests, or the history behind a deliberate-looking oddity, so they will
+confidently flag intentional patterns as bugs — `preserveFeedOrder: true` reads
+as a missing sort, the quiet-day GroupMe skip reads as a dropped notification,
+the pinned `stripLinkAdjacentPunctuation` call sites read as an unfinished
+refactor. A confident wrong "Critical" must not be able to stop a merge on its
+own say-so.
 
-**When fixing findings, fix all Critical + Important + Suggestions in one batch** — don't punt suggestions to follow-up. The user expects a clean PR before merge, not a backlog of "should fix soon" notes. Only defer if the user explicitly opts to ship-as-is.
+So do not tally severities and act on the total. Assess each finding yourself:
 
-Show a brief summary table:
+1. **Is it real?** Read the code it points at. Reproduce the claim mentally
+   against actual behavior — do not accept it because it is stated confidently
+   or because two reviewers said it.
+2. **Does the repo already answer it?** A rule in `CLAUDE.md` or a guard test
+   may make it a non-issue. If so, that's a rejection with a reason.
+3. **Then assign YOUR severity.** A reviewer's label is a suggestion. Findings
+   you have confirmed get your severity; findings you reject get none.
+
+Be genuinely open here — an outside reviewer questioning a premise is the
+point, not noise. Several of this repo's worst bugs were rules that were
+themselves wrong. "CLAUDE.md says so" is a reason to check the rule, not
+automatically to dismiss the finding.
+
+Present your adjudication, showing rejections as well as accepts — a rejected
+finding the user disagrees with is exactly what they need to see:
 
 ```
-Review Results
-─────────────────────────────
-Claude:   [Critical: N | Important: N | Suggestions: N]
-Gemini:   [Critical: N | Important: N | Suggestions: N]
-Codex:    [Critical: N | Important: N | Suggestions: N]
-Copilot:  [Critical: N | Important: N | Suggestions: N]
-Decision: [Proceeding / Blocked on N critical issue(s)]
+Review Adjudication
+──────────────────────────────────────────────────
+Confirmed
+  [Critical]  <finding>                    (Gemini, Copilot)
+  [Important] <finding>                    (Codex)
+Rejected
+  <finding>  — <why it isn't a problem>    (Gemini)
+Reviewers
+  Claude ✓   Gemini ✓   Codex did not run   Copilot ✓
+Decision: <Proceeding / Blocked on N confirmed critical>
 ```
 
-Use `did not run` rather than `0` for any reviewer that errored or was skipped — a failed reviewer and a clean reviewer must never render identically.
+Rules for the summary:
+- Use `did not run` for any reviewer that errored or was skipped. A failed
+  reviewer and a clean reviewer must never render identically.
+- Attribute each finding to the reviewer(s) that raised it, so a reviewer that
+  is consistently wrong becomes visible over time.
+
+Then:
+
+- **Confirmed Critical** → present them, stop auto-approve, ask the user to
+  confirm before proceeding.
+- **Confirmed Important** → fix them in this PR.
+- **Suggestions** → these are opt-in. Recommend the ones you'd take and say
+  why; apply them if the user agrees or if they're clearly right and trivial.
+  Do not silently adopt a reviewer's whole suggestion list.
+- **All rejected / clean** → proceed, but still show what was rejected.
+
+The user has the final say over you, as you have over the advisors. If they
+disagree with an adjudication, theirs wins.
 
 ### 7a. Re-review loop after fixes
 
-If you applied fixes for Critical/Important findings, re-run the Claude reviewer on the new commit to confirm:
-1. All prior findings are now FIXED
+If you applied fixes for confirmed findings, re-run the Claude reviewer on the new commit to confirm:
+1. All confirmed findings are now FIXED
 2. No new issues introduced by the refactor
 
-Pushing the fixes re-triggers the external-review workflow and Copilot, so re-fetch both (step 6 and 6a) against the new commit. Loop until all four reviewers are clean OR the user explicitly waives a remaining finding.
+Pushing the fixes re-triggers the external-review workflow and Copilot, so re-fetch both (step 6 and 6a) against the new commit and adjudicate the new round the same way.
+
+Loop until you have no confirmed unfixed findings. **A reviewer re-raising something you already rejected with a reason does not restart the loop** — note it and move on, otherwise a stubborn false positive blocks the PR forever.
 
 ### 8. Auto-approve the PR
 
-If no Critical issues from any reviewer:
+If no **confirmed** Critical issues:
 ```bash
-gh pr review <PR_NUMBER> --approve --body "Reviewed by Claude Code + Gemini + Codex — no critical issues found. CI must pass before merge."
+gh pr review <PR_NUMBER> --approve --body "Reviewed by Claude Code, with advisory review from Gemini/Codex/Copilot — no confirmed critical issues. CI must pass before merge."
 ```
 
 ### 9. Enable auto-merge
@@ -147,7 +187,7 @@ gh pr merge <PR_NUMBER> --squash --admin
 ```
 
 Only do this when:
-- All Critical/Important findings from Claude, Gemini, Codex, AND Copilot are resolved
+- All findings you CONFIRMED (from any reviewer) are resolved — rejected findings, with their reasons recorded, do not block
 - Every required status check is SUCCESS
 - The user has authorized the admin merge (either explicitly this session or via standing instruction)
 
@@ -191,5 +231,7 @@ When the PR is merged, print:
 - The PR URL (clickable)
 - The squash commit SHA
 - "Deployed to main ✓"
+- Any findings you REJECTED during adjudication, one line each. They shipped
+  unaddressed on your judgement, so the user gets a last look at that call.
 
 If CI failed, print the failing check names and tell the user to fix and re-run `/live`.
