@@ -486,13 +486,25 @@ describe('the prompt rule requires the pairing', () => {
     // construction the redactor uses, and for the same reason `\b` is wrong:
     // a word boundary cannot exist after a name that ends in punctuation, so
     // \bBe Rough!\b matches nothing.
+    //
+    // Case handling deliberately DIVERGES from the production redactor, which
+    // matches `gi` across the board. Blanket case-insensitivity is right there
+    // (over-matching a tip is safe — a stray hit fuzzes a word, a miss leaks
+    // an identity) and wrong here: at a floor of 2 the token list contains
+    // "DEAD", "CHAT", "GRID", "Pain", "Fire", "Heavy", so an `i` flag would
+    // flag ordinary prompt prose and make the guard unrunnable. The split is
+    // by DISTINCTIVENESS — a multi-word name or one >= 8 chars is unambiguous
+    // enough to match case-insensitively (catching a lowercase
+    // "pacific pigskins"), while short abbreviations must match exactly.
+    // Verified: 194 of the 328 forms qualify, with zero false positives
+    // against either region.
     const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const distinctive = (n: string) => /\s/.test(n) || n.length >= 8;
     const failures: string[] = [];
     for (const [label, text] of Object.entries(regions)) {
       for (const name of realNames) {
-        if (new RegExp(`(?<!\\w)${escape(name)}(?!\\w)`).test(text)) {
-          failures.push(`${label}: ${name}`);
-        }
+        const re = new RegExp(`(?<!\\w)${escape(name)}(?!\\w)`, distinctive(name) ? 'i' : '');
+        if (re.test(text)) failures.push(`${label}: ${name}`);
       }
     }
     expect(failures).toEqual([]);

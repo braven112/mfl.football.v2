@@ -165,6 +165,17 @@ prompt chunk gets added to it.
   lookarounds rather than `\b` for the reason CLAUDE.md gives: a word boundary
   cannot exist after a name ending in punctuation, so `\bBe Rough!\b` matches
   nothing.
+- **Case handling should NOT be copied from the redactor.** Production matches
+  `gi` everywhere, which is right for a redactor (over-matching a tip is safe)
+  and wrong for a guard: at a floor of 2 the token list holds `DEAD`, `CHAT`,
+  `GRID`, `Pain`, `Fire`, `Heavy`, so an `i` flag flags ordinary prompt prose
+  and the guard becomes unrunnable. But pure case-sensitivity misses a
+  lowercase `"pacific pigskins"`. Split on **distinctiveness** instead —
+  multi-word or >= 8 chars matches case-insensitively, short abbreviations must
+  match exactly. 194 of 328 forms qualify, still zero false positives. This is
+  the one place the guard deliberately diverges from the production matcher;
+  say so in a comment, because "reuse the production matcher" is the obvious
+  and wrong review suggestion.
 - **Assert both slice indices, not just that the slice is non-empty.** The two
   failure directions are asymmetric and neither raises. A renamed START anchor
   gives `indexOf === -1`, and `slice(-1, end)` collapses to nothing — green
