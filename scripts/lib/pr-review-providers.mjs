@@ -53,6 +53,26 @@ Rules:
 - Be direct and specific. A vague concern is worse than no concern.`;
 
 /**
+ * List model ids this API key can call, newest-looking first.
+ *
+ * Only used to turn a 404 into an actionable error message. Filtered to models
+ * that actually support generateContent — the list also carries embedding and
+ * legacy models that would 400 on a review request.
+ */
+async function listGeminiModels(apiKey) {
+  const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', {
+    headers: { 'x-goog-api-key': apiKey },
+  });
+  if (!res.ok) throw new Error(`ListModels ${res.status}`);
+  const data = await res.json();
+  const usable = (data.models ?? [])
+    .filter((m) => (m.supportedGenerationMethods ?? []).includes('generateContent'))
+    .map((m) => m.name.replace(/^models\//, ''))
+    .filter((n) => !/embedding|aqa|vision-latest/.test(n));
+  return usable.length ? usable.join(', ') : '(none support generateContent)';
+}
+
+/**
  * Provider registry.
  *
  * Each entry owns its endpoint shape and response unwrapping. Model ids are
@@ -84,7 +104,18 @@ export const PROVIDERS = {
       );
 
       if (!res.ok) {
-        throw new Error(`Gemini API ${res.status}: ${(await res.text()).slice(0, 500)}`);
+        const body = (await res.text()).slice(0, 500);
+        // Model ids churn — Google retires them for new API consumers with no
+        // warning, and a hardcoded guess goes stale silently. On a 404, ask the
+        // API which models this key can actually use and put the answer in the
+        // error, so fixing it is a copy-paste rather than another guess.
+        if (res.status === 404) {
+          const available = await listGeminiModels(apiKey).catch((e) => `(lookup failed: ${e.message})`);
+          throw new Error(
+            `Gemini API 404 for model "${model}": ${body}\n\nModels available to this key: ${available}`
+          );
+        }
+        throw new Error(`Gemini API ${res.status}: ${body}`);
       }
 
       const data = await res.json();
