@@ -29,18 +29,21 @@ const rosterModules = import.meta.glob('../../data/mfl-player-salaries-*.json', 
   eager: true,
 });
 
+// Year-filtered globs (2025+): all three feeds are filtered to the current
+// salary year below, so all-years globs only bloated the server chunk.
+// Pattern matches 2025-2099; tests/current-era-feed-globs.test.ts guards it.
 const salaryAdjustmentFeeds = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/salaryAdjustments.json',
+  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/salaryAdjustments.json',
   { eager: true }
 );
 
 const draftResultsFeeds = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/draftResults.json',
+  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/draftResults.json',
   { eager: true }
 );
 
 const playerFeeds = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/players.json',
+  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json',
   { eager: true }
 );
 

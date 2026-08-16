@@ -17,7 +17,7 @@ import type { DraftPrediction, ToiletBowlResult } from '../../types/standings';
 import { getTheLeaguePreference, setTheLeaguePreference, resolveTeamSelection } from '../../utils/team-preferences';
 import { getAuthUser } from '../../utils/auth';
 import { getCurrentSeasonYear, getNextDraftYear, getTestDateFromSearchParams } from '../../utils/league-year';
-import { getPlayerMap } from '../../utils/player-map';
+import { getPlayerMap, getGlobalPlayerMap } from '../../utils/player-map';
 import { resolveConfigForYear, resolvePreferredTeamIdForYear } from '../../utils/team-names';
 import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
 
@@ -33,7 +33,14 @@ const playoffBracketFeeds = import.meta.glob(
 const draftResultsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/draftResults.json', {
   eager: true,
 });
-const playersFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/players.json', {
+// Year-filtered (2025+): the current/next-year predictor reads the exact
+// year's feed; historical draft views (?year=) resolve player identities
+// from the precomputed all-years union (getGlobalPlayerMap, 0.37 MB)
+// instead of bundling ~22 MB of historical players.json into the chunk.
+// draftResultsFeeds above stays all-years on purpose — it drives the
+// ?year= history browser and is small. Guarded by
+// tests/current-era-feed-globs.test.ts.
+const playersFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json', {
   eager: true,
 });
 const futureDraftPicksFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/futureDraftPicks.json', {
@@ -233,34 +240,40 @@ const historyTeamConfigMap: Map<string, { id: string; name: string; icon: string
   ])
 );
 
-const playerFeedYears = Object.keys(playersFeeds)
-  .map((path) => extractFeedSeason(path))
-  .filter((y) => !!y)
-  .map((y) => Number(y))
-  .sort((a, b) => b - a);
-
+// Exact-year feed when it's in the filtered glob (2025+); null for
+// historical years, which buildPlayerLookup resolves from the all-years
+// identity union instead. (The old behavior seeded historical years from
+// whatever bundled feed was nearest, which left retired players blank when
+// the id wasn't in that feed — the union covers every id since 2011.)
 const resolvePlayersDataForYear = (year: number | string) => {
-  const numeric = Number(year);
   const exactKey = Object.keys(playersFeeds).find(
     (path) => extractFeedSeason(path) === String(year)
   );
-  if (exactKey) return getModuleData(playersFeeds[exactKey]);
-
-  const fallbackYear = playerFeedYears.find((y) => y <= numeric) ?? playerFeedYears[0];
-  const fallbackKey = Object.keys(playersFeeds).find(
-    (path) => extractFeedSeason(path) === String(fallbackYear)
-  );
-  return fallbackKey ? getModuleData(playersFeeds[fallbackKey]) : null;
+  return exactKey ? getModuleData(playersFeeds[exactKey]) : null;
 };
 
 const historyPlayersData = resolvePlayersDataForYear(historyYear);
 
 const buildPlayerLookup = (playersData: any, year: number) => {
-  const identityMap = getPlayerMap(year);
   const lookup = new Map<
     string,
     { name: string; position?: string; nflTeam?: string; espnId?: string }
   >();
+  if (!playersData) {
+    // Historical year: no per-year feed in the bundle. The precomputed union
+    // carries id/name/position/team/espnId for every player since 2011 —
+    // strictly better coverage than the old nearest-bundled-feed fallback.
+    for (const [id, identity] of getGlobalPlayerMap()) {
+      lookup.set(id, {
+        name: identity.name,
+        position: identity.position,
+        nflTeam: identity.nflTeam,
+        espnId: identity.espnId,
+      });
+    }
+    return lookup;
+  }
+  const identityMap = getPlayerMap(year);
   const players = playersData?.players?.player;
   const list = Array.isArray(players) ? players : players ? [players] : [];
   list.forEach((p: any) => {
