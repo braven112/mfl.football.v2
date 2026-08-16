@@ -1,7 +1,40 @@
 {
-  "lastScanTimestamp": "2026-08-16T20:34:06.553Z",
+  "lastScanTimestamp": "2026-08-16T20:38:37.260Z",
   "lastProcessedMflTimestamp": "1786894414",
   "posts": [
+    {
+      "id": "sf_speculation_1786912719236_78c07a73",
+      "timestamp": "2026-08-16T20:38:37.260Z",
+      "type": "transaction",
+      "transactionSubType": "trade_speculation",
+      "tier": "rumor",
+      "headline": "Schefter speculating…",
+      "body": "🟡 The talk-radio crowd in Wascawy Wabbits country has been floating a hypothetical: what if they moved Brock Bowers, the 23-year-old tight end, to The Dream in exchange for Jaxon Smith-Njigba, the 24-year-old receiver? Neither front office has acknowledged any such discussion — this isn't coming from the building, it's coming from fan boards and local beat writers speculating on roster fit and positional need. But the chatter is real enough that it's worth monitoring.",
+      "authorId": "claude",
+      "franchiseIds": [
+        "0009",
+        "0016"
+      ],
+      "league": "theleague",
+      "speculation": {
+        "seller": "0009",
+        "buyer": "0016",
+        "marquee": {
+          "id": "16641",
+          "name": "Bowers, Brock",
+          "position": "TE"
+        },
+        "returnPkg": [
+          {
+            "id": "16185",
+            "name": "Smith-Njigba, Jaxon",
+            "position": "WR"
+          }
+        ],
+        "score": 111,
+        "capRelief": false
+      }
+    },
     {
       "id": "espn_813c077f5006d",
       "timestamp": "2026-08-16T20:27:48.782Z",
