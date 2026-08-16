@@ -3,6 +3,7 @@ import { defineConfig, fontProviders } from 'astro/config';
 import { loadEnv } from 'vite';
 import vercel from '@astrojs/vercel';
 import react from '@astrojs/react';
+import { archivedFeedFiles } from './scripts/lib/archived-feed-files.mjs';
 
 // Local dev: hydrate process.env from .env / .env.local (`pnpm vercel env pull`).
 // Vite only exposes those files to import.meta.env, but the server utils
@@ -38,6 +39,10 @@ export default defineConfig({
       'src/data/theleague/schefter-feed.json',
       'data/afl-fantasy/schefter-feed.json',
     ],
+    // Keeps the file tracer's unresolvable-path fallback from shipping 20
+    // years of archived feeds in every request's function. See the module for
+    // why this is safe and why it counts seasons instead of naming a year.
+    excludeFiles: archivedFeedFiles(),
   }),
   integrations: [react()],
   fonts: [

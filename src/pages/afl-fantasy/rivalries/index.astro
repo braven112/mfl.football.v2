@@ -1,0 +1,435 @@
+---
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import aflConfig from '../../../../data/afl-fantasy/afl.config.json';
+import franchiseHistory from '../../../../data/afl-fantasy/derived/franchise-history.json';
+import {
+  currentOwnerMeetings,
+  tallyMeetings,
+  rivalryIntensity,
+  canonicalRivalryPair,
+  formatRivalryRecord,
+  describeCoverageGap,
+  MIN_RIVALRY_MEETINGS,
+} from '../../../utils/rivalries';
+
+export const prerender = false;
+
+type FranchiseRow = {
+  franchiseId: string;
+  currentName: string;
+  currentNameMedium: string;
+  currentNameShort?: string;
+  currentAbbrev?: string | null;
+  currentIcon: string | null;
+  matchupHistory: Record<string, any[]>;
+};
+
+const allFranchises: FranchiseRow[] = Object.values(
+  (franchiseHistory.franchises ?? {}) as Record<string, FranchiseRow>
+);
+
+// Conference/division come from the league config, not the derived file —
+// the registry config is the source of truth for today's alignment.
+const teamLookup: Record<string, any> = Object.fromEntries(
+  (aflConfig.teams as any[]).map((t) => [t.franchiseId, t])
+);
+const conferences: Array<{ code: string; name: string }> = (aflConfig.conferences ?? []) as any[];
+
+const displayName = (f: FranchiseRow) => f.currentNameMedium || f.currentName;
+const abbrev = (f: FranchiseRow) =>
+  f.currentAbbrev || teamLookup[f.franchiseId]?.abbrev || f.franchiseId;
+
+allFranchises.sort((a, b) => displayName(a).localeCompare(displayName(b)));
+
+type PairRecord = {
+  wins: number;
+  losses: number;
+  ties: number;
+  games: number;
+  playoffGames: number;
+  intensity: number;
+};
+
+function pairRecord(row: FranchiseRow, colId: string): PairRecord {
+  const meetings = currentOwnerMeetings(row.matchupHistory, colId);
+  const { wins, losses, ties, playoffGames } = tallyMeetings(meetings);
+  return {
+    wins,
+    losses,
+    ties,
+    games: meetings.length,
+    playoffGames,
+    intensity: rivalryIntensity(meetings.length, wins, losses, ties, playoffGames),
+  };
+}
+
+// Precompute the whole grid once. 24 franchises is 576 cells and each cell is
+// read twice (once per direction), so computing on demand inside the template
+// would walk every meeting list ~1000 times per request.
+const grid = new Map<string, PairRecord>();
+for (const row of allFranchises) {
+  for (const col of allFranchises) {
+    if (row.franchiseId === col.franchiseId) continue;
+    grid.set(`${row.franchiseId}:${col.franchiseId}`, pairRecord(row, col.franchiseId));
+  }
+}
+const cell = (rowId: string, colId: string) => grid.get(`${rowId}:${colId}`);
+
+// Hottest pairings league-wide, deduped so a rivalry appears once rather than
+// from both sides.
+const hottest = (() => {
+  const seen = new Set<string>();
+  const out: Array<{ a: FranchiseRow; b: FranchiseRow; rec: PairRecord }> = [];
+  for (const row of allFranchises) {
+    for (const col of allFranchises) {
+      if (row.franchiseId === col.franchiseId) continue;
+      const key = canonicalRivalryPair(row.franchiseId, col.franchiseId);
+      if (seen.has(key)) continue;
+      const rec = cell(row.franchiseId, col.franchiseId);
+      if (!rec || rec.games < MIN_RIVALRY_MEETINGS) continue;
+      seen.add(key);
+      out.push({ a: row, b: col, rec });
+    }
+  }
+  return out.sort((x, y) => y.rec.intensity - x.rec.intensity).slice(0, 8);
+})();
+
+const maxIntensity = hottest.length ? hottest[0].rec.intensity : 1;
+
+// Shading bucket for a matrix cell, 0 (cold/none) to 4 (hottest). Kept as a
+// discrete data attribute so the CSS carries the palette and stays theme-aware
+// rather than inlining computed colors per cell.
+const heat = (rec: PairRecord | undefined): number => {
+  if (!rec || rec.games === 0) return 0;
+  const ratio = maxIntensity > 0 ? rec.intensity / maxIntensity : 0;
+  if (ratio >= 0.8) return 4;
+  if (ratio >= 0.6) return 3;
+  if (ratio >= 0.4) return 2;
+  return 1;
+};
+
+const conferenceOf = (fid: string): string => teamLookup[fid]?.conference ?? '';
+const conferenceName = (code: string): string =>
+  conferences.find((c) => c.code === code)?.name ?? code;
+
+// Franchises grouped by conference for the per-conference matrices. A single
+// 24x24 grid is legible on a desktop but punishing on a phone; splitting it
+// keeps each table to 12 columns.
+const byConference = conferences.map((c) => ({
+  code: c.code,
+  name: c.name,
+  teams: allFranchises.filter((f) => conferenceOf(f.franchiseId) === c.code),
+}));
+
+const coverage: Array<any> = ((franchiseHistory as any).h2hCoverage ?? []) as any[];
+const coverageNote = describeCoverageGap(coverage);
+---
+
+<TheLeagueLayout title="Rivalry Matrix | AFL Fantasy">
+  <div class="rivalries">
+    <header class="rivalries-header">
+      <h1>Rivalry Matrix</h1>
+      <p class="rivalries-intro">
+        Head-to-head history between every AFL franchise under their current
+        owners. Closeness, total meetings and playoff stakes decide how hot a
+        pairing runs.
+      </p>
+    </header>
+
+    {hottest.length > 0 && (
+      <section class="rivalries-section">
+        <h2>Hottest Rivalries</h2>
+        <ul class="hot-list">
+          {hottest.map(({ a, b, rec }) => (
+            <li>
+              <a class="hot-card" href={`/afl-fantasy/rivalries/${canonicalRivalryPair(a.franchiseId, b.franchiseId)}`}>
+                <div class="hot-card__teams">
+                  {a.currentIcon ? <img src={a.currentIcon} alt="" loading="lazy" /> : null}
+                  <span class="hot-card__vs">vs</span>
+                  {b.currentIcon ? <img src={b.currentIcon} alt="" loading="lazy" /> : null}
+                </div>
+                <div class="hot-card__names">
+                  {displayName(a)} <span class="dim">vs</span> {displayName(b)}
+                </div>
+                <div class="hot-card__record">
+                  {formatRivalryRecord(rec.wins, rec.losses, rec.ties)} · {rec.games} games
+                  {rec.playoffGames > 0 ? ` · 🔥 ${rec.playoffGames} playoff` : ''}
+                </div>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )}
+
+    {byConference.map((conf) => (
+      <section class="rivalries-section">
+        <h2>{conf.name}</h2>
+        <p class="matrix-help">
+          Read across: each row shows that franchise's record against the
+          column. Tap a cell for the full series.
+        </p>
+        <div class="matrix-wrap">
+          <table class="matrix">
+            <thead>
+              <tr>
+                <th scope="col" class="matrix__corner">Team</th>
+                {conf.teams.map((col) => (
+                  <th scope="col" title={displayName(col)}>{abbrev(col)}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {conf.teams.map((row) => (
+                <tr>
+                  <th scope="row" class="matrix__rowhead">
+                    <a href={`/afl-fantasy/franchises/${row.franchiseId}`}>
+                      {row.currentIcon ? <img src={row.currentIcon} alt="" loading="lazy" /> : null}
+                      <span>{abbrev(row)}</span>
+                    </a>
+                  </th>
+                  {conf.teams.map((col) => {
+                    if (row.franchiseId === col.franchiseId) {
+                      return <td class="matrix__self" aria-label="—">—</td>;
+                    }
+                    const rec = cell(row.franchiseId, col.franchiseId);
+                    const label = rec && rec.games
+                      ? formatRivalryRecord(rec.wins, rec.losses, rec.ties)
+                      : '—';
+                    return (
+                      <td data-heat={heat(rec)}>
+                        {rec && rec.games ? (
+                          <a
+                            href={`/afl-fantasy/rivalries/${canonicalRivalryPair(row.franchiseId, col.franchiseId)}`}
+                            title={`${displayName(row)} vs ${displayName(col)} — ${label} in ${rec.games} meetings`}
+                          >
+                            {label}
+                          </a>
+                        ) : (
+                          <span class="dim">{label}</span>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    ))}
+
+    {coverageNote && (
+      <p class="rivalries-caveat">
+        <strong>Data note:</strong> {coverageNote} Every record on this page
+        counts the games MFL's archive holds, so anything missing there is
+        missing here.
+      </p>
+    )}
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .rivalries {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--spacing-md, 16px);
+  }
+
+  .rivalries-header h1 {
+    font-size: 1.6rem;
+    margin: 0 0 0.35rem;
+    color: var(--page-text);
+  }
+
+  .rivalries-intro {
+    color: var(--content-text-muted);
+    font-size: 0.9rem;
+    max-width: 65ch;
+    margin: 0 0 var(--spacing-lg, 24px);
+  }
+
+  .rivalries-section {
+    margin-bottom: var(--spacing-xl, 32px);
+  }
+
+  .rivalries-section h2 {
+    font-size: 1.15rem;
+    margin-bottom: var(--spacing-sm, 8px);
+    color: var(--page-text);
+  }
+
+  .matrix-help {
+    font-size: 0.8rem;
+    color: var(--content-text-muted);
+    margin: 0 0 var(--spacing-sm, 8px);
+  }
+
+  .hot-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: var(--spacing-sm, 8px);
+  }
+
+  .hot-card {
+    display: block;
+    padding: 0.75rem 0.85rem;
+    background: var(--card-bg);
+    border: 1px solid var(--content-border);
+    border-radius: 10px;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+  }
+
+  .hot-card:hover {
+    border-color: var(--league-accent);
+    transform: translateY(-2px);
+  }
+
+  .hot-card__teams {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .hot-card__teams img {
+    width: 34px;
+    height: 34px;
+    object-fit: contain;
+  }
+
+  .hot-card__vs,
+  .dim {
+    color: var(--content-text-muted);
+    font-size: 0.75rem;
+  }
+
+  .hot-card__names {
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-align: center;
+    color: var(--page-text);
+  }
+
+  .hot-card__record {
+    font-size: 0.78rem;
+    text-align: center;
+    color: var(--content-text-muted);
+    font-variant-numeric: tabular-nums;
+    margin-top: 0.2rem;
+  }
+
+  /* The grid scrolls inside its own container — the page body never does. */
+  .matrix-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--content-border);
+    border-radius: 10px;
+    background: var(--card-bg);
+  }
+
+  .matrix {
+    border-collapse: collapse;
+    font-size: 0.78rem;
+    width: 100%;
+  }
+
+  .matrix th,
+  .matrix td {
+    padding: 0.4rem 0.5rem;
+    text-align: center;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--content-border);
+    border-right: 1px solid var(--content-border);
+  }
+
+  .matrix thead th {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--content-text-muted);
+    background: var(--content-bg-muted);
+    position: sticky;
+    top: 0;
+  }
+
+  .matrix__corner,
+  .matrix__rowhead {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--content-bg-muted);
+    text-align: left;
+  }
+
+  .matrix__corner {
+    z-index: 2;
+  }
+
+  .matrix__rowhead a {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    text-decoration: none;
+    color: var(--page-text);
+    font-weight: 600;
+  }
+
+  .matrix__rowhead img {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+  }
+
+  .matrix td {
+    color: var(--page-text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .matrix td a {
+    color: inherit;
+    text-decoration: none;
+    display: block;
+  }
+
+  .matrix td a:hover {
+    text-decoration: underline;
+  }
+
+  .matrix__self {
+    color: var(--content-text-muted);
+    background: var(--content-bg-muted);
+  }
+
+  /* Heat shading. Values are tinted from the league accent via colour-mix so
+     both themes stay legible without a second hand-tuned palette. */
+  .matrix td[data-heat='1'] {
+    background: color-mix(in srgb, var(--league-accent) 8%, transparent);
+  }
+
+  .matrix td[data-heat='2'] {
+    background: color-mix(in srgb, var(--league-accent) 16%, transparent);
+  }
+
+  .matrix td[data-heat='3'] {
+    background: color-mix(in srgb, var(--league-accent) 26%, transparent);
+  }
+
+  .matrix td[data-heat='4'] {
+    background: color-mix(in srgb, var(--league-accent) 38%, transparent);
+    font-weight: 700;
+  }
+
+  .rivalries-caveat {
+    font-size: 0.8rem;
+    color: var(--content-text-muted);
+    max-width: 75ch;
+    border-left: 3px solid var(--content-border);
+    padding-left: 0.75rem;
+  }
+</style>

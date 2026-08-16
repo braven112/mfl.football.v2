@@ -363,3 +363,55 @@ round-trips through `new URL` loses the very input it meant to assert on.
 output. Use `--path-as-is` for any curl that carries an unusual path. Treat a
 clean localhost run as evidence about the happy path only, and verify
 host-dependent or normalization-dependent behavior on a Vercel preview.
+
+## 2026-08-16 - The Vercel Function Ships `data/` Twice, And One Copy Is The Whole Tree
+
+**Context:** Every deploy on a branch failed with "The Vercel Function
+`_render` is 254.49mb uncompressed which exceeds the maximum uncompressed size
+limit of 250mb". The branch added ~3.9 MB of recovered AFL schedules, so the
+obvious read was "this PR is too big" — and the obvious fixes (minify the
+committed JSON, trim the new data) were both wrong.
+
+**Insight:** A local `pnpm exec astro build` and `du -sh
+.vercel/output/functions/_render.func` is the only way to see this, and it told
+a different story: 262 MB, of which **165 MB was a raw copy of `data/`** sitting
+on top of the 78 MB `dist/` bundle that already contained the same JSON
+compiled into chunks. The data shipped twice, and `main` was itself at ~250 MB
+— one cron feed sync from breaking production deploys on its own.
+
+The raw copy exists because Vercel traces files with `@vercel/nft`, and several
+utils read feeds through paths it cannot resolve statically —
+`join(process.cwd(), dataPath, 'mfl-feeds', String(year))`, and a `readdirSync`
+of a `process.cwd()` directory. nft's fallback for an unresolvable path is to
+include the whole directory, so twenty years of archived feeds rode along on
+every request. Two things follow that are easy to get backwards:
+
+- **Removing one unresolvable read does not help.** There were a dozen. The
+  function stayed at 263 MB after the `readdirSync` was gone.
+- **`import.meta.glob` feeds are NOT what needs the raw copy.** A glob compiles
+  the JSON into `dist/server/chunks/` at build time, so excluding the raw file
+  cannot affect a globbed page. Only the `fs` readers need `data/` on disk —
+  and every one of them reads the current or prior season
+  (`rosters.astro`'s `feedYears` is `[leagueYear, seasonYear]`, `schefter-og`
+  tries `[year, year - 1]`, live-scoring scans newest-first and stops at the
+  first complete season). Historical seasons were being shipped for nobody.
+
+Grepping for "is this filename referenced in `src/`" is the wrong test — it
+cannot tell a glob reference from an `fs` reference, and it only found 13 MB.
+The right question is which *`fs` readers* need which *years*.
+
+**Recommendation:** The adapter's `excludeFiles` (`@astrojs/vercel` v11) takes
+explicit paths — no globs — so generate the list at config time from what's on
+disk rather than pinning years, and it needs no maintenance at either league's
+rollover. `scripts/lib/archived-feed-files.mjs` keeps the newest three seasons
+per league and drops the rest: 263 MB → **152 MB**. Keep *three*, not two — a
+new year's directory is created at rollover before it holds real data, and with
+a two-season window that stub would evict a season `schefter-og` still reads.
+
+Two related lessons. **Check the right check**: this branch was reported green
+for several rounds because "Vercel Preview Comments" (a different check that
+does pass) was being read instead of the "Vercel" commit status. And **treat
+immutable history as a build artifact**: `getGlobalPlayerMap()` was unioning 32
+seasons of `players.json` — 23.5 MB of I/O per cold start — to produce a 3,794
+row table that cannot change, now precomputed to 0.37 MB by
+`scripts/compute-player-identity-union.mjs`.

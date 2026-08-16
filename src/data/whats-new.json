@@ -1,5 +1,28 @@
 [
   {
+    "id": "afl-record-book-2026-08-16",
+    "date": "2026-08-16",
+    "category": "new-page",
+    "icon": "trophy",
+    "title": "Twenty-Two Seasons of Extremes, Finally Countable",
+    "summary": "The AFL Record Book is live — highest scores, biggest blowouts, closest finishes, longest streaks and the most-played rivalries, drawn from all 5,333 games the league has ever played.",
+    "description": [
+      "Here is a thing that was quietly impossible until this week: naming the biggest blowout in AFL history. MFL's archives had handed back 2007 through 2019 with the regular-season matchups stripped out, so any all-time list you built stopped being about the league and started being about whichever years happened to survive. Those seasons have now been pulled back in and checked against the official standings, and the Record Book is what you do with them.",
+      "It answers the questions that come up in the chat every year. The biggest blowout ever is Your Team Sucks over Joey's Team by 136.16 — in 2004, a season that was almost entirely invisible on this site until now. The closest finish is one hundredth of a point: The Mariachi Ninjas 110.77, The Boondock Saints 110.76, week 9 of 2015. The highest single game belongs to Drunk Indians, 231.72 in 2021. The longest winning streak is 16 straight by Whitman's Wonders, running from week 11 of 2011 into week 4 of 2012, and the longest losing streak is 16 as well, by Badd Boys, which took them from week 5 of 2015 to week 2 of 2016.",
+      "There are ten boards in total: highest single game, biggest blowout, closest finish, highest combined score, longest winning and losing streaks, most-played and most lopsided rivalries, best regular season and most points in a season. Every rivalry and every game links straight through to the pairing page, so you can go from \"we got destroyed once\" to the full series in one tap.",
+      "Two deliberate choices worth knowing about. Franchises appear under the name they carried that season — Cliffside Killer Clowns, Dicks out for Harambe, Taco Hell — because a record book that renames history is a worse record book. And forfeits are excluded: a 0.00 is not a performance, and letting them in would have handed \"biggest blowout\" to games nobody played.",
+      "One permanent hole, printed on the page rather than hidden: the AFL played its 2003 season on Yahoo and only the standings were ever typed into MFL. No game from that year has a score anywhere, so nothing from it can appear. Every season from 2004 on is complete."
+    ],
+    "image": "afl-record-book.webp",
+    "imageAlt": "The AFL Record Book page: ten leaderboard cards across three columns — highest single game, biggest blowout, closest finish, highest combined score, longest winning and losing streaks, most-played and most lopsided rivalries, best regular season and most points in a season — each listing five ranked records with team names, scores and the season they happened.",
+    "link": "/afl-fantasy/records",
+    "linkLabel": "Open the Record Book",
+    "excludeFromHero": true,
+    "leagues": [
+      "afl"
+    ]
+  },
+  {
     "id": "afl-pecking-order",
     "date": "2026-08-15",
     "category": "new-page",
@@ -64,6 +87,29 @@
     "excludeFromHero": true,
     "leagues": [
       "theleague",
+      "afl"
+    ]
+  },
+  {
+    "id": "afl-rivalries-highlights-trade-ledger-2026-08-12",
+    "date": "2026-08-12",
+    "title": "Twenty-Three Years of Grudges, Finally Written Down",
+    "summary": "AFL franchise pages now carry an all-time record, single-game highlights, a top-five rivals list and a full trade ledger — plus a brand-new rivalry matrix showing what every franchise has done to every other one since 2004.",
+    "description": [
+      "The AFL franchise page has spent its whole life showing you a trophy wall and a name history and then just… stopping. No record. No points. No sense of whether this franchise has been good for twenty years or good for one. That page now opens with the numbers: all-time record, win percentage, seasons played, career points, points per game, playoff appearances. Smokane FC, for the record, is 232-157 across 23 seasons with 46,022 points. That is a lot of football nobody could see until today.",
+      "Underneath it: Single-Game Highlights. Your best day ever, your worst day ever, and the two blowouts — the one you handed out and the one you took. Then Top Rivals, which is the part worth arguing about. It ranks opponents on how charged the series actually is, not just how often you played: an even record counts for more than a lopsided one, and playoff meetings count triple. Smokane's list is led by Fullybaked — 14-9 across 23 games with seven playoff meetings, which is more postseason history than most franchises have with anyone.",
+      "Every rival links to a full pairing page: the whole series in one table, every meeting since 2004, with closest game, biggest blowout, highest combined score and longest winning streak on top. Those pages know what round each playoff game was, too — Quarterfinal, Semifinal, AL and NL Conference Championships, NIT Championship, the whole ladder. And there is now a Rivalry Matrix under Franchises, split by conference, where you can read one franchise's record against all eleven of its conference-mates in a single row and see the hot pairings shaded red.",
+      "Last piece: the Trade Ledger. Every deal this franchise has ever made, grouped by year, with what went out, what came back, and the trade comment the owner typed at the time. Each partner links straight to your rivalry page with them, because a trade history and a grudge history are the same history.",
+      "One caveat when this shipped, since resolved: MFL's archived exports returned 2007-2019 with the regular-season matchups stripped, so head-to-head totals under-counted badly and leaned toward playoff games — Smokane's rivalry pages covered 233 of its 389 career games. Those seasons have since been recovered from MFL's authenticated schedule view and verified against the official standings, so every AFL season from 2004 on is now complete: Smokane's pages carry all 462 of its meetings. The one permanent gap is 2003, which the league played on Yahoo with only standings entered into MFL — no game from that season has a score anywhere, so it is missing from every rivalry record and always will be."
+    ],
+    "category": "new-feature",
+    "link": "/afl-fantasy/rivalries",
+    "linkLabel": "Open the rivalry matrix",
+    "icon": "trophy",
+    "image": "afl-rivalries.webp",
+    "imageAlt": "The AFL Rivalry Matrix: a Hottest Rivalries strip of head-to-head cards showing each pairing's record, total meetings and playoff count, above a per-conference grid where every franchise's record against each conference rival is shaded by intensity.",
+    "excludeFromHero": true,
+    "leagues": [
       "afl"
     ]
   },

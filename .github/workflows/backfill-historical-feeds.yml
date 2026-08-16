@@ -1,22 +1,47 @@
 name: Backfill Historical MFL Feeds
 
-# Manually-triggered one-off (or as-needed) backfill for missing/invalid
-# historical seasons. Pulls every gap year listed in the current league.json's
-# history.league array, then regenerates franchise-history.json and commits
-# any resulting changes back to whatever branch the workflow was launched on.
+# Manually-triggered backfill for missing/incomplete historical seasons. Pulls
+# every gap year listed in the chosen league's current league.json history,
+# regenerates franchise-history.json, and commits anything new back to the
+# branch the workflow was launched on.
 #
-# Run from the GitHub Actions UI, picking the branch you want to backfill
-# (e.g. claude/fantasy-football-ideas-M2Ga7).
+# Run from the GitHub Actions UI (Actions -> this workflow -> "Run workflow"),
+# picking the branch and the league. This runs on GitHub's runners because they
+# can reach myfantasyleague.com; a sandboxed dev environment often cannot.
+#
+# AFL STATUS (resolved 2026-08-16): every season from 2004 to 2025 is complete.
+# The archived exports really do return 2007-2019's regular-season weeks as bare
+# `{"week":"1"}` elements with no matchup key, even authenticated — but the
+# site's own "Fantasy Schedule -> By Franchise" view prints those games, and all
+# of them were recovered that way (scripts/recover-afl-schedule-from-html.mjs,
+# sources under data/afl-fantasy/schedule-recovery/). 2003 is the only gap and
+# is permanent: that season was played on Yahoo with only standings entered.
+#
+# So for the AFL this workflow is now a no-op refresher, and the thing to watch
+# is REGRESSION rather than absence. MFL served fabricated pairings for
+# 2012-2015 — correct scores, invented opponents — and the script's "never trade
+# a fuller cached copy for a thinner fresh one" guard compares COUNTS, which a
+# same-size fabrication would pass. tests/afl-schedule-integrity.test.ts is the
+# backstop: it replays every stored season against MFL's own standings.
 on:
   workflow_dispatch:
     inputs:
+      league:
+        description: 'Which league to backfill'
+        required: true
+        type: choice
+        options:
+          - afl
+          - theleague
+        default: afl
       force:
         description: 'Refetch every year, even ones already cached as valid'
         required: false
-        default: 'false'
+        type: boolean
+        default: false
 
 concurrency:
-  group: backfill-historical-feeds
+  group: backfill-historical-feeds-${{ inputs.league }}
   cancel-in-progress: false
 
 permissions:
@@ -25,6 +50,9 @@ permissions:
 jobs:
   backfill:
     runs-on: ubuntu-latest
+    # Per-week schedule repair adds up to 13 requests/season across 13 seasons
+    # at 500ms apiece, on top of 17 weeklyResults calls per gap year.
+    timeout-minutes: 60
     steps:
       - name: Checkout (current branch)
         uses: actions/checkout@v6
@@ -36,24 +64,77 @@ jobs:
       - name: Setup pnpm + Node + install
         uses: ./.github/actions/setup
 
+      # Snapshot coverage BEFORE touching anything, so the summary can show
+      # exactly what this run recovered rather than just a final total.
+      - name: Snapshot head-to-head coverage (before)
+        run: node ./scripts/report-h2h-coverage.mjs --league=${{ inputs.league }} --json > /tmp/h2h-before.json
+
+      # MFL restricts private-league schedule exports to league owners. Without
+      # the key, archived seasons return weeks with the matchups stripped, which
+      # reads as "MFL doesn't have it" — that is what stalled the AFL backfill.
       - name: Backfill historical feeds
+        env:
+          MFL_APIKEY: ${{ secrets.MFL_APIKEY }}
+          MFL_API_KEY: ${{ secrets.MFL_API_KEY }}
         run: |
           if [ "${{ inputs.force }}" = "true" ]; then
-            node ./scripts/backfill-historical-feeds.mjs --force
+            node ./scripts/backfill-historical-feeds.mjs --league=${{ inputs.league }} --force
           else
-            node ./scripts/backfill-historical-feeds.mjs
+            node ./scripts/backfill-historical-feeds.mjs --league=${{ inputs.league }}
           fi
 
-      - name: Recompute franchise history
-        run: node ./scripts/compute-franchise-history.mjs
+      - name: Report what was recovered
+        id: coverage
+        run: node ./scripts/report-h2h-coverage.mjs --league=${{ inputs.league }} --compare=/tmp/h2h-before.json
 
-      # schefter-feed.json picks up any new milestone posts emitted by
-      # the compute step (Phase 5 — badge crossings auto-post).
+      # Keyed off REMAINING GAPS rather than "did this run gain anything": the
+      # first authenticated run recovered 2024/2025 and so skipped this step
+      # entirely, leaving the very hole it exists to diagnose untested. Walks
+      # every gap season per week rather than sampling, and requires a real
+      # scoreboard signature on the rendered page — a looser test on a guessed
+      # URL is how an earlier probe returned a confident wrong answer.
+      #
+      # Worth knowing before acting on its output: an empty EXPORT is not proof
+      # of absence. The AFL's 2007-2019 audited as empty here and were still
+      # fully recoverable from the authenticated "By Franchise" schedule view.
+      - name: Audit what MFL will actually serve (whenever gaps remain)
+        if: steps.coverage.outputs.gaps == 'true'
+        env:
+          MFL_APIKEY: ${{ secrets.MFL_APIKEY }}
+          MFL_API_KEY: ${{ secrets.MFL_API_KEY }}
+        run: |
+          node ./scripts/audit-mfl-schedule-availability.mjs \
+            --league=${{ inputs.league }} \
+            --years=${{ steps.coverage.outputs.gap_years }} || true
+
+      - name: Recompute franchise history
+        run: node ./scripts/compute-franchise-history.mjs --league=${{ inputs.league }}
+
+      # The record book is derived from the same schedules this job just
+      # backfilled, and the commit step below ships all of derived/. Without
+      # this it would commit a refreshed franchise-history.json beside a
+      # record-book.json still describing the pre-backfill schedules.
+      - name: Recompute record book
+        run: node ./scripts/compute-record-book.mjs --league=${{ inputs.league }}
+
+      # Paths differ per league: TheLeague's schefter feed lives under src/data
+      # and picks up milestone posts from the compute step; the AFL's feed sits
+      # in its data directory and emits no milestones (see LEAGUE_TARGETS in
+      # scripts/compute-franchise-history.mjs).
+      - name: Resolve paths to commit
+        id: paths
+        run: |
+          if [ "${{ inputs.league }}" = "theleague" ]; then
+            echo "add=data/theleague/mfl-feeds/ data/theleague/derived/ src/data/theleague/schefter-feed.json" >> "$GITHUB_OUTPUT"
+          else
+            echo "add=data/afl-fantasy/mfl-feeds/ data/afl-fantasy/derived/" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Commit and push
         uses: ./.github/actions/commit-push
         with:
-          add-paths: 'data/theleague/mfl-feeds/ data/theleague/derived/ src/data/theleague/schefter-feed.json'
-          commit-message: 'chore: backfill historical MFL feeds + recompute franchise history'
+          add-paths: ${{ steps.paths.outputs.add }}
+          commit-message: 'chore: backfill historical MFL feeds + recompute franchise history (${{ inputs.league }})'
           no-changes-message: 'No new historical data picked up — nothing to commit.'
           git-user-name: 'Historical Feed Backfill Bot'
           push-ref: ${{ github.ref_name }}

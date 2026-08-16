@@ -16,6 +16,14 @@ import {
   type TrophyCaseItem,
 } from '../../../utils/afl-awards';
 import { stampBadgeYear } from '../../../utils/afl-badge';
+import franchiseHistory from '../../../../data/afl-fantasy/derived/franchise-history.json';
+import { formatTradeAsset } from '../../../utils/franchise-trade-asset';
+import {
+  computeRivalEntries,
+  canonicalRivalryPair,
+  formatRivalryRecord,
+  describeCoverageGap,
+} from '../../../utils/rivalries';
 import { getCurrentSeasonYear } from '../../../utils/league-year';
 import { segmentsForFranchiseRange as segmentsForFranchiseRangeUtil, type NameEra } from '../../../utils/afl-name-history';
 
@@ -330,6 +338,107 @@ for (const t of aflConfig.teams as any[]) {
     claimedBy.push({ franchiseId: t.franchiseId, teamName: t.name });
   }
 }
+
+// --- Career history (record strip, highlights, rivals, trade ledger) ---
+// All four read the same derived file, built by
+// `pnpm compute:afl-franchise-history`. It is optional on purpose: a checkout
+// that has not run the aggregator (or a fresh league with no seasons yet)
+// renders the page exactly as it did before rather than 500ing.
+const fr: any = (franchiseHistory.franchises as any)?.[id!] ?? null;
+
+const totalGames = fr ? fr.careerWins + fr.careerLosses + fr.careerTies : 0;
+const careerRecord = fr
+  ? formatRivalryRecord(fr.careerWins, fr.careerLosses, fr.careerTies)
+  : null;
+const winPct = totalGames
+  ? ((fr.careerWins + fr.careerTies * 0.5) / totalGames).toFixed(3).replace(/^0/, '')
+  : null;
+const ppg = totalGames ? (fr.careerPointsFor / totalGames).toFixed(1) : null;
+
+// Seasons actually played — yearByYear carries a row for the in-progress
+// season before a snap is taken, and counting it makes a 23-season franchise
+// claim 24.
+const seasonsPlayed = fr
+  ? fr.yearByYear.filter((y: any) => y.wins + y.losses + y.ties > 0).length
+  : 0;
+
+const topRivals = fr ? computeRivalEntries(fr.matchupHistory, id!).slice(0, 5) : [];
+
+// The gap between the rivalry records and the career record above, stated so an
+// owner who notices it is told why rather than concluding the site is broken.
+//
+// No fraction here on purpose. "X of Y career games" compares two different
+// accounting systems: the career record comes from the standings feed (regular
+// season, owner-attributed), while the meeting log counts every archived
+// meeting including the AFL Cup and games whose opponent is unattributed. It
+// read "462 of 389" before, and after narrowing the numerator to regular-season
+// meetings it still read "312 of 311" for four of the 24 franchises. A ratio
+// that cannot be made true is worse than no ratio; the coverage note says the
+// useful part.
+const coverage: Array<any> = ((franchiseHistory as any).h2hCoverage ?? []) as any[];
+const coverageNote = describeCoverageGap(coverage);
+
+const opponentMeta: Record<string, any> = Object.fromEntries(
+  (aflConfig.teams as any[]).map((t) => [
+    t.franchiseId,
+    {
+      name: t.name,
+      nameMedium: t.nameMedium ?? t.name,
+      nameShort: t.nameShort ?? t.nameMedium ?? t.name,
+      icon: t.icon,
+    },
+  ])
+);
+
+const opponentName = (fid: string): string =>
+  opponentMeta[fid]?.nameMedium ?? opponentMeta[fid]?.name ?? fid;
+const franchiseShortName = (fid: string): string =>
+  opponentMeta[fid]?.nameShort ?? opponentMeta[fid]?.nameMedium ?? opponentMeta[fid]?.name ?? fid;
+
+// Trade ledger, newest year first. Self-trades (a partner id equal to ours)
+// are ownerHistory cross-attribution artifacts, not real deals.
+const playerNames = ((franchiseHistory as any).playerNames ?? {}) as Record<
+  string,
+  { name: string; position?: string; team?: string }
+>;
+const formatAsset = (code: string) => formatTradeAsset(code, playerNames, franchiseShortName);
+
+type FranchiseTrade = {
+  year: number;
+  timestamp: number;
+  partnerId: string;
+  gaveUp: string[];
+  received: string[];
+  comments: string;
+};
+const allTrades: FranchiseTrade[] = (((fr?.trades ?? []) as FranchiseTrade[]) || []).filter(
+  (t) => t.partnerId !== id
+);
+const tradesByYear = new Map<number, FranchiseTrade[]>();
+for (const t of allTrades) {
+  if (!tradesByYear.has(t.year)) tradesByYear.set(t.year, []);
+  tradesByYear.get(t.year)!.push(t);
+}
+const tradeYearGroups = Array.from(tradesByYear.entries())
+  .map(([year, trades]) => ({
+    year,
+    trades: trades.slice().sort((a, b) => b.timestamp - a.timestamp),
+  }))
+  .sort((a, b) => b.year - a.year);
+
+const tradeDateLabel = (t: FranchiseTrade): string =>
+  t.timestamp
+    ? new Date(t.timestamp * 1000).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      })
+    : String(t.year);
+
+const hl = fr?.highlights ?? null;
+const hasHighlights = Boolean(
+  hl && (hl.highestSingleGame || hl.lowestSingleGame || hl.biggestBlowoutWin || hl.biggestBlowoutLoss)
+);
 ---
 
 <TheLeagueLayout title={`${team.name} | AFL Franchise`}>
@@ -487,6 +596,173 @@ for (const t of aflConfig.teams as any[]) {
         </div>
       )}
     </section>
+
+    {fr && totalGames > 0 && (
+      <section class="franchise-section career-strip" id="career-record">
+        <h2 class="sr-only">All-time record</h2>
+        <dl class="career-stats">
+          <div class="career-stat">
+            <dt>All-time</dt>
+            <dd>{careerRecord}</dd>
+          </div>
+          <div class="career-stat">
+            <dt>Win pct</dt>
+            <dd>{winPct}</dd>
+          </div>
+          <div class="career-stat">
+            <dt>Seasons</dt>
+            <dd>{seasonsPlayed}</dd>
+          </div>
+          <div class="career-stat">
+            <dt>Points for</dt>
+            <dd>{Math.round(fr.careerPointsFor).toLocaleString()}</dd>
+          </div>
+          <div class="career-stat">
+            <dt>Per game</dt>
+            <dd>{ppg}</dd>
+          </div>
+          <div class="career-stat">
+            <dt>Playoff apps</dt>
+            <dd>{fr.playoffAppearances}</dd>
+          </div>
+        </dl>
+      </section>
+    )}
+
+    {hasHighlights && (
+      <section class="franchise-section highlights" id="highlights">
+        <h2>Single-Game Highlights</h2>
+        <div class="highlight-grid">
+          {hl.highestSingleGame && (
+            <div class="highlight">
+              <div class="hl-label">Highest score</div>
+              <div class="hl-value">{hl.highestSingleGame.score.toFixed(2)}</div>
+              <div class="hl-context">Week {hl.highestSingleGame.week}, {hl.highestSingleGame.year}</div>
+            </div>
+          )}
+          {hl.lowestSingleGame && (
+            <div class="highlight">
+              <div class="hl-label">Lowest score</div>
+              <div class="hl-value">{hl.lowestSingleGame.score.toFixed(2)}</div>
+              <div class="hl-context">Week {hl.lowestSingleGame.week}, {hl.lowestSingleGame.year}</div>
+            </div>
+          )}
+          {hl.biggestBlowoutWin && (
+            <div class="highlight highlight--win">
+              <div class="hl-label">Biggest blowout win</div>
+              <div class="hl-value">+{hl.biggestBlowoutWin.margin.toFixed(2)}</div>
+              <div class="hl-context">
+                {hl.biggestBlowoutWin.score.toFixed(1)}–{hl.biggestBlowoutWin.opponentScore.toFixed(1)} vs{' '}
+                {opponentName(hl.biggestBlowoutWin.opponentFranchiseId)}
+                <br />Week {hl.biggestBlowoutWin.week}, {hl.biggestBlowoutWin.year}
+              </div>
+            </div>
+          )}
+          {hl.biggestBlowoutLoss && (
+            <div class="highlight highlight--loss">
+              <div class="hl-label">Biggest blowout loss</div>
+              <div class="hl-value">−{hl.biggestBlowoutLoss.margin.toFixed(2)}</div>
+              <div class="hl-context">
+                {hl.biggestBlowoutLoss.score.toFixed(1)}–{hl.biggestBlowoutLoss.opponentScore.toFixed(1)} vs{' '}
+                {opponentName(hl.biggestBlowoutLoss.opponentFranchiseId)}
+                <br />Week {hl.biggestBlowoutLoss.week}, {hl.biggestBlowoutLoss.year}
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+    )}
+
+    {topRivals.length > 0 && (
+      <section class="franchise-section rivals" id="rivals">
+        <h2>Top Rivals</h2>
+        <p class="rivals-sub">
+          Most-intense shared history under the current owners — closeness, total
+          meetings, and playoff stakes weighted.
+        </p>
+        <ul class="rivals-list">
+          {topRivals.map((r) => {
+            const meta = opponentMeta[r.opponentId];
+            return (
+              <li>
+                <a
+                  class="rival-card"
+                  href={`/afl-fantasy/rivalries/${canonicalRivalryPair(id!, r.opponentId)}`}
+                >
+                  {meta?.icon ? (
+                    <img src={meta.icon} alt="" class="rival-icon" loading="lazy" />
+                  ) : null}
+                  <div class="rival-text">
+                    <div class="rival-name">{opponentName(r.opponentId)}</div>
+                    <div class="rival-record">
+                      {formatRivalryRecord(r.wins, r.losses, r.ties)} · {r.games} games
+                    </div>
+                  </div>
+                  {r.playoffGames > 0 && (
+                    <div class="rival-playoff">🔥 {r.playoffGames} playoff</div>
+                  )}
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+        {coverageNote && (
+          <p class="rivals-caveat">{coverageNote}</p>
+        )}
+        <a class="rivals-more" href="/afl-fantasy/rivalries">See full rivalry matrix →</a>
+      </section>
+    )}
+
+    {allTrades.length > 0 && (
+      <section class="franchise-section trades" id="trade-ledger">
+        <h2>Trade Ledger ({allTrades.length})</h2>
+        {tradeYearGroups.map((group, gi) => (
+          <details class="trade-year" open={gi === 0}>
+            <summary class="trade-year__summary">
+              {group.year} <span class="trade-year__count">({group.trades.length})</span>
+            </summary>
+            <ul class="trade-list">
+              {group.trades.map((t) => (
+                <li class="trade">
+                  <div class="trade__head">
+                    <a
+                      class="trade-partner"
+                      href={`/afl-fantasy/rivalries/${canonicalRivalryPair(id!, t.partnerId)}`}
+                      title={`Rivalry vs ${opponentName(t.partnerId)}`}
+                    >
+                      {opponentMeta[t.partnerId]?.icon ? (
+                        <img src={opponentMeta[t.partnerId].icon} alt="" class="trade-partner__icon" loading="lazy" />
+                      ) : null}
+                      {opponentName(t.partnerId)}
+                    </a>
+                    <span class="trade__date">{tradeDateLabel(t)}</span>
+                  </div>
+                  <div class="trade__sides">
+                    <div class="trade__side">
+                      <span class="trade__side-label">Sent</span>
+                      <ul>
+                        {t.gaveUp.length
+                          ? t.gaveUp.map((c) => <li>{formatAsset(c)}</li>)
+                          : <li class="trade__empty">—</li>}
+                      </ul>
+                    </div>
+                    <div class="trade__side">
+                      <span class="trade__side-label">Received</span>
+                      <ul>
+                        {t.received.length
+                          ? t.received.map((c) => <li>{formatAsset(c)}</li>)
+                          : <li class="trade__empty">—</li>}
+                      </ul>
+                    </div>
+                  </div>
+                  {t.comments ? <p class="trade__comment">{t.comments}</p> : null}
+                </li>
+              ))}
+            </ul>
+          </details>
+        ))}
+      </section>
+    )}
 
     {(nameEras.length > 1 || priorOwnerEras.length > 0) && (
       <section class="franchise-section name-history" id="name-history">
@@ -744,6 +1020,267 @@ for (const t of aflConfig.teams as any[]) {
   .franchise-section h2 {
     font-size: 1.25rem;
     margin-bottom: var(--spacing-md, 16px);
+  }
+
+  /* --- Career record strip --- */
+  .career-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: var(--spacing-sm, 8px);
+    margin: 0;
+    padding: 0;
+  }
+
+  .career-stat {
+    background: var(--card-bg);
+    border: 1px solid var(--content-border);
+    border-radius: 10px;
+    padding: 0.7rem 0.85rem;
+    text-align: center;
+  }
+
+  .career-stat dt {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--content-text-muted);
+  }
+
+  .career-stat dd {
+    margin: 0.25rem 0 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--page-text);
+  }
+
+  /* --- Single-game highlights --- */
+  .highlight-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: var(--spacing-sm, 8px);
+  }
+
+  .highlight {
+    background: var(--card-bg);
+    border: 1px solid var(--content-border);
+    border-left: 3px solid var(--league-accent);
+    border-radius: 10px;
+    padding: 0.85rem;
+  }
+
+  .highlight--win {
+    border-left-color: var(--afl-gold);
+  }
+
+  .highlight--loss {
+    border-left-color: var(--color-gray-400);
+  }
+
+  .hl-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--content-text-muted);
+  }
+
+  .hl-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--page-text);
+    margin: 0.15rem 0 0.3rem;
+  }
+
+  .hl-context {
+    font-size: 0.8rem;
+    line-height: 1.4;
+    color: var(--content-text-muted);
+  }
+
+  /* --- Top rivals --- */
+  .rivals-sub,
+  .rivals-caveat {
+    font-size: 0.85rem;
+    color: var(--content-text-muted);
+    margin: -0.5rem 0 var(--spacing-md, 16px);
+    max-width: 60ch;
+  }
+
+  .rivals-caveat {
+    margin: var(--spacing-sm, 8px) 0 0;
+    font-size: 0.78rem;
+  }
+
+  .rivals-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .rival-card {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0.85rem;
+    background: var(--card-bg);
+    border: 1px solid var(--content-border);
+    border-radius: 10px;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+  }
+
+  .rival-card:hover {
+    border-color: var(--league-accent);
+    transform: translateX(2px);
+  }
+
+  .rival-icon {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+
+  .rival-text {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .rival-name {
+    font-weight: 600;
+    color: var(--page-text);
+  }
+
+  .rival-record {
+    font-size: 0.8rem;
+    color: var(--content-text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .rival-playoff {
+    font-size: 0.75rem;
+    white-space: nowrap;
+    color: var(--content-text-muted);
+  }
+
+  .rivals-more {
+    display: inline-block;
+    margin-top: var(--spacing-md, 16px);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--league-accent);
+    text-decoration: none;
+  }
+
+  .rivals-more:hover {
+    text-decoration: underline;
+  }
+
+  /* --- Trade ledger --- */
+  .trade-year {
+    border: 1px solid var(--content-border);
+    border-radius: 10px;
+    background: var(--card-bg);
+    margin-bottom: 0.5rem;
+  }
+
+  .trade-year__summary {
+    cursor: pointer;
+    padding: 0.6rem 0.85rem;
+    font-weight: 600;
+    color: var(--page-text);
+  }
+
+  .trade-year__count {
+    color: var(--content-text-muted);
+    font-weight: 400;
+  }
+
+  .trade-list {
+    list-style: none;
+    margin: 0;
+    padding: 0 0.85rem 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .trade {
+    border-top: 1px solid var(--content-border);
+    padding-top: 0.75rem;
+  }
+
+  .trade__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .trade-partner {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-weight: 600;
+    color: var(--page-text);
+    text-decoration: none;
+  }
+
+  .trade-partner:hover {
+    color: var(--league-accent);
+    text-decoration: underline;
+  }
+
+  .trade-partner__icon {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+  }
+
+  .trade__date {
+    font-size: 0.78rem;
+    color: var(--content-text-muted);
+  }
+
+  .trade__sides {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  .trade__side ul {
+    list-style: none;
+    margin: 0.2rem 0 0;
+    padding: 0;
+    font-size: 0.85rem;
+    color: var(--page-text);
+  }
+
+  .trade__side-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--content-text-muted);
+  }
+
+  .trade__empty {
+    color: var(--content-text-muted);
+  }
+
+  .trade__comment {
+    margin: 0.5rem 0 0;
+    font-size: 0.82rem;
+    font-style: italic;
+    color: var(--content-text-muted);
+    border-left: 2px solid var(--content-border);
+    padding-left: 0.6rem;
   }
 
   .name-history__list {

@@ -124,3 +124,59 @@ this is the same latent hazard behind the `inferCurrentOwnerSince` trap
 documented in `afl-team-rename.md` — that one compares the last history name
 to the current name and reads a mismatch as an ownership change, which shape 2
 suppresses and shape 1 triggers.
+
+## 2026-08-16 - Owner-scoping deletes GAMES too, and matchupHistory keys them in two id spaces
+
+**Context:** Follow-on from the 2026-08-11 entry above, which established that
+owner-scoping deletes *awards*. Building an AFL all-time record book surfaced
+that it deletes *games* on the same mechanism, and that two further defects sit
+on top of the ledger's matchup data.
+
+**Three findings, in the order they bite:**
+
+**1. `matchupHistory` is not a record of what happened — it is a record of what
+the current owners did.** `recordMatchup` skips a game when
+`attributeYear(id, year)` returns null, so games played under a slot's previous
+owner never enter the ledger. For the AFL that is 1,158 of 5,333 games, and the
+loss is not spread evenly: 63% of 2004, roughly half of 2005-2011, 0% of
+2022-2025. Any league-wide aggregate built on it — biggest blowout, longest
+streak, most-played rivalry — therefore means "since the current owners
+arrived" while reading as "ever", and skews hard modern. That is why
+`scripts/compute-record-book.mjs` walks the committed feeds directly instead.
+Use the ledger for "what has THIS franchise done"; never for "what is the
+league record".
+
+**2. The same game is filed under two different id spaces, so a pair-keyed
+dedup double-counts it.** A meeting is stored on the ATTRIBUTED current
+franchise but names its opponent by that season's SOURCE slot. So Harambe's
+2018 week-4 win is `0008 → 0021` from one side and `0021 → 0016` from the
+other; keys `0008:0021` and `0016:0021` do not match. Deduping on the filed ids
+put one game on a leaderboard twice, under two different franchise names.
+Canonicalise on `sourceFranchiseId ?? holderId` and `opponentSourceId ??
+opponentKey` — and note that merging both entries is the only way to learn who
+each slot IS today, because each side names only itself.
+
+**3. `weekly-results-raw.json` is a SECOND pairing source, and it wins.**
+`compute-franchise-history.mjs` processes it before `schedule.json` and marks
+`(week, franchiseA, franchiseB)` seen. That dedup key is the pairing, so when
+the two feeds disagree about who played whom, both survive rather than one
+overriding the other. Repairing `schedule.json` for the AFL's fabricated
+2012-2015 seasons therefore left 173 phantom meetings in the rivalry records —
+the league's hottest rivalry read 18-17 when it was 17-17. `schedule.json` now
+wins for any week it covers. Confirmed a no-op for TheLeague first: 3,215 of its
+weeklyRaw pairings sit inside schedule-covered weeks and every one agrees.
+
+**Recommendation:** Before trusting any derived aggregate, ask which of the two
+questions it answers — franchise-scoped or league-scoped — and check that its
+source matches. And when repairing a feed, grep for every other feed that
+carries the same facts: `schedule.json` and `weekly-results-raw.json` both hold
+matchups, and fixing one is not fixing the data.
+
+**Evidence:** `scripts/compute-record-book.mjs`, `src/utils/record-book.mjs`,
+`tests/record-book.test.ts` (pins the committed book above 5,000 games so a
+silent rebuild from the ledger fails), and the `scheduleCoveredWeeks` guard in
+`compute-franchise-history.mjs`.
+
+**Confidence: High** — the game-loss percentages are measured per season against
+the feeds, and every stored AFL season replays to MFL's own standings
+(`tests/afl-schedule-integrity.test.ts`).

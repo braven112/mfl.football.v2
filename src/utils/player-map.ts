@@ -17,7 +17,7 @@
  * ```
  */
 
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { normalizeTeamCode } from './nfl-logo';
 import {
@@ -90,6 +90,45 @@ function normalizePosition(pos: string): string {
 }
 
 /**
+ * Build a PlayerIdentity from one raw MFL player row.
+ *
+ * Shared by the per-year map and the all-years union so the two cannot drift —
+ * they read different files but must agree on what a player's identity IS.
+ * Returns null for positions we don't carry.
+ */
+function toIdentity(
+  p: Record<string, string>,
+  collegeIds: Record<string, { espnCollegeId?: string }>
+): PlayerIdentity | null {
+  const position = p.position || '';
+  if (!FANTASY_POSITIONS.has(position)) return null;
+
+  const mflId = p.id;
+  const nflEspnId = p.espn_id || '';
+  const collegeEspnId = collegeIds[mflId]?.espnCollegeId || '';
+  // Keep `espnId` as the best-guess ID for callers that need one, but
+  // build `headshot` from the *matching* URL — ESPN's NFL headshot
+  // endpoint returns 404 for a college ID, so a rookie with only a
+  // college ESPN ID has to use the college-football URL instead.
+  const espnId = resolveEspnId(mflId, p as { espn_id?: string }, collegeIds);
+  const headshot = nflEspnId
+    ? getPlayerHeadshot(mflId, nflEspnId)
+    : collegeEspnId
+      ? getCollegeHeadshot(collegeEspnId)
+      : getPlayerImageUrl(mflId);
+
+  return {
+    mflId,
+    name: formatName(p.name || '', position),
+    position: normalizePosition(position),
+    nflTeam: normalizeTeamCode(p.team || ''),
+    headshot,
+    espnId,
+    draftYear: p.draft_year || '',
+  };
+}
+
+/**
  * Get the complete player identity map for a given year.
  * Results are cached in memory — multiple calls with the same year return the same Map instance.
  *
@@ -109,35 +148,8 @@ export function getPlayerMap(year: number): Map<string, PlayerIdentity> {
     const collegeIds = loadCollegeIds();
 
     for (const p of players) {
-      const position = p.position || '';
-      if (!FANTASY_POSITIONS.has(position)) continue;
-
-      const mflId = p.id;
-      const normalizedPosition = normalizePosition(position);
-      const nflTeam = normalizeTeamCode(p.team || '');
-      const nflEspnId = p.espn_id || '';
-      const collegeEspnId = collegeIds[mflId]?.espnCollegeId || '';
-      // Keep `espnId` as the best-guess ID for callers that need one, but
-      // build `headshot` from the *matching* URL — ESPN's NFL headshot
-      // endpoint returns 404 for a college ID, so a rookie with only a
-      // college ESPN ID has to use the college-football URL instead.
-      const espnId = resolveEspnId(mflId, p as { espn_id?: string }, collegeIds);
-      const headshot = nflEspnId
-        ? getPlayerHeadshot(mflId, nflEspnId)
-        : collegeEspnId
-          ? getCollegeHeadshot(collegeEspnId)
-          : getPlayerImageUrl(mflId);
-      const name = formatName(p.name || '', position);
-
-      playerMap.set(mflId, {
-        mflId,
-        name,
-        position: normalizedPosition,
-        nflTeam,
-        headshot,
-        espnId,
-        draftYear: p.draft_year || '',
-      });
+      const identity = toIdentity(p, collegeIds);
+      if (identity) playerMap.set(identity.mflId, identity);
     }
   } catch {
     // Feed file missing for this year — return empty map
@@ -173,26 +185,31 @@ let globalMapCache: Map<string, PlayerIdentity> | null = null;
  * (Dead Money Awards, records) need to attach ESPN headshots to legacy
  * players whose own season predates the feed archive.
  *
+ * Reads the precomputed union (`scripts/compute-player-identity-union.mjs`,
+ * run in prebuild) rather than scanning every season's feed at request time.
+ * Past seasons are immutable, so the union is a build artifact — deriving it
+ * per cold start meant 23.5 MB of reads for a 0.37 MB answer, and the
+ * `readdirSync` on a runtime-constructed path defeated Vercel's file tracer,
+ * which then copied all of `data/` into the serverless bundle.
+ *
  * @returns Map of MFL player ID → PlayerIdentity (most-recent-season wins)
  */
 export function getGlobalPlayerMap(): Map<string, PlayerIdentity> {
   if (globalMapCache) return globalMapCache;
 
   const merged = new Map<string, PlayerIdentity>();
-  let years: number[] = [];
   try {
-    years = readdirSync(join(process.cwd(), 'data/theleague/mfl-feeds'))
-      .filter((name) => /^\d{4}$/.test(name))
-      .map(Number)
-      .sort((a, b) => a - b); // ascending → later years overwrite earlier
-  } catch {
-    // feeds dir missing — return an empty map
-  }
+    const filePath = join(process.cwd(), 'data/theleague/derived/player-identity-union.json');
+    const raw = JSON.parse(readFileSync(filePath, 'utf-8'));
+    const collegeIds = loadCollegeIds();
 
-  for (const year of years) {
-    for (const [id, identity] of getPlayerMap(year)) {
-      merged.set(id, identity);
+    for (const p of (raw?.players || []) as Array<Record<string, string>>) {
+      const identity = toIdentity(p, collegeIds);
+      if (identity) merged.set(identity.mflId, identity);
     }
+  } catch {
+    // Union artifact missing — return an empty map, matching the previous
+    // behaviour when the feeds directory was absent.
   }
 
   globalMapCache = merged;
