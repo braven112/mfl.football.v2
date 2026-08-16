@@ -85,3 +85,42 @@ names are short.
 **Recommendation:** In flex rows with `flex: 1; min-width: 0` text, use
 `overflow-wrap: break-word` (only breaks genuinely overlong words) instead of
 `anywhere`.
+
+## 2026-08-15 - A franchise name is not a unique key — not across slots, not across eras
+
+**Context:** Building former-name callbacks for Schefter ("Dead Cap Walking,
+the former Heavy Chevy"). Needed to answer "what did this franchise used to be
+called", which looks like a one-line read off `history[]` and is not.
+
+**Insight:** `history[]` is an **appearance log, not a rename log**, and names
+are not owned by franchises. Three distinct shapes live in the same array, and
+only the first is a rename:
+
+1. **Real renames** — `Heavy Chevy (2020-2025)` under `Dead Cap Walking`.
+2. **Re-skins that repeat the CURRENT name** — `Pacific Pigskins (2007-2012)`
+   AND `Pacific Pigskins (2013-2024)` under a team still called Pacific
+   Pigskins. These rows exist to date icon/banner artwork eras, not names.
+   Nearly every TheLeague franchise has at least one; Bring The Pain and Dark
+   Magicians of Chaos are pure re-skin histories with no rename at all. Naive
+   "most recent history entry" logic yields "the Pigskins, formerly the
+   Pigskins."
+3. **Names that MIGRATED between franchises** — `Midwestside Connection` is
+   `0010`'s former name and **`0011`'s current one**. `Sabertooths` sits in
+   both `0002`'s and `0013`'s history. `Maverick` and `Poker in the Rear`
+   trade back and forth within `0003`.
+
+Shape 3 is the dangerous one: a name→franchise lookup, a search index, or any
+"formerly known as" copy resolves to a **live team that isn't the subject**,
+and it looks completely plausible in output. Nothing in the config marks these
+— the collision is only visible by cross-referencing every team's current name
+forms and `aliases` against every other team's `history[]`.
+
+**Recommendation:** Any feature reading `history[]` needs two filters before
+it can treat an entry as a former name: drop entries matching the team's own
+current name forms (shape 2), and drop entries matching any name or alias
+currently in use league-wide (shape 3). `pickFormerName` in
+`scripts/lib/schefter-former-name.mjs` is the reference implementation. Note
+this is the same latent hazard behind the `inferCurrentOwnerSince` trap
+documented in `afl-team-rename.md` — that one compares the last history name
+to the current name and reads a mismatch as an ownership change, which shape 2
+suppresses and shape 1 triggers.
