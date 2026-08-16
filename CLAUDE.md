@@ -588,6 +588,77 @@ rules — breaking any of these cross-contaminates the leagues:
   `isAuthorizedForLeague`. AFL franchise 0001 must never pass TheLeague's
   admin gate (different teams, same id).
 
+### Franchise-name redaction — a team answers to every name it ever had
+
+`redactFranchiseNamesInText` in `schefter-rumor-scan.mjs` is the mechanical
+backstop for every "Schefter may not name that team" rule — the prompt asks
+the LLM not to, this makes it unable to. It scrubs franchise mentions out of
+the tipster's raw `text` before the text reaches the prompt, so the token
+harvest it runs on is load-bearing, not bookkeeping:
+
+- **Harvest `history[]` and `aliases[]`, not just the four current name
+  fields.** A retired name identifies a franchise as well as the current one
+  and *better* in the AFL, where the last-place punitive rebrands are recent
+  and memorable. That gap shipped "Hearing Balls Deep and a former Cock
+  Gobbler front office…" (Aug 2026) — a second team named in a post allowed
+  to name exactly one, because "Cock Gobbler" is The Show's 2025 rebrand and
+  lived only in `history[]`. Both configs are deep here: ~250 retired name
+  forms and ~90 aliases across the two leagues. `loadTeams` has to carry both
+  fields through or the harvest can't see them.
+- **Every early `return safe` in the web-tip path needs its own redaction
+  call.** The fall-through at the bottom of `anonymizeTips` doesn't cover
+  branches that return above it — `league-wide` and `commish` returned raw
+  text for months. Those are the scopes that need it most: league-wide means
+  "not pinned to anybody."
+- **`keepFranchise` is one display name but a franchise owns many.** Resolve
+  it to the franchise and normalize that team's other forms (alias, retired
+  name) to the canonical name; redact everything else. Comparing the one
+  string fuzzes the kept team's own nicknames and lets Schefter print
+  last-season's punishment name for a team he's allowed to name.
+- Over-matching is the safe direction — a stray hit fuzzes a word to
+  `[a team]`, a miss leaks an identity.
+  `tests/schefter-franchise-name-redaction.test.ts` runs the real configs
+  through the anonymizer and fails on any surviving alias or retired name.
+
+### Former-name callbacks — the bit is the pairing, and it expires
+
+Schefter nodding to a name a franchise just retired ("Dead Cap Walking, the
+former Heavy Chevy…") is a wanted bit, not a bug — but only under three
+constraints, all enforced in `scripts/lib/schefter-former-name.mjs` +
+HARD RULE 30 (commissioner, 2026-08-15):
+
+- **The current name always rides along.** A bare old name is the failure
+  mode — a reader who joined this season doesn't know who that is, and the
+  joke needs both halves. The redactor normalizes any old name in the tip
+  text to the canonical one, so `formerName` on the scope is the ONLY channel
+  the old name reaches the prompt through. No payload, no callback.
+- **Last season's name, and only last season's.** `pickFormerName` requires
+  an explicit `lastSeason` and matches `yearEnd === lastSeason` — never "the
+  most recent rename", which is a different question with the same answer
+  most of the time and a wrong answer the rest. A franchise that rebranded in
+  2017 has no callback available at all, even though that name is genuinely
+  its most recent former one. The bit is a nod to something the league just
+  lived through; two seasons back it's trivia.
+- **It decays and then stops.** Eligible only for the season AFTER the
+  rename: occasional in the offseason, ~2× as often in preseason (Aug 1 →
+  Labor Day) and regular-season weeks 1–3, then **nothing** from week 4 on,
+  permanently. `resolveCallbackPhase` owns the window; the dice roll per post
+  so the bit stays a callback rather than a tic.
+- **Naming-allowed scopes only.** The payload attaches to
+  `franchise-multi-source`, `franchise-explicit-pick`, and `trade-bait` — the
+  same three the IRON RULES let Schefter name. An old name identifies a team
+  as well as the current one, so a callback on a fuzzed scope would be the
+  redaction bug wearing a costume.
+
+Applies to EVERY rename, not just the AFL's last-place punishments —
+`punitive` is a voice flag (lean into the sentence lore) not a gate.
+Two `history[]` rows look like renames and aren't: **re-skins** that repeat
+the current name under a new icon (nearly every TheLeague franchise has one —
+"the Pigskins, formerly the Pigskins") and **names that moved between
+franchises** ("Midwestside Connection" is 0010's old name and 0011's current
+one, so the callback would point at a live team that isn't the subject).
+`pickFormerName` excludes both.
+
 ## Schefter tipster context (Phase 8 — bot intelligence)
 
 The rumor-mill scanner weights bucket priority and surfaces voice cues
