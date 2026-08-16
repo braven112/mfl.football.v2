@@ -5,6 +5,14 @@
   "featuredImageLeague": "afl",
   "changes": [
     {
+      "date": "2026-08-16",
+      "type": "bug-fix",
+      "summary": "Roger's links in the group chat work again. When he ended a sentence with a link — \"Review your plan at theleague.us/rosters.\" — GroupMe grabbed the period along with the address and sent everyone who tapped it to a page that doesn't exist. The roster-cutdown reminder is the one owners actually noticed, since it's the message telling seven teams to go log in and fix their roster. Every bot message now gets the trailing period trimmed off the link on the way out, so this can't come back through a Schefter post or a weekly recap either.",
+      "impact": "user",
+      "area": "other",
+      "league": "both"
+    },
+    {
       "date": "2026-08-15",
       "type": "style-tweak",
       "summary": "Computer Jocks and Da Dangsters now look the same at night in both leagues. Both teams play in TheLeague and the AFL with the identical crest, and both were getting a different dark-mode treatment on each side. Computer Jocks had a dark file over here that was just the normal logo with a white line painted around it — which is exactly what the site already does on its own, so the file's gone and the outline is now drawn in the team's green, same as the AFL. Da Dangsters keeps its dark version, but it's the newer artwork the AFL got last week: the crest on its own navy backdrop instead of the old white-ringed one. Same logo, one look, whichever league you're reading.",

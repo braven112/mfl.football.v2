@@ -7,6 +7,7 @@
  */
 
 import type { GroupMeApiMessage, GroupMeMessagesResponse, GroupMeUserResponse, GroupMeGroupResponse, GroupMeMember } from '../types/groupme';
+import { stripLinkAdjacentPunctuation } from './groupme-link-text.mjs';
 
 const API_BASE = 'https://api.groupme.com/v3';
 
@@ -93,10 +94,13 @@ export async function postAsBot(text: string): Promise<boolean> {
     return false;
   }
 
+  // Keep a sentence-ending period out of GroupMe's autolinked URL — see
+  // groupme-link-text.mjs. Bot copy is ours to tidy; sendMessage() above posts
+  // as a human owner and is deliberately left alone.
   const res = await fetch(`${API_BASE}/bots/post`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ bot_id: botId, text }),
+    body: JSON.stringify({ bot_id: botId, text: stripLinkAdjacentPunctuation(text) }),
   });
 
   if (!res.ok) {

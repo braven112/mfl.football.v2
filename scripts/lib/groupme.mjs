@@ -10,7 +10,13 @@
  * the other two treat any non-throwing fetch as "posted"). Rather than
  * silently normalize those differences, every branch here is an optional
  * callback so each call site reproduces its own original behavior exactly.
+ *
+ * The one thing this DOES normalize is link hygiene: every outgoing text is
+ * run through `stripLinkAdjacentPunctuation` so a sentence-ending period
+ * never gets autolinked into the URL. See src/utils/groupme-link-text.mjs.
  */
+
+import { stripLinkAdjacentPunctuation } from '../../src/utils/groupme-link-text.mjs';
 
 const GROUPME_POST_URL = 'https://api.groupme.com/v3/bots/post';
 
@@ -39,6 +45,9 @@ export async function postToGroupMe({
   onHttpError,
   onFetchError,
 } = {}) {
+  // Applied before the dry-run bail so a rehearsal prints the exact bytes a
+  // live run would send.
+  text = stripLinkAdjacentPunctuation(text);
   if (dryRun) {
     onDryRun?.();
     return { posted: false, reason: 'dry-run' };

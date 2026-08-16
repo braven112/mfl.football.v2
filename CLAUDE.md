@@ -108,6 +108,25 @@ unprefixed path bakes a permanent 404 on mfl.football. Only the absolute
 (GroupMe / deep-link) form gets stripped. The rumor scanner's tip CTA had this
 backwards until Aug 2026 (`TIP_PAGE_PATH = '/schefter/tip'`).
 
+### GroupMe autolinks the punctuation after a URL
+
+A chat message that ends a sentence right after a link — `Review your plan at
+https://www.theleague.us/rosters.` — ships a link whose href includes the
+period, and it 404s for every owner who taps it. Roger's roster-cutdown touch
+did exactly that (owner report, 2026-08-16). Bare hosts autolink too, so
+`…log in at www.theleague.us.` breaks the same way.
+
+`stripLinkAdjacentPunctuation` (`src/utils/groupme-link-text.mjs`) trims the
+`.,;:!?` run glued to the end of a URL, and runs inside all three bot-post
+primitives — `scripts/lib/groupme.mjs` (the choke point for all nine node
+lanes), `scripts/lib/speculation-groupme.mjs`, and
+`src/utils/groupme-client.ts#postAsBot`. It is deliberately on the SEND path,
+not a template guard test: a large share of GroupMe text is composed at
+runtime and Schefter's LLM-written bodies routinely end a sentence on a link,
+so nothing static can catch those. `sendMessage` (owner's own token, owner's
+own words) is deliberately left alone. `tests/groupme-link-text.test.ts`
+locks the behavior and greps all three primitives for the call.
+
 Detecting "is this base URL my own apex host" must go through
 `buildHostToSlugMap()`, never a string compare against the canonical origin —
 `https://theleague.us`, `https://WWW.THELEAGUE.US`, `http://...` and
