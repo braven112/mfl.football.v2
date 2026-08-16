@@ -486,11 +486,38 @@ describe('franchise-name redaction — source guards', () => {
   });
 
   it('matches on non-word lookarounds, never \\b (which cannot follow punctuation)', () => {
+    // The left guard moved into LEFT_EDGE_GUARD when it grew a "/" clause, so
+    // the region has to cover the constants as well as the function — a guard
+    // that only greps the function body reports a clean pass after the edge
+    // logic is lifted out of it, which is the failure mode these exist for.
+    const consts = SCANNER_SRC.match(/const LEFT_EDGE_GUARD = [\s\S]+?;/);
     const fn = SCANNER_SRC.match(/function buildFranchiseNameMatcher[\s\S]+?\n\}/);
+    expect(consts).not.toBeNull();
     expect(fn).not.toBeNull();
-    expect(fn![0]).toMatch(/\(\?<!\\\\w\)/);
-    expect(fn![0]).toMatch(/\(\?!\\\\w\)/);
-    expect(fn![0]).not.toMatch(/\\\\b/);
+    const region = `${consts![0]}\n${fn![0]}`;
+    expect(region).toMatch(/\(\?<!\[\\\\w\/\]\)/);
+    expect(region).toMatch(/\(\?!\\\\w\)/);
+    expect(region).not.toMatch(/\\\\b/);
+    // ...and the function actually USES the constant rather than declaring it
+    // and quietly falling back to something else.
+    expect(fn![0]).toMatch(/LEFT_EDGE_GUARD/);
+  });
+
+  it('behaviorally refuses \\b semantics — a name ending in punctuation still matches', async () => {
+    // The assertions above are greps; this is the behavior they stand in for.
+    // `\bBe Rough!\b` matches nothing, so if anyone swaps the lookarounds back
+    // for word boundaries, this fails where a grep might not.
+    const punctTeams = new Map<string, TeamEntry>([
+      ['0001', { name: 'Be Rough!', division: 'NL' }],
+      ['0002', { name: 'The Blunt Bros.', division: 'NL' }],
+    ]);
+    for (const text of ['Be Rough! has been quiet', 'The Blunt Bros. are shopping a TE']) {
+      const out = await anonymizeTips(
+        [{ id: 't1', source: 'web', topic: 'roster', text, submittedAt: Date.now() }],
+        punctTeams,
+      );
+      expect(out[0].text).toContain('[a team]');
+    }
   });
 });
 
@@ -696,6 +723,28 @@ describe('franchise-name redaction — ordinary prose survives the fuzz', () => 
     ['heavy.chevy are shopping a TE.', 'Heavy Chevy'],
   ])('redacts separator variant %s (TheLeague)', async (text, name) => {
     await assertNameGone(text, LEAGUE, name);
+  });
+
+  // Both found by the Codex reviewer on PR #547, and both are the separator
+  // widening biting back in the direction this whole change exists to fix.
+  // A widened separator is not free: every character admitted also admits
+  // whatever else that character means.
+  it('does not match a multi-word name across a line break', async () => {
+    // `\s` spans newlines, so a wrapped tip merged two unrelated lines:
+    // "I watched the\nshow last night." came out "I watched [a team] last
+    // night." A franchise name does not straddle a newline; sentences do.
+    const text = 'I watched the\nshow last night.';
+    expect(await scrub(text, AFL)).toBe(text);
+  });
+
+  it.each([
+    ['see /the/show for context'],
+    ['see https://example.com/smokane/fc for context'],
+    ['Check https://theleague.us/rosters before the deadline.'],
+  ])('does not redact a URL or path segment: %s', async (text) => {
+    // Admitting "/" as an internal separator made path segments reachable.
+    // Tips carry links routinely, so this is a live shape.
+    expect(await scrub(text, AFL)).toBe(text);
   });
 
   it.each([

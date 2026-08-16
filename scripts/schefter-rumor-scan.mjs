@@ -805,17 +805,40 @@ function withFlexibleSeparators(escaped) {
 
 /**
  * What may stand in for the space inside a multi-word franchise name:
- * whitespace, hyphen, underscore, slash — or a period that is NOT followed by
- * whitespace.
+ * HORIZONTAL whitespace, hyphen, underscore, slash — or a period that is NOT
+ * followed by whitespace.
  *
- * The period needs that guard and the others do not, because a period is also
- * a sentence boundary. Widened naively, "The deal is dead. Cap space is tight."
- * matches "Dead Cap" across the full stop and redacts two unrelated sentences
- * into one phantom team — the exact over-redaction this change exists to
- * remove. `\.(?!\s)` keeps "dead.cap" (one token, no space) while refusing
- * "dead. Cap" (two sentences). Verified both ways.
+ * Each exclusion is a real over-redaction that was measured, not a precaution.
+ * Widening a separator is cheap to get wrong in exactly the direction this
+ * change exists to fix:
+ *
+ * - **Horizontal only.** `\s` spans line breaks, so a wrapped tip reading
+ *   "I watched the\nshow last night." matched "The Show" and came out as
+ *   "I watched [a team] last night." A franchise name does not straddle a
+ *   newline; two unrelated lines routinely do.
+ * - **The period is guarded.** A period is also a full stop, so "The deal is
+ *   dead. Cap space is tight." matches "Dead Cap" across the sentence break
+ *   and welds two sentences into one phantom team. `\.(?!\s)` keeps
+ *   "dead.cap" (one token) and refuses "dead. Cap" (two sentences).
+ * - **The slash pays for itself only with the left-edge guard below.** It is
+ *   here because "dead/cap" otherwise leaks the full name, but a slash is
+ *   also a path separator: "see /the/show for context" and
+ *   "https://example.com/smokane/fc" both redacted a URL segment into a team.
+ *   See `LEFT_EDGE_GUARD`.
  */
-const SEPARATOR_RUN = '(?:[\\s\\-_/]|\\.(?!\\s))+';
+const SEPARATOR_RUN = '(?:[^\\S\\r\\n\\u2028\\u2029]|[-_/]|\\.(?!\\s))+';
+
+/**
+ * A name may not START immediately after a slash. That position is a URL or
+ * path segment, never a franchise mention, and admitting `/` as an internal
+ * separator (above) is what made those segments reachable at all. Tips carry
+ * links routinely — Schefter's own CTAs are URLs — so this is a live shape,
+ * not a hypothetical.
+ *
+ * Extends the existing `(?<!\w)` guard rather than replacing it: a name still
+ * may not start glued to a word character either.
+ */
+const LEFT_EDGE_GUARD = '(?<![\\w/])';
 
 /**
  * Lower-cased with separator runs collapsed to a single space, so a match and
@@ -859,7 +882,7 @@ function buildFranchiseNameMatcher(tokens) {
     .map((t) => {
       // Only assert "not glued to a word character" on an edge that is
       // itself a word character. Punctuation is already its own boundary.
-      const left = /^\w/.test(t) ? '(?<!\\w)' : '';
+      const left = /^\w/.test(t) ? LEFT_EDGE_GUARD : '';
       const right = /\w$/.test(t) ? '(?!\\w)' : '';
       return `${left}${withFlexibleSeparators(escapeRegExp(t))}${right}`;
     })
