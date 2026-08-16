@@ -403,6 +403,36 @@ describe('the prompt rule requires the pairing', () => {
   it('states rule 30 and forbids the bare former name', () => {
     expect(src).toMatch(/30\. FORMER-NAME CALLBACK/);
     expect(src).toMatch(/MUST appear alongside it/);
-    expect(src).toMatch(/FORBIDDEN: "Heavy Chevy are fielding calls\."/);
+    expect(src).toMatch(/FORBIDDEN: "Dockside Dynamos are fielding calls\."/);
+  });
+
+  it('uses INVENTED names in its examples, never real franchises', () => {
+    // The prompt is a leak path the payload redaction cannot reach: it is
+    // built once and sent on EVERY call, including anonymous-scope posts. The
+    // first draft of this rule hardcoded "Dead Cap Walking / Heavy Chevy" and
+    // "The Show / Cock Gobbler" — real teams, paired with their real former
+    // names, one of them a punishment. That handed the model the exact
+    // association the whole feature is gated on, for teams that may be out of
+    // window, on posts not allowed to name anyone.
+    const rule30 = src.slice(
+      src.indexOf('30. FORMER-NAME CALLBACK'),
+      src.indexOf('Voice: "League sources tell me'),
+    );
+    expect(rule30.length).toBeGreaterThan(0);
+
+    const realNames = new Set<string>();
+    for (const cfgPath of ['src/data/theleague.config.json', 'data/afl-fantasy/afl.config.json']) {
+      const cfg = JSON.parse(readFileSync(path.join(process.cwd(), cfgPath), 'utf8'));
+      for (const t of cfg.teams ?? []) {
+        for (const f of ['name', 'nameMedium', 'nameShort'] as const) {
+          if (typeof t[f] === 'string' && t[f].trim().length >= 4) realNames.add(t[f].trim());
+        }
+        for (const h of t.history ?? []) {
+          if (typeof h?.name === 'string' && h.name.trim().length >= 4) realNames.add(h.name.trim());
+        }
+      }
+    }
+    const hardcoded = [...realNames].filter((n) => rule30.includes(n));
+    expect(hardcoded).toEqual([]);
   });
 });
