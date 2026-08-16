@@ -22,6 +22,12 @@ const SEQUENTIAL = [
   { name: 'update:salary:all', cmd: 'pnpm run update:salary:all' },
   { name: 'compute:franchise-history', cmd: 'pnpm run compute:franchise-history' },
   { name: 'compute:afl-free-agents', cmd: 'pnpm run compute:afl-free-agents' },
+  // compute:franchise-history above defaults to TheLeague, so the AFL's copy
+  // was only ever refreshed by hand or by the backfill workflow — it went stale
+  // against its own committed feeds between runs. Adding the record book to
+  // this list without this made that asymmetry worse, since the book would
+  // rebuild every deploy while the history it sits beside did not.
+  { name: 'compute:afl-franchise-history', cmd: 'pnpm run compute:afl-franchise-history' },
   // Reads the same committed feeds as the history step; the record book is a
   // small top-N slice written to its own derived file.
   { name: 'compute:afl-record-book', cmd: 'pnpm run compute:afl-record-book' },

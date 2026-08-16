@@ -110,6 +110,13 @@ jobs:
       - name: Recompute franchise history
         run: node ./scripts/compute-franchise-history.mjs --league=${{ inputs.league }}
 
+      # The record book is derived from the same schedules this job just
+      # backfilled, and the commit step below ships all of derived/. Without
+      # this it would commit a refreshed franchise-history.json beside a
+      # record-book.json still describing the pre-backfill schedules.
+      - name: Recompute record book
+        run: node ./scripts/compute-record-book.mjs --league=${{ inputs.league }}
+
       # Paths differ per league: TheLeague's schefter feed lives under src/data
       # and picks up milestone posts from the compute step; the AFL's feed sits
       # in its data directory and emits no milestones (see LEAGUE_TARGETS in
