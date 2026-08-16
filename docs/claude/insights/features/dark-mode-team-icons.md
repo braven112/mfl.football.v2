@@ -368,23 +368,34 @@ stroke, else opt out.
 ## 2026-08-15 - The measurement's false NEGATIVES are the ones nobody looks for
 
 **Context:** Micks, Titsburgh and Swiftie got dark treatments. None of the three
-was in `crest-dark-stroke-manifest.json` — the measurement had cleared all of
-them, correctly by its own definition.
+was in `crest-dark-stroke-manifest.json`. Scores, per the section above's
+instruction to look them up before writing a legibility rationale anywhere —
+**Micks 0.534, Titsburgh 0.668, Swiftie 0.908**.
 
-**The blind spot is structural, not a tuning problem.** The entry above tunes
-the threshold for false POSITIVES (crests flagged that didn't need it, all
-clustered in 0.35–0.50). This is the other direction, and it can't be fixed by
-moving the threshold at all: the score counts *how many* pixels are legible, not
-*where* they are. A crest that's bright through the middle and dark around its
-rim scores comfortably while the silhouette it actually presents to the card is
-a dark edge on a dark card. Micks (green leprechaun) and Titsburgh (bright
-gray-and-white) both read fine at a glance and both had a black outer ring that
-dissolved. Jewpacabra was the same shape of bug and is already handled in code;
-what this branch establishes is that it's a recurring class, not a one-off.
+**Those three numbers are three different stories, and only the middle one is
+the structural blind spot.** Worth separating, because they argue for different
+fixes:
+
+- **Titsburgh (0.668)** is the real case. It clears comfortably and still had a
+  black outer ring that dissolved — the score counts *how many* pixels are
+  legible, not *where* they are, so a crest bright through the middle passes
+  while the silhouette it presents to the card is a dark edge on a dark one.
+  Moving the threshold cannot reach this; the opt-in path exists for it
+  (Jewpacabra, above).
+- **Micks (0.534)** is not really a false negative at all — it is a *marginal
+  pass*, three points over the cutoff, with ~47% of its pixels illegible. It
+  argues the opposite of the 0.35 re-tune the section above floats: at 0.5 the
+  threshold is already letting through crests that visibly need help. Don't
+  cite it as evidence for the rim blind spot; it's evidence about the cutoff.
+- **Swiftie (0.908)** is not a legibility case in any sense — same shape as Suh
+  girls at 85%. It got a ring for definition, not rescue. See the render-size
+  note below for how that was established.
 
 A cheap manual check when adding any crest-only surface: look at the crest's
 RIM against `--card-surface`, separately from the crest as a whole. The score
-can't see the distinction and won't warn you.
+can't see the distinction and won't warn you. But run
+`pnpm measure:crest-contrast --report` first — the number tells you which of the
+three stories above you're actually in, and eyeballing cannot.
 
 **Judge a stroke at render size, on the real card color — never zoomed.** The
 `drop-shadow` ring is `0.5px`. Reviewed at 180px it looks like a deliberate
