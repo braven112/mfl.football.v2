@@ -147,7 +147,7 @@ function scanHtml(html) {
   }
 
   // Inline scripts matching any redirect/obfuscation pattern.
-  const inlineRe = /<script\b(?![^>]*\bsrc\s*=)[^>]*>([\s\S]*?)<\/script\s*>/gi;
+  const inlineRe = /<script\b(?![^>]*\bsrc\s*=)[^>]*>([\s\S]*?)<\/script[^>]*>/gi;
   while ((m = inlineRe.exec(html))) {
     const body = m[1];
     if (!body.trim()) continue;
@@ -172,7 +172,7 @@ function scanHtml(html) {
 /** Does the schedule table survive on this page? */
 function scheduleSignal(html, names) {
   const text = html
-    .replace(/<script[\s\S]*?<\/script\s*>/gi, ' ')
+    .replace(/<script[\s\S]*?<\/script[^>]*>/gi, ' ')
     .replace(/<[^>]+>/g, ' ')
     .replace(/&nbsp;/g, ' ')
     .replace(/\s+/g, ' ');

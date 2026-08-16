@@ -144,7 +144,7 @@ function franchiseNames(year) {
 
 const stripTags = (html) =>
   html
-    .replace(/<script[\s\S]*?<\/script\s*>/gi, ' ')
+    .replace(/<script[\s\S]*?<\/script[^>]*>/gi, ' ')
     .replace(/<style[\s\S]*?<\/style>/gi, ' ')
     .replace(/<[^>]+>/g, ' ')
     .replace(/&nbsp;/g, ' ')
