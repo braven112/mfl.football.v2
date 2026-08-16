@@ -1,19 +1,23 @@
 /**
- * GroupMe link hygiene.
+ * Link punctuation, both directions.
  *
  * Reported 2026-08-16: Roger's roster-cutdown touch ended
  * "Review your plan at <url>." and GroupMe autolinked the trailing period
  * into the href, so every owner who tapped it got a 404.
  *
- * These tests lock the sanitizer's behavior AND assert that all three
- * bot-post primitives actually call it — a helper existing is not the same
- * as the send path using it.
+ * These tests lock the outgoing sanitizer AND the inbound path trim, assert
+ * that all three bot-post primitives actually call the sanitizer (a helper
+ * existing is not the same as the send path using it), and pin the
+ * open-redirect guard on the inbound side.
  */
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { stripLinkAdjacentPunctuation } from '../src/utils/groupme-link-text.mjs';
+import {
+  stripLinkAdjacentPunctuation,
+  trimTrailingPunctuationFromPath,
+} from '../src/utils/link-punctuation.mjs';
 import { postToGroupMe } from '../scripts/lib/groupme.mjs';
 import { buildSpeculationGroupMeText } from '../scripts/lib/speculation-groupme.mjs';
 
@@ -116,5 +120,64 @@ describe('send-path wiring', () => {
     ]) {
       expect(read(file)).toContain('stripLinkAdjacentPunctuation');
     }
+  });
+});
+
+describe('trimTrailingPunctuationFromPath — inbound rescue', () => {
+  it('rescues the link that is already sitting in the chat', () => {
+    // Both forms: the apex-host bare path and the prefixed path the older
+    // build shipped (vercel.json 301s the prefixed one, then we trim).
+    expect(trimTrailingPunctuationFromPath('/rosters.')).toBe('/rosters');
+    expect(trimTrailingPunctuationFromPath('/theleague/rosters.')).toBe('/theleague/rosters');
+  });
+
+  it('trims every punctuation mark, including runs', () => {
+    for (const mark of ['.', ',', ';', ':', '!', '...', '.,']) {
+      expect(trimTrailingPunctuationFromPath(`/schefter/tip${mark}`)).toBe('/schefter/tip');
+    }
+  });
+
+  it('returns null when there is nothing to trim, so it never loops', () => {
+    for (const path of ['/rosters', '/', '/afl-fantasy/calendar', '/assets/nfl-logos/TBB.svg']) {
+      expect(trimTrailingPunctuationFromPath(path)).toBeNull();
+      // Idempotence: whatever a trim produces must itself be a no-op.
+      expect(trimTrailingPunctuationFromPath(`${path}.`)).toBe(path === '/' ? '/' : path);
+    }
+  });
+
+  it('refuses protocol-relative paths — open-redirect guard', () => {
+    // `//evil.com` in a Location header leaves our origin entirely.
+    expect(trimTrailingPunctuationFromPath('//evil.com.')).toBeNull();
+    expect(trimTrailingPunctuationFromPath('//evil.com/theleague/rosters.')).toBeNull();
+    expect(trimTrailingPunctuationFromPath('/\\evil.com.')).toBeNull();
+  });
+
+  it('refuses control characters that could split a Location header', () => {
+    expect(trimTrailingPunctuationFromPath('/rosters\r\nX-Injected: 1.')).toBeNull();
+    expect(trimTrailingPunctuationFromPath('/rosters\u0000.')).toBeNull();
+  });
+
+  it('degrades a punctuation-only path to the homepage', () => {
+    expect(trimTrailingPunctuationFromPath('.')).toBe('/');
+    expect(trimTrailingPunctuationFromPath('...')).toBe('/');
+  });
+
+  it('leaves percent-encoded slashes same-origin', () => {
+    // Encoded slashes stay a path segment; they never resolve cross-origin.
+    expect(trimTrailingPunctuationFromPath('/%2f%2fevil.com.')).toBe('/%2f%2fevil.com');
+  });
+
+  it('passes non-string and empty input through as null', () => {
+    expect(trimTrailingPunctuationFromPath('')).toBeNull();
+    expect(trimTrailingPunctuationFromPath(undefined as unknown as string)).toBeNull();
+  });
+
+  it('middleware wires it up for navigations only, as a revocable 302', () => {
+    const middleware = read('../src/middleware.ts');
+    expect(middleware).toContain('trimTrailingPunctuationFromPath');
+    expect(middleware).toContain('302');
+    // A 3xx on a write would drop the request body.
+    expect(middleware).toContain("REDIRECTABLE_METHODS = new Set(['GET', 'HEAD'])");
+    expect(middleware).not.toContain('context.redirect(trimmedPath + context.url.search, 301)');
   });
 });

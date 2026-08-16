@@ -116,16 +116,52 @@ period, and it 404s for every owner who taps it. Roger's roster-cutdown touch
 did exactly that (owner report, 2026-08-16). Bare hosts autolink too, so
 `…log in at www.theleague.us.` breaks the same way.
 
-`stripLinkAdjacentPunctuation` (`src/utils/groupme-link-text.mjs`) trims the
-`.,;:!?` run glued to the end of a URL, and runs inside all three bot-post
-primitives — `scripts/lib/groupme.mjs` (the choke point for all nine node
-lanes), `scripts/lib/speculation-groupme.mjs`, and
-`src/utils/groupme-client.ts#postAsBot`. It is deliberately on the SEND path,
-not a template guard test: a large share of GroupMe text is composed at
-runtime and Schefter's LLM-written bodies routinely end a sentence on a link,
-so nothing static can catch those. `sendMessage` (owner's own token, owner's
-own words) is deliberately left alone. `tests/groupme-link-text.test.ts`
-locks the behavior and greps all three primitives for the call.
+`src/utils/link-punctuation.mjs` fixes it from BOTH ends, and both halves are
+load-bearing:
+
+- **Outgoing** — `stripLinkAdjacentPunctuation` trims the `.,;:!?` run glued
+  to the end of a URL, inside all three bot-post primitives:
+  `scripts/lib/groupme.mjs` (the choke point for all nine node lanes),
+  `scripts/lib/speculation-groupme.mjs`, and
+  `src/utils/groupme-client.ts#postAsBot`. It is deliberately on the SEND
+  path, not a template guard test — a large share of GroupMe text is composed
+  at runtime and Schefter's LLM-written bodies routinely end a sentence on a
+  link, so nothing static can catch those. `sendMessage` (owner's own token,
+  owner's own words) is left alone on purpose.
+- **Inbound** — `trimTrailingPunctuationFromPath` powers a 302 in
+  `src/middleware.ts`, because the outgoing fix cannot reach a message
+  already sent: those links are still in the chat and still dead. It also
+  covers iMessage/Slack/email, which autolink the same way. No URL we serve
+  ends in punctuation, so trimming can only turn a 404 into the right page.
+
+Three things about the inbound redirect that are guards, not style:
+
+- **GET/HEAD only.** A 3xx on a POST/PATCH makes clients re-issue as GET and
+  drop the body — a write would look fine and land nowhere.
+- **It refuses protocol-relative paths.** `//evil.com.` trims to
+  `//evil.com`, and that in a `Location` header walks the user off our
+  origin. The helper returns `null` for any path whose second character is
+  `/` or `\`, and for control characters. That guard is why this is a
+  function rather than an inline `.replace()`.
+- **302, not 301.** A permanent redirect is cached indefinitely by browsers
+  and by the Cloudflare layer in front of the apex domains — the same layer
+  that kept serving stale 404s for hours during the NFL-logo saga. This
+  normalization is defensive, not canonical, so keep it revocable.
+
+It runs before the league-host rewrite (so the trimmed path resolves
+normally) and redirects rather than rewrites (so the URL bar stops showing a
+broken, re-shareable link). `tests/link-punctuation.test.ts` locks both
+halves, greps all three primitives for the sanitizer, and pins the
+open-redirect guard.
+
+**Known limitation, deliberate: the redirect is PATH-only.** A stray
+character that lands in the query (`/schefter/tip?target=0001.`) is not
+rescued. Do not "finish the job" by trimming the query too —
+`/api/suggestions/gif-search?q=` carries free-form user text, and trimming
+would silently turn a search for `cat.` into a search for `cat` on every
+request. The outgoing half is what keeps us from emitting those links, and
+the one deep link we build with a query (`/news?post=<id>`) ends in a
+`#post-<id>` fragment that browsers never send, so it absorbs the character.
 
 Detecting "is this base URL my own apex host" must go through
 `buildHostToSlugMap()`, never a string compare against the canonical origin —

@@ -7,7 +7,7 @@
     {
       "date": "2026-08-16",
       "type": "bug-fix",
-      "summary": "Roger's links in the group chat work again. When he ended a sentence with a link — \"Review your plan at theleague.us/rosters.\" — GroupMe grabbed the period along with the address and sent everyone who tapped it to a page that doesn't exist. The roster-cutdown reminder is the one owners actually noticed, since it's the message telling seven teams to go log in and fix their roster. Every bot message now gets the trailing period trimmed off the link on the way out, so this can't come back through a Schefter post or a weekly recap either.",
+      "summary": "Roger's links in the group chat work again. When he ended a sentence with a link — \"Review your plan at theleague.us/rosters.\" — GroupMe grabbed the period along with the address and sent everyone who tapped it to a page that doesn't exist. The roster-cutdown reminder is the one owners actually noticed, since it's the message telling seven teams to go log in and fix their roster. Two fixes, because one wasn't enough: every bot message now gets the trailing period trimmed off the link on the way out, and the site itself now catches a link that arrives with a period stuck to it and quietly sends you to the right page instead of a dead end. That second half matters, because the messages already sitting in the chat can't be edited — and it works for links you paste into a text message or an email too.",
       "impact": "user",
       "area": "other",
       "league": "both"

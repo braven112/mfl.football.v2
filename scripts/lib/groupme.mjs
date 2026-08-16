@@ -13,10 +13,10 @@
  *
  * The one thing this DOES normalize is link hygiene: every outgoing text is
  * run through `stripLinkAdjacentPunctuation` so a sentence-ending period
- * never gets autolinked into the URL. See src/utils/groupme-link-text.mjs.
+ * never gets autolinked into the URL. See src/utils/link-punctuation.mjs.
  */
 
-import { stripLinkAdjacentPunctuation } from '../../src/utils/groupme-link-text.mjs';
+import { stripLinkAdjacentPunctuation } from '../../src/utils/link-punctuation.mjs';
 
 const GROUPME_POST_URL = 'https://api.groupme.com/v3/bots/post';
 

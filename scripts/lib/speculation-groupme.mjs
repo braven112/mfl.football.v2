@@ -24,7 +24,7 @@
  * so we direct readers back to the feed entry itself.
  */
 
-import { stripLinkAdjacentPunctuation } from '../../src/utils/groupme-link-text.mjs';
+import { stripLinkAdjacentPunctuation } from '../../src/utils/link-punctuation.mjs';
 
 const GROUPME_POST_URL = 'https://api.groupme.com/v3/bots/post';
 
