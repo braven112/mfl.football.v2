@@ -1,0 +1,371 @@
+{
+  "generatedAt": "2026-08-16T19:20:13.144Z",
+  "git": {
+    "countObjects": {
+      "count": "20318",
+      "size": "212.30 MiB",
+      "in-pack": "547547",
+      "packs": "85",
+      "size-pack": "6.72 GiB",
+      "prune-packable": "1424",
+      "garbage": "7",
+      "size-garbage": "2.61 MiB"
+    },
+    "branchCount": 1135,
+    "worktreeCount": 95,
+    "commitsLast7d": {
+      "total": 470,
+      "touchingData": 424,
+      "touchingSrcData": 445
+    }
+  },
+  "files": {
+    "leagues": {
+      "theleague": {
+        "mflFeeds": {
+          "files": 608,
+          "bytes": 83130116
+        },
+        "rosterHistory": {
+          "2010": {
+            "files": 1,
+            "bytes": 17188
+          },
+          "2011": {
+            "files": 1,
+            "bytes": 99
+          },
+          "2012": {
+            "files": 2,
+            "bytes": 97544
+          },
+          "2013": {
+            "files": 1,
+            "bytes": 54700
+          },
+          "2014": {
+            "files": 1,
+            "bytes": 46975
+          },
+          "2015": {
+            "files": 1,
+            "bytes": 44570
+          },
+          "2016": {
+            "files": 1,
+            "bytes": 56593
+          },
+          "2017": {
+            "files": 1,
+            "bytes": 61106
+          },
+          "2018": {
+            "files": 1,
+            "bytes": 62058
+          },
+          "2019": {
+            "files": 1,
+            "bytes": 67614
+          },
+          "2020": {
+            "files": 3,
+            "bytes": 200586
+          },
+          "2021": {
+            "files": 4,
+            "bytes": 243448
+          },
+          "2022": {
+            "files": 4,
+            "bytes": 262296
+          },
+          "2023": {
+            "files": 3,
+            "bytes": 190797
+          },
+          "2024": {
+            "files": 3,
+            "bytes": 205125
+          },
+          "2025": {
+            "files": 80,
+            "bytes": 5572731
+          },
+          "2026": {
+            "files": 175,
+            "bytes": 12115119
+          }
+        },
+        "schefterFeed": {
+          "path": "src/data/theleague/schefter-feed.json",
+          "bytes": 994942,
+          "posts": 1553
+        }
+      },
+      "afl-fantasy": {
+        "mflFeeds": {
+          "files": 592,
+          "bytes": 72657430
+        },
+        "rosterHistory": {
+          "2010": {
+            "files": 1,
+            "bytes": 17188
+          },
+          "2011": {
+            "files": 1,
+            "bytes": 99
+          },
+          "2012": {
+            "files": 2,
+            "bytes": 97544
+          },
+          "2013": {
+            "files": 1,
+            "bytes": 54700
+          },
+          "2014": {
+            "files": 1,
+            "bytes": 46975
+          },
+          "2015": {
+            "files": 1,
+            "bytes": 44570
+          },
+          "2016": {
+            "files": 1,
+            "bytes": 56593
+          },
+          "2017": {
+            "files": 1,
+            "bytes": 61106
+          },
+          "2018": {
+            "files": 1,
+            "bytes": 62058
+          },
+          "2019": {
+            "files": 1,
+            "bytes": 67614
+          },
+          "2020": {
+            "files": 1,
+            "bytes": 66862
+          },
+          "2021": {
+            "files": 1,
+            "bytes": 60862
+          },
+          "2022": {
+            "files": 1,
+            "bytes": 63016
+          },
+          "2023": {
+            "files": 1,
+            "bytes": 63599
+          },
+          "2024": {
+            "files": 2,
+            "bytes": 106844
+          },
+          "2025": {
+            "files": 77,
+            "bytes": 3497870
+          },
+          "2026": {
+            "files": 173,
+            "bytes": 1610396
+          }
+        },
+        "schefterFeed": {
+          "path": "data/afl-fantasy/schefter-feed.json",
+          "bytes": 704219,
+          "posts": 1211
+        }
+      },
+      "best-ball-1": {
+        "mflFeeds": null,
+        "rosterHistory": {},
+        "schefterFeed": {
+          "path": "data/best-ball-1/schefter-feed.json",
+          "bytes": 218,
+          "posts": 0
+        }
+      }
+    },
+    "whatsNew": {
+      "bytes": 339206,
+      "entries": 124,
+      "screenshots": {
+        "files": 211,
+        "bytes": 18772631
+      }
+    }
+  },
+  "ttfb": {
+    "https://www.theleague.us/": [
+      {
+        "code": 200,
+        "seconds": 2.248697
+      },
+      {
+        "code": 200,
+        "seconds": 0.682099
+      }
+    ],
+    "https://www.theleague.us/players": [
+      {
+        "code": 200,
+        "seconds": 0.793776
+      },
+      {
+        "code": 200,
+        "seconds": 0.412637
+      },
+      {
+        "code": 200,
+        "seconds": 0.254895
+      }
+    ],
+    "https://www.theleague.us/rosters": [
+      {
+        "code": 200,
+        "seconds": 1.437973
+      },
+      {
+        "code": 200,
+        "seconds": 1.291784
+      },
+      {
+        "code": 200,
+        "seconds": 1.357746
+      }
+    ],
+    "https://www.theleague.us/news": [
+      {
+        "code": 200,
+        "seconds": 0.214251
+      },
+      {
+        "code": 200,
+        "seconds": 0.194397
+      },
+      {
+        "code": 200,
+        "seconds": 0.287955
+      }
+    ],
+    "https://www.theleague.us/mvp": [
+      {
+        "code": 200,
+        "seconds": 0.375443
+      },
+      {
+        "code": 200,
+        "seconds": 0.156065
+      },
+      {
+        "code": 200,
+        "seconds": 0.214033
+      }
+    ],
+    "https://www.theleague.us/rivalries": [
+      {
+        "code": 200,
+        "seconds": 0.26833
+      },
+      {
+        "code": 200,
+        "seconds": 0.184572
+      },
+      {
+        "code": 200,
+        "seconds": 0.14409
+      }
+    ],
+    "https://www.afl-fantasy.com/": [
+      {
+        "code": 200,
+        "seconds": 0.323929
+      },
+      {
+        "code": 200,
+        "seconds": 0.186827
+      },
+      {
+        "code": 200,
+        "seconds": 0.315953
+      }
+    ],
+    "https://www.afl-fantasy.com/players": [
+      {
+        "code": 200,
+        "seconds": 0.390068
+      },
+      {
+        "code": 200,
+        "seconds": 0.18482
+      },
+      {
+        "code": 200,
+        "seconds": 0.146813
+      }
+    ],
+    "https://www.afl-fantasy.com/rosters": [
+      {
+        "code": 200,
+        "seconds": 1.61197
+      },
+      {
+        "code": 200,
+        "seconds": 0.354699
+      },
+      {
+        "code": 200,
+        "seconds": 0.289971
+      }
+    ],
+    "https://www.afl-fantasy.com/news": [
+      {
+        "code": 200,
+        "seconds": 0.218218
+      },
+      {
+        "code": 200,
+        "seconds": 0.154611
+      },
+      {
+        "code": 200,
+        "seconds": 0.174202
+      }
+    ],
+    "https://www.afl-fantasy.com/mvp": [
+      {
+        "code": 404,
+        "seconds": 0.16184
+      },
+      {
+        "code": 404,
+        "seconds": 0.14763
+      },
+      {
+        "code": 404,
+        "seconds": 0.22918
+      }
+    ],
+    "https://www.afl-fantasy.com/rivalries": [
+      {
+        "code": 200,
+        "seconds": 0.21524
+      },
+      {
+        "code": 200,
+        "seconds": 0.265199
+      },
+      {
+        "code": 200,
+        "seconds": 0.179841
+      }
+    ]
+  }
+}
