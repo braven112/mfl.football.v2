@@ -696,6 +696,7 @@ html[data-league="afl"] {
   --afl-navy: #0f1e2e;                         /* design-system deep navy (EventHeroShell palette) */
   --afl-gold: #d97706;                         /* AFL amber accent (championship hero tint/border). NOT the badge gold — use --afl-trophy-gold to match award art. */
   --afl-trophy-gold: #c9a44c;                  /* metallic badge gold — matches the award SVG art (#c9a44c) */
+  --afl-gold-text: #b45309;                    /* AFL gold as FOREGROUND. --afl-gold is 3.2:1 on a white card and --afl-trophy-gold 2.4:1 — both fail AA for text. This is the same amber family at 5.0:1, and tokens-dark.css flips it to --afl-trophy-gold (6.3:1 on the navy card), so a call site needs one line, not a theme override. */
   --afl-trophy-gold-light: #e6c976;            /* lighter badge-gold highlight (#e6c976) */
   --breadcrumb-bar-bg: var(--afl-navy);        /* top "Back to MFL" strip */
   --inverse-bg: var(--afl-navy);               /* footer (via --inverse-content-bg) */

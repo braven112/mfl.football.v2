@@ -1446,10 +1446,12 @@ const roundLabel = (round: string) => {
     border-color: color-mix(in srgb, var(--color-success, #34d399) 45%, transparent);
   }
 
+  /* Green here is the "filled / confirmed" affordance, not a brand color —
+     so it reads from --color-success, not TheLeague's --color-secondary. */
   html.dark .kp-slot--filled .kp-slot__num {
-    background: var(--color-secondary, #10b981);
+    background: var(--color-success, #34d399);
     color: #06281c;
-    border-color: var(--color-secondary, #10b981);
+    border-color: var(--color-success, #34d399);
   }
 
   html.dark .kp-slot__name {
@@ -1485,12 +1487,12 @@ const roundLabel = (round: string) => {
   }
 
   html.dark .kp-btn--primary {
-    background: var(--color-secondary, #10b981);
+    background: var(--color-success, #34d399);
     color: #06281c;
   }
 
   html.dark .kp-btn--primary:hover:not(:disabled) {
-    background: var(--color-secondary-light, #34d399);
+    background: var(--color-success-dark, #6ee7b7);
   }
 
   html.dark .kp-btn--danger {
@@ -1560,7 +1562,7 @@ const roundLabel = (round: string) => {
   }
 
   html.dark .kp-finalize__bar span {
-    background: var(--color-secondary, #10b981);
+    background: var(--color-success, #34d399);
   }
 
   html.dark .kp-finalize__error {

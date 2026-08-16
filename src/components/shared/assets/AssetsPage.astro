@@ -655,15 +655,25 @@ const copyIcons = `
     margin-top: 0.5rem;
   }
 
+  /* This row is AFL-only (see above), so the token can be swapped outright
+     rather than scoped. It was --accent-link-hover-text-color, which chains to
+     --link-color-accent-hover — TheLeague's green in AFL light, since only
+     html.dark[data-league="afl"] pins that token red. */
   .team-tier {
     font-size: 0.85rem;
     font-weight: 600;
     padding: 0.25rem 0.75rem;
     border-radius: 0.25rem;
-    background: var(--accent-link-hover-text-color, #b45309);
+    background: var(--league-accent, #c41e3a);
     color: white;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+  }
+
+  /* Dark remaps --league-accent to #ef5350, where white is 3.49:1 at this
+     size — dark ink instead, same as the draft-order OFFICIAL badge. */
+  :global(html.dark) .team-tier {
+    color: #2a0808;
   }
 
   .team-conference {

@@ -242,6 +242,32 @@
   color: var(--color-secondary, #2e8743);
 }
 
+/* ── AFL accent overrides ──
+   The three rules above use --color-secondary, which is TheLeague's brand
+   green. This file is shared: it's imported by theleague/{index,news,news/[id]}
+   AND afl-fantasy/{index,news,news/[id]}, and the AFL theme never overrides
+   --color-secondary — so without this block the AFL homepage and news feed
+   render TheLeague's green on article and external cards.
+
+   Scoped rather than swapped, because TheLeague's green is correct on
+   TheLeague. The external LINK gets the same two-rule treatment as the
+   playoffs page: --league-accent is #ef5350 in dark, only 4.29:1 on the card,
+   so dark takes --link-color-accent-hover (#ff8a80, 6.56:1). Don't collapse
+   them — that token is TheLeague green in AFL light. Borders are non-text and
+   clear 3:1 on --league-accent alone. */
+html[data-league='afl'] .sf-post--article,
+html[data-league='afl'] .sf-post--external {
+  border-left-color: var(--league-accent, #c41e3a);
+}
+
+html[data-league='afl'] .sf-post__link--external {
+  color: var(--league-accent, #c41e3a);
+}
+
+html.dark[data-league='afl'] .sf-post__link--external {
+  color: var(--link-color-accent-hover, #ff8a80);
+}
+
 /* Directed CTA — fires on franchise-explicit-pick posts (link contains
    ?target=). The directed dare ("Geeks desk — your move →") is a different
    speech act than the open prompt ("Got a tip? Whisper to Schefter →") so

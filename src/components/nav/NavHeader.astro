@@ -384,6 +384,17 @@ const directTarget = switchTargets[0];
     color: var(--secondary-color, #2e8743);
   }
 
+  /* --secondary-color is an alias of TheLeague's --color-secondary, which no
+     other league's theme overrides — so the switcher was marking the current
+     league in TheLeague's green on the AFL and on best-ball alike. Each
+     non-TheLeague league gets its own --league-accent (AFL red, bb1 emerald);
+     TheLeague keeps the base rule, where the green is correct. Icon, so
+     non-text contrast applies. */
+  :global(html[data-league='afl']) .nav-header__switch-check,
+  :global(html[data-league='bb1']) .nav-header__switch-check {
+    color: var(--league-accent, #c41e3a);
+  }
+
   /* Close button */
   .nav-header__close-btn {
     display: flex;

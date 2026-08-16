@@ -300,8 +300,15 @@ const nlOrder = draftOrders.find(order => order.conference === 'National League'
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: #fff;
-    background: var(--color-secondary, #2e8743);
+    background: var(--league-accent, #c41e3a);
     box-shadow: var(--shadow-sm, 0.5px 1px 1px rgba(0, 0, 0, 0.09));
+  }
+
+  /* Dark remaps --league-accent to the brightened red (#ef5350), where white
+     text only reaches 3.5:1 at this size — so the badge flips to dark ink,
+     the same pattern the KeeperPlanner buttons use. */
+  :global(html.dark) .official-badge {
+    color: #2a0808;
   }
 
   .draft-predictor-subtitle {

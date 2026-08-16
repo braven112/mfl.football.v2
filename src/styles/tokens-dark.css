@@ -457,6 +457,7 @@ html.dark {
    --afl-trophy-gold* are left untouched (they match the award SVG art). */
 html.dark[data-league="afl"] {
   --league-accent: #ef5350;                            /* AFL accent — brightened red for dark */
+  --afl-gold-text: var(--afl-trophy-gold, #c9a44c);    /* gold as foreground: the light amber muddies on navy, so text gold becomes the metallic badge gold here (6.3:1 on --card-bg) */
 
   /* Headings + plain anchors: the layout colors h1–h4 and bare <a> via
      --primary-link-default-text-color → --link-color, which html.dark

@@ -1998,3 +1998,141 @@ bbox answers the question that was actually being asked.
 check their viewBox ratios before picking a sizing rule. Equal height is only
 correct for marks that share a ratio; otherwise constrain both axes and verify
 with drawn pixel sizes, not by looking at a screenshot.
+
+---
+
+## `--color-secondary` on an AFL page renders TheLeague's green — and the guard test can't see it
+
+**Context:** `/afl-fantasy/playoffs` labeled every bracket "Championship" in
+green (`#10b981` in dark). The token behind it was `var(--color-secondary,
+#2e8743)` — TheLeague's brand green, defined in `tokens.css` (light `#2e8743`)
+and `tokens-dark.css` (dark `#10b981`).
+
+**Insight:** This is the *sibling* of the documented `var(--color-primary,
+#c41e3a)` trap, and it fails in the opposite direction, which makes it worse.
+The blue trap is a fallback that never fires — the hex only shows in devtools.
+`--color-secondary` genuinely **resolves**, on every AFL page, to the other
+league's brand green, because the AFL blocks (`html[data-league="afl"]` in
+tokens.css, `html.dark[data-league="afl"]` in tokens-dark.css) override
+`--league-accent`, links, nav and the surface ramp but never touch
+`--color-secondary`.
+
+Nothing catches it. `tests/design-token-guard.test.ts` only asserts that a
+referenced custom property is *defined somewhere* — `--color-secondary` is a
+real token with real light and dark values, so the guard passes while the page
+ships another league's identity. A "wrong league's token" bug is invisible to a
+"token exists" test.
+
+**Not every green is a brand leak, and the distinction decides the fix.**
+Sweeping the AFL surfaces turned up three kinds:
+
+- **Brand voice** (`.mfl-link:hover`, the draft-order OFFICIAL badge) → belongs
+  on `--league-accent`. Red on AFL, blue on TheLeague, one token.
+- **Semantic affirmative** (KeeperPlanner's filled-slot pip, primary button,
+  finalize progress bar) → green is correct on any league; it was just sourced
+  from the brand token. Move to `--color-success`, look unchanged.
+- **Categorical palette** (`--lineup-pos-rb` in the position color set) → leave
+  it. `src/pages/theleague/lineup.astro` declares the identical token block, so
+  recoloring only the AFL diverges two sibling pages, and a red RB chip would
+  collide with the error red on the same screen.
+
+Grep `--color-secondary` under `src/pages/afl-fantasy/` and
+`src/components/afl-fantasy/` when touching AFL styling; classify before
+swapping.
+
+**Gold as AFL foreground takes two tokens, not one.** `--afl-gold` (`#d97706`)
+reads on a white card and muddies on the navy one; `--afl-trophy-gold`
+(`#c9a44c`, matching the award SVG art) is 6.2:1 on the dark card and only
+2.4:1 on white. The established pattern is the light/dark split already used by
+`StandingsTable.astro`'s champion subtitle: `--afl-gold` in the base rule,
+`--afl-trophy-gold` under `:global(html.dark)`. Note `--afl-gold` is ~3.2:1 on
+white — under AA for small text; `#b45309` reaches 5:1 in the same family if a
+surface needs it.
+
+**One more asymmetry worth pricing in:** `--league-accent` is *not* the same
+color in both themes (`#c41e3a` light, `#ef5350` dark), so a fill that carries
+white text at 5.8:1 in light drops to 3.5:1 in dark. Flip the text to dark ink
+(`#2a0808`, the pattern `.kp-btn--danger` already uses) rather than pinning the
+light red.
+
+**Follow-up from review (same PR).** Two things the first pass missed, both
+found by an independent reviewer, both worth generalizing:
+
+- **Grep the token name AND the literal hex.** The same page's live-refresh
+  progress bar hardcoded `linear-gradient(90deg, #1c497c, #2e8743)` —
+  TheLeague's blue-to-green brand pair, with no `var()` anywhere for a
+  token-name grep to catch. It renders only on `[data-status='live']` cards,
+  so it also survived every screenshot taken outside a live week. Anything
+  gated behind a live/in-progress state needs its styles read, not screenshotted.
+- **`--link-color-accent-hover` is NOT red on AFL light.** Only
+  `html.dark[data-league="afl"]` pins it (`#ff8a80`); in AFL light it is still
+  TheLeague's `#2e8743`. It is the right token for a dark-mode-only override
+  (6.6:1 vs `--league-accent`'s 4.29:1 at 16px), but folding a light+dark pair
+  into that single token reintroduces the green. Check a link token's value in
+  *both* AFL themes before consolidating.
+
+`tests/afl-brand-green-guard.test.ts` now enforces the whole rule: it scans the
+AFL-only trees for `--color-secondary` and TheLeague's unambiguous brand-green
+hexes, with an allowlist that documents why each sanctioned green is semantic
+or categorical rather than brand. Two notes if you extend it — `#10b981` is
+deliberately absent from the forbidden list (it is `--color-secondary` in dark
+but also `--color-success` in light, so it cannot distinguish the bug from the
+correct usage), and the scanner needs real block-comment state, since a wrapped
+sentence inside `/* … */` often starts with an ordinary word rather than `*`.
+
+**Third round, and the one with the widest blast radius: SHARED stylesheets.**
+`src/styles/schefter-feed.css` is imported by `{theleague,afl-fantasy}/index`,
+`/news`, and `/news/[id]` — six pages, two leagues, one file — and its article
+and external-post accents were still `var(--color-secondary, #2e8743)`. A guard
+that walks only `pages/afl-fantasy` and `components/afl*` cannot see it, which
+is exactly how it survived the first two rounds of this PR.
+
+The fix for a shared file is NOT the fix for an AFL-only file. TheLeague's
+green is *correct* on TheLeague, so swapping the token would just move the bug
+across the border. Scope it instead:
+
+```css
+html[data-league='afl'] .sf-post--article { border-left-color: var(--league-accent); }
+```
+
+`tests/afl-brand-green-guard.test.ts` encodes the distinction — for files in
+`SHARED_STYLESHEETS` it asserts that any file using `--color-secondary` also
+carries an `html[data-league="afl"]` override, rather than banning the token.
+
+**Measurement trap that cost real time here.** Reading contrast after
+`html.classList.remove('dark')` gives *plausible, wrong* numbers on any page
+whose surfaces re-resolve from `prefers-color-scheme` — the Schefter card
+measured 2.56:1 in "light" while its stylesheet plainly said `--card-bg: #fff`,
+because the pane's own scheme was dark and the site's `auto` preference won.
+Set the browser's color scheme (`resize_window { colorScheme: 'light' }`) and
+reload, rather than toggling the class. The tell is a computed background that
+contradicts the only CSS rule that matches the element.
+
+One more non-text contrast note from the same round: `--content-bg-accent` is
+`#66abea` in light — a saturated mid-blue, not a neutral. Nothing clears 3:1 as
+a fill on it (the old TheLeague-green progress bar managed 1.84:1). For a
+progress track or any recessed strip, `--content-bg-muted` is the right token.
+
+**Where this actually lives: the SHARED component layer, not the AFL tree.**
+Round three found four more, none of them in an `afl-*` directory:
+`AssetsPage.astro` (AFL tier badge), `WhatsNewIndexPage.astro` (card read-more
+hover), `schefter-feed-compact.css` (Roger's reply rail), and `NavHeader.astro`
+(the league-switcher checkmark — on every page of both leagues). The lesson is
+that "AFL pages wearing TheLeague green" is mostly not an AFL-page problem; it
+is shared chrome that no per-league override was ever written for.
+
+Two aliases do the smuggling, and neither contains the word "secondary" at the
+call site:
+
+- `--secondary-color` → `var(--color-secondary)`. Green, both themes.
+- `--accent-link-hover-text-color` → `--link-color-accent-hover` → green in AFL
+  **light** only, because just `html.dark[data-league="afl"]` pins it red. This
+  is the same token the playoffs fix leans on for dark, which is exactly why it
+  is dangerous: correct in one theme, TheLeague's brand in the other.
+
+So when auditing, chase the alias chain to a literal before deciding a token is
+league-safe, and treat a token that only ONE theme block overrides as
+half-defined. `tests/afl-brand-green-guard.test.ts` now scans the shared files
+for all three names — but its shared-file check only asserts that *an* AFL
+override exists, so a wrong selector or an override on the wrong property still
+passes. It narrows the gap; it does not close it.

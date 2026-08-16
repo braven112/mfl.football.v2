@@ -1862,11 +1862,15 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
     margin-bottom: 1rem;
   }
 
+  /* AFL gold, not --color-secondary (that token is TheLeague's brand green and
+     the AFL theme never overrides it). Same light/dark split as the standings
+     champion subtitle. --afl-gold-text carries the light/dark pair — amber on
+     the white card, trophy gold on the navy one — so this needs one line. */
   .bracket-label {
     margin: 0;
     font-size: 0.85rem;
     font-weight: 700;
-    color: var(--color-secondary, #2e8743);
+    color: var(--afl-gold-text, #b45309);
     letter-spacing: 0.04em;
   }
 
@@ -2190,18 +2194,28 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
     display: flex;
   }
 
+  /* Recessed surface, not --content-bg-accent: that token is a saturated mid
+     blue (#66abea) in light, which no bar color clears 3:1 against — the old
+     TheLeague-green end managed 1.84:1 on it. --content-bg-muted is the
+     semantically right token for a track and is near-white / deep navy. */
   .refresh-progress-container {
     flex: 1;
     height: 5px;
-    background: var(--content-bg-accent, #e2e8f0);
+    background: var(--content-bg-muted, #eeeeee);
     border-radius: 3px;
     overflow: hidden;
     box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
   }
 
+  /* AFL red -> amber. This was TheLeague's brand pair (#1c497c blue -> #2e8743
+     green) hardcoded, and it only renders on [data-status='live'] cards, so it
+     survived every screenshot of a finished season.
+
+     Far end is --afl-gold-text, not --afl-gold: the brighter amber is only
+     2.75:1 on the light track, under the 3:1 floor for a non-text UI mark. */
   .refresh-progress-bar {
     height: 100%;
-    background: linear-gradient(90deg, #1c497c, #2e8743);
+    background: linear-gradient(90deg, var(--league-accent, #c41e3a), var(--afl-gold-text, #b45309));
     border-radius: 3px;
     transition: width 1s linear;
     width: 100%;
@@ -2288,9 +2302,22 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
     transition: color 0.2s ease;
   }
 
+  /* Hover to the AFL accent (red), not TheLeague's brand green. Dark remaps
+     --league-accent to #ef5350, which is only 4.29:1 on the card — under AA
+     for 16px text — so dark takes --link-color-accent-hover (#ff8a80, 6.6:1),
+     the token the AFL dark theme already defines for exactly this.
+
+     Do NOT collapse these two rules into one --link-color-accent-hover: only
+     html.dark[data-league="afl"] pins that token to red. In AFL LIGHT it is
+     still TheLeague's #2e8743, so the "simplification" reintroduces the very
+     green this file was fixing. */
   .mfl-link:hover {
-    color: var(--color-secondary, #2e8743);
+    color: var(--league-accent, #c41e3a);
     text-decoration: underline;
+  }
+
+  :global(html.dark) .mfl-link:hover {
+    color: var(--link-color-accent-hover, #ff8a80);
   }
 
   @media (max-width: 1024px) {
