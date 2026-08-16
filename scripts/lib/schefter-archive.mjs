@@ -16,10 +16,35 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { ALL_LEAGUES } from '../../src/config/leagues-data.mjs';
 import { toEpochMs } from './merge-schefter-feed.mjs';
 import { SCHEFTER_ACTIVE_MAX } from './retention-policy.mjs';
 
 const postTimestamp = (p) => p?.timestamp ?? p?.publishedAt ?? p?.date ?? '';
+
+/**
+ * Every existing archive year-file, repo-relative — for astro.config.ts's
+ * Vercel `includeFiles` (the OG renderer reads them with fs at runtime).
+ * @astrojs/vercel includeFiles does NOT accept glob patterns (it realpaths
+ * each entry and a literal `*.json` string ENOENTs the whole build — bitten
+ * 2026-08-16), so the list is enumerated at config-load time. A brand-new
+ * year file lands in a data commit, which redeploys, which re-runs this.
+ */
+export function schefterArchiveIncludeFiles() {
+  const files = [];
+  for (const league of ALL_LEAGUES) {
+    const feedPath = league.schefterFeedPath ?? path.join(league.dataPath, 'schefter-feed.json');
+    const dir = path.join(path.dirname(feedPath), 'schefter-archive');
+    try {
+      for (const f of fs.readdirSync(dir)) {
+        if (/^\d{4}\.json$/.test(f)) files.push(path.join(dir, f));
+      }
+    } catch {
+      // league without an archive yet
+    }
+  }
+  return files.sort();
+}
 
 /**
  * Archive `feed` (parsed schefter-feed.json object) down to `max` active
