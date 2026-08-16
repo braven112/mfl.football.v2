@@ -800,8 +800,22 @@ function escapeRegExp(s) {
  * whitespace alone.
  */
 function withFlexibleSeparators(escaped) {
-  return escaped.replace(/\s+/g, '[\\s\\-_]+');
+  return escaped.replace(/\s+/g, SEPARATOR_RUN);
 }
+
+/**
+ * What may stand in for the space inside a multi-word franchise name:
+ * whitespace, hyphen, underscore, slash — or a period that is NOT followed by
+ * whitespace.
+ *
+ * The period needs that guard and the others do not, because a period is also
+ * a sentence boundary. Widened naively, "The deal is dead. Cap space is tight."
+ * matches "Dead Cap" across the full stop and redacts two unrelated sentences
+ * into one phantom team — the exact over-redaction this change exists to
+ * remove. `\.(?!\s)` keeps "dead.cap" (one token, no space) while refusing
+ * "dead. Cap" (two sentences). Verified both ways.
+ */
+const SEPARATOR_RUN = '(?:[\\s\\-_/]|\\.(?!\\s))+';
 
 /**
  * Lower-cased with separator runs collapsed to a single space, so a match and
@@ -812,7 +826,7 @@ function withFlexibleSeparators(escaped) {
  * KEPT franchise's own name to "[a team]".
  */
 function canonicalizeNameKey(s) {
-  return s.trim().toLowerCase().replace(/[\s\-_]+/g, ' ');
+  return s.toLowerCase().replace(/[\s\-_/.]+/g, ' ').trim();
 }
 
 /**

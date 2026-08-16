@@ -666,7 +666,10 @@ harvest it runs on is load-bearing, not bookkeeping:
   `withFlexibleSeparators`, because "dead-cap" otherwise misses "Dead Cap"
   entirely and falls apart into `dead`, letting the FULL name through — every
   Set lookup therefore goes through `canonicalizeNameKey` or the kept team's
-  own hyphenated name gets demoted to `[a team]`; and the prose check runs
+  own hyphenated name gets demoted to `[a team]`. The separator set is
+  space/hyphen/underscore/slash **plus a period only when not followed by
+  whitespace**: a period is also a full stop, so widening it naively welds
+  "The deal is dead. Cap space is tight." into one phantom team. And the prose check runs
   **before** the keep-franchise branches, or an ordinary word that is one of
   the kept team's own forms gets rewritten to that team's display name ("the
   deal is Dead Cap Walking"), the same fabrication wearing a real name.

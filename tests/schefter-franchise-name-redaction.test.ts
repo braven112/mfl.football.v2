@@ -662,20 +662,50 @@ describe('franchise-name redaction — ordinary prose survives the fuzz', () => 
   // franchise name therefore survived, which is a worse leak than the
   // single-word case the relaxation was scoped to permit, and the relaxation
   // is what caused it (before, "dead-cap" degraded to "[a team]-cap").
+  // `toContain('[a team]')` is too weak here: a partial match emits the marker
+  // while half the name survives beside it ("[a team]/deep"). Assert the name
+  // itself is GONE, with separators stripped so no variant spelling sneaks by.
+  const assertNameGone = async (
+    text: string,
+    teams: Map<string, TeamEntry>,
+    name: string,
+  ) => {
+    const out = await scrub(text, teams);
+    const squash = (s: string) => s.toLowerCase().replace(/[\s\-_/.]+/g, '');
+    expect(out).toContain('[a team]');
+    expect(squash(out)).not.toContain(squash(name));
+  };
+
   it.each([
-    ['balls-deep is rebuilding.'],
-    ['Balls-Deep is rebuilding.'],
-  ])('redacts a hyphenated multi-word name in %s (AFL)', async (text) => {
-    expect(await scrub(text, AFL)).toContain('[a team]');
+    ['balls-deep is rebuilding.', 'Balls Deep'],
+    ['Balls-Deep is rebuilding.', 'Balls Deep'],
+    ['balls/deep is rebuilding.', 'Balls Deep'],
+    ['balls.deep is rebuilding.', 'Balls Deep'],
+  ])('redacts separator variant %s (AFL)', async (text, name) => {
+    await assertNameGone(text, AFL, name);
   });
 
   it.each([
-    ['dead-cap is over the limit.'],
-    ['dead_cap is over the limit.'],
-    ['heavy-chevy are shopping a TE.'],
-    ['dead  --  cap is over the limit.'],
-  ])('redacts a hyphenated multi-word name in %s (TheLeague)', async (text) => {
-    expect(await scrub(text, LEAGUE)).toContain('[a team]');
+    ['dead-cap is over the limit.', 'Dead Cap'],
+    ['dead_cap is over the limit.', 'Dead Cap'],
+    ['dead/cap is over the limit.', 'Dead Cap'],
+    ['dead.cap is over the limit.', 'Dead Cap'],
+    ['dead  --  cap is over the limit.', 'Dead Cap'],
+    ['heavy-chevy are shopping a TE.', 'Heavy Chevy'],
+    ['heavy/chevy are shopping a TE.', 'Heavy Chevy'],
+    ['heavy.chevy are shopping a TE.', 'Heavy Chevy'],
+  ])('redacts separator variant %s (TheLeague)', async (text, name) => {
+    await assertNameGone(text, LEAGUE, name);
+  });
+
+  it.each([
+    ['The deal is dead. Cap space is tight.'],
+    ['Deal is dead. Somebody may still move.'],
+  ])('does not match a multi-word name across a sentence boundary: %s', async (text) => {
+    // The period is the one separator that needs a guard, because it is also
+    // a full stop. Widened naively, "dead. Cap" matches "Dead Cap" and welds
+    // two unrelated sentences into one phantom team.
+    expect(await scrub(text, LEAGUE)).toBe(text);
   });
 
   it('does not fuzz the KEPT franchise when its own name is hyphenated', async () => {
@@ -699,6 +729,36 @@ describe('franchise-name redaction — ordinary prose survives the fuzz', () => 
     // What a real mention looks like is "the dream", which "The Dream" covers.
     expect(await scrub('Hearing the dream is shopping a TE', LEAGUE))
       .toBe('Hearing [a team] is shopping a TE');
+  });
+
+  // The accepted cost, stated as a test rather than left implied. A relaxable
+  // token IS let through in lowercase even when the tipster meant the team —
+  // that is the whole trade, and the Codex reviewer flagged it twice. Pinning
+  // it means the next person to widen or narrow the rule sees exactly what
+  // they are buying, and cannot change it without this failing.
+  //
+  // What makes it survivable: none of these is a name anyone currently uses.
+  // 0004 wears DEAD as a standings abbreviation and retired "Heavy Chevy" in
+  // 2025; the forms owners actually type — "Dead Cap", "Heavy Chevy" — are
+  // multi-word and still redact, in every separator variant (above). Live
+  // nicknames are blocked outright by `computeRelaxableTokens` (below).
+  it.each([
+    ['hearing dead is shopping a tight end.'],
+    ['hearing heavy is shopping a tight end.'],
+    ['hearing chevy is shopping a tight end.'],
+    ['hearing music is shopping a tight end.'],
+  ])('ACCEPTED COST — lets a lowercase retired/abbrev form through: %s', async (text) => {
+    expect(await scrub(text, LEAGUE)).toBe(text);
+  });
+
+  it('but the form owners actually type still redacts, in any casing', async () => {
+    for (const text of [
+      'hearing dead cap is shopping a tight end.',
+      'hearing heavy chevy is shopping a tight end.',
+      'HEARING DEAD CAP IS SHOPPING.',
+    ]) {
+      expect(await scrub(text, LEAGUE)).toContain('[a team]');
+    }
   });
 
   it('does not rewrite an ordinary word into the KEPT franchise\'s name', async () => {
