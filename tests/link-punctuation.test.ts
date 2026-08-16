@@ -15,11 +15,14 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import {
+  PUNCTUATION_REDIRECT_STATUS,
+  resolvePunctuationRedirect,
   stripLinkAdjacentPunctuation,
   trimTrailingPunctuationFromPath,
 } from '../src/utils/link-punctuation.mjs';
 import { postToGroupMe } from '../scripts/lib/groupme.mjs';
 import { buildSpeculationGroupMeText } from '../scripts/lib/speculation-groupme.mjs';
+import { postAsBot } from '../src/utils/groupme-client';
 
 const read = (rel: string) =>
   readFileSync(fileURLToPath(new URL(rel, import.meta.url)), 'utf8');
@@ -40,7 +43,7 @@ describe('stripLinkAdjacentPunctuation', () => {
   });
 
   it('handles every punctuation mark GroupMe would swallow', () => {
-    for (const mark of ['.', ',', ';', ':', '!', '?', '...', '?!']) {
+    for (const mark of ['.', ',', ';', ':', '!', '...', '.,']) {
       expect(stripLinkAdjacentPunctuation(`Go to https://www.theleague.us/rosters${mark}`)).toBe(
         'Go to https://www.theleague.us/rosters',
       );
@@ -112,14 +115,71 @@ describe('send-path wiring', () => {
     expect(text.endsWith('#post-spec-1')).toBe(true);
   });
 
-  it('every bot-post primitive routes through the sanitizer', () => {
-    for (const file of [
-      '../scripts/lib/groupme.mjs',
-      '../scripts/lib/speculation-groupme.mjs',
-      '../src/utils/groupme-client.ts',
-    ]) {
-      expect(read(file)).toContain('stripLinkAdjacentPunctuation');
+  it('postAsBot sanitizes the text it POSTs', async () => {
+    // Behavioral, not a grep: an earlier version of this test only checked
+    // that the file MENTIONED the sanitizer, which the import line alone
+    // satisfied — reverting postAsBot to post raw `text` still passed.
+    const prev = process.env.GROUPME_BOT_ID;
+    process.env.GROUPME_BOT_ID = 'bot-abc';
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response('{}', { status: 202 }));
+
+    try {
+      await postAsBot('Review your plan at https://www.theleague.us/rosters.');
+      const body = JSON.parse(String(fetchSpy.mock.calls[0]![1]!.body));
+      expect(body.text).toBe('Review your plan at https://www.theleague.us/rosters');
+    } finally {
+      if (prev === undefined) delete process.env.GROUPME_BOT_ID;
+      else process.env.GROUPME_BOT_ID = prev;
     }
+  });
+
+  it('hands the sanitized text to onDryRun so a rehearsal prints real bytes', async () => {
+    let seen: string | undefined;
+    await postToGroupMe({
+      botId: 'bot-123',
+      dryRun: true,
+      text: 'Plan: https://www.theleague.us/rosters.',
+      onDryRun: (t: string) => {
+        seen = t;
+      },
+    });
+    expect(seen).toBe('Plan: https://www.theleague.us/rosters');
+  });
+
+  it('leaves prose punctuation outside a closing delimiter alone', () => {
+    // `)` and `]` end the link unambiguously — no autolinker takes what
+    // follows, so stripping it was pure collateral damage on Schefter copy.
+    expect(
+      stripLinkAdjacentPunctuation('The plan (see https://www.theleague.us/rosters), then act.'),
+    ).toBe('The plan (see https://www.theleague.us/rosters), then act.');
+    expect(
+      stripLinkAdjacentPunctuation('Docs [https://www.theleague.us/rules]: read them.'),
+    ).toBe('Docs [https://www.theleague.us/rules]: read them.');
+    // ...but a period INSIDE the parens is still the link-breaking case.
+    expect(stripLinkAdjacentPunctuation('(https://www.theleague.us/rosters.)')).toBe(
+      '(https://www.theleague.us/rosters)',
+    );
+  });
+
+  it('strips a period followed by an emoji — Roger copy is emoji-dense', () => {
+    expect(stripLinkAdjacentPunctuation('Plan: https://www.theleague.us/rosters. 🚨')).toBe(
+      'Plan: https://www.theleague.us/rosters 🚨',
+    );
+  });
+
+  it('keeps a question mark, which never broke the link', () => {
+    const text = 'Have you checked https://www.theleague.us/rosters?';
+    expect(stripLinkAdjacentPunctuation(text)).toBe(text);
+  });
+
+  it('bails on oversized input instead of backtracking', () => {
+    // O(n^2) on adversarial input; the cap keeps it off the request path.
+    const huge = `${'www.'.repeat(20_000)}X`;
+    const started = performance.now();
+    expect(stripLinkAdjacentPunctuation(huge)).toBe(huge);
+    expect(performance.now() - started).toBeLessThan(250);
   });
 });
 
@@ -158,8 +218,16 @@ describe('trimTrailingPunctuationFromPath — inbound rescue', () => {
   });
 
   it('degrades a punctuation-only path to the homepage', () => {
-    expect(trimTrailingPunctuationFromPath('.')).toBe('/');
-    expect(trimTrailingPunctuationFromPath('...')).toBe('/');
+    expect(trimTrailingPunctuationFromPath('/.')).toBe('/');
+    expect(trimTrailingPunctuationFromPath('/...')).toBe('/');
+  });
+
+  it('refuses input that is not a rooted path at all', () => {
+    // Shape guards run before the trim, so this exported helper can never
+    // hand back a redirect target for something a pathname could not be.
+    expect(trimTrailingPunctuationFromPath('.')).toBeNull();
+    expect(trimTrailingPunctuationFromPath('rosters.')).toBeNull();
+    expect(trimTrailingPunctuationFromPath('https://evil.com/x.')).toBeNull();
   });
 
   it('leaves percent-encoded slashes same-origin', () => {
@@ -172,12 +240,65 @@ describe('trimTrailingPunctuationFromPath — inbound rescue', () => {
     expect(trimTrailingPunctuationFromPath(undefined as unknown as string)).toBeNull();
   });
 
-  it('middleware wires it up for navigations only, as a revocable 302', () => {
-    const middleware = read('../src/middleware.ts');
-    expect(middleware).toContain('trimTrailingPunctuationFromPath');
-    expect(middleware).toContain('302');
-    // A 3xx on a write would drop the request body.
-    expect(middleware).toContain("REDIRECTABLE_METHODS = new Set(['GET', 'HEAD'])");
-    expect(middleware).not.toContain('context.redirect(trimmedPath + context.url.search, 301)');
+  it('middleware calls the resolver rather than re-deriving the decision', () => {
+    expect(read('../src/middleware.ts')).toContain('resolvePunctuationRedirect');
+  });
+});
+
+describe('resolvePunctuationRedirect — the whole inbound decision', () => {
+  // These replace three string-greps against middleware.ts that passed even
+  // when the method gate was removed, the status flipped to 308, and the
+  // query string was dropped.
+  const url = (pathname: string, search = '') => ({ pathname, search });
+
+  it('redirects a navigation and forwards the query string', () => {
+    expect(resolvePunctuationRedirect('GET', url('/theleague/rosters.'))).toBe(
+      '/theleague/rosters',
+    );
+    expect(resolvePunctuationRedirect('HEAD', url('/rosters.'))).toBe('/rosters');
+    expect(resolvePunctuationRedirect('GET', url('/theleague/news.', '?post=abc'))).toBe(
+      '/theleague/news?post=abc',
+    );
+  });
+
+  it('never redirects a write — a 3xx would drop the request body', () => {
+    for (const method of ['POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS']) {
+      expect(resolvePunctuationRedirect(method, url('/api/rules-qa.'))).toBeNull();
+    }
+  });
+
+  it('leaves a clean path alone', () => {
+    expect(resolvePunctuationRedirect('GET', url('/theleague/rosters'))).toBeNull();
+    expect(resolvePunctuationRedirect('GET', url('/', '?q=cat.'))).toBeNull();
+  });
+
+  it('does not touch a free-form search query', () => {
+    // Trimming here would turn every search for `cat.` into `cat`.
+    expect(
+      resolvePunctuationRedirect('GET', url('/api/suggestions/gif-search', '?q=cat.')),
+    ).toBeNull();
+  });
+
+  it('carries the open-redirect guard through', () => {
+    expect(resolvePunctuationRedirect('GET', url('//evil.com.'))).toBeNull();
+    expect(resolvePunctuationRedirect('GET', url('/\\evil.com.'))).toBeNull();
+  });
+
+  it('is idempotent — its own output never redirects again', () => {
+    const once = resolvePunctuationRedirect('GET', url('/theleague/rosters...'));
+    expect(once).toBe('/theleague/rosters');
+    expect(resolvePunctuationRedirect('GET', url(once!))).toBeNull();
+  });
+
+  it('tolerates a malformed url object', () => {
+    expect(resolvePunctuationRedirect('GET', undefined as never)).toBeNull();
+    expect(resolvePunctuationRedirect('GET', {} as never)).toBeNull();
+  });
+
+  it('pins the status as a revocable 302, not a cached permanent redirect', () => {
+    expect(PUNCTUATION_REDIRECT_STATUS).toBe(302);
+    // And the middleware must send it with no-store — Cloudflare has stamped
+    // its own max-age on responses regardless of status before.
+    expect(read('../src/middleware.ts')).toContain("'Cache-Control': 'no-store'");
   });
 });

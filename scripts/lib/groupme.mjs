@@ -26,7 +26,7 @@ const GROUPME_POST_URL = 'https://api.groupme.com/v3/bots/post';
  *   text: string,
  *   dryRun?: boolean,
  *   checkStatus?: boolean,
- *   onDryRun?: () => void,
+ *   onDryRun?: (sanitizedText: string) => void,
  *   onMissingBotId?: () => void,
  *   onPosted?: () => void,
  *   onHttpError?: (status: number) => void,
@@ -45,11 +45,12 @@ export async function postToGroupMe({
   onHttpError,
   onFetchError,
 } = {}) {
-  // Applied before the dry-run bail so a rehearsal prints the exact bytes a
-  // live run would send.
+  // Applied before the dry-run bail, and handed to onDryRun, so a rehearsal
+  // can print the exact bytes a live run would send. Callers that log their
+  // own captured text still show the unsanitized original — take the argument.
   text = stripLinkAdjacentPunctuation(text);
   if (dryRun) {
-    onDryRun?.();
+    onDryRun?.(text);
     return { posted: false, reason: 'dry-run' };
   }
   if (!botId) {

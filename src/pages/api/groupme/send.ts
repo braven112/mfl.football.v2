@@ -60,9 +60,12 @@ export const POST: APIRoute = async ({ request }) => {
     }
   }
 
-  // Trim to GroupMe's 1000 char limit
+  // Trim to GroupMe's 1000 char limit. The marker is a single ellipsis CHAR,
+  // not three periods: postAsBot strips punctuation glued to the end of a URL,
+  // so a '...' left after a cut that landed mid-link would be removed and the
+  // truncated URL would read as complete. '…' is not in that punctuation set.
   if (finalText.length > 1000) {
-    finalText = finalText.slice(0, 997) + '...';
+    finalText = finalText.slice(0, 999) + '…';
   }
 
   const success = await postAsBot(finalText);

@@ -119,20 +119,28 @@ did exactly that (owner report, 2026-08-16). Bare hosts autolink too, so
 `src/utils/link-punctuation.mjs` fixes it from BOTH ends, and both halves are
 load-bearing:
 
-- **Outgoing** — `stripLinkAdjacentPunctuation` trims the `.,;:!?` run glued
+- **Outgoing** — `stripLinkAdjacentPunctuation` trims the `.,;:!` run glued
   to the end of a URL, inside all three bot-post primitives:
   `scripts/lib/groupme.mjs` (the choke point for all nine node lanes),
   `scripts/lib/speculation-groupme.mjs`, and
   `src/utils/groupme-client.ts#postAsBot`. It is deliberately on the SEND
   path, not a template guard test — a large share of GroupMe text is composed
   at runtime and Schefter's LLM-written bodies routinely end a sentence on a
-  link, so nothing static can catch those. `sendMessage` (owner's own token,
-  owner's own words) is left alone on purpose.
-- **Inbound** — `trimTrailingPunctuationFromPath` powers a 302 in
+  link, so nothing static can catch those.
+- **Inbound** — `resolvePunctuationRedirect` powers a 302 in
   `src/middleware.ts`, because the outgoing fix cannot reach a message
   already sent: those links are still in the chat and still dead. It also
   covers iMessage/Slack/email, which autolink the same way. No URL we serve
   ends in punctuation, so trimming can only turn a 404 into the right page.
+
+Three things the regex has to get right, each one a bug that was in it:
+`?` is NOT in the punctuation set (a URL autolinked as `…/rosters?` still
+resolves, so stripping it only costs a question mark the sentence needed);
+the URL may not END on `"'()[]<>`, or `(see <url>), then act` loses its comma
+to a link that never included it; and the trailing run must not be followed
+by a URL-continuation character, or `…/x.y` collapses to `…/xy`. It is for
+CHAT PROSE only — on JSON or config text it will corrupt a quoted value, so
+don't reuse it on a data file.
 
 Three things about the inbound redirect that are guards, not style:
 
@@ -143,16 +151,29 @@ Three things about the inbound redirect that are guards, not style:
   origin. The helper returns `null` for any path whose second character is
   `/` or `\`, and for control characters. That guard is why this is a
   function rather than an inline `.replace()`.
-- **302, not 301.** A permanent redirect is cached indefinitely by browsers
-  and by the Cloudflare layer in front of the apex domains — the same layer
-  that kept serving stale 404s for hours during the NFL-logo saga. This
-  normalization is defensive, not canonical, so keep it revocable.
+- **302 + `Cache-Control: no-store`.** A 301 is cached indefinitely by
+  browsers, and this normalization is defensive rather than canonical. Note
+  the status code alone is NOT what makes it revocable — Cloudflare fronts
+  the apex domains and has stamped its own max-age on responses regardless
+  of status before (the NFL-logo saga), which is why the middleware builds
+  the `Response` by hand with `no-store` instead of calling
+  `context.redirect()`.
 
 It runs before the league-host rewrite (so the trimmed path resolves
 normally) and redirects rather than rewrites (so the URL bar stops showing a
-broken, re-shareable link). `tests/link-punctuation.test.ts` locks both
-halves, greps all three primitives for the sanitizer, and pins the
-open-redirect guard.
+broken, re-shareable link).
+
+**Test the behavior, not the source text.** The whole inbound decision is one
+pure function (`resolvePunctuationRedirect`) precisely so the invariants can
+be asserted instead of grepped. An earlier version of
+`tests/link-punctuation.test.ts` checked `middleware.ts` with
+`toContain('302')` and friends, and every one of those greps still passed
+when the method gate was deleted, the status flipped to 308, and the query
+string was dropped from the target — the doc comment alone satisfied them.
+Same trap on the outgoing side: `toContain('stripLinkAdjacentPunctuation')`
+was satisfied by the import line, so `postAsBot` could post raw text and stay
+green. Both are now behavioral (spy on `fetch`, assert the posted body), and
+all five of those mutations fail the suite.
 
 **Known limitation, deliberate: the redirect is PATH-only.** A stray
 character that lands in the query (`/schefter/tip?target=0001.`) is not
