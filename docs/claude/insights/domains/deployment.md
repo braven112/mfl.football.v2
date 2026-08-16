@@ -316,3 +316,50 @@ appears; a source-grep-only guard would have missed the hardcoded strings.
 When auditing this class, grep for the *shape* (`}${post.link}`, `}${path}`,
 `}${link}`) rather than for any one domain literal — five of the six sites had
 no domain literal in them at all.
+
+## 2026-08-16 - A Middleware `context.redirect()` Is In The Same 404-Fallback Blast Radius As A Page Redirect
+
+**Context:** Adding a middleware 302 that trims a trailing `.` off a request
+path (`/theleague/rosters.` → `/theleague/rosters`), to rescue chat links whose
+autolinker swallowed the sentence's period.
+
+**Insight:** The 2026-07-21 entry above is written around page-level
+`Astro.redirect()`, which reads as a page concern — but the failure mode is
+about the *response shape*, not where it came from. A middleware redirect
+returned before `next()` is also a 3xx with an empty body, so it is exactly as
+vulnerable to a route-level `status: 404` overriding it, and exactly as
+invisible when it happens (dead page, no body to fall back on). Any unmatched
+path — which is precisely what a punctuation-suffixed URL is — depends on
+`src/pages/[...path].astro` putting a no-forced-status spread route ahead of
+the adapter fallback.
+
+**Evidence:** After `pnpm build`, `.vercel/output/config.json` has 208 routes:
+206 is `{"src":"^(?:/(.*?))?/?$","dest":"_render"}` (no status) and 207 is
+`{"src":"^/.*$","dest":"_render","status":404}`. 206 matching first is the only
+reason the 302 survives.
+
+**Recommendation:** Treat "does my 3xx keep its status" as a build-output
+question, not a middleware question. After any routing or middleware change
+that can emit a redirect on an unmatched path, re-run `pnpm build` and confirm
+the spread route still precedes the `status: 404` fallback.
+
+## 2026-08-16 - Localhost Dev Silently Rewrites The Requests You Need To Test Middleware With
+
+**Context:** Trying to verify an open-redirect guard and apex-host behavior for
+a new middleware path-normalization redirect.
+
+**Insight:** Three layers rewrite the request before your middleware sees it,
+and all three fail open — you get a plausible-looking pass that proves nothing.
+(1) Vite's dev stack collapses `//` in the path, so `//evil.com.` arrives as
+`/evil.com.` and a protocol-relative guard never fires; the `Location` you
+observe is an already-safe `/evil.com`. (2) `curl` also normalizes `//` unless
+given `--path-as-is`. (3) `curl -H 'Host: www.theleague.us'` is rejected with
+403 by Vite's `allowedHosts`, so apex-host middleware behavior is not
+reachable on localhost dev at all. Related parsing trap: `new URL('//x.', base)
+.pathname` is `'/'` — the `//` is read as an authority — so a unit test that
+round-trips through `new URL` loses the very input it meant to assert on.
+
+**Recommendation:** Unit-test path helpers on raw strings, not on `new URL`
+output. Use `--path-as-is` for any curl that carries an unusual path. Treat a
+clean localhost run as evidence about the happy path only, and verify
+host-dependent or normalization-dependent behavior on a Vercel preview.
