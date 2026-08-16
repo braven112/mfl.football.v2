@@ -98,6 +98,13 @@ jobs:
       - name: Fetch live NFL odds
         run: node ./scripts/fetch-live-odds.mjs
 
+      # Retention: prune completed seasons' daily roster snapshots down to
+      # weekly keyframes + the July keeper window + season endpoints
+      # (scripts/lib/retention-policy.mjs). Idempotent and near-free when
+      # there's nothing to do; deletions ride the commit step below.
+      - name: Consolidate roster history
+        run: node ./scripts/consolidate-roster-history.mjs
+
       - name: Commit and push updates
         uses: ./.github/actions/commit-push
         with:

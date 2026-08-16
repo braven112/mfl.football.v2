@@ -1,0 +1,343 @@
+[
+  {
+    "id": "weekly-rollup-2025-12-29",
+    "date": "2025-12-29",
+    "title": "Weekly Fixes & Polish (Dec 22-28)",
+    "summary": "15 bug fixes and style improvements across playoffs, navigation, mobile, and more.",
+    "description": [
+      "Holiday week polish covering playoffs, navigation, and mobile experience:",
+      "<strong>Playoffs</strong> — Champion logic updated for accurate bracket progression. AFL bracket fixes applied. Conference and division names corrected. NIT seeding and seed font size adjusted. Playoff icons fixed.",
+      "<strong>Navigation</strong> — Header/footer logic refined for consistent layout. Mobile view cleaned up across prize page and playoff brackets. Remove unnecessary links for AFL.",
+      "<strong>Mobile</strong> — Mobile styles fixed for The League pages. Off-white background color adjusted to be Mac-friendly. Apple-safe background colors applied. Franchise icon resizing improved. Mobile padding fixed on AFL playoff page.",
+      "<strong>Other</strong> — Team nav fixes applied. Draft predictor updated for AFL support. Live data endpoints added for real-time playoff scoring."
+    ],
+    "category": "bug-fix",
+    "link": "/theleague/whats-new",
+    "linkLabel": "See all updates",
+    "icon": "wrench",
+    "excludeFromHero": true,
+    "image": "weekly-rollup-2025-12-29.webp",
+    "imageAlt": "Playoff bracket showing corrected champion logic, conference names, and NIT seeding display",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "weekly-rollup-2025-12-22",
+    "date": "2025-12-22",
+    "title": "Weekly Fixes & Polish (Dec 8-21)",
+    "summary": "18 bug fixes and style improvements across playoffs, MVP, mobile, and more.",
+    "description": [
+      "Two weeks of polish covering live scoring, playoffs, and mobile improvements:",
+      "<strong>Playoffs & Scoring</strong> — Live scoring links added from playoff page. Live scoring indicator and progress bar implemented. Bracket data kept fresh with frequent updates. Playoff data now uses predictive fallback when live data is unavailable.",
+      "<strong>MVP & Analytics</strong> — All-time MVP tracking added. Team of the Year support introduced. San Diego Chargers historical data now included.",
+      "<strong>Mobile</strong> — Mobile menu fix for header. Rosters layout fixed on mobile. Footer links corrected. Draft predictor now shows on roster page. Icons enlarged for better tap targets.",
+      "<strong>Other</strong> — Standings data freshness improved. Roster rotation implemented. Playoff links back to MFL added. Sunday ticket updates now show both broadcast windows. Timezone and calendar icon updates. URL shareability improved."
+    ],
+    "category": "bug-fix",
+    "link": "/theleague/whats-new",
+    "linkLabel": "See all updates",
+    "icon": "wrench",
+    "excludeFromHero": true,
+    "image": "weekly-rollup-2025-12-22.webp",
+    "imageAlt": "MVP tracking page showing all-time MVP data and Team of the Year standings",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "rules-constitution",
+    "date": "2025-12-20",
+    "title": "League Rules & Constitution",
+    "summary": "The full league constitution is now available on the site.",
+    "description": [
+      "Every league rules argument since the beginning of time has followed the same pattern: someone makes a claim, someone else disputes it, and then everyone spends twenty minutes searching the group chat for the PDF that may or may not contain the relevant clause. The Rules & Constitution page puts the entire league constitution online in a searchable, browsable format — scoring settings, roster requirements, contract details, tagging rules, and everything else that governs how this league operates.",
+      "Twenty-eight anchor-linked sections cover everything from salary cap mechanics and the 10% escalation rule to compensatory pick formulas and playoff payout structures. It's the kind of comprehensive reference that makes you wonder how the league functioned without it — and the answer is: barely, with a lot of scrolling through old messages.",
+      "The next time someone in the group chat asks \"what's the franchise tag rule again?\" — just send them the link. It's faster, it's accurate, and it's significantly more satisfying than typing out a three-paragraph explanation that gets immediately buried under more questions."
+    ],
+    "category": "new-page",
+    "link": "/theleague/rules",
+    "linkLabel": "Read the Rules",
+    "icon": "clipboard",
+    "image": "rules-constitution.webp",
+    "imageAlt": "League Rules and Constitution page with searchable rule sections",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "weekly-rollup-2025-12-08",
+    "date": "2025-12-08",
+    "title": "Weekly Fixes & Polish (Dec 1-7)",
+    "summary": "10 bug fixes and style improvements across AFL setup, infrastructure, and builds.",
+    "description": [
+      "First week of December focused on AFL support and infrastructure:",
+      "<strong>AFL</strong> — AFL theme styles and build script added. Division standings rules implemented. Both leagues now update independently. Salary processing correctly skipped for AFL. Icons enabled across AFL pages.",
+      "<strong>Infrastructure</strong> — Vercel config simplified to run Astro build directly. Asset domain updated to use correct Vercel deployment URL. Incorrect monorepo Vercel config removed. Syncing workflow split by league for reliability.",
+      "<strong>Other</strong> — pnpm lockfile refreshed. JS build system for MFL site established."
+    ],
+    "category": "bug-fix",
+    "link": "/theleague/whats-new",
+    "linkLabel": "See all updates",
+    "icon": "wrench",
+    "excludeFromHero": true,
+    "image": "weekly-rollup-2025-12-08.webp",
+    "imageAlt": "AFL standings page showing the newly launched AFL league support with division standings",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "weekly-rollup-2025-12-01",
+    "date": "2025-12-01",
+    "title": "Weekly Fixes & Polish (Nov 24-30)",
+    "summary": "16 bug fixes and style improvements across standings, navigation, draft predictor, and more.",
+    "description": [
+      "Thanksgiving week polish across navigation, standings, and draft tools:",
+      "<strong>Standings</strong> — Standings UI updates with tiebreaker improvements. Tab icons fixed. Mobile height adjusted on standings page. Larger table fonts for readability.",
+      "<strong>Navigation</strong> — Navigation updates across the site. Breadcrumbs refined. Slim breadcrumb and logo layout. Mobile header size updated. Footer updates applied. Next year summary links added.",
+      "<strong>Draft</strong> — Draft predictor UI cleaned up with better team name display. Year selector updated. Draft history fixed on mobile. Header link corrected.",
+      "<strong>Trade</strong> — Trade bait API endpoint corrected. Player ID type mismatch fixed when checking trade bait set. Trade bait display renamed to 'Trade Block' per league terminology. Trade block indicator repositioned.",
+      "<strong>Other</strong> — Ninja banner updated. Fix icon size on mobile. Fix draft history on mobile."
+    ],
+    "category": "bug-fix",
+    "link": "/theleague/whats-new",
+    "linkLabel": "See all updates",
+    "icon": "wrench",
+    "excludeFromHero": true,
+    "image": "weekly-rollup-2025-12-01.webp",
+    "imageAlt": "Standings page showing improved tiebreaker display, larger table fonts, and tab icon fixes",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "playoffs",
+    "date": "2025-11-30",
+    "title": "Playoff Brackets",
+    "summary": "View the full playoff bracket with matchups, results, and prizes.",
+    "description": [
+      "Playoff brackets have arrived, and they're doing considerably more than just showing you who plays whom. The bracket page displays the full tournament structure — winners bracket, consolation rounds, and the ever-dignified Toilet Bowl — with live scoring that auto-refreshes every sixty seconds during game windows.",
+      "Each matchup shows team scores with progress bars indicating remaining player time, status indicators for Scheduled, Live, and Final states, and winner flags once the dust settles. The Prizes tab breaks down the full payout structure from the championship down through sixth place, plus the weekly high scores that have been accumulating since week one.",
+      "On mobile, the brackets use snap scrolling with navigation indicators so you can swipe through rounds without losing your place. The page auto-scrolls to the current week's matchups, because nobody opens the playoff bracket to reminisce about round one — they open it to see if they're still alive."
+    ],
+    "category": "new-page",
+    "link": "/theleague/playoffs",
+    "linkLabel": "View Playoffs",
+    "icon": "champ",
+    "image": "playoffs.webp",
+    "imageAlt": "Playoff bracket page showing tournament matchups and winners bracket",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "draft-predictor",
+    "date": "2025-11-29",
+    "title": "Draft Order Predictor",
+    "summary": "See the projected draft order for next season based on current standings.",
+    "description": [
+      "Draft order in this league is determined by a combination of regular season finishing position and Toilet Bowl results, which means figuring out where you're picking next year requires either a complex flowchart or this page. The Draft Order Predictor automatically calculates projected pick positions using current standings, playoff outcomes, and the league's draft order rules.",
+      "The page updates throughout the season, so you can track your projected pick position as the standings shift. Historical views let you look back at past drafts, including which picks were traded and where they originally belonged. It's the planning tool every rebuilding team needs — not that anyone in this league would ever tank intentionally, of course.",
+      "For the playoff-bound teams, the predictor is a useful reminder of what your late-round pick will look like in draft capital. For the teams fighting for Toilet Bowl positioning, it's a roadmap to a better future. Either way, knowledge is power."
+    ],
+    "category": "new-page",
+    "link": "/theleague/draft-predictor",
+    "linkLabel": "View Draft Order",
+    "icon": "draft-podium",
+    "image": "draft-predictor.webp",
+    "imageAlt": "Draft Order Predictor showing projected pick order based on current standings",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "standings",
+    "date": "2025-11-28",
+    "title": "Standings Page",
+    "summary": "View current standings with division, playoff, and all-play views.",
+    "description": [
+      "MFL provides standings data, but presenting it in a way that doesn't require squinting at a table designed in 2003 was overdue. The Standings page offers three distinct views: division standings showing how the four divisions shake out, a league-wide playoff race ranking all sixteen teams, and all-play records revealing how each team would have fared against every opponent every week.",
+      "Each view includes win-loss records, points for and against, and relevant tiebreaker details. The year selector lets you browse historical standings to revisit past glory or confirm that, yes, that season really was as bad as you remember. Your team is highlighted for quick identification, because finding yourself in a list of sixteen should not require more than zero seconds.",
+      "The all-play view deserves special mention as the great equalizer: it strips away schedule luck and shows which teams were genuinely good and which ones just happened to face the right opponents at the right time. Prepare for uncomfortable truths."
+    ],
+    "category": "new-page",
+    "link": "/theleague/standings",
+    "linkLabel": "View Standings",
+    "icon": "shield",
+    "image": "standings.webp",
+    "imageAlt": "Standings page showing division standings with win-loss records and points",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "weekly-rollup-2025-11-24",
+    "date": "2025-11-24",
+    "title": "Weekly Fixes & Polish (Nov 17-23)",
+    "summary": "20 bug fixes and style improvements across rosters, salary, charts, login, and more.",
+    "description": [
+      "A busy week of polish as core pages launched:",
+      "<strong>Rosters</strong> — Roster layout changes for better readability. Defense display fixed. NFL logo corrected. Player count display added. Hamburger menu and roster cleanup. Next year 2-column layout aligned. Player duplicates resolved.",
+      "<strong>Salary & Contracts</strong> — Extension calculations fixed. Franchise tag updates applied. Franchise eligibility logic corrected. Cap space color fixed. Salary formula corrected.",
+      "<strong>Charts</strong> — Donut charts now include legends. New bar chart added with proper scale. Position pie chart introduced. Better visual charts across the site.",
+      "<strong>Login & Auth</strong> — Session cookie now sent correctly in development with SameSite=Lax. Auto-select logged-in user's team on roster page. User menu with login modal added to header.",
+      "<strong>Other</strong> — Header and team nav fixed. NFL images updated. Player modal with injury details improved. College analysis max-width on NFL logo fixed."
+    ],
+    "category": "bug-fix",
+    "link": "/theleague/whats-new",
+    "linkLabel": "See all updates",
+    "icon": "wrench",
+    "excludeFromHero": true,
+    "image": "weekly-rollup-2025-11-24.webp",
+    "imageAlt": "League Summary page showing donut charts with legends, salary cap breakdowns, and position pie charts",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "rosters",
+    "date": "2025-11-19",
+    "title": "Team Rosters",
+    "summary": "View all team rosters with player details, salaries, and contracts.",
+    "description": [
+      "This is the page where it all starts and where most decisions end. The Roster page displays every team's complete player inventory with salary, contract length, position, and status. Next-year salary projections with the 10% annual escalation are calculated automatically, because knowing what a player costs today is only half the picture — knowing what they'll cost tomorrow is what separates contenders from cap casualties.",
+      "The page integrates salary cap summaries, dead money calculations, cap space projections, and veteran extension candidate identification — essentially packaging the work of a front office analyst into a single view. Player detail modals provide deep dives into individual contracts, and draft picks are tracked alongside roster players to give a complete picture of team assets.",
+      "Whitside got tired of loading the page and seeing Computer Jock's Chiseled Physique every time, so the default is now a random team. If you're logged in through My Fantasy League, the page automatically loads your team. If you're not logged in, you'll see a different team each visit — which is either a fun surprise or a rude awakening, depending on whose roster comes up. Every other tool in the app — the Trade Builder, the Salary Analytics page, the Coach tab — ultimately feeds information back to decisions made here. Consider it home base."
+    ],
+    "category": "new-page",
+    "link": "/theleague/rosters",
+    "linkLabel": "View Rosters",
+    "icon": "banknote",
+    "image": "rosters.webp",
+    "imageAlt": "Team Roster page showing player salaries, contract lengths, and position details",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "weekly-rollup-2025-11-17",
+    "date": "2025-11-17",
+    "title": "Weekly Fixes & Polish (Nov 9-16)",
+    "summary": "18 bug fixes and style improvements across live scoring, submit lineup, standings, and more.",
+    "description": [
+      "First full week of polish as the site took shape:",
+      "<strong>Live Scoring</strong> — Live scoring fixes across multiple pages. Better live scoring display. Fix live scoring page exclusion for custom scripts. Live scoring bug fixes.",
+      "<strong>Submit Lineup</strong> — Submit lineup page styling improved. Scroll bar and lineup updates. Fix bottom of submit lineup page. Submit caption margin issue fixed.",
+      "<strong>Standings</strong> — Standings updates and alignment. New button style applied. Better icon support added. Standings tweaks for readability.",
+      "<strong>Message Board</strong> — Custom message board CSS added. Ad blocker support improved. Ads removed from message board. Message board post alignment fixed.",
+      "<strong>Mobile</strong> — Mobile view fixes across pages. Power rank page updated. Add/drop page icon preserved. Fix mobile responsiveness throughout.",
+      "<strong>Other</strong> — Updated to latest Sass. Footer fix. Center cards on asset pages. Icon sizes standardized."
+    ],
+    "category": "bug-fix",
+    "link": "/theleague/whats-new",
+    "linkLabel": "See all updates",
+    "icon": "wrench",
+    "excludeFromHero": true,
+    "image": "weekly-rollup-2025-11-17.webp",
+    "imageAlt": "Standings page from the first week of site polish, showing improved alignment, button styles, and icon support",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "salary-history",
+    "date": "2025-11-17",
+    "title": "Salary History Charts",
+    "summary": "Track how team salary spending has changed across seasons.",
+    "description": [
+      "Salary trends in a dynasty league are like tides: if you're not tracking them, you're going to get caught. The Salary History page provides interactive charts showing how franchise tag averages and extension averages have moved across seasons for every position group — QB, RB, WR, TE, PK, and DEF.",
+      "Toggle between franchise tag history (top 3 salary averages) and extension history (top 5 averages) to see which positions are inflating fastest. The multi-season view lets you overlay years to spot the trends that inform your next contract decision — like the fact that wide receiver salaries have been climbing at a rate that should concern anyone with three of them on long-term deals.",
+      "This is auction intelligence in chart form. Knowing that running back salaries dipped last year might mean value. Knowing that quarterback salaries have risen every year for five straight years means you should plan accordingly. Or ignore the data entirely and bid with your heart — the page will still be here when you want to understand what went wrong."
+    ],
+    "category": "new-page",
+    "link": "/theleague/salary-history",
+    "linkLabel": "View Salary History",
+    "icon": "history",
+    "image": "salary-history.webp",
+    "imageAlt": "Salary History page with interactive charts showing cap spending trends across seasons",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "mvp-rankings",
+    "date": "2025-11-17",
+    "title": "Salary-Adjusted MVP Rankings",
+    "summary": "See which players deliver the most value relative to their salary.",
+    "description": [
+      "In a salary cap league, raw fantasy points are only half the equation. A player scoring 250 points on a $10M contract is valuable. The same player scoring 250 points on a $1M contract is a league-altering asset. The Salary-Adjusted MVP Rankings capture this distinction by ranking players on efficiency: points produced per dollar spent.",
+      "The rankings cover every position and surface the players delivering production that far exceeds their contract value — the kind of players you build dynasties around. Position-specific leaderboards let you drill into which quarterbacks, running backs, and receivers are carrying their weight relative to their cap hit.",
+      "The next time someone brags about their star player's point total, check the MVP page. The real winner might be the owner whose roster is full of players nobody wanted at prices nobody else was willing to match."
+    ],
+    "category": "new-page",
+    "link": "/theleague/mvp",
+    "linkLabel": "View MVPs",
+    "icon": "star",
+    "image": "mvp-rankings.webp",
+    "imageAlt": "MVP Rankings page showing salary-adjusted value rankings for top performers",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "salary-benchmarks",
+    "date": "2025-11-16",
+    "title": "Salary Analytics",
+    "summary": "Compare your team's spending against league averages by position.",
+    "description": [
+      "Understanding what your team spends by position is useful. Understanding what your team spends by position compared to what everyone else spends is a competitive advantage. The Salary Benchmarks page provides position-by-position spending comparisons against league-wide averages, making it immediately clear where you're overpaying and where you've found value.",
+      "Each position group shows where your spending falls relative to the league average, turning abstract salary numbers into actionable intelligence. If you're 40% above the league average at quarterback and 30% below at running back, that tells a story about your roster construction — and possibly about your upcoming auction strategy.",
+      "This was the first salary analysis tool built for the league, and it has since grown into the full Salary Analytics suite. But the core question it answers hasn't changed: are you getting your money's worth?"
+    ],
+    "category": "new-page",
+    "link": "/theleague/salary",
+    "linkLabel": "View Benchmarks",
+    "icon": "bar-chart",
+    "image": "salary-benchmarks.webp",
+    "imageAlt": "Salary Benchmarks page comparing team spending against league averages by position",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "extension-calculator",
+    "date": "2025-11-16",
+    "title": "Extension Calculator",
+    "summary": "Calculate the future cost of contract extensions with 10% annual escalation.",
+    "description": [
+      "The 10% annual salary escalation is the silent killer of dynasty rosters. A $2M contract looks brilliant until you realize it becomes $2.2M next year, $2.42M the year after, and $2.66M the year after that. The Extension Calculator did this math for you across multiple extension scenarios, projecting costs for 2, 3, and 4-year extensions with the escalation baked in.",
+      "We say \"did\" because this page has already been retired. Things move fast around here. The extension calculator is now built directly into the Roster page, where it automatically surfaces the top five extension candidates and top three franchise tag candidates for every team, live, with no extra clicks required. Sit back down on your rocking chair — by the time you stood up to use the standalone calculator, it had already been absorbed into something better.",
+      "The original concept remains intact: know what an extension will cost before you offer it, not after. The difference between a 3-year and 4-year deal might look small in year one, but the escalation compounds. The calculator just lives on the Roster page now, where it belongs."
+    ],
+    "category": "new-page",
+    "link": "/theleague/calculator",
+    "linkLabel": "Open Calculator",
+    "icon": "dollar",
+    "image": "extension-calculator.webp",
+    "imageAlt": "Extension Calculator showing projected contract costs with 10% annual escalation",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "asset-library",
+    "date": "2025-11-15",
+    "title": "Asset Library",
+    "summary": "Browse team logos, banners, and brand graphics for all 16 teams.",
+    "description": [
+      "This league has always had extremely attractive logos and banners. That was never the problem. The problem was that they lived in Discord messages, email attachments, and the occasional blurry screenshot that someone insisted was \"close enough.\" The Asset Library is a page that exists for one reason and one reason only: to show you the logos and banners.",
+      "Logos, banners, icons, and even PSD source files are organized by team with search and division-based filtering. There are no salary calculations here. No escalation projections. No trade scenarios. Just extremely attractive logos and banners, available in one click instead of buried in a chat thread from 2019.",
+      "Because if you're going to mock someone's team, at least use the right logo."
+    ],
+    "category": "new-page",
+    "link": "/theleague/assets",
+    "linkLabel": "Browse Assets",
+    "icon": "eye",
+    "image": "asset-library.webp",
+    "imageAlt": "Asset Library gallery showing team logos, banners, and brand graphics",
+    "leagues": [
+      "theleague"
+    ]
+  }
+]

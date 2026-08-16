@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { existsSync, readFileSync } from 'fs';
+import { existsSync, readFileSync, readdirSync } from 'fs';
 import { resolve } from 'path';
 import type { WhatsNewEntry } from '../src/types/whats-new';
 import { VALID_LEAGUE_SLUGS } from '../src/types/whats-new';
@@ -7,6 +7,7 @@ import { ALL_LEAGUES } from '../src/config/leagues';
 import entries from '../src/data/whats-new.json';
 import stagingFile from '../src/data/weekly-changelog-staging.json';
 import { describeSpriteIconValidation } from './helpers/sprite-icons';
+import { WHATS_NEW_ACTIVE_MAX } from '../scripts/lib/retention-policy.mjs';
 
 /**
  * What's New Data Validation
@@ -27,7 +28,39 @@ const SCREENSHOT_ENFORCEMENT_DATE = '2026-02-28';
 
 const WHATS_NEW_ASSETS_DIR = resolve(__dirname, '../public/assets/whats-new');
 
-const typedEntries = entries as WhatsNewEntry[];
+// Validate the FULL history: the active file is capped at
+// WHATS_NEW_ACTIVE_MAX (scripts/lib/retention-policy.mjs) and the overflow
+// lives in per-year archive files that the archive index and permalink pages
+// still render — so every convention here (screenshots on disk, unique ids,
+// league tags) applies to archived entries too.
+const activeEntries = entries as WhatsNewEntry[];
+const ARCHIVE_DIR = resolve(__dirname, '../src/data/whats-new-archive');
+const archiveEntries: WhatsNewEntry[] = existsSync(ARCHIVE_DIR)
+  ? readdirSync(ARCHIVE_DIR)
+      .filter((f) => f.endsWith('.json'))
+      .sort()
+      .flatMap((f) => JSON.parse(readFileSync(resolve(ARCHIVE_DIR, f), 'utf-8')))
+  : [];
+const typedEntries: WhatsNewEntry[] = [...activeEntries, ...archiveEntries];
+
+describe('whats-new.json retention cap', () => {
+  it(`active file stays within WHATS_NEW_ACTIVE_MAX (${WHATS_NEW_ACTIVE_MAX})`, () => {
+    // The weekly rollup enforces this (and `--cap-only` re-enforces it), so a
+    // failure here means an entry was hand-prepended without running the cap —
+    // run: node scripts/weekly-changelog-rollup.mjs --cap-only
+    expect(activeEntries.length).toBeLessThanOrEqual(WHATS_NEW_ACTIVE_MAX);
+  });
+
+  it('archive files only ever contain entries older than the newest active entry', () => {
+    if (archiveEntries.length === 0) return;
+    const oldestActive = activeEntries.at(-1)?.date ?? '';
+    const misplaced = archiveEntries.filter((e) => e.date > oldestActive);
+    expect(
+      misplaced.map((e) => `${e.id} (${e.date})`),
+      'Archived entries newer than the active window — the archive is append-only overflow, not a second inbox',
+    ).toEqual([]);
+  });
+});
 
 // ---------------------------------------------------------------------------
 // Screenshot requirement

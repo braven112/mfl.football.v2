@@ -9,7 +9,9 @@
  */
 import type { AstroGlobal } from 'astro';
 import type { WhatsNewEntry } from '../types/whats-new';
-import { getVisibleWhatsNewEntries } from './whats-new-entries';
+// Full-history access on purpose: permalinks must keep resolving entries
+// that have rolled out of the capped active file into the archive.
+import { getAllVisibleWhatsNewEntries } from './whats-new-all-entries';
 import { getAdjacentEntries } from './whats-new-helpers';
 import { resolveLeaguePath } from './nav-utils';
 import { getLeagueBySlug } from '../config/leagues';
@@ -28,7 +30,7 @@ export function resolveWhatsNewDetail(
   const league = getLeagueBySlug(leagueSlug)!;
   const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 
-  const sorted = getVisibleWhatsNewEntries(Astro.request, league.navSlug);
+  const sorted = getAllVisibleWhatsNewEntries(Astro.request, league.navSlug);
   const id = Astro.params.id;
   const entry = sorted.find((e) => e.id === id);
 

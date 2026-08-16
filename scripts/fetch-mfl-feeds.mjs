@@ -34,7 +34,8 @@ import { normalizeWeeklyResults } from './lib/normalize-weekly-results.mjs';
 import { fetchWithRetry } from './lib/fetch-retry.mjs';
 import { getNonEmpty } from './lib/env.mjs';
 import { getLeagueById, DEFAULT_LEAGUE_SLUG } from '../src/config/leagues-data.mjs';
-import { writeJsonIfChanged } from './lib/canonical-json.mjs';
+import { writeJsonIfChanged, jsonEquivalent } from './lib/canonical-json.mjs';
+import { isKeeperWindowDate } from './lib/retention-policy.mjs';
 
 /**
  * Calculate Labor Day for a given year (first Monday in September)
@@ -566,6 +567,25 @@ const fetchTextWithRetry = (url, retries = 3, baseDelayMs = 1500) =>
     onRetry: (err, attempt, wait) => console.warn(`Retrying ${redactUrl(url)} in ${wait}ms (${err.message})`),
   });
 
+// True when `data` is semantically identical to the most recent existing
+// roster-history snapshot (any date). Used to skip redundant offseason
+// snapshots — see the rosters branch in writeOut.
+const latestSnapshotEquals = (data) => {
+  try {
+    const files = fs
+      .readdirSync(rosterHistoryDir)
+      .filter((f) => /^rosters-\d{4}-\d{2}-\d{2}\.json$/.test(f))
+      .sort();
+    const latest = files.at(-1);
+    if (!latest) return false;
+    const existing = JSON.parse(fs.readFileSync(path.join(rosterHistoryDir, latest), 'utf8'));
+    const next = typeof data === 'string' ? JSON.parse(data) : data;
+    return jsonEquivalent(existing, next);
+  } catch {
+    return false;
+  }
+};
+
 const writeOut = (key, data) => {
   // Error-payload guard: MFL returns HTTP 200 with an `error` body for a
   // rejected param (seen live 2026-07-21: adp-dynasty's IS_KEEPER=D →
@@ -594,6 +614,13 @@ const writeOut = (key, data) => {
     const historyFile = path.join(rosterHistoryDir, `rosters-${dateSlug}.json`);
     if (fs.existsSync(historyFile)) {
       console.log(`Roster history already captured for ${dateSlug}; skipping archive.`);
+    } else if (!isKeeperWindowDate(dateSlug) && latestSnapshotEquals(data)) {
+      // Offseason rosters can sit unchanged for weeks — a byte-identical
+      // ~50 KB snapshot per day per league was the roster-history dir's main
+      // growth. Inside the July keeper window we ALWAYS write: those dated
+      // files are the official AFL keeper record and the keeper page globs
+      // them by date (see scripts/lib/retention-policy.mjs).
+      console.log(`Rosters unchanged since last snapshot; skipping ${dateSlug} archive.`);
     } else {
       fs.mkdirSync(rosterHistoryDir, { recursive: true });
       fs.writeFileSync(

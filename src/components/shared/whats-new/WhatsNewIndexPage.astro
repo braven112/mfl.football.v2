@@ -15,7 +15,9 @@
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import WhatsNewListing from '../../theleague/whats-new/WhatsNewListing';
 import { spriteUrl } from '../../../utils/sprite-url';
-import { getVisibleWhatsNewEntries } from '../../../utils/whats-new-entries';
+// Full-history access on purpose: the archive index lists every entry ever
+// published, including those rolled out of the capped active file.
+import { getAllVisibleWhatsNewEntries } from '../../../utils/whats-new-all-entries';
 import {
   enrichEntries,
   groupByMonth,
@@ -46,7 +48,7 @@ const league = getLeagueBySlug(leagueSlug)!;
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const basePath = hideLeaguePrefix ? '' : `/${league.slug}`;
 
-const sorted = getVisibleWhatsNewEntries(Astro.request, league.navSlug);
+const sorted = getAllVisibleWhatsNewEntries(Astro.request, league.navSlug);
 
 // Read the last-visit cookie for "just in" chip computation
 const lastVisitCookie = Astro.cookies.get('whats_new_last_visit');
