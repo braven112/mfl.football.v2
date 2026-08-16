@@ -253,23 +253,55 @@ vocabulary a fantasy tip is made of. 18 of 18 probe sentences came back mangled.
    scans our own prompt prose, which we capitalize properly, while the redactor
    scans owner-typed tips, which are casually lowercase. The same rule is safe
    in one and a leak in the other.
-2. **When a token is both an ordinary word and a real identifier, no lexical
-   rule separates them** — the ambiguity is positional. What worked was
-   relaxing only in the two positions a proper noun cannot occupy: lowercase,
-   or capitalized solely because a sentence started. `Saints` and `Swift` stay
-   unresolvable when capitalized mid-sentence; privacy keeps that tie.
-3. **Relaxing a token is only safe if the franchise keeps a distinctive one.**
-   `Balls` relaxes because `Balls Deep` doesn't; `dream` can never redact on
-   its own (it's stored lowercase) but `The Dream` covers the real phrasing.
-   That residual-coverage invariant is the thing to test, because a future
-   rename to a plain word is what would quietly strip a team of all protection.
+2. **Every relaxation wider than "lowercase" leaked, and it took three tries
+   to believe it.** This is the part worth remembering, because each attempt
+   looked principled right up until it was measured:
+   - *Relax a capital that is merely sentence-initial.* Rationale: a capital
+     there is grammar, not a proper noun. Reality: it also destroys the only
+     signal available, and sentence-start is exactly where a tipster names a
+     team as the subject. Five AFL franchises leaked outright ("Saints are
+     shopping a tight end.", "Feelers wants a quarterback."). Reverted.
+   - *Relax any ambiguous token when lowercase.* Reality: `saints`, `balls`,
+     `feelers`, `herd`, `chat`, `swift`, `fire`, `pain` are names people
+     actually use, so "hearing saints is shopping" reached the prompt intact.
+     Caught by an outside reviewer, not by me. Narrowed.
+   - *Match on a literal space.* "Dead Cap" missed `dead-cap` entirely, the
+     token fell apart into `dead`, and the relaxation waved the fragment
+     through — so the FULL franchise name survived, a worse leak than the
+     single-word case the relaxation existed to allow. Same reviewer.
 
-**Evidence:** `AMBIGUOUS_NAME_TOKENS` / `readsAsOrdinaryProse` /
-`isSentenceInitial` in `scripts/schefter-rumor-scan.mjs`. Note the ordering
-constraint in `redactFranchiseNamesInText`: the prose check must run **before**
-the keep-franchise branches, or an ordinary word that is one of the *kept*
-team's own forms gets normalized to that team's display name — "the deal is
-Dead Cap Walking", the same fabrication wearing a real name.
+   The pattern: a relaxation's blast radius is never the case you designed it
+   for. **Measure it by sweeping every token in the real configs through every
+   casing and separator variant** — that sweep is three lines and it found all
+   three of these; reasoning about it found none of them.
+3. **Split "is it a word?" from "is it a name people use?"** — one is human
+   judgment, the other is derivable, and fusing them into a single curated
+   list is what let live nicknames in. `AMBIGUOUS_NAME_TOKENS` answers the
+   first; `computeRelaxableTokens` answers the second by relaxing a form only
+   when every appearance across both leagues is an MFL `abbrev` or a retired
+   `history[]` entry. The derived half self-maintains — rename a team to
+   "Fire" and `fire` leaves the set with no list to remember to edit — which
+   matters in a league whose punitive-rename culture churns names yearly.
+4. **Relaxing a token is only safe if the franchise keeps a form that still
+   catches a real mention.** `dream` can never redact on its own (it is stored
+   lowercase) but "The Dream" covers the real phrasing. Test that invariant
+   against the RELAXABLE set, not the curated one — a blocked token protects
+   its franchise fine, and counting it as a hole gives a false alarm.
+
+**Evidence:** `AMBIGUOUS_NAME_TOKENS` / `computeRelaxableTokens` /
+`readsAsOrdinaryProse` / `withFlexibleSeparators` / `canonicalizeNameKey` in
+`scripts/schefter-rumor-scan.mjs`. Two constraints in
+`redactFranchiseNamesInText` that are not obvious from reading it:
+
+- The prose check must run **before** the keep-franchise branches, or an
+  ordinary word that is one of the *kept* team's own forms gets normalized to
+  that team's display name — "the deal is Dead Cap Walking", the same
+  fabrication wearing a real name.
+- Widening the matcher's separators forces every Set lookup through
+  `canonicalizeNameKey`. Miss that and the matcher happily matches "dead-cap"
+  while every key built from "dead cap" fails, quietly demoting the one team
+  the post is ALLOWED to name down to "[a team]". A widening and its lookups
+  are one change, not two.
 
 **Also worth knowing:** the input redactor is the ONLY mechanical layer.
 `sanitizeAiPost` screens meta-commentary, not franchise names — so there is no
@@ -277,9 +309,15 @@ output-side net, and false negatives stay genuinely expensive. That asymmetry is
 real; it just isn't infinite.
 
 **Recommendation:** Before widening any sanitizer that substitutes a
-*meaningful* token, probe the false-positive side against real prose, not just
-the leak side against real configs — one tip per token, each placed
-mid-sentence, since position is load-bearing and a `tokens.join(' / ')` sweep
-cannot express it. And when a doc rule justifies a bias with an assertion about
-what the failure mode *is* ("just fuzzes a word"), check the assertion before
-inheriting the bias.
+*meaningful* token, probe BOTH sides against the real configs, and probe them
+by sweeping rather than by choosing examples — one tip per token, each in
+several casing and separator variants. Position and punctuation are both
+load-bearing, and a `tokens.join(' / ')` sweep expresses neither. Every leak
+in this entry was found that way and none by reading the code.
+
+And when a doc rule justifies a bias with an assertion about what the failure
+mode *is* ("just fuzzes a word"), check the assertion before inheriting the
+bias. The corollary bit here too: having corrected that rule, I then leaned on
+the correction three times to justify relaxations that leaked. A re-priced
+tradeoff is not a licence — it just moves the line, and the new line needs
+measuring exactly as much as the old one did.
