@@ -9,16 +9,20 @@ name: Backfill Historical MFL Feeds
 # picking the branch and the league. This runs on GitHub's runners because they
 # can reach myfantasyleague.com; a sandboxed dev environment often cannot.
 #
-# WHAT TO EXPECT FOR THE AFL: MFL's archived exports for 2007-2019 return the
-# regular-season weeks as bare `{"week":"1"}` elements with no matchup key, so
-# only the postseason weeks are on disk and every rivalry record under-counts
-# those seasons. The script now (a) stops treating a hole as a valid cache and
-# (b) falls back to per-week `TYPE=schedule&W=n` requests, which have never been
-# tried. Whether MFL still holds those pairings is genuinely unknown — the job
-# summary prints a before/after coverage table so the answer is unambiguous
-# either way. If nothing comes back, the data is gone and the pages keep saying
-# so; they are not reconstructable (AFL teams play multiple games in some weeks,
-# so there is no unique schedule that fits the scores and standings).
+# AFL STATUS (resolved 2026-08-16): every season from 2004 to 2025 is complete.
+# The archived exports really do return 2007-2019's regular-season weeks as bare
+# `{"week":"1"}` elements with no matchup key, even authenticated — but the
+# site's own "Fantasy Schedule -> By Franchise" view prints those games, and all
+# of them were recovered that way (scripts/recover-afl-schedule-from-html.mjs,
+# sources under data/afl-fantasy/schedule-recovery/). 2003 is the only gap and
+# is permanent: that season was played on Yahoo with only standings entered.
+#
+# So for the AFL this workflow is now a no-op refresher, and the thing to watch
+# is REGRESSION rather than absence. MFL served fabricated pairings for
+# 2012-2015 — correct scores, invented opponents — and the script's "never trade
+# a fuller cached copy for a thinner fresh one" guard compares COUNTS, which a
+# same-size fabrication would pass. tests/afl-schedule-integrity.test.ts is the
+# backstop: it replays every stored season against MFL's own standings.
 on:
   workflow_dispatch:
     inputs:
@@ -83,16 +87,16 @@ jobs:
         id: coverage
         run: node ./scripts/report-h2h-coverage.mjs --league=${{ inputs.league }} --compare=/tmp/h2h-before.json
 
-      # Any season still short of its weeks is an open question, so the probe
-      # keys off REMAINING GAPS rather than "did this run gain anything". The
-      # first authenticated run recovered 2024/2025 and therefore skipped this
-      # step entirely, leaving the 2007-2019 hole it exists to diagnose
-      # untested. Probes two gap years across both AFL bracket eras.
-      # Walks EVERY season rather than sampling two, and reports the per-week
-      # shape — the only way to say "MFL has 42 games for 2010 and no more"
-      # instead of inferring it from one week. Also checks the rendered
-      # schedule page for that season's franchise NAMES, which is the test the
-      # earlier F=#### link check was too weak to make.
+      # Keyed off REMAINING GAPS rather than "did this run gain anything": the
+      # first authenticated run recovered 2024/2025 and so skipped this step
+      # entirely, leaving the very hole it exists to diagnose untested. Walks
+      # every gap season per week rather than sampling, and requires a real
+      # scoreboard signature on the rendered page — a looser test on a guessed
+      # URL is how an earlier probe returned a confident wrong answer.
+      #
+      # Worth knowing before acting on its output: an empty EXPORT is not proof
+      # of absence. The AFL's 2007-2019 audited as empty here and were still
+      # fully recoverable from the authenticated "By Franchise" schedule view.
       - name: Audit what MFL will actually serve (whenever gaps remain)
         if: steps.coverage.outputs.gaps == 'true'
         env:
@@ -102,19 +106,6 @@ jobs:
           node ./scripts/audit-mfl-schedule-availability.mjs \
             --league=${{ inputs.league }} \
             --years=${{ steps.coverage.outputs.gap_years }} || true
-
-      # The league pages carry an injected redirect script on the seasons that
-      # have not been cleaned, which is why their schedules read as empty to
-      # anything but a browser session that survives the redirect. Report which
-      # seasons are still affected and what is on them, and — separately —
-      # whether the schedule table is visible, i.e. recoverable right now.
-      - name: Scan league pages for injected scripts
-        if: steps.coverage.outputs.gaps == 'true'
-        run: |
-          node ./scripts/scan-mfl-page-injection.mjs \
-            --league=${{ inputs.league }} \
-            --years=${{ steps.coverage.outputs.gap_years }},2019,2020 \
-            --show || true
 
       - name: Recompute franchise history
         run: node ./scripts/compute-franchise-history.mjs --league=${{ inputs.league }}

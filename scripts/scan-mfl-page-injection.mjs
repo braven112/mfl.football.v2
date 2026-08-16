@@ -6,11 +6,21 @@
  * Read-only. Fetches only this repo's own leagues, resolved from the league
  * registry and year-host-map. Writes nothing anywhere.
  *
- * Context (2026-08-12): the AFL's league pages carry a malicious script that
- * redirects traffic. The commissioner cleaned 2019; 2020 and several
- * pre-2019 seasons are still affected. That injection — not privacy settings,
- * and not missing data — is why every automated read of those seasons' schedule
- * pages came back with no matchups while 2019 parsed perfectly.
+ * RESOLVED 2026-08-16 — kept as tooling, not as a live diagnostic. Do not read
+ * a finding here as an explanation for missing schedule data any more.
+ *
+ * Context (2026-08-12): the AFL's league pages carried a malicious script that
+ * redirected traffic. The commissioner cleaned 2019 first, then the rest. At the
+ * time we believed that injection was why automated reads of those seasons'
+ * schedule pages came back with no matchups while 2019 parsed perfectly.
+ *
+ * That turned out to be only half the story: the EXPORT API returns those weeks
+ * stripped regardless, authenticated or not, and the games were ultimately
+ * recovered from the rendered schedule view instead (see
+ * scripts/recover-afl-schedule-from-html.mjs). Every AFL season 2004-2025 is now
+ * complete. This script stays because it is genuinely useful if an injection
+ * recurs — it is read-only and touches only this repo's own leagues — but it is
+ * no longer wired into the backfill workflow.
  *
  * So this answers two questions in one pass:
  *   1. SECURITY — what is injected, on which seasons, and what does it look
