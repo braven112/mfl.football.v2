@@ -409,30 +409,51 @@ describe('the prompt rule requires the pairing', () => {
   it('uses INVENTED names in its examples, never real franchises', () => {
     // The prompt is a leak path the payload redaction cannot reach: it is
     // built once and sent on EVERY call, including anonymous-scope posts. The
-    // first draft of this rule hardcoded "Dead Cap Walking / Heavy Chevy" and
+    // first draft of rule 30 hardcoded "Dead Cap Walking / Heavy Chevy" and
     // "The Show / Cock Gobbler" — real teams, paired with their real former
     // names, one of them a punishment. That handed the model the exact
     // association the whole feature is gated on, for teams that may be out of
     // window, on posts not allowed to name anyone.
-    const rule30 = src.slice(
-      src.indexOf('30. FORMER-NAME CALLBACK'),
+    //
+    // Rule 30 was not the only offender, which is why this scans the WHOLE
+    // HARD RULES block rather than one rule: 4b's explicit-pick examples ran
+    // on "[Geeks]" (0013's own alias) a dozen times over, and 15/16 addressed
+    // a GroupMe author as "Dead Cap" (0004's nameShort). Same category, same
+    // always-sent prompt — a real team named in every call Schefter makes.
+    // Any new rule that reaches for a concrete team name fails here too.
+    const hardRules = src.slice(
+      src.indexOf('HARD RULES (self-enforce, never violate):'),
       src.indexOf('Voice: "League sources tell me'),
     );
-    expect(rule30.length).toBeGreaterThan(0);
+    // Both anchors must still resolve — a renamed heading that silently
+    // shrinks the scanned region to nothing would leave this test green while
+    // guarding nothing at all.
+    expect(hardRules).toContain('4b. If a web tip\'s scope is "franchise-explicit-pick"');
+    expect(hardRules).toContain('30. FORMER-NAME CALLBACK');
 
+    // Harvest every form a franchise answers to, not just its display name —
+    // an alias or a retired name identifies a team just as well (same reason
+    // redactFranchiseNamesInText harvests history[] and aliases[]). The >= 4
+    // floor keeps abbreviations like "GG" from matching prose; at the time of
+    // writing this pulls ~300 forms across the two leagues and produces zero
+    // false positives, so a hit here is a real name, not a coincidence.
     const realNames = new Set<string>();
+    const claim = (v: unknown) => {
+      if (typeof v === 'string' && v.trim().length >= 4) realNames.add(v.trim());
+    };
     for (const cfgPath of ['src/data/theleague.config.json', 'data/afl-fantasy/afl.config.json']) {
       const cfg = JSON.parse(readFileSync(path.join(process.cwd(), cfgPath), 'utf8'));
       for (const t of cfg.teams ?? []) {
-        for (const f of ['name', 'nameMedium', 'nameShort'] as const) {
-          if (typeof t[f] === 'string' && t[f].trim().length >= 4) realNames.add(t[f].trim());
-        }
+        for (const f of ['name', 'nameMedium', 'nameShort', 'abbrev'] as const) claim(t[f]);
+        for (const a of t.aliases ?? []) claim(a);
         for (const h of t.history ?? []) {
-          if (typeof h?.name === 'string' && h.name.trim().length >= 4) realNames.add(h.name.trim());
+          for (const f of ['name', 'nameMedium', 'nameShort', 'abbrev'] as const) claim(h?.[f]);
         }
       }
     }
-    const hardcoded = [...realNames].filter((n) => rule30.includes(n));
+    expect(realNames.size).toBeGreaterThan(100);
+
+    const hardcoded = [...realNames].filter((n) => hardRules.includes(n));
     expect(hardcoded).toEqual([]);
   });
 });

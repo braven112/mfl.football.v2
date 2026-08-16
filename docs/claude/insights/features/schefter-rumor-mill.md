@@ -114,3 +114,47 @@ field to a league config, ask whether the redactor's harvest reads it.
 through the anonymizer and fails on any surviving alias or retired name, which
 catches the config half but not a new early return — that stays a review
 concern.
+
+## 2026-08-15 - The system prompt is a second, unredactable leak channel
+
+**Context:** Follow-on to the entry above. Every fix there operates on the
+per-tip payload. The prompt those payloads are pasted into was never in scope.
+
+**Insight:** `redactFranchiseNamesInText` cannot reach the system prompt. The
+prompt is assembled once, in source, and sent on **every** call — including the
+anonymous-scope posts (`division`, `league-wide`, `hotseat`) whose entire point
+is that no franchise may be named. So a real team name written into a rule's
+few-shot examples is handed to the model on exactly the calls that forbid it,
+and no amount of payload hygiene touches it.
+
+Three separate rules had one. Rule 30's was caught when it was written (a
+current↔former pairing, the sharpest form). Rule 4b's was not: `[Geeks]` —
+0013's own alias — appeared **thirteen times** in the explicit-pick voice
+examples, so the highest-frequency real name in the prompt was the one nobody
+flagged. Rules 15/16 addressed a GroupMe author as "Dead Cap", which is 0004's
+`nameShort` wearing a chat handle's clothes.
+
+**Why the bracket convention hid it:** `[Geeks]` *looks* like a slot to fill,
+which reads as obviously-a-placeholder to a human skimming the rule. It is
+still a real franchise name in the token stream.
+
+**The guard-scoping lesson, which generalizes past this feature:** the original
+test sliced from `'30. FORMER-NAME CALLBACK'` to the block's end and asserted no
+real name appeared *there*. It passed for months while twelve `[Geeks]` sat
+~170 lines above the slice. A guard scoped to the rule that motivated it
+certifies that rule and quietly implies the file. Scope the guard to the
+**blast radius** — here, the whole always-sent block — not to the bug.
+
+**Recommendation:** Never write a real franchise name, alias, retired name, or
+owner's personal name into prompt example text; invent one
+(`Griffins`, `Sandlot`, `Harbor City Kraken`) and say in the rule that it is
+invented. `tests/schefter-former-name-callback.test.ts` now scans the entire
+HARD RULES block against ~300 name forms harvested from both configs
+(`name`/`nameMedium`/`nameShort`/`abbrev`, `aliases[]`, and all four fields per
+`history[]` entry) — the same harvest the redactor uses, and it produces zero
+false positives against real prompt prose, so a hit is always a real name.
+Two gaps it cannot close: **owner personal names** (the configs carry none — the
+only list is a comment map in `src/utils/groupme-storage.ts`, so "Jomar" was
+caught by review, not CI), and the **per-league lore files** appended to the
+same prompt, which name owners and franchises by design. When adding a rule,
+assume the guard will not save you from either.
