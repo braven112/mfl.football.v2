@@ -4,6 +4,71 @@ Domain knowledge about design tokens, CSS variables, theming, and visual pattern
 
 ---
 
+## 2026-08-15 - `--box-shadow-focus-ring` Is a FOCUS Affordance; Using It for SELECTED Ships a Duller Blue
+
+**Context:** The roster page's team-crest drawer marked the active team with
+`box-shadow: var(--box-shadow-focus-ring)`, while the two other selected-state
+controls on the same card — `.view-tab[data-active]` and `.mode-btn.active` —
+both drew a solid `--color-primary` ring. The owner reported the crest's blue
+"doesn't match the other buttons." All three resolve from the *same* dark-mode
+blue (`#3b82f6`), which is exactly why the mismatch was easy to ship and hard
+to explain.
+
+**Insight:** the focus-ring token is alpha-blended, and alpha is not a shade —
+it is a different color once it composites.
+
+`--box-shadow-focus-ring` is a thin alias — `tokens.css` and `tokens-dark.css`
+both define it as `var(--shadow-focus-ring)`, which holds the actual value.
+Call sites use the `--box-shadow-` name; the raw value lives on the shorter one.
+
+| Token | Dark value | Composited over the `#21232a` card |
+|---|---|---|
+| `--color-primary` | `#3b82f6` | `#3b82f6` — full-strength blue |
+| `--box-shadow-focus-ring` → `--shadow-focus-ring` | `0 0 0 3px rgba(59,130,246,0.4)` | ~`#2c4a70` — reads gray-blue |
+
+At 40% over a dark surface the ring loses most of its chroma, so it looks like
+a shadow rather than a decision. Light mode has the same problem from the other
+direction (`rgba(28,73,124,0.25)` over white washes to a pale slate). So "both
+elements use the blue token" is not sufficient — check whether one of them is
+using it *through* an alpha layer.
+
+**Rule:** the two affordances are not interchangeable.
+
+- **Focus** (transient, keyboard, must not compete with content) → the
+  translucent `--box-shadow-focus-ring` glow. Correct as-is; don't "fix" it.
+- **Selected** (persistent, semantic, the answer to "where am I") → an opaque
+  `--color-primary` border plus the standard 12% tint:
+
+```css
+.thing[data-active="true"] {
+  background: color-mix(in srgb, var(--color-primary, #1c497c) 12%, var(--content-bg, white));
+  border-color: var(--color-primary, #1c497c);
+}
+```
+
+Give the element a `border: 2px solid transparent` in its base rule so the
+selected state only *colors* the border — swapping a `box-shadow` for a real
+border otherwise reflows the control by 2px on each side.
+
+**Generalization worth carrying:** when several controls on one card express the
+same state, they should reference the same token *at the same opacity*, not
+merely the same token. A grep for `--color-primary` finds "matching" rules that
+render as two different colors; the honest check is
+`getComputedStyle(el).borderColor` on each element side by side in the running
+page. That check is what proved the fix here — active crest and active view tab
+both reported `rgb(59,130,246)` dark / `rgb(28,73,124)` light, and the same
+composited `color-mix` background in both themes.
+
+**Dead-code note:** `src/components/theleague/TeamIconNav.astro` carries a
+near-identical `.team-icon-btn[data-active]` block with its own hardcoded
+`rgba(28,73,124,0.1)` glow. It styles against `--primary-color`, which does
+resolve — both token files define it as a legacy alias of `--color-primary` —
+so this is a naming-convention issue, not a broken-token one. Prefer
+`--color-primary` in new code. Nothing imports the component; if it's ever
+revived, apply the pattern above and drop the hardcoded alpha glow.
+
+---
+
 ## 2026-08-10 - A Token Defined in Only ONE Theme Passes the Guard and Still Breaks Dark Mode
 
 **Context:** The What's New surfaces (`WhatsNewRow.astro`, `WhatsNewIndexPage.astro`,

@@ -275,6 +275,14 @@
       "impact": "user",
       "area": "homepage",
       "league": "afl"
+    },
+    {
+      "date": "2026-08-15",
+      "type": "style-tweak",
+      "summary": "There are three sets of buttons on the roster page that tell you where you are — the view tabs up top, the GM/Coach switch, and the team crests in the drawer — and only two of them agreed on what \"selected\" looks like. The tabs and the GM switch draw a crisp blue ring. The team you're looking at got a soft blue glow instead, three pixels of it at 40% opacity, which on a dark card lands somewhere between blue and gray and reads more like a shadow than a choice. It now wears the same ring and the same faint blue fill as the tabs directly above it, in both light and dark mode. Nothing moved — the border was always there, it just wasn't colored in.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "theleague"
     }
   ]
 }
