@@ -1136,3 +1136,64 @@ markup — auto-layout column widths are invisible in the DOM, so take a
 screenshot at a real narrow viewport. And size the replacement element
 generously while you're there: an icon chosen to match the old text's line
 height usually looks undersized once it's the only thing identifying the row.
+
+---
+
+## 2026-08-15 - Positioning an Element Into `<main>`'s Gutter Never Fits — and a `display: none` Breakpoint Hides the Miscalculation Instead of Fixing It
+
+**Context:** The Pecking Order's section heading (`PeckingOrderIssue.astro`,
+shared by both leagues) rendered Schefter's 36px avatar with
+`position: absolute; right: calc(100% + 0.6rem)` on the heading, plus
+`@media (max-width: 1300px) { display: none }`. The stated goal in the code
+comment was alignment: pull the avatar out of the text flow so the heading text
+starts on the same left edge as the breadcrumbs, the headline and the ranking
+cards. What actually shipped was a disembodied head floating in the browser
+margin, outside the site's content column entirely, with nothing above or below
+it. Reported by the user as "the headline is out of the layout box."
+
+**Insight:** `TheLeagueLayout`'s `<main>` is `max-width: 1232px` with
+`padding-inline` of only `var(--padding-sm)`/`var(--padding-md)` (8px mobile /
+~19px desktop). An element positioned into that gutter needs `its own RENDERED
+width + gap` of room — 49.6px here — and `<main>` never has that much,
+at **any** viewport. Past 1232px the extra space goes to `margin-inline: auto`,
+which is outside `<main>`'s border box, so widening the window moves the whole
+column right and the gutter element rides along *outside* it. The inequality has
+no solution: `19 >= 49.6` is false for every width. This is a different failure
+from the 2026-07-04 header-alignment entry above (page padding *stacking* on
+`<main>`'s and insetting too far) — here the element is asked to live in padding
+that isn't there at all.
+
+The `max-width: 1300px` hide rule is the part worth internalizing. It reads like
+a responsive breakpoint but it is really a **symptom threshold**: 1300px is
+approximately where the avatar's left edge would cross x=0 and get clipped by
+the viewport. So the guard suppressed the one width where the bug was
+*undeniable* (visibly cut off) and left it visible at every width where it was
+merely *wrong* (floating in the margin). A breakpoint derived from "where does
+this stop looking broken" rather than from a layout intent is the tell.
+
+**Evidence:** Measured with `getBoundingClientRect()` at 1366px, not screenshots
+— the numbers name the owner of the offset where a screenshot only shows the
+gap. Before: `main.left = 67`, article content (`h1`, `.pr-card`) `left = 86`,
+avatar `left = 35` — 51px left of the content edge and 32px outside `<main>`.
+After swapping to a plain `display: flex; align-items: center; gap: 0.6rem`
+heading row: avatar, `h1` and `.pr-card` all report `left = 86`, and
+`documentElement.scrollWidth - clientWidth === 0`. Deleting the breakpoint also
+restored the avatar on mobile, where it had never rendered.
+
+**Recommendation:** Before positioning anything into a layout gutter, check the
+container's actual `padding-inline` against the element's `width + gap` — if the
+padding is smaller, the gutter approach cannot work and no breakpoint will
+rescue it. Put the element in normal flow instead (avatar + text is a flex row;
+the *row* starts on the shared content edge and only the text indents, which
+reads as a byline). Treat any `display: none` keyed to a width near where an
+absolutely-positioned element would leave the viewport as a suspect: it is
+usually hiding evidence rather than adapting a layout.
+
+**Take the width from `getBoundingClientRect()`, not from the CSS.** This site
+does NOT set `box-sizing: border-box` globally — `TheLeagueLayout` scopes it to
+`main` alone, so component-level elements are `content-box`. `.pr-section__avatar`
+declares `width: 36px` with `border: 2px solid` and therefore occupies **40px**;
+the `@media (max-width: 720px)` override to `32px` occupies 36px. Every
+gutter/overlap calculation in this codebase has to add the border back, and the
+first draft of this very entry got the number wrong (45.6 instead of 49.6) by
+reading the declared width off the stylesheet instead of measuring the box.
