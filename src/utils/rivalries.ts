@@ -163,6 +163,21 @@ export function incompleteCoverageSeasons(coverage: CoverageSeason[]): CoverageS
 }
 
 /**
+ * Seasons the archives hold no head-to-head for at all.
+ *
+ * Kept separate from `incompleteCoverageSeasons` — which requires at least one
+ * week of games — because a season with nothing needs different wording, and
+ * because a zero here is not necessarily a data problem to chase. The AFL's
+ * 2003 was played on Yahoo with only standings entered into MFL, so no game in
+ * any week has a score; it is missing from every rivalry record permanently.
+ */
+export function emptyCoverageSeasons(coverage: CoverageSeason[]): CoverageSeason[] {
+  return (coverage ?? []).filter(
+    (c) => c.seasonStarted && c.weeksInFeed && (c.weeksWithGames ?? 0) === 0
+  );
+}
+
+/**
  * A precise sentence describing what is missing, for display on any surface
  * that shows career head-to-head.
  *
@@ -177,24 +192,49 @@ export function incompleteCoverageSeasons(coverage: CoverageSeason[]): CoverageS
  */
 export function describeCoverageGap(coverage: CoverageSeason[]): string | null {
   const seasons = incompleteCoverageSeasons(coverage);
-  if (seasons.length === 0) return null;
+  const empty = emptyCoverageSeasons(coverage);
+  if (seasons.length === 0 && empty.length === 0) return null;
 
   const missingWeeks = (c: CoverageSeason) => (c.weeksInFeed ?? 0) - (c.weeksWithGames ?? 0);
   const mostlyMissing = seasons.filter((c) => missingWeeks(c) > 6);
   const partlyMissing = seasons.filter((c) => missingWeeks(c) <= 6);
 
+  // Verb agreement matters here: the AFL is down to a single gap season, and
+  // "2003 retain only their postseason weeks" reads as broken English next to
+  // real numbers.
+  const verb = (list: CoverageSeason[], singular: string, plural: string) =>
+    list.length === 1 ? singular : plural;
+
   const parts: string[] = [];
+  if (empty.length) {
+    parts.push(
+      `${formatSeasonRanges(empty.map((c) => c.year))} ${verb(empty, 'has', 'have')} no game-by-game results at all`
+    );
+  }
   if (mostlyMissing.length) {
     parts.push(
-      `${formatSeasonRanges(mostlyMissing.map((c) => c.year))} retain only their postseason weeks`
+      `${formatSeasonRanges(mostlyMissing.map((c) => c.year))} ` +
+        `${verb(mostlyMissing, 'retains', 'retain')} only ${verb(mostlyMissing, 'its', 'their')} postseason weeks`
     );
   }
   if (partlyMissing.length) {
     parts.push(
-      `${formatSeasonRanges(partlyMissing.map((c) => c.year))} are missing their opening weeks`
+      `${formatSeasonRanges(partlyMissing.map((c) => c.year))} ` +
+        `${verb(partlyMissing, 'is', 'are')} missing ${verb(partlyMissing, 'its', 'their')} opening weeks`
     );
   }
-  return `MFL's archives for these seasons are incomplete — ${parts.join(', and ')}.`;
+
+  const total = empty.length + seasons.length;
+  const lead = total === 1 ? "MFL's archive for this season is" : "MFL's archives for these seasons are";
+  // Three clauses are now possible, so "A, and B, and C" needs to become a real
+  // list rather than a chain of ands.
+  const joined =
+    parts.length <= 1
+      ? parts.join('')
+      : parts.length === 2
+        ? parts.join(' and ')
+        : `${parts.slice(0, -1).join(', ')}, and ${parts[parts.length - 1]}`;
+  return `${lead} incomplete — ${joined}.`;
 }
 
 /**

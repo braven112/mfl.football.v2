@@ -190,4 +190,37 @@ describe('describeCoverageGap', () => {
     expect(describeCoverageGap([{ year: 2020, seasonStarted: true, weeksWithGames: 17, weeksInFeed: 17 }])).toBeNull();
     expect(describeCoverageGap([])).toBeNull();
   });
+
+  // The AFL's live shape since every recoverable season was pulled back from
+  // the authenticated schedule view: 2003 alone, and it is not "postseason
+  // weeks only" — that season was played on Yahoo and has no game data at all.
+  it('says a season with zero games has none, rather than calling it postseason-only', () => {
+    const note = describeCoverageGap([
+      { year: 2003, seasonStarted: true, weeksWithGames: 0, weeksInFeed: 17 },
+      ...[2004, 2005].map((year) => ({ year, seasonStarted: true, weeksWithGames: 17, weeksInFeed: 17 })),
+    ])!;
+    expect(note).toContain('2003 has no game-by-game results at all');
+    expect(note).not.toContain('postseason');
+  });
+
+  it('agrees in number when only one season is affected', () => {
+    const one = describeCoverageGap([
+      { year: 2003, seasonStarted: true, weeksWithGames: 0, weeksInFeed: 17 },
+    ])!;
+    expect(one).toContain("MFL's archive for this season is incomplete");
+    expect(one).not.toMatch(/\bhave\b|\bretain\b|\btheir\b/);
+
+    const many = describeCoverageGap(AFL_COVERAGE)!;
+    expect(many).toContain("MFL's archives for these seasons are incomplete");
+  });
+
+  it('reads as a list, not a chain of ands, when all three shapes are present', () => {
+    const note = describeCoverageGap([
+      { year: 2003, seasonStarted: true, weeksWithGames: 0, weeksInFeed: 17 },
+      { year: 2007, seasonStarted: true, weeksWithGames: 4, weeksInFeed: 17 },
+      { year: 2012, seasonStarted: true, weeksWithGames: 14, weeksInFeed: 17 },
+    ])!;
+    expect(note).toContain(', and 2012 is missing its opening weeks');
+    expect(note).not.toContain(', and 2007');
+  });
 });

@@ -135,10 +135,27 @@ for (const f of franchises) {
 // characters ("Fullyba", "Chatmas"). Both have to resolve, and neither may
 // resolve by guessing.
 //
-// Two forced rules, in order. A token that is a prefix of exactly one
-// abbrev-less franchise's name IS that franchise. Then, if a single franchise
-// and a single token are still unclaimed, they must be each other. Anything
-// left over stays unresolved and surfaces as a parse problem.
+// Where league.json has no abbrev, MFL generates the opponent label from the
+// NAME, and it uses two different shapes in the same table: the name truncated
+// (single-word teams — "Smokane", "Chatmas" for Chatmaster) and the name's
+// initials (multi-word teams — "TBB" for The Blunt Bros., "DMTI" for Dan
+// Marino's Tan Isotoners, "420A" for 420 All-Stars, which keeps a leading
+// numeric word whole).
+//
+// So a token is matched against a franchise three ways — exact name, name
+// prefix, name initials — and bound ONLY when exactly one franchise can claim
+// it. Binding removes both from the pool, which can force a previously
+// ambiguous token, so it iterates to a fixpoint. A final elimination pass
+// settles a lone remaining pair. Nothing else is bound: anything still
+// unresolved surfaces as a parse problem rather than a guess.
+const initialsOf = (name) =>
+  String(name)
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => (/^\d/.test(w) ? w.match(/^\d+/)[0] : (w.match(/[A-Za-z0-9]/)?.[0] ?? '')))
+    .join('')
+    .toUpperCase();
+
 const abbrevless = franchises.filter((f) => !f.abbrev);
 if (abbrevless.length) {
   const seen = new Set();
@@ -149,16 +166,29 @@ if (abbrevless.length) {
   let unclaimed = [...seen].filter((a) => !idByAbbrev.has(a));
   let pending = [...abbrevless];
 
-  for (const token of [...unclaimed]) {
-    const hits = pending.filter((f) => String(f.name).toUpperCase().startsWith(token));
-    if (hits.length !== 1) continue;
-    idByAbbrev.set(token, hits[0].id);
-    console.log(
-      `league.json has no abbreviation for franchise ${hits[0].id} (${hits[0].name}); ` +
-        `bound it to "${token}", the only name it can be a prefix of.`
-    );
-    pending = pending.filter((f) => f.id !== hits[0].id);
-    unclaimed = unclaimed.filter((a) => a !== token);
+  const claims = (f, token) => {
+    const name = String(f.name).toUpperCase();
+    if (name === token) return 'its name';
+    if (name.startsWith(token)) return 'a prefix of its name';
+    if (initialsOf(f.name) === token) return "its name's initials";
+    return null;
+  };
+
+  let progress = true;
+  while (progress) {
+    progress = false;
+    for (const token of [...unclaimed]) {
+      const hits = pending.filter((f) => claims(f, token));
+      if (hits.length !== 1) continue;
+      idByAbbrev.set(token, hits[0].id);
+      console.log(
+        `league.json has no abbreviation for franchise ${hits[0].id} (${hits[0].name}); ` +
+          `bound it to "${token}" — ${claims(hits[0], token)}, and no other franchise's.`
+      );
+      pending = pending.filter((f) => f.id !== hits[0].id);
+      unclaimed = unclaimed.filter((a) => a !== token);
+      progress = true;
+    }
   }
 
   if (pending.length === 1 && unclaimed.length === 1) {
@@ -202,8 +232,15 @@ const namesByLength = [...idByName.keys()].sort((a, b) => b.length - a.length);
 const lines = raw.split('\n');
 
 // Week numbers from the header row ("Franchise/Week<TAB>1<TAB>2<TAB>…").
-// Falling back to positional numbering keeps a header-less paste usable.
-const headerLine = lines.find((l) => /^Franchise\s*\/\s*Week/i.test(l));
+// Identified by SHAPE, not by its label: 2009's paste arrived as
+// "ranchise/Week", having lost its first character, and a label test would have
+// silently dropped to positional numbering. A line whose every cell after the
+// first is a number is the header, whatever the first cell says.
+const headerLine = lines.find((l) => {
+  const cells = l.split('\t');
+  if (cells.length < 3) return false;
+  return cells.slice(1).every((c) => c.trim() !== '' && Number.isFinite(Number(c.trim())));
+});
 const headerWeeks = headerLine
   ? headerLine.split('\t').slice(1).map((c) => Number(c.trim())).filter(Number.isFinite)
   : [];
