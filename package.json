@@ -28,6 +28,7 @@
     "fetch:nfl-draft-date": "node scripts/fetch-nfl-draft-date.mjs",
     "generate:vapid": "node scripts/generate-vapid-keys.mjs",
     "compute:franchise-history": "node scripts/compute-franchise-history.mjs",
+    "compute:player-identity-union": "node scripts/compute-player-identity-union.mjs",
     "compute:afl-franchise-history": "node scripts/compute-franchise-history.mjs --league=afl",
     "compute:afl-record-book": "node scripts/compute-record-book.mjs --league=afl",
     "recover:afl-schedule": "node scripts/recover-afl-schedule-from-html.mjs --league=afl",

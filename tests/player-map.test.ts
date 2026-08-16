@@ -107,6 +107,14 @@ describe('player-map', () => {
       if (path.includes('espn-college-ids.json')) {
         return JSON.stringify(mockCollegeIds);
       }
+      if (path.includes('player-identity-union.json')) {
+        // The artifact is a flat row list, not the feed's nested shape.
+        return JSON.stringify({
+          league: 'theleague',
+          years: [2024, 2025, 2026],
+          players: mockFeedData.players.player,
+        });
+      }
       throw new Error(`File not found: ${path}`);
     });
     mockReaddirSync.mockReturnValue(['2024', '2025', '2026', 'roster-history'] as any);
@@ -207,20 +215,48 @@ describe('player-map', () => {
   });
 
   describe('getGlobalPlayerMap', () => {
-    it('unions every feed year into one lookup (only year-named dirs)', () => {
+    it('resolves players from the precomputed union', () => {
       const map = getGlobalPlayerMap();
-      // reads year directories (2024/2025/2026), skips non-year names
-      expect(mockReaddirSync).toHaveBeenCalled();
-      expect(map.has('13116')).toBe(true); // Mahomes present across years
+      expect(map.has('13116')).toBe(true);
       expect(map.get('13116')!.name).toBe('Patrick Mahomes');
+    });
+
+    it('reads the union artifact, never a per-season feed scan', () => {
+      // Call history accumulates across tests in this file — reset it so the
+      // assertions describe this call and not an earlier getPlayerMap().
+      clearPlayerMapCache();
+      mockReadFileSync.mockClear();
+      mockReaddirSync.mockClear();
+
+      getGlobalPlayerMap();
+      // The whole point of the artifact is that past seasons are immutable and
+      // must not be re-unioned per cold start. A readdirSync here would also
+      // defeat Vercel's file tracer and drag all of data/ back into the bundle.
+      expect(mockReaddirSync).not.toHaveBeenCalled();
+      const readPaths = mockReadFileSync.mock.calls.map((c) => String(c[0]));
+      expect(readPaths.some((p) => p.includes('player-identity-union.json'))).toBe(true);
+      expect(readPaths.some((p) => /mfl-feeds[\\/]\d{4}[\\/]players\.json$/.test(p))).toBe(false);
+    });
+
+    it('applies the same identity transform as the per-year map', () => {
+      // Both paths must agree on what a player's identity IS — they read
+      // different files, so a drift here would surface as a headshot or team
+      // code that changes depending on which page you loaded.
+      expect(getGlobalPlayerMap().get('13116')).toEqual(getPlayerMap(2026).get('13116'));
+    });
+
+    it('filters out non-fantasy positions from the union', () => {
+      const map = getGlobalPlayerMap();
+      expect(map.has('50000')).toBe(false); // LB
+      expect(map.has('50001')).toBe(false); // CB
     });
 
     it('caches the unioned map — same instance on repeated calls', () => {
       expect(getGlobalPlayerMap()).toBe(getGlobalPlayerMap());
     });
 
-    it('returns an empty map when the feeds dir is unreadable', () => {
-      mockReaddirSync.mockImplementation(() => {
+    it('returns an empty map when the union artifact is missing', () => {
+      mockReadFileSync.mockImplementation(() => {
         throw new Error('ENOENT');
       });
       clearPlayerMapCache();

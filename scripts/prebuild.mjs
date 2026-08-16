@@ -31,6 +31,12 @@ const SEQUENTIAL = [
   // Reads the same committed feeds as the history step; the record book is a
   // small top-N slice written to its own derived file.
   { name: 'compute:afl-record-book', cmd: 'pnpm run compute:afl-record-book' },
+  // Rolls every season's players.json into one identity table. Must run after
+  // the feed sync so the current season is current; the older seasons in it
+  // never change. getGlobalPlayerMap() reads only this file — see the note
+  // there on why deriving it at request time was costing 23.5 MB per cold
+  // start and dragging all of data/ into the serverless bundle.
+  { name: 'compute:player-identity-union', cmd: 'pnpm run compute:player-identity-union' },
 ];
 
 const PARALLEL = [
