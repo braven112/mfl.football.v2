@@ -143,7 +143,12 @@ export const PROVIDERS = {
   gemini: {
     label: 'Gemini',
     envKey: 'GEMINI_API_KEY',
-    defaultModel: 'gemini-2.5-pro',
+    // Must stay in sync with GEMINI_REVIEW_MODEL in pr-external-review.yml.
+    // This is the value a LOCAL run gets with no env override, so a stale id
+    // here fails only off-CI — which is exactly how it went unnoticed: the
+    // workflow was updated off gemini-2.5-pro and this was not. (Caught by
+    // the Gemini reviewer's own cross-cutting lens on PR #544.)
+    defaultModel: 'gemini-flash-latest',
     async call({ apiKey, model, system, user }) {
       const res = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
@@ -156,7 +161,11 @@ export const PROVIDERS = {
           body: JSON.stringify({
             system_instruction: { parts: [{ text: system }] },
             contents: [{ role: 'user', parts: [{ text: user }] }],
-            generationConfig: { temperature: 0.2, maxOutputTokens: 4000 },
+            // 8000, not 4000: the first live review truncated mid-sentence on
+            // its second finding. Flash models spend part of this budget on
+            // reasoning before emitting text, so the visible output is well
+            // short of the cap.
+            generationConfig: { temperature: 0.2, maxOutputTokens: 8000 },
           }),
         }
       );
