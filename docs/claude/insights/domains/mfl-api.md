@@ -148,6 +148,25 @@ impossible in real data and is the cheapest available tripwire for this class of
 bug. A `pf > 0 && wins+losses+ties === 0` assertion in any new standings
 consumer would have caught this on day one.
 
+**Addendum 2026-08-16 — this insight existed and the bug still recurred, in a
+per-field form the recommendation above does not obviously cover.** A new
+consumer (`compute-record-book.mjs`) tried to honour the fallback field by
+field:
+
+```js
+const [w, l, t] = String(f?.h2hwlt ?? '').split('-').map(Number);
+const wins = Number.isFinite(w) ? w || 0 : Number(f?.h2hw) || 0;   // WRONG
+```
+
+With `h2hwlt` absent that yields `[0]`, and `Number.isFinite(0)` is **true**, so
+`wins` locks to 0 while `losses`/`ties` (parsed as `NaN`) fall through
+correctly. The result is a half-real record — the AFL's 2019 and 2021 rendered
+as "0-2" and "0-4" beside 2,500-point seasons. Decide validity for the TRIPLE,
+never per field: require `w || l || t` before trusting the combined parse, the
+way `officialRecord` in `src/utils/record-book.mjs` and the recovery script's
+guard both now do. Seasons known to ship without the combined field: TheLeague
+2022, AFL 2019 and 2021.
+
 **Confidence: High** — the fix restored 144 games of career record across 15
 franchises and four division titles, verified against the raw feed.
 
