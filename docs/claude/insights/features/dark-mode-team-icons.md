@@ -362,3 +362,65 @@ skips any team with a dark variant — so no opt-out was needed and none should
 be added. The guard test asserts the two are mutually exclusive. The fix for a
 flagged crest is, in order: draw the dark variant, else pick a franchise-colored
 stroke, else opt out.
+
+---
+
+## 2026-08-15 - The measurement's false NEGATIVES are the ones nobody looks for
+
+**Context:** Micks, Titsburgh and Swiftie got dark treatments. None of the three
+was in `crest-dark-stroke-manifest.json`. Scores, per the section above's
+instruction to look them up before writing a legibility rationale anywhere —
+**Micks 0.534, Titsburgh 0.668, Swiftie 0.908**.
+
+**Those three numbers are three different stories, and only the middle one is
+the structural blind spot.** Worth separating, because they argue for different
+fixes:
+
+- **Titsburgh (0.668)** is the real case. It clears comfortably and still had a
+  black outer ring that dissolved — the score counts *how many* pixels are
+  legible, not *where* they are, so a crest bright through the middle passes
+  while the silhouette it presents to the card is a dark edge on a dark one.
+  Moving the threshold cannot reach this; the opt-in path exists for it
+  (Jewpacabra, above).
+- **Micks (0.534)** is not really a false negative at all — it is a *marginal
+  pass*, three points over the cutoff, with ~47% of its pixels illegible. It
+  argues the opposite of the 0.35 re-tune the section above floats: at 0.5 the
+  threshold is already letting through crests that visibly need help. Don't
+  cite it as evidence for the rim blind spot; it's evidence about the cutoff.
+- **Swiftie (0.908)** is not a legibility case in any sense — same shape as Suh
+  girls at 85%. It got a ring for definition, not rescue. See the render-size
+  note below for how that was established.
+
+A cheap manual check when adding any crest-only surface: look at the crest's
+RIM against `--card-surface`, separately from the crest as a whole. The score
+can't see the distinction and won't warn you. But run
+`pnpm measure:crest-contrast --report` first — the number tells you which of the
+three stories above you're actually in, and eyeballing cannot.
+
+**Judge a stroke at render size, on the real card color — never zoomed.** The
+`drop-shadow` ring is `0.5px`. Reviewed at 180px it looks like a deliberate
+outline; at the 40px crests actually render on the draft board and standings
+cards it's close to invisible. An A/B built as a fixed-position overlay in the
+page — same image twice, `filter: none` vs the computed filter, at 40/64/100px,
+on `getComputedStyle(document.documentElement).getPropertyValue('--card-surface')`
+— takes one `javascript_tool` call and is the only view that answers "does this
+change anything where it ships." It reversed the read on Swiftie: the stroke is
+real and correct, but its rim is a pale rose that never dissolved, so the ring
+tightens a soft edge rather than rescuing an illegible one. That's a fine reason
+to keep it and a bad reason to claim a legibility fix.
+
+**Verify BOTH properties to prove the two systems stayed exclusive.** The guard
+test asserts mutual exclusivity in config; at render time it costs one call to
+confirm it survived — read `content` AND `filter` on the live crests. A crest
+wearing both would show a `url(...)` content and a `drop-shadow` filter
+simultaneously, which is the "ring around hand-drawn dark art" bug the whole
+exclusion rule exists to prevent, and it fails silently and looks merely ugly.
+
+**No manifest regeneration is needed in either of these cases**, despite the
+recommendation above — worth knowing so a green suite isn't mistaken for a
+skipped step. Adding `iconDark` to a team the measurement never flagged leaves
+the manifest unchanged (it was already absent), and REPLACING an existing
+`*_dark.png` can't move it either, because `measureAllCrests` scores the LIGHT
+icon and skips any team with a dark variant entirely. Re-run
+`pnpm measure:crest-contrast` when a LIGHT crest asset changes, or when a team
+that WAS in the manifest gains an `iconDark`.
