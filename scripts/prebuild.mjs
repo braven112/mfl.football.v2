@@ -22,6 +22,9 @@ const SEQUENTIAL = [
   { name: 'update:salary:all', cmd: 'pnpm run update:salary:all' },
   { name: 'compute:franchise-history', cmd: 'pnpm run compute:franchise-history' },
   { name: 'compute:afl-free-agents', cmd: 'pnpm run compute:afl-free-agents' },
+  // Reads the same committed feeds as the history step; the record book is a
+  // small top-N slice written to its own derived file.
+  { name: 'compute:afl-record-book', cmd: 'pnpm run compute:afl-record-book' },
 ];
 
 const PARALLEL = [

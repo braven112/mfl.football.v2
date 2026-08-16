@@ -1,0 +1,386 @@
+---
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import recordBook from '../../../data/afl-fantasy/derived/record-book.json';
+import { canonicalRivalryPair } from '../../utils/rivalries';
+
+export const prerender = false;
+
+const book = recordBook as any;
+
+const num = (n: number, dp = 2) =>
+  n.toLocaleString('en-US', { minimumFractionDigits: dp, maximumFractionDigits: dp });
+
+const whenOf = (g: any) =>
+  g.isPlayoff ? `${g.year} Playoffs · Week ${g.week}` : `${g.year} · Week ${g.week}`;
+
+// Every board is the same shape — a rank, a headline number and a line of
+// context — so one renderer covers all of them.
+type Row = {
+  value: string;
+  unit?: string;
+  primary: string;
+  secondary?: string;
+  detail: string;
+  href?: string;
+};
+
+const gameRows = (games: any[], value: (g: any) => string, unit?: string): Row[] =>
+  games.map((g) => ({
+    value: value(g),
+    unit,
+    primary: g.winnerName,
+    secondary: g.loserName,
+    detail: `${num(g.winnerScore)} – ${num(g.loserScore)} · ${whenOf(g)}`,
+    href: `/afl-fantasy/rivalries/${canonicalRivalryPair(g.winnerId, g.loserId)}`,
+  }));
+
+const streakRows = (streaks: any[]): Row[] =>
+  streaks.map((s) => ({
+    value: String(s.length),
+    unit: 'games',
+    primary: s.name,
+    detail:
+      s.from.year === s.to.year
+        ? `${s.from.year} · Weeks ${s.from.week}–${s.to.week}`
+        : `${s.from.year} Week ${s.from.week} → ${s.to.year} Week ${s.to.week}`,
+  }));
+
+const rivalryRows = (rows: any[], lopsided: boolean): Row[] =>
+  rows.map((r) => {
+    const aLeads = r.aWins >= r.bWins;
+    const lead = aLeads ? r.aWins : r.bWins;
+    const trail = aLeads ? r.bWins : r.aWins;
+    const record = r.ties > 0 ? `${lead}-${trail}-${r.ties}` : `${lead}-${trail}`;
+    return {
+      value: lopsided ? record : String(r.meetings),
+      unit: lopsided ? undefined : 'meetings',
+      primary: aLeads ? r.aName : r.bName,
+      secondary: aLeads ? r.bName : r.aName,
+      detail: lopsided
+        ? `${r.meetings} meetings${r.playoffMeetings ? ` · ${r.playoffMeetings} playoff` : ''}`
+        : `${record}${r.playoffMeetings ? ` · ${r.playoffMeetings} playoff` : ''}`,
+      href: `/afl-fantasy/rivalries/${canonicalRivalryPair(r.a, r.b)}`,
+    };
+  });
+
+const seasonRows = (lines: any[], mode: 'record' | 'points'): Row[] =>
+  lines.map((s) => ({
+    value:
+      mode === 'points'
+        ? num(s.pointsFor, 0)
+        : `${s.wins}-${s.losses}${s.ties ? `-${s.ties}` : ''}`,
+    unit: mode === 'points' ? 'points' : undefined,
+    primary: s.name,
+    detail:
+      mode === 'points'
+        ? `${s.year} · ${s.wins}-${s.losses}${s.ties ? `-${s.ties}` : ''}`
+        : `${s.year} · ${num(s.pointsFor, 0)} points`,
+  }));
+
+const boards: Array<{ id: string; title: string; blurb: string; rows: Row[] }> = [
+  {
+    id: 'highest-score',
+    title: 'Highest Single Game',
+    blurb: 'The biggest afternoon anyone has ever had.',
+    rows: gameRows(book.highestScore, (g) => num(g.winnerScore)),
+  },
+  {
+    id: 'biggest-blowout',
+    title: 'Biggest Blowout',
+    blurb: 'Margin of victory. Nobody involved remembers these fondly.',
+    rows: gameRows(book.biggestBlowout, (g) => num(g.margin)),
+  },
+  {
+    id: 'closest-game',
+    title: 'Closest Finish',
+    blurb: 'Decided by a decimal. Check your bench.',
+    rows: gameRows(book.closestGame, (g) => num(g.margin)),
+  },
+  {
+    id: 'highest-combined',
+    title: 'Highest Combined Score',
+    blurb: 'Both teams went off. One of them still lost.',
+    rows: gameRows(book.highestCombined, (g) => num(g.combined)),
+  },
+  {
+    id: 'win-streak',
+    title: 'Longest Winning Streak',
+    blurb: 'Consecutive wins, carried across seasons.',
+    rows: streakRows(book.longestWinStreak),
+  },
+  {
+    id: 'losing-streak',
+    title: 'Longest Losing Streak',
+    blurb: 'Same math, worse year.',
+    rows: streakRows(book.longestLosingStreak),
+  },
+  {
+    id: 'most-played',
+    title: 'Most-Played Rivalries',
+    blurb: 'The pairings with the most history behind them.',
+    rows: rivalryRows(book.mostPlayed, false),
+  },
+  {
+    id: 'most-lopsided',
+    title: 'Most Lopsided Rivalries',
+    blurb: `Widest gap in a series of at least ${book.minLopsidedMeetings} meetings.`,
+    rows: rivalryRows(book.mostLopsided, true),
+  },
+  {
+    id: 'best-season',
+    title: 'Best Regular Season',
+    blurb: 'By win percentage.',
+    rows: seasonRows(book.bestSeason, 'record'),
+  },
+  {
+    id: 'most-points',
+    title: 'Most Points in a Season',
+    blurb: 'Regular-season scoring, start to finish.',
+    rows: seasonRows(book.mostPointsSeason, 'points'),
+  },
+];
+---
+
+<TheLeagueLayout title="Record Book | AFL Fantasy">
+  <div class="records-page">
+    <header class="records-header">
+      <h1>Record Book</h1>
+      <p class="records-intro">
+        Every game in league history — {book.totalGames.toLocaleString('en-US')} of
+        them, {book.firstSeason} through {book.lastSeason} — sorted into the
+        extremes. Franchises are named as they were that season.
+      </p>
+    </header>
+
+    <div class="records-grid">
+      {boards.map((board) => (
+        <section class="record-board" id={board.id}>
+          <h2>{board.title}</h2>
+          <p class="record-board__blurb">{board.blurb}</p>
+          {board.rows.length === 0 ? (
+            <p class="record-board__empty">Not enough games on record yet.</p>
+          ) : (
+            <ol class="record-list">
+              {board.rows.map((row, i) => (
+                <li class:list={['record-row', { 'record-row--lead': i === 0 }]}>
+                  <span class="record-rank">{i + 1}</span>
+                  <span class="record-value">
+                    {row.value}
+                    {row.unit ? <span class="record-unit">{row.unit}</span> : null}
+                  </span>
+                  <span class="record-who">
+                    <span class="record-teams">
+                      <span class="record-name">{row.primary}</span>
+                      {row.secondary ? (
+                        <>
+                          <span class="record-vs">vs</span>
+                          <span class="record-name record-name--other">{row.secondary}</span>
+                        </>
+                      ) : null}
+                    </span>
+                    <span class="record-detail">
+                      {row.href ? <a href={row.href}>{row.detail}</a> : row.detail}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </section>
+      ))}
+    </div>
+
+    <p class="records-caveat">
+      <strong>Data note:</strong> The AFL played its 2003 season on Yahoo and
+      only standings were ever entered into MFL, so no game from that year has a
+      score anywhere and none can appear here. Every season from
+      {' '}{book.firstSeason} on is complete.
+    </p>
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .records-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--spacing-lg, 24px) var(--spacing-md, 16px) var(--spacing-xl, 32px);
+    color: var(--page-text);
+  }
+
+  .records-header {
+    margin-bottom: var(--spacing-lg, 24px);
+  }
+
+  .records-header h1 {
+    margin: 0 0 var(--spacing-sm, 8px);
+    font-size: clamp(1.6rem, 4vw, 2.2rem);
+    color: var(--page-text);
+  }
+
+  .records-intro {
+    margin: 0;
+    max-width: 62ch;
+    color: var(--content-text-muted);
+    line-height: 1.55;
+  }
+
+  .records-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: var(--spacing-md, 16px);
+  }
+
+  .record-board {
+    background: var(--card-bg);
+    border: 1px solid var(--content-border);
+    border-radius: 12px;
+    padding: var(--spacing-md, 16px);
+    min-width: 0;
+  }
+
+  .record-board h2 {
+    margin: 0;
+    font-size: 1.02rem;
+    letter-spacing: 0.01em;
+    color: var(--page-text);
+  }
+
+  .record-board__blurb {
+    margin: 0.2rem 0 var(--spacing-sm, 8px);
+    font-size: 0.8rem;
+    color: var(--content-text-muted);
+  }
+
+  .record-board__empty {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--content-text-muted);
+  }
+
+  .record-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .record-row {
+    display: grid;
+    grid-template-columns: 1.2rem minmax(3.6rem, auto) 1fr;
+    align-items: center;
+    gap: var(--spacing-sm, 8px);
+    padding: 0.42rem 0.4rem;
+    border-radius: 8px;
+    min-width: 0;
+  }
+
+  .record-row:nth-child(odd) {
+    background: var(--content-bg-muted);
+  }
+
+  .record-row--lead {
+    background: color-mix(in srgb, var(--league-accent) 12%, transparent);
+  }
+
+  .record-rank {
+    font-size: 0.72rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--content-text-muted);
+    text-align: right;
+  }
+
+  .record-value {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.98rem;
+    color: var(--page-text);
+    white-space: nowrap;
+  }
+
+  .record-row--lead .record-value {
+    color: var(--league-accent);
+  }
+
+  .record-unit {
+    display: block;
+    font-size: 0.62rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--content-text-muted);
+  }
+
+  .record-who {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .record-teams {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0 0.3rem;
+    min-width: 0;
+    font-size: 0.85rem;
+    line-height: 1.25;
+  }
+
+  .record-teams img {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+    flex: none;
+  }
+
+  /* Franchise names run long ("Marriedwithchildren", "Dicks out for Harambe")
+     and a record nobody can attribute is not a record. Wrap rather than
+     ellipsise — the row is allowed to grow. */
+  .record-name {
+    overflow-wrap: anywhere;
+  }
+
+  .record-name--other {
+    color: var(--content-text-muted);
+  }
+
+  .record-vs {
+    font-size: 0.7rem;
+    color: var(--content-text-muted);
+    flex: none;
+  }
+
+  .record-detail {
+    font-size: 0.74rem;
+    color: var(--content-text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .record-detail a {
+    color: inherit;
+    text-decoration: none;
+    border-bottom: 1px dotted var(--content-border);
+  }
+
+  .record-detail a:hover {
+    color: var(--league-accent);
+    border-bottom-color: var(--league-accent);
+  }
+
+  .records-caveat {
+    margin: var(--spacing-lg, 24px) 0 0;
+    max-width: 70ch;
+    font-size: 0.8rem;
+    color: var(--content-text-muted);
+    line-height: 1.5;
+  }
+
+  @media (max-width: 480px) {
+    .record-row {
+      grid-template-columns: 1.2rem minmax(4rem, auto) 1fr;
+    }
+  }
+</style>
