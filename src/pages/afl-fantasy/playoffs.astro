@@ -1862,12 +1862,19 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
     margin-bottom: 1rem;
   }
 
+  /* AFL gold, not --color-secondary (that token is TheLeague's brand green and
+     the AFL theme never overrides it). Same light/dark split as the standings
+     champion subtitle: amber on the white card, trophy gold on the navy one. */
   .bracket-label {
     margin: 0;
     font-size: 0.85rem;
     font-weight: 700;
-    color: var(--color-secondary, #2e8743);
+    color: var(--afl-gold, #d97706);
     letter-spacing: 0.04em;
+  }
+
+  :global(html.dark) .bracket-label {
+    color: var(--afl-trophy-gold, #c9a44c);
   }
 
   .bracket-title {
@@ -2288,8 +2295,10 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
     transition: color 0.2s ease;
   }
 
+  /* Hover to the AFL accent (red), matching --link-color-hover in the AFL
+     theme — not TheLeague's brand green. */
   .mfl-link:hover {
-    color: var(--color-secondary, #2e8743);
+    color: var(--league-accent, #c41e3a);
     text-decoration: underline;
   }
 

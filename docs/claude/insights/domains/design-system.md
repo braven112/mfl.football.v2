@@ -1998,3 +1998,59 @@ bbox answers the question that was actually being asked.
 check their viewBox ratios before picking a sizing rule. Equal height is only
 correct for marks that share a ratio; otherwise constrain both axes and verify
 with drawn pixel sizes, not by looking at a screenshot.
+
+---
+
+## `--color-secondary` on an AFL page renders TheLeague's green — and the guard test can't see it
+
+**Context:** `/afl-fantasy/playoffs` labeled every bracket "Championship" in
+green (`#10b981` in dark). The token behind it was `var(--color-secondary,
+#2e8743)` — TheLeague's brand green, defined in `tokens.css` (light `#2e8743`)
+and `tokens-dark.css` (dark `#10b981`).
+
+**Insight:** This is the *sibling* of the documented `var(--color-primary,
+#c41e3a)` trap, and it fails in the opposite direction, which makes it worse.
+The blue trap is a fallback that never fires — the hex only shows in devtools.
+`--color-secondary` genuinely **resolves**, on every AFL page, to the other
+league's brand green, because the AFL blocks (`html[data-league="afl"]` in
+tokens.css, `html.dark[data-league="afl"]` in tokens-dark.css) override
+`--league-accent`, links, nav and the surface ramp but never touch
+`--color-secondary`.
+
+Nothing catches it. `tests/design-token-guard.test.ts` only asserts that a
+referenced custom property is *defined somewhere* — `--color-secondary` is a
+real token with real light and dark values, so the guard passes while the page
+ships another league's identity. A "wrong league's token" bug is invisible to a
+"token exists" test.
+
+**Not every green is a brand leak, and the distinction decides the fix.**
+Sweeping the AFL surfaces turned up three kinds:
+
+- **Brand voice** (`.mfl-link:hover`, the draft-order OFFICIAL badge) → belongs
+  on `--league-accent`. Red on AFL, blue on TheLeague, one token.
+- **Semantic affirmative** (KeeperPlanner's filled-slot pip, primary button,
+  finalize progress bar) → green is correct on any league; it was just sourced
+  from the brand token. Move to `--color-success`, look unchanged.
+- **Categorical palette** (`--lineup-pos-rb` in the position color set) → leave
+  it. `src/pages/theleague/lineup.astro` declares the identical token block, so
+  recoloring only the AFL diverges two sibling pages, and a red RB chip would
+  collide with the error red on the same screen.
+
+Grep `--color-secondary` under `src/pages/afl-fantasy/` and
+`src/components/afl-fantasy/` when touching AFL styling; classify before
+swapping.
+
+**Gold as AFL foreground takes two tokens, not one.** `--afl-gold` (`#d97706`)
+reads on a white card and muddies on the navy one; `--afl-trophy-gold`
+(`#c9a44c`, matching the award SVG art) is 6.2:1 on the dark card and only
+2.4:1 on white. The established pattern is the light/dark split already used by
+`StandingsTable.astro`'s champion subtitle: `--afl-gold` in the base rule,
+`--afl-trophy-gold` under `:global(html.dark)`. Note `--afl-gold` is ~3.2:1 on
+white — under AA for small text; `#b45309` reaches 5:1 in the same family if a
+surface needs it.
+
+**One more asymmetry worth pricing in:** `--league-accent` is *not* the same
+color in both themes (`#c41e3a` light, `#ef5350` dark), so a fill that carries
+white text at 5.8:1 in light drops to 3.5:1 in dark. Flip the text to dark ink
+(`#2a0808`, the pattern `.kp-btn--danger` already uses) rather than pinning the
+light red.
