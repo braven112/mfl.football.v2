@@ -31,7 +31,7 @@ type TeamEntry = {
   abbrev?: string;
   division?: string;
   aliases?: string[];
-  history?: Array<{ name?: string; nameShort?: string; abbrev?: string }>;
+  history?: Array<{ name?: string; nameShort?: string; abbrev?: string; aliases?: string[] }>;
 };
 
 // Shaped exactly like loadTeams()' output, including the two fields whose
@@ -43,7 +43,9 @@ const teams = new Map<string, TeamEntry>([
     abbrev: 'SKINS',
     division: 'Northwest',
     aliases: ['Pigs'],
-    history: [{ name: 'Sabertooths', abbrev: 'SBR' }],
+    // A retired name carries its OWN aliases in the real configs — "Heavy
+    // Chevy" retired with aliases ["Heavy", "Chevy"] in theleague.config.json.
+    history: [{ name: 'Sabertooths', abbrev: 'SBR', aliases: ['Sabers'] }],
   }],
   ['0002', {
     name: 'Nashville Geeks',
@@ -105,6 +107,16 @@ describe('franchise-name redaction — retired names', () => {
   it('matches retired names case-insensitively', async () => {
     const safe = await anonymizeFuzzed('heard it from the COCK GOBBLER desk');
     expect(safe.text).not.toMatch(/cock gobbler/i);
+  });
+
+  it('redacts the aliases hanging off a RETIRED name, not just the name', async () => {
+    // The harvest read `team.aliases` only, so a nickname for a retired name
+    // was invisible to it. Real instance: 0004's "Heavy Chevy" retired with
+    // aliases ["Heavy", "Chevy"], and "Chevy" alone points at exactly one
+    // franchise as surely as the full retired name does.
+    const safe = await anonymizeFuzzed('the Sabers front office is up to something');
+    expect(safe.text).not.toMatch(/Sabers/i);
+    expect(safe.text).toContain('[a team]');
   });
 });
 
@@ -422,10 +434,15 @@ describe('franchise-name redaction — source guards', () => {
   });
 
   it('token harvest walks history entries and aliases', () => {
+    // Retargeted when the harvest started reading aliases off each history
+    // entry too (`form?.aliases` covers both the team and its history rows,
+    // where the old `team?.aliases` covered only the team). The behavioral
+    // proof is the "Sabers" case above; this guard exists so a refactor that
+    // stops walking history at all can't pass on the behavioral tests alone.
     const fn = SCANNER_SRC.match(/function collectFranchiseNameTokens[\s\S]+?\n\}\n/);
     expect(fn).not.toBeNull();
     expect(fn![0]).toMatch(/team\?\.history/);
-    expect(fn![0]).toMatch(/team\?\.aliases/);
+    expect(fn![0]).toMatch(/form\?\.aliases/);
   });
 
   it('redaction is applied to the RESULT, not inside the scope classifier', () => {

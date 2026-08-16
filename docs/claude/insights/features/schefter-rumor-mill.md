@@ -145,16 +145,53 @@ real name appeared *there*. It passed for months while twelve `[Geeks]` sat
 certifies that rule and quietly implies the file. Scope the guard to the
 **blast radius** — here, the whole always-sent block — not to the bug.
 
+**The block was not the only region, either.** A first pass at this guard
+scanned HARD RULES and stopped there — and `buildTradeOfferPlaybook()`, which
+is concatenated onto the very same `system` string whenever a batch holds a
+trade offer, had named "Pacific Pigskins" and "Midwestside Connection" in four
+worked examples the whole time. Scoping a guard to *a* region repeats the
+original mistake one level up. The unit that matters is **every string the
+model is ever shown**, so the test now iterates a `regions` map and any new
+prompt chunk gets added to it.
+
+**Two matching details that decide whether the guard is worth having:**
+
+- **Match on token boundaries, not substrings.** A raw `includes` reports
+  "CHAT" (AFL 0021's abbrev) inside "CHATTER" and "FRA" inside "FRANCHISE".
+  Those false positives are what force the length floor up to 4 — which then
+  blinds the guard to every short abbreviation (`GG`, `BTP`, `DCW`). Switching
+  to the redactor's own `(?<!\w)…(?!\w)` pair drops the false positives to
+  zero at a floor of 2, so the guard covers 328 forms instead of 299. Use the
+  lookarounds rather than `\b` for the reason CLAUDE.md gives: a word boundary
+  cannot exist after a name ending in punctuation, so `\bBe Rough!\b` matches
+  nothing.
+- **Assert both slice indices, not just that the slice is non-empty.** The two
+  failure directions are asymmetric and neither raises. A renamed START anchor
+  gives `indexOf === -1`, and `slice(-1, end)` collapses to nothing — green
+  test, empty region. A renamed END anchor gives `slice(start, -1)`, which
+  *expands* to nearly the whole file. Check `start >= 0` and `end > start` by
+  hand; a `toContain` sanity assertion on the region's own text is a good
+  second belt.
+
 **Recommendation:** Never write a real franchise name, alias, retired name, or
 owner's personal name into prompt example text; invent one
 (`Griffins`, `Sandlot`, `Harbor City Kraken`) and say in the rule that it is
-invented. `tests/schefter-former-name-callback.test.ts` now scans the entire
-HARD RULES block against ~300 name forms harvested from both configs
-(`name`/`nameMedium`/`nameShort`/`abbrev`, `aliases[]`, and all four fields per
-`history[]` entry) — the same harvest the redactor uses, and it produces zero
-false positives against real prompt prose, so a hit is always a real name.
-Two gaps it cannot close: **owner personal names** (the configs carry none — the
-only list is a comment map in `src/utils/groupme-storage.ts`, so "Jomar" was
-caught by review, not CI), and the **per-league lore files** appended to the
-same prompt, which name owners and franchises by design. When adding a rule,
-assume the guard will not save you from either.
+invented. `tests/schefter-former-name-callback.test.ts` now scans every prompt
+region against 328 name forms harvested exactly the way
+`collectFranchiseNameTokens` harvests them, floor included — the redactor's
+input set IS the privacy boundary, so the guard's must never be narrower.
+Two gaps it still cannot close: **owner personal names** (the configs carry
+none — the only list is a comment map in `src/utils/groupme-storage.ts`, so
+"Jomar" was caught by review, not CI), and the **per-league lore files**
+appended to the same prompt, which name owners and franchises by design. When
+adding a rule, assume the guard will not save you from either.
+
+**Postscript — the redactor had the same blind spot in production.** Chasing
+the test's harvest turned up that `collectFranchiseNameTokens` read
+`team.aliases` but not the `aliases` on each `history[]` entry. Exactly one
+franchise is affected and it is the worst possible one: 0004's "Heavy Chevy"
+retired carrying `aliases: ["Heavy", "Chevy"]`, so a tip that said "Chevy"
+reached the prompt un-fuzzed. Same lesson as the entry above — the harvest is
+the privacy boundary — one level deeper into the config schema than anyone
+looked the first time. Fixed by iterating `[team, ...history]` for aliases the
+way the name fields already were.

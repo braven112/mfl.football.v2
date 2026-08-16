@@ -406,6 +406,24 @@ describe('the prompt rule requires the pairing', () => {
     expect(src).toMatch(/FORBIDDEN: "Dockside Dynamos are fielding calls\."/);
   });
 
+  /**
+   * Slice a named prompt region, refusing to return a region that is missing,
+   * inverted, or silently the wrong size.
+   *
+   * Both failure directions are real. A renamed START anchor gives
+   * `indexOf === -1` and `slice(-1, end)` collapses to nothing — a green test
+   * guarding an empty string. A renamed END anchor gives `slice(start, -1)`,
+   * which EXPANDS to nearly the rest of the file. Neither shows up as an
+   * error; both make the assertion below meaningless.
+   */
+  const region = (label: string, startMark: string, endMark: string) => {
+    const start = src.indexOf(startMark);
+    const end = src.indexOf(endMark, start + 1);
+    expect(start, `${label}: start anchor not found`).toBeGreaterThanOrEqual(0);
+    expect(end, `${label}: end anchor not found`).toBeGreaterThan(start);
+    return src.slice(start, end);
+  };
+
   it('uses INVENTED names in its examples, never real franchises', () => {
     // The prompt is a leak path the payload redaction cannot reach: it is
     // built once and sent on EVERY call, including anonymous-scope posts. The
@@ -415,45 +433,68 @@ describe('the prompt rule requires the pairing', () => {
     // association the whole feature is gated on, for teams that may be out of
     // window, on posts not allowed to name anyone.
     //
-    // Rule 30 was not the only offender, which is why this scans the WHOLE
-    // HARD RULES block rather than one rule: 4b's explicit-pick examples ran
-    // on "[Geeks]" (0013's own alias) a dozen times over, and 15/16 addressed
-    // a GroupMe author as "Dead Cap" (0004's nameShort). Same category, same
-    // always-sent prompt — a real team named in every call Schefter makes.
-    // Any new rule that reaches for a concrete team name fails here too.
-    const hardRules = src.slice(
-      src.indexOf('HARD RULES (self-enforce, never violate):'),
-      src.indexOf('Voice: "League sources tell me'),
-    );
-    // Both anchors must still resolve — a renamed heading that silently
-    // shrinks the scanned region to nothing would leave this test green while
-    // guarding nothing at all.
-    expect(hardRules).toContain('4b. If a web tip\'s scope is "franchise-explicit-pick"');
-    expect(hardRules).toContain('30. FORMER-NAME CALLBACK');
+    // Rule 30 was not the only offender, and the HARD RULES block was not the
+    // only region. 4b's explicit-pick examples ran on "[Geeks]" (0013's own
+    // alias) a dozen times over; 15/16 addressed a GroupMe author as "Dead
+    // Cap" (0004's nameShort); and the trade-offer playbook — appended to the
+    // very same system prompt whenever the batch holds a trade offer — named
+    // "Pacific Pigskins" and "Midwestside Connection" in four examples. Every
+    // string the model is ever shown gets scanned, not just the rule that
+    // happened to motivate the guard.
+    const regions = {
+      'HARD RULES': region(
+        'HARD RULES',
+        'HARD RULES (self-enforce, never violate):',
+        'Voice: "League sources tell me',
+      ),
+      'trade-offer playbook': region(
+        'trade-offer playbook',
+        'function buildTradeOfferPlaybook',
+        '\n// ── NFL news digest',
+      ),
+    };
+    // Sanity-check the regions really are the intended text, so a heading
+    // reshuffle can't quietly point them somewhere harmless.
+    expect(regions['HARD RULES']).toContain('4b. If a web tip\'s scope is "franchise-explicit-pick"');
+    expect(regions['HARD RULES']).toContain('30. FORMER-NAME CALLBACK');
+    expect(regions['trade-offer playbook']).toContain('Example J');
 
-    // Harvest every form a franchise answers to, not just its display name —
-    // an alias or a retired name identifies a team just as well (same reason
-    // redactFranchiseNamesInText harvests history[] and aliases[]). The >= 4
-    // floor keeps abbreviations like "GG" from matching prose; at the time of
-    // writing this pulls ~300 forms across the two leagues and produces zero
-    // false positives, so a hit here is a real name, not a coincidence.
+    // Harvest every form a franchise answers to — including the aliases hung
+    // off a HISTORY entry, which is where "Chevy" lives. This mirrors
+    // collectFranchiseNameTokens in the scanner exactly, floor included: the
+    // redactor's input set IS the privacy boundary, so the guard's must not be
+    // narrower than it.
     const realNames = new Set<string>();
     const claim = (v: unknown) => {
-      if (typeof v === 'string' && v.trim().length >= 4) realNames.add(v.trim());
+      if (typeof v === 'string' && v.trim().length >= 2) realNames.add(v.trim());
     };
     for (const cfgPath of ['src/data/theleague.config.json', 'data/afl-fantasy/afl.config.json']) {
       const cfg = JSON.parse(readFileSync(path.join(process.cwd(), cfgPath), 'utf8'));
       for (const t of cfg.teams ?? []) {
-        for (const f of ['name', 'nameMedium', 'nameShort', 'abbrev'] as const) claim(t[f]);
-        for (const a of t.aliases ?? []) claim(a);
-        for (const h of t.history ?? []) {
-          for (const f of ['name', 'nameMedium', 'nameShort', 'abbrev'] as const) claim(h?.[f]);
+        for (const form of [t, ...(t.history ?? [])]) {
+          for (const f of ['name', 'nameMedium', 'nameShort', 'abbrev'] as const) claim(form?.[f]);
+          for (const a of form?.aliases ?? []) claim(a);
         }
       }
     }
-    expect(realNames.size).toBeGreaterThan(100);
+    expect(realNames.size).toBeGreaterThan(300);
 
-    const hardcoded = [...realNames].filter((n) => hardRules.includes(n));
-    expect(hardcoded).toEqual([]);
+    // Match on token boundaries, not substrings. A raw `includes` reports
+    // "CHAT" (AFL 0021's abbrev) inside "CHATTER" and "FRA" inside
+    // "FRANCHISE" — noise that would force the floor up to 4 and blind the
+    // guard to every short abbreviation. The lookaround pair is the same
+    // construction the redactor uses, and for the same reason `\b` is wrong:
+    // a word boundary cannot exist after a name that ends in punctuation, so
+    // \bBe Rough!\b matches nothing.
+    const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const failures: string[] = [];
+    for (const [label, text] of Object.entries(regions)) {
+      for (const name of realNames) {
+        if (new RegExp(`(?<!\\w)${escape(name)}(?!\\w)`).test(text)) {
+          failures.push(`${label}: ${name}`);
+        }
+      }
+    }
+    expect(failures).toEqual([]);
   });
 });

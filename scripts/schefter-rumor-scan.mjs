@@ -695,13 +695,18 @@ function collectFranchiseNameTokens(teams) {
   };
   for (const team of teams.values()) {
     const history = Array.isArray(team?.history) ? team.history : [];
+    // A history entry carries its own aliases — "Heavy Chevy" retired with
+    // aliases ["Heavy", "Chevy"], and a nickname for a retired name identifies
+    // the franchise exactly as well as the retired name itself. Reading them
+    // off `team` only (the original shape) left those invisible to the
+    // redactor, so a tip saying "Chevy" reached the prompt intact.
     for (const form of [team, ...history]) {
       for (const field of ['name', 'nameMedium', 'nameShort', 'abbrev']) {
         add(form?.[field]);
       }
-    }
-    for (const alias of Array.isArray(team?.aliases) ? team.aliases : []) {
-      add(alias);
+      for (const alias of Array.isArray(form?.aliases) ? form.aliases : []) {
+        add(alias);
+      }
     }
   }
   return [...tokens].sort((a, b) => b.length - a.length);
@@ -1853,17 +1858,17 @@ Example E — lingering base (framingHint=lingering, volumeHint=first_offer, pos
 Example F — lingering named (framingHint=lingering, escalatedPlayer.tier=named, name="Some Player"):
   "I'm told Some Player's name has been floated for days. Still just smoke — and the rest of the league is letting it age. We'll see."
 
-Example G — exposure signal 1 (team only) (exposure={signal:1, team:{name:"Pacific Pigskins", nameShort:"Pigskins"}, players:[]}, positionTokens=["WR"]):
-  "Hearing the Pigskins are kicking tires on a wideout. Early window-shopping or the start of something? Developing."
+Example G — exposure signal 1 (team only) (exposure={signal:1, team:{name:"Gaslamp Griffins", nameShort:"Griffins"}, players:[]}, positionTokens=["WR"]):
+  "Hearing the Griffins are kicking tires on a wideout. Early window-shopping or the start of something? Developing."
 
-Example H — exposure signal 2 (team + marquee player) (exposure={signal:2, team:{name:"Pacific Pigskins", nameShort:"Pigskins"}, players:[{name:"Ja'Marr Chase", position:"WR"}]}):
-  "I'm told the Pigskins have Ja'Marr Chase on the table in trade talks. Still just smoke. Developing."
+Example H — exposure signal 2 (team + marquee player) (exposure={signal:2, team:{name:"Gaslamp Griffins", nameShort:"Griffins"}, players:[{name:"Ja'Marr Chase", position:"WR"}]}):
+  "I'm told the Griffins have Ja'Marr Chase on the table in trade talks. Still just smoke. Developing."
 
-Example I — exposure signal 3 (team + two players) (exposure={signal:3, team:{name:"Pacific Pigskins", nameShort:"Pigskins"}, players:[{name:"Ja'Marr Chase", position:"WR"}, {name:"Breece Hall", position:"RB"}]}):
-  "Ja'Marr Chase AND Breece Hall both in the Pigskins conversation now. Nothing imminent. More to come."
+Example I — exposure signal 3 (team + two players) (exposure={signal:3, team:{name:"Gaslamp Griffins", nameShort:"Griffins"}, players:[{name:"Ja'Marr Chase", position:"WR"}, {name:"Breece Hall", position:"RB"}]}):
+  "Ja'Marr Chase AND Breece Hall both in the Griffins conversation now. Nothing imminent. More to come."
 
-Example J — exposure signal 2 lingering (framingHint=lingering, exposure={signal:2, team:{name:"Midwestside Connection"}, players:[{name:"Some Player", position:"RB"}]}):
-  "The Midwestside Connection have been shopping Some Player since the weekend. Phones on the other end aren't picking up. We'll see."
+Example J — exposure signal 2 lingering (framingHint=lingering, exposure={signal:2, team:{name:"Harbor City Kraken"}, players:[{name:"Some Player", position:"RB"}]}):
+  "The Harbor City Kraken have been shopping Some Player since the weekend. Phones on the other end aren't picking up. We'll see."
 `;
 }
 
