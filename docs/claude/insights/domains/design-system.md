@@ -17,10 +17,14 @@ to explain.
 **Insight:** the focus-ring token is alpha-blended, and alpha is not a shade —
 it is a different color once it composites.
 
+`--box-shadow-focus-ring` is a thin alias — `tokens.css` and `tokens-dark.css`
+both define it as `var(--shadow-focus-ring)`, which holds the actual value.
+Call sites use the `--box-shadow-` name; the raw value lives on the shorter one.
+
 | Token | Dark value | Composited over the `#21232a` card |
 |---|---|---|
 | `--color-primary` | `#3b82f6` | `#3b82f6` — full-strength blue |
-| `--shadow-focus-ring` | `0 0 0 3px rgba(59,130,246,0.4)` | ~`#2c4a70` — reads gray-blue |
+| `--box-shadow-focus-ring` → `--shadow-focus-ring` | `0 0 0 3px rgba(59,130,246,0.4)` | ~`#2c4a70` — reads gray-blue |
 
 At 40% over a dark surface the ring loses most of its chroma, so it looks like
 a shadow rather than a decision. Light mode has the same problem from the other
@@ -57,9 +61,11 @@ composited `color-mix` background in both themes.
 
 **Dead-code note:** `src/components/theleague/TeamIconNav.astro` carries a
 near-identical `.team-icon-btn[data-active]` block with its own hardcoded
-`rgba(28,73,124,0.1)` and a `--primary-color` token that doesn't exist in this
-repo's token files. Nothing imports the component. If it's ever revived, it
-needs this pattern applied and its token names corrected first.
+`rgba(28,73,124,0.1)` glow. It styles against `--primary-color`, which does
+resolve — both token files define it as a legacy alias of `--color-primary` —
+so this is a naming-convention issue, not a broken-token one. Prefer
+`--color-primary` in new code. Nothing imports the component; if it's ever
+revived, apply the pattern above and drop the hardcoded alpha glow.
 
 ---
 

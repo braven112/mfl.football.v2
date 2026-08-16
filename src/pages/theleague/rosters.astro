@@ -3260,9 +3260,10 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     transform: scale(1.1);
   }
 
-  /* Match the active .view-tab / .mode-btn treatment exactly — same
-     --color-primary ring and tint, so every selected control on this card
-     reads as one blue in both themes. */
+  /* Mirrors .view-tab[data-active="true"] exactly — same --color-primary
+     border and 12% tint. (.mode-btn.active draws its ring with box-shadow
+     rather than a border, but off the same --color-primary, so all three
+     selected states on this card read as one blue in both themes.) */
   .team-icon-btn[data-active="true"] {
     background: color-mix(in srgb, var(--color-primary, #1c497c) 12%, var(--content-bg, white));
     border-color: var(--color-primary, #1c497c);
