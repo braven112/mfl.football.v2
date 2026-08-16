@@ -35,11 +35,19 @@
  * both import it, same reason as `src/config/rules-qa-keys.mjs`.
  *
  * SCOPE — `stripLinkAdjacentPunctuation` is for CHAT PROSE, not structured
- * text. It cannot tell a sentence's period from one inside a quoted or
- * delimited value, so on JSON/config/markup it will happily turn
- * `{"url": "https://a.us/x.xml", ...}` into invalid JSON and
- * `?q=U.S.` into `?q=U.S`. Nothing structured flows to GroupMe today; keep
- * it that way rather than reusing this on a data file.
+ * text, and `tests/link-punctuation.test.ts` pins its call sites so that
+ * stays true. A single quoted value survives (excluding `"` from
+ * `URL_TAIL_CHAR` sees to that), but a separator sitting between two of them
+ * does not, because `}` is a legal URL tail and `{` is not a continuation
+ * character:
+ *
+ *   [{"u":"https://a.us/x.xml"},{"u":"https://a.us/y.xml"}]
+ *                              ^ this comma is eaten → invalid JSON
+ *
+ * Unquoted config loses its separator the same way (`url: https://a.us/x.xml,
+ * next: 1`), and a query whose value legitimately ends in a period is
+ * rewritten (`?q=U.S.` → `?q=U.S`). Nothing structured flows to GroupMe
+ * today; keep it that way rather than reusing this on a data file.
  *
  * WHO GETS SANITIZED — every bot post, including `/api/groupme/send`, which
  * is the owner-compose path behind `GroupMeChatPanel`. That is a deliberate
@@ -125,6 +133,36 @@ export function stripLinkAdjacentPunctuation(text) {
   if (typeof text !== 'string' || text.length === 0) return text;
   if (text.length > MAX_SANITIZE_LENGTH) return text;
   return text.replace(URL_WITH_TRAILING_PUNCTUATION, '$1');
+}
+
+/** GroupMe rejects anything longer than this. Counted in UTF-16 units, as the platform does. */
+const GROUPME_MAX_LENGTH = 1000;
+
+/**
+ * Truncate a message to GroupMe's limit, marking the cut with a single
+ * ellipsis CHARACTER rather than three periods.
+ *
+ * That detail is load-bearing and is why this lives here instead of inline in
+ * the route: `'...'` is punctuation, so when the cut lands mid-link
+ * `stripLinkAdjacentPunctuation` removes the marker on the way out and the
+ * truncated URL reads as a complete one. `'…'` is outside the punctuation set
+ * and survives.
+ *
+ * Also refuses to split a surrogate pair — slicing mid-emoji leaves a lone
+ * high surrogate, which renders as a replacement character.
+ *
+ * @param {string} text
+ * @param {number} [limit]
+ * @returns {string}
+ */
+export function truncateForGroupMe(text, limit = GROUPME_MAX_LENGTH) {
+  if (typeof text !== 'string' || text.length <= limit) return text;
+
+  let cut = limit - 1;
+  const code = text.charCodeAt(cut - 1);
+  if (code >= 0xd800 && code <= 0xdbff) cut -= 1; // don't orphan a high surrogate
+
+  return `${text.slice(0, cut)}…`;
 }
 
 /**

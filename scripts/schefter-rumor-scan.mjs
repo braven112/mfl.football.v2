@@ -763,7 +763,7 @@ async function postToGroupMe(text) {
     botId,
     text,
     dryRun: DRY_RUN,
-    onDryRun: () => log(`  [dry-run] Would post to GroupMe:\n${text}`),
+    onDryRun: (sent) => log(`  [dry-run] Would post to GroupMe:\n${sent}`),
     onPosted: () => log('  [GroupMe] Posted'),
     onFetchError: (err) => warn(`  [GroupMe] Failed: ${err.message}`),
   });

@@ -163,17 +163,30 @@ It runs before the league-host rewrite (so the trimmed path resolves
 normally) and redirects rather than rewrites (so the URL bar stops showing a
 broken, re-shareable link).
 
-**Test the behavior, not the source text.** The whole inbound decision is one
-pure function (`resolvePunctuationRedirect`) precisely so the invariants can
-be asserted instead of grepped. An earlier version of
-`tests/link-punctuation.test.ts` checked `middleware.ts` with
-`toContain('302')` and friends, and every one of those greps still passed
-when the method gate was deleted, the status flipped to 308, and the query
-string was dropped from the target — the doc comment alone satisfied them.
-Same trap on the outgoing side: `toContain('stripLinkAdjacentPunctuation')`
-was satisfied by the import line, so `postAsBot` could post raw text and stay
-green. Both are now behavioral (spy on `fetch`, assert the posted body), and
-all five of those mutations fail the suite.
+**Test the behavior, not the source text.** This one bit twice, in the same
+PR, and both rounds are worth knowing about. First: `middleware.ts` was
+checked with `toContain('302')` and friends, and every grep still passed when
+the method gate was deleted, the status flipped to 308, and the query string
+was dropped — the doc comment alone satisfied them. Same on the outgoing
+side, where `toContain('stripLinkAdjacentPunctuation')` was satisfied by the
+import line, so `postAsBot` could post raw text and stay green. Second: after
+moving the *decision* into a pure `resolvePunctuationRedirect` and testing it
+hard, the *wiring* was still grep-only — neutering the redirect branch and
+dropping the `Location` header both left the suite green.
+
+`astro:middleware` is now aliased to `tests/stubs/astro-middleware.ts` in
+`vitest.config.ts` (the real `defineMiddleware` is a typing helper that
+returns its handler unchanged, so the stub is faithful), which lets the test
+import `onRequest` and assert the actual `Response` — status, `Location`,
+`Cache-Control`, and that `next()` is not called. Reach for that alias rather
+than a grep the next time middleware behavior needs a test.
+
+**The sanitizer's call sites are pinned.** It corrupts structured text — a
+separator between two quoted URLs gets eaten (`…x.xml"},{"u"…` → `}{`,
+invalid JSON) — so `tests/link-punctuation.test.ts` fails the build if
+`stripLinkAdjacentPunctuation` is called from anywhere outside the three
+GroupMe send primitives. Same pattern as the league-literal and
+design-token guards: the comment asks, the test enforces.
 
 **Known limitation, deliberate: the redirect is PATH-only.** A stray
 character that lands in the query (`/schefter/tip?target=0001.`) is not

@@ -416,7 +416,7 @@ async function main() {
       text,
       dryRun,
       checkStatus: true,
-      onDryRun: () => console.log(`\n--- league post (not sent, --dry-run) ---\n${text}\n`),
+      onDryRun: (sent) => console.log(`\n--- league post (not sent, --dry-run) ---\n${sent}\n`),
       onMissingBotId: () =>
         console.log(
           `::warning::GroupMe post skipped — GROUPME_ROGER_BOT_ID not set. ${issueFallback}`

@@ -13,12 +13,14 @@
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import {
   PUNCTUATION_REDIRECT_STATUS,
   resolvePunctuationRedirect,
   stripLinkAdjacentPunctuation,
   trimTrailingPunctuationFromPath,
+  truncateForGroupMe,
 } from '../src/utils/link-punctuation.mjs';
 import { postToGroupMe } from '../scripts/lib/groupme.mjs';
 import { buildSpeculationGroupMeText } from '../scripts/lib/speculation-groupme.mjs';
@@ -163,6 +165,21 @@ describe('send-path wiring', () => {
     );
   });
 
+  it('accepts the known gap: a period after a closing delimiter is left alone', () => {
+    // Direction is intentional. Excluding `)]>"` from the URL's tail is what
+    // stops us eating prose commas, and the cost is that these three keep a
+    // period most linkifiers would not have taken anyway (they terminate the
+    // link on the bracket). Documented here so a future change that "fixes"
+    // it is a deliberate re-litigation, not an accident.
+    for (const text of [
+      'Check the roster page (https://www.theleague.us/rosters).',
+      'Link: <https://www.theleague.us/rosters>.',
+      'See https://en.wikipedia.org/wiki/Foo_(bar).',
+    ]) {
+      expect(stripLinkAdjacentPunctuation(text)).toBe(text);
+    }
+  });
+
   it('strips a period followed by an emoji — Roger copy is emoji-dense', () => {
     expect(stripLinkAdjacentPunctuation('Plan: https://www.theleague.us/rosters. 🚨')).toBe(
       'Plan: https://www.theleague.us/rosters 🚨',
@@ -242,6 +259,139 @@ describe('trimTrailingPunctuationFromPath — inbound rescue', () => {
 
   it('middleware calls the resolver rather than re-deriving the decision', () => {
     expect(read('../src/middleware.ts')).toContain('resolvePunctuationRedirect');
+  });
+});
+
+describe('middleware onRequest — the wiring, executed for real', () => {
+  // `astro:middleware` is aliased to a stub in vitest.config.ts so this can
+  // run. Before these existed, neutering the redirect branch and dropping the
+  // Location header BOTH left the suite green — the only assertions touching
+  // middleware.ts were toContain() greps, which is the exact trap CLAUDE.md
+  // warns about two sections above.
+  const ctx = (method: string, href: string) => {
+    const url = new URL(href);
+    return {
+      request: { method },
+      url,
+      locals: {} as Record<string, unknown>,
+      rewrite: vi.fn(),
+      redirect: vi.fn(),
+    };
+  };
+
+  it('returns a 302 with Location and no-store, and does not continue the chain', async () => {
+    const { onRequest } = await import('../src/middleware');
+    const next = vi.fn();
+    const context = ctx('GET', 'https://mfl.football/theleague/rosters.');
+
+    const res: Response = await (onRequest as never)(context, next);
+
+    expect(res).toBeInstanceOf(Response);
+    expect(res.status).toBe(302);
+    expect(res.headers.get('Location')).toBe('/theleague/rosters');
+    expect(res.headers.get('Cache-Control')).toBe('no-store');
+    expect(next).not.toHaveBeenCalled();
+    expect(context.rewrite).not.toHaveBeenCalled();
+  });
+
+  it('forwards the query string on the redirect it issues', async () => {
+    const { onRequest } = await import('../src/middleware');
+    const res: Response = await (onRequest as never)(
+      ctx('GET', 'https://mfl.football/theleague/news.?post=abc'),
+      vi.fn(),
+    );
+    expect(res.headers.get('Location')).toBe('/theleague/news?post=abc');
+  });
+
+  it('lets a clean path fall through to the rest of the chain', async () => {
+    const { onRequest } = await import('../src/middleware');
+    const next = vi.fn().mockResolvedValue(new Response('ok'));
+    const context = ctx('GET', 'https://mfl.football/theleague/rosters');
+
+    await (onRequest as never)(context, next);
+    expect(next).toHaveBeenCalledTimes(1);
+  });
+
+  it('lets a POST through untouched — a 3xx would drop the body', async () => {
+    const { onRequest } = await import('../src/middleware');
+    const next = vi.fn().mockResolvedValue(new Response('ok'));
+
+    await (onRequest as never)(ctx('POST', 'https://mfl.football/api/rules-qa.'), next);
+    expect(next).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('truncateForGroupMe', () => {
+  it('marks the cut with a character the sanitizer will not strip', () => {
+    // The bug: '...' after a cut that landed mid-link got stripped on the way
+    // out, so a truncated URL read as a complete one.
+    const long = `Plan: https://www.theleague.us/${'a'.repeat(1200)}`;
+    const truncated = truncateForGroupMe(long);
+
+    expect(truncated).toHaveLength(1000);
+    expect(truncated.endsWith('…')).toBe(true);
+    // The marker must survive the sanitizer that runs after it.
+    expect(stripLinkAdjacentPunctuation(truncated).endsWith('…')).toBe(true);
+    // ...whereas the three-period form does not, which is the whole point.
+    const dotted = `${long.slice(0, 997)}...`;
+    expect(stripLinkAdjacentPunctuation(dotted).endsWith('.')).toBe(false);
+  });
+
+  it('leaves a message within the limit completely alone', () => {
+    expect(truncateForGroupMe('short message')).toBe('short message');
+    expect(truncateForGroupMe('x'.repeat(1000))).toBe('x'.repeat(1000));
+  });
+
+  it('never orphans half of a surrogate pair', () => {
+    const withEmoji = `${'y'.repeat(998)}🚨🚨`;
+    const truncated = truncateForGroupMe(withEmoji);
+    // A lone high surrogate renders as a replacement character.
+    expect(/[\uD800-\uDBFF]$/.test(truncated.slice(0, -1))).toBe(false);
+    expect([...truncated].every((ch) => ch.codePointAt(0)! !== 0xfffd)).toBe(true);
+  });
+
+  it('is what the owner-compose route actually uses', () => {
+    expect(read('../src/pages/api/groupme/send.ts')).toContain('truncateForGroupMe(finalText)');
+  });
+});
+
+describe('scope guard — the sanitizer stays on chat lanes', () => {
+  it('is only called from the GroupMe send path', () => {
+    // It corrupts structured text (see the SCOPE block in the module), so the
+    // call sites are pinned rather than left to a comment nobody reads.
+    const allowed = new Set([
+      'scripts/lib/groupme.mjs',
+      'scripts/lib/speculation-groupme.mjs',
+      'src/utils/groupme-client.ts',
+      'src/utils/link-punctuation.mjs',
+    ]);
+    const hits = execSync(
+      "grep -rl 'stripLinkAdjacentPunctuation' src scripts --include='*.ts' --include='*.mjs' --include='*.astro' --include='*.tsx' || true",
+      { cwd: fileURLToPath(new URL('..', import.meta.url)), encoding: 'utf8' },
+    )
+      .split('\n')
+      .filter(Boolean);
+
+    for (const hit of hits) {
+      expect(allowed, `${hit} calls the sanitizer — it is unsafe on structured text`).toContain(
+        hit,
+      );
+    }
+  });
+
+  it('every onDryRun caller takes the sanitized text argument', () => {
+    // postToGroupMe hands the sanitized string to onDryRun, but a zero-arg
+    // callback silently ignores it and logs its own pre-sanitization closure
+    // variable — which is exactly the misleading rehearsal output the
+    // argument was added to remove.
+    for (const file of [
+      '../scripts/apply-august-cuts.mjs',
+      '../scripts/schefter-announce.mjs',
+      '../scripts/schefter-rumor-scan.mjs',
+      '../scripts/roger-improvement-notify.mjs',
+    ]) {
+      expect(read(file), `${file} ignores the sanitized text`).not.toMatch(/onDryRun:\s*\(\)\s*=>/);
+    }
   });
 });
 

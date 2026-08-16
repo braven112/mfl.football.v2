@@ -99,7 +99,7 @@ async function sendGroupMe(target, text, { dryRun, log, warn }) {
     text,
     dryRun,
     checkStatus: true,
-    onDryRun: () => log(`  [dry-run] Would POST to GroupMe (${target.navSlug}):\n${text}\n`),
+    onDryRun: (sent) => log(`  [dry-run] Would POST to GroupMe (${target.navSlug}):\n${sent}\n`),
     onMissingBotId: () =>
       warn(
         `  [${target.navSlug}] Schefter GroupMe bot id not set — skipping GroupMe (feed post still written)`,
