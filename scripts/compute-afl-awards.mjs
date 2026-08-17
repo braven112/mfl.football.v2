@@ -591,6 +591,35 @@ async function main() {
     }
   }
 
+  // Heal stale display names on 2016+ rows, whatever wrote them. The
+  // enrichment above only reaches slugs this RUN could derive: bracket rows
+  // need MFL reachable (an --offline run can't refresh them — the local 2018
+  // playoff-brackets.json has no `brackets` key), and `manual:*` rows are
+  // skipped by the merge entirely. So without this pass a rename half-lands —
+  // 2018's nl-west got rewritten to the 2018 name while the same season's NIT
+  // kept 0012's 2026 name, and the two rows disagreed about who won what.
+  //
+  // This is NOT a violation of manual-rows-always-win: that rule protects WHO
+  // WON (franchiseId/source) from being clobbered by a re-derivation, while
+  // `name` is a rendering of franchiseId + year that nothing curates
+  // independently.
+  //
+  // STRICTLY 2016+. Before that a slot id is not owner-stable, so nameForYear
+  // answers "who held this number then" rather than "what was this winner
+  // called" — running this pass over all years renamed the 2007 champion
+  // (Chatmaster, slot 0007 that season, franchise 0021 today) to "Da
+  // Dangsters". Pre-2016 rows keep the season feed name the enrichment gave
+  // them. Rows with a null franchiseId are skipped in both eras: those are
+  // defunct owners the config has no identity for, where the recorded
+  // historical name is the ONLY record of who won.
+  for (const season of byYear.values()) {
+    if (season.year < 2016) continue;
+    for (const award of Object.values(season.awards)) {
+      if (!award?.franchiseId) continue;
+      award.name = nameForYear(award.franchiseId, season.year, award.name);
+    }
+  }
+
   const seasons = [...byYear.values()].sort((a, b) => b.year - a.year);
   const output = {
     // Always rewritten (not `existing?.$comment ||`) so the description of how
