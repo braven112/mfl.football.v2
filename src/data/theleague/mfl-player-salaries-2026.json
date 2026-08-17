@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-08-17T04:28:21.907Z"
+    "fetchedAt": "2026-08-17T07:28:46.784Z"
   },
   "players": [
     {
@@ -3385,12 +3385,63 @@
       ]
     },
     {
+      "id": "17591",
+      "name": "Boerkircher, Nate",
+      "position": "TE",
+      "salary": 450000,
+      "franchiseId": "0003",
+      "status": "TAXI_SQUAD",
+      "contractYear": "4",
+      "points": 0,
+      "team": "JAX",
+      "draftYear": 2026,
+      "draftTeam": "JAC",
+      "birthdate": 999579600,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17591_thumb.jpg",
+      "externalIds": {
+        "mfl": "17591",
+        "sleeper": "13299",
+        "gsis": null
+      },
+      "sleeper": {
+        "id": "13299",
+        "fullName": "Nate Boerkircher",
+        "team": "JAX",
+        "age": 24,
+        "height": "77",
+        "weight": "250",
+        "number": 87,
+        "college": "Texas A&M",
+        "birthDate": "2001-09-04",
+        "status": "Active",
+        "active": true,
+        "position": "TE",
+        "depthChartPosition": "TE",
+        "depthChartOrder": 2,
+        "fantasyPositions": [
+          "TE"
+        ],
+        "experience": 0,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": [
+        {
+          "id": "16269",
+          "name": "Strange, Brenton"
+        }
+      ]
+    },
+    {
       "id": "17547",
       "name": "Klare, Max",
       "position": "TE",
       "salary": 525000,
       "franchiseId": "0003",
-      "status": "ROSTER",
+      "status": "TAXI_SQUAD",
       "contractYear": "4",
       "points": 0,
       "team": "LAR",
@@ -3440,57 +3491,6 @@
         {
           "id": "16219",
           "name": "Allen, Davis"
-        }
-      ]
-    },
-    {
-      "id": "17591",
-      "name": "Boerkircher, Nate",
-      "position": "TE",
-      "salary": 450000,
-      "franchiseId": "0003",
-      "status": "ROSTER",
-      "contractYear": "4",
-      "points": 0,
-      "team": "JAX",
-      "draftYear": 2026,
-      "draftTeam": "JAC",
-      "birthdate": 999579600,
-      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17591_thumb.jpg",
-      "externalIds": {
-        "mfl": "17591",
-        "sleeper": "13299",
-        "gsis": null
-      },
-      "sleeper": {
-        "id": "13299",
-        "fullName": "Nate Boerkircher",
-        "team": "JAX",
-        "age": 24,
-        "height": "77",
-        "weight": "250",
-        "number": 87,
-        "college": "Texas A&M",
-        "birthDate": "2001-09-04",
-        "status": "Active",
-        "active": true,
-        "position": "TE",
-        "depthChartPosition": "TE",
-        "depthChartOrder": 2,
-        "fantasyPositions": [
-          "TE"
-        ],
-        "experience": 0,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
-        "gsisId": null
-      },
-      "nflverse": null,
-      "gamesPlayed": null,
-      "depthChartAhead": [
-        {
-          "id": "16269",
-          "name": "Strange, Brenton"
         }
       ]
     },
