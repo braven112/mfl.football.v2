@@ -103,6 +103,11 @@ interface PreviewRow {
   isDivisionWinner: boolean;
   /** Inlined division-title shield, id-namespaced. Empty when no art exists. */
   divisionBadge: string;
+  /**
+   * Accessible name for the division marker. Shared by the shield and the text
+   * fallback so the two branches can't describe the same state differently.
+   */
+  divisionLabel: string;
   isUser: boolean;
 }
 
@@ -138,6 +143,9 @@ const rows: PreviewRow[] = allConfTeams.map((t: any) => {
     division: t.division,
     isDivisionWinner: t.conferenceSeed <= 2,
     divisionBadge: t.conferenceSeed <= 2 ? divisionBadgeFor(t.division, t.id) : '',
+    // Falls back to the bare phrase when a feed omits the division, so the
+    // label can never read " division leader" with a leading gap.
+    divisionLabel: t.division ? `${t.division} division leader` : 'Division leader',
     isUser: t.id === userFranchiseId,
   };
 });
@@ -204,11 +212,11 @@ const visible = rows.slice(0, 6);
                     ? <span
                         class="afl-conf__div-badge"
                         role="img"
-                        aria-label={`${row.division} division leader`}
-                        title={`${row.division} division leader`}
+                        aria-label={row.divisionLabel}
+                        title={row.divisionLabel}
                         set:html={row.divisionBadge}
                       />
-                    : <span class="afl-conf__chip" aria-label="Division winner">Div</span>
+                    : <span class="afl-conf__chip" aria-label={row.divisionLabel} title={row.divisionLabel}>Div</span>
                 )}
               </td>
               <td class="afl-conf__td afl-conf__td--div">{row.division}</td>
