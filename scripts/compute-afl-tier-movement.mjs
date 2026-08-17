@@ -8,7 +8,9 @@
  *      truth — MFL does not store tiers); the latest completed season can be
  *      seeded from afl.config.json when membership isn't recorded yet,
  *   2. computes each franchise's all-play record from the per-year weekly
- *      results, gated to afl.config.json#tierCompetition.cutoffWeek,
+ *      results, gated to that season's cutoff week (afl.config.json#
+ *      tierCompetition.cutoffWeek, overridden per year by cutoffWeekByYear —
+ *      a recorded per-season fact, never inferred; see resolveTierCutoffWeek),
  *   3. ranks within each tier and applies the constitution movement rule
  *      (scripts/lib/afl-tier-standings.mjs) to name the two tier champions and
  *      derive next season's makeup, and
@@ -57,6 +59,7 @@ import {
   computeAllPlayThroughCutoff,
   computeTierMovement,
 } from './lib/afl-tier-standings.mjs';
+import { resolveTierCutoffWeek } from '../src/utils/all-play.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -246,7 +249,6 @@ async function computeSeason(history, cfg, year, cutoffWeek) {
 
 async function main() {
   const cfg = await loadConfig();
-  const cutoffWeek = cfg.tierCompetition?.cutoffWeek ?? 17;
 
   const history = (await readJson(OUTPUT_PATH)) ?? { seasons: {} };
   history.seasons = history.seasons ?? {};
@@ -266,7 +268,16 @@ async function main() {
   }
 
   for (const year of years) {
-    const result = await computeSeason(history, cfg, year, cutoffWeek);
+    // The cutoff is per-season and RECORDED, not derived — week 16 for the
+    // 2017 AFL Cup, 17 everywhere else. Do not infer it from the title-game
+    // week; see the warning on resolveTierCutoffWeek (that rule would rewrite
+    // 2020's D-League champion, and this script commits what it computes).
+    const result = await computeSeason(
+      history,
+      cfg,
+      year,
+      resolveTierCutoffWeek(cfg.tierCompetition, year)
+    );
     if (!result) continue;
 
     // Write computed champions + (seeded) membership onto this season.

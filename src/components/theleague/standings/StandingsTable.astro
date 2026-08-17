@@ -385,7 +385,7 @@ const bannerLabelFor = (name: string) =>
                         {tierName === 'Premier League' && rank === 11 && <span class="promo-arrow pl-rank-11">⬇</span>}
                         {tierName === 'Premier League' && rank === 12 && <span class="promo-arrow pl-rank-12">⬇</span>}
                         {promotionCutoff !== undefined && rank <= promotionCutoff && (
-                          <span class="promo-arrow founders-promoted">⬆</span>
+                          <span class="promo-arrow cutoff-promoted">⬆</span>
                         )}
                       </>
                     )}
@@ -1530,7 +1530,7 @@ const bannerLabelFor = (name: string) =>
   .v-tier .promo-arrow.pl-rank-12 {
     color: #ef4444;
   }
-  .v-tier .promo-arrow.founders-promoted {
+  .v-tier .promo-arrow.cutoff-promoted {
     color: #22c55e;
   }
   @media (max-width: 767px) {

@@ -104,7 +104,7 @@ fields they render, how they seed/tier, and how they render the team cell.
 - **Formatter quirk:** its record cell suppresses the tie segment when ties
   are zero — `12-3`, not `12-3-0` (line 157). The other three tables always
   render `W-L-T`. Captured as `omitZeroTies` in the column schema (§3.1).
-- Heavy rank-specific styling: gold/silver/bronze/playoff/relegation row classes, promotion/relegation arrows (⬆/⬇), prize map per tier, `promotionCutoff` for the 2017 "Founders Table". Red card glow.
+- Heavy rank-specific styling: gold/silver/bronze/playoff/relegation row classes, promotion/relegation arrows (⬆/⬇), prize map per tier, `promotionCutoff` for the 2017 AFL Cup table. Red card glow.
 
 **ConferenceStandingsTable.astro** — **DEAD.** Playoff-seeding layout (two
 sub-sections: Division Winners + Wild Card; icon+division team cell;
@@ -406,7 +406,7 @@ even when only one league's call site changed.
    `origin/main`:** Playwright screenshot snapshots across the matrix
    {TL, AFL} × {division, league, all_play} × {light, dark} × {desktop,
    ≤767px} × representative years {current, 2010 (AFL 6-division era),
-   2016 (pre-all-play → exercises the zero-pct path), 2017 (Founders Table),
+   2016 (pre-all-play → exercises the zero-pct path), 2017 (the AFL Cup table),
    2021 (255-game all-play)}. Every later step diffs against this baseline —
    manual side-by-side alone cannot catch the silent per-season diffs in
    findings §2.3.1 / teamCellFallback / omitZeroTies.
@@ -416,7 +416,7 @@ even when only one league's call site changed.
    Convert TL all-play (StandingsTable→new) and AFL tier/combined all-play
    (TierAllPlayStandingsTable→new). Verify: TL `/standings?view=all_play`; AFL
    `/standings?view=all_play` current season (tiered) **and** a pre-2017 season
-   (combined + Founders Table promotion arrows) and 2017 itself.
+   (combined + AFL Cup promotion arrows) and 2017 itself.
 3. **league views (usages #2, #5)** — the tier-band tables. Convert
    LeagueStandingsTable + both ConferenceLeagueStandingsTable instances. Verify:
    TL `?view=league` (4 tier bands + boundaries + preferred-team highlight);
@@ -495,7 +495,7 @@ zero-pct change, if approved); anything else is a regression.
    name during migration as long as that's where it ends up.
 7. **Historical-season correctness.** The riskiest verification is old years
    (pre-2017 all-play derivation, 2003-2012 AFL 6-division/3-per-conference
-   layout, 2017 Founders Table).
+   layout, 2017 AFL Cup table).
    **✅ DECIDED: maximum conservatism on historical rendering.** To be explicit
    (this confused at review): **no historical data, pages, or seasons are ever
    deleted** — step 5 deletes only the old *component files* once nothing

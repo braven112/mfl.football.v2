@@ -2,10 +2,11 @@
  * AFL award (trophy wall) helpers.
  *
  * The AFL hands out a set of distinct awards each season — the overall AFL
- * Championship, the legacy AFL Cup (2015-2016 only; the all-play tier
- * competition replaced it in 2017, and the conference-championship BRACKETS
- * began in 2018 — the AL/NL conferences themselves have existed since 2003;
- * see afl-structure.ts), the two conference (AL/NL) titles, division titles
+ * Championship, the legacy AFL Cup (2015-2017 only; a knockout through 2016
+ * and an all-play table in 2017, after which the Premier League / D-League
+ * split replaced it; the conference-championship BRACKETS began in 2018 —
+ * the AL/NL conferences themselves have existed since 2003, see
+ * afl-structure.ts), the two conference (AL/NL) titles, division titles
  * (four today, six in the 2003-2012 layout incl. AL Central and NL Pacific),
  * the NIT consolation crown, and the two all-play tier championships (Premier
  * League / D-League). Each has its own branded SVG badge under
@@ -102,10 +103,12 @@ export interface AwardType {
  */
 export const AWARD_TYPES: AwardType[] = [
   { slug: 'afl-championship', label: 'AFL Champion', badge: 'afl-championship.svg', category: 'championship', tier: 'gold', dated: true },
-  // Retired after 2016 and replaced by the Premier League — the two never
-  // share a season (Cup 2015-16, Premier League 2018 on). Historical badges
-  // still render; it is simply no longer winnable.
-  { slug: 'afl-cup', label: 'AFL Cup', badge: 'afl-cup.svg', category: 'cup', tier: 'gold', dated: true, retired: 2016, replacedBy: 'premier-league' },
+  // Retired after 2017 and replaced by the Premier League — the two never
+  // share a season (Cup 2015-17, Premier League 2018 on). 2017 was the Cup's
+  // last running: same trophy, new format, an all-play table instead of a
+  // knockout, and the competition the Premier League grew out of. Historical
+  // badges still render; it is simply no longer winnable.
+  { slug: 'afl-cup', label: 'AFL Cup', badge: 'afl-cup.svg', category: 'cup', tier: 'gold', dated: true, retired: 2017, replacedBy: 'premier-league' },
   { slug: 'premier-league', label: 'Premier League', badge: 'premier-league.svg', category: 'tier', tier: 'gold', dated: true },
   { slug: 'al-champion', label: 'AL Champion', badge: 'al-champion.svg', category: 'conference', tier: 'conference', dated: true },
   { slug: 'nl-champion', label: 'NL Champion', badge: 'nl-champion.svg', category: 'conference', tier: 'conference', dated: true },

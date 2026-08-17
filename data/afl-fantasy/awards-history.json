@@ -1,5 +1,5 @@
 {
-  "$comment": "AFL award winners per season, 2003-present. Division titles are taken straight from the FIRST ROW of each division in MFL’s official leagueStandings order (source \"standings:mfl-order\") — MFL applies the constitution’s tiebreakers itself, so nothing is re-sorted locally; see tests/afl-division-titles.test.ts. League Champion (afl-championship), AL/NL champions and the NIT are auto-derived for 2016+ from playoff brackets matched by NAME. Premier League + D-League tier champions are auto-derived from data/afl-fantasy/tier-history.json (source \"tier-history\"), superseding the legacy hand-entered \"manual:tier-champion\" rows. Still HAND-ENTERED from the official League Awards table (source \"manual:league-awards\" / \"manual:champion-history\") and NEVER clobbered by a re-run: the AFL Cup (2015 knockout, 2016 all-play), pre-2016 League Champions, and select pre-2016 conference champions. A null franchiseId means the winner is a defunct/pre-2016 franchise with no current page — the historical name is retained.",
+  "$comment": "AFL award winners per season, 2003-present. Division titles are taken straight from the FIRST ROW of each division in MFL’s official leagueStandings order (source \"standings:mfl-order\") — MFL applies the constitution’s tiebreakers itself, so nothing is re-sorted locally; see tests/afl-division-titles.test.ts. League Champion (afl-championship), AL/NL champions and the NIT are auto-derived for 2016+ from playoff brackets matched by NAME. Premier League + D-League tier champions are auto-derived from data/afl-fantasy/tier-history.json (source \"tier-history\"), superseding the legacy hand-entered \"manual:tier-champion\" rows. Still HAND-ENTERED from the official League Awards table (source \"manual:league-awards\" / \"manual:champion-history\") and NEVER clobbered by a re-run: the AFL Cup (2015 knockout, 2016 all-play, and 2017 — the Cup’s last season, an all-play table decided at its week-16 cutoff, won by Smokane FC and confirmed against the season’s payout records), pre-2016 League Champions, and select pre-2016 conference champions. A null franchiseId means the winner is a defunct/pre-2016 franchise with no current page — the historical name is retained.",
   "seasons": [
     {
       "year": 2025,
@@ -483,6 +483,11 @@
           "franchiseId": "0014",
           "name": "Thundering Herd",
           "source": "derived:afl-champion"
+        },
+        "afl-cup": {
+          "franchiseId": "0001",
+          "name": "Smokane FC",
+          "source": "manual:commissioner-payouts (all-play through week 16)"
         }
       }
     },

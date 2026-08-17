@@ -23,7 +23,8 @@ import {
 } from '../../utils/team-preferences';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 import { getCurrentSeasonYear } from '../../utils/league-year';
-import { getTierMembership, TIER_COMPETITION_FIRST_SEASON } from '../../utils/afl-tier';
+import { getTierMembership, TIER_COMPETITION_FIRST_SEASON, AFL_CUP } from '../../utils/afl-tier';
+import { resolveTierCutoffWeek } from '../../utils/all-play.mjs';
 import {
   resolveConfigForYear,
   resolvePreferredTeamIdForYear,
@@ -167,8 +168,14 @@ const weeklyResultsFeed = weeklyResultsFeeds[`../../../data/afl-fantasy/mfl-feed
 
 // Premier League all-play uses the league's tierCompetition cutoff week
 // (configured in afl.config.json) so we use consistent data from weekly results
-// rather than MFL's cumulative all-play data.
-const tierCutoffWeek = (aflConfig as { tierCompetition?: { cutoffWeek?: number } }).tierCompetition?.cutoffWeek ?? 17;
+// rather than MFL's cumulative all-play data. The cutoff is per-season and
+// recorded, not derived — week 16 for the 2017 AFL Cup, 17 everywhere else.
+// See resolveTierCutoffWeek before adding a year.
+const tierCutoffWeek = resolveTierCutoffWeek(
+  (aflConfig as { tierCompetition?: { cutoffWeek?: number; cutoffWeekByYear?: Record<string, number> } })
+    .tierCompetition,
+  selectedYear
+);
 const calculatedAllPlay = weeklyResultsFeed
   ? calculateAllPlayFromWeekly(weeklyResultsFeed, tierCutoffWeek)
   : undefined;
@@ -180,12 +187,15 @@ const divisionStandings = getDivisionStandings(franchises, seasonConfig, { prese
 const conferenceAStandings = getConferenceStandings(franchises, seasonConfig, '00', { preserveFeedOrder: true });
 const conferenceBStandings = getConferenceStandings(franchises, seasonConfig, '01', { preserveFeedOrder: true });
 // All-play side competition, era-aware:
-// - pre-2017 (the AFL Cup era and before): no competition — view hidden.
-// - 2017: inaugural season, branded the "Founders Table" — ONE combined
-//   24-team table with no Premier League branding, but its top 12 really
-//   were headed for promotion (confirmed to exactly match the 2018 Premier
-//   League roster), so the table still carries the relegation/promotion
-//   cutoff line after rank 12.
+// - pre-2017 (the knockout AFL Cup era and before): no all-play competition —
+//   view hidden.
+// - 2017: the league kept the "AFL Cup" name through a format change — the
+//   Cup ran that season as ONE combined 24-team all-play table rather than a
+//   knockout, and it is the competition the Premier League grew out of. No
+//   Premier League branding yet, but its top 12 really were headed for
+//   promotion (confirmed to exactly match the 2018 Premier League roster), so
+//   the table still carries the relegation/promotion cutoff line after rank
+//   12. It ends at week 16 — see resolveTierCutoffWeek.
 // - 2018+: grouped by THAT season's makeup from tier-history.json, recovered
 //   from the league skin's premierleague-YYYY.js grouping scripts (the source
 //   of truth for who was in which league). Any season missing a record falls
@@ -200,8 +210,9 @@ const combinedAllPlayStandings =
   allPlayEra && !hasTierRecord
     ? getAllPlayStandings(franchises, seasonConfig, calculatedAllPlay, { preserveFeedOrder: true })
     : [];
-// 2017 is branded "Founders Table" — the season that founded the Premier
-// League / D-League split (see TIER_COMPETITION_FIRST_SEASON in afl-tier.ts).
+// 2017 is branded "AFL Cup" — the league's own name for it that season, and
+// the competition that became the Premier League / D-League split the
+// following year (see TIER_COMPETITION_FIRST_SEASON in afl-tier.ts).
 const isInauguralAllPlaySeason = selectedYear === TIER_COMPETITION_FIRST_SEASON;
 const nitTeams = [
   ...conferenceAStandings.allTeams.filter(
@@ -252,7 +263,7 @@ const promoRegTeams = [
 });
 
 // Tier-table header config. Only the branded Premier League / D-League tiers
-// carry a logo; the combined "Founders Table" / "All-Play" tables do not.
+// carry a logo; the combined "AFL Cup" / "All-Play" tables do not.
 function tierHeader(name: string) {
   const hasLogo = name === PREMIER_LEAGUE || name === D_LEAGUE;
   return {
@@ -262,7 +273,7 @@ function tierHeader(name: string) {
     logoDarkSrc: hasLogo ? getTierLogoDark(name) : undefined,
   };
 }
-const combinedTierName = isInauguralAllPlaySeason ? 'Founders Table' : 'All-Play';
+const combinedTierName = isInauguralAllPlaySeason ? AFL_CUP : 'All-Play';
 
 // Conference-view presentation: AL glows league red, NL glows conference blue.
 // Title hue matches each conference logo (raw brand hex + a brightened dark
@@ -323,8 +334,8 @@ function divisionHeader(name: string, confId?: '00' | '01') {
         )}
         {view === 'all_play' && !hasTierRecord && isInauguralAllPlaySeason && (
           <>
-            <h1 class="section-title">Founders Table</h1>
-            <p class="subtitle">The one-table season that founded the Premier League / D-League split. The top 12 went on to form the {selectedYear + 1} Premier League.</p>
+            <h1 class="section-title">{AFL_CUP}</h1>
+            <p class="subtitle">The last AFL Cup, run as one all-play table through week {tierCutoffWeek}. The top 12 went on to form the {selectedYear + 1} Premier League.</p>
           </>
         )}
         {view === 'all_play' && !hasTierRecord && !isInauguralAllPlaySeason && (
