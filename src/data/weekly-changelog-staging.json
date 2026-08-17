@@ -7,6 +7,22 @@
     {
       "date": "2026-08-16",
       "type": "bug-fix",
+      "summary": "The Analytics tab was shoving the whole roster page off the side of your screen. On a laptop, a small window, or a tablet held sideways, the team card at the top ran right past the edge — the team drawer would open and half the league's crests were somewhere out in the dark to the right, with the East and Southwest divisions simply gone. The card was innocent. Down at the bottom of the Analytics tab there's a Players by Team report that lays its cards out three across, and three of those cards need about a thousand pixels between them — more than the screen had. Rather than stack, they insisted, and everything above them stretched to match. They now count the room first and take two across, or one, depending on what's actually available. Three-across is still what you get on a wide monitor, which is the only place it ever fit.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-08-16",
+      "type": "bug-fix",
+      "summary": "The bottom of the roster page's team card was a pileup. Three things were trying to occupy the same strip of air: the little word under the view tabs telling you which one you're on, the arrow that opens the team drawer, and the edge of the card itself. The label and the arrow were both floating — pinned to the layout rather than standing in it — so nothing below them knew they were there, and nothing reserved them any room. The arrow sat on top of the tabs it was supposed to sit beneath, the word underneath got sliced in half by the card's bottom edge, and on a phone the whole arrangement spilled past the card entirely. All three now stand in line: the tabs hold open the space their labels need, the arrow follows underneath with room on both sides, and the card grows to fit what's inside it at every screen size. The label on the tab you're actually using also stays up now, instead of appearing only while your finger was still on it.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-08-16",
+      "type": "bug-fix",
       "summary": "Both sites got lighter on their feet. Every page request was quietly hauling around twenty years of archived league feeds — every roster, every box score, every player list back to 2004 — loaded fresh whether you were looking at last Sunday or the Bush administration. It was 165 megabytes of luggage, and the worst part is we were carrying two copies of it: the pages that show old seasons already have their own, so the second set was along for the ride and nothing more. The site had grown so heavy it had actually stopped being able to deploy. Now only the last three seasons ride along and the archives are pulled up when something actually asks for them, which cut the whole thing roughly in half. Nothing you can see has changed — every season is still there, still complete — it just gets there faster.",
       "impact": "user",
       "area": "other",
