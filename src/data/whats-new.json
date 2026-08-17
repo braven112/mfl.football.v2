@@ -1,5 +1,25 @@
 [
   {
+    "id": "afl-cup-2017-correction-2026-08-17",
+    "date": "2026-08-17",
+    "title": "The 2017 Trophy Nobody Was Holding: the AFL Cup Comes Back, and Smokane FC Gets It",
+    "summary": "2017's all-play season was the last AFL Cup — not the \"Founders Table\" we made up for it — and it ended in week 16, not 17. That one week moves the title to Smokane FC.",
+    "description": [
+      "Two things were wrong about 2017, and the second one only became visible once the first was fixed.",
+      "Start with the name. That season ran as one 24-team all-play table, the format the Premier League and D-League grew out of the year after, and we shipped it under a heading called the \"Founders Table.\" Nobody in the league has ever called it that. We invented it. The league called it what it had called the same competition for the two seasons before: the AFL Cup. The Cup did not die in 2016 — it changed shape, traded a knockout bracket for a table, and ran one more year before the split replaced it. It says AFL Cup on the standings page now, and the trophy room treats 2017 as the Cup's last season instead of pretending it never happened.",
+      "Then the week. Every one of these tables gets cut off at the week the season's title game is played, and the site was using week 17 for all of them — right for the modern Premier League, wrong for 2017, whose championship was decided in week 16 (Thundering Herd over Smokane FC; week 17 had nothing but consolation games). One week does not sound like much. It is the entire competition here. Through week 16 Smokane FC finishes 259-109 and Fullybaked 258-110 — one all-play win apart, out of 368. Play the extra week and Fullybaked passes them. The site had been showing the week-17 answer under a name the league never used, so the 2017 AFL Cup had effectively been awarded to the wrong team and filed under the wrong competition.",
+      "Smokane FC's trophy room gains an AFL Cup badge stamped 2017, its eighteenth piece of hardware. Nothing else about that season moves: Thundering Herd keeps the 2017 AFL Championship they won in that week-16 final, and the promotion line is untouched — the top 12 is the same twelve franchises whichever week you stop at, and it still matches the 2018 Premier League roster exactly. The cutoff week is now recorded per season rather than assumed, so no future era can quietly inherit the wrong finish line."
+    ],
+    "category": "bug-fix",
+    "link": "/afl-fantasy/standings?year=2017&view=all_play",
+    "linkLabel": "See the 2017 AFL Cup table",
+    "icon": "trophy",
+    "excludeFromHero": true,
+    "leagues": [
+      "afl"
+    ]
+  },
+  {
     "id": "afl-record-book-2026-08-16",
     "date": "2026-08-16",
     "category": "new-page",
@@ -863,28 +883,6 @@
     "excludeFromHero": true,
     "leagues": [
       "afl"
-    ]
-  },
-  {
-    "id": "dead-money-shame-banners",
-    "date": "2026-07-06",
-    "title": "The Dead Money Awards Hang Their Winners on the Wall",
-    "summary": "The league's monuments to financial mismanagement finally look the part. Both awards open with a full shame banner and every player card now wears the offending franchise's colors — the culprit's ESPN headshot cut out over the fantasy team's gradient with its crest in the corner. Reigning cap casualty Chris Godwin has never looked so expensive.",
-    "description": [
-      "The Dead Money Awards have always been the league's most honest page — a complete public accounting of money set on fire, sorted by season. But the winners were presented like line items on an expense report. A contract that burned $137,000 per fantasy point deserves worse than a table row. It deserves a portrait.",
-      "It has one now — at every level of the page. The Jerry Jones Award opens with a full-width banner: the priciest culprit from that best-case lineup, cut out over the winning franchise's colors drained most of the way to gray — dead cap, dead colors — beneath a ghosted DEAD MONEY wordmark. And every individual card underneath — all-time Brock Osweiler winners, the position-by-position worst, the Zero-Point Hall of Shame — now carries the player's real ESPN headshot cut out over his fantasy team's gradient, franchise crest in the corner, NFL logo on his chest. The band wears the owner's colors, not the NFL team's, because this is the owner's shame. A near-black franchise primary hands off to its vibrant secondary so nobody gets a flat black card. And because MFL player IDs are stable across every season, even the 2007–2010 winners — whose seasons predate the league's photo archive — get their faces back by borrowing from a later year they appear in. The rare player with no headshot anywhere keeps a clean franchise-colored card, never a broken image.",
-      "Every other composite on this site renders players in full saturated glory. The banner is the one place they arrive drained to black and white. That's not a bug. Winners of this award don't deserve color."
-    ],
-    "category": "enhancement",
-    "link": "/theleague/dead-money",
-    "linkLabel": "Tour the hall of shame",
-    "icon": "star",
-    "image": "dead-money-shame-banners.webp",
-    "imageAlt": "The Dead Money Awards page: the 2025 Jerry Jones Award shame banner over a drained franchise-color gradient with a ghosted DEAD MONEY wordmark and Justin Jefferson's grayscale cutout, above a grid of Brock Osweiler award cards each showing a player's ESPN headshot over his fantasy franchise's colors with the team crest in the corner.",
-    "heroPlayerId": "13163",
-    "heroPlayerDescriptor": "Reigning Cap Casualty",
-    "leagues": [
-      "theleague"
     ]
   }
 ]

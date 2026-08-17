@@ -24,21 +24,44 @@ import { type AflTier, PREMIER_LEAGUE, D_LEAGUE, getTierLogo, getTierLogoDark } 
 export { type AflTier, PREMIER_LEAGUE, D_LEAGUE, getTierLogo, getTierLogoDark };
 
 /**
- * First season of the all-play side competition — branded the "Founders
- * Table" on the standings page (src/pages/afl-fantasy/standings.astro), the
- * year after the last AFL Cup (the Cup's bracket structure ran through 2017
- * on MFL but its last awarded champion was 2016; the AFL Cup bracket slot
- * survived as unused config through 2017). The inaugural year ran as ONE
- * combined 24-team table with no Premier League branding, but the promotion
- * cutoff was real: its top 12 by all-play record are an EXACT match for the
- * 2018 Premier League roster (verified against premierleague-2018.js), so
- * the standings page still draws the relegation/promotion line after rank 12
- * for this season. No skin grouping script exists for 2017 itself because
- * one table needs no grouping. awards-history.json originally carried
- * mistaken premier-league / dleague-champion entries for 2017 (Smokane FC /
- * Titsburgh Feelers, neither of which is actually rank 1 of the combined
- * table or rank 1 of the bottom 12) — removed once the combined-table
- * structure was confirmed.
+ * Display name for the 2017 season of this competition, and the label of the
+ * matching `afl-cup` award in afl-awards.ts. Keep the two in step — the
+ * standings page heading and the trophy badge name the same trophy.
+ */
+export const AFL_CUP = 'AFL Cup';
+
+/**
+ * First season of the all-play side competition — the LAST season branded the
+ * "AFL Cup" (commissioner, 2026-08-17), and the competition the Premier
+ * League / D-League split grew out of the following year.
+ *
+ * The Cup ran 2015-2016 as a knockout and 2017 as ONE combined 24-team
+ * all-play table: the league kept the name through the format change, which
+ * is why the Cup's MFL bracket slot still exists in 2017 config carrying no
+ * games. The standings page heads this season's table "AFL Cup"
+ * (src/pages/afl-fantasy/standings.astro) — it was NEVER called the "Founders
+ * Table"; that was our invention and it shipped as the season's heading until
+ * the correction.
+ *
+ * Two things that are easy to get wrong here, both load-bearing:
+ *
+ * - **It ends in WEEK 16**, the week of that season's title game, not week 17
+ *   like the modern Premier League. That one week decides the Cup: through 16
+ *   Smokane FC leads 259-109, and week 17 flips it to Fullybaked. The
+ *   per-season cutoff lives in afl.config.json#tierCompetition.cutoffWeekByYear
+ *   and is resolved by resolveTierCutoffWeek (src/utils/all-play.mjs).
+ * - The promotion cutoff is real and is NOT affected by the cutoff week: the
+ *   top 12 is the same set of franchises at week 16 and week 17, and both are
+ *   an EXACT match for the 2018 Premier League roster (verified against
+ *   premierleague-2018.js), so the standings page draws the promotion line
+ *   after rank 12 for this season. No skin grouping script exists for 2017
+ *   itself because one table needs no grouping.
+ *
+ * awards-history.json originally carried mistaken premier-league /
+ * dleague-champion entries for 2017 (Smokane FC / Titsburgh Feelers, neither
+ * of which is rank 1 of the combined table or rank 1 of the bottom 12) —
+ * removed once the combined-table structure was confirmed. 2017's gold award
+ * is `afl-cup`, not a tier championship.
  */
 export const TIER_COMPETITION_FIRST_SEASON = 2017;
 

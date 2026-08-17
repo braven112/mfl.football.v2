@@ -273,13 +273,18 @@ describe('getFranchiseTrophyRank', () => {
     //   2024 al-north, gained 2009 al-north); Drunk Indians take the lead at
     //   19 (gained 2004/2011/2023 al-north). MFL's order is the league's
     //   source of truth; see tests/afl-division-titles.test.ts.
+    // - 2026-08-17 (commissioner): Smokane FC 17→18, gaining the 2017 AFL Cup.
+    //   The Cup ran one more season than we had recorded, as an all-play table
+    //   decided at its week-16 cutoff — the site was computing that table
+    //   through week 17, which handed the top spot to Fullybaked. See
+    //   TIER_COMPETITION_FIRST_SEASON in src/utils/afl-tier.ts.
     const leader = getFranchiseTrophyRank('0002');
     expect(leader.count).toBe(19);
     expect(leader.rank).toBe(1);
     expect(leader.tied).toBe(false);
 
     const smokane = getFranchiseTrophyRank('0001');
-    expect(smokane.count).toBe(17);
+    expect(smokane.count).toBe(18);
     expect(smokane.rank).toBe(2);
     expect(smokane.tied).toBe(false);
   });
@@ -543,7 +548,7 @@ describe('afl.config.json ownerHistory shape', () => {
 });
 
 /**
- * Retired awards — the AFL Cup, replaced by the Premier League after 2016.
+ * Retired awards — the AFL Cup, replaced by the Premier League after 2017.
  *
  * Retirement was previously implicit: the Cup was simply left out of
  * ALWAYS_ACTIVE and TITLE_TYPES by hand. These tests pin the explicit flag and
@@ -553,9 +558,12 @@ describe('afl.config.json ownerHistory shape', () => {
 describe('retired awards', () => {
   const RETIRED = AWARD_TYPES.filter((a) => a.retired !== undefined);
 
-  it('marks the AFL Cup retired after 2016, replaced by the Premier League', () => {
+  it('marks the AFL Cup retired after 2017, replaced by the Premier League', () => {
+    // 2017 is the Cup's last season: same trophy, new format (an all-play
+    // table rather than a knockout), and the competition the Premier League
+    // grew out of the following year.
     const cup = AWARD_TYPES.find((a) => a.slug === 'afl-cup')!;
-    expect(cup.retired).toBe(2016);
+    expect(cup.retired).toBe(2017);
     expect(cup.replacedBy).toBe('premier-league');
     expect(isAwardRetired('afl-cup')).toBe(true);
   });
@@ -620,7 +628,7 @@ describe('retired awards', () => {
 
     const badge = getFranchiseTrophyCase(cupWinner!).find((t) => t.slug === 'afl-cup')!;
     expect(badge.locked).not.toBe(true);
-    expect(badge.years.every((y) => y <= 2016)).toBe(true);
+    expect(badge.years.every((y) => y <= 2017)).toBe(true);
     expect(countFranchiseBadges(cupWinner!)).toBeGreaterThan(0);
   });
 });

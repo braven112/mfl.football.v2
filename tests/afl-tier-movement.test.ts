@@ -11,6 +11,7 @@ import {
   computeTierMovement,
   CONSTITUTION_MOVEMENT_RULES,
 } from '../scripts/lib/afl-tier-standings.mjs';
+import { resolveTierCutoffWeek } from '../src/utils/all-play.mjs';
 
 const ROOT = path.resolve(__dirname, '..');
 const readJson = (rel: string) =>
@@ -158,6 +159,64 @@ describe('afl-tier-standings: real 2025 data reproduces the recorded champions',
     expect(m.next[PREMIER]).toHaveLength(12);
     expect(m.next[DLEAGUE]).toHaveLength(12);
     expect(new Set([...m.next[PREMIER], ...m.next[DLEAGUE]]).size).toBe(24);
+  });
+});
+
+/**
+ * The 2017 AFL Cup — the last season the Cup ran, as one 24-team all-play
+ * table rather than a knockout (commissioner, 2026-08-17).
+ *
+ * It is the only season whose cutoff is NOT week 17, and that one week is the
+ * whole competition: Smokane FC leads through week 16, Fullybaked passes them
+ * in week 17. The site shipped the week-17 answer under an invented "Founders
+ * Table" heading, so both halves are pinned here — the cutoff resolves to 16,
+ * and the table it produces names the franchise the awards ledger credits.
+ */
+describe('afl-tier-standings: the 2017 AFL Cup ends at week 16', () => {
+  const cfg = readJson('data/afl-fantasy/afl.config.json');
+  const weekly = readJson('data/afl-fantasy/mfl-feeds/2017/weekly-results.json');
+  const awards = readJson('data/afl-fantasy/awards-history.json');
+
+  const rank = (cutoff: number) =>
+    [...computeAllPlayThroughCutoff(weekly, cutoff).entries()].sort(
+      (a, b) => b[1].pct - a[1].pct || b[1].pf - a[1].pf
+    );
+
+  it('resolves 2017 to week 16 and every other season to the default', () => {
+    expect(resolveTierCutoffWeek(cfg.tierCompetition, 2017)).toBe(16);
+    for (const year of [2016, 2018, 2025, 2026]) {
+      expect(resolveTierCutoffWeek(cfg.tierCompetition, year)).toBe(
+        cfg.tierCompetition.cutoffWeek
+      );
+    }
+  });
+
+  it('crowns Smokane FC at week 16 — and Fullybaked at 17, which is the bug', () => {
+    expect(rank(16)[0][0]).toBe('0001'); // Smokane FC, 259-109
+    expect(rank(17)[0][0]).toBe('0010'); // Fullybaked — one week too far
+  });
+
+  it('credits the awards ledger to the week-16 winner', () => {
+    const season = awards.seasons.find((s: { year: number }) => s.year === 2017);
+    expect(season.awards['afl-cup'].franchiseId).toBe(
+      rank(resolveTierCutoffWeek(cfg.tierCompetition, 2017))[0][0]
+    );
+  });
+
+  it('promotes the same top 12 either way — the 2018 Premier League roster', () => {
+    const history = readJson('data/afl-fantasy/tier-history.json');
+    const premier2018 = Object.entries(history.seasons['2018'].membership)
+      .filter(([, tier]) => tier === PREMIER)
+      .map(([id]) => id)
+      .sort();
+    for (const cutoff of [16, 17]) {
+      expect(
+        rank(cutoff)
+          .slice(0, 12)
+          .map(([id]) => id)
+          .sort()
+      ).toEqual(premier2018);
+    }
   });
 });
 

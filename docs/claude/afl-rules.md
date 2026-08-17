@@ -259,7 +259,7 @@ Runs independently, **Week 1 → Week 17**, all-play format.
 
 **New owners:** anyone joining the league **starts in the D-League**, regardless of which tier the franchise slot they take over competed in — in a turnover year, correspondingly fewer Premier League teams are relegated.
 
-**History:** the competition began in **2017** — the year after the last AFL Cup (the Cup ran 2015-2016) — as one combined 24-team all-play table with no Premier League branding; its top 12 formed the 2018 Premier League and the bottom 12 the D-League. Split tiers ran from **2018**; per-season membership for every split season comes from the league skin's `premierleague-YYYY.js` grouping scripts (the source of truth for who was in which league), recorded in `data/afl-fantasy/tier-history.json`.
+**History:** the competition began in **2017** as the final running of the **AFL Cup** — the league kept the Cup's name through a format change from knockout (2015-2016) to one combined 24-team all-play table, and that table is what the tier split grew out of. It carried no Premier League branding, ended at **week 16** (the week of that season's title game, not week 17 like the modern era), and was won by Smokane FC; its top 12 formed the 2018 Premier League and the bottom 12 the D-League. Split tiers ran from **2018**; per-season membership for every split season comes from the league skin's `premierleague-YYYY.js` grouping scripts (the source of truth for who was in which league), recorded in `data/afl-fantasy/tier-history.json`.
 
 ---
 

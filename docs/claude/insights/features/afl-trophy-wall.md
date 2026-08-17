@@ -361,9 +361,10 @@ Smokane FC/D-League Drunk Indians). For 2017 (no script, no split), the same
 technique the other direction confirmed Brandon's memory: ranking the full
 24-team 2017 table and taking the top 12 is an EXACT set-match for the 2018
 Premier League roster — proving 2017 really was one table whose finish order
-seeded the first split. The site brands this season "Founders Table" (not
-"All-Play Standings") with a promotion-line + green arrows on the top 12, but
-zero Premier League logo/styling since no such tier existed yet.
+seeded the first split. The site brands this season **"AFL Cup"** — the
+league's own name for it that year — with a promotion-line + green arrows on
+the top 12, but zero Premier League logo/styling since no such tier existed
+yet.
 
 **A stale hand-entry surfaced and got corrected:** `awards-history.json` had
 carried `premier-league`/`dleague-champion` awards for 2017 (Smokane FC /
@@ -373,6 +374,32 @@ finished 2nd, not 1st; there's no real "D-League champion" for a season with
 no D-League). Removed both entries once confirmed. **Lesson: a `manual:*`
 source tag means "hand-entered," not "verified" — cross-check hand-entries
 against computable ground truth when the surrounding picture changes.**
+
+**…and the cross-check itself was gated on the wrong week (2026-08-17).**
+"Smokane FC finished 2nd, not 1st" above was computed through week 17. The
+2017 competition ended at **week 16**, the week of that season's title game,
+and through week 16 Smokane FC finishes **1st** (259-109 to Fullybaked's
+258-110). So the hand-entry had the right franchise under the wrong award
+name: 2017's gold is the **AFL Cup** — the Cup's last season, run as an
+all-play table instead of a knockout — not a Premier League title. Two things
+generalize:
+
+- **A cutoff week is a competition rule, not a constant.** It now resolves
+  per season (`afl.config.json#tierCompetition.cutoffWeekByYear` →
+  `resolveTierCutoffWeek` in `src/utils/all-play.mjs`). One week either side
+  of the finish line silently crowns a different champion, and the table looks
+  entirely plausible either way.
+- **A verification that reproduces a SET can pass while the ORDER is wrong.**
+  The top-12 set-match held at both week 16 and week 17 — it proved 2017 was
+  one table, and was never evidence about who won it. Pin the thing you
+  actually care about (`tests/afl-tier-movement.test.ts` now pins both the
+  cutoff and the #1).
+
+**The name was ours, not the league's.** "Founders Table" was invented during
+this work to describe 2017 and shipped as the season's heading and in a What's
+New entry. The league called it the AFL Cup. Naming a historical thing we only
+partly understood made the misunderstanding harder to see — it read as a
+deliberate distinction from the Cup rather than as a gap.
 
 **2025 was also wrong:** tier-history's 2025 membership had been seeded from
 an `afl.config.json` snapshot, not the js file. `premierleague-2025.js` has
