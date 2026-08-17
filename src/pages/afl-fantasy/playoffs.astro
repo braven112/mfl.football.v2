@@ -1848,9 +1848,15 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
   }
 
 
+  /* No box-shadow here. A bracket-card is a bare grid nested INSIDE the
+     .brackets-grid card, so it has no background and no border-radius of its
+     own — an elevation shadow on it draws a hard square-cornered halo against
+     the card it already sits on (double shadow, very visible in dark mode
+     where --shadow-lg is pure black at ~2.5x the light alpha). The card
+     surface and its elevation belong to .brackets-grid; TheLeague's copy of
+     this page has always been shadow-free here. */
   .bracket-card {
     display: grid;
-    box-shadow: var(--box-shadow-lg);
   }
 
 
