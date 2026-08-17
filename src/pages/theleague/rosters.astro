@@ -3068,24 +3068,20 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   margin-top: 0;
 }
 
-/* Minimal Toggle Button - just a small arrow at bottom of card */
+/* Minimal Toggle Button - just a small arrow at bottom of card.
+   Deliberately IN FLOW: it used to be absolutely positioned with a negative
+   `top`, which pulled it up over the view tabs and let it hang past the card's
+   bottom edge at every breakpoint. In flow, the card grows to fit it. */
 .team-nav-toggle {
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--padding-sm);
+  padding: 0.25rem var(--padding-sm);
   background: transparent;
   border: none;
   cursor: pointer;
   transition: opacity 0.2s ease;
-  position: absolute;
-  top: -1rem;
-}
-@media (min-width: 480px) {
-  .team-nav-toggle {
-    top: -2rem;
-  }
 }
 
 .team-nav-toggle:hover {
@@ -3228,6 +3224,13 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   .view-tabs {
     display: flex;
     gap: 0.5rem;
+    /* Distance from a tab's bottom edge down to its label's bottom edge. The
+       labels are out of flow (so hover never reflows the row), which means
+       nothing reserves room for them — without this padding they collide with
+       the nav chevron and spill past the card's bottom edge. Same custom
+       property drives .view-tab__label's offset, so the two can't drift. */
+    --view-tab-label-drop: 1.75rem;
+    padding-bottom: var(--view-tab-label-drop);
   }
 
   /* Mobile: Stack tabs below team info */
@@ -3288,7 +3291,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
   .view-tab__label {
     position: absolute;
-    bottom: -1.75rem;
+    bottom: calc(-1 * var(--view-tab-label-drop));
     left: 50%;
     transform: translateX(-50%);
     font-size: 0.75rem;
@@ -3300,8 +3303,12 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     transition: opacity 0.2s ease;
   }
 
+  /* The active tab keeps its label up permanently — the row already reserves
+     the space, so there's no layout cost, and it stops the current view's name
+     from flashing in only while the tab happens to hold focus. */
   .view-tab:hover .view-tab__label,
-  .view-tab:focus .view-tab__label {
+  .view-tab:focus .view-tab__label,
+  .view-tab[data-active="true"] .view-tab__label {
     opacity: 1;
   }
 
@@ -4622,7 +4629,14 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   /* Players by Team Report */
   :global(.nfl-teams-grid) {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    /* auto-fit, not repeat(3, …): a `1fr` track can't shrink below its content's
+       min-content size, and these cards bottom out around 320px (headshot +
+       name + salary). Three of them demanded ~1030px, so on any viewport from
+       768px to ~1050px this grid pushed the whole page wider than the screen —
+       which dragged the team card and its nav off the right edge with it.
+       The min() floor collapses to a single column when the container is
+       narrower than one card, so it can never blow out. */
+    grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
     gap: var(--padding-md);
   }
 
