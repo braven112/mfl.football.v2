@@ -18,6 +18,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { writeJsonIfChanged } from './lib/canonical-json.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -198,8 +199,13 @@ function saveOddsData(oddsData) {
   // Ensure directory exists
   fs.mkdirSync(path.dirname(outputFile), { recursive: true });
 
-  fs.writeFileSync(outputFile, JSON.stringify(oddsData, null, 2));
-  console.log(`\n✅ Saved live odds to ${outputFile}`);
+  // Skip-if-unchanged: the odds payload is stable outside game windows, and
+  // this runs from the 5-minute roster-sync cron — an identical rewrite
+  // would create a commit per run.
+  const wrote = writeJsonIfChanged(outputFile, oddsData);
+  console.log(
+    wrote ? `\n✅ Saved live odds to ${outputFile}` : `\n✅ Live odds unchanged; left ${outputFile} untouched`
+  );
 }
 
 /**

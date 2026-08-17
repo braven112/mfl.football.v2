@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import os from 'node:os';
 import { getNonEmpty } from './lib/env.mjs';
 import { ALL_LEAGUES, getLeagueById, LEAGUES, DEFAULT_LEAGUE_SLUG, DEFAULT_LEAGUE_ID } from '../src/config/leagues-data.mjs';
+import { writeJsonIfChanged } from './lib/canonical-json.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const dataDir = path.join(projectRoot, 'src', 'data');
@@ -684,9 +685,15 @@ const summarizeByPosition = (players) => {
   return summary;
 };
 
+// fetchedAt/generatedAt/snapshot advance every run even when the salary
+// payload is byte-identical — the 5-minute roster-sync cron used to commit
+// these files ~288×/day on timestamp drift alone. Excluding them from the
+// change check means an unchanged payload keeps its previous timestamps on
+// disk and produces no commit; a real change writes fresh ones.
+const SALARY_VOLATILE_KEYS = ['fetchedAt', 'generatedAt', 'snapshot'];
+
 const writeJson = async (filePath, data) => {
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-  await fs.writeFile(filePath, JSON.stringify(data, null, 2));
+  writeJsonIfChanged(filePath, data, { ignoreKeys: SALARY_VOLATILE_KEYS });
 };
 
 const timestampSlug = () => new Date().toISOString().replace(/[:]/g, '-');
@@ -787,8 +794,20 @@ const writeSeasonState = async (state) => {
       }
     }
     all[seasonStateKey] = state;
+    const serialized = JSON.stringify(all, null, 2);
+    // Skip the write when this league's entry hasn't changed — the file is
+    // committed by the 5-minute cron, so a byte-identical rewrite still
+    // counts as churn for mtime-based tooling. (String compare is enough
+    // here: we serialize both sides ourselves, so key order is stable.)
+    let existingRaw = null;
+    try {
+      existingRaw = await fs.readFile(seasonStateFile, 'utf8');
+    } catch {
+      // first run — no file yet
+    }
+    if (existingRaw === serialized) return;
     const tmpFile = `${seasonStateFile}.tmp`;
-    await fs.writeFile(tmpFile, JSON.stringify(all, null, 2));
+    await fs.writeFile(tmpFile, serialized);
     await fs.rename(tmpFile, seasonStateFile);
   } finally {
     await fs.unlink(lockFile).catch(() => {});

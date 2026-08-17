@@ -37,6 +37,12 @@ const SEQUENTIAL = [
   // there on why deriving it at request time was costing 23.5 MB per cold
   // start and dragging all of data/ into the serverless bundle.
   { name: 'compute:player-identity-union', cmd: 'pnpm run compute:player-identity-union' },
+  // Rebuilds the frozen roster payloads for every HISTORICAL TheLeague season
+  // (current league/season years stay live on the page). Runs after the
+  // identity union for the same reason as it: the committed feeds it reads
+  // never change for past seasons, so this is a no-op unless the payload
+  // logic in scripts/lib/roster-season-payload.mjs changed.
+  { name: 'compute:roster-payloads', cmd: 'pnpm run compute:roster-payloads' },
 ];
 
 const PARALLEL = [

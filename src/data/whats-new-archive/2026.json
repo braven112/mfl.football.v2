@@ -1,0 +1,1436 @@
+[
+  {
+    "id": "feature-first-heroes",
+    "date": "2026-07-06",
+    "title": "New Features Now Play Themselves",
+    "summary": "The homepage hero stopped casting random rookies to pose next to announcements. New features now star in their own banner — a live screenshot in a browser frame that matches your theme — and a player only appears when the story is actually about him.",
+    "description": [
+      "For months, every time the site shipped something new, the hero banner hired a rookie to stand next to the headline. Nice kid, great cutout, absolutely nothing to do with the feature. Announcing a salary tool? Here’s a rookie. New calendar page? Rookie. It was the fantasy football equivalent of the stock-photo handshake.",
+      "The casting department has been reorganized. Feature announcements now show the feature — an actual screenshot of the thing, framed in a little browser window, captured in both light and dark mode so it matches whatever theme you’re running. When an announcement genuinely stars a player, he still gets the full spotlight treatment — cutout, team-color glow, caption chip — but only when he’s the story, never as set dressing. And on phones the screenshot politely bows out (nobody can read a full page squeezed into a hero thumbnail) and the league crest stands in.",
+      "The rookies are fine, by the way. They’ve been reassigned to stories about actual rookies — which, it turns out, is the only casting call they ever needed."
+    ],
+    "category": "enhancement",
+    "icon": "star",
+    "image": "feature-first-heroes.webp",
+    "imageAlt": "TheLeague homepage hero showing a feature announcement with its own screenshot in a browser-style frame beside the headline and call-to-action.",
+    "leagues": [
+      "theleague",
+      "afl"
+    ]
+  },
+  {
+    "id": "draft-room-pick-reveal",
+    "date": "2026-07-06",
+    "title": "The Draft Room Learned How to Announce a Pick",
+    "summary": "Picks in the live draft room no longer just materialize in a grid cell. Every selection now gets a full-width reveal — \"With the 1.03, the Pigskins select…\" — with the player's cutout over the drafting franchise's colors, before settling into the board like nothing happened.",
+    "description": [
+      "Until now, the biggest moment in fantasy football — the pick — arrived in the draft room the way a cell updates in a spreadsheet. One second the slot said 'On the clock,' the next it had a tiny headshot and a polite green flash. Roger Goodell walks to a podium for this. Your draft room gave it the ceremony of an autosave.",
+      "No longer. When a pick lands, the room cuts to a full-width splash in the drafting franchise's colors: crest watermarked behind, the pick number ghosted across the background like a jumbotron graphic, and the player himself — college headshot and all, since most of these guys haven't put on an NFL jersey yet — rising from the bottom of the frame. 'With the 1.03, the Pacific Pigskins select Jeremiyah Love.' Hold for applause, then it settles back into the board. If autopick starts ripping through selections, the reveals politely queue up and take the stage one at a time. Tap anywhere to skip ahead — the clock and your controls stay live the whole time, because the ceremony should never cost you your own pick.",
+      "It works in mock drafts too, so you can practice being disappointed by who goes two picks before yours. The podium moment: delivered. The spreadsheet update: released. Nobody claimed it."
+    ],
+    "category": "new-feature",
+    "link": "/theleague/draft-room",
+    "linkLabel": "Step into the draft room",
+    "icon": "star",
+    "image": "draft-room-pick-reveal.webp",
+    "imageAlt": "The draft room pick-reveal splash: a deep-red Pacific Pigskins gradient band reading 'With the 3.17, the Pacific Pigskins select Sal Cannella' with the player's cutout rising from the bottom right over a ghosted pick number and franchise crest.",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "schefter-og-unfurls",
+    "date": "2026-07-06",
+    "title": "Schefter's Links Finally Dress for the Group Chat",
+    "summary": "When Schefter drops a story link in GroupMe, the preview under it is no longer a shrug — every post now unfurls with its own breaking-news card: the featured player's cutout over his team's colors, the headline, and a BREAKING NEWS badge doing the yelling.",
+    "description": [
+      "Claude Schefter has been breaking trades, auction heists, and suspiciously specific rumors into the group chat for months. But every link he dropped arrived wearing the same gray hoodie — a generic preview that could just as easily have been a terms-of-service update. The man files like a wire reporter and his links were unfurling like a fax.",
+      "Fixed. Every Schefter story link now generates its own front-page card before you even tap it: the player at the center of the story, cut out over a gradient in his real team's colors, under the actual headline and a red BREAKING NEWS badge (rumors get the amber RUMOR MILL treatment, because journalism has standards). Trade for a Lion? Honolulu blue floods the card. Cut a Bengal? Orange. Stories without a star — milestones, wire news — get a clean league-crest card instead, so nothing ever previews broken. The whole thing renders fresh for each post, both leagues included.",
+      "It's the same news as before. It just stopped showing up to the group chat in sweatpants."
+    ],
+    "category": "enhancement",
+    "icon": "news",
+    "image": "schefter-og-unfurls.webp",
+    "imageAlt": "A Schefter link-preview card: red BREAKING NEWS badge and The Schefter Report masthead above a trade headline, with Isiah Pacheco's cutout headshot over a dark team-color gradient and a name chip reading Isiah Pacheco, RB, DET.",
+    "leagues": [
+      "theleague",
+      "afl"
+    ]
+  },
+  {
+    "id": "trade-composites",
+    "date": "2026-07-06",
+    "title": "Every Trade Proposal Is Now a Press Conference",
+    "summary": "The trade builder stopped treating blockbusters like receipts. Confirm a trade and the two headline players square off face-to-face over their real teams' colors — and every offer waiting in My Trades wears the same breaking-news poster.",
+    "description": [
+      "You spend twenty minutes engineering the trade of the year — cap math checked, picks balanced, the whole heist — and then the confirmation screen hands you what amounts to a grocery receipt. Two names, two salaries, a Send button. The biggest adrenaline moment in fantasy football, rendered with all the drama of signing for a package.",
+      "Now the moment gets the poster it deserves. Hit Submit Trade and the confirmation modal leads with both headline players face-to-face — each cut out over a gradient in his real NFL team's colors, his team's logo ghosted behind him, a swap badge spinning between them like the trade machine graphic on deadline day. Open My Trades and every pending offer wears the same treatment: the guy you'd receive squaring off against the guy you'd surrender, labeled accordingly, so you can feel the trade before you read it. The strip is smart about who belongs on a poster, too — a defense or a draft pick headlining one side politely declines the photoshoot (logos aren't people, and a 2027 second-rounder has no face), and if a headshot ever fails to load, the whole banner bows out and leaves the trusty text list untouched.",
+      "The asset lists, salaries, and cap math are all still there below — this is a fantasy league, not an art gallery. But the next time someone offers you Breece Hall, you won't read about it. You'll see him standing there, waiting for an answer."
+    ],
+    "category": "enhancement",
+    "link": "/theleague/trade-builder",
+    "linkLabel": "Open the Trade Builder",
+    "icon": "helmet",
+    "image": "trade-composites.webp",
+    "imageAlt": "Trade confirmation modal with a split hero: Keon Coleman cut out over Bills blue and Breece Hall over Jets green, facing a center swap badge, above the Confirm Trade Proposal details.",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "rookie-showcase-composite-cards",
+    "date": "2026-07-06",
+    "title": "The Rookie Board Stopped Filing Its Prospects in a Spreadsheet",
+    "summary": "The Top 50 rookie rankings default to trading-card composites now — a real cutout over a color gradient for every prospect, switching from school colors to his actual NFL team's the moment he gets drafted. Already on a TheLeague roster? There's a chip for that too.",
+    "description": [
+      "The 2026 Rookie Rankings page has always had the scouting goods — Waldman's grades, FBG dynasty ranks, the whole DoT-score apparatus — buried in a very competent, very beige table. Tiny headshot, tiny name, forty-nine more rows to scroll past. It read like a prospectus. It looked like a spreadsheet that went to business school.",
+      "The Top 50 now opens on a wall of trading cards instead. Each prospect gets a real transparent cutout over a color gradient, and the gradient knows things: before the draft, everyone gets the same neutral blue — nobody's earned team colors yet. The instant a prospect lands with an NFL club, his card flips to his new team's colors with the logo watermarked behind him, no redeploy required. Rostered in TheLeague already? A green chip names the franchise that beat everyone else to him. Missing a photo — and a fair number of deep-board prospects are — the card doesn't fake it with a broken image icon; it shows a clean initials disc and moves on with its life. The old sortable table didn't get cut, it just got demoted to a toggle, for anyone who still wants their scouting data in rows and columns.",
+      "Fifty prospects, fifty little billboards for who they are and who wants them. The spreadsheet can have Tuesdays."
+    ],
+    "category": "enhancement",
+    "link": "/theleague/rookies-2026",
+    "linkLabel": "See the class",
+    "icon": "star",
+    "image": "rookie-showcase-composite-cards.webp",
+    "imageAlt": "The 2026 Rookie Rankings Top 50 card view: six trading-card composites in a row, each showing a prospect's cutout over his NFL team's color gradient with the team logo watermarked behind him, a rank and DoT score chip, and a franchise ownership chip below.",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "lineup-faceoff-scoreboard",
+    "date": "2026-07-06",
+    "title": "Your Lineup Page Now Has a Fight Card",
+    "summary": "Setting your lineup used to happen in a vacuum — a column of your own players and zero sense of who you were even playing. Now the top of the page is a player-of-the-game faceoff between you and your Week N opponent, with a live projected-points scoreboard that ticks up and down as you shuffle your starters.",
+    "description": [
+      "Setting your lineup has always been a strangely lonely activity. You'd open the page, stare at a column of your own guys, toggle a flex, and submit — with roughly the same situational awareness as a boxer who never asked who was in the other corner. Was this a week to play it safe or swing for the fences? No idea. The page never mentioned you had an opponent at all, let alone who they were.",
+      "Now the top of the lineup page is a proper fight card. Your best starter squares off against your opponent's, each rendered as a cutout over his own franchise's colors and crest — a real matchup poster, not a list. And underneath, a live projected-points scoreboard: your total on one side, theirs on the other. The catch is that YOUR number is alive. Bench your struggling tight end for a juicier flex and watch your projection tick up on the spot; get cute and start a guy on a bye, watch it drop. Their total is set from their current lineup (or their best case when the week hasn't locked), so you always know exactly how much ground you're making up — or giving away. The same faceoff treatment now rides along on the matchup preview cards and the game-of-the-week hero too, so the whole site finally agrees that fantasy football is, at its core, a contact sport.",
+      "Set your lineup like someone's actually across the table from you this week. Because — plot twist — someone is."
+    ],
+    "category": "new-feature",
+    "link": "/theleague/lineup",
+    "linkLabel": "Set your lineup",
+    "icon": "helmet",
+    "image": "lineup-faceoff-scoreboard.webp",
+    "imageAlt": "The League lineup page with a player-of-the-game faceoff at the top: Justin Herbert over Midwestside Connection's gold-and-crest panel facing Lamar Jackson over Pacific Pigskins' red panel, with a live projected-points scoreboard reading 120.9 versus a blue-highlighted 115.1 beneath them.",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "afl-composite-heroes",
+    "date": "2026-07-05",
+    "title": "The AFL Hero Hired a Casting Director",
+    "summary": "The AFL homepage hero now stars an actual player instead of anonymous stock-photo decoration — your keeper cornerstone before the deadline, the best name on the draft board, a guy literally on the trade block — with a caption explaining why he made the poster.",
+    "description": [
+      "The League's homepage recently fired its stock-photo stranger and started casting real players in the hero. And for about a week, the AFL homepage had to sit there like the sibling who watched the other kid open a bike on Christmas morning. Same site, same big hero card up top, but the AFL's version was still all typography and vibes — announcing YOUR keeper deadline and YOUR draft with the visual personality of a parking notice.",
+      "Consider the bike delivered. Every AFL hero now casts a player who actually earned the spot, rendered as a clean cutout over a glow in his real NFL team's colors, with a frosted caption naming him and stating his business. Keeper deadline approaching? Your keeper cornerstone stares back at you — signed-in owners see their own best player, which makes ignoring the deadline feel weirdly personal. Draft week gets the best name still on the board by ADP. The trade window features a player somebody actually dangled on the block. Game days spotlight a likely starter in the week's earliest kickoff, waiver Wednesday promotes the top unrostered target, the weekly recap crowns the top scorer, and fresh-feature announcements are fronted by a rookie — the universal symbol for 'new around here.' The casting rotates daily, dresses correctly for both light and dark mode, and if a headshot ever goes missing, the AFL shield steps in like a veteran backup who knows the playbook.",
+      "So when the hero tells you to lock in your keepers, the face doing the telling is the exact guy you'd be an idiot to let go. Parity with The League: achieved. Sibling rivalry: ongoing."
+    ],
+    "category": "enhancement",
+    "link": "/afl-fantasy",
+    "linkLabel": "Meet today's headliner",
+    "icon": "helmet",
+    "image": "afl-composite-heroes.webp",
+    "imageAlt": "AFL homepage keeper-deadline hero with a gold border: 'Lock In Your Core' headline and countdown beside a cutout of Jaxson Dart over a Giants-blue glow, with a frosted caption reading Keeper Cornerstone, QB, NYG.",
+    "leagues": [
+      "afl"
+    ]
+  },
+  {
+    "id": "composite-hero-players",
+    "date": "2026-07-05",
+    "title": "The Homepage Hero Finally Knows Who It's Talking About",
+    "summary": "The big hero up top used to be illustrated by a random NFL stranger who had nothing to do with your league. Now every hero casts a player who actually belongs in it — a rookie for new features, the best free agent during the auction, your own cut candidate on deadline week, and the four best rookies left on the board during UDFA.",
+    "description": [
+      "For years the homepage hero has been illustrated by a random NFL player pulled from a hat. A stranger in a generic jersey, standing there looking vaguely athletic while the card beside him talked about YOUR auction, YOUR roster deadline, YOUR draft. It was the fantasy-football equivalent of a stock-photo handshake — technically a person, technically football, related to your actual league in no way whatsoever.",
+      "Now every hero casts a player who belongs in it. A new feature? Fronted by a rookie, because nothing says 'new' like a guy who's never taken an NFL snap. Auction season? The best free agent still on the board — and once bidding goes live, the player whose 36-hour clock runs out first, framed against the league shield. Cut-watch week? A real player on the bubble — your suggested cut if you're signed in, so the hero is essentially your conscience with a headshot. The kickoff countdown shows the best player starting in the actual season opener. And UDFA week lines up the four best rookies still unclaimed, each posed over his NFL team's logo like a trading card. Everyone's composited over their real team's colors — no stock photos, no licensing lawyers, just the guys who matter to whatever the hero is nagging you about.",
+      "So the next time the homepage tells you to set your lineup, the player staring back is one you might actually start. The stranger in the generic jersey has been released. He cleared waivers. Nobody claimed him."
+    ],
+    "category": "enhancement",
+    "icon": "helmet",
+    "image": "composite-heroes.webp",
+    "imageAlt": "The League homepage UDFA hero: four side-by-side team-color panels, each showing an undrafted rookie's headshot over his NFL team logo, ranked one through four, above a green 'best on the board' band.",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "vintage-art-restored",
+    "date": "2026-07-04",
+    "title": "The Lost Archives: Every Vintage Logo, Recovered",
+    "summary": "Nineteen years of team art is finally complete — the lost identities are back, every legacy team wears its original logo button, classic-era banners got their full-resolution glow-up, defending champions fly era-correct colors, and the original Photoshop files are yours to download.",
+    "description": [
+      "Some leagues lose a trophy. Ours lost an entire art museum. When the old dynastytheleague.com went dark, it took the 2007-era banners of Mistakes Were Made, Acer FC Edge, and DangerZone with it — and not even the Internet Archive had a copy, because all three teams rebranded before the Wayback Machine ever bothered to visit. For years those franchises' early chapters displayed a gray placeholder with all the personality of a witness protection photo.",
+      "Then the commissioner went digging through his own files and came up with the motherlode: the original Photoshop sources. Not thumbnails, not screenshots — the actual 900×150 master banners, plus the complete set of original circular logo buttons for every legacy identity in league history. All eighteen of them (Sabertooths through Silver Bullets, BOYZ II MEN included) have been swapped in across the <a href=\"/theleague/assets\">Asset Library</a> and every historical standings page, replacing the improvised crops we'd been squinting at. Classic-era full banners came back too — The Executioners, Rolling Rockers, Amish Rakefighters, and BOYZ II MEN all traded their squashed 300-pixel minis for the real thing, and three original franchises got their vintage looks restored to history: browse any season before 2013 and the Pigskins wear their old-school black razorback banner, while Bring The Pain's skull-and-crossbones and the Dark Magicians' classic wordmark fly over every season through 2022. The division standings got smarter to match: the defending-champion medallion now shows the logo the champ actually wore the season it won — browse 2012 and you'll see the Degenerates and Amish Rakefighters holding their crowns, not their modern-day successors.",
+      "And because league history belongs to the league, the entire source vault is now downloadable. Banners: <a href=\"https://uhyqublxrbcezhyu.public.blob.vercel-storage.com/assets/theleague/history/psd/mistakes_were_made.psd\" download>Mistakes Were Made</a>, <a href=\"https://uhyqublxrbcezhyu.public.blob.vercel-storage.com/assets/theleague/history/psd/dangerzone.psd\" download>DangerZone</a>, <a href=\"https://uhyqublxrbcezhyu.public.blob.vercel-storage.com/assets/theleague/history/psd/acer_fc_edge.psd\" download>Acer FC Edge</a>, <a href=\"https://uhyqublxrbcezhyu.public.blob.vercel-storage.com/assets/theleague/history/psd/executioners.psd\" download>The Executioners</a>, <a href=\"https://uhyqublxrbcezhyu.public.blob.vercel-storage.com/assets/theleague/history/psd/rolling_rockers_green.psd\" download>Rolling Rockers</a> (plus a <a href=\"https://uhyqublxrbcezhyu.public.blob.vercel-storage.com/assets/theleague/history/psd/rolling_rockers_white.psd\" download>white variant</a> that never saw game day), <a href=\"https://uhyqublxrbcezhyu.public.blob.vercel-storage.com/assets/theleague/history/psd/rakefighters.psd\" download>Amish Rakefighters</a>, <a href=\"https://uhyqublxrbcezhyu.public.blob.vercel-storage.com/assets/theleague/history/psd/boys2men.psd\" download>BOYZ II MEN</a>, <a href=\"https://uhyqublxrbcezhyu.public.blob.vercel-storage.com/assets/theleague/history/psd/bring_the_pain.psd\" download>Bring The Pain</a>, <a href=\"https://uhyqublxrbcezhyu.public.blob.vercel-storage.com/assets/theleague/history/psd/dark_magicians_of_chaos.psd\" download>Dark Magicians of Chaos</a>, <a href=\"https://uhyqublxrbcezhyu.public.blob.vercel-storage.com/assets/theleague/history/psd/da_dangsters.psd\" download>Da Dangsters</a>, and the Pigskins in three flavors — <a href=\"https://uhyqublxrbcezhyu.public.blob.vercel-storage.com/assets/theleague/history/psd/pigskins_original.psd\" download>original black</a>, <a href=\"https://uhyqublxrbcezhyu.public.blob.vercel-storage.com/assets/theleague/history/psd/pigskins_red_variant.psd\" download>red variant</a>, and <a href=\"https://uhyqublxrbcezhyu.public.blob.vercel-storage.com/assets/theleague/history/psd/pigskins2013.psd\" download>the 2013 redesign</a> — plus <a href=\"https://uhyqublxrbcezhyu.public.blob.vercel-storage.com/assets/theleague/history/psd/sabertooths.psd\" download>Sabertooths</a>, <a href=\"https://uhyqublxrbcezhyu.public.blob.vercel-storage.com/assets/theleague/history/psd/degenerates.psd\" download>Degenerates</a>, <a href=\"https://uhyqublxrbcezhyu.public.blob.vercel-storage.com/assets/theleague/history/psd/poker_in_the_rear.psd\" download>Poker in the Rear</a>, <a href=\"https://uhyqublxrbcezhyu.public.blob.vercel-storage.com/assets/theleague/history/psd/las_vegas.psd\" download>Las Vegas Elite</a>, <a href=\"https://uhyqublxrbcezhyu.public.blob.vercel-storage.com/assets/theleague/history/psd/art_of_war.psd\" download>The Art of War</a>, <a href=\"https://uhyqublxrbcezhyu.public.blob.vercel-storage.com/assets/theleague/history/psd/drunk_indians.psd\" download>Drunk Indians</a>, <a href=\"https://uhyqublxrbcezhyu.public.blob.vercel-storage.com/assets/theleague/history/psd/witch_city_warlocks.psd\" download>Witch City Warlocks</a>, <a href=\"https://uhyqublxrbcezhyu.public.blob.vercel-storage.com/assets/theleague/history/psd/silver_bullets.psd\" download>Silver Bullets</a>, and <a href=\"https://uhyqublxrbcezhyu.public.blob.vercel-storage.com/assets/theleague/history/psd/treasure_coast.psd\" download>Treasure Coast Swamp Bandits</a>. Extras: the <a href=\"https://uhyqublxrbcezhyu.public.blob.vercel-storage.com/assets/theleague/history/psd/logo_buttons_cpujocks.psd\" download>logo button master</a> and Acer's original <a href=\"/assets/theleague/history/psd/acer_fc_edge_teampage.jpg\" download>2007 team page</a> — Frank Gore rookie card and all. Open them in Photoshop, remix them, print one on a mug. History is no longer lost; it's layered."
+    ],
+    "category": "enhancement",
+    "link": "/theleague/assets",
+    "linkLabel": "Browse the Asset Library",
+    "heroArt": {
+      "src": "/assets/theleague/history/mistakes_were_made_icon_circle.png",
+      "caption": "Mistakes Were Made",
+      "captionMeta": "Circa 2007 · Recovered"
+    },
+    "icon": "history",
+    "image": "vintage-art-restored.webp",
+    "imageAlt": "The Asset Library's Former Teams section showing the recovered Acer FC Edge and Amish Rakefighters vintage banners",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "dark-mode",
+    "date": "2026-07-04",
+    "title": "Lights Out: Dark Mode Is Here",
+    "summary": "The whole site now comes in dark mode — it follows your phone's setting automatically, or pick Light, Auto, or Dark yourself from the menu drawer. Your 11pm waiver-wire spiral no longer doubles as a tactical flashbang.",
+    "description": [
+      "Let's be honest about how this league operates. Nobody checks their cap space at a reasonable hour. The real roster decisions happen at 11:47pm, in bed, one eye closed, phone brightness at minimum — and then the site loads and hits you with a wall of white so bright your ancestors feel it. You've been drafting like a raccoon caught in headlights for years. We saw the late-night traffic logs. We knew.",
+      "So: dark mode. The entire site — every page, every table, every modal, both leagues — now renders in a proper dark theme. It respects your device's system setting out of the box, which means if your phone flips to dark at sunset, the site flips with it, before the page even paints. Prefer to run your own life? There's a Light / Auto / Dark toggle in the menu drawer that remembers your choice. And this isn't one gray blanket thrown over everything: each league got its own treatment, with its own accent colors, and team logos and icons that swap to dark-ready versions where owners have supplied them. The salary tables, the charts, the draft boards — all of it re-tuned so the numbers you squint at actually pass a contrast check.",
+      "Flip it on tonight during your regularly scheduled pre-sleep roster anxiety. Your retinas — and whoever shares your bed — send their regards."
+    ],
+    "category": "new-feature",
+    "heroTheme": "dark",
+    "icon": "eye",
+    "image": "dark-mode.webp",
+    "imageAlt": "The League homepage rendered in dark mode: charcoal cards with bright blue accents, dark roster planning hero, and the Schefter Report feed on dark surfaces.",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "dark-mode-afl",
+    "date": "2026-07-04",
+    "title": "Lights Out: Dark Mode Is Here",
+    "summary": "The whole site now comes in dark mode — it follows your phone's setting automatically, or pick Light, Auto, or Dark yourself from the menu drawer. Your 11pm waiver-wire spiral no longer doubles as a tactical flashbang.",
+    "description": [
+      "Let's be honest about how this league operates. Nobody checks their cap space at a reasonable hour. The real roster decisions happen at 11:47pm, in bed, one eye closed, phone brightness at minimum — and then the site loads and hits you with a wall of white so bright your ancestors feel it. You've been drafting like a raccoon caught in headlights for years. We saw the late-night traffic logs. We knew.",
+      "So: dark mode. The entire site — every page, every table, every modal, both leagues — now renders in a proper dark theme. It respects your device's system setting out of the box, which means if your phone flips to dark at sunset, the site flips with it, before the page even paints. Prefer to run your own life? There's a Light / Auto / Dark toggle in the menu drawer that remembers your choice. And this isn't one gray blanket thrown over everything: each league got its own treatment, with its own accent colors, and team logos and icons that swap to dark-ready versions where owners have supplied them. The salary tables, the charts, the draft boards — all of it re-tuned so the numbers you squint at actually pass a contrast check.",
+      "Flip it on tonight during your regularly scheduled pre-sleep roster anxiety. Your retinas — and whoever shares your bed — send their regards."
+    ],
+    "category": "new-feature",
+    "icon": "eye",
+    "image": "dark-mode-afl.webp",
+    "imageAlt": "The AFL homepage rendered in dark mode: navy cards with red accents, the keeper-deadline hero, and the Schefter Report feed on dark surfaces.",
+    "leagues": [
+      "afl"
+    ]
+  },
+  {
+    "id": "homepage-redesign",
+    "date": "2026-07-04",
+    "title": "The Front Door Got a Facelift",
+    "summary": "The landing page at MFL.football finally looks like it belongs to two proud leagues instead of a parked domain — full-color league banners, real logos, and a combined What's New feed from both sides of the house.",
+    "description": [
+      "For years, the very first page of MFL.football greeted visitors with all the ceremony of a hotel hallway: two beige cards, a league ID number (riveting), and a font that said \"this site was configured, not designed.\" It technically worked, the same way a folding chair technically counts as furniture.",
+      "The new front door gives each league the entrance it deserves. The League gets a deep-blue banner, AFL gets its red-to-navy fade, and both wear their actual logos — big, white, and unmistakable — with the vitals (teams, conferences, draft rounds) right where you can see them. Below the banners, a combined What's New feed pulls the latest six stories from both leagues into one place, each tagged with its league colors so you always know whose news you're reading. And when the site-wide dark mode arrives, this page is already dressed for it.",
+      "Pick your league and walk in. Or linger on the landing page and read the other league's news first — a little light espionage never hurt anyone."
+    ],
+    "category": "enhancement",
+    "icon": "home",
+    "image": "homepage-redesign.webp",
+    "imageAlt": "Redesigned MFL.football landing page showing the Two Leagues One Home headline, a blue The League banner and a red AFL banner with white league logos, above a combined What's New card grid",
+    "leagues": [
+      "theleague",
+      "afl"
+    ]
+  },
+  {
+    "id": "afl-name-history",
+    "date": "2026-07-03",
+    "title": "The Hall of Shame Is Now Official",
+    "summary": "Every AFL franchise page now carries a full Team Name History — every identity an owner has ever played under, across every franchise slot they've occupied — with the punitive last-place renames tagged with a skull. Jesus Killers, Vit's Brother, Cock Gobbler: your sins are now a matter of public record.",
+    "description": [
+      "For over two decades, this league has operated one of fantasy football's great honor systems: finish last in the D-League, and your team name belongs to the group chat for a year. The problem was the record-keeping — the evidence lived in screenshots, half-remembered arguments, and one guy insisting that Pubes was a punishment when it absolutely was not (we checked; it was voluntary, which is somehow worse). The receipts existed, but they were scattered across twenty years of MFL page snapshots like a crime scene nobody bothered to tape off.",
+      "No more. Every AFL franchise page now has a Team Name History section that tracks the OWNER, not the franchise slot — so when someone leaves the league for eighteen years and comes back under a different franchise ID, their whole record follows them like a credit score. Punitive renames wear a 💀 Last-Place Rebrand badge on a highlighted card, previous owners of your slot get their own section (their sins are not your sins), and trophy counts, ranks, and championship tallies all follow the same owner-based accounting — no more inheriting a stranger's hardware or losing your own. The confirmed ledger runs from Jesus Killers (2019) through Cock Gobbler (2025), reconstructed from the league's official standings and verified year by year.",
+      "Browse your rivals' pages and enjoy the archaeology. Some franchises are clean. Some have one skull. One franchise has two skulls in three years, and if you know, you know. And to the 2025 D-League cellar-dweller currently brainstorming their new identity: the badge is already waiting."
+    ],
+    "category": "new-feature",
+    "link": "/afl-fantasy/franchises",
+    "linkLabel": "Inspect the record",
+    "icon": "history",
+    "image": "afl-name-history.webp",
+    "imageAlt": "AFL franchise page Team Name History section showing Avenging Amish's timeline with two highlighted Last-Place Rebrand badges on Broke Back 'lil Half Dead's Brother and Vit's Brother, plus a Previous Owners section below",
+    "leagues": [
+      "afl"
+    ]
+  },
+  {
+    "id": "weekly-rollup-2026-06-29",
+    "date": "2026-06-29",
+    "title": "Weekly Fixes & Polish (May 1-Jun 28)",
+    "summary": "37 bug fixes and style improvements across other, navigation & routing, homepage, rosters, and more.",
+    "description": [
+      "This week's 37 bug fixes and polish improvements touched several areas of the site:",
+      "<strong>Other</strong> — The AFL franchise page now uses the full page width instead of being boxed into a narrow 960px column — the team hero banner stretches edge to edge and the trophy grid fits an extra badge per row, matching the width of every other page on the site. Under the hood, 35 pages across both leagues also shed a duplicate page-region wrapper, leaving exactly one main content landmark per page for cleaner screen-reader navigation.. The AFL franchise trophy-wall strip now reads like a proper scoreboard: the team's hardware count and league rank sit on the left while the \"Complete trophy set\" label and its gold-pip progress bar slide all the way to the right edge of the line, so the two halves no longer crowd each other in the middle.. Trophy title badges on the AFL franchise page now sit two-across on phones (all the way down to 320px) instead of stacking one-per-row, so you can scan a team's hardware without endless scrolling. Tablet and desktop layouts are unchanged.. The AFL franchise trophy-wall now tells you where a team stacks up. The compact summary strip carries a league-wide rank next to the trophy count (\"3rd of 24,\" with a \"T-\" marker when teams are tied), and the gold-pip bar finally wears a label — \"Complete trophy set\" — so it's clear the pips track how many of the six title types a team has won, not raw trophy volume. Each trophy-case section now ranks the team within that category too, so you can see at a glance that a franchise is, say, 1st of 24 in Division Titles but only T-4th in Championships. Teams with an empty case (or an empty category) skip the rank entirely; no participation ribbons here.. The \"Ask Roger\" button on both leagues' rules chat now uses the same shared loading spinner as the rest of the site while Roger consults the rulebook — blue on TheLeague, red on AFL — so the wait looks consistent everywhere.. AFL's Owner Activity report now tracks waiver claims instead of auction wins — AFL is a keeper league with no auction, so the old \"Auctions\" column never reflected real activity.. The Final / Base / History tabs on the Draft Order page now actually switch views — they were silently dead when you arrived via in-app navigation. An unrecognized view in the URL now falls back to the Final order instead of rendering a blank page.. The AFL team formerly known as \"Cock Gobbler\" has reverted to its original name, The Show, after serving out its last-place D-League naming penalty — with the graffiti banner and logo restored across standings, rosters, and the rules chatbot.. AFL keepers now route to the real tool: the homepage keeper-deadline hero and the Keepers page both open the per-team Keeper Planner (Rosters → Planner) instead of a placeholder page that waited on an MFL feed AFL doesn't have. Each franchise card jumps straight into that team's planner..",
+      "<strong>Navigation & Routing</strong> — Simplified nav event listeners and player asset loading for cleaner, more reliable behavior across the app.. AFL header nav icons are now red by default and flip to navy on hover — matching AFL's red-forward brand identity. Labels stay red in both states.. The nav drawer footer no longer shows a \"logged-in\" team chip for people who never signed in. Visiting a page with a ?myteam= link used to make the footer claim you were logged in as that team — even though sign-in-only features (like Ask Roger) correctly knew you weren't. The footer now reflects your real signed-in session only, while still letting you browse another team's pages via ?myteam= as before..",
+      "<strong>Homepage</strong> — \"Manage keepers\" link on the AFL homepage now goes to the Keeper Planner on afl-fantasy.com instead of a broken internal page.. Removed the stray gap above the AFL homepage — the hero and Schefter Report now sit flush at the top of their columns instead of floating below an empty band.. Preseason homepage hero promos (tag window, team purchase deadline, release deadline) now use a darker, readable blue so the white pill label and countdown stand out instead of washing out.. Removed the same stray gap from The League homepage — both sites now have their hero and sidebar sitting flush at the top of their columns.. The homepage hero no longer surfaces a months-old feature as if it were news — a feature stops headlining after 3 weeks. Cut Watch now runs in two tiers (calm roster-planning from June, red-urgent in the final 30 days), and two new countdown heroes fill the old dead zones: Draft Season (post-auction, counting down to the NFL Draft) and Preseason (between roster cuts and Week 1) — instead of a generic What's New card.. The early Cut Watch hero now uses a readable blue accent instead of the near-invisible dark navy that matched the card background — the countdown number and 'AHEAD.' label are actually legible now.. The Champion Crowned homepage hero is now a full dark editorial card — the winning team's logo sits large in the background at 50% opacity, the champion gets a personalized message, and the whole thing wears the same deep-navy branded style as every other offseason hero.. All icons in the AFL homepage Explore section are now red — previously only the Playoffs icon was red because it was the only one with fill set explicitly; the rest inherited SVG's default black.. AFL homepage section titles (What's Next, standings, quick links, My Team) are now slightly larger — bumped from 0.75rem to 0.9rem to match the visual weight of UFC Sans Condensed, which reads smaller than Vend Sans at the same size.. The League homepage quick links icons now display in the correct accent color instead of silently falling back to black — SVG sprite icons render via fill, not color, so the fix mirrors the same correction applied to AFL.. The homepage \"What's Next\" timeline is now actually forward-looking — it no longer leads with a months-old completed event labeled \"Most Recent.\" The slots now read Up Next / Coming Soon / Later (or Happening Now when an event is live), so you only ever see what's ahead..",
+      "<strong>Rosters</strong> — Cutting a player now works even when your offseason roster is over the in-season limit. We switched the cut to the same add/drop path MFL's own site uses for owners, which allows trimming an over-limit roster — so any owner can release a player during the cutdown. Cutting a player that was already dropped now shows a clear 'refresh your roster' message instead of a confusing permissions error. Also fixed AFL confirmation copy that wrongly referenced an \"auction pool\" (AFL drafts, it doesn't auction).. The Move-to-IR button now turns a confirmed green when the move succeeds instead of fading to a washed-out gray, so a completed move actually looks done. The success toast also adapts to dark mode now.. The AFL Keeper Planner now works after navigating to it from another page — previously the drag-and-drop, arrow buttons, and view tabs only worked on a fresh page load, and silently went dead if you clicked into the planner from elsewhere on the site. The roster view tabs (Roster/Analytics/Planner) had the same issue and are fixed too..",
+      "<strong>Standings</strong> — AFL conferences now carry their own American League (red) and National League (blue) logos across the conference standings headers, the division headers, and the homepage playoff and draft previews, and the Premier League / D-League marks now appear on the homepage tier standings preview too.. The Division / Playoff / All-Play tabs on the standings page now actually switch views (they were dead before), and the homepage \"Full bracket\" and \"Full standings\" links no longer land on a blank page..",
+      "<strong>Design System & Theming</strong> — AFL got its own identity: the top \"Back to MFL\" bar and footer now use a deep navy, the header nav icons are navy (turning red on hover), and homepage accents — section borders, icons, and links — are now AFL red instead of the borrowed blue. The League's look is unchanged.. League names are now consistent across the whole site: the league is 'The League' (not 'TheLeague') and the other is 'AFL' (not 'AFL Fantasy' or 'American Football League'). Fixed in the league registry, config files, hero copy, page descriptions, and published What's New articles.. AFL now has its own favicon in the browser tab — the AFL football mark replaces the generic placeholder. Includes the full favicon set (SVG, ICO, Apple Touch Icon, and PWA manifest) from the AFL design system, with AFL navy as the theme color.. AFL Fantasy headings (h1–h4) now render in UFC Sans Condensed — the same athletic, broadcast-style typeface used in hero elements — giving page and section titles a more intentional, editorial feel. Heading sizes were also scaled up slightly to preserve visual weight at the condensed width.. Conference section labels (\"American League Playoff Standings\", \"Draft Preview\") bumped from 0.75rem to 0.9rem for better readability alongside the new condensed headline font.. Submit buttons now spin consistently while they work: the Set Lineup submit (both leagues), the contract-declaration submit, and the Move-to-IR button all show the same shared loading spinner and stay disabled until the action finishes, so you get clear feedback and can't accidentally double-submit..",
+      "<strong>Calendar</strong> — Calendar event cards — both the \"What's Next\" cards on the homepage and the full League Calendar — now look like mini versions of the homepage hero: a deep-navy card with a per-category accent color (preseason blue, free agency green, draft purple, regular season navy) carried through the icon chip, status pill, glow wash, border, and a big countdown number, with the days-out clock only showing when there's actually time on the clock.. AFL pages now point at the correct MFL season. Set Lineup, the Keeper Planner, the Calendar, and sign-in all roll over to the new league year on June 1 — when the new AFL season actually goes live on MFL — instead of jumping ahead in February like The League does. Owners no longer hit empty rosters or a 'franchise could not be determined' login error in the spring gap before the new season exists..",
+      "<strong>Playoffs</strong> — The playoffs pages now respect the \"reduce motion\" accessibility setting — the live-score refresh countdown bar and the score flash/flicker effects hold still instead of animating for viewers who've asked their device to tone motion down.."
+    ],
+    "category": "bug-fix",
+    "icon": "wrench",
+    "excludeFromHero": true,
+    "leagues": [
+      "theleague",
+      "afl"
+    ]
+  },
+  {
+    "id": "afl-title-progress",
+    "date": "2026-06-27",
+    "title": "Your Trophy Wall Now Has a Checklist",
+    "summary": "The AFL franchise header gets a slim progress bar tracking the six title types you can win — AFL, Premier, Conference, Division, D-League, and NIT — lit up in brand gold for the ones you’ve got and greyed out for the ones you don’t. One glance tells you how close you are to a full set.",
+    "description": [
+      "The trophy room already showed you every badge you’ve ever won, which is great until you’re standing there wondering which kind of hardware you’re still missing. Twenty trophies sounds impressive right up until someone points out they’re all division titles and you’ve never once survived a conference final. Quantity is a number; a full set is a flex.",
+      "So the franchise header now carries a compact progress bar, tucked right under your team name, tracking the six title types in play across AFL history: the AFL Championship, Premier League, your Conference, your Division, the D-League crown, and the NIT. Win at least one of a type and its pip lights up in the same gold as the badges below; leave it empty and it sits there greyed out, quietly judging you. A running ‘4 / 6’ keeps the tally honest, and hovering any pip tells you exactly which years you got it done. While we were in there, we also pulled every gold accent on the page — the pips, the tier dividers, the championship hero — onto the one true trophy gold, so the whole thing finally matches the badges instead of doing its own orange thing.",
+      "It’s a checklist for your legacy. Some of you are one pip from the complete set and didn’t even know it — and some of you are going to learn that ‘20 trophies’ has been carrying a lot of weight in the group chat."
+    ],
+    "category": "enhancement",
+    "link": "/afl-fantasy/franchises",
+    "linkLabel": "See your progress",
+    "icon": "trophy",
+    "image": "afl-title-progress.webp",
+    "imageAlt": "An AFL franchise header showing a compact 'Trophy wall' progress bar — six slim pips, four filled in brand gold and two greyed out, with a '4 / 6' tally beside the franchise's trophy count.",
+    "leagues": [
+      "afl"
+    ]
+  },
+  {
+    "id": "afl-trophy-wall",
+    "date": "2026-06-27",
+    "title": "Every AFL Franchise Gets a Trophy Room",
+    "summary": "AFL franchise pages now open with a four-tier trophy room — every AFL Championship, conference, division, NIT, tier, and old AFL Cup title since 2004, each badge stamped with the year it was won, and the ones you haven’t won faded out so everyone can see exactly what’s missing.",
+    "description": [
+      "For years the only way to settle who’d actually won what in the AFL was to argue about it in the group chat until someone gave up, and the franchise pages weren’t much help — a lone ‘Championships’ counter that lumped a dynasty and a one-hit wonder into the same tidy little number. Hardware deserves better than a footnote.",
+      "So every AFL franchise page now leads with a trophy room, sorted into four tiers — Championships, Conference Titles, Division Titles, and Consolation Titles — going all the way back to 2004. Every single win is its own badge, stamped with the year, so a three-peat looks like a three-peat. It covers the whole history: the AFL Championship, AL and NL crowns, all the division titles (including the long-gone AL Central and NL Pacific from the six-division days), the NIT, both tier titles, and the old AFL Cup. Win the AFL Championship and you automatically get your conference badge too, because you had to win the conference to get there. And it follows the owner, not the franchise slot — so a title you won under an old team name still lands on your wall, even if someone else has your old number now.",
+      "Anything active you haven’t won yet — AFL Championship, Premier League, your division, your conference — sits there faded and labeled ‘No division titles,’ ‘No AFL Championships,’ and so on. Motivation or a personal attack, depending on your franchise. Head to your page and see how the case looks; some of you are going to need a bigger room."
+    ],
+    "category": "enhancement",
+    "link": "/afl-fantasy/franchises",
+    "linkLabel": "See your trophy wall",
+    "icon": "trophy",
+    "image": "afl-trophy-wall.webp",
+    "imageAlt": "An AFL franchise trophy room grouped into Championships, Conference Titles, Division Titles, and Consolation Titles, with year-stamped gold-and-navy badges for each win and faded ‘No …’ placeholders for unwon awards",
+    "leagues": [
+      "afl"
+    ]
+  },
+  {
+    "id": "theleague-branded-hero",
+    "date": "2026-06-24",
+    "title": "The Homepage Hero Gets a Uniform",
+    "summary": "The League's homepage hero now wears one branded deep-navy look across the whole calendar — the draft, the tag window, the trade deadline, the live Sunday slate. One card, a rotating cast of player cut-outs, a per-event accent color, and a border that only shows up when there's a clock running.",
+    "description": [
+      "The League homepage hero used to be a grab-bag. The draft countdown looked like one thing, the tag window looked like another, the trade deadline did its own thing entirely, and the offseason just sort of shrugged. Every season milestone showed up in a slightly different outfit, like a team that never agreed on a jersey — same league, five different sweaters, no two countdowns built the same way.",
+      "Now every hero state runs through the same branded shell. The deep-navy card, the player cut-out fading in on the right, the big headline with a punchy accent word, the countdown chip, the green CTA button — it's one consistent system from the NFL Draft through rookie season, the franchise-tag window, the offseason auction, the trade deadline, the live Sunday slate, and the quiet stretches in between. Each milestone gets its own accent color keyed to where it sits on the calendar: blue for the preseason run-up, green for free agency, purple for the draft, navy for the regular season. The player on the card rotates so it never looks the same two days running.",
+      "And like the AFL hero, the border earns its keep: it only frames calendar-anchored events — the deadline you can't miss, the draft that's about to start. Ambient states wear the same card without the frame. One identity, every day of the season, finally reading from the same playbook."
+    ],
+    "category": "enhancement",
+    "link": "/theleague",
+    "linkLabel": "See the homepage",
+    "icon": "star",
+    "image": "theleague-branded-hero.webp",
+    "imageAlt": "The League homepage hero in its franchise-tag-window state — a deep-navy card with a blue 'TAG WINDOW' pill, the headline 'PROTECT YOUR CORE.' with CORE in blue, a 'MANAGE ROSTER' button, a '12 / DAYS TO TAG DEADLINE' countdown chip, and an NFL player cut-out on the right.",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "afl-owner-activity",
+    "date": "2026-06-24",
+    "title": "Who's Actually Showing Up — Now for the AFL",
+    "summary": "The Owner Activity page lands on the AFL: a leaderboard of who last logged in, a 30-day page-views chart with a line for every franchise, the pages everyone's actually clicking, and a season-long transaction tally. The 'I've been busy' excuse now comes with a timestamp.",
+    "description": [
+      "Every league has the owner who swears they're 'staying active' while their roster quietly rots through three waiver cycles. Until now the AFL had no way to call the bluff — activity was a vibe, not a number. The League has had the receipts for a while: a page that shows exactly when each owner last surfaced, what they were looking at, and how many moves they've actually made.",
+      "Owner Activity is now live at /afl-fantasy/activity. The Last Seen table ranks all 24 franchises by most recent visit, with a green/yellow/red dot so you can spot the dormant accounts at a glance. A 30-day page-views chart draws one color-coded line per team — toggle franchises on and off in the legend, hover any day for the breakdown. Below that: the most-visited pages across the whole league, an expandable per-owner view of what each team obsesses over, and a transaction leaderboard tallying trades, free-agent moves, and auction wins for the season. It fills in on its own as owners browse — no setup, no tracking pixel homework.",
+      "The League got to keep score on engagement first. The AFL just got the same scoreboard — and the cold-cereal era keeps getting shorter."
+    ],
+    "category": "new-page",
+    "link": "/afl-fantasy/activity",
+    "linkLabel": "See who's been around",
+    "icon": "activity",
+    "image": "afl-owner-activity.webp",
+    "imageAlt": "The AFL Owner Activity page — a 'Daily Page Views' line chart with one color-coded line per franchise over 30 days, above a Last Seen table ranking franchises by most recent visit with green/yellow/red status dots.",
+    "leagues": [
+      "afl"
+    ]
+  },
+  {
+    "id": "afl-hero-unified",
+    "date": "2026-06-24",
+    "title": "One Hero, Every Day of the Season",
+    "summary": "The AFL homepage hero now wears the same branded look year-round — keeper crunch, draft weekend, live Sunday slates, waiver night, the offseason lull. One card, a rotating cast of players, and a gold border that means business.",
+    "description": [
+      "The AFL homepage used to run two different heroes depending on the day. Calendar moments — the keeper deadline, conference drafts, the trade deadline — got the branded deep-navy card with the player cut-out and the countdown. But the rest of the year, the in-season Tuesday recap, the Wednesday waiver reminder, a fresh feature drop, the quiet stretch of the offseason, fell back to a plain editorial banner that looked like it belonged to a different site. Two visual languages on the same page, switching based on the calendar, and nobody could tell you why.",
+      "Now it's one hero, all year. Every state — live scoring during the Sunday slate, the Monday standings check, the Tuesday recap, Wednesday waiver night, game-day lineup lock, the offseason holding pattern — renders through the same branded card, written in Claude Schefter's voice. 'GAMES ARE LIVE.' on Sundays. 'CLAIMS RUN TONIGHT.' on Wednesdays. 'THE RACE TIGHTENS.' on Mondays. Each one pulls a random player from a pool of 21 optimized cut-outs, so the hero never looks the same two days running.",
+      "The one thing that changes: the gold border is now a signal, not decoration. It only appears on calendar-anchored events — the deadline you can't miss, the draft that's about to start, the championship on the line. Ambient states (the recap, the offseason, a feature announcement) wear the same card without the frame. Border means 'there's a clock on this.' No border means 'here's what's happening.' Same identity, two registers, every day of the year."
+    ],
+    "category": "enhancement",
+    "link": "/afl-fantasy",
+    "linkLabel": "See the homepage",
+    "icon": "star",
+    "image": "afl-hero-unified.webp",
+    "imageAlt": "The AFL homepage hero in its Sunday live-scoring state — a deep-navy card with a 'SUNDAY — LIVE' pill, the headline 'GAMES ARE LIVE.' with LIVE in red, a 'VIEW LIVE SCORES' button, a LIVE / SUNDAY SLATE countdown chip, and a player cut-out on the right.",
+    "leagues": [
+      "afl"
+    ]
+  },
+  {
+    "id": "afl-ask-roger-and-schefter",
+    "date": "2026-06-22",
+    "title": "Roger and Schefter Suit Up for AFL",
+    "summary": "Ask Roger now answers AFL rules questions in plain English, and Claude Schefter is filing transaction posts to the AFL GroupMe the moment a waiver clears. The AFL constitution stops being a thing you scroll through and starts being a thing you ask.",
+    "description": [
+      "The AFL constitution used to be a 20-section HTML document you'd Cmd-F through whenever a question came up about NIT bonus math, the trade deposit, or whether your kicker has to start (he does). Meanwhile the GroupMe stayed quiet on transactions — no breaking news, no auction recaps, no one yelling about a waiver pickup at 9:01 PM. The AFL was running on a 2008 newsletter cadence in a 2026 league.",
+      "Ask Roger is now live at /afl-fantasy/rules-chat. He's read every conference, every division, every promotion/relegation clause, and the fine print about the $50 trade deposit that even the Commissioner forgets about. Ask him anything — \"how does the NIT bonus work,\" \"can I trade my 2027 first,\" \"what happens if I miss the keeper deadline\" — and he answers with citations to the actual constitution. Linked from the rules page, the main nav, and global search. Meanwhile Claude Schefter is now wired into the AFL GroupMe via his own bot, filing breaking news on trades, big-money auction wins, and waiver claims the moment they cross the wire.",
+      "The League has had both of these for months. AFL was the kid eating cold cereal while everyone else got pancakes. Not anymore."
+    ],
+    "category": "new-feature",
+    "link": "/afl-fantasy/rules-chat",
+    "linkLabel": "Ask Roger an AFL question",
+    "icon": "whistle",
+    "image": "afl-ask-roger.webp",
+    "imageAlt": "Ask Roger AFL page showing the chat interface on the left with seeded Q&A cards about AFL rules, and Roger's personality card on the right with the red AFL theme accent",
+    "leagues": [
+      "afl"
+    ]
+  },
+  {
+    "id": "mock-draft",
+    "date": "2026-04-22",
+    "title": "The Mock Draft",
+    "summary": "Run a full rookie draft against the AI in about three minutes. Pick from your queue, swap in any source you trust — Sleeper, KTC, MFL ADP — and rehearse your strategy before draft day actually matters.",
+    "description": [
+      "Mock drafts in dynasty leagues used to mean either staring at FantasyPros' anonymized rookie pool with eleven strangers who'd disappear by round two, or convincing a group chat of league-mates to all hop on Discord at 9 PM on a Tuesday. The first option is a draft against bots that can't tell Tetairoa McMillan from Drake Maye. The second option is herding cats. Either way you'd burn an hour, get one bad result, and still have no idea what your board actually looks like under pressure.",
+      "The Mock Draft lobby lives at /theleague/mock-draft. Pick a timer (1, 3, 10, or 15 seconds — you're not here to think, you're here to stress-test), a round count, and how the AI picks. The board source defaults to your personal Queue from the live draft room, so the AI is genuinely drafting against your rankings instead of some generic ADP soup. You can override per team — give Pigskins your rank, give Cowboy Up the Sleeper board, give Mariachi Ninjas Chaos mode if you want to see what happens when somebody reaches for a punter in the second round. Three presets — All MFL, Mixed boards, Chaos mode — set every team in one click. Your own franchise is highlighted with a YOU badge so the seventeen-row table doesn't blur together. Hit Start Mock Draft and you're in.",
+      "Inside the room, only your slot uses the timer. Every other team picks instantly — there's no waiting on an AI to 'think.' If the AI grabs the player you wanted, hit Go Back and the slot reverts; you can rewind as far as you need to and replay from there. Pause if you need to grab a beer, Reset if you want to start fresh with the same settings. The Schefter Report doesn't see any of this — mock picks stay in your sandbox. Old sessions you don't need anymore? Hover any card in Active Sessions and a delete button appears. The rookie draft is coming up soon. This is the rehearsal."
+    ],
+    "category": "new-page",
+    "link": "/theleague/mock-draft",
+    "linkLabel": "Run a mock draft",
+    "icon": "draft-podium",
+    "image": "mock-draft.webp",
+    "imageAlt": "The Mock Draft lobby — Start a Mock Draft form with timer chips (1, 3, 10, 15 sec), round selector, draft order toggle, and a Board Settings card showing the per-team ranking source list. The Pigskins row is highlighted with a YOU badge and defaults to My Rank; every other team is set to Default.",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "tip-schefter-gets-louder",
+    "date": "2026-04-18",
+    "title": "Tip Schefter Gets Louder",
+    "summary": "The anonymous tip page is now a living surface — tipster scorecards, whisper-back threads, rumor reactions, hot topics, a live cooker timeline, and Tip of the Week badges. Still anonymous. Louder.",
+    "description": [
+      "The original Tip Schefter page was a fire-and-forget form. You'd drop a hunch into the void, Schefter would marinate it, and at some point a rumor would show up in the feed that may or may not have been yours. No feedback, no social proof, no reason to come back. It worked, but it sat there. The Rumor Mill was getting tips — one or two a week, from the same three owners — and the rest of the league had no idea the button even existed. Time to turn the lights on without compromising anonymity.",
+      "The tip page now has a personality. Submit and you'll see your daily cap chip tick down — 2 of 3 left today — and a Last Rumor Dropped card in the sidebar shows the newest thing Schefter printed with a link into the feed. The textarea placeholder rotates by topic: trade interest, roster gripe, bold prediction, beef (covering both league-wide grievances and the commish), and other. A collapsible Good Tip vs. What Schefter Prints card shows exactly how the fuzzing works with three worked examples so nobody's guessing whether their tip is going to leak their franchise. Rumor cards in the feed now have a four-verdict reaction row — 🔥 smoke, 💯 confirmed, 🤔 fake news, 📉 cooked — that stores reactions under the one-way tipster hash instead of a franchise id, so nobody can tell who reacted what. The admin rate-limit exemption is gone too: every user is capped at 3 tips per 24 hours, full stop, because any counter surface would've otherwise leaked who the commissioners are.",
+      "The real hook is the scorecard. Every tipster that actually produces a rumor gets a stable codename — Burner Phone, Back-Channel, Smoke Signal, Off the Record, The Whisper — that's unique per owner (no #N suffixes) and stable across sessions. Your Record shows your codename, your season count, your lifetime count, and any Tip of the Week badges you've earned. Top Tipsters This Season is a codename-only leaderboard: you'll see Hearsay at 7 rumors, Cold Case at 4, and you (hopefully) at the top. Nobody knows who Hearsay is except Hearsay. Whisper Back opens a mini tip form on any rumor card so you can add context to an existing thread — the scanner groups whisper-backs, Schefter opens the next post with 'Following up on yesterday's chatter…', and the thread has its own permalink page that renders the whole chain chronologically. Add a live cooker timeline ('Schefter is marinating 2 tips. Next rumor drops in 47m.'), a Hot Topics this Week chip row showing which topics are buzzing league-wide, and a weekly Tip of the Week ritual where the most-read rumor earns badges for the tipsters that seeded it, and the page stops being a drop-off. It becomes a hangout. Anonymously, of course."
+    ],
+    "category": "new-feature",
+    "link": "/theleague/schefter/tip",
+    "linkLabel": "Tip Schefter",
+    "icon": "commenting",
+    "image": "tip-schefter-engagement.webp",
+    "imageAlt": "The Tip Schefter page with the new tipster scorecard, top-tipsters leaderboard, live cooker timeline, hot topics chips, and a rumor card in the feed showing the four-verdict anonymous reaction bar",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "weekly-rollup-2026-03-30",
+    "date": "2026-03-30",
+    "title": "Weekly Fixes & Polish (Mar 25-25)",
+    "summary": "4 bug fixes and style improvements across other.",
+    "description": [
+      "This week's 4 bug fixes and polish improvements touched several areas of the site:",
+      "<strong>Other</strong> — Comment image uploads now work — images were being dropped between the composer and the API, so uploads appeared to succeed but images never showed on the posted comment. Team icons on The Board no longer have a blue circle background — they now match the transparent style used on Ask Roger. Image uploads no longer fail with a 413 error on large photos — images are now auto-compressed client-side before uploading via Vercel Blob's direct upload. Category icons on The Board now use SVG sprite icons (beer, gavel, wrench) instead of plain emoji text."
+    ],
+    "category": "bug-fix",
+    "link": "/theleague/whats-new",
+    "linkLabel": "See all updates",
+    "icon": "wrench",
+    "excludeFromHero": true,
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "submit-lineup",
+    "date": "2026-03-28",
+    "title": "Set Lineup",
+    "summary": "Set your starting lineup without leaving the site — tap to swap, shake to undo, and let the optimizer do the thinking.",
+    "description": [
+      "Setting lineups on MFL used to mean navigating to the MFL site, logging in again because your session expired (it always expires), clicking through three menus to find the lineup page, and then squinting at a list of player IDs with all the visual polish of a 2003 HTML form. If you wanted to check matchups, injury news, or your opponent's defense ranking, that was a separate browser tab. Or three. Coach Mode on the roster page helped with the research, but actually submitting the lineup still required the MFL pilgrimage.",
+      "The Set Lineup page brings lineup management home. Nine starter slots — QB, RB, WR, TE, three FLEX, PK, DEF — each showing projection, opponent, and FPA rank at a glance. Tap any slot to open the player drawer with your full bench, sorted by projection and decorated with coach data: spread, over/under, weather, recent scoring trends, and hot streak flames for anyone on a three-week heater. Swap a player in, see the slot flash green, and your change count updates live. The Set Optimal button auto-fills the best lineup from projections (or your custom rankings if you've set them). Made a mistake? Shake your phone to undo, or tap the undo toast on desktop. When you're ready, hit Submit and it posts directly to MFL — no tab-switching, no re-authentication, no decoding player IDs.",
+      "It's mobile-first because nobody's setting lineups from a desktop at 12:58 PM on Sunday. But if you are, it works there too."
+    ],
+    "category": "new-page",
+    "link": "/theleague/lineup",
+    "linkLabel": "Set your lineup",
+    "icon": "clipboard",
+    "image": "submit-lineup.webp",
+    "imageAlt": "The Set Lineup page showing nine starter slots with player photos, projections, and opponent matchup data, with the player selection drawer open on the right",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "2026-auction-recap",
+    "date": "2026-03-26",
+    "title": "The 2026 Auction Recap",
+    "summary": "Claude Schefter grades every franchise's auction haul — from the Pigskins' $32.75M spending spree to Dead Cap Walking's bargain bin strategy.",
+    "description": [
+      "The offseason auction wrapped and Claude Schefter immediately locked himself in the film room with a spreadsheet and a strong opinion. The result is a full-length feature article breaking down every franchise's auction strategy — who spent wisely, who overpaid, and who let Lamar Jackson slip through their fingers at $5M while fighting over wide receivers at $10M. If you participated in the auction and want to know whether your front office decisions were brilliant or reckless, Schefter has thoughts. He always has thoughts.",
+      "The recap covers the Big Spenders (Pacific Pigskins, $32.75M across twelve players), the Best Values (Lamar at $5M, Kyler at $4M, Barkley at $5M), the Overpays (Justin Jefferson at $9.8M, CeeDee at $9.5M, Amon-Ra at $10M), position spending trends, and franchise-by-franchise grades from A to C+. It's the kind of article you read once to see how your team did, and then read again to laugh at what your rivals spent. This is the first feature article from The Schefter Report — expect more throughout the season.",
+      "Money is nice, but championships are better. Schefter said that, and he's probably right."
+    ],
+    "category": "new-feature",
+    "link": "/theleague/news/sf_2026_auction_recap",
+    "linkLabel": "Read the recap",
+    "icon": "commenting",
+    "image": "schefter-report.webp",
+    "imageAlt": "The Schefter Report auction recap article showing Claude Schefter's analysis of the 2026 auction results",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "schefter-report",
+    "date": "2026-03-25",
+    "title": "The Schefter Report",
+    "summary": "Claude Schefter is on the beat — a league insider who tracks every trade, auction win, and waiver claim so you don't have to.",
+    "description": [
+      "Keeping up with league transactions used to require checking the MFL transaction log, which has all the personality of a database dump and the readability of a stock ticker from 1987. You'd see '0009 traded 14358,0524,FP_0009_2026_3 to 0011 for 14789,0525' and have to decode it like a war-time cipher just to find out who got fleeced. Half the league wouldn't notice a blockbuster trade until two weeks later when the new player showed up in someone's starting lineup.",
+      "The Schefter Report is a Bluesky-style social feed covering every transaction in the league. Claude Schefter — the league's AI beat reporter — breaks trades with full analysis and letter grades, reports auction wins with salary context, and logs waiver claims. Breaking-tier posts (trades, big-money auctions) get the full insider treatment: 'I'm told the Pacific Pigskins have agreed to a blockbuster deal...' Standard moves get a quick, punchy report. Minor claims get grouped into collapsible sections so they don't crowd the real news. The feed lives at /theleague/news with filter pills for Trades, Free Agency, and Auction — plus a widget on the homepage showing the last five posts.",
+      "Schefter scans for new transactions every hour, so the feed stays current without anyone lifting a finger. He's opinionated, he grades trades, and he's never wrong — or at least he's never admitted it. Think of him as your league's beat writer who actually reads the transaction log so you don't have to. Boom."
+    ],
+    "category": "new-page",
+    "link": "/theleague/news",
+    "linkLabel": "Read the feed",
+    "icon": "commenting",
+    "image": "schefter-report.webp",
+    "imageAlt": "The Schefter Report feed page showing Claude Schefter's persona header with avatar and bio, followed by a social feed of auction wins and trade reports with filter pills for All, Trades, Free Agency, and Auction",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "the-board",
+    "date": "2026-03-25",
+    "title": "The Board",
+    "summary": "The league finally leaves the 2000s. A modern discussion board replaces The League message board — no more phpBB3, no more forgotten passwords, and no more posting contracts only to find out the board's been down for a week.",
+    "description": [
+      "Let's talk about The League message board. The one powered by phpBB3 — the forum software that peaked the same year as flip phones and has aged about as gracefully. And the login experience — genuinely a gauntlet. You'd try to log in, realize you forgot your password, request a reset, then discover you couldn't remember your username either. So you'd message the Commissioner, who'd have to dig through the phpBB admin panel — a UI designed by people who actively resented their users — just to tell you your new password is 'pigskins_rule_07.' An entire afternoon, gone.",
+      "The Board is a full discussion platform built directly into the site — no external forum, no separate login, no phpBB admin panel, no password you set in 2009 and haven't thought about since. Post an idea, tag it as a rule change, website suggestion, or general topic, and other owners can comment, react with emoji, and actually engage in the same decade the conversation started. Each post gets its own thread with nested replies, image uploads, and an emoji reaction bar. The Commissioner can set statuses — Under Review, Approved, Rejected, Tabled — so proposals don't disappear into the void like they did when they were buried under three pages of off-topic replies about someone's fantasy football podcast. Website suggestions get a structured form that captures the page, the problem, and the desired behavior — and here's where it gets interesting: an army of AI agents is standing by to actually build the thing. Your suggestion isn't just a note in a backlog. It's a work order. Describe what you want, and the dev team — which at this point is mostly Claude wearing different hats — gets to work.",
+      "Gone are the days of posting your contract declarations to the message board, only to realize a week later that the board had quietly stopped working and nobody noticed. Rule changes still require a 75% vote per the constitution — The Board doesn't change that. But now the discussion, the reactions, and the Commissioner's ruling all live in one place instead of scattered across a dead phpBB3 instance, a group chat, and someone's DMs. Pour one out for The League message board. It survived the Obama administration, two league expansions, and an era where Comic Sans and Times New Roman coexisted on the same page. It earned its retirement."
+    ],
+    "category": "new-page",
+    "link": "/theleague/suggestions",
+    "linkLabel": "Visit The Board",
+    "icon": "commenting",
+    "image": "the-board.webp",
+    "imageAlt": "The Board page showing league discussion posts with emoji reactions and comment counts, category filter pills, and a sidebar with posting guidelines and an Ask Roger promo",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "ask-roger",
+    "date": "2026-03-24",
+    "title": "Ask Roger",
+    "summary": "An AI rules expert who's read the constitution cover to cover — so you don't have to argue about franchise tag compensation at 11 PM.",
+    "description": [
+      "Every dynasty league eventually develops its own oral tradition — half-remembered rules about extension windows, conflicting interpretations of compensatory pick eligibility, and that one guy who swears the taxi squad salary thing works differently than it actually does. Until now, settling these disputes required either reading all 27 sections of the constitution or pinging the Commissioner, who was probably asleep, busy, or both.",
+      "Ask Roger is an AI-powered rules Q&A board where you can type a question in plain English and get an answer grounded in the actual league constitution. Roger has read every section, every footnote, and the fine print about compensatory picks that even the Commissioner forgot about. He'll tell you the franchise tag costs your 1st and 2nd round picks, that practice squad players count at 50% salary, and that the playoff tiebreaker goes H2H → Division Record → All-Play before anyone reaches for a coin. The page ships with 32 pre-seeded Q&As covering the most common and most arcane rules, and every new question becomes part of the living archive. If Roger doesn't know something, he'll say so — which is more than you can say for most rules lawyers.",
+      "Roger's answers are *probably* right, but he's a chatbot, not the Commissioner. For definitive rulings, ask the real one. For everything else — salary escalation math at midnight, extension eligibility windows, whether you can start a player on bye — Roger's got you. Each question costs about a dime to answer, so if he saved you a trip to the rulebook, consider giving him a hug. Or PayPal. Either works."
+    ],
+    "category": "new-page",
+    "link": "/theleague/rules-chat",
+    "linkLabel": "Ask Roger a question",
+    "icon": "gavel",
+    "image": "ask-roger.webp",
+    "imageAlt": "Ask Roger page showing a two-column layout with AI-answered rules Q&A cards on the left and Roger's personality card on the right",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "projected-free-agents",
+    "date": "2026-03-24",
+    "title": "Projected Free Agents",
+    "summary": "A report showing every player in their final contract year — the ones who'll hit free agency after the season ends, ranked by projection with salary and stats.",
+    "description": [
+      "Planning for free agency used to mean scrolling through sixteen roster pages, mentally flagging every player with a '1' in the contract years column, and trying to remember which ones were actually good. If you wanted salary context or projections alongside that list, you were building your own spreadsheet — and by the time you finished, someone else had already made the trade you were planning.",
+      "The Projected Free Agents report pulls every rostered player with one year remaining on their contract into a single table, sorted by projected points. You get their salary, age, last season's stats, and PPG — plus your imported dynasty rankings if you've got them. Filter by position, search by name, or narrow it down to a specific team's expiring players. The summary bar at the top shows the total count, total salary on the chopping block, and average age of the class.",
+      "Think of it as your offseason scouting report for the players who are about to become available — whether you're planning to re-sign your own guys, target someone else's expiring asset in a trade, or just want to know which teams are about to lose half their roster."
+    ],
+    "category": "new-page",
+    "link": "/theleague/projected-free-agents",
+    "linkLabel": "View the report",
+    "icon": "binoculars",
+    "image": "projected-free-agents.webp",
+    "imageAlt": "Projected Free Agents report showing a sortable table of players in their final contract year with salary, projected points, and position filter pills",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "search-page",
+    "date": "2026-03-23",
+    "title": "Search",
+    "summary": "A searchable index of every page on the site — because even the person who built it can't always remember where everything is.",
+    "description": [
+      "Finding a page on this site used to require one of three things: knowing exactly where it was in the navigation drawer, remembering the URL, or asking the commissioner like he's some kind of fantasy football concierge. The site has over 30 pages across rosters, contracts, reports, and tools — and if you didn't already know the League Summary existed, you weren't going to stumble into it by accident.",
+      "Search is a searchable, categorized index of every page on the site. Type 'money' and you'll get Salary Analytics, Roster/Salary, and the Salary Archive — ranked by which pages people actually visit most. Type 'bracket' and Playoffs surfaces immediately. Filter by category chips — Popular, My Team, Reports, Tools, Info — or just browse the grid. Each card shows the page title, a short description, and the top search tags, so you can find what you need even if you don't know what it's called.",
+      "Every new page that gets added to the site automatically gets a Search entry with its own set of search keywords. Think of it as the site's table of contents, except it actually updates itself and doesn't require you to scroll past 200 pages of appendices to find the one thing you wanted."
+    ],
+    "category": "new-page",
+    "link": "/theleague/search",
+    "linkLabel": "Try the search",
+    "icon": "search",
+    "image": "search-page.webp",
+    "imageAlt": "Search page showing a searchable grid of page cards with category filter chips and search input",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "owner-activity",
+    "date": "2026-03-23",
+    "title": "Owner Activity Report",
+    "summary": "See exactly when each franchise owner last visited the site — ranked from most to least active, with color-coded status indicators.",
+    "description": [
+      "For years, figuring out whether a trade partner was actually alive required the fantasy football equivalent of a wellness check — send a message, wait three days, check if they'd made a waiver claim this decade, then resign yourself to the possibility that your blockbuster offer was sitting in an inbox nobody had opened since the Falcons blew a 28-3 lead.",
+      "The Owner Activity page ranks all 16 franchises by their last visit to theleague.us, complete with green/yellow/red status dots so you can tell at a glance who's been grinding the waiver wire at 2 AM and who apparently thinks the offseason is a time for 'going outside.' Each team's roster header now shows a subtle last-seen timestamp too — because knowing whether someone will actually respond to your trade offer before the auction starts is, technically, useful information.",
+      "Built on the same real-time tracking that'll power future features like trade builder activity badges and commissioner engagement alerts. Think of it as a league-wide pulse monitor — except instead of a heartbeat, it's measuring how recently someone refreshed their salary cap page at work."
+    ],
+    "category": "new-page",
+    "link": "/theleague/activity",
+    "linkLabel": "Check who's active",
+    "icon": "activity",
+    "image": "owner-activity.webp",
+    "imageAlt": "Owner Activity page showing a 30-day line chart of daily page views per owner with 16 color-coded team lines, legend, and popular pages section",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "auction-view",
+    "date": "2026-03-20",
+    "title": "Live Auction on Free Agents",
+    "summary": "The Free Agent page now has a dedicated Auction view with live bid tracking — see every active bid, who's winning, current prices, and how much time is left, all updated every 60 seconds.",
+    "description": [
+      "Tracking a live auction used to mean camping on MFL's auction page in a second tab, refreshing every few minutes, and hoping you didn't miss the 36-hour deadline on that sleeper WR you'd been eyeing since the RSP dropped. The new Auction view puts the entire bid board right next to the player data you already use.",
+      "Switch to Auction view and you'll see Current Bid, High Bidder, Time Left with a live countdown, and a Place Bid button for every nominated player. The table auto-sorts by Time Left so expiring bids surface to the top. Urgency tiers kick in as deadlines approach — amber when closing, red with a warning icon under six hours, and a pulsing alert in the final hour. Countdowns tick every 15 seconds normally and accelerate to 5-second updates when things get critical.",
+      "The Value tab also picked up live bid data — a Bid column right next to your estimated cost and surplus value analysis shows exactly what each player sold for. Won auctions appear in bold so you can spot completed sales at a glance. Your My Rank composite and average rank now appear alongside the money columns, so you can cross-reference your board with market prices without switching views.",
+      "Data refreshes automatically every 60 seconds from MFL's transaction feed. A freshness indicator in the toolbar tells you exactly how current your view is — click it to force a refresh if you're feeling impatient. The view is available to all league members, not just the commissioner, because everyone deserves to know they're about to get outbid."
+    ],
+    "category": "new-feature",
+    "link": "/theleague/players",
+    "linkLabel": "Open auction view",
+    "icon": "binoculars",
+    "image": "auction-view.webp",
+    "imageAlt": "Free Agent page showing the Auction view with live bid amounts, countdown timers, and Place Bid buttons",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "weekly-rollup-2026-03-16",
+    "date": "2026-03-16",
+    "title": "Weekly Fixes & Polish (Mar 13-14)",
+    "summary": "3 bug fixes and style improvements across trade builder, league summary.",
+    "description": [
+      "This week's 3 bug fixes and polish improvements touched several areas of the site:",
+      "<strong>Trade Builder</strong> — Trade submissions now work for all league owners, not just the commissioner — the MFL authentication cookie was being silently stripped during cross-origin redirects, causing every trade proposal to fail. Trade Builder page and My Trades panel now use the site-wide editorial design system — consistent section titles, design tokens, typography scale, and focus states across all trade builder components.",
+      "<strong>League Summary</strong> — League Summary page now uses the site-wide design token system — consistent colors, typography, spacing, and improved accessibility with keyboard-navigable sorting and screen reader announcements."
+    ],
+    "category": "bug-fix",
+    "link": "/theleague/whats-new",
+    "linkLabel": "See all updates",
+    "icon": "wrench",
+    "excludeFromHero": true,
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "salary-analytics-redesign",
+    "date": "2026-03-15",
+    "title": "Salary Analytics Goes Editorial",
+    "summary": "The position salary breakdown page traded its spreadsheet energy for proper editorial design — metric cards, detail rows, and tables that actually look like they belong here.",
+    "description": [
+      "The Salary Analytics page used to have the visual sophistication of a mid-2000s fantasy football message board. Six cards with numbers, some inline styles that fought each other, and a layout that treated mobile users like an afterthought. It worked, technically, in the same way that duct-taping your bumper works — functional, but you wouldn't invite anyone to look at it.",
+      "Now it's built on the editorial design system. Each position gets a proper card with a 3-column metrics grid showing franchise tag, extension, and team option thresholds at a glance. Detail rows break out starter averages and medians with the uppercase-label-plus-value pattern. The Top Earners tables use the standard editorial header style — rounded corners, gray-50 backgrounds, proper spacing between the header and the first row. Everything scales cleanly on mobile thanks to container query units, so those seven-figure salary numbers don't overflow their cards on a phone screen.",
+      "It's also fully accessible now — ARIA live regions announce data changes when you switch seasons or weeks, the tables have proper column headers, and keyboard navigation works throughout. The Export to Excel button and archive link are still right where you'd expect them. Same data, same functionality, dramatically better presentation."
+    ],
+    "category": "enhancement",
+    "link": "/theleague/salary",
+    "linkLabel": "Check salary thresholds",
+    "icon": "bar-chart",
+    "image": "salary-analytics-redesign.webp",
+    "imageAlt": "Salary Analytics page showing editorial-styled position cards with metric grids, detail rows, and top earner tables",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "salary-history-redesign",
+    "date": "2026-03-15",
+    "title": "Salary History Gets the Editorial Treatment",
+    "summary": "The historical salary trends chart went from bare-bones to best-in-class — tabbed views, accessible data tables, and a design that actually belongs on this site.",
+    "description": [
+      "The salary history chart used to look like it wandered in from a different website. A basic Chart.js line graph with default styling, a legend that did the bare minimum, and zero personality. It got the job done the way a gas station sandwich gets the job done — technically, but you wouldn't brag about it.",
+      "Now it's a proper editorial feature. A segmented control lets you toggle between Franchise Tag, Extension, and Team Option trends with smooth data transitions. The custom legend and tooltip follow the site's design language — muted steel-and-sienna palette, uppercase micro labels, tabular numbers that actually align. Every chart type has a collapsible data table underneath for accessibility and for the spreadsheet people who want the raw numbers. The whole thing is keyboard-navigable, screen-reader-friendly, and responsive down to mobile without losing readability.",
+      "It's also the first chart in the editorial design system, which means every future chart starts from this foundation. The palette tokens, the tooltip pattern, the legend style — all reusable. Think of it less as a page redesign and more as the chart department finally opening for business."
+    ],
+    "category": "enhancement",
+    "link": "/theleague/salary-history",
+    "linkLabel": "View salary trends",
+    "icon": "standings-2",
+    "image": "salary-history-redesign.webp",
+    "imageAlt": "Salary history page showing a styled line chart with Franchise Tag trends, segmented control tabs, custom legend, and collapsible data table",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "auction-command-center",
+    "date": "2026-03-15",
+    "title": "Auction Command Center",
+    "summary": "The homepage now transforms into an auction war room during free agent season — every link you need, one click away.",
+    "description": [
+      "During auction season, you used to open the homepage, stare at whatever feature announcement happened to be there, and then manually navigate to MFL to place a bid, check results, or see who's left. It had all the workflow efficiency of driving to the airport and then remembering you left your passport at home. Every. Single. Time.",
+      "Now, the moment free agent auction season opens, the homepage automatically becomes an Auction Command Center. Place Auction Bid gets the big green button treatment front and center. Auction Summary, Auction Details, Completed Auctions — all the MFL tools are one click away. Plus quick links to Free Agents, Trade Builder, Rosters, Historical Salary Trends, and the Calendar so you can plan your next move without tab-surfing. Quick Rules are right there too, because nobody remembers the bid timer rules until they've already lost an auction.",
+      "After the initial 30-day hero window, the homepage goes back to normal but keeps a compact auction strip with your most-used links — because auction season runs through August and you'll still need those shortcuts in July. The same system kicks in for the Rookie Draft too, swapping in draft-specific links and a purple theme when draft day rolls around. Think of it as the homepage finally paying attention to what time of year it is."
+    ],
+    "category": "new-feature",
+    "link": "/theleague",
+    "linkLabel": "Visit the homepage",
+    "icon": "gavel",
+    "image": "auction-hero.webp",
+    "imageAlt": "Homepage showing the Auction Command Center with Place Auction Bid button, quick rules, and eight quick links for auction tools",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "trade-submission",
+    "date": "2026-03-13",
+    "title": "Submit Trades from the Trade Builder",
+    "summary": "Build a trade, review the details, and send the proposal — all without leaving theleague.us.",
+    "description": [
+      "The trade builder used to be a very fancy calculator. You could model trades, compare cap impact, and generally feel very smart about your roster decisions — but when it came time to actually pull the trigger, you still had to open MFL in another tab, navigate their labyrinthine trade interface, and manually re-enter everything you'd just spent ten minutes perfecting. It had all the workflow efficiency of writing a grocery list and then leaving it on the kitchen counter.",
+      "Now you can submit trade proposals directly from the trade builder. Click 'Submit Trade' and you'll get a confirmation modal that shows both sides of the deal — players, draft picks, cap impact — so you can take one last look before committing to whatever questionable decision you're about to make. Add an optional message (diplomacy points matter), hit send, and the proposal goes straight to MFL. The other owner gets it instantly.",
+      "But wait, there's more. The new 'My Trades' panel lets you manage all your pending proposals without ever leaving the page. Accept, reject, withdraw, or counter-offer — all with inline confirmation so you don't accidentally accept a trade that sends your franchise quarterback for a conditional 2028 seventh-rounder. Counter-offers load the original trade right back into the builder so you can adjust and re-submit. It's the full trade lifecycle, from 'I have an idea' to 'I regret this already.'"
+    ],
+    "category": "new-feature",
+    "link": "/theleague/trade-builder",
+    "linkLabel": "Open the Trade Builder",
+    "icon": "transactions-2",
+    "image": "trade-submission.webp",
+    "imageAlt": "Trade builder showing the trade confirmation modal with both sides of a proposed trade, cap impact metrics, and a submit button",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "login-redesign",
+    "date": "2026-03-12",
+    "title": "Login Page Redesign",
+    "summary": "The sign-in page got the editorial treatment — clean labels, proper spacing, and a form that finally looks like it belongs on this site.",
+    "description": [
+      "The old login page had all the visual personality of a hospital check-in kiosk. Two input fields, a button, and the quiet implication that design was somebody else's problem. It worked, technically, the same way a folding chair works at a dinner party — functional, sure, but nobody's impressed.",
+      "The new sign-in page follows the same editorial design language as the rest of the site: uppercase micro-labels, considered spacing, a CTA button that actually looks like it wants to be clicked, and a security note that gently reminds you we never store your password. The form is also built as a reusable component now — meaning it can drop into a modal on any page without a single line of duplicate code. Accessibility got the full treatment too: proper focus rings, ARIA error announcements, and keyboard navigation that doesn't fight you.",
+      "It's a login page. It shouldn't need a press release. But it also shouldn't look like it was built during a lunch break in 2009."
+    ],
+    "category": "enhancement",
+    "link": "/theleague/login",
+    "linkLabel": "See it in action",
+    "icon": "lock",
+    "image": "login-redesign.webp",
+    "imageAlt": "Redesigned login page with editorial-style uppercase labels, clean input fields, and a prominent Sign In button following the site's design language",
+    "excludeFromHero": true,
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "weekly-rollup-2026-03-09",
+    "date": "2026-03-09",
+    "title": "Weekly Fixes & Polish (Mar 2-2)",
+    "summary": "2 bug fixes and style improvements across free agents.",
+    "description": [
+      "This week's 2 bug fixes and polish improvements touched several areas of the site:",
+      "<strong>Free Agents</strong> — Free Agents page now uses the site's editorial design language: table headers match the clean gray-50 style used throughout, section labels have the signature left-border accent, filter panel labels are consistently styled, and the Clear Filters button no longer looks like it's about to revoke your fantasy license. Free Agents hero section redesigned with a broadcast-style diagonal photo cut inspired by ESPN and FOX Sports graphics — rotating NFL player photos now fill a parallelogram with accent stripes along both edges instead of sitting in a small card."
+    ],
+    "category": "bug-fix",
+    "link": "/theleague/whats-new",
+    "linkLabel": "See all updates",
+    "icon": "wrench",
+    "image": "weekly-rollup-2026-03-09.webp",
+    "imageAlt": "Free Agents page showing broadcast-style diagonal player photo, editorial table headers, and position filter tabs",
+    "excludeFromHero": true,
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "contract-declarations",
+    "date": "2026-03-07",
+    "title": "Contract Declarations",
+    "summary": "Contract management is built into your roster now. Declare years on new acquisitions, override rookie deals, exercise team options, and extend rookies — no message board required.",
+    "description": [
+      "For nineteen years, contract changes in this league have followed the same ritual: post to the message board, tag the commissioner, wait somewhere between two hours and two months, then check back to see if anything actually happened. It had all the efficiency of faxing a lunch order. Missed a deadline because you forgot your message board password and the commish was at his kid's soccer game? Tough. Forgot to declare years on a waiver pickup because you were busy living your life? That's a one-year contract now, and nobody's losing sleep over it except you.",
+      "Contract declarations are now built directly into the roster page. Every contract action — from declaring years on a new acquisition to exercising a first-round team option — lives right where you already manage your team. No message board posts. No waiting. Deadlines are tracked automatically, countdowns tick in real time, and the system knows exactly which players are eligible for what. The goal is near-real-time contract updates: you make the call, the league reflects it.",
+      "<strong>A note on the beta:</strong> This is live, but it's running with training wheels. Every declaration you submit goes through a commissioner approval step before it hits the books. This is intentional — we're validating the process, testing the edge cases, and making sure nobody accidentally signs DeAndre Hopkins to a five-year deal when they meant to click three. Once we're confident everything is airtight, the approval step goes away and deadlines enforce themselves. In the meantime, double-check your submissions on the <a href='/theleague/contracts/manage'>contract declarations page</a>. Trust, but verify.",
+      {
+        "type": "image",
+        "src": "contracts-roster-demo.webp",
+        "alt": "Roster page in GM mode with demo players showing contract year chips, salary projections, TO badges, and deadline countdowns across the Years and salary columns",
+        "caption": "Demo mode adds four sandbox players to your roster — each one representing a different declaration type."
+      },
+      "<strong>The Tutorial: How It Works</strong> — <em>(Retired July 2026 — the tutorial served its purpose once declaration season wrapped.)</em> During the beta there was a \"How It Works\" button on the right edge of the roster page that walked you through everything in four steps. It's a guided tutorial with demo players, real modals, and zero consequences. Nothing you click in the demo actually submits. Think of it as voluntary OTAs for contract management.",
+      {
+        "type": "image",
+        "src": "contracts-tutorial-step1.webp",
+        "alt": "Tutorial Step 1 showing four contract declaration types: New Acquisition, Rookie Override, Team Option, and Rookie Extension, each with their default terms, options, and deadline windows",
+        "caption": "Step 1 breaks down the four declaration types — defaults, options, and deadlines at a glance."
+      },
+      "<strong>New Acquisition</strong> — Every player added via waiver bid or free agent signing defaults to a 1-year contract. You can declare 2 to 5 years within a 24-hour window during the season or 48 hours in the offseason. The blue year chip on your roster shows the current contract length and a live countdown to your deadline. Click it, pick your years, and you're done. Miss the window and the default sticks.",
+      {
+        "type": "image",
+        "src": "contracts-new-acquisition.webp",
+        "alt": "Contract declaration modal for DeAndre Hopkins showing a New Acquisition type, $500K salary, 1-year current contract, deadline countdown at 17 hours, and year selection buttons for 2 through 5 years",
+        "caption": "Hopkins as a new acquisition — $500K salary, 17 hours to declare, options from 2 to 5 years."
+      },
+      "<strong>Rookie Override</strong> — All drafted rookies start on a 4-year Rookie Contract (RC). If you'd rather commit to fewer years — maybe you're not sold on that third-round tight end lasting four seasons — you can override the default down to 1, 2, or 3 years. The deadline is the third Sunday in August, which gives you most of the offseason to decide. The blue chip shows the 4-year default with a day countdown to the cutoff.",
+      {
+        "type": "image",
+        "src": "contracts-rookie-override.webp",
+        "alt": "Contract declaration modal for Fernando Mendoza showing a Rookie Override type, $3.25M salary, 4-year RC contract, 162-day deadline, and year selection buttons for 1 through 3 years",
+        "caption": "Mendoza's rookie override — reduce from the 4-year default to 1, 2, or 3 years before August."
+      },
+      "<strong>Team Option</strong> — First-round picks carry a TO (Team Option) badge, which means before Year 4, you have a decision to make. The action button next to the player gives you three paths: exercise the 5th-year team option at the top-10 positional salary average, extend the rookie deal by two years using the extension formula, or do nothing and let the contract play out. This is the NFL-style decision point that separates dynasty thinkers from dynasty hopers.",
+      {
+        "type": "image",
+        "src": "contracts-team-option.webp",
+        "alt": "Contract action modal for Hailmary, Hank showing Step 1 of the team option flow with four choices: Team Option at top 10 position average, Rookie Extension for 2 additional years, Cut Player, or Trade Player",
+        "caption": "Hailmary's team option — exercise the 5th year, extend the rookie deal, cut, or trade."
+      },
+      "<strong>Rookie Extension</strong> — Drafted rookies on RC contracts who haven't hit Year 4 yet are eligible for a 2-year extension. The salary formula mirrors the veteran extension calculation: it factors in the top-5 positional salary average and spreads the value across the extended years. The action button walks you through the math — extension value per year, the new combined salary, and a year-by-year projection with 10% annual escalation baked in.",
+      {
+        "type": "image",
+        "src": "contracts-rookie-extension.webp",
+        "alt": "Contract action modal for Misack, Buck showing the rookie extension flow with salary formula breakdown and year selection",
+        "caption": "Misack's rookie extension — the formula, the projection, and the decision, all in one modal."
+      },
+      "<strong>Reading the Board</strong> — You don't need to memorize any of this. The roster page marks every eligible player automatically. Blue year chips mean a declaration is available — click to open. TO badges on first-round picks signal the team option decision. Three-dot action buttons appear next to players with multiple paths (extend, option, cut, trade). Deadline badges count down in real time, shifting from days to hours to a red urgent state as time runs out. If a player is eligible for something, you'll see it.",
+      {
+        "type": "image",
+        "src": "contracts-tutorial-step3.webp",
+        "alt": "Tutorial Step 3 showing four mock roster rows demonstrating how eligible players are marked with blue year chips, TO badges, action buttons, and deadline countdowns",
+        "caption": "The tutorial's 'Reading the Board' step — every visual cue explained with real examples."
+      },
+      "<strong>What Happens After You Submit</strong> — Your declaration lands in the commissioner's review queue. During this beta period, every submission gets a manual once-over before it's applied to MFL. You'll see a pending status on your roster, and once approved, the contract updates automatically — salary adjustments, year changes, designation updates, all synced. Rejected declarations get flagged with a reason so you can resubmit if needed.",
+      {
+        "type": "image",
+        "src": "contracts-manage.webp",
+        "alt": "Commissioner contract declarations page showing the pending review queue, status counters for pending, approved, rejected, and applied declarations, and the recent decisions history",
+        "caption": "The commissioner's view — pending review queue, status dashboard, and decision history."
+      },
+      "This replaces the message board for contract changes. No more \"hey commish, can you update Hopkins to 3 years\" posts that get buried under trade chatter and trash talk. Open your roster, click the chip, make the declaration. The demo is there if you want to practice first — four players, four scenarios, zero commitments. And if something looks off after you submit, the <a href='/theleague/contracts/manage'>declarations page</a> shows every submission, its status, and whether it's been applied. Use it. That's what it's there for."
+    ],
+    "category": "new-feature",
+    "link": "/theleague/rosters",
+    "linkLabel": "Open your roster",
+    "icon": "clipboard",
+    "image": "contracts-hero-modal.webp",
+    "imageAlt": "Contract declaration modal for DeAndre Hopkins showing salary, deadline countdown, and year selection options over the roster page",
+    "pinToHero": true,
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "weekly-rollup-2026-03-02",
+    "date": "2026-03-02",
+    "title": "Weekly Fixes & Polish (Feb 24-Mar 1)",
+    "summary": "6 bug fixes and style improvements across navigation & routing, what's new, rosters.",
+    "description": [
+      "This week's 6 bug fixes and polish improvements touched several areas of the site:",
+      "<strong>Navigation & Routing</strong> — Drawer links for Trade Builder, Import Rankings, League Calendar, and League Summary now open reliably on theleague.us again..",
+      "<strong>What's New</strong> — Category badges on What's New cards with thumbnails are now vertically centered on the border at all screen sizes.",
+      "<strong>Rosters</strong> — Opponent average and rank columns in the player modal weekly stats now show real data from MFL instead of placeholder values. Draft pick numbers on the League Planner now show the correct positions from MFL instead of approximations from standings. Extension candidates and franchise tag options on the League Planner now show only your team's players instead of candidates from every team in the league. Rookie and draft prospect headshots now show their college photo instead of the generic placeholder across Free Agents, Rosters, Draft Predictor, and Trade Builder."
+    ],
+    "category": "bug-fix",
+    "link": "/theleague/whats-new",
+    "linkLabel": "See all updates",
+    "icon": "wrench",
+    "excludeFromHero": true,
+    "image": "weekly-rollup-2026-03-03.webp",
+    "imageAlt": "Fernando Mendoza's player details modal showing his Indiana college headshot loaded via the new college headshot fallback",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "free-agents-redesign",
+    "date": "2026-02-28",
+    "title": "Free Agents, From Scratch",
+    "summary": "The Free Agents page got rebuilt from the ground up — hero banner, college logos, advanced filters, and enough sorting options to make a spreadsheet jealous.",
+    "description": [
+      "The old Free Agents page was functional the way a phone book is functional — technically all the information was there, but finding what you wanted required patience, squinting, and a vague sense that there had to be a better way. Sorting was limited, filtering was nonexistent, and if you wanted to compare a player's snap count to their draft pedigree you were toggling between tabs like it was 2011.",
+      "The rebuilt page starts with a rotating hero banner featuring players from the available pool, because even a research tool deserves a little curb appeal. Below that, position pills give you instant counts — 86 QBs, 132 RBs, 211 WRs — and a search bar handles the 'I know who I want' moments. The new Filters panel lets you slice by NFL team, age range, height, weight, experience, and draft round, all collapsible so it stays out of your way when you don't need it. The Stats view packs in everything from college logos to snap percentages, and the Rankings view syncs with your imported rankings so you can sort by your own board. Every column is sortable, every row opens the redesigned player modal, and the whole thing remembers your last view preference.",
+      "Think of it less as a free agent list and more as a scouting department that fits in a browser tab. Use it before the auction to find the undervalued 26-year-old WR2 nobody's talking about. Or use it after to confirm that yes, you did in fact overpay for a 30-year-old running back. The data doesn't lie — it just waits patiently for you to ask the right question."
+    ],
+    "category": "enhancement",
+    "link": "/theleague/players",
+    "linkLabel": "Scout some free agents",
+    "icon": "binoculars",
+    "image": "free-agents-redesign.webp",
+    "imageAlt": "Redesigned Free Agents page with broadcast-style diagonal photo hero, editorial position filters, and sortable stats table showing top available players",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "player-details-modal-redesign",
+    "date": "2026-02-28",
+    "title": "Player Modal, Reimagined",
+    "summary": "The player details modal got the editorial treatment — less scrolling, more answers, and a layout that actually respects your time.",
+    "description": [
+      "The old player details modal was the informational equivalent of a junk drawer. Six sections, equal visual weight, the data you actually cared about — weekly results — buried below height, weight, and birthdate like some kind of NFL combine scouting report from 2004. Want to know if a free agent is worth picking up? That'll be four scrolls and a squint, please.",
+      "The redesigned modal flips the hierarchy entirely. At the top: a clean hero section with the player's headshot, name, team, and age — everything you need to confirm you clicked the right guy. Below that, three metric cards give you the instant 'worth it' signal: total fantasy points, points per game, and contract status. Then the weekly results table — promoted from the basement to prime real estate — with color-coded matchup difficulty, compact rows for unplayed weeks, and your fantasy manager's face in the status column. Supporting details like height, weight, draft pedigree, and contract breakdown are still there, just tucked into a compact section at the bottom where they belong.",
+      "The whole thing works on mobile too — slides up as a bottom sheet, hides the less-useful columns, and keeps the information you actually open a modal to see front and center. Click any player name on the Free Agents page and see for yourself. Or don't, and keep scrolling past someone's college to find out if they scored points last week."
+    ],
+    "category": "enhancement",
+    "link": "/theleague/players",
+    "linkLabel": "Try it on Free Agents",
+    "icon": "user",
+    "excludeFromHero": true,
+    "image": "player-details-modal.webp",
+    "imageAlt": "Redesigned player details modal showing Joe Burrow's profile with hero section, metric cards, and weekly results table",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "dead-money-awards",
+    "date": "2026-02-26",
+    "title": "The Dead Money Awards",
+    "summary": "Finally, a page dedicated to celebrating the league's worst financial decisions. You know who you are.",
+    "description": [
+      "For years, the GM MVP Awards have been handing out trophies to the shrewd, the lucky, and the suspiciously well-informed. Meanwhile, the rest of you have been quietly lighting salary cap on fire and hoping nobody noticed. Well, someone noticed. The Dead Money Awards are here to immortalize every overpay, every busted contract, and every player who collected a paycheck and contributed exactly nothing in return.",
+      "The Jerry Jones Award goes to the GM whose best possible starting lineup still managed to be the worst value in the league — because spending $32 million to score fewer points than a team spending half that is a special kind of talent. The Brock Osweiler Award honors the individual player who burned the most salary per point scored, named after the QB who was so bad the Texans literally paid the Browns a second-round pick to take his contract away. And then there's the Zero-Point Hall of Shame: rostered players with real salary who scored exactly zero points. Not one. Not a half-point garbage time catch. Zero.",
+      "Every season is covered, every position has its worst, and the year filter lets you relive the financial mismanagement of seasons past. Think of it as a public service — or at least a cautionary tale for auction day. Check who's on the list before you bid. Or don't, and see yourself here next year."
+    ],
+    "category": "new-page",
+    "link": "/theleague/dead-money",
+    "linkLabel": "See who made the list",
+    "icon": "tombstone",
+    "image": "dead-money-awards.webp",
+    "imageAlt": "Dead Money Awards page showing the league's worst contracts and overpays by season",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "pwa-app",
+    "date": "2026-02-26",
+    "title": "The League Has an App Now",
+    "summary": "That's right. A nineteen-year-old fantasy football league has its own app. Install it to your home screen and try to act surprised.",
+    "description": [
+      "Let's address the elephant in the room: yes, a sixteen-team dynasty fantasy football league that has existed since 2007 now has its own dedicated app. Not a shared app. Not a link to MFL's mobile site that looks like it was designed for a Blackberry. An actual, installable, icon-on-your-home-screen app, sitting right there between Instagram and whatever meditation app you downloaded in January and opened once. The audacity is not lost on us.",
+      "Now, before you start drafting your acceptance speech for the App Store — it's not in the App Store. It's a Progressive Web App, which means you install it straight from your browser. On iPhone, hit the share button and tap \"Add to Home Screen.\" On Android, tap the three-dot menu. On desktop, look for the install icon in Chrome's address bar. No downloads, no updates, no 47 permission requests asking for access to your contacts, camera, and existential dread. It just works.",
+      "Here's what the app does right now: it logs you in, remembers who you are for 90 days, defaults every roster page to your team, and highlights your franchise across the site. That's it. That's the app. We built an entire installable application so you could stop scrolling through a dropdown to find your own team. In the future, this is where lineup submissions, free agent bidding, and other MFL actions will live — but for now, it's a very fancy, very persistent bookmark that knows your name. Install it anyway. You know you want to."
+    ],
+    "category": "new-feature",
+    "link": "/theleague/whats-new/pwa-app",
+    "linkLabel": "Read more",
+    "icon": "home",
+    "image": "pwa-app.webp",
+    "imageAlt": "The League installed as a Progressive Web App on a mobile home screen",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "weekly-rollup-2026-02-24",
+    "date": "2026-02-24",
+    "title": "Weekly Fixes & Polish (Feb 17-23)",
+    "summary": "20 bug fixes and style improvements across navigation & routing, rosters, rankings, design system & theming, and more.",
+    "description": [
+      "This week's 20 bug fixes and polish improvements touched several areas of the site:",
+      "<strong>Navigation & Routing</strong> — URL rewriting now uses Astro middleware instead of Vercel rewrites for more reliable page routing. The /theleague path prefix is now hidden on theleague.us so URLs are cleaner (e.g., theleague.us/rosters instead of theleague.us/theleague/rosters). Mobile and tablet header now stacks nav icons below the logo for a tidier layout.",
+      "<strong>Rosters</strong> — Roster page now shows a random team for new visitors instead of always defaulting to the same team.",
+      "<strong>Rankings</strong> — Removed extra right padding from composite ranking columns for tighter alignment. Ranking column border styles refined for better visual separation between sources. Player matching for imported rankings now handles nicknames (e.g., Mike/Michael) for more accurate matches.",
+      "<strong>Design System & Theming</strong> — Ranking type badge colors softened while maintaining WCAG AA contrast. New --table-header-gradient design token unifies all table header styles across the site. Hardcoded fonts and icon sizes replaced with design tokens for consistency. Accent link hover color now uses brand green instead of a non-brand amber.",
+      "<strong>Import Rankings</strong> — Ranking type badges on import page now use solid colors for better readability. Import rankings cards now have white backgrounds instead of gray.",
+      "<strong>League Summary</strong> — League summary subtitle spacing tightened from 5rem to 2rem.",
+      "<strong>Free Agents</strong> — Free agent average rank column colors updated for better contrast. Average ranking column border made symmetrical on the Free Agents page. Defense player avatars now properly centered using flex alignment. Defense avatars are now circular with smaller, better-proportioned logos. Fixed empty free agents list caused by missing projection data by switching to projectedScores.",
+      "<strong>Homepage</strong> — Homepage card hover color corrected to use the green design token."
+    ],
+    "category": "bug-fix",
+    "link": "/theleague/whats-new",
+    "linkLabel": "See all updates",
+    "icon": "wrench",
+    "excludeFromHero": true,
+    "image": "weekly-rollup-2026-02-24.webp",
+    "imageAlt": "Free Agents page showing defense player avatars, ranking color badges, and table header gradient styling",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "league-planner",
+    "date": "2026-02-23",
+    "title": "League Planner",
+    "summary": "Your roster's Next Year tab now reshuffles itself based on where you are in the offseason — because what matters in January is not what matters in March.",
+    "description": [
+      "The offseason isn't one season — it's four seasons wearing the same trench coat. Tagging window priorities look nothing like free agency priorities, which look nothing like draft night priorities. The old Next Year tab didn't care about any of that. It showed you the same static layout whether you were evaluating franchise tag candidates in January or scrambling for draft picks in April. The League Planner fixes this by rearranging itself around whatever phase of the offseason you're actually in.",
+      "After Week 10, extension and franchise tag tools rise to the top of the page because that's what matters before the tagging deadline. Once free agency opens, a Potential Targets card takes the lead — complete with player headshots, positions, and your imported ranking columns — surfacing the free agents your roster actually needs. Missing a top-8 quarterback or tight end? Only have one top-16 wide receiver? The Planner flags the gaps and recommends targets. During the draft, your 2026 and 2027 pick assets take center stage so you can plan trades without flipping between tabs.",
+      "It's the difference between a to-do list and a to-do list that knows what day it is. Open the Planner in February and it's thinking about tags. Open it in March and it's thinking about free agents. Open it in April and it's thinking about the draft. You should probably be thinking about those things too."
+    ],
+    "category": "new-feature",
+    "link": "/theleague/rosters?view=planner",
+    "linkLabel": "Open League Planner",
+    "icon": "chalkboard",
+    "image": "league-planner.webp",
+    "imageAlt": "League Planner showing offseason phase-aware roster tools with free agent targets and draft picks",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "frozen-salary-averages-fix",
+    "date": "2026-02-22",
+    "title": "Extension Calculator Fix",
+    "summary": "Veteran extension and franchise tag calculations now correctly use the previous season's frozen salary averages.",
+    "description": [
+      "For a brief window after the February league year rollover, the extension and franchise tag calculators were doing their math with all the reliability of a rookie quarterback in a snow game. The problem? They were pulling salary averages from the new league year's roster pool — a pool where half the teams hadn't even finished assembling their rosters yet. The result was position averages that looked like they were generated by a random number generator rather than actual contract data.",
+      "The fix locks all extension and franchise tag calculations onto the previous season's week 14 frozen salary snapshot — the gold standard of salary data, captured when rosters are at their most complete and stable. This frozen data stays in play until the current season reaches its own week 14 freeze, ensuring you never get calculations based on incomplete information. If you used the Trade Builder, Rosters, or Contract Tools pages during the rollover window and something looked off, this is why — and it's now corrected."
+    ],
+    "category": "bug-fix",
+    "icon": "wrench",
+    "excludeFromHero": true,
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "composite-my-rank",
+    "date": "2026-02-22",
+    "title": "My Rank Composite",
+    "summary": "Pick your trusted ranking sources, assign weights, and see a single personalized \"My Rank\" column on the Free Agents page.",
+    "description": [
+      "The arms race of ranking sources has officially reached the point where owners need a ranking of their rankings. With seven import sources available — and some owners hoarding all seven — the Free Agents page was turning into a spreadsheet that would make an accountant weep. Something had to give, and that something is the new My Rank composite.",
+      "Head to the Import Rankings page, check the boxes next to the sources you actually trust, and assign each a weight: 1x for sources you respect, 2x for sources you swear by, and 3x for whatever gospel you've decided is the absolute truth this offseason. Once you've selected at least two sources, a blended \"My Rank\" column appears as the very first ranking column on the Free Agents page. Your composite members are grouped together with a visual separator so you can still see how the individual rankings compare to your custom blend.",
+      "It's worth noting that this is a weighted average, not a popularity contest. If you give KeepTradeCut 3x weight and everything else 1x, KTC's rankings will dominate your composite. Adjust accordingly — or don't, and blame the algorithm when your auction bids don't work out."
+    ],
+    "category": "new-feature",
+    "link": "/theleague/import-rankings",
+    "linkLabel": "Set up My Rank",
+    "icon": "star",
+    "image": "composite-my-rank.webp",
+    "imageAlt": "Import Rankings page showing ranking source selection with weight controls for building a My Rank composite",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "whats-new-redesign",
+    "date": "2026-02-22",
+    "title": "What's New Blog Redesign",
+    "summary": "Browse updates with category filters, full detail pages, and a timeline sidebar.",
+    "description": [
+      "The What's New page has received the kind of makeover usually reserved for a franchise quarterback getting a new helmet design — except this one is actually functional. The original flat list of updates was fine when there were five entries, but with the feature count now pushing thirty, it had all the navigability of a phone book.",
+      "The redesign introduces category filter tabs so you can zero in on New Pages, New Features, or Enhancements without scrolling past bug fixes you don't care about. Every entry now has its own dedicated detail page with a full description, category badge, and prev/next navigation for the chronological browsers among us. On desktop, a sticky timeline sidebar with color-coded dots lets you jump to any month's updates instantly.",
+      "Entries you haven't seen since your last visit are marked with a NEW badge, which is either a helpful convenience or a guilt trip depending on how often you check in. The system tracks your last visit via cookie, so clearing your browser data means everything looks new again — a fresh start, if you need one."
+    ],
+    "category": "enhancement",
+    "link": "/theleague/whats-new",
+    "linkLabel": "See What's New",
+    "icon": "star",
+    "excludeFromHero": true,
+    "image": "whats-new-redesign.webp",
+    "imageAlt": "What's New page with category filter tabs, featured entry cards, and timeline sidebar",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "salary-archive",
+    "date": "2026-02-22",
+    "title": "Salary Archive",
+    "summary": "Browse and download every historical salary spreadsheet from 2009 to 2025.",
+    "description": [
+      "For seventeen years, the league's salary data lived in a scattered archipelago of Google Sheets, each one lovingly maintained by hand and shared via group chat links that expired approximately thirty seconds after being posted. Finding the 2016 salary averages required the kind of archaeological dig usually reserved for ancient civilizations.",
+      "The Salary Archive page puts every historical Tagged Salary Averages spreadsheet from 2009 to 2025 in one place, each year linking directly to the original file. It's the complete record — from the league's earliest days of manual spreadsheet management through the transition to automated MFL API data. The Salary Analytics page also now includes an Export to Excel button that generates a multi-sheet workbook with one tab per position plus a Position Summary overview, so you can take current data with you.",
+      "Whether you're settling a debate about what quarterbacks cost in 2014 or building a historical model for your auction strategy, the data is now exactly one click away instead of buried in someone's Google Drive."
+    ],
+    "category": "new-page",
+    "link": "/theleague/salary-archive",
+    "linkLabel": "View the archive",
+    "icon": "history",
+    "image": "salary-archive.webp",
+    "imageAlt": "Salary Archive page listing historical salary spreadsheets from 2009 to 2025",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "roster-ranking-source-label",
+    "date": "2026-02-22",
+    "title": "Ranking Source in Roster Column",
+    "summary": "The roster rank column now displays which ranking source is being used instead of a generic label.",
+    "description": [
+      "A small change with outsized quality-of-life impact: the rank column on the Roster page now actually tells you which ranking source it's displaying. Previously, the column header just said \"Rank\" — leaving you to either remember which source you'd selected, squint at the numbers and try to reverse-engineer it, or simply accept the mystery rankings on faith.",
+      "The header now shows the source abbreviation directly — Sleep, FBG, KTC, CBS, and so on — with the full source name revealed on hover. It's the kind of thing you didn't know you needed until you found yourself staring at a rank column wondering if those were dynasty ranks or redraft ranks and whether you should be panicking about your WR3 or not."
+    ],
+    "category": "enhancement",
+    "link": "/theleague/rosters",
+    "linkLabel": "View rosters",
+    "icon": "clipboard",
+    "excludeFromHero": true,
+    "image": "roster-ranking-source-label.webp",
+    "imageAlt": "Roster page showing ranking source abbreviation in the column header",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "salary-analytics",
+    "date": "2026-02-21",
+    "title": "Salary Analytics",
+    "summary": "Explore salary benchmarks by position with starter averages, medians, and full player breakdowns.",
+    "description": [
+      "The Salary Benchmarks page has been promoted to Salary Analytics, and the upgrade is roughly equivalent to going from a box score to a full analytics department. Every position now displays starter average and starter median based on realistic league starter counts — not just the overall average that gets dragged down by the deep bench players making league minimum.",
+      "Browse the complete ranked salary list for any position with a Show More button to reveal the full depth chart of spending. The year selector lets you compare salary trends across every season back to 2021, and weekly snapshot switching shows how values shifted throughout the year — useful for tracking how that mid-season blockbuster trade reshaped the market.",
+      "The addition of the Export to Excel button means you can now download a multi-sheet workbook with one tab per position for whatever offline analysis your inner data scientist demands. For the owners who built their entire draft strategy in Excel — you know who you are — this one's for you."
+    ],
+    "category": "enhancement",
+    "link": "/theleague/salary",
+    "linkLabel": "View Salary Analytics",
+    "icon": "bar-chart",
+    "image": "salary-analytics.webp",
+    "imageAlt": "Salary Analytics page with position benchmarks, starter averages, and player salary breakdowns",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "import-rankings",
+    "date": "2026-02-21",
+    "title": "Import Rankings",
+    "summary": "Import player rankings from FantasyPros, FootballGuys, Sleeper, and more — then drag to set your preferred display order.",
+    "description": [
+      "In a league where information is currency, the Import Rankings page is essentially a money printer. Seven major fantasy football ranking sites — FantasyPros, FootballGuys, Dynasty League Football, KeepTradeCut, Sleeper, Yahoo, and CBS Sports — can now feed their rankings directly into the league's tools using simple browser bookmarklets.",
+      "The process is deliberately low-tech and high-trust: drag a bookmarklet to your browser's bookmarks bar, visit your ranking site of choice, click the bookmarklet, and the data flows in. Once imported, drag and drop your saved rankings to control which columns appear and in what order on the Free Agents page. Up to eight ranking columns display for free agents, or five when rostered players are included.",
+      "Every byte of ranking data stays private in your browser's local storage — never sent to the server, never shared with other league members. Your scouting advantage is yours alone, which is exactly how it should be in a league where pre-auction intelligence can be worth millions in cap space."
+    ],
+    "category": "new-page",
+    "link": "/theleague/import-rankings",
+    "linkLabel": "Import rankings now",
+    "icon": "clipboard",
+    "image": "import-rankings.webp",
+    "imageAlt": "Import Rankings page with bookmarklet instructions and draggable ranking source list",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "free-agent-scouting",
+    "date": "2026-02-17",
+    "title": "Free Agent Scouting Tool",
+    "summary": "Research free agents with ADP rankings, snap counts, and detailed player profiles.",
+    "description": [
+      "Auction prep used to involve twelve browser tabs, three spreadsheets, and the quiet resignation that you'd never have all the data in one place. The Free Agent Scouting Tool consolidates the essentials into a single sortable table: ADP Redraft rankings, ADP Dynasty rankings, and NFL snap count data from last season — including total snaps and snap percentage — all side by side.",
+      "Filter by position, search by name or NFL team, and toggle rookies in or out depending on whether you're feeling bold or cautious this offseason. Every column is sortable, which means you can find the high-usage sleepers — lots of snaps, low ADP — or confirm your suspicion that the player everyone's hyping barely saw the field last year.",
+      "This is the pre-auction research hub the league has needed since the first time someone overpaid for a player whose snap count could fit on a Post-it note. Use it before the auction, or don't — and then use it after the auction to figure out where things went wrong."
+    ],
+    "category": "new-feature",
+    "link": "/theleague/players",
+    "linkLabel": "Scout Free Agents",
+    "icon": "users",
+    "image": "free-agent-scouting.webp",
+    "imageAlt": "Free Agents scouting table with player rankings, snap counts, and position filters",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "whats-new-page",
+    "date": "2026-02-16",
+    "title": "What's New Page",
+    "summary": "Track every new feature and improvement in one place.",
+    "description": [
+      "New features used to be announced in the group chat, where they'd enjoy approximately forty-five seconds of visibility before being buried under an avalanche of trade proposals, injury debates, and whatever meme someone found that morning. The What's New page is the league's official changelog — a permanent, browsable record of every feature and improvement as it ships.",
+      "Each entry includes a date, description, and a direct link to the relevant page so you can try new features immediately instead of wondering where they live. It's the difference between hearing about a new restaurant and being handed the address, the menu, and a reservation."
+    ],
+    "category": "new-page",
+    "link": "/theleague/whats-new",
+    "linkLabel": "See all updates",
+    "icon": "star",
+    "image": "whats-new-page.webp",
+    "imageAlt": "What's New changelog page showing feature entries with dates and category badges",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "gm-coach-mode",
+    "date": "2026-02-16",
+    "title": "GM/Coach Mode Toggle",
+    "summary": "Switch between GM and Coach views on your roster page.",
+    "description": [
+      "This one started with a simple request from The Dream: he wanted to see the top scores from every player. What he got was an entire second perspective on the roster page. The GM tab was always there — salaries, contracts, escalation projections, trade value — but not everyone opens the roster page thinking about cap space. Some people open it on Sunday morning wondering who to start.",
+      "The Coach tab strips away the front office and replaces it with what matters on game day. Player averages, opponent matchups, injury designations, Vegas lines, over/unders, and even stadium weather — everything a coach needs to set a lineup without wading through contract details. GM mode is still one click away for when the trade itch hits, but Coach mode is for the people who just want to win this week.",
+      "Coach mode is available to all users, with a demo experience for visitors who want to kick the tires. It's accessible directly via URL so anyone who's already decided which hat they're wearing today can skip straight to the view they need."
+    ],
+    "category": "new-feature",
+    "link": "/theleague/rosters?view=coach",
+    "linkLabel": "Try Coach Mode",
+    "icon": "submit",
+    "image": "gm-coach-mode.webp",
+    "imageAlt": "Roster page in Coach Mode showing matchup data and start/sit columns",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "trade-bait-marketplace",
+    "date": "2026-02-16",
+    "title": "Trade Bait Marketplace",
+    "summary": "See which players teams have listed as available for trade.",
+    "description": [
+      "The trade deadline is approaching, and the eternal question echoes across the league: \"Who's available?\" Previously, answering that question required individually messaging every owner — a process roughly as efficient as going door-to-door asking if anyone wants to sell their house. The Trade Bait Marketplace eliminates the detective work by surfacing every player that teams have flagged as available for trade, all in one view.",
+      "Built directly into the Trade Builder, the marketplace shows trade bait across all sixteen teams, filterable by position. During the February transition period — when the league straddles two league years — trade bait from both the current and incoming seasons is displayed so you're working with the full picture.",
+      "See a player you like? You're already in the Trade Builder. Start dragging."
+    ],
+    "category": "new-feature",
+    "link": "/theleague/trade-builder",
+    "linkLabel": "Open Trade Builder",
+    "icon": "transactions-2",
+    "image": "trade-bait-marketplace.webp",
+    "imageAlt": "Trade Builder page showing the Trade Bait Marketplace with available players",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "weekly-rollup-2026-02-17",
+    "date": "2026-02-16",
+    "title": "Weekly Fixes & Polish (Feb 10-16)",
+    "summary": "17 bug fixes and style improvements across navigation & routing, calendar, league summary, rosters, and more.",
+    "description": [
+      "This week's 17 bug fixes and polish improvements touched several areas of the site:",
+      "<strong>Navigation & Routing</strong> — The site is now accessible at theleague.us with proper domain routing, forum proxy, and root redirect. GM Central link updated to use the correct www.theleague.us domain.",
+      "<strong>Calendar</strong> — Calendar now uses the correct calendar year with a previous-year option and swapped category colors. NFL Draft and Season Start events now use the NFL logo icon with multi-color SVG support. Rookie draft date corrected to Saturday after NFL Draft week. Auction results link fixed to the correct MFL module. Single-day event deadlines now default to 8:45 PM PT.",
+      "<strong>League Summary</strong> — Year range now correctly shows 5 years starting from the current league year (2026-2030). Quartile indicators switched from background colors to text colors for better readability.",
+      "<strong>Rosters</strong> — Veteran extension table columns consolidated to prevent overflow on smaller screens. Draft picks card no longer goes missing on the Next Year view after league year rollover. Demo mode opponent averages and ranks now vary per player for realistic sorting.",
+      "<strong>Trade Builder</strong> — React integration added for Trade Builder components to resolve rendering issues.",
+      "<strong>Playoffs</strong> — Playoffs description corrected from 6 to 7 teams to match actual league rules.",
+      "<strong>Homepage</strong> — Hero banner CTA button alignment fixed on mobile. Mobile alignment and padding improved across homepage and What's New page.",
+      "<strong>Other</strong> — Build failure when MFL API is unavailable during offseason now handled gracefully. CSS class scoping fixed in icon sprite. Icon gallery names display single-line with hidden scrollbar."
+    ],
+    "category": "bug-fix",
+    "link": "/theleague/whats-new",
+    "linkLabel": "See all updates",
+    "icon": "wrench",
+    "excludeFromHero": true,
+    "image": "weekly-rollup-2026-02-17.webp",
+    "imageAlt": "League calendar showing NFL logo icons, corrected dates, and color-coded event categories",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "league-summary",
+    "date": "2026-02-15",
+    "title": "League Summary Page",
+    "summary": "Compare all 16 teams across cap, roster, and contract metrics.",
+    "description": [
+      "Trying to compare all sixteen teams used to require the patience of a saint and the memory of an elephant. Open one roster page, jot down some numbers, open another, compare, forget what the first team's cap situation looked like, go back, repeat until your browser has more tabs than your salary cap has dollars. The League Summary page ends this madness with a single dashboard.",
+      "Fourteen categories of competitive intelligence — salary cap usage, dead money, contract length distribution, draft capital, roster age, extension candidates, and more — are laid out across all sixteen teams in one sortable, scannable view. Five years of historical data lets you track which teams are building for the future and which ones are mortgaging it.",
+      "This is the page you open when someone in the group chat says their team is in great cap shape. Trust, but verify."
+    ],
+    "category": "new-page",
+    "link": "/theleague/league-summary",
+    "linkLabel": "View League Summary",
+    "icon": "standings-2",
+    "image": "league-summary.webp",
+    "imageAlt": "League Summary dashboard comparing all 16 teams across salary cap and roster metrics",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "trade-builder",
+    "date": "2026-02-15",
+    "title": "Trade Builder",
+    "summary": "Simulate trades and instantly see salary cap impact for both teams.",
+    "description": [
+      "This one's for Wabbit. The league's most prolific trader — a true fantasy football day trader — used to evaluate every deal the old-fashioned way: fire up a spreadsheet, manually look up salaries and contract lengths for both sides, calculate escalation percentages by hand, and hope nobody fat-fingered a decimal point. If anyone was going to stress-test a trade tool into existence, it was going to be the owner who treats the trade wire like a full-time job.",
+      "Select any two teams, drag players and draft picks between them, and watch the salary cap impact update in real time. The tool automatically calculates multi-year cap projections with the league's 10% annual escalation, because nobody wants to discover three years from now that a deal they loved in February is eating their cap alive. By default, it suggests the two teams with the most cap room — on the theory that cap-rich teams make the most willing trade partners — but you can switch to any matchup in the league.",
+      "Mock drafts let you rehearse draft night before it happens. The Trade Builder does the same thing for trades — run as many scenarios as you want, see exactly whether the cap math works, and walk into the negotiation already knowing the answer. No more spreadsheets, no more guessing, no more \"I think that works under the cap.\" Early reports suggest Wabbit's trade volume is up roughly 30% since launch, which is either a ringing endorsement or a warning sign depending on whether you're in his division."
+    ],
+    "category": "new-page",
+    "link": "/theleague/trade-builder",
+    "linkLabel": "Build a Trade",
+    "icon": "transactions-2",
+    "image": "trade-builder.webp",
+    "imageAlt": "Trade Builder showing two-team player selection with salary cap impact analysis",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "whats-next-timeline",
+    "date": "2026-02-14",
+    "title": "What's Next Timeline",
+    "summary": "The homepage now shows your current, next, and upcoming league events.",
+    "description": [
+      "The homepage now answers the question that used to require checking the league calendar, the group chat, and occasionally a league member's surprisingly accurate memory: \"What's happening next?\" A three-card timeline at the top of the page shows the current event, the next upcoming event, and the one after that — each with countdown timers and direct action links.",
+      "The cards update automatically as events pass, so the page always reflects the current state of the league calendar. During busy periods like the offseason, where tagging windows, free agency, and the draft can overlap, this becomes the single fastest way to know what you should be paying attention to right now.",
+      "It's personalized to your team where applicable, so links point to your specific roster or franchise tools rather than generic league pages. The days of missing a deadline because you forgot to check the calendar are — theoretically — over."
+    ],
+    "category": "new-feature",
+    "link": "/theleague",
+    "linkLabel": "View Homepage",
+    "icon": "calendar",
+    "image": "whats-next-timeline.webp",
+    "imageAlt": "Homepage showing the What's Next timeline with three upcoming league event cards",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "league-calendar",
+    "date": "2026-02-14",
+    "title": "League Calendar",
+    "summary": "View all important league dates and deadlines in one place.",
+    "description": [
+      "Every league event for the season, in one place, color-coded and countdown-enabled. The League Calendar page displays tagging periods, free agency windows, draft dates, the trading deadline, playoff rounds, and every other date that matters — organized by category with visual differentiation so you can scan for the events relevant to your current planning horizon.",
+      "Events include countdown timers that tell you exactly how many days until the next deadline, action links to the relevant league tools, and status badges indicating whether something is active, upcoming, or urgent. A year selector lets you browse the previous and upcoming seasons' calendars for long-term planning.",
+      "This is the page you bookmark and check every Monday morning. Or you can keep relying on group chat reminders that inevitably arrive twelve hours after the deadline. Your call."
+    ],
+    "category": "new-page",
+    "link": "/theleague/calendar",
+    "linkLabel": "View Calendar",
+    "icon": "calendar",
+    "image": "league-calendar.webp",
+    "imageAlt": "League Calendar page with color-coded events and countdown timers",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "espn-headshots",
+    "date": "2026-02-14",
+    "title": "ESPN Player Headshots",
+    "summary": "Player cards now show real ESPN headshot photos.",
+    "description": [
+      "Player cards across the site now display actual human faces instead of the featureless silhouette placeholders that made every roster look like a witness protection program. Real ESPN headshot photos have been integrated across all player-facing components, displayed at 150% zoom for a clean, cropped presentation.",
+      "It's a cosmetic upgrade, yes, but there's something to be said for being able to visually identify the players you're investing millions of cap dollars in. The system falls back gracefully to MFL photos when ESPN data isn't available, and to a default placeholder as a last resort — so even the most obscure practice squad player gets some kind of representation."
+    ],
+    "category": "enhancement",
+    "link": "/theleague/rosters",
+    "linkLabel": "View Rosters",
+    "icon": "helmet",
+    "image": "espn-headshots.webp",
+    "imageAlt": "Player cards displaying real ESPN headshot photos instead of placeholder silhouettes",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "custom-football-icons",
+    "date": "2026-02-13",
+    "title": "Custom Football Icon Set",
+    "summary": "A complete set of custom-designed football icons throughout the app.",
+    "description": [
+      "The navigation drawer and header have been outfitted with a complete set of custom-designed SVG football icons, replacing the generic icon library that made the app look like it could have been about anything from project management to recipe tracking. The new icons include purpose-built designs for lineups, trades, drafts, standings, salary management, and more.",
+      "It's a small touch that adds up to a significantly more cohesive experience. When you click on the trades icon, it looks like it belongs in a football league, not a stock portfolio app. The entire set is built as an SVG sprite for fast loading, which means you get better visuals with less overhead — the rare upgrade that doesn't cost you any cap space."
+    ],
+    "category": "enhancement",
+    "link": "/theleague/icons",
+    "linkLabel": "View Icon Set",
+    "icon": "shield",
+    "image": "custom-football-icons.webp",
+    "imageAlt": "Navigation drawer showcasing custom-designed SVG football icons for each page",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "weekly-rollup-2026-01-27",
+    "date": "2026-01-27",
+    "title": "Weekly Fixes & Polish (Jan 17-Feb 8)",
+    "summary": "14 bug fixes and style improvements across navigation, rosters, design system, and more.",
+    "description": [
+      "Three weeks of bug fixes and polish from mid-January through early February:",
+      "<strong>Navigation</strong> — Navigation drawer UI polished with updated shadows, link ordering, and removing extra shadows. Switch Leagues option now only visible when you have teams in both leagues. Mobile toggle and spacing fixes.",
+      "<strong>Rosters & Coach Mode</strong> — Coach mode live scoring fixed. Add/drop page colors corrected. Opponent average column aligned properly. Coach mode missing data issue resolved. Roster data now updates on each build.",
+      "<strong>Design System</strong> — New box shadows applied site-wide for depth consistency. Bold college names and alternating row backgrounds added to tables. Page animations refined. Scoreboard colors corrected. Footer now uses flexbox to always sit at the bottom of the page.",
+      "<strong>Infrastructure</strong> — Bundle size checks added to prevent Vercel deploy failures. Roster sync push race condition prevented. Roster sync schedule changed from every 5 minutes to every 20 minutes."
+    ],
+    "category": "bug-fix",
+    "link": "/theleague/whats-new",
+    "linkLabel": "See all updates",
+    "icon": "wrench",
+    "excludeFromHero": true,
+    "image": "weekly-rollup-2026-01-27.webp",
+    "imageAlt": "Rosters page showing polished navigation drawer, updated box shadows, and alternating row backgrounds",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "nav-drawer-redesign",
+    "date": "2026-01-18",
+    "title": "Navigation Drawer Redesign",
+    "summary": "A new collapsible side drawer for faster navigation between pages.",
+    "description": [
+      "The old top navigation bar served the league faithfully for its era, but with the page count growing faster than a rookie's contract demands, something more scalable was in order. The new navigation drawer is a full slide-out panel with grouped sections, league switching, and team information — think of it as the difference between a folding map and a GPS.",
+      "On desktop, the drawer pushes page content aside when open and collapses to a slim icon rail when you need more screen space. On mobile, it overlays as a full-screen panel with a dimmed backdrop. Keyboard navigation, focus trapping, and Escape-to-close are all built in for the power users who refuse to touch a mouse.",
+      "The drawer footer shows your team's logo, owner name, and franchise info — a small personalization that serves as a constant reminder of which dynasty you're building. Or, depending on your roster, which dynasty you're rebuilding."
+    ],
+    "category": "new-feature",
+    "link": "/theleague",
+    "linkLabel": "View The League",
+    "icon": "home",
+    "image": "nav-drawer-redesign.webp",
+    "imageAlt": "Redesigned navigation drawer with grouped sections, league switching, and team info",
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
+    "id": "weekly-rollup-2026-01-13",
+    "date": "2026-01-13",
+    "title": "Weekly Fixes & Polish (Jan 1-12)",
+    "summary": "12 bug fixes and style improvements across playoffs, rosters, auction predictor, and more.",
+    "description": [
+      "Two weeks of bug fixes and polish from the new year:",
+      "<strong>Playoffs & Draft</strong> — Champion draft picks can now be traded via the futureDraftPicks API. Champion picks no longer re-added after merge. Playoff bracket data loading made more robust with better fallbacks.",
+      "<strong>Rosters</strong> — Season year now uses the PUBLIC_MFL_YEAR env var consistently across all pages. Chatmaster banner fixed. Draft history corrected. Compensatory picks added to draft view. Draft pick color corrected.",
+      "<strong>Auction Predictor</strong> — Fixed 500 error on Vercel caused by file path issue. Projected view now uses sortedPredictions correctly.",
+      "<strong>Design System</strong> — Box shadow inconsistencies cleaned up across homepage and borders. Team icon no longer cut off in navigation."
+    ],
+    "category": "bug-fix",
+    "link": "/theleague/whats-new",
+    "linkLabel": "See all updates",
+    "icon": "wrench",
+    "excludeFromHero": true,
+    "image": "weekly-rollup-2026-01-13.webp",
+    "imageAlt": "Playoff bracket showing champion draft pick improvements and more robust bracket data loading",
+    "leagues": [
+      "theleague"
+    ]
+  }
+]

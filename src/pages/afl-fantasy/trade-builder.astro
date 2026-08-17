@@ -21,7 +21,11 @@ const FALLBACK_YEAR = 2025;
 
 // Data — pull rosters + players + ADP for the current AFL season
 const rostersFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/rosters.json', { eager: true });
-const playersFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/players.json', { eager: true });
+// Year-filtered (2025+): selectedYear is always the newest season with real
+// rosters (FALLBACK_YEAR 2025); the bare glob baked ~22 MB of historical
+// players.json into the server chunk. tests/current-era-feed-globs.test.ts
+// guards it.
+const playersFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json', { eager: true });
 const adpFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/adp-dynasty.json', { eager: true });
 const picksFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/futureDraftPicks.json', { eager: true });
 const tradeBaitFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/tradeBait.json', { eager: true });

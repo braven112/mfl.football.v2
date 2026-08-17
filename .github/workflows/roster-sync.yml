@@ -20,7 +20,12 @@ jobs:
         uses: actions/checkout@v6
         with:
           ssh-key: ${{ secrets.DEPLOY_KEY }}
-          fetch-depth: 0
+          # Shallow on purpose: this job runs 288×/day and only needs the tip
+          # to commit on top of. commit-push's `git pull --rebase origin main`
+          # still works from a depth-1 clone (the pre-push fetch deepens as
+          # needed). A full clone here re-downloads the entire multi-GB pack
+          # every 5 minutes.
+          fetch-depth: 1
 
       - name: Setup pnpm + Node + install
         uses: ./.github/actions/setup
@@ -59,7 +64,12 @@ jobs:
             IFS=':' read -r SLUG ID HAS_SALARY_SYNC <<< "$entry"
 
             echo "::group::Fetch MFL data ($SLUG)"
-            MFL_LEAGUE_ID="$ID" MFL_LEAGUE_SLUG="$SLUG" node ./scripts/fetch-mfl-feeds.mjs --force
+            # --refresh-live (not --force): rosters/transactions/standings/
+            # brackets refresh every run, but the heavy daily-only feeds
+            # (players.json, the 17-call weeklyResults loop) fetch once a day.
+            # Combined with skip-if-unchanged writes, a run where nothing
+            # actually changed on MFL commits nothing.
+            MFL_LEAGUE_ID="$ID" MFL_LEAGUE_SLUG="$SLUG" node ./scripts/fetch-mfl-feeds.mjs --refresh-live
             echo "::endgroup::"
 
             if [ "$HAS_SALARY_SYNC" = "true" ]; then
@@ -87,6 +97,13 @@ jobs:
       # so this reordering doesn't change what it reads or writes.
       - name: Fetch live NFL odds
         run: node ./scripts/fetch-live-odds.mjs
+
+      # Retention: prune completed seasons' daily roster snapshots down to
+      # weekly keyframes + the July keeper window + season endpoints
+      # (scripts/lib/retention-policy.mjs). Idempotent and near-free when
+      # there's nothing to do; deletions ride the commit step below.
+      - name: Consolidate roster history
+        run: node ./scripts/consolidate-roster-history.mjs
 
       - name: Commit and push updates
         uses: ./.github/actions/commit-push

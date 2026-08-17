@@ -15,16 +15,18 @@
  * Run manually or via GitHub Actions every Monday at 8pm PT.
  */
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ALL_LEAGUES, DEFAULT_LEAGUE_SLUG } from '../src/config/leagues-data.mjs';
+import { WHATS_NEW_ACTIVE_MAX, WHATS_NEW_ARCHIVE_DIR } from './lib/retention-policy.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
 
 const STAGING_PATH = resolve(ROOT, 'src/data/weekly-changelog-staging.json');
 const WHATS_NEW_PATH = resolve(ROOT, 'src/data/whats-new.json');
+const ARCHIVE_DIR = resolve(ROOT, WHATS_NEW_ARCHIVE_DIR);
 
 /** Map area slugs to display names */
 const AREA_LABELS = {
@@ -187,6 +189,52 @@ const VALID_CHANGE_LEAGUES = [...Object.keys(LEAGUE_ROLLUPS), 'both'];
 
 // ── Main ──
 
+/**
+ * Keep the active file at WHATS_NEW_ACTIVE_MAX entries; everything older
+ * moves to src/data/whats-new-archive/<year>.json (append-union by id,
+ * newest-first). Only the archive index + permalink pages load the archive
+ * files, so the homepage/hero bundle stays bounded while old permalinks
+ * keep resolving. Screenshots stay in public/assets/whats-new — archived
+ * entries still render them.
+ */
+const enforceWhatsNewCap = (entries) => {
+  if (entries.length <= WHATS_NEW_ACTIVE_MAX) return { active: entries, archived: 0 };
+  const active = entries.slice(0, WHATS_NEW_ACTIVE_MAX);
+  const overflow = entries.slice(WHATS_NEW_ACTIVE_MAX);
+  const byYear = new Map();
+  for (const entry of overflow) {
+    const year = String(entry.date ?? '').slice(0, 4) || 'undated';
+    if (!byYear.has(year)) byYear.set(year, []);
+    byYear.get(year).push(entry);
+  }
+  mkdirSync(ARCHIVE_DIR, { recursive: true });
+  for (const [year, yearEntries] of byYear) {
+    const file = resolve(ARCHIVE_DIR, `${year}.json`);
+    let existing = [];
+    try {
+      existing = JSON.parse(readFileSync(file, 'utf-8'));
+    } catch {
+      // new archive year
+    }
+    const seen = new Set(existing.map((e) => e.id));
+    const merged = [...existing, ...yearEntries.filter((e) => !seen.has(e.id))];
+    merged.sort((a, b) => String(b.date ?? '').localeCompare(String(a.date ?? '')));
+    writeFileSync(file, JSON.stringify(merged, null, 2) + '\n');
+    console.log(`Archived ${yearEntries.length} entries -> ${file}`);
+  }
+  return { active, archived: overflow.length };
+};
+
+// --cap-only: enforce the active-file cap without publishing staging (used
+// for the initial migration and safe to re-run any time).
+if (process.argv.includes('--cap-only')) {
+  const entries = JSON.parse(readFileSync(WHATS_NEW_PATH, 'utf-8'));
+  const { active, archived } = enforceWhatsNewCap(entries);
+  if (archived > 0) writeFileSync(WHATS_NEW_PATH, JSON.stringify(active, null, 2) + '\n');
+  console.log(`Cap enforced: ${active.length} active, ${archived} moved to archive.`);
+  process.exit(0);
+}
+
 const staging = JSON.parse(readFileSync(STAGING_PATH, 'utf-8'));
 
 if (!staging.changes || staging.changes.length === 0) {
@@ -277,9 +325,11 @@ if (staging.featuredImage) {
   }
 }
 
-// Prepend to whats-new.json (newest first)
+// Prepend to whats-new.json (newest first), then enforce the active cap —
+// overflow moves to the per-year archive files.
 whatsNew.unshift(...newEntries.map((n) => n.entry));
-writeFileSync(WHATS_NEW_PATH, JSON.stringify(whatsNew, null, 2) + '\n');
+const { active } = enforceWhatsNewCap(whatsNew);
+writeFileSync(WHATS_NEW_PATH, JSON.stringify(active, null, 2) + '\n');
 
 // Reset staging file for next week
 const nextMonday = getNextMonday(new Date());

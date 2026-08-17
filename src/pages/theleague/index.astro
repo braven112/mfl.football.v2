@@ -191,10 +191,14 @@ const extractFeedSeason = (fp: string): string | null => {
 };
 
 const rosterModules = import.meta.glob('../../data/mfl-player-salaries-*.json', { eager: true });
-const salaryAdjustmentFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/salaryAdjustments.json', { eager: true });
-const draftResultsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/draftResults.json', { eager: true });
-const playerFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/players.json', { eager: true });
-const transactionFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/transactions.json', { eager: true });
+// Year-filtered globs (2025+): everything below is filtered to
+// `currentSalaryYear`, so bundling all 20 seasons only bloated the server
+// chunk — players.json alone is ~1.4 MB × season. The brace pattern matches
+// 2025-2099 (self-advancing); tests/current-era-feed-globs.test.ts guards it.
+const salaryAdjustmentFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/salaryAdjustments.json', { eager: true });
+const draftResultsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/draftResults.json', { eager: true });
+const playerFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json', { eager: true });
+const transactionFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/transactions.json', { eager: true });
 
 const rosterEntries = Object.entries(rosterModules)
   .map(([path, mod]) => ({ season: extractSeason(path), data: getModuleData(mod) }))

@@ -31,8 +31,11 @@ const currentSeasonYear = getCurrentSeasonYear();
 const mflHost = getLeagueBySlug('theleague')!.mflHost;
 
 // ── Load MFL data feeds ──
+// Year-filtered (2025+): this page reads only currentLeagueYear +
+// currentSeasonYear; the bare glob baked ~22 MB of historical players.json
+// into the server chunk. tests/current-era-feed-globs.test.ts guards it.
 const playerModules = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/players.json',
+  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json',
   { eager: true }
 );
 const rostersModules = import.meta.glob(
@@ -44,7 +47,7 @@ const projectedScoresModules = import.meta.glob(
   { eager: true }
 );
 const lastYearWeeklyModules = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/weekly-results-raw.json',
+  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/weekly-results-raw.json',
   { eager: true }
 );
 const nflScheduleModules = import.meta.glob(

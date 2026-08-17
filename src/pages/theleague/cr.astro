@@ -32,8 +32,11 @@ const leagueYearStr = String(leagueYear);
 // ---------------------------------------------------------------------------
 // Load MFL players for enrichment (headshot URLs, positions)
 // ---------------------------------------------------------------------------
+// Year-filtered (2025+): only the current league year is read below; the
+// bare glob baked ~22 MB of historical players.json into the server chunk.
+// tests/current-era-feed-globs.test.ts guards it.
 const playersFeeds = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/players.json',
+  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json',
   { eager: true },
 );
 

@@ -41,28 +41,32 @@ const leagueYear = getCurrentLeagueYear();
 const leagueYearStr = String(leagueYear);
 
 // Load data feeds for the current league year
+// Year-filtered globs (2025+): every feed on this page resolves via
+// findFeed(..., leagueYearStr) (trade bait also leagueYear-1), so bundling
+// all 20 seasons only bloated the server chunk. Pattern matches 2025-2099;
+// tests/current-era-feed-globs.test.ts guards it.
 const rostersFeeds = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/rosters.json',
+  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/rosters.json',
   { eager: true }
 );
 const playersFeeds = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/players.json',
+  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json',
   { eager: true }
 );
 const salaryAdjFeeds = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/salaryAdjustments.json',
+  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/salaryAdjustments.json',
   { eager: true }
 );
 const draftPickFeeds = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/futureDraftPicks.json',
+  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/futureDraftPicks.json',
   { eager: true }
 );
 const draftResultsFeeds = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/draftResults.json',
+  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/draftResults.json',
   { eager: true }
 );
 const tradeBaitFeeds = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/tradeBait.json',
+  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/tradeBait.json',
   { eager: true }
 );
 const salaryAvgModules = import.meta.glob(
@@ -70,11 +74,11 @@ const salaryAvgModules = import.meta.glob(
   { eager: true }
 );
 const projScoreFeeds = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/projectedScores.json',
+  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/projectedScores.json',
   { eager: true }
 );
 const adpDynastyFeeds = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/adp-dynasty.json',
+  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/adp-dynasty.json',
   { eager: true }
 );
 

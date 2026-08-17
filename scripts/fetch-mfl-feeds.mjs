@@ -6,9 +6,19 @@
  * - Current year: Fetches daily (data changes throughout season)
  * - Historical years: Caches indefinitely once standings.json exists (static data)
  *   Use --force flag to override and refetch historical data
+ * - --refresh-live (the 5-minute cron's mode): refetch the cheap "live" feed
+ *   set every run (rosters, transactions, standings, brackets, …) but the
+ *   heavy daily-only set (players.json ~1.4 MB, the 17-call weeklyResults
+ *   loop, nflSchedule, assets) only on the first run of each day. Unlike
+ *   --force it never bypasses the historical-year cache.
+ *
+ * All feed writes go through writeJsonIfChanged (scripts/lib/canonical-json.mjs):
+ * MFL returns arrays in nondeterministic order, so a byte-diff is meaningless —
+ * files are only rewritten (and therefore only committed) when the payload
+ * actually changed. This is what keeps the 5-minute cron from growing .git.
  *
  * Usage:
- *   node scripts/fetch-mfl-feeds.js [--force]
+ *   node scripts/fetch-mfl-feeds.js [--force|--refresh-live]
  *
  * Env variables:
  *   MFL_LEAGUE_ID (required) - e.g., 13522
@@ -24,6 +34,8 @@ import { normalizeWeeklyResults } from './lib/normalize-weekly-results.mjs';
 import { fetchWithRetry } from './lib/fetch-retry.mjs';
 import { getNonEmpty } from './lib/env.mjs';
 import { getLeagueById, DEFAULT_LEAGUE_SLUG } from '../src/config/leagues-data.mjs';
+import { writeJsonIfChanged, jsonEquivalent } from './lib/canonical-json.mjs';
+import { isKeeperWindowDate } from './lib/retention-policy.mjs';
 
 /**
  * Calculate Labor Day for a given year (first Monday in September)
@@ -152,6 +164,11 @@ fs.mkdirSync(outDir, { recursive: true });
 const metaFile = path.join(outDir, 'fetch.meta.json');
 const rosterHistoryDir = path.join(outDir, 'roster-history');
 const force = process.argv.includes('--force');
+const refreshLive = process.argv.includes('--refresh-live');
+
+// Keys excluded from change detection: they advance every fetch even when the
+// payload is identical (playoff-brackets.lastFetched).
+const VOLATILE_FEED_KEYS = ['lastFetched'];
 
 const isFreshToday = () => {
   if (!fs.existsSync(metaFile)) return false;
@@ -550,6 +567,25 @@ const fetchTextWithRetry = (url, retries = 3, baseDelayMs = 1500) =>
     onRetry: (err, attempt, wait) => console.warn(`Retrying ${redactUrl(url)} in ${wait}ms (${err.message})`),
   });
 
+// True when `data` is semantically identical to the most recent existing
+// roster-history snapshot (any date). Used to skip redundant offseason
+// snapshots — see the rosters branch in writeOut.
+const latestSnapshotEquals = (data) => {
+  try {
+    const files = fs
+      .readdirSync(rosterHistoryDir)
+      .filter((f) => /^rosters-\d{4}-\d{2}-\d{2}\.json$/.test(f))
+      .sort();
+    const latest = files.at(-1);
+    if (!latest) return false;
+    const existing = JSON.parse(fs.readFileSync(path.join(rosterHistoryDir, latest), 'utf8'));
+    const next = typeof data === 'string' ? JSON.parse(data) : data;
+    return jsonEquivalent(existing, next);
+  } catch {
+    return false;
+  }
+};
+
 const writeOut = (key, data) => {
   // Error-payload guard: MFL returns HTTP 200 with an `error` body for a
   // rejected param (seen live 2026-07-21: adp-dynasty's IS_KEEPER=D →
@@ -565,12 +601,12 @@ const writeOut = (key, data) => {
     return;
   }
   const file = path.join(outDir, `${key}.json`);
-  fs.writeFileSync(
-    file,
-    typeof data === 'string' ? data : JSON.stringify(data, null, 2),
-    'utf8'
-  );
-  console.log(`Saved ${key} -> ${file}`);
+  const wrote = writeJsonIfChanged(file, data, { ignoreKeys: VOLATILE_FEED_KEYS });
+  if (wrote) {
+    console.log(`Saved ${key} -> ${file}`);
+  } else {
+    console.log(`Unchanged ${key}; leaving ${file} untouched.`);
+  }
 
   // Archive a daily snapshot of rosters so weekly history is preserved.
   if (key === 'rosters') {
@@ -578,6 +614,13 @@ const writeOut = (key, data) => {
     const historyFile = path.join(rosterHistoryDir, `rosters-${dateSlug}.json`);
     if (fs.existsSync(historyFile)) {
       console.log(`Roster history already captured for ${dateSlug}; skipping archive.`);
+    } else if (!isKeeperWindowDate(dateSlug) && latestSnapshotEquals(data)) {
+      // Offseason rosters can sit unchanged for weeks — a byte-identical
+      // ~50 KB snapshot per day per league was the roster-history dir's main
+      // growth. Inside the July keeper window we ALWAYS write: those dated
+      // files are the official AFL keeper record and the keeper page globs
+      // them by date (see scripts/lib/retention-policy.mjs).
+      console.log(`Rosters unchanged since last snapshot; skipping ${dateSlug} archive.`);
     } else {
       fs.mkdirSync(rosterHistoryDir, { recursive: true });
       fs.writeFileSync(
@@ -758,13 +801,25 @@ const run = async () => {
   // Always fetch tradeBait + ADP (public, no auth) to get latest data every build
   const alwaysFetchKeys = new Set(['tradeBait', 'adp-redraft', 'adp-dynasty']);
 
-  // Check if historical data is already cached (skip to avoid rate limits)
+  // Feeds that are expensive and only meaningfully change once a day:
+  // players.json is a ~1.4 MB player-database dump, weeklyResults is a
+  // 17-request loop with politeness delays, nflSchedule/assets are static
+  // within a day. Under --refresh-live these fetch only on the first run of
+  // the day; everything else (rosters, transactions, standings, brackets, …)
+  // stays near-real-time on the 5-minute cadence. Roster/free-agent
+  // freshness is unaffected — free agency is derived from rosters.
+  const dailyOnlyKeys = new Set(['players', 'nflSchedule', 'assets']);
+
+  // Check if historical data is already cached (skip to avoid rate limits).
+  // --refresh-live deliberately does NOT bypass this (unlike --force).
   if (!force && isHistoricalDataCached()) {
     console.log(`📦 Historical standings data for ${year} already cached; skipping fetch to avoid rate limits.`);
     return;
   }
 
-  if (!force && isFreshToday()) {
+  const freshToday = isFreshToday();
+
+  if (!force && !refreshLive && freshToday) {
     console.log(`Feeds already fetched today for ${year}; using cached data in ${outDir}.`);
     // Still fetch tradeBait for latest trade bait
     for (const { key, url, parser } of endpoints.filter(e => alwaysFetchKeys.has(e.key))) {
@@ -780,7 +835,17 @@ const run = async () => {
     return;
   }
 
+  // Intraday --refresh-live run: the daily set already fetched today — skip it.
+  const skipDailyFeeds = refreshLive && !force && freshToday;
+  if (skipDailyFeeds) {
+    console.log(`Live refresh for ${year}: skipping daily-only feeds (${[...dailyOnlyKeys].join(', ')}, weeklyResults).`);
+  }
+
   for (const { key, url, parser } of endpoints) {
+    if (skipDailyFeeds && dailyOnlyKeys.has(key)) continue;
+    // Placeholder entries (weekly-results, playoff-brackets) have no URL —
+    // they're fetched by their own dedicated flows below.
+    if (!url) continue;
     try {
       console.log(`Fetching ${key} from ${redactUrl(url)}`);
       const text = await fetchText(url);
@@ -791,34 +856,85 @@ const run = async () => {
     }
   }
 
-  // Fetch weekly results (weeks 1–17) more gently to avoid hammering MFL.
-  const weeks = Array.from({ length: 17 }, (_, idx) => idx + 1);
-  const weeklyResults = [];
-  for (const weekNum of weeks) {
-    const weekUrl = `${host}/${year}/export?TYPE=weeklyResults&L=${leagueId}&JSON=1&W=${weekNum}`;
-    try {
-      console.log(`Fetching weeklyResults week ${weekNum} from ${weekUrl}`);
-      const text = await fetchTextWithRetry(weekUrl, 4, 2000);
-      const parsed = JSON.parse(text);
-      weeklyResults.push(parsed);
-    } catch (err) {
-      console.error(`Failed weeklyResults week ${weekNum}:`, err.message);
+  if (!skipDailyFeeds) {
+    // Fetch weekly results (weeks 1–17) more gently to avoid hammering MFL.
+    const weeks = Array.from({ length: 17 }, (_, idx) => idx + 1);
+    const weeklyResults = [];
+    for (const weekNum of weeks) {
+      const weekUrl = `${host}/${year}/export?TYPE=weeklyResults&L=${leagueId}&JSON=1&W=${weekNum}`;
+      try {
+        console.log(`Fetching weeklyResults week ${weekNum} from ${weekUrl}`);
+        const text = await fetchTextWithRetry(weekUrl, 4, 2000);
+        const parsed = JSON.parse(text);
+        weeklyResults.push(parsed);
+      } catch (err) {
+        console.error(`Failed weeklyResults week ${weekNum}:`, err.message);
+      }
+      // Slow down between calls to be polite
+      await delay(1200);
     }
-    // Slow down between calls to be polite
-    await delay(1200);
-  }
 
-  if (weeklyResults.length > 0) {
-    writeOut('weekly-results-raw', weeklyResults);
-    // Shared normalizer — handles both MFL payload shapes (matchup[] and the
-    // older flat franchise[] used by archive-year regular seasons).
-    writeOut('weekly-results', normalizeWeeklyResults(weeklyResults));
+    if (weeklyResults.length > 0) {
+      writeOut('weekly-results-raw', weeklyResults);
+      // Shared normalizer — handles both MFL payload shapes (matchup[] and the
+      // older flat franchise[] used by archive-year regular seasons).
+      writeOut('weekly-results', normalizeWeeklyResults(weeklyResults));
+    }
   }
 
   // Fetch playoff brackets (metadata + individual bracket details)
   // Cache for 1 hour to catch post-game updates
+  //
+  // Data-protection rules (both learned from live churn, 2026-08):
+  // - A transient MFL failure (429 on the metadata call, a single bracket
+  //   detail erroring) must NEVER downgrade committed real bracket data to
+  //   the standings-derived predictions — the file used to flap between
+  //   real and predicted on every rate-limit, a commit each way.
+  // - Predicted payloads carry `predicted: true` so a later run can tell
+  //   them apart from real MFL data. Legacy files without the flag are
+  //   treated as real (the safe direction: never overwrite).
+  const readExistingPlayoffBrackets = () => {
+    try {
+      return JSON.parse(fs.readFileSync(path.join(outDir, 'playoff-brackets.json'), 'utf8'));
+    } catch {
+      return null;
+    }
+  };
+  const hasRealBracketData = (existing) =>
+    Boolean(
+      existing &&
+        !existing.predicted &&
+        existing.brackets &&
+        Object.keys(existing.brackets).length > 0
+    );
+  const writePredictedBracketsIfSafe = (reason) => {
+    const existing = readExistingPlayoffBrackets();
+    if (hasRealBracketData(existing)) {
+      console.log(`${reason} — keeping existing real MFL bracket data instead of predictions.`);
+      return;
+    }
+    const standingsFile = path.join(outDir, 'standings.json');
+    if (!fs.existsSync(standingsFile)) {
+      console.log('No standings data available to generate predicted brackets');
+      return;
+    }
+    try {
+      const standingsData = JSON.parse(fs.readFileSync(standingsFile, 'utf8'));
+      const predicted = generatePredictedBrackets(standingsData);
+      predicted.predicted = true;
+      predicted.lastFetched = new Date().toISOString();
+      writeOut('playoff-brackets', predicted);
+      console.log('Generated predicted playoff brackets based on current standings');
+    } catch (err) {
+      console.error('Failed to generate predicted brackets:', err.message);
+    }
+  };
   try {
-    if (isPlayoffDataFresh() && !force) {
+    // --refresh-live bypasses the 1-hour cache just like --force did: during
+    // live playoff games the bracket payload changes every run, and honoring
+    // the cache here would lag scores by up to an hour. Skip-if-unchanged in
+    // writeOut keeps the extra fetches from producing writes.
+    if (isPlayoffDataFresh() && !force && !refreshLive) {
       console.log('Playoff bracket data is fresh (< 1 hour old), skipping fetch');
     } else {
       const bracketsMetaUrl = `${host}/${year}/export?TYPE=playoffBrackets&L=${leagueId}&JSON=1`;
@@ -857,6 +973,20 @@ const run = async () => {
         }
       }
 
+      // Backfill any bracket whose detail fetch failed/errored this run from
+      // the existing file, so one transient miss doesn't shrink the payload
+      // (bracket 6 vanishing and reappearing was a commit each way).
+      const existing = readExistingPlayoffBrackets();
+      if (existing?.brackets && !existing.predicted) {
+        for (const bracket of brackets) {
+          const bracketId = String(bracket.id);
+          if (!bracketDetails[bracketId] && existing.brackets[bracketId]) {
+            console.warn(`Bracket ${bracketId} missing from this fetch — keeping previous data for it.`);
+            bracketDetails[bracketId] = existing.brackets[bracketId];
+          }
+        }
+      }
+
       // Write consolidated playoff-brackets.json file with live MFL data + timestamp
       const consolidated = {
         playoffBrackets: metaData.playoffBrackets,
@@ -866,51 +996,27 @@ const run = async () => {
       writeOut('playoff-brackets', consolidated);
       console.log('Updated playoff bracket data with fresh MFL data');
     } else {
-      console.log('No playoff brackets from MFL yet - generating predicted brackets from standings');
-
-      // Generate predicted brackets based on current standings
-      const standingsFile = path.join(outDir, 'standings.json');
-      if (fs.existsSync(standingsFile)) {
-        try {
-          const standingsData = JSON.parse(fs.readFileSync(standingsFile, 'utf8'));
-          const predicted = generatePredictedBrackets(standingsData);
-          predicted.lastFetched = new Date().toISOString();
-          writeOut('playoff-brackets', predicted);
-          console.log('Generated predicted playoff brackets based on current standings');
-        } catch (err) {
-          console.error('Failed to generate predicted brackets:', err.message);
-        }
-      } else {
-        console.log('No standings data available to generate predicted brackets');
-      }
+      writePredictedBracketsIfSafe('No playoff brackets from MFL yet');
     }
     }
   } catch (err) {
     console.error('Failed to fetch playoff brackets metadata:', err.message);
-
-    // Try to generate predicted brackets as fallback
-    const standingsFile = path.join(outDir, 'standings.json');
-    if (fs.existsSync(standingsFile)) {
-      try {
-        console.log('Generating predicted brackets as fallback');
-        const standingsData = JSON.parse(fs.readFileSync(standingsFile, 'utf8'));
-        const predicted = generatePredictedBrackets(standingsData);
-        predicted.lastFetched = new Date().toISOString();
-        writeOut('playoff-brackets', predicted);
-        console.log('Generated predicted playoff brackets based on current standings');
-      } catch (genErr) {
-        console.error('Failed to generate predicted brackets:', genErr.message);
-      }
-    }
+    writePredictedBracketsIfSafe('Playoff bracket fetch failed');
   }
 
 
-  fs.writeFileSync(
-    metaFile,
-    JSON.stringify({ lastFetched: new Date().toISOString(), leagueId, year, week }, null, 2),
-    'utf8'
-  );
-  console.log(`Updated metadata -> ${metaFile}`);
+  // Only stamp the meta file when the daily set actually ran: fetch.meta.json
+  // is committed (it must survive CI's fresh checkouts for isFreshToday to
+  // work), so stamping it on every 5-minute live refresh would mean a commit
+  // per run — exactly the churn writeJsonIfChanged exists to prevent.
+  if (!skipDailyFeeds) {
+    fs.writeFileSync(
+      metaFile,
+      JSON.stringify({ lastFetched: new Date().toISOString(), leagueId, year, week }, null, 2),
+      'utf8'
+    );
+    console.log(`Updated metadata -> ${metaFile}`);
+  }
 };
 
 run();

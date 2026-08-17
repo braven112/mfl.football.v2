@@ -71,6 +71,11 @@ import { buildWeeklyPlayerResults } from '../../utils/weekly-player-results';
 import liveOddsFallbackData from '../../data/nfl/live-odds.json';
 import { spriteUrl } from '../../utils/sprite-url';
 import { getLeagueBySlug } from '../../config/leagues';
+// Precomputed payloads for every historical season (see
+// scripts/compute-roster-season-payloads.mjs); the shared builder computes
+// the current league/season years live at request time.
+import derivedRosterSeasonPayloads from '../../../data/theleague/derived/roster-season-payloads.json';
+import { buildSeasonPayload as buildSeasonPayloadShared } from '../../../scripts/lib/roster-season-payload.mjs';
 
 // MFL host/id from the league registry — never hardcode these (CLAUDE.md).
 // Used throughout this page (server frontmatter and inline client scripts)
@@ -452,31 +457,36 @@ const currentSeasonYearStr = String(getCurrentSeasonYear());
 // weeklyResultsRawData is loaded below with other season-specific feeds
 // playerScoresMap is computed after the feed loading block
 
-const rosterModules = import.meta.glob('../../data/mfl-player-salaries-*.json', {
+// Current-era globs only (2025+, see tests/current-era-feed-globs.test.ts).
+// Historical seasons are served from the precomputed derived payloads
+// (data/theleague/derived/roster-season-payloads.json, built by
+// scripts/compute-roster-season-payloads.mjs during prebuild) — bundling all
+// ~20 seasons of feeds here cost 30+ MB of server chunk per cold start.
+const rosterModules = import.meta.glob('../../data/mfl-player-salaries-20{2[5-9],[3-9][0-9]}.json', {
   eager: true,
 });
 const salaryAveragesModules = import.meta.glob('../../data/mfl-salary-averages-*.json', {
   eager: true,
 });
 const salaryAdjustmentFeeds = import.meta.glob(
-  '../../../data/theleague/mfl-feeds/*/salaryAdjustments.json',
+  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/salaryAdjustments.json',
   {
     eager: true,
   }
 );
-const leagueFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/league.json', {
+const leagueFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/league.json', {
   eager: true,
 });
-const standingsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/standings.json', {
+const standingsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/standings.json', {
   eager: true,
 });
-const playersFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/players.json', {
+const playersFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json', {
   eager: true,
 });
-const rostersFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/rosters.json', {
+const rostersFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/rosters.json', {
   eager: true,
 });
-const transactionsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/*/transactions.json', {
+const transactionsFeeds = import.meta.glob('../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/transactions.json', {
   eager: true,
 });
 const getModuleData = (mod) =>
@@ -1012,310 +1022,77 @@ const buildDisplayRows = (teamData) => {
   return annotateActiveStriping(withDividers);
 };
 
-const buildSeasonPayload = (season, rawData, tradeBaitPlayerIds = new Set()) => {
-  const feedPlayers = playersFeedBySeason[season] ?? {};
-  const playerIdentityMap = getPlayerMap(Number(season));
-  const liveRosterData = liveRosterDataByPlayerId[season] ?? {};
-
-  // Projections Map — use the season's projected scores data
-  const projectedScoresData = projectedScoresBySeason[season] ?? projectedScoresBySeason[currentSeasonYearStr] ?? {};
-  const projectedScores = projectedScoresData?.projectedScores?.playerScore || [];
-  const projectionMap = new Map();
-  if (Array.isArray(projectedScores)) {
-    projectedScores.forEach(p => projectionMap.set(p.id, p.score));
-  } else if (projectedScores.id) {
-    projectionMap.set(projectedScores.id, projectedScores.score);
-  }
-
-  // Build player list from live roster data (the authoritative source).
-  // The salary file is only used for enrichment (sleeper, nflverse, etc.).
-  const salaryDataById = new Map((rawData?.players ?? []).map((p) => [p.id, p]));
-  const hasLiveRosters = Object.keys(liveRosterData).length > 0;
-
-  const basePlayers = hasLiveRosters
-    ? Object.entries(liveRosterData).map(([id, liveData]) => {
-        const salaryPlayer = salaryDataById.get(id) ?? {};
-        const feed = feedPlayers[id] ?? {};
-        const identity = playerIdentityMap.get(id);
-        return {
-          ...salaryPlayer,
-          id,
-          name: identity?.name ?? salaryPlayer.name ?? feed.name ?? `Player ${id}`,
-          position: identity?.position ?? (salaryPlayer.position ?? feed.position ?? 'N/A').replace(/^Def$/i, 'DEF'),
-          team: identity?.nflTeam ?? salaryPlayer.team ?? feed.team ?? '',
-          salary: liveData.salary ?? salaryPlayer.salary ?? '0',
-          contractYear: liveData.contractYear ?? salaryPlayer.contractYear ?? '1',
-          status: liveData.status ?? salaryPlayer.status ?? 'ROSTER',
-          points: salaryPlayer.points ?? 0,
-          draftYear: salaryPlayer.draftYear ?? (feed.draft_year ? Number(feed.draft_year) : null),
-          draftTeam: salaryPlayer.draftTeam ?? feed.draft_team ?? '',
-        };
-      })
-    : (rawData?.players ?? []).filter((player) => !!liveRosterData[player.id] || !hasLiveRosters);
-
-  const players = basePlayers.map((player) => {
-    // Get live roster data for this player (includes current salary, contract, franchise)
-    const liveData = liveRosterData[player.id];
-
-    // Use live salary if available, otherwise fall back to frozen data
-    const salary = liveData?.salary ? parseNumber(liveData.salary) : parseNumber(player.salary);
-    const nflverse = player.nflverse ?? {};
-    const parseSnap = (val) => {
-      if (val === undefined || val === null || val === '') return null;
-      const num = Number(val);
-      return Number.isFinite(num) ? num : null;
-    };
-    // Use live contract years if available
-    const contractYears =
-      Number.parseInt(liveData?.contractYear ?? player.contractYear ?? player.contractYearRemaining ?? '0', 10) ||
-      0;
-    // Use live roster data for current franchise assignment
-    // If player not in live rosters, they may have been dropped - show as FA
-    const franchiseId = liveData?.franchiseId ?? 'FA';
-    const totalRemaining = salary * Math.max(contractYears || 1, 1);
-    const seasonYear = Number.parseInt(season, 10) || getCurrentLeagueYear();
-    // Use live status if available
-    const status = liveData?.status ?? player.status ?? 'ROSTER';
-    const contractType =
-      player.contractType ??
-      (status && status !== 'ROSTER'
-        ? status
-        : player.draftYear && seasonYear - Number(player.draftYear) <= 2
-          ? 'Rookie'
-          : 'Standard');
-    const nflTeam = normalizeTeamCode(player.team ?? '');
-
-    // Helper to get odds data
-    const getOddsData = (team) => {
-      const normalized = team === 'JAC' ? 'JAX' : team === 'WSH' ? 'WAS' : team;
-      return liveOddsData[normalized] || null;
-    };
-
-    const gameOdds = getOddsData(nflTeam);
-    const opponent = gameOdds ? (gameOdds.isHome ? `vs ${gameOdds.opponent}` : `@ ${gameOdds.opponent}`) : 'BYE';
-
-    // Parse Spread
-    let favoredTeam = null;
-    let spreadAmount = null;
-    if (gameOdds?.spread) {
-      const parts = gameOdds.spread.split(' ');
-      if (parts.length >= 2) {
-        favoredTeam = parts[0];
-        // Strip non-numeric characters to get the absolute spread amount
-        spreadAmount = parts[1].replace(/[^0-9.]/g, '');
-      }
-    }
-
-    // Get Opponent Stats (Rank/Avg)
-    let oppStats = null;
-    const fpaData = fantasyPointsAllowedBySeason[season] ?? fantasyPointsAllowedBySeason[currentSeasonYearStr];
-    if (gameOdds && fpaData?.fantasyPointsAllowed) {
-      const oppCode = gameOdds.opponent === 'JAX' ? 'JAC' : gameOdds.opponent === 'WAS' ? 'WSH' : gameOdds.opponent;
-      const teamStats = fpaData.fantasyPointsAllowed[oppCode] || fpaData.fantasyPointsAllowed[gameOdds.opponent];
-      if (teamStats) {
-        oppStats = teamStats[player.position];
-      }
-    }
-
-    // In demo mode, generate unique oppStats per player for sorting demonstration
-    if (isDemoMode && gameOdds) {
-      // Simple hash from player ID to get a consistent pseudo-random value
-      const idNum = parseInt(player.id, 10) || 0;
-      const seed = ((idNum * 2654435761) >>> 0) % 1000; // Knuth multiplicative hash
-      const rank = (seed % 32) + 1; // 1-32
-      const avg = (15 + (seed % 200) / 10).toFixed(1); // 15.0 - 35.0
-      oppStats = { rank, avg };
-    }
-
-    // Get Recent Scores
-    const recentScores = trendWeeks.map(week => ({
-      week,
-      score: playerScoresMap.get(player.id)?.[week] !== undefined
-        ? playerScoresMap.get(player.id)[week]
-        : '-'
-    }));
-
-    // Calculate Recent Average (Last 3 Weeks)
-    const recentNumericScores = recentScores
-      .map(s => s.score)
-      .filter(s => typeof s === 'number');
-    const avgRecent = recentNumericScores.length > 0
-      ? (recentNumericScores.reduce((sum, s) => sum + s, 0) / recentNumericScores.length).toFixed(1)
-      : '-';
-
-    // Calculate Season Average (All Weeks)
-    const playerAllScores = playerScoresMap.get(player.id) || {};
-    const seasonScores = Object.values(playerAllScores).filter(s => typeof s === 'number');
-    const avgSeason = seasonScores.length > 0
-      ? (seasonScores.reduce((sum, s) => sum + s, 0) / seasonScores.length).toFixed(1)
-      : '-';
-
-    const feedPlayer = feedPlayers[player.id] ?? null;
-    const identity = playerIdentityMap.get(player.id);
-    const resolvedEspnId = identity?.espnId ?? feedPlayer?.espn_id ?? (espnCollegeIds as any).players?.[player.id]?.espnCollegeId ?? null;
-    const headshot = identity?.headshot ?? getPlayerHeadshot(player.id, resolvedEspnId);
-    const collegeName = player.sleeper?.college ?? player.college ?? null;
-    const collegeAssets = getCollegeAssets(collegeName);
-    const parseDraft = (val) => {
-      if (val === undefined || val === null || val === '') return null;
-      const num = parseInt(val, 10);
-      return Number.isFinite(num) ? num : null;
-    };
-    const draftYear = parseDraft(player.draftYear ?? feedPlayer?.draft_year);
-    const draftRound = parseDraft(feedPlayer?.draft_round);
-    const draftPick = parseDraft(feedPlayer?.draft_pick);
-    const draftTeam = (player.draftTeam ?? feedPlayer?.draft_team ?? '').toUpperCase() || null;
-
-    const playerObj = {
-      id: player.id,
-      espnId: resolvedEspnId,
-      name: player.name,
-      position: player.position ?? 'N/A',
-      salary,
-      contractYears,
-      totalRemaining,
-      franchiseId,
-      status,
-      contractType,
-      points: parseNumber(player.points),
-      projectedPoints: projectionMap.get(player.id) || '-',
-      recentScores,
-      avgRecent,
-      avgSeason,
-      nflTeam,
-      opponent,
-      oppStats,
-      gameOdds: gameOdds ? {
-        spread: gameOdds.spread,
-        overUnder: gameOdds.overUnder,
-        favoredTeam,
-        spreadAmount,
-        weather: gameOdds.weather,
-        opponent: gameOdds.opponent,
-        isHome: gameOdds.isHome
-      } : null,
-      draftYear,
-      draftTeam,
-      draftRound,
-      draftPick,
-      nflLogo: getNflLogoUrl(nflTeam),
-      rosterSlot: normalizeStatus(player.status),
-      byeWeek: nflByeWeeks[nflTeam] ?? null,
-      birthdate: player.birthdate ?? (feedPlayer?.birthdate ? Number(feedPlayer.birthdate) : null),
-      headshot,
-      college: collegeName,
-      collegeLogo: collegeAssets?.logo ?? null,
-      collegeLogoDark: collegeAssets?.logoDark ?? null,
-      height: player.sleeper?.height ?? null,
-      weight: player.sleeper?.weight ?? null,
-      number: player.sleeper?.number ?? null,
-      experience: player.sleeper?.experience ?? null,
-      depthChartPosition: player.sleeper?.depthChartPosition ?? null,
-      depthChartOrder: player.sleeper?.depthChartOrder ?? null,
-      injuryStatus: mflInjuryData[player.id]?.injuryStatus ?? player.sleeper?.injuryStatus ?? null,
-      injuryBodyPart: mflInjuryData[player.id]?.injuryBodyPart ?? player.sleeper?.injuryBodyPart ?? null,
-      sleeperId: player.sleeper?.id ?? null,
-      sleeperFullName: player.sleeper?.fullName ?? null,
-      sleeperPosition: player.sleeper?.position ?? null,
-      fantasyPositions: player.sleeper?.fantasyPositions ?? null,
-      gsisId: player.sleeper?.gsisId ?? null,
-      sleeperAge: player.sleeper?.age ?? null,
-      sleeperStatus: player.sleeper?.status ?? null,
-      sleeperActive: player.sleeper?.active ?? null,
-      offenseSnaps: parseSnap(nflverse.offenseSnaps),
-      defenseSnaps: parseSnap(nflverse.defenseSnaps),
-      stSnaps: parseSnap(nflverse.stSnaps),
-      gamesPlayed: player.gamesPlayed ?? null,
-      depthChartAhead: player.depthChartAhead ?? null,
-      tradeBait: tradeBaitPlayerIds.has(String(player.id)),
-      contractInfo: liveData?.contractInfo || '',
-    };
-
-    return playerObj;
-  });
-
-  const grouped = {};
-  players.forEach((player) => {
-    const key = player.franchiseId || 'FA';
-    if (!grouped[key]) {
-      grouped[key] = [];
-    }
-    grouped[key].push(player);
-  });
-
-  const teams = {};
-
-  Object.entries(grouped).forEach(([teamId, teamPlayers]) => {
-    const buckets: { ACTIVE: typeof players; PRACTICE: typeof players; INJURED: typeof players } = {
-      ACTIVE: [],
-      PRACTICE: [],
-      INJURED: [],
-    };
-    (Array.isArray(teamPlayers) ? teamPlayers : []).forEach((player) => {
-      if (player.status === 'TAXI_SQUAD') {
-        buckets.PRACTICE.push(player);
-      } else if (player.status === 'INJURED_RESERVE') {
-        buckets.INJURED.push(player);
-      } else {
-        buckets.ACTIVE.push(player);
-      }
-    });
-    const activeSorted = sortByPosition(buckets.ACTIVE);
-    const practiceSorted = sortByPosition(buckets.PRACTICE);
-    const injuredSorted = sortByPosition(buckets.INJURED);
-
-    // Calculate total salary: ACTIVE @ 100%, INJURED @ 100%, PRACTICE @ 50%
-    const activeSalary = activeSorted.reduce(
-      (sum, player) => sum + parseNumber(player.salary),
-      0
-    );
-    const injuredSalary = injuredSorted.reduce(
-      (sum, player) => sum + parseNumber(player.salary),
-      0
-    );
-    const practiceSalary = practiceSorted.reduce(
-      (sum, player) => sum + parseNumber(player.salary) * 0.5,
-      0
-    );
-    const totalSalary = activeSalary + injuredSalary + practiceSalary;
-    teams[teamId] = {
-      players: activeSorted,
-      practiceSquad: practiceSorted,
-      injuredReserve: injuredSorted,
-      record: recordsBySeason[season]?.[teamId] ?? null,
-      totals: {
-        totalSalary,
-        rosterCount: activeSorted.length,
-        openSpots: Math.max(ROSTER_LIMIT - activeSorted.length, 0),
-        practiceCount: practiceSorted.length,
-        injuredCount: injuredSorted.length,
-      },
-    };
-  });
-
-  return {
-    metadata: {
-      capLimit: leagueMetaBySeason[season]?.capLimit ?? SALARY_CAP,
-      rosterLimit: leagueMetaBySeason[season]?.rosterLimit ?? ROSTER_LIMIT,
-      season,
-    },
-    teams,
-    salaryAdjustments: feedSalaryAdjustmentsBySeason[season] ?? [],
-  };
+// Request-time context for the shared season-payload builder
+// (scripts/lib/roster-season-payload.mjs — the faithful extraction of the
+// buildSeasonPayload closure that used to live here). The prebuild script
+// builds every HISTORICAL season from this exact context shape using the
+// committed feeds on disk and neutral live-only inputs (no odds, no weekly
+// scores, no injuries, no projections, no trade bait).
+const seasonPayloadContext = {
+  playersFeedBySeason,
+  getIdentityMap: (year: number) => getPlayerMap(year),
+  liveRosterDataByPlayerId,
+  projectedScoresBySeason,
+  currentSeasonYearStr,
+  currentLeagueYear: getCurrentLeagueYear(),
+  liveOddsData,
+  isDemoMode,
+  fantasyPointsAllowedBySeason,
+  trendWeeks,
+  playerScoresMap,
+  espnCollegeIds,
+  getPlayerHeadshot,
+  getCollegeAssets,
+  mflInjuryData,
+  recordsBySeason,
+  leagueMetaBySeason,
+  feedSalaryAdjustmentsBySeason,
 };
+
+const buildSeasonPayload = (season, rawData, tradeBaitPlayerIds = new Set()) =>
+  buildSeasonPayloadShared(seasonPayloadContext, season, rawData, tradeBaitPlayerIds);
 
 // tradeBaitBySeason is built dynamically from glob feeds above
 
-const rostersBySeason = {};
+// Historical seasons come from the prebuild-time derived file; ONLY the
+// current league year + current season year (feedYears) are built live at
+// request time. Any salary-file season newer than the newest derived season
+// is also built live, so the Feb-14 rollover window never loses a season
+// between derived-file regenerations. Live computation wins whenever a
+// season is one of the current years (a stale derived entry for a current
+// year is overwritten below).
+const derivedSeasonPayloads = derivedRosterSeasonPayloads.seasons ?? {};
+const newestDerivedSeason = Math.max(
+  0,
+  ...Object.keys(derivedSeasonPayloads).map(Number).filter(Number.isFinite)
+);
+
+const rostersBySeason = { ...derivedSeasonPayloads };
 Object.entries(rosterModules).forEach(([path, mod]) => {
   const season = extractSeason(path);
   if (!season) return;
+  const isCurrentYear = feedYears.includes(season);
+  const isNewerThanDerived = Number(season) > newestDerivedSeason;
+  if (!isCurrentYear && !isNewerThanDerived) return; // frozen season → derived payload
   rostersBySeason[season] = buildSeasonPayload(
     season,
     getModuleData(mod),
     tradeBaitBySeason[season] ?? new Set()
   );
 });
+
+// The client config needs salary adjustments for EVERY season; the glob now
+// only carries current-era feeds, so historical seasons read from the derived
+// payloads (each one carries its own enriched salaryAdjustments array).
+const adjustmentsBySeasonAllYears = {
+  ...Object.fromEntries(
+    Object.entries(derivedSeasonPayloads).map(([season, payload]) => [
+      season,
+      (payload as any).salaryAdjustments ?? [],
+    ])
+  ),
+  ...feedSalaryAdjustmentsBySeason,
+};
 
 // Process salary averages for extension calculator
 const salaryAveragesBySeason = {};
@@ -2229,7 +2006,7 @@ const serializedConfig = JSON.stringify({
   defaultTeamId,
   initialSeasonData,
   initialTeamData,
-  adjustmentsBySeason: feedSalaryAdjustmentsBySeason,
+  adjustmentsBySeason: adjustmentsBySeasonAllYears,
   salaryAverages: salaryAveragesBySeason,
   extensionSeason,
   teams: teamLookup,

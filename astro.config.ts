@@ -4,6 +4,7 @@ import { loadEnv } from 'vite';
 import vercel from '@astrojs/vercel';
 import react from '@astrojs/react';
 import { archivedFeedFiles } from './scripts/lib/archived-feed-files.mjs';
+import { schefterArchiveIncludeFiles } from './scripts/lib/schefter-archive.mjs';
 
 // Local dev: hydrate process.env from .env / .env.local (`pnpm vercel env pull`).
 // Vite only exposes those files to import.meta.env, but the server utils
@@ -38,6 +39,10 @@ export default defineConfig({
       'public/assets/logos/afl-logo-dark.svg',
       'src/data/theleague/schefter-feed.json',
       'data/afl-fantasy/schefter-feed.json',
+      // Season archives the OG renderer falls back to for posts older than
+      // the active window. Enumerated (NOT globbed — includeFiles realpaths
+      // each entry, so a literal '*.json' fails the whole build).
+      ...schefterArchiveIncludeFiles(),
     ],
     // Keeps the file tracer's unresolvable-path fallback from shipping 20
     // years of archived feeds in every request's function. See the module for

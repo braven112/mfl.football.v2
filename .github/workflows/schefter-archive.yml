@@ -1,0 +1,45 @@
+name: Schefter Feed Archive
+
+# Weekly: move both leagues' schefter feeds' long tail into per-year archive
+# files, keeping the active feed at SCHEFTER_ACTIVE_MAX posts
+# (scripts/lib/retention-policy.mjs). Safe against the every-15-minute scan
+# jobs: the feed write goes through commit-feed-and-push's content merge, and
+# mergeFeed's archivedThroughTimestamp watermark stops a racing scan from
+# resurrecting archived posts.
+
+on:
+  schedule:
+    - cron: "7 10 * * 2"
+  workflow_dispatch:
+
+concurrency:
+  group: schefter-archive
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+          fetch-depth: 1
+
+      - name: Setup pnpm + Node + install
+        uses: ./.github/actions/setup
+
+      - name: Archive schefter feeds
+        run: node scripts/archive-schefter-feed.mjs
+
+      - name: Commit and push
+        run: |
+          git config user.name "Schefter Bot"
+          git config user.email "actions@users.noreply.github.com"
+          node scripts/commit-feed-and-push.mjs \
+            --branch main \
+            --message "chore: schefter feed archive — rotate long tail into season archives" \
+            --files "src/data/theleague/schefter-feed.json,data/afl-fantasy/schefter-feed.json,src/data/theleague/schefter-archive,data/afl-fantasy/schefter-archive"

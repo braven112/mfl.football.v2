@@ -43,6 +43,16 @@ function postTimestamp(p) {
   return p?.timestamp ?? p?.publishedAt ?? p?.date ?? '';
 }
 
+/** Watermark/timestamp value → epoch ms (NaN when unparseable). Pure-digit
+ *  strings are epoch seconds (lastProcessedMflTimestamp style); everything
+ *  else goes through Date.parse. */
+export function toEpochMs(value) {
+  if (value === undefined || value === null || value === '') return NaN;
+  const s = String(value).trim();
+  if (/^\d+$/.test(s)) return Number(s) * 1000;
+  return Date.parse(s);
+}
+
 /**
  * Union two posts arrays by `id`, newest-first. `ours` wins on a duplicate id
  * (it's the version we just generated this run). Entries without an id are
@@ -110,6 +120,26 @@ export function mergeFeed(theirs, ours) {
   }
 
   result.posts = mergePostArrays(t.posts, o.posts);
+
+  // Archival watermark: posts at or before `archivedThroughTimestamp` have
+  // been moved to the season archive files (scripts/lib/schefter-archive.mjs).
+  // The union above would happily RESURRECT them whenever the other side's
+  // copy predates the archive run — every 15-minute scan races the weekly
+  // archiver, so this is a race we'd eventually lose. Taking the max of both
+  // sides' watermarks and dropping any post at/behind it makes archival
+  // correct under any interleaving. Posts with an unparseable timestamp are
+  // never dropped (the archiver never archives them either).
+  const archivedThrough = maxWatermark(t.archivedThroughTimestamp, o.archivedThroughTimestamp);
+  if (archivedThrough !== undefined && archivedThrough !== null && archivedThrough !== '') {
+    result.archivedThroughTimestamp = archivedThrough;
+    const cutoff = toEpochMs(archivedThrough);
+    if (Number.isFinite(cutoff)) {
+      result.posts = result.posts.filter((p) => {
+        const ts = toEpochMs(postTimestamp(p));
+        return !Number.isFinite(ts) || ts > cutoff;
+      });
+    }
+  }
   return result;
 }
 

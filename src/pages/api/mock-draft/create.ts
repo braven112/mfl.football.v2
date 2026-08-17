@@ -189,8 +189,10 @@ export const POST: APIRoute = async ({ request }) => {
     // ── Load MFL player catalog (needed by every ranking source below) ──
     // We ship the players feed with the build; third-party sources (Sleeper,
     // KTC, FBG) give us names, so we match them back to MFL IDs here.
+    // Year-filtered (2025+): only the current league year is read below.
+    // tests/current-era-feed-globs.test.ts guards it.
     const playersFeeds = import.meta.glob(
-      '../../../../data/theleague/mfl-feeds/*/players.json',
+      '../../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json',
       { eager: true },
     );
     const playersKey = Object.keys(playersFeeds).find(
