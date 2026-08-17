@@ -371,6 +371,14 @@
       "impact": "user",
       "area": "homepage",
       "league": "afl"
+    },
+    {
+      "date": "2026-08-17",
+      "type": "style-tweak",
+      "summary": "The AFL playoffs page had a shadow inside a shadow. Every bracket on it — the championship, the AL and NL semis, the third-place game, the whole tower of placement games below them — sits inside one big card, and each one was also casting its own drop shadow onto that card. That would be fine if a bracket were a card, but it isn't: it's a stack of matchups with no surface and no rounded corners of its own, so the shadow had nothing to hug and drew a hard rectangle around each bracket instead. In daylight it was faint enough to pass for a deliberate divider. At night it was a row of dark boxes ruled across a dark card, square corners and all, sitting inside the card's own shadow — which is where the doubled-up look came from. The brackets now let the card do the lifting, which is what the card is for. TheLeague's playoffs page never had this and didn't need touching, so the two finally match again.",
+      "impact": "user",
+      "area": "playoffs",
+      "league": "afl"
     }
   ]
 }
