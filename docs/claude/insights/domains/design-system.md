@@ -27,13 +27,19 @@ inherits its elevation from the card it lives in and must not restate it.
 
 **Why dark mode surfaces it first (and why light mode is not proof):** the
 shadow tokens are not the same in the two themes. `tokens-dark.css` sets
-`--shadow-color: 0deg 0% 0%` (pure black) at roughly 2.5x the light alpha,
-deliberately, because dark surfaces swallow low-alpha shadows. Light mode uses a
-tinted `220deg 3% 15%` at 0.03–0.06. So the identical square halo was present in
-both themes all along; light mode just rendered it faintly enough to pass for a
+`--shadow-color: 0deg 0% 0%` (pure black) at alphas of 0.2–0.4 on `--shadow-lg`;
+light mode uses a tinted `220deg 3% 15%` at 0.03–0.06. That is deliberate — dark
+surfaces swallow low-alpha shadows — but it means the same rule renders roughly
+**six times** heavier at night. So the identical square halo was present in both
+themes all along; light mode just rendered it faintly enough to pass for a
 deliberate divider. **A shadow bug reported as "dark mode only" is usually a
 shadow bug, not a dark-mode bug** — check the light theme before concluding the
 `html.dark` block is at fault.
+
+Note the multiplier if you go looking: the comment above those tokens in
+`tokens-dark.css` says "roughly 2.5x the light-mode opacity", and that number is
+wrong — the committed values work out to ~6.5x on `--shadow-lg` and ~5.6–7x on
+`--shadow-md`. Harmless (nothing computes off the comment), but don't quote it.
 
 **Related trap in the same file, correct as-is:** `:global(html.dark)
 .brackets-grid` overrides the shadow to
