@@ -2,15 +2,11 @@
   "version": 1,
   "year": 2026,
   "mode": "live",
-  "generatedAt": "2026-08-17T03:53:42.935Z",
+  "generatedAt": "2026-08-17T04:44:02.588Z",
   "cutdownDeadline": "2026-08-17T03:45:00.000Z",
   "summary": {
-    "overLimit": 4,
-    "done": [
-      "0001",
-      "0008",
-      "0011"
-    ],
+    "overLimit": 1,
+    "done": [],
     "failed": [],
     "skipped": [
       "0003"
@@ -522,6 +518,10 @@
         {
           "status": "skipped: no-credential",
           "at": "2026-08-17T03:53:28.135Z"
+        },
+        {
+          "status": "skipped: no-credential",
+          "at": "2026-08-17T04:44:02.284Z"
         }
       ]
     },
