@@ -9,6 +9,7 @@ import {
   splitMembership,
   flattenMembership,
   computeTierMovement,
+  byAllPlay,
   CONSTITUTION_MOVEMENT_RULES,
 } from '../scripts/lib/afl-tier-standings.mjs';
 import { resolveTierCutoffWeek } from '../src/utils/all-play.mjs';
@@ -177,10 +178,14 @@ describe('afl-tier-standings: the 2017 AFL Cup ends at week 16', () => {
   const weekly = readJson('data/afl-fantasy/mfl-feeds/2017/weekly-results.json');
   const awards = readJson('data/afl-fantasy/awards-history.json');
 
-  const rank = (cutoff: number) =>
-    [...computeAllPlayThroughCutoff(weekly, cutoff).entries()].sort(
-      (a, b) => b[1].pct - a[1].pct || b[1].pf - a[1].pf
-    );
+  // Rank with the PRODUCTION comparator, not a lookalike: byAllPlay carries
+  // the franchise-id tiebreak that keeps a pct+PF tie deterministic, and a
+  // test that re-implements the ordering it exists to pin can pass while
+  // production orders differently.
+  const rank = (cutoff: number) => {
+    const rec = computeAllPlayThroughCutoff(weekly, cutoff);
+    return [...rec.keys()].sort(byAllPlay(rec));
+  };
 
   it('resolves 2017 to week 16 and every other season to the default', () => {
     expect(resolveTierCutoffWeek(cfg.tierCompetition, 2017)).toBe(16);
@@ -216,8 +221,8 @@ describe('afl-tier-standings: the 2017 AFL Cup ends at week 16', () => {
       const rec = computeAllPlayThroughCutoff(weekly2020, cutoff);
       return Object.entries(th.seasons['2020'].membership as Record<string, string>)
         .filter(([, t]) => t === tier)
-        .map(([id]) => ({ id, ...(rec.get(id) ?? { pct: 0, pf: 0 }) }))
-        .sort((a, b) => b.pct - a.pct || b.pf - a.pf)[0].id;
+        .map(([id]) => id)
+        .sort(byAllPlay(rec))[0];
     };
     expect(champAt(17, DLEAGUE)).toBe(th.seasons['2020'].champions['dleague-champion']);
     expect(champAt(16, DLEAGUE)).not.toBe(th.seasons['2020'].champions['dleague-champion']);
@@ -225,14 +230,14 @@ describe('afl-tier-standings: the 2017 AFL Cup ends at week 16', () => {
   });
 
   it('crowns Smokane FC at week 16 — and Fullybaked at 17, which is the bug', () => {
-    expect(rank(16)[0][0]).toBe('0001'); // Smokane FC, 259-109
-    expect(rank(17)[0][0]).toBe('0010'); // Fullybaked — one week too far
+    expect(rank(16)[0]).toBe('0001'); // Smokane FC, 259-109
+    expect(rank(17)[0]).toBe('0010'); // Fullybaked — one week too far
   });
 
   it('credits the awards ledger to the week-16 winner', () => {
     const season = awards.seasons.find((s: { year: number }) => s.year === 2017);
     expect(season.awards['afl-cup'].franchiseId).toBe(
-      rank(resolveTierCutoffWeek(cfg.tierCompetition, 2017))[0][0]
+      rank(resolveTierCutoffWeek(cfg.tierCompetition, 2017))[0]
     );
   });
 
@@ -243,12 +248,7 @@ describe('afl-tier-standings: the 2017 AFL Cup ends at week 16', () => {
       .map(([id]) => id)
       .sort();
     for (const cutoff of [16, 17]) {
-      expect(
-        rank(cutoff)
-          .slice(0, 12)
-          .map(([id]) => id)
-          .sort()
-      ).toEqual(premier2018);
+      expect(rank(cutoff).slice(0, 12).sort()).toEqual(premier2018);
     }
   });
 });

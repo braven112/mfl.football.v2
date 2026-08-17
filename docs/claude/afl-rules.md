@@ -245,7 +245,7 @@ The league splits into two groups:
 
 ## Premier League / D-League Competition
 
-Runs independently, **Week 1 → Week 17**, all-play format.
+Runs independently, **Week 1 → Week 17**, all-play format. (One exception, in the History note below: 2017 — the last AFL Cup — ran Week 1 → **Week 16**.)
 
 - Each team plays **every other team once per week** (23 games/week).
 - **Top 4 Premier League** teams win money.
