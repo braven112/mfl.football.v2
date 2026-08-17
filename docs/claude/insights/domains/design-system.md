@@ -4,6 +4,60 @@ Domain knowledge about design tokens, CSS variables, theming, and visual pattern
 
 ---
 
+## 2026-08-17 - An Elevation Shadow Belongs to the Element That Owns the Surface
+
+**Context:** `/afl-fantasy/playoffs` rendered a hard, square-cornered dark halo
+around each bracket block in dark mode — the owner read it as a "double shadow
+on the brackets and then the card." `.bracket-card` was
+`display: grid` + `box-shadow: var(--box-shadow-lg)`, nested inside
+`.brackets-grid`, which is the actual card (background, `border-radius: 1rem`,
+padding, its own `--box-shadow-lg`).
+
+**Insight:** A `box-shadow` is painted around the element's *border box*, which
+exists whether or not the element has a background or a `border-radius`. So an
+elevation shadow on a surfaceless nested element does not read as "slightly
+raised" — it draws a **sharp rectangle** on the surface it is already sitting
+on, and the parent card's own shadow is right there next to it, which is what
+makes it read as doubled rather than merely wrong.
+
+The rule that prevents it: **elevation is a property of a surface.** Only give
+`box-shadow: var(--box-shadow-*)` to an element that also has a background and
+a `border-radius`. A layout-only wrapper (`display: grid`/`flex`, no paint)
+inherits its elevation from the card it lives in and must not restate it.
+
+**Why dark mode surfaces it first (and why light mode is not proof):** the
+shadow tokens are not the same in the two themes. `tokens-dark.css` sets
+`--shadow-color: 0deg 0% 0%` (pure black) at alphas of 0.2–0.4 on `--shadow-lg`;
+light mode uses a tinted `220deg 3% 15%` at 0.03–0.06. That is deliberate — dark
+surfaces swallow low-alpha shadows — but it means the same rule renders roughly
+**six times** heavier at night. So the identical square halo was present in both
+themes all along; light mode just rendered it faintly enough to pass for a
+deliberate divider. **A shadow bug reported as "dark mode only" is usually a
+shadow bug, not a dark-mode bug** — check the light theme before concluding the
+`html.dark` block is at fault.
+
+Note the multiplier if you go looking: the comment above those tokens in
+`tokens-dark.css` says "roughly 2.5x the light-mode opacity", and that number is
+wrong — the committed values work out to ~6.5x on `--shadow-lg` and ~5.6–7x on
+`--shadow-md`. Harmless (nothing computes off the comment), but don't quote it.
+
+**Related trap in the same file, correct as-is:** `:global(html.dark)
+.brackets-grid` overrides the shadow to
+`0 0 0 1px var(--content-border), var(--box-shadow-lg)` — a border ring stacked
+on the elevation, because at night the shadow alone can't separate the card from
+the page background. That is a legitimate nested-shadow pair on an element that
+*does* own a surface. Don't "deduplicate" it while removing a real double
+shadow.
+
+**Cross-league check paid off here:** TheLeague's sibling page
+(`src/pages/theleague/playoffs.astro`) has the same `.bracket-card` /
+`.brackets-grid` structure and has always been shadow-free on the inner block,
+so the AFL page was the drifted copy. On the two-league page pairs, diffing the
+sibling's rule is usually faster than reasoning about the CSS from scratch —
+and it tells you which side is the bug.
+
+---
+
 ## 2026-08-15 - `--box-shadow-focus-ring` Is a FOCUS Affordance; Using It for SELECTED Ships a Duller Blue
 
 **Context:** The roster page's team-crest drawer marked the active team with

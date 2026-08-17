@@ -371,6 +371,22 @@
       "impact": "user",
       "area": "homepage",
       "league": "afl"
+    },
+    {
+      "date": "2026-08-17",
+      "type": "style-tweak",
+      "summary": "The AFL playoffs page had a shadow inside a shadow. Every bracket on it — the championship, the AL and NL semis, the third-place game, the whole tower of placement games below them — sits inside one big card, and each one was also casting its own drop shadow onto that card. That would be fine if a bracket were a card, but it isn't: it's a stack of matchups with no surface and no rounded corners of its own, so the shadow had nothing to hug and drew a hard rectangle around each bracket instead. In daylight it was faint enough to pass for a deliberate divider. At night it was a row of dark boxes ruled across a dark card, square corners and all, sitting inside the card's own shadow — which is where the doubled-up look came from. The brackets now let the card do the lifting, which is what the card is for. TheLeague's playoffs page never had this and didn't need touching, so the two finally match again.",
+      "impact": "user",
+      "area": "playoffs",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-17",
+      "type": "bug-fix",
+      "summary": "The AFL trophy wall was rewriting history every time a team got renamed. Thundering Herd finished last in 2026 and took the punishment name, A Bruin Pegs Me — and the awards ledger promptly went back through the archive and reassigned the 2008, 2016, 2018 and 2023 titles to A Bruin Pegs Me too, including the 2023 D-League championship. The Herd won those. Nobody named A Bruin Pegs Me has ever won anything, because that team is three weeks old. The ledger was stamping each award with whatever the franchise is called today instead of what it was called when it won, which in a league that renames its last-place finisher every single season is an annual guarantee rather than a fluke. Awards now record the name the winner actually wore that year. Same pass caught Smokane, who were plain \"Smokane\" until 2009 and had four division titles from that era filed under the later \"Smokane FC\".",
+      "impact": "user",
+      "area": "other",
+      "league": "afl"
     }
   ]
 }

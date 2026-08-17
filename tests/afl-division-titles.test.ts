@@ -317,3 +317,92 @@ describe('overallPct feed-shape fallbacks (via rankDivisionStandingsBestFirst)',
     expect(rankDivisionStandingsBestFirst(teams).map((t) => t.id)).toEqual(['0001', '0002']);
   });
 });
+
+// A trophy records the name its winner wore THAT SEASON. The AFL rebrands its
+// last-place finisher every year, so a ledger that stamps today's name rewrites
+// somebody's history annually — in Aug 2026 franchise 0014 became "A Bruin Pegs
+// Me" and the next offline re-run of compute-afl-awards.mjs restamped its 2008,
+// 2016, 2018 and 2023 titles with the punishment name.
+//
+// The two eras resolve the name from DIFFERENT sources, and that split is the
+// whole point of these cases:
+//   2016+     slot ids are owner-stable, so the current config's history[]
+//             (getTeamIdentityForYear's year window) is authoritative.
+//   pre-2016  the AFL was recreated as a fresh MFL league every season, so a
+//             slot id is NOT owner-stable — the ledger's franchiseId is an
+//             OWNER pointer and that slot's history[] describes whoever else
+//             held the number. Only the season's own feed name is trustworthy.
+// Resolving pre-2016 through the slot is a real bug that looks like a fix: it
+// renamed the 2007 champion (the team called Chatmaster, slot 0007 then, 0021
+// today) to "Da Dangsters", because a different owner held 0021 in 2007.
+// Resolved from the committed config here rather than imported from
+// compute-afl-awards.mjs on purpose: a test that reuses the implementation's
+// own resolver agrees with it by construction, including when both are wrong.
+// This mirrors getTeamIdentityForYear's window matching (src/utils/team-names.ts),
+// which is what the SITE renders — so a drift between ledger and page fails here.
+function nameForSeason(franchiseId: string, year: number): string | null {
+  const team = ((aflConfig as any).teams ?? []).find(
+    (t: any) => t.franchiseId === franchiseId
+  );
+  if (!team) return null;
+  for (const entry of team.history ?? []) {
+    if (year >= entry.yearStart && year <= entry.yearEnd) return entry.name;
+  }
+  return team.name ?? null;
+}
+
+describe('award names use the winner’s name for that season', () => {
+  it('2016+: honors a later rename (0014 was Thundering Herd until 2025)', () => {
+    for (const [year, slug] of [
+      [2023, 'nl-west'],
+      [2023, 'dleague-champion'],
+      [2018, 'nl-west'],
+      [2016, 'nl-west'],
+    ] as Array<[number, string]>) {
+      const award = SEASONS.get(year)?.[slug];
+      expect(award, `${year} ${slug} missing`).toBeDefined();
+      expect(award!.franchiseId).toBe('0014');
+      expect(award!.name, `${year} ${slug} must not carry the 2026 rename`).toBe(
+        'Thundering Herd'
+      );
+    }
+  });
+
+  it('pre-2016: uses the season’s own feed name, not the slot’s history', () => {
+    // 0001 was "Smokane" through 2008 and "Smokane FC" after — both eras pinned
+    // so a fix to one cannot quietly swallow the other.
+    for (const [year, expected] of [
+      [2008, 'Smokane'],
+      [2005, 'Smokane'],
+      [2010, 'Smokane FC'],
+    ] as Array<[number, string]>) {
+      const award = SEASONS.get(year)?.['al-north'];
+      expect(award, `${year} al-north missing`).toBeDefined();
+      expect(award!.franchiseId).toBe('0001');
+      expect(award!.name).toBe(expected);
+    }
+  });
+
+  // The pins above are hand-picked, so they only catch a rename that happens to
+  // land on a row somebody listed. This asserts the RULE across the whole
+  // ledger, and it is the case that bites: a rename half-lands, because the
+  // per-run enrichment can only reach slugs that run derived. An --offline run
+  // rewrites the division rows (local standings) and cannot touch the bracket
+  // rows (needs MFL), so 2018's nl-west and its NIT ended up naming the same
+  // franchise two different things.
+  it('2016+: every credited row matches that season’s identity, file-wide', () => {
+    const offenders: string[] = [];
+    for (const [year, awards] of SEASONS) {
+      if (year < 2016) continue; // slot ids are not owner-stable before this
+      for (const [slug, award] of Object.entries(awards)) {
+        if (!award?.franchiseId) continue; // defunct owner — name is the only record
+        const expected = nameForSeason(award.franchiseId, year);
+        if (expected && award.name !== expected) {
+          offenders.push(`${year} ${slug} (${award.franchiseId}): "${award.name}" should be "${expected}"`);
+        }
+      }
+    }
+    expect(offenders, `awards naming a franchise by an identity it did not hold:\n${offenders.join('\n')}`)
+      .toEqual([]);
+  });
+});
