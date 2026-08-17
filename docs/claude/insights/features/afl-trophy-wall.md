@@ -519,3 +519,48 @@ already distinct shapes — so only Premier/D-League needed the swap.
 
 **Evidence:** `src/utils/afl-badge.ts` (`stripBadgeYear`); `tests/afl-badge.test.ts`;
 `src/pages/afl-fantasy/franchises/index.astro` (`timelessBadge`, `badgeFilenameFor`).
+
+## 2026-08-16 - Badge art at ICON size: the viewBox is mostly margin, and the filename is derivable
+
+**Context:** The AL/NL playoff-standings card on the AFL homepage
+(`AflConferencePlayoffPreview.astro`) marked its top two seeds with a `Div`
+text chip; replaced it with that team's own division shield. Same "strip, don't
+blank" call as the entry above, but at ~25px instead of trophy-room size, which
+surfaced two things that don't come up at full size.
+
+**Insight 1: the shield art's 260x336 viewBox is ~26% empty margin, so a CSS
+height is NOT the size the badge appears.** The shield path spans y=50..300 of
+336 — roughly 15% dead space above, 11% below. Set `height: 1.75rem` and the
+painted shield is about 1.3rem tall. That's fine (arguably good — it self-insets
+next to a team crest) but it means sizing this art by eye against a neighbouring
+`<img>` misleads: at the same CSS height the shield reads distinctly smaller
+than a crest, and matching them visually takes ~30% more height on the shield.
+Budget for it rather than discovering it after a screenshot. Don't "fix" it by
+tightening the viewBox — the margin is shared by every badge and the trophy wall
+depends on the current framing.
+
+**Insight 2: the award filename is `<conference>-<division>`, so derive it —
+don't write another division→slug map.** `getConferenceShort(code).toLowerCase()
++ '-' + division.toLowerCase()` resolves all four current divisions AND the
+retired pre-2013 pair (`al-central`, `nl-pacific`) with no table to maintain.
+The existing `DIVISION_SLUG` map in `franchises/index.astro` is a hardcoded
+4-entry version of this that structurally cannot cover the six-division
+2003-2012 layouts — fine there (that page only shows current teams), but the
+derived form is the one to copy into anything that touches historical seasons.
+Guard the lookup and fall back to the old text chip on a miss, since a division
+with no art is a real state.
+
+**Insight 3: `namespaceBadgeIds` is still required for two DIFFERENT shields on
+one page, and the reason is not the one in its doc comment.** That comment
+justifies namespacing as protection against the same file inlined once per
+franchise. Two different shields collide too — every shield declares
+`id="sh"` for its clip path. Today it happens to be harmless in both cases for
+the same reason (the clip path geometry is byte-identical across shields, so
+the first-wins duplicate resolves to the right shape), but the gradients are
+already per-division (`g_north` vs `g_south`), which is exactly the divergence
+that would make `sh` diverge next. Namespace on inline and stop reasoning about
+whether today's art happens to be uniform.
+
+**Evidence:** `src/components/afl/hp-sections/AflConferencePlayoffPreview.astro`
+(`divisionBadgeFor`, `.afl-conf__div-badge`); `public/assets/afl/awards/al-*.svg`,
+`nl-*.svg`.

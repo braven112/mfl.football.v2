@@ -12,10 +12,35 @@
  */
 import { chooseTeamName } from '../../../utils/team-names';
 import { getConferenceStandings } from '../../../utils/standings';
-import { getConferenceLogo, getConferenceLogoDark } from '../../../utils/afl-conference';
+import {
+  getConferenceLogo,
+  getConferenceLogoDark,
+  getConferenceShort,
+} from '../../../utils/afl-conference';
+import { stripBadgeYear, namespaceBadgeIds } from '../../../utils/afl-badge';
 import { formatPoints } from '../../../utils/formatters';
 import ThemeImage from '../../ThemeImage.astro';
 import TeamIconCell from '../../TeamIconCell.astro';
+
+// Division-title badge art. Inlined rather than <img>-linked because the year
+// stamp has to come off (see below), which means editing the SVG — an <img>
+// could only point at the unedited file. Inlining then brings the id problem
+// with it: every shield declares `id="sh"` for its clip path, so two of them in
+// one table share that id. It's benign as the art stands (the clip geometry is
+// identical across shields, so first-wins resolves to the right shape) but the
+// gradients are already per-division, which is the divergence that would make
+// `sh` diverge next — so namespace rather than re-audit the art each time.
+const badgeSvgRaw = import.meta.glob<string>(
+  '../../../../public/assets/afl/awards/*.svg',
+  { query: '?raw', import: 'default', eager: true }
+);
+// Strip the ★ YYYY ★ stamp: this marks "leads the division right now", not a
+// win in any particular season.
+const DIVISION_BADGE_SVG: Record<string, string> = {};
+for (const [p, raw] of Object.entries(badgeSvgRaw)) {
+  DIVISION_BADGE_SVG[(p.split('/').pop() as string).replace(/\.svg$/, '')] =
+    stripBadgeYear(raw);
+}
 
 interface Team {
   franchiseId: string;
@@ -76,10 +101,22 @@ interface PreviewRow {
   pf: number;
   division: string;
   isDivisionWinner: boolean;
+  /** Inlined division-title shield, id-namespaced. Empty when no art exists. */
+  divisionBadge: string;
   isUser: boolean;
 }
 
 const allConfTeams = (confResult?.allTeams ?? []) as any[];
+
+// Award art is filed as `<conference>-<division>.svg` (al-north, nl-pacific,
+// …), so derive the filename instead of hardcoding a division→slug map — that
+// covers the six-division 2003-2012 layouts for free. A division with no art
+// resolves to '' and the row falls back to the "Div" wordmark.
+const conferenceSlug = getConferenceShort(conferenceCode).toLowerCase();
+function divisionBadgeFor(division: string, franchiseId: string): string {
+  const svg = DIVISION_BADGE_SVG[`${conferenceSlug}-${String(division).toLowerCase()}`];
+  return svg ? namespaceBadgeIds(svg, `conf-${conferenceSlug}-${franchiseId}`) : '';
+}
 
 const rows: PreviewRow[] = allConfTeams.map((t: any) => {
   const team = teamMap.get(t.id);
@@ -100,6 +137,7 @@ const rows: PreviewRow[] = allConfTeams.map((t: any) => {
     pf: parseFloat(t.pf ?? '0'),
     division: t.division,
     isDivisionWinner: t.conferenceSeed <= 2,
+    divisionBadge: t.conferenceSeed <= 2 ? divisionBadgeFor(t.division, t.id) : '',
     isUser: t.id === userFranchiseId,
   };
 });
@@ -161,7 +199,17 @@ const visible = rows.slice(0, 6);
               </td>
               <td class="afl-conf__td afl-conf__td--team">
                 <TeamIconCell icon={row.icon} name={row.name} emphasis={row.isUser} />
-                {row.isDivisionWinner && <span class="afl-conf__chip" aria-label="Division winner">Div</span>}
+                {row.isDivisionWinner && (
+                  row.divisionBadge
+                    ? <span
+                        class="afl-conf__div-badge"
+                        role="img"
+                        aria-label={`${row.division} division leader`}
+                        title={`${row.division} division leader`}
+                        set:html={row.divisionBadge}
+                      />
+                    : <span class="afl-conf__chip" aria-label="Division winner">Div</span>
+                )}
               </td>
               <td class="afl-conf__td afl-conf__td--div">{row.division}</td>
               {hasGames && <td class="afl-conf__td afl-conf__td--record">{row.record}</td>}
@@ -350,6 +398,25 @@ const visible = rows.slice(0, 6);
     letter-spacing: 0.06em;
   }
 
+  /* Division-title shield in place of the old "Div" wordmark. The art is
+     self-contained (navy fills, white outer stroke) so it reads on the light
+     card and the dark one without a theme swap; sizing is all that's needed. */
+  .afl-conf__div-badge {
+    display: inline-flex;
+    flex-shrink: 0;
+    /* The art's 260x336 viewBox frames the shield with ~15% of empty margin
+       top and bottom, so the crest-sized box below paints a shield about
+       1.3rem tall — deliberately smaller than the team crest beside it. */
+    height: var(--div-badge-size, 1.75rem);
+    line-height: 0;
+  }
+
+  .afl-conf__div-badge :global(svg) {
+    height: 100%;
+    width: auto;
+    display: block;
+  }
+
   .afl-conf__td--div {
     text-align: center;
     color: var(--color-gray-500, #6b7280);
@@ -427,6 +494,8 @@ const visible = rows.slice(0, 6);
 
     .afl-conf {
       --team-icon-size: 2rem;
+      /* Track the crest down so the badge keeps its proportion to it. */
+      --div-badge-size: 1.5rem;
     }
   }
 </style>
