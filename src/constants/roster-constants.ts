@@ -185,6 +185,21 @@ export const NFL_LOGO_ONERROR = `this.classList.add('${NFL_LOGO_FAILED_CLASS}')`
 export const NFL_LOGO_ONLOAD = `this.classList.remove('${NFL_LOGO_FAILED_CLASS}')`;
 
 /**
+ * The college-logo twin of the pair above, under the same two rules: class +
+ * `visibility` (never inline `display:none`, which would also kill a dark-mode
+ * `content: url()` swap that renders fine without the light src), and every
+ * ONERROR paired with ONLOAD so reused imgs self-heal. The hide + dark-mode
+ * un-hide CSS is emitted by buildCollegeLogoDarkCss (which imports the class
+ * token from here), so every page rendering college logos already ships it
+ * via <CollegeLogoDarkStyles />. Defined in this file, not next to the
+ * builder, because client-side scripts import these strings and the builder's
+ * module drags the full college-logos.json into any bundle that touches it.
+ */
+export const COLLEGE_LOGO_FAILED_CLASS = 'college-logo-failed';
+export const COLLEGE_LOGO_ONERROR = `this.classList.add('${COLLEGE_LOGO_FAILED_CLASS}')`;
+export const COLLEGE_LOGO_ONLOAD = `this.classList.remove('${COLLEGE_LOGO_FAILED_CLASS}')`;
+
+/**
  * React equivalents of the inline pair. React attaches onError at hydration
  * and does NOT replay events that fired before it — and a cached 404 (the
  * poisoned-cache scenario the class exists for) typically resolves before

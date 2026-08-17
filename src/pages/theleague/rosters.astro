@@ -5440,7 +5440,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
 <script>
   import { buildPlayerCellHTML } from '../../utils/player-cell-html';
-  import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD } from '../../constants/roster-constants';
+  import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, COLLEGE_LOGO_ONERROR, COLLEGE_LOGO_ONLOAD } from '../../constants/roster-constants';
   import { initPlayerModalTrigger } from '../../utils/player-modal-trigger';
   import { NFL_TEAM_CITIES, normalizeTeamCode } from '../../utils/nfl';
   import { getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark } from '../../utils/nfl-team-colors';
@@ -6949,9 +6949,10 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         }).join('');
 
         const logo = collegePlayers[0]?.collegeLogo;
+        const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         const collegeLogoMarkup = logo
-          ? `<img src="${logo}" alt="${college}" class="team-group__logo" onerror="this.style.display='none'" />`
-          : `<div class="team-group__logo team-group__logo--fallback">${college[0] ?? '?'}</div>`;
+          ? `<img src="${esc(logo)}" alt="${esc(college)}" class="team-group__logo" onerror="${COLLEGE_LOGO_ONERROR}" onload="${COLLEGE_LOGO_ONLOAD}" />`
+          : `<div class="team-group__logo team-group__logo--fallback">${esc(college[0] ?? '?')}</div>`;
 
         return `
           <div class="chart-card">
