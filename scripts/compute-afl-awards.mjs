@@ -145,18 +145,51 @@ async function writeJson(filePath, value) {
 
 let CANONICAL_NAMES = null;
 let NAME_TO_ID = null; // current team name + every alias (lowercased) → franchiseId
+let NAME_HISTORY = null; // franchiseId → [{ name, yearStart, yearEnd }]
 async function loadCanonicalNames() {
   if (CANONICAL_NAMES) return CANONICAL_NAMES;
   const cfg = await readJson(CONFIG_PATH);
   CANONICAL_NAMES = new Map();
   NAME_TO_ID = new Map();
+  NAME_HISTORY = new Map();
   const norm = (s) => String(s || '').trim().toLowerCase();
   for (const t of cfg?.teams ?? []) {
     CANONICAL_NAMES.set(t.franchiseId, t.name);
     NAME_TO_ID.set(norm(t.name), t.franchiseId);
     for (const a of t.aliases ?? []) NAME_TO_ID.set(norm(a), t.franchiseId);
+    if (Array.isArray(t.history) && t.history.length) {
+      NAME_HISTORY.set(t.franchiseId, t.history);
+    }
   }
   return CANONICAL_NAMES;
+}
+
+// An award records the name the franchise wore WHEN IT WON, not the name it
+// wears today — the trophy wall says "Thundering Herd, 2023", because that is
+// who won it. Stamping the current name instead rewrites history every time a
+// team rebrands, and the AFL rebrands its last-place finisher every year, so
+// this is an annual event rather than an edge case. (2026: 0014 became "A Bruin
+// Pegs Me" and the next offline re-run restamped its 2008/2016/2018/2023 titles
+// with the punishment name.)
+//
+// Same rule and same year-matching as getTeamIdentityForYear /
+// resolveConfigForYear (src/utils/team-names.ts), which is what every historical
+// surface on the site displays — the ledger has to agree with the page. Kept as
+// a small local mirror rather than an import because that module is TS and this
+// is a plain-node prebuild script; the shape it reads (`history[]` with
+// yearStart/yearEnd) is the same committed config.
+//
+// ONLY VALID FOR 2016+. A franchise's history[] is indexed by SLOT id, and the
+// slot is only owner-stable from 2016 on (before that the AFL was recreated as
+// a fresh MFL league every season). Pre-2016 the same number belonged to
+// different owners in different years, so resolving a name through it answers
+// "who held this number then", not "what was this winner called" — see the
+// pre-2016 branch in computeYear, which uses the season's own feed name instead.
+function nameForYear(franchiseId, year, fallback) {
+  for (const entry of NAME_HISTORY?.get(franchiseId) ?? []) {
+    if (year >= entry.yearStart && year <= entry.yearEnd) return entry.name;
+  }
+  return CANONICAL_NAMES?.get(franchiseId) || fallback;
 }
 
 // Resolve a historical team NAME to the current franchise that owns it (by
@@ -456,9 +489,18 @@ async function computeYear(year) {
     // with the team name). Unrecognized names are defunct owners — record the
     // name but leave the title uncredited.
     if (year < 2016) {
+      // Record the CONTEMPORANEOUS name (histName, straight from that season's
+      // own league.json), never a name resolved from the current config. In
+      // this era the slot id is not owner-stable, so `mapped` is an OWNER
+      // pointer, not a slot the winner held — the current config's history[]
+      // for that slot describes whoever else occupied the number back then. In
+      // 2007 the champion was the team called Chatmaster, which was slot 0007
+      // that season and is franchise 0021 today; 0021's own history[] says "Da
+      // Dangsters" for 2007, because a different owner held 0021 then. Resolving
+      // the name through the slot credits the title to the wrong team's name.
       const mapped = currentIdForName(histName);
       enriched[slug] = mapped
-        ? { franchiseId: mapped, name: CANONICAL_NAMES.get(mapped) || histName, source: val.source }
+        ? { franchiseId: mapped, name: histName, source: val.source }
         : { franchiseId: null, name: histName, source: val.source };
       continue;
     }
@@ -473,7 +515,7 @@ async function computeYear(year) {
 
     enriched[slug] = {
       franchiseId: val.franchiseId,
-      name: CANONICAL_NAMES.get(val.franchiseId) || histName,
+      name: nameForYear(val.franchiseId, year, histName),
       source: val.source,
     };
   }

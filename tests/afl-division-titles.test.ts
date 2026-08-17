@@ -317,3 +317,60 @@ describe('overallPct feed-shape fallbacks (via rankDivisionStandingsBestFirst)',
     expect(rankDivisionStandingsBestFirst(teams).map((t) => t.id)).toEqual(['0001', '0002']);
   });
 });
+
+// A trophy records the name its winner wore THAT SEASON. The AFL rebrands its
+// last-place finisher every year, so a ledger that stamps today's name rewrites
+// somebody's history annually — in Aug 2026 franchise 0014 became "A Bruin Pegs
+// Me" and the next offline re-run of compute-afl-awards.mjs restamped its 2008,
+// 2016, 2018 and 2023 titles with the punishment name.
+//
+// The two eras resolve the name from DIFFERENT sources, and that split is the
+// whole point of these cases:
+//   2016+     slot ids are owner-stable, so the current config's history[]
+//             (getTeamIdentityForYear's year window) is authoritative.
+//   pre-2016  the AFL was recreated as a fresh MFL league every season, so a
+//             slot id is NOT owner-stable — the ledger's franchiseId is an
+//             OWNER pointer and that slot's history[] describes whoever else
+//             held the number. Only the season's own feed name is trustworthy.
+// Resolving pre-2016 through the slot is a real bug that looks like a fix: it
+// renamed the 2007 champion (the team called Chatmaster, slot 0007 then, 0021
+// today) to "Da Dangsters", because a different owner held 0021 in 2007.
+describe('award names use the winner’s name for that season', () => {
+  it('2016+: honors a later rename (0014 was Thundering Herd until 2025)', () => {
+    for (const [year, slug] of [
+      [2023, 'nl-west'],
+      [2023, 'dleague-champion'],
+      [2018, 'nl-west'],
+      [2016, 'nl-west'],
+    ] as Array<[number, string]>) {
+      const award = SEASONS.get(year)?.[slug];
+      expect(award, `${year} ${slug} missing`).toBeDefined();
+      expect(award!.franchiseId).toBe('0014');
+      expect(award!.name, `${year} ${slug} must not carry the 2026 rename`).toBe(
+        'Thundering Herd'
+      );
+    }
+  });
+
+  it('pre-2016: uses the season’s own feed name, not the slot’s history', () => {
+    // 0001 was "Smokane" through 2008 and "Smokane FC" after — both eras pinned
+    // so a fix to one cannot quietly swallow the other.
+    for (const [year, expected] of [
+      [2008, 'Smokane'],
+      [2005, 'Smokane'],
+      [2010, 'Smokane FC'],
+    ] as Array<[number, string]>) {
+      const award = SEASONS.get(year)?.['al-north'];
+      expect(award, `${year} al-north missing`).toBeDefined();
+      expect(award!.franchiseId).toBe('0001');
+      expect(award!.name).toBe(expected);
+    }
+  });
+
+  it('never credits the 2007 championship to the wrong slot occupant', () => {
+    // Regression: resolving this through 0021's history[] yields "Da Dangsters".
+    const award = SEASONS.get(2007)?.['afl-championship'];
+    if (!award) return; // ledger shape changed; the pins above still guard the rule
+    expect(award.name).toBe('Chatmaster');
+  });
+});
