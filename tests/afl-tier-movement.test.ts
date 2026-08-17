@@ -191,6 +191,39 @@ describe('afl-tier-standings: the 2017 AFL Cup ends at week 16', () => {
     }
   });
 
+  it('falls back rather than passing a malformed cutoff through', () => {
+    // Number(null) and Number('') are both 0 — "finite", and a cutoff of 0
+    // yields an EMPTY all-play table, i.e. champions computed from no games.
+    for (const bad of [null, '', 0, -1, 1.5, 'sixteen', NaN, {}]) {
+      expect(
+        resolveTierCutoffWeek({ cutoffWeek: 17, cutoffWeekByYear: { 2017: bad } }, 2017)
+      ).toBe(17);
+      expect(resolveTierCutoffWeek({ cutoffWeek: bad }, 2017)).toBe(17);
+    }
+  });
+
+  it('does NOT generalize week 16 to every season whose final is in week 16', () => {
+    // The tempting rule — "the competition ends the week of the title game" —
+    // is wrong, and wrong in a way that rewrites real history. Bracket 1
+    // resolves in week 16 in 2018, 2019 AND 2020 too, but those seasons ran
+    // their all-play through 17: recompute 2020 at week 16 and the D-League
+    // champion comes out 0013 where tier-history.json records 0015. Since
+    // compute-afl-tier-movement.mjs writes champions back, applying that rule
+    // would COMMIT the flip. 2017's week 16 is a recorded fact about 2017.
+    const th = readJson('data/afl-fantasy/tier-history.json');
+    const weekly2020 = readJson('data/afl-fantasy/mfl-feeds/2020/weekly-results.json');
+    const champAt = (cutoff: number, tier: string) => {
+      const rec = computeAllPlayThroughCutoff(weekly2020, cutoff);
+      return Object.entries(th.seasons['2020'].membership as Record<string, string>)
+        .filter(([, t]) => t === tier)
+        .map(([id]) => ({ id, ...(rec.get(id) ?? { pct: 0, pf: 0 }) }))
+        .sort((a, b) => b.pct - a.pct || b.pf - a.pf)[0].id;
+    };
+    expect(champAt(17, DLEAGUE)).toBe(th.seasons['2020'].champions['dleague-champion']);
+    expect(champAt(16, DLEAGUE)).not.toBe(th.seasons['2020'].champions['dleague-champion']);
+    expect(resolveTierCutoffWeek(cfg.tierCompetition, 2020)).toBe(17);
+  });
+
   it('crowns Smokane FC at week 16 — and Fullybaked at 17, which is the bug', () => {
     expect(rank(16)[0][0]).toBe('0001'); // Smokane FC, 259-109
     expect(rank(17)[0][0]).toBe('0010'); // Fullybaked — one week too far

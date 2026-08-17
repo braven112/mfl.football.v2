@@ -27,18 +27,26 @@ export const DEFAULT_TIER_CUTOFF_WEEK = 17;
 /**
  * The week a season's all-play competition ENDED, inclusive.
  *
- * The all-play side competition ends the same week the season's championship
- * game is played, and that week is not the same in every era: the modern
- * Premier League / D-League seasons run through week 17, but 2017 — the AFL
- * Cup, the competition the Premier League grew out of — finished in week 16,
- * the week of that season's title game (Thundering Herd def. Smokane FC;
- * week 17 held only consolation and 5th-place games).
+ * Per-season, and the per-season values are RECORDED FACTS, not derived from
+ * anything. 2017 — the AFL Cup, the competition the Premier League grew out
+ * of — ended at week 16; every other season uses the default 17.
  *
- * Getting this wrong does not merely shift a row: the 2017 Cup is decided
- * between week 16 and week 17. Through 16, Smokane FC leads at 259-109; add
- * week 17 and Fullybaked passes them. The promotion cutoff is unaffected —
- * the top 12 is the same set of franchises either way, and matches the 2018
- * Premier League roster exactly.
+ * **Do not "generalize" this to the week of the season's title game.** That
+ * rule looks right and is wrong: bracket 1 resolves in week 16 in 2018, 2019
+ * AND 2020 too, yet those seasons demonstrably ran their all-play through
+ * week 17 — recompute 2020 at week 16 and the D-League champion comes out
+ * 0013 where tier-history.json records 0015. Applying the title-game rule
+ * across the board flips a recorded champion, and
+ * compute-afl-tier-movement.mjs writes champions back, so the flip would be
+ * committed. Only add a year here with evidence for that specific year.
+ *
+ * 2017's evidence: the commissioner checked the season's payout records and
+ * the Cup money went to Smokane FC, which is the week-16 answer. The week
+ * matters because it decides the Cup — through 16, Smokane FC leads at
+ * 259-109; add week 17 and Fullybaked passes them. The promotion cutoff is
+ * unaffected either way (same top 12, an exact match for the 2018 Premier
+ * League roster), which is why the original set-match verification passed
+ * while the order was wrong.
  *
  * @param {{cutoffWeek?: number, cutoffWeekByYear?: Record<string, number>}|undefined} tierCompetition
  *   The league config's `tierCompetition` block.
@@ -46,10 +54,14 @@ export const DEFAULT_TIER_CUTOFF_WEEK = 17;
  * @returns {number} inclusive cutoff week
  */
 export function resolveTierCutoffWeek(tierCompetition, year) {
+  // A malformed entry must fall back, never pass through: Number(null) and
+  // Number('') are both 0, which is "finite" but yields an EMPTY all-play
+  // table — champions computed from zero games, silently.
+  const usable = (v) => Number.isInteger(Number(v)) && Number(v) > 0;
   const perYear = tierCompetition?.cutoffWeekByYear?.[String(year)];
-  if (Number.isFinite(Number(perYear))) return Number(perYear);
-  const fallback = Number(tierCompetition?.cutoffWeek);
-  return Number.isFinite(fallback) ? fallback : DEFAULT_TIER_CUTOFF_WEEK;
+  if (usable(perYear)) return Number(perYear);
+  const fallback = tierCompetition?.cutoffWeek;
+  return usable(fallback) ? Number(fallback) : DEFAULT_TIER_CUTOFF_WEEK;
 }
 
 /**

@@ -45,11 +45,15 @@ export const AFL_CUP = 'AFL Cup';
  *
  * Two things that are easy to get wrong here, both load-bearing:
  *
- * - **It ends in WEEK 16**, the week of that season's title game, not week 17
- *   like the modern Premier League. That one week decides the Cup: through 16
- *   Smokane FC leads 259-109, and week 17 flips it to Fullybaked. The
- *   per-season cutoff lives in afl.config.json#tierCompetition.cutoffWeekByYear
- *   and is resolved by resolveTierCutoffWeek (src/utils/all-play.mjs).
+ * - **It ends in WEEK 16**, not week 17 like every other season. That one week
+ *   decides the Cup: through 16 Smokane FC leads 259-109, and week 17 flips it
+ *   to Fullybaked. Smokane FC is the answer the league's own payout records
+ *   give. The per-season cutoff lives in
+ *   afl.config.json#tierCompetition.cutoffWeekByYear and is resolved by
+ *   resolveTierCutoffWeek (src/utils/all-play.mjs) — read the warning there
+ *   before adding another year: 2017's week 16 is a recorded fact about 2017,
+ *   NOT an instance of "the week of the title game", which is a rule that
+ *   would flip 2020's recorded D-League champion.
  * - The promotion cutoff is real and is NOT affected by the cutoff week: the
  *   top 12 is the same set of franchises at week 16 and week 17, and both are
  *   an EXACT match for the 2018 Premier League roster (verified against

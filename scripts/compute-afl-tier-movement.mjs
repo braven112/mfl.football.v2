@@ -10,7 +10,7 @@
  *   2. computes each franchise's all-play record from the per-year weekly
  *      results, gated to that season's cutoff week (afl.config.json#
  *      tierCompetition.cutoffWeek, overridden per year by cutoffWeekByYear —
- *      the competition ends the week of that season's title game),
+ *      a recorded per-season fact, never inferred; see resolveTierCutoffWeek),
  *   3. ranks within each tier and applies the constitution movement rule
  *      (scripts/lib/afl-tier-standings.mjs) to name the two tier champions and
  *      derive next season's makeup, and
@@ -268,8 +268,10 @@ async function main() {
   }
 
   for (const year of years) {
-    // The cutoff is per-season — the competition ends the week of that
-    // season's title game (week 16 in the 2017 AFL Cup, 17 in the modern era).
+    // The cutoff is per-season and RECORDED, not derived — week 16 for the
+    // 2017 AFL Cup, 17 everywhere else. Do not infer it from the title-game
+    // week; see the warning on resolveTierCutoffWeek (that rule would rewrite
+    // 2020's D-League champion, and this script commits what it computes).
     const result = await computeSeason(
       history,
       cfg,

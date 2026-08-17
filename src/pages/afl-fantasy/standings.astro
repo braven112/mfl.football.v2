@@ -168,9 +168,9 @@ const weeklyResultsFeed = weeklyResultsFeeds[`../../../data/afl-fantasy/mfl-feed
 
 // Premier League all-play uses the league's tierCompetition cutoff week
 // (configured in afl.config.json) so we use consistent data from weekly results
-// rather than MFL's cumulative all-play data. The cutoff is per-season: the
-// competition ends the week of that season's title game, which was week 16 in
-// the 2017 AFL Cup and week 17 in the modern Premier League era.
+// rather than MFL's cumulative all-play data. The cutoff is per-season and
+// recorded, not derived — week 16 for the 2017 AFL Cup, 17 everywhere else.
+// See resolveTierCutoffWeek before adding a year.
 const tierCutoffWeek = resolveTierCutoffWeek(
   (aflConfig as { tierCompetition?: { cutoffWeek?: number; cutoffWeekByYear?: Record<string, number> } })
     .tierCompetition,

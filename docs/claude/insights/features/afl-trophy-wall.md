@@ -377,18 +377,27 @@ against computable ground truth when the surrounding picture changes.**
 
 **…and the cross-check itself was gated on the wrong week (2026-08-17).**
 "Smokane FC finished 2nd, not 1st" above was computed through week 17. The
-2017 competition ended at **week 16**, the week of that season's title game,
+2017 competition ended at **week 16**,
 and through week 16 Smokane FC finishes **1st** (259-109 to Fullybaked's
 258-110). So the hand-entry had the right franchise under the wrong award
 name: 2017's gold is the **AFL Cup** — the Cup's last season, run as an
 all-play table instead of a knockout — not a Premier League title. Two things
 generalize:
 
-- **A cutoff week is a competition rule, not a constant.** It now resolves
-  per season (`afl.config.json#tierCompetition.cutoffWeekByYear` →
+- **A cutoff week is a per-season fact, not a constant AND not a formula.**
+  It resolves per season now
+  (`afl.config.json#tierCompetition.cutoffWeekByYear` →
   `resolveTierCutoffWeek` in `src/utils/all-play.mjs`). One week either side
   of the finish line silently crowns a different champion, and the table looks
-  entirely plausible either way.
+  entirely plausible either way. The first draft of this fix explained 2017's
+  week 16 as "the week of that season's title game" — a tidy rule, stated in
+  five files, and **wrong**: bracket 1 also resolves in week 16 in 2018, 2019
+  and 2020, yet those seasons ran their all-play through 17, and recomputing
+  2020 at 16 flips its recorded D-League champion from 0015 to 0013. Because
+  `compute-afl-tier-movement.mjs` writes champions back, a future session
+  "completing" the pattern would have committed that flip. Record the year;
+  don't derive it. `tests/afl-tier-movement.test.ts` pins 2020 as the
+  counterexample so the tempting generalization fails loudly.
 - **A verification that reproduces a SET can pass while the ORDER is wrong.**
   The top-12 set-match held at both week 16 and week 17 — it proved 2017 was
   one table, and was never evidence about who won it. Pin the thing you
