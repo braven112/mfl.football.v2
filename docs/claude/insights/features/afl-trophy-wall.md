@@ -395,6 +395,18 @@ generalize:
   actually care about (`tests/afl-tier-movement.test.ts` now pins both the
   cutoff and the #1).
 
+**Confirmed out-of-band: the commissioner checked the season's payout
+records, and the 2017 Cup money went to Smokane FC.** Worth noting how that
+arrived — the correction started from a recollection that Thundering Herd won
+it, which turned out to be the AFL Championship they took in that same week-16
+final. Neither the recollection nor the computed table settled it alone; the
+payouts did. **Money moved is the strongest evidence a fantasy league
+produces** — it is contemporaneous, it required someone to act on the result
+at the time, and unlike a bracket title or a standings row it cannot be
+retroactively reinterpreted by us. When a historical award is contested and
+the feed math is close (this one was one all-play win out of 368), ask what
+was paid before deciding what was computed.
+
 **The name was ours, not the league's.** "Founders Table" was invented during
 this work to describe 2017 and shipped as the season's heading and in a What's
 New entry. The league called it the AFL Cup. Naming a historical thing we only
