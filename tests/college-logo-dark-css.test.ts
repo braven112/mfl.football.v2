@@ -27,12 +27,15 @@ import { collectCollegeDarkLogos, NCAA_DARK_URL_RE } from '../scripts/fetch-coll
 describe('buildCollegeLogoDarkCss', () => {
   const css = buildCollegeLogoDarkCss();
   const lines = css.split('\n').filter(Boolean);
+  // The failed-logo rules (base hide + dark un-hide) ride along with the
+  // swap rules; split them out so the swap assertions stay precise.
+  const swapLines = lines.filter((l) => !l.includes('college-logo-failed'));
 
   it('emits a non-empty, html.dark-scoped rule set', () => {
     // Non-empty only — the exact count is locked by the dedupe test below, so
     // this stays green when college-logos.json gains or loses schools.
-    expect(lines.length).toBeGreaterThan(0);
-    for (const line of lines) {
+    expect(swapLines.length).toBeGreaterThan(0);
+    for (const line of swapLines) {
       expect(line.startsWith('html.dark img[src="')).toBe(true);
       // Dark target is either the self-hosted mirror or the ESPN 500-dark cut.
       expect(
@@ -49,7 +52,18 @@ describe('buildCollegeLogoDarkCss', () => {
         .filter((e) => e?.logo && e?.logoDark && resolveCollegeDarkLogoUrl(e.logoDark) !== null)
         .map((e) => e.logo as string),
     );
-    expect(lines).toHaveLength(distinctLight.size);
+    expect(swapLines).toHaveLength(distinctLight.size);
+  });
+
+  it('hides failed logos, un-hiding them in dark mode only where a swap provides pixels', () => {
+    // COLLEGE_LOGO_ONERROR tags a failed img with .college-logo-failed; the
+    // base rule hides it (visibility keeps layout). Imgs whose dark swap
+    // renders from content:url() are un-hidden under html.dark — their pixels
+    // don't depend on the failed light src. Mirrors the NFL failed-logo rules.
+    expect(css).toContain('img.college-logo-failed { visibility: hidden; }');
+    const unhide = lines.find((l) => l.includes('college-logo-failed:is('));
+    expect(unhide).toBeDefined();
+    expect(unhide).toContain('html.dark img.college-logo-failed:is(');
   });
 
   it('never keys a rule on a dark-variant src (no self-referential swap)', () => {

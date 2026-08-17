@@ -37,6 +37,7 @@
 
 import collegeLogos from '../data/college-logos.json';
 import darkLogoManifest from '../data/college-dark-logos-manifest.json';
+import { COLLEGE_LOGO_FAILED_CLASS } from '../constants/roster-constants';
 
 interface CollegeLogoEntry {
   logo?: string | null;
@@ -76,7 +77,12 @@ const NCAA_DARK_URL_RE = /^https:\/\/a\.espncdn\.com\/i\/teamlogos\/ncaa\/500-da
  * log's `✗ <id>: HTTP 404` lines across consecutive deploys identify them.
  */
 export const KNOWN_MISSING_NCAA_DARK_IDS: readonly string[] = [
-  '2347', // Louisiana / Louisiana-Lafayette
+  // As of Aug 2026 these three also 404 on the LIGHT cut, so college-logos.json
+  // no longer references them at all (Malone/Manitoba have null logos; the
+  // Louisiana entries were re-pointed from 2347 — actually Louisiana Christian,
+  // a mis-mapping — to the Ragin' Cajuns' real id, 309). Kept as a guard in
+  // case a future data refresh resurrects the URLs.
+  '2347', // Louisiana Christian University
   '556', // Malone University
   '2770', // Manitoba
 ];
@@ -133,12 +139,24 @@ export function buildCollegeLogoDarkCss(): string {
     darkByLight.set(light, dark);
   }
   const rules: string[] = [];
+  const swappedSrcs: string[] = [];
   for (const [light, dark] of darkByLight) {
     const resolved = resolveCollegeDarkLogoUrl(dark);
     if (!resolved) continue; // dark cut doesn't exist upstream — keep light logo
     rules.push(
       `html.dark img[src="${cssStringEscape(light)}"] { content: url("${cssStringEscape(resolved)}"); }`,
     );
+    swappedSrcs.push(light);
+  }
+  // Failed-logo handling, mirroring buildNflLogoDarkCss: hidden by default (a
+  // broken-image icon is never acceptable), EXCEPT in dark mode for srcs whose
+  // swap rule above provides pixels via content:url(), which doesn't depend on
+  // the light src loading. `visibility` keeps layout; pure CSS, so theme
+  // toggles re-evaluate automatically.
+  rules.push(`img.${COLLEGE_LOGO_FAILED_CLASS} { visibility: hidden; }`);
+  if (swappedSrcs.length) {
+    const selectors = swappedSrcs.map((src) => `[src="${cssStringEscape(src)}"]`).join(', ');
+    rules.push(`html.dark img.${COLLEGE_LOGO_FAILED_CLASS}:is(${selectors}) { visibility: visible; }`);
   }
   cachedCss = rules.join('\n');
   return cachedCss;

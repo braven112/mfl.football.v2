@@ -18,7 +18,7 @@ import {
   type NflMatchup,
 } from '../../utils/nfl-matchups';
 import { normalizeTeamCode, getNFLTeamName, getNFLTeamLogo } from '../../utils/nfl-logo';
-import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD } from '../../constants/roster-constants';
+import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, COLLEGE_LOGO_ONERROR, COLLEGE_LOGO_ONLOAD } from '../../constants/roster-constants';
 import collegeLogos from '../../data/college-logos.json';
 import {
   loadAflPlayerScores,
@@ -1200,7 +1200,7 @@ const pageConfig = {
                 <article class="chart-card">
                   <header class="chart-card__header chart-card__header--group">
                     {assets?.logo ? (
-                      <img src={assets.logo} alt={group.key} class="team-group__logo" />
+                      <img src={assets.logo} alt={group.key} class="team-group__logo" onerror={COLLEGE_LOGO_ONERROR} onload={COLLEGE_LOGO_ONLOAD} />
                     ) : (
                       <div class="team-group__logo team-group__logo--fallback">
                         {group.key[0] ?? '?'}
