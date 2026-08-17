@@ -1205,3 +1205,64 @@ reading the declared width off the stylesheet instead of measuring the box.
 **Insight:** An espnId in `college-logos.json` matching a school *name* is not evidence it's the right school — verify against `https://site.api.espn.com/apis/site/v2/sports/football/college-football/teams/{id}` (`displayName`) before trusting it, and `curl -I` the logo cut. When a school genuinely has no ESPN art, the convention is `"logo": null, "logoDark": null` (keep `espnId`): every consumer (`getCollegeLogo` on both players pages, `getCollegeAssets` on both rosters pages, `compute-afl-free-agents.mjs`, the dark-css builder's `if (!light || !dark) continue`) is already null-safe, so nulling emits no `<img>` anywhere. The `KNOWN_MISSING_NCAA_DARK_IDS` list in `college-logo-dark-css.ts` only suppresses the *dark swap* — it cannot save a light URL that also 404s, which is exactly what these three were. Note `data/afl-fantasy/derived/free-agents.json` bakes `collegeLogo` URLs in at prebuild, so a data fix needs `node scripts/compute-afl-free-agents.mjs` (or the next deploy) to reach the AFL page.
 
 **Recommendation:** Tables show a `<span class="na" title="{college}">-</span>` when a college has no logo — never the college name as text (row-height blowout, the thing the owner explicitly rejected). Every college `<img>` carries `COLLEGE_LOGO_ONERROR`/`COLLEGE_LOGO_ONLOAD` (roster-constants) — the class-based failed pattern, NOT an inline `display:none`, for the same reason as the NFL pair: dark mode repaints these imgs via `content: url()` which doesn't depend on the light src, so a light 404 must not hide a working dark swap (the hide + dark un-hide CSS is emitted by `buildCollegeLogoDarkCss`; `PlayerDetailsModal` duplicates the hide rule because it mounts on pages without `<CollegeLogoDarkStyles />`). Text belongs on roomy surfaces only (PlayerDetailsModal already renders it). `tests/college-logos-data.test.ts` guards the data invariants (logo/logoDark null together, URL ids match espnId, no KNOWN_MISSING id referenced), so a regeneration from the same name-matching source now fails CI instead of resurrecting the bugs.
+
+---
+
+## 2026-08-16 - A Grid Track Blowout Surfaces in the Wrong Subtree — Bisect by Isolation, and `auto-fit` Beats `minmax(0, 1fr)` When the Floor Is Intrinsic
+
+**Context:** Reported bug was "the analytics page's nav goes off the screen" on
+`/theleague/rosters` — the team card's expanded division drawer ran off the right
+edge, with two of the four divisions unreachable. Nothing about the nav, the card,
+or the drawer was wrong. At an 802px viewport the card measured **1029px** and
+`documentElement.scrollWidth` was 1046 against a `clientWidth` of 802.
+
+**Insight:** `.roster-page` is `display: grid`. Its single auto track is
+`minmax(auto, max-content)`, and that `auto` floor is the **max of every grid
+item's min-content**. One item — the Players by Team report, `repeat(3, 1fr)` over
+cards that bottom out near 320px — forced the track to ~1030px, and *every other
+child then stretched to match*. So the element that visibly breaks is routinely
+not the element that causes it: the blowout propagates sideways to innocent
+siblings, and the loudest symptom lands wherever content happens to reach the
+edge. Do not start debugging in the subtree that looks wrong. Confirm
+page-level overflow first (`scrollWidth > clientWidth`), then find the track
+owner.
+
+This extends the 2026-06-28 `minmax(0, 1fr)` entry above in two ways:
+
+1. **Bisect by isolation, not by elimination.** Hiding grid children one at a
+   time to see which one shrinks the track **finds nothing when two or more
+   children independently demand the width** — a descent doing exactly that
+   returned an empty path here, because both report grids needed ~1030px. Invert
+   it: show exactly one child at a time and read
+   `getComputedStyle(grid).gridTemplateColumns`. That named the culprit in a
+   single pass, and it also distinguishes "this item drives the track" from
+   "this item merely stretched to it" — a distinction `getBoundingClientRect()`
+   cannot make, since every stretched sibling reports the blown-out width too.
+2. **`minmax(0, 1fr)` is the fix only when the floor is a fixed child `width`.**
+   The 2026-06-28 case paired it with resetting `.badge-card`'s `width: 200px`.
+   Here nothing carries a fixed width — the ~324px floor is genuine content
+   (headshot + name + salary), so `minmax(0, 1fr)` would let the track shrink
+   and then spill the card's own content instead. Use
+   `repeat(auto-fit, minmax(min(300px, 100%), 1fr))`: `auto-fit` derives the
+   column count from the room actually available, and the `min(…, 100%)` floor
+   collapses to a single column once the container is narrower than one card, so
+   the track can never demand more width than it has at any size.
+
+**Evidence:** Before: viewport 802 → `gridTemplateColumns: 1029.38px`, card
+1029.4px, page overflow 1046 vs 802. After: the same viewport → track 767.4px,
+card 767.4px, `scrollWidth === clientWidth`. Swept with the report populated at
+375/640/768/900/1024/1440 → 1/1/2/2/3/3 columns, zero overflow at every width,
+and three-across preserved on wide screens where it always fit. The broken band
+was **768px–~1050px** — laptops, small windows, landscape tablets — because the
+only responsive escape hatch was a `@media (max-width: 767px)` single-column
+override, which stops exactly where three tracks stop fitting. A media query
+that hands off at the wrong width leaves a hole rather than a bug you can see at
+either extreme, which is why desktop and phone both looked fine.
+
+**Recommendation:** Treat "element X runs off screen" as a page-level question
+until proven local — measure `documentElement.scrollWidth > clientWidth` and walk
+up to the nearest grid/flex ancestor before touching X's own CSS. When a fixed
+column count sits over children whose min-content is *intrinsic* rather than a
+declared `width`, prefer `repeat(auto-fit, minmax(min(Npx, 100%), 1fr))` over
+`repeat(N, …)` + breakpoints: it cannot blow out at any container width, and it
+removes the manual breakpoint ladder that leaves gaps between its rungs.
