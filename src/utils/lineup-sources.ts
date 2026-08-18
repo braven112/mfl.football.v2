@@ -151,21 +151,29 @@ export interface ResolvedWeekLineup {
   starters: LineupStarter[];
   /** Did we establish what MFL holds — including "it holds nothing"? */
   lineupReadOk: boolean;
+  /** True when the starters came from the committed feed, not from MFL. */
+  fromCache: boolean;
 }
 
 /**
  * Resolve a franchise's lineup for one week across all three sources.
  *
- * The disk feed is deliberately ONE-WAY evidence, and that asymmetry is the
- * whole point of this function. It is refreshed once a day, so it can confirm
- * a lineup exists but can NEVER show that one doesn't: a lineup saved this
- * morning is simply not in it yet. Reading a starter-less disk entry as "no
- * lineup on file" would hand the page an armed submit button over a
- * projection fill — the exact overwrite the read-failed state exists to
- * prevent, wearing a fresher-looking source.
+ * Two rules, both about what counts as evidence:
  *
- * So: live evidence settles the question either way. Disk is consulted only
- * when live failed, and only its POSITIVE answer counts.
+ * **Positive evidence wins between the live sources.** The week-scoped and
+ * YTD payloads describe the same fact, so a source that names starters is
+ * more informative than one that doesn't. Ordering them by whether an ENTRY
+ * exists instead would let a week-scoped payload that carries the week but
+ * not this franchise's lineup short-circuit a YTD payload that has it —
+ * landing on "nothing on file" with the submit button armed.
+ *
+ * **The committed feed can confirm a lineup but never deny one.** It is
+ * refreshed once a day, so a lineup saved this morning is simply not in it.
+ * Reading its silence as "no lineup on file" would arm that same button over
+ * a projection fill — the exact overwrite the read-failed state exists to
+ * prevent, wearing a fresher-looking source. Its positive answer is also only
+ * *a* lineup, not provably the current one, so it is flagged `fromCache` and
+ * the page says so rather than claiming a clean "Lineup Saved".
  */
 export function resolveWeekLineup(input: {
   weekScopedPayload: any;
@@ -178,21 +186,32 @@ export function resolveWeekLineup(input: {
   const { weekScopedPayload, ytdPayload, week, franchiseId, league, leagueYear } = input;
 
   // `allowUnlabeled` only on the week-scoped payload — see above.
-  const liveEntry = findWeekResultsEntry(weekScopedPayload, week, { allowUnlabeled: true })
-    ?? findWeekResultsEntry(ytdPayload, week);
+  const weekScoped = findWeekResultsEntry(weekScopedPayload, week, { allowUnlabeled: true });
+  const ytd = findWeekResultsEntry(ytdPayload, week);
 
-  if (liveEntry) {
-    return { entry: liveEntry, starters: extractLineupStarters(liveEntry, franchiseId), lineupReadOk: true };
+  const liveCandidates = [weekScoped, ytd].filter(Boolean);
+  for (const entry of liveCandidates) {
+    const starters = extractLineupStarters(entry, franchiseId);
+    if (starters.length > 0) {
+      return { entry, starters, lineupReadOk: true, fromCache: false };
+    }
+  }
+  if (liveCandidates.length > 0) {
+    // Live answered and holds no lineup for this franchise. That is an
+    // answer, and the page may offer to save its fill.
+    return { entry: liveCandidates[0], starters: [], lineupReadOk: true, fromCache: false };
   }
 
   const diskEntry = findWeekResultsEntry(loadWeeklyResultsFeedFromDisk(league, leagueYear), week);
   const diskStarters = extractLineupStarters(diskEntry, franchiseId);
   if (diskStarters.length > 0) {
-    return { entry: diskEntry, starters: diskStarters, lineupReadOk: true };
+    return { entry: diskEntry, starters: diskStarters, lineupReadOk: true, fromCache: true };
   }
 
-  // Both live calls failed and disk can't vouch for absence — say so.
-  return { entry: null, starters: [], lineupReadOk: false };
+  // Nothing live, and disk can't vouch for absence. Hand back the disk entry
+  // anyway when there is one — it still carries the OPPONENT's recorded
+  // starters, which the faceoff reads — but say the read failed.
+  return { entry: diskEntry, starters: [], lineupReadOk: false, fromCache: false };
 }
 
 /**
@@ -237,7 +256,9 @@ export type LineupFillMode =
   /** We could not read the record; the fill must not be submittable. */
   | 'read-failed'
   /** Week already played with no lineup ever set — read-only view. */
-  | 'past-unset';
+  | 'past-unset'
+  /** A lineup, but from the daily feed — possibly not today's edit. */
+  | 'saved-from-cache';
 
 export interface LineupFillState {
   mode: LineupFillMode;
@@ -263,13 +284,17 @@ export function resolveLineupFillState(input: {
   hasProjections: boolean;
   /** Do all nine slots currently hold a player? MFL rejects a partial lineup. */
   slotsFilled: boolean;
+  /** Did the starters come from the committed feed rather than from MFL? */
+  fromCache?: boolean;
 }): LineupFillState {
-  const { hasStarters, lineupReadOk, weekIsPast, hasProjections, slotsFilled } = input;
+  const { hasStarters, lineupReadOk, weekIsPast, hasProjections, slotsFilled, fromCache } = input;
   const fillIsProjected = hasProjections;
 
   // Order matters: a failed read outranks everything except starters we can
   // actually see, because every other branch would act on absent evidence.
-  if (hasStarters) return { mode: 'saved', canSubmitUnsaved: false, fillIsProjected };
+  if (hasStarters) {
+    return { mode: fromCache ? 'saved-from-cache' : 'saved', canSubmitUnsaved: false, fillIsProjected };
+  }
   if (!lineupReadOk) return { mode: 'read-failed', canSubmitUnsaved: false, fillIsProjected };
   if (weekIsPast) return { mode: 'past-unset', canSubmitUnsaved: false, fillIsProjected };
   // Still an offer even when the fill is short a slot (a thin roster, a

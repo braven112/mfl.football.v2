@@ -218,6 +218,26 @@ describe('resolveLineupFillState', () => {
 describe('the pages consume that decision', () => {
   const pages = ['src/pages/theleague/lineup.astro', 'src/pages/afl-fantasy/lineup.astro'];
 
+  it('clears the submit offer once a lineup really is on file', () => {
+    // The offer branch is tested before the "Lineup Saved" branch, so a
+    // successful submit that moves only lineupOnFile re-arms the button on
+    // the next swap-then-undo.
+    for (const page of pages) {
+      const src = readFileSync(join(process.cwd(), page), 'utf8');
+      expect(src.includes('data.canSubmitUnsaved = false;'), `${page} clears the offer after submit`).toBe(true);
+    }
+  });
+
+  it('does not persist a draft for a page nobody edited', () => {
+    // Storing the untouched projection fill meant loadDraft() replayed it
+    // next visit, where a since-submitted lineup sits in originalSlots — so
+    // the stale fill read as nine unsaved changes with submit armed.
+    for (const page of pages) {
+      const src = readFileSync(join(process.cwd(), page), 'utf8');
+      expect(src.includes('if (countChanges() === 0) {'), `${page} skips no-op drafts`).toBe(true);
+    }
+  });
+
   it('gates the submit affordance on canSubmitUnsaved, not on the weaker !lineupOnFile', () => {
     for (const page of pages) {
       const src = readFileSync(join(process.cwd(), page), 'utf8');
@@ -295,11 +315,38 @@ describe('resolveWeekLineup', () => {
     expect(r.starters.map((p) => p.id)).toEqual(['111', '222']);
   });
 
-  it('lets the committed feed CONFIRM a lineup when every live call failed', () => {
+  it('prefers the live source that actually names starters', () => {
+    // Ordering by presence-of-entry instead would let a week-scoped payload
+    // that carries the week but not this franchise's lineup short-circuit a
+    // YTD payload that has it — landing on "nothing on file" with the submit
+    // button armed over a real lineup.
+    const weekScopedMissingFranchise = { weeklyResults: { week: '12', matchup: [{ franchise: [{ id: '0010' }] }] } };
+    const ytdWithIt = { allWeeklyResults: { weeklyResults: [live.weeklyResults] } };
+    const r = resolveWeekLineup({ ...base, weekScopedPayload: weekScopedMissingFranchise, ytdPayload: ytdWithIt });
+    expect(r.starters.map((p) => p.id)).toEqual(['111', '222']);
+    expect(r.fromCache).toBe(false);
+  });
+
+  it('lets the committed feed CONFIRM a lineup when every live call failed, flagged as cached', () => {
     // Week 1 has real starters in the committed feed.
     const r = resolveWeekLineup({ ...base, week: 1, franchiseId: '0006', weekScopedPayload: null, ytdPayload: null });
     expect(r.lineupReadOk).toBe(true);
     expect(r.starters.length).toBeGreaterThan(0);
+    expect(r.fromCache).toBe(true);
+    // A daily feed proves *a* lineup, not today's — the page must say so
+    // rather than rendering a clean "Lineup Saved".
+    expect(resolveLineupFillState({
+      hasStarters: true, lineupReadOk: true, weekIsPast: false, hasProjections: true,
+      slotsFilled: true, fromCache: true,
+    }).mode).toBe('saved-from-cache');
+  });
+
+  it('still hands back a disk entry it cannot vouch for, for the opponent data on it', () => {
+    // lineupReadOk stays false — but weekStarters(opponentId) reads the same
+    // entry, and throwing it away loses the opponent's recorded starters.
+    const r = resolveWeekLineup({ ...base, week: 12, weekScopedPayload: null, ytdPayload: null });
+    expect(r.lineupReadOk).toBe(false);
+    expect(r.entry).not.toBeNull();
   });
 
   it('never lets the committed feed prove a lineup ABSENT', () => {
@@ -310,6 +357,7 @@ describe('resolveWeekLineup', () => {
     const r = resolveWeekLineup({ ...base, week: 12, weekScopedPayload: null, ytdPayload: null });
     expect(r.lineupReadOk).toBe(false);
     expect(r.starters).toEqual([]);
+    expect(r.fromCache).toBe(false);
     expect(resolveLineupFillState({
       hasStarters: false, lineupReadOk: r.lineupReadOk, weekIsPast: false, hasProjections: true, slotsFilled: true,
     }).canSubmitUnsaved).toBe(false);

@@ -302,6 +302,7 @@ const weekLineup = resolveWeekLineup({
 });
 const resultsWeekEntry = weekLineup.entry;
 const lineupReadOk = weekLineup.lineupReadOk;
+const lineupFromCache = weekLineup.fromCache;
 const starterIds = new Set(weekLineup.starters.map((p) => p.id));
 
 // Build initial slots based on starters
@@ -353,6 +354,7 @@ const fillState = resolveLineupFillState({
   weekIsPast,
   hasProjections: projMap.size > 0,
   slotsFilled: slots.every((s) => s.playerId !== null),
+  fromCache: lineupFromCache,
 });
 const canSubmitUnsaved = fillState.canSubmitUnsaved;
 const fillIsProjected = fillState.fillIsProjected;
@@ -435,13 +437,16 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     </div>
 
     {fillState.mode !== 'saved' && (
-      <p class:list={['lineup-unsaved-note', fillState.mode === 'read-failed' && 'lineup-unsaved-note--warn']}>
+      <p class:list={['lineup-unsaved-note',
+        (fillState.mode === 'read-failed' || fillState.mode === 'saved-from-cache') && 'lineup-unsaved-note--warn']}>
         <svg class="lineup-unsaved-note__icon" aria-hidden="true" width="14" height="14" viewBox="0 0 16 16">
           <circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.2"/>
           <path d="M8 4.75v4M8 11.1v.15" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
         </svg>
         <span>
-          {fillState.mode === 'read-failed'
+          {fillState.mode === 'saved-from-cache'
+            ? `MFL didn't answer, so this is your lineup as of our last sync — if you changed it today, that change may not be shown. Reload before submitting.`
+            : fillState.mode === 'read-failed'
             ? `MFL didn't answer when we asked what lineup you have saved for Week ${week}, so these slots are this page's own fill — not your lineup. Reload before submitting, or you could overwrite a lineup you already set.`
             : fillState.mode === 'past-unset'
               ? `No lineup was submitted for Week ${week}. Week ${week} is over, so these slots are just a view of your roster.`
@@ -766,6 +771,15 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     const STORAGE_KEY = 'lineup-draft-afl';
 
     function saveDraft() {
+      // Only real edits are worth persisting. Storing an untouched page also
+      // stored the projection FILL, and loadDraft() replayed it on the next
+      // visit — where a lineup that had since been submitted now sits in
+      // originalSlots, so the stale fill read as nine unsaved changes with
+      // the submit button armed over the owner's actual lineup.
+      if (countChanges() === 0) {
+        try { localStorage.removeItem(STORAGE_KEY); } catch {}
+        return;
+      }
       const draft = {
         franchiseId: data.franchiseId,
         leagueYear: data.leagueYear,
@@ -1191,8 +1205,11 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
             originalSlots[i].playerId = currentSlots[i].playerId;
           }
           // MFL now holds a lineup for this week, so an untouched page is
-          // genuinely saved from here on.
+          // genuinely saved from here on. Both flags have to move: the
+          // "offer to save the fill" branch is tested FIRST, so leaving it
+          // set would re-arm the button after any swap-then-undo.
           data.lineupOnFile = true;
+          data.canSubmitUnsaved = false;
           unsavedNote?.remove();
           try { localStorage.removeItem(STORAGE_KEY); } catch {}
 
