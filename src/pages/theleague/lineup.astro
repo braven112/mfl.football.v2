@@ -312,18 +312,6 @@ const usedPlayerIds = new Set<string>();
 
 // If MFL returned starters, use those; otherwise fill optimally by projection
 const hasStarters = starterIds.size > 0;
-// A week that has already been played can't take a new lineup, so never offer
-// to submit one over it — the projection fill there is a read-only view.
-const weekIsPast = week < currentWeek;
-// What the nine slots actually represent, and whether saving them is safe.
-const fillState = resolveLineupFillState({
-  hasStarters,
-  lineupReadOk,
-  weekIsPast,
-  hasProjections: projMap.size > 0,
-});
-const canSubmitUnsaved = fillState.canSubmitUnsaved;
-const fillIsProjected = fillState.fillIsProjected;
 const candidatePool = hasStarters
   ? roster.filter(p => starterIds.has(p.id))
   : [...roster].sort((a, b) => (b.projection ?? -1) - (a.projection ?? -1));
@@ -356,6 +344,20 @@ for (let i = 0; i < slots.length; i++) {
     slots[i].locked = assignedPlayer.gameLocked;
   }
 }
+
+// A week that has already been played can't take a new lineup, so never offer
+// to submit one over it — the projection fill there is a read-only view.
+const weekIsPast = week < currentWeek;
+// What the nine slots actually represent, and whether saving them is safe.
+const fillState = resolveLineupFillState({
+  hasStarters,
+  lineupReadOk,
+  weekIsPast,
+  hasProjections: projMap.size > 0,
+  slotsFilled: slots.every((s) => s.playerId !== null),
+});
+const canSubmitUnsaved = fillState.canSubmitUnsaved;
+const fillIsProjected = fillState.fillIsProjected;
 
 // Available weeks for selector
 const availableWeeks: { week: number; label: string; isCurrent: boolean; isPast: boolean }[] = [];

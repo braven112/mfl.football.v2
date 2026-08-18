@@ -193,8 +193,10 @@ export function resolveLineupFillState(input: {
   lineupReadOk: boolean;
   weekIsPast: boolean;
   hasProjections: boolean;
+  /** Do all nine slots currently hold a player? MFL rejects a partial lineup. */
+  slotsFilled: boolean;
 }): LineupFillState {
-  const { hasStarters, lineupReadOk, weekIsPast, hasProjections } = input;
+  const { hasStarters, lineupReadOk, weekIsPast, hasProjections, slotsFilled } = input;
   const fillIsProjected = hasProjections;
 
   // Order matters: a failed read outranks everything except starters we can
@@ -202,5 +204,9 @@ export function resolveLineupFillState(input: {
   if (hasStarters) return { mode: 'saved', canSubmitUnsaved: false, fillIsProjected };
   if (!lineupReadOk) return { mode: 'read-failed', canSubmitUnsaved: false, fillIsProjected };
   if (weekIsPast) return { mode: 'past-unset', canSubmitUnsaved: false, fillIsProjected };
-  return { mode: 'unsaved-offer', canSubmitUnsaved: true, fillIsProjected };
+  // Still an offer even when the fill is short a slot (a thin roster, a
+  // league mid-draft) — the banner should say so. It just isn't submittable
+  // until the owner completes it, and the server-rendered button has to
+  // agree with that before hydration, not only after.
+  return { mode: 'unsaved-offer', canSubmitUnsaved: slotsFilled, fillIsProjected };
 }

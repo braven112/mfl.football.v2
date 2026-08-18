@@ -152,7 +152,7 @@ describe('roster fallback', () => {
 });
 
 describe('resolveLineupFillState', () => {
-  const base = { hasStarters: false, lineupReadOk: true, weekIsPast: false, hasProjections: true };
+  const base = { hasStarters: false, lineupReadOk: true, weekIsPast: false, hasProjections: true, slotsFilled: true };
 
   it('reports a saved lineup and offers nothing to submit', () => {
     const s = resolveLineupFillState({ ...base, hasStarters: true });
@@ -191,6 +191,15 @@ describe('resolveLineupFillState', () => {
     expect(s.canSubmitUnsaved).toBe(false);
   });
 
+  it('will not offer to submit a lineup that is short a slot', () => {
+    // A thin roster (AFL pre-draft) can't fill nine. The banner still names
+    // the fill, but the server-rendered button must already be inert — the
+    // client's own allFilled check only runs after hydration.
+    const s = resolveLineupFillState({ ...base, slotsFilled: false });
+    expect(s.mode).toBe('unsaved-offer');
+    expect(s.canSubmitUnsaved).toBe(false);
+  });
+
   it('reports whether the fill is projection-ordered or just roster order', () => {
     expect(resolveLineupFillState(base).fillIsProjected).toBe(true);
     // No projections (throttled projectedScores) means the "best projected
@@ -199,7 +208,7 @@ describe('resolveLineupFillState', () => {
   });
 
   it('prefers visible starters over every other signal', () => {
-    const s = resolveLineupFillState({ hasStarters: true, lineupReadOk: false, weekIsPast: true, hasProjections: false });
+    const s = resolveLineupFillState({ hasStarters: true, lineupReadOk: false, weekIsPast: true, hasProjections: false, slotsFilled: false });
     expect(s.mode).toBe('saved');
   });
 });
