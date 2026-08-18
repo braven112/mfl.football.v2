@@ -103,7 +103,12 @@ const summary = isUserChampion
   }
 
   :global(html.dark) .champ-hero {
-    --champ-surface: #0f1e2e;
+    /* Dark is a flat navy, not a gradient. Say `none` rather than parking a
+       color in an image slot: a color IS invalid for background-image, so it
+       would resolve to none anyway — but only via the exact
+       invalid-at-computed-value-time rule this whole file is now guarding
+       against, which is a poor thing to depend on deliberately. */
+    --champ-surface: none;
     background-color: #0f1e2e;
     --champ-ink: #ffffff;
     --champ-ink-soft: rgba(255, 255, 255, 0.72);

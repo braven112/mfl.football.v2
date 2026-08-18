@@ -138,7 +138,10 @@ describe('service worker caching', () => {
 
   it('bumps CACHE_NAME so clients holding a poisoned cache are evicted', () => {
     // The only lever that reaches a phone already caching a retired build.
-    expect(SW_SOURCE).toMatch(/const CACHE_NAME = 'theleague-v[4-9]\d*'/);
+    const version = SW_SOURCE.match(/const CACHE_NAME = 'theleague-v(\d+)'/);
+    expect(version, 'CACHE_NAME must stay in the theleague-v<n> shape').not.toBeNull();
+    // Compare numerically — a character class would reject a correct v10.
+    expect(Number(version![1])).toBeGreaterThanOrEqual(4);
   });
 
   describe('HTML', () => {
