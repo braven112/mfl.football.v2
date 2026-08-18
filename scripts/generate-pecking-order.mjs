@@ -22,8 +22,10 @@
  * deterministic templated fallback when the key is unset or the AI output
  * fails the quality gate (per-blurb fallback — see lib/pecking-order-ai.mjs).
  *
- * Offseason: when the target year's feeds have no completed week, exits
- * cleanly so the Tuesday cron can run year-round.
+ * Offseason: the column only runs while the season it would rank is actually
+ * being played (see lib/pecking-order-season-window.mjs) AND that season's
+ * feeds have a completed week, so the Tuesday cron can run year-round. The
+ * earliest possible issue is therefore the Tuesday after week 1.
  */
 
 import { promises as fs } from 'node:fs';
@@ -33,6 +35,7 @@ import { LEAGUES, leagueUrl } from '../src/config/leagues-data.mjs';
 import { callAnthropic } from './article-utils/ai-client.mjs';
 import { getCompletedWeek } from './article-utils/week-resolver.mjs';
 import { currentSeasonYear } from './lib/schefter-recurrence-ledger.mjs';
+import { isSeasonWindowOpen } from './lib/pecking-order-season-window.mjs';
 import { postToGroupMe } from './lib/groupme.mjs';
 import {
   buildFactSheet,
@@ -678,14 +681,41 @@ async function postAnnouncement(issue, teams, league) {
   if (!posted) console.log('  [groupme] announcement not delivered (see above).');
 }
 
+/**
+ * Decide which season this run is for, and whether it may run at all.
+ *
+ * Auto-resolved year (the cron path, including a workflow_dispatch --week
+ * override) is gated on the season actually being in progress. An EXPLICIT
+ * --year is a deliberate backfill of a named season, so it bypasses the
+ * window — the operator already said which season they mean, and that path
+ * only reaches GroupMe if they also pass --publish by hand.
+ */
+export function resolveSeasonGate({ optsYear, now = new Date() }) {
+  if (optsYear != null) return { skip: false, year: optsYear };
+  const year = currentSeasonYear(now);
+  if (!isSeasonWindowOpen(year, now)) {
+    return {
+      skip: true,
+      year,
+      reason: `the ${year} season is not in progress (preseason/offseason).`,
+    };
+  }
+  return { skip: false, year };
+}
+
 async function main() {
   const opts = parseArgs();
   const league = LEAGUES[opts.league];
 
-  const year = opts.year ?? currentSeasonYear();
+  const gate = resolveSeasonGate({ optsYear: opts.year });
+  if (gate.skip) {
+    console.log(`  [skip] ${league.name}: ${gate.reason} Exiting cleanly.`);
+    return;
+  }
+  const year = gate.year;
 
   // Resolve the target week: explicit flag wins, else last completed week
-  // from the feeds. No completed week (offseason / pre-Week-1) → clean exit.
+  // from the feeds. No completed week (pre-Week-1) → clean exit.
   let week = opts.week;
   if (week == null) {
     const weeklyResults = await tryLoadJSON(path.join(feedDir(league, year), 'weekly-results.json'));

@@ -16,6 +16,14 @@
       "impact": "user",
       "area": "rosters",
       "league": "theleague"
+    },
+    {
+      "date": "2026-08-18",
+      "type": "bug-fix",
+      "summary": "Schefter dropped a Pecking Order on the AFL in the middle of August, ranking a season that ended in December. The column runs every Tuesday year-round and it knew to sit out the offseason — it just had no idea it was the offseason. Its season clock rolls at Labor Day, so from February until then it still answers '2025', and the last completed week of 2025 is, unhelpfully, always available. The only thing that had kept it quiet all summer was that every past week already had a column on file; the first gap in the archive is what let it write one and buzz everybody's phone. It now checks that the season it's about to rank is actually being played, so the earliest column of any year is the Tuesday after Week 1, and the stray August issue has been pulled.",
+      "impact": "user",
+      "area": "schefter",
+      "league": "afl"
     }
   ]
 }

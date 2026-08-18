@@ -924,6 +924,21 @@ Year math gotchas fixed July 2026 — don't reintroduce them:
   pin equal to the current calendar year during the season double-advances
   the math). `tests/league-year-rollover.test.ts` locks the timeline.
 
+**"The feeds have a completed week" is NOT an offseason guard.** Because
+`getCurrentSeasonYear()` / `currentSeasonYear()` roll at Labor Day, every date
+from February to Labor Day resolves to LAST season — whose feeds are complete
+by definition. A year-round weekly job that only checks "is there a completed
+week for the resolved year" therefore fires all preseason, ranking or recapping
+a season that ended in December. The Pecking Order shipped exactly that: a
+GroupMe blast to the AFL on 2026-08-18 announcing 2025 Week 16, quiet all
+summer only because every past week already had an issue file and the first gap
+in the archive counted as a fresh write. Gate on the season actually being
+played — `isSeasonWindowOpen` in `scripts/lib/pecking-order-season-window.mjs`
+(week-1 kickoff derived from Labor Day + 3 days, so no year map to maintain)
+closes both the long Feb→Labor Day gap and the short Labor Day→kickoff one.
+Dedup-on-output-file is not a schedule guard; it's an accident waiting for a
+hole in the archive.
+
 ## Draft order framing — "predictor" in-season, "official" after playoffs
 
 Both leagues' draft order stops being a prediction the moment its deciding
