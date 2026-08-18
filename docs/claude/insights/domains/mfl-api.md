@@ -839,12 +839,13 @@ just missing":
    fell back to an optimal-by-projection fill that reads exactly like a saved
    lineup. Use `weeklyResults&W={week}` — see the corrected note above.
 
-2. **A single-week `weeklyResults` payload often omits `week` entirely.**
-   `W=YTD` returns `{ allWeeklyResults: { weeklyResults: [ { week: '1', … } ] } }`,
-   but `W=14` returns `{ weeklyResults: { matchup: [ … ] } }` with no `week`
-   key. A week-keyed lookup over both shapes silently finds nothing on the
-   week-scoped response — the request you just made is the only thing that
-   identifies it.
+2. **MFL's JSON key order is nondeterministic, so a truncated dump lies about
+   which keys exist.** An early reading of a `W=14` response concluded the
+   week-scoped payload omits `week` — it does not; `week` was simply last in
+   that response and fell outside a `head -c 300`. Re-checked across W=12/14/17,
+   every week-scoped response carries it. This is the same trait that makes byte
+   diffs useless on these feeds (see `writeJsonIfChanged`), and it will burn you
+   the same way twice: parse the JSON and inspect keys, never eyeball a prefix.
 
 3. **`res.ok` is not "the call worked."** MFL answers a throttled or malformed
    request with HTTP 200 and an `{ error: … }` body. The lineup pages fire ~9
@@ -867,6 +868,15 @@ committed to disk (`getPlayerMap` for identity, `resolveRostersPayload` for
 rosters). When a read endpoint "doesn't exist", confirm it against MFL's own
 invalid-type listing — `export?TYPE=bogus` prints every valid export type,
 which is faster and more reliable than the docs.
+
+**And distinguish a failed read from an empty result before acting on it.**
+Because MFL's soft failures are indistinguishable from "no data", any WRITE
+affordance built on absent data is a data-loss bug waiting for a bad minute on
+MFL's side: the lineup page's projection fill plus an armed submit button would
+have overwritten a real lineup on exactly the throttled request that caused the
+original report. `resolveLineupFillState` in `src/utils/lineup-sources.ts` is
+the pattern — a read that failed gets its own state, and that state can't
+submit.
 
 ---
 

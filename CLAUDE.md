@@ -568,9 +568,10 @@ week switch is a full page reload. Three things that bit us (owner report,
   saved, for FUTURE weeks too, and unauthenticated. `W=YTD` carries every week
   of the season in one payload, so it backs up the week-scoped call.
   Parsing lives in `src/utils/lineup-sources.ts`
-  (`findWeekResultsEntry` / `extractLineupStarters`) — note the single-week
-  payload often omits `week` entirely, so a week-keyed lookup alone finds
-  nothing.
+  (`findWeekResultsEntry` / `extractLineupStarters`). Its `allowUnlabeled`
+  opt-in belongs ONLY to a week-scoped fetch: enabling it on the YTD payload
+  would answer a lookup for ANY week with the season's single entry once one
+  exists.
 - **`res.ok` is not "the call worked."** MFL answers a throttled or malformed
   request with HTTP 200 and an `{ error: … }` body. A dead `rosters` call
   emptied every slot; a dead `players` call printed "Player 13592" where a
@@ -579,10 +580,17 @@ week switch is a full page reload. Three things that bit us (owner report,
   take player identity from `getPlayerMap` — which reads that same disk feed —
   BEFORE the live `players` response. Never let a live MFL call be the only
   source for something already synced to disk.
-- **An auto-filled lineup must say it is one.** When nothing is on file the
-  pages still fill the slots by projection; unlabeled, that reads as "my
-  lineup is saved" and the submit bar shows zero unsaved changes. The
-  `.lineup-unsaved-note` banner renders whenever no lineup is on file.
+- **"No lineup on file" and "we couldn't read it" are different states, and
+  merging them is destructive.** Both yield zero starters. If the second is
+  treated as the first, the page labels its projection fill "no lineup
+  submitted" AND arms the submit button — one tap then overwrites the lineup
+  the owner actually had. `resolveLineupFillState` owns the four-way call
+  (`saved` / `unsaved-offer` / `read-failed` / `past-unset`); only
+  `unsaved-offer` may submit. A played week never can, and the "best
+  projected lineup" copy is only honest when `projectedScores` came back —
+  on an empty projection map the sort is a no-op and the fill is roster
+  order. Same reasoning as the rosters fallback: absent evidence is not
+  evidence of absence.
 
 ## NFL Draft date source of truth
 

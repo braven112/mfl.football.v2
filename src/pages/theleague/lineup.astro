@@ -35,7 +35,7 @@ import { isThrowbackWeek } from '../../data/theleague/throwback-config';
 import { getAllThrowbackPreferences } from '../../utils/throwback-store';
 import FaceoffComposite, { type FaceoffSide } from '../../components/theleague/FaceoffComposite.astro';
 import { getLeagueBySlug } from '../../config/leagues';
-import { findWeekResultsEntry, extractLineupStarters, resolveRostersPayload } from '../../utils/lineup-sources';
+import { findWeekResultsEntry, extractLineupStarters, resolveRostersPayload, resolveLineupFillState } from '../../utils/lineup-sources';
 import '../../styles/loading.css';
 
 // ---------------------------------------------------------------------------
@@ -294,11 +294,16 @@ const roster: LineupPlayer[] = rosterPlayers.map((rp: any) => {
 // This week's results entry — the authoritative record of who is in a
 // lineup (and, once played, what they scored). The week-scoped fetch wins;
 // the YTD payload backs it up, since MFL carries future weeks there too.
-const resultsWeekEntry = findWeekResultsEntry(weekResultsData, week)
+// `allowUnlabeled` only on the week-scoped payload — see lineup-sources.ts.
+const resultsWeekEntry = findWeekResultsEntry(weekResultsData, week, { allowUnlabeled: true })
   ?? findWeekResultsEntry(weeklyUnwrapped, week);
 
-// The owner's submitted lineup for this week. Empty means no lineup is set
-// yet (future weeks, usually) — the slots then fill optimally by projection.
+// Reading the lineup record has THREE outcomes, not two, and conflating the
+// last two is destructive: a lineup is on file, no lineup is on file, or we
+// could not find out. Both weeklyResults calls failing looks identical to an
+// empty lineup — and if that silently armed the submit button over a
+// projection fill, one tap would overwrite a lineup the owner really had set.
+const lineupReadOk = resultsWeekEntry !== null;
 const starterIds = new Set(extractLineupStarters(resultsWeekEntry, user.franchiseId).map((p) => p.id));
 
 // Build initial slots based on starters
@@ -307,6 +312,18 @@ const usedPlayerIds = new Set<string>();
 
 // If MFL returned starters, use those; otherwise fill optimally by projection
 const hasStarters = starterIds.size > 0;
+// A week that has already been played can't take a new lineup, so never offer
+// to submit one over it — the projection fill there is a read-only view.
+const weekIsPast = week < currentWeek;
+// What the nine slots actually represent, and whether saving them is safe.
+const fillState = resolveLineupFillState({
+  hasStarters,
+  lineupReadOk,
+  weekIsPast,
+  hasProjections: projMap.size > 0,
+});
+const canSubmitUnsaved = fillState.canSubmitUnsaved;
+const fillIsProjected = fillState.fillIsProjected;
 const candidatePool = hasStarters
   ? roster.filter(p => starterIds.has(p.id))
   : [...roster].sort((a, b) => (b.projection ?? -1) - (a.projection ?? -1));
@@ -443,7 +460,7 @@ function bestLineupProjTotal(playerIds: string[]): number {
   return total;
 }
 
-const isPastWeek = week < currentWeek;
+const isPastWeek = weekIsPast;
 
 // User side: the starters this page renders (falls back to the roster when no
 // lineup resolves yet). Opponent side: their recorded starters for the week;
@@ -623,6 +640,9 @@ const lineupPayload = {
   // slots below are a projection fill and the submit bar must not claim
   // "Lineup Saved" over them.
   lineupOnFile: hasStarters,
+  // …and whether we may offer to SAVE that fill. False when the read failed
+  // (an overwrite could destroy a real lineup) or the week is already played.
+  canSubmitUnsaved,
 };
 
 const payloadJson = JSON.stringify(lineupPayload);
@@ -712,13 +732,21 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
       <div class="lineup-status" role="status" aria-live="polite" id="lineup-status"></div>
     </div>
 
-    {!hasStarters && (
-      <p class="lineup-unsaved-note">
+    {fillState.mode !== 'saved' && (
+      <p class:list={['lineup-unsaved-note', fillState.mode === 'read-failed' && 'lineup-unsaved-note--warn']}>
         <svg class="lineup-unsaved-note__icon" aria-hidden="true" width="14" height="14" viewBox="0 0 16 16">
           <circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.2"/>
           <path d="M8 4.75v4M8 11.1v.15" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
         </svg>
-        <span>No lineup submitted for Week {week} yet — these slots are filled with the best projected lineup. Submit to lock it in.</span>
+        <span>
+          {fillState.mode === 'read-failed'
+            ? `MFL didn't answer when we asked what lineup you have saved for Week ${week}, so these slots are this page's own fill — not your lineup. Reload before submitting, or you could overwrite a lineup you already set.`
+            : fillState.mode === 'past-unset'
+              ? `No lineup was submitted for Week ${week}. Week ${week} is over, so these slots are just a view of your roster.`
+              : fillIsProjected
+                ? `No lineup submitted for Week ${week} yet — these slots are filled with the best projected lineup. Submit to lock it in.`
+                : `No lineup submitted for Week ${week} yet, and MFL has no projections for it, so these slots are just your roster in order. Set them before submitting.`}
+        </span>
       </p>
     )}
 
@@ -847,8 +875,10 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
       <span class="lineup-changes" id="lineup-changes" aria-live="polite" style="display:none">
         <strong>0</strong> changes
       </span>
-      <button class:list={['lineup-submit', hasStarters ? 'lineup-submit--clean' : 'lineup-submit--ready']}
-              id="lineup-submit" disabled={hasStarters}>
+      <button class:list={['lineup-submit', canSubmitUnsaved
+              ? 'lineup-submit--ready'
+              : hasStarters ? 'lineup-submit--clean' : 'lineup-submit--disabled']}
+              id="lineup-submit" disabled={!canSubmitUnsaved}>
         <svg class="lineup-submit__icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
           <path d="M13.5 4.5L6 12l-3.5-3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
@@ -1002,9 +1032,11 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
         submitText.textContent = 'Submit Lineup';
         changesEl.style.display = '';
         changesEl.querySelector('strong')!.textContent = String(changes);
-      } else if (!hasChanges && !data.lineupOnFile && allFilled) {
+      } else if (!hasChanges && data.canSubmitUnsaved && allFilled) {
         // Nothing on file at MFL — the untouched slots are this page's
-        // suggestion, not a saved lineup. Offer to submit it.
+        // suggestion, not a saved lineup. Offer to submit it. Note this is
+        // canSubmitUnsaved, not !lineupOnFile: a failed read also has no
+        // lineup on file, and arming the button there overwrites real ones.
         submitBtn.className = 'lineup-submit lineup-submit--ready';
         submitBtn.disabled = false;
         submitText.textContent = 'Submit Lineup';
@@ -2593,5 +2625,14 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
   .lineup-unsaved-note__icon {
     flex-shrink: 0;
     margin-top: 0.125rem;
+  }
+
+  /* Read failed — a stronger tone, because acting on this page's fill could
+     overwrite a real lineup. Warning colors are token pairs so dark mode
+     doesn't ship a light-mode amber on a black card. */
+  .lineup-unsaved-note--warn {
+    background: var(--badge-warning-bg);
+    color: var(--badge-warning-text);
+    border-color: var(--badge-warning-text);
   }
 </style>

@@ -6,6 +6,7 @@ import {
   extractLineupStarters,
   loadRostersFeedFromDisk,
   resolveRostersPayload,
+  resolveLineupFillState,
 } from '../src/utils/lineup-sources';
 
 /**
@@ -62,12 +63,23 @@ describe('findWeekResultsEntry', () => {
     expect(findWeekResultsEntry(PLAYED_WEEK, 7)).toBeNull();
   });
 
-  it('accepts a single-week payload that omits the week field', () => {
-    // MFL's `W=14` response has no `week` key at all — a week-keyed lookup
-    // alone finds nothing, which is how a future week came back empty.
+  it('takes an unlabeled single entry only when the caller opts in', () => {
+    // Belt-and-braces for a week-scoped fetch, where the request itself names
+    // the week. Live `W=<n>` responses DO carry `week` — an early reading that
+    // said otherwise was a truncated dump of a payload whose nondeterministic
+    // key order put `week` last.
     const unlabeled = { weeklyResults: { matchup: [{ franchise: [{ id: '0001', starters: '1,' }] }] } };
-    expect(findWeekResultsEntry(unlabeled, 14)).not.toBeNull();
-    expect(extractLineupStarters(findWeekResultsEntry(unlabeled, 14), '0001')).toHaveLength(1);
+    expect(findWeekResultsEntry(unlabeled, 14, { allowUnlabeled: true })).not.toBeNull();
+    expect(findWeekResultsEntry(unlabeled, 14)).toBeNull();
+  });
+
+  it('never answers a YTD lookup with a different week', () => {
+    // The hazard the opt-in exists to prevent: a season with exactly one
+    // entry would otherwise return week 1's lineups for a week-12 lookup,
+    // and the page would render another week's starters as this week's.
+    const oneWeekSoFar = { allWeeklyResults: { weeklyResults: { matchup: [{ franchise: [{ id: '0001', starters: '111,222,' }] }] } } };
+    expect(findWeekResultsEntry(oneWeekSoFar, 12)).toBeNull();
+    expect(extractLineupStarters(findWeekResultsEntry(oneWeekSoFar, 12), '0001')).toEqual([]);
   });
 
   it('survives a missing or error payload', () => {
@@ -136,6 +148,75 @@ describe('roster fallback', () => {
     expect(loadRostersFeedFromDisk('theleague', 2026)?.rosters?.franchise).toBeTruthy();
     // A year with no committed feed yields null rather than throwing.
     expect(loadRostersFeedFromDisk('theleague', 1999)).toBeNull();
+  });
+});
+
+describe('resolveLineupFillState', () => {
+  const base = { hasStarters: false, lineupReadOk: true, weekIsPast: false, hasProjections: true };
+
+  it('reports a saved lineup and offers nothing to submit', () => {
+    const s = resolveLineupFillState({ ...base, hasStarters: true });
+    expect(s.mode).toBe('saved');
+    expect(s.canSubmitUnsaved).toBe(false);
+  });
+
+  it('offers to save the fill on an open week with nothing on file', () => {
+    const s = resolveLineupFillState(base);
+    expect(s.mode).toBe('unsaved-offer');
+    expect(s.canSubmitUnsaved).toBe(true);
+  });
+
+  it('REFUSES to offer a submit when the read failed', () => {
+    // The destructive case. Both weeklyResults calls failing yields zero
+    // starters — identical to a week nobody set — so treating it as "nothing
+    // on file" arms the button over a projection fill, and one tap replaces a
+    // lineup the owner really had. Must stay false.
+    const s = resolveLineupFillState({ ...base, lineupReadOk: false });
+    expect(s.mode).toBe('read-failed');
+    expect(s.canSubmitUnsaved).toBe(false);
+  });
+
+  it('keeps refusing when a failed read coincides with an open week and projections', () => {
+    for (const weekIsPast of [true, false]) {
+      for (const hasProjections of [true, false]) {
+        const s = resolveLineupFillState({ ...base, lineupReadOk: false, weekIsPast, hasProjections });
+        expect(s.canSubmitUnsaved, `past=${weekIsPast} proj=${hasProjections}`).toBe(false);
+      }
+    }
+  });
+
+  it('never offers a submit on a week that has already been played', () => {
+    const s = resolveLineupFillState({ ...base, weekIsPast: true });
+    expect(s.mode).toBe('past-unset');
+    expect(s.canSubmitUnsaved).toBe(false);
+  });
+
+  it('reports whether the fill is projection-ordered or just roster order', () => {
+    expect(resolveLineupFillState(base).fillIsProjected).toBe(true);
+    // No projections (throttled projectedScores) means the "best projected
+    // lineup" copy would be a lie — the sort is a no-op on an empty map.
+    expect(resolveLineupFillState({ ...base, hasProjections: false }).fillIsProjected).toBe(false);
+  });
+
+  it('prefers visible starters over every other signal', () => {
+    const s = resolveLineupFillState({ hasStarters: true, lineupReadOk: false, weekIsPast: true, hasProjections: false });
+    expect(s.mode).toBe('saved');
+  });
+});
+
+describe('the pages consume that decision', () => {
+  const pages = ['src/pages/theleague/lineup.astro', 'src/pages/afl-fantasy/lineup.astro'];
+
+  it('gates the submit affordance on canSubmitUnsaved, not on the weaker !lineupOnFile', () => {
+    for (const page of pages) {
+      const src = readFileSync(join(process.cwd(), page), 'utf8');
+      expect(src.includes('resolveLineupFillState('), `${page} uses the resolver`).toBe(true);
+      expect(src.includes('disabled={!canSubmitUnsaved}'), `${page} SSR button gate`).toBe(true);
+      expect(src.includes('!hasChanges && data.canSubmitUnsaved && allFilled'), `${page} client gate`).toBe(true);
+      // The two differ exactly in the destructive case, so the weak form is
+      // a regression even though it reads equivalently.
+      expect(src.includes('!hasChanges && !data.lineupOnFile && allFilled'), `${page} weak gate`).toBe(false);
+    }
   });
 });
 

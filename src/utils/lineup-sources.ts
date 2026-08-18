@@ -48,11 +48,23 @@ function asArray<T>(value: T | T[] | null | undefined): T[] {
  *
  * Handles both shapes MFL returns:
  *  - `W=YTD`  → `{ allWeeklyResults: { weeklyResults: [ { week: '1', … }, … ] } }`
- *  - `W=<n>`  → `{ weeklyResults: { matchup: [ … ] } }` — note the single-week
- *    payload often omits `week` entirely, so a week-keyed lookup alone finds
- *    nothing. An unlabeled single entry is the week that was requested.
+ *  - `W=<n>`  → `{ weeklyResults: { week: '12', matchup: [ … ] } }`
+ *
+ * `allowUnlabeled` is opt-in and belongs ONLY to a week-scoped fetch, where
+ * the request itself identifies the week. Every live `W=<n>` response we have
+ * checked does carry `week` — an early reading that said otherwise was a
+ * truncated dump of a payload whose key order happened to put `week` last
+ * (MFL's JSON key order is nondeterministic, the same trait that makes byte
+ * diffs useless on these feeds). So this is a belt-and-braces path, not a
+ * workaround for observed behavior. It must never be enabled for the YTD
+ * payload: a season that has produced exactly one entry would then answer a
+ * lookup for ANY week with that one week's lineups.
  */
-export function findWeekResultsEntry(payload: any, week: number): any | null {
+export function findWeekResultsEntry(
+  payload: any,
+  week: number,
+  opts: { allowUnlabeled?: boolean } = {},
+): any | null {
   if (!payload) return null;
   const unwrapped = payload?.allWeeklyResults ?? payload;
 
@@ -67,8 +79,8 @@ export function findWeekResultsEntry(payload: any, week: number): any | null {
   const matched = normalized.find((wr: any) => parseInt(wr?.week, 10) === week);
   if (matched) return matched;
 
-  // Single unlabeled entry from a week-scoped fetch.
-  if (normalized.length === 1 && normalized[0]?.week === undefined && normalized[0]?.matchup) {
+  if (opts.allowUnlabeled && normalized.length === 1
+      && normalized[0]?.week === undefined && normalized[0]?.matchup) {
     return normalized[0];
   }
   return null;
@@ -146,4 +158,49 @@ export function resolveRostersPayload(
 ): any | null {
   if (livePayload?.rosters?.franchise) return livePayload;
   return loadRostersFeedFromDisk(slug, leagueYear);
+}
+
+/** What the nine rendered slots actually represent for this week. */
+export type LineupFillMode =
+  /** MFL holds a lineup and these are it. */
+  | 'saved'
+  /** Nothing on file, week still open — the fill is an offer to save. */
+  | 'unsaved-offer'
+  /** We could not read the record; the fill must not be submittable. */
+  | 'read-failed'
+  /** Week already played with no lineup ever set — read-only view. */
+  | 'past-unset';
+
+export interface LineupFillState {
+  mode: LineupFillMode;
+  /** May the page offer to submit the untouched auto-fill? */
+  canSubmitUnsaved: boolean;
+  /** Is the fill ordered by projection, or just roster order? */
+  fillIsProjected: boolean;
+}
+
+/**
+ * Decide what the slots mean, from the three facts the page knows.
+ *
+ * The load-bearing distinction is between "no lineup on file" and "we could
+ * not find out": both produce zero starters, and treating the second as the
+ * first arms a submit button over a projection fill — one tap then overwrites
+ * a lineup the owner really had set. A failed read is the ONE case where
+ * doing nothing is strictly better than helping.
+ */
+export function resolveLineupFillState(input: {
+  hasStarters: boolean;
+  lineupReadOk: boolean;
+  weekIsPast: boolean;
+  hasProjections: boolean;
+}): LineupFillState {
+  const { hasStarters, lineupReadOk, weekIsPast, hasProjections } = input;
+  const fillIsProjected = hasProjections;
+
+  // Order matters: a failed read outranks everything except starters we can
+  // actually see, because every other branch would act on absent evidence.
+  if (hasStarters) return { mode: 'saved', canSubmitUnsaved: false, fillIsProjected };
+  if (!lineupReadOk) return { mode: 'read-failed', canSubmitUnsaved: false, fillIsProjected };
+  if (weekIsPast) return { mode: 'past-unset', canSubmitUnsaved: false, fillIsProjected };
+  return { mode: 'unsaved-offer', canSubmitUnsaved: true, fillIsProjected };
 }
