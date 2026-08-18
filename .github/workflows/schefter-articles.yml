@@ -116,8 +116,8 @@ jobs:
             # The Pecking Order writes a standalone JSON issue (not a feed
             # post) and posts its own GroupMe announcement on a fresh write.
             # It self-skips unless the season it would rank is actually being
-            # played (lib/pecking-order-season-window.mjs) and that season has
-            # a completed week, and when the week's issue file already exists,
+            # played (src/utils/pecking-order-season-window.mjs) and that
+            # season has a completed week, and when the week's issue file exists,
             # so the year-round Tuesday cron is safe. Earliest possible issue
             # is the Tuesday after week 1 — do NOT rely on the issue-file
             # dedup alone for that, a gap in the archive is what shipped a

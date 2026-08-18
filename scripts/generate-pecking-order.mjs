@@ -23,9 +23,10 @@
  * fails the quality gate (per-blurb fallback — see lib/pecking-order-ai.mjs).
  *
  * Offseason: the column only runs while the season it would rank is actually
- * being played (see lib/pecking-order-season-window.mjs) AND that season's
- * feeds have a completed week, so the Tuesday cron can run year-round. The
- * earliest possible issue is therefore the Tuesday after week 1.
+ * being played (see src/utils/pecking-order-season-window.mjs) AND that
+ * season's feeds have a completed week, so the Tuesday cron can run
+ * year-round. The earliest possible issue is therefore the Tuesday after
+ * week 1.
  */
 
 import { promises as fs } from 'node:fs';
