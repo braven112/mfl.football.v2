@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import leagueConfig from '../src/data/theleague.config.json';
 import { getEligibleThrowbackEras, resolveThrowbackIdentity } from '../src/utils/throwback-identity';
 import { applyThrowbackOverrides, type ConfigTeam } from '../src/utils/live-scoring-data';
+import { getFranchiseBrand, getThrowbackFranchiseBrand } from '../src/utils/franchise-brand';
 import type { TeamConfig } from '../src/utils/team-names';
 
 const teams = leagueConfig.teams as unknown as TeamConfig[];
@@ -130,6 +133,39 @@ describe('throwback-identity', () => {
     // Inactive week: palette untouched.
     const untouched = applyThrowbackOverrides(teams as unknown as ConfigTeam[], false);
     expect(untouched.find((t) => t.franchiseId === '0002')!.colorPrimary).toBe('#1b435f');
+  });
+
+  it('the CREST throws back too — the lineup faceoff watermark is the only place it renders', () => {
+    // The brand's `groupMe` is what the faceoff paints behind the cutout. It
+    // used to survive the overlay untouched, so Week 4 showed the modern crest
+    // under a legacy name in legacy colors — the icon swap the overlay does do
+    // reaches nothing on that page.
+    const now = getFranchiseBrand('0001');
+    const back = getThrowbackFranchiseBrand('0001', true);
+    expect(now.groupMe).toBe('/assets/theleague/group-me/pigskins.png');
+    expect(back.groupMe).toBe('/assets/theleague/history/pigskins_2013_icon_circle.png');
+    expect(back.groupMe).not.toBe(now.groupMe);
+
+    // An era carrying its OWN groupMe wins over its icon (only Heavy Chevy today).
+    const chevy = getThrowbackFranchiseBrand('0004', true, 2020);
+    expect(chevy.groupMe).toBe('/assets/theleague/group-me/heavy_chevy.png');
+
+    // Dark variant belongs to the current brand — same rule as the *Dark colors.
+    expect(back.groupMeDark).toBeUndefined();
+
+    // Inactive week: the modern crest stays.
+    expect(getThrowbackFranchiseBrand('0001', false).groupMe).toBe(now.groupMe);
+  });
+
+  it('every franchise resolves a throwback crest that is a real committed asset', () => {
+    for (const t of teams) {
+      const brand = getThrowbackFranchiseBrand(t.franchiseId, true);
+      expect(brand.groupMe, `${t.franchiseId} ${brand.name}`).toMatch(/^\/assets\/theleague\/.+\.(png|jpg|jpeg|webp|svg)$/);
+      expect(
+        existsSync(join(process.cwd(), 'public', brand.groupMe)),
+        `${t.franchiseId} ${brand.name} -> ${brand.groupMe}`,
+      ).toBe(true);
+    }
   });
 
   it('recovered era banners are wired in (LBer-DeCleaters, Devil Dogs, Da Dangsters 2015)', () => {
