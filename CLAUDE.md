@@ -245,6 +245,38 @@ Detecting "is this base URL my own apex host" must go through
 `https://theleague.us`, `https://WWW.THELEAGUE.US`, `http://...` and
 `...:443` are all the same host and must all strip.
 
+## Service worker — bounded staleness, versioned cache-first
+
+`public/sw.js` is registered in production only (`TheLeagueLayout.astro`;
+dev actively unregisters it). Three invariants, each one a bug that shipped:
+
+- **Cache-first is for `/_astro/*` and nothing else.** Those filenames carry
+  a content hash, so the URL changes when the bytes do and a cached entry can
+  never be stale. Every other static path (`/assets/**` — team icons, NFL
+  logos, the sprite) is unversioned and runs stale-while-revalidate.
+- **A cached HTML document expires.** Pages are SSR and personalized, and
+  their `<link>` tags name content-hashed CSS *for the build that rendered
+  them*. Replaying an old document therefore pairs old markup with a retired
+  stylesheet — that is how the homepage hero shipped with no background at
+  all, white ink on the bare page, "fixing itself" after a few navigations
+  (owner report, 2026-08-18). `HTML_STALE_MAX_AGE_MS` (12h) caps it; past
+  that the offline page wins, because an honest "you're offline" beats a
+  broken page that looks live.
+- **An aborted request is not a network failure.** `fetch` rejects when the
+  user taps a second link mid-navigation, which is constant on mobile. The
+  old handler treated every rejection as offline and replayed stale HTML.
+  `AbortError` now propagates.
+
+Bumping `CACHE_NAME` is the ONLY lever that reaches a phone already holding
+a poisoned entry — activate deletes every other cache. Bump it whenever a
+caching rule changes.
+
+`tests/service-worker-cache.test.ts` executes the real `sw.js` against a
+stubbed `caches`/`fetch`/`Date` and asserts on the Response it hands back.
+Do NOT swap it for greps: every one of these bugs is invisible in the source
+text (7 of its 10 cases pass a source-level reading of the old file and fail
+on its behavior).
+
 ## Design tokens — every var(--x) must reference a token that exists
 
 The theme system is `src/styles/tokens.css` (light) + `tokens-dark.css`
@@ -307,18 +339,24 @@ hard-won facts (Aug 2026 "missing team images" saga):
   `TEAM_CODE_MAP`/`getAllNFLTeamCodes` — or any `team` value appearing in any
   committed players feed — lacks a valid SVG. Add a logo file + map entry
   together, and never gitignore this directory.
-- **A logo 404 is cache-poisonous, not cosmetic.** The apex domains sit
-  behind Cloudflare, which stamps `cache-control: max-age=14400` on
-  responses *including 404s* — so one broken window keeps rendering broken
-  icons on owners' phones for up to 4 hours after the origin is fixed
-  (that's why past fixes "didn't take"). Defense in depth: player-cell logo
-  `<img>`s carry the `NFL_LOGO_ONERROR` fallback (roster-constants) — hide
-  the img on failure. No substitute crest (owner decision: a wrong logo is
-  worse than none). Dark mode is separate: the
-  `content: url()` swap fires no error event, which is why the dark logos
-  are prebuild-mirrored (see `nfl-logo-dark-css.ts`). If you're in the
-  Cloudflare dashboard anyway: Browser Cache TTL → "Respect Existing
-  Headers" would fix the 404 caching at the source.
+- **A logo 404 is cache-poisonous, not cosmetic.** Cloudflare used to stamp
+  `cache-control: max-age=14400` on responses *including 404s*, so one broken
+  window kept rendering broken icons on owners' phones for hours after the
+  origin was fixed (that's why past fixes "didn't take"). **That setting is
+  now fixed** — Browser Cache TTL is on "Respect Existing Headers", verified
+  live 2026-08-18: the apex serves the origin's own
+  `public, max-age=0, must-revalidate`. Don't re-file it as a to-do. Defense
+  in depth remains: player-cell logo `<img>`s carry the `NFL_LOGO_ONERROR`
+  fallback (roster-constants) — hide the img on failure. No substitute crest
+  (owner decision: a wrong logo is worse than none). Dark mode is separate:
+  the `content: url()` swap fires no error event, which is why the dark logos
+  are prebuild-mirrored (see `nfl-logo-dark-css.ts`).
+- **The service worker is now the longest-lived cache in front of an asset,
+  not the CDN.** `public/sw.js` holds `/assets/**` on stale-while-revalidate,
+  so a bad copy survives exactly one more page view; it is cache-first ONLY
+  for `/_astro/*`, where the content hash is the version. Never widen
+  cache-first to an unversioned path — that pins a 404 until `CACHE_NAME` is
+  bumped, which is unbounded and worse than anything Cloudflare did.
 
 ## Player headshots on team colors — use the shared avatar helpers
 

@@ -2,14 +2,48 @@
  * Service Worker for The League PWA
  *
  * Strategy:
- * - Static assets (CSS, JS, images, fonts): Cache-first
- * - HTML pages (SSR): Network-first with offline fallback
- * - Offline page cached on install
+ * - Content-hashed build output (/_astro/*): cache-first, kept forever. The
+ *   hash IS the version, so a cached entry can never be stale.
+ * - Every other static asset (/assets/**, icons, logos): stale-while-
+ *   revalidate. These URLs are NOT versioned — cache-first pinned a bad or
+ *   404'd logo in a phone's SW cache indefinitely, which is strictly worse
+ *   than the Cloudflare 404-caching problem this file's history is full of
+ *   (see roster-constants NFL_LOGO_ONERROR). SWR serves instantly and
+ *   repairs itself on the next visit.
+ * - HTML pages (SSR): network-first. The cached copy is a genuine-offline
+ *   fallback ONLY, and it expires — see HTML_STALE_MAX_AGE_MS.
  * - Web push: show notification, focus/open the target URL on click
+ *
+ * Why HTML staleness is bounded (owner report, 2026-08-18)
+ * -------------------------------------------------------
+ * Pages are SSR and personalized, and their <link> tags point at
+ * content-hashed CSS for the build that rendered them. Replaying a cached
+ * document from an older deploy therefore pairs old markup with whatever
+ * stylesheet that build named — the homepage hero rendered with no
+ * background at all, white ink on the bare page, and "fixed itself" after a
+ * few navigations once a network fetch finally succeeded. Two changes stop
+ * that: a stale document is only served when the network genuinely failed
+ * (never on an aborted navigation, which is routine on mobile when someone
+ * taps a second link), and it is refused once it is older than
+ * HTML_STALE_MAX_AGE_MS so a document can never outlive its own stylesheet.
+ *
+ * Bump CACHE_NAME to evict every client's cache on the next activate. That
+ * is the only lever that reaches a phone already holding a poisoned entry.
  */
 
-const CACHE_NAME = 'theleague-v3';
+const CACHE_NAME = 'theleague-v4';
 const OFFLINE_URL = '/offline.html';
+
+/**
+ * How long a cached HTML document may still be served as an offline
+ * fallback. Past this it is treated as absent and the offline page wins:
+ * a document old enough to reference a retired build is worse than an
+ * honest "you're offline", because it renders as a broken live page.
+ */
+const HTML_STALE_MAX_AGE_MS = 12 * 60 * 60 * 1000;
+
+/** Header used to age cached HTML — Date on the response is the origin's. */
+const CACHED_AT_HEADER = 'x-sw-cached-at';
 
 // Assets to pre-cache on install
 const PRECACHE_URLS = [OFFLINE_URL];
@@ -48,9 +82,15 @@ self.addEventListener('fetch', (event) => {
   // Skip cross-origin requests (fonts, analytics, etc.)
   if (url.origin !== self.location.origin) return;
 
-  // Static assets: cache-first
-  if (isStaticAsset(url.pathname)) {
+  // Content-hashed build output: cache-first, immutable.
+  if (isImmutableAsset(url.pathname)) {
     event.respondWith(cacheFirst(request));
+    return;
+  }
+
+  // Unversioned static assets: serve fast, repair in the background.
+  if (isStaticAsset(url.pathname)) {
+    event.respondWith(staleWhileRevalidate(event, request));
     return;
   }
 
@@ -62,24 +102,41 @@ self.addEventListener('fetch', (event) => {
 });
 
 /**
+ * Build output from Astro/Vite. The filename carries a content hash, so the
+ * URL changes whenever the bytes do and a cached entry is never stale.
+ */
+function isImmutableAsset(pathname) {
+  return pathname.startsWith('/_astro/');
+}
+
+/**
  * Check if a URL is a static asset that benefits from caching.
  */
 function isStaticAsset(pathname) {
   return /\.(css|js|png|jpg|jpeg|webp|svg|ico|woff2?|ttf|eot)(\?.*)?$/.test(pathname);
 }
 
+/** A response the origin asked us not to store. */
+function isCacheable(response) {
+  return (
+    response.ok
+    && response.type !== 'opaque'
+    && !/(^|,)\s*no-store(\s*,|$)/i.test(response.headers.get('cache-control') || '')
+  );
+}
+
 /**
- * Cache-first strategy: serve from cache, fall back to network.
- * Updates cache in the background on network success.
+ * Cache-first, for immutable URLs only: serve from cache, else fetch and
+ * store. No revalidation — the hash in the URL is the version.
  */
 async function cacheFirst(request) {
-  const cached = await caches.match(request);
+  const cache = await caches.open(CACHE_NAME);
+  const cached = await cache.match(request);
   if (cached) return cached;
 
   try {
     const response = await fetch(request);
-    if (response.ok) {
-      const cache = await caches.open(CACHE_NAME);
+    if (isCacheable(response)) {
       cache.put(request, response.clone());
     }
     return response;
@@ -89,36 +146,103 @@ async function cacheFirst(request) {
 }
 
 /**
- * Network-first strategy with stale fallback.
+ * Stale-while-revalidate, for unversioned assets: answer from cache
+ * immediately when we have one, and refresh the entry in the background so
+ * a bad copy survives exactly one more page view rather than forever.
+ */
+async function staleWhileRevalidate(event, request) {
+  const cache = await caches.open(CACHE_NAME);
+  const cached = await cache.match(request);
+
+  const update = (async () => {
+    try {
+      const response = await fetch(request);
+      if (isCacheable(response)) {
+        await cache.put(request, response.clone());
+      }
+      return response;
+    } catch {
+      return null;
+    }
+  })();
+
+  if (cached) {
+    // Keep the worker alive for the refresh even though we answer now.
+    if (typeof event.waitUntil === 'function') event.waitUntil(update);
+    return cached;
+  }
+
+  const response = await update;
+  return response || new Response('', { status: 408, statusText: 'Offline' });
+}
+
+/**
+ * Store a response and stamp when we stored it, so freshness can be judged
+ * later. The body has to be re-wrapped because headers are immutable.
+ */
+async function cacheWithTimestamp(cache, request, response, now) {
+  const body = await response.clone().blob();
+  const headers = new Headers(response.headers);
+  headers.set(CACHED_AT_HEADER, String(now));
+  await cache.put(
+    request,
+    new Response(body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    })
+  );
+}
+
+/** A cached HTML entry is usable only while it is younger than the cap. */
+function isFreshEnough(response, now) {
+  const stamp = Number(response.headers.get(CACHED_AT_HEADER));
+  if (!Number.isFinite(stamp) || stamp <= 0) return false;
+  return now - stamp < HTML_STALE_MAX_AGE_MS;
+}
+
+/**
+ * Network-first strategy with a bounded stale fallback.
  * 1. Try network — cache successful HTML for future fallback
- * 2. On server 5xx — serve stale cached version if available
- * 3. On network failure — serve stale cached version if available
+ * 2. On server 5xx — serve the stale copy if it is still fresh enough
+ * 3. On a genuine network failure — same, bounded, stale copy
  * 4. Last resort — offline page
+ *
+ * An aborted request is NOT a network failure: the user navigated away or
+ * tapped another link, which happens constantly on mobile. Replaying a
+ * stale document there is how a days-old page ends up on screen looking
+ * live. Let the abort propagate instead.
  */
 async function networkFirstWithOfflineFallback(request) {
+  const now = Date.now();
+  const cache = await caches.open(CACHE_NAME);
+
   try {
     const response = await fetch(request, { cache: 'no-cache' });
 
     if (response.ok) {
-      // Cache successful HTML for stale fallback
-      const cache = await caches.open(CACHE_NAME);
-      cache.put(request, response.clone());
+      if (isCacheable(response)) {
+        // Cache successful HTML for stale fallback
+        await cacheWithTimestamp(cache, request, response, now);
+      }
       return response;
     }
 
     // Server returned 5xx — try stale cache before passing error through
     if (response.status >= 500) {
-      const cached = await caches.match(request);
-      if (cached) return cached;
+      const cached = await cache.match(request);
+      if (cached && isFreshEnough(cached, now)) return cached;
     }
 
     return response;
-  } catch {
-    // Network failure — serve stale cached version if available
-    const cached = await caches.match(request);
-    if (cached) return cached;
+  } catch (error) {
+    if (error && error.name === 'AbortError') throw error;
 
-    const offlinePage = await caches.match(OFFLINE_URL);
+    // Network failure — serve stale cached version if available
+    const cached = await cache.match(request);
+    if (cached && isFreshEnough(cached, now)) return cached;
+
+    const offlinePage = await cache.match(OFFLINE_URL);
     return offlinePage || new Response('Offline', {
       status: 503,
       headers: { 'Content-Type': 'text/plain' },
