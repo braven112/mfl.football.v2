@@ -128,7 +128,13 @@ const summary = franchiseName
     min-height: clamp(240px, 24vw, 290px);
     border-radius: var(--radius-lg, 0.75rem);
     border: 1px solid var(--rch-border);
-    background: var(--rch-surface);
+    /* Fail-safe base: a LITERAL solid under the gradient. A gradient held in a
+       custom property is a single point of failure — if `var(--rch-surface)` is
+       ever dropped (the whole `background` is then invalid at computed-value
+       time), the hero goes transparent while the white ink stays, which is
+       unreadable in BOTH themes. A literal background-color cannot be dropped. */
+    background-color: #1c497c;
+    background-image: var(--rch-surface);
     color: var(--rch-ink);
     display: flex;
     align-items: center;
@@ -137,6 +143,7 @@ const summary = franchiseName
 
   :global(html.dark) .rch {
     --rch-surface: linear-gradient(115deg, #0b1017 0%, #101a26 46%, #14263a 130%);
+    background-color: #101a26;
     --rch-ink: #ffffff;
     --rch-body: rgba(255, 255, 255, 0.78);
     --rch-ghost: rgba(255, 255, 255, 0.045);

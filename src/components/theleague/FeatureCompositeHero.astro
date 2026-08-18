@@ -198,7 +198,13 @@ const frameUrl = content.link
     min-height: clamp(230px, 23vw, 280px);
     border-radius: var(--radius-lg, 0.75rem);
     border: 1px solid var(--fch-border);
-    background: var(--fch-surface);
+    /* Fail-safe base: a LITERAL solid under the gradient. A gradient held in a
+       custom property is a single point of failure — if `var(--fch-surface)` is
+       ever dropped (the whole `background` is then invalid at computed-value
+       time), the hero goes transparent while the white ink stays, which is
+       unreadable in BOTH themes. A literal background-color cannot be dropped. */
+    background-color: #1c497c;
+    background-image: var(--fch-surface);
     color: var(--fch-ink);
     display: flex;
     align-items: center;
@@ -208,6 +214,7 @@ const frameUrl = content.link
   .fch--dark,
   :global(html.dark) .fch {
     --fch-surface: linear-gradient(115deg, #0d1b2c 0%, #16395e 52%, var(--color-primary, #1c497c) 100%);
+    background-color: #16395e;
     --fch-ink: #ffffff;
     --fch-body: rgba(255, 255, 255, 0.78);
     --fch-date: rgba(255, 255, 255, 0.55);

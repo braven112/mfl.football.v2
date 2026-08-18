@@ -4,6 +4,97 @@ Domain knowledge about UI/UX patterns, component architecture, and frontend deve
 
 ---
 
+## 2026-08-18 - Reproduce a Production-Only CSS Bug by Localizing the Shipped Bundle
+
+**Context:** A hero rendered with no background on an owner's phone and nowhere
+else. The question that had to be answered first was binary and everything else
+depended on it: *are the bytes we shipped wrong, or is the device failing to
+apply correct bytes?* Reading the source can't answer it — the source is what
+you already believe is right — and the sandbox can't point headless Chromium at
+the live site, because the agent proxy fails the TLS handshake.
+
+**Insight:** You don't need the live site. Fetch the rendered document and its
+stylesheets with `curl` (which *does* go through the proxy fine), rewrite the
+`<link href>` values to the downloaded copies, and load the result from
+`file://` in the bundled Chromium. You get the exact production markup paired
+with the exact production CSS, at any viewport, with no dev server, no auth,
+and no build.
+
+```bash
+curl -s -L https://www.theleague.us/ -o home.html
+grep -o 'href="/_astro/[^"?]*\.css' home.html | sed 's/href="//' | sort -u \
+  | while read f; do curl -s "https://www.theleague.us$f" -o "dl_$(basename $f)"; done
+# rewrite hrefs → dl_*.css, strip <script src> tags, then:
+/opt/pw-browsers/chromium-1194/chrome-linux/chrome --headless=new --no-sandbox \
+  --disable-gpu --window-size=430,1000 --force-device-scale-factor=2 \
+  --screenshot=shot.png --virtual-time-budget=4000 "file://$PWD/local.html"
+```
+
+Two things this buys beyond the yes/no answer:
+
+- **Editing the localized CSS turns it into a hypothesis rig.** Replacing one
+  declaration with a deliberately-invalid value (`--psh-surface: banana`)
+  reproduced the owner's screenshot exactly, which both confirmed the mechanism
+  and proved the fix rendered readably under it. That's a before/after you can
+  show, from a bug you could not otherwise trigger.
+- **Stripping `<script src>` tags is a deliberate step, not tidying.** It
+  removes client JS as a variable. If the bug survives without scripts it's
+  pure CSS; if it vanishes, a hydration island or the service worker is in play.
+
+**Evidence:** Diagnosis of the composite-hero transparent-background bug (see
+`docs/claude/insights/domains/design-system.md`, 2026-08-18). The localized
+render came out correct, which is what redirected the investigation away from
+the stylesheet and toward value resolution and `public/sw.js` cache staleness.
+
+**Recommendation:** Reach for this before speculating about device quirks on
+any "only happens in production / only on their phone" styling report. It is
+minutes of work and it collapses the search space in half. Note the local
+render will show broken external images (ESPN headshots are cross-origin and
+the proxy blocks them) — that's expected and does not affect layout or paint
+questions.
+
+---
+
+## 2026-08-18 - Testing a Non-Module Browser Script: Evaluate It With `new Function`
+
+**Context:** `public/sw.js` is a service worker — a plain script, not an ES
+module, with no exports, that references `self`, `caches` and `fetch` as free
+globals. It had accumulated three real caching bugs and CLAUDE.md is explicit
+that grep-shaped tests are worthless (a doc comment satisfies them while the
+behavior is deleted underneath).
+
+**Insight:** You can execute the real file under vitest without shipping a test
+build or refactoring it into modules. Read the source and wrap it in a
+`new Function` whose *parameters are the globals you want to control* — inside
+the function body those names shadow the real globals, so the script under test
+sees your stubs and nothing else changes:
+
+```ts
+const factory = new Function('self', 'caches', 'fetch', 'Date', SW_SOURCE);
+factory(selfStub, cachesStub, fetchStub, { now: () => fakeNow });
+```
+
+`self.addEventListener` on the stub captures the worker's real listeners; you
+then invoke the `fetch` listener with a fake event that records what
+`respondWith()` was handed, and assert on **the Response the worker actually
+returned**. Injecting `Date` as `{ now: () => t }` gives deterministic control
+of expiry logic without touching the system clock or mocking timers globally.
+Use the real `Response`/`Headers`/`Request` (Node 18+ globals) so body cloning
+and header semantics behave exactly as in a browser.
+
+**Evidence:** `tests/service-worker-cache.test.ts`. The proof it tests behavior
+rather than text: restoring the previous `sw.js` fails 7 of its 10 cases, while
+a source-level reading of that same old file looks fine.
+
+**Recommendation:** Use this for any browser-global script that resists import
+— service workers, `is:inline` bootstrap scripts, third-party snippets. Always
+verify the suite fails against the pre-fix file before trusting it; a harness
+that passes on both versions is testing nothing. Keep the stubs minimal
+(a Map-backed Cache is enough) so the test documents the contract rather than
+reimplementing the platform.
+
+---
+
 ## 2026-07-08 - AFL Homepage Standings Cards Are Paired Siblings — Keep Their Mobile Headers in Sync
 
 **Context:** The AFL homepage stacks two visually-matched standings cards: `AflConferencePlayoffPreview.astro` (AL/NL "Playoff Standings") and `AflStandingsCompact.astro` (Premier League "Standings"). Both use the same header shape — logo + left-bordered `__section-header` title/subtitle on the left, an accent-colored "Full bracket"/"Full standings" CTA on the right. But the mobile treatment lived only in the playoff card: its `@media (max-width: 640px)` block flips `.afl-conf__header` to `flex-direction: column` so the CTA drops onto its own row under the heading. The Premier card had no such block, so on phones its "Full standings" link stayed crammed top-right, sharing a cramped line with the title.

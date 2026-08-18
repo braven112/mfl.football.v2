@@ -89,7 +89,13 @@ const summary = isUserChampion
     display: flex;
     min-height: clamp(320px, 34vw, 380px);
     border-radius: var(--radius-lg, 0.75rem);
-    background: var(--champ-surface);
+    /* Fail-safe base: a LITERAL solid under the gradient. A gradient held in a
+       custom property is a single point of failure — if `var(--champ-surface)` is
+       ever dropped (the whole `background` is then invalid at computed-value
+       time), the hero goes transparent while the white ink stays, which is
+       unreadable in BOTH themes. A literal background-color cannot be dropped. */
+    background-color: #5a3d0c;
+    background-image: var(--champ-surface);
     border: 2px solid var(--color-warning, #f59e0b);
     color: var(--champ-ink);
     box-shadow: var(--box-shadow-lg, 0 10px 28px rgba(15, 30, 46, 0.4));
@@ -97,7 +103,13 @@ const summary = isUserChampion
   }
 
   :global(html.dark) .champ-hero {
-    --champ-surface: #0f1e2e;
+    /* Dark is a flat navy, not a gradient. Say `none` rather than parking a
+       color in an image slot: a color IS invalid for background-image, so it
+       would resolve to none anyway — but only via the exact
+       invalid-at-computed-value-time rule this whole file is now guarding
+       against, which is a poor thing to depend on deliberately. */
+    --champ-surface: none;
+    background-color: #0f1e2e;
     --champ-ink: #ffffff;
     --champ-ink-soft: rgba(255, 255, 255, 0.72);
     --champ-ink-faint: rgba(255, 255, 255, 0.6);

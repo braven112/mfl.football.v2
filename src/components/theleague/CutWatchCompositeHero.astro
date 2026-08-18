@@ -170,7 +170,13 @@ const glowLight = hexToRgba(primary, 0.2);
     min-height: clamp(260px, 26vw, 310px);
     border-radius: var(--radius-lg, 0.75rem);
     border: 1px solid var(--cwh-border);
-    background: var(--cwh-surface);
+    /* Fail-safe base: a LITERAL solid under the gradient. A gradient held in a
+       custom property is a single point of failure — if `var(--cwh-surface)` is
+       ever dropped (the whole `background` is then invalid at computed-value
+       time), the hero goes transparent while the white ink stays, which is
+       unreadable in BOTH themes. A literal background-color cannot be dropped. */
+    background-color: #1c497c;
+    background-image: var(--cwh-surface);
     color: var(--cwh-ink);
     display: flex;
     align-items: center;
@@ -182,6 +188,7 @@ const glowLight = hexToRgba(primary, 0.2);
        the :global(html.dark) .cwh--urgent block (foreground tokens copied from
        there); only --cwh-surface differs. */
     --cwh-surface: linear-gradient(115deg, #dc2626 0%, #991b1b 55%, #5f1414 100%);
+    background-color: #991b1b;
     --cwh-ghost: rgba(255, 255, 255, 0.05);
     --cwh-accent: #fca5a5;
     --cwh-pill-bg: rgba(252, 165, 165, 0.14);
@@ -193,6 +200,7 @@ const glowLight = hexToRgba(primary, 0.2);
 
   :global(html.dark) .cwh {
     --cwh-surface: linear-gradient(115deg, #0d1420 0%, #12233b 52%, #1a3a63 130%);
+    background-color: #12233b;
     --cwh-ink: #ffffff;
     --cwh-body: rgba(255, 255, 255, 0.78);
     --cwh-ghost: rgba(255, 255, 255, 0.045);
@@ -212,6 +220,7 @@ const glowLight = hexToRgba(primary, 0.2);
 
   :global(html.dark) .cwh--urgent {
     --cwh-surface: linear-gradient(115deg, #170b0d 0%, #2a1216 46%, #6e1220 130%);
+    background-color: #2a1216;
     --cwh-ghost: rgba(255, 255, 255, 0.05);
     --cwh-accent: #fca5a5;
     --cwh-pill-bg: rgba(252, 165, 165, 0.14);
