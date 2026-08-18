@@ -764,7 +764,15 @@ There is no dedicated `myLineup` or `startingLineups` export. To read the curren
 
 1. **`weeklyResults`** (best for submitted lineups): `TYPE=weeklyResults&W={week}`
    - Response: franchise objects with `starters` (comma-separated IDs), `nonstarters`, `optimal`, and a `player` array where each player has `{ id, score, status: "starter"|"nonstarter", shouldStart: "0"|"1" }`
-   - Only available AFTER the week has been processed/played
+   - ~~Only available AFTER the week has been processed/played~~ **CORRECTED 2026-08-18:**
+     the `starters` CSV appears the moment a lineup is SAVED, for future,
+     unplayed weeks as well, and reads unauthenticated. Verified live against
+     L=13522 in the 2026 preseason: `W=1` and `W=2` both return franchise
+     `starters` for teams that have set lineups, `W=12` returns the matchups
+     with no `starters` because nobody has set one yet. `W=YTD` carries every
+     week 1-17 in one payload, so it backs up the week-scoped call.
+     This caveat was wrong and expensive — it is why both lineup pages reached
+     for a `myStarters` export instead (see the 2026-08-18 entry below).
 
 2. **`rosters`** with `W={week}` parameter: `TYPE=rosters&W={week}`
    - Returns all rostered players but NO starter/bench distinction — the roster response only has `status: "ROSTER"|"INJURED_RESERVE"|"TAXI_SQUAD"`, not whether they're starting
@@ -809,6 +817,56 @@ Supported via `FRANCHISE_ID` parameter in the POST body. Requires both `MFL_USER
 - `src/utils/mfl-fetch.ts` — use for all authenticated writes
 - `src/pages/api/move-to-ir.ts` — canonical simple write pattern
 - `src/pages/api/trades/submit.ts` — canonical mflFetch write pattern
+
+---
+
+## 2026-08-18 - `myStarters` Is Import-Only, and MFL's Soft Failures Look Like Empty Data
+
+**Context:** An owner reported that Set Lineup showed no players on one future
+week and player IDs instead of names on another (`/theleague/lineup`,
+`/afl-fantasy/lineup`).
+
+**Insight:** Three separate MFL behaviors, each of which renders as "the data is
+just missing":
+
+1. **`myStarters` is an IMPORT type, not an export.** Both lineup pages read
+   the owner's saved lineup with `export?TYPE=myStarters`. MFL answers every
+   one of those with `Invalid Data Type (myStarters)` and lists the valid
+   export types — `myStarters` is not among them, and neither is any other
+   lineup-read type (`myDraftList` and `whoShouldIStart` are the closest
+   names in the list, and neither is it). The pages' `catch` swallowed the
+   error, so they had never once rendered a submitted lineup; they silently
+   fell back to an optimal-by-projection fill that reads exactly like a saved
+   lineup. Use `weeklyResults&W={week}` — see the corrected note above.
+
+2. **A single-week `weeklyResults` payload often omits `week` entirely.**
+   `W=YTD` returns `{ allWeeklyResults: { weeklyResults: [ { week: '1', … } ] } }`,
+   but `W=14` returns `{ weeklyResults: { matchup: [ … ] } }` with no `week`
+   key. A week-keyed lookup over both shapes silently finds nothing on the
+   week-scoped response — the request you just made is the only thing that
+   identifies it.
+
+3. **`res.ok` is not "the call worked."** MFL answers a throttled or malformed
+   request with HTTP 200 and an `{ error: … }` body. The lineup pages fire ~9
+   live MFL calls per view and a week switch is a full page reload, so
+   throttling is routine — and it degraded differently depending on which call
+   died: a dead `rosters` emptied every starter slot, a dead `players` printed
+   "Player 13592" where a name belongs. Both of those are already synced to
+   disk under `data/<league>/mfl-feeds/<year>/`.
+
+**Evidence:**
+- `curl 'https://api.myfantasyleague.com/2026/export?TYPE=myStarters&L=13522&FRANCHISE=0001&W=14&JSON=1'`
+  → `{"error":{"$t":"Invalid Data Type (myStarters) - needs to be one of the following: players playerProfile …"}}`
+- Live `weeklyResults` W=1/W=2/W=12 shape comparison (2026-08-18 preseason)
+- `src/utils/lineup-sources.ts` + `tests/lineup-sources.test.ts` — the parsing
+  and its regression coverage
+
+**Recommendation:** Check a live MFL payload's own shape rather than the HTTP
+status, and never let a live MFL call be the only source for something already
+committed to disk (`getPlayerMap` for identity, `resolveRostersPayload` for
+rosters). When a read endpoint "doesn't exist", confirm it against MFL's own
+invalid-type listing — `export?TYPE=bogus` prints every valid export type,
+which is faster and more reliable than the docs.
 
 ---
 
