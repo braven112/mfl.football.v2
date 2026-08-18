@@ -395,6 +395,14 @@
       "impact": "user",
       "area": "homepage",
       "league": "theleague"
+    },
+    {
+      "date": "2026-08-18",
+      "type": "bug-fix",
+      "summary": "Your phone was occasionally serving you a page from a previous visit and passing it off as live. The site keeps an offline copy of pages so there's something to show when you're in a dead zone — but it was reaching for that copy any time a request didn't complete cleanly, including the extremely normal case of tapping a second link before the first one finished loading. The saved copy could be days old and still point at a stylesheet that no longer exists, which is how a page could come up looking half-built and then quietly right itself a few taps later. Now the offline copy is only used when you're actually offline, it's ignored once it's more than twelve hours old, and images and logos refresh themselves in the background instead of being kept forever.",
+      "impact": "user",
+      "area": "other",
+      "league": "both"
     }
   ]
 }

@@ -4,6 +4,66 @@ Domain knowledge about design tokens, CSS variables, theming, and visual pattern
 
 ---
 
+## 2026-08-18 - A Gradient in a Custom Property Makes `background` All-or-Nothing
+
+**Context:** An owner reported the homepage kickoff hero rendering with no
+background on mobile — white headline, white summary, light-blue countdown,
+all sitting on the bare gray page, in light mode and then dark. Every other
+rule in the same block was clearly applying: the pill, the flex footer, the
+white CTA, the 40%-opacity model image. Only the surface was missing.
+
+**Insight:** The composite heroes each declare their background as a custom
+property and paint it with one shorthand:
+
+```css
+--psh-surface: linear-gradient(115deg, #2563eb, #1c497c 55%, #0f3057);
+background: var(--psh-surface);
+```
+
+`var()` substitutes at **computed-value time**, and the spec's rule there is
+brutal: if the substituted value isn't valid for the property, the declaration
+is *invalid at computed-value time* and falls back to the property's **initial
+value** — not to the previous cascade winner, and not to a partial application.
+For `background` that initial value is `transparent`.
+
+So a token that fails takes the whole surface with it, while its neighbours in
+the same rule survive. That's why the failure doesn't degrade into "a plain
+hero" — it degrades into white ink on nothing, which is the *unreadable*
+outcome. This is a distinct mechanism from the two already documented:
+
+| Failure | Symptom | Caught by the guard? |
+|---|---|---|
+| Token defined nowhere | Hardcoded fallback renders in BOTH themes | Yes |
+| Token defined light-only | Light value renders in dark mode | No |
+| Token **defined and valid**, value rejected for the property | Property resets to its INITIAL value | No |
+
+The guard tests can't see the third one: the token exists, the syntax parses,
+and nothing is wrong in the source text.
+
+**Evidence:** `src/components/theleague/PreseasonCompositeHero.astro` and seven
+sibling heroes; the shipped stylesheet and markup both verified correct in
+headless Chromium at the reporter's viewport, which is what ruled the CSS
+itself out and pointed at value resolution on the device.
+
+**Recommendation:** Never let a var-carried gradient be the only thing painting
+a surface that has ink designed for it. Split the shorthand:
+
+```css
+background-color: #1c497c;              /* LITERAL — cannot be dropped */
+background-image: var(--psh-surface);   /* the gradient, when it resolves */
+```
+
+Pick the literal from the gradient's own mid stop so the fallback reads as the
+same panel, and add it to every theme/variant block that redefines the surface
+— otherwise one theme silently loses the net.
+`tests/hero-gradient-surface-fallback.test.ts` enforces both halves. The same
+reasoning applies to any all-or-nothing shorthand fed by a token: `background`,
+`border`, `font`, `grid-template`. A token holding a plain color is far less
+exposed, because a color that fails usually fails at parse time in the
+stylesheet rather than at substitution.
+
+---
+
 ## 2026-08-17 - An Elevation Shadow Belongs to the Element That Owns the Surface
 
 **Context:** `/afl-fantasy/playoffs` rendered a hard, square-cornered dark halo
