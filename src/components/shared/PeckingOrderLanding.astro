@@ -1,0 +1,296 @@
+---
+/**
+ * PeckingOrderLanding — the /<league>/pecking-order landing page, shared by
+ * both leagues (the per-league pages are thin wrappers that pass their own
+ * globbed issues, because a Vite glob has to be a literal in the page).
+ *
+ * Two states, decided by resolvePeckingOrderLanding (src/utils):
+ *
+ * - live    — the newest issue is from the season being played. Render it,
+ *             archive underneath, nothing else.
+ * - preview — offseason, preseason, or a league with no issues yet. Lead with
+ *             an explainer of what the column is, then show the newest issue
+ *             LABELLED AS A SAMPLE.
+ *
+ * The preview state is the point of this component. The Pecking Order launched
+ * in August 2026, a month before the AFL's first real issue, and the page's
+ * only content was last season's rankings under a live-looking hero — an owner
+ * who had never heard of the column could not tell a sample from this week's
+ * verdict. Preseason is when owners are ON the site, so the page has to teach
+ * the format before there is any real data to show.
+ */
+import PeckingOrderIssue, { type PeckingOrderData } from './PeckingOrderIssue.astro';
+import type { LeagueSlug } from '../../types/nav';
+import { resolvePeckingOrderLanding, type LandingIssue } from '../../utils/pecking-order-landing';
+
+export interface Props {
+  issues: LandingIssue<PeckingOrderData>[];
+  league: LeagueSlug;
+  /** Base path for permalinks, e.g. "/afl-fantasy/pecking-order". */
+  basePath: string;
+  /** Injectable clock — the ?testDate= convention drives the preview state. */
+  now?: Date;
+}
+
+const { issues, league, basePath, now } = Astro.props as Props;
+
+const { mode, latest, older, firstIssueDate } = resolvePeckingOrderLanding(issues, now);
+const isPreview = mode === 'preview';
+
+const firstIssueLabel = firstIssueDate
+  ? firstIssueDate.toLocaleDateString('en-US', {
+      weekday: 'long', month: 'long', day: 'numeric', timeZone: 'America/Los_Angeles',
+    })
+  : null;
+
+// Field size comes from the sample itself, so the copy can never claim a
+// number the league does not have (16 in TheLeague, 24 in the AFL).
+const teamCount = latest?.data.rankings?.length ?? null;
+
+// The sample's own methodology string, so this page and the issue below it
+// can't drift apart on the formula.
+const methodology = latest?.data.methodology
+  ?? '50% all-play record · 50% last 3 weeks (rolling-3wk PPG)';
+
+const HOW_IT_WORKS = [
+  {
+    title: 'One number, two halves',
+    body: `Every team gets a composite score: ${methodology}. Half of it is how you'd fare against the whole league, half is how you're playing right now.`,
+  },
+  {
+    title: 'All-play ignores who you drew',
+    body: teamCount
+      ? `Each week your score is run against all ${teamCount - 1} other teams, not just the one on your schedule. Post the 4th-best score and the week is worth ${teamCount - 4}-3 — whether you won by 40 or lost by 2.`
+      : `Each week your score is run against every other team, not just the one on your schedule. Schedule luck stops counting.`,
+  },
+  {
+    title: 'Last three weeks, not last September',
+    body: `The other half is a rolling three-week average, so a hot month actually moves you and one bad Sunday in Week 2 stops following you around in November.`,
+  },
+  {
+    title: 'Movement is the story',
+    body: `Every card carries its arrow and how far it moved since last week. Climbing five spots is worth more than sitting at #6 all year.`,
+  },
+  {
+    title: 'Awards, weekly',
+    body: `Stat of the Week, Bench Blunder, Heater, Cooler, and the Matchup of the Week — the highest-ranked clash on the coming slate.`,
+  },
+  {
+    title: 'Standings, on the same page',
+    body: `Divisions and the full all-play table sit at the bottom of every issue, so the rankings and the receipts live together.`,
+  },
+];
+---
+
+{isPreview && (
+  <section class="po-intro" aria-labelledby="po-intro-title">
+    <p class="po-intro__eyebrow">
+      <img
+        class="po-intro__avatar"
+        src="/assets/claude-schefter-avatar.webp"
+        alt=""
+        aria-hidden="true"
+        width="28"
+        height="28"
+        loading="lazy"
+      />
+      <span>New weekly column</span>
+    </p>
+    <h1 class="po-intro__title" id="po-intro-title">The Pecking Order</h1>
+    <p class="po-intro__lede">
+      Every Tuesday morning of the season, Claude Schefter ranks
+      {teamCount ? ` all ${teamCount} teams, 1 through ${teamCount},` : ' the whole league,'}
+      and says out loud what he thinks of your football team. It lands here and in the group chat
+      before you've finished your coffee.
+    </p>
+
+    <p class="po-intro__when">
+      {firstIssueLabel
+        ? <>First issue of the season: <strong>{firstIssueLabel}</strong> — the Tuesday after Week 1.</>
+        : <>Issues publish <strong>every Tuesday morning</strong> once Week 1 is in the books.</>}
+    </p>
+
+    <ul class="po-how">
+      {HOW_IT_WORKS.map(item => (
+        <li class="po-how__card">
+          <h2 class="po-how__title">{item.title}</h2>
+          <p class="po-how__body">{item.body}</p>
+        </li>
+      ))}
+    </ul>
+  </section>
+)}
+
+{latest ? (
+  <>
+    {isPreview && (
+      <div class="po-sample-note" role="note">
+        <span class="po-sample-note__tag">Sample issue</span>
+        <p class="po-sample-note__text">
+          Below is a real issue from <strong>Week {latest.week} of {latest.year}</strong>, published so you can
+          see the format. These are not current rankings{firstIssueLabel
+            ? <> — the season's first issue lands {firstIssueLabel}.</>
+            : <>.</>}
+        </p>
+      </div>
+    )}
+    <div class={isPreview ? 'po-sample' : undefined}>
+      <PeckingOrderIssue issue={latest.data} league={league} variant={isPreview ? 'sample' : 'live'} />
+    </div>
+    {older.length > 0 && (
+      <aside class="pr-archive">
+        <h2 class="pr-archive__title">{isPreview ? 'More past issues' : 'Past Issues'}</h2>
+        <ul class="pr-archive__list">
+          {older.map(i => (
+            <li>
+              <a href={`${basePath}/${i.year}/${i.week}`}>
+                Week {i.week} · {i.year} — {i.data.headline}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </aside>
+    )}
+  </>
+) : (
+  <p class="po-empty">
+    The first issue publishes {firstIssueLabel ? `on ${firstIssueLabel}` : 'the Tuesday after Week 1'}.
+    Check back once the season is underway.
+  </p>
+)}
+
+<style>
+/* Tokens only — a hardcoded fallback here would render identically in both
+   themes and ship white cards on a black page (see CLAUDE.md design tokens). */
+.po-intro {
+  padding: 1.5rem 0 0.5rem;
+  border-bottom: 1px solid var(--content-border, #e5e7eb);
+  margin-bottom: 2rem;
+}
+.po-intro__eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--content-text-muted, #6b7280);
+}
+.po-intro__avatar {
+  border-radius: 50%;
+  flex: none;
+}
+.po-intro__title {
+  font-size: clamp(2rem, 5vw, 3.25rem);
+  line-height: 1.05;
+  margin: 0 0 0.75rem;
+  color: var(--page-text, #111827);
+}
+.po-intro__lede {
+  font-size: 1.15rem;
+  line-height: 1.6;
+  max-width: 62ch;
+  margin: 0 0 1rem;
+  color: var(--content-text-muted, #4b5563);
+}
+.po-intro__when {
+  margin: 0 0 1.75rem;
+  font-size: 1rem;
+  color: var(--page-text, #111827);
+}
+.po-how {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.5rem;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+}
+.po-how__card {
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--content-border, #e5e7eb);
+  border-left: 3px solid var(--color-primary, #2563eb);
+  border-radius: 0.5rem;
+  padding: 0.85rem 1rem;
+}
+.po-how__title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 0 0 0.3rem;
+  color: var(--page-text, #111827);
+}
+.po-how__body {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--content-text-muted, #4b5563);
+}
+
+/* NOTE: the sample note must not claim "the season hasn't started" — preview
+   also covers the days between Thursday kickoff and the first Tuesday issue,
+   when the season very much has started (Copilot caught this on PR #563).
+   The sample label has to survive being skimmed past — an owner who scrolls
+   straight to the rankings must still meet it, so it sits directly above the
+   issue and the wrapper keeps a visible edge the whole way down. */
+.po-sample-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 0.75rem;
+  background: var(--content-bg-muted, #f3f4f6);
+  border: 1px solid var(--content-border, #e5e7eb);
+  border-radius: 0.5rem;
+  padding: 0.7rem 0.9rem;
+  margin-bottom: 0.75rem;
+}
+.po-sample-note__tag {
+  flex: none;
+  background: var(--page-text, #111827);
+  color: var(--card-bg, #fff);
+  border-radius: 0.25rem;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.po-sample-note__text {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--content-text-muted, #4b5563);
+}
+.po-sample {
+  border-left: 2px dashed var(--content-border, #e5e7eb);
+  padding-left: 1rem;
+  margin-left: 0.1rem;
+}
+.pr-archive {
+  margin: 0 0 3rem;
+}
+.pr-archive__title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0 0 0.75rem;
+  color: var(--page-text, #111827);
+}
+.pr-archive__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+.pr-archive__list a {
+  color: var(--page-text, #111827);
+  text-decoration: none;
+}
+.pr-archive__list a:hover { text-decoration: underline; }
+.po-empty {
+  margin: 3rem 0 4rem;
+  font-size: 1rem;
+  color: var(--content-text-muted, #6b7280);
+}
+</style>

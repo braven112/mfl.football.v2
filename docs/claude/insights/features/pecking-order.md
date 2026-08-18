@@ -143,3 +143,83 @@ column ever backfills seasons in bulk.
 (`GROUPME_AFL_SCHEFTER_BOT_ID`), and the announcement URL, which must go
 through `leagueUrl(league, '/pecking-order')` rather than
 `leagueOrigin() + path`.
+
+---
+
+## 2026-08-18 - The Offseason Guard That Could Never Fire, and the Archive Gap That Exposed It
+
+**Context:** the Tuesday cron runs year-round and self-skipped on one check:
+"does the target year's feed have a completed week?" On 2026-08-18 — the
+middle of the preseason — it generated AFL **2025 week 16** and blasted a
+GroupMe announcement ranking a season that ended in December.
+
+**Why the guard was structurally incapable of firing.** The column resolves
+its year with `currentSeasonYear()`, which rolls at **Labor Day**. So from
+February until Labor Day it answers with LAST season — and last season's
+feeds are complete by definition. The guard was asking a question whose
+answer is always "yes" for two-thirds of the calendar. It had been trying to
+publish all summer; what actually kept the chat quiet was the per-week issue
+file already existing on disk. AFL had 2025 weeks 13 and 14 seeded at launch
+and nothing after, so week 16 was the first gap, and a gap is indistinguishable
+from a fresh week.
+
+**The generalizable trap:** *dedup-on-output is not a schedule guard.* It
+looks like one for as long as the archive happens to be dense, and it fails
+the first time it isn't. Any year-round job wants an explicit "is this season
+being played" gate, not an artifact check.
+
+**Why the sibling lanes were fine** (worth knowing before "fixing" them too):
+`schefter-weekly-articles.mjs` resolves its year with `getSeasonYear()` — the
+**February** clock — so in August it asks about the CURRENT year, whose feeds
+are empty, and `isRegularSeasonOrPlayoffs(0)` is false. Two different year
+clocks in two adjacent scripts, and only one of them is safe here. That is
+not obvious from either file.
+
+**Fix:** `isSeasonWindowOpen(year, now)` in
+`src/utils/pecking-order-season-window.mjs` — the column may only run while
+the season it would rank is in progress (week 1 kickoff → 20 weeks out). It
+closes both the long Feb→Labor Day gap and the short Labor Day→kickoff one.
+Week 1 kickoff is **derived** (Thursday after Labor Day; the first-issue
+Tuesday is Labor Day + 8 at 14:00 UTC, matching the cron slot) rather than
+read from a year map, so it never needs an annual edit — the derivation
+reproduces week-resolver's hardcoded `KICKOFF_DATES` for 2024-2027 exactly.
+Note the kickoff instant is stored in UTC and Thursday 20:20 ET is already
+Friday there, so deriving the Tuesday as "kickoff + 5 days" slides a day —
+anchor date arithmetic to Labor Day, not to the kickoff instant.
+
+**An explicit `--year` bypasses the gate** (deliberate backfill of a named
+season), but a `--week` override does NOT — workflow_dispatch passes only
+`--week`, so a manual preseason dispatch still skips.
+
+---
+
+## 2026-08-18 - The Landing Page Spends Most of the Year Showing Something That Isn't Current
+
+**Context:** the column publishes weekly for ~17 weeks and is silent for the
+other 35. Its landing page rendered "the newest issue on disk" unconditionally,
+which for most of the calendar is last December's rankings under a live-looking
+hero — and the column had just launched, so no owner had the context to tell.
+
+**What the page does now:** `resolvePeckingOrderLanding`
+(`src/utils/pecking-order-landing.ts`) returns `live` when the newest issue
+belongs to the season being played and `preview` otherwise — including for a
+league with **no issues at all**, which used to render an empty state telling
+owners to run a pnpm command. Preview leads with what the column is and labels
+the issue below it a sample (`variant="sample"` on `PeckingOrderIssue` drops
+the headline to h2 and hides the publish date — a stale issue stamped with the
+day it was generated reads as breaking news).
+
+**Two things worth copying elsewhere:**
+- The preview copy derives its team count and its formula string **from the
+  sample issue itself**, so it cannot claim a field size or a methodology the
+  league doesn't have. Hardcoding "all 24 teams" in a shared component is how
+  TheLeague's page ends up lying.
+- Both leagues render from ONE component (`PeckingOrderLanding.astro`); the
+  pages keep only their Vite glob, which has to be a literal per page. Before
+  this the two index pages were near-identical copies — the exact shape that
+  drifts (see the two-league page-pair bug class in CLAUDE.md).
+
+**Testing note:** the state decision is pure and tested directly
+(`tests/pecking-order-landing.test.ts`) rather than through rendered markup,
+and `?testDate=YYYY-MM-DD` drives both states in the browser — `?testDate=
+2025-11-18` puts the AFL page back in `live` without touching the clock.

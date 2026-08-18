@@ -1,5 +1,27 @@
 [
   {
+    "id": "pecking-order-preseason-preview",
+    "date": "2026-08-18",
+    "category": "enhancement",
+    "icon": "rank",
+    "title": "The Pecking Order Explains Itself",
+    "summary": "The column doesn't publish again until the Tuesday after Week 1, so its page spent the preseason showing last season's rankings with nothing to say they were last season's. It now opens with what the column actually is — the formula, the awards, the date the first real issue lands — and stamps the issue underneath it as a sample.",
+    "description": [
+      "The Pecking Order arrived three days ago and immediately went quiet for a month, because there is nothing to rank until Week 1 has been played. That left both leagues with a page that opened cold on a set of rankings from last December: real numbers, real teams, a live-looking headline, and no way for anyone who had never heard of the column to tell that none of it was current.",
+      "The page now knows which of those two situations it is in. Out of season it leads with the column itself — every Tuesday morning, every team in your league ranked top to bottom, and a plain-English pass at the math. Half your score is your all-play record, which runs your points against every other team in the league instead of the one you happened to draw: post the fourth-best score in a given week and the week is worth beating everybody but three, whether you won by 40 or lost by 2. The other half is your last three weeks, so a hot month moves you and one bad Sunday in Week 2 stops following you around in November.",
+      "Under that, the six things every issue carries — the ranking cards with their movement arrows, Stat of the Week, Bench Blunder, Heater, Cooler, next week's Matchup of the Week, and the full standings and all-play tables. And the date, spelled out: the first real issue of the season lands Tuesday, September 15, the Tuesday after Week 1.",
+      "The issue below all that is still there, still real, and now clearly labelled a sample — a past week published so you can see the format, with its publish date dropped so nothing about it reads as breaking news. The moment a real issue exists for the season being played, every bit of the explainer disappears and the page goes back to leading with this week's verdict.",
+      "Both leagues get it from the same component, so neither drifts, and it re-arms itself every February when the season ends."
+    ],
+    "image": "afl-pecking-order-preview.webp",
+    "imageAlt": "The AFL Pecking Order landing page in its preseason state: a 'New weekly column' eyebrow above the title, a lede explaining the Tuesday-morning column, the date of the first issue, and six cards covering the formula, the awards and the standings snapshot.",
+    "excludeFromHero": true,
+    "leagues": [
+      "theleague",
+      "afl"
+    ]
+  },
+  {
     "id": "weekly-rollup-2026-08-17",
     "date": "2026-08-17",
     "title": "Weekly Fixes & Polish (Aug 10-18)",
@@ -860,26 +882,6 @@
     "image": "homepage-whats-new-section.webp",
     "imageAlt": "The bottom of the homepage's left column showing a 'What's New' panel with two update cards side by side — each with a category badge, headline, date, and short summary — above an 'All releases' link.",
     "excludeFromHero": true,
-    "leagues": [
-      "theleague"
-    ]
-  },
-  {
-    "id": "live-scoring",
-    "date": "2026-07-08",
-    "title": "Live Scoring Comes Home",
-    "summary": "The Sunday scoreboard used to live on MyFantasyLeague's servers, in a gray grid of numbers with all the drama of a spreadsheet. No more. Live Scoring is now ours — every matchup, every point, projected finals and win probability, updating through the Thursday, Sunday, and Monday windows and dressed in your team's colors.",
-    "description": [
-      "For years, checking who was winning meant bouncing out to the old MFL live-scoring page — a table that looked drawn in 2009. We rebuilt it from scratch, on our own turf, and gave it the broadcast treatment it always deserved.",
-      "The <strong>scoreboard</strong> floats the closest games to the top and pins your matchup up top in a card washed in both franchises' colors. Every matchup carries a live score, a projected final, and a <strong>win-probability bar</strong> that swings as your guys score — because 'you're up 12' and 'you're up 12 with their whole backfield yet to play' are very different Sundays.",
-      "Tap any matchup for the <strong>full head-to-head</strong>: starter by starter, live points over projection, each player's NFL team logo and live game state — green for on the field, amber for yet to play, a quiet gray once he's done. Beat your projection and the number lights up. The score header stays pinned while you scroll, so you never lose sight of the damage. It refreshes every 60 seconds through game windows, and yes — it was built for late nights, with a proper dark mode."
-    ],
-    "category": "new-feature",
-    "link": "/theleague/live-scoring",
-    "linkLabel": "Open the scoreboard",
-    "icon": "goals",
-    "image": "live-scoring.webp",
-    "imageAlt": "The Live Scoring scoreboard in dark mode: a featured 'Your Matchup' card washed from red to purple with the Pigskins and Magicians crests, live scores 64.3 and 76.9, projected finals, and a red-and-purple win-probability bar, above two smaller matchup cards.",
     "leagues": [
       "theleague"
     ]
