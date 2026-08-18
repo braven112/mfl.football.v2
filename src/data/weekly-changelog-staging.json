@@ -387,6 +387,14 @@
       "impact": "user",
       "area": "other",
       "league": "afl"
+    },
+    {
+      "date": "2026-08-18",
+      "type": "bug-fix",
+      "summary": "The homepage hero turned into a ghost on some phone loads — white headline, white countdown, white everything, floating on the plain gray page with no card behind it. The kickoff copy was technically all there; you just couldn't read a word of it, in light mode or dark. The hero paints its blue-to-navy gradient through a single CSS variable, and that one line is all-or-nothing: if the browser doesn't take the value, the entire background is discarded and the white text is left standing on nothing. Every hero on the site — kickoff countdown, cut watch, auction, breaking news, champion crowned, weekly recap — now paints a plain brand-colored panel first and lays the gradient on top of it. When the gradient shows up you get the same hero you've always had; when it doesn't, you get a solid blue (or red, or gold) card and copy you can actually read.",
+      "impact": "user",
+      "area": "homepage",
+      "league": "theleague"
     }
   ]
 }

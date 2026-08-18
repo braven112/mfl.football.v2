@@ -240,7 +240,13 @@ const excerpt = article?.body
     min-height: clamp(220px, 22vw, 268px);
     border-radius: var(--radius-lg, 0.75rem);
     border: 1px solid var(--ahc-border);
-    background: var(--ahc-surface);
+    /* Fail-safe base: a LITERAL solid under the gradient. A gradient held in a
+       custom property is a single point of failure — if `var(--ahc-surface)` is
+       ever dropped (the whole `background` is then invalid at computed-value
+       time), the hero goes transparent while the white ink stays, which is
+       unreadable in BOTH themes. A literal background-color cannot be dropped. */
+    background-color: #1c497c;
+    background-image: var(--ahc-surface);
     color: var(--ahc-ink);
     display: flex;
     align-items: center;
@@ -249,6 +255,7 @@ const excerpt = article?.body
 
   :global(html.dark) .ahc {
     --ahc-surface: linear-gradient(115deg, #0d1b2c 0%, #16395e 52%, var(--color-primary, #1c497c) 100%);
+    background-color: #16395e;
     --ahc-ink: #ffffff;
     --ahc-body: rgba(255, 255, 255, 0.78);
     --ahc-date: rgba(255, 255, 255, 0.55);

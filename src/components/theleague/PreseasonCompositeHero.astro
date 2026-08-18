@@ -112,7 +112,13 @@ const glowLight = hexToRgba(primary, 0.2);
     min-height: clamp(240px, 24vw, 290px);
     border-radius: var(--radius-lg, 0.75rem);
     border: 1px solid var(--psh-border);
-    background: var(--psh-surface);
+    /* Fail-safe base: a LITERAL solid under the gradient. A gradient held in a
+       custom property is a single point of failure — if `var(--psh-surface)` is
+       ever dropped (the whole `background` is then invalid at computed-value
+       time), the hero goes transparent while the white ink stays, which is
+       unreadable in BOTH themes. A literal background-color cannot be dropped. */
+    background-color: #1c497c;
+    background-image: var(--psh-surface);
     color: var(--psh-ink);
     display: flex;
     align-items: center;
@@ -121,6 +127,7 @@ const glowLight = hexToRgba(primary, 0.2);
 
   :global(html.dark) .psh {
     --psh-surface: linear-gradient(115deg, #0d1420 0%, #12233b 52%, #1c497c 130%);
+    background-color: #12233b;
     --psh-ink: #ffffff;
     --psh-body: rgba(255, 255, 255, 0.78);
     --psh-ghost: rgba(255, 255, 255, 0.045);

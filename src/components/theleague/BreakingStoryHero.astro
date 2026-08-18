@@ -123,7 +123,13 @@ const ctaLabel = rosterHref ? 'See the roster' : safeExternal ? 'Read the full s
     min-height: clamp(250px, 25vw, 300px);
     border-radius: var(--radius-lg, 0.75rem);
     border: 1px solid var(--bsh-border);
-    background: var(--bsh-surface);
+    /* Fail-safe base: a LITERAL solid under the gradient. A gradient held in a
+       custom property is a single point of failure — if `var(--bsh-surface)` is
+       ever dropped (the whole `background` is then invalid at computed-value
+       time), the hero goes transparent while the white ink stays, which is
+       unreadable in BOTH themes. A literal background-color cannot be dropped. */
+    background-color: #991b1b;
+    background-image: var(--bsh-surface);
     color: var(--bsh-ink);
     display: flex;
     align-items: center;
@@ -132,6 +138,7 @@ const ctaLabel = rosterHref ? 'See the roster' : safeExternal ? 'Read the full s
 
   :global(html.dark) .bsh {
     --bsh-surface: linear-gradient(115deg, #140b0b 0%, #241111 46%, #3a1414 130%);
+    background-color: #241111;
     --bsh-ink: #ffffff;
     --bsh-body: rgba(255, 255, 255, 0.78);
     --bsh-ghost: rgba(255, 255, 255, 0.05);

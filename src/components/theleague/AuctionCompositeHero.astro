@@ -170,7 +170,13 @@ const chips = [
     min-height: clamp(250px, 25vw, 300px);
     border-radius: var(--radius-lg, 0.75rem);
     border: 1px solid var(--ach-border);
-    background: var(--ach-surface);
+    /* Fail-safe base: a LITERAL solid under the gradient. A gradient held in a
+       custom property is a single point of failure — if `var(--ach-surface)` is
+       ever dropped (the whole `background` is then invalid at computed-value
+       time), the hero goes transparent while the white ink stays, which is
+       unreadable in BOTH themes. A literal background-color cannot be dropped. */
+    background-color: #92400e;
+    background-image: var(--ach-surface);
     color: var(--ach-ink);
     display: flex;
     align-items: center;
@@ -179,6 +185,7 @@ const chips = [
 
   :global(html.dark) .ach {
     --ach-surface: linear-gradient(115deg, #12100b 0%, #221a10 46%, #4a3410 130%);
+    background-color: #221a10;
     --ach-ink: #ffffff;
     --ach-body: rgba(255, 255, 255, 0.78);
     --ach-ghost: rgba(255, 255, 255, 0.045);
