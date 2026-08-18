@@ -92,6 +92,14 @@ export interface Props {
   issue: PeckingOrderData;
   /** Nav slug of the league this issue belongs to. */
   league?: LeagueSlug;
+  /**
+   * 'sample' is the landing page rendering a past issue as a format demo
+   * during the preseason. It drops the headline to h2 (the page already has
+   * its own h1 above) and hides the publish date, which for a sample is both
+   * meaningless and actively confusing — a Week 14 2025 issue stamped with
+   * the day it was generated reads as fresh news.
+   */
+  variant?: 'live' | 'sample';
 }
 
 const CONFIGS: Partial<Record<LeagueSlug, { teams: any[] }>> = {
@@ -111,7 +119,9 @@ const ISSUE_SLUG_TO_NAV: Record<string, LeagueSlug> = {
   'afl-fantasy': 'afl',
 };
 
-const { issue, league: leagueProp } = Astro.props as Props;
+const { issue, league: leagueProp, variant = 'live' } = Astro.props as Props;
+const isSample = variant === 'sample';
+const HeadlineTag = isSample ? 'h2' : 'h1';
 const league: LeagueSlug =
   leagueProp ?? (issue.league ? ISSUE_SLUG_TO_NAV[issue.league] : undefined) ?? 'theleague';
 
@@ -186,10 +196,14 @@ const methodology = issue.methodology
       <span class="pr-hero__badge">The Pecking Order</span>
       <span class="pr-hero__dot" aria-hidden="true"></span>
       <span>Week {issue.week} · {issue.year}</span>
-      <span class="pr-hero__dot" aria-hidden="true"></span>
-      <time datetime={issue.publishedAt}>{formattedDate}</time>
+      {!isSample && (
+        <>
+          <span class="pr-hero__dot" aria-hidden="true"></span>
+          <time datetime={issue.publishedAt}>{formattedDate}</time>
+        </>
+      )}
     </div>
-    <h1 class="pr-hero__title">{issue.headline}</h1>
+    <HeadlineTag class="pr-hero__title">{issue.headline}</HeadlineTag>
     <p class="pr-hero__lede">{issue.lede}</p>
   </header>
 

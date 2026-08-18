@@ -4,7 +4,7 @@ import {
   nflWeekOneKickoff,
   isSeasonWindowOpen,
 // @ts-expect-error — sibling .mjs module, no .d.ts
-} from '../scripts/lib/pecking-order-season-window.mjs';
+} from '../src/utils/pecking-order-season-window.mjs';
 // @ts-expect-error — sibling .mjs module, no .d.ts
 import { resolveSeasonGate } from '../scripts/generate-pecking-order.mjs';
 

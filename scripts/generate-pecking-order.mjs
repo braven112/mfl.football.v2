@@ -35,7 +35,7 @@ import { LEAGUES, leagueUrl } from '../src/config/leagues-data.mjs';
 import { callAnthropic } from './article-utils/ai-client.mjs';
 import { getCompletedWeek } from './article-utils/week-resolver.mjs';
 import { currentSeasonYear } from './lib/schefter-recurrence-ledger.mjs';
-import { isSeasonWindowOpen } from './lib/pecking-order-season-window.mjs';
+import { isSeasonWindowOpen } from '../src/utils/pecking-order-season-window.mjs';
 import { postToGroupMe } from './lib/groupme.mjs';
 import {
   buildFactSheet,

@@ -1,14 +1,19 @@
 ---
 /**
- * The Pecking Order — current week (latest published issue).
+ * The Pecking Order (TheLeague) — landing page.
  *
- * Reads all pecking-order JSON issues via Vite glob and picks the highest
- * (year, week) combination. Permalink to a specific issue lives at
- * /theleague/pecking-order/[year]/[week].
+ * Thin wrapper over the shared landing component: globs this league's issue
+ * JSON (the glob has to be a literal in the page) and hands it over. Which
+ * state the page renders — live issue vs. preseason preview — is decided in
+ * PeckingOrderLanding, so both leagues stay in step.
+ * Permalink to a specific issue lives at /theleague/pecking-order/[year]/[week].
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import Breadcrumbs from '../../../components/theleague/Breadcrumbs.astro';
-import PeckingOrderIssue, { type PeckingOrderData } from '../../../components/shared/PeckingOrderIssue.astro';
+import PeckingOrderLanding from '../../../components/shared/PeckingOrderLanding.astro';
+import { type PeckingOrderData } from '../../../components/shared/PeckingOrderIssue.astro';
+import { resolvePeckingOrderLanding } from '../../../utils/pecking-order-landing';
+import { getTestDateFromSearchParams } from '../../../utils/league-year';
 
 const issueFiles = import.meta.glob<PeckingOrderData>(
   '../../../../data/theleague/pecking-order/*.json',
@@ -25,83 +30,38 @@ const issues = Object.entries(issueFiles)
       data: data as PeckingOrderData,
     };
   })
-  .filter((x): x is { year: number; week: number; data: PeckingOrderData } => x !== null)
-  .sort((a, b) => b.year - a.year || b.week - a.week);
+  .filter((x): x is { year: number; week: number; data: PeckingOrderData } => x !== null);
 
-const latest = issues[0] ?? null;
+// `?testDate=YYYY-MM-DD` shifts the reference date server-side so the preview
+// and live states can both be checked out of season.
+const now = getTestDateFromSearchParams(Astro.url.searchParams) ?? undefined;
 
-const olderIssues = issues.slice(1);
+// Resolved twice (here and in the component) rather than threaded through as a
+// prop: the title needs the state before the body renders, and the resolver is
+// pure sorting + a date compare.
+const { mode, latest } = resolvePeckingOrderLanding(issues, now);
+
+const title = mode === 'live' && latest
+  ? `${latest.data.headline} · The Pecking Order · Week ${latest.week}`
+  : 'The Pecking Order — Weekly Power Rankings';
 ---
 
-<TheLeagueLayout title={latest ? `${latest.data.headline} · The Pecking Order · Week ${latest.week}` : 'The Pecking Order'}>
+<TheLeagueLayout title={title}>
   <div class="pr-page">
     <Breadcrumbs items={[
       { label: 'The League', href: '/theleague' },
       { label: 'The Pecking Order' },
     ]} />
 
-    {latest ? (
-      <>
-        <PeckingOrderIssue issue={latest.data} league="theleague" />
-        {olderIssues.length > 0 && (
-          <aside class="pr-archive">
-            <h2 class="pr-archive__title">Past Issues</h2>
-            <ul class="pr-archive__list">
-              {olderIssues.map(i => (
-                <li>
-                  <a href={`/theleague/pecking-order/${i.year}/${i.week}`}>
-                    Week {i.week} · {i.year} — {i.data.headline}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </aside>
-        )}
-      </>
-    ) : (
-      <section class="pr-empty">
-        <h1>The Pecking Order — Coming Soon</h1>
-        <p>
-          The first weekly issue publishes Tuesday morning during the season.
-          Run <code>pnpm generate:pecking-order --year YYYY --week N</code> to seed an issue.
-        </p>
-      </section>
-    )}
+    <PeckingOrderLanding
+      issues={issues}
+      league="theleague"
+      basePath="/theleague/pecking-order"
+      now={now}
+    />
   </div>
 </TheLeagueLayout>
 
 <style>
 .pr-page { min-height: 60vh; }
-.pr-archive {
-  margin: 0 0 3rem;
-}
-.pr-archive__title {
-  font-size: 1.25rem;
-  font-weight: 700;
-  margin: 0 0 0.75rem;
-}
-.pr-archive__list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: grid;
-  gap: 0.4rem;
-}
-.pr-archive__list a {
-  color: var(--color-gray-900, #111827);
-  text-decoration: none;
-}
-.pr-archive__list a:hover { text-decoration: underline; }
-.pr-empty {
-  max-width: 720px;
-  margin: 4rem auto;
-  text-align: center;
-  color: var(--content-text-muted, #6b7280);
-}
-.pr-empty code {
-  background: var(--content-bg-muted, #f3f4f6);
-  padding: 0.15rem 0.35rem;
-  border-radius: 0.25rem;
-  font-size: 0.9em;
-}
 </style>

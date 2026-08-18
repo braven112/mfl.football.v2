@@ -1,6 +1,11 @@
 /**
  * Season window for The Pecking Order.
  *
+ * Lives in src/utils because BOTH the generator (scripts/) and the landing
+ * page (src/) ask the same question — "is the season this column ranks
+ * actually being played right now?" The generator uses it to stay silent; the
+ * page uses it to decide whether the issue on screen is live or a sample.
+ *
  * The column's Tuesday cron runs year-round and was guarded only by "the
  * target year's feeds have a completed week". That guard cannot see the
  * offseason, because `currentSeasonYear()` runs on the LABOR DAY clock: from
@@ -32,10 +37,14 @@
  * hence the +4 days.
  */
 export function nflWeekOneKickoff(year) {
+  return new Date(Date.UTC(year, 8, laborDayDate(year) + 4, 0, 20));
+}
+
+/** Day-of-month of Labor Day (first Monday of September) in `year`. */
+function laborDayDate(year) {
   const sep1Day = new Date(Date.UTC(year, 8, 1)).getUTCDay();
   const offset = sep1Day === 1 ? 0 : sep1Day === 0 ? 1 : 8 - sep1Day;
-  const laborDayDate = 1 + offset;
-  return new Date(Date.UTC(year, 8, laborDayDate + 4, 0, 20));
+  return 1 + offset;
 }
 
 /**
@@ -52,4 +61,26 @@ export function isSeasonWindowOpen(year, now = new Date()) {
   const kickoff = nflWeekOneKickoff(year);
   if (now < kickoff) return false;
   return now - kickoff <= SEASON_WINDOW_WEEKS * WEEK_MS;
+}
+
+/**
+ * The instant the season's FIRST issue can publish: week 1 kicks off Thursday
+ * night, wraps Monday night, and the cron runs 7am PT Tuesday (14:00 UTC) —
+ * eight days after Labor Day. Anchored to the cron slot rather than
+ * kickoff + 5 days, because kickoff is stored as its UTC instant (Thursday
+ * 20:20 ET is already Friday in UTC) and the arithmetic slides a day.
+ */
+export function firstIssueTuesday(year) {
+  return new Date(Date.UTC(year, 8, laborDayDate(year) + 8, 14, 0));
+}
+
+/**
+ * The next first-issue Tuesday, or null once that date has passed for the
+ * calendar year in progress. Null is the honest answer rather than a date a
+ * year out: it means "the season's opening Tuesday is behind us", and callers
+ * should say "every Tuesday during the season" instead of naming a day.
+ */
+export function upcomingFirstIssueDate(now = new Date()) {
+  const target = firstIssueTuesday(now.getUTCFullYear());
+  return now < target ? target : null;
 }
