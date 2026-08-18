@@ -7,6 +7,8 @@ import {
   loadRostersFeedFromDisk,
   resolveRostersPayload,
   resolveLineupFillState,
+  resolveWeekLineup,
+  resolvePlayerName,
 } from '../src/utils/lineup-sources';
 
 /**
@@ -239,12 +241,77 @@ describe('lineup pages use the readable export', () => {
     }
   });
 
-  it('prefers the on-disk player identity for a name', () => {
-    // A throttled `TYPE=players` call is what put "Player 13592" on screen
-    // where a name belongs; the identity map on disk already has the name.
+  it('resolves names through the shared helper rather than inline', () => {
     for (const page of pages) {
       const src = readFileSync(join(process.cwd(), page), 'utf8');
-      expect(src.includes('name: identity?.name || pd?.name'), `${page} name fallback`).toBe(true);
+      expect(src.includes('resolvePlayerName(identity, pd, rp.id)'), `${page} name resolution`).toBe(true);
     }
+  });
+});
+
+describe('resolvePlayerName', () => {
+  it('prefers the identity synced to disk', () => {
+    expect(resolvePlayerName({ name: 'Lamar Jackson' }, { name: 'Jackson, Lamar' }, '13592')).toBe('Lamar Jackson');
+  });
+
+  it('falls back to the live players response, then to the id', () => {
+    expect(resolvePlayerName(null, { name: 'Jackson, Lamar' }, '13592')).toBe('Jackson, Lamar');
+    expect(resolvePlayerName(null, null, '13592')).toBe('Player 13592');
+  });
+
+  it('does not let a throttled players response erase a name it has on disk', () => {
+    // The reported symptom: `TYPE=players` came back empty, so `pd` is
+    // undefined — and the page printed "Player 13592" at an owner even though
+    // getPlayerMap had the name the whole time.
+    expect(resolvePlayerName({ name: 'Lamar Jackson' }, undefined, '13592')).toBe('Lamar Jackson');
+    // An empty string is not a name either.
+    expect(resolvePlayerName({ name: '' }, { name: 'Jackson, Lamar' }, '13592')).toBe('Jackson, Lamar');
+  });
+});
+
+describe('resolveWeekLineup', () => {
+  const live = {
+    weeklyResults: {
+      week: '12',
+      matchup: [{ franchise: [{ id: '0001', starters: '111,222,' }, { id: '0010' }] }],
+    },
+  };
+  const base = { week: 12, franchiseId: '0001', league: 'theleague' as const, leagueYear: 2026 };
+
+  it('takes the live answer, either way', () => {
+    const found = resolveWeekLineup({ ...base, weekScopedPayload: live, ytdPayload: null });
+    expect(found.lineupReadOk).toBe(true);
+    expect(found.starters.map((p) => p.id)).toEqual(['111', '222']);
+
+    // Live says this franchise has nothing — that IS an answer.
+    const none = resolveWeekLineup({ ...base, franchiseId: '0010', weekScopedPayload: live, ytdPayload: null });
+    expect(none.lineupReadOk).toBe(true);
+    expect(none.starters).toEqual([]);
+  });
+
+  it('falls back to YTD when the week-scoped call failed', () => {
+    const ytd = { allWeeklyResults: { weeklyResults: [live.weeklyResults] } };
+    const r = resolveWeekLineup({ ...base, weekScopedPayload: { error: { $t: 'throttled' } }, ytdPayload: ytd });
+    expect(r.starters.map((p) => p.id)).toEqual(['111', '222']);
+  });
+
+  it('lets the committed feed CONFIRM a lineup when every live call failed', () => {
+    // Week 1 has real starters in the committed feed.
+    const r = resolveWeekLineup({ ...base, week: 1, franchiseId: '0006', weekScopedPayload: null, ytdPayload: null });
+    expect(r.lineupReadOk).toBe(true);
+    expect(r.starters.length).toBeGreaterThan(0);
+  });
+
+  it('never lets the committed feed prove a lineup ABSENT', () => {
+    // The one-way rule. The feed syncs daily, so a lineup saved this morning
+    // simply isn't in it — reading its silence as "nothing on file" would arm
+    // a submit button over a projection fill and overwrite that lineup.
+    // Week 12 has no starters on disk, and both live calls failed here.
+    const r = resolveWeekLineup({ ...base, week: 12, weekScopedPayload: null, ytdPayload: null });
+    expect(r.lineupReadOk).toBe(false);
+    expect(r.starters).toEqual([]);
+    expect(resolveLineupFillState({
+      hasStarters: false, lineupReadOk: r.lineupReadOk, weekIsPast: false, hasProjections: true, slotsFilled: true,
+    }).canSubmitUnsaved).toBe(false);
   });
 });

@@ -566,7 +566,12 @@ week switch is a full page reload. Three things that bit us (owner report,
   `export?TYPE=weeklyResults&W=<week>`: it carries each franchise's `starters`
   CSV (plus `player[]` rows with `status: 'starter'`) as soon as a lineup is
   saved, for FUTURE weeks too, and unauthenticated. `W=YTD` carries every week
-  of the season in one payload, so it backs up the week-scoped call.
+  of the season in one payload with identical `starters`, so it covers a
+  week-scoped call that FAILED — not one that answered "no lineup", which is
+  already the answer. `resolveWeekLineup` owns that ladder, and the committed
+  `weekly-results-raw.json` sits under both as ONE-WAY evidence: it syncs
+  daily, so it can confirm a lineup exists and must never be read as proof
+  that one doesn't.
   Parsing lives in `src/utils/lineup-sources.ts`
   (`findWeekResultsEntry` / `extractLineupStarters`). Its `allowUnlabeled`
   opt-in belongs ONLY to a week-scoped fetch: enabling it on the YTD payload

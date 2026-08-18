@@ -128,6 +128,74 @@ export function extractLineupStarters(weekEntry: any, franchiseId: string): Line
 }
 
 /**
+ * The weeklyResults feed committed under `data/<league>/mfl-feeds/<year>/`.
+ * An ARRAY of per-week MFL payloads, which `findWeekResultsEntry` already
+ * reads — but see `resolveWeekLineup` for the one-way rule that governs it.
+ */
+export function loadWeeklyResultsFeedFromDisk(slug: CanonicalLeagueSlug, leagueYear: number): any | null {
+  const league = getLeagueBySlug(slug);
+  if (!league) return null;
+  try {
+    const filePath = path.join(process.cwd(), league.dataPath, 'mfl-feeds', String(leagueYear), 'weekly-results-raw.json');
+    if (!fs.existsSync(filePath)) return null;
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+export interface ResolvedWeekLineup {
+  /** The week's results entry, from whichever source answered. */
+  entry: any | null;
+  /** The franchise's submitted starters, in MFL's order. */
+  starters: LineupStarter[];
+  /** Did we establish what MFL holds — including "it holds nothing"? */
+  lineupReadOk: boolean;
+}
+
+/**
+ * Resolve a franchise's lineup for one week across all three sources.
+ *
+ * The disk feed is deliberately ONE-WAY evidence, and that asymmetry is the
+ * whole point of this function. It is refreshed once a day, so it can confirm
+ * a lineup exists but can NEVER show that one doesn't: a lineup saved this
+ * morning is simply not in it yet. Reading a starter-less disk entry as "no
+ * lineup on file" would hand the page an armed submit button over a
+ * projection fill — the exact overwrite the read-failed state exists to
+ * prevent, wearing a fresher-looking source.
+ *
+ * So: live evidence settles the question either way. Disk is consulted only
+ * when live failed, and only its POSITIVE answer counts.
+ */
+export function resolveWeekLineup(input: {
+  weekScopedPayload: any;
+  ytdPayload: any;
+  week: number;
+  franchiseId: string;
+  league: CanonicalLeagueSlug;
+  leagueYear: number;
+}): ResolvedWeekLineup {
+  const { weekScopedPayload, ytdPayload, week, franchiseId, league, leagueYear } = input;
+
+  // `allowUnlabeled` only on the week-scoped payload — see above.
+  const liveEntry = findWeekResultsEntry(weekScopedPayload, week, { allowUnlabeled: true })
+    ?? findWeekResultsEntry(ytdPayload, week);
+
+  if (liveEntry) {
+    return { entry: liveEntry, starters: extractLineupStarters(liveEntry, franchiseId), lineupReadOk: true };
+  }
+
+  const diskEntry = findWeekResultsEntry(loadWeeklyResultsFeedFromDisk(league, leagueYear), week);
+  const diskStarters = extractLineupStarters(diskEntry, franchiseId);
+  if (diskStarters.length > 0) {
+    return { entry: diskEntry, starters: diskStarters, lineupReadOk: true };
+  }
+
+  // Both live calls failed and disk can't vouch for absence — say so.
+  return { entry: null, starters: [], lineupReadOk: false };
+}
+
+/**
  * The rosters feed committed under `data/<league>/mfl-feeds/<year>/` — the
  * fallback when the live `TYPE=rosters` call fails. Synced every 5 minutes,
  * so it is at worst minutes stale; an empty lineup page is worse.
@@ -209,4 +277,21 @@ export function resolveLineupFillState(input: {
   // until the owner completes it, and the server-rendered button has to
   // agree with that before hydration, not only after.
   return { mode: 'unsaved-offer', canSubmitUnsaved: slotsFilled, fillIsProjected };
+}
+
+/**
+ * A player's display name, preferring the identity synced to disk.
+ *
+ * Order is load-bearing, not cosmetic. The live `TYPE=players` response is
+ * the one that disappears under throttling, and when it did the page printed
+ * `Player 13592` at an owner — while `getPlayerMap`, reading the same feed
+ * from disk, had the name all along. The MFL id is the last resort it was
+ * always meant to be.
+ */
+export function resolvePlayerName(
+  identity: { name?: string } | null | undefined,
+  livePlayer: { name?: string } | null | undefined,
+  mflId: string,
+): string {
+  return identity?.name || livePlayer?.name || `Player ${mflId}`;
 }

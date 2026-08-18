@@ -18,7 +18,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import PlayerCell from '../../components/theleague/PlayerCell.astro';
 import { getAuthUser } from '../../utils/auth';
 import { getLeagueBySlug } from '../../config/leagues';
-import { findWeekResultsEntry, extractLineupStarters, resolveRostersPayload, resolveLineupFillState } from '../../utils/lineup-sources';
+import { resolveRostersPayload, resolveLineupFillState, resolveWeekLineup, resolvePlayerName } from '../../utils/lineup-sources';
 import { getCurrentWeekForYear } from '../../utils/current-week';
 import { getAflLeagueYear } from '../../utils/league-year';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
@@ -265,7 +265,7 @@ const roster: LineupPlayer[] = rosterPlayers.map((rp: any) => {
 
   return {
     id: rp.id,
-    name: identity?.name || pd?.name || `Player ${rp.id}`,
+    name: resolvePlayerName(identity, pd, rp.id),
     headshot,
     position,
     nflTeam,
@@ -287,17 +287,22 @@ const roster: LineupPlayer[] = rosterPlayers.map((rp: any) => {
 // This week's results entry — the authoritative record of who is in a
 // lineup. The week-scoped fetch wins; the YTD payload backs it up, since
 // MFL carries future weeks there too.
-// `allowUnlabeled` only on the week-scoped payload — see lineup-sources.ts.
-const resultsWeekEntry = findWeekResultsEntry(weekResultsData, week, { allowUnlabeled: true })
-  ?? findWeekResultsEntry(weeklyUnwrapped, week);
-
 // Reading the lineup record has THREE outcomes, not two, and conflating the
 // last two is destructive: a lineup is on file, no lineup is on file, or we
-// could not find out. Both weeklyResults calls failing looks identical to an
-// empty lineup — and if that silently armed the submit button over a
+// could not find out. Every weeklyResults source failing looks identical to
+// an empty lineup — and if that silently armed the submit button over a
 // projection fill, one tap would overwrite a lineup the owner really had set.
-const lineupReadOk = resultsWeekEntry !== null;
-const starterIds = new Set(extractLineupStarters(resultsWeekEntry, user.franchiseId).map((p) => p.id));
+const weekLineup = resolveWeekLineup({
+  weekScopedPayload: weekResultsData,
+  ytdPayload: weeklyUnwrapped,
+  week,
+  franchiseId: user.franchiseId,
+  league: 'afl-fantasy',
+  leagueYear,
+});
+const resultsWeekEntry = weekLineup.entry;
+const lineupReadOk = weekLineup.lineupReadOk;
+const starterIds = new Set(weekLineup.starters.map((p) => p.id));
 
 // Build initial slots based on starters
 const slots: { position: string; index: number; playerId: string | null; locked: boolean }[] = [];
