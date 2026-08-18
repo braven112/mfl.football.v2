@@ -125,6 +125,19 @@ const h = panelOf(home);
     min-height: clamp(132px, 15vw, 168px);
   }
 
+  /* The banner is the only variant wide enough to have a middle worth
+     protecting, so its two stars stand at the OUTER edges rather than at the
+     centers of their panels. That clears the whole center column for the
+     franchise crest, which the card scale had the cutout parked directly on
+     top of. */
+  .foc--banner .foc__panel {
+    justify-content: flex-start;
+  }
+
+  .foc--banner .foc__panel--home {
+    justify-content: flex-end;
+  }
+
   .foc__glow {
     position: absolute;
     inset: -40% -30% auto -30%;
@@ -155,11 +168,12 @@ const h = panelOf(home);
   }
 
   /* The banner panel is wide enough to read the crest as art rather than
-     texture, so it runs larger and slightly less faint than the grid card —
-     the cutout no longer covers it. */
+     texture, and with the cutout moved off to the edge nothing covers it, so
+     it runs larger and brighter than the grid card's. */
   .foc--banner .foc__watermark {
-    width: clamp(104px, 13vw, 150px);
-    opacity: 0.24;
+    width: clamp(120px, 15vw, 168px);
+    opacity: 0.34;
+    top: 46%;
   }
 
   .foc__chip {
@@ -220,12 +234,22 @@ const h = panelOf(home);
     height: clamp(115px, 13vw, 130px);
   }
 
-  /* Banner: ~72% of the panel height, so the headshot reads as a subject
-     placed ON the panel instead of filling it, and the franchise crest
-     behind it stays visible. */
+  /* Banner: the cutout keeps its height — it's the subject, and the center is
+     what needed clearing, not the panel. It bleeds a little past the outer
+     edge so the star reads as standing at the sideline rather than posed in a
+     box, and the name plate (z-index 2) stays above it, so the text runs
+     across the shoulders and remains legible. */
   .foc--banner .foc__cutout {
     width: auto;
-    height: clamp(96px, 10.5vw, 122px);
+    height: clamp(118px, 13.5vw, 152px);
+  }
+
+  .foc--banner .foc__cutout--away {
+    margin-left: -1.75rem;
+  }
+
+  .foc--banner .foc__cutout--home {
+    margin-right: -1.75rem;
   }
 
   /* Mirror the away star to face the center VS. */
