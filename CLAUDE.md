@@ -551,6 +551,39 @@ two channels have different audiences and must not be collapsed:
   keep it that way rather than growing the inline `node -e` pattern some of
   the older workflows use. Preview any change with `pnpm notify:roger --dry-run`.
 
+## Set Lineup — reading a submitted lineup, and MFL's soft failures
+
+Both lineup pages (`src/pages/theleague/lineup.astro`,
+`src/pages/afl-fantasy/lineup.astro`) SSR ~9 live MFL calls per view, and a
+week switch is a full page reload. Three things that bit us (owner report,
+2026-08-18: "future weeks show no players one week and only numbers another"):
+
+- **`myStarters` is an IMPORT type, not an export.** Both pages read the
+  owner's saved lineup with `export?TYPE=myStarters`; MFL answers every one
+  of those with `Invalid Data Type (myStarters)`, and a bare `catch` swallowed
+  it — so the pages had NEVER shown a submitted lineup, silently rendering an
+  optimal-by-projection fill instead. The readable counterpart is
+  `export?TYPE=weeklyResults&W=<week>`: it carries each franchise's `starters`
+  CSV (plus `player[]` rows with `status: 'starter'`) as soon as a lineup is
+  saved, for FUTURE weeks too, and unauthenticated. `W=YTD` carries every week
+  of the season in one payload, so it backs up the week-scoped call.
+  Parsing lives in `src/utils/lineup-sources.ts`
+  (`findWeekResultsEntry` / `extractLineupStarters`) — note the single-week
+  payload often omits `week` entirely, so a week-keyed lookup alone finds
+  nothing.
+- **`res.ok` is not "the call worked."** MFL answers a throttled or malformed
+  request with HTTP 200 and an `{ error: … }` body. A dead `rosters` call
+  emptied every slot; a dead `players` call printed "Player 13592" where a
+  name belongs. Check for the payload's own shape, fall back to the committed
+  feed under `data/<league>/mfl-feeds/<year>/` (`resolveRostersPayload`), and
+  take player identity from `getPlayerMap` — which reads that same disk feed —
+  BEFORE the live `players` response. Never let a live MFL call be the only
+  source for something already synced to disk.
+- **An auto-filled lineup must say it is one.** When nothing is on file the
+  pages still fill the slots by projection; unlabeled, that reads as "my
+  lineup is saved" and the submit bar shows zero unsaved changes. The
+  `.lineup-unsaved-note` banner renders whenever no lineup is on file.
+
 ## NFL Draft date source of truth
 
 - **Authoritative:** `src/data/theleague/nfl-draft-dates-fetched.json` —

@@ -24,6 +24,14 @@
       "impact": "user",
       "area": "schefter",
       "league": "afl"
+    },
+    {
+      "date": "2026-08-18",
+      "type": "bug-fix",
+      "summary": "Set Lineup had two ways of losing your lineup on a future week, and an owner caught both in the same sitting: week 12 came up with nine empty slots and week 14 came up with nine players named 'Player 13592'. The names were the easy half — every page view re-asked MFL for the whole player file, and when that call got throttled the page had nothing left to print but the ID, even though the same names are sitting in a feed on our own disk. The empty week was the same throttling hitting the roster call instead. But the real find was underneath: the page asked MFL for your saved lineup with a request MFL has never accepted — myStarters is an import, not an export — and the error was swallowed, so it silently fell back to filling the slots with whoever projects best. That means it has never once shown you a lineup you submitted. It does now, for any week, and when there's genuinely nothing on file for that week it says so instead of dressing up a projection as your lineup.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "theleague"
     }
   ]
 }
