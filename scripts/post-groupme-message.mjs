@@ -9,8 +9,8 @@
  * article. This writes nothing — chat only.
  *
  * Usage:
- *   node scripts/post-groupme-message.mjs --league afl-fantasy --text "..."
- *   node scripts/post-groupme-message.mjs --league theleague --text "..." --dry-run
+ *   node scripts/post-groupme-message.mjs --league afl-fantasy --text "..."   # rehearsal
+ *   node scripts/post-groupme-message.mjs --league afl-fantasy --text "..." --send
  *
  * The bot id comes from the per-league Schefter table (never a hardcoded env
  * name), and the text goes out through the shared postToGroupMe primitive so
@@ -43,7 +43,15 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const slug = args.league ?? process.env.GROUPME_LEAGUE;
   const text = args.text ?? process.env.GROUPME_TEXT;
-  const dryRun = truthy(args['dry-run'] ?? process.env.GROUPME_DRY_RUN, false);
+  /**
+   * Rehearsal is the DEFAULT, and sending is the thing you have to ask for:
+   * this posts to a chat twelve people read, so the accident should be a
+   * no-op, not a broadcast. `--send` is the opt-out; the workflow passes
+   * GROUPME_DRY_RUN=false explicitly when its own dry_run box is unchecked.
+   */
+  const dryRun = args.send === true
+    ? false
+    : truthy(args['dry-run'] ?? process.env.GROUPME_DRY_RUN, true);
 
   // The Schefter table keys on navSlug as `slug` ('afl') and keeps the
   // registry slug ('afl-fantasy') alongside it; accept either spelling so a
@@ -56,14 +64,16 @@ async function main() {
     );
     process.exit(1);
   }
-  if (!text || !String(text).trim()) {
-    console.error('ERROR: --text is required and cannot be blank.');
+  // `--text` with no value parses as the BOOLEAN true, which would otherwise
+  // survive the blank check and post the literal string "true" to the league.
+  if (typeof text !== 'string' || !text.trim()) {
+    console.error('ERROR: --text is required and must carry a value, e.g. --text "your message".');
     process.exit(1);
   }
   // GroupMe truncates hard past ~1000 chars; fail loudly rather than post a
   // message that ends mid-sentence.
-  if (String(text).length > 1000) {
-    console.error(`ERROR: text is ${String(text).length} chars; GroupMe's limit is 1000.`);
+  if (text.length > 1000) {
+    console.error(`ERROR: text is ${text.length} chars; GroupMe's limit is 1000.`);
     process.exit(1);
   }
 
