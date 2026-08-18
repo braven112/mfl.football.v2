@@ -1,37 +1,23 @@
 ---
 /**
- * The Pecking Order — historical permalink: /theleague/pecking-order/[year]/[week].
+ * The Pecking Order (TheLeague) — historical permalink:
+ * /theleague/pecking-order/[year]/[week].
  *
- * Pre-rendered via getStaticPaths for every issue we have on disk.
+ * Pre-rendered via getStaticPaths for every issue we have on disk. Thin
+ * wrapper over the shared permalink component (archive note, issue, sibling
+ * nav) — only the glob and the breadcrumbs are league-specific.
  */
 export const prerender = true;
 
 import TheLeagueLayout from '../../../../layouts/TheLeagueLayout.astro';
 import Breadcrumbs from '../../../../components/theleague/Breadcrumbs.astro';
-import PeckingOrderIssue, { type PeckingOrderData } from '../../../../components/shared/PeckingOrderIssue.astro';
-
-const issueFiles = import.meta.glob<PeckingOrderData>(
-  '../../../../../data/theleague/pecking-order/*.json',
-  { eager: true, import: 'default' }
-);
+import PeckingOrderPermalink from '../../../../components/shared/PeckingOrderPermalink.astro';
+import { type PeckingOrderData } from '../../../../components/shared/PeckingOrderIssue.astro';
 
 interface Entry { year: number; week: number; data: PeckingOrderData }
 
-const allIssues: Entry[] = Object.entries(issueFiles)
-  .map(([file, data]) => {
-    const m = file.match(/(\d{4})-(\d{1,2})\.json$/);
-    if (!m) return null;
-    return { year: parseInt(m[1], 10), week: parseInt(m[2], 10), data: data as PeckingOrderData };
-  })
-  .filter((x): x is Entry => x !== null)
-  .sort((a, b) => b.year - a.year || b.week - a.week);
-
-export async function getStaticPaths() {
-  const files = import.meta.glob<PeckingOrderData>(
-    '../../../../../data/theleague/pecking-order/*.json',
-    { eager: true, import: 'default' }
-  );
-  const issues: Entry[] = Object.entries(files)
+const parseIssues = (files: Record<string, PeckingOrderData>): Entry[] =>
+  Object.entries(files)
     .map(([file, data]) => {
       const m = file.match(/(\d{4})-(\d{1,2})\.json$/);
       if (!m) return null;
@@ -39,18 +25,31 @@ export async function getStaticPaths() {
     })
     .filter((x): x is Entry => x !== null);
 
-  return issues.map(({ year, week, data }) => ({
-    params: { year: String(year), week: String(week) },
-    props: { issue: data },
-  }));
+const allIssues: Entry[] = parseIssues(
+  import.meta.glob<PeckingOrderData>(
+    '../../../../../data/theleague/pecking-order/*.json',
+    { eager: true, import: 'default' }
+  )
+);
+
+export async function getStaticPaths() {
+  const files = import.meta.glob<PeckingOrderData>(
+    '../../../../../data/theleague/pecking-order/*.json',
+    { eager: true, import: 'default' }
+  );
+  return Object.entries(files)
+    .map(([file, data]) => {
+      const m = file.match(/(\d{4})-(\d{1,2})\.json$/);
+      if (!m) return null;
+      return {
+        params: { year: m[1], week: String(parseInt(m[2], 10)) },
+        props: { issue: data as PeckingOrderData },
+      };
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null);
 }
 
 const { issue } = Astro.props as { issue: PeckingOrderData };
-
-// Find adjacent issues for footer nav
-const idx = allIssues.findIndex(i => i.year === issue.year && i.week === issue.week);
-const prevIssue = idx >= 0 ? allIssues[idx + 1] : null; // older
-const nextIssue = idx > 0 ? allIssues[idx - 1] : null;  // newer
 ---
 
 <TheLeagueLayout title={`${issue.headline} · The Pecking Order · Week ${issue.week}`}>
@@ -61,39 +60,15 @@ const nextIssue = idx > 0 ? allIssues[idx - 1] : null;  // newer
       { label: `Week ${issue.week} · ${issue.year}` },
     ]} />
 
-    <PeckingOrderIssue issue={issue} league="theleague" />
-
-    <nav class="pr-nav" aria-label="Issue navigation">
-      {prevIssue ? (
-        <a class="pr-nav__link pr-nav__link--prev" href={`/theleague/pecking-order/${prevIssue.year}/${prevIssue.week}`}>
-          ← Week {prevIssue.week} · {prevIssue.year}
-        </a>
-      ) : <span></span>}
-      <a class="pr-nav__link pr-nav__link--index" href="/theleague/pecking-order">All issues</a>
-      {nextIssue ? (
-        <a class="pr-nav__link pr-nav__link--next" href={`/theleague/pecking-order/${nextIssue.year}/${nextIssue.week}`}>
-          Week {nextIssue.week} · {nextIssue.year} →
-        </a>
-      ) : <span></span>}
-    </nav>
+    <PeckingOrderPermalink
+      issue={issue}
+      issues={allIssues}
+      league="theleague"
+      basePath="/theleague/pecking-order"
+    />
   </div>
 </TheLeagueLayout>
 
 <style>
 .pr-page { min-height: 60vh; }
-.pr-nav {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-  margin: -2rem 0 3rem;
-}
-.pr-nav__link {
-  color: var(--color-gray-900, #111827);
-  text-decoration: none;
-  font-size: 0.9rem;
-  font-weight: 500;
-}
-.pr-nav__link:hover { text-decoration: underline; }
-.pr-nav__link--index { color: var(--content-text-muted, #6b7280); }
 </style>

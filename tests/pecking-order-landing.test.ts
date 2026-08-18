@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { resolvePeckingOrderLanding, sortIssues } from '../src/utils/pecking-order-landing';
+import {
+  resolvePeckingOrderLanding,
+  sortIssues,
+  isRetroactivelyGenerated,
+  resolveIssuePermalink,
+} from '../src/utils/pecking-order-landing';
 
 const issue = (year: number, week: number) => ({ year, week, data: { year, week } as any });
 
@@ -61,5 +66,63 @@ describe('sortIssues', () => {
   it('orders newest season first, then newest week', () => {
     const sorted = sortIssues([issue(2025, 3), issue(2026, 1), issue(2025, 17)]);
     expect(sorted.map(i => `${i.year}-${i.week}`)).toEqual(['2026-1', '2025-17', '2025-3']);
+  });
+});
+
+// Every issue committed today was generated on 2026-08-15 as a launch seed,
+// months after the week it covers — so its publishedAt is a file-write date,
+// not a publication date. Rendering it as a dateline stamped a Week 14 2025
+// issue "August 14, 2026", which reads as this morning's column.
+describe('isRetroactivelyGenerated', () => {
+  it('flags the committed launch seeds', () => {
+    expect(isRetroactivelyGenerated({ year: 2025, week: 14, publishedAt: '2026-08-15T05:07:36.669Z' })).toBe(true);
+    expect(isRetroactivelyGenerated({ year: 2025, week: 17, publishedAt: '2026-08-15T22:44:53.209Z' })).toBe(true);
+  });
+
+  it('trusts an issue published on its own Tuesday', () => {
+    // Week 1 of 2026 publishes Tue Sept 15; week 5 four weeks later.
+    expect(isRetroactivelyGenerated({ year: 2026, week: 1, publishedAt: '2026-09-15T14:02:00Z' })).toBe(false);
+    expect(isRetroactivelyGenerated({ year: 2026, week: 5, publishedAt: '2026-10-13T14:02:00Z' })).toBe(false);
+  });
+
+  it('tolerates a late or re-run cron inside the grace window', () => {
+    expect(isRetroactivelyGenerated({ year: 2026, week: 1, publishedAt: '2026-09-22T14:00:00Z' })).toBe(false);
+  });
+
+  it('treats a missing or unparseable date as untrustworthy', () => {
+    expect(isRetroactivelyGenerated({ year: 2026, week: 1 })).toBe(true);
+    expect(isRetroactivelyGenerated({ year: 2026, week: 1, publishedAt: 'not a date' })).toBe(true);
+  });
+});
+
+describe('resolveIssuePermalink', () => {
+  const issues = [issue(2026, 5), issue(2026, 4), issue(2025, 17)];
+  const IN_SEASON = new Date('2026-10-20T14:00:00Z');
+
+  it('calls the newest in-season issue current, so no archive note shows', () => {
+    expect(resolveIssuePermalink(issues, { year: 2026, week: 5 }, IN_SEASON).isCurrent).toBe(true);
+  });
+
+  it('archives everything behind it', () => {
+    expect(resolveIssuePermalink(issues, { year: 2026, week: 4 }, IN_SEASON).isCurrent).toBe(false);
+    expect(resolveIssuePermalink(issues, { year: 2025, week: 17 }, IN_SEASON).isCurrent).toBe(false);
+  });
+
+  it('archives the newest issue too once its season is over', () => {
+    // Preseason: the landing page calls this a sample, so the permalink must
+    // not call it current — that disagreement was the bug.
+    const state = resolveIssuePermalink([issue(2025, 14)], { year: 2025, week: 14 }, new Date('2026-08-18T14:00:00Z'));
+    expect(state.isCurrent).toBe(false);
+  });
+
+  it('walks to the neighbouring issues in both directions', () => {
+    const state = resolveIssuePermalink(issues, { year: 2026, week: 4 }, IN_SEASON);
+    expect(state.older).toMatchObject({ year: 2025, week: 17 });
+    expect(state.newer).toMatchObject({ year: 2026, week: 5 });
+  });
+
+  it('has no neighbours at the ends', () => {
+    expect(resolveIssuePermalink(issues, { year: 2026, week: 5 }, IN_SEASON).newer).toBeNull();
+    expect(resolveIssuePermalink(issues, { year: 2025, week: 17 }, IN_SEASON).older).toBeNull();
   });
 });

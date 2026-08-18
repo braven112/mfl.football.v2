@@ -21,6 +21,7 @@
 import {
   isSeasonWindowOpen,
   upcomingFirstIssueDate,
+  expectedIssueTuesday,
 } from './pecking-order-season-window.mjs';
 
 export type PeckingOrderMode = 'live' | 'preview';
@@ -66,5 +67,69 @@ export function resolvePeckingOrderLanding<T>(
     latest,
     older: sorted.slice(1),
     firstIssueDate: mode === 'preview' ? upcomingFirstIssueDate(now) : null,
+  };
+}
+
+/**
+ * Days after a week's own Tuesday that a publish date is still credible as a
+ * publish date. Covers a cron that was late, re-run, or dispatched by hand.
+ */
+const PUBLISH_GRACE_DAYS = 14;
+
+/**
+ * Was this issue's `publishedAt` stamped long after the week it covers?
+ *
+ * `publishedAt` is written at generation time, which for a contemporaneous
+ * Tuesday run IS the publication date. For an issue generated later — the
+ * launch seeds, a backfill, or (before the season gate existed) a stray
+ * preseason run — it is just the day the file was written, and rendering it
+ * as a dateline makes a months-old issue read as breaking news. That is what
+ * put "August 14, 2026" on a Week 14 2025 issue.
+ *
+ * There is no honest date to show in that case: the issue was never
+ * published, so the surface should show none rather than invent one from the
+ * week it covers. An unparseable date counts as untrustworthy too — better
+ * blank than "Invalid Date".
+ */
+export function isRetroactivelyGenerated(
+  issue: { year: number; week: number; publishedAt?: string },
+  graceDays: number = PUBLISH_GRACE_DAYS,
+): boolean {
+  if (!issue.publishedAt) return true;
+  const published = new Date(issue.publishedAt);
+  if (Number.isNaN(published.getTime())) return true;
+  const expected = expectedIssueTuesday(issue.year, issue.week);
+  return published.getTime() - expected.getTime() > graceDays * 24 * 60 * 60 * 1000;
+}
+
+export interface PermalinkState<T> {
+  /** True when this issue is the one the landing page would render as live. */
+  isCurrent: boolean;
+  /** Next issue back in time, for the footer nav. */
+  older: LandingIssue<T> | null;
+  /** Next issue forward in time, for the footer nav. */
+  newer: LandingIssue<T> | null;
+}
+
+/**
+ * Where a permalinked issue sits relative to everything else on disk.
+ *
+ * `isCurrent` deliberately reuses the landing resolver rather than asking its
+ * own question, so the two pages can never disagree about whether an issue is
+ * this week's verdict or an archived one.
+ */
+export function resolveIssuePermalink<T>(
+  issues: LandingIssue<T>[],
+  target: { year: number; week: number },
+  now: Date = new Date(),
+): PermalinkState<T> {
+  const sorted = sortIssues(issues);
+  const idx = sorted.findIndex(i => i.year === target.year && i.week === target.week);
+  const { mode, latest } = resolvePeckingOrderLanding(sorted, now);
+  return {
+    isCurrent:
+      mode === 'live' && latest?.year === target.year && latest?.week === target.week,
+    older: idx >= 0 ? sorted[idx + 1] ?? null : null,
+    newer: idx > 0 ? sorted[idx - 1] ?? null : null,
   };
 }

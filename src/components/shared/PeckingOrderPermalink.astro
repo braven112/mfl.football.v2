@@ -1,0 +1,127 @@
+---
+/**
+ * PeckingOrderPermalink — a single archived issue at
+ * /<league>/pecking-order/<year>/<week>, shared by both leagues.
+ *
+ * The landing page learned to say "this is a sample, not this week"; its
+ * archive links landed here, one click away, where the same issue rendered as
+ * if it were live. This closes that: an issue that is NOT the one the landing
+ * page would render as current gets an archive note and a way back to the
+ * current column.
+ *
+ * `isCurrent` comes from the same resolver the landing page uses, so the two
+ * surfaces cannot disagree about which issue is this week's.
+ *
+ * These pages are prerendered, so `now` is BUILD time rather than request
+ * time. That is sound here rather than merely tolerable: the only thing that
+ * flips an issue from current to archived is a newer issue being committed,
+ * and that commit is itself what triggers the rebuild.
+ */
+import PeckingOrderIssue, { type PeckingOrderData } from './PeckingOrderIssue.astro';
+import type { LeagueSlug } from '../../types/nav';
+import { resolveIssuePermalink, type LandingIssue } from '../../utils/pecking-order-landing';
+
+export interface Props {
+  issue: PeckingOrderData;
+  issues: LandingIssue<PeckingOrderData>[];
+  league: LeagueSlug;
+  /** Base path for sibling links, e.g. "/afl-fantasy/pecking-order". */
+  basePath: string;
+  now?: Date;
+}
+
+const { issue, issues, league, basePath, now } = Astro.props as Props;
+
+const { isCurrent, older, newer } = resolveIssuePermalink(
+  issues,
+  { year: issue.year, week: issue.week },
+  now,
+);
+---
+
+{!isCurrent && (
+  <div class="po-archive-note" role="note">
+    <span class="po-archive-note__tag">Archived issue</span>
+    <p class="po-archive-note__text">
+      This is Week {issue.week} of the {issue.year} season — not the current rankings.
+      <a href={basePath}>See the latest Pecking Order</a>
+    </p>
+  </div>
+)}
+
+<PeckingOrderIssue issue={issue} league={league} />
+
+<nav class="pr-nav" aria-label="Issue navigation">
+  {older ? (
+    <a class="pr-nav__link pr-nav__link--prev" href={`${basePath}/${older.year}/${older.week}`}>
+      ← Week {older.week} · {older.year}
+    </a>
+  ) : <span></span>}
+  <a class="pr-nav__link pr-nav__link--index" href={basePath}>All issues</a>
+  {newer ? (
+    <a class="pr-nav__link pr-nav__link--next" href={`${basePath}/${newer.year}/${newer.week}`}>
+      Week {newer.week} · {newer.year} →
+    </a>
+  ) : <span></span>}
+</nav>
+
+<style>
+/* Same treatment as the landing page's sample note — one visual language for
+   "what you are looking at is not current". Tokens only: a hardcoded fallback
+   renders identically in both themes and ships white-on-white in dark. */
+.po-archive-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 0.75rem;
+  background: var(--content-bg-muted, #f3f4f6);
+  border: 1px solid var(--content-border, #e5e7eb);
+  border-radius: 0.5rem;
+  padding: 0.7rem 0.9rem;
+  margin: 1.5rem 0 0;
+}
+.po-archive-note__tag {
+  flex: none;
+  background: var(--page-text, #111827);
+  /* --card-surface, NOT --card-bg: in base dark mode --card-bg is a radial
+     gradient, which is invalid as a `color` value, so the declaration is
+     dropped and the label inherits the muted (light) text color — light ink
+     on a light chip, i.e. an invisible label. It looked fine only on the AFL,
+     whose dark block happens to override --card-bg to a solid. --card-bg-color
+     is a legacy alias for the gradient and is not the fix. */
+  color: var(--card-surface, #fff);
+  border-radius: 0.25rem;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.po-archive-note__text {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--content-text-muted, #4b5563);
+}
+.po-archive-note__text a {
+  color: var(--page-text, #111827);
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: underline;
+}
+.pr-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin: -2rem 0 3rem;
+}
+.pr-nav__link {
+  color: var(--page-text, #111827);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+.pr-nav__link:hover { text-decoration: underline; }
+.pr-nav__link--index { color: var(--content-text-muted, #6b7280); }
+</style>
