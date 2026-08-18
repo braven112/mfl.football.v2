@@ -13,6 +13,7 @@ import {
   castShowcasePanels,
   scoreFaceoffSides,
   buildPositionRankIndex,
+  buildPositionDemand,
   castTopRankedModel,
 } from '../src/utils/hero-casting';
 import type { PlayerIdentity } from '../src/utils/player-map';
@@ -551,6 +552,56 @@ describe('scoreFaceoffSides', () => {
   });
 });
 
+const LINEUP_SLOTS = ['QB', 'RB', 'WR', 'TE', 'FLEX', 'FLEX', 'FLEX', 'PK', 'DEF'];
+const LINEUP_ELIGIBILITY: Record<string, string[]> = {
+  QB: ['QB'],
+  RB: ['RB'],
+  WR: ['WR'],
+  TE: ['TE'],
+  FLEX: ['RB', 'WR', 'TE'],
+  PK: ['PK'],
+  DEF: ['DEF'],
+};
+
+describe('buildPositionDemand', () => {
+  it('counts a league-wide starter demand per position from the lineup slots', () => {
+    // 16 teams start 1 QB and 1 RB + 1 WR + 1 TE + 3 shared FLEX.
+    const demand = buildPositionDemand(LINEUP_SLOTS, LINEUP_ELIGIBILITY, 16);
+    expect(demand.QB).toBe(16);
+    expect(demand.RB).toBe(32);
+    expect(demand.WR).toBe(32);
+    expect(demand.TE).toBe(32);
+  });
+
+  it('leaves PK and DEF out — they can never model the panel', () => {
+    const demand = buildPositionDemand(LINEUP_SLOTS, LINEUP_ELIGIBILITY, 16);
+    expect(demand.PK).toBeUndefined();
+    expect(demand.DEF).toBeUndefined();
+  });
+
+  it('splits a multi-eligible slot evenly across the positions that can fill it', () => {
+    const demand = buildPositionDemand(['FLEX'], { FLEX: ['RB', 'WR'] }, 10);
+    expect(demand.RB).toBe(5);
+    expect(demand.WR).toBe(5);
+    expect(demand.TE).toBeUndefined();
+  });
+
+  it('scales with the league — an expansion team moves every denominator', () => {
+    const twelve = buildPositionDemand(LINEUP_SLOTS, LINEUP_ELIGIBILITY, 12);
+    expect(twelve.QB).toBe(12);
+    expect(twelve.WR).toBe(24);
+  });
+
+  it('treats a slot with no eligibility entry as its own position', () => {
+    expect(buildPositionDemand(['QB', 'QB'], {}, 10).QB).toBe(20);
+  });
+
+  it('returns an empty map for a league with no teams, so callers fall back', () => {
+    expect(buildPositionDemand(LINEUP_SLOTS, LINEUP_ELIGIBILITY, 0)).toEqual({});
+    expect(buildPositionDemand(LINEUP_SLOTS, LINEUP_ELIGIBILITY, NaN)).toEqual({});
+  });
+});
+
 describe('buildPositionRankIndex', () => {
   const players = mapOf(
     player({ mflId: '1', position: 'QB' }),
@@ -560,41 +611,53 @@ describe('buildPositionRankIndex', () => {
     player({ mflId: '5', position: 'PK' }),
     player({ mflId: '6', position: 'DEF' }),
   );
+  const demand = buildPositionDemand(LINEUP_SLOTS, LINEUP_ELIGIBILITY, 16);
 
   it('ranks each player against his own position, best first', () => {
     const ranks = buildPositionRankIndex(
       new Map([['1', 18], ['2', 25], ['3', 9], ['4', 14]]),
       players,
+      demand,
     );
-    expect(ranks.get('2')).toEqual({ rank: 1, label: 'QB1', position: 'QB' });
-    expect(ranks.get('1')).toEqual({ rank: 2, label: 'QB2', position: 'QB' });
+    expect(ranks.get('2')).toMatchObject({ rank: 1, label: 'QB1', position: 'QB' });
+    expect(ranks.get('1')).toMatchObject({ rank: 2, label: 'QB2', position: 'QB' });
     expect(ranks.get('4')?.label).toBe('WR1');
     expect(ranks.get('3')?.label).toBe('WR2');
   });
 
-  it('leaves non-skill positions unranked — a PK2 must not outrank the skill players', () => {
-    const ranks = buildPositionRankIndex(new Map([['5', 12], ['6', 9], ['1', 20]]), players);
+  it('scores the rank against the position demand — QB2 of 16 is a worse tier than WR2 of 32', () => {
+    const ranks = buildPositionRankIndex(
+      new Map([['1', 18], ['2', 25], ['3', 9], ['4', 14]]),
+      players,
+      demand,
+    );
+    expect(ranks.get('1')?.tier).toBeCloseTo(2 / 16);
+    expect(ranks.get('3')?.tier).toBeCloseTo(2 / 32);
+    expect(ranks.get('3')!.tier).toBeLessThan(ranks.get('1')!.tier);
+  });
+
+  it('leaves positions absent from the demand map unranked', () => {
+    const ranks = buildPositionRankIndex(new Map([['5', 12], ['6', 9], ['1', 20]]), players, demand);
     expect(ranks.has('5')).toBe(false);
     expect(ranks.has('6')).toBe(false);
     expect(ranks.get('1')?.label).toBe('QB1');
   });
 
+  it('ranks nobody when the demand map is empty', () => {
+    expect(buildPositionRankIndex(new Map([['1', 20]]), players, {}).size).toBe(0);
+  });
+
   it('does not rank a zero or non-finite score (bye week is no standing, not last place)', () => {
-    const ranks = buildPositionRankIndex(new Map([['1', 0], ['2', NaN], ['3', 11]]), players);
+    const ranks = buildPositionRankIndex(new Map([['1', 0], ['2', NaN], ['3', 11]]), players, demand);
     expect(ranks.has('1')).toBe(false);
     expect(ranks.has('2')).toBe(false);
     expect(ranks.get('3')?.label).toBe('WR1');
   });
 
   it('breaks score ties by player id so SSR output is stable', () => {
-    const ranks = buildPositionRankIndex(new Map([['2', 20], ['1', 20]]), players);
+    const ranks = buildPositionRankIndex(new Map([['2', 20], ['1', 20]]), players, demand);
     expect(ranks.get('1')?.rank).toBe(1);
     expect(ranks.get('2')?.rank).toBe(2);
-  });
-
-  it('accepts a caller-supplied position set', () => {
-    const ranks = buildPositionRankIndex(new Map([['5', 12]]), players, ['PK']);
-    expect(ranks.get('5')?.label).toBe('PK1');
   });
 });
 
@@ -605,19 +668,29 @@ describe('castTopRankedModel', () => {
     player({ mflId: '3', position: 'WR' }),
     player({ mflId: '4', position: 'WR', headshot: MFL('4') }),
   );
+  const demand = buildPositionDemand(LINEUP_SLOTS, LINEUP_ELIGIBILITY, 16);
+
+  /** Rank index over a hand-built score pool, using the real demand math. */
+  function ranksOf(scores: Array<[string, number]>) {
+    return buildPositionRankIndex(new Map(scores), players, demand);
+  }
 
   it('casts the best positional rank, not the highest score', () => {
-    // The QB outscores the TE 25-13 but is only the league's QB9; the TE is TE1.
-    const ranks = new Map([
-      ['1', { rank: 9, label: 'QB9', position: 'QB' }],
-      ['2', { rank: 1, label: 'TE1', position: 'TE' }],
-    ]);
+    // The QB outscores the TE 25-13 but is only the QB9; the TE is TE1.
+    const scores: Array<[string, number]> = [['2', 13], ['1', 25]];
+    for (let i = 0; i < 8; i++) scores.push([`qb${i}`, 99 - i]);
+    const filler = new Map(players);
+    for (let i = 0; i < 8; i++) filler.set(`qb${i}`, player({ mflId: `qb${i}`, position: 'QB' }));
+    const ranks = buildPositionRankIndex(new Map(scores), filler, demand);
+    expect(ranks.get('1')?.label).toBe('QB9');
+    expect(ranks.get('2')?.label).toBe('TE1');
+
     const cast = castTopRankedModel(
       [
         { playerId: '1', franchiseId: '0001', score: 25 },
         { playerId: '2', franchiseId: '0001', score: 13 },
       ],
-      players,
+      filler,
       ranks,
       undefined,
       'Player of the Game',
@@ -626,10 +699,47 @@ describe('castTopRankedModel', () => {
     expect(cast?.rank.label).toBe('TE1');
   });
 
-  it('breaks a rank tie toward the higher raw score', () => {
+  it('measures the rank against demand — the WR8 beats the QB6 in a 1QB/4-flex league', () => {
     const ranks = new Map([
-      ['1', { rank: 2, label: 'QB2', position: 'QB' }],
-      ['3', { rank: 2, label: 'WR2', position: 'WR' }],
+      ['1', { rank: 6, label: 'QB6', position: 'QB', demand: 16, tier: 6 / 16 }],
+      ['3', { rank: 8, label: 'WR8', position: 'WR', demand: 32, tier: 8 / 32 }],
+    ]);
+    const cast = castTopRankedModel(
+      [
+        { playerId: '1', franchiseId: '0001', score: 29 },
+        { playerId: '3', franchiseId: '0001', score: 12 },
+      ],
+      players,
+      ranks,
+      undefined,
+      'x',
+    );
+    expect(cast?.model.mflId).toBe('3');
+  });
+
+  it('still casts a genuinely elite QB — QB1 of 16 beats the WR6 of 32', () => {
+    const ranks = new Map([
+      ['1', { rank: 1, label: 'QB1', position: 'QB', demand: 16, tier: 1 / 16 }],
+      ['3', { rank: 6, label: 'WR6', position: 'WR', demand: 32, tier: 6 / 32 }],
+    ]);
+    const cast = castTopRankedModel(
+      [
+        { playerId: '1', franchiseId: '0001', score: 32 },
+        { playerId: '3', franchiseId: '0001', score: 15 },
+      ],
+      players,
+      ranks,
+      undefined,
+      'x',
+    );
+    expect(cast?.model.mflId).toBe('1');
+    expect(cast?.rank.label).toBe('QB1');
+  });
+
+  it('breaks a tier tie toward the higher raw score', () => {
+    const ranks = new Map([
+      ['1', { rank: 2, label: 'QB2', position: 'QB', demand: 16, tier: 2 / 16 }],
+      ['3', { rank: 4, label: 'WR4', position: 'WR', demand: 32, tier: 4 / 32 }],
     ]);
     const cast = castTopRankedModel(
       [
@@ -644,11 +754,8 @@ describe('castTopRankedModel', () => {
     expect(cast?.model.mflId).toBe('1');
   });
 
-  it('prefers the signed-in owner\'s candidates when any are ranked', () => {
-    const ranks = new Map([
-      ['1', { rank: 1, label: 'QB1', position: 'QB' }],
-      ['3', { rank: 6, label: 'WR6', position: 'WR' }],
-    ]);
+  it("prefers the signed-in owner's candidates when any are ranked", () => {
+    const ranks = ranksOf([['1', 30], ['3', 12]]);
     const cast = castTopRankedModel(
       [
         { playerId: '1', franchiseId: '0009', score: 30 },
@@ -663,10 +770,8 @@ describe('castTopRankedModel', () => {
   });
 
   it('skips candidates with no cutout even when they are ranked', () => {
-    const ranks = new Map([
-      ['4', { rank: 1, label: 'WR1', position: 'WR' }],
-      ['3', { rank: 40, label: 'WR40', position: 'WR' }],
-    ]);
+    const ranks = ranksOf([['4', 22], ['3', 8]]);
+    expect(ranks.get('4')?.label).toBe('WR1');
     const cast = castTopRankedModel(
       [
         { playerId: '4', franchiseId: '0001', score: 22 },

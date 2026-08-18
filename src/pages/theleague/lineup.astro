@@ -24,6 +24,7 @@ import {
   castBestScoredModel,
   castTopRankedModel,
   buildPositionRankIndex,
+  buildPositionDemand,
   scoreFaceoffSides,
   isCompositable,
   type FaceoffScoreSource,
@@ -504,21 +505,32 @@ if (opponentFranchiseId && userSideIds.length > 0 && opponentSideIds.length > 0)
     faceoffOrder,
   );
   if (scored.source) {
-    // Cast by POSITIONAL RANK, not raw points. Ranking each candidate against
-    // every other player at his position (league-wide for projections — MFL's
-    // projectedScores feed carries ~600 players) is what varies the faces:
-    // raw points always crown the quarterback, so the same two headshots owned
-    // the panel every week. The rank index is built from the same stat source
-    // `scoreFaceoffSides` elected, so the number under the face and the reason
-    // he's there agree. A side with nobody ranked (bye weeks, a week with no
-    // scores yet) falls back to the old highest-score cast.
+    // Cast by POSITIONAL RANK MEASURED AGAINST DEMAND, not raw points. Ranking
+    // each candidate against every other player at his position (league-wide
+    // for projections — MFL's projectedScores feed carries ~600 players) is
+    // what varies the faces: raw points always crown the quarterback, so the
+    // same two headshots owned the panel every week. Dividing by how many
+    // starters the league needs at the position is what keeps it varied — a
+    // bare rank re-crowns the QBs, because the league starts 1 QB and 4+
+    // RB/WR/TE per team, so QB12 is replacement level where WR12 is a stud.
+    // Demand comes from this league's own lineup slots × its team count, so a
+    // rules change or an expansion team moves it without an edit here.
+    // The rank index is built from the same stat source `scoreFaceoffSides`
+    // elected, so the number under the face and the reason he's there agree. A
+    // side with nobody ranked (bye weeks, a week with no scores yet, a feed
+    // with no franchises) falls back to the old highest-score cast.
     const rankPool =
       scored.source === 'projected' ? projMap
       : scored.source === 'salary' ? salaryById
       : new Map<string, number>(
           [...playerScoresMap].map(([id, byWeek]) => [id, byWeek?.[week] ?? 0]),
         );
-    const positionRanks = buildPositionRankIndex(rankPool, lineupPlayerIdentityMap);
+    const positionDemand = buildPositionDemand(
+      SLOT_POSITIONS,
+      SLOT_ELIGIBILITY,
+      franchiseListForSalary.length,
+    );
+    const positionRanks = buildPositionRankIndex(rankPool, lineupPlayerIdentityMap, positionDemand);
 
     const castSide = (cands: typeof scored.away) =>
       castTopRankedModel(cands, lineupPlayerIdentityMap, positionRanks, undefined, 'Player of the Game')
