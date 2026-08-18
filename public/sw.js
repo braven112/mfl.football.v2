@@ -42,6 +42,13 @@ const OFFLINE_URL = '/offline.html';
  */
 const HTML_STALE_MAX_AGE_MS = 12 * 60 * 60 * 1000;
 
+/**
+ * Ceiling on cached content-hashed entries. Hashed filenames never repeat,
+ * so without a bound the cache grows by a full build's worth of assets on
+ * every deploy and eventually hits the origin quota.
+ */
+const MAX_IMMUTABLE_ENTRIES = 96;
+
 /** Header used to age cached HTML — Date on the response is the origin's. */
 const CACHED_AT_HEADER = 'x-sw-cached-at';
 
@@ -84,7 +91,7 @@ self.addEventListener('fetch', (event) => {
 
   // Content-hashed build output: cache-first, immutable.
   if (isImmutableAsset(url.pathname)) {
-    event.respondWith(cacheFirst(request));
+    event.respondWith(cacheFirst(event, request));
     return;
   }
 
@@ -96,7 +103,7 @@ self.addEventListener('fetch', (event) => {
 
   // HTML pages: network-first with offline fallback
   if (request.headers.get('accept')?.includes('text/html')) {
-    event.respondWith(networkFirstWithOfflineFallback(request));
+    event.respondWith(networkFirstWithOfflineFallback(event, request));
     return;
   }
 });
@@ -126,23 +133,35 @@ function isCacheable(response) {
 }
 
 /**
+ * Extend the worker's life for background work without delaying the response.
+ */
+function keepAlive(event, promise) {
+  if (event && typeof event.waitUntil === 'function') event.waitUntil(promise);
+}
+
+/**
  * Cache-first, for immutable URLs only: serve from cache, else fetch and
  * store. No revalidation — the hash in the URL is the version.
+ *
+ * The write is deliberately off the response path: a cache failure must
+ * neither delay the asset nor discard it (see storeAsset).
  */
-async function cacheFirst(request) {
+async function cacheFirst(event, request) {
   const cache = await caches.open(CACHE_NAME);
   const cached = await cache.match(request);
   if (cached) return cached;
 
+  let response;
   try {
-    const response = await fetch(request);
-    if (isCacheable(response)) {
-      cache.put(request, response.clone());
-    }
-    return response;
+    response = await fetch(request);
   } catch {
     return new Response('', { status: 408, statusText: 'Offline' });
   }
+
+  if (isCacheable(response)) {
+    keepAlive(event, storeAsset(cache, request, response.clone()));
+  }
+  return response;
 }
 
 /**
@@ -155,20 +174,24 @@ async function staleWhileRevalidate(event, request) {
   const cached = await cache.match(request);
 
   const update = (async () => {
+    let response;
     try {
-      const response = await fetch(request);
-      if (isCacheable(response)) {
-        await cache.put(request, response.clone());
-      }
-      return response;
+      response = await fetch(request);
     } catch {
       return null;
     }
+    if (isCacheable(response)) {
+      // Storing is best-effort. A quota failure must NOT cost us the
+      // response — with no cached copy to fall back on, discarding it here
+      // is how a live logo turns into a synthetic 408 and fails to render.
+      await storeAsset(cache, request, response.clone());
+    }
+    return response;
   })();
 
   if (cached) {
     // Keep the worker alive for the refresh even though we answer now.
-    if (typeof event.waitUntil === 'function') event.waitUntil(update);
+    keepAlive(event, update);
     return cached;
   }
 
@@ -177,21 +200,71 @@ async function staleWhileRevalidate(event, request) {
 }
 
 /**
+ * Best-effort write. Never throws: every caller has already committed to
+ * returning the response, so a rejection here can only do harm — as an
+ * unhandled rejection, or by being mistaken for a network failure.
+ */
+async function storeAsset(cache, request, response) {
+  try {
+    await cache.put(request, response);
+    await trimImmutableEntries(cache);
+  } catch {
+    // Quota exhausted, or the cache was evicted mid-write. Nothing to do:
+    // the caller already has its response.
+  }
+}
+
+/**
+ * Bound the content-hashed entries.
+ *
+ * Every deploy mints new /_astro/ filenames, and nothing else ever evicts
+ * them — cache-first never revalidates and the hashes never repeat, so the
+ * cache grows monotonically until CACHE_NAME changes. That is the quota
+ * pressure that makes a failing cache.put realistic in the first place.
+ * Cache.keys() is insertion-ordered, so the front of the list is the oldest
+ * deploy's output, which is exactly what should go.
+ */
+async function trimImmutableEntries(cache) {
+  const keys = await cache.keys();
+  const immutable = keys.filter((cached) => {
+    try {
+      return isImmutableAsset(new URL(cached.url).pathname);
+    } catch {
+      return false;
+    }
+  });
+
+  const excess = immutable.length - MAX_IMMUTABLE_ENTRIES;
+  for (let i = 0; i < excess; i += 1) {
+    await cache.delete(immutable[i]);
+  }
+}
+
+/**
  * Store a response and stamp when we stored it, so freshness can be judged
  * later. The body has to be re-wrapped because headers are immutable.
+ *
+ * Takes ownership of `response` — callers pass a clone. Only a 200 is
+ * stored: re-wrapping a null-body status (204/205/304) throws, and such a
+ * document is worthless as an offline fallback anyway.
  */
-async function cacheWithTimestamp(cache, request, response, now) {
-  const body = await response.clone().blob();
-  const headers = new Headers(response.headers);
-  headers.set(CACHED_AT_HEADER, String(now));
-  await cache.put(
-    request,
-    new Response(body, {
-      status: response.status,
-      statusText: response.statusText,
-      headers,
-    })
-  );
+async function cacheHtmlWithTimestamp(cache, request, response, now) {
+  try {
+    if (response.status !== 200) return;
+    const body = await response.blob();
+    const headers = new Headers(response.headers);
+    headers.set(CACHED_AT_HEADER, String(now));
+    await cache.put(
+      request,
+      new Response(body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers,
+      })
+    );
+  } catch {
+    // Best-effort, same contract as storeAsset.
+  }
 }
 
 /** A cached HTML entry is usable only while it is younger than the cap. */
@@ -212,29 +285,20 @@ function isFreshEnough(response, now) {
  * tapped another link, which happens constantly on mobile. Replaying a
  * stale document there is how a days-old page ends up on screen looking
  * live. Let the abort propagate instead.
+ *
+ * Only the fetch is inside the try. Caching is a fire-and-forget clone,
+ * for two independent reasons: awaiting it buffers the entire streamed
+ * document before the page is handed back, and a cache rejection inside
+ * the try would be caught as "offline" and answered with a stale document
+ * even though a fresh 200 was in hand.
  */
-async function networkFirstWithOfflineFallback(request) {
+async function networkFirstWithOfflineFallback(event, request) {
   const now = Date.now();
   const cache = await caches.open(CACHE_NAME);
 
+  let response;
   try {
-    const response = await fetch(request, { cache: 'no-cache' });
-
-    if (response.ok) {
-      if (isCacheable(response)) {
-        // Cache successful HTML for stale fallback
-        await cacheWithTimestamp(cache, request, response, now);
-      }
-      return response;
-    }
-
-    // Server returned 5xx — try stale cache before passing error through
-    if (response.status >= 500) {
-      const cached = await cache.match(request);
-      if (cached && isFreshEnough(cached, now)) return cached;
-    }
-
-    return response;
+    response = await fetch(request, { cache: 'no-cache' });
   } catch (error) {
     if (error && error.name === 'AbortError') throw error;
 
@@ -248,6 +312,22 @@ async function networkFirstWithOfflineFallback(request) {
       headers: { 'Content-Type': 'text/plain' },
     });
   }
+
+  if (response.ok) {
+    if (isCacheable(response)) {
+      // Cache successful HTML for stale fallback — off the response path.
+      keepAlive(event, cacheHtmlWithTimestamp(cache, request, response.clone(), now));
+    }
+    return response;
+  }
+
+  // Server returned 5xx — try stale cache before passing error through
+  if (response.status >= 500) {
+    const cached = await cache.match(request);
+    if (cached && isFreshEnough(cached, now)) return cached;
+  }
+
+  return response;
 }
 
 /* =========================================================================
