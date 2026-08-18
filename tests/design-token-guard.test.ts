@@ -161,3 +161,40 @@ describe('design-token guard', () => {
     ).toEqual([]);
   });
 });
+
+/**
+ * A token whose dark value is a GRADIENT is only valid in the `background`
+ * shorthand. Used as a `color` (or any color-only property) the declaration
+ * is simply dropped, and the element inherits whatever it would have had —
+ * which is how the Pecking Order's "Sample issue" / "Archived issue" labels
+ * shipped as light ink on a light chip, invisible, on TheLeague in dark mode
+ * (PR #564). It looked fine everywhere it was checked because the AFL's dark
+ * block overrides --card-bg to a solid.
+ *
+ * tokens-dark.css says so in a comment; this makes it enforceable.
+ * --card-bg-color is a legacy ALIAS for the same gradient, so it is banned in
+ * the same positions. The solid twin is --card-surface.
+ */
+const GRADIENT_ONLY_TOKENS = ['card-bg', 'card-bg-color'];
+const COLOR_ONLY_PROPS = ['color', 'border-color', 'outline-color', 'text-decoration-color', 'caret-color', 'fill', 'stroke'];
+
+describe('gradient-valued tokens are never used as a color', () => {
+  it('no color-only property references --card-bg', () => {
+    const bad: string[] = [];
+    const pattern = new RegExp(
+      `(?:^|[;{\\s])(${COLOR_ONLY_PROPS.join('|')})\\s*:\\s*var\\(\\s*--(${GRADIENT_ONLY_TOKENS.join('|')})[,)]`,
+      'g',
+    );
+    for (const file of referenceFiles) {
+      const text = fs.readFileSync(file, 'utf-8');
+      for (const m of text.matchAll(pattern)) {
+        bad.push(`${path.relative(SRC, file)}: ${m[1]}: var(--${m[2]})`);
+      }
+    }
+    expect(
+      bad,
+      'A gradient token used as a color is dropped by the browser and the element ' +
+        'inherits its parent color. Use --card-surface (the solid twin) instead.',
+    ).toEqual([]);
+  });
+});

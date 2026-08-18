@@ -83,7 +83,13 @@ const { isCurrent, older, newer } = resolveIssuePermalink(
 .po-archive-note__tag {
   flex: none;
   background: var(--page-text, #111827);
-  color: var(--card-bg, #fff);
+  /* --card-surface, NOT --card-bg: in base dark mode --card-bg is a radial
+     gradient, which is invalid as a `color` value, so the declaration is
+     dropped and the label inherits the muted (light) text color — light ink
+     on a light chip, i.e. an invisible label. It looked fine only on the AFL,
+     whose dark block happens to override --card-bg to a solid. --card-bg-color
+     is a legacy alias for the gradient and is not the fix. */
+  color: var(--card-surface, #fff);
   border-radius: 0.25rem;
   padding: 0.15rem 0.5rem;
   font-size: 0.7rem;
