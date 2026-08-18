@@ -160,6 +160,7 @@ const lineupPlayerIdentityMap = getPlayerMap(leagueYear);
 // ---------------------------------------------------------------------------
 interface LineupPlayer {
   id: string;
+  rosterStatus: string;
   name: string;
   headshot: string;
   position: string;
@@ -272,6 +273,8 @@ const roster: LineupPlayer[] = rosterPlayers.map((rp: any) => {
 
   return {
     id: rp.id,
+    // MFL's own roster bucket — TAXI_SQUAD / INJURED_RESERVE can't start.
+    rosterStatus: rp.status || 'ROSTER',
     name: resolvePlayerName(identity, pd, rp.id),
     headshot,
     position,
@@ -310,6 +313,7 @@ const weekLineup = resolveWeekLineup({
 const resultsWeekEntry = weekLineup.entry;
 const lineupReadOk = weekLineup.lineupReadOk;
 const lineupFromCache = weekLineup.fromCache;
+const weekScheduled = weekLineup.weekScheduled;
 const starterIds = new Set(weekLineup.starters.map((p) => p.id));
 
 // Build initial slots based on starters
@@ -320,7 +324,12 @@ const usedPlayerIds = new Set<string>();
 const hasStarters = starterIds.size > 0;
 const candidatePool = hasStarters
   ? roster.filter(p => starterIds.has(p.id))
-  : [...roster].sort((a, b) => (b.projection ?? -1) - (a.projection ?? -1));
+  // Only active-roster players are legal starters, so the auto-fill must not
+  // reach for taxi-squad or IR players — that fill is now one tap from being
+  // submitted. (A recorded lineup is rendered as-is: MFL accepted it.)
+  : [...roster]
+      .filter(p => p.rosterStatus === 'ROSTER')
+      .sort((a, b) => (b.projection ?? -1) - (a.projection ?? -1));
 
 // Pre-allocate slots array to preserve positional order
 for (let i = 0; i < SLOT_POSITIONS.length; i++) {
@@ -362,8 +371,10 @@ const fillState = resolveLineupFillState({
   hasProjections: projMap.size > 0,
   slotsFilled: slots.every((s) => s.playerId !== null),
   fromCache: lineupFromCache,
+  weekScheduled,
 });
 const canSubmitUnsaved = fillState.canSubmitUnsaved;
+const canSubmitEdits = fillState.canSubmitEdits;
 const fillIsProjected = fillState.fillIsProjected;
 
 // Available weeks for selector
@@ -652,6 +663,10 @@ const lineupPayload = {
   // …and whether we may offer to SAVE that fill. False when the read failed
   // (an overwrite could destroy a real lineup) or the week is already played.
   canSubmitUnsaved,
+  // Whether an EDITED lineup may be submitted at all. False on a failed read
+  // (the owner would be editing a projection they believe is theirs) and on a
+  // week MFL can't take a lineup for.
+  canSubmitEdits,
 };
 
 const payloadJson = JSON.stringify(lineupPayload);
@@ -749,7 +764,11 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
           <path d="M8 4.75v4M8 11.1v.15" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
         </svg>
         <span>
-          {fillState.mode === 'saved-from-cache'
+          {fillState.mode === 'week-unscheduled'
+            ? `MFL has no Week ${week} on this season's schedule, so there's no lineup to set — these slots are just a view of your roster.`
+            : fillState.mode === 'saved-partial'
+              ? `This is your submitted Week ${week} lineup, but at least one of those players is no longer on your roster, so their slot shows empty.`
+              : fillState.mode === 'saved-from-cache'
             ? `MFL didn't answer, so this is your lineup as of our last sync — if you changed it today, that change may not be shown. Reload before submitting.`
             : fillState.mode === 'read-failed'
             ? `MFL didn't answer when we asked what lineup you have saved for Week ${week}, so these slots are this page's own fill — not your lineup. Reload before submitting, or you could overwrite a lineup you already set.`
@@ -1038,7 +1057,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
       const hasChanges = changes > 0;
       const allFilled = currentSlots.every(s => s.playerId != null);
 
-      if (hasChanges && allFilled) {
+      if (hasChanges && allFilled && data.canSubmitEdits) {
         submitBtn.className = 'lineup-submit lineup-submit--ready';
         submitBtn.disabled = false;
         submitText.textContent = 'Submit Lineup';

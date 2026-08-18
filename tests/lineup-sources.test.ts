@@ -9,6 +9,7 @@ import {
   resolveLineupFillState,
   resolveWeekLineup,
   resolvePlayerName,
+  franchiseAppearsIn,
 } from '../src/utils/lineup-sources';
 
 /**
@@ -210,8 +211,12 @@ describe('resolveLineupFillState', () => {
   });
 
   it('prefers visible starters over every other signal', () => {
+    // Starters we can see outrank a failed read and a past week alike — the
+    // mode narrows to the partial variant here only because a dropped player
+    // left a slot empty, which is still a saved lineup.
     const s = resolveLineupFillState({ hasStarters: true, lineupReadOk: false, weekIsPast: true, hasProjections: false, slotsFilled: false });
-    expect(s.mode).toBe('saved');
+    expect(s.mode).toMatch(/^saved/);
+    expect(s.canSubmitUnsaved).toBe(false);
   });
 });
 
@@ -361,5 +366,101 @@ describe('resolveWeekLineup', () => {
     expect(resolveLineupFillState({
       hasStarters: false, lineupReadOk: r.lineupReadOk, weekIsPast: false, hasProjections: true, slotsFilled: true,
     }).canSubmitUnsaved).toBe(false);
+  });
+});
+
+describe('an owner MFL never listed that week', () => {
+  // MFL omits unscheduled franchises from a week's matchups entirely —
+  // playoff byes and odd-sized brackets (TheLeague 2025 wk15 lists 14 of 16).
+  const weekWithoutMe = {
+    weeklyResults: { week: '15', matchup: [{ franchise: [{ id: '0007', starters: '9,' }, { id: '0008' }] }] },
+  };
+  const base = { week: 15, franchiseId: '0001', league: 'theleague' as const, leagueYear: 2026 };
+
+  it('does not read that omission as "no lineup submitted"', () => {
+    expect(franchiseAppearsIn(weekWithoutMe.weeklyResults, '0001')).toBe(false);
+    expect(franchiseAppearsIn(weekWithoutMe.weeklyResults, '0008')).toBe(true);
+
+    const r = resolveWeekLineup({ ...base, weekScopedPayload: weekWithoutMe, ytdPayload: null });
+    expect(r.lineupReadOk).toBe(false);
+    expect(resolveLineupFillState({
+      hasStarters: false, lineupReadOk: r.lineupReadOk, weekIsPast: false,
+      hasProjections: true, slotsFilled: true, weekScheduled: r.weekScheduled,
+    }).canSubmitUnsaved).toBe(false);
+  });
+
+  it('still counts a listed franchise with no starters as a real answer', () => {
+    const r = resolveWeekLineup({ ...base, franchiseId: '0008', weekScopedPayload: weekWithoutMe, ytdPayload: null });
+    expect(r.lineupReadOk).toBe(true);
+    expect(r.starters).toEqual([]);
+  });
+});
+
+describe('a week the season does not contain', () => {
+  it('says so calmly instead of crying "MFL didn\'t answer"', () => {
+    // The selector offers weeks 1-22; MFL's schedule holds 17. Week 20 would
+    // otherwise sit permanently under the amber overwrite warning.
+    const ytd = { allWeeklyResults: { weeklyResults: [{ week: '1', matchup: [{ franchise: [{ id: '0001' }] }] }] } };
+    const r = resolveWeekLineup({
+      week: 20, franchiseId: '0001', league: 'theleague', leagueYear: 2026,
+      weekScopedPayload: null, ytdPayload: ytd,
+    });
+    expect(r.weekScheduled).toBe(false);
+    const state = resolveLineupFillState({
+      hasStarters: false, lineupReadOk: r.lineupReadOk, weekIsPast: false,
+      hasProjections: true, slotsFilled: true, weekScheduled: r.weekScheduled,
+    });
+    expect(state.mode).toBe('week-unscheduled');
+    expect(state.canSubmitUnsaved).toBe(false);
+    expect(state.canSubmitEdits).toBe(false);
+  });
+
+  it('a genuinely failed read still reports read-failed', () => {
+    const r = resolveWeekLineup({
+      week: 20, franchiseId: '0001', league: 'theleague', leagueYear: 2026,
+      weekScopedPayload: null, ytdPayload: null,
+    });
+    // Disk carries weeks, so week 20's absence there is real, not a failure
+    // to reach anything — but nothing can vouch for the lineup either way.
+    expect(r.lineupReadOk).toBe(false);
+  });
+});
+
+describe('editing does not defeat the gates', () => {
+  const base = { hasStarters: false, lineupReadOk: true, weekIsPast: false, hasProjections: true, slotsFilled: true };
+
+  it('blocks an edited submit when the read failed', () => {
+    // Otherwise one deliberate swap re-enables submit and replaces the eight
+    // slots the owner never chose with the page's own projection guess.
+    expect(resolveLineupFillState({ ...base, lineupReadOk: false }).canSubmitEdits).toBe(false);
+  });
+
+  it('blocks an edited submit on a played week', () => {
+    expect(resolveLineupFillState({ ...base, weekIsPast: true }).canSubmitEdits).toBe(false);
+  });
+
+  it('allows edits on an open week, saved or not', () => {
+    expect(resolveLineupFillState(base).canSubmitEdits).toBe(true);
+    expect(resolveLineupFillState({ ...base, hasStarters: true }).canSubmitEdits).toBe(true);
+  });
+});
+
+describe('a saved lineup whose players have since been dropped', () => {
+  it('is flagged rather than shown as a clean save with empty slots', () => {
+    const s = resolveLineupFillState({
+      hasStarters: true, lineupReadOk: true, weekIsPast: true, hasProjections: false, slotsFilled: false,
+    });
+    expect(s.mode).toBe('saved-partial');
+  });
+});
+
+describe('an empty rosters payload is not a roster', () => {
+  it('falls back to disk when MFL returns zero franchises', () => {
+    // `payload.rosters.franchise` being truthy is the wrong question: [] passes
+    // it and every slot renders "Tap to set".
+    const empty = { rosters: { franchise: [] } };
+    const resolved = resolveRostersPayload(empty, 'theleague', 2026);
+    expect(resolved).not.toBe(empty);
+    expect(resolved?.rosters?.franchise?.length).toBeGreaterThan(0);
   });
 });

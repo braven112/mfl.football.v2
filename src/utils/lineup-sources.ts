@@ -144,6 +144,31 @@ export function loadWeeklyResultsFeedFromDisk(slug: CanonicalLeagueSlug, leagueY
   }
 }
 
+/**
+ * Is this franchise listed in the week's matchups at all?
+ *
+ * Absence is not "no lineup" — MFL omits unscheduled franchises entirely
+ * (playoff byes, odd-sized brackets: TheLeague 2025 wk15 lists 14 of 16,
+ * the AFL wk17 lists 18 of 24). Reading that omission as an empty lineup
+ * hands the owner a projection fill with the submit button armed.
+ */
+export function franchiseAppearsIn(weekEntry: any, franchiseId: string): boolean {
+  if (!weekEntry || !franchiseId) return false;
+  for (const matchup of asArray<any>(weekEntry.matchup)) {
+    if (asArray<any>(matchup?.franchise).some((f: any) => f?.id === franchiseId)) return true;
+  }
+  return false;
+}
+
+/** Does this payload carry ANY week? Distinguishes "MFL answered, but that
+ *  week doesn't exist" (weeks 18-22 of a 17-week season) from a failed read. */
+export function payloadCarriesAnyWeek(payload: any): boolean {
+  if (!payload) return false;
+  const unwrapped = payload?.allWeeklyResults ?? payload;
+  const entries = Array.isArray(unwrapped) ? unwrapped : asArray(unwrapped?.weeklyResults);
+  return entries.map((i: any) => i?.weeklyResults ?? i).some((e: any) => e?.matchup);
+}
+
 export interface ResolvedWeekLineup {
   /** The week's results entry, from whichever source answered. */
   entry: any | null;
@@ -153,6 +178,8 @@ export interface ResolvedWeekLineup {
   lineupReadOk: boolean;
   /** True when the starters came from the committed feed, not from MFL. */
   fromCache: boolean;
+  /** False when MFL answered but carries no such week (e.g. week 20 of 17). */
+  weekScheduled: boolean;
 }
 
 /**
@@ -193,25 +220,41 @@ export function resolveWeekLineup(input: {
   for (const entry of liveCandidates) {
     const starters = extractLineupStarters(entry, franchiseId);
     if (starters.length > 0) {
-      return { entry, starters, lineupReadOk: true, fromCache: false };
+      return { entry, starters, lineupReadOk: true, fromCache: false, weekScheduled: true };
     }
   }
-  if (liveCandidates.length > 0) {
-    // Live answered and holds no lineup for this franchise. That is an
-    // answer, and the page may offer to save its fill.
-    return { entry: liveCandidates[0], starters: [], lineupReadOk: true, fromCache: false };
+
+  // A negative live answer only counts if the franchise is IN the week. An
+  // owner MFL never listed that week has no lineup recorded there, and no
+  // absence to report.
+  const listedLive = liveCandidates.find((entry) => franchiseAppearsIn(entry, franchiseId));
+  if (listedLive) {
+    return { entry: listedLive, starters: [], lineupReadOk: true, fromCache: false, weekScheduled: true };
   }
 
-  const diskEntry = findWeekResultsEntry(loadWeeklyResultsFeedFromDisk(league, leagueYear), week);
+  const diskFeed = loadWeeklyResultsFeedFromDisk(league, leagueYear);
+  const diskEntry = findWeekResultsEntry(diskFeed, week);
   const diskStarters = extractLineupStarters(diskEntry, franchiseId);
   if (diskStarters.length > 0) {
-    return { entry: diskEntry, starters: diskStarters, lineupReadOk: true, fromCache: true };
+    return { entry: diskEntry, starters: diskStarters, lineupReadOk: true, fromCache: true, weekScheduled: true };
   }
 
-  // Nothing live, and disk can't vouch for absence. Hand back the disk entry
+  // "MFL answered and has no such week" is not a failed read — it's a week
+  // the season doesn't contain. The selector offers 1-22; MFL's schedule
+  // holds 17, so the alarming read-failed copy would be permanent there.
+  const anySourceHasWeeks = [weekScopedPayload, ytdPayload, diskFeed].some(payloadCarriesAnyWeek);
+  const weekScheduled = liveCandidates.length > 0 || diskEntry !== null || !anySourceHasWeeks;
+
+  // Nothing usable, and disk can't vouch for absence. Hand back the disk entry
   // anyway when there is one — it still carries the OPPONENT's recorded
   // starters, which the faceoff reads — but say the read failed.
-  return { entry: diskEntry, starters: [], lineupReadOk: false, fromCache: false };
+  return {
+    entry: diskEntry ?? liveCandidates[0] ?? null,
+    starters: [],
+    lineupReadOk: false,
+    fromCache: false,
+    weekScheduled,
+  };
 }
 
 /**
@@ -227,7 +270,7 @@ export function loadRostersFeedFromDisk(slug: CanonicalLeagueSlug, leagueYear: n
     const filePath = path.join(process.cwd(), league.dataPath, 'mfl-feeds', String(leagueYear), 'rosters.json');
     if (!fs.existsSync(filePath)) return null;
     const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    return parsed?.rosters?.franchise ? parsed : null;
+    return hasFranchises(parsed) ? parsed : null;
   } catch {
     return null;
   }
@@ -243,8 +286,20 @@ export function resolveRostersPayload(
   slug: CanonicalLeagueSlug,
   leagueYear: number,
 ): any | null {
-  if (livePayload?.rosters?.franchise) return livePayload;
+  if (hasFranchises(livePayload)) return livePayload;
   return loadRostersFeedFromDisk(slug, leagueYear);
+}
+
+/**
+ * Does a rosters payload actually carry franchises? `payload.rosters.franchise`
+ * being merely TRUTHY is not the same question — an empty array passes that
+ * and then renders every starter slot as "Tap to set", which is the exact
+ * symptom the disk fallback exists to prevent.
+ */
+function hasFranchises(payload: any): boolean {
+  const franchises = payload?.rosters?.franchise;
+  if (Array.isArray(franchises)) return franchises.length > 0;
+  return Boolean(franchises?.id);
 }
 
 /** What the nine rendered slots actually represent for this week. */
@@ -258,12 +313,18 @@ export type LineupFillMode =
   /** Week already played with no lineup ever set — read-only view. */
   | 'past-unset'
   /** A lineup, but from the daily feed — possibly not today's edit. */
-  | 'saved-from-cache';
+  | 'saved-from-cache'
+  /** A lineup, but some of its players are no longer on the roster. */
+  | 'saved-partial'
+  /** MFL has no such week this season — nothing to submit, ever. */
+  | 'week-unscheduled';
 
 export interface LineupFillState {
   mode: LineupFillMode;
   /** May the page offer to submit the untouched auto-fill? */
   canSubmitUnsaved: boolean;
+  /** May the owner submit at all, even after deliberately editing slots? */
+  canSubmitEdits: boolean;
   /** Is the fill ordered by projection, or just roster order? */
   fillIsProjected: boolean;
 }
@@ -286,22 +347,37 @@ export function resolveLineupFillState(input: {
   slotsFilled: boolean;
   /** Did the starters come from the committed feed rather than from MFL? */
   fromCache?: boolean;
+  /** False when MFL carries no such week (weeks past the season's last). */
+  weekScheduled?: boolean;
 }): LineupFillState {
   const { hasStarters, lineupReadOk, weekIsPast, hasProjections, slotsFilled, fromCache } = input;
+  const weekScheduled = input.weekScheduled ?? true;
   const fillIsProjected = hasProjections;
 
   // Order matters: a failed read outranks everything except starters we can
   // actually see, because every other branch would act on absent evidence.
   if (hasStarters) {
-    return { mode: fromCache ? 'saved-from-cache' : 'saved', canSubmitUnsaved: false, fillIsProjected };
+    // A recorded starter who has since been dropped can't be rendered, so
+    // the slots come up short under a "Lineup Saved" button with nothing
+    // explaining the gap.
+    const mode: LineupFillMode = fromCache
+      ? 'saved-from-cache'
+      : slotsFilled ? 'saved' : 'saved-partial';
+    return { mode, canSubmitUnsaved: false, canSubmitEdits: !weekIsPast && weekScheduled, fillIsProjected };
   }
-  if (!lineupReadOk) return { mode: 'read-failed', canSubmitUnsaved: false, fillIsProjected };
-  if (weekIsPast) return { mode: 'past-unset', canSubmitUnsaved: false, fillIsProjected };
+  if (!weekScheduled) {
+    return { mode: 'week-unscheduled', canSubmitUnsaved: false, canSubmitEdits: false, fillIsProjected };
+  }
+  // A failed read blocks EDITED submits too, not just the untouched fill:
+  // the owner would be editing a projection they believe is their lineup, so
+  // one swap plus submit replaces the eight slots they never chose.
+  if (!lineupReadOk) return { mode: 'read-failed', canSubmitUnsaved: false, canSubmitEdits: false, fillIsProjected };
+  if (weekIsPast) return { mode: 'past-unset', canSubmitUnsaved: false, canSubmitEdits: false, fillIsProjected };
   // Still an offer even when the fill is short a slot (a thin roster, a
   // league mid-draft) — the banner should say so. It just isn't submittable
   // until the owner completes it, and the server-rendered button has to
   // agree with that before hydration, not only after.
-  return { mode: 'unsaved-offer', canSubmitUnsaved: slotsFilled, fillIsProjected };
+  return { mode: 'unsaved-offer', canSubmitUnsaved: slotsFilled, canSubmitEdits: true, fillIsProjected };
 }
 
 /**
