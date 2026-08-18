@@ -128,7 +128,9 @@ const HOW_IT_WORKS = [
         <span class="po-sample-note__tag">Sample issue</span>
         <p class="po-sample-note__text">
           Below is a real issue from <strong>Week {latest.week} of {latest.year}</strong>, published so you can
-          see the format. These are not current rankings — the season hasn't started.
+          see the format. These are not current rankings{firstIssueLabel
+            ? <> — the season's first issue lands {firstIssueLabel}.</>
+            : <>.</>}
         </p>
       </div>
     )}
@@ -226,7 +228,10 @@ const HOW_IT_WORKS = [
   color: var(--content-text-muted, #4b5563);
 }
 
-/* The sample label has to survive being skimmed past — an owner who scrolls
+/* NOTE: the sample note must not claim "the season hasn't started" — preview
+   also covers the days between Thursday kickoff and the first Tuesday issue,
+   when the season very much has started (Copilot caught this on PR #563).
+   The sample label has to survive being skimmed past — an owner who scrolls
    straight to the rankings must still meet it, so it sits directly above the
    issue and the wrapper keeps a visible edge the whole way down. */
 .po-sample-note {
