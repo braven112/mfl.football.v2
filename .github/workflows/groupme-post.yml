@@ -1,0 +1,59 @@
+name: GroupMe Post
+
+# Manual-only. Sends ONE hand-written message as a league's Schefter bot and
+# does nothing else — no feed post, no commit, no push.
+#
+# Use schefter-announce.yml instead when the message IS news (a new feature, a
+# league event): that lane seeds a Schefter Report post and mirrors it to the
+# chat. This lane is for the other case — replying to something an owner said,
+# or a one-off correction, where a permanent feed article would be wrong.
+on:
+  workflow_dispatch:
+    inputs:
+      league:
+        description: "Which league's Schefter bot posts this"
+        required: true
+        default: theleague
+        type: choice
+        options:
+          - theleague
+          - afl
+      text:
+        description: "Message text (max 1000 chars — GroupMe truncates past that)"
+        required: true
+        type: string
+      dry_run:
+        description: "Preview only — print the exact bytes, send nothing"
+        required: true
+        default: true
+        type: boolean
+
+concurrency:
+  group: groupme-post
+  cancel-in-progress: false
+
+# Read-only: this lane writes nothing to the repo.
+permissions:
+  contents: read
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Send message
+        env:
+          TZ: America/Los_Angeles
+          GROUPME_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_SCHEFTER_BOT_ID }}
+          GROUPME_AFL_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_AFL_SCHEFTER_BOT_ID }}
+          GROUPME_LEAGUE: ${{ inputs.league }}
+          GROUPME_TEXT: ${{ inputs.text }}
+          GROUPME_DRY_RUN: ${{ inputs.dry_run }}
+        run: node scripts/post-groupme-message.mjs
