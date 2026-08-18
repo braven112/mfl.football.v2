@@ -113,6 +113,16 @@ export function getThrowbackFranchiseBrand(
     name: identity.name,
     icon: identity.icon ?? brand.icon,
     banner: identity.banner ?? brand.banner,
+    // The crest has to throw back too, or the one surface that renders it —
+    // the lineup faceoff watermark — wears the modern mark under a legacy
+    // name and legacy colors. Only one era in the config carries its own
+    // `groupMe`, so the era ICON is the working crest for the rest; every
+    // history entry has one and they are square, which is what the watermark
+    // box wants. `groupMeDark` is cleared for the same reason the *Dark
+    // colors are: it belongs to the CURRENT brand, and eras have no dark
+    // variant to swap in.
+    groupMe: identity.groupMe ?? identity.icon ?? brand.groupMe,
+    groupMeDark: undefined,
     // Era palette when defined — legacy hues on the lineup hero, too.
     ...(identity.isHistorical && identity.colorPrimary
       ? {

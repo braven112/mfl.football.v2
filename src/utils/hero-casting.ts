@@ -476,3 +476,170 @@ export function castShowcasePanels(
   }
   return panels;
 }
+
+/** Positions eligible to model a "player of the game" faceoff.
+ *  DEF is already excluded by `isCompositable` (no cutout); PK is excluded
+ *  here because a kicker's face is not the story of a matchup. */
+export const CASTABLE_POSITIONS = ['QB', 'RB', 'WR', 'TE'] as const;
+
+/**
+ * League-wide STARTER DEMAND per position — how many of them the league has
+ * to start each week (a position's starting slots × the number of teams).
+ *
+ * This is the denominator that makes ranks comparable ACROSS positions. A raw
+ * rank can't be: the league starts one quarterback per team and three-plus
+ * receivers, so QB12 is a replacement-level starter while WR12 is a stud, and
+ * comparing the two numbers head-to-head hands the panel back to the
+ * quarterbacks — the thing ranking by position was meant to fix.
+ *
+ * Multi-eligible slots (FLEX) split evenly across the positions that can fill
+ * them. That's a modeling choice, not a measurement: in practice a flex is a
+ * receiver more often than a tight end. It's deliberately neutral, and it
+ * only matters BETWEEN the flex-eligible positions — an even split gives them
+ * equal demand, so among RB/WR/TE the comparison falls back to raw rank,
+ * which is the right answer when we have no evidence to weight them apart.
+ *
+ * Derived from the league's own starting requirements rather than written
+ * down: change a league's lineup slots or add a team and the demand follows.
+ * Returns `{}` for a league with no teams, which leaves every player unranked
+ * and lets callers fall back to a raw-score cast.
+ */
+export function buildPositionDemand(
+  slotPositions: readonly string[],
+  slotEligibility: Record<string, readonly string[]>,
+  teamCount: number,
+  castablePositions: readonly string[] = CASTABLE_POSITIONS,
+): Record<string, number> {
+  if (!Number.isFinite(teamCount) || teamCount <= 0) return {};
+  const castable = new Set(castablePositions);
+  const slotsPerTeam: Record<string, number> = {};
+
+  for (const slot of slotPositions) {
+    const eligible = (slotEligibility[slot] ?? [slot]).filter((pos) => castable.has(pos));
+    if (eligible.length === 0) continue;
+    const share = 1 / eligible.length;
+    for (const pos of eligible) slotsPerTeam[pos] = (slotsPerTeam[pos] ?? 0) + share;
+  }
+
+  // Rounded because the shares are floats: three FLEX slots split three ways
+  // sum to 0.9999999999999999, and a demand of 31.999999999999996 would make
+  // the denominator — and every tier computed from it — noise at the last
+  // digit. Roster spots are whole-ish things; 1e-6 is far finer than any real
+  // half- or third-slot share.
+  const demand: Record<string, number> = {};
+  for (const [pos, perTeam] of Object.entries(slotsPerTeam)) {
+    demand[pos] = Math.round(perTeam * teamCount * 1e6) / 1e6;
+  }
+  return demand;
+}
+
+/** A player's standing within his own position for the scored week. */
+export interface PositionRank {
+  /** 1 = best at the position this week. */
+  rank: number;
+  /** Display form — 'QB1', 'WR12'. The rank owners actually read. */
+  label: string;
+  position: string;
+  /** League-wide starters needed at the position (the demand denominator). */
+  demand: number;
+  /** `rank / demand` — the cross-position yardstick. 1.0 = exactly the last
+   *  startable player at the position; below 1 is a starter, above 1 is a
+   *  bench body. Lower wins. */
+  tier: number;
+}
+
+/**
+ * Rank every scored player against the others at HIS position, and score that
+ * rank against the league's demand for the position.
+ *
+ * The input should be the widest score pool available for the week (MFL's
+ * league-wide `projectedScores` feed, ~600 players), not just one roster —
+ * "WR3 this week" only means something measured against every WR.
+ *
+ * `demand` (from `buildPositionDemand`) doubles as the position filter: a
+ * position with no demand entry is not ranked at all, which is how PK and DEF
+ * stay out. Scores of 0 or non-finite (missing / malformed feed rows) are
+ * unranked too — an unplayed bye-week WR is not "the worst WR in football",
+ * he simply has no standing this week, and callers treat a missing rank as
+ * "can't cast". Ties break by player id so SSR output is stable.
+ */
+export function buildPositionRankIndex(
+  scores: Map<string, number>,
+  players: Map<string, PlayerIdentity>,
+  demand: Record<string, number>,
+): Map<string, PositionRank> {
+  const byPosition = new Map<string, Array<{ playerId: string; score: number }>>();
+
+  for (const [playerId, score] of scores) {
+    const p = players.get(playerId);
+    if (!p || !(demand[p.position] > 0)) continue;
+    if (!Number.isFinite(score) || score <= 0) continue;
+    const arr = byPosition.get(p.position) ?? [];
+    arr.push({ playerId, score });
+    byPosition.set(p.position, arr);
+  }
+
+  const index = new Map<string, PositionRank>();
+  for (const [position, arr] of byPosition) {
+    const positionDemand = demand[position];
+    arr.sort((a, b) => b.score - a.score || a.playerId.localeCompare(b.playerId));
+    arr.forEach((entry, i) => {
+      const rank = i + 1;
+      index.set(entry.playerId, {
+        rank,
+        label: `${position}${rank}`,
+        position,
+        demand: positionDemand,
+        tier: rank / positionDemand,
+      });
+    });
+  }
+  return index;
+}
+
+/**
+ * Cast the best-RANKED player from a scored candidate pool.
+ *
+ * Same contract as `castBestScoredModel` — deterministic, own-franchise
+ * candidates win when any exist — except the yardstick is the player's rank
+ * within his position measured against the league's demand for it, not his
+ * raw score. Raw points always cast the quarterback (a QB projects 25 where a
+ * WR projects 15), so the faceoff showed the same two faces every week;
+ * demand-relative rank lets a league-best tight end or the week's WR1
+ * headline instead, and — unlike a bare rank — doesn't hand the panel back to
+ * the QBs on the strength of a shallow position.
+ *
+ * Unranked candidates (no score this week, or a position outside the demand
+ * map) can't be cast — a rank is the whole basis of the pick. Returns null
+ * when nothing in the pool is ranked, so callers can fall back to
+ * `castBestScoredModel`.
+ *
+ * Ties on tier (a side holding both the QB2 and the WR4 in a 1QB/2WR league)
+ * break toward the higher raw score, then player id.
+ */
+export function castTopRankedModel(
+  candidates: ScoredCastCandidate[],
+  players: Map<string, PlayerIdentity>,
+  ranks: Map<string, PositionRank>,
+  userFranchiseId: string | undefined,
+  descriptor: string,
+): { model: HeroModel; rank: PositionRank } | null {
+  const resolvable = candidates.filter((c) => {
+    const p = players.get(c.playerId);
+    return !!p && isCompositable(p) && ranks.has(c.playerId);
+  });
+  if (resolvable.length === 0) return null;
+
+  const own = userFranchiseId ? resolvable.filter((c) => c.franchiseId === userFranchiseId) : [];
+  const pool = own.length > 0 ? own : resolvable;
+
+  const best = pool.reduce((a, b) => {
+    const ta = ranks.get(a.playerId)!.tier;
+    const tb = ranks.get(b.playerId)!.tier;
+    if (tb !== ta) return tb < ta ? b : a;
+    if (b.score !== a.score) return b.score > a.score ? b : a;
+    return b.playerId < a.playerId ? b : a;
+  });
+
+  return { model: toModel(players.get(best.playerId)!, descriptor), rank: ranks.get(best.playerId)! };
+}

@@ -22,6 +22,9 @@ import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, getPlayerHeadshot, nflByeWeeks } fro
 import { loadLiveOdds, getFPAStats, parseSpread, processWeeklyScores, computeStreak } from '../../utils/coach-data';
 import {
   castBestScoredModel,
+  castTopRankedModel,
+  buildPositionRankIndex,
+  buildPositionDemand,
   scoreFaceoffSides,
   isCompositable,
   type FaceoffScoreSource,
@@ -502,9 +505,56 @@ if (opponentFranchiseId && userSideIds.length > 0 && opponentSideIds.length > 0)
     faceoffOrder,
   );
   if (scored.source) {
-    const awayModel = castBestScoredModel(scored.away, lineupPlayerIdentityMap, undefined, 'Player of the Game');
-    const homeModel = castBestScoredModel(scored.home, lineupPlayerIdentityMap, undefined, 'Player of the Game');
-    if (awayModel && homeModel) {
+    // Cast by POSITIONAL RANK MEASURED AGAINST DEMAND, not raw points. Ranking
+    // each candidate against every other player at his position (league-wide
+    // for projections — MFL's projectedScores feed carries ~600 players) is
+    // what varies the faces: raw points always crown the quarterback, so the
+    // same two headshots owned the panel every week. Dividing by how many
+    // starters the league needs at the position is what keeps it varied — a
+    // bare rank re-crowns the QBs, because the league starts 1 QB and 4+
+    // RB/WR/TE per team, so QB12 is replacement level where WR12 is a stud.
+    // Demand comes from this league's own lineup slots × its team count, so a
+    // rules change or an expansion team moves it without an edit here.
+    // The rank index is built from the same stat source `scoreFaceoffSides`
+    // elected, so the number under the face and the reason he's there agree. A
+    // side with nobody ranked (bye weeks, a week with no scores yet, a feed
+    // with no franchises) falls back to the old highest-score cast.
+    //
+    // ONLY a points source can carry a rank. Salary is the cascade's last
+    // resort and it wins for months at a time — the whole offseason, before
+    // MFL publishes projections for a week — and ranking contract dollars
+    // would print `WR1 · CIN · $8500K`, a pay rank wearing a performance
+    // rank's clothes. Worse, rank-over-demand would then elect the
+    // best-PAID player at the deepest position, which claims nothing about
+    // anybody. Salary weeks keep the old highest-value cast and no rank
+    // label; the dollar figure is already the honest thing to show.
+    const pointsSource = scored.source === 'projected' || scored.source === 'actual';
+    const rankPool = !pointsSource
+      ? new Map<string, number>()
+      : scored.source === 'projected'
+        ? projMap
+        : new Map<string, number>(
+            [...playerScoresMap].map(([id, byWeek]) => [id, byWeek?.[week] ?? 0]),
+          );
+    const positionDemand = buildPositionDemand(
+      SLOT_POSITIONS,
+      SLOT_ELIGIBILITY,
+      franchiseListForSalary.length,
+    );
+    const positionRanks = buildPositionRankIndex(rankPool, lineupPlayerIdentityMap, positionDemand);
+
+    const castSide = (cands: typeof scored.away) =>
+      castTopRankedModel(cands, lineupPlayerIdentityMap, positionRanks, undefined, 'Player of the Game')
+      ?? (() => {
+        const model = castBestScoredModel(cands, lineupPlayerIdentityMap, undefined, 'Player of the Game');
+        return model ? { model, rank: null } : null;
+      })();
+
+    const awayCast = castSide(scored.away);
+    const homeCast = castSide(scored.home);
+    const awayModel = awayCast?.model ?? null;
+    const homeModel = homeCast?.model ?? null;
+    if (awayCast && homeCast && awayModel && homeModel) {
       const scoreOf = (side: typeof scored.away, id: string) => side.find((c) => c.playerId === id)?.score ?? 0;
       const statFor = (side: typeof scored.away, id: string) => {
         const v = scoreOf(side, id);
@@ -520,19 +570,26 @@ if (opponentFranchiseId && userSideIds.length > 0 && opponentSideIds.length > 0)
       const throwbackOverrides = throwbackActive
         ? await getAllThrowbackPreferences([user.franchiseId, opponentFranchiseId].filter(Boolean) as string[])
         : {};
-      const sideFor = (model: NonNullable<typeof awayModel>, cands: typeof scored.away, franchiseId: string): FaceoffSide => {
+      const sideFor = (
+        cast: NonNullable<typeof awayCast>,
+        cands: typeof scored.away,
+        franchiseId: string,
+      ): FaceoffSide => {
         const brand = getThrowbackFranchiseBrand(franchiseId, throwbackActive, throwbackOverrides[franchiseId]);
         return {
-          model,
+          model: cast.model,
           chip: brand.name || `Franchise ${franchiseId}`,
           color: brand.color,
           watermark: brand.groupMe,
-          stat: statFor(cands, model.mflId),
+          stat: statFor(cands, cast.model.mflId),
+          // 'WR3' in place of a bare 'WR' — the meta line then says why this
+          // face won the panel, at no extra width.
+          positionLabel: cast.rank?.label,
         };
       };
       lineupFaceoff = {
-        away: sideFor(awayModel, scored.away, userIsHome ? opponentFranchiseId : user.franchiseId),
-        home: sideFor(homeModel, scored.home, userIsHome ? user.franchiseId : opponentFranchiseId),
+        away: sideFor(awayCast, scored.away, userIsHome ? opponentFranchiseId : user.franchiseId),
+        home: sideFor(homeCast, scored.home, userIsHome ? user.franchiseId : opponentFranchiseId),
         statSource: scored.source,
       };
     }
@@ -606,7 +663,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
 
     {lineupFaceoff && (
       <section class="lineup-faceoff" aria-label={`Week ${week} matchup — ${faceoffTitle}`}>
-        <FaceoffComposite away={lineupFaceoff.away} home={lineupFaceoff.home} size="card" />
+        <FaceoffComposite away={lineupFaceoff.away} home={lineupFaceoff.home} size="banner" />
         <div class="lineup-faceoff__band">
           {hasProjTotals ? (
             <div

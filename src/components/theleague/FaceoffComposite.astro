@@ -26,13 +26,20 @@ export interface FaceoffSide {
   watermark?: string;
   /** Optional stat line appended to the player meta (e.g. "24.6 proj"). */
   stat?: string;
+  /** Overrides the bare position in the meta line — e.g. 'WR3' when the
+   *  caller cast this side by positional rank, so the panel says WHY this
+   *  face is here. Falls back to `model.position`. */
+  positionLabel?: string;
 }
 
 export interface Props {
   away: FaceoffSide;
   home: FaceoffSide;
-  /** 'hero' = homepage-hero scale (default); 'card' = compact in-page scale. */
-  size?: 'hero' | 'card';
+  /** 'hero' = homepage-hero scale (default); 'card' = compact scale for a
+   *  narrow grid cell (~220px, the matchup slate); 'banner' = a single
+   *  full-width strip, where the card scale would blow the cutout up to the
+   *  full panel height and bury the crest behind it. */
+  size?: 'hero' | 'card' | 'banner';
   ariaLabel?: string;
 }
 
@@ -50,7 +57,7 @@ function panelOf(side: FaceoffSide) {
     ...side,
     gradient: `linear-gradient(160deg, #0b0e12 0%, ${color} 150%)`,
     glow: hexToRgba(color, 0.35),
-    meta: [side.model.position, side.model.nflTeam, side.stat].filter(Boolean).join(' · '),
+    meta: [side.positionLabel || side.model.position, side.model.nflTeam, side.stat].filter(Boolean).join(' · '),
   };
 }
 
@@ -114,6 +121,23 @@ const h = panelOf(home);
     min-height: clamp(120px, 13vw, 160px);
   }
 
+  .foc--banner .foc__panel {
+    min-height: clamp(132px, 15vw, 168px);
+  }
+
+  /* The banner is the only variant wide enough to have a middle worth
+     protecting, so its two stars stand at the OUTER edges rather than at the
+     centers of their panels. That clears the whole center column for the
+     franchise crest, which the card scale had the cutout parked directly on
+     top of. */
+  .foc--banner .foc__panel {
+    justify-content: flex-start;
+  }
+
+  .foc--banner .foc__panel--home {
+    justify-content: flex-end;
+  }
+
   .foc__glow {
     position: absolute;
     inset: -40% -30% auto -30%;
@@ -143,6 +167,15 @@ const h = panelOf(home);
     width: clamp(70px, 8vw, 100px);
   }
 
+  /* The banner panel is wide enough to read the crest as art rather than
+     texture, and with the cutout moved off to the edge nothing covers it, so
+     it runs larger and brighter than the grid card's. */
+  .foc--banner .foc__watermark {
+    width: clamp(120px, 15vw, 168px);
+    opacity: 0.34;
+    top: 46%;
+  }
+
   .foc__chip {
     position: absolute;
     top: 0.7rem;
@@ -163,7 +196,8 @@ const h = panelOf(home);
     backdrop-filter: blur(2px);
   }
 
-  .foc--card .foc__chip {
+  .foc--card .foc__chip,
+  .foc--banner .foc__chip {
     top: 0.45rem;
     left: 0.5rem;
     font-size: 0.55rem;
@@ -176,7 +210,8 @@ const h = panelOf(home);
     right: 0.75rem;
   }
 
-  .foc--card .foc__chip--right {
+  .foc--card .foc__chip--right,
+  .foc--banner .foc__chip--right {
     left: auto;
     right: 0.5rem;
   }
@@ -199,6 +234,24 @@ const h = panelOf(home);
     height: clamp(115px, 13vw, 130px);
   }
 
+  /* Banner: the cutout keeps its height — it's the subject, and the center is
+     what needed clearing, not the panel. It bleeds a little past the outer
+     edge so the star reads as standing at the sideline rather than posed in a
+     box, and the name plate (z-index 2) stays above it, so the text runs
+     across the shoulders and remains legible. */
+  .foc--banner .foc__cutout {
+    width: auto;
+    height: clamp(118px, 13.5vw, 152px);
+  }
+
+  .foc--banner .foc__cutout--away {
+    margin-left: -1.75rem;
+  }
+
+  .foc--banner .foc__cutout--home {
+    margin-right: -1.75rem;
+  }
+
   /* Mirror the away star to face the center VS. */
   .foc__cutout--away {
     transform: scaleX(-1);
@@ -218,8 +271,21 @@ const h = panelOf(home);
     background: linear-gradient(transparent, rgba(6, 9, 13, 0.85));
   }
 
-  .foc--card .foc__player {
+  .foc--card .foc__player,
+  .foc--banner .foc__player {
     padding: 0.35rem 0.5rem;
+  }
+
+  /* Banner names stay on the OUTER edge — same side as their star, reading
+     outward from the center VS. They overlap the cutout's shoulders, which is
+     fine: the plate's gradient sits above it (z-index 2) and the shoulders are
+     the flattest part of the art. The inner edge is left to the crest. */
+  .foc--banner .foc__player {
+    padding-left: 0.6rem;
+  }
+
+  .foc--banner .foc__player--right {
+    padding-right: 0.6rem;
   }
 
   .foc__player--right {
@@ -241,6 +307,10 @@ const h = panelOf(home);
     font-size: 0.7rem;
   }
 
+  .foc--banner .foc__player strong {
+    font-size: 0.78rem;
+  }
+
   .foc__player-meta {
     font-size: 0.575rem;
     font-weight: 700;
@@ -256,6 +326,11 @@ const h = panelOf(home);
   .foc--card .foc__player-meta {
     font-size: 0.5rem;
     letter-spacing: 0.08em;
+  }
+
+  .foc--banner .foc__player-meta {
+    font-size: 0.55rem;
+    letter-spacing: 0.1em;
   }
 
   .foc__vs {
@@ -280,7 +355,8 @@ const h = panelOf(home);
     backdrop-filter: blur(2px);
   }
 
-  .foc--card .foc__vs {
+  .foc--card .foc__vs,
+  .foc--banner .foc__vs {
     font-size: 0.75rem;
     width: 1.8rem;
     height: 1.8rem;
@@ -293,6 +369,23 @@ const h = panelOf(home);
 
     .foc--hero .foc__cutout {
       width: 130px;
+    }
+
+    /* A portrait phone is the one place the banner's panels are narrower than
+       they are tall, so a cutout sized to fill their height also fills most of
+       their WIDTH — at 411px it ran ~80% of the panel across, against ~38% on
+       a desktop at the same rule. Trim it (and its bleed, so the same share of
+       the head stays on-panel) to give the crest back its room. */
+    .foc--banner .foc__cutout {
+      height: 104px;
+    }
+
+    .foc--banner .foc__cutout--away {
+      margin-left: -1.25rem;
+    }
+
+    .foc--banner .foc__cutout--home {
+      margin-right: -1.25rem;
     }
   }
 </style>
