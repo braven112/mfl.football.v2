@@ -519,12 +519,23 @@ if (opponentFranchiseId && userSideIds.length > 0 && opponentSideIds.length > 0)
     // elected, so the number under the face and the reason he's there agree. A
     // side with nobody ranked (bye weeks, a week with no scores yet, a feed
     // with no franchises) falls back to the old highest-score cast.
-    const rankPool =
-      scored.source === 'projected' ? projMap
-      : scored.source === 'salary' ? salaryById
-      : new Map<string, number>(
-          [...playerScoresMap].map(([id, byWeek]) => [id, byWeek?.[week] ?? 0]),
-        );
+    //
+    // ONLY a points source can carry a rank. Salary is the cascade's last
+    // resort and it wins for months at a time — the whole offseason, before
+    // MFL publishes projections for a week — and ranking contract dollars
+    // would print `WR1 · CIN · $8500K`, a pay rank wearing a performance
+    // rank's clothes. Worse, rank-over-demand would then elect the
+    // best-PAID player at the deepest position, which claims nothing about
+    // anybody. Salary weeks keep the old highest-value cast and no rank
+    // label; the dollar figure is already the honest thing to show.
+    const pointsSource = scored.source === 'projected' || scored.source === 'actual';
+    const rankPool = !pointsSource
+      ? new Map<string, number>()
+      : scored.source === 'projected'
+        ? projMap
+        : new Map<string, number>(
+            [...playerScoresMap].map(([id, byWeek]) => [id, byWeek?.[week] ?? 0]),
+          );
     const positionDemand = buildPositionDemand(
       SLOT_POSITIONS,
       SLOT_ELIGIBILITY,
