@@ -26,13 +26,20 @@ export interface FaceoffSide {
   watermark?: string;
   /** Optional stat line appended to the player meta (e.g. "24.6 proj"). */
   stat?: string;
+  /** Overrides the bare position in the meta line — e.g. 'WR3' when the
+   *  caller cast this side by positional rank, so the panel says WHY this
+   *  face is here. Falls back to `model.position`. */
+  positionLabel?: string;
 }
 
 export interface Props {
   away: FaceoffSide;
   home: FaceoffSide;
-  /** 'hero' = homepage-hero scale (default); 'card' = compact in-page scale. */
-  size?: 'hero' | 'card';
+  /** 'hero' = homepage-hero scale (default); 'card' = compact scale for a
+   *  narrow grid cell (~220px, the matchup slate); 'banner' = a single
+   *  full-width strip, where the card scale would blow the cutout up to the
+   *  full panel height and bury the crest behind it. */
+  size?: 'hero' | 'card' | 'banner';
   ariaLabel?: string;
 }
 
@@ -50,7 +57,7 @@ function panelOf(side: FaceoffSide) {
     ...side,
     gradient: `linear-gradient(160deg, #0b0e12 0%, ${color} 150%)`,
     glow: hexToRgba(color, 0.35),
-    meta: [side.model.position, side.model.nflTeam, side.stat].filter(Boolean).join(' · '),
+    meta: [side.positionLabel || side.model.position, side.model.nflTeam, side.stat].filter(Boolean).join(' · '),
   };
 }
 
@@ -114,6 +121,10 @@ const h = panelOf(home);
     min-height: clamp(120px, 13vw, 160px);
   }
 
+  .foc--banner .foc__panel {
+    min-height: clamp(132px, 15vw, 168px);
+  }
+
   .foc__glow {
     position: absolute;
     inset: -40% -30% auto -30%;
@@ -143,6 +154,14 @@ const h = panelOf(home);
     width: clamp(70px, 8vw, 100px);
   }
 
+  /* The banner panel is wide enough to read the crest as art rather than
+     texture, so it runs larger and slightly less faint than the grid card —
+     the cutout no longer covers it. */
+  .foc--banner .foc__watermark {
+    width: clamp(104px, 13vw, 150px);
+    opacity: 0.24;
+  }
+
   .foc__chip {
     position: absolute;
     top: 0.7rem;
@@ -163,7 +182,8 @@ const h = panelOf(home);
     backdrop-filter: blur(2px);
   }
 
-  .foc--card .foc__chip {
+  .foc--card .foc__chip,
+  .foc--banner .foc__chip {
     top: 0.45rem;
     left: 0.5rem;
     font-size: 0.55rem;
@@ -176,7 +196,8 @@ const h = panelOf(home);
     right: 0.75rem;
   }
 
-  .foc--card .foc__chip--right {
+  .foc--card .foc__chip--right,
+  .foc--banner .foc__chip--right {
     left: auto;
     right: 0.5rem;
   }
@@ -199,6 +220,14 @@ const h = panelOf(home);
     height: clamp(115px, 13vw, 130px);
   }
 
+  /* Banner: ~72% of the panel height, so the headshot reads as a subject
+     placed ON the panel instead of filling it, and the franchise crest
+     behind it stays visible. */
+  .foc--banner .foc__cutout {
+    width: auto;
+    height: clamp(96px, 10.5vw, 122px);
+  }
+
   /* Mirror the away star to face the center VS. */
   .foc__cutout--away {
     transform: scaleX(-1);
@@ -218,7 +247,8 @@ const h = panelOf(home);
     background: linear-gradient(transparent, rgba(6, 9, 13, 0.85));
   }
 
-  .foc--card .foc__player {
+  .foc--card .foc__player,
+  .foc--banner .foc__player {
     padding: 0.35rem 0.5rem;
   }
 
@@ -241,6 +271,10 @@ const h = panelOf(home);
     font-size: 0.7rem;
   }
 
+  .foc--banner .foc__player strong {
+    font-size: 0.78rem;
+  }
+
   .foc__player-meta {
     font-size: 0.575rem;
     font-weight: 700;
@@ -256,6 +290,11 @@ const h = panelOf(home);
   .foc--card .foc__player-meta {
     font-size: 0.5rem;
     letter-spacing: 0.08em;
+  }
+
+  .foc--banner .foc__player-meta {
+    font-size: 0.55rem;
+    letter-spacing: 0.1em;
   }
 
   .foc__vs {
@@ -280,7 +319,8 @@ const h = panelOf(home);
     backdrop-filter: blur(2px);
   }
 
-  .foc--card .foc__vs {
+  .foc--card .foc__vs,
+  .foc--banner .foc__vs {
     font-size: 0.75rem;
     width: 1.8rem;
     height: 1.8rem;

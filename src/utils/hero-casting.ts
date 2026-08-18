@@ -476,3 +476,103 @@ export function castShowcasePanels(
   }
   return panels;
 }
+
+/** Positions eligible to model a "player of the game" faceoff.
+ *  DEF is already excluded by `isCompositable` (no cutout); PK is excluded
+ *  here on purpose — the kicker pool is ~34 deep league-wide, so ranking by
+ *  position makes a PK2 outrank every skill player on the roster, and a
+ *  kicker's face is not the story of a matchup. */
+export const SKILL_POSITIONS = ['QB', 'RB', 'WR', 'TE'] as const;
+
+/** A player's standing within his own position for the scored week. */
+export interface PositionRank {
+  /** 1 = best at the position this week. Lower wins. */
+  rank: number;
+  /** Display form — 'QB1', 'WR12'. */
+  label: string;
+  position: string;
+}
+
+/**
+ * Rank every scored player against the others at HIS position.
+ *
+ * The input should be the widest score pool available for the week (MFL's
+ * league-wide `projectedScores` feed, ~600 players), not just one roster —
+ * "WR3 this week" only means something measured against every WR.
+ *
+ * Scores of 0 or non-finite (missing / malformed feed rows) are unranked:
+ * an unplayed bye-week WR is not "the worst WR in football", he simply has
+ * no standing this week, and callers treat a missing rank as "can't cast".
+ * Ties break by player id so SSR output is stable.
+ */
+export function buildPositionRankIndex(
+  scores: Map<string, number>,
+  players: Map<string, PlayerIdentity>,
+  positions: readonly string[] = SKILL_POSITIONS,
+): Map<string, PositionRank> {
+  const allowed = new Set(positions);
+  const byPosition = new Map<string, Array<{ playerId: string; score: number }>>();
+
+  for (const [playerId, score] of scores) {
+    const p = players.get(playerId);
+    if (!p || !allowed.has(p.position)) continue;
+    if (!Number.isFinite(score) || score <= 0) continue;
+    const arr = byPosition.get(p.position) ?? [];
+    arr.push({ playerId, score });
+    byPosition.set(p.position, arr);
+  }
+
+  const index = new Map<string, PositionRank>();
+  for (const [position, arr] of byPosition) {
+    arr.sort((a, b) => b.score - a.score || a.playerId.localeCompare(b.playerId));
+    arr.forEach((entry, i) => {
+      index.set(entry.playerId, { rank: i + 1, label: `${position}${i + 1}`, position });
+    });
+  }
+  return index;
+}
+
+/**
+ * Cast the best-RANKED player from a scored candidate pool.
+ *
+ * Same contract as `castBestScoredModel` — deterministic, own-franchise
+ * candidates win when any exist — except the yardstick is the player's
+ * standing WITHIN HIS POSITION rather than his raw score. Raw points always
+ * cast the quarterback (a QB projects 25 where a WR projects 15), so the
+ * faceoff showed the same two faces every week; positional rank lets a
+ * league-best tight end or the week's WR1 headline instead.
+ *
+ * Unranked candidates (no score this week, or a position outside the ranked
+ * set) can't be cast — a rank is the whole basis of the pick. Returns null
+ * when nothing in the pool is ranked, so callers can fall back to
+ * `castBestScoredModel`.
+ *
+ * Ties on rank (a side holding both the QB2 and the WR2) break toward the
+ * higher raw score, then player id.
+ */
+export function castTopRankedModel(
+  candidates: ScoredCastCandidate[],
+  players: Map<string, PlayerIdentity>,
+  ranks: Map<string, PositionRank>,
+  userFranchiseId: string | undefined,
+  descriptor: string,
+): { model: HeroModel; rank: PositionRank } | null {
+  const resolvable = candidates.filter((c) => {
+    const p = players.get(c.playerId);
+    return !!p && isCompositable(p) && ranks.has(c.playerId);
+  });
+  if (resolvable.length === 0) return null;
+
+  const own = userFranchiseId ? resolvable.filter((c) => c.franchiseId === userFranchiseId) : [];
+  const pool = own.length > 0 ? own : resolvable;
+
+  const best = pool.reduce((a, b) => {
+    const ra = ranks.get(a.playerId)!.rank;
+    const rb = ranks.get(b.playerId)!.rank;
+    if (rb !== ra) return rb < ra ? b : a;
+    if (b.score !== a.score) return b.score > a.score ? b : a;
+    return b.playerId < a.playerId ? b : a;
+  });
+
+  return { model: toModel(players.get(best.playerId)!, descriptor), rank: ranks.get(best.playerId)! };
+}
