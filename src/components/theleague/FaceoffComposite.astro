@@ -276,20 +276,16 @@ const h = panelOf(home);
     padding: 0.35rem 0.5rem;
   }
 
-  /* Banner names run along the INNER edge, beside the center VS, because the
-     banner's stars stand at the outer edges — the name follows the space the
-     player vacated rather than sitting on his shoulders. The other variants
-     center their cutouts, so their names stay on the outside. */
+  /* Banner names stay on the OUTER edge — same side as their star, reading
+     outward from the center VS. They overlap the cutout's shoulders, which is
+     fine: the plate's gradient sits above it (z-index 2) and the shoulders are
+     the flattest part of the art. The inner edge is left to the crest. */
   .foc--banner .foc__player {
-    align-items: flex-end;
-    text-align: right;
-    padding-right: 0.6rem;
+    padding-left: 0.6rem;
   }
 
   .foc--banner .foc__player--right {
-    align-items: flex-start;
-    text-align: left;
-    padding-left: 0.6rem;
+    padding-right: 0.6rem;
   }
 
   .foc__player--right {
