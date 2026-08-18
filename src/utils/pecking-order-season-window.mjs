@@ -84,3 +84,14 @@ export function upcomingFirstIssueDate(now = new Date()) {
   const target = firstIssueTuesday(now.getUTCFullYear());
   return now < target ? target : null;
 }
+
+/**
+ * The Tuesday a given week's issue would have published, had the column run
+ * contemporaneously: week 1's issue plus (week - 1) weeks.
+ *
+ * Used to tell a real publication date from a generation date — see
+ * isRetroactivelyGenerated in pecking-order-landing.ts.
+ */
+export function expectedIssueTuesday(year, week) {
+  return new Date(firstIssueTuesday(year).getTime() + (week - 1) * 7 * 24 * 60 * 60 * 1000);
+}

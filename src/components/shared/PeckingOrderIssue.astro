@@ -20,6 +20,7 @@ import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 import type { LeagueSlug } from '../../types/nav';
 import { teamAccentVar } from '../../utils/team-accent-css';
 import { getLeaguePrefix, resolveLeaguePath } from '../../utils/nav-utils';
+import { isRetroactivelyGenerated } from '../../utils/pecking-order-landing';
 
 export interface RankingRow {
   rank: number;
@@ -173,6 +174,16 @@ const formattedDate = new Date(issue.publishedAt).toLocaleDateString('en-US', {
   year: 'numeric', month: 'long', day: 'numeric',
 });
 
+/**
+ * The dateline is only shown when `publishedAt` is actually a publication
+ * date. Issues generated after the fact (launch seeds, backfills) carry the
+ * day the FILE was written, and printing that as a dateline stamped a Week 14
+ * 2025 issue "August 14, 2026" — which reads as this morning's column. Every
+ * committed issue today is such a seed. There is no honest date to substitute,
+ * so the eyebrow just carries the week it covers.
+ */
+const showDateline = !isSample && !isRetroactivelyGenerated(issue);
+
 const orderedAwards: { key: string; card: AwardCard | null }[] = [
   { key: 'statOfWeek',     card: issue.awards.statOfWeek },
   { key: 'benchBlunder',   card: issue.awards.benchBlunder },
@@ -196,7 +207,7 @@ const methodology = issue.methodology
       <span class="pr-hero__badge">The Pecking Order</span>
       <span class="pr-hero__dot" aria-hidden="true"></span>
       <span>Week {issue.week} · {issue.year}</span>
-      {!isSample && (
+      {showDateline && (
         <>
           <span class="pr-hero__dot" aria-hidden="true"></span>
           <time datetime={issue.publishedAt}>{formattedDate}</time>
