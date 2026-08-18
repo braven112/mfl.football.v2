@@ -309,7 +309,14 @@ if (staging.featuredImage) {
     (newEntries.length === 1 ? newEntries[0].leagueSlug : null);
   const target = newEntries.find((n) => n.leagueSlug === imageLeague);
   if (target) {
-    target.entry.image = staging.featuredImage;
+    // `entry.image` is a BARE FILENAME — every consumer builds the URL as
+    // `/assets/whats-new/${entry.image}` (WhatsNewDetailPage, WhatsNewRow,
+    // FeatureCompositeHero). Staging writes `featuredImage` as a full path,
+    // so copying it verbatim published `/assets/whats-new//assets/whats-new/
+    // foo.webp` — a broken image on the live entry, and a red
+    // `whats-new-data` test that blocks every PR until someone repairs the
+    // published JSON by hand. Accept either form, store the basename.
+    target.entry.image = staging.featuredImage.split('/').pop();
     target.entry.imageAlt = staging.featuredImageAlt || 'Weekly rollup screenshot';
   } else {
     // The weekly screenshot is MANDATORY (CLAUDE.md) — silently publishing

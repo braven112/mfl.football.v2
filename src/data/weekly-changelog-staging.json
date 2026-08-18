@@ -1,4 +1,21 @@
 {
   "weekOf": "2026-08-24",
-  "changes": []
+  "changes": [
+    {
+      "date": "2026-08-18",
+      "type": "bug-fix",
+      "summary": "Throwback Week wasn't throwing all the way back on the Set Lineup screen. Week 4 correctly gave both teams their old names and their old colors, then painted the modern logo behind the players anyway — so the Pigskins, whose throwback name is just 'Pacific Pigskins' again, showed no sign of throwing back at all. The crest was the one piece of the old identity nobody had wired up: the overlay swapped the team's icon, but that banner reads a different field, and that field kept pointing at today's mark. It now wears the era's own logo, and each team's 2013-or-whenever crest sits behind its player like it was supposed to.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-08-18",
+      "type": "style-tweak",
+      "summary": "The matchup banner on Set Lineup was showing you the same two faces every week, and both of them were quarterbacks. It picked whoever projected highest, and since a starting QB projects ten points clear of anyone else on a roster, the tight end who is the best tight end in football never once got the panel. It now casts by rank within position, weighed against how many the league actually has to start — we start one quarterback and four backs and receivers, so QB12 is a guy you'd bench where WR12 is a stud, and the panel finally knows the difference. The line under the name says which — WR1 · CIN · 18.0 PROJ — so you can see why that face is up there. Thirteen of sixteen teams get a new headliner out of it, and a genuinely elite quarterback still gets his panel. The two headshots also moved out to the far edges of the banner instead of standing in the middle of it, which finally lets your franchise crest read behind them instead of being a rumor.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "theleague"
+    }
+  ]
 }
