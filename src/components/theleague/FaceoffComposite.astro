@@ -374,5 +374,22 @@ const h = panelOf(home);
     .foc--hero .foc__cutout {
       width: 130px;
     }
+
+    /* A portrait phone is the one place the banner's panels are narrower than
+       they are tall, so a cutout sized to fill their height also fills most of
+       their WIDTH — at 411px it ran ~80% of the panel across, against ~38% on
+       a desktop at the same rule. Trim it (and its bleed, so the same share of
+       the head stays on-panel) to give the crest back its room. */
+    .foc--banner .foc__cutout {
+      height: 104px;
+    }
+
+    .foc--banner .foc__cutout--away {
+      margin-left: -1.25rem;
+    }
+
+    .foc--banner .foc__cutout--home {
+      margin-right: -1.25rem;
+    }
   }
 </style>
