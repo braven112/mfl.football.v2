@@ -1174,3 +1174,83 @@ keep in sync). Render just the chip element with the shared classes:
   in-viewport on mount).
 - First consumer: draft-room `PlayerDetailModal.tsx` header (replaced a raw
   64px `<img>` with a position-color border).
+
+## Faceoff casting: rank ÷ starter demand, not points (2026-08-18)
+
+The lineup faceoff cast each side with `castBestScoredModel` — highest
+projection wins. That is a **quarterback machine**: a starting QB projects
+~25 where the best WR projects ~15, so 16 of 16 rosters headlined their QB,
+every week, forever. The panel was working exactly as specified and was
+still boring.
+
+Two fixes, and the FIRST one is not enough on its own:
+
+- **Rank within position** (`buildPositionRankIndex`) — rank every scored
+  player against the others at his position, from the widest pool available
+  for the elected stat source (MFL's `projectedScores` feed is league-WIDE,
+  ~600 players, so "WR3 this week" is a real claim, not a roster-local one).
+  This changed 11 of 16 headliners.
+- **Divide by starter demand** (`buildPositionDemand`) — a bare rank still
+  favors QBs, because the pools are different depths: 74 ranked QBs against
+  221 WRs means QB6 is a much cheaper achievement than WR6, and comparing
+  the raw integers treats them as equal. Demand = a position's starting
+  slots × the league's team count (TheLeague: QB 16, RB/WR/TE 32), and
+  `rank / demand` is the cross-position yardstick. Two more headliners
+  changed, and QB1–QB3 correctly keep their panels — an elite QB is not
+  penalized for being one, only a middling one loses to a better player at
+  a deeper position.
+
+Three things that are load-bearing:
+
+- **Derive demand from the league's own lineup slots, never a constant.**
+  `buildPositionDemand(SLOT_POSITIONS, SLOT_ELIGIBILITY, teamCount)` means a
+  rules change or an expansion team moves the denominators with no edit.
+  Multi-eligible slots (FLEX) split evenly across their eligible positions —
+  a modeling choice, not a measurement, and deliberately neutral: equal
+  demand for RB/WR/TE makes the comparison AMONG them fall back to raw rank,
+  which is the right answer with no evidence to weight them apart.
+- **The demand map doubles as the position filter**, which is how PK and DEF
+  stay out without a second list. That exclusion is not cosmetic: ranked
+  literally, the kicker pool is ~34 deep league-wide, so a PK2 outranks every
+  skill player on a roster — two franchises headlined a kicker or a defense
+  before the filter existed.
+- **Round the demand.** Three FLEX slots split three ways sum to
+  0.9999999999999999, so an unrounded denominator is 31.999999999999996 and
+  every tier computed from it is noise in the last digit.
+
+Casting returns `{ model, rank }`, and the rank rides to the panel as
+`FaceoffSide.positionLabel`, replacing the bare position in the meta line —
+`WR1 · CIN · 18.0 PROJ`. That costs no width and makes the pick legible:
+the panel says WHY that face is there. Unranked candidates can't be cast at
+all (a rank is the whole basis), so a bye week or a scoreless week falls back
+to `castBestScoredModel`.
+
+## A size variant is tuned to a CONTAINER WIDTH — reusing it elsewhere is a bug (2026-08-18)
+
+`FaceoffComposite`'s `card` size was tuned for the matchup slate, where it
+renders in a ~220px grid cell. The lineup page reused `card` for a
+full-page-width banner, and the same rules that read as correct at 220px are
+wrong at 890px: the cutout is height-sized (see the sizing note above), so at
+full width it filled the panel top-to-bottom and parked directly on the
+franchise crest, which then read as texture rather than as the team's mark.
+Nothing about the CSS was wrong — it was being asked a question it wasn't
+tuned for.
+
+The fix is a third size (`banner`), not a tweak to `card`; the slate still
+wants what `card` does. What `banner` changes, all of it width-driven:
+
+- Panels anchor their cutouts to the OUTER edges (`justify-content` flipped
+  per side) and bleed ~1.75rem past them. A banner is the only variant with
+  a middle worth protecting — at 220px there is no middle — and clearing the
+  center column is what lets the crest show, NOT shrinking the player.
+- The crest runs larger and brighter (168px / 0.34) because nothing covers it
+  any more.
+- Names stay on the outer edge, same side as their star (commissioner pick
+  over the inner-aligned variant, which crowded both names against the VS and
+  put them back on top of the crest).
+- A portrait phone gets its own trim below 640px: the panels are narrower
+  than they are tall there, so a cutout sized to fill their HEIGHT also fills
+  ~80% of their WIDTH (against ~38% on a desktop under the same rule). 118px
+  → 104px, bleed 1.75rem → 1.25rem. This is the same lesson one breakpoint
+  down — the aspect ratio of the container, not its size, is what the rule is
+  actually tuned to.

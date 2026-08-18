@@ -47,3 +47,41 @@ Old MFL "icons" are 300×50 strips (mini-banners) at exactly the 6:1 ratio of th
 ## 2026-07-13 - What's New extended-rotation campaigns (heroRotationDays)
 
 **Insight:** `WhatsNewEntry.heroRotationDays` (e.g. 14) does three things at once in `hero-resolver.ts`: extends the 7-day fresh window, makes the entry beat routine fresh entries for the daily pick, and keeps it in a 50/50 coin flip against the urgent Cut Watch tier that locks out ordinary features. Per-visitor targeting is NOT in the resolver — the homepage filters the entry out of the `entries` array it passes in (signed-out visitors and picked owners never see the promo). The KV read for targeting is gated on `isEntryInHeroWindow`, so the cost disappears when the campaign expires.
+
+## 2026-08-18 - An overlay that maps a FIELD WHITELIST silently misses new consumers
+
+**Context:** Owner report — Week 4 on Set Lineup showed legacy names and legacy
+colors over the MODERN franchise logo. Reproduced by loading
+`/theleague/lineup?week=4`: the chip read "BOYZ II MEN" while the watermark
+was still `/assets/theleague/group-me/vitside-mafia.png`.
+
+**Insight:** `getThrowbackFranchiseBrand` overlays a hand-listed set of fields
+(`name`, `icon`, `banner`, era colors) onto the current brand. The lineup
+faceoff watermark reads `groupMe` — a field NOT in that list — so it kept the
+current value while everything around it threw back. The `icon` the overlay
+does swap reaches nothing on that page. Nobody noticed for a month because the
+surface was added after the overlay: **a whitelist overlay fails silently and
+plausibly for any consumer that reads a field it doesn't map**, and the failure
+looks like "this one asset didn't get updated" rather than like a bug in the
+overlay. The worst-case victim is a franchise whose throwback keeps its NAME
+(Pacific Pigskins → Pacific Pigskins, 2013 art) — there the crest is the ONLY
+tell, so that panel showed no throwback at all.
+
+**Recommendation:** when adding a throwback-aware surface, check which brand
+FIELD it renders, not just that it calls the chokepoint. Prefer spreading and
+then overriding (as this does) over listing fields — and when you must list,
+add the new field the moment a consumer reads it.
+
+**Resolution:** `groupMe: identity.groupMe ?? identity.icon ?? brand.groupMe`.
+The fallback order matters — exactly ONE history entry in the config carries
+its own `groupMe` (Heavy Chevy 2020), while all 42 carry an `icon`, and those
+are square (100×100), which is the shape `.foc__watermark`'s
+`aspect-ratio: 1; object-fit: contain` box wants. `groupMeDark` is cleared for
+the same reason the `*Dark` colors are (see the era-colors note above): it
+belongs to the CURRENT brand and no era has a dark variant.
+
+**Evidence:** `tests/throwback-identity.test.ts` — asserts the swap against the
+real config (verified to FAIL with the fix removed, so it isn't vacuous) plus a
+sweep proving every franchise's resolved throwback crest is a committed file. A
+404 watermark would be a worse bug than the one being fixed, and era art paths
+are hand-maintained.
