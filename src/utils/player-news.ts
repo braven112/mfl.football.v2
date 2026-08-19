@@ -102,6 +102,26 @@ function publishedAt(raw: unknown): string | null {
 }
 
 /**
+ * Does this payload actually look like ESPN's news envelope?
+ *
+ * This is the difference between "ESPN says there is no news" and "we did not
+ * understand ESPN's answer", and those must never be merged: both produce zero
+ * articles, so a shape change upstream would otherwise render as a confident
+ * "No recent ESPN stories" on every player in the league. That is precisely the
+ * failure this module's `empty` / `error` split exists to prevent, and the
+ * parser alone could not express it — it returns `[]` either way.
+ */
+export function hasArticlesEnvelope(payload: unknown): boolean {
+  return Array.isArray((payload as { articles?: unknown } | null)?.articles);
+}
+
+/** Top-level keys of an unrecognized payload, for diagnosing a shape change. */
+export function describePayloadShape(payload: unknown): string {
+  if (payload === null || typeof payload !== 'object') return typeof payload;
+  return Object.keys(payload as Record<string, unknown>).slice(0, 20).join(',') || '(no keys)';
+}
+
+/**
  * Normalize ESPN's `{ articles: [...] }` envelope. PURE — never throws, never
  * fetches. Returns newest-first, capped at `limit`.
  *
@@ -205,6 +225,16 @@ export async function fetchAthleteNews(
   try {
     payload = await response.json();
   } catch {
+    return fail('upstream-shape');
+  }
+
+  // An unrecognized envelope is a READ FAILURE, not "no news". Log the shape so
+  // an upstream change is diagnosable from the runtime logs rather than showing
+  // up as every player quietly having nothing to report.
+  if (!hasArticlesEnvelope(payload)) {
+    console.warn(
+      `[player-news] unrecognized ESPN payload for ${espnId}; top-level keys: ${describePayloadShape(payload)}`,
+    );
     return fail('upstream-shape');
   }
 

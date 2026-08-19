@@ -10,6 +10,7 @@ import {
   ESPN_ATHLETE_NEWS_BASE,
   PLAYER_NEWS_MAX_LIMIT,
   PLAYER_NEWS_DEFAULT_LIMIT,
+  describePayloadShape,
 } from '../src/utils/player-news';
 
 /**
@@ -246,5 +247,37 @@ describe('fetchAthleteNews', () => {
     await fetchAthleteNews('4362628');
     expect(spy.mock.calls[0][0]).toBe(`${ESPN_ATHLETE_NEWS_BASE}/4362628/news`);
     expect(String(spy.mock.calls[0][0])).not.toContain('news?team=');
+  });
+});
+
+describe('shape mismatch is never reported as "no news"', () => {
+  // Every player on the preview deploy came back `empty` — Mahomes, Kelce,
+  // Budda Baker. That is not a league-wide news drought; it is the parser
+  // returning [] for an envelope it did not recognize. Both cases produce zero
+  // articles, which is exactly why they have to be separated here.
+  const stub = (payload: unknown) => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve(payload) })));
+  };
+
+  it('treats a missing articles array as error, not empty', async () => {
+    for (const payload of [{}, { news: [] }, { items: [] }, { articles: null }, { articles: 'nope' }, []]) {
+      stub(payload);
+      const result = await fetchAthleteNews('3139477');
+      expect(result.status).toBe('error');
+      expect(result.reason).toBe('upstream-shape');
+    }
+  });
+
+  it('still reports a genuinely empty articles array as empty', async () => {
+    stub({ articles: [] });
+    const result = await fetchAthleteNews('3139477');
+    expect(result.status).toBe('empty');
+    expect(result.reason).toBeUndefined();
+  });
+
+  it('describePayloadShape names the keys so an upstream change is diagnosable', () => {
+    expect(describePayloadShape({ header: 1, athlete: 2 })).toBe('header,athlete');
+    expect(describePayloadShape(null)).toBe('object');
+    expect(describePayloadShape('x')).toBe('string');
   });
 });
