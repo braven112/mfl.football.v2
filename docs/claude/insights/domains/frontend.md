@@ -4,6 +4,38 @@ Domain knowledge about UI/UX patterns, component architecture, and frontend deve
 
 ---
 
+## 2026-08-18 - A Helpful Default Must Not Wear the Saved State's Clothes
+
+**Context:** Set Lineup fills the nine starter slots by projection when the
+owner has no lineup on file. The fill is intentional and good; presenting it
+as saved was not.
+
+**Insight:** The page's submit bar derives its label purely from a diff — zero
+unsaved changes rendered as a disabled "Lineup Saved" button. On a week with
+nothing submitted, the untouched projection fill also diffs to zero, so the
+page confidently told the owner their lineup was saved over slots MFL had
+never seen. Every honest signal was there in the data and none of it reached
+the UI, because "nothing has changed since load" and "this matches what the
+server holds" were being treated as the same question. They are only the same
+when the page loaded the server's state to begin with.
+
+Once the page can distinguish the two (`lineupOnFile`), both surfaces follow:
+a banner naming the fill for what it is, and a submit button that offers to
+save it rather than claiming it already is.
+
+**Evidence:** `src/pages/theleague/lineup.astro` — `lineupOnFile` on the client
+payload, the `.lineup-unsaved-note` banner, and the `updateSubmitBar()` branch
+order (a not-yet-filled roster must land on disabled "Submit Lineup", never on
+"Lineup Saved").
+
+**Recommendation:** Any UI that auto-populates a form on the user's behalf
+needs a flag for whether the values came from the server or from the page's own
+suggestion — and needs to say which. Deriving "saved" from an empty diff is the
+bug, and it is invisible in every screenshot where the guess happens to be
+reasonable.
+
+---
+
 ## 2026-08-18 - Reproduce a Production-Only CSS Bug by Localizing the Shipped Bundle
 
 **Context:** A hero rendered with no background on an owner's phone and nowhere

@@ -35,6 +35,8 @@ import { isThrowbackWeek } from '../../data/theleague/throwback-config';
 import { getAllThrowbackPreferences } from '../../utils/throwback-store';
 import FaceoffComposite, { type FaceoffSide } from '../../components/theleague/FaceoffComposite.astro';
 import { getLeagueBySlug } from '../../config/leagues';
+import { extractLineupStarters, resolveRostersPayload, resolveLineupFillState, resolveWeekLineup, resolvePlayerName } from '../../utils/lineup-sources';
+import { resolveSubmitButtonState } from '../../utils/lineup-submit-state';
 import '../../styles/loading.css';
 
 // ---------------------------------------------------------------------------
@@ -59,25 +61,34 @@ const mflBase = `https://api.myfantasyleague.com/${leagueYear}/export`;
 // Parallel data fetches (all 9 run concurrently to avoid waterfall).
 // Rosters are fetched league-wide (no FRANCHISE filter) so the weekly
 // opponent's roster is available for the faceoff composite.
-const [rostersRes, projRes, weeklyRes, fpaRes, playersRes, liveOdds, startersRes, nflSchedRes, leagueSchedRes] = await Promise.all([
+const [rostersRes, projRes, weeklyRes, fpaRes, playersRes, liveOdds, weekResultsRes, nflSchedRes, leagueSchedRes] = await Promise.all([
   fetch(`${mflBase}?TYPE=rosters&L=${MFL_LEAGUE_ID}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
   fetch(`${mflBase}?TYPE=projectedScores&L=${MFL_LEAGUE_ID}&W=${week}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
   fetch(`${mflBase}?TYPE=weeklyResults&L=${MFL_LEAGUE_ID}&W=YTD&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
   fetch(`${mflBase}?TYPE=fantasyPointsAllowed&L=${MFL_LEAGUE_ID}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
   fetch(`${mflBase}?TYPE=players&L=${MFL_LEAGUE_ID}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
   loadLiveOdds(week),
-  fetch(`${mflBase}?TYPE=myStarters&L=${MFL_LEAGUE_ID}&FRANCHISE=${user.franchiseId}&W=${week}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
+  // The requested week's results — the readable record of who is in a
+  // lineup. An export of `myStarters` used to be here; that is an IMPORT
+  // type, which MFL rejects, so no submitted lineup ever loaded (see
+  // utils/lineup-sources.ts).
+  fetch(`${mflBase}?TYPE=weeklyResults&L=${MFL_LEAGUE_ID}&W=${week}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
   fetch(`${mflBase}?TYPE=nflSchedule&W=${week}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
   fetch(`${mflBase}?TYPE=schedule&L=${MFL_LEAGUE_ID}&W=${week}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
 ]);
 
-const rostersData = rostersRes?.ok ? await rostersRes.json() : null;
+const liveRostersData = rostersRes?.ok ? await rostersRes.json().catch(() => null) : null;
+// MFL answers a throttled request with HTTP 200 and an error body, so fall
+// back to the committed feed whenever the payload has no franchises — an
+// empty roster renders every slot as "Tap to set".
+const rostersData = resolveRostersPayload(liveRostersData, 'theleague', leagueYear);
+const weekResultsData = weekResultsRes?.ok ? await weekResultsRes.json().catch(() => null) : null;
 const leagueSchedData = leagueSchedRes?.ok ? await leagueSchedRes.json().catch(() => null) : null;
-const projData = projRes?.ok ? await projRes.json() : null;
-const weeklyData = weeklyRes?.ok ? await weeklyRes.json() : null;
-const fpaData = fpaRes?.ok ? await fpaRes.json() : null;
-const playersData = playersRes?.ok ? await playersRes.json() : null;
-const nflSchedData = nflSchedRes?.ok ? await nflSchedRes.json() : null;
+const projData = projRes?.ok ? await projRes.json().catch(() => null) : null;
+const weeklyData = weeklyRes?.ok ? await weeklyRes.json().catch(() => null) : null;
+const fpaData = fpaRes?.ok ? await fpaRes.json().catch(() => null) : null;
+const playersData = playersRes?.ok ? await playersRes.json().catch(() => null) : null;
+const nflSchedData = nflSchedRes?.ok ? await nflSchedRes.json().catch(() => null) : null;
 
 // Build kickoff map from MFL schedule (source of truth for game locks)
 const nowEpoch = Math.floor(Date.now() / 1000);
@@ -150,6 +161,7 @@ const lineupPlayerIdentityMap = getPlayerMap(leagueYear);
 // ---------------------------------------------------------------------------
 interface LineupPlayer {
   id: string;
+  rosterStatus: string;
   name: string;
   headshot: string;
   position: string;
@@ -262,7 +274,9 @@ const roster: LineupPlayer[] = rosterPlayers.map((rp: any) => {
 
   return {
     id: rp.id,
-    name: pd?.name || `Player ${rp.id}`,
+    // MFL's own roster bucket — TAXI_SQUAD / INJURED_RESERVE can't start.
+    rosterStatus: rp.status || 'ROSTER',
+    name: resolvePlayerName(identity, pd, rp.id),
     headshot,
     position,
     nflTeam,
@@ -281,16 +295,27 @@ const roster: LineupPlayer[] = rosterPlayers.map((rp: any) => {
   };
 });
 
-// Parse starters from the parallel fetch
-const starterIds = new Set<string>();
-try {
-  if (startersRes?.ok) {
-    const startersData = await startersRes.json();
-    const rawStarters = startersData?.myStarters?.player;
-    const starterList = Array.isArray(rawStarters) ? rawStarters : rawStarters ? [rawStarters] : [];
-    starterList.forEach((p: any) => starterIds.add(p.id));
-  }
-} catch { /* starters unavailable — slots will be empty, user fills manually */ }
+// This week's results entry — the authoritative record of who is in a
+// lineup (and, once played, what they scored). The week-scoped fetch wins;
+// the YTD payload backs it up, since MFL carries future weeks there too.
+// Reading the lineup record has THREE outcomes, not two, and conflating the
+// last two is destructive: a lineup is on file, no lineup is on file, or we
+// could not find out. Every weeklyResults source failing looks identical to
+// an empty lineup — and if that silently armed the submit button over a
+// projection fill, one tap would overwrite a lineup the owner really had set.
+const weekLineup = resolveWeekLineup({
+  weekScopedPayload: weekResultsData,
+  ytdPayload: weeklyUnwrapped,
+  week,
+  franchiseId: user.franchiseId,
+  league: 'theleague',
+  leagueYear,
+});
+const resultsWeekEntry = weekLineup.entry;
+const lineupReadOk = weekLineup.lineupReadOk;
+const lineupFromCache = weekLineup.fromCache;
+const weekScheduled = weekLineup.weekScheduled;
+const starterIds = new Set(weekLineup.starters.map((p) => p.id));
 
 // Build initial slots based on starters
 const slots: { position: string; index: number; playerId: string | null; locked: boolean }[] = [];
@@ -298,9 +323,22 @@ const usedPlayerIds = new Set<string>();
 
 // If MFL returned starters, use those; otherwise fill optimally by projection
 const hasStarters = starterIds.size > 0;
+// A week that has already been played can't take a new lineup, so never offer
+// to submit one over it — the projection fill there is a read-only view.
+const weekIsPast = week < currentWeek;
 const candidatePool = hasStarters
   ? roster.filter(p => starterIds.has(p.id))
-  : [...roster].sort((a, b) => (b.projection ?? -1) - (a.projection ?? -1));
+  // Only active-roster players are legal starters, so the auto-fill must not
+  // reach for taxi-squad or IR players — that fill is now one tap from being
+  // submitted. (A recorded lineup is rendered as-is: MFL accepted it.)
+  : [...roster]
+      // Legal starters only. Taxi/IR can never start; a locked or bye player
+      // can't start THIS week, and on a week that can still be submitted the
+      // fill has to agree with the client's own Set Optimal. A past week keeps
+      // the unfiltered view — everything is locked there and nothing is
+      // submittable, so filtering would just empty the page.
+      .filter(p => p.rosterStatus === 'ROSTER' && (weekIsPast || (!p.gameLocked && !p.isBye)))
+      .sort((a, b) => (b.projection ?? -1) - (a.projection ?? -1));
 
 // Pre-allocate slots array to preserve positional order
 for (let i = 0; i < SLOT_POSITIONS.length; i++) {
@@ -330,6 +368,31 @@ for (let i = 0; i < slots.length; i++) {
     slots[i].locked = assignedPlayer.gameLocked;
   }
 }
+
+// What the nine slots actually represent, and whether saving them is safe.
+const fillState = resolveLineupFillState({
+  hasStarters,
+  lineupReadOk,
+  weekIsPast,
+  hasProjections: projMap.size > 0,
+  slotsFilled: slots.every((s) => s.playerId !== null),
+  fromCache: lineupFromCache,
+  weekScheduled,
+  franchiseListed: weekLineup.franchiseListed,
+});
+const canSubmitUnsaved = fillState.canSubmitUnsaved;
+const canSubmitEdits = fillState.canSubmitEdits;
+// The server-rendered button comes from the SAME resolver the client uses, so
+// the pre-hydration state can't disagree with the post-hydration one.
+const initialSubmitState = resolveSubmitButtonState({
+  changes: 0,
+  allFilled: slots.every((s) => s.playerId !== null),
+  lineupOnFile: hasStarters,
+  canSubmitEdits,
+  canSubmitUnsaved,
+  fromCache: lineupFromCache && hasStarters,
+});
+const fillIsProjected = fillState.fillIsProjected;
 
 // Available weeks for selector
 const availableWeeks: { week: number; label: string; isCurrent: boolean; isPast: boolean }[] = [];
@@ -372,32 +435,9 @@ for (const m of schedMatchups) {
   }
 }
 
-// This week's weeklyResults entry (from the YTD fetch) — the authoritative
-// record of who actually started, and their actual points.
-const rawWeeklyList = Array.isArray(weeklyUnwrapped)
-  ? weeklyUnwrapped
-  : Array.isArray(weeklyUnwrapped?.weeklyResults)
-    ? weeklyUnwrapped.weeklyResults
-    : weeklyUnwrapped?.weeklyResults ? [weeklyUnwrapped.weeklyResults] : [];
-const resultsWeekEntry = rawWeeklyList
-  .map((item: any) => item?.weeklyResults ?? item)
-  .find((wr: any) => parseInt(wr?.week, 10) === week);
-
 /** Started player ids + actual points for a franchise in this week's results. */
-function weekStarters(franchiseId: string): Array<{ id: string; score: number }> {
-  const matchupsList = Array.isArray(resultsWeekEntry?.matchup)
-    ? resultsWeekEntry.matchup
-    : resultsWeekEntry?.matchup ? [resultsWeekEntry.matchup] : [];
-  for (const m of matchupsList) {
-    const sides = Array.isArray(m?.franchise) ? m.franchise : m?.franchise ? [m.franchise] : [];
-    const side = sides.find((f: any) => f?.id === franchiseId);
-    if (!side) continue;
-    const playerList = Array.isArray(side.player) ? side.player : side.player ? [side.player] : [];
-    return playerList
-      .filter((p: any) => p?.id && p.status === 'starter')
-      .map((p: any) => ({ id: p.id, score: parseFloat(p.score) || 0 }));
-  }
-  return [];
+function weekStarters(franchiseId: string): Array<{ id: string; score: number | null }> {
+  return extractLineupStarters(resultsWeekEntry, franchiseId);
 }
 
 const salaryById = new Map<string, number>();
@@ -457,7 +497,7 @@ function bestLineupProjTotal(playerIds: string[]): number {
   return total;
 }
 
-const isPastWeek = week < currentWeek;
+const isPastWeek = weekIsPast;
 
 // User side: the starters this page renders (falls back to the roster when no
 // lineup resolves yet). Opponent side: their recorded starters for the week;
@@ -472,7 +512,11 @@ if (opponentFranchiseId) {
   const recorded = weekStarters(opponentFranchiseId);
   if (recorded.length > 0) {
     opponentSideIds = recorded.map((p) => p.id);
-    opponentActualById = new Map(recorded.map((p) => [p.id, p.score]));
+    // Only real reported scores go in the map — a null would land as a 0
+    // and shadow the playerScoresMap fallback in faceoffCandidates.
+    opponentActualById = new Map(
+      recorded.filter((p) => p.score !== null).map((p) => [p.id, p.score as number]),
+    );
   } else {
     const oppFranchise = franchiseListForSalary.find((f: any) => f?.id === opponentFranchiseId);
     const oppPlayers = Array.isArray(oppFranchise?.player) ? oppFranchise.player : oppFranchise?.player ? [oppFranchise.player] : [];
@@ -633,6 +677,22 @@ const lineupPayload = {
   roster,
   schedule,
   lastSubmitted: null,
+  // Whether MFL actually holds a lineup for this week. When it doesn't, the
+  // slots below are a projection fill and the submit bar must not claim
+  // "Lineup Saved" over them.
+  lineupOnFile: hasStarters,
+  // …and whether we may offer to SAVE that fill. False when the read failed
+  // (an overwrite could destroy a real lineup) or the week is already played.
+  canSubmitUnsaved,
+  // Whether an EDITED lineup may be submitted at all. False on a failed read
+  // (the owner would be editing a projection they believe is theirs) and on a
+  // week MFL can't take a lineup for.
+  canSubmitEdits,
+  // Up to a day old, so the button must not read a flat "Lineup Saved".
+  lineupFromCache: lineupFromCache && hasStarters,
+  // What the slots represent — a saved draft from a different mode was built
+  // on a different base and must not be replayed.
+  fillMode: fillState.mode,
 };
 
 const payloadJson = JSON.stringify(lineupPayload);
@@ -721,6 +781,35 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
       </button>
       <div class="lineup-status" role="status" aria-live="polite" id="lineup-status"></div>
     </div>
+
+    {fillState.mode !== 'saved' && (
+      <p class:list={['lineup-unsaved-note',
+        (fillState.mode === 'read-failed' || fillState.mode === 'saved-from-cache') && 'lineup-unsaved-note--warn']}>
+        <svg class="lineup-unsaved-note__icon" aria-hidden="true" width="14" height="14" viewBox="0 0 16 16">
+          <circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.2"/>
+          <path d="M8 4.75v4M8 11.1v.15" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+        <span>
+          {fillState.mode === 'franchise-unlisted'
+            ? `MFL doesn't list your team in Week ${week} — no game scheduled, so there's no lineup to set.`
+            : fillState.mode === 'week-unscheduled'
+            ? `MFL has no Week ${week} on this season's schedule, so there's no lineup to set — these slots are just a view of your roster.`
+            : fillState.mode === 'saved-partial'
+              ? `This is your submitted Week ${week} lineup, but at least one of those players is no longer on your roster, so their slot shows empty.`
+              : fillState.mode === 'saved-from-cache'
+            ? `We couldn't confirm your current Week ${week} lineup with MFL, so this is the one we last synced — if you changed it today, that change may not be shown. Reload before submitting.`
+            : fillState.mode === 'read-failed'
+            ? `MFL didn't answer when we asked what lineup you have saved for Week ${week}, so these slots are this page's own fill — not your lineup. Reload before submitting, or you could overwrite a lineup you already set.`
+            : fillState.mode === 'past-unset'
+              ? `No lineup was submitted for Week ${week}. Week ${week} is over, so these slots are just a view of your roster.`
+              : !fillState.canSubmitUnsaved && fillIsProjected
+                ? `No lineup submitted for Week ${week} yet. These slots are filled with the best projected lineup, but at least one can't be filled from your roster — finish it to submit.`
+                : fillIsProjected
+                ? `No lineup submitted for Week ${week} yet — these slots are filled with the best projected lineup. Submit to lock it in.`
+                : `No lineup submitted for Week ${week} yet, and MFL has no projections for it, so these slots are just your roster in order. Set them before submitting.`}
+        </span>
+      </p>
+    )}
 
     <!-- Starters -->
     <section class="lineup-starters" aria-labelledby="starters-heading">
@@ -847,11 +936,11 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
       <span class="lineup-changes" id="lineup-changes" aria-live="polite" style="display:none">
         <strong>0</strong> changes
       </span>
-      <button class="lineup-submit lineup-submit--clean" id="lineup-submit" disabled>
+      <button class={initialSubmitState.className} id="lineup-submit" disabled={initialSubmitState.disabled}>
         <svg class="lineup-submit__icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
           <path d="M13.5 4.5L6 12l-3.5-3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        <span class="lineup-submit__text">Lineup Saved</span>
+        <span class="lineup-submit__text">{initialSubmitState.text}</span>
       </button>
     </div>
 
@@ -906,6 +995,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
   <script>
     import { buildPlayerCellHTML } from '../../utils/player-cell-html';
     import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD } from '../../constants/roster-constants';
+    import { resolveSubmitButtonState } from '../../utils/lineup-submit-state';
 
     // ---------------------------------------------------------------------------
     // State
@@ -927,6 +1017,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     const submitBtn = document.getElementById('lineup-submit') as HTMLButtonElement;
     const submitText = submitBtn.querySelector('.lineup-submit__text') as HTMLElement;
     const changesEl = document.getElementById('lineup-changes') as HTMLElement;
+    const unsavedNote = document.querySelector('.lineup-unsaved-note');
     const cdmEl = document.getElementById('lineup-cdm')!;
     const cdmOverlay = cdmEl.querySelector('.lineup-cdm__overlay') as HTMLElement;
     const cdmSheet = cdmEl.querySelector('.lineup-cdm__sheet') as HTMLElement;
@@ -991,27 +1082,20 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
 
     function updateSubmitBar() {
       const changes = countChanges();
-      const hasChanges = changes > 0;
-      const allFilled = currentSlots.every(s => s.playerId != null);
+      const state = resolveSubmitButtonState({
+        changes,
+        allFilled: currentSlots.every(s => s.playerId != null),
+        lineupOnFile: data.lineupOnFile,
+        canSubmitEdits: data.canSubmitEdits,
+        canSubmitUnsaved: data.canSubmitUnsaved,
+        fromCache: data.lineupFromCache,
+      });
 
-      if (hasChanges && allFilled) {
-        submitBtn.className = 'lineup-submit lineup-submit--ready';
-        submitBtn.disabled = false;
-        submitText.textContent = 'Submit Lineup';
-        changesEl.style.display = '';
-        changesEl.querySelector('strong')!.textContent = String(changes);
-      } else if (!hasChanges) {
-        submitBtn.className = 'lineup-submit lineup-submit--clean';
-        submitBtn.disabled = true;
-        submitText.textContent = 'Lineup Saved';
-        changesEl.style.display = 'none';
-      } else {
-        submitBtn.className = 'lineup-submit lineup-submit--disabled';
-        submitBtn.disabled = true;
-        submitText.textContent = 'Submit Lineup';
-        changesEl.style.display = '';
-        changesEl.querySelector('strong')!.textContent = String(changes);
-      }
+      submitBtn.className = state.className;
+      submitBtn.disabled = state.disabled;
+      submitText.textContent = state.text;
+      changesEl.style.display = state.showChanges ? '' : 'none';
+      changesEl.querySelector('strong')!.textContent = String(changes);
 
       updateFaceoffTotal();
       saveDraft();
@@ -1054,10 +1138,27 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     const STORAGE_KEY = 'lineup-draft';
 
     function saveDraft() {
+      // Only real edits are worth persisting. Storing an untouched page also
+      // stored the projection FILL, and loadDraft() replayed it on the next
+      // visit — where a lineup that had since been submitted now sits in
+      // originalSlots, so the stale fill read as nine unsaved changes with
+      // the submit button armed over the owner's actual lineup.
+      // A draft built on a base we couldn't verify must not outlive the
+      // visit that made it: one swap during a read-failed load would persist
+      // all nine slots (eight of them the projection guess), and replaying
+      // that on a healthy visit arms the bar with nine changes over the
+      // owner's real lineup — the overwrite, one day later.
+      if (countChanges() === 0 || !data.canSubmitEdits) {
+        try { localStorage.removeItem(STORAGE_KEY); } catch {}
+        return;
+      }
       const draft = {
         franchiseId: data.franchiseId,
         leagueYear: data.leagueYear,
         week: data.week,
+        // The state the edits were made against. A draft from a different
+        // base is not resumable, it's a stale overwrite.
+        fillMode: data.fillMode,
         slots: currentSlots.map(s => ({ index: s.index, playerId: s.playerId })),
         savedAt: new Date().toISOString(),
       };
@@ -1070,6 +1171,12 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
         if (!raw) return;
         const draft = JSON.parse(raw);
         if (draft.franchiseId !== data.franchiseId || draft.leagueYear !== data.leagueYear || draft.week !== data.week) return;
+        // Same reason as the save guard: replaying edits over a different
+        // base silently substitutes the eight slots the owner never touched.
+        if (draft.fillMode !== data.fillMode) {
+          try { localStorage.removeItem(STORAGE_KEY); } catch {}
+          return;
+        }
         const age = Date.now() - new Date(draft.savedAt).getTime();
         if (age > 24 * 60 * 60 * 1000) return;
         draft.slots.forEach((s: { index: number; playerId: string | null }) => {
@@ -1207,6 +1314,10 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
       const eligible = data.roster.filter((p: any) => {
         if (usedIds.has(p.id)) return false;
         if (p.id === slot.playerId) return false;
+        // Taxi-squad and IR players can't start. Offering them here is how
+        // the third fill path disagreed with the other two — the pick armed
+        // submit and MFL rejected the POST with a raw error.
+        if (p.rosterStatus !== 'ROSTER') return false;
         if (p.gameLocked) return false;
         return p.eligibleSlots.includes(slot.position);
       });
@@ -1361,7 +1472,11 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     // Set Optimal
     // ---------------------------------------------------------------------------
     function setOptimalLineup() {
-      const available = data.roster.filter((p: any) => !p.gameLocked && !p.isBye);
+      // Taxi-squad and IR players are not legal starters, so "Set Optimal"
+      // must exclude them exactly as the server-side fill does — otherwise
+      // one tap seats an ineligible player and arms submit over him.
+      const available = data.roster.filter((p: any) =>
+        !p.gameLocked && !p.isBye && p.rosterStatus === 'ROSTER');
       const used = new Set<string>();
       const newSlots = currentSlots.map(s => ({ ...s }));
 
@@ -1460,6 +1575,20 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
         return;
       }
 
+      // Submitting replaces all nine slots. When the base came from the
+      // daily feed rather than from MFL, the eight the owner didn't touch
+      // could be a day out of date — so make that an informed choice instead
+      // of a silent revert. (Blocking the submit outright was tried and is
+      // worse: the outage is on MFL's export, submitting uses its import, and
+      // the owner would be stranded before kickoff with no way to clear it.)
+      if (data.lineupFromCache && !confirm(
+        `We couldn't confirm your current Week ${data.week} lineup with MFL, so this page is showing the last one we synced. `
+        + `Submitting replaces all nine starters with what's on screen — any change you made on MFL since then will be undone.\n\n`
+        + `Submit anyway?`
+      )) {
+        return;
+      }
+
       submitBtn.className = 'lineup-submit lineup-submit--ready loading-btn loading-btn--on-accent is-loading';
       submitBtn.disabled = true;
       submitBtn.setAttribute('aria-busy', 'true');
@@ -1478,6 +1607,18 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
           for (let i = 0; i < currentSlots.length; i++) {
             originalSlots[i].playerId = currentSlots[i].playerId;
           }
+          // MFL now holds a lineup for this week, so an untouched page is
+          // genuinely saved from here on. Both flags have to move: the
+          // "offer to save the fill" branch is tested FIRST, so leaving it
+          // set would re-arm the button after any swap-then-undo.
+          data.lineupOnFile = true;
+          data.canSubmitUnsaved = false;
+          // What MFL holds is now exactly what's on screen, so the button
+          // must stop hedging with "Saved (last sync)" — and a draft saved
+          // after this point belongs to the new base, not the old one.
+          data.lineupFromCache = false;
+          data.fillMode = 'saved';
+          unsavedNote?.remove();
           try { localStorage.removeItem(STORAGE_KEY); } catch {}
 
           submitBtn.className = 'lineup-submit lineup-submit--success';
@@ -1488,12 +1629,10 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
 
           document.querySelectorAll('.lineup-slot--swapped').forEach(el => el.classList.remove('lineup-slot--swapped'));
 
-          setTimeout(() => {
-            submitBtn.className = 'lineup-submit lineup-submit--clean';
-            submitBtn.disabled = true;
-            submitText.textContent = 'Lineup Saved';
-            changesEl.style.display = 'none';
-          }, 2000);
+          // Recompute rather than hardcode: the owner may have swapped a
+          // slot during the two seconds "Saved!" is showing, and pinning the
+          // button to disabled/"Lineup Saved" would bury that edit.
+          setTimeout(updateSubmitBar, 2000);
         } else {
           submitBtn.className = 'lineup-submit lineup-submit--error';
           submitBtn.removeAttribute('aria-busy');
@@ -2557,5 +2696,36 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 120px;
+  }
+
+  /* Shown when MFL has no submitted lineup for the week — the slots below
+     are a projection fill, not the owner's saved lineup, and nothing else
+     on the page distinguishes the two. */
+  .lineup-unsaved-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin: 0 0 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--content-border);
+    border-radius: 8px;
+    background: var(--content-bg-muted);
+    color: var(--content-text-muted);
+    font-size: 0.8125rem;
+    line-height: 1.4;
+  }
+
+  .lineup-unsaved-note__icon {
+    flex-shrink: 0;
+    margin-top: 0.125rem;
+  }
+
+  /* Read failed — a stronger tone, because acting on this page's fill could
+     overwrite a real lineup. Warning colors are token pairs so dark mode
+     doesn't ship a light-mode amber on a black card. */
+  .lineup-unsaved-note--warn {
+    background: var(--badge-warning-bg);
+    color: var(--badge-warning-text);
+    border-color: var(--badge-warning-text);
   }
 </style>
