@@ -19,6 +19,7 @@ import PlayerCell from '../../components/theleague/PlayerCell.astro';
 import { getAuthUser } from '../../utils/auth';
 import { getLeagueBySlug } from '../../config/leagues';
 import { resolveRostersPayload, resolveLineupFillState, resolveWeekLineup, resolvePlayerName } from '../../utils/lineup-sources';
+import { resolveSubmitButtonState } from '../../utils/lineup-submit-state';
 import { getCurrentWeekForYear } from '../../utils/current-week';
 import { getAflLeagueYear } from '../../utils/league-year';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
@@ -303,7 +304,6 @@ const weekLineup = resolveWeekLineup({
   league: 'afl-fantasy',
   leagueYear,
 });
-const resultsWeekEntry = weekLineup.entry;
 const lineupReadOk = weekLineup.lineupReadOk;
 const lineupFromCache = weekLineup.fromCache;
 const weekScheduled = weekLineup.weekScheduled;
@@ -370,9 +370,20 @@ const fillState = resolveLineupFillState({
   slotsFilled: slots.every((s) => s.playerId !== null),
   fromCache: lineupFromCache,
   weekScheduled,
+  franchiseListed: weekLineup.franchiseListed,
 });
 const canSubmitUnsaved = fillState.canSubmitUnsaved;
 const canSubmitEdits = fillState.canSubmitEdits;
+// The server-rendered button comes from the SAME resolver the client uses, so
+// the pre-hydration state can't disagree with the post-hydration one.
+const initialSubmitState = resolveSubmitButtonState({
+  changes: 0,
+  allFilled: slots.every((s) => s.playerId !== null),
+  lineupOnFile: hasStarters,
+  canSubmitEdits,
+  canSubmitUnsaved,
+  fromCache: lineupFromCache && hasStarters,
+});
 const fillIsProjected = fillState.fillIsProjected;
 
 // Available weeks for selector
@@ -409,6 +420,8 @@ const lineupPayload = {
   // (the owner would be editing a projection they believe is theirs) and on a
   // week MFL can't take a lineup for.
   canSubmitEdits,
+  // Up to a day old, so the button must not read a flat "Lineup Saved".
+  lineupFromCache: lineupFromCache && hasStarters,
 };
 
 const payloadJson = JSON.stringify(lineupPayload);
@@ -464,7 +477,9 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
           <path d="M8 4.75v4M8 11.1v.15" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
         </svg>
         <span>
-          {fillState.mode === 'week-unscheduled'
+          {fillState.mode === 'franchise-unlisted'
+            ? `MFL doesn't list your team in Week ${week} — no game scheduled, so there's no lineup to set.`
+            : fillState.mode === 'week-unscheduled'
             ? `MFL has no Week ${week} on this season's schedule, so there's no lineup to set — these slots are just a view of your roster.`
             : fillState.mode === 'saved-partial'
               ? `This is your submitted Week ${week} lineup, but at least one of those players is no longer on your roster, so their slot shows empty.`
@@ -474,7 +489,9 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
             ? `MFL didn't answer when we asked what lineup you have saved for Week ${week}, so these slots are this page's own fill — not your lineup. Reload before submitting, or you could overwrite a lineup you already set.`
             : fillState.mode === 'past-unset'
               ? `No lineup was submitted for Week ${week}. Week ${week} is over, so these slots are just a view of your roster.`
-              : fillIsProjected
+              : !fillState.canSubmitUnsaved && fillIsProjected
+                ? `No lineup submitted for Week ${week} yet. These slots are filled with the best projected lineup, but at least one can't be filled from your roster — finish it to submit.`
+                : fillIsProjected
                 ? `No lineup submitted for Week ${week} yet — these slots are filled with the best projected lineup. Submit to lock it in.`
                 : `No lineup submitted for Week ${week} yet, and MFL has no projections for it, so these slots are just your roster in order. Set them before submitting.`}
         </span>
@@ -606,14 +623,11 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
       <span class="lineup-changes" id="lineup-changes" aria-live="polite" style="display:none">
         <strong>0</strong> changes
       </span>
-      <button class:list={['lineup-submit', canSubmitUnsaved
-              ? 'lineup-submit--ready'
-              : hasStarters ? 'lineup-submit--clean' : 'lineup-submit--disabled']}
-              id="lineup-submit" disabled={!canSubmitUnsaved}>
+      <button class={initialSubmitState.className} id="lineup-submit" disabled={initialSubmitState.disabled}>
         <svg class="lineup-submit__icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
           <path d="M13.5 4.5L6 12l-3.5-3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        <span class="lineup-submit__text">{hasStarters ? 'Lineup Saved' : 'Submit Lineup'}</span>
+        <span class="lineup-submit__text">{initialSubmitState.text}</span>
       </button>
     </div>
 
@@ -668,6 +682,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
   <script>
     import { buildPlayerCellHTML } from '../../utils/player-cell-html';
     import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD } from '../../constants/roster-constants';
+    import { resolveSubmitButtonState } from '../../utils/lineup-submit-state';
 
     // ---------------------------------------------------------------------------
     // State
@@ -754,37 +769,20 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
 
     function updateSubmitBar() {
       const changes = countChanges();
-      const hasChanges = changes > 0;
-      const allFilled = currentSlots.every(s => s.playerId != null);
+      const state = resolveSubmitButtonState({
+        changes,
+        allFilled: currentSlots.every(s => s.playerId != null),
+        lineupOnFile: data.lineupOnFile,
+        canSubmitEdits: data.canSubmitEdits,
+        canSubmitUnsaved: data.canSubmitUnsaved,
+        fromCache: data.lineupFromCache,
+      });
 
-      if (hasChanges && allFilled && data.canSubmitEdits) {
-        submitBtn.className = 'lineup-submit lineup-submit--ready';
-        submitBtn.disabled = false;
-        submitText.textContent = 'Submit Lineup';
-        changesEl.style.display = '';
-        changesEl.querySelector('strong')!.textContent = String(changes);
-      } else if (!hasChanges && data.canSubmitUnsaved && allFilled) {
-        // Nothing on file at MFL — the untouched slots are this page's
-        // suggestion, not a saved lineup. Offer to submit it. Note this is
-        // canSubmitUnsaved, not !lineupOnFile: a failed read also has no
-        // lineup on file, and arming the button there overwrites real ones.
-        submitBtn.className = 'lineup-submit lineup-submit--ready';
-        submitBtn.disabled = false;
-        submitText.textContent = 'Submit Lineup';
-        changesEl.style.display = 'none';
-      } else if (!hasChanges && data.lineupOnFile) {
-        submitBtn.className = 'lineup-submit lineup-submit--clean';
-        submitBtn.disabled = true;
-        submitText.textContent = 'Lineup Saved';
-        changesEl.style.display = 'none';
-      } else {
-        // Not submittable yet — an unfilled slot, with or without changes.
-        submitBtn.className = 'lineup-submit lineup-submit--disabled';
-        submitBtn.disabled = true;
-        submitText.textContent = 'Submit Lineup';
-        changesEl.style.display = hasChanges ? '' : 'none';
-        changesEl.querySelector('strong')!.textContent = String(changes);
-      }
+      submitBtn.className = state.className;
+      submitBtn.disabled = state.disabled;
+      submitText.textContent = state.text;
+      changesEl.style.display = state.showChanges ? '' : 'none';
+      changesEl.querySelector('strong')!.textContent = String(changes);
 
       saveDraft();
     }

@@ -85,7 +85,8 @@ export function findWeekResultsEntry(
   if (matched) return matched;
 
   if (opts.allowUnlabeled && normalized.length === 1
-      && normalized[0]?.week === undefined && normalized[0]?.matchup) {
+      && normalized[0]?.week === undefined
+      && (normalized[0]?.matchup || normalized[0]?.franchise)) {
     return normalized[0];
   }
   return null;
@@ -212,6 +213,8 @@ export interface ResolvedWeekLineup {
   fromCache: boolean;
   /** False when MFL answered but carries no such week (e.g. week 20 of 17). */
   weekScheduled: boolean;
+  /** False when a source answered but never lists this franchise that week. */
+  franchiseListed: boolean;
 }
 
 /**
@@ -252,7 +255,7 @@ export function resolveWeekLineup(input: {
   for (const entry of liveCandidates) {
     const starters = extractLineupStarters(entry, franchiseId);
     if (starters.length > 0) {
-      return { entry, starters, lineupReadOk: true, fromCache: false, weekScheduled: true };
+      return { entry, starters, lineupReadOk: true, fromCache: false, weekScheduled: true, franchiseListed: true };
     }
   }
 
@@ -261,14 +264,14 @@ export function resolveWeekLineup(input: {
   // absence to report.
   const listedLive = liveCandidates.find((entry) => franchiseAppearsIn(entry, franchiseId));
   if (listedLive) {
-    return { entry: listedLive, starters: [], lineupReadOk: true, fromCache: false, weekScheduled: true };
+    return { entry: listedLive, starters: [], lineupReadOk: true, fromCache: false, weekScheduled: true, franchiseListed: true };
   }
 
   const diskFeed = loadWeeklyResultsFeedFromDisk(league, leagueYear);
   const diskEntry = findWeekResultsEntry(diskFeed, week);
   const diskStarters = extractLineupStarters(diskEntry, franchiseId);
   if (diskStarters.length > 0) {
-    return { entry: diskEntry, starters: diskStarters, lineupReadOk: true, fromCache: true, weekScheduled: true };
+    return { entry: diskEntry, starters: diskStarters, lineupReadOk: true, fromCache: true, weekScheduled: true, franchiseListed: true };
   }
 
   // "MFL answered and has no such week" is not a failed read — it's a week
@@ -280,12 +283,16 @@ export function resolveWeekLineup(input: {
   // Nothing usable, and disk can't vouch for absence. Hand back the disk entry
   // anyway when there is one — it still carries the OPPONENT's recorded
   // starters, which the faceoff reads — but say the read failed.
+  // Did anything answer for this week without listing us? That's a bye, not
+  // a failed read, and it gets its own honest message.
+  const answered = liveCandidates.length > 0 || diskEntry !== null;
   return {
     entry: diskEntry ?? liveCandidates[0] ?? null,
     starters: [],
     lineupReadOk: false,
     fromCache: false,
     weekScheduled,
+    franchiseListed: !answered,
   };
 }
 
@@ -349,7 +356,9 @@ export type LineupFillMode =
   /** A lineup, but some of its players are no longer on the roster. */
   | 'saved-partial'
   /** MFL has no such week this season — nothing to submit, ever. */
-  | 'week-unscheduled';
+  | 'week-unscheduled'
+  /** MFL answered, but doesn't list this franchise in that week at all. */
+  | 'franchise-unlisted';
 
 export interface LineupFillState {
   mode: LineupFillMode;
@@ -381,6 +390,8 @@ export function resolveLineupFillState(input: {
   fromCache?: boolean;
   /** False when MFL carries no such week (weeks past the season's last). */
   weekScheduled?: boolean;
+  /** False when MFL answered but never lists this franchise in the week. */
+  franchiseListed?: boolean;
 }): LineupFillState {
   const { hasStarters, lineupReadOk, weekIsPast, hasProjections, slotsFilled, fromCache } = input;
   const weekScheduled = input.weekScheduled ?? true;
@@ -406,6 +417,12 @@ export function resolveLineupFillState(input: {
   }
   if (!weekScheduled) {
     return { mode: 'week-unscheduled', canSubmitUnsaved: false, canSubmitEdits: false, fillIsProjected };
+  }
+  // MFL answered and simply has no row for this franchise that week (a
+  // playoff bye). Saying "MFL didn't answer" would be false, and we still
+  // have no record to write over, so nothing is submittable.
+  if (input.franchiseListed === false) {
+    return { mode: 'franchise-unlisted', canSubmitUnsaved: false, canSubmitEdits: false, fillIsProjected };
   }
   // A failed read blocks EDITED submits too, not just the untouched fill:
   // the owner would be editing a projection they believe is their lineup, so

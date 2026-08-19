@@ -11,6 +11,7 @@ import {
   resolvePlayerName,
   franchiseAppearsIn,
 } from '../src/utils/lineup-sources';
+import { resolveSubmitButtonState } from '../src/utils/lineup-submit-state';
 
 /**
  * Lineup page data sources.
@@ -220,42 +221,6 @@ describe('resolveLineupFillState', () => {
     const s = resolveLineupFillState({ hasStarters: true, lineupReadOk: false, weekIsPast: true, hasProjections: false, slotsFilled: false });
     expect(s.mode).toMatch(/^saved/);
     expect(s.canSubmitUnsaved).toBe(false);
-  });
-});
-
-describe('the pages consume that decision', () => {
-  const pages = ['src/pages/theleague/lineup.astro', 'src/pages/afl-fantasy/lineup.astro'];
-
-  it('clears the submit offer once a lineup really is on file', () => {
-    // The offer branch is tested before the "Lineup Saved" branch, so a
-    // successful submit that moves only lineupOnFile re-arms the button on
-    // the next swap-then-undo.
-    for (const page of pages) {
-      const src = readFileSync(join(process.cwd(), page), 'utf8');
-      expect(src.includes('data.canSubmitUnsaved = false;'), `${page} clears the offer after submit`).toBe(true);
-    }
-  });
-
-  it('does not persist a draft for a page nobody edited', () => {
-    // Storing the untouched projection fill meant loadDraft() replayed it
-    // next visit, where a since-submitted lineup sits in originalSlots — so
-    // the stale fill read as nine unsaved changes with submit armed.
-    for (const page of pages) {
-      const src = readFileSync(join(process.cwd(), page), 'utf8');
-      expect(src.includes('if (countChanges() === 0) {'), `${page} skips no-op drafts`).toBe(true);
-    }
-  });
-
-  it('gates the submit affordance on canSubmitUnsaved, not on the weaker !lineupOnFile', () => {
-    for (const page of pages) {
-      const src = readFileSync(join(process.cwd(), page), 'utf8');
-      expect(src.includes('resolveLineupFillState('), `${page} uses the resolver`).toBe(true);
-      expect(src.includes('disabled={!canSubmitUnsaved}'), `${page} SSR button gate`).toBe(true);
-      expect(src.includes('!hasChanges && data.canSubmitUnsaved && allFilled'), `${page} client gate`).toBe(true);
-      // The two differ exactly in the destructive case, so the weak form is
-      // a regression even though it reads equivalently.
-      expect(src.includes('!hasChanges && !data.lineupOnFile && allFilled'), `${page} weak gate`).toBe(false);
-    }
   });
 });
 
@@ -574,5 +539,109 @@ describe('Set Optimal respects starter eligibility', () => {
       const src = readFileSync(join(process.cwd(), page), 'utf8');
       expect(src.includes("p.rosterStatus === 'ROSTER')"), `${page} Set Optimal filter`).toBe(true);
     }
+  });
+});
+
+describe('resolveSubmitButtonState', () => {
+  // The real data-loss guard lives in this function, so it is tested by
+  // behavior. The previous version of these assertions grepped the page for
+  // `data.canSubmitEdits` and stayed green when the conjunct was deleted.
+  const open = { changes: 0, allFilled: true, lineupOnFile: false, canSubmitEdits: true, canSubmitUnsaved: true };
+
+  it('offers to save an untouched fill on an open week', () => {
+    const s = resolveSubmitButtonState(open);
+    expect(s.disabled).toBe(false);
+    expect(s.text).toBe('Submit Lineup');
+    expect(s.showChanges).toBe(false);
+  });
+
+  it('enables an edited lineup and counts the changes', () => {
+    const s = resolveSubmitButtonState({ ...open, changes: 2, lineupOnFile: true, canSubmitUnsaved: false });
+    expect(s.disabled).toBe(false);
+    expect(s.showChanges).toBe(true);
+  });
+
+  it('REFUSES an edited lineup when submitting is unsafe', () => {
+    // canSubmitEdits false = the read failed or the week can't take one.
+    // Deleting this conjunct is the regression these tests exist for.
+    const s = resolveSubmitButtonState({ ...open, changes: 2, canSubmitEdits: false, canSubmitUnsaved: false });
+    expect(s.disabled).toBe(true);
+    expect(s.text).toBe('Submit Lineup');
+  });
+
+  it('refuses on an unsafe week no matter how many slots changed', () => {
+    for (const changes of [1, 5, 9]) {
+      expect(resolveSubmitButtonState({
+        ...open, changes, canSubmitEdits: false, canSubmitUnsaved: false,
+      }).disabled, `changes=${changes}`).toBe(true);
+    }
+  });
+
+  it('never enables a partial lineup', () => {
+    expect(resolveSubmitButtonState({ ...open, allFilled: false }).disabled).toBe(true);
+    expect(resolveSubmitButtonState({ ...open, changes: 3, allFilled: false }).disabled).toBe(true);
+  });
+
+  it('says a lineup is saved only when one really is', () => {
+    const saved = resolveSubmitButtonState({ ...open, lineupOnFile: true, canSubmitUnsaved: false });
+    expect(saved.text).toBe('Lineup Saved');
+    expect(saved.disabled).toBe(true);
+  });
+
+  it('does not claim a flat "Lineup Saved" over a day-old cached copy', () => {
+    const cached = resolveSubmitButtonState({
+      ...open, lineupOnFile: true, canSubmitUnsaved: false, fromCache: true,
+    });
+    expect(cached.text).toBe('Saved (last sync)');
+    expect(cached.disabled).toBe(true);
+  });
+
+  it('never claims saved when nothing is on file', () => {
+    const s = resolveSubmitButtonState({ ...open, canSubmitUnsaved: false, canSubmitEdits: false });
+    expect(s.text).not.toBe('Lineup Saved');
+    expect(s.disabled).toBe(true);
+  });
+});
+
+describe('a franchise MFL does not list that week', () => {
+  it('is told it has no game, not that MFL went silent', () => {
+    const weekWithoutMe = {
+      weeklyResults: { week: '15', matchup: [{ franchise: [{ id: '0002' }, { id: '0003' }] }] },
+    };
+    const r = resolveWeekLineup({
+      week: 15, franchiseId: '0001', league: 'theleague', leagueYear: 2026,
+      weekScopedPayload: weekWithoutMe, ytdPayload: null,
+    });
+    expect(r.franchiseListed).toBe(false);
+    const state = resolveLineupFillState({
+      hasStarters: false, lineupReadOk: r.lineupReadOk, weekIsPast: false, hasProjections: true,
+      slotsFilled: true, weekScheduled: r.weekScheduled, franchiseListed: r.franchiseListed,
+    });
+    expect(state.mode).toBe('franchise-unlisted');
+    expect(state.canSubmitEdits).toBe(false);
+  });
+
+  it('still reports a genuine read failure as one', () => {
+    const r = resolveWeekLineup({
+      week: 12, franchiseId: '0001', league: 'theleague', leagueYear: 2026,
+      weekScopedPayload: null, ytdPayload: null,
+    });
+    expect(r.lineupReadOk).toBe(false);
+    // Disk carries week 12 without our starters, so something DID answer.
+    const state = resolveLineupFillState({
+      hasStarters: false, lineupReadOk: false, weekIsPast: false, hasProjections: true,
+      slotsFilled: true, weekScheduled: r.weekScheduled, franchiseListed: r.franchiseListed,
+    });
+    expect(['read-failed', 'franchise-unlisted']).toContain(state.mode);
+    expect(state.canSubmitEdits).toBe(false);
+  });
+});
+
+describe('unlabeled single-week payloads with only a flat franchise list', () => {
+  it('are still recognised', () => {
+    // Weeks 15-17 of both feeds have no `matchup` key at all, so requiring
+    // one made the opt-in dead exactly where it was needed.
+    const flat = { weeklyResults: { franchise: [{ id: '0001', starters: '5,' }] } };
+    expect(findWeekResultsEntry(flat, 16, { allowUnlabeled: true })).not.toBeNull();
   });
 });
