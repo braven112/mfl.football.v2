@@ -487,7 +487,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
             : fillState.mode === 'saved-partial'
               ? `This is your submitted Week ${week} lineup, but at least one of those players is no longer on your roster, so their slot shows empty.`
               : fillState.mode === 'saved-from-cache'
-            ? `MFL didn't answer, so this is your lineup as of our last sync — if you changed it today, that change may not be shown. Reload before submitting.`
+            ? `We couldn't confirm your current Week ${week} lineup with MFL, so this is the one we last synced — if you changed it today, that change may not be shown. Reload before submitting.`
             : fillState.mode === 'read-failed'
             ? `MFL didn't answer when we asked what lineup you have saved for Week ${week}, so these slots are this page's own fill — not your lineup. Reload before submitting, or you could overwrite a lineup you already set.`
             : fillState.mode === 'past-unset'
@@ -1240,7 +1240,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
       // worse: the outage is on MFL's export, submitting uses its import, and
       // the owner would be stranded before kickoff with no way to clear it.)
       if (data.lineupFromCache && !confirm(
-        `We couldn't reach MFL to check your current Week ${data.week} lineup, so this page is showing the last one we synced. `
+        `We couldn't confirm your current Week ${data.week} lineup with MFL, so this page is showing the last one we synced. `
         + `Submitting replaces all nine starters with what's on screen — any change you made on MFL since then will be undone.\n\n`
         + `Submit anyway?`
       )) {
@@ -1272,8 +1272,10 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
           data.lineupOnFile = true;
           data.canSubmitUnsaved = false;
           // What MFL holds is now exactly what's on screen, so the button
-          // must stop hedging with "Saved (last sync)".
+          // must stop hedging with "Saved (last sync)" — and a draft saved
+          // after this point belongs to the new base, not the old one.
           data.lineupFromCache = false;
+          data.fillMode = 'saved';
           unsavedNote?.remove();
           try { localStorage.removeItem(STORAGE_KEY); } catch {}
 
@@ -1285,12 +1287,10 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
 
           document.querySelectorAll('.lineup-slot--swapped').forEach(el => el.classList.remove('lineup-slot--swapped'));
 
-          setTimeout(() => {
-            submitBtn.className = 'lineup-submit lineup-submit--clean';
-            submitBtn.disabled = true;
-            submitText.textContent = 'Lineup Saved';
-            changesEl.style.display = 'none';
-          }, 2000);
+          // Recompute rather than hardcode: the owner may have swapped a
+          // slot during the two seconds "Saved!" is showing, and pinning the
+          // button to disabled/"Lineup Saved" would bury that edit.
+          setTimeout(updateSubmitBar, 2000);
         } else {
           submitBtn.className = 'lineup-submit lineup-submit--error';
           submitBtn.removeAttribute('aria-busy');

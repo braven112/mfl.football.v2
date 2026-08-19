@@ -310,15 +310,23 @@ export function resolveWeekLineup(input: {
  * so it is at worst minutes stale; an empty lineup page is worse.
  * Returns the raw MFL payload so callers parse one shape either way.
  */
+const rostersFeedCache = new Map<string, any | null>();
+
 export function loadRostersFeedFromDisk(slug: CanonicalLeagueSlug, leagueYear: number): any | null {
   const league = getLeagueBySlug(slug);
   if (!league) return null;
+  // Memoized for the same reason as the weeklyResults feed: re-parsing it per
+  // request is wasted work on a page that already SSRs nine MFL calls.
+  const cacheKey = `${slug}:${leagueYear}`;
+  if (rostersFeedCache.has(cacheKey)) return rostersFeedCache.get(cacheKey) ?? null;
   try {
     const filePath = path.join(process.cwd(), league.dataPath, 'mfl-feeds', String(leagueYear), 'rosters.json');
-    if (!fs.existsSync(filePath)) return null;
-    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    return hasFranchises(parsed) ? parsed : null;
+    const raw = fs.existsSync(filePath) ? JSON.parse(fs.readFileSync(filePath, 'utf8')) : null;
+    const parsed = hasFranchises(raw) ? raw : null;
+    rostersFeedCache.set(cacheKey, parsed);
+    return parsed;
   } catch {
+    rostersFeedCache.set(cacheKey, null);
     return null;
   }
 }
