@@ -1443,7 +1443,11 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     // Set Optimal
     // ---------------------------------------------------------------------------
     function setOptimalLineup() {
-      const available = data.roster.filter((p: any) => !p.gameLocked && !p.isBye);
+      // Taxi-squad and IR players are not legal starters, so "Set Optimal"
+      // must exclude them exactly as the server-side fill does — otherwise
+      // one tap seats an ineligible player and arms submit over him.
+      const available = data.roster.filter((p: any) =>
+        !p.gameLocked && !p.isBye && p.rosterStatus === 'ROSTER');
       const used = new Set<string>();
       const newSlots = currentSlots.map(s => ({ ...s }));
 

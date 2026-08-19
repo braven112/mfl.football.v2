@@ -464,3 +464,87 @@ describe('an empty rosters payload is not a roster', () => {
     expect(resolved?.rosters?.franchise?.length).toBeGreaterThan(0);
   });
 });
+
+describe('franchises MFL lists outside a matchup', () => {
+  // A franchise with no opponent is listed directly on the week — playoff
+  // byes, odd brackets, and (right now) every team in weeks 15-17 of both
+  // leagues, where MFL published the weeks with no `matchup` key at all.
+  // Walking only matchups loses the lineup AND reports the owner as unlisted,
+  // which this module reads as "cannot confirm" — so playoff weeks would show
+  // the overwrite warning and refuse to accept a lineup.
+  const byeWeek = {
+    weeklyResults: {
+      week: '15',
+      matchup: [{ franchise: [{ id: '0002' }, { id: '0003' }] }],
+      franchise: [{ id: '0007', starters: '111,222,' }],
+    },
+  };
+
+  it('reads a lineup off the flat franchise list', () => {
+    const entry = findWeekResultsEntry(byeWeek, 15);
+    expect(extractLineupStarters(entry, '0007').map((p) => p.id)).toEqual(['111', '222']);
+    // and still reads the matchup rows
+    expect(franchiseAppearsIn(entry, '0002')).toBe(true);
+  });
+
+  it('counts a flat-listed franchise as present', () => {
+    expect(franchiseAppearsIn(findWeekResultsEntry(byeWeek, 15), '0007')).toBe(true);
+  });
+
+  it('handles a week with no matchup key at all', () => {
+    const noMatchups = { weeklyResults: { week: '16', franchise: [{ id: '0001' }, { id: '0002' }] } };
+    const entry = findWeekResultsEntry(noMatchups, 16);
+    expect(franchiseAppearsIn(entry, '0001')).toBe(true);
+    const r = resolveWeekLineup({
+      week: 16, franchiseId: '0001', league: 'theleague', leagueYear: 2026,
+      weekScopedPayload: noMatchups, ytdPayload: null,
+    });
+    // Listed with no starters = a real "nothing set yet" answer, so the owner
+    // can still set a playoff lineup.
+    expect(r.lineupReadOk).toBe(true);
+    const state = resolveLineupFillState({
+      hasStarters: false, lineupReadOk: r.lineupReadOk, weekIsPast: false,
+      hasProjections: true, slotsFilled: true, weekScheduled: r.weekScheduled,
+    });
+    expect(state.mode).toBe('unsaved-offer');
+    expect(state.canSubmitEdits).toBe(true);
+  });
+
+  it('resolves the real weeks 15-17 in both leagues as settable', () => {
+    for (const league of ['theleague', 'afl-fantasy'] as const) {
+      for (const week of [15, 16, 17]) {
+        const r = resolveWeekLineup({
+          week, franchiseId: '0001', league, leagueYear: 2026,
+          weekScopedPayload: null, ytdPayload: null,
+        });
+        expect(r.weekScheduled, `${league} wk${week} scheduled`).toBe(true);
+      }
+    }
+  });
+});
+
+describe('a lineup rebuilt from the daily feed', () => {
+  it('cannot be edited and submitted over whatever MFL now holds', () => {
+    // The cache can be a day old, so an edit built on it reverts anything the
+    // owner changed since — the same overwrite as a failed read, wearing
+    // plausible players.
+    const s = resolveLineupFillState({
+      hasStarters: true, lineupReadOk: true, weekIsPast: false,
+      hasProjections: true, slotsFilled: true, fromCache: true,
+    });
+    expect(s.mode).toBe('saved-from-cache');
+    expect(s.canSubmitEdits).toBe(false);
+    expect(s.canSubmitUnsaved).toBe(false);
+  });
+});
+
+describe('Set Optimal respects starter eligibility', () => {
+  it('excludes taxi-squad and IR players client-side too', () => {
+    // The server fill filters them; the button rebuilding the lineup in the
+    // browser has to agree, or one tap seats an ineligible player.
+    for (const page of ['src/pages/theleague/lineup.astro', 'src/pages/afl-fantasy/lineup.astro']) {
+      const src = readFileSync(join(process.cwd(), page), 'utf8');
+      expect(src.includes("p.rosterStatus === 'ROSTER')"), `${page} Set Optimal filter`).toBe(true);
+    }
+  });
+});

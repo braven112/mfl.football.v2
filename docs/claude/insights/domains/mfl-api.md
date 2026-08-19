@@ -862,6 +862,18 @@ just missing":
 - `src/utils/lineup-sources.ts` + `tests/lineup-sources.test.ts` — the parsing
   and its regression coverage
 
+4. **A franchise with no opponent is listed OUTSIDE the matchups.** Rows
+   normally hang off `weeklyResults.matchup[].franchise[]`, but playoff byes
+   and odd-sized brackets put the franchise directly on
+   `weeklyResults.franchise[]` with its full `starters` CSV — and MFL may
+   publish a week with no `matchup` key at all (weeks 15-17 of both leagues'
+   2026 feeds are exactly that: every team flat, no matchups). A parser that
+   walks only the matchups therefore loses real lineups AND reports the owner
+   as unlisted for that week. `scripts/lib/lineup-warnings.mjs#parseStartingLineups`
+   had handled both shapes all along; `weekFranchiseRows` in
+   `src/utils/lineup-sources.ts` is the same walk. Grep for an existing parser
+   of an MFL shape before writing a second one.
+
 **Recommendation:** Check a live MFL payload's own shape rather than the HTTP
 status, and never let a live MFL call be the only source for something already
 committed to disk (`getPlayerMap` for identity, `resolveRostersPayload` for

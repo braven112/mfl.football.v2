@@ -87,6 +87,29 @@ export function findWeekResultsEntry(
 }
 
 /**
+ * Every franchise row in a week's results, from BOTH shapes MFL uses.
+ *
+ * Rows normally hang off `matchup[].franchise[]`, but a franchise with no
+ * opponent is listed directly on the week — playoff byes, odd-sized brackets,
+ * and (right now) every team in weeks 15-17 of both leagues, where MFL has
+ * published the weeks with no `matchup` key at all. Walking only the matchups
+ * therefore loses real lineups AND reports a franchise as unlisted, which
+ * this module treats as "cannot confirm" — so it would have shown every owner
+ * the overwrite warning on playoff weeks and refused to let them set a
+ * lineup. `scripts/lib/lineup-warnings.mjs#parseStartingLineups` has handled
+ * both shapes all along.
+ */
+function weekFranchiseRows(weekEntry: any): any[] {
+  if (!weekEntry) return [];
+  const rows: any[] = [];
+  for (const matchup of asArray<any>(weekEntry.matchup)) {
+    rows.push(...asArray<any>(matchup?.franchise));
+  }
+  rows.push(...asArray<any>(weekEntry.franchise));
+  return rows;
+}
+
+/**
  * The lineup a franchise has submitted for the week the entry describes,
  * in MFL's own order. Empty when no lineup is set (or the entry is missing).
  *
@@ -97,9 +120,8 @@ export function findWeekResultsEntry(
 export function extractLineupStarters(weekEntry: any, franchiseId: string): LineupStarter[] {
   if (!weekEntry || !franchiseId) return [];
 
-  for (const matchup of asArray(weekEntry.matchup)) {
-    const side = asArray<any>(matchup?.franchise).find((f: any) => f?.id === franchiseId);
-    if (!side) continue;
+  for (const side of weekFranchiseRows(weekEntry)) {
+    if (side?.id !== franchiseId) continue;
 
     const scoreById = new Map<string, number>();
     const startersFromRows: string[] = [];
@@ -132,14 +154,22 @@ export function extractLineupStarters(weekEntry: any, franchiseId: string): Line
  * An ARRAY of per-week MFL payloads, which `findWeekResultsEntry` already
  * reads — but see `resolveWeekLineup` for the one-way rule that governs it.
  */
+const weeklyResultsFeedCache = new Map<string, any | null>();
+
 export function loadWeeklyResultsFeedFromDisk(slug: CanonicalLeagueSlug, leagueYear: number): any | null {
   const league = getLeagueBySlug(slug);
   if (!league) return null;
+  // Memoized like getPlayerMap: parsing it per request is wasted work on a
+  // page that already SSRs nine MFL calls.
+  const cacheKey = `${slug}:${leagueYear}`;
+  if (weeklyResultsFeedCache.has(cacheKey)) return weeklyResultsFeedCache.get(cacheKey) ?? null;
   try {
     const filePath = path.join(process.cwd(), league.dataPath, 'mfl-feeds', String(leagueYear), 'weekly-results-raw.json');
-    if (!fs.existsSync(filePath)) return null;
-    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    const parsed = fs.existsSync(filePath) ? JSON.parse(fs.readFileSync(filePath, 'utf8')) : null;
+    weeklyResultsFeedCache.set(cacheKey, parsed);
+    return parsed;
   } catch {
+    weeklyResultsFeedCache.set(cacheKey, null);
     return null;
   }
 }
@@ -154,10 +184,7 @@ export function loadWeeklyResultsFeedFromDisk(slug: CanonicalLeagueSlug, leagueY
  */
 export function franchiseAppearsIn(weekEntry: any, franchiseId: string): boolean {
   if (!weekEntry || !franchiseId) return false;
-  for (const matchup of asArray<any>(weekEntry.matchup)) {
-    if (asArray<any>(matchup?.franchise).some((f: any) => f?.id === franchiseId)) return true;
-  }
-  return false;
+  return weekFranchiseRows(weekEntry).some((f: any) => f?.id === franchiseId);
 }
 
 /** Does this payload carry ANY week? Distinguishes "MFL answered, but that
@@ -166,7 +193,7 @@ export function payloadCarriesAnyWeek(payload: any): boolean {
   if (!payload) return false;
   const unwrapped = payload?.allWeeklyResults ?? payload;
   const entries = Array.isArray(unwrapped) ? unwrapped : asArray(unwrapped?.weeklyResults);
-  return entries.map((i: any) => i?.weeklyResults ?? i).some((e: any) => e?.matchup);
+  return entries.map((i: any) => i?.weeklyResults ?? i).some((e: any) => e?.matchup || e?.franchise);
 }
 
 export interface ResolvedWeekLineup {
@@ -363,7 +390,12 @@ export function resolveLineupFillState(input: {
     const mode: LineupFillMode = fromCache
       ? 'saved-from-cache'
       : slotsFilled ? 'saved' : 'saved-partial';
-    return { mode, canSubmitUnsaved: false, canSubmitEdits: !weekIsPast && weekScheduled, fillIsProjected };
+    // A cached lineup is up to a day old, so submitting an edit built on it
+    // would revert whatever the owner changed since the sync — the same
+    // overwrite as a failed read, just with plausible-looking players in the
+    // slots. The banner tells them to reload; this makes it stick.
+    const canSubmitEdits = !weekIsPast && weekScheduled && !fromCache;
+    return { mode, canSubmitUnsaved: false, canSubmitEdits, fillIsProjected };
   }
   if (!weekScheduled) {
     return { mode: 'week-unscheduled', canSubmitUnsaved: false, canSubmitEdits: false, fillIsProjected };
