@@ -100,7 +100,10 @@ describe('extractLineupStarters', () => {
     );
     // Trailing comma in MFL's CSV must not become an empty starter.
     expect(starters.every((p) => p.id.length > 0)).toBe(true);
-    expect(starters.every((p) => p.score === 0)).toBe(true);
+    // Not-yet-played starters report NO score, which is not a score of zero:
+    // a literal 0 defeats the `?? playerScoresMap` fallback downstream and
+    // renders a real performance as 0.0.
+    expect(starters.every((p) => p.score === null)).toBe(true);
   });
 
   it('reads scores from the player rows on a played week, and only starters', () => {
@@ -524,17 +527,42 @@ describe('franchises MFL lists outside a matchup', () => {
 });
 
 describe('a lineup rebuilt from the daily feed', () => {
-  it('cannot be edited and submitted over whatever MFL now holds', () => {
-    // The cache can be a day old, so an edit built on it reverts anything the
-    // owner changed since — the same overwrite as a failed read, wearing
-    // plausible players.
+  it('is flagged, is never auto-offered, but does not strand the owner', () => {
+    // Up to a day stale, so it gets its own banner — but unlike a failed
+    // read this IS a lineup the owner set, not a projection guess. Blocking
+    // an edit would leave them no way out mid-outage (the outage is on MFL's
+    // export; submitting uses its independent import endpoint).
     const s = resolveLineupFillState({
       hasStarters: true, lineupReadOk: true, weekIsPast: false,
       hasProjections: true, slotsFilled: true, fromCache: true,
     });
     expect(s.mode).toBe('saved-from-cache');
+    expect(s.canSubmitUnsaved).toBe(false);
+    expect(s.canSubmitEdits).toBe(true);
+  });
+
+  it('still blocks everything when the read simply failed', () => {
+    const s = resolveLineupFillState({
+      hasStarters: false, lineupReadOk: false, weekIsPast: false,
+      hasProjections: true, slotsFilled: true,
+    });
     expect(s.canSubmitEdits).toBe(false);
     expect(s.canSubmitUnsaved).toBe(false);
+  });
+});
+
+describe('a fill with no projections behind it', () => {
+  it('is not offered for one-tap submission', () => {
+    // The banner says "just your roster in order. Set them before
+    // submitting" — a green enabled Submit beside that is a contradiction.
+    const s = resolveLineupFillState({
+      hasStarters: false, lineupReadOk: true, weekIsPast: false,
+      hasProjections: false, slotsFilled: true,
+    });
+    expect(s.mode).toBe('unsaved-offer');
+    expect(s.canSubmitUnsaved).toBe(false);
+    // The owner can still build one deliberately.
+    expect(s.canSubmitEdits).toBe(true);
   });
 });
 

@@ -34,8 +34,13 @@ import { getLeagueBySlug, type CanonicalLeagueSlug } from '../config/leagues';
 /** One player in a franchise's submitted lineup for a week. */
 export interface LineupStarter {
   id: string;
-  /** Actual fantasy points — 0 for a week that hasn't been played. */
-  score: number;
+  /**
+   * Actual fantasy points, or null when MFL reported none for this player.
+   * NOT zero: a starter present only in the `starters` CSV has no score yet,
+   * and a literal 0 defeats a `?? playerScoresMap` fallback downstream —
+   * turning "not reported" into "scored nothing".
+   */
+  score: number | null;
 }
 
 function asArray<T>(value: T | T[] | null | undefined): T[] {
@@ -143,7 +148,7 @@ export function extractLineupStarters(weekEntry: any, franchiseId: string): Line
       ordered.push(id);
     }
 
-    return ordered.map((id) => ({ id, score: scoreById.get(id) ?? 0 }));
+    return ordered.map((id) => ({ id, score: scoreById.has(id) ? scoreById.get(id)! : null }));
   }
 
   return [];
@@ -390,11 +395,13 @@ export function resolveLineupFillState(input: {
     const mode: LineupFillMode = fromCache
       ? 'saved-from-cache'
       : slotsFilled ? 'saved' : 'saved-partial';
-    // A cached lineup is up to a day old, so submitting an edit built on it
-    // would revert whatever the owner changed since the sync — the same
-    // overwrite as a failed read, just with plausible-looking players in the
-    // slots. The banner tells them to reload; this makes it stick.
-    const canSubmitEdits = !weekIsPast && weekScheduled && !fromCache;
+    // A cached lineup is up to a day stale, so it gets a banner — but it is
+    // still a lineup the owner really set, not the projection guess a failed
+    // read produces. Blocking edits here would strand them mid-outage with no
+    // way to clear the condition (the outage is on MFL's EXPORT; submitting
+    // goes to its import endpoint, which is independent), so the untouched
+    // fill is never auto-offered but a deliberate edit may still be sent.
+    const canSubmitEdits = !weekIsPast && weekScheduled;
     return { mode, canSubmitUnsaved: false, canSubmitEdits, fillIsProjected };
   }
   if (!weekScheduled) {
@@ -409,7 +416,15 @@ export function resolveLineupFillState(input: {
   // league mid-draft) — the banner should say so. It just isn't submittable
   // until the owner completes it, and the server-rendered button has to
   // agree with that before hydration, not only after.
-  return { mode: 'unsaved-offer', canSubmitUnsaved: slotsFilled, canSubmitEdits: true, fillIsProjected };
+  // Without projections the "fill" is whatever order MFL listed the roster
+  // in, so offering to save it one-tap contradicts the banner telling them to
+  // set it themselves. They can still edit and submit.
+  return {
+    mode: 'unsaved-offer',
+    canSubmitUnsaved: slotsFilled && hasProjections,
+    canSubmitEdits: true,
+    fillIsProjected,
+  };
 }
 
 /**

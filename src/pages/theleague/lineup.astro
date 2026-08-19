@@ -322,13 +322,21 @@ const usedPlayerIds = new Set<string>();
 
 // If MFL returned starters, use those; otherwise fill optimally by projection
 const hasStarters = starterIds.size > 0;
+// A week that has already been played can't take a new lineup, so never offer
+// to submit one over it — the projection fill there is a read-only view.
+const weekIsPast = week < currentWeek;
 const candidatePool = hasStarters
   ? roster.filter(p => starterIds.has(p.id))
   // Only active-roster players are legal starters, so the auto-fill must not
   // reach for taxi-squad or IR players — that fill is now one tap from being
   // submitted. (A recorded lineup is rendered as-is: MFL accepted it.)
   : [...roster]
-      .filter(p => p.rosterStatus === 'ROSTER')
+      // Legal starters only. Taxi/IR can never start; a locked or bye player
+      // can't start THIS week, and on a week that can still be submitted the
+      // fill has to agree with the client's own Set Optimal. A past week keeps
+      // the unfiltered view — everything is locked there and nothing is
+      // submittable, so filtering would just empty the page.
+      .filter(p => p.rosterStatus === 'ROSTER' && (weekIsPast || (!p.gameLocked && !p.isBye)))
       .sort((a, b) => (b.projection ?? -1) - (a.projection ?? -1));
 
 // Pre-allocate slots array to preserve positional order
@@ -360,9 +368,6 @@ for (let i = 0; i < slots.length; i++) {
   }
 }
 
-// A week that has already been played can't take a new lineup, so never offer
-// to submit one over it — the projection fill there is a read-only view.
-const weekIsPast = week < currentWeek;
 // What the nine slots actually represent, and whether saving them is safe.
 const fillState = resolveLineupFillState({
   hasStarters,
@@ -495,7 +500,11 @@ if (opponentFranchiseId) {
   const recorded = weekStarters(opponentFranchiseId);
   if (recorded.length > 0) {
     opponentSideIds = recorded.map((p) => p.id);
-    opponentActualById = new Map(recorded.map((p) => [p.id, p.score]));
+    // Only real reported scores go in the map — a null would land as a 0
+    // and shadow the playerScoresMap fallback in faceoffCandidates.
+    opponentActualById = new Map(
+      recorded.filter((p) => p.score !== null).map((p) => [p.id, p.score as number]),
+    );
   } else {
     const oppFranchise = franchiseListForSalary.find((f: any) => f?.id === opponentFranchiseId);
     const oppPlayers = Array.isArray(oppFranchise?.player) ? oppFranchise.player : oppFranchise?.player ? [oppFranchise.player] : [];
@@ -1289,6 +1298,10 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
       const eligible = data.roster.filter((p: any) => {
         if (usedIds.has(p.id)) return false;
         if (p.id === slot.playerId) return false;
+        // Taxi-squad and IR players can't start. Offering them here is how
+        // the third fill path disagreed with the other two — the pick armed
+        // submit and MFL rejected the POST with a raw error.
+        if (p.rosterStatus !== 'ROSTER') return false;
         if (p.gameLocked) return false;
         return p.eligibleSlots.includes(slot.position);
       });
