@@ -632,7 +632,9 @@ describe('a franchise MFL does not list that week', () => {
       hasStarters: false, lineupReadOk: false, weekIsPast: false, hasProjections: true,
       slotsFilled: true, weekScheduled: r.weekScheduled, franchiseListed: r.franchiseListed,
     });
-    expect(['read-failed', 'franchise-unlisted']).toContain(state.mode);
+    // Specifically read-failed: the disk copy lists us for week 12, and a
+    // day-old file may not tell an owner they have no game.
+    expect(state.mode).toBe('read-failed');
     expect(state.canSubmitEdits).toBe(false);
   });
 });
@@ -643,5 +645,54 @@ describe('unlabeled single-week payloads with only a flat franchise list', () =>
     // one made the opt-in dead exactly where it was needed.
     const flat = { weeklyResults: { franchise: [{ id: '0001', starters: '5,' }] } };
     expect(findWeekResultsEntry(flat, 16, { allowUnlabeled: true })).not.toBeNull();
+  });
+});
+
+describe('scores MFL has not reported', () => {
+  it('are null, not zero, even when the player row exists', () => {
+    // An unplayed week's rows are `{ id, status }` with no score key — the
+    // real shape in every committed feed. Reporting 0 there shadows the
+    // playerScoresMap fallback and renders a real performance as 0.0.
+    const unplayed = {
+      weeklyResults: {
+        week: '3',
+        matchup: [{ franchise: [{ id: '0001', starters: '111,', player: [{ id: '111', status: 'starter' }] }] }],
+      },
+    };
+    const starters = extractLineupStarters(findWeekResultsEntry(unplayed, 3), '0001');
+    expect(starters).toEqual([{ id: '111', score: null }]);
+  });
+
+  it('keeps a real reported score, including a genuine zero', () => {
+    const played = {
+      weeklyResults: {
+        week: '3',
+        matchup: [{ franchise: [{ id: '0001', player: [
+          { id: '111', status: 'starter', score: '0.00' },
+          { id: '222', status: 'starter', score: '18.7' },
+        ] }] }],
+      },
+    };
+    expect(extractLineupStarters(findWeekResultsEntry(played, 3), '0001')).toEqual([
+      { id: '111', score: 0 },
+      { id: '222', score: 18.7 },
+    ]);
+  });
+});
+
+describe('an outage on a week the disk copy carries', () => {
+  it('reports a read failure, not "no game scheduled"', () => {
+    // Week 4 IS in the committed feed and DOES list franchise 0001, so
+    // claiming the owner has no game would be a lie told by a day-old file.
+    const r = resolveWeekLineup({
+      week: 4, franchiseId: '0001', league: 'theleague', leagueYear: 2026,
+      weekScopedPayload: null, ytdPayload: null,
+    });
+    expect(r.franchiseListed).toBe(true);
+    expect(r.lineupReadOk).toBe(false);
+    expect(resolveLineupFillState({
+      hasStarters: false, lineupReadOk: r.lineupReadOk, weekIsPast: false, hasProjections: true,
+      slotsFilled: true, weekScheduled: r.weekScheduled, franchiseListed: r.franchiseListed,
+    }).mode).toBe('read-failed');
   });
 });

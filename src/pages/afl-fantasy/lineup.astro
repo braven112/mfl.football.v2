@@ -1240,6 +1240,9 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
           // set would re-arm the button after any swap-then-undo.
           data.lineupOnFile = true;
           data.canSubmitUnsaved = false;
+          // What MFL holds is now exactly what's on screen, so the button
+          // must stop hedging with "Saved (last sync)".
+          data.lineupFromCache = false;
           unsavedNote?.remove();
           try { localStorage.removeItem(STORAGE_KEY); } catch {}
 

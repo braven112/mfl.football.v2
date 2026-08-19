@@ -134,7 +134,13 @@ export function extractLineupStarters(weekEntry: any, franchiseId: string): Line
     for (const p of asArray<any>(side.player)) {
       if (!p?.id || p.status !== 'starter') continue;
       startersFromRows.push(p.id);
-      scoreById.set(p.id, parseFloat(p.score) || 0);
+      // An unplayed week's rows are `{ id, status }` with NO score key, so
+      // `parseFloat(p.score) || 0` would report every starter as having
+      // scored zero — which then shadows the real-scores fallback downstream.
+      const parsed = p.score === undefined || p.score === null || p.score === ''
+        ? NaN
+        : parseFloat(p.score);
+      if (Number.isFinite(parsed)) scoreById.set(p.id, parsed);
     }
 
     const csvIds = typeof side.starters === 'string'
@@ -283,9 +289,11 @@ export function resolveWeekLineup(input: {
   // Nothing usable, and disk can't vouch for absence. Hand back the disk entry
   // anyway when there is one — it still carries the OPPONENT's recorded
   // starters, which the faceoff reads — but say the read failed.
-  // Did anything answer for this week without listing us? That's a bye, not
-  // a failed read, and it gets its own honest message.
-  const answered = liveCandidates.length > 0 || diskEntry !== null;
+  // Reaching here WITH a live entry means MFL answered and did not list us —
+  // a bye, which gets its own honest message. Reaching here with none means
+  // we simply couldn't read MFL, and the disk copy may not deny us a week
+  // (it is a day old), so that stays a read failure.
+  const answered = liveCandidates.length > 0;
   return {
     entry: diskEntry ?? liveCandidates[0] ?? null,
     starters: [],
