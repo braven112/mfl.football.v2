@@ -30,6 +30,11 @@ const { GET } = await import('../src/pages/api/player-news');
 
 const CACHE_OK = 'public, s-maxage=300, stale-while-revalidate=1800';
 
+// Reference the constant rather than a literal — the default limit doubles as
+// the number of reserved skeleton rows, so it is tuned as a UI decision.
+const { PLAYER_NEWS_DEFAULT_LIMIT, PLAYER_NEWS_MAX_LIMIT } =
+  await import('../src/utils/player-news');
+
 function call(query: string, headers: Record<string, string> = {}) {
   const url = new URL(`https://example.test/api/player-news${query}`);
   const request = new Request(url, { headers });
@@ -99,12 +104,12 @@ describe('GET /api/player-news', () => {
 
   it('clamps an oversized limit before calling upstream', async () => {
     await call('?espnId=3139477&limit=999');
-    expect(fetchAthleteNews).toHaveBeenCalledWith('3139477', 6);
+    expect(fetchAthleteNews).toHaveBeenCalledWith('3139477', PLAYER_NEWS_MAX_LIMIT);
   });
 
   it('falls back to the default limit for junk', async () => {
     await call('?espnId=3139477&limit=abc');
-    expect(fetchAthleteNews).toHaveBeenCalledWith('3139477', 4);
+    expect(fetchAthleteNews).toHaveBeenCalledWith('3139477', PLAYER_NEWS_DEFAULT_LIMIT);
   });
 
   it('returns an uncacheable 429 when rate limited, without calling upstream', async () => {
@@ -133,7 +138,7 @@ describe('GET /api/player-news — mflId resolution', () => {
   it('resolves an MFL id to the feed\'s NFL espn_id and fetches that', async () => {
     getPlayer.mockReturnValue({ nflEspnId: '4362628' });
     await call('?mflId=13116');
-    expect(fetchAthleteNews).toHaveBeenCalledWith('4362628', 4);
+    expect(fetchAthleteNews).toHaveBeenCalledWith('4362628', PLAYER_NEWS_DEFAULT_LIMIT);
   });
 
   it('never uses a college id — a player with no NFL espn_id resolves to empty, not to some other athlete', async () => {
@@ -153,7 +158,7 @@ describe('GET /api/player-news — mflId resolution', () => {
     getPlayer.mockReturnValue(undefined);
     getGlobalPlayerMap.mockReturnValue(new Map([['9999', { nflEspnId: '1257' }]]));
     await call('?mflId=9999');
-    expect(fetchAthleteNews).toHaveBeenCalledWith('1257', 4);
+    expect(fetchAthleteNews).toHaveBeenCalledWith('1257', PLAYER_NEWS_DEFAULT_LIMIT);
   });
 
   it('treats a known player with no ESPN id as empty (cacheable), not as a 400', async () => {
@@ -174,6 +179,6 @@ describe('GET /api/player-news — mflId resolution', () => {
 
   it('still accepts a direct espnId for the DEF stand-in', async () => {
     await call('?espnId=3127287');
-    expect(fetchAthleteNews).toHaveBeenCalledWith('3127287', 4);
+    expect(fetchAthleteNews).toHaveBeenCalledWith('3127287', PLAYER_NEWS_DEFAULT_LIMIT);
   });
 });

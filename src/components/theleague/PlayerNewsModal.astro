@@ -41,9 +41,10 @@ const { class: className } = Astro.props;
     </div>
 
     <div class="player-news-modal__body">
+      <p class="pn-subtitle" id="pnm-news-subtitle" style="display: none;"></p>
       <div class="pn-status" id="pnm-news-status"></div>
       <div class="pn-list" id="pnm-news-list" style="display: none;"></div>
-      <p class="pn-visually-hidden" role="status" aria-live="polite" id="pnm-news-live"></p>
+      <p class="visually-hidden" role="status" aria-live="polite" id="pnm-news-live"></p>
     </div>
 
     <div class="player-news-modal__footer">
@@ -224,15 +225,25 @@ const { class: className } = Astro.props;
     cancelPlayerNews,
     renderPlayerNewsList,
     renderPlayerNewsSkeleton,
+    resolveNewsSubject,
+    type PlayerNewsState,
   } from '../../utils/player-news-client';
 
   /** Document-level listeners bind once — init re-runs on every page swap. */
   let documentListenersBound = false;
 
+  /**
+   * Where focus was before the dialog opened. `aria-modal="true"` tells AT to
+   * expose only the dialog subtree, so leaving focus on the trigger behind the
+   * scrim would strand the user in content the AT has been told to hide.
+   */
+  let lastFocused: HTMLElement | null = null;
+
   function initPlayerNewsModal() {
     const modal = document.querySelector('.player-news-modal');
     const overlay = document.querySelector('.player-news-modal__overlay');
     const closeBtn = document.querySelector('.player-news-modal__close');
+    const subtitleEl = document.getElementById('pnm-news-subtitle');
     const statusEl = document.getElementById('pnm-news-status');
     const listEl = document.getElementById('pnm-news-list');
     const liveEl = document.getElementById('pnm-news-live');
@@ -241,6 +252,8 @@ const { class: className } = Astro.props;
     const closeModal = () => {
       modal?.classList.remove('active');
       cancelPlayerNews();
+      lastFocused?.focus();
+      lastFocused = null;
     };
 
     closeBtn?.addEventListener('click', closeModal);
@@ -257,14 +270,25 @@ const { class: className } = Astro.props;
       });
     }
 
-    const render = (state) => {
+    const announce = (message: string) => {
+      if (!liveEl) return;
+      requestAnimationFrame(() => { liveEl.textContent = message; });
+    };
+
+    let subjectName = '';
+    let lastSubject: { mflId?: string | null; espnId?: string | null } | null = null;
+
+    const render = (state: PlayerNewsState) => {
       if (!statusEl || !listEl) return;
+      const hadFocus = statusEl.contains(document.activeElement);
 
       if (state.kind === 'loading') {
         statusEl.className = 'pn-status';
         statusEl.style.display = '';
         listEl.style.display = 'none';
-        renderPlayerNewsSkeleton(statusEl, 3);
+        renderPlayerNewsSkeleton(statusEl);
+        announce('Loading news\u2026');
+        if (hadFocus) { statusEl.tabIndex = -1; statusEl.focus(); }
         return;
       }
 
@@ -272,7 +296,9 @@ const { class: className } = Astro.props;
         statusEl.style.display = 'none';
         listEl.style.display = '';
         renderPlayerNewsList(listEl, state.items);
-        if (liveEl) liveEl.textContent = `${state.items.length} recent stories loaded.`;
+        const noun = state.items.length === 1 ? 'story' : 'stories';
+        announce(`${state.items.length} recent ${noun} loaded${subjectName ? ` for ${subjectName}` : ''}.`);
+        if (hadFocus) { listEl.tabIndex = -1; listEl.focus(); }
         return;
       }
 
@@ -281,8 +307,9 @@ const { class: className } = Astro.props;
       statusEl.className = 'pn-status pn-status--message';
 
       if (state.kind === 'empty') {
-        statusEl.textContent = 'No recent ESPN stories for this player.';
-        if (liveEl) liveEl.textContent = 'No recent stories.';
+        statusEl.textContent = `No recent ESPN stories${subjectName ? ` for ${subjectName}` : ''}.`;
+        announce('No recent stories.');
+        if (hadFocus) { statusEl.tabIndex = -1; statusEl.focus(); }
         return;
       }
 
@@ -293,12 +320,11 @@ const { class: className } = Astro.props;
       retry.className = 'pn-retry';
       retry.textContent = 'Retry';
       retry.addEventListener('click', () => {
-        const el = document.querySelector('.player-news-modal');
-        const mflId = (el as HTMLElement)?.dataset?.newsMflId;
-        if (mflId) loadPlayerNews({ mflId }, render);
+        if (lastSubject) loadPlayerNews(lastSubject, render);
       });
       statusEl.appendChild(retry);
-      if (liveEl) liveEl.textContent = 'Could not load news.';
+      announce('Could not load news.');
+      if (hadFocus) retry.focus();
     };
 
     window.openPlayerNewsModal = function(playerData) {
@@ -313,14 +339,44 @@ const { class: className } = Astro.props;
       // Composite band: team gradient + ghost wordmark + ESPN cutout
       applyPlayerModalBand(document.getElementById('pnm-band'), playerData);
 
+      lastFocused = document.activeElement as HTMLElement | null;
       modal.classList.add('active');
 
-      // Send the MFL id — the route resolves it to the feed's own espn_id, the
-      // only id guaranteed to be an NFL athlete rather than a college one.
-      const mflId = playerData?.id ? String(playerData.id) : '';
-      (modal as HTMLElement).dataset.newsMflId = mflId;
+      // Move focus INTO the dialog — required by aria-modal, which is on the
+      // content element.
+      const content = modal.querySelector('.player-news-modal__content') as HTMLElement | null;
+      if (content) {
+        content.tabIndex = -1;
+        content.focus();
+      }
+
+      // Shared with PlayerDetailsModal so the two cannot drift: handles the
+      // team-DEF stand-in, and returns null when there is nothing to ask about
+      // — which must NOT be reported as "no recent stories", because we never
+      // asked.
+      const resolved = resolveNewsSubject(playerData || {});
+      subjectName = resolved?.subjectName ?? '';
+
+      if (subtitleEl) {
+        subtitleEl.textContent = resolved?.label ?? '';
+        subtitleEl.style.display = resolved?.label ? '' : 'none';
+      }
+
       if (liveEl) liveEl.textContent = '';
-      loadPlayerNews({ mflId }, render);
+
+      if (!resolved) {
+        if (statusEl) {
+          statusEl.className = 'pn-status pn-status--message';
+          statusEl.style.display = '';
+          statusEl.textContent = 'No ESPN news feed for this player.';
+        }
+        if (listEl) listEl.style.display = 'none';
+        cancelPlayerNews();
+        return;
+      }
+
+      lastSubject = resolved.subject;
+      loadPlayerNews(resolved.subject, render);
     };
   }
 

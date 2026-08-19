@@ -9,6 +9,7 @@ import {
   fetchAthleteNews,
   ESPN_ATHLETE_NEWS_BASE,
   PLAYER_NEWS_MAX_LIMIT,
+  PLAYER_NEWS_DEFAULT_LIMIT,
 } from '../src/utils/player-news';
 
 /**
@@ -92,8 +93,8 @@ describe('clampLimit', () => {
   });
 
   it('falls back to the default for junk', () => {
-    expect(clampLimit('abc')).toBe(4);
-    expect(clampLimit(undefined)).toBe(4);
+    expect(clampLimit('abc')).toBe(PLAYER_NEWS_DEFAULT_LIMIT);
+    expect(clampLimit(undefined)).toBe(PLAYER_NEWS_DEFAULT_LIMIT);
   });
 });
 

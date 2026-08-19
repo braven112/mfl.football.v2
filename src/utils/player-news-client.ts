@@ -16,6 +16,7 @@
  */
 
 import { formatRelativeTime } from './schefter-feed';
+import { getDefSpotlightPlayer } from '../data/theleague/def-spotlight-players';
 import type { PlayerNewsItem } from './player-news';
 
 /**
@@ -27,6 +28,57 @@ import type { PlayerNewsItem } from './player-news';
 export interface PlayerNewsSubject {
   mflId?: string | null;
   espnId?: string | null;
+}
+
+/** Resolved news target: who to ask about, and how to label it. */
+export interface ResolvedNewsSubject {
+  subject: PlayerNewsSubject;
+  /** Sub-line shown when the news is not the player's own (team DEF). */
+  label: string;
+  /** Whose news this actually is, for the screen-reader announcement. */
+  subjectName: string;
+}
+
+/**
+ * Decide who a modal should show news for.
+ *
+ * Shared by both modals on purpose. When this lived only in PlayerDetailsModal,
+ * PlayerNewsModal had no DEF handling and reported "No recent ESPN stories" for
+ * players it had never actually asked about — the exact lie this module's header
+ * warns against.
+ */
+export function resolveNewsSubject(
+  playerData: Record<string, unknown> | null | undefined,
+): ResolvedNewsSubject | null {
+  const position = String((playerData as { position?: unknown })?.position ?? '').toUpperCase();
+  const team = String((playerData as { nflTeam?: unknown })?.nflTeam ?? '');
+
+  if (position === 'DEF') {
+    // A team defense has no ESPN athlete id (0 of 32 in the MFL feed, and
+    // structurally always will be), so it borrows its marquee defender's.
+    const star = getDefSpotlightPlayer(team);
+    if (!star?.espnId) return null;
+    return {
+      subject: { espnId: star.espnId },
+      // Spelled out rather than implied by a separator: a reader who skims the
+      // headlines and not the sub-line would otherwise take one player's news
+      // for the whole unit's.
+      label: `No ESPN feed for this defense \u2014 showing ${star.name}'s news`,
+      subjectName: star.name,
+    };
+  }
+
+  // Send the MFL id, never playerData.espnId — the route resolves it to the
+  // feed's own espn_id, the only id guaranteed to be an NFL athlete. A college
+  // id is numerically indistinguishable and would return a DIFFERENT player.
+  const mflId = (playerData as { id?: unknown })?.id;
+  if (mflId === undefined || mflId === null || !/^\d{1,12}$/.test(String(mflId))) return null;
+
+  return {
+    subject: { mflId: String(mflId) },
+    label: '',
+    subjectName: String((playerData as { name?: unknown })?.name ?? 'this player'),
+  };
 }
 
 export type PlayerNewsState =
@@ -50,17 +102,17 @@ const cache = new Map<string, CacheEntry>();
 let generation = 0;
 let inFlight: AbortController | null = null;
 
-function readCache(espnId: string): PlayerNewsState | null {
-  const hit = cache.get(espnId);
+function readCache(key: string): PlayerNewsState | null {
+  const hit = cache.get(key);
   if (!hit) return null;
   if (Date.now() - hit.at > CACHE_TTL_MS) {
-    cache.delete(espnId);
+    cache.delete(key);
     return null;
   }
   return hit.state;
 }
 
-function writeCache(espnId: string, state: PlayerNewsState): void {
+function writeCache(key: string, state: PlayerNewsState): void {
   // Never cache `error` — a cached failure makes the Retry button a no-op that
   // looks broken.
   if (state.kind === 'error' || state.kind === 'loading') return;
@@ -68,7 +120,7 @@ function writeCache(espnId: string, state: PlayerNewsState): void {
     const oldest = cache.keys().next().value;
     if (oldest !== undefined) cache.delete(oldest);
   }
-  cache.set(espnId, { at: Date.now(), state });
+  cache.set(key, { at: Date.now(), state });
 }
 
 /**
@@ -78,7 +130,7 @@ function writeCache(espnId: string, state: PlayerNewsState): void {
 export function loadPlayerNews(
   subject: PlayerNewsSubject,
   onState: (state: PlayerNewsState) => void,
-  limit = 4,
+  limit = 3,
 ): void {
   const token = ++generation;
 
@@ -96,7 +148,11 @@ export function loadPlayerNews(
     return;
   }
 
-  const cached = readCache(param);
+  // The limit is part of the response, so it must be part of the key — caching
+  // on the id alone would serve a 4-item result to a later 6-item request.
+  const cacheKey = `${param}&limit=${limit}`;
+
+  const cached = readCache(cacheKey);
   if (cached) {
     onState(cached);
     return;
@@ -122,7 +178,7 @@ export function loadPlayerNews(
             ? { kind: 'empty' }
             : { kind: 'error' };
 
-      writeCache(param, state);
+      writeCache(cacheKey, state);
       onState(state);
     })
     .catch((error: unknown) => {
@@ -195,7 +251,7 @@ export function renderPlayerNewsList(
 }
 
 /** Build the skeleton placeholder rows shown while loading. */
-export function renderPlayerNewsSkeleton(statusEl: HTMLElement, rows = 2): void {
+export function renderPlayerNewsSkeleton(statusEl: HTMLElement, rows = 3): void {
   const nodes: HTMLElement[] = [];
   for (let i = 0; i < rows; i++) {
     const row = document.createElement('div');

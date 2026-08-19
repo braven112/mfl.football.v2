@@ -81,8 +81,13 @@ const { class: className, hideContract = false } = Astro.props;
         <p class="pn-subtitle" id="pdm-news-subtitle" style="display: none;"></p>
         <div class="pn-status" id="pdm-news-status"></div>
         <div class="pn-list" id="pdm-news-list" style="display: none;"></div>
-        <p class="pn-visually-hidden" role="status" aria-live="polite" id="pdm-news-live"></p>
       </div>
+
+      <!-- Announcement lives OUTSIDE the news section: that section is hidden
+           for players with no ESPN subject, and a live region that gets hidden
+           and re-shown is unreliable. Uses the global .visually-hidden from
+           styles/utilities.css. -->
+      <p class="visually-hidden" role="status" aria-live="polite" id="pdm-news-live"></p>
 
       <!-- Weekly Results (promoted position) -->
       <div class="pdm-section" id="section-weekly-results" style="display: none;">
@@ -702,12 +707,13 @@ const { class: className, hideContract = false } = Astro.props;
   import { NFL_TEAM_CITIES } from '../../utils/nfl';
   import { applyPlayerModalBand } from '../../utils/player-modal-band';
   import { getDefSpotlightPlayer } from '../../data/theleague/def-spotlight-players';
-  import { isValidEspnId } from '../../utils/player-news';
   import {
     loadPlayerNews,
     cancelPlayerNews,
     renderPlayerNewsList,
     renderPlayerNewsSkeleton,
+    resolveNewsSubject,
+    type PlayerNewsState,
   } from '../../utils/player-news-client';
 
   /**
@@ -717,34 +723,6 @@ const { class: className, hideContract = false } = Astro.props;
    */
   let documentListenersBound = false;
 
-  // ── News ──
-  // A team defense has no ESPN athlete id (0 of 32 in the MFL feed, and always
-  // will be), so it borrows its marquee defender's — the same pool the band
-  // face uses, which is why this costs no extra bundle. The section is then
-  // labeled with whose news it actually is; it must never read as the defense's
-  // own reporting.
-  function resolveNewsSubject(playerData: Record<string, any>) {
-    const isDef = String(playerData?.position || '').toUpperCase() === 'DEF';
-    const team = playerData?.nflTeam || '';
-
-    if (isDef) {
-      const star = getDefSpotlightPlayer(team);
-      if (!star?.espnId || !isValidEspnId(star.espnId)) return null;
-      const teamName = NFL_TEAM_CITIES[team] ? `${NFL_TEAM_CITIES[team]} defense` : 'Team defense';
-      return { subject: { espnId: star.espnId }, key: `espn:${star.espnId}`, label: `${teamName} · latest on ${star.name}` };
-    }
-
-    // Send the MFL id, not playerData.espnId. The route resolves it to the
-    // feed's own espn_id, which is the only id guaranteed to be an NFL athlete
-    // — playerData.espnId can be a COLLEGE id for incoming rookies, and a
-    // college id is numerically indistinguishable from an NFL one, so it would
-    // silently return a DIFFERENT player's news. It also means the three cards
-    // that never populated espnId still get news, since every call site already
-    // passes `id`.
-    const mflId = playerData?.id;
-    if (!mflId || !/^\d{1,12}$/.test(String(mflId))) return null;
-    return { subject: { mflId: String(mflId) }, key: `mfl:${mflId}`, label: '' };
-  }
 
   // ── DEF band face ──
   // A team defense has no headshot of its own, so — mirroring the Free Agents
@@ -809,9 +787,23 @@ const { class: className, hideContract = false } = Astro.props;
       });
     }
 
+    /** Announce on the next frame — see the live-region note in the markup. */
+    const announce = (message: string) => {
+      if (!newsLive) return;
+      requestAnimationFrame(() => { newsLive.textContent = message; });
+    };
+
+    /** Whose news is on screen, for announcements. Set when the modal opens. */
+    let newsSubjectName = '';
+
     /** Paint one news state. Never mixes `empty` with `error`. */
-    const renderNewsState = (state) => {
+    const renderNewsState = (state: PlayerNewsState) => {
       if (!newsSection || !newsStatus || !newsList) return;
+
+      // Retry replaces its own button, so remember whether focus was inside
+      // this block and put it somewhere deliberate afterwards — otherwise
+      // focus falls to <body>, outside the modal.
+      const hadFocus = newsStatus.contains(document.activeElement);
 
       const showStatus = (html: HTMLElement[] | string) => {
         newsList.style.display = 'none';
@@ -824,7 +816,12 @@ const { class: className, hideContract = false } = Astro.props;
         newsStatus.className = 'pn-status';
         newsStatus.style.display = '';
         newsList.style.display = 'none';
-        renderPlayerNewsSkeleton(newsStatus, 2);
+        renderPlayerNewsSkeleton(newsStatus);
+        // The skeleton is the only loading signal, and it is invisible under
+        // prefers-reduced-motion, so say it out loud too. It also makes a
+        // repeat failure distinguishable from "Retry did nothing".
+        announce('Loading news\u2026');
+        if (hadFocus) { newsStatus.tabIndex = -1; newsStatus.focus(); }
         return;
       }
 
@@ -832,15 +829,16 @@ const { class: className, hideContract = false } = Astro.props;
         newsStatus.style.display = 'none';
         newsList.style.display = '';
         renderPlayerNewsList(newsList, state.items);
-        if (newsLive) {
-          newsLive.textContent = `${state.items.length} recent ${state.items.length === 1 ? 'story' : 'stories'} loaded.`;
-        }
+        const noun = state.items.length === 1 ? 'story' : 'stories';
+        announce(`${state.items.length} recent ${noun} loaded${newsSubjectName ? ` for ${newsSubjectName}` : ''}.`);
+        if (hadFocus) { newsList.tabIndex = -1; newsList.focus(); }
         return;
       }
 
       if (state.kind === 'empty') {
-        showStatus('No recent ESPN stories for this player.');
-        if (newsLive) newsLive.textContent = 'No recent stories.';
+        showStatus(`No recent ESPN stories${newsSubjectName ? ` for ${newsSubjectName}` : ''}.`);
+        announce('No recent stories.');
+        if (hadFocus) { newsStatus.tabIndex = -1; newsStatus.focus(); }
         return;
       }
 
@@ -859,7 +857,10 @@ const { class: className, hideContract = false } = Astro.props;
         if (mflId || espnId) loadPlayerNews({ mflId, espnId }, renderNewsState);
       });
       newsStatus.appendChild(retry);
-      if (newsLive) newsLive.textContent = 'Could not load news.';
+      announce('Could not load news.');
+      // Focus the fresh Retry so a keyboard user who just pressed it is not
+      // ejected to <body> behind the scrim.
+      if (hadFocus) retry.focus();
     };
 
     window.openPlayerDetailsModal = function(playerData) {
@@ -1257,11 +1258,13 @@ const { class: className, hideContract = false } = Astro.props;
           // We didn't ask, so we say nothing — a permanent "no recent news" on
           // such a player is true and useless.
           newsSection.style.display = 'none';
+          newsSubjectName = '';
           delete newsSection.dataset.newsMflId;
           delete newsSection.dataset.newsEspnId;
           cancelPlayerNews();
         } else {
           newsSection.style.display = '';
+          newsSubjectName = resolved.subjectName;
           delete newsSection.dataset.newsMflId;
           delete newsSection.dataset.newsEspnId;
           if (resolved.subject.mflId) newsSection.dataset.newsMflId = resolved.subject.mflId;

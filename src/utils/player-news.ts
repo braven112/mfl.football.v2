@@ -47,7 +47,7 @@ export interface PlayerNewsResult {
 export const ESPN_ATHLETE_NEWS_BASE =
   'https://site.api.espn.com/apis/site/v2/sports/football/nfl/athletes';
 
-export const PLAYER_NEWS_DEFAULT_LIMIT = 4;
+export const PLAYER_NEWS_DEFAULT_LIMIT = 3;
 export const PLAYER_NEWS_MAX_LIMIT = 6;
 
 /** Upstream timeout. Matches the 5s used by src/pages/api/nfl-scoreboard.ts. */
