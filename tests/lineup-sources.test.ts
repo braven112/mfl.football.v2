@@ -696,3 +696,26 @@ describe('an outage on a week the disk copy carries', () => {
     }).mode).toBe('read-failed');
   });
 });
+
+describe('drafts do not travel between read states', () => {
+  const pages = ['src/pages/theleague/lineup.astro', 'src/pages/afl-fantasy/lineup.astro'];
+
+  it('refuses to persist edits made on a base that cannot be submitted', () => {
+    // One swap during a read-failed visit used to persist all nine slots —
+    // eight of them the projection guess — and loadDraft() replayed it on
+    // the next healthy visit, arming the bar with nine changes over the
+    // owner's real lineup. The overwrite, one day later.
+    for (const page of pages) {
+      const src = readFileSync(join(process.cwd(), page), 'utf8');
+      expect(src.includes('countChanges() === 0 || !data.canSubmitEdits'), `${page} save guard`).toBe(true);
+      expect(src.includes('draft.fillMode !== data.fillMode'), `${page} load guard`).toBe(true);
+    }
+  });
+
+  it('makes a submit from a cached base an explicit choice', () => {
+    for (const page of pages) {
+      const src = readFileSync(join(process.cwd(), page), 'utf8');
+      expect(src.includes('data.lineupFromCache && !confirm('), `${page} cached-submit confirm`).toBe(true);
+    }
+  });
+});

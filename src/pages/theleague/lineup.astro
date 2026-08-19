@@ -690,6 +690,9 @@ const lineupPayload = {
   canSubmitEdits,
   // Up to a day old, so the button must not read a flat "Lineup Saved".
   lineupFromCache: lineupFromCache && hasStarters,
+  // What the slots represent — a saved draft from a different mode was built
+  // on a different base and must not be replayed.
+  fillMode: fillState.mode,
 };
 
 const payloadJson = JSON.stringify(lineupPayload);
@@ -1140,7 +1143,12 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
       // visit — where a lineup that had since been submitted now sits in
       // originalSlots, so the stale fill read as nine unsaved changes with
       // the submit button armed over the owner's actual lineup.
-      if (countChanges() === 0) {
+      // A draft built on a base we couldn't verify must not outlive the
+      // visit that made it: one swap during a read-failed load would persist
+      // all nine slots (eight of them the projection guess), and replaying
+      // that on a healthy visit arms the bar with nine changes over the
+      // owner's real lineup — the overwrite, one day later.
+      if (countChanges() === 0 || !data.canSubmitEdits) {
         try { localStorage.removeItem(STORAGE_KEY); } catch {}
         return;
       }
@@ -1148,6 +1156,9 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
         franchiseId: data.franchiseId,
         leagueYear: data.leagueYear,
         week: data.week,
+        // The state the edits were made against. A draft from a different
+        // base is not resumable, it's a stale overwrite.
+        fillMode: data.fillMode,
         slots: currentSlots.map(s => ({ index: s.index, playerId: s.playerId })),
         savedAt: new Date().toISOString(),
       };
@@ -1160,6 +1171,12 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
         if (!raw) return;
         const draft = JSON.parse(raw);
         if (draft.franchiseId !== data.franchiseId || draft.leagueYear !== data.leagueYear || draft.week !== data.week) return;
+        // Same reason as the save guard: replaying edits over a different
+        // base silently substitutes the eight slots the owner never touched.
+        if (draft.fillMode !== data.fillMode) {
+          try { localStorage.removeItem(STORAGE_KEY); } catch {}
+          return;
+        }
         const age = Date.now() - new Date(draft.savedAt).getTime();
         if (age > 24 * 60 * 60 * 1000) return;
         draft.slots.forEach((s: { index: number; playerId: string | null }) => {
@@ -1555,6 +1572,20 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
       const starterIds = currentSlots.map(s => s.playerId).filter(Boolean);
       if (starterIds.length !== 9) {
         announce('Lineup is incomplete.');
+        return;
+      }
+
+      // Submitting replaces all nine slots. When the base came from the
+      // daily feed rather than from MFL, the eight the owner didn't touch
+      // could be a day out of date — so make that an informed choice instead
+      // of a silent revert. (Blocking the submit outright was tried and is
+      // worse: the outage is on MFL's export, submitting uses its import, and
+      // the owner would be stranded before kickoff with no way to clear it.)
+      if (data.lineupFromCache && !confirm(
+        `We couldn't reach MFL to check your current Week ${data.week} lineup, so this page is showing the last one we synced. `
+        + `Submitting replaces all nine starters with what's on screen — any change you made on MFL since then will be undone.\n\n`
+        + `Submit anyway?`
+      )) {
         return;
       }
 
