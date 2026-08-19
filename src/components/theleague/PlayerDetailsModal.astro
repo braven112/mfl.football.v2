@@ -7,10 +7,12 @@ import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, COLLEGE_LOGO_ONERROR, COLLEGE_LOGO_O
  * 1. Hero identity band — team-color composite (gradient + ghost wordmark +
  *    ESPN cutout via player-modal-band; gradient-only for DEF / MFL-JPG-only)
  * 2. Key metrics strip (points, PPG, contract)
- * 3. Weekly results (game-by-game performance)
- * 4. Supporting details (physical, status, draft, contract breakdown)
+ * 3. Latest News — ESPN athlete-scoped, fetched on open (see player-news-client)
+ * 4. Weekly results (game-by-game performance)
+ * 5. Supporting details (physical, status, draft, contract breakdown)
  */
 import '../../styles/player-modal-band.css';
+import '../../styles/player-news.css';
 
 export interface Props {
   class?: string;
@@ -68,6 +70,18 @@ const { class: className, hideContract = false } = Astro.props;
             <span class="pdm-metric__label" id="metric-contract-label">Contract</span>
           </div>
         )}
+      </div>
+
+      <!-- Latest News — ESPN athlete-scoped, fetched on open. Sits above the
+           static content, so .pn-status/.pn-list reserve height in
+           player-news.css; without that the whole modal jumps when the fetch
+           resolves under the reader's eyes. -->
+      <div class="pdm-section" id="section-player-news" style="display: none;">
+        <h4 class="pdm-section__title">Latest News</h4>
+        <p class="pn-subtitle" id="pdm-news-subtitle" style="display: none;"></p>
+        <div class="pn-status" id="pdm-news-status"></div>
+        <div class="pn-list" id="pdm-news-list" style="display: none;"></div>
+        <p class="pn-visually-hidden" role="status" aria-live="polite" id="pdm-news-live"></p>
       </div>
 
       <!-- Weekly Results (promoted position) -->
@@ -688,6 +702,49 @@ const { class: className, hideContract = false } = Astro.props;
   import { NFL_TEAM_CITIES } from '../../utils/nfl';
   import { applyPlayerModalBand } from '../../utils/player-modal-band';
   import { getDefSpotlightPlayer } from '../../data/theleague/def-spotlight-players';
+  import { isValidEspnId } from '../../utils/player-news';
+  import {
+    loadPlayerNews,
+    cancelPlayerNews,
+    renderPlayerNewsList,
+    renderPlayerNewsSkeleton,
+  } from '../../utils/player-news-client';
+
+  /**
+   * Document-level listeners must be registered ONCE. initPlayerDetailsModal
+   * re-runs on every astro:page-load (View Transitions), so an unguarded
+   * document.addEventListener here accumulates a new listener per navigation.
+   */
+  let documentListenersBound = false;
+
+  // ── News ──
+  // A team defense has no ESPN athlete id (0 of 32 in the MFL feed, and always
+  // will be), so it borrows its marquee defender's — the same pool the band
+  // face uses, which is why this costs no extra bundle. The section is then
+  // labeled with whose news it actually is; it must never read as the defense's
+  // own reporting.
+  function resolveNewsSubject(playerData: Record<string, any>) {
+    const isDef = String(playerData?.position || '').toUpperCase() === 'DEF';
+    const team = playerData?.nflTeam || '';
+
+    if (isDef) {
+      const star = getDefSpotlightPlayer(team);
+      if (!star?.espnId || !isValidEspnId(star.espnId)) return null;
+      const teamName = NFL_TEAM_CITIES[team] ? `${NFL_TEAM_CITIES[team]} defense` : 'Team defense';
+      return { subject: { espnId: star.espnId }, key: `espn:${star.espnId}`, label: `${teamName} · latest on ${star.name}` };
+    }
+
+    // Send the MFL id, not playerData.espnId. The route resolves it to the
+    // feed's own espn_id, which is the only id guaranteed to be an NFL athlete
+    // — playerData.espnId can be a COLLEGE id for incoming rookies, and a
+    // college id is numerically indistinguishable from an NFL one, so it would
+    // silently return a DIFFERENT player's news. It also means the three cards
+    // that never populated espnId still get news, since every call site already
+    // passes `id`.
+    const mflId = playerData?.id;
+    if (!mflId || !/^\d{1,12}$/.test(String(mflId))) return null;
+    return { subject: { mflId: String(mflId) }, key: `mfl:${mflId}`, label: '' };
+  }
 
   // ── DEF band face ──
   // A team defense has no headshot of its own, so — mirroring the Free Agents
@@ -725,18 +782,85 @@ const { class: className, hideContract = false } = Astro.props;
     const overlay = document.querySelector('.player-details-modal__overlay');
     const closeBtn = document.querySelector('.pdm-close');
 
+    const newsSection = document.getElementById('section-player-news');
+    const newsSubtitle = document.getElementById('pdm-news-subtitle');
+    const newsStatus = document.getElementById('pdm-news-status');
+    const newsList = document.getElementById('pdm-news-list');
+    const newsLive = document.getElementById('pdm-news-live');
+
     const closeModal = () => {
       if (modal) modal.classList.remove('active');
+      // Invalidate any pending render so a late response can't repaint a modal
+      // the user already dismissed.
+      cancelPlayerNews();
     };
 
     if (closeBtn) closeBtn.addEventListener('click', closeModal);
     if (overlay) overlay.addEventListener('click', closeModal);
 
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && modal?.classList.contains('active')) {
-        closeModal();
+    if (!documentListenersBound) {
+      documentListenersBound = true;
+      document.addEventListener('keydown', (e) => {
+        const activeModal = document.querySelector('.player-details-modal');
+        if (e.key === 'Escape' && activeModal?.classList.contains('active')) {
+          activeModal.classList.remove('active');
+          cancelPlayerNews();
+        }
+      });
+    }
+
+    /** Paint one news state. Never mixes `empty` with `error`. */
+    const renderNewsState = (state) => {
+      if (!newsSection || !newsStatus || !newsList) return;
+
+      const showStatus = (html: HTMLElement[] | string) => {
+        newsList.style.display = 'none';
+        newsStatus.style.display = '';
+        newsStatus.className = typeof html === 'string' ? 'pn-status pn-status--message' : 'pn-status';
+        if (typeof html === 'string') newsStatus.textContent = html;
+      };
+
+      if (state.kind === 'loading') {
+        newsStatus.className = 'pn-status';
+        newsStatus.style.display = '';
+        newsList.style.display = 'none';
+        renderPlayerNewsSkeleton(newsStatus, 2);
+        return;
       }
-    });
+
+      if (state.kind === 'ok') {
+        newsStatus.style.display = 'none';
+        newsList.style.display = '';
+        renderPlayerNewsList(newsList, state.items);
+        if (newsLive) {
+          newsLive.textContent = `${state.items.length} recent ${state.items.length === 1 ? 'story' : 'stories'} loaded.`;
+        }
+        return;
+      }
+
+      if (state.kind === 'empty') {
+        showStatus('No recent ESPN stories for this player.');
+        if (newsLive) newsLive.textContent = 'No recent stories.';
+        return;
+      }
+
+      // error — distinct from empty, and retryable.
+      newsList.style.display = 'none';
+      newsStatus.style.display = '';
+      newsStatus.className = 'pn-status pn-status--message';
+      newsStatus.textContent = "Couldn't reach ESPN. ";
+      const retry = document.createElement('button');
+      retry.type = 'button';
+      retry.className = 'pn-retry';
+      retry.textContent = 'Retry';
+      retry.addEventListener('click', () => {
+        const mflId = newsSection.dataset.newsMflId;
+        const espnId = newsSection.dataset.newsEspnId;
+        if (mflId || espnId) loadPlayerNews({ mflId, espnId }, renderNewsState);
+      });
+      newsStatus.appendChild(retry);
+      if (newsLive) newsLive.textContent = 'Could not load news.';
+    };
 
     window.openPlayerDetailsModal = function(playerData) {
       // ── Helpers ──
@@ -1119,6 +1243,35 @@ const { class: className, hideContract = false } = Astro.props;
           weeklySection.style.display = 'none';
           weeklyBody.innerHTML = '';
           if (weeklyFoot) weeklyFoot.style.display = 'none';
+        }
+      }
+
+      // ── News ──
+      // Reset SYNCHRONOUSLY, before any await, so the previous player's
+      // articles are never visible for even one frame under this player's name.
+      const resolved = resolveNewsSubject(playerData || {});
+
+      if (newsSection) {
+        if (!resolved) {
+          // Nothing to ask about (no MFL id, or a DEF with no mapped defender).
+          // We didn't ask, so we say nothing — a permanent "no recent news" on
+          // such a player is true and useless.
+          newsSection.style.display = 'none';
+          delete newsSection.dataset.newsMflId;
+          delete newsSection.dataset.newsEspnId;
+          cancelPlayerNews();
+        } else {
+          newsSection.style.display = '';
+          delete newsSection.dataset.newsMflId;
+          delete newsSection.dataset.newsEspnId;
+          if (resolved.subject.mflId) newsSection.dataset.newsMflId = resolved.subject.mflId;
+          if (resolved.subject.espnId) newsSection.dataset.newsEspnId = resolved.subject.espnId;
+          if (newsSubtitle) {
+            newsSubtitle.textContent = resolved.label;
+            newsSubtitle.style.display = resolved.label ? '' : 'none';
+          }
+          if (newsLive) newsLive.textContent = '';
+          loadPlayerNews(resolved.subject, renderNewsState);
         }
       }
 

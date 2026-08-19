@@ -33,7 +33,21 @@ export interface PlayerIdentity {
   position: string;
   nflTeam: string;
   headshot: string;
+  /**
+   * Best-guess ESPN id — may be an NFL athlete id OR a college one (see
+   * `resolveEspnId`). Fine for picking a headshot, because `headshot` above
+   * already picks the matching URL. NOT safe for anything that assumes an NFL
+   * athlete — use `nflEspnId` for that.
+   */
   espnId: string | null;
+  /**
+   * ESPN id that is definitely an NFL athlete (straight from the feed's
+   * `espn_id`), or null. Consumers hitting NFL-scoped ESPN endpoints must use
+   * this: a college id is numerically indistinguishable from an NFL one, so
+   * passing one to the NFL athlete endpoints silently addresses a DIFFERENT
+   * player rather than failing. Same reason `headshot` splits the two URLs.
+   */
+  nflEspnId: string | null;
   /** NFL draft year from the MFL feed (e.g. '2026'); empty for undrafted/unknown */
   draftYear: string;
 }
@@ -124,6 +138,7 @@ function toIdentity(
     nflTeam: normalizeTeamCode(p.team || ''),
     headshot,
     espnId,
+    nflEspnId: nflEspnId || null,
     draftYear: p.draft_year || '',
   };
 }
