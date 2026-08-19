@@ -11,6 +11,7 @@ import {
   PLAYER_NEWS_MAX_LIMIT,
   PLAYER_NEWS_DEFAULT_LIMIT,
   describePayloadShape,
+  extractOverviewArticles,
 } from '../src/utils/player-news';
 
 /**
@@ -279,5 +280,71 @@ describe('shape mismatch is never reported as "no news"', () => {
     expect(describePayloadShape({ header: 1, athlete: 2 })).toBe('header,athlete');
     expect(describePayloadShape(null)).toBe('object');
     expect(describePayloadShape('x')).toBe('string');
+  });
+});
+
+describe('two-source ladder', () => {
+  // Source 1 (athletes/{id}/news) answers 200 with an empty articles array for
+  // every athlete tried on a live deploy. It is reachable and honest, just
+  // empty — so an empty first source must not be treated as proof of absence.
+  const routeFetch = (byUrl: Record<string, { ok: boolean; body: unknown }>) => {
+    const spy = vi.fn((url: unknown) => {
+      const key = Object.keys(byUrl).find((k) => String(url).includes(k));
+      const hit = key ? byUrl[key] : { ok: false, body: {} };
+      return Promise.resolve({ ok: hit.ok, json: () => Promise.resolve(hit.body) });
+    });
+    vi.stubGlobal('fetch', spy);
+    return spy;
+  };
+
+  const article = (headline: string) => ({
+    id: 1, headline, description: 'd', published: '2026-08-19T00:00:00Z',
+    type: 'Story', links: { web: { href: 'https://espn.com/x' } },
+  });
+
+  it('prefers source 1 and does not call the overview when it has articles', async () => {
+    const spy = routeFetch({ '/news': { ok: true, body: { articles: [article('from news')] } } });
+    const result = await fetchAthleteNews('3139477');
+    expect(result.status).toBe('ok');
+    expect(result.source).toBe('athlete-news');
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it('falls through to the overview when source 1 is empty', async () => {
+    routeFetch({
+      '/news': { ok: true, body: { articles: [] } },
+      '/overview': { ok: true, body: { news: { articles: [article('from overview')] } } },
+    });
+    const result = await fetchAthleteNews('3139477');
+    expect(result.status).toBe('ok');
+    expect(result.source).toBe('athlete-overview');
+    expect(result.items[0].headline).toBe('from overview');
+  });
+
+  it('reports empty only when BOTH sources are empty', async () => {
+    routeFetch({
+      '/news': { ok: true, body: { articles: [] } },
+      '/overview': { ok: true, body: { news: { articles: [] } } },
+    });
+    const result = await fetchAthleteNews('3139477');
+    expect(result.status).toBe('empty');
+    expect(result.source).toBeUndefined();
+  });
+
+  it('a failing overview degrades to empty, not error — source 1 was read fine', async () => {
+    routeFetch({
+      '/news': { ok: true, body: { articles: [] } },
+      '/overview': { ok: false, body: {} },
+    });
+    const result = await fetchAthleteNews('3139477');
+    expect(result.status).toBe('empty');
+    expect(result.reason).toBeUndefined();
+  });
+
+  it('extractOverviewArticles separates a missing envelope from an empty list', () => {
+    expect(extractOverviewArticles({ news: { articles: [] } })).toEqual([]);
+    expect(extractOverviewArticles({ news: {} })).toBeNull();
+    expect(extractOverviewArticles({})).toBeNull();
+    expect(extractOverviewArticles(null)).toBeNull();
   });
 });

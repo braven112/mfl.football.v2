@@ -42,10 +42,22 @@ export interface PlayerNewsResult {
   items: PlayerNewsItem[];
   fetchedAt: string;
   reason?: PlayerNewsFailure;
+  /** Which upstream produced the articles — surfaced for diagnosis. */
+  source?: 'athlete-news' | 'athlete-overview';
 }
 
 export const ESPN_ATHLETE_NEWS_BASE =
   'https://site.api.espn.com/apis/site/v2/sports/football/nfl/athletes';
+
+/**
+ * Second source. The athlete-news endpoint above answers 200 with an EMPTY
+ * `articles` array for every athlete tried on a live deploy (Mahomes, Kelce,
+ * Budda Baker, Aug 2026) — it is reachable and honest, just empty. The Web API's
+ * athlete overview carries its own `news.articles`, so it is tried when the
+ * first source yields nothing.
+ */
+export const ESPN_ATHLETE_OVERVIEW_BASE =
+  'https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes';
 
 export const PLAYER_NEWS_DEFAULT_LIMIT = 3;
 export const PLAYER_NEWS_MAX_LIMIT = 6;
@@ -69,6 +81,23 @@ export function isValidEspnId(raw: unknown): raw is string {
 export function buildAthleteNewsUrl(espnId: unknown): string | null {
   if (!isValidEspnId(espnId)) return null;
   return `${ESPN_ATHLETE_NEWS_BASE}/${espnId}/news`;
+}
+
+/** Build the athlete-overview URL (second news source), or null. */
+export function buildAthleteOverviewUrl(espnId: unknown): string | null {
+  if (!isValidEspnId(espnId)) return null;
+  return `${ESPN_ATHLETE_OVERVIEW_BASE}/${espnId}/overview`;
+}
+
+/**
+ * The overview payload nests its articles under `news`. Returns null when the
+ * envelope is unrecognized, so a shape change stays distinguishable from "no
+ * articles" here too.
+ */
+export function extractOverviewArticles(payload: unknown): unknown[] | null {
+  const news = (payload as { news?: unknown } | null)?.news;
+  const articles = (news as { articles?: unknown } | null)?.articles;
+  return Array.isArray(articles) ? articles : null;
 }
 
 /**
@@ -239,11 +268,46 @@ export async function fetchAthleteNews(
   }
 
   const items = parseEspnAthleteNews(payload, limit);
+  if (items.length) {
+    return { espnId: String(espnId), status: 'ok', items, fetchedAt, source: 'athlete-news' };
+  }
 
-  return {
-    espnId: String(espnId),
-    status: items.length ? 'ok' : 'empty',
-    items,
-    fetchedAt,
-  };
+  // Source 1 answered honestly with nothing. Try the overview before telling the
+  // owner there is no news — an empty first source is not proof of absence.
+  const overview = await fetchOverviewNews(espnId, limit);
+  if (overview.length) {
+    return { espnId: String(espnId), status: 'ok', items: overview, fetchedAt, source: 'athlete-overview' };
+  }
+
+  return { espnId: String(espnId), status: 'empty', items: [], fetchedAt };
+}
+
+/**
+ * Second news source: the athlete overview's own `news.articles`.
+ *
+ * Returns [] on any failure — the caller has already got a successful (if
+ * empty) read from source 1, so a failure here means "no more news", not "we
+ * could not read ESPN". Errors are logged rather than surfaced.
+ */
+async function fetchOverviewNews(espnId: string, limit: number): Promise<PlayerNewsItem[]> {
+  const url = buildAthleteOverviewUrl(espnId);
+  if (!url) return [];
+
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+    if (!res.ok) return [];
+
+    const payload = await res.json();
+    const articles = extractOverviewArticles(payload);
+    if (articles === null) {
+      console.warn(
+        `[player-news] overview payload for ${espnId} had no news.articles; top-level keys: ${describePayloadShape(payload)}`,
+      );
+      return [];
+    }
+    return parseEspnAthleteNews({ articles }, limit);
+  } catch (error) {
+    console.warn(`[player-news] overview fetch failed for ${espnId}:`, error);
+    return [];
+  }
 }
