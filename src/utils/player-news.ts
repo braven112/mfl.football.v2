@@ -90,14 +90,28 @@ export function buildAthleteOverviewUrl(espnId: unknown): string | null {
 }
 
 /**
- * The overview payload nests its articles under `news`. Returns null when the
- * envelope is unrecognized, so a shape change stays distinguishable from "no
- * articles" here too.
+ * Pull the article list out of an athlete-overview payload.
+ *
+ * The overview's top-level keys are `statistics,news,nextGame,gameLog,rotowire,
+ * awards,fantasy` (observed live, Aug 2026), so `news` is definitely there —
+ * but ESPN is inconsistent about what sits under it across their surfaces, and
+ * this endpoint's schema is undocumented even in the community reference. So
+ * accept the shapes it plausibly takes rather than betting on one, and return
+ * null (not []) for anything else, keeping "unrecognized" distinct from "empty".
  */
 export function extractOverviewArticles(payload: unknown): unknown[] | null {
   const news = (payload as { news?: unknown } | null)?.news;
-  const articles = (news as { articles?: unknown } | null)?.articles;
-  return Array.isArray(articles) ? articles : null;
+  if (news === undefined || news === null) return null;
+
+  // `news` is the list itself.
+  if (Array.isArray(news)) return news;
+
+  const container = news as Record<string, unknown>;
+  for (const key of ['articles', 'items', 'article', 'feed', 'headlines']) {
+    if (Array.isArray(container[key])) return container[key] as unknown[];
+  }
+
+  return null;
 }
 
 /**
@@ -300,8 +314,12 @@ async function fetchOverviewNews(espnId: string, limit: number): Promise<PlayerN
     const payload = await res.json();
     const articles = extractOverviewArticles(payload);
     if (articles === null) {
+      // Log the INNER shape — the outer keys are already known to include
+      // `news`, so the remaining unknown is what sits under it.
+      const news = (payload as { news?: unknown } | null)?.news;
       console.warn(
-        `[player-news] overview payload for ${espnId} had no news.articles; top-level keys: ${describePayloadShape(payload)}`,
+        `[player-news] overview news shape unrecognized for ${espnId}; ` +
+        `news is ${Array.isArray(news) ? 'array' : typeof news}, keys: ${describePayloadShape(news)}`,
       );
       return [];
     }

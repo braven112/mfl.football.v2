@@ -348,3 +348,29 @@ describe('two-source ladder', () => {
     expect(extractOverviewArticles(null)).toBeNull();
   });
 });
+
+describe('extractOverviewArticles tolerates ESPN inconsistency', () => {
+  // Observed live: the overview's top-level keys are
+  // statistics,news,nextGame,gameLog,rotowire,awards,fantasy — so `news` exists,
+  // but its inner shape is undocumented even in the community reference.
+  it('accepts the shapes news plausibly takes', () => {
+    const a = [{ headline: 'x' }];
+    expect(extractOverviewArticles({ news: a })).toEqual(a);
+    expect(extractOverviewArticles({ news: { articles: a } })).toEqual(a);
+    expect(extractOverviewArticles({ news: { items: a } })).toEqual(a);
+    expect(extractOverviewArticles({ news: { article: a } })).toEqual(a);
+    expect(extractOverviewArticles({ news: { feed: a } })).toEqual(a);
+  });
+
+  it('returns null (unrecognized), never [], for a shape it does not know', () => {
+    expect(extractOverviewArticles({ news: { something: 1 } })).toBeNull();
+    expect(extractOverviewArticles({ news: 'text' })).toBeNull();
+    expect(extractOverviewArticles({})).toBeNull();
+    expect(extractOverviewArticles(null)).toBeNull();
+  });
+
+  it('an empty list is empty, not unrecognized', () => {
+    expect(extractOverviewArticles({ news: [] })).toEqual([]);
+    expect(extractOverviewArticles({ news: { articles: [] } })).toEqual([]);
+  });
+});
