@@ -35,20 +35,34 @@ import { join } from 'node:path';
 import { getPlayer } from '../utils/player-map';
 import { normalizeTeamCode } from '../utils/nfl-logo';
 import { DEFAULT_LEAGUE_SLUG, getLeagueBySlug } from '../config/leagues';
-import type { LivePlayerRow, MatchupPairing, NflGame, PlayerMeta } from '../types/live-scoring';
+import type {
+  LivePlayerRow,
+  LiveScoringDemoDetail,
+  LiveScoringPlay,
+  MatchupPairing,
+  NflGame,
+  PlayerMeta,
+} from '../types/live-scoring';
 
 /** A regulation NFL game is 3600 game-seconds (mirrors live-win-probability). */
 const NFL_GAME_SECONDS = 3600;
 
-/** Serializable moment seed (mirrors the island's Moment shape). */
-export interface MomentSeed {
-  key: string;
-  fid: string;
-  name: string;
-  team: string;
-  delta: number;
-  clock: string;
-}
+/**
+ * Sample stand-in for /api/nfl-game-detail.
+ *
+ * `plays` carries one entry per franchise's top live scorer so the matchup
+ * ticker has something to render offseason. It is EXPLICITLY not a play — the
+ * historical feeds this sample is built from have no play-by-play, so the text
+ * says what it actually is and `typeAbbrev` is left empty rather than claiming
+ * a touchdown that we cannot verify happened.
+ *
+ * `boxScore` is deliberately EMPTY. Per-player stat lines come from ESPN's
+ * athlete-keyed box score, which has no offseason equivalent here, and
+ * inventing "5 rec, 64 yds" for a sample would put a fabricated stat line on
+ * screen next to real ones. The island's honest "no stat line" state is what
+ * shows instead; verify that feature against live data on a preview deploy.
+ */
+export type SampleDetail = LiveScoringDemoDetail;
 
 export interface LiveScoringSample {
   week: number;
@@ -59,7 +73,7 @@ export interface LiveScoringSample {
   playersYetToPlay: Record<string, number>;
   playerMeta: Record<string, PlayerMeta>;
   nflGames: NflGame[];
-  moments: MomentSeed[];
+  detail: SampleDetail;
 }
 
 /** Row order the island renders top-to-bottom (QB → RB → WR → TE → PK → DEF). */
@@ -381,7 +395,8 @@ export function getLiveScoringSample(
   if (!final) {
     return {
       week: 1, matchups: [], scores: {}, remaining: {}, players: {},
-      playersYetToPlay: {}, playerMeta: {}, nflGames: [], moments: [],
+      playersYetToPlay: {}, playerMeta: {}, nflGames: [],
+      detail: { boxScore: {}, plays: [] },
     };
   }
 
@@ -391,7 +406,7 @@ export function getLiveScoringSample(
   const scores: Record<string, number> = {};
   const remaining: Record<string, number> = {};
   const playersYetToPlay: Record<string, number> = {};
-  const moments: MomentSeed[] = [];
+  const topScorers: Array<{ fid: string; id: string; name: string; team: string; live: number; sec: number }> = [];
 
   // Per-NFL-game phases (some Final, some in-progress). The strip is rendered
   // afterward from the teams that actually have a live starter (`liveTeams`).
@@ -450,7 +465,7 @@ export function getLiveScoringSample(
       .slice(0, 9);
 
     const rows: LivePlayerRow[] = [];
-    let topStarter: { name: string; team: string; live: number; sec: number } | null = null;
+    let topStarter: { id: string; name: string; team: string; live: number; sec: number } | null = null;
 
     for (const r of resolved) {
       const m = r.meta;
@@ -487,7 +502,7 @@ export function getLiveScoringSample(
       rows.push({ id: r.id, live, secondsRemaining: sec, status: 'starter' });
       if (sec > 0 && nflTeam) liveTeams.add(normalizeTeamCode(nflTeam));
       if (!topStarter || live > topStarter.live) {
-        topStarter = { name: m?.name ?? 'Unknown Player', team: nflTeam, live, sec };
+        topStarter = { id: r.id, name: m?.name ?? 'Unknown Player', team: nflTeam, live, sec };
       }
     }
 
@@ -496,22 +511,30 @@ export function getLiveScoringSample(
     remaining[fid] = rows.reduce((s, r) => s + r.secondsRemaining, 0);
     playersYetToPlay[fid] = rows.filter((r) => r.secondsRemaining >= NFL_GAME_SECONDS).length;
 
-    // One moment per team (its top live performer) so any opened matchup shows
-    // both sides' standout; the detail view slices these to the first handful.
+    // One ticker row per team (its top live performer) so any opened matchup
+    // shows both sides' standout; the detail view slices these to a handful.
     if (topStarter && topStarter.live > 0) {
-      moments.push({
-        key: `m-${fid}`,
-        fid,
-        name: topStarter.name,
-        team: topStarter.team,
-        delta: topStarter.live,
-        clock: clockForSec(topStarter.sec),
-      });
+      topScorers.push({ fid, ...topStarter });
     }
   }
 
-  // Surface the biggest performances first.
-  moments.sort((a, b) => b.delta - a.delta);
+  // Surface the biggest performances first. buildMoments() reverses the list
+  // (ESPN orders plays chronologically, newest last), so seed it backwards to
+  // land on biggest-first in the UI.
+  topScorers.sort((a, b) => a.live - b.live);
+  const plays: LiveScoringPlay[] = topScorers.map((t, i) => ({
+    playId: `sample-${t.fid}`,
+    gameId: `sample-${t.fid}`,
+    sequence: i,
+    period: 0,
+    clock: clockForSec(t.sec),
+    text: `${t.name} leads with ${t.live.toFixed(1)} pts`,
+    typeAbbrev: '',
+    typeText: '',
+    nflTeam: normalizeTeamCode(t.team),
+    scoreValue: 0,
+    playerIds: [t.id],
+  }));
 
   // Build the NFL strip now that we know which teams actually have a live
   // starter, so a phased-live game reads Final unless a starter is still on it.
@@ -530,6 +553,6 @@ export function getLiveScoringSample(
     playersYetToPlay,
     playerMeta,
     nflGames,
-    moments,
+    detail: { boxScore: {}, plays },
   };
 }

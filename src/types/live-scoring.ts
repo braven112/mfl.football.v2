@@ -82,6 +82,30 @@ export interface LiveScoringHeroProps {
   initialRemaining?: Record<string, number>;
 }
 
+/**
+ * Live drive state for a game that is actually being played.
+ *
+ * ESPN attaches this ONLY while a game is in progress — it is absent before
+ * kickoff and after the final whistle, which is normal and not an error.
+ */
+export interface NflGameSituation {
+  /**
+   * True when the POSSESSING team has the ball inside the 20. It belongs to
+   * whoever has the ball, so any UI keyed on it must first check `possession`
+   * against the player's own NFL team — otherwise a receiver gets a red-zone
+   * flag while his team is on defense.
+   */
+  isRedZone: boolean;
+  /** Canonical code of the team with the ball; '' when ESPN omits it. */
+  possession: string;
+  /** e.g. "1st & Goal at WSH 8". Empty when absent. */
+  downDistanceText: string;
+  /** e.g. "1st & Goal" — the narrow-width form. Empty when absent. */
+  shortDownDistanceText: string;
+  /** Narration of the most recent play. Empty when absent. */
+  lastPlay: string;
+}
+
 /** A real NFL game from the ESPN scoreboard (powers the NFL games strip). */
 export interface NflGame {
   id: string;
@@ -96,12 +120,83 @@ export interface NflGame {
   /** Team code with possession during a live game, else null. */
   possession: string | null;
   date: string;
+  /** Present only while the game is being played; see NflGameSituation. */
+  situation?: NflGameSituation | null;
 }
 
 /** API response from /api/nfl-scoreboard. */
 export interface NflScoreboardResponse {
+  /**
+   * False when the upstream ESPN request failed. An empty `games` with
+   * `ok: true` is a healthy off-day; `ok: false` is an outage, and the two
+   * must not render the same way.
+   */
+  ok?: boolean;
   week: number;
   games: NflGame[];
+}
+
+/**
+ * A starter's real NFL box-score line, keyed by MFL player id.
+ *
+ * `statLine` is EMPTY when the player has a box-score entry but nothing worth
+ * printing yet (no touches). A player missing from the map entirely has no
+ * entry at all. Neither means the fetch failed — that is
+ * `NflGameDetailResponse.ok`.
+ */
+export interface PlayerBoxScore {
+  playerId: string;
+  /** Canonical NFL team code the box score listed him under. */
+  nflTeam: string;
+  /** Compact line, e.g. "5 rec (8 tgt), 64 yds, 1 TD". '' = no touches yet. */
+  statLine: string;
+  /** ESPN event id of the game the line came from. */
+  gameId: string;
+}
+
+/**
+ * A real, athlete-attributed scoring play. Replaces the old Moments feed,
+ * which inferred a "delta" by diffing fantasy points between two 60s polls and
+ * invented the clock it displayed alongside it.
+ */
+export interface LiveScoringPlay {
+  playId: string;
+  gameId: string;
+  /** ESPN's play ordering within the game. */
+  sequence: number;
+  period: number;
+  /** Game clock at the play, e.g. "11:49". */
+  clock: string;
+  /** ESPN's one-line summary of the play. */
+  text: string;
+  /** TD, FG, SF… Empty when ESPN omits it. */
+  typeAbbrev: string;
+  typeText: string;
+  /** Canonical code of the scoring team. */
+  nflTeam: string;
+  scoreValue: number;
+  /**
+   * MFL player ids credited on the play. Empty when nobody on the play is in
+   * our player feed (an offensive lineman, or a defense). Resolved server-side
+   * from PlayerIdentity.nflEspnId — never from PlayerMeta.espnId, which can
+   * hold a college athlete id.
+   */
+  playerIds: string[];
+}
+
+/** API response from /api/nfl-game-detail. */
+export interface NflGameDetailResponse {
+  /** Did this route get a usable read? Distinct from "is there any data". */
+  ok: boolean;
+  week: number;
+  year: number;
+  fetchedAt: string;
+  /** Keyed by MFL player id. */
+  boxScore: Record<string, PlayerBoxScore>;
+  plays: LiveScoringPlay[];
+  /** Games we tried to expand, and how many came back complete. Partial is normal. */
+  gamesRequested: number;
+  gamesLoaded: number;
 }
 
 /** API response from /api/live-scoring (enhanced with matchup pairings) */
@@ -145,16 +240,12 @@ export interface LiveScoringPageProps {
   demo?: boolean;
   /** Sample NFL games for the strip in demo mode (skips the live fetch). */
   initialNflGames?: NflGame[];
-  /** Seed scoring-moments in demo mode. */
-  initialMoments?: LiveMomentSeed[];
+  /** Sample box scores + scoring plays for demo mode. */
+  initialDetail?: LiveScoringDemoDetail;
 }
 
-/** A pre-baked scoring moment (demo mode); mirrors the island's live Moment. */
-export interface LiveMomentSeed {
-  key: string;
-  fid: string;
-  name: string;
-  team: string;
-  delta: number;
-  clock: string;
+/** Sample scoring plays for demo mode (skips the live /api/nfl-game-detail fetch). */
+export interface LiveScoringDemoDetail {
+  boxScore: Record<string, PlayerBoxScore>;
+  plays: LiveScoringPlay[];
 }

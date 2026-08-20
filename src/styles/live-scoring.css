@@ -428,6 +428,77 @@ html.dark .ls-headshot {
 .ls-m-txt { flex: 1; font-size: 0.86rem; color: var(--page-text); }
 .ls-m-pts { font-family: var(--font-display); font-weight: var(--font-weight-bold); color: var(--ls-boom); font-variant-numeric: tabular-nums; }
 
+/* ── real NFL game context (ESPN) ──
+   Red zone, down & distance, and the live box-score line. All three are
+   theme-token driven: --color-error and the --badge-error-* pair each carry a
+   light value AND an html.dark override, which is what keeps the red-zone chip
+   from shipping as unreadable dark-red-on-black. Never swap these for a
+   literal — a red chip is the exact case that looks perfect in light mode and
+   disappears in dark. */
+
+/* The chip states the fact; the row tint is what survives on a phone, where
+   .ls-pmeta (and with it the chip) is hidden for space. */
+.ls-prow.redzone {
+  background: color-mix(in srgb, var(--color-error) 9%, transparent);
+  box-shadow: inset 2px 0 0 var(--color-error);
+  border-radius: var(--radius-sm);
+}
+.ls-prow.redzone.right {
+  box-shadow: inset -2px 0 0 var(--color-error);
+}
+.ls-rz {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.05rem 0.3rem;
+  border-radius: var(--radius-sm);
+  background: var(--badge-error-bg);
+  color: var(--badge-error-text);
+  font-size: 0.6rem;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+.ls-dd {
+  color: var(--content-text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Box-score line. Rendered only when ESPN actually has stats for the player —
+   an empty line means "no touches yet", and a failed feed suppresses the slot
+   entirely rather than rendering every starter as a blank (see PlayerRow). */
+.ls-pstat {
+  font-size: 0.72rem;
+  line-height: 1.25;
+  color: var(--content-text-muted);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.ls-prow.right .ls-pstat { text-align: right; }
+
+/* Scoring-play ticker. .ls-m-type carries ESPN's own play abbreviation (TD,
+   FG, SF) in place of the old "+X.X" fantasy delta, which was inferred by
+   diffing two polls rather than observed. */
+.ls-m-type {
+  font-family: var(--font-display);
+  font-size: 0.66rem;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.06em;
+  padding: 0.08rem 0.34rem;
+  border-radius: var(--radius-sm);
+  background: var(--badge-success-bg);
+  color: var(--badge-success-text);
+  white-space: nowrap;
+}
+.ls-moments-note {
+  margin: 0.3rem 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--content-text-muted);
+}
+/* "We couldn't read the feed" must not look like "nothing happened". */
+.ls-moments-note.error { color: var(--color-error); }
+
+
 @media (max-width: 760px) {
   /* Stack each team vertically (crest + name above the big score) so the
      three columns stay narrow enough to fit a phone without overflowing. */
@@ -463,6 +534,7 @@ html.dark .ls-headshot {
   .ls-pscore { min-width: 2.3rem; }
   .ls-plive { font-size: 1.02rem; }
   .ls-pproj, .ls-pmeta { display: none; }
+  .ls-pstat { font-size: 0.66rem; }
 
   /* ── Featured "YOUR MATCHUP" row card ──
      Desktop sits the two big scores either side of a center "@", which collides

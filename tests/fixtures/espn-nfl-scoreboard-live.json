@@ -1,0 +1,126 @@
+{
+  "_note": "HAND-BUILT in-progress fixture. The real ESPN scoreboard only carries competitions[0].situation while a game is actually being played, and no NFL game was in progress when the real fixtures were captured (2026-08-20, preseason). Field names come from ESPN's core-API situation resource, which WAS captured live on a completed game: {lastPlay, down, yardLine, distance, isRedZone, homeTimeouts, awayTimeouts}; the site-API scoreboard adds possession/downDistanceText/shortDownDistanceText/possessionText and inlines lastPlay. parseGameSituation() treats every one of these as optional for that reason.",
+  "events": [
+    {
+      "id": "401772800",
+      "date": "2025-09-14T17:00Z",
+      "shortName": "KC @ WSH",
+      "status": {
+        "period": 3,
+        "displayClock": "8:12",
+        "type": {
+          "id": "2",
+          "name": "STATUS_IN_PROGRESS",
+          "state": "in",
+          "completed": false,
+          "description": "In Progress",
+          "detail": "8:12 - 3rd Quarter",
+          "shortDetail": "8:12 - 3rd"
+        }
+      },
+      "competitions": [
+        {
+          "id": "401772800",
+          "competitors": [
+            {
+              "homeAway": "home",
+              "score": "14",
+              "team": { "id": "28", "abbreviation": "WSH", "displayName": "Washington Commanders" }
+            },
+            {
+              "homeAway": "away",
+              "score": "21",
+              "team": { "id": "12", "abbreviation": "KC", "displayName": "Kansas City Chiefs" }
+            }
+          ],
+          "status": {
+            "period": 3,
+            "displayClock": "8:12",
+            "type": {
+              "id": "2",
+              "name": "STATUS_IN_PROGRESS",
+              "state": "in",
+              "completed": false,
+              "description": "In Progress",
+              "detail": "8:12 - 3rd Quarter",
+              "shortDetail": "8:12 - 3rd"
+            }
+          },
+          "situation": {
+            "lastPlay": {
+              "id": "4017728003128",
+              "text": "P.Mahomes pass short right to T.Kelce for 12 yards to the WSH 8."
+            },
+            "down": 1,
+            "distance": 8,
+            "yardLine": 8,
+            "downDistanceText": "1st & Goal at WSH 8",
+            "shortDownDistanceText": "1st & Goal",
+            "possessionText": "WSH 8",
+            "isRedZone": true,
+            "homeTimeouts": 2,
+            "awayTimeouts": 3,
+            "possession": "12"
+          }
+        }
+      ]
+    },
+    {
+      "id": "401772801",
+      "date": "2025-09-14T17:00Z",
+      "shortName": "SF @ SEA",
+      "status": {
+        "period": 2,
+        "displayClock": "1:44",
+        "type": {
+          "id": "2",
+          "name": "STATUS_IN_PROGRESS",
+          "state": "in",
+          "completed": false,
+          "description": "In Progress",
+          "detail": "1:44 - 2nd Quarter",
+          "shortDetail": "1:44 - 2nd"
+        }
+      },
+      "competitions": [
+        {
+          "id": "401772801",
+          "competitors": [
+            {
+              "homeAway": "home",
+              "score": "3",
+              "team": { "id": "26", "abbreviation": "SEA", "displayName": "Seattle Seahawks" }
+            },
+            {
+              "homeAway": "away",
+              "score": "10",
+              "team": { "id": "25", "abbreviation": "SF", "displayName": "San Francisco 49ers" }
+            }
+          ],
+          "status": {
+            "period": 2,
+            "displayClock": "1:44",
+            "type": {
+              "id": "2",
+              "name": "STATUS_IN_PROGRESS",
+              "state": "in",
+              "completed": false,
+              "description": "In Progress",
+              "detail": "1:44 - 2nd Quarter",
+              "shortDetail": "1:44 - 2nd"
+            }
+          },
+          "situation": {
+            "down": 3,
+            "distance": 7,
+            "yardLine": 45,
+            "downDistanceText": "3rd & 7 at SF 45",
+            "shortDownDistanceText": "3rd & 7",
+            "isRedZone": false,
+            "possession": "26"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,9 +1,11 @@
 /**
  * NflGamesStrip — a self-contained, reusable rail of live NFL games.
  *
- * Shows every NFL game for a week with score, quarter/clock, and possession,
- * from /api/nfl-scoreboard (ESPN). Fetches on mount and polls while games are
- * live. Fully namespaced (.nfl-strip__*) with its own stylesheet
+ * Shows every NFL game for a week with score, quarter/clock, possession, and
+ * the live drive situation (red zone / down & distance), from
+ * /api/nfl-scoreboard (ESPN) via the SHARED useNflScoreboard poller — so
+ * dropping this alongside another island that wants the scoreboard costs no
+ * extra fetch. Fully namespaced (.nfl-strip__*) with its own stylesheet
  * (src/styles/nfl-games-strip.css) so it can be dropped on any page — just
  * render the island and import the stylesheet.
  *
@@ -13,12 +15,10 @@
  *   <NflGamesStrip client:visible week={week} year={year} isLive={isLive} />
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { NflGame, NflScoreboardResponse } from '../../types/live-scoring';
+import type { NflGame } from '../../types/live-scoring';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
 import { nflLogoErrorHandler, nflLogoLoadHandler, nflLogoRefCallback } from '../../constants/roster-constants';
-
-const POLL_LIVE = 60_000;
+import { useNflScoreboard } from '../../hooks/useNflScoreboard';
 
 const nflLogoUrl = (code: string) => (code ? `/assets/nfl-logos/${normalizeTeamCode(code)}.svg` : '');
 
@@ -37,19 +37,26 @@ export interface NflGamesStripProps {
 function GameCard({ game }: { game: NflGame }) {
   const live = game.state === 'in';
   const pre = game.state === 'pre';
+  // The red zone belongs to whoever HAS THE BALL, so the flag is drawn on the
+  // possessing team's line and nowhere else.
+  const redZoneTeam = live && game.situation?.isRedZone ? game.situation.possession : '';
 
   const teamLine = (side: 'away' | 'home') => {
     const t = game[side];
     const hasPoss = live && game.possession && game.possession === t.code;
+    const inRedZone = !!redZoneTeam && redZoneTeam === t.code;
     return (
-      <div className="nfl-game__team">
+      <div className={`nfl-game__team${inRedZone ? ' redzone' : ''}`}>
         {t.code && <img className="nfl-game__logo" src={nflLogoUrl(t.code)} alt="" loading="lazy" onError={nflLogoErrorHandler} onLoad={nflLogoLoadHandler} ref={nflLogoRefCallback} />}
         <span className="nfl-game__code">{t.code || 'TBD'}</span>
         {hasPoss && <span className="nfl-game__poss" aria-label="has possession">●</span>}
+        {inRedZone && <span className="nfl-game__rz" title="In the red zone">RZ</span>}
         <span className="nfl-game__score">{pre ? '' : t.score}</span>
       </div>
     );
   };
+
+  const downDistance = live ? game.situation?.shortDownDistanceText ?? '' : '';
 
   return (
     <article className={`nfl-game ${game.state}`}>
@@ -61,37 +68,23 @@ function GameCard({ game }: { game: NflGame }) {
         ) : (
           <span className="nfl-game__pre">{game.state === 'post' ? 'Final' : game.shortDetail}</span>
         )}
+        {downDistance && <span className="nfl-game__dd">{downDistance}</span>}
       </footer>
     </article>
   );
 }
 
 export default function NflGamesStrip({ week, year, isLive, label = 'NFL Games', demo, initialGames }: NflGamesStripProps) {
-  const [games, setGames] = useState<NflGame[]>(initialGames ?? []);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Demo mode renders the bundled sample and does no network at all, so the
+  // live feed can't overwrite it.
+  const { games } = useNflScoreboard(week, year, {
+    enabled: !demo,
+    live: !!isLive,
+    fallbackGames: initialGames,
+  });
 
-  const load = useCallback(async () => {
-    try {
-      const url = new URL('/api/nfl-scoreboard', window.location.origin);
-      url.searchParams.set('week', String(week));
-      url.searchParams.set('year', String(year));
-      const res = await fetch(url.toString());
-      if (!res.ok) return;
-      const data: NflScoreboardResponse = await res.json();
-      setGames(data.games ?? []);
-    } catch {
-      /* best-effort rail */
-    }
-  }, [week, year]);
-
-  useEffect(() => {
-    if (demo) return; // sample data provided; don't hit the live feed
-    load();
-    if (!isLive) return;
-    intervalRef.current = setInterval(load, POLL_LIVE);
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [load, isLive, demo]);
-
+  // Nothing to show and nothing to explain — this is a decorative rail, and a
+  // failed scoreboard fetch is reported by the page's own status, not here.
   if (games.length === 0) return null;
 
   // Live games first, then upcoming, then finals.
