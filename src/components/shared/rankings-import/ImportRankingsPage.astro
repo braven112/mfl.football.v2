@@ -233,7 +233,12 @@ const siteConfigs = [
   .ri-page__title {
     font-size: 1.75rem;
     font-weight: 700;
-    color: var(--primary-color, #1c497c);
+    /* Page title matches every other page in both leagues (--page-text),
+       not the brand blue. --primary-color resolves to #3b82f6 in dark mode,
+       which read as blue-on-navy here and made this the only page whose h1
+       wasn't near-white. Section titles/links/table headers below KEEP the
+       blue — that's the documented per-league convention (tokens.css). */
+    color: var(--page-text);
     margin: 0 0 0.5rem;
   }
 
