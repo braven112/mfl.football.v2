@@ -14,6 +14,7 @@ import type { APIRoute } from 'astro';
 import { getAuthUser, isCommissionerOrAdmin } from './auth';
 import { getRedis } from './redis-client';
 import { json, unauthorized } from './api-response';
+import { rankingsScopeForLeagueId, scopedKvKey } from './rankings-scope';
 
 export interface CreateKvFranchiseStoreOptions {
   /**
@@ -37,21 +38,42 @@ export function createKvFranchiseStore(
 ): { GET: APIRoute; POST: APIRoute } {
   const { requireAdmin = false, label = prefix } = options;
 
-  const makeKey = (franchiseId: string): string => `${prefix}:${franchiseId}`;
-
-  const authorize = (request: Request) => {
+  /**
+   * Resolve the Redis key for this request, or null if the caller may not
+   * touch it.
+   *
+   * The key carries a LEAGUE SCOPE (see rankings-scope.ts) because franchise
+   * ids collide across leagues — AFL 0001 and TheLeague 0001 are different
+   * teams, so the old bare `${prefix}:0001` was ambiguous the moment a second
+   * league started writing. TheLeague's scope still produces that exact
+   * legacy string, so existing owners keep their data.
+   *
+   * The scope comes from the SESSION's league, never from the request. The
+   * optional `?league=` param is a check, not an input: the client sends the
+   * league whose page it is on, and a mismatch is rejected. Without that, an
+   * owner logged into TheLeague who opens the AFL rankings page — where
+   * localStorage is reading and writing the AFL bucket — would sync that AFL
+   * board into their TheLeague KV key. Callers that omit the param keep the
+   * prior behavior of using their own session's scope.
+   */
+  const resolveKey = (request: Request): string | null => {
     const user = getAuthUser(request);
     if (!user) return null;
     // A session without a franchise would read/write the shared bare key
     // `${prefix}:` — reject it so malformed sessions can't pool data.
     if (!user.franchiseId) return null;
     if (requireAdmin && !isCommissionerOrAdmin(user)) return null;
-    return user;
+
+    const scope = rankingsScopeForLeagueId(user.leagueId);
+    const requested = new URL(request.url).searchParams.get('league');
+    if (requested && requested !== scope) return null;
+
+    return scopedKvKey(prefix, scope, user.franchiseId);
   };
 
   const GET: APIRoute = async ({ request }) => {
-    const user = authorize(request);
-    if (!user) {
+    const key = resolveKey(request);
+    if (!key) {
       return unauthorized({ error: 'Unauthorized' });
     }
 
@@ -61,7 +83,7 @@ export function createKvFranchiseStore(
     }
 
     try {
-      const data = await redis.get(makeKey(user.franchiseId));
+      const data = await redis.get(key);
       return json({ data: data ?? null });
     } catch (err) {
       console.error(`Failed to load ${label} from KV:`, err);
@@ -70,8 +92,8 @@ export function createKvFranchiseStore(
   };
 
   const POST: APIRoute = async ({ request }) => {
-    const user = authorize(request);
-    if (!user) {
+    const key = resolveKey(request);
+    if (!key) {
       return unauthorized({ error: 'Unauthorized' });
     }
 
@@ -82,7 +104,7 @@ export function createKvFranchiseStore(
 
     try {
       const body = await request.json();
-      await redis.set(makeKey(user.franchiseId), body);
+      await redis.set(key, body);
       return json({ success: true });
     } catch (err) {
       console.error(`Failed to save ${label} to KV:`, err);

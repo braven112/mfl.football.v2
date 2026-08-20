@@ -16,9 +16,21 @@ interface Props {
   mflPlayersJson: string;
   siteConfigsJson: string;
   isAdmin?: boolean;
+  /**
+   * Prefixed internal route to this league's Custom Rankings board, or null
+   * when the league has none (best-ball leagues only consume the imports).
+   * Resolved by the Astro page — this island can't know which league it's on,
+   * and a hardcoded `/theleague/cr` here sent AFL admins to the wrong board.
+   */
+  customRankingsHref?: string | null;
 }
 
-export default function RankingsImportPage({ mflPlayersJson, siteConfigsJson, isAdmin = false }: Props) {
+export default function RankingsImportPage({
+  mflPlayersJson,
+  siteConfigsJson,
+  isAdmin = false,
+  customRankingsHref = null,
+}: Props) {
   const mflPlayers: MFLPlayerForMatching[] = useMemo(() => {
     try { return JSON.parse(mflPlayersJson); } catch { return []; }
   }, [mflPlayersJson]);
@@ -56,9 +68,9 @@ export default function RankingsImportPage({ mflPlayersJson, siteConfigsJson, is
     <div className="ri-page">
       <div className="ri-page__header">
         <h1 className="ri-page__title">Import Rankings</h1>
-        {isAdmin && (
+        {isAdmin && customRankingsHref && (
           <p className="ri-page__subtitle">
-            <a href="/theleague/cr" className="ri-page__link">Custom Rankings</a>
+            <a href={customRankingsHref} className="ri-page__link">Custom Rankings</a>
           </p>
         )}
       </div>

@@ -10,12 +10,31 @@
 
 import type { StoredRankingImport, CompositeRankConfig, SyncedRankingsPayload } from '../types/rankings-import';
 import { loadFromServer, saveToServer } from './rankings-sync';
+import {
+  DEFAULT_RANKINGS_SCOPE,
+  activeRankingsScope,
+  scopedLocalKey,
+  type RankingsScope,
+} from './rankings-scope';
 
-const STORAGE_KEY = 'rankings.imports';
-const AVG_POSITION_KEY = 'rankings.averagePosition';
-const COMPOSITE_CONFIG_KEY = 'rankings.compositeConfig';
+// ---------------------------------------------------------------------------
+// Keys are per-league (see rankings-scope.ts) and therefore functions, not
+// constants: a single module instance outlives a ClientRouter navigation from
+// one league's page to another's, so the scope has to be re-read per call.
+// TheLeague's scope returns these base strings unchanged.
+// ---------------------------------------------------------------------------
 
-// Legacy keys from the old auction predictor rankings import
+const STORAGE_BASE_KEY = 'rankings.imports';
+const AVG_POSITION_BASE_KEY = 'rankings.averagePosition';
+const COMPOSITE_CONFIG_BASE_KEY = 'rankings.compositeConfig';
+
+const storageKey = (scope = activeRankingsScope()) => scopedLocalKey(STORAGE_BASE_KEY, scope);
+const avgPositionKey = (scope = activeRankingsScope()) => scopedLocalKey(AVG_POSITION_BASE_KEY, scope);
+const compositeConfigKey = (scope = activeRankingsScope()) => scopedLocalKey(COMPOSITE_CONFIG_BASE_KEY, scope);
+
+// Legacy keys from the old auction predictor rankings import.
+// TheLeague-only: they predate multi-league by years and only TheLeague's
+// auction predictor ever read them, so they are NOT scoped.
 const LEGACY_KEYS = [
   'auctionPredictor.dlfRankings',
   'auctionPredictor.footballguysRankings',
@@ -25,14 +44,16 @@ const LEGACY_KEYS = [
 
 // ---------------------------------------------------------------------------
 // In-memory cache — avoids repeated localStorage.getItem + JSON.parse.
+// Keyed BY SCOPE: one map entry per league, so crossing leagues in a single
+// page session can't serve TheLeague's imports on an AFL page.
 // Invalidated on every write (saveImport, deleteImport, migrateFromLegacyKeys).
 // ---------------------------------------------------------------------------
 
-let _cache: StoredRankingImport[] | null = null;
+const _cache = new Map<RankingsScope, StoredRankingImport[]>();
 
-function readFromStorage(): StoredRankingImport[] {
+function readFromStorage(scope: RankingsScope): StoredRankingImport[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(storageKey(scope));
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
@@ -40,8 +61,9 @@ function readFromStorage(): StoredRankingImport[] {
 }
 
 function writeToStorage(imports: StoredRankingImport[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(imports));
-  _cache = imports;
+  const scope = activeRankingsScope();
+  localStorage.setItem(storageKey(scope), JSON.stringify(imports));
+  _cache.set(scope, imports);
   writeLegacyKeys(imports);
   window.dispatchEvent(new CustomEvent('rankingsUpdated'));
   syncToServer();
@@ -49,14 +71,21 @@ function writeToStorage(imports: StoredRankingImport[]): void {
 
 /** Exported for tests — clears the in-memory cache. */
 export function _clearCache(): void {
-  _cache = null;
+  _cache.clear();
 }
 
-// Invalidate cache when another tab writes to localStorage
+// Invalidate cache when another tab writes to localStorage. The tab could be
+// on a different league, so match any scope's key rather than just this one's.
 if (typeof window !== 'undefined') {
   window.addEventListener('storage', (e: StorageEvent) => {
-    if (e.key === STORAGE_KEY) _cache = null;
-    if (e.key === COMPOSITE_CONFIG_KEY) {
+    if (!e.key) return;
+    if (e.key === STORAGE_BASE_KEY || e.key.startsWith(`${STORAGE_BASE_KEY}.`)) {
+      _cache.clear();
+    }
+    if (
+      e.key === COMPOSITE_CONFIG_BASE_KEY ||
+      e.key.startsWith(`${COMPOSITE_CONFIG_BASE_KEY}.`)
+    ) {
       window.dispatchEvent(new CustomEvent('rankingsUpdated'));
     }
   });
@@ -67,9 +96,12 @@ if (typeof window !== 'undefined') {
 // ---------------------------------------------------------------------------
 
 export function getAllImports(): StoredRankingImport[] {
-  if (_cache !== null) return _cache;
-  _cache = readFromStorage();
-  return _cache;
+  const scope = activeRankingsScope();
+  const cached = _cache.get(scope);
+  if (cached !== undefined) return cached;
+  const fresh = readFromStorage(scope);
+  _cache.set(scope, fresh);
+  return fresh;
 }
 
 /**
@@ -102,7 +134,7 @@ export function saveImport(importData: StoredRankingImport): void {
     // Update composite config to reference the new import ID
     if (oldId !== newId) {
       try {
-        const raw = localStorage.getItem(COMPOSITE_CONFIG_KEY);
+        const raw = localStorage.getItem(compositeConfigKey());
         if (raw) {
           const config = JSON.parse(raw) as CompositeRankConfig;
           let changed = false;
@@ -113,7 +145,7 @@ export function saveImport(importData: StoredRankingImport): void {
             }
           }
           if (changed) {
-            localStorage.setItem(COMPOSITE_CONFIG_KEY, JSON.stringify(config));
+            localStorage.setItem(compositeConfigKey(), JSON.stringify(config));
           }
         }
       } catch { /* ignore malformed config */ }
@@ -133,12 +165,12 @@ export function deleteImport(id: string): void {
 
   // Remove from composite config if present
   try {
-    const raw = localStorage.getItem(COMPOSITE_CONFIG_KEY);
+    const raw = localStorage.getItem(compositeConfigKey());
     if (raw) {
       const config = JSON.parse(raw) as CompositeRankConfig;
       const filtered = config.members.filter((m) => m.importId !== id);
       if (filtered.length !== config.members.length) {
-        localStorage.setItem(COMPOSITE_CONFIG_KEY, JSON.stringify({ members: filtered }));
+        localStorage.setItem(compositeConfigKey(), JSON.stringify({ members: filtered }));
       }
     }
   } catch { /* ignore malformed config */ }
@@ -176,7 +208,7 @@ export function reorderImports(importIds: string[]): void {
 
   // Persist average column position (only meaningful when 2+ imports)
   if (averageIndex !== -1) {
-    localStorage.setItem(AVG_POSITION_KEY, String(averageIndex));
+    localStorage.setItem(avgPositionKey(), String(averageIndex));
   }
 }
 
@@ -186,7 +218,7 @@ export function reorderImports(importIds: string[]): void {
  */
 export function getAveragePosition(): number {
   try {
-    const raw = localStorage.getItem(AVG_POSITION_KEY);
+    const raw = localStorage.getItem(avgPositionKey());
     return raw != null ? parseInt(raw, 10) : 0;
   } catch {
     return 0;
@@ -204,7 +236,7 @@ export function getAveragePosition(): number {
  */
 export function getCompositeConfig(): CompositeRankConfig | null {
   try {
-    const raw = localStorage.getItem(COMPOSITE_CONFIG_KEY);
+    const raw = localStorage.getItem(compositeConfigKey());
     if (!raw) return null;
     const config = JSON.parse(raw) as CompositeRankConfig;
     if (!config.members || !Array.isArray(config.members)) return null;
@@ -223,7 +255,7 @@ export function getCompositeConfig(): CompositeRankConfig | null {
  * Fires 'rankingsUpdated' event so all consumers react.
  */
 export function saveCompositeConfig(config: CompositeRankConfig): void {
-  localStorage.setItem(COMPOSITE_CONFIG_KEY, JSON.stringify(config));
+  localStorage.setItem(compositeConfigKey(), JSON.stringify(config));
   window.dispatchEvent(new CustomEvent('rankingsUpdated'));
   syncToServer();
 }
@@ -233,7 +265,7 @@ export function saveCompositeConfig(config: CompositeRankConfig): void {
  * When including, uses default weight of 1.
  */
 export function toggleCompositeImport(importId: string, included: boolean): void {
-  const raw = localStorage.getItem(COMPOSITE_CONFIG_KEY);
+  const raw = localStorage.getItem(compositeConfigKey());
   const current: CompositeRankConfig = raw ? JSON.parse(raw) : { members: [] };
 
   if (included) {
@@ -251,7 +283,7 @@ export function toggleCompositeImport(importId: string, included: boolean): void
  * Update the weight for a composite member.
  */
 export function setCompositeWeight(importId: string, weight: 1 | 2 | 3): void {
-  const raw = localStorage.getItem(COMPOSITE_CONFIG_KEY);
+  const raw = localStorage.getItem(compositeConfigKey());
   const current: CompositeRankConfig = raw ? JSON.parse(raw) : { members: [] };
   const member = current.members.find((m) => m.importId === importId);
   if (member) {
@@ -280,6 +312,11 @@ export function getLatestImportByType(
 // ---------------------------------------------------------------------------
 
 export function migrateFromLegacyKeys(): void {
+  // The auctionPredictor.* keys are TheLeague's alone (see LEGACY_KEYS) —
+  // migrating them into another league's bucket would import one league's
+  // opinions as if they were the other's, and then DELETE the originals.
+  if (activeRankingsScope() !== DEFAULT_RANKINGS_SCOPE) return;
+
   const existing = getAllImports();
   if (existing.length > 0) return; // Already migrated or has new data
 
@@ -334,8 +371,8 @@ export function migrateFromLegacyKeys(): void {
   }
 
   if (migrated) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
-    _cache = existing;
+    localStorage.setItem(storageKey(), JSON.stringify(existing));
+    _cache.set(activeRankingsScope(), existing);
     // Remove legacy keys
     for (const key of LEGACY_KEYS) {
       localStorage.removeItem(key);
@@ -348,6 +385,11 @@ export function migrateFromLegacyKeys(): void {
 // ---------------------------------------------------------------------------
 
 function writeLegacyKeys(imports: StoredRankingImport[]): void {
+  // TheLeague only — these keys are unscoped, so writing them from another
+  // league's page would overwrite TheLeague's auction-predictor rankings with
+  // a different league's board.
+  if (activeRankingsScope() !== DEFAULT_RANKINGS_SCOPE) return;
+
   // Write dynasty rankings to legacy key
   const dynasty = imports.find((i) => i.type === 'dynasty');
   if (dynasty) {
@@ -420,15 +462,15 @@ export async function initFromServer(): Promise<boolean> {
 
   // Server has data, local is empty → adopt server data
   if (localImports.length === 0 && serverImports.length > 0) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(serverImports));
-    _cache = serverImports;
+    localStorage.setItem(storageKey(), JSON.stringify(serverImports));
+    _cache.set(activeRankingsScope(), serverImports);
     writeLegacyKeys(serverImports);
 
     if (serverData.compositeConfig) {
-      localStorage.setItem(COMPOSITE_CONFIG_KEY, JSON.stringify(serverData.compositeConfig));
+      localStorage.setItem(compositeConfigKey(), JSON.stringify(serverData.compositeConfig));
     }
     if (serverData.averagePosition != null) {
-      localStorage.setItem(AVG_POSITION_KEY, String(serverData.averagePosition));
+      localStorage.setItem(avgPositionKey(), String(serverData.averagePosition));
     }
 
     window.dispatchEvent(new CustomEvent('rankingsUpdated'));
@@ -442,13 +484,13 @@ export async function initFromServer(): Promise<boolean> {
       merged.some((m, i) => m.id !== localImports[i]?.id);
 
     if (changed) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
-      _cache = merged;
+      localStorage.setItem(storageKey(), JSON.stringify(merged));
+      _cache.set(activeRankingsScope(), merged);
       writeLegacyKeys(merged);
 
       // Use server composite config if local doesn't have one
       if (!getCompositeConfig() && serverData.compositeConfig) {
-        localStorage.setItem(COMPOSITE_CONFIG_KEY, JSON.stringify(serverData.compositeConfig));
+        localStorage.setItem(compositeConfigKey(), JSON.stringify(serverData.compositeConfig));
       }
 
       window.dispatchEvent(new CustomEvent('rankingsUpdated'));

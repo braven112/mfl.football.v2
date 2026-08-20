@@ -1,43 +1,82 @@
 ---
 /**
  * Import Rankings — shared implementation (extracted from the TheLeague
- * page so best-ball leagues get the identical tool via thin wrappers).
+ * page so the AFL and best-ball leagues get the identical tool via thin
+ * wrappers).
  *
  * Bookmarklet-based rankings import page. Users drag bookmarklets to their
  * bookmarks bar, visit ranking sites, and click to auto-import rankings.
- * All data stored in localStorage only — private per user, and shared
- * browser-wide across leagues (the storage keys are not league-scoped),
- * so rankings imported once feed every league's draft queue.
+ *
+ * Storage is per-owner and scoped by LEAGUE — see src/utils/rankings-scope.ts
+ * for which leagues share a bucket and why TheLeague's keys are unchanged.
+ * Everything below is resolved from the league whose page this is, not from
+ * TheLeague: the fuzzy matcher has to match against the player universe of
+ * the league the rankings will be used in.
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import RankingsImportPage from '../../theleague/rankings-import/RankingsImportPage';
-import { getCurrentLeagueYear } from '../../../utils/league-year';
+import { getLeagueYearForSlug } from '../../../utils/league-year';
 import { getPlayerMap } from '../../../utils/player-map';
+import { getLeagueContext } from '../../../utils/league-context';
+import { ensureLeaguePrefix, getLeagueBySlug } from '../../../config/leagues';
 import bookmarkletManifest from '../../../data/bookmarklet-manifest.json';
-import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
+import { getAuthUser, isCommissionerOrAdmin, isAuthorizedForLeague } from '../../../utils/auth';
 
 interface Props {
   /** Page <title>; defaults to TheLeague's original string. */
   title?: string;
+  /**
+   * Whether this league has a Custom Rankings board to link admins to.
+   * Best-ball leagues don't — they only consume the imports.
+   */
+  hasCustomRankings?: boolean;
 }
 
-const { title = 'Import Rankings | The League' } = Astro.props as Props;
+const { title = 'Import Rankings | The League', hasCustomRankings = true } =
+  Astro.props as Props;
 
-const user = getAuthUser(Astro.request);
-const isAdmin = !!user && isCommissionerOrAdmin(user);
-
-const leagueYear = getCurrentLeagueYear();
+// Per-league year clock — the AFL rolls June 1, TheLeague Feb 14, so a bare
+// getCurrentLeagueYear() reads the wrong season's feed for ~3 months a year.
+const leagueSlug = getLeagueContext(Astro.url).slug;
+const leagueYear = getLeagueYearForSlug(leagueSlug);
 const leagueYearStr = String(leagueYear);
+const league = getLeagueBySlug(leagueSlug);
+
+// The Custom Rankings link is admin-only AND league-scoped: the /cr route
+// bounces a session from a different league, so a TheLeague admin browsing
+// the AFL's page must not be shown a link that dead-ends on a redirect.
+const user = getAuthUser(Astro.request);
+const isAdmin =
+  !!user &&
+  !!league &&
+  isAuthorizedForLeague(user, league.id) &&
+  isCommissionerOrAdmin(user);
+
+// Internal route, so it stays PREFIXED (see CLAUDE.md) — the apex domains
+// redirect the prefixed form, the shared host requires it.
+const customRankingsHref =
+  hasCustomRankings && league ? ensureLeaguePrefix(league, '/cr') : null;
 
 // ---------------------------------------------------------------------------
 // Load MFL players for fuzzy matching
 // ---------------------------------------------------------------------------
-// Year-filtered (2025+): only the current league year is read below.
+// Two globs, one per league with its own player pool, because Vite requires
+// literal glob patterns — the league can't be interpolated. Both are
+// year-filtered (2025+); only the current league year is read below.
 // tests/current-era-feed-globs.test.ts guards it.
-const playersFeeds = import.meta.glob(
+const theLeaguePlayersFeeds = import.meta.glob(
   '../../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json',
   { eager: true },
 );
+const aflPlayersFeeds = import.meta.glob(
+  '../../../../data/afl-fantasy/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json',
+  { eager: true },
+);
+
+// Best-ball leagues have no players feed of their own committed; they draft
+// from the same NFL universe, so they fall back to TheLeague's.
+const playersFeeds =
+  leagueSlug === 'afl-fantasy' ? aflPlayersFeeds : theLeaguePlayersFeeds;
 
 const getModuleData = (mod: unknown) =>
   mod && typeof mod === 'object' && 'default' in mod ? (mod as { default: unknown }).default : mod;
@@ -173,6 +212,7 @@ const siteConfigs = [
     mflPlayersJson={JSON.stringify(mflPlayers)}
     siteConfigsJson={JSON.stringify(siteConfigs)}
     isAdmin={isAdmin}
+    customRankingsHref={customRankingsHref}
   />
 </TheLeagueLayout>
 

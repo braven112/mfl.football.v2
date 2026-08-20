@@ -16,7 +16,18 @@ export default function BookmarkletCard({ site }: Props) {
   const runtimeOrigin = typeof window !== 'undefined'
     ? window.location.origin
     : 'https://www.theleague.us';
-  const runtimeImportUrl = `${runtimeOrigin}/theleague/import-rankings`;
+  // The bookmarklet runs on a third-party site and re-opens THIS page with the
+  // scraped payload on the hash, so the target is the page it was dragged from
+  // — never a fixed league. Reading location at render time is what makes that
+  // true for every league AND both host forms: a league's apex domain serves
+  // the bare `/import-rankings` while the shared host needs the
+  // `/afl-fantasy/...` prefix, and pathname is already whichever one routed.
+  // This was hardcoded to /theleague/import-rankings, which delivered every
+  // AFL bookmarklet's payload into TheLeague's board.
+  const runtimeImportPath = typeof window !== 'undefined'
+    ? window.location.pathname
+    : '/theleague/import-rankings';
+  const runtimeImportUrl = `${runtimeOrigin}${runtimeImportPath}`;
   const bookmarkletHref = site.bookmarkletUri
     .replaceAll('__MFL_IMPORT_ORIGIN__', encodeURIComponent(runtimeOrigin))
     .replaceAll('__MFL_IMPORT_URL__', encodeURIComponent(runtimeImportUrl));

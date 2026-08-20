@@ -1,0 +1,16 @@
+---
+/**
+ * Import Rankings (AFL) — thin route wrapper.
+ * Shared implementation lives in components/shared/rankings-import/ImportRankingsPage.
+ *
+ * The AFL keeps its OWN rankings bucket (see src/utils/rankings-scope.ts):
+ * it's a keeper league with different scoring, so an owner's read on a player
+ * here is a different opinion than their dynasty-contract read in TheLeague,
+ * and the two must not overwrite each other.
+ */
+import ImportRankingsPage from '../../components/shared/rankings-import/ImportRankingsPage.astro';
+
+export const prerender = false;
+---
+
+<ImportRankingsPage title="Import Rankings | AFL" />

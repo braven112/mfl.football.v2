@@ -48,6 +48,13 @@ interface Props {
   mflPlayersJson: string;
   franchiseId: string;
   vorpMapJson?: string;
+  /**
+   * Prefixed internal route to THIS league's Import Rankings page. Resolved by
+   * the Astro page — this island can't know which league it's on, and a
+   * hardcoded `/theleague/import-rankings` sends an AFL admin to the page that
+   * feeds the other league's board.
+   */
+  importRankingsHref?: string;
 }
 
 // ESPN headshots are preferred; getPlayerImageUrl() (roster-constants.ts)
@@ -61,7 +68,12 @@ function getHeadshotUrl(playerId: string, espnId: string | null): string {
   return getPlayerImageUrl(playerId);
 }
 
-export default function CustomRankingsPage({ mflPlayersJson, franchiseId, vorpMapJson }: Props) {
+export default function CustomRankingsPage({
+  mflPlayersJson,
+  franchiseId,
+  vorpMapJson,
+  importRankingsHref = '/theleague/import-rankings',
+}: Props) {
   const mflPlayers: MFLPlayerWithEspn[] = useMemo(
     () => JSON.parse(mflPlayersJson),
     [mflPlayersJson],
@@ -367,7 +379,7 @@ export default function CustomRankingsPage({ mflPlayersJson, franchiseId, vorpMa
         <div className="cr-page__empty">
           <p>No composite rankings found.</p>
           <p>
-            <a href="/theleague/import-rankings">Import rankings</a> and select
+            <a href={importRankingsHref}>Import rankings</a> and select
             at least 2 sources for "My Rank" to get started.
           </p>
         </div>
@@ -412,7 +424,7 @@ export default function CustomRankingsPage({ mflPlayersJson, franchiseId, vorpMa
         <p className="cr-page__subtitle">
           {overrides.size} override{overrides.size !== 1 ? 's' : ''} ·{' '}
           {rankings.length} players ·{' '}
-          <a href="/theleague/import-rankings" className="cr-page__link">
+          <a href={importRankingsHref} className="cr-page__link">
             Import Rankings
           </a>
         </p>
