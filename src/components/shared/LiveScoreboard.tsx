@@ -46,6 +46,7 @@ import {
   formatGameClock,
   isPlayerInRedZone,
   playerDownDistance,
+  selectMatchupMoments,
   type LiveMoment,
 } from '../../utils/live-scoring-view';
 import { useNflScoreboard } from '../../hooks/useNflScoreboard';
@@ -457,7 +458,7 @@ function MatchupDetail({
   const homeRows = players[matchup.home] ?? [];
   const awayRows = players[matchup.away] ?? [];
   const rowCount = Math.max(homeRows.length, awayRows.length);
-  const matchupMoments = moments.filter((m) => m.fid === matchup.home || m.fid === matchup.away).slice(0, 8);
+  const matchupMoments = selectMatchupMoments(moments, matchup.home, matchup.away);
   const gameFor = (row: LivePlayerRow | undefined) =>
     row ? gamesByTeam.get(meta[row.id]?.nflTeam ?? '') : undefined;
 

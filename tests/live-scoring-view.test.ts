@@ -13,6 +13,8 @@ import {
   formatPlayClock,
   isPlayerInRedZone,
   playerDownDistance,
+  selectMatchupMoments,
+  type LiveMoment,
 } from '../src/utils/live-scoring-view';
 import type {
   LivePlayerRow,
@@ -196,6 +198,31 @@ describe('buildMoments', () => {
     expect(rows[0].playerId).toBe('A');
   });
 
+  it('reaches BOTH owners when two franchises start the same player (AFL duplicate rosters)', () => {
+    // The AFL runs duplicate-player conferences, and in a real week 85 of 131
+    // starters are rostered by more than one franchise. A player→franchise map
+    // keeps only the last one written, which drops the play from the other
+    // owner's ticker entirely.
+    const shared: Record<string, LivePlayerRow[]> = {
+      '0002': [{ id: 'A', live: 12, secondsRemaining: 0, status: 'starter' }],
+      '0017': [{ id: 'A', live: 12, secondsRemaining: 0, status: 'starter' }],
+      '0021': [{ id: 'A', live: 12, secondsRemaining: 0, status: 'starter' }],
+    };
+    const rows = buildMoments([play()], shared, meta);
+    expect(rows.map((r) => r.fid).sort()).toEqual(['0002', '0017', '0021']);
+    expect(new Set(rows.map((r) => r.key)).size).toBe(3);
+  });
+
+  it('does not duplicate a franchise that lists the same starter twice', () => {
+    const doubled: Record<string, LivePlayerRow[]> = {
+      '0002': [
+        { id: 'A', live: 12, secondsRemaining: 0, status: 'starter' },
+        { id: 'A', live: 12, secondsRemaining: 0, status: 'starter' },
+      ],
+    };
+    expect(buildMoments([play()], doubled, meta)).toHaveLength(1);
+  });
+
   it('drops a play involving nobody rostered rather than filling the ticker', () => {
     expect(buildMoments([play({ playerIds: ['Z'] })], players, meta)).toEqual([]);
     expect(buildMoments([play({ playerIds: [] })], players, meta)).toEqual([]);
@@ -242,5 +269,60 @@ describe('buildMoments', () => {
     const [m] = buildMoments([play()], players, {});
     expect(m.playerName).toBe('');
     expect(m.fid).toBe('0001');
+  });
+});
+
+describe('selectMatchupMoments', () => {
+  const m = (playId: string, fid: string, text = `play ${playId}`): LiveMoment => ({
+    key: `${playId}:${fid}`,
+    playId,
+    fid,
+    playerId: 'p',
+    playerName: 'Player',
+    team: 'DEN',
+    text,
+    clock: 'Q4 1:00',
+    typeAbbrev: 'TD',
+  });
+
+  it('keeps only the two franchises in this matchup', () => {
+    const rows = selectMatchupMoments(
+      [m('1', '0006'), m('2', '0099'), m('3', '0017')],
+      '0006',
+      '0017',
+    );
+    expect(rows.map((r) => r.playId)).toEqual(['1', '3']);
+  });
+
+  it('shows a play ONCE when both sides of the matchup started a credited player', () => {
+    // The AFL runs duplicate rosters, so this is normal there — and the ticker
+    // carries no team attribution, so a second identical row says nothing.
+    const rows = selectMatchupMoments(
+      [m('9', '0006', 'Courtland Sutton 22 Yd pass from Bo Nix'),
+       m('9', '0017', 'Courtland Sutton 22 Yd pass from Bo Nix')],
+      '0006',
+      '0017',
+    );
+    expect(rows).toHaveLength(1);
+  });
+
+  it('still lets the SAME play reach the other matchup that franchise plays', () => {
+    // Dedupe is per rendered matchup, not global — an AFL doubleheader means
+    // one franchise appears in two matchups and both should show its plays.
+    const all = [m('9', '0006'), m('9', '0017')];
+    expect(selectMatchupMoments(all, '0006', '0001')).toHaveLength(1);
+    expect(selectMatchupMoments(all, '0017', '0002')).toHaveLength(1);
+  });
+
+  it('caps the list, keeping the newest rows (input is newest-first)', () => {
+    const many = Array.from({ length: 20 }, (_, i) => m(String(i), '0006'));
+    const rows = selectMatchupMoments(many, '0006', '0017');
+    expect(rows).toHaveLength(8);
+    expect(rows[0].playId).toBe('0');
+  });
+
+  it('returns an empty list when neither franchise has a play', () => {
+    expect(selectMatchupMoments([m('1', '0099')], '0006', '0017')).toEqual([]);
+    expect(selectMatchupMoments([], '0006', '0017')).toEqual([]);
   });
 });

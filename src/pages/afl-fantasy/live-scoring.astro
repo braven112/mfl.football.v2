@@ -1,0 +1,170 @@
+---
+/**
+ * AFL Fantasy — Live Scoring (/afl-fantasy/live-scoring)
+ *
+ * The AFL's counterpart to TheLeague's board, minus the parts that are
+ * TheLeague-only (Throwback Week, and the commissioner era-preview bar that
+ * rides along with it). Everything else is shared: assembleLiveScoringData and
+ * the LiveScoreboard island are league-agnostic and key off the registry
+ * entry, so the ESPN box scores / real game clock / red-zone flags / scoring
+ * plays all arrive here with no per-league wiring.
+ *
+ * Two AFL facts that shape this page, both from the registry:
+ *
+ *  - **24 franchises playing doubleheaders.** MFL's liveScoring returns 24
+ *    matchup elements for a week — distinct pairs, not duplicates, because
+ *    every AFL team plays twice (intra-conference then interconference). The
+ *    board already handles an arbitrary matchup count and pins the viewer's
+ *    own games first.
+ *  - **`duplicatePlayers`.** The same NFL player is routinely started by two
+ *    AFL franchises at once (85 of 131 starters in a real week), so anything
+ *    mapping a player back to "his" franchise has to handle a LIST. That is
+ *    why buildMoments keys owners as playerId → fid[]; a single-owner map
+ *    silently drops the play from the second owner's ticker.
+ */
+
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import aflConfig from '../../../data/afl-fantasy/afl.config.json';
+import { getAuthUser } from '../../utils/auth';
+import { getLeagueContext } from '../../utils/league-context';
+import { leagueHasFeature } from '../../config/leagues';
+import { getCurrentSeasonYear } from '../../utils/league-year';
+import { getCurrentNFLWeek } from '../../utils/current-week';
+import { getDailySlot } from '../../utils/hero-resolver';
+import { assembleLiveScoringData, buildTeamsMap, type ConfigTeam } from '../../utils/live-scoring-data';
+import { getLiveScoringSample } from '../../data/live-scoring-sample';
+import LiveScoreboard from '../../components/shared/LiveScoreboard';
+import NflGamesStrip from '../../components/shared/NflGamesStrip';
+import type { LiveScoringPageProps, NflGame } from '../../types/live-scoring';
+import '../../styles/live-scoring.css';
+import '../../styles/nfl-games-strip.css';
+
+// Live-fetch on every request — scores must never be cached.
+export const prerender = false;
+
+const league = getLeagueContext(Astro.url);
+
+// Gate on the registry feature flag.
+if (!leagueHasFeature(league.slug, 'liveScoring')) {
+  return Astro.redirect('/afl-fantasy');
+}
+
+const now = new Date();
+const year = getCurrentSeasonYear();
+const weekParam = Astro.url.searchParams.get('week');
+const parsedWeek = weekParam ? parseInt(weekParam, 10) : NaN;
+const week = Number.isFinite(parsedWeek) && parsedWeek > 0
+  ? parsedWeek
+  : (getCurrentNFLWeek(now) ?? 1);
+
+// Same game-day clock as the homepage hero: Thu/Sun/Mon windows drive whether
+// the island polls for live updates and which game-window label to show.
+const daily = getDailySlot(now);
+const isLive = daily.slot === 'live-scoring';
+
+const authUser = getAuthUser(Astro.request);
+// League-scoped on purpose: AFL franchise ids collide with TheLeague's, so a
+// TheLeague session must not light up "YOUR MATCHUP" on an unrelated AFL team.
+const userFranchiseId =
+  authUser?.leagueId === league.leagueId ? authUser.franchiseId : undefined;
+
+const configTeams = ((aflConfig as { teams?: ConfigTeam[] }).teams ?? []) as ConfigTeam[];
+
+// Demo/sample mode, same contract as TheLeague's page. MFL turns the
+// liveScoring feed off in the offseason, so an empty-but-healthy feed falls
+// back to a bundled replay of the last completed AFL regular-season week
+// (badged "Sample data"). ?demo=1 forces it year-round for validation;
+// ?demo=0 forces the live path so the offseason empty state can be debugged.
+const demoParam = Astro.url.searchParams.get('demo');
+
+let useDemo = demoParam === '1';
+let data: Awaited<ReturnType<typeof assembleLiveScoringData>> | undefined;
+
+if (!useDemo) {
+  data = await assembleLiveScoringData({
+    siteUrl: Astro.url,
+    week,
+    year,
+    leagueId: league.leagueId,
+    host: league.host,
+    dataPath: league.dataPath,
+    configTeams,
+    userFranchiseId,
+  });
+  // Require the fetch to have SUCCEEDED (`ok`). A failed live request also
+  // yields no matchups, and papering over an in-season outage with last
+  // season's replay is worse than showing the island's empty/error state.
+  if (demoParam !== '0' && data.ok && data.matchups.length === 0) {
+    useDemo = true;
+  }
+}
+
+let islandProps: LiveScoringPageProps;
+let nflGames: NflGame[] | undefined;
+
+if (useDemo) {
+  const sample = getLiveScoringSample({ slug: league.slug });
+  nflGames = sample.nflGames;
+  islandProps = {
+    week: sample.week,
+    year,
+    leagueId: league.leagueId,
+    host: league.host,
+    slug: league.slug,
+    isLive: false, // don't poll — the live feed would overwrite the sample
+    gameWindow: daily.gameWindow,
+    userFranchiseId,
+    matchups: sample.matchups,
+    teams: buildTeamsMap(configTeams),
+    playerMeta: sample.playerMeta,
+    initialScores: sample.scores,
+    initialRemaining: sample.remaining,
+    initialPlayers: sample.players,
+    initialYetToPlay: sample.playersYetToPlay,
+    demo: true,
+    initialNflGames: sample.nflGames,
+    initialDetail: sample.detail,
+  };
+} else {
+  // data is always assigned in the non-demo branch above.
+  const liveData = data!;
+  islandProps = {
+    week,
+    year,
+    leagueId: league.leagueId,
+    host: league.host,
+    slug: league.slug,
+    isLive,
+    gameWindow: daily.gameWindow,
+    userFranchiseId,
+    matchups: liveData.matchups,
+    teams: liveData.teams,
+    playerMeta: liveData.playerMeta,
+    initialScores: liveData.scores,
+    initialRemaining: liveData.remaining,
+    initialPlayers: liveData.players,
+    initialYetToPlay: liveData.playersYetToPlay,
+  };
+}
+---
+
+<TheLeagueLayout title="Live Scoring | AFL Fantasy">
+  <div class="ls-page">
+    <LiveScoreboard client:load {...islandProps} />
+    <div class="ls-page-strip">
+      <NflGamesStrip client:visible week={islandProps.week} year={year}
+                     isLive={useDemo ? false : isLive} demo={useDemo} initialGames={nflGames} />
+    </div>
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .ls-page {
+    max-width: var(--container-max-width);
+    margin: 0 auto;
+    padding: var(--spacing-lg) var(--spacing-md) var(--spacing-3xl);
+  }
+  .ls-page-strip {
+    margin-top: var(--spacing-2xl);
+  }
+</style>

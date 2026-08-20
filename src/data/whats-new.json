@@ -1,5 +1,24 @@
 [
   {
+    "id": "afl-live-scoring",
+    "date": "2026-08-20",
+    "category": "new-page",
+    "icon": "goals",
+    "title": "The AFL Gets a Real Scoreboard",
+    "summary": "All twenty-four franchises, both of your games, live on one page — with real NFL box-score lines under every starter, the actual game clock, red-zone alerts and a scoring-play ticker. No more refreshing MFL's message board on a Sunday.",
+    "description": [
+      "Until today, watching your AFL week unfold meant a trip to MFL's live scoring summary — a page that tells you a number and nothing else. The league now has its own board at /afl-fantasy/live-scoring, and it is the same one TheLeague has been running, wired to AFL data end to end: your franchise's matchups pinned to the top, win-probability bars, projected finals, and a starter-by-starter breakdown when you tap in.",
+      "Because the AFL plays doubleheaders, the board shows all twenty-four matchups — every team's intra-conference game and its interconference game — and puts both of yours first. Tap either one and every starter carries his real NFL box-score line: \"33/46, 394 yds, 2 TD · 14 car, 30 yds, 2 TD\" under Josh Allen, \"1 car, 3 yds · 7 rec (9 tgt), 76 yds\" under Tyler Warren. The quarter and clock come off the live NFL scoreboard, not off a calculation, and a RED ZONE flag lights up next to any starter whose team has the ball inside the twenty.",
+      "The scoring ticker was the interesting part to get right here. The AFL's two conferences roster duplicate players — in a typical week, 85 of 131 starters are owned by more than one franchise — so \"whose touchdown was that\" has more than one answer. Attribute it to a single owner and roughly four in ten scoring plays quietly vanish from somebody's board. Every owner of every credited player now gets the row, which is the only version of this that is actually true.",
+      "Two honest gaps, both deliberate. Team defenses show their points and no stat line, because the NFL box score is keyed to individual players and a defense is not one — a plausible invented number sitting next to your real score is worse than a blank. And in the offseason, when MFL switches the live feed off, the page replays the last completed AFL regular-season week with a Sample Data badge on it rather than showing you an empty board."
+    ],
+    "image": "live-scoring-afl.webp",
+    "imageAlt": "The AFL Live Scoring matchup detail: Fullybaked 120.5 vs Ninjas 120.6, marked Final. Each starter row shows a position chip, headshot, NFL team and points, with a real box-score line underneath — Josh Allen reading \"33/46, 394 yds, 2 TD · 14 car, 30 yds, 2 TD\" and Tyler Warren \"1 car, 3 yds · 7 rec (9 tgt), 76 yds\". Below the rows a Scoring Plays section lists real fourth-quarter touchdowns with their game clock, each tagged TD.",
+    "leagues": [
+      "afl"
+    ]
+  },
+  {
     "id": "live-scoring-espn-box-scores",
     "date": "2026-08-20",
     "category": "enhancement",
@@ -863,27 +882,6 @@
     "excludeFromHero": true,
     "leagues": [
       "afl"
-    ]
-  },
-  {
-    "id": "throwback-week",
-    "date": "2026-07-13",
-    "title": "Throwback Week: The Old Names Ride Again",
-    "summary": "Every Week 4, the league's weekly pages dust off the archives. Live scoring, matchups, and submit lineup swap every team's name, logo, banner — and colors — for a legacy identity from the franchise's own history. Thirty-seven eras of recovered art, from the Sabertooths to the skull wabbit. One week a season, the scoreboard becomes a family photo album.",
-    "description": [
-      "Sixteen franchises, nearly two decades of rebrands, and a commissioner who spent a weekend spelunking the Wayback Machine so none of it stays buried. Every season, for <strong>Week 4 only</strong>, the weekly pages — live scoring, the matchup scoreboard, and submit lineup — roll every team back to an old identity. Old name, old logo, old banner, and yes, <strong>old colors</strong>: the matchup washes and win-probability bars tint in each era's own palette, sampled from the era's own art. Thirty-seven eras made the cut, every one wearing genuine recovered artwork — Degenerates green, Sabertooths orange, the Barney Fife bullseye.",
-      "Each team defaults to a commissioner-picked former self — Heavy Chevy gives way to the Drunk Indians, the Computer Jocks take the floor as the Witch City Warlocks, and Maverick puckers up as the 2012 'smooch' Poker in the Rear. Rather choose your own ghost? <strong>Throwback Settings</strong> lets every owner browse their franchise's eligible eras — same-name eras get their own nicknames ('The razorback', 'The skull', 'Red graffiti era') so you always know which vintage you're buying. Hit <strong>Preview</strong> on any era to see it live on the scoreboard before committing, then save it right from the preview when it looks right. Your pick sticks for every future Throwback Week until you change it.",
-      "The rest of the site keeps its head: standings, rosters, and the trade builder stay on current identities, so nobody's wondering who the Sabertooths are in the middle of a trade negotiation. (Only one team can be the Sabertooths anyway — we checked. It's the Geeks.) Then Week 5 arrives, everyone snaps back to the present, and the archives go back to sleep for another year. See you next September, Warlocks."
-    ],
-    "category": "new-feature",
-    "link": "/theleague/throwback-settings",
-    "linkLabel": "Pick your era",
-    "icon": "history",
-    "image": "throwback-week.webp",
-    "imageAlt": "The live scoring scoreboard during Throwback Week, with matchup cards showing legacy franchise identities — old team names, logos, and banners from each franchise's history.",
-    "heroRotationDays": 14,
-    "leagues": [
-      "theleague"
     ]
   }
 ]

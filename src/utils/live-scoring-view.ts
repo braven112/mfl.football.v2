@@ -120,44 +120,91 @@ export function buildMoments(
   players: Record<string, LivePlayerRow[]>,
   meta: Record<string, PlayerMeta>,
 ): LiveMoment[] {
-  // MFL player id → the franchise starting him this week.
-  const ownerOf = new Map<string, string>();
+  // MFL player id → EVERY franchise starting him this week.
+  //
+  // The list is not defensive padding. The AFL runs 24 franchises as
+  // duplicate-player conferences (registry: `duplicatePlayers`), so one NFL
+  // player is routinely started by two teams at once — 85 of 131 starters in a
+  // real AFL week. A Map<playerId, fid> silently keeps the LAST franchise
+  // written and drops the play from the other owner's ticker, which looks like
+  // "his touchdown didn't count" rather than like a bug.
+  const ownersOf = new Map<string, string[]>();
   for (const [fid, rows] of Object.entries(players)) {
-    for (const row of rows) ownerOf.set(row.id, fid);
+    for (const row of rows) {
+      const list = ownersOf.get(row.id);
+      if (list) {
+        if (!list.includes(fid)) list.push(fid);
+      } else {
+        ownersOf.set(row.id, [fid]);
+      }
+    }
   }
-  if (ownerOf.size === 0) return [];
+  if (ownersOf.size === 0) return [];
 
   const out: LiveMoment[] = [];
   const seen = new Set<string>();
   for (const play of plays) {
     for (const playerId of play.playerIds) {
-      const fid = ownerOf.get(playerId);
-      if (!fid) continue;
-      // One row per play per FRANCHISE, not per credited player. A play often
-      // credits several athletes (rusher + kicker on a TD), and an owner who
-      // starts two of them would otherwise see the identical line twice — that
-      // shipped as a visible duplicate: "Derrick Henry 46 Yd Rush (Tyler Loop
-      // PAT Failed)" listed twice for the owner who started both. Across
-      // DIFFERENT franchises the play still appears once each, which is the
-      // behavior we want for a QB→WR touchdown.
-      const dedupeKey = `${play.playId}:${fid}`;
-      if (seen.has(dedupeKey)) continue;
-      seen.add(dedupeKey);
-      out.push({
-        key: dedupeKey,
-        playId: play.playId,
-        fid,
-        playerId,
-        playerName: meta[playerId]?.name ?? '',
-        team: play.nflTeam,
-        text: play.text,
-        clock: formatPlayClock(play),
-        typeAbbrev: play.typeAbbrev,
-      });
+      for (const fid of ownersOf.get(playerId) ?? []) {
+        // One row per play per FRANCHISE, not per credited player. A play often
+        // credits several athletes (rusher + kicker on a TD), and an owner who
+        // starts two of them would otherwise see the identical line twice —
+        // that shipped as a visible duplicate: "Derrick Henry 46 Yd Rush (Tyler
+        // Loop PAT Failed)" listed twice for the owner who started both. Across
+        // DIFFERENT franchises the play still appears once each, which is what
+        // we want both for a QB→WR touchdown and for the AFL's duplicate
+        // rosters.
+        const dedupeKey = `${play.playId}:${fid}`;
+        if (seen.has(dedupeKey)) continue;
+        seen.add(dedupeKey);
+        out.push({
+          key: dedupeKey,
+          playId: play.playId,
+          fid,
+          playerId,
+          playerName: meta[playerId]?.name ?? '',
+          team: play.nflTeam,
+          text: play.text,
+          clock: formatPlayClock(play),
+          typeAbbrev: play.typeAbbrev,
+        });
+      }
     }
   }
   // Most recent first. The route hands us the slate in chronological order
   // (comparePlaysChronologically), so reversing is enough — and is why this
   // does NOT re-sort on `sequence`, which only orders within a single game.
   return out.reverse();
+}
+
+/**
+ * The rows one matchup's ticker should render: this matchup's two franchises,
+ * newest first, one row per PLAY, capped.
+ *
+ * The per-play dedupe is not redundant with buildMoments'. That one keys
+ * `playId:franchiseId`, which is what lets a QB→WR touchdown reach both
+ * owners' boards — but a MATCHUP ticker merges two franchises into one list,
+ * and in the AFL both sides can legitimately start the same player
+ * (`duplicatePlayers`). The identical line then appears twice in a row, with no
+ * team attribution anywhere in the ticker to tell them apart, so the second one
+ * carries no information at all. It shipped that way for five of 24 AFL
+ * matchups before this: "Courtland Sutton 22 Yd pass from Bo Nix (Wil Lutz
+ * Kick)" listed back to back.
+ */
+export function selectMatchupMoments(
+  moments: readonly LiveMoment[],
+  homeFid: string,
+  awayFid: string,
+  limit = 8,
+): LiveMoment[] {
+  const seenPlays = new Set<string>();
+  const out: LiveMoment[] = [];
+  for (const m of moments) {
+    if (m.fid !== homeFid && m.fid !== awayFid) continue;
+    if (seenPlays.has(m.playId)) continue;
+    seenPlays.add(m.playId);
+    out.push(m);
+    if (out.length >= limit) break;
+  }
+  return out;
 }

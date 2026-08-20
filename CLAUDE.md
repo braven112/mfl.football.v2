@@ -646,6 +646,17 @@ which is exactly why the split exists — verify parsing offline against
   principle. Deriving one from the opposing team's totals needs each league's
   DEF scoring rules, which we don't model — a plausible wrong number next to the
   real MFL score is worse than a blank.
+- **The AFL rosters duplicate players, and that changes who a play belongs to.**
+  With `duplicatePlayers: true` the same NFL player is started by two franchises
+  at once — 85 of 131 starters in a real AFL week — so a `Map<playerId, fid>`
+  keeps the last one written and drops the play from the other owner's ticker
+  (41% of AFL scoring-play attributions: 202 rows collapse to 120). `buildMoments`
+  therefore keys owners as `playerId -> fid[]`. The MATCHUP ticker then needs the
+  opposite guard: it merges two franchises into one list, and in the AFL both
+  sides can own the same play, so `selectMatchupMoments` dedupes per `playId` for
+  rendering. Two different dedupes, both load-bearing — the first lets one TD
+  reach two owners, the second stops the same line printing twice with no team
+  attribution to tell it apart.
 - **Two pollers on the page, not three.** `src/utils/live-poll-store.ts` holds a
   module-scope store that both islands (`LiveScoreboard`, `NflGamesStrip`)
   subscribe to via `src/hooks/useNfl*`; React state can't cross island roots but

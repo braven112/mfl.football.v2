@@ -90,7 +90,7 @@ export const LEAGUES = {
       liveLineups: false,
       schefterFeed: true,
       schefterTips: true,
-      liveScoring: false,
+      liveScoring: true,
     },
   },
   'best-ball-1': {
