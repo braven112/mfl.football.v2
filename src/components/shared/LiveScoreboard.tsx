@@ -567,13 +567,16 @@ export default function LiveScoreboard(props: LiveScoringPageProps) {
   // ── real NFL context (ESPN) ──
   // Demo mode ships its own sample, so both pollers stay off and the bundled
   // data is used verbatim — a live fetch would overwrite the replay.
+  // `demoLiveNfl` is the sample-fantasy / live-NFL variant: keep the ESPN
+  // pollers running so the real slate drives clocks, red zone and box scores.
+  const espnEnabled = !props.demo || !!props.demoLiveNfl;
   const { byTeam: gamesByTeam, anyLive: anyNflGameLive, espnSlot } = useNflScoreboard(props.week, props.year, {
-    enabled: !props.demo,
+    enabled: espnEnabled,
     live: props.isLive,
     fallbackGames: props.initialNflGames,
   });
   const detail = useNflGameDetail(props.week, props.year, {
-    enabled: !props.demo,
+    enabled: espnEnabled,
     anyLive: anyNflGameLive,
     fallback: props.initialDetail,
   });
@@ -636,7 +639,7 @@ export default function LiveScoreboard(props: LiveScoringPageProps) {
       <div className="ls-head">
         <h1>
           Live Scoring
-          {props.demo && <span className="ls-sample-badge">Sample data</span>}
+          {props.demo && <span className="ls-sample-badge">{props.demoLabel ?? 'Sample data'}</span>}
           {/* A validation override points the NFL half of the board at another
               slate (see resolveEspnTarget). Say so on the page: these URLs are
               shareable, and NFL games that don't belong to the week in the

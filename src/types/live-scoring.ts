@@ -258,6 +258,15 @@ export interface LiveScoringPageProps {
   initialYetToPlay?: Record<string, number>;
   /** Demo/sample mode (?demo=1): render bundled sample data, no polling. */
   demo?: boolean;
+  /**
+   * Demo variant that keeps the ESPN pollers RUNNING (?demo=live): the fantasy
+   * side is a sample built from real current rosters, while the NFL side —
+   * clocks, red zone, box scores, scoring plays — is genuinely live. Without
+   * this, `demo` disables both pollers and the whole point is lost.
+   */
+  demoLiveNfl?: boolean;
+  /** Badge text for demo mode; defaults to "Sample data". */
+  demoLabel?: string;
   /** Sample NFL games for the strip in demo mode (skips the live fetch). */
   initialNflGames?: NflGame[];
   /** Sample box scores + scoring plays for demo mode. */

@@ -28,11 +28,11 @@ import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 import { getAuthUser } from '../../utils/auth';
 import { getLeagueContext } from '../../utils/league-context';
 import { leagueHasFeature } from '../../config/leagues';
-import { getCurrentSeasonYear } from '../../utils/league-year';
+import { getCurrentSeasonYear, getLeagueYearForSlug } from '../../utils/league-year';
 import { getCurrentNFLWeek } from '../../utils/current-week';
 import { getDailySlot } from '../../utils/hero-resolver';
 import { assembleLiveScoringData, buildTeamsMap, type ConfigTeam } from '../../utils/live-scoring-data';
-import { getLiveScoringSample } from '../../data/live-scoring-sample';
+import { getCurrentRosterSample, getLiveScoringSample } from '../../data/live-scoring-sample';
 import LiveScoreboard from '../../components/shared/LiveScoreboard';
 import NflGamesStrip from '../../components/shared/NflGamesStrip';
 import type { LiveScoringPageProps, NflGame } from '../../types/live-scoring';
@@ -77,7 +77,18 @@ const configTeams = ((aflConfig as { teams?: ConfigTeam[] }).teams ?? []) as Con
 // ?demo=0 forces the live path so the offseason empty state can be debugged.
 const demoParam = Astro.url.searchParams.get('demo');
 
-let useDemo = demoParam === '1';
+// ?demo=live — real CURRENT rosters on the fantasy side, a genuinely live NFL
+// slate on the other. MFL serves nothing before the season starts (liveScoring
+// errors outright and week 1's weeklyResults comes back with empty starters),
+// so this is the only way to put real rostered players in front of a game that
+// is actually being played. Pair it with the ?espnSeason/?espnWeek/?espnYear
+// override to choose the slate.
+const useRosterDemo = demoParam === 'live';
+// Each league rolls its MFL league year on its own date (TheLeague Feb 14, the
+// AFL June 1), and this reads that year's rosters off disk — so it must be the
+// per-league clock, not TheLeague's.
+const rosterDemoYear = getLeagueYearForSlug(league.slug);
+let useDemo = demoParam === '1' || useRosterDemo;
 let data: Awaited<ReturnType<typeof assembleLiveScoringData>> | undefined;
 
 if (!useDemo) {
@@ -103,7 +114,9 @@ let islandProps: LiveScoringPageProps;
 let nflGames: NflGame[] | undefined;
 
 if (useDemo) {
-  const sample = getLiveScoringSample({ slug: league.slug });
+  const sample = useRosterDemo
+    ? getCurrentRosterSample({ slug: league.slug, year: rosterDemoYear })
+    : getLiveScoringSample({ slug: league.slug });
   nflGames = sample.nflGames;
   islandProps = {
     week: sample.week,
@@ -111,7 +124,9 @@ if (useDemo) {
     leagueId: league.leagueId,
     host: league.host,
     slug: league.slug,
-    isLive: false, // don't poll — the live feed would overwrite the sample
+    // The MFL poll stays off either way: there is nothing to poll before the
+    // season. The ESPN pollers are re-enabled by demoLiveNfl below.
+    isLive: false,
     gameWindow: daily.gameWindow,
     userFranchiseId,
     matchups: sample.matchups,
@@ -122,6 +137,8 @@ if (useDemo) {
     initialPlayers: sample.players,
     initialYetToPlay: sample.playersYetToPlay,
     demo: true,
+    demoLiveNfl: useRosterDemo,
+    demoLabel: useRosterDemo ? `Live NFL · ${rosterDemoYear} rosters · no fantasy scoring yet` : undefined,
     initialNflGames: sample.nflGames,
     initialDetail: sample.detail,
   };
@@ -153,7 +170,8 @@ if (useDemo) {
     <LiveScoreboard client:load {...islandProps} />
     <div class="ls-page-strip">
       <NflGamesStrip client:visible week={islandProps.week} year={year}
-                     isLive={useDemo ? false : isLive} demo={useDemo} initialGames={nflGames} />
+                     isLive={useRosterDemo ? true : (useDemo ? false : isLive)}
+                     demo={useDemo && !useRosterDemo} initialGames={nflGames} />
     </div>
   </div>
 </TheLeagueLayout>
