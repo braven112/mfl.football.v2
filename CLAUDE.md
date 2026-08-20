@@ -628,6 +628,14 @@ committed `nfl-draft-dates-fetched.json`, the workflow fails so the drift
 surfaces in the Actions tab. To accept a new date, run
 `pnpm fetch:nfl-draft-date` locally and commit the change.
 
+The audit detects drift by re-running the fetch and checking whether
+`nfl-draft-dates-fetched.json` came back dirty, so that file must be
+byte-identical across runs that resolve the same dates. `_fetchedAt` is
+therefore the time a date last **changed**, not the last run — do not make it
+bump unconditionally. It did until Aug 2026, which left the audit failing
+every single day regardless of drift; a permanently-red alarm is how the wrong
+2027 draft date went unnoticed.
+
 ## Merge conflicts — always rebase, resolve autonomously
 
 Only Brandon and Claude commit to this repo, and conflicts are almost

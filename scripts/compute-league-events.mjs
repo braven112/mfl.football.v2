@@ -9,7 +9,7 @@
  * Output: src/data/theleague/resolved-events.json
  */
 
-import { promises as fs } from 'node:fs';
+import { promises as fs, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { calendarDaysUntil } from './lib/roger-reminder-window.mjs';
@@ -178,13 +178,68 @@ const AFL_EVENTS = [
   { id: 'afl-nfl-season-starts', name: 'NFL Season Starts', startRule: { type: 'computed', rule: 'nfl-kickoff' }, tier: 'standard' },
 ];
 
+// ── NFL Draft date resolution (mirrors league-year-config.ts) ──
+//
+// Order matches buildOverrides() in src/data/theleague/league-year-config.ts:
+//   1. nfl-draft-dates-fetched.json  (ESPN, authoritative — wins when present)
+//   2. HARDCODED_OVERRIDES in league-year-config.ts  (offline fallback)
+//   3. 4th Thursday of April  (last-resort estimate; wrong for 2027)
+// Never add a fourth source here — update one of the two files instead.
+
+const FETCHED_DATES_PATH = path.join(projectRoot, 'src', 'data', 'theleague', 'nfl-draft-dates-fetched.json');
+const LEAGUE_YEAR_CONFIG_PATH = path.join(projectRoot, 'src', 'data', 'theleague', 'league-year-config.ts');
+
+function parseIsoDateLocal(value) {
+  const [y, m, d] = value.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function readFetchedDraftDate(year) {
+  try {
+    const json = JSON.parse(readFileSync(FETCHED_DATES_PATH, 'utf8'));
+    const value = json?.dates?.[String(year)];
+    return typeof value === 'string' && value ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+function readHardcodedDraftDate(year) {
+  try {
+    const src = readFileSync(LEAGUE_YEAR_CONFIG_PATH, 'utf8');
+    const block = src.match(/HARDCODED_OVERRIDES[^=]*=\s*\{([\s\S]*?)\n\};/);
+    if (!block) return null;
+    // Strip line comments so prose containing braces/quotes cannot confuse the scan.
+    const body = block[1].replace(/\/\/.*$/gm, '');
+    const re = /(\d{4})\s*:\s*\{[^{}]*?nflDraftDate\s*:\s*'(\d{4}-\d{2}-\d{2})'/g;
+    for (let m = re.exec(body); m; m = re.exec(body)) {
+      if (Number(m[1]) === year) return m[2];
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function getNflDraftDate(year) {
+  const value = readFetchedDraftDate(year) ?? readHardcodedDraftDate(year);
+  if (value) return parseIsoDateLocal(value);
+  return getNthDayOfMonth(year, 3, 4, 4);
+}
+
 // ── Resolve dates ──
 
 function resolveEvents(year, eventList = EVENTS) {
   const now = new Date();
 
-  // NFL Draft date — try to read from league-year-config if it exists
-  let nflDraftDate = getNthDayOfMonth(year, 3, 4, 4); // default: 4th Thursday of April
+  // NFL Draft date — resolved from the SAME two sanctioned sources as
+  // league-year-config.ts (fetched JSON wins, then the hardcoded fallback).
+  // This used to unconditionally use the 4th-Thursday calculation while the
+  // comment claimed it read league-year-config, making this a silent third
+  // source of truth — exactly what CLAUDE.md forbids. It matched by luck in
+  // years where the heuristic happens to be right, and would have shipped a
+  // wrong Rookie Draft date to Roger in 2027 (May 1 instead of May 8).
+  const nflDraftDate = getNflDraftDate(year);
 
   return eventList.map(event => {
     let startDate;

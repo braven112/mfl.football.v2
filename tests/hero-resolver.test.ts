@@ -1041,8 +1041,18 @@ describe('resolveHeroState', () => {
     });
 
     it('should return draft-announced after NFL Draft', () => {
-      // 2027: NFL Draft = Apr 22 (4th Thu), Mon after = Apr 26
-      const state = resolveHeroState(new Date(2027, 3, 27), true);
+      // 2027: NFL Draft = Apr 29, Mon after = May 3. Probe May 4.
+      //
+      // This previously read "Apr 22 (4th Thu), Mon after = Apr 26" and probed
+      // Apr 27. That was not an independent expectation — it was the 4th-Thursday
+      // auto-calculation in getNflDraftDate() written back as the assertion, so
+      // the test agreed with the bug instead of catching it. 2027 is the one year
+      // between 2022-2035 where "4th Thursday of April" is wrong: the draft
+      // actually tracks the Super Bowl (Thursday = SB Sunday + 74 days), and
+      // SB LXI falls on Feb 14, 2027, pushing the draft to the 5th Thursday.
+      // The real date now comes from nfl-draft-dates-fetched.json / the 2027
+      // HARDCODED_OVERRIDES entry, so this probe must be anchored to Apr 29.
+      const state = resolveHeroState(new Date(2027, 4, 4), true);
       expect(state.phase).toBe('draft-announced');
       expect(state.draftProps?.live).toBe(false);
     });
