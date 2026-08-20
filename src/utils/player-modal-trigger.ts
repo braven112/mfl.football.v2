@@ -21,6 +21,12 @@
 /** Data shape accepted by PlayerDetailsModal's `openPlayerDetailsModal()` */
 export interface PlayerModalData {
   id?: string;
+  /**
+   * Best-guess ESPN id — may be a COLLEGE athlete id for rookies (see
+   * `resolveEspnId`). Safe for headshots, which pick the matching URL. NOT safe
+   * for ESPN's NFL athlete endpoints: consumers that need a guaranteed-NFL id
+   * send `id` to /api/player-news and let it resolve `espn_id` from the feed.
+   */
   espnId?: string;
   name?: string;
   position?: string;

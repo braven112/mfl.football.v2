@@ -1,0 +1,66 @@
+{
+  "_comment": "Hand-authored fixture in ESPN's athlete-news shape. Field names are taken from the real ESPN payload that scripts/fetch-player-news.mjs used to persist (headline / description / published / type / links.web.href / images[].url). ESPN is unreachable from CI and from the dev sandbox (egress policy 403s every espn.com host), so this file IS the parser's contract. Rows 4-8 are adversarial on purpose - see tests/player-news.test.ts.",
+  "articles": [
+    {
+      "id": 47284202,
+      "type": "Story",
+      "headline": "Chase active, expected to play full snap count",
+      "description": "The Bengals receiver was a full participant Friday and carries no injury designation into Sunday.",
+      "published": "2025-12-13T01:41:50Z",
+      "links": { "web": { "href": "https://www.espn.com/nfl/story/_/id/47284202/chase-active" } },
+      "images": [{ "url": "https://a.espncdn.com/photo/2025/1212/r1588355_1296x729_16-9.jpg", "width": 1296, "height": 729 }]
+    },
+    {
+      "id": 47251841,
+      "type": "Recap",
+      "headline": "Chase posts 9-141-2 in divisional win",
+      "description": "A season high in yards, and his second multi-touchdown game in three weeks.",
+      "published": "2025-12-15T04:12:00Z",
+      "links": { "web": { "href": "https://www.espn.com/nfl/recap/_/id/47251841" } }
+    },
+    {
+      "id": 47285077,
+      "type": "Story",
+      "headline": "Bengals list Chase as limited Wednesday",
+      "description": "Coach called it maintenance, not a new injury.",
+      "published": "2025-12-10T13:37:32Z",
+      "links": { "web": { "href": "http://www.espn.com/nfl/story/_/id/47285077" } }
+    },
+    {
+      "id": 99990001,
+      "type": "Story",
+      "headline": "Article with a hostile link",
+      "description": "The href must be rejected but the story must survive.",
+      "published": "2025-12-09T10:00:00Z",
+      "links": { "web": { "href": "javascript:alert(document.cookie)" } }
+    },
+    {
+      "id": 99990002,
+      "type": "Story",
+      "headline": "Article with no link at all",
+      "description": "ESPN sometimes omits links.web entirely.",
+      "published": "2025-12-08T10:00:00Z"
+    },
+    {
+      "id": 99990003,
+      "headline": "Article with no type and no description",
+      "published": "2025-12-07T10:00:00Z",
+      "links": { "web": { "href": "https://www.espn.com/nfl/story/_/id/99990003" } }
+    },
+    {
+      "id": 99990004,
+      "type": "Story",
+      "description": "This row has no headline and must be dropped entirely.",
+      "published": "2025-12-06T10:00:00Z",
+      "links": { "web": { "href": "https://www.espn.com/nfl/story/_/id/99990004" } }
+    },
+    {
+      "id": 99990005,
+      "type": "Story",
+      "headline": "Article with an unparseable published date",
+      "description": "Must not become NaN, and must sort last rather than poisoning the compare.",
+      "published": "not-a-date",
+      "links": { "web": { "href": "https://www.espn.com/nfl/story/_/id/99990005" } }
+    }
+  ]
+}

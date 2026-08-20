@@ -1,5 +1,26 @@
 [
   {
+    "id": "player-news-modals",
+    "date": "2026-08-19",
+    "category": "enhancement",
+    "icon": "football",
+    "title": "Every Player Card Now Reads You In",
+    "summary": "Tap a player anywhere on the site and the modal now opens with his latest ESPN headlines sitting right under the numbers — why the usage spiked, what camp is saying, whether the beat writers think the job is his. No more bouncing to another tab to find out what the box score was hinting at.",
+    "description": [
+      "The player modal has always been good at telling you what happened. Sixty-two points, 5.2 a game, twelve starts — fine. What it could never tell you was why, and that is usually the part you actually opened it for. So you left, searched his name somewhere else, and came back.",
+      "Now the modal answers the question itself. Open any player and a Latest News block sits directly beneath his metrics, carrying his three most recent ESPN stories with a timestamp on each. Ryan Flournoy's card, for instance, currently leads with \"Could Ryan Flournoy give Cowboys a third 1,000-yard receiver?\" — which is a considerably more useful thing to know in August than his 2025 per-game average.",
+      "It is genuinely his news, not his team's. That distinction sounds pedantic and is the entire feature: a team-level feed hands every Falcon on your roster the same four headlines, and we measured it — the old approach returned 87 articles across 29 teams but only 28 different ones, with a Madden ratings piece filed under 27 of them. Pulling each player individually gets you 88% unique headlines instead of 32%.",
+      "Team defenses have no news feed of their own, so they borrow their best defender's and say so plainly rather than pretending the headlines belong to the unit. And when ESPN has nothing, the modal says it has nothing — it does not quietly show you stale filler, and if the feed itself is unreachable it tells you that instead, with a retry, because \"no news\" and \"we couldn't reach the wire\" are very different things to tell an owner."
+    ],
+    "image": "player-news-modal.webp",
+    "imageAlt": "The player detail modal for Ryan Flournoy: the team-colored hero band with his name, position and draft details, a three-card metrics strip showing 62.6 points and 5.2 per game, then a Latest News section listing three recent ESPN stories with type labels and timestamps, above the Season Results table.",
+    "excludeFromHero": true,
+    "leagues": [
+      "theleague",
+      "afl"
+    ]
+  },
+  {
     "id": "pecking-order-preseason-preview",
     "date": "2026-08-18",
     "category": "enhancement",
@@ -860,27 +881,6 @@
     "icon": "dollar",
     "image": "homepage-unsigned-fa-set-years.webp",
     "imageAlt": "The homepage Unsigned FA Adds card showing a player pickup with a 'Set years' button, and a contract declaration modal open with year-length options and a Declare Contract button.",
-    "excludeFromHero": true,
-    "leagues": [
-      "theleague"
-    ]
-  },
-  {
-    "id": "homepage-whats-new-section",
-    "date": "2026-07-08",
-    "title": "What's New, Right on the Homepage",
-    "summary": "You shouldn't have to go hunting to learn what changed. The two latest updates now ride at the bottom of the homepage's left column — a quick glance at what shipped while you were off tinkering with your lineup, no detour required.",
-    "description": [
-      "For a while now the full What's New archive has lived a click away on its own page — perfect for a deep dive, a little much for a quick 'wait, what's different?' glance. So we brought the highlights home.",
-      "The two newest updates now sit at the bottom of the homepage's left column, just beneath Explore — each a tappable card with its headline, date, and a one-line pitch. 'All releases →' still takes you to the full history whenever you want the director's cut. And if a story's already headlining the hero up top, the panel quietly steps aside and shows the next one down, so you never read the same news twice on one screen.",
-      "It's a small thing that does a big thing: the stuff we ship stops being a secret you have to look up. Glance down, see what's new, get back to your roster."
-    ],
-    "category": "new-feature",
-    "link": "/theleague",
-    "linkLabel": "See it on the homepage",
-    "icon": "star",
-    "image": "homepage-whats-new-section.webp",
-    "imageAlt": "The bottom of the homepage's left column showing a 'What's New' panel with two update cards side by side — each with a category badge, headline, date, and short summary — above an 'All releases' link.",
     "excludeFromHero": true,
     "leagues": [
       "theleague"

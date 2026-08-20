@@ -540,3 +540,37 @@ browser will hand over.
 `ensureContrastOn()`; keep ΔE for "are these two colors distinguishable". When
 the surface is a gradient, resolve the color at the element's own position
 rather than trusting a computed `background-color`.
+
+---
+## 2026-08-19 - There IS a Global `.visually-hidden` Now — the 2026-07-06 Entry Above Is Stale
+
+**Context:** The player-news audit found `src/styles/player-news.css` shipping a
+private `.pn-visually-hidden` copy, with a comment reading "This project has NO
+global .visually-hidden utility". That comment is a faithful quote of the
+2026-07-06 insight above — which was true then and is not true now.
+
+**Insight:** The "promote one shared global utility" background task from that
+entry landed. `src/styles/utilities.css` defines `.visually-hidden` with
+`!important` on every declaration, and it is imported in the FRONTMATTER of
+`TheLeagueLayout.astro` and `SplashLayout.astro` — i.e. on every page of both
+leagues, since AFL pages use TheLeagueLayout too. New live regions should use
+`.visually-hidden` directly; a private copy is redundant AND weaker, because the
+global rule's `!important` is what defends it from a component's own scoped
+styles (specificity 0-1-0 loses to plenty of scoped selectors).
+
+**Still true from the old entry:** the class must be *reachable*, and in Astro
+that is the real trap. A `@import '../styles/utilities.css'` inside a `<style>`
+block gets SCOPED, so the rule ships with a `[data-astro-cid-…]` attribute the
+element doesn't carry and the live region renders as visible text — exactly the
+draft-room failure, one layer down. Frontmatter `import` (what both layouts do)
+ships it unscoped. If you write a component-local screen-reader rule for a
+JS-injected node, it must be in a global stylesheet imported from frontmatter,
+not a scoped `<style>`.
+
+**Recommendation:** Use `.visually-hidden`. Delete private copies when you touch
+them. Verify the *rule* is reachable from the element (frontmatter import or a
+global stylesheet), not just that the class name appears in the markup.
+
+**Evidence:** `src/styles/utilities.css:10`, `TheLeagueLayout.astro:20`,
+`SplashLayout.astro:16`. Found via the ESPN player-news modal audit; the stale
+insight is what produced the duplicate rule at `player-news.css:168`.

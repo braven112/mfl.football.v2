@@ -1389,3 +1389,66 @@ column count sits over children whose min-content is *intrinsic* rather than a
 declared `width`, prefer `repeat(auto-fit, minmax(min(Npx, 100%), 1fr))` over
 `repeat(N, …)` + breakpoints: it cannot blow out at any container width, and it
 removes the manual breakpoint ladder that leaves gaps between its rungs.
+
+---
+
+## 2026-08-19 - ESPN Player News Modal Feature: Tree-Shaking a Shared Util, and a Fallback That Isn't a Cold-Start Trap
+
+**Context:** Performance review of `src/pages/api/player-news.ts` +
+`src/utils/player-news-client.ts` (ESPN athlete-scoped news in the player
+modals). Two questions the author flagged pre-emptively turned out to already
+be handled correctly by existing patterns, which is worth recording so the
+next reviewer doesn't re-derive it from scratch.
+
+**Insight 1 — importing one function from a "big" util file is fine if the
+file is pure.** `player-news-client.ts` imports only `formatRelativeTime`
+from `schefter-feed.ts` (a 193-line file with 8 other exports: feed
+filtering, milestone labels, OG builders). Bundling with esbuild (proxy for
+Astro's Rolldown/Vite ESM tree-shaking — same dead-code-elimination class)
+showed only 285 of `schefter-feed.ts`'s 7233 source bytes survive into the
+output; total minified client module is 2408 bytes. The reason it tree-shakes
+cleanly: every export in `schefter-feed.ts` is a pure function with no
+top-level side effects and only a type-only import (`SchefterFeed` etc.),
+so there's nothing pinning unused exports live. **The rule this confirms:**
+importing one named export from a shared util is safe without extracting it
+into its own micro-module, AS LONG AS the source file has no top-level
+side effects (data imports, `readFileSync`, singleton construction) that
+would force the whole module to execute. Verify with a throwaway
+`esbuild --bundle --minify --metafile` before assuming — don't guess from
+file size alone.
+
+**Insight 2 — a "union of every season" fallback is not automatically the
+all-years-glob antipattern CLAUDE.md warns about.** `getGlobalPlayerMap()`
+(`src/utils/player-map.ts:212`) sounds exactly like the forbidden pattern,
+but it reads `data/theleague/derived/player-identity-union.json` — a
+**prebuild-computed artifact** (386 KB), not a runtime scan of every
+season's raw `players.json`. It's also lazily invoked (only on a
+current-year lookup miss) and memory-cached after first read. This is the
+`docs/claude/insights` "prebuild-derived snapshot" pattern already
+documented for TheLeague rosters, just not previously cross-referenced from
+the player-news feature. **The distinguishing question for any "reads all
+X" function:** does it glob/readdir the raw per-season feeds at request
+time, or does it read one precomputed union file? Only the former is the
+CLAUDE.md violation. A code comment in `player-map.ts:203-208` already
+explains this was fixed once before (23.5 MB of reads → 0.37 MB), which is
+exactly the kind of prior-art a reviewer should grep for
+(`getGlobalPlayerMap`, `derived/`) before flagging a fallback as a
+cold-start risk.
+
+**Evidence:** `src/pages/api/player-news.ts:67-72` (`resolveNflEspnId`),
+`src/utils/player-map.ts:153-175` (per-year map, real 1.38 MB feed read —
+this one DOES cost real cold-start bytes, but it's a pre-existing path with
+30 other call sites, not something this feature introduced) vs.
+`:212-232` (global union, the precomputed 386 KB artifact).
+
+**Recommendation:** When a new API route reuses an existing data-access
+util, check git blame / diff scope first — a function that looks alarming
+in isolation (`getGlobalPlayerMap`, "unions every season") may already be
+the fixed version of the antipattern, and the new caller isn't the one to
+blame for its cost profile. Separately, always mention that a *new*
+serverless function pays its *own* independent cold-start read of any
+memory-cached module data, even if 30 other routes already warmed the same
+cache in their own isolated instances — this is expected Vercel Lambda
+behavior, not a regression, and shouldn't be reported as a new cost unless
+the read itself is newly introduced.
+

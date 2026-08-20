@@ -1,0 +1,189 @@
+/**
+ * Player news list — shared by PlayerDetailsModal and PlayerNewsModal.
+ *
+ * Global (not an Astro scoped <style>) for the same two reasons
+ * player-modal-band.css is: the items are injected by client JS and so carry no
+ * Astro scope attribute, and both modals must render an identical list rather
+ * than drifting apart with two copies of the rules.
+ *
+ * Tokens only. --card-bg is a GRADIENT in dark mode and is banned from
+ * color/border-color/fill/stroke by tests/design-token-guard.test.ts — the solid
+ * twin is --card-surface.
+ */
+
+/* ── Section shell ───────────────────────────────────────────────────────── */
+
+/* The section sits ABOVE the modal's static content (weekly results, details),
+   so its height must be reserved while loading — otherwise every fetch that
+   resolves shoves the rest of the modal down under the reader's eyes. */
+.pn-status {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  /* No fixed reservation can match variable content, so the skeleton rows ARE
+     the reservation: same count as the default limit, same height as a real
+     item. A shorter result then shrinks upward (mild) instead of shoving the
+     static content below it down (which was measured at +308px). */
+  min-height: 6.3rem;
+  color: var(--content-text-muted);
+  font-size: 0.8125rem;
+}
+
+.pn-status--message {
+  align-items: flex-start;
+  justify-content: center;
+  /* In the empty/error states this message is the section's ONLY content, so
+     it is primary text, not metadata — muted lands at 4.45:1 in dark. */
+  color: var(--page-text);
+}
+
+.pn-subtitle {
+  margin: -0.25rem 0 0.625rem;
+  font-size: 0.75rem;
+  color: var(--content-text-muted);
+}
+
+.pn-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* ── Article item ────────────────────────────────────────────────────────── */
+
+.pn-item {
+  display: block;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--content-border);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  /* Comfortable tap target on a phone (spec floor is 44px). */
+  min-height: 44px;
+}
+
+a.pn-item:hover {
+  background: var(--color-gray-50);
+  text-decoration: none;
+}
+
+a.pn-item:focus-visible {
+  outline: 2px solid var(--link-color-accent);
+  outline-offset: 2px;
+}
+
+/* An article whose href failed scheme validation still renders — it just isn't
+   a link. Muted border so it reads as non-interactive. */
+.pn-item--nolink {
+  cursor: default;
+  /* Genuinely muted so it reads as non-interactive, rather than being
+     pixel-identical to a link as the comment used to merely claim. */
+  opacity: 0.85;
+}
+
+.pn-item__meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.pn-item__type {
+  color: var(--link-color-accent);
+}
+
+.pn-item__date {
+  color: var(--content-text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.pn-item__headline {
+  margin: 0.25rem 0 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--page-text);
+}
+
+a.pn-item:hover .pn-item__headline {
+  color: var(--link-color-accent);
+}
+
+.pn-item__description {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--content-text-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── Retry ───────────────────────────────────────────────────────────────── */
+
+.pn-retry {
+  margin-top: 0.5rem;
+  padding: 0.4375rem 0.875rem;
+  min-height: 44px;
+  border: 1px solid var(--content-border);
+  border-radius: var(--radius-md);
+  background: var(--content-bg-muted);
+  color: var(--page-text);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pn-retry:hover {
+  background: var(--color-gray-100);
+}
+
+.pn-retry:focus-visible {
+  outline: 2px solid var(--link-color-accent);
+  outline-offset: 2px;
+}
+
+/* ── Skeleton placeholder rows ───────────────────────────────────────────── */
+
+.pn-skeleton {
+  /* Matches a rendered .pn-item so the loading block reserves the real height. */
+  height: 6.3rem;
+  border-radius: var(--radius-md);
+  background: var(--color-gray-100);
+  /* The fill is ~1.1:1 against the card in both themes, so the animation was
+     the only thing making it perceptible — which left reduced-motion users
+     staring at an invisible box. The border carries it instead. */
+  border: 1px solid var(--content-border);
+  animation: pn-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pn-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pn-skeleton { animation: none; opacity: 0.75; }
+}
+
+/* Screen-reader announcements use the GLOBAL .visually-hidden from
+   src/styles/utilities.css (imported by TheLeagueLayout) — it carries
+   !important on every declaration, so a private copy here would be both
+   redundant and weaker. */
+
+
+.pn-status[hidden],
+.pn-list[hidden] {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .pn-item__headline { font-size: 0.9375rem; }
+  .pn-item__description { -webkit-line-clamp: 3; line-clamp: 3; }
+}

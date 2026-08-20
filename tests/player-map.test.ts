@@ -274,8 +274,26 @@ describe('player-map', () => {
         nflTeam: 'KC',
         headshot: expect.stringContaining('3139477'),
         espnId: '3139477',
+        // Same value here because Mahomes has an NFL espn_id in the feed. The
+        // two diverge for an incoming rookie who only has a COLLEGE id: espnId
+        // falls back to it, nflEspnId stays null. Anything hitting ESPN's NFL
+        // athlete endpoints must read nflEspnId — see the covering case below.
+        nflEspnId: '3139477',
         draftYear: '2017',
       });
+    });
+
+    it('leaves nflEspnId null when the feed has no NFL espn_id, even though espnId falls back to a college id', () => {
+      // The whole point of the split: a college athlete id is numerically
+      // indistinguishable from an NFL one, so a consumer that trusted `espnId`
+      // would silently address a DIFFERENT athlete on ESPN's NFL endpoints.
+      const all = getPlayerMap(2026);
+      const collegeOnly = [...all.values()].find((p) => p.espnId && !p.nflEspnId);
+
+      if (collegeOnly) {
+        expect(collegeOnly.nflEspnId).toBeNull();
+        expect(collegeOnly.headshot).toContain('college-football');
+      }
     });
 
     it('returns undefined for unknown player', () => {
