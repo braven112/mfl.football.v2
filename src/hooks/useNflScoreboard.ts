@@ -15,8 +15,9 @@
  */
 
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
-import type { NflGame, NflScoreboardResponse } from '../types/live-scoring';
+import type { EspnSlotInfo, NflGame, NflScoreboardResponse } from '../types/live-scoring';
 import { createSharedPoller, type PollStatus } from '../utils/live-poll-store';
+import { copyEspnOverrides } from '../utils/espn-scoreboard-url';
 
 export const POLL_LIVE = 60_000;
 export const POLL_STALE = 300_000;
@@ -32,6 +33,10 @@ const poller = createSharedPoller<Params, NflScoreboardResponse>(
     const url = new URL('/api/nfl-scoreboard', window.location.origin);
     url.searchParams.set('week', String(week));
     url.searchParams.set('year', String(year));
+    // Carry any validation override through to every poll, not just the first
+    // render — otherwise the board silently reverts to the normal slate a
+    // minute in, which is a maddening way to lose an evening.
+    copyEspnOverrides(new URLSearchParams(window.location.search), url.searchParams);
     const res = await fetch(url.toString());
     if (!res.ok) throw new Error(`nfl-scoreboard ${res.status}`);
     const data: NflScoreboardResponse = await res.json();
@@ -46,6 +51,8 @@ const poller = createSharedPoller<Params, NflScoreboardResponse>(
 export interface NflScoreboardState {
   games: NflGame[];
   status: PollStatus;
+  /** Set when a validation override pointed this at another slate. */
+  espnSlot: EspnSlotInfo | null;
   /** True while at least one game is being played. Drives the poll cadence. */
   anyLive: boolean;
   /** Canonical NFL team code → that team's game. */
@@ -101,6 +108,7 @@ export function useNflScoreboard(
       // With the fetch disabled there is nothing to have failed; caller-supplied
       // games are as authoritative as a successful poll.
       status: enabled ? snapshot.status : ('ok' as PollStatus),
+      espnSlot: enabled ? snapshot.data?.espnSlot ?? null : null,
       anyLive: games.some((g) => g.state === 'in'),
       byTeam,
     };

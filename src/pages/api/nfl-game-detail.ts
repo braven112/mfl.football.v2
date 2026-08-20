@@ -16,7 +16,7 @@ import {
   parseScoringPlays,
   type EspnScoringPlay,
 } from '../../utils/espn-game-detail';
-import { buildEspnScoreboardUrl, espnSeasonSlot } from '../../utils/espn-scoreboard-url';
+import { buildEspnScoreboardUrl, resolveEspnTarget } from '../../utils/espn-scoreboard-url';
 import { mapWithConcurrency } from '../../utils/fan-out';
 
 export const prerender = false;
@@ -179,8 +179,12 @@ export const GET: APIRoute = async ({ url }) => {
     ? yearNum
     : getCurrentSeasonYear();
 
-  const slot = espnSeasonSlot(parsedWeek);
-  const scoreboard = await fetchJson(buildEspnScoreboardUrl(slot, year));
+  // Validation override (?espnSeason/?espnWeek/?espnYear) — see
+  // resolveEspnTarget. Both ESPN routes must honor it or the board would show
+  // one slate's games next to another slate's box scores.
+  const target = resolveEspnTarget(url.searchParams, parsedWeek, year);
+  const espnSlot = { ...target.slot, year: target.year, overridden: target.overridden };
+  const scoreboard = await fetchJson(buildEspnScoreboardUrl(target.slot, target.year));
 
   // The scoreboard is the ONE call this route cannot do without: it supplies
   // the event ids to fan out over and the team-id → code map the plays feed
@@ -196,6 +200,7 @@ export const GET: APIRoute = async ({ url }) => {
         plays: [],
         gamesRequested: 0,
         gamesLoaded: 0,
+        espnSlot,
       } satisfies NflGameDetailResponse,
       200,
     );
@@ -283,6 +288,7 @@ export const GET: APIRoute = async ({ url }) => {
       plays,
       gamesRequested: started.length,
       gamesLoaded,
+      espnSlot,
     } satisfies NflGameDetailResponse,
     200,
   );

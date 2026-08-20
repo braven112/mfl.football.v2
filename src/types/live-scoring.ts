@@ -124,6 +124,22 @@ export interface NflGame {
   situation?: NflGameSituation | null;
 }
 
+
+/**
+ * Which ESPN slate a route actually fetched. `overridden` is true when the
+ * validation query params (?espnSeason/?espnWeek/?espnYear) pointed it
+ * somewhere other than the page's own week — the UI badges that, because a
+ * board quietly showing a different week's NFL games than its header claims
+ * would be worse than having no override at all.
+ */
+export interface EspnSlotInfo {
+  /** 1 = preseason, 2 = regular season, 3 = postseason. */
+  seasonType: 1 | 2 | 3;
+  week: number;
+  year: number;
+  overridden: boolean;
+}
+
 /** API response from /api/nfl-scoreboard. */
 export interface NflScoreboardResponse {
   /**
@@ -134,6 +150,8 @@ export interface NflScoreboardResponse {
   ok?: boolean;
   week: number;
   games: NflGame[];
+  /** What we actually asked ESPN for; flags an active validation override. */
+  espnSlot?: EspnSlotInfo;
 }
 
 /**
@@ -197,6 +215,8 @@ export interface NflGameDetailResponse {
   /** Games we tried to expand, and how many came back complete. Partial is normal. */
   gamesRequested: number;
   gamesLoaded: number;
+  /** What we actually asked ESPN for; flags an active validation override. */
+  espnSlot?: EspnSlotInfo;
 }
 
 /** API response from /api/live-scoring (enhanced with matchup pairings) */

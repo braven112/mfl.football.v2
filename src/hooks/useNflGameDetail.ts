@@ -18,6 +18,7 @@ import type {
   PlayerBoxScore,
 } from '../types/live-scoring';
 import { createSharedPoller, type PollStatus } from '../utils/live-poll-store';
+import { copyEspnOverrides } from '../utils/espn-scoreboard-url';
 import { POLL_LIVE, POLL_STALE } from './useNflScoreboard';
 
 interface Params {
@@ -31,6 +32,9 @@ const poller = createSharedPoller<Params, NflGameDetailResponse>(
     const url = new URL('/api/nfl-game-detail', window.location.origin);
     url.searchParams.set('week', String(week));
     url.searchParams.set('year', String(year));
+    // Must match useNflScoreboard's target, or the board pairs one slate's
+    // games with another slate's box scores.
+    copyEspnOverrides(new URLSearchParams(window.location.search), url.searchParams);
     const res = await fetch(url.toString());
     if (!res.ok) throw new Error(`nfl-game-detail ${res.status}`);
     const data: NflGameDetailResponse = await res.json();

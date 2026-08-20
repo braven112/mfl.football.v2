@@ -567,7 +567,7 @@ export default function LiveScoreboard(props: LiveScoringPageProps) {
   // ── real NFL context (ESPN) ──
   // Demo mode ships its own sample, so both pollers stay off and the bundled
   // data is used verbatim — a live fetch would overwrite the replay.
-  const { byTeam: gamesByTeam, anyLive: anyNflGameLive } = useNflScoreboard(props.week, props.year, {
+  const { byTeam: gamesByTeam, anyLive: anyNflGameLive, espnSlot } = useNflScoreboard(props.week, props.year, {
     enabled: !props.demo,
     live: props.isLive,
     fallbackGames: props.initialNflGames,
@@ -634,7 +634,19 @@ export default function LiveScoreboard(props: LiveScoringPageProps) {
   return (
     <div className="ls-root">
       <div className="ls-head">
-        <h1>Live Scoring{props.demo && <span className="ls-sample-badge">Sample data</span>}</h1>
+        <h1>
+          Live Scoring
+          {props.demo && <span className="ls-sample-badge">Sample data</span>}
+          {/* A validation override points the NFL half of the board at another
+              slate (see resolveEspnTarget). Say so on the page: these URLs are
+              shareable, and NFL games that don't belong to the week in the
+              header are indistinguishable from a bug otherwise. */}
+          {espnSlot?.overridden && (
+            <span className="ls-sample-badge" title="NFL games are being read from a different ESPN slate for validation">
+              NFL games: {espnSlot.seasonType === 1 ? 'preseason' : espnSlot.seasonType === 3 ? 'postseason' : 'regular'} wk {espnSlot.week} {espnSlot.year}
+            </span>
+          )}
+        </h1>
         <div className="ls-head-right">
           <label className="ls-weeksel">
             <span className="ls-weeksel-lbl">Week</span>

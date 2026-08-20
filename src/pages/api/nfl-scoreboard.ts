@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 import type { NflGame, NflScoreboardResponse } from '../../types/live-scoring';
 import { getCurrentSeasonYear } from '../../utils/league-year';
 import { canonicalNflCode, parseGameSituation } from '../../utils/espn-game-detail';
-import { buildEspnScoreboardUrl, espnSeasonSlot } from '../../utils/espn-scoreboard-url';
+import { buildEspnScoreboardUrl, resolveEspnTarget } from '../../utils/espn-scoreboard-url';
 
 export const prerender = false;
 
@@ -28,7 +28,11 @@ export const GET: APIRoute = async ({ url }) => {
     ? yearNum
     : getCurrentSeasonYear();
 
-  const espnUrl = buildEspnScoreboardUrl(espnSeasonSlot(week), year);
+  // Validation override (?espnSeason/?espnWeek/?espnYear) — see
+  // resolveEspnTarget. Off by default; every value is whitelisted there.
+  const target = resolveEspnTarget(url.searchParams, week, year);
+  const espnUrl = buildEspnScoreboardUrl(target.slot, target.year);
+  const espnSlot = { ...target.slot, year: target.year, overridden: target.overridden };
 
   const respond = (body: NflScoreboardResponse) =>
     new Response(JSON.stringify(body), {
@@ -38,7 +42,7 @@ export const GET: APIRoute = async ({ url }) => {
 
   try {
     const res = await fetch(espnUrl, { signal: AbortSignal.timeout(5000) });
-    if (!res.ok) return respond({ ok: false, week, games: [] });
+    if (!res.ok) return respond({ ok: false, week, games: [], espnSlot });
     const data = await res.json();
     const events: any[] = data?.events ?? [];
 
@@ -75,9 +79,9 @@ export const GET: APIRoute = async ({ url }) => {
       } satisfies NflGame;
     });
 
-    return respond({ ok: true, week, games });
+    return respond({ ok: true, week, games, espnSlot });
   } catch (error) {
     console.error('Error fetching NFL scoreboard:', error);
-    return respond({ ok: false, week, games: [] });
+    return respond({ ok: false, week, games: [], espnSlot });
   }
 };

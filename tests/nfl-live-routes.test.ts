@@ -11,7 +11,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { buildEspnScoreboardUrl, espnSeasonSlot } from '../src/utils/espn-scoreboard-url';
+import {
+  buildEspnScoreboardUrl,
+  copyEspnOverrides,
+  espnSeasonSlot,
+  resolveEspnTarget,
+} from '../src/utils/espn-scoreboard-url';
 
 const fixture = (name: string) =>
   JSON.parse(readFileSync(join(process.cwd(), 'tests/fixtures', name), 'utf-8'));
@@ -125,6 +130,22 @@ describe('GET /api/nfl-scoreboard', () => {
     await (await load())(ctx('?week=20&year=2025'));
     expect(String(fetchMock.mock.calls[0][0])).toContain('week=2&seasontype=3');
   });
+
+  it('honors the validation override and reports it in the payload', async () => {
+    fetchMock.mockResolvedValue(ok({ events: [] }));
+    const res = await (await load())(ctx('?week=1&year=2025&espnSeason=1&espnWeek=3&espnYear=2026'));
+    expect(String(fetchMock.mock.calls[0][0])).toContain('week=3&seasontype=1&dates=2026');
+    const body = await res.json();
+    // The island badges the board off this flag; without it an overridden
+    // slate is indistinguishable from a bug.
+    expect(body.espnSlot).toEqual({ seasonType: 1, week: 3, year: 2026, overridden: true });
+  });
+
+  it('reports overridden:false on a normal request', async () => {
+    fetchMock.mockResolvedValue(ok({ events: [] }));
+    const body = await (await (await load())(ctx('?week=1&year=2025'))).json();
+    expect(body.espnSlot).toEqual({ seasonType: 2, week: 1, year: 2025, overridden: false });
+  });
 });
 
 describe('GET /api/nfl-game-detail', () => {
@@ -149,6 +170,14 @@ describe('GET /api/nfl-game-detail', () => {
       if (url.includes('/plays')) return over.plays ? over.plays() : ok(PLAYS);
       throw new Error(`unexpected fetch ${url}`);
     });
+
+  it('honors the same override, so games and box scores stay on one slate', async () => {
+    routeFetch();
+    const res = await (await load())(ctx('?week=1&year=2025&espnSeason=1&espnWeek=3&espnYear=2026'));
+    const scoreboardCall = fetchMock.mock.calls.map(String).find((u) => u.includes('/scoreboard'));
+    expect(scoreboardCall).toContain('week=3&seasontype=1&dates=2026');
+    expect((await res.json()).espnSlot).toEqual({ seasonType: 1, week: 3, year: 2026, overridden: true });
+  });
 
   it('rejects a missing or out-of-range week before any upstream call', async () => {
     routeFetch();
@@ -262,5 +291,84 @@ describe('GET /api/nfl-game-detail', () => {
     const first = fetchMock.mock.calls.length;
     await (await load())(ctx('?week=1&year=2025'));
     expect(fetchMock.mock.calls.length).toBeGreaterThan(first + 1);
+  });
+});
+
+describe('resolveEspnTarget (validation override)', () => {
+  const target = (qs: string, week = 5, year = 2025) =>
+    resolveEspnTarget(new URLSearchParams(qs), week, year);
+
+  it('is a no-op with no params — normal behavior is the default', () => {
+    expect(target('')).toEqual({ slot: { seasonType: 2, week: 5 }, year: 2025, overridden: false });
+  });
+
+  it('reaches the preseason, which the page can otherwise never ask for', () => {
+    // This is the entire reason the override exists: espnSeasonSlot only ever
+    // emits 2 or 3, so between February and kickoff there is no URL the board
+    // can build that reaches a game actually being played.
+    expect(target('espnSeason=1&espnWeek=3&espnYear=2026')).toEqual({
+      slot: { seasonType: 1, week: 3 },
+      year: 2026,
+      overridden: true,
+    });
+  });
+
+  it('accepts each param independently', () => {
+    expect(target('espnWeek=9')).toMatchObject({ slot: { seasonType: 2, week: 9 }, year: 2025, overridden: true });
+    expect(target('espnYear=2024')).toMatchObject({ slot: { seasonType: 2, week: 5 }, year: 2024, overridden: true });
+    expect(target('espnSeason=3')).toMatchObject({ slot: { seasonType: 3, week: 5 }, overridden: true });
+  });
+
+  it('IGNORES anything not whitelisted — these reach an upstream URL', () => {
+    for (const bad of [
+      'espnSeason=0', 'espnSeason=4', 'espnSeason=../x', 'espnSeason=2x', 'espnSeason=',
+      'espnWeek=0', 'espnWeek=26', 'espnWeek=-1', 'espnWeek=abc',
+      'espnYear=1999', 'espnYear=2101', 'espnYear=20255', 'espnYear=%2e%2e',
+    ]) {
+      const out = target(bad);
+      expect(out, `should ignore ${bad}`).toEqual({
+        slot: { seasonType: 2, week: 5 },
+        year: 2025,
+        overridden: false,
+      });
+    }
+  });
+
+  it('a rejected value cannot leak into the built URL', () => {
+    // espnYear here IS valid, so it applies; the other two are junk and must
+    // fall back to the page's own slot rather than being coerced by parseInt.
+    const out = target('espnSeason=1;DROP&espnWeek=../../etc&espnYear=2026');
+    const url = buildEspnScoreboardUrl(out.slot, out.year);
+    expect(url).toBe(buildEspnScoreboardUrl({ seasonType: 2, week: 5 }, 2026));
+    expect(url).not.toContain('DROP');
+    expect(url).not.toContain('..');
+  });
+
+  it('keeps a valid param when a sibling is invalid', () => {
+    // Partial garbage should not discard the good half — this is a debugging
+    // aid, and silently reverting everything would be confusing.
+    expect(target('espnSeason=1&espnWeek=999')).toMatchObject({
+      slot: { seasonType: 1, week: 5 },
+      overridden: true,
+    });
+  });
+});
+
+describe('copyEspnOverrides', () => {
+  it('carries the override onto a poll URL', () => {
+    const to = new URLSearchParams('week=1&year=2025');
+    copyEspnOverrides(new URLSearchParams('espnSeason=1&espnWeek=3&espnYear=2026&other=x'), to);
+    expect(to.get('espnSeason')).toBe('1');
+    expect(to.get('espnWeek')).toBe('3');
+    expect(to.get('espnYear')).toBe('2026');
+    // Only the three; a poll URL is not a place to forward arbitrary params.
+    expect(to.get('other')).toBeNull();
+    expect(to.get('week')).toBe('1');
+  });
+
+  it('copies nothing when no override is present', () => {
+    const to = new URLSearchParams('week=1');
+    copyEspnOverrides(new URLSearchParams('demo=1'), to);
+    expect([...to.keys()]).toEqual(['week']);
   });
 });
