@@ -14,6 +14,21 @@ import {
 import { resolveSubmitButtonState } from '../src/utils/lineup-submit-state';
 
 /**
+ * A league year with no feed committed under `data/<league>/mfl-feeds/`.
+ * TheLeague's feeds start at 2007, so nothing will ever sync into 1999.
+ *
+ * `resolveWeekLineup` calls `loadWeeklyResultsFeedFromDisk` internally, so a
+ * test that passes a real league year is silently reading whatever the roster
+ * -sync bot last committed. Tests asserting "nothing could vouch for this
+ * lineup" must use this year, or they are only true until the bot syncs a
+ * lineup for that franchise and week — which is exactly how the two tests
+ * below went red in Aug 2026 once week 15 gained starters for 0001. Tests
+ * that deliberately exercise the disk fallback should keep a real year and
+ * say so.
+ */
+const NO_DISK_FEED_YEAR = 1999;
+
+/**
  * Lineup page data sources.
  *
  * Both lineup pages read the owner's saved lineup with
@@ -343,7 +358,9 @@ describe('an owner MFL never listed that week', () => {
   const weekWithoutMe = {
     weeklyResults: { week: '15', matchup: [{ franchise: [{ id: '0007', starters: '9,' }, { id: '0008' }] }] },
   };
-  const base = { week: 15, franchiseId: '0001', league: 'theleague' as const, leagueYear: 2026 };
+  // NO_DISK_FEED_YEAR: this block is about MFL's live answer omitting us, so
+  // the on-disk feed must not be able to answer on our behalf.
+  const base = { week: 15, franchiseId: '0001', league: 'theleague' as const, leagueYear: NO_DISK_FEED_YEAR };
 
   it('does not read that omission as "no lineup submitted"', () => {
     expect(franchiseAppearsIn(weekWithoutMe.weeklyResults, '0001')).toBe(false);
@@ -609,7 +626,10 @@ describe('a franchise MFL does not list that week', () => {
       weeklyResults: { week: '15', matchup: [{ franchise: [{ id: '0002' }, { id: '0003' }] }] },
     };
     const r = resolveWeekLineup({
-      week: 15, franchiseId: '0001', league: 'theleague', leagueYear: 2026,
+      // NO_DISK_FEED_YEAR — see above. With a real year the disk copy answers
+      // for us and franchiseListed flips true, which is correct behavior but
+      // not the case under test here.
+      week: 15, franchiseId: '0001', league: 'theleague', leagueYear: NO_DISK_FEED_YEAR,
       weekScopedPayload: weekWithoutMe, ytdPayload: null,
     });
     expect(r.franchiseListed).toBe(false);
