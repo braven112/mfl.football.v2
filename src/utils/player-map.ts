@@ -41,11 +41,13 @@ export interface PlayerIdentity {
    */
   espnId: string | null;
   /**
-   * ESPN id that is definitely an NFL athlete (straight from the feed's
-   * `espn_id`), or null. Consumers hitting NFL-scoped ESPN endpoints must use
-   * this: a college id is numerically indistinguishable from an NFL one, so
-   * passing one to the NFL athlete endpoints silently addresses a DIFFERENT
-   * player rather than failing. Same reason `headshot` splits the two URLs.
+   * ESPN id that is definitely an NFL athlete, or null. Sourced from the feed's
+   * own `espn_id`, falling back to the generated backfill for the players MFL
+   * omits one for (see `nflIdBackfill` below). Consumers hitting NFL-scoped
+   * ESPN endpoints must use this: a college id is numerically indistinguishable
+   * from an NFL one, so passing one to the NFL athlete endpoints silently
+   * addresses a DIFFERENT player rather than failing. Same reason `headshot`
+   * splits the two URLs.
    */
   nflEspnId: string | null;
   /** NFL draft year from the MFL feed (e.g. '2026'); empty for undrafted/unknown */
@@ -61,6 +63,27 @@ const cache = new Map<number, Map<string, PlayerIdentity>>();
 /** College ID mapping (loaded once) */
 let collegeIdMap: Record<string, { espnCollegeId?: string }> | null = null;
 
+/**
+ * ESPN NFL athlete ids for players MFL's feed omits an `espn_id` for
+ * (scripts/fetch-espn-athlete-ids.mjs, refreshed in prebuild).
+ *
+ * MFL simply has no espn_id for a couple of dozen players, and some of them
+ * are starters — D'Andre Swift, Tony Pollard and three starting kickers were
+ * all in the gap. Since `nflEspnId` is the join key for every ESPN-backed
+ * surface (live box scores, scoring-play attribution, player news), a missing
+ * id silently drops a real starter out of features he belongs in rather than
+ * failing loudly.
+ *
+ * This is a strict GAP FILL: MFL's own espn_id always wins below, so the
+ * backfill can never override an id the feed is sure about. Its entries are
+ * NFL-only by construction (matched against ESPN's NFL team rosters, or its
+ * search filtered on the NFL league uid), which is what keeps a college
+ * athlete id — numerically indistinguishable from an NFL one — out of this
+ * field. `tests/espn-athlete-id-coverage.test.ts` fails the build if a
+ * rostered player ever loses his id again.
+ */
+let nflIdBackfill: Record<string, string> | null = null;
+
 function loadCollegeIds(): Record<string, { espnCollegeId?: string }> {
   if (collegeIdMap) return collegeIdMap;
   try {
@@ -71,6 +94,20 @@ function loadCollegeIds(): Record<string, { espnCollegeId?: string }> {
     collegeIdMap = {};
   }
   return collegeIdMap!;
+}
+
+function loadNflIdBackfill(): Record<string, string> {
+  if (nflIdBackfill) return nflIdBackfill;
+  try {
+    const filePath = join(process.cwd(), 'data/theleague/derived/espn-nfl-id-backfill.json');
+    const raw = JSON.parse(readFileSync(filePath, 'utf-8'));
+    nflIdBackfill = raw.ids || {};
+  } catch {
+    // Artifact missing (fresh clone before prebuild) — degrade to MFL's own
+    // ids rather than throwing. Coverage drops; nothing else breaks.
+    nflIdBackfill = {};
+  }
+  return nflIdBackfill!;
 }
 
 /**
@@ -112,19 +149,22 @@ function normalizePosition(pos: string): string {
  */
 function toIdentity(
   p: Record<string, string>,
-  collegeIds: Record<string, { espnCollegeId?: string }>
+  collegeIds: Record<string, { espnCollegeId?: string }>,
+  backfill: Record<string, string> = {}
 ): PlayerIdentity | null {
   const position = p.position || '';
   if (!FANTASY_POSITIONS.has(position)) return null;
 
   const mflId = p.id;
-  const nflEspnId = p.espn_id || '';
+  // MFL's own espn_id first, ALWAYS. The backfill only fills the gap where MFL
+  // has none — it must never override an id the feed already asserts.
+  const nflEspnId = p.espn_id || backfill[mflId] || '';
   const collegeEspnId = collegeIds[mflId]?.espnCollegeId || '';
   // Keep `espnId` as the best-guess ID for callers that need one, but
   // build `headshot` from the *matching* URL — ESPN's NFL headshot
   // endpoint returns 404 for a college ID, so a rookie with only a
   // college ESPN ID has to use the college-football URL instead.
-  const espnId = resolveEspnId(mflId, p as { espn_id?: string }, collegeIds);
+  const espnId = resolveEspnId(mflId, { espn_id: nflEspnId || undefined }, collegeIds);
   const headshot = nflEspnId
     ? getPlayerHeadshot(mflId, nflEspnId)
     : collegeEspnId
@@ -161,9 +201,10 @@ export function getPlayerMap(year: number): Map<string, PlayerIdentity> {
     const raw = JSON.parse(readFileSync(filePath, 'utf-8'));
     const players: Array<Record<string, string>> = raw?.players?.player || [];
     const collegeIds = loadCollegeIds();
+    const backfill = loadNflIdBackfill();
 
     for (const p of players) {
-      const identity = toIdentity(p, collegeIds);
+      const identity = toIdentity(p, collegeIds, backfill);
       if (identity) playerMap.set(identity.mflId, identity);
     }
   } catch {
@@ -217,9 +258,10 @@ export function getGlobalPlayerMap(): Map<string, PlayerIdentity> {
     const filePath = join(process.cwd(), 'data/theleague/derived/player-identity-union.json');
     const raw = JSON.parse(readFileSync(filePath, 'utf-8'));
     const collegeIds = loadCollegeIds();
+    const backfill = loadNflIdBackfill();
 
     for (const p of (raw?.players || []) as Array<Record<string, string>>) {
-      const identity = toIdentity(p, collegeIds);
+      const identity = toIdentity(p, collegeIds, backfill);
       if (identity) merged.set(identity.mflId, identity);
     }
   } catch {
@@ -237,6 +279,7 @@ export function getGlobalPlayerMap(): Map<string, PlayerIdentity> {
 export function clearPlayerMapCache(): void {
   cache.clear();
   collegeIdMap = null;
+  nflIdBackfill = null;
   globalMapCache = null;
 }
 
@@ -245,6 +288,7 @@ if ((import.meta as any).hot) {
   (import.meta as any).hot.dispose(() => {
     cache.clear();
     collegeIdMap = null;
+    nflIdBackfill = null;
     globalMapCache = null;
   });
 }

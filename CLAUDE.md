@@ -607,6 +607,22 @@ lives in `src/pages/api/nfl-game-detail.ts`, and the derived view model is
 which is exactly why the split exists — verify parsing offline against
 `tests/fixtures/espn-*.json`, verify fetching on a preview.
 
+- **MFL omits `espn_id` for real starters, so `nflEspnId` is MFL's id OR a
+  generated backfill.** 23 of 976 skill players had none — including D'Andre
+  Swift, Tony Pollard and three starting kickers — and a missing id doesn't
+  fail, it silently drops the player out of every ESPN-backed surface (the AFL
+  ticker credited "Tre Tucker 26 Yd pass from Geno Smith" to Geno Smith alone).
+  `scripts/fetch-espn-athlete-ids.mjs` (prebuild + daily in roster-sync) writes
+  `data/theleague/derived/espn-nfl-id-backfill.json`; `player-map.ts` uses it
+  ONLY where MFL has no id of its own. Matching is deliberately conservative
+  because a wrong id resolves a different athlete rather than failing: team
+  rosters first (team + jersey confirm the name), then ESPN search filtered on
+  the `~l:28~` NFL segment of the `uid` — that segment is the only thing
+  separating the NFL Daniel Carlson from the Arkansas one. A player who has
+  never been on an NFL roster has no NFL athlete id to find, and leaving him
+  blank is correct; his only ESPN matches are other people (one was a Stony
+  Brook BASKETBALL player). `tests/espn-athlete-id-coverage.test.ts` holds the
+  line: 100% of rostered players in every league, 95% of the pool.
 - **Join on `PlayerIdentity.nflEspnId`, server-side, and never ship an ESPN id
   to the client.** `PlayerMeta.espnId` can hold a COLLEGE athlete id, and
   college and NFL ids are both plain 4-7 digit numbers, so joining on it

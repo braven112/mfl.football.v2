@@ -95,6 +95,25 @@ jobs:
       # between the theleague and afl fetches). fetch-live-odds.mjs pulls
       # from ESPN's scoreboard API independent of any per-league MFL data,
       # so this reordering doesn't change what it reads or writes.
+      # ESPN athlete-id backfill for the players MFL omits an espn_id for.
+      # Runs ONCE A DAY, not on the 5-minute cron: it costs 32 ESPN roster
+      # fetches, and the only thing that can change the gap it fills is the
+      # daily players.json refresh above. Rosters DO change on the 5-minute
+      # cadence though, so a daily pass is what keeps a newly-added player
+      # from sitting without an id (and tests/espn-athlete-id-coverage.test.ts
+      # red) for longer than a day. The script is non-fatal by design and
+      # writes nothing when ESPN is unreachable, so a bad day leaves the
+      # committed backfill in place.
+      - name: Refresh ESPN athlete-id backfill (daily)
+        run: |
+          HOUR=$(date -u +%H)
+          MIN=$((10#$(date -u +%M)))
+          if [ "$HOUR" = "12" ] && [ "$MIN" -lt 5 ]; then
+            node ./scripts/fetch-espn-athlete-ids.mjs
+          else
+            echo "Skipping — this step runs once daily, in the 12:00-12:04 UTC window."
+          fi
+
       - name: Fetch live NFL odds
         run: node ./scripts/fetch-live-odds.mjs
 
