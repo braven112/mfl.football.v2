@@ -80,15 +80,31 @@ const cache = (): Map<string, CacheRow> => {
   return globalThis.__nflGameDetailCache;
 };
 
+/**
+ * Fetch one ESPN endpoint, or null.
+ *
+ * Deliberately sends NO custom User-Agent. The MFL-style
+ * `Mozilla/5.0 (compatible; FantasyLeague/1.0)` header this used to carry is
+ * fine from a laptop and gets rejected outright from a serverless IP: on the
+ * first preview deploy every call here failed in ~0.3s while
+ * /api/nfl-scoreboard — same host, same URL, same deployment, no UA header —
+ * succeeded. ESPN's edge is the only thing that can tell those two apart.
+ * Match the route that is already proven in production and send none.
+ *
+ * The failure reason is logged rather than swallowed. It was silent before,
+ * which is why the deploy reported an honest `ok: false` with nothing at all
+ * to say WHY, and the runtime logs showed a clean 200.
+ */
 async function fetchJson(url: string): Promise<any | null> {
   try {
-    const res = await fetch(url, {
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FantasyLeague/1.0)' },
-    });
-    if (!res.ok) return null;
+    const res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+    if (!res.ok) {
+      console.warn(`[nfl-game-detail] upstream ${res.status} for ${url}`);
+      return null;
+    }
     return await res.json();
-  } catch {
+  } catch (error) {
+    console.warn(`[nfl-game-detail] upstream failed for ${url}:`, (error as Error)?.message);
     return null;
   }
 }
