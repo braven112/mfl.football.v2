@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-08-19T21:25:28.198Z"
+    "fetchedAt": "2026-08-20T00:24:15.543Z"
   },
   "players": [
     {
@@ -7178,6 +7178,10 @@
         {
           "id": "16187",
           "name": "Downs, Josh"
+        },
+        {
+          "id": "11222",
+          "name": "Allen, Keenan"
         }
       ]
     },
@@ -8109,6 +8113,10 @@
         {
           "id": "16187",
           "name": "Downs, Josh"
+        },
+        {
+          "id": "11222",
+          "name": "Allen, Keenan"
         },
         {
           "id": "15109",
@@ -11577,7 +11585,7 @@
         "id": "13345",
         "fullName": "Jonah Coleman",
         "team": "DEN",
-        "age": 22,
+        "age": 23,
         "height": "68",
         "weight": "220",
         "number": 20,
@@ -14864,7 +14872,7 @@
         "id": "13420",
         "fullName": "Bryce Lance",
         "team": "NO",
-        "age": 23,
+        "age": 24,
         "height": "75",
         "weight": "204",
         "number": 18,
@@ -15408,20 +15416,51 @@
       "status": "ROSTER",
       "contractYear": "2",
       "points": 0,
-      "team": "FA",
+      "team": "IND",
       "draftYear": 2013,
       "draftTeam": "SDC",
       "birthdate": 704350800,
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/11222_thumb.jpg",
       "externalIds": {
         "mfl": "11222",
-        "sleeper": null,
-        "gsis": null
+        "sleeper": "1479",
+        "gsis": "00-0030279"
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "1479",
+        "fullName": "Keenan Allen",
+        "team": "IND",
+        "age": 34,
+        "height": "74",
+        "weight": "211",
+        "number": 10,
+        "college": "California",
+        "birthDate": "1992-04-27",
+        "status": "Active",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "SWR",
+        "depthChartOrder": 3,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 13,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": "00-0030279"
+      },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "15768",
+          "name": "Pierce, Alec"
+        },
+        {
+          "id": "16187",
+          "name": "Downs, Josh"
+        }
+      ]
     },
     {
       "id": "17042",
@@ -17479,7 +17518,7 @@
       "status": "ROSTER",
       "contractYear": "2",
       "points": 0,
-      "team": "WAS",
+      "team": "FA",
       "draftYear": 2023,
       "draftTeam": "SFO",
       "birthdate": 943333200,
