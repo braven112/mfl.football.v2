@@ -20,6 +20,7 @@
  * spotlight treatment.
  */
 import defData from './def-spotlight-players.json';
+import { normalizeTeamCode } from '../../utils/nfl';
 
 export interface DefSpotlightPlayer {
   name: string;
@@ -42,10 +43,27 @@ export const DEF_SPOTLIGHT_PLAYERS: Record<string, DefSpotlightPlayer[]> = DATA.
 /** The NFL season the production ranking was computed from. */
 export const DEF_SPOTLIGHT_SEASON = DATA.season ?? null;
 
+/**
+ * Normalize any NFL team code to this map's key convention.
+ *
+ * Two steps, and BOTH are load-bearing: the MFL feed ships `GBP/JAC/KCC/LVR/
+ * NEP/NOS/SFO/TBB` while this map is keyed `GB/JAX/KC/LV/NE/NO/SF/TB`, so a raw
+ * feed code misses 8 of 32 defenses outright; and `normalizeTeamCode` maps
+ * Washington the other way (`WAS` -> `WSH`) while this map keys it `WAS`, so the
+ * normalized code misses a 9th. Callers used to open-code the second half and
+ * forget the first — that silently hid the DEF spotlight for a quarter of the
+ * league.
+ */
+export function toDefSpotlightKey(teamCode: string | null | undefined): string {
+  if (!teamCode) return '';
+  const normalized = normalizeTeamCode(teamCode);
+  return normalized === 'WSH' ? 'WAS' : normalized;
+}
+
 /** Ranked pool of marquee defenders for a team, or [] if none is mapped. */
 export function getDefSpotlightPlayers(teamCode: string | null | undefined): DefSpotlightPlayer[] {
   if (!teamCode) return [];
-  return DEF_SPOTLIGHT_PLAYERS[teamCode] ?? [];
+  return DEF_SPOTLIGHT_PLAYERS[toDefSpotlightKey(teamCode)] ?? [];
 }
 
 /** The single top (primary) marquee defender for a team, or null. */

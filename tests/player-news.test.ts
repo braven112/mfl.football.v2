@@ -195,8 +195,17 @@ describe('fetchAthleteNews', () => {
     expect(result.espnId).toBe('3139477');
   });
 
-  it('distinguishes empty from error when ESPN answers with no articles', async () => {
-    stubFetch(() => Promise.resolve({ ok: true, json: () => Promise.resolve({ articles: [] }) }));
+  it('distinguishes empty from error when BOTH sources answer with no articles', async () => {
+    // Both sources must answer cleanly: `empty` now means "everyone we asked
+    // said there is nothing", not "the first one did".
+    vi.stubGlobal('fetch', vi.fn((url: unknown) =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(
+          String(url).includes('/overview') ? { news: { articles: [] } } : { articles: [] },
+        ),
+      }),
+    ));
     const result = await fetchAthleteNews('3139477');
     expect(result.status).toBe('empty');
     expect(result.items).toEqual([]);
@@ -270,7 +279,15 @@ describe('shape mismatch is never reported as "no news"', () => {
   });
 
   it('still reports a genuinely empty articles array as empty', async () => {
-    stub({ articles: [] });
+    // Both sources clean and empty — see the two-source ladder block.
+    vi.stubGlobal('fetch', vi.fn((url: unknown) =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(
+          String(url).includes('/overview') ? { news: { articles: [] } } : { articles: [] },
+        ),
+      }),
+    ));
     const result = await fetchAthleteNews('3139477');
     expect(result.status).toBe('empty');
     expect(result.reason).toBeUndefined();
@@ -331,14 +348,44 @@ describe('two-source ladder', () => {
     expect(result.source).toBeUndefined();
   });
 
-  it('a failing overview degrades to empty, not error — source 1 was read fine', async () => {
+  it('a failing overview is an ERROR even though source 1 read cleanly', async () => {
+    // Deliberate reversal of the original rule. Source 1 is vestigial — it
+    // answers empty for every athlete in production — so its clean read carries
+    // no information about whether news exists. If the overview (the actual
+    // provider) fails, we do not know, and saying "No recent ESPN stories"
+    // would be a confident claim resting on the uninformative source.
     routeFetch({
       '/news': { ok: true, body: { articles: [] } },
       '/overview': { ok: false, body: {} },
     });
     const result = await fetchAthleteNews('3139477');
-    expect(result.status).toBe('empty');
-    expect(result.reason).toBeUndefined();
+    expect(result.status).toBe('error');
+    expect(result.reason).toBe('upstream-status');
+  });
+
+  it('a failing source 1 still falls through to the overview', async () => {
+    // The fix for the short-circuit: source 1 is the vestigial endpoint, so a
+    // 404/5xx there must not blank the feature behind an unusable Retry.
+    routeFetch({
+      '/news': { ok: false, body: {} },
+      '/overview': { ok: true, body: { news: { articles: [article('recovered')] } } },
+    });
+    const result = await fetchAthleteNews('3139477');
+    expect(result.status).toBe('ok');
+    expect(result.source).toBe('athlete-overview');
+    expect(result.items[0].headline).toBe('recovered');
+  });
+
+  it('an envelope with articles that all fail to parse is a shape error, not empty', async () => {
+    // Validating only the container would let an item-level rename render as a
+    // confident, CDN-cached "no news" on every player.
+    routeFetch({
+      '/news': { ok: true, body: { articles: [{ title: 'renamed field' }, { title: 'another' }] } },
+      '/overview': { ok: true, body: { news: { articles: [] } } },
+    });
+    const result = await fetchAthleteNews('3139477');
+    expect(result.status).toBe('error');
+    expect(result.reason).toBe('upstream-shape');
   });
 
   it('extractOverviewArticles separates a missing envelope from an empty list', () => {

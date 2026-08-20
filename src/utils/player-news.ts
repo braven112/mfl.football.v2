@@ -158,6 +158,12 @@ export function hasArticlesEnvelope(payload: unknown): boolean {
   return Array.isArray((payload as { articles?: unknown } | null)?.articles);
 }
 
+/** How many raw entries the envelope claimed, for the drop-rate check below. */
+export function countRawArticles(payload: unknown): number {
+  const articles = (payload as { articles?: unknown } | null)?.articles;
+  return Array.isArray(articles) ? articles.length : 0;
+}
+
 /** Top-level keys of an unrecognized payload, for diagnosing a shape change. */
 export function describePayloadShape(payload: unknown): string {
   if (payload === null || typeof payload !== 'object') return typeof payload;
@@ -262,54 +268,90 @@ export async function fetchAthleteNews(
     return fail(name === 'TimeoutError' ? 'upstream-timeout' : 'upstream-network');
   }
 
-  if (!response.ok) return fail('upstream-status');
+  // Read source 1, but do NOT return early on its failure. In production it is
+  // the vestigial endpoint — always an empty array — while the overview is the
+  // real provider, so letting a 404/5xx here short-circuit would blank the
+  // feature behind a Retry that could never succeed.
+  let sourceOneFailure: PlayerNewsFailure | null = null;
+  let items: PlayerNewsItem[] = [];
 
-  let payload: unknown;
-  try {
-    payload = await response.json();
-  } catch {
-    return fail('upstream-shape');
+  if (!response.ok) {
+    sourceOneFailure = 'upstream-status';
+  } else {
+    let payload: unknown;
+    try {
+      payload = await response.json();
+    } catch {
+      payload = undefined;
+      sourceOneFailure = 'upstream-shape';
+    }
+
+    if (!sourceOneFailure) {
+      // An unrecognized envelope is a READ FAILURE, not "no news". Log the shape
+      // so an upstream change is diagnosable from the runtime logs rather than
+      // showing up as every player quietly having nothing to report.
+      if (!hasArticlesEnvelope(payload)) {
+        console.warn(
+          `[player-news] unrecognized ESPN payload for ${espnId}; top-level keys: ${describePayloadShape(payload)}`,
+        );
+        sourceOneFailure = 'upstream-shape';
+      } else {
+        items = parseEspnAthleteNews(payload, limit);
+
+        // Envelope recognized but every row dropped means the ITEM shape moved
+        // (e.g. `headline` renamed). Validating only the container would let
+        // that render as a confident, CDN-cached "no news" on every player —
+        // the exact failure the empty/error split exists to prevent.
+        const raw = countRawArticles(payload);
+        if (raw > 0 && items.length === 0) {
+          console.warn(
+            `[player-news] ${raw} article(s) for ${espnId} but none renderable — item shape changed?`,
+          );
+          sourceOneFailure = 'upstream-shape';
+        }
+      }
+    }
   }
 
-  // An unrecognized envelope is a READ FAILURE, not "no news". Log the shape so
-  // an upstream change is diagnosable from the runtime logs rather than showing
-  // up as every player quietly having nothing to report.
-  if (!hasArticlesEnvelope(payload)) {
-    console.warn(
-      `[player-news] unrecognized ESPN payload for ${espnId}; top-level keys: ${describePayloadShape(payload)}`,
-    );
-    return fail('upstream-shape');
-  }
-
-  const items = parseEspnAthleteNews(payload, limit);
   if (items.length) {
     return { espnId: String(espnId), status: 'ok', items, fetchedAt, source: 'athlete-news' };
   }
 
-  // Source 1 answered honestly with nothing. Try the overview before telling the
-  // owner there is no news — an empty first source is not proof of absence.
+  // Source 1 gave us nothing usable — whether honestly empty or unreadable.
+  // Either way the overview is worth asking before telling the owner there is
+  // no news: an empty first source is not proof of absence.
   const overview = await fetchOverviewNews(espnId, limit);
-  if (overview.length) {
-    return { espnId: String(espnId), status: 'ok', items: overview, fetchedAt, source: 'athlete-overview' };
+  if (overview.items.length) {
+    return {
+      espnId: String(espnId), status: 'ok', items: overview.items, fetchedAt, source: 'athlete-overview',
+    };
   }
+
+  // Only now is a failure terminal. If EITHER source failed to read we say so;
+  // 'empty' is reserved for both sources answering cleanly with nothing.
+  const failure = sourceOneFailure ?? overview.failure;
+  if (failure) return fail(failure);
 
   return { espnId: String(espnId), status: 'empty', items: [], fetchedAt };
 }
 
 /**
- * Second news source: the athlete overview's own `news.articles`.
+ * Second news source: the athlete overview's own `news` list.
  *
- * Returns [] on any failure — the caller has already got a successful (if
- * empty) read from source 1, so a failure here means "no more news", not "we
- * could not read ESPN". Errors are logged rather than surfaced.
+ * Reports whether it FAILED or was merely empty, because the caller can no
+ * longer assume source 1 succeeded — if both fail we owe the owner an error
+ * with a Retry, not a confident "no news".
  */
-async function fetchOverviewNews(espnId: string, limit: number): Promise<PlayerNewsItem[]> {
+async function fetchOverviewNews(
+  espnId: string,
+  limit: number,
+): Promise<{ items: PlayerNewsItem[]; failure: PlayerNewsFailure | null }> {
   const url = buildAthleteOverviewUrl(espnId);
-  if (!url) return [];
+  if (!url) return { items: [], failure: 'upstream-shape' };
 
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
-    if (!res.ok) return [];
+    if (!res.ok) return { items: [], failure: 'upstream-status' };
 
     const payload = await res.json();
     const articles = extractOverviewArticles(payload);
@@ -321,11 +363,20 @@ async function fetchOverviewNews(espnId: string, limit: number): Promise<PlayerN
         `[player-news] overview news shape unrecognized for ${espnId}; ` +
         `news is ${Array.isArray(news) ? 'array' : typeof news}, keys: ${describePayloadShape(news)}`,
       );
-      return [];
+      return { items: [], failure: 'upstream-shape' };
     }
-    return parseEspnAthleteNews({ articles }, limit);
+
+    const items = parseEspnAthleteNews({ articles }, limit);
+    if (articles.length > 0 && items.length === 0) {
+      console.warn(
+        `[player-news] overview gave ${articles.length} article(s) for ${espnId} but none renderable`,
+      );
+      return { items: [], failure: 'upstream-shape' };
+    }
+    return { items, failure: null };
   } catch (error) {
+    const name = (error as { name?: string } | null)?.name;
     console.warn(`[player-news] overview fetch failed for ${espnId}:`, error);
-    return [];
+    return { items: [], failure: name === 'TimeoutError' ? 'upstream-timeout' : 'upstream-network' };
   }
 }

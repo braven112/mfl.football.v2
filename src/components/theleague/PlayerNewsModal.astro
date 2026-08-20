@@ -249,8 +249,12 @@ const { class: className } = Astro.props;
     const liveEl = document.getElementById('pnm-news-live');
     const playerInfo = document.getElementById('news-player-info');
 
+    // Re-queries rather than using the `modal` captured at init: the
+    // document-level Escape listener is bound ONCE while this init re-runs on
+    // every astro:page-load, so a captured node goes stale after a View
+    // Transition swap and Escape would silently close nothing.
     const closeModal = () => {
-      modal?.classList.remove('active');
+      document.querySelector('.player-news-modal')?.classList.remove('active');
       cancelPlayerNews();
       lastFocused?.focus();
       lastFocused = null;
@@ -264,8 +268,11 @@ const { class: className } = Astro.props;
       document.addEventListener('keydown', (e) => {
         const active = document.querySelector('.player-news-modal');
         if (e.key === 'Escape' && active?.classList.contains('active')) {
-          active.classList.remove('active');
-          cancelPlayerNews();
+          // Route through the same close path as the button and the overlay.
+          // Removing `.active` directly skipped the focus restore, so Escape
+          // dropped focus to <body> behind the scrim — and left `lastFocused`
+          // stale, which then misdirected the NEXT close.
+          closeModal();
         }
       });
     }
