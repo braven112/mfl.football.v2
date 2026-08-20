@@ -252,6 +252,12 @@ export interface LiveScoringPageProps {
   teams: Record<string, TeamInfo>;
   /** Static identity + projection for every starter, keyed by MFL player id. */
   playerMeta: Record<string, PlayerMeta>;
+  /**
+   * The league's starting requirements, used to label each starter's SLOT.
+   * MFL says who is starting but never where, so the board derives it: fill
+   * each position's minimum, and the leftover starters are flex.
+   */
+  starterRules?: { required: Record<string, number>; total: number };
   initialScores?: Record<string, number>;
   initialRemaining?: Record<string, number>;
   initialPlayers?: Record<string, LivePlayerRow[]>;

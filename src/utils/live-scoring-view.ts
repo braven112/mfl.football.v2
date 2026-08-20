@@ -208,3 +208,76 @@ export function selectMatchupMoments(
   }
   return out;
 }
+
+// ── lineup slots ───────────────────────────────────────────────────────────
+
+/**
+ * A league's starting requirements, reduced to what the board needs: how many
+ * of each position MUST start, and how many starters there are in total.
+ * Everything past the required set is flex.
+ */
+export interface LineupSlotRules {
+  /** Position → the minimum that must start there. */
+  required: Record<string, number>;
+  total: number;
+}
+
+/** Display order for a lineup, matching how owners read their own roster. */
+const SLOT_ORDER = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF', 'FLEX'];
+
+export const FLEX_SLOT = 'FLEX';
+
+/** One starter, paired with the slot he is filling. */
+export interface SlottedRow {
+  row: LivePlayerRow;
+  /** 'QB' | 'RB' | … | 'FLEX' — what the row is labelled with. */
+  slot: string;
+}
+
+/**
+ * Work out which slot each starter is filling, and put them in reading order.
+ *
+ * MFL tells us WHO is starting but not WHERE — `liveScoring` marks a player
+ * `starter` and stops there. So the slot has to be derived: fill each
+ * position's required minimum first, and whatever is left over is flex. For
+ * both our leagues that is QB/RB/WR/TE/PK/DEF plus three flex, which is
+ * exactly how an owner sees his own lineup.
+ *
+ * Sorting matters as much as labelling here. The matchup detail pairs away[i]
+ * against home[i] and prints ONE position label between them, so the two sides
+ * have to be in the same order for that label to mean anything — unsorted, the
+ * center column was labelling a row whose two players were often at different
+ * positions.
+ */
+export function assignLineupSlots(
+  rows: readonly LivePlayerRow[],
+  meta: Record<string, PlayerMeta>,
+  rules: LineupSlotRules,
+): SlottedRow[] {
+  const remaining = new Map<string, number>();
+  for (const [pos, count] of Object.entries(rules.required ?? {})) {
+    remaining.set(pos.toUpperCase(), count);
+  }
+
+  const slotted: SlottedRow[] = rows.map((row) => {
+    const pos = (meta[row.id]?.position ?? '').toUpperCase();
+    const left = remaining.get(pos) ?? 0;
+    if (left > 0) {
+      remaining.set(pos, left - 1);
+      return { row, slot: pos };
+    }
+    // Past the requirement — flex. A position we have no rule for keeps its
+    // own name rather than being mislabelled flex.
+    return { row, slot: remaining.has(pos) ? FLEX_SLOT : pos || FLEX_SLOT };
+  });
+
+  const rank = (slot: string) => {
+    const i = SLOT_ORDER.indexOf(slot);
+    return i === -1 ? SLOT_ORDER.length : i;
+  };
+  // Stable within a slot: preserve the order the feed gave us.
+  return slotted
+    .map((entry, i) => ({ entry, i }))
+    .sort((a, b) => rank(a.entry.slot) - rank(b.entry.slot) || a.i - b.i)
+    .map(({ entry }) => entry);
+}

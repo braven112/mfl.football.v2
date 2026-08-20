@@ -339,19 +339,25 @@ html.dark .ls-detail {
 /* ── player row ── */
 .ls-prow { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; padding: 0.5rem 0.55rem; }
 .ls-prow.right { flex-direction: row; }
+/* Slot label: COLORED TEXT, not a filled pill (owner direction, Aug 2026).
+   Nine filled chips per side turned the lineup into a column of colored
+   blocks that outweighed the players' names; as text the color still codes
+   the slot but the name leads. The hues are unchanged and stay
+   theme-independent — they read on both the white and the near-black card. */
 .ls-ppos {
   font-family: var(--font-display); font-weight: var(--font-weight-bold); font-size: 0.72rem;
-  color: #fff; background: var(--posc, #7a8694); width: 2.4rem; text-align: center;
-  padding: 0.18rem 0; border-radius: 4px; flex: none; letter-spacing: 0.02em;
+  color: var(--posc, #7a8694); width: 2.4rem; text-align: center;
+  padding: 0.18rem 0; flex: none; letter-spacing: 0.02em;
 }
-/* Position accent colors (theme-independent) — keyed off data-pos. */
+/* Slot accent colors (theme-independent) — keyed off data-pos, which now
+   carries the SLOT (so the three flex starters share one color). */
 .ls-ppos[data-pos="QB"] { --posc: #e0517a; }
 .ls-ppos[data-pos="RB"] { --posc: #3fb98a; }
 .ls-ppos[data-pos="WR"] { --posc: #4aa3e0; }
 .ls-ppos[data-pos="TE"] { --posc: #e08a3f; }
 .ls-ppos[data-pos="PK"], .ls-ppos[data-pos="K"] { --posc: #9b7fd0; }
-.ls-ppos[data-pos="DEF"] { --posc: #7a8694; }
-.ls-ppos[data-pos="FLEX"] { --posc: #c0a04a; }
+.ls-ppos[data-pos="DEF"] { --posc: #8b97a5; }
+.ls-ppos[data-pos="FLEX"] { --posc: #6f9dd0; }
 .ls-headshot {
   position: relative; width: 42px; height: 42px; border-radius: 50%; flex: none; overflow: hidden;
   /* Same treatment as the shared player-cell chip (player-cell.css): both
@@ -367,12 +373,24 @@ html.dark .ls-headshot {
   box-shadow: inset 0 0 0 1px var(--player-avatar-ring-dark, rgba(255, 255, 255, 0.5));
 }
 .ls-headshot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-/* Defense "headshot" is the NFL logo centered in the chip, over the same
-   team-color spotlight as player chips in both themes. (Deliberate
-   divergence from the player-cell family, whose --def chips stay
-   transparent: here the logo sits inside a small scoreboard circle, and
-   the team backdrop is what keeps it legible on busy rows.) */
-.ls-headshot .ls-def-logo { inset: 18%; width: 64%; height: 64%; object-fit: contain; }
+/* Defense uses the SAME lockup as everywhere else on the site — a bare,
+   full-bleed team logo, no circle and no team-color chip. This mirrors
+   `.player-cell__avatar--def` in player-cell.css, which the roster and lineup
+   pages render.
+   This board previously diverged on purpose (logo inside the headshot circle,
+   team backdrop for legibility). Reverted at the owner's direction, Aug 2026:
+   a defense looked different here than in every other place it appears, and
+   consistency with the shared lockup won. If a busy row ever makes a dark logo
+   hard to pick out, fix it in player-cell.css so every surface benefits —
+   don't re-fork it here. */
+.ls-headshot.def {
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+  overflow: visible;
+}
+html.dark .ls-headshot.def { box-shadow: none; }
+.ls-headshot .ls-def-logo { inset: 0; width: 100%; height: 100%; object-fit: contain; }
 .ls-pid { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; flex: 1; }
 .ls-prow.right .ls-pid { align-items: flex-end; }
 /* max-width caps the shrink-wrapped name box on the right (flex-end) side so

@@ -42,11 +42,13 @@ import {
   winProbability,
 } from '../../utils/live-win-probability';
 import {
+  assignLineupSlots,
   buildMoments,
   formatGameClock,
   isPlayerInRedZone,
   playerDownDistance,
   selectMatchupMoments,
+  type LineupSlotRules,
   type LiveMoment,
 } from '../../utils/live-scoring-view';
 import { useNflScoreboard } from '../../hooks/useNflScoreboard';
@@ -352,6 +354,8 @@ interface PlayerRowProps {
   row: LivePlayerRow;
   meta?: PlayerMeta;
   side: 'left' | 'right';
+  /** Lineup slot he is filling — 'QB' … 'DEF', or 'FLEX'. Falls back to position. */
+  slot?: string;
   /** The player's real NFL game, when the ESPN scoreboard resolved one. */
   game?: NflGame;
   /** His box-score line; undefined = ESPN has no line for him (yet). */
@@ -364,7 +368,7 @@ interface PlayerRowProps {
   detailStatus: PollStatus;
 }
 
-function PlayerRow({ row, meta, side, game, box, detailStatus }: PlayerRowProps) {
+function PlayerRow({ row, meta, side, slot, game, box, detailStatus }: PlayerRowProps) {
   const pos = meta?.position ?? '';
   const team = meta?.nflTeam ?? '';
   const state = nflGameState(row.secondsRemaining);
@@ -380,10 +384,15 @@ function PlayerRow({ row, meta, side, game, box, detailStatus }: PlayerRowProps)
   // one from the opposing team's totals.
   const statLine = detailStatus === 'error' || isDef ? '' : box?.statLine ?? '';
 
+  // DEF uses the SAME lockup as the roster and lineup pages: a bare, full-bleed
+  // team logo — no circle, no team-color chip (player-cell.css
+  // `.player-cell__avatar--def`). This board used to put the logo inside the
+  // player headshot chip, which made a defense the only row on the site that
+  // looked different from everywhere else it appears.
   const face = (
     <span
-      className="ls-headshot"
-      style={{
+      className={`ls-headshot${isDef ? ' def' : ''}`}
+      style={isDef ? undefined : {
         ['--player-avatar-bg' as any]: getPlayerAvatarBackground(team),
         ['--player-avatar-border' as any]: getPlayerAvatarBorder(team),
         ['--player-avatar-ring' as any]: getPlayerAvatarRing(team),
@@ -402,7 +411,9 @@ function PlayerRow({ row, meta, side, game, box, detailStatus }: PlayerRowProps)
     <span className="ls-pid">
       <span className="ls-pname">{meta?.name ?? 'Player'}</span>
       <span className="ls-pmeta">
-        {team && <img src={nflLogoUrl(team)} alt="" loading="lazy" />}
+        {/* DEF hides the meta-row logo — the avatar IS that logo, so showing it
+            twice on one row is the duplicate PlayerCell already suppresses. */}
+        {team && !isDef && <img src={nflLogoUrl(team)} alt="" loading="lazy" />}
         <span>{team}</span>
         <span className={`ls-pclock ${state === 'in-progress' ? 'live' : state === 'not-started' ? 'pre' : ''}`}>
           <span className={`ls-dot ${state === 'in-progress' ? 'live' : state === 'not-started' ? 'pre' : 'final'}`} />
@@ -428,7 +439,14 @@ function PlayerRow({ row, meta, side, game, box, detailStatus }: PlayerRowProps)
     </span>
   );
 
-  const posChip = <span className="ls-ppos" data-pos={pos || undefined}>{pos || '—'}</span>;
+  // The chip names the SLOT, not the player's position — three of nine
+  // starters are flex, and an owner reads his lineup by slot.
+  const slotLabel = slot ?? pos;
+  const posChip = (
+    <span className="ls-ppos" data-pos={slotLabel || undefined}>
+      {slotLabel === 'FLEX' ? 'Flex' : slotLabel || '—'}
+    </span>
+  );
 
   const cls = `ls-prow${redZone ? ' redzone' : ''}`;
   return side === 'left'
@@ -440,7 +458,7 @@ function PlayerRow({ row, meta, side, game, box, detailStatus }: PlayerRowProps)
 
 function MatchupDetail({
   matchup, teams, players, meta, calc, moments, gamesByTeam, boxScore, detailStatus,
-  detailLoaded, detailPartial, onBack,
+  detailLoaded, detailPartial, starterRules, onBack,
 }: {
   matchup: MatchupPairing;
   teams: Record<string, TeamInfo>;
@@ -457,16 +475,22 @@ function MatchupDetail({
   detailLoaded: boolean;
   /** Did some games in the slate fail to expand? */
   detailPartial: boolean;
+  /** League starting requirements, for slot labels. */
+  starterRules: LineupSlotRules;
   onBack: () => void;
 }) {
   const H = teams[matchup.home];
   const A = teams[matchup.away];
-  const homeRows = players[matchup.home] ?? [];
-  const awayRows = players[matchup.away] ?? [];
+  // Derive each side's lineup slots and sort into reading order. Both sides
+  // must agree on order for the single position label between them to mean
+  // anything — see assignLineupSlots.
+  const homeRows = assignLineupSlots(players[matchup.home] ?? [], meta, starterRules);
+  const awayRows = assignLineupSlots(players[matchup.away] ?? [], meta, starterRules);
   const rowCount = Math.max(homeRows.length, awayRows.length);
   const matchupMoments = selectMatchupMoments(moments, matchup.home, matchup.away);
   const gameFor = (row: LivePlayerRow | undefined) =>
     row ? gamesByTeam.get(meta[row.id]?.nflTeam ?? '') : undefined;
+  const slotName = (s: string | undefined) => (s === 'FLEX' ? 'Flex' : s ?? '');
 
   const awaySplit = `${100 - Math.round(calc.homeWinProb * 100)}%`;
   return (
@@ -500,19 +524,19 @@ function MatchupDetail({
       <div className="ls-mx-body">
         {rowCount === 0 && <div className="ls-empty">Player breakdown appears once lineups lock and games begin.</div>}
         {Array.from({ length: rowCount }).map((_, i) => {
-          const h = homeRows[i];
-          const a = awayRows[i];
-          const pos = (a && meta[a.id]?.position) || (h && meta[h.id]?.position) || '';
+          const h = homeRows[i]?.row;
+          const a = awayRows[i]?.row;
+          const slot = slotName(awayRows[i]?.slot ?? homeRows[i]?.slot);
           return (
             <div className="ls-mx-row" key={i}>
               <div>{a && (
-                <PlayerRow row={a} meta={meta[a.id]} side="left" game={gameFor(a)}
-                           box={boxScore[a.id]} detailStatus={detailStatus} />
+                <PlayerRow row={a} meta={meta[a.id]} side="left" slot={awayRows[i]?.slot}
+                           game={gameFor(a)} box={boxScore[a.id]} detailStatus={detailStatus} />
               )}</div>
-              <div className="ls-mx-pos">{pos}</div>
+              <div className="ls-mx-pos">{slot}</div>
               <div>{h && (
-                <PlayerRow row={h} meta={meta[h.id]} side="right" game={gameFor(h)}
-                           box={boxScore[h.id]} detailStatus={detailStatus} />
+                <PlayerRow row={h} meta={meta[h.id]} side="right" slot={homeRows[i]?.slot}
+                           game={gameFor(h)} box={boxScore[h.id]} detailStatus={detailStatus} />
               )}</div>
             </div>
           );
@@ -561,6 +585,12 @@ function goToWeek(w: number) {
 
 export default function LiveScoreboard(props: LiveScoringPageProps) {
   const { teams, playerMeta, userFranchiseId, week } = props;
+  // Both our leagues start one of each position plus three flex; the page
+  // supplies the league's real config, this is only a floor for older callers.
+  const starterRules: LineupSlotRules = props.starterRules ?? {
+    required: { QB: 1, RB: 1, WR: 1, TE: 1, PK: 1, DEF: 1 },
+    total: 9,
+  };
   const { scores, remaining, matchups, players, ytp } = useLiveScoring(props);
   const [selected, setSelected] = useState<MatchupPairing | null>(null);
 
@@ -626,6 +656,7 @@ export default function LiveScoreboard(props: LiveScoringPageProps) {
           meta={playerMeta} calc={calcFor(selected)} moments={moments}
           gamesByTeam={gamesByTeam} boxScore={detail.boxScore}
           detailStatus={detail.status} detailLoaded={detail.loaded} detailPartial={detail.partial}
+          starterRules={starterRules}
           onBack={() => setSelected(null)}
         />
       </div>

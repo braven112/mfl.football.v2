@@ -31,7 +31,7 @@ import { leagueHasFeature } from '../../config/leagues';
 import { getCurrentSeasonYear, getLeagueYearForSlug } from '../../utils/league-year';
 import { getCurrentNFLWeek } from '../../utils/current-week';
 import { getDailySlot } from '../../utils/hero-resolver';
-import { assembleLiveScoringData, buildTeamsMap, type ConfigTeam } from '../../utils/live-scoring-data';
+import { assembleLiveScoringData, buildTeamsMap, loadStarterRules, type ConfigTeam } from '../../utils/live-scoring-data';
 import { getCurrentRosterSample, getLiveScoringSample } from '../../data/live-scoring-sample';
 import LiveScoreboard from '../../components/shared/LiveScoreboard';
 import NflGamesStrip from '../../components/shared/NflGamesStrip';
@@ -88,6 +88,8 @@ const useRosterDemo = demoParam === 'live';
 // AFL June 1), and this reads that year's rosters off disk — so it must be the
 // per-league clock, not TheLeague's.
 const rosterDemoYear = getLeagueYearForSlug(league.slug);
+// Slot labels (QB/RB/…/Flex) come from the league's own starter config.
+const starterRules = loadStarterRules(league.dataPath, rosterDemoYear);
 let useDemo = demoParam === '1' || useRosterDemo;
 let data: Awaited<ReturnType<typeof assembleLiveScoringData>> | undefined;
 
@@ -132,6 +134,7 @@ if (useDemo) {
     matchups: sample.matchups,
     teams: buildTeamsMap(configTeams),
     playerMeta: sample.playerMeta,
+    starterRules,
     initialScores: sample.scores,
     initialRemaining: sample.remaining,
     initialPlayers: sample.players,
@@ -157,6 +160,7 @@ if (useDemo) {
     matchups: liveData.matchups,
     teams: liveData.teams,
     playerMeta: liveData.playerMeta,
+    starterRules,
     initialScores: liveData.scores,
     initialRemaining: liveData.remaining,
     initialPlayers: liveData.players,

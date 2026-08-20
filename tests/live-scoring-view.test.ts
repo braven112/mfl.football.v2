@@ -14,6 +14,7 @@ import {
   isPlayerInRedZone,
   playerDownDistance,
   selectMatchupMoments,
+  assignLineupSlots,
   type LiveMoment,
 } from '../src/utils/live-scoring-view';
 import type {
@@ -324,5 +325,82 @@ describe('selectMatchupMoments', () => {
   it('returns an empty list when neither franchise has a play', () => {
     expect(selectMatchupMoments([m('1', '0099')], '0006', '0017')).toEqual([]);
     expect(selectMatchupMoments([], '0006', '0017')).toEqual([]);
+  });
+});
+
+describe('assignLineupSlots', () => {
+  const RULES = { required: { QB: 1, RB: 1, WR: 1, TE: 1, PK: 1, DEF: 1 }, total: 9 };
+  const row = (id: string): LivePlayerRow => ({ id, live: 0, secondsRemaining: 0, status: 'starter' });
+  const metaFor = (spec: Record<string, string>): Record<string, PlayerMeta> =>
+    Object.fromEntries(
+      Object.entries(spec).map(([id, position]) => [
+        id,
+        { id, name: id, position, nflTeam: 'KC', headshot: '', espnId: null, projected: 0 },
+      ]),
+    );
+
+  it('fills each required slot once, then labels the rest Flex', () => {
+    // TheLeague and the AFL both start one of each plus three flex.
+    const meta = metaFor({
+      q: 'QB', r1: 'RB', r2: 'RB', w1: 'WR', w2: 'WR', w3: 'WR', t: 'TE', k: 'PK', d: 'DEF',
+    });
+    const out = assignLineupSlots(
+      ['w1', 'r1', 'd', 'q', 'w2', 't', 'k', 'r2', 'w3'].map(row),
+      meta,
+      RULES,
+    );
+    expect(out.map((x) => x.slot)).toEqual([
+      'QB', 'RB', 'WR', 'TE', 'PK', 'DEF', 'FLEX', 'FLEX', 'FLEX',
+    ]);
+    // Flex keeps FEED order among themselves (w2 came before r2 in the input),
+    // which is the stable-sort guarantee — not position order.
+    expect(out.filter((x) => x.slot === 'FLEX').map((x) => x.row.id)).toEqual(['w2', 'r2', 'w3']);
+  });
+
+  it('sorts into reading order regardless of the order MFL returned', () => {
+    // The matchup detail pairs away[i] with home[i] and prints ONE label
+    // between them, so both sides must agree on order for it to mean anything.
+    const meta = metaFor({ d: 'DEF', q: 'QB', k: 'PK' });
+    const a = assignLineupSlots([row('d'), row('q'), row('k')], meta, RULES);
+    const b = assignLineupSlots([row('k'), row('d'), row('q')], meta, RULES);
+    expect(a.map((x) => x.slot)).toEqual(['QB', 'PK', 'DEF']);
+    expect(b.map((x) => x.slot)).toEqual(a.map((x) => x.slot));
+  });
+
+  it('keeps feed order among players sharing a slot', () => {
+    const meta = metaFor({ r1: 'RB', r2: 'RB', r3: 'RB' });
+    const out = assignLineupSlots([row('r3'), row('r1'), row('r2')], meta, RULES);
+    expect(out.map((x) => x.row.id)).toEqual(['r3', 'r1', 'r2']);
+    expect(out.map((x) => x.slot)).toEqual(['RB', 'FLEX', 'FLEX']);
+  });
+
+  it('honors a league that requires more than one of a position', () => {
+    const meta = metaFor({ r1: 'RB', r2: 'RB', r3: 'RB' });
+    const out = assignLineupSlots([row('r1'), row('r2'), row('r3')], meta, {
+      required: { RB: 2 },
+      total: 3,
+    });
+    expect(out.map((x) => x.slot)).toEqual(['RB', 'RB', 'FLEX']);
+  });
+
+  it('does not mislabel a position the league has no rule for', () => {
+    // An unknown position keeps its own name rather than silently becoming
+    // flex, which would claim the league allows it in a flex slot.
+    const meta = metaFor({ p: 'PN' });
+    expect(assignLineupSlots([row('p')], meta, RULES)[0].slot).toBe('PN');
+  });
+
+  it('handles a short lineup and an empty one', () => {
+    // AFL rosters are keeper-only in August, so short lineups are normal.
+    const meta = metaFor({ q: 'QB', r: 'RB' });
+    expect(assignLineupSlots([row('q'), row('r')], meta, RULES).map((x) => x.slot))
+      .toEqual(['QB', 'RB']);
+    expect(assignLineupSlots([], meta, RULES)).toEqual([]);
+  });
+
+  it('survives a starter with no metadata', () => {
+    const out = assignLineupSlots([row('ghost')], {}, RULES);
+    expect(out).toHaveLength(1);
+    expect(out[0].slot).toBe('FLEX');
   });
 });
