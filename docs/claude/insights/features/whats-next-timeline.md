@@ -70,3 +70,31 @@
 **Single-year unit tests can now legitimately be empty.** `selectWhatsNextTimeline` over one year's events at end-of-December returns all-null (no future events) — that's correct. Production never hits this because `getMergedResolvedEvents` spans current + next league year. Tests that asserted a trailing past event as `current` were updated.
 
 **Evidence:** `src/utils/league-event-resolver.ts` (`selectWhatsNextTimeline`), `src/components/theleague/WhatsNext.astro`, `src/components/afl/hp-sections/AflWhatsNext.astro`, `tests/league-event-resolver.test.ts`.
+
+---
+
+## 2026-08-20 - The NFL Draft Tracks the Super Bowl, Not the April Calendar — "4th Thursday" Is a Coincidence That Breaks in 2027
+
+**Context:** `getNflDraftDate()` falls back to `getNthDayOfMonth(year, 3, 4, 4)` — the 4th Thursday of April — when neither `nfl-draft-dates-fetched.json` nor `HARDCODED_OVERRIDES` supplies the year. For 2027 that yields Apr 22. The real date is Apr 29.
+
+**Insight:** The draft is anchored to the Super Bowl, not to April. **Draft Thursday = Super Bowl Sunday + 74 days** (10 weeks + 4 days, i.e. the 11th Thursday after). That holds exactly for every year 2022-2027. Before the 17-game season it was a constant 81 days (2016-2021); the Super Bowl moved a week later and the draft did not, so the gap shrank by exactly one week and has been stable since.
+
+The 4th-Thursday heuristic agrees only because the Super Bowl is the 2nd Sunday of February and the arithmetic usually lands in the same week. It diverges whenever February starts late enough to push the 2nd Sunday to Feb 14 — the latest it can fall. Feb 1, 2027 is a Monday, so SB LXI is Feb 14 and the draft slides to the **5th** Thursday, Apr 29. Checked across 2022-2035, **2027 is the only divergence** — which is why it went unnoticed. 2021 (Apr 29) failed the same way and for the same reason.
+
+**Evidence:** Verified against actual draft dates 2015-2027 — SB gap is 74 days for every year 2022-2027 with no exceptions. ESPN's core API returns `2027-04-30T00:00Z` (Apr 29 Eastern). The repo's own `src/data/theleague/schefter-archive/2026.json` already carried "Save the dates: The 2027 NFL Draft in Washington DC will be held April 29 — May 1."
+
+Downstream, `getRookieDraftDate()` is `saturday-after-next-week` off the NFL date (Thursday + 9 days), so the wrong date silently moved the league's own Rookie Draft from May 8 to May 1.
+
+**Recommendation:** Do not "improve" the 4th-Thursday fallback into a cleverer calendar rule — it is the wrong anchor entirely. Pin the year in one of the two sanctioned sources. If a future fallback is ever wanted, derive it from the Super Bowl (2nd Sunday of February + 74 days) rather than from April.
+
+---
+
+## 2026-08-20 - A Test That Asserts a Calculation Back at Itself Ratifies the Bug
+
+**Context:** `tests/hero-resolver.test.ts` had a 2027 draft probe commented `// 2027: NFL Draft = Apr 22 (4th Thu), Mon after = Apr 26`, probing `new Date(2027, 3, 27)`.
+
+**Insight:** That expectation was not independent — it was the output of `getNflDraftDate()`'s own 4th-Thursday fallback, written back as the assertion. The test therefore passed *because* the date was wrong, and would have kept passing forever. A green suite was actively evidence for the bug. This is distinct from a weak test: it does not merely fail to catch the defect, it certifies it.
+
+**Evidence:** After pinning 2027 to Apr 29, the probe had to move to May 4 (Monday after is May 3). Removing the 2027 override now fails the test with `expected 'draft-live' to be 'draft-announced'` — before the fix, the same removal was a no-op.
+
+**Recommendation:** When a test's expected value is a date, count, or ordering that the code under test computes, source it from somewhere the code cannot reach — a published fact, a fixture, a hand-worked example — and say in a comment where it came from. If you cannot state an origin other than "what the function returns", the test is a change-detector. Mutation-check it: break the production value and confirm the test goes red.

@@ -1964,3 +1964,42 @@ Sources are committed under `data/afl-fantasy/schedule-recovery/<year>.txt`.
 **Still unrecoverable:** 2003. The league played that season on Yahoo and only
 standings were entered into MFL, so no game in any week has a score. There is
 nothing behind it — don't spend time, and don't ask for a screenshot.
+
+## 2026-08-20 - `resolveWeekLineup` Reads the Committed Feed From Disk — Tests Passing a Real League Year Assert Against Bot-Synced Data
+
+**Context:** Two tests in `tests/lineup-sources.test.ts` went red on `main`
+with no code change: *"does not read that omission as no lineup submitted"*
+and *"is told it has no game, not that MFL went silent"*.
+
+**Insight:** `resolveWeekLineup()` calls `loadWeeklyResultsFeedFromDisk()`
+internally — it is not a pure function of its arguments. It reads
+`data/<league>/mfl-feeds/<leagueYear>/weekly-results-raw.json` from
+`process.cwd()`. Any test that passes a real league year is therefore
+asserting against whatever the roster-sync bot last committed, and the bot
+commits daily.
+
+Both tests set up "MFL's live answer omits this franchise" and asserted that
+nothing could vouch for the lineup. True when written. Then the 2026 feed
+gained 9 starters for franchise `0001` in week 15, the disk copy legitimately
+answered, `lineupReadOk`/`franchiseListed` flipped true, and the tests failed.
+
+The resolver is correct: a disk copy proving a lineup **present** is the
+allowed direction of the one-way rule — it is proving a lineup **absent**
+that is forbidden — and showing the saved lineup is strictly safer than
+rendering a projection fill under an armed submit button. The fixtures were
+wrong, not the code.
+
+**Evidence:** Instrumenting the call returned
+`{lineupReadOk: true, fromCache: true, starters: 9}` where the test expected
+`false`. `franchiseAppearsIn()` correctly returned `false` for `0001` — the
+live payload was never the problem.
+
+**Recommendation:** Assertions of the form "nothing can vouch for this" must
+use `NO_DISK_FEED_YEAR` (1999 — TheLeague's feeds start at 2007, the AFL's at
+2003, so no sync can ever create it). Keep a real year only when the disk
+fallback is deliberately the thing under test, and say so in a comment.
+
+More generally: before asserting an absence against a function that touches
+`process.cwd()`, check whether a committed feed can answer on your behalf. A
+test that depends on bot-synced data is a scheduled failure, and it lands on
+`main` rather than on the PR that caused it.

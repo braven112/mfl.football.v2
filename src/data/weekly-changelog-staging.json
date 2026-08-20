@@ -32,6 +32,14 @@
       "impact": "user",
       "area": "rosters",
       "league": "both"
+    },
+    {
+      "date": "2026-08-20",
+      "type": "bug-fix",
+      "summary": "The league calendar had the 2027 NFL Draft on April 22 — a Thursday, the fourth Thursday in April, very nearly the right answer and not the right answer. It's April 29. That matters more than a stray date on a calendar usually would, because our Rookie Draft isn't stored anywhere: it's computed off the NFL's opening night, nine days later, every year. So a draft that was a week early quietly made our draft a week early too — May 1 where it should read May 8 — in What's Next, on the calendar, and in anything Roger would have gotten around to reminding you about. The tell is that April was never the anchor. The NFL Draft tracks the Super Bowl, landing exactly 74 days after it every year since 2022, and the Super Bowl is the second Sunday in February. February 2027 opens on a Monday, which shoves that Sunday out to the 14th — the latest it can ever fall — and drags the draft to the fifth Thursday of April instead of the fourth. Run that against every year from 2022 to 2035 and the shortcut is wrong exactly once, in 2027, which is precisely why it sat there. Both years are now taken from ESPN instead of guessed, the Rookie Draft moves back to Saturday, May 8, and the nightly job that was supposed to catch this sort of thing has been fixed too: it had been failing every night for unrelated reasons, which is a fine way to make sure nobody looks at it the night it's finally right.",
+      "impact": "user",
+      "area": "calendar",
+      "league": "theleague"
     }
   ]
 }

@@ -415,3 +415,39 @@ immutable history as a build artifact**: `getGlobalPlayerMap()` was unioning 32
 seasons of `players.json` — 23.5 MB of I/O per cold start — to produce a 3,794
 row table that cannot change, now precomputed to 0.37 MB by
 `scripts/compute-player-identity-union.mjs`.
+
+## 2026-08-20 - A Drift Audit That Rewrites a Timestamp Can Never Pass — And a Permanently-Red Alarm Hides the Drift It Watches For
+
+**Context:** `.github/workflows/roger-date-audit.yml` runs daily to catch the
+NFL Draft date drifting away from what's committed. Its detection method is:
+re-run `scripts/fetch-nfl-draft-date.mjs`, then fail if
+`git status --porcelain src/data/theleague/nfl-draft-dates-fetched.json`
+is non-empty.
+
+**Insight:** The script wrote `_fetchedAt: new Date().toISOString()`
+unconditionally on every run — including the "nothing changed" path, which
+re-bumped it deliberately with the comment *"Still bump the timestamp so CI
+logs show the run happened."* That makes the output file different on every
+single run, so the porcelain check is **always** dirty and the audit's pass
+condition is unsatisfiable. It had been failing daily regardless of drift.
+
+The second-order damage is the real lesson. The audit existed specifically to
+catch a missing/incorrect draft year, and a genuinely missing 2027 date sat
+behind it unnoticed for months — because a real signal was indistinguishable
+from the daily false alarm. An alarm that always fires is worse than no alarm:
+no alarm at least leaves you knowing you are unmonitored.
+
+**Evidence:** Two consecutive runs with no upstream change produced a diff of
+exactly one line (`_fetchedAt`). `dates` was `{}` in the committed file while
+ESPN had been answering `2027-04-29` the whole time.
+
+**Recommendation:** Any check of the form "regenerate the artifact and fail if
+git says it changed" requires the generator to be **byte-deterministic** for
+unchanged inputs. Keep timestamps, run IDs, and ordering out of the artifact,
+or exclude them from the comparison. `_fetchedAt` now means "when a date last
+changed" and is preserved when nothing did; the run is still evidenced by
+stdout in the Actions log, which is where that belongs.
+
+Corollary worth applying beyond this workflow: when a monitor has been red for
+a long time, treat "why is it red" as a real question before adding another
+monitor. A check nobody can act on is a check nobody reads.
