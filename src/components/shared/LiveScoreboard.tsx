@@ -411,9 +411,15 @@ function PlayerRow({ row, meta, side, game, box, detailStatus }: PlayerRowProps)
         {redZone && <span className="ls-rz" title="His team is in the red zone">RED ZONE</span>}
         {!redZone && downDistance && <span className="ls-dd">{downDistance}</span>}
       </span>
-      {statLine && <span className="ls-pstat">{statLine}</span>}
     </span>
   );
+
+  // The stat line is a SIBLING of the identity block, not a child of it, so it
+  // spans the whole row rather than the narrow name column. Nested, a real
+  // line ("18 car, 169 yds, 2 TD · 1 rec (1 tgt), 13 yds · 1 FUM lost") wrapped
+  // to two lines on a desktop card and to SIX on a 390px phone, which tripled
+  // the row height and squeezed the player's name to "Derric…".
+  const stat = statLine ? <span className="ls-pstat">{statLine}</span> : null;
 
   const score = (
     <span className={`ls-pscore${state === 'not-started' ? ' pre' : ''}${boom ? ' boom' : ''}`}>
@@ -426,8 +432,8 @@ function PlayerRow({ row, meta, side, game, box, detailStatus }: PlayerRowProps)
 
   const cls = `ls-prow${redZone ? ' redzone' : ''}`;
   return side === 'left'
-    ? <div className={cls}>{posChip}{face}{id}{score}</div>
-    : <div className={`${cls} right`}>{score}{id}{face}{posChip}</div>;
+    ? <div className={cls}>{posChip}{face}{id}{score}{stat}</div>
+    : <div className={`${cls} right`}>{score}{id}{face}{posChip}{stat}</div>;
 }
 
 // ── matchup detail ──

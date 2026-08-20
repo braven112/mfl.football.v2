@@ -337,7 +337,7 @@ html.dark .ls-detail {
 .ls-mx-pos { text-align: center; font-family: var(--font-display); font-weight: var(--font-weight-bold); font-size: 0.72rem; color: var(--content-text-muted); }
 
 /* ── player row ── */
-.ls-prow { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0.55rem; }
+.ls-prow { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; padding: 0.5rem 0.55rem; }
 .ls-prow.right { flex-direction: row; }
 .ls-ppos {
   font-family: var(--font-display); font-weight: var(--font-weight-bold); font-size: 0.72rem;
@@ -467,9 +467,13 @@ html.dark .ls-headshot {
 /* Box-score line. Rendered only when ESPN actually has stats for the player —
    an empty line means "no touches yet", and a failed feed suppresses the slot
    entirely rather than rendering every starter as a blank (see PlayerRow). */
+/* Own line, full row width. `flex-basis: 100%` is what forces the wrap — see
+   the comment in PlayerRow for what it looked like nested in the name column. */
 .ls-pstat {
+  flex: 0 0 100%;
+  margin-top: -0.15rem;
   font-size: 0.72rem;
-  line-height: 1.25;
+  line-height: 1.3;
   color: var(--content-text-muted);
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
