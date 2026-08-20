@@ -757,6 +757,24 @@ const { class: className, hideContract = false } = Astro.props;
 
   function initPlayerDetailsModal() {
     const modal = document.querySelector('.player-details-modal');
+
+    // Guard the DOUBLE INIT, not the individual bindings.
+    //
+    // This script registers init at module eval AND on astro:page-load, and
+    // ClientRouter fires that on the first load too — so on initial load init
+    // runs twice against the SAME DOM and every element listener is bound
+    // twice. After a navigation the node is swapped, so the flag is absent on
+    // the fresh node and re-wiring happens normally.
+    //
+    // Deliberately NOT the dataset-guarded bind-once pattern: init creates
+    // per-run closure state, and freezing listeners on run 1 while the rebuilt
+    // content reads run 2 is the documented stale-closure state split
+    // (insights/domains/frontend.md, 2026-07-21). Returning early means the
+    // second run never creates a divergent copy at all.
+    if (modal instanceof HTMLElement) {
+      if (modal.dataset.pdmWired === '1') return;
+      modal.dataset.pdmWired = '1';
+    }
     const overlay = document.querySelector('.player-details-modal__overlay');
     const closeBtn = document.querySelector('.pdm-close');
 
