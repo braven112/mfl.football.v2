@@ -4,6 +4,51 @@ Domain knowledge about design tokens, CSS variables, theming, and visual pattern
 
 ---
 
+## 2026-08-21 - A Surface That Renders Team Accents Must BE the Card Surface
+
+**Context:** An owner reported the Owner Activity chart's hover readout
+unreadable in dark mode — white text on a near-white box. Immediate cause was
+the ramp-inversion trap already documented below (2026-07-05): the tooltip
+asked for `--color-gray-900` + `--color-white`, and `gray-900` resolves to
+`#ededed` under `html.dark`. That half is old news. The part worth keeping is
+what the *correct* replacement turned out to be, and why "any theme-aware
+pair" was not good enough.
+
+**Insight:** `getTeamAccentPair` (`src/utils/team-colors.ts`) forces every
+`--team-accent-<fid>` to clear 3:1 against **one specific value per theme** —
+`LIGHT_CARD_SURFACE` (`#ffffff`) and `DARK_CARD_SURFACE` (`#262626`
+TheLeague / `#16283c` AFL). That guarantee is anchored to `--card-surface` and
+travels nowhere else. So any container that renders team-accent marks — legend
+swatches, tooltip dots, chart keys, a colored rank numeral — inherits the
+guarantee only if its own background IS `--card-surface`. Put those marks on a
+custom chip, a tinted well, or a "dark panel" and the contrast floor silently
+stops applying, even though nothing about the accent token changed.
+
+The activity tooltip proved both directions of this at once. In dark mode it
+was the ink that failed (the ramp flip). In **light** mode it had been failing
+the whole time in a way nobody filed: the near-black franchise accents (Bring
+The Pain, Cowboy Up) were black dots on a `#111827` chip — invisible, on the
+theme everyone looks at. One wrong surface, two themes, two different bugs,
+and the light one was the older of the two.
+
+**Rule:** a floating surface that carries franchise color should be
+`background: var(--card-surface)` + `color: var(--page-text)`, elevated with a
+`0 0 0 1px var(--card-border)` ring and `var(--shadow-lg)` rather than by being
+a different color. You get theme-correctness and the accent contrast floor from
+the same decision. Reach for `--nav-tooltip-bg`/`--nav-tooltip-text` (a real,
+theme-aware tooltip pair that exists in both token files) only for tooltips
+carrying **no** team color — it is an elevated surface, not the card surface,
+so the 3:1 floor does not cover it.
+
+**Why the guard tests didn't catch it:** `design-token-guard` only asks whether
+a referenced token is *defined* somewhere, and `--color-gray-900` is very much
+defined. `team-accent-css` only asks whether each accent clears 3:1 against the
+card surface, which it does — the accents were fine, the surface underneath
+them was not. Neither test can see a mark and its background land on different
+surfaces. That pairing is still eyes-only; screenshot both themes.
+
+---
+
 ## 2026-08-18 - A Gradient in a Custom Property Makes `background` All-or-Nothing
 
 **Context:** An owner reported the homepage kickoff hero rendering with no
