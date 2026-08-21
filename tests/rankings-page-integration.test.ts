@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
+import {
+  MAX_RANKING_COLUMNS,
+  visibleRankingColumns,
+} from '../src/utils/rankings-table';
+import type { RankingColumn } from '../src/utils/rankings-lookup';
 
 /**
  * The rankings display surfaces, pinned against the drift that keeps happening.
@@ -51,6 +56,13 @@ describe('rankings reach every decision page', () => {
       ]) {
         expect(src, `${page} is missing ${event}`).toContain(event);
       }
+    });
+
+    it.each(FREE_AGENT_PAGES)('%s lets the shared module pick the columns', (page) => {
+      // Which ranking columns show is one rule for both leagues (the owner's
+      // composite, capped). A page passing its own budget is how the two
+      // tables drifted apart the first time.
+      expect(read(page)).not.toContain('maxColumns');
     });
 
     it.each(FREE_AGENT_PAGES)('%s re-applies column visibility after render', (page) => {
@@ -117,6 +129,59 @@ describe('rankings reach every decision page', () => {
     });
   });
 
+  describe('which ranking columns the table shows', () => {
+    const col = (over: Partial<RankingColumn>): RankingColumn => ({
+      importId: over.importId ?? 'x',
+      source: 'custom',
+      type: 'overall',
+      header: over.importId ?? 'x',
+      fullName: over.importId ?? 'x',
+      playerCount: 10,
+      importDate: '2026-08-21',
+      ...over,
+    });
+
+    const composite = col({ importId: '__composite__', isComposite: true });
+    const average = col({ importId: '__average__', isAverage: true });
+    const members = ['m1', 'm2', 'm3', 'm4', 'm5', 'm6'].map((id) =>
+      col({ importId: id, isCompositeMember: true }),
+    );
+    const others = ['o1', 'o2'].map((id) => col({ importId: id }));
+
+    it('drops the Average column', () => {
+      // Average is the unweighted mean of EVERY import — including the ones
+      // the owner deliberately left out of their composite, which makes it a
+      // second opinion contradicting the one they built on purpose.
+      const out = visibleRankingColumns([composite, average, ...members.slice(0, 2)]);
+      expect(out.some((c) => c.isAverage)).toBe(false);
+    });
+
+    it('shows only My Rank and the sources feeding it', () => {
+      const out = visibleRankingColumns([composite, ...members.slice(0, 2), ...others]);
+      expect(out.map((c) => c.importId)).toEqual(['__composite__', 'm1', 'm2']);
+    });
+
+    it(`never shows more than ${MAX_RANKING_COLUMNS} columns`, () => {
+      const out = visibleRankingColumns([composite, ...members]);
+      expect(out).toHaveLength(MAX_RANKING_COLUMNS);
+      // My Rank always takes one of the slots — it is the whole point.
+      expect(out[0].isComposite).toBe(true);
+    });
+
+    it('falls back to the raw imports when there is no composite', () => {
+      // An owner who unticked everything should still see their boards rather
+      // than a table that silently lost its ranking columns.
+      const out = visibleRankingColumns([average, ...others]);
+      expect(out.map((c) => c.importId)).toEqual(['o1', 'o2']);
+    });
+
+    it('drops the member separator, which has nothing left to separate', () => {
+      const last = col({ importId: 'm2', isCompositeMember: true, isLastCompositeMember: true });
+      const out = visibleRankingColumns([composite, members[0], last]);
+      expect(out.some((c) => c.isLastCompositeMember)).toBe(false);
+    });
+  });
+
   describe('My Rank editor', () => {
     // Re-weighting the composite used to mean leaving the page for Import
     // Rankings and coming back. Every page that SHOWS the composite should be
@@ -127,6 +192,17 @@ describe('rankings reach every decision page', () => {
       const src = read(page);
       expect(src).toContain('components/shared/rankings/MyRankEditor.astro');
       expect(src).toMatch(/<MyRankEditor\s+league="(theleague|afl)"/);
+    });
+
+    it.each(FREE_AGENT_PAGES)('%s keeps the trigger out of the View group', (page) => {
+      // My Rank opens a dialog; it is not a fourth view. Sitting inside the
+      // "View:" pill group it read as one.
+      const src = read(page);
+      const toggles = src.slice(
+        src.indexOf('class="col-group-toggles"'),
+        src.indexOf('</div>', src.indexOf('class="col-group-toggles"')),
+      );
+      expect(toggles).not.toContain('MyRankEditor');
     });
 
     it('the editor writes only through the storage helpers', () => {

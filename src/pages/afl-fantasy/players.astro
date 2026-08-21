@@ -274,8 +274,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           <span class="col-group-toggles__label">View:</span>
           <button class="col-group-btn active" data-group="stats" type="button" aria-pressed="true">Stats</button>
           <button class="col-group-btn" data-group="rankings" id="col-group-btn-rankings" type="button" aria-pressed="false">Rankings</button>
-          <MyRankEditor league="afl" />
         </div>
+        <MyRankEditor league="afl" />
         <button class="filter-toggle-btn" id="filter-toggle-btn" type="button" aria-expanded="false" aria-controls="filters-panel">
           <svg class="filter-toggle-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="4" y1="6" x2="20" y2="6" /><line x1="8" y1="12" x2="16" y2="12" /><line x1="11" y1="18" x2="13" y2="18" />
@@ -1302,9 +1302,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   initRankingTable({
     tableSelector: '.players-table',
     anchorSelector: '[data-sort="weight"]',
-    // The AFL table is narrower than TheLeague's (no contract or auction
-    // columns), so the full built-in set fits.
-    maxColumns: () => 8,
   });
 </script>
 

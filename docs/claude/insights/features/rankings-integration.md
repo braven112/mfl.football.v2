@@ -413,3 +413,41 @@ stay on Import Rankings, which it links to.
   rendered the light fallback in dark mode too — near-black on near-black, the
   exact trap `CLAUDE.md` warns about. Body text is `--color-gray-900`; form
   fields are `--input-bg` / `--input-text` / `--input-border`.
+
+### Which ranking columns a Free Agents table shows (2026-08-21, same day)
+
+The first cut showed every import as a column, capped at 5/8 depending on
+TheLeague's rostered toggle, with the synthetic Average column in the middle.
+That was wrong on both counts, and the fix is one rule in
+`rankings-table.ts#visibleRankingColumns` shared by both leagues:
+
+- **No Average column.** It is the unweighted mean of EVERY import, including
+  the ones the owner deliberately left out of their composite — a second
+  opinion that contradicts the one they built on purpose. It still exists in
+  `buildRankingLookup()` (the Rosters and Set Lineup surfaces read
+  `columns[0]`, which can legitimately be it); it is just not a Free Agents
+  column any more.
+- **Only My Rank and the sources feeding it.** An unticked source is one the
+  owner has already said shouldn't weigh on the decision. Falls back to the raw
+  import list when there is no composite at all, so unticking everything
+  doesn't silently empty the ranking block.
+- **Hard cap of 5**, My Rank included. Past that the ranking block pushes the
+  player column off a laptop screen.
+
+Three knock-on effects worth knowing:
+
+1. **The per-page `maxColumns` option is gone**, and with it TheLeague's
+   `rankings:get-rostered-state` / `rankings:rostered-changed` handshake — the
+   budget no longer depends on page state, so the whole channel was dead code.
+   A page that passes its own column budget is how the two tables drifted the
+   first time; the test now asserts neither page mentions `maxColumns`.
+2. **A sorted column can vanish.** Untick the source you're sorted by and the
+   table would keep sorting by a column nobody can see. `injectRankingColumns`
+   probes the current sort and falls back to the leading visible column.
+3. **`isLastCompositeMember` is stripped.** With non-members gone the
+   separator has nothing to separate and would just draw a border at the
+   table's edge.
+
+Related placement note: the My Rank trigger moved out of the `View:` pill
+group and next to Filters. It opens a dialog — inside a group of mutually
+exclusive view pills it read as a fourth view.

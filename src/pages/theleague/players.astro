@@ -742,7 +742,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           <span class="col-group-toggles__label">View:</span>
           <button class="col-group-btn active" data-group="stats" type="button" aria-pressed="true">Stats</button>
           <button class="col-group-btn" data-group="rankings" id="col-group-btn-rankings" type="button" aria-pressed="false">Rankings</button>
-          <MyRankEditor league="theleague" />
           <button class="col-group-btn" data-group="auction" id="col-group-btn-auction" type="button" aria-pressed="false">Auction</button>
           {isAdmin && (hasSurplusData || hasAuctionData) && <button class="col-group-btn" data-group="value" id="col-group-btn-value" type="button" aria-pressed="false">Value</button>}
         </div>
@@ -757,6 +756,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       </div>
       <div class="toolbar-center"></div>
       <div class="toolbar-right">
+        <MyRankEditor league="theleague" />
         <button class="filter-toggle-btn" id="filter-toggle-btn" type="button" aria-expanded="false" aria-controls="filters-panel">
           <svg class="filter-toggle-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="4" y1="6" x2="20" y2="6" /><line x1="8" y1="12" x2="16" y2="12" /><line x1="11" y1="18" x2="13" y2="18" />
@@ -2190,12 +2190,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     e.detail.descDefaults = descDefaults;
   });
 
-  // Synchronous request for rostered toggle state — used by module script
-  // to limit visible ranking columns (5 when rostered, 8 when free agents only)
-  document.addEventListener('rankings:get-rostered-state', function (e) {
-    e.detail.showRostered = showRostered;
-  });
-
   // Signal that the inline script is ready for the module script
   document.dispatchEvent(new CustomEvent('rankings:page-ready'));
 
@@ -2255,8 +2249,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       showRostered = rosterCheck.checked;
       rosterCheck.addEventListener('change', (e) => {
         showRostered = e.target.checked;
-        // Notify module script to re-inject ranking columns (column limit changes)
-        document.dispatchEvent(new CustomEvent('rankings:rostered-changed'));
         filterPlayers();
       });
     }
@@ -2381,7 +2373,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         if (rosterCheck) rosterCheck.checked = false;
         if (rookieCheck) rookieCheck.checked = rookieDraftComplete;
 
-        document.dispatchEvent(new CustomEvent('rankings:rostered-changed'));
         filterPlayers();
       });
     }
@@ -2759,16 +2750,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   initRankingTable({
     tableSelector: '.players-table',
     anchorSelector: '[data-sort="weight"]',
-    // More ranking columns fit when only free agents are shown, because the
-    // contract columns are hidden then. The inline script owns that toggle.
-    maxColumns: () => {
-      const detail: Record<string, unknown> = {};
-      document.dispatchEvent(new CustomEvent('rankings:get-rostered-state', { detail }));
-      return detail.showRostered ? 5 : 8;
-    },
     // My Rank doubles as the Value view's ranking column.
     compositeThClasses: ['col-my-rank', 'col-group--value'],
-    reinjectOn: ['rankings:rostered-changed'],
   });
 </script>
 

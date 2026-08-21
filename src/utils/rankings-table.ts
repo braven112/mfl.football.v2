@@ -31,18 +31,48 @@ export interface RankingTableOptions {
   /** The `<th>` that ranking headers are inserted after, e.g. `[data-sort="weight"]`. */
   anchorSelector: string;
   /**
-   * How many ranking columns the table has room for right now. Re-read on
-   * every injection, so a page can widen/narrow the set as its own view state
-   * changes (TheLeague shows fewer when rostered players are included).
-   */
-  maxColumns: () => number;
-  /**
    * Extra classes for the composite ("My Rank") `<th>` only. TheLeague tags it
    * into its Value view; the AFL has no such view.
    */
   compositeThClasses?: string[];
-  /** Document events that should trigger a re-injection (e.g. a view toggle). */
-  reinjectOn?: string[];
+}
+
+/**
+ * Ceiling on ranking columns.
+ *
+ * Both Free Agents tables are already wide; past five the ranking block starts
+ * pushing the player column off a laptop screen and the numbers stop being
+ * comparable at a glance. My Rank always takes one of the five.
+ */
+export const MAX_RANKING_COLUMNS = 5;
+
+/**
+ * The ranking columns the table actually shows.
+ *
+ * Two rules, both about respecting a decision the owner already made:
+ *
+ * - **No Average column.** It is the unweighted mean of every import, which
+ *   means it includes sources the owner deliberately left OUT of their
+ *   composite. Once My Rank exists, Average is a second opinion contradicting
+ *   the one they built on purpose.
+ * - **Only the sources feeding My Rank.** An unticked source is one the owner
+ *   has already said shouldn't weigh on the decision, so it doesn't earn a
+ *   column either — that's what the My Rank editor is for.
+ *
+ * Falls back to the raw import list when there's no composite at all, so an
+ * owner who unticked everything still sees their boards rather than a table
+ * that silently lost its ranking columns.
+ */
+export function visibleRankingColumns(columns: RankingColumn[]): RankingColumn[] {
+  const withoutAverage = columns.filter((c) => !c.isAverage);
+  const board = withoutAverage.filter((c) => c.isComposite || c.isCompositeMember);
+  const chosen = board.length > 0 ? board : withoutAverage;
+
+  return chosen.slice(0, MAX_RANKING_COLUMNS).map((col) =>
+    // The member/non-member separator has nothing left to separate once the
+    // non-members are gone — it would just draw a border at the table edge.
+    col.isLastCompositeMember ? { ...col, isLastCompositeMember: false } : col,
+  );
 }
 
 /** Dispatch a CustomEvent on document (synchronous). */
@@ -91,8 +121,19 @@ export function rankingHeaderTitle(col: RankingColumn, allColumns: RankingColumn
 function injectRankingColumns(options: RankingTableOptions): void {
   const lookup: RankingLookup = buildRankingLookup();
 
-  const limitedColumns = lookup.columns.slice(0, Math.max(0, options.maxColumns()));
+  const limitedColumns = visibleRankingColumns(lookup.columns);
   const limitedLookup: RankingLookup = { ...lookup, columns: limitedColumns };
+
+  // A column can disappear underneath an active sort — untick a source in the
+  // My Rank editor and the table would keep sorting by a column nobody can
+  // see. Fall back to My Rank (or whatever leads now).
+  const sortKey = probe('rankings:get-sort').currentSort;
+  if (typeof sortKey === 'string' && sortKey.startsWith('ranking_')) {
+    const stillVisible = limitedColumns.some((c) => `ranking_${c.importId}` === sortKey);
+    if (!stillVisible && limitedColumns.length > 0) {
+      emit('rankings:set-sort', { key: `ranking_${limitedColumns[0].importId}`, dir: 'asc' });
+    }
+  }
 
   // Tell the inline script about the new lookup before touching the DOM, so a
   // re-render triggered below already has the matching column list.
@@ -160,7 +201,6 @@ function injectRankingColumns(options: RankingTableOptions): void {
  */
 export function initRankingTable(options: RankingTableOptions): void {
   let unsubscribe: (() => void) | null = null;
-  let reinjectBound = false;
 
   function init(): void {
     if (unsubscribe) {
@@ -171,15 +211,6 @@ export function initRankingTable(options: RankingTableOptions): void {
     injectRankingColumns(options);
 
     unsubscribe = onRankingsChanged(() => injectRankingColumns(options));
-
-    // Bind page-owned re-injection triggers once — these listeners outlive a
-    // single init, and re-binding on every page-load would stack duplicates.
-    if (!reinjectBound) {
-      reinjectBound = true;
-      for (const eventName of options.reinjectOn ?? []) {
-        document.addEventListener(eventName, () => injectRankingColumns(options));
-      }
-    }
   }
 
   document.addEventListener('rankings:page-ready', () => init());
