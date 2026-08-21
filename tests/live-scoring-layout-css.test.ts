@@ -77,6 +77,51 @@ function valueOf(block: string, selector: string, prop: string): string | undefi
 
 const phone = mediaBlock('@media (max-width: 760px)');
 
+/** A rem length (or a bare `0`) as a number. Anything else is a test bug. */
+function rem(value: string): number {
+  if (/^-?0$/.test(value.trim())) return 0;
+  const m = /^(-?[\d.]+)rem$/.exec(value.trim());
+  expect(m, `expected a rem length, got "${value}"`).not.toBeNull();
+  return parseFloat(m![1]);
+}
+
+/**
+ * The LEFT and RIGHT halves of a box property (`padding` / `margin`) as the
+ * cascade actually resolves them: the shorthand expanded 1-to-4 values, then
+ * any longhand (`-left` / `-right` / `-inline`) applied over it, in source
+ * order. `block` cascades on top of `base`, so a phone-only override counts.
+ *
+ * Reading `value.split(' ')[1]` instead — as the first version of this guard
+ * did — sees padding-RIGHT of a four-value shorthand and nothing at all of a
+ * longhand, so `padding: 0.7rem 0.4rem 0.7rem 1rem` sails through with a full
+ * uncancelled rem on the side that matters.
+ */
+function boxInline(block: string, selector: string, prop: 'padding' | 'margin'): { left: number; right: number } {
+  const decls = [
+    ...declarationsFor(base, selector),
+    ...(block === base ? [] : declarationsFor(block, selector)),
+  ];
+  const box = { left: 0, right: 0 };
+  for (const [p, v] of decls) {
+    if (p === prop) {
+      const parts = v.trim().split(/\s+/);
+      // 1 → all; 2 → [block, inline]; 3 → [top, inline, bottom]; 4 → [t,r,b,l].
+      box.left = rem(parts.length === 4 ? parts[3] : parts[Math.min(1, parts.length - 1)]);
+      box.right = rem(parts[Math.min(1, parts.length - 1)]);
+    } else if (p === `${prop}-inline`) {
+      const parts = v.trim().split(/\s+/);
+      box.left = rem(parts[parts.length - 1]);
+      box.right = rem(parts[0]);
+    } else if (p === `${prop}-left` || p === `${prop}-inline-start`) {
+      box.left = rem(v);
+    } else if (p === `${prop}-right` || p === `${prop}-inline-end`) {
+      box.right = rem(v);
+    }
+  }
+  return box;
+}
+
+
 /** The stylesheet with every @media block removed — the base cascade only. */
 const base = (() => {
   let out = '';
@@ -179,6 +224,31 @@ describe('live-scoring on a phone', () => {
     expect(valueOf(phone, '.ls-status', 'display')).not.toBe('none');
     expect(valueOf(phone, '.ls-status-lbl', 'display')).not.toBe('none');
     expect(valueOf(phone, '.ls-status-age', 'display')).not.toBe('none');
+  });
+
+  it('starts the pill at the same x as the back button when the row wraps', () => {
+    // The detail header is one flex row: back button, freshness pill. On a
+    // phone it wraps, and a wrapped line is laid out against the CONTAINER's
+    // padding box — so an inset that lives on `.ls-back` indents the button
+    // only, and the pill lands a full rem left of the label above it (owner
+    // screenshot, 2026-08-21). The inset therefore belongs to the row.
+    for (const [block, inset] of [[base, 1.2], [phone, 0.6]] as const) {
+      const row = boxInline(block, '.ls-detail-top', 'padding');
+      expect(row.left, 'the row itself must carry the horizontal inset').toBe(inset);
+      expect(row.right).toBe(inset);
+      // And .ls-back must not re-indent its own label: whatever inline padding
+      // it keeps for the tap target has to be cancelled by an equal negative
+      // margin, on BOTH sides, or the wrapped line disagrees with the label
+      // above it again. Resolved from the shorthand AND the longhands, in
+      // both cascades — a `padding-left` on its own is the same bug.
+      const pad = boxInline(block, '.ls-back', 'padding');
+      const mar = boxInline(block, '.ls-back', 'margin');
+      expect(pad.left + mar.left, '.ls-back padding-left must net to zero').toBe(0);
+      expect(pad.right + mar.right, '.ls-back padding-right must net to zero').toBe(0);
+      // The tap target may not extend past the row's own inset, or the button
+      // overflows the card (.ls-detail is overflow: hidden).
+      expect(-mar.left).toBeLessThanOrEqual(inset);
+    }
   });
 
   it('the freshness pill distinguishes a failed feed from a quiet one', () => {

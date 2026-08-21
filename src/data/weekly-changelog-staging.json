@@ -2,6 +2,14 @@
   "weekOf": "2026-08-24",
   "changes": [
     {
+      "date": "2026-08-21",
+      "type": "style-tweak",
+      "summary": "Open a matchup on your phone and the little \"Tracking · updated 37s ago\" line — the one that proves the scores are still coming in — sat a full step to the left of the \"All matchups\" link right above it, hanging off the edge of the card like it had fallen out of the header. The header is one row that wraps on a narrow screen, and the indent had been attached to the back button instead of the row, so the moment the status dropped to its own line it lost the indent with it. The row carries it now, so both lines start at the same place — and on a wide screen the back link finally lines up with the team names below it too.",
+      "impact": "user",
+      "area": "live-scoring",
+      "league": "both"
+    },
+    {
       "date": "2026-08-18",
       "type": "bug-fix",
       "summary": "Throwback Week wasn't throwing all the way back on the Set Lineup screen. Week 4 correctly gave both teams their old names and their old colors, then painted the modern logo behind the players anyway — so the Pigskins, whose throwback name is just 'Pacific Pigskins' again, showed no sign of throwing back at all. The crest was the one piece of the old identity nobody had wired up: the overlay swapped the team's icon, but that banner reads a different field, and that field kept pointing at today's mark. It now wears the era's own logo, and each team's 2013-or-whenever crest sits behind its player like it was supposed to.",

@@ -306,16 +306,27 @@ html.dark .ls-detail {
 }
 /* Back button and the freshness pill share the detail view's top row, so the
    pill is on screen before an owner scrolls — on a phone the detail header is
-   the whole first screen. */
+   the whole first screen.
+
+   The row's horizontal inset lives HERE, not inside `.ls-back`. When the row
+   wraps — which it does on a phone, where the pill drops to its own line — a
+   button that carries its own left padding indents only itself: the wrapped
+   pill starts flush at the card's edge, one full rem to the LEFT of the back
+   label above it (owner screenshot, 2026-08-21). Padding on the flex
+   container applies to every line, so both start at the same x in either
+   state, and both line up with `.ls-scorehead`'s content below. */
 .ls-detail-top {
   display: flex; align-items: center; justify-content: space-between;
-  gap: 0.5rem; padding-right: 1.2rem; flex-wrap: wrap;
+  gap: 0.5rem; padding: 0 1.2rem; flex-wrap: wrap;
 }
 .ls-back {
   display: inline-flex; align-items: center; gap: 0.35rem;
   background: none; border: 0; font: inherit; cursor: pointer;
   color: var(--league-accent); font-weight: var(--font-weight-semibold);
-  padding: 0.7rem 1rem 0.7rem; font-size: var(--font-size-sm);
+  /* The inline padding is cancelled by an equal negative margin, so the tap
+     target stays wider than the label while the label itself still starts at
+     the row's padding edge — see .ls-detail-top. */
+  padding: 0.7rem 0.4rem; margin: 0 -0.4rem; font-size: var(--font-size-sm);
 }
 .ls-scorehead {
   position: sticky; top: 0; z-index: 5;
@@ -976,7 +987,7 @@ html.dark .ls-headshot.def { box-shadow: none; }
   .ls-head-right { flex-wrap: wrap; gap: 0.5rem var(--spacing-md); }
   .ls-status { font-size: 0.72rem; gap: 0.3rem; }
   .ls-status-sub { display: none; }
-  .ls-detail-top { padding-right: 0.6rem; }
+  .ls-detail-top { padding: 0 0.6rem; }
 
   /* ── Featured "YOUR MATCHUP" row card ──
      Desktop sits the two big scores either side of a center "@", which collides

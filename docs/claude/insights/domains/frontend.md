@@ -49,6 +49,11 @@
 - `text-overflow: ellipsis` no-ops on a flex child with non-`stretch` alignment
   (it shrink-wraps) — add `max-width: 100%`. `flex: 1` won't expand inside a
   `justify-content: center` ancestor — give the ancestor a definite width.
+- **A wrapping flex row's inset belongs to the ROW, not to one item.** A wrapped
+  line lays out against the *container's* padding box, so padding on the first
+  item indents only that item — the wrapped line starts flush. Put the inset on
+  the flex container; if an item needs inline padding for a tap target, cancel
+  it with an equal negative margin so its label still starts at the padding edge.
 - Collapsibles animate `grid-template-rows: 0fr → 1fr` with `overflow: hidden`
   on a **bare** wrapper — a fixed `max-height` clips the moment content reflows.
 - `:not(:first-child)` spacing breaks when the first child is a
@@ -1630,3 +1635,44 @@ element will mask the true magnitude**: here a one-line name still occupied the
 rather than a layout bug, which is why it survived a round of "fixes." If the
 two sides must agree on anything at all, `subgrid` is the durable answer;
 per-side reservations only hold until content exceeds what you reserved.
+
+## 2026-08-21 - Padding On A Wrapping Flex Item Indents Only That Item; The Wrapped Line Starts Flush
+
+**Context:** The live-scoring matchup detail header (`.ls-detail-top` in
+`src/styles/live-scoring.css`) is one `display: flex; flex-wrap: wrap` row:
+`← All matchups` on the left, the feed-freshness pill (`Tracking · updated 37s
+ago`) pushed right by `justify-content: space-between`. The row's horizontal
+inset lived on the button (`.ls-back { padding: 0.7rem 1rem }`) with only
+`padding-right` on the container. On a phone the row wraps, and the pill landed
+hard against the card's left edge — a full `1rem` left of the back label
+directly above it (owner screenshot).
+
+**Insight:** `justify-content` and item padding describe the *first* line's
+composition; every wrapped line is laid out afresh against the **container's
+content box**. So an inset carried by one flex item is an inset for that item
+alone, and the moment a sibling wraps onto its own line it inherits nothing.
+This is invisible on a desktop viewport, because a row that never wraps looks
+identical either way — the bug only exists in the wrapped state. Same trap as
+the `<main>`-gutter entries above, one level down: the question is always
+*which box owns the inset*, and for a wrapping row the answer must be the
+container.
+
+**Evidence:** Fix was `padding: 0 1.2rem` on `.ls-detail-top` (`0 0.6rem` in the
+760px breakpoint, matching `.ls-scorehead`'s own gutter so the header lines up
+with the team names below it), and `.ls-back { padding: 0.7rem 0.4rem; margin: 0
+-0.4rem }` — the negative margin cancels the inline padding so the tap target
+stays wider than the label while the label itself starts exactly at the row's
+padding edge. Measured in headless Chromium against the real stylesheet at three
+widths: wrapped (300px) back-label x and status-dot x both `22.6` (previously
+~16px apart); desktop (900px) back label at `32.2`, identical to the team-name
+column below it. **Measure the wrapped state specifically** — a probe at 390px
+did not wrap and reported the bug as fixed while it wasn't yet.
+
+**Recommendation:** For any `flex-wrap: wrap` row, put horizontal padding on the
+container and keep items' inline padding self-cancelling (`padding: y x; margin:
+0 -x`). Guard it by asserting the inset is declared on the container in both the
+base cascade and the breakpoint — `tests/live-scoring-layout-css.test.ts` parses
+the stylesheet and does exactly that, including that no one-sided
+`padding-left` override reopens the mismatch.
+
+---
