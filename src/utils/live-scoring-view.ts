@@ -341,6 +341,52 @@ export function assignLineupSlots(
     .map(({ entry }) => entry);
 }
 
+/**
+ * A franchise's BENCH, in the order an owner wants to read it.
+ *
+ * Not the same question as `assignLineupSlots`. A bench player fills no slot —
+ * there is nothing to derive and nothing to pair against the other side of the
+ * matchup, so this sorts rather than labels, and the row falls back to the
+ * player's own position for its chip.
+ *
+ * Position first, points second. Grouping by position is what makes the
+ * section answerable at a glance — the question an owner opens his bench to
+ * ask is "did I start the wrong RB", and that comparison is only possible when
+ * the RBs sit together. Within a position the highest scorer leads, so the
+ * player who would have changed the answer is the first one he reads.
+ *
+ * Unknown positions sort last rather than being folded into a bucket they
+ * aren't in: MFL carries a handful of roster rows whose position we can't
+ * resolve (an unfeed'd rookie, a player map miss), and putting one under "TE"
+ * because that is where the fallback landed would be a quiet lie about a row
+ * that is already the least trustworthy on the board.
+ */
+export function sortBenchRows(
+  rows: readonly LivePlayerRow[],
+  meta: Record<string, PlayerMeta>,
+): LivePlayerRow[] {
+  const rank = (id: string) => {
+    const pos = (meta[id]?.position ?? '').toUpperCase();
+    const i = SLOT_ORDER.indexOf(pos);
+    return i === -1 ? SLOT_ORDER.length : i;
+  };
+  return rows
+    .map((row, i) => ({ row, i }))
+    .sort((a, b) =>
+      rank(a.row.id) - rank(b.row.id) ||
+      b.row.live - a.row.live ||
+      // Stable tail: an all-zero bench (every pre-kickoff Sunday morning)
+      // otherwise reorders itself between polls purely on sort instability.
+      a.i - b.i,
+    )
+    .map(({ row }) => row);
+}
+
+/** Total live points sitting on a bench. Never counts toward the matchup. */
+export function benchPoints(rows: readonly LivePlayerRow[]): number {
+  return rows.reduce((sum, r) => sum + (Number.isFinite(r.live) ? r.live : 0), 0);
+}
+
 // ── feed freshness ──
 
 /**

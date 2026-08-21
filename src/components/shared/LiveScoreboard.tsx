@@ -43,6 +43,7 @@ import {
 } from '../../utils/live-win-probability';
 import {
   assignLineupSlots,
+  benchPoints,
   buildMoments,
   describeFeedFreshness,
   describeGameState,
@@ -51,6 +52,7 @@ import {
   playerDownDistance,
   resolveGameState,
   selectMatchupMoments,
+  sortBenchRows,
   type FeedSnapshot,
   type LineupSlotRules,
   type LiveMoment,
@@ -76,6 +78,7 @@ function useLiveScoring(props: LiveScoringPageProps) {
   const [remaining, setRemaining] = useState<Record<string, number>>(props.initialRemaining ?? {});
   const [matchups, setMatchups] = useState<MatchupPairing[]>(props.matchups ?? []);
   const [players, setPlayers] = useState<Record<string, LivePlayerRow[]>>(props.initialPlayers ?? {});
+  const [bench, setBench] = useState<Record<string, LivePlayerRow[]>>(props.initialBench ?? {});
   const [ytp, setYtp] = useState<Record<string, number>>(props.initialYetToPlay ?? {});
   // Freshness of the MFL half of the board, on the same contract the shared
   // ESPN store uses: `fetchedAt` only ever advances on a SUCCESSFUL poll, and
@@ -99,7 +102,17 @@ function useLiveScoring(props: LiveScoringPageProps) {
       setScores(data.scores ?? {});
       setRemaining(data.remaining ?? {});
       if (data.matchups?.length) setMatchups(data.matchups);
-      if (data.players) setPlayers(data.players);
+      if (data.players) {
+        setPlayers(data.players);
+        // Bench rides on the SAME guard, then defaults to empty rather than
+        // being skipped when absent. The guard is "did this payload carry
+        // rosters at all" — an outage response has neither map, and clearing
+        // the board on one would drop every player mid-Sunday. Given rosters,
+        // though, a missing bench is a real answer: a franchise can start its
+        // whole roster, and a drop can empty a bench that had rows a poll ago.
+        // Skipping the write there would leave released players on screen.
+        setBench(data.bench ?? {});
+      }
       if (data.playersYetToPlay) setYtp(data.playersYetToPlay);
       setFeed({ status: 'ok', fetchedAt: Date.now() });
     } catch {
@@ -124,7 +137,7 @@ function useLiveScoring(props: LiveScoringPageProps) {
     }
   }, [remaining, isLive, poll]);
 
-  return { scores, remaining, matchups, players, ytp, feed };
+  return { scores, remaining, matchups, players, bench, ytp, feed };
 }
 
 // ── helpers ──
@@ -544,15 +557,107 @@ function PlayerRow({ row, meta, side, slot, game, box, detailStatus }: PlayerRow
     : <div className={`${cls} right`}>{score}{id}{face}{posChip}{stat}</div>;
 }
 
+/**
+ * The bench, collapsed.
+ *
+ * Owners asked to see it, and the reason it is COLLAPSED rather than merely
+ * placed below the lineup is that the two lists answer different questions.
+ * The starters are the matchup; the bench is a second-guess. Rendering ~24
+ * more rows open by default would push the scoring plays — and on a phone the
+ * home team's lineup — off the bottom of a view whose whole job is the nine
+ * players who are actually scoring.
+ *
+ * Two things this section states out loud rather than leaving to be inferred:
+ *
+ *  - **Bench points do not count.** Everything else on the page is a number
+ *    that moves the matchup, so a second column of totals in the same
+ *    typography reads as though it does. The note is the cheapest way to keep
+ *    the board's numbers meaning one thing.
+ *  - **It is not paired.** The lineup above pairs away[i] against home[i]
+ *    under one slot label because both sides fill the same nine slots. Two
+ *    benches share no such structure — different lengths, different positions
+ *    — so this renders two independent columns and no center label. Reusing
+ *    the paired row here would put a "RB" between a running back and a kicker.
+ */
+function BenchSection({ away, home, teams, matchup, meta, gamesByTeam, boxScore, detailStatus }: {
+  away: LivePlayerRow[];
+  home: LivePlayerRow[];
+  teams: Record<string, TeamInfo>;
+  matchup: MatchupPairing;
+  meta: Record<string, PlayerMeta>;
+  gamesByTeam: Map<string, NflGame>;
+  boxScore: Record<string, PlayerBoxScore>;
+  detailStatus: PollStatus;
+}) {
+  const A = teams[matchup.away];
+  const H = teams[matchup.home];
+  // Memoized because a poll replaces both bench arrays every 60s and the sort
+  // is the only work this component does that isn't rendering. Note it does
+  // NOT save the render: <details> builds its children whether it is open or
+  // shut, so every bench row is mounted from first paint. That is the price of
+  // native disclosure semantics (find-in-page reaches a closed section,
+  // keyboard and screen readers get the control for free), and at ~24 rows of
+  // static markup it is the right trade against hand-rolling a toggle.
+  const awayRows = useMemo(() => sortBenchRows(away, meta), [away, meta]);
+  const homeRows = useMemo(() => sortBenchRows(home, meta), [home, meta]);
+  const gameFor = (row: LivePlayerRow) => gamesByTeam.get(meta[row.id]?.nflTeam ?? '');
+
+  // Nothing to disclose. An empty <details> is a control that does nothing —
+  // worse than absent, because it implies a bench we failed to load.
+  if (awayRows.length === 0 && homeRows.length === 0) return null;
+
+  const total = (rows: LivePlayerRow[], side: 'away' | 'home') => (
+    <span className={`ls-bench-tot ${side}`}>
+      <b>{fmt(benchPoints(rows))}</b>
+      <em>{rows.length} player{rows.length === 1 ? '' : 's'}</em>
+    </span>
+  );
+
+  const column = (rows: LivePlayerRow[], team: TeamInfo | undefined, side: 'left' | 'right') => (
+    <div className={`ls-bench-col ${side === 'left' ? 'away' : 'home'}`}>
+      <div className="ls-bench-cap">
+        {team?.icon && <img src={team.icon} alt="" loading="lazy" />}
+        <span>{team?.nameShort ?? team?.name ?? 'TBD'}</span>
+      </div>
+      {rows.length === 0
+        ? <div className="ls-bench-none">No bench players</div>
+        : rows.map((row) => (
+            <PlayerRow key={row.id} row={row} meta={meta[row.id]} side={side}
+                       game={gameFor(row)} box={boxScore[row.id]} detailStatus={detailStatus} />
+          ))}
+    </div>
+  );
+
+  return (
+    <details className="ls-bench">
+      <summary className="ls-bench-head">
+        {total(awayRows, 'away')}
+        <span className="ls-bench-lbl">
+          Bench
+          <span className="ls-bench-chev" aria-hidden="true" />
+        </span>
+        {total(homeRows, 'home')}
+      </summary>
+      <p className="ls-bench-note">Bench points don’t count toward the matchup.</p>
+      <div className="ls-bench-grid">
+        {column(awayRows, A, 'left')}
+        {column(homeRows, H, 'right')}
+      </div>
+    </details>
+  );
+}
+
 // ── matchup detail ──
 
 function MatchupDetail({
-  matchup, teams, players, meta, calc, moments, gamesByTeam, boxScore, detailStatus,
+  matchup, teams, players, bench, meta, calc, moments, gamesByTeam, boxScore, detailStatus,
   detailLoaded, detailPartial, starterRules, feeds, nflAnyLive, nflLiveCount, onBack,
 }: {
   matchup: MatchupPairing;
   teams: Record<string, TeamInfo>;
   players: Record<string, LivePlayerRow[]>;
+  /** Per-franchise bench rows. Separate from `players` on purpose — these score nothing. */
+  bench: Record<string, LivePlayerRow[]>;
   meta: Record<string, PlayerMeta>;
   calc: { home: TeamCalc; away: TeamCalc; homeWinProb: number; isFinal: boolean };
   moments: LiveMoment[];
@@ -638,6 +743,11 @@ function MatchupDetail({
             </div>
           );
         })}
+        <BenchSection
+          away={bench[matchup.away] ?? []} home={bench[matchup.home] ?? []}
+          teams={teams} matchup={matchup} meta={meta}
+          gamesByTeam={gamesByTeam} boxScore={boxScore} detailStatus={detailStatus}
+        />
       </div>
 
       {/* Scoring plays. Three distinct states, deliberately: real plays, an
@@ -688,7 +798,7 @@ export default function LiveScoreboard(props: LiveScoringPageProps) {
     required: { QB: 1, RB: 1, WR: 1, TE: 1, PK: 1, DEF: 1 },
     total: 9,
   };
-  const { scores, remaining, matchups, players, ytp, feed: mflFeed } = useLiveScoring(props);
+  const { scores, remaining, matchups, players, bench, ytp, feed: mflFeed } = useLiveScoring(props);
   const [selected, setSelected] = useState<MatchupPairing | null>(null);
 
   // ── real NFL context (ESPN) ──
@@ -766,7 +876,7 @@ export default function LiveScoreboard(props: LiveScoringPageProps) {
     return (
       <div className="ls-root">
         <MatchupDetail
-          matchup={selected} teams={teams} players={players}
+          matchup={selected} teams={teams} players={players} bench={bench}
           meta={playerMeta} calc={calcFor(selected)} moments={moments}
           gamesByTeam={gamesByTeam} boxScore={detail.boxScore}
           detailStatus={detail.status} detailLoaded={detail.loaded} detailPartial={detail.partial}

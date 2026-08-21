@@ -71,6 +71,7 @@ export const GET: APIRoute = async ({ url }) => {
     const remaining: Record<string, number> = {};
     const matchups: MatchupPairing[] = [];
     const players: Record<string, LivePlayerRow[]> = {};
+    const bench: Record<string, LivePlayerRow[]> = {};
     const playersYetToPlay: Record<string, number> = {};
 
     // Process live scoring data (regular matchups)
@@ -113,20 +114,41 @@ export const GET: APIRoute = async ({ url }) => {
 
         // Per-player breakdown (present when DETAILS=1). MFL nests this as
         // franchise.players.player[] in liveScoring but flat franchise.player[]
-        // in weeklyResults — accept either. Keep starters only (status is the
-        // confirmed 'starter'/'nonstarter' field): bench players don't count
-        // toward the matchup and just bloat the poll.
+        // in weeklyResults — accept either.
+        //
+        // Starters and bench go into SEPARATE maps rather than one list with a
+        // status flag, and that split is load-bearing rather than tidiness.
+        // Every consumer of `players` treats a row as scoring for the matchup:
+        // computeTeam sums its remaining projection into the team's projected
+        // final and counts it in "yet to play", and buildMoments credits a
+        // scoring play to whoever is listed. Folding bench rows into that map
+        // would inflate every projection and every win-probability bar on the
+        // board with points that cannot be scored, and put bench touchdowns in
+        // a matchup ticker. Keeping them apart means a caller has to opt IN to
+        // the bench, which is exactly the property we want.
         const rawPlayers = team?.players?.player ?? team?.player;
         if (rawPlayers) {
           const list = Array.isArray(rawPlayers) ? rawPlayers : [rawPlayers];
-          players[fid] = list
-            .filter((p: any) => p?.id && p.status !== 'nonstarter')
-            .map((p: any) => ({
+          const starters: LivePlayerRow[] = [];
+          const reserves: LivePlayerRow[] = [];
+          for (const p of list) {
+            if (!p?.id) continue;
+            const status = String(p.status || 'starter');
+            const row: LivePlayerRow = {
               id: String(p.id),
               live: Number(p.score) || 0,
               secondsRemaining: Number(p.gameSecondsRemaining) || 0,
-              status: String(p.status || 'starter'),
-            }));
+              status,
+            };
+            // Anything MFL does not confirm as a nonstarter is treated as a
+            // starter, the same direction the old filter erred in: a row we
+            // cannot classify belongs on the side that scores, because
+            // dropping a real starter out of the matchup is far worse than
+            // showing a bench player among the starters.
+            (status === 'nonstarter' ? reserves : starters).push(row);
+          }
+          players[fid] = starters;
+          if (reserves.length) bench[fid] = reserves;
         }
       });
     }
@@ -200,6 +222,7 @@ export const GET: APIRoute = async ({ url }) => {
         remaining,
         matchups,
         players,
+        bench,
         playersYetToPlay,
       }),
       {

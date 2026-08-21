@@ -105,6 +105,8 @@ export interface LiveScoringData {
   scores: Record<string, number>;
   remaining: Record<string, number>;
   players: Record<string, LivePlayerRow[]>;
+  /** Per-franchise bench rows; see LiveScoringResponse.bench for why it's separate. */
+  bench: Record<string, LivePlayerRow[]>;
   playersYetToPlay: Record<string, number>;
 }
 
@@ -197,7 +199,7 @@ export function loadStarterRules(dataPath: string, year: number): LineupSlotRule
   }
 }
 
-/** Resolve static identity + projection for every starter id in the snapshot. */
+/** Resolve static identity + projection for every player id in the snapshot. */
 export function buildPlayerMeta(
   year: number,
   playerIds: Iterable<string>,
@@ -250,8 +252,13 @@ export async function assembleLiveScoringData(opts: AssembleOpts): Promise<LiveS
   }
 
   const players: Record<string, LivePlayerRow[]> = snapshot.players ?? {};
+  const bench: Record<string, LivePlayerRow[]> = snapshot.bench ?? {};
+  // Identity is resolved for BOTH maps in one pass. The bench section renders
+  // the same PlayerRow as the lineup, so a bench id missing from playerMeta
+  // does not degrade gracefully — it prints "Unknown Player" with no headshot,
+  // no NFL logo and no team code, which is the whole row.
   const ids = new Set<string>();
-  for (const rows of Object.values(players)) {
+  for (const rows of [...Object.values(players), ...Object.values(bench)]) {
     for (const r of rows as LivePlayerRow[]) ids.add(r.id);
   }
   const playerMeta = buildPlayerMeta(opts.year, ids, projections);
@@ -264,6 +271,7 @@ export async function assembleLiveScoringData(opts: AssembleOpts): Promise<LiveS
     scores: snapshot.scores ?? {},
     remaining: snapshot.remaining ?? {},
     players,
+    bench,
     playersYetToPlay: snapshot.playersYetToPlay ?? {},
   };
 }

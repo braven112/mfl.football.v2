@@ -229,6 +229,17 @@ export interface LiveScoringResponse {
   matchups: MatchupPairing[];
   /** Per-franchise starter rows (live points + remaining game-time). */
   players?: Record<string, LivePlayerRow[]>;
+  /**
+   * Per-franchise BENCH rows, in a map of their own.
+   *
+   * Deliberately not merged into `players` with a status flag. Everything
+   * downstream reads `players` as "the rows that score this matchup" — team
+   * projections, "yet to play" counts, win probability, and the scoring-play
+   * ticker's ownership map all sum or credit straight off it. A bench row in
+   * there would inflate every one of those with points that cannot be scored.
+   * A franchise with an all-starters roster is absent from this map entirely.
+   */
+  bench?: Record<string, LivePlayerRow[]>;
   /** Per-franchise count of starters whose NFL game hasn't started. */
   playersYetToPlay?: Record<string, number>;
 }
@@ -250,7 +261,11 @@ export interface LiveScoringPageProps {
   userFranchiseId?: string;
   matchups: MatchupPairing[];
   teams: Record<string, TeamInfo>;
-  /** Static identity + projection for every starter, keyed by MFL player id. */
+  /**
+   * Static identity + projection for every player on the board, keyed by MFL
+   * player id — bench included, since the bench section renders the same
+   * PlayerRow and would otherwise print "Unknown Player" for each one.
+   */
   playerMeta: Record<string, PlayerMeta>;
   /**
    * The league's starting requirements, used to label each starter's SLOT.
@@ -261,6 +276,8 @@ export interface LiveScoringPageProps {
   initialScores?: Record<string, number>;
   initialRemaining?: Record<string, number>;
   initialPlayers?: Record<string, LivePlayerRow[]>;
+  /** Per-franchise bench rows for the first paint; see LiveScoringResponse.bench. */
+  initialBench?: Record<string, LivePlayerRow[]>;
   initialYetToPlay?: Record<string, number>;
   /** Demo/sample mode (?demo=1): render bundled sample data, no polling. */
   demo?: boolean;
