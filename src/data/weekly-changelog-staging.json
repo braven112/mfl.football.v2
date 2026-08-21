@@ -40,6 +40,14 @@
       "impact": "user",
       "area": "calendar",
       "league": "theleague"
+    },
+    {
+      "date": "2026-08-20",
+      "type": "bug-fix",
+      "summary": "A couple dozen players — D'Andre Swift, Tony Pollard, Cameron Dicker and three other kickers among them — were missing the id that links them to ESPN, so they quietly showed no box-score line on Live Scoring and went uncredited on their own touchdowns. All of them resolve now, and a test keeps it that way.",
+      "impact": "user",
+      "area": "live-scoring",
+      "league": "both"
     }
   ]
 }

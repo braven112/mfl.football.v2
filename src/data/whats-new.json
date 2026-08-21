@@ -1,5 +1,45 @@
 [
   {
+    "id": "afl-live-scoring",
+    "date": "2026-08-20",
+    "category": "new-page",
+    "icon": "goals",
+    "title": "The AFL Gets a Real Scoreboard",
+    "summary": "All twenty-four franchises, both of your games, live on one page — with real NFL box-score lines under every starter, the actual game clock, red-zone alerts and a scoring-play ticker. No more refreshing MFL's message board on a Sunday.",
+    "description": [
+      "Until today, watching your AFL week unfold meant a trip to MFL's live scoring summary — a page that tells you a number and nothing else. The league now has its own board at /afl-fantasy/live-scoring, and it is the same one TheLeague has been running, wired to AFL data end to end: your franchise's matchups pinned to the top, win-probability bars, projected finals, and a starter-by-starter breakdown when you tap in.",
+      "Because the AFL plays doubleheaders, the board shows all twenty-four matchups — every team's intra-conference game and its interconference game — and puts both of yours first. Tap either one and every starter carries his real NFL box-score line: \"33/46, 394 yds, 2 TD · 14 car, 30 yds, 2 TD\" under Josh Allen, \"1 car, 3 yds · 7 rec (9 tgt), 76 yds\" under Tyler Warren. The quarter and clock come off the live NFL scoreboard, not off a calculation, and a RED ZONE flag lights up next to any starter whose team has the ball inside the twenty.",
+      "The scoring ticker was the interesting part to get right here. The AFL's two conferences roster duplicate players — in a typical week, 85 of 131 starters are owned by more than one franchise — so \"whose touchdown was that\" has more than one answer. Attribute it to a single owner and roughly four in ten scoring plays quietly vanish from somebody's board. Every owner of every credited player now gets the row, which is the only version of this that is actually true.",
+      "Two honest gaps, both deliberate. Team defenses show their points and no stat line, because the NFL box score is keyed to individual players and a defense is not one — a plausible invented number sitting next to your real score is worse than a blank. And in the offseason, when MFL switches the live feed off, the page replays the last completed AFL regular-season week with a Sample Data badge on it rather than showing you an empty board."
+    ],
+    "image": "live-scoring-afl.webp",
+    "imageAlt": "The AFL Live Scoring matchup detail: Fullybaked 120.5 vs Ninjas 120.6, marked Final. Each starter row shows a position chip, headshot, NFL team and points, with a real box-score line underneath — Josh Allen reading \"33/46, 394 yds, 2 TD · 14 car, 30 yds, 2 TD\" and Tyler Warren \"1 car, 3 yds · 7 rec (9 tgt), 76 yds\". Below the rows a Scoring Plays section lists real fourth-quarter touchdowns with their game clock, each tagged TD.",
+    "leagues": [
+      "afl"
+    ]
+  },
+  {
+    "id": "live-scoring-espn-box-scores",
+    "date": "2026-08-20",
+    "category": "enhancement",
+    "icon": "football",
+    "title": "Live Scoring Finally Knows What Actually Happened",
+    "summary": "Every starter on the matchup page now carries his real box-score line, the quarter and clock come straight off the NFL scoreboard instead of being guessed, and the scoring ticker lists actual plays — with a red-zone flag that lights up the moment your guy's team gets inside the 20.",
+    "description": [
+      "Live Scoring has always been able to tell you that your running back had 14.3 points. What it could never tell you was how — fourteen carries and a short touchdown, or one long screen and nothing else. Same number, completely different feeling about the rest of the afternoon. Now the line is right there under his name: \"7 car, 55 yds · 3 rec (4 tgt), 20 yds, 1 TD\". Quarterbacks get completions, yards, touchdowns and picks; kickers get their field goals and extra points; every skill player gets targets, which is the number you actually wanted.",
+      "The clock is the part we owe you an apology for. Until today the little \"Q3 7:24\" next to each player was not the game clock — it was arithmetic, MFL's remaining-game-seconds divided into quarters, and it drifted from the real one all afternoon because an NFL clock stops and that number does not. It now reads the actual scoreboard: \"8:12 - 3rd\", straight from ESPN. And when there is no game to read, it says \"In progress\" and no numbers at all, because a missing clock is a lot less annoying than a confident wrong one.",
+      "The scoring ticker used to guess too. It watched each starter's points between two one-minute polls, and if the number jumped it announced a scoring update at a made-up time — which meant a stat correction could invent a touchdown that never happened. It now lists real plays: \"Q4 5:02 — Quentin Johnston 23 Yd pass from Justin Herbert (Cameron Dicker Kick)\", in true chronological order across the whole slate, and only for plays your starters were actually part of.",
+      "New this week and best on a Sunday: a RED ZONE flag on any starter whose team has the ball inside the twenty, with the down and distance beside it. It is careful about whose red zone it is — your receiver does not get flagged because the other team is about to score on his defense, which is exactly the kind of thing that would have shipped if nobody checked.",
+      "Team defenses are the one gap, and it is on purpose. ESPN's box score is keyed to individual athletes and a defense is not one, so a DEF row shows its points and nothing else rather than a made-up stat line that disagrees with the score sitting next to it. Same rule everywhere else on the page: when the NFL feed is unreachable it tells you so out loud, instead of quietly showing you an empty board that looks like nobody did anything."
+    ],
+    "image": "live-scoring-espn-box-scores.webp",
+    "imageAlt": "The Live Scoring matchup detail for Geeks 106.1 vs The Dream 106.8. Each starter row shows his position chip, headshot, NFL team, game state and points, with a real box-score line underneath — Justin Herbert reading \"25/34, 318 yds, 3 TD · 7 car, 32 yds\" and Derrick Henry \"18 car, 169 yds, 2 TD · 1 rec (1 tgt), 13 yds · 1 FUM lost\". Below the rows a Scoring Plays section lists real touchdowns with their quarter and game clock, each tagged TD.",
+    "excludeFromHero": true,
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
     "id": "player-news-modals",
     "date": "2026-08-19",
     "category": "enhancement",
@@ -842,48 +882,6 @@
     "excludeFromHero": true,
     "leagues": [
       "afl"
-    ]
-  },
-  {
-    "id": "throwback-week",
-    "date": "2026-07-13",
-    "title": "Throwback Week: The Old Names Ride Again",
-    "summary": "Every Week 4, the league's weekly pages dust off the archives. Live scoring, matchups, and submit lineup swap every team's name, logo, banner — and colors — for a legacy identity from the franchise's own history. Thirty-seven eras of recovered art, from the Sabertooths to the skull wabbit. One week a season, the scoreboard becomes a family photo album.",
-    "description": [
-      "Sixteen franchises, nearly two decades of rebrands, and a commissioner who spent a weekend spelunking the Wayback Machine so none of it stays buried. Every season, for <strong>Week 4 only</strong>, the weekly pages — live scoring, the matchup scoreboard, and submit lineup — roll every team back to an old identity. Old name, old logo, old banner, and yes, <strong>old colors</strong>: the matchup washes and win-probability bars tint in each era's own palette, sampled from the era's own art. Thirty-seven eras made the cut, every one wearing genuine recovered artwork — Degenerates green, Sabertooths orange, the Barney Fife bullseye.",
-      "Each team defaults to a commissioner-picked former self — Heavy Chevy gives way to the Drunk Indians, the Computer Jocks take the floor as the Witch City Warlocks, and Maverick puckers up as the 2012 'smooch' Poker in the Rear. Rather choose your own ghost? <strong>Throwback Settings</strong> lets every owner browse their franchise's eligible eras — same-name eras get their own nicknames ('The razorback', 'The skull', 'Red graffiti era') so you always know which vintage you're buying. Hit <strong>Preview</strong> on any era to see it live on the scoreboard before committing, then save it right from the preview when it looks right. Your pick sticks for every future Throwback Week until you change it.",
-      "The rest of the site keeps its head: standings, rosters, and the trade builder stay on current identities, so nobody's wondering who the Sabertooths are in the middle of a trade negotiation. (Only one team can be the Sabertooths anyway — we checked. It's the Geeks.) Then Week 5 arrives, everyone snaps back to the present, and the archives go back to sleep for another year. See you next September, Warlocks."
-    ],
-    "category": "new-feature",
-    "link": "/theleague/throwback-settings",
-    "linkLabel": "Pick your era",
-    "icon": "history",
-    "image": "throwback-week.webp",
-    "imageAlt": "The live scoring scoreboard during Throwback Week, with matchup cards showing legacy franchise identities — old team names, logos, and banners from each franchise's history.",
-    "heroRotationDays": 14,
-    "leagues": [
-      "theleague"
-    ]
-  },
-  {
-    "id": "homepage-unsigned-fa-set-years",
-    "date": "2026-07-09",
-    "title": "Set Contract Years Without Leaving the Homepage",
-    "summary": "The Unsigned FA Adds card used to just point a finger at your default 1-year deals and send you off to Manage Contracts to actually do something about it. Now it does something about it right there.",
-    "description": [
-      "The homepage has always been good at telling on you — 'hey, this pickup is still sitting on the default 1-year contract' — but it never let you fix it without a detour. Click through, find the player again, declare the years, hope you remembered the deadline. Small tax, paid every single time.",
-      "Tax repealed. Every eligible pickup on the card now has a <strong>Set years</strong> button that opens the same contract declaration flow the roster page uses — pick a term, hit declare, done, all without the card ever losing your place. And the card got smarter about who it shows: any player still inside the 48-hour (or 24-hour in-season) window now shows up, even after you've already declared — they just slide into a quieter <strong>Declared</strong> section with a status pill and a Change years button, in case you change your mind before the window closes.",
-      "Once the clock runs out, they age off the list either way — declared or not. The homepage was already the first thing you saw every visit; now it's also a place you can actually finish something."
-    ],
-    "category": "enhancement",
-    "link": "/theleague",
-    "linkLabel": "See it on the homepage",
-    "icon": "dollar",
-    "image": "homepage-unsigned-fa-set-years.webp",
-    "imageAlt": "The homepage Unsigned FA Adds card showing a player pickup with a 'Set years' button, and a contract declaration modal open with year-length options and a Declare Contract button.",
-    "excludeFromHero": true,
-    "leagues": [
-      "theleague"
     ]
   }
 ]

@@ -1,0 +1,824 @@
+{
+ "boxscore": {
+  "players": [
+   {
+    "team": {
+     "id": "6",
+     "abbreviation": "DAL",
+     "displayName": "Dallas Cowboys"
+    },
+    "statistics": [
+     {
+      "name": "passing",
+      "keys": [
+       "completions/passingAttempts",
+       "passingYards",
+       "yardsPerPassAttempt",
+       "passingTouchdowns",
+       "interceptions",
+       "sacks-sackYardsLost",
+       "adjQBR",
+       "QBRating"
+      ],
+      "labels": [
+       "C/ATT",
+       "YDS",
+       "AVG",
+       "TD",
+       "INT",
+       "SACKS",
+       "QBR",
+       "RTG"
+      ],
+      "athletes": [
+       {
+        "athlete": {
+         "id": "2577417",
+         "displayName": "Dak Prescott"
+        },
+        "stats": [
+         "21/34",
+         "188",
+         "5.5",
+         "0",
+         "0",
+         "0-0",
+         "61.4",
+         "76.6"
+        ]
+       }
+      ]
+     },
+     {
+      "name": "rushing",
+      "keys": [
+       "rushingAttempts",
+       "rushingYards",
+       "yardsPerRushAttempt",
+       "rushingTouchdowns",
+       "longRushing"
+      ],
+      "labels": [
+       "CAR",
+       "YDS",
+       "AVG",
+       "TD",
+       "LONG"
+      ],
+      "athletes": [
+       {
+        "athlete": {
+         "id": "4361579",
+         "displayName": "Javonte Williams"
+        },
+        "stats": [
+         "15",
+         "54",
+         "3.6",
+         "2",
+         "11"
+        ]
+       },
+       {
+        "athlete": {
+         "id": "4045163",
+         "displayName": "Miles Sanders"
+        },
+        "stats": [
+         "4",
+         "53",
+         "13.3",
+         "0",
+         "49"
+        ]
+       },
+       {
+        "athlete": {
+         "id": "3676833",
+         "displayName": "KaVontae Turpin"
+        },
+        "stats": [
+         "2",
+         "9",
+         "4.5",
+         "0",
+         "5"
+        ]
+       }
+      ]
+     },
+     {
+      "name": "receiving",
+      "keys": [
+       "receptions",
+       "receivingYards",
+       "yardsPerReception",
+       "receivingTouchdowns",
+       "longReception",
+       "receivingTargets"
+      ],
+      "labels": [
+       "REC",
+       "YDS",
+       "AVG",
+       "TD",
+       "LONG",
+       "TGTS"
+      ],
+      "athletes": [
+       {
+        "athlete": {
+         "id": "4241389",
+         "displayName": "CeeDee Lamb"
+        },
+        "stats": [
+         "7",
+         "110",
+         "15.7",
+         "0",
+         "32",
+         "13"
+        ]
+       },
+       {
+        "athlete": {
+         "id": "4426354",
+         "displayName": "George Pickens"
+        },
+        "stats": [
+         "3",
+         "30",
+         "10.0",
+         "0",
+         "15",
+         "4"
+        ]
+       },
+       {
+        "athlete": {
+         "id": "4242355",
+         "displayName": "Jake Ferguson"
+        },
+        "stats": [
+         "5",
+         "23",
+         "4.6",
+         "0",
+         "5",
+         "6"
+        ]
+       }
+      ]
+     },
+     {
+      "name": "fumbles",
+      "keys": [
+       "fumbles",
+       "fumblesLost",
+       "fumblesRecovered"
+      ],
+      "labels": [
+       "FUM",
+       "LOST",
+       "REC"
+      ],
+      "athletes": [
+       {
+        "athlete": {
+         "id": "4045163",
+         "displayName": "Miles Sanders"
+        },
+        "stats": [
+         "1",
+         "1",
+         "0"
+        ]
+       }
+      ]
+     },
+     {
+      "name": "defensive",
+      "keys": [
+       "totalTackles",
+       "soloTackles",
+       "sacks",
+       "tacklesForLoss",
+       "passesDefended",
+       "QBHits",
+       "defensiveTouchdowns"
+      ],
+      "labels": [
+       "TOT",
+       "SOLO",
+       "SACKS",
+       "TFL",
+       "PD",
+       "QB HTS",
+       "TD"
+      ],
+      "athletes": [
+       {
+        "athlete": {
+         "id": "3121415",
+         "displayName": "Malik Hooker"
+        },
+        "stats": [
+         "9",
+         "4",
+         "0",
+         "0",
+         "0",
+         "0",
+         "0"
+        ]
+       },
+       {
+        "athlete": {
+         "id": "4241394",
+         "displayName": "Kenneth Murray Jr."
+        },
+        "stats": [
+         "9",
+         "4",
+         "0",
+         "0",
+         "0",
+         "0",
+         "0"
+        ]
+       },
+       {
+        "athlete": {
+         "id": "4567399",
+         "displayName": "Kaiir Elam"
+        },
+        "stats": [
+         "6",
+         "4",
+         "0",
+         "0",
+         "0",
+         "0",
+         "0"
+        ]
+       }
+      ]
+     },
+     {
+      "name": "interceptions",
+      "keys": [
+       "interceptions",
+       "interceptionYards",
+       "interceptionTouchdowns"
+      ],
+      "labels": [
+       "INT",
+       "YDS",
+       "TD"
+      ],
+      "athletes": []
+     },
+     {
+      "name": "kickReturns",
+      "keys": [
+       "kickReturns",
+       "kickReturnYards",
+       "yardsPerKickReturn",
+       "longKickReturn",
+       "kickReturnTouchdowns"
+      ],
+      "labels": [
+       "NO",
+       "YDS",
+       "AVG",
+       "LONG",
+       "TD"
+      ],
+      "athletes": [
+       {
+        "athlete": {
+         "id": "3676833",
+         "displayName": "KaVontae Turpin"
+        },
+        "stats": [
+         "4",
+         "81",
+         "20.3",
+         "27",
+         "0"
+        ]
+       },
+       {
+        "athlete": {
+         "id": "4249417",
+         "displayName": "Jalen Tolbert"
+        },
+        "stats": [
+         "1",
+         "20",
+         "20.0",
+         "20",
+         "0"
+        ]
+       }
+      ]
+     },
+     {
+      "name": "puntReturns",
+      "keys": [
+       "puntReturns",
+       "puntReturnYards",
+       "yardsPerPuntReturn",
+       "longPuntReturn",
+       "puntReturnTouchdowns"
+      ],
+      "labels": [
+       "NO",
+       "YDS",
+       "AVG",
+       "LONG",
+       "TD"
+      ],
+      "athletes": []
+     },
+     {
+      "name": "kicking",
+      "keys": [
+       "fieldGoalsMade/fieldGoalAttempts",
+       "fieldGoalPct",
+       "longFieldGoalMade",
+       "extraPointsMade/extraPointAttempts",
+       "totalKickingPoints"
+      ],
+      "labels": [
+       "FG",
+       "PCT",
+       "LONG",
+       "XP",
+       "PTS"
+      ],
+      "athletes": [
+       {
+        "athlete": {
+         "id": "3953687",
+         "displayName": "Brandon Aubrey"
+        },
+        "stats": [
+         "2/2",
+         "100.0",
+         "53",
+         "2/2",
+         "8"
+        ]
+       }
+      ]
+     },
+     {
+      "name": "punting",
+      "keys": [
+       "punts",
+       "puntYards",
+       "grossAvgPuntYards",
+       "touchbacks",
+       "puntsInside20",
+       "longPunt"
+      ],
+      "labels": [
+       "NO",
+       "YDS",
+       "AVG",
+       "TB",
+       "In 20",
+       "LONG"
+      ],
+      "athletes": [
+       {
+        "athlete": {
+         "id": "14950",
+         "displayName": "Bryan Anger"
+        },
+        "stats": [
+         "2",
+         "87",
+         "43.5",
+         "0",
+         "1",
+         "49"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "team": {
+     "id": "21",
+     "abbreviation": "PHI",
+     "displayName": "Philadelphia Eagles"
+    },
+    "statistics": [
+     {
+      "name": "passing",
+      "keys": [
+       "completions/passingAttempts",
+       "passingYards",
+       "yardsPerPassAttempt",
+       "passingTouchdowns",
+       "interceptions",
+       "sacks-sackYardsLost",
+       "adjQBR",
+       "QBRating"
+      ],
+      "labels": [
+       "C/ATT",
+       "YDS",
+       "AVG",
+       "TD",
+       "INT",
+       "SACKS",
+       "QBR",
+       "RTG"
+      ],
+      "athletes": [
+       {
+        "athlete": {
+         "id": "4040715",
+         "displayName": "Jalen Hurts"
+        },
+        "stats": [
+         "19/23",
+         "152",
+         "6.6",
+         "0",
+         "0",
+         "1-8",
+         "89.0",
+         "94.2"
+        ]
+       }
+      ]
+     },
+     {
+      "name": "rushing",
+      "keys": [
+       "rushingAttempts",
+       "rushingYards",
+       "yardsPerRushAttempt",
+       "rushingTouchdowns",
+       "longRushing"
+      ],
+      "labels": [
+       "CAR",
+       "YDS",
+       "AVG",
+       "TD",
+       "LONG"
+      ],
+      "athletes": [
+       {
+        "athlete": {
+         "id": "4040715",
+         "displayName": "Jalen Hurts"
+        },
+        "stats": [
+         "14",
+         "62",
+         "4.4",
+         "2",
+         "15"
+        ]
+       },
+       {
+        "athlete": {
+         "id": "3929630",
+         "displayName": "Saquon Barkley"
+        },
+        "stats": [
+         "18",
+         "60",
+         "3.3",
+         "1",
+         "16"
+        ]
+       },
+       {
+        "athlete": {
+         "id": "4431545",
+         "displayName": "Will Shipley"
+        },
+        "stats": [
+         "3",
+         "26",
+         "8.7",
+         "0",
+         "20"
+        ]
+       }
+      ]
+     },
+     {
+      "name": "receiving",
+      "keys": [
+       "receptions",
+       "receivingYards",
+       "yardsPerReception",
+       "receivingTouchdowns",
+       "longReception",
+       "receivingTargets"
+      ],
+      "labels": [
+       "REC",
+       "YDS",
+       "AVG",
+       "TD",
+       "LONG",
+       "TGTS"
+      ],
+      "athletes": [
+       {
+        "athlete": {
+         "id": "4361409",
+         "displayName": "Jahan Dotson"
+        },
+        "stats": [
+         "3",
+         "59",
+         "19.7",
+         "0",
+         "51",
+         "3"
+        ]
+       },
+       {
+        "athlete": {
+         "id": "3121023",
+         "displayName": "Dallas Goedert"
+        },
+        "stats": [
+         "7",
+         "44",
+         "6.3",
+         "0",
+         "9",
+         "7"
+        ]
+       },
+       {
+        "athlete": {
+         "id": "3929630",
+         "displayName": "Saquon Barkley"
+        },
+        "stats": [
+         "4",
+         "24",
+         "6.0",
+         "0",
+         "8",
+         "5"
+        ]
+       }
+      ]
+     },
+     {
+      "name": "fumbles",
+      "keys": [
+       "fumbles",
+       "fumblesLost",
+       "fumblesRecovered"
+      ],
+      "labels": [
+       "FUM",
+       "LOST",
+       "REC"
+      ],
+      "athletes": [
+       {
+        "athlete": {
+         "id": "4686273",
+         "displayName": "Quinyon Mitchell"
+        },
+        "stats": [
+         "0",
+         "0",
+         "1"
+        ]
+       }
+      ]
+     },
+     {
+      "name": "defensive",
+      "keys": [
+       "totalTackles",
+       "soloTackles",
+       "sacks",
+       "tacklesForLoss",
+       "passesDefended",
+       "QBHits",
+       "defensiveTouchdowns"
+      ],
+      "labels": [
+       "TOT",
+       "SOLO",
+       "SACKS",
+       "TFL",
+       "PD",
+       "QB HTS",
+       "TD"
+      ],
+      "athletes": [
+       {
+        "athlete": {
+         "id": "3917657",
+         "displayName": "Zack Baun"
+        },
+        "stats": [
+         "9",
+         "6",
+         "0",
+         "1",
+         "1",
+         "0",
+         "0"
+        ]
+       },
+       {
+        "athlete": {
+         "id": "3120347",
+         "displayName": "Adoree' Jackson"
+        },
+        "stats": [
+         "7",
+         "5",
+         "0",
+         "0",
+         "1",
+         "0",
+         "0"
+        ]
+       },
+       {
+        "athlete": {
+         "id": "4381558",
+         "displayName": "Jordan Davis"
+        },
+        "stats": [
+         "6",
+         "3",
+         "0",
+         "1",
+         "1",
+         "0",
+         "0"
+        ]
+       }
+      ]
+     },
+     {
+      "name": "interceptions",
+      "keys": [
+       "interceptions",
+       "interceptionYards",
+       "interceptionTouchdowns"
+      ],
+      "labels": [
+       "INT",
+       "YDS",
+       "TD"
+      ],
+      "athletes": []
+     },
+     {
+      "name": "kickReturns",
+      "keys": [
+       "kickReturns",
+       "kickReturnYards",
+       "yardsPerKickReturn",
+       "longKickReturn",
+       "kickReturnTouchdowns"
+      ],
+      "labels": [
+       "NO",
+       "YDS",
+       "AVG",
+       "LONG",
+       "TD"
+      ],
+      "athletes": [
+       {
+        "athlete": {
+         "id": "4567096",
+         "displayName": "John Metchie III"
+        },
+        "stats": [
+         "1",
+         "20",
+         "20.0",
+         "20",
+         "0"
+        ]
+       },
+       {
+        "athlete": {
+         "id": "4431545",
+         "displayName": "Will Shipley"
+        },
+        "stats": [
+         "1",
+         "12",
+         "12.0",
+         "12",
+         "0"
+        ]
+       }
+      ]
+     },
+     {
+      "name": "puntReturns",
+      "keys": [
+       "puntReturns",
+       "puntReturnYards",
+       "yardsPerPuntReturn",
+       "longPuntReturn",
+       "puntReturnTouchdowns"
+      ],
+      "labels": [
+       "NO",
+       "YDS",
+       "AVG",
+       "LONG",
+       "TD"
+      ],
+      "athletes": []
+     },
+     {
+      "name": "kicking",
+      "keys": [
+       "fieldGoalsMade/fieldGoalAttempts",
+       "fieldGoalPct",
+       "longFieldGoalMade",
+       "extraPointsMade/extraPointAttempts",
+       "totalKickingPoints"
+      ],
+      "labels": [
+       "FG",
+       "PCT",
+       "LONG",
+       "XP",
+       "PTS"
+      ],
+      "athletes": [
+       {
+        "athlete": {
+         "id": "3050478",
+         "displayName": "Jake Elliott"
+        },
+        "stats": [
+         "1/1",
+         "100.0",
+         "58",
+         "3/3",
+         "6"
+        ]
+       }
+      ]
+     },
+     {
+      "name": "punting",
+      "keys": [
+       "punts",
+       "puntYards",
+       "grossAvgPuntYards",
+       "touchbacks",
+       "puntsInside20",
+       "longPunt"
+      ],
+      "labels": [
+       "NO",
+       "YDS",
+       "AVG",
+       "TB",
+       "In 20",
+       "LONG"
+      ],
+      "athletes": [
+       {
+        "athlete": {
+         "id": "4035239",
+         "displayName": "Braden Mann"
+        },
+        "stats": [
+         "3",
+         "146",
+         "48.7",
+         "0",
+         "2",
+         "51"
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

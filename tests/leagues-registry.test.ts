@@ -81,7 +81,10 @@ describe('league registry', () => {
     expect(leagueHasFeature('afl-fantasy', 'contracts')).toBe(false);
     expect(leagueHasFeature('afl-fantasy', 'keepers')).toBe(true);
     expect(leagueHasFeature('theleague', 'liveScoring')).toBe(true);
-    expect(leagueHasFeature('afl-fantasy', 'liveScoring')).toBe(false);
+    expect(leagueHasFeature('afl-fantasy', 'liveScoring')).toBe(true);
+    // A flag that IS off somewhere, so the false branch stays exercised —
+    // otherwise flipping every flag on would leave this test green by accident.
+    expect(leagueHasFeature('afl-fantasy', 'salaryCap')).toBe(false);
     expect(leagueHasFeature('nope', 'contracts')).toBe(false);
   });
 });

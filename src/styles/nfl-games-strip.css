@@ -42,7 +42,32 @@
   color: var(--page-text);
   font-variant-numeric: tabular-nums;
 }
-.nfl-game__foot { border-top: 1px solid var(--content-border); padding-top: 0.35rem; font-size: 0.72rem; }
+.nfl-game__foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.4rem;
+  border-top: 1px solid var(--content-border);
+  padding-top: 0.35rem;
+  font-size: 0.72rem;
+}
+
+/* ── live drive state (ESPN `situation`) ──
+   The red zone belongs to whoever HAS THE BALL, so both of these are drawn on
+   the possessing team's line only — see GameCard. Colors come from the themed
+   --color-error / --badge-error-* pair so the chip stays legible in dark mode;
+   a literal red here reads fine on white and vanishes on the dark card. */
+.nfl-game__team.redzone { background: color-mix(in srgb, var(--color-error) 10%, transparent); border-radius: var(--radius-sm); }
+.nfl-game__rz {
+  padding: 0.02rem 0.26rem;
+  border-radius: var(--radius-sm);
+  background: var(--badge-error-bg);
+  color: var(--badge-error-text);
+  font-size: 0.56rem;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.05em;
+}
+.nfl-game__dd { color: var(--content-text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .nfl-game__live { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--color-success); font-weight: var(--font-weight-semibold); }
 .nfl-game__pre { color: var(--content-text-muted); }
 

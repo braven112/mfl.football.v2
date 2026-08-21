@@ -35,20 +35,34 @@ import { join } from 'node:path';
 import { getPlayer } from '../utils/player-map';
 import { normalizeTeamCode } from '../utils/nfl-logo';
 import { DEFAULT_LEAGUE_SLUG, getLeagueBySlug } from '../config/leagues';
-import type { LivePlayerRow, MatchupPairing, NflGame, PlayerMeta } from '../types/live-scoring';
+import type {
+  LivePlayerRow,
+  LiveScoringDemoDetail,
+  LiveScoringPlay,
+  MatchupPairing,
+  NflGame,
+  PlayerMeta,
+} from '../types/live-scoring';
 
 /** A regulation NFL game is 3600 game-seconds (mirrors live-win-probability). */
 const NFL_GAME_SECONDS = 3600;
 
-/** Serializable moment seed (mirrors the island's Moment shape). */
-export interface MomentSeed {
-  key: string;
-  fid: string;
-  name: string;
-  team: string;
-  delta: number;
-  clock: string;
-}
+/**
+ * Sample stand-in for /api/nfl-game-detail.
+ *
+ * `plays` carries one entry per franchise's top live scorer so the matchup
+ * ticker has something to render offseason. It is EXPLICITLY not a play — the
+ * historical feeds this sample is built from have no play-by-play, so the text
+ * says what it actually is and `typeAbbrev` is left empty rather than claiming
+ * a touchdown that we cannot verify happened.
+ *
+ * `boxScore` is deliberately EMPTY. Per-player stat lines come from ESPN's
+ * athlete-keyed box score, which has no offseason equivalent here, and
+ * inventing "5 rec, 64 yds" for a sample would put a fabricated stat line on
+ * screen next to real ones. The island's honest "no stat line" state is what
+ * shows instead; verify that feature against live data on a preview deploy.
+ */
+export type SampleDetail = LiveScoringDemoDetail;
 
 export interface LiveScoringSample {
   week: number;
@@ -59,7 +73,7 @@ export interface LiveScoringSample {
   playersYetToPlay: Record<string, number>;
   playerMeta: Record<string, PlayerMeta>;
   nflGames: NflGame[];
-  moments: MomentSeed[];
+  detail: SampleDetail;
 }
 
 /** Row order the island renders top-to-bottom (QB → RB → WR → TE → PK → DEF). */
@@ -381,7 +395,8 @@ export function getLiveScoringSample(
   if (!final) {
     return {
       week: 1, matchups: [], scores: {}, remaining: {}, players: {},
-      playersYetToPlay: {}, playerMeta: {}, nflGames: [], moments: [],
+      playersYetToPlay: {}, playerMeta: {}, nflGames: [],
+      detail: { boxScore: {}, plays: [] },
     };
   }
 
@@ -391,7 +406,7 @@ export function getLiveScoringSample(
   const scores: Record<string, number> = {};
   const remaining: Record<string, number> = {};
   const playersYetToPlay: Record<string, number> = {};
-  const moments: MomentSeed[] = [];
+  const topScorers: Array<{ fid: string; id: string; name: string; team: string; live: number; sec: number }> = [];
 
   // Per-NFL-game phases (some Final, some in-progress). The strip is rendered
   // afterward from the teams that actually have a live starter (`liveTeams`).
@@ -450,7 +465,7 @@ export function getLiveScoringSample(
       .slice(0, 9);
 
     const rows: LivePlayerRow[] = [];
-    let topStarter: { name: string; team: string; live: number; sec: number } | null = null;
+    let topStarter: { id: string; name: string; team: string; live: number; sec: number } | null = null;
 
     for (const r of resolved) {
       const m = r.meta;
@@ -487,7 +502,7 @@ export function getLiveScoringSample(
       rows.push({ id: r.id, live, secondsRemaining: sec, status: 'starter' });
       if (sec > 0 && nflTeam) liveTeams.add(normalizeTeamCode(nflTeam));
       if (!topStarter || live > topStarter.live) {
-        topStarter = { name: m?.name ?? 'Unknown Player', team: nflTeam, live, sec };
+        topStarter = { id: r.id, name: m?.name ?? 'Unknown Player', team: nflTeam, live, sec };
       }
     }
 
@@ -496,22 +511,30 @@ export function getLiveScoringSample(
     remaining[fid] = rows.reduce((s, r) => s + r.secondsRemaining, 0);
     playersYetToPlay[fid] = rows.filter((r) => r.secondsRemaining >= NFL_GAME_SECONDS).length;
 
-    // One moment per team (its top live performer) so any opened matchup shows
-    // both sides' standout; the detail view slices these to the first handful.
+    // One ticker row per team (its top live performer) so any opened matchup
+    // shows both sides' standout; the detail view slices these to a handful.
     if (topStarter && topStarter.live > 0) {
-      moments.push({
-        key: `m-${fid}`,
-        fid,
-        name: topStarter.name,
-        team: topStarter.team,
-        delta: topStarter.live,
-        clock: clockForSec(topStarter.sec),
-      });
+      topScorers.push({ fid, ...topStarter });
     }
   }
 
-  // Surface the biggest performances first.
-  moments.sort((a, b) => b.delta - a.delta);
+  // Surface the biggest performances first. buildMoments() reverses the list
+  // (ESPN orders plays chronologically, newest last), so seed it backwards to
+  // land on biggest-first in the UI.
+  topScorers.sort((a, b) => a.live - b.live);
+  const plays: LiveScoringPlay[] = topScorers.map((t, i) => ({
+    playId: `sample-${t.fid}`,
+    gameId: `sample-${t.fid}`,
+    sequence: i,
+    period: 0,
+    clock: clockForSec(t.sec),
+    text: `${t.name} leads with ${t.live.toFixed(1)} pts`,
+    typeAbbrev: '',
+    typeText: '',
+    nflTeam: normalizeTeamCode(t.team),
+    scoreValue: 0,
+    playerIds: [t.id],
+  }));
 
   // Build the NFL strip now that we know which teams actually have a live
   // starter, so a phased-live game reads Final unless a starter is still on it.
@@ -530,6 +553,233 @@ export function getLiveScoringSample(
     playersYetToPlay,
     playerMeta,
     nflGames,
-    moments,
+    detail: { boxScore: {}, plays },
   };
 }
+
+// ── current-roster demo (real rosters + a live NFL slate) ──────────────────
+
+/**
+ * Build a board from each franchise's REAL CURRENT ROSTER, for pairing with a
+ * live NFL slate.
+ *
+ * Why this exists separately from the replay above. Between February and
+ * kickoff MFL hands us nothing to score: `liveScoring` answers
+ * "Live scoring not available until the season starts", and `weeklyResults`
+ * for week 1 returns the matchups with EMPTY starters because no owner has
+ * submitted a lineup yet. So a demo that wants to show the ESPN-backed
+ * surfaces against a game being played right now cannot get its players from
+ * MFL — but the current rosters are on disk and are real.
+ *
+ * FANTASY POINTS ARE ZERO HERE, deliberately. MFL has no scoring for a season
+ * that has not started, and the ESPN box score cannot supply it — turning
+ * yards into fantasy points needs each league's own scoring rules, which we do
+ * not model. The same reasoning that leaves DEF/ST without a stat line applies
+ * with more force to a whole board: a plausible invented total is worse than
+ * an honest zero. What IS real here is every player, his NFL game, his clock,
+ * his box-score line and his scoring plays — which is the half being
+ * demonstrated.
+ *
+ * The caller is expected to leave the ESPN pollers ON and point them at a live
+ * slate (see resolveEspnTarget); this returns no `nflGames` for that reason.
+ */
+export function getCurrentRosterSample(opts: { slug?: string; year: number }): LiveScoringSample {
+  const league = getLeagueBySlug(opts.slug ?? DEFAULT_LEAGUE_SLUG);
+  const empty: LiveScoringSample = {
+    week: 1, matchups: [], scores: {}, remaining: {}, players: {},
+    playersYetToPlay: {}, playerMeta: {}, nflGames: [], detail: { boxScore: {}, plays: [] },
+  };
+  if (!league) return empty;
+
+  const dir = join(process.cwd(), league.dataPath, 'mfl-feeds', String(opts.year));
+  const rosters = readJson(join(dir, 'rosters.json'))?.rosters?.franchise;
+  const schedule = readJson(join(dir, 'schedule.json'))?.schedule;
+  if (!rosters || !schedule) return empty;
+
+  // Week 1's real pairings. Both leagues play doubleheaders, so this is one
+  // entry per franchise rather than half that many.
+  const weeks = asArray<any>(schedule.weeklySchedule);
+  const week1 = weeks.find((w) => String(w?.week) === '1');
+  const matchups: MatchupPairing[] = [];
+  for (const m of asArray<any>(week1?.matchup)) {
+    const ids = asArray<any>(m?.franchise).map((f) => String(f?.id ?? ''));
+    if (ids.length >= 2 && ids[0] && ids[1]) matchups.push({ home: ids[0], away: ids[1] });
+  }
+  if (matchups.length === 0) return empty;
+
+  // Rank by redraft ADP so a franchise's best players start, rather than
+  // whatever order MFL happened to return its roster in.
+  const adpRank = new Map<string, number>();
+  for (const row of asArray<any>(readJson(join(dir, 'adp-redraft.json'))?.adp?.player)) {
+    if (row?.id) adpRank.set(String(row.id), Number(row.averagePick) || Number.MAX_SAFE_INTEGER);
+  }
+
+  const starterSlots = resolveStarterSlots(readJson(join(dir, 'league.json'))?.league);
+
+  const players: Record<string, LivePlayerRow[]> = {};
+  const playerMeta: Record<string, PlayerMeta> = {};
+  const scores: Record<string, number> = {};
+  const remaining: Record<string, number> = {};
+  const playersYetToPlay: Record<string, number> = {};
+
+  const inMatchups = new Set<string>();
+  for (const m of matchups) { inMatchups.add(m.home); inMatchups.add(m.away); }
+
+  for (const f of asArray<any>(rosters)) {
+    const fid = String(f?.id ?? '');
+    if (!fid || !inMatchups.has(fid)) continue;
+
+    const roster = asArray<any>(f?.player)
+      .map((p) => ({ id: String(p?.id ?? ''), meta: getPlayer(opts.year, String(p?.id ?? '')) }))
+      .filter((p) => p.id && p.meta)
+      .sort(
+        (a, b) =>
+          (adpRank.get(a.id) ?? Number.MAX_SAFE_INTEGER) -
+          (adpRank.get(b.id) ?? Number.MAX_SAFE_INTEGER),
+      );
+
+    const picked = pickStarters(roster, starterSlots);
+    const rows: LivePlayerRow[] = [];
+    for (const p of picked) {
+      const m = p.meta!;
+      playerMeta[p.id] = {
+        id: p.id,
+        name: m.name,
+        position: m.position,
+        nflTeam: m.nflTeam,
+        headshot: m.headshot,
+        espnId: m.espnId,
+        // No projection either — same reason as the points.
+        projected: 0,
+      };
+      // A FULL game remaining, not zero. Zero reads as "final" everywhere
+      // downstream — the matchup header rendered a confident FINAL over
+      // 0.0-0.0, which says the game ended scoreless rather than that it has
+      // not been played. A full clock is the truthful state for a season that
+      // has not started, and it makes the "yet to play" counts correct too.
+      // The clock each row DISPLAYS still comes from the real ESPN game;
+      // formatGameClock prefers it whenever one resolves.
+      rows.push({ id: p.id, live: 0, secondsRemaining: NFL_GAME_SECONDS, status: 'starter' });
+    }
+    players[fid] = rows;
+    scores[fid] = 0;
+    remaining[fid] = rows.length * NFL_GAME_SECONDS;
+    playersYetToPlay[fid] = rows.length;
+  }
+
+  return {
+    week: 1,
+    matchups,
+    scores,
+    remaining,
+    players,
+    playersYetToPlay,
+    playerMeta,
+    // Deliberately empty: the live poller supplies the real slate.
+    nflGames: [],
+    detail: { boxScore: {}, plays: [] },
+  };
+}
+
+/** One starting slot: a position and how many of it are required. */
+interface StarterSlot { position: string; count: number; flex: boolean }
+
+/** The league's full starter rules: required slots, flex pool, and per-position caps. */
+interface StarterRules {
+  fixed: StarterSlot[];
+  flexPositions: string[];
+  /** Position → the MOST that may start there. Load-bearing during the flex fill. */
+  maxByPosition: Map<string, number>;
+  total: number;
+}
+
+/**
+ * Read the league's own starter requirements rather than hardcoding a shape.
+ * MFL expresses them as `{ name: 'RB', limit: '1-4' }` plus a total `count`,
+ * so a fixed position takes its minimum and anything with a range is flex
+ * that competes for the leftover slots.
+ */
+function resolveStarterSlots(league: any): StarterRules {
+  const rows = asArray<any>(league?.starters?.position);
+  const total = Number(league?.starters?.count) || 9;
+  const fixed: StarterSlot[] = [];
+  const flexPositions: string[] = [];
+  const maxByPosition = new Map<string, number>();
+  for (const r of rows) {
+    const name = normalizePos(String(r?.name ?? ''));
+    const limit = String(r?.limit ?? '');
+    const min = Number(limit.split('-')[0]) || 0;
+    const max = Number(limit.split('-')[1] ?? limit) || min;
+    if (!name) continue;
+    maxByPosition.set(name, max);
+    if (min > 0) fixed.push({ position: name, count: min, flex: max > min });
+    if (max > min) flexPositions.push(name);
+  }
+  if (fixed.length === 0) {
+    // Config unreadable — fall back to the shape both leagues actually use.
+    return {
+      fixed: [
+        { position: 'QB', count: 1, flex: false },
+        { position: 'RB', count: 1, flex: true },
+        { position: 'WR', count: 1, flex: true },
+        { position: 'TE', count: 1, flex: true },
+        { position: 'PK', count: 1, flex: false },
+        { position: 'DEF', count: 1, flex: false },
+      ],
+      flexPositions: ['RB', 'WR', 'TE'],
+      maxByPosition: new Map([['QB', 1], ['RB', 4], ['WR', 4], ['TE', 4], ['PK', 1], ['DEF', 1]]),
+      total: 9,
+    };
+  }
+  return { fixed, flexPositions, maxByPosition, total };
+}
+
+const normalizePos = (p: string): string => (p === 'Def' ? 'DEF' : p.toUpperCase());
+
+/**
+ * Fill every required slot, then the leftover flex slots, best ADP first.
+ *
+ * The per-position CAP is enforced throughout, not just the total. Without it
+ * a lopsided roster overfills one slot — a real AFL franchise with seven
+ * keepers started five wide receivers against a limit of four. A short lineup
+ * is the correct outcome when the roster cannot legally fill the board (the
+ * same franchise carrying two quarterbacks can only start one of them), and is
+ * a truthful thing to show; an illegal one is not.
+ */
+function pickStarters(
+  roster: Array<{ id: string; meta: ReturnType<typeof getPlayer> }>,
+  slots: StarterRules,
+): Array<{ id: string; meta: ReturnType<typeof getPlayer> }> {
+  const used = new Set<string>();
+  const usedByPos = new Map<string, number>();
+  const out: Array<{ id: string; meta: ReturnType<typeof getPlayer> }> = [];
+
+  const capFor = (pos: string) => slots.maxByPosition.get(pos) ?? slots.total;
+  const take = (p: { id: string; meta: ReturnType<typeof getPlayer> }, pos: string) => {
+    out.push(p);
+    used.add(p.id);
+    usedByPos.set(pos, (usedByPos.get(pos) ?? 0) + 1);
+  };
+  const hasRoom = (pos: string) => (usedByPos.get(pos) ?? 0) < capFor(pos);
+
+  for (const slot of slots.fixed) {
+    const atPos = roster.filter(
+      (p) => !used.has(p.id) && normalizePos(p.meta?.position ?? '') === slot.position,
+    );
+    for (const p of atPos.slice(0, slot.count)) {
+      if (!hasRoom(slot.position)) break;
+      take(p, slot.position);
+    }
+  }
+
+  const flex = new Set(slots.flexPositions.map(normalizePos));
+  for (const p of roster) {
+    if (out.length >= slots.total) break;
+    if (used.has(p.id)) continue;
+    const pos = normalizePos(p.meta?.position ?? '');
+    if (!flex.has(pos) || !hasRoom(pos)) continue;
+    take(p, pos);
+  }
+  return out.slice(0, slots.total);
+}
+

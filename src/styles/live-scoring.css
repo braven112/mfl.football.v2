@@ -69,7 +69,29 @@
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
 }
+/* Feed-freshness pill. The tone is the FEED's state, not the game's:
+   'live' (a real NFL game is being played), 'idle' (we're polling, nothing is
+   in progress), 'error' (the last poll did not answer — the numbers on screen
+   are the last we could confirm), 'pending' (nothing has landed yet). Keeping
+   error visually distinct from idle is the same split the poll store keeps in
+   `status` vs `data`: silence and failure must never look alike. */
 .ls-status.live { color: var(--ls-live); }
+.ls-status.idle, .ls-status.pending { color: var(--content-text-muted); }
+.ls-status.error { color: var(--color-error); }
+.ls-status-sub, .ls-status-age {
+  font-weight: var(--font-weight-normal);
+  color: var(--content-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+/* The age ticks every second, so it is the element that proves the page is
+   still working. Give it a separator rather than relying on the flex gap, so
+   the three clauses read as one sentence at any width. */
+.ls-status-sub::before, .ls-status-age::before {
+  content: "·";
+  margin-right: 0.35rem;
+  color: var(--content-border);
+}
+.ls-dot.err { background: var(--color-error); }
 .ls-week-tab {
   font-size: var(--font-size-sm);
   color: var(--content-text-muted);
@@ -282,6 +304,13 @@ html.dark .ls-detail {
   overflow: hidden;
   box-shadow: var(--shadow-lg);
 }
+/* Back button and the freshness pill share the detail view's top row, so the
+   pill is on screen before an owner scrolls — on a phone the detail header is
+   the whole first screen. */
+.ls-detail-top {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 0.5rem; padding-right: 1.2rem; flex-wrap: wrap;
+}
 .ls-back {
   display: inline-flex; align-items: center; gap: 0.35rem;
   background: none; border: 0; font: inherit; cursor: pointer;
@@ -328,32 +357,75 @@ html.dark .ls-detail {
 .ls-detail .ls-wp { padding: 0.7rem 1.2rem 0; }
 .ls-ytp { display: flex; justify-content: space-between; padding: 0.2rem 1.2rem 0.6rem; font-size: 0.7rem; color: var(--ls-pre); }
 
-.ls-mx-body { padding: 0.4rem 0.7rem 0.8rem; }
+.ls-mx-body {
+  /* The player row's fixed columns, declared once HERE rather than on
+     .ls-prow, because the center slot label has to measure against them too.
+     The phone breakpoint overrides the four base values and everything
+     derived from them follows. */
+  --ls-slot-w: 2.4rem;
+  --ls-face-w: 42px;
+  --ls-row-gap: 0.6rem;
+  --ls-row-pad-y: 0.5rem;
+  /* Where a player's NAME starts: chip + headshot + the two gaps. The
+     box-score line indents to exactly this, because flush left it sat under
+     the position chip — a whole slot column away from the player it
+     describes (owner, 2026-08-21). */
+  --ls-stat-indent: calc(var(--ls-slot-w) + var(--ls-face-w) + var(--ls-row-gap) * 2);
+  /* Height of a row's FIRST line — the headshot line. */
+  --ls-row-line1: calc(var(--ls-face-w) + var(--ls-row-pad-y) * 2);
+  padding: 0.4rem 0.7rem 0.8rem;
+}
 .ls-mx-row {
-  display: grid; grid-template-columns: 1fr 2.2rem 1fr; align-items: center; gap: 0.3rem;
+  display: grid; grid-template-columns: 1fr 2.2rem 1fr; gap: 0.3rem;
+  /* TOP-aligned, not centered. A box-score line only exists for a player who
+     has touched the ball, so one side of a matchup row is routinely taller
+     than the other — and centering then floats the quiet side's name half a
+     line below its opponent's. The two players in a row stopped lining up the
+     moment real stats arrived (owner, 2026-08-21). */
+  align-items: start;
   border-bottom: 1px solid var(--content-border);
 }
 .ls-mx-row:last-child { border-bottom: 0; }
-.ls-mx-pos { text-align: center; font-family: var(--font-display); font-weight: var(--font-weight-bold); font-size: 0.72rem; color: var(--content-text-muted); }
+.ls-mx-pos {
+  text-align: center; font-family: var(--font-display); font-weight: var(--font-weight-bold);
+  font-size: 0.72rem; color: var(--content-text-muted);
+  /* Centered on the row's FIRST line, not on the cell — same reason: a stat
+     line on either side must not drag the shared label down. */
+  display: flex; align-items: center; justify-content: center;
+  min-height: var(--ls-row-line1);
+}
 
 /* ── player row ── */
-.ls-prow { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0.55rem; }
+.ls-prow {
+  display: flex; flex-wrap: wrap; align-items: center;
+  /* Lines pack to the TOP. With one line in a stretched cell the default
+     would centre it — the same misalignment .ls-mx-row's align-items:start
+     fixes one level up. */
+  align-content: flex-start;
+  gap: var(--ls-row-gap); padding: var(--ls-row-pad-y) 0.55rem;
+}
 .ls-prow.right { flex-direction: row; }
+/* Slot label: COLORED TEXT, not a filled pill (owner direction, Aug 2026).
+   Nine filled chips per side turned the lineup into a column of colored
+   blocks that outweighed the players' names; as text the color still codes
+   the slot but the name leads. The hues are unchanged and stay
+   theme-independent — they read on both the white and the near-black card. */
 .ls-ppos {
   font-family: var(--font-display); font-weight: var(--font-weight-bold); font-size: 0.72rem;
-  color: #fff; background: var(--posc, #7a8694); width: 2.4rem; text-align: center;
-  padding: 0.18rem 0; border-radius: 4px; flex: none; letter-spacing: 0.02em;
+  color: var(--posc, #7a8694); width: var(--ls-slot-w); text-align: center;
+  padding: 0.18rem 0; flex: none; letter-spacing: 0.02em;
 }
-/* Position accent colors (theme-independent) — keyed off data-pos. */
+/* Slot accent colors (theme-independent) — keyed off data-pos, which now
+   carries the SLOT (so the three flex starters share one color). */
 .ls-ppos[data-pos="QB"] { --posc: #e0517a; }
 .ls-ppos[data-pos="RB"] { --posc: #3fb98a; }
 .ls-ppos[data-pos="WR"] { --posc: #4aa3e0; }
 .ls-ppos[data-pos="TE"] { --posc: #e08a3f; }
 .ls-ppos[data-pos="PK"], .ls-ppos[data-pos="K"] { --posc: #9b7fd0; }
-.ls-ppos[data-pos="DEF"] { --posc: #7a8694; }
-.ls-ppos[data-pos="FLEX"] { --posc: #c0a04a; }
+.ls-ppos[data-pos="DEF"] { --posc: #8b97a5; }
+.ls-ppos[data-pos="FLEX"] { --posc: #6f9dd0; }
 .ls-headshot {
-  position: relative; width: 42px; height: 42px; border-radius: 50%; flex: none; overflow: hidden;
+  position: relative; width: var(--ls-face-w); height: var(--ls-face-w); border-radius: 50%; flex: none; overflow: hidden;
   /* Same treatment as the shared player-cell chip (player-cell.css): both
      themes use the luminance-floored radial head-spotlight from
      getPlayerAvatarBackground plus the team-tinted ring — darker ink mix in
@@ -367,12 +439,24 @@ html.dark .ls-headshot {
   box-shadow: inset 0 0 0 1px var(--player-avatar-ring-dark, rgba(255, 255, 255, 0.5));
 }
 .ls-headshot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-/* Defense "headshot" is the NFL logo centered in the chip, over the same
-   team-color spotlight as player chips in both themes. (Deliberate
-   divergence from the player-cell family, whose --def chips stay
-   transparent: here the logo sits inside a small scoreboard circle, and
-   the team backdrop is what keeps it legible on busy rows.) */
-.ls-headshot .ls-def-logo { inset: 18%; width: 64%; height: 64%; object-fit: contain; }
+/* Defense uses the SAME lockup as everywhere else on the site — a bare,
+   full-bleed team logo, no circle and no team-color chip. This mirrors
+   `.player-cell__avatar--def` in player-cell.css, which the roster and lineup
+   pages render.
+   This board previously diverged on purpose (logo inside the headshot circle,
+   team backdrop for legibility). Reverted at the owner's direction, Aug 2026:
+   a defense looked different here than in every other place it appears, and
+   consistency with the shared lockup won. If a busy row ever makes a dark logo
+   hard to pick out, fix it in player-cell.css so every surface benefits —
+   don't re-fork it here. */
+.ls-headshot.def {
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+  overflow: visible;
+}
+html.dark .ls-headshot.def { box-shadow: none; }
+.ls-headshot .ls-def-logo { inset: 0; width: 100%; height: 100%; object-fit: contain; }
 .ls-pid { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; flex: 1; }
 .ls-prow.right .ls-pid { align-items: flex-end; }
 /* max-width caps the shrink-wrapped name box on the right (flex-end) side so
@@ -428,6 +512,90 @@ html.dark .ls-headshot {
 .ls-m-txt { flex: 1; font-size: 0.86rem; color: var(--page-text); }
 .ls-m-pts { font-family: var(--font-display); font-weight: var(--font-weight-bold); color: var(--ls-boom); font-variant-numeric: tabular-nums; }
 
+/* ── real NFL game context (ESPN) ──
+   Red zone, down & distance, and the live box-score line. All three are
+   theme-token driven: --color-error and the --badge-error-* pair each carry a
+   light value AND an html.dark override, which is what keeps the red-zone chip
+   from shipping as unreadable dark-red-on-black. Never swap these for a
+   literal — a red chip is the exact case that looks perfect in light mode and
+   disappears in dark. */
+
+/* Two signals for one fact, on purpose. The chip names it; the row tint is
+   what an owner catches while scanning nine rows at arm's length, and it is
+   the half that still reads at the phone's 0.55rem chip size. */
+.ls-prow.redzone {
+  background: color-mix(in srgb, var(--color-error) 9%, transparent);
+  box-shadow: inset 2px 0 0 var(--color-error);
+  border-radius: var(--radius-sm);
+}
+.ls-prow.redzone.right {
+  box-shadow: inset -2px 0 0 var(--color-error);
+}
+.ls-rz {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.05rem 0.3rem;
+  border-radius: var(--radius-sm);
+  background: var(--badge-error-bg);
+  color: var(--badge-error-text);
+  font-size: 0.6rem;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+.ls-dd {
+  color: var(--content-text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Box-score line. Rendered only when ESPN actually has stats for the player —
+   an empty line means "no touches yet", and a failed feed suppresses the slot
+   entirely rather than rendering every starter as a blank (see PlayerRow). */
+/* Own line, full row width. `flex-basis: 100%` is what forces the wrap — see
+   the comment in PlayerRow for what it looked like nested in the name column. */
+.ls-pstat {
+  flex: 0 0 100%;
+  /* The indent is PADDING inside a 100% basis, not a margin: a margin would
+     add to the basis and push the line past the row. */
+  box-sizing: border-box;
+  padding-left: var(--ls-stat-indent);
+  margin-top: -0.15rem;
+  font-size: 0.72rem;
+  line-height: 1.3;
+  color: var(--content-text-muted);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.ls-prow.right .ls-pstat {
+  text-align: right;
+  padding-left: 0;
+  padding-right: var(--ls-stat-indent);
+}
+
+/* Scoring-play ticker. .ls-m-type carries ESPN's own play abbreviation (TD,
+   FG, SF) in place of the old "+X.X" fantasy delta, which was inferred by
+   diffing two polls rather than observed. */
+.ls-m-type {
+  font-family: var(--font-display);
+  font-size: 0.66rem;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.06em;
+  padding: 0.08rem 0.34rem;
+  border-radius: var(--radius-sm);
+  background: var(--badge-success-bg);
+  color: var(--badge-success-text);
+  white-space: nowrap;
+}
+.ls-moments-note {
+  margin: 0.3rem 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--content-text-muted);
+}
+/* "We couldn't read the feed" must not look like "nothing happened". */
+.ls-moments-note.error { color: var(--color-error); }
+
+
 @media (max-width: 760px) {
   /* Stack each team vertically (crest + name above the big score) so the
      three columns stay narrow enough to fit a phone without overflowing. */
@@ -448,21 +616,118 @@ html.dark .ls-headshot {
      two paired positions (the away player's), so it mislabels the home player
      whenever the teams run different lineup shapes (a FLEX row can pair an RB
      against a WR). Instead each side keeps its OWN colored position chip,
-     shrunk, so every player is labeled with its real position + color. Headshot
-     and score shrink, and the two side tracks use minmax(0) so names truncate
-     instead of the row overflowing. `.ls-mx-pos` is display:none, so the row's
-     three DOM children collapse to the two side columns. */
-  .ls-mx-body { padding: 0.4rem 0.35rem 0.8rem; }
+     shrunk, so every player is labeled with its real position + color. The two
+     side tracks use minmax(0) so a long name reflows inside its column instead
+     of overflowing the row. `.ls-mx-pos` is display:none, so the row's three
+     DOM children collapse to the two side columns. */
+  .ls-mx-body {
+    --ls-slot-w: 1.4rem;
+    --ls-face-w: 30px;
+    --ls-row-gap: 0.35rem;
+    --ls-row-pad-y: 0.45rem;
+    padding: 0.4rem 0.25rem 0.8rem;
+  }
   .ls-mx-pos { display: none; }
-  .ls-mx-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.4rem; }
+  .ls-mx-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.35rem; }
   .ls-mx-row > div { min-width: 0; }
-  .ls-prow { gap: 0.35rem; padding: 0.4rem 0.1rem; min-width: 0; }
-  .ls-mx-body .ls-ppos { width: 1.55rem; font-size: 0.6rem; padding: 0.14rem 0; letter-spacing: 0; }
-  .ls-headshot { width: 32px; height: 32px; }
-  .ls-pname { font-size: 0.82rem; }
-  .ls-pscore { min-width: 2.3rem; }
-  .ls-plive { font-size: 1.02rem; }
-  .ls-pproj, .ls-pmeta { display: none; }
+
+  /* ── Two lines per player, not one ──
+     Chip + headshot + name + game state + score do not fit on one ~165px
+     line, and the attempts to make them fit are both bugs we shipped: first
+     the name was ellipsised to "Jah…", then every fixed column was squeezed
+     to claw back sixteen pixels and the row just read as crowded instead
+     (owner, 2026-08-21).
+     So the row becomes a grid with an explicit second line: identity across
+     the top, game state and the score across the bottom, the position chip
+     spanning both as the left anchor. Each piece then gets a width it can
+     actually be read at — the name spans the score column, the meta line
+     spans the headshot column.
+     `.ls-pid` goes `display: contents` so the name and the meta line can be
+     placed independently; they stay nested in the DOM because the desktop
+     layout stacks them as one identity block. */
+  .ls-prow {
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "pos face name name"
+      "pos meta meta score";
+    align-items: center;
+    column-gap: var(--ls-row-gap);
+    row-gap: 0.1rem;
+    padding: var(--ls-row-pad-y) 0.1rem;
+    min-width: 0;
+  }
+  /* Mirrored, not re-ordered: grid areas ignore DOM order, so the home side
+     reuses the same markup with the columns reversed. */
+  .ls-prow.right {
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "name  name face pos"
+      "score meta meta pos";
+  }
+  .ls-pid { display: contents; }
+  .ls-mx-body .ls-ppos { grid-area: pos; font-size: 0.6rem; padding: 0.14rem 0; letter-spacing: 0; }
+  .ls-headshot { grid-area: face; }
+  .ls-pname { grid-area: name; }
+  .ls-pmeta { grid-area: meta; }
+  .ls-pscore { grid-area: score; }
+  /* The box-score line gets its own row below both — starting at the headshot
+     column, so it lines up under the player it describes rather than under the
+     slot chip. Grid columns say that directly; no indent arithmetic needed. */
+  .ls-pstat { grid-column: 2 / -1; margin-top: 0; padding-left: 0; }
+  .ls-prow.right .ls-pstat { grid-column: 1 / -2; padding-right: 0; }
+  /* Full names. They used to ellipsise inside a ~57px column, which turned
+     "Jahmyr Gibbs" into "Jah…" — not a name, and not something an owner can
+     read his lineup from. With the score column folded into this line almost
+     every name now fits on one; the longest still wrap rather than clip. */
+  .ls-pname {
+    font-size: 0.84rem;
+    white-space: normal;
+    /* break-word, NOT anywhere: `anywhere` also shrinks the box's intrinsic
+       minimum to a single character, which lets the column squeeze until a
+       name breaks mid-word ("Christian McCaffre / y"). */
+    overflow-wrap: break-word;
+    line-height: 1.2;
+  }
+  .ls-prow.right .ls-pname { text-align: right; }
+  .ls-pscore { min-width: 2.2rem; }
+  .ls-plive { font-size: 1.05rem; }
+  .ls-pproj { display: none; }
+  /* The meta row is the ONLY per-player evidence that anything is being
+     tracked — the real game clock, the red-zone flag, the game state dot.
+     Hiding it wholesale for space is what made a phone look like a static
+     table. Keep it and shed the pieces that are duplicated elsewhere instead:
+     the NFL logo (the row already identifies the player) and down & distance
+     (the red-zone flag is the part that changes how a lineup reads). */
+  /* What the meta line keeps at this width, and why.
+     It has ~91px, and a wrap here costs the whole row a third line — which is
+     what the two-line grid exists to avoid. So the line is trimmed to the
+     things that CHANGE: the game clock and the red-zone flag. Dropped:
+        - the NFL logo and the team code, because the headshot's team-color
+          backdrop directly above already says which club he plays for
+          (owner, 2026-08-21), and those three characters were most of the
+          overflow;
+        - down & distance, the least load-bearing of the live signals.
+     With the team code gone the clock is first in the line, so its divider
+     rule would render as a stray leading bar. The small left pad is what puts
+     the dot under the headshot's left edge rather than hard against the grid
+     line. */
+  .ls-pmeta { font-size: 0.62rem; gap: 0.24rem; flex-wrap: wrap; padding-left: 0.2rem; }
+  .ls-prow.right .ls-pmeta { padding-left: 0; padding-right: 0.2rem; }
+  .ls-pmeta img, .ls-pteam { display: none; }
+  .ls-dd { display: none; }
+  .ls-rz { font-size: 0.55rem; padding: 0.03rem 0.22rem; letter-spacing: 0.02em; }
+  .ls-pclock { padding-left: 0; margin-left: 0; border-left: 0; }
+  .ls-prow.right .ls-pclock { padding-right: 0; margin-right: 0; border-right: 0; }
+  .ls-pstat { font-size: 0.66rem; }
+
+  /* Header: the week selector and the freshness pill share a line on a phone
+     and must be allowed to stack rather than squeeze. The games-live clause is
+     the one droppable clause — the state word and the ticking age are not. */
+  .ls-head-right { flex-wrap: wrap; gap: 0.5rem var(--spacing-md); }
+  .ls-status { font-size: 0.72rem; gap: 0.3rem; }
+  .ls-status-sub { display: none; }
+  .ls-detail-top { padding-right: 0.6rem; }
 
   /* ── Featured "YOUR MATCHUP" row card ──
      Desktop sits the two big scores either side of a center "@", which collides
