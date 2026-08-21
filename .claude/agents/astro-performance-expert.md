@@ -169,7 +169,7 @@ Review every React island (component with `client:*` directive):
 
 ## Learning Protocol
 
-**Before each review:** Read `docs/claude/insights/domains/frontend.md` for established patterns and known issues.
+**Before each review:** Read the curated head of `docs/claude/insights/domains/frontend.md` for established patterns and known issues. Each domain file opens with a **curated head** (the block above `<!-- /CURATED-HEAD -->`) holding the rules that still apply. Read that; the dated archive below it is 130-150 KB and must not be read start-to-finish — `grep -n` it for your specific topic instead.
 
 **After each review:** Append new performance insights to `docs/claude/insights/domains/frontend.md` using the format defined in `docs/claude/insights/README.md`. Focus on:
 - Astro patterns that worked well or caused issues

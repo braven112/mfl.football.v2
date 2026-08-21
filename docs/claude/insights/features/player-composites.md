@@ -1,5 +1,15 @@
 # Player Composite Imagery
 
+<!-- CURATED-HEAD -->
+> **Read to the end of "Casting Rules" and stop.** Below that marker is ~72 KB
+> of per-surface implementation notes, one dated section per shipped surface —
+> grep it for the surface you're touching
+> (`grep -n "pick-reveal" docs/claude/insights/features/player-composites.md`),
+> don't read it through.
+>
+> Unlike the `domains/` files this is a reference spec rather than a journal:
+> everything above the marker is current and binding, not history.
+
 ## Context
 
 Approved photo direction for the whole site (2026-07-04): identifiable NFL action
@@ -70,6 +80,8 @@ per player.
   caster was removed with the feature-rule revision.
 - Bug-fix rollups and screenshot-less entries → no player, league logo
   silhouette (`.fch__logo-art` / `.fch__shot-logo`, light/dark asset pair).
+
+<!-- /CURATED-HEAD -->
 
 ## Shipped Use Cases
 

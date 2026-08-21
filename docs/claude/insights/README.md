@@ -8,15 +8,53 @@ This folder contains institutional knowledge captured by AI agents during develo
 insights/
 ├── README.md                    # This file
 ├── domains/                     # Cross-cutting knowledge by domain
-│   ├── frontend.md              # UI/UX patterns, component architecture
-│   ├── design-system.md         # Design tokens, CSS variables, theming
-│   ├── mfl-api.md               # MFL API quirks, authentication, data formats
+│   ├── frontend.md              # UI/UX patterns, component architecture   [curated head]
+│   ├── design-system.md         # Design tokens, CSS variables, theming    [curated head]
+│   ├── mfl-api.md               # MFL API quirks, authentication, formats  [curated head]
+│   ├── deployment.md            # Vercel, builds, env
 │   └── accessibility.md         # A11y patterns, ARIA usage
 └── features/                    # Feature-specific learnings
     ├── nav-redesign.md          # Navigation drawer insights
     ├── auction-predictor.md     # Auction predictor insights
     └── {feature-name}.md        # New features get their own file
 ```
+
+## Curated heads — read the rule, grep the evidence
+
+The three largest domain files grew to 129-151 KB, which is 32-38k tokens each.
+Instructions like "read `frontend.md` before each task" stopped being followable
+somewhere around 60 KB: an agent handed that much dated journal skims it or
+truncates it, and the accumulated knowledge silently stops being applied. It was
+written faithfully and read almost never.
+
+So each of those three now opens with a **curated head** — the rules that still
+apply, in a few KB — followed by the dated archive as evidence:
+
+```markdown
+# <Domain> Insights
+
+<!-- CURATED-HEAD -->
+> Read this head, then stop. Everything below is a dated archive — grep it.
+...the rules...
+<!-- /CURATED-HEAD -->
+
+---
+## 2026-08-21 - <dated entry>
+```
+
+**Reading:** read the head. To go deeper, `grep -n "<topic>" <file>` and read the
+matching entries. Never read one of these files start-to-finish.
+
+**Writing:** append the dated entry as always — the archive is the evidence and
+must not shrink. **If the entry changes a rule, update the head too.** A new
+entry that contradicts the head leaves the wrong rule in the place everyone
+actually reads, which is worse than not recording it.
+
+`tests/insights-curated-head.test.ts` enforces the contract: each head stays
+under 8 KB, keeps its grep instruction, keeps a real archive beneath it, and any
+*other* domain file that grows past 64 KB has to get a head of its own. The cap
+is the point — without it the head becomes the second encyclopedia this split
+was undoing. Move detail into a dated entry rather than raising it.
 
 ## Workflow
 
@@ -26,7 +64,8 @@ insights/
    - Feature being worked on → check `features/{feature}.md`
    - Domains involved → check `domains/{domain}.md`
 
-2. **Read the relevant files** to understand:
+2. **Read the relevant files** — the curated head for the three large domain
+   files, the whole file for anything smaller — to understand:
    - Past decisions and why they were made
    - Gotchas and pitfalls to avoid
    - Patterns that worked well

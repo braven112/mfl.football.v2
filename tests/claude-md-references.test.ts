@@ -169,6 +169,32 @@ describe('CLAUDE.md cross-references', () => {
     expect(broken, 'A rules doc was renamed or deleted without updating its pointers.').toEqual([]);
   });
 
+  it('nothing references a docs/claude/ file by line number', () => {
+    // A `path.md:188-232` anchor is correct exactly until someone prepends to
+    // that file. Adding curated heads to three insight files shifted every line
+    // in them by ~70 and silently repointed two real citations
+    // (scripts/apply-august-cuts.mjs, the august-cuts plan) at unrelated
+    // guidance — the anchors still resolved, they just landed somewhere else,
+    // which is worse than a broken link.
+    const LINE_ANCHOR = /docs\/claude\/[A-Za-z0-9/_-]+\.md:\d+/g;
+    const anchored: string[] = [];
+
+    for (const file of files) {
+      const body = readFileSync(join(ROOT, file), 'utf8');
+      for (const match of body.matchAll(LINE_ANCHOR)) {
+        const line = body.slice(0, match.index).split('\n').length;
+        anchored.push(`${file}:${line} → ${match[0]}`);
+      }
+    }
+
+    expect(
+      anchored,
+      'Reference a docs/claude/ file by its heading text, not by line number — ' +
+        'line anchors survive until the first edit above them and then point at ' +
+        'the wrong content without breaking.',
+    ).toEqual([]);
+  });
+
   it("CLAUDE.md's router table points at rules files that exist", () => {
     // The "Read before you touch" table is the entry point for every domain.
     // A typo here is worse than a broken comment: it misroutes every session.

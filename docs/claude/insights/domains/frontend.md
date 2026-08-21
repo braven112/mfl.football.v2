@@ -1,6 +1,93 @@
 # Frontend Insights
 
-Domain knowledge about UI/UX patterns, component architecture, and frontend development.
+<!-- CURATED-HEAD -->
+> **Read this head, then stop.** Everything below `/CURATED-HEAD` is a dated
+> archive (~140 KB, 64 entries) — do NOT read it start-to-finish. Grep it for
+> your topic: `grep -n "sticky" docs/claude/insights/domains/frontend.md`.
+>
+> Design tokens, theming and dark mode are NOT here — see
+> `docs/claude/rules/theming-and-assets.md` and `domains/design-system.md`.
+
+## Astro and ClientRouter
+
+- **Never add your own `<main>`.** `TheLeagueLayout` owns the one main landmark,
+  the 1232px cap, and the horizontal gutter. Use a `<div>`; scope any narrower
+  `max-width` to an inner wrapper.
+- **Scoped CSS dies silently on markup the component didn't emit.** `set:html`,
+  client-injected DOM, and *a child component's own tags* carry no (or a
+  different) `data-astro-cid`, so `.parent img {…}` stops matching the moment
+  you swap an inline tag for a component. Re-anchor as
+  `.parent :global(img)`. Never `@import` a shared stylesheet inside a scoped
+  `<style>` — Vite inlines it and scopes every imported selector; import it in
+  frontmatter instead.
+- **Interactive scripts must re-init on `astro:page-load`,** or they go dead on
+  in-site navigation. Three traps: `document`-level listeners *stack* (guard
+  with a module-scoped once-flag); config captured at module-eval goes stale
+  (re-read the SSR JSON blob inside the handler); and `init()` can run twice on
+  the *initial* load, splitting closure state from the DOM it rebuilt.
+- **A control whose only job is switching a URL param should be an `<a href>`**
+  built from `Astro.url` — not a `<button>` plus a click handler.
+- Never wrap a `<script>` in a conditional (breaks Astro's dedup). Read
+  `public/` files with `path.join(process.cwd(), …)`, never `import.meta.url`.
+- **React islands must not SSR anything time-derived** — start `null`, render a
+  placeholder, start the clock in `useEffect`. `?testDate=` makes the mismatch
+  a branch-level hydration failure, not a cosmetic one.
+
+## Layout traps that keep recurring
+
+- **`1fr` means `minmax(auto, 1fr)`, and that `auto` floor is min-content.** If
+  the floor is a child's fixed `width`, use `minmax(0, 1fr)` *and* drop that
+  width in the same breakpoint. If the floor is intrinsic content, use
+  `repeat(auto-fit, minmax(min(300px, 100%), 1fr))` — it cannot blow out.
+- **A grid blowout surfaces in the wrong subtree.** Every sibling stretches to
+  the widest one, so the element that looks broken is usually innocent. Check
+  `documentElement.scrollWidth > clientWidth` first, then find the track owner
+  by showing *one* child at a time (hiding them one at a time finds nothing
+  when two independently demand the width).
+- **Table columns:** `width: 1%` shrinks a column to its content;
+  `max-width: 0` *collapses it to nothing*. Never use the latter.
+- `text-overflow: ellipsis` no-ops on a flex child with non-`stretch` alignment
+  (it shrink-wraps) — add `max-width: 100%`. `flex: 1` won't expand inside a
+  `justify-content: center` ancestor — give the ancestor a definite width.
+- Collapsibles animate `grid-template-rows: 0fr → 1fr` with `overflow: hidden`
+  on a **bare** wrapper — a fixed `max-height` clips the moment content reflows.
+- `:not(:first-child)` spacing breaks when the first child is a
+  `visually-hidden` (absolutely positioned) heading — use flex/grid `gap`.
+- **This site is not globally `box-sizing: border-box`** (`TheLeagueLayout`
+  scopes it to `main`). Measure boxes with `getBoundingClientRect()`, never by
+  reading the declared width — borders count.
+
+## Two leagues, two of everything
+
+TheLeague and AFL sibling pages/components are copy-paste twins that **share no
+CSS**. A fix applied to one does not propagate — grep both before calling it done.
+
+- Assets files hold **former** identities under the same franchise id: always
+  `getActiveTeams()`, never raw `.teams`; `getCurrentIconPath()`, never
+  `icons[0]` (that's the *oldest*).
+- Any page reading `?year=` must feed `resolveConfigForYear()` output into the
+  standings utils (AFL also needs `applySeasonStructure`) — raw config renders
+  present-day branding on historical seasons.
+- `page-directory.json` paths are inconsistently prefixed: filter with
+  `pathBelongsToLeague()` **and** build hrefs with `resolveDirectoryHref()`.
+  Doing only one leaves either cross-league entries or dead double-prefixed links.
+- Cross-league link leaks hide in shared components and **auth redirects**, not
+  in nav-config: a correct `href` still bounces the user cross-league if the
+  page's logged-out gate redirects to the other league's login. Each login page
+  validates its return param against its own path space, so send AFL users to
+  `/afl-fantasy/login` and TheLeague users to `/theleague/login`. (Both pages
+  accept `?next=` and `?redirect=`; they differ only in precedence — an older
+  entry below says otherwise and is stale.) Find leaks by rendering the page and
+  grepping the HTML, and follow the 302 — an href-only audit misses the gate.
+
+## Verifying
+
+Measure, don't screenshot: `getBoundingClientRect()` and
+`scrollWidth > clientWidth` answer layout questions a screenshot cannot. For a
+production-only CSS bug, `curl` the shipped HTML + stylesheets, rewrite the
+hrefs to local copies, and open it in the bundled Chromium — it isolates
+"wrong bytes" from "device failing to apply right bytes" in minutes.
+<!-- /CURATED-HEAD -->
 
 ---
 

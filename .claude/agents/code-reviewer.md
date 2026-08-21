@@ -69,6 +69,8 @@ Additionally, read these insight files for project-wide context:
 - `docs/claude/insights/domains/design-system.md` — Design token patterns and known issues
 - `docs/claude/insights/domains/frontend.md` — UI patterns and component architecture decisions
 
+Each domain file opens with a **curated head** (the block above `<!-- /CURATED-HEAD -->`) holding the rules that still apply. Read that; the dated archive below it is 130-150 KB and must not be read start-to-finish — `grep -n` it for your specific topic instead.
+
 ## Output Format
 
 Structure your reviews as:

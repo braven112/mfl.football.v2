@@ -1,6 +1,64 @@
 # MFL API Insights
 
-Domain knowledge about MyFantasyLeague API integration.
+<!-- CURATED-HEAD -->
+> **Read this head, then stop.** Everything below `/CURATED-HEAD` is a dated
+> archive (~150 KB, 50 entries) — do NOT read it start-to-finish. Grep it for
+> your topic: `grep -n "taxi" docs/claude/insights/domains/mfl-api.md`.
+>
+> Not repeated here because they live in the rules docs:
+> `docs/claude/rules/lineups.md` (reading a submitted lineup),
+> `docs/claude/rules/standings-brackets-draft-order.md` (standings order,
+> bracket ids), `docs/claude/rules/live-scoring.md` (ESPN joins).
+
+## Non-negotiables
+
+- **Cookie on the request? Use `mflFetch()`** (`src/utils/mfl-fetch.ts`) — reads
+  included. `api.myfantasyleague.com` 302s to `www##`, and Node's undici strips
+  `Cookie` cross-origin. Raw `fetch()` is only for unauthenticated calls.
+- **HTTP 200 is not success.** MFL returns errors as 200 with an `{error:…}`
+  body, and an import with an *unrecognized parameter name* returns
+  `<status>OK</status>` having done nothing. Check the payload's own shape.
+  Never overwrite a committed feed with a payload carrying `error` — the ADP
+  and feed fetchers have guards for exactly this; don't remove them.
+- **Never send `FRANCHISE_ID` on an owner-authenticated write.** It is
+  commissioner-only and silently switches MFL to a stricter validation path.
+- **Commissioner writes need the `www##` host AND both cookies**
+  (`MFL_USER_ID` + `MFL_IS_COMMISH`). The `api.` host rejects them.
+- **Normalize every filtered export.** A one-result query returns a bare object,
+  not a one-element array. Use `asArray` (`src/utils/mfl-normalize.ts`) *inside
+  shared utils*, not at call sites. Offseason feeds ship a truthy object with
+  empty-string fields, so `|| []` does not protect you.
+- **Empty ≠ absent.** Owner-gated exports (`tradeBait`, `schedule`) answer an
+  unauthenticated request with a well-formed empty payload. Send credentials
+  before concluding data is gone — and an export saying "no" is evidence about
+  *the export*, not about MFL (13 AFL seasons were recovered from the rendered
+  page after the export said they were gone).
+
+## League-shape traps
+
+- **AFL's league year rolls June 1** (`getAflLeagueYear()`), TheLeague's Feb 14.
+  Season year is Labor Day for both. Read and write paths must share one clock.
+- **AFL is a duplicate-player league** — the same player is legitimately on two
+  rosters. Never infer ownership from "he's on someone else's roster."
+- **Franchise ids collide across leagues.** Session `leagueId` selects config for
+  storage/rendering; the **route path** selects it for writes from league-scoped
+  pages (a dual-league owner's session lies about which league the page means).
+- **Pre-2016 years used different league ids.** `L=13522` on a pre-2016 year
+  returns a real, valid-looking payload for *a different league*. Use
+  `backfill-historical-feeds.mjs --force --year=YYYY`; plain runs no-op.
+
+## Before you spend an hour
+
+- `export?TYPE=bogus` prints every valid export type — faster and more reliable
+  than the docs, which 403 from this environment.
+- **Don't ship inferred parameter names to a write endpoint.** Transaction-log
+  fields are past-tense (`activated`); import params are verbs (`ACTIVATE`), and
+  the direction is inverted. That one-letter guess burned five PRs.
+- **MFL egress is proxy-blocked from web sandboxes.** Don't burn time curling it.
+- In tests, `resolveWeekLineup` and friends read committed feeds from
+  `process.cwd()`. To assert an absence, use `NO_DISK_FEED_YEAR` (1999) — a real
+  year asserts against bot-synced data and fails later, on `main`.
+<!-- /CURATED-HEAD -->
 
 ---
 

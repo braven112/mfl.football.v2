@@ -121,3 +121,114 @@ Two things learned writing it, both worth keeping if you extend the pattern:
 `docs/claude/insights/`, `docs/plans/` and `.claude/plans/` are deliberately NOT
 scanned — they are dated journals recording what CLAUDE.md said at the time, and
 rewriting them to track a later reorganization would falsify the record.
+
+## 2026-08-21 - "Is this doc used?" is two questions, and the write side lies
+
+**Context:** Asked whether `docs/claude/insights/` was available and actually
+used. The write side looked healthy — every one of the five domain files had a
+dated entry within two days, 27 of 41 feature files had one since July, and four
+separate files pointed at the tree (CLAUDE.md, four agent definitions, and the
+`/feature` and `/update-insights` commands). By every reachability measure it
+was fine.
+
+**Insight:** It was fine, and it was still not working, because *written* and
+*read* are independent and only one of them leaves evidence. Three domain files
+had grown to 151 KB, 141 KB and 129 KB — 32-38k tokens each, every one larger
+than the 84 KB CLAUDE.md that had just been split for exactly this reason. The
+instructions layered on top had quietly stopped being executable: `/feature`
+step 1 said to read `frontend.md` **"(always)"**, and `mfl-api-expert` said
+"Before each task: Read `mfl-api.md`". An agent handed 35k tokens of dated
+journal skims it, truncates it, or spends its whole budget on it — so the
+knowledge is captured, indexed, pointed at, and silently not applied.
+
+The failure is invisible from either side alone. Grep for pointers and the tree
+looks well-wired. Check recency and the corpus looks alive. Only holding the
+file SIZE against the INSTRUCTION shows it: "read this before each task" is an
+honest instruction at 24 KB and a fiction at 141 KB.
+
+**Evidence:** `docs/claude/insights/domains/` — 476 KB across five files, of
+which three were >129 KB; `features/` another 568 KB across 41 files that
+nothing routes to beyond "if one exists for this feature."
+
+**Recommendation:** For any doc a workflow tells an agent to read, periodically
+price the instruction: bytes ÷ 4 ≈ tokens, against what the agent has to spend
+before it starts the actual task. Past roughly 60 KB, "read this file" needs to
+become "read this file's head, grep the rest" — the shape now enforced by
+`tests/insights-curated-head.test.ts`. And when auditing any knowledge store,
+measure the read path and the write path separately; a corpus with a healthy
+write loop and a broken read loop looks identical to a working one from the
+outside, and is strictly worse than a small one, because the effort is being
+spent.
+
+## 2026-08-21 - A shallow clone makes every history-based measurement lie
+
+**Context:** While measuring whether the insights corpus was still growing, I ran
+`git show "HEAD@{90 days ago}:<file>" | wc -c` against the current size for the
+three big domain files, and `git log --since="90 days ago"`.
+
+**Insight:** Claude Code Remote sessions clone shallow. This one had **57 commits
+total and a reflog one day deep**, so `HEAD@{90 days ago}` silently resolved to
+current HEAD. Two of the three files reported byte-identical "before" and
+"after", which reads as a confident "these have not changed in 90 days" — the
+exact opposite of the truth, since both had entries from two days prior. The
+`--since` count was equally hollow: "3 commits in 90 days" was really 3 of the
+only 57 commits that exist locally.
+
+Nothing errors. `git show` on an unresolvable reflog entry falls back rather than
+failing, so the number arrives looking like data.
+
+**Evidence:** `git rev-parse --is-shallow-repository` → `true`;
+`git reflog | wc -l` → 10, oldest entry the same day;
+`git rev-list --count HEAD` → 57 against a repo with years of history.
+
+**Recommendation:** In any CCR session, run
+`git rev-parse --is-shallow-repository` before trusting **any** comparison
+against a past revision — `HEAD@{...}`, `git log --since`, `git blame` ages,
+"has this file changed recently". If it returns true, either
+`git fetch --unshallow` first or find a signal inside the working tree instead.
+Here the reliable signal was already in the files: the dated `## YYYY-MM-DD`
+headings each entry carries. Prefer in-content evidence over git history in a
+shallow clone.
+
+## 2026-08-21 - A distilled rule inherits the archive's date but is presented as current
+
+**Context:** Review of the curated-head PR caught a rule I had written into
+`frontend.md`'s head: *"AFL login takes `?next=`, TheLeague `?redirect=`."* It
+was faithfully distilled from a 2026-07-07 archive entry that said exactly that.
+It is also wrong today — both login pages now accept both params and differ only
+in precedence, and each one's source comment says it was made symmetric
+deliberately ("`?redirect=` for symmetry with TheLeague's login").
+
+**Insight:** Summarizing a dated journal changes the claim's tense. In the
+archive the entry is stamped 2026-07-07 and reads as *what was true then*; a
+reader who finds it knows to check. Lifted into a head with the date stripped, the
+same sentence reads as *what is true now* — and it has been promoted to the one
+place agents are told to read **instead of** the archive. So the distillation
+step converts a correctly-dated historical record into a confidently-wrong
+current rule, and it does it silently, because the source text was accurate when
+written and copying it faithfully feels like the careful thing to do.
+
+This is strictly worse than leaving the file at 141 KB. An oversized archive
+fails by being skipped; a wrong head fails by being *believed*.
+
+**Evidence:** `src/pages/theleague/login.astro:20` and
+`src/pages/afl-fantasy/login.astro:31` — both read
+`searchParams.get('next') || searchParams.get('redirect')` (order swapped per
+league), each validated with `startsWith` against its own path prefix. The
+archive entry that produced the head line is still below it, correctly dated,
+and is now explicitly marked stale by the head.
+
+**Recommendation:** When distilling any dated entry into a head, **re-verify the
+rule against current code before promoting it** — grep the symbol, open the file,
+check the behavior still matches. Budget for this: it is a different and slower
+activity than summarizing, and it is the only step that distinguishes a head from
+a wiki page nobody trusts. Two habits that make it cheap:
+
+- Prefer rules that name a helper or a guard test (`use getActiveTeams()`,
+  `tests/team-accent-css.test.ts` enforces 3:1`) over rules that describe a
+  behavior in prose. A named symbol either exists or it doesn't, so the check is
+  a grep and the rule rots loudly rather than quietly.
+- When a head contradicts an entry below it, say so in the head. The archive is
+  immutable history and must not be rewritten, so the head is the only place the
+  correction can live — leaving both versions standing with no pointer is how the
+  next reader picks the wrong one.

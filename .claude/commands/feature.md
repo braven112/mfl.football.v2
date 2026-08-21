@@ -8,12 +8,17 @@ Do these three things immediately:
 
 1. **Read the story template** at `docs/claude/story-template.md` — this is your format.
 
-2. **Read relevant insight files** to understand existing patterns:
-   - `docs/claude/insights/domains/frontend.md` (always)
-   - `docs/claude/insights/domains/design-system.md` (if UI work)
-   - `docs/claude/insights/domains/mfl-api.md` (if API work)
-   - `docs/claude/insights/domains/accessibility.md` (if new interactive UI)
-   - `docs/claude/insights/features/{feature}.md` (if one exists for this feature)
+2. **Read relevant insight files** to understand existing patterns. For the three
+   large domain files, read only the **curated head** (the block above
+   `<!-- /CURATED-HEAD -->`) — the dated archive below it is 130-150 KB and must
+   not be read start-to-finish; `grep -n` it for a specific topic instead.
+   - `docs/claude/insights/domains/frontend.md` — head (always)
+   - `docs/claude/insights/domains/design-system.md` — head (if UI work)
+   - `docs/claude/insights/domains/mfl-api.md` — head (if API work)
+   - `docs/claude/insights/domains/accessibility.md` (if new interactive UI; small, read whole)
+   - `docs/claude/insights/features/{feature}.md` (if one exists for this feature —
+     check its size first; anything over ~64 KB carries a curated head too, and
+     the rest of it should be grepped, not read)
 
 3. **Write a structured story** filling in the template with:
    - User story, acceptance criteria, technical context, design requirements
