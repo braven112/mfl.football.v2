@@ -219,6 +219,65 @@ describe('a matchup row keeps its two players level', () => {
     }
   });
 
+  it('sizes every lineup row to the tallest one, and never by truncating', () => {
+    // Owner report, 2026-08-21: rows of different heights left the two sides
+    // of the board visibly out of step. The fix has to equalize by GROWING the
+    // short rows, never by shrinking the tall one — `grid-auto-rows: 1fr` in
+    // an auto-height grid sizes every implicit row to the tallest one's
+    // content, which costs whitespace and clips nothing.
+    expect(
+      valueOf(base, '.ls-mx-rows', 'grid-auto-rows'),
+      'lineup rows must share one equalized track size',
+    ).toBe('1fr');
+    expect(valueOf(base, '.ls-mx-rows', 'display')).toBe('grid');
+
+    // The equalization only reaches rows that are ITEMS of that grid. If
+    // .ls-mx-row stopped being a real box (display: contents), each row would
+    // size itself again AND `.ls-mx-row { align-items: start }` — the rule
+    // that keeps the two players in a row level — would go silently inert.
+    expect(valueOf(base, '.ls-mx-row', 'display')).toBe('grid');
+  });
+
+  it('pairs the two benches into shared grid rows rather than two columns', () => {
+    // Two independently-flowing columns drift: one box-score line or one
+    // wrapping name on the left pushes every row below it out of step with
+    // its neighbour on the right, and the gap compounds down the list. Cells
+    // that share a grid row cannot disagree about where a row starts.
+    expect(valueOf(base, '.ls-bench-grid', 'display')).toBe('grid');
+    expect(valueOf(base, '.ls-bench-grid', 'grid-auto-rows')).toBe('1fr');
+    // The caption row must stay auto-sized, or the team names get stretched to
+    // a full player row's height along with everything else.
+    expect(
+      valueOf(base, '.ls-bench-grid', 'grid-template-rows'),
+      'the caption row must be explicit + auto so only player rows equalize',
+    ).toBe('auto');
+    // A ROW gap would defeat the point — the equalized tracks are what make
+    // the rows line up, and gap between them just reintroduces spacing that
+    // has to be kept in sync with the starters above.
+    expect(valueOf(base, '.ls-bench-grid', 'gap')).toBeUndefined();
+    expect(valueOf(base, '.ls-bench-grid', 'column-gap')).toBeDefined();
+  });
+
+  it('does not buy equal rows by clamping the name or the stat line', () => {
+    // The two tempting ways to make rows uniform are a fixed height and a
+    // line clamp, and both truncate. A clamp on the name is the "Jah…" bug
+    // this stylesheet already fixed once; a clamp on the box-score line
+    // silently drops the tail of a long one ("… · 1 FUM lost").
+    for (const block of [base, phone]) {
+      for (const selector of ['.ls-pname', '.ls-pstat']) {
+        expect(
+          valueOf(block, selector, '-webkit-line-clamp'),
+          `${selector} must not be line-clamped to equalize rows`,
+        ).toBeUndefined();
+      }
+      // A fixed height on the row would clip whatever didn't fit; the
+      // equalization has to come from the track, not from the row box.
+      expect(valueOf(block, '.ls-prow', 'height')).toBeUndefined();
+    }
+    // The phone rule that lets names wrap must still be the one in force.
+    expect(valueOf(phone, '.ls-pname', 'white-space')).toBe('normal');
+  });
+
   it('on a phone the box-score line clears the slot chip via grid columns', () => {
     // Column 2 is the headshot, which is where the meta line above it starts —
     // the stat line lines up under the player, not under his slot label.

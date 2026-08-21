@@ -23,7 +23,7 @@
  * couldn't reach ESPN". The first is silence; the second says so out loud.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
   LivePlayerRow,
   LiveScoringPageProps,
@@ -573,11 +573,14 @@ function PlayerRow({ row, meta, side, slot, game, box, detailStatus }: PlayerRow
  *    that moves the matchup, so a second column of totals in the same
  *    typography reads as though it does. The note is the cheapest way to keep
  *    the board's numbers meaning one thing.
- *  - **It is not paired.** The lineup above pairs away[i] against home[i]
- *    under one slot label because both sides fill the same nine slots. Two
- *    benches share no such structure — different lengths, different positions
- *    — so this renders two independent columns and no center label. Reusing
- *    the paired row here would put a "RB" between a running back and a kicker.
+ *  - **The two sides are paired by INDEX, but never by slot.** Each side keeps
+ *    its own position chip and there is no shared center label, because bench
+ *    row 3 on the left and bench row 3 on the right are unrelated players. The
+ *    pairing is purely a layout device: two independently-flowing columns
+ *    drift apart as soon as one side has a box-score line or a wrapping name
+ *    the other doesn't, and by row 12 the two lists are visibly out of step
+ *    (owner, 2026-08-21). Putting both cells in one grid row means they can
+ *    never disagree about where a row starts.
  */
 function BenchSection({ away, home, teams, matchup, meta, gamesByTeam, boxScore, detailStatus }: {
   away: LivePlayerRow[];
@@ -613,21 +616,26 @@ function BenchSection({ away, home, teams, matchup, meta, gamesByTeam, boxScore,
     </span>
   );
 
-  const column = (rows: LivePlayerRow[], team: TeamInfo | undefined, side: 'left' | 'right') => (
-    <div className={`ls-bench-col ${side === 'left' ? 'away' : 'home'}`}>
-      <div className="ls-bench-cap">
-        {team?.icon && <img src={team.icon} alt="" loading="lazy" />}
-        <span>{team?.nameShort ?? team?.name ?? 'TBD'}</span>
-      </div>
-      {rows.length === 0
-        ? <div className="ls-bench-none">No bench players</div>
-        : rows.map((row) => (
-            <PlayerRow key={row.id} row={row} meta={meta[row.id]} side={side}
-                       game={gameFor(row)} box={boxScore[row.id]} detailStatus={detailStatus} />
-          ))}
+  const caption = (team: TeamInfo | undefined, side: 'away' | 'home') => (
+    <div className={`ls-bench-cap ${side}`}>
+      {team?.icon && <img src={team.icon} alt="" loading="lazy" />}
+      <span>{team?.nameShort ?? team?.name ?? 'TBD'}</span>
     </div>
   );
 
+  // One cell per side per row. An empty cell is still a cell: the sides have
+  // different bench sizes, and leaving the shorter one's tail out of the grid
+  // would let the taller side's rows slide up into the gap.
+  const cell = (row: LivePlayerRow | undefined, side: 'left' | 'right', i: number) => (
+    <div className={`ls-bench-cell ${side === 'left' ? 'away' : 'home'}`}>
+      {row
+        ? <PlayerRow row={row} meta={meta[row.id]} side={side}
+                     game={gameFor(row)} box={boxScore[row.id]} detailStatus={detailStatus} />
+        : i === 0 ? <div className="ls-bench-none">No bench players</div> : null}
+    </div>
+  );
+
+  const rowCount = Math.max(awayRows.length, homeRows.length);
   return (
     <details className="ls-bench">
       <summary className="ls-bench-head">
@@ -640,8 +648,14 @@ function BenchSection({ away, home, teams, matchup, meta, gamesByTeam, boxScore,
       </summary>
       <p className="ls-bench-note">Bench points don’t count toward the matchup.</p>
       <div className="ls-bench-grid">
-        {column(awayRows, A, 'left')}
-        {column(homeRows, H, 'right')}
+        {caption(A, 'away')}
+        {caption(H, 'home')}
+        {Array.from({ length: rowCount }).map((_, i) => (
+          <Fragment key={i}>
+            {cell(awayRows[i], 'left', i)}
+            {cell(homeRows[i], 'right', i)}
+          </Fragment>
+        ))}
       </div>
     </details>
   );
@@ -725,6 +739,11 @@ function MatchupDetail({
 
       <div className="ls-mx-body">
         {rowCount === 0 && <div className="ls-empty">Player breakdown appears once lineups lock and games begin.</div>}
+        {/* The lineup rows get their OWN grid so every row can be sized to the
+            tallest one (see .ls-mx-rows). The bench and the empty state are
+            deliberately outside it — they are not player rows and must not be
+            stretched to a player row's height. */}
+        <div className="ls-mx-rows">
         {Array.from({ length: rowCount }).map((_, i) => {
           const h = homeRows[i]?.row;
           const a = awayRows[i]?.row;
@@ -743,6 +762,7 @@ function MatchupDetail({
             </div>
           );
         })}
+        </div>
         <BenchSection
           away={bench[matchup.away] ?? []} home={bench[matchup.home] ?? []}
           teams={teams} matchup={matchup} meta={meta}

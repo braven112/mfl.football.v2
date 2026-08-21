@@ -375,6 +375,23 @@ html.dark .ls-detail {
   --ls-row-line1: calc(var(--ls-face-w) + var(--ls-row-pad-y) * 2);
   padding: 0.4rem 0.7rem 0.8rem;
 }
+/* Every lineup row the same height.
+   `grid-auto-rows: 1fr` in an auto-height grid sizes EVERY implicit row to the
+   tallest one's content, so the rows line up without anything being clipped to
+   make them. That distinction is the whole point: the obvious fixes here are a
+   fixed row height or a one-line clamp, and both truncate — a clamp on the
+   name column is exactly the "Jah…" bug this stylesheet already fixed once,
+   and a clamp on the box-score line silently drops the tail of "18 car, 169
+   yds, 2 TD · 1 rec (1 tgt), 13 yds · 1 FUM lost".
+   It also self-tunes: with no box scores on the board (a preseason slate,
+   any time before kickoff) the tallest row is a plain one and the rows stay
+   compact. Only a week with real stat lines pays for the extra height.
+   `.ls-mx-row` stays a real box rather than `display: contents`, because its
+   `align-items: start` is load-bearing and would go silently inert. */
+.ls-mx-rows {
+  display: grid;
+  grid-auto-rows: 1fr;
+}
 .ls-mx-row {
   display: grid; grid-template-columns: 1fr 2.2rem 1fr; gap: 0.3rem;
   /* TOP-aligned, not centered. A box-score line only exists for a player who
@@ -583,13 +600,30 @@ html.dark .ls-headshot.def { box-shadow: none; }
   color: var(--content-text-muted);
   text-align: center;
 }
+/* Both benches in ONE grid, paired by index — not two columns flowing
+   independently. Independent columns drift: the moment one side has a
+   box-score line or a name that wraps, every row below it on that side sits
+   lower than its neighbour, and by row 12 the two lists are visibly out of
+   step. Sharing grid rows makes that impossible.
+   `grid-template-rows: auto` sizes the caption row to its content; every row
+   after it is implicit and picks up the `1fr` equalization, same mechanism and
+   same reasoning as .ls-mx-rows above. */
 .ls-bench-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.3rem;
+  grid-template-rows: auto;
+  grid-auto-rows: 1fr;
+  column-gap: 0.3rem;
   padding: 0 0.3rem 0.5rem;
 }
-.ls-bench-col { min-width: 0; }
+.ls-bench-cell {
+  min-width: 0;
+  border-bottom: 1px dashed var(--content-border);
+}
+/* The last PAIR of cells, not the last player row — the two sides can have
+   different bench sizes, so `:last-child` alone would leave a rule under the
+   shorter side's final row. */
+.ls-bench-cell:nth-last-child(-n + 2) { border-bottom: 0; }
 .ls-bench-cap {
   display: flex;
   align-items: center;
@@ -600,7 +634,7 @@ html.dark .ls-headshot.def { box-shadow: none; }
   color: var(--content-text-muted);
   border-bottom: 1px solid var(--content-border);
 }
-.ls-bench-col.home .ls-bench-cap { flex-direction: row-reverse; }
+.ls-bench-cap.home { flex-direction: row-reverse; }
 .ls-bench-cap img { width: 16px; height: 16px; object-fit: contain; border-radius: 3px; }
 .ls-bench-cap span {
   min-width: 0;
@@ -613,9 +647,7 @@ html.dark .ls-headshot.def { box-shadow: none; }
   font-size: 0.72rem;
   color: var(--content-text-muted);
 }
-.ls-bench-col.home .ls-bench-none { text-align: right; }
-.ls-bench .ls-prow { border-bottom: 1px dashed var(--content-border); }
-.ls-bench .ls-prow:last-child { border-bottom: 0; }
+.ls-bench-cell.home .ls-bench-none { text-align: right; }
 
 /* ── scoring moments feed ── */
 .ls-moments { padding: 1rem 1.2rem 1.3rem; background: var(--content-bg-muted); border-top: 1px solid var(--content-border); }
@@ -873,7 +905,7 @@ html.dark .ls-headshot.def { box-shadow: none; }
      two teams' benches in a single scroll column with nothing but the caption
      to say which is which. minmax(0) for the same reason .ls-mx-row uses it —
      a long name must reflow inside its column, not widen the grid track. */
-  .ls-bench-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.25rem; padding: 0 0.15rem 0.5rem; }
+  .ls-bench-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 0.25rem; padding: 0 0.15rem 0.5rem; }
   .ls-bench-head { padding: 0.5rem 0.5rem; gap: 0.35rem; }
   .ls-bench-lbl { font-size: 0.64rem; letter-spacing: 0.04em; }
   .ls-bench-tot b { font-size: 0.85rem; }
