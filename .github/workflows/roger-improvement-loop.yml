@@ -1,7 +1,7 @@
 name: Roger Improvement Loop
 
-# Weekly rubric audit of real Ask Roger traffic (see CLAUDE.md → "Ask Roger
-# eval"). scripts/roger-improvement-loop.ts pulls owner questions from Redis,
+# Weekly rubric audit of real Ask Roger traffic (see
+# docs/claude/rules/roger.md → "Ask Roger eval"). scripts/roger-improvement-loop.ts pulls owner questions from Redis,
 # grades each answer (deterministic format graders + Claude Opus rubric
 # judge), and commits:
 #   - data/roger-improvement/audit-ledger.json    (what's been graded)

@@ -12,7 +12,8 @@
  *
  * 1. **Comparison is order-blind; files are NEVER re-sorted on disk.** MFL's
  *    `leagueStandings` row order IS the league's official final order (see
- *    CLAUDE.md "Standings order") and other feeds may carry meaning in feed
+ *    docs/claude/rules/standings-brackets-draft-order.md) and other feeds may
+ *    carry meaning in feed
  *    order, so canonicalizing the stored file would corrupt data. We only
  *    canonicalize the *comparison string*. Consequence: a pure permutation
  *    (e.g. two all-tied offseason teams swapping standings rows with zero

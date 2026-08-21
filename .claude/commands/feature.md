@@ -31,7 +31,8 @@ Do these three things immediately:
 1. **Launch the `frontend-ux-architect` agent** with the story context. Include in the prompt:
    - The user story and acceptance criteria
    - Specific file paths from "Existing Patterns to Reuse"
-   - The relevant editorial design standard section from CLAUDE.md
+   - The editorial design standard (`docs/claude/loading-standards.md`,
+     `docs/claude/components.md`) — it is NOT in CLAUDE.md
    - Any existing similar page/component to reference
 
    Ask the agent to produce:
@@ -96,7 +97,8 @@ Launch **all three reviewers IN PARALLEL** (single message, three Agent tool cal
 1. **`code-reviewer`** (haiku — fast, pattern-matching):
    - Design token compliance (no hardcoded colors/spacing)
    - DRY principles (no duplicated logic)
-   - CLAUDE.md guideline adherence (team names, player display, year utilities)
+   - Repo-rule adherence: `chooseTeamName()`, the two year clocks, and the
+     `docs/claude/rules/` doc for whichever domain the story touches
    - TypeScript type safety
 
 2. **`astro-performance-expert`** (sonnet — checklist-based):
@@ -169,7 +171,7 @@ Also update `MEMORY.md` if the feature revealed significant architectural patter
 
 Follow these rules to minimize token waste across all agent launches:
 
-1. **Don't paste full CLAUDE.md** into agent prompts. Embed only the section relevant to the feature (e.g., "Player Display" for player-facing work, "Editorial Design Standard" for UI work).
+1. **Don't paste full CLAUDE.md** into agent prompts. CLAUDE.md is a router: its "Read before you touch" table maps a domain to the one `docs/claude/rules/<domain>.md` that agent needs. Pass that file path, not the rules text — e.g. `docs/claude/rules/theming-and-assets.md` for UI work, `docs/claude/rules/schefter.md` for feed work.
 
 2. **Give agents specific file paths** to read. Instead of "explore the rosters page," say "read `src/pages/theleague/rosters.astro` lines 1-100 for the data loading pattern."
 

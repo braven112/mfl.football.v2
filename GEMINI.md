@@ -26,8 +26,9 @@ guard tests that will fail CI — flagging them early saves a round trip.
 ### 2. Explorer (bulk-context questions)
 You get asked things like "which of these 60 docs mention X" or "audit every
 committed bracket feed for Y". You are chosen for these because your context
-window is large: `data/` is ~161MB of JSON, `docs/claude/` is ~1MB across 60
-files, `CLAUDE.md` alone is 57KB.
+window is large: `data/` is ~161MB of JSON, and `docs/claude/` is ~1MB across
+60 files — including `docs/claude/rules/`, which holds the per-domain rulebooks
+in full.
 
 **Return the conclusion, not the corpus.** The caller is paying for the answer,
 not a file dump. Cite `path:line` so the caller can verify without re-reading.
@@ -66,8 +67,9 @@ node --check script.mjs        # syntax-check any .mjs you touched
 
 These are rules that have each caused a real production bug. Most are enforced
 by a guard test in `tests/`; violating one fails CI. Full rationale for every
-item lives in `CLAUDE.md` — read the relevant section there before changing
-anything in that area.
+item lives in `docs/claude/rules/<domain>.md` — `CLAUDE.md` is a router whose
+"Read before you touch" table maps each area to its rules doc. Read the
+matching doc before changing anything in that area.
 
 **League constants — never hardcode.** No `'13522'`, `'19621'`,
 `'data/theleague'` inline. Import from `src/config/leagues-data.mjs` (node
@@ -148,7 +150,8 @@ scripts/lib/       Shared script helpers
 packages/          Internal workspace packages (league-utils, shared-types, …)
 data/              Large per-league MFL feed archives (~161MB)
 tests/             vitest — including the guard tests named above
-docs/claude/       Insight write-ups (60 files); domain gotchas in depth
+docs/claude/rules/ Per-domain rulebooks — the authority on every landmine above
+docs/claude/       Reference docs + dated insight write-ups (60 files)
 .github/workflows/ Cron automation (Schefter, Roger, syncs)
 ```
 
@@ -156,8 +159,9 @@ docs/claude/       Insight write-ups (60 files); domain gotchas in depth
 
 ## Conventions
 
-- **`CLAUDE.md` is the source of truth** for the *why* behind every landmine
-  above. It is 57KB — read the relevant section, not the whole file.
+- **`docs/claude/rules/<domain>.md` is the source of truth** for the *why*
+  behind every landmine above. `CLAUDE.md` is a short router: start at its
+  "Read before you touch" table, then read only the rules doc it points you to.
 - Team names go through `chooseTeamName()` (`src/utils/team-names.ts`).
 - Check `src/utils/` and `scripts/lib/` before writing a new helper; this repo
   has a strong shared-helper culture and duplicate logic drifts.
