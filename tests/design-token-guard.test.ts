@@ -23,7 +23,7 @@
  * unrelated file that the cascade never reaches will pass this test. The
  * repo convention that keeps that gap closed: define theme tokens globally
  * in tokens.css / tokens-dark.css, never as page-local vocabularies (see
- * CLAUDE.md "Design tokens").
+ * docs/claude/rules/theming-and-assets.md, "Design tokens").
  *
  * If you add a genuinely intentional reference to a token defined outside
  * src/ (e.g. injected by a third-party script at runtime), add it to

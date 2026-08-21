@@ -1,0 +1,193 @@
+# Standings order, AFL playoff brackets, and draft-order framing
+
+> Deep reference extracted from `CLAUDE.md` (Aug 2026 slim-down). `CLAUDE.md`
+> carries the one-line rule and points here; this file is the authority on the
+> reasoning. Every rule below is load-bearing — each one is a bug that shipped.
+
+## Standings order — MFL is the source of truth; "most PA" is decoupled
+
+Two related rules, both from commissioner rulings in August 2026.
+
+**1. Never re-sort MFL's standings rows.** MFL's `leagueStandings` export
+returns rows in the league's OFFICIAL final order, with each league's
+constitution tiebreaker chain already applied — including head-to-head, which
+we cannot reproduce (the feed's `h2h*` columns only echo the overall record).
+The first row of each division IS that division's winner. Every standings,
+playoffs and homepage surface in BOTH leagues passes
+`{ preserveFeedOrder: true }` to `src/utils/standings.ts`; the awards scripts
+take `group[0]` in feed order. Homebrew tiebreakers miscredited 22 AFL and 10
+TheLeague division titles before this rule existed. The proof that MFL is
+applying the rulebook and we cannot is TheLeague's 2015 Central: two 15-3-0
+teams with identical 4-2-0 division records, where MFL credited the team with
+LOWER all-play and LOWER points because it swept the season series.
+`divisionTiebreaker` in standings.ts now has no production callers.
+
+**2. "Most Points Allowed" benefits the team — in BOTH directions.** The team
+that gave up more points wins that tiebreaker step, meaning it gets both the
+better standing and the better (earlier) draft pick. Those are opposite ends of
+one ranking, so the step is deliberately **decoupled**: see
+`PointsAllowedFavors` in `src/utils/afl-draft-utils.ts`
+(`rankDivisionBlockWorstFirst` takes `'draft'` vs `'standings'`). Do not
+"simplify" the two directions back into one — `tests/points-allowed-tiebreaker.test.ts`
+has a guard for exactly that. The step has never actually decided a real
+division title, so a regression here is invisible in the data.
+
+Caveat worth remembering: because standings order now comes from MFL, rule 2
+only governs OUR draft-order math. The live standings apply whatever MFL's
+`OPP_PTS` setting does, which is a league-settings question, not a code one.
+
+**3. Division alignment is per-season too — `resolveConfigForYear` is not
+enough.** It resolves a franchise's historical name/icon/banner/conference but
+NOT its `division`, and every standings surface groups on
+`getTeamConfig().division`. Compose `applyHistoricalDivisions`
+(`src/utils/historical-divisions.ts`) after it, passing that season's
+`league.json`, or an archived year gets grouped by TODAY's map — which had 21 of
+76 TheLeague division-seasons (every year 2007-2015) showing a different winner
+than `franchise-history.json`, and invented divisions for 2007-2010 (the league
+actually ran Pacific/Midwest/Central/Atlantic). The helper is fail-safe: a
+missing or malformed feed leaves the config untouched.
+
+**Division display names go through `divisionAliases`** (in
+`theleague.config.json`, applied by both `applyHistoricalDivisions` and
+`compute-franchise-history.mjs`). MFL's archives call the fourth division
+"Eastern" from 2012 on; the league displays it as "East" (commissioner,
+2026-08-11). Committed archive feeds keep saying "Eastern" even after MFL is
+renamed, so this alias is permanent, not transitional. Anything keyed on a
+division name — notably `DIVISION_BADGES` — keys the DISPLAY name only; retired
+divisions (Pacific/Midwest/Atlantic) are intentionally unbadged so
+`StandingsTable` falls back to a plain header.
+
+**The AFL already had its own version of this** — do NOT port
+`applyHistoricalDivisions` there. `src/utils/afl-structure.ts`
+(`extractSeasonStructure` + `applySeasonStructure`) has resolved the AFL's
+per-season divisions AND conferences from `league.json` for a while, which it
+must: the AFL re-parented divisions, not just renamed them (2003-2012 ran SIX,
+three per conference — North/Central/South American, East/West/Pacific
+National). Every AFL surface that groups by division or conference has to
+compose it after `resolveConfigForYear`, and
+`tests/afl-structure.test.ts` greps both AFL pages to enforce that — a helper
+existing is not the same as a page calling it, which is exactly how
+`/afl-fantasy/playoffs` ended up seeding 12 conference-seasons differently than
+`/afl-fantasy/standings` for the same year.
+
+Two leagues, two helpers, on purpose: TheLeague has no conferences and needs
+`divisionAliases`; the AFL has conferences and doesn't. Merging them would drag
+each league's special case into the other.
+
+Two traps this work surfaced, written up in full under `docs/claude/insights/`:
+a missing `h2hwlt` column parses to `0-0-0` instead of erroring and silently
+erased TheLeague's entire 2022 season (`domains/mfl-api.md`), and owner-scoped
+attribution drops awards won under a slot's previous owner — which reads
+exactly like "defunct franchise" and leads to the wrong fix
+(`features/franchise-history.md`).
+
+
+## AFL playoff brackets — reconstructed games, and ids that lie
+
+MFL's `playoffBracket` export carries seeds only for 2003-2023 — no franchise
+ids, no points — so `/afl-fantasy/playoffs` rendered "Bracket data not
+available" for every season before 2024. The GAMES were never missing:
+`schedule.json` has every playoff week fully scored.
+
+- **`scripts/reconstruct-afl-playoff-brackets.mjs`** walks those weeks as a
+  single-elimination tournament and writes
+  `data/afl-fantasy/derived/reconstructed-playoff-brackets.json` in MFL's own
+  `brackets` shape. The page consults it **only** when the committed feed has
+  no games for a bracket — real MFL data always wins. 20 seasons recovered,
+  every declared postseason bracket in each.
+- **The standings do not always describe the field.** `championshipField` takes
+  the top N of each conference in standings order, which is right for 17 of the
+  19 seasons — but 2004 and 2011 ran six divisions into an eight-team bracket,
+  so division winners took most of the slots and teams outside the top eight
+  qualified ahead of better records. Seeded wrong, the walk finds two of its
+  four opening games and bails. `searchChampionshipField` recovers the field by
+  fingerprinting the bracket's shape against the schedule (pick `teams/2`
+  opening games whose winners pair off into real games the next week, down to
+  one) and accepting a candidate **only** if its final matches the champion AND
+  runner-up on record. 2011 and 2004 are both recovered this way and verified
+  game-for-game against MFL's own bracket pages — 2004 without ever seeing its
+  championship bracket, because the NIT's 16 teams are the exact complement of
+  the championship field.
+  **2003 is permanently unrecoverable** — the league played that season on
+  Yahoo and only standings were entered into MFL, so no game in any week has a
+  score. Don't spend time on it, and don't ask for a screenshot: there is
+  nothing behind it.
+- **The bracket shape is era-dependent.** 2003-2017 bracket "1" IS the 8-team
+  field; 2018+ it is only the 2-team final fed by separate AL/NL brackets.
+  Seeding the modern shape with the old assumption produced the wrong 2019
+  champion during development. `describePlayoffShape` handles this.
+- **Archived schedules contain rounds that aren't valid rounds.** 2012 week 14
+  has an outright `0023 vs 0023` bye row; 2014 and 2015 NIT week 14 each carry
+  a stray matchup pairing two teams already scheduled that week. `pruneRound`
+  drops them — without it, 2012 rendered five quarterfinals, one of them a team
+  playing itself.
+- **Bracket ids do not mean the same thing across seasons.** The NIT is bracket
+  3 in 2005, 4 in 2006, 5 in 2007-2017 and 6 from 2018 on; ids 2/3 are the
+  AL/NL brackets only in the modern era (in 2005 they're the AFL Losers Bracket
+  and the NIT). Classify with `src/utils/afl-bracket-kind.mjs`, never with an id
+  range — the page's old hardcoded `winners = 1-5 / NIT = 6-9` split filed every
+  pre-2018 NIT under the Championship tab and left the NIT tab empty.
+  `tests/afl-bracket-kind.test.ts` runs the classifier over every committed feed
+  and greps the page to stop an id list creeping back in.
+- **The consolation/placement brackets are solved, not seeded.** Their fields
+  are made of losers, so `reconstructConsolation` walks forward consuming the
+  games the championship and NIT walks left behind: an open bracket first claims
+  any game involving a team it still has alive (this is how late entrants join —
+  the AFL Consolation Bracket is 4 quarterfinal losers in week 15 plus the 2
+  semifinal losers in week 16), then whatever remains is grouped by how deep its
+  teams got in the primary bracket and handed to the brackets starting that
+  week, deepest run to the lowest bracket id. That last rule is load-bearing:
+  2005 week 17 starts three different 1-game brackets at once and only
+  elimination depth tells them apart, and they award different draft picks.
+  The correctness proof is that **every scored game in the playoff weeks lands
+  in exactly one bracket** — `tests/afl-reconstructed-brackets.test.ts` asserts
+  it, so a mis-assignment surfaces as a leftover rather than as a plausible
+  wrong bracket.
+
+**Never read a finishing position out of `bracketWinnerTitle`.** The AFL wrote
+custom bracket titles for years ("#1 Pick in 2nd Round", "*NIT 3rd Place or 6th
+Place"), and MFL renders a custom title as a placement it does not mean — which
+is why the league's own results page shows 2005's Da Dangsters in 2nd when they
+finished 3rd (they won the AFL Losers Bracket; 2nd is the title-game loser).
+Only the games are trustworthy. A guard test greps the reconstruction script for
+`bracketWinnerTitle` to keep it out.
+
+Champions are pinned in `tests/afl-reconstructed-brackets.test.ts` against
+three independent sources that agree: `championship-history.json`, the awards
+ledger, and the commissioner's own confirmation of the 2005-2008 results. A
+reconstruction that looks plausible and is wrong is the failure mode here, so
+add fixture pins rather than loosening assertions.
+
+
+## Draft order framing — "predictor" in-season, "official" after playoffs
+
+Both leagues' draft order stops being a prediction the moment its deciding
+games finish, and every surface that names or links the order must match
+the phase — "Draft Predictor / projected" during the regular season,
+"Draft Order / official" once it's locked. The phase is always data-driven
+from the parsed playoff brackets (falls back to "projected" if any bracket
+result can't be resolved):
+
+- **AFL:** projected (season underway) → official once the NIT wraps (both
+  conference champions + all 5 NIT bonus positions; `isDraftOrderFinal` in
+  `src/utils/afl-draft-utils.ts`) → drafted once the late-August conference
+  drafts are conducted (shared `isDraftConducted`, which handles the AFL's
+  two-element `draftUnit` array). `afl-fantasy/draft-predictor.astro`
+  switches its title/subtitle/badge on the phase.
+- **TheLeague:** three phases, because the rookie draft happens mid-spring:
+  projected (season underway) → official (champion + all 3 toilet bowl comp
+  slots settled, draft not yet held) → drafted (picks made; back to
+  predictor framing for the next cycle at Labor Day). Sources of truth:
+  `isLeagueDraftOrderFinal` + `isDraftConducted` in `src/utils/draft-utils.ts`;
+  `theleague/draft-predictor.astro` switches on them. In the drafted phase
+  the "final" view must render the as-drafted results, never the
+  `futureDraftPicks` merge — that snapshot freezes pre-draft and misses
+  later pick trades.
+
+Surfaces that only ever render in one phase can hardcode that phase's
+framing: the AL/NL draft heroes (`afl-hero-resolver.ts`) and the NFL-draft /
+rookie-draft heroes (`league-event-hero-view.ts`) only appear in offseason
+windows where the order is official, so they say "View Draft Order", never
+"predictor". Static copy (nav, page directory, Roger's prompt/seeds) should
+stay phase-neutral or state both phases.
+
