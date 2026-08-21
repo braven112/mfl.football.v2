@@ -291,3 +291,76 @@ component. Any mutation re-weights *sibling* rows, so a handler that updates
 only the row that was clicked leaves the table showing numbers that disagree
 with storage — the store held 31.6/31.7/31.7/5 while the screen showed
 25/25/25/5. Re-read from storage after every change.
+
+---
+
+## 2026-08-21 - Surfacing Rankings on the Decision Pages (and the shared modules that keep both leagues in step)
+
+**Context:** After the built-in sources landed, every owner had six loaded
+boards and a composite "My Rank" — visible only on the Import Rankings page.
+Rankings rendered on TheLeague's Free Agents and Rosters, on neither of the
+AFL's, and on neither league's Set Lineup. Most of the feature's value was
+sitting on a page nobody visits twice.
+
+**Insight:** The integration pattern documented above works, but *copying* it
+into a sibling page is the failure mode, not the fix. `theleague/players.astro`
+and `afl-fantasy/players.astro` are near-identical copies, as are the two
+`lineup.astro` files — the AFL gap existed precisely because the pattern was
+inlined into one sibling. Each surface now goes through one shared module:
+
+| Surface | Module | What it owns |
+|---|---|---|
+| Free Agents (both) | `src/utils/rankings-table.ts` | `initRankingTable()` — injects the ranking `<th>`s, owns the CustomEvent protocol, the sort-click handler, and re-injection on board change |
+| Rosters (both) | `src/utils/rankings-roster-column.ts` | `initRosterRankColumn()` — fills one Rank column from `lookup.columns[0]`, hides it outright when there is no board |
+| Set Lineup (both) | `src/utils/lineup-rankings.ts` | `loadLineupRankings()` / `byRank()` — the owner's top board as `{ available, label, fullName, rank(id) }` |
+
+The page-side call is 5-15 lines; the differences between siblings become
+*arguments* (`maxColumns`, `compositeThClasses`, `visibleDisplay`,
+`afterPopulate`) instead of divergent copies.
+`tests/rankings-page-integration.test.ts` fails the build if a page stops going
+through its module.
+
+### What "useful" means differs by page
+
+- **Free Agents** wants the whole board — you are comparing 900 players, so
+  every source is a column and every column sorts. The AFL mirrors TheLeague's
+  Stats/Rankings view switch (`col-group--stats` / `col-group--rankings` marker
+  classes + `applyGroupVisibility()` after every `render()`), stores its
+  preference under `aflPlayersViewMode`, and accepts `?view=stats|rankings`.
+- **Rosters** wants one column — you already know these players; the question
+  is only "where does my board have him". Header is relabeled with the board's
+  short name so it says *whose* opinion it is.
+- **Set Lineup** wants one rank per candidate, not a table. It is mobile-first
+  and one decision at a time, so the rank lands in the replacement sheet next
+  to each eligible player, plus on the current-starter card for the direct
+  comparison. The static "by Projection" label became the sort toggle
+  (projection ⇄ your board); unranked players stay last in both orders.
+
+**Gotchas this shook out:**
+
+1. **`onRankingsChanged` was TheLeague-only across tabs.** Its `storage`
+   listener compared `e.key === 'rankings.imports'`, so a scoped key
+   (`rankings.imports.afl`) never matched. Now goes through
+   `isImportsStorageKey()` exported from `rankings-storage.ts` — the base key
+   stays in one file.
+2. **A module script can miss `rankings:page-ready`.** The inline classic
+   script fires it during parse; the module script only exists after parse.
+   `initRankingTable()` probes once via `queueMicrotask` instead of relying on
+   the ClientRouter's `astro:page-load` as the sole rescue. The AFL page also
+   fires `rankings:page-ready` from inside its `bootstrap()`, after `init()`,
+   so the table exists when the columns arrive.
+3. **A `MutationObserver` on the rank column's rows must not use `subtree`.**
+   Populating writes `textContent` into cells one level down; with
+   `subtree: true` that re-triggers the observer forever.
+4. **`afterPopulate` needs to know whether a column exists.** TheLeague's
+   Rosters re-applies GM/Coach visibility after every populate — without a
+   `hasColumn` flag it would un-hide the Rank column in GM mode for an owner
+   who has no board at all.
+5. **No undefined tokens for the ranking tint.** `var(--league-accent-tint)`
+   does not exist; an undefined token renders its fallback in *both* themes, so
+   the AFL page defines `--rank-col-tint` on `.players-table` with a
+   `:global(html.dark)` override rather than a one-sided literal.
+
+**Recommendation:** New surface for rankings? Call the matching module. If none
+fits, add one here rather than inlining — and add its pages to
+`tests/rankings-page-integration.test.ts` so the next sibling can't be missed.

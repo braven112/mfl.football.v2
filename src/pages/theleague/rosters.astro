@@ -12344,84 +12344,28 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   document.addEventListener('astro:page-load', initFaNeedsTabs);
 </script>
 
-<!-- Rankings integration: populates rank column from top imported ranking in localStorage -->
+<!-- Rankings integration: populates rank column from the owner's top board -->
 <script>
-  import { buildRankingLookup, onRankingsChanged } from '../../utils/rankings-lookup';
+  import { initRosterRankColumn } from '../../utils/rankings-roster-column';
 
-  let unsubscribe: (() => void) | null = null;
-
-  function populateRankCells() {
-    const lookup = buildRankingLookup();
-    // Expose on window so the sort function can access it
-    (window as any).__rosterRankingLookup = lookup;
-
-    const topColumn = lookup.columns[0];
-    const headerEl = document.getElementById('rankColHeader');
-
-    // Update header text and tooltip with ranking source name
-    if (headerEl && topColumn) {
-      headerEl.title = topColumn.fullName;
-      // Show source abbreviation as the column header
-      const sortArrow = headerEl.querySelector('.sort-arrow');
-      headerEl.textContent = '';
-      headerEl.append(`${topColumn.header} `, sortArrow || document.createElement('span'));
-      if (sortArrow) sortArrow.className = 'sort-arrow';
-    }
-
-    // If no rankings imported, hide the column
-    const rankCols = document.querySelectorAll('.ranking-col');
-    if (!topColumn) {
-      rankCols.forEach(el => (el as HTMLElement).style.display = 'none');
-      return;
-    }
-
-    const playerRanks = lookup.byImport.get(topColumn.importId);
-    if (!playerRanks) return;
-
-    // Populate rank cells in all visible rows
-    document.querySelectorAll('#rosterTableBody tr[data-player-id]').forEach(row => {
-      const playerId = (row as HTMLElement).dataset.playerId;
-      const cell = row.querySelector('.ranking-cell');
-      if (!cell || !playerId) return;
-
-      const rank = playerRanks.get(playerId);
-      cell.textContent = rank != null ? String(rank) : '—';
-    });
-
-    // Re-apply mode visibility so ranking-col cells respect GM/Coach toggle
-    const currentMode = localStorage.getItem('rosterViewMode') || 'gm';
-    rankCols.forEach(el => {
-      (el as HTMLElement).style.display = currentMode === 'gm' ? 'table-cell' : 'none';
-    });
-  }
-
-  function initRankings() {
-    if (unsubscribe) {
-      unsubscribe();
-      unsubscribe = null;
-    }
-
-    populateRankCells();
-
-    // Re-populate when rankings change (import/delete on another page or tab)
-    unsubscribe = onRankingsChanged(() => populateRankCells());
-
-    // Re-populate after the main script re-renders table rows
-    const observer = new MutationObserver(() => populateRankCells());
-    const tbody = document.getElementById('rosterTableBody');
-    if (tbody) {
-      observer.observe(tbody, { childList: true });
-    }
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initRankings);
-  } else {
-    // Small delay to ensure main script has rendered rows first
-    setTimeout(initRankings, 50);
-  }
-
-  document.addEventListener('astro:page-load', () => setTimeout(initRankings, 50));
+  initRosterRankColumn({
+    rowsSelector: '#rosterTableBody',
+    columnSelector: '.ranking-col',
+    cellSelector: '.ranking-cell',
+    headerSelector: '#rankColHeader',
+    visibleDisplay: 'table-cell',
+    afterPopulate: (lookup, hasColumn) => {
+      // The sort comparator reads the lookup off window (it lives in the page's
+      // own big inline script, which can't import).
+      (window as any).__rosterRankingLookup = lookup;
+      // Rank is a GM-mode column — never let it reappear in Coach mode.
+      if (!hasColumn) return;
+      const mode = localStorage.getItem('rosterViewMode') || 'gm';
+      document.querySelectorAll('.ranking-col').forEach((el) => {
+        (el as HTMLElement).style.display = mode === 'gm' ? 'table-cell' : 'none';
+      });
+    },
+  });
 </script>
 
 <!-- Rankings integration for Potential Targets (FA needs) card in planner view -->

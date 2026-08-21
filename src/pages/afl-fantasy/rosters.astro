@@ -825,6 +825,10 @@ const pageConfig = {
                       <tr>
                         <th data-column="player">Player</th>
                         {isOwner && <th data-column="actions" aria-label="Actions"></th>}
+                        {/* Rankings column — starts hidden and is revealed by the
+                            rankings script only when the owner has a board loaded,
+                            so an owner without one never sees an empty column. */}
+                        <th data-column="rank" class="ranking-col" id="aflRankColHeader" style="display:none">Rank</th>
                         <th data-column="oppRank">Opp #</th>
                         <th data-column="opponent">Opponent</th>
                         <th data-column="ou">O/U</th>
@@ -892,6 +896,7 @@ const pageConfig = {
                           </button>
                         </td>
                       )}
+                      <td data-column="rank" class="ranking-col ranking-cell" style="display:none"></td>
                       <td data-column="oppRank">
                         {oppRank != null ? (
                           <span class={`rank-badge rank-tier-${tier}`}>#{oppRank}</span>
@@ -1460,6 +1465,22 @@ const pageConfig = {
     else document.addEventListener('DOMContentLoaded', initAflRosterPage);
   </script>
 
+  <!-- Rankings integration: fills the Rank column from the owner's top board -->
+  <script>
+    import { initRosterRankColumn } from '../../utils/rankings-roster-column';
+
+    initRosterRankColumn({
+      // One tbody per roster section (Active Roster, Injured Reserve).
+      rowsSelector: '.roster-table--afl tbody',
+      columnSelector: '.roster-table--afl .ranking-col',
+      cellSelector: '.ranking-cell',
+      // Label the column with the board it's showing ("My Rank", "MFL", …) —
+      // a bare "Rank" doesn't say whose opinion it is.
+      headerSelector: '#aflRankColHeader',
+      visibleDisplay: 'table-cell',
+    });
+  </script>
+
   <style>
     /* ────────────────────────────────────────────────────────────────
        AFL roster page — matches TheLeague's roster page visual language
@@ -1817,6 +1838,13 @@ const pageConfig = {
       font-weight: 600;
     }
 
+    .roster-table th[data-column="rank"] { width: 68px; text-align: right; }
+    .roster-table td[data-column="rank"] {
+      text-align: right;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+      color: var(--color-gray-500, #6b7280);
+    }
     .roster-table th[data-column="oppRank"] { width: 64px; }
     .roster-table th[data-column="opponent"] { width: 96px; }
     .roster-table th[data-column="ou"] { width: 56px; text-align: right; }

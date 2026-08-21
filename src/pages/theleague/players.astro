@@ -2752,139 +2752,21 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
 <!-- Rankings integration: dynamically injects ranking columns from localStorage imports -->
 <script>
-  import { buildRankingLookup, onRankingsChanged } from '../../utils/rankings-lookup';
+  import { initRankingTable } from '../../utils/rankings-table';
 
-  let unsubscribe: (() => void) | null = null;
-
-  /** Dispatch a CustomEvent on document (synchronous). */
-  function emit(name: string, detail?: Record<string, unknown>) {
-    document.dispatchEvent(new CustomEvent(name, { detail: detail ?? {} }));
-  }
-
-  /** Read current sort state from the inline script via synchronous CustomEvent. */
-  function getSortState(): { currentSort: string; descDefaults: Set<string> } {
-    const detail: Record<string, unknown> = {};
-    document.dispatchEvent(new CustomEvent('rankings:get-sort', { detail }));
-    return {
-      currentSort: detail.currentSort as string,
-      descDefaults: detail.descDefaults as Set<string>,
-    };
-  }
-
-  function injectRankingColumns() {
-    const lookup = buildRankingLookup();
-
-    // Query the rostered toggle state to determine max visible ranking columns.
-    // More columns fit when only free agents are shown (fewer data columns visible).
-    const rosteredDetail: Record<string, unknown> = {};
-    document.dispatchEvent(new CustomEvent('rankings:get-rostered-state', { detail: rosteredDetail }));
-    const maxRankingCols = rosteredDetail.showRostered ? 5 : 8;
-    const limitedColumns = lookup.columns.slice(0, maxRankingCols);
-    const limitedLookup = { ...lookup, columns: limitedColumns };
-
-    // Tell the inline script about the new lookup and whether ranking columns exist
-    const hasComposite = limitedLookup.columns.some((c: any) => c.isComposite);
-    emit('rankings:set-lookup', { lookup: limitedLookup, hasColumns: limitedLookup.columns.length > 0, hasComposite });
-
-    // Remove any previously injected ranking <th> elements
-    document.querySelectorAll('.players-table th[data-ranking-col]').forEach(th => th.remove());
-
-    if (limitedColumns.length === 0) {
-      emit('rankings:refilter');
-      return;
-    }
-
-    // Find the Wt header to insert ranking columns after it
-    const headerRow = document.querySelector('.players-table thead tr');
-    if (!headerRow) return;
-
-    const anchorTh = headerRow.querySelector('[data-sort="weight"]');
-    if (!anchorTh) return;
-
-    // Insert ranking <th> elements in reverse order (so they end up in correct order after anchor)
-    const columnsReversed = [...limitedColumns].reverse();
-    for (const col of columnsReversed) {
-      const th = document.createElement('th');
-      th.className = 'sortable col-num col-group--rankings';
-      th.dataset.sort = `ranking_${col.importId}`;
-      th.dataset.rankingCol = 'true';
-
-      if (col.isComposite) {
-        th.classList.add('col-ranking-composite', 'col-my-rank', 'col-group--value');
-        const memberCount = limitedColumns.filter((c: any) => c.isCompositeMember).length;
-        th.title = `My Rank — weighted composite of ${memberCount} ranking sources`;
-      } else if (col.isAverage) {
-        th.classList.add('col-ranking-avg');
-        th.title = `Average Rank across ${limitedColumns.length - 1} imports`;
-      } else {
-        th.title = `${col.fullName} (${col.playerCount} players)`;
-      }
-
-      if (col.isLastCompositeMember) {
-        th.classList.add('col-ranking-member-last');
-      }
-
-      th.innerHTML = `<div class="th-content">${col.header}</div>`;
-
-      // Sort click handler
-      th.addEventListener('click', () => {
-        const sortKey = `ranking_${col.importId}`;
-        const { currentSort } = getSortState();
-        if (sortKey === currentSort) {
-          // Toggle direction — check current arrow to determine state
-          const arrow = th.querySelector('.sort-arrow');
-          const wasAsc = arrow && arrow.textContent === '\u25B2';
-          emit('rankings:set-sort', { key: sortKey, dir: wasAsc ? 'desc' : 'asc' });
-        } else {
-          // Ranking columns default to ascending (rank 1 = best at top)
-          emit('rankings:set-sort', { key: sortKey, dir: 'asc' });
-        }
-        emit('rankings:refresh-table');
-      });
-
-      anchorTh.after(th);
-    }
-
-    // Re-render with the new columns
-    emit('rankings:refilter');
-  }
-
-  function initRankings() {
-    // Clean up previous subscription
-    if (unsubscribe) {
-      unsubscribe();
-      unsubscribe = null;
-    }
-
-    injectRankingColumns();
-
-    // Subscribe to ranking changes (import/delete on another page or tab)
-    unsubscribe = onRankingsChanged(() => {
-      injectRankingColumns();
-    });
-
-    // Re-inject columns when rostered toggle changes (column limit differs)
-    document.addEventListener('rankings:rostered-changed', () => {
-      injectRankingColumns();
-    });
-  }
-
-  // Listen for the inline script's ready signal
-  document.addEventListener('rankings:page-ready', () => initRankings());
-
-  // Also handle Astro page transitions
-  document.addEventListener('astro:page-load', () => {
-    // On page load via Astro transitions, the inline script re-runs and fires
-    // rankings:page-ready — but if this module script was already loaded and the
-    // event was missed, try init after a microtask.
-    queueMicrotask(() => {
-      // Check if the page script is ready by dispatching get-sort and seeing if it responds
+  initRankingTable({
+    tableSelector: '.players-table',
+    anchorSelector: '[data-sort="weight"]',
+    // More ranking columns fit when only free agents are shown, because the
+    // contract columns are hidden then. The inline script owns that toggle.
+    maxColumns: () => {
       const detail: Record<string, unknown> = {};
-      document.dispatchEvent(new CustomEvent('rankings:get-sort', { detail }));
-      if (detail.currentSort !== undefined) {
-        initRankings();
-      }
-    });
+      document.dispatchEvent(new CustomEvent('rankings:get-rostered-state', { detail }));
+      return detail.showRostered ? 5 : 8;
+    },
+    // My Rank doubles as the Value view's ranking column.
+    compositeThClasses: ['col-my-rank', 'col-group--value'],
+    reinjectOn: ['rankings:rostered-changed'],
   });
 </script>
 

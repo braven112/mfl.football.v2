@@ -965,7 +965,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
         <div class="lineup-cdm__replacements">
           <div class="lineup-cdm__replacements-header">
             <h3 class="section-title">Eligible Replacements</h3>
-            <span class="lineup-cdm__sort-label" id="cdm-sort-label">by Projection</span>
+            <button type="button" class="lineup-cdm__sort-label" id="cdm-sort-toggle" aria-label="Sort eligible replacements">by Projection</button>
           </div>
           <div class="lineup-cdm__table-scroll">
             <table class="lineup-cdm__table" aria-label="Available replacement players">
@@ -996,6 +996,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     import { buildPlayerCellHTML } from '../../utils/player-cell-html';
     import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD } from '../../constants/roster-constants';
     import { resolveSubmitButtonState } from '../../utils/lineup-submit-state';
+    import { loadLineupRankings, byRank, onRankingsChanged } from '../../utils/lineup-rankings';
 
     // ---------------------------------------------------------------------------
     // State
@@ -1025,6 +1026,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     const cdmCurrent = document.getElementById('cdm-current-starter')!;
     const cdmThead = document.getElementById('cdm-thead')!;
     const cdmTbody = document.getElementById('cdm-tbody')!;
+    const cdmSortToggle = document.getElementById('cdm-sort-toggle') as HTMLButtonElement;
     const announcer = document.getElementById('lineup-announcer')!;
     const toastEl = document.getElementById('lineup-toast')!;
     const toastText = document.getElementById('lineup-toast-text')!;
@@ -1034,6 +1036,15 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     const statusEl = document.getElementById('lineup-status')!;
 
     let activeSlotIndex: number | null = null;
+
+    // ── Rankings ──
+    // The owner's top board (composite "My Rank" when they've built one), shown
+    // next to each candidate so the start/sit call has more than a projection
+    // behind it. Scoped to this league by rankings-scope.ts, via the helper.
+    let rankings = loadLineupRankings();
+    // Which order the candidate list is in. Projection is the in-season default;
+    // rank is the "who's the better player" read.
+    let cdmSort: 'projection' | 'rank' = 'projection';
 
     // ---------------------------------------------------------------------------
     // Helpers
@@ -1267,45 +1278,39 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     // ---------------------------------------------------------------------------
     // CDM (bottom sheet / modal)
     // ---------------------------------------------------------------------------
-    function openCDM(slotIndex: number) {
-      activeSlotIndex = slotIndex;
+    /**
+     * The sort control doubles as the label for how the list is ordered. With
+     * no board loaded there is nothing to switch to, so it stays a plain label.
+     */
+    function updateSortToggle() {
+      if (!cdmSortToggle) return;
+      const sortingByRank = cdmSort === 'rank' && rankings.available;
+      cdmSortToggle.textContent = sortingByRank ? `by ${rankings.label}` : 'by Projection';
+      cdmSortToggle.disabled = !rankings.available;
+      cdmSortToggle.classList.toggle('lineup-cdm__sort-label--interactive', rankings.available);
+      cdmSortToggle.title = rankings.available
+        ? `Sorted ${sortingByRank ? `by ${rankings.fullName}` : 'by projection'} — tap to switch`
+        : '';
+    }
+
+    function toggleCdmSort() {
+      if (!rankings.available) return;
+      cdmSort = cdmSort === 'rank' ? 'projection' : 'rank';
+      haptic('light');
+      if (activeSlotIndex !== null) renderCdmList(activeSlotIndex);
+      updateSortToggle();
+      announce(cdmSort === 'rank'
+        ? `Sorted by ${rankings.fullName}.`
+        : 'Sorted by projection.');
+    }
+
+    /**
+     * Build the eligible-replacement list for a slot. Split out of openCDM so
+     * the sort toggle can re-order the list in place without re-opening the
+     * sheet. Returns how many candidates there are.
+     */
+    function renderCdmList(slotIndex: number): number {
       const slot = currentSlots[slotIndex];
-      const currentPlayer = getPlayer(slot.playerId);
-      previousFocus = document.activeElement as HTMLElement;
-
-      const slotEl = slotsContainer.children[slotIndex] as HTMLElement;
-      slotEl?.classList.add('lineup-slot--active');
-
-      // Current starter card
-      if (currentPlayer) {
-        const cell = buildPlayerCellHTML({
-          name: currentPlayer.name,
-          headshot: currentPlayer.headshot,
-          position: currentPlayer.position,
-          nflTeam: currentPlayer.nflTeam,
-          mflId: currentPlayer.id,
-          espnId: currentPlayer.espnId,
-          size: 'compact',
-        });
-        cdmCurrent.innerHTML = `
-          <h3 class="lineup-cdm__section-title section-title">Current Starter</h3>
-          <div class="lineup-cdm__current-card">
-            ${cell}
-            <div class="lineup-cdm__current-stats">
-              ${currentPlayer.projection != null ? `<span class="lineup-cdm__stat"><strong>${currentPlayer.projection.toFixed(1)}</strong> proj</span>` : ''}
-              ${currentPlayer.last3Avg != null ? `<span class="lineup-cdm__stat">${currentPlayer.last3Avg.toFixed(1)} L3</span>` : ''}
-              ${currentPlayer.seasonAvg != null ? `<span class="lineup-cdm__stat">${currentPlayer.seasonAvg.toFixed(1)} avg</span>` : ''}
-            </div>
-          </div>
-        `;
-      } else {
-        cdmCurrent.innerHTML = `
-          <h3 class="lineup-cdm__section-title section-title">Current Starter</h3>
-          <div class="lineup-cdm__current-card lineup-cdm__current-card--empty">
-            <span>No player assigned</span>
-          </div>
-        `;
-      }
 
       // Eligible replacements
       const usedIds = new Set(currentSlots.map(s => s.playerId).filter(Boolean));
@@ -1327,10 +1332,16 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
           '| sample:', data.roster.slice(0, 5).map((p: any) => ({ name: p.name, pos: p.position, slots: p.eligibleSlots, locked: p.gameLocked })));
       }
 
-      eligible.sort((a: any, b: any) => (b.projection ?? 0) - (a.projection ?? 0));
+      if (cdmSort === 'rank' && rankings.available) {
+        eligible.sort(byRank(rankings));
+      } else {
+        eligible.sort((a: any, b: any) => (b.projection ?? 0) - (a.projection ?? 0));
+      }
+      updateSortToggle();
 
       cdmThead.innerHTML = `<tr>
         <th class="cdm-th cdm-th--player">Player</th>
+        ${rankings.available ? `<th class="cdm-th cdm-th--num cdm-th--rank" title="${esc(rankings.fullName)}">${esc(rankings.label)}</th>` : ''}
         <th class="cdm-th cdm-th--num">FPA</th>
         <th class="cdm-th cdm-th--num">Proj</th>
         <th class="cdm-th cdm-th--num">L3</th>
@@ -1376,6 +1387,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
 
         return `<tr class="cdm-row" role="option" tabindex="${i === 0 ? '0' : '-1'}" data-player-id="${esc(p.id)}" aria-selected="false">
           <td class="cdm-td cdm-td--player">${cell}${matchupHtml}</td>
+          ${rankings.available ? `<td class="cdm-td cdm-td--num cdm-td--rank">${rankings.rank(p.id) ?? '-'}</td>` : ''}
           <td class="cdm-td cdm-td--num ${fpaClass}">${esc(fpaRank)}</td>
           <td class="cdm-td cdm-td--num cdm-td--proj">${p.projection != null ? p.projection.toFixed(1) : '-'}</td>
           <td class="cdm-td cdm-td--num">${p.last3Avg != null ? p.last3Avg.toFixed(1) : '-'}</td>
@@ -1383,11 +1395,57 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
         </tr>`;
       }).join('');
 
+      return eligible.length;
+    }
+
+    function openCDM(slotIndex: number) {
+      activeSlotIndex = slotIndex;
+      const slot = currentSlots[slotIndex];
+      const currentPlayer = getPlayer(slot.playerId);
+      previousFocus = document.activeElement as HTMLElement;
+
+      const slotEl = slotsContainer.children[slotIndex] as HTMLElement;
+      slotEl?.classList.add('lineup-slot--active');
+
+      // Current starter card
+      if (currentPlayer) {
+        const cell = buildPlayerCellHTML({
+          name: currentPlayer.name,
+          headshot: currentPlayer.headshot,
+          position: currentPlayer.position,
+          nflTeam: currentPlayer.nflTeam,
+          mflId: currentPlayer.id,
+          espnId: currentPlayer.espnId,
+          size: 'compact',
+        });
+        cdmCurrent.innerHTML = `
+          <h3 class="lineup-cdm__section-title section-title">Current Starter</h3>
+          <div class="lineup-cdm__current-card">
+            ${cell}
+            <div class="lineup-cdm__current-stats">
+              ${rankings.available && rankings.rank(currentPlayer.id) != null ? `<span class="lineup-cdm__stat lineup-cdm__stat--rank" title="${esc(rankings.fullName)}">#${rankings.rank(currentPlayer.id)} ${esc(rankings.label)}</span>` : ''}
+              ${currentPlayer.projection != null ? `<span class="lineup-cdm__stat"><strong>${currentPlayer.projection.toFixed(1)}</strong> proj</span>` : ''}
+              ${currentPlayer.last3Avg != null ? `<span class="lineup-cdm__stat">${currentPlayer.last3Avg.toFixed(1)} L3</span>` : ''}
+              ${currentPlayer.seasonAvg != null ? `<span class="lineup-cdm__stat">${currentPlayer.seasonAvg.toFixed(1)} avg</span>` : ''}
+            </div>
+          </div>
+        `;
+      } else {
+        cdmCurrent.innerHTML = `
+          <h3 class="lineup-cdm__section-title section-title">Current Starter</h3>
+          <div class="lineup-cdm__current-card lineup-cdm__current-card--empty">
+            <span>No player assigned</span>
+          </div>
+        `;
+      }
+
+      const eligibleCount = renderCdmList(slotIndex);
+
       cdmEl.ariaHidden = 'false';
       cdmEl.classList.add('lineup-cdm--open');
       document.body.style.overflow = 'hidden';
 
-      announce(`Choose replacement for ${slot.position} slot. ${eligible.length} players available.`);
+      announce(`Choose replacement for ${slot.position} slot. ${eligibleCount} players available.`);
 
       setTimeout(() => {
         const firstRow = cdmTbody.querySelector('.cdm-row') as HTMLElement;
@@ -1675,6 +1733,17 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
 
     cdmOverlay.addEventListener('click', closeCDM);
     cdmClose.addEventListener('click', closeCDM);
+    cdmSortToggle?.addEventListener('click', toggleCdmSort);
+
+    // The owner can import or re-weight a board in another tab while this page
+    // is open — pick the new one up rather than showing a stale column.
+    onRankingsChanged(() => {
+      rankings = loadLineupRankings();
+      if (!rankings.available) cdmSort = 'projection';
+      updateSortToggle();
+      if (activeSlotIndex !== null) renderCdmList(activeSlotIndex);
+    });
+    updateSortToggle();
 
     cdmTbody.addEventListener('click', (e) => {
       const row = (e.target as HTMLElement).closest('.cdm-row') as HTMLElement;
@@ -2511,11 +2580,46 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
 
   .lineup-cdm__replacements-header .section-title { margin: 0; }
 
+  /* Doubles as the sort control once the owner has a ranking board — a plain
+     label until then, so it never advertises a switch that does nothing. */
   .lineup-cdm__sort-label {
     font-size: 0.6875rem;
     color: var(--color-gray-500, #6b7280);
     font-style: italic;
+    background: none;
+    border: 0;
+    padding: 0;
+    font-family: inherit;
+    text-align: right;
   }
+
+  .lineup-cdm__sort-label--interactive {
+    cursor: pointer;
+    font-style: normal;
+    font-weight: 600;
+    color: var(--color-primary, #1c497c);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    /* Comfortable tap target without visually growing the row. */
+    padding: 0.35rem 0.25rem;
+    margin: -0.35rem -0.25rem;
+  }
+
+  .lineup-cdm__sort-label--interactive:hover {
+    color: var(--color-primary-dark, #15385f);
+  }
+
+  .lineup-cdm__stat--rank {
+    font-weight: 600;
+    color: var(--color-primary, #1c497c);
+  }
+
+  .cdm-th--rank,
+  .cdm-td--rank {
+    color: var(--color-primary, #1c497c);
+  }
+
+  .cdm-td--rank { font-weight: 600; }
 
   .lineup-cdm__table {
     width: 100%;

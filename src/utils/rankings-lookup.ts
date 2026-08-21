@@ -24,7 +24,12 @@ import type {
   RankingType,
   StoredRankingImport,
 } from '../types/rankings-import';
-import { getAllImports, getAveragePosition, getCompositeConfig } from './rankings-storage';
+import {
+  getAllImports,
+  getAveragePosition,
+  getCompositeConfig,
+  isImportsStorageKey,
+} from './rankings-storage';
 
 /** Synthetic importId used for the computed average rank column. */
 export const AVERAGE_IMPORT_ID = '__average__';
@@ -377,9 +382,10 @@ export function onRankingsChanged(callback: () => void): () => void {
   const handleCustomEvent = () => callback();
 
   const handleStorageEvent = (e: StorageEvent) => {
-    if (e.key === 'rankings.imports') {
-      callback();
-    }
+    // Match any league's bucket, not just TheLeague's bare key — the scoped
+    // keys are `rankings.imports.afl`, `.bb1`, … and a bare-key check made
+    // cross-tab updates a TheLeague-only feature.
+    if (isImportsStorageKey(e.key)) callback();
   };
 
   window.addEventListener('rankingsUpdated', handleCustomEvent);

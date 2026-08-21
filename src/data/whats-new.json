@@ -1,5 +1,26 @@
 [
   {
+    "id": "rankings-on-the-decision-pages",
+    "date": "2026-08-21",
+    "category": "enhancement",
+    "icon": "rank",
+    "title": "Your Board Follows You to the Lineup Sheet",
+    "summary": "Tap a lineup slot and every eligible replacement now shows up with a rank beside its projection — plus the rank of the starter you'd be benching. Free Agents and Rosters carry your board too, in both leagues now.",
+    "description": [
+      "Six sources loaded, weights tuned, a composite My Rank sitting there looking sharp — and then you opened the page where you actually pick someone, and none of it was there. That was most of a feature missing.",
+      "Set Lineup is the one that changes the most, and it's the one built for a phone. Tap a slot and the sheet of eligible replacements now carries a rank next to each name, with your current starter's rank on the card above it — so “start the guy projected for 1.3 more points” becomes a call with a second opinion attached. That little “by Projection” line at the top of the list is now a switch: tap it and the candidates reorder by your board instead, tap it again and they go back. Unranked players stay at the bottom either way, so nobody's kicker jumps the queue.",
+      "Over in the AFL, Free Agents and Rosters finally caught up to what The League has had for a while. Free Agents gets a View switch above the table — Stats keeps the columns you know, Rankings swaps in your whole board with My Rank first, then the sources feeding it, then the rest — and it opens sorted by My Rank, best first, because that's the order you were going to put it in anyway. Every column sorts. Rosters gets one column next to each player, labeled with whose opinion it is: My Rank when you've built a composite, otherwise whatever board sits at the top of your list.",
+      "If you haven't loaded a board, none of this appears — no empty column, no dead toggle, nothing new to ignore. And the boards stay where you built them: your read on a player in one league is still a completely separate opinion from your read on him in the other."
+    ],
+    "image": "rankings-decision-pages.webp",
+    "imageAlt": "The AFL Free Agents table in Rankings view — a View switch set to Rankings above the table, and columns for My Rank, MFL ADP, ESPN, FantasySharks, Avg, FantasyCalc, Sleeper ADP and ESPN Superflex beside each available player, sorted by My Rank.",
+    "excludeFromHero": true,
+    "leagues": [
+      "afl",
+      "theleague"
+    ]
+  },
+  {
     "id": "built-in-rankings-2026-08-21",
     "date": "2026-08-21",
     "category": "new-feature",
