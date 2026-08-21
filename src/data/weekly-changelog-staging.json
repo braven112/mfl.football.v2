@@ -56,6 +56,14 @@
       "impact": "user",
       "area": "design-system",
       "league": "both"
+    },
+    {
+      "date": "2026-08-21",
+      "type": "bug-fix",
+      "summary": "On a phone, the two sides of a Live Scoring matchup never quite agreed on where a player's points sat — a name that wrapped onto a second line pushed its score down a hair, a name that didn't left it where it was, and the two columns read as slightly out of step all the way down. Worse on a narrow phone, where a name like Mike Washington Jr. needs three lines and drops that score a full line below his opponent's. Both sides of a matchup now share their rows outright, so a longer name, a wrapping box-score line, or a red-zone flag grows the row for both players at once and the numbers stay level. The box-score detail also moved below the score line rather than above it, which is where you'd look for it.",
+      "impact": "user",
+      "area": "live-scoring",
+      "league": "both"
     }
   ]
 }

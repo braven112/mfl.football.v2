@@ -64,6 +64,27 @@ which is exactly why the split exists — verify parsing offline against
   idempotent — no seen-set to drift. It dedupes per `playId:franchiseId`, since
   a TD credits the scorer AND the kicker and an owner starting both saw the row
   twice.
+- **Bench rows travel in their OWN map, never in `players` with a status flag.**
+  Everything downstream reads `players` as "the rows that score this matchup":
+  `computeTeam` sums each row's remaining projection into the team's projected
+  final and counts it in "yet to play", `winProbability` follows from that, and
+  `buildMoments` credits a scoring play to whoever is listed. A bench row in
+  there inflates every projection and win-probability bar on the board with
+  points that cannot be scored, and puts bench touchdowns in a matchup ticker.
+  `/api/live-scoring` therefore returns a separate `bench` map and a caller has
+  to opt in (`LiveScoringResponse.bench` → `LiveScoringData.bench` →
+  `LiveScoringPageProps.initialBench`). A row MFL does not confirm as
+  `nonstarter` is treated as a STARTER — dropping a real starter silently
+  subtracts his points, which is far worse than one extra row. A franchise with
+  no bench is ABSENT from the map, so the island renders no disclosure control
+  rather than one that opens onto nothing.
+- **`res.ok` is not "the data is good" on our OWN routes either.**
+  `/api/live-scoring` answers 200 with `ok: false` and empty collections when
+  the upstream MFL call fails, and `{}` is truthy — so `if (data.players)` is
+  not a guard, it is always taken. Gating on it wiped every score and player row
+  off a live board while the freshness pill still reported the poll healthy.
+  Both halves gate on the flag: `assembleLiveScoringData` on
+  `snapshot?.ok !== false`, the island's poller on `data.ok === false`.
 - **DEF/ST gets no stat line, deliberately.** `boxscore.players` is athlete-keyed
   and MFL's 32 defenses carry no `espn_id`, so there is no join key even in
   principle. Deriving one from the opposing team's totals needs each league's

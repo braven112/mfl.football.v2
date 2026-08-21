@@ -247,3 +247,72 @@ starter), but the cross-cutting residual is unfixable without deleting the
 Final/Live board mix (matchups span too many NFL teams to finish together). The
 product owner chose the mix over strip consistency for this offseason-only,
 badged sample. See the big comment at the `doneFids` block.
+
+---
+
+## 2026-08-21 - Bench rows travel in their OWN map, never in `players` with a status flag
+
+**Context:** Adding the bench to the matchup detail. MFL's `liveScoring`
+`DETAILS=1` payload carries the whole roster with a `status` of
+`starter` / `nonstarter`; the route had been filtering nonstarters out.
+
+**Insight:** The obvious change — keep every row and let the UI filter on
+`status` — is the wrong one, and the reason is that **every existing consumer of
+`players` treats a row as scoring for the matchup**:
+
+- `computeTeam` sums each row's remaining projection into the team's projected
+  final and counts it toward "yet to play";
+- `winProbability` follows from that projected final;
+- `buildMoments` credits a scoring play to whoever appears in the map.
+
+So a bench row inside `players` inflates every projection and win-probability
+bar on the board with points that cannot be scored, and puts bench touchdowns in
+a matchup ticker. `/api/live-scoring` therefore returns a separate `bench` map,
+and a caller has to opt in. `LiveScoringResponse.bench`, `LiveScoringData.bench`
+and `LiveScoringPageProps.initialBench` all carry the split end to end.
+
+Details that are load-bearing rather than tidy:
+
+- **A row MFL doesn't confirm as `nonstarter` is treated as a STARTER** — the
+  same direction the old filter erred in. Dropping a real starter silently
+  subtracts his points from the team total, which is far worse than one extra
+  row among the starters.
+- **A franchise with no bench is ABSENT from the map, not an empty array**, so
+  the island renders no disclosure control rather than one that opens onto
+  nothing.
+- **`playerMeta` must be resolved for both maps in one pass.** The bench renders
+  the same `PlayerRow`, so a bench id missing from `playerMeta` doesn't degrade
+  gracefully — it prints "Unknown Player" with no headshot, logo or team code,
+  which is the whole row.
+- **The poll writes `bench` under the same guard as `players`, then defaults to
+  `{}`.** The guard answers "did this payload carry rosters at all" (an outage
+  has neither map, and clearing on one would empty the board mid-Sunday); given
+  rosters, a *missing* bench is a real answer — a franchise can start its whole
+  roster, and a drop can empty a bench that had rows a poll ago.
+
+`tests/live-scoring-bench.test.ts` drives the real route handler with `fetch`
+stubbed and asserts on the returned JSON. That level matters: the split is a
+`push` into one of two arrays, so inverting the condition or concatenating the
+maps at the response boundary leaves the source looking exactly as it does now.
+Verified by injecting the regression — 4 of 8 cases fail.
+
+## 2026-08-21 - The offseason sample needs a bench too, or the feature is invisible
+
+Both sample builders in `src/data/live-scoring-sample.ts` carry `bench`, because
+the page auto-falls back to the sample whenever MFL's feed is empty — which is
+every day between February and kickoff, i.e. exactly when someone is most likely
+to be looking at a newly-built feature.
+
+- **The replay derives the bench by SUBTRACTING the starters CSV from the week's
+  scored players**, not by reading a `status` field. `weeklyResults` labels rows
+  inconsistently across archived seasons, whereas the starters CSV is the same
+  list the league's own results page renders — so subtracting from it cannot
+  disagree with the lineup rendered directly above the bench.
+- **Bench rows run through the SAME NFL-game phase math as the starters** (the
+  forced-final override, the partial-progress fraction). Phasing them
+  independently would show a bench player Final while his teammate in the lineup
+  was still playing.
+- **Team scores stay starters-only in both samples** — `rows`, never
+  `[...rows, ...benchRows]`. This is the sample's copy of the invariant above,
+  and getting it wrong makes the demo board disagree with the real one about
+  what a team is scoring.

@@ -70,6 +70,13 @@ export interface LiveScoringSample {
   scores: Record<string, number>;
   remaining: Record<string, number>;
   players: Record<string, LivePlayerRow[]>;
+  /**
+   * Per-franchise BENCH rows. Kept out of `players` for the same reason the
+   * live API keeps them out: every consumer of `players` scores its rows into
+   * the matchup, so a bench row there would inflate the sample's projections
+   * and win-probability bars exactly as it would inflate a real week's.
+   */
+  bench: Record<string, LivePlayerRow[]>;
   playersYetToPlay: Record<string, number>;
   playerMeta: Record<string, PlayerMeta>;
   nflGames: NflGame[];
@@ -161,6 +168,13 @@ interface FinalWeek {
   matchups: MatchupPairing[];
   /** franchiseId → real starters (may be empty if the feed didn't cover a team). */
   lineups: Record<string, StarterSeed[]>;
+  /**
+   * franchiseId → the players who were ON THE ROSTER but not started that week.
+   * Read from the same `f.player[]` rows the scores come from, so these are
+   * real bench players with the real points they really scored — the replay
+   * shows the bench exactly as it was, second-guesses included.
+   */
+  benches: Record<string, StarterSeed[]>;
 }
 
 /**
@@ -199,6 +213,7 @@ function resolveFinalRegularSeasonWeek(dataPath: string): FinalWeek | null {
 
     const matchups: MatchupPairing[] = [];
     const lineups: Record<string, StarterSeed[]> = {};
+    const benches: Record<string, StarterSeed[]> = {};
     let wellFormed = true;
     let totalFranchises = 0;
     let scoredFranchises = 0;
@@ -229,6 +244,16 @@ function resolveFinalRegularSeasonWeek(dataPath: string): FinalWeek | null {
         // player scores, which must NOT count as played.
         if (starterIds.length > 0 && scoreById.size > 0) scoredFranchises += 1;
         lineups[f.id] = starterIds.map((id) => ({ id, live: scoreById.get(id) ?? 0 }));
+        // The bench is every scored player who is NOT in the starters CSV.
+        // Derived by subtraction rather than read from a `status` field
+        // because weeklyResults labels rows inconsistently across archived
+        // seasons, whereas the starters CSV is the same list the league's own
+        // results page renders — so subtracting from it can't disagree with
+        // the lineup shown directly above the bench.
+        const startedIds = new Set(starterIds);
+        benches[f.id] = [...scoreById.entries()]
+          .filter(([id]) => !startedIds.has(id))
+          .map(([id, live]) => ({ id, live }));
         if (String(f.isHome) === '1') home = f.id;
         else if (String(f.isHome) === '0') away = f.id;
       }
@@ -242,7 +267,7 @@ function resolveFinalRegularSeasonWeek(dataPath: string): FinalWeek | null {
     if (!wellFormed || scoredFranchises === 0 || scoredFranchises < totalFranchises - 2) {
       continue;
     }
-    return { year, week, matchups, lineups };
+    return { year, week, matchups, lineups, benches };
   }
 
   return null;
@@ -394,7 +419,7 @@ export function getLiveScoringSample(
   // "scores will appear" state) rather than throwing on the page.
   if (!final) {
     return {
-      week: 1, matchups: [], scores: {}, remaining: {}, players: {},
+      week: 1, matchups: [], scores: {}, remaining: {}, players: {}, bench: {},
       playersYetToPlay: {}, playerMeta: {}, nflGames: [],
       detail: { boxScore: {}, plays: [] },
     };
@@ -402,6 +427,7 @@ export function getLiveScoringSample(
 
   const { year, week } = final;
   const players: Record<string, LivePlayerRow[]> = {};
+  const bench: Record<string, LivePlayerRow[]> = {};
   const playerMeta: Record<string, PlayerMeta> = {};
   const scores: Record<string, number> = {};
   const remaining: Record<string, number> = {};
@@ -507,6 +533,58 @@ export function getLiveScoringSample(
     }
 
     players[fid] = rows;
+
+    // Bench rows run through the SAME phase math as the starters — the same
+    // forced-final override, the same partial-progress fraction — so a bench
+    // player's clock and points agree with the starter beside him on the same
+    // NFL team. Phasing them independently would show a bench player Final
+    // while his teammate in the lineup was still playing.
+    //
+    // No `hot` roll and no boom here: the projection is simply the real final
+    // (0 once his game is over), because the bench's job in the sample is to
+    // be readable, not to compete with the lineup for attention.
+    const benchRows: LivePlayerRow[] = [];
+    for (const seed of final.benches[fid] ?? []) {
+      const m = getPlayer(year, seed.id);
+      if (!m) continue;
+      const nflTeam = m.nflTeam ?? '';
+      const phase = doneFids.has(fid)
+        ? FINAL_PHASE
+        : (byTeam.get(normalizeTeamCode(nflTeam)) ?? FINAL_PHASE);
+      const isDone = phase.state === 'post';
+      const finalPts = round2(seed.live);
+      const live = isDone ? finalPts : round2(finalPts * phase.progress);
+      // STARTERS OWN THE ENTRY. `playerMeta` is one map across every franchise,
+      // and in the AFL (`duplicatePlayers: true`) the same player is routinely
+      // a starter for one team and a bench row for another — 43 ids in the
+      // committed feeds. Writing unconditionally lets a live bench row reset a
+      // forced-final starter's deliberately-zeroed `projected`, which lights
+      // the green "boom" cell on a player whose game is over. It happens not to
+      // occur on today's data, which is exactly why it would go unnoticed.
+      if (!playerMeta[seed.id]) {
+        playerMeta[seed.id] = {
+          id: seed.id,
+          name: m.name ?? 'Unknown Player',
+          position: m.position ?? '',
+          nflTeam,
+          headshot: m.headshot ?? '',
+          espnId: m.espnId ?? null,
+          projected: isDone ? 0 : finalPts,
+        };
+      }
+      benchRows.push({
+        id: seed.id,
+        live,
+        secondsRemaining: isDone ? 0 : phase.sec,
+        status: 'nonstarter',
+      });
+    }
+    if (benchRows.length) bench[fid] = benchRows;
+
+    // Totals stay STARTERS-ONLY. `rows`, not `[...rows, ...benchRows]` — this
+    // is the sample's version of the same invariant the live API holds, and
+    // getting it wrong here would make the demo board disagree with the real
+    // one about what a team is scoring.
     scores[fid] = round2(rows.reduce((s, r) => s + r.live, 0));
     remaining[fid] = rows.reduce((s, r) => s + r.secondsRemaining, 0);
     playersYetToPlay[fid] = rows.filter((r) => r.secondsRemaining >= NFL_GAME_SECONDS).length;
@@ -550,6 +628,7 @@ export function getLiveScoringSample(
     scores,
     remaining,
     players,
+    bench,
     playersYetToPlay,
     playerMeta,
     nflGames,
@@ -586,7 +665,7 @@ export function getLiveScoringSample(
 export function getCurrentRosterSample(opts: { slug?: string; year: number }): LiveScoringSample {
   const league = getLeagueBySlug(opts.slug ?? DEFAULT_LEAGUE_SLUG);
   const empty: LiveScoringSample = {
-    week: 1, matchups: [], scores: {}, remaining: {}, players: {},
+    week: 1, matchups: [], scores: {}, remaining: {}, players: {}, bench: {},
     playersYetToPlay: {}, playerMeta: {}, nflGames: [], detail: { boxScore: {}, plays: [] },
   };
   if (!league) return empty;
@@ -617,6 +696,7 @@ export function getCurrentRosterSample(opts: { slug?: string; year: number }): L
   const starterSlots = resolveStarterSlots(readJson(join(dir, 'league.json'))?.league);
 
   const players: Record<string, LivePlayerRow[]> = {};
+  const bench: Record<string, LivePlayerRow[]> = {};
   const playerMeta: Record<string, PlayerMeta> = {};
   const scores: Record<string, number> = {};
   const remaining: Record<string, number> = {};
@@ -662,7 +742,35 @@ export function getCurrentRosterSample(opts: { slug?: string; year: number }): L
       rows.push({ id: p.id, live: 0, secondsRemaining: NFL_GAME_SECONDS, status: 'starter' });
     }
     players[fid] = rows;
+
+    // Everyone the starter fill didn't take. This is a REAL bench — the actual
+    // rest of the franchise's roster, in ADP order — which is the point of the
+    // ?demo=live variant: real players against a live NFL slate. Fantasy points
+    // stay 0 for the same reason the starters' do (MFL has no scoring for a
+    // season that hasn't started, and inventing one would be worse than zero),
+    // but the clock, the box-score line and the red-zone flag on each of these
+    // rows are genuinely live.
+    const started = new Set(rows.map((r) => r.id));
+    const benchRows: LivePlayerRow[] = [];
+    for (const p of roster) {
+      if (started.has(p.id)) continue;
+      const m = p.meta!;
+      playerMeta[p.id] = {
+        id: p.id,
+        name: m.name,
+        position: m.position,
+        nflTeam: m.nflTeam,
+        headshot: m.headshot,
+        espnId: m.espnId,
+        projected: 0,
+      };
+      benchRows.push({ id: p.id, live: 0, secondsRemaining: NFL_GAME_SECONDS, status: 'nonstarter' });
+    }
+    if (benchRows.length) bench[fid] = benchRows;
+
     scores[fid] = 0;
+    // Starters only — `rows`, not the bench. These feed the matchup header's
+    // clock and its "yet to play" count, neither of which a bench player is in.
     remaining[fid] = rows.length * NFL_GAME_SECONDS;
     playersYetToPlay[fid] = rows.length;
   }
@@ -673,6 +781,7 @@ export function getCurrentRosterSample(opts: { slug?: string; year: number }): L
     scores,
     remaining,
     players,
+    bench,
     playersYetToPlay,
     playerMeta,
     // Deliberately empty: the live poller supplies the real slate.

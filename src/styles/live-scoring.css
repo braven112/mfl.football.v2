@@ -375,18 +375,40 @@ html.dark .ls-detail {
   --ls-row-line1: calc(var(--ls-face-w) + var(--ls-row-pad-y) * 2);
   padding: 0.4rem 0.7rem 0.8rem;
 }
+/* Rows size to their own content — deliberately NOT equalized to the tallest.
+   An earlier pass gave every row one shared height (`grid-auto-rows: 1fr`),
+   on the theory that equal rows are what makes the two sides line up. They
+   are not: the misalignment came from where the score sits INSIDE a row (see
+   the phone rules below), and equalizing on top of the real fix just bought
+   whitespace — with sparse box-score lines, a row whose player hasn't
+   kicked off got stretched to the height of one who has, stranding its score
+   an inch below its name. Each row is now as tall as its own taller side and
+   no taller. */
 .ls-mx-row {
   display: grid; grid-template-columns: 1fr 2.2rem 1fr; gap: 0.3rem;
-  /* TOP-aligned, not centered. A box-score line only exists for a player who
-     has touched the ball, so one side of a matchup row is routinely taller
-     than the other — and centering then floats the quiet side's name half a
-     line below its opponent's. The two players in a row stopped lining up the
-     moment real stats arrived (owner, 2026-08-21). */
-  align-items: start;
+  /* STRETCH, and never `center`. Centering was the original bug: a box-score
+     line only exists for a player who has touched the ball, so one side of a
+     row is routinely taller than the other, and centering floated the quiet
+     side's name half a line below its opponent's (owner, 2026-08-21).
+     `start` fixed that but left the two cells sized to their own content —
+     which is fine for the NAME (both start at the top either way) and wrong
+     for everything anchored to the BOTTOM of the row. Stretching makes both
+     cells exactly as tall as the equalized track, which is what lets the
+     phone layout pin the score line to the row's bottom edge on both sides.
+     Content still packs to the top: `.ls-prow` keeps `align-content: flex-start`. */
+  align-items: stretch;
   border-bottom: 1px solid var(--content-border);
 }
 .ls-mx-row:last-child { border-bottom: 0; }
 .ls-mx-pos {
+  /* NOT stretched, even though its siblings are. `.ls-mx-row` switched to
+     `align-items: stretch` so the two player cells share a bottom edge; that
+     also stretched THIS cell, and a stretched cell makes the `min-height` +
+     `align-items: center` below centre the label over the whole row instead of
+     over its first line. Measured 13px of drift on any row carrying a
+     box-score line — the exact bug the comment below guards against, walked in
+     through the parent. */
+  align-self: start;
   text-align: center; font-family: var(--font-display); font-weight: var(--font-weight-bold);
   font-size: 0.72rem; color: var(--content-text-muted);
   /* Centered on the row's FIRST line, not on the cell — same reason: a stat
@@ -403,6 +425,10 @@ html.dark .ls-detail {
      fixes one level up. */
   align-content: flex-start;
   gap: var(--ls-row-gap); padding: var(--ls-row-pad-y) 0.55rem;
+  /* Fill the cell the equalized track stretched. Not a fixed height — a
+     length here would clip; 100% just adopts whatever the tallest row in the
+     section already needed. */
+  height: 100%;
 }
 .ls-prow.right { flex-direction: row; }
 /* Slot label: COLORED TEXT, not a filled pill (owner direction, Aug 2026).
@@ -498,6 +524,138 @@ html.dark .ls-headshot.def { box-shadow: none; }
 
 /* NFL games strip styles moved to src/styles/nfl-games-strip.css (now a
    self-contained reusable component). */
+
+/* ── bench (collapsed by default) ──
+   Sits inside .ls-mx-body so it inherits the row metrics (--ls-slot-w,
+   --ls-face-w, …) the player rows measure against, and so the phone
+   breakpoint's `.ls-mx-body .ls-prow` grid applies to a bench row exactly as
+   it does to a starter. Nesting it elsewhere would give the bench desktop
+   rows on a phone.
+
+   The section is quieter than the lineup on purpose: muted surface, smaller
+   type on the totals, and a dashed rule under each row rather than the solid
+   one the matchup rows carry. Bench points don't count, and the styling is
+   the first thing that says so — the note below the summary is the second. */
+.ls-bench {
+  margin-top: 0.5rem;
+  border: 1px solid var(--content-border);
+  border-radius: var(--radius-md, 8px);
+  background: var(--content-bg-muted);
+}
+.ls-bench-head {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.8rem;
+  cursor: pointer;
+  list-style: none;
+  border-radius: var(--radius-md, 8px);
+}
+/* Safari renders a disclosure triangle via this pseudo-element, which no
+   `list-style: none` reaches. The chevron below is ours and is positioned. */
+.ls-bench-head::-webkit-details-marker { display: none; }
+.ls-bench-head:hover { background: color-mix(in srgb, var(--content-text-muted) 8%, transparent); }
+.ls-bench-head:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+.ls-bench-lbl {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--content-text-muted);
+}
+/* Rotating caret: points down when shut, up when open, so the control says
+   which way it moves. Borders rather than a glyph keeps it theme-driven. */
+.ls-bench-chev {
+  width: 0; height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid currentColor;
+  transition: transform 0.15s ease;
+}
+.ls-bench[open] .ls-bench-chev { transform: rotate(180deg); }
+.ls-bench-tot {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+/* Classed, not :last-of-type — a span added to the summary later would
+   silently steal the right-alignment from the home team's total. */
+.ls-bench-tot.home { align-items: flex-end; text-align: right; }
+.ls-bench-tot b {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: var(--font-weight-bold);
+  color: var(--content-text-muted);
+}
+.ls-bench-tot em {
+  font-style: normal;
+  font-size: 0.62rem;
+  color: var(--content-text-muted);
+  opacity: 0.8;
+}
+.ls-bench-note {
+  margin: 0;
+  padding: 0 0.8rem 0.4rem;
+  font-size: 0.68rem;
+  color: var(--content-text-muted);
+  text-align: center;
+}
+/* Both benches in ONE grid, paired by index — not two columns flowing
+   independently. Independent columns drift: the moment one side has a
+   box-score line or a name that wraps, every row below it on that side sits
+   lower than its neighbour, and by row 12 the two lists are visibly out of
+   step. Sharing grid rows makes that impossible.
+   Each grid row is as tall as its taller cell, and both cells stretch to it —
+   which is what the phone layout's bottom-anchored score line needs to have
+   something to anchor against. */
+.ls-bench-grid { padding: 0 0.3rem 0.5rem; }
+/* A bench pair is shaped EXACTLY like a starter row (.ls-mx-row): a two-column
+   grid holding the away cell and the home cell. That is not incidental — it is
+   what lets one rule align both sections, because the two sides of a pair have
+   to share row tracks for their scores to agree (see the phone block). */
+.ls-bench-caps,
+.ls-bench-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 0.3rem;
+  align-items: stretch;
+}
+.ls-bench-row { border-bottom: 1px dashed var(--content-border); }
+.ls-bench-row:last-child { border-bottom: 0; }
+.ls-bench-row > div { min-width: 0; }
+.ls-bench-cap {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.45rem 0.35rem;
+  font-size: 0.68rem;
+  font-weight: var(--font-weight-bold);
+  color: var(--content-text-muted);
+  border-bottom: 1px solid var(--content-border);
+}
+.ls-bench-cap.home { flex-direction: row-reverse; }
+.ls-bench-cap img { width: 16px; height: 16px; object-fit: contain; border-radius: 3px; }
+.ls-bench-cap span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ls-bench-none {
+  padding: 0.6rem 0.45rem;
+  font-size: 0.72rem;
+  color: var(--content-text-muted);
+}
+.ls-bench-row > div:last-child .ls-bench-none { text-align: right; }
 
 /* ── scoring moments feed ── */
 .ls-moments { padding: 1rem 1.2rem 1.3rem; background: var(--content-bg-muted); border-top: 1px solid var(--content-border); }
@@ -631,6 +789,27 @@ html.dark .ls-headshot.def { box-shadow: none; }
   .ls-mx-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.35rem; }
   .ls-mx-row > div { min-width: 0; }
 
+  /* ── The two sides of a pair SHARE their row tracks ──
+     This is what finally makes the scores agree. Reserving two lines for the
+     name (below) equalizes a one-line name against a two-line one, but it
+     cannot help when a name genuinely needs three — "Mike Washington Jr." and
+     "San Francisco 49ers" both do at 360px, which is a Galaxy in portrait, and
+     each one dropped that side's score a full line below its opponent's.
+     Subgrid removes the class of bug rather than the instance: the pair's row
+     grid owns the three tracks (name / score / stat) and each side maps onto
+     them, so ANY content difference — a third name line, a two-line box score,
+     a wrapped red-zone flag — grows the track for BOTH sides at once and the
+     score cannot drift. The wrappers go `display: contents` so the two
+     `.ls-prow`s are real grid items of that pair.
+     The plain `auto auto 1fr` immediately before `subgrid` is a deliberate
+     fallback: a browser without subgrid ignores the second declaration and
+     keeps the two-line reservation, which is correct for every name that
+     fits two lines. */
+  .ls-mx-row,
+  .ls-bench-row { grid-template-rows: auto auto 1fr; }
+  .ls-mx-row > div:not(.ls-mx-pos),
+  .ls-bench-row > div { display: contents; }
+
   /* ── Two lines per player, not one ──
      Chip + headshot + name + game state + score do not fit on one ~165px
      line, and the attempts to make them fit are both bugs we shipped: first
@@ -645,12 +824,51 @@ html.dark .ls-headshot.def { box-shadow: none; }
      `.ls-pid` goes `display: contents` so the name and the meta line can be
      placed independently; they stay nested in the DOM because the desktop
      layout stacks them as one identity block. */
+  /* ── The score line sits at a FIXED offset from the top of the row ──
+     Equal row heights were not enough: a one-line name and a two-line name
+     put the score at different heights INSIDE their equal rows, so the two
+     sides still didn't line up (owner, 2026-08-21). The headshot hides most
+     of it — a one-line name still occupies the 30px avatar — which is why it
+     reads as a couple of stray pixels until a name needs three lines and it
+     becomes a full line of drift.
+     The score line reads directly under the player and ABOVE his box-score
+     detail (owner direction), so it cannot be pushed to the bottom of the
+     row — its offset has to be made constant instead. Two things do that:
+
+       - the name block carries a `min-height` of TWO lines, so a one-line
+         name and a two-line name produce an identical first row (they
+         differed by the ~2px a second line adds beyond the 30px avatar, which
+         is why this read as a couple of stray pixels rather than a whole
+         line);
+       - the box-score row underneath takes `1fr`, so ALL the slack a row
+         inherits from its taller opponent collects below the score line
+         instead of above it.
+
+     Everything above the stat row is therefore content-sized and identical on
+     both sides, which puts the two scores on the same pixel. */
   .ls-prow {
     display: grid;
     grid-template-columns: auto auto minmax(0, 1fr) auto;
+    /* Two lines of the name — what the first row is pinned to. Derived from
+       the name's own font-size and line-height below so the three cannot
+       drift apart. */
+    --ls-name-h: calc(0.84rem * 1.2 * 2);
     grid-template-areas:
       "pos face name name"
-      "pos meta meta score";
+      ".   meta meta score"
+      ".   stat stat stat";
+    /* Each side spans its pair's three shared tracks. The plain
+       `auto auto 1fr` is the fallback for a browser without subgrid — it must
+       stay immediately before the `subgrid` line, and this must be the LAST
+       `grid-template-rows` any rule sets on `.ls-prow` in this block, or
+       source order quietly reinstates per-side tracks and the drift is back.
+       Rows 1 and 2 are content-sized and row 3 takes the slack, so an
+       opponent's box-score line lengthens the pair DOWNWARD and never moves
+       the score. */
+    grid-column: 1;
+    grid-row: 1 / -1;
+    grid-template-rows: auto auto 1fr;
+    grid-template-rows: subgrid;
     align-items: center;
     column-gap: var(--ls-row-gap);
     row-gap: 0.1rem;
@@ -660,21 +878,52 @@ html.dark .ls-headshot.def { box-shadow: none; }
   /* Mirrored, not re-ordered: grid areas ignore DOM order, so the home side
      reuses the same markup with the columns reversed. */
   .ls-prow.right {
+    grid-column: 2;
     grid-template-columns: auto minmax(0, 1fr) auto auto;
     grid-template-areas:
       "name  name face pos"
-      "score meta meta pos";
+      "score meta meta ."
+      "stat  stat stat .";
   }
+  /* Two lines' worth of name, always — this is what makes a one-line name and
+     a two-line name produce the same first row, and so the same score offset.
+     The text is centred inside that box so a one-line name still sits level
+     with the middle of its headshot rather than riding at the top of it, and
+     a two-line name fills the box exactly. A name needing THREE lines grows
+     the box; that did not occur for any rostered player down to a 320px
+     viewport, and the honest fix if it ever does is subgrid, not a clamp. */
+  .ls-pname {
+    min-height: var(--ls-name-h);
+    display: flex;
+    align-items: center;
+  }
+  .ls-prow.right .ls-pname { justify-content: flex-end; }
+  /* Pinned to the TOP of the shared first track, not centred in it. When one
+     side of a pair carries a three-line name the track grows for both, and
+     centring then floats the shorter name half its difference down — the same
+     drift the scores had, moved onto the names. Top-aligned they always start
+     on the same pixel, and the two-line box above keeps a one-line name
+     optically centred against its 30px headshot regardless. */
+  .ls-headshot, .ls-pname { align-self: start; }
+  /* The box-score line takes the slack row, pinned to its top so it stays
+     tucked under the score line it belongs to. */
+  .ls-pstat { align-self: start; }
   .ls-pid { display: contents; }
+  /* The slot chip occupies ROW 1 ONLY (see the areas above), so it centres
+     against the headshot beside the name it labels. Spanning all three rows
+     instead would centre it over the whole row — floating the label into the
+     empty space of a row made tall by its opponent's box-score line, where it
+     reads as a slot chip attached to nothing. */
   .ls-mx-body .ls-ppos { grid-area: pos; font-size: 0.6rem; padding: 0.14rem 0; letter-spacing: 0; }
   .ls-headshot { grid-area: face; }
   .ls-pname { grid-area: name; }
   .ls-pmeta { grid-area: meta; }
   .ls-pscore { grid-area: score; }
-  /* The box-score line gets its own row below both — starting at the headshot
-     column, so it lines up under the player it describes rather than under the
-     slot chip. Grid columns say that directly; no indent arithmetic needed. */
-  .ls-pstat { grid-column: 2 / -1; margin-top: 0; padding-left: 0; }
+  /* The box-score line starts at the headshot column, so it lines up under
+     the player it describes rather than under the slot chip. Grid columns say
+     that directly; no indent arithmetic needed. It is placed by AREA above
+     (row 2), and the explicit column span keeps it clear of the slot chip. */
+  .ls-pstat { grid-area: stat; grid-column: 2 / -1; margin-top: 0; padding-left: 0; }
   .ls-prow.right .ls-pstat { grid-column: 1 / -2; padding-right: 0; }
   /* Full names. They used to ellipsise inside a ~57px column, which turned
      "Jahmyr Gibbs" into "Jah…" — not a name, and not something an owner can
@@ -748,4 +997,19 @@ html.dark .ls-headshot.def { box-shadow: none; }
   .ls-fr-score { font-size: 1.7rem; min-width: 3.6rem; text-align: right; }
   .ls-fr-crest { width: 2rem; height: 2rem; }
   .ls-fr-name { font-size: 0.95rem; }
+
+  /* ── Bench ──
+     Stays two columns, matching the starter rows directly above it: an owner
+     compares his bench against the lineup, and a stacked bench would put the
+     two teams' benches in a single scroll column with nothing but the caption
+     to say which is which. minmax(0) for the same reason .ls-mx-row uses it —
+     a long name must reflow inside its column, not widen the grid track. */
+  .ls-bench-grid { padding: 0 0.15rem 0.5rem; }
+  .ls-bench-caps,
+  .ls-bench-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 0.25rem; }
+  .ls-bench-head { padding: 0.5rem 0.5rem; gap: 0.35rem; }
+  .ls-bench-lbl { font-size: 0.64rem; letter-spacing: 0.04em; }
+  .ls-bench-tot b { font-size: 0.85rem; }
+  .ls-bench-cap { font-size: 0.62rem; padding: 0.2rem 0.2rem 0.3rem; }
+  .ls-bench-note { font-size: 0.62rem; padding: 0 0.5rem 0.35rem; }
 }

@@ -19,6 +19,8 @@ import {
   playerDownDistance,
   resolveGameState,
   selectMatchupMoments,
+  sortBenchRows,
+  benchPoints,
   assignLineupSlots,
   type LiveMoment,
 } from '../src/utils/live-scoring-view';
@@ -407,6 +409,97 @@ describe('assignLineupSlots', () => {
     const out = assignLineupSlots([row('ghost')], {}, RULES);
     expect(out).toHaveLength(1);
     expect(out[0].slot).toBe('FLEX');
+  });
+});
+
+describe('sortBenchRows', () => {
+  const row = (id: string, live = 0): LivePlayerRow => ({
+    id, live, secondsRemaining: 0, status: 'nonstarter',
+  });
+  const metaFor = (spec: Record<string, string>): Record<string, PlayerMeta> =>
+    Object.fromEntries(
+      Object.entries(spec).map(([id, position]) => [
+        id,
+        { id, name: id, position, nflTeam: 'KC', headshot: '', espnId: null, projected: 0 },
+      ]),
+    );
+
+  it('groups by position in the lineup reading order', () => {
+    // Same order the starters render in, which is the whole reason to group:
+    // an owner comparing bench to lineup reads them as two parallel columns.
+    const meta = metaFor({ d: 'DEF', w: 'WR', q: 'QB', k: 'PK', t: 'TE', r: 'RB' });
+    const out = sortBenchRows([row('d'), row('w'), row('q'), row('k'), row('t'), row('r')], meta);
+    expect(out.map((r) => r.id)).toEqual(['q', 'r', 'w', 't', 'k', 'd']);
+  });
+
+  it('puts the highest scorer first WITHIN a position', () => {
+    // The question the bench answers is "did I start the wrong RB", so the
+    // player who would have changed the answer has to be the first one read.
+    const meta = metaFor({ r1: 'RB', r2: 'RB', r3: 'RB', w1: 'WR' });
+    const out = sortBenchRows(
+      [row('r1', 4.2), row('w1', 30), row('r2', 21.7), row('r3', 0)],
+      meta,
+    );
+    expect(out.map((r) => r.id)).toEqual(['r2', 'r1', 'r3', 'w1']);
+  });
+
+  it('never lets points outrank position', () => {
+    // A 30-point kicker still sorts below a 0-point QB. Position is the
+    // grouping; points only order within it.
+    const meta = metaFor({ k: 'PK', q: 'QB' });
+    expect(sortBenchRows([row('k', 30), row('q', 0)], meta).map((r) => r.id))
+      .toEqual(['q', 'k']);
+  });
+
+  it('sorts an unresolved position last rather than folding it into one', () => {
+    // A player the map can't resolve is the least trustworthy row on the
+    // board; filing him under a position we guessed would be a quiet lie.
+    const meta = metaFor({ q: 'QB', d: 'DEF' });
+    const out = sortBenchRows([row('ghost', 99), row('d'), row('q')], meta);
+    expect(out.map((r) => r.id)).toEqual(['q', 'd', 'ghost']);
+  });
+
+  it('is stable on an all-zero bench', () => {
+    // Every Sunday morning before kickoff every bench is all zeroes. Without
+    // the index tiebreak the list can reorder itself between 60s polls purely
+    // on sort instability, which reads as the page shuffling at random.
+    const meta = metaFor({ r1: 'RB', r2: 'RB', r3: 'RB', r4: 'RB' });
+    const input = [row('r3'), row('r1'), row('r4'), row('r2')];
+    expect(sortBenchRows(input, meta).map((r) => r.id)).toEqual(['r3', 'r1', 'r4', 'r2']);
+  });
+
+  it('does not mutate the array it was given', () => {
+    // The rows come straight off the poll payload and the starters map is
+    // rendered from the same response object.
+    const meta = metaFor({ q: 'QB', d: 'DEF' });
+    const input = [row('d'), row('q')];
+    sortBenchRows(input, meta);
+    expect(input.map((r) => r.id)).toEqual(['d', 'q']);
+  });
+
+  it('handles an empty bench and missing metadata entirely', () => {
+    expect(sortBenchRows([], {})).toEqual([]);
+    expect(sortBenchRows([row('a'), row('b')], {}).map((r) => r.id)).toEqual(['a', 'b']);
+  });
+});
+
+describe('benchPoints', () => {
+  const row = (live: number): LivePlayerRow => ({
+    id: String(live), live, secondsRemaining: 0, status: 'nonstarter',
+  });
+
+  it('sums the bench', () => {
+    expect(benchPoints([row(4.2), row(21.7), row(0)])).toBeCloseTo(25.9, 5);
+  });
+
+  it('is 0 for an empty bench', () => {
+    expect(benchPoints([])).toBe(0);
+  });
+
+  it('ignores a non-finite score instead of poisoning the total', () => {
+    // One bad row would otherwise print "NaN" where a number belongs, and a
+    // NaN total is indistinguishable from a broken feed to whoever reads it.
+    expect(benchPoints([row(10), row(NaN), row(5)])).toBe(15);
   });
 });
 

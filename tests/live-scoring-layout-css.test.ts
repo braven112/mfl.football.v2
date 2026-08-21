@@ -120,15 +120,21 @@ describe('live-scoring on a phone', () => {
 
     for (const selector of ['.ls-prow', '.ls-prow.right']) {
       const rows = gridRows(phone, selector);
-      expect(rows.length, `${selector} must lay the row out on two lines`).toBe(2);
+      // At least two: one line cannot hold all of this. Three now, since the
+      // box-score line has its own row between the name and the score line
+      // (see the bottom-anchor test below).
+      expect(rows.length, `${selector} must not collapse to one line`).toBeGreaterThanOrEqual(2);
       expect(rows[0], `${selector} line 1 carries the name`).toContain('name');
-      expect(rows[1], `${selector} line 2 carries the game state`).toContain('meta');
-      expect(rows[1], `${selector} line 2 carries the score`).toContain('score');
+      // Find the row by CONTENT rather than by index — the box-score line sits
+      // below the score line, so the score is not the last row.
+      const scoreRow = rows.find((r) => r.includes('score')) ?? [];
+      expect(scoreRow, `${selector} pairs the game state with the score`).toContain('meta');
+      expect(scoreRow, `${selector} carries the score`).toContain('score');
       // The name must reach across the score column and the meta line across
       // the headshot column — that span is the width the two-line layout buys,
       // and without it we are back to a ~57px name.
       expect(rows[0].filter((a) => a === 'name').length).toBeGreaterThan(1);
-      expect(rows[1].filter((a) => a === 'meta').length).toBeGreaterThan(1);
+      expect(scoreRow.filter((a) => a === 'meta').length).toBeGreaterThan(1);
     }
 
     // Mirrored, not re-ordered: the home side reuses the same markup.
@@ -193,7 +199,11 @@ describe('a matchup row keeps its two players level', () => {
     // quiet side's name floats half a line below its opponent's — the two
     // players stopped lining up the moment real stats arrived (owner,
     // 2026-08-21).
-    expect(valueOf(base, '.ls-mx-row', 'align-items')).toBe('start');
+    // `stretch` (not `start`) — both keep content at the top, but only
+    // stretch gives the row a shared bottom edge for the score to anchor to.
+    // `center` is the original sin and must never come back.
+    expect(valueOf(base, '.ls-mx-row', 'align-items')).toBe('stretch');
+    expect(valueOf(base, '.ls-mx-row', 'align-items')).not.toBe('center');
     // Same reasoning one level down: a single flex line in a stretched cell
     // would otherwise be centered in it.
     expect(valueOf(base, '.ls-prow', 'align-content')).toBe('flex-start');
@@ -204,6 +214,16 @@ describe('a matchup row keeps its two players level', () => {
     // gained, which is the same bug wearing the center column's clothes.
     expect(valueOf(base, '.ls-mx-pos', 'min-height')).toBe('var(--ls-row-line1)');
     expect(valueOf(base, '.ls-mx-pos', 'align-items')).toBe('center');
+    // …and the cell must not be STRETCHED, or those two do the opposite of
+    // what they say: a stretched cell is the whole row tall, so centring in it
+    // centres over the row rather than over its first line. `.ls-mx-row` is
+    // `align-items: stretch` for the player cells' benefit, and this label
+    // has to opt out of it. Measured 13px of drift on a row with a box-score
+    // line before this line existed.
+    expect(
+      valueOf(base, '.ls-mx-pos', 'align-self'),
+      'the slot label must opt out of the row stretch',
+    ).toBe('start');
   });
 
   it('indents the box-score line to where the player’s name starts', () => {
@@ -217,6 +237,135 @@ describe('a matchup row keeps its two players level', () => {
     for (const token of ['--ls-slot-w', '--ls-face-w', '--ls-row-gap']) {
       expect(indent, `--ls-stat-indent must be computed from ${token}`).toContain(token);
     }
+  });
+
+  it('keeps the score at the same offset on both sides of a phone row', () => {
+    // The bug: a two-line name pushed the score down and a one-line name did
+    // not, so the two sides of a matchup never agreed on where the score sat
+    // (owner, 2026-08-21). The headshot masks most of it — a one-line name
+    // still occupies the 30px avatar — which is why it read as a couple of
+    // stray pixels rather than a whole line.
+    //
+    // The score line reads under the player and ABOVE his box-score detail
+    // (owner direction), so it cannot simply be pushed to the bottom of the
+    // row. Its offset is made constant instead, and BOTH halves are needed:
+    for (const selector of ['.ls-prow', '.ls-prow.right']) {
+      const rows = gridRows(phone, selector);
+      expect(rows.length, `${selector} needs name / score / stat rows`).toBe(3);
+      expect(rows[0], `${selector}: row 1 carries the name`).toContain('name');
+      expect(rows[1], `${selector}: the score sits on row 2`).toContain('score');
+      expect(rows[1], `${selector}: the clock rides with the score`).toContain('meta');
+      // The box-score detail belongs BELOW the score (owner direction) — and
+      // that ordering is also what lets the slack collect beneath it.
+      expect(
+        rows[2],
+        `${selector}: the box-score line goes below the score, not above`,
+      ).toContain('stat');
+
+      // `.ls-prow` declares grid-template-rows TWICE: a plain fallback and then
+      // `subgrid`. Both matter, so read every declaration rather than just the
+      // winning one.
+      const decls = declarationsFor(phone, selector)
+        .filter(([prop]) => prop === 'grid-template-rows')
+        .map(([, value]) => value);
+      const all = decls.length ? decls : declarationsFor(phone, '.ls-prow')
+        .filter(([prop]) => prop === 'grid-template-rows')
+        .map(([, value]) => value);
+
+      // (1) The two sides of a pair must SHARE row tracks. Without this a name
+      //     that needs a third line — "Mike Washington Jr." at 360px — grows
+      //     only its own side and drops that score a full line.
+      expect(
+        all[all.length - 1],
+        `${selector}: the pair must share row tracks, or a 3-line name drifts`,
+      ).toBe('subgrid');
+
+      // (2) The fallback immediately before it, for browsers without subgrid.
+      const fallback = (all[all.length - 2] ?? '').split(/\s+/);
+      expect(
+        fallback.length,
+        `${selector}: the pre-subgrid fallback needs one track per row`,
+      ).toBe(rows.length);
+      // Everything ABOVE the score is content-sized, or a taller opponent
+      // inflates it and the score moves; the slack goes to the row BELOW.
+      expect(fallback[0], `${selector}: row 1 must not absorb slack`).toBe('auto');
+      expect(fallback[1], `${selector}: the score row must not absorb slack`).toBe('auto');
+      expect(
+        fallback[2],
+        `${selector}: the stat row must take the slack, below the score`,
+      ).toBe('1fr');
+    }
+
+    // Subgrid only reaches `.ls-prow` if it is a real grid item of the pair's
+    // row — the wrappers between them have to collapse.
+    expect(valueOf(phone, '.ls-mx-row > div:not(.ls-mx-pos)', 'display')).toBe('contents');
+    expect(valueOf(phone, '.ls-bench-row > div', 'display')).toBe('contents');
+    // And the pair's row must define the three tracks they map onto.
+    expect(valueOf(phone, '.ls-mx-row', 'grid-template-rows')).toBe('auto auto 1fr');
+    expect(valueOf(phone, '.ls-bench-row', 'grid-template-rows')).toBe('auto auto 1fr');
+
+    // (3) And row 1 is only equal on both sides because the name block is
+    //     pinned to two lines. Without this a one-line name yields a 30px
+    //     first row (the avatar) and a two-line name ~32px — the exact couple
+    //     of pixels this whole test exists for.
+    const nameMin = valueOf(phone, '.ls-pname', 'min-height');
+    expect(nameMin, 'the name block must reserve two lines').toBeDefined();
+    // Derived from the name's own type, not a magic number that silently
+    // stops matching the moment the font-size is touched.
+    const nameH = valueOf(phone, '.ls-prow', '--ls-name-h') ?? '';
+    expect(nameMin).toBe('var(--ls-name-h)');
+    expect(nameH, '--ls-name-h must be derived from the name font-size').toContain(
+      valueOf(phone, '.ls-pname', 'font-size') ?? 'NO-FONT-SIZE',
+    );
+    expect(nameH, '--ls-name-h must be derived from the name line-height').toContain(
+      valueOf(phone, '.ls-pname', 'line-height') ?? 'NO-LINE-HEIGHT',
+    );
+
+    // The cells still have to fill the row, or there is no slack to place.
+    expect(
+      valueOf(base, '.ls-mx-row', 'align-items'),
+      'cells must stretch to the row height',
+    ).toBe('stretch');
+    expect(valueOf(base, '.ls-prow', 'height')).toBe('100%');
+  });
+
+  it('pairs the two benches into shared grid rows rather than two columns', () => {
+    // Two independently-flowing columns drift: one box-score line or one
+    // wrapping name on the left pushes every row below it out of step with
+    // its neighbour on the right, and the gap compounds down the list. Cells
+    // that share a grid row cannot disagree about where a row starts.
+    // A bench pair is shaped exactly like a starter row: one two-column grid
+    // holding both sides. That shared shape is what lets ONE subgrid rule
+    // align both sections.
+    expect(valueOf(base, '.ls-bench-row', 'display')).toBe('grid');
+    expect(valueOf(base, '.ls-bench-row', 'grid-template-columns')).toBe('1fr 1fr');
+    // A ROW gap would put space between the paired cells that the starter rows
+    // above don't have, and it has to be kept in sync by hand. Columns only.
+    expect(valueOf(base, '.ls-bench-row', 'gap')).toBeUndefined();
+    expect(valueOf(base, '.ls-bench-row', 'column-gap')).toBeDefined();
+  });
+
+  it('does not buy equal rows by clamping the name or the stat line', () => {
+    // The two tempting ways to make rows uniform are a fixed height and a
+    // line clamp, and both truncate. A clamp on the name is the "Jah…" bug
+    // this stylesheet already fixed once; a clamp on the box-score line
+    // silently drops the tail of a long one ("… · 1 FUM lost").
+    for (const block of [base, phone]) {
+      for (const selector of ['.ls-pname', '.ls-pstat']) {
+        expect(
+          valueOf(block, selector, '-webkit-line-clamp'),
+          `${selector} must not be line-clamped to equalize rows`,
+        ).toBeUndefined();
+      }
+      // `height: 100%` is REQUIRED (it fills the stretched cell) and cannot
+      // clip — it adopts whatever the row already needed. A length would clip,
+      // and so would a max-height.
+      const h = valueOf(block, '.ls-prow', 'height');
+      if (h !== undefined) expect(h, 'a fixed row height would clip').toBe('100%');
+      expect(valueOf(block, '.ls-prow', 'max-height')).toBeUndefined();
+    }
+    // The phone rule that lets names wrap must still be the one in force.
+    expect(valueOf(phone, '.ls-pname', 'white-space')).toBe('normal');
   });
 
   it('on a phone the box-score line clears the slot chip via grid columns', () => {
