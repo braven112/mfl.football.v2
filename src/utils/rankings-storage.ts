@@ -195,6 +195,12 @@ export function syncBuiltinImports(
    * for a contract dynasty league. Omitted → nothing auto-ticks.
    */
   defaultSourceIds: string[] = [],
+  /**
+   * id → display metadata for the league's players, used to fill in the
+   * name/position/team the snapshot doesn't carry. Optional: without it the
+   * board still works, the View modal just shows bare ranks.
+   */
+  playerMeta?: Map<string, { name: string; position: string; team: string }>,
 ): boolean {
   if (!snapshot?.sources?.length) return false;
 
@@ -228,9 +234,13 @@ export function syncBuiltinImports(
     rankings: src.players.map((p) => ({
       rank: p.rank,
       playerId: p.id,
-      playerName: '',
-      position: '',
-      team: '',
+      // The snapshot carries id + rank only, but these fields are what the
+      // View modal renders — leaving them blank showed an empty Name/Pos/Team
+      // for every row of a source reporting a 100% match rate. Enriched from
+      // the league's player list when one is supplied.
+      playerName: playerMeta?.get(p.id)?.name ?? '',
+      position: playerMeta?.get(p.id)?.position ?? '',
+      team: playerMeta?.get(p.id)?.team ?? '',
       // Every built-in source is resolved to an MFL id at build time — by id
       // for the MFL feeds and FantasyCalc, by name once for Sleeper and ESPN.
       matched: true,
@@ -244,8 +254,46 @@ export function syncBuiltinImports(
     },
   }));
 
+  // Supersede a legacy manual import of the same source+type.
+  //
+  // ESPN, FantasyCalc and Sleeper used to be one-click imports, so an owner who
+  // used them already has a stored import with source 'espn' — and the built-in
+  // now carries the same source. Keeping both shows the source twice and lets
+  // the composite weight that board twice. The built-in wins (it re-matches at
+  // build time and refreshes daily), but any composite membership the old row
+  // held is carried over so the owner's weighting survives the swap.
+  const providedKeys = new Set(provided.map((i) => `${i.source}:${i.type}`));
+  const superseded = userImports.filter((i) => providedKeys.has(`${i.source}:${i.type}`));
+  const keptUserImports = userImports.filter((i) => !providedKeys.has(`${i.source}:${i.type}`));
+
+  if (superseded.length > 0) {
+    try {
+      const raw = localStorage.getItem(compositeConfigKey());
+      if (raw) {
+        const config = JSON.parse(raw) as CompositeRankConfig;
+        let changed = false;
+        for (const old of superseded) {
+          const member = config.members.find((m) => m.importId === old.id);
+          if (!member) continue;
+          const replacement = provided.find(
+            (pv) => `${pv.source}:${pv.type}` === `${old.source}:${old.type}`,
+          );
+          if (replacement && !config.members.some((m) => m.importId === replacement.id)) {
+            member.importId = replacement.id;
+          } else {
+            config.members = config.members.filter((m) => m.importId !== old.id);
+          }
+          changed = true;
+        }
+        if (changed) {
+          localStorage.setItem(compositeConfigKey(), JSON.stringify(config));
+        }
+      }
+    } catch { /* ignore malformed config */ }
+  }
+
   // Provided sources sort ahead of the user's own imports.
-  const next = [...provided, ...userImports];
+  const next = [...provided, ...keptUserImports];
   localStorage.setItem(storageKey(scope), JSON.stringify(next));
   // Invalidate rather than set: the cached value must go back through
   // getAllImports()'s hidden-source filter.

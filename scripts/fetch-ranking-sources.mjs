@@ -424,10 +424,34 @@ const run = async () => {
   }
 
   const file = path.join(OUT_DIR, `${year}.json`);
+
+  // Carry forward any source that failed THIS run.
+  //
+  // A partial write is worse than it looks: the client reconciliation treats
+  // the snapshot as authoritative and rebuilds the provided list from it, so a
+  // single transient upstream 500 would strip that source from every owner's
+  // board — and then re-seed it a day later as if it were new, re-ticking it
+  // for leagues that default it on. Merging keeps yesterday's copy (stale by a
+  // day) instead, which is strictly better than absent.
+  let merged = sources;
+  try {
+    const prev = JSON.parse(fs.readFileSync(file, 'utf8'));
+    const fresh = new Set(sources.map((s) => s.id));
+    const carried = (prev.sources ?? []).filter((s) => !fresh.has(s.id));
+    if (carried.length > 0) {
+      console.warn(
+        `::warning::carrying forward ${carried.length} source(s) that failed this run: ` +
+          carried.map((s) => s.id).join(', '),
+      );
+      merged = [...sources, ...carried];
+    }
+  } catch {
+    // No previous snapshot (first run) — nothing to carry.
+  }
   fs.mkdirSync(OUT_DIR, { recursive: true });
   // generatedAt is volatile by design; ignoring it keeps an unchanged fetch
   // from producing a commit (the storage-churn rule in CLAUDE.md).
-  const changed = writeJsonIfChanged(file, { year, generatedAt: new Date().toISOString(), sources },
+  const changed = writeJsonIfChanged(file, { year, generatedAt: new Date().toISOString(), sources: merged },
     { ignoreKeys: ['generatedAt'] });
   console.log(changed ? `Wrote ${file}` : `${file} unchanged — skipped write`);
 };

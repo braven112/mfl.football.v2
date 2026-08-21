@@ -12,6 +12,7 @@
 
 import type { PlayerRankingImport } from '../types/auction-predictor';
 import { normalizePosition } from './normalize-position';
+import { normalizeTeamCode } from './nfl-logo';
 
 // =============================================================================
 // NAME NORMALIZATION & MATCHING
@@ -246,9 +247,19 @@ function getNameIndex(mflPlayers: MFLPlayer[]) {
  */
 const TEAM_MATCH_BOOST = 0.15;
 
-/** Upper-case/trim a team code for comparison. '' means "no signal". */
+/**
+ * Canonicalize a team code for comparison. '' means "no signal".
+ *
+ * Upper-casing alone is not enough: MFL speaks its own dialect (`TBB`, `NOS`,
+ * `GBP`, `WAS`, `JAC`, `HST`…) where the ranking sources say `TB`, `NO`, `GB`,
+ * `WSH`, `JAX`, `HOU`. Comparing the raw strings makes the tiebreaker silently
+ * no-op for roughly a third of the league — including, for an exact same-name
+ * collision, still picking the arbitrary last-indexed candidate.
+ * `normalizeTeamCode` is the shared map (src/utils/nfl-logo.ts).
+ */
 function normalizeTeamForMatch(team: string | undefined | null): string {
-  return (team || '').trim().toUpperCase();
+  const raw = (team || '').trim();
+  return raw ? normalizeTeamCode(raw.toUpperCase()) : '';
 }
 
 export function matchPlayerToMFL(

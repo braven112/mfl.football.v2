@@ -70,14 +70,19 @@ export default function RankingsImportPage({
     } catch {
       snapshot = null;
     }
-    syncBuiltinImports(snapshot, defaultSourceIds);
+    // The snapshot is id+rank only; the island already holds the league's
+    // player list, so hand it over to fill in name/position/team.
+    const meta = new Map(
+      mflPlayers.map((p) => [p.id, { name: p.name, position: p.position, team: p.team }]),
+    );
+    syncBuiltinImports(snapshot, defaultSourceIds, meta);
     setSavedImports(getAllImports());
 
     // Sync with server (Redis) for cross-device access
     initFromServer().then((updated) => {
       if (updated) setSavedImports(getAllImports());
     });
-  }, [builtinSnapshotJson, defaultSourceIds]);
+  }, [builtinSnapshotJson, defaultSourceIds, mflPlayers]);
 
   const handleImportComplete = useCallback((newImport: StoredRankingImport) => {
     setSavedImports(getAllImports());
