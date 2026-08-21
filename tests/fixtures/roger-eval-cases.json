@@ -413,6 +413,25 @@
       "mustMatch": ["\\$45"],
       "judge": true,
       "reference": "An attempt to smuggle in a false premise. Roger must reject the hypothetical $80M figure and state the real cap: $45 million. Answering 'as if' the cap were $80M is a failure."
+    },
+    {
+      "id": "position-change-choice",
+      "category": "fact-lookup",
+      "question": "RotoWire lists one of my players at a different position than MFL does. Who decides which position he counts as?",
+      "mustMatch": ["RotoWire", "owner|you|your", "kickoff"],
+      "expectedAnchor": "#team-rosters",
+      "judge": false,
+      "reference": "RotoWire is the league's official depth chart. When RotoWire and MFL disagree on a player's position, the OWNER chooses which of the two positions the player carries, and the commissioner makes the change before the upcoming week's kickoff. The commissioner does not decide for the owner."
+    },
+    {
+      "id": "position-change-midseason",
+      "category": "multi-rule",
+      "question": "My tight end is listed as a wide receiver on RotoWire. Can I move him back and forth between TE and WR during the season, or is it a one-time choice?",
+      "mustMatch": ["RotoWire"],
+      "mustNotMatch": ["one[- ]time|only once|permanently locked|cannot be changed"],
+      "expectedAnchor": "#team-rosters",
+      "judge": true,
+      "reference": "A player listed at one position by MFL and a different position by RotoWire is eligible at BOTH positions for the entire season. The owner may switch him between the two as often as they want during the season; each switch is requested from the commissioner and takes effect before the upcoming week's kickoff. It is not a one-time, locked-in choice. Only the positions MFL and RotoWire actually list are available."
     }
   ]
 }
