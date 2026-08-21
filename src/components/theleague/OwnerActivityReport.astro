@@ -532,13 +532,27 @@ const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 
 	.chart-empty p { margin: 0; }
 
-	/* Tooltip */
+	/* Tooltip — a raised popover on the CARD surface, not a fixed dark chip.
+	   Two reasons it has to be the card surface specifically:
+
+	   1. The gray ramp INVERTS in dark mode (`--color-gray-900` is #ededed
+	      there), so the old `gray-900` bg + `--color-white` text shipped
+	      white ink on a near-white box — unreadable, which is exactly what
+	      owners saw (report, 2026-08-21).
+	   2. The row dots are `var(--team-accent-<id>)`, and `getTeamAccentPair`
+	      only guarantees those 3:1 against `--card-surface` in each theme.
+	      On any off-palette chip the guarantee doesn't hold — the old dark
+	      chip already swallowed the near-black franchise accents in LIGHT
+	      mode for the same reason. */
 	.chart-container :global(.chart-tooltip) {
 		position: absolute;
 		top: 0.5rem;
 		right: 0.75rem;
-		background: var(--color-gray-900, #111827);
-		color: var(--color-white, #fff);
+		background: var(--card-surface, #fff);
+		color: var(--page-text, #111827);
+		box-shadow:
+			0 0 0 1px var(--card-border, #e5e7eb),
+			var(--shadow-lg);
 		font-size: 0.75rem;
 		padding: 0.5rem 0.625rem;
 		border-radius: 0.375rem;
@@ -561,11 +575,26 @@ const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 		line-height: 1.6;
 	}
 
+	/* The dot carries whatever color the PAGE hands us, and the two pages hand
+	   us different things: TheLeague passes `teamAccentVar` (floored at 3:1
+	   against the card surface), the AFL passes a raw 24-entry `CHART_PALETTE`
+	   picked for mutual distinctness and never contrast-tuned. On white, 8 of
+	   those 24 sit under 3:1; on the AFL's navy card, a different 8 do. No flat
+	   surface satisfies both halves of that palette, and swapping the AFL to
+	   accent tokens is not the answer either — the accents collapse to 20
+	   distinct colors for 24 teams (three share #181818), which is exactly why
+	   the hand-picked palette exists.
+
+	   So give the dot an edge instead of asking the surface to carry it: a
+	   hairline ring in the surface's own ink keeps the mark's SHAPE readable at
+	   any fill contrast, in both themes and both leagues, with the team name
+	   sitting right beside it to carry the meaning. */
 	.chart-container :global(.chart-tooltip__dot) {
 		width: 0.5rem;
 		height: 0.5rem;
 		border-radius: 50%;
 		flex-shrink: 0;
+		box-shadow: 0 0 0 1px color-mix(in srgb, var(--page-text, #111827) 40%, transparent);
 	}
 
 	/* Hover column cursor */
@@ -603,11 +632,15 @@ const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 		opacity: 0.35;
 	}
 
+	/* Same mark, same palette, same ring as `.chart-tooltip__dot` — see the note
+	   there. Fixing one of the two swatches in this component and not the other
+	   is how the pair drifts. */
 	.chart-legend__swatch {
 		width: 0.5rem;
 		height: 0.5rem;
 		border-radius: 50%;
 		flex-shrink: 0;
+		box-shadow: 0 0 0 1px color-mix(in srgb, var(--page-text, #111827) 40%, transparent);
 	}
 
 	.chart-legend__icon {
