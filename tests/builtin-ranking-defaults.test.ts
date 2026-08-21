@@ -92,4 +92,20 @@ describe('per-league default ranking sources', () => {
     );
     expect(new Set(labels).size).toBe(labels.length);
   });
+
+  it('no built-in source is typed "overall"', () => {
+    // 'overall' is not a ranking type — it's the bookmarklet parser's fallback
+    // for an import it can't classify, and the type of the synthetic composite
+    // column. A real source carrying it renders a meaningless badge; Sharks
+    // shipped that way (its ranks are season-long redraft).
+    for (const [id, type] of available) {
+      expect(type, `source '${id}' is typed 'overall'`).not.toBe('overall');
+    }
+  });
+
+  it('every built-in type is one the table can badge', () => {
+    for (const [id, type] of available) {
+      expect(['dynasty', 'redraft', 'adp'], `source '${id}'`).toContain(type);
+    }
+  });
 });

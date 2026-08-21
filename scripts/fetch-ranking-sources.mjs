@@ -215,8 +215,13 @@ const fetchSharks = async (year) => {
   return {
     id: 'sharks',
     label: 'FantasySharks',
-    type: 'overall',
-    meta: {},
+    // Redraft, not 'overall'. MFL calls these "overall player rankings", but
+    // that's a scope ("all positions"), not a ranking TYPE — they're
+    // season-long draft ranks. 'overall' survives in the type union only as
+    // the parser's fallback for an unrecognized import and as the synthetic
+    // composite column's type; no real source should carry it.
+    type: 'redraft',
+    meta: { basis: 'FantasySharks season-long ranks' },
     players: rows
       .map((r) => ({ id: String(r.id), rank: Number(r.rank) }))
       .filter((r) => r.id && Number.isFinite(r.rank))
