@@ -996,7 +996,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     import { buildPlayerCellHTML } from '../../utils/player-cell-html';
     import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD } from '../../constants/roster-constants';
     import { resolveSubmitButtonState } from '../../utils/lineup-submit-state';
-    import { loadLineupRankings, byRank, onRankingsChanged } from '../../utils/lineup-rankings';
+    import { loadLineupRankings, byRank, applyRankChips, onRankingsChanged } from '../../utils/lineup-rankings';
 
     // ---------------------------------------------------------------------------
     // State
@@ -1202,7 +1202,26 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     // ---------------------------------------------------------------------------
     // Render slot card content
     // ---------------------------------------------------------------------------
+    /**
+      * Rank chips on the starters and the bench.
+      *
+      * Every path that rewrites a slot's innerHTML destroys its chip, so this
+      * is called from the renderSlotCard wrapper rather than from each of the
+      * six callers — one of which would eventually be missed.
+      */
+    function refreshRankChips() {
+      applyRankChips(rankings, [
+        { rowSelector: '.lineup-slot[data-player-id]', afterSelector: '.lineup-slot__player' },
+        { rowSelector: '.lineup-bench-row[data-player-id]', afterSelector: '.lineup-bench-row__player' },
+      ]);
+    }
+
     function renderSlotCard(slotIndex: number) {
+      renderSlotCardBody(slotIndex);
+      refreshRankChips();
+    }
+
+    function renderSlotCardBody(slotIndex: number) {
       const slot = currentSlots[slotIndex];
       const li = slotsContainer.children[slotIndex] as HTMLElement;
       if (!li) return;
@@ -1741,9 +1760,11 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
       rankings = loadLineupRankings();
       if (!rankings.available) cdmSort = 'projection';
       updateSortToggle();
+      refreshRankChips();
       if (activeSlotIndex !== null) renderCdmList(activeSlotIndex);
     });
     updateSortToggle();
+    refreshRankChips();
 
     cdmTbody.addEventListener('click', (e) => {
       const row = (e.target as HTMLElement).closest('.cdm-row') as HTMLElement;
@@ -2607,6 +2628,27 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
 
   .lineup-cdm__sort-label--interactive:hover {
     color: var(--color-primary-dark, #15385f);
+  }
+
+  /* Inline rank chip on a starter slot / bench row — sits between the player
+     block and the matchup, so the row keeps its height. */
+  .lineup-rank-chip {
+    flex-shrink: 0;
+    align-self: center;
+    margin-right: 0.375rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: var(--radius-full, 999px);
+    background: rgba(28, 73, 124, 0.09);
+    color: var(--color-primary, #1c497c);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.45;
+    letter-spacing: -0.01em;
+  }
+
+  html.dark .lineup-rank-chip {
+    background: rgba(59, 130, 246, 0.16);
   }
 
   .lineup-cdm__stat--rank {

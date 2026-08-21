@@ -76,6 +76,7 @@ import { getLeagueBySlug } from '../../config/leagues';
 // the current league/season years live at request time.
 import derivedRosterSeasonPayloads from '../../../data/theleague/derived/roster-season-payloads.json';
 import { buildSeasonPayload as buildSeasonPayloadShared } from '../../../scripts/lib/roster-season-payload.mjs';
+import MyRankEditor from '../../components/shared/rankings/MyRankEditor.astro';
 
 // MFL host/id from the league registry — never hardcode these (CLAUDE.md).
 // Used throughout this page (server frontmatter and inline client scripts)
@@ -2178,6 +2179,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
             </svg>
             <span class="submit-franchise-tags-btn__label">Submit Tags/Extensions</span>
           </button>
+
+          <MyRankEditor league="theleague" />
 
           <div class="mode-toggle">
             <button class="mode-btn active" data-mode="gm" title="GM Mode: Contracts & Salary Cap">

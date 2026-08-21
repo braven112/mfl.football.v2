@@ -43,6 +43,7 @@ import { getCachedRosterFranchises } from '../../utils/mfl-roster-cache';
 import { getLeagueBySlug } from '../../config/leagues';
 import { parseTradeBaitPlayerIds, parseTradeBaitByFranchise } from '../../utils/trade-bait';
 import { getCachedTradeBait } from '../../utils/mfl-trade-bait-cache';
+import MyRankEditor from '../../components/shared/rankings/MyRankEditor.astro';
 
 export const prerender = false;
 
@@ -785,6 +786,7 @@ const pageConfig = {
           ))}
         </select>
       </div>
+      <MyRankEditor league="afl" />
       <a class="roster-controls-bar__profile" href={`/afl-fantasy/franchises/${selectedTeam.franchiseId}`}>
         Franchise history →
       </a>

@@ -72,3 +72,57 @@ export function byRank(
 ): (a: { id: string }, b: { id: string }) => number {
   return (a, b) => (rankings.rank(a.id) ?? Infinity) - (rankings.rank(b.id) ?? Infinity);
 }
+
+// ---------------------------------------------------------------------------
+// Inline rank chips
+// ---------------------------------------------------------------------------
+
+/** A set of rows to hang rank chips on. */
+export interface RankChipTarget {
+  /** Rows carrying `data-player-id`, e.g. `.lineup-slot[data-player-id]`. */
+  rowSelector: string;
+  /** The chip is inserted immediately after this element inside the row. */
+  afterSelector: string;
+}
+
+const CHIP_ATTR = 'data-rank-chip';
+
+/**
+ * Put the owner's rank inline on every row that names a player.
+ *
+ * The replacement sheet alone was not enough: an owner scanning their lineup
+ * has no reason to tap a slot they weren't already suspicious of, so a rank
+ * that only exists behind a tap is a rank they never see. This puts it on the
+ * starters and the bench, where the "wait, why is he on my bench" moment
+ * actually happens.
+ *
+ * Idempotent — clears every chip before re-inserting, so a slot re-render or a
+ * board change can call it as often as it likes. A player the board doesn't
+ * rank gets NO chip rather than a dash, so the column of chips stays a signal
+ * instead of becoming visual noise on a roster full of kickers.
+ */
+export function applyRankChips(rankings: LineupRankings, targets: RankChipTarget[]): void {
+  document.querySelectorAll(`[${CHIP_ATTR}]`).forEach((el) => el.remove());
+  if (!rankings.available) return;
+
+  for (const target of targets) {
+    document.querySelectorAll<HTMLElement>(target.rowSelector).forEach((row) => {
+      const playerId = row.dataset.playerId;
+      if (!playerId) return;
+      const rank = rankings.rank(playerId);
+      if (rank == null) return;
+
+      const anchor = row.querySelector(target.afterSelector);
+      if (!anchor) return;
+
+      const chip = document.createElement('span');
+      chip.className = 'lineup-rank-chip';
+      chip.setAttribute(CHIP_ATTR, '');
+      chip.textContent = `#${rank}`;
+      // The visible "#43" reads as "hash forty-three" or worse; name the board.
+      chip.setAttribute('aria-label', `${rankings.label} ${rank}`);
+      chip.title = `${rankings.fullName}: #${rank}`;
+      anchor.insertAdjacentElement('afterend', chip);
+    });
+  }
+}

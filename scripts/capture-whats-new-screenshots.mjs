@@ -129,6 +129,13 @@ const PAGE_HOOKS = {
       window.scrollBy(0, -120);
     });
     await page.waitForTimeout(400);
+    // Open the My Rank editor over the table: the entry is as much about
+    // being able to re-weight the board in place as about the columns.
+    await page.evaluate(() => {
+      document.dispatchEvent(new CustomEvent('rankings:open-my-rank-editor'));
+    });
+    await page.waitForSelector('.mre__sheet', { timeout: 5000 }).catch(() => {});
+    await page.waitForTimeout(500);
   },
   'built-in-rankings-2026-08-21': async (page) => {
     // The built-in sources are reconciled into storage after hydration, so the

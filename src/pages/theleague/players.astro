@@ -27,6 +27,7 @@ import { getLeagueBySlug } from '../../config/leagues';
 import { getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark, getPlayerAvatarStyleMaps } from '../../utils/nfl-team-colors';
 import { isDraftComplete } from '../../utils/draft-utils';
 import { DEF_SPOTLIGHT_PLAYERS, getDefSpotlightPlayer } from '../../data/theleague/def-spotlight-players';
+import MyRankEditor from '../../components/shared/rankings/MyRankEditor.astro';
 
 // Build franchise ID → short name map for auction high-bidder display
 const franchiseNameEntries: [string, string][] = ((leagueConfig as any).teams ?? []).map((t: any) => [
@@ -741,6 +742,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           <span class="col-group-toggles__label">View:</span>
           <button class="col-group-btn active" data-group="stats" type="button" aria-pressed="true">Stats</button>
           <button class="col-group-btn" data-group="rankings" id="col-group-btn-rankings" type="button" aria-pressed="false">Rankings</button>
+          <MyRankEditor league="theleague" />
           <button class="col-group-btn" data-group="auction" id="col-group-btn-auction" type="button" aria-pressed="false">Auction</button>
           {isAdmin && (hasSurplusData || hasAuctionData) && <button class="col-group-btn" data-group="value" id="col-group-btn-value" type="button" aria-pressed="false">Value</button>}
         </div>

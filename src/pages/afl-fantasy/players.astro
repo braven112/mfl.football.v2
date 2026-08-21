@@ -43,6 +43,7 @@ import { getAuthUser } from '../../utils/auth';
 // marquee defenders (ESPN headshots) over the logo watermark. The data is keyed
 // by NFL team code, so the shared theleague-sourced file works directly here.
 import { DEF_SPOTLIGHT_PLAYERS, getDefSpotlightPlayer } from '../../data/theleague/def-spotlight-players';
+import MyRankEditor from '../../components/shared/rankings/MyRankEditor.astro';
 
 // SSR (server-rendered) — NOT prerendered. Two constraints pull in opposite
 // directions and the derived-snapshot import above is how we satisfy both:
@@ -273,6 +274,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           <span class="col-group-toggles__label">View:</span>
           <button class="col-group-btn active" data-group="stats" type="button" aria-pressed="true">Stats</button>
           <button class="col-group-btn" data-group="rankings" id="col-group-btn-rankings" type="button" aria-pressed="false">Rankings</button>
+          <MyRankEditor league="afl" />
         </div>
         <button class="filter-toggle-btn" id="filter-toggle-btn" type="button" aria-expanded="false" aria-controls="filters-panel">
           <svg class="filter-toggle-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

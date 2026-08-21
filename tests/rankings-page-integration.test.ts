@@ -91,11 +91,62 @@ describe('rankings reach every decision page', () => {
       expect(src).toContain('byRank(rankings)');
     });
 
+    it.each(LINEUP_PAGES)('%s puts a rank chip on the starters AND the bench', (page) => {
+      const src = read(page);
+      // The replacement sheet alone was not discoverable: an owner scanning
+      // their lineup has no reason to tap a slot they weren't already
+      // suspicious of, so a rank only behind a tap is a rank never seen.
+      expect(src).toContain('applyRankChips(');
+      expect(src).toContain(".lineup-slot[data-player-id]");
+      expect(src).toContain(".lineup-bench-row[data-player-id]");
+    });
+
+    it.each(LINEUP_PAGES)('%s re-hangs chips from one place, not per caller', (page) => {
+      const src = read(page);
+      // Six different paths rewrite a slot's innerHTML and destroy its chip.
+      // The wrapper is what keeps the seventh from being missed.
+      expect(src).toContain('renderSlotCardBody(slotIndex);');
+      expect(src).toContain('refreshRankChips();');
+    });
+
     it.each(LINEUP_PAGES)('%s degrades to no column when there is no board', (page) => {
       const src = read(page);
       // Every rank surface is gated on `rankings.available`, so an owner who
       // has imported nothing sees no empty column and no dead toggle.
       expect(src).toContain('rankings.available');
+    });
+  });
+
+  describe('My Rank editor', () => {
+    // Re-weighting the composite used to mean leaving the page for Import
+    // Rankings and coming back. Every page that SHOWS the composite should be
+    // able to edit it.
+    const EDITOR_HOSTS = [...FREE_AGENT_PAGES, ...ROSTER_PAGES];
+
+    it.each(EDITOR_HOSTS)('%s mounts the editor', (page) => {
+      const src = read(page);
+      expect(src).toContain('components/shared/rankings/MyRankEditor.astro');
+      expect(src).toMatch(/<MyRankEditor\s+league="(theleague|afl)"/);
+    });
+
+    it('the editor writes only through the storage helpers', () => {
+      // The rebalance-to-100 rule and the `rankingsUpdated` broadcast live in
+      // rankings-storage.ts. A second implementation here would drift from it
+      // and leave the host page's columns stale.
+      const src = read('src/components/shared/rankings/MyRankEditor.tsx');
+      expect(src).toContain('toggleCompositeImport');
+      expect(src).toContain('setCompositeWeight');
+      expect(src).not.toMatch(/localStorage\.(set|get)Item/);
+    });
+
+    it('the editor derives its Import Rankings link from the registry', () => {
+      // A hardcoded '/theleague/import-rankings' sends AFL owners to the wrong
+      // league's board — and tests/league-literal-guard.test.ts would not see
+      // it, because the slug is not one of the literals it scans for.
+      const src = read('src/components/shared/rankings/MyRankEditor.astro');
+      expect(src).toContain('getLeaguePrefix(');
+      expect(src).toContain('resolveLeaguePath(');
+      expect(src).not.toMatch(/["'`]\/(theleague|afl-fantasy)\/import-rankings/);
     });
   });
 

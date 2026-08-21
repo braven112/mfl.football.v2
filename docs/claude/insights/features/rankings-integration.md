@@ -364,3 +364,52 @@ through its module.
 **Recommendation:** New surface for rankings? Call the matching module. If none
 fits, add one here rather than inlining — and add its pages to
 `tests/rankings-page-integration.test.ts` so the next sibling can't be missed.
+
+### Follow-up the same day: discoverability, and editing in place
+
+Two things came back from the first look at this, and both are worth keeping.
+
+**A rank behind a tap is a rank nobody sees.** The first cut put ranks only
+inside Set Lineup's replacement sheet. That is where the *decision* happens,
+but it is not where the owner *looks* — you have no reason to open a slot you
+weren't already suspicious of, so the lineup screen was visibly unchanged and
+read as "the feature didn't ship". `applyRankChips()` in `lineup-rankings.ts`
+now hangs a small chip on every starter and bench row, which is what makes the
+"#41 on my bench under the #75 I'm starting" moment possible at a glance.
+
+Two details that are load-bearing there:
+
+- **A player the board doesn't rank gets NO chip, not a dash.** A roster full
+  of "—" turns the chip column into noise; absence is the more useful signal.
+- **`renderSlotCard` is a wrapper.** Six paths rewrite a slot's innerHTML
+  (swap, undo, undo-clear, clear, set-optimal, load-draft) and each one
+  destroys that slot's chip. Re-hanging from inside the wrapper rather than at
+  each call site is the only version of this that survives a seventh path.
+
+**`src/components/shared/rankings/MyRankEditor.astro`** is the other half:
+re-weighting the composite meant leaving for Import Rankings and coming back,
+so the modal now opens over Free Agents and Rosters in both leagues. It is
+deliberately only the two controls that change the number on screen — in/out
+and the percentage. Adding imports, hiding built-ins and reordering columns
+stay on Import Rankings, which it links to.
+
+- Every write goes through `toggleCompositeImport` / `setCompositeWeight`. They
+  own the rebalance-to-100 rule and fire `rankingsUpdated`, so the host page's
+  existing subscription re-sorts its own columns — **the modal notifies nobody
+  directly**, and that is why it works identically on four different pages.
+- State is re-read from storage after every change, never patched. Ticking one
+  source rebalances all of them, so the row you touched is never the only one
+  that moved.
+- The trigger button starts `hidden` and appears only at 2+ imports, because
+  below that `buildRankingLookup()` returns no composite config and the modal
+  would be a button to a dead end.
+- The Import Rankings link comes from `getLeaguePrefix()` +
+  `resolveLeaguePath()`. Note `tests/league-literal-guard.test.ts` would NOT
+  have caught a hardcoded `/afl-fantasy/import-rankings` — the slug isn't one
+  of the literals it scans — so `tests/rankings-page-integration.test.ts`
+  covers it instead.
+- **`--content-text` is not a token in this repo.** The first version of
+  `src/styles/my-rank-editor.css` used it for the sheet's body text, which
+  rendered the light fallback in dark mode too — near-black on near-black, the
+  exact trap `CLAUDE.md` warns about. Body text is `--color-gray-900`; form
+  fields are `--input-bg` / `--input-text` / `--input-border`.
