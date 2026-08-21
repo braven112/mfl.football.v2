@@ -645,15 +645,26 @@ html.dark .ls-headshot.def { box-shadow: none; }
      table. Keep it and shed the pieces that are duplicated elsewhere instead:
      the NFL logo (the row already identifies the player) and down & distance
      (the red-zone flag is the part that changes how a lineup reads). */
-  /* Sized to hold the longest real meta line — "ARI │ ● 8/22 10:00p" — on ONE
-     line inside the ~91px area. A wrap here costs the whole row a third line
-     and is what the two-line grid exists to avoid. */
-  .ls-pmeta { font-size: 0.6rem; gap: 0.24rem; flex-wrap: wrap; }
-  .ls-pmeta img { display: none; }
+  /* What the meta line keeps at this width, and why.
+     It has ~91px, and a wrap here costs the whole row a third line — which is
+     what the two-line grid exists to avoid. So the line is trimmed to the
+     things that CHANGE: the game clock and the red-zone flag. Dropped:
+        - the NFL logo and the team code, because the headshot's team-color
+          backdrop directly above already says which club he plays for
+          (owner, 2026-08-21), and those three characters were most of the
+          overflow;
+        - down & distance, the least load-bearing of the live signals.
+     With the team code gone the clock is first in the line, so its divider
+     rule would render as a stray leading bar. The small left pad is what puts
+     the dot under the headshot's left edge rather than hard against the grid
+     line. */
+  .ls-pmeta { font-size: 0.62rem; gap: 0.24rem; flex-wrap: wrap; padding-left: 0.2rem; }
+  .ls-prow.right .ls-pmeta { padding-left: 0; padding-right: 0.2rem; }
+  .ls-pmeta img, .ls-pteam { display: none; }
   .ls-dd { display: none; }
   .ls-rz { font-size: 0.55rem; padding: 0.03rem 0.22rem; letter-spacing: 0.02em; }
-  .ls-pclock { padding-left: 0.22rem; margin-left: 0; }
-  .ls-prow.right .ls-pclock { padding-right: 0.22rem; margin-right: 0; }
+  .ls-pclock { padding-left: 0; margin-left: 0; border-left: 0; }
+  .ls-prow.right .ls-pclock { padding-right: 0; margin-right: 0; border-right: 0; }
   .ls-pstat { font-size: 0.66rem; }
 
   /* Header: the week selector and the freshness pill share a line on a phone
