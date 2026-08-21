@@ -632,11 +632,15 @@ const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 		opacity: 0.35;
 	}
 
+	/* Same mark, same palette, same ring as `.chart-tooltip__dot` — see the note
+	   there. Fixing one of the two swatches in this component and not the other
+	   is how the pair drifts. */
 	.chart-legend__swatch {
 		width: 0.5rem;
 		height: 0.5rem;
 		border-radius: 50%;
 		flex-shrink: 0;
+		box-shadow: 0 0 0 1px color-mix(in srgb, var(--page-text, #111827) 40%, transparent);
 	}
 
 	.chart-legend__icon {
