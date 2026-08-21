@@ -657,3 +657,46 @@ describe('matchPlayerToMFL - Real-World Scenarios', () => {
     expect(result.playerId).toBe('1007');
   });
 });
+
+describe('matchPlayerToMFL — NFL team as a tiebreaker', () => {
+  // Team is a signal every source already carried and none of them passed to
+  // the matcher; ESPN was even dropping it on the floor (it arrives as a
+  // numeric proTeamId, not a string). These pin the two rules that make using
+  // it safe.
+  const twoJoshAllens = [
+    { id: '100', name: 'Josh Allen', position: 'QB', team: 'BUF' },
+    { id: '200', name: 'Josh Allen', position: 'QB', team: 'JAX' },
+  ];
+
+  it('breaks a same-name tie using the team', () => {
+    // Without a team these are indistinguishable and the matcher picks whoever
+    // sorts first — a silent wrong-player match.
+    const buf = matchPlayerToMFL('Josh Allen', 'QB', twoJoshAllens, undefined, 'BUF');
+    expect(buf.matched).toBe(true);
+    expect(buf.playerId).toBe('100');
+  });
+
+  it('NEVER excludes a candidate whose team disagrees', () => {
+    // Rankings go stale the moment a player is traded or cut. A team mismatch
+    // must cost the candidate its boost, not its place in the running —
+    // filtering on team would drop every traded player from every import.
+    const traded = [{ id: '300', name: 'Stefon Diggs', position: 'WR', team: 'HOU' }];
+    const stale = matchPlayerToMFL('Stefon Diggs', 'WR', traded, undefined, 'BUF');
+    expect(stale.matched).toBe(true);
+    expect(stale.playerId).toBe('300');
+  });
+
+  it('never reports a confidence above 1', () => {
+    // The boost is additive; an exact name + team agreement must not overflow
+    // past a perfect score or the number stops meaning anything.
+    const exact = matchPlayerToMFL('Josh Allen', 'QB', [twoJoshAllens[0]], undefined, 'BUF');
+    expect(exact.confidence).toBeLessThanOrEqual(1);
+  });
+
+  it('is a no-op when the source supplies no team', () => {
+    const noTeam = matchPlayerToMFL('Josh Allen', 'QB', [twoJoshAllens[0]], undefined, '');
+    const omitted = matchPlayerToMFL('Josh Allen', 'QB', [twoJoshAllens[0]]);
+    expect(noTeam.playerId).toBe(omitted.playerId);
+    expect(noTeam.confidence).toBe(omitted.confidence);
+  });
+});

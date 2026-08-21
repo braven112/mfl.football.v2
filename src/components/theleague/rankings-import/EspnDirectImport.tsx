@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { matchPlayerToMFL } from '../../../utils/rankings-importer';
 import { saveImport, findDuplicateImport } from '../../../utils/rankings-storage';
 import { SOURCE_LABELS } from '../../../utils/rankings-lookup';
+import { espnProTeamAbbrev } from '../../../constants/espn-pro-teams';
 import type {
   MFLPlayerForMatching,
   StoredRankingImport,
@@ -11,6 +12,17 @@ import type {
 interface Props {
   mflPlayers: MFLPlayerForMatching[];
   onImportComplete: (importData: StoredRankingImport) => void;
+  /**
+   * Season to pull ESPN rankings for — the LEAGUE year (Feb 14 for TheLeague,
+   * June 1 for the AFL), resolved server-side and passed down.
+   *
+   * This was hardcoded to 2025 and kept serving last season's board into
+   * 2026 (Ja'Marr Chase #1 instead of Jahmyr Gibbs #1). The league clock is
+   * the right one here rather than getCurrentSeasonYear(): draft rankings are
+   * for the season ABOUT to be played, and the season clock doesn't roll until
+   * Labor Day — long after owners start prepping.
+   */
+  seasonYear: number;
 }
 
 interface ImportResult {
@@ -20,8 +32,9 @@ interface ImportResult {
   unmatchedNames?: string[];
 }
 
-const ESPN_API_URL =
-  'https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/2025/segments/0/leaguedefaults/3?scoringPeriodId=0&view=kona_player_info';
+const espnApiUrl = (season: number) =>
+  `https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/${season}` +
+  '/segments/0/leaguedefaults/3?scoringPeriodId=0&view=kona_player_info';
 const ESPN_FILTER = JSON.stringify({
   players: { limit: 500, sortDraftRanks: { sortPriority: 100, sortAsc: true, value: 'PPR' } },
 });
@@ -30,7 +43,7 @@ const ESPN_FILTER = JSON.stringify({
 const POS_MAP: Record<number, string> = { 1: 'QB', 2: 'RB', 3: 'WR', 4: 'TE', 5: 'PK', 16: 'Def' };
 const VALID_POSITIONS: Record<string, number> = { QB: 1, RB: 1, WR: 1, TE: 1 };
 
-export default function EspnDirectImport({ mflPlayers, onImportComplete }: Props) {
+export default function EspnDirectImport({ mflPlayers, onImportComplete, seasonYear }: Props) {
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
 
@@ -39,7 +52,7 @@ export default function EspnDirectImport({ mflPlayers, onImportComplete }: Props
     setResult(null);
 
     try {
-      const response = await fetch(ESPN_API_URL, {
+      const response = await fetch(espnApiUrl(seasonYear), {
         headers: { 'X-Fantasy-Filter': ESPN_FILTER },
       });
       if (!response.ok) {
@@ -68,14 +81,18 @@ export default function EspnDirectImport({ mflPlayers, onImportComplete }: Props
         if (!pprRank?.rank) continue;
 
         const name = player.fullName || '';
-        const match = matchPlayerToMFL(name, pos, mflForMatching);
+        // ESPN gives the NFL team as a numeric proTeamId, not a string — it IS
+        // in this view, contrary to the old comment here. Feeding it to the
+        // matcher disambiguates same-name players at a position.
+        const team = espnProTeamAbbrev(player.proTeamId);
+        const match = matchPlayerToMFL(name, pos, mflForMatching, undefined, team);
 
         rankings.push({
           rank: pprRank.rank,
           playerId: match.playerId,
           playerName: name,
           position: pos,
-          team: '', // ESPN API doesn't return team abbreviation in this view
+          team,
           matched: match.matched,
           confidence: match.confidence,
         });

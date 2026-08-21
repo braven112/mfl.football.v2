@@ -203,11 +203,21 @@ function getNameIndex(mflPlayers: MFLPlayer[]) {
 
   const byPositionAndName = new Map<string, MFLPlayer>();
   const byPositionAndReversedName = new Map<string, MFLPlayer>();
+  // Same name + same position happens for real (two Josh Allens, two Mike
+  // Williamses). The single-value maps above silently keep whichever player
+  // was indexed LAST, so the exact-match fast path cannot even tell a
+  // collision occurred. This parallel map keeps every candidate so the team
+  // can break the tie; without it, a same-name lookup is a coin flip.
+  const allByPositionAndName = new Map<string, MFLPlayer[]>();
 
   for (const p of mflPlayers) {
     const norm = normalizePlayerName(p.name);
     const key = `${p.position}:${norm}`;
     byPositionAndName.set(key, p);
+
+    const bucket = allByPositionAndName.get(key);
+    if (bucket) bucket.push(p);
+    else allByPositionAndName.set(key, [p]);
 
     const rev = normalizePlayerName(reverseName(p.name));
     if (rev !== norm) {
@@ -215,15 +225,35 @@ function getNameIndex(mflPlayers: MFLPlayer[]) {
     }
   }
 
-  _nameIndexCache = { players: mflPlayers, byPositionAndName, byPositionAndReversedName };
+  _nameIndexCache = {
+    players: mflPlayers,
+    byPositionAndName,
+    byPositionAndReversedName,
+    allByPositionAndName,
+  };
   return _nameIndexCache;
+}
+
+
+/**
+ * Confidence added when the source's NFL team agrees with the MFL feed's.
+ * Deliberately small: enough to break a tie between two similar names and to
+ * pull a genuine match over the 0.7 threshold, not enough to promote an
+ * unrelated player who happens to share a team.
+ */
+const TEAM_MATCH_BOOST = 0.15;
+
+/** Upper-case/trim a team code for comparison. '' means "no signal". */
+function normalizeTeamForMatch(team: string | undefined | null): string {
+  return (team || '').trim().toUpperCase();
 }
 
 export function matchPlayerToMFL(
   rankingName: string,
   rankingPosition: string,
   mflPlayers: MFLPlayer[],
-  threshold: number = 0.7
+  threshold: number = 0.7,
+  rankingTeam: string = ''
 ): RankingMatch {
   // Filter to same position
   const positionPlayers = mflPlayers.filter(p => p.position === rankingPosition);
@@ -246,6 +276,25 @@ export function matchPlayerToMFL(
     index.byPositionAndReversedName.get(lookupKeyRev);
 
   if (exactMatch) {
+    // Disambiguate a same-name collision by team when the source gave us one.
+    // Only ever REORDERS equally-exact candidates — if none of them matches
+    // the supplied team (a traded or cut player, stale rankings), the original
+    // pick stands, so a stale team can never turn a hit into a miss.
+    const wantTeamExact = normalizeTeamForMatch(rankingTeam);
+    if (wantTeamExact) {
+      const candidates =
+        index.allByPositionAndName.get(lookupKey) ||
+        index.allByPositionAndName.get(lookupKeyRev);
+      if (candidates && candidates.length > 1) {
+        const onTeam = candidates.find(
+          (c) => normalizeTeamForMatch(c.team) === wantTeamExact,
+        );
+        if (onTeam) {
+          return { playerId: onTeam.id, confidence: 1.0, matched: true };
+        }
+      }
+    }
+
     return {
       playerId: exactMatch.id,
       confidence: 1.0,
@@ -253,12 +302,26 @@ export function matchPlayerToMFL(
     };
   }
 
-  // Slow path: Levenshtein fuzzy matching against position-filtered players
-  const scores = positionPlayers.map(player => ({
-    playerId: player.id,
-    name: player.name,
-    confidence: calculateSimilarity(rankingName, player.name),
-  }));
+  // Slow path: Levenshtein fuzzy matching against position-filtered players.
+  //
+  // NFL team is a tiebreaker, not a filter. Sources disagree with the MFL feed
+  // constantly — a player traded or cut since the rankings were published has
+  // the "wrong" team through no fault of the data — so a mismatch must never
+  // exclude a candidate, only decline to boost it. Boosting on agreement is
+  // safe and is what separates two same-named players at a position.
+  const wantTeam = normalizeTeamForMatch(rankingTeam);
+  const scores = positionPlayers.map(player => {
+    const base = calculateSimilarity(rankingName, player.name);
+    const teamAgrees =
+      !!wantTeam && normalizeTeamForMatch(player.team) === wantTeam;
+    return {
+      playerId: player.id,
+      name: player.name,
+      // Cap at 1 so a boosted fuzzy hit can never outrank an exact-name match,
+      // and keep the reported confidence honest.
+      confidence: teamAgrees ? Math.min(1, base + TEAM_MATCH_BOOST) : base,
+    };
+  });
 
   // Sort by confidence descending
   scores.sort((a, b) => b.confidence - a.confidence);
@@ -476,7 +539,13 @@ export function importRankings(
   
   // Match players to MFL database
   const rankings = parsedRankings.map(ranking => {
-    const match = matchPlayerToMFL(ranking.playerName, ranking.position, mflPlayers);
+    const match = matchPlayerToMFL(
+      ranking.playerName,
+      ranking.position,
+      mflPlayers,
+      undefined,
+      ranking.team,
+    );
     
     return {
       rank: ranking.rank,

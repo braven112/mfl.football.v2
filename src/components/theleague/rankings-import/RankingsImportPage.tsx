@@ -23,6 +23,8 @@ interface Props {
    * and a hardcoded `/theleague/cr` here sent AFL admins to the wrong board.
    */
   customRankingsHref?: string | null;
+  /** League year to pull season-scoped source data for (see EspnDirectImport). */
+  seasonYear: number;
 }
 
 export default function RankingsImportPage({
@@ -30,6 +32,7 @@ export default function RankingsImportPage({
   siteConfigsJson,
   isAdmin = false,
   customRankingsHref = null,
+  seasonYear,
 }: Props) {
   const mflPlayers: MFLPlayerForMatching[] = useMemo(() => {
     try { return JSON.parse(mflPlayersJson); } catch { return []; }
@@ -80,7 +83,7 @@ export default function RankingsImportPage({
       )}
       <div className="ri-direct-import-grid">
         <FantasyCalcDirectImport mflPlayers={mflPlayers} onImportComplete={handleImportComplete} />
-        <EspnDirectImport mflPlayers={mflPlayers} onImportComplete={handleImportComplete} />
+        <EspnDirectImport mflPlayers={mflPlayers} onImportComplete={handleImportComplete} seasonYear={seasonYear} />
         <SleeperDirectImport mflPlayers={mflPlayers} onImportComplete={handleImportComplete} />
       </div>
       <BookmarkletSection siteConfigs={siteConfigs} />

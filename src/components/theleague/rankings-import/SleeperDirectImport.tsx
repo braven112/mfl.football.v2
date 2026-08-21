@@ -79,6 +79,8 @@ export default function SleeperDirectImport({ mflPlayers, onImportComplete }: Pr
           p.name,
           p.pos,
           mflPlayers.map((m) => ({ id: m.id, name: m.name, position: m.position, team: m.team })),
+          undefined,
+          p.team || '',
         );
         return {
           rank: p.rank,
