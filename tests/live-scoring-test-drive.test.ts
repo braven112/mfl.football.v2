@@ -11,7 +11,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   isTestDriveWindow,
-  testDriveBoards,
+  showTestDriveHero,
+  testDriveBoard,
   TEST_DRIVE_PARAMS,
   TEST_DRIVE_QUERY,
 } from '../src/utils/live-scoring-test-drive';
@@ -41,49 +42,61 @@ describe('live-scoring test drive', () => {
   it('carries every param the board needs to resolve a slate', () => {
     // Without the espn* override the board asks for regular-season week 1,
     // which does not exist yet, and comes back empty — the exact "broken or
-    // just August?" ambiguity the promo exists to remove.
+    // just August?" ambiguity the hero exists to remove. These live on the
+    // button and are never printed; the reader taps, they do not configure.
     expect(TEST_DRIVE_QUERY).toBe('demo=live&espnSeason=1&espnWeek=3&espnYear=2026');
     expect(TEST_DRIVE_PARAMS.map(([p]) => p)).toEqual(['demo', 'espnSeason', 'espnWeek', 'espnYear']);
-    for (const [param, value, note] of TEST_DRIVE_PARAMS) {
+    for (const [param, value] of TEST_DRIVE_PARAMS) {
       expect(value, `${param} needs a value`).not.toBe('');
-      expect(note.length, `${param} needs an explanation — the promo IS the explanation`).toBeGreaterThan(20);
     }
   });
 
-  it('offers exactly the leagues that have the board, current one first', () => {
-    // Derived from the registry, so a league gaining or losing liveScoring is
-    // right without editing the promo.
-    const expected = ALL_LEAGUES
-      .filter((l) => leagueHasFeature(l.slug, 'liveScoring') && !l.bestBall)
-      .map((l) => l.slug);
-    expect(expected.length, 'no league has liveScoring — the promo would be empty').toBeGreaterThan(0);
-
-    for (const slug of expected) {
-      const boards = testDriveBoards(slug);
-      expect(boards.map((b) => b.slug).sort()).toEqual([...expected].sort());
-      expect(boards[0].slug, 'the viewer’s own league leads').toBe(slug);
-      expect(boards.filter((b) => b.isCurrent)).toHaveLength(1);
-      for (const b of boards) {
-        // Prefix intact: both homepages render prefixed internal routes, and a
-        // cross-league link must keep its prefix regardless.
-        expect(b.path).toBe(`/${b.slug}/live-scoring?${TEST_DRIVE_QUERY}`);
-      }
+  it('offers THIS league\u2019s board and no other', () => {
+    // One league, not both: an owner on TheLeague's homepage is being asked to
+    // check TheLeague's board, and offering the AFL's alongside it turns one
+    // instruction into a choice.
+    for (const league of ALL_LEAGUES) {
+      const board = testDriveBoard(league.slug);
+      if (!board) continue;
+      expect(board.slug).toBe(league.slug);
+      expect(board.name).toBe(league.name);
+      // Prefix intact: both homepages render prefixed internal routes.
+      expect(board.path).toBe(`/${league.slug}/live-scoring?${TEST_DRIVE_QUERY}`);
     }
   });
 
-  it('never lists a league with nothing on the board', () => {
-    const listed = testDriveBoards('theleague').map((b) => b.slug);
+  it('returns null for a league with nothing on the board', () => {
     for (const l of ALL_LEAGUES) {
       if (!leagueHasFeature(l.slug, 'liveScoring')) {
-        expect(listed, `${l.slug} has no board`).not.toContain(l.slug);
+        expect(testDriveBoard(l.slug), `${l.slug} has no board`).toBeNull();
       }
       if (l.bestBall) {
         // Draft-only: its MFL season does not exist until draft night, so the
         // board renders "scores will appear here when games begin". Linking an
-        // empty page from a "go look at this" promo reads as a broken feature.
-        expect(listed, `${l.slug} is draft-only and has no matchups yet`).not.toContain(l.slug);
+        // empty page from a go-look-at-this hero reads as a broken feature.
+        expect(testDriveBoard(l.slug), `${l.slug} is draft-only`).toBeNull();
       }
     }
-    expect(listed.length, 'the promo would be empty').toBeGreaterThan(0);
+    expect(testDriveBoard('not-a-league')).toBeNull();
+  });
+
+  it('at least one league actually gets the hero', () => {
+    // Guards the whole thing being silently inert.
+    const shown = ALL_LEAGUES.filter((l) => showTestDriveHero(l.slug, pt('2026-08-21T12:00:00-07:00')));
+    expect(shown.length).toBeGreaterThan(0);
+  });
+
+  it('the page-level gate agrees with the component\u2019s, in both directions', () => {
+    // The page uses showTestDriveHero to SUPPRESS its normal hero, and the
+    // component independently decides whether to render. If those two ever
+    // disagree the homepage shows two heroes or none — the failure this pairs
+    // against, so it is asserted rather than assumed.
+    const inside = pt('2026-08-21T12:00:00-07:00');
+    const outside = pt('2026-09-21T12:00:00-07:00');
+    for (const l of ALL_LEAGUES) {
+      const hasBoard = testDriveBoard(l.slug) !== null;
+      expect(showTestDriveHero(l.slug, inside), `${l.slug} inside the window`).toBe(hasBoard);
+      expect(showTestDriveHero(l.slug, outside), `${l.slug} outside the window`).toBe(false);
+    }
   });
 });

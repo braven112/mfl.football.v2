@@ -1,16 +1,19 @@
 ---
 /**
- * TEMPORARY — live-scoring test-drive promo for the preseason weekend.
+ * TEMPORARY — the live-scoring preseason hero, for one weekend.
  *
- * Sits above the real hero on both homepages rather than replacing it: the
- * hero is a state machine with a documented priority waterfall, and wedging a
- * three-day banner into it would mean a new SeasonPhase, a new AFL hero kind
- * and two renderers to unpick afterwards. This is one component and two call
- * sites, and `isTestDriveWindow` takes it down on its own.
+ * During the window this REPLACES the league's normal hero (the homepages gate
+ * on `showTestDriveHero`), so it has to carry the page on its own rather than
+ * sit above something. One message, one button, no disclosure panels: an owner
+ * on a phone during a game gets a reason and a tap target.
+ *
+ * The query string that makes `?demo=live` work is on the button and nowhere
+ * else — it is plumbing, and printing it was making the reader do setup that
+ * the link already does (owner direction, 2026-08-21).
  *
  * Delete with src/utils/live-scoring-test-drive.ts once the window lapses.
  */
-import { isTestDriveWindow, testDriveBoards, TEST_DRIVE_PARAMS, TEST_DRIVE_QUERY } from '../../utils/live-scoring-test-drive';
+import { isTestDriveWindow, testDriveBoard } from '../../utils/live-scoring-test-drive';
 
 interface Props {
   /** Canonical slug of the league whose homepage this is. */
@@ -20,157 +23,117 @@ interface Props {
 }
 
 const { slug, referenceDate } = Astro.props;
-const show = isTestDriveWindow(referenceDate ?? new Date());
-const boards = show ? testDriveBoards(slug) : [];
-const primary = boards[0];
+const board = isTestDriveWindow(referenceDate ?? new Date()) ? testDriveBoard(slug) : null;
 ---
 
-{show && primary && (
+{board && (
   <section class="ls-td" aria-labelledby="ls-td-title">
-    <p class="ls-td__kicker">Test drive · preseason weekend</p>
-    <h2 class="ls-td__title" id="ls-td-title">Live Scoring is up. Real NFL games, your real roster.</h2>
-    <p class="ls-td__lede">
-      The board now reads the actual NFL game — real quarter and clock, red-zone
-      alerts, each starter's live box-score line, and a ticker of the scoring
-      plays your guys were involved in. MFL doesn't switch its own scoring on
-      until Week 1, so this points the fantasy side at your current roster and
-      the NFL side at this weekend's preseason slate.
-      <strong>Every fantasy score reads 0.0 — that part is expected.</strong>
-      Everything else should be live.
+    <p class="ls-td__kicker">
+      <span class="ls-td__flag">Preseason</span>
+      Live Scoring test drive
     </p>
 
-    <div class="ls-td__ctas">
-      {boards.map((b) => (
-        <a class:list={['ls-td__cta', b.isCurrent && 'primary']} href={b.path}>
-          {b.name} board →
-        </a>
-      ))}
-    </div>
+    <h2 class="ls-td__title" id="ls-td-title">
+      The new Live Scoring board is running on this week&rsquo;s preseason games.
+    </h2>
 
-    <details class="ls-td__details">
-      <summary>What the query string is doing</summary>
-      <code class="ls-td__url">{primary.path}</code>
-      <dl class="ls-td__params">
-        {TEST_DRIVE_PARAMS.map(([param, value, note]) => (
-          <>
-            <dt><code>{param}={value}</code></dt>
-            <dd>{note}</dd>
-          </>
-        ))}
-      </dl>
-      <p class="ls-td__note">
-        Drop <code>&{TEST_DRIVE_QUERY.split('&').slice(1).join('&')}</code> once the
-        regular season starts — the board finds the right week on its own then.
-      </p>
-    </details>
+    <p class="ls-td__lede">
+      It reads the actual NFL game now — real quarter and clock, red-zone alerts,
+      each starter&rsquo;s live box-score line, and a ticker of the scoring plays
+      your guys were in. Tap through and it puts your current roster against
+      tonight&rsquo;s <strong>preseason</strong> slate.
+    </p>
 
-    <p class="ls-td__ask">
-      Anything that looks wrong — a name, a clock, a stat line, a play credited to
-      the wrong owner — say so in the chat. Phones especially.
+    <a class="ls-td__cta" href={board.path}>Watch the preseason games live &rarr;</a>
+
+    <p class="ls-td__note">
+      Fantasy totals will all read <strong>0.0</strong> — MFL doesn&rsquo;t switch
+      its own scoring on until Week 1, and preseason stats never count. Everything
+      on the NFL side is real. Anything that looks wrong — a name, a clock, a stat
+      line — say so in the chat. Phones especially.
     </p>
   </section>
 )}
 
 <style>
+  /* Hero-scale on purpose: for this weekend it IS the hero, so it carries the
+     top of the page rather than sitting above something bigger. */
   .ls-td {
     border: 1px solid var(--card-border);
     border-left: 4px solid var(--league-accent);
     border-radius: var(--radius-lg);
     background: var(--card-surface);
-    padding: var(--spacing-lg);
+    padding: var(--spacing-xl) var(--spacing-lg);
     margin-bottom: var(--spacing-lg);
   }
   .ls-td__kicker {
-    margin: 0 0 0.35rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 0.6rem;
     font-family: var(--font-display);
-    font-size: 0.68rem;
+    font-size: 0.7rem;
     font-weight: var(--font-weight-bold);
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--league-accent);
+    color: var(--content-text-muted);
+  }
+  /* The one word the hero is really about. Warning tokens, not the league
+     accent: this is a "these games don't count" flag, not branding, and both
+     tokens carry a light value and an html.dark override. */
+  .ls-td__flag {
+    padding: 0.2rem 0.45rem;
+    border-radius: var(--radius-sm);
+    background: var(--badge-warning-bg);
+    color: var(--badge-warning-text);
+    letter-spacing: 0.08em;
   }
   .ls-td__title {
-    margin: 0 0 0.5rem;
+    margin: 0 0 0.6rem;
     font-family: var(--font-display);
-    font-size: clamp(1.25rem, 3.5vw, 1.75rem);
-    line-height: 1.15;
+    font-size: clamp(1.4rem, 4.5vw, 2.1rem);
+    line-height: 1.12;
     color: var(--page-text);
+    max-width: 24ch;
   }
   .ls-td__lede {
-    margin: 0 0 var(--spacing-md);
+    margin: 0 0 var(--spacing-lg);
     color: var(--content-text-muted);
+    font-size: var(--font-size-lg);
     line-height: 1.5;
-    max-width: 62ch;
+    max-width: 60ch;
   }
-  .ls-td__lede strong { color: var(--page-text); }
+  .ls-td__lede strong, .ls-td__note strong { color: var(--page-text); }
 
-  .ls-td__ctas { display: flex; flex-wrap: wrap; gap: 0.6rem; }
   .ls-td__cta {
     display: inline-flex;
     align-items: center;
-    padding: 0.55rem 1rem;
-    border: 1px solid var(--card-border);
+    padding: 0.75rem 1.4rem;
+    border: 1px solid var(--league-accent);
     border-radius: var(--radius-md);
+    background: var(--league-accent);
+    color: #fff;
     font-family: var(--font-display);
     font-weight: var(--font-weight-bold);
-    font-size: var(--font-size-sm);
-    color: var(--page-text);
-    background: var(--content-bg-muted);
+    font-size: var(--font-size-base);
     text-decoration: none;
-  }
-  .ls-td__cta.primary {
-    background: var(--league-accent);
-    border-color: var(--league-accent);
-    color: #fff;
   }
   .ls-td__cta:hover { text-decoration: none; opacity: 0.9; }
   .ls-td__cta:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 
-  .ls-td__details { margin-top: var(--spacing-md); }
-  .ls-td__details summary {
-    cursor: pointer;
+  .ls-td__note {
+    margin: var(--spacing-lg) 0 0;
     font-size: var(--font-size-sm);
-    font-weight: var(--font-weight-semibold);
+    line-height: 1.5;
     color: var(--content-text-muted);
-  }
-  .ls-td__url {
-    display: block;
-    margin: 0.6rem 0;
-    padding: 0.5rem 0.6rem;
-    border-radius: var(--radius-sm);
-    background: var(--content-bg-muted);
-    border: 1px solid var(--content-border);
-    font-size: 0.75rem;
-    color: var(--page-text);
-    /* The whole point is that it's copyable, so it must not be clipped. */
-    overflow-wrap: anywhere;
-  }
-  .ls-td__params {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 0.3rem 0.75rem;
-    margin: 0 0 0.6rem;
-    font-size: var(--font-size-sm);
-  }
-  .ls-td__params dt { margin: 0; }
-  .ls-td__params dd { margin: 0; color: var(--content-text-muted); }
-  .ls-td__params code, .ls-td__note code {
-    font-size: 0.75rem;
-    color: var(--page-text);
-    overflow-wrap: anywhere;
-  }
-  .ls-td__note { margin: 0; font-size: var(--font-size-sm); color: var(--content-text-muted); }
-
-  .ls-td__ask {
-    margin: var(--spacing-md) 0 0;
-    font-size: var(--font-size-sm);
-    color: var(--content-text-muted);
+    max-width: 60ch;
   }
 
   @media (max-width: 640px) {
-    .ls-td { padding: var(--spacing-md); }
-    .ls-td__cta { flex: 1 1 100%; justify-content: center; }
-    .ls-td__params { grid-template-columns: 1fr; gap: 0.15rem; }
-    .ls-td__params dd { margin-bottom: 0.45rem; }
+    .ls-td { padding: var(--spacing-lg) var(--spacing-md); }
+    .ls-td__title { max-width: none; }
+    .ls-td__lede { font-size: var(--font-size-base); }
+    /* Full-width tap target — this hero is aimed at a phone during a game. */
+    .ls-td__cta { display: flex; justify-content: center; }
   }
 </style>
