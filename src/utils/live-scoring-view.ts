@@ -77,6 +77,21 @@ export function compactKickoff(shortDetail: string): string {
   return when ? `${when} ${time}` : time;
 }
 
+/**
+ * Plain-language name for the state the dot next to a player's clock encodes.
+ *
+ * The dot is the only thing on the row that says whether a game is being
+ * played, and its three forms — pulsing green, hollow amber ring, solid grey —
+ * are learnable but not self-evident ("what does the yellow circle indicate?",
+ * owner, 2026-08-21). This rides on the clock's `title` so the answer is one
+ * hover or one screen-reader stop away, without spending row width on a legend.
+ */
+export function describeGameState(state: NflGameState): string {
+  if (state === 'in-progress') return 'His game is being played right now';
+  if (state === 'not-started') return 'His game has not kicked off yet';
+  return 'His game is final';
+}
+
 export function isPlayerInRedZone(game: NflGame | undefined, nflTeam: string): boolean {
   if (!game || game.state !== 'in' || !nflTeam) return false;
   const s = game.situation;

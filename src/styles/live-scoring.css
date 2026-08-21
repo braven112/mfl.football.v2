@@ -357,16 +357,53 @@ html.dark .ls-detail {
 .ls-detail .ls-wp { padding: 0.7rem 1.2rem 0; }
 .ls-ytp { display: flex; justify-content: space-between; padding: 0.2rem 1.2rem 0.6rem; font-size: 0.7rem; color: var(--ls-pre); }
 
-.ls-mx-body { padding: 0.4rem 0.7rem 0.8rem; }
+.ls-mx-body {
+  /* The player row's fixed columns, declared once HERE rather than on
+     .ls-prow, because the center slot label has to measure against them too.
+     The phone breakpoint overrides the four base values and everything
+     derived from them follows. */
+  --ls-slot-w: 2.4rem;
+  --ls-face-w: 42px;
+  --ls-row-gap: 0.6rem;
+  --ls-row-pad-y: 0.5rem;
+  /* Where a player's NAME starts: chip + headshot + the two gaps. The
+     box-score line indents to exactly this, because flush left it sat under
+     the position chip — a whole slot column away from the player it
+     describes (owner, 2026-08-21). */
+  --ls-stat-indent: calc(var(--ls-slot-w) + var(--ls-face-w) + var(--ls-row-gap) * 2);
+  /* Height of a row's FIRST line — the headshot line. */
+  --ls-row-line1: calc(var(--ls-face-w) + var(--ls-row-pad-y) * 2);
+  padding: 0.4rem 0.7rem 0.8rem;
+}
 .ls-mx-row {
-  display: grid; grid-template-columns: 1fr 2.2rem 1fr; align-items: center; gap: 0.3rem;
+  display: grid; grid-template-columns: 1fr 2.2rem 1fr; gap: 0.3rem;
+  /* TOP-aligned, not centered. A box-score line only exists for a player who
+     has touched the ball, so one side of a matchup row is routinely taller
+     than the other — and centering then floats the quiet side's name half a
+     line below its opponent's. The two players in a row stopped lining up the
+     moment real stats arrived (owner, 2026-08-21). */
+  align-items: start;
   border-bottom: 1px solid var(--content-border);
 }
 .ls-mx-row:last-child { border-bottom: 0; }
-.ls-mx-pos { text-align: center; font-family: var(--font-display); font-weight: var(--font-weight-bold); font-size: 0.72rem; color: var(--content-text-muted); }
+.ls-mx-pos {
+  text-align: center; font-family: var(--font-display); font-weight: var(--font-weight-bold);
+  font-size: 0.72rem; color: var(--content-text-muted);
+  /* Centered on the row's FIRST line, not on the cell — same reason: a stat
+     line on either side must not drag the shared label down. */
+  display: flex; align-items: center; justify-content: center;
+  min-height: var(--ls-row-line1);
+}
 
 /* ── player row ── */
-.ls-prow { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; padding: 0.5rem 0.55rem; }
+.ls-prow {
+  display: flex; flex-wrap: wrap; align-items: center;
+  /* Lines pack to the TOP. With one line in a stretched cell the default
+     would centre it — the same misalignment .ls-mx-row's align-items:start
+     fixes one level up. */
+  align-content: flex-start;
+  gap: var(--ls-row-gap); padding: var(--ls-row-pad-y) 0.55rem;
+}
 .ls-prow.right { flex-direction: row; }
 /* Slot label: COLORED TEXT, not a filled pill (owner direction, Aug 2026).
    Nine filled chips per side turned the lineup into a column of colored
@@ -375,7 +412,7 @@ html.dark .ls-detail {
    theme-independent — they read on both the white and the near-black card. */
 .ls-ppos {
   font-family: var(--font-display); font-weight: var(--font-weight-bold); font-size: 0.72rem;
-  color: var(--posc, #7a8694); width: 2.4rem; text-align: center;
+  color: var(--posc, #7a8694); width: var(--ls-slot-w); text-align: center;
   padding: 0.18rem 0; flex: none; letter-spacing: 0.02em;
 }
 /* Slot accent colors (theme-independent) — keyed off data-pos, which now
@@ -388,7 +425,7 @@ html.dark .ls-detail {
 .ls-ppos[data-pos="DEF"] { --posc: #8b97a5; }
 .ls-ppos[data-pos="FLEX"] { --posc: #6f9dd0; }
 .ls-headshot {
-  position: relative; width: 42px; height: 42px; border-radius: 50%; flex: none; overflow: hidden;
+  position: relative; width: var(--ls-face-w); height: var(--ls-face-w); border-radius: 50%; flex: none; overflow: hidden;
   /* Same treatment as the shared player-cell chip (player-cell.css): both
      themes use the luminance-floored radial head-spotlight from
      getPlayerAvatarBackground plus the team-tinted ring — darker ink mix in
@@ -519,6 +556,10 @@ html.dark .ls-headshot.def { box-shadow: none; }
    the comment in PlayerRow for what it looked like nested in the name column. */
 .ls-pstat {
   flex: 0 0 100%;
+  /* The indent is PADDING inside a 100% basis, not a margin: a margin would
+     add to the basis and push the line past the row. */
+  box-sizing: border-box;
+  padding-left: var(--ls-stat-indent);
   margin-top: -0.15rem;
   font-size: 0.72rem;
   line-height: 1.3;
@@ -526,7 +567,11 @@ html.dark .ls-headshot.def { box-shadow: none; }
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
-.ls-prow.right .ls-pstat { text-align: right; }
+.ls-prow.right .ls-pstat {
+  text-align: right;
+  padding-left: 0;
+  padding-right: var(--ls-stat-indent);
+}
 
 /* Scoring-play ticker. .ls-m-type carries ESPN's own play abbreviation (TD,
    FG, SF) in place of the old "+X.X" fantasy delta, which was inferred by
@@ -575,7 +620,13 @@ html.dark .ls-headshot.def { box-shadow: none; }
      side tracks use minmax(0) so a long name reflows inside its column instead
      of overflowing the row. `.ls-mx-pos` is display:none, so the row's three
      DOM children collapse to the two side columns. */
-  .ls-mx-body { padding: 0.4rem 0.25rem 0.8rem; }
+  .ls-mx-body {
+    --ls-slot-w: 1.4rem;
+    --ls-face-w: 30px;
+    --ls-row-gap: 0.35rem;
+    --ls-row-pad-y: 0.45rem;
+    padding: 0.4rem 0.25rem 0.8rem;
+  }
   .ls-mx-pos { display: none; }
   .ls-mx-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.35rem; }
   .ls-mx-row > div { min-width: 0; }
@@ -601,9 +652,9 @@ html.dark .ls-headshot.def { box-shadow: none; }
       "pos face name name"
       "pos meta meta score";
     align-items: center;
-    column-gap: 0.35rem;
+    column-gap: var(--ls-row-gap);
     row-gap: 0.1rem;
-    padding: 0.45rem 0.1rem;
+    padding: var(--ls-row-pad-y) 0.1rem;
     min-width: 0;
   }
   /* Mirrored, not re-ordered: grid areas ignore DOM order, so the home side
@@ -615,13 +666,16 @@ html.dark .ls-headshot.def { box-shadow: none; }
       "score meta meta pos";
   }
   .ls-pid { display: contents; }
-  .ls-mx-body .ls-ppos { grid-area: pos; width: 1.4rem; font-size: 0.6rem; padding: 0.14rem 0; letter-spacing: 0; }
-  .ls-headshot { grid-area: face; width: 30px; height: 30px; }
+  .ls-mx-body .ls-ppos { grid-area: pos; font-size: 0.6rem; padding: 0.14rem 0; letter-spacing: 0; }
+  .ls-headshot { grid-area: face; }
   .ls-pname { grid-area: name; }
   .ls-pmeta { grid-area: meta; }
   .ls-pscore { grid-area: score; }
-  /* The box-score line keeps its own full-width row below both. */
-  .ls-pstat { grid-column: 1 / -1; margin-top: 0; }
+  /* The box-score line gets its own row below both — starting at the headshot
+     column, so it lines up under the player it describes rather than under the
+     slot chip. Grid columns say that directly; no indent arithmetic needed. */
+  .ls-pstat { grid-column: 2 / -1; margin-top: 0; padding-left: 0; }
+  .ls-prow.right .ls-pstat { grid-column: 1 / -2; padding-right: 0; }
   /* Full names. They used to ellipsise inside a ~57px column, which turned
      "Jahmyr Gibbs" into "Jah…" — not a name, and not something an owner can
      read his lineup from. With the score column folded into this line almost

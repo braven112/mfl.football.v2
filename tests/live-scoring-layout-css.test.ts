@@ -1,5 +1,11 @@
 /**
- * Mobile guard for the live-scoring board.
+ * Layout guards for the live-scoring board.
+ *
+ * CSS has no runtime to assert against, so this parses the stylesheet and
+ * checks the DECLARATIONS that apply — in the base cascade and inside the
+ * phone breakpoint separately. A grep would pass on a rule that was moved,
+ * overridden, or re-hidden under a different selector.
+ *
  *
  * Two regressions, both reported by an owner on a phone in portrait
  * (2026-08-21), both invisible on a desktop viewport:
@@ -11,10 +17,10 @@
  *  - **Names were not names.** `.ls-pname` ellipsised inside a ~70px column in
  *    the two-column matchup view, rendering "Jahmyr Gibbs" as "Jah…".
  *
- * CSS has no runtime to assert against, so this parses the stylesheet's own
- * `@media` block and checks the DECLARATIONS that apply there — not that some
- * string appears in the file. A grep would pass on a rule that was moved,
- * overridden, or re-hidden under a different selector.
+ * A third, from the same day: the box-score line sat flush at the row's left
+ * edge, under the position chip rather than under the player it describes,
+ * and a taller side of a matchup row floated the quieter side's name half a
+ * line below its opponent's.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -70,6 +76,26 @@ function valueOf(block: string, selector: string, prop: string): string | undefi
 }
 
 const phone = mediaBlock('@media (max-width: 760px)');
+
+/** The stylesheet with every @media block removed — the base cascade only. */
+const base = (() => {
+  let out = '';
+  let i = 0;
+  while (i < stripped.length) {
+    const at = stripped.indexOf('@media', i);
+    if (at < 0) { out += stripped.slice(i); break; }
+    out += stripped.slice(i, at);
+    const open = stripped.indexOf('{', at);
+    let depth = 0;
+    let j = open;
+    for (; j < stripped.length; j++) {
+      if (stripped[j] === '{') depth++;
+      else if (stripped[j] === '}') { depth--; if (depth === 0) break; }
+    }
+    i = j + 1;
+  }
+  return out;
+})();
 
 /** The rows named by a `grid-template-areas` value, in order. */
 function gridRows(block: string, selector: string): string[][] {
@@ -156,5 +182,47 @@ describe('live-scoring on a phone', () => {
     expect(tone('live')).toBe(true);
     expect(tone('error')).toBe(true);
     expect(stripped).toMatch(/\.ls-dot\.err[^{]*\{[^}]*background:/);
+  });
+});
+
+
+describe('a matchup row keeps its two players level', () => {
+  it('top-aligns the two sides instead of centering them', () => {
+    // A box-score line only exists for a player who has touched the ball, so
+    // one side of a row is routinely taller than the other. Centered, the
+    // quiet side's name floats half a line below its opponent's — the two
+    // players stopped lining up the moment real stats arrived (owner,
+    // 2026-08-21).
+    expect(valueOf(base, '.ls-mx-row', 'align-items')).toBe('start');
+    // Same reasoning one level down: a single flex line in a stretched cell
+    // would otherwise be centered in it.
+    expect(valueOf(base, '.ls-prow', 'align-content')).toBe('flex-start');
+  });
+
+  it('centers the shared slot label on the first line, not on the cell', () => {
+    // Without this the label drifts downward by half whatever the taller side
+    // gained, which is the same bug wearing the center column's clothes.
+    expect(valueOf(base, '.ls-mx-pos', 'min-height')).toBe('var(--ls-row-line1)');
+    expect(valueOf(base, '.ls-mx-pos', 'align-items')).toBe('center');
+  });
+
+  it('indents the box-score line to where the player’s name starts', () => {
+    // Flush left it sat under the position chip, a whole slot column away
+    // from the player it describes.
+    expect(valueOf(base, '.ls-pstat', 'padding-left')).toBe('var(--ls-stat-indent)');
+    expect(valueOf(base, '.ls-prow.right .ls-pstat', 'padding-right')).toBe('var(--ls-stat-indent)');
+    // The indent must be DERIVED from the same values that size the columns
+    // it is clearing, or it silently drifts the next time one of them moves.
+    const indent = valueOf(base, '.ls-mx-body', '--ls-stat-indent') ?? '';
+    for (const token of ['--ls-slot-w', '--ls-face-w', '--ls-row-gap']) {
+      expect(indent, `--ls-stat-indent must be computed from ${token}`).toContain(token);
+    }
+  });
+
+  it('on a phone the box-score line clears the slot chip via grid columns', () => {
+    // Column 2 is the headshot, which is where the meta line above it starts —
+    // the stat line lines up under the player, not under his slot label.
+    expect(valueOf(phone, '.ls-pstat', 'grid-column')).toBe('2 / -1');
+    expect(valueOf(phone, '.ls-prow.right .ls-pstat', 'grid-column')).toBe('1 / -2');
   });
 });

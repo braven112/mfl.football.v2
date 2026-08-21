@@ -11,6 +11,7 @@ import {
   buildMoments,
   compactKickoff,
   describeFeedFreshness,
+  describeGameState,
   formatFeedAge,
   formatGameClock,
   formatPlayClock,
@@ -515,5 +516,16 @@ describe('compactKickoff', () => {
     // Wiring, not just the helper: the row used to render shortDetail raw.
     expect(formatGameClock('not-started', game({ state: 'pre', shortDetail: '8/22 - 7:00 PM EDT' })))
       .toBe('8/22 7:00p');
+  });
+});
+
+describe('describeGameState', () => {
+  it('names what the dot beside the clock is showing', () => {
+    // Three dot forms — pulsing green, hollow amber ring, solid grey — are
+    // learnable but not self-evident ("what does the yellow circle indicate?",
+    // owner, 2026-08-21). This rides on the clock's title attribute.
+    expect(describeGameState('in-progress')).toMatch(/right now/);
+    expect(describeGameState('not-started')).toMatch(/not kicked off/);
+    expect(describeGameState('final')).toMatch(/final/);
   });
 });

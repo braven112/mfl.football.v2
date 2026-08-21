@@ -45,6 +45,7 @@ import {
   assignLineupSlots,
   buildMoments,
   describeFeedFreshness,
+  describeGameState,
   formatGameClock,
   isPlayerInRedZone,
   playerDownDistance,
@@ -497,7 +498,10 @@ function PlayerRow({ row, meta, side, slot, game, box, detailStatus }: PlayerRow
             team-color backdrop already says which club he plays for, and the
             three characters are what pushed the meta line into a second wrap. */}
         <span className="ls-pteam">{team}</span>
-        <span className={`ls-pclock ${state === 'in-progress' ? 'live' : state === 'not-started' ? 'pre' : ''}`}>
+        <span
+          className={`ls-pclock ${state === 'in-progress' ? 'live' : state === 'not-started' ? 'pre' : ''}`}
+          title={describeGameState(state)}
+        >
           <span className={`ls-dot ${state === 'in-progress' ? 'live' : state === 'not-started' ? 'pre' : 'final'}`} />
           {formatGameClock(state, game)}
         </span>
