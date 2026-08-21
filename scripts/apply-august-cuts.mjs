@@ -272,8 +272,9 @@ async function fetchFranchiseNames(year) {
 
 /**
  * Cross-check the transactions feed for a drop marker when the rosters
- * endpoint looks stale (docs/claude/insights/domains/mfl-api.md:188-232 —
- * rosters can lag drops; transactions are authoritative). Drop-only format
+ * endpoint looks stale — see "MFL Rosters API Inconsistency During Pre-Rollover
+ * Window" in docs/claude/insights/domains/mfl-api.md: rosters can lag drops,
+ * transactions are authoritative. Drop-only format
  * is `|{playerId},`.
  */
 async function dropConfirmedByTransactions(year, franchiseId, playerId, sinceEpochSeconds) {
@@ -300,7 +301,8 @@ async function dropConfirmedByTransactions(year, franchiseId, playerId, sinceEpo
  * INVARIANT: owner-mode only. NEVER send FRANCHISE_ID, and never attach the
  * commissioner cookie — MFL's lockout-impersonation check silently no-ops
  * the drop when a franchise id rides along on an owner request
- * (docs/claude/insights/features/roster-actions.md:19). The cookie alone
+ * (see "Owner mode does NOT pass FRANCHISE_ID" in
+ * docs/claude/insights/features/roster-actions.md). The cookie alone
  * identifies the franchise.
  */
 async function postAddDrop({ year, playerId, ownerCookie }) {

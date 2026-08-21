@@ -127,9 +127,10 @@ When working in this codebase, pay attention to:
 
 **Before each task:** Read these insight files for established patterns and known issues:
 - `docs/claude/insights/domains/design-system.md` — Design tokens, CSS variables, theming patterns
+- `docs/claude/insights/domains/frontend.md` — Astro/ClientRouter rules, layout traps, two-league drift
 - `docs/claude/insights/domains/accessibility.md` — A11y patterns, ARIA usage, contrast requirements
 
-Each domain file opens with a **curated head** (the block above `<!-- /CURATED-HEAD -->`) holding the rules that still apply. Read that; the dated archive below it is 130-150 KB and must not be read start-to-finish — `grep -n` it for your specific topic instead. (`accessibility.md` is small enough to read whole.)
+Each domain file opens with a **curated head** (the block above `<!-- /CURATED-HEAD -->`) holding the rules that still apply. Read that; the dated archive below it is 130-150 KB and must not be read start-to-finish — `grep -n` it for your specific topic instead. (`design-system.md` and `frontend.md` have heads; `accessibility.md` is small enough to read whole.)
 
 **After each task:** Append new insights to the relevant domain file using the format defined in `docs/claude/insights/README.md`. Focus on:
 - Component patterns that worked well or caused issues

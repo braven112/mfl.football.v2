@@ -127,8 +127,9 @@ rewriting them to track a later reorganization would falsify the record.
 **Context:** Asked whether `docs/claude/insights/` was available and actually
 used. The write side looked healthy — every one of the five domain files had a
 dated entry within two days, 27 of 41 feature files had one since July, and four
-separate places pointed at the tree (CLAUDE.md, five agent definitions,
-`/feature`, `/update-insights`). By every reachability measure it was fine.
+separate files pointed at the tree (CLAUDE.md, four agent definitions, and the
+`/feature` and `/update-insights` commands). By every reachability measure it
+was fine.
 
 **Insight:** It was fine, and it was still not working, because *written* and
 *read* are independent and only one of them leaves evidence. Three domain files

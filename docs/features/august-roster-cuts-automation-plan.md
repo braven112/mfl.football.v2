@@ -303,7 +303,7 @@ MFL write job"):
   uses (form fields at `cut-player.ts:165-174`), owner-mode, **never sending
   `FRANCHISE_ID`** — sending it on an owner request trips the
   lockout-impersonation check and silently no-ops
-  (`docs/claude/insights/features/roster-actions.md:19`). Two implementation
+  (`docs/claude/insights/features/roster-actions.md, "Owner mode does NOT pass FRANCHISE_ID"`). Two implementation
   options: (a) port the add_drop POST + `mflFetch` redirect-cookie handling
   into the script, or (b) keep the script a thin orchestrator that calls a new
   internal admin API route on the deployed site per franchise, reusing
@@ -312,7 +312,7 @@ MFL write job"):
   (mitigate: one invocation per franchise).
 - **Beware the stale-rosters window:** MFL's `rosters` endpoint can return stale
   data for recent drops in the offseason
-  (`docs/claude/insights/domains/mfl-api.md:188-232`) — cross-check
+  (`docs/claude/insights/domains/mfl-api.md`, "MFL Rosters API Inconsistency During Pre-Rollover Window") — cross-check
   `transactions` when verifying, and don't double-cut on a stale read.
 - **Pre-execution snapshot (audit trail — see next section):** before the
   first cut is attempted, write `autocut:snapshot:{year}` capturing every
