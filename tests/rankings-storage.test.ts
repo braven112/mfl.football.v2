@@ -10,6 +10,7 @@ import {
   getCompositeConfig,
   saveCompositeConfig,
   toggleCompositeImport,
+  setBuiltinHidden,
   setCompositeWeight,
   _clearCache,
 } from '../src/utils/rankings-storage';
@@ -552,6 +553,17 @@ describe('rankings-storage', () => {
       const byId = Object.fromEntries(membersFromStore().map((m) => [m.importId, m.weight]));
       expect(byId.d).toBe(5);
       expect(total()).toBe(100);
+    });
+
+    it('re-totals to 100 after a built-in is hidden', () => {
+      // Hiding drops the source from the composite. Without rebalancing, the
+      // survivors keep their old percentages and the table shows numbers that
+      // add to 68.3 — which is what shipped to the preview.
+      for (const id of ['a', 'b', 'c']) toggleCompositeImport(id, true);
+      setBuiltinHidden('b', true);
+      const members = membersFromStore();
+      expect(members.some((m) => m.importId === 'b')).toBe(false);
+      expect(members.reduce((s, m) => s + m.weight, 0)).toBe(100);
     });
 
     it('re-totals to 100 after a source is removed', () => {

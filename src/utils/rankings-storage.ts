@@ -128,7 +128,10 @@ export function setBuiltinHidden(importId: string, hidden: boolean): void {
   localStorage.setItem(hiddenBuiltinsKey(), JSON.stringify([...current]));
 
   // Hiding removes it from the composite too — leaving a hidden source
-  // silently weighting "My Rank" is exactly the confusion this avoids.
+  // silently weighting "My Rank" is exactly the confusion this avoids. The
+  // survivors are rebalanced back to 100 for the same reason unticking one is:
+  // weights are percentages, and dropping a 31.7% source without redistributing
+  // leaves the table showing three numbers that add to 68.3.
   if (hidden) {
     try {
       const raw = localStorage.getItem(compositeConfigKey());
@@ -136,7 +139,10 @@ export function setBuiltinHidden(importId: string, hidden: boolean): void {
         const config = JSON.parse(raw) as CompositeRankConfig;
         const filtered = config.members.filter((m) => m.importId !== importId);
         if (filtered.length !== config.members.length) {
-          localStorage.setItem(compositeConfigKey(), JSON.stringify({ members: filtered }));
+          localStorage.setItem(
+            compositeConfigKey(),
+            JSON.stringify({ members: rebalanceToHundred(filtered) }),
+          );
         }
       }
     } catch { /* ignore malformed config */ }
