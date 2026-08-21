@@ -1,13 +1,17 @@
 import { describe, it, expect } from 'vitest';
 import {
   isAflDraftWindowOpen,
+  pickTitleSpotlight,
   resolveAflDraftSpotlight,
   resolveAflTitleSpotlight,
   resolveAflStreakSpotlight,
   resolveAflRecordSpotlight,
   resolveAflTeamSpotlight,
   type AflDraftSlot,
+  type TitleTrophy,
 } from '../src/utils/afl-team-spotlight';
+import { getFranchiseTrophyCase } from '../src/utils/afl-awards';
+import aflConfig from '../data/afl-fantasy/afl.config.json';
 
 /**
  * The AFL homepage's offseason "spotlight" tile — the slot that used to be
@@ -28,7 +32,16 @@ import {
  *   4. The draft asterisk fires on a MOVED round-1 pick and not on a missing
  *      board. "No board published yet" and "board says you kept your pick" are
  *      different states and must not collapse.
+ *
+ * Title-tier behaviour is pinned through `pickTitleSpotlight` with fixtures,
+ * NOT against live awards: `awards-history.json` gains a season every January,
+ * so an assertion that Smokane's last title is the 2025 AL North fails on the
+ * season rolling over rather than on a bug. Assertions that do read live data
+ * derive their expectation from that data instead of hardcoding it.
  */
+
+const trophy = (slug: string, year: number, label: string): TitleTrophy =>
+  ({ slug, year, label }) as TitleTrophy;
 
 const slot = (over: Partial<AflDraftSlot> = {}): AflDraftSlot => ({
   basePick: 10,
@@ -108,10 +121,17 @@ describe('resolveAflDraftSpotlight', () => {
   });
 });
 
-describe('resolveAflTitleSpotlight', () => {
+describe('pickTitleSpotlight', () => {
   it('headlines the most recent title and appends the best when they differ', () => {
-    // Smokane FC: last title the 2025 AL North, best the 2013 AFL Championship.
-    const s = resolveAflTitleSpotlight('0001');
+    // Smokane's real shape as of 2025: newest is a division title, best is a
+    // championship a decade older. Both have to survive onto the tile.
+    const s = pickTitleSpotlight(
+      [
+        trophy('al-north', 2025, 'AL North'),
+        trophy('afl-championship', 2013, 'AFL Champion'),
+      ],
+      '0001'
+    );
     expect(s).not.toBeNull();
     expect(s!.kind).toBe('title');
     expect(s!.value).toBe('2025');
@@ -120,26 +140,93 @@ describe('resolveAflTitleSpotlight', () => {
   });
 
   it('collapses to one line when the most recent title IS the best', () => {
-    // The Mariachi Ninjas won the 2025 AFL Championship — nothing outranks it
-    // and nothing is newer, so the sub must not repeat itself.
-    const s = resolveAflTitleSpotlight('0015');
+    const s = pickTitleSpotlight(
+      [
+        trophy('afl-championship', 2025, 'AFL Champion'),
+        trophy('nl-east', 2019, 'NL East'),
+      ],
+      '0015'
+    );
     expect(s!.value).toBe('2025');
     expect(s!.sub).toBe('AFL Champion');
   });
 
-  it('ranks a championship above a newer division title', () => {
-    // Harambe: 2021 AFL Championship, 2025 AL South. The newer one headlines,
-    // but the championship has to survive into the sub.
-    const s = resolveAflTitleSpotlight('0008');
-    expect(s!.sub).toContain("AFL '21");
+  it('ranks by the league order, not by recency, for the "best" half', () => {
+    const s = pickTitleSpotlight(
+      [
+        trophy('nit', 2025, 'NIT Champion'),
+        trophy('premier-league', 2020, 'Premier League'),
+        trophy('al-south', 2024, 'AL South'),
+      ],
+      '0008'
+    );
+    // Newest is the 2025 NIT; best is the Premier League, which outranks both
+    // the division and consolation titles regardless of being older.
+    expect(s!.value).toBe('2025');
+    expect(s!.sub).toBe("NIT · Premier '20");
   });
 
-  it('returns null for a franchise with no hardware, so the chain falls through', () => {
-    // The Micks (0013) have never won anything across 9 seasons. Note the id:
-    // `getFranchiseTrophyCase` runs award years through `attributeAwardYear`,
-    // so a franchise inherits its predecessors' trophies — a raw scan of
-    // awards-history by franchiseId finds a DIFFERENT, wrong, empty set.
-    expect(resolveAflTitleSpotlight('0013')).toBeNull();
+  it('breaks a same-year tie toward the better trophy', () => {
+    const s = pickTitleSpotlight(
+      [
+        trophy('al-north', 2025, 'AL North'),
+        trophy('afl-championship', 2025, 'AFL Champion'),
+      ],
+      '0001'
+    );
+    expect(s!.sub).toBe('AFL Champion');
+  });
+
+  it('shortens BOTH halves when the line carries two trophies', () => {
+    // "NIT Champion · D-League '18" wraps the tile to two lines; "NIT" alone
+    // does not. The solo case keeps the long label — see the sibling test.
+    const s = pickTitleSpotlight(
+      [
+        trophy('nit', 2021, 'NIT Champion'),
+        trophy('dleague-champion', 2018, 'D-League Champion'),
+      ],
+      '0003'
+    );
+    expect(s!.sub).toBe("NIT · D-League '18");
+    expect(s!.sub.length).toBeLessThanOrEqual(25);
+  });
+
+  it('keeps the full label when there is only one trophy to show', () => {
+    const s = pickTitleSpotlight([trophy('nit', 2016, 'NIT Champion')], '0019');
+    expect(s!.sub).toBe('NIT Champion');
+  });
+
+  it('ignores undated trophies and returns null when none remain', () => {
+    expect(pickTitleSpotlight([], '0013')).toBeNull();
+    expect(
+      pickTitleSpotlight([{ slug: 'nit', label: 'NIT Champion' } as TitleTrophy], '0013')
+    ).toBeNull();
+  });
+});
+
+describe('resolveAflTitleSpotlight (live awards)', () => {
+  it('agrees with the pure picker for every franchise', () => {
+    // Wires the real trophy case in without pinning any franchise's result.
+    // NOTE the source: `getFranchiseTrophyCase` routes award years through
+    // `attributeAwardYear`, so a franchise inherits its predecessors' hardware.
+    // A raw scan of awards-history by franchiseId gives a DIFFERENT, wrong
+    // answer — see insights/features/afl-team-rename.md.
+    for (const team of aflConfig.teams) {
+      const trophies = getFranchiseTrophyCase(team.franchiseId);
+      expect(resolveAflTitleSpotlight(team.franchiseId)).toEqual(
+        pickTitleSpotlight(trophies, team.franchiseId)
+      );
+    }
+  });
+
+  it('renders a 4-digit year and a non-empty sub wherever it resolves', () => {
+    for (const team of aflConfig.teams) {
+      const s = resolveAflTitleSpotlight(team.franchiseId);
+      if (!s) continue;
+      expect(s.value, team.name).toMatch(/^\d{4}$/);
+      expect(s.sub.length, team.name).toBeGreaterThan(0);
+      expect(s.sub.length, `${team.name} sub wraps the tile`).toBeLessThanOrEqual(28);
+    }
   });
 });
 
@@ -201,10 +288,15 @@ describe('resolveAflRecordSpotlight', () => {
     expect(s.value).toBe('10-8-1');
   });
 
-  it('still returns a tile for a franchise with no games — the chain must be total', () => {
+  it('never renders a dash for a franchise with no games — the chain must be total', () => {
+    // The regression this whole tile exists to kill. An expansion franchise
+    // has no entry in the career stats at all, and `—` here would put the dead
+    // keeper tile straight back on the newest owner's homepage.
     const s = resolveAflRecordSpotlight('9999', undefined);
     expect(s.kind).toBe('record');
-    expect(s.sub).toBe('no games yet');
+    expect(s.value).toBe('0-0');
+    expect(s.value).not.toBe('—');
+    expect(s.sub).toBe('first season');
   });
 });
 
@@ -225,18 +317,24 @@ describe('resolveAflTeamSpotlight (tier chain)', () => {
   });
 
   it('falls past titles and a drought to the all-time record', async () => {
-    // Micks: no hardware, and no playoffs since 2006. Both of the middle tiers
-    // decline and the record catches it.
-    const s = await resolveAflTeamSpotlight({ franchiseId: '0013' });
-    expect(s.kind).toBe('record');
-    expect(s.value).toMatch(/^\d+-\d+/);
+    // Found at runtime, not hardcoded: a franchise pinned as "has no hardware"
+    // stops being one the season it finally wins something.
+    const trophyless = aflConfig.teams.find(
+      (t) => !resolveAflTitleSpotlight(t.franchiseId)
+    );
+    if (!trophyless) {
+      console.info('[afl-team-spotlight] every franchise now owns a trophy — fallthrough untested');
+      return;
+    }
+    const s = await resolveAflTeamSpotlight({ franchiseId: trophyless.franchiseId });
+    // Streak or record depending on last season; never the title tier, and
+    // never a drought counter.
+    expect(['streak', 'record'], trophyless.name).toContain(s.kind);
+    if (s.kind === 'record') expect(s.value).toMatch(/^\d+-\d+/);
   });
 
   it('always resolves a tile for every current franchise', async () => {
     // The regression that started this: a tile with no fallback rendering '—'.
-    const { default: aflConfig } = await import(
-      '../data/afl-fantasy/afl.config.json'
-    );
     for (const team of aflConfig.teams) {
       const s = await resolveAflTeamSpotlight({ franchiseId: team.franchiseId });
       expect(s.value, `${team.name} rendered an empty spotlight`).not.toBe('—');

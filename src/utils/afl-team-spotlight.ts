@@ -226,8 +226,32 @@ export function resolveAflDraftSpotlight(slot: AflDraftSlot): AflSpotlight {
 export function resolveAflTitleSpotlight(
   franchiseId: string
 ): AflSpotlight | null {
-  const trophies = getFranchiseTrophyCase(franchiseId).filter(
-    (t): t is typeof t & { year: number } => typeof t.year === 'number'
+  // `getFranchiseTrophyCase` (NOT a raw scan of awards-history by franchiseId)
+  // runs every award year through `attributeAwardYear`, so a franchise inherits
+  // its predecessors' hardware and a departed owner's does not follow them. See
+  // insights/features/afl-team-rename.md.
+  return pickTitleSpotlight(getFranchiseTrophyCase(franchiseId), franchiseId);
+}
+
+/** One trophy as the title tier needs it — the subset of `TrophyCaseItem`. */
+export interface TitleTrophy {
+  slug: AwardSlug;
+  label: string;
+  year?: number;
+}
+
+/**
+ * Pure half of the title tier, split out so tests can drive it with fixtures.
+ * The live award data changes every January, and assertions pinned to "Smokane's
+ * last title is the 2025 AL North" fail on a season rolling over rather than on
+ * a bug.
+ */
+export function pickTitleSpotlight(
+  allTrophies: TitleTrophy[],
+  franchiseId: string
+): AflSpotlight | null {
+  const trophies = allTrophies.filter(
+    (t): t is TitleTrophy & { year: number } => typeof t.year === 'number'
   );
   if (!trophies.length) return null;
 
@@ -320,9 +344,13 @@ export function resolveAflRecordSpotlight(
 
   return {
     kind: 'record',
+    // NOT `games ? record : '—'`. This tier exists so the chain is total; a
+    // dash here is the exact dead tile the spotlight replaced, and it would
+    // reappear for the one franchise most likely to look — a brand-new one
+    // with no completed season. `0-0` is a real record.
     label: 'All-Time',
-    value: games ? record : '—',
-    sub: stats?.firstYear ? `since ${stats.firstYear}` : 'no games yet',
+    value: record,
+    sub: stats?.firstYear ? `since ${stats.firstYear}` : 'first season',
     icon: 'line-chart',
     href: `/afl-fantasy/franchises/${franchiseId}`,
     hint: games

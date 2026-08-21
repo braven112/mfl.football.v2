@@ -12,9 +12,16 @@
  *     only place trades show up. The 2025 board is the proof this matters —
  *     two franchises held two round-1 picks and two held none.
  *
- * Reads the feeds with `fs` rather than `import.meta.glob` deliberately: the
- * homepage is SSR (`prerender = false`), the draft predictor page already reads
- * these exact files the same way, and globbing would compile every season of
+ * Split into a pure resolver (`resolveAflDraftSlotFrom`) and a thin fs wrapper
+ * (`loadAflDraftSlot`) on purpose. `mfl-feeds/**` is cron-written, so a test
+ * that asserts against the live board asserts against a file that changes under
+ * it — the moment the conference drafts run, "the board is unfinished" stops
+ * being true and every such assertion fails on a data-only commit. The pure
+ * half takes fixtures and stays deterministic; only the wrapper touches disk.
+ *
+ * Reads the feeds with `fs` rather than `import.meta.glob`: the homepage is SSR
+ * (`prerender = false`), the draft predictor page already reads these exact
+ * files the same way, and globbing would compile every season of
  * `weekly-results-raw.json` into the server bundle for one season's use. The
  * three newest seasons stay reachable at request time by design — see
  * `scripts/lib/archived-feed-files.mjs`.
@@ -32,6 +39,12 @@ import { getAflLeagueYear } from './league-year';
 import { getLeagueBySlug } from '../config/leagues';
 import { isAflDraftWindowOpen, type AflDraftSlot } from './afl-team-spotlight';
 import type { StandingsFranchise } from '../types/standings';
+// Static import, not an fs read through the registry's `configPath`: the config
+// is already compiled into the bundle (afl-awards.ts imports it the same way),
+// which makes this typed, free, and one less 46 KB parse. `configPath` is also
+// absent from the `LeagueDefinition` interface — its only other consumers are
+// untyped .mjs scripts, so reading it here was a TS2339.
+import aflConfig from '../../data/afl-fantasy/afl.config.json';
 
 /** MFL's per-conference draft unit ids on the AFL board. */
 const CONFERENCE_UNIT: Record<string, string> = {
@@ -50,48 +63,16 @@ const CONFERENCE_ORDER_NAME: Record<string, string> = {
   '01': 'National League',
 };
 
-interface RawDraftPick {
+export interface RawDraftPick {
   round?: string;
   pick?: string;
   franchise?: string;
   player?: string;
 }
 
-interface RawDraftUnit {
+export interface RawDraftUnit {
   unit?: string;
   draftPick?: RawDraftPick | RawDraftPick[];
-}
-
-function feedPath(year: number, file: string): string {
-  const dataPath = getLeagueBySlug('afl-fantasy')!.dataPath;
-  return path.join(process.cwd(), dataPath, 'mfl-feeds', String(year), file);
-}
-
-/**
- * Parsed feeds, cached for the life of the process.
- *
- * This runs on the AFL homepage — the most-hit page — and the four feeds it
- * touches come to ~170 KB of JSON, re-parsed on every request without this.
- * They are committed files that only change on deploy, so a process-lifetime
- * cache has exactly the staleness of the `import.meta.glob` the rest of the
- * page uses (and matches how `afl-career-stats.ts` memoizes). A miss is cached
- * too: a feed that does not exist must not be re-stat'd every request.
- */
-const feedCache = new Map<string, unknown>();
-
-function readJson<T>(file: string): T | null {
-  if (feedCache.has(file)) return feedCache.get(file) as T | null;
-  let parsed: T | null;
-  try {
-    parsed = JSON.parse(fs.readFileSync(file, 'utf-8')) as T;
-  } catch {
-    // A feed that does not exist yet is a normal state, not an error: the
-    // board is absent until MFL seeds it, and playoff brackets are absent
-    // until the postseason runs.
-    parsed = null;
-  }
-  feedCache.set(file, parsed);
-  return parsed;
 }
 
 function asArray<T>(value: T | T[] | undefined): T[] {
@@ -100,7 +81,7 @@ function asArray<T>(value: T | T[] | undefined): T[] {
 }
 
 /** The board's draft unit for one conference, or null when there is no board. */
-function conferenceUnit(
+export function conferenceUnit(
   board: unknown,
   conferenceId: string
 ): RawDraftUnit | null {
@@ -117,7 +98,7 @@ function conferenceUnit(
 }
 
 /** True once every slot in this conference's board carries a real selection. */
-function isConferenceDraftComplete(
+export function isConferenceDraftComplete(
   board: unknown,
   conferenceId: string
 ): boolean {
@@ -128,7 +109,7 @@ function isConferenceDraftComplete(
 }
 
 /** Round-1 pick numbers this franchise holds on the board, ascending. */
-function heldRoundOnePicks(
+export function heldRoundOnePicks(
   board: unknown,
   conferenceId: string,
   franchiseId: string
@@ -144,63 +125,84 @@ function heldRoundOnePicks(
     .sort((a, b) => a - b);
 }
 
-export interface AflDraftSlotOptions {
+/**
+ * True when a board is still exactly as MFL seeded it — every franchise holding
+ * exactly one round-1 pick, nothing drafted yet.
+ *
+ * Only in that state can the board be compared against our standings-derived
+ * order, because only then are the two describing the same thing. Once a pick
+ * is traded MFL has overwritten who earned the slot, and once the draft runs
+ * the question is moot. Exported so the test can gate its cross-check on the
+ * precondition instead of assuming it holds forever.
+ */
+export function isBoardStillSeeded(
+  board: unknown,
+  conferenceId: string
+): boolean {
+  const unit = conferenceUnit(board, conferenceId);
+  if (!unit) return false;
+  const picks = asArray(unit.draftPick);
+  if (!picks.length) return false;
+  if (picks.some((p) => !!p.player && p.player !== '')) return false;
+  const roundOne = picks.filter((p) => Number(p.round) === 1);
+  const holders = new Set(roundOne.map((p) => p.franchise));
+  return roundOne.length > 0 && holders.size === roundOne.length;
+}
+
+// ── Pure resolver ───────────────────────────────────────────────────────────
+
+export interface AflDraftSlotInputs {
   franchiseId: string;
-  /** '00' (AL) or '01' (NL). Anything else skips the tier. */
-  conferenceId?: string;
-  referenceDate?: Date;
+  /** '00' (AL) or '01' (NL). */
+  conferenceId: string;
+  /** The upcoming draft's year — the AFL league year. */
+  draftYear: number;
+  /** `referenceDate.getFullYear()`, for the June 1 floor. */
+  calendarYear: number;
+  /** Parsed `draftResults.json` for `draftYear`, or null when unpublished. */
+  board: unknown;
+  /** Standings rows for season `draftYear - 1`. */
+  standings: StandingsFranchise[];
+  /** Parsed `playoff-brackets.json` for season `draftYear - 1`, or null. */
+  brackets?: unknown;
+  /** Parsed `weekly-results-raw.json` for season `draftYear - 1`, or null. */
+  weeklyResultsRaw?: unknown;
 }
 
 /**
- * The franchise's round-1 slot, or null when the draft tier does not apply —
- * outside the window, unknown conference, or no computable base slot.
+ * The franchise's round-1 slot, or null when the draft tier does not apply.
+ * Pure: everything it reads is passed in.
  */
-export function loadAflDraftSlot(
-  opts: AflDraftSlotOptions
+export function resolveAflDraftSlotFrom(
+  inputs: AflDraftSlotInputs
 ): AflDraftSlot | null {
-  const { franchiseId, conferenceId, referenceDate } = opts;
-  if (!conferenceId || !(conferenceId in CONFERENCE_UNIT)) return null;
+  const {
+    franchiseId,
+    conferenceId,
+    draftYear,
+    calendarYear,
+    board,
+    standings,
+    brackets,
+    weeklyResultsRaw,
+  } = inputs;
 
-  // The AFL league year IS the upcoming draft's year: the registry's June 1
-  // rollover flips it the moment the new MFL league is created, and that
-  // league's draft is the one being ordered.
-  const draftYear = getAflLeagueYear(referenceDate);
-  const board = readJson(feedPath(draftYear, 'draftResults.json'));
+  if (!(conferenceId in CONFERENCE_UNIT)) return null;
 
   if (
     !isAflDraftWindowOpen({
       aflLeagueYear: draftYear,
-      calendarYear: (referenceDate ?? new Date()).getFullYear(),
+      calendarYear,
       conferenceDraftComplete: isConferenceDraftComplete(board, conferenceId),
     })
   ) {
     return null;
   }
 
-  // The order for draft year Y is set by season Y-1. Deriving it that way
-  // rather than from getCurrentSeasonYear() keeps it off the Labor Day clock:
-  // the two agree all offseason, but after kickoff getCurrentSeasonYear() names
-  // a season whose standings are still all zeros.
-  const standingsYear = draftYear - 1;
-  const standingsFeed = readJson<{
-    leagueStandings?: { franchise?: StandingsFranchise | StandingsFranchise[] };
-  }>(feedPath(standingsYear, 'standings.json'));
-  const standings = asArray(standingsFeed?.leagueStandings?.franchise);
   if (!standings.length) return null;
 
-  const aflConfig = readJson<{
-    teams?: Array<{
-      franchiseId: string;
-      name: string;
-      icon?: string;
-      banner?: string;
-      conference?: string;
-      division?: string;
-    }>;
-  }>(path.join(process.cwd(), getLeagueBySlug('afl-fantasy')!.configPath));
-
   const teamConfigMap = new Map(
-    (aflConfig?.teams ?? []).map((team) => [
+    aflConfig.teams.map((team) => [
       team.franchiseId,
       {
         id: team.franchiseId,
@@ -216,7 +218,6 @@ export function loadAflDraftSlot(
   // Champions and NIT finishers carry draft-order bonuses; both are absent
   // until the postseason runs, which is exactly the "projected order" state the
   // predictor page also renders.
-  const brackets = readJson(feedPath(standingsYear, 'playoff-brackets.json'));
   const conferenceChampions = brackets
     ? parseConferenceChampions(brackets, teamConfigMap)
     : new Map<string, string>();
@@ -226,8 +227,9 @@ export function loadAflDraftSlot(
 
   // Regular-season head-to-head drives step 1 of the same-division tiebreaker.
   // Missing raw results just drops that step, same as on the predictor page.
-  const raw = readJson(feedPath(standingsYear, 'weekly-results-raw.json'));
-  const headToHead = raw ? buildHeadToHeadFromRaw(raw) : undefined;
+  const headToHead = weeklyResultsRaw
+    ? buildHeadToHeadFromRaw(weeklyResultsRaw)
+    : undefined;
 
   const orders = calculateAFLDraftOrder(
     standings,
@@ -251,4 +253,104 @@ export function loadAflDraftSlot(
     conferenceShort: CONFERENCE_SHORT[conferenceId],
     draftYear,
   };
+}
+
+// ── Feed loading ────────────────────────────────────────────────────────────
+
+function feedPath(year: number, file: string): string {
+  const dataPath = getLeagueBySlug('afl-fantasy')!.dataPath;
+  return path.join(process.cwd(), dataPath, 'mfl-feeds', String(year), file);
+}
+
+/**
+ * Parsed feeds, cached for the life of the process.
+ *
+ * This runs on the AFL homepage — the most-hit page — and the feeds are not
+ * small: the prior season's `weekly-results-raw.json` alone is ~1.6 MB, with
+ * the board, standings and brackets adding ~100 KB. Re-reading and re-parsing
+ * that per request is not viable, so it happens once per process. The 1.6 MB
+ * file buys exactly one thing — the head-to-head ledger behind step 1 of the
+ * same-division tiebreaker — and it is loaded anyway, because dropping it would
+ * let our base order diverge from the draft predictor's and asterisk a pick
+ * nobody traded.
+ *
+ * Committed feeds only change on deploy, so a process-lifetime cache has
+ * exactly the staleness `import.meta.glob` already has (and matches how
+ * `afl-career-stats.ts` memoizes). Misses are cached too: a feed that does not
+ * exist must not be re-`stat`'d on every request.
+ */
+const feedCache = new Map<string, unknown>();
+
+function readJson<T>(file: string): T | null {
+  if (feedCache.has(file)) return feedCache.get(file) as T | null;
+  let parsed: T | null;
+  try {
+    parsed = JSON.parse(fs.readFileSync(file, 'utf-8')) as T;
+  } catch {
+    // A feed that does not exist yet is a normal state, not an error: the
+    // board is absent until MFL seeds it, and playoff brackets are absent
+    // until the postseason runs.
+    parsed = null;
+  }
+  feedCache.set(file, parsed);
+  return parsed;
+}
+
+export interface AflDraftSlotOptions {
+  franchiseId: string;
+  /** '00' (AL) or '01' (NL). Anything else skips the tier. */
+  conferenceId?: string;
+  referenceDate?: Date;
+}
+
+/**
+ * Read the feeds this franchise's slot needs and resolve it. Returns null when
+ * the draft tier does not apply — outside the window, unknown conference, or no
+ * computable base slot.
+ */
+export function loadAflDraftSlot(
+  opts: AflDraftSlotOptions
+): AflDraftSlot | null {
+  const { franchiseId, conferenceId, referenceDate } = opts;
+  if (!conferenceId || !(conferenceId in CONFERENCE_UNIT)) return null;
+
+  // The AFL league year IS the upcoming draft's year: the registry's June 1
+  // rollover flips it the moment the new MFL league is created, and that
+  // league's draft is the one being ordered.
+  const draftYear = getAflLeagueYear(referenceDate);
+  const board = readJson(feedPath(draftYear, 'draftResults.json'));
+
+  // Bail before the expensive reads when the window is shut — which is most of
+  // the year, and every request outside June → the conference draft.
+  if (
+    !isAflDraftWindowOpen({
+      aflLeagueYear: draftYear,
+      calendarYear: (referenceDate ?? new Date()).getFullYear(),
+      conferenceDraftComplete: isConferenceDraftComplete(board, conferenceId),
+    })
+  ) {
+    return null;
+  }
+
+  // The order for draft year Y is set by season Y-1. Deriving it that way
+  // rather than from getCurrentSeasonYear() keeps it off the Labor Day clock:
+  // the two agree all offseason, but after kickoff getCurrentSeasonYear() names
+  // a season whose standings are still all zeros.
+  const standingsYear = draftYear - 1;
+  const standingsFeed = readJson<{
+    leagueStandings?: { franchise?: StandingsFranchise | StandingsFranchise[] };
+  }>(feedPath(standingsYear, 'standings.json'));
+
+  return resolveAflDraftSlotFrom({
+    franchiseId,
+    conferenceId,
+    draftYear,
+    calendarYear: (referenceDate ?? new Date()).getFullYear(),
+    board,
+    standings: asArray(standingsFeed?.leagueStandings?.franchise),
+    brackets: readJson(feedPath(standingsYear, 'playoff-brackets.json')),
+    weeklyResultsRaw: readJson(
+      feedPath(standingsYear, 'weekly-results-raw.json')
+    ),
+  });
 }
