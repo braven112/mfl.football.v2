@@ -181,6 +181,32 @@ describe('live-scoring on a phone', () => {
     expect(valueOf(phone, '.ls-status-age', 'display')).not.toBe('none');
   });
 
+  it('starts the pill at the same x as the back button when the row wraps', () => {
+    // The detail header is one flex row: back button, freshness pill. On a
+    // phone it wraps, and a wrapped line is laid out against the CONTAINER's
+    // padding box — so an inset that lives on `.ls-back` indents the button
+    // only, and the pill lands a full rem left of the label above it (owner
+    // screenshot, 2026-08-21). The inset therefore belongs to the row.
+    for (const [block, inset] of [[base, '1.2rem'], [phone, '0.6rem']] as const) {
+      const pad = valueOf(block, '.ls-detail-top', 'padding');
+      expect(pad, 'the row itself must carry the horizontal inset').toBeDefined();
+      expect(pad).toContain(inset);
+      expect(
+        valueOf(block, '.ls-detail-top', 'padding-left'),
+        'a one-sided override re-opens the mismatch',
+      ).toBeUndefined();
+    }
+    // And .ls-back must not re-indent its own label: any inline padding it
+    // keeps for the tap target has to be cancelled by an equal negative
+    // margin, or the two lines disagree again.
+    const backPad = valueOf(base, '.ls-back', 'padding') ?? '';
+    const inline = backPad.trim().split(/\s+/)[1] ?? '0';
+    const margin = valueOf(base, '.ls-back', 'margin') ?? '0 0';
+    const marginInline = margin.trim().split(/\s+/)[1] ?? margin.trim();
+    expect(marginInline, `.ls-back padding-inline ${inline} must be cancelled`)
+      .toBe(inline === '0' ? '0' : `-${inline}`);
+  });
+
   it('the freshness pill distinguishes a failed feed from a quiet one', () => {
     // Same split the poll store keeps between `status` and `data`: "we could
     // not reach the feed" must never render the same as "nothing is happening".
