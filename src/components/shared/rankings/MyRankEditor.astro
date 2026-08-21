@@ -42,7 +42,15 @@ const importPath = resolveLeaguePath(
   {label}
 </button>
 
-<MyRankEditorIsland client:idle importPath={importPath} />
+{/*
+  client:only, NOT client:idle. The component renders null until it's opened,
+  so SSR emits an empty <astro-island> and React then hydrates a root that had
+  no server output — which React 19 reports as a hydration mismatch (#418) on
+  every page load. There is nothing to hydrate here anyway: the modal is always
+  closed on first paint and its entire contents come from localStorage, which
+  does not exist on the server.
+*/}
+<MyRankEditorIsland client:only="react" importPath={importPath} />
 
 <script>
   import { getAllImports } from '../../../utils/rankings-storage';
@@ -69,10 +77,26 @@ const importPath = resolveLeaguePath(
     unsubscribe = onRankingsChanged(syncTriggers);
   }
 
+  /**
+   * Open the modal, retrying once if the island hasn't mounted yet.
+   *
+   * The trigger is plain HTML and works from first paint; the React island
+   * arrives whenever its chunk does. Without the retry, a fast click lands
+   * before the listener exists and the button silently does nothing. The
+   * component marks `detail.handled` so we only retry when nobody answered.
+   */
+  function openEditor(attempt = 0) {
+    const detail: { handled?: boolean } = {};
+    document.dispatchEvent(new CustomEvent(OPEN_EVENT, { detail }));
+    if (!detail.handled && attempt < 10) {
+      setTimeout(() => openEditor(attempt + 1), 100);
+    }
+  }
+
   document.addEventListener('click', (e) => {
     const btn = (e.target as HTMLElement).closest('[data-mre-trigger]');
     if (!btn) return;
-    document.dispatchEvent(new CustomEvent(OPEN_EVENT));
+    openEditor();
   });
 
   if (document.readyState === 'loading') {

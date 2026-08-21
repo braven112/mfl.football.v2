@@ -57,7 +57,11 @@ export default function MyRankEditor({ importPath }: Props) {
   }, []);
 
   useEffect(() => {
-    const onOpen = () => {
+    const onOpen = (e: Event) => {
+      // Tell the trigger somebody answered — it retries until one of us does,
+      // so a click landing before this island mounts still opens the modal.
+      const detail = (e as CustomEvent<{ handled?: boolean }>).detail;
+      if (detail) detail.handled = true;
       previousFocus.current = document.activeElement as HTMLElement;
       refresh();
       setOpen(true);

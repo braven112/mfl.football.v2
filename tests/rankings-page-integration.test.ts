@@ -215,6 +215,32 @@ describe('rankings reach every decision page', () => {
       expect(src).not.toMatch(/localStorage\.(set|get)Item/);
     });
 
+    it('the editor is client:only, never hydrated', () => {
+      // The component returns null until it is opened, so SSR emits an EMPTY
+      // <astro-island> and a hydrating directive then asks React to hydrate a
+      // root that had no server output — which React 19 reports as a mismatch
+      // (#418) on every single page load. It shipped that way once. There is
+      // nothing to hydrate here anyway: the modal is always closed on first
+      // paint and its contents come from localStorage.
+      const src = read('src/components/shared/rankings/MyRankEditor.astro');
+      expect(src).toContain('client:only="react"');
+      // Strip comments first — the directive is explained in prose right above
+      // the tag, and that prose names the directive it is warning against.
+      const code = src
+        .replace(/\{\/\*[\s\S]*?\*\/\}/g, '')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/\/\/[^\n]*/g, '');
+      expect(code).not.toMatch(/client:(load|idle|visible)/);
+    });
+
+    it('the trigger retries until the island answers', () => {
+      // The button is plain HTML and works from first paint; the island
+      // arrives whenever its chunk does. Without the retry a fast click lands
+      // before the listener exists and the button silently does nothing.
+      expect(read('src/components/shared/rankings/MyRankEditor.astro')).toContain('detail.handled');
+      expect(read('src/components/shared/rankings/MyRankEditor.tsx')).toContain('detail.handled = true');
+    });
+
     it('the editor derives its Import Rankings link from the registry', () => {
       // A hardcoded '/theleague/import-rankings' sends AFL owners to the wrong
       // league's board — and tests/league-literal-guard.test.ts would not see
@@ -236,5 +262,18 @@ describe('rankings reach every decision page', () => {
         /localStorage\.getItem\(\s*['"`]rankings/,
       );
     }
+  });
+});
+
+describe('Saved Rankings table layout', () => {
+  // `display: flex` on a <td> takes the cell out of the table's column layout:
+  // it stops aligning with its header and draws its border-bottom across its
+  // own box instead of the row, which showed up as a stray line under the
+  // Actions column. Space the buttons on the children instead.
+  it('never makes a table cell a flex container', () => {
+    const css = readFileSync('src/components/shared/rankings-import/ImportRankingsPage.astro', 'utf8');
+    const block = css.slice(css.indexOf('.ri-manage__actions {'));
+    const decls = block.slice(0, block.indexOf('}'));
+    expect(decls).not.toMatch(/display:\s*(flex|grid|inline-flex)/);
   });
 });
