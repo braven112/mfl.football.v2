@@ -80,7 +80,7 @@ RULEBOOK SECTIONS (use these exact anchor IDs):
   #league-information — League overview, commissioner, fees, calendar year
   #important-dates — Preseason, tagging period, free agency, regular season deadlines
   #division-setup — Four divisions, team assignments
-  #team-rosters — Roster limits (22 active + 3 taxi), offseason rules, practice squad
+  #team-rosters — Roster limits (22 active + 3 taxi), offseason rules, practice squad, position changes (RotoWire vs MFL)
   #injured-reserve — IR rules, unlimited slots, cap impact
   #starting-rosters — Lineup requirements (9 starters, flex rules), PPR scoring
   #salary-caps-contracts — $45M cap, escalation, contract length, dead money

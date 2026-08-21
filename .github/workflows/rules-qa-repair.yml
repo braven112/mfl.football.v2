@@ -1,0 +1,91 @@
+name: Ask Roger — Repair Stored Answers
+
+# Manual only. Nothing regenerates a stored Ask Roger answer (see
+# docs/claude/rules/roger.md), so when a rulebook clarification lands, the
+# cards already on /theleague/rules-chat keep serving the old ruling. This is
+# how they get corrected: the replacement text is committed under
+# data/roger-repairs/<league>/<qaId>.md and applied here, where the Upstash
+# credentials live.
+#
+#   mode: list   — print stored answers (optionally filtered by `search`)
+#   mode: show   — dump one stored answer as JSON, by id
+#   mode: apply  — rewrite the `answer` field of every committed repair file
+#
+# `apply` is idempotent (an already-repaired answer reports "unchanged") and
+# snapshots the previous array to <key>:repair-backup before writing.
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'list | show | apply'
+        required: true
+        default: 'list'
+        type: choice
+        options: [list, show, apply]
+      league:
+        description: 'League slug'
+        required: true
+        default: 'theleague'
+        type: choice
+        options: [theleague, afl-fantasy]
+      search:
+        description: 'list mode: case-insensitive substring over question + answer'
+        required: false
+        type: string
+      id:
+        description: 'show mode: the stored answer id'
+        required: false
+        type: string
+      dry_run:
+        description: 'apply mode: print the rewrite, write nothing'
+        required: false
+        default: true
+        type: boolean
+
+concurrency:
+  group: rules-qa-repair
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm + Node + install
+        uses: ./.github/actions/setup
+
+      - name: Run repair script
+        env:
+          MODE: ${{ inputs.mode }}
+          LEAGUE: ${{ inputs.league }}
+          SEARCH: ${{ inputs.search }}
+          QA_ID: ${{ inputs.id }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          args=(--league "$LEAGUE")
+          case "$MODE" in
+            list)
+              args+=(--list)
+              [ -n "$SEARCH" ] && args+=(--search "$SEARCH")
+              ;;
+            show)
+              if [ -z "$QA_ID" ]; then echo "show mode needs an id"; exit 1; fi
+              args+=(--show "$QA_ID")
+              ;;
+            apply)
+              args+=(--apply)
+              [ "$DRY_RUN" = "true" ] && args+=(--dry-run)
+              ;;
+          esac
+          node scripts/fix-rules-qa-answer.mjs "${args[@]}"
