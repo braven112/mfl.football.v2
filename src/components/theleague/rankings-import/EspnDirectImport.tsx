@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { matchPlayerToMFL } from '../../../utils/rankings-importer';
 import { saveImport, findDuplicateImport } from '../../../utils/rankings-storage';
 import { SOURCE_LABELS } from '../../../utils/rankings-lookup';
-import { espnProTeamAbbrev } from '../../../constants/espn-pro-teams';
+import { espnProTeamAbbrev } from '../../../constants/espn-pro-teams.mjs';
 import type {
   MFLPlayerForMatching,
   StoredRankingImport,

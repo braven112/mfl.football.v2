@@ -30,9 +30,17 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fetchWithRetry } from './lib/fetch-retry.mjs';
 import { writeJsonIfChanged } from './lib/canonical-json.mjs';
+import { espnProTeamAbbrev } from '../src/constants/espn-pro-teams.mjs';
 
 const MFL_HOST = 'https://api.myfantasyleague.com';
 const SLEEPER_URL = 'https://api.sleeper.app/v1/players/nfl';
+const FANTASYCALC_URL =
+  'https://api.fantasycalc.com/values/current?isDynasty=true&numQbs=1&numTeams=12&ppr=1';
+const espnUrl = (year) =>
+  `https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/${year}` +
+  '/segments/0/leaguedefaults/3?scoringPeriodId=0&view=kona_player_info';
+/** ESPN position ids → abbreviations (defaultPositionId). */
+const ESPN_POSITIONS = { 1: 'QB', 2: 'RB', 3: 'WR', 4: 'TE' };
 const OUT_DIR = path.join('data', 'ranking-sources');
 
 /** Positions the rankings board carries. Mirrors the import UI. */
@@ -243,6 +251,77 @@ const fetchSleeper = async (mflIndex) => {
   };
 };
 
+const fetchFantasyCalc = async () => {
+  // FantasyCalc hands back `player.mflId` directly — 100% coverage on skill
+  // players — so this needs no name matching at all, same as the MFL feeds.
+  const rows = await fetchJson(FANTASYCALC_URL);
+  if (!Array.isArray(rows)) throw new Error('unexpected FantasyCalc payload');
+  const players = [];
+  for (const entry of rows) {
+    const p = entry?.player;
+    if (!p || !VALID_POSITIONS.has(p.position) || !p.mflId) continue;
+    players.push({ id: String(p.mflId), rank: players.length + 1, value: entry.value ?? null });
+  }
+  if (players.length === 0) throw new Error('no usable FantasyCalc rows');
+  return {
+    id: 'fantasycalc',
+    label: 'FantasyCalc',
+    type: 'dynasty',
+    meta: { basis: 'dynasty trade values, 1QB/12-team/PPR' },
+    players,
+  };
+};
+
+const fetchEspn = async (year, mflIndex) => {
+  // ESPN uses its own ids, so this is matched here rather than per visitor.
+  // Team arrives as a numeric proTeamId — the shared map turns it into the
+  // abbreviation the matcher needs to break same-name ties.
+  const res = await fetchWithRetry(espnUrl(year), {
+    attempts: 3,
+    baseDelayMs: 1500,
+    parse: 'json',
+    // Must be fetchOptions, not a bare `headers` key — fetchWithRetry only
+    // forwards fetchOptions, and without X-Fantasy-Filter ESPN silently caps
+    // the response at 50 players instead of 500.
+    fetchOptions: {
+      headers: {
+        'X-Fantasy-Filter': JSON.stringify({
+          players: { limit: 500, sortDraftRanks: { sortPriority: 100, sortAsc: true, value: 'PPR' } },
+        }),
+      },
+    },
+    onRetry: (err, attempt, wait) =>
+      console.warn(`  retry ${attempt + 1} for ESPN in ${wait}ms (${err.message})`),
+  });
+  const rows = res?.players;
+  if (!Array.isArray(rows)) throw new Error('no players in ESPN response');
+
+  const ranked = [];
+  let dropped = 0;
+  for (const entry of rows) {
+    const p = entry?.player;
+    if (!p) continue;
+    const pos = ESPN_POSITIONS[p.defaultPositionId];
+    if (!pos) continue;
+    const rank = p.draftRanksByRankType?.PPR?.rank;
+    if (!rank) continue;
+    const id = resolveMflId(mflIndex, p.fullName || '', pos, espnProTeamAbbrev(p.proTeamId));
+    if (!id) { dropped++; continue; }
+    ranked.push({ id, espnRank: rank });
+  }
+  ranked.sort((a, b) => a.espnRank - b.espnRank);
+  return {
+    source: {
+      id: 'espn',
+      label: 'ESPN',
+      type: 'redraft',
+      meta: { basis: 'PPR redraft' },
+      players: ranked.map((r, i) => ({ id: r.id, rank: i + 1 })),
+    },
+    dropped,
+  };
+};
+
 // ── Main ────────────────────────────────────────────────────────────────────
 
 const run = async () => {
@@ -265,6 +344,8 @@ const run = async () => {
   const tasks = [
     ['MFL ADP', () => fetchMflAdp(year)],
     ['FantasySharks', () => fetchSharks(year)],
+    // Already id-keyed (mflId), so it rides the same trim/re-rank path.
+    ['FantasyCalc', () => fetchFantasyCalc()],
   ];
   for (const [name, fn] of tasks) {
     try {
@@ -288,13 +369,20 @@ const run = async () => {
     }
   }
 
+  // Name-matched sources — need the MFL index, so they run separately.
   if (mflIndex) {
-    try {
-      const { source, dropped } = await fetchSleeper(mflIndex);
-      sources.push(source);
-      console.log(`  Sleeper → ${source.players.length} players (${dropped} unmatched dropped)`);
-    } catch (err) {
-      console.warn(`::warning::Sleeper failed (${err.message}) — omitted from this run.`);
+    const matched = [
+      ['Sleeper', () => fetchSleeper(mflIndex)],
+      ['ESPN', () => fetchEspn(year, mflIndex)],
+    ];
+    for (const [name, fn] of matched) {
+      try {
+        const { source, dropped } = await fn();
+        sources.push(source);
+        console.log(`  ${name} → ${source.players.length} players (${dropped} unmatched dropped)`);
+      } catch (err) {
+        console.warn(`::warning::${name} failed (${err.message}) — omitted from this run.`);
+      }
     }
   }
 

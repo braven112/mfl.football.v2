@@ -8,13 +8,17 @@
  * same-name players and rescues near-threshold matches), so throwing it away
  * cost match rate on every ESPN import.
  *
+ * Plain .mjs so the build-time fetch script and the browser island share ONE
+ * copy — same reason src/config/leagues-data.mjs is .mjs (node scripts can't
+ * import .ts). A duplicated 32-entry map is a map that drifts.
+ *
  * Generated from ESPN's own `?view=proTeamSchedules_wl` (settings.proTeams),
  * not hand-typed. Ids are not contiguous: 31/32 are unused, BAL is 33 and
  * HOU is 34, and 0 is the free-agent bucket. Codes are ESPN's own spelling
  * (WSH, LAR, LAC, JAX) — run them through `normalizeTeamCode` before
  * comparing against an MFL feed, which uses its own aliases.
  */
-export const ESPN_PRO_TEAM_ABBREV: Record<number, string> = {
+export const ESPN_PRO_TEAM_ABBREV = {
   0: '', // free agent — no team
   1: 'ATL', 2: 'BUF', 3: 'CHI', 4: 'CIN', 5: 'CLE', 6: 'DAL', 7: 'DEN',
   8: 'DET', 9: 'GB', 10: 'TEN', 11: 'IND', 12: 'KC', 13: 'LV', 14: 'LAR',
@@ -24,6 +28,6 @@ export const ESPN_PRO_TEAM_ABBREV: Record<number, string> = {
 };
 
 /** Resolve an ESPN proTeamId to an abbreviation ('' when unknown/free agent). */
-export function espnProTeamAbbrev(proTeamId: unknown): string {
+export function espnProTeamAbbrev(proTeamId) {
   return typeof proTeamId === 'number' ? (ESPN_PRO_TEAM_ABBREV[proTeamId] ?? '') : '';
 }
