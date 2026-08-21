@@ -1,6 +1,108 @@
 # Design System Insights
 
-Domain knowledge about design tokens, CSS variables, theming, and visual patterns.
+<!-- CURATED-HEAD -->
+> **Read this head, then stop.** Everything below `/CURATED-HEAD` is a dated
+> archive (~130 KB, 50 entries) — do NOT read it start-to-finish. Grep it for
+> your topic: `grep -n "focus ring" docs/claude/insights/domains/design-system.md`.
+>
+> The repo-wide rule ("every `var(--x)` must reference a token that exists") is
+> in `docs/claude/rules/theming-and-assets.md`. This head is the part the guard
+> tests **cannot** see.
+
+## Four ways a token fails — only the first is caught
+
+| Failure | Symptom | Guard? |
+|---|---|---|
+| Defined nowhere | Hardcoded fallback renders in BOTH themes | **Yes** |
+| Defined light-only | Light value renders in dark mode | No |
+| Ink tokenized, surface hardcoded | Inverted ink on a fixed light surface — worst contrast of all | No |
+| Defined and valid, value rejected *for that property* | Property resets to its **initial** value | No |
+
+The last one is the nastiest: `background: var(--x)` where `--x` holds a
+gradient is all-or-nothing — if it fails to substitute, `background` falls to
+`transparent`, not to the previous cascade winner. Split it:
+`background-color: <literal mid-stop>` + `background-image: var(--x)`, in every
+theme block. `tests/hero-gradient-surface-fallback.test.ts` enforces this.
+
+The "half-tokenized" row has a grep-able tell: `var(--color-` and a raw `#fff`
+in the same style block. Light mode looks pixel-perfect, so it ships and stays.
+
+## The gray ramp inverts — both directions
+
+`tokens-dark.css` flips the whole scale. `--color-gray-50..300` are **surfaces**
+in dark, not text (`gray-700` is the readable muted gray). And `--color-gray-900`
+resolves to near-**white** under `html.dark` — so a "dark broadcast panel"
+painted with it turns white at night. **A surface that must stay dark in both
+themes takes a literal** (`#111827`), never a gray token.
+
+## Don't fix a token that has other consumers
+
+- **Never remap `--color-primary` per league** to correct heading color — it also
+  feeds every primary fill and the nav's active pill. Headings come from the
+  `--link-color` family; override that instead.
+- `--card-bg` is a **gradient** in dark — never paint form fields with it
+  (`--input-bg` is the solid one).
+- Trace a bad dark value to *every* consumer before overriding. The fix belongs
+  on the token only the broken consumer reads, never on a shared primitive.
+
+## League leakage the guard can't see
+
+`--color-secondary` is TheLeague's brand green and **genuinely resolves on AFL
+pages** — a real token with real values in both themes, so "token exists" passes
+while the page wears the wrong league's identity. It mostly lives in **shared
+chrome**, not the AFL tree, and travels under aliases that don't contain the
+word: `--secondary-color`, `--accent-link-hover-text-color`. Chase the alias
+chain to a literal, and grep the raw hex too (`#2e8743`) — a hardcoded gradient
+has no `var()` to find. In a *shared* stylesheet, scope an
+`html[data-league='afl']` override rather than swapping the token; TheLeague's
+green is correct on TheLeague. `tests/afl-brand-green-guard.test.ts`.
+
+Treat a token only ONE theme block overrides as half-defined. `--color-surface-3`
+is dark-only (no `:root` value) — safe only inside a `:global(html.dark)` block.
+**AFL dark collapses the elevation ramp** (`--card-bg`/`--card-surface`/
+`--content-bg`/`--color-surface-2` are all `#16283c`), so nested surfaces need
+`--color-surface-3`. Test nested surfaces on the AFL palette, not TheLeague's.
+
+## Franchise color has three separate roles
+
+- `color` (config) — the **chart** color, chosen for distinctness on a bar graph.
+  Do not repurpose it as brand identity.
+- `colorPrimary`/`Secondary`/… — brand colors, correct for a **fill** with text
+  on top.
+- `teamAccentVar(fid)` → `--team-accent-<fid>` — the only correct source for a
+  **foreground** (text, numerals, borders, chart lines, swatches). It guarantees
+  3:1, but **only against `--card-surface`**. Put the mark on a custom chip or a
+  tinted well and the floor silently stops applying — that's a bug neither
+  `design-token-guard` nor `team-accent-css` can see. When the color isn't yours
+  to choose, give the mark a hairline ring in the surface's own ink.
+
+## Smaller traps, each of which cost a session
+
+- **An inline `style` beats every `html.dark` rule.** JS-built markup carrying
+  `style="color:#059669"` cannot be fixed from a stylesheet — move it to a class.
+- A bare `html.dark { }` inside a **scoped** Astro `<style>` gets scoped and dies
+  (a `:root { }` in the same block does not). Use
+  `:global(html.dark) .wrapper { --token: … }`.
+- **Elevation belongs to the element that owns the surface.** `box-shadow` only
+  on something that also has a background and a `border-radius`; a layout-only
+  wrapper draws a sharp rectangle instead. Dark shadows are ~6x heavier than
+  light, so a "dark-mode-only" shadow bug is usually just a shadow bug.
+- **Focus ≠ selected.** `--box-shadow-focus-ring` is alpha-blended, and alpha is
+  not a shade — it composites to gray-blue. Selected states take an opaque
+  `--color-primary` border plus a 12% `color-mix` tint.
+- **Inverse surfaces** (a dark panel on a light page) need their own scoped
+  `:focus-visible` — the global ring is `--color-primary`, which *is* the
+  footer's background at 1.00:1. Define their tokens once, with no dark pair.
+- `var()` does not resolve in an SVG **presentation attribute** —
+  `el.style.stroke = 'var(--x)'` works, `setAttribute('stroke', …)` renders nothing.
+
+## Measuring
+
+Set the browser's color scheme and reload — **do not** toggle `html.dark`; on an
+`auto` preference the pane's own scheme wins and you get plausible, wrong
+numbers. For SVG ink use an alpha bounding box over rendered pixels: `getBBox()`
+excludes stroke, and the halo on every `-dark` badge *is* a stroke.
+<!-- /CURATED-HEAD -->
 
 ---
 

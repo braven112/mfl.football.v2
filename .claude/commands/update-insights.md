@@ -25,7 +25,16 @@ Also check if a feature-specific file exists: `docs/claude/insights/features/{fe
 
 ## Step 3: Read the relevant insight files
 
-Read only the domain files that apply. Skim quickly — you're looking for gaps, not re-reading everything.
+Read only the domain files that apply — and for `frontend.md`, `design-system.md`
+and `mfl-api.md`, read only the **curated head** (above `<!-- /CURATED-HEAD -->`).
+`grep -n` the archive below it for your specific topic; never read it whole.
+You're looking for gaps, not re-reading everything.
+
+**If your learning changes a rule in the head, update the head too** — a new
+dated entry that contradicts the head silently leaves the wrong rule in the
+place everyone actually reads. Keep each head under 8 KB
+(`tests/insights-curated-head.test.ts` enforces this): the head holds the rule,
+the archive holds the evidence.
 
 ## Step 4: Evaluate what's worth recording
 

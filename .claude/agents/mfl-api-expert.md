@@ -55,7 +55,7 @@ After EVERY task, you MUST update the MFL API knowledge files:
 - **Primary:** `docs/claude/insights/domains/mfl-api.md` — Append new insights using the format in `docs/claude/insights/README.md`
 - **Reference:** `docs/features/mfl-api.md` — Update endpoint documentation when discovering new APIs
 
-**Before each task:** Read `docs/claude/insights/domains/mfl-api.md` and `docs/features/mfl-api.md` to apply accumulated knowledge.
+**Before each task:** Read the curated head of `docs/claude/insights/domains/mfl-api.md`, plus `docs/features/mfl-api.md`, to apply accumulated knowledge. Each domain file opens with a **curated head** (the block above `<!-- /CURATED-HEAD -->`) holding the rules that still apply. Read that; the dated archive below it is 130-150 KB and must not be read start-to-finish — `grep -n` it for your specific topic instead.
 
 **Update Guidelines:**
 - Small discoveries: Add an insight entry to `docs/claude/insights/domains/mfl-api.md`
