@@ -139,6 +139,31 @@ export function resolveEspnTarget(
  * vanish on the first poll — the board would flip back to the normal slate a
  * minute later, which is exactly the kind of thing that wastes an evening.
  */
+/**
+ * Stable signature of whichever override params a query string carries — the
+ * empty string when it carries none.
+ *
+ * This exists to go in a CACHE KEY. The shared pollers keyed only on
+ * `year:week` while reading the overrides straight off `window.location` at
+ * fetch time, so the key did not describe what had actually been fetched. With
+ * `ClientRouter` on (TheLeagueLayout), a soft navigation between an overridden
+ * URL and a plain one keeps the module — and therefore the store — alive, and
+ * `subscribe` only forces an immediate load when the entry is idle or a failed
+ * empty. An entry sitting there `ok` is reused as-is, so the board would show
+ * the preseason slate on a page that asked for the live one until the next
+ * timer tick, up to five minutes later.
+ *
+ * Order is fixed by ESPN_OVERRIDE_PARAMS rather than by the order the user
+ * happened to type them, so two spellings of the same target share one entry
+ * instead of double-polling.
+ */
+export function espnOverrideKey(search: string | URLSearchParams): string {
+  const params = typeof search === 'string' ? new URLSearchParams(search) : search;
+  const out = new URLSearchParams();
+  copyEspnOverrides(params, out);
+  return out.toString();
+}
+
 export function copyEspnOverrides(from: URLSearchParams, to: URLSearchParams): void {
   for (const key of ESPN_OVERRIDE_PARAMS) {
     const value = from.get(key);

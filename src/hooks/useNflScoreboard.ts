@@ -17,7 +17,7 @@
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import type { EspnSlotInfo, NflGame, NflScoreboardResponse } from '../types/live-scoring';
 import { createSharedPoller, type PollStatus } from '../utils/live-poll-store';
-import { copyEspnOverrides } from '../utils/espn-scoreboard-url';
+import { espnOverrideKey } from '../utils/espn-scoreboard-url';
 
 export const POLL_LIVE = 60_000;
 export const POLL_STALE = 300_000;
@@ -25,18 +25,27 @@ export const POLL_STALE = 300_000;
 interface Params {
   week: number;
   year: number;
+  /**
+   * Signature of the ?espnSeason/?espnWeek/?espnYear override, '' when there
+   * is none. Part of the cache key AND the thing the fetch is built from, so
+   * an entry can never describe a different slate than the one it holds — see
+   * espnOverrideKey for the soft-navigation case that made this necessary.
+   */
+  overrides: string;
 }
 
 const poller = createSharedPoller<Params, NflScoreboardResponse>(
-  ({ week, year }) => `${year}:${week}`,
-  async ({ week, year }) => {
+  ({ week, year, overrides }) => `${year}:${week}${overrides ? `:${overrides}` : ''}`,
+  async ({ week, year, overrides }) => {
     const url = new URL('/api/nfl-scoreboard', window.location.origin);
     url.searchParams.set('week', String(week));
     url.searchParams.set('year', String(year));
-    // Carry any validation override through to every poll, not just the first
+    // Carry the validation override through to every poll, not just the first
     // render — otherwise the board silently reverts to the normal slate a
-    // minute in, which is a maddening way to lose an evening.
-    copyEspnOverrides(new URLSearchParams(window.location.search), url.searchParams);
+    // minute in, which is a maddening way to lose an evening. It comes from
+    // `overrides` rather than from window.location so the request can never
+    // disagree with the cache key it was stored under.
+    for (const [k, v] of new URLSearchParams(overrides)) url.searchParams.set(k, v);
     const res = await fetch(url.toString());
     if (!res.ok) throw new Error(`nfl-scoreboard ${res.status}`);
     const data: NflScoreboardResponse = await res.json();
@@ -47,6 +56,15 @@ const poller = createSharedPoller<Params, NflScoreboardResponse>(
     return data;
   },
 );
+
+/**
+ * The override signature for the page as it stands right now. Empty during
+ * SSR — there is no location to read, and the store is empty on the server
+ * anyway, so the server and first-client snapshots still agree.
+ */
+function currentEspnOverrides(): string {
+  return typeof window === 'undefined' ? '' : espnOverrideKey(window.location.search);
+}
 
 export interface NflScoreboardState {
   games: NflGame[];
@@ -80,7 +98,12 @@ export function useNflScoreboard(
   opts: { enabled?: boolean; live?: boolean; fallbackGames?: NflGame[] } = {},
 ): NflScoreboardState {
   const { enabled = true, live = false, fallbackGames } = opts;
-  const params = useMemo(() => ({ week, year }), [week, year]);
+  // Read on every render, not once: with ClientRouter a soft navigation
+  // changes the URL under a mounted island. A changed signature gives
+  // `subscribe` a new identity, which re-registers on the new key and loads
+  // immediately rather than serving the previous slate until the next tick.
+  const overrides = currentEspnOverrides();
+  const params = useMemo(() => ({ week, year, overrides }), [week, year, overrides]);
 
   // Read the store during render (not inside the subscribe callback) so the
   // cadence stays REACTIVE: the component re-renders whenever the store emits,

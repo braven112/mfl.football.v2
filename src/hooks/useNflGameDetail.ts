@@ -18,23 +18,31 @@ import type {
   PlayerBoxScore,
 } from '../types/live-scoring';
 import { createSharedPoller, type PollStatus } from '../utils/live-poll-store';
-import { copyEspnOverrides } from '../utils/espn-scoreboard-url';
+import { espnOverrideKey } from '../utils/espn-scoreboard-url';
 import { POLL_LIVE, POLL_STALE } from './useNflScoreboard';
 
 interface Params {
   week: number;
   year: number;
+  /**
+   * Signature of the ?espnSeason/?espnWeek/?espnYear override, '' when there
+   * is none. Part of the cache key AND the thing the fetch is built from, so
+   * an entry can never describe a different slate than the one it holds — see
+   * espnOverrideKey for the soft-navigation case that made this necessary.
+   */
+  overrides: string;
 }
 
 const poller = createSharedPoller<Params, NflGameDetailResponse>(
-  ({ week, year }) => `${year}:${week}`,
-  async ({ week, year }) => {
+  ({ week, year, overrides }) => `${year}:${week}${overrides ? `:${overrides}` : ''}`,
+  async ({ week, year, overrides }) => {
     const url = new URL('/api/nfl-game-detail', window.location.origin);
     url.searchParams.set('week', String(week));
     url.searchParams.set('year', String(year));
     // Must match useNflScoreboard's target, or the board pairs one slate's
-    // games with another slate's box scores.
-    copyEspnOverrides(new URLSearchParams(window.location.search), url.searchParams);
+    // games with another slate's box scores. Same reasoning for reading it
+    // from `overrides`: request and cache key stay in lockstep.
+    for (const [k, v] of new URLSearchParams(overrides)) url.searchParams.set(k, v);
     const res = await fetch(url.toString());
     if (!res.ok) throw new Error(`nfl-game-detail ${res.status}`);
     const data: NflGameDetailResponse = await res.json();
@@ -42,6 +50,15 @@ const poller = createSharedPoller<Params, NflGameDetailResponse>(
     return data;
   },
 );
+
+/**
+ * The override signature for the page as it stands right now. Empty during
+ * SSR — there is no location to read, and the store is empty on the server
+ * anyway, so the server and first-client snapshots still agree.
+ */
+function currentEspnOverrides(): string {
+  return typeof window === 'undefined' ? '' : espnOverrideKey(window.location.search);
+}
 
 export interface NflGameDetailState {
   /** MFL player id → his box-score line. */
@@ -72,7 +89,12 @@ export function useNflGameDetail(
   } = {},
 ): NflGameDetailState {
   const { enabled = true, anyLive = false, fallback } = opts;
-  const params = useMemo(() => ({ week, year }), [week, year]);
+  // Read on every render, not once: with ClientRouter a soft navigation
+  // changes the URL under a mounted island. A changed signature gives
+  // `subscribe` a new identity, which re-registers on the new key and loads
+  // immediately rather than serving the previous slate until the next tick.
+  const overrides = currentEspnOverrides();
+  const params = useMemo(() => ({ week, year, overrides }), [week, year, overrides]);
 
   const snapshot = useSyncExternalStore(
     useCallback(

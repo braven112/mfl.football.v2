@@ -14,6 +14,7 @@ import { join } from 'node:path';
 import {
   buildEspnScoreboardUrl,
   copyEspnOverrides,
+  espnOverrideKey,
   espnSeasonSlot,
   resolveEspnTarget,
 } from '../src/utils/espn-scoreboard-url';
@@ -370,5 +371,53 @@ describe('copyEspnOverrides', () => {
     const to = new URLSearchParams('week=1');
     copyEspnOverrides(new URLSearchParams('demo=1'), to);
     expect([...to.keys()]).toEqual(['week']);
+  });
+});
+
+describe('espnOverrideKey (shared-poller cache key)', () => {
+  it('is empty when no override is present', () => {
+    // No override → the plain slate shares one cache entry, as before.
+    expect(espnOverrideKey('')).toBe('');
+    expect(espnOverrideKey('week=3&year=2026&demo=live')).toBe('');
+  });
+
+  it('separates an overridden slate from the plain one', () => {
+    // This is the whole point. The pollers keyed only on `year:week` while
+    // reading the override off window.location at fetch time, so the key did
+    // not describe what had been fetched. ClientRouter keeps the module — and
+    // the store — alive across a soft navigation, and `subscribe` only forces
+    // a load when the entry is idle or a failed empty; an entry sitting there
+    // `ok` gets reused. The board would show the preseason slate on a page
+    // that asked for the live one until the next tick, up to five minutes.
+    const overridden = espnOverrideKey('demo=live&espnSeason=1&espnWeek=3&espnYear=2026');
+    expect(overridden).not.toBe('');
+    expect(overridden).not.toBe(espnOverrideKey('demo=live'));
+  });
+
+  it('ignores everything that is not an override param', () => {
+    // `demo` and `week` change the page, not the ESPN target, so folding them
+    // into the key would split the cache and double the polling for nothing.
+    expect(espnOverrideKey('espnWeek=3&demo=live&week=9&testDate=2026-08-21'))
+      .toBe(espnOverrideKey('espnWeek=3'));
+  });
+
+  it('gives two spellings of the same target ONE entry', () => {
+    // Order comes from ESPN_OVERRIDE_PARAMS, not from whatever the user typed
+    // — otherwise two links to the same slate poll it twice.
+    expect(espnOverrideKey('espnYear=2026&espnWeek=3&espnSeason=1'))
+      .toBe(espnOverrideKey('espnSeason=1&espnWeek=3&espnYear=2026'));
+  });
+
+  it('accepts URLSearchParams as well as a raw string', () => {
+    expect(espnOverrideKey(new URLSearchParams('espnSeason=1')))
+      .toBe(espnOverrideKey('espnSeason=1'));
+  });
+
+  it('distinguishes partial overrides from each other', () => {
+    // A partial override still changes the target (resolveEspnTarget fills the
+    // rest from the page's own week), so it cannot share a key with a
+    // different partial one.
+    expect(espnOverrideKey('espnWeek=3')).not.toBe(espnOverrideKey('espnWeek=4'));
+    expect(espnOverrideKey('espnSeason=1')).not.toBe(espnOverrideKey('espnWeek=1'));
   });
 });
