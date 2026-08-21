@@ -97,7 +97,8 @@ Launch **all three reviewers IN PARALLEL** (single message, three Agent tool cal
 1. **`code-reviewer`** (haiku — fast, pattern-matching):
    - Design token compliance (no hardcoded colors/spacing)
    - DRY principles (no duplicated logic)
-   - CLAUDE.md guideline adherence (team names, player display, year utilities)
+   - Repo-rule adherence: `chooseTeamName()`, the two year clocks, and the
+     `docs/claude/rules/` doc for whichever domain the story touches
    - TypeScript type safety
 
 2. **`astro-performance-expert`** (sonnet — checklist-based):
