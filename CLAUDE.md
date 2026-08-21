@@ -188,7 +188,8 @@ admin-only/unreleased features.
   `resolveHeroState` (`src/utils/hero-resolver.ts`). `/update-whats-new` (and
   therefore `/live`) prompts for this — don't decide silently.
 - Smaller fixes go to `src/data/weekly-changelog-staging.json` (`date`,
-  `type`: `bug-fix | style-tweak`, user-facing `summary`, `impact`, `area`).
+  `type`: `bug-fix | style-tweak`, user-facing `summary`, `impact`: `user |
+  admin`, `area`).
   `scripts/weekly-changelog-rollup.mjs` compiles them Mondays 8pm PT and needs
   a top-level `featuredImage`/`featuredImageAlt` set before it runs.
 

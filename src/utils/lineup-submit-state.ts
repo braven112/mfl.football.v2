@@ -6,8 +6,9 @@
  * bundle. This one is pure and is imported by BOTH the client script and its
  * tests, which is the point — the guard that stops a submit from overwriting
  * a lineup we could not read is a branch in this function, and a test that
- * greps the page for it stays green when the branch is deleted (CLAUDE.md's
- * "test the behavior, not the source text", learned the hard way twice).
+ * greps the page for it stays green when the branch is deleted
+ * (docs/claude/rules/league-urls.md, "test the behavior, not the source text"
+ * — learned the hard way twice).
  */
 
 export interface SubmitButtonState {

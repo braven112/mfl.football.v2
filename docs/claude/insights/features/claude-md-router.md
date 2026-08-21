@@ -37,11 +37,35 @@ Final state: 627/630 verbatim. The 3 remaining were checked by hand and are
 deliberate — an invented placeholder (`SCHEFTER_FOO_ENABLED`) and two anecdotes
 whose *rules* were kept.
 
-**Recommendation:** Run the token diff on any doc split or large tightening
-before committing, and state the surviving ratio in the commit message so the
-next reader knows the check ran. Do the extraction mechanically too — split by
-heading with `awk` and concatenate, rather than retyping sections into their new
-homes. Retyping is what introduces the paraphrase drift in the first place.
+**Limitation — the token diff is a smoke test, not proof.** `grep -o` pairs
+backticks left-to-right *within a line*, so anything that desynchronizes the
+pairing silently corrupts the token list: a code span wrapped across a newline,
+an odd backtick, and above all ```` ``` ```` fences, which this file has several
+of. Downstream of a desync you get junk "tokens" and real ones go unreported.
+
+It missed a live one. `` `impact`: `user | admin` `` in the What's New section
+was condensed to `` `impact` ``, dropping an enum that
+`tests/whats-new-data.test.ts` enforces via `VALID_IMPACTS` — so a session
+following the router would write a staging entry and fail the build with no idea
+which values were legal. The check reported 627/630 clean while that was sitting
+in the diff. Unwrapping the file first (`tr '\n' ' '`) does not fix it; it makes
+it worse, because one unmatched backtick then desyncs the entire document.
+
+**Recommendation:** Use the token diff as a first pass — it is cheap and it did
+catch 15 real drops. But do not treat its ratio as a completeness claim. The
+rigorous check is narrower and comes in two halves:
+
+1. **Verbatim moves** — `diff` each extracted section against its source. Byte
+   identity is a real proof, and it covers most of the volume.
+2. **Tightened sections** — the only genuine risk surface, and there are few of
+   them. Read each one against its original, specifically hunting for dropped
+   *enumerations, formulas, and identifiers*. That is where condensation does
+   its damage: the sentence still reads correctly with `user | admin` removed,
+   which is exactly why prose review slides past it.
+
+Do the extraction mechanically too — split by heading with `awk` and
+concatenate, rather than retyping sections into their new homes. Retyping is
+what introduces the paraphrase drift in the first place.
 
 ## 2026-08-21 - Nothing tests the pointers from `.claude/` into CLAUDE.md
 
@@ -74,5 +98,26 @@ grep -rn "CLAUDE\.md" --include=*.md --include=*.ts --include=*.mjs \
 
 Prefer pointing those files at a stable file path (`docs/claude/rules/<domain>.md`)
 over a section title — a moved file breaks loudly on open, a renamed section
-does not. If this class recurs, a guard test asserting every CLAUDE.md section
-title referenced elsewhere actually exists would be cheap.
+does not.
+
+**This is now enforced:** `tests/claude-md-references.test.ts` asserts that every
+`CLAUDE.md "<Title>"` citation names text actually present in CLAUDE.md, that
+every referenced `docs/claude/rules/*.md` path resolves, and that the router
+table's own rows point at real files. Deliberately-superseded citations go in its
+ALLOWLIST with a reason.
+
+Two things learned writing it, both worth keeping if you extend the pattern:
+
+- **The regex has to cross newlines.** Citations wrap (`CLAUDE.md's "fixing the\n
+  * constitution does NOT..."`), and comment gutters (` * `, `# `, `// `) must be
+  stripped before matching or they end up inside the captured title. A
+  newline-free first version passed three genuinely dangling citations.
+- **But the gap must be connectors only** (`'s`, `→`, `:`, `(`, `,`, dashes) —
+  never sentence text. A version that merely counted characters between
+  `CLAUDE.md` and the next quote paired "(CLAUDE.md rule)." in a workflow header
+  with a cron string two lines below it. Widen for newlines, tighten for grammar;
+  doing only one of the two gives you either false negatives or false positives.
+
+`docs/claude/insights/`, `docs/plans/` and `.claude/plans/` are deliberately NOT
+scanned — they are dated journals recording what CLAUDE.md said at the time, and
+rewriting them to track a later reorganization would falsify the record.

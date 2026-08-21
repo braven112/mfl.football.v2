@@ -66,8 +66,9 @@ node --check script.mjs        # syntax-check any .mjs you touched
 
 These are rules that have each caused a real production bug. Most are enforced
 by a guard test in `tests/`; violating one fails CI. Full rationale for every
-item lives in `CLAUDE.md` — read the relevant section there before changing
-anything in that area.
+item lives in `docs/claude/rules/<domain>.md` — `CLAUDE.md` is a router whose
+"Read before you touch" table maps each area to its rules doc. Read the
+matching doc before changing anything in that area.
 
 **League constants — never hardcode.** No `'13522'`, `'19621'`,
 `'data/theleague'` inline. Import from `src/config/leagues-data.mjs` (node

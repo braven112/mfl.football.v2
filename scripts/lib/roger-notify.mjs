@@ -193,7 +193,8 @@ export function buildIssueBody(proposal, { runUrl, now } = {}) {
     '',
     '> If the constitution turns out to be **ambiguous** rather than silent, fix the ambiguity in',
     '> the constitution too — patching only the answer leaves the trap armed for the next phrasing',
-    '> of the question (CLAUDE.md → "A gap in the constitution reads as a wrong answer").',
+    '> of the question (docs/claude/rules/roger.md → "A gap in the constitution reads as a',
+    '> wrong answer").',
     '',
     '---',
     '',
@@ -231,8 +232,9 @@ export function buildBumpComment(proposal, { runUrl, now } = {}) {
  * Written for OWNERS, not for the commissioner. That distinction drives every
  * choice here: no proposal ids, no GitHub links, no "needs your review" — the
  * league can't action any of that. What an owner gets from this is the one
- * thing that genuinely affects them, straight out of CLAUDE.md's "fixing the
- * constitution does NOT fix answers already on the page": a stored answer they
+ * thing that genuinely affects them, straight out of
+ * docs/claude/rules/roger.md's "fixing the constitution does NOT fix answers
+ * already on the page": a stored answer they
  * may have already read is suspect, so don't rely on it until it's ruled on.
  *
  * Judge errors are deliberately NOT included. "ANTHROPIC_API_KEY is wedged" is

@@ -2,8 +2,9 @@
  * "This answer looks wrong" — owner-reported flags on Ask Roger answers.
  *
  * Why this exists: Roger generates each answer once and the POST handler
- * persists it to Redis; nothing ever regenerates a stored answer (CLAUDE.md →
- * "Fixing the constitution does NOT fix answers already on the page"). Until
+ * persists it to Redis; nothing ever regenerates a stored answer
+ * (docs/claude/rules/roger.md → "Fixing the constitution does NOT fix answers
+ * already on the page"). Until
  * now the only lever on a bad answer was the admin delete button, which throws
  * away the owner's QUESTION along with the wrong answer — so the report is
  * lost, the question has to be re-asked, and the card loses its place and its

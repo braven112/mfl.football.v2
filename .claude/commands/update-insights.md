@@ -41,7 +41,7 @@ Do NOT record:
 - Things already in the insight files
 - Things derivable from reading the code
 - Temporary state or in-progress work
-- Anything already in CLAUDE.md
+- Anything already in CLAUDE.md or `docs/claude/rules/*.md`
 
 ## Step 5: Write the insights
 
