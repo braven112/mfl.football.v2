@@ -1,0 +1,45 @@
+name: Ranking Sources Sync
+
+# Refreshes the BUILT-IN ranking sources every owner sees on Import Rankings
+# without importing anything (data/ranking-sources/<year>.json): MFL ADP,
+# FantasySharks expert ranks, and Sleeper's board matched to MFL player ids.
+#
+# Daily rather than on the 5-minute roster cadence: ADP moves over days, not
+# minutes, and this hits two third-party APIs. It runs AFTER the morning
+# roster sync so the players.json it matches Sleeper against is current.
+#
+# To pause this job, comment out the cron line below (feature flags live in
+# code, not GitHub variables — see CLAUDE.md).
+
+on:
+  schedule:
+    # 7 AM PT (2 PM UTC), daily.
+    - cron: "0 14 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync-ranking-sources:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+
+      - name: Setup pnpm + Node + install
+        uses: ./.github/actions/setup
+
+      - name: Fetch built-in ranking sources
+        run: node ./scripts/fetch-ranking-sources.mjs
+
+      - name: Commit and push updates
+        uses: ./.github/actions/commit-push
+        with:
+          check-paths: 'data/ranking-sources'
+          add-paths: 'data/ranking-sources'
+          commit-message: 'chore: refresh built-in ranking sources'
+          no-changes-message: 'No ranking source changes to commit.'
+          git-user-name: 'Rankings Sync Bot'
