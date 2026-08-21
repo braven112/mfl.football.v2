@@ -35,7 +35,7 @@ import {
   parseConferenceChampions,
   parseNITResults,
 } from './afl-draft-utils';
-import { getAflLeagueYear } from './league-year';
+import { getAflLeagueYear, getTestDateFromUrl } from './league-year';
 import { getLeagueBySlug } from '../config/leagues';
 import { isAflDraftWindowOpen, type AflDraftSlot } from './afl-team-spotlight';
 import type { StandingsFranchise } from '../types/standings';
@@ -314,10 +314,19 @@ export function loadAflDraftSlot(
   const { franchiseId, conferenceId, referenceDate } = opts;
   if (!conferenceId || !(conferenceId in CONFERENCE_UNIT)) return null;
 
+  // ONE date for both halves of the window check. `getAflLeagueYear(undefined)`
+  // resolves its own `new Date()` internally, so letting it default while
+  // computing `calendarYear` from a second `new Date()` compares two different
+  // instants: across a New Year boundary they disagree and the gate flips shut.
+  // Browser-side it is worse — `getAflLeagueYear` honors `?testDate=` and a
+  // bare `.getFullYear()` does not, so the two would straddle clocks entirely.
+  const ref = referenceDate ?? getTestDateFromUrl() ?? new Date();
+
   // The AFL league year IS the upcoming draft's year: the registry's June 1
   // rollover flips it the moment the new MFL league is created, and that
   // league's draft is the one being ordered.
-  const draftYear = getAflLeagueYear(referenceDate);
+  const draftYear = getAflLeagueYear(ref);
+  const calendarYear = ref.getFullYear();
   const board = readJson(feedPath(draftYear, 'draftResults.json'));
 
   // Bail before the expensive reads when the window is shut — which is most of
@@ -325,7 +334,7 @@ export function loadAflDraftSlot(
   if (
     !isAflDraftWindowOpen({
       aflLeagueYear: draftYear,
-      calendarYear: (referenceDate ?? new Date()).getFullYear(),
+      calendarYear,
       conferenceDraftComplete: isConferenceDraftComplete(board, conferenceId),
     })
   ) {
@@ -345,7 +354,7 @@ export function loadAflDraftSlot(
     franchiseId,
     conferenceId,
     draftYear,
-    calendarYear: (referenceDate ?? new Date()).getFullYear(),
+    calendarYear,
     board,
     standings: asArray(standingsFeed?.leagueStandings?.franchise),
     brackets: readJson(feedPath(standingsYear, 'playoff-brackets.json')),
