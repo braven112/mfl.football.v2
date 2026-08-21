@@ -31,6 +31,25 @@ The Pain, Cowboy Up) were black dots on a `#111827` chip — invisible, on the
 theme everyone looks at. One wrong surface, two themes, two different bugs,
 and the light one was the older of the two.
 
+**The other half, learned the hard way in review:** "paint it `--card-surface`"
+is *necessary but not sufficient* — the mark's color must also come from
+`teamAccentVar`, and on the two activity pages only ONE of them does.
+`theleague/activity.astro` passes `teamAccentVar(...)`;
+`afl-fantasy/activity.astro` passes a hand-written 24-entry `CHART_PALETTE`
+of raw hexes, because AFL franchises carry no config `color` and their derived
+accents collapse to **20 distinct values for 24 teams** (three resolve to
+`#181818`, three to `#8b8f93`) — unusable as 24 chart lines. So do NOT
+"fix" that page by switching it to accent tokens; the palette is deliberate,
+and distinctness is the constraint it solves for. Its cost is that 8 of those
+24 fall under 3:1 on white and a *different* 8 fall under it on the AFL's navy
+card — no flat surface satisfies both halves.
+
+**When the palette can't be fixed, give the mark an edge.** A hairline ring in
+the surface's own ink — `box-shadow: 0 0 0 1px color-mix(in srgb,
+var(--page-text) 40%, transparent)` — keeps a swatch's SHAPE readable at any
+fill contrast, in both themes and both leagues, and costs nothing when the
+fill already passes. Right answer whenever the color is not yours to choose.
+
 **Rule:** a floating surface that carries franchise color should be
 `background: var(--card-surface)` + `color: var(--page-text)`, elevated with a
 `0 0 0 1px var(--card-border)` ring and `var(--shadow-lg)` rather than by being

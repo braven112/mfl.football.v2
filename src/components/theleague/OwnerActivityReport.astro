@@ -575,11 +575,26 @@ const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 		line-height: 1.6;
 	}
 
+	/* The dot carries whatever color the PAGE hands us, and the two pages hand
+	   us different things: TheLeague passes `teamAccentVar` (floored at 3:1
+	   against the card surface), the AFL passes a raw 24-entry `CHART_PALETTE`
+	   picked for mutual distinctness and never contrast-tuned. On white, 8 of
+	   those 24 sit under 3:1; on the AFL's navy card, a different 8 do. No flat
+	   surface satisfies both halves of that palette, and swapping the AFL to
+	   accent tokens is not the answer either — the accents collapse to 20
+	   distinct colors for 24 teams (three share #181818), which is exactly why
+	   the hand-picked palette exists.
+
+	   So give the dot an edge instead of asking the surface to carry it: a
+	   hairline ring in the surface's own ink keeps the mark's SHAPE readable at
+	   any fill contrast, in both themes and both leagues, with the team name
+	   sitting right beside it to carry the meaning. */
 	.chart-container :global(.chart-tooltip__dot) {
 		width: 0.5rem;
 		height: 0.5rem;
 		border-radius: 50%;
 		flex-shrink: 0;
+		box-shadow: 0 0 0 1px color-mix(in srgb, var(--page-text, #111827) 40%, transparent);
 	}
 
 	/* Hover column cursor */
