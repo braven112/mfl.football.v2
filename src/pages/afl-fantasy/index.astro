@@ -67,10 +67,13 @@ if (myTeamParam) {
   }
 }
 
+/** This league's registry entry — resolved once, not per use site. */
+const AFL = getLeagueBySlug('afl-fantasy')!;
+
 const cookiePref = getAFLPreference(Astro.cookies);
 const authUser = getAuthUser(Astro.request);
 const authAflFranchiseId =
-  authUser?.leagueId === getLeagueBySlug('afl-fantasy')!.id && authUser.franchiseId
+  authUser?.leagueId === AFL.id && authUser.franchiseId
     ? authUser.franchiseId
     : null;
 const hasExplicitTeam = !!(myTeamParam || franchiseParam || cookiePref || authAflFranchiseId);
@@ -91,6 +94,11 @@ const userConferenceName = userConferenceId
 // ── Date / hero state ───────────────────────────────────────────────────────
 const testDateParam = Astro.url.searchParams.get('testDate');
 const effectiveDate = parseTestDate(testDateParam) ?? new Date();
+// One date instance for the gate AND the component it gates — see the same
+// comment on TheLeague's homepage for the boundary race that splitting them
+// creates. `effectiveDate` is always defined here, which is why this page was
+// already correct; the shared const keeps it that way.
+const testDriveHero = showTestDriveHero(AFL.slug, effectiveDate);
 const testMode = !!testDateParam;
 
 const timeline = getAflWhatsNextTimeline(effectiveDate);
@@ -201,8 +209,8 @@ const lastVisitDate = Astro.cookies.get('whats_new_last_visit')?.value ?? null;
     <section class="afl-hp__main" aria-labelledby="afl-hp-hero-heading">
       <h2 id="afl-hp-hero-heading" class="visually-hidden">League Overview</h2>
 
-      {showTestDriveHero(getLeagueBySlug('afl-fantasy')!.slug, effectiveDate) ? (
-        <LiveScoringTestDrive slug={getLeagueBySlug('afl-fantasy')!.slug} referenceDate={effectiveDate} />
+      {testDriveHero ? (
+        <LiveScoringTestDrive slug={AFL.slug} referenceDate={effectiveDate} />
       ) : (
         <AflHero
           state={heroState}

@@ -141,7 +141,13 @@ if (throwbackPromo && isEntryInHeroWindow(throwbackPromo, effectiveDate ?? new D
   }
 }
 
-const testDriveHero = showTestDriveHero(THELEAGUE.slug, effectiveDate ?? new Date());
+// ONE date instance for both the gate below and the component it gates.
+// `effectiveDate` is undefined unless ?testDate= is set, so resolving `now`
+// separately in each place put two `new Date()` calls on either side of the
+// window boundary — and since the page's ternary is exclusive, a request that
+// split them would render no hero at all (review finding, #569).
+const heroReferenceDate = effectiveDate ?? new Date();
+const testDriveHero = showTestDriveHero(THELEAGUE.slug, heroReferenceDate);
 
 const rawHeroState = resolveHeroState(effectiveDate, testMode, heroEntries, timeline, draftComplete, hasBreakingStory);
 const heroState = await enrichHeroState(rawHeroState);
@@ -648,7 +654,7 @@ if ((heroState.phase === 'playoffs' || heroState.phase === 'championship') && he
     <section class="hp2__main" aria-labelledby="hp2-hero-heading">
       <h2 id="hp2-hero-heading" class="visually-hidden">League Overview</h2>
       {testDriveHero ? (
-        <LiveScoringTestDrive slug={THELEAGUE.slug} referenceDate={effectiveDate} />
+        <LiveScoringTestDrive slug={THELEAGUE.slug} referenceDate={heroReferenceDate} />
       ) : (
       <SeasonDailyHero
         state={heroState}

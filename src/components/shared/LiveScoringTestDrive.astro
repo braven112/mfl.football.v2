@@ -18,12 +18,20 @@ import { isTestDriveWindow, testDriveBoard } from '../../utils/live-scoring-test
 interface Props {
   /** Canonical slug of the league whose homepage this is. */
   slug: string;
-  /** Test-date override, so ?testDate= can preview it like the real hero. */
-  referenceDate?: Date;
+  /**
+   * REQUIRED, and it must be the SAME instance the page passed to
+   * `showTestDriveHero`. The page uses that call to suppress its normal hero,
+   * so if this component reached for its own `new Date()` the two could land
+   * on opposite sides of the window boundary within one request — the page
+   * hides `SeasonDailyHero`, this renders nothing, and the homepage has NO
+   * hero. Making the prop non-optional turns that into a type error instead
+   * of a once-a-window race (review finding, #569).
+   */
+  referenceDate: Date;
 }
 
 const { slug, referenceDate } = Astro.props;
-const board = isTestDriveWindow(referenceDate ?? new Date()) ? testDriveBoard(slug) : null;
+const board = isTestDriveWindow(referenceDate) ? testDriveBoard(slug) : null;
 ---
 
 {board && (
