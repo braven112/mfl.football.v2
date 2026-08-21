@@ -49,6 +49,7 @@ import {
   formatGameClock,
   isPlayerInRedZone,
   playerDownDistance,
+  resolveGameState,
   selectMatchupMoments,
   type FeedSnapshot,
   type LineupSlotRules,
@@ -451,7 +452,10 @@ interface PlayerRowProps {
 function PlayerRow({ row, meta, side, slot, game, box, detailStatus }: PlayerRowProps) {
   const pos = meta?.position ?? '';
   const team = meta?.nflTeam ?? '';
-  const state = nflGameState(row.secondsRemaining);
+  // ESPN decides whether his game is under way; MFL's seconds are the
+  // fallback. See resolveGameState — reading the dot from MFL and the clock
+  // from ESPN is what put a "not kicked off" ring beside a running clock.
+  const state = resolveGameState(nflGameState(row.secondsRemaining), game);
   const projected = meta?.projected ?? 0;
   const projFinal = projectPlayerFinal({ live: row.live, projected, secondsRemaining: row.secondsRemaining });
   const boom = state !== 'not-started' && projected > 0 && row.live >= projected;

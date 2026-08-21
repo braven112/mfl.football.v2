@@ -28,6 +28,28 @@ import type {
  * the STATE and no numbers: "In progress" is honestly less than "Q3 7:24", and
  * that is the point — an invented clock is worse than a missing one.
  */
+/**
+ * Whose word to take on whether a player's game is being played.
+ *
+ * There are two answers on the row and they disagree. MFL's
+ * `gameSecondsRemaining` is a fantasy-side number that only moves when MFL
+ * refreshes it — before the season it is simply a full game for everybody,
+ * and in-season it lags. ESPN's `state` is the real one, and it is already
+ * what prints the clock text.
+ *
+ * Reading the two from different sources put a hollow "has not kicked off"
+ * ring next to a live clock reading "4:08 - 3rd", on players who had a box
+ * score (owner, 2026-08-21). So ESPN wins wherever ESPN has the game; MFL is
+ * the fallback for a player whose game we could not resolve at all (a bye, or
+ * a team code that did not match), where a stale answer still beats none.
+ */
+export function resolveGameState(fallback: NflGameState, game?: NflGame): NflGameState {
+  if (!game) return fallback;
+  if (game.state === 'in') return 'in-progress';
+  if (game.state === 'post') return 'final';
+  return 'not-started';
+}
+
 export function formatGameClock(state: NflGameState, game?: NflGame): string {
   if (game) {
     if (game.state === 'post') return 'Final';

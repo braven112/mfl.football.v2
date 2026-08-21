@@ -17,6 +17,7 @@ import {
   formatPlayClock,
   isPlayerInRedZone,
   playerDownDistance,
+  resolveGameState,
   selectMatchupMoments,
   assignLineupSlots,
   type LiveMoment,
@@ -527,5 +528,33 @@ describe('describeGameState', () => {
     expect(describeGameState('in-progress')).toMatch(/right now/);
     expect(describeGameState('not-started')).toMatch(/not kicked off/);
     expect(describeGameState('final')).toMatch(/final/);
+  });
+});
+
+describe('resolveGameState', () => {
+  it('takes ESPN’s word over MFL’s game clock', () => {
+    // MFL's gameSecondsRemaining is a fantasy-side number that does not move
+    // in real time — before the season it is a full game for everybody. Read
+    // from it, the dot said "has not kicked off" beside a clock reading
+    // "4:08 - 3rd", on players who already had a box score.
+    expect(resolveGameState('not-started', game({ state: 'in' }))).toBe('in-progress');
+    expect(resolveGameState('not-started', game({ state: 'post' }))).toBe('final');
+    expect(resolveGameState('in-progress', game({ state: 'pre' }))).toBe('not-started');
+    expect(resolveGameState('final', game({ state: 'in' }))).toBe('in-progress');
+  });
+
+  it('falls back to MFL when ESPN has no game for him', () => {
+    // A bye, or a team code that did not resolve. A stale answer beats none.
+    expect(resolveGameState('in-progress', undefined)).toBe('in-progress');
+    expect(resolveGameState('final', undefined)).toBe('final');
+    expect(resolveGameState('not-started', undefined)).toBe('not-started');
+  });
+
+  it('agrees with the clock text rendered beside it', () => {
+    // The two were read from different sources; this is the pairing that broke.
+    const live = game({ state: 'in', shortDetail: '4:08 - 3rd' });
+    const state = resolveGameState('not-started', live);
+    expect(state).toBe('in-progress');
+    expect(formatGameClock(state, live)).toBe('4:08 - 3rd');
   });
 });
