@@ -532,13 +532,27 @@ const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 
 	.chart-empty p { margin: 0; }
 
-	/* Tooltip */
+	/* Tooltip — a raised popover on the CARD surface, not a fixed dark chip.
+	   Two reasons it has to be the card surface specifically:
+
+	   1. The gray ramp INVERTS in dark mode (`--color-gray-900` is #ededed
+	      there), so the old `gray-900` bg + `--color-white` text shipped
+	      white ink on a near-white box — unreadable, which is exactly what
+	      owners saw (report, 2026-08-21).
+	   2. The row dots are `var(--team-accent-<id>)`, and `getTeamAccentPair`
+	      only guarantees those 3:1 against `--card-surface` in each theme.
+	      On any off-palette chip the guarantee doesn't hold — the old dark
+	      chip already swallowed the near-black franchise accents in LIGHT
+	      mode for the same reason. */
 	.chart-container :global(.chart-tooltip) {
 		position: absolute;
 		top: 0.5rem;
 		right: 0.75rem;
-		background: var(--color-gray-900, #111827);
-		color: var(--color-white, #fff);
+		background: var(--card-surface, #fff);
+		color: var(--page-text, #111827);
+		box-shadow:
+			0 0 0 1px var(--card-border, #e5e7eb),
+			var(--shadow-lg);
 		font-size: 0.75rem;
 		padding: 0.5rem 0.625rem;
 		border-radius: 0.375rem;

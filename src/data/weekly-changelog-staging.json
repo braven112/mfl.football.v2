@@ -48,6 +48,14 @@
       "impact": "user",
       "area": "live-scoring",
       "league": "both"
+    },
+    {
+      "date": "2026-08-21",
+      "type": "bug-fix",
+      "summary": "Hover a day on the Owner Activity chart in dark mode and the readout came up white text on a near-white box — legible only if you already knew what it said. The chart's tooltip was pinned to the darkest gray in the palette, and that palette flips in dark mode, so the \"almost black\" it asked for resolved to almost white while the text stayed white. It's now the same raised card surface the rest of the site uses, which fixes a quieter problem in light mode at the same time: the team dots in that readout are tuned to stand out against a card, so on the old dark chip the darker-jerseyed teams were dots you couldn't see.",
+      "impact": "user",
+      "area": "design-system",
+      "league": "both"
     }
   ]
 }
