@@ -23,7 +23,7 @@
  * couldn't reach ESPN". The first is silence; the second says so out loud.
  */
 
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
   LivePlayerRow,
   LiveScoringPageProps,
@@ -627,7 +627,7 @@ function BenchSection({ away, home, teams, matchup, meta, gamesByTeam, boxScore,
   // different bench sizes, and leaving the shorter one's tail out of the grid
   // would let the taller side's rows slide up into the gap.
   const cell = (row: LivePlayerRow | undefined, side: 'left' | 'right', i: number) => (
-    <div className={`ls-bench-cell ${side === 'left' ? 'away' : 'home'}`}>
+    <div>
       {row
         ? <PlayerRow row={row} meta={meta[row.id]} side={side}
                      game={gameFor(row)} box={boxScore[row.id]} detailStatus={detailStatus} />
@@ -648,13 +648,15 @@ function BenchSection({ away, home, teams, matchup, meta, gamesByTeam, boxScore,
       </summary>
       <p className="ls-bench-note">Bench points don’t count toward the matchup.</p>
       <div className="ls-bench-grid">
-        {caption(A, 'away')}
-        {caption(H, 'home')}
+        <div className="ls-bench-caps">
+          {caption(A, 'away')}
+          {caption(H, 'home')}
+        </div>
         {Array.from({ length: rowCount }).map((_, i) => (
-          <Fragment key={i}>
+          <div className="ls-bench-row" key={i}>
             {cell(awayRows[i], 'left', i)}
             {cell(homeRows[i], 'right', i)}
-          </Fragment>
+          </div>
         ))}
       </div>
     </details>
@@ -739,11 +741,6 @@ function MatchupDetail({
 
       <div className="ls-mx-body">
         {rowCount === 0 && <div className="ls-empty">Player breakdown appears once lineups lock and games begin.</div>}
-        {/* The lineup rows get their OWN grid so every row can be sized to the
-            tallest one (see .ls-mx-rows). The bench and the empty state are
-            deliberately outside it — they are not player rows and must not be
-            stretched to a player row's height. */}
-        <div className="ls-mx-rows">
         {Array.from({ length: rowCount }).map((_, i) => {
           const h = homeRows[i]?.row;
           const a = awayRows[i]?.row;
@@ -762,7 +759,6 @@ function MatchupDetail({
             </div>
           );
         })}
-        </div>
         <BenchSection
           away={bench[matchup.away] ?? []} home={bench[matchup.home] ?? []}
           teams={teams} matchup={matchup} meta={meta}
