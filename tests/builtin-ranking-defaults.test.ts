@@ -5,6 +5,7 @@ import {
   defaultRankingSourcesFor,
   DEFAULT_RANKING_SOURCES_FALLBACK,
 } from '../src/config/leagues-data.mjs';
+import { SOURCE_LABELS, SOURCE_ABBREVS } from '../src/utils/rankings-lookup';
 
 /**
  * Built-in ranking sources are AVAILABLE in every league; only which ones are
@@ -67,5 +68,28 @@ describe('per-league default ranking sources', () => {
     for (const id of DEFAULT_RANKING_SOURCES_FALLBACK) {
       expect(available.has(id)).toBe(true);
     }
+  });
+
+  it('every snapshot source has a display label and abbreviation', () => {
+    // Without this the table renders the raw id — 'sleeper-adp' and
+    // 'espn-superflex' both shipped to the preview that way, because adding a
+    // source to the fetch script and labelling it are two separate edits and
+    // nothing connected them.
+    for (const id of available.keys()) {
+      expect(SOURCE_LABELS[id as keyof typeof SOURCE_LABELS], `no label for '${id}'`).toBeTruthy();
+      expect(
+        SOURCE_ABBREVS[id as keyof typeof SOURCE_ABBREVS],
+        `no abbreviation for '${id}'`,
+      ).toBeTruthy();
+    }
+  });
+
+  it('labels are distinct enough to tell two variants apart', () => {
+    // ESPN and ESPN Superflex are different boards; identical labels would
+    // make the two rows indistinguishable in the table.
+    const labels = [...available.keys()].map(
+      (id) => SOURCE_LABELS[id as keyof typeof SOURCE_LABELS],
+    );
+    expect(new Set(labels).size).toBe(labels.length);
   });
 });

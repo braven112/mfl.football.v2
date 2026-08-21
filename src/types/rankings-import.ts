@@ -24,6 +24,8 @@ export type RankingSourceId =
   // an import. See scripts/fetch-ranking-sources.mjs.
   | 'mfl-adp'
   | 'sharks'
+  | 'sleeper-adp'
+  | 'espn-superflex'
   | 'custom';
 
 export type RankingType = 'dynasty' | 'redraft' | 'adp' | 'overall';

@@ -424,11 +424,12 @@ describe('rankings-storage', () => {
       expect(dispatchEventMock).toHaveBeenCalled();
     });
 
-    it('toggleCompositeImport adds a member with default weight', () => {
+    it('toggleCompositeImport adds a member owning the whole composite', () => {
+      // Weights are percentages, so the only member is 100% of My Rank.
       toggleCompositeImport('imp-1', true);
       const stored = JSON.parse(localStorageMock._getStore()['rankings.compositeConfig']);
       expect(stored.members).toHaveLength(1);
-      expect(stored.members[0]).toEqual({ importId: 'imp-1', weight: 1 });
+      expect(stored.members[0]).toEqual({ importId: 'imp-1', weight: 100 });
     });
 
     it('toggleCompositeImport removes a member', () => {
@@ -467,10 +468,13 @@ describe('rankings-storage', () => {
           ],
         }),
       );
+      // Pins 'a' at the typed value; 'b' absorbs the rest so the total is 100.
       setCompositeWeight('a', 3);
       const stored = JSON.parse(localStorageMock._getStore()['rankings.compositeConfig']);
-      expect(stored.members[0]).toEqual({ importId: 'a', weight: 3 });
-      expect(stored.members[1]).toEqual({ importId: 'b', weight: 1 });
+      const byId = Object.fromEntries(stored.members.map((m: any) => [m.importId, m.weight]));
+      expect(byId.a).toBe(3);
+      expect(byId.b).toBe(97);
+      expect(byId.a + byId.b).toBe(100);
     });
 
     it('deleteImport removes deleted ID from composite config', () => {
@@ -514,6 +518,47 @@ describe('rankings-storage', () => {
       const stored = JSON.parse(localStorageMock._getStore()['rankings.compositeConfig']);
       expect(stored.members[0]).toEqual({ importId: 'new-id', weight: 2 });
       expect(stored.members[1]).toEqual({ importId: 'other', weight: 1 });
+    });
+  });
+
+  describe('composite weights normalize to 100', () => {
+    // Weights are shown to owners as percentages, so "5" has to MEAN 5% of My
+    // Rank. The composite divides by total weight, so without normalizing, 5
+    // against three sources at 1 each is really 62.5% — the opposite of what
+    // the input implies. This is the contract that makes the number honest.
+    const membersFromStore = () =>
+      JSON.parse(localStorageMock._getStore()['rankings.compositeConfig']).members as {
+        importId: string;
+        weight: number;
+      }[];
+    const total = () => membersFromStore().reduce((s, m) => s + m.weight, 0);
+
+    it('keeps the total at 100 as sources are added', () => {
+      for (const id of ['a', 'b', 'c', 'd']) toggleCompositeImport(id, true);
+      expect(membersFromStore()).toHaveLength(4);
+      expect(total()).toBe(100);
+    });
+
+    it('never leaves a newly added source at 0%', () => {
+      // A member at 0 is in the composite but ignored — worse than absent,
+      // because the UI shows it as contributing.
+      for (const id of ['a', 'b', 'c']) toggleCompositeImport(id, true);
+      for (const m of membersFromStore()) expect(m.weight).toBeGreaterThan(0);
+    });
+
+    it('a small pinned weight stays small', () => {
+      for (const id of ['a', 'b', 'c', 'd']) toggleCompositeImport(id, true);
+      setCompositeWeight('d', 5);
+      const byId = Object.fromEntries(membersFromStore().map((m) => [m.importId, m.weight]));
+      expect(byId.d).toBe(5);
+      expect(total()).toBe(100);
+    });
+
+    it('re-totals to 100 after a source is removed', () => {
+      for (const id of ['a', 'b', 'c']) toggleCompositeImport(id, true);
+      toggleCompositeImport('b', false);
+      expect(membersFromStore()).toHaveLength(2);
+      expect(total()).toBe(100);
     });
   });
 });

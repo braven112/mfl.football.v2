@@ -13,6 +13,7 @@ import type {
   CompositeRankConfig,
   SyncedRankingsPayload,
   BuiltinRankingSource,
+  CompositeImportConfig,
 } from '../types/rankings-import';
 import { loadFromServer, saveToServer } from './rankings-sync';
 import {
@@ -244,10 +245,15 @@ export function syncBuiltinImports(
     const config: CompositeRankConfig = raw ? JSON.parse(raw) : { members: [] };
     for (const imp of fresh) {
       if (!config.members.find((m) => m.importId === imp.id)) {
-        config.members.push({ importId: imp.id, weight: 1 });
+        config.members.push({ importId: imp.id, weight: 0 });
       }
     }
-    localStorage.setItem(compositeConfigKey(), JSON.stringify(config));
+    // Seeded defaults start as an even split summing to 100, so the very first
+    // board an owner sees already reads as percentages.
+    localStorage.setItem(
+      compositeConfigKey(),
+      JSON.stringify({ members: rebalanceToHundred(config.members) }),
+    );
   }
 
   window.dispatchEvent(new CustomEvent('rankingsUpdated'));
@@ -446,8 +452,59 @@ export function saveCompositeConfig(config: CompositeRankConfig): void {
 }
 
 /**
+ * Rebalance member weights so they sum to 100.
+ *
+ * Weights are PERCENTAGES to the owner, so the number typed has to be the
+ * share the source actually gets. The composite normalizes by total weight, so
+ * without this "5" against three sources at 1 each is really 62.5% — the exact
+ * opposite of the "5% superflex" the input implies.
+ *
+ * `pinned` keeps one member at the value just typed and distributes the
+ * remainder across the others in proportion to what they already had, so
+ * adjusting one source doesn't silently flatten the balance between the rest.
+ */
+function rebalanceToHundred(
+  members: CompositeImportConfig[],
+  pinnedId?: string,
+): CompositeImportConfig[] {
+  if (members.length === 0) return members;
+  if (members.length === 1) return [{ ...members[0], weight: 100 }];
+
+  const pinned = pinnedId ? members.find((m) => m.importId === pinnedId) : undefined;
+  const others = members.filter((m) => m !== pinned);
+
+  const pinnedWeight = pinned ? Math.min(100, Math.max(0, pinned.weight)) : 0;
+  const remaining = 100 - pinnedWeight;
+  const othersTotal = others.reduce((sum, m) => sum + (m.weight > 0 ? m.weight : 0), 0);
+
+  const scaled = others.map((m) => ({
+    ...m,
+    // No prior signal (all zero) → split the remainder evenly.
+    weight: othersTotal > 0 ? (m.weight / othersTotal) * remaining : remaining / others.length,
+  }));
+
+  const out = members.map((m) =>
+    m === pinned ? { ...m, weight: pinnedWeight } : scaled.find((s) => s.importId === m.importId)!,
+  );
+
+  // Round to one decimal, then put any rounding drift on the largest
+  // non-pinned member so the displayed numbers still add to exactly 100.
+  const rounded = out.map((m) => ({ ...m, weight: Math.round(m.weight * 10) / 10 }));
+  const drift = Math.round((100 - rounded.reduce((s, m) => s + m.weight, 0)) * 10) / 10;
+  if (drift !== 0) {
+    const target = rounded
+      .filter((m) => m.importId !== pinnedId)
+      .sort((a, b) => b.weight - a.weight)[0];
+    if (target) target.weight = Math.round((target.weight + drift) * 10) / 10;
+  }
+  return rounded;
+}
+
+/**
  * Toggle a specific import's inclusion in the composite.
- * When including, uses default weight of 1.
+ *
+ * Adding or removing a source rebalances every member back to a total of 100,
+ * so the percentages stay meaningful without the owner having to fix them up.
  */
 export function toggleCompositeImport(importId: string, included: boolean): void {
   const raw = localStorage.getItem(compositeConfigKey());
@@ -455,13 +512,25 @@ export function toggleCompositeImport(importId: string, included: boolean): void
 
   if (included) {
     if (!current.members.find((m) => m.importId === importId)) {
-      current.members.push({ importId, weight: 1 });
+      current.members.push({ importId, weight: 0 });
     }
   } else {
     current.members = current.members.filter((m) => m.importId !== importId);
   }
 
-  saveCompositeConfig(current);
+  // A source just ticked ON gets an even share (100/n) and the others absorb
+  // the remainder proportionally. Rebalancing it as a plain zero-weight member
+  // would leave it at 0% — nominally in the composite, actually ignored.
+  const members = included
+    ? rebalanceToHundred(
+        current.members.map((m) =>
+          m.importId === importId ? { ...m, weight: 100 / current.members.length } : m,
+        ),
+        importId,
+      )
+    : rebalanceToHundred(current.members);
+
+  saveCompositeConfig({ members });
 }
 
 /**
@@ -484,10 +553,12 @@ export function setCompositeWeight(importId: string, weight: number): void {
   const raw = localStorage.getItem(compositeConfigKey());
   const current: CompositeRankConfig = raw ? JSON.parse(raw) : { members: [] };
   const member = current.members.find((m) => m.importId === importId);
-  if (member) {
-    member.weight = clamped;
-    saveCompositeConfig(current);
-  }
+  if (!member) return;
+
+  member.weight = clamped;
+  // Pin what was just typed and absorb the difference into the other sources,
+  // so the typed number IS the share this source gets.
+  saveCompositeConfig({ members: rebalanceToHundred(current.members, importId) });
 }
 
 // ---------------------------------------------------------------------------
