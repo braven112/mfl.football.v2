@@ -31,7 +31,7 @@ import type {
 export function formatGameClock(state: NflGameState, game?: NflGame): string {
   if (game) {
     if (game.state === 'post') return 'Final';
-    if (game.state === 'pre') return game.shortDetail || 'Yet to play';
+    if (game.state === 'pre') return compactKickoff(game.shortDetail) || 'Yet to play';
     // ESPN's shortDetail is already "8:12 - 3rd"; fall back to assembling it
     // only if that string is missing.
     if (game.shortDetail) return game.shortDetail;
@@ -55,6 +55,28 @@ export function formatGameClock(state: NflGameState, game?: NflGame): string {
  * in-progress check are load-bearing: a `situation` can linger on a payload
  * whose game has ended.
  */
+/**
+ * ESPN's pre-game `shortDetail` ("8/22 - 7:00 PM EDT") squeezed into the
+ * player row's meta line.
+ *
+ * The full string is eighteen characters in a column that is about ninety
+ * pixels wide on a phone in portrait, so it wrapped to three lines and tripled
+ * the row height — with the timezone, the least useful token, taking a whole
+ * line of its own. The date and time are what an owner is reading for; the
+ * zone is the site's own (every clock on the page is one timezone) and the
+ * dash is a separator a space already provides.
+ *
+ * Anything that does not parse as a kickoff time comes back UNCHANGED. This
+ * shortens a known shape; it never guesses at an unknown one.
+ */
+export function compactKickoff(shortDetail: string): string {
+  const m = /^\s*(.*?)\s*(?:-\s*)?(\d{1,2}:\d{2})\s*(AM|PM)\b\s*[A-Z]{0,4}\s*$/i.exec(shortDetail ?? '');
+  if (!m) return shortDetail ?? '';
+  const when = m[1].trim();
+  const time = `${m[2]}${m[3].toLowerCase().startsWith('p') ? 'p' : 'a'}`;
+  return when ? `${when} ${time}` : time;
+}
+
 export function isPlayerInRedZone(game: NflGame | undefined, nflTeam: string): boolean {
   if (!game || game.state !== 'in' || !nflTeam) return false;
   const s = game.situation;
@@ -280,4 +302,95 @@ export function assignLineupSlots(
     .map((entry, i) => ({ entry, i }))
     .sort((a, b) => rank(a.entry.slot) - rank(b.entry.slot) || a.i - b.i)
     .map(({ entry }) => entry);
+}
+
+// ── feed freshness ──
+
+/**
+ * Is the board actually tracking anything?
+ *
+ * A static "LIVE" pill answers that question with an assertion. Owners read it
+ * as one — and on a page whose fantasy numbers can legitimately sit at 0.0 for
+ * an hour (a preseason slate, a Thursday before kickoff, an MFL feed that has
+ * not opened yet) an assertion with no evidence behind it is indistinguishable
+ * from a dead page. That was the owner report, 2026-08-21: "I don't see
+ * anything that indicates it's tracking anything live."
+ *
+ * So the pill states the FEED's own state instead, from the poll timestamps
+ * the shared store already keeps. Two rules make it honest:
+ *
+ *  - **"We couldn't reach the feed" outranks "nothing is happening."** Same
+ *    split the poll store keeps in `status` vs `data`, carried to the UI: a
+ *    failed poll keeps the last good payload, so the scores stay on screen —
+ *    but the pill must stop claiming they are current.
+ *  - **Never claim freshness we haven't got.** Before the first successful
+ *    poll the answer is "Connecting…", not "updated just now" — `fetchedAt`
+ *    is 0 there, and treating 0 as a timestamp prints "56 years ago".
+ */
+export type FeedTone = 'live' | 'idle' | 'error' | 'pending';
+
+export interface FeedSnapshot {
+  /** Poll status from the shared store. */
+  status: 'idle' | 'loading' | 'ok' | 'error';
+  /** epoch ms of the last SUCCESSFUL poll; 0 if none has landed. */
+  fetchedAt: number;
+}
+
+export interface FeedFreshness {
+  tone: FeedTone;
+  /** Short state word for the pill. */
+  label: string;
+  /** Human age of the newest successful poll; '' while pending. */
+  age: string;
+  /** ms since the newest successful poll; -1 while nothing has landed. */
+  ageMs: number;
+}
+
+/**
+ * Relative age, in the coarsest unit that still reads as motion.
+ *
+ * Seconds are the point below a minute: the number changes on every tick, so
+ * the element visibly proves the page is still working, and it snaps back to
+ * "just now" the moment a poll lands.
+ */
+export function formatFeedAge(ageMs: number): string {
+  if (!Number.isFinite(ageMs) || ageMs < 0) return '';
+  const s = Math.floor(ageMs / 1000);
+  if (s < 5) return 'just now';
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  return `${h}h ago`;
+}
+
+/**
+ * @param feeds only the feeds that are actually ENABLED for this render. A
+ *   disabled poller never fails and never goes stale, so including one would
+ *   pin the pill at "Connecting…" forever (bundled-sample mode does exactly
+ *   that). An empty list means there is nothing to report — render no pill.
+ * @param anyLive whether a real NFL game is in progress right now.
+ */
+export function describeFeedFreshness(
+  feeds: FeedSnapshot[],
+  anyLive: boolean,
+  now: number,
+): FeedFreshness {
+  const loaded = feeds.filter((f) => f.fetchedAt > 0);
+  const failing = feeds.some((f) => f.status === 'error');
+
+  if (loaded.length === 0) {
+    return failing
+      ? { tone: 'error', label: 'Reconnecting', age: '', ageMs: -1 }
+      : { tone: 'pending', label: 'Connecting', age: '', ageMs: -1 };
+  }
+
+  const newest = Math.max(...loaded.map((f) => f.fetchedAt));
+  const ageMs = Math.max(0, now - newest);
+  const age = formatFeedAge(ageMs);
+
+  if (failing) return { tone: 'error', label: 'Reconnecting', age, ageMs };
+  return anyLive
+    ? { tone: 'live', label: 'Live', age, ageMs }
+    : { tone: 'idle', label: 'Tracking', age, ageMs };
 }

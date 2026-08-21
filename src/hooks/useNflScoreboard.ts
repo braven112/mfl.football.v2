@@ -57,6 +57,15 @@ export interface NflScoreboardState {
   anyLive: boolean;
   /** Canonical NFL team code → that team's game. */
   byTeam: Map<string, NflGame>;
+  /** How many games are being played right now. */
+  liveCount: number;
+  /**
+   * epoch ms of the last SUCCESSFUL poll; 0 when nothing has landed yet.
+   * Surfaced so the UI can show the feed's own freshness — a board that says
+   * "Live" but has not been confirmed in ten minutes is not live, and an owner
+   * has no way to tell the two apart from the scores alone.
+   */
+  fetchedAt: number;
 }
 
 const EMPTY_GAMES: NflGame[] = [];
@@ -111,6 +120,8 @@ export function useNflScoreboard(
       espnSlot: enabled ? snapshot.data?.espnSlot ?? null : null,
       anyLive: games.some((g) => g.state === 'in'),
       byTeam,
+      liveCount: games.filter((g) => g.state === 'in').length,
+      fetchedAt: enabled ? snapshot.fetchedAt : 0,
     };
   }, [enabled, fallbackGames, snapshot]);
 }

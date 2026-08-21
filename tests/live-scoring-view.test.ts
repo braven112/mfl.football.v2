@@ -9,6 +9,9 @@
 import { describe, it, expect } from 'vitest';
 import {
   buildMoments,
+  compactKickoff,
+  describeFeedFreshness,
+  formatFeedAge,
   formatGameClock,
   formatPlayClock,
   isPlayerInRedZone,
@@ -78,7 +81,7 @@ describe('formatGameClock', () => {
 
   it('shows the kickoff time for a game that has not started', () => {
     expect(formatGameClock('not-started', game({ state: 'pre', shortDetail: 'Sun 1:00 PM ET' })))
-      .toBe('Sun 1:00 PM ET');
+      .toBe('Sun 1:00p'); // compacted — see compactKickoff
   });
 });
 
@@ -402,5 +405,115 @@ describe('assignLineupSlots', () => {
     const out = assignLineupSlots([row('ghost')], {}, RULES);
     expect(out).toHaveLength(1);
     expect(out[0].slot).toBe('FLEX');
+  });
+});
+
+describe('feed freshness', () => {
+  const T = 1_700_000_000_000;
+  const ok = (fetchedAt: number) => ({ status: 'ok' as const, fetchedAt });
+
+  describe('formatFeedAge', () => {
+    it('reads as motion below a minute and coarsens above it', () => {
+      expect(formatFeedAge(0)).toBe('just now');
+      expect(formatFeedAge(4_999)).toBe('just now');
+      expect(formatFeedAge(5_000)).toBe('5s ago');
+      expect(formatFeedAge(59_000)).toBe('59s ago');
+      expect(formatFeedAge(60_000)).toBe('1m ago');
+      expect(formatFeedAge(59 * 60_000)).toBe('59m ago');
+      expect(formatFeedAge(60 * 60_000)).toBe('1h ago');
+      expect(formatFeedAge(5 * 60 * 60_000)).toBe('5h ago');
+    });
+
+    it('refuses to invent an age from a nonsense duration', () => {
+      // A negative age comes from a clock skew, not from a fresh poll — and
+      // `-1` is what describeFeedFreshness uses for "nothing has landed".
+      expect(formatFeedAge(-1)).toBe('');
+      expect(formatFeedAge(NaN)).toBe('');
+    });
+  });
+
+  it('says "Connecting" before any poll has landed — never "just now"', () => {
+    // fetchedAt 0 is the absence of a timestamp. Treating it as one prints an
+    // age measured from 1970, which is the specific bug this guards.
+    const f = describeFeedFreshness([{ status: 'loading', fetchedAt: 0 }], false, T);
+    expect(f.tone).toBe('pending');
+    expect(f.label).toBe('Connecting');
+    expect(f.age).toBe('');
+    expect(f.ageMs).toBe(-1);
+  });
+
+  it('claims "Live" only when a real NFL game is being played', () => {
+    expect(describeFeedFreshness([ok(T - 3_000)], true, T).label).toBe('Live');
+    expect(describeFeedFreshness([ok(T - 3_000)], true, T).tone).toBe('live');
+    // Polling healthily with nothing in progress is not "Live" — that was the
+    // old static badge's lie, which lit up from the calendar and never moved.
+    expect(describeFeedFreshness([ok(T - 3_000)], false, T).label).toBe('Tracking');
+    expect(describeFeedFreshness([ok(T - 3_000)], false, T).tone).toBe('idle');
+  });
+
+  it('a failed poll outranks a live game and keeps the last confirmed age', () => {
+    // Same split the poll store keeps between `status` and `data`: the scores
+    // stay on screen, but the pill must stop claiming they are current.
+    const f = describeFeedFreshness(
+      [ok(T - 90_000), { status: 'error', fetchedAt: T - 90_000 }],
+      true,
+      T,
+    );
+    expect(f.tone).toBe('error');
+    expect(f.label).toBe('Reconnecting');
+    expect(f.age).toBe('1m ago');
+  });
+
+  it('reports "Reconnecting" rather than "Connecting" when the first poll failed', () => {
+    const f = describeFeedFreshness([{ status: 'error', fetchedAt: 0 }], false, T);
+    expect(f.tone).toBe('error');
+    expect(f.label).toBe('Reconnecting');
+    expect(f.age).toBe('');
+  });
+
+  it('ages from the NEWEST healthy feed, not the oldest', () => {
+    // The two ESPN pollers back off independently (the detail feed drops to
+    // 5 minutes when nothing is live). Reporting the stalest one would show a
+    // five-minute-old age on a board being refreshed every minute.
+    const f = describeFeedFreshness([ok(T - 300_000), ok(T - 2_000)], true, T);
+    expect(f.age).toBe('just now');
+    expect(f.ageMs).toBe(2_000);
+  });
+
+  it('an empty feed list is a real state — nothing is being polled', () => {
+    // Bundled-sample mode disables both pollers. The caller renders no pill at
+    // all in that case; this just pins that we do not fabricate freshness.
+    expect(describeFeedFreshness([], false, T).tone).toBe('pending');
+  });
+
+  it('never returns a negative age when the clock runs backwards', () => {
+    expect(describeFeedFreshness([ok(T + 5_000)], true, T).ageMs).toBe(0);
+    expect(describeFeedFreshness([ok(T + 5_000)], true, T).age).toBe('just now');
+  });
+});
+
+describe('compactKickoff', () => {
+  it('drops the timezone and the dash from ESPN’s kickoff string', () => {
+    // "8/22 - 7:00 PM EDT" is eighteen characters in a ~90px column and wrapped
+    // to three lines on a phone, with the timezone taking one of them.
+    expect(compactKickoff('8/22 - 7:00 PM EDT')).toBe('8/22 7:00p');
+    expect(compactKickoff('8/20 - 10:00 PM EDT')).toBe('8/20 10:00p');
+    expect(compactKickoff('Sun 1:00 PM ET')).toBe('Sun 1:00p');
+    expect(compactKickoff('Thu 8:15 AM ET')).toBe('Thu 8:15a');
+  });
+
+  it('returns anything it does not recognize unchanged', () => {
+    // Shortening a known shape is the whole job; guessing at an unknown one
+    // would silently mangle a string ESPN changed under us.
+    expect(compactKickoff('Final')).toBe('Final');
+    expect(compactKickoff('8:12 - 3rd')).toBe('8:12 - 3rd');
+    expect(compactKickoff('Postponed')).toBe('Postponed');
+    expect(compactKickoff('')).toBe('');
+  });
+
+  it('is what the pre-game player clock actually prints', () => {
+    // Wiring, not just the helper: the row used to render shortDetail raw.
+    expect(formatGameClock('not-started', game({ state: 'pre', shortDetail: '8/22 - 7:00 PM EDT' })))
+      .toBe('8/22 7:00p');
   });
 });

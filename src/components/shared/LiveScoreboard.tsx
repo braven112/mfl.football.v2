@@ -44,10 +44,12 @@ import {
 import {
   assignLineupSlots,
   buildMoments,
+  describeFeedFreshness,
   formatGameClock,
   isPlayerInRedZone,
   playerDownDistance,
   selectMatchupMoments,
+  type FeedSnapshot,
   type LineupSlotRules,
   type LiveMoment,
 } from '../../utils/live-scoring-view';
@@ -73,6 +75,10 @@ function useLiveScoring(props: LiveScoringPageProps) {
   const [matchups, setMatchups] = useState<MatchupPairing[]>(props.matchups ?? []);
   const [players, setPlayers] = useState<Record<string, LivePlayerRow[]>>(props.initialPlayers ?? {});
   const [ytp, setYtp] = useState<Record<string, number>>(props.initialYetToPlay ?? {});
+  // Freshness of the MFL half of the board, on the same contract the shared
+  // ESPN store uses: `fetchedAt` only ever advances on a SUCCESSFUL poll, and
+  // a failure flips `status` without touching the data we already hold.
+  const [feed, setFeed] = useState<FeedSnapshot>({ status: 'idle', fetchedAt: 0 });
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const poll = useCallback(async () => {
@@ -83,15 +89,20 @@ function useLiveScoring(props: LiveScoringPageProps) {
       url.searchParams.set('L', leagueId);
       url.searchParams.set('host', `https://${host}`);
       const res = await fetch(url.toString());
-      if (!res.ok) return;
+      if (!res.ok) {
+        setFeed((f) => ({ ...f, status: 'error' }));
+        return;
+      }
       const data: LiveScoringResponse = await res.json();
       setScores(data.scores ?? {});
       setRemaining(data.remaining ?? {});
       if (data.matchups?.length) setMatchups(data.matchups);
       if (data.players) setPlayers(data.players);
       if (data.playersYetToPlay) setYtp(data.playersYetToPlay);
+      setFeed({ status: 'ok', fetchedAt: Date.now() });
     } catch {
-      /* retry next tick */
+      /* retry next tick — keep the last good scores, say we're reconnecting */
+      setFeed((f) => ({ ...f, status: 'error' }));
     }
   }, [week, year, leagueId, host]);
 
@@ -111,7 +122,7 @@ function useLiveScoring(props: LiveScoringPageProps) {
     }
   }, [remaining, isLive, poll]);
 
-  return { scores, remaining, matchups, players, ytp };
+  return { scores, remaining, matchups, players, ytp, feed };
 }
 
 // ── helpers ──
@@ -348,6 +359,74 @@ function ScoreCard({ matchup, teams, calc, featured, variant = 'faceoff', isYour
   );
 }
 
+// ── feed status ──
+
+/**
+ * The pill that proves the page is still working.
+ *
+ * It replaced a static "Live" badge that was true-by-assertion: it lit up from
+ * the game-day clock and then never changed again, so a board sitting at
+ * 0.0–0.0 (preseason, pre-kickoff, an MFL feed that has not opened) looked
+ * exactly like a dead page. Owner report, 2026-08-21.
+ *
+ * Three deliberate choices:
+ *
+ *  - **A relative age, ticking.** "updated 14s ago" counts up every second and
+ *    snaps to "just now" when a poll lands, so the element itself is the
+ *    evidence. An absolute clock time reads as a caption; this reads as a
+ *    heartbeat.
+ *  - **The tick is local to this component.** A 1s interval one level up would
+ *    re-render every starter row on the board once a second.
+ *  - **It renders nothing when no feed is enabled.** In bundled-sample mode
+ *    both pollers are off, so there is no freshness to report and a pill
+ *    stuck on "Connecting…" would be a lie in the other direction.
+ */
+function LiveFeedStatus({ feeds, anyLive, gamesLive, compact }: {
+  /** ONLY the pollers actually running for this render. Empty → no pill. */
+  feeds: FeedSnapshot[];
+  anyLive: boolean;
+  /** How many NFL games are being played right now. 0 hides the clause. */
+  gamesLive: number;
+  /** Detail view: drop the games clause, the header there is already tight. */
+  compact?: boolean;
+}) {
+  const [now, setNow] = useState(0);
+  const newest = feeds.reduce((max, f) => Math.max(max, f.fetchedAt), 0);
+
+  useEffect(() => {
+    // Start ticking only once something has landed. Before that the pill says
+    // "Connecting…" and has no age to age, so a timer would be pure churn —
+    // and it keeps the first client render byte-identical to the server's.
+    if (!newest) return;
+    setNow(Date.now());
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [newest]);
+
+  if (feeds.length === 0) return null;
+  const fresh = describeFeedFreshness(feeds, anyLive, now || newest);
+  const games = !compact && gamesLive > 0
+    ? `${gamesLive} game${gamesLive === 1 ? '' : 's'} live`
+    : '';
+
+  return (
+    <span
+      className={`ls-status ${fresh.tone}`}
+      role="status"
+      title={
+        fresh.tone === 'error'
+          ? 'The live feed did not answer the last poll — these numbers are the last we could confirm.'
+          : 'Live feed check-in. The page re-reads the feeds automatically.'
+      }
+    >
+      <span className={`ls-dot ${fresh.tone === 'live' ? 'live' : fresh.tone === 'error' ? 'err' : 'pre'}`} />
+      <span className="ls-status-lbl">{fresh.label}</span>
+      {games && <span className="ls-status-sub">{games}</span>}
+      {fresh.age && <span className="ls-status-age">updated {fresh.age}</span>}
+    </span>
+  );
+}
+
 // ── player row ──
 
 interface PlayerRowProps {
@@ -458,7 +537,7 @@ function PlayerRow({ row, meta, side, slot, game, box, detailStatus }: PlayerRow
 
 function MatchupDetail({
   matchup, teams, players, meta, calc, moments, gamesByTeam, boxScore, detailStatus,
-  detailLoaded, detailPartial, starterRules, onBack,
+  detailLoaded, detailPartial, starterRules, feeds, nflAnyLive, nflLiveCount, onBack,
 }: {
   matchup: MatchupPairing;
   teams: Record<string, TeamInfo>;
@@ -477,6 +556,10 @@ function MatchupDetail({
   detailPartial: boolean;
   /** League starting requirements, for slot labels. */
   starterRules: LineupSlotRules;
+  /** Enabled pollers, for the freshness pill. */
+  feeds: FeedSnapshot[];
+  nflAnyLive: boolean;
+  nflLiveCount: number;
   onBack: () => void;
 }) {
   const H = teams[matchup.home];
@@ -495,7 +578,10 @@ function MatchupDetail({
   const awaySplit = `${100 - Math.round(calc.homeWinProb * 100)}%`;
   return (
     <div className="ls-detail" style={{ ...teamColorVars(H, A), ['--wp-split' as any]: awaySplit }}>
-      <button className="ls-back" onClick={onBack}>← All matchups</button>
+      <div className="ls-detail-top">
+        <button className="ls-back" onClick={onBack}>← All matchups</button>
+        <LiveFeedStatus feeds={feeds} anyLive={nflAnyLive} gamesLive={nflLiveCount} compact />
+      </div>
       <div className="ls-scorehead">
         <div className="ls-mx-team away">
           <span className="ls-mx-crest">{A?.icon && <img src={A.icon} alt="" />}</span>
@@ -591,7 +677,7 @@ export default function LiveScoreboard(props: LiveScoringPageProps) {
     required: { QB: 1, RB: 1, WR: 1, TE: 1, PK: 1, DEF: 1 },
     total: 9,
   };
-  const { scores, remaining, matchups, players, ytp } = useLiveScoring(props);
+  const { scores, remaining, matchups, players, ytp, feed: mflFeed } = useLiveScoring(props);
   const [selected, setSelected] = useState<MatchupPairing | null>(null);
 
   // ── real NFL context (ESPN) ──
@@ -600,7 +686,10 @@ export default function LiveScoreboard(props: LiveScoringPageProps) {
   // `demoLiveNfl` is the sample-fantasy / live-NFL variant: keep the ESPN
   // pollers running so the real slate drives clocks, red zone and box scores.
   const espnEnabled = !props.demo || !!props.demoLiveNfl;
-  const { byTeam: gamesByTeam, anyLive: anyNflGameLive, espnSlot } = useNflScoreboard(props.week, props.year, {
+  const {
+    byTeam: gamesByTeam, anyLive: anyNflGameLive, espnSlot,
+    status: nflStatus, fetchedAt: nflFetchedAt, liveCount: nflLiveCount,
+  } = useNflScoreboard(props.week, props.year, {
     enabled: espnEnabled,
     live: props.isLive,
     fallbackGames: props.initialNflGames,
@@ -610,6 +699,20 @@ export default function LiveScoreboard(props: LiveScoringPageProps) {
     anyLive: anyNflGameLive,
     fallback: props.initialDetail,
   });
+
+  // Only the pollers that are actually RUNNING. A disabled poller can never go
+  // stale or fail, so listing one would pin the status pill at "Connecting…"
+  // (bundled-sample mode turns both ESPN feeds off; ?demo=live turns the MFL
+  // one off, because MFL serves nothing before the season starts).
+  const feeds = useMemo<FeedSnapshot[]>(() => {
+    const out: FeedSnapshot[] = [];
+    if (props.isLive) out.push(mflFeed);
+    if (espnEnabled) {
+      out.push({ status: nflStatus, fetchedAt: nflFetchedAt });
+      out.push({ status: detail.status, fetchedAt: detail.fetchedAt });
+    }
+    return out;
+  }, [props.isLive, mflFeed, espnEnabled, nflStatus, nflFetchedAt, detail.status, detail.fetchedAt]);
 
   // Scoring plays, DERIVED rather than accumulated: /api/nfl-game-detail
   // returns the whole slate's scoring plays on every poll, so recomputing is
@@ -657,13 +760,12 @@ export default function LiveScoreboard(props: LiveScoringPageProps) {
           gamesByTeam={gamesByTeam} boxScore={detail.boxScore}
           detailStatus={detail.status} detailLoaded={detail.loaded} detailPartial={detail.partial}
           starterRules={starterRules}
+          feeds={feeds} nflAnyLive={anyNflGameLive} nflLiveCount={nflLiveCount}
           onBack={() => setSelected(null)}
         />
       </div>
     );
   }
-
-  const anyLive = Object.values(remaining).some((r) => r > 0);
 
   return (
     <div className="ls-root">
@@ -690,7 +792,9 @@ export default function LiveScoreboard(props: LiveScoringPageProps) {
               ))}
             </select>
           </label>
-          {(anyLive || props.demo) && <span className="ls-status live"><span className="ls-dot live" />Live</span>}
+          {/* "Live" is claimed from the NFL slate alone — a franchise still having
+              seconds left is true all week and says nothing about right now. */}
+          <LiveFeedStatus feeds={feeds} anyLive={anyNflGameLive} gamesLive={nflLiveCount} />
         </div>
       </div>
 

@@ -55,6 +55,8 @@ export interface NflGameDetailState {
   loaded: boolean;
   /** Some games in the slate failed to expand; what we show is incomplete. */
   partial: boolean;
+  /** epoch ms of the last SUCCESSFUL poll; 0 when nothing has landed yet. */
+  fetchedAt: number;
 }
 
 const EMPTY_BOX: Record<string, PlayerBoxScore> = {};
@@ -92,6 +94,7 @@ export function useNflGameDetail(
         status: 'ok' as PollStatus,
         loaded: !!fallback,
         partial: false,
+        fetchedAt: 0,
       };
     }
     const data = snapshot.data;
@@ -101,6 +104,7 @@ export function useNflGameDetail(
       status: snapshot.status,
       loaded: !!data,
       partial: !!data && data.gamesLoaded < data.gamesRequested,
+      fetchedAt: snapshot.fetchedAt,
     };
   }, [enabled, fallback, snapshot]);
 }
