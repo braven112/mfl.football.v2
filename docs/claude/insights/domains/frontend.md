@@ -80,6 +80,23 @@ CSS**. A fix applied to one does not propagate — grep both before calling it d
   entry below says otherwise and is stale.) Find leaks by rendering the page and
   grepping the HTML, and follow the 302 — an href-only audit misses the gate.
 
+## One page can need BOTH year clocks
+
+CLAUDE.md tells you to pick the right clock per feature; it does not warn that a
+single page often needs two at once, and a page-level `const seasonYear = …`
+quietly applies one of them to everything on it. The AFL homepage resolved one
+year and used it for standings AND rosters, so for the whole offseason the team
+card counted a roster from a season that had already ended.
+
+- Standings / record / draft order → the **season** year (Labor Day).
+- Rosters / contracts / cap / anything a trade changes → the **league** year
+  (AFL: June 1, TheLeague: Feb 14). They are ~3 months apart for the AFL.
+- Symptom to grep for: one `resolve*YearWithData()` helper feeding feeds of
+  different shapes. Give each clock its own resolver and name it for the clock.
+- Both resolvers must walk backward for populated data — MFL creates the new
+  year's directory before it holds anything, so a bare `getX()` reads an empty
+  feed for weeks.
+
 ## Verifying
 
 Measure, don't screenshot: `getBoundingClientRect()` and

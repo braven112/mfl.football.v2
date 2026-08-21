@@ -74,6 +74,8 @@ const MANUAL_CAPTURE_ONLY = {
     'owner-auth-gated Cutdown Plan panel on /theleague/rosters — needs a forged owner session for a franchise over the 22-active limit during the Jun 1 → 3rd-Sunday-of-August window; blind capture shoots the signed-out roster page',
   'august-cut-auto-slate':
     'owner-auth-gated roster-row AUTO-CUT badges on /theleague/rosters — same forged-owner + over-limit + cut-window requirement as august-cutdown-plan; badges only render for the logged-in owner viewing their own team, so blind capture shoots the signed-out roster page',
+  'afl-team-spotlight':
+    'the My Team card on the AFL homepage only renders for a signed-in owner (or a myteam cookie) — signed out it is replaced by the team-picker prompt, so blind capture shoots that instead. Needs a forged owner session for the AFL league (id from the registry, franchise 0001) and an element screenshot of `.afl-snapshot`, not the full page. The spotlight tile also rotates on the calendar: the committed capture is the draft-slot state, which only renders June 1 -> the conference draft, so recapture outside that window needs ?testDate= to land on the same tile.',
 };
 
 /**
