@@ -19,9 +19,13 @@ export const prerender = false;
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import SchefterFeedCompact from '../../components/shared/SchefterFeedCompact.astro';
 import AflHero from '../../components/afl/AflHero.astro';
-// TEMPORARY (2026-08-20 → 08-23): live-scoring test-drive promo. Removes
-// itself past the window; delete with src/utils/live-scoring-test-drive.ts.
+// TEMPORARY (2026-08-20 → 08-23): for this preseason weekend the hero IS the
+// live-scoring test drive — it REPLACES AflHero rather than stacking above it.
+// Both halves gate on the same showTestDriveHero() call so the page can never
+// render two heroes or none. Removes itself past the window; delete with
+// src/utils/live-scoring-test-drive.ts.
 import LiveScoringTestDrive from '../../components/shared/LiveScoringTestDrive.astro';
+import { showTestDriveHero } from '../../utils/live-scoring-test-drive';
 import AflTeamSnapshot from '../../components/afl/hp-sections/AflTeamSnapshot.astro';
 import AflStandingsCompact from '../../components/afl/hp-sections/AflStandingsCompact.astro';
 import AflConferencePlayoffPreview from '../../components/afl/hp-sections/AflConferencePlayoffPreview.astro';
@@ -63,10 +67,13 @@ if (myTeamParam) {
   }
 }
 
+/** This league's registry entry — resolved once, not per use site. */
+const AFL = getLeagueBySlug('afl-fantasy')!;
+
 const cookiePref = getAFLPreference(Astro.cookies);
 const authUser = getAuthUser(Astro.request);
 const authAflFranchiseId =
-  authUser?.leagueId === getLeagueBySlug('afl-fantasy')!.id && authUser.franchiseId
+  authUser?.leagueId === AFL.id && authUser.franchiseId
     ? authUser.franchiseId
     : null;
 const hasExplicitTeam = !!(myTeamParam || franchiseParam || cookiePref || authAflFranchiseId);
@@ -87,6 +94,11 @@ const userConferenceName = userConferenceId
 // ── Date / hero state ───────────────────────────────────────────────────────
 const testDateParam = Astro.url.searchParams.get('testDate');
 const effectiveDate = parseTestDate(testDateParam) ?? new Date();
+// One date instance for the gate AND the component it gates — see the same
+// comment on TheLeague's homepage for the boundary race that splitting them
+// creates. `effectiveDate` is always defined here, which is why this page was
+// already correct; the shared const keeps it that way.
+const testDriveHero = showTestDriveHero(AFL.slug, effectiveDate);
 const testMode = !!testDateParam;
 
 const timeline = getAflWhatsNextTimeline(effectiveDate);
@@ -197,14 +209,16 @@ const lastVisitDate = Astro.cookies.get('whats_new_last_visit')?.value ?? null;
     <section class="afl-hp__main" aria-labelledby="afl-hp-hero-heading">
       <h2 id="afl-hp-hero-heading" class="visually-hidden">League Overview</h2>
 
-      <LiveScoringTestDrive slug={getLeagueBySlug('afl-fantasy')!.slug} referenceDate={effectiveDate} />
-
-      <AflHero
-        state={heroState}
-        config={aflConfig}
-        standings={standingsFranchises}
-        userFranchiseId={userFranchiseId}
-      />
+      {testDriveHero ? (
+        <LiveScoringTestDrive slug={AFL.slug} referenceDate={effectiveDate} />
+      ) : (
+        <AflHero
+          state={heroState}
+          config={aflConfig}
+          standings={standingsFranchises}
+          userFranchiseId={userFranchiseId}
+        />
+      )}
 
       <AflTeamSnapshot
         userTeam={userTeam}
