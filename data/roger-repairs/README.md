@@ -30,3 +30,28 @@ Applying is idempotent — an answer that already matches its file reports
 
 Files stay here after they're applied: they're the record of what a stored
 ruling was changed to, and they make a re-run a no-op rather than a surprise.
+
+## Running it locally instead
+
+The Upstash credentials are repo secrets, so a local run needs them pulled
+first:
+
+    pnpm dlx vercel env pull            # writes .env.local
+    set -a && . ./.env.local && set +a  # export it into this shell
+
+    # 1. find the stale card
+    node scripts/fix-rules-qa-answer.mjs --list --search rotowire --full
+
+    # 2. name the replacement text after the id it repairs
+    mv data/roger-repairs/theleague/EXAMPLE-position-change.md.draft \
+       data/roger-repairs/theleague/<that-id>.md
+
+    # 3. look at the rewrite, then commit to it
+    node scripts/fix-rules-qa-answer.mjs --apply --dry-run
+    node scripts/fix-rules-qa-answer.mjs --apply
+
+`EXAMPLE-position-change.md.draft` is the clarified position-change answer,
+written for the August 2026 RotoWire rule clarification but not yet pointed at
+a stored card — the `.draft` suffix keeps `--apply` from picking it up. Re-read
+it against the owner's actual question before renaming it; a repair that
+answers a question nobody asked is its own kind of wrong answer.
