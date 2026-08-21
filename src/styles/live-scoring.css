@@ -571,35 +571,73 @@ html.dark .ls-headshot.def { box-shadow: none; }
      two paired positions (the away player's), so it mislabels the home player
      whenever the teams run different lineup shapes (a FLEX row can pair an RB
      against a WR). Instead each side keeps its OWN colored position chip,
-     shrunk, so every player is labeled with its real position + color. Headshot
-     and score shrink, and the two side tracks use minmax(0) so names truncate
-     instead of the row overflowing. `.ls-mx-pos` is display:none, so the row's
-     three DOM children collapse to the two side columns. */
-  .ls-mx-body { padding: 0.4rem 0.2rem 0.8rem; }
+     shrunk, so every player is labeled with its real position + color. The two
+     side tracks use minmax(0) so a long name reflows inside its column instead
+     of overflowing the row. `.ls-mx-pos` is display:none, so the row's three
+     DOM children collapse to the two side columns. */
+  .ls-mx-body { padding: 0.4rem 0.25rem 0.8rem; }
   .ls-mx-pos { display: none; }
-  .ls-mx-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.3rem; }
+  .ls-mx-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.35rem; }
   .ls-mx-row > div { min-width: 0; }
-  /* Every fixed column here is squeezed to the minimum that still reads,
-     because the leftover is the name column — and at 390px it is the
-     difference between "Christian McCaffrey" and "Christian McCaffre / y". */
-  .ls-prow { gap: 0.25rem; padding: 0.4rem 0.1rem; min-width: 0; }
-  .ls-mx-body .ls-ppos { width: 1.15rem; font-size: 0.56rem; padding: 0.14rem 0; letter-spacing: 0; }
-  .ls-headshot { width: 24px; height: 24px; }
-  /* Full names, wrapped. They used to ellipsise inside a ~70px column, which
-     turned "Jahmyr Gibbs" into "Jah…" — not a name, and not something an owner
-     can read his lineup from (owner report, 2026-08-21). Wrapping costs a
-     line; the tightened fixed columns above and below hand most of it back. */
+
+  /* ── Two lines per player, not one ──
+     Chip + headshot + name + game state + score do not fit on one ~165px
+     line, and the attempts to make them fit are both bugs we shipped: first
+     the name was ellipsised to "Jah…", then every fixed column was squeezed
+     to claw back sixteen pixels and the row just read as crowded instead
+     (owner, 2026-08-21).
+     So the row becomes a grid with an explicit second line: identity across
+     the top, game state and the score across the bottom, the position chip
+     spanning both as the left anchor. Each piece then gets a width it can
+     actually be read at — the name spans the score column, the meta line
+     spans the headshot column.
+     `.ls-pid` goes `display: contents` so the name and the meta line can be
+     placed independently; they stay nested in the DOM because the desktop
+     layout stacks them as one identity block. */
+  .ls-prow {
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "pos face name name"
+      "pos meta meta score";
+    align-items: center;
+    column-gap: 0.35rem;
+    row-gap: 0.1rem;
+    padding: 0.45rem 0.1rem;
+    min-width: 0;
+  }
+  /* Mirrored, not re-ordered: grid areas ignore DOM order, so the home side
+     reuses the same markup with the columns reversed. */
+  .ls-prow.right {
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "name  name face pos"
+      "score meta meta pos";
+  }
+  .ls-pid { display: contents; }
+  .ls-mx-body .ls-ppos { grid-area: pos; width: 1.4rem; font-size: 0.6rem; padding: 0.14rem 0; letter-spacing: 0; }
+  .ls-headshot { grid-area: face; width: 30px; height: 30px; }
+  .ls-pname { grid-area: name; }
+  .ls-pmeta { grid-area: meta; }
+  .ls-pscore { grid-area: score; }
+  /* The box-score line keeps its own full-width row below both. */
+  .ls-pstat { grid-column: 1 / -1; margin-top: 0; }
+  /* Full names. They used to ellipsise inside a ~57px column, which turned
+     "Jahmyr Gibbs" into "Jah…" — not a name, and not something an owner can
+     read his lineup from. With the score column folded into this line almost
+     every name now fits on one; the longest still wrap rather than clip. */
   .ls-pname {
-    font-size: 0.8rem;
+    font-size: 0.84rem;
     white-space: normal;
     /* break-word, NOT anywhere: `anywhere` also shrinks the box's intrinsic
-       minimum to a single character, which lets the flex row squeeze the
-       column until a name breaks mid-word ("Christian McCaffre / y"). */
+       minimum to a single character, which lets the column squeeze until a
+       name breaks mid-word ("Christian McCaffre / y"). */
     overflow-wrap: break-word;
     line-height: 1.2;
   }
-  .ls-pscore { min-width: 2.1rem; }
-  .ls-plive { font-size: 1.02rem; }
+  .ls-prow.right .ls-pname { text-align: right; }
+  .ls-pscore { min-width: 2.2rem; }
+  .ls-plive { font-size: 1.05rem; }
   .ls-pproj { display: none; }
   /* The meta row is the ONLY per-player evidence that anything is being
      tracked — the real game clock, the red-zone flag, the game state dot.
@@ -607,14 +645,15 @@ html.dark .ls-headshot.def { box-shadow: none; }
      table. Keep it and shed the pieces that are duplicated elsewhere instead:
      the NFL logo (the row already identifies the player) and down & distance
      (the red-zone flag is the part that changes how a lineup reads). */
-  .ls-pmeta { font-size: 0.62rem; gap: 0.22rem; flex-wrap: wrap; }
+  /* Sized to hold the longest real meta line — "ARI │ ● 8/22 10:00p" — on ONE
+     line inside the ~91px area. A wrap here costs the whole row a third line
+     and is what the two-line grid exists to avoid. */
+  .ls-pmeta { font-size: 0.6rem; gap: 0.24rem; flex-wrap: wrap; }
   .ls-pmeta img { display: none; }
   .ls-dd { display: none; }
-  .ls-rz { font-size: 0.55rem; padding: 0.02rem 0.22rem; letter-spacing: 0.02em; }
-  /* The divider rule reads as a stray vertical bar once the meta row wraps,
-     which it does at this width. The wrap itself is the separation. */
-  .ls-pclock { padding-left: 0; margin-left: 0; border-left: 0; }
-  .ls-prow.right .ls-pclock { padding-right: 0; margin-right: 0; border-right: 0; }
+  .ls-rz { font-size: 0.55rem; padding: 0.03rem 0.22rem; letter-spacing: 0.02em; }
+  .ls-pclock { padding-left: 0.22rem; margin-left: 0; }
+  .ls-prow.right .ls-pclock { padding-right: 0.22rem; margin-right: 0; }
   .ls-pstat { font-size: 0.66rem; }
 
   /* Header: the week selector and the freshness pill share a line on a phone

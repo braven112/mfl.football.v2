@@ -71,7 +71,45 @@ function valueOf(block: string, selector: string, prop: string): string | undefi
 
 const phone = mediaBlock('@media (max-width: 760px)');
 
+/** The rows named by a `grid-template-areas` value, in order. */
+function gridRows(block: string, selector: string): string[][] {
+  const raw = valueOf(block, selector, 'grid-template-areas') ?? '';
+  return [...raw.matchAll(/"([^"]*)"/g)].map((m) => m[1].trim().split(/\s+/));
+}
+
 describe('live-scoring on a phone', () => {
+  it('gives each player TWO lines instead of one crowded one', () => {
+    // One line cannot hold chip + headshot + name + game state + score inside
+    // a ~165px matchup column. Both attempts to make it are bugs we shipped:
+    // ellipsising the name to "Jah…", then squeezing every fixed column until
+    // the row just read as crowded (owner, 2026-08-21).
+    expect(valueOf(phone, '.ls-prow', 'display')).toBe('grid');
+    // `display: contents` on the identity wrapper is what lets the name and
+    // the meta line be placed on different rows — they are nested in the DOM
+    // because the DESKTOP layout stacks them as one block.
+    expect(
+      valueOf(phone, '.ls-pid', 'display'),
+      'without display:contents the grid areas below cannot reach .ls-pname / .ls-pmeta',
+    ).toBe('contents');
+
+    for (const selector of ['.ls-prow', '.ls-prow.right']) {
+      const rows = gridRows(phone, selector);
+      expect(rows.length, `${selector} must lay the row out on two lines`).toBe(2);
+      expect(rows[0], `${selector} line 1 carries the name`).toContain('name');
+      expect(rows[1], `${selector} line 2 carries the game state`).toContain('meta');
+      expect(rows[1], `${selector} line 2 carries the score`).toContain('score');
+      // The name must reach across the score column and the meta line across
+      // the headshot column — that span is the width the two-line layout buys,
+      // and without it we are back to a ~57px name.
+      expect(rows[0].filter((a) => a === 'name').length).toBeGreaterThan(1);
+      expect(rows[1].filter((a) => a === 'meta').length).toBeGreaterThan(1);
+    }
+
+    // Mirrored, not re-ordered: the home side reuses the same markup.
+    expect(gridRows(phone, '.ls-prow')[0].join(' '))
+      .toBe([...gridRows(phone, '.ls-prow.right')[0]].reverse().join(' '));
+  });
+
   it('keeps the per-player meta row, which is the only live signal on the row', () => {
     expect(
       valueOf(phone, '.ls-pmeta', 'display'),
