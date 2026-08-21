@@ -193,6 +193,8 @@ let _nameIndexCache: {
   players: MFLPlayer[];
   byPositionAndName: Map<string, MFLPlayer>;
   byPositionAndReversedName: Map<string, MFLPlayer>;
+  /** Every player per name+position, so a collision can be broken by team. */
+  allByPositionAndName: Map<string, MFLPlayer[]>;
 } | null = null;
 
 function getNameIndex(mflPlayers: MFLPlayer[]) {
@@ -225,13 +227,14 @@ function getNameIndex(mflPlayers: MFLPlayer[]) {
     }
   }
 
-  _nameIndexCache = {
+  const built = {
     players: mflPlayers,
     byPositionAndName,
     byPositionAndReversedName,
     allByPositionAndName,
   };
-  return _nameIndexCache;
+  _nameIndexCache = built;
+  return built;
 }
 
 
