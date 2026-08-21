@@ -47,11 +47,15 @@ export const SOURCE_LABELS: Record<RankingSourceId, string> = {
   dlf: 'DLF',
   yahoo: 'Yahoo',
   footballguys: 'FootballGuys',
+  'mfl-adp': 'MFL ADP',
+  sharks: 'FantasySharks',
   custom: 'Custom',
 };
 
 /** Short abbreviations for column headers (≤5 chars) */
 export const SOURCE_ABBREVS: Record<RankingSourceId, string> = {
+  'mfl-adp': 'MFL',
+  sharks: 'Shrks',
   fantasypros: 'FPros',
   cbs: 'CBS',
   sleeper: 'Sleep',

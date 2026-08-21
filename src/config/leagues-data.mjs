@@ -51,6 +51,8 @@ export const LEAGUES = {
       schefterTips: true,
       liveScoring: true,
     },
+    // Contract dynasty league — long-horizon value is the right opening board.
+    defaultRankingSources: ['fantasycalc', 'sharks', 'mfl-adp'],
   },
   'afl-fantasy': {
     id: '19621',
@@ -92,6 +94,10 @@ export const LEAGUES = {
       schefterTips: true,
       liveScoring: true,
     },
+    // Keeper league that re-drafts most of the roster every year, so the
+    // defaults lean redraft/ADP. FantasyCalc dynasty stays AVAILABLE, just
+    // not on by default — it overrates youth for a one-season horizon.
+    defaultRankingSources: ['mfl-adp', 'espn', 'sharks'],
   },
   'best-ball-1': {
     id: '37610',
@@ -287,4 +293,27 @@ export function buildHostToSlugMap() {
     }
   }
   return map;
+}
+/**
+ * Which BUILT-IN ranking sources are ticked into "My Rank" by default, per
+ * league. Every source is AVAILABLE everywhere — this only decides the
+ * starting composite, because the right default depends on how the league
+ * drafts: dynasty trade values are the wrong opening board for a league that
+ * re-drafts, and a straight redraft ADP is the wrong one for a contract
+ * dynasty league.
+ *
+ * An owner's own tick/weight choices always win after the first visit; this
+ * is a starting point, not a policy. Ids come from
+ * scripts/fetch-ranking-sources.mjs.
+ *
+ * NOTE: best-ball leagues deliberately SHARE TheLeague's rankings storage
+ * (see the BEST_BALL note in src/utils/rankings-scope.ts), which means they
+ * share its composite config too — so they cannot carry their own defaults
+ * without splitting that storage first. They are absent here on purpose.
+ */
+export const DEFAULT_RANKING_SOURCES_FALLBACK = ['mfl-adp', 'sharks'];
+
+/** Built-in ranking sources ticked on by default for a league slug. */
+export function defaultRankingSourcesFor(slug) {
+  return LEAGUES[slug]?.defaultRankingSources ?? DEFAULT_RANKING_SOURCES_FALLBACK;
 }

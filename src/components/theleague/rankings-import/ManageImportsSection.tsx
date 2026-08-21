@@ -24,6 +24,8 @@ import {
   getCompositeConfig,
   toggleCompositeImport,
   setCompositeWeight,
+  setBuiltinHidden,
+  getHiddenBuiltinImports,
 } from '../../../utils/rankings-storage';
 import type { StoredRankingImport, CompositeImportConfig } from '../../../types/rankings-import';
 import { SOURCE_LABELS, AVERAGE_IMPORT_ID } from '../../../utils/rankings-lookup';
@@ -122,6 +124,22 @@ export default function ManageImportsSection({ imports, onDelete, onReorder }: P
     onReorder();
   };
 
+  const [hiddenBuiltins, setHiddenBuiltins] = useState<StoredRankingImport[]>(
+    () => getHiddenBuiltinImports(),
+  );
+
+  const handleHide = (imp: StoredRankingImport) => {
+    setBuiltinHidden(imp.id, true);
+    setHiddenBuiltins(getHiddenBuiltinImports());
+    onDelete(imp.id); // refreshes the caller's list from storage
+  };
+
+  const handleShow = (imp: StoredRankingImport) => {
+    setBuiltinHidden(imp.id, false);
+    setHiddenBuiltins(getHiddenBuiltinImports());
+    onDelete(imp.id);
+  };
+
   const handleSetWeight = (importId: string, weight: 1 | 2 | 3) => {
     setCompositeWeight(importId, weight);
     const updated = new Map(compositeMembers);
@@ -181,6 +199,7 @@ export default function ManageImportsSection({ imports, onDelete, onReorder }: P
                         order={idx + 1}
                         onView={setSelectedImport}
                         onDelete={setDeleteTarget}
+                        onHide={handleHide}
                         isCompositeMember={compositeMembers.has(item.id)}
                         compositeWeight={compositeMembers.get(item.id)?.weight ?? null}
                         onToggleComposite={handleToggleComposite}
@@ -300,13 +319,14 @@ interface SortableRowProps {
   order: number;
   onView: (imp: StoredRankingImport) => void;
   onDelete: (imp: StoredRankingImport) => void;
+  onHide: (imp: StoredRankingImport) => void;
   isCompositeMember: boolean;
   compositeWeight: 1 | 2 | 3 | null;
   onToggleComposite: (importId: string, included: boolean) => void;
   onSetWeight: (importId: string, weight: 1 | 2 | 3) => void;
 }
 
-function SortableRow({ imp, order, onView, onDelete, isCompositeMember, compositeWeight, onToggleComposite, onSetWeight }: SortableRowProps) {
+function SortableRow({ imp, order, onView, onDelete, onHide, isCompositeMember, compositeWeight, onToggleComposite, onSetWeight }: SortableRowProps) {
   const {
     attributes,
     listeners,
@@ -384,13 +404,27 @@ function SortableRow({ imp, order, onView, onDelete, isCompositeMember, composit
         >
           View
         </button>
-        <button
-          type="button"
-          className="ri-btn ri-btn--sm ri-btn--danger"
-          onClick={() => onDelete(imp)}
-        >
-          Delete
-        </button>
+        {imp.provided ? (
+          // A built-in can't be deleted — the next daily snapshot would bring
+          // it straight back. Hiding is the durable opt-out, and it drops the
+          // source from "My Rank" too.
+          <button
+            type="button"
+            className="ri-btn ri-btn--sm"
+            onClick={() => onHide(imp)}
+            title="Remove this built-in source from your board. You can show it again later."
+          >
+            Hide
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="ri-btn ri-btn--sm ri-btn--danger"
+            onClick={() => onDelete(imp)}
+          >
+            Delete
+          </button>
+        )}
       </td>
     </tr>
   );

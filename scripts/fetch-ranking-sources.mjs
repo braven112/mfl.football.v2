@@ -272,6 +272,22 @@ const fetchFantasyCalc = async () => {
   };
 };
 
+/**
+ * ESPN publishes several rank types on the same payload. 2026 carries
+ * STANDARD, PPR, ELIMINATION and SUPERFLEX; 2025 had only STANDARD and PPR,
+ * so a missing type is normal and must not fail the run.
+ */
+const ESPN_RANK_TYPES = [
+  { rankType: 'PPR', id: 'espn', label: 'ESPN', type: 'redraft', basis: 'PPR redraft' },
+  {
+    rankType: 'SUPERFLEX',
+    id: 'espn-superflex',
+    label: 'ESPN Superflex',
+    type: 'redraft',
+    basis: 'superflex redraft (2QB)',
+  },
+];
+
 const fetchEspn = async (year, mflIndex) => {
   // ESPN uses its own ids, so this is matched here rather than per visitor.
   // Team arrives as a numeric proTeamId — the shared map turns it into the
@@ -296,30 +312,37 @@ const fetchEspn = async (year, mflIndex) => {
   const rows = res?.players;
   if (!Array.isArray(rows)) throw new Error('no players in ESPN response');
 
-  const ranked = [];
+  // Resolve each player ONCE, then emit one source per rank type — the ids and
+  // the name matching are identical across types, only the ordering differs.
+  const resolved = [];
   let dropped = 0;
   for (const entry of rows) {
     const p = entry?.player;
     if (!p) continue;
     const pos = ESPN_POSITIONS[p.defaultPositionId];
     if (!pos) continue;
-    const rank = p.draftRanksByRankType?.PPR?.rank;
-    if (!rank) continue;
+    if (!p.draftRanksByRankType) continue;
     const id = resolveMflId(mflIndex, p.fullName || '', pos, espnProTeamAbbrev(p.proTeamId));
     if (!id) { dropped++; continue; }
-    ranked.push({ id, espnRank: rank });
+    resolved.push({ id, ranks: p.draftRanksByRankType });
   }
-  ranked.sort((a, b) => a.espnRank - b.espnRank);
-  return {
-    source: {
-      id: 'espn',
-      label: 'ESPN',
-      type: 'redraft',
-      meta: { basis: 'PPR redraft' },
+
+  const sources = [];
+  for (const spec of ESPN_RANK_TYPES) {
+    const ranked = resolved
+      .map((r) => ({ id: r.id, raw: r.ranks[spec.rankType]?.rank }))
+      .filter((r) => Number.isFinite(r.raw))
+      .sort((a, b) => a.raw - b.raw);
+    if (ranked.length === 0) continue; // type not published this season
+    sources.push({
+      id: spec.id,
+      label: spec.label,
+      type: spec.type,
+      meta: { basis: spec.basis },
       players: ranked.map((r, i) => ({ id: r.id, rank: i + 1 })),
-    },
-    dropped,
-  };
+    });
+  }
+  return { sources, dropped };
 };
 
 // ── Main ────────────────────────────────────────────────────────────────────
@@ -377,9 +400,13 @@ const run = async () => {
     ];
     for (const [name, fn] of matched) {
       try {
-        const { source, dropped } = await fn();
-        sources.push(source);
-        console.log(`  ${name} → ${source.players.length} players (${dropped} unmatched dropped)`);
+        const res = await fn();
+        // ESPN emits one source per rank type (PPR, SUPERFLEX); Sleeper one.
+        const produced = res.sources ?? [res.source];
+        for (const src of produced) {
+          sources.push(src);
+          console.log(`  ${src.label} → ${src.players.length} players (${res.dropped} unmatched dropped)`);
+        }
       } catch (err) {
         console.warn(`::warning::${name} failed (${err.message}) — omitted from this run.`);
       }

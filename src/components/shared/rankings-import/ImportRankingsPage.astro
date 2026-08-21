@@ -19,6 +19,7 @@ import { getLeagueYearForSlug } from '../../../utils/league-year';
 import { getPlayerMap } from '../../../utils/player-map';
 import { getLeagueContext } from '../../../utils/league-context';
 import { ensureLeaguePrefix, getLeagueBySlug } from '../../../config/leagues';
+import { defaultRankingSourcesFor } from '../../../config/leagues-data.mjs';
 import bookmarkletManifest from '../../../data/bookmarklet-manifest.json';
 import { getAuthUser, isCommissionerOrAdmin, isAuthorizedForLeague } from '../../../utils/auth';
 
@@ -108,6 +109,20 @@ const mflPlayers = rawPlayers
       team: identity?.nflTeam ?? p.team ?? '',
     };
   });
+
+// ---------------------------------------------------------------------------
+// Built-in ranking sources (data/ranking-sources/<year>.json)
+// ---------------------------------------------------------------------------
+// Read on the SERVER and handed to the island as a prop, so the ~150 KB
+// snapshot lands in the server chunk for this one route instead of the client
+// bundle of every page that touches rankings. The island reconciles it into
+// the owner's store, and every downstream consumer reads it from there.
+const rankingSourceFiles = import.meta.glob(
+  '../../../../data/ranking-sources/*.json',
+  { eager: true },
+);
+const builtinSnapshot =
+  getModuleData(rankingSourceFiles[`../../../../data/ranking-sources/${leagueYearStr}.json`]) ?? null;
 
 // ---------------------------------------------------------------------------
 // Site configurations for bookmarklet cards
@@ -213,7 +228,8 @@ const siteConfigs = [
     siteConfigsJson={JSON.stringify(siteConfigs)}
     isAdmin={isAdmin}
     customRankingsHref={customRankingsHref}
-    seasonYear={leagueYear}
+    builtinSnapshotJson={JSON.stringify(builtinSnapshot)}
+    defaultSourceIds={defaultRankingSourcesFor(leagueSlug)}
   />
 </TheLeagueLayout>
 

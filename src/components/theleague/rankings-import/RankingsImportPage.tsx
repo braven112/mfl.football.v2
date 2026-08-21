@@ -1,5 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { getAllImports, migrateFromLegacyKeys, initFromServer } from '../../../utils/rankings-storage';
+import {
+  getAllImports,
+  migrateFromLegacyKeys,
+  initFromServer,
+  syncBuiltinImports,
+} from '../../../utils/rankings-storage';
 import type {
   BookmarkletSiteConfig,
   MFLPlayerForMatching,
@@ -8,9 +13,6 @@ import type {
 import BookmarkletSection from './BookmarkletSection';
 import ImportSection from './ImportSection';
 import ManageImportsSection from './ManageImportsSection';
-import SleeperDirectImport from './SleeperDirectImport';
-import FantasyCalcDirectImport from './FantasyCalcDirectImport';
-import EspnDirectImport from './EspnDirectImport';
 
 interface Props {
   mflPlayersJson: string;
@@ -23,8 +25,18 @@ interface Props {
    * and a hardcoded `/theleague/cr` here sent AFL admins to the wrong board.
    */
   customRankingsHref?: string | null;
-  /** League year to pull season-scoped source data for (see EspnDirectImport). */
-  seasonYear: number;
+  /**
+   * The build-time snapshot of built-in ranking sources, as JSON. Reconciled
+   * into the owner's store on mount so ESPN, FantasyCalc, Sleeper, MFL ADP and
+   * FantasySharks are present without anyone importing anything — which is
+   * what replaced the old one-click import cards.
+   */
+  builtinSnapshotJson?: string | null;
+  /**
+   * Built-in source ids this league ticks on by default (registry-driven).
+   * Every source is still available and selectable — see syncBuiltinImports.
+   */
+  defaultSourceIds?: string[];
 }
 
 export default function RankingsImportPage({
@@ -32,7 +44,8 @@ export default function RankingsImportPage({
   siteConfigsJson,
   isAdmin = false,
   customRankingsHref = null,
-  seasonYear,
+  builtinSnapshotJson = null,
+  defaultSourceIds = [],
 }: Props) {
   const mflPlayers: MFLPlayerForMatching[] = useMemo(() => {
     try { return JSON.parse(mflPlayersJson); } catch { return []; }
@@ -48,12 +61,23 @@ export default function RankingsImportPage({
   });
 
   useEffect(() => {
+    // Reconcile the built-in sources FIRST so a first-time owner sees a full
+    // board immediately, then let the server sync layer bring in their own
+    // imports. Both are no-ops when nothing changed.
+    let snapshot = null;
+    try {
+      snapshot = builtinSnapshotJson ? JSON.parse(builtinSnapshotJson) : null;
+    } catch {
+      snapshot = null;
+    }
+    syncBuiltinImports(snapshot, defaultSourceIds);
     setSavedImports(getAllImports());
+
     // Sync with server (Redis) for cross-device access
     initFromServer().then((updated) => {
       if (updated) setSavedImports(getAllImports());
     });
-  }, []);
+  }, [builtinSnapshotJson, defaultSourceIds]);
 
   const handleImportComplete = useCallback((newImport: StoredRankingImport) => {
     setSavedImports(getAllImports());
@@ -81,11 +105,6 @@ export default function RankingsImportPage({
       {savedImports.length > 0 && (
         <ManageImportsSection imports={savedImports} onDelete={handleDelete} onReorder={handleReorder} />
       )}
-      <div className="ri-direct-import-grid">
-        <FantasyCalcDirectImport mflPlayers={mflPlayers} onImportComplete={handleImportComplete} />
-        <EspnDirectImport mflPlayers={mflPlayers} onImportComplete={handleImportComplete} seasonYear={seasonYear} />
-        <SleeperDirectImport mflPlayers={mflPlayers} onImportComplete={handleImportComplete} />
-      </div>
       <BookmarkletSection siteConfigs={siteConfigs} />
       <ImportSection mflPlayers={mflPlayers} onImportComplete={handleImportComplete} />
     </div>

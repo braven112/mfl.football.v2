@@ -8,7 +8,12 @@
  * Also handles migration from the legacy auctionPredictor.* localStorage keys.
  */
 
-import type { StoredRankingImport, CompositeRankConfig, SyncedRankingsPayload } from '../types/rankings-import';
+import type {
+  StoredRankingImport,
+  CompositeRankConfig,
+  SyncedRankingsPayload,
+  BuiltinRankingSource,
+} from '../types/rankings-import';
 import { loadFromServer, saveToServer } from './rankings-sync';
 import {
   DEFAULT_RANKINGS_SCOPE,
@@ -27,10 +32,12 @@ import {
 const STORAGE_BASE_KEY = 'rankings.imports';
 const AVG_POSITION_BASE_KEY = 'rankings.averagePosition';
 const COMPOSITE_CONFIG_BASE_KEY = 'rankings.compositeConfig';
+const HIDDEN_BUILTINS_BASE_KEY = 'rankings.hiddenBuiltins';
 
 const storageKey = (scope = activeRankingsScope()) => scopedLocalKey(STORAGE_BASE_KEY, scope);
 const avgPositionKey = (scope = activeRankingsScope()) => scopedLocalKey(AVG_POSITION_BASE_KEY, scope);
 const compositeConfigKey = (scope = activeRankingsScope()) => scopedLocalKey(COMPOSITE_CONFIG_BASE_KEY, scope);
+const hiddenBuiltinsKey = (scope = activeRankingsScope()) => scopedLocalKey(HIDDEN_BUILTINS_BASE_KEY, scope);
 
 // Legacy keys from the old auction predictor rankings import.
 // TheLeague-only: they predate multi-league by years and only TheLeague's
@@ -92,6 +99,162 @@ if (typeof window !== 'undefined') {
 }
 
 // ---------------------------------------------------------------------------
+// Built-in sources
+// ---------------------------------------------------------------------------
+/**
+ * Built-in sources the owner has hidden.
+ *
+ * A provided source can't be deleted — the next snapshot would just bring it
+ * back — but "I built my own board out of FBG and DLF and don't want the
+ * defaults in my way" is a real need, so hiding is the durable opt-out.
+ * Hiding also drops the source from the composite; showing it again does NOT
+ * silently re-add it, because by then the owner has a weighting they chose.
+ */
+export function getHiddenBuiltins(): string[] {
+  try {
+    const raw = localStorage.getItem(hiddenBuiltinsKey());
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export function setBuiltinHidden(importId: string, hidden: boolean): void {
+  const current = new Set(getHiddenBuiltins());
+  if (hidden) current.add(importId);
+  else current.delete(importId);
+  localStorage.setItem(hiddenBuiltinsKey(), JSON.stringify([...current]));
+
+  // Hiding removes it from the composite too — leaving a hidden source
+  // silently weighting "My Rank" is exactly the confusion this avoids.
+  if (hidden) {
+    try {
+      const raw = localStorage.getItem(compositeConfigKey());
+      if (raw) {
+        const config = JSON.parse(raw) as CompositeRankConfig;
+        const filtered = config.members.filter((m) => m.importId !== importId);
+        if (filtered.length !== config.members.length) {
+          localStorage.setItem(compositeConfigKey(), JSON.stringify({ members: filtered }));
+        }
+      }
+    } catch { /* ignore malformed config */ }
+  }
+
+  _cache.clear();
+  window.dispatchEvent(new CustomEvent('rankingsUpdated'));
+}
+
+
+/**
+ * Reconcile the build-time ranking snapshot into this league's store.
+ *
+ * The built-in sources live in the SAME array as a user's own imports, so
+ * every existing consumer — the composite, the Free Agents columns, the draft
+ * queue, the Custom Rankings seed — reads one list and needed no changes.
+ * They are marked `provided` so the UI can refuse to delete them.
+ *
+ * Three rules that matter:
+ *
+ * - **Refresh in place.** A provided import is replaced when the snapshot's
+ *   `generatedAt` moves, keyed on source+type, so the daily cron's new numbers
+ *   land without duplicating a row or disturbing the user's own imports.
+ * - **On by default, once.** A newly-seeded source is added to the composite
+ *   config the first time it appears. After that the user's tick state is
+ *   authoritative — re-adding it on every refresh would silently undo an
+ *   owner who deliberately unticked it.
+ * - **No write when nothing changed.** This runs on every page load; an
+ *   unconditional write would fire `rankingsUpdated` and push to the server
+ *   on every visit.
+ */
+export function syncBuiltinImports(
+  snapshot: { generatedAt?: string; sources?: BuiltinRankingSource[] } | null,
+  /**
+   * Source ids ticked into "My Rank" on first sight, from the league registry
+   * (`defaultRankingSources`). EVERY source is stored and selectable; this only
+   * decides the opening composite, because dynasty trade values are the wrong
+   * default for a league that re-drafts and redraft ADP is the wrong default
+   * for a contract dynasty league. Omitted → nothing auto-ticks.
+   */
+  defaultSourceIds: string[] = [],
+): boolean {
+  if (!snapshot?.sources?.length) return false;
+
+  const generatedAt = snapshot.generatedAt ?? '';
+  // Read the RAW store, not getAllImports() — that view hides the built-ins
+  // the owner hid, and reconciling against it would treat every hidden source
+  // as missing: re-seeded on every load, and re-added to the composite because
+  // `seenBefore` wouldn't contain it. Hiding is a read-time filter precisely
+  // so this stays a pure function of the snapshot.
+  const scope = activeRankingsScope();
+  const existing = readFromStorage(scope);
+  const userImports = existing.filter((i) => !i.provided);
+  const priorProvided = existing.filter((i) => i.provided);
+
+  // Nothing to do if we already hold this exact snapshot.
+  const upToDate =
+    priorProvided.length === snapshot.sources.length &&
+    priorProvided.every((i) => i.generatedAt === generatedAt);
+  if (upToDate) return false;
+
+  const seenBefore = new Set(priorProvided.map((i) => `${i.source}:${i.type}`));
+
+  const provided: StoredRankingImport[] = snapshot.sources.map((src) => ({
+    // Stable id per source+type so composite membership survives a refresh.
+    id: `builtin:${src.id}`,
+    source: src.id as StoredRankingImport['source'],
+    type: src.type as StoredRankingImport['type'],
+    importDate: generatedAt || new Date().toISOString(),
+    generatedAt,
+    provided: true,
+    rankings: src.players.map((p) => ({
+      rank: p.rank,
+      playerId: p.id,
+      playerName: '',
+      position: '',
+      team: '',
+      // Every built-in source is resolved to an MFL id at build time — by id
+      // for the MFL feeds and FantasyCalc, by name once for Sleeper and ESPN.
+      matched: true,
+      confidence: 1,
+    })),
+    stats: {
+      total: src.players.length,
+      matched: src.players.length,
+      unmatched: 0,
+      matchRate: 100,
+    },
+  }));
+
+  // Provided sources sort ahead of the user's own imports.
+  const next = [...provided, ...userImports];
+  localStorage.setItem(storageKey(scope), JSON.stringify(next));
+  // Invalidate rather than set: the cached value must go back through
+  // getAllImports()'s hidden-source filter.
+  _cache.delete(scope);
+
+  // Newly-seeded sources join the composite IF this league defaults them on;
+  // previously-seen ones keep whatever the owner set.
+  const defaults = new Set(defaultSourceIds);
+  const fresh = provided.filter(
+    (i) => !seenBefore.has(`${i.source}:${i.type}`) && defaults.has(i.source),
+  );
+  if (fresh.length > 0) {
+    const raw = localStorage.getItem(compositeConfigKey());
+    const config: CompositeRankConfig = raw ? JSON.parse(raw) : { members: [] };
+    for (const imp of fresh) {
+      if (!config.members.find((m) => m.importId === imp.id)) {
+        config.members.push({ importId: imp.id, weight: 1 });
+      }
+    }
+    localStorage.setItem(compositeConfigKey(), JSON.stringify(config));
+  }
+
+  window.dispatchEvent(new CustomEvent('rankingsUpdated'));
+  return true;
+}
+
+// ---------------------------------------------------------------------------
 // CRUD
 // ---------------------------------------------------------------------------
 
@@ -99,9 +262,24 @@ export function getAllImports(): StoredRankingImport[] {
   const scope = activeRankingsScope();
   const cached = _cache.get(scope);
   if (cached !== undefined) return cached;
-  const fresh = readFromStorage(scope);
+  // Hidden built-ins are filtered on READ rather than dropped on write, so
+  // un-hiding is instant and the snapshot reconciliation stays a pure
+  // function of the build data.
+  const hidden = new Set(getHiddenBuiltins());
+  const fresh = readFromStorage(scope).filter(
+    (i) => !(i.provided && hidden.has(i.id)),
+  );
   _cache.set(scope, fresh);
   return fresh;
+}
+
+/** Built-in sources present in the snapshot but hidden by the owner. */
+export function getHiddenBuiltinImports(): StoredRankingImport[] {
+  const hidden = new Set(getHiddenBuiltins());
+  if (hidden.size === 0) return [];
+  return readFromStorage(activeRankingsScope()).filter(
+    (i) => i.provided && hidden.has(i.id),
+  );
 }
 
 /**
@@ -160,6 +338,13 @@ export function saveImport(importData: StoredRankingImport): void {
 }
 
 export function deleteImport(id: string): void {
+  // A provided source is refreshed from the build snapshot, so deleting it
+  // would just resurrect it on the next load. Unticking "My Rank" is the
+  // opt-out. Guarded here as well as in the UI so a stray call can't put the
+  // store into a state that fights the next sync.
+  const target = getAllImports().find((i) => i.id === id);
+  if (target?.provided) return;
+
   const imports = getAllImports().filter((i) => i.id !== id);
   writeToStorage(imports);
 
@@ -423,7 +608,11 @@ function writeLegacyKeys(imports: StoredRankingImport[]): void {
 
 /** Build the current state into a payload and push to server. Fire-and-forget. */
 function syncToServer(): void {
-  const imports = getAllImports();
+  // Provided sources are NOT synced: they are regenerated from the build
+  // snapshot on every device, so pushing them would store ~150 KB of
+  // identical, immediately-stale data per owner and let an old device's copy
+  // overwrite a fresh one on merge. Only the user's own imports are durable.
+  const imports = getAllImports().filter((i) => !i.provided);
   const compositeConfig = getCompositeConfig();
   const averagePosition = getAveragePosition();
 
@@ -447,7 +636,10 @@ function syncToServer(): void {
  */
 export async function initFromServer(): Promise<boolean> {
   const serverData = await loadFromServer();
-  const localImports = getAllImports();
+  // Compare against the user's OWN imports — provided sources never round-trip
+  // through the server, so counting them here would make a first-time owner
+  // look like they already had data and skip the server adopt path.
+  const localImports = getAllImports().filter((i) => !i.provided);
 
   // Server unavailable or user not authenticated
   if (!serverData) {
@@ -462,8 +654,9 @@ export async function initFromServer(): Promise<boolean> {
 
   // Server has data, local is empty → adopt server data
   if (localImports.length === 0 && serverImports.length > 0) {
-    localStorage.setItem(storageKey(), JSON.stringify(serverImports));
-    _cache.set(activeRankingsScope(), serverImports);
+    const withProvided = [...getAllImports().filter((i) => i.provided), ...serverImports];
+    localStorage.setItem(storageKey(), JSON.stringify(withProvided));
+    _cache.set(activeRankingsScope(), withProvided);
     writeLegacyKeys(serverImports);
 
     if (serverData.compositeConfig) {
@@ -484,8 +677,12 @@ export async function initFromServer(): Promise<boolean> {
       merged.some((m, i) => m.id !== localImports[i]?.id);
 
     if (changed) {
-      localStorage.setItem(storageKey(), JSON.stringify(merged));
-      _cache.set(activeRankingsScope(), merged);
+      const mergedWithProvided = [
+        ...getAllImports().filter((i) => i.provided),
+        ...merged,
+      ];
+      localStorage.setItem(storageKey(), JSON.stringify(mergedWithProvided));
+      _cache.set(activeRankingsScope(), mergedWithProvided);
       writeLegacyKeys(merged);
 
       // Use server composite config if local doesn't have one
