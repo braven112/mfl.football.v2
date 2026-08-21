@@ -191,10 +191,31 @@ Four things that are load-bearing, not style:
   `writeLegacyKeys` and `migrateFromLegacyKeys` both bail on any other scope —
   otherwise an AFL import overwrites TheLeague's auction-predictor rankings,
   and the migration *deletes* the originals on its way out.
-- **Best-ball deliberately shares TheLeague's bucket** (`bb1` → `theleague` in
-  `SCOPE_BY_NAV_SLUG`). Those leagues have no board of their own; they only
-  consume the imports for the draft queue and the "My Rank" auto-pick source,
-  so giving them a separate bucket would silently empty an existing queue.
+- **Every league has its own bucket, best-ball included.** bb1 shared
+  TheLeague's until Aug 2026; the objection to splitting was that best-ball
+  owners would be left with an empty queue, and the built-in sources (below)
+  removed that objection by seeding a working composite on first load.
+
+**Built-in ranking sources.** `data/ranking-sources/<year>.json`
+(`scripts/fetch-ranking-sources.mjs`, prebuild + daily cron) supplies six
+sources every owner gets without importing: MFL ADP, FantasySharks,
+FantasyCalc, Sleeper, ESPN, ESPN Superflex. They are stored alongside a user's
+own imports and marked `provided`, so the composite / Free Agents columns /
+draft queue / `/cr` seed all read one list. Rules: refreshed in place on
+`generatedAt`; auto-ticked ONCE on first sight (re-ticking would undo a
+deliberate untick); never synced to Redis (regenerated per device); not
+deletable — **Hide** is the opt-out, filtered on READ, which is why
+`syncBuiltinImports` reads the raw store rather than `getAllImports()`.
+
+Which sources are ticked BY DEFAULT is per-league (`defaultRankingSources` in
+the registry) because the right opening board depends on how the league drafts
+— dynasty trade values are wrong for a league that re-drafts, redraft ADP is
+wrong for a contract dynasty league. Every source stays available everywhere.
+
+Composite weights are arbitrary positive numbers normalized by their total
+(`weight / Σweight`), which is what lets the UI present them as percentages and
+makes a deliberately small source (superflex at 5) behave as expected. Only the
+RATIO matters — `tests/rankings-lookup.test.ts` pins that.
 
 `tests/rankings-scope.test.ts` pins the legacy strings, the AFL separation, and
 fails if a league is added to the registry without a scope entry.

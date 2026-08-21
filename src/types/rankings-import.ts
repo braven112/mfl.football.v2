@@ -126,7 +126,19 @@ export interface MFLPlayerForMatching {
 /** A single import's inclusion in the composite rank with a weight multiplier. */
 export interface CompositeImportConfig {
   importId: string;        // References StoredRankingImport.id
-  weight: 1 | 2 | 3;      // Multiplier for weighted average
+  /**
+   * Relative influence in the weighted average. Any positive number.
+   *
+   * The UI presents these as PERCENTAGES, which works without converting
+   * anything because the composite already divides by the total weight — a
+   * source's real share is `weight / Σweight`. So weights that sum to 100 make
+   * each number literally its percentage, and weights that don't still behave
+   * sensibly (they're just normalized). That's what allows a deliberate
+   * low-influence source, e.g. superflex at 5.
+   *
+   * Was `1 | 2 | 3`; existing stored values remain valid numbers.
+   */
+  weight: number;
 }
 
 /** Full composite rank configuration persisted in localStorage. */

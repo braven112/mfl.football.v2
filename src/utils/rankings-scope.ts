@@ -18,28 +18,29 @@
  *   different teams, so a bare `ri:0001` KV key is genuinely ambiguous once a
  *   second league writes to it. The scope is the disambiguator.
  *
- * Best-ball is deliberately NOT its own scope — see BEST_BALL note below.
+ * Every league has its own bucket, best-ball included — see BEST_BALL below.
  */
 
 import { getLeagueBySlug, getLeagueById } from '../config/leagues';
 
 /** The buckets rankings can live in. Add one per league that needs its own. */
-export type RankingsScope = 'theleague' | 'afl';
+export type RankingsScope = 'theleague' | 'afl' | 'bb1';
 
 export const DEFAULT_RANKINGS_SCOPE: RankingsScope = 'theleague';
 
 /**
- * navSlug → scope.
+ * navSlug → scope. Every league gets its own bucket.
  *
- * BEST_BALL: `bb1` maps to `theleague` on purpose, preserving the behavior the
- * best-ball wrapper page documents — rankings imported on either page feed the
- * other's draft queue and "My Rank" auto-pick source. Best-ball leagues have no
- * ranking surface of their own to keep separate; they only consume the imports.
- * Giving them their own bucket would silently empty an existing draft queue.
+ * BEST_BALL: bb1 previously shared TheLeague's bucket so an owner's imports fed
+ * both draft queues. That is no longer wanted — a best-ball board is its own
+ * board (commissioner, 2026-08-20). The original objection to splitting was
+ * that it would leave best-ball owners with an empty queue; the built-in
+ * sources (src/utils/rankings-storage.ts#syncBuiltinImports) now seed a
+ * working composite on first load, so a fresh bucket starts populated instead.
  */
 const SCOPE_BY_NAV_SLUG: Record<string, RankingsScope> = {
   theleague: 'theleague',
-  bb1: 'theleague',
+  bb1: 'bb1',
   afl: 'afl',
 };
 

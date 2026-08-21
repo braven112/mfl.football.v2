@@ -877,6 +877,44 @@ const siteConfigs = [
     text-align: center;
   }
 
+  .ri-manage__weight-input-wrap {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.15rem;
+    white-space: nowrap;
+  }
+
+  .ri-manage__weight-input {
+    width: 3.25rem;
+    padding: 0.2rem 0.3rem;
+    text-align: right;
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--page-text);
+    background: var(--content-bg, #fff);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: 4px;
+  }
+
+  .ri-manage__weight-input:focus {
+    outline: 2px solid var(--primary-color, #1c497c);
+    outline-offset: -1px;
+  }
+
+  .ri-manage__weight-unit {
+    font-size: 0.75rem;
+    color: var(--content-text-muted, #64748b);
+  }
+
+  /* Actual share once the composite normalizes by total weight. Only rendered
+     when it differs from the typed number. */
+  .ri-manage__weight-effective {
+    margin-left: 0.3rem;
+    font-size: 0.7rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--content-text-muted, #64748b);
+  }
+
   .ri-manage__weight-picker {
     display: inline-flex;
     gap: 2px;

@@ -57,17 +57,24 @@ describe('rankings scope', () => {
     });
   });
 
-  describe('best-ball deliberately shares TheLeague’s bucket', () => {
-    // Documented in rankings-scope.ts (BEST_BALL) and the best-ball wrapper
-    // page: those leagues only CONSUME imports (draft queue + My Rank
-    // auto-pick) and have no board of their own. Giving them a separate bucket
-    // would silently empty an existing draft queue, so this is pinned rather
-    // than left to drift.
-    it('maps bb1 to the TheLeague scope', () => {
-      expect(rankingsScopeForNavSlug('bb1')).toBe(DEFAULT_RANKINGS_SCOPE);
-      expect(scopedLocalKey('rankings.imports', rankingsScopeForNavSlug('bb1'))).toBe(
-        'rankings.imports',
+  describe('best-ball has its own bucket', () => {
+    // bb1 used to share TheLeague's bucket. It must not (commissioner,
+    // 2026-08-20): a best-ball board is its own board. Pinned because the old
+    // behavior was deliberate and documented, so a well-meaning revert is
+    // plausible.
+    it('does not share TheLeague’s storage', () => {
+      const bb1 = rankingsScopeForNavSlug('bb1');
+      expect(bb1).toBe('bb1');
+      expect(bb1).not.toBe(DEFAULT_RANKINGS_SCOPE);
+      expect(scopedLocalKey('rankings.imports', bb1)).toBe('rankings.imports.bb1');
+      expect(scopedKvKey('ri', bb1, '0001')).toBe('ri:bb1:0001');
+    });
+
+    it('keeps all three leagues on distinct keys for the same franchise id', () => {
+      const keys = ['theleague', 'afl', 'bb1'].map((slug) =>
+        scopedKvKey('cr', rankingsScopeForNavSlug(slug), '0001'),
       );
+      expect(new Set(keys).size).toBe(3);
     });
   });
 
@@ -75,7 +82,7 @@ describe('rankings scope', () => {
     it('resolves canonical league slugs', () => {
       expect(rankingsScopeForLeagueSlug('theleague')).toBe('theleague');
       expect(rankingsScopeForLeagueSlug('afl-fantasy')).toBe('afl');
-      expect(rankingsScopeForLeagueSlug('best-ball-1')).toBe('theleague');
+      expect(rankingsScopeForLeagueSlug('best-ball-1')).toBe('bb1');
     });
 
     it('resolves MFL league ids (what a session JWT carries)', () => {

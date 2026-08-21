@@ -140,7 +140,21 @@ export default function ManageImportsSection({ imports, onDelete, onReorder }: P
     onDelete(imp.id);
   };
 
-  const handleSetWeight = (importId: string, weight: 1 | 2 | 3) => {
+  // A source's real influence is weight/Σweight. Surfaced only when it differs
+  // from the number the owner typed, so equal splits and totals of 100 stay
+  // uncluttered and a lopsided total is impossible to miss.
+  const totalWeight = [...compositeMembers.values()].reduce(
+    (sum, m) => sum + (Number.isFinite(m.weight) ? m.weight : 0),
+    0,
+  );
+  const effectiveShareFor = (importId: string): number | null => {
+    const member = compositeMembers.get(importId);
+    if (!member || totalWeight <= 0) return null;
+    const share = Math.round((member.weight / totalWeight) * 1000) / 10;
+    return Math.abs(share - member.weight) < 0.5 ? null : share;
+  };
+
+  const handleSetWeight = (importId: string, weight: number) => {
     setCompositeWeight(importId, weight);
     const updated = new Map(compositeMembers);
     const member = updated.get(importId);
@@ -163,7 +177,10 @@ export default function ManageImportsSection({ imports, onDelete, onReorder }: P
         Saved Rankings
       </h2>
       <p className="ri-section__note">
-        Drag to reorder. Check the <strong>My Rank</strong> box to include a ranking in your composite. Adjust weight to give a source more influence.
+        Drag to reorder. Check the <strong>My Rank</strong> box to include a ranking in your composite,
+        and set each source's <strong>weight</strong> as a percentage — the shares are normalized, so
+        a source set to 5 stays a light thumb on the scale. Built-in sources can be hidden if you'd
+        rather build your board from your own imports.
       </p>
 
       {imports.length === 0 ? (
@@ -202,6 +219,7 @@ export default function ManageImportsSection({ imports, onDelete, onReorder }: P
                         onHide={handleHide}
                         isCompositeMember={compositeMembers.has(item.id)}
                         compositeWeight={compositeMembers.get(item.id)?.weight ?? null}
+                        effectiveShare={effectiveShareFor(item.id)}
                         onToggleComposite={handleToggleComposite}
                         onSetWeight={handleSetWeight}
                       />
@@ -321,12 +339,14 @@ interface SortableRowProps {
   onDelete: (imp: StoredRankingImport) => void;
   onHide: (imp: StoredRankingImport) => void;
   isCompositeMember: boolean;
-  compositeWeight: 1 | 2 | 3 | null;
+  compositeWeight: number | null;
+  /** weight/Σweight as a percent, or null when it matches the typed value. */
+  effectiveShare: number | null;
   onToggleComposite: (importId: string, included: boolean) => void;
-  onSetWeight: (importId: string, weight: 1 | 2 | 3) => void;
+  onSetWeight: (importId: string, weight: number) => void;
 }
 
-function SortableRow({ imp, order, onView, onDelete, onHide, isCompositeMember, compositeWeight, onToggleComposite, onSetWeight }: SortableRowProps) {
+function SortableRow({ imp, order, onView, onDelete, onHide, isCompositeMember, compositeWeight, effectiveShare, onToggleComposite, onSetWeight }: SortableRowProps) {
   const {
     attributes,
     listeners,
@@ -371,19 +391,30 @@ function SortableRow({ imp, order, onView, onDelete, onHide, isCompositeMember, 
       </td>
       <td className="ri-manage__weight">
         {isCompositeMember ? (
-          <div className="ri-manage__weight-picker">
-            {([1, 2, 3] as const).map((w) => (
-              <button
-                key={w}
-                type="button"
-                className={`ri-manage__weight-btn${compositeWeight === w ? ' active' : ''}`}
-                onClick={() => onSetWeight(imp.id, w)}
-                aria-label={`Set weight to ${w}x`}
-                aria-pressed={compositeWeight === w}
-              >
-                {w}x
-              </button>
-            ))}
+          <div className="ri-manage__weight-input-wrap">
+            <input
+              type="number"
+              className="ri-manage__weight-input"
+              min={0}
+              max={100}
+              step={1}
+              value={compositeWeight ?? 0}
+              onChange={(e) => {
+                const next = Number(e.target.value);
+                if (Number.isFinite(next)) onSetWeight(imp.id, next);
+              }}
+              aria-label={`Weight for ${SOURCE_LABELS[imp.source] ?? imp.source}, in percent`}
+            />
+            <span className="ri-manage__weight-unit">%</span>
+            {/* The composite normalizes by total weight, so what a source is
+                actually worth is weight/Σweight. Show that whenever it differs
+                from the typed number — otherwise "5" reads as 5% when the
+                other sources sum to 3 and it is really 62%. */}
+            {effectiveShare != null && (
+              <span className="ri-manage__weight-effective" title="Actual share of My Rank">
+                ={effectiveShare}%
+              </span>
+            )}
           </div>
         ) : (
           <span className="na">—</span>

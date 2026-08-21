@@ -467,12 +467,25 @@ export function toggleCompositeImport(importId: string, included: boolean): void
 /**
  * Update the weight for a composite member.
  */
-export function setCompositeWeight(importId: string, weight: 1 | 2 | 3): void {
+export const MIN_COMPOSITE_WEIGHT = 0;
+export const MAX_COMPOSITE_WEIGHT = 100;
+
+/**
+ * Set a source's share of the composite. See CompositeRankMember.weight —
+ * the value is a percentage by convention, normalized by the composite math.
+ *
+ * A non-finite or negative weight is rejected rather than stored: it would
+ * poison `weightedSum / totalWeight` for every player at once, and a NaN there
+ * silently empties the whole board.
+ */
+export function setCompositeWeight(importId: string, weight: number): void {
+  if (!Number.isFinite(weight) || weight < MIN_COMPOSITE_WEIGHT) return;
+  const clamped = Math.min(MAX_COMPOSITE_WEIGHT, weight);
   const raw = localStorage.getItem(compositeConfigKey());
   const current: CompositeRankConfig = raw ? JSON.parse(raw) : { members: [] };
   const member = current.members.find((m) => m.importId === importId);
   if (member) {
-    member.weight = weight;
+    member.weight = clamped;
     saveCompositeConfig(current);
   }
 }

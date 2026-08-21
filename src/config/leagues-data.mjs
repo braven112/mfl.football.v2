@@ -140,6 +140,9 @@ export const LEAGUES = {
        */
       liveScoring: true,
     },
+    // Redraft best-ball: one season, no keepers, no contracts — straight
+    // redraft ADP is exactly the right opening board.
+    defaultRankingSources: ['mfl-adp', 'espn', 'sharks'],
   },
 };
 
@@ -306,10 +309,8 @@ export function buildHostToSlugMap() {
  * is a starting point, not a policy. Ids come from
  * scripts/fetch-ranking-sources.mjs.
  *
- * NOTE: best-ball leagues deliberately SHARE TheLeague's rankings storage
- * (see the BEST_BALL note in src/utils/rankings-scope.ts), which means they
- * share its composite config too — so they cannot carry their own defaults
- * without splitting that storage first. They are absent here on purpose.
+ * Every league carries its own rankings storage (see rankings-scope.ts), so
+ * every league can carry its own defaults.
  */
 export const DEFAULT_RANKING_SOURCES_FALLBACK = ['mfl-adp', 'sharks'];
 
