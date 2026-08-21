@@ -1452,3 +1452,77 @@ cache in their own isolated instances — this is expected Vercel Lambda
 behavior, not a regression, and shouldn't be reported as a new cost unless
 the read itself is newly introduced.
 
+
+---
+
+## 2026-08-21 - Two Paired Columns: Equal Row Heights Do NOT Align Their Contents — Anchor Inside the Row, and Reach for `subgrid`
+
+**Context:** Owner report on the Live Scoring matchup detail: the away and home
+columns "aren't lined up." Two rounds of fixes were needed because the first
+one addressed a symptom that turned out not to be the cause.
+
+**Insight — three distinct failures wearing one costume, in the order they
+have to be fixed:**
+
+1. **Independently-flowing columns drift cumulatively.** Two sibling `<div>`
+   columns each laying out their own list will diverge the moment one side has
+   an extra line, and the gap *compounds* down the list — 10px by row 13 in the
+   measured case. Fix: put both sides' cells in the **same grid row**, paired by
+   index. Nothing else makes drift structurally impossible.
+2. **Equal row heights are not the same as aligned content, and this is the
+   trap.** `grid-auto-rows: 1fr` in an auto-height grid does size every row to
+   the tallest one — but the two cells in a row still lay their *internal*
+   content out independently, so a two-line name and a one-line name still put
+   their scores at different offsets. Equalizing the rows changed nothing an
+   owner could see and cost real whitespace: a row whose player hadn't kicked
+   off got stretched to the height of one who had, stranding its score an inch
+   below its name. **It was reverted.** Don't reach for it.
+3. **Anchor the thing that must line up, inside the row.** Whatever element has
+   to agree across the pair needs a *constant offset*, which means every track
+   between it and its anchor edge must be content-sized and identical on both
+   sides, with the slack pushed to a track beyond it. Concretely: score row
+   second, box-score row third taking `1fr`, so a taller opponent lengthens the
+   row DOWNWARD and never moves the score. (Anchoring to the bottom instead —
+   `1fr` above, score row last — also works and is simpler, but only if nothing
+   is allowed to render below the anchored element.)
+
+**And then the case that defeats all of the above:** reserving two lines for the
+name equalizes a one-line name against a two-line one, but a name that genuinely
+needs *three* lines grows only its own side. "Mike Washington Jr." and "San
+Francisco 49ers" both wrap to three lines at 360px — a Galaxy in portrait — and
+each dropped that side's score a full line. `grid-template-rows: subgrid` is the
+only fix that removes the class rather than the instance: the pair's row owns
+the tracks and each side maps onto them, so *any* content difference grows the
+track for both at once.
+
+**Two mechanical traps with subgrid, both of which cost a debug cycle:**
+
+- **It must be the LAST `grid-template-rows` declaration that applies.**
+  Declaring it in a rule that appears *earlier* in the stylesheet than another
+  rule setting `grid-template-rows` on the same selector loses on source order,
+  silently. The symptom is subgrid reporting as supported (`CSS.supports` true)
+  while the child's computed `grid-template-rows` shows its own tracks and the
+  parent's read `0px 0px <total>`. Check the *computed* value on both, not the
+  source.
+- **The child must be a real grid item of the row.** Any wrapper between the
+  row and the subgrid child has to be `display: contents`, or subgrid has
+  nothing to inherit from.
+
+Put the plain fallback immediately before it — `grid-template-rows: auto auto
+1fr; grid-template-rows: subgrid;` — so a browser without subgrid keeps the
+line-reservation behavior instead of losing both.
+
+**Evidence:** Measured score-offset delta per pair, lopsided box-score lines
+injected. Before: 8 of 15 bench pairs misaligned. After equalizing rows only:
+still 8 of 15. After anchoring: 0 at 390px+, still 16px at 320–375px wherever a
+three-line name appeared. After subgrid: 0px score delta AND 0px name delta on
+all 24 pairs at 320 / 360 / 375 / 390 / 430 / 1100px.
+
+**Recommendation:** When a paired-column layout misaligns, measure the offset of
+the specific element from its own row's top on both sides — do not eyeball it
+and do not assume row heights are the problem. **A neighbouring fixed-size
+element will mask the true magnitude**: here a one-line name still occupied the
+30px headshot, so a full-line bug measured 2px and read as a rendering quirk
+rather than a layout bug, which is why it survived a round of "fixes." If the
+two sides must agree on anything at all, `subgrid` is the durable answer;
+per-side reservations only hold until content exceeds what you reserved.
