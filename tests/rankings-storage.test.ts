@@ -10,6 +10,7 @@ import {
   getCompositeConfig,
   saveCompositeConfig,
   toggleCompositeImport,
+  syncBuiltinImports,
   setBuiltinHidden,
   setCompositeWeight,
   _clearCache,
@@ -571,6 +572,69 @@ describe('rankings-storage', () => {
       toggleCompositeImport('b', false);
       expect(membersFromStore()).toHaveLength(2);
       expect(total()).toBe(100);
+    });
+  });
+
+  describe('hidden built-ins survive unrelated writes', () => {
+    // Every mutation path rebuilds the list from getAllImports(), which HIDES
+    // what the owner hid. Writing that back erased the hidden rows from raw
+    // storage, so the next reconciliation saw them as new and re-seeded them —
+    // saving an unrelated import silently un-hid a source.
+    const rawStore = () =>
+      JSON.parse(localStorageMock._getStore()['rankings.imports'] || '[]') as {
+        id: string;
+        provided?: boolean;
+      }[];
+
+    const snapshot = {
+      generatedAt: '2026-08-21T00:00:00.000Z',
+      sources: [
+        { id: 'mfl-adp', label: 'MFL ADP', type: 'adp', players: [{ id: 'p1', rank: 1 }] },
+        { id: 'sharks', label: 'Sharks', type: 'redraft', players: [{ id: 'p1', rank: 1 }] },
+      ],
+    };
+
+    it('keeps a hidden source in raw storage when another import is saved', () => {
+      syncBuiltinImports(snapshot as never, ['mfl-adp', 'sharks']);
+      setBuiltinHidden('builtin:sharks', true);
+      expect(getAllImports().some((i) => i.id === 'builtin:sharks')).toBe(false);
+
+      saveImport(createMockImport({ id: 'user-1', source: 'fantasypros', type: 'dynasty' }));
+
+      // Still present in RAW storage, still hidden from the filtered view.
+      expect(rawStore().some((i) => i.id === 'builtin:sharks')).toBe(true);
+      expect(getAllImports().some((i) => i.id === 'builtin:sharks')).toBe(false);
+    });
+
+    it('does not re-tick a hidden source on the next reconciliation', () => {
+      syncBuiltinImports(snapshot as never, ['mfl-adp', 'sharks']);
+      setBuiltinHidden('builtin:sharks', true);
+      saveImport(createMockImport({ id: 'user-1', source: 'fantasypros', type: 'dynasty' }));
+      syncBuiltinImports(snapshot as never, ['mfl-adp', 'sharks']);
+
+      const members = JSON.parse(
+        localStorageMock._getStore()['rankings.compositeConfig'] || '{"members":[]}',
+      ).members as { importId: string }[];
+      expect(members.some((m) => m.importId === 'builtin:sharks')).toBe(false);
+    });
+  });
+
+  describe('deleting an import rebalances the composite', () => {
+    it('leaves the remaining weights totalling 100', () => {
+      // Same class as the hide bug, in the sibling path.
+      const a = createMockImport({ id: 'a', source: 'fantasypros', type: 'dynasty' });
+      const b = createMockImport({ id: 'b', source: 'cbs', type: 'redraft' });
+      const c = createMockImport({ id: 'c', source: 'yahoo', type: 'adp' });
+      [a, b, c].forEach(saveImport);
+      ['a', 'b', 'c'].forEach((id) => toggleCompositeImport(id, true));
+
+      deleteImport('b');
+
+      const members = JSON.parse(
+        localStorageMock._getStore()['rankings.compositeConfig'],
+      ).members as { importId: string; weight: number }[];
+      expect(members.some((m) => m.importId === 'b')).toBe(false);
+      expect(members.reduce((s, m) => s + m.weight, 0)).toBe(100);
     });
   });
 });

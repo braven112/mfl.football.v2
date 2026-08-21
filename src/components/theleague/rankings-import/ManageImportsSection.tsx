@@ -236,6 +236,27 @@ export default function ManageImportsSection({ imports, onDelete, onReorder }: P
       )}
 
       {deleteTarget && (
+        {hiddenBuiltins.length > 0 && (
+          /* Hide is advertised as reversible ("you can show it again later"),
+             so there has to be a way back. Without this the state and the
+             handler existed but nothing rendered them, making Hide one-way. */
+          <div className="ri-manage__hidden-bar">
+            <span className="ri-manage__hidden-label">
+              {hiddenBuiltins.length} built-in source{hiddenBuiltins.length === 1 ? '' : 's'} hidden:
+            </span>
+            {hiddenBuiltins.map((imp) => (
+              <button
+                key={imp.id}
+                type="button"
+                className="ri-btn ri-btn--sm"
+                onClick={() => handleShow(imp)}
+              >
+                Show {SOURCE_LABELS[imp.source] || imp.source}
+              </button>
+            ))}
+          </div>
+        )}
+
         <ConfirmDeleteModal
           itemName={`${SOURCE_LABELS[deleteTarget.source] || deleteTarget.source} ${deleteTarget.type} rankings`}
           onConfirm={handleDeleteConfirm}

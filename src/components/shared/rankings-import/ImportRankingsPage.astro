@@ -877,6 +877,24 @@ const siteConfigs = [
     text-align: center;
   }
 
+  /* Restore control for built-in sources the owner hid. */
+  .ri-manage__hidden-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--content-bg-muted, #f8fafc);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: 6px;
+    font-size: 0.8125rem;
+  }
+
+  .ri-manage__hidden-label {
+    color: var(--content-text-muted, #64748b);
+  }
+
   .ri-manage__weight-input-wrap {
     display: inline-flex;
     align-items: baseline;

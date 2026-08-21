@@ -70,8 +70,19 @@ function readFromStorage(scope: RankingsScope): StoredRankingImport[] {
 
 function writeToStorage(imports: StoredRankingImport[]): void {
   const scope = activeRankingsScope();
-  localStorage.setItem(storageKey(scope), JSON.stringify(imports));
-  _cache.set(scope, imports);
+  // Callers build their new list from getAllImports(), which HIDES the
+  // built-ins the owner hid. Writing that straight back would erase those rows
+  // from raw storage, and the next reconciliation would see them as new —
+  // re-seeding them and re-ticking the ones this league defaults on. So an
+  // unrelated action like saving an import would silently un-hide a source.
+  // Carry them through every write instead.
+  const hidden = new Set(getHiddenBuiltins());
+  const preserved = readFromStorage(scope).filter((i) => i.provided && hidden.has(i.id));
+
+  localStorage.setItem(storageKey(scope), JSON.stringify([...imports, ...preserved]));
+  // Invalidate rather than set: the cached value has to go back through
+  // getAllImports()'s hidden-source filter.
+  _cache.delete(scope);
   writeLegacyKeys(imports);
   window.dispatchEvent(new CustomEvent('rankingsUpdated'));
   syncToServer();
@@ -367,7 +378,13 @@ export function deleteImport(id: string): void {
       const config = JSON.parse(raw) as CompositeRankConfig;
       const filtered = config.members.filter((m) => m.importId !== id);
       if (filtered.length !== config.members.length) {
-        localStorage.setItem(compositeConfigKey(), JSON.stringify({ members: filtered }));
+        // Rebalance for the same reason hiding does: weights are percentages,
+        // so removing a member without redistributing its share leaves the
+        // table showing numbers that add to less than 100.
+        localStorage.setItem(
+          compositeConfigKey(),
+          JSON.stringify({ members: rebalanceToHundred(filtered) }),
+        );
       }
     }
   } catch { /* ignore malformed config */ }
@@ -762,6 +779,19 @@ export async function initFromServer(): Promise<boolean> {
   }
 
   const serverImports = serverData.imports ?? [];
+
+  // Adopt the server's composite settings whenever this device has none of its
+  // own. Provided sources are stripped before syncing, so an owner who only
+  // uses the built-ins pushes `imports: []` with a real compositeConfig — and
+  // the three branches below all require a non-empty import list on one side,
+  // so their weights and tick state never reached a second device.
+  if (serverData.compositeConfig && getCompositeMembers().length === 0) {
+    localStorage.setItem(
+      compositeConfigKey(),
+      JSON.stringify(serverData.compositeConfig),
+    );
+    window.dispatchEvent(new CustomEvent('rankingsUpdated'));
+  }
 
   // Server has data, local is empty → adopt server data
   if (localImports.length === 0 && serverImports.length > 0) {

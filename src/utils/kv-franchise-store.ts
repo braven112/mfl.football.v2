@@ -15,6 +15,7 @@ import { getAuthUser, isCommissionerOrAdmin } from './auth';
 import { getRedis } from './redis-client';
 import { json, unauthorized } from './api-response';
 import { rankingsScopeForLeagueId, scopedKvKey } from './rankings-scope';
+import { getLeagueById } from '../config/leagues';
 
 export interface CreateKvFranchiseStoreOptions {
   /**
@@ -63,6 +64,15 @@ export function createKvFranchiseStore(
     // `${prefix}:` — reject it so malformed sessions can't pool data.
     if (!user.franchiseId) return null;
     if (requireAdmin && !isCommissionerOrAdmin(user)) return null;
+
+    // Reject a session we can't attribute to a league rather than letting it
+    // fall through. rankingsScopeForLeagueId answers "which bucket", and its
+    // default is TheLeague — so a malformed or legacy session carrying no
+    // recognizable leagueId would read and write TheLeague's `ri:{franchiseId}`
+    // under someone else's franchise number. Franchise ids collide across
+    // leagues, which is what makes that a data-exposure path and not just an
+    // odd default.
+    if (!user.leagueId || !getLeagueById(user.leagueId)) return null;
 
     const scope = rankingsScopeForLeagueId(user.leagueId);
     const requested = new URL(request.url).searchParams.get('league');
