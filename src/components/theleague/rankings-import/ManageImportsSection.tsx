@@ -21,11 +21,11 @@ import {
   deleteImport,
   reorderImports,
   getAveragePosition,
-  getCompositeConfig,
   toggleCompositeImport,
   setCompositeWeight,
   setBuiltinHidden,
   getHiddenBuiltinImports,
+  getCompositeMembers,
 } from '../../../utils/rankings-storage';
 import type { StoredRankingImport, CompositeImportConfig } from '../../../types/rankings-import';
 import { SOURCE_LABELS, AVERAGE_IMPORT_ID } from '../../../utils/rankings-lookup';
@@ -46,11 +46,11 @@ type SortableItem =
 export default function ManageImportsSection({ imports, onDelete, onReorder }: Props) {
   const [selectedImport, setSelectedImport] = useState<StoredRankingImport | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<StoredRankingImport | null>(null);
+  // getCompositeMembers(), not getCompositeConfig(): the latter returns null
+  // below 2 members because a one-source composite isn't meaningful, but the
+  // table still has to render that source as ticked with its weight.
   const [compositeMembers, setCompositeMembers] = useState<Map<string, CompositeImportConfig>>(
-    () => {
-      const config = getCompositeConfig();
-      return new Map(config?.members.map((m) => [m.importId, m]) ?? []);
-    },
+    () => new Map(getCompositeMembers().map((m) => [m.importId, m])),
   );
 
   const sensors = useSensors(
@@ -60,10 +60,10 @@ export default function ManageImportsSection({ imports, onDelete, onReorder }: P
     }),
   );
 
-  // Refresh composite state when imports change (e.g. deletion may invalidate members)
+  // Refresh composite state when imports change (e.g. deletion may invalidate
+  // members, and the built-in sync seeds new ones after mount).
   useEffect(() => {
-    const config = getCompositeConfig();
-    setCompositeMembers(new Map(config?.members.map((m) => [m.importId, m]) ?? []));
+    setCompositeMembers(new Map(getCompositeMembers().map((m) => [m.importId, m])));
   }, [imports]);
 
   const showAverage = imports.length >= 2;
@@ -105,22 +105,21 @@ export default function ManageImportsSection({ imports, onDelete, onReorder }: P
     }
   };
 
+  /**
+   * Re-read the whole member list from storage after any change.
+   *
+   * Never patch this optimistically: adding, removing or reweighting a source
+   * rebalances EVERY member so the weights still total 100, so touching one
+   * row changes the others. Patching just the row that was clicked left the
+   * siblings showing their old percentages while the store held the new ones.
+   */
+  const refreshCompositeMembers = () => {
+    setCompositeMembers(new Map(getCompositeMembers().map((m) => [m.importId, m])));
+  };
+
   const handleToggleComposite = (importId: string, included: boolean) => {
     toggleCompositeImport(importId, included);
-    const config = getCompositeConfig();
-    setCompositeMembers(new Map(config?.members.map((m) => [m.importId, m]) ?? []));
-    // Read raw config to show members even when < 2 (UI shows checkboxes always)
-    try {
-      const raw = localStorage.getItem('rankings.compositeConfig');
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed.members) {
-          setCompositeMembers(new Map(parsed.members.map((m: CompositeImportConfig) => [m.importId, m])));
-        }
-      } else if (!included) {
-        setCompositeMembers(new Map());
-      }
-    } catch { /* ignore */ }
+    refreshCompositeMembers();
     onReorder();
   };
 
@@ -156,12 +155,9 @@ export default function ManageImportsSection({ imports, onDelete, onReorder }: P
 
   const handleSetWeight = (importId: string, weight: number) => {
     setCompositeWeight(importId, weight);
-    const updated = new Map(compositeMembers);
-    const member = updated.get(importId);
-    if (member) {
-      updated.set(importId, { ...member, weight });
-      setCompositeMembers(updated);
-    }
+    // Re-read rather than patch — see refreshCompositeMembers. Setting one
+    // weight re-totals the others to keep the sum at 100.
+    refreshCompositeMembers();
     onReorder();
   };
 

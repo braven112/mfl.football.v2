@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { execSync } from 'node:child_process';
 import {
   DEFAULT_RANKINGS_SCOPE,
   activeRankingsScope,
@@ -145,6 +146,42 @@ describe('rankings scope', () => {
     it('defaults with no document at all (SSR)', () => {
       delete (globalThis as any).document;
       expect(activeRankingsScope()).toBe(DEFAULT_RANKINGS_SCOPE);
+    });
+  });
+
+  describe('no component reaches past the scope helpers', () => {
+    // A component reading `localStorage.getItem('rankings.compositeConfig')`
+    // directly gets TheLeague's key on every page — on an AFL or best-ball
+    // page that is the wrong league's config, or nothing at all. That shipped
+    // once (ManageImportsSection) and rendered stale tick state on two of the
+    // three leagues, so it is worth failing the build over.
+    const BASE_KEYS = [
+      'rankings.imports',
+      'rankings.compositeConfig',
+      'rankings.averagePosition',
+      'rankings.hiddenBuiltins',
+      'ri.localCache',
+      'cr.localCache',
+    ];
+
+    it('never hardcodes a rankings storage key outside the scope helpers', () => {
+      const files = execSync(
+        "git ls-files 'src/components/**/*.tsx' 'src/components/**/*.astro' 'src/hooks/**/*.ts' 'src/pages/**/*.astro'",
+        { encoding: 'utf8' },
+      )
+        .split('\n')
+        .filter(Boolean);
+
+      const offenders: string[] = [];
+      for (const file of files) {
+        const source = readFileSync(file, 'utf8');
+        for (const key of BASE_KEYS) {
+          if (source.includes(`'${key}'`) || source.includes(`"${key}"`)) {
+            offenders.push(`${file} → ${key}`);
+          }
+        }
+      }
+      expect(offenders, 'use the exports in rankings-storage.ts instead').toEqual([]);
     });
   });
 });

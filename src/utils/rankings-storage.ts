@@ -442,6 +442,27 @@ export function getCompositeConfig(): CompositeRankConfig | null {
 }
 
 /**
+ * Every composite member, unfiltered.
+ *
+ * `getCompositeConfig()` deliberately returns null below 2 members (the
+ * composite isn't meaningful with one), but the UI still has to render each
+ * source's tick state and weight — so it needs the raw list. It used to reach
+ * into localStorage for `'rankings.compositeConfig'` directly, which is
+ * TheLeague's key: on an AFL or best-ball page that read the wrong league's
+ * config, or nothing at all. Scoped here so no caller can get that wrong.
+ */
+export function getCompositeMembers(): CompositeImportConfig[] {
+  try {
+    const raw = localStorage.getItem(compositeConfigKey());
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as CompositeRankConfig;
+    return Array.isArray(parsed.members) ? parsed.members : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Save composite rank configuration.
  * Fires 'rankingsUpdated' event so all consumers react.
  */
