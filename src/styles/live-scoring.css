@@ -401,6 +401,14 @@ html.dark .ls-detail {
 }
 .ls-mx-row:last-child { border-bottom: 0; }
 .ls-mx-pos {
+  /* NOT stretched, even though its siblings are. `.ls-mx-row` switched to
+     `align-items: stretch` so the two player cells share a bottom edge; that
+     also stretched THIS cell, and a stretched cell makes the `min-height` +
+     `align-items: center` below centre the label over the whole row instead of
+     over its first line. Measured 13px of drift on any row carrying a
+     box-score line — the exact bug the comment below guards against, walked in
+     through the parent. */
+  align-self: start;
   text-align: center; font-family: var(--font-display); font-weight: var(--font-weight-bold);
   font-size: 0.72rem; color: var(--content-text-muted);
   /* Centered on the row's FIRST line, not on the cell — same reason: a stat

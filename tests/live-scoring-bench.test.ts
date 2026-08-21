@@ -139,6 +139,22 @@ describe('GET /api/live-scoring — starter / bench split', () => {
     expect(body.players).toEqual({});
   });
 
+  it('reports an upstream MFL failure as ok:false with EMPTY collections', async () => {
+    // This is the shape the client has to defend against, and the reason
+    // `if (data.players)` cannot be the guard: the route always emits the key,
+    // and `{}` is truthy. A client that treats this as a payload wipes every
+    // score and player row off a live board while reporting the poll healthy.
+    fetchMock.mockResolvedValueOnce(bad(503)).mockResolvedValueOnce(bad(404));
+    const body = await call();
+    expect(body.ok).toBe(false);
+    expect(body).toHaveProperty('players');
+    expect(body).toHaveProperty('bench');
+    expect(body.players).toEqual({});
+    expect(body.bench).toEqual({});
+    // Truthy despite being empty — the trap in one assertion.
+    expect(Boolean(body.players)).toBe(true);
+  });
+
   it('does not fold the bench back into the franchise score', async () => {
     // `score` is MFL's own franchise total and must pass through untouched —
     // it is what the scoreboard card prints. A bench sum added anywhere here

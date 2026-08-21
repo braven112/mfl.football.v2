@@ -99,18 +99,33 @@ function useLiveScoring(props: LiveScoringPageProps) {
         return;
       }
       const data: LiveScoringResponse = await res.json();
+
+      // `res.ok` is not "the data is good". Our own route answers 200 with
+      // `ok: false` and EMPTY collections when the upstream MFL request failed
+      // — the same soft-failure shape MFL itself uses. Treating that as a
+      // payload wipes every score, every player row and both bench drawers off
+      // a live board, then reports the poll as healthy: the exact "we couldn't
+      // reach the feed" / "nothing is happening" merge this page is built to
+      // keep apart. Keep the last good data and say we're reconnecting.
+      //
+      // Note `if (data.players)` cannot do this job: the route always emits the
+      // key, and `{}` is truthy. The server-side twin already gates on
+      // `snapshot?.ok !== false`; this is the client half of the same rule.
+      if (data.ok === false) {
+        setFeed((f) => ({ ...f, status: 'error' }));
+        return;
+      }
+
       setScores(data.scores ?? {});
       setRemaining(data.remaining ?? {});
       if (data.matchups?.length) setMatchups(data.matchups);
       if (data.players) {
         setPlayers(data.players);
-        // Bench rides on the SAME guard, then defaults to empty rather than
-        // being skipped when absent. The guard is "did this payload carry
-        // rosters at all" — an outage response has neither map, and clearing
-        // the board on one would drop every player mid-Sunday. Given rosters,
-        // though, a missing bench is a real answer: a franchise can start its
-        // whole roster, and a drop can empty a bench that had rows a poll ago.
-        // Skipping the write there would leave released players on screen.
+        // Bench rides on the same write, defaulting to empty rather than being
+        // skipped when absent — past the `ok` gate above, a missing bench is a
+        // real answer: a franchise can start its whole roster, and a drop can
+        // empty a bench that had rows a poll ago. Skipping the write there
+        // would leave released players on screen.
         setBench(data.bench ?? {});
       }
       if (data.playersYetToPlay) setYtp(data.playersYetToPlay);
@@ -628,8 +643,13 @@ function BenchSection({ away, home, teams, matchup, meta, gamesByTeam, boxScore,
   // would let the taller side's rows slide up into the gap.
   const cell = (row: LivePlayerRow | undefined, side: 'left' | 'right', i: number) => (
     <div>
+      {/* Keyed by PLAYER, not by position in the list. sortBenchRows reorders
+          by live points on every poll, and PlayerRow hides a 404'd headshot by
+          setting style.display imperatively — which React does not manage, so
+          a position-reconciled row inherits the previous occupant's hidden
+          avatar. A key that changes with the player forces a remount. */}
       {row
-        ? <PlayerRow row={row} meta={meta[row.id]} side={side}
+        ? <PlayerRow key={row.id} row={row} meta={meta[row.id]} side={side}
                      game={gameFor(row)} box={boxScore[row.id]} detailStatus={detailStatus} />
         : i === 0 ? <div className="ls-bench-none">No bench players</div> : null}
     </div>
@@ -748,12 +768,12 @@ function MatchupDetail({
           return (
             <div className="ls-mx-row" key={i}>
               <div>{a && (
-                <PlayerRow row={a} meta={meta[a.id]} side="left" slot={awayRows[i]?.slot}
+                <PlayerRow key={a.id} row={a} meta={meta[a.id]} side="left" slot={awayRows[i]?.slot}
                            game={gameFor(a)} box={boxScore[a.id]} detailStatus={detailStatus} />
               )}</div>
               <div className="ls-mx-pos">{slot}</div>
               <div>{h && (
-                <PlayerRow row={h} meta={meta[h.id]} side="right" slot={homeRows[i]?.slot}
+                <PlayerRow key={h.id} row={h} meta={meta[h.id]} side="right" slot={homeRows[i]?.slot}
                            game={gameFor(h)} box={boxScore[h.id]} detailStatus={detailStatus} />
               )}</div>
             </div>

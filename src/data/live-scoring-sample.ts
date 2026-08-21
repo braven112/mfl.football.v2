@@ -554,15 +554,24 @@ export function getLiveScoringSample(
       const isDone = phase.state === 'post';
       const finalPts = round2(seed.live);
       const live = isDone ? finalPts : round2(finalPts * phase.progress);
-      playerMeta[seed.id] = {
-        id: seed.id,
-        name: m.name ?? 'Unknown Player',
-        position: m.position ?? '',
-        nflTeam,
-        headshot: m.headshot ?? '',
-        espnId: m.espnId ?? null,
-        projected: isDone ? 0 : finalPts,
-      };
+      // STARTERS OWN THE ENTRY. `playerMeta` is one map across every franchise,
+      // and in the AFL (`duplicatePlayers: true`) the same player is routinely
+      // a starter for one team and a bench row for another — 43 ids in the
+      // committed feeds. Writing unconditionally lets a live bench row reset a
+      // forced-final starter's deliberately-zeroed `projected`, which lights
+      // the green "boom" cell on a player whose game is over. It happens not to
+      // occur on today's data, which is exactly why it would go unnoticed.
+      if (!playerMeta[seed.id]) {
+        playerMeta[seed.id] = {
+          id: seed.id,
+          name: m.name ?? 'Unknown Player',
+          position: m.position ?? '',
+          nflTeam,
+          headshot: m.headshot ?? '',
+          espnId: m.espnId ?? null,
+          projected: isDone ? 0 : finalPts,
+        };
+      }
       benchRows.push({
         id: seed.id,
         live,

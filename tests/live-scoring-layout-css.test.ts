@@ -214,6 +214,16 @@ describe('a matchup row keeps its two players level', () => {
     // gained, which is the same bug wearing the center column's clothes.
     expect(valueOf(base, '.ls-mx-pos', 'min-height')).toBe('var(--ls-row-line1)');
     expect(valueOf(base, '.ls-mx-pos', 'align-items')).toBe('center');
+    // …and the cell must not be STRETCHED, or those two do the opposite of
+    // what they say: a stretched cell is the whole row tall, so centring in it
+    // centres over the row rather than over its first line. `.ls-mx-row` is
+    // `align-items: stretch` for the player cells' benefit, and this label
+    // has to opt out of it. Measured 13px of drift on a row with a box-score
+    // line before this line existed.
+    expect(
+      valueOf(base, '.ls-mx-pos', 'align-self'),
+      'the slot label must opt out of the row stretch',
+    ).toBe('start');
   });
 
   it('indents the box-score line to where the player’s name starts', () => {
