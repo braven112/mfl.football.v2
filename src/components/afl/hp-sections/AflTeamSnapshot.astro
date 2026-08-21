@@ -38,9 +38,11 @@ interface Props {
   nextOpponent?: { name?: string; icon?: string };
   rosterCount?: number;
   /**
-   * Season the roster count came from. The offseason card reads the last
-   * COMPLETED season's roster, so the sub line has to name the year — an
-   * unlabelled "20 players" in August is last year's team, not this one's.
+   * Set ONLY when `rosterCount` is not the current league year's roster —
+   * i.e. the caller had to fall back because MFL has not populated the new
+   * year's feed yet. The sub line then names the year, because an unlabelled
+   * "20 players" is a team that no longer exists. Leave undefined for a
+   * current roster and the tile just says "players".
    */
   rosterYear?: number;
   /** Active roster target (used to surface "X of N" slot fill). */

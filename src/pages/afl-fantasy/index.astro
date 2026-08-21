@@ -138,15 +138,39 @@ function resolveSeasonYearWithData(): number {
 
 const seasonYear = resolveSeasonYearWithData();
 
-function pickFeed(feeds: Record<string, unknown>, suffix: string) {
-  return getModule(feeds[`../../../data/afl-fantasy/mfl-feeds/${seasonYear}/${suffix}`]);
+/**
+ * Rosters run on the LEAGUE year, which is NOT the season year — the two clocks
+ * are ~3 months apart for the AFL (June 1 rollover vs Labor Day). CLAUDE.md's
+ * rule: anything roster-management-shaped uses the league year.
+ *
+ * Reading rosters off `seasonYear` showed the last COMPLETED season's roster
+ * for the whole offseason — in August that is 20 players from a team that no
+ * longer exists, while the actual roster is the 7 keepers the draft is about to
+ * fill out. Walks back the same way `resolveSeasonYearWithData` does, because
+ * MFL creates the new year's directory before it holds anything.
+ */
+function resolveRosterYearWithData(): number {
+  const preferred = getAflLeagueYear(effectiveDate);
+  for (let y = preferred; y >= preferred - 5; y--) {
+    const feed = getModule(rosterFeeds[`../../../data/afl-fantasy/mfl-feeds/${y}/rosters.json`]) as { rosters?: { franchise?: any | any[] } } | undefined;
+    const franchises = feed?.rosters?.franchise;
+    if (Array.isArray(franchises) ? franchises.length : franchises) return y;
+  }
+  return preferred;
+}
+
+const aflLeagueYear = getAflLeagueYear(effectiveDate);
+const rosterYear = resolveRosterYearWithData();
+
+function pickFeed(feeds: Record<string, unknown>, suffix: string, year = seasonYear) {
+  return getModule(feeds[`../../../data/afl-fantasy/mfl-feeds/${year}/${suffix}`]);
 }
 
 const standingsFeed = pickFeed(standingsFeeds, 'standings.json') as { leagueStandings?: { franchise: any[] } } | undefined;
 const standingsFranchises: any[] = standingsFeed?.leagueStandings?.franchise ?? [];
 
-// Roster count for the user's team
-const rostersFeed = pickFeed(rosterFeeds, 'rosters.json') as { rosters?: { franchise: any | any[] } } | undefined;
+// Roster count for the user's team, from the current league year.
+const rostersFeed = pickFeed(rosterFeeds, 'rosters.json', rosterYear) as { rosters?: { franchise: any | any[] } } | undefined;
 const rosterFranchises = rostersFeed?.rosters?.franchise
   ? Array.isArray(rostersFeed.rosters.franchise) ? rostersFeed.rosters.franchise : [rostersFeed.rosters.franchise]
   : [];
@@ -243,7 +267,7 @@ const lastVisitDate = Astro.cookies.get('whats_new_last_visit')?.value ?? null;
         userConferenceName={userConferenceName}
         record={record}
         rosterCount={rosterCount}
-        rosterYear={inSeasonVariant ? undefined : seasonYear}
+        rosterYear={rosterYear === aflLeagueYear ? undefined : rosterYear}
         rosterLimit={28}
         spotlight={spotlight}
         variant={inSeasonVariant ? 'in-season' : 'offseason'}
