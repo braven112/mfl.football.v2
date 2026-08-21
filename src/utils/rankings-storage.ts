@@ -8,14 +8,41 @@
  * Also handles migration from the legacy auctionPredictor.* localStorage keys.
  */
 
-import type { StoredRankingImport, CompositeRankConfig, SyncedRankingsPayload } from '../types/rankings-import';
+import type {
+  StoredRankingImport,
+  CompositeRankConfig,
+  SyncedRankingsPayload,
+  BuiltinRankingSource,
+  CompositeImportConfig,
+} from '../types/rankings-import';
 import { loadFromServer, saveToServer } from './rankings-sync';
+import {
+  DEFAULT_RANKINGS_SCOPE,
+  activeRankingsScope,
+  scopedLocalKey,
+  type RankingsScope,
+} from './rankings-scope';
 
-const STORAGE_KEY = 'rankings.imports';
-const AVG_POSITION_KEY = 'rankings.averagePosition';
-const COMPOSITE_CONFIG_KEY = 'rankings.compositeConfig';
+// ---------------------------------------------------------------------------
+// Keys are per-league (see rankings-scope.ts) and therefore functions, not
+// constants: a single module instance outlives a ClientRouter navigation from
+// one league's page to another's, so the scope has to be re-read per call.
+// TheLeague's scope returns these base strings unchanged.
+// ---------------------------------------------------------------------------
 
-// Legacy keys from the old auction predictor rankings import
+const STORAGE_BASE_KEY = 'rankings.imports';
+const AVG_POSITION_BASE_KEY = 'rankings.averagePosition';
+const COMPOSITE_CONFIG_BASE_KEY = 'rankings.compositeConfig';
+const HIDDEN_BUILTINS_BASE_KEY = 'rankings.hiddenBuiltins';
+
+const storageKey = (scope = activeRankingsScope()) => scopedLocalKey(STORAGE_BASE_KEY, scope);
+const avgPositionKey = (scope = activeRankingsScope()) => scopedLocalKey(AVG_POSITION_BASE_KEY, scope);
+const compositeConfigKey = (scope = activeRankingsScope()) => scopedLocalKey(COMPOSITE_CONFIG_BASE_KEY, scope);
+const hiddenBuiltinsKey = (scope = activeRankingsScope()) => scopedLocalKey(HIDDEN_BUILTINS_BASE_KEY, scope);
+
+// Legacy keys from the old auction predictor rankings import.
+// TheLeague-only: they predate multi-league by years and only TheLeague's
+// auction predictor ever read them, so they are NOT scoped.
 const LEGACY_KEYS = [
   'auctionPredictor.dlfRankings',
   'auctionPredictor.footballguysRankings',
@@ -25,14 +52,16 @@ const LEGACY_KEYS = [
 
 // ---------------------------------------------------------------------------
 // In-memory cache — avoids repeated localStorage.getItem + JSON.parse.
+// Keyed BY SCOPE: one map entry per league, so crossing leagues in a single
+// page session can't serve TheLeague's imports on an AFL page.
 // Invalidated on every write (saveImport, deleteImport, migrateFromLegacyKeys).
 // ---------------------------------------------------------------------------
 
-let _cache: StoredRankingImport[] | null = null;
+const _cache = new Map<RankingsScope, StoredRankingImport[]>();
 
-function readFromStorage(): StoredRankingImport[] {
+function readFromStorage(scope: RankingsScope): StoredRankingImport[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(storageKey(scope));
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
@@ -40,8 +69,20 @@ function readFromStorage(): StoredRankingImport[] {
 }
 
 function writeToStorage(imports: StoredRankingImport[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(imports));
-  _cache = imports;
+  const scope = activeRankingsScope();
+  // Callers build their new list from getAllImports(), which HIDES the
+  // built-ins the owner hid. Writing that straight back would erase those rows
+  // from raw storage, and the next reconciliation would see them as new —
+  // re-seeding them and re-ticking the ones this league defaults on. So an
+  // unrelated action like saving an import would silently un-hide a source.
+  // Carry them through every write instead.
+  const hidden = new Set(getHiddenBuiltins());
+  const preserved = readFromStorage(scope).filter((i) => i.provided && hidden.has(i.id));
+
+  localStorage.setItem(storageKey(scope), JSON.stringify([...imports, ...preserved]));
+  // Invalidate rather than set: the cached value has to go back through
+  // getAllImports()'s hidden-source filter.
+  _cache.delete(scope);
   writeLegacyKeys(imports);
   window.dispatchEvent(new CustomEvent('rankingsUpdated'));
   syncToServer();
@@ -49,17 +90,239 @@ function writeToStorage(imports: StoredRankingImport[]): void {
 
 /** Exported for tests — clears the in-memory cache. */
 export function _clearCache(): void {
-  _cache = null;
+  _cache.clear();
 }
 
-// Invalidate cache when another tab writes to localStorage
+// Invalidate cache when another tab writes to localStorage. The tab could be
+// on a different league, so match any scope's key rather than just this one's.
 if (typeof window !== 'undefined') {
   window.addEventListener('storage', (e: StorageEvent) => {
-    if (e.key === STORAGE_KEY) _cache = null;
-    if (e.key === COMPOSITE_CONFIG_KEY) {
+    if (!e.key) return;
+    if (e.key === STORAGE_BASE_KEY || e.key.startsWith(`${STORAGE_BASE_KEY}.`)) {
+      _cache.clear();
+    }
+    if (
+      e.key === COMPOSITE_CONFIG_BASE_KEY ||
+      e.key.startsWith(`${COMPOSITE_CONFIG_BASE_KEY}.`)
+    ) {
       window.dispatchEvent(new CustomEvent('rankingsUpdated'));
     }
   });
+}
+
+// ---------------------------------------------------------------------------
+// Built-in sources
+// ---------------------------------------------------------------------------
+/**
+ * Built-in sources the owner has hidden.
+ *
+ * A provided source can't be deleted — the next snapshot would just bring it
+ * back — but "I built my own board out of FBG and DLF and don't want the
+ * defaults in my way" is a real need, so hiding is the durable opt-out.
+ * Hiding also drops the source from the composite; showing it again does NOT
+ * silently re-add it, because by then the owner has a weighting they chose.
+ */
+export function getHiddenBuiltins(): string[] {
+  try {
+    const raw = localStorage.getItem(hiddenBuiltinsKey());
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export function setBuiltinHidden(importId: string, hidden: boolean): void {
+  const current = new Set(getHiddenBuiltins());
+  if (hidden) current.add(importId);
+  else current.delete(importId);
+  localStorage.setItem(hiddenBuiltinsKey(), JSON.stringify([...current]));
+
+  // Hiding removes it from the composite too — leaving a hidden source
+  // silently weighting "My Rank" is exactly the confusion this avoids. The
+  // survivors are rebalanced back to 100 for the same reason unticking one is:
+  // weights are percentages, and dropping a 31.7% source without redistributing
+  // leaves the table showing three numbers that add to 68.3.
+  if (hidden) {
+    try {
+      const raw = localStorage.getItem(compositeConfigKey());
+      if (raw) {
+        const config = JSON.parse(raw) as CompositeRankConfig;
+        const filtered = config.members.filter((m) => m.importId !== importId);
+        if (filtered.length !== config.members.length) {
+          localStorage.setItem(
+            compositeConfigKey(),
+            JSON.stringify({ members: rebalanceToHundred(filtered) }),
+          );
+        }
+      }
+    } catch { /* ignore malformed config */ }
+  }
+
+  _cache.clear();
+  window.dispatchEvent(new CustomEvent('rankingsUpdated'));
+}
+
+
+/**
+ * Reconcile the build-time ranking snapshot into this league's store.
+ *
+ * The built-in sources live in the SAME array as a user's own imports, so
+ * every existing consumer — the composite, the Free Agents columns, the draft
+ * queue, the Custom Rankings seed — reads one list and needed no changes.
+ * They are marked `provided` so the UI can refuse to delete them.
+ *
+ * Three rules that matter:
+ *
+ * - **Refresh in place.** A provided import is replaced when the snapshot's
+ *   `generatedAt` moves, keyed on source+type, so the daily cron's new numbers
+ *   land without duplicating a row or disturbing the user's own imports.
+ * - **On by default, once.** A newly-seeded source is added to the composite
+ *   config the first time it appears. After that the user's tick state is
+ *   authoritative — re-adding it on every refresh would silently undo an
+ *   owner who deliberately unticked it.
+ * - **No write when nothing changed.** This runs on every page load; an
+ *   unconditional write would fire `rankingsUpdated` and push to the server
+ *   on every visit.
+ */
+export function syncBuiltinImports(
+  snapshot: { generatedAt?: string; sources?: BuiltinRankingSource[] } | null,
+  /**
+   * Source ids ticked into "My Rank" on first sight, from the league registry
+   * (`defaultRankingSources`). EVERY source is stored and selectable; this only
+   * decides the opening composite, because dynasty trade values are the wrong
+   * default for a league that re-drafts and redraft ADP is the wrong default
+   * for a contract dynasty league. Omitted → nothing auto-ticks.
+   */
+  defaultSourceIds: string[] = [],
+  /**
+   * id → display metadata for the league's players, used to fill in the
+   * name/position/team the snapshot doesn't carry. Optional: without it the
+   * board still works, the View modal just shows bare ranks.
+   */
+  playerMeta?: Map<string, { name: string; position: string; team: string }>,
+): boolean {
+  if (!snapshot?.sources?.length) return false;
+
+  const generatedAt = snapshot.generatedAt ?? '';
+  // Read the RAW store, not getAllImports() — that view hides the built-ins
+  // the owner hid, and reconciling against it would treat every hidden source
+  // as missing: re-seeded on every load, and re-added to the composite because
+  // `seenBefore` wouldn't contain it. Hiding is a read-time filter precisely
+  // so this stays a pure function of the snapshot.
+  const scope = activeRankingsScope();
+  const existing = readFromStorage(scope);
+  const userImports = existing.filter((i) => !i.provided);
+  const priorProvided = existing.filter((i) => i.provided);
+
+  // Nothing to do if we already hold this exact snapshot.
+  const upToDate =
+    priorProvided.length === snapshot.sources.length &&
+    priorProvided.every((i) => i.generatedAt === generatedAt);
+  if (upToDate) return false;
+
+  const seenBefore = new Set(priorProvided.map((i) => `${i.source}:${i.type}`));
+
+  const provided: StoredRankingImport[] = snapshot.sources.map((src) => ({
+    // Stable id per source+type so composite membership survives a refresh.
+    id: `builtin:${src.id}`,
+    source: src.id as StoredRankingImport['source'],
+    type: src.type as StoredRankingImport['type'],
+    importDate: generatedAt || new Date().toISOString(),
+    generatedAt,
+    provided: true,
+    rankings: src.players.map((p) => ({
+      rank: p.rank,
+      playerId: p.id,
+      // The snapshot carries id + rank only, but these fields are what the
+      // View modal renders — leaving them blank showed an empty Name/Pos/Team
+      // for every row of a source reporting a 100% match rate. Enriched from
+      // the league's player list when one is supplied.
+      playerName: playerMeta?.get(p.id)?.name ?? '',
+      position: playerMeta?.get(p.id)?.position ?? '',
+      team: playerMeta?.get(p.id)?.team ?? '',
+      // Every built-in source is resolved to an MFL id at build time — by id
+      // for the MFL feeds and FantasyCalc, by name once for Sleeper and ESPN.
+      matched: true,
+      confidence: 1,
+    })),
+    stats: {
+      total: src.players.length,
+      matched: src.players.length,
+      unmatched: 0,
+      matchRate: 100,
+    },
+  }));
+
+  // Supersede a legacy manual import of the same source+type.
+  //
+  // ESPN, FantasyCalc and Sleeper used to be one-click imports, so an owner who
+  // used them already has a stored import with source 'espn' — and the built-in
+  // now carries the same source. Keeping both shows the source twice and lets
+  // the composite weight that board twice. The built-in wins (it re-matches at
+  // build time and refreshes daily), but any composite membership the old row
+  // held is carried over so the owner's weighting survives the swap.
+  const providedKeys = new Set(provided.map((i) => `${i.source}:${i.type}`));
+  const superseded = userImports.filter((i) => providedKeys.has(`${i.source}:${i.type}`));
+  const keptUserImports = userImports.filter((i) => !providedKeys.has(`${i.source}:${i.type}`));
+
+  if (superseded.length > 0) {
+    try {
+      const raw = localStorage.getItem(compositeConfigKey());
+      if (raw) {
+        const config = JSON.parse(raw) as CompositeRankConfig;
+        let changed = false;
+        for (const old of superseded) {
+          const member = config.members.find((m) => m.importId === old.id);
+          if (!member) continue;
+          const replacement = provided.find(
+            (pv) => `${pv.source}:${pv.type}` === `${old.source}:${old.type}`,
+          );
+          if (replacement && !config.members.some((m) => m.importId === replacement.id)) {
+            member.importId = replacement.id;
+          } else {
+            config.members = config.members.filter((m) => m.importId !== old.id);
+          }
+          changed = true;
+        }
+        if (changed) {
+          localStorage.setItem(compositeConfigKey(), JSON.stringify(config));
+        }
+      }
+    } catch { /* ignore malformed config */ }
+  }
+
+  // Provided sources sort ahead of the user's own imports.
+  const next = [...provided, ...keptUserImports];
+  localStorage.setItem(storageKey(scope), JSON.stringify(next));
+  // Invalidate rather than set: the cached value must go back through
+  // getAllImports()'s hidden-source filter.
+  _cache.delete(scope);
+
+  // Newly-seeded sources join the composite IF this league defaults them on;
+  // previously-seen ones keep whatever the owner set.
+  const defaults = new Set(defaultSourceIds);
+  const fresh = provided.filter(
+    (i) => !seenBefore.has(`${i.source}:${i.type}`) && defaults.has(i.source),
+  );
+  if (fresh.length > 0) {
+    const raw = localStorage.getItem(compositeConfigKey());
+    const config: CompositeRankConfig = raw ? JSON.parse(raw) : { members: [] };
+    for (const imp of fresh) {
+      if (!config.members.find((m) => m.importId === imp.id)) {
+        config.members.push({ importId: imp.id, weight: 0 });
+      }
+    }
+    // Seeded defaults start as an even split summing to 100, so the very first
+    // board an owner sees already reads as percentages.
+    localStorage.setItem(
+      compositeConfigKey(),
+      JSON.stringify({ members: rebalanceToHundred(config.members) }),
+    );
+  }
+
+  window.dispatchEvent(new CustomEvent('rankingsUpdated'));
+  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -67,9 +330,27 @@ if (typeof window !== 'undefined') {
 // ---------------------------------------------------------------------------
 
 export function getAllImports(): StoredRankingImport[] {
-  if (_cache !== null) return _cache;
-  _cache = readFromStorage();
-  return _cache;
+  const scope = activeRankingsScope();
+  const cached = _cache.get(scope);
+  if (cached !== undefined) return cached;
+  // Hidden built-ins are filtered on READ rather than dropped on write, so
+  // un-hiding is instant and the snapshot reconciliation stays a pure
+  // function of the build data.
+  const hidden = new Set(getHiddenBuiltins());
+  const fresh = readFromStorage(scope).filter(
+    (i) => !(i.provided && hidden.has(i.id)),
+  );
+  _cache.set(scope, fresh);
+  return fresh;
+}
+
+/** Built-in sources present in the snapshot but hidden by the owner. */
+export function getHiddenBuiltinImports(): StoredRankingImport[] {
+  const hidden = new Set(getHiddenBuiltins());
+  if (hidden.size === 0) return [];
+  return readFromStorage(activeRankingsScope()).filter(
+    (i) => i.provided && hidden.has(i.id),
+  );
 }
 
 /**
@@ -102,7 +383,7 @@ export function saveImport(importData: StoredRankingImport): void {
     // Update composite config to reference the new import ID
     if (oldId !== newId) {
       try {
-        const raw = localStorage.getItem(COMPOSITE_CONFIG_KEY);
+        const raw = localStorage.getItem(compositeConfigKey());
         if (raw) {
           const config = JSON.parse(raw) as CompositeRankConfig;
           let changed = false;
@@ -113,7 +394,7 @@ export function saveImport(importData: StoredRankingImport): void {
             }
           }
           if (changed) {
-            localStorage.setItem(COMPOSITE_CONFIG_KEY, JSON.stringify(config));
+            localStorage.setItem(compositeConfigKey(), JSON.stringify(config));
           }
         }
       } catch { /* ignore malformed config */ }
@@ -128,17 +409,30 @@ export function saveImport(importData: StoredRankingImport): void {
 }
 
 export function deleteImport(id: string): void {
+  // A provided source is refreshed from the build snapshot, so deleting it
+  // would just resurrect it on the next load. Unticking "My Rank" is the
+  // opt-out. Guarded here as well as in the UI so a stray call can't put the
+  // store into a state that fights the next sync.
+  const target = getAllImports().find((i) => i.id === id);
+  if (target?.provided) return;
+
   const imports = getAllImports().filter((i) => i.id !== id);
   writeToStorage(imports);
 
   // Remove from composite config if present
   try {
-    const raw = localStorage.getItem(COMPOSITE_CONFIG_KEY);
+    const raw = localStorage.getItem(compositeConfigKey());
     if (raw) {
       const config = JSON.parse(raw) as CompositeRankConfig;
       const filtered = config.members.filter((m) => m.importId !== id);
       if (filtered.length !== config.members.length) {
-        localStorage.setItem(COMPOSITE_CONFIG_KEY, JSON.stringify({ members: filtered }));
+        // Rebalance for the same reason hiding does: weights are percentages,
+        // so removing a member without redistributing its share leaves the
+        // table showing numbers that add to less than 100.
+        localStorage.setItem(
+          compositeConfigKey(),
+          JSON.stringify({ members: rebalanceToHundred(filtered) }),
+        );
       }
     }
   } catch { /* ignore malformed config */ }
@@ -176,7 +470,7 @@ export function reorderImports(importIds: string[]): void {
 
   // Persist average column position (only meaningful when 2+ imports)
   if (averageIndex !== -1) {
-    localStorage.setItem(AVG_POSITION_KEY, String(averageIndex));
+    localStorage.setItem(avgPositionKey(), String(averageIndex));
   }
 }
 
@@ -186,7 +480,7 @@ export function reorderImports(importIds: string[]): void {
  */
 export function getAveragePosition(): number {
   try {
-    const raw = localStorage.getItem(AVG_POSITION_KEY);
+    const raw = localStorage.getItem(avgPositionKey());
     return raw != null ? parseInt(raw, 10) : 0;
   } catch {
     return 0;
@@ -204,7 +498,7 @@ export function getAveragePosition(): number {
  */
 export function getCompositeConfig(): CompositeRankConfig | null {
   try {
-    const raw = localStorage.getItem(COMPOSITE_CONFIG_KEY);
+    const raw = localStorage.getItem(compositeConfigKey());
     if (!raw) return null;
     const config = JSON.parse(raw) as CompositeRankConfig;
     if (!config.members || !Array.isArray(config.members)) return null;
@@ -219,45 +513,144 @@ export function getCompositeConfig(): CompositeRankConfig | null {
 }
 
 /**
+ * Every composite member, unfiltered.
+ *
+ * `getCompositeConfig()` deliberately returns null below 2 members (the
+ * composite isn't meaningful with one), but the UI still has to render each
+ * source's tick state and weight — so it needs the raw list. It used to reach
+ * into localStorage for `'rankings.compositeConfig'` directly, which is
+ * TheLeague's key: on an AFL or best-ball page that read the wrong league's
+ * config, or nothing at all. Scoped here so no caller can get that wrong.
+ */
+export function getCompositeMembers(): CompositeImportConfig[] {
+  try {
+    const raw = localStorage.getItem(compositeConfigKey());
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as CompositeRankConfig;
+    return Array.isArray(parsed.members) ? parsed.members : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Save composite rank configuration.
  * Fires 'rankingsUpdated' event so all consumers react.
  */
 export function saveCompositeConfig(config: CompositeRankConfig): void {
-  localStorage.setItem(COMPOSITE_CONFIG_KEY, JSON.stringify(config));
+  localStorage.setItem(compositeConfigKey(), JSON.stringify(config));
   window.dispatchEvent(new CustomEvent('rankingsUpdated'));
   syncToServer();
 }
 
 /**
+ * Rebalance member weights so they sum to 100.
+ *
+ * Weights are PERCENTAGES to the owner, so the number typed has to be the
+ * share the source actually gets. The composite normalizes by total weight, so
+ * without this "5" against three sources at 1 each is really 62.5% — the exact
+ * opposite of the "5% superflex" the input implies.
+ *
+ * `pinned` keeps one member at the value just typed and distributes the
+ * remainder across the others in proportion to what they already had, so
+ * adjusting one source doesn't silently flatten the balance between the rest.
+ */
+function rebalanceToHundred(
+  members: CompositeImportConfig[],
+  pinnedId?: string,
+): CompositeImportConfig[] {
+  if (members.length === 0) return members;
+  if (members.length === 1) return [{ ...members[0], weight: 100 }];
+
+  const pinned = pinnedId ? members.find((m) => m.importId === pinnedId) : undefined;
+  const others = members.filter((m) => m !== pinned);
+
+  const pinnedWeight = pinned ? Math.min(100, Math.max(0, pinned.weight)) : 0;
+  const remaining = 100 - pinnedWeight;
+  const othersTotal = others.reduce((sum, m) => sum + (m.weight > 0 ? m.weight : 0), 0);
+
+  const scaled = others.map((m) => ({
+    ...m,
+    // No prior signal (all zero) → split the remainder evenly.
+    weight: othersTotal > 0 ? (m.weight / othersTotal) * remaining : remaining / others.length,
+  }));
+
+  const out = members.map((m) =>
+    m === pinned ? { ...m, weight: pinnedWeight } : scaled.find((s) => s.importId === m.importId)!,
+  );
+
+  // Round to one decimal, then put any rounding drift on the largest
+  // non-pinned member so the displayed numbers still add to exactly 100.
+  const rounded = out.map((m) => ({ ...m, weight: Math.round(m.weight * 10) / 10 }));
+  const drift = Math.round((100 - rounded.reduce((s, m) => s + m.weight, 0)) * 10) / 10;
+  if (drift !== 0) {
+    const target = rounded
+      .filter((m) => m.importId !== pinnedId)
+      .sort((a, b) => b.weight - a.weight)[0];
+    if (target) target.weight = Math.round((target.weight + drift) * 10) / 10;
+  }
+  return rounded;
+}
+
+/**
  * Toggle a specific import's inclusion in the composite.
- * When including, uses default weight of 1.
+ *
+ * Adding or removing a source rebalances every member back to a total of 100,
+ * so the percentages stay meaningful without the owner having to fix them up.
  */
 export function toggleCompositeImport(importId: string, included: boolean): void {
-  const raw = localStorage.getItem(COMPOSITE_CONFIG_KEY);
+  const raw = localStorage.getItem(compositeConfigKey());
   const current: CompositeRankConfig = raw ? JSON.parse(raw) : { members: [] };
 
   if (included) {
     if (!current.members.find((m) => m.importId === importId)) {
-      current.members.push({ importId, weight: 1 });
+      current.members.push({ importId, weight: 0 });
     }
   } else {
     current.members = current.members.filter((m) => m.importId !== importId);
   }
 
-  saveCompositeConfig(current);
+  // A source just ticked ON gets an even share (100/n) and the others absorb
+  // the remainder proportionally. Rebalancing it as a plain zero-weight member
+  // would leave it at 0% — nominally in the composite, actually ignored.
+  const members = included
+    ? rebalanceToHundred(
+        current.members.map((m) =>
+          m.importId === importId ? { ...m, weight: 100 / current.members.length } : m,
+        ),
+        importId,
+      )
+    : rebalanceToHundred(current.members);
+
+  saveCompositeConfig({ members });
 }
 
 /**
  * Update the weight for a composite member.
  */
-export function setCompositeWeight(importId: string, weight: 1 | 2 | 3): void {
-  const raw = localStorage.getItem(COMPOSITE_CONFIG_KEY);
+export const MIN_COMPOSITE_WEIGHT = 0;
+export const MAX_COMPOSITE_WEIGHT = 100;
+
+/**
+ * Set a source's share of the composite. See CompositeRankMember.weight —
+ * the value is a percentage by convention, normalized by the composite math.
+ *
+ * A non-finite or negative weight is rejected rather than stored: it would
+ * poison `weightedSum / totalWeight` for every player at once, and a NaN there
+ * silently empties the whole board.
+ */
+export function setCompositeWeight(importId: string, weight: number): void {
+  if (!Number.isFinite(weight) || weight < MIN_COMPOSITE_WEIGHT) return;
+  const clamped = Math.min(MAX_COMPOSITE_WEIGHT, weight);
+  const raw = localStorage.getItem(compositeConfigKey());
   const current: CompositeRankConfig = raw ? JSON.parse(raw) : { members: [] };
   const member = current.members.find((m) => m.importId === importId);
-  if (member) {
-    member.weight = weight;
-    saveCompositeConfig(current);
-  }
+  if (!member) return;
+
+  member.weight = clamped;
+  // Pin what was just typed and absorb the difference into the other sources,
+  // so the typed number IS the share this source gets.
+  saveCompositeConfig({ members: rebalanceToHundred(current.members, importId) });
 }
 
 // ---------------------------------------------------------------------------
@@ -280,6 +673,11 @@ export function getLatestImportByType(
 // ---------------------------------------------------------------------------
 
 export function migrateFromLegacyKeys(): void {
+  // The auctionPredictor.* keys are TheLeague's alone (see LEGACY_KEYS) —
+  // migrating them into another league's bucket would import one league's
+  // opinions as if they were the other's, and then DELETE the originals.
+  if (activeRankingsScope() !== DEFAULT_RANKINGS_SCOPE) return;
+
   const existing = getAllImports();
   if (existing.length > 0) return; // Already migrated or has new data
 
@@ -334,8 +732,8 @@ export function migrateFromLegacyKeys(): void {
   }
 
   if (migrated) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
-    _cache = existing;
+    localStorage.setItem(storageKey(), JSON.stringify(existing));
+    _cache.set(activeRankingsScope(), existing);
     // Remove legacy keys
     for (const key of LEGACY_KEYS) {
       localStorage.removeItem(key);
@@ -348,6 +746,11 @@ export function migrateFromLegacyKeys(): void {
 // ---------------------------------------------------------------------------
 
 function writeLegacyKeys(imports: StoredRankingImport[]): void {
+  // TheLeague only — these keys are unscoped, so writing them from another
+  // league's page would overwrite TheLeague's auction-predictor rankings with
+  // a different league's board.
+  if (activeRankingsScope() !== DEFAULT_RANKINGS_SCOPE) return;
+
   // Write dynasty rankings to legacy key
   const dynasty = imports.find((i) => i.type === 'dynasty');
   if (dynasty) {
@@ -381,7 +784,11 @@ function writeLegacyKeys(imports: StoredRankingImport[]): void {
 
 /** Build the current state into a payload and push to server. Fire-and-forget. */
 function syncToServer(): void {
-  const imports = getAllImports();
+  // Provided sources are NOT synced: they are regenerated from the build
+  // snapshot on every device, so pushing them would store ~150 KB of
+  // identical, immediately-stale data per owner and let an old device's copy
+  // overwrite a fresh one on merge. Only the user's own imports are durable.
+  const imports = getAllImports().filter((i) => !i.provided);
   const compositeConfig = getCompositeConfig();
   const averagePosition = getAveragePosition();
 
@@ -405,7 +812,10 @@ function syncToServer(): void {
  */
 export async function initFromServer(): Promise<boolean> {
   const serverData = await loadFromServer();
-  const localImports = getAllImports();
+  // Compare against the user's OWN imports — provided sources never round-trip
+  // through the server, so counting them here would make a first-time owner
+  // look like they already had data and skip the server adopt path.
+  const localImports = getAllImports().filter((i) => !i.provided);
 
   // Server unavailable or user not authenticated
   if (!serverData) {
@@ -418,17 +828,31 @@ export async function initFromServer(): Promise<boolean> {
 
   const serverImports = serverData.imports ?? [];
 
+  // Adopt the server's composite settings whenever this device has none of its
+  // own. Provided sources are stripped before syncing, so an owner who only
+  // uses the built-ins pushes `imports: []` with a real compositeConfig — and
+  // the three branches below all require a non-empty import list on one side,
+  // so their weights and tick state never reached a second device.
+  if (serverData.compositeConfig && getCompositeMembers().length === 0) {
+    localStorage.setItem(
+      compositeConfigKey(),
+      JSON.stringify(serverData.compositeConfig),
+    );
+    window.dispatchEvent(new CustomEvent('rankingsUpdated'));
+  }
+
   // Server has data, local is empty → adopt server data
   if (localImports.length === 0 && serverImports.length > 0) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(serverImports));
-    _cache = serverImports;
+    const withProvided = [...getAllImports().filter((i) => i.provided), ...serverImports];
+    localStorage.setItem(storageKey(), JSON.stringify(withProvided));
+    _cache.set(activeRankingsScope(), withProvided);
     writeLegacyKeys(serverImports);
 
     if (serverData.compositeConfig) {
-      localStorage.setItem(COMPOSITE_CONFIG_KEY, JSON.stringify(serverData.compositeConfig));
+      localStorage.setItem(compositeConfigKey(), JSON.stringify(serverData.compositeConfig));
     }
     if (serverData.averagePosition != null) {
-      localStorage.setItem(AVG_POSITION_KEY, String(serverData.averagePosition));
+      localStorage.setItem(avgPositionKey(), String(serverData.averagePosition));
     }
 
     window.dispatchEvent(new CustomEvent('rankingsUpdated'));
@@ -442,13 +866,17 @@ export async function initFromServer(): Promise<boolean> {
       merged.some((m, i) => m.id !== localImports[i]?.id);
 
     if (changed) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
-      _cache = merged;
+      const mergedWithProvided = [
+        ...getAllImports().filter((i) => i.provided),
+        ...merged,
+      ];
+      localStorage.setItem(storageKey(), JSON.stringify(mergedWithProvided));
+      _cache.set(activeRankingsScope(), mergedWithProvided);
       writeLegacyKeys(merged);
 
       // Use server composite config if local doesn't have one
       if (!getCompositeConfig() && serverData.compositeConfig) {
-        localStorage.setItem(COMPOSITE_CONFIG_KEY, JSON.stringify(serverData.compositeConfig));
+        localStorage.setItem(compositeConfigKey(), JSON.stringify(serverData.compositeConfig));
       }
 
       window.dispatchEvent(new CustomEvent('rankingsUpdated'));

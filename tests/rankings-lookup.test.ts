@@ -1083,3 +1083,74 @@ describe('composite rank column', () => {
     expect(compositeCol?.playerCount).toBe(3); // p1, p2, p3
   });
 });
+
+// ---------------------------------------------------------------------------
+// Percentage weights
+// ---------------------------------------------------------------------------
+
+describe('composite weights as percentages', () => {
+  // Weights are arbitrary positive numbers that the composite normalizes by
+  // their total, which is what lets the UI present them as percentages. These
+  // pin the behavior that makes "5% superflex" mean what it looks like.
+  const rankOnly = (id: string, ranks: Record<string, number>) =>
+    createMockRankingImport({
+      id,
+      rankings: Object.entries(ranks).map(([playerId, rank]) =>
+        createMockRankingEntry({ rank, playerId, playerName: playerId }),
+      ),
+    });
+
+  // A disagrees with B about two players; the weighting decides who wins.
+  const a = rankOnly('a', { p1: 1, p2: 2 });
+  const b = rankOnly('b', { p1: 2, p2: 1 });
+
+  it('a heavier source wins the disagreement', () => {
+    mockGetCompositeConfig.mockReturnValue({
+      members: [
+        { importId: 'a', weight: 95 },
+        { importId: 'b', weight: 5 },
+      ],
+    });
+    const lookup = buildRankingLookup([a, b]);
+    const composite = lookup.byImport.get(COMPOSITE_IMPORT_ID);
+    // A ranks p1 first and carries 95% of the weight.
+    expect(composite?.get('p1')).toBe(1);
+    expect(composite?.get('p2')).toBe(2);
+  });
+
+  it('only the RATIO matters, not the scale', () => {
+    // 95/5 and 19/1 are the same opinion. If these ever disagree, the math has
+    // stopped normalizing and the numbers no longer read as percentages.
+    mockGetCompositeConfig.mockReturnValue({
+      members: [
+        { importId: 'a', weight: 19 },
+        { importId: 'b', weight: 1 },
+      ],
+    });
+    const scaled = buildRankingLookup([a, b]).byImport.get(COMPOSITE_IMPORT_ID);
+
+    mockGetCompositeConfig.mockReturnValue({
+      members: [
+        { importId: 'a', weight: 95 },
+        { importId: 'b', weight: 5 },
+      ],
+    });
+    const asPercent = buildRankingLookup([a, b]).byImport.get(COMPOSITE_IMPORT_ID);
+
+    expect([...(scaled ?? [])]).toEqual([...(asPercent ?? [])]);
+  });
+
+  it('a tiny weight still shifts nothing it cannot outvote', () => {
+    // Flipping the weighting flips the winner — proof the small number is a
+    // real thumb on the scale rather than being rounded away.
+    mockGetCompositeConfig.mockReturnValue({
+      members: [
+        { importId: 'a', weight: 5 },
+        { importId: 'b', weight: 95 },
+      ],
+    });
+    const composite = buildRankingLookup([a, b]).byImport.get(COMPOSITE_IMPORT_ID);
+    expect(composite?.get('p2')).toBe(1);
+    expect(composite?.get('p1')).toBe(2);
+  });
+});

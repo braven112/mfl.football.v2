@@ -10,6 +10,8 @@ import {
   getCompositeConfig,
   saveCompositeConfig,
   toggleCompositeImport,
+  syncBuiltinImports,
+  setBuiltinHidden,
   setCompositeWeight,
   _clearCache,
 } from '../src/utils/rankings-storage';
@@ -424,11 +426,12 @@ describe('rankings-storage', () => {
       expect(dispatchEventMock).toHaveBeenCalled();
     });
 
-    it('toggleCompositeImport adds a member with default weight', () => {
+    it('toggleCompositeImport adds a member owning the whole composite', () => {
+      // Weights are percentages, so the only member is 100% of My Rank.
       toggleCompositeImport('imp-1', true);
       const stored = JSON.parse(localStorageMock._getStore()['rankings.compositeConfig']);
       expect(stored.members).toHaveLength(1);
-      expect(stored.members[0]).toEqual({ importId: 'imp-1', weight: 1 });
+      expect(stored.members[0]).toEqual({ importId: 'imp-1', weight: 100 });
     });
 
     it('toggleCompositeImport removes a member', () => {
@@ -467,10 +470,13 @@ describe('rankings-storage', () => {
           ],
         }),
       );
+      // Pins 'a' at the typed value; 'b' absorbs the rest so the total is 100.
       setCompositeWeight('a', 3);
       const stored = JSON.parse(localStorageMock._getStore()['rankings.compositeConfig']);
-      expect(stored.members[0]).toEqual({ importId: 'a', weight: 3 });
-      expect(stored.members[1]).toEqual({ importId: 'b', weight: 1 });
+      const byId = Object.fromEntries(stored.members.map((m: any) => [m.importId, m.weight]));
+      expect(byId.a).toBe(3);
+      expect(byId.b).toBe(97);
+      expect(byId.a + byId.b).toBe(100);
     });
 
     it('deleteImport removes deleted ID from composite config', () => {
@@ -514,6 +520,121 @@ describe('rankings-storage', () => {
       const stored = JSON.parse(localStorageMock._getStore()['rankings.compositeConfig']);
       expect(stored.members[0]).toEqual({ importId: 'new-id', weight: 2 });
       expect(stored.members[1]).toEqual({ importId: 'other', weight: 1 });
+    });
+  });
+
+  describe('composite weights normalize to 100', () => {
+    // Weights are shown to owners as percentages, so "5" has to MEAN 5% of My
+    // Rank. The composite divides by total weight, so without normalizing, 5
+    // against three sources at 1 each is really 62.5% — the opposite of what
+    // the input implies. This is the contract that makes the number honest.
+    const membersFromStore = () =>
+      JSON.parse(localStorageMock._getStore()['rankings.compositeConfig']).members as {
+        importId: string;
+        weight: number;
+      }[];
+    const total = () => membersFromStore().reduce((s, m) => s + m.weight, 0);
+
+    it('keeps the total at 100 as sources are added', () => {
+      for (const id of ['a', 'b', 'c', 'd']) toggleCompositeImport(id, true);
+      expect(membersFromStore()).toHaveLength(4);
+      expect(total()).toBe(100);
+    });
+
+    it('never leaves a newly added source at 0%', () => {
+      // A member at 0 is in the composite but ignored — worse than absent,
+      // because the UI shows it as contributing.
+      for (const id of ['a', 'b', 'c']) toggleCompositeImport(id, true);
+      for (const m of membersFromStore()) expect(m.weight).toBeGreaterThan(0);
+    });
+
+    it('a small pinned weight stays small', () => {
+      for (const id of ['a', 'b', 'c', 'd']) toggleCompositeImport(id, true);
+      setCompositeWeight('d', 5);
+      const byId = Object.fromEntries(membersFromStore().map((m) => [m.importId, m.weight]));
+      expect(byId.d).toBe(5);
+      expect(total()).toBe(100);
+    });
+
+    it('re-totals to 100 after a built-in is hidden', () => {
+      // Hiding drops the source from the composite. Without rebalancing, the
+      // survivors keep their old percentages and the table shows numbers that
+      // add to 68.3 — which is what shipped to the preview.
+      for (const id of ['a', 'b', 'c']) toggleCompositeImport(id, true);
+      setBuiltinHidden('b', true);
+      const members = membersFromStore();
+      expect(members.some((m) => m.importId === 'b')).toBe(false);
+      expect(members.reduce((s, m) => s + m.weight, 0)).toBe(100);
+    });
+
+    it('re-totals to 100 after a source is removed', () => {
+      for (const id of ['a', 'b', 'c']) toggleCompositeImport(id, true);
+      toggleCompositeImport('b', false);
+      expect(membersFromStore()).toHaveLength(2);
+      expect(total()).toBe(100);
+    });
+  });
+
+  describe('hidden built-ins survive unrelated writes', () => {
+    // Every mutation path rebuilds the list from getAllImports(), which HIDES
+    // what the owner hid. Writing that back erased the hidden rows from raw
+    // storage, so the next reconciliation saw them as new and re-seeded them —
+    // saving an unrelated import silently un-hid a source.
+    const rawStore = () =>
+      JSON.parse(localStorageMock._getStore()['rankings.imports'] || '[]') as {
+        id: string;
+        provided?: boolean;
+      }[];
+
+    const snapshot = {
+      generatedAt: '2026-08-21T00:00:00.000Z',
+      sources: [
+        { id: 'mfl-adp', label: 'MFL ADP', type: 'adp', players: [{ id: 'p1', rank: 1 }] },
+        { id: 'sharks', label: 'Sharks', type: 'redraft', players: [{ id: 'p1', rank: 1 }] },
+      ],
+    };
+
+    it('keeps a hidden source in raw storage when another import is saved', () => {
+      syncBuiltinImports(snapshot as never, ['mfl-adp', 'sharks']);
+      setBuiltinHidden('builtin:sharks', true);
+      expect(getAllImports().some((i) => i.id === 'builtin:sharks')).toBe(false);
+
+      saveImport(createMockImport({ id: 'user-1', source: 'fantasypros', type: 'dynasty' }));
+
+      // Still present in RAW storage, still hidden from the filtered view.
+      expect(rawStore().some((i) => i.id === 'builtin:sharks')).toBe(true);
+      expect(getAllImports().some((i) => i.id === 'builtin:sharks')).toBe(false);
+    });
+
+    it('does not re-tick a hidden source on the next reconciliation', () => {
+      syncBuiltinImports(snapshot as never, ['mfl-adp', 'sharks']);
+      setBuiltinHidden('builtin:sharks', true);
+      saveImport(createMockImport({ id: 'user-1', source: 'fantasypros', type: 'dynasty' }));
+      syncBuiltinImports(snapshot as never, ['mfl-adp', 'sharks']);
+
+      const members = JSON.parse(
+        localStorageMock._getStore()['rankings.compositeConfig'] || '{"members":[]}',
+      ).members as { importId: string }[];
+      expect(members.some((m) => m.importId === 'builtin:sharks')).toBe(false);
+    });
+  });
+
+  describe('deleting an import rebalances the composite', () => {
+    it('leaves the remaining weights totalling 100', () => {
+      // Same class as the hide bug, in the sibling path.
+      const a = createMockImport({ id: 'a', source: 'fantasypros', type: 'dynasty' });
+      const b = createMockImport({ id: 'b', source: 'cbs', type: 'redraft' });
+      const c = createMockImport({ id: 'c', source: 'yahoo', type: 'adp' });
+      [a, b, c].forEach(saveImport);
+      ['a', 'b', 'c'].forEach((id) => toggleCompositeImport(id, true));
+
+      deleteImport('b');
+
+      const members = JSON.parse(
+        localStorageMock._getStore()['rankings.compositeConfig'],
+      ).members as { importId: string; weight: number }[];
+      expect(members.some((m) => m.importId === 'b')).toBe(false);
+      expect(members.reduce((s, m) => s + m.weight, 0)).toBe(100);
     });
   });
 });

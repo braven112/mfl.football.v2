@@ -20,6 +20,12 @@ export type RankingSourceId =
   | 'dlf'
   | 'yahoo'
   | 'footballguys'
+  // Built-in sources — fetched at build time, present for every owner without
+  // an import. See scripts/fetch-ranking-sources.mjs.
+  | 'mfl-adp'
+  | 'sharks'
+  | 'sleeper-adp'
+  | 'espn-superflex'
   | 'custom';
 
 export type RankingType = 'dynasty' | 'redraft' | 'adp' | 'overall';
@@ -75,6 +81,15 @@ export interface StoredRankingImport {
     unmatched: number;
     matchRate: number;         // percentage (0-100)
   };
+  /**
+   * True for the BUILT-IN sources the site supplies (MFL ADP, FantasySharks,
+   * FantasyCalc, Sleeper, ESPN). They live in the same store as a user's own
+   * imports so every consumer reads one list, but they are refreshed from the
+   * build snapshot and cannot be deleted — unticking "My Rank" is the opt-out.
+   */
+  provided?: boolean;
+  /** Snapshot stamp a provided import came from, used to detect staleness. */
+  generatedAt?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -113,7 +128,19 @@ export interface MFLPlayerForMatching {
 /** A single import's inclusion in the composite rank with a weight multiplier. */
 export interface CompositeImportConfig {
   importId: string;        // References StoredRankingImport.id
-  weight: 1 | 2 | 3;      // Multiplier for weighted average
+  /**
+   * Relative influence in the weighted average. Any positive number.
+   *
+   * The UI presents these as PERCENTAGES, which works without converting
+   * anything because the composite already divides by the total weight — a
+   * source's real share is `weight / Σweight`. So weights that sum to 100 make
+   * each number literally its percentage, and weights that don't still behave
+   * sensibly (they're just normalized). That's what allows a deliberate
+   * low-influence source, e.g. superflex at 5.
+   *
+   * Was `1 | 2 | 3`; existing stored values remain valid numbers.
+   */
+  weight: number;
 }
 
 /** Full composite rank configuration persisted in localStorage. */
@@ -131,4 +158,25 @@ export interface SyncedRankingsPayload {
   compositeConfig: CompositeRankConfig | null;
   averagePosition: number;
   lastModified: string; // ISO 8601
+}
+
+// ---------------------------------------------------------------------------
+// Built-in ranking sources (data/ranking-sources/<year>.json)
+// ---------------------------------------------------------------------------
+
+/** One built-in source as written by scripts/fetch-ranking-sources.mjs. */
+export interface BuiltinRankingSource {
+  id: string;
+  label: string;
+  type: RankingType;
+  meta?: Record<string, unknown>;
+  /** Already resolved to MFL player ids, ranked densely from 1. */
+  players: { id: string; rank: number }[];
+}
+
+/** The whole snapshot file. */
+export interface BuiltinRankingSnapshot {
+  year: number;
+  generatedAt: string;
+  sources: BuiltinRankingSource[];
 }

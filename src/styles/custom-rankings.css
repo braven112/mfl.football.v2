@@ -30,7 +30,8 @@
 .cr-page__title {
   font-size: 1.75rem;
   font-weight: 700;
-  color: var(--primary-color, #1c497c);
+  /* See .ri-page__title — page h1 uses --page-text, not the brand blue. */
+  color: var(--page-text);
   margin: 0;
 }
 

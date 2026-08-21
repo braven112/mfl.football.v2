@@ -18,7 +18,7 @@ import { spriteUrl } from '../../../utils/sprite-url';
 import type { DescriptionImageBlock, WhatsNewEntry } from '../../../types/whats-new';
 import { WHATS_NEW_CATEGORY_LABELS } from '../../../types/whats-new';
 import { formatEntryDate } from '../../../utils/whats-new-helpers';
-import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { resolveDirectoryHref, resolveLeaguePath } from '../../../utils/nav-utils';
 import SchefterWidget from '../SchefterWidget.astro';
 import type { SchefterFeed as FeedType } from '../../../types/schefter';
 import { getLeagueBySlug } from '../../../config/leagues';
@@ -46,7 +46,18 @@ const hasApex = league.domains.length > 0;
 const apexDomain = league.domains[0] ?? 'mfl.football';
 
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
-const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
+/**
+ * Resolve an entry link for this reader's league.
+ *
+ * A multi-league entry must carry a LEAGUE-NEUTRAL link (`/import-rankings`) —
+ * a prefixed one would send half its readers into the other league, and
+ * tests/whats-new-data.test.ts enforces that. But `resolveLeaguePath` only
+ * STRIPS a prefix, so a bare path stayed bare and 404'd on the shared host,
+ * which has no root route. Prefix for the current league first, then let the
+ * apex-host strip take it back off where it's redundant.
+ */
+const r = (path: string) =>
+  resolveLeaguePath(resolveDirectoryHref(path, league.navSlug), hideLeaguePrefix);
 
 const MULTICOLOR_ICONS = ['nfl'];
 const iconId = entry.icon ? `icon-${entry.icon}` : null;

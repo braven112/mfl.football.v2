@@ -2,13 +2,14 @@
 /**
  * Import Rankings (Best Ball #1) — thin route wrapper.
  * Shared implementation lives in components/shared/rankings-import/ImportRankingsPage.
- * Rankings live in league-agnostic localStorage, so anything imported here
- * (or on TheLeague's copy) feeds this league's draft-room queue and the
- * "My Rank" auto-pick source alike.
+ * This league keeps its OWN rankings bucket (see src/utils/rankings-scope.ts).
+ * The built-in sources seed a redraft-leaning composite on first load, which
+ * feeds the draft-room queue and the "My Rank" auto-pick source. There is no
+ * Custom Rankings board here to link to.
  */
 import ImportRankingsPage from '../../components/shared/rankings-import/ImportRankingsPage.astro';
 
 export const prerender = false;
 ---
 
-<ImportRankingsPage title="Import Rankings | Best Ball #1" />
+<ImportRankingsPage title="Import Rankings | Best Ball #1" hasCustomRankings={false} />

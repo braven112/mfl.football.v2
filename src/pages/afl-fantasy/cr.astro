@@ -1,7 +1,10 @@
 ---
 /**
- * Custom Rankings (The League) — thin route wrapper.
+ * Custom Rankings (AFL) — thin route wrapper.
  * Shared implementation lives in components/shared/custom-rankings/CustomRankingsPage.
+ *
+ * Seeds from the AFL's own Import Rankings composite and persists to the
+ * AFL's own KV bucket — see src/utils/rankings-scope.ts.
  *
  * The auth gate is HERE, not in the shared component: Astro.redirect() only
  * redirects from a page. See src/utils/custom-rankings-access.ts.
@@ -13,8 +16,8 @@ export const prerender = false;
 
 const access = resolveCustomRankingsAccess(Astro.request, Astro.url);
 if (!access) {
-  return Astro.redirect('/theleague');
+  return Astro.redirect('/afl-fantasy');
 }
 ---
 
-<CustomRankingsPage title="Custom Rankings | The League" user={access.user} />
+<CustomRankingsPage title="Custom Rankings | AFL" user={access.user} />

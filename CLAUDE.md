@@ -158,6 +158,84 @@ git diff | node scripts/gemini-ask.mjs -p "summarize the risk here"
 - **Two CLIs are installed** (node 20's is broken). Always go through the
   script, never `gemini` directly.
 
+## Rankings are per-league — `rankings-scope.ts` owns the keys
+
+Import Rankings (→ composite "My Rank") and the Custom Rankings board (`/cr`)
+run in TheLeague and the AFL, and the two must never share storage.
+`src/utils/rankings-scope.ts` is the only place that decides which bucket a
+league reads, for both layers:
+
+- **localStorage** — `scopedLocalKey(base, scope)`. TheLeague returns the base
+  string unchanged (`rankings.imports`, `cr.localCache`, …) so no owner loses a
+  board they already built; the AFL gets `<base>.afl`.
+- **Redis** — `scopedKvKey(prefix, scope, franchiseId)`, applied inside
+  `createKvFranchiseStore` (the shared body of `/api/ri` + `/api/cr`).
+  TheLeague keeps the legacy `ri:0001`; the AFL gets `ri:afl:0001`. The scope
+  is NOT decoration here — **both leagues have a franchise 0001**, so the bare
+  key was genuinely ambiguous the moment a second league wrote to it.
+
+Four things that are load-bearing, not style:
+
+- **The scope is re-read per call, never captured at module load.** With the
+  ClientRouter a single JS module instance survives a navigation from one
+  league's page to another's, so a captured value writes the previous league's
+  bucket. Same reason `rankings-storage.ts`'s in-memory cache is a
+  `Map<scope, …>` rather than one array.
+- **The client sends `?league=` and the server REJECTS a mismatch.** An owner
+  logged into TheLeague can browse the AFL's rankings pages, where localStorage
+  is already writing the AFL bucket — without the check, that AFL board syncs
+  into their TheLeague KV key. The KV scope always comes from the session
+  (`user.leagueId`), so the param is a check, never an input. A mismatch 401s
+  and both sync helpers degrade to local-only, which is the correct outcome.
+- **The `auctionPredictor.*` legacy keys are unscoped and TheLeague's alone.**
+  `writeLegacyKeys` and `migrateFromLegacyKeys` both bail on any other scope —
+  otherwise an AFL import overwrites TheLeague's auction-predictor rankings,
+  and the migration *deletes* the originals on its way out.
+- **Every league has its own bucket, best-ball included.** bb1 shared
+  TheLeague's until Aug 2026; the objection to splitting was that best-ball
+  owners would be left with an empty queue, and the built-in sources (below)
+  removed that objection by seeding a working composite on first load.
+
+**Built-in ranking sources.** `data/ranking-sources/<year>.json`
+(`scripts/fetch-ranking-sources.mjs`, prebuild + daily cron) supplies six
+sources every owner gets without importing: MFL ADP, FantasySharks,
+FantasyCalc, Sleeper, ESPN, ESPN Superflex. They are stored alongside a user's
+own imports and marked `provided`, so the composite / Free Agents columns /
+draft queue / `/cr` seed all read one list. Rules: refreshed in place on
+`generatedAt`; auto-ticked ONCE on first sight (re-ticking would undo a
+deliberate untick); never synced to Redis (regenerated per device); not
+deletable — **Hide** is the opt-out, filtered on READ, which is why
+`syncBuiltinImports` reads the raw store rather than `getAllImports()`.
+
+Which sources are ticked BY DEFAULT is per-league (`defaultRankingSources` in
+the registry) because the right opening board depends on how the league drafts
+— dynasty trade values are wrong for a league that re-drafts, redraft ADP is
+wrong for a contract dynasty league. Every source stays available everywhere.
+
+Composite weights are arbitrary positive numbers normalized by their total
+(`weight / Σweight`), which is what lets the UI present them as percentages and
+makes a deliberately small source (superflex at 5) behave as expected. Only the
+RATIO matters — `tests/rankings-lookup.test.ts` pins that.
+
+`tests/rankings-scope.test.ts` pins the legacy strings, the AFL separation, and
+fails if a league is added to the registry without a scope entry.
+
+### `Astro.redirect()` only redirects from a PAGE
+
+Returning it from a **component's** frontmatter just stops rendering that
+component — the response is still a 200, now with a blank body. Extracting
+TheLeague's `/cr` page into a shared component moved its auth gate into a
+component and shipped exactly that: unauthorized visitors got an empty page
+instead of a bounce. The gate now lives in each thin route wrapper
+(`resolveCustomRankingsAccess` in `src/utils/custom-rankings-access.ts` holds
+the shared decision; the pages own the redirect). Any auth gate being moved into
+a shared `.astro` component needs the same split.
+
+Related: an admin link into a league-scoped page must be gated on
+`isAuthorizedForLeague` too, not just `isCommissionerOrAdmin` — a TheLeague
+admin browsing the AFL's Import Rankings page was otherwise shown a Custom
+Rankings link that dead-ends on the redirect.
+
 ## Page directory registry — required for every new page
 
 Adding a page without adding it to `src/data/page-directory.json` makes it

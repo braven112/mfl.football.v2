@@ -196,3 +196,98 @@ function MyComponent() {
 - Any new page consuming rankings should check `col.isComposite` for special styling
 - The composite column uses `source: 'custom'` and `type: 'overall'` — avoid filtering on these if you want synthetic columns to appear
 - Weight values are constrained to `1 | 2 | 3` — if expanding, update the `CompositeImportConfig` type and the UI picker
+
+---
+
+## 2026-08-21 - Built-In Ranking Sources: Match Once at Build, Not Per Visitor
+
+**Context:** Import Rankings required every owner to drag bookmarklets to a
+desktop bookmarks bar or click a one-click import. Most never would, so most
+boards were empty. Six sources are now supplied pre-loaded
+(`scripts/fetch-ranking-sources.mjs` → `data/ranking-sources/<year>.json`).
+
+**Insight:** Sources split cleanly into two classes, and the split decides the
+whole architecture:
+
+1. **Already MFL-keyed — zero matching.** MFL `adp`, MFL `playerRanks`, and
+   **FantasyCalc** (which returns `player.mflId` at 100% coverage on skill
+   players). These resolve by id and can never mis-match.
+2. **Foreign-keyed — matched ONCE at build.** Sleeper and ESPN. Doing this at
+   build instead of in every browser is not just a perf win: it is the only
+   way to get a deterministic, inspectable match rate. ESPN resolves 432/436.
+
+Build-time matching also **cleans the data for free**. Sleeper's list is full
+of retired stars (see below); none exist in the MFL feed, so dropping
+unmatched players removes them with no hand-maintained retirement list.
+
+Two things make that safe rather than lossy:
+
+- **MFL speaks its own team dialect** — `TBB`/`NOS`/`GBP`/`WAS` where every
+  external source says `TB`/`NO`/`GB`/`WSH`. Team is used to break name ties,
+  so comparing raw strings fails for about a third of the league.
+- **MFL stores LEGAL names.** `Gainwell, Kenneth` vs Sleeper's "Kenny
+  Gainwell"; `Okonkwo, Chigoziem` vs "Chig Okonkwo". Both are current
+  starters. A narrow fallback (same position + surname + first initial + team,
+  refusing when no team is supplied) recovers them without ever pairing two
+  different people.
+
+**Evidence:** Exact-match-only dropped 170 of Sleeper's 500; the nickname
+fallback recovered Gainwell and Okonkwo, and the remaining 167 drops were
+verified to be retirees. Every source ends at 0 ids absent from the players
+feed.
+
+**Recommendation:** Adding a source is two edits that nothing connects —
+the fetch script AND `SOURCE_LABELS`/`SOURCE_ABBREVS`. Shipping only the first
+renders the raw id in the table (that reached a preview twice).
+`tests/builtin-ranking-defaults.test.ts` now fails on a missing label, a
+duplicate label, or a source typed `overall`. Also trim every source to the
+positions the board renders and **re-rank 1..n** — Sharks returns the whole
+league including kickers and IDP, and leaving gaps where those were makes
+every downstream rank look wrong.
+
+---
+
+## 2026-08-21 - Sleeper's `search_rank` Is Popularity, Not ADP
+
+**Context:** The Sleeper import's match rate sat at ~73%, which looked like a
+name-matching bug worth chasing.
+
+**Insight:** It wasn't. `/v1/players/nfl`'s `search_rank` is Sleeper's
+**search popularity** ordering, not ADP — so it ranks retired stars highly:
+Todd Gurley #27, Drew Brees #76, Antonio Brown #89, Gronkowski #118, Larry
+Fitzgerald #165. The `active` flag does not exclude them.
+
+**Evidence:** Of 133 unmatched players, 112 ranked 301–500 and were retirees.
+The top 100 matched 99%; the top 50 matched 98%.
+
+**Recommendation:** A headline match rate on a Sleeper import is misleading —
+judge it by the top 100. And never present `search_rank` to owners as "ADP"
+without qualification. MFL's own `TYPE=adp` is real ADP from hundreds of
+drafts and needs no matching at all; prefer it.
+
+---
+
+## 2026-08-21 - A Normalized Weight Must Be Shown Normalized, or the Number Lies
+
+**Context:** Composite weights moved from a `1|2|3` multiplier to a
+user-entered percentage so an owner could say "5% superflex".
+
+**Insight:** The composite has always computed `weightedSum / totalWeight`, so
+a source's real share is `weight / Σweight`. That means the math needed **no
+change** to support percentages — but it also means an un-normalized set lies
+to the user: typing `5` against three sources at `1` each yields 5/8 = **62.5%**,
+the exact opposite of the intent. Weights must be re-totalled to 100 on every
+mutation — set, toggle on, toggle off, and hide — pinning the value just typed
+and distributing the remainder across the others in proportion to what they
+had. A newly-added member gets an even `100/n` share, never 0: a member at 0 is
+*in* the composite but ignored, which is worse than absent because the UI shows
+it contributing.
+
+**Evidence:** All four mutation paths were written separately and three of them
+shipped without rebalancing. Hiding a source left the survivors at 68.3.
+
+**Recommendation:** Never patch composite state optimistically in the
+component. Any mutation re-weights *sibling* rows, so a handler that updates
+only the row that was clicked leaves the table showing numbers that disagree
+with storage — the store held 31.6/31.7/31.7/5 while the screen showed
+25/25/25/5. Re-read from storage after every change.

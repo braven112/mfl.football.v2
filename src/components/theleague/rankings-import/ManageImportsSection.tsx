@@ -21,9 +21,11 @@ import {
   deleteImport,
   reorderImports,
   getAveragePosition,
-  getCompositeConfig,
   toggleCompositeImport,
   setCompositeWeight,
+  setBuiltinHidden,
+  getHiddenBuiltinImports,
+  getCompositeMembers,
 } from '../../../utils/rankings-storage';
 import type { StoredRankingImport, CompositeImportConfig } from '../../../types/rankings-import';
 import { SOURCE_LABELS, AVERAGE_IMPORT_ID } from '../../../utils/rankings-lookup';
@@ -44,11 +46,11 @@ type SortableItem =
 export default function ManageImportsSection({ imports, onDelete, onReorder }: Props) {
   const [selectedImport, setSelectedImport] = useState<StoredRankingImport | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<StoredRankingImport | null>(null);
+  // getCompositeMembers(), not getCompositeConfig(): the latter returns null
+  // below 2 members because a one-source composite isn't meaningful, but the
+  // table still has to render that source as ticked with its weight.
   const [compositeMembers, setCompositeMembers] = useState<Map<string, CompositeImportConfig>>(
-    () => {
-      const config = getCompositeConfig();
-      return new Map(config?.members.map((m) => [m.importId, m]) ?? []);
-    },
+    () => new Map(getCompositeMembers().map((m) => [m.importId, m])),
   );
 
   const sensors = useSensors(
@@ -58,10 +60,10 @@ export default function ManageImportsSection({ imports, onDelete, onReorder }: P
     }),
   );
 
-  // Refresh composite state when imports change (e.g. deletion may invalidate members)
+  // Refresh composite state when imports change (e.g. deletion may invalidate
+  // members, and the built-in sync seeds new ones after mount).
   useEffect(() => {
-    const config = getCompositeConfig();
-    setCompositeMembers(new Map(config?.members.map((m) => [m.importId, m]) ?? []));
+    setCompositeMembers(new Map(getCompositeMembers().map((m) => [m.importId, m])));
   }, [imports]);
 
   const showAverage = imports.length >= 2;
@@ -103,33 +105,59 @@ export default function ManageImportsSection({ imports, onDelete, onReorder }: P
     }
   };
 
+  /**
+   * Re-read the whole member list from storage after any change.
+   *
+   * Never patch this optimistically: adding, removing or reweighting a source
+   * rebalances EVERY member so the weights still total 100, so touching one
+   * row changes the others. Patching just the row that was clicked left the
+   * siblings showing their old percentages while the store held the new ones.
+   */
+  const refreshCompositeMembers = () => {
+    setCompositeMembers(new Map(getCompositeMembers().map((m) => [m.importId, m])));
+  };
+
   const handleToggleComposite = (importId: string, included: boolean) => {
     toggleCompositeImport(importId, included);
-    const config = getCompositeConfig();
-    setCompositeMembers(new Map(config?.members.map((m) => [m.importId, m]) ?? []));
-    // Read raw config to show members even when < 2 (UI shows checkboxes always)
-    try {
-      const raw = localStorage.getItem('rankings.compositeConfig');
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed.members) {
-          setCompositeMembers(new Map(parsed.members.map((m: CompositeImportConfig) => [m.importId, m])));
-        }
-      } else if (!included) {
-        setCompositeMembers(new Map());
-      }
-    } catch { /* ignore */ }
+    refreshCompositeMembers();
     onReorder();
   };
 
-  const handleSetWeight = (importId: string, weight: 1 | 2 | 3) => {
+  const [hiddenBuiltins, setHiddenBuiltins] = useState<StoredRankingImport[]>(
+    () => getHiddenBuiltinImports(),
+  );
+
+  const handleHide = (imp: StoredRankingImport) => {
+    setBuiltinHidden(imp.id, true);
+    setHiddenBuiltins(getHiddenBuiltinImports());
+    onDelete(imp.id); // refreshes the caller's list from storage
+  };
+
+  const handleShow = (imp: StoredRankingImport) => {
+    setBuiltinHidden(imp.id, false);
+    setHiddenBuiltins(getHiddenBuiltinImports());
+    onDelete(imp.id);
+  };
+
+  // A source's real influence is weight/Σweight. Surfaced only when it differs
+  // from the number the owner typed, so equal splits and totals of 100 stay
+  // uncluttered and a lopsided total is impossible to miss.
+  const totalWeight = [...compositeMembers.values()].reduce(
+    (sum, m) => sum + (Number.isFinite(m.weight) ? m.weight : 0),
+    0,
+  );
+  const effectiveShareFor = (importId: string): number | null => {
+    const member = compositeMembers.get(importId);
+    if (!member || totalWeight <= 0) return null;
+    const share = Math.round((member.weight / totalWeight) * 1000) / 10;
+    return Math.abs(share - member.weight) < 0.5 ? null : share;
+  };
+
+  const handleSetWeight = (importId: string, weight: number) => {
     setCompositeWeight(importId, weight);
-    const updated = new Map(compositeMembers);
-    const member = updated.get(importId);
-    if (member) {
-      updated.set(importId, { ...member, weight });
-      setCompositeMembers(updated);
-    }
+    // Re-read rather than patch — see refreshCompositeMembers. Setting one
+    // weight re-totals the others to keep the sum at 100.
+    refreshCompositeMembers();
     onReorder();
   };
 
@@ -145,7 +173,10 @@ export default function ManageImportsSection({ imports, onDelete, onReorder }: P
         Saved Rankings
       </h2>
       <p className="ri-section__note">
-        Drag to reorder. Check the <strong>My Rank</strong> box to include a ranking in your composite. Adjust weight to give a source more influence.
+        Drag to reorder. Check the <strong>My Rank</strong> box to include a ranking in your composite,
+        and set each source's <strong>weight</strong> as a percentage — the shares are normalized, so
+        a source set to 5 stays a light thumb on the scale. Built-in sources can be hidden if you'd
+        rather build your board from your own imports.
       </p>
 
       {imports.length === 0 ? (
@@ -181,8 +212,10 @@ export default function ManageImportsSection({ imports, onDelete, onReorder }: P
                         order={idx + 1}
                         onView={setSelectedImport}
                         onDelete={setDeleteTarget}
+                        onHide={handleHide}
                         isCompositeMember={compositeMembers.has(item.id)}
                         compositeWeight={compositeMembers.get(item.id)?.weight ?? null}
+                        effectiveShare={effectiveShareFor(item.id)}
                         onToggleComposite={handleToggleComposite}
                         onSetWeight={handleSetWeight}
                       />
@@ -193,6 +226,27 @@ export default function ManageImportsSection({ imports, onDelete, onReorder }: P
             </table>
           </div>
         </DndContext>
+      )}
+
+      {hiddenBuiltins.length > 0 && (
+        /* Hide is advertised as reversible ("you can show it again later"), so
+           there has to be a way back. The state and handler existed but nothing
+           rendered them, which made Hide one-way. */
+        <div className="ri-manage__hidden-bar">
+          <span className="ri-manage__hidden-label">
+            {hiddenBuiltins.length} built-in source{hiddenBuiltins.length === 1 ? '' : 's'} hidden:
+          </span>
+          {hiddenBuiltins.map((imp) => (
+            <button
+              key={imp.id}
+              type="button"
+              className="ri-btn ri-btn--sm"
+              onClick={() => handleShow(imp)}
+            >
+              Show {SOURCE_LABELS[imp.source] || imp.source}
+            </button>
+          ))}
+        </div>
       )}
 
       {selectedImport && (
@@ -300,13 +354,16 @@ interface SortableRowProps {
   order: number;
   onView: (imp: StoredRankingImport) => void;
   onDelete: (imp: StoredRankingImport) => void;
+  onHide: (imp: StoredRankingImport) => void;
   isCompositeMember: boolean;
-  compositeWeight: 1 | 2 | 3 | null;
+  compositeWeight: number | null;
+  /** weight/Σweight as a percent, or null when it matches the typed value. */
+  effectiveShare: number | null;
   onToggleComposite: (importId: string, included: boolean) => void;
-  onSetWeight: (importId: string, weight: 1 | 2 | 3) => void;
+  onSetWeight: (importId: string, weight: number) => void;
 }
 
-function SortableRow({ imp, order, onView, onDelete, isCompositeMember, compositeWeight, onToggleComposite, onSetWeight }: SortableRowProps) {
+function SortableRow({ imp, order, onView, onDelete, onHide, isCompositeMember, compositeWeight, effectiveShare, onToggleComposite, onSetWeight }: SortableRowProps) {
   const {
     attributes,
     listeners,
@@ -351,19 +408,30 @@ function SortableRow({ imp, order, onView, onDelete, isCompositeMember, composit
       </td>
       <td className="ri-manage__weight">
         {isCompositeMember ? (
-          <div className="ri-manage__weight-picker">
-            {([1, 2, 3] as const).map((w) => (
-              <button
-                key={w}
-                type="button"
-                className={`ri-manage__weight-btn${compositeWeight === w ? ' active' : ''}`}
-                onClick={() => onSetWeight(imp.id, w)}
-                aria-label={`Set weight to ${w}x`}
-                aria-pressed={compositeWeight === w}
-              >
-                {w}x
-              </button>
-            ))}
+          <div className="ri-manage__weight-input-wrap">
+            <input
+              type="number"
+              className="ri-manage__weight-input"
+              min={0}
+              max={100}
+              step={1}
+              value={compositeWeight ?? 0}
+              onChange={(e) => {
+                const next = Number(e.target.value);
+                if (Number.isFinite(next)) onSetWeight(imp.id, next);
+              }}
+              aria-label={`Weight for ${SOURCE_LABELS[imp.source] ?? imp.source}, in percent`}
+            />
+            <span className="ri-manage__weight-unit">%</span>
+            {/* The composite normalizes by total weight, so what a source is
+                actually worth is weight/Σweight. Show that whenever it differs
+                from the typed number — otherwise "5" reads as 5% when the
+                other sources sum to 3 and it is really 62%. */}
+            {effectiveShare != null && (
+              <span className="ri-manage__weight-effective" title="Actual share of My Rank">
+                ={effectiveShare}%
+              </span>
+            )}
           </div>
         ) : (
           <span className="na">—</span>
@@ -384,13 +452,27 @@ function SortableRow({ imp, order, onView, onDelete, isCompositeMember, composit
         >
           View
         </button>
-        <button
-          type="button"
-          className="ri-btn ri-btn--sm ri-btn--danger"
-          onClick={() => onDelete(imp)}
-        >
-          Delete
-        </button>
+        {imp.provided ? (
+          // A built-in can't be deleted — the next daily snapshot would bring
+          // it straight back. Hiding is the durable opt-out, and it drops the
+          // source from "My Rank" too.
+          <button
+            type="button"
+            className="ri-btn ri-btn--sm"
+            onClick={() => onHide(imp)}
+            title="Remove this built-in source from your board. You can show it again later."
+          >
+            Hide
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="ri-btn ri-btn--sm ri-btn--danger"
+            onClick={() => onDelete(imp)}
+          >
+            Delete
+          </button>
+        )}
       </td>
     </tr>
   );

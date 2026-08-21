@@ -1,0 +1,182 @@
+---
+/**
+ * Custom Rankings — shared implementation (extracted from TheLeague's page so
+ * the AFL gets the identical board via a thin wrapper).
+ *
+ * Hidden, admin-only page for creating personalized player rankings. Seeds
+ * from the composite "My Rank" average built on Import Rankings, supports
+ * drag-and-drop reordering, tier breaks, and position filtering. State
+ * persists via Vercel KV, keyed per league (src/utils/rankings-scope.ts) —
+ * an owner's AFL board and their TheLeague board are separate opinions.
+ *
+ * Leagues without a salary cap (the AFL) are handled without a branch: with
+ * no salaries on the roster feed, pointsPerDollar resolves to 0 and
+ * pointsToDollarValue short-circuits, so vorpDollar comes out 0 while the
+ * vorpPoints column — the only one the board renders — stays meaningful.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import CustomRankingsPage from '../../theleague/custom-rankings/CustomRankingsPage';
+import { getLeagueYearForSlug } from '../../../utils/league-year';
+import { getPlayerMap } from '../../../utils/player-map';
+import { getLeagueContext } from '../../../utils/league-context';
+import { getLeagueBySlug, ensureLeaguePrefix } from '../../../config/leagues';
+import '../../../styles/player-cell.css';
+import '../../../styles/custom-rankings.css';
+import { parseNumber } from '../../../utils/formatters';
+import { calculatePointsPerDollar } from '../../../utils/surplus-value';
+import { calculateAllVORP } from '../../../utils/vorp';
+import espnCollegeIds from '../../../../data/theleague/espn-college-ids.json';
+import type { AuthUser } from '../../../utils/auth';
+
+interface Props {
+  /** Page <title>; defaults to TheLeague's original string. */
+  title?: string;
+  /**
+   * The authorized session, resolved and gated by the ROUTE.
+   *
+   * The gate cannot live here: `Astro.redirect()` only produces a redirect
+   * from a page, endpoint, or middleware — returning it from a component's
+   * frontmatter just stops rendering, which shipped a blank 200 instead of
+   * bouncing the visitor. Each thin wrapper calls
+   * `resolveCustomRankingsAccess` and redirects, then hands the user down.
+   */
+  user: AuthUser;
+}
+
+const { title = 'Custom Rankings | The League', user } = Astro.props as Props;
+
+const leagueSlug = getLeagueContext(Astro.url).slug;
+const league = getLeagueBySlug(leagueSlug)!;
+
+// Per-league year clock — the AFL rolls June 1, TheLeague Feb 14.
+const leagueYear = getLeagueYearForSlug(leagueSlug);
+const leagueYearStr = String(leagueYear);
+const isAfl = leagueSlug === 'afl-fantasy';
+
+// ---------------------------------------------------------------------------
+// Load MFL players for enrichment (headshot URLs, positions)
+// ---------------------------------------------------------------------------
+// Two globs, one per league, because Vite requires literal glob patterns —
+// the league can't be interpolated. Year-filtered (2025+): only the current
+// league year is read below; the bare glob baked ~22 MB of historical
+// players.json into the server chunk.
+// tests/current-era-feed-globs.test.ts guards it.
+const theLeaguePlayersFeeds = import.meta.glob(
+  '../../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json',
+  { eager: true },
+);
+const aflPlayersFeeds = import.meta.glob(
+  '../../../../data/afl-fantasy/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json',
+  { eager: true },
+);
+const playersFeeds = isAfl ? aflPlayersFeeds : theLeaguePlayersFeeds;
+
+const getModuleData = (mod: unknown) =>
+  mod && typeof mod === 'object' && 'default' in mod ? (mod as { default: unknown }).default : mod;
+
+const extractFeedSeason = (filepath: string) => {
+  const match = filepath.match(/mfl-feeds\/(\d{4})\//);
+  return match ? match[1] : null;
+};
+
+let playersData: any = null;
+for (const [filepath, mod] of Object.entries(playersFeeds)) {
+  if (extractFeedSeason(filepath) === leagueYearStr) {
+    playersData = getModuleData(mod);
+    break;
+  }
+}
+
+// Build player array with headshot info for client-side enrichment
+const crPlayerIdentityMap = getPlayerMap(leagueYear);
+const rawPlayers = playersData?.players?.player ?? [];
+const mflPlayers = rawPlayers
+  .filter((p: any) => p.name && p.position)
+  .map((p: any) => {
+    const identity = crPlayerIdentityMap.get(p.id);
+    return {
+      id: p.id,
+      name: identity?.name ?? p.name,
+      position: identity?.position ?? (p.position === 'Def' ? 'DEF' : p.position),
+      team: identity?.nflTeam ?? p.team ?? '',
+      espnId: identity?.espnId ?? (p.espn_id || (espnCollegeIds as any).players?.[p.id]?.espnCollegeId || null),
+    };
+  });
+
+// ---------------------------------------------------------------------------
+// Load projected scores + rosters for VORP calculation
+// ---------------------------------------------------------------------------
+// Current-era filtered for the same reason as players.json above — only the
+// current league year is ever read.
+const theLeagueProjScoreFeeds = import.meta.glob(
+  '../../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/projectedScores.json',
+  { eager: true },
+);
+const aflProjScoreFeeds = import.meta.glob(
+  '../../../../data/afl-fantasy/mfl-feeds/20{2[5-9],[3-9][0-9]}/projectedScores.json',
+  { eager: true },
+);
+const theLeagueRostersFeeds = import.meta.glob(
+  '../../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/rosters.json',
+  { eager: true },
+);
+const aflRostersFeeds = import.meta.glob(
+  '../../../../data/afl-fantasy/mfl-feeds/20{2[5-9],[3-9][0-9]}/rosters.json',
+  { eager: true },
+);
+
+const projScoreFeeds = isAfl ? aflProjScoreFeeds : theLeagueProjScoreFeeds;
+const rostersFeeds = isAfl ? aflRostersFeeds : theLeagueRostersFeeds;
+
+let projScoreData: any = null;
+let rostersData: any = null;
+for (const [fp, mod] of Object.entries(projScoreFeeds)) {
+  if (extractFeedSeason(fp) === leagueYearStr) { projScoreData = getModuleData(mod); break; }
+}
+for (const [fp, mod] of Object.entries(rostersFeeds)) {
+  if (extractFeedSeason(fp) === leagueYearStr) { rostersData = getModuleData(mod); break; }
+}
+
+// Build maps for VORP
+const projectedScores = new Map<string, number>();
+for (const ps of (projScoreData?.projectedScores?.playerScore ?? [])) {
+  const score = parseNumber(ps.score);
+  if (score > 0) projectedScores.set(ps.id, score);
+}
+
+const playerPositionMap = new Map<string, { position: string }>();
+for (const p of mflPlayers) {
+  playerPositionMap.set(p.id, { position: p.position });
+}
+
+// Calculate points-per-dollar ratio from rostered players. Resolves to 0 in a
+// league with no salary cap, which pointsToDollarValue handles.
+const rosteredPlayers = new Map<string, { salary: number; position: string }>();
+for (const franchise of (rostersData?.rosters?.franchise ?? [])) {
+  for (const rp of (Array.isArray(franchise.player) ? franchise.player : [])) {
+    const salary = parseNumber(rp.salary);
+    const meta = playerPositionMap.get(rp.id);
+    if (meta) {
+      rosteredPlayers.set(rp.id, { salary, position: meta.position });
+    }
+  }
+}
+const pointsPerDollar = calculatePointsPerDollar(projectedScores, rosteredPlayers);
+
+// Calculate VORP for all players
+const vorpResults = calculateAllVORP(projectedScores, playerPositionMap, pointsPerDollar);
+const vorpMap: Record<string, { vorpPoints: number; vorpDollar: number }> = {};
+for (const [id, result] of vorpResults) {
+  vorpMap[id] = result;
+}
+---
+
+<TheLeagueLayout title={title}>
+  <CustomRankingsPage
+    client:load
+    mflPlayersJson={JSON.stringify(mflPlayers)}
+    franchiseId={user.franchiseId}
+    vorpMapJson={JSON.stringify(vorpMap)}
+    importRankingsHref={ensureLeaguePrefix(league, '/import-rankings')}
+  />
+</TheLeagueLayout>

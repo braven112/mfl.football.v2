@@ -1,5 +1,29 @@
 [
   {
+    "id": "built-in-rankings-2026-08-21",
+    "date": "2026-08-21",
+    "category": "new-feature",
+    "icon": "clipboard",
+    "title": "Your Draft Board, Already Built",
+    "summary": "Import Rankings now arrives with six ranking sources already loaded and weighted — no bookmarklets, no setup, nothing to click. Tune the mix to taste with a weight you set as a percentage, and every league keeps a board of its own.",
+    "description": [
+      "Open Import Rankings and there is already a board waiting. Six sources come loaded: MFL's own ADP from hundreds of real drafts, FantasySharks expert ranks, FantasyCalc dynasty trade values, Sleeper, ESPN redraft and ESPN superflex. Nothing to install, nothing to drag to a bookmarks bar, and it works on your phone. They refresh themselves every morning.",
+      "Which ones start switched on depends on the league, because the right opening board is not the same everywhere. The AFL and Best Ball lead with redraft ADP — you are re-drafting most of the roster, so a dynasty trade value overrates a 22-year-old you will not keep. TheLeague leads with dynasty values, because you are signing players to contracts. Every source is available in every league either way; only the starting three differ.",
+      "The mix is yours. Each source has a weight you set as a percentage — put ESPN superflex at 5 if you just want it whispering in the background, push MFL ADP to 60 if that is the board you actually trust. The numbers always total 100, so what you type is genuinely what that source is worth. Don't want the defaults at all? Hide them and build the whole thing from your own imports — the bookmarklets for FantasyPros, FootballGuys, DLF, KeepTradeCut, Yahoo and CBS are all still there.",
+      "One thing worth knowing if you play in more than one: every league now keeps its own board. What you build in the AFL stays in the AFL, TheLeague keeps exactly what you had, and Best Ball starts fresh instead of borrowing. Your own imports are untouched — the new sources simply sit alongside them."
+    ],
+    "image": "built-in-rankings.webp",
+    "imageAlt": "The Import Rankings page with a Saved Rankings table listing six built-in sources — MFL ADP, FantasySharks, FantasyCalc, Sleeper, ESPN and ESPN Superflex — each with a My Rank checkbox, an editable percentage weight, a player count and View and Hide buttons, above the Get Bookmarklets grid.",
+    "link": "/import-rankings",
+    "linkLabel": "Open your board",
+    "excludeFromHero": true,
+    "leagues": [
+      "afl",
+      "theleague",
+      "bb1"
+    ]
+  },
+  {
     "id": "afl-team-spotlight",
     "date": "2026-08-21",
     "category": "enhancement",
@@ -849,27 +873,6 @@
     "icon": "line-chart",
     "image": "afl-gauntlet-schedule-strength.webp",
     "imageAlt": "The Gauntlet schedule-strength dashboard on the AFL site showing past-season difficulty rankings and schedule-luck callouts",
-    "excludeFromHero": true,
-    "leagues": [
-      "afl"
-    ]
-  },
-  {
-    "id": "afl-trade-block-in-builder",
-    "date": "2026-07-14",
-    "title": "The Trade Block Comes to the AFL Trade Builder",
-    "summary": "Players flagged on the trade block now show up right inside the AFL Trade Builder — see who is shopping, then start the trade in one click.",
-    "description": [
-      "The AFL Trade Builder knew your roster, knew their roster, and knew exactly how lopsided your offer was. What it didn't know was who actually wanted to make a deal — you were cold-calling every roster in the conference like a telemarketer with a draft-pick script. That changes today: every player an owner has flagged on the trade block now headlines the Trade Builder in a new On the Trade Block panel, grouped by team, ranked by ADP.",
-      "See a player you like? Click him. If he plays for a conference rival, the builder loads that team and drops him straight into the 'They give' column — you're one counter-offer away from a done deal. Your own flagged players get the same treatment on your side of the ledger, and the little 🏷️ tag follows flagged players into the roster pickers and the team dropdown, so availability is visible everywhere you build. Teams from the other conference still show up on the block, but they're politely grayed out — cross-conference trades remain illegal, no matter how nicely you ask.",
-      "And yes, the block is now properly attributed: with both conferences drafting from the same NFL player pool, the old data couldn't tell WHICH team had flagged a player. Now it can. Flag a player from the Rosters page (the ⋯ menu next to any player) and the whole league knows you're open for business — the right you, on the right team."
-    ],
-    "category": "enhancement",
-    "link": "/afl-fantasy/trade-builder",
-    "linkLabel": "Open Trade Builder",
-    "icon": "transactions-2",
-    "image": "afl-trade-block-builder.webp",
-    "imageAlt": "AFL Trade Builder showing the On the Trade Block panel with flagged players grouped by team",
     "excludeFromHero": true,
     "leagues": [
       "afl"

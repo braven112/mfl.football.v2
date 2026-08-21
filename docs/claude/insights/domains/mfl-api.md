@@ -2061,3 +2061,60 @@ More generally: before asserting an absence against a function that touches
 `process.cwd()`, check whether a committed feed can answer on your behalf. A
 test that depends on bot-synced data is a scheduled failure, and it lands on
 `main` rather than on the PR that caused it.
+---
+
+## 2026-08-21 - `playerRanks` and `adp` MUST Go to `api.myfantasyleague.com` — a League Host Answers With an Empty Body
+
+**Context:** Evaluating MFL's own ranking exports as built-in sources for
+Import Rankings.
+
+**Insight:** Both `TYPE=playerRanks` and `TYPE=adp` are **host-gated**. Sent to
+a league host (`www49.myfantasyleague.com/2026/export?...`) they return:
+
+```json
+{"error":{"$t":"Invalid request. This API request must go to api.myfantasyleague.com"}}
+```
+
+The dangerous part is how that reads downstream: for `playerRanks` the body
+comes back effectively empty, which is indistinguishable from "these rankings
+aren't published for this season yet" — a wrong but entirely plausible
+conclusion that stops the investigation.
+
+Both work unauthenticated on `api.myfantasyleague.com` and neither needs `L=`:
+
+- `TYPE=playerRanks` — FantasySharks expert ranks. Params: `SOURCE`
+  (default `sharks`), `POS`. Returns `rank`, `id`, plus `change` and
+  `last_week` for week-over-week movement.
+- `TYPE=adp` — real ADP. Params: `PERIOD` (ALL/RECENT/DRAFT/JUNE/JULY/AUG1/
+  AUG15/START/MID/PLAYOFF), `FCOUNT`, `IS_PPR`, `IS_KEEPER`, `IS_MOCK`,
+  `CUTOFF`, `DETAILS`. Returns `averagePick`, `minPick`, `maxPick`,
+  `draftsSelectedIn`, `draftSelPct`.
+
+**Evidence:** The same query returned an error payload on `www49` and full data
+on `api` in the same minute.
+
+**Recommendation:** Both key on **global MFL player ids**, so they need no name
+matching and resolve to 100% of the pool by construction — strictly better than
+any external ranking source for this repo. When an MFL export returns nothing,
+check the host before concluding the data doesn't exist.
+
+---
+
+## 2026-08-21 - MFL Team Codes Are Their Own Dialect — Normalize Before Comparing
+
+**Context:** Using NFL team as a tiebreaker when matching external ranking
+sources to MFL players.
+
+**Insight:** MFL emits `TBB`, `NOS`, `GBP`, `NEP`, `KCC`, `SFO`, `LVR`, `WAS`,
+`JAC`, `HST`, `BLT`, `CLV`, `ARZ` where ESPN, Sleeper and FantasyCalc all emit
+`TB`, `NO`, `GB`, `NE`, `KC`, `SF`, `LV`, `WSH`, `JAX`, `HOU`, `BAL`, `CLE`,
+`ARI`. Comparing raw strings silently fails for roughly a third of the league —
+and it fails *quietly*, as a missing tie-break rather than an error.
+
+`TEAM_CODE_MAP` in `src/utils/nfl-logo.ts` is the canonical map; node scripts
+that can't import the `.ts` must mirror it and say so in a comment.
+
+**Recommendation:** Team is a **tiebreaker, never a filter**. Rankings go stale
+the moment a player is traded or cut, so a team mismatch must cost a candidate
+its confidence boost, not its place in the running — filtering on team drops
+every traded player from every import.

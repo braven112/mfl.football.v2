@@ -1,43 +1,83 @@
 ---
 /**
  * Import Rankings — shared implementation (extracted from the TheLeague
- * page so best-ball leagues get the identical tool via thin wrappers).
+ * page so the AFL and best-ball leagues get the identical tool via thin
+ * wrappers).
  *
  * Bookmarklet-based rankings import page. Users drag bookmarklets to their
  * bookmarks bar, visit ranking sites, and click to auto-import rankings.
- * All data stored in localStorage only — private per user, and shared
- * browser-wide across leagues (the storage keys are not league-scoped),
- * so rankings imported once feed every league's draft queue.
+ *
+ * Storage is per-owner and scoped by LEAGUE — see src/utils/rankings-scope.ts
+ * for which leagues share a bucket and why TheLeague's keys are unchanged.
+ * Everything below is resolved from the league whose page this is, not from
+ * TheLeague: the fuzzy matcher has to match against the player universe of
+ * the league the rankings will be used in.
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import RankingsImportPage from '../../theleague/rankings-import/RankingsImportPage';
-import { getCurrentLeagueYear } from '../../../utils/league-year';
+import { getLeagueYearForSlug } from '../../../utils/league-year';
 import { getPlayerMap } from '../../../utils/player-map';
+import { getLeagueContext } from '../../../utils/league-context';
+import { ensureLeaguePrefix, getLeagueBySlug } from '../../../config/leagues';
+import { defaultRankingSourcesFor } from '../../../config/leagues-data.mjs';
 import bookmarkletManifest from '../../../data/bookmarklet-manifest.json';
-import { getAuthUser, isCommissionerOrAdmin } from '../../../utils/auth';
+import { getAuthUser, isCommissionerOrAdmin, isAuthorizedForLeague } from '../../../utils/auth';
 
 interface Props {
   /** Page <title>; defaults to TheLeague's original string. */
   title?: string;
+  /**
+   * Whether this league has a Custom Rankings board to link admins to.
+   * Best-ball leagues don't — they only consume the imports.
+   */
+  hasCustomRankings?: boolean;
 }
 
-const { title = 'Import Rankings | The League' } = Astro.props as Props;
+const { title = 'Import Rankings | The League', hasCustomRankings = true } =
+  Astro.props as Props;
 
-const user = getAuthUser(Astro.request);
-const isAdmin = !!user && isCommissionerOrAdmin(user);
-
-const leagueYear = getCurrentLeagueYear();
+// Per-league year clock — the AFL rolls June 1, TheLeague Feb 14, so a bare
+// getCurrentLeagueYear() reads the wrong season's feed for ~3 months a year.
+const leagueSlug = getLeagueContext(Astro.url).slug;
+const leagueYear = getLeagueYearForSlug(leagueSlug);
 const leagueYearStr = String(leagueYear);
+const league = getLeagueBySlug(leagueSlug);
+
+// The Custom Rankings link is admin-only AND league-scoped: the /cr route
+// bounces a session from a different league, so a TheLeague admin browsing
+// the AFL's page must not be shown a link that dead-ends on a redirect.
+const user = getAuthUser(Astro.request);
+const isAdmin =
+  !!user &&
+  !!league &&
+  isAuthorizedForLeague(user, league.id) &&
+  isCommissionerOrAdmin(user);
+
+// Internal route, so it stays PREFIXED (see CLAUDE.md) — the apex domains
+// redirect the prefixed form, the shared host requires it.
+const customRankingsHref =
+  hasCustomRankings && league ? ensureLeaguePrefix(league, '/cr') : null;
 
 // ---------------------------------------------------------------------------
 // Load MFL players for fuzzy matching
 // ---------------------------------------------------------------------------
-// Year-filtered (2025+): only the current league year is read below.
+// Two globs, one per league with its own player pool, because Vite requires
+// literal glob patterns — the league can't be interpolated. Both are
+// year-filtered (2025+); only the current league year is read below.
 // tests/current-era-feed-globs.test.ts guards it.
-const playersFeeds = import.meta.glob(
+const theLeaguePlayersFeeds = import.meta.glob(
   '../../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json',
   { eager: true },
 );
+const aflPlayersFeeds = import.meta.glob(
+  '../../../../data/afl-fantasy/mfl-feeds/20{2[5-9],[3-9][0-9]}/players.json',
+  { eager: true },
+);
+
+// Best-ball leagues have no players feed of their own committed; they draft
+// from the same NFL universe, so they fall back to TheLeague's.
+const playersFeeds =
+  leagueSlug === 'afl-fantasy' ? aflPlayersFeeds : theLeaguePlayersFeeds;
 
 const getModuleData = (mod: unknown) =>
   mod && typeof mod === 'object' && 'default' in mod ? (mod as { default: unknown }).default : mod;
@@ -69,6 +109,20 @@ const mflPlayers = rawPlayers
       team: identity?.nflTeam ?? p.team ?? '',
     };
   });
+
+// ---------------------------------------------------------------------------
+// Built-in ranking sources (data/ranking-sources/<year>.json)
+// ---------------------------------------------------------------------------
+// Read on the SERVER and handed to the island as a prop, so the ~150 KB
+// snapshot lands in the server chunk for this one route instead of the client
+// bundle of every page that touches rankings. The island reconciles it into
+// the owner's store, and every downstream consumer reads it from there.
+const rankingSourceFiles = import.meta.glob(
+  '../../../../data/ranking-sources/*.json',
+  { eager: true },
+);
+const builtinSnapshot =
+  getModuleData(rankingSourceFiles[`../../../../data/ranking-sources/${leagueYearStr}.json`]) ?? null;
 
 // ---------------------------------------------------------------------------
 // Site configurations for bookmarklet cards
@@ -173,6 +227,9 @@ const siteConfigs = [
     mflPlayersJson={JSON.stringify(mflPlayers)}
     siteConfigsJson={JSON.stringify(siteConfigs)}
     isAdmin={isAdmin}
+    customRankingsHref={customRankingsHref}
+    builtinSnapshotJson={JSON.stringify(builtinSnapshot)}
+    defaultSourceIds={defaultRankingSourcesFor(leagueSlug)}
   />
 </TheLeagueLayout>
 
@@ -193,7 +250,12 @@ const siteConfigs = [
   .ri-page__title {
     font-size: 1.75rem;
     font-weight: 700;
-    color: var(--primary-color, #1c497c);
+    /* Page title matches every other page in both leagues (--page-text),
+       not the brand blue. --primary-color resolves to #3b82f6 in dark mode,
+       which read as blue-on-navy here and made this the only page whose h1
+       wasn't near-white. Section titles/links/table headers below KEEP the
+       blue — that's the documented per-league convention (tokens.css). */
+    color: var(--page-text);
     margin: 0 0 0.5rem;
   }
 
@@ -237,7 +299,7 @@ const siteConfigs = [
     gap: 0.5rem;
     font-size: 1.2rem;
     font-weight: 600;
-    color: var(--primary-color, #1c497c);
+    color: var(--page-text);
     margin: 0 0 0.75rem;
   }
 
@@ -339,7 +401,7 @@ const siteConfigs = [
   .bm-card__name {
     font-weight: 600;
     font-size: 1rem;
-    color: var(--primary-color, #1c497c);
+    color: var(--page-text);
   }
 
   .bm-card__badges {
@@ -582,7 +644,7 @@ const siteConfigs = [
     gap: 0.5rem;
     font-size: 1.2rem;
     font-weight: 600;
-    color: var(--primary-color, #1c497c);
+    color: var(--page-text);
     list-style: none;
     user-select: none;
   }
@@ -607,7 +669,7 @@ const siteConfigs = [
   }
 
   .ri-import__manual-summary:hover {
-    color: var(--btn-primary-bg-hover, #163d68);
+    color: var(--page-text);
   }
 
   .ri-import__manual-content {
@@ -686,7 +748,7 @@ const siteConfigs = [
   .ri-manage__table th {
     text-align: left;
     font-weight: 600;
-    color: var(--primary-color, #1c497c);
+    color: var(--content-text-muted);
     padding: 0.5rem 0.75rem;
     border-bottom: 2px solid var(--primary-content-border-color, #e2e8f0);
     white-space: nowrap;
@@ -815,6 +877,62 @@ const siteConfigs = [
     text-align: center;
   }
 
+  /* Restore control for built-in sources the owner hid. */
+  .ri-manage__hidden-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--content-bg-muted, #f8fafc);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: 6px;
+    font-size: 0.8125rem;
+  }
+
+  .ri-manage__hidden-label {
+    color: var(--content-text-muted, #64748b);
+  }
+
+  .ri-manage__weight-input-wrap {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.15rem;
+    white-space: nowrap;
+  }
+
+  .ri-manage__weight-input {
+    width: 3.25rem;
+    padding: 0.2rem 0.3rem;
+    text-align: right;
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--page-text);
+    background: var(--content-bg, #fff);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: 4px;
+  }
+
+  .ri-manage__weight-input:focus {
+    outline: 2px solid var(--primary-color, #1c497c);
+    outline-offset: -1px;
+  }
+
+  .ri-manage__weight-unit {
+    font-size: 0.75rem;
+    color: var(--content-text-muted, #64748b);
+  }
+
+  /* Actual share once the composite normalizes by total weight. Only rendered
+     when it differs from the typed number. */
+  .ri-manage__weight-effective {
+    margin-left: 0.3rem;
+    font-size: 0.7rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--content-text-muted, #64748b);
+  }
+
   .ri-manage__weight-picker {
     display: inline-flex;
     gap: 2px;
@@ -861,7 +979,7 @@ const siteConfigs = [
 
   .ri-manage__composite-bar-label {
     font-weight: 700;
-    color: var(--primary-color, #1c497c);
+    color: var(--page-text);
   }
 
   .ri-manage__composite-bar-detail {
@@ -903,7 +1021,7 @@ const siteConfigs = [
   .ri-modal__header h3 {
     font-size: 1.1rem;
     font-weight: 600;
-    color: var(--primary-color, #1c497c);
+    color: var(--page-text);
     margin: 0;
     text-transform: capitalize;
   }
@@ -1025,7 +1143,7 @@ const siteConfigs = [
   .ri-guide__content h3 {
     font-size: 0.95rem;
     font-weight: 600;
-    color: var(--primary-color, #1c497c);
+    color: var(--page-text);
     margin: 1.25rem 0 0.5rem;
   }
 
@@ -1062,7 +1180,7 @@ const siteConfigs = [
     font-weight: 600;
     padding: 0.35rem 0.5rem;
     border-bottom: 2px solid var(--content-border, #e2e8f0);
-    color: var(--primary-color, #1c497c);
+    color: var(--content-text-muted);
   }
 
   .ri-guide__fields-table td {

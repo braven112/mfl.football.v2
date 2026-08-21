@@ -47,11 +47,22 @@ export const SOURCE_LABELS: Record<RankingSourceId, string> = {
   dlf: 'DLF',
   yahoo: 'Yahoo',
   footballguys: 'FootballGuys',
+  'mfl-adp': 'MFL ADP',
+  sharks: 'FantasySharks',
+  // Built-in variants are distinct sources, not the same source twice: the
+  // Sleeper built-in is build-time matched (the old one-click card was not),
+  // and superflex is a different board from ESPN's PPR ranks.
+  'sleeper-adp': 'Sleeper',
+  'espn-superflex': 'ESPN Superflex',
   custom: 'Custom',
 };
 
 /** Short abbreviations for column headers (≤5 chars) */
 export const SOURCE_ABBREVS: Record<RankingSourceId, string> = {
+  'mfl-adp': 'MFL',
+  sharks: 'Shrks',
+  'sleeper-adp': 'Sleep',
+  'espn-superflex': 'ESPNS',
   fantasypros: 'FPros',
   cbs: 'CBS',
   sleeper: 'Sleep',

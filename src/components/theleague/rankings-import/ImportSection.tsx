@@ -60,6 +60,8 @@ export default function ImportSection({ mflPlayers, onImportComplete }: Props) {
             p.name,
             p.pos,
             mflPlayers.map((m) => ({ id: m.id, name: m.name, position: m.position, team: m.team })),
+            undefined,
+            p.team || '',
           );
           return {
             rank: p.rank,

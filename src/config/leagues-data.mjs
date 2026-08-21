@@ -51,6 +51,8 @@ export const LEAGUES = {
       schefterTips: true,
       liveScoring: true,
     },
+    // Contract dynasty league — long-horizon value is the right opening board.
+    defaultRankingSources: ['fantasycalc', 'sharks', 'mfl-adp'],
   },
   'afl-fantasy': {
     id: '19621',
@@ -92,6 +94,10 @@ export const LEAGUES = {
       schefterTips: true,
       liveScoring: true,
     },
+    // Keeper league that re-drafts most of the roster every year, so the
+    // defaults lean redraft/ADP. FantasyCalc dynasty stays AVAILABLE, just
+    // not on by default — it overrates youth for a one-season horizon.
+    defaultRankingSources: ['mfl-adp', 'espn', 'sharks'],
   },
   'best-ball-1': {
     id: '37610',
@@ -134,6 +140,9 @@ export const LEAGUES = {
        */
       liveScoring: true,
     },
+    // Redraft best-ball: one season, no keepers, no contracts — straight
+    // redraft ADP is exactly the right opening board.
+    defaultRankingSources: ['mfl-adp', 'espn', 'sharks'],
   },
 };
 
@@ -287,4 +296,25 @@ export function buildHostToSlugMap() {
     }
   }
   return map;
+}
+/**
+ * Which BUILT-IN ranking sources are ticked into "My Rank" by default, per
+ * league. Every source is AVAILABLE everywhere — this only decides the
+ * starting composite, because the right default depends on how the league
+ * drafts: dynasty trade values are the wrong opening board for a league that
+ * re-drafts, and a straight redraft ADP is the wrong one for a contract
+ * dynasty league.
+ *
+ * An owner's own tick/weight choices always win after the first visit; this
+ * is a starting point, not a policy. Ids come from
+ * scripts/fetch-ranking-sources.mjs.
+ *
+ * Every league carries its own rankings storage (see rankings-scope.ts), so
+ * every league can carry its own defaults.
+ */
+export const DEFAULT_RANKING_SOURCES_FALLBACK = ['mfl-adp', 'sharks'];
+
+/** Built-in ranking sources ticked on by default for a league slug. */
+export function defaultRankingSourcesFor(slug) {
+  return LEAGUES[slug]?.defaultRankingSources ?? DEFAULT_RANKING_SOURCES_FALLBACK;
 }

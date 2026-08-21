@@ -83,6 +83,20 @@ const MANUAL_CAPTURE_ONLY = {
  * Each key is an entry ID; the value is an async function that runs
  * after navigation + initial wait, right before the screenshot is taken.
  */
+/**
+ * Capture path overrides.
+ *
+ * An entry visible in more than one league must carry a LEAGUE-NEUTRAL link
+ * (`/import-rankings`), because a prefixed one would send half its readers
+ * into the other league — tests/whats-new-data.test.ts enforces that. Bare
+ * paths only route on a league's own apex domain though, so on the shared
+ * host (and on a preview deployment) they 404 and the capture silently grabs
+ * an error page. Name a concrete page to shoot instead.
+ */
+const CAPTURE_PATHS = {
+  'built-in-rankings-2026-08-21': '/afl-fantasy/import-rankings',
+};
+
 const PAGE_HOOKS = {
   'homepage-whats-new-section': async (page) => {
     // The What's New panel sits at the bottom of the homepage's left column —
@@ -92,6 +106,13 @@ const PAGE_HOOKS = {
       if (el) el.scrollIntoView({ block: 'center' });
     });
     await page.waitForTimeout(500);
+  },
+  'built-in-rankings-2026-08-21': async (page) => {
+    // The built-in sources are reconciled into storage after hydration, so the
+    // Saved Rankings table this shot is about does not exist at networkidle.
+    // Wait for the rows rather than a fixed delay.
+    await page.waitForSelector('.ri-manage__table tbody tr', { timeout: 15000 }).catch(() => {});
+    await page.waitForTimeout(800);
   },
   'nav-drawer-redesign': async (page) => {
     // Open the navigation drawer so it's visible in the screenshot
@@ -251,7 +272,8 @@ async function main() {
 
   for (const entry of targets) {
     const page = await context.newPage();
-    const url = entry.link ? `${BASE_URL}${entry.link}` : BASE_URL;
+    const capturePath = CAPTURE_PATHS[entry.id] ?? entry.link;
+    const url = capturePath ? `${BASE_URL}${capturePath}` : BASE_URL;
 
     console.log(`  [${entry.id}] navigating to ${url}`);
     try {
