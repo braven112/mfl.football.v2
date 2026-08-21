@@ -2180,8 +2180,6 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
             <span class="submit-franchise-tags-btn__label">Submit Tags/Extensions</span>
           </button>
 
-          <MyRankEditor league="theleague" />
-
           <div class="mode-toggle">
             <button class="mode-btn active" data-mode="gm" title="GM Mode: Contracts & Salary Cap">
               <svg class="mode-icon"><use href={`${spriteUrl}#icon-banknote`}></use></svg> GM
@@ -2190,6 +2188,11 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
               <svg class="mode-icon"><use href={`${spriteUrl}#icon-submit`}></use></svg> Coach
             </button>
           </div>
+
+          {/* Below the mode toggle, not above it: .mode-toggle has a negative
+              top margin so it can ride up beside the team card, which means it
+              covers anything stacked above it in this column. */}
+          <MyRankEditor league="theleague" />
         </div>
       <div class="roster-table-wrapper">
         <table class="roster-table" data-hidden-columns="">
@@ -4843,6 +4846,16 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
           margin-top: -2.5rem;
           margin-right: 0;
     }
+  }
+
+  /* .roster-controls lays out with `order`, and .mode-toggle (order: 1) rides
+     up on a negative top margin — so a sibling that doesn't opt into the
+     ordering renders FIRST and gets covered by the toggle, whatever its
+     position in the markup. */
+  .roster-controls :global(.mre-trigger) {
+    order: 2;
+    align-self: flex-end;
+    margin-top: 0.4rem;
   }
   .mode-btn {
     display: flex;

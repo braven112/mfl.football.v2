@@ -258,6 +258,12 @@
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
+  /* Host toolbars are flex containers, and some of them stack in a column with
+     the default `align-items: stretch` — which blew this pill out to the full
+     width of TheLeague's roster controls. Never grow, never shrink, sit on the
+     cross axis wherever the row does. */
+  flex: 0 0 auto;
+  align-self: center;
   padding: 0.25rem 0.65rem;
   border: 1px solid var(--content-border, #d1d5db);
   border-radius: var(--radius-full, 999px);
