@@ -4,11 +4,14 @@
  *
  * Shows the AFL team's tier (Premier / D-League), conference, current record,
  * and roster count. During the regular season, also surfaces the next matchup;
- * during the offseason, surfaces keeper status. Guests see a team picker prompt.
+ * during the offseason, the fourth tile is a calendar-rotating "spotlight"
+ * resolved by `afl-team-spotlight.ts` (draft slot -> last title -> playoff
+ * streak -> all-time record). Guests see a team picker prompt.
  */
 import { spriteUrl } from '../../../utils/sprite-url';
 import ThemeImage from '../../ThemeImage.astro';
 import { getTierLogo, getTierLogoDark, PREMIER_LEAGUE, D_LEAGUE } from '../../../utils/afl-tier-logo';
+import type { AflSpotlight } from '../../../utils/afl-team-spotlight';
 import {
   getConferenceLogo,
   getConferenceLogoDark,
@@ -34,11 +37,21 @@ interface Props {
   record?: { wins: number; losses: number; ties: number };
   nextOpponent?: { name?: string; icon?: string };
   rosterCount?: number;
-  keeperCount?: number;
-  /** Total keepers allowed per franchise. */
-  keeperLimit: number;
+  /**
+   * Set ONLY when `rosterCount` is not the current league year's roster —
+   * i.e. the caller had to fall back because MFL has not populated the new
+   * year's feed yet. The sub line then names the year, because an unlabelled
+   * "20 players" is a team that no longer exists. Leave undefined for a
+   * current roster and the tile just says "players".
+   */
+  rosterYear?: number;
   /** Active roster target (used to surface "X of N" slot fill). */
   rosterLimit?: number;
+  /**
+   * Offseason-only fourth tile. Resolved by the caller because the draft tier
+   * needs feed reads; the component just renders whatever tier won.
+   */
+  spotlight?: AflSpotlight | null;
   /** Render variant — defaults to "in-season" when record exists, "offseason" otherwise */
   variant?: 'in-season' | 'offseason';
 }
@@ -49,9 +62,9 @@ const {
   record,
   nextOpponent,
   rosterCount,
-  keeperCount,
-  keeperLimit,
+  rosterYear,
   rosterLimit,
+  spotlight,
   variant,
 } = Astro.props;
 
@@ -82,6 +95,12 @@ interface MetricDef {
    */
   logoAlt?: string;
   alert?: boolean;
+  /**
+   * Long-form description for `title`/`aria-label`. The spotlight tile needs
+   * one — "1.10*" is not something a screen reader can convey, and the
+   * asterisk is meaningless without the sentence behind it.
+   */
+  hint?: string;
 }
 
 /* Tier and conference are branded in this league, and the badge says "Premier"
@@ -161,18 +180,20 @@ const metrics: MetricDef[] = inferredVariant === 'in-season'
         icon: 'star',
         ...conferenceLogo,
       },
-      {
-        label: 'Keepers',
-        value: keeperCount != null ? `${keeperCount}` : '—',
-        sub: `of ${keeperLimit} protected`,
-        href: '/afl-fantasy/keepers',
-        icon: 'bookmark',
-        alert: keeperCount != null && keeperCount < keeperLimit,
-      },
+      ...(spotlight
+        ? [{
+            label: spotlight.label,
+            value: spotlight.value,
+            sub: spotlight.sub,
+            href: spotlight.href,
+            icon: spotlight.icon,
+            hint: spotlight.hint,
+          }]
+        : []),
       {
         label: 'Roster',
         value: rosterCount != null ? `${rosterCount}` : '—',
-        sub: 'players',
+        sub: rosterYear ? `${rosterYear} roster` : 'players',
         href: '/afl-fantasy/rosters',
         icon: 'users',
       },
@@ -200,7 +221,7 @@ const metrics: MetricDef[] = inferredVariant === 'in-season'
     </div>
     <div class="afl-snapshot__grid">
       {metrics.map(m => (
-        <a href={m.href} class="afl-snapshot__card">
+        <a href={m.href} class="afl-snapshot__card" title={m.hint} aria-label={m.hint ? `${m.label}: ${m.hint}` : undefined}>
           {m.logo && m.logoDark ? (
             <span class="afl-snapshot__card-headline">
               {/* eager, not lazy: this card sits directly under the hero and the

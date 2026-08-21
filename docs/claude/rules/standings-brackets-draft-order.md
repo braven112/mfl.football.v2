@@ -191,3 +191,47 @@ windows where the order is official, so they say "View Draft Order", never
 "predictor". Static copy (nav, page directory, Roger's prompt/seeds) should
 stay phase-neutral or state both phases.
 
+
+## MFL's board does not preserve who earned a slot
+
+`draftResults.json` is the only place traded picks show up — and that is
+exactly why it cannot tell you a franchise's **earned** draft position. MFL
+seeds a fresh board straight from the official order, then *reassigns* a slot
+to the new owner when the pick is traded. The earned position is overwritten,
+not annotated. Proof in the archive: on the 2025 AFL board two franchises hold
+two round-1 picks and two hold none, and the only trace of who originally owned
+them is a `comments` string (`[Pick traded from Smokane FC.]`) that MFL does
+not write until the pick is actually *made*.
+
+So anything showing "your draft slot" needs both sources, and must not
+substitute one for the other:
+
+- **Earned/base slot** → `calculateAFLDraftOrder` over the prior season's
+  standings. Trade-independent by construction.
+- **Picks actually held** → the board's `draftPick[].franchise`.
+
+`src/utils/afl-draft-slot.ts` does exactly this for the homepage spotlight
+tile, and `tests/afl-draft-slot.test.ts` pins the property that makes the base
+slot trustworthy: on an untraded board, our standings-derived order must
+reproduce MFL's seeding pick for pick across all 24 franchises. A drift in the
+tiebreaker chain surfaces there as a phantom "you traded this pick" asterisk.
+
+Two smaller traps in the same feed:
+
+- Take the draft year's standings from `draftYear - 1`, not
+  `getCurrentSeasonYear()`. They agree all offseason, but after Labor Day
+  `getCurrentSeasonYear()` names a season whose standings are still all zeros.
+- Completion is **per conference**. The AFL's board is two `draftUnit` entries
+  (`CONFERENCE00` / `CONFERENCE01`) that finish a day apart, so a flattened
+  "is the draft done" check keeps AL owners in draft mode while the NL picks.
+
+## AFL has no keeper construct — don't build a metric on one
+
+The offseason auction wipes every roster, so MFL stores nothing keeper-shaped
+for the AFL; `afl-keepers-storage.ts` is a private per-owner scratchpad in
+Redis, not league state. A "keepers protected" count therefore measures whether
+someone opened a planning page. The MFL roster feed is no better: preseason it
+holds exactly `keepers` players for **all 24 franchises**, so any tile built on
+it reads "7 of 7" league-wide. The AFL homepage shipped that tile for months
+rendering a bare `—`; it is now the calendar-rotating spotlight in
+`src/utils/afl-team-spotlight.ts`.
