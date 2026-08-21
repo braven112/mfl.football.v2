@@ -72,8 +72,13 @@ CSS**. A fix applied to one does not propagate — grep both before calling it d
   `pathBelongsToLeague()` **and** build hrefs with `resolveDirectoryHref()`.
   Doing only one leaves either cross-league entries or dead double-prefixed links.
 - Cross-league link leaks hide in shared components and **auth redirects**, not
-  in nav-config. AFL login takes `?next=`, TheLeague `?redirect=`. Find them by
-  rendering the page and grepping the HTML, not by reading code.
+  in nav-config: a correct `href` still bounces the user cross-league if the
+  page's logged-out gate redirects to the other league's login. Each login page
+  validates its return param against its own path space, so send AFL users to
+  `/afl-fantasy/login` and TheLeague users to `/theleague/login`. (Both pages
+  accept `?next=` and `?redirect=`; they differ only in precedence — an older
+  entry below says otherwise and is stale.) Find leaks by rendering the page and
+  grepping the HTML, and follow the 302 — an href-only audit misses the gate.
 
 ## Verifying
 

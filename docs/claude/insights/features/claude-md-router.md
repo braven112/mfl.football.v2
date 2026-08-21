@@ -188,3 +188,46 @@ against a past revision — `HEAD@{...}`, `git log --since`, `git blame` ages,
 Here the reliable signal was already in the files: the dated `## YYYY-MM-DD`
 headings each entry carries. Prefer in-content evidence over git history in a
 shallow clone.
+
+## 2026-08-21 - A distilled rule inherits the archive's date but is presented as current
+
+**Context:** Review of the curated-head PR caught a rule I had written into
+`frontend.md`'s head: *"AFL login takes `?next=`, TheLeague `?redirect=`."* It
+was faithfully distilled from a 2026-07-07 archive entry that said exactly that.
+It is also wrong today — both login pages now accept both params and differ only
+in precedence, and each one's source comment says it was made symmetric
+deliberately ("`?redirect=` for symmetry with TheLeague's login").
+
+**Insight:** Summarizing a dated journal changes the claim's tense. In the
+archive the entry is stamped 2026-07-07 and reads as *what was true then*; a
+reader who finds it knows to check. Lifted into a head with the date stripped, the
+same sentence reads as *what is true now* — and it has been promoted to the one
+place agents are told to read **instead of** the archive. So the distillation
+step converts a correctly-dated historical record into a confidently-wrong
+current rule, and it does it silently, because the source text was accurate when
+written and copying it faithfully feels like the careful thing to do.
+
+This is strictly worse than leaving the file at 141 KB. An oversized archive
+fails by being skipped; a wrong head fails by being *believed*.
+
+**Evidence:** `src/pages/theleague/login.astro:20` and
+`src/pages/afl-fantasy/login.astro:31` — both read
+`searchParams.get('next') || searchParams.get('redirect')` (order swapped per
+league), each validated with `startsWith` against its own path prefix. The
+archive entry that produced the head line is still below it, correctly dated,
+and is now explicitly marked stale by the head.
+
+**Recommendation:** When distilling any dated entry into a head, **re-verify the
+rule against current code before promoting it** — grep the symbol, open the file,
+check the behavior still matches. Budget for this: it is a different and slower
+activity than summarizing, and it is the only step that distinguishes a head from
+a wiki page nobody trusts. Two habits that make it cheap:
+
+- Prefer rules that name a helper or a guard test (`use getActiveTeams()`,
+  `tests/team-accent-css.test.ts` enforces 3:1`) over rules that describe a
+  behavior in prose. A named symbol either exists or it doesn't, so the check is
+  a grep and the rule rots loudly rather than quietly.
+- When a head contradicts an entry below it, say so in the head. The archive is
+  immutable history and must not be rewritten, so the head is the only place the
+  correction can live — leaving both versions standing with no pointer is how the
+  next reader picks the wrong one.

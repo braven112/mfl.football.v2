@@ -16,7 +16,9 @@ Do these three things immediately:
    - `docs/claude/insights/domains/design-system.md` — head (if UI work)
    - `docs/claude/insights/domains/mfl-api.md` — head (if API work)
    - `docs/claude/insights/domains/accessibility.md` (if new interactive UI; small, read whole)
-   - `docs/claude/insights/features/{feature}.md` (if one exists for this feature)
+   - `docs/claude/insights/features/{feature}.md` (if one exists for this feature —
+     check its size first; anything over ~64 KB carries a curated head too, and
+     the rest of it should be grepped, not read)
 
 3. **Write a structured story** filling in the template with:
    - User story, acceptance criteria, technical context, design requirements
