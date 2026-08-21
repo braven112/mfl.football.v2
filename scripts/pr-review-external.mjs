@@ -14,15 +14,24 @@
 //
 // Usage:
 //   node scripts/pr-review-external.mjs --pr <number> [--providers gemini,openai] [--dry-run]
+//   node scripts/pr-review-external.mjs --providers openai --section-only
+//
+// The second form is the in-session fallback `/live` uses when the local
+// `codex` CLI is missing (the Claude cloud sandbox). It prints the reviewer's
+// findings to stdout for in-session adjudication and posts nothing — see
+// `renderSections()` for why an in-session run must not touch the PR comment.
 
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { runProvider, PROVIDERS } from './lib/pr-review-providers.mjs';
-
-// Marker on the posted comment. Used to find-and-update rather than append a
-// new comment on every push, so a long-lived PR doesn't accumulate a wall of
-// stale reviews. Must stay byte-stable — changing it orphans existing comments.
-const COMMENT_MARKER = '<!-- external-pr-review -->';
+import {
+  runProvider,
+  PROVIDERS,
+  COMMENT_MARKER,
+  STATUS_PREFIX,
+  buildComment,
+  renderSections,
+  overallStatus,
+} from './lib/pr-review-providers.mjs';
 
 // Paths whose diffs are noise for a reviewer: generated feeds, lockfiles and
 // committed data snapshots written by cron. Dropping them keeps the real
@@ -78,10 +87,17 @@ function loadRepoContext() {
 // guarantees a permanently-failing reviewer. It stays in the registry so
 // `--providers gemini,openai` works if a funded key ever exists.
 function parseArgs(argv) {
-  const args = { providers: ['gemini'], dryRun: false, pr: null, base: 'origin/main' };
+  const args = {
+    providers: ['gemini'],
+    dryRun: false,
+    sectionOnly: false,
+    pr: null,
+    base: 'origin/main',
+  };
   for (let i = 2; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === '--dry-run') args.dryRun = true;
+    else if (arg === '--section-only') args.sectionOnly = true;
     else if (arg === '--pr') args.pr = argv[++i];
     else if (arg === '--base') args.base = argv[++i];
     else if (arg === '--providers') args.providers = argv[++i].split(',').map((s) => s.trim());
@@ -96,39 +112,6 @@ function sh(cmd, cmdArgs) {
 /** Three-dot diff: the branch's own changes, excluding whatever main did meanwhile. */
 function collectDiff(base) {
   return sh('git', ['diff', `${base}...HEAD`, '--', '.', ...EXCLUDED_PATHS]);
-}
-
-/**
- * Render one provider's result as a markdown section.
- *
- * Errors and skips are rendered explicitly rather than omitted. A reviewer
- * that failed must never be indistinguishable from a reviewer that passed —
- * that is the exact failure mode this whole workflow exists to fix.
- */
-function renderSection(result) {
-  if (result.status === 'skipped') {
-    return `### ${result.label}\n\n_Skipped — ${result.reason}._`;
-  }
-  if (result.status === 'error') {
-    return `### ${result.label}\n\n⚠️ **Reviewer failed to run** — ${result.reason}\n\nTreat this as "not reviewed", not as a clean pass.`;
-  }
-  const truncNote = result.truncated
-    ? '\n\n_Note: the diff was truncated — coverage is partial._'
-    : '';
-  const focus = result.focus ? ` · lens: **${result.focus}**` : '';
-  return `### ${result.label}\n\n<sub>\`${result.model}\`${focus}</sub>\n\n${result.text}${truncNote}`;
-}
-
-function buildComment(results) {
-  const body = results.map(renderSection).join('\n\n---\n\n');
-  return `${COMMENT_MARKER}
-## External review
-
-Independent reviewers running outside the Claude session, so coverage doesn't depend on which machine \`/live\` was launched from.
-
-${body}
-
-<sub>Posted by \`.github/workflows/pr-external-review.yml\`. Severity headings are parsed by \`/live\`.</sub>`;
 }
 
 /**
@@ -194,12 +177,14 @@ async function main() {
         .map((p) => PROVIDERS[p].envKey)
         .join(', ')}). External review skipped — Claude and Copilot still review this PR.`
     );
+    console.log(`${STATUS_PREFIX} skipped`);
     return;
   }
 
   const diff = collectDiff(args.base);
   if (!diff.trim()) {
     console.log('No reviewable diff (all changes excluded or branch is empty). Nothing to do.');
+    console.log(`${STATUS_PREFIX} skipped`);
     return;
   }
   console.log(`Diff: ${diff.length} bytes across providers: ${args.providers.join(', ')}`);
@@ -215,15 +200,28 @@ async function main() {
     console.log(`  ${r.label}: ${r.status}${r.reason ? ` — ${r.reason}` : ''}`);
   }
 
+  const status = overallStatus(results);
+
+  // Print findings and stop. Checked BEFORE --pr on purpose: --section-only is
+  // a promise not to write to the PR, and a caller that passes both should get
+  // the promise, not the post.
+  if (args.sectionOnly) {
+    console.log(`\n${renderSections(results)}`);
+    console.log(`\n${STATUS_PREFIX} ${status}`);
+    return;
+  }
+
   const comment = buildComment(results);
 
   if (args.dryRun || !args.pr) {
     console.log('\n--- comment body (dry run) ---\n');
     console.log(comment);
+    console.log(`\n${STATUS_PREFIX} ${status}`);
     return;
   }
 
   postComment(args.pr, comment);
+  console.log(`${STATUS_PREFIX} ${status}`);
 
   // Never exit non-zero on a provider failure. These reviewers are ADVISORY and
   // run on free-tier quota, so a 429 is an ordinary Tuesday — failing the check

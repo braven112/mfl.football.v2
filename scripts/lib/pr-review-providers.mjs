@@ -309,3 +309,85 @@ export async function runProvider(name, { diff, context = '', env = process.env 
     };
   }
 }
+
+/**
+ * Marker on the sticky PR comment posted by the Actions workflow. Used to
+ * find-and-update rather than append a new comment on every push, so a
+ * long-lived PR doesn't accumulate a wall of stale reviews. Must stay
+ * byte-stable — changing it orphans existing comments.
+ *
+ * It lives here, next to the renderers, because `renderSections()` is defined
+ * by NOT carrying it. See that function.
+ */
+export const COMMENT_MARKER = '<!-- external-pr-review -->';
+
+/**
+ * Prefix of the machine-readable status line every run prints before exiting.
+ *
+ * `/live` reads this instead of interpreting prose. Without it the caller has
+ * to guess from stdout whether a reviewer ran, and "no key configured" exits
+ * 0 with a friendly sentence — which is precisely the shape that gets read as
+ * a clean pass. One greppable token, three values: ok | degraded | skipped.
+ */
+export const STATUS_PREFIX = 'EXTERNAL_REVIEW_STATUS:';
+
+/**
+ * Collapse per-provider results into one status for the caller.
+ *
+ * `degraded` exists so a partial run can never round up to `ok`: if two
+ * providers were asked for and one 429'd, the lens it held was not covered
+ * by anyone, and `/live` has to say so.
+ */
+export function overallStatus(results) {
+  if (!results.length) return 'skipped';
+  if (results.every((r) => r.status === 'ok')) return 'ok';
+  if (results.some((r) => r.status === 'ok')) return 'degraded';
+  return 'skipped';
+}
+
+/**
+ * Render one provider's result as a markdown section.
+ *
+ * Errors and skips are rendered explicitly rather than omitted. A reviewer
+ * that failed must never be indistinguishable from a reviewer that passed —
+ * that is the exact failure mode this whole pipeline exists to fix.
+ */
+export function renderSection(result) {
+  if (result.status === 'skipped') {
+    return `### ${result.label}\n\n_Skipped — ${result.reason}._`;
+  }
+  if (result.status === 'error') {
+    return `### ${result.label}\n\n⚠️ **Reviewer failed to run** — ${result.reason}\n\nTreat this as "not reviewed", not as a clean pass.`;
+  }
+  const truncNote = result.truncated
+    ? '\n\n_Note: the diff was truncated — coverage is partial._'
+    : '';
+  const focus = result.focus ? ` · lens: **${result.focus}**` : '';
+  return `### ${result.label}\n\n<sub>\`${result.model}\`${focus}</sub>\n\n${result.text}${truncNote}`;
+}
+
+/**
+ * The sections alone — no sticky-comment wrapper, and deliberately no
+ * COMMENT_MARKER.
+ *
+ * This is what an in-session run prints (`--section-only`), and the missing
+ * marker is the point. The sticky comment belongs to the workflow: an
+ * in-session run that carried the marker would be PATCHed over CI's next
+ * review — or worse, would itself PATCH CI's comment and replace Gemini's
+ * cross-cutting findings with an openai-only body. Two reviewers, one slot,
+ * last writer wins. Keep the marker on exactly one producer.
+ */
+export function renderSections(results) {
+  return results.map(renderSection).join('\n\n---\n\n');
+}
+
+export function buildComment(results) {
+  return `${COMMENT_MARKER}
+## External review
+
+Independent reviewers running outside the Claude session, so coverage doesn't depend on which machine \`/live\` was launched from.
+
+${renderSections(results)}
+
+<sub>Posted by \`.github/workflows/pr-external-review.yml\`. Severity headings are parsed by \`/live\`.</sub>`;
+}
