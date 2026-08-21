@@ -1,0 +1,176 @@
+---
+/**
+ * TEMPORARY — live-scoring test-drive promo for the preseason weekend.
+ *
+ * Sits above the real hero on both homepages rather than replacing it: the
+ * hero is a state machine with a documented priority waterfall, and wedging a
+ * three-day banner into it would mean a new SeasonPhase, a new AFL hero kind
+ * and two renderers to unpick afterwards. This is one component and two call
+ * sites, and `isTestDriveWindow` takes it down on its own.
+ *
+ * Delete with src/utils/live-scoring-test-drive.ts once the window lapses.
+ */
+import { isTestDriveWindow, testDriveBoards, TEST_DRIVE_PARAMS, TEST_DRIVE_QUERY } from '../../utils/live-scoring-test-drive';
+
+interface Props {
+  /** Canonical slug of the league whose homepage this is. */
+  slug: string;
+  /** Test-date override, so ?testDate= can preview it like the real hero. */
+  referenceDate?: Date;
+}
+
+const { slug, referenceDate } = Astro.props;
+const show = isTestDriveWindow(referenceDate ?? new Date());
+const boards = show ? testDriveBoards(slug) : [];
+const primary = boards[0];
+---
+
+{show && primary && (
+  <section class="ls-td" aria-labelledby="ls-td-title">
+    <p class="ls-td__kicker">Test drive · today only</p>
+    <h2 class="ls-td__title" id="ls-td-title">Live Scoring is up. Real NFL games, your real roster.</h2>
+    <p class="ls-td__lede">
+      The board now reads the actual NFL game — real quarter and clock, red-zone
+      alerts, each starter's live box-score line, and a ticker of the scoring
+      plays your guys were involved in. MFL doesn't switch its own scoring on
+      until Week 1, so this points the fantasy side at your current roster and
+      the NFL side at this weekend's preseason slate.
+      <strong>Every fantasy score reads 0.0 — that part is expected.</strong>
+      Everything else should be live.
+    </p>
+
+    <div class="ls-td__ctas">
+      {boards.map((b) => (
+        <a class:list={['ls-td__cta', b.isCurrent && 'primary']} href={b.path}>
+          {b.name} board →
+        </a>
+      ))}
+    </div>
+
+    <details class="ls-td__details">
+      <summary>What the query string is doing</summary>
+      <code class="ls-td__url">{primary.path}</code>
+      <dl class="ls-td__params">
+        {TEST_DRIVE_PARAMS.map(([param, value, note]) => (
+          <>
+            <dt><code>{param}={value}</code></dt>
+            <dd>{note}</dd>
+          </>
+        ))}
+      </dl>
+      <p class="ls-td__note">
+        Drop <code>&{TEST_DRIVE_QUERY.split('&').slice(1).join('&')}</code> once the
+        regular season starts — the board finds the right week on its own then.
+      </p>
+    </details>
+
+    <p class="ls-td__ask">
+      Anything that looks wrong — a name, a clock, a stat line, a play credited to
+      the wrong owner — say so in the chat. Phones especially.
+    </p>
+  </section>
+)}
+
+<style>
+  .ls-td {
+    border: 1px solid var(--card-border);
+    border-left: 4px solid var(--league-accent);
+    border-radius: var(--radius-lg);
+    background: var(--card-surface);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-lg);
+  }
+  .ls-td__kicker {
+    margin: 0 0 0.35rem;
+    font-family: var(--font-display);
+    font-size: 0.68rem;
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--league-accent);
+  }
+  .ls-td__title {
+    margin: 0 0 0.5rem;
+    font-family: var(--font-display);
+    font-size: clamp(1.25rem, 3.5vw, 1.75rem);
+    line-height: 1.15;
+    color: var(--page-text);
+  }
+  .ls-td__lede {
+    margin: 0 0 var(--spacing-md);
+    color: var(--content-text-muted);
+    line-height: 1.5;
+    max-width: 62ch;
+  }
+  .ls-td__lede strong { color: var(--page-text); }
+
+  .ls-td__ctas { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+  .ls-td__cta {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.55rem 1rem;
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-md);
+    font-family: var(--font-display);
+    font-weight: var(--font-weight-bold);
+    font-size: var(--font-size-sm);
+    color: var(--page-text);
+    background: var(--content-bg-muted);
+    text-decoration: none;
+  }
+  .ls-td__cta.primary {
+    background: var(--league-accent);
+    border-color: var(--league-accent);
+    color: #fff;
+  }
+  .ls-td__cta:hover { text-decoration: none; opacity: 0.9; }
+  .ls-td__cta:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+
+  .ls-td__details { margin-top: var(--spacing-md); }
+  .ls-td__details summary {
+    cursor: pointer;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    color: var(--content-text-muted);
+  }
+  .ls-td__url {
+    display: block;
+    margin: 0.6rem 0;
+    padding: 0.5rem 0.6rem;
+    border-radius: var(--radius-sm);
+    background: var(--content-bg-muted);
+    border: 1px solid var(--content-border);
+    font-size: 0.75rem;
+    color: var(--page-text);
+    /* The whole point is that it's copyable, so it must not be clipped. */
+    overflow-wrap: anywhere;
+  }
+  .ls-td__params {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.3rem 0.75rem;
+    margin: 0 0 0.6rem;
+    font-size: var(--font-size-sm);
+  }
+  .ls-td__params dt { margin: 0; }
+  .ls-td__params dd { margin: 0; color: var(--content-text-muted); }
+  .ls-td__params code, .ls-td__note code {
+    font-size: 0.75rem;
+    color: var(--page-text);
+    overflow-wrap: anywhere;
+  }
+  .ls-td__note { margin: 0; font-size: var(--font-size-sm); color: var(--content-text-muted); }
+
+  .ls-td__ask {
+    margin: var(--spacing-md) 0 0;
+    font-size: var(--font-size-sm);
+    color: var(--content-text-muted);
+  }
+
+  @media (max-width: 640px) {
+    .ls-td { padding: var(--spacing-md); }
+    .ls-td__cta { flex: 1 1 100%; justify-content: center; }
+    .ls-td__params { grid-template-columns: 1fr; gap: 0.15rem; }
+    .ls-td__params dd { margin-bottom: 0.45rem; }
+  }
+</style>

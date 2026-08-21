@@ -19,6 +19,9 @@ export const prerender = false;
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import SchefterFeedCompact from '../../components/shared/SchefterFeedCompact.astro';
 import AflHero from '../../components/afl/AflHero.astro';
+// TEMPORARY (2026-08-20 → 08-23): live-scoring test-drive promo. Removes
+// itself past the window; delete with src/utils/live-scoring-test-drive.ts.
+import LiveScoringTestDrive from '../../components/shared/LiveScoringTestDrive.astro';
 import AflTeamSnapshot from '../../components/afl/hp-sections/AflTeamSnapshot.astro';
 import AflStandingsCompact from '../../components/afl/hp-sections/AflStandingsCompact.astro';
 import AflConferencePlayoffPreview from '../../components/afl/hp-sections/AflConferencePlayoffPreview.astro';
@@ -193,6 +196,8 @@ const lastVisitDate = Astro.cookies.get('whats_new_last_visit')?.value ?? null;
   <div class="afl-hp">
     <section class="afl-hp__main" aria-labelledby="afl-hp-hero-heading">
       <h2 id="afl-hp-hero-heading" class="visually-hidden">League Overview</h2>
+
+      <LiveScoringTestDrive slug={getLeagueBySlug('afl-fantasy')!.slug} referenceDate={effectiveDate} />
 
       <AflHero
         state={heroState}
