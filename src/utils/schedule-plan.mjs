@@ -44,11 +44,14 @@ import { buildWeekPlan, searchSeason } from './schedule-builder.mjs';
  */
 export const SCHEDULE_POLICY = {
   theleague: {
-    // The league runs `simple` for 2026 by its own decision. `constructive` is
-    // available and produces a materially different season — see the comparison
-    // in docs/claude/rules/schedule-optimization.md — so the planner accepts a
-    // mode override rather than making this an edit-to-try-it.
-    mode: 'simple',
+    // Both leagues now build constructively. The League ran `simple` while the
+    // two were being compared; it was adopted on the numbers — bye spread 17 to
+    // 4 and home/away 7-11 to 9-9, neither of which re-timing can reach, since
+    // moving rounds between weeks never changes which side is home.
+    // `keepDivisionFinish` no longer applies in this mode: the constructive
+    // week plan ends on division games by construction. `mode: 'simple'` is
+    // still reachable per call for a minimal in-season repair.
+    mode: 'constructive',
     startWindow: [1, 2, 3, 4],
     endWindow: [12, 13, 14],
     doubleheaderCount: 4,

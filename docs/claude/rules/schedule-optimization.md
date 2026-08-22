@@ -107,6 +107,35 @@ round on a pure-division final week — the rivalry finish — which costs 8. We
 13 and 14 both carry byes in 2026, so "no division game on a bye" and "the
 season ends on division games" cannot both hold. The league chose the finish.
 
+## Both leagues build constructively
+
+The League ran `simple` while the two were compared, then adopted
+`constructive` on the numbers. Simple moves the doubleheader and nothing else,
+which fixes the rule violation but cannot reach the two measures that matter
+most — and on The League's 2026 season it made one franchise's bye luck
+actively worse (Mariachi Ninjas −4 → −8) because shuffling two weeks has no
+way to compensate.
+
+| The League 2026 | was live | simple | constructive |
+|---|---|---|---|
+| doubleheaders | 1,2,3,**13** | 1,2,3,12 | 1,2,3,12 |
+| division games bye-free (of 48) | 32 | 40 | 40 |
+| **season net bye spread** | **17** | 14 | **4** |
+| mean \|bye diff\| per game | 1.07 | 0.95 | 0.73 |
+| min rematch gap | 9 | 8 | 9 |
+| **home games min–max** | 7–11 | 7–11 | **9–9** |
+| doubleheader opponent balance (sd) | 3.14 | 3.43 | 2.26 |
+| late-season SOS balance (sd) | 2.35 | 2.35 | 1.52 |
+| weeks changed | — | 2 | 14 |
+
+**Home/away is the one re-timing can never fix.** It moves whole rounds between
+weeks and never changes which side is home, so a 7-to-11 spread survives every
+simple repair. `balanceHomeAway` only exists on the constructive path.
+
+`mode: 'simple'` stays reachable per call — `--mode=simple`, or the page's
+Method selector — for a minimal in-season repair where re-drawing everyone's
+calendar is not acceptable.
+
 ## MFL has no schedule write API
 
 The full import list (`api_info?STATE=details`) is lineup, franchises,
