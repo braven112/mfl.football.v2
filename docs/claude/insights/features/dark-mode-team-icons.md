@@ -424,3 +424,32 @@ the manifest unchanged (it was already absent), and REPLACING an existing
 icon and skips any team with a dark variant entirely. Re-run
 `pnpm measure:crest-contrast` when a LIGHT crest asset changes, or when a team
 that WAS in the manifest gains an `iconDark`.
+
+---
+
+## 2026-08-21 - Promoting a stroked crest to real art: the two steps nothing prompts
+
+**Context:** Computer Jocks — stroked in both leagues since Aug 15 — got
+hand-drawn dark artwork, so both configs traded `iconStrokeDark: "#2b972b"` for
+an `iconDark`. The mechanical parts are all guarded (mutual exclusivity, file
+existence, manifest drift), and the entry above already says to re-measure when
+a manifest team gains an `iconDark`. Two steps are not guarded.
+
+**The pinned launch list is a one-way ratchet.**
+`tests/team-icon-dark-styles.test.ts` asserts every franchise in `LAUNCH_FIDS`
+declares an `iconDark` named `{slug}_dark.png`. It says nothing about teams
+outside the list, so REMOVING an `iconDark` fails loudly while ADDING one back
+passes silently. Computer Jocks came off that list in Aug 2026 and would have
+stayed off with a fully green suite. Re-add the franchise yourself, and keep the
+comment above the list honest — it's the only record of which teams took the
+round trip and why, and a stale one reads as "this team never had dark art."
+
+**`groupMeDark` is per-league, and the AFL usually can't take it.** The AFL
+config declares `groupMe` on exactly ONE team (Vitside Mafia); TheLeague
+declares it on 17. So the mirror-the-fields advice above applies asymmetrically:
+adding `groupMeDark` to an AFL team that has no `groupMe` is dead config — a
+dark variant of a light path that isn't there. Drop the 400×400 file next to its
+sibling in `public/assets/afl/group-me/` so it's ready, and set the field only
+in the league that names the light one. No consumer reads `groupMeDark` yet
+either way (the GroupMe crest watermark still always renders light), so nothing
+about this is visible on a page — only in the config.
