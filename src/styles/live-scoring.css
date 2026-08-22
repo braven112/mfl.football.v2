@@ -116,7 +116,10 @@
 /* ── scoreboard grid ── */
 .ls-board {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  /* `min(300px, 100%)` rather than a bare 300px: a track floor wider than the
+     container is not clamped by grid, so a 320px-wide phone got a 4px
+     horizontal scroll off the board itself. */
+  grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
   gap: var(--spacing-md);
 }
 /* Predictor-chart colors resolve per theme from the four inline vars set by
@@ -136,6 +139,13 @@ html.dark .ls-detail {
 .ls-card {
   position: relative;
   overflow: hidden;
+  /* REQUIRED, not tidiness. Every scoring card is a <button>, which the UA
+     stylesheet already gives border-box — the empty state is a <div>, which
+     does not, so `width: 100%` + this padding + the border pushed the card
+     34px past the page and put a horizontal scrollbar on the whole phone
+     viewport whenever there were no matchups (owner screenshot, 2026-08-22).
+     There is no global box-sizing reset in this repo to fall back on. */
+  box-sizing: border-box;
   background: var(--card-surface);
   border: 1px solid var(--card-border);
   border-radius: var(--radius-lg);
@@ -172,6 +182,21 @@ html.dark .ls-detail {
 .ls-card.feat {
   grid-column: 1 / -1;
   box-shadow: var(--shadow-lg);
+}
+/* Empty state: the card shell without the button behavior. It is a <div>,
+   not a matchup — so no pointer cursor, no hover accent, and no
+   win-probability split bar. That gradient encodes a matchup's win share, and
+   over an empty card it renders as a stray grey/blue bar that reads as a
+   scrollbar rather than as a border. */
+.ls-card.static {
+  cursor: default;
+}
+.ls-card.static:hover {
+  border-color: var(--card-border);
+  box-shadow: var(--shadow-card);
+}
+.ls-card.static::before {
+  content: none;
 }
 /* featured (your) matchup — horizontal faceoff, away left / home right */
 .ls-faceoff {

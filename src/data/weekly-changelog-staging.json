@@ -4,6 +4,14 @@
     {
       "date": "2026-08-22",
       "type": "bug-fix",
+      "summary": "Live Scoring stopped sliding sideways in a week with no games. Open it before kickoff and the empty \"Scores will appear here when games begin\" card ran wider than the phone, so the page scrolled horizontally with nothing to scroll to — the card's right edge parked just off screen, and a stray gray-and-blue bar sat along its top looking for all the world like a scrollbar. That bar is the win-probability split every real matchup card wears; with no matchup behind it there was nothing for it to show, so it's gone from the empty state, and the card now measures itself the same way the scoring cards do and fits the screen. The board behind it also stopped overflowing by a hair on the narrowest phones.",
+      "impact": "user",
+      "area": "live-scoring",
+      "league": "both"
+    },
+    {
+      "date": "2026-08-22",
+      "type": "bug-fix",
       "summary": "The My Rank panel — the one where you set how much each ranking source counts — was taller than a phone screen, and it was anchored to the bottom, so everything it couldn't fit got pushed off the TOP. The title went first, then the X. An owner with nine sources loaded opened it, found the rows running past the edge with no way to scroll them back, and couldn't close the thing either. It now measures itself against the part of the screen you can actually see rather than the taller one your browser reports when its address bar is hidden, so the header and the Done button stay put and the list of sources scrolls between them.",
       "impact": "user",
       "area": "import-rankings",
