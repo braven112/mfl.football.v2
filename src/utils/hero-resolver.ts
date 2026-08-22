@@ -17,6 +17,8 @@
  */
 
 import type { WhatsNewEntry, HeroContent } from '../types/whats-new';
+// @ts-expect-error - .mjs helper shared with the node scripts (see its header)
+import { scheduleReleaseTease, scheduleReleaseTeaseCopy } from './schedule-release.mjs';
 import { WHATS_NEW_CATEGORY_LABELS, entryAppliesToLeague } from '../types/whats-new';
 import type { WhatsNextTimeline, ResolvedLeagueEvent } from '../types/league-events';
 import type { HeroState, SeasonPhase, DailySlot, GameWindow, HeroPriority } from '../types/hero-state';
@@ -913,6 +915,10 @@ function buildState(
  * @param timeline - Optional WhatsNext timeline for fallback resolution
  * @param rng - Injectable random source (0..1) for the roster-deadline coin
  *   flip; defaults to Math.random. Override in tests for deterministic results.
+ * @param scheduleReleaseRevealed - Whether this season's schedule reveal is
+ *   already locked. Passed in rather than read here: the archive lives on disk
+ *   and this resolver stays synchronous and side-effect free, the same way
+ *   `draftComplete` is resolved by the page.
  */
 export function resolveHeroState(
   referenceDate?: Date,
@@ -922,6 +928,7 @@ export function resolveHeroState(
   draftComplete?: boolean,
   hasBreakingStory: boolean = false,
   rng: () => number = Math.random,
+  scheduleReleaseRevealed: boolean = false,
 ): HeroState {
   const now = referenceDate ?? new Date();
   const week = getCurrentNFLWeek(now) ?? undefined;
@@ -1052,6 +1059,34 @@ export function resolveHeroState(
         resolvedBy: 'isPlayoffPeriod',
       },
     });
+  }
+
+  // --- P1: Schedule Release — countdown, release day, and the week after ---
+  //
+  // Sits at P1 so a live P0 (championship, trade deadline, draft) still owns
+  // the homepage, but it outranks the ambient offseason phases below, which is
+  // exactly the stretch of calendar it falls in. The decision comes from
+  // src/utils/schedule-release.mjs so The League and the AFL — which share no
+  // hero code at all — cannot drift apart on when the tease starts.
+  {
+    const tease = scheduleReleaseTease('theleague', now, { revealed: scheduleReleaseRevealed });
+    const copy = scheduleReleaseTeaseCopy(tease, 'The League');
+    if (tease.show && copy) {
+      return buildState('schedule-release', 'P1', 'scheduleReleaseTease', now, testMode, {
+        fallbackHero: {
+          source: 'event',
+          title: copy.title,
+          summary: copy.summary,
+          link: '/theleague/schedule-release',
+          linkLabel: tease.phase === 'out' ? 'See the schedule' : 'See the countdown',
+          icon: 'calendar',
+          accentColor: 'var(--accent-color, #1c497c)',
+          kicker: copy.kicker,
+          isUrgent: tease.phase === 'imminent',
+          isActive: tease.phase === 'out',
+        },
+      });
+    }
   }
 
   // --- P1: Tag & Extension Window ---

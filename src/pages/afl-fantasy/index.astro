@@ -40,6 +40,7 @@ import { getWhatsNewEntriesForLeague } from '../../utils/whats-new-entries';
 import type { SchefterFeed as FeedType } from '../../types/schefter';
 import { parseTestDate } from '../../utils/hero-resolver';
 import { resolveAflHeroState } from '../../utils/afl-hero-resolver';
+import { getRelease } from '../../utils/schedule-release-store';
 import { castAflHeroModel } from '../../utils/afl-hero-casting';
 import { getAflWhatsNextTimeline } from '../../utils/league-event-resolver';
 import { getAflLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
@@ -106,6 +107,11 @@ const testMode = !!testDateParam;
 const timeline = getAflWhatsNextTimeline(effectiveDate);
 const aflWhatsNew = getWhatsNewEntriesForLeague('afl');
 
+// Whether this season's reveal is already locked — read here so the resolver
+// stays synchronous and side-effect free.
+const aflScheduleReleaseRevealed = Boolean(
+  await getRelease('afl-fantasy', effectiveDate.getUTCFullYear()),
+);
 const heroState = resolveAflHeroState({
   referenceDate: effectiveDate,
   testMode,
@@ -113,6 +119,7 @@ const heroState = resolveAflHeroState({
   timeline,
   userConferenceId,
   userTier: userTeam?.tier,
+  scheduleReleaseRevealed: aflScheduleReleaseRevealed,
 });
 
 // ── Standings + roster data ─────────────────────────────────────────────────
