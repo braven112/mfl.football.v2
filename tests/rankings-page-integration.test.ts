@@ -85,6 +85,23 @@ describe('rankings reach every decision page', () => {
       expect(read(page)).toContain('e.detail.key == null');
     });
 
+    it.each(FREE_AGENT_PAGES)('%s styles its injected ranking headers globally', (page) => {
+      // The ranking <th>s are created in JS, so they never carry the page's
+      // Astro scope class and every scoped `th` rule misses them — including
+      // `white-space: nowrap`, which is why "My Rank" and "FBG ®" wrapped onto
+      // two lines while every static header stayed on one. The fix has to be
+      // global CSS; a scoped rule silently does nothing here.
+      expect(read(page)).toContain("import '../../styles/ranking-columns.css'");
+    });
+
+    it('the injected-header stylesheet keeps ranking titles on one line', () => {
+      const css = read('src/styles/ranking-columns.css');
+      const block = css.slice(css.indexOf('th[data-ranking-col] {'));
+      expect(block.slice(0, block.indexOf('}'))).toMatch(/white-space:\s*nowrap/);
+      // Scoping it would put it back out of reach of the very elements it targets.
+      expect(css).not.toContain(':global(');
+    });
+
     it.each(FREE_AGENT_PAGES)('%s re-applies column visibility after render', (page) => {
       // render() rebuilds tbody with innerHTML, which wipes every inline
       // display style. Without this call the hidden group reappears on any

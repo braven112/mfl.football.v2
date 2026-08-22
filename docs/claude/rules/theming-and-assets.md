@@ -25,6 +25,28 @@ matches what was rendering — otherwise keep the light literal and override
 only under `html.dark` (see the admin-hub gate pills for the pattern).
 
 
+## Astro scoped CSS never reaches an element JS created
+
+A `<style>` block in a `.astro` file compiles to selectors that require the
+page's `astro-xxxx` scope class on the element itself. Anything built at
+runtime — `document.createElement`, an `innerHTML` string, a `define:vars`
+script's row builder — has no scope class, so *every* scoped rule silently
+misses it and the element renders with browser defaults. Nothing errors; the
+markup just looks unstyled.
+
+That is how the Free Agents ranking headers shipped at 16px mixed-case
+centered while every static header next to them was 10px uppercase gray: the
+`<th>`s come from `src/utils/rankings-table.ts`, so `.players-table th
+{ white-space: nowrap }` never applied and "My Rank" / "FBG ®" wrapped onto two
+lines. The fix is global CSS keyed to something only the injected elements
+carry (`th[data-ranking-col]`), in a shared stylesheet both sibling pages
+import — `src/styles/ranking-columns.css`. A `:global()` block inside the page
+works too, and the pages already use that for the ranking `<td>`s; a plain
+`.css` file is the better home once two pages need the same rules.
+
+Symptom to recognize: one row of headers or cells styled correctly and its
+JS-built neighbors not, in the same table.
+
 ## Franchise colors as foreground — use the accent token, never the raw hex
 
 A team color used as FOREGROUND (text, a rank numeral, a border, a chart line,
