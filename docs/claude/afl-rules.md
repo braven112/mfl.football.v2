@@ -158,9 +158,50 @@ The draft is annual, **9 rounds**, NFL-style. Only non-keepers are eligible.
 
 ## Schedule
 
-- **17-game** schedule per franchise.
-- Each team plays **division opponents twice**, **other conference opponents once**, and **one game vs the opposite conference** team that finished in the same position the prior year.
-- **Doubleheaders** in **Weeks 1, 2, 3, and 13** (this is how 13 calendar weeks yield 17 games).
+- **17-game** schedule per franchise over a **14-week regular season** (Weeks 1-14).
+  14 weeks + **3 doubleheader weeks** = 17 games.
+- Each team plays **division opponents twice**, **other conference opponents once**,
+  and **one game vs the opposite conference**.
+
+### Cross-conference game (Week 1)
+
+Paired by **DIVISION finish position from the prior season** - not conference
+position. The North's Nth-place finisher plays the Nth-place finisher of the
+National League division the North is paired with that year. The division
+pairing alternates: `North/East + South/West` one season,
+`North/West + South/East` the next.
+
+Verified against the feeds: the rule reproduces **12 of 12** Week 1
+cross-conference pairings in 2022, 2023 and 2024.
+
+> **Protected rivalry (lapsed).** Computer Jocks vs Jewpacabra was scheduled
+> off-formula in six straight seasons, 2015-2020. It has not been protected
+> since; 2022-2024 are purely positional with no exceptions. It is the only
+> pair that was ever protected across multiple seasons.
+
+### Doubleheader placement
+
+- Split **as evenly as possible between the start and the end** of the season.
+  With 3 doubleheaders that is **2 early, 1 late**.
+- **Never on an NFL bye week.** The NFL bye calendar moves every year, so the
+  doubleheader weeks are **re-derived each season**, not fixed. Recent seasons:
+  Weeks 1 and 2 early, plus whichever of **Week 12 or Week 13** is bye-free.
+
+| Season | Bye-free late week | AFL doubleheaders | |
+|---|---|---|---|
+| 2022 | 12 | 1, 2, 3 | ok |
+| 2023 | 12 | 1, 2, **12** | ok |
+| 2024 | 13 | 1, 2, **13** | ok |
+| 2025 | 13 | 1, 2, **13** | ok |
+| 2026 | **12** | 1, 2, **13** | **wrong - Week 13 has 4 teams on bye** |
+
+### Division games and byes
+
+Division games should also avoid NFL bye weeks whenever possible. With six-team
+divisions this **cannot** be fully satisfied: a team has only 8 game slots in
+the bye-free weeks but plays 10 division games, so **at least 24 of the 120
+division games leaguewide must land on a bye week**. The goal is to maximize
+the bye-free count (ceiling **96**), not to reach zero.
 
 ---
 
@@ -376,10 +417,11 @@ Runs independently, **Week 1 → Week 17**, all-play format. (One exception, in 
 
 ### ⚠️ Constitution vs. MFL platform config
 
-The MFL platform is currently configured with **`lastRegularSeasonWeek = 14`**
-and **`endWeek = 18`**, which does **not** match the constitution's prose
-(13-week regular season with doubleheaders → 17 games, League Championship
-playoffs Weeks 14–16, NIT, Premier/D-League Weeks 1–17). Treat the
-**constitution as authoritative for rules** and the **MFL feeds as authoritative
-for live week/scoring data**. If features depend on week boundaries, read them
-from the MFL feed rather than hardcoding the constitution's week numbers.
+The MFL platform is configured with **`lastRegularSeasonWeek = 14`** and
+**`endWeek = 18`**. The Schedule section above has been reconciled to that
+(14-week regular season, 3 doubleheaders → 17 games), but other prose in this
+document still describes the older 13-week shape (League Championship playoffs
+Weeks 14–16, NIT, Premier/D-League Weeks 1–17). Treat the **constitution as
+authoritative for rules** and the **MFL feeds as authoritative for live
+week/scoring data**. If features depend on week boundaries, read them from the
+MFL feed rather than hardcoding week numbers.

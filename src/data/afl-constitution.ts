@@ -101,9 +101,13 @@ DRAFT
 - Draft timing: the weekend BEFORE Labor Day weekend, never a fixed calendar date. The American League drafts live on the Saturday; the National League runs its email draft beginning 9:00am PT the following Sunday. Because Labor Day is the first Monday in September, the AL draft falls on the Saturday nine days before Labor Day and the NL draft on the Sunday eight days before it.
 
 SCHEDULE
-- 17-game schedule per franchise.
-- Each team plays division opponents twice, other conference opponents once, and one game vs the opposite-conference team that finished in the same position the prior year.
-- Doubleheaders in Weeks 1, 2, 3, and 13.
+- 17-game schedule per franchise, played over a 14-week regular season (Weeks 1-14).
+- 14 weeks plus 3 doubleheader weeks = 17 games.
+- Each team plays division opponents twice, other conference opponents once, and one game vs the opposite conference.
+- The cross-conference game is played in Week 1. Opponents are paired by DIVISION finish position from the prior season: the North's Nth-place team plays the Nth-place team of the National League division it is paired with that year. The division pairing alternates year to year (North/East + South/West one season, North/West + South/East the next).
+- Doubleheaders are split as evenly as possible between the start and the end of the season (with 3, that is 2 early and 1 late).
+- Doubleheaders must NOT fall on an NFL bye week. Because the NFL bye calendar moves every year, the doubleheader weeks are re-derived each season rather than fixed: recent seasons have used Weeks 1 and 2 early, plus whichever of Week 12 or Week 13 is bye-free that year.
+- Division games should also avoid NFL bye weeks whenever possible. With six-team divisions this cannot be fully satisfied - each team can fit at most 8 of its 10 division games into bye-free weeks - so the goal is to maximize the count, not to hit zero.
 
 SCORING
 - Passing: 0.04 pts/yd (1 pt per 25 yds), Pass TD 6 pts, INT −2 pts, 2-pt pass 2 pts
