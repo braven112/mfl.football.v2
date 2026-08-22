@@ -53,12 +53,23 @@ week switch is a full page reload. Three things that bit us (owner report,
 
 ## A week can schedule more than ONE game
 
-TheLeague runs double-header weeks — 2026 weeks 1-3 and 13 list 16 matchups
-for 16 franchises, so every team plays two different opponents (home in one,
-away in the other) off a single submitted lineup. The Set Lineup page's
-matchup panel walked the week's matchups and `break`ed at the first one
-containing the owner, so it drew one game and silently dropped the other:
-half the week they were setting a lineup for was simply not on the page.
+BOTH leagues run double-header weeks — TheLeague's 2026 weeks 1-3 and 13 list
+16 matchups for 16 franchises, the AFL has three of its own — so every team
+plays two different opponents (home in one, away in the other) off a single
+submitted lineup. TheLeague's matchup panel walked the week's matchups and
+`break`ed at the first one containing the owner, so it drew one game and
+silently dropped the other: half the week they were setting a lineup for was
+simply not on the page. (The AFL page had no matchup panel at all until the
+strip below was shared with it.)
+
+**The strip is shared, not copy-pasted.** `buildMatchupCards`
+(`src/utils/lineup-matchup-cards.ts`) builds the cards and
+`LineupGameStrip.astro` (`src/components/shared/`) renders them; the pages
+supply only what differs — the schedule payload, the roster feed, and
+`brandFor` (TheLeague resolves throwback identities, the AFL reads
+`afl.config.json`). Both pages must fetch `TYPE=rosters` LEAGUE-WIDE: a
+franchise-scoped roster call has no opponent pool, so their projected total
+comes out 0.0 on any week MFL hasn't recorded starters for.
 
 - **`findWeekMatchups` (`src/utils/lineup-sources.ts`) is the reader, and it
   is plural.** Never re-introduce a first-match-wins loop over
@@ -72,8 +83,10 @@ half the week they were setting a lineup for was simply not on the page.
   both games, so our projected total is the same number on every card — the
   client updates them ALL (`querySelectorAll('.lineup-faceoff__scoreboard')`).
   Updating only `querySelector`'s first hit left the second game showing a
-  stale total that contradicted the one a swipe away. `tests/lineup-sources.test.ts`
-  pins both the reader and that selector.
+  stale total that contradicted the one a swipe away. The PAGE owns the
+  numbers; the strip component owns the carousel — keep that split, or two
+  scripts end up fighting over the same DOM. `tests/lineup-sources.test.ts`
+  pins the reader, that selector, and both pages using the shared builder.
 - **Scroll position is the carousel's only state.** The arrows and dots just
   scroll the track; the dots, the counter, the arrow ends and which
   scoreboard holds `aria-live` are all re-derived from a scroll listener, so a

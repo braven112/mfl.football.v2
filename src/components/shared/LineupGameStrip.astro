@@ -1,0 +1,469 @@
+---
+/**
+ * LineupGameStrip — the game cards above the Set Lineup slots, in both leagues.
+ *
+ * One card per game the owner plays that week (`buildMatchupCards`). Both
+ * leagues schedule DOUBLE-HEADER weeks — two opponents, two scoreboards, ONE
+ * submitted lineup — so more than one card turns the strip into a carousel:
+ * scroll-snap under the thumb on mobile, arrows for a pointer, dots and a
+ * "Game 1 of 2" counter. A single-game week renders exactly the plain
+ * full-width card it always was, with no carousel chrome at all.
+ *
+ * Division of labor with the page's own client script: this component owns
+ * carousel state (scroll position, dots, counter, arrows, which card's
+ * scoreboard is the live region). The PAGE owns the numbers — it recomputes
+ * our projected total on every `.lineup-faceoff__total` as the lineup changes,
+ * on all cards at once, because one lineup scores every game of the week.
+ */
+import FaceoffComposite from '../theleague/FaceoffComposite.astro';
+import type { MatchupCard } from '../../utils/lineup-matchup-cards';
+
+export interface Props {
+  cards: MatchupCard[];
+  week: number;
+}
+
+const { cards, week } = Astro.props;
+
+// More than one game means a swipeable strip; a single game renders exactly
+// as it always has.
+const isMultiGame = cards.length > 1;
+---
+
+{cards.length > 0 && (
+  <section
+    class:list={['lineup-games', isMultiGame && 'lineup-games--multi']}
+    data-game-count={cards.length}
+    aria-roledescription={isMultiGame ? 'carousel' : undefined}
+    aria-label={isMultiGame
+      ? `Week ${week} matchups — ${cards.length} games`
+      : `Week ${week} matchup — ${cards[0].title}`}
+  >
+    {isMultiGame && (
+      <button
+        type="button"
+        class="lineup-games__arrow lineup-games__arrow--prev"
+        id="lineup-games-prev"
+        aria-controls="lineup-games-track"
+        aria-label="Previous game"
+      >
+        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 18 18">
+          <path d="M11.25 4L6.5 9l4.75 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+      </button>
+    )}
+
+    <div class="lineup-games__track" id="lineup-games-track">
+      {cards.map((card, i) => (
+        <article
+          class="lineup-faceoff"
+          data-game-index={i}
+          aria-roledescription={isMultiGame ? 'slide' : undefined}
+          aria-label={isMultiGame ? `Game ${i + 1} of ${cards.length} — ${card.title}` : undefined}
+        >
+          {card.faceoff && (
+            <FaceoffComposite away={card.faceoff.away} home={card.faceoff.home} size="banner" />
+          )}
+          <div class="lineup-faceoff__band">
+            {card.hasProjTotals ? (
+              <div
+                class="lineup-faceoff__scoreboard"
+                data-user-side={card.userScoreSide}
+                role="status"
+                aria-live={i === 0 ? 'polite' : 'off'}
+                aria-label="Projected points"
+              >
+                <div class="lineup-faceoff__side lineup-faceoff__side--away">
+                  <span class="lineup-faceoff__team">{card.awayChip}</span>
+                  <span
+                    class="lineup-faceoff__total"
+                    data-side="away"
+                    data-total={card.awayProjTotal.toFixed(1)}
+                    aria-label={`${card.awayChip} projected ${card.awayProjTotal.toFixed(1)} points`}
+                  >{card.awayProjTotal.toFixed(1)}</span>
+                </div>
+                <span class="lineup-faceoff__sep" aria-hidden="true">Proj</span>
+                <div class="lineup-faceoff__side lineup-faceoff__side--home">
+                  <span
+                    class="lineup-faceoff__total"
+                    data-side="home"
+                    data-total={card.homeProjTotal.toFixed(1)}
+                    aria-label={`${card.homeChip} projected ${card.homeProjTotal.toFixed(1)} points`}
+                  >{card.homeProjTotal.toFixed(1)}</span>
+                  <span class="lineup-faceoff__team">{card.homeChip}</span>
+                </div>
+              </div>
+            ) : (
+              <>
+                <span class="lineup-faceoff__eyebrow">
+                  Week {week}{isMultiGame ? ` · Game ${i + 1} of ${cards.length}` : ' · Players of the game'}
+                </span>
+                <span class="lineup-faceoff__title">{card.title}</span>
+              </>
+            )}
+          </div>
+        </article>
+      ))}
+    </div>
+
+    {isMultiGame && (
+      <button
+        type="button"
+        class="lineup-games__arrow lineup-games__arrow--next"
+        id="lineup-games-next"
+        aria-controls="lineup-games-track"
+        aria-label="Next game"
+      >
+        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 18 18">
+          <path d="M6.75 4L11.5 9l-4.75 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+      </button>
+    )}
+
+    {isMultiGame && (
+      <div class="lineup-games__nav">
+        <span class="lineup-games__count" id="lineup-games-count">Game 1 of {cards.length}</span>
+        <div class="lineup-games__dots" role="group" aria-label="Choose a game">
+          {cards.map((card, i) => (
+            <button
+              type="button"
+              class="lineup-games__dot"
+              data-game-index={i}
+              aria-current={i === 0 ? 'true' : undefined}
+              aria-label={`Game ${i + 1}: ${card.title}`}
+            ><span aria-hidden="true"></span></button>
+          ))}
+        </div>
+      </div>
+    )}
+  </section>
+)}
+
+<style>
+  /* Game strip — one card per scheduled matchup. A double-header week (two
+     games off ONE submitted lineup) turns the strip into a carousel: snap
+     scrolling under the thumb on mobile, arrows for a mouse. A single game
+     keeps the plain full-width card it always was, with no carousel chrome. */
+  .lineup-games {
+    position: relative;
+    margin-bottom: 0.875rem;
+  }
+
+  .lineup-games__track {
+    display: grid;
+    grid-auto-flow: column;
+    /* Cards are always full width — the strip shows ONE game at a time so the
+       composite keeps its scale, and the next game is a swipe/click away. */
+    grid-auto-columns: 100%;
+    gap: 0.625rem;
+  }
+
+  .lineup-games--multi .lineup-games__track {
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .lineup-games--multi .lineup-games__track::-webkit-scrollbar {
+    display: none;
+  }
+
+  .lineup-games--multi .lineup-faceoff {
+    scroll-snap-align: center;
+    scroll-snap-stop: always;
+  }
+
+  /* Arrows overlay the composite, whose height is the FaceoffComposite banner
+     clamp — anchoring to it keeps them centered on the artwork rather than on
+     the section, which also carries the band and the dots. */
+  .lineup-games__arrow {
+    position: absolute;
+    top: calc(clamp(132px, 15vw, 168px) / 2);
+    transform: translateY(-50%);
+    z-index: 2;
+    /* Touch gets the swipe; the arrows are for a pointer. */
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border-radius: 999px;
+    /* The panels behind are inherently dark in BOTH themes, so this control
+       is deliberately not re-tokenized — a light chip here would vanish. */
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: rgba(11, 14, 18, 0.72);
+    color: #ffffff;
+    cursor: pointer;
+    transition: background 150ms ease, opacity 150ms ease;
+  }
+
+  .lineup-games__arrow--prev { left: 0.5rem; }
+  .lineup-games__arrow--next { right: 0.5rem; }
+
+  .lineup-games__arrow:hover { background: rgba(11, 14, 18, 0.9); }
+
+  .lineup-games__arrow:focus-visible {
+    outline: 2px solid #7cb2ff;
+    outline-offset: 2px;
+  }
+
+  /* At an end of the strip the arrow stays in the tab order but reads as
+     spent — disabling it outright would move focus unpredictably mid-swipe. */
+  .lineup-games__arrow[aria-disabled='true'] {
+    opacity: 0.35;
+    cursor: default;
+  }
+
+  @media (min-width: 640px) {
+    .lineup-games--multi .lineup-games__arrow { display: flex; }
+  }
+
+  .lineup-games__nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    padding-top: 0.4rem;
+  }
+
+  .lineup-games__count {
+    font-size: 0.6rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--color-gray-500, #6b7280);
+  }
+
+  .lineup-games__dots {
+    display: flex;
+    align-items: center;
+    gap: 0.125rem;
+  }
+
+  /* A 6px dot inside a thumb-sized hit target. */
+  .lineup-games__dot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+  }
+
+  .lineup-games__dot > span {
+    display: block;
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--color-gray-300, #d1d5db);
+    transition: background 150ms ease, transform 150ms ease;
+  }
+
+  .lineup-games__dot[aria-current='true'] > span {
+    background: var(--color-primary, #1c497c);
+    transform: scale(1.4);
+  }
+
+  .lineup-games__dot:focus-visible {
+    outline: 2px solid var(--color-primary, #1c497c);
+    outline-offset: 1px;
+    border-radius: var(--radius-sm, 0.25rem);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .lineup-games__dot > span { transition: none; }
+  }
+
+  /* Player-of-the-game faceoff — the panels are inherently dark (team-color
+     gradients over near-black) in both themes; only the border re-tokenizes. */
+  .lineup-faceoff {
+    overflow: hidden;
+    border-radius: var(--radius-lg, 0.75rem);
+    border: 1px solid var(--content-border, #e2e8f0);
+  }
+
+  :global(html.dark) .lineup-faceoff {
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+
+  .lineup-faceoff__band {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    padding: 0.5rem 0.875rem;
+    background: #0b0e12;
+    color: #ffffff;
+  }
+
+  .lineup-faceoff__eyebrow {
+    font-size: 0.6rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: #7cb2ff;
+  }
+
+  .lineup-faceoff__title {
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+
+  /* Projected-points scoreboard (fills the band when projections exist). */
+  .lineup-faceoff__scoreboard {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  .lineup-faceoff__side {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .lineup-faceoff__side--home {
+    justify-content: flex-end;
+  }
+
+  .lineup-faceoff__team {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.6);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .lineup-faceoff__total {
+    font-size: 1.15rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    color: #ffffff;
+    flex-shrink: 0;
+  }
+
+  /* Our live total gets the accent so a change reads as "yours moved". */
+  .lineup-faceoff__scoreboard[data-user-side="away"] .lineup-faceoff__side--away .lineup-faceoff__total,
+  .lineup-faceoff__scoreboard[data-user-side="home"] .lineup-faceoff__side--home .lineup-faceoff__total {
+    color: #7cb2ff;
+  }
+
+  /* The bump class is added by the PAGE's script as the total changes. */
+  .lineup-faceoff__total--bumped {
+    animation: lineup-faceoff-bump 400ms ease;
+  }
+
+  @keyframes lineup-faceoff-bump {
+    0% { transform: scale(1); }
+    35% { transform: scale(1.14); }
+    100% { transform: scale(1); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .lineup-faceoff__total--bumped { animation: none; }
+  }
+
+  .lineup-faceoff__sep {
+    flex-shrink: 0;
+    font-size: 0.55rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: rgba(255, 255, 255, 0.4);
+  }
+</style>
+
+<script>
+  // ---------------------------------------------------------------------------
+  // Game carousel — only mounts when the week schedules more than one game
+  // (a double-header). Scroll position is the single source of truth: the
+  // arrows and dots just scroll the track, and everything else (dots, counter,
+  // arrow ends, which scoreboard announces) re-reads it. A swipe therefore
+  // lands in exactly the same state as an arrow click.
+  // ---------------------------------------------------------------------------
+  const track = document.getElementById('lineup-games-track');
+  const countEl = document.getElementById('lineup-games-count');
+  const prevBtn = document.getElementById('lineup-games-prev');
+  const nextBtn = document.getElementById('lineup-games-next');
+  const cards = track ? (Array.from(track.querySelectorAll('.lineup-faceoff')) as HTMLElement[]) : [];
+  const dots = Array.from(document.querySelectorAll('.lineup-games__dot')) as HTMLButtonElement[];
+  const scoreboards = Array.from(document.querySelectorAll('.lineup-faceoff__scoreboard')) as HTMLElement[];
+
+  if (track && cards.length > 1) {
+    let activeGame = 0;
+
+    /** Which card is nearest the track's center right now. */
+    const currentGameIndex = (): number => {
+      const mid = track.scrollLeft + track.clientWidth / 2;
+      let best = 0;
+      let bestDist = Infinity;
+      cards.forEach((card, i) => {
+        const center = card.offsetLeft + card.offsetWidth / 2;
+        const dist = Math.abs(center - mid);
+        if (dist < bestDist) { bestDist = dist; best = i; }
+      });
+      return best;
+    };
+
+    const paintNav = (index: number) => {
+      activeGame = index;
+      dots.forEach((dot, i) => {
+        if (i === index) dot.setAttribute('aria-current', 'true');
+        else dot.removeAttribute('aria-current');
+      });
+      if (countEl) countEl.textContent = `Game ${index + 1} of ${cards.length}`;
+      // Ends are marked, not disabled — a disabled button under the pointer
+      // drops focus mid-swipe.
+      prevBtn?.setAttribute('aria-disabled', String(index === 0));
+      nextBtn?.setAttribute('aria-disabled', String(index === cards.length - 1));
+      // Move the polite region onto the card actually in view so a lineup edit
+      // announces once, from the game the owner is looking at.
+      scoreboards.forEach((board) => {
+        const card = board.closest('.lineup-faceoff') as HTMLElement | null;
+        const cardIndex = card ? cards.indexOf(card) : -1;
+        board.setAttribute('aria-live', cardIndex === index ? 'polite' : 'off');
+      });
+    };
+
+    const scrollToGame = (index: number) => {
+      const target = cards[Math.max(0, Math.min(index, cards.length - 1))];
+      if (!target) return;
+      track.scrollTo({
+        left: target.offsetLeft - (track.clientWidth - target.offsetWidth) / 2,
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+      });
+    };
+
+    let scrollRaf = 0;
+    track.addEventListener('scroll', () => {
+      if (scrollRaf) return;
+      scrollRaf = requestAnimationFrame(() => {
+        scrollRaf = 0;
+        const next = currentGameIndex();
+        if (next !== activeGame) paintNav(next);
+      });
+    }, { passive: true });
+
+    prevBtn?.addEventListener('click', () => scrollToGame(activeGame - 1));
+    nextBtn?.addEventListener('click', () => scrollToGame(activeGame + 1));
+    dots.forEach((dot, i) => dot.addEventListener('click', () => scrollToGame(i)));
+
+    paintNav(currentGameIndex());
+  }
+</script>

@@ -799,19 +799,52 @@ describe('a week that schedules more than one game', () => {
 });
 
 describe('the Set Lineup game strip', () => {
-  const page = 'src/pages/theleague/lineup.astro';
+  // Both leagues run double-headers, so both pages build the strip from the
+  // SAME shared card builder + component. A page that grew its own copy would
+  // drift — TheLeague's did exactly that for the whole faceoff panel.
+  const lineupPages = [
+    'src/pages/theleague/lineup.astro',
+    'src/pages/afl-fantasy/lineup.astro',
+  ];
+  const STRIP = 'src/components/shared/LineupGameStrip.astro';
 
-  it('renders a card per scheduled game, not just the first', () => {
-    const src = readFileSync(join(process.cwd(), page), 'utf8');
-    expect(src.includes('findWeekMatchups')).toBe(true);
-    expect(src.includes('matchupCards.map')).toBe(true);
+  it('builds a card per scheduled game on both pages, not just the first', () => {
+    for (const page of lineupPages) {
+      const src = readFileSync(join(process.cwd(), page), 'utf8');
+      expect(src.includes('findWeekMatchups'), `${page} reads every game`).toBe(true);
+      expect(src.includes('buildMatchupCards'), `${page} shares the card builder`).toBe(true);
+      expect(src.includes('<LineupGameStrip'), `${page} renders the shared strip`).toBe(true);
+    }
+    const strip = readFileSync(join(process.cwd(), STRIP), 'utf8');
+    expect(strip.includes('cards.map')).toBe(true);
+  });
+
+  it('reads the whole league roster, so an opponent side can be built', () => {
+    // The AFL page used to fetch `TYPE=rosters&FRANCHISE=<me>`; a strip built
+    // on that has no opponent pool, so their projected total is 0.0.
+    for (const page of lineupPages) {
+      const src = readFileSync(join(process.cwd(), page), 'utf8');
+      expect(src.includes('TYPE=rosters&L=${MFL_LEAGUE_ID}&JSON=1'), `${page} rosters call`).toBe(true);
+    }
   });
 
   it('updates our projected total on every card', () => {
     // One lineup scores both games of a double-header. Updating only
     // querySelector's first hit left the second card contradicting the first.
-    const src = readFileSync(join(process.cwd(), page), 'utf8');
-    expect(src.includes("querySelectorAll('.lineup-faceoff__scoreboard')")).toBe(true);
-    expect(src.includes("querySelector('.lineup-faceoff__scoreboard')")).toBe(false);
+    for (const page of lineupPages) {
+      const src = readFileSync(join(process.cwd(), page), 'utf8');
+      expect(src.includes("querySelectorAll('.lineup-faceoff__scoreboard')"), `${page} all boards`).toBe(true);
+      expect(src.includes("querySelector('.lineup-faceoff__scoreboard')"), `${page} single board`).toBe(false);
+    }
+  });
+
+  it('drives the carousel off scroll position alone', () => {
+    // Arrows and dots only scroll; the dots, counter, arrow ends and the live
+    // region are re-derived from the scroll listener, so a swipe and a click
+    // land in identical states.
+    const strip = readFileSync(join(process.cwd(), STRIP), 'utf8');
+    expect(strip.includes("addEventListener('scroll'")).toBe(true);
+    expect(strip.includes('scrollToGame')).toBe(true);
+    expect(strip.includes("setAttribute('aria-live'")).toBe(true);
   });
 });
