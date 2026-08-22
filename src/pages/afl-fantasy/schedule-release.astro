@@ -1,0 +1,31 @@
+---
+/**
+ * Schedule Release Day — /afl-fantasy/schedule-release
+ *
+ * Thin wrapper: signed-in members of THIS league only, then the shared
+ * component. Not commissioner-gated — the reveal is a league event, and the
+ * whole point is that every owner sees the same schedule and the same headline
+ * matchups. Only the paste block inside is commissioner-only.
+ *
+ * The gate lives here rather than in the component because `Astro.redirect()`
+ * returned from a component does not redirect; it stops that component
+ * rendering and serves a blank 200.
+ */
+export const prerender = false;
+
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import ScheduleRelease from '../../components/shared/ScheduleRelease.tsx';
+import { getAuthUser, isAuthorizedForLeague } from '../../utils/auth';
+import { getLeagueBySlug } from '../../config/leagues';
+import '../../styles/schedule-release.css';
+
+const user = getAuthUser(Astro.request);
+const league = getLeagueBySlug('afl-fantasy');
+if (!user || !league || !isAuthorizedForLeague(user, league.id)) {
+  return Astro.redirect('/afl-fantasy');
+}
+---
+
+<TheLeagueLayout title="Schedule Release">
+  <ScheduleRelease client:load leagueSlug={league.slug} />
+</TheLeagueLayout>
