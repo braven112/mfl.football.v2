@@ -4860,10 +4860,11 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     justify-content: center;
   }
 
-  /* From desktop up the row has room for both, so horizontal placement is a
-     main-axis job — an auto right margin eats the free space and puts the pill
-     flush left, with the mode toggle keeping the other end. */
-  @media (min-width: 1024px) {
+  /* Wherever .roster-controls is a row — it becomes a column at 640px — the
+     pill sits flush left and the mode toggle keeps the other end. Horizontal
+     placement is a main-axis job there, so an auto right margin eats the free
+     space; align-self would only move the pill vertically. */
+  @media (min-width: 641px) {
     .roster-controls :global(.mre-trigger-wrap) {
       order: -1;
       flex: 0 0 auto;
@@ -4871,14 +4872,11 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     }
   }
 
-  /* Below desktop the pill stays on the toggle's line rather than claiming a
-     second row — two rows of chrome above the table is more vertical space
-     than this control is worth. At phone widths .roster-controls is a column,
-     so it stacks there whatever we do, and centres. */
-  @media (max-width: 1023px) {
+  /* In the column, after the toggle: .mode-toggle is order: 1 and rides up on
+     a negative top margin, so anything ordered ahead of it gets covered. */
+  @media (max-width: 640px) {
     .roster-controls :global(.mre-trigger-wrap) {
       order: 3;
-      margin-left: 0.5rem;
     }
   }
 
