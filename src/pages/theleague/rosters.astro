@@ -4851,33 +4851,48 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   /* The My Rank pill shares .roster-controls with .mode-toggle, which lays out
      with `order` and rides up on a negative top margin — so a sibling that
      doesn't opt into the ordering renders first and gets covered by it.
-     Below desktop the pill takes a line of its own and centres on it; the
-     wrapper exists so that line can be full width without the pill stretching
-     to match. */
-  .roster-controls {
-    flex-wrap: wrap;
-  }
-
+     The wrapper is given a real display here (it is display: contents by
+     default) so BOTH breakpoints can lay it out as a flex item; without that,
+     a rule targeting it silently does nothing. */
   .roster-controls :global(.mre-trigger-wrap) {
     display: flex;
+    align-items: center;
     justify-content: center;
-    order: 3;
-    flex: 1 0 100%;
-    margin-top: 0.4rem;
   }
 
-  /* From desktop up the row has room for both, so horizontal placement becomes
-     a main-axis job — an auto right margin eats the free space and puts the
-     pill flush left, with the mode toggle keeping the other end. */
+  /* From desktop up the row has room for both, so horizontal placement is a
+     main-axis job — an auto right margin eats the free space and puts the pill
+     flush left, with the mode toggle keeping the other end. */
   @media (min-width: 1024px) {
     .roster-controls :global(.mre-trigger-wrap) {
       order: -1;
       flex: 0 0 auto;
       margin-right: auto;
-      margin-top: 0;
-      align-items: center;
     }
   }
+
+  /* Below desktop the pill takes a line of its own and centres on it. The
+     wrapper is what makes that line full width without stretching the pill. */
+  @media (max-width: 1023px) {
+    .roster-controls {
+      flex-wrap: wrap;
+    }
+
+    .roster-controls :global(.mre-trigger-wrap) {
+      order: 3;
+      flex: 1 0 100%;
+      margin-top: 0.4rem;
+    }
+
+    /* .mode-toggle's negative top margin is tuned for being the only thing on
+       a single-line row — it lifts the toggle ~26px above .roster-table-card,
+       which clips it (overflow: auto). Once the pill wraps to a second line
+       the toggle no longer needs to ride up, so drop the pull. */
+    .mode-toggle {
+      margin-top: 0;
+    }
+  }
+
   .mode-btn {
     display: flex;
     align-items: center;
