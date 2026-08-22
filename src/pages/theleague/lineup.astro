@@ -99,7 +99,9 @@ for (const game of matchups) {
   const kickoff = parseInt(game.kickoff, 10) || 0;
   const teams = Array.isArray(game.team) ? game.team : game.team ? [game.team] : [];
   for (const t of teams) {
-    if (t.id) kickoffByTeam.set(t.id, kickoff);
+    // MFL's own codes (WAS, TBB, NOS...) keyed against an ESPN-normalized
+    // lookup below — same vocabulary split as the odds map above.
+    if (t.id) kickoffByTeam.set(normalizeTeamCode(t.id), kickoff);
   }
 }
 
@@ -202,21 +204,33 @@ Object.values(liveOdds).forEach((odds) => {
   const { favoredTeam, spreadAmount } = parseSpread(odds.spread);
   const spreadNum = spreadAmount ? parseFloat(spreadAmount) : null;
 
+  // Speak the same team vocabulary as the players do. `player.nflTeam` is
+  // normalizeTeamCode'd (MFL -> ESPN, so WAS -> WSH), but the odds map arrives
+  // from coach-data's normalizeEspnTeamCode, which rewrites the SAME team the
+  // other way (WSH -> WAS). Every consumer below compares these codes against
+  // player.nflTeam, so leaving them raw means Washington never joins its own
+  // game: no matchup line, no FPA rank, and — once the matchup line spells the
+  // opponent out — "vs WAS" sitting next to a PlayerCell that says WSH.
+  // normalizeTeamCode is identity for codes it doesn't map, so this can only
+  // add matches, never drop one.
+  const homeTeam = normalizeTeamCode(odds.homeTeam);
+  const awayTeam = normalizeTeamCode(odds.awayTeam);
+
   // Build FPA ranks for this game
   const fpaRanks: Record<string, Record<string, number>> = {};
   for (const pos of ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF']) {
     const homeStats = getFPAStats(fpaData, odds.awayTeam, pos);
     const awayStats = getFPAStats(fpaData, odds.homeTeam, pos);
-    if (!fpaRanks[odds.homeTeam]) fpaRanks[odds.homeTeam] = {};
-    if (!fpaRanks[odds.awayTeam]) fpaRanks[odds.awayTeam] = {};
-    if (awayStats) fpaRanks[odds.homeTeam][pos] = awayStats.rank;
-    if (homeStats) fpaRanks[odds.awayTeam][pos] = homeStats.rank;
+    if (!fpaRanks[homeTeam]) fpaRanks[homeTeam] = {};
+    if (!fpaRanks[awayTeam]) fpaRanks[awayTeam] = {};
+    if (awayStats) fpaRanks[homeTeam][pos] = awayStats.rank;
+    if (homeStats) fpaRanks[awayTeam][pos] = homeStats.rank;
   }
 
   schedule.push({
     id: odds.id,
-    home: odds.homeTeam,
-    away: odds.awayTeam,
+    home: homeTeam,
+    away: awayTeam,
     kickoff: odds.date,
     spread: spreadNum && favoredTeam ? (favoredTeam === odds.homeTeam ? -spreadNum : spreadNum) : null,
     overUnder: odds.overUnder !== 'N/A' ? parseFloat(String(odds.overUnder)) : null,
@@ -865,6 +879,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
                         <div class="lineup-slot__opp" aria-label={matchupLabel}>
                           <span class="lineup-slot__opp-prefix">{matchupPrefix}</span>
                           <img src={`/assets/nfl-logos/${oppTeam}.svg`} alt="" aria-hidden="true" class="lineup-slot__opp-logo" width="16" height="16" onerror={NFL_LOGO_ONERROR} onload={NFL_LOGO_ONLOAD} />
+                          <span class="lineup-slot__opp-team">{oppTeam}</span>
                         </div>
                         {player.projection != null && (
                           <span class="lineup-slot__proj">{player.projection.toFixed(1)}</span>
@@ -920,6 +935,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
               <div class="lineup-bench-row__opp" aria-label={matchupLabel}>
                 <span class="lineup-bench-row__opp-prefix">{matchupPrefix}</span>
                 <img src={`/assets/nfl-logos/${oppTeam}.svg`} alt="" aria-hidden="true" class="lineup-bench-row__opp-logo" width="14" height="14" onerror={NFL_LOGO_ONERROR} onload={NFL_LOGO_ONLOAD} />
+                <span class="lineup-bench-row__opp-team">{oppTeam}</span>
               </div>
             ) : null}
             {player.projection != null && (
@@ -1278,6 +1294,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
           <div class="lineup-slot__opp" aria-label="${esc(matchupLabel)}">
             <span class="lineup-slot__opp-prefix">${matchupPrefix}</span>
             <img src="/assets/nfl-logos/${esc(oppTeam)}.svg" alt="" aria-hidden="true" class="lineup-slot__opp-logo" width="16" height="16" onerror="${NFL_LOGO_ONERROR}" onload="${NFL_LOGO_ONLOAD}" />
+            <span class="lineup-slot__opp-team">${esc(oppTeam)}</span>
           </div>
           ${player.projection != null ? `<span class="lineup-slot__proj">${player.projection.toFixed(1)}</span>` : ''}
         `;
@@ -1399,8 +1416,11 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
           matchupHtml = `<span class="cdm-matchup cdm-matchup--bye">BYE</span>`;
         } else if (oppTeam) {
           matchupHtml = `<div class="cdm-matchup">
-            <img src="/assets/nfl-logos/${esc(oppTeam)}.svg" alt="${esc(oppTeam)}" class="cdm-matchup__logo" width="12" height="12" onerror="${NFL_LOGO_ONERROR}" onload="${NFL_LOGO_ONLOAD}" />
-            <span class="cdm-matchup__text"><span class="cdm-matchup__prefix">${isHome ? 'vs' : '@'}</span> ${esc(oppTeam)}</span>
+            <span class="cdm-matchup__text">
+              <span class="cdm-matchup__prefix">${isHome ? 'vs' : '@'}</span>
+              <img src="/assets/nfl-logos/${esc(oppTeam)}.svg" alt="" aria-hidden="true" class="cdm-matchup__logo" width="12" height="12" onerror="${NFL_LOGO_ONERROR}" onload="${NFL_LOGO_ONLOAD}" />
+              <span class="cdm-matchup__team">${esc(oppTeam)}</span>
+            </span>
           </div>`;
         }
 
@@ -2228,11 +2248,21 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
 
   .lineup-slot__opp-logo { width: 16px; height: 16px; }
 
+  /* The matchup reads as one phrase — prefix, crest, team code — at full
+     text strength, matching the player-swap sheet. Rides the gray scale so
+     it is near-white in dark mode and near-black in light. */
   .lineup-slot__opp-prefix {
     font-size: 0.6875rem;
     text-transform: lowercase;
     font-weight: 600;
-    color: var(--color-gray-400, #9ca3af);
+    color: var(--color-gray-900, #111827);
+  }
+
+  .lineup-slot__opp-team {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--color-gray-900, #111827);
+    font-variant-numeric: tabular-nums;
   }
 
   .lineup-slot__opp-prefix + .lineup-slot__opp-logo {
@@ -2367,9 +2397,15 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     flex-shrink: 0;
   }
 
-  .lineup-bench-row__opp-prefix {
+  .lineup-bench-row__opp-prefix,
+  .lineup-bench-row__opp-team {
     font-size: 0.625rem;
-    color: var(--color-gray-400, #9ca3af);
+    color: var(--color-gray-900, #111827);
+  }
+
+  .lineup-bench-row__opp-team {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
   }
 
   .lineup-bench-row--locked { opacity: 0.6; }
@@ -2727,17 +2763,25 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     width: 12px;
     height: 12px;
     flex-shrink: 0;
-    opacity: 0.85;
   }
 
+  /* The logo sits INSIDE the text run, between the "vs"/"@" and the team
+     code, so the whole matchup reads as one phrase. inline-flex keeps the
+     crest optically centered on the cap height instead of the baseline. */
   .cdm-matchup__text {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
     font-size: 0.625rem;
-    color: var(--color-gray-400, #9ca3af);
+    /* Rides the gray scale, so this is near-white in dark mode and
+       near-black in light — the sheet surface flips with the theme. */
+    color: var(--color-gray-900, #111827);
     font-variant-numeric: tabular-nums;
   }
 
-  .cdm-matchup__prefix {
-    color: var(--color-gray-300, #d1d5db);
+  .cdm-matchup__prefix,
+  .cdm-matchup__team {
+    color: inherit;
   }
 
   .cdm-matchup--bye {
