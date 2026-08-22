@@ -70,11 +70,20 @@ export const GET: APIRoute = async ({ request, url }) => {
     );
   }
 
+  // Which construction to use. A league's policy picks the default; the param
+  // only lets a commissioner see the other one before choosing, so an unknown
+  // value is rejected rather than silently falling back.
+  const mode = url.searchParams.get('mode') ?? undefined;
+  if (mode && mode !== 'simple' && mode !== 'constructive') {
+    return json({ error: `mode must be "simple" or "constructive"` }, 400);
+  }
+
   try {
     const plan = planSchedule({
       slug,
       year,
       byes,
+      mode,
       readFeed: (y: number, feed: string) => readFeedFile(league.dataPath, y, feed),
       // Bounded so the request finishes inside the function's 30s ceiling.
       // Quality plateaus well before this; the structure does the heavy lifting.

@@ -74,6 +74,10 @@ export default function SchedulePlanner({
   seasons: number[];
 }) {
   const [year, setYear] = useState(defaultYear);
+  // Which construction to generate. The league's own policy is the default;
+  // this exists so the two can be compared before a paste, not to make the
+  // choice casual — they differ by 12 weeks of everyone's calendar.
+  const [mode, setMode] = useState<'default' | 'simple' | 'constructive'>('default');
   const [plan, setPlan] = useState<Plan | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -85,7 +89,9 @@ export default function SchedulePlanner({
     setError(null);
     setCopied(false);
     try {
-      const res = await fetch(`/api/schedule-plan?league=${encodeURIComponent(leagueSlug)}&year=${year}`);
+      const query = new URLSearchParams({ league: leagueSlug, year: String(year) });
+      if (mode !== 'default') query.set('mode', mode);
+      const res = await fetch(`/api/schedule-plan?${query}`);
       const body = await res.json();
       if (!res.ok) throw new Error(body?.error ?? `Request failed (${res.status})`);
       setPlan(body as Plan);
@@ -95,7 +101,7 @@ export default function SchedulePlanner({
     } finally {
       setLoading(false);
     }
-  }, [leagueSlug, year]);
+  }, [leagueSlug, year, mode]);
 
   const copy = useCallback(async () => {
     if (!plan) return;
@@ -136,6 +142,14 @@ export default function SchedulePlanner({
                 {y}
               </option>
             ))}
+          </select>
+        </label>
+        <label className="sched__field">
+          <span>Method</span>
+          <select value={mode} onChange={(e) => setMode(e.target.value as typeof mode)} disabled={loading}>
+            <option value="default">League default</option>
+            <option value="simple">Simple — move the doubleheader only</option>
+            <option value="constructive">Optimized — full rebuild</option>
           </select>
         </label>
         <button type="button" className="sched__go" onClick={generate} disabled={loading}>
@@ -209,7 +223,11 @@ export default function SchedulePlanner({
                       : `${plan.changedWeeks.length} of ${plan.lastWeek} — weeks ${plan.changedWeeks.join(', ')}`}
                 </dd>
                 <dt>Method</dt>
-                <dd>{plan.mode === 'simple' ? 'minimal — move the doubleheader only' : 'full constructive rebuild'}</dd>
+                <dd>
+                  {plan.mode === 'simple'
+                    ? 'simple — moves the doubleheader, leaves every other week alone'
+                    : 'optimized — rebuilt from the format, every week re-drawn'}
+                </dd>
               </dl>
             </section>
 
