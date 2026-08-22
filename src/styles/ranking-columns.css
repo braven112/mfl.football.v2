@@ -1,0 +1,49 @@
+/**
+ * Ranking column headers on the Free Agents tables.
+ *
+ * These `<th>`s are built in JS (`src/utils/rankings-table.ts`) after the page
+ * renders, so they never carry an Astro scope class and the pages' own
+ * `.players-table th { … }` rule cannot reach them. They shipped with the
+ * browser's default table-header styling instead: 16px, mixed case, centered,
+ * and — because the pages' `white-space: nowrap` was scoped out too — "My Rank"
+ * and "FBG ®" wrapped onto two lines while every static header stayed on one.
+ *
+ * Global on purpose. It mirrors the scoped header typography in
+ * `theleague/players.astro` and `afl-fantasy/players.astro`; if that changes,
+ * change it here too. Matched on `[data-ranking-col]`, which only the injected
+ * headers carry, so nothing else in the table is in range.
+ *
+ * The table wrapper scrolls horizontally, so `nowrap` costs a scroll, never a
+ * clipped header.
+ */
+
+th[data-ranking-col] {
+  padding: 0.5rem 0.375rem;
+  text-align: right;
+  font-weight: 600;
+  font-size: 0.625rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--color-gray-400, #9ca3af);
+}
+
+/* The computed columns (My Rank, Avg) run flush to their tinted left edge —
+   matches the `padding-left: 0` the pages already set on the pair. */
+th[data-ranking-col].col-ranking-composite,
+th[data-ranking-col].col-ranking-avg {
+  padding-left: 0;
+}
+
+th[data-ranking-col] .th-content {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.25rem;
+  white-space: nowrap;
+}
+
+th[data-ranking-col] .sort-arrow {
+  font-size: 0.55rem;
+  opacity: 0.8;
+}

@@ -721,6 +721,17 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   }
 
   function init() {
+    // Own this page's table, once.
+    //
+    // init() is an astro:page-load handler that is never torn down, so without
+    // this it re-runs on every page the owner navigates to afterwards: five more
+    // document-level bridge listeners each time, and a rankings:page-ready
+    // dispatch that wakes THIS page's module instance while a different table is
+    // live. Same dataset guard the Free Agents pages use.
+    var ownTable = document.getElementById('pfa-table');
+    if (!ownTable || ownTable.dataset.init) return;
+    ownTable.dataset.init = 'true';
+
     // Position pills
     var pills = document.querySelectorAll('#pos-tabs .pos-pill');
     for (var pi = 0; pi < pills.length; pi++) {
@@ -828,129 +839,82 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       });
     }
 
-    // Custom event bridge for rankings integration
+    // Custom event bridge for rankings integration.
+    //
+    // These listeners sit on `document` and are never removed, and init() runs
+    // again on every ClientRouter navigation — so after leaving this page the
+    // previous instance is still listening, and its closure would answer for
+    // (or repaint) whatever table is live now. Every handler checks that the
+    // table THIS closure was built for is still in the document. Same guard as
+    // the Free Agents pages; same bug it was added for.
+    var OWN_TABLE = ownTable;
+    function isLivePage() {
+      return !!OWN_TABLE && OWN_TABLE.isConnected;
+    }
+
     document.addEventListener('rankings:set-lookup', function(e) {
+      if (!isLivePage()) return;
       var detail = e.detail;
       if (detail.lookup) {
         rankingLookup = detail.lookup;
         hasRankingColumns = !!detail.hasColumns;
       }
     });
-    document.addEventListener('rankings:refilter', function() { filterPlayers(); });
+    document.addEventListener('rankings:refilter', function() {
+      if (!isLivePage()) return;
+      filterPlayers();
+    });
     document.addEventListener('rankings:refresh-table', function() {
+      if (!isLivePage()) return;
       sortPlayers();
       render();
     });
     document.addEventListener('rankings:set-sort', function(e) {
+      if (!isLivePage()) return;
       var detail = e.detail;
+      // A null key means the ranking column being sorted by is gone (the owner
+      // hid its source) and there is nothing left to hand off to — restore this
+      // page's own default instead of sorting by a column that no longer exists.
+      if (detail.key == null) {
+        currentSort = 'projected';
+        sortDirection = 'desc';
+        return;
+      }
       currentSort = detail.key;
       sortDirection = detail.dir;
     });
     document.addEventListener('rankings:get-sort', function(e) {
+      if (!isLivePage()) return;
       e.detail.currentSort = currentSort;
       e.detail.descDefaults = new Set(['projected', 'lastYrPts', 'ppg', 'salary', 'age']);
     });
 
     // Initial render
     filterPlayers();
+
+    // Signal the module script that this page's half of the bridge is live.
+    document.dispatchEvent(new CustomEvent('rankings:page-ready'));
   }
 
   document.addEventListener('astro:page-load', init);
 </script>
 
-<!-- Rankings integration: dynamically injects ranking columns from localStorage imports -->
+<!-- Rankings integration — the SHARED module owns which columns show.
+     This page used to hand-roll its own copy, taking the first eight columns
+     off the raw lookup, which is exactly the drift the shared module exists to
+     prevent: it drew Avg and every source the owner had unticked in the My
+     Rank editor, while the Free Agents tables honored the board. -->
 <script>
-  import { buildRankingLookup, onRankingsChanged } from '../../utils/rankings-lookup';
+  import { initRankingTable } from '../../utils/rankings-table';
 
-  let unsubscribe: (() => void) | null = null;
-
-  function emit(name: string, detail?: Record<string, unknown>) {
-    document.dispatchEvent(new CustomEvent(name, { detail: detail ?? {} }));
-  }
-
-  function getSortState(): { currentSort: string } {
-    const detail: Record<string, unknown> = {};
-    document.dispatchEvent(new CustomEvent('rankings:get-sort', { detail }));
-    return { currentSort: detail.currentSort as string };
-  }
-
-  function injectRankingColumns() {
-    const lookup = buildRankingLookup();
-    const limitedColumns = lookup.columns.slice(0, 8);
-    const limitedLookup = { ...lookup, columns: limitedColumns };
-
-    emit('rankings:set-lookup', { lookup: limitedLookup, hasColumns: limitedColumns.length > 0 });
-
-    // Remove any previously injected ranking <th> elements
-    document.querySelectorAll('.pfa-table th[data-ranking-col]').forEach(th => th.remove());
-
-    if (limitedColumns.length === 0) {
-      emit('rankings:refilter');
-      return;
-    }
-
-    const headerRow = document.querySelector('.pfa-table thead tr');
-    if (!headerRow) return;
-
-    // Insert after PPG header
-    const anchorTh = headerRow.querySelector('[data-sort="ppg"]');
-    if (!anchorTh) return;
-
-    const columnsReversed = [...limitedColumns].reverse();
-    for (const col of columnsReversed) {
-      const th = document.createElement('th');
-      th.className = 'sortable col-num col-group--rankings col-hide-mobile';
-      th.dataset.sort = `ranking_${col.importId}`;
-      th.dataset.rankingCol = 'true';
-
-      if ((col as any).isComposite) {
-        th.classList.add('col-ranking-composite');
-        th.title = 'My Rank — weighted composite';
-      } else if ((col as any).isAverage) {
-        th.classList.add('col-ranking-avg');
-        th.title = 'Average Rank';
-      } else {
-        th.title = `${col.fullName} (${col.playerCount} players)`;
-      }
-
-      const thContent = document.createElement('div');
-      thContent.className = 'th-content';
-      thContent.textContent = col.header;
-      th.appendChild(thContent);
-
-      th.addEventListener('click', () => {
-        const sortKey = `ranking_${col.importId}`;
-        const { currentSort } = getSortState();
-        if (sortKey === currentSort) {
-          const arrow = th.querySelector('.sort-arrow');
-          const wasAsc = arrow && arrow.textContent === '\u25B2';
-          emit('rankings:set-sort', { key: sortKey, dir: wasAsc ? 'desc' : 'asc' });
-        } else {
-          emit('rankings:set-sort', { key: sortKey, dir: 'asc' });
-        }
-        emit('rankings:refresh-table');
-      });
-
-      anchorTh.after(th);
-    }
-
-    emit('rankings:refilter');
-  }
-
-  function initRankings() {
-    if (unsubscribe) {
-      unsubscribe();
-      unsubscribe = null;
-    }
-
-    injectRankingColumns();
-
-    unsubscribe = onRankingsChanged(() => {
-      injectRankingColumns();
-    });
-  }
-
-  document.addEventListener('astro:page-load', initRankings);
+  initRankingTable({
+    tableSelector: '.pfa-table',
+    anchorSelector: '[data-sort="ppg"]',
+    // The ranking block is desktop-only here and the <td>s already carry this
+    // class, so the headers must too — otherwise the header row keeps columns
+    // the body has dropped and every mobile cell lands under the wrong title.
+    thClasses: ['col-hide-mobile'],
+  });
 </script>
 
 <style is:global>

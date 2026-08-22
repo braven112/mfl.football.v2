@@ -85,12 +85,103 @@ describe('rankings reach every decision page', () => {
       expect(read(page)).toContain('e.detail.key == null');
     });
 
+    it.each(FREE_AGENT_PAGES)('%s styles its injected ranking headers globally', (page) => {
+      // The ranking <th>s are created in JS, so they never carry the page's
+      // Astro scope class and every scoped `th` rule misses them — including
+      // `white-space: nowrap`, which is why "My Rank" and "FBG ®" wrapped onto
+      // two lines while every static header stayed on one. The fix has to be
+      // global CSS; a scoped rule silently does nothing here.
+      expect(read(page)).toContain("import '../../styles/ranking-columns.css'");
+    });
+
+    it('the injected-header stylesheet keeps ranking titles on one line', () => {
+      const css = read('src/styles/ranking-columns.css');
+      const block = css.slice(css.indexOf('th[data-ranking-col] {'));
+      expect(block.slice(0, block.indexOf('}'))).toMatch(/white-space:\s*nowrap/);
+      // Scoping it would put it back out of reach of the very elements it targets.
+      expect(css).not.toContain(':global(');
+    });
+
     it.each(FREE_AGENT_PAGES)('%s re-applies column visibility after render', (page) => {
       // render() rebuilds tbody with innerHTML, which wipes every inline
       // display style. Without this call the hidden group reappears on any
       // sort, filter or "load more".
       const src = read(page);
       expect(src).toContain('applyGroupVisibility()');
+    });
+  });
+
+  describe('Projected Free Agents', () => {
+    const PFA = 'src/pages/theleague/projected-free-agents.astro';
+
+    it('injects its ranking columns via the shared module', () => {
+      const src = read(PFA);
+      expect(src).toContain("from '../../utils/rankings-table'");
+      expect(src).toContain('initRankingTable(');
+    });
+
+    it('does not hand-roll its own column budget', () => {
+      // It used to: `lookup.columns.slice(0, 8)`, which drew Avg and every
+      // source the owner had unticked in the My Rank editor — the two things
+      // visibleRankingColumns() exists to filter out. A page that slices the
+      // raw lookup itself has stopped honoring the owner's board.
+      const src = read(PFA);
+      expect(src).not.toMatch(/lookup\.columns\.slice\(/);
+      expect(src).not.toContain('buildRankingLookup(');
+    });
+
+    it('hides its ranking headers on mobile with the cells', () => {
+      // The <td>s are col-hide-mobile; a <th> that stays visible when its
+      // column's cells are gone puts every remaining mobile cell under the
+      // wrong heading.
+      const src = read(PFA);
+      expect(src).toContain("thClasses: ['col-hide-mobile']");
+      expect(src).toContain('col-group--rankings col-hide-mobile');
+    });
+
+    it('restores its own sort when the last ranking column goes', () => {
+      expect(read(PFA)).toContain('detail.key == null');
+    });
+
+    it('ignores bridge events once its own table is detached', () => {
+      // Same ClientRouter hazard the Free Agents pages hit: init() re-runs on
+      // every navigation and these document listeners are never removed, so a
+      // stale closure would answer for the live page.
+      const src = read(PFA);
+      expect(src).toContain("var ownTable = document.getElementById('pfa-table')");
+      expect(src).toContain('OWN_TABLE.isConnected');
+      const guards = src.match(/if \(!isLivePage\(\)\) return;/g) ?? [];
+      expect(guards.length).toBeGreaterThanOrEqual(5);
+    });
+
+    it('runs its setup once, for its own table only', () => {
+      // init() is an astro:page-load handler that is never torn down. Without
+      // the guard it re-runs on every page visited afterwards — five more
+      // document-level bridge listeners each time, plus a rankings:page-ready
+      // dispatch that wakes this page's module instance while someone else's
+      // table is live.
+      const src = read(PFA);
+      expect(src).toContain('ownTable.dataset.init');
+    });
+
+    it('tells the module its half of the bridge is live', () => {
+      expect(read(PFA)).toContain("new CustomEvent('rankings:page-ready')");
+    });
+  });
+
+  describe('the shared module across pages', () => {
+    it('a stale instance never speaks for a table it does not own', () => {
+      // Every event the module emits goes on `document`, and the live page's
+      // bridge cannot tell whose instance sent it. With more than one
+      // tableSelector in play (.players-table and .pfa-table), a stale instance
+      // waking on the other page would reach the no-anchor path and broadcast
+      // `hasColumns: false` — dropping the live table's ranking <td>s under
+      // headers that are still there, and flipping players.astro off its
+      // rankings view for good when the owner picked that view by hand.
+      const src = read('src/utils/rankings-table.ts');
+      const body = src.slice(src.indexOf('function injectRankingColumns('));
+      const beforeFirstEmit = body.slice(0, body.indexOf('emit('));
+      expect(beforeFirstEmit).toContain('if (!document.querySelector(options.tableSelector)) return;');
     });
   });
 
