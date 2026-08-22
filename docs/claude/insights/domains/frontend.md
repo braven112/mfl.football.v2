@@ -131,6 +131,35 @@ hrefs to local copies, and open it in the bundled Chromium — it isolates
 
 ---
 
+## 2026-08-22 - The Two Homepages Disagree About Whether `effectiveDate` Is Optional
+
+**Context:** Wiring the Schedule Release tease into both league homeposts. Both
+pages have a variable called `effectiveDate` derived from `?testDate=`, and I
+read the season off it in both.
+
+**Insight:** They are not the same type. `src/pages/afl-fantasy/index.astro`
+declares `parseTestDate(testDateParam) ?? new Date()` — always a Date.
+`src/pages/theleague/index.astro` declares `parseTestDate(testDateParam)` with
+NO fallback, so it is `Date | undefined`, and the resolved value lives in a
+*differently named* variable (`heroReferenceDate`) six lines further down.
+`effectiveDate.getUTCFullYear()` therefore threw
+`Cannot read properties of undefined (reading 'getUTCFullYear')` on every
+ordinary request to `/theleague` — a 500 on the front page — while passing on
+every `?testDate=` request, which is exactly how it got verified and shipped.
+
+**Evidence:** Shipped in 940a450, caught only because a screenshot run needed
+the dev server and the homepage came back 500. The file even carries a comment
+above `heroReferenceDate` explaining that `effectiveDate` is undefined without
+`?testDate=`; the two identically-named variables are what defeats it.
+
+**Recommendation:** On TheLeague's homepage, never dereference `effectiveDate`
+— use `heroReferenceDate`. More generally: when the same identifier is
+`T | undefined` in one sibling page and `T` in the other, a mechanical guard is
+worth more than care.  `tests/schedule-release.test.ts` greps the file for
+`effectiveDate.<member>` and fails on any hit, which is a two-line test that
+catches the whole class. Verifying a date-dependent page ONLY through
+`?testDate=` will systematically miss this: exercise the bare URL too.
+
 ## 2026-08-22 - Hoisting Page Frontmatter Into a Function Loses Its Narrowing
 
 **Context:** Sharing the Set Lineup matchup panel between both leagues meant
