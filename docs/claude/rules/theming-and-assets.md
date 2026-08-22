@@ -128,6 +128,32 @@ hard-won facts (Aug 2026 "missing team images" saga):
   bumped, which is unbounded and worse than anything Cloudflare did.
 
 
+## Overlays on a phone — size against `dvh`, never bare `vh`
+
+`vh` is the LARGE viewport: the page as it would be with the browser chrome
+hidden. On a phone with the URL bar and the bottom bar showing, the visible
+area is smaller, so a panel capped at `88vh` is taller than what the owner can
+actually see. Which edge they lose depends on how it is anchored — the My Rank
+sheet is bottom-pinned (`align-items: flex-end`), so the overflow went off the
+TOP and took the title and the close button with it, leaving an owner inside a
+modal they could barely close (report, 2026-08-22).
+
+Cap against `dvh` (the visible viewport, which tracks that chrome as it moves),
+with a plain `vh` line above it as the fallback:
+
+```css
+max-height: 88vh;   /* fallback first */
+max-height: 88dvh;  /* the one that's right on a phone */
+```
+
+The same applies to `height` and to any `calc()` that mixes one in. It is
+invisible on a desktop browser and in Playwright, where `vh` and `dvh` are
+equal — the only way to see it is a real phone, or arithmetic against the
+reporter's viewport. `tests/my-rank-editor-css.test.ts` pins the sheet;
+`draft-room.css` still has three bare `100vh` caps that were out of scope for
+that fix.
+
+
 ## Service worker — bounded staleness, versioned cache-first
 
 `public/sw.js` is registered in production only (`TheLeagueLayout.astro`;
