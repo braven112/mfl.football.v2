@@ -67,7 +67,7 @@ const BYES = readJson(path.join(BYES_ROOT, 'data/nfl/bye-weeks.json'))?.seasons 
 /** Season under audit: the newest year that has both a bye calendar and a schedule. */
 const LEAGUES = [
   { slug: 'theleague', dir: 'data/theleague', divisionSize: 4, doubleheaders: 4, crossConference: false },
-  { slug: 'afl-fantasy', dir: 'data/afl-fantasy', divisionSize: 6, doubleheaders: 3, crossConference: true },
+  { slug: 'afl-fantasy', dir: 'data/afl-fantasy', divisionSize: 6, conferenceSize: 12, doubleheaders: 3, crossConference: true },
 ];
 
 const loadSeason = (dir: string, year: string) => {
@@ -226,6 +226,10 @@ for (const league of LEAGUES) {
             doubleheaders: dh,
             byeCounts,
             divisionSize: league.divisionSize,
+            // REQUIRED. Without it `interRounds` is NaN, buildWeekPlan throws,
+            // and the bare catch below leaves `allowance` at 0 — so this branch
+            // silently asserted a stricter bound than its comment describes.
+            conferenceSize: league.conferenceSize,
             crossWeek: 1,
           });
           const cleanWeeks = new Set(clean);
@@ -236,9 +240,13 @@ for (const league of LEAGUES) {
               .reduce((n: number, w: any) => n + w.slots.filter((s: any) => s.kind === 'division').length, 0) *
             gamesPerRound;
           allowance = Math.max(0, ceiling.ceiling - reachable);
-        } catch {
-          // A season whose weeks/doubleheaders do not fit the format at all is
-          // already reported by the doubleheader assertions above.
+        } catch (err) {
+          // Never silent: a throw here means the reachable bound could not be
+          // derived, and an `allowance` of 0 would then assert a STRICTER rule
+          // than the one this test documents. Fail with the reason instead.
+          throw new Error(
+            `${league.slug} ${year}: could not derive the division-game allowance — ${(err as Error).message}`,
+          );
         }
       }
       expect(

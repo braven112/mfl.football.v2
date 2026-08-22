@@ -282,7 +282,19 @@ export const buildWeekPlan = ({
   // two slots before the first leg is dealt.
   const earlySlots = earlyWeeks.flatMap((w) => (dh.has(w) ? [w, w] : [w]));
   if (crossWeek) {
-    earlySlots.splice(earlySlots.indexOf(crossWeek), 1);
+    // Take the cross slot out of the early block by INDEX, and only when it is
+    // actually there. `splice(indexOf(x), 1)` on a miss is `splice(-1, 1)`,
+    // which silently deletes the last early slot instead — a division leg
+    // vanishes and the plan comes back one round short, with nothing pointing
+    // at this line. `dh.has(crossWeek)` does not cover it: the cross week can
+    // sit outside the early block entirely.
+    const at = earlySlots.indexOf(crossWeek);
+    if (at === -1) {
+      throw new Error(
+        `crossWeek ${crossWeek} is not one of the early-block weeks (${earlyWeeks.join(', ')})`,
+      );
+    }
+    earlySlots.splice(at, 1);
     push(crossWeek, { kind: 'cross' });
   }
 

@@ -64,10 +64,19 @@ const startUnix = Math.floor(start.getTime() / 1000);
 
 // Writes go to the league's own host, never the api gateway.
 const host = process.env.MFL_WRITE_HOST || `https://${league.mflHost}`;
+// END_TIME and HAPPENS are not optional — this endpoint takes exactly five
+// parameters and omitting two of them is a rejected write. MFL returns its
+// errors at HTTP 200, so a call missing them looks EXACTLY like a successful
+// one from the response status; the omission was invisible until the header's
+// own parameter list was read back against the request.
+// A release marker is a single all-day-ish point in time, so the event ends
+// where it starts and never repeats.
 const params = new URLSearchParams({
   L: league.id,
   EVENT_TYPE: 'CUSTOM',
   START_TIME: String(startUnix),
+  END_TIME: String(startUnix),
+  HAPPENS: 'ONCE',
   // Undocumented. Sent on the chance MFL honours it; ignored silently if not.
   DESCRIPTION: `${league.name} Schedule Release`,
 });

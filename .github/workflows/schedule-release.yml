@@ -85,11 +85,22 @@ jobs:
           done
 
       - name: Lock the reveal
+        # Inputs arrive through env, never interpolated into the script body.
+        # `${{ inputs.league }}` expanded inline runs as shell in a job holding
+        # contents: write and the checkout deploy key, so `league=x; curl … | sh`
+        # would execute.
+        env:
+          INPUT_LEAGUE: ${{ inputs.league }}
+          INPUT_YEAR: ${{ inputs.year }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
         run: |
-          node scripts/lock-schedule-release.mjs \
-            ${{ inputs.league && format('--league={0}', inputs.league) || '' }} \
-            ${{ inputs.year && format('--year={0}', inputs.year) || '' }} \
-            ${{ inputs.dry_run && '--dry-run' || '' }}
+          # `if` blocks, not `[ x ] && y` — the runner's shell is `bash -e`, so a
+          # false test as a standalone statement exits the step.
+          ARGS=()
+          if [ -n "$INPUT_LEAGUE" ]; then ARGS+=("--league=$INPUT_LEAGUE"); fi
+          if [ -n "$INPUT_YEAR" ]; then ARGS+=("--year=$INPUT_YEAR"); fi
+          if [ "$INPUT_DRY_RUN" = "true" ]; then ARGS+=("--dry-run"); fi
+          node scripts/lock-schedule-release.mjs "${ARGS[@]}"
 
       - name: Commit the bye calendar and any archived reveal
         run: |

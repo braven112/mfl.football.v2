@@ -102,14 +102,32 @@ export const rivalryPairKey = (a, b) => [a, b].sort().join('-');
  */
 export function rivalrySeriesByPair(franchises, { minMeetings = MIN_RIVALRY_MEETINGS } = {}) {
   const byPair = {};
+  /**
+   * The mirror image of every pairing, tallied with NO `minMeetings` floor.
+   *
+   * This must not go through `computeRivalEntries`: that filter drops an
+   * opponent under the floor, so the WORSE the two copies disagree the more
+   * likely the smaller side vanishes and the pairing is marked undisputed —
+   * exactly backwards. AFL `0001-0004` reads 8 meetings from one side and 2
+   * from the other, and the 2 would have been filtered away.
+   */
   const mirrored = {};
+  for (const [selfId, franchise] of Object.entries(franchises ?? {})) {
+    for (const opponentId of Object.keys(franchise?.matchupHistory ?? {})) {
+      if (opponentId === selfId) continue;
+      const key = rivalryPairKey(selfId, opponentId);
+      if (selfId === key.split('-')[0]) continue; // the canonical side; see below
+      const ms = currentOwnerMeetings(franchise?.matchupHistory, opponentId);
+      const { wins, losses, ties } = tallyMeetings(ms);
+      mirrored[key] = { games: ms.length, wins, losses, ties };
+    }
+  }
+
   for (const [selfId, franchise] of Object.entries(franchises ?? {})) {
     for (const entry of computeRivalEntries(franchise?.matchupHistory, selfId, { minMeetings })) {
       const key = rivalryPairKey(selfId, entry.opponentId);
-      const canonical = selfId === key.split('-')[0];
-      // Both sides get recorded; the CANONICAL one (id sorts first) is the
-      // series, the other is kept only to check the two agree.
-      (canonical ? byPair : mirrored)[key] = {
+      if (selfId !== key.split('-')[0]) continue; // canonical side only
+      byPair[key] = {
         games: entry.games,
         playoffGames: entry.playoffGames,
         intensity: entry.intensity,
@@ -144,13 +162,16 @@ export function rivalrySeriesByPair(franchises, { minMeetings = MIN_RIVALRY_MEET
    */
   for (const [key, series] of Object.entries(byPair)) {
     const other = mirrored[key];
-    series.disputed = Boolean(
-      other &&
-        (other.games !== series.games ||
-          other.wins !== series.losses ||
-          other.losses !== series.wins ||
-          other.ties !== series.ties),
-    );
+    // A MISSING mirror counts as disputed too: one side records a series the
+    // other has no record of at all is the largest disagreement there is, not
+    // an absence of one. (It also covers an opponent missing from the input
+    // entirely — saying nothing about that pairing is the safe answer.)
+    series.disputed =
+      !other ||
+      other.games !== series.games ||
+      other.wins !== series.losses ||
+      other.losses !== series.wins ||
+      other.ties !== series.ties;
   }
   return byPair;
 }

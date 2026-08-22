@@ -579,6 +579,27 @@ describe('a series the two sides disagree about', () => {
     expect(byPair['0001-0009'].games, 'still weights the pick').toBeGreaterThan(0);
   });
 
+  // The first cut of this check built its mirror through `computeRivalEntries`,
+  // which applies the 4-meeting floor — so the WORSE the two copies disagreed
+  // the more likely the smaller side was filtered out and the pairing came
+  // back UNDISPUTED. Exactly backwards, and it left AFL 0001-0004 (8 meetings
+  // one side, 2 the other) asserting a record on a live reveal.
+  it('catches a disagreement where one side falls under the meetings floor', () => {
+    const franchises = {
+      '0001': { matchupHistory: { '0009': meetings([1, 1, 1, 1, 1, 0, 0, 0]) } },
+      '0009': { matchupHistory: { '0001': meetings([0, 1]) } },
+    };
+    expect(rivalrySeriesByPair(franchises)['0001-0009'].disputed).toBe(true);
+  });
+
+  it('treats a side with no record of the series at all as disputed', () => {
+    const franchises = {
+      '0001': { matchupHistory: { '0009': meetings([1, 1, 1, 0]) } },
+      '0009': { matchupHistory: {} },
+    };
+    expect(rivalrySeriesByPair(franchises)['0001-0009'].disputed).toBe(true);
+  });
+
   it('leaves an agreeing pairing undisputed', () => {
     const franchises = {
       '0001': { matchupHistory: { '0009': meetings([1, 1, 1, 0]) } },
