@@ -4871,25 +4871,14 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     }
   }
 
-  /* Below desktop the pill takes a line of its own and centres on it. The
-     wrapper is what makes that line full width without stretching the pill. */
+  /* Below desktop the pill stays on the toggle's line rather than claiming a
+     second row — two rows of chrome above the table is more vertical space
+     than this control is worth. At phone widths .roster-controls is a column,
+     so it stacks there whatever we do, and centres. */
   @media (max-width: 1023px) {
-    .roster-controls {
-      flex-wrap: wrap;
-    }
-
     .roster-controls :global(.mre-trigger-wrap) {
       order: 3;
-      flex: 1 0 100%;
-      margin-top: 0.4rem;
-    }
-
-    /* .mode-toggle's negative top margin is tuned for being the only thing on
-       a single-line row — it lifts the toggle ~26px above .roster-table-card,
-       which clips it (overflow: auto). Once the pill wraps to a second line
-       the toggle no longer needs to ride up, so drop the pull. */
-    .mode-toggle {
-      margin-top: 0;
+      margin-left: 0.5rem;
     }
   }
 
