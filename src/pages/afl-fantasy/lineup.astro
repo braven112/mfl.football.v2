@@ -1027,8 +1027,11 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
           matchupHtml = `<span class="cdm-matchup cdm-matchup--bye">BYE</span>`;
         } else if (oppTeam) {
           matchupHtml = `<div class="cdm-matchup">
-            <img src="/assets/nfl-logos/${esc(oppTeam)}.svg" alt="${esc(oppTeam)}" class="cdm-matchup__logo" width="12" height="12" onerror="${NFL_LOGO_ONERROR}" onload="${NFL_LOGO_ONLOAD}" />
-            <span class="cdm-matchup__text"><span class="cdm-matchup__prefix">${isHome ? 'vs' : '@'}</span> ${esc(oppTeam)}</span>
+            <span class="cdm-matchup__text">
+              <span class="cdm-matchup__prefix">${isHome ? 'vs' : '@'}</span>
+              <img src="/assets/nfl-logos/${esc(oppTeam)}.svg" alt="" aria-hidden="true" class="cdm-matchup__logo" width="12" height="12" onerror="${NFL_LOGO_ONERROR}" onload="${NFL_LOGO_ONLOAD}" />
+              <span class="cdm-matchup__team">${esc(oppTeam)}</span>
+            </span>
           </div>`;
         }
 
@@ -2131,17 +2134,25 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     width: 12px;
     height: 12px;
     flex-shrink: 0;
-    opacity: 0.85;
   }
 
+  /* The logo sits INSIDE the text run, between the "vs"/"@" and the team
+     code, so the whole matchup reads as one phrase. inline-flex keeps the
+     crest optically centered on the cap height instead of the baseline. */
   .cdm-matchup__text {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
     font-size: 0.625rem;
-    color: var(--color-gray-400, #9ca3af);
+    /* Rides the gray scale, so this is near-white in dark mode and
+       near-black in light — the sheet surface flips with the theme. */
+    color: var(--color-gray-900, #111827);
     font-variant-numeric: tabular-nums;
   }
 
-  .cdm-matchup__prefix {
-    color: var(--color-gray-300, #d1d5db);
+  .cdm-matchup__prefix,
+  .cdm-matchup__team {
+    color: inherit;
   }
 
   .cdm-matchup--bye {
