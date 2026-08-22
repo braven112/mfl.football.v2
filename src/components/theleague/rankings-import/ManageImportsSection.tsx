@@ -43,6 +43,17 @@ type SortableItem =
   | { kind: 'import'; id: string; data: StoredRankingImport }
   | { kind: 'average'; id: typeof AVERAGE_IMPORT_ID };
 
+/** True when a built-in source would end up above one of the owner's imports. */
+function crossesBuiltinBoundary(items: SortableItem[]): boolean {
+  let sawProvided = false;
+  for (const item of items) {
+    if (item.kind !== 'import') continue;
+    if (item.data.provided) sawProvided = true;
+    else if (sawProvided) return true;
+  }
+  return false;
+}
+
 export default function ManageImportsSection({ imports, onDelete, onReorder }: Props) {
   const [selectedImport, setSelectedImport] = useState<StoredRankingImport | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<StoredRankingImport | null>(null);
@@ -92,8 +103,15 @@ export default function ManageImportsSection({ imports, onDelete, onReorder }: P
       const oldIndex = items.findIndex((item) => item.id === active.id);
       const newIndex = items.findIndex((item) => item.id === over.id);
       const reordered = arrayMove(items, oldIndex, newIndex);
-      reorderImports(reordered.map((item) => item.id));
-      onReorder();
+      // The owner's own imports always sit above the built-ins
+      // (sortUserImportsFirst), so a drag across that line is discarded on the
+      // next read anyway. Drop it here instead of persisting an order that
+      // won't survive — otherwise the row snaps back AND we've pushed the
+      // discarded order to Redis.
+      if (!crossesBuiltinBoundary(reordered)) {
+        reorderImports(reordered.map((item) => item.id));
+        onReorder();
+      }
     }
   };
 

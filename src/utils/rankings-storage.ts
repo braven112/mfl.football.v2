@@ -877,9 +877,19 @@ export async function initFromServer(): Promise<boolean> {
 
   // Server has data, local is empty → adopt server data
   if (localImports.length === 0 && serverImports.length > 0) {
-    const withProvided = [...serverImports, ...getAllImports().filter((i) => i.provided)];
+    // Provided rows come from the RAW store, not getAllImports() — that view
+    // has already dropped the built-ins the owner hid, so writing it back
+    // erased them from storage: the "Show X" bar disappeared (Hide became
+    // one-way) and the next reconciliation saw them as new and re-seeded them
+    // into the composite. Same reason writeToStorage carries them through.
+    const withProvided = [
+      ...serverImports,
+      ...readFromStorage(activeRankingsScope()).filter((i) => i.provided),
+    ];
     localStorage.setItem(storageKey(), JSON.stringify(withProvided));
-    _cache.set(activeRankingsScope(), withProvided);
+    // Invalidate rather than set: the cached value has to go back through
+    // getAllImports()'s hidden-source filter and its ordering.
+    _cache.delete(activeRankingsScope());
     writeLegacyKeys(serverImports);
 
     if (serverData.compositeConfig) {
@@ -902,10 +912,11 @@ export async function initFromServer(): Promise<boolean> {
     if (changed) {
       const mergedWithProvided = [
         ...merged,
-        ...getAllImports().filter((i) => i.provided),
+        // Raw store, and invalidate rather than set — see the adopt branch.
+        ...readFromStorage(activeRankingsScope()).filter((i) => i.provided),
       ];
       localStorage.setItem(storageKey(), JSON.stringify(mergedWithProvided));
-      _cache.set(activeRankingsScope(), mergedWithProvided);
+      _cache.delete(activeRankingsScope());
       writeLegacyKeys(merged);
 
       // Use server composite config if local doesn't have one
