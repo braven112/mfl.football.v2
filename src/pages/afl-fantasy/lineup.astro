@@ -18,7 +18,10 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import PlayerCell from '../../components/theleague/PlayerCell.astro';
 import { getAuthUser } from '../../utils/auth';
 import { getLeagueBySlug } from '../../config/leagues';
-import { resolveRostersPayload, resolveLineupFillState, resolveWeekLineup, resolvePlayerName } from '../../utils/lineup-sources';
+import { findWeekMatchups, resolveRostersPayload, resolveLineupFillState, resolveWeekLineup, resolvePlayerName } from '../../utils/lineup-sources';
+import LineupGameStrip from '../../components/shared/LineupGameStrip.astro';
+import { buildMatchupCards } from '../../utils/lineup-matchup-cards';
+import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 import { resolveSubmitButtonState } from '../../utils/lineup-submit-state';
 import { getCurrentWeekForYear } from '../../utils/current-week';
 import { getAflLeagueYear } from '../../utils/league-year';
@@ -53,9 +56,12 @@ const week = Math.max(1, Math.min(22, requestedWeek));
 
 const mflBase = `https://api.myfantasyleague.com/${leagueYear}/export`;
 
-// Parallel data fetches (all 8 run concurrently to avoid waterfall)
-const [rostersRes, projRes, weeklyRes, fpaRes, playersRes, liveOdds, weekResultsRes, nflSchedRes] = await Promise.all([
-  fetch(`${mflBase}?TYPE=rosters&L=${MFL_LEAGUE_ID}&FRANCHISE=${user.franchiseId}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
+// Parallel data fetches (all 9 run concurrently to avoid waterfall)
+const [rostersRes, projRes, weeklyRes, fpaRes, playersRes, liveOdds, weekResultsRes, nflSchedRes, leagueSchedRes] = await Promise.all([
+  // League-wide, not FRANCHISE-scoped: the matchup strip needs the OPPONENT's
+  // roster to presume their lineup (and its projected total) on a week MFL
+  // hasn't recorded starters for yet.
+  fetch(`${mflBase}?TYPE=rosters&L=${MFL_LEAGUE_ID}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
   fetch(`${mflBase}?TYPE=projectedScores&L=${MFL_LEAGUE_ID}&W=${week}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
   fetch(`${mflBase}?TYPE=weeklyResults&L=${MFL_LEAGUE_ID}&W=YTD&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
   fetch(`${mflBase}?TYPE=fantasyPointsAllowed&L=${MFL_LEAGUE_ID}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
@@ -67,6 +73,9 @@ const [rostersRes, projRes, weeklyRes, fpaRes, playersRes, liveOdds, weekResults
   // utils/lineup-sources.ts).
   fetch(`${mflBase}?TYPE=weeklyResults&L=${MFL_LEAGUE_ID}&W=${week}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
   fetch(`${mflBase}?TYPE=nflSchedule&W=${week}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
+  // The FANTASY schedule — who we play this week. Plural: the AFL runs
+  // double-header weeks too (three of them in 2026).
+  fetch(`${mflBase}?TYPE=schedule&L=${MFL_LEAGUE_ID}&W=${week}&JSON=1`, { signal: AbortSignal.timeout(8000) }).catch(() => null),
 ]);
 
 const liveRostersData = rostersRes?.ok ? await rostersRes.json().catch(() => null) : null;
@@ -80,6 +89,7 @@ const weeklyData = weeklyRes?.ok ? await weeklyRes.json().catch(() => null) : nu
 const fpaData = fpaRes?.ok ? await fpaRes.json().catch(() => null) : null;
 const playersData = playersRes?.ok ? await playersRes.json().catch(() => null) : null;
 const nflSchedData = nflSchedRes?.ok ? await nflSchedRes.json().catch(() => null) : null;
+const leagueSchedData = leagueSchedRes?.ok ? await leagueSchedRes.json().catch(() => null) : null;
 
 // Build kickoff map from MFL schedule (source of truth for game locks)
 const nowEpoch = Math.floor(Date.now() / 1000);
@@ -318,6 +328,7 @@ const weekLineup = resolveWeekLineup({
   league: 'afl-fantasy',
   leagueYear,
 });
+const resultsWeekEntry = weekLineup.entry;
 const lineupReadOk = weekLineup.lineupReadOk;
 const lineupFromCache = weekLineup.fromCache;
 const weekScheduled = weekLineup.weekScheduled;
@@ -400,6 +411,72 @@ const initialSubmitState = resolveSubmitButtonState({
 });
 const fillIsProjected = fillState.fillIsProjected;
 
+// ---------------------------------------------------------------------------
+// Player-of-the-game faceoff — each of this week's games as a two-player split
+// composite over the two franchises' brand colors and crests, with a projected
+// scoreboard under it. PLURAL: the AFL schedules double-header weeks (three in
+// 2026), where a franchise plays two different opponents off ONE submitted
+// lineup, so the strip carries a card per game and becomes a swipeable
+// carousel when there is more than one. Shared with TheLeague's page — see
+// utils/lineup-matchup-cards.ts.
+// ---------------------------------------------------------------------------
+const rawWeeklySched = leagueSchedData?.schedule?.weeklySchedule;
+const schedWeekEntry = Array.isArray(rawWeeklySched)
+  ? rawWeeklySched.find((w: any) => parseInt(w?.week, 10) === week)
+  : rawWeeklySched;
+const userMatchups = findWeekMatchups(schedWeekEntry, user.franchiseId);
+
+// User side: the starters this page renders (falls back to the roster when no
+// lineup resolves yet).
+const userStarterIds = slots.map((s) => s.playerId).filter((id): id is string => !!id);
+const userSideIds = userStarterIds.length > 0 ? userStarterIds : roster.map((p) => p.id);
+
+// Our projected total sums the starting slots and is live-updated client-side
+// as the lineup changes; one lineup covers every game of a double-header, so
+// it is the same number on every card.
+const userProjTotal = slots.reduce(
+  (t, s) => t + (s.playerId ? (projMap.get(s.playerId) ?? 0) : 0),
+  0,
+);
+
+// Each panel wears its FRANCHISE, not the player's NFL team: brand color tint
+// plus the team's crest as the watermark, straight from the league config
+// (the AFL has no throwback identities, so there is nothing to resolve).
+//
+// `iconDark` FIRST, and not gated on the theme: the faceoff panel is a
+// team-color gradient over near-black in BOTH themes, so the site-wide
+// `html.dark` crest swap (TeamIconDarkStyles) never fires here — a dark-inked
+// crest would sit invisible behind a 0.34-opacity watermark in light mode.
+// Ten of the 24 AFL teams ship a hand-authored dark variant; the rest fall
+// back to their light crest, which the chip already names either way.
+const aflTeamsById = new Map<string, any>(
+  ((aflConfig as any).teams ?? []).map((t: any) => [t.franchiseId, t]),
+);
+
+const matchupCards = buildMatchupCards({
+  userFranchiseId: user.franchiseId,
+  matchups: userMatchups,
+  week,
+  weekIsPast,
+  userSideIds,
+  userProjTotal,
+  franchiseList: allFranchises,
+  resultsWeekEntry,
+  projMap,
+  playerScoresMap,
+  identityMap: lineupPlayerIdentityMap,
+  slotPositions: SLOT_POSITIONS,
+  slotEligibility: SLOT_ELIGIBILITY,
+  brandFor: (franchiseId) => {
+    const team = aflTeamsById.get(franchiseId);
+    return {
+      name: team?.nameShort || team?.name || '',
+      color: team?.colorPrimary,
+      watermark: team?.iconDark || team?.icon,
+    };
+  },
+});
+
 // Available weeks for selector
 const availableWeeks: { week: number; label: string; isCurrent: boolean; isPast: boolean }[] = [];
 for (let w = 1; w <= 22; w++) {
@@ -466,6 +543,8 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
         </svg>
       </div>
     </header>
+
+    <LineupGameStrip cards={matchupCards} week={week} />
 
     <!-- Toolbar -->
     <div class="lineup-toolbar">
@@ -814,7 +893,49 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
       changesEl.style.display = state.showChanges ? '' : 'none';
       changesEl.querySelector('strong')!.textContent = String(changes);
 
+      updateFaceoffTotal();
       saveDraft();
+    }
+
+    // ---------------------------------------------------------------------------
+    // Live projected-points total — our side recomputes from the starting slots
+    // whenever the lineup changes. The opponent's total is server-fixed.
+    //
+    // EVERY card, not just the first: a double-header week scores the SAME
+    // submitted lineup in both games, so our total has to move on both cards.
+    // (The carousel itself — dots, arrows, which card announces — belongs to
+    // LineupGameStrip; this only owns the numbers.)
+    // ---------------------------------------------------------------------------
+    const faceoffScoreboards = Array.from(
+      document.querySelectorAll('.lineup-faceoff__scoreboard'),
+    ) as HTMLElement[];
+
+    function updateFaceoffTotal() {
+      if (faceoffScoreboards.length === 0) return;
+
+      let total = 0;
+      for (const s of currentSlots) {
+        const p = s.playerId ? getPlayer(s.playerId) : null;
+        if (p && typeof p.projection === 'number') total += p.projection;
+      }
+      const next = total.toFixed(1);
+
+      for (const board of faceoffScoreboards) {
+        const side = board.dataset.userSide; // 'away' | 'home'
+        const totalEl = board.querySelector(`.lineup-faceoff__total[data-side="${side}"]`) as HTMLElement | null;
+        if (!totalEl) continue;
+        if (totalEl.dataset.total === next) continue;
+
+        totalEl.dataset.total = next;
+        totalEl.textContent = next;
+        // Keep the SR label in sync with the live value (aria-live announces it).
+        const prevLabel = totalEl.getAttribute('aria-label');
+        if (prevLabel) totalEl.setAttribute('aria-label', prevLabel.replace(/projected [\d.]+ points/, `projected ${next} points`));
+        totalEl.classList.remove('lineup-faceoff__total--bumped');
+        // Reflow so the animation restarts on each change.
+        void totalEl.offsetWidth;
+        totalEl.classList.add('lineup-faceoff__total--bumped');
+      }
     }
 
     // ---------------------------------------------------------------------------

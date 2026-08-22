@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
+  findWeekMatchups,
   findWeekResultsEntry,
   extractLineupStarters,
   loadRostersFeedFromDisk,
@@ -12,6 +13,7 @@ import {
   franchiseAppearsIn,
 } from '../src/utils/lineup-sources';
 import { resolveSubmitButtonState } from '../src/utils/lineup-submit-state';
+import { buildMatchupCards } from '../src/utils/lineup-matchup-cards';
 
 /**
  * A league year with no feed committed under `data/<league>/mfl-feeds/`.
@@ -737,5 +739,153 @@ describe('drafts do not travel between read states', () => {
       const src = readFileSync(join(process.cwd(), page), 'utf8');
       expect(src.includes('data.lineupFromCache && !confirm('), `${page} cached-submit confirm`).toBe(true);
     }
+  });
+});
+
+describe('a week that schedules more than one game', () => {
+  // TheLeague runs DOUBLE-HEADERS: 2026 weeks 1-3 and 13 list 16 matchups
+  // for 16 franchises, so every team plays twice off ONE submitted lineup.
+  // The Set Lineup page used to stop at the first matchup containing the
+  // owner, which showed one game and silently dropped the other.
+  const doubleHeader = {
+    week: '1',
+    matchup: [
+      { franchise: [{ id: '0003', isHome: '0' }, { id: '0001', isHome: '1' }] },
+      { franchise: [{ id: '0002', isHome: '0' }, { id: '0004', isHome: '1' }] },
+      { franchise: [{ id: '0001', isHome: '0' }, { id: '0016', isHome: '1' }] },
+    ],
+  };
+
+  it('returns every game the franchise plays, in MFL order', () => {
+    expect(findWeekMatchups(doubleHeader, '0001')).toEqual([
+      { opponentFranchiseId: '0003', userIsHome: true },
+      { opponentFranchiseId: '0016', userIsHome: false },
+    ]);
+  });
+
+  it('keeps each game\'s own home/away side', () => {
+    // Both games share one lineup but not one scoreboard: the owner is home
+    // in the first and away in the second, and the panel that wears the
+    // accent (and gets the live total) follows the game, not the week.
+    const [first, second] = findWeekMatchups(doubleHeader, '0001');
+    expect(first.userIsHome).toBe(true);
+    expect(second.userIsHome).toBe(false);
+  });
+
+  it('reads a single-game week as exactly one game', () => {
+    const single = { week: '4', matchup: { franchise: [{ id: '0001', isHome: '1' }, { id: '0009', isHome: '0' }] } };
+    expect(findWeekMatchups(single, '0001')).toEqual([
+      { opponentFranchiseId: '0009', userIsHome: true },
+    ]);
+  });
+
+  it('returns nothing for a franchise MFL did not schedule', () => {
+    // Not an error state — the page already tells that owner there is no
+    // game to set a lineup for.
+    expect(findWeekMatchups(doubleHeader, '0099')).toEqual([]);
+    expect(findWeekMatchups(null, '0001')).toEqual([]);
+    expect(findWeekMatchups({ week: '15' }, '0001')).toEqual([]);
+  });
+
+  it('finds both of the real week 1 games in TheLeague\'s committed schedule', () => {
+    const schedule = JSON.parse(
+      readFileSync(join(process.cwd(), 'data/theleague/mfl-feeds/2026/schedule.json'), 'utf8'),
+    );
+    const weeks = schedule?.schedule?.weeklySchedule ?? [];
+    const week1 = (Array.isArray(weeks) ? weeks : [weeks]).find((w: any) => String(w?.week) === '1');
+    const games = findWeekMatchups(week1, '0001');
+    expect(games.length).toBe(2);
+    expect(new Set(games.map((g) => g.opponentFranchiseId)).size).toBe(2);
+  });
+});
+
+describe('the Set Lineup game strip', () => {
+  // Both leagues run double-headers, so both pages build the strip from the
+  // SAME shared card builder + component. A page that grew its own copy would
+  // drift — TheLeague's did exactly that for the whole faceoff panel.
+  const lineupPages = [
+    'src/pages/theleague/lineup.astro',
+    'src/pages/afl-fantasy/lineup.astro',
+  ];
+  const STRIP = 'src/components/shared/LineupGameStrip.astro';
+
+  it('builds a card per scheduled game on both pages, not just the first', () => {
+    for (const page of lineupPages) {
+      const src = readFileSync(join(process.cwd(), page), 'utf8');
+      expect(src.includes('findWeekMatchups'), `${page} reads every game`).toBe(true);
+      expect(src.includes('buildMatchupCards'), `${page} shares the card builder`).toBe(true);
+      expect(src.includes('<LineupGameStrip'), `${page} renders the shared strip`).toBe(true);
+    }
+    const strip = readFileSync(join(process.cwd(), STRIP), 'utf8');
+    expect(strip.includes('cards.map')).toBe(true);
+  });
+
+  it('reads the whole league roster, so an opponent side can be built', () => {
+    // The AFL page used to fetch `TYPE=rosters&FRANCHISE=<me>`; a strip built
+    // on that has no opponent pool, so their projected total is 0.0.
+    for (const page of lineupPages) {
+      const src = readFileSync(join(process.cwd(), page), 'utf8');
+      expect(src.includes('TYPE=rosters&L=${MFL_LEAGUE_ID}&JSON=1'), `${page} rosters call`).toBe(true);
+    }
+  });
+
+  it('updates our projected total on every card', () => {
+    // One lineup scores both games of a double-header. Updating only
+    // querySelector's first hit left the second card contradicting the first.
+    for (const page of lineupPages) {
+      const src = readFileSync(join(process.cwd(), page), 'utf8');
+      expect(src.includes("querySelectorAll('.lineup-faceoff__scoreboard')"), `${page} all boards`).toBe(true);
+      expect(src.includes("querySelector('.lineup-faceoff__scoreboard')"), `${page} single board`).toBe(false);
+    }
+  });
+
+  it('never drops a scheduled game, even with nothing to show on it', () => {
+    // The failure mode this whole change exists to kill: a week with two
+    // games rendering one card. With no projections and no roster feed, a
+    // card has no composite and no totals — and must STILL be built, because
+    // its band names the opponent.
+    const cards = buildMatchupCards({
+      userFranchiseId: '0001',
+      matchups: [
+        { opponentFranchiseId: '0003', userIsHome: true },
+        { opponentFranchiseId: '0016', userIsHome: false },
+      ],
+      week: 1,
+      weekIsPast: false,
+      userSideIds: [],
+      userProjTotal: 0,
+      franchiseList: [],
+      resultsWeekEntry: null,
+      projMap: new Map(),
+      playerScoresMap: new Map(),
+      identityMap: new Map(),
+      slotPositions: ['QB', 'RB', 'WR', 'TE', 'FLEX', 'PK', 'DEF'],
+      slotEligibility: { QB: ['QB'], RB: ['RB'], WR: ['WR'], TE: ['TE'], FLEX: ['RB', 'WR', 'TE'], PK: ['PK'], DEF: ['DEF'] },
+      brandFor: (id) => ({ name: `Team ${id}` }),
+    });
+    expect(cards.map((c) => c.opponentFranchiseId)).toEqual(['0003', '0016']);
+    expect(cards.every((c) => c.faceoff === null)).toBe(true);
+    // Home/away still follows the GAME, not the week.
+    expect(cards.map((c) => c.userScoreSide)).toEqual(['home', 'away']);
+    expect(cards[0].title).toBe('Team 0003 vs Team 0001');
+  });
+
+  it('re-inits the carousel on astro:page-load', () => {
+    // The ClientRouter does not re-evaluate an already-loaded module, so a
+    // once-at-module-scope init leaves the arrows dead on a return visit.
+    const strip = readFileSync(join(process.cwd(), STRIP), 'utf8');
+    expect(strip.includes("addEventListener('astro:page-load'")).toBe(true);
+    // …and that event ALSO fires on first load, so the init must be guarded.
+    expect(strip.includes('carouselWired')).toBe(true);
+  });
+
+  it('drives the carousel off scroll position alone', () => {
+    // Arrows and dots only scroll; the dots, counter, arrow ends and the live
+    // region are re-derived from the scroll listener, so a swipe and a click
+    // land in identical states.
+    const strip = readFileSync(join(process.cwd(), STRIP), 'utf8');
+    expect(strip.includes("addEventListener('scroll'")).toBe(true);
+    expect(strip.includes('scrollToGame')).toBe(true);
+    expect(strip.includes("setAttribute('aria-live'")).toBe(true);
   });
 });

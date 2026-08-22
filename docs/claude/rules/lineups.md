@@ -50,3 +50,66 @@ week switch is a full page reload. Three things that bit us (owner report,
   order. Same reasoning as the rosters fallback: absent evidence is not
   evidence of absence.
 
+
+## A week can schedule more than ONE game
+
+BOTH leagues run double-header weeks — TheLeague's 2026 weeks 1-3 and 13 list
+16 matchups for 16 franchises, the AFL has three of its own — so every team
+plays two different opponents (home in one, away in the other) off a single
+submitted lineup. TheLeague's matchup panel walked the week's matchups and
+`break`ed at the first one containing the owner, so it drew one game and
+silently dropped the other: half the week they were setting a lineup for was
+simply not on the page. (The AFL page had no matchup panel at all until the
+strip below was shared with it.)
+
+**The strip is shared, not copy-pasted.** `buildMatchupCards`
+(`src/utils/lineup-matchup-cards.ts`) builds the cards and
+`LineupGameStrip.astro` (`src/components/shared/`) renders them; the pages
+supply only what differs — the schedule payload, the roster feed, and
+`brandFor` (TheLeague resolves throwback identities, the AFL reads
+`afl.config.json`). Both pages must fetch `TYPE=rosters` LEAGUE-WIDE: a
+franchise-scoped roster call has no opponent pool, so their projected total
+comes out 0.0 on any week MFL hasn't recorded starters for.
+
+- **`findWeekMatchups` (`src/utils/lineup-sources.ts`) is the reader, and it
+  is plural.** Never re-introduce a first-match-wins loop over
+  `weeklySchedule[].matchup`. An empty array is the "MFL didn't schedule this
+  franchise" state `franchiseAppearsIn` already guards — not an error.
+- **Home/away is per GAME, not per week.** Each card resolves its own
+  `userIsHome`, which decides which panel wears the accent and which total is
+  ours. Reusing the first game's side puts the owner on the wrong side of the
+  second scoreboard.
+- **One lineup, every card.** MFL takes one lineup per week and scores it in
+  both games, so our projected total is the same number on every card — the
+  client updates them ALL (`querySelectorAll('.lineup-faceoff__scoreboard')`).
+  Updating only `querySelector`'s first hit left the second game showing a
+  stale total that contradicted the one a swipe away. The PAGE owns the
+  numbers; the strip component owns the carousel — keep that split, or two
+  scripts end up fighting over the same DOM. `tests/lineup-sources.test.ts`
+  pins the reader, that selector, and both pages using the shared builder.
+- **Scroll position is the carousel's only state.** The arrows and dots just
+  scroll the track; the dots, the counter, the arrow ends and which
+  scoreboard holds `aria-live` are all re-derived from a scroll listener, so a
+  swipe and an arrow click land in identical states. Only the card in view is
+  a polite live region — two would announce the same new total twice.
+- **EVERY scheduled game gets a card, unconditionally.** A game with no cast
+  composite and no projections (MFL hasn't published the week, or a throttled
+  rosters call left the opponent pool empty) still renders its band, and the
+  band names both teams — which is the question being asked. An earlier
+  `if (faceoff || hasProjTotals)` guard would have reproduced the
+  one-game-of-two bug in exactly the conditions that caused it.
+- **The strip re-inits on `astro:page-load`.** With the ClientRouter, a module
+  already evaluated this session is not re-evaluated on a return visit, so a
+  once-at-module-scope init leaves the arrows dead the second time an owner
+  opens the page. `astro:page-load` also fires on the FIRST load, so the init
+  is guarded by a `data-carousel-wired` flag on the track — which the router
+  replaces along with the DOM, so it never blocks a real re-init.
+  (The lineup PAGES' own scripts still lack this and go inert on a return
+  visit — a pre-existing bug across both, worth its own change.)
+- **The AFL watermark takes `iconDark` first, ungated.** The panel is a
+  team-color gradient over near-black in BOTH themes, so the site-wide
+  `html.dark` crest swap (`TeamIconDarkStyles`) never fires on it. Nine of the
+  24 AFL crests measure illegible on a dark card
+  (`src/data/crest-dark-stroke-manifest.json`) and ten ship a hand-authored
+  dark variant; taking the light crest unconditionally hid those behind a
+  0.34-opacity watermark in light mode.
