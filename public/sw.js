@@ -31,7 +31,12 @@
  * is the only lever that reaches a phone already holding a poisoned entry.
  */
 
-const CACHE_NAME = 'theleague-v4';
+// v5 (Aug 2026): forced eviction. /_astro/ entries are cache-first and never
+// revalidated, so one bad copy of a build chunk is permanent on that device —
+// the page still renders, but whichever module lives in that chunk silently
+// never runs, which is indistinguishable from the feature not existing.
+// Bumped after an owner's phone showed exactly that shape on Free Agents.
+const CACHE_NAME = 'theleague-v5';
 const OFFLINE_URL = '/offline.html';
 
 /**

@@ -892,19 +892,19 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             <th class="sortable col-age" data-sort="age">
               <div class="th-content">Age</div>
             </th>
-            <th class="sortable col-sm col-always-profile" data-sort="exp">
+            <th class="sortable col-sm col-always-profile col-bio" data-sort="exp">
               <div class="th-content">Exp</div>
             </th>
-            <th class="sortable col-sm col-always-profile" data-sort="draftRd">
+            <th class="sortable col-sm col-always-profile col-bio" data-sort="draftRd">
               <div class="th-content">Draft</div>
             </th>
             <th class="sortable col-text col-group--stats col-college" data-sort="college" title="College" aria-label="College">
               <div class="th-content">C</div>
             </th>
-            <th class="sortable col-sm col-always-profile" data-sort="height">
+            <th class="sortable col-sm col-always-profile col-bio" data-sort="height">
               <div class="th-content">Ht</div>
             </th>
-            <th class="sortable col-sm col-always-profile" data-sort="weight">
+            <th class="sortable col-sm col-always-profile col-bio" data-sort="weight">
               <div class="th-content">Wt</div>
             </th>
             {hasSnapCounts && (
@@ -1211,6 +1211,12 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     if (toggleBar) {
       toggleBar.style.display = (canShowRankingsView || canShowAuctionView || canShowValueView) ? '' : 'none';
     }
+
+    // Drives the phone-only column drop in the stylesheet: in Rankings view the
+    // ranks are the point, and Exp/Draft/Ht/Wt push them off the right edge of
+    // a phone where nothing tells you they're there.
+    const playersTable = document.getElementById('players-table');
+    if (playersTable) playersTable.dataset.view = activeView;
 
     // Show/hide auction indicators in Value/Stats/Auction views
     const showAuctionIndicators = showValue || showAuctionView || activeView === 'stats';
@@ -1920,14 +1926,14 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           </div>
         </td>
         <td class="cell-age">${p.age ?? '-'}</td>
-        <td class="cell-sm col-always-profile">${p.exp != null ? p.exp : '-'}</td>`;
+        <td class="cell-sm col-always-profile cell-bio">${p.exp != null ? p.exp : '-'}</td>`;
 
       const htDisplay = p.height ? Math.floor(p.height / 12) + "'" + (p.height % 12) + '"' : '-';
       const wtDisplay = p.weight ? p.weight + '' : '-';
-      html += `<td class="cell-sm col-always-profile">${p.draftRd != null ? 'Rd ' + p.draftRd : '<span class="na">-</span>'}</td>
+      html += `<td class="cell-sm col-always-profile cell-bio">${p.draftRd != null ? 'Rd ' + p.draftRd : '<span class="na">-</span>'}</td>
         <td class="cell-college col-group--stats">${p.collegeLogo ? `<img src="${escapeAttr(p.collegeLogo)}" alt="${escapeAttr(p.college || '')}" title="${escapeAttr(p.college || '')}" class="college-logo" loading="lazy" decoding="async" onerror="${escapeAttr(collegeLogoOnerror)}" onload="${escapeAttr(collegeLogoOnload)}" />` : (p.college ? `<span class="na" title="${escapeAttr(p.college)}">-</span>` : '<span class="na">-</span>')}</td>
-        <td class="cell-sm col-always-profile">${htDisplay}</td>
-        <td class="cell-sm col-always-profile">${wtDisplay}</td>`;
+        <td class="cell-sm col-always-profile cell-bio">${htDisplay}</td>
+        <td class="cell-sm col-always-profile cell-bio">${wtDisplay}</td>`;
 
       // Dynamic ranking columns
       for (const col of rankingLookup.columns) {
@@ -3759,6 +3765,21 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
   /* ── Responsive ── */
   @media (max-width: 767px) {
+    /* Rankings view on a phone: the board is what you came for, so the bio
+       detail columns step aside. Without this, #, Player, Age, Exp, Draft, Ht
+       and Wt fill the viewport and every ranking column — My Rank included —
+       sits off the right edge, reachable only by horizontal scrolling that
+       nothing advertises. Age stays: it is a dynasty judgement call, not a
+       stat. Scoped to the Rankings view, so Stats/Auction/Value are untouched
+       (their own branches set inline display and would win anyway).
+
+       The cell half needs :global(): those <td>s are built by render() as an
+       innerHTML string, so they never carry the data-astro-cid attribute that
+       a scoped selector matches on. Same reason .cell-sm is global. */
+    .players-table[data-view="rankings"] .col-bio,
+    .players-table[data-view="rankings"] :global(.cell-bio) {
+      display: none;
+    }
     .players-hero {
       padding: 1.25rem 1rem 1.25rem;
       margin: 0.75rem 0 0 0;

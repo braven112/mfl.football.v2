@@ -4,6 +4,14 @@
     {
       "date": "2026-08-22",
       "type": "bug-fix",
+      "summary": "Switching Free Agents to Rankings on a phone looked like it did nothing. The rank columns were there — they were just parked past Exp, Draft, Ht and Wt, off the right edge of the screen, and nothing on the page told you to scroll sideways to find them. In Rankings view on a phone those four bio columns now step aside, so My Rank and your sources sit right next to the player's name where you can read them and tap the header to sort by them. Age stays; it's a roster decision, not a stat. Nothing changes on a desktop, and Stats view is untouched everywhere. Separately, the switch itself could go missing entirely: the ranking columns load through a handshake between two scripts on the page, and if that handshake was missed once, the page went quiet for good — you could open My Rank, tick sources, and the table would never react. It now retries, and a single malformed saved import can no longer take every ranking on the page down with it.",
+      "impact": "user",
+      "area": "free-agents",
+      "league": "both"
+    },
+    {
+      "date": "2026-08-22",
+      "type": "bug-fix",
       "summary": "Washington players had been quietly missing from their own games on Set Lineup. Every other roster spot told you who its player was up against that week; a Commanders player told you nothing — no opponent, no defensive matchup ranking — as if the week had forgotten him. Two halves of the app had been spelling the team differently, WAS on one side and WSH on the other, and a lookup that has to match exactly never did. They speak the same way now, and Washington's players get their week back like everybody else.",
       "impact": "user",
       "area": "rosters",

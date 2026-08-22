@@ -171,7 +171,12 @@ export function buildRankingLookup(imports?: StoredRankingImport[]): RankingLook
   for (const imp of allImports) {
     const playerMap = new Map<string, number>();
 
-    for (const entry of imp.rankings) {
+    // localStorage is not a schema. A row written by an older build, truncated
+    // by a failed write, or adopted from the server without its rows would
+    // otherwise throw here and take EVERY ranking surface on the page down with
+    // it — the Free Agents columns, the Rosters rank, Set Lineup — while the My
+    // Rank editor, which only counts imports, kept working and hid the cause.
+    for (const entry of Array.isArray(imp.rankings) ? imp.rankings : []) {
       if (entry.matched && entry.playerId) {
         playerMap.set(entry.playerId, entry.rank);
       }
@@ -204,7 +209,7 @@ export function buildRankingLookup(imports?: StoredRankingImport[]): RankingLook
       const imp = allImports.find((i) => i.id === member.importId);
       if (imp) {
         let maxRank = 0;
-        for (const entry of imp.rankings) {
+        for (const entry of Array.isArray(imp.rankings) ? imp.rankings : []) {
           if (entry.rank > maxRank) maxRank = entry.rank;
         }
         compositeMemberMaxRanks.set(member.importId, maxRank);
@@ -298,7 +303,7 @@ export function buildRankingLookup(imports?: StoredRankingImport[]): RankingLook
       if (playerMap) {
         realImportMaps.push(playerMap);
         let maxRank = 0;
-        for (const entry of imp.rankings) {
+        for (const entry of Array.isArray(imp.rankings) ? imp.rankings : []) {
           if (entry.rank > maxRank) maxRank = entry.rank;
         }
         realImportMaxRanks.push(maxRank);

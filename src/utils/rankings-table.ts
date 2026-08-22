@@ -216,36 +216,81 @@ function injectRankingColumns(options: RankingTableOptions): void {
  * tab or another one.
  */
 export function initRankingTable(options: RankingTableOptions): void {
-  let unsubscribe: (() => void) | null = null;
+  /**
+   * True once a live inline script has answered a probe. Only used to decide
+   * whether a board change is worth re-probing for — never to gate the
+   * subscription itself, see below.
+   */
+  let attached = false;
 
-  function init(): void {
-    if (unsubscribe) {
-      unsubscribe();
-      unsubscribe = null;
+  function tryInject(): boolean {
+    // No live inline script on this page (or not yet): nothing can consume the
+    // events, so injecting would only emit into the void.
+    if (probe('rankings:get-sort').currentSort === undefined) return false;
+    attached = true;
+    try {
+      injectRankingColumns(options);
+    } catch (err) {
+      // One malformed stored import must not take the whole integration down.
+      // Reported as no columns, which is what the page already degrades to,
+      // rather than leaving `hasRankingColumns` stuck at its initial false with
+      // no event ever explaining why.
+      console.error('[rankings] column injection failed', err);
+      // Same shape the pages initialise with — `render()` reads `.columns` and
+      // `.byImport` unconditionally, so a null here would trade one broken
+      // table for another.
+      emit('rankings:set-lookup', {
+        lookup: { byImport: new Map<string, Map<string, number>>(), columns: [] },
+        hasColumns: false,
+        hasComposite: false,
+      });
+      emit('rankings:refilter');
     }
+    return true;
+  }
 
-    injectRankingColumns(options);
-
-    unsubscribe = onRankingsChanged(() => injectRankingColumns(options));
+  /**
+   * Retry across a few frames.
+   *
+   * The inline script is a classic `define:vars` script and this is a module,
+   * so their relative order is not guaranteed by anything we control — and a
+   * single missed handshake used to leave the page permanently without ranking
+   * columns, with no second chance and no way for the owner to tell.
+   */
+  function init(attempt = 0): void {
+    if (tryInject() || attempt >= 10) return;
+    requestAnimationFrame(() => init(attempt + 1));
   }
 
   document.addEventListener('rankings:page-ready', () => init());
 
+  /**
+   * Subscribed unconditionally, at module scope rather than inside `init()`.
+   *
+   * The subscription used to be installed only by a successful `init()`, so a
+   * page whose handshake never landed went permanently inert: the owner could
+   * tick sources in the My Rank editor and the table would never react, with
+   * the Stats/Rankings switch staying hidden because `hasColumns` was never
+   * reported. Every board change is now also a retry.
+   */
+  onRankingsChanged(() => {
+    if (attached) tryInject();
+    else init();
+  });
+
   // A module script runs after the document is parsed, so an inline classic
   // script that already fired `rankings:page-ready` did so before the listener
-  // above existed. Probe once on load for that case rather than relying on the
+  // above existed. Probe on load for that case rather than relying on the
   // ClientRouter's `astro:page-load` to be the only rescue.
-  queueMicrotask(() => {
-    if (probe('rankings:get-sort').currentSort !== undefined) init();
-  });
+  queueMicrotask(() => init());
 
   // Astro view transitions: the inline script re-runs and fires
   // `rankings:page-ready`, but if this module was already loaded the event can
   // land before the listener above is re-attached. Probe for a live inline
-  // script instead of assuming either ordering.
+  // script instead of assuming either ordering. The swapped-in DOM is a fresh
+  // table, so `attached` restarts as "prove it again".
   document.addEventListener('astro:page-load', () => {
-    queueMicrotask(() => {
-      if (probe('rankings:get-sort').currentSort !== undefined) init();
-    });
+    attached = false;
+    queueMicrotask(() => init());
   });
 }

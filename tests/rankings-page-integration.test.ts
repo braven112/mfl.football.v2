@@ -310,3 +310,75 @@ describe('Saved Rankings table layout', () => {
     expect(decls).not.toMatch(/display:\s*(flex|grid|inline-flex)/);
   });
 });
+
+describe('Rankings view survives a missed handshake', () => {
+  /**
+   * The bridge between the pages' classic `define:vars` scripts and the
+   * importable module is a CustomEvent handshake, and its failure mode is
+   * silent: `hasRankingColumns` stays false, so the Stats/Rankings switch never
+   * appears and the owner has no way to reach a board they can see listed in
+   * the My Rank editor on the same page. Reported from an AFL owner's phone.
+   */
+  const src = read('src/utils/rankings-table.ts');
+
+  it('subscribes to board changes even when the first probe finds nothing', () => {
+    // The subscription used to be installed by a successful init() only, so a
+    // page that missed the handshake went permanently inert — ticking a source
+    // in the My Rank editor could never wake it. Ticking a source has to be a
+    // second chance, which means subscribing before knowing the outcome.
+    const initBody = src.slice(src.indexOf('export function initRankingTable'));
+    const subscribe = initBody.indexOf('onRankingsChanged(');
+    const firstInit = initBody.indexOf('function init(');
+    expect(subscribe).toBeGreaterThan(-1);
+    // Subscribed at the function's own scope, not from inside init().
+    expect(initBody.slice(0, subscribe)).not.toMatch(/unsubscribe\s*=\s*onRankingsChanged/);
+    expect(firstInit).toBeGreaterThan(-1);
+  });
+
+  it('retries the probe rather than giving up after one microtask', () => {
+    expect(src).toContain('requestAnimationFrame');
+  });
+
+  it('reports "no columns" rather than dying when injection throws', () => {
+    // A page left with hasRankingColumns stuck at its initial false looks
+    // identical to an owner with no board at all. Emitting the empty lookup
+    // keeps render() and the switch consistent with what actually happened.
+    const catchBlock = src.slice(src.indexOf('} catch (err) {'));
+    expect(catchBlock).toContain("emit('rankings:set-lookup'");
+    expect(catchBlock).toContain('hasColumns: false');
+  });
+});
+
+describe('Rankings view on a phone', () => {
+  /**
+   * Age/Exp/Draft/Ht/Wt sit between the player name and the first ranking
+   * column, so on a 393px viewport every rank — My Rank included — rendered off
+   * the right edge, reachable only by a horizontal scroll nothing advertises.
+   * Switching to Rankings looked like it did nothing.
+   */
+  it.each(FREE_AGENT_PAGES)('%s tags the bio detail columns on both th and td', (page) => {
+    const src = read(page);
+    // Four columns, header and cell, or the two halves fall out of alignment.
+    // Anchored on the closing quote so the stylesheet's own selectors, which
+    // mention both class names, don't inflate the count.
+    expect(src.match(/col-bio"/g) ?? []).toHaveLength(4);
+    expect(src.match(/cell-bio"/g) ?? []).toHaveLength(4);
+  });
+
+  it.each(FREE_AGENT_PAGES)('%s publishes the active view on the table', (page) => {
+    // The CSS below keys off it; without the write the rule never matches.
+    expect(read(page)).toMatch(/dataset\.view = activeView/);
+  });
+
+  it.each(FREE_AGENT_PAGES)('%s drops them only on a phone, only in Rankings', (page) => {
+    const src = read(page);
+    const rule = src.slice(src.indexOf('.players-table[data-view="rankings"] .col-bio'));
+    expect(rule.slice(0, rule.indexOf('}'))).toContain('display: none');
+    // The <td>s are built by render() as an innerHTML string and never carry
+    // the data-astro-cid attribute, so a scoped selector silently misses them —
+    // headers hid, values stayed. See the same reason on .cell-sm.
+    expect(src).toContain(':global(.cell-bio)');
+    const mobileBlock = src.slice(src.indexOf('@media (max-width: 767px)'));
+    expect(mobileBlock).toContain('.players-table[data-view="rankings"] .col-bio');
+  });
+});

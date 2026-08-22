@@ -1171,3 +1171,59 @@ describe('composite weights as percentages', () => {
     expect(composite?.get('p1')).toBe(2);
   });
 });
+
+describe('a malformed stored import cannot take the page down', () => {
+  /**
+   * localStorage is not a schema. A row written by an older build, truncated by
+   * a failed write, or adopted from the server without its entries used to
+   * throw straight out of the `for…of`, and the throw escaped to whatever was
+   * building the lookup — killing the Free Agents ranking columns, the Rosters
+   * rank and Set Lineup's ranks at once.
+   *
+   * The tell was that the My Rank editor kept working: it only COUNTS imports,
+   * so it listed the sources happily while every surface that read them was
+   * dead, which is exactly what makes this worth a guard rather than a fix at
+   * the call sites.
+   */
+  const broken = (over: Partial<StoredRankingImport>) =>
+    ({ ...createMockRankingImport({}), ...over }) as StoredRankingImport;
+
+  it.each([
+    ['undefined', undefined],
+    ['null', null],
+    ['an object', {}],
+  ])('survives an import whose rankings are %s', (_label, rankings) => {
+    const imp = broken({ id: 'bad', rankings: rankings as never });
+
+    const lookup = buildRankingLookup([imp]);
+
+    // Still a column: the source exists, it just has nothing to say. Dropping
+    // it instead would silently shrink the owner's board.
+    expect(lookup.columns.map((c) => c.importId)).toContain('bad');
+    expect(lookup.byImport.get('bad')?.size).toBe(0);
+  });
+
+  it('still builds the composite around a broken member', () => {
+    mockGetCompositeConfig.mockReturnValue({
+      members: [
+        { importId: 'bad', weight: 50 },
+        { importId: 'good', weight: 50 },
+      ],
+    } as CompositeRankConfig);
+
+    const lookup = buildRankingLookup([
+      broken({ id: 'bad', rankings: undefined as never }),
+      createMockRankingImport({
+        id: 'good',
+        rankings: [
+          createMockRankingEntry({ rank: 1, playerId: 'p1' }),
+          createMockRankingEntry({ rank: 2, playerId: 'p2' }),
+        ],
+      }),
+    ]);
+
+    const composite = lookup.byImport.get(COMPOSITE_IMPORT_ID);
+    expect(composite?.get('p1')).toBe(1);
+    expect(composite?.get('p2')).toBe(2);
+  });
+});
