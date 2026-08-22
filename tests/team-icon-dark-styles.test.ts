@@ -136,17 +136,17 @@ describe('theleague config dark icon rollout', () => {
       ),
     );
     // Dangsters, Maverick, Dead Cap Walking, Ninjas, Music City,
-    // Fire Ready Aim, Bring The Pain, Wabbits.
-    // Computer Jocks (0010) was a tenth until Aug 2026: its `_dark.png` was the
-    // light artwork with a white ring painted on, which is precisely what the
-    // generated stroke does — so it dropped the file and took the stroke in the
-    // team's own green instead, matching the AFL's identical crest.
-    // The Mariachi Ninjas (0005) briefly came off for the same reason and went
-    // straight back on: rather than keep the generated ring, the green was
-    // redrawn INTO real dark artwork (full-bleed backdrop, ring baked in), which
-    // both leagues now share byte-for-byte. Dark artwork always wins over the
-    // stroke — the manifest excludes any team declaring an `iconDark`.
-    const LAUNCH_FIDS = ['0002', '0003', '0004', '0005', '0006', '0007', '0008', '0009'];
+    // Fire Ready Aim, Bring The Pain, Wabbits, Computer Jocks.
+    // Two of these took a round trip through the stroke and came back. Computer
+    // Jocks (0010) came off in Aug 2026 because its `_dark.png` was the light
+    // artwork with a white ring painted on — precisely what the generated stroke
+    // does — and returned once real dark artwork was drawn for it; the Mariachi
+    // Ninjas (0005) followed the same arc (green redrawn INTO the crest,
+    // full-bleed backdrop, ring baked in). Both leagues share each of those
+    // files byte-for-byte, the AFL crest being identical artwork. Dark artwork
+    // always wins over the stroke — the manifest excludes any team declaring an
+    // `iconDark`.
+    const LAUNCH_FIDS = ['0002', '0003', '0004', '0005', '0006', '0007', '0008', '0009', '0010'];
     for (const fid of LAUNCH_FIDS) {
       const team = byId.get(fid);
       expect(team?.iconDark, `franchise ${fid} should have iconDark`).toBe(

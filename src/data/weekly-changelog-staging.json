@@ -4,6 +4,14 @@
     {
       "date": "2026-08-21",
       "type": "style-tweak",
+      "summary": "The Computer Jocks finally have a real night look. Their crest was surviving dark mode on a generated green outline — a ring the site draws around any logo too dark to read on a dark card, which keeps a logo findable but is a floor, not a design. Somebody sat down and drew the thing properly instead: the lifter and the CPU wordmark redrawn to glow on black, ring baked into the artwork. It's the same file in both leagues, so the defending champs look identical whether you're reading TheLeague or the AFL, and the borrowed outline is gone from both. The GroupMe avatar got the matching cut while we were in there.",
+      "impact": "user",
+      "area": "other",
+      "league": "both"
+    },
+    {
+      "date": "2026-08-21",
+      "type": "style-tweak",
       "summary": "Open a matchup on your phone and the little \"Tracking · updated 37s ago\" line — the one that proves the scores are still coming in — sat a full step to the left of the \"All matchups\" link right above it, hanging off the edge of the card like it had fallen out of the header. The header is one row that wraps on a narrow screen, and the indent had been attached to the back button instead of the row, so the moment the status dropped to its own line it lost the indent with it. The row carries it now, so both lines start at the same place — and on a wide screen the back link finally lines up with the team names below it too.",
       "impact": "user",
       "area": "live-scoring",
