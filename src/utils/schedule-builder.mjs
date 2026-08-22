@@ -80,6 +80,62 @@ export const bipartiteRounds = (a, b) => {
   return a.map((_, r) => a.map((team, i) => ({ away: team, home: b[(i + r) % b.length] })));
 };
 
+/**
+ * Non-division rounds — every game a franchise plays outside its own division,
+ * decomposed into full-league perfect matchings.
+ *
+ * Two shapes, because the two leagues ask different questions:
+ *
+ *   AFL       plays only the OTHER division in its conference, so each
+ *             conference contributes one 6x6 bipartite matching per round and
+ *             the two conferences stack into a 12-game round. 6 rounds.
+ *   The League has no conferences: every franchise plays all 12 teams outside
+ *             its division once. That is the complete 4-partite graph
+ *             K(4,4,4,4), 12-regular, so it decomposes into 12 perfect
+ *             matchings — built here by running a round-robin ON THE DIVISIONS.
+ *             Four divisions pair off three ways ({01|23}, {02|13}, {03|12}),
+ *             and each pairing supplies 4 bipartite rounds: 3 x 4 = 12.
+ *
+ * `pairings` is the search space: permuting a division's team order changes who
+ * is drawn against whom in each round without changing the round set.
+ */
+export const nonDivisionRounds = (divisionNames, teamsByDivision, { conferences = null } = {}) => {
+  if (conferences) {
+    const perConference = Object.values(conferences).map(([sideA, sideB]) => bipartiteRounds(sideA, sideB));
+    const count = perConference[0].length;
+    return Array.from({ length: count }, (_, r) => perConference.flatMap((rounds) => rounds[r]));
+  }
+  // Round-robin on the divisions themselves.
+  const names = [...divisionNames];
+  if (names.length % 2 !== 0) throw new Error('a conference-less league needs an even number of divisions');
+  const rounds = [];
+  for (const pairing of divisionRoundRobin(names)) {
+    const bySide = pairing.map(([a, b]) => bipartiteRounds(teamsByDivision[a], teamsByDivision[b]));
+    for (let r = 0; r < bySide[0].length; r += 1) rounds.push(bySide.flatMap((side) => side[r]));
+  }
+  return rounds;
+};
+
+/** Circle method over divisions: n-1 pairings, each splitting them all into pairs. */
+export const divisionRoundRobin = (names) => {
+  const n = names.length;
+  const fixed = names[0];
+  let rotating = names.slice(1);
+  const pairings = [];
+  for (let r = 0; r < n - 1; r += 1) {
+    const pairs = [[fixed, rotating[0]]];
+    for (let i = 1; i < rotating.length - i + 1; i += 1) {
+      const a = rotating[i];
+      const b = rotating[rotating.length - i];
+      if (a === b) break;
+      pairs.push([a, b]);
+    }
+    pairings.push(pairs);
+    rotating = [rotating[rotating.length - 1], ...rotating.slice(0, -1)];
+  }
+  return pairings;
+};
+
 /** Same pairings, sides reversed — the second leg of a double round-robin. */
 export const mirrorRound = (games) => games.map((g) => ({ away: g.home, home: g.away }));
 
@@ -116,31 +172,60 @@ export const mirrorRound = (games) => games.map((g) => ({ away: g.home, home: g.
  * tests/schedule-week-plan.test.ts asserts it rather than leaving it to
  * chance: the finale is all-division unless it is the season's worst bye week.
  */
-export const buildWeekPlan = ({ lastWeek, doubleheaders, byeCounts = {}, divisionSize, crossWeek = 1 }) => {
+export const buildWeekPlan = ({
+  lastWeek,
+  doubleheaders,
+  byeCounts = {},
+  divisionSize,
+  conferenceSize,
+  crossWeek = null,
+}) => {
   const dh = new Set(doubleheaders);
   const slots = [];
   for (let week = 1; week <= lastWeek; week += 1) {
     for (let i = 0; i < (dh.has(week) ? 2 : 1); i += 1) slots.push(week);
   }
   const legRounds = divisionSize - 1; // one meeting with each division rival
-  const interRounds = divisionSize; // 6x6 against the other division in your conference
-  const needed = legRounds * 2 + interRounds + 1;
+  const crossRounds = crossWeek ? 1 : 0;
+  // Everyone inside your conference but outside your division, once each. For
+  // the AFL that is the other division in its conference (12 - 6 = 6); for a
+  // conference-less league the "conference" is the whole league (16 - 4 = 12).
+  const interRounds = conferenceSize - divisionSize;
+  const needed = legRounds * 2 + interRounds + crossRounds;
   if (slots.length !== needed) {
     throw new Error(
       `week plan does not fit: ${lastWeek} weeks + ${doubleheaders.length} doubleheaders = ${slots.length} slots, ` +
-        `but the format needs ${needed} (${legRounds * 2} division + ${interRounds} interdivision + 1 cross-conference)`,
+        `but the format needs ${needed} (${legRounds * 2} division + ${interRounds} interdivision` +
+        `${crossRounds ? ' + 1 cross-conference' : ''})`,
     );
   }
-  if (!dh.has(crossWeek)) {
+  if (crossWeek && !dh.has(crossWeek)) {
     throw new Error(`Week ${crossWeek} must be a doubleheader to hold both the cross-conference and a division round`);
   }
 
   const byes = (week) => byeCounts[week] ?? 0;
   const countSlots = (weeks) => weeks.reduce((n, w) => n + (dh.has(w) ? 2 : 1), 0);
 
-  // Shortest prefix that holds the cross-conference round plus the first leg.
+  // Shortest prefix that holds the first leg (plus the cross-conference round
+  // when the league has one), then EXTENDED over any further bye-free weeks.
+  //
+  // The extension matters where the format leaves slack. The AFL's blocks fit
+  // exactly, so nothing grows. The League's first leg is 3 rounds into a
+  // 4-slot minimum prefix, and without the extension all three land in Weeks 1
+  // and 2 — 16 of 48 division games in Week 1 alone, the same front-loading
+  // that makes the naive optimiser's output bad. Widening to every clean week
+  // lets `spread` below put one rivalry round in each of Weeks 1-3 instead.
   const earlyWeeks = [];
-  for (let week = 1; week <= lastWeek && countSlots(earlyWeeks) < legRounds + 1; week += 1) earlyWeeks.push(week);
+  for (let week = 1; week <= lastWeek && countSlots(earlyWeeks) < legRounds + crossRounds; week += 1) {
+    earlyWeeks.push(week);
+  }
+  while (
+    earlyWeeks.at(-1) + 1 <= lastWeek &&
+    byes(earlyWeeks.at(-1) + 1) === 0 &&
+    countSlots([...earlyWeeks, earlyWeeks.at(-1) + 1]) < slots.length - legRounds
+  ) {
+    earlyWeeks.push(earlyWeeks.at(-1) + 1);
+  }
 
   // Shortest suffix that holds the second leg, grown by one week when it fits
   // exactly and carries byes, so an interdivision round can take the worst.
@@ -157,12 +242,30 @@ export const buildWeekPlan = ({ lastWeek, doubleheaders, byeCounts = {}, divisio
   // Within a block, division rounds take the cleanest weeks. Ties break toward
   // the season's edges so the opener and the finale stay rivalry games.
   // Whatever a block does not spend on division becomes interdivision.
+  // Rank a block's slots for division play: cleanest week first, then SPREAD —
+  // a week's first slot outranks any week's second, so rivalry rounds land in
+  // distinct weeks before they double up. Ties break toward the season's edges
+  // so the opener and the finale stay rivalry games.
+  const rankSlots = (weeks, preferLate) => {
+    const seen = {};
+    return weeks
+      .flatMap((w) => (dh.has(w) ? [w, w] : [w]))
+      .map((week, i) => {
+        seen[week] = (seen[week] ?? 0) + 1;
+        return { week, i, nth: seen[week] };
+      })
+      .sort(
+        (a, b) =>
+          byes(a.week) - byes(b.week) ||
+          a.nth - b.nth ||
+          (preferLate ? b.week - a.week : a.week - b.week),
+      );
+  };
+
   const assignBlock = (weeks, divisionCount, leg, preferLate) => {
     const expanded = weeks.flatMap((w) => (dh.has(w) ? [w, w] : [w]));
     const chosen = new Set(
-      expanded
-        .map((week, i) => ({ week, i }))
-        .sort((a, b) => byes(a.week) - byes(b.week) || (preferLate ? b.week - a.week : a.week - b.week))
+      rankSlots(weeks, preferLate)
         .slice(0, divisionCount)
         .map((r) => r.i),
     );
@@ -175,17 +278,22 @@ export const buildWeekPlan = ({ lastWeek, doubleheaders, byeCounts = {}, divisio
     kindByWeek.get(week).push(slot);
   };
 
-  // The cross-conference round consumes one of Week 1's two slots before the
-  // first leg is dealt, so the early block is dealt over what is left.
+  // The cross-conference round, where a league has one, consumes one of Week 1's
+  // two slots before the first leg is dealt.
   const earlySlots = earlyWeeks.flatMap((w) => (dh.has(w) ? [w, w] : [w]));
-  const crossAt = earlySlots.indexOf(crossWeek);
-  earlySlots.splice(crossAt, 1);
-  push(crossWeek, { kind: 'cross' });
+  if (crossWeek) {
+    earlySlots.splice(earlySlots.indexOf(crossWeek), 1);
+    push(crossWeek, { kind: 'cross' });
+  }
 
+  const earlySeen = {};
   const earlyChosen = new Set(
     earlySlots
-      .map((week, i) => ({ week, i }))
-      .sort((a, b) => byes(a.week) - byes(b.week) || a.week - b.week)
+      .map((week, i) => {
+        earlySeen[week] = (earlySeen[week] ?? 0) + 1;
+        return { week, i, nth: earlySeen[week] };
+      })
+      .sort((a, b) => byes(a.week) - byes(b.week) || a.nth - b.nth || a.week - b.week)
       .slice(0, legRounds)
       .map((r) => r.i),
   );
@@ -204,7 +312,12 @@ export const buildWeekPlan = ({ lastWeek, doubleheaders, byeCounts = {}, divisio
 
   const tally = plan.flatMap((w) => w.slots);
   const count = (kind, leg) => tally.filter((s) => s.kind === kind && (leg === undefined || s.leg === leg)).length;
-  if (count('division', 0) !== legRounds || count('division', 1) !== legRounds || count('inter') !== interRounds) {
+  if (
+    count('cross') !== crossRounds ||
+    count('division', 0) !== legRounds ||
+    count('division', 1) !== legRounds ||
+    count('inter') !== interRounds
+  ) {
     throw new Error(
       `week plan is unbalanced: ${count('division', 0)}/${count('division', 1)} division legs and ` +
         `${count('inter')} interdivision rounds, expected ${legRounds}/${legRounds} and ${interRounds}`,
@@ -359,20 +472,26 @@ const shuffled = (xs, rng) => {
 const materialise = (state, ctx) => {
   const { divisions, conferences, crossRound, weekPlan } = ctx;
 
+  // One ordering per division drives BOTH constructions — the round-robin
+  // inside the division and the bipartite pairings against other divisions.
+  // Permuting it is what lets the annealer reach a different schedule without
+  // ever changing the round set.
+  const ordered = state.teamOrder;
+
   const divisionPool = {};
-  for (const [division, teams] of Object.entries(divisions)) {
-    const base = roundRobinRounds(state.teamOrder[division]);
+  for (const division of Object.keys(divisions)) {
+    const base = roundRobinRounds(ordered[division]);
     divisionPool[division] = [
       state.legOrder[division][0].map((r) => base[r]),
       state.legOrder[division][1].map((r) => mirrorRound(base[r])),
     ];
   }
-  const interPool = {};
-  for (const [conference, [sideA, sideB]] of Object.entries(conferences)) {
-    const base = bipartiteRounds(sideA, state.interOrder[conference]);
-    interPool[conference] = state.interSlotOrder[conference].map((r) => base[r]);
-    void sideB;
-  }
+
+  const conferenceTeams = conferences
+    ? Object.fromEntries(Object.entries(conferences).map(([c, [a, b]]) => [c, [ordered[a], ordered[b]]]))
+    : null;
+  const pool = nonDivisionRounds(Object.keys(divisions), ordered, { conferences: conferenceTeams });
+  const interPool = state.interSlotOrder.map((r) => pool[r]);
 
   const cursor = { division: [0, 0], inter: 0 };
   const weeks = new Map();
@@ -386,8 +505,7 @@ const materialise = (state, ctx) => {
         for (const division of Object.keys(divisions)) games.push(...divisionPool[division][slot.leg][i]);
         cursor.division[slot.leg] += 1;
       } else {
-        const i = cursor.inter;
-        for (const conference of Object.keys(conferences)) games.push(...interPool[conference][i]);
+        games.push(...interPool[cursor.inter]);
         cursor.inter += 1;
       }
     }
@@ -397,19 +515,17 @@ const materialise = (state, ctx) => {
 };
 
 const randomState = (ctx, rng) => {
-  const state = { teamOrder: {}, legOrder: {}, interOrder: {}, interSlotOrder: {} };
+  const state = { teamOrder: {}, legOrder: {}, interSlotOrder: [] };
   for (const [division, teams] of Object.entries(ctx.divisions)) {
     state.teamOrder[division] = shuffled(teams, rng);
     const idx = teams.slice(0, teams.length - 1).map((_, i) => i);
     state.legOrder[division] = [shuffled(idx, rng), shuffled(idx, rng)];
   }
-  for (const [conference, [, sideB]] of Object.entries(ctx.conferences)) {
-    state.interOrder[conference] = shuffled(sideB, rng);
-    state.interSlotOrder[conference] = shuffled(
-      sideB.map((_, i) => i),
-      rng,
-    );
-  }
+  const interCount = ctx.weekPlan.flatMap((w) => w.slots).filter((s) => s.kind === 'inter').length;
+  state.interSlotOrder = shuffled(
+    Array.from({ length: interCount }, (_, i) => i),
+    rng,
+  );
   return state;
 };
 
@@ -417,11 +533,9 @@ const mutate = (state, ctx, rng) => {
   const next = {
     teamOrder: { ...state.teamOrder },
     legOrder: { ...state.legOrder },
-    interOrder: { ...state.interOrder },
-    interSlotOrder: { ...state.interSlotOrder },
+    interSlotOrder: state.interSlotOrder,
   };
   const divisions = Object.keys(ctx.divisions);
-  const conferences = Object.keys(ctx.conferences);
   const swap = (arr) => {
     const out = arr.slice();
     const i = Math.floor(rng() * out.length);
@@ -431,21 +545,17 @@ const mutate = (state, ctx, rng) => {
     return out;
   };
   const pick = rng();
-  if (pick < 0.35) {
+  if (pick < 0.4) {
     const d = divisions[Math.floor(rng() * divisions.length)];
     next.teamOrder[d] = swap(state.teamOrder[d]);
-  } else if (pick < 0.7) {
+  } else if (pick < 0.75) {
     const d = divisions[Math.floor(rng() * divisions.length)];
     const leg = rng() < 0.5 ? 0 : 1;
     const legs = state.legOrder[d].slice();
     legs[leg] = swap(legs[leg]);
     next.legOrder[d] = legs;
-  } else if (pick < 0.85) {
-    const c = conferences[Math.floor(rng() * conferences.length)];
-    next.interOrder[c] = swap(state.interOrder[c]);
   } else {
-    const c = conferences[Math.floor(rng() * conferences.length)];
-    next.interSlotOrder[c] = swap(state.interSlotOrder[c]);
+    next.interSlotOrder = swap(state.interSlotOrder);
   }
   return next;
 };
