@@ -50,6 +50,14 @@ function setColumnDisplay(selector: string, value: string): void {
 
 function populate(options: RosterRankColumnOptions): RankingLookup {
   const lookup = buildRankingLookup();
+
+  // After a ClientRouter swap the previous page's module instance is still
+  // alive and still answers `astro:page-load`. Its selectors can match the new
+  // page's markup (both leagues use `.ranking-col`), so it would fight the live
+  // page's own instance over which cells are visible. If OUR rows aren't in the
+  // document, this isn't our page — do nothing at all.
+  if (!document.querySelector(options.rowsSelector)) return lookup;
+
   const topColumn = lookup.columns[0];
 
   if (!topColumn) {

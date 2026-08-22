@@ -1232,7 +1232,18 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   // The module script below owns the ranking columns; it can import, this
   // script can't. Everything crosses on CustomEvents fired at `document`.
 
+  // After a ClientRouter swap the PREVIOUS page's inline script is still alive
+  // and its document-level listeners still answer these events — verified: two
+  // handlers responded to rankings:get-sort on the AFL page after navigating
+  // from TheLeague's. Both pages use the same element ids, so a stale handler
+  // reads/repaints the live page. Ignore events once our own table is detached.
+  const OWN_TABLE = document.getElementById('players-table');
+  function isLivePage() {
+    return !!OWN_TABLE && OWN_TABLE.isConnected;
+  }
+
   document.addEventListener('rankings:set-lookup', function (e) {
+    if (!isLivePage()) return;
     rankingLookup = e.detail.lookup;
     const hadColumns = hasRankingColumns;
     hasRankingColumns = e.detail.hasColumns;
@@ -1253,23 +1264,36 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   });
 
   document.addEventListener('rankings:set-sort', function (e) {
+    if (!isLivePage()) return;
+    // A null key means the ranking column we were sorted by is gone entirely —
+    // restore this page's own default rather than keep sorting by a column
+    // that no longer exists.
+    if (e.detail.key == null) {
+      currentSort = defaultSort;
+      sortDirection = descDefaults.has(currentSort) ? 'desc' : 'asc';
+      hasExplicitSortPref = false;
+      return;
+    }
     hasExplicitSortPref = true;
     currentSort = e.detail.key;
     sortDirection = e.detail.dir;
   });
 
   document.addEventListener('rankings:refresh-table', function () {
+    if (!isLivePage()) return;
     sortPlayers();
     visibleCount = BATCH_SIZE;
     render();
   });
 
   document.addEventListener('rankings:refilter', function () {
+    if (!isLivePage()) return;
     filterPlayers();
   });
 
   // Synchronous read — the module reads e.detail back after dispatch.
   document.addEventListener('rankings:get-sort', function (e) {
+    if (!isLivePage()) return;
     e.detail.currentSort = currentSort;
   });
 

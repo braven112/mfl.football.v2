@@ -12395,7 +12395,10 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
   initRosterRankColumn({
     rowsSelector: '#rosterTableBody',
-    columnSelector: '.ranking-col',
+    // Scoped to THIS league's tables: the AFL roster page uses `.ranking-col`
+    // on a `.roster-table` too, so a bare `.roster-table` scope would still
+    // reach across a ClientRouter navigation into the other league's markup.
+    columnSelector: '.roster-table:not(.roster-table--afl) .ranking-col',
     cellSelector: '.ranking-cell',
     headerSelector: '#rankColHeader',
     visibleDisplay: 'table-cell',
@@ -12406,7 +12409,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       // Rank is a GM-mode column — never let it reappear in Coach mode.
       if (!hasColumn) return;
       const mode = localStorage.getItem('rosterViewMode') || 'gm';
-      document.querySelectorAll('.ranking-col').forEach((el) => {
+      document.querySelectorAll('.roster-table:not(.roster-table--afl) .ranking-col').forEach((el) => {
         (el as HTMLElement).style.display = mode === 'gm' ? 'table-cell' : 'none';
       });
     },

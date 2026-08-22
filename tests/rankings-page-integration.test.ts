@@ -65,6 +65,26 @@ describe('rankings reach every decision page', () => {
       expect(read(page)).not.toContain('maxColumns');
     });
 
+    it.each(FREE_AGENT_PAGES)('%s ignores bridge events once its own table is detached', (page) => {
+      // After a ClientRouter swap the previous page's inline script is still
+      // alive and still answers these document-level events — measured: two
+      // handlers responded to rankings:get-sort on the AFL page after
+      // navigating from TheLeague's. Both pages use the same element ids, so a
+      // stale handler otherwise reads or repaints the live page.
+      const src = read(page);
+      expect(src).toContain("const OWN_TABLE = document.getElementById('players-table')");
+      expect(src).toContain('OWN_TABLE.isConnected');
+      // Every bridge handler must be guarded, not just some of them.
+      const guards = src.match(/if \(!isLivePage\(\)\) return;/g) ?? [];
+      expect(guards.length).toBeGreaterThanOrEqual(5);
+    });
+
+    it.each(FREE_AGENT_PAGES)('%s restores its own sort when the last ranking column goes', (page) => {
+      // Hiding the last ranking source used to leave the table ordered by a
+      // column that no longer exists, with no header left to click.
+      expect(read(page)).toContain('e.detail.key == null');
+    });
+
     it.each(FREE_AGENT_PAGES)('%s re-applies column visibility after render', (page) => {
       // render() rebuilds tbody with innerHTML, which wipes every inline
       // display style. Without this call the hidden group reappears on any
@@ -79,6 +99,19 @@ describe('rankings reach every decision page', () => {
       const src = read(page);
       expect(src).toContain("from '../../utils/rankings-roster-column'");
       expect(src).toContain('initRosterRankColumn(');
+    });
+
+    it('the roster module does nothing when its own rows are absent', () => {
+      // Same ClientRouter hazard: a stale instance from the other league still
+      // answers astro:page-load, and both leagues use `.ranking-col`.
+      const src = read('src/utils/rankings-roster-column.ts');
+      expect(src).toContain('if (!document.querySelector(options.rowsSelector)) return lookup;');
+    });
+
+    it('TheLeague scopes its column selector away from the AFL table', () => {
+      const src = read('src/pages/theleague/rosters.astro');
+      expect(src).not.toMatch(/columnSelector:\s*'\.ranking-col'/);
+      expect(src).toContain(".roster-table:not(.roster-table--afl) .ranking-col");
     });
 
     it.each(ROSTER_PAGES)('%s has a rank cell for the module to fill', (page) => {

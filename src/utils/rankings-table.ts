@@ -130,8 +130,16 @@ function injectRankingColumns(options: RankingTableOptions): void {
   const sortKey = probe('rankings:get-sort').currentSort;
   if (typeof sortKey === 'string' && sortKey.startsWith('ranking_')) {
     const stillVisible = limitedColumns.some((c) => `ranking_${c.importId}` === sortKey);
-    if (!stillVisible && limitedColumns.length > 0) {
-      emit('rankings:set-sort', { key: `ranking_${limitedColumns[0].importId}`, dir: 'asc' });
+    if (!stillVisible) {
+      // Hand over to whatever leads now; a null key tells the page to restore
+      // its OWN default, for when the owner hid the last ranking source and
+      // there is no ranking column left to hand off to. Without this the table
+      // stays ordered by a column that no longer exists and has no header left
+      // to click.
+      emit('rankings:set-sort', {
+        key: limitedColumns.length > 0 ? `ranking_${limitedColumns[0].importId}` : null,
+        dir: 'asc',
+      });
     }
   }
 
