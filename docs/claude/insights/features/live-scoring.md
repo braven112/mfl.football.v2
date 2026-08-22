@@ -316,3 +316,35 @@ to be looking at a newly-built feature.
   `[...rows, ...benchRows]`. This is the sample's copy of the invariant above,
   and getting it wrong makes the demo board disagree with the real one about
   what a team is scoring.
+
+## 2026-08-22 - The empty state is the one card that is not a `<button>`
+
+An owner opened Live Scoring before kickoff on a phone and the page scrolled
+sideways with nothing to scroll to. The board itself was innocent: every
+matchup card is a `<button>`, and the UA stylesheet gives buttons
+`box-sizing: border-box`, so `.ls-card`'s `width: 100%` + `0.9rem 1rem` padding
++ `1px` border fit exactly. The empty state is the only `.ls-card` rendered as
+a `<div>` — content-box, because this repo has no global reset — so the same
+rule made it 34px wider than its container. Root `scrollWidth` 404 against a
+393px viewport, and the card's right edge parked just off screen.
+
+- **A shared "card" class that is a button in one branch and a div in another
+  is the trap**, not the padding. It renders correctly in the common case and
+  breaks only in the branch nobody screenshots, which is why this survived
+  every mobile pass on the board. `.ls-card` now declares `border-box` itself.
+- **`.ls-card::before` is the win-probability split**, away color to the left of
+  `--wp-split`, home color to the right. With no matchup behind it, the empty
+  card fell back to the 50% default and painted a grey/blue bar across its top
+  that reads as a scrollbar, not as a border — the owner's screenshot is mostly
+  that bar. `.ls-card.static` drops it along with the pointer cursor and hover
+  accent a non-interactive div should never have carried.
+- **`.ls-board`'s `minmax(300px, 1fr)` was overflowing too**, 4px at 320px, with
+  matchups present — grid does not clamp a track floor to its container. This is
+  the rule already in `insights/domains/frontend.md`'s head
+  (`minmax(min(300px, 100%), 1fr)`); the board predated it.
+
+Measured in Chromium at 393px and 320px, both leagues, empty and populated:
+`document.documentElement.scrollWidth` equals `clientWidth` in all six.
+`tests/live-scoring-layout-css.test.ts` pins the box-sizing, the collapsible
+track floor, the suppressed bar, and that the markup still asks for `.static` —
+the CSS half alone would pass with the class dropped from the island.

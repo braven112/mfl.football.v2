@@ -74,9 +74,11 @@
   on a **bare** wrapper — a fixed `max-height` clips the moment content reflows.
 - `:not(:first-child)` spacing breaks when the first child is a
   `visually-hidden` (absolutely positioned) heading — use flex/grid `gap`.
-- **This site is not globally `box-sizing: border-box`** (`TheLeagueLayout`
-  scopes it to `main`). Measure boxes with `getBoundingClientRect()`, never by
-  reading the declared width — borders count.
+- **No global `box-sizing: border-box`** (`TheLeagueLayout` scopes it to
+  `main`), so one class on both a `<button>` and a `<div>` sizes differently:
+  the UA sheet gives buttons border-box, the div content-box, so `width: 100%`
+  + padding overflows only where the div is used. Measure with
+  `getBoundingClientRect()`, never the declared width.
 
 ## Two leagues, two of everything
 
