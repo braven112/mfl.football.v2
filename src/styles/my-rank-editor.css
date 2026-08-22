@@ -196,6 +196,14 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Same step as the trigger — every blue-on-surface text in this component
+   rides --color-primary-light in dark, never bare --color-primary. */
+html.dark .mre__row--on .mre__source-name,
+html.dark .mre__weight-effective,
+html.dark .mre__link {
+  color: var(--color-primary-light, #60a5fa);
+}
+
 .mre__empty {
   margin: 0;
   padding: 1.5rem 1rem;
@@ -295,6 +303,17 @@
 
 .mre-trigger:hover {
   border-color: var(--color-primary, #1c497c);
+}
+
+/**
+ * Match the GM/Coach toggle's active text exactly.
+ *
+ * `.mode-btn.active` lifts to --color-primary-light in dark mode; this pill
+ * sat on --color-primary, which is a near-but-not-equal blue right next to it.
+ * Two accents that close together read as a mistake, so follow the same step.
+ */
+html.dark .mre-trigger {
+  color: var(--color-primary-light, #60a5fa);
 }
 
 .mre-trigger__icon {
