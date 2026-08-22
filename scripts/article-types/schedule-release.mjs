@@ -177,9 +177,16 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = '
       // A pairing plays twice in a division; the FIRST meeting is the renewal.
       if (seenPair.has(key)) continue;
       seenPair.add(key);
+      // Null for a DISPUTED series — the two stored copies of that pairing
+      // disagree, so there is no record to hand the model. Dropping the whole
+      // renewal is right: a line naming two teams with no record is an
+      // invitation to invent one, and this sheet is the only thing standing
+      // between the column and a made-up head-to-head.
+      const described = describeSeries(s, g.away, g.home, (id) => name[id]);
+      if (!described) continue;
       renewals.push({
         week: Number(w),
-        line: `  Week ${w}: ${name[g.away] ?? g.away} at ${name[g.home] ?? g.home} — ${describeSeries(s, g.away, g.home, (id) => name[id])}`,
+        line: `  Week ${w}: ${name[g.away] ?? g.away} at ${name[g.home] ?? g.home} — ${described}`,
         intensity: s.intensity,
       });
     }

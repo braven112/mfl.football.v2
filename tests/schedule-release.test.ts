@@ -3,6 +3,8 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { loadSpriteIconIds } from './helpers/sprite-icons';
 // @ts-expect-error - .mjs helper shared with the node scripts (see its header)
+import { describeSeries, rivalrySeriesByPair } from '../src/utils/rivalry-intensity.mjs';
+// @ts-expect-error - .mjs helper shared with the node scripts (see its header)
 import {
   aflNationalLeagueDraft,
   laborDay,
@@ -534,3 +536,83 @@ describe('the rivalry lens', () => {
     expect(declared).toBe(THROWBACK_REASON);
   });
 });
+
+/**
+ * Disputed series.
+ *
+ * `matchupHistory` stores every meeting twice and the two copies do not always
+ * agree — `bothAttributed` is resolved from each side's own owner history, so
+ * a franchise identity that moved between slots leaves the sides counting
+ * different games. TheLeague has 18 such pairings out of 105, the AFL 23 of
+ * 162, and one of them landed on a 2026 marquee card. Stating a record we
+ * cannot stand behind puts a head-to-head in the chat that the Rivalries page
+ * contradicts.
+ */
+describe('a series the two sides disagree about', () => {
+  const nameOf = (id: string) => ({ '0001': 'Alpha', '0005': 'Bravo' })[id] ?? id;
+
+  it('states a record when the two copies agree', () => {
+    const agreed = { games: 20, wins: 12, losses: 8, ties: 0, perspective: '0001', disputed: false };
+    expect(describeSeries(agreed, '0001', '0005', nameOf)).toBe('20 meetings, Alpha up 12-8');
+  });
+
+  // Caught by the fixture above missing `perspective`: the old code printed
+  // "undefined up 12-8" rather than degrading.
+  it('drops the leader clause rather than naming an unknown one', () => {
+    const orphaned = { games: 20, wins: 12, losses: 8, ties: 0, perspective: '9999' };
+    expect(describeSeries(orphaned, '0001', '0005', nameOf)).toBe('20 meetings, 12-8');
+  });
+
+  it('states nothing at all when they do not', () => {
+    const disputed = { games: 20, wins: 12, losses: 8, ties: 0, perspective: '0001', disputed: true };
+    expect(describeSeries(disputed, '0001', '0005', nameOf)).toBeNull();
+  });
+
+  it('flags the disagreement rather than picking a side', () => {
+    // 0001 counts 6 meetings against 0009; 0009 counts only 4 of them.
+    const franchises = {
+      '0001': { matchupHistory: { '0009': meetings([1, 1, 1, 0, 0, 0]) } },
+      '0009': { matchupHistory: { '0001': meetings([1, 1, 0, 0]) } },
+    };
+    const byPair = rivalrySeriesByPair(franchises);
+    expect(byPair['0001-0009'].disputed).toBe(true);
+    expect(byPair['0001-0009'].games, 'still weights the pick').toBeGreaterThan(0);
+  });
+
+  it('leaves an agreeing pairing undisputed', () => {
+    const franchises = {
+      '0001': { matchupHistory: { '0009': meetings([1, 1, 1, 0]) } },
+      '0009': { matchupHistory: { '0001': meetings([0, 0, 0, 1]) } },
+    };
+    expect(rivalrySeriesByPair(franchises)['0001-0009'].disputed).toBe(false);
+  });
+
+  it('never prints a disputed record on a marquee card', () => {
+    const ids = ['0001', '0002', '0003', '0004'];
+    const ctx = {
+      divisionOf: Object.fromEntries(ids.map((id) => [id, 'D1'])),
+      conferenceOf: Object.fromEntries(ids.map((id) => [id, '00'])),
+      name: Object.fromEntries(ids.map((id) => [id, `T${id}`])),
+      winRate: Object.fromEntries(ids.map((id) => [id, 0.5])),
+      lastChampionship: null,
+      lastWeek: 2,
+      doubleheaderWeeks: [],
+      rivalry: {
+        '0001-0002': { games: 30, playoffGames: 0, intensity: 4.9, perspective: '0001', wins: 16, losses: 14, ties: 0, disputed: true },
+      },
+    };
+    const picks = marqueeMatchups(new Map([[1, [{ away: '0001', home: '0002' }]]]), ctx, 1);
+    expect(picks[0].why.some((w: string) => /meetings/.test(w))).toBe(false);
+  });
+});
+
+/** `wins` as 1s and 0s, as one franchise's `matchupHistory` entry. */
+function meetings(results: number[]) {
+  return results.map((win, i) => ({
+    year: 2010 + i,
+    week: 1,
+    score: win ? 100 : 50,
+    opponentScore: win ? 50 : 100,
+    bothAttributed: true,
+  }));
+}

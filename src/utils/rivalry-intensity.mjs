@@ -102,13 +102,14 @@ export const rivalryPairKey = (a, b) => [a, b].sort().join('-');
  */
 export function rivalrySeriesByPair(franchises, { minMeetings = MIN_RIVALRY_MEETINGS } = {}) {
   const byPair = {};
+  const mirrored = {};
   for (const [selfId, franchise] of Object.entries(franchises ?? {})) {
     for (const entry of computeRivalEntries(franchise?.matchupHistory, selfId, { minMeetings })) {
       const key = rivalryPairKey(selfId, entry.opponentId);
-      // Keep the perspective of whichever id sorts first, so wins/losses are
-      // not silently inverted depending on which side happened to be read last.
-      if (byPair[key] && selfId !== key.split('-')[0]) continue;
-      byPair[key] = {
+      const canonical = selfId === key.split('-')[0];
+      // Both sides get recorded; the CANONICAL one (id sorts first) is the
+      // series, the other is kept only to check the two agree.
+      (canonical ? byPair : mirrored)[key] = {
         games: entry.games,
         playoffGames: entry.playoffGames,
         intensity: entry.intensity,
@@ -124,11 +125,41 @@ export function rivalrySeriesByPair(franchises, { minMeetings = MIN_RIVALRY_MEET
       };
     }
   }
+
+  /**
+   * DISPUTED SERIES. `matchupHistory` stores every meeting twice, and the two
+   * copies do not always agree: `bothAttributed` is resolved from each side's
+   * own owner history, so a franchise identity that moved between slots leaves
+   * the two sides counting different games. In TheLeague, 18 of 120 pairings
+   * disagree — 0001 vs 0010 reads 32 meetings (22-10) from one side and 21
+   * (5-16) from the other — and every one of them involves the two slots an
+   * identity moved between.
+   *
+   * There is no way to pick a winner here without knowing which owner history
+   * is right, so we do not guess and we do not average. The series still
+   * WEIGHTS a matchup (the canonical side's intensity is a reasonable
+   * estimate), but `describeSeries` refuses to state a record for it. Printing
+   * one would mean a marquee card, a Schefter column and a GroupMe blast
+   * asserting a head-to-head the Rivalries page contradicts.
+   */
+  for (const [key, series] of Object.entries(byPair)) {
+    const other = mirrored[key];
+    series.disputed = Boolean(
+      other &&
+        (other.games !== series.games ||
+          other.wins !== series.losses ||
+          other.losses !== series.wins ||
+          other.ties !== series.ties),
+    );
+  }
   return byPair;
 }
 
 /**
  * One series as a phrase — "25 meetings, Pigskins up 14-11".
+ *
+ * Returns null for a DISPUTED series (see `rivalrySeriesByPair`) — the two
+ * stored copies of that pairing disagree, so there is no record to state.
  *
  * Needs both franchise ids because the stored record belongs to
  * `perspective`, which is whichever id sorts first and has nothing to do with
@@ -142,13 +173,19 @@ export function rivalrySeriesByPair(franchises, { minMeetings = MIN_RIVALRY_MEET
  * @param {(id: string) => string} nameOf
  */
 export function describeSeries(series, a, b, nameOf) {
-  if (!series) return null;
+  if (!series || series.disputed) return null;
   const { wins, losses, ties = 0, games, perspective } = series;
   const tail = ties > 0 ? `-${ties}` : '';
-  if (wins === losses) return `${games} meetings, dead even at ${wins}-${losses}${tail}`;
-  const other = perspective === a ? b : a;
-  const leader = wins > losses ? perspective : other;
   const hi = Math.max(wins, losses);
   const lo = Math.min(wins, losses);
-  return `${games} meetings, ${nameOf(leader) || leader} up ${hi}-${lo}${tail}`;
+  if (wins === losses) return `${games} meetings, dead even at ${wins}-${losses}${tail}`;
+  // `perspective` must be one of the two ids or the record cannot be
+  // attributed at all. Falling through to a bare score beats naming
+  // "undefined" as the team that leads the series.
+  if (perspective !== a && perspective !== b) return `${games} meetings, ${hi}-${lo}${tail}`;
+  const leader = wins > losses ? perspective : perspective === a ? b : a;
+  const name = nameOf(leader);
+  return name
+    ? `${games} meetings, ${name} up ${hi}-${lo}${tail}`
+    : `${games} meetings, ${hi}-${lo}${tail}`;
 }
