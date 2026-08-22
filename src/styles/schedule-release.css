@@ -1,0 +1,330 @@
+/**
+ * Schedule Release Day.
+ *
+ * Every colour is a token with a light-mode fallback — a bare hex renders fine
+ * in light and ships white-on-white in dark (docs/claude/rules/theming-and-assets.md).
+ */
+
+.rel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+}
+
+.rel__loading,
+.rel__error {
+  padding: 1rem;
+  margin: 0;
+  color: var(--color-text-secondary, #475569);
+}
+
+.rel__error {
+  color: var(--alert-warning-text, #7c2d12);
+  background: var(--alert-warning-bg, #fef3c7);
+  border: 1px solid var(--alert-warning-border, #fcd34d);
+  border-radius: 8px;
+}
+
+/* ----------------------------------------------------------------- hero */
+
+.rel__hero {
+  padding: 2rem 1.25rem;
+  text-align: center;
+  background: var(--color-surface-2, #f8fafc);
+  border: 1px solid var(--color-border-subtle, #e2e8f0);
+  border-radius: 12px;
+}
+
+.rel__hero--out {
+  background: color-mix(in srgb, var(--accent-color, #1c497c) 10%, var(--color-surface-2, #f8fafc));
+  border-color: color-mix(in srgb, var(--accent-color, #1c497c) 35%, transparent);
+}
+
+.rel__kicker {
+  margin: 0 0 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary, #475569);
+}
+
+.rel__hero h2 {
+  margin: 0;
+  font-size: clamp(1.6rem, 5vw, 2.5rem);
+  line-height: 1.1;
+  color: var(--color-text-primary, #0f172a);
+}
+
+.rel__date {
+  margin: 0.5rem 0 0;
+  font-size: 0.9375rem;
+  color: var(--color-text-secondary, #475569);
+}
+
+/* ------------------------------------------------------------- countdown */
+
+.rel__clock {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.rel__clock li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 1rem 0.5rem;
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--card-border, #e2e8f0);
+  border-radius: 10px;
+}
+
+.rel__num {
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: clamp(1.5rem, 6vw, 2.5rem);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--color-text-primary, #0f172a);
+}
+
+.rel__unit {
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary, #475569);
+}
+
+.rel__due {
+  padding: 0.9rem 1rem;
+  margin: 0;
+  text-align: center;
+  color: var(--alert-success-text, #14532d);
+  background: var(--alert-success-bg, #dcfce7);
+  border: 1px solid var(--alert-success-border, #86efac);
+  border-radius: 8px;
+}
+
+.rel__reason,
+.rel__blurb {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  text-align: center;
+  color: var(--color-text-secondary, #475569);
+}
+
+.rel__admin {
+  align-self: center;
+  min-height: 2.5rem;
+  padding: 0 1rem;
+  font-size: 0.875rem;
+  color: var(--btn-secondary-text, #1c497c);
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--btn-secondary-border, #cbd5e1);
+  border-radius: 8px;
+}
+
+.rel__admin:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* --------------------------------------------------------------- marquee */
+
+.rel__h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1.0625rem;
+  color: var(--color-text-primary, #0f172a);
+}
+
+.rel__marquee {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.rel__marquee li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.9rem 1rem;
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--card-border, #e2e8f0);
+  border-left: 3px solid var(--accent-color, #1c497c);
+  border-radius: 10px;
+}
+
+.rel__week {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--accent-color, #1c497c);
+}
+
+.rel__teams {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text-primary, #0f172a);
+}
+
+.rel__at {
+  font-weight: 400;
+  color: var(--color-text-secondary, #475569);
+}
+
+.rel__why {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary, #475569);
+}
+
+/* ----------------------------------------------------------------- facts */
+
+.rel__facts {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.rel__facts div {
+  padding: 0.75rem 0.9rem;
+  background: var(--color-surface-2, #f8fafc);
+  border: 1px solid var(--color-border-subtle, #e2e8f0);
+  border-radius: 10px;
+}
+
+.rel__facts dt {
+  font-size: 0.6875rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary, #475569);
+}
+
+.rel__facts dd {
+  margin: 0.25rem 0 0;
+  font-size: 1.25rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary, #0f172a);
+}
+
+.rel__facts small {
+  font-size: 0.75rem;
+  color: var(--color-text-disabled, #94a3b8);
+}
+
+/* ------------------------------------------------------------------ grid */
+
+/* Wide content scrolls inside its own box; the page body never does. */
+.rel__scroll {
+  overflow-x: auto;
+}
+
+.rel__grid {
+  width: 100%;
+  font-size: 0.875rem;
+  border-collapse: collapse;
+}
+
+.rel__grid th,
+.rel__grid td {
+  padding: 0.5rem 0.6rem;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--color-border-subtle, #eef2f7);
+}
+
+.rel__grid thead th {
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary, #475569);
+}
+
+.rel__grid tbody th {
+  width: 4.5rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary, #0f172a);
+}
+
+.rel__games {
+  display: grid;
+  gap: 0.15rem 1rem;
+  margin: 0;
+  padding: 0;
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.8125rem;
+  color: var(--color-text-primary, #0f172a);
+  list-style: none;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+}
+
+.rel__tag {
+  display: inline-block;
+  padding: 0.05rem 0.35rem;
+  margin-left: 0.35rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: var(--badge-info-text, #1e3a8a);
+  background: var(--badge-info-bg, #dbeafe);
+  border-radius: 999px;
+}
+
+/* ----------------------------------------------------------------- paste */
+
+.rel__pasteHead {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rel__copy {
+  min-height: 2.5rem;
+  padding: 0 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--btn-primary-text, #fff);
+  cursor: pointer;
+  background: var(--btn-primary-bg, #1c497c);
+  border: 1px solid var(--btn-primary-border, transparent);
+  border-radius: 8px;
+}
+
+.rel__hint {
+  margin: 0.5rem 0;
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary, #475569);
+}
+
+.rel__text {
+  width: 100%;
+  min-height: 14rem;
+  padding: 0.75rem;
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.8125rem;
+  color: var(--color-text-primary, #0f172a);
+  resize: vertical;
+  background: var(--color-surface-2, #f8fafc);
+  border: 1px solid var(--color-border-default, #cbd5e1);
+  border-radius: 8px;
+}
+
+.rel__admin:focus-visible,
+.rel__copy:focus-visible,
+.rel__text:focus-visible {
+  outline: 2px solid var(--accent-color, #1c497c);
+  outline-offset: 2px;
+}
