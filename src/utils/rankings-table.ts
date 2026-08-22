@@ -35,6 +35,14 @@ export interface RankingTableOptions {
    * into its Value view; the AFL has no such view.
    */
   compositeThClasses?: string[];
+  /**
+   * Extra classes for EVERY injected ranking `<th>`. Projected Free Agents
+   * hides its whole ranking block below 640px with `col-hide-mobile`; its
+   * `<td>`s carry the class already, so the headers have to as well — a header
+   * that stays while its cells vanish shifts every remaining cell in the row
+   * under the wrong heading.
+   */
+  thClasses?: string[];
 }
 
 /**
@@ -181,6 +189,7 @@ function injectRankingColumns(options: RankingTableOptions): void {
     th.dataset.rankingCol = 'true';
 
     for (const cls of rankingCellClasses(col)) th.classList.add(cls);
+    for (const cls of options.thClasses ?? []) th.classList.add(cls);
     if (col.isComposite) {
       for (const cls of options.compositeThClasses ?? []) th.classList.add(cls);
     }

@@ -451,3 +451,37 @@ Three knock-on effects worth knowing:
 Related placement note: the My Rank trigger moved out of the `View:` pill
 group and next to Filters. It opens a dialog — inside a group of mutually
 exclusive view pills it read as a fourth view.
+
+## 2026-08-22 - The third table: Projected Free Agents was never on the shared module
+
+Two rankings tables were kept in step by `rankings-table.ts`; a third one was
+not, and nobody noticed because it looked fine. `theleague/projected-free-agents.astro`
+had its own copy of the injection logic — `buildRankingLookup()` and then
+`lookup.columns.slice(0, 8)` straight off the raw list. Measured in the
+browser: eight ranking columns, including Avg and every source the owner had
+unticked in the My Rank editor, next to the Free Agents table's four. Both of
+those are the exact things `visibleRankingColumns()` was written to filter out
+(see the 2026-08-21 entry above); the page predated it and never got the memo.
+
+It now calls `initRankingTable({ tableSelector: '.pfa-table', anchorSelector:
+'[data-sort="ppg"]', thClasses: ['col-hide-mobile'] })`. Three things that fell
+out of the switch and are worth knowing before wiring a fourth table:
+
+- **`thClasses` is new.** This table hides its whole ranking block below 640px;
+  the `<td>`s already carried `col-hide-mobile`, so the injected `<th>`s have to
+  as well. A header that survives while its column's cells are gone doesn't
+  leave a gap — it shifts every remaining cell in the row under the wrong title.
+  `compositeThClasses` only tags My Rank, so it can't do this job.
+- **The `key == null` contract.** When the sorted-by ranking column disappears
+  and there is nothing to hand off to, the module emits `set-sort` with a null
+  key, meaning "restore your OWN default". This page's handler assigned it
+  straight to `currentSort` and would have sorted by null.
+- **Bridge handlers need the stale-page guard.** `init()` re-runs on every
+  ClientRouter navigation and these `document` listeners are never removed, so
+  the previous instance's closure keeps answering `rankings:get-sort` and
+  repainting. Both element ids (`pfa-table`) survive the swap, so identity has
+  to come from the captured node: `OWN_TABLE.isConnected`.
+
+`tests/rankings-page-integration.test.ts` now has a Projected Free Agents
+block, including an assertion that the page never slices `lookup.columns`
+itself — that slice is what the drift looked like.

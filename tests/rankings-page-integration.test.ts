@@ -111,6 +111,54 @@ describe('rankings reach every decision page', () => {
     });
   });
 
+  describe('Projected Free Agents', () => {
+    const PFA = 'src/pages/theleague/projected-free-agents.astro';
+
+    it('injects its ranking columns via the shared module', () => {
+      const src = read(PFA);
+      expect(src).toContain("from '../../utils/rankings-table'");
+      expect(src).toContain('initRankingTable(');
+    });
+
+    it('does not hand-roll its own column budget', () => {
+      // It used to: `lookup.columns.slice(0, 8)`, which drew Avg and every
+      // source the owner had unticked in the My Rank editor — the two things
+      // visibleRankingColumns() exists to filter out. A page that slices the
+      // raw lookup itself has stopped honoring the owner's board.
+      const src = read(PFA);
+      expect(src).not.toMatch(/lookup\.columns\.slice\(/);
+      expect(src).not.toContain('buildRankingLookup(');
+    });
+
+    it('hides its ranking headers on mobile with the cells', () => {
+      // The <td>s are col-hide-mobile; a <th> that stays visible when its
+      // column's cells are gone puts every remaining mobile cell under the
+      // wrong heading.
+      const src = read(PFA);
+      expect(src).toContain("thClasses: ['col-hide-mobile']");
+      expect(src).toContain('col-group--rankings col-hide-mobile');
+    });
+
+    it('restores its own sort when the last ranking column goes', () => {
+      expect(read(PFA)).toContain('detail.key == null');
+    });
+
+    it('ignores bridge events once its own table is detached', () => {
+      // Same ClientRouter hazard the Free Agents pages hit: init() re-runs on
+      // every navigation and these document listeners are never removed, so a
+      // stale closure would answer for the live page.
+      const src = read(PFA);
+      expect(src).toContain("var OWN_TABLE = document.getElementById('pfa-table')");
+      expect(src).toContain('OWN_TABLE.isConnected');
+      const guards = src.match(/if \(!isLivePage\(\)\) return;/g) ?? [];
+      expect(guards.length).toBeGreaterThanOrEqual(5);
+    });
+
+    it('tells the module its half of the bridge is live', () => {
+      expect(read(PFA)).toContain("new CustomEvent('rankings:page-ready')");
+    });
+  });
+
   describe('Rosters', () => {
     it.each(ROSTER_PAGES)('%s fills its Rank column via the shared module', (page) => {
       const src = read(page);
