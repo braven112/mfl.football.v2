@@ -70,7 +70,17 @@ export function loadLineupRankings(): LineupRankings {
 export function byRank(
   rankings: LineupRankings,
 ): (a: { id: string }, b: { id: string }) => number {
-  return (a, b) => (rankings.rank(a.id) ?? Infinity) - (rankings.rank(b.id) ?? Infinity);
+  return (a, b) => {
+    const ra = rankings.rank(a.id);
+    const rb = rankings.rank(b.id);
+    // Compare the null cases explicitly rather than substituting Infinity:
+    // `Infinity - Infinity` is NaN, and a comparator that returns NaN leaves
+    // the order of every unranked-vs-unranked pair up to the engine. A slot
+    // full of kickers and defenses is exactly that case.
+    if (ra == null) return rb == null ? 0 : 1;
+    if (rb == null) return -1;
+    return ra - rb;
+  };
 }
 
 // ---------------------------------------------------------------------------

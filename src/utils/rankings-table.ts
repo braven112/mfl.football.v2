@@ -155,7 +155,15 @@ function injectRankingColumns(options: RankingTableOptions): void {
 
   const headerRow = document.querySelector(`${options.tableSelector} thead tr`);
   const anchorTh = headerRow?.querySelector(options.anchorSelector);
-  if (!anchorTh) return;
+  if (!anchorTh) {
+    // No anchor means no headers can be injected. Bailing here with the column
+    // list already announced would leave render() emitting ranking <td>s that
+    // no <th> lines up with — a silently misaligned table. Degrade to no
+    // ranking columns at all, which is at least consistent.
+    emit('rankings:set-lookup', { lookup: { ...lookup, columns: [] }, hasColumns: false, hasComposite: false });
+    emit('rankings:refilter');
+    return;
+  }
 
   // Insert in reverse so repeated `after()` calls on the same anchor land in order.
   for (const col of [...limitedColumns].reverse()) {
