@@ -127,6 +127,19 @@ export function rankingHeaderTitle(col: RankingColumn, allColumns: RankingColumn
 }
 
 function injectRankingColumns(options: RankingTableOptions): void {
+  // Bail before ANY emit if this instance's own table isn't on the page.
+  //
+  // These listeners outlive the page that registered them (ClientRouter keeps
+  // the module), and the call sites no longer all pass `.players-table` — so a
+  // stale Projected Free Agents instance can wake on a Free Agents page whose
+  // table it does not own. Every event below is dispatched on `document`, and
+  // the live page's bridge has no way to tell whose instance sent it: the
+  // no-anchor path further down would hand it `hasColumns: false`, which drops
+  // its ranking <td>s under headers that are still there and flips its view off
+  // `rankings` — permanently, for an owner who picked that view by hand
+  // (players.astro only restores it when there's no explicit preference).
+  if (!document.querySelector(options.tableSelector)) return;
+
   const lookup: RankingLookup = buildRankingLookup();
 
   const limitedColumns = visibleRankingColumns(lookup.columns);

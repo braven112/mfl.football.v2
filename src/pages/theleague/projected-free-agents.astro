@@ -721,6 +721,17 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   }
 
   function init() {
+    // Own this page's table, once.
+    //
+    // init() is an astro:page-load handler that is never torn down, so without
+    // this it re-runs on every page the owner navigates to afterwards: five more
+    // document-level bridge listeners each time, and a rankings:page-ready
+    // dispatch that wakes THIS page's module instance while a different table is
+    // live. Same dataset guard the Free Agents pages use.
+    var ownTable = document.getElementById('pfa-table');
+    if (!ownTable || ownTable.dataset.init) return;
+    ownTable.dataset.init = 'true';
+
     // Position pills
     var pills = document.querySelectorAll('#pos-tabs .pos-pill');
     for (var pi = 0; pi < pills.length; pi++) {
@@ -836,7 +847,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     // (or repaint) whatever table is live now. Every handler checks that the
     // table THIS closure was built for is still in the document. Same guard as
     // the Free Agents pages; same bug it was added for.
-    var OWN_TABLE = document.getElementById('pfa-table');
+    var OWN_TABLE = ownTable;
     function isLivePage() {
       return !!OWN_TABLE && OWN_TABLE.isConnected;
     }

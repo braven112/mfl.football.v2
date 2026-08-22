@@ -148,14 +148,40 @@ describe('rankings reach every decision page', () => {
       // every navigation and these document listeners are never removed, so a
       // stale closure would answer for the live page.
       const src = read(PFA);
-      expect(src).toContain("var OWN_TABLE = document.getElementById('pfa-table')");
+      expect(src).toContain("var ownTable = document.getElementById('pfa-table')");
       expect(src).toContain('OWN_TABLE.isConnected');
       const guards = src.match(/if \(!isLivePage\(\)\) return;/g) ?? [];
       expect(guards.length).toBeGreaterThanOrEqual(5);
     });
 
+    it('runs its setup once, for its own table only', () => {
+      // init() is an astro:page-load handler that is never torn down. Without
+      // the guard it re-runs on every page visited afterwards — five more
+      // document-level bridge listeners each time, plus a rankings:page-ready
+      // dispatch that wakes this page's module instance while someone else's
+      // table is live.
+      const src = read(PFA);
+      expect(src).toContain('ownTable.dataset.init');
+    });
+
     it('tells the module its half of the bridge is live', () => {
       expect(read(PFA)).toContain("new CustomEvent('rankings:page-ready')");
+    });
+  });
+
+  describe('the shared module across pages', () => {
+    it('a stale instance never speaks for a table it does not own', () => {
+      // Every event the module emits goes on `document`, and the live page's
+      // bridge cannot tell whose instance sent it. With more than one
+      // tableSelector in play (.players-table and .pfa-table), a stale instance
+      // waking on the other page would reach the no-anchor path and broadcast
+      // `hasColumns: false` — dropping the live table's ranking <td>s under
+      // headers that are still there, and flipping players.astro off its
+      // rankings view for good when the owner picked that view by hand.
+      const src = read('src/utils/rankings-table.ts');
+      const body = src.slice(src.indexOf('function injectRankingColumns('));
+      const beforeFirstEmit = body.slice(0, body.indexOf('emit('));
+      expect(beforeFirstEmit).toContain('if (!document.querySelector(options.tableSelector)) return;');
     });
   });
 
