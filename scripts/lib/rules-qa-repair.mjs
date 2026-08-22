@@ -30,6 +30,21 @@ export function matchesSearch(entry, term) {
   );
 }
 
+/**
+ * Who asked, for the listing. `askedBy` is an OBJECT
+ * (`{ franchiseId, teamName }`, see src/types/rules-qa.ts) — interpolating it
+ * straight into a template printed "[object Object]" for every real question,
+ * which is exactly the column you're scanning to tell whose card you're about
+ * to rewrite. Seeded cards carry null.
+ */
+function describeAsker(askedBy) {
+  if (!askedBy) return '(seed/unknown)';
+  if (typeof askedBy === 'string') return askedBy;
+  const { teamName, franchiseId } = askedBy;
+  if (teamName && franchiseId) return `${teamName} (${franchiseId})`;
+  return teamName || franchiseId || '(unknown)';
+}
+
 /** One-line, log-safe digest of a stored Q&A. */
 export function summarizeEntry(entry, { answerChars = 160 } = {}) {
   const answer = String(entry.answer ?? '').replace(/\s+/g, ' ');
@@ -37,7 +52,7 @@ export function summarizeEntry(entry, { answerChars = 160 } = {}) {
     answer.length > answerChars ? `${answer.slice(0, answerChars)}…` : answer;
   return [
     `id:        ${entry.id}`,
-    `asked:     ${entry.createdAt ?? '(no date)'} by ${entry.askedBy ?? '(seed/unknown)'}`,
+    `asked:     ${entry.createdAt ?? '(no date)'} by ${describeAsker(entry.askedBy)}`,
     `question:  ${entry.question}`,
     `answer:    ${truncated}`,
   ].join('\n');
