@@ -67,10 +67,14 @@ const POLICY = {
     startWindow: [1, 2, 3, 4],
     endWindow: [12, 13, 14],
     doubleheaderCount: 4,
-    // Weeks 13 and 14 both carry byes in 2026, so "no division game on a bye"
-    // and "the season ends on division games" cannot both hold. The league
-    // keeps the rivalry finish: one pure-division round stays in the final
-    // week, everything else goes bye-free.
+    // SIMPLE mode by league decision for 2026: move the doubleheader off the
+    // bye week and change nothing else. The full re-timing is available
+    // (mode: 'optimize') but scores well on bye avoidance while wrecking the
+    // calendar — it stacks every rivalry game into Weeks 1-3, leaving 16 of 24
+    // division pairs meeting within three weeks against 0 of 24 today. The
+    // AFL runs the constructive builder instead
+    // (scripts/build-afl-schedule.mjs), which fixes that properly.
+    mode: 'simple',
     keepDivisionFinish: true,
     crossConference: null,
   },
@@ -245,11 +249,43 @@ const main = () => {
     throw new Error(`${slots.length} week slots but ${rounds.length} rounds — doubleheader count is wrong`);
   }
 
+  const cleanSet = new Set(clean);
   const assignment = new Map(); // week -> rounds[]
   const place = (week, round) => {
     if (!assignment.has(week)) assignment.set(week, []);
     assignment.get(week).push(round);
   };
+
+  // --- simple mode: relocate the doubleheader, touch nothing else ---------
+  //
+  // Every week keeps the rounds it already has. Only the weeks whose
+  // doubleheader status changes pool their rounds and redeal them. Which of
+  // the pooled rounds ends up in the single-game week is a free choice, so it
+  // goes to the one with the fewest division games — a strict improvement
+  // with no disruption anywhere else in the calendar.
+  if (policy.mode === 'simple') {
+    const wasDh = new Set(doubleheaderWeeks(current));
+    const touched = [...new Set([...wasDh, ...dh])].filter((w) => wasDh.has(w) !== dhSet.has(w)).sort((a, b) => a - b);
+    const pool = [];
+    for (const r of rounds) {
+      if (touched.includes(r.sourceWeek)) pool.push(r);
+      else place(r.sourceWeek, r);
+    }
+    pool.sort((a, b) => a.divisionGames - b.divisionGames);
+    const openings = [];
+    for (const w of touched) for (let i = 0; i < (dhSet.has(w) ? 2 : 1); i += 1) openings.push(w);
+    if (openings.length !== pool.length) {
+      throw new Error(`simple mode: ${pool.length} rounds to redeal but ${openings.length} openings`);
+    }
+    // Fewest-division rounds fill the bye weeks first.
+    openings.sort((a, b) => (clean.includes(a) ? 1 : 0) - (clean.includes(b) ? 1 : 0) || a - b);
+    openings.forEach((week, i) => place(week, pool[i]));
+    console.log(`simple mode: redealt ${pool.length} rounds across weeks ${touched.join(', ')}; all other weeks unchanged`);
+  } else {
+    assignRoundsFully();
+  }
+
+  function assignRoundsFully() {
   const remainingSlots = [...slots];
   const takeSlot = (week) => {
     const i = remainingSlots.indexOf(week);
@@ -278,7 +314,6 @@ const main = () => {
   // Then: richest division rounds into the cleanest weeks. Bye-free weeks
   // first; after that, lightest bye week first, so any division games that
   // could not be placed cleanly land where the fewest NFL teams are out.
-  const cleanSet = new Set(clean);
   remainingSlots.sort((a, b) => {
     const ca = cleanSet.has(a) ? 0 : 1;
     const cb = cleanSet.has(b) ? 0 : 1;
@@ -288,6 +323,7 @@ const main = () => {
   });
   pending.sort((a, b) => b.divisionGames - a.divisionGames);
   remainingSlots.forEach((week, i) => place(week, pending[i]));
+  }
 
   // --- report -------------------------------------------------------------
   const planned = new Map();
@@ -312,7 +348,7 @@ const main = () => {
   for (let w = 1; w <= ctx.lastRegularSeasonWeek; w += 1) {
     const g = planned.get(w) ?? [];
     console.log(
-      `  ${String(w).padStart(2)}  ${String(byeCounts[w] ?? 0).padStart(4)}  ${String(g.length).padStart(5)}  ${String(g.filter(isDivision).length).padStart(3)}  ${dhSet.has(w) ? 'DOUBLEHEADER' : ''}${cleanSet.has(w) ? '' : ''}`,
+      `  ${String(w).padStart(2)}  ${String(byeCounts[w] ?? 0).padStart(4)}  ${String(g.length).padStart(5)}  ${String(g.filter(isDivision).length).padStart(3)}  ${dhSet.has(w) ? 'DOUBLEHEADER' : ''}${cleanSet.has(w) ? '' : '  (byes)'}`,
     );
   }
   console.log(
