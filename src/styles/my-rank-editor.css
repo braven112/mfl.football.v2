@@ -26,7 +26,23 @@
 
 .mre__sheet {
   width: 100%;
+  /**
+   * Cap against the VISIBLE viewport, not the largest one.
+   *
+   * `vh` on a phone is the viewport with the browser chrome hidden, so with
+   * the URL bar and the bottom bar both showing, 88vh is taller than what the
+   * owner can actually see — and the sheet is pinned to the bottom, so the
+   * excess goes off the TOP. Reported from an Android phone (2026-08-22) with
+   * nine sources in the list: the title and the close button were sliced off
+   * above the URL bar ("I can barely close the modal now") and the rows that
+   * overflowed sat outside the visible area with no way to bring them in
+   * ("I still need to be able to scroll down to see all of the rankings").
+   *
+   * `dvh` is that visible viewport and it tracks the chrome as it moves. The
+   * `vh` line above it is the fallback for anything that doesn't know `dvh`.
+   */
   max-height: 88vh;
+  max-height: 88dvh;
   display: flex;
   flex-direction: column;
   background: var(--content-bg, #fff);
@@ -55,7 +71,16 @@
   .mre, .mre__sheet { animation: none; }
 }
 
+/*
+ * The header and footer hold their height; the list is the part that scrolls.
+ * Stated explicitly rather than left to the defaults — the sheet's whole job
+ * is to keep the close button and Done reachable while the list absorbs
+ * whatever nine sources need. (`min-height: 0` on the list is belt-and-braces:
+ * a scroll container's automatic minimum size is already 0, but it stops being
+ * so the day someone drops the `overflow-y`.)
+ */
 .mre__header {
+  flex: 0 0 auto;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -99,8 +124,12 @@
   list-style: none;
   margin: 0;
   padding: 0.25rem 0;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  /* Don't hand the scroll to the page behind once this list hits its end. */
+  overscroll-behavior: contain;
 }
 
 .mre__row {
@@ -205,6 +234,9 @@ html.dark .mre__link {
 }
 
 .mre__empty {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
   margin: 0;
   padding: 1.5rem 1rem;
   font-size: 0.8125rem;
@@ -213,6 +245,7 @@ html.dark .mre__link {
 }
 
 .mre__footer {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -253,6 +286,7 @@ html.dark .mre__link {
   .mre__sheet {
     width: min(520px, calc(100vw - 2rem));
     max-height: 80vh;
+    max-height: 80dvh;
     border-radius: var(--radius-lg, 1rem);
     border-bottom: 1px solid var(--content-border, #e2e8f0);
     box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
