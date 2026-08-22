@@ -1,7 +1,7 @@
 /**
  * Schedule construction rules shared by the optimizer and the annual audit.
  *
- *   scripts/optimize-league-schedule.mjs   builds a compliant schedule
+ *   src/utils/schedule-plan.mjs            builds a compliant schedule
  *   tests/schedule-optimization.test.ts    checks the live one against these
  *
  * Both leagues state the same three scheduling goals (see

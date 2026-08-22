@@ -12,6 +12,8 @@ import {
   pairKey,
   regularSeasonGames,
 } from '../src/utils/schedule-rules.mjs';
+// @ts-expect-error - .mjs helper shared with the node scripts (see its header)
+import { buildWeekPlan } from '../src/utils/schedule-builder.mjs';
 
 /**
  * The annual schedule audit.
@@ -32,8 +34,8 @@ import {
  * fails, the fix is to regenerate and paste:
  *
  *   node scripts/fetch-nfl-bye-weeks.mjs          # refresh the bye calendar
- *   node scripts/build-afl-schedule.mjs           # AFL: constructive build
- *   node scripts/optimize-league-schedule.mjs --league=theleague
+ *   node scripts/generate-schedule.mjs --league=afl-fantasy
+ *   node scripts/generate-schedule.mjs --league=theleague
  *
  * A season that has not been scheduled yet is skipped rather than failed —
  * these run year-round and must not go red every February.
@@ -205,9 +207,40 @@ for (const league of LEAGUES) {
         doubleheaders: dh,
         reservedSlotsPerTeam: league.crossConference ? 1 : 0,
       });
+
+      // `divisionGameCeiling` is the ABSTRACT bound — every bye-free slot, if
+      // the division legs could reach it. They cannot always. Confining the two
+      // legs to an early and a late block is what makes rivals meet once early
+      // and once late, so a bye-free week stranded in the middle (2023 and 2024
+      // both have a clean Week 8) is unreachable by construction. Deriving the
+      // reachable bound from the week plan keeps this assertion honest instead
+      // of failing a schedule for obeying a different rule.
+      //
       // The League deliberately keeps a pure-division final week, which costs
       // one round; see docs/claude/rules/schedule-optimization.md.
-      const allowance = league.crossConference ? 0 : season.franchiseIds.length / 2;
+      let allowance = league.crossConference ? 0 : season.franchiseIds.length / 2;
+      if (league.crossConference) {
+        try {
+          const weekPlan = buildWeekPlan({
+            lastWeek: season.lastWeek,
+            doubleheaders: dh,
+            byeCounts,
+            divisionSize: league.divisionSize,
+            crossWeek: 1,
+          });
+          const cleanWeeks = new Set(clean);
+          const gamesPerRound = season.franchiseIds.length / 2;
+          const reachable =
+            weekPlan
+              .filter((w: any) => cleanWeeks.has(w.week))
+              .reduce((n: number, w: any) => n + w.slots.filter((s: any) => s.kind === 'division').length, 0) *
+            gamesPerRound;
+          allowance = Math.max(0, ceiling.ceiling - reachable);
+        } catch {
+          // A season whose weeks/doubleheaders do not fit the format at all is
+          // already reported by the doubleheader assertions above.
+        }
+      }
       expect(
         byeFree,
         `${byeFree} of ${ceiling.total} division games are bye-free; ceiling is ${ceiling.ceiling} ` +
@@ -291,7 +324,7 @@ for (const league of LEAGUES) {
         expect(
           wrong,
           `${actual.length - wrong.length} of ${expected.length} pairings are correct. ` +
-            `Regenerate with node scripts/build-afl-schedule.mjs`,
+            `Regenerate with node scripts/generate-schedule.mjs --league=afl-fantasy`,
         ).toEqual([]);
       });
 

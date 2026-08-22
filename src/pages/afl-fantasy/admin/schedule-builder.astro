@@ -1,0 +1,37 @@
+---
+/**
+ * Schedule Builder — /afl-fantasy/admin/schedule-builder
+ *
+ * Thin wrapper: league-scoped admin gate + layout. The tool itself is the
+ * shared components/shared/SchedulePlannerPanel.astro, and the generation runs
+ * in /api/schedule-plan, which repeats this same gate — a page gate protects
+ * the page, not the endpoint behind it.
+ *
+ * The gate lives HERE rather than in the shared panel because
+ * `Astro.redirect()` returned from a component does not redirect; it stops
+ * that component rendering and serves a blank 200.
+ */
+export const prerender = false;
+
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import SchedulePlannerPanel from '../../../components/shared/SchedulePlannerPanel.astro';
+import { getAuthUser, isCommissionerOrAdmin, isAuthorizedForLeague } from '../../../utils/auth';
+import { getLeagueBySlug } from '../../../config/leagues';
+import { schedulableSeasons } from '../../../utils/nfl-bye-weeks';
+
+const user = getAuthUser(Astro.request);
+const league = getLeagueBySlug('afl-fantasy');
+if (!user || !isCommissionerOrAdmin(user) || !league || !isAuthorizedForLeague(user, league.id)) {
+  return Astro.redirect('/afl-fantasy');
+}
+
+// NOT getCurrentSeasonYear(): it rolls at Labor Day, so all summer it still
+// says "last season" — precisely when next season's schedule gets built. A
+// season is schedulable exactly when we hold its NFL bye calendar.
+const seasons = schedulableSeasons();
+const defaultYear = seasons[0] ?? new Date().getUTCFullYear();
+---
+
+<TheLeagueLayout title="Schedule Builder — Admin">
+  <SchedulePlannerPanel leagueSlug={league.slug} leagueName={league.name} defaultYear={defaultYear} seasons={seasons} />
+</TheLeagueLayout>
