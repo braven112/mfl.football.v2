@@ -226,6 +226,7 @@ const { class: className } = Astro.props;
     renderPlayerNewsList,
     renderPlayerNewsSkeleton,
     resolveNewsSubject,
+    playerNewsEmptyMessage,
     type PlayerNewsState,
   } from '../../utils/player-news-client';
 
@@ -332,8 +333,13 @@ const { class: className } = Astro.props;
       statusEl.className = 'pn-status pn-status--message';
 
       if (state.kind === 'empty') {
-        statusEl.textContent = `No recent ESPN stories${subjectName ? ` for ${subjectName}` : ''}.`;
-        announce('No recent stories.');
+        // Collapsed: `--empty` drops the skeleton's height reservation so the
+        // section shrinks to the one-line note instead of leaving a tall blank
+        // box under a heading that has nothing to show.
+        statusEl.className = 'pn-status pn-status--message pn-status--empty';
+        const message = playerNewsEmptyMessage(state.windowDays, subjectName);
+        statusEl.textContent = message;
+        announce(message);
         if (hadFocus) { statusEl.tabIndex = -1; statusEl.focus(); }
         return;
       }

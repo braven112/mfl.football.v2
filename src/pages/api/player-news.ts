@@ -1,11 +1,12 @@
 import type { APIRoute } from 'astro';
 import { checkRateLimit } from '../../utils/rate-limit';
 import { getPlayer, getGlobalPlayerMap } from '../../utils/player-map';
-import { getCurrentLeagueYear } from '../../utils/league-year';
+import { getCurrentLeagueYear, getTestDateFromSearchParams } from '../../utils/league-year';
 import {
   fetchAthleteNews,
   isValidEspnId,
   clampLimit,
+  playerNewsWindowDays,
   type PlayerNewsResult,
 } from '../../utils/player-news';
 
@@ -74,6 +75,11 @@ function resolveNflEspnId(mflId: string): string | null {
 export const GET: APIRoute = async ({ request, url }) => {
   const mflId = url.searchParams.get('mflId') ?? '';
 
+  // `?testDate=YYYY-MM-DD` moves the clock that picks the recency window, the
+  // way every other date-dependent surface here is exercised. It is a distinct
+  // URL, so it gets its own cache entry and can never poison the real one.
+  const now = getTestDateFromSearchParams(url.searchParams) ?? new Date();
+
   // Two ways in. `mflId` is the normal path. A direct `espnId` is for the team
   // DEF stand-in, whose id comes from def-spotlight-players (ESPN's own roster
   // scrape) and is therefore known-NFL without a feed lookup.
@@ -89,7 +95,13 @@ export const GET: APIRoute = async ({ request, url }) => {
     // to ask about (every team DEF, and a handful of kickers).
     if (mflId && /^\d{1,12}$/.test(mflId)) {
       return json(
-        { espnId: null, status: 'empty', items: [], fetchedAt: new Date().toISOString() },
+        {
+          espnId: null,
+          status: 'empty',
+          items: [],
+          fetchedAt: new Date().toISOString(),
+          windowDays: playerNewsWindowDays(now),
+        },
         200,
         CACHE_OK,
       );
@@ -106,13 +118,20 @@ export const GET: APIRoute = async ({ request, url }) => {
 
   let result: PlayerNewsResult;
   try {
-    result = await fetchAthleteNews(espnId, limit);
+    result = await fetchAthleteNews(espnId, limit, now);
   } catch (error) {
     // fetchAthleteNews is written not to throw; this is belt-and-braces so an
     // unexpected throw still degrades to a typed error rather than a 500 page.
     console.error('[player-news] unexpected failure:', error);
     return json(
-      { espnId, status: 'error', items: [], fetchedAt: new Date().toISOString(), reason: 'upstream-network' },
+      {
+        espnId,
+        status: 'error',
+        items: [],
+        fetchedAt: new Date().toISOString(),
+        reason: 'upstream-network',
+        windowDays: playerNewsWindowDays(now),
+      },
       200,
       CACHE_NEVER,
     );

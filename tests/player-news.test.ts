@@ -12,6 +12,10 @@ import {
   PLAYER_NEWS_DEFAULT_LIMIT,
   describePayloadShape,
   extractOverviewArticles,
+  filterRecentNews,
+  playerNewsWindowDays,
+  PLAYER_NEWS_WINDOW_DAYS_IN_SEASON,
+  PLAYER_NEWS_WINDOW_DAYS_OFFSEASON,
 } from '../src/utils/player-news';
 
 /**
@@ -25,6 +29,16 @@ import {
 afterEach(() => {
   vi.unstubAllGlobals();
 });
+
+/**
+ * Pinned clock for every fetch test.
+ *
+ * News is now filtered to a recency window, so a fixture article's publish date
+ * is only "recent" relative to some `now`. Left on the wall clock, every one of
+ * these assertions would silently flip from the parse path to the empty path on
+ * a future calendar date — a test that expires is not a test.
+ */
+const NOW = new Date('2026-08-22T00:00:00Z');
 
 describe('isValidEspnId', () => {
   it('accepts the plain digit ids the MFL feed actually carries', () => {
@@ -187,9 +201,15 @@ describe('fetchAthleteNews', () => {
     return spy;
   };
 
+  // The fixture's articles are dated mid-December 2025, so every call that
+  // expects them to SURVIVE has to run its clock next to them — the recency
+  // window would age them out under the wall clock, and these tests would
+  // quietly start asserting the empty path instead of the parse path.
+  const FIXTURE_NOW = new Date('2025-12-16T00:00:00Z');
+
   it('returns ok with parsed items', async () => {
     stubFetch(() => Promise.resolve({ ok: true, json: () => Promise.resolve(fixture) }));
-    const result = await fetchAthleteNews('3139477', 2);
+    const result = await fetchAthleteNews('3139477', 2, FIXTURE_NOW);
     expect(result.status).toBe('ok');
     expect(result.items).toHaveLength(2);
     expect(result.espnId).toBe('3139477');
@@ -206,7 +226,7 @@ describe('fetchAthleteNews', () => {
         ),
       }),
     ));
-    const result = await fetchAthleteNews('3139477');
+    const result = await fetchAthleteNews('3139477', PLAYER_NEWS_DEFAULT_LIMIT, NOW);
     expect(result.status).toBe('empty');
     expect(result.items).toEqual([]);
     expect(result.reason).toBeUndefined();
@@ -217,7 +237,7 @@ describe('fetchAthleteNews', () => {
     // an outage "no recent news" is a confident lie to the owner.
     for (const status of [404, 429, 500]) {
       stubFetch(() => Promise.resolve({ ok: false, status, json: () => Promise.resolve({}) }));
-      const result = await fetchAthleteNews('3139477');
+      const result = await fetchAthleteNews('3139477', PLAYER_NEWS_DEFAULT_LIMIT, NOW);
       expect(result.status).toBe('error');
       expect(result.reason).toBe('upstream-status');
     }
@@ -225,7 +245,7 @@ describe('fetchAthleteNews', () => {
 
   it('reports a network rejection as error', async () => {
     stubFetch(() => Promise.reject(new Error('ECONNRESET')));
-    const result = await fetchAthleteNews('3139477');
+    const result = await fetchAthleteNews('3139477', PLAYER_NEWS_DEFAULT_LIMIT, NOW);
     expect(result.status).toBe('error');
     expect(result.reason).toBe('upstream-network');
   });
@@ -233,13 +253,13 @@ describe('fetchAthleteNews', () => {
   it('distinguishes a timeout from a generic network failure', async () => {
     const timeout = Object.assign(new Error('timed out'), { name: 'TimeoutError' });
     stubFetch(() => Promise.reject(timeout));
-    const result = await fetchAthleteNews('3139477');
+    const result = await fetchAthleteNews('3139477', PLAYER_NEWS_DEFAULT_LIMIT, NOW);
     expect(result.reason).toBe('upstream-timeout');
   });
 
   it('reports unparseable JSON as error', async () => {
     stubFetch(() => Promise.resolve({ ok: true, json: () => Promise.reject(new Error('bad json')) }));
-    const result = await fetchAthleteNews('3139477');
+    const result = await fetchAthleteNews('3139477', PLAYER_NEWS_DEFAULT_LIMIT, NOW);
     expect(result.status).toBe('error');
     expect(result.reason).toBe('upstream-shape');
   });
@@ -272,7 +292,7 @@ describe('shape mismatch is never reported as "no news"', () => {
   it('treats a missing articles array as error, not empty', async () => {
     for (const payload of [{}, { news: [] }, { items: [] }, { articles: null }, { articles: 'nope' }, []]) {
       stub(payload);
-      const result = await fetchAthleteNews('3139477');
+      const result = await fetchAthleteNews('3139477', PLAYER_NEWS_DEFAULT_LIMIT, NOW);
       expect(result.status).toBe('error');
       expect(result.reason).toBe('upstream-shape');
     }
@@ -288,7 +308,7 @@ describe('shape mismatch is never reported as "no news"', () => {
         ),
       }),
     ));
-    const result = await fetchAthleteNews('3139477');
+    const result = await fetchAthleteNews('3139477', PLAYER_NEWS_DEFAULT_LIMIT, NOW);
     expect(result.status).toBe('empty');
     expect(result.reason).toBeUndefined();
   });
@@ -321,7 +341,7 @@ describe('two-source ladder', () => {
 
   it('prefers source 1 and does not call the overview when it has articles', async () => {
     const spy = routeFetch({ '/news': { ok: true, body: { articles: [article('from news')] } } });
-    const result = await fetchAthleteNews('3139477');
+    const result = await fetchAthleteNews('3139477', PLAYER_NEWS_DEFAULT_LIMIT, NOW);
     expect(result.status).toBe('ok');
     expect(result.source).toBe('athlete-news');
     expect(spy).toHaveBeenCalledTimes(1);
@@ -332,7 +352,7 @@ describe('two-source ladder', () => {
       '/news': { ok: true, body: { articles: [] } },
       '/overview': { ok: true, body: { news: { articles: [article('from overview')] } } },
     });
-    const result = await fetchAthleteNews('3139477');
+    const result = await fetchAthleteNews('3139477', PLAYER_NEWS_DEFAULT_LIMIT, NOW);
     expect(result.status).toBe('ok');
     expect(result.source).toBe('athlete-overview');
     expect(result.items[0].headline).toBe('from overview');
@@ -343,9 +363,37 @@ describe('two-source ladder', () => {
       '/news': { ok: true, body: { articles: [] } },
       '/overview': { ok: true, body: { news: { articles: [] } } },
     });
-    const result = await fetchAthleteNews('3139477');
+    const result = await fetchAthleteNews('3139477', PLAYER_NEWS_DEFAULT_LIMIT, NOW);
     expect(result.status).toBe('empty');
     expect(result.source).toBeUndefined();
+  });
+
+  it('a failing source 1 does NOT veto a clean overview that has nothing recent', async () => {
+    // Observed live 2026-08-22: source 1 403s from the sandbox while the
+    // overview answers fine. With source 1 allowed to veto, a player whose
+    // overview articles all fell outside the recency window rendered as
+    // "Couldn't reach ESPN" behind a Retry that could never change the answer
+    // — which made the empty state unreachable the whole time source 1 was
+    // down. The overview is the real provider; if it answered, we believe it.
+    routeFetch({
+      '/news': { ok: false, body: {} },
+      '/overview': {
+        ok: true,
+        body: { news: { articles: [{ ...article('ancient'), published: '2024-01-01T00:00:00Z' }] } },
+      },
+    });
+    const result = await fetchAthleteNews('3139477', PLAYER_NEWS_DEFAULT_LIMIT, NOW);
+    expect(result.status).toBe('empty');
+    expect(result.reason).toBeUndefined();
+  });
+
+  it('a failing source 1 does not veto a clean, genuinely empty overview either', async () => {
+    routeFetch({
+      '/news': { ok: false, body: {} },
+      '/overview': { ok: true, body: { news: { articles: [] } } },
+    });
+    const result = await fetchAthleteNews('3139477', PLAYER_NEWS_DEFAULT_LIMIT, NOW);
+    expect(result.status).toBe('empty');
   });
 
   it('a failing overview is an ERROR even though source 1 read cleanly', async () => {
@@ -358,7 +406,7 @@ describe('two-source ladder', () => {
       '/news': { ok: true, body: { articles: [] } },
       '/overview': { ok: false, body: {} },
     });
-    const result = await fetchAthleteNews('3139477');
+    const result = await fetchAthleteNews('3139477', PLAYER_NEWS_DEFAULT_LIMIT, NOW);
     expect(result.status).toBe('error');
     expect(result.reason).toBe('upstream-status');
   });
@@ -370,7 +418,7 @@ describe('two-source ladder', () => {
       '/news': { ok: false, body: {} },
       '/overview': { ok: true, body: { news: { articles: [article('recovered')] } } },
     });
-    const result = await fetchAthleteNews('3139477');
+    const result = await fetchAthleteNews('3139477', PLAYER_NEWS_DEFAULT_LIMIT, NOW);
     expect(result.status).toBe('ok');
     expect(result.source).toBe('athlete-overview');
     expect(result.items[0].headline).toBe('recovered');
@@ -383,7 +431,7 @@ describe('two-source ladder', () => {
       '/news': { ok: true, body: { articles: [{ title: 'renamed field' }, { title: 'another' }] } },
       '/overview': { ok: true, body: { news: { articles: [] } } },
     });
-    const result = await fetchAthleteNews('3139477');
+    const result = await fetchAthleteNews('3139477', PLAYER_NEWS_DEFAULT_LIMIT, NOW);
     expect(result.status).toBe('error');
     expect(result.reason).toBe('upstream-shape');
   });
@@ -419,5 +467,144 @@ describe('extractOverviewArticles tolerates ESPN inconsistency', () => {
   it('an empty list is empty, not unrecognized', () => {
     expect(extractOverviewArticles({ news: [] })).toEqual([]);
     expect(extractOverviewArticles({ news: { articles: [] } })).toEqual([]);
+  });
+});
+
+/**
+ * The recency window. Two clocks matter here and they are easy to conflate:
+ * `getCurrentSeasonYear()` rolls at LABOR DAY, so it names a season that may be
+ * over (Feb-Aug) or not yet started (Labor Day-kickoff). Only
+ * `isSeasonWindowOpen` says whether that season is actually being PLAYED, which
+ * is the question the window depends on.
+ */
+describe('playerNewsWindowDays', () => {
+  it('uses the short window while the season is being played', () => {
+    // 2026 kickoff is the Thursday after Labor Day (Sep 7) = Sep 10.
+    for (const date of ['2026-09-11', '2026-10-15', '2026-12-25', '2027-01-15']) {
+      expect(playerNewsWindowDays(new Date(`${date}T12:00:00Z`)))
+        .toBe(PLAYER_NEWS_WINDOW_DAYS_IN_SEASON);
+    }
+  });
+
+  it('opens to the long window in the offseason', () => {
+    // March and July are obvious. Aug 22 is the one that matters: the feeds of
+    // the 2025 season are complete, which is exactly why "the feeds have a
+    // completed week" is not an offseason guard.
+    for (const date of ['2026-03-01', '2026-06-15', '2026-07-04', '2026-08-22']) {
+      expect(playerNewsWindowDays(new Date(`${date}T12:00:00Z`)))
+        .toBe(PLAYER_NEWS_WINDOW_DAYS_OFFSEASON);
+    }
+  });
+
+  it('treats the Labor Day-to-kickoff gap as offseason, not as in-season', () => {
+    // getCurrentSeasonYear() has already rolled to 2026 here, but 2026 has not
+    // kicked off. Reading the year roll as "the season is on" would cut the
+    // window to 30 days for a week when nothing has been played yet.
+    expect(playerNewsWindowDays(new Date('2026-09-08T12:00:00Z')))
+      .toBe(PLAYER_NEWS_WINDOW_DAYS_OFFSEASON);
+  });
+
+  it('is one of the two windows, never something in between', () => {
+    expect(PLAYER_NEWS_WINDOW_DAYS_IN_SEASON).toBe(30);
+    expect(PLAYER_NEWS_WINDOW_DAYS_OFFSEASON).toBe(90);
+  });
+});
+
+describe('filterRecentNews', () => {
+  const item = (id: string, published: string | null) => ({
+    id, headline: `h${id}`, description: '', published, type: 'Story', link: null,
+  });
+  const now = new Date('2026-10-01T00:00:00Z');
+
+  it('keeps articles inside the window and drops the ones outside it', () => {
+    const kept = filterRecentNews(
+      [
+        item('fresh', '2026-09-29T00:00:00Z'),
+        item('edge', '2026-09-01T00:00:00Z'),   // exactly 30 days — inclusive
+        item('stale', '2026-08-25T00:00:00Z'),
+      ],
+      30,
+      now,
+    );
+    expect(kept.map((i) => i.id)).toEqual(['fresh', 'edge']);
+  });
+
+  it('the wider offseason window keeps what the in-season one drops', () => {
+    const items = [item('summer', '2026-07-20T00:00:00Z')];
+    expect(filterRecentNews(items, 30, now)).toHaveLength(0);
+    expect(filterRecentNews(items, 90, now)).toHaveLength(1);
+  });
+
+  it('drops an undated article — it cannot be shown to be inside the window', () => {
+    // These sort LAST, so they only ever surface once the dated articles run
+    // out: precisely the player whose real news is two years old.
+    expect(filterRecentNews([item('nodate', null)], 90, now)).toEqual([]);
+  });
+
+  it('keeps a future-dated article — clock skew is not staleness', () => {
+    expect(filterRecentNews([item('ahead', '2026-10-02T00:00:00Z')], 30, now)).toHaveLength(1);
+  });
+
+  it('never throws on an unparseable date', () => {
+    expect(filterRecentNews([item('junk', 'not-a-date')], 30, now)).toEqual([]);
+  });
+});
+
+describe('stale-only results are empty, never an error', () => {
+  const stale = {
+    id: 1, headline: 'last December', description: 'd', published: '2025-12-01T00:00:00Z',
+    type: 'Story', links: { web: { href: 'https://espn.com/x' } },
+  };
+
+  const routeFetch = (byUrl: Record<string, { ok: boolean; body: unknown }>) => {
+    const spy = vi.fn((url: unknown) => {
+      const key = Object.keys(byUrl).find((k) => String(url).includes(k));
+      const hit = key ? byUrl[key] : { ok: false, body: {} };
+      return Promise.resolve({ ok: hit.ok, json: () => Promise.resolve(hit.body) });
+    });
+    vi.stubGlobal('fetch', spy);
+    return spy;
+  };
+
+  it('reads a perfectly-formed but aged-out envelope as empty', async () => {
+    // The regression this guards: filtering BEFORE the "articles but none
+    // renderable" check would make three readable-but-old stories look like an
+    // item-shape change, and paint a retryable "Couldn't reach ESPN" over what
+    // is really just a quiet player.
+    routeFetch({
+      '/news': { ok: true, body: { articles: [stale] } },
+      '/overview': { ok: true, body: { news: { articles: [stale] } } },
+    });
+    const result = await fetchAthleteNews('3139477', PLAYER_NEWS_DEFAULT_LIMIT, NOW);
+    expect(result.status).toBe('empty');
+    expect(result.reason).toBeUndefined();
+    expect(result.items).toEqual([]);
+  });
+
+  it('falls through to the overview when source 1 has only stale articles', async () => {
+    routeFetch({
+      '/news': { ok: true, body: { articles: [stale] } },
+      '/overview': {
+        ok: true,
+        body: { news: { articles: [{ ...stale, headline: 'this week', published: '2026-08-20T00:00:00Z' }] } },
+      },
+    });
+    const result = await fetchAthleteNews('3139477', PLAYER_NEWS_DEFAULT_LIMIT, NOW);
+    expect(result.status).toBe('ok');
+    expect(result.items.map((i) => i.headline)).toEqual(['this week']);
+  });
+
+  it('reports the window it applied so the UI can name it', async () => {
+    routeFetch({
+      '/news': { ok: true, body: { articles: [] } },
+      '/overview': { ok: true, body: { news: { articles: [] } } },
+    });
+    const offseason = await fetchAthleteNews('3139477', PLAYER_NEWS_DEFAULT_LIMIT, NOW);
+    expect(offseason.windowDays).toBe(PLAYER_NEWS_WINDOW_DAYS_OFFSEASON);
+
+    const inSeason = await fetchAthleteNews(
+      '3139477', PLAYER_NEWS_DEFAULT_LIMIT, new Date('2026-11-01T00:00:00Z'),
+    );
+    expect(inSeason.windowDays).toBe(PLAYER_NEWS_WINDOW_DAYS_IN_SEASON);
   });
 });

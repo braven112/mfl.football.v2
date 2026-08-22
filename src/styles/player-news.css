@@ -37,6 +37,21 @@
   color: var(--page-text);
 }
 
+/* Empty is the one state that collapses.
+
+   The min-height above reserves the skeleton's height so a resolving fetch
+   never shoves the modal's static content DOWN. Once the answer is "nothing in
+   the last 30 days" there is no content coming, so holding 6.3rem of blank card
+   under the heading is reservation for its own sake — it shrinks UPWARD, which
+   the reservation comment already calls mild. Error keeps the reservation: its
+   Retry button can turn into a list on the next click, and a section that jumps
+   taller under the reader's cursor is the failure the height is there to stop. */
+.pn-status--empty {
+  min-height: 0;
+  font-size: 0.8125rem;
+  color: var(--content-text-muted);
+}
+
 .pn-subtitle {
   margin: -0.25rem 0 0.625rem;
   font-size: 0.75rem;
