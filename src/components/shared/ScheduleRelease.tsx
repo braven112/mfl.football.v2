@@ -71,7 +71,6 @@ export default function ScheduleRelease({ leagueSlug }: { leagueSlug: string }) 
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const [copied, setCopied] = useState(false);
-  const [locking, setLocking] = useState(false);
   const textRef = useRef<HTMLTextAreaElement>(null);
 
   const load = useCallback(async () => {
@@ -125,20 +124,6 @@ export default function ScheduleRelease({ leagueSlug }: { leagueSlug: string }) 
     const t = setTimeout(() => setCopied(false), 2500);
     return () => clearTimeout(t);
   }, [copied]);
-
-  const revealNow = useCallback(async () => {
-    setLocking(true);
-    try {
-      const res = await fetch(`/api/schedule-release?league=${encodeURIComponent(leagueSlug)}`, { method: 'POST' });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body?.error ?? body?.reason ?? `Request failed (${res.status})`);
-      await load();
-    } catch (err: any) {
-      setError(err?.message ?? 'Could not lock the reveal');
-    } finally {
-      setLocking(false);
-    }
-  }, [leagueSlug, load]);
 
   const clock = useMemo(() => (target == null ? null : breakdown(target - now)), [target, now]);
 
@@ -195,10 +180,14 @@ export default function ScheduleRelease({ leagueSlug }: { leagueSlug: string }) 
           everyone. Nobody gets a different draw.
         </p>
 
+        {/* No in-browser reveal. The schedule is drawn and COMMITTED by the
+            release cron, which is what makes it a lock — a page cannot commit.
+            To rehearse or to fire it early, run the Schedule Release workflow. */}
         {data.canPaste && (
-          <button type="button" className="rel__admin" onClick={revealNow} disabled={locking}>
-            {locking ? 'Locking…' : 'Reveal now (commissioner)'}
-          </button>
+          <p className="rel__adminNote">
+            Commissioner: the reveal is locked by the Schedule Release workflow, which commits it to the repo. Run
+            that workflow to rehearse or to release early.
+          </p>
         )}
       </div>
     );

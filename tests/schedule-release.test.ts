@@ -7,6 +7,8 @@ import {
   priorWinRates,
   releaseIsReady,
   scheduleReleaseDate,
+  scheduleReleaseTease,
+  scheduleReleaseTeaseCopy,
 } from '../src/utils/schedule-release.mjs';
 
 /**
@@ -113,6 +115,62 @@ describe('releaseIsReady', () => {
   it('refuses a partial bye calendar', () => {
     const partial = Object.fromEntries(Object.entries(fullByes).slice(0, 20));
     expect(releaseIsReady('theleague', 2026, new Date(Date.UTC(2026, 6, 1)), partial).ready).toBe(false);
+  });
+});
+
+describe('scheduleReleaseTease', () => {
+  const at = (iso: string) => new Date(`${iso}T12:00:00Z`);
+  const phase = (iso: string, opts?: any) => scheduleReleaseTease('theleague', at(iso), opts);
+
+  it('stays quiet until the lead window opens', () => {
+    expect(phase('2026-05-05').show).toBe(false);
+    expect(phase('2026-05-11').show).toBe(true);
+  });
+
+  it('counts down inside the window', () => {
+    expect(phase('2026-05-31')).toMatchObject({ show: true, phase: 'countdown', daysUntil: 1 });
+  });
+
+  // This is the one that bit. An unbounded "drops today" hijacked the homepage
+  // for the rest of the offseason any time a reveal failed to fire — it turned
+  // eighteen hero-resolver tests red in late June and July on first wiring.
+  it('gives up on "drops today" after a short grace period', () => {
+    expect(phase('2026-06-01')).toMatchObject({ show: true, phase: 'imminent' });
+    expect(phase('2026-06-03')).toMatchObject({ show: true, phase: 'imminent' });
+    expect(phase('2026-06-04')).toMatchObject({ show: false, phase: 'overdue' });
+    expect(phase('2026-07-20').show).toBe(false);
+  });
+
+  it('teases the result for a week once it is revealed, then stops', () => {
+    expect(phase('2026-06-02', { revealed: true })).toMatchObject({ show: true, phase: 'out' });
+    expect(phase('2026-06-08', { revealed: true }).show).toBe(true);
+    expect(phase('2026-06-10', { revealed: true }).show).toBe(false);
+  });
+
+  it('never reports a negative countdown', () => {
+    for (const d of ['2026-06-01', '2026-06-02', '2026-07-01']) {
+      const t = phase(d);
+      if (t.daysUntil != null) expect(t.daysUntil).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it('runs on each league’s own date', () => {
+    // Mid-August is the AFL's window and nowhere near The League's.
+    expect(scheduleReleaseTease('afl-fantasy', at('2026-08-10')).show).toBe(true);
+    expect(scheduleReleaseTease('theleague', at('2026-08-10')).show).toBe(false);
+  });
+
+  it('says nothing for a league with no release date', () => {
+    expect(scheduleReleaseTease('best-ball-1', at('2026-06-01')).show).toBe(false);
+  });
+
+  it('writes copy that never shows a raw negative or NaN', () => {
+    for (const d of ['2026-05-12', '2026-05-31', '2026-06-01']) {
+      const copy = scheduleReleaseTeaseCopy(phase(d), 'The League');
+      expect(copy).not.toBeNull();
+      expect(copy!.title).not.toMatch(/-\d|NaN|undefined/);
+      expect(copy!.kicker).not.toMatch(/NaN|undefined/);
+    }
   });
 });
 

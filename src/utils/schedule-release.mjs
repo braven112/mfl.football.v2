@@ -208,3 +208,85 @@ export const marqueeMatchups = (
   }
   return picked.slice(0, limit).sort((x, y) => x.week - y.week);
 };
+
+/* ---------------------------------------------------------------- tease */
+
+/**
+ * The homepage tease, decided ONCE for both leagues.
+ *
+ * There are two independent hero resolvers — `resolveHeroState` for The League
+ * and `resolveAflHeroState` for the AFL — and they share no code. Putting the
+ * countdown decision in either of them would mean writing it twice and having
+ * one of them drift, which is the failure this repo has already shipped in
+ * other places. Both call this instead; all they own is how the result looks.
+ *
+ * @param {string} slug
+ * @param {Date} now
+ * @param {{ revealed?: boolean, leadDays?: number, year?: number }} [opts]
+ *   revealed  the reveal has already been locked, so tease the RESULT
+ *   leadDays  how long before release day the tease starts (default 21)
+ */
+/** How long "drops today" may stand before the tease gives up and steps aside. */
+const IMMINENT_GRACE_DAYS = 2;
+
+export const scheduleReleaseTease = (slug, now, { revealed = false, leadDays = 21, year } = {}) => {
+  const season = year ?? now.getUTCFullYear();
+  const date = scheduleReleaseDate(slug, season);
+  if (!date) return { show: false };
+
+  const msLeft = date.getTime() - now.getTime();
+  const dayMs = 86_400_000;
+  // Ceil so the day of release reads "today" and the day before reads "1 day",
+  // rather than a partial day rounding down to zero and claiming it is out.
+  const daysUntil = Math.ceil(msLeft / dayMs);
+
+  if (revealed) {
+    // Once it is out, keep it on the homepage for a week — that is the window
+    // in which owners actually go looking for their schedule.
+    const daysSince = Math.floor(-msLeft / dayMs);
+    return daysSince <= 7
+      ? { show: true, phase: 'out', date, daysUntil: 0, daysSince }
+      : { show: false, phase: 'out', date };
+  }
+
+  if (msLeft <= 0) {
+    // Date has passed but nothing is locked: the cron has not run yet, or it
+    // could not (no bye calendar). Say "any moment", never a negative count —
+    // but only BRIEFLY. An unbounded "drops today" is a hero that hijacks the
+    // homepage for the rest of the offseason whenever a reveal fails to fire,
+    // which is exactly what it did on first wiring: eighteen hero tests in late
+    // June and July went red because this branch never expired.
+    const daysOverdue = Math.floor(-msLeft / dayMs);
+    return daysOverdue <= IMMINENT_GRACE_DAYS
+      ? { show: true, phase: 'imminent', date, daysUntil: 0, daysOverdue }
+      : { show: false, phase: 'overdue', date, daysOverdue };
+  }
+  if (daysUntil > leadDays) return { show: false, phase: 'early', date, daysUntil };
+  return { show: true, phase: 'countdown', date, daysUntil };
+};
+
+/** Human copy for the tease, so both heroes read identically. */
+export const scheduleReleaseTeaseCopy = (tease, leagueName = '') => {
+  if (!tease?.show) return null;
+  const when = tease.date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' });
+  if (tease.phase === 'out') {
+    return {
+      kicker: 'Schedule Release',
+      title: 'The Schedule Is Out',
+      summary: `Every ${leagueName || 'league'} matchup for the coming season, and the four games worth circling.`,
+    };
+  }
+  if (tease.phase === 'imminent') {
+    return {
+      kicker: 'Schedule Release — Today',
+      title: 'The Schedule Drops Today',
+      summary: 'The draw locks today. Same schedule, same headline matchups, for everyone.',
+    };
+  }
+  const days = tease.daysUntil;
+  return {
+    kicker: `Schedule Release — ${when}`,
+    title: days === 1 ? 'The Schedule Drops Tomorrow' : `The Schedule Drops in ${days} Days`,
+    summary: 'One draw, locked, for the whole league. Nobody gets a different schedule.',
+  };
+};

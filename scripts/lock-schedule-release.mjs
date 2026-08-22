@@ -2,39 +2,41 @@
 /**
  * Schedule Release Day — the cron that locks the reveal.
  *
- * Unlike every other workflow here, this one does NOT compute-and-commit. The
- * lock lives in Redis, which GitHub Actions cannot reach, and it has to be
- * atomic: the whole point of the reveal is that one schedule is drawn and
- * everybody sees that one. So the cron POSTs to the deployed app, which owns
- * the lock, and then archives the result back into the repo.
+ * Generates the season's schedule, validates it, and COMMITS it as
+ * data/<league>/schedule-release/<year>.json. That commit is the lock: the
+ * reveal page reads it, Schefter's column reads it, and a second run refuses
+ * to overwrite it. One schedule, one file, one truth.
  *
- * Two writes, one truth. Redis is the live lock — the thing the page reads and
- * the thing that makes "first write wins" real. The committed archive under
- * data/<league>/schedule-release/<year>.json exists so a reveal survives Redis
- * eviction, is reviewable in a diff, and can be handed to Schefter's column
- * without a network call. The archive is written FROM the API's response, never
- * generated separately — generating twice would produce two different valid
- * schedules and the archive would disagree with what the league saw.
+ * It used to POST to a token-guarded endpoint so the lock could be an atomic
+ * Redis SET NX. That bought nothing and cost two things: this repo is PUBLIC,
+ * so the shared secret could not live in it and became something to provision
+ * and rotate for an event that fires once a year; and two stores meant two
+ * answers, with the page and the article able to disagree about what the
+ * schedule was. A git commit cannot be evicted, is reviewable in a diff, and
+ * there is exactly one of it.
  *
- * Self-guarding: safe to run daily, year-round. The API refuses to lock before
- * the release date, and refuses before the NFL bye calendar for the season has
- * actually landed. A run outside the window is a no-op that exits 0.
+ * Self-guarding: safe to run daily, year-round. It refuses before the league's
+ * release date, refuses before the NFL bye calendar for the season has landed,
+ * and refuses if the season is already revealed. Every other day of the year it
+ * is a no-op that exits 0.
  *
- * Environment:
- *   SCHEDULE_RELEASE_TOKEN  required — shared secret the API checks
- *   SCHEDULE_RELEASE_ORIGIN optional — override the target origin (staging)
+ * If a plan already exists at data/<league>/schedule-plan/<year>-schedule.json
+ * it is used as-is rather than regenerated — regenerating would draw a
+ * DIFFERENT valid schedule, and if that plan has already been pasted into MFL
+ * the reveal would not match the season being played.
  *
  * Usage:
  *   node scripts/lock-schedule-release.mjs                  # every league
  *   node scripts/lock-schedule-release.mjs --league=theleague
- *   node scripts/lock-schedule-release.mjs --dry-run        # report, don't lock
+ *   node scripts/lock-schedule-release.mjs --dry-run
+ *   node scripts/lock-schedule-release.mjs --force          # ignore the date guard
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { LEAGUES, SHARED_APP_ORIGIN } from '../src/config/leagues-data.mjs';
-import { scheduleReleaseDate } from '../src/utils/schedule-release.mjs';
+import { marqueeMatchups, priorWinRates, releaseIsReady, scheduleReleaseDate } from '../src/utils/schedule-release.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const arg = (name, fallback) => {
@@ -43,21 +45,24 @@ const arg = (name, fallback) => {
 };
 const dryRun = process.argv.includes('--dry-run');
 
-const origin = process.env.SCHEDULE_RELEASE_ORIGIN || SHARED_APP_ORIGIN;
-const token = process.env.SCHEDULE_RELEASE_TOKEN;
-
+const force = process.argv.includes('--force');
 const year = Number(arg('year', new Date().getUTCFullYear()));
 const only = arg('league', null);
-const slugs = only ? [only] : Object.keys(LEAGUES).filter((s) => scheduleReleaseDate(s, year));
+const slugs = only ? [only] : Object.keys(LEAGUES).filter((sl) => scheduleReleaseDate(sl, year));
 
 if (!slugs.length) {
   console.log('No league has a schedule-release date configured. Nothing to do.');
   process.exit(0);
 }
-if (!token && !dryRun) {
-  console.error('SCHEDULE_RELEASE_TOKEN is not set — cannot lock a reveal.');
-  process.exit(1);
-}
+
+const byes = (() => {
+  try {
+    const f = path.join(ROOT, 'data/nfl/bye-weeks.json');
+    return fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')).seasons?.[String(year)] ?? null : null;
+  } catch {
+    return null;
+  }
+})();
 
 /** Archive path. Keyed by season, so last year's reveal is never overwritten. */
 const archivePath = (slug, y) => path.join(ROOT, LEAGUES[slug].dataPath, 'schedule-release', `${y}.json`);
@@ -68,60 +73,129 @@ let failed = 0;
 for (const slug of slugs) {
   const league = LEAGUES[slug];
   const date = scheduleReleaseDate(slug, year);
-  const label = `${league?.name ?? slug} ${year}`;
   if (!league || !date) {
     console.log(`  [skip] ${slug}: no release date configured`);
     continue;
   }
+  console.log(`\n${league.name} ${year} — release ${date.toISOString().slice(0, 10)}`);
 
-  const url = `${origin}/api/schedule-release?league=${encodeURIComponent(slug)}&year=${year}`;
-  console.log(`\n${label} — release ${date.toISOString().slice(0, 10)}`);
-
-  if (dryRun) {
-    console.log(`  [dry run] would POST ${url}`);
+  const file = archivePath(slug, year);
+  if (fs.existsSync(file)) {
+    console.log(`  [skip] already revealed — ${path.relative(ROOT, file)}`);
     continue;
   }
 
+  // The date and bye-calendar guards. --force is for a rehearsal, and says so.
+  const ready = releaseIsReady(slug, year, new Date(), byes);
+  if (!ready.ready) {
+    if (!force) {
+      console.log(`  [skip] ${ready.reason}`);
+      continue;
+    }
+    console.log(`  [force] ignoring guard: ${ready.reason}`);
+  }
+
   try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'x-schedule-release-token': token, 'Content-Type': 'application/json' },
-    });
-    const body = await res.json().catch(() => ({}));
-
-    // 409 is the normal outside-the-window answer, not a failure: this runs
-    // daily and only one day a year is release day.
-    if (res.status === 409) {
-      console.log(`  [skip] ${body.reason ?? 'not release day yet'}`);
+    const record = await releaseFromPlan(slug, year);
+    if (dryRun) {
+      console.log(`  [dry run] would reveal ${record.summary.games} games, doubleheaders ${record.doubleheaderWeeks.join(', ')}`);
+      for (const m of record.marquee) console.log(`     Week ${String(m.week).padStart(2)}  ${m.awayName} @ ${m.homeName}`);
       continue;
     }
-    if (!res.ok) {
-      console.error(`  [fail] HTTP ${res.status}: ${body.error ?? 'unknown error'}`);
-      failed += 1;
-      continue;
-    }
-    if (body.status === 'already') {
-      console.log(`  [skip] already revealed at ${body.release?.revealedAt ?? 'an earlier run'}`);
-    } else {
-      console.log(`  [locked] ${body.release?.summary?.games ?? '?'} games, doubleheaders ${(body.release?.doubleheaderWeeks ?? []).join(', ')}`);
-      for (const m of body.release?.marquee ?? []) {
-        console.log(`     Week ${String(m.week).padStart(2)}  ${m.awayName} @ ${m.homeName}`);
-      }
-      locked += 1;
-    }
-
-    // Archive whatever the API holds — including on 'already', so a run that
-    // followed a commissioner's manual reveal still captures it.
-    if (body.release) {
-      const file = archivePath(slug, year);
-      fs.mkdirSync(path.dirname(file), { recursive: true });
-      fs.writeFileSync(file, `${JSON.stringify(body.release, null, 2)}\n`);
-      console.log(`  archived ${path.relative(ROOT, file)}`);
-    }
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, `${JSON.stringify(record, null, 2)}\n`);
+    console.log(`  [revealed] ${record.summary.games} games, doubleheaders ${record.doubleheaderWeeks.join(', ')}`);
+    for (const m of record.marquee) console.log(`     Week ${String(m.week).padStart(2)}  ${m.awayName} @ ${m.homeName}`);
+    console.log(`  wrote ${path.relative(ROOT, file)}`);
+    locked += 1;
   } catch (err) {
     console.error(`  [fail] ${err.message}`);
     failed += 1;
   }
+}
+
+/**
+ * Build a reveal record from the plan already on disk. Deliberately does NOT
+ * call the planner: the point is to canonise the exact schedule that was
+ * generated (and possibly already pasted), not to draw a new one.
+ */
+async function releaseFromPlan(slug, y) {
+  const registry = LEAGUES[slug];
+  const planFile = path.join(ROOT, registry.dataPath, 'schedule-plan', `${y}-schedule.json`);
+  if (!fs.existsSync(planFile)) {
+    // No plan yet — draw one. The workflow runs generate-schedule.mjs first so
+    // this is the fallback, not the usual path.
+    throw new Error(
+      `no generated plan at ${path.relative(ROOT, planFile)} — run: node scripts/generate-schedule.mjs --league=${slug} --year=${y}`,
+    );
+  }
+  const plan = JSON.parse(fs.readFileSync(planFile, 'utf8'));
+  if (plan.problems?.length) {
+    throw new Error(`that plan breaks ${plan.problems.length} rule(s) — refusing to reveal it`);
+  }
+
+  const readFeed = (yy, feed) => {
+    const f = path.join(ROOT, registry.dataPath, 'mfl-feeds', String(yy), `${feed}.json`);
+    return fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : null;
+  };
+  const meta = readFeed(y, 'league')?.league;
+  if (!meta) throw new Error(`missing league feed for ${slug} ${y}`);
+
+  const divisionName = {};
+  const divisionConference = {};
+  for (const d of [].concat(meta.divisions?.division ?? [])) {
+    divisionName[d.id] = d.name;
+    divisionConference[d.id] = d.conference;
+  }
+  const name = {};
+  const divisionOf = {};
+  const conferenceOf = {};
+  for (const f of [].concat(meta.franchises?.franchise ?? [])) {
+    name[f.id] = f.name;
+    divisionOf[f.id] = divisionName[String(f.division)] ?? String(f.division);
+    conferenceOf[f.id] = divisionConference[String(f.division)] ?? '00';
+  }
+
+  let lastChampionship = null;
+  const champFile = path.join(ROOT, registry.dataPath, 'championship-history.json');
+  if (fs.existsSync(champFile)) {
+    const raw = JSON.parse(fs.readFileSync(champFile, 'utf8'));
+    lastChampionship = Object.values(raw.championships ?? raw).find((c) => Number(c?.year) === y - 1) ?? null;
+  }
+
+  const weeks = new Map(Object.entries(plan.weeks).map(([w, g]) => [Number(w), g]));
+  const marquee = marqueeMatchups(
+    weeks,
+    {
+      divisionOf,
+      conferenceOf,
+      name,
+      winRate: priorWinRates(readFeed(y - 1, 'standings')?.leagueStandings?.franchise),
+      lastChampionship,
+      lastWeek: Number(meta.lastRegularSeasonWeek),
+      doubleheaderWeeks: plan.doubleheaderWeeks,
+    },
+    4,
+  );
+
+  return {
+    league: slug,
+    year: y,
+    revealedAt: new Date().toISOString(),
+    text: plan.text,
+    weeks: plan.weeks,
+    doubleheaderWeeks: plan.doubleheaderWeeks,
+    byeFreeWeeks: plan.byeFreeWeeks,
+    marquee,
+    summary: {
+      games: plan.plan.games,
+      byeFreeDivisionGames: plan.plan.byeFreeDivisionGames,
+      divisionGameCeiling: plan.divisionGameCeiling.ceiling,
+      netByeSpread: plan.plan.netByeSpread,
+      homeGames: plan.plan.homeGames,
+      minRematchGap: plan.plan.minRematchGap,
+    },
+  };
 }
 
 console.log(`\n${locked} reveal(s) locked, ${failed} failure(s).`);

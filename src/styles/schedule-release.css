@@ -121,21 +121,16 @@
   color: var(--color-text-secondary, #475569);
 }
 
-.rel__admin {
-  align-self: center;
-  min-height: 2.5rem;
-  padding: 0 1rem;
-  font-size: 0.875rem;
-  color: var(--btn-secondary-text, #1c497c);
-  cursor: pointer;
-  background: transparent;
-  border: 1px solid var(--btn-secondary-border, #cbd5e1);
+.rel__adminNote {
+  max-width: 34rem;
+  padding: 0.65rem 0.9rem;
+  margin: 0 auto;
+  font-size: 0.8125rem;
+  text-align: center;
+  color: var(--color-text-secondary, #475569);
+  background: var(--color-surface-2, #f8fafc);
+  border: 1px dashed var(--color-border-default, #cbd5e1);
   border-radius: 8px;
-}
-
-.rel__admin:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
 }
 
 /* --------------------------------------------------------------- marquee */
@@ -322,7 +317,6 @@
   border-radius: 8px;
 }
 
-.rel__admin:focus-visible,
 .rel__copy:focus-visible,
 .rel__text:focus-visible {
   outline: 2px solid var(--accent-color, #1c497c);
