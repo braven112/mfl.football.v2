@@ -555,6 +555,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
                         <div class="lineup-slot__opp" aria-label={matchupLabel}>
                           <span class="lineup-slot__opp-prefix">{matchupPrefix}</span>
                           <img src={`/assets/nfl-logos/${oppTeam}.svg`} alt="" aria-hidden="true" class="lineup-slot__opp-logo" width="16" height="16" onerror={NFL_LOGO_ONERROR} onload={NFL_LOGO_ONLOAD} />
+                          <span class="lineup-slot__opp-team">{oppTeam}</span>
                         </div>
                         {player.projection != null && (
                           <span class="lineup-slot__proj">{player.projection.toFixed(1)}</span>
@@ -610,6 +611,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
               <div class="lineup-bench-row__opp" aria-label={matchupLabel}>
                 <span class="lineup-bench-row__opp-prefix">{matchupPrefix}</span>
                 <img src={`/assets/nfl-logos/${oppTeam}.svg`} alt="" aria-hidden="true" class="lineup-bench-row__opp-logo" width="14" height="14" onerror={NFL_LOGO_ONERROR} onload={NFL_LOGO_ONLOAD} />
+                <span class="lineup-bench-row__opp-team">{oppTeam}</span>
               </div>
             ) : null}
             {player.projection != null && (
@@ -906,6 +908,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
           <div class="lineup-slot__opp" aria-label="${esc(matchupLabel)}">
             <span class="lineup-slot__opp-prefix">${matchupPrefix}</span>
             <img src="/assets/nfl-logos/${esc(oppTeam)}.svg" alt="" aria-hidden="true" class="lineup-slot__opp-logo" width="16" height="16" onerror="${NFL_LOGO_ONERROR}" onload="${NFL_LOGO_ONLOAD}" />
+            <span class="lineup-slot__opp-team">${esc(oppTeam)}</span>
           </div>
           ${player.projection != null ? `<span class="lineup-slot__proj">${player.projection.toFixed(1)}</span>` : ''}
         `;
@@ -1691,11 +1694,21 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
 
   .lineup-slot__opp-logo { width: 16px; height: 16px; }
 
+  /* The matchup reads as one phrase — prefix, crest, team code — at full
+     text strength, matching the player-swap sheet. Rides the gray scale so
+     it is near-white in dark mode and near-black in light. */
   .lineup-slot__opp-prefix {
     font-size: 0.6875rem;
     text-transform: lowercase;
     font-weight: 600;
-    color: var(--color-gray-400, #9ca3af);
+    color: var(--color-gray-900, #111827);
+  }
+
+  .lineup-slot__opp-team {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--color-gray-900, #111827);
+    font-variant-numeric: tabular-nums;
   }
 
   .lineup-slot__opp-prefix + .lineup-slot__opp-logo {
@@ -1830,9 +1843,15 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     flex-shrink: 0;
   }
 
-  .lineup-bench-row__opp-prefix {
+  .lineup-bench-row__opp-prefix,
+  .lineup-bench-row__opp-team {
     font-size: 0.625rem;
-    color: var(--color-gray-400, #9ca3af);
+    color: var(--color-gray-900, #111827);
+  }
+
+  .lineup-bench-row__opp-team {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
   }
 
   .lineup-bench-row--locked { opacity: 0.6; }
