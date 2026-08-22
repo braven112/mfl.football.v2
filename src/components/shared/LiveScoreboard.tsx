@@ -956,7 +956,7 @@ export default function LiveScoreboard(props: LiveScoringPageProps) {
       </div>
 
       {matchups.length === 0 ? (
-        <div className="ls-card"><div className="ls-empty">Scores will appear here when games begin.</div></div>
+        <div className="ls-card static"><div className="ls-empty">Scores will appear here when games begin.</div></div>
       ) : (
         <div className="ls-board" aria-live="polite">
           {/* Doubleheader (2 games): side by side in the faceoff format.

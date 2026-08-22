@@ -28,6 +28,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const css = readFileSync(join(process.cwd(), 'src/styles/live-scoring.css'), 'utf-8');
+const island = readFileSync(join(process.cwd(), 'src/components/shared/LiveScoreboard.tsx'), 'utf-8');
 
 /** Strip comments so a commented-out rule can never satisfy this test. */
 const stripped = css.replace(/\/\*[\s\S]*?\*\//g, '');
@@ -443,5 +444,47 @@ describe('a matchup row keeps its two players level', () => {
     // the stat line lines up under the player, not under his slot label.
     expect(valueOf(phone, '.ls-pstat', 'grid-column')).toBe('2 / -1');
     expect(valueOf(phone, '.ls-prow.right .ls-pstat', 'grid-column')).toBe('1 / -2');
+  });
+});
+
+
+describe('the no-games board fits the phone', () => {
+  // Every scoring card is a <button>, and the UA stylesheet gives buttons
+  // border-box. The empty state is a <div>, which gets content-box — so the
+  // SAME `.ls-card` rule (width: 100% + 1rem padding + a border) overflowed
+  // the page by 34px and put a horizontal scrollbar across the whole phone
+  // viewport, but ONLY in the week with no matchups (owner, 2026-08-22).
+  // Measured: root scrollWidth 404 against a 393px viewport.
+  it('sizes the card shell in border-box, since only some of them are buttons', () => {
+    expect(
+      valueOf(base, '.ls-card', 'box-sizing'),
+      'this repo has no global box-sizing reset; a <div>.ls-card overflows without it',
+    ).toBe('border-box');
+    // And the declaration this is defending against must still be there, or
+    // the guard is guarding nothing.
+    expect(valueOf(base, '.ls-card', 'width')).toBe('100%');
+    expect(valueOf(base, '.ls-card', 'padding')).toBeDefined();
+  });
+
+  it('lets the board track floor collapse on a narrow phone', () => {
+    // `minmax(300px, 1fr)` is a floor grid does NOT clamp to the container, so
+    // a 320px phone scrolled 4px sideways on the board itself.
+    const cols = valueOf(base, '.ls-board', 'grid-template-columns') ?? '';
+    expect(cols).toContain('minmax(min(300px, 100%), 1fr)');
+  });
+
+  it('does not paint a win-probability split bar over the empty card', () => {
+    // `.ls-card::before` is the two-color top border split at the away win
+    // share. With no matchup behind it, it falls back to --wp-split 50% and
+    // renders as a grey/blue bar that reads as a scrollbar, not a border.
+    expect(valueOf(base, '.ls-card.static::before', 'content')).toBe('none');
+    // Non-interactive: it is a <div>, so the button affordances have to go too.
+    expect(valueOf(base, '.ls-card.static', 'cursor')).toBe('default');
+    expect(valueOf(base, '.ls-card.static:hover', 'border-color')).toBe('var(--card-border)');
+    // …and the markup must actually ask for that variant, or the three
+    // declarations above apply to nothing.
+    expect(island, 'the empty state must carry the .static variant').toMatch(
+      /className="ls-card static"/,
+    );
   });
 });
