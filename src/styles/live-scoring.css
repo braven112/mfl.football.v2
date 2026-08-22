@@ -643,23 +643,27 @@ html.dark .ls-headshot.def { box-shadow: none; }
 .ls-bench-row { border-bottom: 1px dashed var(--content-border); }
 .ls-bench-row:last-child { border-bottom: 0; }
 .ls-bench-row > div { min-width: 0; }
+/* Owner direction, Aug 2026: the caption is the only thing saying which bench
+   is whose, so it reads as a team header — display font at the players' own
+   size, not a 0.68rem body-font label that the names below it outweighed. */
 .ls-bench-cap {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.45rem;
   padding: 0.2rem 0.45rem 0.35rem;
-  font-size: 0.68rem;
+  font-size: 1rem;
   font-weight: var(--font-weight-bold);
   color: var(--content-text-muted);
   border-bottom: 1px solid var(--content-border);
 }
 .ls-bench-cap.home { flex-direction: row-reverse; }
-.ls-bench-cap img { width: 16px; height: 16px; object-fit: contain; border-radius: 3px; }
+.ls-bench-cap img { width: 32px; height: 32px; object-fit: contain; border-radius: 3px; }
 .ls-bench-cap span {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-family: var(--font-display);
 }
 .ls-bench-none {
   padding: 0.6rem 0.45rem;
@@ -1021,6 +1025,10 @@ html.dark .ls-headshot.def { box-shadow: none; }
   .ls-bench-head { padding: 0.5rem 0.5rem; gap: 0.35rem; }
   .ls-bench-lbl { font-size: 0.64rem; letter-spacing: 0.04em; }
   .ls-bench-tot b { font-size: 0.85rem; }
-  .ls-bench-cap { font-size: 0.62rem; padding: 0.2rem 0.2rem 0.3rem; }
+  /* Scaled with the desktop caption, but not all the way: two captions share
+     the phone's width, so the crest shrinks and the name stops short of the
+     player names it sits above. */
+  .ls-bench-cap { font-size: 0.78rem; gap: 0.3rem; padding: 0.2rem 0.2rem 0.3rem; }
+  .ls-bench-cap img { width: 24px; height: 24px; }
   .ls-bench-note { font-size: 0.62rem; padding: 0 0.5rem 0.35rem; }
 }
