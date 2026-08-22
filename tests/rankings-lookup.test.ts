@@ -196,6 +196,23 @@ describe('formatFullName', () => {
     const imp = createMockRankingImport({ source: 'yahoo', type: 'adp' });
     expect(formatFullName(imp)).toBe('Yahoo ADP');
   });
+
+  // The 'MFL ADP' label already ends in the type, so appending it again read
+  // as "MFL ADP ADP" in the My Rank editor.
+  it('should not repeat a type the source label already carries', () => {
+    const imp = createMockRankingImport({ source: 'mfl-adp', type: 'adp' });
+    expect(formatFullName(imp)).toBe('MFL ADP');
+  });
+
+  it('should still append a type the source label does not carry', () => {
+    const imp = createMockRankingImport({ source: 'espn-superflex', type: 'redraft' });
+    expect(formatFullName(imp)).toBe('ESPN Superflex Redraft');
+  });
+
+  it('should keep the built-in Sleeper ADP name intact', () => {
+    const imp = createMockRankingImport({ source: 'sleeper-adp', type: 'adp' });
+    expect(formatFullName(imp)).toBe('Sleeper ADP');
+  });
 });
 
 // ---------------------------------------------------------------------------

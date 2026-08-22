@@ -102,19 +102,28 @@ export function formatColumnHeader(imp: StoredRankingImport): string {
   return `${abbrev} ${type}`;
 }
 
+/** Long labels for ranking type, used by {@link formatFullName}. */
+const FULL_TYPE_LABELS: Record<RankingType, string> = {
+  dynasty: 'Dynasty',
+  redraft: 'Redraft',
+  adp: 'ADP',
+  overall: 'Overall',
+};
+
 /**
  * Format a full display name for a ranking import.
  * e.g. "FootballGuys Dynasty", "KeepTradeCut Redraft"
+ *
+ * A source label may already carry the type ('MFL ADP' reads wrong as just
+ * 'MFL' in the standalone spots that print SOURCE_LABELS on its own), so drop
+ * the suffix when it would only repeat the label's last word — otherwise the
+ * My Rank editor lists "MFL ADP ADP".
  */
 export function formatFullName(imp: StoredRankingImport): string {
   const label = SOURCE_LABELS[imp.source] || imp.source;
-  const typeLabel: Record<RankingType, string> = {
-    dynasty: 'Dynasty',
-    redraft: 'Redraft',
-    adp: 'ADP',
-    overall: 'Overall',
-  };
-  return `${label} ${typeLabel[imp.type] || imp.type}`;
+  const type = FULL_TYPE_LABELS[imp.type] || imp.type;
+  if (label.toLowerCase().endsWith(` ${type.toLowerCase()}`)) return label;
+  return `${label} ${type}`;
 }
 
 // ---------------------------------------------------------------------------
