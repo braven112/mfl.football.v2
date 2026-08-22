@@ -129,6 +129,47 @@ hrefs to local copies, and open it in the bundled Chromium — it isolates
 
 ---
 
+## 2026-08-22 - Hoisting Page Frontmatter Into a Function Loses Its Narrowing
+
+**Context:** Sharing the Set Lineup matchup panel between both leagues meant
+lifting ~200 lines of `.astro` frontmatter into a helper (per-game, so a
+double-header week can render a card each) and then into `src/utils/`.
+
+**Insight:** Four things bit, none of them visible until `astro check` ran:
+
+1. **An auth gate does not narrow inside a closure.** The page opens with
+   `const user = getAuthUser(...); if (!user?.franchiseId) return Astro.redirect(...)`,
+   and every top-level line below it reads `user.franchiseId` happily. Move
+   one of those lines into a function and TS drops the narrowing — optional-
+   chained gates are not preserved into closures — so the same expression
+   becomes `'user' is possibly 'null'`. Fix at the gate, not the call site:
+   `const userFranchiseId: string = user.franchiseId;` right after the
+   redirect, then use that everywhere below. Cheaper than a `!` per use and
+   it survives the next extraction.
+2. **A `//` comment is a parse error inside an element's attribute list.**
+   `.astro` templates are JSX-shaped: a line comment between two attributes
+   does not compile. Explanation goes in the frontmatter or above the element.
+3. **`import type { X } from '../components/Foo.astro'` works from a plain
+   `.ts` module.** `astro check` resolves it and the import is erased at
+   build, so a shared util can type against a component's own prop interface
+   instead of restating it and letting the copy drift.
+4. **The scoped CSS has to move with the markup.** A page's `<style>` only
+   reaches tags the page itself emitted, so the moment the markup becomes
+   `<LineupGameStrip />` every page rule for it silently stops matching (the
+   inverse of the `set:html` trap in the head). Move the rules into the
+   component; leave behind only what styles the page's own tags.
+
+**Also worth knowing:** `pnpm astro check` OOMs on this repo before it prints
+its summary. It still emits per-file diagnostics first, so
+`NODE_OPTIONS=--max-old-space-size=12288 npx astro check --minimumSeverity error 2>&1 | grep <yourfile>`
+gets you a usable answer; the crash at the end is not your change.
+
+**Evidence:** `src/utils/lineup-matchup-cards.ts`,
+`src/components/shared/LineupGameStrip.astro`, and the `userFranchiseId`
+const in `src/pages/theleague/lineup.astro`.
+
+---
+
 ## 2026-08-18 - A Helpful Default Must Not Wear the Saved State's Clothes
 
 **Context:** Set Lineup fills the nine starter slots by projection when the

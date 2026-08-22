@@ -56,7 +56,7 @@ const week = Math.max(1, Math.min(22, requestedWeek));
 
 const mflBase = `https://api.myfantasyleague.com/${leagueYear}/export`;
 
-// Parallel data fetches (all 8 run concurrently to avoid waterfall)
+// Parallel data fetches (all 9 run concurrently to avoid waterfall)
 const [rostersRes, projRes, weeklyRes, fpaRes, playersRes, liveOdds, weekResultsRes, nflSchedRes, leagueSchedRes] = await Promise.all([
   // League-wide, not FRANCHISE-scoped: the matchup strip needs the OPPONENT's
   // roster to presume their lineup (and its projected total) on a week MFL
