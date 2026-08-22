@@ -756,7 +756,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     filteredPlayers.sort((a, b) => {
       let aVal, bVal;
       // Dynamic ranking columns — sort key is `ranking_{importId}`. Unranked
-      // players sort to the bottom in either direction's "best first" reading.
+      // players take a sentinel worse than any real rank, so ascending (the
+      // default for these columns) puts the best board positions first and the
+      // unranked last. Descending inverts that literally, unranked first —
+      // same as TheLeague's table, which is the behaviour to match here.
       if (currentSort.startsWith('ranking_')) {
         const map = rankingLookup.byImport.get(currentSort.slice(8));
         aVal = map?.get(a.id) ?? 99999;

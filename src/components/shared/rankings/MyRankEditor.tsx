@@ -16,7 +16,10 @@
  * Anything structural — adding an import, hiding a built-in, reordering the
  * columns — still lives on Import Rankings, which this links to.
  *
- * Mount once per page with `client:idle`; open it by dispatching
+ * Mount once per page with `client:only="react"` — NOT a hydrating directive.
+ * This component returns `null` until it is opened, so Astro SSRs an empty
+ * `<astro-island>` and React 19 then reports #418 on every page load for a root
+ * the server gave nothing. Open it by dispatching
  * `rankings:open-my-rank-editor` on `document`.
  */
 
