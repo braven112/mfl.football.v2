@@ -3,14 +3,6 @@
   "changes": [
     {
       "date": "2026-08-22",
-      "type": "style-tweak",
-      "summary": "Import Rankings ships six built-in sources to every owner, and until now they sat at the top of the Saved Rankings table — so the board you went and imported yourself, the whole reason you opened the page, was stranded underneath a wall of defaults you never asked for. Your own imports now come first, in the Saved Rankings table, in the My Rank weighting panel, and in the ranking columns on Free Agents. The built-ins fall in behind them, your drag order inside each group is untouched, and Hide still gets rid of a built-in entirely if you'd rather build the board from your own work alone.",
-      "impact": "user",
-      "area": "import-rankings",
-      "league": "both"
-    },
-    {
-      "date": "2026-08-22",
       "type": "bug-fix",
       "summary": "Projected Free Agents was ignoring your rankings board. The report had its own private idea of which ranking columns to draw — the first eight it could find — so it showed an Average column nobody asked for and every source you had deliberately unticked in the My Rank editor, eight columns of it running off the right edge of the screen. Free Agents has honored your board for months; this page never got the message. It now uses the same rule: My Rank plus the sources actually feeding it, nothing you turned off, and the table fits on the screen again. On a phone the ranking headers hide along with their numbers instead of hanging around over the wrong columns.",
       "impact": "user",
