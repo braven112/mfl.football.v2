@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
+  findWeekMatchups,
   findWeekResultsEntry,
   extractLineupStarters,
   loadRostersFeedFromDisk,
@@ -737,5 +738,80 @@ describe('drafts do not travel between read states', () => {
       const src = readFileSync(join(process.cwd(), page), 'utf8');
       expect(src.includes('data.lineupFromCache && !confirm('), `${page} cached-submit confirm`).toBe(true);
     }
+  });
+});
+
+describe('a week that schedules more than one game', () => {
+  // TheLeague runs DOUBLE-HEADERS: 2026 weeks 1-3 and 13 list 16 matchups
+  // for 16 franchises, so every team plays twice off ONE submitted lineup.
+  // The Set Lineup page used to stop at the first matchup containing the
+  // owner, which showed one game and silently dropped the other.
+  const doubleHeader = {
+    week: '1',
+    matchup: [
+      { franchise: [{ id: '0003', isHome: '0' }, { id: '0001', isHome: '1' }] },
+      { franchise: [{ id: '0002', isHome: '0' }, { id: '0004', isHome: '1' }] },
+      { franchise: [{ id: '0001', isHome: '0' }, { id: '0016', isHome: '1' }] },
+    ],
+  };
+
+  it('returns every game the franchise plays, in MFL order', () => {
+    expect(findWeekMatchups(doubleHeader, '0001')).toEqual([
+      { opponentFranchiseId: '0003', userIsHome: true },
+      { opponentFranchiseId: '0016', userIsHome: false },
+    ]);
+  });
+
+  it('keeps each game\'s own home/away side', () => {
+    // Both games share one lineup but not one scoreboard: the owner is home
+    // in the first and away in the second, and the panel that wears the
+    // accent (and gets the live total) follows the game, not the week.
+    const [first, second] = findWeekMatchups(doubleHeader, '0001');
+    expect(first.userIsHome).toBe(true);
+    expect(second.userIsHome).toBe(false);
+  });
+
+  it('reads a single-game week as exactly one game', () => {
+    const single = { week: '4', matchup: { franchise: [{ id: '0001', isHome: '1' }, { id: '0009', isHome: '0' }] } };
+    expect(findWeekMatchups(single, '0001')).toEqual([
+      { opponentFranchiseId: '0009', userIsHome: true },
+    ]);
+  });
+
+  it('returns nothing for a franchise MFL did not schedule', () => {
+    // Not an error state — the page already tells that owner there is no
+    // game to set a lineup for.
+    expect(findWeekMatchups(doubleHeader, '0099')).toEqual([]);
+    expect(findWeekMatchups(null, '0001')).toEqual([]);
+    expect(findWeekMatchups({ week: '15' }, '0001')).toEqual([]);
+  });
+
+  it('finds both of the real week 1 games in TheLeague\'s committed schedule', () => {
+    const schedule = JSON.parse(
+      readFileSync(join(process.cwd(), 'data/theleague/mfl-feeds/2026/schedule.json'), 'utf8'),
+    );
+    const weeks = schedule?.schedule?.weeklySchedule ?? [];
+    const week1 = (Array.isArray(weeks) ? weeks : [weeks]).find((w: any) => String(w?.week) === '1');
+    const games = findWeekMatchups(week1, '0001');
+    expect(games.length).toBe(2);
+    expect(new Set(games.map((g) => g.opponentFranchiseId)).size).toBe(2);
+  });
+});
+
+describe('the Set Lineup game strip', () => {
+  const page = 'src/pages/theleague/lineup.astro';
+
+  it('renders a card per scheduled game, not just the first', () => {
+    const src = readFileSync(join(process.cwd(), page), 'utf8');
+    expect(src.includes('findWeekMatchups')).toBe(true);
+    expect(src.includes('matchupCards.map')).toBe(true);
+  });
+
+  it('updates our projected total on every card', () => {
+    // One lineup scores both games of a double-header. Updating only
+    // querySelector's first hit left the second card contradicting the first.
+    const src = readFileSync(join(process.cwd(), page), 'utf8');
+    expect(src.includes("querySelectorAll('.lineup-faceoff__scoreboard')")).toBe(true);
+    expect(src.includes("querySelector('.lineup-faceoff__scoreboard')")).toBe(false);
   });
 });

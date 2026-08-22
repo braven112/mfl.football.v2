@@ -50,3 +50,35 @@ week switch is a full page reload. Three things that bit us (owner report,
   order. Same reasoning as the rosters fallback: absent evidence is not
   evidence of absence.
 
+
+## A week can schedule more than ONE game
+
+TheLeague runs double-header weeks — 2026 weeks 1-3 and 13 list 16 matchups
+for 16 franchises, so every team plays two different opponents (home in one,
+away in the other) off a single submitted lineup. The Set Lineup page's
+matchup panel walked the week's matchups and `break`ed at the first one
+containing the owner, so it drew one game and silently dropped the other:
+half the week they were setting a lineup for was simply not on the page.
+
+- **`findWeekMatchups` (`src/utils/lineup-sources.ts`) is the reader, and it
+  is plural.** Never re-introduce a first-match-wins loop over
+  `weeklySchedule[].matchup`. An empty array is the "MFL didn't schedule this
+  franchise" state `franchiseAppearsIn` already guards — not an error.
+- **Home/away is per GAME, not per week.** Each card resolves its own
+  `userIsHome`, which decides which panel wears the accent and which total is
+  ours. Reusing the first game's side puts the owner on the wrong side of the
+  second scoreboard.
+- **One lineup, every card.** MFL takes one lineup per week and scores it in
+  both games, so our projected total is the same number on every card — the
+  client updates them ALL (`querySelectorAll('.lineup-faceoff__scoreboard')`).
+  Updating only `querySelector`'s first hit left the second game showing a
+  stale total that contradicted the one a swipe away. `tests/lineup-sources.test.ts`
+  pins both the reader and that selector.
+- **Scroll position is the carousel's only state.** The arrows and dots just
+  scroll the track; the dots, the counter, the arrow ends and which
+  scoreboard holds `aria-live` are all re-derived from a scroll listener, so a
+  swipe and an arrow click land in identical states. Only the card in view is
+  a polite live region — two would announce the same new total twice.
+- **A card whose composite can't cast still renders** (band only). Dropping it
+  would hide half of a double-header; the section only disappears when a game
+  has neither a cast faceoff nor a projected total.

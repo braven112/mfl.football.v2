@@ -1,5 +1,27 @@
 [
   {
+    "id": "lineup-double-header-carousel",
+    "date": "2026-08-22",
+    "category": "enhancement",
+    "icon": "chevron-right",
+    "title": "Both Halves of a Double-Header, Finally",
+    "summary": "On a week where you play twice, Set Lineup now shows both games instead of one. Swipe between them on your phone, click the arrows on a laptop — and your projected total moves on both cards as you set the lineup they share.",
+    "description": [
+      "Weeks 1 through 3 and Week 13 are double-headers: two opponents, two results, one lineup. Set Lineup never let on. It found the first game that had your name on it, drew the matchup panel, and stopped — so half of the week you were setting a lineup for simply wasn't on the page. If your second opponent was the one you needed to worry about, the page had nothing to say about them.",
+      "Now there's a card for each game. On a phone they sit side by side and snap under your thumb, with a dot for each and a small “Game 1 of 2” that keeps up as you swipe. On anything with a mouse, arrows sit on the panel and click through the same cards. A normal single-game week looks exactly as it always has — no dots, no arrows, nothing new to learn.",
+      "Each card knows its own game. Home and away follow the schedule, so you're on the right side of each scoreboard, and the projected total facing you is that opponent's, not a number borrowed from the other game. The one number both cards share is yours: MFL takes one lineup for the week and scores it twice, so every swap you make ticks your total on both cards at once. Watching one go up while the other sat there stale would have been its own kind of lie.",
+      "Two opponents also means two players of the game — each card casts its own faceoff, so a double-header week now looks like the two separate fights it actually is."
+    ],
+    "image": "lineup-game-carousel.webp",
+    "imageAlt": "The Set Lineup page for Week 1 showing a matchup card between Maverick and Pacific Pigskins with a player from each side, projected totals of 82.2 and 93.2, click arrows on the left and right of the panel, and a “Game 1 of 2” label with two dots below it.",
+    "link": "/theleague/lineup",
+    "linkLabel": "Set your lineup",
+    "excludeFromHero": true,
+    "leagues": [
+      "theleague"
+    ]
+  },
+  {
     "id": "rankings-on-the-decision-pages",
     "date": "2026-08-21",
     "category": "enhancement",
@@ -856,27 +878,6 @@
     "leagues": [
       "theleague",
       "afl"
-    ]
-  },
-  {
-    "id": "august-cutdown-plan",
-    "date": "2026-07-19",
-    "title": "Cutdown Day Runs Itself Now",
-    "summary": "Mark your August cuts from the player menu, let the new Cutdown Plan panel do the cap math, and sleep through the deadline — the automation executes your exact list at 8:45 PM PT so nobody has to set an alarm for roster panic.",
-    "description": [
-      "Every August it's the same movie: the roster limit says 22, your roster says 25, and somewhere around 8:40 PM on deadline Sunday you're squinting at salaries on your phone trying to remember who you promised yourself you'd cut back in June. This year the movie has a different ending. Open the ⋯ menu next to any player on your roster and there's a new option — <strong>Mark for August auto-cut</strong> — and just like that, cutdown day stops being an appointment and starts being a decision you already made.",
-      "The brains live on the Rosters page in the new <strong>Cutdown Plan</strong> panel, which shows you exactly what deadline night will do to your roster — not roughly, exactly. Your marked players line up first, in your order, and if you're still over the limit the panel fills the rest with your most recent waiver and free-agent pickups, each row showing salary, dead cap, and net savings, with the total cap damage tallied underneath. Roster rows wear honest badges — <strong>AUTO-CUT</strong> for players inside the cut line, <strong>MARKED</strong> for insurance picks below it — and every number comes from the same math the deadline job runs, so the preview can't lie to you. Hit <strong>Save cut list</strong>, confirm your MFL login once, and the panel stamps your plan credentials-verified. Feeling decisive? <strong>Cut marked players now</strong> does it on the spot instead.",
-      "And if you do absolutely nothing? The automation still has you covered at the deadline — last players in are the first ones out, with one civilized exception: players you traded for don't count as \"just added,\" so nobody's prized deadline-week acquisition gets swept out with the waiver-wire flotsam. Save a list, cut now, or let the machine sort it out — three ways to make the deadline, zero of them involving an 8:44 PM heart rate spike. The Cut Watch countdown on the homepage will still try to scare you. Now you can smile back at it."
-    ],
-    "category": "new-feature",
-    "link": "/theleague/rosters",
-    "linkLabel": "Open your Cutdown Plan",
-    "icon": "user-times",
-    "image": "august-cutdown-plan.webp",
-    "imageAlt": "The Cutdown Plan panel on the Rosters page showing three auto-selected cuts in execution order, each with salary, dead cap, and net savings, plus the Save cut list and Cut marked players now buttons",
-    "excludeFromHero": true,
-    "leagues": [
-      "theleague"
     ]
   }
 ]

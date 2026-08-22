@@ -476,3 +476,38 @@ export function resolvePlayerName(
 ): string {
   return identity?.name || livePlayer?.name || `Player ${mflId}`;
 }
+
+/** One scheduled game for a franchise in a given week. */
+export interface WeekMatchup {
+  /** The other side's franchise id. */
+  opponentFranchiseId: string;
+  /** Whether OUR franchise is the home side (MFL's `isHome === '1'`). */
+  userIsHome: boolean;
+}
+
+/**
+ * Every game a franchise plays in one week's schedule entry, in MFL's order.
+ *
+ * Plural on purpose: TheLeague runs DOUBLE-HEADER weeks (2026 weeks 1-3 and
+ * 13 list 16 matchups for 16 teams — every franchise plays twice, against two
+ * different opponents, home in one and away in the other). Code that stopped
+ * at the first matchup containing the franchise showed one of those games and
+ * silently dropped the other, so an owner setting a lineup saw half the week
+ * they were setting it for.
+ *
+ * A franchise MFL doesn't schedule that week yields `[]` — the same "not
+ * listed" state `franchiseAppearsIn` guards, not an error.
+ */
+export function findWeekMatchups(weekEntry: any, franchiseId: string): WeekMatchup[] {
+  if (!weekEntry || !franchiseId) return [];
+  const games: WeekMatchup[] = [];
+  for (const m of asArray<any>(weekEntry?.matchup)) {
+    const sides = asArray<any>(m?.franchise);
+    const mine = sides.find((f: any) => f?.id === franchiseId);
+    if (!mine) continue;
+    const theirs = sides.find((f: any) => f?.id && f.id !== franchiseId);
+    if (!theirs) continue;
+    games.push({ opponentFranchiseId: theirs.id, userIsHome: mine.isHome === '1' });
+  }
+  return games;
+}
