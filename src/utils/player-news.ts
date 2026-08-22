@@ -17,6 +17,9 @@
  * the only part that can be verified locally — keep it pure and fixture-tested.
  */
 
+import { getCurrentSeasonYear } from './league-year';
+import { isSeasonWindowOpen } from './pecking-order-season-window.mjs';
+
 /** One normalized article. `link` is null when ESPN's href failed validation. */
 export interface PlayerNewsItem {
   id: string;
@@ -44,6 +47,13 @@ export interface PlayerNewsResult {
   reason?: PlayerNewsFailure;
   /** Which upstream produced the articles — surfaced for diagnosis. */
   source?: 'athlete-news' | 'athlete-overview';
+  /**
+   * The recency window these items were filtered to, in days. Sent to the
+   * browser so the empty state can name it ("no news in the last 30 days")
+   * without the client re-deriving the season clock — the client must not own
+   * a second copy of that math, or the two answers drift at every rollover.
+   */
+  windowDays?: number;
 }
 
 export const ESPN_ATHLETE_NEWS_BASE =
@@ -232,6 +242,64 @@ export function clampLimit(raw: unknown): number {
 }
 
 /**
+ * How far back player news may reach, in days.
+ *
+ * Two windows because the same story ages at two different rates. During the
+ * season a three-week-old note is already stale — the depth chart moved twice
+ * since — so the modal shows a month. In the offseason ESPN publishes almost
+ * nothing about most athletes, and a month-old signing is still the freshest
+ * true thing about that player, so the window opens to three months rather
+ * than reporting "no news" for two-thirds of the league all summer.
+ */
+export const PLAYER_NEWS_WINDOW_DAYS_IN_SEASON = 30;
+export const PLAYER_NEWS_WINDOW_DAYS_OFFSEASON = 90;
+
+/**
+ * Which window applies right now.
+ *
+ * "In season" is the season actually being PLAYED, via isSeasonWindowOpen —
+ * not "the feeds have a completed week", which CLAUDE.md documents as the
+ * non-guard it is: `getCurrentSeasonYear()` runs on the Labor Day clock, so
+ * from February to Labor Day it resolves to a season that finished months ago
+ * and every completeness check answers yes. Composing the two is what makes
+ * Feb-to-Labor-Day read as offseason (last season, long over) and the Labor
+ * Day-to-kickoff gap read as offseason too (this season, not started).
+ */
+export function playerNewsWindowDays(now: Date = new Date()): number {
+  return isSeasonWindowOpen(getCurrentSeasonYear(now), now)
+    ? PLAYER_NEWS_WINDOW_DAYS_IN_SEASON
+    : PLAYER_NEWS_WINDOW_DAYS_OFFSEASON;
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Drop articles older than `windowDays`. PURE — never throws, never fetches.
+ *
+ * An UNDATED article is dropped too. It cannot be shown to be inside a window
+ * whose whole point is recency, and the alternative is worse than it looks:
+ * `parseEspnAthleteNews` sorts undated items last, so they only ever surface
+ * once the dated ones run out — which is exactly the player whose real news is
+ * two years old. Keeping them would reinstate the stale item this filter
+ * exists to remove, under a headline with no date to give it away.
+ *
+ * A future-dated article is KEPT: clock skew between ESPN and us is real, and
+ * "too new" is never the staleness complaint.
+ */
+export function filterRecentNews(
+  items: PlayerNewsItem[],
+  windowDays: number,
+  now: Date = new Date(),
+): PlayerNewsItem[] {
+  const cutoff = now.getTime() - windowDays * DAY_MS;
+  return items.filter((item) => {
+    if (!item.published) return false;
+    const at = new Date(item.published).getTime();
+    return Number.isFinite(at) && at >= cutoff;
+  });
+}
+
+/**
  * Fetch and normalize one athlete's news.
  *
  * Returns a typed result rather than throwing — and deliberately distinguishes
@@ -243,9 +311,11 @@ export function clampLimit(raw: unknown): number {
 export async function fetchAthleteNews(
   espnId: string,
   limit: number = PLAYER_NEWS_DEFAULT_LIMIT,
+  now: Date = new Date(),
 ): Promise<PlayerNewsResult> {
   const fetchedAt = new Date().toISOString();
   const url = buildAthleteNewsUrl(espnId);
+  const windowDays = playerNewsWindowDays(now);
 
   const fail = (reason: PlayerNewsFailure): PlayerNewsResult => ({
     espnId: String(espnId),
@@ -253,11 +323,23 @@ export async function fetchAthleteNews(
     items: [],
     fetchedAt,
     reason,
+    windowDays,
   });
 
   if (!url) return fail('upstream-shape');
 
-  let response: Response;
+  // Read source 1, but do NOT return early on ANY of its failures. In
+  // production it is the vestigial endpoint — always an empty array — while the
+  // overview is the real provider, so letting a 404/5xx/timeout here
+  // short-circuit would blank the feature behind a Retry that could never
+  // succeed. That applied to the status check below from the start; the fetch
+  // rejection right underneath still returned early and quietly exempted itself,
+  // which meant a slow or unroutable site.api.espn.com blanked news for every
+  // player while the overview sat there healthy.
+  let sourceOneFailure: PlayerNewsFailure | null = null;
+  let items: PlayerNewsItem[] = [];
+
+  let response: Response | null = null;
   try {
     response = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
   } catch (error) {
@@ -265,17 +347,13 @@ export async function fetchAthleteNews(
     // rejects with AbortError. Neither is "ESPN is broken", but only the timeout
     // is ours to report — an AbortError means the caller moved on already.
     const name = (error as { name?: string } | null)?.name;
-    return fail(name === 'TimeoutError' ? 'upstream-timeout' : 'upstream-network');
+    sourceOneFailure = name === 'TimeoutError' ? 'upstream-timeout' : 'upstream-network';
   }
 
-  // Read source 1, but do NOT return early on its failure. In production it is
-  // the vestigial endpoint — always an empty array — while the overview is the
-  // real provider, so letting a 404/5xx here short-circuit would blank the
-  // feature behind a Retry that could never succeed.
-  let sourceOneFailure: PlayerNewsFailure | null = null;
-  let items: PlayerNewsItem[] = [];
-
-  if (!response.ok) {
+  if (!response) {
+    // Rejected above; nothing to read here. The overview is asked anyway, and
+    // whether this failure ends up terminal is decided at the bottom.
+  } else if (!response.ok) {
     sourceOneFailure = 'upstream-status';
   } else {
     let payload: unknown;
@@ -309,30 +387,56 @@ export async function fetchAthleteNews(
           );
           sourceOneFailure = 'upstream-shape';
         }
+
+        // Recency filter runs AFTER that check, never before. Filtering first
+        // would let a source that answered perfectly — three readable articles,
+        // all older than the window — trip the "none renderable" heuristic and
+        // render as a retryable "Couldn't reach ESPN". Stale is `empty`, and
+        // `empty` is the honest word for it.
+        items = filterRecentNews(items, windowDays, now);
       }
     }
   }
 
   if (items.length) {
-    return { espnId: String(espnId), status: 'ok', items, fetchedAt, source: 'athlete-news' };
+    return {
+      espnId: String(espnId), status: 'ok', items, fetchedAt, source: 'athlete-news', windowDays,
+    };
   }
 
   // Source 1 gave us nothing usable — whether honestly empty or unreadable.
   // Either way the overview is worth asking before telling the owner there is
   // no news: an empty first source is not proof of absence.
-  const overview = await fetchOverviewNews(espnId, limit);
+  const overview = await fetchOverviewNews(espnId, limit, windowDays, now);
   if (overview.items.length) {
     return {
-      espnId: String(espnId), status: 'ok', items: overview.items, fetchedAt, source: 'athlete-overview',
+      espnId: String(espnId), status: 'ok', items: overview.items, fetchedAt,
+      source: 'athlete-overview', windowDays,
     };
   }
 
-  // Only now is a failure terminal. If EITHER source failed to read we say so;
-  // 'empty' is reserved for both sources answering cleanly with nothing.
-  const failure = sourceOneFailure ?? overview.failure;
-  if (failure) return fail(failure);
+  // Only now is a failure terminal — and WHICH failure matters, because the two
+  // kinds of source-1 failure mean different things.
+  //
+  // A source-1 SHAPE failure still vetoes everything. It means ESPN answered
+  // and we did not understand the answer, so there may be articles we are
+  // failing to read; rendering that as "no news" would put a confident,
+  // CDN-cached lie on every player in the league at once. That is the whole
+  // point of the empty/error split.
+  //
+  // A source-1 TRANSPORT failure (403, 5xx, timeout) does not. Source 1 is the
+  // vestigial endpoint — it answers 200 with an empty array for every athlete
+  // in production — so its clean read carries no information about whether
+  // news exists, and its unreachability carries exactly as little. Letting it
+  // veto made the empty state unreachable the moment it went down: the
+  // overview would read cleanly, its articles would all fall outside the
+  // recency window, and a quiet player rendered as "Couldn't reach ESPN"
+  // behind a Retry that could never change the answer. Reproduced against the
+  // live endpoints on 2026-08-22, where source 1 403s and the overview is fine.
+  if (sourceOneFailure === 'upstream-shape') return fail(sourceOneFailure);
+  if (overview.failure) return fail(overview.failure);
 
-  return { espnId: String(espnId), status: 'empty', items: [], fetchedAt };
+  return { espnId: String(espnId), status: 'empty', items: [], fetchedAt, windowDays };
 }
 
 /**
@@ -345,6 +449,8 @@ export async function fetchAthleteNews(
 async function fetchOverviewNews(
   espnId: string,
   limit: number,
+  windowDays: number,
+  now: Date,
 ): Promise<{ items: PlayerNewsItem[]; failure: PlayerNewsFailure | null }> {
   const url = buildAthleteOverviewUrl(espnId);
   if (!url) return { items: [], failure: 'upstream-shape' };
@@ -373,7 +479,8 @@ async function fetchOverviewNews(
       );
       return { items: [], failure: 'upstream-shape' };
     }
-    return { items, failure: null };
+    // Same ordering rule as source 1: validate the shape first, then age out.
+    return { items: filterRecentNews(items, windowDays, now), failure: null };
   } catch (error) {
     const name = (error as { name?: string } | null)?.name;
     console.warn(`[player-news] overview fetch failed for ${espnId}:`, error);

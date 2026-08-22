@@ -1,11 +1,12 @@
 import type { APIRoute } from 'astro';
 import { checkRateLimit } from '../../utils/rate-limit';
 import { getPlayer, getGlobalPlayerMap } from '../../utils/player-map';
-import { getCurrentLeagueYear } from '../../utils/league-year';
+import { getCurrentLeagueYear, getTestDateFromSearchParams } from '../../utils/league-year';
 import {
   fetchAthleteNews,
   isValidEspnId,
   clampLimit,
+  playerNewsWindowDays,
   type PlayerNewsResult,
 } from '../../utils/player-news';
 
@@ -74,6 +75,19 @@ function resolveNflEspnId(mflId: string): string | null {
 export const GET: APIRoute = async ({ request, url }) => {
   const mflId = url.searchParams.get('mflId') ?? '';
 
+  // `?testDate=YYYY-MM-DD` moves the clock that picks the recency window, the
+  // way every other date-dependent surface here is exercised.
+  const testClock = getTestDateFromSearchParams(url.searchParams);
+  const now = testClock ?? new Date();
+
+  // A test-clock response is never cacheable. Each testDate is a distinct URL
+  // so it could not poison the real entry, but it is still worth refusing:
+  // every minted date would otherwise become its own CDN variant, and the
+  // param exists FOR debugging — where a five-minute-old copy served back to
+  // your own probe is exactly the trap `docs/claude/insights/features/
+  // player-news.md` already records against s-maxage on this route.
+  const okCache = testClock ? CACHE_NEVER : CACHE_OK;
+
   // Two ways in. `mflId` is the normal path. A direct `espnId` is for the team
   // DEF stand-in, whose id comes from def-spotlight-players (ESPN's own roster
   // scrape) and is therefore known-NFL without a feed lookup.
@@ -88,10 +102,15 @@ export const GET: APIRoute = async ({ request, url }) => {
     // A known player with no ESPN id is not an error — there is simply nothing
     // to ask about (every team DEF, and a handful of kickers).
     if (mflId && /^\d{1,12}$/.test(mflId)) {
+      // No windowDays here, deliberately. This branch never contacts ESPN, so
+      // "nothing in the last 90 days" would be a specific claim about a search
+      // that did not happen. Omitting it drops the client to the wording that
+      // makes no such claim — windowDays means "this window was actually
+      // applied", and nothing else may set it.
       return json(
         { espnId: null, status: 'empty', items: [], fetchedAt: new Date().toISOString() },
         200,
-        CACHE_OK,
+        okCache,
       );
     }
     return json({ error: 'invalid player id' }, 400, CACHE_NEVER);
@@ -106,13 +125,20 @@ export const GET: APIRoute = async ({ request, url }) => {
 
   let result: PlayerNewsResult;
   try {
-    result = await fetchAthleteNews(espnId, limit);
+    result = await fetchAthleteNews(espnId, limit, now);
   } catch (error) {
     // fetchAthleteNews is written not to throw; this is belt-and-braces so an
     // unexpected throw still degrades to a typed error rather than a 500 page.
     console.error('[player-news] unexpected failure:', error);
     return json(
-      { espnId, status: 'error', items: [], fetchedAt: new Date().toISOString(), reason: 'upstream-network' },
+      {
+        espnId,
+        status: 'error',
+        items: [],
+        fetchedAt: new Date().toISOString(),
+        reason: 'upstream-network',
+        windowDays: playerNewsWindowDays(now),
+      },
       200,
       CACHE_NEVER,
     );
@@ -120,5 +146,5 @@ export const GET: APIRoute = async ({ request, url }) => {
 
   // `error` rides a 200 so the client renders its retryable error state rather
   // than a fetch rejection — but it is explicitly uncacheable.
-  return json(result, 200, result.status === 'error' ? CACHE_NEVER : CACHE_OK);
+  return json(result, 200, result.status === 'error' ? CACHE_NEVER : okCache);
 };

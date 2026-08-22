@@ -12,6 +12,14 @@
     {
       "date": "2026-08-22",
       "type": "bug-fix",
+      "summary": "Player news in the player pop-up had no expiration date. Open a quiet backup and ESPN would happily hand back three stories from a season and a half ago — a training-camp battle he lost in 2024, presented with the same confidence as this morning's injury report. News now ages out: one month during the season, when a three-week-old note is already two depth charts behind, and three months in the offseason, when a June signing really is the freshest true thing about a player. And when there's genuinely nothing to show, the section stops holding open a tall empty box under the heading — it collapses to a single line telling you nothing turned up in the last 30 (or 90) days, so you know the search happened and came back empty instead of wondering whether it ran at all.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "both"
+    },
+    {
+      "date": "2026-08-22",
+      "type": "bug-fix",
       "summary": "Projected Free Agents was ignoring your rankings board. The report had its own private idea of which ranking columns to draw — the first eight it could find — so it showed an Average column nobody asked for and every source you had deliberately unticked in the My Rank editor, eight columns of it running off the right edge of the screen. Free Agents has honored your board for months; this page never got the message. It now uses the same rule: My Rank plus the sources actually feeding it, nothing you turned off, and the table fits on the screen again. On a phone the ranking headers hide along with their numbers instead of hanging around over the wrong columns.",
       "impact": "user",
       "area": "rankings",

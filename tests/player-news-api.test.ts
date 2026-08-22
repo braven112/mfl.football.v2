@@ -104,12 +104,12 @@ describe('GET /api/player-news', () => {
 
   it('clamps an oversized limit before calling upstream', async () => {
     await call('?espnId=3139477&limit=999');
-    expect(fetchAthleteNews).toHaveBeenCalledWith('3139477', PLAYER_NEWS_MAX_LIMIT);
+    expect(fetchAthleteNews).toHaveBeenCalledWith('3139477', PLAYER_NEWS_MAX_LIMIT, expect.any(Date));
   });
 
   it('falls back to the default limit for junk', async () => {
     await call('?espnId=3139477&limit=abc');
-    expect(fetchAthleteNews).toHaveBeenCalledWith('3139477', PLAYER_NEWS_DEFAULT_LIMIT);
+    expect(fetchAthleteNews).toHaveBeenCalledWith('3139477', PLAYER_NEWS_DEFAULT_LIMIT, expect.any(Date));
   });
 
   it('returns an uncacheable 429 when rate limited, without calling upstream', async () => {
@@ -138,7 +138,7 @@ describe('GET /api/player-news — mflId resolution', () => {
   it('resolves an MFL id to the feed\'s NFL espn_id and fetches that', async () => {
     getPlayer.mockReturnValue({ nflEspnId: '4362628' });
     await call('?mflId=13116');
-    expect(fetchAthleteNews).toHaveBeenCalledWith('4362628', PLAYER_NEWS_DEFAULT_LIMIT);
+    expect(fetchAthleteNews).toHaveBeenCalledWith('4362628', PLAYER_NEWS_DEFAULT_LIMIT, expect.any(Date));
   });
 
   it('never uses a college id — a player with no NFL espn_id resolves to empty, not to some other athlete', async () => {
@@ -158,7 +158,7 @@ describe('GET /api/player-news — mflId resolution', () => {
     getPlayer.mockReturnValue(undefined);
     getGlobalPlayerMap.mockReturnValue(new Map([['9999', { nflEspnId: '1257' }]]));
     await call('?mflId=9999');
-    expect(fetchAthleteNews).toHaveBeenCalledWith('1257', PLAYER_NEWS_DEFAULT_LIMIT);
+    expect(fetchAthleteNews).toHaveBeenCalledWith('1257', PLAYER_NEWS_DEFAULT_LIMIT, expect.any(Date));
   });
 
   it('treats a known player with no ESPN id as empty (cacheable), not as a 400', async () => {
@@ -179,6 +179,56 @@ describe('GET /api/player-news — mflId resolution', () => {
 
   it('still accepts a direct espnId for the DEF stand-in', async () => {
     await call('?espnId=3127287');
-    expect(fetchAthleteNews).toHaveBeenCalledWith('3127287', PLAYER_NEWS_DEFAULT_LIMIT);
+    expect(fetchAthleteNews).toHaveBeenCalledWith('3127287', PLAYER_NEWS_DEFAULT_LIMIT, expect.any(Date));
+  });
+});
+
+describe('GET /api/player-news — recency window', () => {
+  it('claims NO window on a player it never asked ESPN about', async () => {
+    // windowDays means "this window was actually applied". This branch never
+    // contacts ESPN at all (every team DEF, a handful of kickers), so naming a
+    // window would put "nothing in the last 30 days" under a search that never
+    // ran — and the client builds its note straight from this field.
+    getPlayer.mockReturnValue(undefined);
+    getGlobalPlayerMap.mockReturnValue(new Map());
+    const res = await call('?mflId=13593&testDate=2026-11-01');
+    const body = await res.json();
+    expect(body.status).toBe('empty');
+    expect(body.windowDays).toBeUndefined();
+    expect(fetchAthleteNews).not.toHaveBeenCalled();
+  });
+
+  it('honors ?testDate= so the window is verifiable without moving the clock', async () => {
+    await call('?espnId=3139477&testDate=2026-11-01');
+    const passed = fetchAthleteNews.mock.calls[0][2] as Date;
+    expect(passed.getFullYear()).toBe(2026);
+    expect(passed.getMonth()).toBe(10);
+  });
+
+  it('passes the real clock through when no testDate is given', async () => {
+    await call('?espnId=3139477');
+    const passed = fetchAthleteNews.mock.calls[0][2] as Date;
+    expect(Math.abs(passed.getTime() - Date.now())).toBeLessThan(5000);
+  });
+
+  it('NEVER lets the CDN hold a test-clock response', async () => {
+    // Two reasons, and the second is the one that bites: every minted date
+    // would become its own CDN variant, and the param exists for debugging —
+    // where a five-minute-old copy served back to your own probe is the exact
+    // trap this route's insight file already records.
+    const res = await call('?espnId=3139477&testDate=2026-11-01');
+    expect(res.headers.get('Cache-Control')).toBe('no-store');
+  });
+
+  it('still caches the real-clock response', async () => {
+    const res = await call('?espnId=3139477');
+    expect(res.headers.get('Cache-Control')).toBe(CACHE_OK);
+  });
+
+  it('does not cache a test-clock no-ESPN-id response either', async () => {
+    getPlayer.mockReturnValue(undefined);
+    getGlobalPlayerMap.mockReturnValue(new Map());
+    const res = await call('?mflId=13593&testDate=2026-11-01');
+    expect(res.headers.get('Cache-Control')).toBe('no-store');
   });
 });

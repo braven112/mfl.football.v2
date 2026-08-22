@@ -84,8 +84,30 @@ export function resolveNewsSubject(
 export type PlayerNewsState =
   | { kind: 'loading' }
   | { kind: 'ok'; items: PlayerNewsItem[] }
-  | { kind: 'empty' }
+  /** `windowDays` is the recency window the server applied, so the note can
+   *  name it. Absent when we never reached the server (no id to ask about). */
+  | { kind: 'empty'; windowDays?: number }
   | { kind: 'error' };
+
+/**
+ * The one-line note shown when there is nothing to list.
+ *
+ * It names the window on purpose. "No recent ESPN stories" invites the owner to
+ * conclude the feature is broken for a player who genuinely has had no news
+ * since minicamp; "in the last 90 days" says what was searched, so a quiet
+ * player reads as quiet rather than as a bug. The window comes from the
+ * response — the browser never re-derives the season clock, because two copies
+ * of that math disagree at exactly the rollovers nobody is watching.
+ */
+export function playerNewsEmptyMessage(
+  windowDays: number | undefined,
+  subjectName?: string,
+): string {
+  const who = subjectName ? ` for ${subjectName}` : '';
+  return typeof windowDays === 'number' && Number.isFinite(windowDays)
+    ? `No ESPN stories${who} in the last ${windowDays} days.`
+    : `No recent ESPN stories${who}.`;
+}
 
 const CACHE_TTL_MS = 5 * 60_000;
 
@@ -167,15 +189,25 @@ export function loadPlayerNews(
     signal: controller.signal,
   })
     .then((res) => (res.ok ? res.json() : Promise.reject(new Error(String(res.status)))))
-    .then((body: { status?: string; items?: PlayerNewsItem[] }) => {
+    .then((body: { status?: string; items?: PlayerNewsItem[]; windowDays?: number }) => {
       if (token !== generation) return;
 
       const items = Array.isArray(body?.items) ? body.items : [];
+      // Normalized HERE, at the wire boundary, so no malformed number can enter
+      // the state or the cache. `typeof === 'number'` alone admits NaN and
+      // Infinity; playerNewsEmptyMessage guards against both, but a value that
+      // is wrong should be dropped where it arrives rather than at each of the
+      // places that later has to remember to re-check it.
+      const rawWindow = body?.windowDays;
+      const windowDays =
+        typeof rawWindow === 'number' && Number.isFinite(rawWindow) && rawWindow > 0
+          ? rawWindow
+          : undefined;
       const state: PlayerNewsState =
         body?.status === 'ok' && items.length
           ? { kind: 'ok', items }
           : body?.status === 'empty'
-            ? { kind: 'empty' }
+            ? { kind: 'empty', windowDays }
             : { kind: 'error' };
 
       writeCache(cacheKey, state);

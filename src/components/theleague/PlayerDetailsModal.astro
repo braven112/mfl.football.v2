@@ -713,6 +713,7 @@ const { class: className, hideContract = false } = Astro.props;
     renderPlayerNewsList,
     renderPlayerNewsSkeleton,
     resolveNewsSubject,
+    playerNewsEmptyMessage,
     type PlayerNewsState,
   } from '../../utils/player-news-client';
 
@@ -854,8 +855,13 @@ const { class: className, hideContract = false } = Astro.props;
       }
 
       if (state.kind === 'empty') {
-        showStatus(`No recent ESPN stories${newsSubjectName ? ` for ${newsSubjectName}` : ''}.`);
-        announce('No recent stories.');
+        const message = playerNewsEmptyMessage(state.windowDays, newsSubjectName);
+        showStatus(message);
+        // Collapsed: `--empty` drops the skeleton's height reservation, so a
+        // player with nothing to report costs one line here rather than a tall
+        // blank box shoving the weekly results down the modal.
+        newsStatus.className = 'pn-status pn-status--message pn-status--empty';
+        announce(message);
         if (hadFocus) { newsStatus.tabIndex = -1; newsStatus.focus(); }
         return;
       }
