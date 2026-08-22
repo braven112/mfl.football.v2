@@ -13,9 +13,23 @@ import {
   syncBuiltinImports,
   setBuiltinHidden,
   setCompositeWeight,
+  reorderImports,
+  initFromServer,
+  getHiddenBuiltinImports,
   _clearCache,
 } from '../src/utils/rankings-storage';
 import type { StoredRankingImport } from '../src/types/rankings-import';
+
+// The server layer is the one thing these tests can't exercise for real. Only
+// initFromServer's merge branches need it, and they need to control what the
+// server "returns".
+const loadFromServerMock = vi.fn();
+const saveToServerMock = vi.fn();
+vi.mock('../src/utils/rankings-sync', () => ({
+  loadFromServer: () => loadFromServerMock(),
+  saveToServer: (payload: unknown) => saveToServerMock(payload),
+  getLocalCache: () => null,
+}));
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -637,4 +651,123 @@ describe('rankings-storage', () => {
       expect(members.reduce((s, m) => s + m.weight, 0)).toBe(100);
     });
   });
+
+  describe("the owner's own imports sort above the built-ins", () => {
+    // Six built-in sources ship with every league. Listing them first buried
+    // the board the owner actually imported — on the Saved Rankings table
+    // (where weights are chosen), in the My Rank editor, and in the Free
+    // Agents columns, all of which read this one array's order.
+    const snapshot = {
+      generatedAt: '2026-08-21T00:00:00.000Z',
+      sources: [
+        { id: 'mfl-adp', label: 'MFL ADP', type: 'adp', players: [{ id: 'p1', rank: 1 }] },
+        { id: 'sharks', label: 'Sharks', type: 'redraft', players: [{ id: 'p1', rank: 1 }] },
+      ],
+    };
+
+    const idsInOrder = () => getAllImports().map((i) => i.id);
+
+    it('puts a user import ahead of the provided sources after a sync', () => {
+      saveImport(createMockImport({ id: 'user-1', source: 'fantasypros', type: 'dynasty' }));
+      syncBuiltinImports(snapshot as never, ['mfl-adp', 'sharks']);
+
+      expect(idsInOrder()).toEqual(['user-1', 'builtin:mfl-adp', 'builtin:sharks']);
+    });
+
+    it('puts an import saved after the sync ahead of the provided sources', () => {
+      syncBuiltinImports(snapshot as never, ['mfl-adp', 'sharks']);
+      saveImport(createMockImport({ id: 'user-1', source: 'fantasypros', type: 'dynasty' }));
+
+      expect(idsInOrder()).toEqual(['user-1', 'builtin:mfl-adp', 'builtin:sharks']);
+    });
+
+    it('holds for a store written before the rule existed', () => {
+      // Read-time invariant: a legacy array with the built-ins first still
+      // renders the owner's import on top.
+      const legacy = [
+        { ...createMockImport({ id: 'builtin:mfl-adp', source: 'mfl-adp', type: 'adp' }), provided: true },
+        { ...createMockImport({ id: 'user-1', source: 'fantasypros', type: 'dynasty' }) },
+      ];
+      localStorageMock.setItem('rankings.imports', JSON.stringify(legacy));
+      _clearCache();
+
+      expect(idsInOrder()).toEqual(['user-1', 'builtin:mfl-adp']);
+    });
+
+    it('keeps the owner\'s drag order within their own imports', () => {
+      saveImport(createMockImport({ id: 'user-1', source: 'fantasypros', type: 'dynasty' }));
+      saveImport(createMockImport({ id: 'user-2', source: 'cbs', type: 'redraft' }));
+      syncBuiltinImports(snapshot as never, []);
+
+      reorderImports(['user-2', 'user-1', 'builtin:mfl-adp', 'builtin:sharks']);
+
+      expect(idsInOrder()).toEqual(['user-2', 'user-1', 'builtin:mfl-adp', 'builtin:sharks']);
+    });
+
+    it('snaps a built-in back below the imports if one is dragged above them', () => {
+      saveImport(createMockImport({ id: 'user-1', source: 'fantasypros', type: 'dynasty' }));
+      syncBuiltinImports(snapshot as never, []);
+
+      reorderImports(['builtin:sharks', 'user-1', 'builtin:mfl-adp']);
+
+      expect(idsInOrder()).toEqual(['user-1', 'builtin:sharks', 'builtin:mfl-adp']);
+    });
+  });
+
+
+  describe('initFromServer keeps hidden built-ins in raw storage', () => {
+    // Both merge branches used to rebuild the array from getAllImports(),
+    // which has ALREADY dropped the hidden built-ins — so adopting server data
+    // erased them from storage. The "Show X" bar vanished (Hide read as
+    // one-way) and the next reconciliation saw them as new, re-seeding them
+    // into the composite the owner had just removed them from.
+    const snapshot = {
+      generatedAt: '2026-08-21T00:00:00.000Z',
+      sources: [
+        { id: 'mfl-adp', label: 'MFL ADP', type: 'adp', players: [{ id: 'p1', rank: 1 }] },
+        { id: 'sharks', label: 'Sharks', type: 'redraft', players: [{ id: 'p1', rank: 1 }] },
+      ],
+    };
+
+    beforeEach(() => {
+      loadFromServerMock.mockReset();
+      saveToServerMock.mockReset();
+    });
+
+    it('survives adopting the server payload onto a device with no imports', async () => {
+      syncBuiltinImports(snapshot as never, ['mfl-adp', 'sharks']);
+      setBuiltinHidden('builtin:sharks', true);
+
+      loadFromServerMock.mockResolvedValue({
+        imports: [createMockImport({ id: 'server-1', source: 'fantasypros', type: 'dynasty' })],
+        compositeConfig: null,
+        averagePosition: 0,
+        lastModified: '2026-08-21T00:00:00.000Z',
+      });
+
+      await initFromServer();
+
+      expect(getHiddenBuiltinImports().map((i) => i.id)).toEqual(['builtin:sharks']);
+      expect(getAllImports().map((i) => i.id)).toEqual(['server-1', 'builtin:mfl-adp']);
+    });
+
+    it('survives a merge of local and server imports', async () => {
+      syncBuiltinImports(snapshot as never, ['mfl-adp', 'sharks']);
+      setBuiltinHidden('builtin:sharks', true);
+      saveImport(createMockImport({ id: 'local-1', source: 'fantasypros', type: 'dynasty' }));
+
+      loadFromServerMock.mockResolvedValue({
+        imports: [createMockImport({ id: 'server-1', source: 'cbs', type: 'redraft' })],
+        compositeConfig: null,
+        averagePosition: 0,
+        lastModified: '2026-08-21T00:00:00.000Z',
+      });
+
+      await initFromServer();
+
+      expect(getHiddenBuiltinImports().map((i) => i.id)).toEqual(['builtin:sharks']);
+      expect(getAllImports().map((i) => i.id)).toEqual(['local-1', 'server-1', 'builtin:mfl-adp']);
+    });
+  });
+
 });

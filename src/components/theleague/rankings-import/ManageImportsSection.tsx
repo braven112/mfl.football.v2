@@ -43,6 +43,17 @@ type SortableItem =
   | { kind: 'import'; id: string; data: StoredRankingImport }
   | { kind: 'average'; id: typeof AVERAGE_IMPORT_ID };
 
+/** True when a built-in source would end up above one of the owner's imports. */
+function crossesBuiltinBoundary(items: SortableItem[]): boolean {
+  let sawProvided = false;
+  for (const item of items) {
+    if (item.kind !== 'import') continue;
+    if (item.data.provided) sawProvided = true;
+    else if (sawProvided) return true;
+  }
+  return false;
+}
+
 export default function ManageImportsSection({ imports, onDelete, onReorder }: Props) {
   const [selectedImport, setSelectedImport] = useState<StoredRankingImport | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<StoredRankingImport | null>(null);
@@ -92,8 +103,15 @@ export default function ManageImportsSection({ imports, onDelete, onReorder }: P
       const oldIndex = items.findIndex((item) => item.id === active.id);
       const newIndex = items.findIndex((item) => item.id === over.id);
       const reordered = arrayMove(items, oldIndex, newIndex);
-      reorderImports(reordered.map((item) => item.id));
-      onReorder();
+      // The owner's own imports always sit above the built-ins
+      // (sortUserImportsFirst), so a drag across that line is discarded on the
+      // next read anyway. Drop it here instead of persisting an order that
+      // won't survive — otherwise the row snaps back AND we've pushed the
+      // discarded order to Redis.
+      if (!crossesBuiltinBoundary(reordered)) {
+        reorderImports(reordered.map((item) => item.id));
+        onReorder();
+      }
     }
   };
 
@@ -175,8 +193,9 @@ export default function ManageImportsSection({ imports, onDelete, onReorder }: P
       <p className="ri-section__note">
         Drag to reorder. Check the <strong>My Rank</strong> box to include a ranking in your composite,
         and set each source's <strong>weight</strong> as a percentage — the shares are normalized, so
-        a source set to 5 stays a light thumb on the scale. Built-in sources can be hidden if you'd
-        rather build your board from your own imports.
+        a source set to 5 stays a light thumb on the scale. Your own imports always sit above the
+        built-in sources, and a built-in can be hidden if you'd rather build your board from your
+        own imports alone.
       </p>
 
       {imports.length === 0 ? (
