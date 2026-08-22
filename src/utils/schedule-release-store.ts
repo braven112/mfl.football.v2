@@ -66,7 +66,6 @@ export interface ScheduleRelease {
 }
 
 /** Reveals are per league AND per season — next year is a different record. */
-const key = (league: string, year: number) => `schedule-release:${league}:${year}`;
 
 const isRelease = (v: any): v is ScheduleRelease =>
   Boolean(v) && typeof v === 'object' && typeof v.text === 'string' && v.text.length > 0 && Array.isArray(v.marquee);

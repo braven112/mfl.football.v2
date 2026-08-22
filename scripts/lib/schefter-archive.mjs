@@ -138,3 +138,31 @@ export function archiveFeedFile(feedPath, { max = SCHEFTER_ACTIVE_MAX, dryRun = 
     files,
   };
 }
+
+/**
+ * Locked schedule reveals (`data/<league>/schedule-release/<year>.json`).
+ *
+ * These are read at request time with `join(process.cwd(), …)` by
+ * `schedule-release-store.ts` — both homepages and `/api/schedule-release`.
+ * The whole `data/` tree happens to ship today, because the tracer cannot
+ * resolve those joins and falls back to copying all of it (see
+ * `archived-feed-files.mjs`), so this is belt-and-braces rather than a fix.
+ * It is worth declaring anyway: the day that fallback stops applying, the
+ * failure is a reveal page that shows a countdown forever in production and
+ * looks like the cron never ran. Enumerated, not globbed — `includeFiles`
+ * realpaths every entry, so a literal `*.json` fails the whole build.
+ */
+export function scheduleReleaseIncludeFiles() {
+  const files = [];
+  for (const league of ALL_LEAGUES) {
+    const dir = path.join(league.dataPath, 'schedule-release');
+    try {
+      for (const f of fs.readdirSync(dir)) {
+        if (/^\d{4}\.json$/.test(f)) files.push(path.join(dir, f));
+      }
+    } catch {
+      // league with no reveal locked yet
+    }
+  }
+  return files.sort();
+}
