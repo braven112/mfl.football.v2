@@ -151,6 +151,61 @@ API beats guessing at an undocumented schema.
 
 ---
 
+---
+
+## 2026-08-22 - A Recency Window Exposed Two Ordering Bugs the Two-Source Ladder Was Hiding
+
+**Context:** News is now aged out before it reaches the browser — 30 days while
+the season is being played, 90 in the offseason
+(`playerNewsWindowDays` / `filterRecentNews`). Adding a filter to a ladder that
+already distinguished `empty` from `error` broke that distinction twice, in
+ways that only showed up against the live endpoints.
+
+**1. Where the filter runs inside `fetchAthleteNews` is load-bearing.**
+It must run AFTER the `raw > 0 && items.length === 0` shape check, never before.
+That check exists to catch an item-level rename (`headline` → something else)
+and report it as a read failure. Filter first and a source that answered
+perfectly — three readable stories, all older than the window — trips it, and a
+quiet player renders as a retryable "Couldn't reach ESPN". Stale is `empty`;
+`empty` is the honest word for it. Same rule inside `fetchOverviewNews`.
+
+**2. Source 1's TRANSPORT failure must not veto a clean overview read.**
+The terminal rule used to be `sourceOneFailure ?? overview.failure` — "if EITHER
+source failed to read we say so". That was survivable while the overview's
+articles always made it through. Once a window can empty them out, it made the
+`empty` state UNREACHABLE for as long as source 1 was down: overview reads
+cleanly → every article falls outside the window → 0 items → source 1's stale
+403 becomes the answer → Retry button that can never change anything.
+
+The fix splits the two kinds of source-1 failure, and the split is principled
+rather than test-driven:
+
+- `upstream-shape` still vetoes. ESPN answered and we did not understand it, so
+  there may be articles we are failing to read. Calling that "no news" is a
+  league-wide, CDN-cached lie — the exact thing the empty/error split exists for.
+- `upstream-status` / `-timeout` / `-network` do NOT veto. Source 1 is the
+  vestigial endpoint whose successful answer is always `articles: []`, so its
+  clean read carries no information about whether news exists (already
+  documented above) — and its unreachability carries exactly as little.
+
+**How it was caught:** `site.api.espn.com` was 403 from the dev sandbox on
+2026-08-22 while `site.web.api.espn.com` answered fine — so source 1 failed on
+every request and the bug was 100% reproducible locally rather than being a
+production-only edge case. The egress proxy blocking one ESPN host but not the
+other is worth trying deliberately: it simulates a half-down ladder for free.
+
+**Related:** the `windowDays` the server applied rides back in the response, and
+the browser's empty note is built from THAT rather than from a client-side
+season check (`playerNewsEmptyMessage`). Two copies of the Labor Day math
+disagree at exactly the rollovers nobody is watching.
+
+**Testing note:** every fetch test now passes an explicit `now`. A fixture
+article's publish date is only "recent" relative to some clock, so left on the
+wall clock these assertions silently flip from the parse path to the empty path
+on a future calendar date. `/api/player-news` accepts `?testDate=` for the same
+reason — a distinct URL, so it gets its own cache entry.
+
+
 ## Open / not done
 
 - The three cards above still ship no `espnId`, so their hero bands render
