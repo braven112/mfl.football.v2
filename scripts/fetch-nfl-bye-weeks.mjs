@@ -4,7 +4,7 @@
  *
  * The NFL bye calendar moves every season and it is the input that decides
  * where a league's doubleheaders and division games may legally go — see
- * scripts/optimize-league-schedule.mjs and tests/schedule-optimization.test.ts.
+ * src/utils/schedule-plan.mjs and tests/schedule-optimization.test.ts.
  * Committing it (rather than fetching at test time) keeps the annual audit
  * deterministic and runnable offline.
  *

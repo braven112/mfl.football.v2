@@ -1,8 +1,8 @@
 # Schedule construction and the annual audit
 
 Both leagues state the same scheduling goals, and both have broken them in a
-way nothing caught. Read this before touching `scripts/optimize-league-schedule.mjs`,
-`scripts/build-afl-schedule.mjs`, `src/utils/schedule-rules.mjs`,
+way nothing caught. Read this before touching `scripts/generate-schedule.mjs`,
+`src/utils/schedule-plan.mjs`, `src/utils/schedule-rules.mjs`,
 `src/utils/schedule-builder.mjs`, or `tests/schedule-optimization.test.ts`.
 
 ## The goals
@@ -118,20 +118,45 @@ franchiseScoreAdjustment, survivorPoolPick. **No schedule or matchup type**;
 
 Schedules are applied by hand: Commissioner → Setup → Schedule → the advanced
 editor, which takes `WW,AAAA,HHHH` lines and **overwrites the entire fantasy
-schedule**. Both scripts emit exactly that, every game, no diff.
+schedule**. The planner emits exactly that, every game, no diff.
+
+### Where it runs
+
+| | |
+|---|---|
+| Admin page | `/theleague/admin/schedule-builder`, `/afl-fantasy/admin/schedule-builder` |
+| API | `src/pages/api/schedule-plan.ts` |
+| CLI | `node scripts/generate-schedule.mjs --league=<slug>` |
+| Planner (shared by all three) | `src/utils/schedule-plan.mjs` |
+
+Feed access is **injected** into the planner (`readFeed`) rather than done
+inside it, so the page and the CLI cannot drift into different answers. The
+planner is pure: same feeds in, same schedule out, no clock and no filesystem.
+
+The page reads committed feeds at request time. That works because
+`scripts/lib/archived-feed-files.mjs` keeps the newest three seasons per league
+inside the serverless function; `data/nfl/bye-weeks.json` is named in
+`includeFiles` because the tracer cannot follow a `process.cwd()` join.
+
+The API route repeats the page's auth gate. A page gate protects the page, not
+the endpoint behind it — and both are scoped with `isAuthorizedForLeague`, so a
+commissioner of one league cannot plan the other's schedule.
 
 **Verify before pasting — there is no undo:**
 
 ```bash
-node scripts/build-afl-schedule.mjs
-node scripts/optimize-league-schedule.mjs --league=theleague
+node scripts/generate-schedule.mjs --league=afl-fantasy
+node scripts/generate-schedule.mjs --league=theleague
 SCHEDULE_AUDIT_ROOT=$(node scripts/stage-schedule-plan.mjs --print-root) \
   pnpm vitest run tests/schedule-optimization.test.ts
 ```
 
-That runs the *same* audit that guards the live schedule against the candidate,
-rather than a second implementation that could agree with the planner for the
-wrong reason.
+The CLI exits non-zero if `validateSeason` finds a problem, and the page
+disables its copy button in the same case. Neither will hand over a schedule
+that breaks a structural rule. It runs the *same* audit that guards the live
+schedule against the candidate, rather than a second implementation that could
+agree with the planner for the wrong reason.
+
 
 ## AFL cross-conference pairing
 

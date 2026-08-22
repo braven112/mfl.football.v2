@@ -1,0 +1,273 @@
+/**
+ * Schedule planner (commissioner tool).
+ *
+ * Every colour is a token with a light-mode fallback. A bare hex here renders
+ * correctly in light and ships white-on-white in dark, which is the failure
+ * mode docs/claude/rules/theming-and-assets.md exists to prevent.
+ */
+
+.sched {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* ------------------------------------------------------------------ bar */
+
+.sched__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+.sched__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text-secondary, #475569);
+}
+
+.sched__field select {
+  min-height: 2.75rem;
+  padding: 0 0.75rem;
+  font-size: 1rem;
+  color: var(--color-text-primary, #0f172a);
+  background: var(--color-surface-1, #fff);
+  border: 1px solid var(--color-border-default, #cbd5e1);
+  border-radius: 8px;
+}
+
+.sched__go,
+.sched__copy {
+  min-height: 2.75rem;
+  padding: 0 1.1rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--btn-primary-text, #fff);
+  cursor: pointer;
+  background: var(--btn-primary-bg, #1c497c);
+  border: 1px solid var(--btn-primary-border, transparent);
+  border-radius: 8px;
+}
+
+.sched__go:hover:not(:disabled),
+.sched__copy:hover:not(:disabled) {
+  background: var(--btn-primary-bg-hover, #163a63);
+}
+
+.sched__go:disabled,
+.sched__copy:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.sched__go:focus-visible,
+.sched__copy:focus-visible,
+.sched__field select:focus-visible,
+.sched__text:focus-visible {
+  outline: 2px solid var(--accent-color, #1c497c);
+  outline-offset: 2px;
+}
+
+/* -------------------------------------------------------------- status */
+
+.sched__error,
+.sched__block {
+  padding: 0.85rem 1rem;
+  margin: 0;
+  color: var(--alert-warning-text, #7c2d12);
+  background: var(--alert-warning-bg, #fef3c7);
+  border: 1px solid var(--alert-warning-border, #fcd34d);
+  border-radius: 8px;
+}
+
+.sched__block ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.sched__ok {
+  padding: 0.85rem 1rem;
+  margin: 0;
+  color: var(--alert-success-text, #14532d);
+  background: var(--alert-success-bg, #dcfce7);
+  border: 1px solid var(--alert-success-border, #86efac);
+  border-radius: 8px;
+}
+
+/* --------------------------------------------------------- paste target */
+
+.sched__pasteHead {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sched__pasteHead h3 {
+  margin: 0;
+  font-size: 1.0625rem;
+  color: var(--color-text-primary, #0f172a);
+}
+
+.sched__hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary, #475569);
+}
+
+.sched__hint code {
+  padding: 0.1em 0.35em;
+  background: var(--color-surface-2, #f1f5f9);
+  border-radius: 4px;
+}
+
+.sched__text {
+  width: 100%;
+  min-height: 20rem;
+  padding: 0.75rem;
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--color-text-primary, #0f172a);
+  resize: vertical;
+  background: var(--color-surface-2, #f8fafc);
+  border: 1px solid var(--color-border-default, #cbd5e1);
+  border-radius: 8px;
+}
+
+/* ---------------------------------------------------------------- cards */
+
+.sched__grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.sched__card {
+  padding: 1rem;
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--card-border, #e2e8f0);
+  border-radius: 10px;
+}
+
+.sched__card h4 {
+  margin: 0 0 0.75rem;
+  font-size: 0.9375rem;
+  color: var(--color-text-primary, #0f172a);
+}
+
+.sched__card dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.4rem 0.75rem;
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.sched__card dt {
+  font-weight: 600;
+  color: var(--color-text-secondary, #475569);
+}
+
+.sched__card dd {
+  margin: 0;
+  color: var(--color-text-primary, #0f172a);
+}
+
+.sched__note {
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary, #475569);
+}
+
+.sched__note--warn {
+  color: var(--alert-warning-text, #7c2d12);
+}
+
+/* --------------------------------------------------------------- tables */
+
+/* Wide content scrolls inside its own box; the page body never does. */
+.sched__scroll {
+  overflow-x: auto;
+}
+
+.sched__compare,
+.sched__weeks {
+  width: 100%;
+  font-size: 0.875rem;
+  border-collapse: collapse;
+}
+
+.sched__compare th,
+.sched__compare td,
+.sched__weeks th,
+.sched__weeks td {
+  padding: 0.4rem 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border-subtle, #eef2f7);
+}
+
+.sched__compare thead th,
+.sched__weeks thead th {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary, #475569);
+}
+
+.sched__compare tbody th,
+.sched__weeks tbody th {
+  font-weight: 500;
+  color: var(--color-text-secondary, #475569);
+}
+
+.sched__compare td,
+.sched__weeks td {
+  color: var(--color-text-primary, #0f172a);
+}
+
+.sched__compare small {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 400;
+  color: var(--color-text-disabled, #94a3b8);
+}
+
+.sched__weeks tr.is-clean th,
+.sched__weeks tr.is-clean td {
+  background: color-mix(in srgb, var(--alert-success-bg, #dcfce7) 40%, transparent);
+}
+
+/* ---------------------------------------------------------------- misc */
+
+.sched__tag {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--badge-info-text, #1e3a8a);
+  background: var(--badge-info-bg, #dbeafe);
+  border-radius: 999px;
+}
+
+.sched__tag--rival {
+  margin-left: 0.5rem;
+  color: var(--badge-warning-text, #78350f);
+  background: var(--badge-warning-bg, #fef3c7);
+}
+
+.sched__pairs {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  font-size: 0.875rem;
+  color: var(--color-text-primary, #0f172a);
+  list-style: none;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}

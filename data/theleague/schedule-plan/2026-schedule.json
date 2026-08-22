@@ -1,13 +1,9 @@
 {
-  "league": "The League",
+  "slug": "theleague",
   "year": 2026,
-  "generatedFrom": "scripts/optimize-league-schedule.mjs",
-  "doubleheaderWeeks": [
-    1,
-    2,
-    3,
-    12
-  ],
+  "mode": "simple",
+  "leagueName": "The League",
+  "lastWeek": 14,
   "byeFreeWeeks": [
     1,
     2,
@@ -15,7 +11,21 @@
     4,
     12
   ],
-  "divisionGamesByeFree": 40,
+  "doubleheaderWeeks": [
+    1,
+    2,
+    3,
+    12
+  ],
+  "currentDoubleheaderWeeks": [
+    1,
+    2,
+    3,
+    13
+  ],
+  "text": "01,0015,0006\n01,0009,0004\n01,0007,0011\n01,0016,0013\n01,0014,0002\n01,0008,0012\n01,0005,0010\n01,0003,0001\n01,0001,0016\n01,0002,0007\n01,0012,0015\n01,0010,0009\n01,0004,0008\n01,0006,0014\n01,0013,0003\n01,0011,0005\n02,0011,0008\n02,0013,0005\n02,0006,0003\n02,0004,0014\n02,0010,0016\n02,0012,0009\n02,0002,0015\n02,0001,0007\n02,0016,0015\n02,0009,0007\n02,0003,0014\n02,0008,0005\n02,0006,0004\n02,0011,0013\n02,0002,0012\n02,0010,0001\n03,0001,0002\n03,0010,0012\n03,0013,0006\n03,0011,0004\n03,0005,0003\n03,0008,0014\n03,0007,0016\n03,0009,0015\n03,0001,0015\n03,0002,0009\n03,0012,0016\n03,0010,0007\n03,0004,0003\n03,0006,0005\n03,0013,0008\n03,0011,0014\n04,0007,0015\n04,0009,0016\n04,0005,0014\n04,0008,0003\n04,0013,0004\n04,0011,0006\n04,0001,0012\n04,0010,0002\n05,0007,0003\n05,0016,0014\n05,0015,0008\n05,0009,0005\n05,0013,0002\n05,0006,0012\n05,0004,0010\n05,0011,0001\n06,0001,0004\n06,0010,0006\n06,0012,0013\n06,0002,0011\n06,0005,0015\n06,0008,0016\n06,0014,0007\n06,0003,0009\n07,0015,0003\n07,0009,0014\n07,0007,0008\n07,0016,0005\n07,0004,0002\n07,0011,0012\n07,0013,0010\n07,0006,0001\n08,0001,0014\n08,0010,0003\n08,0012,0005\n08,0002,0008\n08,0013,0015\n08,0011,0016\n08,0004,0007\n08,0006,0009\n09,0007,0006\n09,0016,0004\n09,0015,0011\n09,0009,0013\n09,0005,0002\n09,0003,0012\n09,0014,0010\n09,0008,0001\n10,0001,0013\n10,0010,0011\n10,0012,0004\n10,0002,0006\n10,0005,0007\n10,0008,0009\n10,0014,0015\n10,0003,0016\n11,0001,0005\n11,0010,0008\n11,0012,0014\n11,0002,0003\n11,0013,0007\n11,0011,0009\n11,0004,0015\n11,0006,0016\n12,0001,0010\n12,0012,0002\n12,0013,0011\n12,0004,0006\n12,0005,0008\n12,0014,0003\n12,0007,0009\n12,0015,0016\n12,0002,0010\n12,0012,0001\n12,0006,0011\n12,0004,0013\n12,0003,0008\n12,0014,0005\n12,0016,0009\n12,0015,0007\n13,0001,0009\n13,0002,0016\n13,0012,0007\n13,0010,0015\n13,0004,0005\n13,0006,0008\n13,0013,0014\n13,0011,0003\n14,0002,0001\n14,0012,0010\n14,0006,0013\n14,0004,0011\n14,0003,0005\n14,0014,0008\n14,0016,0007\n14,0015,0009",
+  "crossConference": null,
+  "fairness": null,
   "divisionGameCeiling": {
     "total": 48,
     "ceiling": 48,
@@ -23,6 +33,375 @@
     "slotsPerTeam": 9,
     "divisionGamesPerTeam": 6
   },
+  "plan": {
+    "byWeek": [
+      {
+        "week": 1,
+        "games": 16,
+        "divisionGames": 0,
+        "nflByes": 0,
+        "doubleheader": true
+      },
+      {
+        "week": 2,
+        "games": 16,
+        "divisionGames": 8,
+        "nflByes": 0,
+        "doubleheader": true
+      },
+      {
+        "week": 3,
+        "games": 16,
+        "divisionGames": 8,
+        "nflByes": 0,
+        "doubleheader": true
+      },
+      {
+        "week": 4,
+        "games": 8,
+        "divisionGames": 8,
+        "nflByes": 0,
+        "doubleheader": false
+      },
+      {
+        "week": 5,
+        "games": 8,
+        "divisionGames": 0,
+        "nflByes": 2,
+        "doubleheader": false
+      },
+      {
+        "week": 6,
+        "games": 8,
+        "divisionGames": 0,
+        "nflByes": 4,
+        "doubleheader": false
+      },
+      {
+        "week": 7,
+        "games": 8,
+        "divisionGames": 0,
+        "nflByes": 4,
+        "doubleheader": false
+      },
+      {
+        "week": 8,
+        "games": 8,
+        "divisionGames": 0,
+        "nflByes": 4,
+        "doubleheader": false
+      },
+      {
+        "week": 9,
+        "games": 8,
+        "divisionGames": 0,
+        "nflByes": 2,
+        "doubleheader": false
+      },
+      {
+        "week": 10,
+        "games": 8,
+        "divisionGames": 0,
+        "nflByes": 4,
+        "doubleheader": false
+      },
+      {
+        "week": 11,
+        "games": 8,
+        "divisionGames": 0,
+        "nflByes": 6,
+        "doubleheader": false
+      },
+      {
+        "week": 12,
+        "games": 16,
+        "divisionGames": 16,
+        "nflByes": 0,
+        "doubleheader": true
+      },
+      {
+        "week": 13,
+        "games": 8,
+        "divisionGames": 0,
+        "nflByes": 4,
+        "doubleheader": false
+      },
+      {
+        "week": 14,
+        "games": 8,
+        "divisionGames": 8,
+        "nflByes": 2,
+        "doubleheader": false
+      }
+    ],
+    "games": 144,
+    "byeFreeDivisionGames": 40,
+    "meanByeDifferential": 0.9513888888888888,
+    "netByeSpread": 14,
+    "netByeByFranchise": [
+      {
+        "franchise": "The Mariachi Ninjas",
+        "net": -8
+      },
+      {
+        "franchise": "Midwestside Connection",
+        "net": -5
+      },
+      {
+        "franchise": "Cowboy Up",
+        "net": -5
+      },
+      {
+        "franchise": "Dark Magicians of Chaos",
+        "net": -4
+      },
+      {
+        "franchise": "Pacific Pigskins",
+        "net": -2
+      },
+      {
+        "franchise": "Vitside Mafia",
+        "net": -1
+      },
+      {
+        "franchise": "Bring the Pain",
+        "net": 0
+      },
+      {
+        "franchise": "Dead Cap Walking ",
+        "net": 1
+      },
+      {
+        "franchise": "Wascawy Wabbits",
+        "net": 1
+      },
+      {
+        "franchise": " Running Down The Dream",
+        "net": 1
+      },
+      {
+        "franchise": "The Music City Mafia",
+        "net": 2
+      },
+      {
+        "franchise": "Computer Jocks",
+        "net": 2
+      },
+      {
+        "franchise": "Fire Ready Aim",
+        "net": 3
+      },
+      {
+        "franchise": "Gridiron Geeks",
+        "net": 4
+      },
+      {
+        "franchise": "Da Dangsters",
+        "net": 5
+      },
+      {
+        "franchise": "Maverick",
+        "net": 6
+      }
+    ],
+    "minRematchGap": 8,
+    "meanRematchGap": 9.666666666666666,
+    "rematchesWithinThreeWeeks": 0,
+    "homeGames": {
+      "min": 7,
+      "max": 11
+    },
+    "gamesPerFranchise": [
+      18
+    ]
+  },
+  "currentPlan": {
+    "byWeek": [
+      {
+        "week": 1,
+        "games": 16,
+        "divisionGames": 0,
+        "nflByes": 0,
+        "doubleheader": true
+      },
+      {
+        "week": 2,
+        "games": 16,
+        "divisionGames": 8,
+        "nflByes": 0,
+        "doubleheader": true
+      },
+      {
+        "week": 3,
+        "games": 16,
+        "divisionGames": 8,
+        "nflByes": 0,
+        "doubleheader": true
+      },
+      {
+        "week": 4,
+        "games": 8,
+        "divisionGames": 8,
+        "nflByes": 0,
+        "doubleheader": false
+      },
+      {
+        "week": 5,
+        "games": 8,
+        "divisionGames": 0,
+        "nflByes": 2,
+        "doubleheader": false
+      },
+      {
+        "week": 6,
+        "games": 8,
+        "divisionGames": 0,
+        "nflByes": 4,
+        "doubleheader": false
+      },
+      {
+        "week": 7,
+        "games": 8,
+        "divisionGames": 0,
+        "nflByes": 4,
+        "doubleheader": false
+      },
+      {
+        "week": 8,
+        "games": 8,
+        "divisionGames": 0,
+        "nflByes": 4,
+        "doubleheader": false
+      },
+      {
+        "week": 9,
+        "games": 8,
+        "divisionGames": 0,
+        "nflByes": 2,
+        "doubleheader": false
+      },
+      {
+        "week": 10,
+        "games": 8,
+        "divisionGames": 0,
+        "nflByes": 4,
+        "doubleheader": false
+      },
+      {
+        "week": 11,
+        "games": 8,
+        "divisionGames": 0,
+        "nflByes": 6,
+        "doubleheader": false
+      },
+      {
+        "week": 12,
+        "games": 8,
+        "divisionGames": 8,
+        "nflByes": 0,
+        "doubleheader": false
+      },
+      {
+        "week": 13,
+        "games": 16,
+        "divisionGames": 8,
+        "nflByes": 4,
+        "doubleheader": true
+      },
+      {
+        "week": 14,
+        "games": 8,
+        "divisionGames": 8,
+        "nflByes": 2,
+        "doubleheader": false
+      }
+    ],
+    "games": 144,
+    "byeFreeDivisionGames": 32,
+    "meanByeDifferential": 1.0694444444444444,
+    "netByeSpread": 17,
+    "netByeByFranchise": [
+      {
+        "franchise": "Cowboy Up",
+        "net": -9
+      },
+      {
+        "franchise": "Dark Magicians of Chaos",
+        "net": -7
+      },
+      {
+        "franchise": "Midwestside Connection",
+        "net": -6
+      },
+      {
+        "franchise": "The Mariachi Ninjas",
+        "net": -4
+      },
+      {
+        "franchise": "Pacific Pigskins",
+        "net": -3
+      },
+      {
+        "franchise": "Bring the Pain",
+        "net": -2
+      },
+      {
+        "franchise": "Vitside Mafia",
+        "net": 0
+      },
+      {
+        "franchise": " Running Down The Dream",
+        "net": 0
+      },
+      {
+        "franchise": "Da Dangsters",
+        "net": 1
+      },
+      {
+        "franchise": "Dead Cap Walking ",
+        "net": 2
+      },
+      {
+        "franchise": "Wascawy Wabbits",
+        "net": 2
+      },
+      {
+        "franchise": "The Music City Mafia",
+        "net": 3
+      },
+      {
+        "franchise": "Gridiron Geeks",
+        "net": 3
+      },
+      {
+        "franchise": "Fire Ready Aim",
+        "net": 6
+      },
+      {
+        "franchise": "Computer Jocks",
+        "net": 6
+      },
+      {
+        "franchise": "Maverick",
+        "net": 8
+      }
+    ],
+    "minRematchGap": 9,
+    "meanRematchGap": 10,
+    "rematchesWithinThreeWeeks": 0,
+    "homeGames": {
+      "min": 7,
+      "max": 11
+    },
+    "gamesPerFranchise": [
+      18
+    ]
+  },
+  "problems": [],
+  "changedWeeks": [
+    12,
+    13
+  ],
   "weeks": {
     "1": [
       {

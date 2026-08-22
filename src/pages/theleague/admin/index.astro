@@ -46,6 +46,13 @@ const sections: Array<{ title: string; links: AdminLink[] }> = [
     title: 'Commissioner tools (hard redirect)',
     links: [
       {
+        href: '/theleague/admin/schedule-builder',
+        title: 'Schedule Builder',
+        blurb:
+          "Generate the regular season against this year's NFL bye calendar and copy it into MFL's schedule editor. The AFL has its own at /afl-fantasy/admin/schedule-builder.",
+        gate: 'redirect',
+      },
+      {
         href: '/theleague/contracts/franchise-tags',
         title: 'Franchise Tags',
         blurb: 'Review, approve, or reject franchise-tag declarations.',

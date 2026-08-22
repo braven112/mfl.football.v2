@@ -1,0 +1,114 @@
+---
+/**
+ * Shared body for the schedule planner pages.
+ *
+ * NO AUTH GATE LIVES HERE. `Astro.redirect()` returned from a COMPONENT does
+ * not redirect — it just stops rendering that component and the response is
+ * still a 200 with a blank body. The gate belongs in each thin route wrapper
+ * (see docs/claude/rules/schedule-optimization.md and the same note in
+ * CLAUDE.md about /cr).
+ */
+import SchedulePlanner from './SchedulePlanner.tsx';
+import '../../styles/schedule-planner.css';
+
+interface Props {
+  leagueSlug: string;
+  leagueName: string;
+  defaultYear: number;
+  /** Seasons we hold an NFL bye calendar for — the only schedulable ones. */
+  seasons: number[];
+}
+const { leagueSlug, leagueName, defaultYear, seasons } = Astro.props;
+---
+
+<section class="schedplan">
+  <header class="schedplan__head">
+    <h1>Schedule Builder</h1>
+    <p>
+      Generates {leagueName}&rsquo;s regular season against this year&rsquo;s NFL bye calendar, then hands you the
+      text to paste into MFL. Nothing here writes to MFL &mdash; MFL has no schedule write API, so the paste is
+      always yours to make.
+    </p>
+  </header>
+
+  <SchedulePlanner
+    client:load
+    leagueSlug={leagueSlug}
+    leagueName={leagueName}
+    defaultYear={defaultYear}
+    seasons={seasons}
+  />
+
+  <footer class="schedplan__foot">
+    <h2>What it enforces</h2>
+    <ul>
+      <li>No doubleheader on an NFL bye week &mdash; the bye calendar moves every year, so the week is re-derived, never copied forward.</li>
+      <li>Doubleheaders split as evenly as the bye-free weeks allow, between the start and the end of the season.</li>
+      <li>Division games take every bye-free slot available to them, reported against the ceiling the format allows rather than against zero.</li>
+      <li>Division rivals never meet twice inside three weeks.</li>
+      <li>Division opponents twice, everyone else once, and one game per franchise per week.</li>
+    </ul>
+    <p class="schedplan__stale">
+      New season? Refresh the NFL bye calendar first: <code>node scripts/fetch-nfl-bye-weeks.mjs</code>. Without it
+      this page has nothing to schedule against and will say so.
+    </p>
+  </footer>
+</section>
+
+<style>
+  .schedplan {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    max-width: 68rem;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 3rem;
+  }
+
+  .schedplan__head h1 {
+    margin: 0 0 0.4rem;
+    font-size: 1.5rem;
+    color: var(--color-text-primary, #0f172a);
+  }
+
+  .schedplan__head p {
+    max-width: 46rem;
+    margin: 0;
+    font-size: 0.9375rem;
+    line-height: 1.55;
+    color: var(--color-text-secondary, #475569);
+  }
+
+  .schedplan__foot {
+    padding: 1rem;
+    background: var(--color-surface-2, #f8fafc);
+    border: 1px solid var(--color-border-subtle, #e2e8f0);
+    border-radius: 10px;
+  }
+
+  .schedplan__foot h2 {
+    margin: 0 0 0.6rem;
+    font-size: 0.9375rem;
+    color: var(--color-text-primary, #0f172a);
+  }
+
+  .schedplan__foot ul {
+    margin: 0;
+    padding-left: 1.15rem;
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: var(--color-text-secondary, #475569);
+  }
+
+  .schedplan__stale {
+    margin: 0.75rem 0 0;
+    font-size: 0.8125rem;
+    color: var(--color-text-secondary, #475569);
+  }
+
+  .schedplan__stale code {
+    padding: 0.1em 0.35em;
+    background: var(--color-surface-3, #eef2f7);
+    border-radius: 4px;
+  }
+</style>

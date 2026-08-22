@@ -39,6 +39,9 @@ export default defineConfig({
       'public/assets/logos/afl-logo-dark.svg',
       'src/data/theleague/schefter-feed.json',
       'data/afl-fantasy/schefter-feed.json',
+      // NFL bye calendar — read with fs by /api/schedule-plan. Small, and the
+      // tracer cannot follow a process.cwd() join on its own.
+      'data/nfl/bye-weeks.json',
       // Season archives the OG renderer falls back to for posts older than
       // the active window. Enumerated (NOT globbed — includeFiles realpaths
       // each entry, so a literal '*.json' fails the whole build).

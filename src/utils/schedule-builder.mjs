@@ -3,8 +3,8 @@
  *
  * WHY CONSTRUCT RATHER THAN RE-TIME
  *
- * scripts/optimize-league-schedule.mjs re-times an existing schedule by moving
- * whole rounds between weeks. That is safe and minimal, and it is also why its
+ * The planner's `simple` mode re-times an existing schedule by moving whole
+ * rounds between weeks. That is safe and minimal, and it is also why its
  * output is bad: the rounds it inherits are whatever last year's schedule
  * happened to contain, so "maximise bye-free division games" just stacks every
  * rivalry round into the opening weeks. Measured on The League 2026 that gives
@@ -86,27 +86,132 @@ export const mirrorRound = (games) => games.map((g) => ({ away: g.home, home: g.
 /* ------------------------------------------------------------ week plan */
 
 /**
- * Slot shape for a 14-week, 17-round AFL season. `kind` picks which pool a
- * round comes from; `leg` separates first from second meetings.
+ * Build the week plan for a season — DERIVED, never hard-coded.
+ *
+ * An earlier version of this file pinned the doubleheaders to Weeks 1, 2 and
+ * 12 because that is where they belong in 2026. That is the exact bug this
+ * whole module exists to prevent: the bye calendar moves, so 2025's late
+ * bye-free week is 13, and a pinned plan silently contradicts the
+ * doubleheader weeks the planner derives. `validateSeason` caught it, which is
+ * the only reason it is not still here.
+ *
+ * The shape falls out of three facts and one preference:
+ *
+ *   - Week 1 holds the cross-conference round.
+ *   - Each division pair meets once in the first leg and once in the second,
+ *     so the legs must sit in disjoint early and late blocks.
+ *   - The blocks are as SHORT as they can be while holding their rounds, which
+ *     pushes the first leg to the front and the second to the stretch run and
+ *     leaves the middle for interdivision play.
+ *   - Preference: within a block, division rounds go to the weeks with the
+ *     fewest NFL byes. A late block that exactly fits is grown by one week so
+ *     an interdivision round can absorb the block's worst bye week — in 2026
+ *     that is Week 11, with six NFL teams out.
+ *
+ * ONE CONSEQUENCE WORTH KNOWING. The all-division finale is a preference, not
+ * an invariant, and fairness outranks it. In 2022 the final week had six NFL
+ * teams out — the worst of that season — so the interdivision round lands
+ * there and the season does NOT end on rivalry games. That is the league's
+ * stated precedence, but it visibly changes how the run-in feels, so
+ * tests/schedule-week-plan.test.ts asserts it rather than leaving it to
+ * chance: the finale is all-division unless it is the season's worst bye week.
  */
-export const AFL_WEEK_PLAN = [
-  { week: 1, slots: [{ kind: 'cross' }, { kind: 'division', leg: 0 }] },
-  { week: 2, slots: [{ kind: 'division', leg: 0 }, { kind: 'division', leg: 0 }] },
-  { week: 3, slots: [{ kind: 'division', leg: 0 }] },
-  { week: 4, slots: [{ kind: 'division', leg: 0 }] },
-  { week: 5, slots: [{ kind: 'inter' }] },
-  { week: 6, slots: [{ kind: 'inter' }] },
-  { week: 7, slots: [{ kind: 'inter' }] },
-  { week: 8, slots: [{ kind: 'inter' }] },
-  { week: 9, slots: [{ kind: 'inter' }] },
-  { week: 10, slots: [{ kind: 'division', leg: 1 }] },
-  // Week 11 has six NFL teams on bye in 2026 — the heaviest week of the year.
-  // It gets the one late interdivision round so no rivalry game lands there.
-  { week: 11, slots: [{ kind: 'inter' }] },
-  { week: 12, slots: [{ kind: 'division', leg: 1 }, { kind: 'division', leg: 1 }] },
-  { week: 13, slots: [{ kind: 'division', leg: 1 }] },
-  { week: 14, slots: [{ kind: 'division', leg: 1 }] },
-];
+export const buildWeekPlan = ({ lastWeek, doubleheaders, byeCounts = {}, divisionSize, crossWeek = 1 }) => {
+  const dh = new Set(doubleheaders);
+  const slots = [];
+  for (let week = 1; week <= lastWeek; week += 1) {
+    for (let i = 0; i < (dh.has(week) ? 2 : 1); i += 1) slots.push(week);
+  }
+  const legRounds = divisionSize - 1; // one meeting with each division rival
+  const interRounds = divisionSize; // 6x6 against the other division in your conference
+  const needed = legRounds * 2 + interRounds + 1;
+  if (slots.length !== needed) {
+    throw new Error(
+      `week plan does not fit: ${lastWeek} weeks + ${doubleheaders.length} doubleheaders = ${slots.length} slots, ` +
+        `but the format needs ${needed} (${legRounds * 2} division + ${interRounds} interdivision + 1 cross-conference)`,
+    );
+  }
+  if (!dh.has(crossWeek)) {
+    throw new Error(`Week ${crossWeek} must be a doubleheader to hold both the cross-conference and a division round`);
+  }
+
+  const byes = (week) => byeCounts[week] ?? 0;
+  const countSlots = (weeks) => weeks.reduce((n, w) => n + (dh.has(w) ? 2 : 1), 0);
+
+  // Shortest prefix that holds the cross-conference round plus the first leg.
+  const earlyWeeks = [];
+  for (let week = 1; week <= lastWeek && countSlots(earlyWeeks) < legRounds + 1; week += 1) earlyWeeks.push(week);
+
+  // Shortest suffix that holds the second leg, grown by one week when it fits
+  // exactly and carries byes, so an interdivision round can take the worst.
+  const lateWeeks = [];
+  for (let week = lastWeek; week >= 1 && countSlots(lateWeeks) < legRounds; week -= 1) lateWeeks.unshift(week);
+  const first = lateWeeks[0];
+  if (countSlots(lateWeeks) === legRounds && lateWeeks.some((w) => byes(w) > 0) && first - 1 > earlyWeeks.at(-1)) {
+    lateWeeks.unshift(first - 1);
+  }
+  if (lateWeeks[0] <= earlyWeeks.at(-1)) {
+    throw new Error('early and late division blocks overlap — the season is too short for this format');
+  }
+
+  // Within a block, division rounds take the cleanest weeks. Ties break toward
+  // the season's edges so the opener and the finale stay rivalry games.
+  // Whatever a block does not spend on division becomes interdivision.
+  const assignBlock = (weeks, divisionCount, leg, preferLate) => {
+    const expanded = weeks.flatMap((w) => (dh.has(w) ? [w, w] : [w]));
+    const chosen = new Set(
+      expanded
+        .map((week, i) => ({ week, i }))
+        .sort((a, b) => byes(a.week) - byes(b.week) || (preferLate ? b.week - a.week : a.week - b.week))
+        .slice(0, divisionCount)
+        .map((r) => r.i),
+    );
+    return expanded.map((week, i) => ({ week, kind: chosen.has(i) ? 'division' : 'inter', leg }));
+  };
+
+  const kindByWeek = new Map();
+  const push = (week, slot) => {
+    if (!kindByWeek.has(week)) kindByWeek.set(week, []);
+    kindByWeek.get(week).push(slot);
+  };
+
+  // The cross-conference round consumes one of Week 1's two slots before the
+  // first leg is dealt, so the early block is dealt over what is left.
+  const earlySlots = earlyWeeks.flatMap((w) => (dh.has(w) ? [w, w] : [w]));
+  const crossAt = earlySlots.indexOf(crossWeek);
+  earlySlots.splice(crossAt, 1);
+  push(crossWeek, { kind: 'cross' });
+
+  const earlyChosen = new Set(
+    earlySlots
+      .map((week, i) => ({ week, i }))
+      .sort((a, b) => byes(a.week) - byes(b.week) || a.week - b.week)
+      .slice(0, legRounds)
+      .map((r) => r.i),
+  );
+  earlySlots.forEach((week, i) =>
+    push(week, earlyChosen.has(i) ? { kind: 'division', leg: 0 } : { kind: 'inter' }),
+  );
+  for (const s of assignBlock(lateWeeks, legRounds, 1, true)) {
+    push(s.week, s.kind === 'division' ? { kind: 'division', leg: 1 } : { kind: 'inter' });
+  }
+  for (let week = earlyWeeks.at(-1) + 1; week < lateWeeks[0]; week += 1) {
+    for (let i = 0; i < (dh.has(week) ? 2 : 1); i += 1) push(week, { kind: 'inter' });
+  }
+
+  const plan = [];
+  for (let week = 1; week <= lastWeek; week += 1) plan.push({ week, slots: kindByWeek.get(week) ?? [] });
+
+  const tally = plan.flatMap((w) => w.slots);
+  const count = (kind, leg) => tally.filter((s) => s.kind === kind && (leg === undefined || s.leg === leg)).length;
+  if (count('division', 0) !== legRounds || count('division', 1) !== legRounds || count('inter') !== interRounds) {
+    throw new Error(
+      `week plan is unbalanced: ${count('division', 0)}/${count('division', 1)} division legs and ` +
+        `${count('inter')} interdivision rounds, expected ${legRounds}/${legRounds} and ${interRounds}`,
+    );
+  }
+  return plan;
+};
 
 /* ------------------------------------------------------------ objective */
 
