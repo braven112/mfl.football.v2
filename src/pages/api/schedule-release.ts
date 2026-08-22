@@ -22,6 +22,10 @@ import { getLeagueBySlug } from '../../config/leagues';
 import { byeWeeksForSeason } from '../../utils/nfl-bye-weeks';
 import { getRelease } from '../../utils/schedule-release-store';
 import { getLeagueTeamBrands } from '../../utils/league-team-brands';
+import { getThrowbackFranchiseBrand } from '../../utils/franchise-brand';
+import { DEFAULT_THROWBACK_ERA } from '../../data/theleague/throwback-config';
+// @ts-expect-error - .mjs helper shared with the node scripts (see its header)
+import { THROWBACK_REASON } from '../../utils/schedule-release.mjs';
 // @ts-expect-error - .mjs helpers shared with the node scripts (see their headers)
 import { SCHEDULE_POLICY } from '../../utils/schedule-plan.mjs';
 // @ts-expect-error - .mjs helpers shared with the node scripts (see their headers)
@@ -72,11 +76,41 @@ const seasonShape = (leagueJson: any) => {
   const divisionOf: Record<string, string> = {};
   const conferenceOf: Record<string, string> = {};
   for (const f of asArray(meta.franchises?.franchise)) {
-    name[f.id] = f.name;
+    // MFL stores a few franchise names with stray leading space.
+    name[f.id] = String(f.name ?? '').trim();
     divisionOf[f.id] = divisionName[String(f.division)] ?? String(f.division);
     conferenceOf[f.id] = divisionConference[String(f.division)] ?? '00';
   }
   return { meta, name, divisionOf, conferenceOf, lastWeek: Number(meta.lastRegularSeasonWeek) };
+};
+
+
+/**
+ * Old-school brands for the Throwback Week marquee pick, or null.
+ *
+ * TheLeague is the only league that runs Throwback Week today, and
+ * `getThrowbackFranchiseBrand` reads its config directly — so this is gated on
+ * the registry's `throwbackWeeks` rather than a slug test, and returns null
+ * everywhere else instead of resolving a franchise id against the wrong
+ * league's teams.
+ */
+const throwbackBrands = (slug: string, _leagueId: string, release: any) => {
+  const weeks = getLeagueBySlug(slug)?.throwbackWeeks;
+  if (!weeks?.length) return null;
+  const pick = (release?.marquee ?? []).find((m: any) => m.why?.includes(THROWBACK_REASON));
+  if (!pick) return null;
+  const brandOf = (id: string) => {
+    const b = getThrowbackFranchiseBrand(id, true, DEFAULT_THROWBACK_ERA[id]);
+    // No dark variant: `getThrowbackFranchiseBrand` deliberately clears the
+    // *Dark colors when it swaps in an era palette, because those belong to the
+    // CURRENT brand and eras have none. The one colour is used in both themes.
+    return {
+      name: b.name,
+      icon: b.icon ?? '',
+      colorPrimary: b.colorPrimary ?? b.color,
+    };
+  };
+  return { week: pick.week, away: brandOf(pick.away), home: brandOf(pick.home) };
 };
 
 /** Season the reveal is FOR: the upcoming one, which is this calendar year. */
@@ -112,6 +146,12 @@ export const GET: APIRoute = async ({ request, url }) => {
       // rebrands. Names in `release.marquee` are the ones the draw was made
       // under; these are how the team looks today.
       teams: getLeagueTeamBrands(slug),
+      // Throwback Week's old-school identities for the one marquee game played
+      // in them. Resolved from the COMMISSIONER DEFAULT era, never an owner's
+      // saved preference: the reveal is a league event and every owner has to
+      // be looking at the same card. (An owner may still pick a different era
+      // for the week itself — that is a live-scoring decision, months away.)
+      throwback: throwbackBrands(slug, league.id, existing),
     });
   }
 

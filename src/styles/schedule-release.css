@@ -416,3 +416,36 @@
   outline: 2px solid var(--accent-color, #1c497c);
   outline-offset: 2px;
 }
+
+/* ------------------------------------------------------- throwback card */
+
+/**
+ * Throwback Week's game is shown in the identities it will actually be played
+ * in — legacy crests, legacy names, legacy colours (`getThrowbackFranchiseBrand`).
+ * The card marks itself so the old logos read as deliberate rather than as
+ * stale artwork, which is exactly how an unexplained 2009 crest looks.
+ */
+.rel__game--throwback {
+  border-color: color-mix(in srgb, var(--rel-away-themed) 40%, var(--card-border, #e2e8f0));
+}
+
+.rel__era {
+  display: inline-block;
+  padding: 0.05rem 0.4rem;
+  margin-left: 0.4rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--badge-info-text, #1e3a8a);
+  background: var(--badge-info-bg, #dbeafe);
+  border-radius: 999px;
+}
+
+/* Who the throwback identity is TODAY — the reason chip credits the all-time
+   record to the current franchise, so the card has to name it somewhere. */
+.rel__now {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 400;
+  color: var(--color-text-secondary, #475569);
+}

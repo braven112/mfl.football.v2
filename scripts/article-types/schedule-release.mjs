@@ -24,6 +24,12 @@ import path from 'node:path';
 import { buildCachedSystem } from '../article-utils/ai-client.mjs';
 import { resolveMainRepo } from '../article-utils/data-loaders.mjs';
 import { LEAGUES, leagueUrl } from '../../src/config/leagues-data.mjs';
+import {
+  describeSeries,
+  rivalryPairKey,
+  rivalrySeriesByPair,
+} from '../../src/utils/rivalry-intensity.mjs';
+import { RIVALRY_MEETINGS_TO_MENTION } from '../../src/utils/schedule-release.mjs';
 
 export const config = {
   // One per league per season. The league token comes from the registry so a
@@ -117,7 +123,8 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = '
   for (const d of asArray(meta.divisions?.division)) divisionName[d.id] = d.name;
   const divisionOf = {};
   for (const f of asArray(meta.franchises?.franchise)) {
-    name[f.id] = f.name;
+    // MFL stores a few franchise names with a stray leading/trailing space.
+    name[f.id] = String(f.name ?? '').trim();
     divisionOf[f.id] = divisionName[String(f.division)] ?? String(f.division);
   }
 
@@ -146,6 +153,47 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = '
     lines.push(`  - No two division rivals meet twice inside ${release.summary.minRematchGap} weeks of each other.`);
   }
   lines.push(`  - ${release.summary.games} games in total.`);
+  // THE RIVALRY RENEWALS. Ranked by the same intensity formula the rivalry
+  // pages use (`rivalry-intensity.mjs`) so the column and the site agree about
+  // who a franchise's real rival is. Records are rendered through
+  // `describeSeries`, never formatted here — the stored record belongs to
+  // whichever id sorts first, so hand-formatting it prints the wrong team
+  // winning the series.
+  const historyFile = path.join(mainRepo, registry.dataPath, 'derived', 'franchise-history.json');
+  let series = {};
+  try {
+    const history = JSON.parse(await fs.readFile(historyFile, 'utf8'));
+    series = rivalrySeriesByPair(history.franchises ?? history);
+  } catch {
+    // A league with no ingested head-to-head simply gets no rivalry section.
+  }
+  const renewals = [];
+  const seenPair = new Set();
+  for (const [w, games] of Object.entries(release.weeks)) {
+    for (const g of games) {
+      const key = rivalryPairKey(g.away, g.home);
+      const s = series[key];
+      if (!s || s.games < RIVALRY_MEETINGS_TO_MENTION) continue;
+      // A pairing plays twice in a division; the FIRST meeting is the renewal.
+      if (seenPair.has(key)) continue;
+      seenPair.add(key);
+      renewals.push({
+        week: Number(w),
+        line: `  Week ${w}: ${name[g.away] ?? g.away} at ${name[g.home] ?? g.home} — ${describeSeries(s, g.away, g.home, (id) => name[id])}`,
+        intensity: s.intensity,
+      });
+    }
+  }
+  if (renewals.length) {
+    renewals.sort((x, y) => y.intensity - x.intensity);
+    lines.push('');
+    lines.push('THE RIVALRIES THIS SCHEDULE RENEWS (most charged first — all-time records under the CURRENT owners):');
+    for (const r of renewals.slice(0, 8)) lines.push(r.line);
+    lines.push(
+      `  (${renewals.length} pairings in this schedule have met ${RIVALRY_MEETINGS_TO_MENTION}+ times.)`,
+    );
+  }
+
   lines.push('');
   lines.push('OPENING WEEK:');
   for (const g of release.weeks['1'] ?? []) {
@@ -164,11 +212,38 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = '
       league,
       year,
       marquee: release.marquee,
+      rivalryRenewals: renewals.length,
       doubleheaderWeeks: release.doubleheaderWeeks,
       summary: release.summary,
       releasePageUrl: leagueUrl(registry, `/${registry.slug}/schedule-release`),
     },
   };
+}
+
+/**
+ * GroupMe promo — the chat's version of the tease.
+ *
+ * Names the four games rather than summarising them, because the chat is where
+ * owners argue about the draw and a game with two names in it is the thing
+ * that starts that. The link goes LAST and carries no trailing punctuation:
+ * GroupMe autolinks a sentence-ending period into the href and 404s it for
+ * every owner (docs/claude/rules/league-urls.md). `leagueUrl` is already
+ * applied in buildFactSheet, so this never concatenates an origin with a path.
+ */
+export function buildGroupMePromo(post, enrichment, { league = 'theleague' } = {}) {
+  const registry = LEAGUES[league];
+  if (!registry || !enrichment?.marquee?.length) return null;
+  const games = enrichment.marquee
+    .map((m) => `  Wk ${m.week}: ${m.awayName} at ${m.homeName}`)
+    .join('\n');
+  const dh = enrichment.doubleheaderWeeks?.length
+    ? ` Doubleheaders in Weeks ${enrichment.doubleheaderWeeks.join(', ')}, none of them on an NFL bye.`
+    : '';
+  return (
+    `📅 THE ${enrichment.year} SCHEDULE IS OUT. Every matchup is live in MFL.` +
+    `${dh}\n\nFour to circle:\n${games}\n\n` +
+    `Schefter's full breakdown:\n${leagueUrl(registry, post.link)}`
+  );
 }
 
 export function getSystemPrompt() {
@@ -179,7 +254,14 @@ the methodology. The construction facts are there to reassure anyone who
 suspects the draw was unfair — mention them lightly, in passing, the way a beat
 writer notes the league office got something right for once. Never present the
 schedule as an opinion: it is set, it is final, and every team is looking at
-the same one.`);
+the same one.
+
+RIVALRIES ARE THE STORY. A schedule is a list of dates until you say who is
+playing whom and what happened the last dozen times. The fact sheet ranks the
+pairings this schedule renews, with all-time records — use them. A game between
+two teams that have split twenty meetings is worth more words than a
+construction fact. Cite the record when you name a rivalry; never estimate one,
+and never say a team leads a series unless the fact sheet says so.`);
 }
 
 export function getUserPrompt(factSheet) {
@@ -201,6 +283,9 @@ OUTPUT FORMAT — respond with ONLY valid JSON, no markdown fences:
 RULES:
 - Use ONLY franchise names and week numbers that appear above. Never invent a matchup.
 - Give each of the four circled games its own beat — that is the spine of the column.
+- Devote a section to the rivalry renewals, using the all-time records exactly as written.
+  Quote a record verbatim or not at all — do not recompute, round, or flip it.
+- If a game falls in Throwback Week, say so: those franchises play it in their old identities.
 - Do not restate every construction fact; pick the one or two that land.
 - No predictions of wins and losses. The schedule is news, not a forecast.`;
 }

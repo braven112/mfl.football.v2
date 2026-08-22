@@ -82,6 +82,12 @@ export interface LeagueDefinition {
    * leagues, and their nav links are opt-in (see nav-utils).
    */
   bestBall?: boolean;
+  /**
+   * Weeks that run Throwback Week — franchises wear a legacy identity instead
+   * of their current one. Absent for a league that doesn't run it, which is
+   * every league but TheLeague today.
+   */
+  throwbackWeeks?: number[];
   features: LeagueFeatures;
 }
 

@@ -37,6 +37,10 @@ type TeamBrand = {
   icon: string;
 };
 
+/** One side's legacy identity, as worn in Throwback Week. */
+type ThrowbackSide = { name: string; icon: string; colorPrimary: string };
+type ThrowbackGame = { week: number; away: ThrowbackSide; home: ThrowbackSide };
+
 type Release = {
   league: string;
   year: number;
@@ -66,6 +70,8 @@ type State =
       canPaste: boolean;
       release: Release;
       teams: Record<string, TeamBrand>;
+      /** Old-school identities for the Throwback Week pick, when the league runs one. */
+      throwback: ThrowbackGame | null;
     };
 
 /**
@@ -86,6 +92,8 @@ const WHY_ICONS: Record<string, string> = {
   'two of last year’s best': 'star',
 };
 const WHY_FALLBACK_ICON = 'football';
+/** The reason string that marks the Throwback Week pick — see schedule-release.mjs. */
+const THROWBACK_REASON = 'throwback week — old-school uniforms';
 
 const UNITS = [
   ['day', 86_400_000],
@@ -239,7 +247,7 @@ export default function ScheduleRelease({
   }
 
   /* ------------------------------------------------------------- revealed */
-  const { release, teams } = data;
+  const { release, teams, throwback } = data;
   const weekNumbers = Object.keys(release.weeks)
     .map(Number)
     .sort((a, b) => a - b);
@@ -269,17 +277,43 @@ export default function ScheduleRelease({
         <h3 className="rel__h3">Circle these</h3>
         <ul className="rel__marquee">
           {release.marquee.map((g) => {
-            const away = side(g.away, g.awayName);
-            const home = side(g.home, g.homeName);
+            // Throwback Week's game wears the era it will actually be played
+            // in — legacy crests, legacy names, legacy colours. Same treatment
+            // live scoring gives that week, so the tease looks like the day.
+            const isThrowback = throwback != null && g.why.includes(THROWBACK_REASON);
+            // The era name replaces the modern one, with the modern one kept as
+            // a subtitle: the reason chip credits the all-time record to the
+            // CURRENT franchise, so a card showing only "BOYZ II MEN" against a
+            // record held by "Vitside Mafia" reads as two different teams.
+            const away = isThrowback
+              ? { ...side(g.away, g.awayName), name: throwback.away.name, full: throwback.away.name, icon: throwback.away.icon, now: side(g.away, g.awayName).full }
+              : side(g.away, g.awayName);
+            const home = isThrowback
+              ? { ...side(g.home, g.homeName), name: throwback.home.name, full: throwback.home.name, icon: throwback.home.icon, now: side(g.home, g.homeName).full }
+              : side(g.home, g.homeName);
+            const fallback = 'var(--accent-color, #1c497c)';
+            // Era palettes carry no dark variant (the API says why), so the one
+            // colour serves both themes on a throwback card.
+            const awayColor = isThrowback ? throwback.away.colorPrimary : teams?.[g.away]?.colorPrimary;
+            const homeColor = isThrowback ? throwback.home.colorPrimary : teams?.[g.home]?.colorPrimary;
             const brandVars = {
-              '--rel-away': teams?.[g.away]?.colorPrimary ?? 'var(--accent-color, #1c497c)',
-              '--rel-away-dark': teams?.[g.away]?.colorPrimaryDark ?? 'var(--accent-color, #1c497c)',
-              '--rel-home': teams?.[g.home]?.colorPrimary ?? 'var(--accent-color, #1c497c)',
-              '--rel-home-dark': teams?.[g.home]?.colorPrimaryDark ?? 'var(--accent-color, #1c497c)',
+              '--rel-away': awayColor ?? fallback,
+              '--rel-away-dark':
+                (isThrowback ? awayColor : teams?.[g.away]?.colorPrimaryDark) ?? fallback,
+              '--rel-home': homeColor ?? fallback,
+              '--rel-home-dark':
+                (isThrowback ? homeColor : teams?.[g.home]?.colorPrimaryDark) ?? fallback,
             } as CSSProperties;
             return (
-              <li key={`${g.week}-${g.away}-${g.home}`} className="rel__game" style={brandVars}>
-                <span className="rel__week">Week {g.week}</span>
+              <li
+                key={`${g.week}-${g.away}-${g.home}`}
+                className={`rel__game${isThrowback ? ' rel__game--throwback' : ''}`}
+                style={brandVars}
+              >
+                <span className="rel__week">
+                  Week {g.week}
+                  {isThrowback && <span className="rel__era">Throwback</span>}
+                </span>
                 {/* Stacked, not side by side: four cards across a 60rem column
                     leaves ~110px per team on one row, which truncated every
                     franchise to "Midw…". Away over home also matches how the
@@ -289,7 +323,12 @@ export default function ScheduleRelease({
                     <span className="rel__crest">
                       {away.icon && <img src={away.icon} alt="" loading="lazy" width="28" height="28" />}
                     </span>
-                    <span className="rel__name">{away.full}</span>
+                    <span className="rel__name">
+                      {away.full}
+                      {'now' in away && away.now !== away.full && (
+                        <span className="rel__now">{away.now}</span>
+                      )}
+                    </span>
                   </span>
                   <span className="rel__side rel__side--home">
                     <span className="rel__at" aria-label="at">
@@ -298,19 +337,26 @@ export default function ScheduleRelease({
                     <span className="rel__crest">
                       {home.icon && <img src={home.icon} alt="" loading="lazy" width="28" height="28" />}
                     </span>
-                    <span className="rel__name">{home.full}</span>
+                    <span className="rel__name">
+                      {home.full}
+                      {'now' in home && home.now !== home.full && (
+                        <span className="rel__now">{home.now}</span>
+                      )}
+                    </span>
                   </span>
                 </div>
-                {g.why.length > 0 && (
+                {g.why.filter((w) => !isThrowback || w !== THROWBACK_REASON).length > 0 && (
                   <ul className="rel__whys">
-                    {g.why.map((why) => (
-                      <li key={why} className="rel__why">
-                        <svg className="rel__whyIcon" aria-hidden="true" width="13" height="13">
-                          <use href={`${spriteHref}#icon-${WHY_ICONS[why] ?? WHY_FALLBACK_ICON}`} />
-                        </svg>
-                        {why}
-                      </li>
-                    ))}
+                    {g.why
+                      .filter((w) => !isThrowback || w !== THROWBACK_REASON)
+                      .map((why) => (
+                        <li key={why} className="rel__why">
+                          <svg className="rel__whyIcon" aria-hidden="true" width="13" height="13">
+                            <use href={`${spriteHref}#icon-${WHY_ICONS[why] ?? WHY_FALLBACK_ICON}`} />
+                          </svg>
+                          {why}
+                        </li>
+                      ))}
                   </ul>
                 )}
               </li>

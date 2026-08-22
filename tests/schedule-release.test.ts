@@ -13,6 +13,7 @@ import {
   scheduleReleaseTease,
   scheduleReleaseTeaseCopy,
   GENERIC_QUALITY_REASON,
+  THROWBACK_REASON,
 } from '../src/utils/schedule-release.mjs';
 
 /**
@@ -400,5 +401,136 @@ describe('trimming the generic quality reason', () => {
 
   it('leaves a card with no angle at all with an empty reason list, not filler', () => {
     for (const p of picks) expect(Array.isArray(p.why)).toBe(true);
+  });
+});
+
+/**
+ * Rivalries and Throwback Week in the tease.
+ *
+ * Both are reasons a game matters that this season's records say nothing
+ * about, and both have a way of going wrong quietly: a record printed from the
+ * wrong side names the wrong winner, and a reserved slot that isn't really
+ * reserved just silently drops the week.
+ */
+describe('the rivalry lens', () => {
+  const ids = ['0001', '0002', '0003', '0004', '0005', '0006', '0007', '0008'];
+  const name = Object.fromEntries(ids.map((id, i) => [id, `Team ${i + 1}`]));
+  const divisionOf = Object.fromEntries(ids.map((id, i) => [id, `D${Math.ceil((i + 1) / 4)}`]));
+  const conferenceOf = Object.fromEntries(ids.map((id) => [id, '00']));
+  const winRate = Object.fromEntries(ids.map((id) => [id, 0.5]));
+
+  // 0001 vs 0005 is the marquee series; 0002 vs 0006 a lesser one.
+  const rivalry = {
+    '0001-0005': { games: 30, playoffGames: 2, intensity: 4.9, perspective: '0001', wins: 16, losses: 14, ties: 0 },
+    '0002-0006': { games: 12, playoffGames: 0, intensity: 3.1, perspective: '0002', wins: 6, losses: 6, ties: 0 },
+    '0003-0007': { games: 3, playoffGames: 0, intensity: 1.4, perspective: '0003', wins: 2, losses: 1, ties: 0 },
+  };
+  const base = {
+    divisionOf,
+    conferenceOf,
+    name,
+    winRate,
+    lastChampionship: null,
+    lastWeek: 6,
+    doubleheaderWeeks: [],
+    rivalry,
+  };
+  const weeks = new Map([
+    [1, [{ away: '0001', home: '0005' }, { away: '0003', home: '0007' }]],
+    [2, [{ away: '0002', home: '0006' }, { away: '0004', home: '0008' }]],
+    [3, [{ away: '0001', home: '0006' }, { away: '0002', home: '0005' }]],
+    [4, [{ away: '0002', home: '0006' }, { away: '0003', home: '0008' }]],
+    [5, [{ away: '0004', home: '0007' }, { away: '0001', home: '0003' }]],
+    [6, [{ away: '0005', home: '0008' }, { away: '0002', home: '0004' }]],
+  ]);
+
+  it('lifts a long series into the tease', () => {
+    const picks = marqueeMatchups(weeks, base, 4);
+    const hasMarqueeSeries = picks.some(
+      (p: any) => (p.away === '0001' && p.home === '0005') || (p.away === '0005' && p.home === '0001'),
+    );
+    expect(hasMarqueeSeries, 'the 30-meeting series should make the four').toBe(true);
+  });
+
+  // A series line on all four cards is wallpaper — the same failure the
+  // generic quality tag had.
+  it('says the series on at most one card outside Throwback Week', () => {
+    const picks = marqueeMatchups(weeks, base, 4);
+    const said = picks.filter((p: any) => p.why.some((w: string) => /\d+ meetings/.test(w)));
+    expect(said.length).toBeLessThanOrEqual(1);
+  });
+
+  it('names the franchise that is actually ahead, not whichever id sorts first', () => {
+    // 0005 leads 0001 here, but the record is STORED from 0001's side.
+    const flipped = {
+      ...base,
+      rivalry: { '0001-0005': { ...rivalry['0001-0005'], wins: 12, losses: 18 } },
+    };
+    const [pick] = marqueeMatchups(new Map([[1, [{ away: '0001', home: '0005' }]]]), flipped, 1);
+    const line = pick.why.find((w: string) => /meetings/.test(w));
+    expect(line).toContain('Team 5 up 18-12');
+    expect(line).not.toContain('Team 1 up');
+  });
+
+  it('calls an even series even rather than picking a leader', () => {
+    const even = { ...base, rivalry: { '0002-0006': rivalry['0002-0006'] } };
+    const [pick] = marqueeMatchups(new Map([[2, [{ away: '0002', home: '0006' }]]]), even, 1);
+    expect(pick.why.find((w: string) => /meetings/.test(w))).toContain('dead even at 6-6');
+  });
+
+  it('ignores a pairing with too little history to be a rivalry', () => {
+    const [pick] = marqueeMatchups(new Map([[1, [{ away: '0003', home: '0007' }]]]), base, 1);
+    expect(pick.why.some((w: string) => /meetings/.test(w))).toBe(false);
+  });
+
+  it('degrades to the old behaviour with no rivalry data at all', () => {
+    const picks = marqueeMatchups(weeks, { ...base, rivalry: undefined }, 4);
+    expect(picks).toHaveLength(4);
+    for (const p of picks) expect(p.why.some((w: string) => /meetings/.test(w))).toBe(false);
+  });
+
+  describe('Throwback Week', () => {
+    const ctx = { ...base, throwbackWeek: 4 };
+
+    it('always carries a game from the throwback week', () => {
+      const picks = marqueeMatchups(weeks, ctx, 4);
+      expect(picks.some((p: any) => p.week === 4)).toBe(true);
+    });
+
+    it('picks the week’s best RIVALRY, not its best score', () => {
+      const [pick] = marqueeMatchups(weeks, ctx, 4).filter((p: any) => p.week === 4);
+      expect([pick.away, pick.home].sort()).toEqual(['0002', '0006']);
+    });
+
+    // Franchise-distinctness is the guarantee that survives everywhere: the
+    // reserved slot claims two franchises before the general pass runs, and
+    // the first relax pass still refuses a repeat. Week-distinctness is only
+    // best-effort — this eight-team fixture genuinely runs out of legal games
+    // in unused weeks, which is why the relax passes exist at all — so it is
+    // pinned on the sixteen-team shape in the marqueeMatchups suite above.
+    it('never repeats a franchise, even with a slot reserved', () => {
+      const teams = marqueeMatchups(weeks, ctx, 4).flatMap((p: any) => [p.away, p.home]);
+      expect(new Set(teams).size).toBe(teams.length);
+    });
+
+    it('says both the rivalry and the throwback on that card', () => {
+      const [pick] = marqueeMatchups(weeks, ctx, 4).filter((p: any) => p.week === 4);
+      expect(pick.why).toContain(THROWBACK_REASON);
+      expect(pick.why.some((w: string) => /meetings/.test(w))).toBe(true);
+    });
+
+    it('does nothing at all for a league that runs no throwback week', () => {
+      const picks = marqueeMatchups(weeks, base, 4);
+      for (const p of picks) expect(p.why).not.toContain(THROWBACK_REASON);
+    });
+  });
+
+  // The reveal page has to spot the throwback pick to swap in the era crests,
+  // and it does that by matching this exact string in a second file.
+  it('keeps the reveal page’s copy of THROWBACK_REASON in step', () => {
+    const tsx = readFileSync(resolve(__dirname, '../src/components/shared/ScheduleRelease.tsx'), 'utf-8');
+    const declared = tsx.match(/const THROWBACK_REASON = '([^']+)'/)?.[1];
+    expect(declared, 'ScheduleRelease.tsx must declare THROWBACK_REASON').toBeTruthy();
+    expect(declared).toBe(THROWBACK_REASON);
   });
 });

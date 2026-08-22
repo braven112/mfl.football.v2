@@ -41,86 +41,41 @@ export type RivalEntry = {
 };
 
 /**
- * Meetings below this are one-off scheduling artifacts rather than a shared
- * history, and in a 24-team league they are the majority of pairings.
+ * The pure math lives in `rivalry-intensity.mjs` and is re-exported here with
+ * types. It moved there so the schedule-release lock script — plain node,
+ * which cannot import a .ts module — ranks rivalries with the SAME formula
+ * these pages show, instead of carrying a second copy of it.
  */
-export const MIN_RIVALRY_MEETINGS = 4;
+import * as intensity from './rivalry-intensity.mjs';
+
+export const MIN_RIVALRY_MEETINGS: number = intensity.MIN_RIVALRY_MEETINGS;
 
 /** Meetings between two franchises under the current owners, oldest-first. */
-export function currentOwnerMeetings(
+export const currentOwnerMeetings: (
   matchupHistory: Record<string, Matchup[]> | undefined,
   opponentId: string
-): Matchup[] {
-  return (matchupHistory?.[opponentId] ?? []).filter((m) => m.bothAttributed);
-}
+) => Matchup[] = intensity.currentOwnerMeetings;
 
 /** Win/loss/tie/playoff tallies for a list of meetings, from OUR perspective. */
-export function tallyMeetings(meetings: Matchup[]) {
-  let wins = 0;
-  let losses = 0;
-  let ties = 0;
-  let playoffGames = 0;
-  for (const m of meetings) {
-    if (m.score > m.opponentScore) wins++;
-    else if (m.score < m.opponentScore) losses++;
-    else ties++;
-    if (m.isPlayoff) playoffGames++;
-  }
-  return { wins, losses, ties, playoffGames };
-}
+export const tallyMeetings: (
+  meetings: Matchup[]
+) => { wins: number; losses: number; ties: number; playoffGames: number } = intensity.tallyMeetings;
 
-/**
- * How charged a pairing is: an even record counts for more than a lopsided
- * one, volume and postseason meetings raise it, and the log keeps a franchise
- * that simply plays one division rival often from crowding out a genuinely
- * close series. Playoff meetings count triple.
- *
- * Every playoff meeting weighs the same here regardless of round. That is
- * deliberate for now — the AFL runs 9-15 brackets a season and MFL's archived
- * bracket metadata does not label which is the title game before 2024, so a
- * championship-vs-consolation tier would be guesswork for most of its history.
- */
-export function rivalryIntensity(
+/** How charged a pairing is — see the .mjs for the reasoning behind the weights. */
+export const rivalryIntensity: (
   meetings: number,
   wins: number,
   losses: number,
   ties: number,
   playoffGames: number
-): number {
-  const totalDecided = wins + losses + ties;
-  const closeness = totalDecided > 0 ? 1 - Math.abs(wins - losses) / totalDecided : 0;
-  return closeness * Math.log2(1 + meetings + playoffGames * 3);
-}
+) => number = intensity.rivalryIntensity;
 
-/**
- * Rank every opponent a franchise shares enough history with, most intense
- * first. `selfId` is skipped: ownerHistory cross-attribution can leave a
- * franchise facing its own id when an owner changed slots mid-career.
- */
-export function computeRivalEntries(
+/** Rank every opponent a franchise shares enough history with, most intense first. */
+export const computeRivalEntries: (
   matchupHistory: Record<string, Matchup[]> | undefined,
   selfId: string,
-  { minMeetings = MIN_RIVALRY_MEETINGS }: { minMeetings?: number } = {}
-): RivalEntry[] {
-  const entries: RivalEntry[] = [];
-  for (const opponentId of Object.keys(matchupHistory ?? {})) {
-    if (opponentId === selfId) continue;
-    const meetings = currentOwnerMeetings(matchupHistory, opponentId);
-    if (meetings.length < minMeetings) continue;
-    const { wins, losses, ties, playoffGames } = tallyMeetings(meetings);
-    entries.push({
-      opponentId,
-      wins,
-      losses,
-      ties,
-      games: meetings.length,
-      playoffGames,
-      intensity: rivalryIntensity(meetings.length, wins, losses, ties, playoffGames),
-    });
-  }
-  entries.sort((a, b) => b.intensity - a.intensity);
-  return entries;
-}
+  opts?: { minMeetings?: number }
+) => RivalEntry[] = intensity.computeRivalEntries;
 
 /**
  * URL slug for a pairing. Sorted so both franchises link to the SAME page —

@@ -1,4 +1,6 @@
 import { readFileSync } from 'node:fs';
+// @ts-expect-error — sibling .mjs module, no .d.ts
+import { THROWBACK_WEEKS, isThrowbackWeek } from '../src/data/theleague/throwback-weeks.mjs';
 import path from 'node:path';
 import { describe, it, expect } from 'vitest';
 // @ts-expect-error — sibling .mjs module, no .d.ts
@@ -60,14 +62,26 @@ describe('NFL week date derivation', () => {
 });
 
 describe('THROWBACK_WEEKS config parsing (single source of truth)', () => {
-  it('parses the real throwback-config.ts (guards against drift)', () => {
+  // The list moved to the league registry (`throwbackWeeks`) so node scripts
+  // can IMPORT it — compute-league-events.mjs used to scrape it out of the
+  // TypeScript with parseThrowbackWeeks, and a scrape that stops matching
+  // fails soft onto DEFAULT_THROWBACK_WEEKS, which is a silent wrong answer
+  // the moment the two disagree. The parser is kept (and still exercised
+  // below) because nothing else replaces it if the list ever moves back into
+  // TS, but it is no longer on the live path.
+  it('the registry is the source, and every reader agrees with it', () => {
+    expect(THROWBACK_WEEKS.length).toBeGreaterThan(0);
+    expect(THROWBACK_WEEKS).toEqual(DEFAULT_THROWBACK_WEEKS); // fallback must mirror the registry
+    expect(THROWBACK_WEEKS.every((w) => isThrowbackWeek(w))).toBe(true);
+  });
+
+  it('the events script imports the list rather than scraping the TS', () => {
     const source = readFileSync(
-      path.join(__dirname, '..', 'src', 'data', 'theleague', 'throwback-config.ts'),
+      path.join(__dirname, '..', 'scripts', 'compute-league-events.mjs'),
       'utf8',
     );
-    const weeks = parseThrowbackWeeks(source);
-    expect(weeks).not.toBeNull();
-    expect(weeks).toEqual(DEFAULT_THROWBACK_WEEKS); // fallback must mirror config
+    expect(source).toContain("from '../src/data/theleague/throwback-weeks.mjs'");
+    expect(source).not.toContain('parseThrowbackWeeks(');
   });
 
   it('parses multi-week and annotated declarations', () => {

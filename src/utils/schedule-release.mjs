@@ -32,6 +32,8 @@
  * a reveal that runs without bye data would schedule against nothing.
  */
 
+import { rivalryPairKey as pairKey, describeSeries } from './rivalry-intensity.mjs';
+
 /** Labor Day: first Monday in September, as a UTC date. */
 export const laborDay = (year) => {
   const d = new Date(Date.UTC(year, 8, 1));
@@ -125,23 +127,78 @@ export const priorWinRates = (standingsFranchises) => {
  * has going for it, and then on at most one card, so it means "this one is
  * here on quality alone" rather than "we ran out of things to write".
  */
+/** A series shorter than this is a scheduling coincidence, not a rivalry. */
+export const RIVALRY_MEETINGS_TO_MENTION = 6;
+
+/** The reason a Throwback Week pick carries, so the reveal page can spot it. */
+export const THROWBACK_REASON = 'throwback week — old-school uniforms';
+
 export const GENERIC_QUALITY_REASON = 'two of last year’s best';
 
-const trimGenericReasons = (picks) => {
-  let spent = false;
+/**
+ * Decide what each card actually SAYS, once all four are known.
+ *
+ * Two reasons are true of too many games to print on every card:
+ *
+ *   the series line   every pairing in a sixteen-year league has history, so
+ *                     annotating all four is wallpaper. It goes on the single
+ *                     most-charged rivalry in the set, plus the Throwback Week
+ *                     card, where the old rivalry IS the reason for the pick.
+ *   the quality tag   any two teams over .600 qualify. Printed only when a
+ *                     game has nothing more specific to say, and then once.
+ *
+ * Both keep their full weight in the score either way — this is about wording,
+ * not about which games get picked.
+ */
+const trimReasons = (picks, nameOf) => {
+  const withSeries = picks.filter((p) => p.series);
+  let loudest = null;
+  for (const p of withSeries) {
+    if (!loudest || p.series.intensity > loudest.series.intensity) loudest = p;
+  }
+
+  let spentGeneric = false;
   return picks.map((p) => {
-    const others = p.why.filter((w) => w !== GENERIC_QUALITY_REASON);
+    const why = [...p.why];
+    const saysSeries = p.series && (p === loudest || p.why.includes(THROWBACK_REASON));
+    if (saysSeries) {
+      const line = describeSeries(p.series, p.away, p.home, nameOf);
+      // Ahead of the throwback line so the card reads "old rivalry, in old
+      // uniforms" rather than the other way round.
+      if (line) why.unshift(line);
+    }
+
+    const others = why.filter((w) => w !== GENERIC_QUALITY_REASON);
     if (others.length > 0) return { ...p, why: others };
-    if (!p.why.includes(GENERIC_QUALITY_REASON)) return p;
-    if (spent) return { ...p, why: [] };
-    spent = true;
-    return p;
+    if (!why.includes(GENERIC_QUALITY_REASON)) return { ...p, why };
+    if (spentGeneric) return { ...p, why: [] };
+    spentGeneric = true;
+    return { ...p, why };
   });
 };
 
 export const marqueeMatchups = (
   weeks,
-  { divisionOf, conferenceOf, name, winRate, lastChampionship, lastWeek, doubleheaderWeeks = [] },
+  {
+    divisionOf,
+    conferenceOf,
+    name,
+    winRate,
+    lastChampionship,
+    lastWeek,
+    doubleheaderWeeks = [],
+    /**
+     * Career head-to-head per pairing, keyed by `pairKey` — see
+     * `rivalrySeriesByPair`. Absent for a league with no ingested history, and
+     * everything below degrades to the old behaviour rather than throwing.
+     */
+    rivalry = {},
+    /**
+     * Throwback Week, if the league runs one (`THROWBACK_WEEKS`, TheLeague
+     * only today). One marquee slot is RESERVED for its best old rivalry.
+     */
+    throwbackWeek = null,
+  },
   limit = 4,
 ) => {
   const dh = new Set(doubleheaderWeeks);
@@ -186,6 +243,17 @@ export const marqueeMatchups = (
         score += 16;
         why.push('cross-conference opener');
       }
+      // A long series between the same two owners is a reason to watch a game
+      // this year's records say nothing about. Scored off the SHARED intensity
+      // formula (`rivalry-intensity.mjs`) so the tease agrees with the rivalry
+      // pages instead of inventing a second ranking.
+      const series = rivalry[pairKey(a, b)];
+      const rivalrySays = series && series.games >= RIVALRY_MEETINGS_TO_MENTION;
+      if (rivalrySays) score += Math.min(30, series.intensity * 5);
+      if (week === throwbackWeek) {
+        score += 10;
+        why.push(THROWBACK_REASON);
+      }
       // Both coming off a strong season reads as a heavyweight bout even
       // without a trophy or a division between them.
       // Weighted always; only SAID when nothing else fits (trimGenericReasons).
@@ -193,7 +261,20 @@ export const marqueeMatchups = (
         score += 18;
         why.push(GENERIC_QUALITY_REASON);
       }
-      scored.push({ week, away: a, home: b, awayName: name[a], homeName: name[b], score, why });
+      scored.push({
+        week,
+        away: a,
+        home: b,
+        awayName: name[a],
+        homeName: name[b],
+        score,
+        why,
+        // Carried, not printed: which cards SAY it is decided once the four are
+        // known, in `trimReasons`. Every game in a sixteen-year league has some
+        // history, so a series line on all four reads as boilerplate — the same
+        // failure as the generic quality tag below.
+        series: rivalrySays ? series : null,
+      });
     }
   }
 
@@ -216,6 +297,25 @@ export const marqueeMatchups = (
   };
   const isPicked = (g) => picked.some((p) => p.week === g.week && p.away === g.away && p.home === g.home);
 
+  // Throwback Week gets a RESERVED slot, claimed BEFORE anything else.
+  //
+  // Two things this ordering buys. It guarantees the week appears at all — the
+  // whole point of it is the old uniforms, and quietly showing none of its
+  // games is indistinguishable from the league not running the week. And it
+  // gets the RIGHT game: ranked by rivalry rather than by score, because score
+  // is dominated by opening-week and quality bonuses that say nothing about
+  // how old a grudge is. Claiming it last instead (the first cut) let Weeks 1
+  // and 14 take both franchises of the week's best series first, leaving a
+  // nine-meeting pairing standing in for a fifteen-meeting one decided by a
+  // single game.
+  if (throwbackWeek != null) {
+    const inWeek = scored.filter((g) => g.week === throwbackWeek);
+    const best =
+      inWeek.filter((g) => g.series).sort((x, y) => y.series.intensity - x.series.intensity)[0] ??
+      inWeek[0];
+    if (best) take(best);
+  }
+
   for (const g of scored) {
     if (picked.length >= limit) break;
     if (usedWeeks.has(g.week) || usedTeams.has(g.away) || usedTeams.has(g.home)) continue;
@@ -231,7 +331,10 @@ export const marqueeMatchups = (
       take(g);
     }
   }
-  return trimGenericReasons(picked.slice(0, limit).sort((x, y) => x.week - y.week));
+  return trimReasons(
+    picked.slice(0, limit).sort((x, y) => x.week - y.week),
+    (id) => name[id] ?? '',
+  );
 };
 
 /* ---------------------------------------------------------------- tease */

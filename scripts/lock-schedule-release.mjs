@@ -37,6 +37,7 @@ import { fileURLToPath } from 'node:url';
 
 import { LEAGUES, SHARED_APP_ORIGIN } from '../src/config/leagues-data.mjs';
 import { marqueeMatchups, priorWinRates, releaseIsReady, scheduleReleaseDate } from '../src/utils/schedule-release.mjs';
+import { rivalrySeriesByPair } from '../src/utils/rivalry-intensity.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const arg = (name, fallback) => {
@@ -151,7 +152,8 @@ async function releaseFromPlan(slug, y) {
   const divisionOf = {};
   const conferenceOf = {};
   for (const f of [].concat(meta.franchises?.franchise ?? [])) {
-    name[f.id] = f.name;
+    // MFL stores a few franchise names with stray leading space.
+    name[f.id] = String(f.name ?? '').trim();
     divisionOf[f.id] = divisionName[String(f.division)] ?? String(f.division);
     conferenceOf[f.id] = divisionConference[String(f.division)] ?? '00';
   }
@@ -162,6 +164,21 @@ async function releaseFromPlan(slug, y) {
     const raw = JSON.parse(fs.readFileSync(champFile, 'utf8'));
     lastChampionship = Object.values(raw.championships ?? raw).find((c) => Number(c?.year) === y - 1) ?? null;
   }
+
+  // Career head-to-head, so a long series counts toward a game being marquee.
+  // Missing history is not an error: a league with no ingested archives simply
+  // scores on this year's evidence, exactly as it did before.
+  let rivalry = {};
+  const historyFile = path.join(ROOT, registry.dataPath, 'derived', 'franchise-history.json');
+  if (fs.existsSync(historyFile)) {
+    const history = JSON.parse(fs.readFileSync(historyFile, 'utf8'));
+    rivalry = rivalrySeriesByPair(history.franchises ?? history);
+  }
+
+  // Throwback Week, if this league runs one. Straight off the registry rather
+  // than a slug test, so giving a second league a throwback week is a one-key
+  // change there and needs no branch here.
+  const throwbackWeek = registry.throwbackWeeks?.[0] ?? null;
 
   const weeks = new Map(Object.entries(plan.weeks).map(([w, g]) => [Number(w), g]));
   const marquee = marqueeMatchups(
@@ -174,6 +191,8 @@ async function releaseFromPlan(slug, y) {
       lastChampionship,
       lastWeek: Number(meta.lastRegularSeasonWeek),
       doubleheaderWeeks: plan.doubleheaderWeeks,
+      rivalry,
+      throwbackWeek,
     },
     4,
   );
