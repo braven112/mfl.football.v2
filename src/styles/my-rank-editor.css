@@ -254,6 +254,21 @@
 }
 
 /* ── The trigger button, shared by every host page ── */
+
+/**
+ * A layout handle for hosts that need one.
+ *
+ * `display: contents` means the wrapper is invisible to layout everywhere by
+ * default — the button remains the host toolbar's own flex item, exactly as if
+ * this element weren't here. A host that needs the trigger on its own line
+ * (see TheLeague's roster controls) gives the wrapper a real display and lays
+ * it out, which is the only way to get a full-width line without stretching
+ * the pill itself.
+ */
+.mre-trigger-wrap {
+  display: contents;
+}
+
 .mre-trigger {
   display: inline-flex;
   align-items: center;

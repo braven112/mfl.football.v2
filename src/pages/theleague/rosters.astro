@@ -4848,14 +4848,35 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     }
   }
 
-  /* .roster-controls lays out with `order`, and .mode-toggle (order: 1) rides
-     up on a negative top margin — so a sibling that doesn't opt into the
-     ordering renders FIRST and gets covered by the toggle, whatever its
-     position in the markup. */
-  .roster-controls :global(.mre-trigger) {
-    order: 2;
-    align-self: flex-end;
+  /* The My Rank pill shares .roster-controls with .mode-toggle, which lays out
+     with `order` and rides up on a negative top margin — so a sibling that
+     doesn't opt into the ordering renders first and gets covered by it.
+     Below desktop the pill takes a line of its own and centres on it; the
+     wrapper exists so that line can be full width without the pill stretching
+     to match. */
+  .roster-controls {
+    flex-wrap: wrap;
+  }
+
+  .roster-controls :global(.mre-trigger-wrap) {
+    display: flex;
+    justify-content: center;
+    order: 3;
+    flex: 1 0 100%;
     margin-top: 0.4rem;
+  }
+
+  /* From desktop up the row has room for both, so horizontal placement becomes
+     a main-axis job — an auto right margin eats the free space and puts the
+     pill flush left, with the mode toggle keeping the other end. */
+  @media (min-width: 1024px) {
+    .roster-controls :global(.mre-trigger-wrap) {
+      order: -1;
+      flex: 0 0 auto;
+      margin-right: auto;
+      margin-top: 0;
+      align-items: center;
+    }
   }
   .mode-btn {
     display: flex;
