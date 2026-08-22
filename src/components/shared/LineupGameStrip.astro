@@ -473,8 +473,16 @@ const isMultiGame = cards.length > 1;
         });
       }, { passive: true });
 
-      prevBtn?.addEventListener('click', () => scrollToGame(activeGame - 1));
-      nextBtn?.addEventListener('click', () => scrollToGame(activeGame + 1));
+      // An `aria-disabled` control must not perform its action. Clamping in
+      // scrollToGame already made an end-of-strip click a no-op, but a screen
+      // reader announces these as unavailable — so honor that literally
+      // rather than relying on the clamp to be silently equivalent.
+      const step = (btn: HTMLElement | null, delta: number) => {
+        if (btn?.getAttribute('aria-disabled') === 'true') return;
+        scrollToGame(activeGame + delta);
+      };
+      prevBtn?.addEventListener('click', () => step(prevBtn, -1));
+      nextBtn?.addEventListener('click', () => step(nextBtn, 1));
       dots.forEach((dot, i) => dot.addEventListener('click', () => scrollToGame(i)));
 
       paintNav(currentGameIndex());
