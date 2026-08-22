@@ -24,7 +24,10 @@
  * so explicitly, because a cron that silently failed to lock would leave the
  * league staring at a countdown that already expired.
  */
+import fs from 'node:fs';
+import path from 'node:path';
 import { getRedis } from './redis-client';
+import { getLeagueBySlug } from '../config/leagues';
 
 /** One franchise-vs-franchise game, as the planner emits it. */
 export interface ReleaseGame {
@@ -67,18 +70,47 @@ export interface ScheduleRelease {
 /** Reveals are per league AND per season — next year is a different record. */
 const key = (league: string, year: number) => `schedule-release:${league}:${year}`;
 
-export async function getRelease(league: string, year: number): Promise<ScheduleRelease | null> {
-  const redis = await getRedis();
-  if (!redis) return null;
+const isRelease = (v: any): v is ScheduleRelease =>
+  Boolean(v) && typeof v === 'object' && typeof v.text === 'string' && v.text.length > 0 && Array.isArray(v.marquee);
+
+/**
+ * The committed archive scripts/lock-schedule-release.mjs writes after a
+ * successful lock. It is the durable half: Redis can be evicted or
+ * unconfigured, and a reveal is a permanent league record that Schefter's
+ * column still needs to read months later.
+ */
+function readArchive(league: string, year: number): ScheduleRelease | null {
+  const registry = getLeagueBySlug(league);
+  if (!registry) return null;
   try {
-    const value = await redis.get<ScheduleRelease>(key(league, year));
-    // A malformed record must read as "not revealed" rather than crashing the
-    // page — it is recoverable by re-running the lock, a 500 is not.
-    if (!value || typeof value !== 'object' || !value.text || !Array.isArray(value.marquee)) return null;
-    return value;
+    const file = path.join(process.cwd(), registry.dataPath, 'schedule-release', `${year}.json`);
+    if (!fs.existsSync(file)) return null;
+    const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
+    return isRelease(parsed) ? parsed : null;
   } catch {
     return null;
   }
+}
+
+/**
+ * Redis first, committed archive second. Redis is the live lock — it is what
+ * makes first-write-wins atomic and what a commissioner's manual reveal writes.
+ * The archive covers the cases Redis cannot: eviction, an environment with no
+ * Redis at all, and reading a past season's reveal.
+ */
+export async function getRelease(league: string, year: number): Promise<ScheduleRelease | null> {
+  const redis = await getRedis();
+  if (redis) {
+    try {
+      const value = await redis.get<ScheduleRelease>(key(league, year));
+      // A malformed record must read as "not revealed" rather than crashing the
+      // page — it is recoverable by re-running the lock, a 500 is not.
+      if (isRelease(value)) return value;
+    } catch {
+      // fall through to the archive rather than reporting "not revealed"
+    }
+  }
+  return readArchive(league, year);
 }
 
 export type LockOutcome =
@@ -115,6 +147,9 @@ export async function lockRelease(release: ScheduleRelease): Promise<LockOutcome
 export async function clearRelease(league: string, year: number): Promise<boolean> {
   const redis = await getRedis();
   if (!redis) return false;
+  // NOTE: this clears the LIVE lock only. A committed archive for the same
+  // season still reads back through getRelease, by design — the archive is the
+  // permanent record and removing it is a deliberate commit, not an API call.
   try {
     await redis.del(key(league, year));
     return true;

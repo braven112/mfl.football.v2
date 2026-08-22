@@ -46,6 +46,10 @@ const VALID_TYPES = [
   'draft-grades',
   'team-grades',
   'schedule-strength',
+  // Offseason, once per league per season. Self-guards on the locked reveal
+  // AND on the commissioner's paste having landed in MFL, so it can be run
+  // daily and stays a no-op until both are true.
+  'schedule-release',
 ];
 
 const VALID_LEAGUES = ['theleague', 'afl-fantasy'];
@@ -99,6 +103,9 @@ const DATA_FILE_MAP = {
   'players': 'players.json',
   'league': 'league.json',
   'draftResults': 'draftResults.json',
+  // schedule-release compares the LIVE schedule against the locked reveal to
+  // decide whether the commissioner's paste has landed yet.
+  'schedule': 'schedule.json',
 };
 
 async function loadDataFiles(dataDir, keys) {

@@ -210,3 +210,73 @@ Which in August is keepers only for the AFL. That is deliberate — it fixes the
 part of bye exposure the schedule controls, and owners manage the rest of their
 roster themselves. Rosters churn all season, so a post-draft re-run would give
 a different, not obviously better, answer.
+
+
+## Schedule Release Day
+
+The annual reveal. `src/utils/schedule-release.mjs` owns the dates and the
+marquee picks; `src/utils/schedule-release-store.ts` owns the lock.
+
+| | Reveal | 2026 |
+|---|---|---|
+| The League | June 1 | Mon Jun 1 |
+| AFL | the Sunday two weeks before its NL draft (Labor Day − 22 days) | Sun Aug 16 |
+
+The AFL's date is derived twice over — Labor Day, then the NL draft eight days
+before it, then two weeks before that. There was no shared Labor Day / AFL-draft
+helper in code before this, only prose in the constitution.
+
+**Neither date fires without the NFL bye calendar.** `releaseIsReady` checks the
+data, not just the clock. Both reveals sit weeks after a normal mid-May NFL
+release (May 11–15 across 2023–2026), but that release moved from April to May
+once already, and a reveal without bye data would build a schedule against
+nothing.
+
+### Why the reveal is LOCKED
+
+The optimiser is simulated annealing: generating twice gives two different
+valid schedules. Without a lock, sixteen owners would see sixteen seasons and
+the commissioner would paste one of them. `set(..., { nx: true })` — atomic
+create-if-absent — is the whole mechanism. Two racing crons or a retry cannot
+overwrite a reveal that already happened.
+
+Redis is the live lock; `data/<league>/schedule-release/<year>.json` is the
+committed archive, written FROM the API's response so the two can never
+disagree. Generating the archive separately would produce a different schedule
+from the one the league was shown. `getRelease` reads Redis first, archive
+second — the archive covers eviction, Redis-less environments, and past seasons.
+
+### The chain
+
+```
+NFL releases its schedule (mid-May, date unknown)
+  → daily cron refreshes data/nfl/bye-weeks.json
+Release day, 9am PT — .github/workflows/schedule-release.yml
+  → POSTs /api/schedule-release, which generates, validates and LOCKS
+  → archives the response into the repo
+Owners open /<league>/schedule-release
+  → countdown before, then the same four marquee games for everyone
+Commissioner pastes into MFL (no schedule write API — see above)
+  → the feed cron picks the new schedule up
+Daily 11am PT — the schedule-release article type
+  → fires ONLY when the live schedule matches the locked reveal
+```
+
+**Schefter waits for the paste, not the clock.** Announcing a schedule nobody
+can open yet, or analysing one that turned out not to be what got pasted, is
+worse than announcing late. It also means each league announces on its own
+schedule with no second date to maintain.
+
+### The countdown decides nothing
+
+It ticks in the browser, but once it hits zero the page asks the server every
+15s rather than flipping itself. The reveal exists when the lock exists, not
+when a laptop's clock says so.
+
+### MFL calendar events cannot be named
+
+`import?TYPE=calendarEvent` takes `L`, `EVENT_TYPE`, `START_TIME`, `END_TIME`,
+`HAPPENS` — and no title or description. A CUSTOM event lands as an unlabeled
+dated marker. `scripts/mfl-calendar-event.mjs` exists and works, but is
+deliberately NOT wired into the cron: run it by hand once, look at what MFL
+renders, and decide whether an unnamed marker is worth having.

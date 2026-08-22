@@ -16,6 +16,10 @@ on:
     # Sunday 8am PT (15:00 UTC) — cut-watch (weekly during the Jul 15–Aug 16
     # window; self-guards outside it)
     - cron: "0 15 * * 0"
+    # Daily 11am PT (18:00 UTC) — schedule-release. Fires only once the
+    # commissioner's paste has landed in MFL and matches the locked reveal, so
+    # it is a no-op on every other day of the year (see the article type).
+    - cron: "0 18 * * *"
     # Wednesday 9am PT (16:00 UTC) — schedule-strength (The Gauntlet, both
     # leagues). Stays at 16:00 from when cut-watch ran daily at 15:00 and
     # would have shadowed a Wednesday mapping; no reason to churn it back.
@@ -37,6 +41,7 @@ on:
           - team-grades
           - schedule-strength
           - pecking-order
+          - schedule-release
       week:
         description: "Override week number (optional)"
         required: false
@@ -87,6 +92,7 @@ jobs:
               "0 15 * * 5") TYPE="weekend-preview" ;;
               "0 16 * * 6") TYPE="matchup-preview" ;;
               "0 15 * * 0") TYPE="cut-watch" ;;
+              "0 18 * * *") TYPE="schedule-release" ;;
             esac
             echo "type=${TYPE}" >> "$GITHUB_OUTPUT"
           fi
@@ -146,6 +152,14 @@ jobs:
             node scripts/compute-schedule-strength.mjs $COMPUTE_WEEK_ARG
             node scripts/schefter-weekly-articles.mjs --type "$ARTICLE_TYPE" --league theleague $WEEK_ARG
             node scripts/schefter-weekly-articles.mjs --type "$ARTICLE_TYPE" --league afl-fantasy $WEEK_ARG || echo "AFL generation failed (non-fatal)"
+          elif [ "$ARTICLE_TYPE" = "schedule-release" ]; then
+            # Release-day column, one per league per season. The article type
+            # self-skips until BOTH the reveal is locked and the commissioner's
+            # paste is live in MFL and matches it, so this daily cron is a
+            # no-op on every other day of the year. Each league announces when
+            # ITS paste lands — there is no second date to keep in sync.
+            node scripts/schefter-weekly-articles.mjs --type "$ARTICLE_TYPE" --league theleague
+            node scripts/schefter-weekly-articles.mjs --type "$ARTICLE_TYPE" --league afl-fantasy || echo "AFL generation failed (non-fatal)"
           else
             node scripts/schefter-weekly-articles.mjs --type "$ARTICLE_TYPE" $WEEK_ARG
           fi
@@ -165,6 +179,8 @@ jobs:
           FILES="src/data/theleague/schefter-feed.json"
           if [ "$ARTICLE_TYPE" = "schedule-strength" ]; then
             FILES="$FILES,data/afl-fantasy/schefter-feed.json,data/theleague/derived,data/afl-fantasy/derived"
+          elif [ "$ARTICLE_TYPE" = "schedule-release" ]; then
+            FILES="$FILES,data/afl-fantasy/schefter-feed.json"
           elif [ "$ARTICLE_TYPE" = "pecking-order" ]; then
             FILES="data/theleague/pecking-order,data/afl-fantasy/pecking-order"
           fi
