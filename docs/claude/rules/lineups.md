@@ -92,6 +92,24 @@ comes out 0.0 on any week MFL hasn't recorded starters for.
   scoreboard holds `aria-live` are all re-derived from a scroll listener, so a
   swipe and an arrow click land in identical states. Only the card in view is
   a polite live region — two would announce the same new total twice.
-- **A card whose composite can't cast still renders** (band only). Dropping it
-  would hide half of a double-header; the section only disappears when a game
-  has neither a cast faceoff nor a projected total.
+- **EVERY scheduled game gets a card, unconditionally.** A game with no cast
+  composite and no projections (MFL hasn't published the week, or a throttled
+  rosters call left the opponent pool empty) still renders its band, and the
+  band names both teams — which is the question being asked. An earlier
+  `if (faceoff || hasProjTotals)` guard would have reproduced the
+  one-game-of-two bug in exactly the conditions that caused it.
+- **The strip re-inits on `astro:page-load`.** With the ClientRouter, a module
+  already evaluated this session is not re-evaluated on a return visit, so a
+  once-at-module-scope init leaves the arrows dead the second time an owner
+  opens the page. `astro:page-load` also fires on the FIRST load, so the init
+  is guarded by a `data-carousel-wired` flag on the track — which the router
+  replaces along with the DOM, so it never blocks a real re-init.
+  (The lineup PAGES' own scripts still lack this and go inert on a return
+  visit — a pre-existing bug across both, worth its own change.)
+- **The AFL watermark takes `iconDark` first, ungated.** The panel is a
+  team-color gradient over near-black in BOTH themes, so the site-wide
+  `html.dark` crest swap (`TeamIconDarkStyles`) never fires on it. Nine of the
+  24 AFL crests measure illegible on a dark card
+  (`src/data/crest-dark-stroke-manifest.json`) and ten ship a hand-authored
+  dark variant; taking the light crest unconditionally hid those behind a
+  0.34-opacity watermark in light mode.

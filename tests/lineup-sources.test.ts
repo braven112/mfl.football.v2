@@ -13,6 +13,7 @@ import {
   franchiseAppearsIn,
 } from '../src/utils/lineup-sources';
 import { resolveSubmitButtonState } from '../src/utils/lineup-submit-state';
+import { buildMatchupCards } from '../src/utils/lineup-matchup-cards';
 
 /**
  * A league year with no feed committed under `data/<league>/mfl-feeds/`.
@@ -836,6 +837,46 @@ describe('the Set Lineup game strip', () => {
       expect(src.includes("querySelectorAll('.lineup-faceoff__scoreboard')"), `${page} all boards`).toBe(true);
       expect(src.includes("querySelector('.lineup-faceoff__scoreboard')"), `${page} single board`).toBe(false);
     }
+  });
+
+  it('never drops a scheduled game, even with nothing to show on it', () => {
+    // The failure mode this whole change exists to kill: a week with two
+    // games rendering one card. With no projections and no roster feed, a
+    // card has no composite and no totals — and must STILL be built, because
+    // its band names the opponent.
+    const cards = buildMatchupCards({
+      userFranchiseId: '0001',
+      matchups: [
+        { opponentFranchiseId: '0003', userIsHome: true },
+        { opponentFranchiseId: '0016', userIsHome: false },
+      ],
+      week: 1,
+      weekIsPast: false,
+      userSideIds: [],
+      userProjTotal: 0,
+      franchiseList: [],
+      resultsWeekEntry: null,
+      projMap: new Map(),
+      playerScoresMap: new Map(),
+      identityMap: new Map(),
+      slotPositions: ['QB', 'RB', 'WR', 'TE', 'FLEX', 'PK', 'DEF'],
+      slotEligibility: { QB: ['QB'], RB: ['RB'], WR: ['WR'], TE: ['TE'], FLEX: ['RB', 'WR', 'TE'], PK: ['PK'], DEF: ['DEF'] },
+      brandFor: (id) => ({ name: `Team ${id}` }),
+    });
+    expect(cards.map((c) => c.opponentFranchiseId)).toEqual(['0003', '0016']);
+    expect(cards.every((c) => c.faceoff === null)).toBe(true);
+    // Home/away still follows the GAME, not the week.
+    expect(cards.map((c) => c.userScoreSide)).toEqual(['home', 'away']);
+    expect(cards[0].title).toBe('Team 0003 vs Team 0001');
+  });
+
+  it('re-inits the carousel on astro:page-load', () => {
+    // The ClientRouter does not re-evaluate an already-loaded module, so a
+    // once-at-module-scope init leaves the arrows dead on a return visit.
+    const strip = readFileSync(join(process.cwd(), STRIP), 'utf8');
+    expect(strip.includes("addEventListener('astro:page-load'")).toBe(true);
+    // …and that event ALSO fires on first load, so the init must be guarded.
+    expect(strip.includes('carouselWired')).toBe(true);
   });
 
   it('drives the carousel off scroll position alone', () => {

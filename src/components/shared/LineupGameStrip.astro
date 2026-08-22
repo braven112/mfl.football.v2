@@ -396,74 +396,91 @@ const isMultiGame = cards.length > 1;
   // arrows and dots just scroll the track, and everything else (dots, counter,
   // arrow ends, which scoreboard announces) re-reads it. A swipe therefore
   // lands in exactly the same state as an arrow click.
+  //
+  // Runs on `astro:page-load` as well as first paint: with the ClientRouter a
+  // module already evaluated this session is NOT re-evaluated on a return
+  // visit, so a once-at-module-scope init leaves the arrows dead the second
+  // time an owner opens the page. Every listener here is bound to an element
+  // inside the swapped DOM (never to `document`), so a fresh run binds a fresh
+  // set and nothing stacks.
   // ---------------------------------------------------------------------------
-  const track = document.getElementById('lineup-games-track');
-  const countEl = document.getElementById('lineup-games-count');
-  const prevBtn = document.getElementById('lineup-games-prev');
-  const nextBtn = document.getElementById('lineup-games-next');
-  const cards = track ? (Array.from(track.querySelectorAll('.lineup-faceoff')) as HTMLElement[]) : [];
-  const dots = Array.from(document.querySelectorAll('.lineup-games__dot')) as HTMLButtonElement[];
-  const scoreboards = Array.from(document.querySelectorAll('.lineup-faceoff__scoreboard')) as HTMLElement[];
+  function initGameCarousel() {
+    const track = document.getElementById('lineup-games-track');
+    // `astro:page-load` also fires on the FIRST load, so the pair below would
+    // otherwise wire this DOM twice. The flag lives on the element, which the
+    // ClientRouter replaces on navigation — so it never blocks a real re-init.
+    if (!track || track.dataset.carouselWired === '1') return;
+    track.dataset.carouselWired = '1';
+    const countEl = document.getElementById('lineup-games-count');
+    const prevBtn = document.getElementById('lineup-games-prev');
+    const nextBtn = document.getElementById('lineup-games-next');
+    const cards = Array.from(track.querySelectorAll('.lineup-faceoff')) as HTMLElement[];
+    const dots = Array.from(document.querySelectorAll('.lineup-games__dot')) as HTMLButtonElement[];
+    const scoreboards = Array.from(document.querySelectorAll('.lineup-faceoff__scoreboard')) as HTMLElement[];
 
-  if (track && cards.length > 1) {
-    let activeGame = 0;
+    if (cards.length > 1) {
+      let activeGame = 0;
 
-    /** Which card is nearest the track's center right now. */
-    const currentGameIndex = (): number => {
-      const mid = track.scrollLeft + track.clientWidth / 2;
-      let best = 0;
-      let bestDist = Infinity;
-      cards.forEach((card, i) => {
-        const center = card.offsetLeft + card.offsetWidth / 2;
-        const dist = Math.abs(center - mid);
-        if (dist < bestDist) { bestDist = dist; best = i; }
-      });
-      return best;
-    };
+      /** Which card is nearest the track's center right now. */
+      const currentGameIndex = (): number => {
+        const mid = track.scrollLeft + track.clientWidth / 2;
+        let best = 0;
+        let bestDist = Infinity;
+        cards.forEach((card, i) => {
+          const center = card.offsetLeft + card.offsetWidth / 2;
+          const dist = Math.abs(center - mid);
+          if (dist < bestDist) { bestDist = dist; best = i; }
+        });
+        return best;
+      };
 
-    const paintNav = (index: number) => {
-      activeGame = index;
-      dots.forEach((dot, i) => {
-        if (i === index) dot.setAttribute('aria-current', 'true');
-        else dot.removeAttribute('aria-current');
-      });
-      if (countEl) countEl.textContent = `Game ${index + 1} of ${cards.length}`;
-      // Ends are marked, not disabled — a disabled button under the pointer
-      // drops focus mid-swipe.
-      prevBtn?.setAttribute('aria-disabled', String(index === 0));
-      nextBtn?.setAttribute('aria-disabled', String(index === cards.length - 1));
-      // Move the polite region onto the card actually in view so a lineup edit
-      // announces once, from the game the owner is looking at.
-      scoreboards.forEach((board) => {
-        const card = board.closest('.lineup-faceoff') as HTMLElement | null;
-        const cardIndex = card ? cards.indexOf(card) : -1;
-        board.setAttribute('aria-live', cardIndex === index ? 'polite' : 'off');
-      });
-    };
+      const paintNav = (index: number) => {
+        activeGame = index;
+        dots.forEach((dot, i) => {
+          if (i === index) dot.setAttribute('aria-current', 'true');
+          else dot.removeAttribute('aria-current');
+        });
+        if (countEl) countEl.textContent = `Game ${index + 1} of ${cards.length}`;
+        // Ends are marked, not disabled — a disabled button under the pointer
+        // drops focus mid-swipe.
+        prevBtn?.setAttribute('aria-disabled', String(index === 0));
+        nextBtn?.setAttribute('aria-disabled', String(index === cards.length - 1));
+        // Move the polite region onto the card actually in view so a lineup edit
+        // announces once, from the game the owner is looking at.
+        scoreboards.forEach((board) => {
+          const card = board.closest('.lineup-faceoff') as HTMLElement | null;
+          const cardIndex = card ? cards.indexOf(card) : -1;
+          board.setAttribute('aria-live', cardIndex === index ? 'polite' : 'off');
+        });
+      };
 
-    const scrollToGame = (index: number) => {
-      const target = cards[Math.max(0, Math.min(index, cards.length - 1))];
-      if (!target) return;
-      track.scrollTo({
-        left: target.offsetLeft - (track.clientWidth - target.offsetWidth) / 2,
-        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
-      });
-    };
+      const scrollToGame = (index: number) => {
+        const target = cards[Math.max(0, Math.min(index, cards.length - 1))];
+        if (!target) return;
+        track.scrollTo({
+          left: target.offsetLeft - (track.clientWidth - target.offsetWidth) / 2,
+          behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+        });
+      };
 
-    let scrollRaf = 0;
-    track.addEventListener('scroll', () => {
-      if (scrollRaf) return;
-      scrollRaf = requestAnimationFrame(() => {
-        scrollRaf = 0;
-        const next = currentGameIndex();
-        if (next !== activeGame) paintNav(next);
-      });
-    }, { passive: true });
+      let scrollRaf = 0;
+      track.addEventListener('scroll', () => {
+        if (scrollRaf) return;
+        scrollRaf = requestAnimationFrame(() => {
+          scrollRaf = 0;
+          const next = currentGameIndex();
+          if (next !== activeGame) paintNav(next);
+        });
+      }, { passive: true });
 
-    prevBtn?.addEventListener('click', () => scrollToGame(activeGame - 1));
-    nextBtn?.addEventListener('click', () => scrollToGame(activeGame + 1));
-    dots.forEach((dot, i) => dot.addEventListener('click', () => scrollToGame(i)));
+      prevBtn?.addEventListener('click', () => scrollToGame(activeGame - 1));
+      nextBtn?.addEventListener('click', () => scrollToGame(activeGame + 1));
+      dots.forEach((dot, i) => dot.addEventListener('click', () => scrollToGame(i)));
 
-    paintNav(currentGameIndex());
-  }
+      paintNav(currentGameIndex());
+    }
+    }
+
+  initGameCarousel();
+  document.addEventListener('astro:page-load', initGameCarousel);
 </script>

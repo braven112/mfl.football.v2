@@ -304,10 +304,15 @@ export function buildMatchupCards(input: BuildMatchupCardsInput): MatchupCard[] 
       homeProjTotal: m.userIsHome ? userProjTotal : opponentProjTotal,
       hasProjTotals: userProjTotal > 0 || opponentProjTotal > 0,
     };
-    // A game with neither a cast composite nor a projection has nothing to
-    // show; a card that is band-only is still worth rendering, because
-    // dropping it would hide half of a double-header.
-    if (card.faceoff || card.hasProjTotals) cards.push(card);
+    // EVERY scheduled game gets a card — never conditionally, because the
+    // whole point of the strip is that a double-header stops hiding one of
+    // its games. A card with no cast composite and no projections (MFL hasn't
+    // published the week yet, or a throttled rosters call left the opponent
+    // pool empty) still renders its band, and the band names the two teams:
+    // "Game 2 of 2 — Maverick vs Pacific Pigskins" is the answer to the
+    // question the owner is asking. Dropping it would silently reproduce the
+    // one-game-of-two bug in exactly the conditions that caused it.
+    cards.push(card);
   }
   return cards;
 }

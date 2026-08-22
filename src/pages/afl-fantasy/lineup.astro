@@ -442,6 +442,13 @@ const userProjTotal = slots.reduce(
 // Each panel wears its FRANCHISE, not the player's NFL team: brand color tint
 // plus the team's crest as the watermark, straight from the league config
 // (the AFL has no throwback identities, so there is nothing to resolve).
+//
+// `iconDark` FIRST, and not gated on the theme: the faceoff panel is a
+// team-color gradient over near-black in BOTH themes, so the site-wide
+// `html.dark` crest swap (TeamIconDarkStyles) never fires here — a dark-inked
+// crest would sit invisible behind a 0.34-opacity watermark in light mode.
+// Ten of the 24 AFL teams ship a hand-authored dark variant; the rest fall
+// back to their light crest, which the chip already names either way.
 const aflTeamsById = new Map<string, any>(
   ((aflConfig as any).teams ?? []).map((t: any) => [t.franchiseId, t]),
 );
@@ -465,7 +472,7 @@ const matchupCards = buildMatchupCards({
     return {
       name: team?.nameShort || team?.name || '',
       color: team?.colorPrimary,
-      watermark: team?.icon,
+      watermark: team?.iconDark || team?.icon,
     };
   },
 });
