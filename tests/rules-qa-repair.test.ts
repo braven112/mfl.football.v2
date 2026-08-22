@@ -65,6 +65,30 @@ describe('summarizeEntry', () => {
     const seed = { id: 'seed_x', question: 'q', answer: 'a', askedBy: null };
     expect(summarizeEntry(seed)).toContain('(seed/unknown)');
   });
+
+  it('renders askedBy as a team, not [object Object]', () => {
+    // askedBy is { franchiseId, teamName } (src/types/rules-qa.ts). The first
+    // real --list run printed "[object Object]" for every owner-asked card —
+    // the one column you read to tell whose answer you are about to rewrite.
+    const asked = {
+      id: 'qa_x',
+      question: 'q',
+      answer: 'a',
+      askedBy: { franchiseId: '0001', teamName: 'Pacific Pigskins' },
+    };
+    const summary = summarizeEntry(asked);
+    expect(summary).toContain('Pacific Pigskins (0001)');
+    expect(summary).not.toContain('[object Object]');
+  });
+
+  it('falls back to whichever half of askedBy is present', () => {
+    expect(summarizeEntry({ id: 'a', askedBy: { teamName: 'Maverick' } })).toContain(
+      'Maverick',
+    );
+    expect(summarizeEntry({ id: 'b', askedBy: { franchiseId: '0004' } })).toContain(
+      '0004',
+    );
+  });
 });
 
 describe('applyRepairs', () => {

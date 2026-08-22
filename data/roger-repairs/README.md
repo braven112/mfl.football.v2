@@ -42,16 +42,22 @@ first:
     # 1. find the stale card
     node scripts/fix-rules-qa-answer.mjs --list --search rotowire --full
 
-    # 2. name the replacement text after the id it repairs
-    mv data/roger-repairs/theleague/EXAMPLE-position-change.md.draft \
-       data/roger-repairs/theleague/<that-id>.md
+    # 2. write the replacement text, named for the id it repairs
+    $EDITOR data/roger-repairs/theleague/<that-id>.md
 
     # 3. look at the rewrite, then commit to it
     node scripts/fix-rules-qa-answer.mjs --apply --dry-run
     node scripts/fix-rules-qa-answer.mjs --apply
 
-`EXAMPLE-position-change.md.draft` is the clarified position-change answer,
-written for the August 2026 RotoWire rule clarification but not yet pointed at
-a stored card — the `.draft` suffix keeps `--apply` from picking it up. Re-read
-it against the owner's actual question before renaming it; a repair that
-answers a question nobody asked is its own kind of wrong answer.
+Write the replacement against the owner's actual question, not against the
+rule in the abstract — a repair that answers a question nobody asked is its own
+kind of wrong answer.
+
+## What's in here
+
+- `theleague/qa_kr0axui7mt3aattt.md` — "what is the rule on position changes?
+  If a player position is changed what is the official source of truth". The
+  stored answer named RotoWire as the source of truth and stopped there, which
+  was all the constitution said at the time. The August 2026 clarification
+  added the half that matters: the owner picks between MFL's listing and
+  RotoWire's, and can switch back and forth all season.
