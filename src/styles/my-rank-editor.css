@@ -1,0 +1,321 @@
+/**
+ * My Rank editor modal — opened from the Free Agents and Rosters pages so the
+ * composite can be re-weighted next to the table that's showing it.
+ *
+ * A real stylesheet rather than a <style> literal inside the React component:
+ * `:global()` is inert outside an Astro scoped block, so a literal would ship
+ * dead CSS. Imported by MyRankEditor.astro.
+ *
+ * Bottom sheet on a phone, centred dialog from 640px up.
+ */
+
+.mre {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.55);
+  /* Every overlay in this codebase blurs its backdrop — see
+     docs/claude/rules/theming-and-assets.md. */
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  animation: mre-fade 160ms ease;
+}
+
+.mre__sheet {
+  width: 100%;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--content-bg, #fff);
+  /* --color-gray-900, not --content-text: the latter is not a token here, and
+     an undefined var renders its light fallback in dark mode too. */
+  color: var(--color-gray-900, #111827);
+  border-radius: var(--radius-lg, 1rem) var(--radius-lg, 1rem) 0 0;
+  border: 1px solid var(--content-border, #e2e8f0);
+  border-bottom: 0;
+  box-shadow: 0 -12px 40px rgba(15, 23, 42, 0.25);
+  outline: none;
+  animation: mre-rise 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes mre-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes mre-rise {
+  from { transform: translateY(16px); }
+  to { transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mre, .mre__sheet { animation: none; }
+}
+
+.mre__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 1rem 0.75rem;
+  border-bottom: 1px solid var(--content-border, #e2e8f0);
+}
+
+.mre__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.mre__subtitle {
+  margin: 0.2rem 0 0;
+  font-size: 0.75rem;
+  color: var(--content-text-muted, #64748b);
+}
+
+.mre__close {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full, 999px);
+  border: 1px solid var(--content-border, #e2e8f0);
+  background: var(--content-bg, #fff);
+  color: var(--content-text-muted, #64748b);
+  cursor: pointer;
+}
+
+.mre__close:hover {
+  color: var(--color-gray-900, #111827);
+}
+
+.mre__list {
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mre__row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--table-border, #f1f5f9);
+}
+
+.mre__row:last-child { border-bottom: 0; }
+
+.mre__pick {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  cursor: pointer;
+}
+
+.mre__pick input {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-primary, #1c497c);
+  cursor: pointer;
+}
+
+.mre__source {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+}
+
+.mre__source-name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mre__row--on .mre__source-name {
+  color: var(--color-primary, #1c497c);
+}
+
+.mre__source-meta {
+  font-size: 0.6875rem;
+  color: var(--content-text-muted, #64748b);
+  font-variant-numeric: tabular-nums;
+}
+
+.mre__weight {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.75rem;
+  color: var(--content-text-muted, #64748b);
+}
+
+.mre__weight--off {
+  min-width: 72px;
+  justify-content: flex-end;
+  color: var(--color-gray-300, #d1d5db);
+}
+
+.mre__weight-input {
+  width: 56px;
+  padding: 0.3rem 0.35rem;
+  border: 1px solid var(--input-border, #d1d5db);
+  border-radius: var(--radius-sm, 0.375rem);
+  background: var(--input-bg, #fff);
+  color: var(--input-text, #111827);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.mre__weight-unit {
+  font-weight: 600;
+}
+
+/* The composite normalizes by total weight, so a source's real influence is
+   weight/Σweight. Only rendered when it disagrees with the typed number. */
+.mre__weight-effective {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--color-primary, #1c497c);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Same step as the trigger — every blue-on-surface text in this component
+   rides --color-primary-light in dark, never bare --color-primary. */
+html.dark .mre__row--on .mre__source-name,
+html.dark .mre__weight-effective,
+html.dark .mre__link {
+  color: var(--color-primary-light, #60a5fa);
+}
+
+.mre__empty {
+  margin: 0;
+  padding: 1.5rem 1rem;
+  font-size: 0.8125rem;
+  color: var(--content-text-muted, #64748b);
+  text-align: center;
+}
+
+.mre__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  /* Clear the iOS home indicator on a bottom sheet. */
+  padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--content-border, #e2e8f0);
+}
+
+.mre__link {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-primary, #1c497c);
+  text-decoration: none;
+}
+
+.mre__link:hover { text-decoration: underline; }
+
+.mre__done {
+  padding: 0.45rem 1.1rem;
+  border: 0;
+  border-radius: var(--radius-full, 999px);
+  background: var(--color-primary, #1c497c);
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mre__done:hover {
+  background: var(--color-primary-dark, #164066);
+}
+
+@media (min-width: 640px) {
+  .mre { align-items: center; }
+
+  .mre__sheet {
+    width: min(520px, calc(100vw - 2rem));
+    max-height: 80vh;
+    border-radius: var(--radius-lg, 1rem);
+    border-bottom: 1px solid var(--content-border, #e2e8f0);
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+  }
+
+  .mre__footer { padding-bottom: 0.75rem; }
+}
+
+/* ── The trigger button, shared by every host page ── */
+
+/**
+ * A layout handle for hosts that need one.
+ *
+ * `display: contents` means the wrapper is invisible to layout everywhere by
+ * default — the button remains the host toolbar's own flex item, exactly as if
+ * this element weren't here. A host that needs the trigger on its own line
+ * (see TheLeague's roster controls) gives the wrapper a real display and lays
+ * it out, which is the only way to get a full-width line without stretching
+ * the pill itself.
+ */
+.mre-trigger-wrap {
+  display: contents;
+}
+
+.mre-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  /* Host toolbars are flex containers, and some of them stack in a column with
+     the default `align-items: stretch` — which blew this pill out to the full
+     width of TheLeague's roster controls. Never grow, never shrink, sit on the
+     cross axis wherever the row does. */
+  flex: 0 0 auto;
+  align-self: center;
+  padding: 0.25rem 0.65rem;
+  border: 1px solid var(--content-border, #d1d5db);
+  border-radius: var(--radius-full, 999px);
+  background: var(--content-bg, #fff);
+  color: var(--color-primary, #1c497c);
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.4;
+  /* Wrapping turns the pill into a two-line lump next to the view toggles. */
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.mre-trigger:hover {
+  border-color: var(--color-primary, #1c497c);
+}
+
+/**
+ * Match the GM/Coach toggle's active text exactly.
+ *
+ * `.mode-btn.active` lifts to --color-primary-light in dark mode; this pill
+ * sat on --color-primary, which is a near-but-not-equal blue right next to it.
+ * Two accents that close together read as a mistake, so follow the same step.
+ */
+html.dark .mre-trigger {
+  color: var(--color-primary-light, #60a5fa);
+}
+
+.mre-trigger__icon {
+  flex-shrink: 0;
+}

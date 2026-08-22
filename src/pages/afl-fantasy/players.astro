@@ -43,6 +43,7 @@ import { getAuthUser } from '../../utils/auth';
 // marquee defenders (ESPN headshots) over the logo watermark. The data is keyed
 // by NFL team code, so the shared theleague-sourced file works directly here.
 import { DEF_SPOTLIGHT_PLAYERS, getDefSpotlightPlayer } from '../../data/theleague/def-spotlight-players';
+import MyRankEditor from '../../components/shared/rankings/MyRankEditor.astro';
 
 // SSR (server-rendered) — NOT prerendered. Two constraints pull in opposite
 // directions and the derived-snapshot import above is how we satisfy both:
@@ -269,6 +270,12 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         </span>
       </div>
       <div class="toolbar-right">
+        <div class="col-group-toggles" id="col-group-toggles" role="group" aria-label="Show columns" style="display: none;">
+          <span class="col-group-toggles__label">View:</span>
+          <button class="col-group-btn active" data-group="stats" type="button" aria-pressed="true">Stats</button>
+          <button class="col-group-btn" data-group="rankings" id="col-group-btn-rankings" type="button" aria-pressed="false">Rankings</button>
+        </div>
+        <MyRankEditor league="afl" />
         <button class="filter-toggle-btn" id="filter-toggle-btn" type="button" aria-expanded="false" aria-controls="filters-panel">
           <svg class="filter-toggle-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="4" y1="6" x2="20" y2="6" /><line x1="8" y1="12" x2="16" y2="12" /><line x1="11" y1="18" x2="13" y2="18" />
@@ -379,17 +386,17 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             <th class="sortable col-age" data-sort="age"><div class="th-content">Age</div></th>
             <th class="sortable col-sm" data-sort="exp"><div class="th-content">Exp</div></th>
             <th class="sortable col-sm" data-sort="draftRd"><div class="th-content">Draft</div></th>
-            <th class="sortable col-text col-college" data-sort="college" title="College" aria-label="College"><div class="th-content">C</div></th>
+            <th class="sortable col-text col-group--stats col-college" data-sort="college" title="College" aria-label="College"><div class="th-content">C</div></th>
             <th class="sortable col-sm" data-sort="height"><div class="th-content">Ht</div></th>
             <th class="sortable col-sm" data-sort="weight"><div class="th-content">Wt</div></th>
             {hasAdp && (
-              <th class="sortable col-num" data-sort="adpDyn"><div class="th-content">ADP</div></th>
+              <th class="sortable col-num col-group--stats" data-sort="adpDyn"><div class="th-content">ADP</div></th>
             )}
             {hasLastYrPts && (
-              <th class="sortable col-num" data-sort="lastYrPts"><div class="th-content">Last Yr</div></th>
+              <th class="sortable col-num col-group--stats" data-sort="lastYrPts"><div class="th-content">Last Yr</div></th>
             )}
             {hasProjected && (
-              <th class="sortable col-num col-projected" data-sort="projected"><div class="th-content">Proj</div></th>
+              <th class="sortable col-num col-projected col-group--stats" data-sort="projected"><div class="th-content">Proj</div></th>
             )}
           </tr>
         </thead>
@@ -454,6 +461,19 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   let showRookies = true;
   let rookiesOnly = false;
   const BATCH_SIZE = 50;
+
+  // ── Rankings state ──
+  // Populated by the rankings module script below over CustomEvents: this is a
+  // define:vars (classic) script and can't import. See
+  // docs/claude/insights/features/rankings-integration.md.
+  let rankingLookup = { byImport: new Map(), columns: [] };
+  let hasRankingColumns = false;
+  let hasExplicitSortPref = false;
+
+  // Column view: 'stats' (the traditional columns) or 'rankings' (the owner's
+  // imported boards). Mutually exclusive, like TheLeague's Free Agents page.
+  let activeView = 'stats';
+  let hasExplicitViewPref = false;
 
   // Advanced filter state
   let filterTeam = '';
@@ -670,10 +690,83 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     }
   }
 
+  // ── Column view ──
+  function loadViewPref() {
+    try {
+      const saved = localStorage.getItem('aflPlayersViewMode');
+      if (saved === 'rankings' || saved === 'stats') {
+        activeView = saved;
+        hasExplicitViewPref = true;
+      }
+    } catch (_) {}
+  }
+
+  function saveViewPref() {
+    try {
+      localStorage.setItem('aflPlayersViewMode', activeView);
+    } catch (_) {}
+  }
+
+  function applyGroupVisibility() {
+    // Fall back to Stats if the owner has no board loaded (or deleted it while
+    // the Rankings view was showing).
+    if (activeView === 'rankings' && !hasRankingColumns) activeView = 'stats';
+
+    const showStats = activeView === 'stats';
+
+    document.querySelectorAll('.col-group--stats').forEach(el => {
+      el.style.display = showStats ? '' : 'none';
+    });
+    document.querySelectorAll('.col-group--rankings').forEach(el => {
+      el.style.display = showStats ? 'none' : '';
+    });
+
+    for (const group of ['stats', 'rankings']) {
+      const btn = document.querySelector(`.col-group-btn[data-group="${group}"]`);
+      if (btn) {
+        const isActive = group === activeView;
+        btn.classList.toggle('active', isActive);
+        btn.setAttribute('aria-pressed', String(isActive));
+      }
+    }
+
+    // The whole bar is meaningless without a second view to switch to.
+    const toggleBar = document.getElementById('col-group-toggles');
+    if (toggleBar) toggleBar.style.display = hasRankingColumns ? '' : 'none';
+  }
+
+  function setActiveView(view) {
+    activeView = view;
+    hasExplicitViewPref = true;
+    saveViewPref();
+    applyGroupVisibility();
+  }
+
+  loadViewPref();
+
+  // ?view=stats|rankings — shareable, and wins over the stored preference.
+  const viewParam = new URLSearchParams(window.location.search).get('view');
+  if (viewParam === 'stats' || viewParam === 'rankings') {
+    activeView = viewParam;
+    hasExplicitViewPref = true;
+  }
+
   // ── Sorting ──
   function sortPlayers() {
     filteredPlayers.sort((a, b) => {
       let aVal, bVal;
+      // Dynamic ranking columns — sort key is `ranking_{importId}`. Unranked
+      // players take a sentinel worse than any real rank, so ascending (the
+      // default for these columns) puts the best board positions first and the
+      // unranked last. Descending inverts that literally, unranked first —
+      // same as TheLeague's table, which is the behaviour to match here.
+      if (currentSort.startsWith('ranking_')) {
+        const map = rankingLookup.byImport.get(currentSort.slice(8));
+        aVal = map?.get(a.id) ?? 99999;
+        bVal = map?.get(b.id) ?? 99999;
+        const rDiff = aVal - bVal;
+        return sortDirection === 'desc' ? -rDiff : rDiff;
+      }
       switch (currentSort) {
         case 'name':
           return sortDirection === 'asc'
@@ -873,18 +966,29 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         <td class="cell-age">${p.age ?? '-'}</td>
         <td class="cell-sm">${p.exp != null ? p.exp : '-'}</td>
         <td class="cell-sm">${p.draftRd != null ? 'Rd ' + p.draftRd : '<span class="na">-</span>'}</td>
-        <td class="cell-college">${p.collegeLogo ? `<img src="${escapeAttr(p.collegeLogo)}" alt="${escapeAttr(p.college || '')}" title="${escapeAttr(p.college || '')}" class="college-logo" loading="lazy" decoding="async" onerror="${escapeAttr(collegeLogoOnerror)}" onload="${escapeAttr(collegeLogoOnload)}" />` : (p.college ? `<span class="na" title="${escapeAttr(p.college)}">-</span>` : '<span class="na">-</span>')}</td>
+        <td class="cell-college col-group--stats">${p.collegeLogo ? `<img src="${escapeAttr(p.collegeLogo)}" alt="${escapeAttr(p.college || '')}" title="${escapeAttr(p.college || '')}" class="college-logo" loading="lazy" decoding="async" onerror="${escapeAttr(collegeLogoOnerror)}" onload="${escapeAttr(collegeLogoOnload)}" />` : (p.college ? `<span class="na" title="${escapeAttr(p.college)}">-</span>` : '<span class="na">-</span>')}</td>
         <td class="cell-sm">${htDisplay}</td>
         <td class="cell-sm">${wtDisplay}</td>`;
 
+      // Ranking cells sit right after Wt, matching where the module script
+      // injects their headers. Class list mirrors rankingCellClasses() in
+      // src/utils/rankings-table.ts — this script can't import it.
+      for (const col of rankingLookup.columns) {
+        const rnk = rankingLookup.byImport.get(col.importId)?.get(p.id);
+        const avgCls = col.isAverage ? ' col-ranking-avg' : '';
+        const compositeCls = col.isComposite ? ' col-ranking-composite' : '';
+        const borderCls = col.isLastCompositeMember ? ' col-ranking-member-last' : '';
+        html += `<td class="cell-num col-group--rankings${avgCls}${compositeCls}${borderCls}">${rnk != null ? rnk : '<span class="na">-</span>'}</td>`;
+      }
+
       if (hasAdp) {
-        html += `<td class="cell-num">${p.adpDyn != null ? p.adpDyn.toFixed(1) : '<span class="na">-</span>'}</td>`;
+        html += `<td class="cell-num col-group--stats">${p.adpDyn != null ? p.adpDyn.toFixed(1) : '<span class="na">-</span>'}</td>`;
       }
       if (hasLastYrPts) {
-        html += `<td class="cell-num">${p.lastYrPts != null ? p.lastYrPts.toFixed(1) : '<span class="na">-</span>'}</td>`;
+        html += `<td class="cell-num col-group--stats">${p.lastYrPts != null ? p.lastYrPts.toFixed(1) : '<span class="na">-</span>'}</td>`;
       }
       if (hasProjected) {
-        html += `<td class="cell-num cell-pts col-projected">${p.projected != null ? p.projected.toFixed(1) : '<span class="na">-</span>'}</td>`;
+        html += `<td class="cell-num cell-pts col-projected col-group--stats">${p.projected != null ? p.projected.toFixed(1) : '<span class="na">-</span>'}</td>`;
       }
       html += `</tr>`;
     }
@@ -914,6 +1018,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
     const noDataEl = document.getElementById('no-data');
     if (noDataEl) noDataEl.style.display = players.length === 0 ? 'block' : 'none';
+
+    // render() rebuilds tbody via innerHTML, which destroys every inline
+    // display style — re-apply or the hidden group comes back on each render.
+    applyGroupVisibility();
 
     updateSpotlight(filteredPlayers[0] || null);
   }
@@ -984,6 +1092,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       th.addEventListener('click', () => {
         const key = th.getAttribute('data-sort');
         if (key === 'rank') return;
+        // Ranking headers carry their own handler (added by the module script).
+        if (key && key.startsWith('ranking_')) return;
+        hasExplicitSortPref = true;
         if (currentSort === key) {
           sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
         } else {
@@ -997,6 +1108,18 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         render();
       });
     });
+
+    // Column view toggles (Stats / Rankings)
+    const colGroupToggles = document.getElementById('col-group-toggles');
+    if (colGroupToggles && !colGroupToggles.dataset.init) {
+      colGroupToggles.dataset.init = 'true';
+      colGroupToggles.addEventListener('click', (e) => {
+        const btn = e.target.closest('.col-group-btn');
+        if (!btn) return;
+        const group = btn.getAttribute('data-group');
+        if (group) setActiveView(group);
+      });
+    }
 
     // Filter toggle
     const filterToggle = document.getElementById('filter-toggle-btn');
@@ -1108,11 +1231,88 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     filterPlayers();
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
+  // ── Rankings bridge ──
+  // The module script below owns the ranking columns; it can import, this
+  // script can't. Everything crosses on CustomEvents fired at `document`.
+
+  // After a ClientRouter swap the PREVIOUS page's inline script is still alive
+  // and its document-level listeners still answer these events — verified: two
+  // handlers responded to rankings:get-sort on the AFL page after navigating
+  // from TheLeague's. Both pages use the same element ids, so a stale handler
+  // reads/repaints the live page. Ignore events once our own table is detached.
+  const OWN_TABLE = document.getElementById('players-table');
+  function isLivePage() {
+    return !!OWN_TABLE && OWN_TABLE.isConnected;
   }
+
+  document.addEventListener('rankings:set-lookup', function (e) {
+    if (!isLivePage()) return;
+    rankingLookup = e.detail.lookup;
+    const hadColumns = hasRankingColumns;
+    hasRankingColumns = e.detail.hasColumns;
+
+    // First board to arrive opens the Rankings view for the owner — that is
+    // the whole point of importing one. An explicit choice is never overridden.
+    if (hasRankingColumns && !hadColumns && !hasExplicitViewPref) {
+      activeView = 'rankings';
+    }
+
+    // "My Rank" is the board the owner actually built, so lead with it.
+    if (e.detail.hasComposite && !hasExplicitSortPref) {
+      currentSort = 'ranking___composite__';
+      sortDirection = 'asc';
+    }
+
+    applyGroupVisibility();
+  });
+
+  document.addEventListener('rankings:set-sort', function (e) {
+    if (!isLivePage()) return;
+    // A null key means the ranking column we were sorted by is gone entirely —
+    // restore this page's own default rather than keep sorting by a column
+    // that no longer exists.
+    if (e.detail.key == null) {
+      currentSort = defaultSort;
+      sortDirection = descDefaults.has(currentSort) ? 'desc' : 'asc';
+      hasExplicitSortPref = false;
+      return;
+    }
+    hasExplicitSortPref = true;
+    currentSort = e.detail.key;
+    sortDirection = e.detail.dir;
+  });
+
+  document.addEventListener('rankings:refresh-table', function () {
+    if (!isLivePage()) return;
+    sortPlayers();
+    visibleCount = BATCH_SIZE;
+    render();
+  });
+
+  document.addEventListener('rankings:refilter', function () {
+    if (!isLivePage()) return;
+    filterPlayers();
+  });
+
+  // Synchronous read — the module reads e.detail back after dispatch.
+  document.addEventListener('rankings:get-sort', function (e) {
+    if (!isLivePage()) return;
+    e.detail.currentSort = currentSort;
+  });
+
+  function bootstrap() {
+    init();
+    // Only now is the table in the DOM and the sort state readable, so this is
+    // the earliest the module script can safely inject its columns.
+    document.dispatchEvent(new CustomEvent('rankings:page-ready'));
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootstrap);
+  } else {
+    bootstrap();
+  }
+
   // Cleanup on navigation (View Transitions) — stop the DEF rotation timer so it
   // can't keep mutating detached hero nodes or stack a second interval on return.
   document.addEventListener('astro:before-swap', function () {
@@ -1120,6 +1320,16 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   }, { once: true });
   // Astro view transitions
   document.addEventListener('astro:page-load', init);
+</script>
+
+<!-- Rankings integration: injects the owner's ranking columns into the table -->
+<script>
+  import { initRankingTable } from '../../utils/rankings-table';
+
+  initRankingTable({
+    tableSelector: '.players-table',
+    anchorSelector: '[data-sort="weight"]',
+  });
 </script>
 
 <!-- Player modal trigger (delegated, survives re-renders) -->
@@ -1539,6 +1749,39 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     font-weight: 600;
   }
 
+  /* ── Column view toggles (Stats / Rankings) ── */
+  .col-group-toggles {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  .col-group-toggles__label {
+    font-size: 0.8125rem;
+    color: var(--content-text-muted, #64748b);
+    margin-right: 0.1rem;
+  }
+  .col-group-btn {
+    padding: 0.25rem 0.65rem;
+    border: 1px solid var(--content-border, #d1d5db);
+    border-radius: var(--radius-full, 999px);
+    background: var(--content-bg, #fff);
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--color-gray-600, #4b5563);
+    cursor: pointer;
+    transition: all 0.15s;
+    line-height: 1.4;
+  }
+  .col-group-btn:hover {
+    border-color: var(--league-accent, #c41e3a);
+    color: var(--league-accent, #c41e3a);
+  }
+  .col-group-btn.active {
+    background: var(--league-accent, #c41e3a);
+    border-color: var(--league-accent, #c41e3a);
+    color: #fff;
+  }
+
   /* ── Filter toggle ── */
   .filter-toggle-btn {
     display: inline-flex;
@@ -1868,6 +2111,34 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     color: var(--color-gray-800, #1f2937);
   }
   :global(.na) { color: var(--color-gray-300, #d1d5db); }
+
+  /* Ranking columns — the computed boards (My Rank, Avg) read as the summary,
+     the member sources that feed My Rank are fenced off to their right.
+     The tint is defined on the table (which carries the scope class) and
+     overridden for dark, so it never falls back to a light-only value. */
+  .players-table {
+    --rank-col-tint: rgba(196, 30, 58, 0.05);
+  }
+  :global(html.dark) .players-table {
+    --rank-col-tint: rgba(239, 83, 80, 0.12);
+  }
+  :global(.col-ranking-avg),
+  :global(.col-ranking-composite) {
+    font-weight: 600;
+    background: var(--rank-col-tint, transparent);
+    padding-left: 0;
+  }
+  :global(th.col-ranking-avg .th-content),
+  :global(th.col-ranking-composite .th-content) {
+    font-weight: 700;
+  }
+  :global(th.col-ranking-member-last) {
+    border-right: 1px solid var(--content-border, #e2e8f0);
+  }
+  :global(td.col-ranking-member-last) {
+    border-right: 1px solid var(--table-border, #f1f5f9);
+    padding-right: 0.5rem;
+  }
   :global(.cell-sm) {
     text-align: center;
     font-size: 0.8125rem;
@@ -1937,7 +2208,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       gap: 0.5rem;
     }
     .toolbar-left { order: 2; flex-wrap: wrap; gap: 0.5rem; }
-    .toolbar-right { order: 3; justify-content: flex-end; }
+    .toolbar-right { order: 3; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; }
     .filters-grid { grid-template-columns: 1fr 1fr; }
     .filters-row-bottom {
       flex-direction: column;

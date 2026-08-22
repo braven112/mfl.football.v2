@@ -88,6 +88,18 @@ function writeToStorage(imports: StoredRankingImport[]): void {
   syncToServer();
 }
 
+/**
+ * True when a `storage` event key refers to ANY league's imports bucket.
+ *
+ * Exported so subscribers (rankings-lookup.ts#onRankingsChanged) don't have to
+ * restate the key — a bare `=== 'rankings.imports'` check silently made
+ * cross-tab updates a TheLeague-only feature.
+ */
+export function isImportsStorageKey(key: string | null): boolean {
+  if (!key) return false;
+  return key === STORAGE_BASE_KEY || key.startsWith(`${STORAGE_BASE_KEY}.`);
+}
+
 /** Exported for tests — clears the in-memory cache. */
 export function _clearCache(): void {
   _cache.clear();

@@ -76,6 +76,7 @@ import { getLeagueBySlug } from '../../config/leagues';
 // the current league/season years live at request time.
 import derivedRosterSeasonPayloads from '../../../data/theleague/derived/roster-season-payloads.json';
 import { buildSeasonPayload as buildSeasonPayloadShared } from '../../../scripts/lib/roster-season-payload.mjs';
+import MyRankEditor from '../../components/shared/rankings/MyRankEditor.astro';
 
 // MFL host/id from the league registry — never hardcode these (CLAUDE.md).
 // Used throughout this page (server frontmatter and inline client scripts)
@@ -2187,6 +2188,11 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
               <svg class="mode-icon"><use href={`${spriteUrl}#icon-submit`}></use></svg> Coach
             </button>
           </div>
+
+          {/* Below the mode toggle, not above it: .mode-toggle has a negative
+              top margin so it can ride up beside the team card, which means it
+              covers anything stacked above it in this column. */}
+          <MyRankEditor league="theleague" />
         </div>
       <div class="roster-table-wrapper">
         <table class="roster-table" data-hidden-columns="">
@@ -4841,6 +4847,45 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
           margin-right: 0;
     }
   }
+
+  /* The My Rank pill shares .roster-controls with .mode-toggle, which lays out
+     with `order` and rides up on a negative top margin — so a sibling that
+     doesn't opt into the ordering renders first and gets covered by it.
+     The wrapper is given a real display here (it is display: contents by
+     default) so it can be laid out as a flex item at all; without that, a rule
+     targeting it silently does nothing.
+
+     The ROW treatment is the default rather than a min-width query: paired
+     with a max-width query it would leave fractional widths (640.5px) matching
+     neither branch, and the pill would fall back to order 0 — ahead of the
+     toggle, and covered by it. */
+  .roster-controls :global(.mre-trigger-wrap) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    order: -1;
+    flex: 0 0 auto;
+    margin-right: auto;
+  }
+
+  /* .roster-controls becomes a column here — same breakpoint the page's own
+     rule uses, so the two can never disagree about which shape it is. */
+  @media (max-width: 640px) {
+    .roster-controls :global(.mre-trigger-wrap) {
+      order: 3;
+      margin-right: 0;
+    }
+
+    /* .mode-toggle's -2.5rem pull is gated on min-width: 640px, while
+       .roster-controls turns into a column at max-width: 640px — BOTH match at
+       exactly 640px, so the toggle carries a row-tuned pull inside a column
+       and .roster-table-card (overflow: auto) clips half of it. A column never
+       needs the pull. */
+    .mode-toggle {
+      margin-top: 0;
+    }
+  }
+
   .mode-btn {
     display: flex;
     align-items: center;
@@ -12344,84 +12389,31 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   document.addEventListener('astro:page-load', initFaNeedsTabs);
 </script>
 
-<!-- Rankings integration: populates rank column from top imported ranking in localStorage -->
+<!-- Rankings integration: populates rank column from the owner's top board -->
 <script>
-  import { buildRankingLookup, onRankingsChanged } from '../../utils/rankings-lookup';
+  import { initRosterRankColumn } from '../../utils/rankings-roster-column';
 
-  let unsubscribe: (() => void) | null = null;
-
-  function populateRankCells() {
-    const lookup = buildRankingLookup();
-    // Expose on window so the sort function can access it
-    (window as any).__rosterRankingLookup = lookup;
-
-    const topColumn = lookup.columns[0];
-    const headerEl = document.getElementById('rankColHeader');
-
-    // Update header text and tooltip with ranking source name
-    if (headerEl && topColumn) {
-      headerEl.title = topColumn.fullName;
-      // Show source abbreviation as the column header
-      const sortArrow = headerEl.querySelector('.sort-arrow');
-      headerEl.textContent = '';
-      headerEl.append(`${topColumn.header} `, sortArrow || document.createElement('span'));
-      if (sortArrow) sortArrow.className = 'sort-arrow';
-    }
-
-    // If no rankings imported, hide the column
-    const rankCols = document.querySelectorAll('.ranking-col');
-    if (!topColumn) {
-      rankCols.forEach(el => (el as HTMLElement).style.display = 'none');
-      return;
-    }
-
-    const playerRanks = lookup.byImport.get(topColumn.importId);
-    if (!playerRanks) return;
-
-    // Populate rank cells in all visible rows
-    document.querySelectorAll('#rosterTableBody tr[data-player-id]').forEach(row => {
-      const playerId = (row as HTMLElement).dataset.playerId;
-      const cell = row.querySelector('.ranking-cell');
-      if (!cell || !playerId) return;
-
-      const rank = playerRanks.get(playerId);
-      cell.textContent = rank != null ? String(rank) : '—';
-    });
-
-    // Re-apply mode visibility so ranking-col cells respect GM/Coach toggle
-    const currentMode = localStorage.getItem('rosterViewMode') || 'gm';
-    rankCols.forEach(el => {
-      (el as HTMLElement).style.display = currentMode === 'gm' ? 'table-cell' : 'none';
-    });
-  }
-
-  function initRankings() {
-    if (unsubscribe) {
-      unsubscribe();
-      unsubscribe = null;
-    }
-
-    populateRankCells();
-
-    // Re-populate when rankings change (import/delete on another page or tab)
-    unsubscribe = onRankingsChanged(() => populateRankCells());
-
-    // Re-populate after the main script re-renders table rows
-    const observer = new MutationObserver(() => populateRankCells());
-    const tbody = document.getElementById('rosterTableBody');
-    if (tbody) {
-      observer.observe(tbody, { childList: true });
-    }
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initRankings);
-  } else {
-    // Small delay to ensure main script has rendered rows first
-    setTimeout(initRankings, 50);
-  }
-
-  document.addEventListener('astro:page-load', () => setTimeout(initRankings, 50));
+  initRosterRankColumn({
+    rowsSelector: '#rosterTableBody',
+    // Scoped to THIS league's tables: the AFL roster page uses `.ranking-col`
+    // on a `.roster-table` too, so a bare `.roster-table` scope would still
+    // reach across a ClientRouter navigation into the other league's markup.
+    columnSelector: '.roster-table:not(.roster-table--afl) .ranking-col',
+    cellSelector: '.ranking-cell',
+    headerSelector: '#rankColHeader',
+    visibleDisplay: 'table-cell',
+    afterPopulate: (lookup, hasColumn) => {
+      // The sort comparator reads the lookup off window (it lives in the page's
+      // own big inline script, which can't import).
+      (window as any).__rosterRankingLookup = lookup;
+      // Rank is a GM-mode column — never let it reappear in Coach mode.
+      if (!hasColumn) return;
+      const mode = localStorage.getItem('rosterViewMode') || 'gm';
+      document.querySelectorAll('.roster-table:not(.roster-table--afl) .ranking-col').forEach((el) => {
+        (el as HTMLElement).style.display = mode === 'gm' ? 'table-cell' : 'none';
+      });
+    },
+  });
 </script>
 
 <!-- Rankings integration for Potential Targets (FA needs) card in planner view -->

@@ -801,9 +801,16 @@ const siteConfigs = [
   .ri-manage__rate--ok { color: var(--color-warning-dark, #d97706); }
   .ri-manage__rate--low { color: var(--color-error, #dc2626); }
 
+  /* `display: flex` on a <td> takes it OUT of the table's column layout — the
+     cell stops aligning with its header and draws its border-bottom at its own
+     box rather than across the row, which is the stray line that showed up
+     under Actions. Keep the cell a cell and space the buttons inline. */
   .ri-manage__actions {
-    display: flex;
-    gap: 0.35rem;
+    white-space: nowrap;
+  }
+
+  .ri-manage__actions > * + * {
+    margin-left: 0.35rem;
   }
 
   /* ---- Drag Handle ---- */
@@ -1238,8 +1245,16 @@ const siteConfigs = [
       font-size: 0.78rem;
     }
 
-    .ri-manage__actions {
-      flex-direction: column;
+    /* Narrow screens stack the buttons — done with layout on the children,
+       since the cell itself must stay display: table-cell (see above). */
+    .ri-manage__actions > * {
+      display: block;
+      width: 100%;
+    }
+
+    .ri-manage__actions > * + * {
+      margin-left: 0;
+      margin-top: 0.35rem;
     }
 
     .ri-manage__drag-handle svg {

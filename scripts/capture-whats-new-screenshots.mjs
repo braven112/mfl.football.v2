@@ -95,6 +95,9 @@ const MANUAL_CAPTURE_ONLY = {
  */
 const CAPTURE_PATHS = {
   'built-in-rankings-2026-08-21': '/afl-fantasy/import-rankings',
+  // No `link` on this entry (see whats-new.json) — without an override the
+  // capture would shoot the site root.
+  'rankings-on-the-decision-pages': '/afl-fantasy/players',
 };
 
 const PAGE_HOOKS = {
@@ -105,6 +108,33 @@ const PAGE_HOOKS = {
       const el = document.querySelector('.whats-new-row');
       if (el) el.scrollIntoView({ block: 'center' });
     });
+    await page.waitForTimeout(500);
+  },
+  'rankings-on-the-decision-pages': async (page) => {
+    // The ranking columns only exist once the owner's board is in localStorage,
+    // and the built-in sources are reconciled into it by the Import Rankings
+    // page. A blind capture of /afl-fantasy/players shoots the Stats view, so
+    // seed the AFL bucket first, then come back.
+    const base = new URL(page.url()).origin;
+    await page.goto(`${base}/afl-fantasy/import-rankings`, { waitUntil: 'networkidle' });
+    await page.waitForSelector('.ri-manage__table tbody tr', { timeout: 15000 }).catch(() => {});
+    await page.waitForTimeout(800);
+    await page.goto(`${base}/afl-fantasy/players`, { waitUntil: 'networkidle' });
+    await page.waitForSelector('.players-table th[data-ranking-col]', { timeout: 15000 }).catch(() => {});
+    await page.waitForTimeout(600);
+    // Frame the table, not the hero — the columns are the point.
+    await page.evaluate(() => {
+      const el = document.querySelector('.players-toolbar');
+      if (el) el.scrollIntoView({ block: 'start' });
+      window.scrollBy(0, -120);
+    });
+    await page.waitForTimeout(400);
+    // Open the My Rank editor over the table: the entry is as much about
+    // being able to re-weight the board in place as about the columns.
+    await page.evaluate(() => {
+      document.dispatchEvent(new CustomEvent('rankings:open-my-rank-editor'));
+    });
+    await page.waitForSelector('.mre__sheet', { timeout: 5000 }).catch(() => {});
     await page.waitForTimeout(500);
   },
   'built-in-rankings-2026-08-21': async (page) => {

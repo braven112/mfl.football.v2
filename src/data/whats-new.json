@@ -1,5 +1,27 @@
 [
   {
+    "id": "rankings-on-the-decision-pages",
+    "date": "2026-08-21",
+    "category": "enhancement",
+    "icon": "rank",
+    "title": "Your Board Follows You to the Lineup Sheet",
+    "summary": "Every starter and every bench player now carries your rank, right on the lineup screen — and when you open a slot, each eligible replacement does too. Free Agents and Rosters carry the board as well, and you can re-weight it without leaving the page.",
+    "description": [
+      "Six sources loaded, weights tuned, a composite My Rank sitting there looking sharp — and then you opened the page where you actually pick someone, and none of it was there. That was most of a feature missing.",
+      "Set Lineup changes the most, and it's the one built for a phone. Every starter and every bench player now wears a small rank chip next to their projection, so the whole screen is scannable in one pass — the point being to notice the #41 sitting on your bench under the #75 you're starting. Open a slot and the sheet of eligible replacements carries a rank next to each name, with your current starter's rank on the card above it. That little “by Projection” line at the top of the list is a switch: tap it and the candidates reorder by your board, tap it again and they go back. Unranked players stay at the bottom either way, so nobody's kicker jumps the queue.",
+      "Over in the AFL, Free Agents and Rosters finally caught up to what The League has had for a while. Free Agents gets a View switch above the table — Stats keeps the columns you know, Rankings swaps in your board: My Rank first, then the sources actually feeding it. Not every source you've ever loaded, just the ones you ticked, capped at five, because a source you left out is one you've already said shouldn't weigh on the call. The table opens sorted by My Rank, best first, because that's the order you were going to put it in anyway, and every column sorts. Rosters gets one column next to each player, labeled with whose opinion it is: My Rank when you've built a composite, otherwise whatever board sits at the top of your list.",
+      "And you can argue with the board while you're looking at it. There's a My Rank button next to Filters on Free Agents and Rosters now that opens the sources and their weights right there — tick one in, push another down to 10%, watch the columns re-sort underneath you. Untick a source and its column leaves with it. The percentages still always total 100, so what you type is what that source is actually worth. Adding new imports and hiding built-ins still lives on Import Rankings; this is just the dial.",
+      "If you haven't loaded a board, none of this appears — no empty column, no dead button, no chips on your lineup. And the boards stay where you built them: your read on a player in one league is still a completely separate opinion from your read on him in the other."
+    ],
+    "image": "rankings-decision-pages.webp",
+    "imageAlt": "The AFL Free Agents table in Rankings view with the My Rank editor open over it — a modal listing six ranking sources, three of them ticked with editable percentage weights, above a table showing only My Rank and the three sources feeding it: MFL ADP, ESPN and FantasySharks.",
+    "excludeFromHero": true,
+    "leagues": [
+      "afl",
+      "theleague"
+    ]
+  },
+  {
     "id": "built-in-rankings-2026-08-21",
     "date": "2026-08-21",
     "category": "new-feature",
@@ -856,26 +878,5 @@
     "leagues": [
       "theleague"
     ]
-  },
-  {
-    "id": "gauntlet-schedule-strength",
-    "date": "2026-07-18",
-    "title": "The Gauntlet: Schefter Ranks Every Team’s Road Ahead",
-    "summary": "Claude Schefter’s new weekly column ranks every franchise’s remaining schedule from cupcake run to buzz saw — with a full dashboard, a week-by-week heat map, and receipts for whose record is lying.",
-    "description": [
-      "Your record says 5-2. Congratulations. Now answer the uncomfortable question: 5-2 against WHOM? Starting this season, Claude Schefter answers it for you every Wednesday morning with The Gauntlet — his new schedule-strength column that rates every team’s remaining opponents on a 0-100 difficulty scale and ranks the league from “walking into a wood chipper” down to “booked a cruise through the soft part of the schedule.” Both leagues get their own edition, and yes, he built the model himself, and yes, he trusts it more than he trusts you.",
-      "The column is just the headline act. Behind it sits a full Schedule Strength dashboard: “The Run-In” ranks who has the hardest road left (with week-over-week trend arrows, because your schedule can get scarier while you sleep), “What They’ve Been Through” scores the slate each team has already survived, and the Schedule Luck callouts name names — the 6-1 team that’s been feasting on cupcakes, and the 1-6 team that’s secretly been playing murderers’ row. Scroll down for the week-by-week heat map: every franchise, every remaining week, color-coded green to red, each cell one click from your future opponent’s franchise page. Trap Weeks flags the Sunday the whole league hits a wall at once.",
-      "Every Wednesday the numbers recompute from settled stats, Schefter files his column to the Schefter Report, and one perfectly-calibrated teaser lands in the GroupMe — just enough to start an argument by lunch. Find Schedule Strength in site search, or wait for Wednesday and let the man tell you himself. Your record has an asterisk now. He put it there."
-    ],
-    "category": "new-page",
-    "icon": "line-chart",
-    "image": "gauntlet-schedule-strength.webp",
-    "imageAlt": "The Gauntlet schedule-strength dashboard showing the Week 9 run-in rankings with difficulty bars for every franchise",
-    "excludeFromHero": true,
-    "leagues": [
-      "theleague"
-    ],
-    "link": "/theleague/schedule-strength?year=2025",
-    "linkLabel": "Enter The Gauntlet"
   }
 ]

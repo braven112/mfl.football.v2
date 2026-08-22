@@ -1,0 +1,110 @@
+---
+/**
+ * Mounts the My Rank editor plus its trigger button.
+ *
+ * Drop one of these on any page that shows the composite. The button is
+ * yours to place — render this component where the button should sit — and
+ * the modal itself is fixed-position, so it doesn't matter structurally.
+ *
+ * Hidden until the owner actually has a board: `data-mre-trigger` starts
+ * `hidden` and the inline script reveals it only when there are 2+ imports to
+ * blend. An owner with nothing loaded gets no button to a modal that would
+ * have nothing in it.
+ */
+import '../../../styles/my-rank-editor.css';
+import MyRankEditorIsland from './MyRankEditor.tsx';
+import { getLeaguePrefix, resolveLeaguePath } from '../../../utils/nav-utils';
+import type { LeagueSlug } from '../../../types/nav';
+
+interface Props {
+  /** The league's nav slug — 'theleague' | 'afl' | 'bb1'. */
+  league: LeagueSlug;
+  /** Button label. Defaults to the column's own name. */
+  label?: string;
+}
+
+const { league, label = 'My Rank' } = Astro.props;
+
+// Registry-derived, never hardcoded — and stripped to the clean URL when the
+// page is served from a league apex host.
+const importPath = resolveLeaguePath(
+  `${getLeaguePrefix(league)}/import-rankings`,
+  Boolean(Astro.locals.hideLeaguePrefix),
+);
+---
+
+<span class="mre-trigger-wrap">
+  <button type="button" class="mre-trigger" data-mre-trigger hidden aria-haspopup="dialog">
+  <svg class="mre-trigger__icon" width="13" height="13" viewBox="0 0 24 24" fill="none"
+       stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+    <line x1="4" y1="8" x2="20" y2="8" /><circle cx="10" cy="8" r="2.4" fill="currentColor" stroke="none" />
+    <line x1="4" y1="16" x2="20" y2="16" /><circle cx="16" cy="16" r="2.4" fill="currentColor" stroke="none" />
+  </svg>
+    {label}
+  </button>
+</span>
+
+{/*
+  client:only, NOT client:idle. The component renders null until it's opened,
+  so SSR emits an empty <astro-island> and React then hydrates a root that had
+  no server output — which React 19 reports as a hydration mismatch (#418) on
+  every page load. There is nothing to hydrate here anyway: the modal is always
+  closed on first paint and its entire contents come from localStorage, which
+  does not exist on the server.
+*/}
+<MyRankEditorIsland client:only="react" importPath={importPath} />
+
+<script>
+  import { getAllImports } from '../../../utils/rankings-storage';
+  import { onRankingsChanged } from '../../../utils/rankings-lookup';
+
+  const OPEN_EVENT = 'rankings:open-my-rank-editor';
+
+  function syncTriggers() {
+    // Two is the floor for a composite (buildRankingLookup returns no config
+    // below it), so one lone import is a button to a dead end.
+    const enough = getAllImports().length >= 2;
+    document.querySelectorAll<HTMLElement>('[data-mre-trigger]').forEach((btn) => {
+      btn.hidden = !enough;
+    });
+  }
+
+  // A ClientRouter navigation re-runs init(); without dropping the previous
+  // subscription each one stacks another syncTriggers on every board change.
+  let unsubscribe: (() => void) | null = null;
+
+  function init() {
+    unsubscribe?.();
+    syncTriggers();
+    unsubscribe = onRankingsChanged(syncTriggers);
+  }
+
+  /**
+   * Open the modal, retrying once if the island hasn't mounted yet.
+   *
+   * The trigger is plain HTML and works from first paint; the React island
+   * arrives whenever its chunk does. Without the retry, a fast click lands
+   * before the listener exists and the button silently does nothing. The
+   * component marks `detail.handled` so we only retry when nobody answered.
+   */
+  function openEditor(attempt = 0) {
+    const detail: { handled?: boolean } = {};
+    document.dispatchEvent(new CustomEvent(OPEN_EVENT, { detail }));
+    if (!detail.handled && attempt < 10) {
+      setTimeout(() => openEditor(attempt + 1), 100);
+    }
+  }
+
+  document.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('[data-mre-trigger]');
+    if (!btn) return;
+    openEditor();
+  });
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+  document.addEventListener('astro:page-load', init);
+</script>

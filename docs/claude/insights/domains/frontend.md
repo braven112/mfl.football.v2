@@ -32,6 +32,13 @@
 - **React islands must not SSR anything time-derived** — start `null`, render a
   placeholder, start the clock in `useEffect`. `?testDate=` makes the mismatch
   a branch-level hydration failure, not a cosmetic one.
+- **An island that renders `null` until opened must be `client:only`.** A
+  hydrating directive makes Astro SSR an EMPTY `<astro-island>` and React 19
+  then reports #418 on every load — it will not hydrate a root the server gave
+  nothing. Modals/sheets driven entirely by localStorage have nothing to
+  hydrate anyway. Corollary: the trigger is plain HTML and lives from first
+  paint while the island lands whenever its chunk does, so a click can precede
+  the listener — have the open event carry a `handled` flag and retry briefly.
 
 ## Layout traps that keep recurring
 
@@ -45,7 +52,16 @@
   by showing *one* child at a time (hiding them one at a time finds nothing
   when two independently demand the width).
 - **Table columns:** `width: 1%` shrinks a column to its content;
-  `max-width: 0` *collapses it to nothing*. Never use the latter.
+  `max-width: 0` *collapses it to nothing*. Never use the latter. And **never
+  put `display: flex` on a `<td>`** — it stops being a table cell, leaves the
+  column grid, and draws its `border-bottom` across its own box instead of the
+  row (a stray rule under one column). Lay the children out instead.
+- **`min-width: N` and `max-width: N` BOTH match at exactly N**, so a rule pair
+  written that way applies together for one pixel — how a row-tuned negative
+  margin ended up inside a column layout and got clipped. Writing the second as
+  `min-width: N+1` swaps it for the mirror bug: fractional widths (N+0.5, which
+  browsers do produce) match neither. Make one side the unconditional default
+  and query only the other.
 - `text-overflow: ellipsis` no-ops on a flex child with non-`stretch` alignment
   (it shrink-wraps) — add `max-width: 100%`. `flex: 1` won't expand inside a
   `justify-content: center` ancestor — give the ancestor a definite width.
@@ -1676,3 +1692,74 @@ the stylesheet and does exactly that, including that no one-sided
 `padding-left` override reopens the mismatch.
 
 ---
+
+---
+
+## 2026-08-22 - An Island That Renders `null` Cannot Be Hydrated (React #418)
+
+**Context:** A My Rank editor modal was mounted on four pages with
+`client:idle`. It returns `null` until opened. Every load of those pages threw
+`Minified React error #418` — the site's global error box caught it and showed
+the user a red panel. The roster pages had had no React island at all before,
+which is why the error was new and why the Astro React client runtime was
+suddenly being fetched there.
+
+**Insight:** Astro SSRs the component, gets `null`, and emits an EMPTY
+`<astro-island>`. The hydrating directive then calls `hydrateRoot` on a
+container the server contributed nothing to, and React 19 reports that as a
+hydration mismatch. This is a *different trigger* from the time-derived
+mismatch already documented above (2026-07 countdown hero) but the same
+symptom class — worth knowing both, because "does it render deterministically?"
+is not the only question. The other question is "does it render *anything*?"
+
+`client:only="react"` is not a workaround here, it is the correct directive: a
+modal that is always closed on first paint, whose entire contents come from
+localStorage, has no server render worth reconciling.
+
+**Evidence:** `curl` of the deployed page showed
+`<astro-island … ssr client="idle"></astro-island>` — self-closing, no
+children. After the change, `client="only"` and `islandChildren: 0` with a
+clean console on every one of the four pages.
+
+**Second-order:** `client:only` makes the trigger's timing real. The button is
+plain HTML and works from first paint; the island lands whenever its chunk
+does. A fast click dispatches an open event nobody is listening for yet and the
+button silently does nothing. Fix: the event carries a mutable
+`detail.handled` the component sets, and the trigger re-dispatches on a short
+interval until somebody answers.
+
+**Recommendation:** Any island whose top-level render can be `null` — modals,
+sheets, popovers, anything gated on "is it open" — takes `client:only`. If it
+has an out-of-island trigger, make the open path idempotent and retrying.
+
+---
+
+## 2026-08-22 - `display: flex` on a `<td>`, and `display: contents` as a Layout Handle
+
+**Context:** The Saved Rankings table's Actions cell was `display: flex` (to
+space its View/Hide buttons). It rendered a stray horizontal rule that didn't
+line up with any row, and the column drifted out of alignment with its header.
+
+**Insight:** A `<td>` with `display: flex` is no longer a table cell. It leaves
+the table's column layout entirely, so it neither aligns to its `<th>` nor
+draws its `border-bottom` across the row — the border tracks the flex box's own
+geometry. The buttons looked fine, which is why it survived; only the border
+gave it away. Space the children (`> * + * { margin-left }`) and leave the cell
+alone.
+
+**The inverse, which is genuinely useful:** `display: contents` on a wrapper
+makes it invisible to layout, so a shared component can ship a wrapper element
+that costs nothing on hosts that don't want it, and a single host can give it a
+real display to lay it out (e.g. a full-width flex line, so the child inside
+doesn't have to stretch to get one). The trap that comes with it: a
+`display: contents` element **cannot be a flex item**, so any `order` /
+`margin: auto` / `flex` rule targeting it silently no-ops. If one breakpoint
+lays the wrapper out and another leaves it `contents`, the second breakpoint's
+placement rules do nothing — which is exactly how a "flush left" rule passed
+review and did nothing at desktop.
+
+**Recommendation:** Verify responsive placement by *measuring* boxes across a
+width sweep, not by eye at two widths. A `getBoundingClientRect()` sweep over
+`[1280, 1024, 1023, 900, 700, 642, 641, 640.5, 640, 639, 535, 375]` found a
+one-pixel media-query overlap, a fractional-width gap, and a silently-inert
+rule that three rounds of screenshots had all missed.
