@@ -115,6 +115,30 @@ export const priorWinRates = (standingsFranchises) => {
  * playing (the base), a title rematch, a season-deciding rivalry game, and the
  * weeks that carry extra weight — the opener, the finale, a doubleheader.
  */
+/**
+ * "Two of last year's best" is a SCORING signal, not a headline.
+ *
+ * It applies to a lot of games — any two teams that both cleared .600 — so
+ * left alone it turned up on three of four cards in the 2026 draw and read as
+ * boilerplate. It keeps its weight in the score (it is a real reason a game is
+ * worth watching), but it is only ever SAID when it is the only thing a game
+ * has going for it, and then on at most one card, so it means "this one is
+ * here on quality alone" rather than "we ran out of things to write".
+ */
+export const GENERIC_QUALITY_REASON = 'two of last year’s best';
+
+const trimGenericReasons = (picks) => {
+  let spent = false;
+  return picks.map((p) => {
+    const others = p.why.filter((w) => w !== GENERIC_QUALITY_REASON);
+    if (others.length > 0) return { ...p, why: others };
+    if (!p.why.includes(GENERIC_QUALITY_REASON)) return p;
+    if (spent) return { ...p, why: [] };
+    spent = true;
+    return p;
+  });
+};
+
 export const marqueeMatchups = (
   weeks,
   { divisionOf, conferenceOf, name, winRate, lastChampionship, lastWeek, doubleheaderWeeks = [] },
@@ -164,9 +188,10 @@ export const marqueeMatchups = (
       }
       // Both coming off a strong season reads as a heavyweight bout even
       // without a trophy or a division between them.
+      // Weighted always; only SAID when nothing else fits (trimGenericReasons).
       if ((winRate[a] ?? 0) >= 0.6 && (winRate[b] ?? 0) >= 0.6) {
         score += 18;
-        why.push('two of last year’s best');
+        why.push(GENERIC_QUALITY_REASON);
       }
       scored.push({ week, away: a, home: b, awayName: name[a], homeName: name[b], score, why });
     }
@@ -206,7 +231,7 @@ export const marqueeMatchups = (
       take(g);
     }
   }
-  return picked.slice(0, limit).sort((x, y) => x.week - y.week);
+  return trimGenericReasons(picked.slice(0, limit).sort((x, y) => x.week - y.week));
 };
 
 /* ---------------------------------------------------------------- tease */

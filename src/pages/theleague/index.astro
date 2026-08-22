@@ -151,9 +151,12 @@ const heroReferenceDate = effectiveDate ?? new Date();
 const testDriveHero = showTestDriveHero(THELEAGUE.slug, heroReferenceDate);
 
 // Whether this season's reveal is already locked — read here rather than in
-// the resolver so that stays synchronous and side-effect free.
+// the resolver so that stays synchronous and side-effect free. Reads
+// `heroReferenceDate`, never `effectiveDate`: the latter is undefined on a
+// normal request (only `?testDate=` sets it), so dereferencing it here threw
+// on every homepage load until this was caught.
 const scheduleReleaseRevealed = Boolean(
-  await getRelease('theleague', effectiveDate.getUTCFullYear()),
+  await getRelease('theleague', heroReferenceDate.getUTCFullYear()),
 );
 const rawHeroState = resolveHeroState(
   effectiveDate,

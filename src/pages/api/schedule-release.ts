@@ -21,6 +21,7 @@ import { getAuthUser, isCommissionerOrAdmin, isAuthorizedForLeague } from '../..
 import { getLeagueBySlug } from '../../config/leagues';
 import { byeWeeksForSeason } from '../../utils/nfl-bye-weeks';
 import { getRelease } from '../../utils/schedule-release-store';
+import { getLeagueTeamBrands } from '../../utils/league-team-brands';
 // @ts-expect-error - .mjs helpers shared with the node scripts (see their headers)
 import { SCHEDULE_POLICY } from '../../utils/schedule-plan.mjs';
 // @ts-expect-error - .mjs helpers shared with the node scripts (see their headers)
@@ -105,6 +106,12 @@ export const GET: APIRoute = async ({ request, url }) => {
       releaseDate: releaseDate?.toISOString() ?? null,
       canPaste: isCommissionerOrAdmin(user),
       release: existing,
+      // Crests + brand colours for the marquee cards. Sent alongside the
+      // archived reveal rather than baked into it: the reveal is a COMMITTED
+      // record of a season's games and must not go stale the day a franchise
+      // rebrands. Names in `release.marquee` are the ones the draw was made
+      // under; these are how the team looks today.
+      teams: getLeagueTeamBrands(slug),
     });
   }
 

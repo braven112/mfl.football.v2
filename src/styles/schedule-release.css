@@ -141,6 +141,11 @@
   color: var(--color-text-primary, #0f172a);
 }
 
+/* Crest + short name + `@`, tinted by the two franchises — the same faceoff
+   language the live scoreboard cards use, so a marquee game reads as a game
+   and not as a bullet. The seam gradient is drawn from the away brand into the
+   home brand; both have a `-dark` variant because several franchise primaries
+   are a near-black that vanishes on a dark card. */
 .rel__marquee {
   display: grid;
   gap: 0.75rem;
@@ -150,15 +155,40 @@
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
 }
 
-.rel__marquee li {
+.rel__game {
+  --rel-away-themed: var(--rel-away, var(--accent-color, #1c497c));
+  --rel-home-themed: var(--rel-home, var(--accent-color, #1c497c));
+
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
-  padding: 0.9rem 1rem;
+  gap: 0.55rem;
+  padding: 0.9rem 1rem 0.85rem 1.6rem;
+  overflow: hidden;
   background: var(--card-bg, #fff);
   border: 1px solid var(--card-border, #e2e8f0);
-  border-left: 3px solid var(--accent-color, #1c497c);
   border-radius: 10px;
+}
+
+/* The brand seam. A pseudo-element rather than a border-image so the two
+   colors can meet in the middle at any card width. */
+.rel__game::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  content: '';
+  background: linear-gradient(
+    90deg,
+    var(--rel-away-themed) 0%,
+    var(--rel-away-themed) 45%,
+    var(--rel-home-themed) 55%,
+    var(--rel-home-themed) 100%
+  );
+}
+
+:root.dark .rel__game {
+  --rel-away-themed: var(--rel-away-dark, var(--rel-away, var(--accent-color, #1c497c)));
+  --rel-home-themed: var(--rel-home-dark, var(--rel-home, var(--accent-color, #1c497c)));
 }
 
 .rel__week {
@@ -166,23 +196,85 @@
   font-weight: 700;
   letter-spacing: 0.07em;
   text-transform: uppercase;
-  color: var(--accent-color, #1c497c);
+  color: var(--color-text-secondary, #475569);
 }
 
-.rel__teams {
-  font-size: 1rem;
+.rel__faceoff {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.rel__side {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  min-width: 0;
+}
+
+/* The home row is inset by the `@`, so both crests still line up under one
+   another and the marker sits in the gutter. */
+.rel__side--home .rel__at {
+  flex: 0 0 auto;
+  width: 0.85rem;
+  margin-left: -1.25rem;
+  text-align: center;
+}
+
+.rel__crest {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.rel__crest img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.rel__name {
+  font-size: 0.9375rem;
   font-weight: 600;
+  line-height: 1.2;
   color: var(--color-text-primary, #0f172a);
 }
 
 .rel__at {
+  flex: 0 0 auto;
+  font-size: 0.8125rem;
   font-weight: 400;
-  color: var(--color-text-secondary, #475569);
+  color: var(--color-text-disabled, #94a3b8);
+}
+
+.rel__whys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .rel__why {
-  font-size: 0.75rem;
+  display: inline-flex;
+  gap: 0.25rem;
+  align-items: center;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.6875rem;
   color: var(--color-text-secondary, #475569);
+  background: var(--color-surface-2, #f8fafc);
+  border: 1px solid var(--color-border-subtle, #e2e8f0);
+  border-radius: 999px;
+}
+
+.rel__whyIcon {
+  flex: 0 0 auto;
+  fill: currentColor;
+  opacity: 0.75;
 }
 
 /* ----------------------------------------------------------------- facts */
@@ -253,16 +345,18 @@
   color: var(--color-text-primary, #0f172a);
 }
 
+/* Short names, not franchise ids — the grid is the thing an owner scans for
+   their own season. Proportional type (the ids were monospace for alignment
+   that names don't want) and a wider track to hold them. */
 .rel__games {
   display: grid;
-  gap: 0.15rem 1rem;
+  gap: 0.2rem 1rem;
   margin: 0;
   padding: 0;
-  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
   font-size: 0.8125rem;
   color: var(--color-text-primary, #0f172a);
   list-style: none;
-  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
 }
 
 .rel__tag {

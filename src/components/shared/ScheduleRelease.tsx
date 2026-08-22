@@ -15,7 +15,7 @@
  * skewed clock would otherwise show a reveal that has not happened, or hide one
  * that has.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 
 type MarqueeGame = {
   week: number;
@@ -24,6 +24,17 @@ type MarqueeGame = {
   awayName: string;
   homeName: string;
   why: string[];
+};
+
+/** One franchise's crest + brand colour, from the league config (`/api/schedule-release`). */
+type TeamBrand = {
+  franchiseId: string;
+  name: string;
+  nameShort: string;
+  colorPrimary: string;
+  colorPrimaryDark: string;
+  /** Light crest; the layout's global stylesheet handles the dark swap. */
+  icon: string;
 };
 
 type Release = {
@@ -47,7 +58,34 @@ type Release = {
 
 type State =
   | { state: 'countdown'; leagueName: string; year: number; releaseDate: string | null; due: boolean; reason: string | null; canPaste: boolean }
-  | { state: 'revealed'; leagueName: string; year: number; releaseDate: string | null; canPaste: boolean; release: Release };
+  | {
+      state: 'revealed';
+      leagueName: string;
+      year: number;
+      releaseDate: string | null;
+      canPaste: boolean;
+      release: Release;
+      teams: Record<string, TeamBrand>;
+    };
+
+/**
+ * A glyph for every reason `marqueeMatchups` can give, so a card says what
+ * kind of game it is before you have read a word of it. The keys are the
+ * literal `why` strings that scorer emits — keep them in step with
+ * src/utils/schedule-release.mjs; `tests/schedule-release.test.ts` pins that
+ * every reason it can produce has an icon here.
+ */
+const WHY_ICONS: Record<string, string> = {
+  'championship rematch': 'trophy',
+  'division title on the line in the final week': 'shield',
+  'division rivalry': 'shield',
+  'opening week': 'whistle',
+  'final week': 'champ',
+  'doubleheader week': 'calendar-2',
+  'cross-conference opener': 'exchange',
+  'two of last year’s best': 'star',
+};
+const WHY_FALLBACK_ICON = 'football';
 
 const UNITS = [
   ['day', 86_400_000],
@@ -66,7 +104,14 @@ const breakdown = (ms: number) => {
   });
 };
 
-export default function ScheduleRelease({ leagueSlug }: { leagueSlug: string }) {
+export default function ScheduleRelease({
+  leagueSlug,
+  spriteHref,
+}: {
+  leagueSlug: string;
+  /** Cache-busted sprite URL from the page — React can't read it off disk. */
+  spriteHref: string;
+}) {
   const [data, setData] = useState<State | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
@@ -194,11 +239,23 @@ export default function ScheduleRelease({ leagueSlug }: { leagueSlug: string }) 
   }
 
   /* ------------------------------------------------------------- revealed */
-  const { release } = data;
+  const { release, teams } = data;
   const weekNumbers = Object.keys(release.weeks)
     .map(Number)
     .sort((a, b) => a - b);
   const dh = new Set(release.doubleheaderWeeks);
+
+  // Crest + short name for one side of a marquee card. Falls back to the name
+  // frozen into the reveal when a franchise has left the config since — the
+  // card still reads, it just loses its crest.
+  const side = (id: string, frozenName: string) => {
+    const t = teams?.[id];
+    return {
+      name: t?.nameShort || frozenName || `Franchise ${id}`,
+      full: t?.name || frozenName || `Franchise ${id}`,
+      icon: t?.icon ?? '',
+    };
+  };
 
   return (
     <div className="rel">
@@ -211,15 +268,54 @@ export default function ScheduleRelease({ leagueSlug }: { leagueSlug: string }) 
       <section>
         <h3 className="rel__h3">Circle these</h3>
         <ul className="rel__marquee">
-          {release.marquee.map((g) => (
-            <li key={`${g.week}-${g.away}-${g.home}`}>
-              <span className="rel__week">Week {g.week}</span>
-              <span className="rel__teams">
-                {g.awayName} <span className="rel__at">@</span> {g.homeName}
-              </span>
-              {g.why.length > 0 && <span className="rel__why">{g.why.join(' · ')}</span>}
-            </li>
-          ))}
+          {release.marquee.map((g) => {
+            const away = side(g.away, g.awayName);
+            const home = side(g.home, g.homeName);
+            const brandVars = {
+              '--rel-away': teams?.[g.away]?.colorPrimary ?? 'var(--accent-color, #1c497c)',
+              '--rel-away-dark': teams?.[g.away]?.colorPrimaryDark ?? 'var(--accent-color, #1c497c)',
+              '--rel-home': teams?.[g.home]?.colorPrimary ?? 'var(--accent-color, #1c497c)',
+              '--rel-home-dark': teams?.[g.home]?.colorPrimaryDark ?? 'var(--accent-color, #1c497c)',
+            } as CSSProperties;
+            return (
+              <li key={`${g.week}-${g.away}-${g.home}`} className="rel__game" style={brandVars}>
+                <span className="rel__week">Week {g.week}</span>
+                {/* Stacked, not side by side: four cards across a 60rem column
+                    leaves ~110px per team on one row, which truncated every
+                    franchise to "Midw…". Away over home also matches how the
+                    matchup reads aloud. */}
+                <div className="rel__faceoff">
+                  <span className="rel__side">
+                    <span className="rel__crest">
+                      {away.icon && <img src={away.icon} alt="" loading="lazy" width="28" height="28" />}
+                    </span>
+                    <span className="rel__name">{away.full}</span>
+                  </span>
+                  <span className="rel__side rel__side--home">
+                    <span className="rel__at" aria-label="at">
+                      @
+                    </span>
+                    <span className="rel__crest">
+                      {home.icon && <img src={home.icon} alt="" loading="lazy" width="28" height="28" />}
+                    </span>
+                    <span className="rel__name">{home.full}</span>
+                  </span>
+                </div>
+                {g.why.length > 0 && (
+                  <ul className="rel__whys">
+                    {g.why.map((why) => (
+                      <li key={why} className="rel__why">
+                        <svg className="rel__whyIcon" aria-hidden="true" width="13" height="13">
+                          <use href={`${spriteHref}#icon-${WHY_ICONS[why] ?? WHY_FALLBACK_ICON}`} />
+                        </svg>
+                        {why}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            );
+          })}
         </ul>
       </section>
 
@@ -268,7 +364,8 @@ export default function ScheduleRelease({ leagueSlug }: { leagueSlug: string }) 
                     <ul className="rel__games">
                       {release.weeks[String(w)].map((g, i) => (
                         <li key={`${w}-${i}`}>
-                          {g.away} @ {g.home}
+                          {side(g.away, '').name} <span className="rel__at">@</span>{' '}
+                          {side(g.home, '').name}
                         </li>
                       ))}
                     </ul>

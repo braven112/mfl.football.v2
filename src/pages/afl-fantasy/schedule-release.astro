@@ -17,6 +17,7 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import ScheduleRelease from '../../components/shared/ScheduleRelease.tsx';
 import { getAuthUser, isAuthorizedForLeague } from '../../utils/auth';
 import { getLeagueBySlug } from '../../config/leagues';
+import { spriteUrl } from '../../utils/sprite-url';
 import '../../styles/schedule-release.css';
 
 const user = getAuthUser(Astro.request);
@@ -27,5 +28,5 @@ if (!user || !league || !isAuthorizedForLeague(user, league.id)) {
 ---
 
 <TheLeagueLayout title="Schedule Release">
-  <ScheduleRelease client:load leagueSlug={league.slug} />
+  <ScheduleRelease client:load leagueSlug={league.slug} spriteHref={spriteUrl} />
 </TheLeagueLayout>

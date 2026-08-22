@@ -1,4 +1,7 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
+import { loadSpriteIconIds } from './helpers/sprite-icons';
 // @ts-expect-error - .mjs helper shared with the node scripts (see its header)
 import {
   aflNationalLeagueDraft,
@@ -9,6 +12,7 @@ import {
   scheduleReleaseDate,
   scheduleReleaseTease,
   scheduleReleaseTeaseCopy,
+  GENERIC_QUALITY_REASON,
 } from '../src/utils/schedule-release.mjs';
 
 /**
@@ -269,5 +273,132 @@ describe('marqueeMatchups', () => {
     const picks = marqueeMatchups(weeks, { ...ctx, lastChampionship: null }, 4);
     expect(picks).toHaveLength(4);
     for (const p of picks) expect(p.why).not.toContain('championship rematch');
+  });
+});
+
+/**
+ * The homepage wiring.
+ *
+ * TheLeague's homepage has TWO date variables and only one of them is safe to
+ * dereference: `effectiveDate` is `Date | undefined` (only `?testDate=` sets
+ * it) and `heroReferenceDate` is the resolved `effectiveDate ?? new Date()`.
+ * Reading the season off the wrong one threw
+ * `Cannot read properties of undefined (reading 'getUTCFullYear')` on every
+ * normal request — a 500 on the front page, invisible to any test that only
+ * exercises the resolver, because a `?testDate=` run passes.
+ *
+ * The AFL page defines `effectiveDate` WITH the fallback, so this rule is
+ * TheLeague's alone.
+ */
+describe('theleague homepage never dereferences the optional date', () => {
+  it('reads the schedule-release season off heroReferenceDate', () => {
+    const src = readFileSync(resolve(__dirname, '../src/pages/theleague/index.astro'), 'utf-8');
+    const optionalUse = src.match(/\beffectiveDate\.\w+/g) ?? [];
+    expect(
+      optionalUse,
+      'effectiveDate is `Date | undefined` on this page — use heroReferenceDate (or `effectiveDate ?? new Date()`)',
+    ).toEqual([]);
+    expect(src).toContain("getRelease('theleague', heroReferenceDate.getUTCFullYear())");
+  });
+});
+
+/**
+ * Marquee reason icons.
+ *
+ * The reason strings are written in one file (`schedule-release.mjs`, as
+ * `why.push(...)`) and given glyphs in another (`ScheduleRelease.tsx`, as
+ * `WHY_ICONS`). Nothing at runtime connects them: an unmapped reason silently
+ * falls back to the generic football, and a typo'd glyph name renders an empty
+ * box, both of which look like a design choice rather than a bug.
+ */
+describe('marquee reason icons', () => {
+  const mjs = readFileSync(resolve(__dirname, '../src/utils/schedule-release.mjs'), 'utf-8');
+  const reasons = [
+    ...[...mjs.matchAll(/why\.push\('([^']+)'\)/g)].map((m) => m[1]),
+    // Pushed via its named constant rather than a literal, because the trim
+    // rule below has to refer to the same string.
+    GENERIC_QUALITY_REASON,
+  ];
+  const tsx = readFileSync(resolve(__dirname, '../src/components/shared/ScheduleRelease.tsx'), 'utf-8');
+  const mapped = Object.fromEntries(
+    [...tsx.matchAll(/^\s+'([^']+)': '([a-z0-9-]+)',$/gm)].map((m) => [m[1], m[2]]),
+  );
+
+  it('finds the reasons and the map (sanity)', () => {
+    expect(reasons.length).toBeGreaterThan(5);
+    expect(Object.keys(mapped).length).toBeGreaterThan(5);
+  });
+
+  it('gives every reason the scorer can emit its own glyph', () => {
+    const unmapped = reasons.filter((r) => !mapped[r]);
+    expect(unmapped, 'reasons with no entry in WHY_ICONS — they render the generic fallback').toEqual([]);
+  });
+
+  it('maps only glyphs that exist in the sprite', () => {
+    const sprite = loadSpriteIconIds();
+    const missing = Object.entries(mapped)
+      .filter(([, icon]) => !sprite.has(icon))
+      .map(([reason, icon]) => `${reason} -> ${icon}`);
+    expect(missing, 'WHY_ICONS names a glyph the sprite does not define — renders empty').toEqual([]);
+  });
+});
+
+/**
+ * The generic-quality reason.
+ *
+ * "Two of last year's best" is true of a LOT of games — in the 2026 draw it
+ * landed on three of the four picks, which made the tease read like filler.
+ * It still WEIGHTS the pick; it is only printed when a game has nothing more
+ * specific to say, and then only once across the set.
+ */
+describe('trimming the generic quality reason', () => {
+  const ids = ['0001', '0002', '0003', '0004', '0005', '0006', '0007', '0008'];
+  const name = Object.fromEntries(ids.map((id, i) => [id, `Team ${i + 1}`]));
+  const divisionOf = Object.fromEntries(ids.map((id, i) => [id, `D${Math.ceil((i + 1) / 4)}`]));
+  const conferenceOf = Object.fromEntries(ids.map((id) => [id, '00']));
+  // Everybody had a strong year, so every game qualifies for the generic tag.
+  const winRate = Object.fromEntries(ids.map((id) => [id, 0.8]));
+  const ctx = {
+    divisionOf,
+    conferenceOf,
+    name,
+    winRate,
+    lastChampionship: { champion: '0001', runnerUp: '0005' },
+    lastWeek: 4,
+    doubleheaderWeeks: [1],
+  };
+  // Four weeks, four games each — every pairing qualifies on quality alone.
+  const weeks = new Map<number, { away: string; home: string }[]>();
+  for (let w = 1; w <= 4; w += 1) {
+    const rot = [...ids.slice(w % 8), ...ids.slice(0, w % 8)];
+    weeks.set(
+      w,
+      Array.from({ length: 4 }, (_, i) => ({ away: rot[i * 2], home: rot[i * 2 + 1] })),
+    );
+  }
+
+  const picks = marqueeMatchups(weeks, ctx, 4);
+
+  it('never says it more than once across the whole tease', () => {
+    const said = picks.filter((p: any) => p.why.includes(GENERIC_QUALITY_REASON));
+    expect(said.length).toBeLessThanOrEqual(1);
+  });
+
+  it('never says it alongside a more specific reason', () => {
+    for (const p of picks) {
+      if (!p.why.includes(GENERIC_QUALITY_REASON)) continue;
+      expect(p.why, `${p.awayName} @ ${p.homeName}`).toEqual([GENERIC_QUALITY_REASON]);
+    }
+  });
+
+  it('still weights the pick — a quality game with nothing else keeps the label', () => {
+    // A single game, two strong teams, no rivalry/opener/rematch angle at all.
+    const bare = new Map([[2, [{ away: '0002', home: '0006' }]]]);
+    const [only] = marqueeMatchups(bare, ctx, 1);
+    expect(only.why).toEqual([GENERIC_QUALITY_REASON]);
+  });
+
+  it('leaves a card with no angle at all with an empty reason list, not filler', () => {
+    for (const p of picks) expect(Array.isArray(p.why)).toBe(true);
   });
 });
