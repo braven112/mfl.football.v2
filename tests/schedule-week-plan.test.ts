@@ -18,7 +18,10 @@ import byeData from '../data/nfl/bye-weeks.json';
  */
 const SEASONS = Object.keys((byeData as any).seasons);
 
-const planFor = (year: string, { lastWeek = 14, divisionSize = 6, doubleheaderCount = 3 } = {}) => {
+const planFor = (
+  year: string,
+  { lastWeek = 14, divisionSize = 6, conferenceSize = 12, doubleheaderCount = 3 } = {},
+) => {
   const byes = (byeData as any).seasons[year];
   const clean = byeFreeWeeks(byes, lastWeek);
   const doubleheaders = chooseDoubleheaderWeeks({
@@ -36,6 +39,7 @@ const planFor = (year: string, { lastWeek = 14, divisionSize = 6, doubleheaderCo
       doubleheaders,
       byeCounts: byeCountsByWeek(byes),
       divisionSize,
+      conferenceSize,
       crossWeek: 1,
     }),
   };
@@ -124,15 +128,36 @@ describe('buildWeekPlan', () => {
       }
     });
 
-      it('uses every bye-free week the division blocks can reach', () => {
-        for (const week of clean) {
-          const row = plan.find((w: any) => w.week === week)!;
-          const reachable = row.slots.some((s: any) => s.kind === 'division');
-          if (!reachable) continue; // middle-block clean week — see the note above
-          expect(
-            row.slots.filter((s: any) => s.kind === 'inter'),
-            `week ${week} is bye-free and in a division block but wastes a slot`,
-          ).toHaveLength(0);
+      // Not "every clean slot is a division round" — the spread rule
+      // deliberately leaves a clean week's SECOND slot to interdivision so
+      // rivalry rounds land in distinct weeks, which costs nothing because the
+      // COUNT is what matters. This asserts that count is maximal: as many
+      // division rounds sit in bye-free weeks as the block has clean slots.
+      it('places as many division rounds in bye-free weeks as each block can hold', () => {
+        for (const leg of [0, 1]) {
+          const blockWeeks = plan
+            .filter((w: any) => w.slots.some((s: any) => s.kind === 'division' && s.leg === leg))
+            .map((w: any) => w.week);
+          const lo = Math.min(...blockWeeks);
+          const hi = Math.max(...blockWeeks);
+          const block = plan.filter((w: any) => w.week >= lo && w.week <= hi);
+          const blockSlots = block.flatMap((w: any) => w.slots.map(() => w.week));
+          const cleanSlots = blockSlots.filter((w: number) => (byeCounts[w] ?? 0) === 0).length;
+          const rounds = block.reduce(
+            (n: number, w: any) => n + w.slots.filter((sl: any) => sl.kind === 'division' && sl.leg === leg).length,
+            0,
+          );
+          const placedClean = block.reduce(
+            (n: number, w: any) =>
+              n +
+              ((byeCounts[w.week] ?? 0) === 0
+                ? w.slots.filter((sl: any) => sl.kind === 'division' && sl.leg === leg).length
+                : 0),
+            0,
+          );
+          expect(placedClean, `leg ${leg}: ${placedClean} bye-free of ${rounds}, block has ${cleanSlots} clean slots`).toBe(
+            Math.min(rounds, cleanSlots),
+          );
         }
       });
 
@@ -151,14 +176,62 @@ describe('buildWeekPlan', () => {
 
   it('refuses a week/doubleheader combination the format cannot fill', () => {
     expect(() =>
-      buildWeekPlan({ lastWeek: 14, doubleheaders: [1, 2], byeCounts: {}, divisionSize: 6, crossWeek: 1 }),
+      buildWeekPlan({
+        lastWeek: 14,
+        doubleheaders: [1, 2],
+        byeCounts: {},
+        divisionSize: 6,
+        conferenceSize: 12,
+        crossWeek: 1,
+      }),
     ).toThrow(/needs 17/);
   });
 
   it('refuses to put the cross-conference round in a single-game week', () => {
     expect(() =>
-      buildWeekPlan({ lastWeek: 14, doubleheaders: [2, 3, 12], byeCounts: {}, divisionSize: 6, crossWeek: 1 }),
+      buildWeekPlan({
+        lastWeek: 14,
+        doubleheaders: [2, 3, 12],
+        byeCounts: {},
+        divisionSize: 6,
+        conferenceSize: 12,
+        crossWeek: 1,
+      }),
     ).toThrow(/must be a doubleheader/);
+  });
+});
+
+describe('buildWeekPlan for a conference-less league (The League: 16 teams, 4x4)', () => {
+  const byes = (byeData as any).seasons['2026'];
+  const plan = buildWeekPlan({
+    lastWeek: 14,
+    doubleheaders: [1, 2, 3, 12],
+    byeCounts: byeCountsByWeek(byes),
+    divisionSize: 4,
+    conferenceSize: 16,
+    crossWeek: null,
+  });
+  const slots = plan.flatMap((w: any) => w.slots);
+
+  it('needs no cross-conference round and plays every other division', () => {
+    expect(slots.filter((s: any) => s.kind === 'cross')).toHaveLength(0);
+    expect(slots.filter((s: any) => s.kind === 'division' && s.leg === 0)).toHaveLength(3);
+    expect(slots.filter((s: any) => s.kind === 'division' && s.leg === 1)).toHaveLength(3);
+    expect(slots.filter((s: any) => s.kind === 'inter')).toHaveLength(12);
+  });
+
+  it('spreads the first leg across distinct weeks instead of stacking Week 1', () => {
+    const earlyWeeks = plan
+      .filter((w: any) => w.slots.some((s: any) => s.kind === 'division' && s.leg === 0))
+      .map((w: any) => w.week);
+    // The minimum prefix holding 3 rounds is Weeks 1-2, which would put two
+    // rivalry rounds in Week 1 — a third of the division schedule in the
+    // highest-variance week of the year. The block extends over clean weeks so
+    // each gets one instead.
+    expect(new Set(earlyWeeks).size).toBe(3);
+    for (const week of earlyWeeks) {
+      expect(plan.find((w: any) => w.week === week)!.slots.filter((s: any) => s.kind === 'division')).toHaveLength(1);
+    }
   });
 });
 

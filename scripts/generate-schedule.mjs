@@ -40,6 +40,7 @@ if (!league || !SCHEDULE_POLICY[slug]) {
 }
 const year = Number(arg('year', new Date().getUTCFullYear()));
 const outDir = arg('out', path.join(ROOT, league.dataPath, 'schedule-plan'));
+const suffix = arg('mode') ? `-${arg('mode')}` : '';
 
 const byes = readJson(path.join(ROOT, 'data/nfl/bye-weeks.json'))?.seasons?.[String(year)];
 if (!byes) {
@@ -53,6 +54,9 @@ const plan = planSchedule({
   byes,
   readFeed: (y, feed) => readJson(path.join(ROOT, league.dataPath, 'mfl-feeds', String(y), `${feed}.json`)),
   search: { restarts: Number(arg('restarts', 8)), iterations: Number(arg('iterations', 15000)) },
+  // --mode=constructive forces the full rebuild on a league whose policy is
+  // `simple`, so the two can be compared without editing the policy.
+  mode: arg('mode', undefined),
 });
 
 console.log(`\n=== ${plan.leagueName} ${year} (${plan.mode}) ===`);
@@ -97,11 +101,11 @@ if (plan.problems.length) {
 }
 
 fs.mkdirSync(outDir, { recursive: true });
-const txt = path.join(outDir, `${year}-schedule.txt`);
+const txt = path.join(outDir, `${year}-schedule${suffix}.txt`);
 fs.writeFileSync(txt, `${plan.text}\n`);
 const { weeks, ...serialisable } = plan;
 fs.writeFileSync(
-  path.join(outDir, `${year}-schedule.json`),
+  path.join(outDir, `${year}-schedule${suffix}.json`),
   `${JSON.stringify({ ...serialisable, weeks: Object.fromEntries([...weeks.entries()].sort((a, b) => a[0] - b[0])) }, null, 2)}\n`,
 );
 console.log(`\nwrote ${path.relative(ROOT, txt)} (${plan.text.split('\n').length} games — paste into MFL)`);

@@ -44,6 +44,10 @@ import { buildWeekPlan, searchSeason } from './schedule-builder.mjs';
  */
 export const SCHEDULE_POLICY = {
   theleague: {
+    // The league runs `simple` for 2026 by its own decision. `constructive` is
+    // available and produces a materially different season — see the comparison
+    // in docs/claude/rules/schedule-optimization.md — so the planner accepts a
+    // mode override rather than making this an edit-to-try-it.
     mode: 'simple',
     startWindow: [1, 2, 3, 4],
     endWindow: [12, 13, 14],
@@ -308,9 +312,10 @@ export const toMflScheduleText = (weeks) => {
  * @param {Record<string,number>} args.byes  NFL team -> bye week
  * @param {{restarts?:number,iterations?:number,seed?:number}} [args.search]
  */
-export const planSchedule = ({ slug, year, readFeed, byes, search = {} }) => {
-  const policy = SCHEDULE_POLICY[slug];
-  if (!policy) throw new Error(`no scheduling policy for league: ${slug}`);
+export const planSchedule = ({ slug, year, readFeed, byes, search = {}, mode }) => {
+  const base = SCHEDULE_POLICY[slug];
+  if (!base) throw new Error(`no scheduling policy for league: ${slug}`);
+  const policy = mode && mode !== base.mode ? { ...base, mode } : base;
   const shape = seasonShape(readFeed(year, 'league'));
   if (!shape) throw new Error(`missing league feed for ${slug} ${year}`);
 
@@ -331,14 +336,10 @@ export const planSchedule = ({ slug, year, readFeed, byes, search = {} }) => {
   let fairness = null;
 
   if (policy.mode === 'constructive') {
-    const cross = buildCrossRound(
-      shape,
-      policy,
-      year,
-      readFeed(year - 1, 'league'),
-      readFeed(year - 1, 'standings'),
-    );
-    crossConference = {
+    const cross = policy.crossConference
+      ? buildCrossRound(shape, policy, year, readFeed(year - 1, 'league'), readFeed(year - 1, 'standings'))
+      : null;
+    if (cross) crossConference = {
       divisionPairing: cross.divisionPairing,
       alternateYear: cross.flip,
       skippedRivalries: cross.skippedRivalries,
@@ -350,12 +351,19 @@ export const planSchedule = ({ slug, year, readFeed, byes, search = {} }) => {
     };
     const divisions = {};
     for (const id of shape.franchiseIds) (divisions[shape.divisionOf[id]] ??= []).push(id);
-    const conferences = {};
-    for (const teams of Object.values(divisions)) {
-      (conferences[shape.conferenceOf[teams[0]]] ??= []).push(teams);
-    }
+    // Conferences are keyed by DIVISION NAME so the builder can re-read the
+    // annealer's current team ordering; a captured team array would freeze it.
+    // A league whose divisions all share one conference has no cross-conference
+    // structure at all, so it schedules against every division instead.
+    const byConference = {};
+    for (const name of Object.keys(divisions)) (byConference[shape.conferenceOf[divisions[name][0]]] ??= []).push(name);
+    const conferences = Object.keys(byConference).length > 1 ? byConference : null;
     const divisionSize = shape.franchiseIds.length / shape.divisionCount;
-    const gamesPerTeam = (divisionSize - 1) * 2 + divisionSize + 1;
+    const crossWeek = policy.crossConference?.week ?? null;
+    const conferenceSize = conferences
+      ? shape.franchiseIds.length / Object.keys(conferences).length
+      : shape.franchiseIds.length;
+    const gamesPerTeam = (divisionSize - 1) * 2 + (conferenceSize - divisionSize) + (crossWeek ? 1 : 0);
     // Derived from THIS season's doubleheaders and byes. Never pinned — a
     // hard-coded plan silently contradicts the weeks the planner chose the
     // moment the bye calendar moves.
@@ -364,13 +372,14 @@ export const planSchedule = ({ slug, year, readFeed, byes, search = {} }) => {
       doubleheaders,
       byeCounts: byeCountsByWeek(byes),
       divisionSize,
-      crossWeek: policy.crossConference.week,
+      conferenceSize,
+      crossWeek,
     });
     const best = searchSeason(
       {
         divisions,
         conferences,
-        crossRound: cross.games,
+        crossRound: cross?.games ?? [],
         weekPlan,
         franchiseIds: shape.franchiseIds,
         gamesPerTeam,
@@ -393,7 +402,7 @@ export const planSchedule = ({ slug, year, readFeed, byes, search = {} }) => {
     divisionSize: shape.franchiseIds.length / shape.divisionCount,
     byeFree: clean,
     doubleheaders,
-    reservedSlotsPerTeam: policy.crossConference ? 1 : 0,
+    reservedSlotsPerTeam: policy.crossConference && policy.mode === 'constructive' ? 1 : 0,
   });
 
   return {
