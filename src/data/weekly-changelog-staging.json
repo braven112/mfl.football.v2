@@ -88,6 +88,22 @@
       "impact": "user",
       "area": "live-scoring",
       "league": "both"
+    },
+    {
+      "date": "2026-08-22",
+      "type": "bug-fix",
+      "summary": "The Actions column on Import Rankings had drifted out of line with its own header, and the Average Rank row trailed a stray horizontal rule off to one side. Both are back in the grid where they belong.",
+      "impact": "user",
+      "area": "import-rankings",
+      "league": "both"
+    },
+    {
+      "date": "2026-08-22",
+      "type": "bug-fix",
+      "summary": "At one specific browser width — right at the tablet breakpoint — the GM/Coach switch on the roster page was sliced in half by the top edge of the card it sits in. It stays inside the card at every width now.",
+      "impact": "user",
+      "area": "rosters",
+      "league": "theleague"
     }
   ]
 }
