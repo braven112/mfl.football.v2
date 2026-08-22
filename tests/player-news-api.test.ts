@@ -211,8 +211,24 @@ describe('GET /api/player-news — recency window', () => {
     expect(Math.abs(passed.getTime() - Date.now())).toBeLessThan(5000);
   });
 
-  it('a testDate result is still cacheable — it is a distinct URL, not a poisoned one', async () => {
+  it('NEVER lets the CDN hold a test-clock response', async () => {
+    // Two reasons, and the second is the one that bites: every minted date
+    // would become its own CDN variant, and the param exists for debugging —
+    // where a five-minute-old copy served back to your own probe is the exact
+    // trap this route's insight file already records.
     const res = await call('?espnId=3139477&testDate=2026-11-01');
+    expect(res.headers.get('Cache-Control')).toBe('no-store');
+  });
+
+  it('still caches the real-clock response', async () => {
+    const res = await call('?espnId=3139477');
     expect(res.headers.get('Cache-Control')).toBe(CACHE_OK);
+  });
+
+  it('does not cache a test-clock no-ESPN-id response either', async () => {
+    getPlayer.mockReturnValue(undefined);
+    getGlobalPlayerMap.mockReturnValue(new Map());
+    const res = await call('?mflId=13593&testDate=2026-11-01');
+    expect(res.headers.get('Cache-Control')).toBe('no-store');
   });
 });

@@ -76,9 +76,17 @@ export const GET: APIRoute = async ({ request, url }) => {
   const mflId = url.searchParams.get('mflId') ?? '';
 
   // `?testDate=YYYY-MM-DD` moves the clock that picks the recency window, the
-  // way every other date-dependent surface here is exercised. It is a distinct
-  // URL, so it gets its own cache entry and can never poison the real one.
-  const now = getTestDateFromSearchParams(url.searchParams) ?? new Date();
+  // way every other date-dependent surface here is exercised.
+  const testClock = getTestDateFromSearchParams(url.searchParams);
+  const now = testClock ?? new Date();
+
+  // A test-clock response is never cacheable. Each testDate is a distinct URL
+  // so it could not poison the real entry, but it is still worth refusing:
+  // every minted date would otherwise become its own CDN variant, and the
+  // param exists FOR debugging — where a five-minute-old copy served back to
+  // your own probe is exactly the trap `docs/claude/insights/features/
+  // player-news.md` already records against s-maxage on this route.
+  const okCache = testClock ? CACHE_NEVER : CACHE_OK;
 
   // Two ways in. `mflId` is the normal path. A direct `espnId` is for the team
   // DEF stand-in, whose id comes from def-spotlight-players (ESPN's own roster
@@ -102,7 +110,7 @@ export const GET: APIRoute = async ({ request, url }) => {
       return json(
         { espnId: null, status: 'empty', items: [], fetchedAt: new Date().toISOString() },
         200,
-        CACHE_OK,
+        okCache,
       );
     }
     return json({ error: 'invalid player id' }, 400, CACHE_NEVER);
@@ -138,5 +146,5 @@ export const GET: APIRoute = async ({ request, url }) => {
 
   // `error` rides a 200 so the client renders its retryable error state rather
   // than a fetch rejection — but it is explicitly uncacheable.
-  return json(result, 200, result.status === 'error' ? CACHE_NEVER : CACHE_OK);
+  return json(result, 200, result.status === 'error' ? CACHE_NEVER : okCache);
 };

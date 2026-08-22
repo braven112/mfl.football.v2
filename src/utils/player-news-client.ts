@@ -193,7 +193,16 @@ export function loadPlayerNews(
       if (token !== generation) return;
 
       const items = Array.isArray(body?.items) ? body.items : [];
-      const windowDays = typeof body?.windowDays === 'number' ? body.windowDays : undefined;
+      // Normalized HERE, at the wire boundary, so no malformed number can enter
+      // the state or the cache. `typeof === 'number'` alone admits NaN and
+      // Infinity; playerNewsEmptyMessage guards against both, but a value that
+      // is wrong should be dropped where it arrives rather than at each of the
+      // places that later has to remember to re-check it.
+      const rawWindow = body?.windowDays;
+      const windowDays =
+        typeof rawWindow === 'number' && Number.isFinite(rawWindow) && rawWindow > 0
+          ? rawWindow
+          : undefined;
       const state: PlayerNewsState =
         body?.status === 'ok' && items.length
           ? { kind: 'ok', items }
