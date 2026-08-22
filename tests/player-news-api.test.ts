@@ -184,16 +184,18 @@ describe('GET /api/player-news — mflId resolution', () => {
 });
 
 describe('GET /api/player-news — recency window', () => {
-  it('names the window on a no-ESPN-id player, so the note can say what was searched', async () => {
-    // This branch never reaches fetchAthleteNews, so the route has to supply
-    // windowDays itself — otherwise the modal falls back to a vaguer note for
-    // exactly the players who most look broken (every team DEF, some kickers).
+  it('claims NO window on a player it never asked ESPN about', async () => {
+    // windowDays means "this window was actually applied". This branch never
+    // contacts ESPN at all (every team DEF, a handful of kickers), so naming a
+    // window would put "nothing in the last 30 days" under a search that never
+    // ran — and the client builds its note straight from this field.
     getPlayer.mockReturnValue(undefined);
     getGlobalPlayerMap.mockReturnValue(new Map());
     const res = await call('?mflId=13593&testDate=2026-11-01');
     const body = await res.json();
     expect(body.status).toBe('empty');
-    expect(body.windowDays).toBe(30);
+    expect(body.windowDays).toBeUndefined();
+    expect(fetchAthleteNews).not.toHaveBeenCalled();
   });
 
   it('honors ?testDate= so the window is verifiable without moving the clock', async () => {

@@ -396,6 +396,38 @@ describe('two-source ladder', () => {
     expect(result.status).toBe('empty');
   });
 
+  it('a source-1 TIMEOUT does not short-circuit the overview either', async () => {
+    // The status check and the fetch rejection are two different failure paths
+    // and only the first one had been de-vetoed. A slow or unroutable
+    // site.api.espn.com would return before the overview was ever asked,
+    // blanking news for every player while the real provider sat there healthy.
+    const timeout = Object.assign(new Error('timed out'), { name: 'TimeoutError' });
+    vi.stubGlobal('fetch', vi.fn((url: unknown) => {
+      if (String(url).includes('/overview')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ news: { articles: [article('survived the timeout')] } }),
+        });
+      }
+      return Promise.reject(timeout);
+    }));
+    const result = await fetchAthleteNews('3139477', PLAYER_NEWS_DEFAULT_LIMIT, NOW);
+    expect(result.status).toBe('ok');
+    expect(result.source).toBe('athlete-overview');
+    expect(result.items[0].headline).toBe('survived the timeout');
+  });
+
+  it('a source-1 network rejection leaves a clean, empty overview as empty', async () => {
+    vi.stubGlobal('fetch', vi.fn((url: unknown) =>
+      String(url).includes('/overview')
+        ? Promise.resolve({ ok: true, json: () => Promise.resolve({ news: { articles: [] } }) })
+        : Promise.reject(new Error('ECONNREFUSED')),
+    ));
+    const result = await fetchAthleteNews('3139477', PLAYER_NEWS_DEFAULT_LIMIT, NOW);
+    expect(result.status).toBe('empty');
+    expect(result.reason).toBeUndefined();
+  });
+
   it('a failing overview is an ERROR even though source 1 read cleanly', async () => {
     // Deliberate reversal of the original rule. Source 1 is vestigial — it
     // answers empty for every athlete in production — so its clean read carries

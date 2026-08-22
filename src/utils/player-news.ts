@@ -328,7 +328,18 @@ export async function fetchAthleteNews(
 
   if (!url) return fail('upstream-shape');
 
-  let response: Response;
+  // Read source 1, but do NOT return early on ANY of its failures. In
+  // production it is the vestigial endpoint — always an empty array — while the
+  // overview is the real provider, so letting a 404/5xx/timeout here
+  // short-circuit would blank the feature behind a Retry that could never
+  // succeed. That applied to the status check below from the start; the fetch
+  // rejection right underneath still returned early and quietly exempted itself,
+  // which meant a slow or unroutable site.api.espn.com blanked news for every
+  // player while the overview sat there healthy.
+  let sourceOneFailure: PlayerNewsFailure | null = null;
+  let items: PlayerNewsItem[] = [];
+
+  let response: Response | null = null;
   try {
     response = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
   } catch (error) {
@@ -336,17 +347,13 @@ export async function fetchAthleteNews(
     // rejects with AbortError. Neither is "ESPN is broken", but only the timeout
     // is ours to report — an AbortError means the caller moved on already.
     const name = (error as { name?: string } | null)?.name;
-    return fail(name === 'TimeoutError' ? 'upstream-timeout' : 'upstream-network');
+    sourceOneFailure = name === 'TimeoutError' ? 'upstream-timeout' : 'upstream-network';
   }
 
-  // Read source 1, but do NOT return early on its failure. In production it is
-  // the vestigial endpoint — always an empty array — while the overview is the
-  // real provider, so letting a 404/5xx here short-circuit would blank the
-  // feature behind a Retry that could never succeed.
-  let sourceOneFailure: PlayerNewsFailure | null = null;
-  let items: PlayerNewsItem[] = [];
-
-  if (!response.ok) {
+  if (!response) {
+    // Rejected above; nothing to read here. The overview is asked anyway, and
+    // whether this failure ends up terminal is decided at the bottom.
+  } else if (!response.ok) {
     sourceOneFailure = 'upstream-status';
   } else {
     let payload: unknown;

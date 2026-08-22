@@ -45,11 +45,15 @@
    under the heading is reservation for its own sake — it shrinks UPWARD, which
    the reservation comment already calls mild. Error keeps the reservation: its
    Retry button can turn into a list on the next click, and a section that jumps
-   taller under the reader's cursor is the failure the height is there to stop. */
+   taller under the reader's cursor is the failure the height is there to stop.
+
+   Height ONLY. Do not add a color here: this rule sits after .pn-status--message
+   at equal specificity, so any color declared here silently wins over that
+   block's deliberate --page-text and puts the note back at 4.45:1 in dark —
+   the exact value the comment above it rejects. Font size would be a no-op
+   anyway; .pn-status already sets it. */
 .pn-status--empty {
   min-height: 0;
-  font-size: 0.8125rem;
-  color: var(--content-text-muted);
 }
 
 .pn-subtitle {

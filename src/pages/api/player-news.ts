@@ -94,14 +94,13 @@ export const GET: APIRoute = async ({ request, url }) => {
     // A known player with no ESPN id is not an error — there is simply nothing
     // to ask about (every team DEF, and a handful of kickers).
     if (mflId && /^\d{1,12}$/.test(mflId)) {
+      // No windowDays here, deliberately. This branch never contacts ESPN, so
+      // "nothing in the last 90 days" would be a specific claim about a search
+      // that did not happen. Omitting it drops the client to the wording that
+      // makes no such claim — windowDays means "this window was actually
+      // applied", and nothing else may set it.
       return json(
-        {
-          espnId: null,
-          status: 'empty',
-          items: [],
-          fetchedAt: new Date().toISOString(),
-          windowDays: playerNewsWindowDays(now),
-        },
+        { espnId: null, status: 'empty', items: [], fetchedAt: new Date().toISOString() },
         200,
         CACHE_OK,
       );
