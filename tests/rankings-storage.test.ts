@@ -13,6 +13,7 @@ import {
   syncBuiltinImports,
   setBuiltinHidden,
   setCompositeWeight,
+  reorderImports,
   _clearCache,
 } from '../src/utils/rankings-storage';
 import type { StoredRankingImport } from '../src/types/rankings-import';
@@ -637,4 +638,67 @@ describe('rankings-storage', () => {
       expect(members.reduce((s, m) => s + m.weight, 0)).toBe(100);
     });
   });
+
+  describe("the owner's own imports sort above the built-ins", () => {
+    // Six built-in sources ship with every league. Listing them first buried
+    // the board the owner actually imported — on the Saved Rankings table
+    // (where weights are chosen), in the My Rank editor, and in the Free
+    // Agents columns, all of which read this one array's order.
+    const snapshot = {
+      generatedAt: '2026-08-21T00:00:00.000Z',
+      sources: [
+        { id: 'mfl-adp', label: 'MFL ADP', type: 'adp', players: [{ id: 'p1', rank: 1 }] },
+        { id: 'sharks', label: 'Sharks', type: 'redraft', players: [{ id: 'p1', rank: 1 }] },
+      ],
+    };
+
+    const idsInOrder = () => getAllImports().map((i) => i.id);
+
+    it('puts a user import ahead of the provided sources after a sync', () => {
+      saveImport(createMockImport({ id: 'user-1', source: 'fantasypros', type: 'dynasty' }));
+      syncBuiltinImports(snapshot as never, ['mfl-adp', 'sharks']);
+
+      expect(idsInOrder()).toEqual(['user-1', 'builtin:mfl-adp', 'builtin:sharks']);
+    });
+
+    it('puts an import saved after the sync ahead of the provided sources', () => {
+      syncBuiltinImports(snapshot as never, ['mfl-adp', 'sharks']);
+      saveImport(createMockImport({ id: 'user-1', source: 'fantasypros', type: 'dynasty' }));
+
+      expect(idsInOrder()).toEqual(['user-1', 'builtin:mfl-adp', 'builtin:sharks']);
+    });
+
+    it('holds for a store written before the rule existed', () => {
+      // Read-time invariant: a legacy array with the built-ins first still
+      // renders the owner's import on top.
+      const legacy = [
+        { ...createMockImport({ id: 'builtin:mfl-adp', source: 'mfl-adp', type: 'adp' }), provided: true },
+        { ...createMockImport({ id: 'user-1', source: 'fantasypros', type: 'dynasty' }) },
+      ];
+      localStorageMock.setItem('rankings.imports', JSON.stringify(legacy));
+      _clearCache();
+
+      expect(idsInOrder()).toEqual(['user-1', 'builtin:mfl-adp']);
+    });
+
+    it('keeps the owner\'s drag order within their own imports', () => {
+      saveImport(createMockImport({ id: 'user-1', source: 'fantasypros', type: 'dynasty' }));
+      saveImport(createMockImport({ id: 'user-2', source: 'cbs', type: 'redraft' }));
+      syncBuiltinImports(snapshot as never, []);
+
+      reorderImports(['user-2', 'user-1', 'builtin:mfl-adp', 'builtin:sharks']);
+
+      expect(idsInOrder()).toEqual(['user-2', 'user-1', 'builtin:mfl-adp', 'builtin:sharks']);
+    });
+
+    it('snaps a built-in back below the imports if one is dragged above them', () => {
+      saveImport(createMockImport({ id: 'user-1', source: 'fantasypros', type: 'dynasty' }));
+      syncBuiltinImports(snapshot as never, []);
+
+      reorderImports(['builtin:sharks', 'user-1', 'builtin:mfl-adp']);
+
+      expect(idsInOrder()).toEqual(['user-1', 'builtin:sharks', 'builtin:mfl-adp']);
+    });
+  });
+
 });

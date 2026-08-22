@@ -175,8 +175,9 @@ export default function ManageImportsSection({ imports, onDelete, onReorder }: P
       <p className="ri-section__note">
         Drag to reorder. Check the <strong>My Rank</strong> box to include a ranking in your composite,
         and set each source's <strong>weight</strong> as a percentage — the shares are normalized, so
-        a source set to 5 stays a light thumb on the scale. Built-in sources can be hidden if you'd
-        rather build your board from your own imports.
+        a source set to 5 stays a light thumb on the scale. Your own imports always sit above the
+        built-in sources, and a built-in can be hidden if you'd rather build your board from your
+        own imports alone.
       </p>
 
       {imports.length === 0 ? (

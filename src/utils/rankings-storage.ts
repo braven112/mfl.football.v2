@@ -105,6 +105,26 @@ export function _clearCache(): void {
   _cache.clear();
 }
 
+/**
+ * The owner's OWN imports always sort above the built-in sources.
+ *
+ * The two kinds share one array, so ordering is what every consumer reads:
+ * the Saved Rankings table (where weights are chosen), the My Rank editor,
+ * and the Free Agents ranking columns. Six built-ins ship with every league,
+ * so leaving them first buried the one board an owner actually went and
+ * imported below a wall of defaults — they had to scroll past everything they
+ * didn't ask for to weight the thing they did.
+ *
+ * Applied on READ (getAllImports) rather than only at write time, so the rule
+ * holds no matter how the array got into storage — a legacy store written
+ * before this rule, a server merge, or a drag that dropped an import below a
+ * built-in. Stable within each group: whatever order the owner dragged their
+ * own imports into is preserved, and so is the snapshot's source order.
+ */
+export function sortUserImportsFirst<T extends { provided?: boolean }>(imports: T[]): T[] {
+  return [...imports.filter((i) => !i.provided), ...imports.filter((i) => i.provided)];
+}
+
 // Invalidate cache when another tab writes to localStorage. The tab could be
 // on a different league, so match any scope's key rather than just this one's.
 if (typeof window !== 'undefined') {
@@ -304,8 +324,10 @@ export function syncBuiltinImports(
     } catch { /* ignore malformed config */ }
   }
 
-  // Provided sources sort ahead of the user's own imports.
-  const next = [...provided, ...keptUserImports];
+  // The owner's own imports sort ahead of the provided sources — see
+  // sortUserImportsFirst. Written in that order as well as enforced on read,
+  // so raw storage and the rendered board agree.
+  const next = [...keptUserImports, ...provided];
   localStorage.setItem(storageKey(scope), JSON.stringify(next));
   // Invalidate rather than set: the cached value must go back through
   // getAllImports()'s hidden-source filter.
@@ -349,8 +371,8 @@ export function getAllImports(): StoredRankingImport[] {
   // un-hiding is instant and the snapshot reconciliation stays a pure
   // function of the build data.
   const hidden = new Set(getHiddenBuiltins());
-  const fresh = readFromStorage(scope).filter(
-    (i) => !(i.provided && hidden.has(i.id)),
+  const fresh = sortUserImportsFirst(
+    readFromStorage(scope).filter((i) => !(i.provided && hidden.has(i.id))),
   );
   _cache.set(scope, fresh);
   return fresh;
@@ -855,7 +877,7 @@ export async function initFromServer(): Promise<boolean> {
 
   // Server has data, local is empty → adopt server data
   if (localImports.length === 0 && serverImports.length > 0) {
-    const withProvided = [...getAllImports().filter((i) => i.provided), ...serverImports];
+    const withProvided = [...serverImports, ...getAllImports().filter((i) => i.provided)];
     localStorage.setItem(storageKey(), JSON.stringify(withProvided));
     _cache.set(activeRankingsScope(), withProvided);
     writeLegacyKeys(serverImports);
@@ -879,8 +901,8 @@ export async function initFromServer(): Promise<boolean> {
 
     if (changed) {
       const mergedWithProvided = [
-        ...getAllImports().filter((i) => i.provided),
         ...merged,
+        ...getAllImports().filter((i) => i.provided),
       ];
       localStorage.setItem(storageKey(), JSON.stringify(mergedWithProvided));
       _cache.set(activeRankingsScope(), mergedWithProvided);

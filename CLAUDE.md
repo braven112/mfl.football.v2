@@ -205,7 +205,10 @@ draft queue / `/cr` seed all read one list. Rules: refreshed in place on
 `generatedAt`; auto-ticked ONCE on first sight (re-ticking would undo a
 deliberate untick); never synced to Redis (regenerated per device); not
 deletable — **Hide** is the opt-out, filtered on READ, which is why
-`syncBuiltinImports` reads the raw store rather than `getAllImports()`.
+`syncBuiltinImports` reads the raw store rather than `getAllImports()`. The
+owner's OWN imports always sort ABOVE the built-ins (`sortUserImportsFirst`,
+applied inside `getAllImports()` so the rule holds for a legacy store, a server
+merge, or a drag that dropped one below); order within each group is untouched.
 
 Which sources are ticked BY DEFAULT is per-league (`defaultRankingSources` in
 the registry) because the right opening board depends on how the league drafts
