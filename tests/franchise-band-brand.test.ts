@@ -112,6 +112,53 @@ describe('buildFranchiseBandBrands', () => {
     }
   });
 
+  it('leads with the owner-directed colour where the automatic pick is wrong', () => {
+    // Three franchises whose most identifiable colour is NOT the one the band
+    // should lead with. No rule derives this — see BAND_ART_DIRECTION — so it
+    // is pinned here, including the near-black tint that keeps Midwestside and
+    // Vitside from resolving to the same flat #181818 band.
+    const { teams } = buildFranchiseBandBrands('theleague');
+
+    // Midwestside: black leads, gold is the glow (not the other way round).
+    expect(contrastRatio(teams['0011'].primary, '#ffffff')).toBeGreaterThan(10);
+    expect(teams['0011'].secondary.toLowerCase()).toBe('#ffcd00');
+
+    // Vitside: black + red, its real brand pair — never the chart-only pink.
+    expect(contrastRatio(teams['0012'].primary, '#ffffff')).toBeGreaterThan(10);
+    expect(teams['0012'].secondary.toLowerCase()).toBe('#aa322b');
+    expect(teams['0012'].primary.toLowerCase()).not.toBe('#f06abc');
+
+    // Gridiron Geeks: the blue leads, the orange accents. Asserted as "is a
+    // blue, and no lighter than the brand blue" rather than as a literal, so
+    // the band can be tuned darker (it is — see BAND_ART_DIRECTION) without
+    // this failing for the wrong reason. The orange must NOT be the anchor.
+    const geeks = teams['0013'].primary;
+    const [gr, gg, gb] = [1, 3, 5].map((i) => parseInt(geeks.slice(i, i + 2), 16));
+    expect(gb, `${geeks} is not blue-dominant`).toBeGreaterThan(gr);
+    expect(gb).toBeGreaterThan(gg);
+    expect(contrastRatio(geeks, '#ffffff')).toBeGreaterThanOrEqual(
+      contrastRatio('#1274ba', '#ffffff')
+    );
+    expect(teams['0013'].secondary.toLowerCase()).toBe('#d45500');
+
+    // The two near-blacks must stay distinguishable from each other and from
+    // Bring The Pain, who is genuinely just black.
+    const blacks = [teams['0011'].primary, teams['0012'].primary, teams['0008'].primary];
+    expect(new Set(blacks.map((c) => c.toLowerCase())).size).toBe(3);
+  });
+
+  it('lets a Throwback Week overwrite the art direction', () => {
+    // The overrides describe the brand a franchise wears TODAY. An era has its
+    // own palette and must win, or a throwback band shows 2013 artwork in
+    // 2026 colours.
+    const past = buildFranchiseBandBrands('theleague', { throwbackActive: true }).teams;
+    const now = buildFranchiseBandBrands('theleague').teams;
+    const changed = ['0011', '0012', '0013'].filter(
+      (id) => past[id].primary !== now[id].primary || past[id].secondary !== now[id].secondary
+    );
+    expect(changed.length, 'no directed franchise threw back its colours').toBeGreaterThan(0);
+  });
+
   it('keeps white band ink legible on every franchise, in every league', () => {
     // The band's type is white in both themes. NFL primaries are almost all
     // dark, so this never bit before; franchise chart hues include a pure gold

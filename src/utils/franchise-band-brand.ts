@@ -49,7 +49,7 @@ import aflConfig from '../../data/afl-fantasy/afl.config.json';
 import bb1Config from '../../data/best-ball-1/bb1.config.json';
 import type { LeagueSlug } from '../types/nav';
 import { getTeamColorPrimary, getTeamColorSecondary } from './team-colors';
-import { chroma } from './nfl-team-colors';
+import { chroma, mixHex } from './nfl-team-colors';
 import { AA_LARGE_TEXT_RATIO, ensureContrastOn } from './team-color-contrast';
 import { getThrowbackFranchiseBrand } from './franchise-brand';
 import { preferredIconSrc } from './team-icon-dark-css';
@@ -129,6 +129,49 @@ function anchorHue(primary: string, secondary: string): string {
 }
 
 /**
+ * Band art direction that the automatic hue rule cannot derive.
+ *
+ * `anchorHue` picks the franchise's most identifiable colour, and for most of
+ * the league that is the right call. For these three it is not, and no rule
+ * gets there — the answer is which of a franchise's OWN colours its owner
+ * wants the band to lead with, which is a judgement, not a measurement:
+ *
+ * - **Midwestside** is gold-on-black. `color` and `colorPrimary` are both the
+ *   gold, so nothing in the config says the black leads — but it does, and the
+ *   gold reads as trim (their crest already carries a gold stroke).
+ * - **Vitside** wears black and red. Its `color` is a chart-only pink that
+ *   appears nowhere in the brand pair, so the automatic pick was a hue the
+ *   franchise does not actually own.
+ * - **Gridiron Geeks** are blue with orange trim, and `color` is the orange.
+ *
+ * The near-blacks are tinted ~10% toward each franchise's accent rather than
+ * set flat. Two reasons, and both matter: it is literally what "black with a
+ * bit of gold" asks for, and a flat `#181818` on both Midwestside and Vitside
+ * would make their bands identical — the thing
+ * `tests/franchise-band-brand.test.ts` exists to prevent.
+ *
+ * Applied to the CURRENT identity only. A Throwback Week overwrites both
+ * colours from the era below, which is correct: this is art direction for the
+ * brand a franchise wears today, not for one it wore in 2013.
+ */
+const BAND_ART_DIRECTION: Partial<Record<LeagueSlug, Record<string, { primary: string; secondary: string }>>> = {
+  theleague: {
+    // Midwestside Connection — black, with the gold as trim and glow.
+    '0011': { primary: mixHex('#181818', '#ffcd00', 0.1), secondary: '#ffcd00' },
+    // Vitside Mafia — black with red, which is its real colorPrimary/Secondary
+    // pair; the pink it was using is a chart hue only.
+    '0012': { primary: mixHex('#181818', '#aa322b', 0.1), secondary: '#aa322b' },
+    // Gridiron Geeks — the blue leads, the orange accents. The blue is
+    // deepened ~30%: at its raw #1274ba the band is bright enough that both
+    // accents wash out against it — the orange glow barely registers and the
+    // crest watermark loses its edges. Every other band in the league carries
+    // its accent on a darker field; this brings the blue to the same footing
+    // without changing which colour it is.
+    '0013': { primary: mixHex('#1274ba', '#0b0e13', 0.3), secondary: '#d45500' },
+  },
+};
+
+/**
  * The era crest to actually render, or `''` to keep what the franchise wears
  * now.
  *
@@ -185,6 +228,13 @@ export function buildFranchiseBandBrands(
       team.color || getTeamColorPrimary(franchiseId, league),
       secondary
     );
+    // Owner-directed override, where the automatic pick leads with the wrong
+    // one of the franchise's own colours (see BAND_ART_DIRECTION).
+    const directed = BAND_ART_DIRECTION[league]?.[franchiseId];
+    if (directed) {
+      primary = directed.primary;
+      secondary = directed.secondary;
+    }
     // Only a crest rendered as its LIGHT artwork can need the stroke.
     let crestFilter = team.iconDark ? undefined : strokes[franchiseId];
 
