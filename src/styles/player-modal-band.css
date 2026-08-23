@@ -53,8 +53,9 @@
    see the edges of does not read as the team's mark. Moving it clear of the
    player entirely fixed that and broke the composition — it stopped being a
    watermark and started being a second subject competing with the face. The
-   `right` below splits the difference: roughly the last third of the crest
-   tucks under the player, the rest of it reads.
+   `right` below splits the difference: the crest's right edge sits on the
+   player's horizontal centre, so his head and shoulder cover that side of the
+   mark and the rest of it reads.
 
    That offset is tuned against .pmb__cutout's `right` + `max-width`, so the
    two move together — change the cutout's width and this wants re-checking.
@@ -69,11 +70,26 @@
    white type instead of lightening it. */
 .pmb__crest {
   position: absolute;
-  right: var(--pmb-crest-right, 24%);
+  /* The right edge of the ARTWORK, parked on the player's horizontal centre —
+     which is why the box below has to be square (see the note). The cutout is
+     `right: 1rem` and caps at 38% wide (34% on a phone), so its centre lands
+     ~19-21% from the right edge on every band this renders on. */
+  right: var(--pmb-crest-right, 20%);
   top: 50%;
   transform: translateY(-50%);
-  width: var(--pmb-crest-size, clamp(152px, 52%, 264px));
-  height: var(--pmb-crest-size, clamp(152px, 52%, 264px));
+  /* Sized off the band's HEIGHT, and square, so the file's edges ARE the
+     artwork's edges and `right` above means what it says.
+
+     It was `width` and `height` both set to one clamp(), which looks square
+     and is not: a percentage WIDTH resolves against the containing block's
+     width, a percentage HEIGHT against its height, and this band is roughly
+     3.5x wider than it is tall. That clamp resolved to 182x124 on a phone, so
+     `object-fit: contain` letterboxed the square crest with ~29px of
+     transparent padding down each side — and `right` was then positioning an
+     invisible box edge ~7% away from the logo anyone could see. */
+  height: var(--pmb-crest-size, 112%);
+  aspect-ratio: 1;
+  width: auto;
   object-fit: contain;
   opacity: var(--pmb-crest-opacity, 0.26);
   pointer-events: none;
@@ -84,6 +100,7 @@
    had, and can carry more weight with nothing competing. */
 .pmb--no-cutout .pmb__crest {
   --pmb-crest-right: 1.25rem;
+  --pmb-crest-size: 124%;
   --pmb-crest-opacity: 0.34;
 }
 
@@ -106,13 +123,5 @@
 
   .pmb__cutout {
     max-width: 34%;
-  }
-
-  /* A phone band is narrower AND shorter, so the same percentage buys a crest
-     that bleeds nearly its own height off both edges. Trim the size; the
-     offset holds, because the cutout narrows here too (34% vs 38%) and the
-     two changes very nearly cancel. */
-  .pmb__crest {
-    --pmb-crest-size: clamp(124px, 44%, 190px);
   }
 }
