@@ -240,11 +240,48 @@ the commissioner would paste one of them. `set(..., { nx: true })` — atomic
 create-if-absent — is the whole mechanism. Two racing crons or a retry cannot
 overwrite a reveal that already happened.
 
-Redis is the live lock; `data/<league>/schedule-release/<year>.json` is the
-committed archive, written FROM the API's response so the two can never
-disagree. Generating the archive separately would produce a different schedule
-from the one the league was shown. `getRelease` reads Redis first, archive
-second — the archive covers eviction, Redis-less environments, and past seasons.
+`data/<league>/schedule-release/<year>.json` is the lock — the committed file
+itself, not a cache entry. `scripts/lock-schedule-release.mjs` refuses to write
+one that already exists, so a retry or a second cron cannot overwrite a reveal
+that already happened. It used to be a Redis `SET NX` behind a token-guarded
+endpoint; that bought nothing and cost two things — this repo is PUBLIC, so the
+shared secret became something to provision and rotate for an event that fires
+once a year, and two stores meant two answers, with the page (Redis-first) and
+Schefter (archive-only) able to disagree about what the schedule was. A commit
+cannot be evicted, is reviewable in a diff, and there is exactly one of it.
+
+### The plan on disk is not necessarily the season being played
+
+Annealing again draws a DIFFERENT valid schedule. So the committed plan and the
+schedule the commissioner actually pasted can be two complete strangers —
+same rounds, same cross-conference pairs, not one week in common. It happened to
+the AFL in 2026: the plan came from the CLI run in the PR, the paste came from a
+later draw, and all fourteen weeks differed.
+
+That is not cosmetic. `pasteHasLanded` compares the live schedule against the
+reveal week for week, so a reveal locked from the wrong draw shows owners a
+season nobody will play AND gates Schedule Release Day's column forever — it
+waits for a match that can never arrive.
+
+**Once a paste has landed, the reveal must be canonised from the live feed:**
+
+```bash
+node scripts/lock-schedule-release.mjs --league=<slug> --from-live
+```
+
+`--from-live` reads `mfl-feeds/<year>/schedule.json`, runs it through the same
+`validateSeason` audit a generated plan gets (it refuses to lock a broken
+season), and recomputes the summary and the marquee four from what is actually
+there. On a league whose plan and paste agree it reproduces the plan-sourced
+record byte for byte — weeks, MFL text, marquee, summary — which is what makes
+it safe to reach for when you are not sure.
+
+It is deliberately NOT the default, and the cron must never guess. Before the
+paste, the live feed carries MFL's own schedule for the season, and nothing in
+the data distinguishes "the commissioner pasted a different valid draw" from
+"the commissioner has not pasted yet". Auto-preferring live would lock MFL's
+default schedule as the reveal on every normal release day. The reveal record
+carries `source: 'plan' | 'live'` so which one produced it is readable later.
 
 ### The chain
 

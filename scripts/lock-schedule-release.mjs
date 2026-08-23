@@ -30,6 +30,16 @@
  *   node scripts/lock-schedule-release.mjs --league=theleague
  *   node scripts/lock-schedule-release.mjs --dry-run
  *   node scripts/lock-schedule-release.mjs --force          # ignore the date guard
+ *   node scripts/lock-schedule-release.mjs --from-live      # canonise what is already in MFL
+ *
+ * --from-live exists because the plan on disk and the schedule the
+ * commissioner actually pasted can be two DIFFERENT valid draws. The optimiser
+ * is simulated annealing, so a second run — the admin page, a re-run of the
+ * CLI — produces another season that satisfies every rule and shares not one
+ * week with the committed plan. When that has already happened, the reveal has
+ * to describe the season being played, not the one the file remembers, so this
+ * mode reads the live MFL schedule feed and canonises THAT. It validates the
+ * live schedule with the same audit and refuses to lock a broken one.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -38,6 +48,20 @@ import { fileURLToPath } from 'node:url';
 import { LEAGUES, SHARED_APP_ORIGIN } from '../src/config/leagues-data.mjs';
 import { marqueeMatchups, priorWinRates, releaseIsReady, scheduleReleaseDate } from '../src/utils/schedule-release.mjs';
 import { rivalrySeriesByPair } from '../src/utils/rivalry-intensity.mjs';
+import {
+  byeExposure,
+  describeSeason,
+  SCHEDULE_POLICY,
+  seasonShape,
+  toMflScheduleText,
+  validateSeason,
+} from '../src/utils/schedule-plan.mjs';
+import {
+  byeFreeWeeks,
+  divisionGameCeiling,
+  doubleheaderWeeks,
+  regularSeasonGames,
+} from '../src/utils/schedule-rules.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const arg = (name, fallback) => {
@@ -47,6 +71,7 @@ const arg = (name, fallback) => {
 const dryRun = process.argv.includes('--dry-run');
 
 const force = process.argv.includes('--force');
+const fromLive = process.argv.includes('--from-live');
 const year = Number(arg('year', new Date().getUTCFullYear()));
 const only = arg('league', null);
 const slugs = only ? [only] : Object.keys(LEAGUES).filter((sl) => scheduleReleaseDate(sl, year));
@@ -56,14 +81,15 @@ if (!slugs.length) {
   process.exit(0);
 }
 
-const byes = (() => {
+const byesFor = (y) => {
   try {
     const f = path.join(ROOT, 'data/nfl/bye-weeks.json');
-    return fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')).seasons?.[String(year)] ?? null : null;
+    return fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')).seasons?.[String(y)] ?? null : null;
   } catch {
     return null;
   }
-})();
+};
+const byes = byesFor(year);
 
 /** Archive path. Keyed by season, so last year's reveal is never overwritten. */
 const archivePath = (slug, y) => path.join(ROOT, LEAGUES[slug].dataPath, 'schedule-release', `${y}.json`);
@@ -97,7 +123,7 @@ for (const slug of slugs) {
   }
 
   try {
-    const record = await releaseFromPlan(slug, year);
+    const record = fromLive ? await releaseFromLive(slug, year) : await releaseFromPlan(slug, year);
     if (dryRun) {
       console.log(`  [dry run] would reveal ${record.summary.games} games, doubleheaders ${record.doubleheaderWeeks.join(', ')}`);
       for (const m of record.marquee) console.log(`     Week ${String(m.week).padStart(2)}  ${m.awayName} @ ${m.homeName}`);
@@ -135,28 +161,112 @@ async function releaseFromPlan(slug, y) {
     throw new Error(`that plan breaks ${plan.problems.length} rule(s) — refusing to reveal it`);
   }
 
+  const ctx = revealContext(slug, y);
+  const weeks = new Map(Object.entries(plan.weeks).map(([w, g]) => [Number(w), g]));
+
+  return {
+    league: slug,
+    year: y,
+    revealedAt: new Date().toISOString(),
+    source: 'plan',
+    text: plan.text,
+    weeks: plan.weeks,
+    doubleheaderWeeks: plan.doubleheaderWeeks,
+    byeFreeWeeks: plan.byeFreeWeeks,
+    marquee: pickMarquee(ctx, weeks, plan.doubleheaderWeeks),
+    summary: {
+      games: plan.plan.games,
+      byeFreeDivisionGames: plan.plan.byeFreeDivisionGames,
+      divisionGameCeiling: plan.divisionGameCeiling.ceiling,
+      netByeSpread: plan.plan.netByeSpread,
+      homeGames: plan.plan.homeGames,
+      minRematchGap: plan.plan.minRematchGap,
+    },
+  };
+}
+
+/**
+ * Build a reveal record from the schedule that is ALREADY LIVE in MFL.
+ *
+ * The committed plan and the pasted season can be two different valid draws —
+ * the optimiser anneals, so the admin page and the CLI each produce a season
+ * that satisfies every rule and shares not one week with the other. Once a
+ * paste has landed, the reveal has to describe the season being played;
+ * anything else shows owners a schedule nobody will play and leaves Schefter's
+ * column permanently gated on a match that will never happen.
+ *
+ * The live schedule gets the SAME audit a generated one does. A schedule that
+ * fails it is not lockable — the point of the archive is that it is the truth,
+ * and canonising a broken season would only make it the official one.
+ */
+async function releaseFromLive(slug, y) {
+  const ctx = revealContext(slug, y);
+  const { registry, shape, readFeed } = ctx;
+
+  const weeks = regularSeasonGames(readFeed(y, 'schedule')?.schedule?.weeklySchedule, shape.lastWeek);
+  if (!weeks.size) throw new Error(`no live schedule in ${registry.dataPath}/mfl-feeds/${y}/schedule.json`);
+
+  const seasonByes = byesFor(y);
+  if (!seasonByes) throw new Error(`no NFL bye calendar for ${y} — cannot audit the live schedule`);
+  const byeFree = byeFreeWeeks(seasonByes, shape.lastWeek);
+  const doubleheaders = doubleheaderWeeks(weeks);
+
+  const problems = validateSeason(weeks, shape, { byeFree, doubleheaders });
+  if (problems.length) {
+    throw new Error(`the live schedule breaks ${problems.length} rule(s) — refusing to reveal it:\n     ${problems.join('\n     ')}`);
+  }
+
+  const exposure = byeExposure(readFeed(y, 'rosters'), readFeed(y, 'players'), seasonByes, shape.franchiseIds);
+  const described = describeSeason(weeks, shape, { byes: seasonByes, exposure, byeFree, doubleheaders });
+  const divisionSize = shape.franchiseIds.length / shape.divisionCount;
+  const ceiling = divisionGameCeiling({
+    teamCount: shape.franchiseIds.length,
+    divisionSize,
+    byeFree,
+    doubleheaders,
+    // The cross-conference round is a slot a franchise cannot spend on a
+    // division game; the AFL reserves one, The League none.
+    reservedSlotsPerTeam: SCHEDULE_POLICY[slug]?.crossConference ? 1 : 0,
+  });
+
+  return {
+    league: slug,
+    year: y,
+    revealedAt: new Date().toISOString(),
+    source: 'live',
+    text: toMflScheduleText(weeks),
+    weeks: Object.fromEntries([...weeks].sort((a, b) => a[0] - b[0]).map(([w, g]) => [String(w), g])),
+    doubleheaderWeeks: doubleheaders,
+    byeFreeWeeks: byeFree,
+    marquee: pickMarquee(ctx, weeks, doubleheaders),
+    summary: {
+      games: described.games,
+      byeFreeDivisionGames: described.byeFreeDivisionGames,
+      divisionGameCeiling: ceiling.ceiling,
+      netByeSpread: described.netByeSpread,
+      homeGames: described.homeGames,
+      minRematchGap: described.minRematchGap,
+    },
+  };
+}
+
+/**
+ * Everything a reveal needs about a league that is not the schedule itself:
+ * who the franchises are, last year's finish, the career head-to-head, and
+ * whether the league runs a Throwback Week. Shared so a plan-sourced and a
+ * live-sourced reveal cannot describe the same league differently.
+ */
+function revealContext(slug, y) {
+  const registry = LEAGUES[slug];
   const readFeed = (yy, feed) => {
     const f = path.join(ROOT, registry.dataPath, 'mfl-feeds', String(yy), `${feed}.json`);
     return fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : null;
   };
-  const meta = readFeed(y, 'league')?.league;
-  if (!meta) throw new Error(`missing league feed for ${slug} ${y}`);
-
-  const divisionName = {};
-  const divisionConference = {};
-  for (const d of [].concat(meta.divisions?.division ?? [])) {
-    divisionName[d.id] = d.name;
-    divisionConference[d.id] = d.conference;
-  }
-  const name = {};
-  const divisionOf = {};
-  const conferenceOf = {};
-  for (const f of [].concat(meta.franchises?.franchise ?? [])) {
-    // MFL stores a few franchise names with stray leading space.
-    name[f.id] = String(f.name ?? '').trim();
-    divisionOf[f.id] = divisionName[String(f.division)] ?? String(f.division);
-    conferenceOf[f.id] = divisionConference[String(f.division)] ?? '00';
-  }
+  const leagueJson = readFeed(y, 'league');
+  const shape = seasonShape(leagueJson);
+  if (!shape) throw new Error(`missing league feed for ${slug} ${y}`);
+  // MFL stores a few franchise names with a stray leading space.
+  for (const id of shape.franchiseIds) shape.name[id] = String(shape.name[id] ?? '').trim();
 
   let lastChampionship = null;
   const champFile = path.join(ROOT, registry.dataPath, 'championship-history.json');
@@ -180,41 +290,27 @@ async function releaseFromPlan(slug, y) {
   // change there and needs no branch here.
   const throwbackWeek = registry.throwbackWeeks?.[0] ?? null;
 
-  const weeks = new Map(Object.entries(plan.weeks).map(([w, g]) => [Number(w), g]));
-  const marquee = marqueeMatchups(
+  return { registry, readFeed, year: y, shape, lastChampionship, rivalry, throwbackWeek };
+}
+
+/** The four games the league is shown on release day. */
+function pickMarquee(ctx, weeks, doubleheaders) {
+  const { shape, readFeed, lastChampionship, rivalry, throwbackWeek } = ctx;
+  return marqueeMatchups(
     weeks,
     {
-      divisionOf,
-      conferenceOf,
-      name,
-      winRate: priorWinRates(readFeed(y - 1, 'standings')?.leagueStandings?.franchise),
+      divisionOf: shape.divisionOf,
+      conferenceOf: shape.conferenceOf,
+      name: shape.name,
+      winRate: priorWinRates(readFeed(ctx.year - 1, 'standings')?.leagueStandings?.franchise),
       lastChampionship,
-      lastWeek: Number(meta.lastRegularSeasonWeek),
-      doubleheaderWeeks: plan.doubleheaderWeeks,
+      lastWeek: shape.lastWeek,
+      doubleheaderWeeks: doubleheaders,
       rivalry,
       throwbackWeek,
     },
     4,
   );
-
-  return {
-    league: slug,
-    year: y,
-    revealedAt: new Date().toISOString(),
-    text: plan.text,
-    weeks: plan.weeks,
-    doubleheaderWeeks: plan.doubleheaderWeeks,
-    byeFreeWeeks: plan.byeFreeWeeks,
-    marquee,
-    summary: {
-      games: plan.plan.games,
-      byeFreeDivisionGames: plan.plan.byeFreeDivisionGames,
-      divisionGameCeiling: plan.divisionGameCeiling.ceiling,
-      netByeSpread: plan.plan.netByeSpread,
-      homeGames: plan.plan.homeGames,
-      minRematchGap: plan.plan.minRematchGap,
-    },
-  };
 }
 
 console.log(`\n${locked} reveal(s) locked, ${failed} failure(s).`);
