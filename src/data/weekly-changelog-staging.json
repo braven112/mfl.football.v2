@@ -4,6 +4,14 @@
     {
       "date": "2026-08-23",
       "type": "bug-fix",
+      "summary": "Midwestside's franchise history had been handing Nate a season he never played. His page opened on 2010 — a 2-16 Witch City Warlocks year that belonged to the owner before him — because the record of when he took over franchise 0010 started a year early. He arrived in 2011, the year the Warlocks became the Midwestside Connection, and 2011 is where his history starts now. The 2-16 goes back to the former owner where it belongs, and his career record loses it too: 95-117 instead of 97-133, with the 2010 Jerry Jones Award off his shelf. The other thing he noticed while he was down there: his first five seasons were wearing the Warlocks' pentagram. The art for that era was a copy of the logo it replaced, so 2011 through 2015 sat under an occult crest that was never his. Those years now wear the gold-ringed Midwestside photo — the same one the team wore right through 2024, because the banner Nate hung in 2011 is the banner still hanging today.",
+      "impact": "user",
+      "area": "franchises",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-08-23",
+      "type": "bug-fix",
       "summary": "The AFL's Schedule Release page had counted down to zero on August 16 and then just sat there. The countdown was right; the reveal behind it was never locked, so there was nothing for the page to show and Schefter's release-day column had nothing to announce. The reveal is locked now, drawn from the schedule that is actually live in MFL rather than from an older draw of it that nobody is playing — 204 games, doubleheaders in Weeks 1, 2 and 12 with none of them on an NFL bye, and all 84 division games that can clear a bye week clearing one. The four games to circle are on the page, and Schefter's breakdown is in the feed.",
       "impact": "user",
       "area": "calendar",

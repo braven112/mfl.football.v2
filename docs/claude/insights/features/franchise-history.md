@@ -1,5 +1,78 @@
 # Franchise History Pages — Insights
 
+## 2026-08-23 - An `ownerHistory` boundary is a CLAIM — one year wide and a page hands an owner a season he never played
+
+**Context:** Midwestside's owner read his own franchise page and found 2010 on
+it — a 2-16 Witch City Warlocks season from before he joined. `ownerHistory`
+for 0011 claimed franchise 0010 from `yearStart: 2010`, but 0010 was still the
+Warlocks that whole season; MFL's 2010 `league.json` says so, and the rename to
+Midwestside Connection lands in the 2011 feed. Off by exactly one.
+
+**Insight:** Nothing in the pipeline can catch this. `attributeYear` treats an
+`ownerHistory` range as authoritative and hands every year inside it to the
+claiming franchise, so a boundary that is one year wide reads as data, not as a
+bug — the row renders with the correct name for that year (the SOURCE
+franchise's `history` resolves it to "Witch City Warlocks"), which makes the
+page look meticulous while it is wrong. The claim also propagates well past the
+season table: career W-L, `yearsActive`, `matchupHistory`, trades, draft picks,
+auction wins, and the award badges all follow it. The 2010 Jerry Jones Award —
+worst cost-per-point in the league — was hanging on the wrong owner's page.
+
+Cross-check a boundary against the FEEDS, never against the config alone: the
+config's `history` entry for the era (0010's Warlocks ran `yearEnd: 2010`)
+already disagreed with the `ownerHistory` claim, and the two live 80 lines
+apart in the same file.
+
+**Evidence:** `theleague.config.json` 0011 `ownerHistory[0].yearStart` 2010 →
+2011. Recomputed: career 97-133 → 95-117, `yearsActive` 13 → 12, the 2010 Jerry
+Jones drops off, and the era card reads "2011–2015 · 5 seasons · 32-56". 2010
+returns to being unattributed, exactly like 2007-2009 already were — no current
+franchise claims the Warlocks' original owner.
+
+**Recommendation:** When adding or editing an `ownerHistory` entry, confirm both
+edges against `data/<league>/mfl-feeds/<year>/league.json` — the franchise NAME
+in the year's own feed is the evidence, not the era ranges in the config. And
+when an owner disputes a season, check the boundary before the stats.
+
+## 2026-08-23 - Era art copied from the identity it REPLACED reads as a deliberate choice
+
+**Context:** The same page rendered the 2011-2015 Midwestside years under the
+Witch City Warlocks' pentagram. `computer_jocks_midwestside_icon_circle.png`
+was a near-duplicate of `witch_city_warlocks_icon_circle.png` — the era got a
+copy of the crest it replaced, presumably as a placeholder that outlived its
+placeholder-ness. The owner's read was not "missing art", it was "that logo
+choice for my old team is interesting 🧐".
+
+**Insight:** A placeholder that LOOKS like real art is worse than a visibly
+empty one. The banner slot for that same era held
+`historical-team-banner-placeholder.svg`, which announces itself; the icon slot
+held a real crest belonging to a different team, which does not. Prefer the
+obvious placeholder, or track down the real thing.
+
+The real thing is usually still findable. MFL's `league.json` for each year
+stores the era's `icon` URL, and the Wayback Machine has the retired
+theleague.us / afl-fantasy.com art those URLs point at (note: `web.archive.org`
+binaries need `https://` and the `if_` suffix in this sandbox — plain `http://`
+is refused by egress policy, while `archive.org/wayback/available` works over
+either). Here the recovered 2011 and 2015 snapshots turned out to be the SAME
+artwork the team wears today at lower resolution — the identity never changed —
+so the fix needed no new asset, just a pointer at the art already in `public/`.
+
+**Evidence:** 0010's 2011-2015 history entry now points at
+`history/midwestside_icon_circle.png` + `banners/midwestside.png` with the
+era's real gold/black palette (`#bba329` / `#141312`) in place of the inherited
+Warlocks purple. The duplicate PNG is deleted and `theleague.assets.json`
+re-synced. `THROWBACK_ASSET_CONFLICTS` already excluded this era from the Jocks'
+throwback picker, so pointing it at 0011's art does not let 0010 wear it — which
+is also why an `eraLabel` on this entry would be dead config: its only consumer
+(`throwback-settings.astro`) iterates the ELIGIBLE eras, and a conflicted one
+never reaches it.
+
+**Recommendation:** Before shipping a history entry, open its icon next to the
+neighbouring era's. If they are the same picture, one of them is a placeholder.
+Check the year's MFL feed for the original URL and the Wayback Machine for the
+file before drawing something new.
+
 ## 2026-08-11 - Owner-scoping silently DELETES league history — awards need a season-keyed ledger too
 
 **Context:** Auditing TheLeague's division titles against MFL's official

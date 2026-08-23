@@ -172,7 +172,7 @@ export function buildFranchiseEras(
   if (Array.isArray(team.ownerHistory) && team.ownerHistory.length > 0) {
     // Owner-driven era construction — one era per ownerHistory entry, with
     // the identity sourced from the relevant franchise's history config.
-    // Keeps both stints (e.g. Midwestside Connection on 0010 in 2012-2015
+    // Keeps both stints (e.g. Midwestside Connection on 0010 in 2011-2015
     // and on 0011 in 2019+) on the same page.
     const sortedOwner = [...team.ownerHistory].sort((a, b) => a.yearStart - b.yearStart);
     for (const entry of sortedOwner) {
