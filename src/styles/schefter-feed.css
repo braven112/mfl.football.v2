@@ -1132,7 +1132,14 @@ html.dark[data-league='afl'] .sf-post__link--external {
  * against the dark card.
  */
 .sf-article__body a,
-.sf-grade-card__body a {
+.sf-grade-card__body a,
+/* The EXCERPT too. `post.body` is rendered with set:html on the feed cards
+ * exactly like the article body, so a legitimate anchor can land there — and
+ * unstyled it renders as plain text that happens to be clickable, which is
+ * worse than no link. (Invented hrefs are stripped before publish; these
+ * rules are for the ones that survive.) */
+.sf-post__body a,
+.sfc-post__body a {
   color: var(--sf-link-color, var(--color-primary, #1c497c));
   text-decoration: underline;
   /* Underline offset rather than none-until-hover: these links are the point
@@ -1144,12 +1151,16 @@ html.dark[data-league='afl'] .sf-post__link--external {
 }
 
 .sf-article__body a:hover,
-.sf-grade-card__body a:hover {
+.sf-grade-card__body a:hover,
+.sf-post__body a:hover,
+.sfc-post__body a:hover {
   text-decoration-thickness: 2px;
 }
 
 .sf-article__body a:focus-visible,
-.sf-grade-card__body a:focus-visible {
+.sf-grade-card__body a:focus-visible,
+.sf-post__body a:focus-visible,
+.sfc-post__body a:focus-visible {
   outline: 2px solid var(--sf-accent, var(--color-primary, #1c497c));
   outline-offset: 2px;
   border-radius: 2px;

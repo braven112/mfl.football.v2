@@ -444,8 +444,14 @@ describe('published articles carry their links', () => {
     const raw = JSON.parse(readFileSync(file, 'utf8'));
     const posts = (Array.isArray(raw) ? raw : raw.posts) ?? [];
     const articles = posts.filter((p: { type?: string }) => p.type === 'article');
+    // The ARTICLE's own prose. Deliberately excludes `body` (the excerpt): a
+    // link there sits on a feed card, not in the article, so it must not
+    // satisfy the "this article links somewhere" requirement.
     const prose = (p: { content?: string[]; intro?: string[]; grades?: { body?: string }[] }) =>
       [...(p.content ?? []), ...(p.intro ?? []), ...(p.grades ?? []).map((g) => g.body ?? '')].join('');
+    // Everything rendered with set:html, excerpt included — for checking that
+    // no href anywhere on the post points at a page that does not exist.
+    const allHtml = (p: { body?: string }) => `${prose(p as never)}${typeof p.body === 'string' ? p.body : ''}`;
 
     for (const post of articles) {
       it(`${league.slug}: "${post.headline}" links somewhere`, () => {
@@ -453,7 +459,7 @@ describe('published articles carry their links', () => {
       });
 
       it(`${league.slug}: "${post.headline}" links only to real pages`, () => {
-        const hrefs = [...prose(post).matchAll(/<a href="([^"]+)"/g)].map((m) => m[1]);
+        const hrefs = [...allHtml(post).matchAll(/<a href="([^"]+)"/g)].map((m) => m[1]);
         for (const href of hrefs) {
           expect(href.startsWith('/'), `${href} is not a root-relative internal link`).toBe(true);
           expect(routeExists(href), `${post.id} links to ${href}, which has no route`).toBe(true);
