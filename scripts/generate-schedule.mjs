@@ -48,10 +48,22 @@ if (!byes) {
   process.exit(1);
 }
 
+// Player values for the projected-starter bye model. League-independent, so it
+// is read from the shared path rather than through readFeed (which is scoped to
+// one league's mfl-feeds directory).
+const rankingSources = readJson(path.join(ROOT, 'data', 'ranking-sources', `${year}.json`));
+if (!rankingSources) {
+  console.warn(
+    `no data/ranking-sources/${year}.json — falling back to whole-roster bye counts. ` +
+      `Run: node scripts/fetch-ranking-sources.mjs`,
+  );
+}
+
 const plan = planSchedule({
   slug,
   year,
   byes,
+  rankingSources,
   readFeed: (y, feed) => readJson(path.join(ROOT, league.dataPath, 'mfl-feeds', String(y), `${feed}.json`)),
   search: { restarts: Number(arg('restarts', 8)), iterations: Number(arg('iterations', 15000)) },
   // --mode=constructive forces the full rebuild on a league whose policy is

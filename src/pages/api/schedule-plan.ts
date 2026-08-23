@@ -36,6 +36,17 @@ const readFeedFile = (dataPath: string, year: number, feed: string): any => {
   }
 };
 
+/** Player values for the projected-starter bye model. Shared across leagues. */
+const readRankingSources = (year: number): any => {
+  try {
+    const file = path.join(process.cwd(), 'data', 'ranking-sources', `${year}.json`);
+    if (!fs.existsSync(file)) return null;
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch {
+    return null;
+  }
+};
+
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
@@ -84,6 +95,10 @@ export const GET: APIRoute = async ({ request, url }) => {
       year,
       byes,
       mode,
+      // Player values for the projected-starter bye model. Shared across
+      // leagues, so it does not come through readFeed (which is scoped to one
+      // league's mfl-feeds directory). Null degrades to whole-roster counts.
+      rankingSources: readRankingSources(year),
       readFeed: (y: number, feed: string) => readFeedFile(league.dataPath, y, feed),
       // Bounded so the request finishes inside the function's 30s ceiling.
       // Quality plateaus well before this; the structure does the heavy lifting.

@@ -170,12 +170,14 @@ const allConstraints = () => {
         'Which division games land on a bye week is settled by the goal above; WHICH bye week is still a free ' +
         'choice, and a two-team week costs a couple of rosters a starter where a six-team week guts half the ' +
         'league. The second half of the rivalry schedule is widened backwards until the light weeks are reachable. ' +
-        'How much the second clause matters differs by league, and not for the reason you would guess. The AFL ' +
-        'reveals its schedule BEFORE its draft, so the only players on a roster are keepers \u2014 which are by ' +
-        'definition the important ones, making a whole-roster bye count already a fair read on starters. The League ' +
-        'reveals on June 1, after rosters are set and full, so its bye counts are diluted by deep bench players who ' +
-        'would never start. The starter-aware test is therefore mostly a League need, and until it is built NFL ' +
-        'teams out is the proxy for both.',
+        'The second clause is the sharper one and the optimiser now scores it directly: exposure is counted over ' +
+        'each roster\u2019s PROJECTED STARTING NINE, so a rivalry week costs nothing if neither side is actually ' +
+        'missing anyone. It matters far more in The League, and not for the reason you would guess \u2014 the AFL ' +
+        'reveals BEFORE its draft, so its rosters are keepers only, which are by definition the important players ' +
+        'and cannot even fill nine slots; whole-roster and starter counts agree there. The League reveals June 1 ' +
+        'with full rosters, where the whole-roster count says only 10% of bye-week slots are usable against 41% for ' +
+        'starters. Which bye WEEK a game lands in is still chosen by NFL teams out; who is missing from it is now ' +
+        'chosen by the rosters.',
       enforcedBy: 'buildWeekPlan + tests/schedule-week-plan.test.ts',
       // Adopted Aug 2026, after the 2026 schedules were drawn, locked and
       // pasted into MFL. 2026 is not re-drawn for it.
@@ -230,6 +232,16 @@ const allConstraints = () => {
     },
   ];
   return list.map((c) => ({ since: null, enforcedBy: null, weight: null, ...c }));
+};
+
+/**
+ * A goal's tradeable weight, by key. Throws on an unknown key so a typo in the
+ * optimiser cannot silently weight a term at zero.
+ */
+export const goalWeight = (key) => {
+  const c = allConstraints().find((x) => x.key === key);
+  if (!c) throw new Error(`unknown schedule goal "${key}"`);
+  return c.weight;
 };
 
 /** Was this rule in force for `season`? A rule with no `since` always was. */

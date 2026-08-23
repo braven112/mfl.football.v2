@@ -118,7 +118,96 @@ outstanding piece.
 
 ### Two goals are not fully implemented
 
-- **Starter-aware bye exposure.** Goal 6's second clause — "a bye week is only a
+### Starter-aware exposure — BUILT (Aug 2026)
+
+`src/utils/starter-exposure.mjs`. Exposure is counted over each roster's
+projected starting nine (league's own `league.starters` limits, ranked by a
+composite of the built-in ADP sources with roster salary as the tiebreak for
+unranked deep bench), not the whole roster.
+
+**Why it was needed, in one number.** Whole-roster counting saturates in The
+League: only 10% of its (team, bye-week) slots have a clean roster, and Weeks
+8, 11 and 13 have ZERO clean teams. An optimiser cannot steer by a signal that
+says every week is bad. Starter counting takes that to 41%.
+
+**It is a no-op for the AFL, by construction and on purpose.** The AFL reveals
+before its draft, so a roster is 7 keepers — fewer than the 9 starter slots — so
+every player is a starter and the model returns exactly what the roster count
+returned (46% either way). `projectedStarters` returns the whole roster when it
+cannot fill the slots, which is why this needs no per-league branch.
+`tests/starter-exposure.test.ts` pins that equality; if it ever breaks, the
+model has started inventing a lineup.
+
+### The per-game rivalry term — BUILT (Aug 2026)
+
+`scoreSeason` gains `divisionByeCost`: starters missing, summed over both sides,
+for DIVISION games only.
+
+This is the term that makes the schedule pick a week for a particular *matchup*
+rather than for the league as a whole. `byeDifferential` cannot do it — it only
+cares that the two sides are equally hurt, so two rivals both missing three
+starters scores *perfectly* on it, and that is precisely the game nobody wants
+to play.
+
+Its weight is derived from the published goal weights
+(`goalWeight('light-bye-weeks') / goalWeight('bye-luck')` = 70/45) rather than
+hand-tuned, so the optimiser cannot rank it differently from what the page says.
+
+Measured on 2026, old system vs new:
+
+| | AFL | The League |
+|---|---|---|
+| rivalry games with both rosters whole | 94/120 → **99/120** | 42/48 → **44/48** |
+| starters missing across rivalry games | 58 → **40** (−31%) | 9 → 9 |
+| min rematch gap | 8 → 7 | 9 → 9 |
+| season net bye spread | 2 → 4 | 12 → **2** |
+
+The League gains little on the rivalry metric because it had almost nothing to
+gain — 42 of its 48 rivalry games were already clean once measured by starters.
+The AFL's net-bye-spread regression (2 → 4) is the trade the ranking sanctions:
+light-bye-weeks outweighs bye-luck 70 to 45.
+
+**Note both leagues still play their division games in the same weeks.** This
+step buys the pairing freedom that already existed — which RIVAL meets which in
+which division-round week — and nothing more. Letting different teams play
+division games in different weeks needs the edge-colouring rewrite below.
+
+### Still to build: mixed rounds
+
+Every round today is PURE — 13 of 14 AFL weeks are single-type — because
+`materialise` builds them from structured pieces (circle-method within a
+division, complete-bipartite between). Those constructions can only emit pure
+rounds, and `buildWeekPlan` then labels each slot by type.
+
+A perfect matching does not have to be pure. `{n1-n2, n3-n4, s1-s2, s5-s6,
+n5-s3, n6-s4}` is a legal round with two North internal games, two South
+internal and two cross — some teams play a rival that week, others do not. That
+is the whole ask, and it needs:
+
+1. **State becomes an assignment of each required game to a round**, not
+   `{teamOrder, legOrder, interSlotOrder}`. This is edge-colouring: colours are
+   rounds, a proper colouring is a valid season.
+2. **Kempe-chain moves.** Pick two rounds; their union is disjoint even cycles
+   (every team has degree 2); swap colours along one cycle. Both stay perfect
+   matchings. Seed from today's construction — Δ-regular graphs are not always
+   Δ-edge-colourable in general, so starting from a known-good colouring
+   matters.
+3. **Hard goals move from structure into move filters.** The two-leg block
+   currently gives the rematch gap, the stretch run and the finale for free,
+   which is why the annealer only carries fairness. A free colouring guarantees
+   none of them.
+4. **`buildWeekPlan` largely dies** — its job is labelling slots by round type,
+   and round types stop existing. `chooseDoubleheaderWeeks` survives.
+5. **Most of `tests/schedule-week-plan.test.ts` dies with it.** Replace with
+   outcome assertions against the goal scorecard, which is why the scorecard
+   was worth building first: it becomes the acceptance gate.
+
+Headroom if built: 46% of the AFL's (team, bye-week) slots have a clean roster
+and 41% of The League's, against the ~10 division rounds a season currently has
+to work with.
+
+- **Starter-aware bye exposure.** ~~Goal 6's second clause~~ SUPERSEDED — see
+  above. Original note kept for the reasoning: Goal 6's second clause — "a bye week is only a
   problem for a game if one of those two teams is actually missing starters" —
   is not built. `byeExposure` counts the WHOLE roster, so a team losing two
   bench players scores the same as one losing two starters.

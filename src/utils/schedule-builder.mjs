@@ -47,6 +47,8 @@
  * then home/away balance.
  */
 
+import { goalWeight } from './schedule-constraints.mjs';
+
 /* --------------------------------------------------------------- rounds */
 
 /**
@@ -409,16 +411,34 @@ export const scoreSeason = (weeks, ctx, weights = {}) => {
   const w = {
     byeDifferential: 1.0,
     netByeAdvantage: 0.6,
+    // Scaled from the published goal weights rather than tuned by hand, so the
+    // optimiser cannot rank this differently than the page says it is ranked:
+    // the light-bye-week goal outweighs bye luck 70 to 45, and byeDifferential
+    // is bye luck's term at 1.0. The other four are legacy tuning, kept because
+    // re-deriving them would change every existing draw for no stated reason;
+    // a test pins that their ORDER still matches the goal weights.
+    divisionByeCost: goalWeight('light-bye-weeks') / goalWeight('bye-luck'),
     doubleheaderStrength: 0.25,
     lateSeasonStrength: 0.25,
     homeAwayBalance: 0.15,
     ...weights,
   };
-  const { byesFor, rating, doubleheaderWeeks, lateWeeks, franchiseIds, gamesPerTeam } = ctx;
+  const { byesFor, rating, doubleheaderWeeks, lateWeeks, franchiseIds, gamesPerTeam, divisionOf } = ctx;
   const dh = new Set(doubleheaderWeeks);
   const late = new Set(lateWeeks);
 
   let byeDiff = 0;
+  // Starters missing from RIVALRY games specifically, summed over both sides.
+  //
+  // This is the term that makes the schedule choose a week for a particular
+  // matchup rather than for the league as a whole. byeDifferential only cares
+  // that the two sides are EQUALLY hurt — two division rivals both missing
+  // three starters scores perfectly on it, which is exactly the game nobody
+  // wants to play. Counting the absolute total, for division games only, is
+  // what expresses "put rivals against each other in weeks neither is missing
+  // anyone".
+  let divisionByeTotal = 0;
+  let divisionGames = 0;
   const net = {};
   const dhStrength = {};
   const lateStrength = {};
@@ -435,6 +455,10 @@ export const scoreSeason = (weeks, ctx, weights = {}) => {
       const ba = byesFor(g.away, week);
       const bb = byesFor(g.home, week);
       byeDiff += Math.abs(ba - bb);
+      if (divisionOf && divisionOf[g.away] === divisionOf[g.home]) {
+        divisionGames += 1;
+        divisionByeTotal += ba + bb;
+      }
       net[g.away] += bb - ba;
       net[g.home] += ba - bb;
       homeCount[g.home] += 1;
@@ -453,6 +477,7 @@ export const scoreSeason = (weeks, ctx, weights = {}) => {
   const terms = {
     // Per game, so leagues of different sizes compare.
     byeDifferential: byeDiff / ((gamesPerTeam * franchiseIds.length) / 2),
+    divisionByeCost: divisionGames ? divisionByeTotal / divisionGames : 0,
     netByeAdvantage: Math.sqrt(mean(franchiseIds.map((id) => net[id] ** 2))),
     doubleheaderStrength: Math.sqrt(variance(franchiseIds.map((id) => dhStrength[id]))),
     lateSeasonStrength: Math.sqrt(variance(franchiseIds.map((id) => lateStrength[id]))),

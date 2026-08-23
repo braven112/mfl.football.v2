@@ -34,6 +34,7 @@ import {
   regularSeasonGames,
 } from './schedule-rules.mjs';
 import { buildWeekPlan, searchSeason } from './schedule-builder.mjs';
+import { starterByeExposure } from './starter-exposure.mjs';
 
 /**
  * Per-league policy. `mode` is the league's own decision about how much
@@ -205,6 +206,13 @@ export const describeSeason = (weeks, shape, { byes, exposure, byeFree, doublehe
   let byeFreeDivision = 0;
   let byeDiffTotal = 0;
   let gameCount = 0;
+  // Rivalry games measured by who is actually MISSING, not by which week it is.
+  // A division game in a bye week where neither roster loses a starter costs
+  // nothing; one where both lose three is the game nobody wants to play, and
+  // the week number alone cannot tell them apart.
+  let divisionStarterByes = 0;
+  let cleanDivisionGames = 0;
+  let divisionGameCount = 0;
 
   for (const week of [...weeks.keys()].sort((a, b) => a - b)) {
     const games = weeks.get(week);
@@ -221,6 +229,10 @@ export const describeSeason = (weeks, shape, { byes, exposure, byeFree, doublehe
       net[g.home] += ba - bb;
       if (isDivision(g)) {
         division += 1;
+        divisionGameCount += 1;
+        const out = ba + bb;
+        divisionStarterByes += out;
+        if (out === 0) cleanDivisionGames += 1;
         (met[pairKey(g.away, g.home)] ??= []).push(week);
       }
     }
@@ -244,6 +256,9 @@ export const describeSeason = (weeks, shape, { byes, exposure, byeFree, doublehe
     byWeek,
     games: gameCount,
     byeFreeDivisionGames: byeFreeDivision,
+    divisionGameCount,
+    divisionStarterByes,
+    cleanDivisionGames,
     meanByeDifferential: gameCount ? byeDiffTotal / gameCount : 0,
     netByeSpread: netValues.length ? Math.max(...netValues) - Math.min(...netValues) : 0,
     netByeByFranchise: shape.franchiseIds
@@ -321,7 +336,7 @@ export const toMflScheduleText = (weeks) => {
  * @param {Record<string,number>} args.byes  NFL team -> bye week
  * @param {{restarts?:number,iterations?:number,seed?:number}} [args.search]
  */
-export const planSchedule = ({ slug, year, readFeed, byes, search = {}, mode }) => {
+export const planSchedule = ({ slug, year, readFeed, byes, search = {}, mode, rankingSources = null }) => {
   const base = SCHEDULE_POLICY[slug];
   if (!base) throw new Error(`no scheduling policy for league: ${slug}`);
   const policy = mode && mode !== base.mode ? { ...base, mode } : base;
@@ -338,7 +353,31 @@ export const planSchedule = ({ slug, year, readFeed, byes, search = {}, mode }) 
 
   const currentSchedule = readFeed(year, 'schedule')?.schedule?.weeklySchedule;
   const current = currentSchedule ? regularSeasonGames(currentSchedule, shape.lastWeek) : new Map();
-  const exposure = byeExposure(readFeed(year, 'rosters'), readFeed(year, 'players'), byes, shape.franchiseIds);
+  // Projected STARTERS on bye, not the whole roster.
+  //
+  // Measured on 2026: the whole-roster count says only 10% of The League's
+  // (team, bye-week) slots are usable and that Weeks 8, 11 and 13 have zero
+  // clean teams — a 24-man roster nearly always has SOMEBODY out, so the signal
+  // saturates and the optimiser has nothing to steer by. Counting the projected
+  // starting nine instead takes that to 41%. The AFL is unaffected (46% either
+  // way) because its rosters are keepers only at reveal time and cannot even
+  // fill nine slots, so every player is already a starter — the model degrades
+  // to the old behaviour there rather than needing a special case.
+  //
+  // Falls back to the roster count when the ranking sources are unavailable, so
+  // a missing data file degrades the objective instead of failing the draw.
+  const rosterExposure = byeExposure(readFeed(year, 'rosters'), readFeed(year, 'players'), byes, shape.franchiseIds);
+  const sources = rankingSources ?? readFeed(year, 'ranking-sources');
+  const exposure = sources
+    ? starterByeExposure({
+        rostersJson: readFeed(year, 'rosters'),
+        playersJson: readFeed(year, 'players'),
+        rankingSourcesJson: sources,
+        byes,
+        franchiseIds: shape.franchiseIds,
+        starters: shape.meta?.starters,
+      }).exposure
+    : rosterExposure;
 
   let weeks;
   let crossConference = null;
@@ -395,6 +434,9 @@ export const planSchedule = ({ slug, year, readFeed, byes, search = {}, mode }) 
         doubleheaderWeeks: doubleheaders,
         lateWeeks: [shape.lastWeek - 2, shape.lastWeek - 1, shape.lastWeek],
         rating: priorRatings(readFeed(year - 1, 'standings'), shape.franchiseIds),
+        // Needed by the divisionByeCost term — it scores rivalry games
+        // differently from the rest, so it has to know which are which.
+        divisionOf: shape.divisionOf,
         byesFor: (id, week) => exposure[id]?.[week] ?? 0,
       },
       { restarts: search.restarts ?? 6, iterations: search.iterations ?? 12000, seed: search.seed ?? 20260822 },

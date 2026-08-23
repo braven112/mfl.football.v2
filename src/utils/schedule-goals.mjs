@@ -137,16 +137,22 @@ const SCORERS = {
 
   'light-bye-weeks': (f) => {
     const weeks = f.divisionByeWeeks;
-    if (!weeks.length) return { status: 'met', detail: 'no division game falls on a bye week' };
+    // The sharper measure when we have it: how many rivalry games actually
+    // lose a starter, rather than how many sit in a week with byes in it.
+    const starters =
+      f.cleanDivisionGames != null && f.divisionGameCount
+        ? ` ${f.cleanDivisionGames} of ${f.divisionGameCount} rivalry games have both rosters at full strength` +
+          `${f.divisionStarterByes != null ? ` (${f.divisionStarterByes} projected starters missing league-wide)` : ''}.`
+        : '';
+    if (!weeks.length) return { status: 'met', detail: `no division game falls on a bye week.${starters}` };
     const light = weeks.filter((w) => w.teamsOut <= f.lightByeWeekMax);
     const label = weeks.map((w) => `Wk ${w.week} (${w.teamsOut})`).join(', ');
-    if (light.length === weeks.length) return { status: 'met', detail: `all on light weeks — ${label}` };
+    if (light.length === weeks.length) return { status: 'met', detail: `all on light weeks — ${label}.${starters}` };
     return {
       status: 'partial',
       detail:
         `${light.length} of ${weeks.length} on a week with ${f.lightByeWeekMax} or fewer NFL teams out — ${label}. ` +
-        `No lighter week was reachable. Counted by NFL teams on bye, not by starters actually missing from the ` +
-        `two rosters involved — that sharper test is not built yet.`,
+        `No lighter week was reachable.${starters}`,
     };
   },
 
@@ -267,6 +273,9 @@ export const goalFactsFromSeason = ({
     worstByeWeek: worst ? (withByes.find((w) => w.nflByes === worst)?.week ?? null) : null,
     // Every game in the last week is a division game — the rivalry finish.
     finaleAllDivision: Boolean(finale && finale.divisionGames === finale.games),
+    divisionGameCount: described.divisionGameCount,
+    divisionStarterByes: described.divisionStarterByes,
+    cleanDivisionGames: described.cleanDivisionGames,
     netByeSpread: described.netByeSpread,
     homeGames: described.homeGames,
     minRematchGap: described.minRematchGap,
