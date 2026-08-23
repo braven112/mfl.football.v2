@@ -1302,12 +1302,16 @@ unchanged. Four things were not obvious going in:
   applied INLINE by JS, which covers light mode and outranks the global rule so
   the two can never stack.
 - **Franchise hues are NOT drop-in replacements for NFL primaries.** NFL
-  primaries are overwhelmingly dark, so white band ink was never at risk.
-  `colorPrimary` is `#181818` for five TheLeague franchises (five identical
-  near-black bands — unusable), and the chart hue `color`, which IS the
-  identifiable one, includes Midwestside's `#ffcd00` at 1.5:1 against white.
-  Anchor on `color`, then `ensureContrastOn(…, '#ffffff', 3)`. Five franchises
-  shift slightly; the hue survives.
+  primaries are overwhelmingly dark, so white band ink was never at risk;
+  franchise brand colours include Midwestside's `#ffcd00` at 1.5:1 against
+  white, so the anchor goes through `ensureContrastOn(…, '#ffffff', 3)`.
+  **Anchor on the BRAND pair — `colorPrimary`, falling back to
+  `colorSecondary` when the primary is a neutral (it is `#181818` for five
+  TheLeague franchises, which would be five identical bands), and then the
+  neutral becomes the glow so the two are never the same hue.** This bullet
+  used to say "anchor on `color`" and that was the bug — see the 2026-08-23
+  follow-up at the end of this file. `color` is a CHART hue and can name a
+  colour the franchise does not wear.
 - **Re-read the map per call, never cache it at module scope.** Same trap
   `rankings-scope.ts` documents: one module instance survives a ClientRouter
   navigation from one league's page to another's, and a captured map paints the
@@ -1342,4 +1346,38 @@ The offset is measured against `.pmb__cutout`'s `right` + `max-width` (centre
 lands 19-21% from the right across breakpoints), so the two are coupled —
 changing the cutout's width wants this re-checked. Full write-up of the CSS
 trap: `domains/frontend.md`, 2026-08-23.
+
+### Follow-up 2026-08-23 - The band was anchored on the chart hue, and the rule was already written down
+
+Owner report: three franchises' bands were the wrong colour. Each looked like
+its own art-direction call. They were one bug — the band anchored on the
+config's `color`, and `domains/design-system.md`'s curated head already said,
+in as many words, "the **chart** color, chosen for distinctness on a bar graph.
+Do not repurpose it as brand identity."
+
+Worth noticing HOW it got past: the reasoning in the code was sound in
+isolation. `colorPrimary` is `#181818` for five TheLeague franchises, so
+anchoring there gives five identical near-black bands — a real problem, with a
+real fix (`anchorHue`: primary when it has a hue, secondary when it doesn't).
+Reaching for `color` solved the same problem more easily and the comment
+justified it convincingly. **A local justification that never checks the domain
+doc will lose to it every time.** The head is 5.9 KB; reading it costs nothing
+next to shipping a franchise a colour it does not own.
+
+**The tell an owner can see:** a franchise whose band colour appears nowhere on
+its crest. Vitside's pink is the loud case; Midwestside's gold and Gridiron's
+orange were subtler because those hues ARE in the brand, just not the one that
+should lead.
+
+**What genuinely does not fall out of the config**, and so stays as an explicit
+`BAND_ART_DIRECTION` map: which of a franchise's OWN colours leads. Midwestside
+is gold-on-black and its `colorPrimary` IS the gold, so nothing in the data says
+the black carries the band — the owner does.
+
+**Accepted regression, recorded not hidden:** Bring The Pain and Wascawy Wabbits
+now resolve to the same `#181818`. Both are black-and-white through the whole
+config — primary `#181818`, secondary near-white, chart hues grey — so there is
+no hue to pull. Their crests still separate the bands. It sits in the
+distinctness guard's `KNOWN_DATA_GAPS`; giving either franchise a real accent
+colour in the config is the fix whenever someone wants it.
 

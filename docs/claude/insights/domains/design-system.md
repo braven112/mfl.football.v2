@@ -66,7 +66,10 @@ is dark-only (no `:root` value) — safe only inside a `:global(html.dark)` bloc
 ## Franchise color has three separate roles
 
 - `color` (config) — the **chart** color, chosen for distinctness on a bar graph.
-  Do not repurpose it as brand identity.
+  Do not repurpose it as brand identity. It is picked to sit apart from fifteen
+  other lines, so it can name a hue the franchise does not wear at all: Vitside
+  Mafia is black-and-red and its `color` is **pink**. The player modal band
+  anchored on this field and shipped that pink; an owner reported it (Aug 2026).
 - `colorPrimary`/`Secondary`/… — brand colors, correct for a **fill** with text
   on top.
 - `teamAccentVar(fid)` → `--team-accent-<fid>` — the only correct source for a

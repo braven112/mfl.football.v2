@@ -60,9 +60,9 @@
    That offset is tuned against .pmb__cutout's `right` + `max-width`, so the
    two move together — change the cutout's width and this wants re-checking.
 
-   At this size the crest is TALLER than the band and deliberately bleeds off
-   both edges, the same language as .pmb__ghost, which already runs off the
-   bottom. `overflow: hidden` on .pmb does the cropping.
+   It sits INSIDE the band vertically (under 100% of its height), so nothing
+   is cropped — `overflow: hidden` on .pmb is a safety net here, not part of
+   the look.
 
    It underlaps the name block rather than clearing it. That is safe in the one
    direction that matters: every crest is drawn on ink (see
@@ -92,10 +92,10 @@
      The px ceiling is a backstop, not the operative value: sizing off the
      band's height means anything that makes the band TALLER (a name long
      enough to wrap on a 320px phone) makes the crest WIDER too, and it creeps
-     out from behind the player and under the text. The secondary lines in
-     both bands clip rather than wrap for the same reason; this bounds what is
-     left. */
-  height: var(--pmb-crest-size, min(112%, 152px));
+     out from behind the player and under the text. Every .pmb band's
+     secondary lines clip rather than wrap for the same reason; this bounds
+     what is left. */
+  height: var(--pmb-crest-size, min(90%, 152px));
   aspect-ratio: 1;
   width: auto;
   object-fit: contain;
