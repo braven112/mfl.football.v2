@@ -74,9 +74,22 @@ jobs:
         # Only draws what is missing; an existing plan is reused, because
         # redrawing gives a DIFFERENT valid schedule and the reveal must match
         # whatever ends up pasted into MFL.
+        #
+        # A season that is already REVEALED needs no plan at all, and drawing
+        # one is worse than wasteful: the locker will skip (the archive is the
+        # lock), so the fresh draw is a season nobody will ever play, sitting on
+        # disk under a name that reads like this year's schedule. That is how
+        # the AFL ended up with a committed 2026 plan contradicting its own
+        # reveal week for week. The archive carries `text` and `weeks`, so it is
+        # the paste source once it exists — the plan has no reader left.
         run: |
           for L in theleague afl-fantasy; do
-            PLAN="data/$L/schedule-plan/$(date -u +%Y)-schedule.json"
+            Y="$(date -u +%Y)"
+            if [ -f "data/$L/schedule-release/$Y.json" ]; then
+              echo "$L: $Y already revealed — the archive is the schedule, no plan needed"
+              continue
+            fi
+            PLAN="data/$L/schedule-plan/$Y-schedule.json"
             if [ -f "$PLAN" ]; then
               echo "$L: reusing $PLAN"
             else

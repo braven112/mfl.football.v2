@@ -291,6 +291,16 @@ rivals test too. A 13-week AFL season audits clean and would lock as truth. On a
 record byte for byte — weeks, MFL text, marquee, summary — which is what makes
 it safe to reach for when you are not sure.
 
+**Once a season is revealed, its plan file is deleted, not kept.** The archive
+carries `text` and `weeks`, so it is the paste source and the plan has no reader
+left — while a plan that disagrees is a decoy: named like this year's schedule,
+valid, complete with a ready-to-paste `text` block, describing a season nobody
+will play. The release workflow no longer draws a plan for a revealed season
+(drawing one would manufacture a fresh decoy every run), and
+`tests/schedule-plan-agrees-with-reveal.test.ts` fails the build if a plan and a
+reveal for the same league-year ever disagree. When it goes red the PLAN is
+wrong: delete it or redraw it. Never edit the archive to match a plan.
+
 It is deliberately NOT the default, and the cron must never guess. Before the
 paste, the live feed carries MFL's own schedule for the season, and nothing in
 the data distinguishes "the commissioner pasted a different valid draw" from
