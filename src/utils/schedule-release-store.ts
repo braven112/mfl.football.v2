@@ -47,6 +47,16 @@ export interface ScheduleRelease {
   year: number;
   /** ISO timestamp the schedule was locked. */
   revealedAt: string;
+  /**
+   * Which schedule this record was canonised FROM.
+   *
+   * `plan` is the normal path — the reveal is the draw the locker just made.
+   * `live` means it was taken from the schedule already pasted into MFL,
+   * because the committed plan and the pasted season had diverged into two
+   * different valid draws. Optional: reveals locked before the distinction
+   * existed carry neither.
+   */
+  source?: 'plan' | 'live';
   /** `WW,AAAA,HHHH` lines, ready to paste into MFL. */
   text: string;
   /** Week number -> games. */
