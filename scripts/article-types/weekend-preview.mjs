@@ -11,7 +11,7 @@ import { buildCachedSystem } from '../article-utils/ai-client.mjs';
 import { isRegularSeasonOrPlayoffs } from '../article-utils/season-guards.mjs';
 import { getMatchupPairings } from '../article-utils/week-resolver.mjs';
 import { pickHeroPlayer } from '../article-utils/hero-player.mjs';
-import { primaryLink, articleLink, featureLink, linkList } from '../article-utils/article-links.mjs';
+import { primaryLink, articleLink, featureLink, linkList } from '../lib/schefter-links.mjs';
 
 export const config = {
   id: (year, week) => `sf_${year}_weekend_preview_w${String(week).padStart(2, '0')}`,
@@ -175,7 +175,7 @@ export function validate(aiOutput) {
  * The pipeline calls this on every run. `applyArticleLinks` injects the
  * PRIMARY link if the model drops it and strips any href the model invented;
  * the `featureLink` plugs are never injected, only offered — see
- * article-links.mjs for why a forced plug is worse than no plug. Plugs for
+ * schefter-links.mjs for why a forced plug is worse than no plug. Plugs for
  * pages a league does not have resolve to null and `linkList` drops them, so
  * this one list serves every league.
  */

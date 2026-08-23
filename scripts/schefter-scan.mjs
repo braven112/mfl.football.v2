@@ -43,6 +43,7 @@ import { buildDropAdjustmentMap, resolveDropSalary } from './lib/drop-salary.mjs
 
 import { getRedisConfig, createUpstashClient } from './lib/redis.mjs';
 import { postToGroupMe as sharedPostToGroupMe } from './lib/groupme.mjs';
+import { transactionCta, defaultTransactionCta, tradeBuilderPath } from './lib/schefter-links.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const MFL_HOST = process.env.MFL_HOST || 'api.myfantasyleague.com';
@@ -199,7 +200,7 @@ function extractTradePlayerIds(str) {
     .filter((part) => part && !part.startsWith('FP_'));
 }
 
-function generateTradePost(raw, players, teams, leagueSlug) {
+function generateTradePost(raw, players, teams, leagueSlug, registrySlug) {
   const team1 = teams.get(raw.franchise)?.name ?? `Team ${raw.franchise}`;
   const team2 = teams.get(raw.franchise2)?.name ?? `Team ${raw.franchise2}`;
   const gave1 = parseTradeAssets(raw.franchise1_gave_up, players, teams);
@@ -241,6 +242,7 @@ function generateTradePost(raw, players, teams, leagueSlug) {
     sourceTimestamp: raw.timestamp,
     tradeSignature: buildTradeSignature(raw.franchise, raw.franchise2, raw.franchise1_gave_up, raw.franchise2_gave_up),
     league: leagueSlug,
+    ...transactionCta(registrySlug, 'trade'),
   };
 }
 
@@ -348,7 +350,7 @@ function pickTemplate(templates, timestamp) {
   return templates[finalIdx];
 }
 
-function generateAuctionPost(raw, players, teams, leagueSlug) {
+function generateAuctionPost(raw, players, teams, leagueSlug, registrySlug) {
   const team = teams.get(raw.franchise)?.name ?? `Team ${raw.franchise}`;
   const { playerId, playerName, isDef, salary } = parseAuctionTransaction(raw.transaction, players);
   const tier = classifyTier(raw, salary);
@@ -378,6 +380,7 @@ function generateAuctionPost(raw, players, teams, leagueSlug) {
     ...(playerId ? { playerIds: [playerId] } : {}),
     sourceTimestamp: raw.timestamp,
     league: leagueSlug,
+    ...transactionCta(registrySlug, 'auction'),
   };
 }
 
@@ -427,7 +430,7 @@ function describePlayer(playerId, players) {
   };
 }
 
-function generateFreeAgentPost(raw, players, teams, leagueSlug, dropAdjustmentMap = new Map()) {
+function generateFreeAgentPost(raw, players, teams, leagueSlug, registrySlug, dropAdjustmentMap = new Map()) {
   const team = teams.get(raw.franchise)?.name ?? `Team ${raw.franchise}`;
   const { addedIds, droppedIds, bbidAmount } = parseRosterMove(raw.transaction);
   const added = describePlayer(addedIds[0], players);
@@ -464,12 +467,13 @@ function generateFreeAgentPost(raw, players, teams, leagueSlug, dropAdjustmentMa
         body,
         playerIds: [featuredId],
         bigDrop: { playerId: featuredId, salary: dropSalary.salary },
+        ...transactionCta(registrySlug, 'big-drop'),
       };
     }
 
     const dropPool = dropped.isDef ? DROP_DEF_TEMPLATES : DROP_TEMPLATES;
     const { headline, body } = pickTemplate(dropPool, raw.timestamp)(team, dropped.playerName, '');
-    return { ...base, tier: 'minor', headline, body };
+    return { ...base, tier: 'minor', headline, body, ...transactionCta(registrySlug, 'drop') };
   }
 
   // Acquisition (with or without a corresponding drop) — report the add.
@@ -477,7 +481,7 @@ function generateFreeAgentPost(raw, players, teams, leagueSlug, dropAdjustmentMa
   const salaryStr = salary ? ` (${formatSalary(salary)})` : '';
   const faPool = added.isDef ? FA_DEF_TEMPLATES : FA_TEMPLATES;
   const { headline, body } = pickTemplate(faPool, raw.timestamp)(team, added.playerName, salaryStr);
-  return { ...base, tier, headline, body, playerIds: [added.playerId] };
+  return { ...base, tier, headline, body, playerIds: [added.playerId], ...transactionCta(registrySlug, 'pickup') };
 }
 
 // ── AI Commentary (breaking tier) ──
@@ -658,6 +662,10 @@ async function scanLeague(league) {
   console.log(`  Teams loaded: ${teams.size}`);
 
   const leagueSlug = league.slug === 'afl' ? 'afl' : 'theleague';
+  // Posts carry the NAV slug in `league`, but a link needs the REGISTRY slug —
+  // the path prefix is /afl-fantasy, not /afl. Keeping both explicit beats
+  // deriving one from the other at each of the five post-return sites.
+  const registrySlug = league.registrySlug;
 
   // Filter new transactions
   const newTxns = transactions.filter(txn => {
@@ -682,17 +690,30 @@ async function scanLeague(league) {
   for (const txn of newTxns) {
     let post;
     if (txn.type === 'TRADE') {
-      post = generateTradePost(txn, players, teams, leagueSlug);
+      post = generateTradePost(txn, players, teams, leagueSlug, registrySlug);
     } else if (txn.type === 'AUCTION_WON') {
-      post = generateAuctionPost(txn, players, teams, leagueSlug);
+      post = generateAuctionPost(txn, players, teams, leagueSlug, registrySlug);
     } else if (txn.type === 'FREE_AGENT' || txn.type === 'WAIVER' || txn.type === 'BBID_WAIVER') {
-      post = generateFreeAgentPost(txn, players, teams, leagueSlug, dropAdjustmentMap);
+      post = generateFreeAgentPost(txn, players, teams, leagueSlug, registrySlug, dropAdjustmentMap);
     } else {
       continue;
     }
 
     // A generator may decline to post (e.g. an unrecognizable roster move).
     if (!post) continue;
+
+    // Every card gets somewhere to go. The generators above set a CTA that
+    // matches what the reader can DO about the news; this is the floor for a
+    // transaction type added later whose generator forgot one. Logged, not
+    // silent — a card pointing at the generic rosters page when it should
+    // point at the wire is a worse link, and worth noticing.
+    if (!post.link) {
+      const fallback = defaultTransactionCta(registrySlug);
+      if (fallback) {
+        Object.assign(post, fallback);
+        console.warn(`  [links] ${post.transactionSubType} had no CTA — fell back to ${fallback.link}`);
+      }
+    }
 
     // Check for dedup
     if (feed.posts.some(p => p.sourceTimestamp === txn.timestamp && p.transactionSubType === post.transactionSubType)) {
@@ -1250,6 +1271,12 @@ async function scanPendingTrades(league) {
         offerId,
         tradeSignature: buildTradeSignature(trade.franchise, trade.franchise2, trade.franchise1_gave_up, trade.franchise2_gave_up),
         league: leagueSlug,
+        // Both franchises are named in the headline and badged on the card, so
+        // a deep link that pre-loads them identifies nobody the post hasn't
+        // already identified — unlike the rumor mill, where the same link on a
+        // fuzzed scope is a leak (see franchiseDeepLinkAllowed).
+        link: tradeBuilderPath(league.registrySlug, { us: trade.franchise, them: trade.franchise2 }),
+        linkLabel: 'Open this deal in Trade Builder →',
       };
 
       // Dedup guard in case watermark got out of sync with feed

@@ -11,8 +11,9 @@ import {
   applyArticleLinks,
   linkDirective,
   withLinkDirective,
-} from '../scripts/article-utils/article-links.mjs';
+} from '../scripts/lib/schefter-links.mjs';
 import { LEAGUES, ALL_LEAGUES } from '../src/config/leagues-data.mjs';
+import { astroRouteExists } from './helpers/astro-routes';
 
 /**
  * Schefter has to link to the thing he is talking about.
@@ -29,7 +30,6 @@ import { LEAGUES, ALL_LEAGUES } from '../src/config/leagues-data.mjs';
  */
 
 const TYPES_DIR = path.resolve(__dirname, '../scripts/article-types');
-const PAGES_DIR = path.resolve(__dirname, '../src/pages');
 const PIPELINE = path.resolve(__dirname, '../scripts/schefter-weekly-articles.mjs');
 
 const typeFiles = readdirSync(TYPES_DIR).filter((f) => f.endsWith('.mjs')).sort();
@@ -43,16 +43,10 @@ const pipelineLeagues = (): string[] => {
 };
 
 /**
- * Does an href resolve to a real Astro route?
- *
- * Checked against the filesystem rather than page-directory.json: the
- * directory is a search index that a page can be missing from, while the
- * route either exists or 404s. Both `foo.astro` and `foo/index.astro` count.
+ * Does an href resolve to a real Astro route? See tests/helpers/astro-routes.
+ * Dynamic segments count — every article permalink is `news/[id].astro`.
  */
-const routeExists = (href: string): boolean => {
-  const rel = href.replace(/^\//, '');
-  return existsSync(path.join(PAGES_DIR, `${rel}.astro`)) || existsSync(path.join(PAGES_DIR, rel, 'index.astro'));
-};
+const routeExists = astroRouteExists;
 
 describe('article links — destinations are real pages', () => {
   const leagues = pipelineLeagues();

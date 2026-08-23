@@ -31,7 +31,7 @@ import { getAugustCutdownDay, calendarDaysUntilCutdown, ptDateParts } from '../l
 import { getRedisConfig, redisCommand } from '../lib/redis.mjs';
 import { normalizeFranchiseId } from '../../src/utils/franchise-id.mjs';
 import { selectAutoMoves, parseAcquisitionEvents, buildRookiePriorityFromFeeds } from '../../src/utils/august-cut-selection-core.mjs';
-import { primaryLink, articleLink, featureLink, linkList } from '../article-utils/article-links.mjs';
+import { primaryLink, articleLink, featureLink, linkList } from '../lib/schefter-links.mjs';
 
 // TheLeague's active-roster cap. Cut-watch is TheLeague-only today (the
 // August cutdown machinery it reports on doesn't exist for AFL); if that
@@ -583,7 +583,7 @@ export function buildGroupMePromo(post, enrichment, { league = 'theleague', now 
  * The pipeline calls this on every run. `applyArticleLinks` injects the
  * PRIMARY link if the model drops it and strips any href the model invented;
  * the `featureLink` plugs are never injected, only offered — see
- * article-links.mjs for why a forced plug is worse than no plug. Plugs for
+ * schefter-links.mjs for why a forced plug is worse than no plug. Plugs for
  * pages a league does not have resolve to null and `linkList` drops them, so
  * this one list serves every league.
  */

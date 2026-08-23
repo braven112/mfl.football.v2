@@ -1122,7 +1122,7 @@ html.dark[data-league='afl'] .sf-post__link--external {
 
 /* ── Links inside article prose ──
  * Article bodies are raw HTML rendered through `set:html`, so the anchors
- * Schefter writes (scripts/article-utils/article-links.mjs) never carry an
+ * Schefter writes (scripts/lib/schefter-links.mjs) never carry an
  * Astro scoped-style attribute — a rule inside a page's <style> block would
  * not reach them. This lives in the shared sheet for that reason, and because
  * both leagues' news pages import it, so one definition serves both.

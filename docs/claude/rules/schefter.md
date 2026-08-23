@@ -187,7 +187,7 @@ one, so the callback would point at a live team that isn't the subject).
 `pickFormerName` excludes both.
 
 
-## Articles must link — and must plug the site
+## Every post must link — and must plug the site
 
 Schefter has two jobs: report the league, and get owners USING the site. Until
 Aug 2026 he did neither half of the second one — a `grep '<a '` over the whole
@@ -196,7 +196,7 @@ The article that made it visible was the 2026 schedule release: eight
 paragraphs about a schedule, and not one link to the schedule release page the
 column existed to announce.
 
-`scripts/article-utils/article-links.mjs` is the whole mechanism. Three layers,
+`scripts/lib/schefter-links.mjs` is the whole mechanism. Three layers,
 because the model is one of them and the model is not reliable:
 
 1. **Declare.** Every article type exports
@@ -206,7 +206,7 @@ because the model is one of them and the model is not reliable:
    reading `schefter-weekly-articles.mjs`, so a new article type that omits
    `relatedLinks` fails the suite. Wrapping that call in a
    `typeof mod.relatedLinks === 'function'` guard silently re-opens the hole —
-   `tests/article-links.test.ts` asserts the call stays unguarded for exactly
+   `tests/schefter-links.test.ts` asserts the call stays unguarded for exactly
    that reason.
 2. **Ask.** `withLinkDirective` appends copy-this-verbatim anchors to the fact
    sheet. Never "link to the standings": a model asked to build a URL builds a
@@ -255,10 +255,54 @@ Load-bearing details:
   scoped rule cannot reach these anchors — and both leagues' news pages import
   the shared sheet, so one definition serves both.
 
-`tests/article-links.test.ts` also checks the **shipped feeds**: every
+`tests/schefter-links.test.ts` also checks the **shipped feeds**: every
 `type: 'article'` post must contain an anchor and every href in one must
 resolve to a real route. That is what catches a hand-edited feed, which no
 amount of pipeline enforcement would.
+
+### The short posts link too — and their links answer to redaction
+
+Transactions, rumors and speculation are one or two sentences, so they use the
+card-level `link` / `linkLabel` the Schefter cards already render rather than
+an inline anchor. `scripts/lib/schefter-links.mjs` owns those as well
+(`transactionCta`, `tradeBuilderPath`, `tipPagePath`); the guards live in
+`tests/schefter-post-links.test.ts` and `tests/schefter-trade-cta.test.ts`.
+
+- **A LINK NAMES A TEAM AS WELL AS A SENTENCE DOES.** `isTradeFlavoredTip`
+  answers "is this about a trade?", which is a different question from "may
+  this post identify the team?" — and only the second one governs the href.
+  A web tip with `topic: 'trade'` whose scope falls through to `division`
+  (single source, no consent signal, or over the per-tipster naming rate
+  limit) arrives at `resolveCta` with its `franchiseHint` intact, so the body
+  read "a team in the AL East" while the button under it pre-loaded that exact
+  franchise. `franchiseDeepLinkAllowed` gates it on the same three scopes the
+  IRON RULES let Schefter name, for the same reason former-name callbacks are
+  gated. A `franchiseIdsInLink` sweep then re-checks the FINISHED post, so a
+  CTA branch added later is safe by default — the `redactSafePayload` pattern
+  applied to hrefs.
+- **`franchiseIdsInLink` is param-aware, not shape-only.** `?target=` is a
+  FRANCHISE on the tip page and a PLAYER on the AFL Trade Builder. A guard
+  that called every four-digit value a franchise would flag player ids, and a
+  guard everyone learns to ignore guards nothing. Unknown pages still get the
+  shape sweep, so a deep link added elsewhere cannot slip past.
+- **The two Trade Builders are different pages.** TheLeague's is a React
+  island restoring `?a`/`?b` (plus `?ap`/`?bp`, a whole side each) client-side;
+  the AFL's is server-rendered on `?from`/`?to` (plus `?player`/`?target`,
+  exactly one each). The rumor mill hardcoded `?b=` for both — its comment
+  cited "the same convention the rosters page uses", meaning *TheLeague's*
+  rosters page — so every AFL trade CTA opened an EMPTY builder. Nothing
+  404s, which is why it lasted: the link works, the deep link silently
+  doesn't. `tradeBuilderPath` owns both spellings and the cardinality
+  difference, and the test reads the params back out of each page.
+- **`?target=` on a card is only a "desk dare" on the tip page.** Both post
+  cards styled any `?target=` link with the megaphone icon and the directed
+  treatment, which would mislabel an AFL trade deep link. `isDirectedCta`
+  checks the path now.
+- Transaction CTAs follow what the reader can DO: a **drop** goes to the free
+  agent board (the player is claimable by whoever is reading), a **pickup**,
+  **auction** or **trade** goes to the rosters. The scanner backfills a
+  logged fallback for a transaction type whose generator forgets one — a
+  floor, not the mechanism.
 
 ## Schefter tipster context (Phase 8 — bot intelligence)
 

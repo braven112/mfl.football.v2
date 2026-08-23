@@ -33,7 +33,7 @@ import { getSeasonYear, getCurrentNFLWeek, getCompletedWeek } from './article-ut
 import { callAnthropic } from './article-utils/ai-client.mjs';
 import { isDuplicate, appendToFeed } from './article-utils/feed-writer.mjs';
 import { postToGroupMe } from './lib/groupme.mjs';
-import { withLinkDirective, applyArticleLinks } from './article-utils/article-links.mjs';
+import { withLinkDirective, applyArticleLinks } from './lib/schefter-links.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 
@@ -216,7 +216,7 @@ async function main() {
   // `mod.relatedLinks` is called UNCONDITIONALLY and on purpose: the interface
   // test derives its required-export list by reading this file, so an article
   // type that does not declare its links fails the suite rather than
-  // publishing prose the reader can't act on (article-utils/article-links.mjs).
+  // publishing prose the reader can't act on (lib/schefter-links.mjs).
   const links = mod.relatedLinks(enrichment, { league }) ?? [];
   console.log(`  Links: ${links.map((l) => l.href).join(', ') || 'none'}`);
 
