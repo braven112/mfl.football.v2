@@ -17,6 +17,7 @@ import { buildCachedSystem } from '../article-utils/ai-client.mjs';
 import { isRegularSeasonOrPlayoffs } from '../article-utils/season-guards.mjs';
 import { resolveMainRepo } from '../article-utils/data-loaders.mjs';
 import { LEAGUES, leagueUrl } from '../../src/config/leagues-data.mjs';
+import { primaryLink, articleLink, featureLink, linkList } from '../article-utils/article-links.mjs';
 
 function leagueMeta(league) {
   const reg = LEAGUES[league];
@@ -181,6 +182,33 @@ export function validate(aiOutput) {
   if (!aiOutput.excerpt || aiOutput.excerpt.length > 500) errors.push('Excerpt missing or too long');
   if (!aiOutput.content || aiOutput.content.length < 2) errors.push('Too few content paragraphs');
   return errors;
+}
+
+/**
+ * Where this article points, and which parts of the site it plugs.
+ *
+ * The column is the prose half of a rankings table that lives on its own page
+ * (and is embedded below the article by GauntletArticleSection). The plugs are
+ * what a team does about a schedule it does not like.
+ *
+ * The pipeline calls this on every run. `applyArticleLinks` injects the
+ * PRIMARY link if the model drops it and strips any href the model invented;
+ * the `featureLink` plugs are never injected, only offered — see
+ * article-links.mjs for why a forced plug is worse than no plug. Plugs for
+ * pages a league does not have resolve to null and `linkList` drops them, so
+ * this one list serves every league.
+ */
+export function relatedLinks(_enrichment, { league = 'theleague' } = {}) {
+  return linkList(
+    primaryLink(league, 'schedule-strength', {
+      label: 'the Gauntlet rankings',
+      cta: 'The full remaining-schedule rankings are on the Gauntlet page.',
+    }),
+    articleLink(league, 'standings', { label: 'the standings' }),
+    featureLink(league, 'trade-builder'),
+    featureLink(league, 'players'),
+    featureLink(league, 'playoffs'),
+  );
 }
 
 export function buildPost(aiOutput, enrichment, articleId, { league = 'theleague' } = {}) {
