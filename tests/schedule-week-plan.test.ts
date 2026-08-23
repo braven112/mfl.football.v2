@@ -1,6 +1,13 @@
 import { describe, it, expect } from 'vitest';
 // @ts-expect-error - .mjs helper shared with the node scripts (see its header)
-import { buildWeekPlan, roundRobinRounds, bipartiteRounds, balanceHomeAway } from '../src/utils/schedule-builder.mjs';
+import {
+  buildWeekPlan,
+  roundRobinRounds,
+  bipartiteRounds,
+  balanceHomeAway,
+  LIGHT_BYE_WEEK_MAX,
+  MIN_REMATCH_GAP,
+} from '../src/utils/schedule-builder.mjs';
 // @ts-expect-error - .mjs helper shared with the node scripts (see its header)
 import { byeCountsByWeek, byeFreeWeeks, chooseDoubleheaderWeeks } from '../src/utils/schedule-rules.mjs';
 import byeData from '../data/nfl/bye-weeks.json';
@@ -100,12 +107,18 @@ describe('buildWeekPlan', () => {
         ).toBe(worst);
       });
 
-    // A bye-free week in the MIDDLE of the season still gets an interdivision
-    // round, and that is correct: confining the two legs to an early and a late
-    // block is what guarantees rivals meet once early and once late. 2023 and
-    // 2024 both have a clean Week 8 that the division legs cannot reach.
-    // What must hold is the weaker, real property — WITHIN a block, division
-    // rounds take the cleanest weeks available to that block.
+    // A bye-free week in the MIDDLE of the season may still get an
+    // interdivision round: confining the two legs to an early and a late block
+    // is what guarantees rivals meet once early and once late, so a clean week
+    // inside neither block is unreachable.
+    //
+    // This comment used to name 2023's and 2024's clean Week 8 as the example.
+    // It was wrong about why — those weeks were unreachable because the late
+    // block was the shortest suffix, not because the format forbade them, and
+    // widening the block to the rematch bound now reaches both (see
+    // 'gives forced bye-week division rounds the lightest weeks the gap rule
+    // allows'). Kept as the weaker, always-true property; the optimality test
+    // below is the one with teeth.
     it('within each block, division rounds take the cleanest weeks', () => {
       for (const leg of [0, 1]) {
         const blockWeeks = plan
@@ -159,6 +172,75 @@ describe('buildWeekPlan', () => {
             Math.min(rounds, cleanSlots),
           );
         }
+      });
+
+      /**
+       * The forced bye-week division rounds must take the LIGHTEST bye weeks
+       * the rematch rule lets them reach.
+       *
+       * This is the property the shortest-suffix late block used to violate
+       * silently. In 2026 the AFL's three unavoidable bye-week rounds sat on
+       * Weeks 10, 13 and 14 — ten NFL teams out — while Week 9, with two out,
+       * was one week past the block's edge and never considered. Nothing
+       * failed, because "within a block, division rounds take the cleanest
+       * weeks" was true: the block was simply too narrow to contain the answer.
+       *
+       * So this asserts against the weeks the gap rule ALLOWS, not the weeks
+       * the block happens to span. Compared at week granularity rather than
+       * slot: a doubleheader's second clean slot deliberately goes to
+       * interdivision (the spread rule), so a per-slot comparison would fail on
+       * a rule that is working correctly.
+       */
+      it('gives forced bye-week division rounds the lightest weeks the gap rule allows', () => {
+        const weeksWithLeg = (leg: number) =>
+          plan.filter((w: any) => w.slots.some((s: any) => s.kind === 'division' && s.leg === leg)).map((w: any) => w.week);
+        const earliestLate = Math.max(...weeksWithLeg(0)) + MIN_REMATCH_GAP;
+        const used = new Set(weeksWithLeg(1));
+        const reachable = plan.filter((w: any) => w.week >= earliestLate).map((w: any) => w.week);
+        const bye = (w: number) => byeCounts[w] ?? 0;
+
+        const heaviestUsed = Math.max(...[...used].map(bye));
+        const unused = reachable.filter((w: number) => !used.has(w));
+        if (!unused.length) return;
+        expect(
+          Math.min(...unused.map(bye)),
+          `a reachable week is lighter than a week the second leg took — used ` +
+            `${[...used].map((w) => `${w}:${bye(w)}`).join(' ')} / free ${unused.map((w) => `${w}:${bye(w)}`).join(' ')}`,
+        ).toBeGreaterThanOrEqual(heaviestUsed);
+      });
+
+      /**
+       * The widening is bounded by the rematch rule and by nothing else. Too
+       * narrow and light weeks stay unreachable (the bug above); one week too
+       * wide and a pair can be drawn into Weeks 4 and 5, which `scoreSeason`
+       * has no term to prevent and only the season audit would catch.
+       */
+      it('starts the second leg exactly MIN_REMATCH_GAP after the first leg ends, at the earliest', () => {
+        const early = plan.filter((w: any) => w.slots.some((s: any) => s.kind === 'division' && s.leg === 0)).map((w: any) => w.week);
+        const late = plan.filter((w: any) => w.slots.some((s: any) => s.kind === 'division' && s.leg === 1)).map((w: any) => w.week);
+        expect(Math.min(...late) - Math.max(...early)).toBeGreaterThanOrEqual(MIN_REMATCH_GAP);
+      });
+
+      /**
+       * Reported, not asserted: whether the target was actually met. Some
+       * seasons have fewer light weeks than the format has forced rounds, and
+       * the rematch guarantee can put one out of reach — neither is a bug, and
+       * failing the build on the NFL's bye calendar would be absurd. The test
+       * above is the real guarantee; this one keeps the shortfall visible.
+       */
+      it('reports how many forced bye-week division rounds cleared the light-week bar', () => {
+        const onBye = plan
+          .filter((w: any) => w.slots.some((s: any) => s.kind === 'division'))
+          .map((w: any) => w.week)
+          .filter((w: number) => (byeCounts[w] ?? 0) > 0);
+        const heavy = onBye.filter((w: number) => (byeCounts[w] ?? 0) > LIGHT_BYE_WEEK_MAX);
+        if (heavy.length) {
+          console.log(
+            `  [${year}] ${onBye.length - heavy.length}/${onBye.length} forced bye-week division rounds on light ` +
+              `(<=${LIGHT_BYE_WEEK_MAX}) weeks; heavier: ${heavy.map((w: number) => `wk${w}:${byeCounts[w]}`).join(' ')}`,
+          );
+        }
+        expect(onBye.every((w: number) => (byeCounts[w] ?? 0) > 0)).toBe(true);
       });
 
       it('keeps rivalry games out of the season’s worst bye week', () => {
@@ -218,6 +300,25 @@ describe('buildWeekPlan for a conference-less league (The League: 16 teams, 4x4)
     expect(slots.filter((s: any) => s.kind === 'division' && s.leg === 0)).toHaveLength(3);
     expect(slots.filter((s: any) => s.kind === 'division' && s.leg === 1)).toHaveLength(3);
     expect(slots.filter((s: any) => s.kind === 'inter')).toHaveLength(12);
+  });
+
+  // The League has bye-free slots for every division game (ceiling 48 of 48),
+  // so its bye-week rounds are BOUGHT, not forced — the all-division finale in
+  // a year when Weeks 13 and 14 both carry byes. The light-week rule still
+  // governs which bye week that finale lands on.
+  it('puts its bye-week division rounds on the lightest weeks the gap rule allows', () => {
+    const byeCounts = byeCountsByWeek(byes);
+    const weeksWithLeg = (leg: number) =>
+      plan.filter((w: any) => w.slots.some((s: any) => s.kind === 'division' && s.leg === leg)).map((w: any) => w.week);
+    const used = new Set(weeksWithLeg(1));
+    const earliestLate = Math.max(...weeksWithLeg(0)) + MIN_REMATCH_GAP;
+    const bye = (w: number) => byeCounts[w] ?? 0;
+    const unused = plan.map((w: any) => w.week).filter((w: number) => w >= earliestLate && !used.has(w));
+    expect(Math.min(...unused.map(bye))).toBeGreaterThanOrEqual(Math.max(...[...used].map(bye)));
+    // 2026 concretely: the finale is Week 14, two NFL teams out (ARI, DAL) —
+    // the lightest non-zero week on the calendar.
+    expect(bye(14)).toBeLessThanOrEqual(LIGHT_BYE_WEEK_MAX);
+    expect(used.has(14)).toBe(true);
   });
 
   it('spreads the first leg across distinct weeks instead of stacking Week 1', () => {

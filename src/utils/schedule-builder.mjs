@@ -142,6 +142,26 @@ export const mirrorRound = (games) => games.map((g) => ({ away: g.home, home: g.
 /* ------------------------------------------------------------ week plan */
 
 /**
+ * Weeks a division pair must be kept apart. The league's rule is "never twice
+ * inside three weeks", so 4 is the smallest gap that satisfies it.
+ */
+export const MIN_REMATCH_GAP = 4;
+
+/**
+ * What counts as a LIGHT bye week — the ones a forced bye-week division round
+ * should be steered onto.
+ *
+ * Two is not arbitrary: the NFL never schedules a bye week with fewer than two
+ * teams out, so this is the floor, and a two-team week means at most a couple
+ * of rosters in a 24-team league lose a starter. It is a TARGET, not a
+ * guarantee — some seasons have fewer light weeks than the format has forced
+ * rounds, and the rematch guarantee can put a light week out of reach. The
+ * planner always takes the lightest weeks its block can legally reach;
+ * `describeForcedByeWeeks` reports whether that cleared the bar.
+ */
+export const LIGHT_BYE_WEEK_MAX = 2;
+
+/**
  * Build the week plan for a season — DERIVED, never hard-coded.
  *
  * An earlier version of this file pinned the doubleheaders to Weeks 1, 2 and
@@ -179,6 +199,13 @@ export const buildWeekPlan = ({
   divisionSize,
   conferenceSize,
   crossWeek = null,
+  /**
+   * Weeks a division pair must be kept apart. 4 satisfies the league's "never
+   * twice inside three weeks" rule with nothing to spare, and it bounds how
+   * far back the second leg's window may be widened in search of a light bye
+   * week — see the block below.
+   */
+  minRematchGap = MIN_REMATCH_GAP,
 }) => {
   const dh = new Set(doubleheaders);
   const slots = [];
@@ -227,14 +254,38 @@ export const buildWeekPlan = ({
     earlyWeeks.push(earlyWeeks.at(-1) + 1);
   }
 
-  // Shortest suffix that holds the second leg, grown by one week when it fits
-  // exactly and carries byes, so an interdivision round can take the worst.
+  // Shortest suffix that holds the second leg, then WIDENED backwards to every
+  // week the rematch guarantee still allows.
+  //
+  // The widening is the whole reason a forced bye-week division round can pick
+  // which bye week it lands on. A shortest-suffix block only reaches the last
+  // few weeks of the season, so in 2026 the AFL's three unavoidable ones were
+  // stuck with Weeks 10, 13 and 14 — ten NFL teams out — while Week 9, with
+  // two out, sat one week beyond the block's edge and could not be considered.
+  // Widening puts every reachable week in front of `rankSlots`, which already
+  // sorts by bye count, so the lightest ones win. Nothing is forced INTO the
+  // wider window: the `preferLate` tie-break means an equal-bye earlier week
+  // loses to the later one, so the block only actually moves when moving buys
+  // a lighter week.
+  //
+  // The floor is the binding constraint, not a formality. A pair's rematch gap
+  // is (its leg-2 week − its leg-1 week), and the worst case pairs the LAST
+  // first-leg week with the FIRST second-leg week — so the earliest week the
+  // window may reach is `minRematchGap` past the end of the early block, and
+  // every draw is then safe by construction rather than by luck. `scoreSeason`
+  // has no rematch term to steer with, so a window one week too wide would
+  // produce a Week 4 / Week 5 rivalry rematch, score it as good, and be caught
+  // only by tests/schedule-optimization.test.ts.
   const lateWeeks = [];
   for (let week = lastWeek; week >= 1 && countSlots(lateWeeks) < legRounds; week -= 1) lateWeeks.unshift(week);
-  const first = lateWeeks[0];
-  if (countSlots(lateWeeks) === legRounds && lateWeeks.some((w) => byes(w) > 0) && first - 1 > earlyWeeks.at(-1)) {
-    lateWeeks.unshift(first - 1);
+  const earliestLate = earlyWeeks.at(-1) + minRematchGap;
+  if (lateWeeks[0] < earliestLate) {
+    throw new Error(
+      `the second division leg needs Week ${lateWeeks[0]}, only ${lateWeeks[0] - earlyWeeks.at(-1)} week(s) after ` +
+        `the first leg ends in Week ${earlyWeeks.at(-1)} — rivals would meet twice inside ${minRematchGap} weeks`,
+    );
   }
+  while (lateWeeks[0] - 1 >= earliestLate) lateWeeks.unshift(lateWeeks[0] - 1);
   if (lateWeeks[0] <= earlyWeeks.at(-1)) {
     throw new Error('early and late division blocks overlap — the season is too short for this format');
   }

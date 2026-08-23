@@ -98,6 +98,12 @@ export const scheduleConstraints = ({ crossConference = false } = {}) => {
     },
     {
       tier: 'maximise',
+      rule: 'The division games that cannot dodge a bye week take the LIGHTEST bye weeks — ideally ones with only two NFL teams out.',
+      why: 'Which division games land on a bye week is settled by the rule above; WHICH bye week is still a free choice, and a two-team week costs a couple of rosters a starter where a six-team week guts half the league. The second leg\u2019s window is widened backwards until the light weeks are reachable, and stops exactly where the three-week rematch rule says it must.',
+      enforcedBy: 'buildWeekPlan + tests/schedule-week-plan.test.ts',
+    },
+    {
+      tier: 'maximise',
       rule: 'Bye-week luck is levelled — first the gap between the two teams in a game, then each franchise’s season-long net.',
       why: 'The heaviest term in the objective. Facing a team missing four starters while you are whole is the largest unearned edge a schedule can hand out.',
       enforcedBy: 'scoreSeason',

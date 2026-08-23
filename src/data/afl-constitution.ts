@@ -108,6 +108,7 @@ SCHEDULE
 - Doubleheaders are split as evenly as possible between the start and the end of the season (with 3, that is 2 early and 1 late).
 - Doubleheaders must NOT fall on an NFL bye week. Because the NFL bye calendar moves every year, the doubleheader weeks are re-derived each season rather than fixed: recent seasons have used Weeks 1 and 2 early, plus whichever of Week 12 or Week 13 is bye-free that year.
 - Division games should also avoid NFL bye weeks whenever possible. With six-team divisions this cannot be fully satisfied - each team can fit at most 8 of its 10 division games into bye-free weeks - so the goal is to maximize the count, not to hit zero.
+- The division games that CANNOT avoid a bye week are placed on the lightest bye weeks available - ideally ones with only two NFL teams out. Which division games land on a bye week is fixed by the format; which bye week they land on is not, and a two-team week costs a couple of rosters a starter where a six-team week guts half the league. This yields to the rematch rule: the second half of the division schedule is never pulled so far forward that rivals could meet twice inside three weeks, even when that leaves a light week unreachable.
 
 SCORING
 - Passing: 0.04 pts/yd (1 pt per 25 yds), Pass TD 6 pts, INT −2 pts, 2-pt pass 2 pts

@@ -1,5 +1,25 @@
 [
   {
+    "id": "light-bye-week-division-rule",
+    "date": "2026-08-23",
+    "title": "A Division Game You Can’t Move Now Lands on the Quietest Week",
+    "summary": "New scheduling rule, effective next season: the division games the format cannot keep off an NFL bye week now get the LIGHTEST bye week available — ideally one with only two teams out instead of six. Replayed over the last five seasons it improves three of them, one by more than half.",
+    "description": [
+      "Some division games have to be played on NFL bye weeks. That part is arithmetic, not laziness — the calendar runs out of clean weeks before the schedule runs out of division games, and no draw fixes it.",
+      "What was never settled is WHICH bye week they land on, and the difference is not small. A week with two teams out costs a couple of rosters a starter. A week with six out guts half the league. Until now the schedule builder could only choose among the last few weeks of the season, so it took whatever bye weeks happened to be there — in 2026 that meant Weeks 10, 13 and 14, ten NFL teams out between them, while Week 9 with two out sat one week outside the range it was allowed to look at.",
+      "It can now look further back, and it stops at exactly the point where reaching further would let two division rivals meet twice inside three weeks. That rule still wins; this one yields to it. Where a light week is out of reach, the schedule takes the lightest one it can legally get and says so rather than pretending.",
+      "Replayed across every season we hold a bye calendar for, three of five improve: 2024 drops from fourteen NFL teams out during division rounds to six, 2023 from ten to six, 2026 from ten to eight. Two seasons do not move, correctly — there was nothing lighter within reach. As a bonus nobody was aiming for, 2023 and 2024 also pick up a bye-free division round each, because the wider search finally reaches a clean Week 8 that the old one could not.",
+      "The 2026 schedule is not being re-drawn. It is locked, pasted into MFL and about to be played. This applies from the next one."
+    ],
+    "category": "league-event",
+    "icon": "gavel",
+    "excludeFromHero": true,
+    "leagues": [
+      "theleague",
+      "afl"
+    ]
+  },
+  {
     "id": "schedule-constraints-in-priority-order",
     "date": "2026-08-23",
     "category": "enhancement",
@@ -862,26 +882,6 @@
     "linkLabel": "See all updates",
     "icon": "wrench",
     "excludeFromHero": true,
-    "leagues": [
-      "bb1"
-    ]
-  },
-  {
-    "id": "best-ball-league-launch",
-    "date": "2026-07-21",
-    "category": "new-page",
-    "icon": "football",
-    "title": "Introducing Best Ball #1: Draft Once, Never Set a Lineup Again",
-    "summary": "A third league joins the family — 12 teams, one 25-round startup draft run entirely on this site, and then absolutely nothing to manage. No waivers, no lineups, no trades. Draft well or wear it all season. The draft room is built, the mock lobby is open, and the clock is waiting.",
-    "description": [
-      "Some leagues are marriages. TheLeague, with its contracts and cap sheets and August cut deadlines, is a marriage. Best Ball #1 is a first date that decides your entire year: one night, 25 rounds, 300 picks, and then you put the roster down and never touch it again. Your best scorers start themselves every week. That's the whole format. That's the whole league.",
-      "The main event runs right here on the site — the same live draft room engine that powers mock drafts, promoted to the real thing. Draft board, full veteran player pool sorted by <strong>redraft</strong> ADP (this is a win-now league; nobody's drafting for 2029), a pick queue, trash-talk chat, and an on-the-clock timer with an auto-pick safety net for whoever's getting a snack when their turn comes up. When the last pick lands, the results get imported to MyFantasyLeague and the season simply… runs.",
-      "Until draft night, the practice facility is open: the mock draft lobby spins up full 25-round rehearsals against the clock, and the Import Rankings page pulls your board in from FantasyPros or FootballGuys to power your queue. The rules fit on one page — which is the point. Draft once. Watch football. Argue about it in the chat. See you on the clock."
-    ],
-    "link": "/best-ball-1",
-    "linkLabel": "Enter Best Ball #1",
-    "image": "best-ball-league-launch.webp",
-    "imageAlt": "The Best Ball #1 league home: emerald hero announcing the 2026 startup draft with cards for the Draft Room, Draft Board, and Rosters.",
     "leagues": [
       "bb1"
     ]

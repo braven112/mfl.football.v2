@@ -159,6 +159,67 @@ scored as good, and caught only if someone ran the suite.
 best-achievable 9 — the annealer optimises fairness, not gap, so it lands
 inside the structural window rather than at its edge.
 
+### The light-bye-week rule, and why the block had to be widened for it
+
+Since Aug 2026 the forced rounds take the LIGHTEST bye weeks the rematch rule
+lets them reach (`LIGHT_BYE_WEEK_MAX = 2` — the NFL never schedules a bye week
+with fewer than two teams out, so two is the floor, not a preference).
+
+The rule was unimplementable against the old late block and that is the part
+worth remembering. `lateWeeks` was the SHORTEST SUFFIX holding the second leg,
+grown by one week. In 2026 that spanned Weeks 10-14, so Week 9 — two teams out
+— sat one week past the edge and was never a candidate. Nothing failed: "within
+a block, division rounds take the cleanest weeks" was perfectly true, because
+the block was too narrow to contain the better answer. **A locality property
+cannot detect a bad locality.** The fix is to widen the window to every week
+the guarantee allows and let `rankSlots` sort it; `tests/schedule-week-plan.test.ts`
+now asserts against the weeks the gap rule ALLOWS, not the weeks the block
+happens to span.
+
+The widening is bounded by `MIN_REMATCH_GAP = 4` and by nothing else, in both
+directions:
+
+- **Too narrow** and light weeks stay unreachable — the bug above.
+- **One week too wide** and a pair can be drawn into Weeks 4 and 5. A pair's
+  gap is (leg-2 week − leg-1 week) and the worst case pairs the LAST first-leg
+  week with the FIRST second-leg week, so the window start is exactly
+  `end of early block + 4`. `scoreSeason` has no rematch term to steer with, so
+  such a draw would be generated, scored as good, and caught only by the season
+  audit.
+
+Widening is free where it gains nothing: `rankSlots` breaks bye-count ties
+toward the LATER week, so an equal-bye earlier week never displaces a later
+one and the stretch run is only given up when a lighter week is bought with it.
+
+What it actually bought, replayed over every season we hold a bye calendar for
+(AFL; "teams out" = NFL teams on bye summed across the division rounds):
+
+| Season | Teams out before → after | Bye-free rounds before → after | Light-week hit rate |
+|---|---|---|---|
+| 2022 | 10 → 10 | 7 → 7 | 1 of 3 |
+| 2023 | 10 → **6** | 7 → **8** (ceiling) | 1 of 2 |
+| 2024 | 14 → **6** | 7 → **8** (ceiling) | 1 of 2 |
+| 2025 | 10 → 10 | 7 → 7 | 1 of 3 |
+| 2026 | 10 → **8** | 7 → 7 | **2 of 3** |
+
+Three of five seasons improve and 2024 more than halves. **The second column is
+the surprise and it is not what the rule was for.** Widening the window also
+reached the bye-free Week 8 that 2023 and 2024 have in mid-season, which the
+shortest-suffix block could never touch — an older comment in
+`tests/schedule-week-plan.test.ts` called that clean week permanently
+unreachable and treated it as a fact about the format. It was a fact about the
+block. Both seasons now hit the division-game ceiling outright.
+
+2022 and 2025 do not move, correctly: neither has a lighter reachable week than
+the ones already taken. The hit rate is REPORTED, never asserted — some seasons
+have fewer light weeks than the format has forced rounds, and failing a build on
+the NFL's bye calendar would be absurd. The asserted property is the optimality
+one: no division round sits on a bye week heavier than one its block could
+legally have used instead.
+
+2026 is not re-drawn. Its schedule is locked, pasted into MFL and being played;
+the rule applies from the next generation.
+
 ## Both leagues build constructively
 
 The League ran `simple` while the two were compared, then adopted
