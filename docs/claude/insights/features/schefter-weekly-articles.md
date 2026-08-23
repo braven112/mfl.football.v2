@@ -2,6 +2,26 @@
 
 Insights for the article pipeline: runner → article-type module → feed append → optional GroupMe promo.
 
+## 2026-08-23 - How the Runner CALLS a Hook Is the Switch That Makes It Mandatory
+
+**Context:** Every article type had to start declaring where its column links (`relatedLinks`), after the 2026 schedule-release column ran eight paragraphs about a schedule and never linked to the schedule release page — and a `grep '<a '` over the whole published feed (396 posts, every type, both leagues) returned ZERO. No article type had ever emitted a link and nothing would have told us.
+
+**Insight:** `tests/article-type-interface.test.ts` does not hardcode the required-export list — it derives it by reading `schefter-weekly-articles.mjs` and collecting every `mod.X` the runner calls, then SUBTRACTING the ones wrapped in `typeof mod.X === 'function'`. So the call site is the enforcement lever, and it cuts both ways: adding an unguarded `mod.foo()` makes every existing type fail until it implements foo (which is exactly how a new mandatory hook gets rolled out), and wrapping an existing call in a typeof guard silently demotes it to opt-in — the same mechanism that makes `buildGroupMePromo` optional (see the 2026-07-21 entry, which documents this lever from the other side). Because the demotion is invisible in a diff that only touches the runner, `tests/schefter-links.test.ts` now asserts the `relatedLinks` call stays unguarded. When a hook must be mandatory, call it unconditionally AND pin the unguardedness; a comment saying "required" enforces nothing.
+
+**Recommendation:** Three-layer shape for anything the LLM is asked to produce and must not omit: DECLARE (a per-type export the runner calls unconditionally), ASK (put the requirement in the fact sheet as copy-this-verbatim text, never a description — a model told to "link to the standings" builds a plausible URL, and `/theleague/schedule` 404s exactly as hard as gibberish), ENFORCE (post-process the built post before the feed write — repair what you can, strip what you can't, inject what's missing). Don't rely on the prompt alone; `applyArticleLinks` was written on the assumption the model would ignore the directive some fraction of the time, and replaying the real August output through it confirmed that assumption.
+
+**Evidence:** `scripts/lib/schefter-links.mjs`, `scripts/schefter-weekly-articles.mjs` steps 8/10, `tests/article-type-interface.test.ts` (`requiredExports()` / `optionalExports()`), `tests/schefter-links.test.ts`.
+
+## 2026-08-23 - A Route-Existence Check Against src/pages/ Is Vacuously True Until You Exclude the Root Catch-All
+
+**Context:** Guarding that no Schefter post links to a page that doesn't exist meant resolving hrefs against `src/pages/`. The first version passed everything, including `/theleague/nope`.
+
+**Insight:** `src/pages/[...path].astro` is the shared-host router that maps unprefixed paths onto a league; a resolver that treats any `[...rest].astro` as "this segment matches" therefore matches EVERY path at depth 0, and the guard silently becomes a no-op that still reports green. Rest params must be honored in nested directories (`power-rankings/[...rest].astro` is a real page) but skipped at the pages root. The same resolver also has to honor single dynamic segments or it reports false failures: every Schefter article permalink is `/theleague/news/<id>`, served by `news/[id].astro`, so a literal-file-only check calls all four published articles broken — and a guard that cries wolf on real links is one nobody keeps. `tests/helpers/astro-routes.ts#astroRouteExists` handles both, plus stripping `?query` before resolving.
+
+**Recommendation:** Any new "does this link resolve" test should import `astroRouteExists` rather than re-deriving it, and should be mutation-tested once (break a link on purpose, confirm the test fails) — a route checker that returns true for everything is indistinguishable from a passing suite.
+
+**Evidence:** `tests/helpers/astro-routes.ts`, `src/pages/[...path].astro`, `tests/root-catch-all.test.ts`.
+
 ## 2026-07-26 - Cut Watch Carries Two Framings That the LLM Will Weld Together Unless the Mechanic Is Stated
 
 **Context:** The 7/26 cut-watch article shipped a false league rule: "When you don't pick, the system picks the weakest combined-value players first." The real deadline auto-cut (august-cut-selection-core.mjs) is marked-players-first, then newest waiver/FA/auction pickup first — trades treated as long-held, value plays no role.
