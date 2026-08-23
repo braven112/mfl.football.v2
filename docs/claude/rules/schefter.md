@@ -187,6 +187,79 @@ one, so the callback would point at a live team that isn't the subject).
 `pickFormerName` excludes both.
 
 
+## Articles must link — and must plug the site
+
+Schefter has two jobs: report the league, and get owners USING the site. Until
+Aug 2026 he did neither half of the second one — a `grep '<a '` over the whole
+published feed (396 posts, every article type, both leagues) returned **zero**.
+The article that made it visible was the 2026 schedule release: eight
+paragraphs about a schedule, and not one link to the schedule release page the
+column existed to announce.
+
+`scripts/article-utils/article-links.mjs` is the whole mechanism. Three layers,
+because the model is one of them and the model is not reliable:
+
+1. **Declare.** Every article type exports
+   `relatedLinks(enrichment, { league })`. The pipeline calls it
+   **unconditionally**, which is the load-bearing part:
+   `tests/article-type-interface.test.ts` derives its required-export list by
+   reading `schefter-weekly-articles.mjs`, so a new article type that omits
+   `relatedLinks` fails the suite. Wrapping that call in a
+   `typeof mod.relatedLinks === 'function'` guard silently re-opens the hole —
+   `tests/article-links.test.ts` asserts the call stays unguarded for exactly
+   that reason.
+2. **Ask.** `withLinkDirective` appends copy-this-verbatim anchors to the fact
+   sheet. Never "link to the standings": a model asked to build a URL builds a
+   *plausible* one, and `/theleague/schedule` 404s as hard as gibberish.
+3. **Enforce.** `applyArticleLinks` runs on the built post before the feed
+   write. It repairs alias spellings (`/schedule-release` → the prefixed form,
+   absolute URLs → paths), **unwraps** any href not on the declared list, and
+   injects the primary link if it is still missing. Publishing a linkless
+   article is not a reachable state.
+
+Load-bearing details:
+
+- **Three tiers, three different instructions.** `primaryLink` is the article's
+  subject and gets injected if dropped. Plain `articleLink` is subject-adjacent
+  and merely encouraged. `featureLink` is a **site-feature plug** and is
+  offered, never injected — a plug the model had to wedge in reads as an ad,
+  and readers stop clicking a columnist who sounds like an ad. Aim for one plug
+  per column; do not enforce one.
+- **hrefs are root-relative and league-prefixed** (`/theleague/standings`).
+  Article `content` is raw HTML through `set:html`, so it never gets the
+  `resolveLeaguePath()` treatment a component's `<a>` gets — the string in the
+  JSON *is* the href. Prefixed root-relative is the one form that resolves
+  everywhere: directly on the shared host and on localhost/preview, via the
+  `vercel.json` 301 on each apex domain. `leagueUrl` absolutes are for text
+  that LEAVES the site (the GroupMe promo) — an absolute in the body bounces a
+  preview-deploy reader to production.
+- **`DESTINATIONS.leagues` is checked BOTH ways.** A listed league that lacks
+  the page is a dead link; an **unlisted league that has the page** is a
+  feature Schefter is silently not allowed to mention there — the failure mode
+  that hides, because nothing breaks. The test enumerates `src/pages/<slug>/`
+  and fails on either. It already caught one: `/activity` exists in both
+  leagues but is owner-visit tracking in TheLeague and the transaction log in
+  the AFL, which is why that entry carries a per-league `labels` override
+  rather than one label promising the wrong page.
+- **`articleLink` returns null for a page the league lacks; `primaryLink`
+  throws.** The AFL has no salary cap, so cap-flavoured plugs drop out through
+  `linkList` instead of forcing every `relatedLinks` into per-league branches.
+  A missing PRIMARY is different — that league has no business running the
+  article type at all, so it fails loudly.
+- **Grade-card types are covered too.** `draft-grades` / `team-grades` put
+  prose in `intro[]` plus `grades[].body`, not `content[]`. Sanitising only
+  `content` would leave the grade cards as the one place a hallucinated href
+  still ships.
+- **Link styling lives in `src/styles/schefter-feed.css`, not a page `<style>`
+  block.** `set:html` content carries no Astro scoped-style attribute, so a
+  scoped rule cannot reach these anchors — and both leagues' news pages import
+  the shared sheet, so one definition serves both.
+
+`tests/article-links.test.ts` also checks the **shipped feeds**: every
+`type: 'article'` post must contain an anchor and every href in one must
+resolve to a real route. That is what catches a hand-edited feed, which no
+amount of pipeline enforcement would.
+
 ## Schefter tipster context (Phase 8 — bot intelligence)
 
 The rumor-mill scanner weights bucket priority and surfaces voice cues

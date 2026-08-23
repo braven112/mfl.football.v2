@@ -33,6 +33,7 @@ import { getSeasonYear, getCurrentNFLWeek, getCompletedWeek } from './article-ut
 import { callAnthropic } from './article-utils/ai-client.mjs';
 import { isDuplicate, appendToFeed } from './article-utils/feed-writer.mjs';
 import { postToGroupMe } from './lib/groupme.mjs';
+import { withLinkDirective, applyArticleLinks } from './article-utils/article-links.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 
@@ -202,16 +203,26 @@ async function main() {
   const { factSheet, enrichment } = factSheetResult;
 
   if (dryRun) {
+    // Print the sheet the model would actually see, link directive included —
+    // a dry run that hides the directive can't catch a bad link.
     console.log('\n--- FACT SHEET (dry run) ---\n');
-    console.log(factSheet);
+    console.log(withLinkDirective(factSheet, mod.relatedLinks(enrichment, { league }) ?? []));
     console.log('\n--- END FACT SHEET ---');
     return;
   }
 
-  // Step 8: Call Anthropic API
+  // Step 8: Resolve where this article points, then call Anthropic.
+  //
+  // `mod.relatedLinks` is called UNCONDITIONALLY and on purpose: the interface
+  // test derives its required-export list by reading this file, so an article
+  // type that does not declare its links fails the suite rather than
+  // publishing prose the reader can't act on (article-utils/article-links.mjs).
+  const links = mod.relatedLinks(enrichment, { league }) ?? [];
+  console.log(`  Links: ${links.map((l) => l.href).join(', ') || 'none'}`);
+
   console.log('  Generating Schefter article...');
   const systemPrompt = mod.getSystemPrompt();
-  const userPrompt = mod.getUserPrompt(factSheet);
+  const userPrompt = mod.getUserPrompt(withLinkDirective(factSheet, links));
   const aiOutput = await callAnthropic(systemPrompt, userPrompt, mod.config.maxTokens);
   console.log(`  Headline: ${aiOutput.headline}`);
 
@@ -225,6 +236,15 @@ async function main() {
 
   // Step 10: Build post and append to feed
   const post = mod.buildPost(aiOutput, enrichment, articleId, { league });
+
+  // The model was asked for links in step 8; this is what makes them true.
+  // Invented hrefs are unwrapped and a dropped primary link is injected, so a
+  // linkless (or 404-carrying) article cannot reach the feed. Notices are
+  // logged rather than swallowed — a run that keeps injecting means the
+  // prompt is losing to the model and the directive needs rewording.
+  const { notices } = applyArticleLinks(post, links, { league });
+  for (const notice of notices) console.warn(`  [links] ${notice}`);
+
   const written = await appendToFeed(feedPath, post);
   if (written) {
     console.log(`\n✅ Article "${post.headline}" appended to feed.`);

@@ -9,6 +9,7 @@
 import { loadTeams, flipName, normalizePosition, formatDefName } from '../article-utils/data-loaders.mjs';
 import { buildCachedSystem } from '../article-utils/ai-client.mjs';
 import { isChampionshipComplete } from '../article-utils/season-guards.mjs';
+import { primaryLink, articleLink, featureLink, linkList } from '../article-utils/article-links.mjs';
 
 const CHAMPIONSHIP_WEEK = 17;
 
@@ -142,6 +143,33 @@ export function validate(aiOutput) {
   if (!aiOutput.excerpt || aiOutput.excerpt.length > 500) errors.push('Excerpt missing or too long');
   if (!aiOutput.content || aiOutput.content.length < 3) errors.push('Too few content paragraphs');
   return errors;
+}
+
+/**
+ * Where this article points, and which parts of the site it plugs.
+ *
+ * A title recap is the last chapter of a bracket, and the bracket is still up.
+ * The plugs point forward — the offseason starts the moment this posts.
+ *
+ * The pipeline calls this on every run. `applyArticleLinks` injects the
+ * PRIMARY link if the model drops it and strips any href the model invented;
+ * the `featureLink` plugs are never injected, only offered — see
+ * article-links.mjs for why a forced plug is worse than no plug. Plugs for
+ * pages a league does not have resolve to null and `linkList` drops them, so
+ * this one list serves every league.
+ */
+export function relatedLinks(_enrichment, { league = 'theleague' } = {}) {
+  return linkList(
+    primaryLink(league, 'playoffs', {
+      label: 'the playoff bracket',
+      cta: 'The whole bracket, round by round, is here.',
+    }),
+    articleLink(league, 'standings', { label: 'the final standings' }),
+    featureLink(league, 'franchises'),
+    featureLink(league, 'draft-predictor'),
+    featureLink(league, 'records'),
+    featureLink(league, 'mvp'),
+  );
 }
 
 export function buildPost(aiOutput, enrichment, articleId) {

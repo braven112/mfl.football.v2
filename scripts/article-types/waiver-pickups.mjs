@@ -10,6 +10,7 @@ import { loadTeams, formatSalary, flipName, normalizePosition, formatDefName } f
 import { buildCachedSystem } from '../article-utils/ai-client.mjs';
 import { isRegularSeasonOrPlayoffs } from '../article-utils/season-guards.mjs';
 import { pickHeroPlayer } from '../article-utils/hero-player.mjs';
+import { primaryLink, articleLink, featureLink, linkList } from '../article-utils/article-links.mjs';
 
 export const config = {
   id: (year, week) => `sf_${year}_waiver_pickups_w${String(week).padStart(2, '0')}`,
@@ -151,6 +152,34 @@ export function validate(aiOutput) {
   if (!aiOutput.excerpt || aiOutput.excerpt.length > 500) errors.push('Excerpt missing or too long');
   if (!aiOutput.content || aiOutput.content.length < 2) errors.push('Too few content paragraphs');
   return errors;
+}
+
+/**
+ * Where this article points, and which parts of the site it plugs.
+ *
+ * Every waiver column ends with a reader wondering who is still out there —
+ * which is a page, not a paragraph. The plugs are the tools that turn that
+ * wondering into a claim.
+ *
+ * The pipeline calls this on every run. `applyArticleLinks` injects the
+ * PRIMARY link if the model drops it and strips any href the model invented;
+ * the `featureLink` plugs are never injected, only offered — see
+ * article-links.mjs for why a forced plug is worse than no plug. Plugs for
+ * pages a league does not have resolve to null and `linkList` drops them, so
+ * this one list serves every league.
+ */
+export function relatedLinks(_enrichment, { league = 'theleague' } = {}) {
+  return linkList(
+    primaryLink(league, 'players', {
+      label: 'the free agent board',
+      cta: 'See who is still out there on the free agent board.',
+    }),
+    articleLink(league, 'rosters', { label: 'the rosters' }),
+    featureLink(league, 'import-rankings'),
+    featureLink(league, 'custom-rankings'),
+    featureLink(league, 'notifications'),
+    featureLink(league, 'salary'),
+  );
 }
 
 export function buildPost(aiOutput, enrichment, articleId) {
