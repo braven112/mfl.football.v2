@@ -81,7 +81,13 @@ export const SCHEDULE_POLICY = {
 };
 
 /** Franchise/division/conference shape for one season. */
-const seasonShape = (leagueJson) => {
+/**
+ * Franchise names, divisions and conferences for a season, straight off the
+ * league feed. Exported because the reveal locker needs the same shape when it
+ * canonises a schedule that is already live in MFL rather than one this
+ * planner just drew.
+ */
+export const seasonShape = (leagueJson) => {
   const meta = leagueJson?.league;
   if (!meta) return null;
   const divisionName = {};
@@ -112,7 +118,7 @@ const seasonShape = (leagueJson) => {
 };
 
 /** Rostered players on bye, per franchise per week. Empty map if feeds absent. */
-const byeExposure = (rostersJson, playersJson, byes, franchiseIds) => {
+export const byeExposure = (rostersJson, playersJson, byes, franchiseIds) => {
   const table = {};
   for (const id of franchiseIds) table[id] = {};
   const teamOf = {};

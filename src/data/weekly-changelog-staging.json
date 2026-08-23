@@ -2,6 +2,14 @@
   "weekOf": "2026-08-24",
   "changes": [
     {
+      "date": "2026-08-23",
+      "type": "bug-fix",
+      "summary": "The AFL's Schedule Release page had counted down to zero on August 16 and then just sat there. The countdown was right; the reveal behind it was never locked, so there was nothing for the page to show and Schefter's release-day column had nothing to announce. The reveal is locked now, drawn from the schedule that is actually live in MFL rather than from an older draw of it that nobody is playing — 204 games, doubleheaders in Weeks 1, 2 and 12 with none of them on an NFL bye, and all 84 division games that can clear a bye week clearing one. The four games to circle are on the page, and Schefter's breakdown is in the feed.",
+      "impact": "user",
+      "area": "calendar",
+      "league": "afl"
+    },
+    {
       "date": "2026-08-22",
       "type": "bug-fix",
       "summary": "Live Scoring stopped sliding sideways in a week with no games. Open it before kickoff and the empty \"Scores will appear here when games begin\" card ran wider than the phone, so the page scrolled horizontally with nothing to scroll to — the card's right edge parked just off screen, and a stray gray-and-blue bar sat along its top looking for all the world like a scrollbar. That bar is the win-probability split every real matchup card wears; with no matchup behind it there was nothing for it to show, so it's gone from the empty state, and the card now measures itself the same way the scoring cards do and fits the screen. The board behind it also stopped overflowing by a hair on the narrowest phones.",
