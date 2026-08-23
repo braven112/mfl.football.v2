@@ -26,7 +26,7 @@ cross-cutting, add a line here. Keep this file short.
 
 | Working on… | Read first | The trap, in one line |
 |---|---|---|
-| Schefter (tips, rumor mill, redaction, tipster context, article links) | `docs/claude/rules/schefter.md` | Redaction must cover retired names + aliases, or a post names a team it may not; and every article type must declare `relatedLinks` or it publishes prose with nothing to click. |
+| Schefter (tips, rumor mill, redaction, tipster context, article links) | `docs/claude/rules/schefter.md` | Redaction must cover retired names + aliases, or a post names a team it may not; every article type must declare `relatedLinks` or it publishes prose with nothing to click; and a post's LINK must obey the same naming scopes its prose does. |
 | Roger (rules Q&A, GroupMe reminders, evals, draft dates) | `docs/claude/rules/roger.md` | Two independent "Roger" code paths; both have hallucinated dates. Fixing one doesn't fix the other. |
 | Standings, playoffs, brackets, draft order | `docs/claude/rules/standings-brackets-draft-order.md` | Never re-sort MFL's standings rows — its order already applies the constitution's tiebreakers, including h2h we can't reproduce. |
 | Live scoring / ESPN data | `docs/claude/rules/live-scoring.md` | A college athlete id and an NFL one are both plain digits, so a bad join resolves the wrong person instead of failing. |

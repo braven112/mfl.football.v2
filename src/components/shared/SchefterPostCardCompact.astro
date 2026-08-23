@@ -78,6 +78,15 @@ if (firstEmbedUrl) {
   else if (instaMatches.length > 0) { firstEmbedLabel = 'View on Instagram'; firstEmbedDomain = 'instagram.com'; }
   else { try { firstEmbedDomain = new URL(firstEmbedUrl).hostname.replace(/^www\./, ''); } catch { firstEmbedDomain = ''; } firstEmbedLabel = 'Open link'; }
 }
+// A "directed" CTA is the tip-page dare — "Geeks desk — your move" — which
+// gets the megaphone icon and its own styling. The signal is `?target=` on the
+// TIP PAGE specifically, not `?target=` anywhere: the AFL's Trade Builder also
+// reads a `target` param, where it means a player on the other side of the
+// swap (src/pages/afl-fantasy/trade-builder.astro). Matching the bare query
+// would put a megaphone on a trade link.
+const isDirectedCta =
+  typeof post.link === 'string' && /\/schefter\/tip\?/.test(post.link) && post.link.includes('target=');
+
 ---
 
 <article id={`post-${post.id}`} class={tierClass} data-post-id={post.id} aria-label={`${displayName}: ${post.headline ?? post.body?.replace(/<[^>]+>/g, '').slice(0, 80) ?? 'Post'}`}>
@@ -128,10 +137,10 @@ if (firstEmbedUrl) {
     {post.link && (
       <a
         href={post.link}
-        class={`sfc-post__link${typeof post.link === 'string' && post.link.includes('?target=') ? ' sfc-post__link--directed' : ''}`}
+        class={`sfc-post__link${isDirectedCta ? ' sfc-post__link--directed' : ''}`}
         {...(isExternal ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
       >
-        {typeof post.link === 'string' && post.link.includes('?target=') && (
+        {isDirectedCta && (
           <svg class="sfc-post__link-icon" width="14" height="14" viewBox="0 0 24 24"
                fill="none" stroke="currentColor" stroke-width="2.25" aria-hidden="true">
             <path d="M3 11l15-7v16L3 13zM3 11v2M8 13v4a2 2 0 0 0 4 0v-3" />

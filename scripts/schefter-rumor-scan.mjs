@@ -136,6 +136,7 @@ import {
   ensureLeaguePrefix,
 } from '../src/config/leagues-data.mjs';
 import { getSchefterLeague } from './lib/schefter-leagues.mjs';
+import { tradeBuilderPath, franchiseDeepLinkAllowed, franchiseIdsInLink } from './lib/schefter-links.mjs';
 import {
   getPtHour,
   getPtDateString,
@@ -421,7 +422,13 @@ const TRADE_BUILDER_LINK_LABEL = 'Open in Trade Builder →';
 const TRADE_BUILDER_GROUPME_PREFIX = 'Counter on the block?';
 
 function buildTradeBuilderPath(franchiseId) {
-  return `/${LEAGUE_SLUG}/trade-builder?b=${encodeURIComponent(franchiseId)}`;
+  // Through the shared builder, because the two leagues' Trade Builders read
+  // DIFFERENT params. This used to hardcode `?b=`, citing "the same convention
+  // the rosters page uses" — TheLeague's rosters page. The AFL's builder reads
+  // `?from=`/`?to=` and ignores `b` entirely, so every AFL trade CTA has been
+  // landing on an empty builder. Nothing 404s, which is why it went unseen:
+  // the link works, the deep link silently doesn't.
+  return tradeBuilderPath(SCHEFTER_LEAGUE_REGISTRY.slug, { them: franchiseId });
 }
 
 /**
@@ -433,7 +440,7 @@ function buildTradeBuilderPath(franchiseId) {
  * Whisper-back tips (`repliesToPostId`) are excluded — the user explicitly
  * chose to reply to a non-trade rumor; we honor that lane.
  */
-function isTradeFlavoredTip(tip) {
+export function isTradeFlavoredTip(tip) {
   if (!tip) return false;
   if (tip.source === 'trade_offer' || tip.source === 'trade_bait') return true;
   if (tip.repliesToPostId) return false;
@@ -459,7 +466,7 @@ const TRADE_BUILDER_PATH = `/${LEAGUE_SLUG}/trade-builder`;
  * Returns the feed link, feed label, GroupMe prefix, and absolute GroupMe
  * URL so the post builder + groupMeTextFor stay in sync.
  */
-function resolveCta(primaryBucket) {
+export function resolveCta(primaryBucket, scopeKind) {
   const tips = primaryBucket?.tips ?? [];
   const tradeFlavored = tips.length > 0 && tips.some(isTradeFlavoredTip);
   if (tradeFlavored) {
@@ -469,7 +476,19 @@ function resolveCta(primaryBucket) {
         .map((t) => t.franchiseHint)
         .filter((fid) => typeof fid === 'string' && fid !== 'league-wide' && fid !== 'commish'),
     );
-    const path = franchiseIds.size === 1
+    // THE SCOPE GATE. `isTradeFlavoredTip` answers "is this about a trade?",
+    // which is a different question from "may this post identify the team?" —
+    // and only the second one decides whether the franchise may appear in the
+    // href. A web tip with topic 'trade' whose scope fell through to
+    // `division` (single source, no consent signal, or over the per-tipster
+    // naming rate limit) reaches here with its franchiseHint intact: the body
+    // says "a team in the AL East", and without this the button underneath
+    // pre-loads franchise 0022. That is the redaction bug wearing a costume —
+    // the same reasoning that restricts former-name callbacks to these three
+    // scopes (docs/claude/rules/schefter.md). Dropping to the bare builder is
+    // a worse click and a correct one.
+    const mayName = franchiseDeepLinkAllowed(scopeKind);
+    const path = franchiseIds.size === 1 && mayName
       ? buildTradeBuilderPath([...franchiseIds][0])
       : TRADE_BUILDER_PATH;
     return {
@@ -502,7 +521,7 @@ function resolveCta(primaryBucket) {
  * scope, the resolving tip has no franchiseHint, or any tip in the batch
  * is trade-flavored).
  */
-function buildDirectedCta(beat) {
+export function buildDirectedCta(beat) {
   const safe = beat?.anonymized?.[0];
   if (safe?.scope?.kind !== 'franchise-explicit-pick') return null;
   const batch = beat?.batch ?? [];
@@ -4073,7 +4092,11 @@ async function main() {
     // that pre-selects the named franchise on the tip form, turning the
     // post into the start of a thread.
     const directedCta = buildDirectedCta(beat);
-    const cta = directedCta ?? resolveCta(beatBuckets[i]);
+    // The scope the redactor actually settled on — the same object the
+    // anonymizer used to decide what the PROSE may say. The CTA has to answer
+    // to it too, or the link says what the sentence was not allowed to.
+    const beatScopeKind = beat?.anonymized?.[0]?.scope?.kind;
+    const cta = directedCta ?? resolveCta(beatBuckets[i], beatScopeKind);
 
     const post = {
       id: generatePostId(),
@@ -4092,6 +4115,25 @@ async function main() {
       linkLabel: cta.linkLabel,
       ...(threadId ? { threadId } : {}),
     };
+    // BACKSTOP, applied to the finished post rather than trusted from the
+    // branch that built it — the same reason redactSafePayload runs on the
+    // classifier's RESULT instead of inside its dozen return paths. A CTA
+    // branch added later is then safe by default: if the scope forbids naming
+    // and a franchise id still made it into the href, strip the query rather
+    // than ship it. `franchiseIdsInLink` knows which params on which page are
+    // franchise slots, so an AFL Trade Builder `?target=<playerId>` is not
+    // mistaken for one.
+    if (!franchiseDeepLinkAllowed(beatScopeKind)) {
+      const leaked = franchiseIdsInLink(post.link);
+      if (leaked.length > 0) {
+        const bare = String(post.link).split('?')[0];
+        warn(`  [cta] scope "${beatScopeKind}" may not name a franchise — stripped ${leaked.join(', ')} from ${post.link}`);
+        post.link = bare;
+        cta.link = bare;
+        cta.groupMeUrl = publicUrl(bare);
+      }
+    }
+
     ctaByPostId.set(post.id, cta);
     if (threadId && dominantParentId) {
       parentIdByPostId.set(post.id, dominantParentId);

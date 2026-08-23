@@ -88,6 +88,15 @@ for (const url of allUrlsToStrip) {
   gmDisplayBody = gmDisplayBody.replace(url, '');
 }
 gmDisplayBody = gmDisplayBody.replace(/\n{3,}/g, '\n\n').trim();
+// A "directed" CTA is the tip-page dare — "Geeks desk — your move" — which
+// gets the megaphone icon and its own styling. The signal is `?target=` on the
+// TIP PAGE specifically, not `?target=` anywhere: the AFL's Trade Builder also
+// reads a `target` param, where it means a player on the other side of the
+// swap (src/pages/afl-fantasy/trade-builder.astro). Matching the bare query
+// would put a megaphone on a trade link.
+const isDirectedCta =
+  typeof post.link === 'string' && /\/schefter\/tip\?/.test(post.link) && post.link.includes('target=');
+
 ---
 
 <article id={`post-${post.id}`} class={tierClass} data-post-id={post.id} data-tier={post.tier} data-post-type={post.transactionSubType ?? post.type} data-author={post.authorId ?? 'claude'} data-rumor-impression={isRumorLike ? 'true' : undefined} aria-label={`${displayName}: ${post.headline || post.body?.replace(/<[^>]+>/g, '').slice(0, 80) || 'Post'}`}>
@@ -235,10 +244,10 @@ gmDisplayBody = gmDisplayBody.replace(/\n{3,}/g, '\n\n').trim();
         {post.link && (
           <a
             href={post.link}
-            class={`sf-post__link${isExternal ? ' sf-post__link--external' : ''}${typeof post.link === 'string' && post.link.includes('?target=') ? ' sf-post__link--directed' : ''}`}
+            class={`sf-post__link${isExternal ? ' sf-post__link--external' : ''}${isDirectedCta ? ' sf-post__link--directed' : ''}`}
             {...(isExternal ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
           >
-            {typeof post.link === 'string' && post.link.includes('?target=') && (
+            {isDirectedCta && (
               <svg class="sf-post__link-icon" width="14" height="14" viewBox="0 0 24 24"
                    fill="none" stroke="currentColor" stroke-width="2.25" aria-hidden="true">
                 <path d="M3 11l15-7v16L3 13zM3 11v2M8 13v4a2 2 0 0 0 4 0v-3" />

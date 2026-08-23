@@ -48,7 +48,7 @@ import { LEAGUES, ensureLeaguePrefix } from '../../src/config/leagues-data.mjs';
  * Paths are stored UNPREFIXED and get the league's prefix at build time, so
  * one entry serves both leagues. `leagues` is explicit rather than derived
  * because this file runs in node with no view of src/pages —
- * `tests/article-links.test.ts` checks the map BOTH ways against the real
+ * `tests/schefter-links.test.ts` checks the map BOTH ways against the real
  * routes: a listed league that lacks the page fails (a dead link inside an
  * article nobody re-reads), and an UNLISTED league that has the page fails
  * too (a feature the AFL quietly gained that Schefter is still not allowed
@@ -430,4 +430,182 @@ export function applyArticleLinks(post, links, { league = 'theleague' } = {}) {
   }
 
   return { post, notices };
+}
+
+// ── Deep links into a specific franchise ───────────────────────────────────
+
+/**
+ * Which query params each league's Trade Builder actually reads.
+ *
+ * THESE ARE NOT THE SAME PAGE. TheLeague's builder is a React island that
+ * restores state from `?a=<teamA>&b=<teamB>` client-side
+ * (`deserializeTradeFromParams`); the AFL's is server-rendered and reads
+ * `?from=<yours>&to=<theirs>`. The rumor mill hardcoded `?b=` for both — its
+ * comment cited "the same convention the rosters page uses", which is
+ * TheLeague's rosters page — so every AFL trade CTA landed on an EMPTY
+ * builder. Nothing 404s, which is why it went unnoticed: the link works, the
+ * deep link silently doesn't.
+ *
+ * `them` is the only param either league needs from a feed post: Schefter is
+ * pointing a reader at somebody ELSE's roster, and who "you" are comes from
+ * the session, not from a link in a public feed.
+ */
+const TRADE_BUILDER_PARAMS = {
+  theleague: { them: 'b', us: 'a', themPlayers: 'bp', usPlayers: 'ap', multiPlayer: true },
+  'afl-fantasy': { them: 'to', us: 'from', themPlayers: 'target', usPlayers: 'player', multiPlayer: false },
+};
+
+/**
+ * Trade Builder path, optionally pre-loaded with the other franchise.
+ *
+ * Returns the BARE builder when `them` is absent — which is the deliberate
+ * fallback for a rumor whose scope forbids naming the team (see
+ * `franchiseDeepLinkAllowed`). An empty builder is a worse click and a
+ * correct one; a pre-loaded builder names the team the body just fuzzed.
+ */
+export function tradeBuilderPath(league, { them, us, themPlayers, usPlayers } = {}) {
+  const registry = LEAGUES[league];
+  if (!registry) throw new Error(`tradeBuilderPath: unknown league "${league}"`);
+  const base = ensureLeaguePrefix(registry, '/trade-builder');
+  const names = TRADE_BUILDER_PARAMS[league];
+  if (!names) return base;
+  const q = new URLSearchParams();
+  if (us) q.set(names.us, us);
+  if (them) q.set(names.them, them);
+  // Player pre-loading differs in CARDINALITY, not just spelling: TheLeague's
+  // island restores a whole list per side (`ap`/`bp`, comma-joined), while the
+  // AFL page pre-selects exactly one player per side. Sending a comma-joined
+  // list to the AFL would match no player at all and silently select nothing,
+  // so it takes the first and drops the rest.
+  const list = (ids) => (Array.isArray(ids) ? ids : [ids]).filter(Boolean).map(String);
+  if (names.usPlayers && usPlayers) {
+    const ids = list(usPlayers);
+    if (ids.length) q.set(names.usPlayers, names.multiPlayer ? ids.join(',') : ids[0]);
+  }
+  if (names.themPlayers && themPlayers) {
+    const ids = list(themPlayers);
+    if (ids.length) q.set(names.themPlayers, names.multiPlayer ? ids.join(',') : ids[0]);
+  }
+  const query = q.toString();
+  return query ? `${base}?${query}` : base;
+}
+
+/** Tip-page path, optionally with a franchise's desk pre-selected. */
+export function tipPagePath(league, { target } = {}) {
+  const registry = LEAGUES[league];
+  if (!registry) throw new Error(`tipPagePath: unknown league "${league}"`);
+  const base = ensureLeaguePrefix(registry, '/schefter/tip');
+  return target ? `${base}?target=${encodeURIComponent(target)}` : base;
+}
+
+/**
+ * The three rumor scopes that are allowed to identify a franchise.
+ *
+ * Mirrors `NAMING_ALLOWED_SCOPES` in schefter-rumor-scan.mjs, and is here
+ * because a LINK identifies a team exactly as well as a sentence does. A card
+ * whose body reads "a team in the AL East" over a button that pre-loads
+ * franchise 0022 has not anonymized anything — it has just moved the leak
+ * from the prose to the href, where none of the redaction tests were looking.
+ * Same reasoning that restricts former-name callbacks to these three scopes
+ * (docs/claude/rules/schefter.md).
+ */
+export const FRANCHISE_NAMING_SCOPES = new Set([
+  'franchise-multi-source',
+  'franchise-explicit-pick',
+  'trade-bait',
+]);
+
+/** May a post with this resolved scope carry a franchise-identifying link? */
+export function franchiseDeepLinkAllowed(scopeKind) {
+  return FRANCHISE_NAMING_SCOPES.has(scopeKind);
+}
+
+/**
+ * Which query params on a given page carry a FRANCHISE id.
+ *
+ * Needed because `target` means two different things on two pages: on the tip
+ * page it is a franchise's desk, on the AFL Trade Builder it is a player on
+ * the other side. A guard that treated every four-digit value as a franchise
+ * would flag a player id and, worse, teach everyone to ignore it.
+ */
+const FRANCHISE_PARAMS_BY_PAGE = [
+  { match: /\/schefter\/tip$/, params: ['target'] },
+  { match: /\/trade-builder$/, params: ['a', 'b', 'from', 'to'] },
+];
+
+/**
+ * Every franchise id a link's query string would expose.
+ *
+ * For a page we know, only its declared franchise slots are read. For a page
+ * we DON'T know, every param is swept by shape instead — a deep link added
+ * later to some other page is exactly the kind of thing that would reopen
+ * this hole quietly, and a false positive there is the safe direction.
+ */
+export function franchiseIdsInLink(link) {
+  if (typeof link !== 'string') return [];
+  const q = link.indexOf('?');
+  if (q === -1) return [];
+  const [pathOnly] = link.split(/[?#]/);
+  const known = FRANCHISE_PARAMS_BY_PAGE.find((p) => p.match.test(pathOnly));
+  const params = new URLSearchParams(link.slice(q + 1));
+  const out = [];
+  for (const [key, value] of params) {
+    if (known && !known.params.includes(key)) continue;
+    // MFL franchise ids are zero-padded four-digit strings.
+    if (/^\d{4}$/.test(value)) out.push(value);
+  }
+  return out;
+}
+
+
+// ── Feed posts (transactions, rumors, speculation) ─────────────────────────
+
+/**
+ * The CTA a transaction card carries.
+ *
+ * Feed cards are one or two sentences, so an inline anchor mid-sentence is
+ * noise — these use the card-level `link` / `linkLabel` the Schefter cards
+ * already render (the rumor mill has used it since July 2026; transaction
+ * posts never set it at all, so 19 of TheLeague's 19 shipped with nothing to
+ * click).
+ *
+ * The destination follows what the reader can DO about the news, which is why
+ * a drop and a pickup point at different pages: a dropped player is claimable
+ * by anyone reading, so that card belongs on the free agent board, while a
+ * pickup or a trade is somebody else's roster now.
+ */
+const TRANSACTION_CTAS = {
+  trade: { key: 'rosters', label: 'See both rosters →' },
+  auction: { key: 'rosters', label: 'See the updated roster →' },
+  pickup: { key: 'rosters', label: 'See the roster →' },
+  drop: { key: 'players', label: 'Claim him on the free agent board →' },
+  'big-drop': { key: 'players', label: 'He is on the free agent board now →' },
+  'trade-pending': { key: 'trade-builder', label: 'Open in Trade Builder →' },
+};
+
+/** Kinds `transactionCta` knows, for the guard test to enumerate. */
+export const TRANSACTION_CTA_KINDS = Object.keys(TRANSACTION_CTAS);
+
+/**
+ * `{ link, linkLabel }` for a transaction post, or null for an unknown kind.
+ *
+ * Null rather than a guessed default: a new transaction type with no CTA
+ * entry should be caught by the scanner's backfill (which logs it) rather
+ * than silently pointed at whatever page seemed closest.
+ */
+export function transactionCta(league, kind) {
+  const spec = TRANSACTION_CTAS[kind];
+  if (!spec) return null;
+  if (spec.key === 'trade-builder') {
+    return { link: tradeBuilderPath(league), linkLabel: spec.label };
+  }
+  const link = articleLink(league, spec.key);
+  if (!link) return null;
+  return { link: link.href, linkLabel: spec.label };
+}
+
+/** Where a transaction card falls back to when nothing more specific fits. */
+export function defaultTransactionCta(league) {
+  const link = articleLink(league, 'rosters');
+  return link ? { link: link.href, linkLabel: 'See the rosters →' } : null;
 }

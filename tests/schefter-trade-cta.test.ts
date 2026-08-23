@@ -3,8 +3,9 @@
  *
  * Trade-flavored beats (any tip with source 'trade_offer'/'trade_bait' or
  * topic === 'trade') route to the Trade Builder so the natural next click
- * is to build a counter-offer. Single-franchise scope pre-loads via
- * `?b=<fid>`; multi-franchise or league-wide drops to the bare builder.
+ * is to build a counter-offer. Single-franchise scope pre-loads that franchise
+ * — but ONLY when the resolved scope is allowed to name it; multi-franchise,
+ * league-wide, or any fuzzed scope drops to the bare builder.
  * Non-trade beats (commish beef, roster gripes, predictions, other) keep
  * the tip-page CTA so readers can whisper a follow-up.
  *
@@ -15,6 +16,8 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { resolveCta, buildDirectedCta } from '../scripts/schefter-rumor-scan.mjs';
+import { franchiseIdsInLink } from '../scripts/lib/schefter-links.mjs';
 
 function read(rel: string): string {
   return readFileSync(path.join(process.cwd(), rel), 'utf8');
@@ -30,6 +33,8 @@ describe('isTradeFlavoredTip — classification', () => {
 
   it('declares an isTradeFlavoredTip helper', () => {
     expect(SCANNER_SRC).toMatch(/function isTradeFlavoredTip\(tip\)/);
+    // Exported, so the behavioral suite below can call the real one.
+    expect(SCANNER_SRC).toMatch(/export function isTradeFlavoredTip/);
   });
 
   it('matches trade_offer source', () => {
@@ -69,12 +74,14 @@ describe('resolveCta — trade-flavored beats route to the Trade Builder', () =>
     expect(SCANNER_SRC).toMatch(/const TRADE_BUILDER_PATH = `\/\$\{LEAGUE_SLUG\}\/trade-builder`/);
   });
 
-  it('routes single-franchise trade beats through buildTradeBuilderPath(fid)', () => {
-    // Pinned: when exactly one franchise is named across trade-flavored
-    // tips, we deep-link with ?b=<fid>.
+  it('routes single-franchise trade beats through buildTradeBuilderPath(fid) — when the scope allows naming', () => {
+    // Pinned: exactly one franchise named across trade-flavored tips deep-links
+    // to that franchise, AND the resolved scope must permit naming it. The
+    // second half is not decoration — see the scope-gate suite below.
     expect(SCANNER_SRC).toMatch(
-      /franchiseIds\.size === 1\s*\?\s*buildTradeBuilderPath\(/,
+      /franchiseIds\.size === 1 && mayName\s*\n?\s*\?\s*buildTradeBuilderPath\(/,
     );
+    expect(SCANNER_SRC).toMatch(/const mayName = franchiseDeepLinkAllowed\(scopeKind\)/);
   });
 
   it('drops league-wide / multi-franchise trade beats to the bare builder', () => {
@@ -96,102 +103,130 @@ describe('buildDirectedCta — skips trade beats', () => {
   });
 });
 
-describe('CTA routing — execution via a focused harness', () => {
-  // resolveCta is a pure function over { tips }. Re-implement the routing
-  // by importing the scanner module dynamically. Node ESM doesn't expose
-  // top-level non-exported fns, so we redeclare the predicate + path
-  // helper here and assert behavioral equivalence with the source.
-  //
-  // The intent is to lock in the BEHAVIOR even though the function isn't
-  // exported — if scanner-side logic drifts from this harness, the
-  // grep-asserted tests above will fail first.
+describe('CTA routing — against the real exported resolveCta', () => {
+  // `resolveCta` and `isTradeFlavoredTip` are exported from the scanner (the
+  // file's own convention for its pure helpers), so these call the real thing
+  // rather than a local re-implementation. The re-implementation this replaced
+  // carried its own warning that it could drift from the scanner — and it had:
+  // it predated the scope gate entirely, so it would have kept passing while
+  // the scanner leaked a franchise into an href.
+  const TIP = '/theleague/schefter/tip';
+  const BUILDER = '/theleague/trade-builder';
 
-  function isTradeFlavoredTip(tip: { source?: string; topic?: string; repliesToPostId?: string } | null) {
-    if (!tip) return false;
-    if (tip.source === 'trade_offer' || tip.source === 'trade_bait') return true;
-    if (tip.repliesToPostId) return false;
-    return tip.topic === 'trade';
-  }
+  // Any naming-allowed scope; the gate itself is exercised below.
+  const named = (bucket: unknown) => resolveCta(bucket, 'trade-bait');
 
-  function resolveCta(bucket: { tips?: Array<{ source?: string; topic?: string; franchiseHint?: string; repliesToPostId?: string }> }) {
-    const tips = bucket?.tips ?? [];
-    const tradeFlavored = tips.length > 0 && tips.some(isTradeFlavoredTip);
-    if (tradeFlavored) {
-      const franchiseIds = new Set(
-        tips
-          .filter(isTradeFlavoredTip)
-          .map((t) => t.franchiseHint)
-          .filter((fid): fid is string => typeof fid === 'string' && fid !== 'league-wide' && fid !== 'commish'),
-      );
-      const path = franchiseIds.size === 1
-        ? `/theleague/trade-builder?b=${encodeURIComponent([...franchiseIds][0])}`
-        : '/theleague/trade-builder';
-      return { link: path, kind: 'trade_builder' as const };
-    }
-    return { link: '/schefter/tip', kind: 'tip_page' as const };
-  }
-
-  it('trade_offer with one franchise → /theleague/trade-builder?b=<fid>', () => {
-    const cta = resolveCta({ tips: [{ source: 'trade_offer', franchiseHint: '0003' }] });
-    expect(cta).toEqual({ link: '/theleague/trade-builder?b=0003', kind: 'trade_builder' });
+  it('trade_offer with one franchise → builder pre-loaded', () => {
+    expect(named({ tips: [{ source: 'trade_offer', franchiseHint: '0003' }] }).link)
+      .toBe(`${BUILDER}?b=0003`);
   });
 
   it('trade_bait single franchise → builder pre-loaded', () => {
-    const cta = resolveCta({ tips: [{ source: 'trade_bait', franchiseHint: '0007' }] });
-    expect(cta).toEqual({ link: '/theleague/trade-builder?b=0007', kind: 'trade_builder' });
+    expect(named({ tips: [{ source: 'trade_bait', franchiseHint: '0007' }] }).link)
+      .toBe(`${BUILDER}?b=0007`);
   });
 
   it('web tip with topic=trade and one franchise → builder pre-loaded', () => {
-    const cta = resolveCta({ tips: [{ topic: 'trade', franchiseHint: '0001' }] });
-    expect(cta).toEqual({ link: '/theleague/trade-builder?b=0001', kind: 'trade_builder' });
+    expect(named({ tips: [{ topic: 'trade', franchiseHint: '0001' }] }).link)
+      .toBe(`${BUILDER}?b=0001`);
   });
 
-  it('league-wide trade speculation → bare builder (no ?b=)', () => {
-    const cta = resolveCta({ tips: [{ topic: 'trade', franchiseHint: 'league-wide' }] });
-    expect(cta).toEqual({ link: '/theleague/trade-builder', kind: 'trade_builder' });
+  it('league-wide trade speculation → bare builder', () => {
+    expect(named({ tips: [{ topic: 'trade', franchiseHint: 'league-wide' }] }).link).toBe(BUILDER);
   });
 
   it('multi-franchise trade rumor → bare builder', () => {
-    const cta = resolveCta({
+    expect(named({
       tips: [
         { source: 'trade_offer', franchiseHint: '0003' },
         { source: 'trade_offer', franchiseHint: '0007' },
       ],
-    });
-    expect(cta).toEqual({ link: '/theleague/trade-builder', kind: 'trade_builder' });
+    }).link).toBe(BUILDER);
   });
 
   it('mixed trade + non-trade bucket still routes to builder (any trade tip wins)', () => {
-    const cta = resolveCta({
+    expect(named({
       tips: [
         { topic: 'trade', franchiseHint: '0003' },
         { topic: 'roster', franchiseHint: '0003' },
       ],
-    });
-    expect(cta).toEqual({ link: '/theleague/trade-builder?b=0003', kind: 'trade_builder' });
+    }).link).toBe(`${BUILDER}?b=0003`);
   });
 
   it('commish beef stays on the tip page', () => {
-    const cta = resolveCta({ tips: [{ topic: 'commish', franchiseHint: 'commish' }] });
-    expect(cta).toEqual({ link: '/schefter/tip', kind: 'tip_page' });
+    expect(named({ tips: [{ topic: 'commish', franchiseHint: 'commish' }] }).link).toBe(TIP);
   });
 
   it('roster gripe stays on the tip page', () => {
-    const cta = resolveCta({ tips: [{ topic: 'roster', franchiseHint: '0005' }] });
-    expect(cta).toEqual({ link: '/schefter/tip', kind: 'tip_page' });
+    expect(named({ tips: [{ topic: 'roster', franchiseHint: '0005' }] }).link).toBe(TIP);
   });
 
   it('whisper-back to a non-trade rumor stays on the tip page even with topic=trade', () => {
-    // A user replying to a roster-gripe rumor explicitly chose that thread —
-    // we honor their lane and don't redirect to the trade builder.
-    const cta = resolveCta({
+    expect(named({
       tips: [{ topic: 'trade', franchiseHint: '0003', repliesToPostId: 'sf_rumor_x' }],
-    });
-    expect(cta).toEqual({ link: '/schefter/tip', kind: 'tip_page' });
+    }).link).toBe(TIP);
   });
 
   it('empty bucket falls back to tip page', () => {
-    expect(resolveCta({})).toEqual({ link: '/schefter/tip', kind: 'tip_page' });
-    expect(resolveCta({ tips: [] })).toEqual({ link: '/schefter/tip', kind: 'tip_page' });
+    expect(named({}).link).toBe(TIP);
+    expect(named({ tips: [] }).link).toBe(TIP);
+  });
+
+  it('the tip-page fallback is PREFIXED', () => {
+    // A bare `/schefter/tip` resolves only on a league apex host; on the shared
+    // host it hits the 404 catch-all. One July 2026 rumor shipped exactly that.
+    expect(named({}).link.startsWith('/theleague/')).toBe(true);
+  });
+});
+
+describe('the CTA may not name a franchise the prose may not name', () => {
+  /**
+   * `isTradeFlavoredTip` answers "is this about a trade?". Whether the post may
+   * IDENTIFY the team is a different question, answered by the resolved scope —
+   * and only the second one governs what may appear in the href.
+   *
+   * The reachable path: a web tip with topic 'trade' whose scope falls through
+   * to `division` (single source, no consent signal, or over the per-tipster
+   * naming rate limit) still arrives here with its franchiseHint intact. Before
+   * the gate, the body read "a team in the AL East" while the button beneath it
+   * pre-loaded that exact franchise — the redaction bug wearing a costume, in
+   * the one place none of the redaction tests were looking.
+   */
+  const tradeTip = { tips: [{ topic: 'trade', franchiseHint: '0003' }] };
+
+  for (const scope of ['franchise-multi-source', 'franchise-explicit-pick', 'trade-bait']) {
+    it(`${scope} may deep-link the franchise`, () => {
+      expect(resolveCta(tradeTip, scope).link).toBe('/theleague/trade-builder?b=0003');
+    });
+  }
+
+  for (const scope of ['division', 'league-wide', 'commish', 'tier', 'groupme-public', undefined]) {
+    it(`${String(scope)} drops to the bare builder rather than naming the team`, () => {
+      const link = resolveCta(tradeTip, scope).link;
+      expect(link).toBe('/theleague/trade-builder');
+      expect(franchiseIdsInLink(link)).toEqual([]);
+    });
+  }
+
+  it('the GroupMe URL is fuzzed too, not just the feed card', () => {
+    // The chat message carries the same CTA; anonymizing one and not the other
+    // would just move which surface leaks.
+    const cta = resolveCta(tradeTip, 'division');
+    expect(cta.groupMeUrl).not.toMatch(/0003/);
+  });
+
+  it('the directed "your move" dare is already scope-gated, and stays that way', () => {
+    // buildDirectedCta fires only on franchise-explicit-pick — a naming-allowed
+    // scope — which is why it needs no separate gate.
+    expect(buildDirectedCta({ anonymized: [{ scope: { kind: 'division' } }], batch: [] })).toBeNull();
+    expect(buildDirectedCta({ anonymized: [{ scope: { kind: 'league-wide' } }], batch: [] })).toBeNull();
+    expect(SCANNER_SRC).toMatch(/safe\?\.scope\?\.kind !== 'franchise-explicit-pick'/);
+  });
+
+  it('and the finished post is checked again before it ships', () => {
+    // Same principle as redactSafePayload: applied to the RESULT, so a CTA
+    // branch added later is safe by default rather than by remembering.
+    expect(SCANNER_SRC).toMatch(/if \(!franchiseDeepLinkAllowed\(beatScopeKind\)\) \{/);
+    expect(SCANNER_SRC).toMatch(/franchiseIdsInLink\(post\.link\)/);
   });
 });

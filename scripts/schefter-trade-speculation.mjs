@@ -69,6 +69,7 @@ import {
 import { postSpeculationToGroupMe } from './lib/speculation-groupme.mjs';
 import { getRedisConfig, createUpstashClient } from './lib/redis.mjs';
 import { getPtHour, secondsUntilPtMidnight } from './lib/pt-date.mjs';
+import { tradeBuilderPath } from './lib/schefter-links.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const DRY_RUN = process.argv.includes('--dry-run');
@@ -76,6 +77,11 @@ const DRY_RUN = process.argv.includes('--dry-run');
 // ── Constants ──
 
 const LEAGUE_SLUG = 'theleague';
+// The registry slug drives link PATHS (/theleague/...); LEAGUE_SLUG above is
+// the value stamped on the post. They happen to be equal for TheLeague, which
+// is exactly why the difference has to be spelled out — this lane is
+// TheLeague-only today, and a copy-paste to the AFL would need /afl-fantasy.
+const SCHEFTER_LEAGUE_REGISTRY_SLUG = 'theleague';
 const FEED_PATH = path.join(projectRoot, 'src', 'data', 'theleague', LEAGUE_SLUG === 'theleague' ? 'schefter-feed.json' : `${LEAGUE_SLUG}-schefter-feed.json`);
 const RESOLVED_EVENTS_PATH = path.join(projectRoot, 'src', 'data', 'theleague', 'resolved-events.json');
 const TEAMS_CONFIG_PATH = path.join(projectRoot, 'src', 'data', 'theleague.config.json');
@@ -496,6 +502,19 @@ async function main() {
       score: winner.score,
       capRelief: winner.capRelief,
     },
+    // The whole hypothetical, pre-loaded: both franchises and both sides of
+    // the swap. This post is an invitation to argue with a trade, and the
+    // Trade Builder is where the argument gets settled — a card that names two
+    // teams and two players and then offers nothing to click was the single
+    // worst offender in the feed. Naming is not a concern here: the body, the
+    // headline and `franchiseIds` all identify both sides already.
+    link: tradeBuilderPath(SCHEFTER_LEAGUE_REGISTRY_SLUG, {
+      us: winner.seller,
+      them: winner.buyer,
+      usPlayers: [winner.marquee.id],
+      themPlayers: winner.returnPkg.map((p) => p.id),
+    }),
+    linkLabel: 'Build this trade →',
   };
 
   if (DRY_RUN) {
