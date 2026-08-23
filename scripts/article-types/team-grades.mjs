@@ -8,6 +8,7 @@
 
 import { loadTeams, flipName, normalizePosition, formatDefName, formatSalary } from '../article-utils/data-loaders.mjs';
 import { buildCachedSystem } from '../article-utils/ai-client.mjs';
+import { primaryLink, articleLink, featureLink, linkList } from '../article-utils/article-links.mjs';
 
 const SALARY_CAP = 45_000_000;
 const VALID_GRADES = ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'D-', 'F'];
@@ -185,6 +186,33 @@ export function validate(aiOutput) {
     if (!VALID_GRADES.includes(g.grade)) errors.push(`Invalid grade "${g.grade}" for ${g.franchiseId}`);
   }
   return errors;
+}
+
+/**
+ * Where this article points, and which parts of the site it plugs.
+ *
+ * A roster grade is a claim about a roster the reader can go audit. The plugs
+ * are the tools that let them argue back with numbers.
+ *
+ * The pipeline calls this on every run. `applyArticleLinks` injects the
+ * PRIMARY link if the model drops it and strips any href the model invented;
+ * the `featureLink` plugs are never injected, only offered — see
+ * article-links.mjs for why a forced plug is worse than no plug. Plugs for
+ * pages a league does not have resolve to null and `linkList` drops them, so
+ * this one list serves every league.
+ */
+export function relatedLinks(_enrichment, { league = 'theleague' } = {}) {
+  return linkList(
+    primaryLink(league, 'rosters', {
+      label: 'the rosters',
+      cta: 'Audit the roster yourself.',
+    }),
+    articleLink(league, 'standings', { label: 'the standings' }),
+    featureLink(league, 'trade-builder'),
+    featureLink(league, 'salary'),
+    featureLink(league, 'projected-free-agents'),
+    featureLink(league, 'league-summary'),
+  );
 }
 
 export function buildPost(aiOutput, enrichment, articleId) {

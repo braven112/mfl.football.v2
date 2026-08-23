@@ -30,6 +30,7 @@ import {
   rivalrySeriesByPair,
 } from '../../src/utils/rivalry-intensity.mjs';
 import { RIVALRY_MEETINGS_TO_MENTION } from '../../src/utils/schedule-release.mjs';
+import { primaryLink, articleLink, featureLink, linkList } from '../article-utils/article-links.mjs';
 
 export const config = {
   // One per league per season. The league token comes from the registry so a
@@ -237,6 +238,36 @@ export function validate(aiOutput) {
   if (!aiOutput.excerpt || aiOutput.excerpt.length > 500) errors.push('Excerpt missing or too long');
   if (!Array.isArray(aiOutput.content) || aiOutput.content.length < 2) errors.push('Too few content paragraphs');
   return errors;
+}
+
+/**
+ * Where this article points, and which parts of the site it plugs.
+ *
+ * The whole reason release day is an event: the reveal page shows the locked
+ * schedule week by week, and the column announcing it is worthless if the
+ * reader cannot get there. This is the link the 2026 column shipped without.
+ *
+ * The plugs are the release-day ones — a schedule people have just seen is
+ * what sends them to the rivalry pages, the calendar, and their throwback era.
+ *
+ * The pipeline calls this on every run. `applyArticleLinks` injects the
+ * PRIMARY link if the model drops it and strips any href the model invented;
+ * the `featureLink` plugs are never injected, only offered — see
+ * article-links.mjs for why a forced plug is worse than no plug. Plugs for
+ * pages a league does not have resolve to null and `linkList` drops them, so
+ * this one list serves every league.
+ */
+export function relatedLinks(_enrichment, { league = 'theleague' } = {}) {
+  return linkList(
+    primaryLink(league, 'schedule-release', {
+      label: 'the full schedule release',
+      cta: 'Go see the whole thing, week by week, on the schedule release page.',
+    }),
+    articleLink(league, 'rivalries', { label: 'the rivalry pages' }),
+    featureLink(league, 'calendar'),
+    featureLink(league, 'throwback-settings'),
+    featureLink(league, 'schedule-strength'),
+  );
 }
 
 /**

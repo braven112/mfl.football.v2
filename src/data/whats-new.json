@@ -1,5 +1,27 @@
 [
   {
+    "id": "schefter-article-links",
+    "date": "2026-08-23",
+    "category": "enhancement",
+    "icon": "link",
+    "title": "Schefter Learned to Point at Things",
+    "summary": "Every Schefter column now links to the page it's about, and works in the tool that answers whatever question the paragraph just raised. His schedule release article somehow never linked to the schedule release page. That's fixed, and so is the reason it happened.",
+    "description": [
+      "Claude Schefter filed eight paragraphs about the 2026 schedule — the four games to circle, the rivalry records, the bye-week math — and never once told you where to go read the thing. The schedule release page was right there. The column existed to announce it. Not a link in sight.",
+      "It turned out not to be a slip in one article. Searching the entire published feed for a link — 396 posts, every column he has ever filed, both leagues — turned up exactly zero. He had never linked to anything. He would name a roster crunch and not point at the rosters, call out dead weight and not point at the dead money report, and finish a cut-watch column three days from a deadline without once mentioning the calendar.",
+      "Now every article type declares where it points before a word is written. The page the column is about gets linked near the top and again at the end, and the pages it touches on the way through get linked where they come up. Go back and read the 2026 schedule release now: the opening line is the link, Throwback Week goes to your throwback settings, the rivalry section goes to the rivalry pages, and the closer hands you the full week-by-week grid. The three cut-watch columns from August got the same treatment — over-the-limit rosters, dead weight, a bloated receiver room that the trade builder has opinions about.",
+      "The second half of the job is new: Schefter is now expected to plug the site. Not with a paragraph of housekeeping bolted to the end — with the tool that answers the question he just raised. Grading your auction and pointing at the salary benchmarks. Naming the guy you're about to lose and pointing at the free agent board. He picks the ones that fit the story and skips the rest, because a plug he had to wedge in reads like an ad, and nobody clicks a columnist who sounds like an ad.",
+      "Links he makes up don't survive. He writes from a list of real pages, and anything that isn't on it gets quietly unwrapped before publishing — the sentence still reads, it just stops promising a page that doesn't exist. And if he forgets the main link entirely, the way he did in August, it gets put back in for him. A Schefter column with nothing to click is no longer something that can happen."
+    ],
+    "image": "schefter-article-links.webp",
+    "imageAlt": "The 2026 schedule release article on The Schefter Report, headlined “The 2026 Schedule Is Here. Four Games Will Define It.” under Claude Schefter’s byline. Three phrases in the prose are blue underlined links: “The 2026 schedule for The League is official” in the opening line, “Throwback Week” inside the Week 4 paragraph about Bring the Pain at Vitside Mafia, and “The rivalry renewals are stacked this season” opening the rivalry section.",
+    "excludeFromHero": true,
+    "leagues": [
+      "theleague",
+      "afl"
+    ]
+  },
+  {
     "id": "player-modals-wear-your-colors",
     "date": "2026-08-23",
     "category": "enhancement",
@@ -859,27 +881,6 @@
     "linkLabel": "Boss your cut list around",
     "image": "cutdown-plan-full-control.webp",
     "imageAlt": "The Cutdown Plan slate with three marked cuts above a red dashed cut line and a fourth marked player parked safely below it.",
-    "excludeFromHero": true,
-    "leagues": [
-      "theleague"
-    ]
-  },
-  {
-    "id": "august-cut-auto-slate",
-    "date": "2026-07-19",
-    "category": "enhancement",
-    "icon": "user-times",
-    "title": "Your Roster Now Tells You Who's Getting Cut",
-    "summary": "Over the 22-man limit? Your roster rows now wear the cut slate on their sleeves — gold AUTO-CUT badges in the exact order the deadline job will swing the axe. Mark nobody and it flags your newest pickups; mark your own and the badges flip to YOUR PICK.",
-    "description": [
-      "Last month the Cutdown Plan panel promised the machine had your back at the deadline — \"last players in are the first ones out.\" True, but abstract. A policy isn't a picture. Now it's a picture. Open your roster during the cut window and the players headed for the chopping block wear it right next to their name: a gold <strong>AUTO-CUT #1, #2, #3</strong> badge, laid out in the exact order the automation will make the cuts.",
-      "Here's the part that matters: you don't have to mark a single player to see this. Marked nothing? The roster fills the slate with your most recent waiver and free-agent pickups and stamps each one <strong>LAST ADDED</strong> — because that's the tiebreaker the deadline job actually uses (and yes, players you traded for are safe; a deadline-week acquisition doesn't count as \"just added\"). Start marking your own casualties and those badges flip to <strong>YOUR PICK</strong> and jump to the front of the line. Same math, honest labels — <strong>AUTO-CUT</strong> for whoever's inside the cut line right now, <strong>MARKED</strong> for the insurance picks sitting safely below it.",
-      "A legend under the table does the accounting out loud — how many players are getting cut, and the night it happens — with a standing invitation to choose your own instead. Because the automation will happily pick for you. It's just picking by recency, not by heart. See exactly who's on the block, then go tell it who should be."
-    ],
-    "link": "/theleague/rosters",
-    "linkLabel": "See your cut slate",
-    "image": "august-cut-auto-slate.webp",
-    "imageAlt": "Roster rows during the August cut window with four players wearing gold AUTO-CUT #1 through #4 · LAST ADDED badges beside their contract years and salaries.",
     "excludeFromHero": true,
     "leagues": [
       "theleague"

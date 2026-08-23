@@ -31,6 +31,7 @@ import { getAugustCutdownDay, calendarDaysUntilCutdown, ptDateParts } from '../l
 import { getRedisConfig, redisCommand } from '../lib/redis.mjs';
 import { normalizeFranchiseId } from '../../src/utils/franchise-id.mjs';
 import { selectAutoMoves, parseAcquisitionEvents, buildRookiePriorityFromFeeds } from '../../src/utils/august-cut-selection-core.mjs';
+import { primaryLink, articleLink, featureLink, linkList } from '../article-utils/article-links.mjs';
 
 // TheLeague's active-roster cap. Cut-watch is TheLeague-only today (the
 // August cutdown machinery it reports on doesn't exist for AFL); if that
@@ -569,6 +570,34 @@ export function buildGroupMePromo(post, enrichment, { league = 'theleague', now 
     // shaped URLs that only resolve via a 301. It also pins the canonical
     // (cookie-safe) host, so the link doesn't open logged-out.
     leagueUrl(LEAGUES[league], post.link)
+  );
+}
+
+/**
+ * Where this article points, and which parts of the site it plugs.
+ *
+ * Cut watch names teams over the limit; the rosters page is where an owner
+ * goes to do something about it. The plugs are the three ways out of a roster
+ * crunch — cut, trade, or work out what the cut actually costs.
+ *
+ * The pipeline calls this on every run. `applyArticleLinks` injects the
+ * PRIMARY link if the model drops it and strips any href the model invented;
+ * the `featureLink` plugs are never injected, only offered — see
+ * article-links.mjs for why a forced plug is worse than no plug. Plugs for
+ * pages a league does not have resolve to null and `linkList` drops them, so
+ * this one list serves every league.
+ */
+export function relatedLinks(_enrichment, { league = 'theleague' } = {}) {
+  return linkList(
+    primaryLink(league, 'rosters', {
+      label: 'the rosters',
+      cta: 'Check where every roster stands before the deadline.',
+    }),
+    articleLink(league, 'players', { label: 'the free agent board' }),
+    featureLink(league, 'trade-builder'),
+    featureLink(league, 'dead-money'),
+    featureLink(league, 'calculator'),
+    featureLink(league, 'calendar'),
   );
 }
 

@@ -9,6 +9,7 @@
 import { loadPlayers, loadTeams, formatSalary } from '../article-utils/data-loaders.mjs';
 import { buildCachedSystem } from '../article-utils/ai-client.mjs';
 import { isRegularSeasonOrPlayoffs } from '../article-utils/season-guards.mjs';
+import { primaryLink, articleLink, featureLink, linkList } from '../article-utils/article-links.mjs';
 
 export const config = {
   id: (year, week) => `sf_${year}_weekly_recap_w${String(week).padStart(2, '0')}`,
@@ -165,6 +166,34 @@ export function validate(aiOutput) {
   if (!aiOutput.excerpt || aiOutput.excerpt.length > 500) errors.push('Excerpt missing or too long');
   if (!aiOutput.content || aiOutput.content.length < 2) errors.push('Too few content paragraphs');
   return errors;
+}
+
+/**
+ * Where this article points, and which parts of the site it plugs.
+ *
+ * A recap is an argument about who is good; the standings are the scoreboard
+ * that argument gets settled on. The plugs are the pages a reader reaches for
+ * once they disagree with the recap.
+ *
+ * The pipeline calls this on every run. `applyArticleLinks` injects the
+ * PRIMARY link if the model drops it and strips any href the model invented;
+ * the `featureLink` plugs are never injected, only offered — see
+ * article-links.mjs for why a forced plug is worse than no plug. Plugs for
+ * pages a league does not have resolve to null and `linkList` drops them, so
+ * this one list serves every league.
+ */
+export function relatedLinks(_enrichment, { league = 'theleague' } = {}) {
+  return linkList(
+    primaryLink(league, 'standings', {
+      label: 'the standings',
+      cta: 'The full standings, with every tiebreaker applied, are here.',
+    }),
+    articleLink(league, 'pecking-order', { label: "this week's pecking order" }),
+    featureLink(league, 'mvp'),
+    featureLink(league, 'trade-builder'),
+    featureLink(league, 'schedule-strength'),
+    featureLink(league, 'records'),
+  );
 }
 
 export function buildPost(aiOutput, enrichment, articleId) {
