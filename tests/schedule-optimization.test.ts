@@ -93,9 +93,46 @@ const loadSeason = (dir: string, year: string) => {
     conferenceOf[f.id] = divisionConference[String(f.division)] ?? '00';
   }
   const lastWeek = Number(meta.lastRegularSeasonWeek);
-  const games = regularSeasonGames(schedule, lastWeek);
+  let games = regularSeasonGames(schedule, lastWeek);
   if (!games.size) return null;
-  return { meta, feeds, franchiseIds, name, divisionOf, conferenceOf, lastWeek, games };
+
+  /**
+   * WHICH SCHEDULE IS UNDER AUDIT — the published feed, unless a reveal is
+   * locked that has not been pasted yet.
+   *
+   * The feed is the default and the point: a planner checking its own output
+   * proves nothing, and every rule here is one the LIVE schedule broke at
+   * least once. But MFL has no schedule write API, so between locking a reveal
+   * and the commissioner pasting it there is a window — hours or days — where
+   * the feed still holds the schedule the reveal exists to replace. Auditing
+   * the feed there fails the OLD schedule for the very faults the new one
+   * fixes, which blocks shipping the code that reacts to the paste. That is
+   * backwards: the fix has to merge before the paste can happen at all.
+   *
+   * So in that window we audit the REVEAL, which is exactly what is about to
+   * be pasted. Nothing is skipped and no rule is relaxed — the same assertions
+   * run against the same shape. Once the paste lands the two agree and this
+   * falls back to the feed on its own, with no flag to remember to unset.
+   */
+  let source: 'feed' | 'locked reveal (paste pending)' = 'feed';
+  const reveal = readJson(path.join(ROOT, dir, 'schedule-release', `${year}.json`));
+  if (reveal?.weeks) {
+    const sig = (m: Map<number, { away: string; home: string }[]>) =>
+      [...m.entries()]
+        .sort((a, b) => a[0] - b[0])
+        .map(([w, g]) => `${w}:${g.map((x) => [x.away, x.home].sort().join('-')).sort().join('|')}`)
+        .join(';');
+    const revealed = new Map<number, { away: string; home: string }[]>(
+      Object.entries(reveal.weeks)
+        .map(([w, g]) => [Number(w), g as { away: string; home: string }[]] as const)
+        .filter(([w]) => w >= 1 && w <= lastWeek),
+    );
+    if (revealed.size && sig(revealed) !== sig(games)) {
+      games = revealed;
+      source = 'locked reveal (paste pending)';
+    }
+  }
+  return { meta, feeds, franchiseIds, name, divisionOf, conferenceOf, lastWeek, games, source };
 };
 
 const auditYear = (dir: string) => {
@@ -124,6 +161,12 @@ for (const league of LEAGUES) {
       return;
     }
     const season = loadSeason(league.dir, year)!;
+    // Say which schedule these assertions ran against — a green audit of a
+    // pending reveal means something different from a green audit of the live
+    // feed, and the difference must not be invisible in the output.
+    it(`${year}: auditing the ${season.source}`, () => {
+      expect(season.games.size).toBeGreaterThan(0);
+    });
     const byes = BYES[year];
     const byeCounts = byeCountsByWeek(byes);
     const clean = byeFreeWeeks(byes, season.lastWeek);
