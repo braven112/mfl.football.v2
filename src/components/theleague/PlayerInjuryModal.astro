@@ -133,6 +133,13 @@ const { class: className } = Astro.props;
     color: #fff;
     line-height: 1.2;
     text-shadow: 0 1px 8px rgba(0, 0, 0, 0.35);
+    /* Clips rather than wraps, like every other .pmb band's text: the crest is
+       sized off the band's HEIGHT, so a name long enough to wrap grows the
+       band and the crest with it. Lossless — the body repeats the name in its
+       own Name field. */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .player-injury-modal__close {
