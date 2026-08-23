@@ -103,6 +103,27 @@ function strokeFilterByFranchise(league: LeagueSlug, teams: any[]): Record<strin
 }
 
 /**
+ * The era crest to actually render, or `''` to keep what the franchise wears
+ * now.
+ *
+ * `resolveThrowbackIdentity` falls back to the CURRENT identity for a
+ * franchise with no eligible era, and `getThrowbackFranchiseBrand` hands that
+ * back as `icon` — the current LIGHT crest. Taking it would undo both of this
+ * file's crest rules at once: the light src re-arms the global `html.dark`
+ * swap (so the crest would change with the theme on a band that doesn't), and
+ * the era branch clears `crestFilter`, stripping a stroke the light artwork
+ * still needs.
+ *
+ * Split out and exported so the no-eligible-era case is testable. Every
+ * franchise has an eligible era today, so a sweep over the real config can
+ * only ever pass — one `THROWBACK_ASSET_CONFLICTS` entry is all it takes to
+ * arm this, on the one week a year anyone would see it.
+ */
+export function resolveEraCrest(currentIcon: string, eraIcon: string): string {
+  return eraIcon && eraIcon !== currentIcon ? eraIcon : '';
+}
+
+/**
  * Build the serializable franchise band map for one league.
  *
  * `throwbackActive` only does anything for TheLeague — it is the only league
@@ -139,12 +160,17 @@ export function buildFranchiseBandBrands(
     if (throwback) {
       const era = getThrowbackFranchiseBrand(franchiseId, true, overrides[franchiseId]);
       name = era.name;
-      // Era artwork has no dark variant and is not in the stroke manifest
-      // (which measures current crests only), so it renders as authored.
-      crest = era.icon || crest;
       primary = era.color;
       secondary = era.colorSecondary;
-      crestFilter = era.icon ? undefined : crestFilter;
+      // Empty when this franchise has no eligible era to throw back to — see
+      // resolveEraCrest for why taking `era.icon` there is wrong twice over.
+      const eraCrest = resolveEraCrest(team.icon ?? '', era.icon ?? '');
+      if (eraCrest) {
+        // Era artwork has no dark variant and is not in the stroke manifest
+        // (which measures current crests only), so it renders as authored.
+        crest = eraCrest;
+        crestFilter = undefined;
+      }
     }
 
     map[franchiseId] = {

@@ -13,7 +13,7 @@ import { resolve } from 'node:path';
 import theleagueConfig from '../src/data/theleague.config.json';
 import aflConfig from '../data/afl-fantasy/afl.config.json';
 import strokeManifest from '../src/data/crest-dark-stroke-manifest.json';
-import { buildFranchiseBandBrands } from '../src/utils/franchise-band-brand';
+import { buildFranchiseBandBrands, resolveEraCrest } from '../src/utils/franchise-band-brand';
 import { contrastRatio, AA_LARGE_TEXT_RATIO } from '../src/utils/team-color-contrast';
 import { DEFAULT_THROWBACK_ERA } from '../src/data/theleague/throwback-config';
 import { getEligibleThrowbackEras } from '../src/utils/throwback-identity';
@@ -130,6 +130,39 @@ describe('buildFranchiseBandBrands', () => {
       const era = getEligibleThrowbackEras(team).find((e) => e.yearStart === yearStart);
       if (!era) continue;
       expect(past.teams[id].name, `${id} @ ${yearStart}`).toBe(era.name);
+    }
+  });
+
+  it('keeps the current crest when a franchise has no era to throw back to', () => {
+    // Non-vacuous BY CONSTRUCTION: every real franchise has an eligible era, so
+    // only a synthetic no-eligible-era case can exercise this branch. The
+    // sweep below covers the real config; this covers the case that arms it.
+    expect(resolveEraCrest('/icons/x.png', '/icons/x.png')).toBe('');
+    expect(resolveEraCrest('/icons/x.png', '')).toBe('');
+    expect(resolveEraCrest('/icons/x.png', '/history/x_2013.png')).toBe('/history/x_2013.png');
+  });
+
+  it('never renders a franchise its own LIGHT crest during a Throwback Week', () => {
+    // resolveThrowbackIdentity returns the current identity when a franchise
+    // has nothing to throw back to, and getThrowbackFranchiseBrand hands that
+    // back as `icon` — the current LIGHT crest. Taking it would re-arm the
+    // global html.dark swap and drop a stroke the light artwork needs.
+    const past = buildFranchiseBandBrands('theleague', { throwbackActive: true });
+    const now = buildFranchiseBandBrands('theleague');
+    const lightIcons = new Map(
+      (theleagueConfig.teams as any[]).map((t) => [t.franchiseId, t.icon])
+    );
+
+    for (const [id, brand] of Object.entries(past.teams)) {
+      // No franchise may render its own current LIGHT icon during a throwback:
+      // either it threw back (era art) or it kept the dark artwork it had.
+      expect(brand.crest, `${id} throwback crest`).not.toBe(lightIcons.get(id));
+      if (brand.crest === now.teams[id].crest) {
+        // Didn't throw back → it must keep the current entry's stroke, too.
+        expect(brand.crestFilter, `${id} kept crest but lost its stroke`).toBe(
+          now.teams[id].crestFilter
+        );
+      }
     }
   });
 
