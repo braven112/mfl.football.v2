@@ -223,7 +223,7 @@ const getIdentityForYear = (franchiseId, year) => {
 
 // --- Owner-history attribution ---
 // Some franchises moved IDs over the years (e.g. the current Midwestside
-// Connection owner held franchise 0010 from 2012-2015 then took over 0011
+// Connection owner held franchise 0010 from 2011-2015 then took over 0011
 // in 2019). For each (sourceFranchiseId, year) the attribution map returns
 // the franchise that should get credit.
 const teamsWithOwnerHistory = currentTeams.filter((t) => Array.isArray(t.ownerHistory) && t.ownerHistory.length > 0);
