@@ -82,6 +82,36 @@ describe('buildFranchiseBandBrands', () => {
     expect(flagged.size).toBeGreaterThan(0);
   });
 
+  it('gives each franchise in a league its own band hue', () => {
+    // The band replaced a per-NFL-team palette, which was distinct by
+    // construction. Franchise palettes are not: eight franchises across the
+    // two leagues wear #181818 as colorPrimary and three more wear #8b8f93,
+    // and ONLY TheLeague's config defines the `color` chart hue that would
+    // otherwise carry the identity. Without the neutral swap, opening two
+    // different AFL teams' players paints the same near-black band.
+    //
+    // The one allowed collision is a DATA gap, not a code one: 0017/0019/0023
+    // list nothing but grey and black in the AFL config, so there is no hue to
+    // find. Fill one of those in and this test wants updating.
+    const KNOWN_DATA_GAPS: Record<string, string[][]> = {
+      afl: [['0017', '0019', '0023']],
+    };
+
+    for (const league of ['theleague', 'afl', 'bb1'] as const) {
+      const byHue = new Map<string, string[]>();
+      for (const [id, brand] of Object.entries(buildFranchiseBandBrands(league).teams)) {
+        if (!byHue.has(brand.primary)) byHue.set(brand.primary, []);
+        byHue.get(brand.primary)!.push(id);
+      }
+      const collisions = [...byHue.values()]
+        .filter((ids) => ids.length > 1)
+        .map((ids) => ids.sort());
+      expect(collisions, `${league} franchises sharing a band hue`).toEqual(
+        KNOWN_DATA_GAPS[league] ?? []
+      );
+    }
+  });
+
   it('keeps white band ink legible on every franchise, in every league', () => {
     // The band's type is white in both themes. NFL primaries are almost all
     // dark, so this never bit before; franchise chart hues include a pure gold

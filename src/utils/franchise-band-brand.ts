@@ -49,6 +49,7 @@ import aflConfig from '../../data/afl-fantasy/afl.config.json';
 import bb1Config from '../../data/best-ball-1/bb1.config.json';
 import type { LeagueSlug } from '../types/nav';
 import { getTeamColorPrimary, getTeamColorSecondary } from './team-colors';
+import { chroma } from './nfl-team-colors';
 import { AA_LARGE_TEXT_RATIO, ensureContrastOn } from './team-color-contrast';
 import { getThrowbackFranchiseBrand } from './franchise-brand';
 import { preferredIconSrc } from './team-icon-dark-css';
@@ -103,6 +104,31 @@ function strokeFilterByFranchise(league: LeagueSlug, teams: any[]): Record<strin
 }
 
 /**
+ * Minimum channel spread for a color to count as a HUE rather than a neutral.
+ * `#181818` scores 0 and `#8b8f93` scores 8 — the two shades that collapse
+ * whole groups of franchises into one band; every real brand color in any
+ * league's config clears this comfortably.
+ */
+const MIN_ANCHOR_CHROMA = 20;
+
+/**
+ * The gradient anchor for a franchise: its own hue, or the secondary when the
+ * primary is a neutral it shares with other teams.
+ *
+ * Deliberately NOT `pickBrandAccent`, which answers a similar-looking question
+ * for the SSR panels. That helper also imposes a luminance floor, so it treats
+ * a dark-but-saturated navy as unusable and swaps it out — which flips Cowboy
+ * Up off their navy and onto red. Here the band's left half is deep ink
+ * anyway, white ink has its own floor applied downstream
+ * (`ensureContrastOn`), and a navy band reads perfectly well. The only thing
+ * that actually breaks this surface is a GREY, so chroma is the whole test.
+ */
+function anchorHue(primary: string, secondary: string): string {
+  if (chroma(primary) >= MIN_ANCHOR_CHROMA) return primary;
+  return chroma(secondary) >= MIN_ANCHOR_CHROMA ? secondary : primary;
+}
+
+/**
  * The era crest to actually render, or `''` to keep what the franchise wears
  * now.
  *
@@ -144,23 +170,31 @@ export function buildFranchiseBandBrands(
     const franchiseId = team?.franchiseId;
     if (!franchiseId) continue;
 
-    // Current identity. `color` (the chart hue) is the anchor the site's other
-    // franchise composites tint with (`franchiseGradient`); the AFL and
-    // best-ball configs don't carry one, so fall through to the brand primary.
     let name: string = team.name ?? '';
     let crest: string = team.iconDark || team.icon || '';
-    // `colorPrimary` is deliberately NOT the anchor: five franchises wear
-    // #181818 there, and a band built off it is the same near-black for all
-    // of them. The chart hue is the identifiable one — floor it instead.
-    let primary: string = team.color || getTeamColorPrimary(franchiseId, league);
     let secondary: string = getTeamColorSecondary(franchiseId, league);
+    // `colorPrimary` is deliberately NOT the anchor on its own: five TheLeague
+    // franchises and three AFL ones wear #181818 there, and a band built off it
+    // is the same identity-less near-black for every one of them. `color` (the
+    // chart hue) is the identifiable one, and is what the site's other
+    // franchise composites tint with (`franchiseGradient`) — but ONLY
+    // TheLeague's config defines it, so without the swap below the AFL and
+    // best-ball fall straight through to the very field this rules out, and
+    // six AFL franchises collapse into two bands.
+    let primary: string = anchorHue(
+      team.color || getTeamColorPrimary(franchiseId, league),
+      secondary
+    );
     // Only a crest rendered as its LIGHT artwork can need the stroke.
     let crestFilter = team.iconDark ? undefined : strokes[franchiseId];
 
     if (throwback) {
       const era = getThrowbackFranchiseBrand(franchiseId, true, overrides[franchiseId]);
       name = era.name;
-      primary = era.color;
+      // Same treatment as the current identity above — a few eras are
+      // monochrome (the palette sampler falls back to a dark neutral for
+      // character-heavy art), and those bands need the era secondary too.
+      primary = anchorHue(era.color, era.colorSecondary);
       secondary = era.colorSecondary;
       // Empty when this franchise has no eligible era to throw back to — see
       // resolveEraCrest for why taking `era.icon` there is wrong twice over.

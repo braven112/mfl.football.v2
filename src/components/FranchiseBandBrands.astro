@@ -16,6 +16,15 @@
  * map, and every modal on the page throws back with it. The store read is
  * gated on the week actually being one — outside that week this component
  * costs a config walk and nothing else.
+ *
+ * Inside that week it is memoized, because this sits in the layout and would
+ * otherwise put a blocking Redis round trip in the `<head>` of EVERY page —
+ * including the ones with no player modal on them at all. `/live-scoring` and
+ * `/lineup` each read the same store, but each renders throwback content that
+ * pays for it. Owner picks change a handful of times a season, so a short TTL
+ * costs nothing real: the worst case is one owner seeing their own era swap
+ * take up to a minute to reach a modal band, on pages where the SCOREBOARD —
+ * which is not memoized — already shows the new one.
  */
 import theleagueConfig from '../data/theleague.config.json';
 import type { LeagueSlug } from '../types/nav';
@@ -31,6 +40,28 @@ export interface Props {
 
 const { league } = Astro.props;
 
+/**
+ * Module-scope, so it is shared across requests on a warm instance. That is
+ * safe here and would not be for most cached data: throwback preferences are
+ * LEAGUE-WIDE (all 16 franchises' picks), never scoped to the viewer, so there
+ * is no per-user state to leak. A failed read caches `{}` too — deliberately.
+ * If Redis is down, every render should not pay the timeout to rediscover it.
+ */
+const THROWBACK_CACHE_TTL_MS = 60_000;
+let throwbackCache: { at: number; value: Record<string, number> } | null = null;
+
+async function cachedThrowbackOverrides(): Promise<Record<string, number>> {
+  const nowMs = Date.now();
+  if (throwbackCache && nowMs - throwbackCache.at < THROWBACK_CACHE_TTL_MS) {
+    return throwbackCache.value;
+  }
+  const value = await getAllThrowbackPreferences(
+    ((theleagueConfig as any).teams ?? []).map((t: any) => t.franchiseId)
+  );
+  throwbackCache = { at: nowMs, value };
+  return value;
+}
+
 // Season-shaped clock (which NFL week is it), matching live-scoring. `?week=`
 // and `?testDate=` are honored so a throwback week can be previewed the same
 // way it is everywhere else.
@@ -40,11 +71,7 @@ const week =
   Number.isFinite(weekParam) && weekParam > 0 ? weekParam : (getCurrentNFLWeek(now) ?? 0);
 
 const throwbackActive = league === 'theleague' && isThrowbackWeek(week);
-const throwbackOverrides = throwbackActive
-  ? await getAllThrowbackPreferences(
-      ((theleagueConfig as any).teams ?? []).map((t: any) => t.franchiseId)
-    )
-  : {};
+const throwbackOverrides = throwbackActive ? await cachedThrowbackOverrides() : {};
 
 const brands = buildFranchiseBandBrands(league, { throwbackActive, throwbackOverrides });
 // `</script>` can't appear in a crest path or a hex, but escaping `<` is the

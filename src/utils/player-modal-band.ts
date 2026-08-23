@@ -59,12 +59,6 @@ export interface BandOptions {
   accent?: string;
   /** Override the ghost wordmark (defaults to "POS NICKNAME") */
   ghost?: string;
-  /**
-   * Force the NFL palette even for a rostered player. For a surface where the
-   * pro team IS the subject; the default follows the franchise when one is
-   * available.
-   */
-  brandBy?: 'auto' | 'nfl';
 }
 
 /** True only when the URL's actual hostname is ESPN's CDN (or a subdomain) */
@@ -146,11 +140,10 @@ export function applyPlayerModalBand(
   const teamCode = player.nflTeam ? normalizeTeamCode(player.nflTeam) : '';
 
   // Franchise first, NFL team as the fallback (see WHOSE COLORS above).
-  const franchise = opts.brandBy === 'nfl' ? null : getFranchiseBandBrand(player.franchiseId);
+  const franchise = getFranchiseBandBrand(player.franchiseId);
   const nfl = getNflTeamColors(teamCode || '');
   const primary = franchise ? franchise.primary : nfl.primary;
   const secondary = franchise ? franchise.secondary : nfl.secondary;
-  band.classList.toggle('pmb--franchise', !!franchise);
 
   // Deep-ink → team primary, 115° like the site composites. An accent pulls
   // both stops toward the status color so the band reads "team, but alarmed".
