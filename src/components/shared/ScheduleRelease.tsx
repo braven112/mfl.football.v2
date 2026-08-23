@@ -16,6 +16,12 @@
  * that has.
  */
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import {
+  describeDivisionByeSplit,
+  divisionByeSplit,
+  scheduleConstraints,
+  TIER_LABEL,
+} from '../../utils/schedule-constraints.mjs';
 
 type MarqueeGame = {
   week: number;
@@ -54,6 +60,8 @@ type Release = {
     games: number;
     byeFreeDivisionGames: number;
     divisionGameCeiling: number;
+    /** Every division game in the season. Absent on reveals locked before Aug 2026. */
+    divisionGames?: number;
     netByeSpread: number;
     homeGames: { min: number; max: number };
     minRematchGap: number | null;
@@ -69,6 +77,8 @@ type State =
       releaseDate: string | null;
       canPaste: boolean;
       release: Release;
+      /** This league plays a cross-conference round — see /api/schedule-release. */
+      crossConference: boolean;
       teams: Record<string, TeamBrand>;
       /** Old-school identities for the Throwback Week pick, when the league runs one. */
       throwback: ThrowbackGame | null;
@@ -253,6 +263,19 @@ export default function ScheduleRelease({
     .sort((a, b) => a - b);
   const dh = new Set(release.doubleheaderWeeks);
 
+  // How many division games actually landed on an NFL bye week, and how many
+  // of those the format forced. Reporting only the bye-FREE count invited the
+  // reading that the rest were avoidable: in the AFL every one of them is
+  // forced, and in The League none of them are — they are the price of ending
+  // the season on rivalry games. Null on reveals locked before the denominator
+  // was recorded, in which case the tile falls back to the bye-free count.
+  const byeSplit = divisionByeSplit({
+    total: release.summary.divisionGames,
+    byeFree: release.summary.byeFreeDivisionGames,
+    ceiling: release.summary.divisionGameCeiling,
+  });
+  const constraints = scheduleConstraints({ crossConference: data.crossConference });
+
   // Crest + short name for one side of a marquee card. Falls back to the name
   // frozen into the reveal when a franchise has left the config since — the
   // card still reads, it just loses its crest.
@@ -381,6 +404,19 @@ export default function ScheduleRelease({
             <small> / {release.summary.divisionGameCeiling} possible</small>
           </dd>
         </div>
+        {byeSplit && (
+          <div>
+            <dt>Division games on an NFL bye</dt>
+            <dd>
+              {byeSplit.onByes}
+              <small>
+                {' '}
+                / {byeSplit.total} ({byeSplit.percent}%)
+              </small>
+            </dd>
+            <p className="rel__factNote">{describeDivisionByeSplit(byeSplit)}</p>
+          </div>
+        )}
         <div>
           <dt>Home games</dt>
           <dd>
@@ -421,6 +457,23 @@ export default function ScheduleRelease({
             </tbody>
           </table>
         </div>
+      </section>
+
+      <section>
+        <h3 className="rel__h3">The rules this draw had to satisfy</h3>
+        <p className="rel__hint">
+          In priority order. Everything below the line yields to everything above it, which is why a schedule can
+          break a stated goal and still be the right one — a higher rule won.
+        </p>
+        <ol className="rel__rules">
+          {constraints.map((c) => (
+            <li key={c.rank} className={`rel__rule rel__rule--${c.tier}`}>
+              <span className="rel__ruleTier">{TIER_LABEL[c.tier]}</span>
+              <p className="rel__ruleText">{c.rule}</p>
+              <p className="rel__ruleWhy">{c.why}</p>
+            </li>
+          ))}
+        </ol>
       </section>
 
       {data.canPaste && (

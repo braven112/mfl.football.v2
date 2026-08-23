@@ -1,5 +1,26 @@
 [
   {
+    "id": "schedule-constraints-in-priority-order",
+    "date": "2026-08-23",
+    "category": "enhancement",
+    "icon": "calendar-2",
+    "title": "The Schedule Now Shows Its Work",
+    "summary": "Schedule Release Day used to tell you how many division games dodged the NFL byes and stop there. It now tells you how many did NOT, what percentage that is, and how many of those the format left no way to avoid — plus the ten rules the draw had to satisfy, in the order they beat each other.",
+    "description": [
+      "The old line read '84 of 84 possible division games clear of NFL byes' and it was true, which is exactly the problem. Read it quickly and it sounds like a clean sweep. It is not: 36 of the AFL’s 120 division games are played on weeks with NFL byes, and the page never said so.",
+      "Both numbers are now on the board, with the part that actually matters underneath: all 36 are FORCED. A franchise has eight bye-free game slots, the constitution spends one of them on the Week 1 cross-conference game, and it plays ten division games. The math runs out before the calendar does. Every legal way of drawing the season lands on the same 36 — we checked all 336 of them — so this is the floor, not a miss.",
+      "The League’s eight are the opposite: nothing forces them. They are the price of ending the season on rivalry games in a year when Weeks 13 and 14 both carry byes. You cannot have the all-division finish and a perfectly clean sheet, and the league picked the finish. The page now says which kind of number you are looking at instead of leaving you to guess.",
+      "Underneath sits the whole rulebook, ranked: the format at the top, then the hard rules that get a schedule rejected outright, then the things the optimiser maximises, then the preferences, then home-and-away, which is settled exactly once everything above it is fixed. Ten rules, five tiers. Nearly every 'why is my schedule like this' question turns out to be a higher rule beating a lower one, and now you can see which."
+    ],
+    "image": "afl-schedule-constraints.webp",
+    "imageAlt": "The AFL Schedule Release page. A row of fact tiles reads 204 games, doubleheaders in weeks 1, 2 and 12, 84 of 84 possible division games clear of NFL byes, and a new tile reading 36 of 120 (30%) division games on an NFL bye with the caption 'all 36 forced by the format — the floor, not a miss', then home games 8 to 9. Below it a section headed 'The rules this draw had to satisfy' lists ten numbered cards in priority order, each with a coloured left stripe and a tier label: two THE FORMAT rules, three HARD RULE, three MAXIMISED, one PREFERENCE and one SETTLED EXACTLY.",
+    "excludeFromHero": true,
+    "leagues": [
+      "theleague",
+      "afl"
+    ]
+  },
+  {
     "id": "schefter-article-links",
     "date": "2026-08-23",
     "category": "enhancement",
@@ -863,27 +884,6 @@
     "imageAlt": "The Best Ball #1 league home: emerald hero announcing the 2026 startup draft with cards for the Draft Room, Draft Board, and Rosters.",
     "leagues": [
       "bb1"
-    ]
-  },
-  {
-    "id": "cutdown-plan-full-control",
-    "date": "2026-07-21",
-    "category": "enhancement",
-    "icon": "user-times",
-    "title": "The Cut List Is Now Yours to Boss Around",
-    "summary": "Drag any player — even the machine's picks — into your cut order, unmark with one click, and watch a red dashed CUT LINE split who goes from who's safe. Oh, and the panel saves itself now, which beats its old habit of quietly forgetting your work.",
-    "description": [
-      "First, a confession from the beat desk: until this week, the Cutdown Plan panel had a split personality. You'd mark your August cuts, watch the slate update beautifully — and then saving would post your <em>original</em> list and reset everything, like a waiter who nods through your whole order and brings you what the last table had. That bug is dead. And so is the Save button, because the panel now saves itself about a second after you stop fiddling — the status line tells you the moment your cuts are locked in, and it means it.",
-      "With the trust rebuilt, the slate got handed over to you completely. Every row is draggable now, not just your own picks — grab one of the machine's <strong>LAST ADDED</strong> selections, drop it where you want it, and it becomes <strong>YOUR PICK</strong> at that exact spot. On your phone, a Mark button does the same job with a tap, and every marked player wears an × so you can change your mind without opening his player card.",
-      "Best of all: marking more players than the deadline needs no longer hides the overflow. Everybody renders in one ordered list, split by a red dashed <strong>CUT LINE</strong> — players above it go on deadline night, players below it are your insurance, safe unless the roster grows. The numbering runs straight across the line, arrows and drags cross it freely, and even when you're at the limit with nothing to cut, your order stays visible and waiting. The automation still swings the axe. You just fully control the order of the chopping block."
-    ],
-    "link": "/theleague/rosters",
-    "linkLabel": "Boss your cut list around",
-    "image": "cutdown-plan-full-control.webp",
-    "imageAlt": "The Cutdown Plan slate with three marked cuts above a red dashed cut line and a fourth marked player parked safely below it.",
-    "excludeFromHero": true,
-    "leagues": [
-      "theleague"
     ]
   }
 ]

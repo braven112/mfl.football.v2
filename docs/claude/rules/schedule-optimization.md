@@ -13,6 +13,14 @@ way nothing caught. Read this before touching `scripts/generate-schedule.mjs`,
 
 Goal 1 outranks goal 2. Goal 3 is a **maximize**, not a must.
 
+The full ordering — ten rules across five tiers, from the format down to the
+home/away post-pass — lives in `src/utils/schedule-constraints.mjs`, and the
+reveal page, the admin panel and Schefter's fact sheet all render THAT list
+rather than their own. It used to be restated in four places and no two copies
+agreed on precedence, which matters because "why did the schedule break a
+stated goal" is nearly always answered by "a higher-ranked one beat it". Adding
+or reordering a rule is an edit there plus `tests/schedule-constraints.test.ts`.
+
 ## The trap: bye weeks move, week numbers don't
 
 **The late doubleheader week is not a constant.** It is whichever of Week 12 or
@@ -106,6 +114,50 @@ The League has no such squeeze (ceiling 48 of 48) but deliberately spends one
 round on a pure-division final week — the rivalry finish — which costs 8. Weeks
 13 and 14 both carry byes in 2026, so "no division game on a bye" and "the
 season ends on division games" cannot both hold. The league chose the finish.
+
+**Say the count, not only the complement.** "84 of 84 possible" and "36 of 120
+division games are on a bye" are the same schedule, and only the second one
+answers the question owners actually ask. Reporting the bye-FREE count alone
+reads as a clean sweep and invited exactly the wrong claim — that the AFL puts
+no division game on a bye week. `divisionByeSplit`
+(`src/utils/schedule-constraints.mjs`) computes both halves and, crucially,
+splits the bye-week games into FORCED (the format left nowhere else) and
+CHOSEN (a preference was spent). Those two are opposites and the same number
+hides them: the AFL's 36 are all forced, The League's 8 are all chosen.
+
+### The 36 do not move — only their severity does
+
+Measured exhaustively over all 336 legal placements of the AFL's second
+division leg in 2026 (the first leg and the cross-conference round fill Weeks
+1-4 with no freedom left):
+
+| leg-2 weeks | div games on byes | NFL teams out | best min gap | gap floor | last 5 wks w/ division |
+|---|---|---|---|---|---|
+| 5, 9, 12, 12, 14 | 36 (30%) | 6 | 4 | **1** | 2/5 |
+| 9, 10, 12, 12, 14 | 36 (30%) | 8 | 8 | 5 | 3/5 |
+| 9, 12, 12, 13, 14 | 36 (30%) | 8 | 8 | 5 | 3/5 |
+| **10, 12, 12, 13, 14** | **36 (30%)** | **10** | **9** | **6** | **4/5** ← shipped |
+| 11, 12, 12, 13, 14 | 36 (30%) | 12 | 10 | 7 | 4/5 |
+
+Every row is 36. The count is invariant because only two bye-free slots survive
+Week 4 (Week 12's doubleheader) and the second leg is five rounds — so three
+land on byes no matter what. **Do not "optimise" the count; it is already the
+floor.** What the placement buys is severity and rematch gap, and they trade
+off monotonically: each 2 fewer NFL teams out during a division round costs
+roughly a week of minimum rematch gap.
+
+The cheap end of that trade is real — Week 9 for Week 10 saves 2 team-byes for
+1 week of gap — and it was not taken, because it also drops the stretch run
+from 4 of the last 5 weeks to 3. The expensive end is a trap: routing the leg
+through Weeks 5 and 9 saves 4 team-byes but puts the gap FLOOR at 1, and
+`validateSeason` does not check the rematch rule — only
+`tests/schedule-optimization.test.ts` does, and the annealer has no gap term to
+steer with. A draw that seats rivals in Weeks 4 and 5 would be generated,
+scored as good, and caught only if someone ran the suite.
+
+2026 realised a minimum gap of 8 (histogram 8×15, 9×21, 11×9, 12×15) against a
+best-achievable 9 — the annealer optimises fairness, not gap, so it lands
+inside the structural window rather than at its edge.
 
 ## Both leagues build constructively
 

@@ -30,6 +30,13 @@ import {
   rivalrySeriesByPair,
 } from '../../src/utils/rivalry-intensity.mjs';
 import { RIVALRY_MEETINGS_TO_MENTION } from '../../src/utils/schedule-release.mjs';
+import { SCHEDULE_POLICY } from '../../src/utils/schedule-plan.mjs';
+import {
+  describeDivisionByeSplit,
+  divisionByeSplit,
+  scheduleConstraints,
+  TIER_LABEL,
+} from '../../src/utils/schedule-constraints.mjs';
 import { primaryLink, articleLink, featureLink, linkList } from '../article-utils/article-links.mjs';
 
 export const config = {
@@ -146,6 +153,22 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = '
   lines.push(
     `  - ${release.summary.byeFreeDivisionGames} of a possible ${release.summary.divisionGameCeiling} division games fall in weeks with no NFL byes.`,
   );
+  // The bye-free count alone reads as a clean sweep. State the OTHER side of
+  // it — how many division games are on a bye and why — or the column
+  // implies a promise the schedule does not make. `divisionGames` is absent
+  // on reveals locked before it was recorded; the column simply omits the
+  // line rather than guessing a denominator.
+  const byeSplit = divisionByeSplit({
+    total: release.summary.divisionGames,
+    byeFree: release.summary.byeFreeDivisionGames,
+    ceiling: release.summary.divisionGameCeiling,
+  });
+  if (byeSplit) {
+    lines.push(
+      `  - The other ${byeSplit.onByes} of ${byeSplit.total} division games (${byeSplit.percent}%) DO fall on ` +
+        `NFL bye weeks: ${describeDivisionByeSplit(byeSplit)}. Do not call this a scheduling failure.`,
+    );
+  }
   lines.push(
     `  - Bye-week luck is nearly even: the gap between the most and least favoured franchise is ${release.summary.netByeSpread}.`,
   );
@@ -154,6 +177,16 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = '
     lines.push(`  - No two division rivals meet twice inside ${release.summary.minRematchGap} weeks of each other.`);
   }
   lines.push(`  - ${release.summary.games} games in total.`);
+  lines.push('');
+  // The precedence, not just the rules. Nearly every "why is my schedule like
+  // this" question is answered by a higher-ranked rule beating a lower one,
+  // and a column that lists the goals without the order cannot give that
+  // answer. Shared with the reveal page so the two cannot drift.
+  lines.push('THE CONSTRAINTS, IN PRIORITY ORDER (each one yields to every one above it):');
+  for (const c of scheduleConstraints({ crossConference: Boolean(SCHEDULE_POLICY[league]?.crossConference) })) {
+    lines.push(`  ${c.rank}. [${TIER_LABEL[c.tier]}] ${c.rule}`);
+    lines.push(`     ${c.why}`);
+  }
   // THE RIVALRY RENEWALS. Ranked by the same intensity formula the rivalry
   // pages use (`rivalry-intensity.mjs`) so the column and the site agree about
   // who a franchise's real rival is. Records are rendered through
@@ -331,6 +364,15 @@ suspects the draw was unfair — mention them lightly, in passing, the way a bea
 writer notes the league office got something right for once. Never present the
 schedule as an opinion: it is set, it is final, and every team is looking at
 the same one.
+
+BYE-WEEK DIVISION GAMES ARE NOT A SCANDAL. The fact sheet gives both numbers:
+how many division games dodge the NFL byes and how many do not. Some leagues
+CANNOT get to zero — the format runs out of bye-free weeks before it runs out
+of division games — and where the fact sheet says a count is forced, say so or
+say nothing. Never write that the league office failed to avoid a bye week it
+had no way to avoid, and never round the awkward number away. The constraint
+list is in priority order for exactly this reason: if the schedule breaks a
+stated goal, a higher-ranked rule beat it, and that is the story.
 
 RIVALRIES ARE THE STORY. A schedule is a list of dates until you say who is
 playing whom and what happened the last dozen times. The fact sheet ranks the

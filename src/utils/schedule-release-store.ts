@@ -69,6 +69,13 @@ export interface ScheduleRelease {
     games: number;
     byeFreeDivisionGames: number;
     divisionGameCeiling: number;
+    /**
+     * Every division game in the season — the denominator `byeFreeDivisionGames`
+     * and `divisionGameCeiling` are both counted against. Optional because
+     * reveals locked before Aug 2026 carry neither it nor the percentage the
+     * page derives from it; those render the bye-free count alone.
+     */
+    divisionGames?: number;
     netByeSpread: number;
     homeGames: { min: number; max: number };
     minRematchGap: number | null;
