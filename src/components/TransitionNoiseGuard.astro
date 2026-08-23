@@ -63,10 +63,17 @@
     if (window.__transitionNoiseGuardInstalled) return;
     window.__transitionNoiseGuardInstalled = true;
 
-    // Grace period before declaring a swap dead. The rejection can land a beat
-    // before `astro:after-swap` on a slow page, and hard-navigating over a swap
-    // that was about to succeed would throw away a perfectly good soft nav.
-    var SETTLE_MS = 250;
+    // Grace period before declaring a swap dead.
+    //
+    // Longer is strictly safer, and costs only latency on a navigation that has
+    // already failed. If the rejection belongs to the CURRENT navigation then
+    // that navigation is dead by definition — its swap callback rejected, so
+    // `astro:after-swap` will never fire and no amount of waiting changes the
+    // answer. If it belongs to a superseded one, the live navigation is healthy
+    // and waiting is exactly what lets it fire after-swap and call this off.
+    // 250ms was not enough for that on the roster page, which is slow enough to
+    // have earned its own branded loader.
+    var SETTLE_MS = 1500;
 
     // How long a completed rescue suppresses another one to the same URL. Long
     // enough to outlive the reload it triggers, short enough that a genuine
@@ -166,6 +173,13 @@
         '[client-router] view transition aborted:',
         event.reason && event.reason.message
       );
+
+      // Suppress both names, but rescue only InvalidStateError. AbortError is
+      // the SUPERSEDED case — Astro calls skipTransition() on the in-flight
+      // transition before starting the next one, so by the time it lands a
+      // second, healthy navigation already owns `pending`. Rescuing there would
+      // hard-navigate over a soft navigation that was on its way to succeeding.
+      if (event.reason.name !== 'InvalidStateError') return;
       rescueFailedNavigation();
     });
   })();

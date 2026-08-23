@@ -200,6 +200,18 @@ describe('rescues a navigation whose swap failed', () => {
     expect(guard.navigatedTo()).toBeNull();
   });
 
+  it('does NOT hard-navigate on a SUPERSEDED transition', () => {
+    // AbortError ("Transition was skipped") is Astro calling skipTransition()
+    // on the in-flight transition before starting the next one — so by the time
+    // it lands, a second and healthy navigation already owns `pending`.
+    // Rescuing there would hard-navigate over a soft nav on its way to
+    // succeeding. Suppress it, but never rescue on it.
+    guard.astro('astro:before-preparation', TARGET);
+    expect(guard.reject(new DOMException('Transition was skipped', 'AbortError'))).toBe(true);
+    guard.flushTimers();
+    expect(guard.navigatedTo()).toBeNull();
+  });
+
   it('does NOT hard-navigate for a rejection it did not suppress', () => {
     guard.astro('astro:before-preparation', TARGET);
     guard.reject(new TypeError('a real bug'));
