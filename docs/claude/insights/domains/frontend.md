@@ -1843,22 +1843,32 @@ rule that three rounds of screenshots had all missed.
 offset was set, and three rounds of eyeballing screenshots and nudging the
 value never landed it.
 
-**Insight:** The crest was `width: X; height: X;` with `X = clamp(152px, 52%,
-264px)` — one declaration reused, which *looks* square and is not. **A
-percentage `width` resolves against the containing block's WIDTH; a percentage
-`height` against its HEIGHT.** The band is ~3.5x wider than it is tall, so the
-same clamp resolved to `182px` wide and `124px` tall (the height fell to the
-clamp's px floor, since 52% of a 119px band is 62px). `object-fit: contain`
-then letterboxed the square artwork inside that 182x124 box with ~29px of
-transparent padding down each side — so `right` was positioning an **invisible
-box edge sitting ~7% of the band away from the logo anyone could see**.
+**Insight:** The crest was `width: X; height: X;` — one declaration reused,
+which *looks* square and is not. **A percentage `width` resolves against the
+containing block's WIDTH; a percentage `height` against its HEIGHT.** The band
+is ~3.5x wider than it is tall, so one clamp resolved to two different lengths
+and `object-fit: contain` letterboxed the square artwork inside the resulting
+non-square box — leaving transparent padding down each side, which is what
+`right` was actually positioning against.
+
+Measured on a 414x119 phone band, at both sizes this shipped at:
+
+| `clamp()` | box | painted | dead space per side |
+|---|---|---|---|
+| `clamp(76px, 26%, 132px)` (shipped) | 108x76 | 76x76 | 16px |
+| `clamp(152px, 52%, 264px)` (2x attempt) | 182x124 | 124x124 | 29px |
+
+In both rows the HEIGHT lands on the clamp's px **floor** — 26% of a 119px
+band is 31px, 52% is 62px — so the artwork was never once the size the
+percentage implied, and the offset was pointing at an invisible edge several
+percent of the band away from the logo anyone could see.
 
 Two failure modes worth separating, because only the first is obvious:
 - The element is the wrong SHAPE. Any `object-fit` value then re-introduces a
   gap between the box and the paint: `contain` letterboxes, `cover` crops.
 - The clamp's px min/max silently becomes the operative value on one axis
   only. Here the artwork was legible purely *because* the height floor caught
-  it — remove the floor and the crest would have collapsed to 62px.
+  it — remove the floor and the crest collapses to 31px.
 
 Fix: size one axis and let `aspect-ratio` derive the other
 (`height: 112%; aspect-ratio: 1; width: auto`). Box and artwork then coincide,
@@ -1875,7 +1885,7 @@ const s = Math.min(b.width / img.naturalWidth, b.height / img.naturalHeight); //
 const paintedWidth = img.naturalWidth * s;   // vs b.width -> the phantom padding
 ```
 
-A one-line diff of "box 182x124, natural 100x100, painted 124x124" said
+A one-line dump of "box 182x124, natural 100x100, painted 124x124" said
 immediately what three screenshot rounds had not. Generally: any time an
 absolutely-positioned box is offset against a *sibling's* position, print both
 rects before touching the offset — see also the width-sweep recommendation in
@@ -1883,4 +1893,12 @@ the 2026-08-22 `display: contents` entry.
 
 **Evidence:** `src/styles/player-modal-band.css#.pmb__crest`, whose comment
 carries the short version.
+
+**Sequel, same day:** sizing the fixed axis off the CONTAINER's height then
+makes the crest grow whenever anything grows the container. A player name long
+enough to wrap at 320px took the band 119px -> 134px and the crest 133px ->
+150px, sliding it out from behind the player and under the name. Percentage
+sizing against a parent that can grow needs either a cap (`min(112%, 152px)`)
+or a parent that cannot grow — this took both, clipping the band's secondary
+lines instead of letting them wrap.
 

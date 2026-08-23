@@ -1330,9 +1330,10 @@ headshot, then "it's not behind the player" after it was moved. Both were the
 same defect, and it was not the offset.
 
 `.pmb__crest` set `width` and `height` to one `clamp()`, so the box resolved
-182x124 (percentage width vs. the band's width, percentage height vs. its
-height) and `object-fit: contain` letterboxed the square crest with ~29px of
-dead space each side. `right` was positioning that dead edge. Sizing one axis
+non-square (percentage width vs. the band's width, percentage height vs. its
+height) and `object-fit: contain` letterboxed the square crest with dead space
+down each side — 16px per side as shipped, 29px once the size was doubled, on
+a 414x119 band. `right` was positioning that dead edge, not the artwork. Sizing one axis
 and deriving the other with `aspect-ratio: 1` makes box and artwork the same
 rectangle; the offset then parks the crest's right edge on the cutout's
 horizontal centre, so the player's head and shoulder cover that side.

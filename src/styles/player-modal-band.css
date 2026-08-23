@@ -86,8 +86,16 @@
      3.5x wider than it is tall. That clamp resolved to 182x124 on a phone, so
      `object-fit: contain` letterboxed the square crest with ~29px of
      transparent padding down each side — and `right` was then positioning an
-     invisible box edge ~7% away from the logo anyone could see. */
-  height: var(--pmb-crest-size, 112%);
+     invisible box edge, several percent of the band away from the logo anyone
+     could actually see.
+
+     The px ceiling is a backstop, not the operative value: sizing off the
+     band's height means anything that makes the band TALLER (a name long
+     enough to wrap on a 320px phone) makes the crest WIDER too, and it creeps
+     out from behind the player and under the text. The secondary lines in
+     both bands clip rather than wrap for the same reason; this bounds what is
+     left. */
+  height: var(--pmb-crest-size, min(112%, 152px));
   aspect-ratio: 1;
   width: auto;
   object-fit: contain;
@@ -97,10 +105,12 @@
 }
 
 /* No headshot to sit beside — the crest takes the space the cutout would have
-   had, and can carry more weight with nothing competing. */
+   had, and can carry more weight with nothing competing. Sized UNDER 100% on
+   purpose: this is the one band with no player to explain a crest running off
+   the top and bottom edges, so it stays whole inside `overflow: hidden`. */
 .pmb--no-cutout .pmb__crest {
   --pmb-crest-right: 1.25rem;
-  --pmb-crest-size: 124%;
+  --pmb-crest-size: 94%;
   --pmb-crest-opacity: 0.34;
 }
 

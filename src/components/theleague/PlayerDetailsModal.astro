@@ -325,16 +325,31 @@ const { class: className, hideContract = false } = Astro.props;
     filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
   }
 
+  /* Both secondary lines clip rather than wrap, matching .cdm-band__* on the
+     sibling modal. The band is a fixed-height identity strip (min-height
+     108px) and the crest inside it is sized off that height, so a line that
+     wraps on a narrow phone grows the band AND the crest with it — at 320px a
+     wrapped sub line took the band 119px -> 134px and the crest 133px ->
+     150px, sliding it under the name. Nothing is lost to the clip: college,
+     experience and the full draft line all repeat in the details section
+     below. */
   .pdm-hero__meta-text {
     font-size: 0.875rem;
     font-weight: 500;
     color: rgba(255, 255, 255, 0.85);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .pdm-hero__sub {
     font-size: 0.8125rem;
     color: rgba(255, 255, 255, 0.62);
     line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .pdm-hero__age {
