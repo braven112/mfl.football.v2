@@ -158,11 +158,19 @@ const { class: className } = Astro.props;
     text-shadow: 0 1px 8px rgba(0, 0, 0, 0.35);
   }
 
+  /* Clips rather than wraps, like every other .pmb band's secondary line: the
+     crest inside the band is sized off the band's HEIGHT, so a line that wraps
+     on a narrow phone grows the band and the crest with it. The player's name
+     leads this string, so the ellipsis only ever eats the position and team —
+     both of which are on the row that opened this. */
   .player-news-subtitle {
     margin: 0.25rem 0 0 0;
     font-size: 0.9rem;
     color: rgba(255, 255, 255, 0.78);
     font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .player-news-modal__close {

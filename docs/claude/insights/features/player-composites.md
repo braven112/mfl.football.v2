@@ -1323,3 +1323,23 @@ themes).
 
 **Evidence:** `tests/franchise-band-brand.test.ts`.
 
+### Follow-up 2026-08-23 - Crest placement: measure the box, not the artwork
+
+Owner feedback in two rounds: the crest was too small and hidden behind the
+headshot, then "it's not behind the player" after it was moved. Both were the
+same defect, and it was not the offset.
+
+`.pmb__crest` set `width` and `height` to one `clamp()`, so the box resolved
+non-square (percentage width vs. the band's width, percentage height vs. its
+height) and `object-fit: contain` letterboxed the square crest with dead space
+down each side — 16px per side as shipped, 29px once the size was doubled, on
+a 414x119 band. `right` was positioning that dead edge, not the artwork. Sizing one axis
+and deriving the other with `aspect-ratio: 1` makes box and artwork the same
+rectangle; the offset then parks the crest's right edge on the cutout's
+horizontal centre, so the player's head and shoulder cover that side.
+
+The offset is measured against `.pmb__cutout`'s `right` + `max-width` (centre
+lands 19-21% from the right across breakpoints), so the two are coupled —
+changing the cutout's width wants this re-checked. Full write-up of the CSS
+trap: `domains/frontend.md`, 2026-08-23.
+

@@ -45,25 +45,73 @@
   pointer-events: none;
 }
 
-/* Franchise crest watermark — behind the cutout, same treatment as the
-   draft-room splash (.dr-splash__crest). Opacity is a custom property so a
-   surface with more room (or none of the cutout competing) can push it. */
+/* Franchise crest watermark — behind the player, offset far enough left that
+   most of the mark clears him.
+
+   It started fully behind the cutout (the draft-room splash convention,
+   .dr-splash__crest) and the headshot hid nearly all of it: a crest you only
+   see the edges of does not read as the team's mark. Moving it clear of the
+   player entirely fixed that and broke the composition — it stopped being a
+   watermark and started being a second subject competing with the face. The
+   `right` below splits the difference: the crest's right edge sits on the
+   player's horizontal centre, so his head and shoulder cover that side of the
+   mark and the rest of it reads.
+
+   That offset is tuned against .pmb__cutout's `right` + `max-width`, so the
+   two move together — change the cutout's width and this wants re-checking.
+
+   At this size the crest is TALLER than the band and deliberately bleeds off
+   both edges, the same language as .pmb__ghost, which already runs off the
+   bottom. `overflow: hidden` on .pmb does the cropping.
+
+   It underlaps the name block rather than clearing it. That is safe in the one
+   direction that matters: every crest is drawn on ink (see
+   franchise-band-brand.ts), so at this opacity it DARKENS the gradient behind
+   white type instead of lightening it. */
 .pmb__crest {
   position: absolute;
-  right: 1.25rem;
+  /* The right edge of the ARTWORK, parked on the player's horizontal centre —
+     which is why the box below has to be square (see the note). The cutout is
+     `right: 1rem` and caps at 38% wide (34% on a phone), so its centre lands
+     ~19-21% from the right edge on every band this renders on. */
+  right: var(--pmb-crest-right, 20%);
   top: 50%;
   transform: translateY(-50%);
-  width: var(--pmb-crest-size, clamp(76px, 26%, 132px));
-  height: var(--pmb-crest-size, clamp(76px, 26%, 132px));
+  /* Sized off the band's HEIGHT, and square, so the file's edges ARE the
+     artwork's edges and `right` above means what it says.
+
+     It was `width` and `height` both set to one clamp(), which looks square
+     and is not: a percentage WIDTH resolves against the containing block's
+     width, a percentage HEIGHT against its height, and this band is roughly
+     3.5x wider than it is tall. That clamp resolved to 182x124 on a phone, so
+     `object-fit: contain` letterboxed the square crest with ~29px of
+     transparent padding down each side — and `right` was then positioning an
+     invisible box edge, several percent of the band away from the logo anyone
+     could actually see.
+
+     The px ceiling is a backstop, not the operative value: sizing off the
+     band's height means anything that makes the band TALLER (a name long
+     enough to wrap on a 320px phone) makes the crest WIDER too, and it creeps
+     out from behind the player and under the text. The secondary lines in
+     both bands clip rather than wrap for the same reason; this bounds what is
+     left. */
+  height: var(--pmb-crest-size, min(112%, 152px));
+  aspect-ratio: 1;
+  width: auto;
   object-fit: contain;
-  opacity: var(--pmb-crest-opacity, 0.28);
+  opacity: var(--pmb-crest-opacity, 0.26);
   pointer-events: none;
   user-select: none;
 }
 
-/* No headshot to sit behind — let the crest carry the right side outright. */
+/* No headshot to sit beside — the crest takes the space the cutout would have
+   had, and can carry more weight with nothing competing. Sized UNDER 100% on
+   purpose: this is the one band with no player to explain a crest running off
+   the top and bottom edges, so it stays whole inside `overflow: hidden`. */
 .pmb--no-cutout .pmb__crest {
-  --pmb-crest-opacity: 0.4;
+  --pmb-crest-right: 1.25rem;
+  --pmb-crest-size: 94%;
+  --pmb-crest-opacity: 0.34;
 }
 
 .pmb__cutout {
@@ -85,9 +133,5 @@
 
   .pmb__cutout {
     max-width: 34%;
-  }
-
-  .pmb__crest {
-    --pmb-crest-size: clamp(64px, 24%, 104px);
   }
 }
