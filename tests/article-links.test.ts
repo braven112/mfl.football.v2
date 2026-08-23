@@ -386,6 +386,27 @@ describe('article links — enforcement on the built post', () => {
     });
   }
 
+  it('does not mistake <abbr> or <article> for an anchor', () => {
+    // The scanner checks the tag NAME boundary; `<a` followed by a letter is a
+    // different element. A naive /<a\b/ would have eaten both of these.
+    const html = '<p><abbr title="x">ABC</abbr> and <article>y</article></p>';
+    const post = { content: ['<p><a href="/theleague/schedule-release">ok</a></p>', html] };
+    const { post: out } = applyArticleLinks(post, links(), { league: 'theleague' });
+    expect(out.content[1]).toBe(html);
+  });
+
+  it('drops a stray </a> rather than leaving unbalanced markup', () => {
+    const post = { content: ['<p><a href="/theleague/schedule-release">ok</a></p>', '<p>text</a> more</p>'] };
+    const { post: out } = applyArticleLinks(post, links(), { league: 'theleague' });
+    expect(out.content[1]).toBe('<p>text more</p>');
+  });
+
+  it('closes an anchor the model left open', () => {
+    const post = { content: ['<p>a</p>', '<p><a href="/theleague/schedule-release">unclosed</p>'] };
+    const { post: out } = applyArticleLinks(post, links(), { league: 'theleague' });
+    expect(out.content[1]).toBe('<p><a href="/theleague/schedule-release">unclosed</p></a>');
+  });
+
   it('leaves an approved link alone through the same path', () => {
     const post = {
       content: ['<p>a</p>', '<p>go <a href="/theleague/schedule-release">the reveal</a> now</p>'],

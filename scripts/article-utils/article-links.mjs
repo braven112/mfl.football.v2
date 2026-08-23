@@ -278,26 +278,67 @@ export function withLinkDirective(factSheet, links) {
 // ── The enforcement half ───────────────────────────────────────────────────
 
 /**
- * Anchor matcher for the REPAIR pass.
- *
- * The attribute run is `(?:[^>"']|"[^"]*"|'[^']*')*`, not `[^>]*`, because a
- * `>` inside a quoted attribute value is legal HTML — `<a title="a > b"
- * href="/x">` — and `[^>]*` stops at the wrong character, mis-parsing the tag.
- * The closing tag allows `</a >`.
- *
- * THIS REGEX IS NOT THE SECURITY BOUNDARY, and must not be treated as one. A
- * regex cannot parse HTML, so `neutralizeForeignHrefs` below is what actually
- * guarantees no unapproved href survives; this one exists to produce clean
- * output in the ordinary case. CodeQL flagged the original `[^>]*` version as
- * a bad HTML filter (high severity) and it was right — three separate inputs
- * carried an unapproved href straight through it into `set:html`: an anchor
- * with no closing tag, one closed with `</a >`, and one with a `>` inside a
- * quoted attribute.
+ * Attribute-level matchers. These match an `href="…"` ATTRIBUTE, never a tag —
+ * which is the whole point (see `scanAnchorTags`).
  */
-const ANCHOR_RE = /<a\b((?:[^>"']|"[^"]*"|'[^']*')*)>([\s\S]*?)<\/a\s*>/gi;
 const HREF_RE = /\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/i;
-/** Every `href=` in a string, wherever it sits and however the tag is formed. */
 const HREF_ANYWHERE_RE = /\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/gi;
+
+/**
+ * Find every `<a …>` / `</a>` in a string by SCANNING it, not by regex.
+ *
+ * HTML is not a regular language, and the first version of this file learned
+ * it the expensive way: `/<a\b[^>]*>([\s\S]*?)<\/a>/gi` let three different
+ * inputs carry an unapproved href straight through the sanitizer into
+ * `set:html` — an anchor with no closing tag (never matched), one closed with
+ * `</a >` (never matched), and one with a `>` inside a quoted attribute value,
+ * which is legal HTML that `[^>]*` stops dead in the middle of. CodeQL flagged
+ * the pattern as a bad HTML filter, high severity, and it was right.
+ *
+ * A scanner fixes the class rather than the three instances: it tracks quoting
+ * while looking for the tag's closing `>`, so an attribute value containing
+ * `>` cannot end the tag early, and an unterminated tag is reported as running
+ * to end-of-string instead of silently not existing. Roughly thirty lines, no
+ * backtracking, and correct for the input it is given rather than correct for
+ * the inputs somebody thought of.
+ *
+ * @param {string} html
+ * @returns {Array<{ start: number, end: number, close: boolean, attrs: string }>}
+ */
+function scanAnchorTags(html) {
+  const tags = [];
+  for (let i = 0; i < html.length; i++) {
+    if (html[i] !== '<') continue;
+    let j = i + 1;
+    const close = html[j] === '/';
+    if (close) j++;
+    if (html[j] !== 'a' && html[j] !== 'A') continue;
+    // `<a` must be the whole tag name — `<abbr>` and `<article>` are not ours.
+    const after = html[j + 1];
+    if (after !== undefined && !/[\s/>]/.test(after)) continue;
+    const attrsFrom = j + 1;
+
+    // Walk to the tag's real `>`, honoring quoted attribute values.
+    let k = attrsFrom;
+    let quote = null;
+    while (k < html.length) {
+      const c = html[k];
+      if (quote) {
+        if (c === quote) quote = null;
+      } else if (c === '"' || c === "'") {
+        quote = c;
+      } else if (c === '>') {
+        break;
+      }
+      k++;
+    }
+    // k === html.length means an unterminated tag; treat it as reaching the
+    // end, so it is still removed rather than left behind as live markup.
+    tags.push({ start: i, end: Math.min(k, html.length - 1) + 1, close, attrs: html.slice(attrsFrom, k) });
+    i = k;
+  }
+  return tags;
+}
 
 /**
  * Reduce whatever the model wrote to a comparable path.
@@ -368,60 +409,78 @@ function sanitizeParagraph(html, index, notices) {
   // `?? ''` like the sibling `linksPresent`: a malformed model response can
   // put a null into `content[]`, and String(null) writes the literal text
   // "null" back into the article.
-  const repaired = String(html ?? '').replace(ANCHOR_RE, (whole, attrs, text) => {
-    const match = HREF_RE.exec(attrs ?? '');
+  const source = String(html ?? '');
+  const tags = scanAnchorTags(source);
+  if (tags.length === 0) return source;
+
+  // Rebuild the string tag by tag. An OPEN tag whose href is approved is
+  // re-emitted in canonical form (dropping any target/onclick/style the model
+  // decorated it with); one whose href is not approved is dropped along with
+  // its matching close tag, leaving the sentence intact but unlinked. A close
+  // tag with no live open tag is dropped too, so unbalanced markup cannot
+  // leave a stray `</a>` behind.
+  let out = '';
+  let cursor = 0;
+  let openApproved = 0;
+  for (const tag of tags) {
+    out += source.slice(cursor, tag.start);
+    cursor = tag.end;
+
+    if (tag.close) {
+      if (openApproved > 0) {
+        out += '</a>';
+        openApproved--;
+      }
+      continue;
+    }
+
+    const match = HREF_RE.exec(tag.attrs ?? '');
     const raw = match ? (match[1] ?? match[2] ?? match[3]) : null;
-    const normalized = normalizeHref(raw);
-    const link = normalized ? index.get(normalized) : null;
+    const link = index.get(normalizeHref(raw) ?? '');
     if (!link) {
       notices.push(`stripped invented link href="${raw ?? ''}"`);
-      return text;
+      continue;
     }
-    // Rebuild rather than pass through: drops any target/onclick/style the
-    // model decorated it with, and normalises the alias spellings above onto
-    // the one canonical href.
-    return renderAnchor(link, text);
-  });
-  return neutralizeForeignHrefs(repaired, index, notices);
+    out += `<a href="${link.href}">`;
+    openApproved++;
+  }
+  out += source.slice(cursor);
+  // Any open tag the source never closed.
+  out += '</a>'.repeat(openApproved);
+
+  return assertNoForeignHrefs(out, index, notices);
 }
 
 /**
- * THE ACTUAL GUARANTEE: no href the allow-list doesn't contain survives.
+ * Last line of defence, and deliberately not dependent on the scanner above.
  *
- * Deliberately does not parse tags at all. It sweeps for the substring
- * `href=` wherever it appears and deletes any attribute whose value isn't
- * approved — so markup the repair pass could not parse (an unclosed anchor, a
- * `</a >`, a `>` inside a quoted attribute, or something nobody has thought of
- * yet) still cannot ship a live link to a page we did not approve. Removing
- * the attribute rather than the tag is what makes it parser-independent: an
- * `<a>` with no href navigates nowhere.
- *
- * The leftover bare `<a>` is then unwrapped best-effort. That part IS
- * regex-parsing and may leave a stray tag on pathological input — which is
- * cosmetic, because the navigation is already gone.
+ * Sweeps for the substring `href=` wherever it appears and deletes any
+ * attribute whose value is not on the allow-list. Two independent mechanisms
+ * now have to fail before an unapproved link can ship, and this one makes no
+ * assumptions about the shape of the markup at all — so if `scanAnchorTags`
+ * has a bug, the reader still cannot be sent anywhere we did not approve.
  */
-function neutralizeForeignHrefs(html, index, notices) {
-  let touched = false;
-  const stripped = html.replace(HREF_ANYWHERE_RE, (whole, dq, sq, bare) => {
+function assertNoForeignHrefs(html, index, notices) {
+  return html.replace(HREF_ANYWHERE_RE, (whole, dq, sq, bare) => {
     const raw = dq ?? sq ?? bare;
     if (index.get(normalizeHref(raw) ?? '')) return whole;
-    notices.push(`neutralized unparseable anchor carrying href="${raw ?? ''}"`);
-    touched = true;
+    notices.push(`neutralized href="${raw ?? ''}" that survived the scanner`);
     return '';
   });
-  if (!touched) return html;
-  // Cosmetic only: drop the now-inert anchor tags so the prose reads normally.
-  return stripped.replace(/<a\b[^>]*>/gi, '').replace(/<\/a\s*>/gi, '');
 }
 
-/** Which of `links` already appear in a list of HTML strings. */
+/**
+ * Which of `links` already appear in a list of HTML strings.
+ *
+ * Reads hrefs, not tags: by the time this runs the strings have been through
+ * `sanitizeParagraph`, so every href left in them is an approved one, and
+ * asking "which approved destinations are present" needs no tag parsing.
+ */
 function linksPresent(paragraphs, index) {
   const found = new Set();
   for (const html of paragraphs) {
-    for (const m of String(html ?? '').matchAll(ANCHOR_RE)) {
-      const hrefMatch = HREF_RE.exec(m[1] ?? '');
-      const raw = hrefMatch ? (hrefMatch[1] ?? hrefMatch[2] ?? hrefMatch[3]) : null;
-      const link = index.get(normalizeHref(raw) ?? '');
+    for (const m of String(html ?? '').matchAll(HREF_ANYWHERE_RE)) {
+      const link = index.get(normalizeHref(m[1] ?? m[2] ?? m[3]) ?? '');
       if (link) found.add(link.href);
     }
   }
