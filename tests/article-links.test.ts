@@ -363,6 +363,38 @@ describe('article links — enforcement on the built post', () => {
     expect(out.content[1]).toBe('');
   });
 
+  // CodeQL flagged the original anchor regex as a bad HTML filter, high
+  // severity, and it was right: each of these carried an unapproved href
+  // straight through the sanitizer and into `set:html`. A regex cannot parse
+  // HTML, so the guarantee now comes from a parser-independent `href=` sweep
+  // rather than from matching tags correctly.
+  const BYPASSES: [string, string][] = [
+    ['an anchor with no closing tag', '<p><a href="/evil/phish">the browser closes it</a-less</p>'],
+    ['a closing tag written as </a >', '<p><a href="/evil/phish">spaced close</a ></p>'],
+    ['a > inside a quoted attribute', '<p><a title="x > y" href="/evil/phish">quoted gt</a></p>'],
+    ['an uppercase tag', '<p><A HREF="/evil/phish">shouty</A></p>'],
+    ['a single-quoted href', "<p><a href='/evil/phish'>single</a></p>"],
+    ['an unquoted href', '<p><a href=/evil/phish>bare</a></p>'],
+  ];
+
+  for (const [label, html] of BYPASSES) {
+    it(`no unapproved href survives ${label}`, () => {
+      const post = { content: ['<p><a href="/theleague/schedule-release">ok</a></p>', html] };
+      const { post: out, notices } = applyArticleLinks(post, links(), { league: 'theleague' });
+      expect(out.content.join(''), `${label} leaked a live link`).not.toContain('/evil/phish');
+      expect(notices.length, `${label} was neutralized silently`).toBeGreaterThan(0);
+    });
+  }
+
+  it('leaves an approved link alone through the same path', () => {
+    const post = {
+      content: ['<p>a</p>', '<p>go <a href="/theleague/schedule-release">the reveal</a> now</p>'],
+    };
+    const { post: out, notices } = applyArticleLinks(post, links(), { league: 'theleague' });
+    expect(out.content[1]).toBe('<p>go <a href="/theleague/schedule-release">the reveal</a> now</p>');
+    expect(notices).toEqual([]);
+  });
+
   it('covers the grade-card shape, not just content[]', () => {
     // draft-grades / team-grades put prose in intro[] + grades[].body. Those
     // were the one place a hallucinated href could still have shipped.

@@ -277,8 +277,27 @@ export function withLinkDirective(factSheet, links) {
 
 // ── The enforcement half ───────────────────────────────────────────────────
 
-const ANCHOR_RE = /<a\b([^>]*)>([\s\S]*?)<\/a>/gi;
+/**
+ * Anchor matcher for the REPAIR pass.
+ *
+ * The attribute run is `(?:[^>"']|"[^"]*"|'[^']*')*`, not `[^>]*`, because a
+ * `>` inside a quoted attribute value is legal HTML — `<a title="a > b"
+ * href="/x">` — and `[^>]*` stops at the wrong character, mis-parsing the tag.
+ * The closing tag allows `</a >`.
+ *
+ * THIS REGEX IS NOT THE SECURITY BOUNDARY, and must not be treated as one. A
+ * regex cannot parse HTML, so `neutralizeForeignHrefs` below is what actually
+ * guarantees no unapproved href survives; this one exists to produce clean
+ * output in the ordinary case. CodeQL flagged the original `[^>]*` version as
+ * a bad HTML filter (high severity) and it was right — three separate inputs
+ * carried an unapproved href straight through it into `set:html`: an anchor
+ * with no closing tag, one closed with `</a >`, and one with a `>` inside a
+ * quoted attribute.
+ */
+const ANCHOR_RE = /<a\b((?:[^>"']|"[^"]*"|'[^']*')*)>([\s\S]*?)<\/a\s*>/gi;
 const HREF_RE = /\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/i;
+/** Every `href=` in a string, wherever it sits and however the tag is formed. */
+const HREF_ANYWHERE_RE = /\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/gi;
 
 /**
  * Reduce whatever the model wrote to a comparable path.
@@ -349,7 +368,7 @@ function sanitizeParagraph(html, index, notices) {
   // `?? ''` like the sibling `linksPresent`: a malformed model response can
   // put a null into `content[]`, and String(null) writes the literal text
   // "null" back into the article.
-  return String(html ?? '').replace(ANCHOR_RE, (whole, attrs, text) => {
+  const repaired = String(html ?? '').replace(ANCHOR_RE, (whole, attrs, text) => {
     const match = HREF_RE.exec(attrs ?? '');
     const raw = match ? (match[1] ?? match[2] ?? match[3]) : null;
     const normalized = normalizeHref(raw);
@@ -363,6 +382,36 @@ function sanitizeParagraph(html, index, notices) {
     // the one canonical href.
     return renderAnchor(link, text);
   });
+  return neutralizeForeignHrefs(repaired, index, notices);
+}
+
+/**
+ * THE ACTUAL GUARANTEE: no href the allow-list doesn't contain survives.
+ *
+ * Deliberately does not parse tags at all. It sweeps for the substring
+ * `href=` wherever it appears and deletes any attribute whose value isn't
+ * approved — so markup the repair pass could not parse (an unclosed anchor, a
+ * `</a >`, a `>` inside a quoted attribute, or something nobody has thought of
+ * yet) still cannot ship a live link to a page we did not approve. Removing
+ * the attribute rather than the tag is what makes it parser-independent: an
+ * `<a>` with no href navigates nowhere.
+ *
+ * The leftover bare `<a>` is then unwrapped best-effort. That part IS
+ * regex-parsing and may leave a stray tag on pathological input — which is
+ * cosmetic, because the navigation is already gone.
+ */
+function neutralizeForeignHrefs(html, index, notices) {
+  let touched = false;
+  const stripped = html.replace(HREF_ANYWHERE_RE, (whole, dq, sq, bare) => {
+    const raw = dq ?? sq ?? bare;
+    if (index.get(normalizeHref(raw) ?? '')) return whole;
+    notices.push(`neutralized unparseable anchor carrying href="${raw ?? ''}"`);
+    touched = true;
+    return '';
+  });
+  if (!touched) return html;
+  // Cosmetic only: drop the now-inert anchor tags so the prose reads normally.
+  return stripped.replace(/<a\b[^>]*>/gi, '').replace(/<\/a\s*>/gi, '');
 }
 
 /** Which of `links` already appear in a list of HTML strings. */
