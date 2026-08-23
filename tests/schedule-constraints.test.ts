@@ -47,9 +47,30 @@ describe('scheduleConstraints', () => {
         }
       });
 
-      it('opens on the format and closes on the exact post-pass', () => {
+      it('opens on the format and closes on the cosmetic one', () => {
         expect(list[0].tier).toBe('format');
-        expect(list.at(-1)!.tier).toBe('exact');
+        // Home/away is last because it decides nothing — there is no
+        // home-field advantage in fantasy.
+        expect(list.at(-1)!.tier).toBe('cosmetic');
+        expect(list.at(-1)!.key).toBe('home-away');
+      });
+
+      it('ranks getting division games off byes ABOVE the rematch gap', () => {
+        // The league's explicit call: the rematch gap is ideal, not
+        // inviolable, and a schedule that protects it by handing a rivalry
+        // week to teams missing starters has bought the wrong thing.
+        const rank = (k: string) => list.find((c) => c.key === k)?.rank ?? Infinity;
+        expect(rank('division-bye-free-ceiling')).toBeLessThan(rank('rematch-gap'));
+        // light-bye-weeks is absent from seasons that predate it (2026).
+        if (list.some((c) => c.key === 'light-bye-weeks')) {
+          expect(rank('light-bye-weeks')).toBeLessThan(rank('rematch-gap'));
+        }
+      });
+
+      it('keeps both doubleheader goals above every division-game goal', () => {
+        const rank = (k: string) => list.find((c) => c.key === k)?.rank ?? Infinity;
+        expect(rank('doubleheaders-off-byes')).toBeLessThan(rank('division-bye-free-ceiling'));
+        expect(rank('doubleheader-split')).toBeLessThan(rank('division-bye-free-ceiling'));
       });
     });
   }
@@ -76,6 +97,43 @@ describe('scheduleConstraints', () => {
     expect(upcomingConstraints({ season: 2027 })).toEqual([]);
     // No season given = planning the next draw, so everything applies.
     expect(upcomingConstraints({})).toEqual([]);
+  });
+
+  // Weights exist so the SOFT goals can trade against each other by margin
+  // instead of by strict precedence. Two properties keep that coherent.
+  it('weights only the tradeable goals, and never the format or hard ones', () => {
+    for (const c of scheduleConstraints({})) {
+      if (c.tier === 'format' || c.tier === 'hard') {
+        expect(c.weight, `${c.key} is non-negotiable and must not carry a weight`).toBeNull();
+      } else {
+        expect(c.weight, `${c.key} is tradeable and needs a weight`).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('orders weights the same way it orders ranks', () => {
+    // A goal ranked higher that weighed less would make the list say two
+    // contradictory things about the same trade.
+    const weighted = scheduleConstraints({}).filter((c) => c.weight != null);
+    for (let i = 1; i < weighted.length; i += 1) {
+      expect(
+        weighted[i].weight,
+        `${weighted[i].key} (rank ${weighted[i].rank}) outweighs ${weighted[i - 1].key} (rank ${weighted[i - 1].rank})`,
+      ).toBeLessThanOrEqual(weighted[i - 1].weight!);
+    }
+  });
+
+  it('keeps the annealer\u2019s weights in the same order as the goal weights', () => {
+    // scoreSeason tunes the tail of this list. Its numbers are tuned
+    // independently, but if they ever ranked opponent strength above bye luck
+    // the optimiser would be chasing a different priority order than the one
+    // the page publishes.
+    const weightOf = (k: string) => scheduleConstraints({}).find((c) => c.key === k)!.weight!;
+    const annealer = { byeLuck: 1.0 + 0.6, opponentStrength: 0.25 + 0.25, homeAway: 0.15 };
+    expect(weightOf('bye-luck')).toBeGreaterThan(weightOf('opponent-strength'));
+    expect(annealer.byeLuck).toBeGreaterThan(annealer.opponentStrength);
+    expect(weightOf('opponent-strength')).toBeGreaterThan(weightOf('home-away'));
+    expect(annealer.opponentStrength).toBeGreaterThan(annealer.homeAway);
   });
 
   it('gives every goal a stable key, unique across the list', () => {

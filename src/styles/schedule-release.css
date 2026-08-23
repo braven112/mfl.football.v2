@@ -604,3 +604,15 @@
 .rel__verdict--optimised .rel__verdictTag {
   color: var(--color-text-secondary, #475569);
 }
+
+/* Weight sits beside the tier label: the tier says whether a goal can be
+   traded at all, the weight says what it costs when it is. */
+.rel__ruleWeight {
+  display: inline-block;
+  margin-left: 0.5rem;
+  font-size: 0.625rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-disabled, #94a3b8);
+}

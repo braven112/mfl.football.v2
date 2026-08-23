@@ -64,20 +64,44 @@ const SCORERS = {
       : { status: 'met', detail: `Weeks ${f.doubleheaders.join(', ')}, none with an NFL bye` };
   },
 
+  // A goal now, not a hard rule — it ranks below getting division games off
+  // bye weeks, so falling short of it can be the RIGHT outcome rather than a
+  // failure. Scored partial, with the number, instead of blocked.
   'rematch-gap': (f) =>
     f.minRematchGap == null
       ? { status: 'optimised', detail: 'no repeat pairing to measure' }
       : f.minRematchGap > 3
         ? { status: 'met', detail: `closest rematch is ${f.minRematchGap} weeks apart` }
-        : { status: 'blocked', detail: `a rivalry repeats after ${f.minRematchGap} week(s)` },
+        : {
+            status: 'partial',
+            detail:
+              `a rivalry repeats after ${f.minRematchGap} week(s) — inside the three-week target, ` +
+              `traded away for a higher goal`,
+          },
 
   'doubleheader-split': (f) => {
     const early = f.doubleheaders.filter((w) => w <= f.lastWeek / 2).length;
     const late = f.doubleheaders.length - early;
-    // An odd count cannot split evenly; 2/1 is as good as three gets.
-    return Math.abs(early - late) <= 1
-      ? { status: 'met', detail: `${early} early, ${late} late` }
-      : { status: 'partial', detail: `${early} early, ${late} late — the bye-free weeks did not allow better` };
+    // Two separate tests, and the second is the one with teeth. A franchise
+    // whose extra games all landed in September has had its season
+    // front-loaded, because the back half is the half that decides seeding.
+    // With league-wide doubleheaders "every franchise" is satisfied by any one
+    // week past 8; under the staggered last resort it has to hold per team,
+    // which is why it is stated per franchise rather than per week.
+    const afterWeek8 = f.doubleheadersAfterWeek8 ?? f.doubleheaders.filter((w) => w > 8).length;
+    const balanced = Math.abs(early - late) <= 1;
+    if (!afterWeek8) {
+      return {
+        status: 'blocked',
+        detail: `no doubleheader after Week 8 — every extra game lands in the first half (Weeks ${f.doubleheaders.join(', ')})`,
+      };
+    }
+    return balanced
+      ? { status: 'met', detail: `${early} early, ${late} late; ${afterWeek8} after Week 8` }
+      : {
+          status: 'partial',
+          detail: `${early} early, ${late} late (${afterWeek8} after Week 8) — the bye-free weeks did not allow an even split`,
+        };
   },
 
   // The one goal where "short of target" has two completely different
@@ -120,8 +144,9 @@ const SCORERS = {
     return {
       status: 'partial',
       detail:
-        `${light.length} of ${weeks.length} on a week with ${f.lightByeWeekMax} or fewer teams out — ${label}. ` +
-        `The calendar had no lighter week the rematch rule could reach.`,
+        `${light.length} of ${weeks.length} on a week with ${f.lightByeWeekMax} or fewer NFL teams out — ${label}. ` +
+        `No lighter week was reachable. Counted by NFL teams on bye, not by starters actually missing from the ` +
+        `two rosters involved — that sharper test is not built yet.`,
     };
   },
 
@@ -230,6 +255,10 @@ export const goalFactsFromSeason = ({
     lastWeek,
     games: described.games,
     doubleheaders,
+    // Derived from the week plan, so it is right for league-wide doubleheaders.
+    // A staggered season would need this computed per franchise off the games
+    // themselves — see the goal's `why`.
+    doubleheadersAfterWeek8: doubleheaders.filter((w) => w > 8).length,
     byeCount: (week) => byeByWeek.get(week) ?? 0,
     divisionGames: ceiling.total,
     byeFreeDivisionGames: described.byeFreeDivisionGames,

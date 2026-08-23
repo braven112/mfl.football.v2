@@ -57,11 +57,92 @@ renumber — rank is positional and derived. `tests/schedule-goals.test.ts` fail
 if a goal has no scorer, including one whose `since` has not arrived yet, so the
 season it first applies to cannot throw at lock time.
 
-### Goal 1 has an escape hatch nothing else has
+### The ranking, and the one decision still open
 
-No doubleheader on an NFL bye week is the league's top goal, and in a year when
-no league-wide week works the commissioner has **staggered doubleheaders
-franchise by franchise** so each team plays its two games in a week its own
+Set by the commissioner in Aug 2026, in his words:
+
+1-2. **The format.** Note goal 1 is "the same number of games ACROSS THE
+SEASON", not one per week — doubleheaders break per-week uniformity by design,
+and the staggered last resort below breaks it per franchise.
+3. **No doubleheader on a bye week.** The top goal and the enabling one: "if
+   it's possible to be true then we do it and other rules fall in place."
+4. **Doubleheaders split, and every franchise gets one after Week 8.** The
+   after-Week-8 clause is new and is the half with teeth — the back end of the
+   season decides seeding.
+5. **Division games off bye weeks, to the format's ceiling.**
+6. **The forced ones backfill onto the lightest bye weeks.**
+7. **Rematch gap** — DEMOTED from a hard rule to a goal below 5 and 6.
+   "Division games off byes is more important than this but this is ideal."
+8-10. Bye luck, opponent strength, worst-week/finale.
+11. **Home/away — cosmetic.** "It has no bearing on games." True: there is no
+    home-field advantage in fantasy.
+
+**A trade you might expect here does not exist.** Ranking 5 above 7 sounds like
+it should let the planner break the rematch gap to get more division games off
+byes. It cannot: the COUNT of bye-week division games is invariant across every
+legal draw (all 336 for the AFL in 2026 — see the frontier above), because it
+falls out of how many bye-free slots the format leaves. The rematch bound
+constrains only goal 6, which bye WEEKS the forced ones land on.
+
+So the open decision is narrow: may the planner widen past `MIN_REMATCH_GAP` to
+reach a lighter bye week? For AFL 2026 that would buy 8 NFL teams out → 6, at a
+rematch floor of 1 (rivals in Weeks 4 and 5). The ranking says yes; the bound is
+still in place pending confirmation, because `scoreSeason` has no rematch term
+and would not steer away from the worst case on its own.
+
+### Ranked AND weighted
+
+Rank alone is lexicographic — goal 5 beats goal 6 by any margin, however small
+the gain or large the loss. That is right for `format` and `hard` (those carry
+`weight: null` and are never traded) and wrong below them, where the trades are
+real: giving up a little rematch gap for a much lighter bye week is a good deal
+and the reverse is not.
+
+| Goal | Weight |
+|---|---|
+| division games off byes | 100 |
+| lightest bye weeks | 70 |
+| rematch gap | 55 |
+| bye luck | 45 |
+| opponent strength | 20 |
+| worst week / finale | 15 |
+| home/away (cosmetic) | 5 |
+
+Only ratios matter, which is what lets home/away at 5 behave as intended beside
+100. **`scoreSeason` already trades by weight and its terms are the tail of this
+list; the week-plan goals above them are still lexicographic inside
+`buildWeekPlan`.** A test pins that the annealer's weights stay in the same
+ORDER as the goal weights, so the optimiser cannot chase a different priority
+order than the page publishes. Making the week plan itself weighted is the
+outstanding piece.
+
+### Two goals are not fully implemented
+
+- **Starter-aware bye exposure.** Goal 6's second clause — "a bye week is only a
+  problem for a game if one of those two teams is actually missing starters" —
+  is not built. `byeExposure` counts the WHOLE roster, so a team losing two
+  bench players scores the same as one losing two starters.
+
+  **It matters far more in The League than the AFL, and not for the obvious
+  reason.** The AFL reveals its schedule BEFORE its draft (release is Labor Day
+  − 22, the NL draft is Labor Day − 8), so the only players on an AFL roster at
+  that moment are keepers — which are by definition the important ones, making a
+  whole-roster count already a fair read on starters. The League reveals June 1,
+  after rosters are set and FULL, so its counts are diluted by deep bench players
+  who would never start. Build it for The League first.
+
+  The league feed has the starter requirements (`league.starters`: 9, with
+  position limits), so the model is buildable; it needs a preseason value source
+  to pick the starting nine (ADP from `data/ranking-sources/<year>.json` is the
+  obvious candidate). Until then, NFL teams out is the proxy and the verdict
+  says so.
+- **Staggered doubleheaders.** The last resort under goal 3 is documented, not
+  implemented — see below.
+
+### Goal 3 has an escape hatch nothing else has
+
+In a year when no league-wide week works the commissioner has **staggered
+doubleheaders franchise by franchise** so each team plays its two games in a week its own
 roster is whole. That breaks the round model this whole module is built on and
 has to be hand-built, so it is a genuine last resort — and it is still better
 than a doubleheader on a bye. Nothing here implements it; it is recorded so

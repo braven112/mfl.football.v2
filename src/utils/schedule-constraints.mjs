@@ -23,6 +23,30 @@
  *   preference  real, stated, and the first thing to yield.
  *   exact       settled by a post-pass once everything above is fixed.
  *
+ * RANKED *AND* WEIGHTED
+ *
+ * Rank alone is lexicographic: goal 5 beats goal 6 by any margin, however
+ * small the gain and however large the loss. That is the right model for the
+ * `format` and `hard` tiers — a schedule that plays someone twelve games is not
+ * a schedule, and no amount of bye-week elegance buys it back, so those carry
+ * `weight: null` and are never traded.
+ *
+ * Everything below them carries a `weight`, because down there the trades are
+ * real and the margins matter: giving up a little rematch gap for a much
+ * lighter bye week is a good deal, and the reverse is not. Weights are
+ * arbitrary positive numbers read as ratios — only the ratio matters, which is
+ * what lets a deliberately small one (home/away at 5, cosmetic) behave as
+ * expected next to a large one (division games off byes at 100).
+ *
+ * WHAT IS AND IS NOT WEIGHTED TODAY. `scoreSeason` already trades its terms by
+ * weight, and those terms are the tail of this list — bye luck, opponent
+ * strength, home/away. The week-plan goals above them (which weeks hold
+ * division rounds, where the doubleheaders go) are still decided
+ * lexicographically inside `buildWeekPlan`. `tests/schedule-constraints.test.ts`
+ * pins that the annealer's weights stay in the same ORDER as the goal weights
+ * so the two cannot contradict each other; making the week plan itself weighted
+ * is the outstanding piece.
+ *
  * ONE GOAL LIST FOR EVERY LEAGUE
  *
  * The leagues share these goals exactly; what differs is how well each can hit
@@ -70,7 +94,7 @@
  */
 
 /** Tiers, strongest first. Index is the precedence. */
-export const CONSTRAINT_TIERS = ['format', 'hard', 'maximise', 'preference', 'exact'];
+export const CONSTRAINT_TIERS = ['format', 'hard', 'maximise', 'preference', 'cosmetic'];
 
 /** @type {Record<string, string>} — indexed by `constraint.tier`, which is a plain string. */
 export const TIER_LABEL = {
@@ -78,7 +102,7 @@ export const TIER_LABEL = {
   hard: 'Hard rule',
   maximise: 'Maximised',
   preference: 'Preference',
-  exact: 'Settled exactly',
+  cosmetic: 'Cosmetic',
 };
 
 /**
@@ -90,8 +114,12 @@ const allConstraints = () => {
     {
       key: 'one-game-per-week',
       tier: 'format',
-      rule: 'One game per franchise per week — two in a doubleheader — and every franchise plays the same number of games.',
-      why: 'A season is a set of whole rounds. Move a single game and the invariant breaks on the first move.',
+      rule: 'Every franchise plays the same number of games across the season, and never two in a week that is not a doubleheader week for it.',
+      why:
+        'Note what this does NOT say. Per-week uniformity is not the invariant — a doubleheader week gives every ' +
+        'franchise two, and the staggered-doubleheader last resort under the top goal deliberately gives DIFFERENT ' +
+        'franchises their second game in different weeks. What can never bend is the season total: an unequal ' +
+        'number of games is not a schedule, it is a scoring error waiting to happen.',
       enforcedBy: 'validateSeason',
     },
     {
@@ -106,29 +134,28 @@ const allConstraints = () => {
       tier: 'hard',
       rule: 'No doubleheader falls on an NFL bye week.',
       why:
-        'THE TOP GOAL. A doubleheader pays the bye penalty twice, so a bye week is the one week it must not land on. ' +
-        'It has an escape hatch nothing else has: in a year when no league-wide week works, the commissioner has ' +
-        'staggered doubleheaders franchise by franchise so each team plays its two games in a week its own roster is ' +
-        'whole. That is a last resort — it breaks the round structure everything else here relies on and has to be ' +
-        'built by hand — and it is still better than putting a doubleheader on a bye.',
+        'THE TOP GOAL, and the enabling one — fix the doubleheader weeks first and most of the rest of the list ' +
+        'falls into place around them. A doubleheader pays the bye penalty twice, so a bye week is the one week it ' +
+        'must not land on. It has an escape hatch nothing else has: in a year when no league-wide week works, the ' +
+        'commissioner has staggered doubleheaders franchise by franchise so each team plays its two games in a week ' +
+        'its own roster is whole. That breaks the round structure everything else here relies on and has to be built ' +
+        'by hand, so it is a genuine last resort — and it is still better than a doubleheader on a bye.',
       enforcedBy: 'validateSeason',
-    },
-    {
-      key: 'rematch-gap',
-      tier: 'hard',
-      rule: 'Division rivals never meet twice inside three weeks.',
-      why: 'A rematch seven days later is the same game again — same rosters, no new information — and it settles the division race before the season has one.',
-      enforcedBy: 'tests/schedule-optimization.test.ts',
     },
     {
       key: 'doubleheader-split',
       tier: 'hard',
-      rule: 'Doubleheaders split between the start and the end of the season.',
-      why: 'Both ends carry extra games, so neither half of the season decides more than its share. It yields to the goal above it: in a year with too few bye-free weeks at one end, staying off the byes wins.',
+      rule: 'Doubleheaders split between the start and the end of the season, and every franchise gets at least one after Week 8.',
+      why:
+        'Both ends carry extra games, so neither half of the season decides more than its share — and the back half ' +
+        'is the half that decides seeding, so a franchise whose extra games all landed in September has had its ' +
+        'season front-loaded. The after-Week-8 clause is what makes that concrete, and it is the clause the ' +
+        'staggered-doubleheader last resort has to keep honouring franchise by franchise.',
       enforcedBy: 'chooseDoubleheaderWeeks + tests/schedule-optimization.test.ts',
     },
     {
       key: 'division-bye-free-ceiling',
+      weight: 100,
       tier: 'maximise',
       rule: 'Division games take every bye-free slot the format leaves them.',
       why: 'A ceiling, not a target of zero. A franchise has only so many bye-free game slots, and a format needing more division games than it has clean slots must put some on a bye however the season is drawn — the AFL cannot reach zero at all, The League can only by giving up its rivalry finish. Always reported against the slots the format actually leaves.',
@@ -136,23 +163,47 @@ const allConstraints = () => {
     },
     {
       key: 'light-bye-weeks',
+      weight: 70,
       tier: 'maximise',
-      rule: 'The division games that cannot dodge a bye week take the LIGHTEST bye weeks — ideally ones with only two NFL teams out.',
-      why: 'Which division games land on a bye week is settled by the rule above; WHICH bye week is still a free choice, and a two-team week costs a couple of rosters a starter where a six-team week guts half the league. The second leg\u2019s window is widened backwards until the light weeks are reachable, and stops exactly where the three-week rematch rule says it must.',
+      rule: 'The division games that cannot dodge a bye week backfill onto the LIGHTEST bye weeks — and a bye week is only a problem for a game if one of those two teams is actually missing starters.',
+      why:
+        'Which division games land on a bye week is settled by the goal above; WHICH bye week is still a free ' +
+        'choice, and a two-team week costs a couple of rosters a starter where a six-team week guts half the ' +
+        'league. The second half of the rivalry schedule is widened backwards until the light weeks are reachable. ' +
+        'How much the second clause matters differs by league, and not for the reason you would guess. The AFL ' +
+        'reveals its schedule BEFORE its draft, so the only players on a roster are keepers \u2014 which are by ' +
+        'definition the important ones, making a whole-roster bye count already a fair read on starters. The League ' +
+        'reveals on June 1, after rosters are set and full, so its bye counts are diluted by deep bench players who ' +
+        'would never start. The starter-aware test is therefore mostly a League need, and until it is built NFL ' +
+        'teams out is the proxy for both.',
       enforcedBy: 'buildWeekPlan + tests/schedule-week-plan.test.ts',
       // Adopted Aug 2026, after the 2026 schedules were drawn, locked and
       // pasted into MFL. 2026 is not re-drawn for it.
       since: 2027,
     },
     {
-      key: 'bye-luck',
+      key: 'rematch-gap',
+      weight: 55,
       tier: 'maximise',
-      rule: 'Bye-week luck is levelled — first the gap between the two teams in a game, then each franchise’s season-long net.',
+      rule: 'Division rivals do not meet twice inside three weeks.',
+      why:
+        'Ideal rather than inviolable, and ranked below getting division games off byes deliberately. A rematch ' +
+        'seven days later is the same game again — same rosters, no new information — and it settles the division ' +
+        'race before the season has one. But a schedule that protects the gap by handing a rivalry week to four ' +
+        'teams missing starters has bought the wrong thing.',
+      enforcedBy: 'tests/schedule-optimization.test.ts',
+    },
+    {
+      key: 'bye-luck',
+      weight: 45,
+      tier: 'maximise',
+      rule: 'Bye-week luck is levelled — first the gap between the two teams in a game, then each franchise\u2019s season-long net.',
       why: 'The heaviest term in the objective. Facing a team missing four starters while you are whole is the largest unearned edge a schedule can hand out.',
       enforcedBy: 'scoreSeason',
     },
     {
       key: 'opponent-strength',
+      weight: 20,
       tier: 'maximise',
       rule: 'Doubleheader opponents, then late-season opponents, are balanced in strength.',
       why: 'The weeks that count double and the weeks that decide seeding should not be systematically easier for some franchises.',
@@ -160,20 +211,25 @@ const allConstraints = () => {
     },
     {
       key: 'worst-week-and-finale',
+      weight: 15,
       tier: 'preference',
-      rule: 'The season’s worst bye week gets an interdivision round, and the season ends on division games.',
-      why: 'A rivalry finish is worth having, but not at the cost of the fairness terms above — in a year when the final week IS the worst bye week, the finale is not all-division.',
+      rule: 'The season\u2019s worst bye week gets an interdivision round, and the season ends on division games.',
+      why: 'A rivalry finish is worth having, but not at the cost of the fairness goals above — in a year when the final week IS the worst bye week, the finale is not all-division.',
       enforcedBy: 'buildWeekPlan',
     },
     {
       key: 'home-away',
-      tier: 'exact',
+      weight: 5,
+      tier: 'cosmetic',
       rule: 'Home and away are balanced as evenly as the schedule allows.',
-      why: 'Which side is home constrains nothing else, so it is fixed exactly by a post-pass instead of being annealed for.',
+      why:
+        'Last on purpose: there is no home-field advantage in fantasy, so this decides nothing about who wins. It ' +
+        'is worth doing because a lopsided home count looks like a mistake, and it is free — which side is home ' +
+        'constrains nothing else, so a post-pass fixes it exactly rather than the optimiser spending effort on it.',
       enforcedBy: 'balanceHomeAway',
     },
   ];
-  return list.map((c) => ({ since: null, enforcedBy: null, ...c }));
+  return list.map((c) => ({ since: null, enforcedBy: null, weight: null, ...c }));
 };
 
 /** Was this rule in force for `season`? A rule with no `since` always was. */

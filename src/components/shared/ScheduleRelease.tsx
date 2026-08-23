@@ -515,6 +515,13 @@ export default function ScheduleRelease({
           {constraints.map((c) => (
             <li key={c.rank} className={`rel__rule rel__rule--${c.tier}`}>
               <span className="rel__ruleTier">{TIER_LABEL[c.tier]}</span>
+              {/* Weight, not rank, is what decides a trade between two soft
+                  goals — so it belongs on the row rather than in a footnote.
+                  The non-negotiable ones show no number because there is no
+                  margin at which they lose. */}
+              <span className="rel__ruleWeight">
+                {c.weight == null ? 'never traded' : `weight ${c.weight}`}
+              </span>
               <p className="rel__ruleText">{c.rule}</p>
               {goalByKey.has(c.key) ? (
                 <p className={`rel__verdict rel__verdict--${goalByKey.get(c.key)!.status}`}>

@@ -88,9 +88,26 @@ describe('scoreSeasonGoals', () => {
     expect(g.detail).toMatch(/Week 13/);
   });
 
-  it('blocks the rematch goal when rivals meet inside three weeks', () => {
+  // Demoted from a hard rule to a goal below getting division games off byes,
+  // so a short gap is a trade the league accepted, not a broken schedule.
+  it('scores a short rematch gap partial, not blocked', () => {
     const { goals } = scoreSeasonGoals({ ...aflFacts, minRematchGap: 2 });
-    expect(goals.find((g: any) => g.key === 'rematch-gap')!.status).toBe('blocked');
+    const g = goals.find((x: any) => x.key === 'rematch-gap')!;
+    expect(g.status).toBe('partial');
+    expect(g.detail).toMatch(/traded away for a higher goal/);
+  });
+
+  it('blocks the doubleheader-split goal when no franchise gets one after Week 8', () => {
+    const { goals } = scoreSeasonGoals({ ...aflFacts, doubleheaders: [1, 2, 3] });
+    const g = goals.find((x: any) => x.key === 'doubleheader-split')!;
+    expect(g.status).toBe('blocked');
+    expect(g.detail).toMatch(/after Week 8/);
+  });
+
+  it('reports the after-Week-8 doubleheader count when the goal is met', () => {
+    const g = scoreSeasonGoals(aflFacts).goals.find((x: any) => x.key === 'doubleheader-split')!;
+    expect(g.status).toBe('met');
+    expect(g.detail).toMatch(/1 after Week 8/);
   });
 
   it('scores the light-bye-week goal partial when the calendar runs out of light weeks', () => {

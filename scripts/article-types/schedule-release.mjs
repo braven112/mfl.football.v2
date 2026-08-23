@@ -197,7 +197,7 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = '
   );
   for (const c of scheduleConstraints({ season: year })) {
     const v = verdict.get(c.key);
-    lines.push(`  ${c.rank}. [${TIER_LABEL[c.tier]}] ${c.rule}`);
+    lines.push(`  ${c.rank}. [${TIER_LABEL[c.tier]}${c.weight == null ? ', never traded' : `, weight ${c.weight}`}] ${c.rule}`);
     if (v) lines.push(`     VERDICT: ${v.status.toUpperCase()} — ${v.detail}`);
     lines.push(`     ${c.why}`);
   }

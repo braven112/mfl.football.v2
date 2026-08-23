@@ -747,25 +747,25 @@
       "detail": "Weeks 1, 2, 3, 12, none with an NFL bye"
     },
     {
-      "key": "rematch-gap",
+      "key": "doubleheader-split",
       "rank": 4,
       "tier": "hard",
-      "status": "met",
-      "detail": "closest rematch is 9 weeks apart"
-    },
-    {
-      "key": "doubleheader-split",
-      "rank": 5,
-      "tier": "hard",
       "status": "partial",
-      "detail": "3 early, 1 late — the bye-free weeks did not allow better"
+      "detail": "3 early, 1 late (1 after Week 8) — the bye-free weeks did not allow an even split"
     },
     {
       "key": "division-bye-free-ceiling",
-      "rank": 6,
+      "rank": 5,
       "tier": "maximise",
       "status": "partial",
       "detail": "8 of 48 division games (17%) fall on a bye week — none forced; they buy the all-division finish in a year with byes in both closing weeks"
+    },
+    {
+      "key": "rematch-gap",
+      "rank": 6,
+      "tier": "maximise",
+      "status": "met",
+      "detail": "closest rematch is 9 weeks apart"
     },
     {
       "key": "bye-luck",
@@ -791,7 +791,7 @@
     {
       "key": "home-away",
       "rank": 10,
-      "tier": "exact",
+      "tier": "cosmetic",
       "status": "met",
       "detail": "every franchise hosts 9"
     }
