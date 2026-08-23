@@ -31,6 +31,7 @@
  *   node scripts/lock-schedule-release.mjs --dry-run
  *   node scripts/lock-schedule-release.mjs --force          # ignore the date guard
  *   node scripts/lock-schedule-release.mjs --from-live      # canonise what is already in MFL
+ *   node scripts/lock-schedule-release.mjs --from-live --relock   # ...over a wrong reveal
  *
  * --from-live exists because the plan on disk and the schedule the
  * commissioner actually pasted can be two DIFFERENT valid draws. The optimiser
@@ -40,6 +41,14 @@
  * to describe the season being played, not the one the file remembers, so this
  * mode reads the live MFL schedule feed and canonises THAT. It validates the
  * live schedule with the same audit and refuses to lock a broken one.
+ *
+ * --relock is what makes --from-live usable in the case it exists for. The
+ * archive IS the lock, so an existing one normally ends the run — but a reveal
+ * built from the wrong draw is precisely a state in which the archive already
+ * exists, and without an escape hatch the documented repair is a silent no-op
+ * that exits 0 while the column stays deadlocked. --relock overwrites it, and
+ * ONLY alongside --from-live: overwriting with a fresh PLAN would draw a new
+ * season and defeat the lock entirely, which is the one thing it is for.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -72,6 +81,7 @@ const dryRun = process.argv.includes('--dry-run');
 
 const force = process.argv.includes('--force');
 const fromLive = process.argv.includes('--from-live');
+const relock = process.argv.includes('--relock');
 const year = Number(arg('year', new Date().getUTCFullYear()));
 const only = arg('league', null);
 const slugs = only ? [only] : Object.keys(LEAGUES).filter((sl) => scheduleReleaseDate(sl, year));
@@ -108,8 +118,14 @@ for (const slug of slugs) {
 
   const file = archivePath(slug, year);
   if (fs.existsSync(file)) {
-    console.log(`  [skip] already revealed — ${path.relative(ROOT, file)}`);
-    continue;
+    // The archive is the lock. Replacing it is only ever right when the
+    // replacement is the season MFL is ALREADY running — never a fresh draw.
+    if (!(relock && fromLive)) {
+      console.log(`  [skip] already revealed — ${path.relative(ROOT, file)}`);
+      if (relock) console.log('  [relock] ignored: --relock requires --from-live (a re-drawn plan would defeat the lock).');
+      continue;
+    }
+    console.log(`  [relock] overwriting ${path.relative(ROOT, file)} with the schedule live in MFL.`);
   }
 
   // The date and bye-calendar guards. --force is for a rehearsal, and says so.
@@ -205,6 +221,26 @@ async function releaseFromLive(slug, y) {
 
   const weeks = regularSeasonGames(readFeed(y, 'schedule')?.schedule?.weeklySchedule, shape.lastWeek);
   if (!weeks.size) throw new Error(`no live schedule in ${registry.dataPath}/mfl-feeds/${y}/schedule.json`);
+
+  // EVERY regular-season week, or this is not a season yet.
+  //
+  // `regularSeasonGames` drops a week with no matchups and `validateSeason`
+  // only walks the weeks it is given, so a half-applied paste — or a feed
+  // fetched while the commissioner was mid-paste — passes every check it has:
+  // each franchise still loses the SAME game, so the equal-games test holds,
+  // and a missing week carrying no division game is invisible to the rivals
+  // test too. A 13-week AFL season audits clean and locks as truth, and the
+  // column opens by announcing 192 games of a 204-game season. The planner
+  // always emits every week, so this hole only opened when a live feed became
+  // a possible source.
+  const missing = [];
+  for (let w = 1; w <= shape.lastWeek; w++) if (!weeks.has(w)) missing.push(w);
+  if (missing.length) {
+    throw new Error(
+      `the live schedule is missing Week ${missing.join(', ')} of 1-${shape.lastWeek} — ` +
+        'a partly-applied paste is not a season; refetch the feed and try again',
+    );
+  }
 
   const seasonByes = byesFor(y);
   if (!seasonByes) throw new Error(`no NFL bye calendar for ${y} — cannot audit the live schedule`);

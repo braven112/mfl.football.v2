@@ -266,13 +266,28 @@ waits for a match that can never arrive.
 **Once a paste has landed, the reveal must be canonised from the live feed:**
 
 ```bash
-node scripts/lock-schedule-release.mjs --league=<slug> --from-live
+node scripts/lock-schedule-release.mjs --league=<slug> --from-live            # no reveal yet
+node scripts/lock-schedule-release.mjs --league=<slug> --from-live --relock   # replacing a wrong one
 ```
+
+**`--relock` is not optional in the repair case.** The archive is the lock, so
+an existing one normally ends the run before the mode is even consulted — and a
+reveal built from the wrong draw is by definition a state where the archive
+already exists. Without `--relock` the repair prints `[skip] already revealed`
+and exits 0, which reads as success while the column stays deadlocked. It works
+only alongside `--from-live`, on purpose: overwriting the lock with a fresh
+*plan* would draw a new season, which is the exact thing the lock exists to
+prevent. Adopting the season MFL is already running is not a redraw.
 
 `--from-live` reads `mfl-feeds/<year>/schedule.json`, runs it through the same
 `validateSeason` audit a generated plan gets (it refuses to lock a broken
 season), and recomputes the summary and the marquee four from what is actually
-there. On a league whose plan and paste agree it reproduces the plan-sourced
+there. It additionally requires **every** week 1..`lastRegularSeasonWeek` to be
+present, which the plan path never had to check: `regularSeasonGames` drops an
+empty week and `validateSeason` only walks the weeks it is handed, so a
+half-applied paste passes every check it has — each franchise still loses the
+same game, and a missing week with no division game in it is invisible to the
+rivals test too. A 13-week AFL season audits clean and would lock as truth. On a league whose plan and paste agree it reproduces the plan-sourced
 record byte for byte — weeks, MFL text, marquee, summary — which is what makes
 it safe to reach for when you are not sure.
 
