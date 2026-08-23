@@ -90,10 +90,17 @@ describe('buildFranchiseBandBrands', () => {
     // otherwise carry the identity. Without the neutral swap, opening two
     // different AFL teams' players paints the same near-black band.
     //
-    // The one allowed collision is a DATA gap, not a code one: 0017/0019/0023
-    // list nothing but grey and black in the AFL config, so there is no hue to
-    // find. Fill one of those in and this test wants updating.
+    // The allowed collisions are DATA gaps, not code ones — these franchises
+    // have no hue anywhere in their config to find. Give any of them a real
+    // accent colour and this test wants updating.
+    //
+    // - afl 0017/0019/0023 list nothing but grey and black.
+    // - theleague 0008/0009 are both black-and-white brands: `colorPrimary`
+    //   #181818, `colorSecondary` near-white, and even their chart hues are
+    //   greys. Their CRESTS still tell the two bands apart, which is the only
+    //   reason this is tolerable rather than a bug.
     const KNOWN_DATA_GAPS: Record<string, string[][]> = {
+      theleague: [['0008', '0009']],
       afl: [['0017', '0019', '0023']],
     };
 

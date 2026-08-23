@@ -131,18 +131,19 @@ function anchorHue(primary: string, secondary: string): string {
 /**
  * Band art direction that the automatic hue rule cannot derive.
  *
- * `anchorHue` picks the franchise's most identifiable colour, and for most of
- * the league that is the right call. For these three it is not, and no rule
- * gets there — the answer is which of a franchise's OWN colours its owner
- * wants the band to lead with, which is a judgement, not a measurement:
+ * `anchorHue` reads the brand pair, which is right for thirteen of sixteen
+ * franchises. These three want something the pair does not say, and no rule
+ * gets there — it is which of a franchise's OWN colours the band should lead
+ * with, which is a judgement, not a measurement:
  *
- * - **Midwestside** is gold-on-black. `color` and `colorPrimary` are both the
- *   gold, so nothing in the config says the black leads — but it does, and the
- *   gold reads as trim (their crest already carries a gold stroke).
- * - **Vitside** wears black and red. Its `color` is a chart-only pink that
- *   appears nowhere in the brand pair, so the automatic pick was a hue the
- *   franchise does not actually own.
- * - **Gridiron Geeks** are blue with orange trim, and `color` is the orange.
+ * - **Midwestside** is gold-on-black, and its `colorPrimary` IS the gold, so
+ *   nothing in the config says the black leads. It does; the gold is trim
+ *   (their crest already carries a gold stroke).
+ * - **Vitside** would resolve to its red — correct family, wrong lead. The
+ *   black carries it and the red accents.
+ * - **Gridiron Geeks** resolve to the right blue on their own; the override
+ *   only deepens it and swaps the muted `colorSecondary` orange for the vivid
+ *   one, so the accent is visible at all.
  *
  * The near-blacks are tinted ~10% toward each franchise's accent rather than
  * set flat. Two reasons, and both matter: it is literally what "black with a
@@ -216,16 +217,19 @@ export function buildFranchiseBandBrands(
     let name: string = team.name ?? '';
     let crest: string = team.iconDark || team.icon || '';
     let secondary: string = getTeamColorSecondary(franchiseId, league);
-    // `colorPrimary` is deliberately NOT the anchor on its own: five TheLeague
-    // franchises and three AFL ones wear #181818 there, and a band built off it
-    // is the same identity-less near-black for every one of them. `color` (the
-    // chart hue) is the identifiable one, and is what the site's other
-    // franchise composites tint with (`franchiseGradient`) — but ONLY
-    // TheLeague's config defines it, so without the swap below the AFL and
-    // best-ball fall straight through to the very field this rules out, and
-    // six AFL franchises collapse into two bands.
+    // The BRAND pair, never the chart hue. `color` is chosen for distinctness
+    // on a bar graph and `design-system.md` says in as many words not to
+    // repurpose it as brand identity — this band did, and it showed: Vitside
+    // Mafia, a black-and-red franchise, opened in a pink that appears nowhere
+    // in its brand, because pink is what reads well next to fifteen other
+    // lines on a chart.
+    //
+    // `colorPrimary` alone is not enough either — five TheLeague franchises
+    // and three AFL ones wear #181818 there, and a band built off it is the
+    // same identity-less near-black for all of them. Hence `anchorHue`: the
+    // primary when it carries a hue at all, the secondary when it doesn't.
     let primary: string = anchorHue(
-      team.color || getTeamColorPrimary(franchiseId, league),
+      getTeamColorPrimary(franchiseId, league),
       secondary
     );
     // Owner-directed override, where the automatic pick leads with the wrong
