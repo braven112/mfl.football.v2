@@ -228,6 +228,44 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = '
 }
 
 /**
+ * Shape check on the model's JSON. Warnings only — the pipeline logs them and
+ * still publishes, matching every other article type.
+ */
+export function validate(aiOutput) {
+  const errors = [];
+  if (!aiOutput.headline || aiOutput.headline.length > 100) errors.push('Headline missing or too long');
+  if (!aiOutput.excerpt || aiOutput.excerpt.length > 500) errors.push('Excerpt missing or too long');
+  if (!Array.isArray(aiOutput.content) || aiOutput.content.length < 2) errors.push('Too few content paragraphs');
+  return errors;
+}
+
+/**
+ * The feed post. `content` is a flat array of `<p>` strings, which is what the
+ * news page renders (`post.content?.map(p => <p set:html={p} />)`) — it has no
+ * concept of sections, so a nested shape would have published an article that
+ * renders as nothing.
+ */
+export function buildPost(aiOutput, enrichment, articleId, { league = 'theleague' } = {}) {
+  const registry = LEAGUES[league];
+  return {
+    id: articleId,
+    timestamp: new Date().toISOString(),
+    type: 'article',
+    category: 'articles',
+    tier: config.tier,
+    headline: aiOutput.headline,
+    body: aiOutput.excerpt,
+    // The four circled games, so the feed card can badge the franchises in it.
+    franchiseIds: [...new Set((enrichment?.marquee ?? []).flatMap((m) => [m.away, m.home]))],
+    link: `/${registry.slug}/news/${articleId}`,
+    linkLabel: 'Read the schedule breakdown',
+    league,
+    authorId: 'claude',
+    content: aiOutput.content,
+  };
+}
+
+/**
  * GroupMe promo — the chat's version of the tease.
  *
  * Names the four games rather than summarising them, because the chat is where
@@ -280,14 +318,15 @@ OUTPUT FORMAT — respond with ONLY valid JSON, no markdown fences:
 {
   "headline": "Short punchy headline (~60 chars)",
   "excerpt": "2-3 sentence teaser for the feed card.",
-  "intro": ["<p>Opening paragraph — the schedule is out, set the tone.</p>"],
-  "sections": [
-    { "heading": "Section heading", "paragraphs": ["<p>...</p>"] }
-  ],
-  "outro": ["<p>Closing line — point at the opener.</p>"]
+  "content": [
+    "<p>Opening paragraph — the schedule is out, set the tone.</p>",
+    "<p>...</p>",
+    "<p>Closing line — point at the opener.</p>"
+  ]
 }
 
 RULES:
+- "content" is a flat array of 6-10 standalone <p> paragraphs. No headings, no nesting.
 - Use ONLY franchise names and week numbers that appear above. Never invent a matchup.
 - Give each of the four circled games its own beat — that is the spine of the column.
 - Devote a section to the rivalry renewals, using the all-time records exactly as written.
