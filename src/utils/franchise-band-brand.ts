@@ -112,8 +112,9 @@ function strokeFilterByFranchise(league: LeagueSlug, teams: any[]): Record<strin
 const MIN_ANCHOR_CHROMA = 20;
 
 /**
- * The gradient anchor for a franchise: its own hue, or the secondary when the
- * primary is a neutral it shares with other teams.
+ * The gradient anchor AND the glow for a franchise, resolved together so the
+ * two are never the same hue: the brand primary when it carries a hue at all,
+ * otherwise the secondary — and then the neutral primary becomes the glow.
  *
  * Deliberately NOT `pickBrandAccent`, which answers a similar-looking question
  * for the SSR panels. That helper also imposes a luminance floor, so it treats
@@ -123,9 +124,17 @@ const MIN_ANCHOR_CHROMA = 20;
  * (`ensureContrastOn`), and a navy band reads perfectly well. The only thing
  * that actually breaks this surface is a GREY, so chroma is the whole test.
  */
-function anchorHue(primary: string, secondary: string): string {
-  if (chroma(primary) >= MIN_ANCHOR_CHROMA) return primary;
-  return chroma(secondary) >= MIN_ANCHOR_CHROMA ? secondary : primary;
+function resolveBandPair(
+  primary: string,
+  secondary: string
+): { anchor: string; glow: string } {
+  if (chroma(primary) >= MIN_ANCHOR_CHROMA) return { anchor: primary, glow: secondary };
+  // The primary is a neutral, so the secondary carries the band — and the
+  // NEUTRAL becomes the glow. Returning `secondary` for both would set `--pmb-g2`
+  // and `--pmb-glow` to the same hex, and the band would render as one flat
+  // colour with an invisible glow; four franchises land here.
+  if (chroma(secondary) >= MIN_ANCHOR_CHROMA) return { anchor: secondary, glow: primary };
+  return { anchor: primary, glow: secondary };
 }
 
 /**
@@ -155,13 +164,25 @@ function anchorHue(primary: string, secondary: string): string {
  * colours from the era below, which is correct: this is art direction for the
  * brand a franchise wears today, not for one it wore in 2013.
  */
+const MIDWESTSIDE_BAND = { primary: mixHex('#181818', '#ffcd00', 0.1), secondary: '#ffcd00' };
+const VITSIDE_BAND = { primary: mixHex('#181818', '#aa322b', 0.1), secondary: '#aa322b' };
+
 const BAND_ART_DIRECTION: Partial<Record<LeagueSlug, Record<string, { primary: string; secondary: string }>>> = {
+  // Midwestside and Vitside are the SAME franchises in both leagues, with
+  // identical brand colours in both configs — so the call about which colour
+  // leads has to be made in both, or the same team wears two different bands
+  // depending on which roster you opened it from. (Franchise ids differ per
+  // league; there is no shared key.) Gridiron Geeks has no AFL entry.
+  afl: {
+    '0011': MIDWESTSIDE_BAND,
+    '0009': VITSIDE_BAND,
+  },
   theleague: {
     // Midwestside Connection — black, with the gold as trim and glow.
-    '0011': { primary: mixHex('#181818', '#ffcd00', 0.1), secondary: '#ffcd00' },
+    '0011': MIDWESTSIDE_BAND,
     // Vitside Mafia — black with red, which is its real colorPrimary/Secondary
     // pair; the pink it was using is a chart hue only.
-    '0012': { primary: mixHex('#181818', '#aa322b', 0.1), secondary: '#aa322b' },
+    '0012': VITSIDE_BAND,
     // Gridiron Geeks — the blue leads, the orange accents. The blue is
     // deepened ~30%: at its raw #1274ba the band is bright enough that both
     // accents wash out against it — the orange glow barely registers and the
@@ -228,10 +249,9 @@ export function buildFranchiseBandBrands(
     // and three AFL ones wear #181818 there, and a band built off it is the
     // same identity-less near-black for all of them. Hence `anchorHue`: the
     // primary when it carries a hue at all, the secondary when it doesn't.
-    let primary: string = anchorHue(
-      getTeamColorPrimary(franchiseId, league),
-      secondary
-    );
+    const pair = resolveBandPair(getTeamColorPrimary(franchiseId, league), secondary);
+    let primary: string = pair.anchor;
+    secondary = pair.glow;
     // Owner-directed override, where the automatic pick leads with the wrong
     // one of the franchise's own colours (see BAND_ART_DIRECTION).
     const directed = BAND_ART_DIRECTION[league]?.[franchiseId];
@@ -248,8 +268,15 @@ export function buildFranchiseBandBrands(
       // Same treatment as the current identity above — a few eras are
       // monochrome (the palette sampler falls back to a dark neutral for
       // character-heavy art), and those bands need the era secondary too.
-      primary = anchorHue(era.color, era.colorSecondary);
-      secondary = era.colorSecondary;
+      // `era.colorPrimary`, NOT `era.color`. getThrowbackFranchiseBrand only
+      // overwrites `color` for a franchise that actually threw back
+      // (`isHistorical && colorPrimary`), so for one with no eligible era it
+      // is still the CURRENT chart hue — the exact field this file stopped
+      // anchoring on, sneaking back in on the one week a year it shows. Same
+      // shape as the crest bug `resolveEraCrest` guards.
+      const eraPair = resolveBandPair(era.colorPrimary, era.colorSecondary);
+      primary = eraPair.anchor;
+      secondary = eraPair.glow;
       // Empty when this franchise has no eligible era to throw back to — see
       // resolveEraCrest for why taking `era.icon` there is wrong twice over.
       const eraCrest = resolveEraCrest(team.icon ?? '', era.icon ?? '');

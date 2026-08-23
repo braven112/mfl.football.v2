@@ -1302,12 +1302,16 @@ unchanged. Four things were not obvious going in:
   applied INLINE by JS, which covers light mode and outranks the global rule so
   the two can never stack.
 - **Franchise hues are NOT drop-in replacements for NFL primaries.** NFL
-  primaries are overwhelmingly dark, so white band ink was never at risk.
-  `colorPrimary` is `#181818` for five TheLeague franchises (five identical
-  near-black bands — unusable), and the chart hue `color`, which IS the
-  identifiable one, includes Midwestside's `#ffcd00` at 1.5:1 against white.
-  Anchor on `color`, then `ensureContrastOn(…, '#ffffff', 3)`. Five franchises
-  shift slightly; the hue survives.
+  primaries are overwhelmingly dark, so white band ink was never at risk;
+  franchise brand colours include Midwestside's `#ffcd00` at 1.5:1 against
+  white, so the anchor goes through `ensureContrastOn(…, '#ffffff', 3)`.
+  **Anchor on the BRAND pair — `colorPrimary`, falling back to
+  `colorSecondary` when the primary is a neutral (it is `#181818` for five
+  TheLeague franchises, which would be five identical bands), and then the
+  neutral becomes the glow so the two are never the same hue.** This bullet
+  used to say "anchor on `color`" and that was the bug — see the 2026-08-23
+  follow-up at the end of this file. `color` is a CHART hue and can name a
+  colour the franchise does not wear.
 - **Re-read the map per call, never cache it at module scope.** Same trap
   `rankings-scope.ts` documents: one module instance survives a ClientRouter
   navigation from one league's page to another's, and a captured map paints the

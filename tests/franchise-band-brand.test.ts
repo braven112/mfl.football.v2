@@ -160,10 +160,45 @@ describe('buildFranchiseBandBrands', () => {
     // 2026 colours.
     const past = buildFranchiseBandBrands('theleague', { throwbackActive: true }).teams;
     const now = buildFranchiseBandBrands('theleague').teams;
+    // Asserted as the exact set, not a count: `length > 0` stays green if two
+    // of the three regress and only one still throws back.
     const changed = ['0011', '0012', '0013'].filter(
       (id) => past[id].primary !== now[id].primary || past[id].secondary !== now[id].secondary
     );
-    expect(changed.length, 'no directed franchise threw back its colours').toBeGreaterThan(0);
+    expect(changed, 'a directed franchise kept its current colours in a throwback').toEqual([
+      '0011',
+      '0012',
+      '0013',
+    ]);
+  });
+
+  it('never paints the field and the glow the same hue', () => {
+    // A neutral primary hands the band to the secondary. Using the secondary
+    // for the glow as well set --pmb-g2 and --pmb-glow to one hex, and the
+    // band rendered flat with no glow at all — four TheLeague franchises.
+    for (const league of ['theleague', 'afl', 'bb1'] as const) {
+      for (const [id, brand] of Object.entries(buildFranchiseBandBrands(league).teams)) {
+        expect(
+          brand.primary.toLowerCase(),
+          `${league}/${id} field and glow are both ${brand.primary}`
+        ).not.toBe(brand.secondary.toLowerCase());
+      }
+    }
+  });
+
+  it('art-directs a franchise the same way in every league it plays in', () => {
+    // Midwestside and Vitside are the same franchises in TheLeague and the
+    // AFL, with identical brand colours in both configs and DIFFERENT
+    // franchise ids. A theleague-only override left the AFL copy of the same
+    // team leading with the colour the owner said was wrong.
+    const tl = buildFranchiseBandBrands('theleague').teams;
+    const afl = buildFranchiseBandBrands('afl').teams;
+    expect(afl['0011'], 'AFL Midwestside').toEqual(
+      expect.objectContaining({ primary: tl['0011'].primary, secondary: tl['0011'].secondary })
+    );
+    expect(afl['0009'], 'AFL Vitside').toEqual(
+      expect.objectContaining({ primary: tl['0012'].primary, secondary: tl['0012'].secondary })
+    );
   });
 
   it('keeps white band ink legible on every franchise, in every league', () => {
