@@ -354,7 +354,14 @@ describe('article links — enforcement on the built post', () => {
     };
     const { post: out, notices } = applyArticleLinks(post, links(), { league: 'theleague' });
     expect(out.content[0]).toBe('<p>not ours</p>');
-    expect(notices.some((n) => n.includes('example.com'))).toBe(true);
+    // Asserted in full rather than by substring. A substring check for a host
+    // inside a URL-shaped string is the `js/incomplete-url-substring-sanitization`
+    // shape — harmless in a test assertion, but CodeQL cannot tell an assertion
+    // from a security check, and an alert everyone learns to wave through is
+    // worse than no alert. The exact string is a stronger assertion anyway.
+    expect(notices).toContain(
+      'stripped invented link href="https://example.com/theleague/schedule-release"',
+    );
   });
 
   it('writes an empty paragraph, not the text "null", for a malformed response', () => {
