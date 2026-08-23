@@ -1119,3 +1119,38 @@ html.dark[data-league='afl'] .sf-post__link--external {
 .sfc-post__thread-link:hover {
   text-decoration: underline;
 }
+
+/* ── Links inside article prose ──
+ * Article bodies are raw HTML rendered through `set:html`, so the anchors
+ * Schefter writes (scripts/article-utils/article-links.mjs) never carry an
+ * Astro scoped-style attribute — a rule inside a page's <style> block would
+ * not reach them. This lives in the shared sheet for that reason, and because
+ * both leagues' news pages import it, so one definition serves both.
+ *
+ * Colour comes from --sf-link-color → --color-primary, which is redefined in
+ * tokens-dark.css. A literal here would look right in light mode and vanish
+ * against the dark card.
+ */
+.sf-article__body a,
+.sf-grade-card__body a {
+  color: var(--sf-link-color, var(--color-primary, #1c497c));
+  text-decoration: underline;
+  /* Underline offset rather than none-until-hover: these links are the point
+   * of the paragraph they sit in, and a link you have to hover to find is a
+   * link nobody on a phone ever finds. */
+  text-underline-offset: 0.15em;
+  text-decoration-thickness: 1px;
+  font-weight: 600;
+}
+
+.sf-article__body a:hover,
+.sf-grade-card__body a:hover {
+  text-decoration-thickness: 2px;
+}
+
+.sf-article__body a:focus-visible,
+.sf-grade-card__body a:focus-visible {
+  outline: 2px solid var(--sf-accent, var(--color-primary, #1c497c));
+  outline-offset: 2px;
+  border-radius: 2px;
+}

@@ -98,6 +98,10 @@ const CAPTURE_PATHS = {
   // No `link` on this entry (see whats-new.json) — without an override the
   // capture would shoot the site root.
   'rankings-on-the-decision-pages': '/afl-fantasy/players',
+  // Both-league entry, so it carries no `link` (a TheLeague article URL would
+  // send AFL owners across the fence). The links themselves are the subject,
+  // so the shot has to be of an article, not a feature page.
+  'schefter-article-links': '/theleague/news/sf_2026_schedule_release_theleague',
 };
 
 const PAGE_HOOKS = {

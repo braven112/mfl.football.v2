@@ -11,6 +11,7 @@ import { buildCachedSystem } from '../article-utils/ai-client.mjs';
 import { isRegularSeasonOrPlayoffs } from '../article-utils/season-guards.mjs';
 import { getMatchupPairings } from '../article-utils/week-resolver.mjs';
 import path from 'node:path';
+import { primaryLink, articleLink, featureLink, linkList } from '../article-utils/article-links.mjs';
 
 export const config = {
   id: (year, week) => `sf_${year}_matchup_preview_w${String(week).padStart(2, '0')}`,
@@ -173,6 +174,33 @@ export function validate(aiOutput) {
   if (!aiOutput.excerpt || aiOutput.excerpt.length > 500) errors.push('Excerpt missing or too long');
   if (!aiOutput.content || aiOutput.content.length < 3) errors.push('Too few content paragraphs');
   return errors;
+}
+
+/**
+ * Where this article points, and which parts of the site it plugs.
+ *
+ * The broadcast guide is a plan for Sunday; the scoreboard is where Sunday
+ * actually happens. The plugs are the pages that settle the arguments a
+ * matchup preview starts.
+ *
+ * The pipeline calls this on every run. `applyArticleLinks` injects the
+ * PRIMARY link if the model drops it and strips any href the model invented;
+ * the `featureLink` plugs are never injected, only offered — see
+ * article-links.mjs for why a forced plug is worse than no plug. Plugs for
+ * pages a league does not have resolve to null and `linkList` drops them, so
+ * this one list serves every league.
+ */
+export function relatedLinks(_enrichment, { league = 'theleague' } = {}) {
+  return linkList(
+    primaryLink(league, 'live-scoring', {
+      label: 'the live scoreboard',
+      cta: 'Follow every matchup live on the scoreboard.',
+    }),
+    articleLink(league, 'lineup', { label: 'your lineup' }),
+    featureLink(league, 'rivalries'),
+    featureLink(league, 'standings'),
+    featureLink(league, 'notifications'),
+  );
 }
 
 export function buildPost(aiOutput, enrichment, articleId) {
