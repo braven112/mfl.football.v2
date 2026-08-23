@@ -23,6 +23,42 @@
  *   preference  real, stated, and the first thing to yield.
  *   exact       settled by a post-pass once everything above is fixed.
  *
+ * ONE GOAL LIST FOR EVERY LEAGUE
+ *
+ * The leagues share these goals exactly; what differs is how well each can hit
+ * them in a given year, because the formats differ and the NFL's bye calendar
+ * moves. So nothing here branches on the league. An earlier version wrote goal
+ * 2 two ways — naming the AFL's Week 1 cross-conference round in one and not
+ * the other — which quietly turned a shared goal into two different goals and
+ * made the two leagues' scorecards incomparable. Format specifics belong in the
+ * VERDICT (`schedule-goals.mjs`), which is per-league and per-season by nature.
+ *
+ * RULES ARRIVE OVER TIME, AND OLD SEASONS MUST NOT INHERIT THEM
+ *
+ * A reveal page is a record of a season that was already drawn. Rendering
+ * today's rule list against it silently backdates every rule the league has
+ * added since — the light-bye-week rule shipped in Aug 2026 and appeared
+ * immediately under the 2026 reveal's heading "The rules this draw had to
+ * satisfy", next to a draw made before the rule existed that does not satisfy
+ * it. The schedule was right and the page was wrong.
+ *
+ * So a rule may carry `since: <season>`, and callers displaying a SPECIFIC
+ * season pass it: `scheduleConstraints({ season })` returns only what was in
+ * force then, renumbered, and `upcomingConstraints({ season })` returns the
+ * ones that arrive later so the page can say so instead of pretending. Omit
+ * `season` — as the planner UI does, since it draws the next one — and
+ * everything is in force.
+ *
+ * ADDING A RULE IS THEREFORE ONE ENTRY plus a `since` year. Do not renumber
+ * anything: rank is positional and derived.
+ *
+ * `since` gates DOCUMENTATION, never the planner. `buildWeekPlan` applies every
+ * adopted rule whichever season it is pointed at, because it draws schedules
+ * and a draw should be as good as we currently know how to make it. The archive
+ * is the record of what was in force when a season was locked; the planner is
+ * always current. Keeping the version logic out of the algorithm is the whole
+ * point — a scheduler carrying five years of rule vintages is unmaintainable.
+ *
  * Keep this in step with `SCHEDULE_POLICY` (schedule-plan.mjs), `buildWeekPlan`
  * and `scoreSeason` (schedule-builder.mjs), and `validateSeason`
  * (schedule-plan.mjs). `tests/schedule-constraints.test.ts` pins the tiers, the
@@ -46,89 +82,126 @@ export const TIER_LABEL = {
 };
 
 /**
- * @param {{ crossConference?: boolean, divisionSize?: number }} [league]
- *   `crossConference` — the league plays one cross-conference game (the AFL).
- *   Its Week 1 slot is the reason the AFL's bye-free division ceiling is not
- *   the whole schedule, so the clause only appears for a league that has one.
- * @returns {{rank:number, tier:string, rule:string, why:string, enforcedBy:string|null}[]}
+ * Every rule the league has ever adopted, in force order — including ones not
+ * yet effective. Callers want `scheduleConstraints` or `upcomingConstraints`.
  */
-export const scheduleConstraints = ({ crossConference = false } = {}) => {
+const allConstraints = () => {
   const list = [
     {
+      key: 'one-game-per-week',
       tier: 'format',
       rule: 'One game per franchise per week — two in a doubleheader — and every franchise plays the same number of games.',
       why: 'A season is a set of whole rounds. Move a single game and the invariant breaks on the first move.',
       enforcedBy: 'validateSeason',
     },
     {
+      key: 'opponent-counts',
       tier: 'format',
-      rule: crossConference
-        ? 'Division rivals twice, the other division in your conference once, and one cross-conference game in Week 1.'
-        : 'Division rivals twice, everybody else once.',
-      why: crossConference
-        ? 'The constitution fixes both the opponent counts and the week the cross-conference game is played.'
-        : 'The constitution fixes the opponent counts.',
+      rule: 'Every franchise plays the opponent set its constitution defines — division rivals twice — and any round the constitution pins to a fixed week is played in that week.',
+      why: 'The opponent counts, and the AFL\u2019s Week 1 cross-conference round, are constitutional. They are not the scheduler\u2019s to trade, which is why they sit above every goal that is.',
       enforcedBy: 'validateSeason',
     },
     {
+      key: 'doubleheaders-off-byes',
       tier: 'hard',
       rule: 'No doubleheader falls on an NFL bye week.',
-      why: 'A doubleheader pays the bye penalty twice, so a bye week is the one week it must not land on.',
+      why:
+        'THE TOP GOAL. A doubleheader pays the bye penalty twice, so a bye week is the one week it must not land on. ' +
+        'It has an escape hatch nothing else has: in a year when no league-wide week works, the commissioner has ' +
+        'staggered doubleheaders franchise by franchise so each team plays its two games in a week its own roster is ' +
+        'whole. That is a last resort — it breaks the round structure everything else here relies on and has to be ' +
+        'built by hand — and it is still better than putting a doubleheader on a bye.',
       enforcedBy: 'validateSeason',
     },
     {
+      key: 'rematch-gap',
       tier: 'hard',
       rule: 'Division rivals never meet twice inside three weeks.',
       why: 'A rematch seven days later is the same game again — same rosters, no new information — and it settles the division race before the season has one.',
       enforcedBy: 'tests/schedule-optimization.test.ts',
     },
     {
+      key: 'doubleheader-split',
       tier: 'hard',
       rule: 'Doubleheaders split between the start and the end of the season.',
-      why: 'Both ends carry extra games, so neither half of the season decides more than its share. It yields to the rule above it: in a year with too few bye-free weeks at one end, staying off the byes wins.',
+      why: 'Both ends carry extra games, so neither half of the season decides more than its share. It yields to the goal above it: in a year with too few bye-free weeks at one end, staying off the byes wins.',
       enforcedBy: 'chooseDoubleheaderWeeks + tests/schedule-optimization.test.ts',
     },
     {
+      key: 'division-bye-free-ceiling',
       tier: 'maximise',
       rule: 'Division games take every bye-free slot the format leaves them.',
-      why: crossConference
-        ? 'It is a ceiling, not a target of zero: a franchise has 8 bye-free slots, one goes to the Week 1 cross-conference game, and it plays 10 division games — so some are forced onto bye weeks no matter how the season is drawn.'
-        : 'Reported against the slots the format actually leaves, never against zero.',
+      why: 'A ceiling, not a target of zero. A franchise has only so many bye-free game slots, and a format needing more division games than it has clean slots must put some on a bye however the season is drawn — the AFL cannot reach zero at all, The League can only by giving up its rivalry finish. Always reported against the slots the format actually leaves.',
       enforcedBy: 'divisionGameCeiling',
     },
     {
+      key: 'light-bye-weeks',
       tier: 'maximise',
       rule: 'The division games that cannot dodge a bye week take the LIGHTEST bye weeks — ideally ones with only two NFL teams out.',
       why: 'Which division games land on a bye week is settled by the rule above; WHICH bye week is still a free choice, and a two-team week costs a couple of rosters a starter where a six-team week guts half the league. The second leg\u2019s window is widened backwards until the light weeks are reachable, and stops exactly where the three-week rematch rule says it must.',
       enforcedBy: 'buildWeekPlan + tests/schedule-week-plan.test.ts',
+      // Adopted Aug 2026, after the 2026 schedules were drawn, locked and
+      // pasted into MFL. 2026 is not re-drawn for it.
+      since: 2027,
     },
     {
+      key: 'bye-luck',
       tier: 'maximise',
       rule: 'Bye-week luck is levelled — first the gap between the two teams in a game, then each franchise’s season-long net.',
       why: 'The heaviest term in the objective. Facing a team missing four starters while you are whole is the largest unearned edge a schedule can hand out.',
       enforcedBy: 'scoreSeason',
     },
     {
+      key: 'opponent-strength',
       tier: 'maximise',
       rule: 'Doubleheader opponents, then late-season opponents, are balanced in strength.',
       why: 'The weeks that count double and the weeks that decide seeding should not be systematically easier for some franchises.',
       enforcedBy: 'scoreSeason',
     },
     {
+      key: 'worst-week-and-finale',
       tier: 'preference',
       rule: 'The season’s worst bye week gets an interdivision round, and the season ends on division games.',
       why: 'A rivalry finish is worth having, but not at the cost of the fairness terms above — in a year when the final week IS the worst bye week, the finale is not all-division.',
       enforcedBy: 'buildWeekPlan',
     },
     {
+      key: 'home-away',
       tier: 'exact',
       rule: 'Home and away are balanced as evenly as the schedule allows.',
       why: 'Which side is home constrains nothing else, so it is fixed exactly by a post-pass instead of being annealed for.',
       enforcedBy: 'balanceHomeAway',
     },
   ];
-  return list.map((c, i) => ({ rank: i + 1, ...c }));
+  return list.map((c) => ({ since: null, enforcedBy: null, ...c }));
 };
+
+/** Was this rule in force for `season`? A rule with no `since` always was. */
+const inForce = (constraint, season) =>
+  season == null || constraint.since == null || season >= constraint.since;
+
+/**
+ * The rules a given season's schedule actually had to satisfy, ranked 1..n.
+ *
+ * @param {{ season?: number|null }} [opts]
+ *   `season` — the season being DISPLAYED. Omit when planning the next one
+ *   (the admin builder) so every adopted goal applies. The list does not vary
+ *   by league; only the verdicts do.
+ * @returns {{rank:number, tier:string, rule:string, why:string,
+ *            enforcedBy:string|null, since:number|null}[]}
+ */
+export const scheduleConstraints = ({ season = null } = {}) =>
+  allConstraints()
+    .filter((c) => inForce(c, season))
+    .map((c, i) => ({ rank: i + 1, ...c }));
+
+/**
+ * Rules adopted AFTER `season` — what a past reveal is allowed to say about
+ * its own gaps. Unranked on purpose: they had no rank in that season's list.
+ * Empty when `season` is omitted or is current.
+ */
+export const upcomingConstraints = ({ season = null } = {}) =>
+  season == null ? [] : allConstraints().filter((c) => !inForce(c, season));
 
 /**
  * How many division games ended up on NFL bye weeks, and how much of that the

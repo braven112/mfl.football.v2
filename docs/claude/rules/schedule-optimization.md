@@ -13,13 +13,60 @@ way nothing caught. Read this before touching `scripts/generate-schedule.mjs`,
 
 Goal 1 outranks goal 2. Goal 3 is a **maximize**, not a must.
 
-The full ordering — ten rules across five tiers, from the format down to the
-home/away post-pass — lives in `src/utils/schedule-constraints.mjs`, and the
-reveal page, the admin panel and Schefter's fact sheet all render THAT list
-rather than their own. It used to be restated in four places and no two copies
-agreed on precedence, which matters because "why did the schedule break a
-stated goal" is nearly always answered by "a higher-ranked one beat it". Adding
-or reordering a rule is an edit there plus `tests/schedule-constraints.test.ts`.
+These are **goals, not guarantees**, and the distinction is load-bearing: the
+league does not control the NFL's bye calendar, so the same goal is trivial in
+one season and unreachable in the next. A goal list with no per-season outcome
+reads as a schedule repeatedly breaking its promises, which is backwards.
+
+Three files, and they do different jobs:
+
+| File | Job | Varies by |
+|---|---|---|
+| `src/utils/schedule-constraints.mjs` | the ranked goal list | season only |
+| `src/utils/schedule-goals.mjs` | scoring a season against it | league AND season |
+| `src/utils/schedule-builder.mjs` | actually drawing a schedule | nothing — always current |
+
+**The goal list is identical for every league.** Only outcomes differ. An early
+version branched goal 2's text on whether the league plays a cross-conference
+round, which quietly made the two leagues' scorecards incomparable; format
+specifics belong in the verdict, which is per-league by nature.
+
+**A goal may carry `since: <season>`, and that gates DOCUMENTATION only.** A
+reveal page is a record of a draw that already happened, so rendering today's
+list against it backdates every goal added since — the light-bye-week goal
+shipped in Aug 2026 and immediately appeared under the 2026 reveal's heading
+"the rules this draw had to satisfy", beside a draw that predates it and does
+not satisfy it. The schedule was right; the page was wrong. `scheduleConstraints({season})`
+returns what was in force, `upcomingConstraints({season})` returns what came
+later so the page can say so. `buildWeekPlan` is NOT season-gated — it draws
+schedules and should draw the best one we currently know how to make. Keeping
+rule vintages out of the algorithm is the point.
+
+**Verdicts are scored once, at lock time, and stored in the reveal**
+(`summary` siblings `goals` / `notYetAdopted`). Re-deriving on read would let a
+season's verdict change silently every time a goal is added.
+
+Statuses are `met`, `partial` (as far as the calendar allowed), `blocked` (not
+attainable this year), and `optimised` — the last for soft objective terms with
+no pass mark. `optimised` is not a cop-out: inventing a threshold for
+"doubleheader opponents are balanced in strength" would make the scorecard a
+worse document than reporting the spread.
+
+**Adding a goal is one entry plus a `since` year plus a scorer.** Do not
+renumber — rank is positional and derived. `tests/schedule-goals.test.ts` fails
+if a goal has no scorer, including one whose `since` has not arrived yet, so the
+season it first applies to cannot throw at lock time.
+
+### Goal 1 has an escape hatch nothing else has
+
+No doubleheader on an NFL bye week is the league's top goal, and in a year when
+no league-wide week works the commissioner has **staggered doubleheaders
+franchise by franchise** so each team plays its two games in a week its own
+roster is whole. That breaks the round model this whole module is built on and
+has to be hand-built, so it is a genuine last resort — and it is still better
+than a doubleheader on a bye. Nothing here implements it; it is recorded so
+nobody concludes the goal is unachievable when a season has no clean shared
+week.
 
 ## The trap: bye weeks move, week numbers don't
 

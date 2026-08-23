@@ -12,12 +12,13 @@ import {
   describeDivisionByeSplit,
   divisionByeSplit,
   scheduleConstraints,
+  upcomingConstraints,
 } from '../src/utils/schedule-constraints.mjs';
 
 describe('scheduleConstraints', () => {
-  for (const crossConference of [true, false]) {
-    describe(crossConference ? 'league with a cross-conference round' : 'league without one', () => {
-      const list = scheduleConstraints({ crossConference });
+  for (const season of [null, 2026, 2027]) {
+    describe(season == null ? 'every adopted goal' : `goals in force for ${season}`, () => {
+      const list = scheduleConstraints({ season });
 
       it('ranks 1..n with no gaps', () => {
         expect(list.map((c) => c.rank)).toEqual(list.map((_, i) => i + 1));
@@ -53,11 +54,41 @@ describe('scheduleConstraints', () => {
     });
   }
 
-  it('only mentions the cross-conference game for a league that plays one', () => {
-    const withCross = JSON.stringify(scheduleConstraints({ crossConference: true }));
-    const without = JSON.stringify(scheduleConstraints({ crossConference: false }));
-    expect(withCross).toMatch(/cross-conference/i);
-    expect(without).not.toMatch(/cross-conference/i);
+  // Every league chases the SAME goals; only the outcomes differ, and those
+  // live in the verdicts (schedule-goals.mjs). An earlier version branched
+  // goal 2's text on whether the league plays a cross-conference round, which
+  // made the two leagues' scorecards quietly incomparable.
+  it('is one list for every league — no argument can change it but the season', () => {
+    const base = JSON.stringify(scheduleConstraints({ season: 2027 }));
+    for (const junk of [{}, { crossConference: true }, { crossConference: false }, { divisionSize: 6 }]) {
+      expect(JSON.stringify(scheduleConstraints({ ...junk, season: 2027 })), JSON.stringify(junk)).toBe(base);
+    }
+  });
+
+  it('withholds a goal from the seasons that predate it, and names it as upcoming', () => {
+    const before = scheduleConstraints({ season: 2026 }).map((c) => c.key);
+    const after = scheduleConstraints({ season: 2027 }).map((c) => c.key);
+    expect(before).not.toContain('light-bye-weeks');
+    expect(after).toContain('light-bye-weeks');
+    // Ranks close up rather than leaving a hole where the goal will go.
+    expect(before).toEqual(after.filter((k) => k !== 'light-bye-weeks'));
+    expect(upcomingConstraints({ season: 2026 }).map((c) => c.key)).toEqual(['light-bye-weeks']);
+    expect(upcomingConstraints({ season: 2027 })).toEqual([]);
+    // No season given = planning the next draw, so everything applies.
+    expect(upcomingConstraints({})).toEqual([]);
+  });
+
+  it('gives every goal a stable key, unique across the list', () => {
+    const keys = scheduleConstraints({}).map((c) => c.key);
+    expect(keys.every(Boolean)).toBe(true);
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it('keeps the doubleheader goal at the top of the negotiable ones', () => {
+    // The league's stated #1 goal. Everything above it is the format itself.
+    const list = scheduleConstraints({});
+    const firstNonFormat = list.find((c) => c.tier !== 'format')!;
+    expect(firstNonFormat.key).toBe('doubleheaders-off-byes');
   });
 });
 

@@ -80,6 +80,15 @@ export interface ScheduleRelease {
     homeGames: { min: number; max: number };
     minRematchGap: number | null;
   };
+  /**
+   * How the season did against the goals in force when it was drawn — scored
+   * once at lock time (`scoreSeasonGoals`) and stored, never re-derived: the
+   * reveal is a record, and a verdict that recomputed would silently change as
+   * the league adds goals. Absent on reveals locked before scoring existed.
+   */
+  goals?: { key: string; rank: number; tier: string; status: string; detail: string }[];
+  /** Goals adopted after this draw was locked. They did not apply to it. */
+  notYetAdopted?: { key: string; since: number }[];
 }
 
 /** Reveals are per league AND per season — next year is a different record. */

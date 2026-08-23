@@ -57,6 +57,8 @@ import { fileURLToPath } from 'node:url';
 import { LEAGUES, SHARED_APP_ORIGIN } from '../src/config/leagues-data.mjs';
 import { marqueeMatchups, priorWinRates, releaseIsReady, scheduleReleaseDate } from '../src/utils/schedule-release.mjs';
 import { rivalrySeriesByPair } from '../src/utils/rivalry-intensity.mjs';
+import { goalFactsFromSeason, scoreSeasonGoals } from '../src/utils/schedule-goals.mjs';
+import { LIGHT_BYE_WEEK_MAX } from '../src/utils/schedule-builder.mjs';
 import {
   byeExposure,
   describeSeason,
@@ -199,6 +201,20 @@ async function releaseFromPlan(slug, y) {
       homeGames: plan.plan.homeGames,
       minRematchGap: plan.plan.minRematchGap,
     },
+    // Same scoring as the live path — `plan.plan` IS a describeSeason result,
+    // so both sources produce a scorecard built the same way.
+    ...scoreSeasonGoals(
+      goalFactsFromSeason({
+        season: y,
+        crossConference: Boolean(SCHEDULE_POLICY[slug]?.crossConference),
+        lastWeek: plan.lastWeek,
+        described: plan.plan,
+        ceiling: plan.divisionGameCeiling,
+        doubleheaders: plan.doubleheaderWeeks,
+        lightByeWeekMax: LIGHT_BYE_WEEK_MAX,
+        problems: plan.problems ?? [],
+      }),
+    ),
   };
 }
 
@@ -285,6 +301,21 @@ async function releaseFromLive(slug, y) {
       homeGames: described.homeGames,
       minRematchGap: described.minRematchGap,
     },
+    // Scored ONCE, here, against the goals in force when this season was
+    // drawn. Stored rather than derived on read: the reveal is a record, and a
+    // verdict that re-computes would silently change as the goal list grows.
+    ...scoreSeasonGoals(
+      goalFactsFromSeason({
+        season: y,
+        crossConference: Boolean(SCHEDULE_POLICY[slug]?.crossConference),
+        lastWeek: shape.lastWeek,
+        described,
+        ceiling,
+        doubleheaders,
+        lightByeWeekMax: LIGHT_BYE_WEEK_MAX,
+        problems,
+      }),
+    ),
   };
 }
 

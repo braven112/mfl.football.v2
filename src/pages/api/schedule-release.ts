@@ -140,13 +140,6 @@ export const GET: APIRoute = async ({ request, url }) => {
       releaseDate: releaseDate?.toISOString() ?? null,
       canPaste: isCommissionerOrAdmin(user),
       release: existing,
-      // Whether this league plays a cross-conference round. The page needs it
-      // to state the constraints correctly — that round's fixed Week 1 slot is
-      // the reason the AFL's bye-free division ceiling is short of its whole
-      // schedule, and The League has no such clause. Sent from the policy
-      // rather than inferred client-side, so no league literal reaches the
-      // browser bundle.
-      crossConference: Boolean(SCHEDULE_POLICY[slug as keyof typeof SCHEDULE_POLICY]?.crossConference),
       // Crests + brand colours for the marquee cards. Sent alongside the
       // archived reveal rather than baked into it: the reveal is a COMMITTED
       // record of a season's games and must not go stale the day a franchise

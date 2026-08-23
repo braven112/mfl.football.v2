@@ -964,5 +964,83 @@
       "max": 9
     },
     "minRematchGap": 8
-  }
+  },
+  "goals": [
+    {
+      "key": "one-game-per-week",
+      "rank": 1,
+      "tier": "format",
+      "status": "met",
+      "detail": "204 games, every franchise the same number"
+    },
+    {
+      "key": "opponent-counts",
+      "rank": 2,
+      "tier": "format",
+      "status": "met",
+      "detail": "division rivals twice, the other division in the conference once, cross-conference in Week 1"
+    },
+    {
+      "key": "doubleheaders-off-byes",
+      "rank": 3,
+      "tier": "hard",
+      "status": "met",
+      "detail": "Weeks 1, 2, 12, none with an NFL bye"
+    },
+    {
+      "key": "rematch-gap",
+      "rank": 4,
+      "tier": "hard",
+      "status": "met",
+      "detail": "closest rematch is 8 weeks apart"
+    },
+    {
+      "key": "doubleheader-split",
+      "rank": 5,
+      "tier": "hard",
+      "status": "met",
+      "detail": "2 early, 1 late"
+    },
+    {
+      "key": "division-bye-free-ceiling",
+      "rank": 6,
+      "tier": "maximise",
+      "status": "met",
+      "detail": "36 of 120 division games (30%) fall on a bye week — every one forced by the format; the floor, not a miss"
+    },
+    {
+      "key": "bye-luck",
+      "rank": 7,
+      "tier": "maximise",
+      "status": "optimised",
+      "detail": "most- to least-favoured franchise differ by 2 across the season"
+    },
+    {
+      "key": "opponent-strength",
+      "rank": 8,
+      "tier": "maximise",
+      "status": "optimised",
+      "detail": "balanced by the optimiser; no pass mark — see the doubleheader and late-season spreads"
+    },
+    {
+      "key": "worst-week-and-finale",
+      "rank": 9,
+      "tier": "preference",
+      "status": "met",
+      "detail": "Week 14 is all-division; the season's worst bye week is not"
+    },
+    {
+      "key": "home-away",
+      "rank": 10,
+      "tier": "exact",
+      "status": "met",
+      "detail": "8–9 per franchise, an odd game count's best split"
+    }
+  ],
+  "notYetAdopted": [
+    {
+      "key": "light-bye-weeks",
+      "since": 2027
+    }
+  ]
 }

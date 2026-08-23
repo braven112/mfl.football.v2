@@ -537,3 +537,70 @@
   line-height: 1.45;
   color: var(--color-text-secondary, #475569);
 }
+
+/* Rules adopted after the season on screen. Visually subordinate to the
+   numbered list — they are context for what this draw did NOT have to do, not
+   part of what it did. */
+.rel__later {
+  margin-top: 1rem;
+  padding: 0.85rem 0.9rem;
+  background: var(--color-surface-2, #f8fafc);
+  border: 1px dashed var(--color-border-subtle, #e2e8f0);
+  border-radius: 10px;
+}
+
+.rel__laterHead {
+  margin: 0 0 0.15rem;
+  font-size: 0.8125rem;
+  color: var(--color-text-primary, #0f172a);
+}
+
+.rel__laterList {
+  margin: 0.5rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--color-text-secondary, #475569);
+}
+
+.rel__laterList li + li {
+  margin-top: 0.35rem;
+}
+
+/* Per-goal verdict. Colour is a reinforcement, never the message — the status
+   is spelled out in words on every row, so a monochrome or colour-blind read
+   loses nothing. */
+.rel__verdict {
+  margin: 0.4rem 0 0;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  border-radius: 6px;
+  background: var(--color-surface-3, #eef2f7);
+  color: var(--color-text-primary, #0f172a);
+}
+
+.rel__verdictTag {
+  display: inline-block;
+  margin-right: 0.4rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.rel__verdict--met .rel__verdictTag {
+  color: var(--color-success, #16a34a);
+}
+
+.rel__verdict--partial .rel__verdictTag {
+  color: var(--color-warning, #d97706);
+}
+
+.rel__verdict--blocked .rel__verdictTag {
+  color: var(--color-error, #dc2626);
+}
+
+.rel__verdict--optimised .rel__verdictTag {
+  color: var(--color-text-secondary, #475569);
+}

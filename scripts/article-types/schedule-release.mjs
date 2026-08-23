@@ -30,11 +30,11 @@ import {
   rivalrySeriesByPair,
 } from '../../src/utils/rivalry-intensity.mjs';
 import { RIVALRY_MEETINGS_TO_MENTION } from '../../src/utils/schedule-release.mjs';
-import { SCHEDULE_POLICY } from '../../src/utils/schedule-plan.mjs';
 import {
   describeDivisionByeSplit,
   divisionByeSplit,
   scheduleConstraints,
+  upcomingConstraints,
   TIER_LABEL,
 } from '../../src/utils/schedule-constraints.mjs';
 import { primaryLink, articleLink, featureLink, linkList } from '../article-utils/article-links.mjs';
@@ -178,14 +178,37 @@ export async function buildFactSheet(data, week, year, projectRoot, { league = '
   }
   lines.push(`  - ${release.summary.games} games in total.`);
   lines.push('');
-  // The precedence, not just the rules. Nearly every "why is my schedule like
-  // this" question is answered by a higher-ranked rule beating a lower one,
-  // and a column that lists the goals without the order cannot give that
-  // answer. Shared with the reveal page so the two cannot drift.
-  lines.push('THE CONSTRAINTS, IN PRIORITY ORDER (each one yields to every one above it):');
-  for (const c of scheduleConstraints({ crossConference: Boolean(SCHEDULE_POLICY[league]?.crossConference) })) {
+  // Ranked goals WITH their verdict, scoped to the season being written about.
+  //
+  // Three things this has to get right at once. The order, because nearly every
+  // "why is my schedule like this" question is answered by a higher goal
+  // beating a lower one. The season, because a goal adopted after this draw was
+  // locked is not one it had to satisfy and listing it would accuse the
+  // schedule of breaking a rule that did not exist. And the verdict, because
+  // goals without outcomes just restate the rulebook — the outcome is the story.
+  //
+  // Shared with the reveal page, so the column and the page cannot drift.
+  const verdict = new Map((release.goals ?? []).map((g) => [g.key, g]));
+  lines.push('THE GOALS, IN PRIORITY ORDER, AND HOW THIS SCHEDULE DID:');
+  lines.push(
+    '  (Ranked. Each yields to every one above it. These are GOALS scored against the NFL\'s bye',
+    '   calendar for this season, not guarantees — falling short of one is only a failure if a',
+    '   better draw existed, and the verdict below already says whether it did.)',
+  );
+  for (const c of scheduleConstraints({ season: year })) {
+    const v = verdict.get(c.key);
     lines.push(`  ${c.rank}. [${TIER_LABEL[c.tier]}] ${c.rule}`);
+    if (v) lines.push(`     VERDICT: ${v.status.toUpperCase()} — ${v.detail}`);
     lines.push(`     ${c.why}`);
+  }
+  const later = upcomingConstraints({ season: year });
+  if (later.length) {
+    lines.push('');
+    lines.push(
+      `RULES ADOPTED AFTER THIS SCHEDULE WAS DRAWN (they did NOT apply to it — never write that ` +
+        `this schedule broke one):`,
+    );
+    for (const c of later) lines.push(`  - From ${c.since}: ${c.rule}`);
   }
   // THE RIVALRY RENEWALS. Ranked by the same intensity formula the rivalry
   // pages use (`rivalry-intensity.mjs`) so the column and the site agree about

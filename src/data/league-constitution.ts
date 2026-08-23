@@ -238,7 +238,7 @@ SCHEDULE
 - Each franchise will play an 18-game schedule.
 - Division Opponents twice and the rest of the league once.
 - Whenever possible, division games and doubleheaders will avoid bye weeks and ideally played weeks 1-4, 12-14.
-- When a division game cannot avoid a bye week, it is placed on the LIGHTEST bye week available — ideally one with only two NFL teams out. This never overrides the rule that division rivals must not meet twice inside three weeks; where the two conflict, the rematch gap wins and a heavier bye week is used.
+- (Effective with the 2027 schedule.) When a division game cannot avoid a bye week, it is placed on the LIGHTEST bye week available — ideally one with only two NFL teams out. This never overrides the rule that division rivals must not meet twice inside three weeks; where the two conflict, the rematch gap wins and a heavier bye week is used.
 
 SCORING ERRORS
 - The league's web site provider (My Fantasy League) will be the system of record for NFL stats.

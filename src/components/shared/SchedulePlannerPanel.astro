@@ -10,7 +10,6 @@
  */
 import SchedulePlanner from './SchedulePlanner.tsx';
 import { scheduleConstraints, TIER_LABEL } from '../../utils/schedule-constraints.mjs';
-import { SCHEDULE_POLICY } from '../../utils/schedule-plan.mjs';
 import '../../styles/schedule-planner.css';
 
 interface Props {
@@ -21,9 +20,11 @@ interface Props {
   seasons: number[];
 }
 const { leagueSlug, leagueName, defaultYear, seasons } = Astro.props;
-const constraints = scheduleConstraints({
-  crossConference: Boolean(SCHEDULE_POLICY[leagueSlug]?.crossConference),
-});
+// No `season` here, deliberately. The builder DRAWS a schedule, so it applies
+// every rule the league has adopted, whichever year it is pointed at — the
+// planner is always current. Only the reveal page passes a season, because it
+// DISPLAYS a draw that already happened and must not backdate a rule onto it.
+const constraints = scheduleConstraints();
 ---
 
 <section class="schedplan">
