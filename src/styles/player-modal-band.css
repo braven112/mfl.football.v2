@@ -45,25 +45,46 @@
   pointer-events: none;
 }
 
-/* Franchise crest watermark — behind the cutout, same treatment as the
-   draft-room splash (.dr-splash__crest). Opacity is a custom property so a
-   surface with more room (or none of the cutout competing) can push it. */
+/* Franchise crest watermark — behind the player, offset far enough left that
+   most of the mark clears him.
+
+   It started fully behind the cutout (the draft-room splash convention,
+   .dr-splash__crest) and the headshot hid nearly all of it: a crest you only
+   see the edges of does not read as the team's mark. Moving it clear of the
+   player entirely fixed that and broke the composition — it stopped being a
+   watermark and started being a second subject competing with the face. The
+   `right` below splits the difference: roughly the last third of the crest
+   tucks under the player, the rest of it reads.
+
+   That offset is tuned against .pmb__cutout's `right` + `max-width`, so the
+   two move together — change the cutout's width and this wants re-checking.
+
+   At this size the crest is TALLER than the band and deliberately bleeds off
+   both edges, the same language as .pmb__ghost, which already runs off the
+   bottom. `overflow: hidden` on .pmb does the cropping.
+
+   It underlaps the name block rather than clearing it. That is safe in the one
+   direction that matters: every crest is drawn on ink (see
+   franchise-band-brand.ts), so at this opacity it DARKENS the gradient behind
+   white type instead of lightening it. */
 .pmb__crest {
   position: absolute;
-  right: 1.25rem;
+  right: var(--pmb-crest-right, 24%);
   top: 50%;
   transform: translateY(-50%);
-  width: var(--pmb-crest-size, clamp(76px, 26%, 132px));
-  height: var(--pmb-crest-size, clamp(76px, 26%, 132px));
+  width: var(--pmb-crest-size, clamp(152px, 52%, 264px));
+  height: var(--pmb-crest-size, clamp(152px, 52%, 264px));
   object-fit: contain;
-  opacity: var(--pmb-crest-opacity, 0.28);
+  opacity: var(--pmb-crest-opacity, 0.26);
   pointer-events: none;
   user-select: none;
 }
 
-/* No headshot to sit behind — let the crest carry the right side outright. */
+/* No headshot to sit beside — the crest takes the space the cutout would have
+   had, and can carry more weight with nothing competing. */
 .pmb--no-cutout .pmb__crest {
-  --pmb-crest-opacity: 0.4;
+  --pmb-crest-right: 1.25rem;
+  --pmb-crest-opacity: 0.34;
 }
 
 .pmb__cutout {
@@ -87,7 +108,11 @@
     max-width: 34%;
   }
 
+  /* A phone band is narrower AND shorter, so the same percentage buys a crest
+     that bleeds nearly its own height off both edges. Trim the size; the
+     offset holds, because the cutout narrows here too (34% vs 38%) and the
+     two changes very nearly cancel. */
   .pmb__crest {
-    --pmb-crest-size: clamp(64px, 24%, 104px);
+    --pmb-crest-size: clamp(124px, 44%, 190px);
   }
 }
