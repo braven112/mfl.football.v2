@@ -1835,3 +1835,52 @@ width sweep, not by eye at two widths. A `getBoundingClientRect()` sweep over
 `[1280, 1024, 1023, 900, 700, 642, 641, 640.5, 640, 639, 535, 375]` found a
 one-pixel media-query overlap, a fractional-width gap, and a silently-inert
 rule that three rounds of screenshots had all missed.
+
+## 2026-08-23 - One `clamp()` Set On Both `width` And `height` Is Not A Square
+
+**Context:** The player-modal band's franchise crest would not sit where its
+`right` said it did. It read as clearing the player entirely no matter what
+offset was set, and three rounds of eyeballing screenshots and nudging the
+value never landed it.
+
+**Insight:** The crest was `width: X; height: X;` with `X = clamp(152px, 52%,
+264px)` — one declaration reused, which *looks* square and is not. **A
+percentage `width` resolves against the containing block's WIDTH; a percentage
+`height` against its HEIGHT.** The band is ~3.5x wider than it is tall, so the
+same clamp resolved to `182px` wide and `124px` tall (the height fell to the
+clamp's px floor, since 52% of a 119px band is 62px). `object-fit: contain`
+then letterboxed the square artwork inside that 182x124 box with ~29px of
+transparent padding down each side — so `right` was positioning an **invisible
+box edge sitting ~7% of the band away from the logo anyone could see**.
+
+Two failure modes worth separating, because only the first is obvious:
+- The element is the wrong SHAPE. Any `object-fit` value then re-introduces a
+  gap between the box and the paint: `contain` letterboxes, `cover` crops.
+- The clamp's px min/max silently becomes the operative value on one axis
+  only. Here the artwork was legible purely *because* the height floor caught
+  it — remove the floor and the crest would have collapsed to 62px.
+
+Fix: size one axis and let `aspect-ratio` derive the other
+(`height: 112%; aspect-ratio: 1; width: auto`). Box and artwork then coincide,
+and the offset means what it says.
+
+**Recommendation:** MEASURE, don't nudge. Two rounds were lost to adjusting a
+value that was being applied correctly to the wrong rectangle. Dump the real
+geometry instead — `getBoundingClientRect()` for the boxes, plus where
+`object-fit` actually paints inside them:
+
+```js
+const b = img.getBoundingClientRect();
+const s = Math.min(b.width / img.naturalWidth, b.height / img.naturalHeight); // contain
+const paintedWidth = img.naturalWidth * s;   // vs b.width -> the phantom padding
+```
+
+A one-line diff of "box 182x124, natural 100x100, painted 124x124" said
+immediately what three screenshot rounds had not. Generally: any time an
+absolutely-positioned box is offset against a *sibling's* position, print both
+rects before touching the offset — see also the width-sweep recommendation in
+the 2026-08-22 `display: contents` entry.
+
+**Evidence:** `src/styles/player-modal-band.css#.pmb__crest`, whose comment
+carries the short version.
+
