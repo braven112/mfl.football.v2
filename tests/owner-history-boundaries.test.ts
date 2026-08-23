@@ -12,38 +12,55 @@
  * correct NAME for the year (resolved from the source franchise's history), so
  * the page looks meticulous while it is wrong.
  *
- * The invariant every entry in both leagues satisfies: the source franchise's
- * name in `mfl-feeds/<yearStart>/league.json` differs from its name in
- * `<yearStart - 1>` — an owner change shows up as a rename. If a genuine
- * takeover ever happens WITHOUT a rename, add it to NO_RENAME_TAKEOVERS below
- * with a note; do not loosen the check.
+ * The invariant every entry in every league satisfies, at BOTH edges: the
+ * source franchise's name in `mfl-feeds/<year>/league.json` changes when a
+ * stint starts and changes again after it ends — an owner change shows up as a
+ * rename. `yearEnd` is not the safe edge: `yearEnd: 2016` would hand 0011 a
+ * season the Computer Jocks' owner played, the exact mirror of the bug above.
+ *
+ * If a genuine takeover ever happens WITHOUT a rename, add it to the matching
+ * allowlist below with a note; do not loosen the check.
+ *
+ * Leagues come from the registry, so a league added later is covered here the
+ * day its config gains an `ownerHistory`.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
-import theleagueConfig from '../src/data/theleague.config.json';
-import aflConfig from '../data/afl-fantasy/afl.config.json';
+import { ALL_LEAGUES } from '../src/config/leagues-data.mjs';
 
 const ROOT = path.resolve(__dirname, '..');
+
+/** Open-ended stints ("still the owner") carry this sentinel as `yearEnd`. */
+const OPEN_ENDED_YEAR_END = 9999;
 
 type OwnerHistoryEntry = { franchiseId: string; yearStart: number; yearEnd: number };
 type ConfigTeam = { franchiseId: string; name: string; ownerHistory?: OwnerHistoryEntry[] };
 
-const LEAGUES: { slug: string; teams: ConfigTeam[]; feedsDir: string }[] = [
-  {
-    slug: 'theleague',
-    teams: theleagueConfig.teams as unknown as ConfigTeam[],
-    feedsDir: path.join(ROOT, 'data/theleague/mfl-feeds'),
-  },
-  {
-    slug: 'afl-fantasy',
-    teams: aflConfig.teams as unknown as ConfigTeam[],
-    feedsDir: path.join(ROOT, 'data/afl-fantasy/mfl-feeds'),
-  },
-];
+type LeagueUnderTest = { slug: string; teams: ConfigTeam[]; feedsDir: string };
 
-/** `${slug}:${claimingId}->${sourceId}@${yearStart}` for takeovers with no rename. */
+const leaguesUnderTest: LeagueUnderTest[] = ALL_LEAGUES.flatMap(
+  (league: { slug: string; configPath?: string; dataPath?: string }) => {
+    if (!league.configPath || !league.dataPath) return [];
+    const configFile = path.join(ROOT, league.configPath);
+    if (!existsSync(configFile)) return [];
+    const config = JSON.parse(readFileSync(configFile, 'utf8'));
+    const teams = Array.isArray(config?.teams) ? (config.teams as ConfigTeam[]) : [];
+    return [{ slug: league.slug, teams, feedsDir: path.join(ROOT, league.dataPath, 'mfl-feeds') }];
+  }
+);
+
+/**
+ * Stints that genuinely began without the source franchise being renamed.
+ * Key: `${slug}:${claimingId}->${sourceId}@${yearStart}`.
+ */
 const NO_RENAME_TAKEOVERS = new Set<string>([]);
+
+/**
+ * Stints that genuinely ended without the source franchise being renamed
+ * afterwards. Key: `${slug}:${claimingId}->${sourceId}@${yearEnd}`.
+ */
+const NO_RENAME_HANDOFFS = new Set<string>([]);
 
 const feedFranchiseName = (feedsDir: string, year: number, franchiseId: string): string | null => {
   const file = path.join(feedsDir, String(year), 'league.json');
@@ -56,24 +73,30 @@ const feedFranchiseName = (feedsDir: string, year: number, franchiseId: string):
 };
 
 describe('ownerHistory boundaries', () => {
-  for (const league of LEAGUES) {
-    const claimants = league.teams.filter((t) => (t.ownerHistory?.length ?? 0) > 0);
+  it('the registry resolves at least one league with an ownerHistory claim', () => {
+    expect(leaguesUnderTest.length).toBeGreaterThan(0);
+    const claims = leaguesUnderTest.flatMap((l) =>
+      l.teams.flatMap((t) => t.ownerHistory ?? [])
+    );
+    expect(claims.length).toBeGreaterThan(0);
+  });
 
-    it(`${league.slug} has at least one team with an ownerHistory (fixture sanity)`, () => {
-      expect(claimants.length).toBeGreaterThan(0);
-    });
-
-    for (const team of claimants) {
-      for (const entry of team.ownerHistory!) {
+  for (const league of leaguesUnderTest) {
+    for (const team of league.teams) {
+      for (const entry of team.ownerHistory ?? []) {
         const label =
           `${league.slug} ${team.franchiseId} (${team.name}) claiming ` +
-          `${entry.franchiseId} from ${entry.yearStart}`;
+          `${entry.franchiseId} ${entry.yearStart}-${entry.yearEnd}`;
 
         it(`${label} starts on a rename in that year's MFL feed`, () => {
           const key = `${league.slug}:${team.franchiseId}->${entry.franchiseId}@${entry.yearStart}`;
           if (NO_RENAME_TAKEOVERS.has(key)) return;
 
-          const priorName = feedFranchiseName(league.feedsDir, entry.yearStart - 1, entry.franchiseId);
+          const priorName = feedFranchiseName(
+            league.feedsDir,
+            entry.yearStart - 1,
+            entry.franchiseId
+          );
           // No feed for the prior year (the claim starts at the league's first
           // recorded season) — there is nothing to compare against.
           if (priorName === null) return;
@@ -87,20 +110,48 @@ describe('ownerHistory boundaries', () => {
               `page would show a season played by someone else`
           ).not.toBe(priorName);
         });
+
+        it(`${label} ends on a rename in the following year's MFL feed`, () => {
+          if (entry.yearEnd >= OPEN_ENDED_YEAR_END) return;
+
+          const key = `${league.slug}:${team.franchiseId}->${entry.franchiseId}@${entry.yearEnd}`;
+          if (NO_RENAME_HANDOFFS.has(key)) return;
+
+          const nextName = feedFranchiseName(
+            league.feedsDir,
+            entry.yearEnd + 1,
+            entry.franchiseId
+          );
+          // No feed for the following year — the stint ends at the last
+          // recorded season, so there is nothing to compare against.
+          if (nextName === null) return;
+
+          const endName = feedFranchiseName(league.feedsDir, entry.yearEnd, entry.franchiseId);
+          expect(endName, `${label}: no feed name for ${entry.yearEnd}`).toBeTruthy();
+          expect(
+            endName,
+            `${label}: franchise ${entry.franchiseId} was still "${nextName}" in ` +
+              `${entry.yearEnd + 1}, so the claim runs a year long — the owner's ` +
+              `page would show a season played by someone else`
+          ).not.toBe(nextName);
+        });
       }
     }
   }
 
-  it('TheLeague 0011 claims franchise 0010 from 2011, the year the Warlocks became Midwestside', () => {
-    const midwestside = (theleagueConfig.teams as unknown as ConfigTeam[]).find(
-      (t) => t.franchiseId === '0011'
-    );
+  it('TheLeague 0011 claims franchise 0010 for 2011-2015, the Midwestside years', () => {
+    const theleague = leaguesUnderTest.find((l) => l.slug === 'theleague');
+    expect(theleague, 'theleague missing from the registry').toBeTruthy();
+
+    const midwestside = theleague!.teams.find((t) => t.franchiseId === '0011');
     const stint = midwestside?.ownerHistory?.find((e) => e.franchiseId === '0010');
     expect(stint?.yearStart).toBe(2011);
     expect(stint?.yearEnd).toBe(2015);
 
-    const feeds = path.join(ROOT, 'data/theleague/mfl-feeds');
-    expect(feedFranchiseName(feeds, 2010, '0010')).toBe('Witch City Warlocks');
-    expect(feedFranchiseName(feeds, 2011, '0010')).toBe('Midwestside Connection');
+    // The rename in each direction, straight from the feeds.
+    expect(feedFranchiseName(theleague!.feedsDir, 2010, '0010')).toBe('Witch City Warlocks');
+    expect(feedFranchiseName(theleague!.feedsDir, 2011, '0010')).toBe('Midwestside Connection');
+    expect(feedFranchiseName(theleague!.feedsDir, 2015, '0010')).toBe('Midwestside Connection');
+    expect(feedFranchiseName(theleague!.feedsDir, 2016, '0010')).toBe('Computer Jocks');
   });
 });

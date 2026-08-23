@@ -61,10 +61,12 @@ so the fix needed no new asset, just a pointer at the art already in `public/`.
 **Evidence:** 0010's 2011-2015 history entry now points at
 `history/midwestside_icon_circle.png` + `banners/midwestside.png` with the
 era's real gold/black palette (`#bba329` / `#141312`) in place of the inherited
-Warlocks purple, and carries `eraLabel: "Midwestside's first stint"`. The duplicate
-PNG is deleted and `theleague.assets.json` re-synced. `THROWBACK_ASSET_CONFLICTS`
-already excluded this era from the Jocks' throwback picker, so pointing it at
-0011's art does not let 0010 wear it.
+Warlocks purple. The duplicate PNG is deleted and `theleague.assets.json`
+re-synced. `THROWBACK_ASSET_CONFLICTS` already excluded this era from the Jocks'
+throwback picker, so pointing it at 0011's art does not let 0010 wear it — which
+is also why an `eraLabel` on this entry would be dead config: its only consumer
+(`throwback-settings.astro`) iterates the ELIGIBLE eras, and a conflicted one
+never reaches it.
 
 **Recommendation:** Before shipping a history entry, open its icon next to the
 neighbouring era's. If they are the same picture, one of them is a placeholder.
