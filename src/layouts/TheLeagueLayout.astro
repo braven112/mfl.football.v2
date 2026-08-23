@@ -16,6 +16,7 @@
  */
 
 import { ClientRouter } from 'astro:transitions';
+import TransitionNoiseGuard from '../components/TransitionNoiseGuard.astro';
 import { Font } from 'astro:assets';
 // Global utility classes (.visually-hidden, etc.) — frontmatter import so the
 // CSS ships unscoped; @import inside the <style> block below would get scoped.
@@ -282,6 +283,10 @@ const themePref = getThemePreference(Astro.cookies);
 		<NflLogoDarkStyles />
 		<TeamAccentStyles />
 		<FranchiseBandBrands league={league} />
+		{/* Must precede ClientRouter's own listeners AND every page's: it is the
+		    first `unhandledrejection` handler, and downstream diagnostics read
+		    the `defaultPrevented` it sets. */}
+		<TransitionNoiseGuard />
 		<ClientRouter />
 	</head>
 	<body>
