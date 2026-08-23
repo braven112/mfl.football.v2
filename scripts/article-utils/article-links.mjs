@@ -40,7 +40,15 @@
  * involved; `ensureLeaguePrefix` is the registry's own path builder.
  */
 
-import { LEAGUES, ensureLeaguePrefix } from '../../src/config/leagues-data.mjs';
+import { LEAGUES, ensureLeaguePrefix, buildHostToSlugMap } from '../../src/config/leagues-data.mjs';
+
+/**
+ * Hosts this site actually serves, from the registry — every league's apex
+ * domains. Used to decide whether an absolute URL is ours (collapse it to a
+ * path) or somebody else's (not a valid article link).
+ */
+const OWN_HOSTS = new Set(Object.keys(buildHostToSlugMap()).map((h) => h.toLowerCase()));
+const isOwnHost = (hostname) => OWN_HOSTS.has(String(hostname).toLowerCase());
 
 /**
  * Every page an article may point at, and which leagues actually have it.
@@ -285,7 +293,15 @@ function normalizeHref(raw) {
   let href = String(raw).trim().replace(/&amp;/gi, '&');
   if (/^([a-z][a-z0-9+.-]*:)?\/\//i.test(href)) {
     try {
-      href = new URL(href, 'https://placeholder.invalid').pathname;
+      const url = new URL(href, 'https://placeholder.invalid');
+      // Only OUR OWN hosts collapse to a path. Dropping the host from any
+      // absolute URL means an external link whose path happens to collide with
+      // a destination (`https://example.com/theleague/rosters`) is silently
+      // rewritten into an internal one — a link that now points somewhere the
+      // author never wrote, with nothing logged. An unrecognised host returns
+      // null instead, so it falls through to the strip-and-notice path.
+      if (!isOwnHost(url.hostname)) return null;
+      href = url.pathname;
     } catch {
       return null;
     }
@@ -330,7 +346,10 @@ function buildHrefIndex(links, league) {
  * of the middle of a paragraph.
  */
 function sanitizeParagraph(html, index, notices) {
-  return String(html).replace(ANCHOR_RE, (whole, attrs, text) => {
+  // `?? ''` like the sibling `linksPresent`: a malformed model response can
+  // put a null into `content[]`, and String(null) writes the literal text
+  // "null" back into the article.
+  return String(html ?? '').replace(ANCHOR_RE, (whole, attrs, text) => {
     const match = HREF_RE.exec(attrs ?? '');
     const raw = match ? (match[1] ?? match[2] ?? match[3]) : null;
     const normalized = normalizeHref(raw);
@@ -381,6 +400,18 @@ function bodyFields(post) {
 }
 
 /**
+ * The excerpt. `post.body` is a STRING, not an array, and the feed card renders
+ * it through `set:html` (SchefterPostCard.astro) exactly like the article body
+ * — so an href invented there ships unvalidated. It is sanitized but NOT
+ * counted toward the primary-link check: the excerpt is a teaser on a card
+ * that is itself a link to the article, so a link inside it satisfies nothing.
+ */
+function sanitizeExcerpt(post, index, notices) {
+  if (typeof post.body !== 'string' || !post.body.includes('<a')) return;
+  post.body = sanitizeParagraph(post.body, index, notices);
+}
+
+/**
  * Guarantee the article links where it was told to, and nowhere else.
  *
  * Mutates and returns the post. `notices` describes every repair so the
@@ -408,6 +439,7 @@ export function applyArticleLinks(post, links, { league = 'theleague' } = {}) {
       typeof g?.body === 'string' ? { ...g, body: sanitizeParagraph(g.body, index, notices) } : g,
     );
   }
+  sanitizeExcerpt(post, index, notices);
 
   // 2. The primary link is not optional. Inject high in the article — the
   //    point of the link is that the reader goes there, and a link below eight

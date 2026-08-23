@@ -13,6 +13,7 @@ import {
   withLinkDirective,
 } from '../scripts/article-utils/article-links.mjs';
 import { LEAGUES, ALL_LEAGUES } from '../src/config/leagues-data.mjs';
+import { astroRouteExists } from './helpers/astro-routes';
 
 /**
  * Schefter has to link to the thing he is talking about.
@@ -29,7 +30,6 @@ import { LEAGUES, ALL_LEAGUES } from '../src/config/leagues-data.mjs';
  */
 
 const TYPES_DIR = path.resolve(__dirname, '../scripts/article-types');
-const PAGES_DIR = path.resolve(__dirname, '../src/pages');
 const PIPELINE = path.resolve(__dirname, '../scripts/schefter-weekly-articles.mjs');
 
 const typeFiles = readdirSync(TYPES_DIR).filter((f) => f.endsWith('.mjs')).sort();
@@ -43,16 +43,32 @@ const pipelineLeagues = (): string[] => {
 };
 
 /**
- * Does an href resolve to a real Astro route?
- *
- * Checked against the filesystem rather than page-directory.json: the
- * directory is a search index that a page can be missing from, while the
- * route either exists or 404s. Both `foo.astro` and `foo/index.astro` count.
+ * Does an href resolve to a real Astro route? See tests/helpers/astro-routes.
+ * Dynamic segments count — an article permalink is served by `news/[id].astro`,
+ * and a literal-file-only check would call every such link broken.
  */
-const routeExists = (href: string): boolean => {
-  const rel = href.replace(/^\//, '');
-  return existsSync(path.join(PAGES_DIR, `${rel}.astro`)) || existsSync(path.join(PAGES_DIR, rel, 'index.astro'));
-};
+const routeExists = astroRouteExists;
+
+describe('the route resolver itself', () => {
+  it('resolves a dynamic article permalink, which a literal-file check would call broken', () => {
+    expect(routeExists('/theleague/news/sf_2026_cut_watch_0802')).toBe(true);
+    expect(routeExists('/theleague/power-rankings/2026')).toBe(true);
+    expect(routeExists('/theleague/pecking-order')).toBe(true);
+  });
+
+  it('still says no to a page that does not exist', () => {
+    // The root [...path].astro catch-all would otherwise make every string a
+    // valid route and this whole guard a no-op that reports green.
+    expect(routeExists('/theleague/nope')).toBe(false);
+    expect(routeExists('/theleague/keepers')).toBe(false); // AFL-only
+    expect(routeExists('/schefter/tip')).toBe(false); // unprefixed: 404s on the shared host
+  });
+
+  it('strips the query before resolving', () => {
+    expect(routeExists('/theleague/trade-builder?b=0012')).toBe(true);
+    expect(routeExists('/theleague/rosters?view=coach')).toBe(true);
+  });
+});
 
 describe('article links — destinations are real pages', () => {
   const leagues = pipelineLeagues();
@@ -300,6 +316,51 @@ describe('article links — enforcement on the built post', () => {
     const { post: out } = applyArticleLinks(post, links(), { league: 'theleague' });
     expect(out.content[1]).not.toContain('onclick');
     expect(out.content[1]).not.toContain('target');
+  });
+
+  it('sanitizes the EXCERPT, which the feed card also renders with set:html', () => {
+    // `post.body` is a string, not an array, and SchefterPostCard renders it
+    // raw — so an href invented there shipped unvalidated past every other
+    // check, including the published-feed guard.
+    const post = {
+      content: ['<p>a</p>', '<p><a href="/theleague/schedule-release">the reveal</a></p>'],
+      body: 'Teaser with <a href="/theleague/invented">a made-up link</a>.',
+    };
+    const { post: out, notices } = applyArticleLinks(post, links(), { league: 'theleague' });
+    expect(out.body).toBe('Teaser with a made-up link.');
+    expect(notices.some((n) => n.startsWith('stripped'))).toBe(true);
+  });
+
+  it('does NOT let a link in the excerpt satisfy the primary-link requirement', () => {
+    // The excerpt is a teaser on a card that is itself a link to the article.
+    // Counting it would let the article body ship with nothing to click.
+    const post = {
+      content: ['<p>a</p>', '<p>b</p>'],
+      body: 'See <a href="/theleague/schedule-release">the reveal</a>.',
+    };
+    const { post: out, notices } = applyArticleLinks(post, links(), { league: 'theleague' });
+    expect(notices.some((n) => n.includes('injected'))).toBe(true);
+    expect(out.content.join('')).toContain('href="/theleague/schedule-release"');
+  });
+
+  it('does not rewrite an EXTERNAL url whose path collides with a destination', () => {
+    // Dropping the host from any absolute URL turns somebody else's link into
+    // one of ours, silently. Only our own hosts collapse to a path.
+    const post = {
+      content: [
+        '<p><a href="https://example.com/theleague/schedule-release">not ours</a></p>',
+        '<p><a href="/theleague/schedule-release">ours</a></p>',
+      ],
+    };
+    const { post: out, notices } = applyArticleLinks(post, links(), { league: 'theleague' });
+    expect(out.content[0]).toBe('<p>not ours</p>');
+    expect(notices.some((n) => n.includes('example.com'))).toBe(true);
+  });
+
+  it('writes an empty paragraph, not the text "null", for a malformed response', () => {
+    const post = { content: ['<p><a href="/theleague/schedule-release">x</a></p>', null] };
+    const { post: out } = applyArticleLinks(post as never, links(), { league: 'theleague' });
+    expect(out.content[1]).toBe('');
   });
 
   it('covers the grade-card shape, not just content[]', () => {
