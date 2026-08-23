@@ -15,10 +15,10 @@ import { fileURLToPath } from 'node:url';
 import { calendarDaysUntil } from './lib/roger-reminder-window.mjs';
 import {
   getNflWeekStart,
-  parseThrowbackWeeks,
   throwbackEventId,
   DEFAULT_THROWBACK_WEEKS,
 } from './lib/throwback-reminder.mjs';
+import { THROWBACK_WEEKS } from '../src/data/theleague/throwback-weeks.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const outputPath = path.join(projectRoot, 'src', 'data', 'theleague', 'resolved-events.json');
@@ -125,26 +125,18 @@ const EVENTS = [
 ];
 
 // ── Throwback Week events (TheLeague only) ──
-// The week number lives in src/data/theleague/throwback-config.ts
-// (THROWBACK_WEEKS) — single source of truth. We parse it out of the TS
-// source rather than duplicating the number here; if the parse ever fails we
-// warn and fall back to DEFAULT_THROWBACK_WEEKS. The DATE is computed, never
+// The week number is a per-league constant and lives in the registry
+// (`throwbackWeeks`), read here through its .mjs accessor — IMPORTED, not
+// scraped. It used to be parsed out of throwback-config.ts because that file
+// is TypeScript and this script is node; moving the list to the registry made
+// the parse unnecessary, and a real import cannot quietly fall back to a
+// stale mirror the way the regex could. The DATE is still computed, never
 // hardcoded: NFL Week N starts kickoff Thursday + (N-1)*7 days (see
 // scripts/lib/throwback-reminder.mjs). tier: major → full 14d/7d/2d/day-of
 // Roger touch schedule.
 
 async function loadThrowbackEvents() {
-  const configPath = path.join(projectRoot, 'src', 'data', 'theleague', 'throwback-config.ts');
-  let weeks = null;
-  try {
-    weeks = parseThrowbackWeeks(await fs.readFile(configPath, 'utf8'));
-  } catch (err) {
-    console.warn(`Could not read throwback-config.ts (${err.message})`);
-  }
-  if (!weeks) {
-    console.warn(`THROWBACK_WEEKS parse failed — falling back to [${DEFAULT_THROWBACK_WEEKS}]`);
-    weeks = DEFAULT_THROWBACK_WEEKS;
-  }
+  const weeks = THROWBACK_WEEKS?.length ? THROWBACK_WEEKS : DEFAULT_THROWBACK_WEEKS;
   return weeks.map(week => ({
     id: throwbackEventId(week),
     name: `Throwback Week (NFL Week ${week})`,

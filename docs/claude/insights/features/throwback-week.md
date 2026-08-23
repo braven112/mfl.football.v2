@@ -85,3 +85,35 @@ real config (verified to FAIL with the fix removed, so it isn't vacuous) plus a
 sweep proving every franchise's resolved throwback crest is a committed file. A
 404 watermark would be a worse bug than the one being fixed, and era art paths
 are hand-maintained.
+
+## 2026-08-22 - `THROWBACK_WEEKS` Moved to the Registry, Which Broke a Regex Scraper
+
+**Context:** The Schedule Release lock script reserves a marquee slot for the
+Throwback Week game. It is plain node and cannot import
+`throwback-config.ts`, so the week list had to be reachable without a
+TypeScript loader.
+
+**Insight:** The list is a per-league constant, so it moved to the league
+registry (`throwbackWeeks` in `src/config/leagues-data.mjs`), read through
+`src/data/theleague/throwback-weeks.mjs`; `throwback-config.ts` now re-exports
+both `THROWBACK_WEEKS` and `isThrowbackWeek` from there and keeps only the era
+defaults and asset conflicts. What that broke was invisible:
+`scripts/compute-league-events.mjs` was *scraping* the number out of the TS
+source with `parseThrowbackWeeks(...)` — a regex for
+`export const THROWBACK_WEEKS: number[] = [4]` — because it, too, could not
+import the file. Once the declaration became a re-export the regex matched
+nothing, and the scrape **fails soft** onto `DEFAULT_THROWBACK_WEEKS`, a
+hand-mirrored `[4]`. Nothing would have thrown; the Throwback Week calendar
+event would simply have stopped tracking the config, and stayed correct only as
+long as nobody changed the week.
+
+**Evidence:** Caught by `tests/throwback-week-reminder.test.ts` ("parses the
+real throwback-config.ts (guards against drift)") — the one test that read the
+actual file rather than a synthetic string. `compute-league-events.mjs` now
+imports the list, and the test asserts it does not go back to scraping.
+
+**Recommendation:** Before moving a constant out of a file, grep for readers
+that parse the file as TEXT, not just ones that import it. A scraper with a
+default is worse than one without: it survives the change and lies. Where a
+node script needs a TypeScript constant, the fix is to move the constant
+somewhere node can import — the parse only ever existed as a workaround.

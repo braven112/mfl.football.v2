@@ -1,0 +1,117 @@
+name: Schedule Release
+
+# Locks each league's schedule reveal on its release day, then archives it.
+#
+# Runs DAILY year-round and self-guards: the API refuses to lock before the
+# league's release date, and refuses before the NFL bye calendar for the season
+# has actually landed. Every other day of the year this is a no-op that exits 0.
+#
+# Release days (derived, not fixed — see src/utils/schedule-release.mjs):
+#   The League  June 1
+#   AFL         the Sunday two weeks before its National League draft, which is
+#               itself the Sunday eight days before Labor Day
+#
+# The committed file IS the lock. No secret, no endpoint, no cache: a git commit
+# cannot be evicted, is reviewable in a diff, and there is exactly one of it. A
+# second run refuses to overwrite an existing reveal, so re-running is safe.
+
+on:
+  schedule:
+    # 9am PT (16:00 UTC), daily.
+    - cron: "0 16 * * *"
+  workflow_dispatch:
+    inputs:
+      league:
+        description: "Single league slug (blank = every configured league)"
+        required: false
+        type: string
+      year:
+        description: "Season to reveal (blank = current calendar year)"
+        required: false
+        type: string
+      dry_run:
+        description: "Report what would happen without locking anything"
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: schedule-release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  lock:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Refresh the NFL bye calendar
+        # The reveal cannot happen without it, and it is the one input that
+        # arrives on the NFL's schedule rather than ours.
+        run: node scripts/fetch-nfl-bye-weeks.mjs
+        continue-on-error: true
+
+      - name: Draw the schedules
+        # Only draws what is missing; an existing plan is reused, because
+        # redrawing gives a DIFFERENT valid schedule and the reveal must match
+        # whatever ends up pasted into MFL.
+        run: |
+          for L in theleague afl-fantasy; do
+            PLAN="data/$L/schedule-plan/$(date -u +%Y)-schedule.json"
+            if [ -f "$PLAN" ]; then
+              echo "$L: reusing $PLAN"
+            else
+              node scripts/generate-schedule.mjs --league="$L" || echo "$L: could not draw (skipping)"
+            fi
+          done
+
+      - name: Lock the reveal
+        # Inputs arrive through env, never interpolated into the script body.
+        # `${{ inputs.league }}` expanded inline runs as shell in a job holding
+        # contents: write and the checkout deploy key, so `league=x; curl … | sh`
+        # would execute.
+        env:
+          INPUT_LEAGUE: ${{ inputs.league }}
+          INPUT_YEAR: ${{ inputs.year }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          # `if` blocks, not `[ x ] && y` — the runner's shell is `bash -e`, so a
+          # false test as a standalone statement exits the step.
+          ARGS=()
+          if [ -n "$INPUT_LEAGUE" ]; then ARGS+=("--league=$INPUT_LEAGUE"); fi
+          if [ -n "$INPUT_YEAR" ]; then ARGS+=("--year=$INPUT_YEAR"); fi
+          if [ "$INPUT_DRY_RUN" = "true" ]; then ARGS+=("--dry-run"); fi
+          node scripts/lock-schedule-release.mjs "${ARGS[@]}"
+
+      - name: Commit the bye calendar and any archived reveal
+        run: |
+          git config user.name "Schedule Release Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/nfl/bye-weeks.json 'data/*/schedule-release' 'data/*/schedule-plan' 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "nothing to commit"
+            exit 0
+          fi
+          git commit -m "chore: schedule release — lock and archive"
+          # Another cron may have pushed while this ran; rebase rather than fail.
+          git pull --rebase origin main
+          git push origin HEAD:main

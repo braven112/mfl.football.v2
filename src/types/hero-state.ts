@@ -27,6 +27,7 @@ export type SeasonPhase =
   | 'preseason-countdown' // FA close → NFL kickoff
   | 'regular-season'      // NFL kickoff → end of Week 14
   | 'trade-deadline'      // Nov 13 (24h override)
+  | 'schedule-release'    // countdown to, and the week after, Schedule Release Day
   | 'playoffs'            // Week 15 → Week 16
   | 'offseason-fallback'; // Any gap not covered by above
 

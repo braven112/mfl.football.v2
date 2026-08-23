@@ -28,6 +28,7 @@ import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.as
 import { getAuthUser } from '../../utils/auth';
 import { getLeagueBySlug } from '../../config/leagues';
 import { resolveHeroState, parseTestDate, isAuctionStripPeriod, isEntryInHeroWindow } from '../../utils/hero-resolver';
+import { getRelease } from '../../utils/schedule-release-store';
 import { getThrowbackPreference } from '../../utils/throwback-store';
 import { enrichHeroState, isDraftComplete, getRosteredPlayerIds, getAdpRankedIds, getFranchiseHeadliners, getKickoffGame, getKickoffGameCandidates, selectBreakingStory } from '../../utils/offseason-hero-data';
 import { getWhatsNextTimeline } from '../../utils/league-event-resolver';
@@ -149,7 +150,24 @@ if (throwbackPromo && isEntryInHeroWindow(throwbackPromo, effectiveDate ?? new D
 const heroReferenceDate = effectiveDate ?? new Date();
 const testDriveHero = showTestDriveHero(THELEAGUE.slug, heroReferenceDate);
 
-const rawHeroState = resolveHeroState(effectiveDate, testMode, heroEntries, timeline, draftComplete, hasBreakingStory);
+// Whether this season's reveal is already locked — read here rather than in
+// the resolver so that stays synchronous and side-effect free. Reads
+// `heroReferenceDate`, never `effectiveDate`: the latter is undefined on a
+// normal request (only `?testDate=` sets it), so dereferencing it here threw
+// on every homepage load until this was caught.
+const scheduleReleaseRevealed = Boolean(
+  await getRelease('theleague', heroReferenceDate.getUTCFullYear()),
+);
+const rawHeroState = resolveHeroState(
+  effectiveDate,
+  testMode,
+  heroEntries,
+  timeline,
+  draftComplete,
+  hasBreakingStory,
+  Math.random,
+  scheduleReleaseRevealed,
+);
 const heroState = await enrichHeroState(rawHeroState);
 
 // "NEW since last visit" badges for the What's New section (same cookie the

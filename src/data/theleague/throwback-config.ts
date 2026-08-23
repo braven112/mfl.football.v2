@@ -7,12 +7,14 @@
  */
 
 /**
- * NFL week numbers that trigger throwback identity, every season (not tied
- * to a specific year — recurs automatically). Week 4 is the standing pick;
- * hand-edit this list to add/remove weeks or make a given week one-time by
- * moving the check into `isThrowbackWeek` instead.
+ * NFL week numbers that trigger throwback identity. Defined in
+ * `throwback-weeks.mjs` and re-exported here — the schedule-release lock
+ * script is plain node and reserves a marquee slot for the throwback game, so
+ * the list has to be readable without a TypeScript loader. Edit it there.
  */
-export const THROWBACK_WEEKS: number[] = [4];
+import { THROWBACK_WEEKS as WEEKS, isThrowbackWeek as isWeek } from './throwback-weeks.mjs';
+
+export const THROWBACK_WEEKS: number[] = WEEKS;
 
 /**
  * {franchiseId, yearStart} pairs excluded from throwback eligibility —
@@ -66,6 +68,4 @@ export const DEFAULT_THROWBACK_ERA: Record<string, number> = {
   '0016': 2011, // Treasure Coast Swamp Bandits
 };
 
-export function isThrowbackWeek(week: number): boolean {
-  return THROWBACK_WEEKS.includes(week);
-}
+export const isThrowbackWeek: (week: number) => boolean = isWeek;

@@ -53,6 +53,14 @@ export const LEAGUES = {
     },
     // Contract dynasty league — long-horizon value is the right opening board.
     defaultRankingSources: ['fantasycalc', 'sharks', 'mfl-adp'],
+    /**
+     * Weeks that run Throwback Week — franchises wear a legacy identity from
+     * their `history[]` era instead of their current one. Only TheLeague runs
+     * it today; a league without the key simply never triggers it. Read by
+     * `src/data/theleague/throwback-weeks.mjs` (the app's accessor) and by the
+     * schedule-release lock, which reserves a marquee slot for the week.
+     */
+    throwbackWeeks: [4],
   },
   'afl-fantasy': {
     id: '19621',

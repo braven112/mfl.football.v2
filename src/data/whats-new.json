@@ -1,5 +1,29 @@
 [
   {
+    "id": "schedule-release-day",
+    "date": "2026-08-22",
+    "category": "new-page",
+    "icon": "calendar",
+    "title": "Schedule Release Day Is a Real Day Now",
+    "summary": "Both leagues get an annual Schedule Release Day — a countdown page that hits zero, locks one schedule for everybody, and puts four games on the board worth circling, rivalry records and all. Same draw for every owner, no reshuffles.",
+    "description": [
+      "The NFL turns its schedule release into a two-hour prime-time special. We used to do ours by way of a commissioner quietly saving a form in May and somebody noticing in August. That is over. Both leagues now have a Schedule Release Day on the calendar, with a page that counts down to it — find it under Offseason War Room in the menu. The League goes June 1; the AFL goes the Sunday two weeks before the National League draft, a date that moves with Labor Day every year, same as the draft it is pinned to.",
+      "Open the page before the day and there is a clock — days, hours, minutes, seconds. When it hits zero the schedule locks, and locked is the whole point. The draw is built by an optimizer that could produce a hundred different valid seasons, so if everyone hit a button and got their own, fifteen of sixteen owners would be studying a year that never happens. One schedule gets locked, everybody sees that one, and the copy-and-paste block the commissioner sends to MFL is the exact same one on your screen.",
+      "The first thing you get is the tease: four games, four different weeks, each one wearing both franchises’ colors and crests and a line saying why it is there. And the why is not just this year’s records — it is the whole history. The League’s 2026 board opens on a division game in a Week 1 doubleheader, runs the championship rematch in Week 9, and closes in Week 14 with a division title on the line. Records come straight off the same rivalry math the Rivalries pages use, and where the archives disagree with themselves about a pairing — which happens for eighteen of them, a leftover from a franchise identity that changed slots years ago — the card simply says nothing rather than pick a number.",
+      "Week 4 gets its own reserved slot, because Week 4 is Throwback Week. The card shows that game the way it will actually be played — old logos, old names, old colors — and the schedule picks it by rivalry rather than by record, so it is the oldest, closest series in the week rather than whoever happens to be good. In 2026 that is Bring the Pain at a Vitside Mafia playing as BOYZ II MEN: fifteen meetings, separated by exactly one game.",
+      "Under the tease, the receipts. The schedule is not a shuffle — it is optimized against the constitution and against the NFL’s bye calendar, and the page shows how it did. The League’s 2026 season: 144 games, doubleheaders in Weeks 1, 2, 3 and 12, 40 of a possible 48 division games played on weeks with no NFL byes, and every team with nine home games and nine road games. No more losing a division game because four of your starters were on vacation that Sunday.",
+      "Then the full week-by-week grid, so you can find your own season without waiting for MFL to catch up. Any signed-in owner can see all of it. The paste block is commissioner-only, for the obvious reason that saving it in MFL overwrites the entire schedule and there is no undo. And when the paste does land, Claude Schefter files the release column — four games, the rivalries the draw renews, and the records to go with them — and drops it in the chat."
+    ],
+    "image": "schedule-release-day.webp",
+    "imageAlt": "The Schedule Release page reading “The Schedule Is Out — Released Monday, June 1, 2026”, above a Circle These row of four marquee cards. Each is striped with the two franchises’ brand colors and stacks the away team over the home team with their crests. Week 1 Da Dangsters at Pacific Pigskins, tagged division rivalry, opening week and doubleheader week; Week 4 carries a THROWBACK badge and shows old-school logos for Bring The Pain and BOYZ II MEN, labelled Vitside Mafia underneath, tagged “15 meetings, Vitside Mafia up 8-7”; Week 9 Computer Jocks at Dark Magicians of Chaos, tagged championship rematch; Week 14 Running down the Dream at Wascawy Wabbits with a division title on the line. Below sit stat tiles reading 144 games, doubleheaders in weeks 1, 2, 3 and 12, 40 of 48 possible division games clear of NFL byes and 9–9 home games, then the week-by-week matchup grid.",
+    "link": "/schedule-release",
+    "excludeFromHero": true,
+    "leagues": [
+      "theleague",
+      "afl"
+    ]
+  },
+  {
     "id": "lineup-double-header-carousel",
     "date": "2026-08-22",
     "category": "enhancement",
@@ -857,25 +881,6 @@
     "image": "afl-tip-schefter.webp",
     "imageAlt": "The AFL Tip Schefter page: anonymous tip form with topic and team selectors, Schefter's kitchen status, and the tipster leaderboard.",
     "leagues": [
-      "afl"
-    ]
-  },
-  {
-    "id": "rumor-mill-insider-upgrade",
-    "date": "2026-07-19",
-    "category": "enhancement",
-    "icon": "user-secret",
-    "title": "The Rumor Mill Learns Some New Tricks",
-    "summary": "New NFL-insider topic lanes (hot seat, tampering, draft intentions), instant codename reveal, a 60-second undo, and in-form whisper-backs — the tip line just got a front-office upgrade in both leagues.",
-    "description": [
-      "The tip form's topic menu graduated from message-board categories to actual insider beats: Hot seat, Tampering, Draft intentions, Front-office dysfunction, and Contract-year motives join the classics. Each one comes with its own editorial rules — tampering posts always hedge (an accusation is not a report), and hot-seat chatter never names a team, because you can all read a standings page and Schefter isn't doing the triangulation for you.",
-      "Quality-of-life, since you asked (loudly, anonymously): your codename is revealed the moment you file your first tip instead of whenever your first rumor prints. A 60-second undo pulls back a fat-thumbed tip with a full slot refund. And the form can now whisper back on any rumor from the last two weeks — pick the storyline, add your intel, and Schefter threads it."
-    ],
-    "image": "afl-tip-schefter.webp",
-    "imageAlt": "The upgraded tip form showing the expanded topic list and whisper-back picker.",
-    "excludeFromHero": true,
-    "leagues": [
-      "theleague",
       "afl"
     ]
   }

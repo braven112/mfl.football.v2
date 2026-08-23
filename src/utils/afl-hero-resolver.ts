@@ -24,6 +24,8 @@
  */
 
 import type { WhatsNewEntry, HeroContent } from '../types/whats-new';
+// @ts-expect-error - .mjs helper shared with the node scripts (see its header)
+import { scheduleReleaseTease, scheduleReleaseTeaseCopy } from './schedule-release.mjs';
 import { dailyPick, type HeroModel } from './hero-casting';
 import { entryAppliesToLeague, WHATS_NEW_CATEGORY_LABELS } from '../types/whats-new';
 import type { WhatsNextTimeline, ResolvedLeagueEvent } from '../types/league-events';
@@ -110,6 +112,12 @@ export interface AflHeroResolverInput {
   userConferenceId?: '00' | '01';
   /** User's AFL tier ("Premier League" | "D-League") — for keeper hero badge selection. */
   userTier?: string;
+  /**
+   * Whether this season's schedule reveal is already locked. Passed in rather
+   * than read here: the archive lives on disk and this resolver stays
+   * synchronous.
+   */
+  scheduleReleaseRevealed?: boolean;
 }
 
 // ── Date helpers ─────────────────────────────────────────────────────────────
@@ -1040,6 +1048,50 @@ export function resolveAflHeroState(input: AflHeroResolverInput): AflHeroState {
       content: buildRegularSeasonHero(slot, week, gameWindow),
       view,
     };
+  }
+
+  // P2: Schedule Release — countdown, release day, and the week after.
+  //
+  // Reuses the existing `event` kind rather than adding a variant, so the
+  // casting layer needs no change. The DECISION comes from
+  // src/utils/schedule-release.mjs, shared with The League's resolver — the two
+  // hero systems have no code in common, and a countdown implemented twice is a
+  // countdown that eventually disagrees with itself.
+  {
+    const tease = scheduleReleaseTease('afl-fantasy', now, {
+      revealed: Boolean(input.scheduleReleaseRevealed),
+    });
+    const copy = scheduleReleaseTeaseCopy(tease, 'AFL');
+    if (tease.show && copy) {
+      return {
+        kind: 'event',
+        priority: 'P3',
+        content: {
+          source: 'event',
+          title: copy.title,
+          summary: copy.summary,
+          link: '/afl-fantasy/schedule-release',
+          linkLabel: tease.phase === 'out' ? 'See the schedule' : 'See the countdown',
+          icon: 'calendar',
+          accentColor: ACCENT_GOLD,
+          kicker: copy.kicker,
+          isUrgent: tease.phase === 'imminent',
+          isActive: tease.phase === 'out',
+        },
+        view: {
+          pill: tease.phase === 'out' ? 'JUST DROPPED' : 'COMING UP',
+          headline: copy.title.toUpperCase(),
+          accentWord: '',
+          summary: copy.summary,
+          link: '/afl-fantasy/schedule-release',
+          linkLabel: (tease.phase === 'out' ? 'See the schedule' : 'See the countdown').toUpperCase(),
+          icon: 'calendar',
+          accent: ACCENT_GOLD,
+          glow: GLOW_GOLD,
+          player: randomHeroPlayer(now),
+        },
+      };
+    }
   }
 
   // P2: Fresh AFL-tagged What's New (≤7 days) — branded fresh-on-the-site hero.

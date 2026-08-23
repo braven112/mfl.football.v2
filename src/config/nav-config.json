@@ -4,7 +4,10 @@
       "id": "best-ball",
       "label": "Best Ball",
       "leagueOnly": "bb1",
-      "phaseOrder": { "inSeason": 1, "offSeason": 1 },
+      "phaseOrder": {
+        "inSeason": 1,
+        "offSeason": 1
+      },
       "defaultOpen": "always",
       "links": [
         {
@@ -84,7 +87,10 @@
     {
       "id": "news-updates",
       "label": "News & Updates",
-      "phaseOrder": { "inSeason": 2, "offSeason": 1 },
+      "phaseOrder": {
+        "inSeason": 2,
+        "offSeason": 1
+      },
       "defaultOpen": "always",
       "links": [
         {
@@ -132,7 +138,10 @@
     {
       "id": "this-week",
       "label": "This Week",
-      "phaseOrder": { "inSeason": 1, "offSeason": 4 },
+      "phaseOrder": {
+        "inSeason": 1,
+        "offSeason": 4
+      },
       "defaultOpen": "in-season",
       "links": [
         {
@@ -226,9 +235,20 @@
     {
       "id": "offseason-war-room",
       "label": "Offseason War Room",
-      "phaseOrder": { "inSeason": 5, "offSeason": 2 },
+      "phaseOrder": {
+        "inSeason": 5,
+        "offSeason": 2
+      },
       "defaultOpen": "off-season",
       "links": [
+        {
+          "id": "schedule-release",
+          "label": "Schedule Release",
+          "icon": "calendar",
+          "path": "/schedule-release",
+          "external": false,
+          "description": "Next season's schedule, locked and revealed — plus the games to circle"
+        },
         {
           "id": "draft-room",
           "label": "Draft Room",
@@ -305,7 +325,10 @@
       "id": "cap-contracts",
       "label": "Cap & Contracts",
       "labelAFL": "Roster & Trades",
-      "phaseOrder": { "inSeason": 3, "offSeason": 3 },
+      "phaseOrder": {
+        "inSeason": 3,
+        "offSeason": 3
+      },
       "defaultOpen": "never",
       "links": [
         {
@@ -349,7 +372,10 @@
     {
       "id": "league-reports",
       "label": "League Reports",
-      "phaseOrder": { "inSeason": 4, "offSeason": 5 },
+      "phaseOrder": {
+        "inSeason": 4,
+        "offSeason": 5
+      },
       "defaultOpen": "never",
       "links": [
         {
@@ -399,7 +425,10 @@
     {
       "id": "rules",
       "label": "Rules",
-      "phaseOrder": { "inSeason": 6, "offSeason": 6 },
+      "phaseOrder": {
+        "inSeason": 6,
+        "offSeason": 6
+      },
       "defaultOpen": "never",
       "links": [
         {
@@ -440,7 +469,10 @@
     {
       "id": "commissioner",
       "label": "Commissioner",
-      "phaseOrder": { "inSeason": 7, "offSeason": 7 },
+      "phaseOrder": {
+        "inSeason": 7,
+        "offSeason": 7
+      },
       "defaultOpen": "never",
       "visibility": "admin",
       "leagueOnly": "theleague",
@@ -469,9 +501,17 @@
     }
   ],
   "adminFranchiseIds": {
-    "theleague": ["0001", "0000"],
-    "afl": ["0001"],
-    "bb1": ["0001", "0000"]
+    "theleague": [
+      "0001",
+      "0000"
+    ],
+    "afl": [
+      "0001"
+    ],
+    "bb1": [
+      "0001",
+      "0000"
+    ]
   },
   "footerLinks": [
     {
