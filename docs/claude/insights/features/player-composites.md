@@ -1266,3 +1266,60 @@ wants what `card` does. What `banner` changes, all of it width-driven:
   → 104px, bleed 1.75rem → 1.25rem. This is the same lesson one breakpoint
   down — the aspect ratio of the container, not its size, is what the rule is
   actually tuned to.
+
+## 2026-08-23 - The modal band now brands by the FRANCHISE, not the NFL team
+
+Extends the 2026-07-06 "Player modal mini-hero bands" section above; the three
+rules there (espncdn-only cutouts, DEF excluded, 404 → gradient-only) are
+unchanged. What changed is WHOSE colors the band wears, and it is the first
+composite in the family whose palette comes from the fantasy league rather than
+from `nfl-team-colors.ts`.
+
+**Context:** Owner request — a player opened from a roster row answered with a
+wall of NFL team color, repeating what the row already showed (helmet logo,
+city) and telling the owner nothing about the team that actually rosters him.
+
+**Insight:** A rostered player's band now reads `franchise-band-brand.ts`:
+gradient hues + a crest watermark (`.pmb__crest`, the `dr-splash__crest`
+treatment at 0.28 / 0.4 without a cutout). No `franchiseId` → the NFL palette,
+unchanged. Four things were not obvious going in:
+
+- **A client-painted composite needs its brand data SERIALIZED, and exactly
+  once per page.** `franchise-brand.ts` and the league configs are far too
+  large to import into an Astro `<script>` (unlike `nfl-team-colors.ts`, which
+  is a flat hex map and is why the 2026-07-06 band could just import it). The
+  map is built server-side and emitted as a JSON island from the shared layout
+  `<head>` (`FranchiseBandBrands.astro`), beside `TeamAccentStyles` /
+  `TeamIconDarkStyles` — four modals can be on one page, so a per-modal emitter
+  would collide on the element id. A guard test asserts no modal emits it.
+- **A dark-in-both-themes surface INVERTS two of the site's crest rules.** The
+  band is a deep-ink composite, so there is no theme to resolve and the crest
+  is picked server-side as `iconDark` — which also means the global
+  `html.dark img[src="<light>"] { content: url(…) }` swap, keyed on the LIGHT
+  src, can never fire on it. For a franchise with no dark artwork the measured
+  stroke has the mirror-image problem: the global rule is `html.dark`-scoped
+  and does nothing in light mode, where this surface is still dark. It is
+  applied INLINE by JS, which covers light mode and outranks the global rule so
+  the two can never stack.
+- **Franchise hues are NOT drop-in replacements for NFL primaries.** NFL
+  primaries are overwhelmingly dark, so white band ink was never at risk.
+  `colorPrimary` is `#181818` for five TheLeague franchises (five identical
+  near-black bands — unusable), and the chart hue `color`, which IS the
+  identifiable one, includes Midwestside's `#ffcd00` at 1.5:1 against white.
+  Anchor on `color`, then `ensureContrastOn(…, '#ffffff', 3)`. Five franchises
+  shift slightly; the hue survives.
+- **Re-read the map per call, never cache it at module scope.** Same trap
+  `rankings-scope.ts` documents: one module instance survives a ClientRouter
+  navigation from one league's page to another's, and a captured map paints the
+  previous league's crest onto this league's franchise.
+
+`ContractDeclarationModal` took the same band in place of its avatar-chip hero,
+which also moved the identity block OUTSIDE `.cdm-body` (the scrollable area)
+so the player stays on screen while the flow scrolls — matching `.pdm-hero`.
+The close button had to change with it: `--color-gray-100` on a team gradient
+is invisible, so it took `.pdm-close`'s `rgba(6,9,13,0.4)` scrim, hardcoded
+rather than tokenized for the usual reason (the surface is dark in both
+themes).
+
+**Evidence:** `tests/franchise-band-brand.test.ts`.
+

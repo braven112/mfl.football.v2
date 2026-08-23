@@ -2,12 +2,15 @@
  * Player Modal Band — compact composite hero for player modal headers.
  *
  * The same visual language as the composite heroes (team-color gradient,
- * ghost wordmark, glow, transparent ESPN cutout) at modal-header height.
- * Painted client-side by src/utils/player-modal-band.ts, which sets
- * --pmb-g1 / --pmb-g2 / --pmb-glow per player.
+ * ghost wordmark, glow, crest watermark, transparent ESPN cutout) at
+ * modal-header height. Painted client-side by src/utils/player-modal-band.ts,
+ * which sets --pmb-g1 / --pmb-g2 / --pmb-glow per player and points
+ * .pmb__crest at the owning franchise's mark.
  *
  * The band is inherently dark in both themes — team colors ARE the surface —
- * so no html.dark overrides are needed; ink is always white.
+ * so no html.dark overrides are needed; ink is always white. That is also why
+ * the crest is picked server-side as the DARK artwork when a franchise has any
+ * (see franchise-band-brand.ts): there is no theme to resolve here.
  */
 
 .pmb {
@@ -42,6 +45,27 @@
   pointer-events: none;
 }
 
+/* Franchise crest watermark — behind the cutout, same treatment as the
+   draft-room splash (.dr-splash__crest). Opacity is a custom property so a
+   surface with more room (or none of the cutout competing) can push it. */
+.pmb__crest {
+  position: absolute;
+  right: 1.25rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: var(--pmb-crest-size, clamp(76px, 26%, 132px));
+  height: var(--pmb-crest-size, clamp(76px, 26%, 132px));
+  object-fit: contain;
+  opacity: var(--pmb-crest-opacity, 0.28);
+  pointer-events: none;
+  user-select: none;
+}
+
+/* No headshot to sit behind — let the crest carry the right side outright. */
+.pmb--no-cutout .pmb__crest {
+  --pmb-crest-opacity: 0.4;
+}
+
 .pmb__cutout {
   position: absolute;
   right: 1rem;
@@ -61,5 +85,9 @@
 
   .pmb__cutout {
     max-width: 34%;
+  }
+
+  .pmb__crest {
+    --pmb-crest-size: clamp(64px, 24%, 104px);
   }
 }

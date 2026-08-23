@@ -2,10 +2,25 @@
  * Player Modal Band — mini composite hero for player modal headers.
  *
  * Client-side counterpart to the composite heroes (FeatureCompositeHero et
- * al): team-color gradient + ghost wordmark + glow + transparent ESPN cutout,
- * at modal-header height. The player modals are populated at open time from
- * client data, so the band is applied here rather than server-rendered.
- * Styles live in src/styles/player-modal-band.css (`.pmb` prefix).
+ * al): team-color gradient + ghost wordmark + glow + crest watermark +
+ * transparent ESPN cutout, at modal-header height. The player modals are
+ * populated at open time from client data, so the band is applied here rather
+ * than server-rendered. Styles live in src/styles/player-modal-band.css
+ * (`.pmb` prefix).
+ *
+ * WHOSE COLORS: a ROSTERED player wears the FANTASY franchise that owns him —
+ * its hues drive the gradient and its crest is the watermark. That is the
+ * whole point of opening the modal from a roster: the NFL identity is already
+ * carried as real text (team logo + city in the meta row, nickname in the
+ * ghost wordmark), so spending the band on it said nothing the row didn't.
+ * A player with no `franchiseId` — a free agent, or a modal opened from a
+ * league-less surface — falls back to the NFL team colors, which is also what
+ * happens when the page never emitted a brand map.
+ *
+ * The brand map is server-rendered once per page by
+ * `src/components/FranchiseBandBrands.astro` and is already Throwback
+ * Week-resolved, so the band throws back with everything else and needs no
+ * date logic of its own.
  *
  * Composite rules (docs/claude/insights/features/player-composites.md):
  *   - Only transparent ESPN headshots composite (URL contains espncdn.com);
@@ -24,6 +39,10 @@
 
 import { getNflTeamColors, getNflTeamNickname, hexToRgba, mixHex } from './nfl-team-colors';
 import { normalizeTeamCode } from './nfl-logo';
+import type { FranchiseBandBrand, FranchiseBandBrandMap } from './franchise-band-brand';
+
+/** Element id of the JSON island written by `FranchiseBandBrands.astro`. */
+export const FRANCHISE_BAND_BRANDS_ID = 'franchise-band-brands';
 
 export interface BandPlayer {
   name?: string | null;
@@ -31,6 +50,8 @@ export interface BandPlayer {
   nflTeam?: string | null;
   espnId?: string | null;
   headshot?: string | null;
+  /** Fantasy franchise that rosters the player, when there is one. */
+  franchiseId?: string | null;
 }
 
 export interface BandOptions {
@@ -70,12 +91,44 @@ export function resolveCutoutUrl(player: BandPlayer): string | null {
 }
 
 /**
- * Paint a modal header band for the given player: gradient stops + glow via
- * CSS custom props, ghost wordmark text, and the cutout image (shown only
- * when a transparent ESPN source exists; hidden again on 404).
+ * Read the page's server-rendered franchise brand map.
  *
- * The band element is expected to contain `.pmb__ghost`, `.pmb__glow` and
- * `.pmb__cutout` children (any may be omitted).
+ * Deliberately re-parsed on EVERY call rather than cached at module scope.
+ * With the ClientRouter one module instance survives a navigation from one
+ * league's page to another's, so a captured map would paint the previous
+ * league's crest onto this league's franchise — the same trap
+ * `rankings-scope.ts` documents. The payload is a couple of KB; the parse is
+ * not worth a correctness bug.
+ */
+export function readFranchiseBandBrands(): FranchiseBandBrandMap | null {
+  if (typeof document === 'undefined') return null;
+  const el = document.getElementById(FRANCHISE_BAND_BRANDS_ID);
+  if (!el?.textContent) return null;
+  try {
+    const parsed = JSON.parse(el.textContent) as FranchiseBandBrandMap;
+    return parsed && typeof parsed === 'object' && parsed.teams ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+/** This page's brand entry for a franchise, or null when there isn't one. */
+export function getFranchiseBandBrand(
+  franchiseId?: string | null
+): FranchiseBandBrand | null {
+  if (!franchiseId) return null;
+  const map = readFranchiseBandBrands();
+  return map?.teams?.[franchiseId] ?? null;
+}
+
+/**
+ * Paint a modal header band for the given player: gradient stops + glow via
+ * CSS custom props, ghost wordmark text, the franchise crest watermark, and
+ * the cutout image (shown only when a transparent ESPN source exists; hidden
+ * again on 404).
+ *
+ * The band element is expected to contain `.pmb__ghost`, `.pmb__glow`,
+ * `.pmb__crest` and `.pmb__cutout` children (any may be omitted).
  */
 export function applyPlayerModalBand(
   band: HTMLElement | null,
@@ -85,7 +138,12 @@ export function applyPlayerModalBand(
   if (!band) return;
 
   const teamCode = player.nflTeam ? normalizeTeamCode(player.nflTeam) : '';
-  const { primary, secondary } = getNflTeamColors(teamCode || '');
+
+  // Franchise first, NFL team as the fallback (see WHOSE COLORS above).
+  const franchise = getFranchiseBandBrand(player.franchiseId);
+  const nfl = getNflTeamColors(teamCode || '');
+  const primary = franchise ? franchise.primary : nfl.primary;
+  const secondary = franchise ? franchise.secondary : nfl.secondary;
 
   // Deep-ink → team primary, 115° like the site composites. An accent pulls
   // both stops toward the status color so the band reads "team, but alarmed".
@@ -107,6 +165,25 @@ export function applyPlayerModalBand(
     const nickname = teamCode && teamCode !== 'NFL' ? getNflTeamNickname(teamCode) : '';
     const text = opts.ghost ?? [pos !== 'DEF' ? pos : '', nickname].filter(Boolean).join(' ');
     ghost.textContent = text;
+  }
+
+  // Crest watermark — the franchise's mark, sitting behind the cutout the way
+  // the draft-room splash and the lineup faceoff panels wear theirs.
+  const crest = band.querySelector<HTMLImageElement>('.pmb__crest');
+  if (crest) {
+    if (franchise?.crest) {
+      crest.src = franchise.crest;
+      crest.alt = '';
+      // Inline, not a class: the global `html.dark img[src=…]` stroke rule
+      // would otherwise win in dark mode and double the treatment, and it
+      // never fires in light mode — where this band is dark all the same.
+      crest.style.filter = franchise.crestFilter ?? '';
+      crest.style.display = '';
+    } else {
+      crest.removeAttribute('src');
+      crest.style.filter = '';
+      crest.style.display = 'none';
+    }
   }
 
   const cutout = band.querySelector<HTMLImageElement>('.pmb__cutout');

@@ -117,3 +117,45 @@ that parse the file as TEXT, not just ones that import it. A scraper with a
 default is worse than one without: it survives the change and lies. Where a
 node script needs a TypeScript constant, the fix is to move the constant
 somewhere node can import — the parse only ever existed as a workaround.
+
+## 2026-08-23 - A THIRD consumer, and the whitelist-overlay trap's other half
+
+**Context:** The player modal band (see
+`docs/claude/insights/features/player-composites.md`, 2026-08-23) became the
+fourth throwback-aware surface. It is painted client-side, so it cannot call a
+chokepoint at render time.
+
+**Insight:** The chokepoint rule still holds — you just move it. The band's
+brand map (`src/utils/franchise-band-brand.ts`) calls
+`getThrowbackFranchiseBrand` on the SERVER, once per page, and ships the
+resolved result as a JSON island. The client never learns what week it is.
+That is the pattern for any future client-rendered throwback surface: serialize
+the chokepoint's OUTPUT, don't re-derive the era.
+
+**The trap has a second half nobody had hit yet.** The 2026-08-18 note above
+covers a consumer reading a field the overlay does not map. The opposite also
+bites: `resolveThrowbackIdentity` falls back to the CURRENT identity when a
+franchise has **no eligible era**, and `getThrowbackFranchiseBrand` returns
+that as a perfectly ordinary `icon` — indistinguishable, at the call site, from
+a real era crest. A consumer that treats `icon` as "the throwback crest" then
+silently takes the franchise's current LIGHT art. For the band that was wrong
+twice over: the light src re-arms the global `html.dark` crest swap (so the
+crest would change with the theme on a surface that doesn't), and the era
+branch clears the measured stroke that light art still needs.
+
+Every franchise has an eligible era today, so a sweep over the real config
+passes either way — the guard is only non-vacuous against a synthetic case,
+which is why `resolveEraCrest` is split out and exported. **One
+`THROWBACK_ASSET_CONFLICTS` entry is all it takes to arm this**, on the one week
+a year anyone would see it.
+
+**Recommendation:** treat `getThrowbackFranchiseBrand`'s return as "the brand to
+render", never as "the era". If you need to know whether a franchise actually
+threw back, compare against its current value (`era.icon !== team.icon`) or
+reach for `resolveThrowbackIdentity`'s `isHistorical` — the brand helper
+deliberately does not expose it.
+
+**Evidence:** `tests/franchise-band-brand.test.ts` — the `resolveEraCrest` unit
+(verified to FAIL when the guard is removed) plus a real-config sweep asserting
+no franchise renders its own light crest during a throwback week.
+

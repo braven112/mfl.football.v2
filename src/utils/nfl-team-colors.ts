@@ -301,7 +301,16 @@ function luminance(hex: string): number {
 }
 
 /** Chroma (max−min channel spread, 0–255) — how colorful vs gray a color is. */
-function chroma(hex: string): number {
+/**
+ * Spread between a color's brightest and dimmest channel — how much HUE it
+ * carries. Zero for any grey, black or white; high for a saturated color.
+ *
+ * Exported because "is this a real hue or a neutral?" is a question other
+ * color surfaces need on its own, WITHOUT `pickBrandAccent`'s companion
+ * luminance floor (see `franchise-band-brand.ts`, where a dark-but-saturated
+ * navy is a perfectly good gradient anchor and only a grey is not).
+ */
+export function chroma(hex: string): number {
   const ch = parseHexChannels(hex);
   return Math.max(...ch) - Math.min(...ch);
 }

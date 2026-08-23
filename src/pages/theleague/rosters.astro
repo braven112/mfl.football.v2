@@ -5278,8 +5278,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   import { buildPlayerCellHTML } from '../../utils/player-cell-html';
   import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, COLLEGE_LOGO_ONERROR, COLLEGE_LOGO_ONLOAD } from '../../constants/roster-constants';
   import { initPlayerModalTrigger } from '../../utils/player-modal-trigger';
+  import { applyPlayerModalBand } from '../../utils/player-modal-band';
   import { NFL_TEAM_CITIES, normalizeTeamCode } from '../../utils/nfl';
-  import { getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark } from '../../utils/nfl-team-colors';
   // Same selection function the deadline job runs — the Cutdown Plan preview
   // and the automation's reality cannot drift (plan requirement).
   import { selectAutoMoves } from '../../utils/august-cut-selection';
@@ -6418,6 +6418,9 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         // the hero meta line or the DEF check.
         position: modalData.position ?? (posEl?.textContent ?? '').split(' - ')[0].trim(),
         nflTeam: modalData.nflTeam ?? null,
+        // Band inputs: espnId resolves the cutout, franchiseId the crest/hues.
+        espnId: modalData.espnId ?? null,
+        franchiseId: modalData.franchiseId ?? currentTeam,
         birthdate: birthdateRaw ? Number(birthdateRaw) : (modalData.birthdate ?? null),
         college: modalData.college ?? null,
         draftYear: modalData.draftYear ?? null,
@@ -7338,6 +7341,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
               name: playerName,
               position: playerPosition,
               nflTeam: btn.dataset.playerNflTeam || actionModalData.nflTeam || '',
+              espnId: actionModalData.espnId ?? null,
               nflLogo: btn.dataset.playerNflLogo || '',
               headshot: btn.dataset.playerHeadshot || '',
               injuryStatus: btn.dataset.playerInjuryStatus || '',
@@ -7408,6 +7412,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
               position: playerMeta.position,
               nflTeam: playerMeta.nflTeam,
               espnId: playerMeta.espnId,
+              // The band brands by the owning franchise when it has one.
+              franchiseId: playerMeta.franchiseId,
               headshot: btn.closest('.player-cell')?.querySelector('.player-cell__avatar img')?.src,
             };
             if (window.openPlayerInjuryModal) {
@@ -8178,36 +8184,22 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       cdmSubmitBtn.removeAttribute('aria-busy');
       cdmSubmitBtn.style.display = '';
 
-      // Hero — mirror the ESPN → College → MFL → default cascade used by PlayerCell/buildHeadshotOnerror
-      const cdmHeadshotImg = document.getElementById('cdm-headshot');
-      const cdmHeadshotUrl = data.headshot || DEFAULT_HEADSHOT_URL;
-      const cdmEspnMatch = cdmHeadshotUrl.match(/\/headshots\/nfl\/players\/full\/(\d+)\.png/);
-      const cdmEspnId = cdmEspnMatch?.[1] ?? null;
-      const cdmMflId = data.id ?? null;
-      cdmHeadshotImg.src = cdmHeadshotUrl;
-      if (cdmEspnId && cdmMflId) {
-        const cdmCollege = `https://a.espncdn.com/i/headshots/college-football/players/full/${cdmEspnId}.png`;
-        const cdmMfl = `https://${config.mflHost}/player_photos_big_2014/${cdmMflId}_thumb.jpg`;
-        cdmHeadshotImg.onerror = function() { this.onerror = function() { this.onerror = function() { this.onerror = null; this.src = DEFAULT_HEADSHOT_URL; }; this.src = cdmMfl; }; this.src = cdmCollege; };
-      } else if (cdmEspnId) {
-        const cdmCollege = `https://a.espncdn.com/i/headshots/college-football/players/full/${cdmEspnId}.png`;
-        cdmHeadshotImg.onerror = function() { this.onerror = function() { this.onerror = null; this.src = DEFAULT_HEADSHOT_URL; }; this.src = cdmCollege; };
-      } else {
-        cdmHeadshotImg.onerror = function() { this.onerror = null; this.src = DEFAULT_HEADSHOT_URL; };
-      }
-      // Team-color chip behind the headshot — same treatment as PlayerCell.
-      const cdmAvatarEl = document.getElementById('cdm-avatar');
-      if (cdmAvatarEl) {
-        const cdmAvatarIsDef = (data.position || '').toUpperCase() === 'DEF';
-        cdmAvatarEl.classList.toggle('cdm-hero__avatar--def', cdmAvatarIsDef);
-        cdmAvatarEl.style.setProperty('--player-avatar-bg', getPlayerAvatarBackground(data.nflTeam || ''));
-        cdmAvatarEl.style.setProperty('--player-avatar-border', getPlayerAvatarBorder(data.nflTeam || ''));
-        cdmAvatarEl.style.setProperty('--player-avatar-ring', getPlayerAvatarRing(data.nflTeam || ''));
-        cdmAvatarEl.style.setProperty('--player-avatar-ring-dark', getPlayerAvatarRingDark(data.nflTeam || ''));
-        cdmHeadshotImg.alt = cdmAvatarIsDef
-          ? `${data.nflTeam || 'Team'} logo`
-          : `${data.name || 'Player'} headshot`;
-      }
+      // Hero — the SAME composite band PlayerDetailsModal wears: franchise
+      // gradient + crest watermark + transparent ESPN cutout. `data.headshot`
+      // is the roster row's already-resolved avatar src, so a player whose
+      // ESPN cutout 404'd earlier arrives here as an MFL JPG and the band
+      // correctly stays gradient-only rather than re-fetching a known-bad URL.
+      applyPlayerModalBand(document.getElementById('cdm-band'), {
+        name: data.name,
+        position: data.position,
+        nflTeam: data.nflTeam,
+        espnId: data.espnId,
+        headshot: data.headshot,
+        // Every player reachable from this modal is rostered, so the band
+        // brands by the owning franchise; currentTeam is the fallback for the
+        // openers that don't carry the id on their row.
+        franchiseId: data.franchiseId || currentTeam,
+      });
       document.getElementById('cdm-player-name').textContent = data.name;
       document.getElementById('cdm-nfl-logo').src = data.nflLogo || '/assets/nfl-logos/NFL.svg';
 
@@ -8342,7 +8334,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       projSection.style.display = 'none';
       if (actionSectionReset) actionSectionReset.style.display = 'none';
       if (cutSectionReset) cutSectionReset.style.display = 'none';
-      // Restore metrics visibility for non-action-select step 1 (action-select re-hides it below)
+      // Metrics are visible on step 1 of every flow (a later step may hide them)
       if (metricsReset) metricsReset.style.display = '';
 
       // Always reset formula section — only shown on vet-ext step 3
@@ -8370,9 +8362,10 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         const typeBadgeEl = document.getElementById('cdm-type-badge');
         if (typeBadgeEl) typeBadgeEl.style.display = 'none';
 
-        // Hide key metrics on step 1
-        const cdmMetricsEl = document.getElementById('cdm-metrics');
-        if (cdmMetricsEl) cdmMetricsEl.style.display = 'none';
+        // Key metrics stay VISIBLE on step 1. They used to be hidden here,
+        // which left the action sheet with nothing between the header and the
+        // buttons — you were asked to pick "Cut Player" or "Veteran Extension"
+        // without the salary, years and designation those choices turn on.
 
         // Show action section, hide submit (action buttons are the "submit")
         const actionSection = document.getElementById('cdm-action-section');
@@ -10906,8 +10899,10 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       document.getElementById('cdm-projection-section').style.display = 'none';
       document.getElementById('cdm-cap-impact-section').style.display = 'none';
 
+      // Back to the action sheet — metrics come back with it (same reason
+      // they are shown on the first paint of this step).
       const metricsEl = document.getElementById('cdm-metrics');
-      if (metricsEl) metricsEl.style.display = 'none';
+      if (metricsEl) metricsEl.style.display = '';
 
       if (cdmBackBtn) cdmBackBtn.style.display = 'none';
       cdmSelectedYears = null;

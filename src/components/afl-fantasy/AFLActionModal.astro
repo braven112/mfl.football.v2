@@ -27,8 +27,19 @@
     </button>
 
     <div class="aam-body">
-      <!-- Hero Identity — mirrors PlayerDetailsModal's pdm-hero
-           (avatar + name + age pill + team logo + city · position + college · draft) -->
+      <!-- Hero Identity — avatar + name + age pill + team logo + city ·
+           position + college · draft.
+
+           NOTE (2026-08-23): this NO LONGER matches its siblings. TheLeague's
+           PlayerDetailsModal and ContractDeclarationModal both moved to the
+           composite `.pmb` band (franchise gradient + crest watermark + ESPN
+           cutout), and PlayerDetailsModal is shared, so the AFL rosters page
+           now shows a band header on the player modal and this avatar chip on
+           the action sheet. The AFL rosters page already puts `franchiseId` in
+           its `data-player-modal` payload, so porting this to the band is
+           mechanical — deliberately left out of the change that moved the other
+           two, because it is a visible redesign of a league that change was not
+           asked to touch. -->
       <div class="aam-hero">
         <div class="aam-hero__avatar">
           <img id="aam-headshot" alt="Player headshot" />
@@ -601,10 +612,14 @@
     padding-right: 2.25rem; /* leave room for the absolute-positioned close button */
   }
 
-  /* Player Identity Hero — mirrors TheLeague's cdm-hero block: square rounded
-     avatar on the left, large bold name + meta row to its right. Matches the
-     hero typography of the player-details + contract-declaration modals so
-     all three player-centric modals read as siblings. */
+  /* Player Identity Hero — square rounded avatar on the left, large bold name
+     + meta row to its right.
+
+     This used to say it mirrored TheLeague's `cdm-hero`. That class no longer
+     exists: the contract modal took the composite band instead (see the note
+     on the markup above), so the "all three player-centric modals read as
+     siblings" claim this block was written to uphold is currently false for
+     the AFL. */
   .aam-hero {
     display: flex;
     align-items: flex-start;
