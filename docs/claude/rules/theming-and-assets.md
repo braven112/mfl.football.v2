@@ -94,6 +94,41 @@ full-bleed surfaces with white text on the colored area, allowlisted in
 direct `getNflTeamColors` consumer.
 
 
+## The player modal band wears the FRANCHISE, and it is dark in both themes
+
+`player-modal-band.ts` paints the header of every player modal
+(PlayerDetails / PlayerNews / PlayerInjury / ContractDeclaration). A ROSTERED
+player's band brands by the fantasy franchise that owns him — gradient hues +
+crest watermark; a player with no `franchiseId` falls back to the NFL palette.
+The map it reads (`franchise-band-brand.ts`) is server-rendered ONCE per page
+by `FranchiseBandBrands.astro` in the shared layout `<head>`, and is already
+Throwback Week-resolved. Four things there are load-bearing:
+
+- **The crest is picked server-side as the DARK artwork.** That is not a
+  violation of "never pick a theme server-side": the band is a deep-ink
+  composite, so its surface is dark in BOTH themes and there is no theme to
+  resolve. Emitting `iconDark` also means the global
+  `html.dark img[src="<light>"] { content: url(…) }` swap — which keys on the
+  LIGHT src — can never fire on it.
+- **The measured stroke is applied INLINE, by JS.** For a franchise with no
+  `iconDark` whose crest scores illegible on ink, the global stroke rule is
+  `html.dark`-scoped, so it does nothing in light mode — where this band is
+  still dark. The inline style covers light mode AND outranks the global rule,
+  so the two can never stack.
+- **The gradient anchor is the chart hue `color`, floored to 3:1 vs white.**
+  `colorPrimary` is `#181818` for five TheLeague franchises, so anchoring
+  there makes five teams the same near-black band. The chart hue is the
+  identifiable one — but it includes Midwestside's `#ffcd00` at 1.5:1 against
+  the band's white type, so `ensureContrastOn(…, '#ffffff')` darkens it just
+  far enough. Same for era colors during a Throwback Week.
+- **The map is re-read per call, never captured at module load** — the
+  `rankings-scope.ts` trap: one module instance survives a ClientRouter
+  navigation between leagues, and a captured map paints the wrong league's
+  crest.
+
+`tests/franchise-band-brand.test.ts` pins all four, plus the requirement that
+exactly one component emits the map.
+
 ## NFL team logos — committed files, guard-tested, must never 404
 
 Every player cell renders self-hosted `/assets/nfl-logos/{CODE}.svg`. Two

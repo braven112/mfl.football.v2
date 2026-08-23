@@ -1,0 +1,55 @@
+---
+/**
+ * Franchise band brands — the per-league crest + hue map the player modals'
+ * header band reads.
+ *
+ * Emitted ONCE per page from the shared layout <head>, beside
+ * `TeamIconDarkStyles` / `TeamAccentStyles`, for the same reason those live
+ * there: the band is painted by client JS in ~4 different modals, and a
+ * per-modal copy would collide on the element id and duplicate the payload.
+ *
+ * It is a JSON island rather than CSS custom properties because the band needs
+ * a crest URL and a display name, not just colors.
+ *
+ * THROWBACK WEEK is resolved here so no client code has to know the date:
+ * during a throwback week every franchise's legacy identity is baked into the
+ * map, and every modal on the page throws back with it. The store read is
+ * gated on the week actually being one — outside that week this component
+ * costs a config walk and nothing else.
+ */
+import theleagueConfig from '../data/theleague.config.json';
+import type { LeagueSlug } from '../types/nav';
+import { buildFranchiseBandBrands } from '../utils/franchise-band-brand';
+import { isThrowbackWeek } from '../data/theleague/throwback-config';
+import { getAllThrowbackPreferences } from '../utils/throwback-store';
+import { getCurrentNFLWeek } from '../utils/current-week';
+import { getTestDateFromSearchParams } from '../utils/league-year';
+
+export interface Props {
+  league: LeagueSlug;
+}
+
+const { league } = Astro.props;
+
+// Season-shaped clock (which NFL week is it), matching live-scoring. `?week=`
+// and `?testDate=` are honored so a throwback week can be previewed the same
+// way it is everywhere else.
+const now = getTestDateFromSearchParams(Astro.url.searchParams) ?? new Date();
+const weekParam = parseInt(Astro.url.searchParams.get('week') ?? '', 10);
+const week =
+  Number.isFinite(weekParam) && weekParam > 0 ? weekParam : (getCurrentNFLWeek(now) ?? 0);
+
+const throwbackActive = league === 'theleague' && isThrowbackWeek(week);
+const throwbackOverrides = throwbackActive
+  ? await getAllThrowbackPreferences(
+      ((theleagueConfig as any).teams ?? []).map((t: any) => t.franchiseId)
+    )
+  : {};
+
+const brands = buildFranchiseBandBrands(league, { throwbackActive, throwbackOverrides });
+// `</script>` can't appear in a crest path or a hex, but escaping `<` is the
+// cheap way to guarantee a config edit can never break out of the tag.
+const payload = JSON.stringify(brands).replace(/</g, '\\u003c');
+---
+
+<script type="application/json" id="franchise-band-brands" is:inline set:html={payload}></script>

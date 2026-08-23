@@ -578,8 +578,7 @@ function getPickupLabel(type: UnsignedFaAlert['acquisitionType']): string {
   // trimmed clone of the year-select branch of rosters.astro's CDM wiring —
   // no action-select, franchise-tag, extension, or cut flows apply here.
   import { NFL_TEAM_CITIES, normalizeTeamCode } from '../../../utils/nfl';
-  import { getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark } from '../../../utils/nfl-team-colors';
-  import { DEFAULT_HEADSHOT_URL } from '../../../constants/roster-constants';
+  import { applyPlayerModalBand } from '../../../utils/player-modal-band';
   import { DEFAULT_LEAGUE_ID } from '../../../config/leagues';
 
   const YEAR_OPTIONS = [1, 2, 3, 4, 5];
@@ -657,34 +656,21 @@ function getPickupLabel(type: UnsignedFaAlert['acquisitionType']): string {
       const typeBadgeEl = document.getElementById('cdm-type-badge');
       if (typeBadgeEl) typeBadgeEl.style.display = '';
 
-      // Hero
-      const headshotImg = document.getElementById('cdm-headshot') as HTMLImageElement | null;
-      if (headshotImg) {
-        headshotImg.onerror = null;
-        headshotImg.src = data.headshot || DEFAULT_HEADSHOT_URL;
-        headshotImg.onerror = function () {
-          (this as HTMLImageElement).onerror = null;
-          (this as HTMLImageElement).src = DEFAULT_HEADSHOT_URL;
-        };
-      }
+      // Hero — the shared composite band (see ContractDeclarationModal).
+      // Branded by the SIGNING franchise: the whole modal is "add him to my
+      // team", so the crest the owner is about to put him under is the right
+      // mark to show. `franchiseId` is the card's own data attribute, read
+      // above.
+      applyPlayerModalBand(document.getElementById('cdm-band'), {
+        name: data.name,
+        position: data.position,
+        nflTeam: data.nflTeam,
+        headshot: data.headshot,
+        franchiseId,
+      });
       const nameEl = document.getElementById('cdm-player-name');
       if (nameEl) nameEl.textContent = data.name;
       const normalizedTeam = data.nflTeam ? normalizeTeamCode(data.nflTeam) : '';
-      // Team-color chip behind the headshot — same treatment as PlayerCell.
-      const avatarEl = document.getElementById('cdm-avatar');
-      if (avatarEl) {
-        const avatarIsDef = (data.position || '').toUpperCase() === 'DEF';
-        avatarEl.classList.toggle('cdm-hero__avatar--def', avatarIsDef);
-        avatarEl.style.setProperty('--player-avatar-bg', getPlayerAvatarBackground(data.nflTeam || ''));
-        avatarEl.style.setProperty('--player-avatar-border', getPlayerAvatarBorder(data.nflTeam || ''));
-        avatarEl.style.setProperty('--player-avatar-ring', getPlayerAvatarRing(data.nflTeam || ''));
-        avatarEl.style.setProperty('--player-avatar-ring-dark', getPlayerAvatarRingDark(data.nflTeam || ''));
-        if (headshotImg) {
-          headshotImg.alt = avatarIsDef
-            ? `${data.nflTeam || 'Team'} logo`
-            : `${data.name || 'Player'} headshot`;
-        }
-      }
       const logoEl = document.getElementById('cdm-nfl-logo') as HTMLImageElement | null;
       if (logoEl) logoEl.src = normalizedTeam ? `/assets/nfl-logos/${normalizedTeam}.svg` : '/assets/nfl-logos/NFL.svg';
       const teamCity = normalizedTeam ? (NFL_TEAM_CITIES[normalizedTeam] || normalizedTeam) : 'Free Agent';

@@ -39,6 +39,7 @@ const { class: className, hideContract = false } = Astro.props;
     <div class="pdm-hero pmb" id="pdm-band">
       <span class="pmb__ghost" aria-hidden="true"></span>
       <div class="pmb__glow" aria-hidden="true"></div>
+      <img class="pmb__crest" alt="" aria-hidden="true" loading="lazy" decoding="async" style="display:none" />
       <img class="pmb__cutout" alt="" aria-hidden="true" loading="eager" decoding="async" />
       <div class="pdm-hero__info">
         <div class="pdm-hero__name-row">
@@ -989,6 +990,9 @@ const { class: className, hideContract = false } = Astro.props;
         nflTeam: playerData.nflTeam,
         espnId: playerData.espnId,
         headshot: playerData.headshot,
+        // Rostered → the band wears the owning FRANCHISE (crest + hues);
+        // free agents fall back to the NFL palette.
+        franchiseId: playerData.franchiseId,
       });
 
       // ── Hero: Name ──
