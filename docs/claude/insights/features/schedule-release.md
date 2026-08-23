@@ -117,3 +117,49 @@ of a schedule that turned out not to be the one that got pasted.
 **Recommendation:** When a human step sits between "we decided" and "it is
 true", gate the announcement on observing the effect, never on the decision's
 timestamp.
+
+## 2026-08-23 - Gating on "the Feed Matches the Reveal" Deadlocks if the Reveal Was Never Pasted
+
+**Context:** The AFL's reveal had never been locked — its release date (Aug 16)
+fell before Schedule Release Day shipped. The obvious repair was to run the
+locker, which builds the reveal from `data/<league>/schedule-plan/<year>-schedule.json`.
+That would have been the wrong schedule.
+
+**Insight:** The plan on disk is not necessarily the season being played. The
+optimiser is simulated annealing, so the admin page and the CLI each draw a
+different valid season from the same construction — same rounds, same
+cross-conference pairs, and not one of the fourteen weeks in common. The AFL's
+committed plan and its pasted schedule diverged exactly that way, and nothing
+about either file says which one MFL is running.
+
+The previous entry's gate is what makes this fatal rather than cosmetic.
+`pasteHasLanded` compares the live feed against the reveal week for week, so a
+reveal locked from the unpasted draw doesn't just show owners the wrong
+schedule — it gates the column **forever**, waiting for a match that can never
+arrive. A guard that waits for observed truth deadlocks silently when the thing
+it waits for is unreachable, and there is no error anywhere: the cron logs
+`[skip] waiting for the paste` every day and looks healthy.
+
+**Evidence:** Fingerprint both before locking anything.
+
+```bash
+# every week differs => the plan is not what is live
+node -e "…pairKey both, compare week by week…"
+```
+
+**Recommendation:** `node scripts/lock-schedule-release.mjs --league=<slug> --from-live`
+canonises the schedule actually in MFL, audited with the same `validateSeason`.
+Where plan and paste agree it reproduces the plan-sourced record byte for byte
+(weeks, MFL text, marquee, summary) — verify that against a league you know is
+correct before trusting it on one you don't.
+
+Do **not** make it the default. Before a paste the live feed carries MFL's own
+schedule for the season, and no field distinguishes "pasted a different valid
+draw" from "hasn't pasted yet", so an auto-preferring cron would lock MFL's
+default schedule as the reveal on every normal release day. Explicit flag,
+`source: 'plan' | 'live'` recorded on the reveal.
+
+**Generalisable:** when a wait-for-observed-effect guard can be fed a target
+that will never be observed, the guard needs either a liveness check or an
+operator escape hatch — otherwise "still waiting" and "will wait forever" are
+the same log line.
