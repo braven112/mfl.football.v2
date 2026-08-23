@@ -5250,7 +5250,15 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       );
     });
     window.addEventListener('unhandledrejection', function (e) {
+      // TransitionNoiseGuard (layout <head>, so it registered first) already
+      // called preventDefault on an aborted ClientRouter view transition. That
+      // is Astro's own noise on a page that rendered fine — an owner reported
+      // exactly it as a full-width red box over a working roster. Both checks
+      // are kept: defaultPrevented is the contract, and the shared predicate
+      // covers the case where this banner somehow registered first.
+      if (e.defaultPrevented) return;
       var r = e.reason;
+      if (window.__isAbortedViewTransition && window.__isAbortedViewTransition(r)) return;
       showDiagBanner('Unhandled promise rejection', (r && r.stack) || String(r));
     });
   })();

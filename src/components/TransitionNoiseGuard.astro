@@ -1,0 +1,90 @@
+---
+/**
+ * Silences ONE class of unhandled promise rejection: a ClientRouter view
+ * transition that got aborted.
+ *
+ * Why this exists. Astro's router (astro/dist/transitions/router.js) drives
+ * every soft navigation through `document.startViewTransition()` and then does:
+ *
+ *   viewTransition.updateCallbackDone.finally(async () => { ...runScripts() })
+ *   viewTransition.finished.finally(() => { ...cleanup })
+ *   try { await viewTransition.updateCallbackDone } catch (e) { console.log(e) }
+ *
+ * `.finally()` returns a NEW promise that rejects with the same reason when the
+ * original does, and neither derived promise is ever caught — the try/catch
+ * guards the ORIGINAL `updateCallbackDone`, not the chain hanging off it, and
+ * `finished` is never awaited at all. So any aborted transition escapes as an
+ * unhandled rejection, TWICE. Verified in Chromium against Astro's exact shape
+ * (2026-08-22): one rejection per `.finally()` chain, both carrying the abort.
+ *
+ * An abort is not a page failure. The DOM swap has already happened; what
+ * failed is the cosmetic crossfade over it — because the document went hidden
+ * mid-navigation (Chrome: "Transition was aborted because of invalid state"),
+ * or because a second navigation superseded the first ("Transition was
+ * skipped", which Astro itself triggers on every fast double-tap of the nav).
+ * An owner on Android who switched apps mid-tap reported the first of those as
+ * a full-width red error box over a roster page that had rendered perfectly —
+ * the rosters diagnostic banner faithfully reporting Astro's noise.
+ *
+ * Deliberately narrow, and it fails SAFE: anything that does not match stays
+ * unhandled and still reaches the banner. It also still `console.warn`s, so a
+ * transition that aborts for a reason worth knowing about is never invisible —
+ * just not screamed at an owner who cannot act on it.
+ *
+ * Must load BEFORE any other `unhandledrejection` listener. Listeners fire in
+ * registration order, and downstream diagnostics decide what to do by reading
+ * `event.defaultPrevented` — which is only set if this one ran first. That is
+ * why it is an `is:inline` script in <head> rather than a bundled module: a
+ * bundled script is deferred and would register after the page body's.
+ */
+---
+
+<script is:inline>
+  (function () {
+    // `window` outlives a ClientRouter soft navigation, and Astro re-runs
+    // scripts from the incoming document, so without this the listener would
+    // stack up one copy per navigation for the life of the tab.
+    if (window.__transitionNoiseGuardInstalled) return;
+    window.__transitionNoiseGuardInstalled = true;
+
+    /**
+     * A benign aborted view transition, or something we should not touch?
+     *
+     * Three conditions, all required, because the cost of a false positive is
+     * a real bug silently swallowed:
+     *
+     *  - a DOMException-shaped object, not a bare string or an Error;
+     *  - `AbortError` or `InvalidStateError` — the two names the View
+     *    Transition spec aborts with. NOT a blanket name check;
+     *  - the word "transition" in the message. This is what separates it from
+     *    the other frequent flyer on these two names: IndexedDB, whose
+     *    InvalidStateErrors talk about a "transaction". Different word,
+     *    deliberately matched with a \b boundary so it cannot collide.
+     *
+     * Message text is browser-specific, so a browser that words it differently
+     * simply will not match — the rejection stays unhandled and visible, which
+     * is the safe direction to be wrong in.
+     */
+    function isAbortedViewTransition(reason) {
+      if (!reason || typeof reason !== 'object') return false;
+      if (reason.name !== 'AbortError' && reason.name !== 'InvalidStateError') return false;
+      var message = typeof reason.message === 'string' ? reason.message : '';
+      return /\btransitions?\b/i.test(message);
+    }
+
+    // Exposed so the rosters diagnostic banner can reach the same decision,
+    // rather than keeping a second copy of it that drifts.
+    window.__isAbortedViewTransition = isAbortedViewTransition;
+
+    window.addEventListener('unhandledrejection', function (event) {
+      if (!isAbortedViewTransition(event.reason)) return;
+      // Marks the event handled: stops the browser's own console report, and
+      // sets `defaultPrevented` for the listeners registered after this one.
+      event.preventDefault();
+      console.warn(
+        '[client-router] aborted view transition (page is fine, animation was not):',
+        event.reason && event.reason.message
+      );
+    });
+  })();
+</script>
