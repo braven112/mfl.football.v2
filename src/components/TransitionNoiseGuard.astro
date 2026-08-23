@@ -1,65 +1,92 @@
 ---
 /**
- * Silences ONE class of unhandled promise rejection: a ClientRouter view
- * transition that got aborted.
+ * Rescues a ClientRouter soft navigation whose DOM swap failed, and keeps the
+ * failure from reaching the owner as a red error box.
  *
- * Why this exists. Astro's router (astro/dist/transitions/router.js) drives
- * every soft navigation through `document.startViewTransition()` and then does:
+ * ── What goes wrong ──────────────────────────────────────────────────────────
+ *
+ * Astro's router (astro/dist/transitions/router.js) drives every soft
+ * navigation through `document.startViewTransition()` and then does:
  *
  *   viewTransition.updateCallbackDone.finally(async () => { ...runScripts() })
  *   viewTransition.finished.finally(() => { ...cleanup })
  *   try { await viewTransition.updateCallbackDone } catch (e) { console.log(e) }
  *
- * `.finally()` returns a NEW promise that rejects with the same reason when the
- * original does, and neither derived promise is ever caught — the try/catch
- * guards the ORIGINAL `updateCallbackDone`, not the chain hanging off it, and
- * `finished` is never awaited at all. So any aborted transition escapes as an
- * unhandled rejection, TWICE. Verified in Chromium against Astro's exact shape
- * (2026-08-22): one rejection per `.finally()` chain, both carrying the abort.
+ * `.finally()` returns a NEW promise that rejects with the same reason, and
+ * neither derived promise is caught — the try/catch guards the ORIGINAL
+ * `updateCallbackDone`, not the chain hanging off it, and `finished` is never
+ * awaited at all. So the rejection escapes as an unhandled rejection, TWICE.
+ * Verified in Chromium against Astro's exact shape (2026-08-22), and the code
+ * is byte-identical in the latest release (7.2.4) — there is no version to
+ * upgrade to.
  *
- * An abort is not a page failure. The DOM swap has already happened; what
- * failed is the cosmetic crossfade over it — because the document went hidden
- * mid-navigation (Chrome: "Transition was aborted because of invalid state"),
- * or because a second navigation superseded the first ("Transition was
- * skipped", which Astro itself triggers on every fast double-tap of the nav).
- * An owner on Android who switched apps mid-tap reported the first of those as
- * a full-width red error box over a roster page that had rendered perfectly —
- * the rosters diagnostic banner faithfully reporting Astro's noise.
+ * ── Why it is not merely cosmetic ────────────────────────────────────────────
  *
- * Deliberately narrow, and it fails SAFE: anything that does not match stays
- * unhandled and still reaches the banner. It also still `console.warn`s, so a
- * transition that aborts for a reason worth knowing about is never invisible —
- * just not screamed at an owner who cannot act on it.
+ * Astro never touches the native `ready` promise — the one an aborted ANIMATION
+ * rejects. It only observes `updateCallbackDone` (the swap callback) and
+ * `finished`, which per both the spec and Astro's own source comment "rejects
+ * iff updateDone does". So a rejection that reaches us means the swap callback
+ * itself rejected: the DOM was never replaced and `astro:after-swap` never
+ * fired. The tap did nothing.
+ *
+ * That is what the reporting owner actually saw. The screenshot looks like a
+ * working roster page because it IS the roster page — they were still on it,
+ * their tap having silently gone nowhere, under a full-width red banner. Astro
+ * does not recover from this; its `catch` at the end of the transition only
+ * `console.log`s and leaves you on the old page.
+ *
+ * ── What this does ───────────────────────────────────────────────────────────
+ *
+ * Tracks the in-flight navigation target via Astro's own lifecycle events. If
+ * an aborted-transition rejection lands while a navigation is still unlanded,
+ * it finishes the job the hard way — `location.href = target`. A full page load
+ * is a real cost, but it is paid only on a navigation that already failed, and
+ * the alternative is an owner tapping a dead link.
+ *
+ * The suppression is deliberately narrow and fails SAFE: anything unmatched
+ * stays unhandled and still reaches the rosters diagnostic banner. A matched
+ * one still `console.warn`s, so this is quiet, not invisible.
  *
  * Must load BEFORE any other `unhandledrejection` listener. Listeners fire in
- * registration order, and downstream diagnostics decide what to do by reading
- * `event.defaultPrevented` — which is only set if this one ran first. That is
- * why it is an `is:inline` script in <head> rather than a bundled module: a
- * bundled script is deferred and would register after the page body's.
+ * registration order and the banner decides by reading `event.defaultPrevented`
+ * — which is only set if this ran first. Hence an `is:inline` script in <head>
+ * rather than a bundled module, which would be deferred until after the page
+ * body's own listeners had registered.
  */
 ---
 
 <script is:inline>
   (function () {
-    // `window` outlives a ClientRouter soft navigation, and Astro re-runs
-    // scripts from the incoming document, so without this the listener would
-    // stack up one copy per navigation for the life of the tab.
+    // `window` outlives a ClientRouter soft navigation and Astro re-runs scripts
+    // from the incoming document, so without this the listeners would stack up
+    // one copy per navigation for the life of the tab.
     if (window.__transitionNoiseGuardInstalled) return;
     window.__transitionNoiseGuardInstalled = true;
 
+    // Grace period before declaring a swap dead. The rejection can land a beat
+    // before `astro:after-swap` on a slow page, and hard-navigating over a swap
+    // that was about to succeed would throw away a perfectly good soft nav.
+    var SETTLE_MS = 250;
+
+    // How long a completed rescue suppresses another one to the same URL. Long
+    // enough to outlive the reload it triggers, short enough that a genuine
+    // later navigation to the same page is still rescued.
+    var RESCUE_TTL_MS = 10000;
+    var RESCUE_KEY = '__vtRescue';
+
     /**
-     * A benign aborted view transition, or something we should not touch?
+     * A benign aborted view transition, or something we must not touch?
      *
-     * Three conditions, all required, because the cost of a false positive is
-     * a real bug silently swallowed:
+     * Three conditions, all required, because the cost of a false positive is a
+     * real bug silently swallowed:
      *
      *  - a DOMException-shaped object, not a bare string or an Error;
-     *  - `AbortError` or `InvalidStateError` — the two names the View
-     *    Transition spec aborts with. NOT a blanket name check;
+     *  - `AbortError` or `InvalidStateError` — the two names the View Transition
+     *    spec aborts with. NOT a blanket name check;
      *  - the word "transition" in the message. This is what separates it from
-     *    the other frequent flyer on these two names: IndexedDB, whose
-     *    InvalidStateErrors talk about a "transaction". Different word,
-     *    deliberately matched with a \b boundary so it cannot collide.
+     *    the other frequent flyer on those two names: IndexedDB, whose
+     *    InvalidStateErrors talk about a "transaction". One letter apart, so it
+     *    is matched with a \b boundary rather than a loose substring.
      *
      * Message text is browser-specific, so a browser that words it differently
      * simply will not match — the rejection stays unhandled and visible, which
@@ -72,19 +99,74 @@
       return /\btransitions?\b/i.test(message);
     }
 
-    // Exposed so the rosters diagnostic banner can reach the same decision,
-    // rather than keeping a second copy of it that drifts.
+    // Exposed so the rosters diagnostic banner reaches the same decision rather
+    // than keeping a second copy of the rule that drifts.
     window.__isAbortedViewTransition = isAbortedViewTransition;
+
+    // The navigation Astro is currently attempting, or null once it has landed.
+    var pending = null;
+
+    document.addEventListener('astro:before-preparation', function (event) {
+      pending = event && event.to ? String(event.to) : null;
+    });
+
+    // after-swap is the success signal that matters here: the DOM has been
+    // replaced and the URL moved. Anything the transition does after this point
+    // really is just animation.
+    document.addEventListener('astro:after-swap', function () { pending = null; });
+    document.addEventListener('astro:page-load', function () { pending = null; });
+
+    function rescuedRecently(target) {
+      try {
+        var raw = window.sessionStorage.getItem(RESCUE_KEY);
+        if (!raw) return false;
+        var last = JSON.parse(raw);
+        return !!last && last.to === target && Date.now() - last.at < RESCUE_TTL_MS;
+      } catch (err) {
+        // Private mode, storage disabled, malformed JSON. Losing the loop guard
+        // is worse than losing the rescue, so decline to rescue.
+        return true;
+      }
+    }
+
+    function markRescued(target) {
+      try {
+        window.sessionStorage.setItem(RESCUE_KEY, JSON.stringify({ to: target, at: Date.now() }));
+      } catch (err) {
+        /* storage unavailable — rescuedRecently already declines in that case */
+      }
+    }
+
+    /**
+     * Finish a navigation the soft path dropped. No-ops when the swap landed
+     * after all, when we are already at the target, or when we just rescued
+     * this same URL (which would be a reload loop).
+     */
+    function rescueFailedNavigation() {
+      var target = pending;
+      if (!target) return;
+
+      window.setTimeout(function () {
+        if (pending !== target) return;                       // it landed after all
+        if (window.location.href === target) { pending = null; return; }
+        if (rescuedRecently(target)) return;
+        pending = null;
+        markRescued(target);
+        console.warn('[client-router] swap failed; completing navigation the hard way:', target);
+        window.location.href = target;
+      }, SETTLE_MS);
+    }
 
     window.addEventListener('unhandledrejection', function (event) {
       if (!isAbortedViewTransition(event.reason)) return;
       // Marks the event handled: stops the browser's own console report, and
-      // sets `defaultPrevented` for the listeners registered after this one.
+      // sets `defaultPrevented` for listeners registered after this one.
       event.preventDefault();
       console.warn(
-        '[client-router] aborted view transition (page is fine, animation was not):',
+        '[client-router] view transition aborted:',
         event.reason && event.reason.message
       );
+      rescueFailedNavigation();
     });
   })();
 </script>
