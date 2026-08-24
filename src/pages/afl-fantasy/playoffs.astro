@@ -26,7 +26,7 @@ import {
 import { getCurrentSeasonYear } from '../../utils/league-year';
 import { spriteUrl } from '../../utils/sprite-url';
 import { getLeagueBySlug } from '../../config/leagues';
-import { getAwardPrize, getSeedPrize, getTierPrize } from '../../utils/prize-display';
+import { formatPrizeAmount, getAwardPrize, getSeedPrize, getTierPrize } from '../../utils/prize-display';
 
 export const prerender = false;
 
@@ -78,7 +78,7 @@ const leagueFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/leag
 // (2003-2023). Advisory, never a substitute for real MFL data — see
 // scripts/reconstruct-afl-playoff-brackets.mjs.
 import reconstructedBracketsFile from '../../../data/afl-fantasy/derived/reconstructed-playoff-brackets.json';
-import { buildBracketKindResolver, isNitTitleBracket } from '../../utils/afl-bracket-kind.mjs';
+import { buildBracketKindResolver, isNitTitleBracket, isTitleBracket } from '../../utils/afl-bracket-kind.mjs';
 type BracketKind = 'al' | 'nl' | 'nit' | 'cup' | 'championship';
 const weeklyResultsFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/weekly-results.json', {
   eager: true,
@@ -693,6 +693,39 @@ const tierAmount = (tier: string, rank: number): number =>
 const PREMIER_TIER = 'Premier League';
 const DLEAGUE_TIER = 'D-League';
 
+/**
+ * The award each bracket plays for, keyed by bracket KIND rather than id —
+ * the same reason the prize lines below are: ids 2 and 3 are the AL/NL
+ * brackets only from 2018 on, and before that they are consolation rounds
+ * with no conference meaning. A kind with no entry (the AFL Cup) plays for
+ * no money and renders no badge.
+ */
+const BRACKET_AWARD_BY_KIND: Partial<Record<BracketKind, string>> = {
+  championship: 'afl-championship',
+  al: 'al-champion',
+  nl: 'nl-champion',
+  nit: 'nit',
+};
+
+/**
+ * The prize riding on a bracket, for its header badge.
+ *
+ * The kind alone is NOT enough. `championship` is the resolver's FALLTHROUGH —
+ * "AFL-side, not NIT/Cup/AL/NL" — so it covers the AFL 3rd and 5th Place Games
+ * as well as the title bracket. Badging on kind alone hangs the $300 League
+ * Championship on both placement games, which is money the AFL does not pay
+ * for them; the same misreading already shipped once in the franchise-history
+ * round labeller. `isTitleBracket` is the question actually being asked here
+ * (see src/utils/afl-bracket-kind.mjs).
+ */
+const bracketPrize = (bracketId: string): { label: string; amount: string } | null => {
+  if (!isTitleBracket(bracketNameById.get(String(bracketId)))) return null;
+  const slug = BRACKET_AWARD_BY_KIND[bracketKind(bracketId)];
+  if (!slug) return null;
+  const prize = getAwardPrize(AFL_SLUG, slug);
+  return prize ? { label: prize.label, amount: formatPrizeAmount(prize.amount) } : null;
+};
+
 const franchiseLookup = new Map(
   franchises.map(f => [String((f as any).id ?? (f as any).franchise_id ?? ''), f])
 );
@@ -1151,8 +1184,18 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
                   Starts week {bracket.startWeek || '?'} · {bracket.teamsInvolved ?? '?'} teams
                 </p>
               </div>
-              <div class="bracket-pill">
-                {bracket.emphasis ? 'Primary' : 'Side bracket'}
+              <div class="bracket-header__aside">
+                <div class="bracket-pill">
+                  {bracket.emphasis ? 'Primary' : 'Side bracket'}
+                </div>
+                {bracketPrize(bracket.id) && (
+                  <p class="bracket-prizes" aria-label="Prize money on this bracket">
+                    <span class="bracket-prize">
+                      <span class="bracket-prize__label">{bracketPrize(bracket.id)!.label}</span>
+                      <span class="bracket-prize__amount">{bracketPrize(bracket.id)!.amount}</span>
+                    </span>
+                  </p>
+                )}
               </div>
             </div>
 
@@ -1929,6 +1972,45 @@ const grandTotal = allPrizes.reduce((sum, p) => sum + p.amount, 0);
     color: #7dd3fc;
   }
 
+
+  /* Prize money riding on a bracket. Sits under the Primary/Side pill in the
+     header aside, right-aligned to it. Amounts come from the registry payout
+     table via prize-display — never typed here. */
+  .bracket-header__aside {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.4rem;
+  }
+  .bracket-prizes {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.25rem;
+  }
+  .bracket-prize {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    white-space: nowrap;
+  }
+  .bracket-prize__label {
+    font-size: 0.75rem;
+    color: var(--content-text-muted, #64748b);
+  }
+  .bracket-prize__amount {
+    padding: 0.1rem 0.45rem;
+    border-radius: 0.375rem;
+    background: var(--prize-seed-bg);
+    border: 1px solid var(--prize-seed-border);
+    color: var(--prize-seed-text);
+    font-weight: 700;
+    font-size: 0.8125rem;
+    font-variant-numeric: tabular-nums;
+  }
 
   .bracket-scroll {
     display: grid;

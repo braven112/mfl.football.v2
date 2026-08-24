@@ -13,6 +13,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { bracketKindFromName, isTitleBracket } from '../src/utils/afl-bracket-kind.mjs';
 import { join } from 'node:path';
 import {
   formatPrizeAmount,
@@ -276,6 +277,67 @@ describe('rules pages render the derived payouts table', () => {
     const start = html.indexOf('<h3>Prize Distribution</h3>');
     expect(start).toBeGreaterThan(-1);
     expect(html.indexOf('</ul>', start)).toBeGreaterThan(start);
+  });
+});
+
+/**
+ * Bracket prize badges — the gate that keeps money off a bracket that does not
+ * pay it.
+ *
+ * `bracketKind()` returns `championship` as a FALLTHROUGH ("AFL-side, not
+ * NIT/Cup/AL/NL"), so it covers the AFL 3rd and 5th Place Games as well as the
+ * title bracket. Badging on kind alone hangs the $300 League Championship on
+ * both placement games. That misreading already shipped once in the
+ * franchise-history round labeller, and again here while these badges were
+ * being built — `isTitleBracket` is the question actually being asked.
+ */
+describe('bracket prize badges only ride on title brackets', () => {
+  it('treats a tournament final as a title bracket', () => {
+    expect(isTitleBracket('AFL Championship')).toBe(true);
+    expect(isTitleBracket('AL Championship')).toBe(true);
+    expect(isTitleBracket('NIT Championship')).toBe(true);
+    // A reconstructed feed rebuilds only the primary bracket, and it arrives
+    // unnamed — that counts as the title bracket.
+    expect(isTitleBracket(undefined)).toBe(true);
+  });
+
+  it('rejects the placement games that share the championship KIND', () => {
+    expect(isTitleBracket('AFL 3rd Place Game')).toBe(false);
+    expect(isTitleBracket('AFL 5th Place Game')).toBe(false);
+    expect(isTitleBracket('NIT 3rd Place Game')).toBe(false);
+    expect(isTitleBracket('NIT 5th Place Game')).toBe(false);
+  });
+
+  it('agrees with bracketKind on which tournament a bracket belongs to', () => {
+    // Both halves are needed: the kind picks WHICH award, isTitleBracket
+    // decides WHETHER any award applies.
+    expect(bracketKindFromName('AFL 3rd Place Game', '1')).toBe('championship');
+    expect(bracketKindFromName('NIT 3rd Place Game', '6')).toBe('nit');
+  });
+
+  it("the AFL playoffs page gates its badge on isTitleBracket", () => {
+    const source = readFileSync(
+      join(process.cwd(), 'src/pages/afl-fantasy/playoffs.astro'),
+      'utf8'
+    );
+    expect(source).toContain('isTitleBracket');
+    // The gate must run before the award lookup, not after.
+    const gate = source.indexOf('if (!isTitleBracket(');
+    const lookup = source.indexOf('BRACKET_AWARD_BY_KIND[bracketKind(');
+    expect(gate).toBeGreaterThan(-1);
+    expect(lookup).toBeGreaterThan(gate);
+  });
+
+  it("TheLeague's brackets and Prizes tab read ONE placement map", () => {
+    const source = readFileSync(
+      join(process.cwd(), 'src/pages/theleague/playoffs.astro'),
+      'utf8'
+    );
+    // Both the badge helper and the payout lines derive from PLACEMENT_BRACKETS,
+    // so a bracket header cannot show money the tab does not pay.
+    expect(source).toContain('const PLACEMENT_BRACKETS');
+    expect(source).toContain('PLACEMENT_BRACKETS.flatMap');
+    expect(source).toContain('PLACEMENT_BRACKETS.find');
   });
 });
 

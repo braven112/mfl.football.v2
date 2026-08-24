@@ -26,7 +26,7 @@ import {
 import { getCurrentSeasonYear } from '../../utils/league-year';
 import { spriteUrl } from '../../utils/sprite-url';
 import { getLeagueBySlug } from '../../config/leagues';
-import { getPlacementPrize, getWeeklyHighPrize } from '../../utils/prize-display';
+import { formatPrizeAmount, getPlacementPrize, getWeeklyHighPrize } from '../../utils/prize-display';
 
 export const prerender = false;
 
@@ -517,22 +517,50 @@ const findFinalGame = (bracketId: string) => {
   return { winnerId, loserId, game };
 };
 
-const playoffPlacements = (() => {
-  const champGame = findFinalGame('1');
-  const thirdGame = findFinalGame('2');
-  const fifthGame = findFinalGame('3');
+// Which bracket decides which places. Each final decides TWO — the winner
+// takes the bracket's place, the loser the one below it. ONE map, read by both
+// the Prizes tab and the prize badge on each bracket header, so the money shown
+// on a bracket can never disagree with the money the tab pays out.
+const PLACEMENT_BRACKETS: Array<{ id: string; places: [number, number] }> = [
+  { id: '1', places: [1, 2] },
+  { id: '2', places: [3, 4] },
+  { id: '3', places: [5, 6] },
+];
 
-  // Each final decides TWO places — the winner takes the bracket's place, the
-  // loser the one below it.
+const ORDINAL_FALLBACK: Record<number, string> = {
+  1: 'Champion', 2: '2nd Place', 3: '3rd Place',
+  4: '4th Place', 5: '5th Place', 6: '6th Place',
+};
+
+const playoffPlacements = PLACEMENT_BRACKETS.flatMap(({ id, places }) => {
+  const game = findFinalGame(id);
+  const [winnerPlace, loserPlace] = places;
   return [
-    { label: placementLabel(1, 'Champion'), amount: placementAmount(1), teamId: champGame?.winnerId },
-    { label: placementLabel(2, '2nd Place'), amount: placementAmount(2), teamId: champGame?.loserId },
-    { label: placementLabel(3, '3rd Place'), amount: placementAmount(3), teamId: thirdGame?.winnerId },
-    { label: placementLabel(4, '4th Place'), amount: placementAmount(4), teamId: thirdGame?.loserId },
-    { label: placementLabel(5, '5th Place'), amount: placementAmount(5), teamId: fifthGame?.winnerId },
-    { label: placementLabel(6, '6th Place'), amount: placementAmount(6), teamId: fifthGame?.loserId },
+    {
+      label: placementLabel(winnerPlace, ORDINAL_FALLBACK[winnerPlace] ?? `Place ${winnerPlace}`),
+      amount: placementAmount(winnerPlace),
+      teamId: game?.winnerId,
+    },
+    {
+      label: placementLabel(loserPlace, ORDINAL_FALLBACK[loserPlace] ?? `Place ${loserPlace}`),
+      amount: placementAmount(loserPlace),
+      teamId: game?.loserId,
+    },
   ];
-})();
+});
+
+/**
+ * The prize money riding on a bracket, for its header badge. A bracket with no
+ * placement money (the Toilet Bowl side) returns nothing and renders no badge.
+ */
+const bracketPrizes = (bracketId: string): Array<{ label: string; amount: string }> => {
+  const entry = PLACEMENT_BRACKETS.find((b) => b.id === bracketId);
+  if (!entry) return [];
+  return entry.places
+    .map((place) => getPlacementPrize(THELEAGUE_SLUG, place))
+    .filter((prize): prize is NonNullable<typeof prize> => Boolean(prize))
+    .map((prize) => ({ label: prize.label, amount: formatPrizeAmount(prize.amount) }));
+};
 
 const weeklyHighs = await Promise.all(
   Array.from({ length: REGULAR_SEASON_WEEKS }, async (_, idx) => {
@@ -773,8 +801,20 @@ const grandTotal =
                   Starts week {bracket.startWeek || '?'} · {bracket.teamsInvolved ?? '?'} teams
                 </p>
               </div>
-              <div class="bracket-pill">
-                {bracket.emphasis ? 'Primary' : 'Side bracket'}
+              <div class="bracket-header__aside">
+                <div class="bracket-pill">
+                  {bracket.emphasis ? 'Primary' : 'Side bracket'}
+                </div>
+                {bracketPrizes(bracket.id).length > 0 && (
+                  <ul class="bracket-prizes" aria-label="Prize money on this bracket">
+                    {bracketPrizes(bracket.id).map((prize) => (
+                      <li class="bracket-prize">
+                        <span class="bracket-prize__label">{prize.label}</span>
+                        <span class="bracket-prize__amount">{prize.amount}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </div>
 
@@ -1264,6 +1304,45 @@ const grandTotal =
     font-weight: 700;
     font-size: 0.85rem;
     white-space: nowrap;
+  }
+
+  /* Prize money riding on a bracket. Sits under the Primary/Side pill in the
+     header aside, right-aligned to it. Amounts come from the registry payout
+     table via prize-display — never typed here. */
+  .bracket-header__aside {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.4rem;
+  }
+  .bracket-prizes {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.25rem;
+  }
+  .bracket-prize {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    white-space: nowrap;
+  }
+  .bracket-prize__label {
+    font-size: 0.75rem;
+    color: var(--content-text-muted, #64748b);
+  }
+  .bracket-prize__amount {
+    padding: 0.1rem 0.45rem;
+    border-radius: 0.375rem;
+    background: var(--prize-seed-bg);
+    border: 1px solid var(--prize-seed-border);
+    color: var(--prize-seed-text);
+    font-weight: 700;
+    font-size: 0.8125rem;
+    font-variant-numeric: tabular-nums;
   }
 
   .bracket-scroll {
