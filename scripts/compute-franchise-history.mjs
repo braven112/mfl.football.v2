@@ -117,6 +117,7 @@ const resolveTargetPath = (spec) =>
 const LEAGUE_CONFIG_PATH = resolveTargetPath(TARGET.configPath);
 const CHAMPIONSHIP_HISTORY_PATH = path.join(ROOT, LEAGUE.dataPath, 'championship-history.json');
 const OUTPUT_PATH = path.join(ROOT, LEAGUE.dataPath, 'derived/franchise-history.json');
+const SEASON_LEDGER_PATH = path.join(ROOT, LEAGUE.dataPath, 'derived/season-ledger.json');
 const SCHEFTER_FEED_PATH = resolveTargetPath(TARGET.schefterFeedPath);
 const RECONSTRUCTED_BRACKETS_PATH = TARGET.reconstructedBracketsPath
   ? resolveTargetPath(TARGET.reconstructedBracketsPath)
@@ -691,6 +692,18 @@ const reconstructedBracketsByYear = RECONSTRUCTED_BRACKETS_PATH
 const yearSummaries = []; // for the index page: champion/runner-up per year
 const h2hCoverage = []; // per-year "how complete is this season's H2H" audit trail
 
+// Flat, UNATTRIBUTED ledger — one row per franchise-season actually played,
+// including the ones `attributeYear` drops because they belong to a previous
+// owner. franchises[].yearByYear is owner-scoped by design (a new owner does
+// not inherit the last one's record), which means ~34% of TheLeague's
+// franchise-seasons and ~40% of the AFL's existed nowhere on disk before this
+// ledger — 14 league championships and 73 division titles among them.
+//
+// This is the raw substrate the owner-tenure derivation reads; it makes no
+// attribution decisions of its own beyond recording the one `attributeYear`
+// already made, in `attributedTo`.
+const ledgerRows = [];
+
 // Player-name lookup populated from each year's players.json as we process
 // trades. Only contains players that appear in trade ledgers — keeps the
 // derived JSON small while letting rivalry/franchise pages display human
@@ -913,9 +926,6 @@ for (const year of years) {
   // follow the human owner across franchise-ID changes.
   for (const row of standingsRows) {
     const targetId = attributeYear(row.franchiseId, year);
-    if (!targetId) continue; // skip — former-owner year on a team that has ownerHistory
-
-    const fr = ensureFranchise(targetId);
     const identity = getIdentityForYear(row.franchiseId, year);
 
     // Suppress preseason placeholder standings: when a season has zero
@@ -945,14 +955,19 @@ for (const year of years) {
       ? Array.from(divisionTitleHolders.entries()).find(([, id]) => id === row.franchiseId)?.[0]
       : null;
 
-    fr.yearByYear.push({
+    // Built before the attribution guard so the ledger can keep the rows the
+    // guard drops. Every field above is derived from the RAW `row.franchiseId`
+    // (identity, playoff result, division title), so an orphaned row is
+    // already correct here — no re-derivation needed downstream.
+    const seasonRow = {
       year,
       name: identity.name,
       nameMedium: identity.nameMedium,
       icon: identity.icon,
       banner: identity.banner,
       isHistorical: identity.isHistorical,
-      sourceFranchiseId: row.franchiseId !== targetId ? row.franchiseId : null,
+      // Only meaningful relative to a claimant; null when nobody claims the row.
+      sourceFranchiseId: targetId && row.franchiseId !== targetId ? row.franchiseId : null,
       wins: row.wins,
       losses: row.losses,
       ties: row.ties,
@@ -962,7 +977,19 @@ for (const year of years) {
       divisionName: row.divisionId ? divisionNames.get(row.divisionId) : null,
       wonDivision: !seasonNotStarted && !!wonDivision,
       playoffResult,
+    };
+
+    ledgerRows.push({
+      ...seasonRow,
+      franchiseId: row.franchiseId,
+      attributedTo: targetId ?? null,
+      seasonNotStarted,
     });
+
+    if (!targetId) continue; // former-owner year — the ledger keeps it, yearByYear does not
+
+    const fr = ensureFranchise(targetId);
+    fr.yearByYear.push(seasonRow);
 
     fr.careerWins += row.wins;
     fr.careerLosses += row.losses;
@@ -1548,6 +1575,25 @@ const output = {
 
 fs.mkdirSync(path.dirname(OUTPUT_PATH), { recursive: true });
 fs.writeFileSync(OUTPUT_PATH, JSON.stringify(output, null, 2));
+
+// Season ledger — same run, same parsed standings/brackets/divisions. Deriving
+// it in a second script would mean a second copy of that parsing, which is the
+// guaranteed source of future drift.
+const orphanCount = ledgerRows.filter((r) => r.attributedTo === null).length;
+const ledgerOutput = {
+  generatedAt: output.generatedAt,
+  league: LEAGUE_SLUG,
+  yearsCovered: output.yearsCovered,
+  totalRows: ledgerRows.length,
+  orphanedRows: orphanCount,
+  rows: ledgerRows,
+};
+fs.writeFileSync(SEASON_LEDGER_PATH, JSON.stringify(ledgerOutput, null, 2));
+console.log(
+  `[franchise-history] wrote ${SEASON_LEDGER_PATH}: ${ledgerRows.length} franchise-seasons, ${orphanCount} unattributed (${
+    ledgerRows.length ? Math.round((orphanCount / ledgerRows.length) * 100) : 0
+  }%)`
+);
 
 const champCount = yearSummaries.filter((y) => y.champion).length;
 console.log(

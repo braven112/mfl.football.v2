@@ -1,0 +1,501 @@
+---
+/**
+ * Owner detail — shared render for both leagues.
+ *
+ * One page per owner tenure. For a former owner this is the ONLY page their
+ * seasons appear on anywhere: their franchise's page starts at whoever came
+ * after them.
+ *
+ * ── Making it read like a person, not a franchise ─────────────────────────
+ * These pages are anonymous — owner names exist nowhere in the repo yet — so
+ * an owner page could easily read as just another franchise page with a
+ * different slice of years. Three things do the work of saying "this is a
+ * person": the Current / Former owner pill, the "2007–2010 · The League ·
+ * franchise 0010" subtitle, and the succession footer naming who handed the
+ * slot over and who took it.
+ *
+ * The season tables are <EraSeasonTable>, the same component the franchise
+ * page renders, so the two can never drift.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../theleague/Breadcrumbs.astro';
+import EraSeasonTable from '../franchises/EraSeasonTable.astro';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { getLeagueBySlug } from '../../../config/leagues';
+import type { CanonicalLeagueSlug } from '../../../config/leagues';
+import type { Owner } from '../../../types/owner-tenures';
+import { formatOwnerRecord, ownerWinPct } from '../../../utils/owner-detail';
+
+interface Props {
+  leagueSlug: CanonicalLeagueSlug;
+  owner: Owner;
+  related: Record<string, Owner>;
+}
+
+const { leagueSlug, owner, related } = Astro.props as Props;
+const league = getLeagueBySlug(leagueSlug)!;
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+
+const r = (path: string) => resolveLeaguePath(`/${league.slug}${path}`, hideLeaguePrefix);
+
+const { totals } = owner;
+const yearLabel =
+  owner.yearStart === owner.yearEnd
+    ? String(owner.yearStart)
+    : `${owner.yearStart}–${owner.isCurrent ? 'present' : owner.yearEnd}`;
+
+const slotLabel = owner.tenures.length === 1
+  ? `franchise ${owner.tenures[0].franchiseId}`
+  : `franchises ${owner.tenures.map((t) => t.franchiseId).join(', ')}`;
+
+const trophies = [
+  totals.championships.length > 0 && {
+    label: `🏆 ${totals.championships.length} title${totals.championships.length === 1 ? '' : 's'}`,
+    detail: totals.championships.join(', '),
+  },
+  totals.runnerUps.length > 0 && {
+    label: `🥈 ${totals.runnerUps.length} runner-up`,
+    detail: totals.runnerUps.join(', '),
+  },
+  totals.thirdPlaces.length > 0 && {
+    label: `🥉 ${totals.thirdPlaces.length} third place`,
+    detail: totals.thirdPlaces.join(', '),
+  },
+  totals.divisionTitles.length > 0 && {
+    label: `🛡 ${totals.divisionTitles.length} division`,
+    detail: totals.divisionTitles.map((d) => d.year).join(', '),
+  },
+  totals.mvpAwards.length > 0 && {
+    label: `⭐ ${totals.mvpAwards.length} MVP`,
+    detail: totals.mvpAwards.join(', '),
+  },
+  totals.jerryJonesAwards.length > 0 && {
+    label: `💸 ${totals.jerryJonesAwards.length} Jerry Jones`,
+    detail: totals.jerryJonesAwards.join(', '),
+  },
+  totals.osweilerAwards.length > 0 && {
+    label: `📉 ${totals.osweilerAwards.length} Osweiler`,
+    detail: totals.osweilerAwards.join(', '),
+  },
+].filter(Boolean) as { label: string; detail: string }[];
+
+/** Award chips for one tenure — scoped to the years inside it. */
+const tenureAwards = (tenure: Owner['tenures'][number]) => {
+  const years = new Set(tenure.seasons.map((s) => s.year));
+  const inTenure = (list: number[]) => list.filter((y) => years.has(y)).length;
+  const titles = inTenure(totals.championships);
+  const divisions = totals.divisionTitles.filter((d) => years.has(d.year)).length;
+  const mvps = inTenure(totals.mvpAwards);
+  const jerrys = inTenure(totals.jerryJonesAwards);
+  const osweilers = inTenure(totals.osweilerAwards);
+  return [
+    titles > 0 && { label: `🏆 ${titles} title${titles === 1 ? '' : 's'}` },
+    divisions > 0 && { label: `🛡 ${divisions} division` },
+    mvps > 0 && { label: `⭐ ${mvps} MVP` },
+    jerrys > 0 && { label: `💸 ${jerrys} Jerry Jones` },
+    osweilers > 0 && { label: `📉 ${osweilers} Osweiler` },
+  ].filter(Boolean) as { label: string }[];
+};
+
+/**
+ * What to call a co-owner. Two people sharing one team wear the same
+ * identities, so in this league's file their titles are identical — "Co-owned
+ * with Cowboy Up" on the Cowboy Up page. Until names land, their other league
+ * is what tells them apart.
+ */
+const coOwnerLabel = (co: Owner['coOwners'][number]) => {
+  if (co.displayName) return co.displayName;
+  if (co.title && co.title !== owner.title) return co.title;
+  const elsewhere = co.crossLeague?.[0];
+  if (elsewhere) {
+    const other = getLeagueBySlug(elsewhere.league as CanonicalLeagueSlug);
+    return `the ${other?.name ?? elsewhere.league} franchise ${elsewhere.franchiseId} owner`;
+  }
+  return 'the other owner';
+};
+
+/** Pre-rendered so the markup stays on one line — see the note at its use. */
+const coOwnerLinks = (owner.coOwners ?? []).map((co, i, all) => ({
+  href: r(`/owners/${co.slug}`),
+  label: coOwnerLabel(co),
+  separator: i === 0 ? '' : i === all.length - 1 ? ' and ' : ', ',
+}));
+
+const pageTitle = `${owner.title} — ${league.name} owner history`;
+---
+
+<TheLeagueLayout title={pageTitle}>
+  <article class="owner-detail">
+    <Breadcrumbs
+      items={[{ label: 'Owners', href: r('/owners') }, { label: owner.title }]}
+    />
+
+    <header class="hero">
+      <img class="hero-icon" src={owner.icon} alt="" width="88" height="88" />
+      <div class="hero-text">
+        <p class="pill-row">
+          <span class:list={['pill', owner.isCurrent ? 'pill--current' : 'pill--former']}>
+            {owner.isCurrent ? 'Current' : 'Former owner'}
+          </span>
+          {owner.isShared && <span class="pill pill--shared">Shared team</span>}
+        </p>
+        <h1>{owner.displayName ?? owner.title}</h1>
+        <p class="hero-meta">
+          {yearLabel} · {league.name} · {slotLabel}
+        </p>
+        {owner.isShared && coOwnerLinks.length > 0 && (
+          <p class="co-owners">
+            Co-owned with {coOwnerLinks.map((co) => (<span>{co.separator}<a href={co.href}>{co.label}</a></span>))}. The record below is the team's, and counts for both.
+          </p>
+        )}
+        {!owner.displayName && (
+          <p class="unnamed-note">
+            We don't have this owner's name on record — the page is titled by the
+            team identities they wore.
+          </p>
+        )}
+      </div>
+    </header>
+
+    {owner.crossLeague.length > 0 && (
+      <section class="cross-league">
+        <h2 class="sr-heading">Also in</h2>
+        <ul>
+          {owner.crossLeague.map((claim) => (
+            <li>
+              <span class="cross-league-league">{getLeagueBySlug(claim.league as CanonicalLeagueSlug)?.name ?? claim.league}</span>
+              <span class="cross-league-years">
+                franchise {claim.franchiseId} · {claim.yearStart}–{claim.yearEnd >= 9999 ? 'present' : claim.yearEnd}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )}
+
+    <section class="career">
+      <h2>Career</h2>
+      <dl class="career-stats">
+        <div>
+          <dt>Record</dt>
+          <dd>{formatOwnerRecord(owner)} <span class="dim">({ownerWinPct(owner)})</span></dd>
+        </div>
+        <div>
+          <dt>Seasons</dt>
+          <dd>{totals.seasons}</dd>
+        </div>
+        <div>
+          <dt>Points For</dt>
+          <dd>{Math.round(totals.pointsFor).toLocaleString()}</dd>
+        </div>
+        <div>
+          <dt>Playoffs</dt>
+          <dd>{totals.playoffAppearances}</dd>
+        </div>
+      </dl>
+
+      {trophies.length > 0 && (
+        <div class="trophy-chips">
+          {trophies.map((t) => (
+            <span class="era-award" title={t.detail}>{t.label}</span>
+          ))}
+        </div>
+      )}
+    </section>
+
+    <section class="tenures">
+      <h2>{owner.tenures.length === 1 ? 'Seasons' : 'Tenures'}</h2>
+      {owner.tenures.map((tenure) => (
+        <EraSeasonTable
+          name={owner.tenures.length === 1
+            ? owner.title
+            : `Franchise ${tenure.franchiseId}`}
+          icon={tenure.identities[0]?.icon ?? owner.icon}
+          yearStart={tenure.yearStart}
+          yearEnd={owner.isCurrent && tenure.franchiseId === owner.currentFranchiseId ? 9999 : tenure.yearEnd}
+          isCurrent={owner.isCurrent && tenure.franchiseId === owner.currentFranchiseId}
+          seasons={tenure.seasons}
+          {/* With a single tenure the per-tenure chips would repeat the career
+              chips verbatim a few hundred pixels below them. Only split the
+              trophies per tenure when there is more than one to split. */}
+          awards={owner.tenures.length === 1 ? [] : tenureAwards(tenure)}
+          emptyMessage="No games played in this tenure."
+        />
+      ))}
+    </section>
+
+    <section class="succession">
+      <h2>Succession</h2>
+      <ul class="succession-list">
+        {owner.tenures.map((tenure) => {
+          const succession = owner.slotSuccession[tenure.franchiseId];
+          const previous = succession?.previous ? related[succession.previous] : null;
+          const next = succession?.next ? related[succession.next] : null;
+          return (
+            <li class="succession-item">
+              <p class="succession-slot">
+                Franchise {tenure.franchiseId}
+                {tenure.franchiseName && <span class="dim"> — {tenure.franchiseName} today</span>}
+              </p>
+              <div class="succession-chain">
+                {previous ? (
+                  <a href={r(`/owners/${previous.slug}`)} class="succession-link">
+                    ← {previous.title}
+                  </a>
+                ) : (
+                  <span class="succession-end">← first owner</span>
+                )}
+                <span class="succession-self">{owner.title}</span>
+                {next ? (
+                  <a href={r(`/owners/${next.slug}`)} class="succession-link">
+                    {next.title} →
+                  </a>
+                ) : (
+                  <span class="succession-end">current owner →</span>
+                )}
+              </div>
+              <p class="succession-franchise-link">
+                <a href={r(`/franchises/${tenure.franchiseId}`)}>
+                  View franchise {tenure.franchiseId} →
+                </a>
+              </p>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+
+    <p class="footnote">
+      <a href={r('/owners')}>← All owners</a>
+    </p>
+  </article>
+</TheLeagueLayout>
+
+<style>
+  .owner-detail {
+    --accent: var(--color-primary, #cc2936);
+    padding: 1.5rem 1rem 4rem;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+
+  /* ── Hero ──────────────────────────────────────────────────────────── */
+  .hero {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.125rem;
+    margin: 0.5rem 0 1.75rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--content-border, #e5e5e5);
+  }
+  .hero-icon {
+    width: 88px;
+    height: 88px;
+    object-fit: contain;
+    border-radius: 0.5rem;
+    background: var(--card-bg, #fff);
+    flex: 0 0 auto;
+  }
+  .hero-text { min-width: 0; }
+  .hero h1 {
+    margin: 0 0 0.25rem;
+    font-size: 1.625rem;
+    line-height: 1.2;
+  }
+  .pill-row { margin: 0 0 0.375rem; }
+  .pill {
+    display: inline-block;
+    padding: 0.15rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .pill--current {
+    background: var(--accent);
+    color: #fff;
+  }
+  .pill--former {
+    background: var(--content-bg-muted, #ededed);
+    color: var(--content-text-muted, #555);
+  }
+  .pill--shared {
+    margin-left: 0.35rem;
+    background: transparent;
+    color: var(--content-text-muted, #666);
+    border: 1px solid var(--content-border, #d5d5d5);
+  }
+  .co-owners {
+    margin: 0.4rem 0 0;
+    font-size: 0.875rem;
+    color: var(--content-text-muted, #666);
+    max-width: 56ch;
+  }
+  .co-owners a {
+    color: var(--link-color, var(--accent));
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .co-owners a:hover { text-decoration: underline; }
+  .hero-meta {
+    margin: 0;
+    font-size: 0.9375rem;
+    color: var(--content-text-muted, #666);
+    font-variant-numeric: tabular-nums;
+  }
+  .unnamed-note {
+    margin: 0.5rem 0 0;
+    font-size: 0.8125rem;
+    color: var(--content-text-muted, #999);
+    font-style: italic;
+    max-width: 52ch;
+  }
+
+  /* ── Cross-league strip ────────────────────────────────────────────── */
+  .cross-league {
+    margin: 0 0 1.5rem;
+    padding: 0.75rem 1rem;
+    border: 1px dashed var(--content-border, #ddd);
+    border-radius: 0.5rem;
+  }
+  .cross-league ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  .cross-league li { display: flex; flex-direction: column; }
+  .cross-league-league { font-weight: 600; font-size: 0.875rem; }
+  .cross-league-years {
+    font-size: 0.75rem;
+    color: var(--content-text-muted, #777);
+    font-variant-numeric: tabular-nums;
+  }
+  .sr-heading {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  h2 {
+    margin: 0 0 0.75rem;
+    font-size: 1.25rem;
+  }
+
+  /* ── Career ────────────────────────────────────────────────────────── */
+  .career { margin-bottom: 2rem; }
+  .career-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.75rem;
+    margin: 0 0 0.875rem;
+    padding: 0.875rem 1rem;
+    border: 1px solid var(--content-border, #e5e5e5);
+    border-radius: 0.625rem;
+    background: var(--card-bg, #fff);
+  }
+  .career-stats div { min-width: 0; }
+  .career-stats dt {
+    font-size: 0.625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--content-text-muted, #888);
+    font-weight: 600;
+  }
+  .career-stats dd {
+    margin: 0.2rem 0 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .trophy-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  /* Same chip language as the era tables — this component's copy, since
+     Astro scoped CSS does not cross the component boundary. */
+  .era-award {
+    font-size: 0.75rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 999px;
+    background: var(--content-bg-muted, #f5f5f5);
+    color: var(--content-text-muted, #555);
+    font-weight: 600;
+    cursor: help;
+  }
+
+  .tenures { margin-bottom: 2rem; }
+
+  /* ── Succession ────────────────────────────────────────────────────── */
+  .succession-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .succession-item {
+    padding: 0.875rem 1rem;
+    border: 1px solid var(--content-border, #e5e5e5);
+    border-radius: 0.625rem;
+    background: var(--card-bg, #fff);
+  }
+  .succession-slot {
+    margin: 0 0 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+  .succession-chain {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.875rem;
+    font-size: 0.875rem;
+  }
+  .succession-link {
+    color: var(--link-color, var(--accent));
+    text-decoration: none;
+  }
+  .succession-link:hover { text-decoration: underline; }
+  .succession-self {
+    font-weight: 700;
+    padding: 0.1rem 0.5rem;
+    border-radius: 0.375rem;
+    background: var(--content-bg-muted, #f0f0f0);
+  }
+  .succession-end {
+    color: var(--content-text-muted, #999);
+    font-size: 0.8125rem;
+  }
+  .succession-franchise-link {
+    margin: 0.625rem 0 0;
+    font-size: 0.8125rem;
+  }
+  .succession-franchise-link a {
+    color: var(--link-color, var(--accent));
+    text-decoration: none;
+  }
+  .succession-franchise-link a:hover { text-decoration: underline; }
+
+  .footnote {
+    margin-top: 2.5rem;
+    text-align: center;
+    font-size: 0.875rem;
+  }
+  .dim { color: var(--content-text-muted, #888); }
+
+  @media (max-width: 560px) {
+    .hero { gap: 0.875rem; }
+    .hero-icon { width: 64px; height: 64px; }
+    .hero h1 { font-size: 1.375rem; }
+  }
+</style>

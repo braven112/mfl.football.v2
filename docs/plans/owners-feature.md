@@ -1,9 +1,29 @@
 # Owners as a first-class concept
 
-> **Status:** specified, not built. Written August 2026 in the session that
-> fixed Midwestside's 2010 attribution (PR #597), which is what surfaced the
-> gap. Everything here was measured against real data in this repo — a future
-> session should not need to re-derive any of it.
+> **Status:** **PR 1 shipped** (Aug 2026). PRs 2-4 still to build — see
+> Phasing. Written August 2026 in the session that fixed Midwestside's 2010
+> attribution (PR #597), which is what surfaced the gap. Everything here was
+> measured against real data in this repo — a future session should not need to
+> re-derive any of it.
+>
+> **What PR 1 landed**, all numbers confirmed against real data on first run:
+> `season-ledger.json` (320 rows / 110 orphaned; 576 / 230),
+> `owner-tenures.json` (TheLeague 16 current + 22 former = 38; AFL 24 + 78 =
+> 102), `src/data/owners-registry.json` (140 people, every `displayName` null),
+> the shared `EraSeasonTable`, four routes, and five guard suites — full suite
+> 252 files / 6300 tests.
+>
+> **Two things a follow-up session should know:**
+> - The **"Not verified" risk at the bottom of this doc is resolved.** Apex
+>   rewrites do handle these routes: `resolveLeagueRewrite` maps
+>   `theleague.us/owners` and `afl-fantasy.com/owners/<slug>` onto the league
+>   routes, and `resolveLeaguePath` strips the prefix for apex-host links.
+> - **A complete registry bypasses inference entirely.** The seeder claims
+>   every season, so claims alone satisfy conservation and the inference path —
+>   the code that handles a new orphan the day an owner leaves — is not
+>   exercised by the derived file. `tests/owner-tenures-data.test.ts`
+>   therefore re-derives with `registry: null` and asserts conservation again.
+>   Keep that test if you touch the overlay.
 
 ## Start here
 
@@ -326,12 +346,32 @@ the AFL's); `whats-new.json` entry + light/dark webp pair (**ask about
 the `ownerEra` divergence (trap 3). Flip the parity test from advisory to
 required. Zero user-visible change; snapshot both franchise pages before/after.
 
-**PR 4 — "Names."** Add `sourceFranchiseId` to `compute-afl-awards.mjs` (~`:505`
+**PR 4 — "Names."** *(source found — see below.)* Add `sourceFranchiseId` to `compute-afl-awards.mjs` (~`:505`
 writes `{franchiseId: null, name, source}` with no source slot — the one genuine
 producer-side gap; the merge logic near `:603` preserves existing fields, so
 verify against a full re-derive) and light up AFL award badges. Then populate
 `displayName`s — a pure data edit. Optionally fold in the 15 names from
 `groupme-storage.ts:294-317`, making the registry the single source of truth.
+
+**The names have a real source.** Locked decision 3 said owner names exist
+nowhere in this repo, and that is still true of what is COMMITTED — a
+structured walk of all 44 `league.json` files finds zero owner/email/username
+fields, because they were fetched unauthenticated. But MFL's `league` export
+returns owner names to a request carrying a COMMISSIONER cookie. Since each
+MFL league-year is its own league, a year-by-year authenticated sweep can name
+FORMER owners too, not just the 40 current ones — which is most of the 140.
+
+`scripts/fetch-owner-names.mjs` (added in PR 1, wired into nothing) does this:
+`MFL_USERNAME`/`MFL_PASSWORD` or `MFL_COOKIE`, `--dry-run` by default. Three
+rules it enforces, all covered by `tests/fetch-owner-names.test.ts`:
+- **Names only.** The same response carries email addresses. Fields are a
+  whitelist, and `assertNoContactInfo` throws if anything email- or URL-shaped
+  reaches the registry. Never widen this to a blacklist.
+- **A name a human set is never overwritten.**
+- **A tenure MFL reports two owners for is left alone**, and reported with a
+  season count per name. That is a tenure that should be SPLIT; naming it after
+  whichever appeared more would bury exactly the boundary the registry exists
+  to record.
 
 ## Guard tests
 
@@ -403,6 +443,6 @@ verify against a full re-derive) and light up AFL award badges. Then populate
 - **Anonymous pages read like franchise pages.** The `Former owner` pill, the
   `2007–2010 · The League · franchise 0010` subtitle, and the succession footer
   are what make "this is a person" legible. Check on first render.
-- **Not verified:** whether the apex-domain rewrites resolve `/owners/<slug>`
-  under `hideLeaguePrefix` — the `r()` recipe should handle it, but
-  `vercel.json` and `[...path].astro` weren't read.
+- ~~**Not verified:** whether the apex-domain rewrites resolve
+  `/owners/<slug>` under `hideLeaguePrefix`.~~ **Resolved in PR 1** — they do,
+  in both leagues and both directions. The `r()` recipe was the right one.

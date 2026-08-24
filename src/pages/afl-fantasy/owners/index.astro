@@ -1,0 +1,16 @@
+---
+/**
+ * Owners index (AFL) — thin route wrapper.
+ * Shared implementation lives in components/shared/owners/OwnersIndexPage.
+ * The derived file is imported HERE because static import specifiers can't be
+ * runtime variables, and importing both leagues' files in the shared component
+ * would ship the other league's owners to every render of either route.
+ */
+import OwnersIndexPage from '../../../components/shared/owners/OwnersIndexPage.astro';
+import ownerData from '../../../../data/afl-fantasy/derived/owner-tenures.json';
+import type { OwnerTenuresFile } from '../../../types/owner-tenures';
+
+export const prerender = false;
+---
+
+<OwnersIndexPage leagueSlug="afl-fantasy" data={ownerData as unknown as OwnerTenuresFile} />
