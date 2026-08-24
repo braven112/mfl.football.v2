@@ -7,7 +7,8 @@
  */
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import Breadcrumbs from '../../components/theleague/Breadcrumbs.astro';
-import { resolveLeaguePath } from '../../utils/nav-utils';
+import { resolveDirectoryHref, resolveLeaguePath } from '../../utils/nav-utils';
+import { pathBelongsToLeague } from '../../config/footer-config';
 import { spriteUrl } from '../../utils/sprite-url';
 import pageDirectory from '../../data/page-directory.json';
 
@@ -26,7 +27,13 @@ interface PageEntry {
   popularity: number;
 }
 
-const allPages = pageDirectory as PageEntry[];
+// page-directory.json is ONE global list shared with AFL and best-ball, so
+// scope it to this league before grouping. Without this, an AFL entry that
+// carries a `subcategory` (Record Book, AFL Owners) renders as a TheLeague
+// card whose href is built from the wrong prefix — the owner-reported bug.
+const allPages = (pageDirectory as PageEntry[]).filter((p) =>
+  pathBelongsToLeague(p.path, 'theleague')
+);
 
 const SECTIONS: { id: string; title: string; description: string }[] = [
   {
@@ -93,7 +100,7 @@ for (const section of SECTIONS) {
             </div>
             <div class="stats-section__grid">
               {pages.map((page) => (
-                <a class="stats-card" href={r(`/theleague${page.path}`)}>
+                <a class="stats-card" href={r(resolveDirectoryHref(page.path, 'theleague'))}>
                   <svg class="stats-card__icon" width="22" height="22" aria-hidden="true">
                     <use href={`${spriteUrl}#icon-${page.icon}`} />
                   </svg>
