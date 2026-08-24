@@ -488,3 +488,51 @@ describe('calendars the NFL has not produced yet', () => {
     expect(byeFreeWeeks({ BUF: [6, 12], MIA: 6 }, 14)).not.toContain(12);
   });
 });
+
+/**
+ * The finale-doubleheader goal: the season should finish on a double rather
+ * than taper off. Its entire implementation is the descending sort in
+ * `chooseDoubleheaderWeeks`, which took the latest clean week first for years
+ * without anything saying why — the exact kind of line someone tidies into
+ * ascending order and silently drops a league preference.
+ */
+describe('the finale doubleheader', () => {
+  const pick = (byes: Record<string, number>, lastWeek: number, count: number) => {
+    const clean = byeFreeWeeks(byes, lastWeek);
+    return chooseDoubleheaderWeeks({
+      count,
+      byeFree: clean,
+      startWindow: [1, 2, 3, 4],
+      endWindow: [lastWeek - 2, lastWeek - 1, lastWeek],
+      byeCounts: byeCountsByWeek(byes),
+      lastWeek,
+    });
+  };
+
+  it('takes the final week when it is bye-free', () => {
+    // Byes finish in Week 11, so Weeks 12 and 13 are both clean and the goal
+    // says take the later one.
+    const byes = { A: 5, B: 6, C: 7, D: 8, E: 9, F: 10, G: 11 };
+    expect(pick(byes, 13, 3)).toContain(13);
+  });
+
+  it('does not take it when the finale carries a bye — the top goal wins', () => {
+    const byes = { A: 5, B: 6, C: 7, D: 8, E: 9, F: 10, G: 11, H: 14 };
+    const picked = pick(byes, 14, 3);
+    expect(picked).not.toContain(14);
+    // ...and settles for the latest clean week instead.
+    expect(picked).toContain(13);
+  });
+
+  it('holds for every real season where the finale was clean', () => {
+    // 2011-2015 and 2017-2019 ran 13 weeks with a bye-free Week 13. Every one
+    // of them should put a doubleheader on the finale.
+    for (const year of SEASONS) {
+      const byes = (byeData as any).seasons[year];
+      const lastWeek = Number(year) <= 2020 ? 13 : 14;
+      const counts = byeCountsByWeek(byes);
+      if ((counts[lastWeek] ?? 0) > 0) continue;
+      expect(pick(byes, lastWeek, 4), `${year}`).toContain(lastWeek);
+    }
+  });
+});

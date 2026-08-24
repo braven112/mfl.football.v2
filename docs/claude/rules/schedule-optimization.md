@@ -307,21 +307,42 @@ repeat pairs outright, which is also strictly correct: flipping BOTH meetings
 of a pair changes no home count at all, so a repeat pair can never help it and
 can only be damaged by it.
 
+### The finale doubleheader — the sixth unwritten rule, already implemented
+
+**The commissioner's ruling: a doubleheader in the final week is IDEAL.** The
+opposite of what the data made it look like, and the code had been doing it all
+along.
+
+`chooseDoubleheaderWeeks` sorts its end window DESCENDING, so it takes the
+latest clean week first. Nothing said why. That single `sort((a, b) => b - a)`
+is the entire implementation of a league preference, and it is exactly the kind
+of line someone tidies into ascending order without knowing what it does.
+
+It worked: in the eight 13-week seasons whose Week 13 was bye-free, the finale
+got the doubleheader every time. It has not happened since 2021 because Week 14
+has carried byes every single year — and that is the top goal winning, correctly.
+
+Now goal 12, weight 10, `since: 2027`. Ranked that low because it is cheap when
+available and impossible when not: it only ever competes with the
+no-doubleheader-on-a-bye rule, and loses. `tests/schedule-week-plan.test.ts`
+asserts it against every real season whose finale was clean.
+
 ### Two properties nobody has ruled on
 
 Surfaced by the sweep. Neither is a violation — there is no rule to violate —
 and both are recorded rather than guessed at:
 
+One remains — the finale doubleheader was the other, and is now goal 12 above.
+
 | Property | 2011-2020 (13-week seasons) | 2021-2026 (14-week) |
 |---|---|---|
-| final week is a doubleheader | League 8 seasons, AFL 6 | never |
 | longest run of consecutive doubleheader weeks | 3-4 | League 3, AFL 2 |
 
-A doubleheader in the FINAL week makes the last week count double for seeding —
-a franchise can be saved or eliminated by it. It happened routinely in the
-13-week era because Week 13 was often the only clean late week, and has not
-happened since the season went to 14. It would return the moment the season
-length changes again, which the commissioner has said it will.
+Doubleheaders cluster at the start: Weeks 1, 2, 3 (and often 4) run
+back-to-back, so a franchise plays six to eight games before the end of
+September. `doubleheader-split` counts them early vs late and requires one after
+Week 8, but says nothing about clustering. Nobody has ruled on whether that
+matters.
 
 ### Futures the NFL has told us to expect
 

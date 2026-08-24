@@ -229,6 +229,24 @@ const SCORERS = {
     return { status: 'partial', detail: `a division round sits in the season's worst bye week (Week ${f.worstByeWeek})` };
   },
 
+  'finale-doubleheader': (f) => {
+    const byes = f.byeCount(f.lastWeek);
+    if (f.doubleheaders.includes(f.lastWeek)) {
+      return { status: 'met', detail: `Week ${f.lastWeek} is a doubleheader` };
+    }
+    if (byes > 0) {
+      return {
+        status: 'blocked',
+        detail:
+          `Week ${f.lastWeek} has ${byes} NFL teams out, so a doubleheader there would break the top goal. ` +
+          `Not achievable this season.`,
+      };
+    }
+    // Clean finale and no doubleheader on it is a genuine miss, not a calendar
+    // constraint — say so rather than filing it under bad luck.
+    return { status: 'blocked', detail: `Week ${f.lastWeek} is bye-free and was available, but carries one game` };
+  },
+
   'home-away': (f) =>
     f.homeGames.min === f.homeGames.max
       ? { status: 'met', detail: `every franchise hosts ${f.homeGames.min}` }

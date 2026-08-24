@@ -220,6 +220,11 @@ export const chooseDoubleheaderWeeks = ({
   // refusing to produce a season is not.
   const forced = required.filter((w) => Number.isInteger(w));
   const early = startWindow.filter((w) => clean.has(w)).sort((a, b) => a - b);
+  // DESCENDING, so the LATEST clean week in the window is taken first. That is
+  // the finale-doubleheader goal and it is the whole of its implementation:
+  // the league wants the season to finish on a double rather than taper off.
+  // It read as an arbitrary sort order for years and is exactly the kind of
+  // line someone tidies into ascending without knowing what it does.
   const late = endWindow.filter((w) => clean.has(w)).sort((a, b) => b - a);
 
   const remaining = Math.max(0, count - forced.length);

@@ -232,6 +232,22 @@ const allConstraints = () => {
       enforcedBy: 'buildWeekPlan',
     },
     {
+      key: 'finale-doubleheader',
+      weight: 10,
+      tier: 'preference',
+      rule: 'The final week is a doubleheader when the calendar allows one — the season should finish on a double, not taper off.',
+      why:
+        'Cheap when it is available and impossible when it is not, which is why it sits this low: it only ever ' +
+        'competes with the top goal, and loses. A doubleheader may not fall on a bye week, and the last week of the ' +
+        'season has carried byes every year since 2021 — so this has been unachievable for six straight seasons and ' +
+        'was routine before that, when the season ran 13 weeks and Week 13 was usually clean. It will come back the ' +
+        'moment the season length changes. The planner has always done this, via an undocumented descending sort in ' +
+        '`chooseDoubleheaderWeeks` that happens to take the latest clean week first; writing it down is what stops ' +
+        'someone "tidying" that sort and silently dropping it.',
+      enforcedBy: 'chooseDoubleheaderWeeks + tests/schedule-week-plan.test.ts',
+      since: 2027,
+    },
+    {
       key: 'home-away',
       weight: 5,
       tier: 'cosmetic',
