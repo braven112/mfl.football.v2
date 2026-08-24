@@ -327,22 +327,41 @@ available and impossible when not: it only ever competes with the
 no-doubleheader-on-a-bye rule, and loses. `tests/schedule-week-plan.test.ts`
 asserts it against every real season whose finale was clean.
 
-### Two properties nobody has ruled on
+### Clustering is fine. The SPLIT is the rule — and it was broken
 
-Surfaced by the sweep. Neither is a violation — there is no rule to violate —
-and both are recorded rather than guessed at:
+**Ruling: doubleheaders belong at the start and the end of the season, split as
+evenly as the calendar allows.** Runs of three or four back-to-back
+doubleheaders inside one end are not a problem; there is no need to spread them
+out within the start block. That closes the last open question from the sweep.
 
-One remains — the finale doubleheader was the other, and is now goal 12 above.
+It also made the split worth checking against every season, and it failed four
+of them. `chooseDoubleheaderWeeks` computed the late share as
+`floor(remaining / 2)`, where `remaining` had already had the forced Week 1
+subtracted. **Week 1 is EARLY** — subtracting it shrank the pool the LATE share
+was drawn from and skewed the whole split early:
 
-| Property | 2011-2020 (13-week seasons) | 2021-2026 (14-week) |
-|---|---|---|
-| longest run of consecutive doubleheader weeks | 3-4 | League 3, AFL 2 |
+| Season | was | should have been | wasted |
+|---|---|---|---|
+| AFL 2011 | 2/0 | **1/1** | 2 clean end weeks |
+| AFL 2012 | 2/0 | **1/1** | 2 clean end weeks |
+| AFL 2015 | 3/1 | **2/2** | 1 clean end week |
+| AFL 2017 | 3/1 | **2/2** | 1 clean end week |
 
-Doubleheaders cluster at the start: Weeks 1, 2, 3 (and often 4) run
-back-to-back, so a franchise plays six to eight games before the end of
-September. `doubleheader-split` counts them early vs late and requires one after
-Week 8, but says nothing about clustering. Nobody has ruled on whether that
-matters.
+Four seasons piled doubleheaders into Weeks 1-3 while bye-free weeks at the end
+of the season sat unused. The late share now comes from the full count,
+discounting only forced weeks that are themselves late. All 32 season-league
+combinations are optimal, and 2026 is unchanged for both leagues.
+
+**The scorer is why nobody noticed.** It filed every uneven split under "the
+bye-free weeks did not allow an even split" without ever checking whether they
+did. It now computes what was available: an unavoidable 3/1 scores `partial`, a
+3/1 with a clean end week going spare scores `blocked` and names it.
+
+**And beware the measure, not just the code.** The first version of this check
+counted clean weeks across the whole second half and flagged The League's 2023
+and 2024 as well. They were fine — their spare clean week was Week 8, which is
+mid-season, and "late" here means the END window, not the back half. Two of the
+six flags were my metric being wrong rather than the planner.
 
 ### Futures the NFL has told us to expect
 
