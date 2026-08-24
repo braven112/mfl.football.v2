@@ -18,6 +18,8 @@ import { fileURLToPath } from 'node:url';
 
 import { LEAGUES } from '../src/config/leagues-data.mjs';
 import { planSchedule, SCHEDULE_POLICY } from '../src/utils/schedule-plan.mjs';
+import { blockingFailures, goalFactsFromSeason, scoreSeasonGoals } from '../src/utils/schedule-goals.mjs';
+import { LIGHT_BYE_WEEK_MAX } from '../src/utils/schedule-builder.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const readJson = (p) => {
@@ -110,6 +112,46 @@ if (plan.problems.length) {
   process.exitCode = 1;
 } else {
   console.log('\npasses every structural check');
+}
+
+// The goal scorecard, HERE, not just at lock time.
+//
+// The NFL publishes its schedule in mid-May and The League reveals on June 1 —
+// that fortnight is the entire window for noticing a bad draw and fixing it,
+// and it only exists if someone is told. The daily cron draws the plan the day
+// the bye calendar lands and then says nothing until the lock fires on release
+// day, which would turn the buffer into a countdown. So the same gate the lock
+// applies runs now, and a plan that would be refused on June 1 fails the draw
+// in mid-May instead.
+const scored = scoreSeasonGoals(
+  goalFactsFromSeason({
+    season: year,
+    crossConference: Boolean(SCHEDULE_POLICY[slug]?.crossConference),
+    lastWeek: plan.lastWeek,
+    described: plan.plan,
+    ceiling: plan.divisionGameCeiling,
+    doubleheaders: plan.doubleheaderWeeks,
+    lightByeWeekMax: LIGHT_BYE_WEEK_MAX,
+    problems: plan.problems,
+  }),
+);
+const GLYPH = { met: 'ok  ', partial: 'part', blocked: 'FAIL', optimised: 'opt ' };
+console.log('\ngoals');
+for (const g of scored.goals) {
+  console.log(`  ${String(g.rank).padStart(2)}. [${GLYPH[g.status] ?? g.status}] ${g.key}: ${g.detail}`);
+}
+for (const n of scored.notYetAdopted) {
+  console.log(`   -. [n/a ] ${n.key} — adopted for ${n.since}, after this season`);
+}
+
+const blocking = blockingFailures(scored.goals);
+if (blocking.length) {
+  console.error(
+    `\nTHIS PLAN WOULD BE REFUSED AT LOCK TIME — ${blocking.length} goal(s) it could have met:`,
+  );
+  for (const g of blocking) console.error(`  ${g.rank}. ${g.key}: ${g.detail}`);
+  console.error('\nRedraw with a different --seed, or fix the goal that is failing.');
+  process.exitCode = 1;
 }
 
 fs.mkdirSync(outDir, { recursive: true });

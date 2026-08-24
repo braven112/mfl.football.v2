@@ -363,6 +363,26 @@ and 2024 as well. They were fine — their spare clean week was Week 8, which is
 mid-season, and "late" here means the END window, not the back half. Two of the
 six flags were my metric being wrong rather than the planner.
 
+### The calendar that governs everything: mid-May to June 1
+
+The NFL publishes its schedule — and therefore the bye calendar — in **mid-May**.
+The League reveals on **June 1**. That fortnight is not padding; it is the entire
+window in which a bad draw can be noticed and fixed, and The League's release
+date exists to create it. The AFL's reveal (Labor Day − 22, ~mid-August) gets a
+far longer run-up for free.
+
+Nothing about the scheduler can be validated before mid-May, because the one
+input it optimises against does not exist. Backtests over the sixteen stored
+seasons are the substitute and they are not the same thing.
+
+**So the draw is the early warning, not the lock.** The daily cron fetches the
+bye calendar and draws any missing plan the day it lands. That draw now prints
+the full goal scorecard and **exits non-zero if the plan would be refused at
+lock time**, and the workflow puts the scorecard in the job summary. A plan that
+fails an avoidable goal breaks the build in mid-May with a fortnight in hand,
+rather than silently waiting to be refused on release day with nothing to be
+done. Without this the buffer is a countdown.
+
 ### The release lock now gates on the scorecard
 
 `validateSeason` catches STRUCTURAL breakage — someone playing twice in a week,

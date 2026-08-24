@@ -74,14 +74,33 @@ jobs:
         # Only draws what is missing; an existing plan is reused, because
         # redrawing gives a DIFFERENT valid schedule and the reveal must match
         # whatever ends up pasted into MFL.
+        #
+        # THE DRAW IS THE EARLY WARNING. The NFL publishes its schedule in
+        # mid-May and The League reveals on June 1; that fortnight is the whole
+        # window for noticing a bad draw and fixing it. This step runs the day
+        # the bye calendar lands, so its goal scorecard goes into the job
+        # summary and a plan that would be REFUSED at lock time fails here —
+        # two weeks early — rather than on release day with nothing to be done.
         run: |
           for L in theleague afl-fantasy; do
             PLAN="data/$L/schedule-plan/$(date -u +%Y)-schedule.json"
             if [ -f "$PLAN" ]; then
               echo "$L: reusing $PLAN"
-            else
-              node scripts/generate-schedule.mjs --league="$L" || echo "$L: could not draw (skipping)"
+              continue
             fi
+            echo "### $L — freshly drawn" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            if node scripts/generate-schedule.mjs --league="$L" 2>&1 | tee /tmp/draw-$L.log; then
+              sed -n '/^goals/,$p' /tmp/draw-$L.log >> "$GITHUB_STEP_SUMMARY"
+            else
+              sed -n '/^goals/,$p' /tmp/draw-$L.log >> "$GITHUB_STEP_SUMMARY"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+              echo "**$L: this plan would be refused at lock time — fix it before release day.**" \
+                >> "$GITHUB_STEP_SUMMARY"
+              echo "$L: DREW A PLAN THAT WOULD BE REFUSED — see the job summary"
+              exit 1
+            fi
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
           done
 
       - name: Lock the reveal
