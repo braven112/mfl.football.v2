@@ -198,6 +198,27 @@
     {
       "date": "2026-08-24",
       "type": "bug-fix",
+      "summary": "The Schedule Builder now says plainly that it is a preview. It runs a shortened search so the page loads, while the release job runs a much longer one and produces a different schedule — and the page was offering a copy-to-clipboard button as if the two were the same.",
+      "impact": "admin",
+      "area": "Schedule Builder"
+    },
+    {
+      "date": "2026-08-24",
+      "type": "bug-fix",
+      "summary": "Schedule Release Day can no longer publish a schedule that missed a goal it could have hit. The lock previously checked only for structural breakage, so a season could leave a bye-free finale unused or decide a division race in September and still go live. Genuinely unachievable goals are still reported and still publish.",
+      "impact": "admin",
+      "area": "Schedule Release"
+    },
+    {
+      "date": "2026-08-24",
+      "type": "bug-fix",
+      "summary": "Doubleheaders were being pushed too early in the season. The calculation that splits them between the start and end subtracted the fixed Week 1 game before halving, which shrank the late half — four past seasons put doubleheaders in Weeks 1-3 while bye-free weeks at the end of the season went unused.",
+      "impact": "user",
+      "area": "Schedule Builder"
+    },
+    {
+      "date": "2026-08-24",
+      "type": "bug-fix",
       "summary": "The schedule builder could not handle a season of a different length or a different division structure — it assumed 14 weeks and today’s divisions, and threw outright on any other shape. Replaying the last 15 years of NFL bye calendars found ten seasons it could not schedule at all. The doubleheader count is now derived from the format instead of hardcoded.",
       "impact": "admin",
       "area": "Schedule Builder"
