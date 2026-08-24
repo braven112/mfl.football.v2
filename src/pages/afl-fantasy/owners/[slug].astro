@@ -1,0 +1,20 @@
+---
+/**
+ * Owner detail (AFL) — thin route wrapper.
+ *
+ * The redirect lives HERE, not in the shared component: Astro only honours
+ * `Astro.redirect()` from a page, and returning it from a component renders a
+ * blank 200 instead of bouncing.
+ */
+import OwnerDetailPage from '../../../components/shared/owners/OwnerDetailPage.astro';
+import { resolveOwnerDetail } from '../../../utils/owner-detail';
+import ownerData from '../../../../data/afl-fantasy/derived/owner-tenures.json';
+import type { OwnerTenuresFile } from '../../../types/owner-tenures';
+
+export const prerender = false;
+
+const result = resolveOwnerDetail(Astro, 'afl-fantasy', ownerData as unknown as OwnerTenuresFile);
+if (result.redirectTo !== undefined) return Astro.redirect(result.redirectTo);
+---
+
+<OwnerDetailPage leagueSlug="afl-fantasy" owner={result.owner} related={result.related} />

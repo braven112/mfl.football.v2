@@ -1,0 +1,569 @@
+---
+/**
+ * Owners index — shared render for both leagues.
+ *
+ * Franchise pages are owner-scoped: a new owner does not inherit the previous
+ * one's record, so a third of all league history had no page at all. This is
+ * that page. Every owner tenure, current and former, with its own record.
+ *
+ * Layout is deliberately asymmetric. Current owners get cards, reusing the
+ * `.franchise-card` / `.stats` / `.badges` language from franchises/index. The
+ * AFL has ~78 FORMER owners, and a card grid of 78 is unreadable, so those get
+ * a dense sortable table instead.
+ *
+ * The lede counts come from the file, never hardcoded, so they cannot go stale.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../theleague/Breadcrumbs.astro';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { getLeagueBySlug } from '../../../config/leagues';
+import type { CanonicalLeagueSlug } from '../../../config/leagues';
+import type { Owner, OwnerTenuresFile } from '../../../types/owner-tenures';
+import { formatOwnerRecord, ownerWinPct } from '../../../utils/owner-detail';
+
+interface Props {
+  leagueSlug: CanonicalLeagueSlug;
+  data: OwnerTenuresFile;
+}
+
+const { leagueSlug, data } = Astro.props as Props;
+const league = getLeagueBySlug(leagueSlug)!;
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+
+const r = (path: string) => resolveLeaguePath(`/${league.slug}${path}`, hideLeaguePrefix);
+const ownerHref = (owner: Owner) => r(`/owners/${owner.slug}`);
+
+const current = data.owners.filter((o) => o.isCurrent);
+const former = data.owners.filter((o) => !o.isCurrent);
+
+const sortBySeasons = (a: Owner, b: Owner) =>
+  b.totals.seasons - a.totals.seasons || a.yearStart - b.yearStart;
+
+const formerSorted = [...former].sort(sortBySeasons);
+const currentSorted = [...current].sort(sortBySeasons);
+
+/**
+ * The highest-value thing on the page: former owners who won a title that
+ * appears nowhere else on the site. 7 of them in TheLeague, 7 in the AFL.
+ */
+const forgottenChampions = former
+  .filter((o) => o.totals.championships.length > 0)
+  .sort((a, b) => b.totals.championships.length - a.totals.championships.length || a.yearStart - b.yearStart);
+
+const formerSeasons = former.reduce((sum, o) => sum + o.totals.seasons, 0);
+const formerTitles = former.reduce((sum, o) => sum + o.totals.championships.length, 0);
+const formerDivisions = former.reduce((sum, o) => sum + o.totals.divisionTitles.length, 0);
+
+const generatedDate = new Date(data.generatedAt);
+const generatedLabel = Number.isNaN(generatedDate.getTime())
+  ? null
+  : generatedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+---
+
+<TheLeagueLayout title={`Owners — ${league.name}`}>
+  <div class="owners-page">
+    <Breadcrumbs items={[{ label: 'Owners' }]} />
+
+    <header class="page-head">
+      <h1>Owners</h1>
+      <p class="lede">
+        Every owner {league.name} has had — {data.counts.current} current, {data.counts.former} former.
+        Franchise pages only show the CURRENT owner's record, which left
+        <strong>{formerSeasons} seasons</strong>
+        {formerTitles > 0 && (
+          <> — including <strong>{formerTitles} championship{formerTitles === 1 ? '' : 's'}</strong> and {formerDivisions} division titles — </>
+        )}
+        with nowhere to live. This is where they live.
+      </p>
+    </header>
+
+    {forgottenChampions.length > 0 && (
+      <section class="forgotten" aria-labelledby="forgotten-heading">
+        <h2 id="forgotten-heading">Champions you've never seen</h2>
+        <p class="forgotten-sub">
+          These owners won {league.name} and then left. Their titles appear on no franchise page.
+        </p>
+        <ul class="forgotten-list">
+          {forgottenChampions.map((owner) => (
+            <li>
+              <a href={ownerHref(owner)} class="forgotten-card">
+                <img class="forgotten-icon" src={owner.icon} alt="" loading="lazy" width="40" height="40" />
+                <span class="forgotten-text">
+                  <span class="forgotten-name">{owner.title}</span>
+                  <span class="forgotten-meta">
+                    {owner.totals.championships.join(', ')} · {formatOwnerRecord(owner)}
+                  </span>
+                </span>
+                <span class="forgotten-count" aria-label={`${owner.totals.championships.length} titles`}>
+                  🏆 {owner.totals.championships.length}
+                </span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )}
+
+    <section class="current-owners">
+      <h2>Current owners <span class="count">{currentSorted.length}</span></h2>
+      <div class="owner-grid">
+        {currentSorted.map((owner) => (
+          <a href={ownerHref(owner)} class="franchise-card">
+            <div class="card-body">
+              <div class="lockup">
+                <img class="lockup-icon" src={owner.icon} alt="" loading="lazy" width="64" height="64" />
+                <div class="lockup-text">
+                  <h3 class="name">{owner.title}</h3>
+                  <p class="division">
+                    Since {owner.yearStart}
+                    {owner.currentFranchiseId && ` · franchise ${owner.currentFranchiseId}`}
+                  </p>
+                </div>
+              </div>
+              <dl class="stats">
+                <div>
+                  <dt>All-Time</dt>
+                  <dd>{formatOwnerRecord(owner)} <span class="dim">({ownerWinPct(owner)})</span></dd>
+                </div>
+                <div>
+                  <dt>Seasons</dt>
+                  <dd>{owner.totals.seasons}</dd>
+                </div>
+                <div>
+                  <dt>Points</dt>
+                  <dd>{Math.round(owner.totals.pointsFor).toLocaleString()}</dd>
+                </div>
+              </dl>
+              <ul class="badges" aria-label="Awards">
+                {owner.totals.championships.length > 0 && (
+                  <li class="badge badge--championship" title={`Champion: ${owner.totals.championships.join(', ')}`}>
+                    <span class="icon" aria-hidden="true">🏆</span>
+                    <span>{owner.totals.championships.length}</span>
+                  </li>
+                )}
+                {owner.totals.divisionTitles.length > 0 && (
+                  <li class="badge badge--division" title={`Division titles: ${owner.totals.divisionTitles.length}`}>
+                    <span class="icon" aria-hidden="true">🛡</span>
+                    <span>{owner.totals.divisionTitles.length}</span>
+                  </li>
+                )}
+                {owner.totals.mvpAwards.length > 0 && (
+                  <li class="badge badge--mvp" title={`MVPs: ${owner.totals.mvpAwards.length}`}>
+                    <span class="icon" aria-hidden="true">⭐</span>
+                    <span>{owner.totals.mvpAwards.length}</span>
+                  </li>
+                )}
+                {owner.totals.jerryJonesAwards.length > 0 && (
+                  <li class="badge badge--jerry" title={`Jerry Jones Awards: ${owner.totals.jerryJonesAwards.length}`}>
+                    <span class="icon" aria-hidden="true">💸</span>
+                    <span>{owner.totals.jerryJonesAwards.length}</span>
+                  </li>
+                )}
+              </ul>
+            </div>
+          </a>
+        ))}
+      </div>
+    </section>
+
+    <section class="former-owners">
+      <h2>Former owners <span class="count">{formerSorted.length}</span></h2>
+      <p class="section-sub">
+        Sorted by seasons played, so one-season cameos sink to the bottom.
+      </p>
+      <div class="table-controls">
+        <label class="filter">
+          <span class="visually-hidden">Filter former owners</span>
+          <input type="search" id="owner-filter" placeholder="Filter by name or franchise…" autocomplete="off" />
+        </label>
+      </div>
+      <div class="former-scroll">
+        <table class="former-table" id="former-table">
+          <thead>
+            <tr>
+              <th data-sort="name" scope="col">Identity</th>
+              <th data-sort="slot" scope="col">Slot</th>
+              <th data-sort="years" scope="col">Years</th>
+              <th data-sort="seasons" scope="col" aria-sort="descending">Seasons</th>
+              <th data-sort="record" scope="col">Record</th>
+              <th data-sort="titles" scope="col">🏆</th>
+              <th data-sort="divisions" scope="col">🛡</th>
+            </tr>
+          </thead>
+          <tbody>
+            {formerSorted.map((owner) => (
+              <tr
+                data-name={owner.title.toLowerCase()}
+                data-slot={owner.tenures.map((t) => t.franchiseId).join(' ')}
+                data-years={owner.yearStart}
+                data-seasons={owner.totals.seasons}
+                data-record={owner.totals.wins}
+                data-titles={owner.totals.championships.length}
+                data-divisions={owner.totals.divisionTitles.length}
+              >
+                <td class="cell-name">
+                  <a href={ownerHref(owner)}>
+                    <img class="row-icon" src={owner.icon} alt="" loading="lazy" width="18" height="18" />
+                    {owner.title}
+                  </a>
+                </td>
+                <td>{owner.tenures.map((t) => t.franchiseId).join(', ')}</td>
+                <td>{owner.yearStart === owner.yearEnd ? owner.yearStart : `${owner.yearStart}–${owner.yearEnd}`}</td>
+                <td>{owner.totals.seasons}</td>
+                <td>{formatOwnerRecord(owner)}</td>
+                <td>{owner.totals.championships.length || '—'}</td>
+                <td>{owner.totals.divisionTitles.length || '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p class="no-results" id="no-results" hidden>No owners match that filter.</p>
+    </section>
+
+    {generatedLabel && (
+      <p class="footnote dim">
+        Derived from league history · updated {generatedLabel}
+      </p>
+    )}
+  </div>
+</TheLeagueLayout>
+
+<script>
+  // Progressive enhancement: the table is fully rendered and readable without
+  // this. Filtering and sorting are conveniences on top.
+  const table = document.getElementById('former-table') as HTMLTableElement | null;
+  const filter = document.getElementById('owner-filter') as HTMLInputElement | null;
+  const noResults = document.getElementById('no-results');
+  if (table) {
+    const tbody = table.tBodies[0];
+    const rows = Array.from(tbody.rows);
+
+    filter?.addEventListener('input', () => {
+      const q = filter.value.trim().toLowerCase();
+      let visible = 0;
+      for (const row of rows) {
+        const name = row.dataset.name ?? '';
+        const slot = row.dataset.slot ?? '';
+        const match = !q || name.includes(q) || slot.includes(q);
+        row.hidden = !match;
+        if (match) visible += 1;
+      }
+      if (noResults) noResults.hidden = visible > 0;
+    });
+
+    let activeKey = 'seasons';
+    let descending = true;
+    for (const th of Array.from(table.tHead?.rows[0].cells ?? [])) {
+      const key = th.dataset.sort;
+      if (!key) continue;
+      th.tabIndex = 0;
+      th.setAttribute('role', 'button');
+      const apply = () => {
+        descending = activeKey === key ? !descending : true;
+        activeKey = key;
+        const numeric = ['years', 'seasons', 'record', 'titles', 'divisions'].includes(key);
+        const sorted = [...rows].sort((a, b) => {
+          const av = a.dataset[key] ?? '';
+          const bv = b.dataset[key] ?? '';
+          const cmp = numeric ? Number(av) - Number(bv) : av.localeCompare(bv);
+          return descending ? -cmp : cmp;
+        });
+        for (const row of sorted) tbody.appendChild(row);
+        for (const other of Array.from(table.tHead?.rows[0].cells ?? [])) {
+          other.removeAttribute('aria-sort');
+        }
+        th.setAttribute('aria-sort', descending ? 'descending' : 'ascending');
+      };
+      th.addEventListener('click', apply);
+      th.addEventListener('keydown', (e) => {
+        if ((e as KeyboardEvent).key === 'Enter' || (e as KeyboardEvent).key === ' ') {
+          e.preventDefault();
+          apply();
+        }
+      });
+    }
+  }
+</script>
+
+<style>
+  .owners-page {
+    --accent: var(--color-primary, #cc2936);
+    padding: 1.5rem 1rem 4rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .page-head { margin: 0.5rem 0 1.5rem; }
+  .page-head h1 { margin: 0 0 0.5rem; font-size: 1.75rem; }
+  .lede {
+    margin: 0;
+    max-width: 62ch;
+    color: var(--content-text-muted, #555);
+    line-height: 1.55;
+  }
+  .lede strong { color: var(--color-gray-900, #111827); }
+
+  h2 {
+    margin: 0 0 0.25rem;
+    font-size: 1.25rem;
+  }
+  .count {
+    display: inline-block;
+    margin-left: 0.4rem;
+    padding: 0.05rem 0.5rem;
+    border-radius: 999px;
+    background: var(--content-bg-muted, #f0f0f0);
+    color: var(--content-text-muted, #666);
+    font-size: 0.75rem;
+    font-weight: 600;
+    vertical-align: middle;
+  }
+  .section-sub {
+    margin: 0 0 0.875rem;
+    font-size: 0.875rem;
+    color: var(--content-text-muted, #777);
+  }
+
+  /* ── Champions you've never seen ───────────────────────────────────── */
+  .forgotten {
+    margin: 0 0 2.5rem;
+    padding: 1.125rem 1.25rem 1.25rem;
+    border: 1px solid var(--content-border, #e5e5e5);
+    border-left: 3px solid var(--accent);
+    border-radius: 0.625rem;
+    background: var(--card-bg, #fff);
+  }
+  .forgotten-sub {
+    margin: 0 0 0.875rem;
+    font-size: 0.875rem;
+    color: var(--content-text-muted, #666);
+  }
+  .forgotten-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 0.5rem;
+  }
+  .forgotten-card {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.5rem 0.625rem;
+    border-radius: 0.5rem;
+    text-decoration: none;
+    color: inherit;
+    background: var(--content-bg-muted, #f7f7f7);
+    transition: background 0.15s ease;
+  }
+  .forgotten-card:hover { background: var(--content-border, #ececec); }
+  .forgotten-icon {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    border-radius: 0.375rem;
+    flex: 0 0 auto;
+  }
+  .forgotten-text { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; }
+  .forgotten-name {
+    font-weight: 600;
+    font-size: 0.9375rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .forgotten-meta {
+    font-size: 0.75rem;
+    color: var(--content-text-muted, #777);
+    font-variant-numeric: tabular-nums;
+  }
+  .forgotten-count {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  /* ── Current owner cards (same language as franchises/index) ───────── */
+  .current-owners { margin-bottom: 2.5rem; }
+  .owner-grid {
+    margin-top: 0.875rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 0.875rem;
+  }
+  .franchise-card {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    border: 1px solid var(--content-border, #e5e5e5);
+    border-left: 3px solid var(--accent);
+    border-radius: 0.625rem;
+    background: var(--card-bg, #fff);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .franchise-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 14px rgb(0 0 0 / 8%);
+  }
+  .card-body { padding: 0.875rem 1rem 1rem; }
+  .lockup { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; }
+  .lockup-icon {
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
+    border-radius: 0.375rem;
+    flex: 0 0 auto;
+  }
+  .lockup-text { min-width: 0; }
+  .name {
+    margin: 0 0 0.125rem;
+    font-size: 1rem;
+    line-height: 1.25;
+  }
+  .division {
+    margin: 0;
+    font-size: 0.75rem;
+    color: var(--content-text-muted, #777);
+  }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    margin: 0 0 0.75rem;
+  }
+  .stats div { min-width: 0; }
+  .stats dt {
+    font-size: 0.625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--content-text-muted, #888);
+    font-weight: 600;
+  }
+  .stats dd {
+    margin: 0.125rem 0 0;
+    font-size: 0.875rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .badges {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin: 0;
+    padding: 0;
+    min-height: 1.25rem;
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+    background: var(--content-bg-muted, #f5f5f5);
+    color: var(--content-text-muted, #555);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Former owners table ───────────────────────────────────────────── */
+  .table-controls { margin: 0 0 0.625rem; }
+  .filter input {
+    width: min(340px, 100%);
+    padding: 0.4rem 0.625rem;
+    border: 1px solid var(--content-border, #ddd);
+    border-radius: 0.375rem;
+    background: var(--card-bg, #fff);
+    color: inherit;
+    font-size: 0.875rem;
+  }
+  .former-scroll {
+    max-height: 640px;
+    overflow: auto;
+    overscroll-behavior: contain;
+    border: 1px solid var(--content-border, #e5e5e5);
+    border-radius: 0.5rem;
+    background: var(--card-bg, #fff);
+  }
+  .former-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+  .former-table th,
+  .former-table td {
+    padding: 0.5rem 0.625rem;
+    text-align: left;
+    border-bottom: 1px solid var(--content-border, #ececec);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .former-table th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--card-bg, #fff);
+    box-shadow: inset 0 -1px 0 var(--content-border, #ececec);
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--content-text-muted, #888);
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+  }
+  .former-table th:hover { color: var(--color-gray-900, #111827); }
+  .former-table th[aria-sort]::after {
+    content: ' ▾';
+    font-size: 0.75em;
+  }
+  .former-table th[aria-sort='ascending']::after { content: ' ▴'; }
+  .former-table tbody tr:hover { background: var(--content-bg-muted, #f5f5f5); }
+  .cell-name { white-space: normal; }
+  .cell-name a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    color: inherit;
+    text-decoration: none;
+    font-weight: 600;
+  }
+  .cell-name a:hover { text-decoration: underline; }
+  .row-icon {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+    flex: 0 0 auto;
+  }
+
+  .no-results {
+    margin: 0.75rem 0 0;
+    font-size: 0.875rem;
+    color: var(--content-text-muted, #777);
+  }
+  .footnote {
+    margin-top: 2.5rem;
+    text-align: center;
+    font-size: 0.75rem;
+  }
+  .dim { color: var(--content-text-muted, #888); }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  @media (max-width: 640px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .forgotten-list { grid-template-columns: 1fr; }
+  }
+</style>
