@@ -336,6 +336,19 @@ export const toMflScheduleText = (weeks) => {
  * @param {Record<string,number>} args.byes  NFL team -> bye week
  * @param {{restarts?:number,iterations?:number,seed?:number}} [args.search]
  */
+/**
+ * Rounds the format demands: a double round-robin inside each division, one
+ * meeting with everyone else in the conference, plus any fixed-week round.
+ * Derived from the season's OWN league feed, so a season played under a
+ * different structure is described by that structure, not today's.
+ */
+export const roundsRequired = (shape, policy) => {
+  const divisionSize = shape.franchiseIds.length / shape.divisionCount;
+  const conferences = new Set(shape.franchiseIds.map((id) => shape.conferenceOf[id]));
+  const conferenceSize = conferences.size > 1 ? shape.franchiseIds.length / conferences.size : shape.franchiseIds.length;
+  return (divisionSize - 1) * 2 + (conferenceSize - divisionSize) + (policy?.crossConference ? 1 : 0);
+};
+
 export const planSchedule = ({ slug, year, readFeed, byes, search = {}, mode, rankingSources = null }) => {
   const base = SCHEDULE_POLICY[slug];
   if (!base) throw new Error(`no scheduling policy for league: ${slug}`);
@@ -344,11 +357,42 @@ export const planSchedule = ({ slug, year, readFeed, byes, search = {}, mode, ra
   if (!shape) throw new Error(`missing league feed for ${slug} ${year}`);
 
   const clean = byeFreeWeeks(byes, shape.lastWeek);
+
+  // How many doubleheaders the season needs is ARITHMETIC, not policy: the
+  // format fixes the number of rounds, the calendar fixes the number of weeks,
+  // and the difference is how many weeks must carry two.
+  //
+  // `policy.doubleheaderCount` used to decide this and it is a modern
+  // constant — 3 for the AFL, 4 for The League — that happens to be right for
+  // a 14-week season with today's divisions. Replaying the last fifteen years
+  // showed what that costs: every season from 2011 to 2020 ran THIRTEEN weeks,
+  // and 2011-12 had six four-team divisions rather than four six-team ones, so
+  // the planner threw "week plan does not fit" on all ten rather than
+  // scheduling them. A league that changes its season length or its division
+  // structure would hit exactly the same wall. The windows are derived for the
+  // same reason: `endWindow: [12, 13, 14]` names no real week of a 13-week
+  // season.
+  const requiredRounds = roundsRequired(shape, policy);
+  const doubleheaderCount = requiredRounds - shape.lastWeek;
+  if (doubleheaderCount < 0) {
+    throw new Error(
+      `${slug} ${year}: ${shape.lastWeek} weeks for ${requiredRounds} rounds — the season is longer than the format`,
+    );
+  }
   const doubleheaders = chooseDoubleheaderWeeks({
-    count: policy.doubleheaderCount,
+    count: doubleheaderCount,
     byeFree: clean,
-    startWindow: policy.startWindow,
-    endWindow: policy.endWindow,
+    startWindow: (policy.startWindow ?? [1, 2, 3, 4]).filter((w) => w <= shape.lastWeek),
+    // Always the last three weeks of THIS season. The policy's literal
+    // [12, 13, 14] names no real week of a 13-week season.
+    endWindow: [shape.lastWeek - 2, shape.lastWeek - 1, shape.lastWeek],
+    // The cross-conference week must carry two rounds, bye or no bye.
+    required: policy.crossConference?.week ? [policy.crossConference.week] : [],
+    // Used only when there are fewer bye-free weeks than the format needs
+    // doubleheaders — then the lightest bye weeks are taken rather than
+    // refusing to produce a season.
+    byeCounts: byeCountsByWeek(byes),
+    lastWeek: shape.lastWeek,
   });
 
   const currentSchedule = readFeed(year, 'schedule')?.schedule?.weeklySchedule;

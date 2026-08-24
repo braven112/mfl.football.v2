@@ -172,6 +172,73 @@ step buys the pairing freedom that already existed — which RIVAL meets which i
 which division-round week — and nothing more. Letting different teams play
 division games in different weeks needs the edge-colouring rewrite below.
 
+### The 16-season backtest — what it found
+
+`node scripts/backtest-schedule.mjs` replays the planner against every NFL bye
+calendar we hold and scores each result against the goals. Calendars are
+backfilled from MFL's `nflByeWeeks` export from **2011** (they only went back to
+2022 before), and league/rosters/players feeds exist for the same span.
+
+**Do this before touching the objective.** The 2011-2020 calendars are the
+OPPOSITE SHAPE to recent ones — byes mostly start in Week 4 and are done by
+Week 11-13, where 2021-2026 run Weeks 5/6-14 — and 2017 carries a **Week 1**
+bye. Tuning against recent seasons alone proves nothing.
+
+Five real defects, all of which had been sitting in code that passed its tests:
+
+1. **`doubleheaderCount` and `endWindow` were modern constants.** 3 for the AFL,
+   4 for The League, `[12, 13, 14]` for both — correct only for a 14-week season
+   with today's divisions. Every season from 2011 to 2020 ran THIRTEEN weeks,
+   and 2011-12 had six four-team divisions, so the planner threw "week plan does
+   not fit" on ten AFL and six League seasons. Both are now DERIVED
+   (`roundsRequired`), which is what they always should have been — the count is
+   arithmetic: rounds minus weeks.
+2. **A format-pinned doubleheader week was not exempt from the bye rule.** The
+   AFL's Week 1 must hold the cross-conference round plus a division round; 2017
+   put a bye in Week 1, so `chooseDoubleheaderWeeks` skipped it and the planner
+   threw rather than scheduling the season. The format outranks the
+   no-doubleheader-on-a-bye goal, so the week is now taken via `required` and the
+   scorecard reports the goal failed. **A season with a flagged problem beats no
+   season.**
+3. **Fewer bye-free weeks than required doubleheaders was fatal.** Six League
+   seasons need five doubleheaders and have only four bye-free weeks. Now the
+   lightest bye weeks are taken as a last resort, same principle as (2).
+4. **The scorecard mis-attributed problems.** Scorers read `problems.length` as
+   "is anything wrong", so 2017's single Week 1 doubleheader problem also failed
+   one-game-per-week and opponent-counts, neither of which it violated.
+   `problemGoal()` now routes each problem to its own goal.
+5. **Two guard assertions were properties of 2022-2026, not of the scheduler.**
+   Both passed for years because every calendar they had seen was bye-free
+   through Week 4:
+   - "as many division rounds in bye-free weeks as the block can hold" ignored
+     that Week 1's cross-conference round CONSUMES one of those clean slots.
+   - "rivalry games stay out of the season's worst bye week" cannot hold when
+     the worst week falls inside a leg's block and the block has no
+     interdivision round to trade for it (2014, Week 4, six teams out).
+
+Results after the fixes — 16 seasons planned, 2 unplannable:
+
+| | AFL | The League |
+|---|---|---|
+| seasons planned | 14 of 16 | 16 of 16 |
+| structural goals (1-2) | all met | all met |
+| no doubleheader on a bye | 13 met, **1 failed (2017)** | 10 met, **6 failed** |
+| doubleheader split + Wk 8 | 5 met, 8 partial, **1 failed (2021)** | 4 met, 11 partial, **1 failed (2021)** |
+| rematch gap | 16 met | 16 met |
+
+2011 and 2012 AFL cannot be planned at all: they ran six four-team divisions,
+three per conference, and `nonDivisionRounds` assumes exactly TWO divisions per
+conference for its bipartite construction. Documented as a bound rather than
+fixed — the league has not had that structure since 2012, and the harness
+reports it loudly rather than silently mis-scheduling.
+
+**2021 is the year the escape hatch was needed, and the backtest found it
+independently.** Its byes run Weeks 6-14, so Weeks 1-5 are the only clean weeks
+in the season and no league-wide doubleheader can be placed after Week 8 without
+landing on a bye. Both leagues fail goal 4 that year and the planner correctly
+prefers failing it to failing goal 3. That is exactly the season a commissioner
+staggers doubleheaders franchise by franchise.
+
 ### Still to build: mixed rounds
 
 Every round today is PURE — 13 of 14 AFL weeks are single-type — because

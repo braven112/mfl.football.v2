@@ -27,7 +27,7 @@ const SEASONS = Object.keys((byeData as any).seasons);
 
 const planFor = (
   year: string,
-  { lastWeek = 14, divisionSize = 6, conferenceSize = 12, doubleheaderCount = 3 } = {},
+  { lastWeek = 14, divisionSize = 6, conferenceSize = 12, doubleheaderCount = 3, crossWeek = 1 } = {},
 ) => {
   const byes = (byeData as any).seasons[year];
   const clean = byeFreeWeeks(byes, lastWeek);
@@ -35,7 +35,15 @@ const planFor = (
     count: doubleheaderCount,
     byeFree: clean,
     startWindow: [1, 2, 3, 4],
-    endWindow: [12, 13, 14],
+    endWindow: [lastWeek - 2, lastWeek - 1, lastWeek],
+    // Mirrors planSchedule. Week 1 holds the cross-conference round, so it
+    // must carry two rounds whether or not it is bye-free — 2017 put a bye in
+    // Week 1 and this helper, which used to omit `required`, threw on it while
+    // the real planner scheduled the season. A test helper that calls the code
+    // differently from production tests something production never does.
+    required: crossWeek ? [crossWeek] : [],
+    byeCounts: byeCountsByWeek(byes),
+    lastWeek,
   });
   return {
     doubleheaders,
@@ -47,7 +55,7 @@ const planFor = (
       byeCounts: byeCountsByWeek(byes),
       divisionSize,
       conferenceSize,
-      crossWeek: 1,
+      crossWeek,
     }),
   };
 };
@@ -155,7 +163,23 @@ describe('buildWeekPlan', () => {
           const hi = Math.max(...blockWeeks);
           const block = plan.filter((w: any) => w.week >= lo && w.week <= hi);
           const blockSlots = block.flatMap((w: any) => w.slots.map(() => w.week));
-          const cleanSlots = blockSlots.filter((w: number) => (byeCounts[w] ?? 0) === 0).length;
+          // Clean slots the DIVISION rounds can actually reach — the
+          // cross-conference round is pinned to Week 1 by the constitution, so
+          // a clean slot it occupies was never available to them.
+          //
+          // Missing that reservation is why this assertion passed for years:
+          // every calendar it had seen (2022-2026) was bye-free through Week 4,
+          // so the early block never had to reach a bye week and the
+          // subtraction never mattered. Backfilling 2011-2021 brought in the
+          // opposite shape — byes starting in Week 4 — where the block runs
+          // Weeks 1-4 and the fifth rivalry round has nowhere clean left.
+          const crossCleanSlots = block.reduce(
+            (n: number, w: any) =>
+              n + ((byeCounts[w.week] ?? 0) === 0 ? w.slots.filter((sl: any) => sl.kind === 'cross').length : 0),
+            0,
+          );
+          const cleanSlots =
+            blockSlots.filter((w: number) => (byeCounts[w] ?? 0) === 0).length - crossCleanSlots;
           const rounds = block.reduce(
             (n: number, w: any) => n + w.slots.filter((sl: any) => sl.kind === 'division' && sl.leg === leg).length,
             0,
@@ -243,15 +267,43 @@ describe('buildWeekPlan', () => {
         expect(onBye.every((w: number) => (byeCounts[w] ?? 0) > 0)).toBe(true);
       });
 
-      it('keeps rivalry games out of the season’s worst bye week', () => {
+      /**
+       * ...unless the format leaves nothing to swap in. 2014's worst bye week
+       * is Week 4, six teams out, and Weeks 1-4 are exactly the span the first
+       * leg needs for its five rivalry rounds plus the cross-conference round —
+       * six slots, six rounds, no interdivision round anywhere in the block to
+       * trade for it.
+       *
+       * The unconditional version of this assertion passed only because every
+       * calendar it had seen was bye-free through Week 4. It was asserting a
+       * property of 2022-2026, not of the scheduler.
+       */
+      it('keeps rivalry games out of the season’s worst bye week when it has anything to swap', () => {
         const worst = Object.entries(byeCounts)
           .map(([w, n]) => ({ week: Number(w), n: Number(n) }))
           .filter((r) => r.week <= 14)
           .sort((a, b) => b.n - a.n)[0];
         const row = plan.find((w: any) => w.week === worst.week)!;
-        expect(row.slots.every((s: any) => s.kind === 'inter'), `week ${worst.week} has ${worst.n} NFL teams out`).toBe(
-          true,
+        if (row.slots.every((s: any) => s.kind === 'inter')) return;
+
+        // It carries a division round, so prove nothing could have taken its
+        // place: the block that week belongs to must be fully spoken for.
+        const leg = row.slots.find((s: any) => s.kind === 'division')?.leg;
+        const blockWeeks = plan
+          .filter((w: any) => w.slots.some((s: any) => s.kind === 'division' && s.leg === leg))
+          .map((w: any) => w.week);
+        const block = plan.filter(
+          (w: any) => w.week >= Math.min(...blockWeeks) && w.week <= Math.max(...blockWeeks),
         );
+        const spare = block.reduce(
+          (n: number, w: any) => n + w.slots.filter((s: any) => s.kind === 'inter').length,
+          0,
+        );
+        expect(
+          spare,
+          `week ${worst.week} has ${worst.n} NFL teams out and carries a division round, ` +
+            `but its block has ${spare} interdivision round(s) that could have taken it`,
+        ).toBe(0);
       });
     });
   }

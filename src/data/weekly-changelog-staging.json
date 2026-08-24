@@ -193,5 +193,14 @@
       "area": "rosters",
       "league": "theleague"
     }
+  ],
+  "entries": [
+    {
+      "date": "2026-08-24",
+      "type": "bug-fix",
+      "summary": "The schedule builder could not handle a season of a different length or a different division structure — it assumed 14 weeks and today’s divisions, and threw outright on any other shape. Replaying the last 15 years of NFL bye calendars found ten seasons it could not schedule at all. The doubleheader count is now derived from the format instead of hardcoded.",
+      "impact": "admin",
+      "area": "Schedule Builder"
+    }
   ]
 }

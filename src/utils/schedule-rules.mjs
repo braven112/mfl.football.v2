@@ -184,21 +184,58 @@ export const decomposeSeasonIntoRounds = (gamesByWeek, { divisionOf, conferenceO
  * that cannot fill its end window (2026 offers exactly one clean late week)
  * gets an uneven split rather than a doubleheader on a bye.
  */
-export const chooseDoubleheaderWeeks = ({ count, byeFree, startWindow, endWindow }) => {
+export const chooseDoubleheaderWeeks = ({
+  count,
+  byeFree,
+  startWindow,
+  endWindow,
+  required = [],
+  byeCounts = {},
+  lastWeek = 0,
+}) => {
   const clean = new Set(byeFree);
+  // A week the FORMAT forces to hold two rounds — the AFL's Week 1, which the
+  // constitution pins the cross-conference round to while a division round
+  // shares the slot. It is taken whether or not it is bye-free, because the
+  // format outranks the no-doubleheader-on-a-bye goal: 2017 had a Week 1 bye
+  // and the planner threw rather than scheduling the season at all. Taking it
+  // and letting the scorecard report the goal as failed is the honest outcome;
+  // refusing to produce a season is not.
+  const forced = required.filter((w) => Number.isInteger(w));
   const early = startWindow.filter((w) => clean.has(w)).sort((a, b) => a - b);
   const late = endWindow.filter((w) => clean.has(w)).sort((a, b) => b - a);
 
-  const wantLate = Math.floor(count / 2);
-  const takeLate = late.slice(0, Math.min(wantLate, late.length));
-  const takeEarly = early.slice(0, count - takeLate.length);
-  const picked = [...takeEarly, ...takeLate];
+  const remaining = Math.max(0, count - forced.length);
+  const wantLate = Math.floor(remaining / 2);
+  const takeLate = late.filter((w) => !forced.includes(w)).slice(0, Math.min(wantLate, late.length));
+  const takeEarly = early
+    .filter((w) => !forced.includes(w))
+    .slice(0, remaining - takeLate.length);
+  const picked = [...forced, ...takeEarly, ...takeLate];
 
   if (picked.length < count) {
     // Not enough clean weeks in either window; widen to any clean week.
     for (const w of byeFree) {
       if (picked.length >= count) break;
       if (!picked.includes(w)) picked.push(w);
+    }
+  }
+  // Still short: the season has FEWER bye-free weeks than the format needs
+  // doubleheaders, so one has to land on a bye. Replaying 2013-2020 found this
+  // is not hypothetical — those seasons ran 13 weeks against an 18-round
+  // format, needing five doubleheaders where only four weeks were bye-free.
+  // The planner used to throw and produce no season at all.
+  //
+  // The format outranks the no-doubleheader-on-a-bye goal, so take the
+  // LIGHTEST bye weeks going and let the scorecard report the goal as failed.
+  // A season with one doubleheader on a two-team bye week beats no season.
+  if (picked.length < count && lastWeek) {
+    const rest = [];
+    for (let w = 1; w <= lastWeek; w += 1) if (!picked.includes(w)) rest.push(w);
+    rest.sort((a, b) => (byeCounts[a] ?? 0) - (byeCounts[b] ?? 0) || a - b);
+    for (const w of rest) {
+      if (picked.length >= count) break;
+      picked.push(w);
     }
   }
   return picked.sort((a, b) => a - b);

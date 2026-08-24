@@ -41,15 +41,36 @@ import { divisionByeSplit, scheduleConstraints, upcomingConstraints } from './sc
  *
  * @param {object} f  season facts — see `scoreSeasonGoals`
  */
+/**
+ * Which goal a `validateSeason` problem belongs to.
+ *
+ * The scorers used to read `problems.length` as "is anything wrong", which
+ * cross-wired them: 2017's calendar forces a Week 1 doubleheader onto a bye
+ * (the constitution pins the cross-conference round there and the format
+ * outranks the no-doubleheader-on-a-bye goal), and that ONE problem made the
+ * scorecard report the season as also violating one-game-per-week and the
+ * opponent counts, neither of which it did. A goal is only failed by its own
+ * problems.
+ */
+export const problemGoal = (message) => {
+  if (/doubleheader in Week \d+ falls on an NFL bye week/i.test(message)) return 'doubleheaders-off-byes';
+  if (/does not play exactly its division rivals twice/i.test(message)) return 'opponent-counts';
+  return 'one-game-per-week';
+};
+
+const problemsFor = (f, key) => (f.problems ?? []).filter((p) => problemGoal(p) === key);
+
 const SCORERS = {
-  'one-game-per-week': (f) =>
-    f.problems.length
-      ? { status: 'blocked', detail: `${f.problems.length} structural problem(s) in the audit` }
-      : { status: 'met', detail: `${f.games} games, every franchise the same number` },
+  'one-game-per-week': (f) => {
+    const own = problemsFor(f, 'one-game-per-week');
+    return own.length
+      ? { status: 'blocked', detail: own.join('; ') }
+      : { status: 'met', detail: `${f.games} games, every franchise the same number` };
+  },
 
   'opponent-counts': (f) =>
-    f.problems.length
-      ? { status: 'blocked', detail: 'the audit found an opponent-count problem' }
+    problemsFor(f, 'opponent-counts').length
+      ? { status: 'blocked', detail: problemsFor(f, 'opponent-counts').join('; ') }
       : {
           status: 'met',
           detail: f.crossConference
@@ -59,9 +80,17 @@ const SCORERS = {
 
   'doubleheaders-off-byes': (f) => {
     const bad = f.doubleheaders.filter((w) => f.byeCount(w) > 0);
-    return bad.length
-      ? { status: 'blocked', detail: `Week ${bad.join(', ')} carries byes` }
-      : { status: 'met', detail: `Weeks ${f.doubleheaders.join(', ')}, none with an NFL bye` };
+    if (!bad.length) return { status: 'met', detail: `Weeks ${f.doubleheaders.join(', ')}, none with an NFL bye` };
+    // The only way this happens is a week the FORMAT pins — the AFL's Week 1,
+    // in a year the NFL put a bye there (2017). Say which weeks and how bad,
+    // because this is the season the commissioner would stagger by hand.
+    return {
+      status: 'blocked',
+      detail:
+        `Week ${bad.map((w) => `${w} (${f.byeCount(w)} NFL teams out)`).join(', ')} — ` +
+        `no bye-free week was available for a round the format pins there. This is the case for ` +
+        `staggering doubleheaders franchise by franchise.`,
+    };
   },
 
   // A goal now, not a hard rule — it ranks below getting division games off
