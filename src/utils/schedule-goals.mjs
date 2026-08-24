@@ -23,6 +23,13 @@
  *              reports the number rather than inventing a verdict
  *   n/a        the goal was not yet adopted when this season was drawn
  *
+ * A `blocked` verdict also carries `avoidable`, and the distinction is the one
+ * the release lock turns on. 2021 CANNOT put a doubleheader after Week 8 — its
+ * only bye-free weeks are 1-5 — and refusing to publish a season over that
+ * would mean refusing to publish 2021 at all. A bye-free finale sitting unused
+ * is the opposite: nothing stopped us, and it must not be committed and pasted
+ * into MFL. Unavoidable failures are reported; avoidable ones stop the lock.
+ *
  * `optimised` is not a cop-out tier. Inventing a threshold for "doubleheader
  * opponents are balanced in strength" would make the scorecard a worse
  * document than reporting the spread and letting a reader judge it: the number
@@ -64,13 +71,13 @@ const SCORERS = {
   'one-game-per-week': (f) => {
     const own = problemsFor(f, 'one-game-per-week');
     return own.length
-      ? { status: 'blocked', detail: own.join('; ') }
+      ? { status: 'blocked', avoidable: true, detail: own.join('; ') }
       : { status: 'met', detail: `${f.games} games, every franchise the same number` };
   },
 
   'opponent-counts': (f) =>
     problemsFor(f, 'opponent-counts').length
-      ? { status: 'blocked', detail: problemsFor(f, 'opponent-counts').join('; ') }
+      ? { status: 'blocked', avoidable: true, detail: problemsFor(f, 'opponent-counts').join('; ') }
       : {
           status: 'met',
           detail: f.crossConference
@@ -86,6 +93,8 @@ const SCORERS = {
     // because this is the season the commissioner would stagger by hand.
     return {
       status: 'blocked',
+      // The only way this happens is a week the FORMAT pins. Not ours to fix.
+      avoidable: false,
       detail:
         `Week ${bad.map((w) => `${w} (${f.byeCount(w)} NFL teams out)`).join(', ')} — ` +
         `no bye-free week was available for a round the format pins there. This is the case for ` +
@@ -120,9 +129,17 @@ const SCORERS = {
     const afterWeek8 = f.doubleheadersAfterWeek8 ?? f.doubleheaders.filter((w) => w > 8).length;
     const balanced = Math.abs(early - late) <= 1;
     if (!afterWeek8) {
+      // 2021's only bye-free weeks are 1-5, so no league-wide doubleheader can
+      // go later without landing on a bye — the top goal wins and this one
+      // simply cannot be met. Avoidable only if a clean week after 8 went spare.
+      const cleanAfter8 = [];
+      for (let w = 9; w <= f.lastWeek; w += 1) if (f.byeCount(w) === 0) cleanAfter8.push(w);
       return {
         status: 'blocked',
-        detail: `no doubleheader after Week 8 — every extra game lands in the first half (Weeks ${f.doubleheaders.join(', ')})`,
+        avoidable: cleanAfter8.length > 0,
+        detail: cleanAfter8.length
+          ? `no doubleheader after Week 8, but Week ${cleanAfter8.join(', ')} was bye-free and available`
+          : `no doubleheader after Week 8 — no bye-free week exists past it, so none can be placed there`,
       };
     }
     if (balanced) return { status: 'met', detail: `${early} early, ${late} late; ${afterWeek8} after Week 8` };
@@ -137,6 +154,7 @@ const SCORERS = {
     const atBest = late >= bestLate;
     return {
       status: atBest ? 'partial' : 'blocked',
+      avoidable: !atBest,
       detail: atBest
         ? `${early} early, ${late} late (${afterWeek8} after Week 8) — the only even split the bye-free weeks allow`
         : `${early} early, ${late} late, but ${cleanEnd} bye-free week(s) at the end of the season went unused — ` +
@@ -188,6 +206,9 @@ const SCORERS = {
     if (lo >= 0.25 && hi <= 0.75) return { status: 'partial', detail: `${label} — lopsided but not decided early` };
     return {
       status: 'blocked',
+      // Always fixable: division games are allowed on bye weeks (that goal is a
+      // maximise, not a rule), so there is always somewhere later to put one.
+      avoidable: true,
       detail:
         `${label}. ${worst?.franchise ?? 'A franchise'} is the worst. A division race this front-loaded is ` +
         `over before the second half starts.`,
@@ -248,6 +269,7 @@ const SCORERS = {
     if (byes > 0) {
       return {
         status: 'blocked',
+        avoidable: false,
         detail:
           `Week ${f.lastWeek} has ${byes} NFL teams out, so a doubleheader there would break the top goal. ` +
           `Not achievable this season.`,
@@ -255,7 +277,11 @@ const SCORERS = {
     }
     // Clean finale and no doubleheader on it is a genuine miss, not a calendar
     // constraint — say so rather than filing it under bad luck.
-    return { status: 'blocked', detail: `Week ${f.lastWeek} is bye-free and was available, but carries one game` };
+    return {
+      status: 'blocked',
+      avoidable: true,
+      detail: `Week ${f.lastWeek} is bye-free and was available, but carries one game`,
+    };
   },
 
   'home-away': (f) =>
@@ -295,8 +321,18 @@ export const scoreSeasonGoals = (facts) => {
   const scored = inForce.map((c) => {
     const scorer = SCORERS[c.key];
     if (!scorer) throw new Error(`no scorer for schedule goal "${c.key}" — add one to schedule-goals.mjs`);
-    const { status, detail } = scorer(f);
-    return { key: c.key, rank: c.rank, tier: c.tier, status, detail };
+    const { status, detail, avoidable } = scorer(f);
+    return {
+      key: c.key,
+      rank: c.rank,
+      tier: c.tier,
+      status,
+      detail,
+      // Only meaningful on `blocked`. Defaults to avoidable so a scorer that
+      // forgets to say fails LOUD rather than silently letting a bad season
+      // through the release lock.
+      ...(status === 'blocked' ? { avoidable: avoidable !== false } : {}),
+    };
   });
 
   return {
@@ -361,6 +397,13 @@ export const goalFactsFromSeason = ({
     problems,
   };
 };
+
+/**
+ * Goals that failed AND could have been met. The release lock refuses on any of
+ * these: a season with one of them is a mistake, not a hard year.
+ */
+export const blockingFailures = (goals) =>
+  goals.filter((g) => g.status === 'blocked' && g.avoidable !== false);
 
 /** Roll-up for the page header: "8 met, 2 as far as the calendar allowed". */
 export const summariseGoals = (goals) => {

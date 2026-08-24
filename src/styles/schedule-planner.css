@@ -271,3 +271,18 @@
   list-style: none;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
 }
+
+/* The builder's plan is generated with a reduced search so the request fits its
+   deadline; the release job draws a different one. Saying so next to a
+   copy-to-clipboard button is the difference between a planning aid and a
+   schedule pasted into MFL that nothing else agrees with. */
+.sched__preview {
+  margin: 0 0 0.75rem;
+  padding: 0.7rem 0.85rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--color-text-primary, #0f172a);
+  background: var(--color-warning-light, #fef3c7);
+  border: 1px solid var(--color-warning, #d97706);
+  border-radius: 8px;
+}

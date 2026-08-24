@@ -4,9 +4,12 @@
  * adding a goal cannot silently ship a season with a hole in its report.
  */
 import { describe, expect, it } from 'vitest';
-// @ts-expect-error - .mjs helper shared with the node scripts
-import { goalFactsFromSeason, scoreSeasonGoals, summariseGoals } from '../src/utils/schedule-goals.mjs';
-// @ts-expect-error - .mjs helper shared with the node scripts
+import {
+  blockingFailures,
+  goalFactsFromSeason,
+  scoreSeasonGoals,
+  summariseGoals,
+} from '../src/utils/schedule-goals.mjs';
 import { scheduleConstraints, upcomingConstraints } from '../src/utils/schedule-constraints.mjs';
 import aflRelease from '../data/afl-fantasy/schedule-release/2026.json';
 import theLeagueRelease from '../data/theleague/schedule-release/2026.json';
@@ -39,7 +42,7 @@ const aflFacts = {
 describe('scoreSeasonGoals', () => {
   it('scores every goal that was in force, and nothing that was not', () => {
     const { goals, notYetAdopted } = scoreSeasonGoals(aflFacts);
-    const inForce = scheduleConstraints({ crossConference: true, season: 2026 });
+    const inForce = scheduleConstraints({ season: 2026 });
     expect(goals.map((g: any) => g.key)).toEqual(inForce.map((c: any) => c.key));
     // Goals adopted for 2027 must not judge a 2026 draw. Derived rather than
     // named, so adopting another does not break this test.
@@ -47,7 +50,7 @@ describe('scoreSeasonGoals', () => {
     expect(upcoming.length).toBeGreaterThan(0);
     for (const key of upcoming) expect(goals.some((g: any) => g.key === key), key).toBe(false);
     expect(notYetAdopted.map((n: any) => n.key).sort()).toEqual([...upcoming].sort());
-    for (const n of notYetAdopted) expect(n.since).toBeGreaterThan(2026);
+    for (const n of notYetAdopted) expect(Number(n.since)).toBeGreaterThan(2026);
   });
 
   it('has a scorer for EVERY goal, including ones not yet in force', () => {
@@ -134,6 +137,67 @@ describe('scoreSeasonGoals', () => {
     const halves = Array.from({ length: 16 }, (_, i) => ({ franchise: `F${i}`, early: 3, late: 3 }));
     const { goals } = scoreSeasonGoals({ ...aflFacts, season: 2027, divisionHalves: halves });
     expect(goals.find((x: any) => x.key === 'division-spread')!.status).toBe('met');
+  });
+});
+
+describe('avoidable vs unavoidable failures — what gates the release lock', () => {
+  /**
+   * The whole point of the flag. 2021 CANNOT put a doubleheader after Week 8 —
+   * its only bye-free weeks are 1-5 — so refusing to publish over that would
+   * mean refusing to publish 2021 at all. A bye-free finale sitting unused is
+   * the opposite: nothing stopped us, and it must not be pasted into MFL.
+   */
+  it('marks a doubleheader forced onto a bye by the format as unavoidable', () => {
+    const { goals } = scoreSeasonGoals({ ...aflFacts, doubleheaders: [1, 2, 13] });
+    const g = goals.find((x: any) => x.key === 'doubleheaders-off-byes')!;
+    expect(g.status).toBe('blocked');
+    expect(g.avoidable).toBe(false);
+    expect(blockingFailures(goals).map((x: any) => x.key)).not.toContain('doubleheaders-off-byes');
+  });
+
+  it('marks a bye-free finale left unused as avoidable', () => {
+    // Week 14 clean and not a doubleheader — nothing stopped us.
+    const { goals } = scoreSeasonGoals({
+      ...aflFacts,
+      season: 2027,
+      byeCount: (w: number) => ({ 5: 2, 6: 4, 7: 4, 8: 4, 9: 2, 10: 4, 11: 6, 13: 4 })[w] ?? 0,
+    });
+    const g = goals.find((x: any) => x.key === 'finale-doubleheader')!;
+    expect(g.status).toBe('blocked');
+    expect(g.avoidable).toBe(true);
+    expect(blockingFailures(goals).map((x: any) => x.key)).toContain('finale-doubleheader');
+  });
+
+  it('marks no-doubleheader-after-Week-8 unavoidable when no clean week exists past it', () => {
+    // 2021's shape: byes from Week 6 on, so nothing after Week 8 is clean.
+    const byeCount = (w: number) => (w >= 6 ? 4 : 0);
+    const { goals } = scoreSeasonGoals({ ...aflFacts, doubleheaders: [1, 2, 3], byeCount });
+    const g = goals.find((x: any) => x.key === 'doubleheader-split')!;
+    expect(g.status).toBe('blocked');
+    expect(g.avoidable).toBe(false);
+  });
+
+  it('marks it avoidable when a clean week after Week 8 went spare', () => {
+    const byeCount = (w: number) => (w === 12 ? 0 : w >= 5 ? 4 : 0);
+    const { goals } = scoreSeasonGoals({ ...aflFacts, doubleheaders: [1, 2, 3], byeCount });
+    const g = goals.find((x: any) => x.key === 'doubleheader-split')!;
+    expect(g.status).toBe('blocked');
+    expect(g.avoidable).toBe(true);
+    expect(g.detail).toMatch(/Week 12 was bye-free/);
+  });
+
+  it('defaults to avoidable so a scorer that forgets to say fails loud', () => {
+    // A new goal whose scorer returns blocked without the flag must stop the
+    // lock, not slip through it.
+    for (const g of scoreSeasonGoals({ ...aflFacts, season: 9999 }).goals) {
+      if (g.status === 'blocked') expect(typeof g.avoidable).toBe('boolean');
+    }
+  });
+
+  it('reports nothing blocking for either league’s real 2026 season', () => {
+    for (const rec of [aflRelease, theLeagueRelease] as any[]) {
+      expect(blockingFailures(rec.goals)).toEqual([]);
+    }
   });
 });
 

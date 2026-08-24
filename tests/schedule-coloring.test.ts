@@ -5,7 +5,6 @@
  * downstream check is measuring a schedule that cannot be played.
  */
 import { describe, expect, it } from 'vitest';
-// @ts-expect-error - .mjs helpers shared with the node scripts
 import {
   applyKempe,
   buildSlots,
@@ -16,19 +15,16 @@ import {
   searchColoring,
   weeksFromColoring,
 } from '../src/utils/schedule-coloring.mjs';
-// @ts-expect-error - .mjs helper shared with the node scripts
 import { seasonShape, byeExposure } from '../src/utils/schedule-plan.mjs';
-// @ts-expect-error - .mjs helper shared with the node scripts
 import { regularSeasonGames } from '../src/utils/schedule-rules.mjs';
-// @ts-expect-error - .mjs helper shared with the node scripts
 import { balanceHomeAway, HARD_MIN_REMATCH_GAP, MIN_REMATCH_GAP } from '../src/utils/schedule-builder.mjs';
 
 const byes = require('../data/nfl/bye-weeks.json').seasons['2026'];
 
 /** The live AFL 2026 season, decomposed into slots. A real, valid colouring. */
-const load = () => {
+const load = (): any => {
   const read = (f: string) => require(`../data/afl-fantasy/mfl-feeds/2026/${f}.json`);
-  const shape = seasonShape(read('league'));
+  const shape = seasonShape(read('league'))!;  // the fixture always has a league feed
   const weeks = regularSeasonGames(read('schedule')?.schedule?.weeklySchedule, shape.lastWeek);
   const doubleheaders = [...weeks.entries()]
     .filter(([, g]: any) => g.length > shape.franchiseIds.length / 2)
@@ -111,7 +107,7 @@ describe('kempeCycles / applyKempe', () => {
 });
 
 describe('searchColoring', () => {
-  const ctx = (l: ReturnType<typeof load>) => ({
+  const ctx = (l: any) => ({
     divisionOf: l.shape.divisionOf,
     byesFor: (id: string, week: number) => l.exposure[id]?.[week] ?? 0,
     rating: Object.fromEntries(l.shape.franchiseIds.map((id: string) => [id, 0])),
@@ -218,7 +214,7 @@ describe('COLORING_WEIGHTS', () => {
 
 describe('the division-spread goal', () => {
   // Local copy — the searchColoring block's `ctx` is scoped to that describe.
-  const ctx = (l: ReturnType<typeof load>) => ({
+  const ctx = (l: any) => ({
     divisionOf: l.shape.divisionOf,
     byesFor: (id: string, week: number) => l.exposure[id]?.[week] ?? 0,
     rating: Object.fromEntries(l.shape.franchiseIds.map((id: string) => [id, 0])),

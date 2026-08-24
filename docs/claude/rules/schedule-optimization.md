@@ -363,6 +363,56 @@ and 2024 as well. They were fine — their spare clean week was Week 8, which is
 mid-season, and "late" here means the END window, not the back half. Two of the
 six flags were my metric being wrong rather than the planner.
 
+### The release lock now gates on the scorecard
+
+`validateSeason` catches STRUCTURAL breakage — someone playing twice in a week,
+wrong opponent counts — and nothing else. A season could pass every one of those
+checks and still leave a bye-free finale unused, skew its doubleheaders into
+September, or hand a franchise its whole division race before October, and it
+would lock and paste into MFL without a word.
+
+`refuseAvoidableFailures` in `lock-schedule-release.mjs` now refuses on any goal
+scored `blocked` with `avoidable !== false`. **The `avoidable` flag is what makes
+this safe to enforce:**
+
+| Failure | avoidable | lock |
+|---|---|---|
+| 2021: no doubleheader after Week 8 (no clean week exists past it) | no | reported, proceeds |
+| 2017: doubleheader on a bye because the format pins Week 1 | no | reported, proceeds |
+| a bye-free finale left unused | **yes** | **refused** |
+| a clean end-of-season week left unused in the split | **yes** | **refused** |
+| a division race decided before October | **yes** | **refused** |
+
+Refusing over the unavoidable ones would mean refusing to publish 2021 at all.
+A scorer that returns `blocked` without saying defaults to **avoidable**, so
+forgetting the flag stops the lock rather than silently letting a bad season
+through.
+
+**Both lock paths are gated and both were exercised end to end**, not just
+unit-tested — `--dry-run --force --relock --from-live` for the live path, and
+regenerating the plans with the archives temporarily moved aside for the plan
+path. Both 2026 seasons pass.
+
+That exercise immediately found a bug `node --check` and a normal dry run both
+missed: the gate was written as a `const` arrow, and this script's main loop
+runs at TOP LEVEL above the declarations. `async function` hoists; a const
+arrow does not. It died with "Cannot access before initialization" the first
+time a league actually reached it. **A dry run that skips every league proves
+nothing.**
+
+### The admin builder is a preview and now says so
+
+The API cannot afford the full colouring search inside a request — 150k
+iterations is about the whole 30s budget — so it runs 8k and returns at or near
+the structured seed. The CLI and the release cron run the full search and
+produce a different draw.
+
+That was fine as a planning aid and dangerous next to a copy-to-clipboard
+button: a commissioner could paste a schedule the release job would never
+produce. The response now carries `preview: { coloringIterations, full: false }`
+and the page prints a warning above the paste block pointing at Schedule Release
+Day for the authoritative one.
+
 ### Futures the NFL has told us to expect
 
 Three changes the commissioner flagged as plausible, all now covered by

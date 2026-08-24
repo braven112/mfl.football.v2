@@ -36,6 +36,12 @@ const readFeedFile = (dataPath: string, year: number, feed: string): any => {
   }
 };
 
+/**
+ * Colouring iterations this route can afford. The full search is ~150k and takes
+ * about as long as the whole request budget, so a preview cannot run it.
+ */
+const PREVIEW_COLORING_ITERATIONS = 8000;
+
 /** Player values for the projected-starter bye model. Shared across leagues. */
 const readRankingSources = (year: number): any => {
   try {
@@ -100,19 +106,23 @@ export const GET: APIRoute = async ({ request, url }) => {
       // league's mfl-feeds directory). Null degrades to whole-roster counts.
       rankingSources: readRankingSources(year),
       readFeed: (y: number, feed: string) => readFeedFile(league.dataPath, y, feed),
-      // Bounded so the request finishes inside the function's 30s ceiling.
-      // Quality plateaus well before this; the structure does the heavy lifting.
       // Bounded for the function's 30s ceiling. The colouring refinement needs
       // ~150k iterations to clear the structured seed's local optimum and that
-      // takes ~30s alone, so the admin preview gets a small budget and returns
-      // at or near the seed. The CLI and the release cron run the full search.
-      search: { restarts: 6, iterations: 12000, coloringIterations: 8000, coloringRestarts: 1 },
+      // alone takes ~30s, so this preview gets a fraction of it and returns at
+      // or near the structured seed. The CLI and the release cron run the full
+      // search and will generally produce a DIFFERENT schedule — which is why
+      // the response says so and the page refuses to present this as pasteable.
+      search: { restarts: 6, iterations: 12000, coloringIterations: PREVIEW_COLORING_ITERATIONS, coloringRestarts: 1 },
     });
     // `weeks` is a Map and carries nothing the client needs beyond the text and
     // the per-week summary already in `plan.plan.byWeek`.
     const { weeks, ...rest } = plan;
     void weeks;
-    return json(rest);
+    return json({
+      ...rest,
+      // The page needs to know this is not the draw the cron will lock.
+      preview: { coloringIterations: PREVIEW_COLORING_ITERATIONS, full: false },
+    });
   } catch (err: any) {
     return json({ error: err?.message ?? 'Could not generate a schedule' }, 500);
   }
