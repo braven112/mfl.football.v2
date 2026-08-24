@@ -1,0 +1,59 @@
+---
+/**
+ * Accounting — /afl-fantasy/admin/accounting
+ *
+ * Thin wrapper: league-scoped commissioner gate + layout. The console itself is
+ * the shared components/shared/AccountingConsole.astro, and every write runs
+ * through /api/accounting/*, which repeats this same gate — a page gate
+ * protects the page, not the endpoints behind it.
+ *
+ * The gate lives HERE rather than in the shared component because
+ * `Astro.redirect()` returned from a component does not redirect; it stops
+ * that component rendering and serves a blank 200.
+ */
+export const prerender = false;
+
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import AccountingConsole from '../../../components/shared/AccountingConsole.astro';
+import { getAuthUser, isCommissionerOrAdmin, isAuthorizedForLeague } from '../../../utils/auth';
+import { getLeagueBySlug } from '../../../config/leagues';
+import { getCurrentSeasonYear } from '../../../utils/league-year';
+import { leagueYearFor } from '../../../utils/accounting-request';
+import { loadFranchises } from '../../../utils/accounting-season-data';
+
+const user = getAuthUser(Astro.request);
+const league = getLeagueBySlug('afl-fantasy');
+if (
+  !user ||
+  !isCommissionerOrAdmin(user) ||
+  !league ||
+  !isAuthorizedForLeague(user, league.id) ||
+  !league.features.accounting
+) {
+  return Astro.redirect('/afl-fantasy');
+}
+
+// Two clocks, deliberately: `year` is the MFL LEAGUE year whose ledger we
+// edit, `season` is the results year whose winners get paid. They differ for
+// most of the calendar — see src/utils/accounting-request.ts.
+const year = leagueYearFor(league);
+const season = getCurrentSeasonYear();
+
+// Offer the seasons we could plausibly hold results for. Older seasons stay
+// selectable because prizes get settled late.
+const seasons = Array.from({ length: 6 }, (_, index) => season - index);
+
+const franchises = loadFranchises(league, year);
+---
+
+<TheLeagueLayout title="Accounting — Admin">
+  <AccountingConsole
+    leagueSlug={league.slug}
+    leagueName={league.name}
+    franchises={franchises}
+    year={year}
+    season={season}
+    seasons={seasons}
+    hasPayouts={Boolean(league.payouts)}
+  />
+</TheLeagueLayout>

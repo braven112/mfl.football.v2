@@ -50,6 +50,32 @@ export const LEAGUES = {
       schefterFeed: true,
       schefterTips: true,
       liveScoring: true,
+      accounting: true,
+    },
+    /**
+     * Prize table for the commissioner's accounting page, straight from the
+     * constitution's PAYOUTS section. Amounts are DOLLARS OWED TO the winner —
+     * the accounting writer converts them to MFL's sign convention, which is
+     * not the same thing (see docs/claude/rules/accounting.md).
+     *
+     * `prizePool` is the constitution's stated total and exists ONLY so the
+     * page can show plan-vs-pool and surface a drift. It is never used to
+     * scale or cap a payout.
+     */
+    payouts: {
+      prizePool: 712,
+      prizes: [
+        { key: 'champion', label: 'League Champion', amount: 300, source: { kind: 'placement', place: 1 } },
+        { key: 'second', label: '2nd Place', amount: 150, source: { kind: 'placement', place: 2 } },
+        { key: 'third', label: '3rd Place', amount: 100, source: { kind: 'placement', place: 3 } },
+        { key: 'fourth', label: '4th Place', amount: 50, source: { kind: 'placement', place: 4 } },
+        { key: 'fifth', label: '5th Place', amount: 45, source: { kind: 'placement', place: 5 } },
+        { key: 'sixth', label: '6th Place', amount: 25, source: { kind: 'placement', place: 6 } },
+        // $3 x 14 weeks. The WEEK COUNT is not a constant to trust blindly:
+        // the planner pays whichever regular-season weeks actually have
+        // scores, and `weeks` is the expected count it reconciles against.
+        { key: 'weekly-high', label: 'Weekly High Score', amount: 3, source: { kind: 'weekly-high', weeks: 14 } },
+      ],
     },
     // Contract dynasty league — long-horizon value is the right opening board.
     defaultRankingSources: ['fantasycalc', 'sharks', 'mfl-adp'],
@@ -101,6 +127,42 @@ export const LEAGUES = {
       schefterFeed: true,
       schefterTips: true,
       liveScoring: true,
+      accounting: true,
+    },
+    /**
+     * AFL prize table (constitution PAYOUTS). The AFL pays for WINNING, and
+     * almost every prize resolves off something the league already publishes.
+     *
+     * The playoff-side prizes are the subtle ones. The AFL has SIX divisions
+     * but pays only FOUR division titles: each conference sends four teams —
+     * its two best division winners (seeds 1-2) plus two wild cards (seeds
+     * 3-4) — so a third division winner who misses the playoffs is not paid.
+     * Both prizes therefore key off PLAYOFF SEED, not off a division-title
+     * award slug: seeds 1-2 are the paid division champions, seeds 3-4 the
+     * wild cards. Paying all six division slugs instead totals $2,525 against
+     * a $2,220 pool; paying the four seeds totals $2,225, which is the pool
+     * within the same rounding TheLeague's "approximately $712" carries.
+     * Confirmed with the commissioner, Aug 2026 — do not "fix" this back to
+     * six division awards.
+     */
+    payouts: {
+      prizePool: 2220,
+      prizes: [
+        { key: 'afl-championship', label: 'League Championship', amount: 300, source: { kind: 'award', slug: 'afl-championship' } },
+        { key: 'al-champion', label: 'AL Champion', amount: 150, source: { kind: 'award', slug: 'al-champion' } },
+        { key: 'nl-champion', label: 'NL Champion', amount: 150, source: { kind: 'award', slug: 'nl-champion' } },
+        // Seeds 1-2 in each conference bracket: the division winners who
+        // actually reached the playoffs. Four paid, not six.
+        { key: 'division-title', label: 'Division Championship', amount: 150, source: { kind: 'playoff-seed', seeds: [1, 2] } },
+        // Seeds 3-4: the playoff teams that did not win a division.
+        { key: 'wild-card', label: 'Wild Card', amount: 100, source: { kind: 'playoff-seed', seeds: [3, 4] } },
+        { key: 'premier-league', label: 'Premier League Champion', amount: 225, source: { kind: 'tier-rank', tier: 'Premier League', rank: 1 } },
+        { key: 'premier-league-2', label: 'Premier League 2nd', amount: 150, source: { kind: 'tier-rank', tier: 'Premier League', rank: 2 } },
+        { key: 'premier-league-3', label: 'Premier League 3rd', amount: 100, source: { kind: 'tier-rank', tier: 'Premier League', rank: 3 } },
+        { key: 'premier-league-4', label: 'Premier League 4th', amount: 50, source: { kind: 'tier-rank', tier: 'Premier League', rank: 4 } },
+        { key: 'dleague-champion', label: 'D-League Champion', amount: 50, source: { kind: 'tier-rank', tier: 'D-League', rank: 1 } },
+        { key: 'nit', label: 'NIT Champion', amount: 50, source: { kind: 'award', slug: 'nit' } },
+      ],
     },
     // Keeper league that re-drafts most of the roster every year, so the
     // defaults lean redraft/ADP. FantasyCalc dynasty stays AVAILABLE, just
@@ -147,6 +209,13 @@ export const LEAGUES = {
        * scoreboard watching is the whole in-season experience here.
        */
       liveScoring: true,
+      /**
+       * Draft-only league: no MFL syncing, no commissioner write path, and no
+       * prize table in its rules. Turning this on would make the accounting
+       * page the FIRST write into bb1's MFL league — don't, without deciding
+       * that separately.
+       */
+      accounting: false,
     },
     // Redraft best-ball: one season, no keepers, no contracts — straight
     // redraft ADP is exactly the right opening board.

@@ -1,0 +1,71 @@
+---
+/**
+ * Shared body for the commissioner accounting pages.
+ *
+ * NO AUTH GATE LIVES HERE. `Astro.redirect()` returned from a COMPONENT does
+ * not redirect — it stops rendering that component and the response is still a
+ * 200 with a blank body. The gate belongs in each thin route wrapper. Same
+ * rule as SchedulePlannerPanel and /cr; see CLAUDE.md.
+ */
+import AccountingPanel from './AccountingPanel.tsx';
+import '../../styles/accounting.css';
+
+interface Props {
+  leagueSlug: string;
+  leagueName: string;
+  franchises: Array<{ id: string; name: string }>;
+  year: number;
+  season: number;
+  seasons: number[];
+  hasPayouts: boolean;
+}
+const { leagueSlug, leagueName, franchises, year, season, seasons, hasPayouts } = Astro.props;
+---
+
+<section class="acct-page">
+  <header class="acct-page__head">
+    <h1>Accounting</h1>
+    <p>
+      {leagueName}&rsquo;s league ledger on MFL, for the {year} league year. Everything on this page reads and
+      writes MFL directly &mdash; there is no local copy, and MFL&rsquo;s import has no undo, so a written record
+      has to be corrected with an offsetting one.
+    </p>
+  </header>
+
+  <AccountingPanel
+    client:load
+    leagueSlug={leagueSlug}
+    leagueName={leagueName}
+    franchises={franchises}
+    year={year}
+    season={season}
+    seasons={seasons}
+    hasPayouts={hasPayouts}
+  />
+</section>
+
+<style>
+  .acct-page {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 3rem;
+  }
+
+  .acct-page__head h1 {
+    margin: 0 0 0.5rem;
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--color-text-primary, #0f172a);
+  }
+
+  .acct-page__head p {
+    margin: 0;
+    max-width: 68ch;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: var(--color-text-secondary, #475569);
+  }
+</style>

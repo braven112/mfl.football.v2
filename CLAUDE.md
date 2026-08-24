@@ -37,6 +37,7 @@ cross-cutting, add a line here. Keep this file short.
 | Absolute URLs, GroupMe message text | `docs/claude/rules/league-urls.md` | Never concatenate origin + path; and GroupMe autolinks the period after a URL, 404ing it for every owner. |
 | Best-ball leagues | `docs/claude/rules/best-ball.md` | Draft-only: nav is opt-in, ADP is redraft, no live MFL syncing. |
 | Schedules, doubleheaders, NFL byes, division-game placement | `docs/claude/rules/schedule-optimization.md` | The late doubleheader week is not a constant — it is whichever of Week 12/13 is bye-free that year, and copying last year's week numbers has shipped a doubleheader onto a bye twice. |
+| League accounting, dues, prize payouts | `docs/claude/rules/accounting.md` | MFL credits on POSITIVE and its import has no delete — a prize written negative doubles the owner's bill, and a payout re-run without the idempotency check pays the whole season twice. |
 
 Deeper history (dated journals, one file per feature/domain) lives in
 `docs/claude/insights/`. Reference docs (auth, testing, build, league rules)

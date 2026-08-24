@@ -30,6 +30,7 @@ import {
   type StandingsColumn,
   type StandingsTableProps,
 } from './standings-table-config';
+import { getLeagueBySlug } from '../../../config/leagues';
 
 const {
   teams,
@@ -160,10 +161,27 @@ function cellText(col: StandingsColumn, team: (typeof teams)[number]): string {
 }
 
 // --- Tier-table (AFL) row/border/prize logic (gated on the tier variant) -----
-const TIER_PRIZES: Record<string, string[]> = {
-  'Premier League': ['$225', '$150', '$100', '$50', '', '', '', '', '', '', '', ''],
-  'D-League': ['$50', '', '', '', '', '', '', '', '', '', '', ''],
-};
+// Prize amounts come from the league registry's payout table — the SAME table
+// the accounting page pays from. They were hardcoded here until Aug 2026, which
+// meant the badge an owner read on the standings page and the dollars the
+// commissioner actually wrote were two independent constants free to disagree.
+// Tier prizes are AFL-only (no other league runs an all-play tier competition),
+// so the AFL entry is read directly rather than threading a league prop through
+// every standings caller.
+const TIER_PRIZES: Record<string, string[]> = (() => {
+  const table: Record<string, string[]> = {};
+  for (const prize of getLeagueBySlug('afl-fantasy')?.payouts?.prizes ?? []) {
+    if (prize.source.kind !== 'tier-rank') continue;
+    const row = table[prize.source.tier] ?? [];
+    row[prize.source.rank - 1] = `$${prize.amount}`;
+    table[prize.source.tier] = row;
+  }
+  // Ranks with no prize must render as an empty cell, not `undefined`.
+  for (const tier of Object.keys(table)) {
+    table[tier] = Array.from({ length: 12 }, (_, index) => table[tier][index] ?? '');
+  }
+  return table;
+})();
 function tierRowClass(rank: number): string {
   if (tierName === 'Premier League') {
     if (rank === 1) return 'gold-tier';
