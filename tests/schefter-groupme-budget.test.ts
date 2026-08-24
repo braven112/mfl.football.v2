@@ -13,7 +13,6 @@ import {
   QUIET_HOUR_END,
   RUMOR_POSTS_TODAY_KEY,
   RUMOR_LAST_POST_TS_KEY,
-  // @ts-expect-error — plain .mjs module, no type declarations
 } from '../scripts/lib/schefter-groupme-budget.mjs';
 
 // A PT instant helper: build a Date that reads as the given hour in LA.

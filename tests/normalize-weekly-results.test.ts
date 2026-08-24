@@ -1,5 +1,4 @@
 import { describe, it, expect } from 'vitest';
-// @ts-expect-error — plain .mjs module shared with node cron scripts
 import { normalizeWeeklyResults } from '../scripts/lib/normalize-weekly-results.mjs';
 
 describe('normalizeWeeklyResults', () => {

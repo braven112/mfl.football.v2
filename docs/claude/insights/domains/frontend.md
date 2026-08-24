@@ -131,6 +131,78 @@ hrefs to local copies, and open it in the bundled Chromium — it isolates
 
 ---
 
+## 2026-08-24 - A Hoisted `function` Declaration Drops a Guard's Narrowing; an Arrow Assigned After It Keeps It
+
+**Context:** A repo-wide type audit. Most of the `'X' is possibly 'null'`
+errors in `.astro` inline scripts sat *below* a perfectly good
+`const el = document.getElementById(...); if (!el) return;` gate.
+
+**Insight:** The gate is not the problem — the callee's *shape* is. TS drops
+the narrowing inside a hoisted `function` declaration (it can be called
+before the guard ran, so the narrowing is not sound there), but keeps it
+inside an arrow assigned to a `const` after the guard. Same guard, same
+variable, different verdict:
+
+```ts
+const feed = q();            // HTMLElement | null
+if (!feed) return;
+function tick() { feed.querySelector('x'); }      // ts(18047) possibly null
+const tick2 = () => { feed.querySelector('x'); }; // fine
+```
+
+**Recommendation:** Two fixes, and which one is right depends on the file:
+
+- **Re-bind at the gate** — `const el: HTMLElement = maybeEl;` right after the
+  early return, keeping the *old* name for the binding. Every existing call
+  site and the hoisting of every function below stay untouched, so this is the
+  only safe option in the big inline scripts (`rosters.astro` and friends),
+  where converting a declaration to an arrow can trip the TDZ crash documented
+  in `features/august-roster-cuts.md`.
+- **Convert to an arrow** — only when you have checked that nothing calls it
+  above its definition. Cheaper to read, but it changes hoisting.
+
+Reach for `!` for neither: it re-asserts at every use and goes stale silently.
+
+**Evidence:** `KeeperPlanner.astro`, `OwnerActivityReport.astro`,
+`NotificationSettingsCard.astro` (re-bind) and `news.astro`'s `tick`
+(arrow) in the type-errors audit branch.
+
+## 2026-08-24 - `src/types/auction-predictor` Never Existed, So the Whole Cap Stack Type-Checked Against Nothing
+
+**Context:** Same audit. `ts(2307): Cannot find module` on
+`../types/auction-predictor`, from twelve `src/` files.
+
+**Insight:** The module was not deleted — `git log --diff-filter=D` finds
+nothing, it was never committed. Its four types (`TeamCapSituation`,
+`PlayerValuation`, `ContractEscalation`, `PlayerRankingImport`, plus
+`FranchiseTagPrediction`) are defined nowhere else, so
+`cap-space-calculator`, `league-cap`, `franchise-tag-predictor`,
+`multi-contract-pricer`, `draft-pick-cap-impact`,
+`championship-window-detector`, `csv-exporter`, `rankings-importer` and
+`rankings-parser` were all unchecked. Nothing caught it because **no CI job
+runs `astro check` or `tsc`** — a missing type module is invisible when the
+only consumer of type errors is a human running the checker by hand.
+
+Reconstructing it from usage immediately surfaced two things the silence had
+been hiding: the test suite's `TeamCapSituation` mock had drifted to a
+different shape entirely (`currentCommitments`, `draftPickCommitments`,
+`championshipWindow`, `positionalNeeds: string[]`) from the one
+`cap-space-calculator` actually builds, and
+`tests/rankings-importer.test.ts`'s "should not include best match in
+alternatives" mapped `a => a.id` over objects keyed `playerId`, so it asserted
+`[undefined] not.toContain(...)` and had never once tested its own name.
+
+**Recommendation:** An `import type` from a missing module is erased at build,
+so it costs nothing at runtime and shows no symptom — only the checker sees
+it. Treat `ts(2307)` as a P1 in an audit, not noise: each one silently voids
+every type in the file. `pnpm test:types` now ratchets the total so a new one
+cannot land unnoticed.
+
+**Evidence:** `src/types/auction-predictor.ts` (restored), and the mock +
+assertion fixes in `tests/franchise-tag-predictor.test.ts` /
+`tests/rankings-importer.test.ts`.
+
+
 ## 2026-08-22 - The Two Homepages Disagree About Whether `effectiveDate` Is Optional
 
 **Context:** Wiring the Schedule Release tease into both league homeposts. Both

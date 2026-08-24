@@ -39,7 +39,8 @@ const franchiseMetaMap = new Map(
       team.id,
       ...aliases,
     ]
-      .filter(Boolean)
+      // `.filter(Boolean)` does not narrow in TS — the predicate form does.
+      .filter((value): value is string => Boolean(value))
       .map((value) => value.toLowerCase());
 
     return [

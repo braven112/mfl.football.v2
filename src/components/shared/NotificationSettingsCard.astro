@@ -66,9 +66,10 @@ const vapidPublicKey = (import.meta.env.PUBLIC_VAPID_PUBLIC_KEY as string | unde
     const publicKey = root.dataset.vapidKey || '';
     const stateEl = document.getElementById('push-state');
     const statusEl = document.getElementById('push-status');
-    const toggleBtn = document.getElementById('push-toggle') as HTMLButtonElement | null;
+    const toggleBtnEl = document.getElementById('push-toggle') as HTMLButtonElement | null;
     const testBtn = document.getElementById('push-test') as HTMLButtonElement | null;
-    if (!stateEl || !statusEl || !toggleBtn || !testBtn) return;
+    if (!stateEl || !statusEl || !toggleBtnEl || !testBtn) return;
+    const toggleBtn: HTMLButtonElement = toggleBtnEl;
 
     let subscribed = false;
 

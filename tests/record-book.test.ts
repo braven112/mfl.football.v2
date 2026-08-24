@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
-// @ts-expect-error - .mjs helper shared with the node script (see its header)
 import {
   gamesFromSchedule,
   longestStreaks,

@@ -4,7 +4,6 @@
  * its behavior here guarantees the in-page preview matches what actually ships.
  */
 import { describe, it, expect } from 'vitest';
-// @ts-expect-error — .mjs imported via allowJs
 import {
   resolveLeagues,
   announcePostId,

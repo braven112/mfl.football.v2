@@ -20,7 +20,6 @@ import Breadcrumbs from '../../components/theleague/Breadcrumbs.astro';
 import SchefterFeed from '../../components/shared/SchefterFeed.astro';
 import GroupMeChatPanel from '../../components/shared/GroupMeChatPanel.tsx';
 import HottestDesksWidget from '../../components/theleague/HottestDesksWidget.astro';
-// @ts-expect-error — JS module without bundled types; runtime exports verified.
 import { getTopNamedTeams } from '../../../scripts/lib/schefter-team-naming.mjs';
 import { getAuthUser } from '../../utils/auth';
 import { getAuthor, getAuthorAvatar, SCHEFTER_AUTHORS } from '../../types/schefter';
@@ -578,7 +577,7 @@ const tabs = [
     let since = Number(container.dataset.groupmeSince ?? '0') || 0;
     let stopped = false;
 
-    async function tick() {
+    const tick = async () => {
       if (stopped) return;
       try {
         const url = since > 0
@@ -613,7 +612,7 @@ const tabs = [
       } catch {
         /* swallow — try again next tick */
       }
-    }
+    };
 
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') tick();

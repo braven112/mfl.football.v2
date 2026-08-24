@@ -1,5 +1,4 @@
 import { describe, it, expect } from 'vitest';
-// @ts-expect-error — sibling .mjs module, no .d.ts
 import {
   findTwoTeamCandidates,
   buildPositionalWants,
@@ -7,7 +6,6 @@ import {
   franchiseCapSpace,
   valuePlayer,
   __testing__,
-// @ts-expect-error — sibling .mjs module, no .d.ts
 } from '../scripts/lib/speculation-matching.mjs';
 
 const adpRankById = new Map<string, number>([

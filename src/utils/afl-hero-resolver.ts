@@ -24,7 +24,6 @@
  */
 
 import type { WhatsNewEntry, HeroContent } from '../types/whats-new';
-// @ts-expect-error - .mjs helper shared with the node scripts (see its header)
 import { scheduleReleaseTease, scheduleReleaseTeaseCopy } from './schedule-release.mjs';
 import { dailyPick, type HeroModel } from './hero-casting';
 import { entryAppliesToLeague, WHATS_NEW_CATEGORY_LABELS } from '../types/whats-new';

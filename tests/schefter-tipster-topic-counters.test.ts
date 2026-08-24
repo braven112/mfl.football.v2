@@ -16,7 +16,6 @@
  *   - per-hash redis failure logs and continues; the post is never blocked
  */
 import { describe, it, expect } from 'vitest';
-// @ts-expect-error — .mjs imported via allowJs
 import { incrementTipsterTopicCounters } from '../scripts/lib/schefter-tipster-counters.mjs';
 
 class FakeRedis {

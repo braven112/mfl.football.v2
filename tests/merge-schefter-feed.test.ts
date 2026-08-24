@@ -1,5 +1,4 @@
 import { describe, it, expect } from 'vitest';
-// @ts-expect-error — plain .mjs module, no types
 import { mergeFeed, mergeHistory, maxWatermark, mergeByPath } from '../scripts/lib/merge-schefter-feed.mjs';
 
 const post = (id: string, ts: string, extra: Record<string, unknown> = {}) => ({

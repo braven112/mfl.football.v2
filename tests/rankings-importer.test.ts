@@ -442,16 +442,34 @@ describe('matchPlayerToMFL - Confidence Scoring', () => {
 });
 
 describe('matchPlayerToMFL - Alternatives', () => {
+  // A dedicated roster of same-surname QBs. The shared `mflPlayers` fixture has
+  // exactly one Allen, so every rival candidate scored under the 0.5 threshold
+  // and `alternatives` came back empty — every assertion below sat behind an
+  // `if` that never opened, and the whole block passed without testing anything.
+  // Six candidates also means the top-3 cap (`scores.slice(1, 4)`) is real here.
+  const allenQBs = [
+    { id: '2001', name: 'Allen, Josh', position: 'QB', team: 'BUF' },
+    { id: '2002', name: 'Allen, Joshua', position: 'QB', team: 'JAX' },
+    { id: '2003', name: 'Allen, Kyle', position: 'QB', team: 'WAS' },
+    { id: '2004', name: 'Allen, Jonathan', position: 'QB', team: 'MIN' },
+    { id: '2005', name: 'Allen, Jared', position: 'QB', team: 'CAR' },
+    { id: '2006', name: 'Mahomes, Patrick', position: 'QB', team: 'KCC' },
+  ];
+
+  /** Fuzzy (misspelled) lookup — the only path that returns alternatives. */
+  const fuzzyMatch = () => matchPlayerToMFL('Jossh Allen', 'QB', allenQBs);
+
   it('should include alternatives when best match is fuzzy (not exact)', () => {
-    // Use a slightly misspelled name so it goes through fuzzy path, not exact-match fast path
-    const result = matchPlayerToMFL('Jossh Allen', 'QB', mflPlayers);
+    const result = fuzzyMatch();
     expect(result.matched).toBe(true);
     expect(result.alternatives).toBeDefined();
     expect(Array.isArray(result.alternatives)).toBe(true);
+    // Non-empty is the point: an empty array satisfies every check below vacuously.
+    expect(result.alternatives!.length).toBeGreaterThan(0);
   });
 
   it('should skip alternatives for exact matches (performance optimization)', () => {
-    const result = matchPlayerToMFL('Josh Allen', 'QB', mflPlayers);
+    const result = matchPlayerToMFL('Josh Allen', 'QB', allenQBs);
     expect(result.matched).toBe(true);
     expect(result.confidence).toBe(1.0);
     // Exact matches skip alternatives since they are unnecessary
@@ -459,61 +477,60 @@ describe('matchPlayerToMFL - Alternatives', () => {
   });
 
   it('should filter alternatives by minimum confidence threshold (0.5)', () => {
-    const result = matchPlayerToMFL('Josh Allen', 'QB', mflPlayers);
-    if (result.alternatives) {
-      result.alternatives.forEach(alt => {
-        expect(alt.confidence).toBeGreaterThanOrEqual(0.5);
-      });
-    }
+    const alternatives = fuzzyMatch().alternatives!;
+    expect(alternatives.length).toBeGreaterThan(0);
+    alternatives.forEach(alt => {
+      expect(alt.confidence).toBeGreaterThanOrEqual(0.5);
+    });
   });
 
   it('should not include best match in alternatives', () => {
-    const result = matchPlayerToMFL('Josh Allen', 'QB', mflPlayers);
-    if (result.alternatives && result.playerId) {
-      const alternativeIds = result.alternatives.map(a => a.id);
-      expect(alternativeIds).not.toContain(result.playerId);
-    }
+    const result = fuzzyMatch();
+    expect(result.playerId).toBe('2001');
+    expect(result.alternatives!.length).toBeGreaterThan(0);
+    expect(result.alternatives!.map(a => a.playerId)).not.toContain(result.playerId);
   });
 
   it('should limit alternatives to top 3 (excluding best)', () => {
-    const result = matchPlayerToMFL('Allen', 'QB', mflPlayers);
-    if (result.alternatives) {
-      expect(result.alternatives.length).toBeLessThanOrEqual(3);
-    }
+    // Five rivals clear the position filter; only the top 3 may survive.
+    const alternatives = fuzzyMatch().alternatives!;
+    expect(alternatives.length).toBe(3);
   });
 
   it('should include playerId in alternatives', () => {
-    const result = matchPlayerToMFL('Josh Allen', 'QB', mflPlayers);
-    if (result.alternatives && result.alternatives.length > 0) {
-      expect(result.alternatives[0]).toHaveProperty('playerId');
-      expect(typeof result.alternatives[0].playerId).toBe('string');
-    }
+    const alternatives = fuzzyMatch().alternatives!;
+    expect(alternatives.length).toBeGreaterThan(0);
+    expect(alternatives[0]).toHaveProperty('playerId');
+    expect(typeof alternatives[0].playerId).toBe('string');
   });
 
   it('should include player name in alternatives', () => {
-    const result = matchPlayerToMFL('Josh Allen', 'QB', mflPlayers);
-    if (result.alternatives && result.alternatives.length > 0) {
-      expect(result.alternatives[0]).toHaveProperty('name');
-      expect(typeof result.alternatives[0].name).toBe('string');
-    }
+    const alternatives = fuzzyMatch().alternatives!;
+    expect(alternatives.length).toBeGreaterThan(0);
+    expect(alternatives[0]).toHaveProperty('name');
+    expect(typeof alternatives[0].name).toBe('string');
   });
 
   it('should include confidence score in alternatives', () => {
-    const result = matchPlayerToMFL('Josh Allen', 'QB', mflPlayers);
-    if (result.alternatives && result.alternatives.length > 0) {
-      expect(result.alternatives[0]).toHaveProperty('confidence');
-      expect(typeof result.alternatives[0].confidence).toBe('number');
-    }
+    const alternatives = fuzzyMatch().alternatives!;
+    expect(alternatives.length).toBeGreaterThan(0);
+    expect(alternatives[0]).toHaveProperty('confidence');
+    expect(typeof alternatives[0].confidence).toBe('number');
   });
 
-  it('should not include alternatives when matched is false', () => {
-    const result = matchPlayerToMFL('Fake Player', 'QB', mflPlayers);
-    if (result.alternatives) {
-      // Alternatives should still be filtered by confidence threshold
-      result.alternatives.forEach(alt => {
-        expect(alt.confidence).toBeGreaterThanOrEqual(0.5);
-      });
-    }
+  it('should sort alternatives by confidence, highest first', () => {
+    const alternatives = fuzzyMatch().alternatives!;
+    expect(alternatives.length).toBeGreaterThan(1);
+    const confidences = alternatives.map(a => a.confidence);
+    expect(confidences).toEqual([...confidences].sort((a, b) => b - a));
+  });
+
+  it('still filters by confidence when nothing clears the match threshold', () => {
+    const result = matchPlayerToMFL('Fake Player', 'QB', allenQBs);
+    expect(result.matched).toBe(false);
+    (result.alternatives ?? []).forEach(alt => {
+      expect(alt.confidence).toBeGreaterThanOrEqual(0.5);
+    });
   });
 });
 

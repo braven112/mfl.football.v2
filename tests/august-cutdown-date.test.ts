@@ -23,7 +23,6 @@ import { getAugustCutdownDate as appCutdownDate, ACQUISITION_TYPES, parseTransac
 import { TARGET_ACTIVE_COUNT } from '../src/utils/salary-calculations';
 import { selectAutoCuts as selectAutoCutsTs } from '../src/utils/august-cut-selection';
 import { isCredentialFresh as isCredentialFreshTs } from '../src/utils/autocut-storage';
-// @ts-expect-error — sibling .mjs module, no .d.ts
 import {
   getAugustCutdownDate as scriptCutdownDate,
   getAugustCutdownWallClock,
@@ -32,7 +31,6 @@ import {
   decryptCredentialRecord,
   isCredentialFresh as isCredentialFreshMjs,
 } from '../scripts/lib/august-cutdown.mjs';
-// @ts-expect-error — sibling .mjs module, no .d.ts
 import {
   selectAutoCuts as selectAutoCutsCore,
   parseAcquisitionEvents,

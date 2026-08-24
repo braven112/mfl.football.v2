@@ -44,13 +44,20 @@ function createMockTeamCap(overrides: Partial<TeamCapSituation> = {}): TeamCapSi
   return {
     franchiseId: '0001',
     teamName: 'Test Team',
+    currentCapSpace: 0,
     projectedCapSpace2026: 50_000_000,
-    currentCommitments: 150_000_000,
-    discretionarySpending: 25_000_000,
+    committedSalaries: 150_000_000,
+    deadMoney: 0,
     expiringContracts: [],
-    draftPickCommitments: 5_000_000,
-    positionalNeeds: ['WR', 'RB'],
-    championshipWindow: 'contending',
+    totalExpiringValue: 0,
+    franchiseTagCommitment: 0,
+    availableAfterTag: 50_000_000,
+    estimatedMinimumRosterSpend: 5_000_000,
+    discretionarySpending: 25_000_000,
+    positionalNeeds: [
+      { position: 'WR', priority: 'high', currentDepth: 5, targetAcquisitions: 2 },
+      { position: 'RB', priority: 'medium', currentDepth: 4, targetAcquisitions: 1 },
+    ],
     ...overrides,
   };
 }

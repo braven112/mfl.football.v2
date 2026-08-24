@@ -9,7 +9,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-// @ts-expect-error — .mjs imported via allowJs
 import { evaluateQuietDayConditions } from '../scripts/schefter-rumor-scan.mjs';
 
 const ctxEntry = (overrides: Record<string, unknown> = {}) => ({

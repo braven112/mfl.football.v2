@@ -288,9 +288,10 @@ const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 
 <script>
 	function renderChart() {
-		const el = document.getElementById('activityChart');
+		const chartEl = document.getElementById('activityChart');
 		const dataEl = document.getElementById('chart-data');
-		if (!el || !dataEl) return;
+		if (!chartEl || !dataEl) return;
+		const el: HTMLElement = chartEl;
 
 		const { dates, teams } = JSON.parse(dataEl.textContent || '{}') as {
 			dates: string[];

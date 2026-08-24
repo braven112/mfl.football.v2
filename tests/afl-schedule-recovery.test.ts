@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
-// @ts-expect-error - .mjs helper shared with the node scripts (see its header)
 import { bracketKindFromName } from '../src/utils/afl-bracket-kind.mjs';
 
 /**

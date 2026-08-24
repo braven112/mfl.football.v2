@@ -29,11 +29,8 @@ import { describe, it, expect } from 'vitest';
 import path from 'node:path';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-// @ts-expect-error — plain .mjs module without type declarations
 import { findValueBasedAutoCutClaims, findValueBasedAutoCutClaimsInPost, stripHtml } from '../scripts/lib/cut-watch-graders.mjs';
-// @ts-expect-error — plain .mjs module without type declarations
 import { buildFactSheet, getUserPrompt } from '../scripts/article-types/cut-watch.mjs';
-// @ts-expect-error — plain .mjs module without type declarations
 import { selectAutoMoves, parseAcquisitionEvents } from '../src/utils/august-cut-selection-core.mjs';
 import { fixtureData, fixtureAdp } from './fixtures/cut-watch-fixture';
 

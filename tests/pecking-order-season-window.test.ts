@@ -1,11 +1,8 @@
 import { describe, it, expect } from 'vitest';
-// @ts-expect-error — sibling .mjs module, no .d.ts
 import {
   nflWeekOneKickoff,
   isSeasonWindowOpen,
-// @ts-expect-error — sibling .mjs module, no .d.ts
 } from '../src/utils/pecking-order-season-window.mjs';
-// @ts-expect-error — sibling .mjs module, no .d.ts
 import { resolveSeasonGate } from '../scripts/generate-pecking-order.mjs';
 
 /**

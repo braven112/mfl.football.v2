@@ -1,5 +1,4 @@
 import { describe, it, expect } from 'vitest';
-// @ts-expect-error — sibling .mjs module, no .d.ts
 import {
   detectFranchiseChange,
   detectTradeBaitChanges,
@@ -7,7 +6,6 @@ import {
   DEFAULT_SETTLE_WINDOW_MS,
   DEFAULT_MAX_SETTLE_WAIT_MS,
   MAX_ADDS_PER_TIP,
-// @ts-expect-error — sibling .mjs module, no .d.ts
 } from '../scripts/lib/trade-bait-detector.mjs';
 
 /**

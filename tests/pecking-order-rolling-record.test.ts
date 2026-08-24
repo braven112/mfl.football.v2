@@ -1,9 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-// @ts-expect-error — sibling .mjs module, no .d.ts
 import { buildPairings, rollingRecord } from '../scripts/generate-pecking-order.mjs';
-// @ts-expect-error — sibling .mjs module, no .d.ts
 import { LEAGUES } from '../src/config/leagues-data.mjs';
 
 /**

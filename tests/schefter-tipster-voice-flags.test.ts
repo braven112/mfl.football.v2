@@ -14,7 +14,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-// @ts-expect-error — sibling .mjs module, no .d.ts
 import { anonymizeTips } from '../scripts/schefter-rumor-scan.mjs';
 
 const SCANNER_SRC = readFileSync(

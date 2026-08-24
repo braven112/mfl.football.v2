@@ -1,5 +1,4 @@
 import { describe, it, expect } from 'vitest';
-// @ts-expect-error - .mjs helper shared with the node scripts (see its header)
 import {
   buildWeekPlan,
   roundRobinRounds,
@@ -8,7 +7,6 @@ import {
   LIGHT_BYE_WEEK_MAX,
   MIN_REMATCH_GAP,
 } from '../src/utils/schedule-builder.mjs';
-// @ts-expect-error - .mjs helper shared with the node scripts (see its header)
 import { byeCountsByWeek, byeFreeWeeks, chooseDoubleheaderWeeks } from '../src/utils/schedule-rules.mjs';
 import byeData from '../data/nfl/bye-weeks.json';
 

@@ -24,11 +24,8 @@ import { getRelease } from '../../utils/schedule-release-store';
 import { getLeagueTeamBrands } from '../../utils/league-team-brands';
 import { getThrowbackFranchiseBrand } from '../../utils/franchise-brand';
 import { DEFAULT_THROWBACK_ERA } from '../../data/theleague/throwback-config';
-// @ts-expect-error - .mjs helper shared with the node scripts (see its header)
 import { THROWBACK_REASON } from '../../utils/schedule-release.mjs';
-// @ts-expect-error - .mjs helpers shared with the node scripts (see their headers)
 import { SCHEDULE_POLICY } from '../../utils/schedule-plan.mjs';
-// @ts-expect-error - .mjs helpers shared with the node scripts (see their headers)
 import { releaseIsReady, scheduleReleaseDate } from '../../utils/schedule-release.mjs';
 
 export const prerender = false;
