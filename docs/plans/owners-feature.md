@@ -346,12 +346,32 @@ the AFL's); `whats-new.json` entry + light/dark webp pair (**ask about
 the `ownerEra` divergence (trap 3). Flip the parity test from advisory to
 required. Zero user-visible change; snapshot both franchise pages before/after.
 
-**PR 4 — "Names."** Add `sourceFranchiseId` to `compute-afl-awards.mjs` (~`:505`
+**PR 4 — "Names."** *(source found — see below.)* Add `sourceFranchiseId` to `compute-afl-awards.mjs` (~`:505`
 writes `{franchiseId: null, name, source}` with no source slot — the one genuine
 producer-side gap; the merge logic near `:603` preserves existing fields, so
 verify against a full re-derive) and light up AFL award badges. Then populate
 `displayName`s — a pure data edit. Optionally fold in the 15 names from
 `groupme-storage.ts:294-317`, making the registry the single source of truth.
+
+**The names have a real source.** Locked decision 3 said owner names exist
+nowhere in this repo, and that is still true of what is COMMITTED — a
+structured walk of all 44 `league.json` files finds zero owner/email/username
+fields, because they were fetched unauthenticated. But MFL's `league` export
+returns owner names to a request carrying a COMMISSIONER cookie. Since each
+MFL league-year is its own league, a year-by-year authenticated sweep can name
+FORMER owners too, not just the 40 current ones — which is most of the 140.
+
+`scripts/fetch-owner-names.mjs` (added in PR 1, wired into nothing) does this:
+`MFL_USERNAME`/`MFL_PASSWORD` or `MFL_COOKIE`, `--dry-run` by default. Three
+rules it enforces, all covered by `tests/fetch-owner-names.test.ts`:
+- **Names only.** The same response carries email addresses. Fields are a
+  whitelist, and `assertNoContactInfo` throws if anything email- or URL-shaped
+  reaches the registry. Never widen this to a blacklist.
+- **A name a human set is never overwritten.**
+- **A tenure MFL reports two owners for is left alone**, and reported with a
+  season count per name. That is a tenure that should be SPLIT; naming it after
+  whichever appeared more would bury exactly the boundary the registry exists
+  to record.
 
 ## Guard tests
 

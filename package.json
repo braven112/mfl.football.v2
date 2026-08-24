@@ -40,6 +40,7 @@
     "compute:schedule-strength": "node scripts/compute-schedule-strength.mjs",
     "compute:owner-tenures": "node scripts/compute-owner-tenures.mjs",
     "seed:owners-registry": "node scripts/seed-owners-registry.mjs",
+    "fetch:owner-names": "node scripts/fetch-owner-names.mjs",
     "generate:pecking-order": "node scripts/generate-pecking-order.mjs",
     "backfill:historical-feeds": "node scripts/backfill-historical-feeds.mjs",
     "backfill:afl-champions": "node scripts/backfill-afl-championship-history.mjs",
