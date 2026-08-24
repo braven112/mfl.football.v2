@@ -534,6 +534,9 @@ export const planSchedule = ({ slug, year, readFeed, byes, search = {}, mode, ra
     // proof that a legal colouring exists for this format.
     if (policy.coloring !== false) {
       const slots = buildSlots(shape.lastWeek, doubleheaders);
+      // Built once and reused: it also feeds `frozenSlots` below, which used
+      // to rebuild it inside a per-slot filter.
+      const seeded = coloringFromWeeks(weeks, slots);
       const colorCtx = {
         divisionOf: shape.divisionOf,
         byesFor: (id, week) => exposure[id]?.[week] ?? 0,
@@ -557,14 +560,13 @@ export const planSchedule = ({ slug, year, readFeed, byes, search = {}, mode, ra
                 .map((slot, i) => ({ slot, i }))
                 .filter(({ slot, i }) =>
                   slot.week === policy.crossConference.week &&
-                  coloringFromWeeks(weeks, slots)[i].some(
+                  seeded[i].some(
                     (g) => shape.conferenceOf[g.away] !== shape.conferenceOf[g.home],
                   ))
                 .map(({ i }) => i)
             : [],
         ),
       };
-      const seeded = coloringFromWeeks(weeks, slots);
       const refined = searchColoring(seeded, slots, colorCtx, {
         // 150k lands the search well past the structured seed's local
         // optimum; 20k does not move at all (measured — the seed is a deep

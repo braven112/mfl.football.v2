@@ -240,10 +240,22 @@ export const chooseDoubleheaderWeeks = ({
   // evenly as the calendar allows.
   const forcedLate = forced.filter((w) => endWindow.includes(w)).length;
   const wantLate = Math.max(0, Math.floor(count / 2) - forcedLate);
-  const takeLate = late.filter((w) => !forced.includes(w)).slice(0, Math.min(wantLate, late.length));
+  // Capped by `remaining` as well as by `wantLate`: the late share is drawn
+  // from what is LEFT after the format's forced weeks, and `wantLate` comes
+  // from `count` alone. Without the cap, 2 doubleheaders with 2 forced weeks
+  // returned 3.
+  const takeLate = late
+    .filter((w) => !forced.includes(w))
+    .slice(0, Math.min(wantLate, late.length, remaining));
+  // max(0, ...) is load-bearing: a NEGATIVE end makes slice count back from
+  // the end of the array rather than return nothing, so it would hand back
+  // all-but-n early weeks and over-pick. It goes negative whenever the format
+  // forces more weeks than the early share has room for -- today `required`
+  // holds at most the AFL's Week 1, but the format is an input that changes,
+  // and asking for 2 doubleheaders once returned 5.
   const takeEarly = early
     .filter((w) => !forced.includes(w))
-    .slice(0, remaining - takeLate.length);
+    .slice(0, Math.max(0, remaining - takeLate.length));
   const picked = [...forced, ...takeEarly, ...takeLate];
 
   if (picked.length < count) {

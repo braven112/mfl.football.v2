@@ -589,4 +589,42 @@ describe('the doubleheader split is the best the calendar allows', () => {
     expect(picked).toContain(1);
     expect(picked.filter((w: number) => w >= 11).length).toBe(1);
   });
+
+  it('never returns more doubleheaders than were asked for', () => {
+    // `takeEarly` slices `remaining - takeLate.length`. A NEGATIVE end makes
+    // Array#slice count back from the END rather than return nothing, so it
+    // handed back all-but-n early weeks and the season came out with more
+    // doubleheaders than the format has rounds for. It goes negative whenever
+    // the format forces more weeks than the early share has room for. Today
+    // `required` holds at most the AFL's Week 1, so no shipped config reaches
+    // it — but the format is an input that changes, which is the whole reason
+    // this branch exists, and asking for 2 once returned 5.
+    const byes = { A: 5, B: 6, C: 7, D: 8, E: 9, F: 10, G: 11 };
+    for (const [count, required] of [
+      [2, [1, 2]],
+      [2, [1, 2, 3]],
+      [3, [1, 2, 3]],
+      [1, [1, 13]],
+      [4, [1]],
+    ] as const) {
+      const picked = chooseDoubleheaderWeeks({
+        count,
+        byeFree: byeFreeWeeks(byes, 13),
+        startWindow: [1, 2, 3, 4],
+        endWindow: [11, 12, 13],
+        required: [...required],
+        byeCounts: byeCountsByWeek(byes),
+        lastWeek: 13,
+      });
+      // The format's forced weeks are never dropped, so a `required` longer
+      // than `count` legitimately returns all of them — but nothing beyond.
+      const floor = Math.max(count, required.length);
+      expect(
+        picked.length,
+        `count ${count}, required [${required.join(',')}] -> picked [${picked.join(',')}]`,
+      ).toBe(floor);
+      expect(new Set(picked).size, 'no week picked twice').toBe(picked.length);
+      for (const w of required) expect(picked).toContain(w);
+    }
+  });
 });
