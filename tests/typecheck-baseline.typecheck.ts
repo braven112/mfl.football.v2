@@ -33,7 +33,11 @@ function runAstroCheck(): string {
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
       // The 12k-line rosters.astro OOMs the checker at the default heap.
-      env: { ...process.env, NODE_OPTIONS: '--max-old-space-size=12288' },
+      // Overridable so a smaller CI runner can cap it below the local default.
+      env: {
+        ...process.env,
+        NODE_OPTIONS: process.env.TYPECHECK_NODE_OPTIONS ?? '--max-old-space-size=12288',
+      },
       maxBuffer: 64 * 1024 * 1024,
     });
   } catch (err) {
@@ -52,8 +56,16 @@ function parseErrorTotal(output: string): number {
   const plain = output.replace(/\u001b\[[0-9;]*m/g, '');
   const match = plain.match(/^-\s*(\d+)\s+errors?$/m);
   if (!match) {
+    // The commonest cause is the checker running out of heap on rosters.astro,
+    // which aborts before printing the summary. Say so, rather than reporting
+    // it as an unparseable-output mystery.
+    const outOfMemory = /JavaScript heap out of memory|FATAL ERROR:.*Allocation failed/i.test(plain);
     throw new Error(
-      `Could not find astro check's error summary in its output.\nLast 500 chars:\n${plain.slice(-500)}`,
+      (outOfMemory
+        ? 'astro check ran out of memory before printing its summary. Raise the heap via '
+          + 'TYPECHECK_NODE_OPTIONS (e.g. --max-old-space-size=12288).\n'
+        : "Could not find astro check's error summary in its output.\n")
+        + `Last 500 chars:\n${plain.slice(-500)}`,
     );
   }
   return Number(match[1]);

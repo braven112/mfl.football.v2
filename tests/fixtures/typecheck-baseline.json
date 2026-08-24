@@ -1,5 +1,5 @@
 {
-  "$comment": "Ratchet baseline for `astro check --minimumSeverity error`. This number may only go DOWN. tests/typecheck-baseline.test.ts fails if it rises (a regression) and also fails if it drops (so the baseline is retightened rather than quietly leaving slack). Run `pnpm test:types` to check, then lower `total` to the reported count.",
+  "$comment": "Ratchet baseline for `astro check --minimumSeverity error`. This number may only go DOWN. tests/typecheck-baseline.typecheck.ts fails if it rises (a regression) and also fails if it drops (so the baseline is retightened rather than quietly leaving slack). Run `pnpm test:types` to check, then lower `total` to the reported count.",
   "total": 2092,
   "recordedAt": "2026-08-24",
   "notes": {
