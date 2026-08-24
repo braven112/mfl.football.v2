@@ -6,6 +6,7 @@ import franchiseHistory from '../../../../data/theleague/derived/franchise-histo
 import leagueConfig from '../../../data/theleague.config.json';
 import { formatTradeAsset } from '../../../utils/franchise-trade-asset';
 import { buildFranchiseEras, type FranchiseEra as Era } from '../../../utils/franchise-eras';
+import EraSeasonTable from '../../../components/shared/franchises/EraSeasonTable.astro';
 
 export const prerender = false;
 
@@ -704,72 +705,24 @@ const formatBid = (n: number): string => {
       <h2>Era History</h2>
       {eraStats
         .filter(({ seasons }) => seasons.length > 0)
-        .map(({ era, seasons, w, l, t, pf, champs, divTitles, mvps, jerrys, osweilers }) => (
-        <div class="era" id={`era-${era.yearStart}`}>
-          <div class="era-header">
-            {era.icon && <img src={resolveRowIcon(era)} alt="" class="era-icon" />}
-            <div>
-              <h3>
-                {era.name}
-                {era.isCurrent && <span class="current-tag">Current</span>}
-                {era.sourceFranchiseId && (
-                  <span class="prior-franchise-tag">as franchise {era.sourceFranchiseId}</span>
-                )}
-              </h3>
-              <p class="meta">
-                {era.yearStart === era.yearEnd || era.yearEnd === 9999
-                  ? `${era.yearStart}–${era.yearEnd === 9999 ? 'present' : era.yearEnd}`
-                  : `${era.yearStart}–${era.yearEnd}`}
-                {seasons.length > 0 && ` · ${seasons.length} season${seasons.length === 1 ? '' : 's'} · ${formatRecord(w, l, t)}`}
-              </p>
-            </div>
-          </div>
-          {seasons.length > 0 ? (
-            <div class="year-by-year-scroll">
-            <table class="year-by-year">
-              <thead>
-                <tr>
-                  <th>Year</th>
-                  <th>Identity</th>
-                  <th>Record</th>
-                  <th>Points</th>
-                  <th>Reg. Rank</th>
-                  <th>Result</th>
-                </tr>
-              </thead>
-              <tbody>
-                {seasons.sort((a: any, b: any) => b.year - a.year).map((s: any) => (
-                  <tr>
-                    <td>{s.year}</td>
-                    <td>
-                      <img src={resolveRowIcon(s)} alt="" class="row-icon" loading="lazy" />
-                      {s.nameMedium || s.name}
-                    </td>
-                    <td>{formatRecord(s.wins, s.losses, s.ties)}</td>
-                    <td>{Math.round(s.pointsFor).toLocaleString()}</td>
-                    <td>{s.regSeasonRank ? `#${s.regSeasonRank}` : '—'}</td>
-                    <td>
-                      {playoffResultLabel[s.playoffResult] ?? '—'}
-                      {s.wonDivision && <span class="div-tag">🛡 {s.divisionName}</span>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            </div>
-          ) : (
-            <p class="dim">No games played in this era yet.</p>
-          )}
-          {(champs.length > 0 || divTitles.length > 0 || mvps.length > 0 || jerrys.length > 0 || osweilers.length > 0) && (
-            <div class="era-awards">
-              {champs.length > 0 && <span class="era-award">🏆 {champs.length} title{champs.length === 1 ? '' : 's'}</span>}
-              {divTitles.length > 0 && <span class="era-award">🛡 {divTitles.length} division</span>}
-              {mvps.length > 0 && <span class="era-award">⭐ {mvps.length} MVP</span>}
-              {jerrys.length > 0 && <span class="era-award">💸 {jerrys.length} Jerry Jones</span>}
-              {osweilers.length > 0 && <span class="era-award">📉 {osweilers.length} Osweiler</span>}
-            </div>
-          )}
-        </div>
+        .map(({ era, seasons, champs, divTitles, mvps, jerrys, osweilers }) => (
+        <EraSeasonTable
+          anchorId={`era-${era.yearStart}`}
+          name={era.name}
+          icon={era.icon ? resolveRowIcon(era) : null}
+          yearStart={era.yearStart}
+          yearEnd={era.yearEnd}
+          isCurrent={era.isCurrent}
+          priorFranchiseId={era.sourceFranchiseId ?? null}
+          seasons={seasons.map((s: any) => ({ ...s, icon: resolveRowIcon(s) }))}
+          awards={[
+            champs.length > 0 && { label: `🏆 ${champs.length} title${champs.length === 1 ? '' : 's'}` },
+            divTitles.length > 0 && { label: `🛡 ${divTitles.length} division` },
+            mvps.length > 0 && { label: `⭐ ${mvps.length} MVP` },
+            jerrys.length > 0 && { label: `💸 ${jerrys.length} Jerry Jones` },
+            osweilers.length > 0 && { label: `📉 ${osweilers.length} Osweiler` },
+          ].filter(Boolean)}
+        />
       ))}
     </section>
 
@@ -1143,128 +1096,8 @@ const formatBid = (n: number): string => {
     font-variant-numeric: tabular-nums;
   }
 
-  .era {
-    margin-bottom: 2rem;
-    padding: 1rem 1.25rem;
-    border: 1px solid var(--content-border, #e5e5e5);
-    border-radius: 0.625rem;
-    background: var(--card-bg, #fff);
-  }
-  .year-by-year-scroll {
-    max-height: 480px;
-    overflow: auto;
-    margin: 0 -0.25rem;
-    padding: 0 0.25rem;
-    /* contain scrolling so a fast scroll inside the table doesn't bubble
-       up and start scrolling the page once it hits the boundary */
-    overscroll-behavior: contain;
-    border-radius: 0.375rem;
-    background: var(--card-bg, #fff);
-  }
-  .year-by-year-scroll thead th {
-    position: sticky;
-    top: 0;
-    background: var(--card-bg, #fff);
-    z-index: 1;
-    box-shadow: inset 0 -1px 0 var(--content-border, #ececec);
-  }
-  .era-header {
-    display: flex;
-    align-items: center;
-    gap: 0.875rem;
-    margin-bottom: 0.875rem;
-  }
-  .era-icon {
-    width: 48px;
-    height: 48px;
-    object-fit: contain;
-    border-radius: 0.375rem;
-    background: var(--card-bg, #fff);
-  }
-  .era-header h3 {
-    margin: 0 0 0.125rem;
-    font-size: 1.125rem;
-  }
-  .current-tag {
-    display: inline-block;
-    margin-left: 0.5rem;
-    padding: 0.125rem 0.5rem;
-    border-radius: 999px;
-    background: var(--accent);
-    color: #fff;
-    font-size: 0.6875rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    vertical-align: middle;
-  }
-  .prior-franchise-tag {
-    display: inline-block;
-    margin-left: 0.5rem;
-    padding: 0.125rem 0.5rem;
-    border-radius: 999px;
-    background: var(--content-bg-muted, #f0f0f0);
-    color: var(--content-text-muted, #555);
-    font-size: 0.6875rem;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-    vertical-align: middle;
-  }
 
-  .year-by-year {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.875rem;
-  }
-  .year-by-year th, .year-by-year td {
-    padding: 0.5rem 0.625rem;
-    text-align: left;
-    border-bottom: 1px solid var(--content-border, #ececec);
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-  }
-  .year-by-year th {
-    font-size: 0.6875rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--content-text-muted, #888);
-    font-weight: 600;
-  }
-  .year-by-year tbody tr:hover { background: var(--content-bg-muted, #f5f5f5); }
-  .row-icon {
-    width: 18px;
-    height: 18px;
-    object-fit: contain;
-    margin-right: 0.375rem;
-    vertical-align: middle;
-  }
-  .div-tag {
-    display: inline-block;
-    margin-left: 0.5rem;
-    padding: 0.0625rem 0.375rem;
-    background: #d6e4ff;
-    color: #1a3d7c;
-    border-radius: 0.25rem;
-    font-size: 0.6875rem;
-    font-weight: 600;
-  }
 
-  .era-awards {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-top: 0.75rem;
-    padding-top: 0.75rem;
-    border-top: 1px dashed var(--content-border, #e5e5e5);
-  }
-  .era-award {
-    font-size: 0.75rem;
-    padding: 0.125rem 0.5rem;
-    border-radius: 999px;
-    background: var(--content-bg-muted, #f5f5f5);
-    color: var(--content-text-muted, #555);
-    font-weight: 600;
-  }
 
   .dim { color: var(--content-text-muted, #888); }
   .small { font-size: 0.75rem; }

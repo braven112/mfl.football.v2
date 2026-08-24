@@ -1,0 +1,343 @@
+---
+/**
+ * One era / tenure block: identity header, year-by-year season table, and
+ * trophy chips.
+ *
+ * Extracted verbatim from src/pages/theleague/franchises/[id].astro so the
+ * owner pages render the identical table instead of a second copy that drifts.
+ * The franchise page shows one of these per ERA; an owner page shows one per
+ * TENURE. Same shape, same markup, same CSS.
+ *
+ * ── Trap 4 ────────────────────────────────────────────────────────────────
+ * Astro scoped CSS does NOT cross into a child component. Every rule this
+ * markup depends on had to move HERE with it — `.era`, `.era-header`,
+ * `.era-icon`, `.current-tag`, `.prior-franchise-tag`, `.year-by-year`,
+ * `.year-by-year-scroll`, `.row-icon`, `.div-tag`, `.era-awards`,
+ * `.era-award`, `.dim`. Moving the markup and leaving the styles behind ships
+ * an unstyled table that still passes every test.
+ * See docs/claude/rules/theming-and-assets.md.
+ *
+ * Icons must be RESOLVED BY THE CALLER. Many config history[] icon values are
+ * dead theleague.us URLs; the franchise page repairs them with resolveRowIcon,
+ * the owner pages get them repaired at compute time. This component just
+ * renders what it is handed.
+ */
+
+export interface EraSeason {
+  year: number;
+  name?: string | null;
+  nameMedium?: string | null;
+  icon?: string | null;
+  wins: number;
+  losses: number;
+  ties: number;
+  pointsFor: number;
+  regSeasonRank?: number | null;
+  divisionName?: string | null;
+  wonDivision?: boolean;
+  playoffResult?: string;
+  /** Name came from the MFL feed rather than a config history entry. */
+  inferredFromFeed?: boolean;
+}
+
+export interface EraAward {
+  label: string;
+}
+
+interface Props {
+  /** Anchor id — the franchise page links to `#era-{yearStart}`. */
+  anchorId?: string | null;
+  name: string;
+  icon?: string | null;
+  yearStart: number;
+  /** 9999 renders as "present". */
+  yearEnd: number;
+  isCurrent?: boolean;
+  /** Renders "as franchise 0010" when this stint was on another slot. */
+  priorFranchiseId?: string | null;
+  seasons: EraSeason[];
+  awards?: EraAward[];
+  emptyMessage?: string;
+  /** Heading level, so an owner page can nest these under its own h2. */
+  headingLevel?: 'h3' | 'h4';
+}
+
+const {
+  anchorId = null,
+  name,
+  icon = null,
+  yearStart,
+  yearEnd,
+  isCurrent = false,
+  priorFranchiseId = null,
+  seasons,
+  awards = [],
+  emptyMessage = 'No games played in this era yet.',
+  headingLevel = 'h3',
+} = Astro.props as Props;
+
+const playoffResultLabel: Record<string, string> = {
+  champion: '🏆 Champion',
+  'runner-up': '🥈 Runner-up',
+  'third-place': '🥉 3rd place',
+  playoffs: 'Playoffs',
+  missed: '—',
+};
+
+const formatRecord = (w: number, l: number, t: number) => (t > 0 ? `${w}-${l}-${t}` : `${w}-${l}`);
+
+const sortedSeasons = [...seasons].sort((a, b) => b.year - a.year);
+const played = sortedSeasons.filter((s) => s.wins || s.losses || s.ties || s.pointsFor);
+
+const totals = seasons.reduce(
+  (acc, s) => ({
+    w: acc.w + s.wins,
+    l: acc.l + s.losses,
+    t: acc.t + s.ties,
+  }),
+  { w: 0, l: 0, t: 0 }
+);
+
+const yearRange =
+  yearStart === yearEnd || yearEnd >= 9999
+    ? `${yearStart}–${yearEnd >= 9999 ? 'present' : yearEnd}`
+    : `${yearStart}–${yearEnd}`;
+
+const Heading = headingLevel;
+---
+
+<div class="era" id={anchorId ?? undefined}>
+  <div class="era-header">
+    {icon && <img src={icon} alt="" class="era-icon" />}
+    <div>
+      <Heading>
+        {name}
+        {isCurrent && <span class="current-tag">Current</span>}
+        {priorFranchiseId && (
+          <span class="prior-franchise-tag">as franchise {priorFranchiseId}</span>
+        )}
+      </Heading>
+      <p class="meta">
+        {yearRange}
+        {seasons.length > 0 &&
+          ` · ${seasons.length} season${seasons.length === 1 ? '' : 's'} · ${formatRecord(totals.w, totals.l, totals.t)}`}
+      </p>
+    </div>
+  </div>
+
+  {seasons.length > 0 ? (
+    <div class="year-by-year-scroll">
+      <table class="year-by-year">
+        <thead>
+          <tr>
+            <th>Year</th>
+            <th>Identity</th>
+            <th>Record</th>
+            <th>Points</th>
+            <th>Reg. Rank</th>
+            <th>Result</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sortedSeasons.map((s) => (
+            <tr>
+              <td>{s.year}</td>
+              <td>
+                {s.icon && <img src={s.icon} alt="" class="row-icon" loading="lazy" />}
+                {s.nameMedium || s.name}
+                {s.inferredFromFeed && (
+                  <span class="inferred-tag" title="Name taken from the MFL season feed — no config history entry covers this year">
+                    ?
+                  </span>
+                )}
+              </td>
+              <td>{formatRecord(s.wins, s.losses, s.ties)}</td>
+              <td>{Math.round(s.pointsFor).toLocaleString()}</td>
+              <td>{s.regSeasonRank ? `#${s.regSeasonRank}` : '—'}</td>
+              <td>
+                {playoffResultLabel[s.playoffResult ?? 'missed'] ?? '—'}
+                {s.wonDivision && <span class="div-tag">🛡 {s.divisionName}</span>}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  ) : (
+    <p class="dim">{emptyMessage}</p>
+  )}
+
+  {awards.length > 0 && (
+    <div class="era-awards">
+      {awards.map((award) => (
+        <span class="era-award">{award.label}</span>
+      ))}
+    </div>
+  )}
+</div>
+
+<style>
+  /* ============================================================
+   * MOVED WITH THE MARKUP — see trap 4 in the component doc above.
+   * Astro scoped CSS never reaches a child component, so these rules
+   * cannot stay behind on the franchise page. Values are unchanged
+   * from src/pages/theleague/franchises/[id].astro.
+   * ============================================================ */
+  .era {
+    margin-bottom: 2rem;
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--content-border, #e5e5e5);
+    border-radius: 0.625rem;
+    background: var(--card-bg, #fff);
+  }
+
+  .era-header {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    margin-bottom: 0.875rem;
+  }
+  .era-icon {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+    border-radius: 0.375rem;
+    background: var(--card-bg, #fff);
+  }
+  .era-header h3,
+  .era-header h4 {
+    margin: 0 0 0.125rem;
+    font-size: 1.125rem;
+  }
+  .meta {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--content-text-muted, #666);
+  }
+
+  .current-tag {
+    display: inline-block;
+    margin-left: 0.5rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 999px;
+    background: var(--accent, var(--color-primary, #cc2936));
+    color: #fff;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    vertical-align: middle;
+  }
+  .prior-franchise-tag {
+    display: inline-block;
+    margin-left: 0.5rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 999px;
+    background: var(--content-bg-muted, #f0f0f0);
+    color: var(--content-text-muted, #555);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    vertical-align: middle;
+  }
+
+  .year-by-year-scroll {
+    max-height: 480px;
+    overflow: auto;
+    margin: 0 -0.25rem;
+    padding: 0 0.25rem;
+    /* contain scrolling so a fast scroll inside the table doesn't bubble
+       up and start scrolling the page once it hits the boundary */
+    overscroll-behavior: contain;
+    border-radius: 0.375rem;
+    background: var(--card-bg, #fff);
+  }
+  .year-by-year-scroll thead th {
+    position: sticky;
+    top: 0;
+    background: var(--card-bg, #fff);
+    z-index: 1;
+    box-shadow: inset 0 -1px 0 var(--content-border, #ececec);
+  }
+
+  .year-by-year {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+  .year-by-year th,
+  .year-by-year td {
+    padding: 0.5rem 0.625rem;
+    text-align: left;
+    border-bottom: 1px solid var(--content-border, #ececec);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .year-by-year th {
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--content-text-muted, #888);
+    font-weight: 600;
+  }
+  .year-by-year tbody tr:hover {
+    background: var(--content-bg-muted, #f5f5f5);
+  }
+  .row-icon {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+    margin-right: 0.375rem;
+    vertical-align: middle;
+  }
+  .div-tag {
+    display: inline-block;
+    margin-left: 0.5rem;
+    padding: 0.0625rem 0.375rem;
+    background: #d6e4ff;
+    color: #1a3d7c;
+    border-radius: 0.25rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+  }
+
+  /* New here: marks a season whose name came from the MFL feed because no
+     config history entry covers it. Deliberately quiet — it is a provenance
+     hint, not a warning. */
+  .inferred-tag {
+    display: inline-block;
+    margin-left: 0.3rem;
+    width: 1rem;
+    height: 1rem;
+    line-height: 1rem;
+    text-align: center;
+    border-radius: 999px;
+    background: var(--content-bg-muted, #f0f0f0);
+    color: var(--content-text-muted, #888);
+    font-size: 0.625rem;
+    font-weight: 700;
+    cursor: help;
+    vertical-align: middle;
+  }
+
+  .era-awards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px dashed var(--content-border, #e5e5e5);
+  }
+  .era-award {
+    font-size: 0.75rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 999px;
+    background: var(--content-bg-muted, #f5f5f5);
+    color: var(--content-text-muted, #555);
+    font-weight: 600;
+  }
+
+  .dim {
+    color: var(--content-text-muted, #888);
+  }
+</style>
