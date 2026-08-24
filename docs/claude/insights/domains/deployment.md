@@ -471,3 +471,29 @@ monitor. A check nobody can act on is a check nobody reads.
 **Evidence:** Fresh clone: `ls public/assets/nfl-logos/dark/ | wc -l` → `0`, manifest `{"codes": []}`. After `NODE_USE_ENV_PROXY=1 node scripts/fetch-nfl-dark-logos.mjs` → `32 fetched, 0 failed`, and the same screenshot rendered real Raiders/Jets/Commanders crests.
 
 **Recommendation:** Run `scripts/fetch-nfl-dark-logos.mjs` before any dark-mode screenshot that includes NFL logos, then **revert the generated directory and manifest before committing** — they're prebuild artifacts and the manifest is tracked, so leaving them staged puts 32 binaries and a churned JSON file in the diff.
+
+## 2026-08-24 - A Top-Level `.mjs` Script Body Runs Before Its `const` Helpers Exist — `node --check` Passes Anyway
+
+**Context:** Adding `refuseAvoidableFailures()` to `scripts/lock-schedule-release.mjs`, to stop Schedule Release Day locking a plan that missed a goal it could have hit. Written as `const refuseAvoidableFailures = async (…) => {…}` near the other helpers, around line 176. The script's main loop is not inside a `main()` — it is **top-level code at line 112**, above the declaration.
+
+**Insight:** Module-level `const`/`let` are in the temporal dead zone until their line executes, and a top-level script body executes in source order. So a call at line 112 to a `const` arrow declared at line 176 throws `ReferenceError: Cannot access 'X' before initialization` — at runtime, on the real path, only. `function` declarations hoist; `const` arrows do not. The distinction is invisible in a file where every other helper happens to sit above its first use.
+
+Two things that normally catch a broken script did not:
+- `node --check` is a **parse**, not an execution. TDZ is a runtime error, so it reports clean.
+- A dry run passed — because the dry run's league loop skipped every league before reaching the call site. A guard that only fires on the path you did not exercise is not covered by "the script ran".
+
+**Evidence:** `scripts/lock-schedule-release.mjs` — `refuseAvoidableFailures` is now a hoisted `function` declaration with a comment saying it must stay one. Both call sites (the fresh-draw path and the re-lock path) sit above it.
+
+**Recommendation:** In any `scripts/*.mjs` with a top-level body rather than a `main()`, declare helpers as `function`, not `const` arrows. When you add a guard to a script, exercise the path the guard is on — a run that short-circuits before it proves nothing, and `node --check` proves less than it looks like it does.
+
+## 2026-08-24 - `weekly-changelog-rollup.mjs` Ignored Unknown Flags, So `--dry-run` Published And Emptied The Queue
+
+**Context:** Verifying a fix to `weekly-changelog-staging.json` before committing it. Ran `node scripts/weekly-changelog-rollup.mjs --dry-run`, expecting a preview.
+
+**Insight:** The script had no argument parser — only `process.argv.includes('--cap-only')`. Anything else fell straight through to the real rollup, which **publishes every staged change into `whats-new.json`, archives the overflow, and resets staging to empty**. One command consumed 28 staged changes, most of them belonging to other work, generated three weekly entries, and left no in-band trace that it was meant to be a preview. Recovery was `git checkout --` on the three written files, which only worked because nothing else was uncommitted in them.
+
+The general shape: a flag that *sounds* standard is more dangerous than a flag that sounds made-up, because you will not check whether it exists before running a destructive command with it.
+
+**Evidence:** `scripts/weekly-changelog-rollup.mjs` now rejects any argument outside `KNOWN_FLAGS` with exit 1 and states plainly that there is no dry-run mode. `.github/workflows/weekly-changelog-rollup.yml` passes no arguments, so the cron path is unaffected.
+
+**Recommendation:** Any script that writes tracked files should reject unknown arguments rather than ignore them. And before running one to "check" something, read its argv handling — for a script whose whole job is to consume a queue, the safe preview is `cat` on its input, not a flag you are hoping exists.
