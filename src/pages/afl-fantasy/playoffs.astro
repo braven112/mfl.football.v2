@@ -26,6 +26,7 @@ import {
 import { getCurrentSeasonYear } from '../../utils/league-year';
 import { spriteUrl } from '../../utils/sprite-url';
 import { getLeagueBySlug } from '../../config/leagues';
+import { getAwardPrize, getSeedPrize, getTierPrize } from '../../utils/prize-display';
 
 export const prerender = false;
 
@@ -679,19 +680,18 @@ const filteredBrackets = bracketViews.filter(bracket => {
 });
 const hasBrackets = filteredBrackets.length > 0;
 
-// AFL Payout Structure (different from The League)
-const aflPayouts = {
-  leagueChampionship: 300,
-  conferenceChampionship: 150,
-  divisionChampionship: 150, // per division
-  wildCard: 100, // per wild card
-  premierChampion: 225,
-  premier2nd: 150,
-  premier3rd: 100,
-  premier4th: 50,
-  dLeagueChampion: 50,
-  nitChampion: 50,
-};
+// AFL prize amounts come from the league registry's payout table — the SAME
+// table the commissioner's accounting page pays from. They were hardcoded here
+// as an `aflPayouts` object until Aug 2026, which is the exact bug the tier
+// tables had: the dollars an owner read on this page and the dollars actually
+// written to MFL were two independent constants free to disagree. See
+// docs/claude/rules/accounting.md.
+const AFL_SLUG = getLeagueBySlug('afl-fantasy')!.slug;
+const awardAmount = (slug: string): number => getAwardPrize(AFL_SLUG, slug)?.amount ?? 0;
+const tierAmount = (tier: string, rank: number): number =>
+  getTierPrize(AFL_SLUG, tier, rank)?.amount ?? 0;
+const PREMIER_TIER = 'Premier League';
+const DLEAGUE_TIER = 'D-League';
 
 const franchiseLookup = new Map(
   franchises.map(f => [String((f as any).id ?? (f as any).franchise_id ?? ''), f])
@@ -762,7 +762,7 @@ const leagueChampGame = findFinalGame('1');
 if (leagueChampGame?.winnerId) {
   playoffPrizes.push({
     label: 'League Championship',
-    amount: aflPayouts.leagueChampionship,
+    amount: awardAmount('afl-championship'),
     teamId: leagueChampGame.winnerId,
     category: 'playoff',
     isOfficial: true, // Official when winner exists
@@ -784,7 +784,7 @@ const nlChampGame = conferenceFinal('nl');
 if (alChampGame?.winnerId) {
   playoffPrizes.push({
     label: 'AL Conference Championship',
-    amount: aflPayouts.conferenceChampionship,
+    amount: awardAmount('al-champion'),
     teamId: alChampGame.winnerId,
     category: 'playoff',
     isOfficial: true, // Official when winner exists
@@ -793,48 +793,46 @@ if (alChampGame?.winnerId) {
 if (nlChampGame?.winnerId) {
   playoffPrizes.push({
     label: 'NL Conference Championship',
-    amount: aflPayouts.conferenceChampionship,
+    amount: awardAmount('nl-champion'),
     teamId: nlChampGame.winnerId,
     category: 'playoff',
     isOfficial: true, // Official when winner exists
   });
 }
 
-// Division Championships (4 divisions)
-// AL Conference divisions
-conferenceAStandings.divisionWinners.forEach(winner => {
-  playoffPrizes.push({
-    label: `AL ${winner.division} Division Championship`,
-    amount: aflPayouts.divisionChampionship,
-    teamId: winner.id,
-    category: 'playoff',
-    isOfficial: isDivisionWildCardOfficial,
-  });
-});
-
-// NL Conference divisions
-conferenceBStandings.divisionWinners.forEach(winner => {
-  playoffPrizes.push({
-    label: `NL ${winner.division} Division Championship`,
-    amount: aflPayouts.divisionChampionship,
-    teamId: winner.id,
-    category: 'playoff',
-    isOfficial: isDivisionWildCardOfficial,
-  });
-});
-
-// Wild Cards (2 per conference)
-const wildCards = [
-  ...conferenceAStandings.wildCards,
-  ...conferenceBStandings.wildCards,
+// Division Championships and Wild Cards, keyed off PLAYOFF SEED.
+//
+// Seed is the key, not "won a division": the AFL pays FOUR division titles,
+// not six. Each conference sends four teams — its two best division winners
+// (seeds 1-2) plus two wild cards (seeds 3-4) — so a third division winner
+// who misses the playoffs is not paid. That matters beyond today's four-
+// division layout: the 2003-2012 seasons ran SIX divisions, where iterating
+// `divisionWinners` pays three titles per conference and this page would
+// have shown $900 of division money against the planner's $600.
+//
+// Which seeds pay what comes from the registry's playoff-seed prizes, so
+// this page and the commissioner's payout run resolve identically.
+const seededConferences = [
+  { prefix: 'AL', standings: conferenceAStandings },
+  { prefix: 'NL', standings: conferenceBStandings },
 ];
-wildCards.forEach(wildCard => {
-  playoffPrizes.push({
-    label: 'Wild Card',
-    amount: aflPayouts.wildCard,
-    teamId: wildCard.id,
-    category: 'playoff',
-    isOfficial: isDivisionWildCardOfficial,
+seededConferences.forEach(({ prefix, standings }) => {
+  standings.allTeams.forEach(team => {
+    const prize = team.conferenceSeed ? getSeedPrize(AFL_SLUG, team.conferenceSeed) : null;
+    if (!prize) return;
+    // The registry's label is the prize ("Division Championship" / "Wild
+    // Card"); the conference and division only add context around it.
+    const label =
+      prize.source.kind === 'playoff-seed' && prize.key === 'division-title'
+        ? `${prefix} ${team.division} ${prize.label}`
+        : `${prefix} ${prize.label}`;
+    playoffPrizes.push({
+      label,
+      amount: prize.amount,
+      teamId: team.id,
+      category: 'playoff',
+      isOfficial: isDivisionWildCardOfficial,
+    });
   });
 });
 
@@ -867,7 +865,7 @@ for (const bracketId of nitBrackets) {
 if (nitChampionId) {
   playoffPrizes.push({
     label: 'NIT Champion',
-    amount: aflPayouts.nitChampion,
+    amount: awardAmount('nit'),
     teamId: nitChampionId,
     category: 'other',
     isOfficial: true, // Official when winner exists
@@ -880,7 +878,7 @@ if (premierLeague?.teams) {
   if (premierLeague.teams[0]) {
     premierPrizes.push({
       label: 'Premier League Champion',
-      amount: aflPayouts.premierChampion,
+      amount: tierAmount(PREMIER_TIER, 1),
       teamId: premierLeague.teams[0].id,
       category: 'premier',
       isOfficial: isPremierDLeagueOfficial,
@@ -889,7 +887,7 @@ if (premierLeague?.teams) {
   if (premierLeague.teams[1]) {
     premierPrizes.push({
       label: 'Premier League 2nd Place',
-      amount: aflPayouts.premier2nd,
+      amount: tierAmount(PREMIER_TIER, 2),
       teamId: premierLeague.teams[1].id,
       category: 'premier',
       isOfficial: isPremierDLeagueOfficial,
@@ -898,7 +896,7 @@ if (premierLeague?.teams) {
   if (premierLeague.teams[2]) {
     premierPrizes.push({
       label: 'Premier League 3rd Place',
-      amount: aflPayouts.premier3rd,
+      amount: tierAmount(PREMIER_TIER, 3),
       teamId: premierLeague.teams[2].id,
       category: 'premier',
       isOfficial: isPremierDLeagueOfficial,
@@ -907,7 +905,7 @@ if (premierLeague?.teams) {
   if (premierLeague.teams[3]) {
     premierPrizes.push({
       label: 'Premier League 4th Place',
-      amount: aflPayouts.premier4th,
+      amount: tierAmount(PREMIER_TIER, 4),
       teamId: premierLeague.teams[3].id,
       category: 'premier',
       isOfficial: isPremierDLeagueOfficial,
@@ -919,7 +917,7 @@ if (premierLeague?.teams) {
 if (dLeague?.teams?.[0]) {
   premierPrizes.push({
     label: 'D-League Champion',
-    amount: aflPayouts.dLeagueChampion,
+    amount: tierAmount(DLEAGUE_TIER, 1),
     teamId: dLeague.teams[0].id,
     category: 'premier',
     isOfficial: isPremierDLeagueOfficial,

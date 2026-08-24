@@ -616,3 +616,19 @@ html.dark [tabindex]:focus-visible {
   outline-offset: 2px;
   box-shadow: var(--shadow-focus-ring);
 }
+
+/* ========================================
+   Prize amounts — dark overrides
+   The gold badge keeps its light values on purpose: a saturated gold with
+   black text reads correctly on a dark card too, and dimming it would drop
+   the tier tables' marquee treatment. The QUIET seed treatment is the one
+   that must move — #1a7f4b green sits ~2.4:1 on the dark card and fails,
+   so dark gets a brightened green (6.1:1 on --card-bg).
+   ======================================== */
+html.dark {
+  --prize-seed-text: #4ade80;
+  --prize-seed-bg: rgba(74, 222, 128, 0.12);
+  --prize-seed-border: rgba(74, 222, 128, 0.28);
+  --prize-empty-text: #6b7280;
+  --prize-pool-text: #9ca3af;
+}

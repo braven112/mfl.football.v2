@@ -26,6 +26,7 @@ import {
 import { getCurrentSeasonYear } from '../../utils/league-year';
 import { spriteUrl } from '../../utils/sprite-url';
 import { getLeagueBySlug } from '../../config/leagues';
+import { getPlacementPrize, getWeeklyHighPrize } from '../../utils/prize-display';
 
 export const prerender = false;
 
@@ -464,16 +465,23 @@ const filteredBrackets = bracketViews.filter(bracket => {
 });
 const hasBrackets = filteredBrackets.length > 0;
 
-const REGULAR_SEASON_WEEKS = 14;
-const WEEKLY_HIGH_PAYOUT = 3;
-const placementPayouts = {
-  champion: 300,
-  second: 150,
-  third: 100,
-  fourth: 50,
-  fifth: 45,
-  sixth: 25,
-};
+// Prize amounts come from the league registry's payout table — the SAME table
+// the commissioner's accounting page pays from. They were hardcoded here (a
+// `placementPayouts` object plus a bare WEEKLY_HIGH_PAYOUT) until Aug 2026,
+// which is the exact bug the tier tables had: the dollars an owner read on
+// this page and the dollars actually written to MFL were two independent
+// constants free to disagree. See docs/claude/rules/accounting.md.
+const THELEAGUE_SLUG = getLeagueBySlug('theleague')!.slug;
+const weeklyHigh = getWeeklyHighPrize(THELEAGUE_SLUG);
+// The constitution's stated week count. The planner pays whichever weeks
+// actually have scores; this is the expected count it reconciles against, and
+// the loop below likewise only pays weeks that produced a high scorer.
+const REGULAR_SEASON_WEEKS = weeklyHigh?.weeks ?? 0;
+const WEEKLY_HIGH_PAYOUT = weeklyHigh?.amount ?? 0;
+const placementAmount = (place: number): number =>
+  getPlacementPrize(THELEAGUE_SLUG, place)?.amount ?? 0;
+const placementLabel = (place: number, fallback: string): string =>
+  getPlacementPrize(THELEAGUE_SLUG, place)?.label ?? fallback;
 
 const franchiseLookup = new Map(
   franchises.map(f => [String((f as any).id ?? (f as any).franchise_id ?? ''), f])
@@ -514,13 +522,15 @@ const playoffPlacements = (() => {
   const thirdGame = findFinalGame('2');
   const fifthGame = findFinalGame('3');
 
+  // Each final decides TWO places — the winner takes the bracket's place, the
+  // loser the one below it.
   return [
-    { label: 'Champion', amount: placementPayouts.champion, teamId: champGame?.winnerId },
-    { label: '2nd Place', amount: placementPayouts.second, teamId: champGame?.loserId },
-    { label: '3rd Place', amount: placementPayouts.third, teamId: thirdGame?.winnerId },
-    { label: '4th Place', amount: placementPayouts.fourth, teamId: thirdGame?.loserId },
-    { label: '5th Place', amount: placementPayouts.fifth, teamId: fifthGame?.winnerId },
-    { label: '6th Place', amount: placementPayouts.sixth, teamId: fifthGame?.loserId },
+    { label: placementLabel(1, 'Champion'), amount: placementAmount(1), teamId: champGame?.winnerId },
+    { label: placementLabel(2, '2nd Place'), amount: placementAmount(2), teamId: champGame?.loserId },
+    { label: placementLabel(3, '3rd Place'), amount: placementAmount(3), teamId: thirdGame?.winnerId },
+    { label: placementLabel(4, '4th Place'), amount: placementAmount(4), teamId: thirdGame?.loserId },
+    { label: placementLabel(5, '5th Place'), amount: placementAmount(5), teamId: fifthGame?.winnerId },
+    { label: placementLabel(6, '6th Place'), amount: placementAmount(6), teamId: fifthGame?.loserId },
   ];
 })();
 

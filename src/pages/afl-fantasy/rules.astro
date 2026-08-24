@@ -1,7 +1,12 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import PayoutsTable from '../../components/shared/PayoutsTable.astro';
+import { getLeagueBySlug } from '../../config/leagues';
+import { formatPrizeAmount, getAwardPrize } from '../../utils/prize-display';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
+
+const AFL_SLUG = getLeagueBySlug('afl-fantasy')!.slug;
 
 export const prerender = false;
 
@@ -23,6 +28,45 @@ try {
 } catch {
   rulesHtml = '<p>Rules document not available.</p>';
 }
+
+// The constitution's Prize Distribution list is the one part of this document
+// we do NOT render as written: prize amounts have a single source of truth in
+// the league registry (docs/claude/rules/accounting.md), and a hand-typed copy
+// here is free to drift from the dollars the commissioner actually pays. Cut
+// that list out and render <PayoutsTable> in the gap instead.
+//
+// This is a best-effort splice against a file the AFL league office replaces
+// wholesale. If the markers are ever absent the split simply doesn't happen
+// and the document renders exactly as delivered — a stale list is a smaller
+// failure than a blank rules page.
+const PRIZE_LIST_START = '<h3>Prize Distribution</h3>';
+const PRIZE_LIST_END = '</ul>';
+const prizeStart = rulesHtml.indexOf(PRIZE_LIST_START);
+const prizeEnd =
+  prizeStart === -1 ? -1 : rulesHtml.indexOf(PRIZE_LIST_END, prizeStart);
+
+// The footnote after the list states a combined total ($450) that is itself
+// two registry prizes added together, so it is derived rather than copied.
+const leagueChampionship = getAwardPrize(AFL_SLUG, 'afl-championship');
+const conferenceChampionship = getAwardPrize(AFL_SLUG, 'al-champion');
+const doubleTitleFootnote =
+  leagueChampionship && conferenceChampionship
+    ? `The League Champion is also a Conference Champion, earning a total of ${formatPrizeAmount(
+        leagueChampionship.amount + conferenceChampionship.amount
+      )} for both titles.`
+    : undefined;
+
+// Everything after the list, minus the footnote the component now renders.
+// Matched on its opening words rather than its full text: the footnote states
+// a combined total, and pinning the old dollar figure here would stop matching
+// the day that figure changes — leaving the stale footnote AND the derived one
+// on the page together.
+const FOOTNOTE_PATTERN = /<p><em>\*?The League Champion is also a Conference Champion[^<]*<\/em><\/p>/;
+const canSplicePrizes = prizeStart !== -1 && prizeEnd !== -1;
+const rulesHtmlBeforePrizes = canSplicePrizes ? rulesHtml.slice(0, prizeStart) : rulesHtml;
+const rulesHtmlAfterPrizes = canSplicePrizes
+  ? rulesHtml.slice(prizeEnd + PRIZE_LIST_END.length).replace(FOOTNOTE_PATTERN, '')
+  : '';
 
 // Section anchors lifted from the headings in docs/rules.html so the
 // in-page jump nav stays in sync.
@@ -75,7 +119,16 @@ const sectionLinks = [
       </ol>
     </nav>
 
-    <article class="afl-rules-page__content" set:html={rulesHtml} />
+    <article class="afl-rules-page__content">
+      <Fragment set:html={rulesHtmlBeforePrizes} />
+      {canSplicePrizes && (
+        <>
+          <h3>Prize Distribution</h3>
+          <PayoutsTable leagueSlug={AFL_SLUG} footnote={doubleTitleFootnote} />
+        </>
+      )}
+      <Fragment set:html={rulesHtmlAfterPrizes} />
+    </article>
   </div>
 </TheLeagueLayout>
 

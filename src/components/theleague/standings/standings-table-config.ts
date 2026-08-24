@@ -30,7 +30,8 @@ export type StandingsColumnKey =
   | 'pa'
   | 'pwr'
   | 'vp'
-  | 'prize'; // AFL tier prize + promo/reg arrow
+  | 'prize' // AFL tier prize + promo/reg arrow
+  | 'seedPrize'; // AFL conference playoff-seed prize (division title / wild card)
 
 export interface StandingsColumn {
   key: StandingsColumnKey;
@@ -111,6 +112,12 @@ export interface StandingsTableProps {
   /** Tier-table extras (only read when a prize/rankCircle column is present). */
   tierName?: string;
   promotionCutoff?: number;
+  /**
+   * League slug whose registry payout table feeds the `seedPrize` column.
+   * Omitted = no prize amounts rendered, which is the right default: a
+   * playoff seed only pays in a league whose constitution says it does.
+   */
+  prizeLeagueSlug?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -180,6 +187,9 @@ export const COLUMNS = {
   conferenceSeeded: [
     { key: 'seedAccent', header: 'Seed' },
     { key: 'team', header: 'Team' },
+    // Seeds 1-2 pay a Division Championship, 3-4 a Wild Card. Amounts come
+    // from the registry via `prizeLeagueSlug` — never typed in here.
+    { key: 'seedPrize', header: 'Prize' },
     { key: 'overallRecord', header: 'Overall' },
     { key: 'overallPct', header: 'PCT', hideBelow: 'sm' },
     { key: 'divRecord', header: 'Div', hideBelow: 'sm' },

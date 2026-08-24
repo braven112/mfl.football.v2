@@ -682,6 +682,21 @@
   --nav-scrollbar-track: transparent;
   --nav-scrollbar-thumb: #d1d5db;
   --nav-scrollbar-thumb-hover: #9ca3af;
+
+  /* Prize amounts — the money a league's constitution pays out.
+     Sourced from the registry payout table (docs/claude/rules/accounting.md);
+     these tokens style it, they never encode an amount.
+     --prize-badge-*  the marquee gold badge on the AFL tier tables.
+     --prize-seed-*   the quieter per-row treatment on dense standings tables,
+                      where a gold badge on four rows would shout over the
+                      seeds it sits next to. */
+  --prize-badge-bg: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+  --prize-badge-text: #000000;
+  --prize-seed-text: #1a7f4b;
+  --prize-seed-bg: rgba(26, 127, 75, 0.1);
+  --prize-seed-border: rgba(26, 127, 75, 0.25);
+  --prize-empty-text: #9ca3af;
+  --prize-pool-text: #6b7280;
 }
 
 /* ========================================

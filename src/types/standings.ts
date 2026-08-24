@@ -45,6 +45,12 @@ export interface TeamStanding extends StandingsFranchise {
   teamIcon: string;
   teamBanner: string;
   seed?: number;
+  /**
+   * Seed WITHIN a conference (AFL). Set by getConferenceStandings() via
+   * spread, and read by the conference standings table for its seed and
+   * playoff-seed prize columns.
+   */
+  conferenceSeed?: number;
   playoffStatus?: 'division_winner' | 'wild_card' | 'playoff_team' | 'play_in' | 'toilet_bowl';
 }
 

@@ -126,11 +126,36 @@ and why "why did it pay that" is answerable by replaying inputs.
 ## Prize tables live in the registry, once
 
 `payouts` in `src/config/leagues-data.mjs` is the only prize table. It was not
-always: `StandingsTable.astro` hardcoded `TIER_PRIZES` until Aug 2026, so the
-badge an owner read and the dollars the commissioner wrote were two
-independent constants free to disagree. That component now derives from the
-registry. **Do not reintroduce a prize amount anywhere else** — put it in the
-registry and read it.
+always — there were THREE copies, and finding the first one did not find the
+others:
+
+| Copy | Held | Removed |
+|---|---|---|
+| `TIER_PRIZES` in `StandingsTable.astro` | AFL tier ranks | Aug 2026 |
+| `placementPayouts` + `WEEKLY_HIGH_PAYOUT` in `theleague/playoffs.astro` | TheLeague's whole table | Aug 2026 |
+| `aflPayouts` in `afl-fantasy/playoffs.astro` | all 11 AFL amounts | Aug 2026 |
+
+Each one fed a live prize display, so the dollars an owner read and the
+dollars the commissioner wrote were independent constants free to disagree.
+**Do not reintroduce a prize amount anywhere else** — put it in the registry
+and read it.
+
+Display surfaces go through `src/utils/prize-display.ts`, which returns the
+registry ROW (label included) rather than a bare number, so a caller cannot
+re-type a label either. `tests/prize-display.test.ts` scans every prize
+surface for a `$<amount>` literal matching any registry amount and fails on a
+new copy — that scan is what would have caught the two playoff tables.
+
+### A display surface must resolve a winner the same way the planner does
+
+Reading the registry is necessary but not sufficient: the AFL playoffs page
+derived its division titles by iterating `divisionWinners`, which pays one per
+division. That is right for today's four-division layout and WRONG for the
+2003-2012 six-division seasons, where it paid six titles ($900) against the
+four the planner pays ($600). Display now keys off `conferenceSeed` through
+`getSeedPrize()`, the same seeds-1-2 / seeds-3-4 rule `resolvePlayoffSeeds`
+applies. If a page and the planner can disagree about WHO won, sharing the
+amount was never the whole fix.
 
 `prizePool` is the constitution's stated total. It is **display-and-reconcile
 only**: the planner never scales or caps a prize to fit it, and the page shows

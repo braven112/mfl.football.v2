@@ -31,6 +31,7 @@ import {
   type StandingsTableProps,
 } from './standings-table-config';
 import { getLeagueBySlug } from '../../../config/leagues';
+import { formatPrizeAmount, getSeedPrize, getTierPrize } from '../../../utils/prize-display';
 
 const {
   teams,
@@ -46,7 +47,22 @@ const {
   accent = 'league-blue',
   tierName = '',
   promotionCutoff,
+  prizeLeagueSlug,
 } = Astro.props as StandingsTableProps;
+
+// Playoff-seed prizes for the conference tables. Driven by a prop rather than
+// a hardcoded slug so the component never assumes which league is rendering:
+// with no `prizeLeagueSlug`, no amounts render at all. Same registry table the
+// commissioner pays from — see docs/claude/rules/accounting.md.
+const seedPrizeFor = (seed: number | undefined): string => {
+  if (!prizeLeagueSlug || !seed) return '';
+  const prize = getSeedPrize(prizeLeagueSlug, seed);
+  return prize ? formatPrizeAmount(prize.amount) : '';
+};
+const seedPrizeLabelFor = (seed: number | undefined): string => {
+  if (!prizeLeagueSlug || !seed) return '';
+  return getSeedPrize(prizeLeagueSlug, seed)?.label ?? '';
+};
 
 // The tier variant is defined by its column set (rank circle + prize), not by
 // the team-cell mode — deriving it from the columns keeps layout/skin selection
@@ -112,6 +128,8 @@ function colClass(col: StandingsColumn): string {
       return 'col-vp';
     case 'prize':
       return 'col-prize';
+    case 'seedPrize':
+      return 'col-seed-prize';
     default:
       return '';
   }
@@ -172,13 +190,11 @@ const TIER_PRIZES: Record<string, string[]> = (() => {
   const table: Record<string, string[]> = {};
   for (const prize of getLeagueBySlug('afl-fantasy')?.payouts?.prizes ?? []) {
     if (prize.source.kind !== 'tier-rank') continue;
-    const row = table[prize.source.tier] ?? [];
-    row[prize.source.rank - 1] = `$${prize.amount}`;
-    table[prize.source.tier] = row;
-  }
-  // Ranks with no prize must render as an empty cell, not `undefined`.
-  for (const tier of Object.keys(table)) {
-    table[tier] = Array.from({ length: 12 }, (_, index) => table[tier][index] ?? '');
+    const tier = prize.source.tier;
+    // Ranks with no prize must render as an empty cell, not `undefined`.
+    table[tier] ??= Array.from({ length: 12 }, () => '');
+    const found = getTierPrize('afl-fantasy', tier, prize.source.rank);
+    if (found) table[tier][prize.source.rank - 1] = formatPrizeAmount(found.amount);
   }
   return table;
 })();
@@ -357,6 +373,15 @@ const bannerLabelFor = (name: string) =>
                     )}
                     {col.key === 'seedPlain' && <span class="seed-number">#{team.seed}</span>}
                     {col.key === 'seedAccent' && <span class="seed-number">#{team.conferenceSeed}</span>}
+
+                    {col.key === 'seedPrize' &&
+                      (seedPrizeFor(team.conferenceSeed) ? (
+                        <span class="seed-prize-amount" title={seedPrizeLabelFor(team.conferenceSeed)}>
+                          {seedPrizeFor(team.conferenceSeed)}
+                        </span>
+                      ) : (
+                        <span class="seed-prize-empty" aria-hidden="true">—</span>
+                      ))}
                     {col.key === 'seedPill' && <span class="seed-badge">#{team.seed}</span>}
                     {col.key === 'rankCircle' && <span class="rank-number">{rank}</span>}
 
@@ -408,7 +433,7 @@ const bannerLabelFor = (name: string) =>
                       </>
                     )}
 
-                    {!['playoffBadge', 'seedPlain', 'seedAccent', 'seedPill', 'rankCircle', 'team', 'prize'].includes(
+                    {!['playoffBadge', 'seedPlain', 'seedAccent', 'seedPill', 'rankCircle', 'team', 'prize', 'seedPrize'].includes(
                       col.key
                     ) && cellText(col, team)}
                   </td>
@@ -1441,11 +1466,34 @@ const bannerLabelFor = (name: string) =>
     font-weight: 600;
     color: var(--page-text, #111827);
   }
+  /* Playoff-seed prize (AFL conference tables). Deliberately quieter than the
+     tier tables' gold badge: this column repeats on four of twelve rows, so a
+     marquee treatment would out-shout the seed numbers beside it. */
+  .col-seed-prize {
+    text-align: right;
+    white-space: nowrap;
+  }
+  .seed-prize-amount {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 0.375rem;
+    background: var(--prize-seed-bg);
+    border: 1px solid var(--prize-seed-border);
+    color: var(--prize-seed-text);
+    font-weight: 700;
+    font-size: 0.8125rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .seed-prize-empty {
+    color: var(--prize-empty-text);
+    font-size: 0.8125rem;
+  }
+
   .v-tier .prize-amount {
     display: inline-block;
     padding: 0.25rem 0.75rem;
-    background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
-    color: #000;
+    background: var(--prize-badge-bg);
+    color: var(--prize-badge-text);
     font-weight: 700;
     border-radius: 0.5rem;
     font-size: 0.875rem;

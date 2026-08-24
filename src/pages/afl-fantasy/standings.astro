@@ -88,9 +88,14 @@ const committedFeed = standingsFeeds[`../../../data/afl-fantasy/mfl-feeds/${sele
   | StandingsFeed
   | undefined;
 
+// The registry entry drives both the live-standings fetch and the playoff-seed
+// prize amounts on the conference tables — one lookup, one source of truth.
+const aflLeague = getLeagueBySlug('afl-fantasy')!;
+const AFL_SLUG = aflLeague.slug;
+
 const { feed: selectedFeed, live: isLiveStandings, fetchedAt: liveFetchedAt } =
   await getStandingsFeedWithLiveRefresh({
-    league: getLeagueBySlug('afl-fantasy')!,
+    league: aflLeague,
     year: selectedYear,
     committedFeed,
   });
@@ -389,6 +394,7 @@ function divisionHeader(name: string, confId?: '00' | '01') {
             year={selectedYear}
             preferredTeamId={yearPreferredTeamId}
             rosterBaseUrl={`${baseUrl}/rosters`}
+            prizeLeagueSlug={AFL_SLUG}
           />
           <UnifiedStandingsTable
             teams={conferenceBStandings.allTeams}
@@ -401,6 +407,7 @@ function divisionHeader(name: string, confId?: '00' | '01') {
             year={selectedYear}
             preferredTeamId={yearPreferredTeamId}
             rosterBaseUrl={`${baseUrl}/rosters`}
+            prizeLeagueSlug={AFL_SLUG}
           />
 
           {nitTeams.length > 0 && (

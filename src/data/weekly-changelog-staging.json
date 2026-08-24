@@ -2,6 +2,14 @@
   "weekOf": "2026-08-24",
   "changes": [
     {
+      "date": "2026-08-24",
+      "type": "bug-fix",
+      "summary": "Prize money now comes from one place, and the pages that show it can no longer disagree with the ledger that pays it. Both playoff pages kept their own hand-typed copy of the prize table — TheLeague's placement money and weekly high score, the AFL's eleven amounts — sitting alongside the commissioner's table with nothing keeping the three in step. Change a prize in one and the other two kept quoting the old number. They all read the league registry now, the same table the payout run writes from. The AFL's Prizes tab also had the division money wrong for its older seasons: it paid a division title to every division winner, which is right for today's four-division layout but pays six titles in the 2003-2012 seasons that ran six divisions — $900 of division money against the $600 actually owed. It pays by playoff seed now, the way the constitution reads and the way the commissioner pays: the two best division winners in each conference, plus two wild cards.",
+      "impact": "user",
+      "area": "playoffs",
+      "league": "both"
+    },
+    {
       "date": "2026-08-23",
       "type": "bug-fix",
       "summary": "Midwestside's franchise history had been handing Nate a season he never played. His page opened on 2010 — a 2-16 Witch City Warlocks year that belonged to the owner before him — because the record of when he took over franchise 0010 started a year early. He arrived in 2011, the year the Warlocks became the Midwestside Connection, and 2011 is where his history starts now. The 2-16 goes back to the former owner where it belongs, and his career record loses it too: 95-117 instead of 97-133, with the 2010 Jerry Jones Award off his shelf. The other thing he noticed while he was down there: his first five seasons were wearing the Warlocks' pentagram. The art for that era was a copy of the logo it replaced, so 2011 through 2015 sat under an occult crest that was never his. Those years now wear the gold-ringed Midwestside photo — the same one the team wore right through 2024, because the banner Nate hung in 2011 is the banner still hanging today.",

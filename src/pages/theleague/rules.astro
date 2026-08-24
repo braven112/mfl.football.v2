@@ -1,5 +1,6 @@
 ---
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import PayoutsTable from '../../components/shared/PayoutsTable.astro';
 import AnchorNav from '../../components/theleague/AnchorNav.astro';
 import { getCurrentLeagueYear } from '../../utils/league-year';
 import { getLeagueBySlug } from '../../config/leagues';
@@ -1043,16 +1044,7 @@ const sectionLinks = [
       <br>
 
       <h2 id="payouts">Payouts</h2>
-      <ul>
-        <li>Total Net Prize Money will be approximately = $712</li>
-        <li>Weekly High Score $3 x 14 weeks Total $42</li>
-        <li>League Champion $300</li>
-        <li>2nd Place $150</li>
-        <li>3rd Place $100</li>
-        <li>4th Place $50</li>
-        <li>5th Place $45</li>
-        <li>6th Place $25</li>
-      </ul>
+      <PayoutsTable leagueSlug={THELEAGUE.slug} />
 
       <h2 id="replacement-owners">Replacement Owners</h2>
       <ul>
