@@ -5286,6 +5286,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   import { buildPlayerCellHTML } from '../../utils/player-cell-html';
   import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, COLLEGE_LOGO_ONERROR, COLLEGE_LOGO_ONLOAD } from '../../constants/roster-constants';
   import { initPlayerModalTrigger } from '../../utils/player-modal-trigger';
+  import type { PlayerModalData } from '../../utils/player-modal-trigger';
   import { applyPlayerModalBand } from '../../utils/player-modal-band';
   import { NFL_TEAM_CITIES, normalizeTeamCode } from '../../utils/nfl';
   // Same selection function the deadline job runs — the Cutdown Plan preview
@@ -6411,7 +6412,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       // without duplicating those fields into separate data attributes.
       const modalJsonEl = playerCell?.querySelector('.player-cell__name[data-player-modal]');
       const rawJson = modalJsonEl?.getAttribute('data-player-modal');
-      let modalData = {};
+      let modalData: PlayerModalData = {};
       if (rawJson) {
         try { modalData = JSON.parse(rawJson); } catch { /* leave empty */ }
       }
@@ -7339,7 +7340,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
             // its own data attribute.
             const actionPlayerCell = actionRow?.querySelector('[data-column="player"]');
             const actionModalJson = actionPlayerCell?.querySelector('.player-cell__name[data-player-modal]')?.getAttribute('data-player-modal');
-            let actionModalData = {};
+            let actionModalData: PlayerModalData = {};
             if (actionModalJson) {
               try { actionModalData = JSON.parse(actionModalJson); } catch { /* leave empty */ }
             }
@@ -7408,7 +7409,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
             // The button sits inside the player-cell name element, which
             // carries the full PlayerDetailsModal JSON — reuse it so the
             // injury modal's composite band gets team/position/espnId.
-            let playerMeta = {};
+            let playerMeta: PlayerModalData = {};
             const modalJson = btn.closest('[data-player-modal]')?.getAttribute('data-player-modal');
             if (modalJson) {
               try { playerMeta = JSON.parse(modalJson); } catch { /* leave empty */ }

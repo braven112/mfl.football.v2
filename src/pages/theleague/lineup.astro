@@ -29,6 +29,7 @@ import { getLeagueBySlug } from '../../config/leagues';
 import { findWeekMatchups, resolveRostersPayload, resolveLineupFillState, resolveWeekLineup, resolvePlayerName } from '../../utils/lineup-sources';
 import { resolveSubmitButtonState } from '../../utils/lineup-submit-state';
 import '../../styles/loading.css';
+import type { LineupPlayer } from '../../types/lineups';
 
 // ---------------------------------------------------------------------------
 // Auth gate
@@ -155,26 +156,6 @@ const lineupPlayerIdentityMap = getPlayerMap(leagueYear);
 // ---------------------------------------------------------------------------
 // Build LineupPlayer array
 // ---------------------------------------------------------------------------
-interface LineupPlayer {
-  id: string;
-  rosterStatus: string;
-  name: string;
-  headshot: string;
-  position: string;
-  nflTeam: string;
-  eligibleSlots: string[];
-  projection: number | null;
-  last3Avg: number | null;
-  seasonAvg: number | null;
-  injury: string | null;
-  gameLocked: boolean;
-  gameIndex: number | null;
-  isBye: boolean;
-  espnId?: string;
-  customRank: number | null;
-  streak: number | null;
-  recentScores: { week: number; score: number }[];
-}
 
 interface GameInfo {
   id: string;
@@ -248,7 +229,7 @@ const roster: LineupPlayer[] = rosterPlayers.map((rp: any) => {
   const identity = lineupPlayerIdentityMap.get(rp.id);
   const nflTeam = identity?.nflTeam ?? normalizeTeamCode(pd?.team || '');
   const position = identity?.position ?? (pd?.position || 'N/A').replace(/^Def$/i, 'DEF').replace(/^K$/i, 'PK');
-  const espnId = identity?.espnId ?? null;
+  const espnId = identity?.espnId ?? undefined;
   const headshot = identity?.headshot ?? getPlayerHeadshot(rp.id, espnId);
   const proj = projMap.get(rp.id) ?? null;
   const isBye = nflByeWeeks[nflTeam] === week;
@@ -518,7 +499,7 @@ const payloadJson = JSON.stringify(lineupPayload);
 const rosterById = new Map(roster.map(p => [p.id, p]));
 ---
 
-<TheLeagueLayout title="Set Lineup" currentPage="lineup">
+<TheLeagueLayout title="Set Lineup">
   <div class="lineup-page">
     <!-- Header -->
     <header class="lineup-header">
@@ -776,6 +757,7 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
     import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD } from '../../constants/roster-constants';
     import { resolveSubmitButtonState } from '../../utils/lineup-submit-state';
     import { loadLineupRankings, byRank, applyRankChips, onRankingsChanged } from '../../utils/lineup-rankings';
+    import type { LineupPlayer } from '../../types/lineups';
 
     // ---------------------------------------------------------------------------
     // State
@@ -787,7 +769,12 @@ const rosterById = new Map(roster.map(p => [p.id, p]));
 
     let currentSlots: SlotState[] = [...data.slots];
     const originalSlots: SlotState[] = data.slots.map((s: SlotState) => ({ ...s }));
-    const rosterMap = new Map(data.roster.map((p: any) => [p.id, p]));
+    // Annotating the tuple is what gives this a real type: a bare
+    // `new Map(data.roster.map(...))` infers `Map<{}, {}>`, and every player
+    // property read below it then fails to compile.
+    const rosterMap = new Map(
+      (data.roster as LineupPlayer[]).map((p): [string, LineupPlayer] => [p.id, p]),
+    );
     let lastSwap: { slotIndex: number; oldPlayerId: string; newPlayerId: string } | null = null;
     let lastClear: { slots: (string | null)[] } | null = null;
     let previousFocus: HTMLElement | null = null;
