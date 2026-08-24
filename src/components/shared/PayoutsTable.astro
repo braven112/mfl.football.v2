@@ -105,6 +105,9 @@ const drift = pool !== null && derivedTotal !== null ? derivedTotal - pool : nul
   }
   .payouts-table {
     width: 100%;
+    /* Two columns only — left to its own devices the table sprawls the full
+       content width and strands each amount a long way from its label. */
+    max-width: 34rem;
     border-collapse: collapse;
     font-size: 0.9375rem;
   }
@@ -134,7 +137,8 @@ const drift = pool !== null && derivedTotal !== null ? derivedTotal - pool : nul
     font-weight: 400;
     color: var(--content-text-muted);
   }
-  .payouts-table__amount {
+  .payouts-table th.payouts-table__amount,
+  .payouts-table td.payouts-table__amount {
     text-align: right;
     white-space: nowrap;
     font-variant-numeric: tabular-nums;

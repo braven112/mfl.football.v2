@@ -1,5 +1,26 @@
 [
   {
+    "id": "prize-money-surfaces",
+    "date": "2026-08-24",
+    "category": "enhancement",
+    "icon": "money-bag",
+    "title": "The Prize Money Finally Shows Up Where You Earn It",
+    "summary": "Playoff standings now tell you what each seed is worth, and both constitutions' payout tables are generated from the same numbers the commissioner actually pays. Three separate copies of the prize list have been quietly disagreeing with each other. There is one now.",
+    "description": [
+      "Fantasy football is a game about money that spends most of the season never mentioning any. The AFL's Premier League tables have carried prize badges for a while — you could see the $225 sitting on top of the tier. Everywhere else, the dollars lived in the constitution, in a list you had to go find, and nowhere near the standings you were actually staring at in Week 14.",
+      "The AFL's playoff standings now carry a Prize column. Seeds 1 and 2 show $150 for a Division Championship, seeds 3 and 4 show $100 for a Wild Card, and everyone below the cut line gets a dash — which is its own kind of motivation. Both constitutions' Payouts sections are now generated tables rather than hand-typed lists, so The League's page finally shows the Weekly High Score money ($3 a week, fourteen weeks, $42) next to the placement prizes instead of burying it in a bullet.",
+      "The unglamorous part is the reason any of it is trustworthy. The prize amounts existed in three places at once: the tier tables read one list, The League's playoff Prizes tab had its own copy, and the AFL's playoff page had a third. Nothing kept them in step. Change a prize and two of the three kept quoting the old number, with no way to tell which one the commissioner would actually pay from. All of it — every page above, plus the payout run itself — now reads a single table.",
+      "One number moved while we were in there. The AFL's Prizes tab paid a division title to every division winner, which is correct today and wrong for the league's older seasons: the AFL ran six divisions from 2003 to 2012, and paying all six came to $900 of division money against the $600 the constitution actually owes. The AFL sends four teams per conference — the two best division winners and two wild cards — so the page pays by playoff seed now, the same way the commissioner does. Pull up 2025 and the whole board totals $2,225, which is the prize pool, give or take the rounding the constitution has always carried."
+    ],
+    "image": "prize-money-surfaces.webp",
+    "imageAlt": "The AFL's American League playoff standings for 2025, with a new Prize column between Team and Overall. Dicks Out For Harambe at seed #1 and SmokaneFC at #2 each show a green $150 badge; Avenging Amish at #3 and Computer_ at #4 each show $100. Seeds #5 Midwestside Connection and #6 Drunk Indians show a dash, and a divider line separates the four paid playoff seeds from the rest.",
+    "excludeFromHero": true,
+    "leagues": [
+      "theleague",
+      "afl"
+    ]
+  },
+  {
     "id": "schefter-article-links",
     "date": "2026-08-23",
     "category": "enhancement",
@@ -863,27 +884,6 @@
     "imageAlt": "The Best Ball #1 league home: emerald hero announcing the 2026 startup draft with cards for the Draft Room, Draft Board, and Rosters.",
     "leagues": [
       "bb1"
-    ]
-  },
-  {
-    "id": "cutdown-plan-full-control",
-    "date": "2026-07-21",
-    "category": "enhancement",
-    "icon": "user-times",
-    "title": "The Cut List Is Now Yours to Boss Around",
-    "summary": "Drag any player — even the machine's picks — into your cut order, unmark with one click, and watch a red dashed CUT LINE split who goes from who's safe. Oh, and the panel saves itself now, which beats its old habit of quietly forgetting your work.",
-    "description": [
-      "First, a confession from the beat desk: until this week, the Cutdown Plan panel had a split personality. You'd mark your August cuts, watch the slate update beautifully — and then saving would post your <em>original</em> list and reset everything, like a waiter who nods through your whole order and brings you what the last table had. That bug is dead. And so is the Save button, because the panel now saves itself about a second after you stop fiddling — the status line tells you the moment your cuts are locked in, and it means it.",
-      "With the trust rebuilt, the slate got handed over to you completely. Every row is draggable now, not just your own picks — grab one of the machine's <strong>LAST ADDED</strong> selections, drop it where you want it, and it becomes <strong>YOUR PICK</strong> at that exact spot. On your phone, a Mark button does the same job with a tap, and every marked player wears an × so you can change your mind without opening his player card.",
-      "Best of all: marking more players than the deadline needs no longer hides the overflow. Everybody renders in one ordered list, split by a red dashed <strong>CUT LINE</strong> — players above it go on deadline night, players below it are your insurance, safe unless the roster grows. The numbering runs straight across the line, arrows and drags cross it freely, and even when you're at the limit with nothing to cut, your order stays visible and waiting. The automation still swings the axe. You just fully control the order of the chopping block."
-    ],
-    "link": "/theleague/rosters",
-    "linkLabel": "Boss your cut list around",
-    "image": "cutdown-plan-full-control.webp",
-    "imageAlt": "The Cutdown Plan slate with three marked cuts above a red dashed cut line and a fourth marked player parked safely below it.",
-    "excludeFromHero": true,
-    "leagues": [
-      "theleague"
     ]
   }
 ]
