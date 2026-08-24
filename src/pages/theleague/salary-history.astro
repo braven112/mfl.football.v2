@@ -807,7 +807,7 @@ function formatCurrency(val: number | null): string {
           }, 250);
         }, { signal: ac.signal });
 
-        const tabs = document.querySelectorAll('.chart-tab');
+        const tabs = document.querySelectorAll<HTMLElement>('.chart-tab');
         const titleEl = document.getElementById('chart-title');
         const subtitleEl = document.getElementById('chart-subtitle');
         const panelEl = document.getElementById('chart-panel');
@@ -834,7 +834,7 @@ function formatCurrency(val: number | null): string {
 
           buildLegend(chart);
 
-          document.querySelectorAll('[data-table-view]').forEach((section) => {
+          document.querySelectorAll<HTMLElement>('[data-table-view]').forEach((section) => {
             section.hidden = section.dataset.tableView !== key;
           });
 

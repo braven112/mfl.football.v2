@@ -430,7 +430,7 @@ const containerClasses = [
             
             // Hide the IR eligible section after a delay
             setTimeout(() => {
-              const irSection = btn.closest('.ir-eligible-section');
+              const irSection = btn.closest<HTMLElement>('.ir-eligible-section');
               if (irSection) {
                 irSection.style.opacity = '0.5';
                 irSection.style.pointerEvents = 'none';

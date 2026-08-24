@@ -3,7 +3,7 @@ export const prerender = false;
 
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import { getAuthUser, isCommissionerOrAdmin } from '../../utils/auth';
-import RulesChat from '../../components/shared/rules-chat/RulesChat';
+import RulesChatIsland from '../../components/shared/rules-chat/RulesChat';
 import seedData from '../../data/afl-rules-qa-seeds.json';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 import '../../styles/loading.css';
@@ -34,7 +34,7 @@ const teamIcons = aflConfig.teams.map((t: { franchiseId: string; icon: string })
       </header>
 
       <div class="rqa-body">
-        <RulesChat
+        <RulesChatIsland
           client:load
           preSeeded={seedData}
           isAuthenticated={isAuthenticated}

@@ -6,7 +6,7 @@
  */
 
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
-import DraftRoom from '../../components/theleague/draft-room/DraftRoom';
+import DraftRoomIsland from '../../components/theleague/draft-room/DraftRoom';
 import leagueConfigData from '../../data/theleague.config.json';
 import { getCurrentLeagueYear } from '../../utils/league-year';
 import { getTheLeaguePreference, resolveTeamSelection } from '../../utils/team-preferences';
@@ -155,7 +155,7 @@ const pageData: DraftRoomPageData = {
 ---
 
 <TheLeagueLayout title="Draft Room | The League" hideMobileNavIcons>
-  <DraftRoom
+  <DraftRoomIsland
     client:load
     pageData={JSON.stringify(pageData)}
     userTeamId={defaultTeam}

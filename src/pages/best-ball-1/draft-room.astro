@@ -17,7 +17,7 @@
  */
 
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
-import DraftRoom from '../../components/theleague/draft-room/DraftRoom';
+import DraftRoomIsland from '../../components/theleague/draft-room/DraftRoom';
 import bb1Config from '../../../data/best-ball-1/bb1.config.json';
 import { getLeagueBySlug } from '../../config/leagues';
 import { getLeagueYearForSlug, getCurrentLeagueYear } from '../../utils/league-year';
@@ -93,7 +93,7 @@ if (session) {
 <TheLeagueLayout title={`Draft Room | ${BB1.name}`} hideMobileNavIcons>
   {
     pageData ? (
-      <DraftRoom
+      <DraftRoomIsland
         client:load
         pageData={JSON.stringify(pageData)}
         userTeamId={userTeamId}

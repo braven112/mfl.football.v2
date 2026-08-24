@@ -5,7 +5,7 @@
  */
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import leagueConfigData from '../../data/theleague.config.json';
-import TradeBuilder from '../../components/theleague/trade-builder/TradeBuilder';
+import TradeBuilderIsland from '../../components/theleague/trade-builder/TradeBuilder';
 import {
   parseNumber,
 } from '../../utils/formatters';
@@ -482,7 +482,7 @@ const pageData = {
 ---
 
 <TheLeagueLayout title="Trade Builder | The League">
-  <TradeBuilder
+  <TradeBuilderIsland
     client:load
     pageData={JSON.stringify(pageData)}
     defaultTeamId={defaultTeam}

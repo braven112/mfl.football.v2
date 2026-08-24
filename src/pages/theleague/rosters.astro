@@ -5613,20 +5613,20 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     currentView = viewName;
 
     // Hide all view containers
-    document.querySelectorAll('.view-container').forEach(container => {
+    document.querySelectorAll<HTMLElement>('.view-container').forEach(container => {
       container.style.display = 'none';
     });
 
     // Show selected view
-    const selectedView = document.querySelector(`[data-view-content="${viewName}"]`);
+    const selectedView = document.querySelector<HTMLElement>(`[data-view-content="${viewName}"]`);
     if (selectedView) {
       selectedView.style.display = 'grid';
     }
 
     // Update tab active states
-    document.querySelectorAll('.view-tab').forEach(tab => {
+    document.querySelectorAll<HTMLElement>('.view-tab').forEach(tab => {
       const isActive = tab.dataset.view === viewName;
-      tab.dataset.active = isActive;
+      tab.dataset.active = String(isActive);
     });
 
     // Update view label
@@ -5972,21 +5972,21 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     } = config;
 
     // Initialize view tabs
-    document.querySelectorAll('.view-tab').forEach(tab => {
+    document.querySelectorAll<HTMLElement>('.view-tab').forEach(tab => {
       tab.addEventListener('click', () => {
         switchView(tab.dataset.view);
       });
     });
 
     // Coach Mode Logic
-    const modeBtns = document.querySelectorAll('.mode-btn');
+    const modeBtns = document.querySelectorAll<HTMLElement>('.mode-btn');
     const rosterPage = document.querySelector('.roster-page');
 
     // Trend weeks toggle state
     let trendWeeksExpanded = localStorage.getItem('trendWeeksExpanded') === 'true';
 
     function updateTrendWeeksVisibility(mode) {
-      const trendWeekCols = document.querySelectorAll('.trend-week-col');
+      const trendWeekCols = document.querySelectorAll<HTMLElement>('.trend-week-col');
       const trendToggleBtn = document.getElementById('trendToggleBtn');
 
       // Trend weeks only visible when: coach mode AND expanded
@@ -6017,9 +6017,9 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       }
 
       // Toggle Columns (exclude trend-week-col from regular coach handling)
-      const coachCols = document.querySelectorAll('.coach-col:not(.trend-week-col)');
-      const gmCols = document.querySelectorAll('.gm-col');
-      const gmRows = document.querySelectorAll('.gm-row');
+      const coachCols = document.querySelectorAll<HTMLElement>('.coach-col:not(.trend-week-col)');
+      const gmCols = document.querySelectorAll<HTMLElement>('.gm-col');
+      const gmRows = document.querySelectorAll<HTMLElement>('.gm-row');
 
       coachCols.forEach(col => col.style.display = mode === 'coach' ? 'table-cell' : 'none');
       gmCols.forEach(col => col.style.display = mode === 'gm' ? 'table-cell' : 'none');
@@ -6202,11 +6202,11 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         rosterPageEl.classList.toggle('coach-mode', currentMode === 'coach');
         rosterPageEl.classList.toggle('gm-mode', currentMode === 'gm');
       }
-      document.querySelectorAll('.coach-col:not(.trend-week-col)').forEach(col =>
+      document.querySelectorAll<HTMLElement>('.coach-col:not(.trend-week-col)').forEach(col =>
         col.style.display = currentMode === 'coach' ? 'table-cell' : 'none');
-      document.querySelectorAll('.gm-col').forEach(col =>
+      document.querySelectorAll<HTMLElement>('.gm-col').forEach(col =>
         col.style.display = currentMode === 'gm' ? 'table-cell' : 'none');
-      document.querySelectorAll('.gm-row').forEach(row =>
+      document.querySelectorAll<HTMLElement>('.gm-row').forEach(row =>
         row.style.display = currentMode === 'gm' ? 'table-row' : 'none');
       updateTrendWeeksVisibility(currentMode);
     };
@@ -6225,12 +6225,13 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     };
 
     // Attach click handlers to sortable headers
-    document.querySelectorAll('th[data-sortable]').forEach(th => {
+    document.querySelectorAll<HTMLElement>('th[data-sortable]').forEach(th => {
       th.addEventListener('click', (e) => {
         // Don't sort when clicking the trend toggle button
         if (e.target.closest('.trend-toggle-btn')) return;
 
         const sortKey = th.dataset.sortKey;
+        if (!sortKey) return;
 
         if (sortKey === 'position') {
           // Player column always resets to default
@@ -6322,7 +6323,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     const teamNames = document.querySelectorAll('[data-team-name]');
     const teamMetas = document.querySelectorAll('[data-team-meta]');
     const teamIdentityEls = document.querySelectorAll('[data-team-identity]');
-    const rosterTable = document.querySelector('.roster-table');
+    const rosterTable = document.querySelector<HTMLElement>('.roster-table');
     const rosterTableBody = document.getElementById('rosterTableBody');
     const rosterMetadata = document.getElementById('rosterMetadata');
     const rosterCountLabel = document.getElementById('rosterCountLabel');
@@ -6357,7 +6358,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     const countActive = document.getElementById('countActive');
     const countPractice = document.getElementById('countPractice');
     const countInjured = document.getElementById('countInjured');
-    const assetsPanels = document.querySelectorAll('[data-assets-team-id]');
+    const assetsPanels = document.querySelectorAll<HTMLElement>('[data-assets-team-id]');
 
     // Delegated click handler for player detail modals (works across re-renders)
     // Modal trigger is attached in the Astro-processed <script> above
@@ -6445,8 +6446,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       if (!isOwnerViewingTeam(currentTeam)) return;
 
       // Eligible chips — open fresh declaration modal
-      document.querySelectorAll('.yrs-chip--eligible').forEach(btn => {
-        const cell = btn.closest('.years-cell');
+      document.querySelectorAll<HTMLElement>('.yrs-chip--eligible').forEach(btn => {
+        const cell = btn.closest<HTMLElement>('.years-cell');
         const playerId = cell?.dataset?.playerId;
         if (!playerId) return;
         const elig = getPlayerEligibility(playerId, currentTeam);
@@ -6464,8 +6465,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       });
 
       // Pending chips — reopen modal pre-populated with current selection
-      document.querySelectorAll('.yrs-chip--pending').forEach(btn => {
-        const cell = btn.closest('.years-cell');
+      document.querySelectorAll<HTMLElement>('.yrs-chip--pending').forEach(btn => {
+        const cell = btn.closest<HTMLElement>('.years-cell');
         const playerId = cell?.dataset?.playerId || btn.dataset.declPlayer;
         if (!playerId) return;
         const elig = getPlayerEligibility(playerId, currentTeam);
@@ -6482,7 +6483,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       });
 
       // Team option cells — clickable TO badge in salary column
-      document.querySelectorAll('.salary-cell--team-option-eligible[data-player-id]').forEach(cell => {
+      document.querySelectorAll<HTMLElement>('.salary-cell--team-option-eligible[data-player-id]').forEach(cell => {
         const playerId = cell.dataset.playerId;
         if (!playerId) return;
         const elig = getPlayerEligibility(playerId, currentTeam);
@@ -6500,7 +6501,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       });
 
       // Action button players (rookie-extension, team-option) stay clickable via the menu.
-      document.querySelectorAll('.ufa-action-btn[data-player-id]').forEach(btn => {
+      document.querySelectorAll<HTMLElement>('.ufa-action-btn[data-player-id]').forEach(btn => {
         const playerId = btn.dataset.playerId;
         if (!playerId) return;
         const elig = getPlayerEligibility(playerId, btn.dataset.playerFranchiseId || currentTeam);
@@ -6925,7 +6926,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       const activityDataEl = document.getElementById('owner-activity-data');
       if (activityDataEl) {
         const activityMap = JSON.parse(activityDataEl.textContent || '{}');
-        const lastSeenEls = document.querySelectorAll('[data-last-seen]');
+        const lastSeenEls = document.querySelectorAll<HTMLElement>('[data-last-seen]');
         const ts = activityMap[currentTeam] ? Number(activityMap[currentTeam]) : null;
         lastSeenEls.forEach((el) => {
           if (!ts) {
@@ -7323,7 +7324,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       // Add event listeners for UFA buttons and remove buttons
       setTimeout(() => {
         // UFA action buttons
-        document.querySelectorAll('.ufa-action-btn').forEach(btn => {
+        document.querySelectorAll<HTMLElement>('.ufa-action-btn').forEach(btn => {
           btn.addEventListener('click', (e) => {
             e.stopPropagation();
             const playerId = btn.dataset.playerId;
@@ -7403,7 +7404,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         applyEligibilityStyling();
 
         // Injury indicator buttons
-        document.querySelectorAll('.injury-indicator').forEach(btn => {
+        document.querySelectorAll<HTMLElement>('.injury-indicator').forEach(btn => {
           btn.addEventListener('click', (e) => {
             e.stopPropagation();
             // The button sits inside the player-cell name element, which
@@ -7423,7 +7424,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
               espnId: playerMeta.espnId,
               // The band brands by the owning franchise when it has one.
               franchiseId: playerMeta.franchiseId,
-              headshot: btn.closest('.player-cell')?.querySelector('.player-cell__avatar img')?.src,
+              headshot: btn.closest('.player-cell')?.querySelector<HTMLImageElement>('.player-cell__avatar img')?.src,
             };
             if (window.openPlayerInjuryModal) {
               window.openPlayerInjuryModal(injuryData);
@@ -7434,7 +7435,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         });
 
         // Remove contract action buttons
-        document.querySelectorAll('.contract-action-remove').forEach(btn => {
+        document.querySelectorAll<HTMLElement>('.contract-action-remove').forEach(btn => {
           btn.addEventListener('click', (e) => {
             e.stopPropagation();
             const playerId = btn.dataset.playerId;
@@ -7854,7 +7855,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
     // Toggle FA needs panels when team switches
     const updateFaNeedsPanel = (teamId) => {
-      const panels = document.querySelectorAll('[data-fa-needs-team-id]');
+      const panels = document.querySelectorAll<HTMLElement>('[data-fa-needs-team-id]');
       if (!panels.length) return;
       let found = false;
       panels.forEach((panel) => {
@@ -7871,7 +7872,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
     // Toggle 2027 draft assets panels when team switches
     const updateDraftAssets2027Panel = (teamId) => {
-      const panels = document.querySelectorAll('[data-assets-2027-team-id]');
+      const panels = document.querySelectorAll<HTMLElement>('[data-assets-2027-team-id]');
       if (!panels.length) return;
       let found = false;
       panels.forEach((panel) => {
@@ -8037,13 +8038,13 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         birthdate: player.birthdate || null,
       }));
 
-      const franchiseTagEl = document.querySelector('.franchise-tag-eligibility');
+      const franchiseTagEl = document.querySelector<HTMLElement>('.franchise-tag-eligibility');
       if (franchiseTagEl) {
         franchiseTagEl.dataset.allPlayers = JSON.stringify(allPlayersForTag);
         franchiseTagEl.dataset.currentTeam = teamId;
       }
 
-      const veteranExtensionEl = document.querySelector('.veteran-extension-candidates');
+      const veteranExtensionEl = document.querySelector<HTMLElement>('.veteran-extension-candidates');
       if (veteranExtensionEl) {
         veteranExtensionEl.dataset.allPlayers = JSON.stringify(allPlayersForTag);
         veteranExtensionEl.dataset.currentTeam = teamId;
@@ -9008,7 +9009,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
           if (!playerId) return;
 
           // Find the button and show loading state
-          const tbBtn = actionOptions.querySelector('.cdm-action-option--trade-block');
+          const tbBtn = actionOptions.querySelector<HTMLButtonElement>('.cdm-action-option--trade-block');
           const tbLabel = tbBtn?.querySelector('.cdm-action-option__label');
           const tbDesc = tbBtn?.querySelector('.cdm-action-option__desc');
           const origLabel = tbLabel?.textContent || '';
@@ -9047,7 +9048,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
             if (cdmPlayerData?._rawPlayer) cdmPlayerData._rawPlayer.tradeBait = newTradeBait;
 
             // Update the ufa-action-btn data attribute for future CDM opens
-            const ufaBtn = document.querySelector(`.ufa-action-btn[data-player-id="${playerId}"]`);
+            const ufaBtn = document.querySelector<HTMLElement>(`.ufa-action-btn[data-player-id="${playerId}"]`);
             if (ufaBtn) ufaBtn.dataset.playerTradeBait = String(newTradeBait);
 
             // Update the trade bait badge in the roster table
@@ -9285,7 +9286,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         const origLabel = cta.textContent;
         cta.disabled = true;
         backBtn.disabled = true;
-        const card = actionOptions.querySelector('.cdm-roster-move-card');
+        const card = actionOptions.querySelector<HTMLElement>('.cdm-roster-move-card');
         if (card) card.style.opacity = '0.6';
         cta.textContent = (() => {
           if (target === 'ir' && direction === 'to') return 'Moving to IR…';
@@ -9391,7 +9392,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       buckets[toKey].push(moved);
 
       // Update the action button's data attrs so the next CDM open sees the new state
-      const ufaBtn = document.querySelector('.ufa-action-btn[data-player-id="' + playerId + '"]');
+      const ufaBtn = document.querySelector<HTMLElement>('.ufa-action-btn[data-player-id="' + playerId + '"]');
       if (ufaBtn) {
         ufaBtn.dataset.playerDisplayTag = newDisplayTag;
       }
@@ -9621,7 +9622,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
      *  same class of fix as the trade-bait badge; no section boundary is
      *  crossed so no full updateView() is needed. */
     const refreshAutocutBadges = () => {
-      const rows = document.querySelectorAll('#rosterTableBody tr[data-player-id]');
+      const rows = document.querySelectorAll<HTMLElement>('#rosterTableBody tr[data-player-id]');
       if (!rows.length) return;
       const own = isAutocutOwnView();
       // One slate computation drives every row (map keyed by player id).
@@ -9792,7 +9793,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     // ---- CDM action-option toggle ----------------------------------
     const toggleAutocutMark = async (playerId, isMarked) => {
       const actionOptions = document.getElementById('cdm-action-options');
-      const btn = actionOptions?.querySelector('.cdm-action-option--autocut-toggle');
+      const btn = actionOptions?.querySelector<HTMLButtonElement>('.cdm-action-option--autocut-toggle');
       const label = btn?.querySelector('.cdm-action-option__label');
       const desc = btn?.querySelector('.cdm-action-option__desc');
 
@@ -9839,7 +9840,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         // The rebuild destroyed the clicked button — restore keyboard focus
         // to the fresh toggle so repeated marking doesn't drop focus.
         document
-          .querySelector('#cdm-action-options .cdm-action-option--autocut-toggle')
+          .querySelector<HTMLElement>('#cdm-action-options .cdm-action-option--autocut-toggle')
           ?.focus();
       };
 
@@ -10795,7 +10796,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         reauthOverlay.addEventListener('keydown', (e) => {
           if (e.key !== 'Tab') return;
           const focusables = Array.from(
-            reauthOverlay.querySelectorAll('input, button'),
+            reauthOverlay.querySelectorAll<HTMLInputElement | HTMLButtonElement>('input, button'),
           ).filter((el) => !el.disabled && el.offsetParent !== null);
           if (!focusables.length) return;
           const first = focusables[0];
@@ -10833,7 +10834,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         cutnowOverlay.addEventListener('keydown', (e) => {
           if (e.key !== 'Tab') return;
           const focusables = Array.from(
-            cutnowOverlay.querySelectorAll('input, button'),
+            cutnowOverlay.querySelectorAll<HTMLInputElement | HTMLButtonElement>('input, button'),
           ).filter((el) => !el.disabled && el.offsetParent !== null);
           if (!focusables.length) return;
           const first = focusables[0];
@@ -11434,7 +11435,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     // ----------------------------------------------------------------
     let cutConfirmed = false;
     const executeCutPlayer = async () => {
-      const cutBtn = document.querySelector('.cdm-action-option--cut-real');
+      const cutBtn = document.querySelector<HTMLButtonElement>('.cdm-action-option--cut-real');
       if (!cutBtn) return;
 
       // First click: transform to danger confirmation state
@@ -11462,7 +11463,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       cdmError.style.display = 'none';
 
       // Disable the simulate button too
-      const simBtn = document.querySelector('.cdm-action-option--cut-simulate');
+      const simBtn = document.querySelector<HTMLButtonElement>('.cdm-action-option--cut-simulate');
       if (simBtn) simBtn.disabled = true;
 
       try {
@@ -11762,9 +11763,9 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       }
 
       // Update column visibility (exclude trend-week-col from regular coach handling)
-      const coachCols = document.querySelectorAll('.coach-col:not(.trend-week-col)');
-      const gmCols = document.querySelectorAll('.gm-col');
-      const gmRows = document.querySelectorAll('.gm-row');
+      const coachCols = document.querySelectorAll<HTMLElement>('.coach-col:not(.trend-week-col)');
+      const gmCols = document.querySelectorAll<HTMLElement>('.gm-col');
+      const gmRows = document.querySelectorAll<HTMLElement>('.gm-row');
 
       coachCols.forEach(col => col.style.display = currentMode === 'coach' ? 'table-cell' : 'none');
       gmCols.forEach(col => col.style.display = currentMode === 'gm' ? 'table-cell' : 'none');
@@ -11901,7 +11902,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     const demoBack = document.getElementById('cdemo-back');
     const demoNext = document.getElementById('cdemo-next');
     const demoStart = document.getElementById('cdemo-start');
-    const demoOverlay = demoTutorial?.querySelector('.cdemo-tutorial__overlay');
+    const demoOverlay = demoTutorial?.querySelector<HTMLElement>('.cdemo-tutorial__overlay');
 
     // NOTE: demoActive is declared up in the autocut section — the initial
     // updateView() render reads it via isAutocutOwnView() before this section
@@ -12250,11 +12251,11 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     const setDemoStep = (step) => {
       demoStep = step;
       // Update panels
-      demoTutorial?.querySelectorAll('.cdemo-panel').forEach(p => {
+      demoTutorial?.querySelectorAll<HTMLElement>('.cdemo-panel').forEach(p => {
         p.classList.toggle('active', Number(p.dataset.step) === step);
       });
       // Update stepper dots
-      demoTutorial?.querySelectorAll('.cdemo-stepper__dot').forEach(d => {
+      demoTutorial?.querySelectorAll<HTMLElement>('.cdemo-stepper__dot').forEach(d => {
         const s = Number(d.dataset.step);
         d.classList.toggle('active', s === step);
         d.classList.toggle('completed', s < step);
@@ -12369,7 +12370,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   function initFaNeedsTabs() {
     document.querySelectorAll('.fa-needs').forEach((card) => {
       const tabs = card.querySelectorAll('[data-fa-tab]');
-      const panels = card.querySelectorAll('[data-fa-panel]');
+      const panels = card.querySelectorAll<HTMLElement>('[data-fa-panel]');
       tabs.forEach((tab) => {
         tab.addEventListener('click', () => {
           const pos = tab.getAttribute('data-fa-tab');
