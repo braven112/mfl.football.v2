@@ -5,6 +5,7 @@
  * monotonic by tier, every hard rule names its enforcer, and the bye split
  * arithmetic tells a forced bye-week division game apart from a chosen one.
  */
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   CONSTRAINT_TIERS,
@@ -192,5 +193,37 @@ describe('divisionByeSplit', () => {
   it('returns null without a denominator', () => {
     expect(divisionByeSplit({ total: undefined, byeFree: 84, ceiling: 84 })).toBeNull();
     expect(describeDivisionByeSplit(null)).toBeNull();
+  });
+});
+
+/**
+ * The reveal page renders each goal as `rel__rule rel__rule--${c.tier}`, so a
+ * tier with no matching CSS rule silently loses its stripe while every other
+ * tier keeps one. The `cosmetic` tier was called `exact` once; the rename
+ * reached `CONSTRAINT_TIERS` and `TIER_LABEL` but not the stylesheet, and the
+ * bottom-ranked goal rendered unstriped for as long as that stood. Nothing
+ * fails when these drift — the class just never matches.
+ */
+describe('the tier list and the stylesheet agree', () => {
+  const css = readFileSync(
+    new URL('../src/styles/schedule-release.css', import.meta.url),
+    'utf8',
+  );
+
+  it('gives every tier a border-colour rule', () => {
+    for (const tier of CONSTRAINT_TIERS) {
+      expect(css, `no .rel__rule--${tier} rule for the "${tier}" tier`).toContain(
+        `.rel__rule--${tier} {`,
+      );
+    }
+  });
+
+  it('has no rule for a tier that no longer exists', () => {
+    const styled = [...css.matchAll(/\.rel__rule--([a-z-]+)\s*\{/g)].map((m) => m[1]);
+    expect(styled.filter((t) => !CONSTRAINT_TIERS.includes(t))).toEqual([]);
+  });
+
+  it('labels every tier', () => {
+    for (const tier of CONSTRAINT_TIERS) expect(TIER_LABEL[tier]).toBeTruthy();
   });
 });

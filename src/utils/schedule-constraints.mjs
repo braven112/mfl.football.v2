@@ -21,7 +21,7 @@
  *   maximise    optimised as far as the format allows, and reported against
  *               that allowance rather than against a perfect score.
  *   preference  real, stated, and the first thing to yield.
- *   exact       settled by a post-pass once everything above is fixed.
+ *   cosmetic    settled by a post-pass once everything above is fixed.
  *
  * RANKED *AND* WEIGHTED
  *
