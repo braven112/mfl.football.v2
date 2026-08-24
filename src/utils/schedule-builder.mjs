@@ -150,6 +150,15 @@ export const mirrorRound = (games) => games.map((g) => ({ away: g.home, home: g.
 export const MIN_REMATCH_GAP = 4;
 
 /**
+ * The gap that is never traded, however much a schedule gains by it. The league
+ * demoted "no rematch inside three weeks" from a hard rule to a goal ranked
+ * below getting division games off byes — which permits encroaching on it, not
+ * abolishing it. Left unbounded, the colouring search promptly traded rivals
+ * down to a two-week gap to buy bye-week improvements.
+ */
+export const HARD_MIN_REMATCH_GAP = 3;
+
+/**
  * What counts as a LIGHT bye week — the ones a forced bye-week division round
  * should be steered onto.
  *

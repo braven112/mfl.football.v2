@@ -48,6 +48,12 @@ const to = Number(arg('to', 9999));
 const iterations = Number(arg('iterations', 6000));
 const restarts = Number(arg('restarts', 3));
 const onlyLeague = arg('league', null);
+// The colouring refinement needs ~150k iterations to clear the structured
+// seed's local optimum, which is ~30s per season. A 32-season sweep at that
+// budget is 16 minutes, so the sweep runs a token budget by default and
+// --coloring=N (or --coloring=full) turns it up for a spot check.
+const coloringArg = arg('coloring', '2000');
+const coloringIterations = coloringArg === 'full' ? 150000 : Number(coloringArg);
 
 /**
  * Calendars the NFL has not produced yet but plausibly will. The league has
@@ -107,7 +113,7 @@ const runLeague = (slug) => {
         byes: byeData[String(year)],
         readFeed: read,
         rankingSources: readJson(path.join(ROOT, 'data', 'ranking-sources', `${year}.json`)),
-        search: { restarts, iterations },
+        search: { restarts, iterations, coloringIterations, coloringRestarts: 1 },
       });
       const { goals } = scoreSeasonGoals(
         goalFactsFromSeason({
@@ -141,7 +147,10 @@ const runLeague = (slug) => {
     if (r.error) { console.log(`${r.year}  --   THREW: ${r.error}`); (tally.threw ??= []).push(r.year); continue; }
     const byKey = new Map(r.goals.map((g) => [g.key, g]));
     const cells = keys.map((k) => (byKey.has(k) ? GLYPH[byKey.get(k).status] ?? '  ?   ' : '  --  ')).join('|');
-    console.log(`${r.year} ${String(r.plan.doubleheaderWeeks.join(',')).padEnd(11)}|${cells}|`);
+    const gain = r.plan.coloring
+      ? ` colour ${(r.plan.coloring.improvedBy > 0 ? '-' : '')}${(Math.abs(r.plan.coloring.improvedBy) * 100).toFixed(1)}%pt`
+      : '';
+    console.log(`${r.year} ${String(r.plan.doubleheaderWeeks.join(',')).padEnd(11)}|${cells}|${gain}`);
     for (const g of r.goals) {
       (tally[g.key] ??= { met: 0, partial: 0, blocked: 0, optimised: 0 })[g.status] += 1;
     }
@@ -179,7 +188,7 @@ const runLeague = (slug) => {
         const plan = planSchedule({
           slug, year, byes, readFeed: read,
           rankingSources: readJson(path.join(ROOT, 'data', 'ranking-sources', `${year}.json`)),
-          search: { restarts: 1, iterations: 1500 },
+          search: { restarts: 1, iterations: 1500, coloringIterations, coloringRestarts: 1 },
         });
         const { goals } = scoreSeasonGoals(
           goalFactsFromSeason({

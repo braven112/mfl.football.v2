@@ -259,71 +259,68 @@ same one the historical backfill taught: the guard conditions were written
 against the calendars we had seen, and "there are byes by Week 6" was an
 unstated assumption in slot arithmetic that never mentioned byes.
 
-### Still to build: mixed rounds
+### Mixed rounds — BUILT (Aug 2026)
 
-Every round today is PURE — 13 of 14 AFL weeks are single-type — because
-`materialise` builds them from structured pieces (circle-method within a
-division, complete-bipartite between). Those constructions can only emit pure
-rounds, and `buildWeekPlan` then labels each slot by type.
+`src/utils/schedule-coloring.mjs`. The structured builder still runs; its output
+is now the SEED for an edge-colouring search that can reach the rounds it
+cannot.
 
-A perfect matching does not have to be pure. `{n1-n2, n3-n4, s1-s2, s5-s6,
-n5-s3, n6-s4}` is a legal round with two North internal games, two South
-internal and two cross — some teams play a rival that week, others do not. That
-is the whole ask, and it needs:
+**The model.** Franchises are vertices, required games are edges, and assigning
+games to rounds is edge colouring — a proper colouring (no two edges at a vertex
+share a colour) is exactly "nobody plays twice in a round". Colours are SLOTS
+and each slot has a week; a doubleheader week owns two, which is how a franchise
+legitimately plays twice.
 
-1. **State becomes an assignment of each required game to a round**, not
-   `{teamOrder, legOrder, interSlotOrder}`. This is edge-colouring: colours are
-   rounds, a proper colouring is a valid season.
-2. **Kempe-chain moves.** Pick two rounds; their union is disjoint even cycles
-   (every team has degree 2); swap colours along one cycle. Both stay perfect
-   matchings. Seed from today's construction — Δ-regular graphs are not always
-   Δ-edge-colourable in general, so starting from a known-good colouring
-   matters.
-3. **Hard goals move from structure into move filters.** The two-leg block
-   currently gives the rematch gap, the stretch run and the finale for free,
-   which is why the annealer only carries fairness. A free colouring guarantees
-   none of them.
-4. **`buildWeekPlan` largely dies** — its job is labelling slots by round type,
-   and round types stop existing. `chooseDoubleheaderWeeks` survives.
-5. **Most of `tests/schedule-week-plan.test.ts` dies with it.** Replace with
-   outcome assertions against the goal scorecard, which is why the scorecard
-   was worth building first: it becomes the acceptance gate.
+**The move: Kempe chains.** Every franchise has degree exactly 2 in the union of
+two slots' matchings, so the union is disjoint even cycles. Swap the colours
+along one cycle and both slots are still perfect matchings.
+`tests/schedule-coloring.test.ts` verifies properness exhaustively — every slot
+pair, every cycle, on a real 17-slot 204-game season.
 
-Headroom if built: 46% of the AFL's (team, bye-week) slots have a clean roster
-and 41% of The League's, against the ~10 division rounds a season currently has
-to work with.
+**Why it is SEEDED, not started cold.** A Δ-regular multigraph is not always
+Δ-edge-colourable (Petersen graph), so there is no guarantee a random start can
+be repaired into a legal season. The structured output IS a proper colouring,
+which proves one exists for this format, and every move preserves properness.
+The search cannot fail; the worst case is it returns the seed.
 
-- **Starter-aware bye exposure.** ~~Goal 6's second clause~~ SUPERSEDED — see
-  above. Original note kept for the reasoning: Goal 6's second clause — "a bye week is only a
-  problem for a game if one of those two teams is actually missing starters" —
-  is not built. `byeExposure` counts the WHOLE roster, so a team losing two
-  bench players scores the same as one losing two starters.
+**The objective is now the scorecard.** `scoreColoring` weights come from
+`goalWeight()`, normalised — the optimiser is literally chasing the published
+ranking rather than a hand-tuned fairness subset. Home/away is excluded and
+fixed exactly by the post-pass.
 
-  **It matters far more in The League than the AFL, and not for the obvious
-  reason.** The AFL reveals its schedule BEFORE its draft (release is Labor Day
-  − 22, the NL draft is Labor Day − 8), so the only players on an AFL roster at
-  that moment are keepers — which are by definition the important ones, making a
-  whole-roster count already a fair read on starters. The League reveals June 1,
-  after rosters are set and FULL, so its counts are diluted by deep bench players
-  who would never start. Build it for The League first.
+Measured on 2026:
 
-  The league feed has the starter requirements (`league.starters`: 9, with
-  position limits), so the model is buildable; it needs a preseason value source
-  to pick the starting nine (ADP from `data/ranking-sources/<year>.json` is the
-  obvious candidate). Until then, NFL teams out is the proxy and the verdict
-  says so.
-- **Staggered doubleheaders.** The last resort under goal 3 is documented, not
-  implemented — see below.
+| | structured seed | + colouring |
+|---|---|---|
+| AFL division games on a bye week | 36 / 120 | **28 / 120** |
+| AFL starters missing from rivalry games | 40 | **13** |
+| League division games on a bye week | 8 / 48 | **4 / 48** |
+| weeks containing a division game (AFL) | 8 | **11** |
+| min rematch gap | 7 | 3 |
 
-### Goal 3 has an escape hatch nothing else has
+The AFL's division games now spread `3:10 4:10 5:2 7:4 9:6 10:2 13:4 14:10` —
+different franchises playing rivals in different weeks, which is the whole point
+and was impossible before.
 
-In a year when no league-wide week works the commissioner has **staggered
-doubleheaders franchise by franchise** so each team plays its two games in a week its own
-roster is whole. That breaks the round model this whole module is built on and
-has to be hand-built, so it is a genuine last resort — and it is still better
-than a doubleheader on a bye. Nothing here implements it; it is recorded so
-nobody concludes the goal is unachievable when a season has no clean shared
-week.
+**Two things that had to be got right, both found by running it:**
+
+- **20k iterations moves nothing.** The structured seed is a deep local optimum
+  and a Kempe swap is a coarse move — a greedy pass found 2 improving moves in
+  9,000 tries. 150k at temperature 0.01 clears it. Callers with a request
+  deadline (the admin preview, 30s) pass a small budget and get the seed, which
+  is the correct degradation rather than a timeout.
+- **An unbounded rematch term gets traded to nothing.** The first run took
+  rivals to a two-week gap to buy bye-week gains. Two fixes: the penalty is now
+  QUADRATIC in the shortfall (linear leaves the search indifferent between a
+  three-week gap and a one-week one), and `HARD_MIN_REMATCH_GAP = 3` is enforced
+  as a move filter, not a price. Demoting the three-week rule to a goal permits
+  encroaching on it; it does not permit back-to-back rivalries. The floor
+  *improved* the outcome — with it, starters missing fell to 13 rather than 20,
+  because it kept the search out of a bad region.
+
+`tests/schedule-optimization.test.ts` now asserts the FLOOR and reports
+encroachment on the four-week target rather than failing on it, matching the
+ranking.
 
 ## The trap: bye weeks move, week numbers don't
 
@@ -443,10 +440,19 @@ division leg in 2026 (the first leg and the cross-conference round fill Weeks
 | **10, 12, 12, 13, 14** | **36 (30%)** | **10** | **9** | **6** | **4/5** ← shipped |
 | 11, 12, 12, 13, 14 | 36 (30%) | 12 | 10 | 7 | 4/5 |
 
-Every row is 36. The count is invariant because only two bye-free slots survive
-Week 4 (Week 12's doubleheader) and the second leg is five rounds — so three
-land on byes no matter what. **Do not "optimise" the count; it is already the
-floor.** What the placement buys is severity and rematch gap, and they trade
+Every row is 36 — **but only inside the round model.** The count is invariant
+across placements because only two bye-free slots survive Week 4 (Week 12's
+doubleheader) and the second leg is five rounds, so three land on byes however
+the LEG is placed.
+
+> **Superseded for the colouring builder (Aug 2026).** That invariance is a
+> property of PURE rounds, not of the format. It was stated here — and to the
+> commissioner — as though the format fixed it at 36. It does not. Once rounds
+> may mix division and interdivision games, division games are no longer moved
+> a whole round at a time and the count drops: 36 → 28 for the AFL and 8 → 4 for
+> The League on 2026. The table below is still the right answer for the
+> structured builder and the wrong one for the season the planner now emits.
+> If you are reasoning about a ceiling, check which builder produced it. What the placement buys is severity and rematch gap, and they trade
 off monotonically: each 2 fewer NFL teams out during a division round costs
 roughly a week of minimum rematch gap.
 

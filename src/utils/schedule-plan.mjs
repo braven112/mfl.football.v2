@@ -34,8 +34,21 @@ import {
   pairKey,
   regularSeasonGames,
 } from './schedule-rules.mjs';
-import { buildWeekPlan, searchSeason } from './schedule-builder.mjs';
+import {
+  balanceHomeAway,
+  buildWeekPlan,
+  HARD_MIN_REMATCH_GAP,
+  MIN_REMATCH_GAP,
+  searchSeason,
+} from './schedule-builder.mjs';
 import { starterByeExposure } from './starter-exposure.mjs';
+import {
+  buildSlots,
+  coloringFromWeeks,
+  scoreColoring,
+  searchColoring,
+  weeksFromColoring,
+} from './schedule-coloring.mjs';
 
 /**
  * Per-league policy. `mode` is the league's own decision about how much
@@ -429,6 +442,7 @@ export const planSchedule = ({ slug, year, readFeed, byes, search = {}, mode, ra
   let weeks;
   let crossConference = null;
   let fairness = null;
+  let coloring = null;
 
   if (policy.mode === 'constructive') {
     const cross = policy.crossConference
@@ -490,6 +504,52 @@ export const planSchedule = ({ slug, year, readFeed, byes, search = {}, mode, ra
     );
     weeks = best.weeks;
     fairness = best.score;
+
+    // Refine the structured season by EDGE COLOURING.
+    //
+    // The structured builder can only emit pure rounds, so every franchise
+    // plays its division games in the same weeks as everyone else. Kempe swaps
+    // reach the mixed rounds it cannot, and because they preserve properness
+    // and the search keeps the best state ever seen, the result is never worse
+    // than the season handed in. Seeded rather than started cold because a
+    // Δ-regular multigraph is not always Δ-edge-colourable — the seed is the
+    // proof that a legal colouring exists for this format.
+    if (policy.coloring !== false) {
+      const slots = buildSlots(shape.lastWeek, doubleheaders);
+      const colorCtx = {
+        divisionOf: shape.divisionOf,
+        byesFor: (id, week) => exposure[id]?.[week] ?? 0,
+        rating: priorRatings(readFeed(year - 1, 'standings'), shape.franchiseIds),
+        franchiseIds: shape.franchiseIds,
+        byeFreeWeeks: clean,
+        lastWeek: shape.lastWeek,
+        doubleheaderWeeks: doubleheaders,
+        minRematchGap: MIN_REMATCH_GAP,
+        // Absolute floor. The three-week rule is a goal now and may be traded,
+        // but never down to rivals playing a fortnight apart.
+        hardMinRematchGap: HARD_MIN_REMATCH_GAP,
+      };
+      const seeded = coloringFromWeeks(weeks, slots);
+      const refined = searchColoring(seeded, slots, colorCtx, {
+        // 150k lands the search well past the structured seed's local
+        // optimum; 20k does not move at all (measured — the seed is a deep
+        // optimum and single Kempe swaps are coarse). Callers with a request
+        // deadline pass a smaller budget and get the seed or close to it,
+        // which is the correct degradation.
+        iterations: search.coloringIterations ?? 150000,
+        restarts: search.coloringRestarts ?? 2,
+        seed: search.seed ?? 20260824,
+      });
+      coloring = {
+        seedScore: refined.seedScore.total,
+        score: refined.score.total,
+        terms: refined.score.terms,
+        improvedBy: refined.seedScore.total - refined.score.total,
+      };
+      const refinedWeeks = weeksFromColoring(refined.bySlot, slots);
+      balanceHomeAway(refinedWeeks, shape.franchiseIds, gamesPerTeam);
+      weeks = refinedWeeks;
+    }
   } else {
     if (!current.size) throw new Error(`simple mode needs the current ${year} schedule feed, which is missing`);
     weeks = replanBySwappingDoubleheader(current, shape, { doubleheaders, byeFree: clean });
@@ -516,6 +576,7 @@ export const planSchedule = ({ slug, year, readFeed, byes, search = {}, mode, ra
     text: toMflScheduleText(weeks),
     crossConference,
     fairness,
+    coloring,
     divisionGameCeiling: ceiling,
     plan: describeSeason(weeks, shape, { byes, exposure, byeFree: clean, doubleheaders }),
     currentPlan: current.size

@@ -102,7 +102,11 @@ export const GET: APIRoute = async ({ request, url }) => {
       readFeed: (y: number, feed: string) => readFeedFile(league.dataPath, y, feed),
       // Bounded so the request finishes inside the function's 30s ceiling.
       // Quality plateaus well before this; the structure does the heavy lifting.
-      search: { restarts: 6, iterations: 12000 },
+      // Bounded for the function's 30s ceiling. The colouring refinement needs
+      // ~150k iterations to clear the structured seed's local optimum and that
+      // takes ~30s alone, so the admin preview gets a small budget and returns
+      // at or near the seed. The CLI and the release cron run the full search.
+      search: { restarts: 6, iterations: 12000, coloringIterations: 8000, coloringRestarts: 1 },
     });
     // `weeks` is a Map and carries nothing the client needs beyond the text and
     // the per-week summary already in `plan.plan.byWeek`.
