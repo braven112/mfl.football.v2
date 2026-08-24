@@ -280,6 +280,49 @@ two-leg block is a near-optimal answer to this goal set. The colouring earns its
 place in years where the structure fits badly, and by proving the seed rather
 than trusting it.
 
+### The invariant sweep, and the fifth unwritten rule
+
+`scripts/backtest-schedule.mjs` now audits, on every season, the things
+`validateSeason` does NOT reject a schedule for — the ones that would have
+shipped. All 30 plannable seasons are clean:
+
+- **home-and-home** — a pair meeting twice plays one game at each venue
+- **pinned rounds stay pinned** — cross-conference games only in their week
+- **nobody meets three times**
+
+**`balanceHomeAway` could have broken the first of those and nobody would have
+noticed.** It flips individual games to even out hosting and knew nothing about
+a pair's other meeting; flipping one half of a rivalry puts both at the same
+ground. It never fired, and the reason is a chain nobody had written down:
+
+1. Kempe swaps move whole games between slots without touching sides, so the
+   colouring preserves the seed's per-franchise home counts exactly.
+2. The seed is already balanced.
+3. So the function finds nothing to improve and returns without flipping.
+
+Thirty clean seasons rested entirely on that. Break any link — a future move
+that flips sides, an imbalanced seed, a wrong `gamesPerTeam` — and it starts
+quietly scheduling both halves of a rivalry at the same venue. It now skips
+repeat pairs outright, which is also strictly correct: flipping BOTH meetings
+of a pair changes no home count at all, so a repeat pair can never help it and
+can only be damaged by it.
+
+### Two properties nobody has ruled on
+
+Surfaced by the sweep. Neither is a violation — there is no rule to violate —
+and both are recorded rather than guessed at:
+
+| Property | 2011-2020 (13-week seasons) | 2021-2026 (14-week) |
+|---|---|---|
+| final week is a doubleheader | League 8 seasons, AFL 6 | never |
+| longest run of consecutive doubleheader weeks | 3-4 | League 3, AFL 2 |
+
+A doubleheader in the FINAL week makes the last week count double for seeding —
+a franchise can be saved or eliminated by it. It happened routinely in the
+13-week era because Week 13 was often the only clean late week, and has not
+happened since the season went to 14. It would return the moment the season
+length changes again, which the commissioner has said it will.
+
 ### Futures the NFL has told us to expect
 
 Three changes the commissioner flagged as plausible, all now covered by

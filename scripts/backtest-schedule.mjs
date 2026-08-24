@@ -30,7 +30,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { LEAGUES } from '../src/config/leagues-data.mjs';
-import { planSchedule, SCHEDULE_POLICY } from '../src/utils/schedule-plan.mjs';
+import { planSchedule, seasonShape, SCHEDULE_POLICY } from '../src/utils/schedule-plan.mjs';
 import { LIGHT_BYE_WEEK_MAX } from '../src/utils/schedule-builder.mjs';
 import { goalFactsFromSeason, scoreSeasonGoals } from '../src/utils/schedule-goals.mjs';
 import { scheduleConstraints } from '../src/utils/schedule-constraints.mjs';
@@ -90,6 +90,54 @@ const STRESS = {
 const slugs = Object.keys(SCHEDULE_POLICY).filter((s) => !onlyLeague || s === onlyLeague);
 const seasons = Object.keys(byeData).map(Number).filter((y) => y >= from && y <= to).sort();
 
+/**
+ * Invariants nothing else checks, because the old structured builder provided
+ * them for free and so nobody wrote them down.
+ *
+ * Every entry here was discovered by something violating it, or by asking what
+ * the construction had been quietly guaranteeing. `validateSeason` covers the
+ * ones a season is REJECTED for; these are the ones that would have shipped.
+ */
+const auditInvariants = (weeks, shape, policy) => {
+  const problems = [];
+  const met = {};
+  const crossWeeks = new Set();
+  for (const [week, games] of weeks) {
+    for (const g of games) {
+      if (shape.conferenceOf[g.away] !== shape.conferenceOf[g.home]) crossWeeks.add(week);
+      const key = [g.away, g.home].sort().join('-');
+      (met[key] ??= []).push({ week, home: g.home });
+    }
+  }
+
+  // 1. Home-and-home. The structured builder guaranteed it with `mirrorRound`;
+  //    a colouring only preserves it because Kempe swaps move whole games
+  //    rather than flipping sides, and `balanceHomeAway` could still undo it.
+  const sameVenue = Object.entries(met)
+    .filter(([, ms]) => ms.length === 2 && ms[0].home === ms[1].home)
+    .map(([k]) => k);
+  if (sameVenue.length) {
+    problems.push(`${sameVenue.length} pair(s) play both meetings at the same venue: ${sameVenue.slice(0, 3).join(', ')}`);
+  }
+
+  // 2. A constitutionally pinned round stays in its week. The colouring search
+  //    traded the AFL's Week 1 cross-conference round away the first time it
+  //    was let loose, and the illegal result scored better than anything legal.
+  const pinned = policy?.crossConference?.week;
+  if (pinned) {
+    const stray = [...crossWeeks].filter((w) => w !== pinned);
+    if (stray.length) problems.push(`cross-conference games outside Week ${pinned}: weeks ${stray.join(', ')}`);
+    if (!crossWeeks.has(pinned)) problems.push(`no cross-conference game in Week ${pinned}`);
+  }
+
+  // 3. Nobody meets three times. The game multiset makes this impossible by
+  //    construction, which is exactly why it is worth asserting cheaply.
+  const thrice = Object.entries(met).filter(([, ms]) => ms.length > 2).map(([k]) => k);
+  if (thrice.length) problems.push(`${thrice.length} pair(s) meet more than twice: ${thrice.slice(0, 3).join(', ')}`);
+
+  return problems;
+};
+
 /** Short glyph per verdict so a 16-row matrix stays readable. */
 const GLYPH = { met: '  ok  ', partial: ' part ', blocked: ' FAIL ', optimised: ' opt  ' };
 
@@ -127,7 +175,12 @@ const runLeague = (slug) => {
           problems: plan.problems,
         }),
       );
-      rows.push({ year, goals, plan });
+      rows.push({
+        year,
+        goals,
+        plan,
+        invariants: auditInvariants(plan.weeks, seasonShape(read(year, 'league')), SCHEDULE_POLICY[slug]),
+      });
     } catch (err) {
       rows.push({ year, error: err.message });
     }
@@ -164,6 +217,12 @@ const runLeague = (slug) => {
       `${String(t.blocked).padStart(6)}  ${String(t.optimised).padStart(9)}`);
   }
   if (tally.threw) console.log(`\n  SEASONS THAT COULD NOT BE PLANNED AT ALL: ${tally.threw.join(', ')}`);
+
+  // The point of the sweep: things that would have SHIPPED, not things the
+  // audit already rejects.
+  const broken = rows.filter((r) => r.invariants?.length);
+  console.log(`\n  unwritten invariants: ${broken.length ? `${broken.length} season(s) VIOLATE one` : 'all seasons clean'}`);
+  for (const r of broken) for (const p of r.invariants) console.log(`    ${r.year}: ${p}`);
 
   // Every detail for the seasons that went wrong — the point of the exercise.
   for (const r of rows) {

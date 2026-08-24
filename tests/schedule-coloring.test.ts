@@ -21,7 +21,7 @@ import { seasonShape, byeExposure } from '../src/utils/schedule-plan.mjs';
 // @ts-expect-error - .mjs helper shared with the node scripts
 import { regularSeasonGames } from '../src/utils/schedule-rules.mjs';
 // @ts-expect-error - .mjs helper shared with the node scripts
-import { HARD_MIN_REMATCH_GAP, MIN_REMATCH_GAP } from '../src/utils/schedule-builder.mjs';
+import { balanceHomeAway, HARD_MIN_REMATCH_GAP, MIN_REMATCH_GAP } from '../src/utils/schedule-builder.mjs';
 
 const byes = require('../data/nfl/bye-weeks.json').seasons['2026'];
 
@@ -263,5 +263,40 @@ describe('the division-spread goal', () => {
     const w = COLORING_WEIGHTS();
     expect(w.divisionByeFree).toBeGreaterThan(w.divisionSpread);
     expect(w.divisionSpread).toBeGreaterThan(w.divisionByeCost);
+  });
+});
+
+describe('balanceHomeAway and home-and-home', () => {
+  /**
+   * A pair that meets twice plays one game at each venue. `balanceHomeAway`
+   * flips individual games to even out hosting, and knew nothing about that —
+   * flipping one meeting of a pair puts both at the same ground.
+   *
+   * It never fired in 30 backtested seasons, but only because of a chain
+   * nobody had written down: Kempe swaps preserve per-franchise home counts, so
+   * a balanced seed stays balanced, so the function finds nothing to do. This
+   * test removes the luck.
+   */
+  it('never puts both halves of a rivalry at the same venue, even from an unbalanced start', () => {
+    const l = load();
+    const weeks = new Map(
+      [...l.weeks.entries()].map(([w, games]: any) => [w, games.map((g: any) => ({ ...g }))]),
+    );
+    // Force a lopsided starting point so the balancer actually has work to do.
+    for (const games of weeks.values()) {
+      for (let i = 0; i < games.length; i += 1) {
+        if (i % 2 === 0) games[i] = { away: games[i].home, home: games[i].away };
+      }
+    }
+    balanceHomeAway(weeks, l.shape.franchiseIds, 17);
+
+    const venues: Record<string, string[]> = {};
+    for (const games of weeks.values()) {
+      for (const g of games as any[]) {
+        (venues[[g.away, g.home].sort().join('-')] ??= []).push(g.home);
+      }
+    }
+    const sameVenue = Object.entries(venues).filter(([, v]) => v.length === 2 && v[0] === v[1]);
+    expect(sameVenue.map(([k]) => k)).toEqual([]);
   });
 });

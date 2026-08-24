@@ -526,11 +526,37 @@ export const scoreSeason = (weeks, ctx, weights = {}) => {
  * the best possible is 8/9, and this reaches it. Doing it as a post-pass
  * instead of inside the annealer keeps each search iteration cheap.
  */
+/**
+ * Even out how often each franchise hosts, by flipping which side is home.
+ *
+ * ONLY GAMES BETWEEN PAIRS THAT MEET ONCE ARE ELIGIBLE. A pair that meets twice
+ * plays home-and-home — one meeting at each venue — and flipping a single one
+ * of them puts both at the same ground. Flipping BOTH just swaps which meeting
+ * is which and changes no home count at all, so a repeat pair can never help
+ * this function and can only be damaged by it.
+ *
+ * This was latent rather than live, and the chain that hid it is worth
+ * knowing: Kempe swaps move whole games between slots without touching sides,
+ * so the colouring preserves the seed's per-franchise home counts exactly; the
+ * seed is already balanced; so this function finds nothing to improve and
+ * returns without flipping anything. Thirty backtested seasons came out clean
+ * for that reason alone. Change any link — a move that flips sides, an
+ * imbalanced seed, a different `gamesPerTeam` — and it would have started
+ * quietly scheduling both halves of a rivalry at the same venue.
+ */
 export const balanceHomeAway = (weeks, franchiseIds, gamesPerTeam) => {
   const target = gamesPerTeam / 2;
   const home = {};
   for (const id of franchiseIds) home[id] = 0;
-  for (const games of weeks.values()) for (const g of games) home[g.home] += 1;
+  const meetings = {};
+  for (const games of weeks.values()) {
+    for (const g of games) {
+      home[g.home] += 1;
+      const key = [g.away, g.home].sort().join('-');
+      meetings[key] = (meetings[key] ?? 0) + 1;
+    }
+  }
+  const playsOnce = (g) => meetings[[g.away, g.home].sort().join('-')] === 1;
 
   const cost = (id) => (home[id] - target) ** 2;
   for (let pass = 0; pass < 50; pass += 1) {
@@ -538,6 +564,7 @@ export const balanceHomeAway = (weeks, franchiseIds, gamesPerTeam) => {
     for (const games of weeks.values()) {
       for (let i = 0; i < games.length; i += 1) {
         const g = games[i];
+        if (!playsOnce(g)) continue;
         const before = cost(g.home) + cost(g.away);
         home[g.home] -= 1;
         home[g.away] += 1;
