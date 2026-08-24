@@ -71,7 +71,7 @@ interface Plan {
 const money = (amount: number) =>
   `${amount < 0 ? '-' : ''}$${Math.abs(amount).toFixed(2)}`;
 
-type Tab = 'ledger' | 'add' | 'import' | 'payouts';
+type Tab = 'ledger' | 'add' | 'import' | 'payouts' | 'rollover';
 
 export default function AccountingPanel({
   leagueSlug,
@@ -128,6 +128,7 @@ export default function AccountingPanel({
           ['add', 'Add transaction'],
           ['import', 'Import CSV'],
           ...(hasPayouts ? ([['payouts', 'Season payouts']] as Array<[Tab, string]>) : []),
+          ['rollover', 'Year rollover'],
         ] as Array<[Tab, string]>).map(([id, label]) => (
           <button
             key={id}
@@ -174,6 +175,17 @@ export default function AccountingPanel({
           leagueName={leagueName}
           year={year}
           initialSeason={initialSeason}
+          seasons={seasons}
+          nameFor={nameFor}
+          onWritten={loadLedger}
+        />
+      )}
+
+      {tab === 'rollover' && (
+        <Rollover
+          base={base}
+          leagueSlug={leagueSlug}
+          year={year}
           seasons={seasons}
           nameFor={nameFor}
           onWritten={loadLedger}
@@ -785,6 +797,294 @@ function PayoutTable({
                 </td>
                 <td>{nameFor(line.franchiseId)}</td>
                 <td className="acct__num">{money(line.amount)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
+/* ── Year rollover ──────────────────────────────────────────────────────── */
+
+interface MigrationLine {
+  franchiseId: string;
+  name: string | null;
+  amount: number;
+  description: string;
+  status: 'payable' | 'already-migrated' | 'conflict';
+}
+
+interface MigrationPlan {
+  from: number;
+  to: number;
+  lines: MigrationLine[];
+  skipped: Array<{ franchiseId: string; reason: string; balance: number }>;
+  warnings: Array<{ franchiseId: string; balance: number; reason: string }>;
+  totals: {
+    carryable: number;
+    alreadyMigrated: number;
+    conflicts: number;
+    sourceNet: number;
+    carriedNet: number;
+    franchisesCarried: number;
+  };
+}
+
+/**
+ * Carry last year's closing balances into the new league year.
+ *
+ * MFL starts each new league year with an empty ledger, so this is the step
+ * that stops the league's books resetting to zero every February. The panel
+ * leads with the net check — source net vs carried net — because those two
+ * numbers agreeing is the fastest way for a commissioner to see that nothing
+ * was invented, lost, or flipped.
+ */
+function Rollover({
+  base,
+  leagueSlug,
+  year,
+  seasons,
+  nameFor,
+  onWritten,
+}: {
+  base: string;
+  leagueSlug: string;
+  year: number;
+  seasons: number[];
+  nameFor: (id: string) => string;
+  onWritten: () => void;
+}) {
+  // Default to carrying the year before the live ledger year — the rollover
+  // that is actually due when a commissioner opens this.
+  const [from, setFrom] = useState(year - 1);
+  const [plan, setPlan] = useState<MigrationPlan | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [applied, setApplied] = useState<string | null>(null);
+
+  const query = `league=${encodeURIComponent(leagueSlug)}&from=${from}&to=${year}`;
+
+  const loadPlan = useCallback(async () => {
+    setBusy(true);
+    setError(null);
+    setApplied(null);
+    try {
+      const response = await fetch(`${base}/migrate?${query}`);
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.error ?? `HTTP ${response.status}`);
+      setPlan(data);
+    } catch (err) {
+      setError((err as Error).message);
+      setPlan(null);
+    } finally {
+      setBusy(false);
+    }
+  }, [base, query]);
+
+  useEffect(() => {
+    void loadPlan();
+  }, [loadPlan]);
+
+  const apply = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await fetch(`${base}/migrate?${query}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm: true }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.error ?? `HTTP ${response.status}`);
+      setApplied(
+        data.failedCount
+          ? `${data.written} carried, ${data.failedCount} failed. Re-run to retry only the failures.`
+          : `${data.written} balance${data.written === 1 ? '' : 's'} carried into ${year}.`
+      );
+      onWritten();
+      await loadPlan();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const carryable = plan?.lines.filter((line) => line.status === 'payable') ?? [];
+  const carried = plan?.lines.filter((line) => line.status === 'already-migrated') ?? [];
+  const conflicts = plan?.lines.filter((line) => line.status === 'conflict') ?? [];
+  const netMatches = plan ? plan.totals.sourceNet === plan.totals.carriedNet : true;
+
+  return (
+    <div className="acct__section">
+      <div className="acct__toolbar">
+        <h2>Year rollover</h2>
+        <label className="acct__inline">
+          <span>Carry from</span>
+          <select value={from} onChange={(e) => setFrom(Number(e.target.value))}>
+            {seasons
+              .filter((option) => option < year)
+              .map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+          </select>
+          <span>into {year}</span>
+        </label>
+      </div>
+
+      <p className="acct__note">
+        MFL creates a brand-new league every year and its ledger starts empty &mdash; nothing carries over on
+        MFL&rsquo;s side. This writes each franchise&rsquo;s {from} closing balance into the {year} books, keeping
+        the sign: a franchise that owed money still owes it. Balances already carried are never written twice.
+      </p>
+
+      {error && <p className="acct__error" role="alert">{error}</p>}
+      {applied && <p className="acct__ok" role="status">{applied}</p>}
+      {busy && !plan && <p className="acct__note">Reading both years&rsquo; ledgers…</p>}
+
+      {plan && (
+        <>
+          <dl className="acct__totals">
+            <div>
+              <dt>{from} net</dt>
+              <dd>{money(plan.totals.sourceNet)}</dd>
+            </div>
+            <div>
+              <dt>Carried net</dt>
+              <dd>{money(plan.totals.carriedNet)}</dd>
+            </div>
+            <div>
+              <dt>To carry</dt>
+              <dd>{money(plan.totals.carryable)}</dd>
+            </div>
+            <div>
+              <dt>Franchises</dt>
+              <dd>{plan.totals.franchisesCarried}</dd>
+            </div>
+          </dl>
+
+          {/* The two nets disagreeing means a balance is being dropped — most
+              often a franchise that no longer exists. Say so plainly rather
+              than leaving the commissioner to spot it in the numbers. */}
+          {!netMatches && (
+            <div className="acct__warn">
+              <p>
+                {from} nets {money(plan.totals.sourceNet)} but only {money(plan.totals.carriedNet)} is
+                accounted for. The difference is money that will not reach the {year} books &mdash; check the
+                warnings below before carrying.
+              </p>
+            </div>
+          )}
+
+          {conflicts.length > 0 && (
+            <div className="acct__error" role="alert">
+              <p>
+                {conflicts.length} franchise{conflicts.length === 1 ? '' : 's'} already carr
+                {conflicts.length === 1 ? 'ies' : 'y'} a {from} balance at a different amount. Nothing will be
+                written until {conflicts.length === 1 ? 'it is' : 'they are'} reconciled in MFL.
+              </p>
+              <ul className="acct__results">
+                {conflicts.map((line) => (
+                  <li key={line.franchiseId} className="is-bad">
+                    {nameFor(line.franchiseId)} — plan says {money(line.amount)}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {plan.warnings.length > 0 && (
+            <div className="acct__warn">
+              <p>
+                {plan.warnings.length} balance{plan.warnings.length === 1 ? '' : 's'} cannot be carried
+                automatically:
+              </p>
+              <ul className="acct__results">
+                {plan.warnings.map((warning) => (
+                  <li key={warning.franchiseId} className="is-bad">
+                    {warning.reason}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <MigrationTable title={`To carry (${carryable.length})`} lines={carryable} nameFor={nameFor} />
+          <MigrationTable
+            title={`Already carried (${carried.length})`}
+            lines={carried}
+            nameFor={nameFor}
+            muted
+          />
+
+          {plan.skipped.length > 0 && (
+            <p className="acct__note">
+              {plan.skipped.length} franchise{plan.skipped.length === 1 ? '' : 's'} closed {from} square and
+              need nothing carried.
+            </p>
+          )}
+
+          <div className="acct__actions">
+            <button type="button" className="acct__btn" onClick={loadPlan} disabled={busy}>
+              Recheck
+            </button>
+            <button
+              type="button"
+              className="acct__btn acct__btn--primary"
+              onClick={apply}
+              disabled={busy || carryable.length === 0 || conflicts.length > 0}
+            >
+              {busy
+                ? 'Carrying…'
+                : carryable.length === 0
+                  ? 'Nothing to carry'
+                  : `Carry ${carryable.length} balance${carryable.length === 1 ? '' : 's'} into ${year}`}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function MigrationTable({
+  title,
+  lines,
+  nameFor,
+  muted,
+}: {
+  title: string;
+  lines: MigrationLine[];
+  nameFor: (id: string) => string;
+  muted?: boolean;
+}) {
+  if (!lines.length) return null;
+  return (
+    <>
+      <h3 className={muted ? 'acct__h3 is-muted' : 'acct__h3'}>{title}</h3>
+      <div className="acct__tablewrap">
+        <table className={`acct__table${muted ? ' is-muted' : ''}`}>
+          <thead>
+            <tr>
+              <th scope="col">Franchise</th>
+              <th scope="col" className="acct__num">Carried</th>
+              <th scope="col">Direction</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lines.map((line) => (
+              <tr key={line.franchiseId}>
+                <td>{line.name ?? nameFor(line.franchiseId)}</td>
+                <td className={`acct__num${line.amount < 0 ? ' is-negative' : ''}`}>
+                  {money(line.amount)}
+                </td>
+                {/* Spelled out, because the sign alone is the whole meaning
+                    here and a misread costs an owner real money. */}
+                <td>{line.amount < 0 ? 'Owes the league' : 'League owes them'}</td>
               </tr>
             ))}
           </tbody>

@@ -10,14 +10,15 @@ season payout run.
 | | |
 |---|---|
 | Admin pages | `/theleague/admin/accounting`, `/afl-fantasy/admin/accounting` |
-| API | `src/pages/api/accounting/{records,import,payouts}.ts` |
+| API | `src/pages/api/accounting/{records,import,payouts,migrate}.ts` |
 | MFL client | `src/utils/mfl-accounting.ts` |
 | CSV | `src/utils/accounting-csv.ts` |
 | Planner (pure) | `src/utils/accounting-payouts.mjs` |
+| Rollover planner (pure) | `src/utils/accounting-migration.mjs` |
 | Season data | `src/utils/accounting-season-data.ts` |
 | Gate | `src/utils/accounting-request.ts` |
 | Prize tables | `payouts` in `src/config/leagues-data.mjs` |
-| Tests | `tests/mfl-accounting.test.ts`, `tests/accounting-csv.test.ts`, `tests/accounting-payouts.test.ts`, `tests/accounting-access.test.ts` |
+| Tests | `tests/mfl-accounting.test.ts`, `tests/accounting-csv.test.ts`, `tests/accounting-payouts.test.ts`, `tests/accounting-migration.test.ts`, `tests/accounting-access.test.ts` |
 
 ## The sign convention: positive CREDITS the franchise
 
@@ -149,6 +150,75 @@ same rounding TheLeague's "approximately $712" carries. Confirmed with the
 commissioner, Aug 2026 — **do not "fix" this back to six division awards.**
 
 TheLeague's table reconciles exactly: the derived 2025 plan totals $712.
+
+## Year rollover: MFL's new league starts with EMPTY books
+
+MFL creates a brand-new league every year — Feb 14 for TheLeague, June 1 for
+the AFL — and **the new league's accounting ledger starts completely empty.**
+Nothing carries over on MFL's side. Without a deliberate migration, the
+league's books reset to zero every February and every outstanding debt and
+credit silently disappears.
+
+`/api/accounting/migrate` plans and applies the carry-forward; the console's
+**Year rollover** tab drives it.
+
+### The sign is preserved, never flipped
+
+A franchise at **-100** at the close of 2025 (they owe $100) opens 2026 at
+**-100**. A franchise at **+300** opens at **+300**. The carried amount IS the
+closing balance, unchanged.
+
+This is the most destructive thing to get wrong in the whole feature. Flipping
+it converts every debt in the league into a credit and every credit into a
+debt, in one pass, with no error from MFL — and the resulting ledger looks
+entirely plausible. Pinned by `tests/accounting-migration.test.ts`.
+
+The plan reports **source net vs carried net**. Those two agreeing is the
+check that nothing was invented, lost, or flipped; the UI calls out a
+mismatch rather than leaving it to be spotted in the numbers.
+
+### An empty source ledger is an ERROR, not an empty result
+
+The quiet failure: a degraded read of last year's ledger yields no balances,
+the plan has nothing to carry, and the page says "nothing to migrate" — which
+is exactly what a genuinely settled league looks like. The commissioner ticks
+it off and the books are lost.
+
+So a source ledger with **no records at all** refuses to plan and returns 409.
+A year that really did end empty has nothing to carry anyway, so refusing
+costs nothing and catches the case that destroys the books.
+
+The TARGET ledger read is equally non-optional: without it, already-carried
+cannot be told from carryable, and the failure mode of guessing is carrying
+everything twice.
+
+### Balances follow the franchise, not the owner
+
+Both constitutions say a replacement owner takes the team over as-is,
+financial obligations included. So a straight franchise-id carry is the rule,
+not an approximation — if 0009 changed hands over the winter, 0009's debt is
+still 0009's debt. **No owner-history lookup belongs in the migration.**
+
+A balance whose franchise no longer exists in the target year cannot be
+carried and is reported as a warning, never dropped. That is real money
+someone has to reassign by hand.
+
+### Other guards
+
+- **Idempotency** is keyed on (franchiseId, description), with the description
+  year-stamped: `Balance carried forward from 2025`. Every franchise's carry
+  record shares that description by design, so keying on description alone
+  would carry exactly one franchise and skip the rest.
+- **A conflict stops the whole run** — a carry record already present at a
+  different amount means the source moved after a partial run, or someone
+  edited by hand. The correct balance is then ambiguous.
+- **Same-year and backwards migrations are refused.** Carrying a year into
+  itself doubles the whole league in place; backwards is a typo or an attempt
+  to rewrite closed books.
+- **Zero balances are skipped**, and reported as skipped — a franchise missing
+  from the plan entirely reads as an oversight.
+- **A partial carry is safe to re-run**: rows that landed come back
+  already-migrated on the next plan.
 
 ## Two clocks, and they are not interchangeable
 
