@@ -58,9 +58,12 @@ export interface HistoricalIdentity {
   icon: string | null;
 }
 
-/** Collapse casing, whitespace, and a leading "The " for identity matching. */
-export const normalizeIdentity = (s: string): string =>
-  (s || '').trim().toLowerCase().replace(/^the\s+/, '').replace(/\s+/g, ' ');
+// Sourced from the shared .mjs primitive so the node-side tenure derivation
+// and this module can never drift apart. Imported (not just re-exported) —
+// this module calls it internally, and `export … from` creates no local
+// binding. Import path unchanged for every existing consumer.
+import { normalizeIdentity } from './identity-normalize.mjs';
+export { normalizeIdentity };
 
 type EraGroup = { entries: TeamHistoryEntry[]; key: string };
 

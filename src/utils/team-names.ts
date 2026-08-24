@@ -7,8 +7,16 @@
  */
 export const MAX_TEAM_NAME_LENGTH = 15;
 export const MAX_SHORT_NAME_LENGTH = 10;
-export const HISTORICAL_TEAM_ICON_FALLBACK = '/assets/theleague/history/historical-team-placeholder.svg';
-export const HISTORICAL_TEAM_BANNER_FALLBACK = '/assets/theleague/history/historical-team-banner-placeholder.svg';
+// Defined in the shared .mjs primitive so the node-side owner-tenure
+// derivation resolves historical assets to the exact same placeholders this
+// module hands the pages. Imported (not just re-exported) — this module uses
+// both below, and `export … from` creates no local binding. Every existing
+// import of these names is unchanged.
+import {
+  HISTORICAL_TEAM_ICON_FALLBACK,
+  HISTORICAL_TEAM_BANNER_FALLBACK,
+} from './identity-normalize.mjs';
+export { HISTORICAL_TEAM_ICON_FALLBACK, HISTORICAL_TEAM_BANNER_FALLBACK };
 
 /**
  * Choose the best team name from available options with a maximum length limit.
