@@ -1,0 +1,163 @@
+name: Fetch Owner Names from MFL
+
+# Manually-triggered backfill of `displayName` in src/data/owners-registry.json.
+#
+# MFL's `league` export returns owner names, but ONLY to a request carrying the
+# cookie of a user with commissioner access. Every league.json committed in this
+# repo was fetched unauthenticated — a structured walk of all 44 finds zero
+# owner/email/username fields — which is why the owners feature shipped with
+# every page anonymous.
+#
+# Runs here rather than locally or behind a UI for three reasons:
+#   1. MFL_USERNAME / MFL_PASSWORD are ALREADY repo secrets (roster-sync,
+#      apply-august-cuts, apply-pending-contracts, sync-draft-pick-contracts).
+#      This adds no new credential surface — the password never leaves GitHub's
+#      secret store and never reaches a developer machine.
+#   2. The registry is a committed JSON file, not a database. A UI would have to
+#      either push a git commit or write to KV, and KV would split the source of
+#      truth for a file the build reads.
+#   3. GitHub's runners can reach myfantasyleague.com; a sandboxed dev
+#      environment often cannot (see backfill-historical-feeds.yml).
+#
+# WHY A YEAR-BY-YEAR SWEEP: each MFL league-year is its own league. Fetching
+# 2009 with a commissioner cookie returns who owned those franchises IN 2009 —
+# so this names FORMER owners too, which is most of the 140 and the whole point.
+#
+# PRIVACY: the same authenticated response carries EMAIL ADDRESSES. The script
+# reads a whitelist of name fields only, and throws if anything email- or
+# URL-shaped would reach the registry. Nothing raw is cached or logged. Keep the
+# dry run as your first step so you can read what it proposes before it writes.
+on:
+  workflow_dispatch:
+    inputs:
+      league:
+        description: 'Which league to name owners for'
+        required: true
+        type: choice
+        options:
+          - both
+          - theleague
+          - afl
+        default: both
+      write:
+        description: 'Actually write the registry (leave off for a dry run first)'
+        required: false
+        type: boolean
+        default: false
+      year:
+        description: 'Optional single year (e.g. 2009). Blank = every year with feeds.'
+        required: false
+        type: string
+        default: ''
+
+concurrency:
+  # Never let two runs write owners-registry.json at once — the loser would
+  # commit on top of a registry it never read.
+  group: fetch-owner-names
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  fetch-owner-names:
+    runs-on: ubuntu-latest
+    # ~44 league-years across both leagues at 600ms apiece, plus login and the
+    # recompute. Generous so a slow MFL doesn't kill a half-finished sweep.
+    timeout-minutes: 30
+    steps:
+      - name: Checkout (current branch)
+        uses: actions/checkout@v6
+        with:
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+          ref: ${{ github.ref }}
+
+      - name: Setup pnpm + Node + install
+        uses: ./.github/actions/setup
+
+      - name: Resolve script arguments
+        id: args
+        run: |
+          ARGS=""
+          if [ "${{ inputs.league }}" != "both" ]; then
+            ARGS="$ARGS --league=${{ inputs.league }}"
+          fi
+          if [ -n "${{ inputs.year }}" ]; then
+            ARGS="$ARGS --year=${{ inputs.year }}"
+          fi
+          echo "args=$ARGS" >> "$GITHUB_OUTPUT"
+          echo "Resolved args:$ARGS"
+
+      # ALWAYS runs, even when write is on: the dry run is what surfaces the
+      # conflicts — tenures MFL reports two different owners for. Those are
+      # tenures inference merged that should be SPLIT, and they are the most
+      # valuable output of this job. Captured to a file so the summary can show
+      # them without anyone opening the raw log.
+      - name: Dry run — what would be named
+        id: dryrun
+        env:
+          MFL_USERNAME: ${{ secrets.MFL_USERNAME }}
+          MFL_PASSWORD: ${{ secrets.MFL_PASSWORD }}
+        run: |
+          set -o pipefail
+          node ./scripts/fetch-owner-names.mjs ${{ steps.args.outputs.args }} 2>&1 | tee /tmp/owner-names-dry.txt
+
+      - name: Summarise the dry run
+        if: always()
+        run: |
+          {
+            echo "## Owner names — dry run"
+            echo ""
+            echo '```'
+            # The script prints names; that is the point of the job. It never
+            # prints an email — assertNoContactInfo throws first.
+            cat /tmp/owner-names-dry.txt || echo "(no output)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Apply names to the registry
+        if: inputs.write
+        env:
+          MFL_USERNAME: ${{ secrets.MFL_USERNAME }}
+          MFL_PASSWORD: ${{ secrets.MFL_PASSWORD }}
+        run: node ./scripts/fetch-owner-names.mjs ${{ steps.args.outputs.args }} --write
+
+      # The derived files carry displayName through to `title`, so a registry
+      # written without this would commit named people beside owner pages still
+      # titled by their team identities.
+      - name: Recompute owner tenures
+        if: inputs.write
+        run: node ./scripts/compute-owner-tenures.mjs
+
+      # The registry guard tests are the backstop for a bad name landing:
+      # overlapping claims, a name that is really contact info, a shared team
+      # declared on only one side. Cheaper to fail here than to commit it.
+      - name: Verify registry and derived data
+        if: inputs.write
+        run: |
+          pnpm vitest run \
+            tests/owners-registry.test.ts \
+            tests/owner-tenures-data.test.ts \
+            tests/fetch-owner-names.test.ts
+
+      - name: Commit and push
+        if: inputs.write
+        uses: ./.github/actions/commit-push
+        with:
+          add-paths: 'src/data/owners-registry.json data/theleague/derived/owner-tenures.json data/afl-fantasy/derived/owner-tenures.json'
+          commit-message: 'chore: name owners from MFL (${{ inputs.league }})'
+          no-changes-message: 'No new owner names — nothing to commit.'
+          git-user-name: 'Owner Names Bot'
+          push-ref: ${{ github.ref_name }}
+
+      - name: Say what happens next
+        if: always()
+        run: |
+          if [ "${{ inputs.write }}" != "true" ]; then
+            {
+              echo ""
+              echo "**Dry run only — nothing was written.**"
+              echo ""
+              echo "Read the conflicts above before writing: a tenure MFL reports two owners for is one this repo's inference merged and should probably SPLIT. Fix those in \`src/data/owners-registry.json\` first, then re-run with **write** ticked."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
