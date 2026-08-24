@@ -319,15 +319,42 @@ describe.each(leagues)('$league.slug owner tenures', ({ league, ownersPath, ledg
     }
   });
 
-  it('makes slotSuccession agree with bySlot ordering', () => {
-    for (const owner of owners.owners) {
-      for (const [slot, succession] of Object.entries<any>(owner.slotSuccession)) {
-        const order = owners.bySlot[slot];
-        const index = order.indexOf(owner.slug);
-        expect(index).toBeGreaterThanOrEqual(0);
-        expect(succession.previous).toBe(index > 0 ? order[index - 1] : null);
-        expect(succession.next).toBe(index < order.length - 1 ? order[index + 1] : null);
+  /**
+   * Succession runs over HOLDINGS, not owner entries: two co-owners of a
+   * shared team occupy one position in the chain. Walking bySlug index-by-index
+   * would make each co-owner the other's predecessor — a handover between two
+   * people who ran the team at the same time.
+   */
+  it('makes slotSuccession agree with bySlot, collapsing co-owners to one step', () => {
+    const bySlug = new Map(owners.owners.map((o: any) => [o.slug, o]));
+    for (const [slot, order] of Object.entries<string[]>(owners.bySlot)) {
+      // Group consecutive slugs that start the same year — that is a holding.
+      const holdings: string[][] = [];
+      for (const slug of order) {
+        const yearStart = bySlug
+          .get(slug)!
+          .tenures.find((t: any) => t.franchiseId === slot).yearStart;
+        const last = holdings[holdings.length - 1];
+        const lastYear = last
+          ? bySlug.get(last[0])!.tenures.find((t: any) => t.franchiseId === slot).yearStart
+          : null;
+        if (last && lastYear === yearStart) last.push(slug);
+        else holdings.push([slug]);
       }
+
+      holdings.forEach((holding, index) => {
+        const expectedPrev = index > 0 ? holdings[index - 1][0] : null;
+        const expectedNext = index < holdings.length - 1 ? holdings[index + 1][0] : null;
+        for (const slug of holding) {
+          const succession = bySlug.get(slug)!.slotSuccession[slot];
+          expect(succession, `${slug} has no succession for ${slot}`).toBeTruthy();
+          expect(succession.previous).toBe(expectedPrev);
+          expect(succession.next).toBe(expectedNext);
+          // A co-owner is never their own neighbour.
+          expect(succession.previous).not.toBe(slug);
+          expect(succession.next).not.toBe(slug);
+        }
+      });
     }
   });
 
@@ -360,9 +387,12 @@ describe.each(leagues)('$league.slug owner tenures', ({ league, ownersPath, ledg
  * reason the feature exists; moving them should require someone to look.
  */
 describe('measured owner counts', () => {
+  // TheLeague is 17 current for 16 slots: Cowboy Up (0014) is a shared team, so
+  // its two co-owners are two owner entries on one franchise. `seasons` stays
+  // 320 because it counts DISTINCT franchise-seasons, not owner-seasons.
   const cases = [
-    { slug: 'theleague', total: 38, current: 16, former: 22, seasons: 320 },
-    { slug: 'afl-fantasy', total: 102, current: 24, former: 78, seasons: 576 },
+    { slug: 'theleague', total: 39, current: 17, former: 22, seasons: 320, shared: 2 },
+    { slug: 'afl-fantasy', total: 102, current: 24, former: 78, seasons: 576, shared: 0 },
   ];
 
   for (const expected of cases) {
@@ -377,6 +407,7 @@ describe('measured owner counts', () => {
         current: expected.current,
         former: expected.former,
         seasons: expected.seasons,
+        shared: expected.shared,
       });
     });
   }
@@ -476,19 +507,57 @@ describe.each(leagues)('$league.slug inference without a registry', ({ league, o
 });
 
 /** Slugs are URLs, and the two leagues' files are served from one origin. */
-describe('slugs are unique across every league', () => {
-  it('has no collisions between leagues', () => {
-    const seen = new Map<string, string>();
+describe('slugs identify one person across every league', () => {
+  /**
+   * A slug appearing in both leagues' files is NOT a collision when it is the
+   * same person — that is the whole point of a league-neutral registry, and an
+   * owner with a team in each league is exactly the case locked decision 1
+   * exists for. The real invariant is that one slug never means two people.
+   */
+  it('never lets one slug mean two different people', () => {
+    const seen = new Map<string, { ownerId: string; league: string }>();
     const collisions: string[] = [];
     for (const { league, ownersPath } of leagues) {
       for (const owner of readJson(ownersPath).owners) {
-        if (seen.has(owner.slug)) {
-          collisions.push(`${owner.slug}: ${seen.get(owner.slug)} and ${league.slug}`);
+        const prior = seen.get(owner.slug);
+        if (prior && prior.ownerId !== owner.ownerId) {
+          collisions.push(
+            `${owner.slug}: ${prior.ownerId} (${prior.league}) and ${owner.ownerId} (${league.slug})`
+          );
         }
-        seen.set(owner.slug, league.slug);
+        seen.set(owner.slug, { ownerId: owner.ownerId, league: league.slug });
       }
     }
     expect(collisions).toEqual([]);
     expect(seen.size).toBeGreaterThan(0);
+  });
+
+  it('keeps slugs unique WITHIN each league', () => {
+    for (const { league, ownersPath } of leagues) {
+      const slugs = readJson(ownersPath).owners.map((o: any) => o.slug);
+      const dupes = slugs.filter((s: string, i: number) => slugs.indexOf(s) !== i);
+      expect(dupes, `${league.slug} has duplicate slugs`).toEqual([]);
+    }
+  });
+
+  it('gives a cross-league person the same ownerId in both files', () => {
+    const byLeague = leagues.map(({ league, ownersPath }) => ({
+      slug: league.slug,
+      owners: readJson(ownersPath).owners,
+    }));
+    if (byLeague.length < 2) return;
+    const [first, second] = byLeague;
+    const firstById = new Map(first.owners.map((o: any) => [o.ownerId, o]));
+    let shared = 0;
+    for (const owner of second.owners) {
+      const other: any = firstById.get(owner.ownerId);
+      if (!other) continue;
+      shared += 1;
+      expect(other.slug, `${owner.ownerId} has different slugs per league`).toBe(owner.slug);
+      // And each side should say the other league is where the rest lives.
+      expect(owner.crossLeague.length + other.crossLeague.length).toBeGreaterThan(0);
+    }
+    // Not asserted to be non-zero: a league pair with no shared people is fine.
+    expect(shared).toBeGreaterThanOrEqual(0);
   });
 });

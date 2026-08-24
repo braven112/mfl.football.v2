@@ -216,22 +216,6 @@
       "notes": null
     },
     {
-      "id": "own-0014",
-      "slug": "cowboy-up-2018",
-      "previousSlugs": [],
-      "displayName": null,
-      "claims": [
-        {
-          "league": "theleague",
-          "franchiseId": "0014",
-          "yearStart": 2018,
-          "yearEnd": 9999
-        }
-      ],
-      "seededFrom": "inferred:identity-split@2026-08-24",
-      "notes": null
-    },
-    {
       "id": "own-0015",
       "slug": "music-city-mafia-2019",
       "previousSlugs": [],
@@ -731,19 +715,28 @@
     },
     {
       "id": "own-0045",
-      "slug": "a-bruin-pegs-me-2007",
-      "previousSlugs": [],
-      "displayName": null,
+      "slug": "ross-lawrence",
+      "previousSlugs": [
+        "a-bruin-pegs-me-2007"
+      ],
+      "displayName": "Ross Lawrence",
       "claims": [
         {
           "league": "afl-fantasy",
           "franchiseId": "0014",
           "yearStart": 2007,
           "yearEnd": 9999
+        },
+        {
+          "league": "theleague",
+          "franchiseId": "0014",
+          "yearStart": 2018,
+          "yearEnd": 9999,
+          "shared": true
         }
       ],
       "seededFrom": "inferred:identity-split@2026-08-24",
-      "notes": null
+      "notes": "Co-owns TheLeague 0014 (Cowboy Up) with Shawn Klezovich."
     },
     {
       "id": "own-0046",
@@ -977,19 +970,29 @@
     },
     {
       "id": "own-0060",
-      "slug": "swiftie-4-life-2022",
-      "previousSlugs": [],
-      "displayName": null,
+      "slug": "shawn-klezovich",
+      "previousSlugs": [
+        "swiftie-4-life-2022",
+        "shawn"
+      ],
+      "displayName": "Shawn Klezovich",
       "claims": [
         {
           "league": "afl-fantasy",
           "franchiseId": "0016",
           "yearStart": 2022,
           "yearEnd": 9999
+        },
+        {
+          "league": "theleague",
+          "franchiseId": "0014",
+          "yearStart": 2018,
+          "yearEnd": 9999,
+          "shared": true
         }
       ],
       "seededFrom": "inferred:identity-split@2026-08-24",
-      "notes": null
+      "notes": "Co-owns TheLeague 0014 (Cowboy Up) with Ross Lawrence."
     },
     {
       "id": "own-0061",

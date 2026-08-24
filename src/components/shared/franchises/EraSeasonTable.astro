@@ -87,6 +87,16 @@ const playoffResultLabel: Record<string, string> = {
 const formatRecord = (w: number, l: number, t: number) => (t > 0 ? `${w}-${l}-${t}` : `${w}-${l}`);
 
 const sortedSeasons = [...seasons].sort((a, b) => b.year - a.year);
+
+/**
+ * Seasons actually PLAYED. A preseason row is 0-0-0 with 0 points — it is
+ * listed (owners want to see the current year) but it is not a season anyone
+ * has played, and `franchises[].yearsActive` has always excluded it.
+ *
+ * Counting rows here instead put "11 seasons" in this header next to the same
+ * franchise's own "10 seasons" career stat on the same page. Same number, two
+ * answers.
+ */
 const played = sortedSeasons.filter((s) => s.wins || s.losses || s.ties || s.pointsFor);
 
 const totals = seasons.reduce(
@@ -119,8 +129,8 @@ const Heading = headingLevel;
       </Heading>
       <p class="meta">
         {yearRange}
-        {seasons.length > 0 &&
-          ` · ${seasons.length} season${seasons.length === 1 ? '' : 's'} · ${formatRecord(totals.w, totals.l, totals.t)}`}
+        {played.length > 0 &&
+          ` · ${played.length} season${played.length === 1 ? '' : 's'} · ${formatRecord(totals.w, totals.l, totals.t)}`}
       </p>
     </div>
   </div>

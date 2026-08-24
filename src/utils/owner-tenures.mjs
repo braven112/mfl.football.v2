@@ -845,7 +845,17 @@ export const buildOwnerTenures = ({
     owner.coOwners = (owner.coOwnerIds ?? [])
       .map((id) => ownerById.get(id))
       .filter(Boolean)
-      .map((co) => ({ slug: co.slug, title: co.title, displayName: co.displayName }));
+      .map((co) => ({
+        slug: co.slug,
+        title: co.title,
+        displayName: co.displayName,
+        // Co-owners of one team wear the SAME identities, so in this league's
+        // file their titles are identical ("Co-owned with Cowboy Up" tells the
+        // reader nothing). While owners are anonymous, their other league is
+        // the only thing that distinguishes them — carry it so the page can
+        // say "the AFL franchise 0016 owner" instead.
+        crossLeague: co.crossLeague ?? [],
+      }));
     delete owner.coOwnerIds;
   }
 

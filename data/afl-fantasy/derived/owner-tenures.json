@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-24T03:31:43.254Z",
+  "generatedAt": "2026-08-24T03:49:59.383Z",
   "league": "afl-fantasy",
   "counts": {
     "total": 102,
@@ -3672,15 +3672,17 @@
     },
     {
       "ownerId": "own-0045",
-      "slug": "a-bruin-pegs-me-2007",
-      "previousSlugs": [],
-      "displayName": null,
-      "title": "Thundering Herd / A Bruin Pegs Me",
+      "slug": "ross-lawrence",
+      "previousSlugs": [
+        "a-bruin-pegs-me-2007"
+      ],
+      "displayName": "Ross Lawrence",
+      "title": "Ross Lawrence",
       "dominantName": "Thundering Herd",
       "icon": "/assets/afl/history/thundering_herd_icon.png",
       "isCurrent": true,
       "source": "registry",
-      "notes": null,
+      "notes": "Co-owns TheLeague 0014 (Cowboy Up) with Shawn Klezovich.",
       "yearStart": 2007,
       "yearEnd": 2026,
       "currentFranchiseId": "0014",
@@ -4257,7 +4259,14 @@
           "next": null
         }
       },
-      "crossLeague": [],
+      "crossLeague": [
+        {
+          "league": "theleague",
+          "franchiseId": "0014",
+          "yearStart": 2018,
+          "yearEnd": 9999
+        }
+      ],
       "isShared": false,
       "coOwners": []
     },
@@ -10131,15 +10140,18 @@
     },
     {
       "ownerId": "own-0060",
-      "slug": "swiftie-4-life-2022",
-      "previousSlugs": [],
-      "displayName": null,
-      "title": "Silver Bullets / Swifty 4 Life / Swiftie 4 Life",
+      "slug": "shawn-klezovich",
+      "previousSlugs": [
+        "swiftie-4-life-2022",
+        "shawn"
+      ],
+      "displayName": "Shawn Klezovich",
+      "title": "Shawn Klezovich",
       "dominantName": "Swifty 4 Life",
       "icon": "/assets/afl/history/swifty_4_life_icon_icon_circle.png",
       "isCurrent": true,
       "source": "registry",
-      "notes": null,
+      "notes": "Co-owns TheLeague 0014 (Cowboy Up) with Ross Lawrence.",
       "yearStart": 2022,
       "yearEnd": 2026,
       "currentFranchiseId": "0016",
@@ -10371,7 +10383,14 @@
           "next": null
         }
       },
-      "crossLeague": [],
+      "crossLeague": [
+        {
+          "league": "theleague",
+          "franchiseId": "0014",
+          "yearStart": 2018,
+          "yearEnd": 9999
+        }
+      ],
       "isShared": false,
       "coOwners": []
     },
@@ -15334,7 +15353,7 @@
       "slotSuccession": {
         "0014": {
           "previous": "the-a-team-2004",
-          "next": "a-bruin-pegs-me-2007"
+          "next": "ross-lawrence"
         }
       },
       "crossLeague": [],
@@ -22278,7 +22297,7 @@
       "slotSuccession": {
         "0016": {
           "previous": "dicks-out-for-harambe-2017",
-          "next": "swiftie-4-life-2022"
+          "next": "shawn-klezovich"
         }
       },
       "crossLeague": [],
@@ -22660,7 +22679,7 @@
       "trevors-team-2003",
       "the-a-team-2004",
       "isis-2005",
-      "a-bruin-pegs-me-2007"
+      "ross-lawrence"
     ],
     "0012": [
       "italian-stalions-2003",
@@ -22740,7 +22759,7 @@
       "cska-sofia-2016",
       "dicks-out-for-harambe-2017",
       "be-gentle-it-s-my-first-time-2019",
-      "swiftie-4-life-2022"
+      "shawn-klezovich"
     ],
     "0008": [
       "the-nukes-2003",
@@ -22775,8 +22794,8 @@
     "chatmaster|2010": "chatmaster-2004",
     "muck juggling micks|2005": "muck-juggling-micks-2005",
     "muck juggling micks|2020": "muck-juggling-micks-2005",
-    "thundering herd|2007": "a-bruin-pegs-me-2007",
-    "a bruin pegs me|2026": "a-bruin-pegs-me-2007",
+    "thundering herd|2007": "ross-lawrence",
+    "a bruin pegs me|2026": "ross-lawrence",
     "shifty joe|2008": "suh-girls-one-cup-2008",
     "pubes|2009": "suh-girls-one-cup-2008",
     "suh girls, one cup|2019": "suh-girls-one-cup-2008",
@@ -22799,9 +22818,9 @@
     "avenging amish|2022": "avenging-amish-2021",
     "broke back 'lil half dead's brother|2023": "avenging-amish-2021",
     "avenging amish|2024": "avenging-amish-2021",
-    "silver bullets|2022": "swiftie-4-life-2022",
-    "swifty 4 life|2023": "swiftie-4-life-2022",
-    "swiftie 4 life|2025": "swiftie-4-life-2022",
+    "silver bullets|2022": "shawn-klezovich",
+    "swifty 4 life|2023": "shawn-klezovich",
+    "swiftie 4 life|2025": "shawn-klezovich",
     "show|2022": "the-show-2022",
     "cock gobbler|2025": "the-show-2022",
     "show|2026": "the-show-2022",

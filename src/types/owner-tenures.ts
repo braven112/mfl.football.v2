@@ -136,7 +136,14 @@ export interface Owner {
    */
   isShared: boolean;
   /** The other people who share this tenure. Always mutual. */
-  coOwners: { slug: string; title: string; displayName: string | null }[];
+  coOwners: {
+    slug: string;
+    title: string;
+    displayName: string | null;
+    /** Their claims in OTHER leagues — the only way to tell two anonymous
+     *  co-owners apart, since they wear identical identities here. */
+    crossLeague: CrossLeagueClaim[];
+  }[];
 }
 
 export interface OwnerTenuresFile {

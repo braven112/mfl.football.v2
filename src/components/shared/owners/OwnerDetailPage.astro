@@ -97,6 +97,30 @@ const tenureAwards = (tenure: Owner['tenures'][number]) => {
   ].filter(Boolean) as { label: string }[];
 };
 
+/**
+ * What to call a co-owner. Two people sharing one team wear the same
+ * identities, so in this league's file their titles are identical — "Co-owned
+ * with Cowboy Up" on the Cowboy Up page. Until names land, their other league
+ * is what tells them apart.
+ */
+const coOwnerLabel = (co: Owner['coOwners'][number]) => {
+  if (co.displayName) return co.displayName;
+  if (co.title && co.title !== owner.title) return co.title;
+  const elsewhere = co.crossLeague?.[0];
+  if (elsewhere) {
+    const other = getLeagueBySlug(elsewhere.league as CanonicalLeagueSlug);
+    return `the ${other?.name ?? elsewhere.league} franchise ${elsewhere.franchiseId} owner`;
+  }
+  return 'the other owner';
+};
+
+/** Pre-rendered so the markup stays on one line — see the note at its use. */
+const coOwnerLinks = (owner.coOwners ?? []).map((co, i, all) => ({
+  href: r(`/owners/${co.slug}`),
+  label: coOwnerLabel(co),
+  separator: i === 0 ? '' : i === all.length - 1 ? ' and ' : ', ',
+}));
+
 const pageTitle = `${owner.title} — ${league.name} owner history`;
 ---
 
@@ -119,16 +143,9 @@ const pageTitle = `${owner.title} — ${league.name} owner history`;
         <p class="hero-meta">
           {yearLabel} · {league.name} · {slotLabel}
         </p>
-        {owner.isShared && owner.coOwners.length > 0 && (
+        {owner.isShared && coOwnerLinks.length > 0 && (
           <p class="co-owners">
-            Co-owned with{' '}
-            {owner.coOwners.map((co, i) => (
-              <>
-                {i > 0 && (i === owner.coOwners.length - 1 ? ' and ' : ', ')}
-                <a href={r(`/owners/${co.slug}`)}>{co.displayName ?? co.title}</a>
-              </>
-            ))}
-            . The record below is the team's, and counts for both.
+            Co-owned with {coOwnerLinks.map((co) => (<span>{co.separator}<a href={co.href}>{co.label}</a></span>))}. The record below is the team's, and counts for both.
           </p>
         )}
         {!owner.displayName && (

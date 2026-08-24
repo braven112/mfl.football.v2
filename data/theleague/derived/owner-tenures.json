@@ -1,12 +1,12 @@
 {
-  "generatedAt": "2026-08-24T03:31:43.204Z",
+  "generatedAt": "2026-08-24T03:49:59.332Z",
   "league": "theleague",
   "counts": {
-    "total": 38,
-    "current": 16,
+    "total": 39,
+    "current": 17,
     "former": 22,
     "seasons": 320,
-    "shared": 0
+    "shared": 2
   },
   "owners": [
     {
@@ -5850,16 +5850,18 @@
       "coOwners": []
     },
     {
-      "ownerId": "own-0014",
-      "slug": "cowboy-up-2018",
-      "previousSlugs": [],
-      "displayName": null,
-      "title": "Cowboy Up",
+      "ownerId": "own-0045",
+      "slug": "ross-lawrence",
+      "previousSlugs": [
+        "a-bruin-pegs-me-2007"
+      ],
+      "displayName": "Ross Lawrence",
+      "title": "Ross Lawrence",
       "dominantName": "Cowboy Up",
       "icon": "/assets/theleague/icons/cowboy_up.png",
       "isCurrent": true,
       "source": "registry",
-      "notes": null,
+      "notes": "Co-owns TheLeague 0014 (Cowboy Up) with Shawn Klezovich.",
       "yearStart": 2018,
       "yearEnd": 2026,
       "currentFranchiseId": "0014",
@@ -6137,9 +6139,346 @@
           "next": null
         }
       },
-      "crossLeague": [],
-      "isShared": false,
-      "coOwners": []
+      "crossLeague": [
+        {
+          "league": "afl-fantasy",
+          "franchiseId": "0014",
+          "yearStart": 2007,
+          "yearEnd": 9999
+        }
+      ],
+      "isShared": true,
+      "coOwners": [
+        {
+          "slug": "shawn-klezovich",
+          "title": "Shawn Klezovich",
+          "displayName": "Shawn Klezovich",
+          "crossLeague": [
+            {
+              "league": "afl-fantasy",
+              "franchiseId": "0016",
+              "yearStart": 2022,
+              "yearEnd": 9999
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ownerId": "own-0060",
+      "slug": "shawn-klezovich",
+      "previousSlugs": [
+        "swiftie-4-life-2022",
+        "shawn"
+      ],
+      "displayName": "Shawn Klezovich",
+      "title": "Shawn Klezovich",
+      "dominantName": "Cowboy Up",
+      "icon": "/assets/theleague/icons/cowboy_up.png",
+      "isCurrent": true,
+      "source": "registry",
+      "notes": "Co-owns TheLeague 0014 (Cowboy Up) with Ross Lawrence.",
+      "yearStart": 2018,
+      "yearEnd": 2026,
+      "currentFranchiseId": "0014",
+      "identities": [
+        {
+          "name": "Cowboy Up",
+          "nameMedium": "Cowboy Up",
+          "yearStart": 2018,
+          "yearEnd": 2026,
+          "years": [
+            2018,
+            2019,
+            2020,
+            2021,
+            2022,
+            2023,
+            2024,
+            2025,
+            2026
+          ],
+          "icon": "/assets/theleague/icons/cowboy_up.png",
+          "banner": "/assets/theleague/banners/cowboy_up.png",
+          "rebrandGroup": null,
+          "punitive": false,
+          "inferredFromFeed": false
+        }
+      ],
+      "tenures": [
+        {
+          "franchiseId": "0014",
+          "franchiseName": "Cowboy Up",
+          "yearStart": 2018,
+          "yearEnd": 2026,
+          "identities": [
+            {
+              "name": "Cowboy Up",
+              "nameMedium": "Cowboy Up",
+              "yearStart": 2018,
+              "yearEnd": 2026,
+              "years": [
+                2018,
+                2019,
+                2020,
+                2021,
+                2022,
+                2023,
+                2024,
+                2025,
+                2026
+              ],
+              "icon": "/assets/theleague/icons/cowboy_up.png",
+              "banner": "/assets/theleague/banners/cowboy_up.png",
+              "rebrandGroup": null,
+              "punitive": false,
+              "inferredFromFeed": false
+            }
+          ],
+          "seasons": [
+            {
+              "year": 2018,
+              "name": "Cowboy Up",
+              "nameMedium": "Cowboy Up",
+              "icon": "/assets/theleague/icons/cowboy_up.png",
+              "banner": "/assets/theleague/banners/cowboy_up.png",
+              "isHistorical": true,
+              "sourceFranchiseId": null,
+              "wins": 8,
+              "losses": 8,
+              "ties": 0,
+              "pointsFor": 1543.75,
+              "regSeasonRank": 8,
+              "divisionId": "02",
+              "divisionName": "Central",
+              "wonDivision": false,
+              "playoffResult": "missed",
+              "franchiseId": "0014",
+              "attributedTo": "0014",
+              "seasonNotStarted": false
+            },
+            {
+              "year": 2019,
+              "name": "Cowboy Up",
+              "nameMedium": "Cowboy Up",
+              "icon": "/assets/theleague/icons/cowboy_up.png",
+              "banner": "/assets/theleague/banners/cowboy_up.png",
+              "isHistorical": true,
+              "sourceFranchiseId": null,
+              "wins": 4,
+              "losses": 12,
+              "ties": 0,
+              "pointsFor": 1554.68,
+              "regSeasonRank": 15,
+              "divisionId": "02",
+              "divisionName": "Central",
+              "wonDivision": false,
+              "playoffResult": "missed",
+              "franchiseId": "0014",
+              "attributedTo": "0014",
+              "seasonNotStarted": false
+            },
+            {
+              "year": 2020,
+              "name": "Cowboy Up",
+              "nameMedium": "Cowboy Up",
+              "icon": "/assets/theleague/icons/cowboy_up.png",
+              "banner": "/assets/theleague/banners/cowboy_up.png",
+              "isHistorical": true,
+              "sourceFranchiseId": null,
+              "wins": 5,
+              "losses": 13,
+              "ties": 0,
+              "pointsFor": 1650.54,
+              "regSeasonRank": 14,
+              "divisionId": "02",
+              "divisionName": "Central",
+              "wonDivision": false,
+              "playoffResult": "missed",
+              "franchiseId": "0014",
+              "attributedTo": "0014",
+              "seasonNotStarted": false
+            },
+            {
+              "year": 2021,
+              "name": "Cowboy Up",
+              "nameMedium": "Cowboy Up",
+              "icon": "/assets/theleague/icons/cowboy_up.png",
+              "banner": "/assets/theleague/banners/cowboy_up.png",
+              "isHistorical": true,
+              "sourceFranchiseId": null,
+              "wins": 7,
+              "losses": 11,
+              "ties": 0,
+              "pointsFor": 1596.05,
+              "regSeasonRank": 12,
+              "divisionId": "02",
+              "divisionName": "Central",
+              "wonDivision": false,
+              "playoffResult": "missed",
+              "franchiseId": "0014",
+              "attributedTo": "0014",
+              "seasonNotStarted": false
+            },
+            {
+              "year": 2022,
+              "name": "Cowboy Up",
+              "nameMedium": "Cowboy Up",
+              "icon": "/assets/theleague/icons/cowboy_up.png",
+              "banner": "/assets/theleague/banners/cowboy_up.png",
+              "isHistorical": true,
+              "sourceFranchiseId": null,
+              "wins": 6,
+              "losses": 12,
+              "ties": 0,
+              "pointsFor": 1523.82,
+              "regSeasonRank": 13,
+              "divisionId": "02",
+              "divisionName": "Central",
+              "wonDivision": false,
+              "playoffResult": "missed",
+              "franchiseId": "0014",
+              "attributedTo": "0014",
+              "seasonNotStarted": false
+            },
+            {
+              "year": 2023,
+              "name": "Cowboy Up",
+              "nameMedium": "Cowboy Up",
+              "icon": "/assets/theleague/icons/cowboy_up.png",
+              "banner": "/assets/theleague/banners/cowboy_up.png",
+              "isHistorical": true,
+              "sourceFranchiseId": null,
+              "wins": 8,
+              "losses": 10,
+              "ties": 0,
+              "pointsFor": 1592.69,
+              "regSeasonRank": 10,
+              "divisionId": "02",
+              "divisionName": "Central",
+              "wonDivision": false,
+              "playoffResult": "missed",
+              "franchiseId": "0014",
+              "attributedTo": "0014",
+              "seasonNotStarted": false
+            },
+            {
+              "year": 2024,
+              "name": "Cowboy Up",
+              "nameMedium": "Cowboy Up",
+              "icon": "/assets/theleague/icons/cowboy_up.png",
+              "banner": "/assets/theleague/banners/cowboy_up.png",
+              "isHistorical": true,
+              "sourceFranchiseId": null,
+              "wins": 2,
+              "losses": 16,
+              "ties": 0,
+              "pointsFor": 1287.96,
+              "regSeasonRank": 16,
+              "divisionId": "02",
+              "divisionName": "Central",
+              "wonDivision": false,
+              "playoffResult": "missed",
+              "franchiseId": "0014",
+              "attributedTo": "0014",
+              "seasonNotStarted": false
+            },
+            {
+              "year": 2025,
+              "name": "Cowboy Up",
+              "nameMedium": "Cowboy Up",
+              "icon": "/assets/theleague/icons/cowboy_up.png",
+              "banner": "/assets/theleague/banners/cowboy_up.png",
+              "isHistorical": false,
+              "sourceFranchiseId": null,
+              "wins": 5,
+              "losses": 13,
+              "ties": 0,
+              "pointsFor": 1544.42,
+              "regSeasonRank": 13,
+              "divisionId": "02",
+              "divisionName": "Central",
+              "wonDivision": false,
+              "playoffResult": "missed",
+              "franchiseId": "0014",
+              "attributedTo": "0014",
+              "seasonNotStarted": false
+            },
+            {
+              "year": 2026,
+              "name": "Cowboy Up",
+              "nameMedium": "Cowboy Up",
+              "icon": "/assets/theleague/icons/cowboy_up.png",
+              "banner": "/assets/theleague/banners/cowboy_up.png",
+              "isHistorical": false,
+              "sourceFranchiseId": null,
+              "wins": 0,
+              "losses": 0,
+              "ties": 0,
+              "pointsFor": 0,
+              "regSeasonRank": null,
+              "divisionId": "02",
+              "divisionName": "Central",
+              "wonDivision": false,
+              "playoffResult": "missed",
+              "franchiseId": "0014",
+              "attributedTo": "0014",
+              "seasonNotStarted": true
+            }
+          ]
+        }
+      ],
+      "totals": {
+        "seasons": 8,
+        "wins": 45,
+        "losses": 95,
+        "ties": 0,
+        "pointsFor": 12293.910000000002,
+        "playoffAppearances": 0,
+        "championships": [],
+        "runnerUps": [],
+        "thirdPlaces": [],
+        "divisionTitles": [],
+        "mvpAwards": [],
+        "jerryJonesAwards": [
+          2021,
+          2024
+        ],
+        "osweilerAwards": [
+          2022,
+          2023
+        ]
+      },
+      "slotSuccession": {
+        "0014": {
+          "previous": "devil-dogs-2007",
+          "next": null
+        }
+      },
+      "crossLeague": [
+        {
+          "league": "afl-fantasy",
+          "franchiseId": "0016",
+          "yearStart": 2022,
+          "yearEnd": 9999
+        }
+      ],
+      "isShared": true,
+      "coOwners": [
+        {
+          "slug": "ross-lawrence",
+          "title": "Ross Lawrence",
+          "displayName": "Ross Lawrence",
+          "crossLeague": [
+            {
+              "league": "afl-fantasy",
+              "franchiseId": "0014",
+              "yearStart": 2007,
+              "yearEnd": 9999
+            }
+          ]
+        }
+      ]
     },
     {
       "ownerId": "own-0015",
@@ -7629,7 +7968,7 @@
       "slotSuccession": {
         "0014": {
           "previous": null,
-          "next": "cowboy-up-2018"
+          "next": "ross-lawrence"
         }
       },
       "crossLeague": [],
@@ -11097,7 +11436,8 @@
     ],
     "0014": [
       "devil-dogs-2007",
-      "cowboy-up-2018"
+      "ross-lawrence",
+      "shawn-klezovich"
     ],
     "0006": [
       "lber-decleaters-2007",
@@ -11126,7 +11466,7 @@
     "computer jocks|2016": "computer-jocks-2016",
     "maverick|2016": "maverick-2016",
     "mariachi ninjas|2016": "the-mariachi-ninjas-2016",
-    "cowboy up|2018": "cowboy-up-2018",
+    "cowboy up|2018": "ross-lawrence",
     "music city mafia|2019": "music-city-mafia-2019",
     "dead cap walking|2026": "dead-cap-walking-2026",
     "acer fc edge|2007": "acer-fc-edge-2007",
