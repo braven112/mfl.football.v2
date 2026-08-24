@@ -1,0 +1,314 @@
+/**
+ * Commissioner accounting console.
+ *
+ * Every colour is a token WITH a light-mode fallback. A bare hex renders
+ * correctly in light and ships white-on-white in dark, and a `var(--x)` whose
+ * token is never defined silently renders its fallback in BOTH themes — see
+ * docs/claude/rules/theming-and-assets.md. Tokens used here are the same set
+ * the schedule planner uses, so they are known to be defined.
+ */
+
+.acct {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* ----------------------------------------------------------------- tabs */
+
+.acct__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--color-border-default, #cbd5e1);
+}
+
+.acct__tab {
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-text-secondary, #475569);
+  cursor: pointer;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+}
+
+.acct__tab.is-active {
+  color: var(--color-text-primary, #0f172a);
+  border-bottom-color: var(--btn-primary-bg, #1c497c);
+}
+
+/* -------------------------------------------------------------- sections */
+
+.acct__section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.acct__section h2 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--color-text-primary, #0f172a);
+}
+
+.acct__h3 {
+  margin: 0.5rem 0 0;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--color-text-primary, #0f172a);
+}
+
+.acct__h3.is-muted,
+.acct__note {
+  color: var(--color-text-secondary, #475569);
+}
+
+.acct__note,
+.acct__hint {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.acct__hint {
+  color: var(--color-text-secondary, #475569);
+}
+
+.acct__detail {
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary, #475569);
+}
+
+.acct__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.acct__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* ------------------------------------------------------------- controls */
+
+.acct__field,
+.acct__inline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text-secondary, #475569);
+}
+
+.acct__inline {
+  flex-direction: row;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.acct__field input,
+.acct__field select,
+.acct__field textarea,
+.acct__inline select,
+.acct__file {
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--color-text-primary, #0f172a);
+  background: var(--color-surface-1, #fff);
+  border: 1px solid var(--color-border-default, #cbd5e1);
+  border-radius: 8px;
+}
+
+.acct__field textarea {
+  min-height: 9rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.875rem;
+  resize: vertical;
+}
+
+.acct__btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0 1.1rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-text-primary, #0f172a);
+  text-decoration: none;
+  cursor: pointer;
+  background: var(--color-surface-1, #fff);
+  border: 1px solid var(--color-border-default, #cbd5e1);
+  border-radius: 8px;
+}
+
+.acct__btn--primary {
+  color: var(--btn-primary-text, #fff);
+  background: var(--btn-primary-bg, #1c497c);
+  border-color: var(--btn-primary-border, transparent);
+}
+
+.acct__btn--primary:hover:not(:disabled) {
+  background: var(--btn-primary-bg-hover, #163a63);
+}
+
+.acct__btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* --------------------------------------------------------------- tables */
+
+/* Wide tables scroll INSIDE this wrapper — the page body must never scroll
+   horizontally on a phone, which is where a commissioner actually does this. */
+.acct__tablewrap {
+  overflow-x: auto;
+}
+
+.acct__table {
+  width: 100%;
+  font-size: 0.9375rem;
+  border-collapse: collapse;
+}
+
+.acct__table th,
+.acct__table td {
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border-subtle, #e2e8f0);
+}
+
+.acct__table th {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary, #475569);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.acct__table td {
+  color: var(--color-text-primary, #0f172a);
+}
+
+.acct__table.is-muted td {
+  color: var(--color-text-secondary, #475569);
+}
+
+.acct__num {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* Negative is a CHARGE. Colour is a reinforcement, never the only signal —
+   the minus sign carries the meaning for anyone who can't see the hue.
+   --color-error and --color-error-light are both redefined in tokens-dark.css,
+   which is what makes them safe here; --color-danger* were not defined at all
+   and would have rendered their light-mode fallback in dark too. */
+.acct__num.is-negative {
+  color: var(--color-error, #dc2626);
+}
+
+.acct__table tr.is-bad td {
+  background: var(--color-error-light, #fee2e2);
+}
+
+/* --------------------------------------------------------------- status */
+
+.acct__totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin: 0;
+  padding: 0.9rem 1rem;
+  background: var(--color-surface-2, #f8fafc);
+  border: 1px solid var(--color-border-subtle, #e2e8f0);
+  border-radius: 10px;
+}
+
+.acct__totals dt {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-secondary, #475569);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.acct__totals dd {
+  margin: 0.15rem 0 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary, #0f172a);
+}
+
+.acct__drift {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text-secondary, #475569);
+}
+
+.acct__ok,
+.acct__error,
+.acct__warn {
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  border: 1px solid;
+  border-radius: 8px;
+}
+
+.acct__ok {
+  color: var(--color-success-dark, #059669);
+  background: var(--color-success-light, #d1fae5);
+  border-color: var(--color-success-dark, #059669);
+}
+
+.acct__error {
+  color: var(--color-error-dark, #b91c1c);
+  background: var(--color-error-light, #fee2e2);
+  border-color: var(--color-error, #dc2626);
+}
+
+.acct__warn {
+  color: var(--color-warning-dark, #d97706);
+  background: var(--color-warning-light, #fef3c7);
+  border-color: var(--color-warning-dark, #d97706);
+}
+
+.acct__results {
+  margin: 0.5rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.acct__results .is-ok {
+  color: var(--color-success-dark, #059669);
+}
+
+.acct__results .is-bad,
+.acct__bad {
+  color: var(--color-error-dark, #b91c1c);
+}
+
+@media (max-width: 640px) {
+  .acct__totals {
+    gap: 1rem;
+  }
+
+  .acct__toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

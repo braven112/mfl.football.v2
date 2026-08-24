@@ -40,6 +40,56 @@ export interface LeagueFeatures {
    */
   schefterTips: boolean;
   liveScoring: boolean;
+  /**
+   * Commissioner accounting page: read/write of MFL's league accounting
+   * ledger and the season payout run. Requires a league that (a) actually
+   * settles money on MFL and (b) has a documented prize table under
+   * `payouts` — a league with the flag on and no `payouts` can still keep
+   * the ledger, it just has no payouts to plan.
+   */
+  accounting: boolean;
+}
+
+/**
+ * How the payout planner finds the franchise that won a prize. Every kind is
+ * derived from data the league already publishes — none of them is a
+ * hand-entered winner.
+ */
+export type PayoutSource =
+  /** Final standing N in the league's championship/placement brackets. */
+  | { kind: 'placement'; place: number }
+  /** A slug already resolved in the league's awards history. */
+  | { kind: 'award'; slug: string }
+  /** Highest score in each played regular-season week. */
+  | { kind: 'weekly-high'; weeks: number }
+  /**
+   * Every franchise holding one of these seeds in a conference playoff
+   * bracket. The AFL pays its division titles and wild cards this way: seeds
+   * 1-2 are the division winners who actually made the playoffs, seeds 3-4
+   * the wild cards. Keyed on seed rather than on a division-title award
+   * because a division winner who misses the playoffs is not paid.
+   */
+  | { kind: 'playoff-seed'; seeds: number[] }
+  /** Rank N of an all-play tier table (AFL Premier League / D-League). */
+  | { kind: 'tier-rank'; tier: string; rank: number };
+
+/** One line of a league's prize table. */
+export interface PayoutPrize {
+  /** Stable key — the ledger's idempotency handle. Never renumber these. */
+  key: string;
+  label: string;
+  /** Dollars OWED TO the winner. Sign conversion happens in the writer. */
+  amount: number;
+  source: PayoutSource;
+}
+
+export interface LeaguePayouts {
+  /**
+   * The constitution's stated prize pool. Display-and-reconcile only — the
+   * planner never scales a prize to fit it.
+   */
+  prizePool: number;
+  prizes: PayoutPrize[];
 }
 
 /** Date (month is 1-indexed) on which a league flips to the new MFL league year. */
@@ -88,6 +138,12 @@ export interface LeagueDefinition {
    * every league but TheLeague today.
    */
   throwbackWeeks?: number[];
+  /**
+   * Prize table for the accounting page's payout run. Absent for a league
+   * that pays out nothing (or hasn't written its table down yet) — the page
+   * then offers the ledger and CSV import without a payouts panel.
+   */
+  payouts?: LeaguePayouts;
   features: LeagueFeatures;
 }
 
@@ -122,6 +178,15 @@ export function getLeagueByPath(pathname: string): LeagueDefinition {
 /** Whether a feature is enabled for the given league slug. */
 export function leagueHasFeature(slug: string, feature: keyof LeagueFeatures): boolean {
   return getLeagueBySlug(slug)?.features[feature] ?? false;
+}
+
+/**
+ * A league's prize table, or null when it publishes none. Separate from
+ * `leagueHasFeature(slug, 'accounting')` on purpose: the ledger and the
+ * payout run are independently available.
+ */
+export function getLeaguePayouts(slug: string): LeaguePayouts | null {
+  return getLeagueBySlug(slug)?.payouts ?? null;
 }
 
 /**
