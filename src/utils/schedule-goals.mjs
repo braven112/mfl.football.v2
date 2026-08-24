@@ -125,12 +125,23 @@ const SCORERS = {
         detail: `no doubleheader after Week 8 — every extra game lands in the first half (Weeks ${f.doubleheaders.join(', ')})`,
       };
     }
-    return balanced
-      ? { status: 'met', detail: `${early} early, ${late} late; ${afterWeek8} after Week 8` }
-      : {
-          status: 'partial',
-          detail: `${early} early, ${late} late (${afterWeek8} after Week 8) — the bye-free weeks did not allow an even split`,
-        };
+    if (balanced) return { status: 'met', detail: `${early} early, ${late} late; ${afterWeek8} after Week 8` };
+
+    // Uneven is usually the calendar's doing, but not always — and the two are
+    // worth telling apart. A latent bug in `chooseDoubleheaderWeeks` skewed
+    // four seasons early while clean end weeks sat unused, and this scorer
+    // filed every one of them under "the calendar did not allow it".
+    const endWindow = [f.lastWeek - 2, f.lastWeek - 1, f.lastWeek];
+    const cleanEnd = endWindow.filter((w) => f.byeCount(w) === 0).length;
+    const bestLate = Math.min(Math.floor(f.doubleheaders.length / 2), cleanEnd);
+    const atBest = late >= bestLate;
+    return {
+      status: atBest ? 'partial' : 'blocked',
+      detail: atBest
+        ? `${early} early, ${late} late (${afterWeek8} after Week 8) — the only even split the bye-free weeks allow`
+        : `${early} early, ${late} late, but ${cleanEnd} bye-free week(s) at the end of the season went unused — ` +
+          `a ${f.doubleheaders.length - bestLate}/${bestLate} split was available`,
+    };
   },
 
   // The one goal where "short of target" has two completely different

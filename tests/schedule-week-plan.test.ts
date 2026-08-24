@@ -536,3 +536,57 @@ describe('the finale doubleheader', () => {
     }
   });
 });
+
+/**
+ * Doubleheaders go at the START and the END of the season, split as evenly as
+ * the calendar allows. Clustering inside each end is fine — the league's own
+ * ruling — so what matters is the balance between the two ends.
+ */
+describe('the doubleheader split is the best the calendar allows', () => {
+  it('never leaves a bye-free end-of-season week unused', () => {
+    // Four seasons used to. `wantLate` was floor(remaining / 2), and
+    // `remaining` had already had the forced Week 1 subtracted from it — but
+    // Week 1 is EARLY, so subtracting it shrank the pool the LATE share was
+    // drawn from. AFL 2011 came out 2/0 with two clean end weeks going spare.
+    for (const year of SEASONS) {
+      const byes = (byeData as any).seasons[year];
+      const counts = byeCountsByWeek(byes);
+      for (const [lastWeek, count, crossWeek] of [[13, 4, 1], [14, 3, 1], [14, 4, null]] as const) {
+        const endWindow = [lastWeek - 2, lastWeek - 1, lastWeek];
+        const picked = chooseDoubleheaderWeeks({
+          count,
+          byeFree: byeFreeWeeks(byes, lastWeek),
+          startWindow: [1, 2, 3, 4],
+          endWindow,
+          required: crossWeek ? [crossWeek] : [],
+          byeCounts: counts,
+          lastWeek,
+        });
+        const late = picked.filter((w: number) => endWindow.includes(w)).length;
+        const cleanEnd = endWindow.filter((w) => (counts[w] ?? 0) === 0).length;
+        const bestLate = Math.min(Math.floor(count / 2), cleanEnd);
+        expect(
+          late,
+          `${year} (lastWeek ${lastWeek}, ${count} doubleheaders): picked ${picked.join(',')} — ` +
+            `${cleanEnd} clean end week(s) available`,
+        ).toBeGreaterThanOrEqual(bestLate);
+      }
+    }
+  });
+
+  it('still puts the forced cross-conference week early rather than spending the late allocation on it', () => {
+    // Week 1 is forced AND early; it must not eat into the late share.
+    const byes = { A: 5, B: 6, C: 7, D: 8, E: 9, F: 10, G: 11 };
+    const picked = chooseDoubleheaderWeeks({
+      count: 2,
+      byeFree: byeFreeWeeks(byes, 13),
+      startWindow: [1, 2, 3, 4],
+      endWindow: [11, 12, 13],
+      required: [1],
+      byeCounts: byeCountsByWeek(byes),
+      lastWeek: 13,
+    });
+    expect(picked).toContain(1);
+    expect(picked.filter((w: number) => w >= 11).length).toBe(1);
+  });
+});

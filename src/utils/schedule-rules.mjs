@@ -228,7 +228,18 @@ export const chooseDoubleheaderWeeks = ({
   const late = endWindow.filter((w) => clean.has(w)).sort((a, b) => b - a);
 
   const remaining = Math.max(0, count - forced.length);
-  const wantLate = Math.floor(remaining / 2);
+  // The late share comes from the FULL count, discounting only forced weeks
+  // that are themselves late.
+  //
+  // It used to be `floor(remaining / 2)`, which subtracted the forced week
+  // before halving. The forced week is Week 1 — always early — so subtracting
+  // it shrank the pool the LATE share was drawn from and skewed the whole
+  // split early: AFL 2011 got 2/0 with two clean end weeks going spare, and
+  // 2015 and 2017 got 3/1 where 2/2 was available. Four seasons, and the
+  // league's stated preference is doubleheaders at the start AND the end, as
+  // evenly as the calendar allows.
+  const forcedLate = forced.filter((w) => endWindow.includes(w)).length;
+  const wantLate = Math.max(0, Math.floor(count / 2) - forcedLate);
   const takeLate = late.filter((w) => !forced.includes(w)).slice(0, Math.min(wantLate, late.length));
   const takeEarly = early
     .filter((w) => !forced.includes(w))
