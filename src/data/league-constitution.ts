@@ -240,6 +240,7 @@ SCHEDULE
 - Whenever possible, division games and doubleheaders will avoid bye weeks and ideally played weeks 1-4, 12-14. Keeping doubleheaders off bye weeks is the top scheduling goal; if no league-wide week works in a given year, doubleheaders may be staggered franchise by franchise as a hand-built last resort.
 - Doubleheaders will be split between the start and the end of the season, and every franchise will get at least one doubleheader after Week 8.
 - (Effective with the 2027 schedule.) When a division game cannot avoid a bye week, it is placed on the LIGHTEST bye week available — ideally one with only two NFL teams out. This outranks the three-week rematch target; where the two conflict, the lighter bye week wins. Keeping rivals apart is ideal, not inviolable.
+- (Effective with the 2027 schedule.) Division games will be spread across the season, with each franchise playing roughly half of its division games after the midpoint. This ranks just below keeping division games off bye weeks; where the two conflict, a division race that runs all season wins over a marginally cleaner one.
 
 SCORING ERRORS
 - The league's web site provider (My Fantasy League) will be the system of record for NFL stats.

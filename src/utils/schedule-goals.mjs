@@ -164,6 +164,25 @@ const SCORERS = {
     };
   },
 
+  'division-spread': (f) => {
+    const halves = f.divisionHalves ?? [];
+    if (!halves.length) return { status: 'optimised', detail: 'not measured for this season' };
+    const shares = halves.map((h) => (h.early + h.late ? h.late / (h.early + h.late) : 0.5));
+    const worst = halves[shares.indexOf(shares.reduce((a, b) => (Math.abs(b - 0.5) > Math.abs(a - 0.5) ? b : a)))];
+    const lo = Math.min(...shares);
+    const hi = Math.max(...shares);
+    const label = `every franchise plays ${Math.round(lo * 100)}-${Math.round(hi * 100)}% of its division games after the midpoint`;
+    // A tenth either side of even is not a season anyone notices; a third is.
+    if (lo >= 0.4 && hi <= 0.6) return { status: 'met', detail: label };
+    if (lo >= 0.25 && hi <= 0.75) return { status: 'partial', detail: `${label} — lopsided but not decided early` };
+    return {
+      status: 'blocked',
+      detail:
+        `${label}. ${worst?.franchise ?? 'A franchise'} is the worst. A division race this front-loaded is ` +
+        `over before the second half starts.`,
+    };
+  },
+
   'light-bye-weeks': (f) => {
     const weeks = f.divisionByeWeeks;
     // The sharper measure when we have it: how many rivalry games actually
@@ -305,6 +324,7 @@ export const goalFactsFromSeason = ({
     divisionGameCount: described.divisionGameCount,
     divisionStarterByes: described.divisionStarterByes,
     cleanDivisionGames: described.cleanDivisionGames,
+    divisionHalves: described.divisionHalves,
     netByeSpread: described.netByeSpread,
     homeGames: described.homeGames,
     minRematchGap: described.minRematchGap,

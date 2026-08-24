@@ -4,14 +4,14 @@
     "date": "2026-08-24",
     "category": "league-event",
     "icon": "calendar-2",
-    "title": "Zero Rivalry Games on Bye Weeks",
-    "summary": "The schedule builder was quietly forced to give every team its division games in the same weeks as everyone else. It no longer is — and in one league that takes division games played on NFL bye weeks from eight to zero.",
+    "title": "The Schedule Builder Learned What It Was Getting Wrong",
+    "summary": "A rebuild let the scheduler place each rivalry game in a week that suits those two rosters instead of forcing everyone into the same weeks. Then it produced a season with zero division games on bye weeks and a division race that ended in Week 4 — so a new rule went in, and the schedule you already have turns out to have been right.",
     "description": [
-      "A hidden assumption ran through every schedule this league has ever generated: division games came in complete rounds, so if your rivalry game was in Week 9, so was everyone else’s. Nobody chose that. It fell out of how the builder assembled a season, and it meant a week that was perfect for two teams and terrible for two others had to be all or nothing.",
-      "The builder now works differently. A week only has to give every franchise exactly one game — it does not have to give everyone the SAME KIND of game. So a week can hold two rivalry games and four ordinary ones, and each matchup goes where those two rosters are actually healthy.",
-      "One league drops from eight division games on bye weeks to ZERO, on every run. Those eight were never forced by the calendar — they were the price of ending the season on rivalry games in a year with byes in both closing weeks. Given the choice, the builder now keeps the rivalry games clean and gives up the all-division finish, which is the second-lowest-ranked goal we have.",
-      "The other league does not move, and that is the right answer rather than a failure: its clean weeks are already completely full of division games, and the only remaining slot is reserved by the constitution for the Week 1 cross-conference round. There is genuinely nowhere left to put one.",
-      "Three guardrails went in after early runs misbehaved. The optimiser tried to trade away that constitutional Week 1 round, produced a rematch two weeks after the first meeting, and once made the single most important goal WORSE in order to win five smaller ones. All three are now impossible."
+      "A hidden assumption ran through every schedule this league has ever generated: division games came in complete rounds, so if your rivalry game was in Week 9, so was everyone else’s. Nobody chose that. It fell out of how the builder assembled a season.",
+      "The rebuilt version does not need that. A week only has to give every franchise exactly one game — not the same KIND of game — so a week can hold two rivalry games and four ordinary ones, and each matchup can go where those two rosters are healthy.",
+      "Turned loose, it found something uncomfortable. It produced a season with ZERO division games on bye weeks and not a single starter missing from a rivalry game. It did that by cramming all 48 division games into Weeks 1 through 4 and Week 12, leaving Weeks 5 to 11, 13 and 14 without one, and the finale with none at all. Perfect on paper. A division race decided in September.",
+      "The old builder had prevented that for free, by construction, which is exactly why nobody had ever written it down as a rule. So it is written down now: every franchise plays roughly half its division games after the midpoint, ranked just below keeping them off bye weeks.",
+      "With that rule in place the arithmetic settles it. A 50/50 split needs 24 division games after Week 7, only one clean week remains that late, and it holds 16 — so at least eight must land on a bye week. Eight is exactly what the current schedule has. The schedule you are playing was already the right answer; we just proved it instead of assuming it."
     ],
     "excludeFromHero": true,
     "leagues": [

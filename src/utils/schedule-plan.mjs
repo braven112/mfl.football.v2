@@ -229,6 +229,16 @@ export const describeSeason = (weeks, shape, { byes, exposure, byeFree, doublehe
   let divisionStarterByes = 0;
   let cleanDivisionGames = 0;
   let divisionGameCount = 0;
+  // Division games per franchise either side of the midpoint. Per franchise,
+  // not league-wide: a league-wide count can look balanced while individual
+  // teams have their whole division race in September.
+  const divEarly = {};
+  const divLate = {};
+  for (const id of shape.franchiseIds) {
+    divEarly[id] = 0;
+    divLate[id] = 0;
+  }
+  const midpoint = shape.lastWeek / 2;
 
   for (const week of [...weeks.keys()].sort((a, b) => a - b)) {
     const games = weeks.get(week);
@@ -248,6 +258,9 @@ export const describeSeason = (weeks, shape, { byes, exposure, byeFree, doublehe
         divisionGameCount += 1;
         const out = ba + bb;
         divisionStarterByes += out;
+        const half = week > midpoint ? divLate : divEarly;
+        half[g.away] += 1;
+        half[g.home] += 1;
         if (out === 0) cleanDivisionGames += 1;
         (met[pairKey(g.away, g.home)] ??= []).push(week);
       }
@@ -275,6 +288,11 @@ export const describeSeason = (weeks, shape, { byes, exposure, byeFree, doublehe
     divisionGameCount,
     divisionStarterByes,
     cleanDivisionGames,
+    divisionHalves: shape.franchiseIds.map((id) => ({
+      franchise: shape.name[id],
+      early: divEarly[id],
+      late: divLate[id],
+    })),
     meanByeDifferential: gameCount ? byeDiffTotal / gameCount : 0,
     netByeSpread: netValues.length ? Math.max(...netValues) - Math.min(...netValues) : 0,
     netByeByFranchise: shape.franchiseIds

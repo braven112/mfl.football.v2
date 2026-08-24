@@ -86,14 +86,21 @@ describe('scheduleConstraints', () => {
     }
   });
 
-  it('withholds a goal from the seasons that predate it, and names it as upcoming', () => {
+  it('withholds goals from the seasons that predate them, and names them as upcoming', () => {
+    // Derived, not hardcoded — this test named the one 2027 goal by hand and
+    // broke the moment a second was adopted. Whichever goals carry a `since`
+    // are the ones that must be withheld.
     const before = scheduleConstraints({ season: 2026 }).map((c) => c.key);
     const after = scheduleConstraints({ season: 2027 }).map((c) => c.key);
-    expect(before).not.toContain('light-bye-weeks');
-    expect(after).toContain('light-bye-weeks');
-    // Ranks close up rather than leaving a hole where the goal will go.
-    expect(before).toEqual(after.filter((k) => k !== 'light-bye-weeks'));
-    expect(upcomingConstraints({ season: 2026 }).map((c) => c.key)).toEqual(['light-bye-weeks']);
+    const upcoming = upcomingConstraints({ season: 2026 }).map((c) => c.key);
+
+    expect(upcoming.length).toBeGreaterThan(0);
+    for (const key of upcoming) {
+      expect(before, `${key} predates 2026`).not.toContain(key);
+      expect(after, `${key} should be in force by 2027`).toContain(key);
+    }
+    // Ranks close up rather than leaving holes where the goals will go.
+    expect(before).toEqual(after.filter((k) => !upcoming.includes(k)));
     expect(upcomingConstraints({ season: 2027 })).toEqual([]);
     // No season given = planning the next draw, so everything applies.
     expect(upcomingConstraints({})).toEqual([]);

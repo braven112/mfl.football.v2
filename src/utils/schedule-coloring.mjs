@@ -185,6 +185,7 @@ const variance = (xs) => {
 export const COLORING_WEIGHTS = () => {
   const raw = {
     divisionByeFree: goalWeight('division-bye-free-ceiling'),
+    divisionSpread: goalWeight('division-spread'),
     divisionByeCost: goalWeight('light-bye-weeks'),
     rematchGap: goalWeight('rematch-gap'),
     byeLuck: goalWeight('bye-luck'),
@@ -232,6 +233,16 @@ export const scoreColoring = (bySlot, slots, ctx, weights) => {
     lateStrength[id] = 0;
   }
   const met = {};
+  // Division games per franchise, split at the season's midpoint. Measured PER
+  // FRANCHISE rather than league-wide because a league-wide count can look
+  // balanced while individual teams have all six of theirs in September.
+  const divEarly = {};
+  const divLate = {};
+  for (const id of franchiseIds) {
+    divEarly[id] = 0;
+    divLate[id] = 0;
+  }
+  const midpoint = lastWeek / 2;
 
   bySlot.forEach((slotGames, i) => {
     const week = slots[i].week;
@@ -258,6 +269,9 @@ export const scoreColoring = (bySlot, slots, ctx, weights) => {
       }
       if (divisionOf[g.away] === divisionOf[g.home]) {
         divisionGames += 1;
+        const half = week > midpoint ? divLate : divEarly;
+        half[g.away] += 1;
+        half[g.home] += 1;
         if (!cleanSet.has(week)) divisionOnBye += 1;
         divisionStarterByes += ba + bb;
         (met[pairKey(g.away, g.home)] ??= []).push(week);
@@ -298,8 +312,19 @@ export const scoreColoring = (bySlot, slots, ctx, weights) => {
     const expected = ratingSd * Math.sqrt(gamesPerTeam);
     return Math.min(1, Math.sqrt(variance(franchiseIds.map((id) => table[id]))) / expected);
   };
+  // Distance from a 50/50 split, averaged over franchises and scaled so 0 is
+  // perfectly balanced and 1 is every division game in one half.
+  const spreadPenalty = mean(
+    franchiseIds.map((id) => {
+      const total = divEarly[id] + divLate[id];
+      if (!total) return 0;
+      return Math.abs(divLate[id] / total - 0.5) / 0.5;
+    }),
+  );
+
   const terms = {
     divisionByeFree: divisionGames ? divisionOnBye / divisionGames : 0,
+    divisionSpread: spreadPenalty,
     // Two starters missing from a rivalry game is the reference point for "bad".
     divisionByeCost: divisionGames ? Math.min(1, divisionStarterByes / (divisionGames * 2)) : 0,
     rematchGap: repeats ? rematchPenalty / repeats : 0,
@@ -434,14 +459,25 @@ export const searchColoring = (seedBySlot, slots, ctx, { seed = 20260824, iterat
       // Absolute floor, never a price. Demoting the three-week rule to a goal
       // lets the optimiser trade it; it does not license a one-week rematch.
       if (candidateScore.minRematchGap < (ctx.hardMinRematchGap ?? 3)) continue;
-      // RATCHET ON THE TOP GOAL. A plain weighted sum lets the five lower goals
-      // club together and buy a loss on the highest-weighted one: an AFL run
-      // pushed division games on bye weeks from 36 to 38 because the small
-      // gains elsewhere added up to more than the 0.006 it cost. That is
-      // arithmetically correct and against the stated ranking, which gives
-      // flexibility on the LESSER goals. So getting division games off byes
-      // may improve or hold, never regress.
-      if (candidateScore.terms.divisionByeFree > best.score.terms.divisionByeFree + 1e-9) continue;
+      // RATCHET ON THE TOP GOAL, with one exemption. A plain weighted sum lets
+      // the lower goals club together and buy a loss on the highest-weighted
+      // one: an AFL run pushed division games on bye weeks from 36 to 38
+      // because the small gains elsewhere summed to more than the 0.006 it
+      // cost. Arithmetically right, against a ranking that gives flexibility on
+      // the LESSER goals.
+      //
+      // The exemption is division SPREAD, ranked directly below it at 85 to
+      // 100. Those two genuinely trade — bye-free weeks cluster early, so a
+      // schedule can be clean or spread but rarely both — and a hard ratchet
+      // would let bye-freeness win every time and hand back the September
+      // pile-up this goal exists to prevent. So bye-freeness may regress, but
+      // only in a move that buys spread with it, never for the tail.
+      if (
+        candidateScore.terms.divisionByeFree > best.score.terms.divisionByeFree + 1e-9 &&
+        candidateScore.terms.divisionSpread >= best.score.terms.divisionSpread - 1e-9
+      ) {
+        continue;
+      }
       const delta = candidateScore.total - score.total;
       const temperature = 1 - i / iterations;
       if (delta < 0 || rng() < Math.exp(-delta / Math.max(1e-9, 0.02 * temperature))) {

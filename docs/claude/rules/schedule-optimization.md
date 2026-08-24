@@ -239,6 +239,47 @@ landing on a bye. Both leagues fail goal 4 that year and the planner correctly
 prefers failing it to failing goal 3. That is exactly the season a commissioner
 staggers doubleheaders franchise by franchise.
 
+### The division-spread goal, and why it was missing
+
+**Adopted Aug 2026, weight 85, ranked directly below getting division games off
+byes.** Every franchise plays roughly half its division games after the season's
+midpoint.
+
+It exists because of one run. Told only to keep division games off bye weeks,
+the colouring optimiser put all 48 of The League's into Weeks 1-4 and 12 and
+left Weeks 5-11, 13 and 14 without a single one. Zero division games on byes,
+zero starters missing from a rivalry game — **perfect on the goal above it, and
+a division race decided by Week 4.** The last rivalry game of the season was in
+Week 12 and the finale had none at all.
+
+That is the exact failure this repo's own docs warned about for the naive
+optimiser ("it stacks every rivalry round into Weeks 1-3… the division race is
+settled by Week 3 and then ten weeks have no division game at all"). The
+structured builder had prevented it for free, by putting the two halves of the
+rivalry schedule in disjoint blocks — so it was never written down as a goal.
+**Removing the structure removed the guarantee, and the goal list had no
+replacement.** Fourth time in this rewrite that an implicit rule surfaced only
+when something violated it.
+
+**The two top goals genuinely trade, so the ratchet has an exemption.**
+Bye-free weeks cluster early — The League's are Weeks 1, 2, 3, 4 and 12, and
+only Week 12 is in the second half. A hard ratchet on bye-freeness would let it
+win every time and hand the pile-up straight back. So bye-freeness may regress,
+but only in a move that buys spread with it, never for the tail.
+
+**And the arithmetic settles the argument.** With a 50/50 split required, The
+League needs 24 division games after Week 7. Week 12 is its only clean late week
+and holds at most 16. So **at least 8 must fall on a late bye week — and 8 is
+exactly what the locked 2026 schedule has.** The structured builder's answer was
+optimal all along; the colouring now confirms it rather than assuming it.
+
+Consequence worth knowing: with this goal in place the colouring search returns
+the structured seed unchanged for both leagues in 2026 (gain 0.0000,
+`divisionSpread: 0`). That is the correct result, not an inert search — the
+two-leg block is a near-optimal answer to this goal set. The colouring earns its
+place in years where the structure fits badly, and by proving the seed rather
+than trusting it.
+
 ### Futures the NFL has told us to expect
 
 Three changes the commissioner flagged as plausible, all now covered by

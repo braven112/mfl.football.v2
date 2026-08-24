@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 // @ts-expect-error - .mjs helper shared with the node scripts
 import { goalFactsFromSeason, scoreSeasonGoals, summariseGoals } from '../src/utils/schedule-goals.mjs';
 // @ts-expect-error - .mjs helper shared with the node scripts
-import { scheduleConstraints } from '../src/utils/schedule-constraints.mjs';
+import { scheduleConstraints, upcomingConstraints } from '../src/utils/schedule-constraints.mjs';
 import aflRelease from '../data/afl-fantasy/schedule-release/2026.json';
 import theLeagueRelease from '../data/theleague/schedule-release/2026.json';
 
@@ -41,10 +41,13 @@ describe('scoreSeasonGoals', () => {
     const { goals, notYetAdopted } = scoreSeasonGoals(aflFacts);
     const inForce = scheduleConstraints({ crossConference: true, season: 2026 });
     expect(goals.map((g: any) => g.key)).toEqual(inForce.map((c: any) => c.key));
-    // The light-bye-week goal was adopted for 2027; 2026 must not be judged by it.
-    expect(goals.some((g: any) => g.key === 'light-bye-weeks')).toBe(false);
-    expect(notYetAdopted.map((n: any) => n.key)).toEqual(['light-bye-weeks']);
-    expect(notYetAdopted[0].since).toBe(2027);
+    // Goals adopted for 2027 must not judge a 2026 draw. Derived rather than
+    // named, so adopting another does not break this test.
+    const upcoming = upcomingConstraints({ season: 2026 }).map((c: any) => c.key);
+    expect(upcoming.length).toBeGreaterThan(0);
+    for (const key of upcoming) expect(goals.some((g: any) => g.key === key), key).toBe(false);
+    expect(notYetAdopted.map((n: any) => n.key).sort()).toEqual([...upcoming].sort());
+    for (const n of notYetAdopted) expect(n.since).toBeGreaterThan(2026);
   });
 
   it('has a scorer for EVERY goal, including ones not yet in force', () => {
@@ -115,6 +118,22 @@ describe('scoreSeasonGoals', () => {
     const g = goals.find((x: any) => x.key === 'light-bye-weeks')!;
     expect(g.status).toBe('partial');
     expect(g.detail).toMatch(/1 of 3/);
+  });
+
+  it('fails the spread goal on a season whose division race ends in September', () => {
+    // The exact shape the colouring optimiser produced when told only to keep
+    // division games off byes: everything in Weeks 1-4 and 12.
+    const halves = Array.from({ length: 16 }, (_, i) => ({ franchise: `F${i}`, early: 6, late: 0 }));
+    const { goals } = scoreSeasonGoals({ ...aflFacts, season: 2027, divisionHalves: halves });
+    const g = goals.find((x: any) => x.key === 'division-spread')!;
+    expect(g.status).toBe('blocked');
+    expect(g.detail).toMatch(/over before the second half/);
+  });
+
+  it('meets the spread goal on an evenly split season', () => {
+    const halves = Array.from({ length: 16 }, (_, i) => ({ franchise: `F${i}`, early: 3, late: 3 }));
+    const { goals } = scoreSeasonGoals({ ...aflFacts, season: 2027, divisionHalves: halves });
+    expect(goals.find((x: any) => x.key === 'division-spread')!.status).toBe('met');
   });
 });
 

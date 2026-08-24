@@ -162,6 +162,18 @@ const allConstraints = () => {
       enforcedBy: 'divisionGameCeiling',
     },
     {
+      key: 'division-spread',
+      weight: 85,
+      tier: 'maximise',
+      rule: 'Every franchise plays its division games across the whole season — roughly half of them after the midpoint — rather than having its division race settled in September.',
+      why:
+        'The structured builder gave this away for free by putting the two halves of the rivalry schedule in separate blocks, so it was never written down. Removing that structure removed the guarantee, and the goal list had no replacement: told only to keep division games off bye weeks, the optimiser stacked all 48 of The League\u2019s into Weeks 1-4 and 12 and left Weeks 5-11, 13 and 14 without a single one. Perfect on the goal above, and a season whose division race is over by Week 4. Ranked directly below that goal because the two genuinely trade against each other \u2014 bye-free weeks cluster early, and a schedule can be clean or spread but rarely both.',
+      enforcedBy: 'scoreColoring + tests/schedule-coloring.test.ts',
+      // Adopted Aug 2026 with the colouring builder, which is what exposed the
+      // gap. Seasons drawn before it were spread by construction.
+      since: 2027,
+    },
+    {
       key: 'light-bye-weeks',
       weight: 70,
       tier: 'maximise',

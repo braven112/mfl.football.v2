@@ -215,3 +215,53 @@ describe('COLORING_WEIGHTS', () => {
     expect(w.opponentStrength).toBeGreaterThan(w.finale);
   });
 });
+
+describe('the division-spread goal', () => {
+  // Local copy — the searchColoring block's `ctx` is scoped to that describe.
+  const ctx = (l: ReturnType<typeof load>) => ({
+    divisionOf: l.shape.divisionOf,
+    byesFor: (id: string, week: number) => l.exposure[id]?.[week] ?? 0,
+    rating: Object.fromEntries(l.shape.franchiseIds.map((id: string) => [id, 0])),
+    franchiseIds: l.shape.franchiseIds,
+    byeFreeWeeks: [1, 2, 3, 4, 12],
+    lastWeek: l.shape.lastWeek,
+    doubleheaderWeeks: l.doubleheaders,
+    minRematchGap: MIN_REMATCH_GAP,
+    hardMinRematchGap: HARD_MIN_REMATCH_GAP,
+    frozenSlots: new Set<number>(),
+  });
+
+  /**
+   * This goal exists because of a specific failure. Told only to keep division
+   * games off bye weeks, the optimiser put all 48 of The League's into Weeks
+   * 1-4 and 12 and left Weeks 5-11, 13 and 14 without a single one — perfect on
+   * the goal above it, and a division race decided by Week 4. The structured
+   * builder had prevented that for free with its two-leg block, so nobody had
+   * ever had to write it down.
+   */
+  it('scores a September pile-up worse than an even split', () => {
+    const l = load();
+    const c = ctx(l);
+    const w = COLORING_WEIGHTS();
+    const even = scoreColoring(l.bySlot, l.slots, c, w);
+    // The live season is spread by construction, so it should score ~0 here.
+    expect(even.terms.divisionSpread).toBeLessThan(0.1);
+
+    // Force every division game into the first half and confirm the term reacts.
+    const front = l.bySlot.map((games: any[], i: number) =>
+      l.slots[i].week > l.shape.lastWeek / 2
+        ? games.filter((g: any) => l.shape.divisionOf[g.away] !== l.shape.divisionOf[g.home])
+        : games,
+    );
+    expect(scoreColoring(front, l.slots, c, w).terms.divisionSpread).toBeGreaterThan(0.5);
+  });
+
+  it('lets bye-freeness regress ONLY when spread is bought with it', () => {
+    // The two top goals genuinely trade — bye-free weeks cluster early, so a
+    // schedule can be clean or spread but rarely both. A hard ratchet on
+    // bye-freeness would let it win every time and hand back the pile-up.
+    const w = COLORING_WEIGHTS();
+    expect(w.divisionByeFree).toBeGreaterThan(w.divisionSpread);
+    expect(w.divisionSpread).toBeGreaterThan(w.divisionByeCost);
+  });
+});
