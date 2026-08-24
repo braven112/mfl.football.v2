@@ -288,27 +288,57 @@ The search cannot fail; the worst case is it returns the seed.
 ranking rather than a hand-tuned fairness subset. Home/away is excluded and
 fixed exactly by the post-pass.
 
-Measured on 2026:
+Measured on 2026, stable across three RNG seeds:
 
 | | structured seed | + colouring |
 |---|---|---|
-| AFL division games on a bye week | 36 / 120 | **28 / 120** |
-| AFL starters missing from rivalry games | 40 | **13** |
-| League division games on a bye week | 8 / 48 | **4 / 48** |
-| weeks containing a division game (AFL) | 8 | **11** |
-| min rematch gap | 7 | 3 |
+| League division games on a bye week | 8 / 48 | **0 / 48** |
+| AFL division games on a bye week | 36 / 120 | 36 / 120 (the floor — see above) |
+| cross-conference round | Week 1 | Week 1 |
+| min rematch gap | 7-9 | 3 (the floor, sanctioned) |
 
-The AFL's division games now spread `3:10 4:10 5:2 7:4 9:6 10:2 13:4 14:10` —
-different franchises playing rivals in different weeks, which is the whole point
-and was impossible before.
+**The League reaches ZERO.** Its 8 were never forced — they bought the
+all-division finale in a year with byes in both closing weeks. The colouring
+finds a draw that keeps every rivalry game in a clean week by giving up that
+finale, which is goal 10 of 11 and the cheapest thing on the board. That is the
+ranking working exactly as written.
 
-**Two things that had to be got right, both found by running it:**
+**The AFL gains nothing on the top goal and that is correct**, not a failure —
+it is already at the format's floor. It still picks up small gains on the lower
+goals (0 to 0.01 of total score, seed-dependent).
 
-- **20k iterations moves nothing.** The structured seed is a deep local optimum
-  and a Kempe swap is a coarse move — a greedy pass found 2 improving moves in
-  9,000 tries. 150k at temperature 0.01 clears it. Callers with a request
-  deadline (the admin preview, 30s) pass a small budget and get the seed, which
-  is the correct degradation rather than a timeout.
+**Four things that had to be got right, every one found by running it:**
+
+- **A pinned round must be frozen out of the search.** See the correction above.
+  Without it the optimiser trades the AFL's Week 1 cross-conference round for a
+  rivalry game — it is the only clean slot holding non-division games, so it is
+  the only move available, and the illegal result looks like the best schedule
+  ever drawn. Enforced by excluding those slots from swaps entirely: a slot that
+  never participates in a move cannot lose its games.
+- **The top goal needs a ratchet.** A plain weighted sum lets the five lower
+  goals club together and buy a regression on the highest-weighted one — an AFL
+  run pushed division games on byes from 36 to 38 because the small gains
+  elsewhere summed to more than the 0.006 it cost. Arithmetically right, against
+  the stated ranking, which gives flexibility on the LESSER goals.
+  `divisionByeFree` may improve or hold, never regress.
+
+- **20k iterations moves nothing, and neither does 150k with the wrong
+  normalisation.** The structured seed is a deep local optimum and a Kempe swap
+  is coarse — greedy descent found 2 improving moves in 9,000 tries. Worse,
+  `opponentStrength` was normalised by an arbitrary `/4`, which with real
+  prior-season ratings put it at 0.602 while every other term sat at 0-0.3 —
+  and it is VOLATILE, since every swap perturbs it. The seed came from
+  `scoreSeason`, which optimised that exact quantity, so nearly every move cost
+  more there than it gained anywhere else and the search sat still through 150k
+  iterations returning the seed verbatim. It is now normalised against the
+  spread a RANDOM draw would produce (`sd * sqrt(gamesPerTeam)`), so 1.0 means
+  "no better than random" and the number is comparable to the other terms.
+- **Random slot pairs never find the structural win.** Moving a rivalry game out
+  of a bye week needs a cycle spanning exactly one dirty slot and one clean one
+  with room; blind sampling of 17x17 pairs finds it too rarely to matter. 75% of
+  moves now target a slot that HAS the defect and a slot that can absorb it. The
+  remaining 25% stay uniform, because the other five goals need moves the
+  heuristic would never propose.
 - **An unbounded rematch term gets traded to nothing.** The first run took
   rivals to a two-week gap to buy bye-week gains. Two fixes: the penalty is now
   QUADRATIC in the shortfall (linear leaves the search indifferent between a
@@ -445,14 +475,22 @@ across placements because only two bye-free slots survive Week 4 (Week 12's
 doubleheader) and the second leg is five rounds, so three land on byes however
 the LEG is placed.
 
-> **Superseded for the colouring builder (Aug 2026).** That invariance is a
-> property of PURE rounds, not of the format. It was stated here — and to the
-> commissioner — as though the format fixed it at 36. It does not. Once rounds
-> may mix division and interdivision games, division games are no longer moved
-> a whole round at a time and the count drops: 36 → 28 for the AFL and 8 → 4 for
-> The League on 2026. The table below is still the right answer for the
-> structured builder and the wrong one for the season the planner now emits.
-> If you are reasoning about a ceiling, check which builder produced it. What the placement buys is severity and rematch gap, and they trade
+> **This survived the colouring rewrite. A note here briefly claimed it did
+> not — that was wrong, and the way it was wrong is worth keeping.**
+>
+> The colouring search did produce 28, and it did it by moving the Week 1
+> cross-conference round out of Week 1, which the constitution pins. The result
+> scored beautifully and was an illegal season. Count the AFL's clean slots and
+> the reason is plain: eight slots across Weeks 1-4 and 12, seven of them
+> already 100% division games (7 x 12 = 84, exactly the ceiling), and the eighth
+> is the cross-conference slot. There is nowhere to put an 85th division game
+> that does not displace a constitutional round.
+>
+> **36 is the floor for the AFL under any builder.** The colouring search is now
+> frozen out of pinned slots and reproduces 36 on every seed.
+>
+> The League is the opposite case and the colouring genuinely does break its
+> figure — 8 → **0**, because its 8 were bought, not forced (see below). What the placement buys is severity and rematch gap, and they trade
 off monotonically: each 2 fewer NFL teams out during a division round costs
 roughly a week of minimum rematch gap.
 

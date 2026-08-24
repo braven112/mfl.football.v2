@@ -220,6 +220,8 @@ export const scoreColoring = (bySlot, slots, ctx, weights) => {
   let games = 0;
   let finaleNonDivision = 0;
   let finaleGames = 0;
+  let dhGameSlots = 0;
+  let lateGameSlots = 0;
 
   const net = {};
   const dhStrength = {};
@@ -243,10 +245,12 @@ export const scoreColoring = (bySlot, slots, ctx, weights) => {
       if (dh.has(week)) {
         dhStrength[g.away] += rating[g.home] ?? 0;
         dhStrength[g.home] += rating[g.away] ?? 0;
+        dhGameSlots += 2;
       }
       if (late.has(week)) {
         lateStrength[g.away] += rating[g.home] ?? 0;
         lateStrength[g.home] += rating[g.away] ?? 0;
+        lateGameSlots += 2;
       }
       if (week === lastWeek) {
         finaleGames += 1;
@@ -285,7 +289,15 @@ export const scoreColoring = (bySlot, slots, ctx, weights) => {
     }
   }
 
+  const dhGamesPerTeam = dhGameSlots / franchiseIds.length;
+  const lateGamesPerTeam = lateGameSlots / franchiseIds.length;
   const netValues = franchiseIds.map((id) => net[id]);
+  const ratingSd = Math.sqrt(variance(franchiseIds.map((id) => rating[id] ?? 0))) || 1;
+  const spread = (table, gamesPerTeam) => {
+    if (!gamesPerTeam) return 0;
+    const expected = ratingSd * Math.sqrt(gamesPerTeam);
+    return Math.min(1, Math.sqrt(variance(franchiseIds.map((id) => table[id]))) / expected);
+  };
   const terms = {
     divisionByeFree: divisionGames ? divisionOnBye / divisionGames : 0,
     // Two starters missing from a rivalry game is the reference point for "bad".
@@ -294,8 +306,19 @@ export const scoreColoring = (bySlot, slots, ctx, weights) => {
     byeLuck:
       (games ? Math.min(1, byeDiff / games / 3) : 0) * 0.6 +
       Math.min(1, (Math.max(...netValues, 0) - Math.min(...netValues, 0)) / 12) * 0.4,
-    opponentStrength: Math.min(1, (Math.sqrt(variance(franchiseIds.map((id) => dhStrength[id]))) +
-      Math.sqrt(variance(franchiseIds.map((id) => lateStrength[id])))) / 4),
+    // Normalised against what a RANDOM draw would produce, not an arbitrary
+    // divisor. A franchise's doubleheader strength is a sum of n opponent
+    // ratings, so under random assignment its spread is about sd*sqrt(n) —
+    // dividing by that puts a random schedule near 1 and a perfectly balanced
+    // one near 0, which is what the other terms already mean.
+    //
+    // The arbitrary /4 it replaces was the bug that made this whole search
+    // inert: with real prior-season ratings the term sat at 0.602 while every
+    // other term was 0-0.3, and it is VOLATILE — every Kempe swap perturbs it.
+    // The seed comes from `scoreSeason`, which optimised that exact quantity,
+    // so essentially every move away from the seed cost more here than it
+    // gained anywhere else and the optimiser never moved at all.
+    opponentStrength: (spread(dhStrength, dhGamesPerTeam) + spread(lateStrength, lateGamesPerTeam)) / 2,
     finale: finaleGames ? finaleNonDivision / finaleGames : 0,
   };
   const total = Object.entries(terms).reduce((sum, [k, v]) => sum + (w[k] ?? 0) * v, 0);
@@ -311,6 +334,75 @@ const makeRng = (seed) => {
     s = (s * 1664525 + 1013904223) >>> 0;
     return s / 4294967296;
   };
+};
+
+/**
+ * Pick two slots to swap between, aimed at the defect that carries the most
+ * weight: a division game sitting in a bye week.
+ *
+ * Uniform random slot pairs are fine for polishing the fairness terms and
+ * hopeless for this one. Moving a rivalry game out of a bye week needs a cycle
+ * that spans exactly one dirty slot and one clean one, and blind sampling of
+ * 17x17 pairs finds that combination rarely enough that the structural gain
+ * never materialised — the search would grind through 150k iterations and come
+ * back with the seed's 36 division games on byes every time.
+ *
+ * So most of the time, pick a slot that HAS the defect and a slot that could
+ * absorb it. The rest of the time sample uniformly, because the other five
+ * goals still need moves that this heuristic would never propose.
+ */
+const pickSlotPair = (bySlot, slots, ctx, rng) => {
+  // Slots the constitution pins are never swapped, which is the whole
+  // enforcement mechanism: if a slot never participates in a move, its games
+  // cannot leave the week they are pinned to.
+  //
+  // This is not a refinement. Without it the search WILL trade the AFL's Week 1
+  // cross-conference round away — it is the only clean slot holding
+  // non-division games, so it is the only place a rivalry game can move to, and
+  // the optimiser found it immediately. The resulting schedule looked like a
+  // large improvement and was illegal.
+  const frozen = ctx.frozenSlots ?? new Set();
+  const open = [];
+  for (let i = 0; i < slots.length; i += 1) if (!frozen.has(i)) open.push(i);
+  if (open.length < 2) return null;
+  const uniform = () => {
+    const a = open[Math.floor(rng() * open.length)];
+    let b = open[Math.floor(rng() * open.length)];
+    if (a === b) b = open[(open.indexOf(b) + 1) % open.length];
+    return [a, b];
+  };
+  if (rng() > (ctx.targetedShare ?? 0.75)) return uniform();
+
+  const clean = new Set(ctx.byeFreeWeeks);
+  const dirty = [];
+  const spare = [];
+  bySlot.forEach((games, i) => {
+    const isClean = clean.has(slots[i].week);
+    const divisionGames = games.filter((g) => ctx.divisionOf[g.away] === ctx.divisionOf[g.home]).length;
+    if (frozen.has(i)) return;
+    if (!isClean && divisionGames > 0) dirty.push(i);
+    // A clean slot can only absorb a rivalry game if it has a non-division
+    // game to give back — a fully-division clean slot is already spent.
+    if (isClean && divisionGames < games.length) spare.push(i);
+  });
+  if (!dirty.length || !spare.length) return uniform();
+  return [dirty[Math.floor(rng() * dirty.length)], spare[Math.floor(rng() * spare.length)]];
+};
+
+/**
+ * Prefer a cycle that actually relocates a division game out of the bye week.
+ * A targeted slot pair is wasted if the cycle drawn from it moves six games
+ * that were all fine where they were.
+ */
+const pickCycle = (cycles, slotA, slots, ctx, rng) => {
+  const clean = new Set(ctx.byeFreeWeeks);
+  if (!clean.has(slots[slotA].week)) {
+    const useful = cycles.filter((c) =>
+      c.a.some((g) => ctx.divisionOf[g.away] === ctx.divisionOf[g.home]),
+    );
+    if (useful.length) return useful[Math.floor(rng() * useful.length)];
+  }
+  return cycles[Math.floor(rng() * cycles.length)];
 };
 
 /**
@@ -331,17 +423,25 @@ export const searchColoring = (seedBySlot, slots, ctx, { seed = 20260824, iterat
     let current = seedBySlot;
     let score = seedScore;
     for (let i = 0; i < iterations; i += 1) {
-      const a = Math.floor(rng() * slots.length);
-      let b = Math.floor(rng() * slots.length);
-      if (a === b) b = (b + 1) % slots.length;
+      const pair = pickSlotPair(current, slots, ctx, rng);
+      if (!pair) break;
+      const [a, b] = pair;
       const cycles = kempeCycles(current[a], current[b]);
       if (!cycles.length) continue;
-      const cycle = cycles[Math.floor(rng() * cycles.length)];
+      const cycle = pickCycle(cycles, a, slots, ctx, rng);
       const candidate = applyKempe(current, a, b, cycle);
       const candidateScore = scoreColoring(candidate, slots, ctx, weights);
       // Absolute floor, never a price. Demoting the three-week rule to a goal
       // lets the optimiser trade it; it does not license a one-week rematch.
       if (candidateScore.minRematchGap < (ctx.hardMinRematchGap ?? 3)) continue;
+      // RATCHET ON THE TOP GOAL. A plain weighted sum lets the five lower goals
+      // club together and buy a loss on the highest-weighted one: an AFL run
+      // pushed division games on bye weeks from 36 to 38 because the small
+      // gains elsewhere added up to more than the 0.006 it cost. That is
+      // arithmetically correct and against the stated ranking, which gives
+      // flexibility on the LESSER goals. So getting division games off byes
+      // may improve or hold, never regress.
+      if (candidateScore.terms.divisionByeFree > best.score.terms.divisionByeFree + 1e-9) continue;
       const delta = candidateScore.total - score.total;
       const temperature = 1 - i / iterations;
       if (delta < 0 || rng() < Math.exp(-delta / Math.max(1e-9, 0.02 * temperature))) {

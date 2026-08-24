@@ -121,6 +121,7 @@ describe('searchColoring', () => {
     doubleheaderWeeks: l.doubleheaders,
     minRematchGap: MIN_REMATCH_GAP,
     hardMinRematchGap: HARD_MIN_REMATCH_GAP,
+    frozenSlots: new Set<number>(),
   });
 
   it('never returns worse than the season it was seeded with', () => {
@@ -153,6 +154,42 @@ describe('searchColoring', () => {
       if (ws.length < 2) continue;
       const sorted = [...ws].sort((a, b) => a - b);
       expect(sorted[1] - sorted[0], pair).toBeGreaterThanOrEqual(HARD_MIN_REMATCH_GAP);
+    }
+  });
+
+  it('never regresses the top goal to buy the lesser ones', () => {
+    // A plain weighted sum lets the five lower goals club together and pay for
+    // a loss on the highest-weighted one — an AFL run pushed division games on
+    // byes from 36 to 38 doing exactly that. The ranking gives flexibility on
+    // the LESSER goals, so this one ratchets.
+    const l = load();
+    const c = ctx(l);
+    const before = scoreColoring(l.bySlot, l.slots, c, COLORING_WEIGHTS());
+    const out = searchColoring(l.bySlot, l.slots, c, { iterations: 6000, restarts: 1 });
+    expect(out.score.terms.divisionByeFree).toBeLessThanOrEqual(before.terms.divisionByeFree + 1e-9);
+  });
+
+  it('never moves a constitutionally pinned round out of its week', () => {
+    // The AFL's Week 1 cross-conference slot is the ONLY clean slot holding
+    // non-division games, so it is the only place a rivalry game can move to,
+    // and the optimiser found it immediately. The result scored beautifully
+    // and was illegal. Frozen slots are the enforcement.
+    const l = load();
+    const crossSlots = new Set(
+      l.bySlot
+        .map((games: any[], i: number) => ({ i, games }))
+        .filter(({ games }: any) =>
+          games.some((g: any) => l.shape.conferenceOf[g.away] !== l.shape.conferenceOf[g.home]),
+        )
+        .map(({ i }: any) => i),
+    );
+    expect(crossSlots.size).toBeGreaterThan(0);
+    const out = searchColoring(l.bySlot, l.slots, { ...ctx(l), frozenSlots: crossSlots }, {
+      iterations: 6000,
+      restarts: 1,
+    });
+    for (const i of crossSlots) {
+      expect(JSON.stringify(out.bySlot[i]), `slot ${i} moved`).toBe(JSON.stringify(l.bySlot[i]));
     }
   });
 

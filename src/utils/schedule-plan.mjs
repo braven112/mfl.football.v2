@@ -528,6 +528,23 @@ export const planSchedule = ({ slug, year, readFeed, byes, search = {}, mode, ra
         // Absolute floor. The three-week rule is a goal now and may be traded,
         // but never down to rivals playing a fortnight apart.
         hardMinRematchGap: HARD_MIN_REMATCH_GAP,
+        // Slots holding a round the constitution pins to a week — the AFL's
+        // Week 1 cross-conference round. Frozen out of the search entirely,
+        // because it is also the only clean slot with non-division games in it
+        // and the optimiser would otherwise spend it on a rivalry game and
+        // emit an illegal season that scores beautifully.
+        frozenSlots: new Set(
+          policy.crossConference?.week
+            ? slots
+                .map((slot, i) => ({ slot, i }))
+                .filter(({ slot, i }) =>
+                  slot.week === policy.crossConference.week &&
+                  coloringFromWeeks(weeks, slots)[i].some(
+                    (g) => shape.conferenceOf[g.away] !== shape.conferenceOf[g.home],
+                  ))
+                .map(({ i }) => i)
+            : [],
+        ),
       };
       const seeded = coloringFromWeeks(weeks, slots);
       const refined = searchColoring(seeded, slots, colorCtx, {
