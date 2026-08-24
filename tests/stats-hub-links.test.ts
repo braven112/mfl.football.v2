@@ -36,6 +36,7 @@ type DirectoryEntry = {
   id: string;
   title: string;
   path: string;
+  category: string;
   subcategory?: string;
   visibility: string;
   popularity: number;
