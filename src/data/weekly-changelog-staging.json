@@ -4,6 +4,14 @@
     {
       "date": "2026-08-24",
       "type": "bug-fix",
+      "league": "theleague",
+      "impact": "user",
+      "area": "navigation",
+      "summary": "An owner spotted the AFL sneaking onto The League's Stats & Reports page. The League History shelf was carrying two cards that belong to the other league — Record Book and AFL Owners — and clicking either one went nowhere, because the link was built by gluing The League's address onto an AFL one. The shelf now lists only The League's own history pages: Franchises, Rivalries and Owners."
+    },
+    {
+      "date": "2026-08-24",
+      "type": "bug-fix",
       "league": "both",
       "impact": "user",
       "area": "calendar",

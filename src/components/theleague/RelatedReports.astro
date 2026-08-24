@@ -9,7 +9,8 @@
  * Usage:
  *   <RelatedReports currentId="salary-analytics" />
  */
-import { resolveLeaguePath } from '../../utils/nav-utils';
+import { resolveDirectoryHref, resolveLeaguePath } from '../../utils/nav-utils';
+import { pathBelongsToLeague } from '../../config/footer-config';
 import { spriteUrl } from '../../utils/sprite-url';
 import pageDirectory from '../../data/page-directory.json';
 
@@ -34,7 +35,12 @@ const { currentId } = Astro.props;
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
-const allPages = pageDirectory as PageEntry[];
+// Scope the shared directory to this league first — it also holds AFL and
+// best-ball entries, and a foreign sibling would link to a path this league
+// doesn't route. See the same filter in pages/theleague/stats.astro.
+const allPages = (pageDirectory as PageEntry[]).filter((p) =>
+  pathBelongsToLeague(p.path, 'theleague')
+);
 const current = allPages.find((p) => p.id === currentId);
 const siblings = current?.subcategory
   ? allPages
@@ -60,7 +66,7 @@ const siblings = current?.subcategory
     </div>
     <div class="related-reports__grid">
       {siblings.map((page) => (
-        <a class="related-reports__card" href={r(`/theleague${page.path}`)}>
+        <a class="related-reports__card" href={r(resolveDirectoryHref(page.path, 'theleague'))}>
           <svg class="related-reports__icon" width="20" height="20" aria-hidden="true">
             <use href={`${spriteUrl}#icon-${page.icon}`} />
           </svg>

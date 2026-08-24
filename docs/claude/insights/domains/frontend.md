@@ -93,7 +93,8 @@ CSS**. A fix applied to one does not propagate — grep both before calling it d
   present-day branding on historical seasons.
 - `page-directory.json` paths are inconsistently prefixed: filter with
   `pathBelongsToLeague()` **and** build hrefs with `resolveDirectoryHref()`.
-  Doing only one leaves either cross-league entries or dead double-prefixed links.
+  Doing only one leaves cross-league or dead double-prefixed links;
+  `tests/stats-hub-links.test.ts` now guards both.
 - Cross-league link leaks hide in shared components and **auth redirects**, not
   in nav-config: a correct `href` still bounces the user cross-league if the
   page's logged-out gate redirects to the other league's login. Each login page
@@ -1974,3 +1975,55 @@ sizing against a parent that can grow needs either a cap (`min(112%, 152px)`)
 or a parent that cannot grow — this took both, clipping the band's secondary
 lines instead of letting them wrap.
 
+## 2026-08-24 - The `page-directory.json` Rule Was Documented and Still Regressed — Two Weeks Later, Reported by an Owner
+
+**Context:** TheLeague's Stats & Reports hub (`src/pages/theleague/stats.astro`)
+groups directory entries by their `subcategory` field. It read
+`page-directory.json` with no league filter and built hrefs as
+`` `/theleague${page.path}` ``, so the two AFL entries tagged
+`subcategory: "league-history"` — `record-book` (`/afl-fantasy/records`) and
+`afl-owners` (`/afl-fantasy/owners`) — rendered as TheLeague cards in the
+League History section, each linking to `/theleague/afl-fantasy/...`, a route
+nothing backs. `RelatedReports.astro` reads the same list the same way and
+carried the identical latent bug (it doesn't leak today only because no page
+using it sits in a subcategory that has a foreign sibling). An owner reported
+it.
+
+**Insight:** This is the third consumer with this exact pair of bugs, and the
+2026-08-12 entry above had already written down the fix, the two helpers, and
+the "grep for `from '.*page-directory.json'`" recommendation. The
+recommendation was correct and it did not work: `stats.astro` was written
+after it, by someone (Claude) who had no reason to go looking for a rule about
+a JSON file they were merely importing. **A recommendation that depends on
+remembering to grep is not a control.** The directory has no compile-time
+signal for either half — a missing filter type-checks, and a hand-built href is
+just a template literal — so the only thing that stops the fourth occurrence is
+a test.
+
+Note also what makes this class so easy to reintroduce: `subcategory` is a
+sparse field (12 of 101 entries), and the two AFL entries that carry it are
+`record-book` and `afl-owners` — an id with no league prefix and a title that
+reads fine in either league. Nothing about the entry announces its league
+except the `path`.
+
+**Evidence:** Fixed both files with the helpers that already existed —
+`pathBelongsToLeague(p.path, 'theleague')` from `src/config/footer-config.ts`
+before grouping, and `resolveDirectoryHref(page.path, 'theleague')` from
+`src/utils/nav-utils.ts` for the href (it strips whichever prefix is present
+before re-prefixing, so a pre-prefixed entry like `/theleague/lineup` survives).
+League History went from 5 cards to the correct 3.
+
+Added `tests/stats-hub-links.test.ts`, which does the two things prose could
+not: resolves every hub card against `src/pages/` (dead link, foreign league,
+double prefix — the same route check as `tests/footer-links.test.ts`), and
+source-scans every `.astro` under `src/pages/` and `src/components/` that
+imports `page-directory.json` for a hand-built prefix
+(`/(theleague|afl-fantasy|best-ball-1)\$\{`). Verified the regex matches the
+old line and not the new one — a guard that cannot fail on the bug it was
+written for is worse than none.
+
+**Recommendation:** When an insight entry's recommendation is "remember to
+grep for X", treat that as a note that the invariant still needs a mechanical
+guard, not as the fix. This repo's own framing says it — "guard tests are the
+real memory" — and the gap between the 08-12 write-up and this regression is
+what that sentence costs when only the prose half gets done.
