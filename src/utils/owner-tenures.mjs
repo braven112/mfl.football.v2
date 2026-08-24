@@ -420,8 +420,8 @@ export const makeIconResolver = ({ league, teams, assetExists = null }) => {
  * one owner, and a silent overwrite would break it invisibly.
  */
 export const indexRegistryClaims = (registry, leagueSlug) => {
+  /** key -> [{ person, shared }] */
   const bySeason = new Map();
-  const conflicts = [];
 
   for (const person of registry?.people ?? []) {
     for (const claim of person.claims ?? []) {
@@ -430,14 +430,26 @@ export const indexRegistryClaims = (registry, leagueSlug) => {
       for (let year = claim.yearStart; year <= end; year++) {
         if (year > 3000) break; // open-ended claims are clamped by the caller's year set
         const key = `${claim.franchiseId}|${year}`;
-        const existing = bySeason.get(key);
-        if (existing && existing.id !== person.id) {
-          conflicts.push({ key, holders: [existing.id, person.id] });
-          continue;
-        }
-        bySeason.set(key, person);
+        if (!bySeason.has(key)) bySeason.set(key, []);
+        const holders = bySeason.get(key);
+        if (holders.some((h) => h.person.id === person.id)) continue;
+        holders.push({ person, shared: claim.shared === true });
       }
     }
+  }
+
+  // A season held by more than one person is legal ONLY when every claim on it
+  // says so. Co-ownership is real — some teams are run by two people — but it
+  // has to be DECLARED, because the alternative reading of the same data is a
+  // registry typo silently handing one owner's seasons to somebody else.
+  const conflicts = [];
+  for (const [key, holders] of bySeason) {
+    if (holders.length < 2) continue;
+    if (holders.every((h) => h.shared)) continue;
+    conflicts.push({
+      key,
+      holders: holders.map((h) => `${h.person.id}${h.shared ? '' : ' (not marked shared)'}`),
+    });
   }
 
   if (conflicts.length > 0) {
@@ -445,7 +457,8 @@ export const indexRegistryClaims = (registry, leagueSlug) => {
       .map((c) => `  ${leagueSlug} ${c.key} claimed by ${c.holders.join(' and ')}`)
       .join('\n');
     throw new Error(
-      `owners-registry.json: ${conflicts.length} season(s) claimed by more than one person:\n${detail}`
+      `owners-registry.json: ${conflicts.length} season(s) claimed by more than one person ` +
+        `without every claim being marked "shared": true:\n${detail}`
     );
   }
 
@@ -490,18 +503,26 @@ export const buildOwnerTenures = ({
   const registryPeople = new Map((registry?.people ?? []).map((p) => [p.id, p]));
 
   // ── Partition every played season ────────────────────────────────────────
-  // Three destinations: a registry person, the slot's current owner, or an
+  // Three destinations: a registry HOLDING, the slot's current owner, or an
   // inferred former-owner tenure. Exactly one, always.
-  const byRegistryPerson = new Map(); // personId -> rows
+  //
+  // A "holding" is the SET of people who hold a season together — usually one
+  // person, but a shared team has two. Keying on the set rather than on a
+  // single person is what keeps conservation intact: the season still belongs
+  // to exactly one holding, and the holding then emits one owner entry per
+  // member, all sharing the same tenure.
+  const byHolding = new Map(); // "id+id" -> { people: [...], rows: [...] }
   const byCurrentOwner = new Map(); // franchiseId (claimant) -> rows
   const orphanRowsBySlot = new Map(); // franchiseId (raw slot) -> rows
 
   for (const row of ledgerRows) {
     const key = `${row.franchiseId}|${row.year}`;
-    const person = claimed.get(key);
-    if (person) {
-      if (!byRegistryPerson.has(person.id)) byRegistryPerson.set(person.id, []);
-      byRegistryPerson.get(person.id).push(row);
+    const holders = claimed.get(key);
+    if (holders?.length) {
+      const people = holders.map((h) => h.person).sort((a, b) => a.id.localeCompare(b.id));
+      const holdingKey = people.map((p) => p.id).join('+');
+      if (!byHolding.has(holdingKey)) byHolding.set(holdingKey, { people, rows: [] });
+      byHolding.get(holdingKey).rows.push(row);
       continue;
     }
     if (row.attributedTo) {
@@ -574,6 +595,8 @@ export const buildOwnerTenures = ({
     currentFranchiseId,
     notes,
     crossLeague,
+    isShared = false,
+    coOwnerIds = [],
   }) => {
     const ownedSlotYears = new Set();
     for (const tenure of tenures) {
@@ -617,42 +640,59 @@ export const buildOwnerTenures = ({
       totals,
       slotSuccession: {},
       crossLeague: crossLeague ?? [],
+      /** A shared team — this tenure is run by more than one person. */
+      isShared,
+      /** Filled in below, once every owner entry exists to resolve against. */
+      coOwners: [],
+      coOwnerIds,
     };
   };
 
-  // ── Registry people ──────────────────────────────────────────────────────
-  for (const [personId, rows] of byRegistryPerson) {
-    const person = registryPeople.get(personId);
-    const tenures = buildTenuresFromRows(rows);
-    if (tenures.length === 0) continue;
-    // A person is "current" when one of their claims is open-ended on a slot
-    // whose present-day holder is that same slot.
-    const openClaim = (person.claims ?? []).find(
-      (c) => c.league === league.slug && c.yearEnd >= OPEN_ENDED_YEAR
-    );
-    const isCurrent = Boolean(openClaim);
-    const crossLeague = (person.claims ?? [])
-      .filter((c) => c.league !== league.slug)
-      .map((c) => ({
-        league: c.league,
-        franchiseId: c.franchiseId,
-        yearStart: c.yearStart,
-        yearEnd: c.yearEnd,
-      }));
-    owners.push(
-      finalizeOwner({
-        ownerId: person.id,
-        slug: person.slug,
-        previousSlugs: person.previousSlugs ?? [],
-        displayName: person.displayName ?? null,
-        source: 'registry',
-        tenures,
-        isCurrent,
-        currentFranchiseId: openClaim?.franchiseId ?? null,
-        notes: person.notes ?? null,
-        crossLeague,
-      })
-    );
+  // ── Registry holdings ────────────────────────────────────────────────────
+  // One holding may emit several owner entries — a shared team gives each
+  // co-owner their own page, both showing the same tenure and the same record.
+  for (const [, holding] of byHolding) {
+    const isShared = holding.people.length > 1;
+
+    for (const person of holding.people) {
+      // Built per person rather than shared by reference: two owner entries
+      // pointing at one tenure object would make any later mutation of one
+      // silently rewrite the other.
+      const tenures = buildTenuresFromRows(holding.rows);
+      if (tenures.length === 0) continue;
+
+      // A person is "current" when one of their claims is open-ended on a slot
+      // whose present-day holder is that same slot.
+      const openClaim = (person.claims ?? []).find(
+        (c) => c.league === league.slug && c.yearEnd >= OPEN_ENDED_YEAR
+      );
+      const isCurrent = Boolean(openClaim);
+      const crossLeague = (person.claims ?? [])
+        .filter((c) => c.league !== league.slug)
+        .map((c) => ({
+          league: c.league,
+          franchiseId: c.franchiseId,
+          yearStart: c.yearStart,
+          yearEnd: c.yearEnd,
+        }));
+      owners.push(
+        finalizeOwner({
+          ownerId: person.id,
+          slug: person.slug,
+          previousSlugs: person.previousSlugs ?? [],
+          displayName: person.displayName ?? null,
+          source: 'registry',
+          tenures,
+          isCurrent,
+          currentFranchiseId: openClaim?.franchiseId ?? null,
+          notes: person.notes ?? null,
+          crossLeague,
+          isShared,
+          // Resolved to slugs/titles in a second pass, once every owner exists.
+          coOwnerIds: holding.people.filter((p) => p.id !== person.id).map((p) => p.id),
+        })
+      );
+    }
   }
 
   // ── Inferred current owners ──────────────────────────────────────────────
@@ -769,16 +809,44 @@ export const buildOwnerTenures = ({
 
   // Predecessor / successor per slot, so a page can say "Franchise 0010 today:
   // Computer Jocks →".
+  //
+  // Succession runs over HOLDINGS, not owner entries. Two co-owners of a
+  // shared team occupy ONE position in the chain — walking owner entries
+  // instead would make each co-owner the other's predecessor, inventing a
+  // handover between two people who ran the team at the same time.
   const ownerBySlug = new Map(owners.map((o) => [o.slug, o]));
   for (const [slot, entries] of Object.entries(bySlot)) {
-    entries.forEach((entry, index) => {
-      const owner = ownerBySlug.get(entry.slug);
-      if (!owner) return;
-      owner.slotSuccession[slot] = {
-        previous: index > 0 ? entries[index - 1].slug : null,
-        next: index < entries.length - 1 ? entries[index + 1].slug : null,
-      };
+    const holdings = [];
+    for (const entry of entries) {
+      const last = holdings[holdings.length - 1];
+      if (last && last.yearStart === entry.yearStart) {
+        last.slugs.push(entry.slug);
+      } else {
+        holdings.push({ yearStart: entry.yearStart, slugs: [entry.slug] });
+      }
+    }
+    holdings.forEach((holding, index) => {
+      // A neighbouring shared holding contributes its first co-owner as the
+      // link target; the page names the rest via that owner's own coOwners.
+      const previous = index > 0 ? holdings[index - 1].slugs[0] : null;
+      const next = index < holdings.length - 1 ? holdings[index + 1].slugs[0] : null;
+      for (const slug of holding.slugs) {
+        const owner = ownerBySlug.get(slug);
+        if (!owner) continue;
+        owner.slotSuccession[slot] = { previous, next };
+      }
     });
+  }
+
+  // Resolve co-owners now that every owner entry (and its final, possibly
+  // disambiguated slug) exists.
+  const ownerById = new Map(owners.map((o) => [o.ownerId, o]));
+  for (const owner of owners) {
+    owner.coOwners = (owner.coOwnerIds ?? [])
+      .map((id) => ownerById.get(id))
+      .filter(Boolean)
+      .map((co) => ({ slug: co.slug, title: co.title, displayName: co.displayName }));
+    delete owner.coOwnerIds;
   }
 
   // Keyed exactly as buildHistoricalIdentities() returns, so the franchises
@@ -804,7 +872,16 @@ export const buildOwnerTenures = ({
       total: owners.length,
       current: owners.filter((o) => o.isCurrent).length,
       former: owners.filter((o) => !o.isCurrent).length,
-      seasons: owners.reduce((sum, o) => sum + o.tenures.reduce((s, t) => s + t.seasons.length, 0), 0),
+      // DISTINCT franchise-seasons covered. A shared team is held by two
+      // owners, so summing per-owner season counts would report more seasons
+      // than the league has actually played.
+      seasons: new Set(
+        owners.flatMap((o) =>
+          o.tenures.flatMap((t) => t.seasons.map((season) => `${t.franchiseId}|${season.year}`))
+        )
+      ).size,
+      /** Owner entries that share a team with someone else. */
+      shared: owners.filter((o) => o.isShared).length,
     },
     owners,
     bySlot: slotIndex,

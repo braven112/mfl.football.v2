@@ -142,25 +142,67 @@ describe('owners-registry.json', () => {
    * franchise-season lands on two owner pages, which breaks the conservation
    * guarantee that this whole feature rests on.
    */
-  it('has no overlapping claims, within OR across people', () => {
-    const holder = new Map<string, string>();
-    const overlaps: string[] = [];
+  it('has no overlapping claims, within OR across people, unless BOTH say shared', () => {
+    const holders = new Map<string, { id: string; shared: boolean }[]>();
 
     for (const person of registry.people) {
       for (const claim of person.claims) {
         const end = claim.yearEnd === 9999 ? 2100 : claim.yearEnd;
         for (let year = claim.yearStart; year <= end; year++) {
           const key = `${claim.league}|${claim.franchiseId}|${year}`;
-          const existing = holder.get(key);
-          if (existing) {
-            overlaps.push(`${key}: ${existing} and ${person.id}`);
-          } else {
-            holder.set(key, person.id);
-          }
+          if (!holders.has(key)) holders.set(key, []);
+          holders.get(key)!.push({ id: person.id, shared: claim.shared === true });
         }
       }
     }
+
+    // Co-ownership is real, but it has to be DECLARED on every side. A
+    // one-sided overlap is indistinguishable from a typo that hands one
+    // owner's whole tenure to somebody else.
+    const overlaps: string[] = [];
+    for (const [key, hs] of holders) {
+      if (hs.length < 2) continue;
+      if (hs.every((h) => h.shared)) continue;
+      overlaps.push(`${key}: ${hs.map((h) => `${h.id}${h.shared ? '' : ' (not shared)'}`).join(', ')}`);
+    }
     expect(overlaps.slice(0, 10)).toEqual([]);
+  });
+
+  it('never lets one person claim the same season twice', () => {
+    for (const person of registry.people) {
+      const seen = new Set<string>();
+      const dupes: string[] = [];
+      for (const claim of person.claims) {
+        const end = claim.yearEnd === 9999 ? 2100 : claim.yearEnd;
+        for (let year = claim.yearStart; year <= end; year++) {
+          const key = `${claim.league}|${claim.franchiseId}|${year}`;
+          if (seen.has(key)) dupes.push(key);
+          seen.add(key);
+        }
+      }
+      expect(dupes, `${person.id} claims a season twice`).toEqual([]);
+    }
+  });
+
+  it('marks a shared claim on every side of the share', () => {
+    // For each season claimed with shared:true, at least one OTHER person must
+    // also claim it — a lone `shared: true` is a half-finished edit.
+    const sharedSeasons = new Map<string, string[]>();
+    for (const person of registry.people) {
+      for (const claim of person.claims) {
+        if (claim.shared !== true) continue;
+        const end = claim.yearEnd === 9999 ? 2100 : claim.yearEnd;
+        for (let year = claim.yearStart; year <= end; year++) {
+          const key = `${claim.league}|${claim.franchiseId}|${year}`;
+          if (!sharedSeasons.has(key)) sharedSeasons.set(key, []);
+          sharedSeasons.get(key)!.push(person.id);
+        }
+      }
+    }
+    const lonely = [...sharedSeasons]
+      .filter(([, ids]) => ids.length < 2)
+      .map(([key, ids]) => `${key}: only ${ids[0]}`);
+    expect(lonely.slice(0, 10)).toEqual([]);
   });
 
   it('has displayName null or a non-empty trimmed string', () => {

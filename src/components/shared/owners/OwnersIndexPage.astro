@@ -118,6 +118,7 @@ const generatedLabel = Number.isNaN(generatedDate.getTime())
                     Since {owner.yearStart}
                     {owner.currentFranchiseId && ` · franchise ${owner.currentFranchiseId}`}
                   </p>
+                  {owner.isShared && <p class="shared-tag">Shared team</p>}
                 </div>
               </div>
               <dl class="stats">
@@ -425,6 +426,18 @@ const generatedLabel = Number.isNaN(generatedDate.getTime())
   .division {
     margin: 0;
     font-size: 0.75rem;
+    color: var(--content-text-muted, #777);
+  }
+  .shared-tag {
+    display: inline-block;
+    margin: 0.2rem 0 0;
+    padding: 0.02rem 0.4rem;
+    border: 1px solid var(--content-border, #ddd);
+    border-radius: 999px;
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
     color: var(--content-text-muted, #777);
   }
   .stats {

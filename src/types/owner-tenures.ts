@@ -129,6 +129,14 @@ export interface Owner {
   totals: OwnerTotals;
   slotSuccession: Record<string, SlotSuccession>;
   crossLeague: CrossLeagueClaim[];
+  /**
+   * A shared team — this tenure is run by more than one person. The record is
+   * the TEAM's and counts in full for every co-owner, which is why the file's
+   * `counts.seasons` is distinct franchise-seasons rather than a sum.
+   */
+  isShared: boolean;
+  /** The other people who share this tenure. Always mutual. */
+  coOwners: { slug: string; title: string; displayName: string | null }[];
 }
 
 export interface OwnerTenuresFile {
@@ -138,7 +146,10 @@ export interface OwnerTenuresFile {
     total: number;
     current: number;
     former: number;
+    /** DISTINCT franchise-seasons covered, not summed per owner. */
     seasons: number;
+    /** Owner entries that share a team with someone else. */
+    shared: number;
   };
   owners: Owner[];
   /** franchiseId → owner slugs, oldest first. */
@@ -158,6 +169,12 @@ export interface OwnerClaim {
   yearStart: number;
   /** 9999 = open-ended, matching the existing ownerHistory convention. */
   yearEnd: number;
+  /**
+   * This franchise is co-owned. Two people may claim the same season ONLY when
+   * BOTH claims set this — otherwise the overlap is indistinguishable from a
+   * typo handing one owner's tenure to somebody else, and the build fails.
+   */
+  shared?: boolean;
 }
 
 export interface RegistryPerson {

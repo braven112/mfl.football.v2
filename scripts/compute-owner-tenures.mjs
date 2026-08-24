@@ -73,11 +73,36 @@ function assertConservation(slug, ledgerRows, payload) {
   const ownedSet = new Set(owned);
   const problems = [];
 
+  // A season may appear under more than one owner ONLY when those owners are
+  // declared co-owners of a shared team. Anything else is a season quietly
+  // counted twice.
   if (owned.length !== ownedSet.size) {
-    const counts = new Map();
-    for (const key of owned) counts.set(key, (counts.get(key) ?? 0) + 1);
-    const dupes = [...counts].filter(([, c]) => c > 1).map(([k, c]) => `${k} (${c}x)`);
-    problems.push(`${dupes.length} season(s) under more than one owner: ${dupes.slice(0, 5).join(', ')}`);
+    const holdersOf = new Map();
+    for (const owner of payload.owners) {
+      for (const tenure of owner.tenures) {
+        for (const season of tenure.seasons) {
+          const key = `${tenure.franchiseId}|${season.year}`;
+          if (!holdersOf.has(key)) holdersOf.set(key, []);
+          holdersOf.get(key).push(owner);
+        }
+      }
+    }
+    const undeclared = [];
+    for (const [key, holders] of holdersOf) {
+      if (holders.length < 2) continue;
+      const allShared = holders.every((o) => o.isShared);
+      const mutual = holders.every((o) =>
+        holders.filter((x) => x !== o).every((x) => o.coOwners.some((c) => c.slug === x.slug))
+      );
+      if (allShared && mutual) continue;
+      undeclared.push(`${key} (${holders.map((h) => h.slug).join(', ')})`);
+    }
+    if (undeclared.length > 0) {
+      problems.push(
+        `${undeclared.length} season(s) under more than one owner without a declared shared ` +
+          `team: ${undeclared.slice(0, 5).join('; ')}`
+      );
+    }
   }
   const missing = ledgerKeys.filter((k) => !ownedSet.has(k));
   if (missing.length > 0) {
@@ -94,11 +119,20 @@ function assertConservation(slug, ledgerRows, payload) {
   const liveCounts = new Map();
   for (const owner of payload.owners) {
     if (!owner.currentFranchiseId) continue;
-    liveCounts.set(owner.currentFranchiseId, (liveCounts.get(owner.currentFranchiseId) ?? 0) + 1);
+    if (!liveCounts.has(owner.currentFranchiseId)) liveCounts.set(owner.currentFranchiseId, []);
+    liveCounts.get(owner.currentFranchiseId).push(owner);
   }
-  const contested = [...liveCounts].filter(([, c]) => c > 1).map(([slot]) => slot);
+  // A shared team legitimately has two current owners on one slot, so this
+  // counts HOLDINGS: co-owners of the same slot collapse to one.
+  const contested = [];
+  for (const [slot, holders] of liveCounts) {
+    if (holders.length < 2) continue;
+    const allShared = holders.every((o) => o.isShared);
+    if (allShared) continue;
+    contested.push(`${slot} (${holders.map((h) => h.slug).join(', ')})`);
+  }
   if (contested.length > 0) {
-    problems.push(`slot(s) with more than one current owner: ${contested.join(', ')}`);
+    problems.push(`slot(s) with more than one current owner: ${contested.join('; ')}`);
   }
 
   if (problems.length > 0) {

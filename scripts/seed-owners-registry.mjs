@@ -131,6 +131,11 @@ async function main() {
       const claims = owner.tenures.map((tenure) => ({
         league: slug,
         franchiseId: tenure.franchiseId,
+        // Inference cannot detect co-ownership — nothing in MFL's data says two
+        // people run one team. A human adds `shared: true` to BOTH sides by
+        // hand; the seeder never invents it and never strips it, because it
+        // only ever appends people it has not seen before.
+        ...(owner.isShared ? { shared: true } : {}),
         // An open-ended tenure stays open-ended so next season flows in
         // without a registry edit.
         yearStart: tenure.yearStart,

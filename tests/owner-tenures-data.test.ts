@@ -62,23 +62,69 @@ describe.each(leagues)('$league.slug owner tenures', ({ league, ownersPath, ledg
   );
   const ledgerKeys = ledger.rows.map((r: any) => `${r.franchiseId}|${r.year}`);
 
-  /** ★ The one that would have caught the original bug. */
-  it('CONSERVATION: every ledger season lands on exactly one owner', () => {
-    expect(ownedKeys.length).toBe(ledgerKeys.length);
-    expect([...ownedKeys].sort()).toEqual([...ledgerKeys].sort());
+  /**
+   * ★ The one that would have caught the original bug.
+   *
+   * Stated over SETS rather than multisets, because a shared team is
+   * legitimately held by two owners and appears twice. The duplicate case is
+   * checked separately and precisely below — the two together still mean
+   * "nothing lost, nothing silently double-counted".
+   */
+  it('CONSERVATION: every ledger season is covered, and nothing extra appears', () => {
+    expect([...new Set(ownedKeys)].sort()).toEqual([...new Set(ledgerKeys)].sort());
+    expect(new Set(ledgerKeys).size).toBe(ledgerKeys.length);
   });
 
-  it('puts no season under two owners', () => {
-    const counts = new Map<string, number>();
-    for (const key of ownedKeys) counts.set(key, (counts.get(key) ?? 0) + 1);
-    const doubled = [...counts].filter(([, c]) => c > 1);
-    expect(doubled).toEqual([]);
+  it('puts no season under two owners unless they are declared co-owners', () => {
+    const holders = new Map<string, any[]>();
+    for (const owner of owners.owners) {
+      for (const tenure of owner.tenures) {
+        for (const season of tenure.seasons) {
+          const key = `${tenure.franchiseId}|${season.year}`;
+          if (!holders.has(key)) holders.set(key, []);
+          holders.get(key)!.push(owner);
+        }
+      }
+    }
+    const undeclared: string[] = [];
+    for (const [key, hs] of holders) {
+      if (hs.length < 2) continue;
+      // Every holder must say it is shared AND name the others.
+      const ok =
+        hs.every((o) => o.isShared) &&
+        hs.every((o) =>
+          hs.filter((x) => x !== o).every((x) => o.coOwners.some((c: any) => c.slug === x.slug))
+        );
+      if (!ok) undeclared.push(`${key}: ${hs.map((h) => h.slug).join(', ')}`);
+    }
+    expect(undeclared).toEqual([]);
+  });
+
+  it('makes co-ownership mutual and never self-referential', () => {
+    const bySlug = new Map(owners.owners.map((o: any) => [o.slug, o]));
+    for (const owner of owners.owners) {
+      expect(owner.coOwners.some((c: any) => c.slug === owner.slug)).toBe(false);
+      expect(owner.isShared).toBe(owner.coOwners.length > 0);
+      for (const co of owner.coOwners) {
+        const other = bySlug.get(co.slug);
+        expect(other, `${owner.slug} names unknown co-owner ${co.slug}`).toBeTruthy();
+        expect(
+          other.coOwners.some((c: any) => c.slug === owner.slug),
+          `${co.slug} does not name ${owner.slug} back`
+        ).toBe(true);
+      }
+    }
   });
 
   it('loses no season — every ledger row is claimed', () => {
     const owned = new Set(ownedKeys);
     const missing = ledgerKeys.filter((k: string) => !owned.has(k));
     expect(missing).toEqual([]);
+  });
+
+  it('counts distinct franchise-seasons, not owner-seasons', () => {
+    expect(owners.counts.seasons).toBe(new Set(ownedKeys).size);
+    expect(owners.counts.seasons).toBe(ledgerKeys.length);
   });
 
   it('invents no season — every owned row exists in the ledger', () => {
@@ -91,17 +137,20 @@ describe.each(leagues)('$league.slug owner tenures', ({ league, ownersPath, ledg
     expect(owners.counts.total).toBe(owners.owners.length);
     expect(owners.counts.current).toBe(owners.owners.filter((o: any) => o.isCurrent).length);
     expect(owners.counts.former).toBe(owners.owners.filter((o: any) => !o.isCurrent).length);
-    expect(owners.counts.seasons).toBe(ownedKeys.length);
+    expect(owners.counts.seasons).toBe(new Set(ownedKeys).size);
   });
 
-  it('has exactly one current owner per live slot', () => {
-    const counts = new Map<string, string[]>();
+  it('has exactly one current holding per live slot', () => {
+    const counts = new Map<string, any[]>();
     for (const owner of owners.owners) {
       if (!owner.currentFranchiseId) continue;
       if (!counts.has(owner.currentFranchiseId)) counts.set(owner.currentFranchiseId, []);
-      counts.get(owner.currentFranchiseId)!.push(owner.slug);
+      counts.get(owner.currentFranchiseId)!.push(owner);
     }
-    const contested = [...counts].filter(([, slugs]) => slugs.length > 1);
+    // Two current owners on one slot is fine ONLY for a declared shared team.
+    const contested = [...counts]
+      .filter(([, os]) => os.length > 1 && !os.every((o) => o.isShared))
+      .map(([slot, os]) => `${slot}: ${os.map((o) => o.slug).join(', ')}`);
     expect(contested).toEqual([]);
 
     // And every slot that played the most recent season has one.

@@ -406,13 +406,63 @@ describe('indexRegistryClaims', () => {
 
   it('indexes each claimed season', () => {
     const index = indexRegistryClaims(registry, 'theleague');
-    expect(index.get('0010|2007')?.id).toBe('own-0006');
-    expect(index.get('0010|2010')?.id).toBe('own-0006');
+    expect(index.get('0010|2007')?.map((h: any) => h.person.id)).toEqual(['own-0006']);
+    expect(index.get('0010|2010')?.map((h: any) => h.person.id)).toEqual(['own-0006']);
     expect(index.get('0010|2011')).toBeUndefined();
   });
 
   it('ignores claims belonging to another league', () => {
     expect(indexRegistryClaims(registry, 'afl-fantasy').size).toBe(0);
+  });
+
+  it('allows two people on one season when BOTH claims say shared', () => {
+    const coOwned = {
+      version: 1,
+      people: [
+        {
+          id: 'own-0100',
+          slug: 'a',
+          claims: [
+            { league: 'theleague', franchiseId: '0014', yearStart: 2018, yearEnd: 9999, shared: true },
+          ],
+        },
+        {
+          id: 'own-0101',
+          slug: 'b',
+          claims: [
+            { league: 'theleague', franchiseId: '0014', yearStart: 2018, yearEnd: 9999, shared: true },
+          ],
+        },
+      ],
+    };
+    const index = indexRegistryClaims(coOwned, 'theleague');
+    expect(index.get('0014|2018')?.map((h: any) => h.person.id).sort()).toEqual([
+      'own-0100',
+      'own-0101',
+    ]);
+  });
+
+  it('still throws when only ONE side of a shared season declares it', () => {
+    const halfDeclared = {
+      version: 1,
+      people: [
+        {
+          id: 'own-0100',
+          slug: 'a',
+          claims: [
+            { league: 'theleague', franchiseId: '0014', yearStart: 2018, yearEnd: 2018, shared: true },
+          ],
+        },
+        {
+          id: 'own-0101',
+          slug: 'b',
+          // No `shared` — indistinguishable from a typo that hands away a
+          // whole tenure, so it must not be accepted silently.
+          claims: [{ league: 'theleague', franchiseId: '0014', yearStart: 2018, yearEnd: 2018 }],
+        },
+      ],
+    };
+    expect(() => indexRegistryClaims(halfDeclared, 'theleague')).toThrow(/not marked shared/);
   });
 
   it('throws on a doubly-claimed season rather than silently last-wins', () => {

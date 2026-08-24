@@ -113,11 +113,24 @@ const pageTitle = `${owner.title} — ${league.name} owner history`;
           <span class:list={['pill', owner.isCurrent ? 'pill--current' : 'pill--former']}>
             {owner.isCurrent ? 'Current' : 'Former owner'}
           </span>
+          {owner.isShared && <span class="pill pill--shared">Shared team</span>}
         </p>
         <h1>{owner.displayName ?? owner.title}</h1>
         <p class="hero-meta">
           {yearLabel} · {league.name} · {slotLabel}
         </p>
+        {owner.isShared && owner.coOwners.length > 0 && (
+          <p class="co-owners">
+            Co-owned with{' '}
+            {owner.coOwners.map((co, i) => (
+              <>
+                {i > 0 && (i === owner.coOwners.length - 1 ? ' and ' : ', ')}
+                <a href={r(`/owners/${co.slug}`)}>{co.displayName ?? co.title}</a>
+              </>
+            ))}
+            . The record below is the team's, and counts for both.
+          </p>
+        )}
         {!owner.displayName && (
           <p class="unnamed-note">
             We don't have this owner's name on record — the page is titled by the
@@ -290,6 +303,24 @@ const pageTitle = `${owner.title} — ${league.name} owner history`;
     background: var(--content-bg-muted, #ededed);
     color: var(--content-text-muted, #555);
   }
+  .pill--shared {
+    margin-left: 0.35rem;
+    background: transparent;
+    color: var(--content-text-muted, #666);
+    border: 1px solid var(--content-border, #d5d5d5);
+  }
+  .co-owners {
+    margin: 0.4rem 0 0;
+    font-size: 0.875rem;
+    color: var(--content-text-muted, #666);
+    max-width: 56ch;
+  }
+  .co-owners a {
+    color: var(--link-color, var(--accent));
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .co-owners a:hover { text-decoration: underline; }
   .hero-meta {
     margin: 0;
     font-size: 0.9375rem;
