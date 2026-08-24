@@ -16,6 +16,13 @@
  * that has.
  */
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import {
+  describeDivisionByeSplit,
+  divisionByeSplit,
+  scheduleConstraints,
+  upcomingConstraints,
+  TIER_LABEL,
+} from '../../utils/schedule-constraints.mjs';
 
 type MarqueeGame = {
   week: number;
@@ -54,10 +61,20 @@ type Release = {
     games: number;
     byeFreeDivisionGames: number;
     divisionGameCeiling: number;
+    /** Every division game in the season. Absent on reveals locked before Aug 2026. */
+    divisionGames?: number;
     netByeSpread: number;
     homeGames: { min: number; max: number };
     minRematchGap: number | null;
   };
+  /**
+   * How this season did against the goals in force when it was drawn — scored
+   * once at lock time, never re-derived, so a verdict cannot drift as the goal
+   * list grows. Absent on reveals locked before scoring existed.
+   */
+  goals?: { key: string; rank: number; tier: string; status: string; detail: string }[];
+  /** Goals adopted after this draw; they did not apply to it. */
+  notYetAdopted?: { key: string; since: number }[];
 };
 
 type State =
@@ -92,6 +109,18 @@ const WHY_ICONS: Record<string, string> = {
   'two of last year’s best': 'star',
 };
 const WHY_FALLBACK_ICON = 'football';
+
+/**
+ * How each verdict reads on the page. `optimised` deliberately has no pass
+ * mark — inventing a threshold for "opponent strength is balanced" would make
+ * the scorecard less honest, not more.
+ */
+const GOAL_STATUS: Record<string, string> = {
+  met: 'Met',
+  partial: 'As far as the calendar allowed',
+  blocked: 'Not achievable this year',
+  optimised: 'Optimised',
+};
 /** The reason string that marks the Throwback Week pick — see schedule-release.mjs. */
 const THROWBACK_REASON = 'throwback week — old-school uniforms';
 
@@ -253,6 +282,36 @@ export default function ScheduleRelease({
     .sort((a, b) => a - b);
   const dh = new Set(release.doubleheaderWeeks);
 
+  // How many division games actually landed on an NFL bye week, and how many
+  // of those the format forced. Reporting only the bye-FREE count invited the
+  // reading that the rest were avoidable: in the AFL every one of them is
+  // forced, and in The League none of them are — they are the price of ending
+  // the season on rivalry games. Null on reveals locked before the denominator
+  // was recorded, in which case the tile falls back to the bye-free count.
+  const byeSplit = divisionByeSplit({
+    total: release.summary.divisionGames,
+    byeFree: release.summary.byeFreeDivisionGames,
+    ceiling: release.summary.divisionGameCeiling,
+  });
+  // Scoped to the season BEING SHOWN, not to today. A reveal is a record of a
+  // draw that already happened, and a rule adopted afterwards was not one this
+  // draw had to satisfy — rendering it here would blame the 2026 schedule for
+  // missing a rule that did not exist when it was made.
+  const constraints = scheduleConstraints({ season: release.year });
+  // Stored verdicts win; the computed list is only a fallback for reveals
+  // locked before scoring existed, which render as an unscored rule list.
+  const goalByKey = new Map((release.goals ?? []).map((g) => [g.key, g]));
+  const upcoming = release.notYetAdopted?.length
+    ? release.notYetAdopted.map((n) => ({
+        ...(upcomingConstraints({ season: release.year }) as any[]).find((c) => c.key === n.key),
+        since: n.since,
+      }))
+    : upcomingConstraints({ season: release.year });
+  const tally = (release.goals ?? []).reduce<Record<string, number>>((acc, g) => {
+    acc[g.status] = (acc[g.status] ?? 0) + 1;
+    return acc;
+  }, {});
+
   // Crest + short name for one side of a marquee card. Falls back to the name
   // frozen into the reveal when a franchise has left the config since — the
   // card still reads, it just loses its crest.
@@ -381,6 +440,19 @@ export default function ScheduleRelease({
             <small> / {release.summary.divisionGameCeiling} possible</small>
           </dd>
         </div>
+        {byeSplit && (
+          <div>
+            <dt>Division games on an NFL bye</dt>
+            <dd>
+              {byeSplit.onByes}
+              <small>
+                {' '}
+                / {byeSplit.total} ({byeSplit.percent}%)
+              </small>
+            </dd>
+            <p className="rel__factNote">{describeDivisionByeSplit(byeSplit)}</p>
+          </div>
+        )}
         <div>
           <dt>Home games</dt>
           <dd>
@@ -421,6 +493,66 @@ export default function ScheduleRelease({
             </tbody>
           </table>
         </div>
+      </section>
+
+      <section>
+        <h3 className="rel__h3">The goals, ranked — and how {release.year} did</h3>
+        <p className="rel__hint">
+          The league does not control the NFL&rsquo;s bye calendar, so these are goals scored each year, not promises.
+          Each one yields to every one above it: a schedule can fall short of a goal and still be the right draw,
+          because a higher goal won or the calendar left no room.
+          {release.goals?.length ? (
+            <>
+              {' '}
+              This season: <strong>{tally.met ?? 0} met</strong>
+              {tally.partial ? `, ${tally.partial} as far as the calendar allowed` : ''}
+              {tally.blocked ? `, ${tally.blocked} not achievable` : ''}
+              {tally.optimised ? `, ${tally.optimised} optimised without a pass mark` : ''}.
+            </>
+          ) : null}
+        </p>
+        <ol className="rel__rules">
+          {constraints.map((c) => (
+            <li key={c.rank} className={`rel__rule rel__rule--${c.tier}`}>
+              <span className="rel__ruleTier">{TIER_LABEL[c.tier]}</span>
+              {/* Weight, not rank, is what decides a trade between two soft
+                  goals — so it belongs on the row rather than in a footnote.
+                  The non-negotiable ones show no number because there is no
+                  margin at which they lose. */}
+              <span className="rel__ruleWeight">
+                {c.weight == null ? 'never traded' : `weight ${c.weight}`}
+              </span>
+              <p className="rel__ruleText">{c.rule}</p>
+              {goalByKey.has(c.key) ? (
+                <p className={`rel__verdict rel__verdict--${goalByKey.get(c.key)!.status}`}>
+                  <span className="rel__verdictTag">{GOAL_STATUS[goalByKey.get(c.key)!.status] ?? goalByKey.get(c.key)!.status}</span>
+                  {goalByKey.get(c.key)!.detail}
+                </p>
+              ) : null}
+              <p className="rel__ruleWhy">{c.why}</p>
+            </li>
+          ))}
+        </ol>
+        {upcoming.length > 0 && (
+          <div className="rel__later">
+            <h4 className="rel__laterHead">
+              Adopted since this schedule was drawn
+            </h4>
+            <p className="rel__hint">
+              {upcoming.length === 1 ? 'This rule was' : 'These rules were'} added after the {release.year} draw was
+              locked, so {upcoming.length === 1 ? 'it is' : 'they are'} not part of the list above.{' '}
+              {upcoming.length === 1 ? 'It applies' : 'They apply'} from{' '}
+              {[...new Set(upcoming.map((c: any) => c.since))].sort().join(' and ')}.
+            </p>
+            <ul className="rel__laterList">
+              {upcoming.map((c: any) => (
+                <li key={c.rule}>
+                  <span className="rel__ruleTier">From {c.since}</span> {c.rule}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </section>
 
       {data.canPaste && (

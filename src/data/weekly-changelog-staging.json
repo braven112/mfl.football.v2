@@ -2,6 +2,38 @@
   "weekOf": "2026-08-24",
   "changes": [
     {
+      "date": "2026-08-24",
+      "type": "bug-fix",
+      "league": "both",
+      "impact": "user",
+      "area": "calendar",
+      "summary": "Doubleheaders were being pushed too early in the season. The maths that splits them between the start and the end subtracted the fixed Week 1 game before halving, which quietly shrank the late half — four past seasons ended up with doubleheaders stacked in Weeks 1 to 3 while bye-free weeks at the end of the season went unused."
+    },
+    {
+      "date": "2026-08-24",
+      "type": "bug-fix",
+      "league": "both",
+      "impact": "user",
+      "area": "calendar",
+      "summary": "The schedule builder could not cope with a season of a different length or a different division structure — it assumed 14 weeks and today’s divisions and gave up outright on anything else. Replaying the last fifteen years of NFL bye calendars found ten seasons it could not schedule at all. It now works the shape out from the format instead of assuming it."
+    },
+    {
+      "date": "2026-08-24",
+      "type": "bug-fix",
+      "league": "both",
+      "impact": "admin",
+      "area": "calendar",
+      "summary": "Schedule Release Day can no longer publish a schedule that missed a goal it could have hit. The lock previously checked only for structural breakage, so a season could leave a bye-free finale unused or decide a division race in September and still go live. Goals that were genuinely unachievable that year are still reported and still publish."
+    },
+    {
+      "date": "2026-08-24",
+      "type": "bug-fix",
+      "league": "both",
+      "impact": "admin",
+      "area": "calendar",
+      "summary": "The Schedule Builder now says plainly that it is a preview. It runs a shortened search so the page loads in time, while the release job runs a far longer one and produces a different schedule — and the page had been offering a copy-to-clipboard button as though the two were the same."
+    },
+    {
       "date": "2026-08-23",
       "type": "bug-fix",
       "summary": "Midwestside's franchise history had been handing Nate a season he never played. His page opened on 2010 — a 2-16 Witch City Warlocks year that belonged to the owner before him — because the record of when he took over franchise 0010 started a year early. He arrived in 2011, the year the Warlocks became the Midwestside Connection, and 2011 is where his history starts now. The 2-16 goes back to the former owner where it belongs, and his career record loses it too: 95-117 instead of 97-133, with the 2010 Jerry Jones Award off his shelf. The other thing he noticed while he was down there: his first five seasons were wearing the Warlocks' pentagram. The art for that era was a copy of the logo it replaced, so 2011 through 2015 sat under an occult crest that was never his. Those years now wear the gold-ringed Midwestside photo — the same one the team wore right through 2024, because the banner Nate hung in 2011 is the banner still hanging today.",

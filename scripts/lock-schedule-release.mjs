@@ -57,6 +57,8 @@ import { fileURLToPath } from 'node:url';
 import { LEAGUES, SHARED_APP_ORIGIN } from '../src/config/leagues-data.mjs';
 import { marqueeMatchups, priorWinRates, releaseIsReady, scheduleReleaseDate } from '../src/utils/schedule-release.mjs';
 import { rivalrySeriesByPair } from '../src/utils/rivalry-intensity.mjs';
+import { blockingFailures, goalFactsFromSeason, scoreSeasonGoals } from '../src/utils/schedule-goals.mjs';
+import { LIGHT_BYE_WEEK_MAX } from '../src/utils/schedule-builder.mjs';
 import {
   byeExposure,
   describeSeason,
@@ -158,6 +160,38 @@ for (const slug of slugs) {
 }
 
 /**
+ * Refuse to canonise a season that failed a goal it could have met.
+ *
+ * `validateSeason` catches STRUCTURAL breakage — someone playing twice in a
+ * week, wrong opponent counts — and nothing else. A season could satisfy every
+ * one of those checks and still leave a bye-free finale unused, skew its
+ * doubleheaders into September, or hand a franchise its entire division race
+ * before October, and it would lock and paste into MFL without a word.
+ *
+ * The distinction that makes this safe to enforce is `avoidable`. 2021 CANNOT
+ * put a doubleheader after Week 8 — its only bye-free weeks are 1-5 — and
+ * refusing over that would mean refusing to publish 2021 at all. Those are
+ * reported. Only failures nothing stopped us fixing block the lock.
+ */
+// A `function` declaration, not a const arrow, and deliberately so: the main
+// loop in this script runs at TOP LEVEL above here, so only a hoisted
+// declaration is in scope by the time it calls this. `node --check` passes
+// either way and so does a dry run that skips every league — the const version
+// died only when the real lock path finally reached it.
+function refuseAvoidableFailures(slug, year, goals) {
+  for (const g of goals.filter((x) => x.status === 'blocked' && x.avoidable === false)) {
+    console.log(`  [note] ${slug} ${year}: "${g.key}" was not achievable this season — ${g.detail}`);
+  }
+  const blocking = blockingFailures(goals);
+  if (!blocking.length) return;
+  throw new Error(
+    `${slug} ${year} fails ${blocking.length} goal(s) it could have met — refusing to reveal it:\n` +
+      blocking.map((g) => `     ${g.rank}. ${g.key}: ${g.detail}`).join('\n') +
+      `\n     Redraw with: node scripts/generate-schedule.mjs --league=${slug} --year=${year}`,
+  );
+}
+
+/**
  * Build a reveal record from the plan already on disk. Deliberately does NOT
  * call the planner: the point is to canonise the exact schedule that was
  * generated (and possibly already pasted), not to draw a new one.
@@ -180,6 +214,20 @@ async function releaseFromPlan(slug, y) {
   const ctx = revealContext(slug, y);
   const weeks = new Map(Object.entries(plan.weeks).map(([w, g]) => [Number(w), g]));
 
+  const scored = scoreSeasonGoals(
+    goalFactsFromSeason({
+      season: y,
+      crossConference: Boolean(SCHEDULE_POLICY[slug]?.crossConference),
+      lastWeek: plan.lastWeek,
+      described: plan.plan,
+      ceiling: plan.divisionGameCeiling,
+      doubleheaders: plan.doubleheaderWeeks,
+      lightByeWeekMax: LIGHT_BYE_WEEK_MAX,
+      problems: plan.problems ?? [],
+    }),
+  );
+  refuseAvoidableFailures(slug, y, scored.goals);
+
   return {
     league: slug,
     year: y,
@@ -194,10 +242,14 @@ async function releaseFromPlan(slug, y) {
       games: plan.plan.games,
       byeFreeDivisionGames: plan.plan.byeFreeDivisionGames,
       divisionGameCeiling: plan.divisionGameCeiling.ceiling,
+      divisionGames: plan.divisionGameCeiling.total,
       netByeSpread: plan.plan.netByeSpread,
       homeGames: plan.plan.homeGames,
       minRematchGap: plan.plan.minRematchGap,
     },
+    // Same scoring as the live path — `plan.plan` IS a describeSeason result,
+    // so both sources produce a scorecard built the same way.
+    ...scored,
   };
 }
 
@@ -265,6 +317,24 @@ async function releaseFromLive(slug, y) {
     reservedSlotsPerTeam: SCHEDULE_POLICY[slug]?.crossConference ? 1 : 0,
   });
 
+
+  const scored = scoreSeasonGoals(
+    goalFactsFromSeason({
+      season: y,
+      crossConference: Boolean(SCHEDULE_POLICY[slug]?.crossConference),
+      lastWeek: shape.lastWeek,
+      described,
+      ceiling,
+      doubleheaders,
+      lightByeWeekMax: LIGHT_BYE_WEEK_MAX,
+      problems,
+    }),
+  );
+  // A live schedule already pasted into MFL is a fact, not a proposal — but
+  // canonising one that failed an avoidable goal would make the bad draw the
+  // official record. Better to refuse and let a human decide.
+  refuseAvoidableFailures(slug, y, scored.goals);
+
   return {
     league: slug,
     year: y,
@@ -279,10 +349,15 @@ async function releaseFromLive(slug, y) {
       games: described.games,
       byeFreeDivisionGames: described.byeFreeDivisionGames,
       divisionGameCeiling: ceiling.ceiling,
+      divisionGames: ceiling.total,
       netByeSpread: described.netByeSpread,
       homeGames: described.homeGames,
       minRematchGap: described.minRematchGap,
     },
+    // Scored ONCE, here, against the goals in force when this season was
+    // drawn. Stored rather than derived on read: the reveal is a record, and a
+    // verdict that re-computes would silently change as the goal list grows.
+    ...scored,
   };
 }
 

@@ -1,5 +1,88 @@
 [
   {
+    "id": "mixed-round-schedule-builder",
+    "date": "2026-08-24",
+    "category": "league-event",
+    "icon": "calendar-2",
+    "title": "The Schedule Builder Learned What It Was Getting Wrong",
+    "summary": "A rebuild let the scheduler place each rivalry game in a week that suits those two rosters instead of forcing everyone into the same weeks. Then it produced a season with zero division games on bye weeks and a division race that ended in Week 4 — so a new rule went in, and the schedule you already have turns out to have been right.",
+    "description": [
+      "A hidden assumption ran through every schedule this league has ever generated: division games came in complete rounds, so if your rivalry game was in Week 9, so was everyone else’s. Nobody chose that. It fell out of how the builder assembled a season.",
+      "The rebuilt version does not need that. A week only has to give every franchise exactly one game — not the same KIND of game — so a week can hold two rivalry games and four ordinary ones, and each matchup can go where those two rosters are healthy.",
+      "Turned loose, it found something uncomfortable. It produced a season with ZERO division games on bye weeks and not a single starter missing from a rivalry game. It did that by cramming all 48 division games into Weeks 1 through 4 and Week 12, leaving Weeks 5 to 11, 13 and 14 without one, and the finale with none at all. Perfect on paper. A division race decided in September.",
+      "The old builder had prevented that for free, by construction, which is exactly why nobody had ever written it down as a rule. So it is written down now: every franchise plays roughly half its division games after the midpoint, ranked just below keeping them off bye weeks.",
+      "With that rule in place the arithmetic settles it. A 50/50 split needs 24 division games after Week 7, only one clean week remains that late, and it holds 16 — so at least eight must land on a bye week. Eight is exactly what the current schedule has. The schedule you are playing was already the right answer; we just proved it instead of assuming it."
+    ],
+    "excludeFromHero": true,
+    "leagues": [
+      "theleague",
+      "afl"
+    ]
+  },
+  {
+    "id": "starter-aware-schedule-optimizer",
+    "date": "2026-08-23",
+    "category": "league-event",
+    "icon": "calendar-2",
+    "title": "The Scheduler Now Knows Who Is Actually Missing",
+    "summary": "Next year’s schedule is built against your projected starting nine instead of your whole roster, and it actively hunts for weeks where neither side of a rivalry game is missing anyone. Replayed on 2026 it cuts missing starters in division games by nearly a third.",
+    "description": [
+      "The old scheduler asked “does this week have NFL byes in it?” That question is nearly useless for a 24-man roster, because a 24-man roster almost always has somebody out. Measured on The League’s 2026 rosters, only 10% of team-week combinations were fully clean, and Weeks 8, 11 and 13 had none at all. Every week looked equally bad, so nothing could be optimised.",
+      "It now asks a better question: is either of THESE two teams missing a projected starter that week? Counting the starting nine instead of the whole roster takes The League from 10% usable weeks to 41%, and it unlocks Weeks 8, 11 and 13 entirely.",
+      "The AFL is unaffected, and that is the correct answer rather than an oversight. The AFL reveals its schedule before its draft, so a roster is seven keepers — fewer players than there are starting slots, which means everyone kept is a starter. Whole-roster and starter counts agree exactly there.",
+      "On top of that the optimiser now scores rivalry games specifically: starters missing from a division game, both sides added together. The old fairness measure could not see this at all, because it only checked whether the two teams were EQUALLY hurt — two rivals both missing three starters scored perfectly, which is exactly the game nobody wants to play. Replayed on 2026 the AFL goes from 58 missing starters across its division games to 40, and from 94 to 99 rivalry games with both rosters whole.",
+      "The 2026 schedules are untouched — locked, pasted and being played. This applies to the next one. Still to come: letting different teams play their division games in different weeks, which is a deeper rebuild of how rounds are constructed."
+    ],
+    "excludeFromHero": true,
+    "leagues": [
+      "theleague",
+      "afl"
+    ]
+  },
+  {
+    "id": "light-bye-week-division-rule",
+    "date": "2026-08-23",
+    "title": "The Schedule Is Graded Now, Not Just Explained",
+    "summary": "The scheduling rules are goals now — ranked, and scored against the season they actually produced. Every release page shows how that year did on each one, because the NFL moves the bye calendar and the same goal is easy one year and impossible the next. Plus a new goal for 2027.",
+    "description": [
+      "A list of rules with no outcomes is a list of promises, and this one kept looking like a schedule breaking them. It is not. The league does not control the NFL’s bye calendar, so the same goal is trivial one year and unreachable the next — and a page that never says which is which reads as an accusation.",
+      "So they are goals, they are ranked, and every season is graded against the ones that were in force when it was drawn. Each goal now carries a verdict: MET, AS FAR AS THE CALENDAR ALLOWED, NOT ACHIEVABLE THIS YEAR, or OPTIMISED for the soft ones where inventing a pass mark would be less honest than showing the number. The AFL’s 2026 schedule scores eight met and two optimised. The League’s scores six met, two partial, two optimised — and the two partials are things the calendar decided, not things anyone got wrong.",
+      "Top of the list, and it is not close: no doubleheader lands on an NFL bye week. A doubleheader pays the bye penalty twice. In a year when no league-wide week works, the commissioner has staggered doubleheaders franchise by franchise so each team plays its two games in a week its own roster is whole — a last resort, built by hand, and still better than the alternative. Next is getting division games off bye weeks, which the AFL cannot fully do and The League can only do by giving up its all-division finish.",
+      "New for 2027: the division games that cannot dodge a bye week take the LIGHTEST bye weeks — ideally ones with only two NFL teams out instead of six. Replayed over the last five seasons it improves three of them, 2024 by more than half.",
+      "The 2026 schedules are not re-drawn — they are locked and being played. They are graded against the ten goals that existed when they were made, and the new one is listed separately as adopted afterwards. Every goal is the same in both leagues; only the outcomes differ."
+    ],
+    "category": "enhancement",
+    "icon": "calendar-2",
+    "excludeFromHero": true,
+    "leagues": [
+      "theleague",
+      "afl"
+    ],
+    "image": "schedule-goal-scorecard.webp",
+    "imageAlt": "The AFL Schedule Release page. Under the heading 'The goals, ranked — and how 2026 did', ten numbered cards each show a goal, a coloured tier stripe and label, and a verdict chip. Examples: 'No doubleheader falls on an NFL bye week' with MET — Weeks 1, 2, 12, none with an NFL bye; 'Division games take every bye-free slot the format leaves them' with MET — 36 of 120 division games (30%) fall on a bye week, every one forced by the format. Two goals are marked OPTIMISED rather than met or missed. A dashed box at the bottom reads 'Adopted since this schedule was drawn' and lists the lightest-bye-week goal as applying from 2027."
+  },
+  {
+    "id": "schedule-constraints-in-priority-order",
+    "date": "2026-08-23",
+    "category": "enhancement",
+    "icon": "calendar-2",
+    "title": "The Schedule Now Shows Its Work",
+    "summary": "Schedule Release Day used to tell you how many division games dodged the NFL byes and stop there. It now tells you how many did NOT, what percentage that is, and how many of those the format left no way to avoid — plus the ten rules the draw had to satisfy, in the order they beat each other.",
+    "description": [
+      "The old line read '84 of 84 possible division games clear of NFL byes' and it was true, which is exactly the problem. Read it quickly and it sounds like a clean sweep. It is not: 36 of the AFL’s 120 division games are played on weeks with NFL byes, and the page never said so.",
+      "Both numbers are now on the board, with the part that actually matters underneath: all 36 are FORCED. A franchise has eight bye-free game slots, the constitution spends one of them on the Week 1 cross-conference game, and it plays ten division games. The math runs out before the calendar does. Every legal way of drawing the season lands on the same 36 — we checked all 336 of them — so this is the floor, not a miss.",
+      "The League’s eight are the opposite: nothing forces them. They are the price of ending the season on rivalry games in a year when Weeks 13 and 14 both carry byes. You cannot have the all-division finish and a perfectly clean sheet, and the league picked the finish. The page now says which kind of number you are looking at instead of leaving you to guess.",
+      "Underneath sits the whole rulebook, ranked: the format at the top, then the hard rules that get a schedule rejected outright, then the things the optimiser maximises, then the preferences, then home-and-away, which is settled exactly once everything above it is fixed. Ten rules, five tiers. Nearly every 'why is my schedule like this' question turns out to be a higher rule beating a lower one, and now you can see which."
+    ],
+    "image": "afl-schedule-constraints.webp",
+    "imageAlt": "The AFL Schedule Release page. A row of fact tiles reads 204 games, doubleheaders in weeks 1, 2 and 12, 84 of 84 possible division games clear of NFL byes, and a new tile reading 36 of 120 (30%) division games on an NFL bye with the caption 'all 36 forced by the format — the floor, not a miss', then home games 8 to 9. Below it a section headed 'The rules this draw had to satisfy' lists ten numbered cards in priority order, each with a coloured left stripe and a tier label: two THE FORMAT rules, three HARD RULE, three MAXIMISED, one PREFERENCE and one SETTLED EXACTLY.",
+    "excludeFromHero": true,
+    "leagues": [
+      "theleague",
+      "afl"
+    ]
+  },
+  {
     "id": "schefter-article-links",
     "date": "2026-08-23",
     "category": "enhancement",
@@ -792,95 +875,6 @@
     "link": "/theleague/whats-new",
     "linkLabel": "See all updates",
     "icon": "wrench",
-    "excludeFromHero": true,
-    "leagues": [
-      "theleague"
-    ]
-  },
-  {
-    "id": "weekly-rollup-2026-07-27-afl",
-    "date": "2026-07-27",
-    "title": "Weekly Fixes & Polish (Jul 15-21)",
-    "summary": "12 bug fixes and style improvements across design system & theming, rosters, navigation & routing, schefter report, and more.",
-    "description": [
-      "This week's 12 bug fixes and polish improvements touched the following areas of the site:",
-      "<strong>Design System & Theming</strong> — Light mode finally got the memo about team colors. The little circular player headshots have been wearing their NFL team's colors in dark mode for a while — gradient backdrop, soft spotlight behind the face — while light mode made do with a plain gray circle and a thin colored ring, like everyone showed up to the team photo in street clothes. No more: every player chip now wears the full team-color treatment in both themes, on every surface — rosters, player pools, free agents, live scoring, the contract sheet. The ring around each chip is cut from the same cloth, mixed darker in light mode so it frames the chip against a white page, lighter in dark mode so it pops off a black one. Bo Nix glows Broncos orange at noon and at midnight. The dark-mode player-headshot fix from earlier today found four stragglers. The live-scoring scoreboard was mixing its own paint — player chips built from raw team colors with none of the brightness safeguards, so a Titan or Steeler could still vanish into a midnight circle mid-game. The Projected Free Agents table and the AFL player pool had quietly skipped team colors entirely, showing plain gray chips in dark mode while their sibling pages got the full treatment. And the Rosters page's players-by-team and players-by-college cards were hand-sewing their own player rows without the backdrop. All four now use the same spotlight-behind-the-head backdrop as everywhere else, plus a half-opacity white ring that lifts every chip off the dark page. A new build-time guard makes it structural: any future page that hand-rolls its own team-color-behind-a-player math — or renders a player chip without the backdrop — fails the build and gets pointed at the shared helper. One paintbrush, whole site. Dark mode stopped hiding half the league's rookies. The little circular player headshots wear their NFL team's colors behind them — great in theory, except a third of the league (Titans, Steelers, Bears, Seahawks, Texans...) wears colors that are basically midnight, so a guy like Cam Ward in a navy jersey on a navy chip on a dark page was just a rumor of a face. The chips now reach for each team's lighter brand color when the main one is too dark — Titans light blue, Steelers gold, Bears orange — and every chip puts a soft spotlight right where the player's head sits, brightest behind the face and deepening toward the rim. Every team's backdrop is held to a minimum brightness, enforced by a build-time guard so no future team-color tweak can sink a headshot back into the void. Light mode untouched; it was never the problem. Dark mode got a full sweep of the closet. The Admin Hub bug from earlier this week — styling against color tokens that don't actually exist, so everything silently rendered its light-mode fallback — turned out to have cousins in some forty files: white draft-queue rows on a dark draft room, lineup accordions and matchup pickers stuck with light text, homepage urgency chips glowing like flashlights, and a templates page whose headings had no color at all. Every one now runs through the real theme tokens, and a new build-time guard fails any future code that references a token that doesn't exist — so this whole class of bug is done recurring.",
-      "<strong>Rosters</strong> — The roster loading screen learned to breathe. Its rotating one-liners were flipping every 2.2 seconds — just enough time to read half a quip before the next one shoved it offstage. Each line now hangs around for a full five seconds, and the loader itself waits a beat longer before appearing so quick page loads skip the theatrics entirely. Trade block tags on the AFL Rosters page no longer vanish after a reload — flagging a player now sticks visibly, and the tag only shows on the team that actually flagged him (not his conference twin).",
-      "<strong>Navigation & Routing</strong> — The side menu's league-switch chevron now actually switches leagues. On theleague.us and afl-fantasy.com it used to strip the other league's address right out of its own link — so 'Switch to AFL' just reloaded the page you were already on. It now carries you straight to the same page on the other league's site, and the chevron shows for everyone instead of hiding unless you were logged in as a dual-league owner.",
-      "<strong>Schefter Report</strong> — The 'whisper back' links in Schefter's GroupMe posts work now. Every clean link on the league domains — afl-fantasy.com/schefter/tip, theleague.us/rosters, all of them — was quietly being stamped page-not-found behind the scenes; most pages shrugged it off and displayed anyway, but the tip page's sign-in handoff couldn't, so tapping a tip link from GroupMe dead-ended on a 404. The routing now reports what actually happened, the sign-in bounce goes through, and the link even remembers which team's desk you were headed to after you log in. Bonus: a bare /schefter now drops you at the Schefter Report feed instead of a dead end. Claude Schefter no longer ghosts you after one bad draft. When his quality gate spiked a post for being too vague, the scanner still charged it against the day's posting budget — so one scrapped rumor at 7am could silence the rumor mill until midnight, tips waiting patiently the whole time. Budgets now only count posts that actually ship. And when the feed's been quiet for a week (or a subject hasn't come up all week), the bar for 'worth posting' drops — a scrappy 3/10 rumor beats radio silence.",
-      "<strong>Draft</strong> — The AFL draft order finally admits when it's done predicting. Once the NIT wrapped, the order was set in stone — but the homepage hero and the draft page kept calling it a 'predictor,' like a weatherman forecasting yesterday. Now the page flips to the official draft order (green badge and all) the moment the playoffs and NIT finish, the offseason hero says 'View Draft Order,' and the projected framing returns automatically when the new season kicks off.",
-      "<strong>Standings</strong> — Standings finally sit still on your phone — the Premier League tables (and every other standings view) used to shove the whole page sideways, so you had to swipe left and right just to read a record. Now the columns that matter — rank, team, and record — fit the screen, the rest tuck away until you've got the width for them, and the desktop layout is untouched.",
-      "<strong>Playoffs</strong> — AFL links that point back to MFL now actually point at the AFL. A pair of long-standing wiring mistakes had AFL pages borrowing TheLeague's MFL server for outbound links: the What's Next event buttons (live scoring, options pages) and the Playoffs page's live-scoring polls and league-options link were all built against TheLeague's www49 host — so an AFL owner clicking through could land on the wrong league entirely. Both now resolve the AFL's own MFL server from the league registry, every time."
-    ],
-    "category": "bug-fix",
-    "link": "/afl-fantasy/whats-new",
-    "linkLabel": "See all updates",
-    "icon": "wrench",
-    "excludeFromHero": true,
-    "leagues": [
-      "afl"
-    ],
-    "image": "standings-mobile-no-sideways-scroll.webp",
-    "imageAlt": "The AFL Premier League standings on a phone, with rank, team, all-play record, and prize columns all fitting the screen — no sideways scrolling"
-  },
-  {
-    "id": "weekly-rollup-2026-07-27-bb1",
-    "date": "2026-07-27",
-    "title": "Weekly Fixes & Polish (Jul 15-21)",
-    "summary": "9 bug fixes and style improvements across design system & theming, rosters, navigation & routing, schefter report, and more.",
-    "description": [
-      "This week's 9 bug fixes and polish improvements touched the following areas of the site:",
-      "<strong>Design System & Theming</strong> — Light mode finally got the memo about team colors. The little circular player headshots have been wearing their NFL team's colors in dark mode for a while — gradient backdrop, soft spotlight behind the face — while light mode made do with a plain gray circle and a thin colored ring, like everyone showed up to the team photo in street clothes. No more: every player chip now wears the full team-color treatment in both themes, on every surface — rosters, player pools, free agents, live scoring, the contract sheet. The ring around each chip is cut from the same cloth, mixed darker in light mode so it frames the chip against a white page, lighter in dark mode so it pops off a black one. Bo Nix glows Broncos orange at noon and at midnight. The dark-mode player-headshot fix from earlier today found four stragglers. The live-scoring scoreboard was mixing its own paint — player chips built from raw team colors with none of the brightness safeguards, so a Titan or Steeler could still vanish into a midnight circle mid-game. The Projected Free Agents table and the AFL player pool had quietly skipped team colors entirely, showing plain gray chips in dark mode while their sibling pages got the full treatment. And the Rosters page's players-by-team and players-by-college cards were hand-sewing their own player rows without the backdrop. All four now use the same spotlight-behind-the-head backdrop as everywhere else, plus a half-opacity white ring that lifts every chip off the dark page. A new build-time guard makes it structural: any future page that hand-rolls its own team-color-behind-a-player math — or renders a player chip without the backdrop — fails the build and gets pointed at the shared helper. One paintbrush, whole site. Dark mode stopped hiding half the league's rookies. The little circular player headshots wear their NFL team's colors behind them — great in theory, except a third of the league (Titans, Steelers, Bears, Seahawks, Texans...) wears colors that are basically midnight, so a guy like Cam Ward in a navy jersey on a navy chip on a dark page was just a rumor of a face. The chips now reach for each team's lighter brand color when the main one is too dark — Titans light blue, Steelers gold, Bears orange — and every chip puts a soft spotlight right where the player's head sits, brightest behind the face and deepening toward the rim. Every team's backdrop is held to a minimum brightness, enforced by a build-time guard so no future team-color tweak can sink a headshot back into the void. Light mode untouched; it was never the problem. Dark mode got a full sweep of the closet. The Admin Hub bug from earlier this week — styling against color tokens that don't actually exist, so everything silently rendered its light-mode fallback — turned out to have cousins in some forty files: white draft-queue rows on a dark draft room, lineup accordions and matchup pickers stuck with light text, homepage urgency chips glowing like flashlights, and a templates page whose headings had no color at all. Every one now runs through the real theme tokens, and a new build-time guard fails any future code that references a token that doesn't exist — so this whole class of bug is done recurring.",
-      "<strong>Rosters</strong> — The roster loading screen learned to breathe. Its rotating one-liners were flipping every 2.2 seconds — just enough time to read half a quip before the next one shoved it offstage. Each line now hangs around for a full five seconds, and the loader itself waits a beat longer before appearing so quick page loads skip the theatrics entirely.",
-      "<strong>Navigation & Routing</strong> — The side menu's league-switch chevron now actually switches leagues. On theleague.us and afl-fantasy.com it used to strip the other league's address right out of its own link — so 'Switch to AFL' just reloaded the page you were already on. It now carries you straight to the same page on the other league's site, and the chevron shows for everyone instead of hiding unless you were logged in as a dual-league owner.",
-      "<strong>Schefter Report</strong> — The 'whisper back' links in Schefter's GroupMe posts work now. Every clean link on the league domains — afl-fantasy.com/schefter/tip, theleague.us/rosters, all of them — was quietly being stamped page-not-found behind the scenes; most pages shrugged it off and displayed anyway, but the tip page's sign-in handoff couldn't, so tapping a tip link from GroupMe dead-ended on a 404. The routing now reports what actually happened, the sign-in bounce goes through, and the link even remembers which team's desk you were headed to after you log in. Bonus: a bare /schefter now drops you at the Schefter Report feed instead of a dead end. Claude Schefter no longer ghosts you after one bad draft. When his quality gate spiked a post for being too vague, the scanner still charged it against the day's posting budget — so one scrapped rumor at 7am could silence the rumor mill until midnight, tips waiting patiently the whole time. Budgets now only count posts that actually ship. And when the feed's been quiet for a week (or a subject hasn't come up all week), the bar for 'worth posting' drops — a scrappy 3/10 rumor beats radio silence.",
-      "<strong>Standings</strong> — Standings finally sit still on your phone — the Premier League tables (and every other standings view) used to shove the whole page sideways, so you had to swipe left and right just to read a record. Now the columns that matter — rank, team, and record — fit the screen, the rest tuck away until you've got the width for them, and the desktop layout is untouched."
-    ],
-    "category": "bug-fix",
-    "link": "/best-ball-1/whats-new",
-    "linkLabel": "See all updates",
-    "icon": "wrench",
-    "excludeFromHero": true,
-    "leagues": [
-      "bb1"
-    ]
-  },
-  {
-    "id": "best-ball-league-launch",
-    "date": "2026-07-21",
-    "category": "new-page",
-    "icon": "football",
-    "title": "Introducing Best Ball #1: Draft Once, Never Set a Lineup Again",
-    "summary": "A third league joins the family — 12 teams, one 25-round startup draft run entirely on this site, and then absolutely nothing to manage. No waivers, no lineups, no trades. Draft well or wear it all season. The draft room is built, the mock lobby is open, and the clock is waiting.",
-    "description": [
-      "Some leagues are marriages. TheLeague, with its contracts and cap sheets and August cut deadlines, is a marriage. Best Ball #1 is a first date that decides your entire year: one night, 25 rounds, 300 picks, and then you put the roster down and never touch it again. Your best scorers start themselves every week. That's the whole format. That's the whole league.",
-      "The main event runs right here on the site — the same live draft room engine that powers mock drafts, promoted to the real thing. Draft board, full veteran player pool sorted by <strong>redraft</strong> ADP (this is a win-now league; nobody's drafting for 2029), a pick queue, trash-talk chat, and an on-the-clock timer with an auto-pick safety net for whoever's getting a snack when their turn comes up. When the last pick lands, the results get imported to MyFantasyLeague and the season simply… runs.",
-      "Until draft night, the practice facility is open: the mock draft lobby spins up full 25-round rehearsals against the clock, and the Import Rankings page pulls your board in from FantasyPros or FootballGuys to power your queue. The rules fit on one page — which is the point. Draft once. Watch football. Argue about it in the chat. See you on the clock."
-    ],
-    "link": "/best-ball-1",
-    "linkLabel": "Enter Best Ball #1",
-    "image": "best-ball-league-launch.webp",
-    "imageAlt": "The Best Ball #1 league home: emerald hero announcing the 2026 startup draft with cards for the Draft Room, Draft Board, and Rosters.",
-    "leagues": [
-      "bb1"
-    ]
-  },
-  {
-    "id": "cutdown-plan-full-control",
-    "date": "2026-07-21",
-    "category": "enhancement",
-    "icon": "user-times",
-    "title": "The Cut List Is Now Yours to Boss Around",
-    "summary": "Drag any player — even the machine's picks — into your cut order, unmark with one click, and watch a red dashed CUT LINE split who goes from who's safe. Oh, and the panel saves itself now, which beats its old habit of quietly forgetting your work.",
-    "description": [
-      "First, a confession from the beat desk: until this week, the Cutdown Plan panel had a split personality. You'd mark your August cuts, watch the slate update beautifully — and then saving would post your <em>original</em> list and reset everything, like a waiter who nods through your whole order and brings you what the last table had. That bug is dead. And so is the Save button, because the panel now saves itself about a second after you stop fiddling — the status line tells you the moment your cuts are locked in, and it means it.",
-      "With the trust rebuilt, the slate got handed over to you completely. Every row is draggable now, not just your own picks — grab one of the machine's <strong>LAST ADDED</strong> selections, drop it where you want it, and it becomes <strong>YOUR PICK</strong> at that exact spot. On your phone, a Mark button does the same job with a tap, and every marked player wears an × so you can change your mind without opening his player card.",
-      "Best of all: marking more players than the deadline needs no longer hides the overflow. Everybody renders in one ordered list, split by a red dashed <strong>CUT LINE</strong> — players above it go on deadline night, players below it are your insurance, safe unless the roster grows. The numbering runs straight across the line, arrows and drags cross it freely, and even when you're at the limit with nothing to cut, your order stays visible and waiting. The automation still swings the axe. You just fully control the order of the chopping block."
-    ],
-    "link": "/theleague/rosters",
-    "linkLabel": "Boss your cut list around",
-    "image": "cutdown-plan-full-control.webp",
-    "imageAlt": "The Cutdown Plan slate with three marked cuts above a red dashed cut line and a fourth marked player parked safely below it.",
     "excludeFromHero": true,
     "leagues": [
       "theleague"

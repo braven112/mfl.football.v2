@@ -449,3 +449,170 @@
   font-weight: 400;
   color: var(--color-text-secondary, #475569);
 }
+
+/* ------------------------------------------------------- rules in order */
+
+/* The caption under a fact, where the number needs a sentence to be read
+   correctly — 36 of 120 division games on byes is the format's floor, not a
+   miss, and the tile is the only place that can say so. */
+.rel__factNote {
+  margin: 0.35rem 0 0;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--color-text-secondary, #475569);
+}
+
+.rel__rules {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: rel-rule;
+}
+
+.rel__rule {
+  position: relative;
+  padding: 0.7rem 0.9rem 0.7rem 2.6rem;
+  background: var(--color-surface-2, #f8fafc);
+  border: 1px solid var(--color-border-subtle, #e2e8f0);
+  /* The tier stripe carries the precedence, so it must not be the ONLY signal:
+     the tier is also spelled out in words on every row. */
+  border-left: 3px solid var(--color-border-subtle, #e2e8f0);
+  border-radius: 10px;
+}
+
+.rel__rule::before {
+  counter-increment: rel-rule;
+  content: counter(rel-rule);
+  position: absolute;
+  left: 0.9rem;
+  top: 0.72rem;
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-disabled, #94a3b8);
+}
+
+.rel__rule--format {
+  border-left-color: var(--color-text-primary, #0f172a);
+}
+
+.rel__rule--hard {
+  border-left-color: var(--color-error, #dc2626);
+}
+
+/* Blue, not the green `--color-accent` resolves to — `--color-success` already
+   owns green here and the two tiers must not read as the same stripe. */
+.rel__rule--maximise {
+  border-left-color: var(--color-info, #3b82f6);
+}
+
+.rel__rule--preference {
+  border-left-color: var(--color-warning, #d97706);
+}
+
+.rel__rule--cosmetic {
+  border-left-color: var(--color-success, #16a34a);
+}
+
+.rel__ruleTier {
+  display: inline-block;
+  font-size: 0.625rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary, #475569);
+}
+
+.rel__ruleText {
+  margin: 0.15rem 0 0;
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  color: var(--color-text-primary, #0f172a);
+}
+
+.rel__ruleWhy {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--color-text-secondary, #475569);
+}
+
+/* Rules adopted after the season on screen. Visually subordinate to the
+   numbered list — they are context for what this draw did NOT have to do, not
+   part of what it did. */
+.rel__later {
+  margin-top: 1rem;
+  padding: 0.85rem 0.9rem;
+  background: var(--color-surface-2, #f8fafc);
+  border: 1px dashed var(--color-border-subtle, #e2e8f0);
+  border-radius: 10px;
+}
+
+.rel__laterHead {
+  margin: 0 0 0.15rem;
+  font-size: 0.8125rem;
+  color: var(--color-text-primary, #0f172a);
+}
+
+.rel__laterList {
+  margin: 0.5rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--color-text-secondary, #475569);
+}
+
+.rel__laterList li + li {
+  margin-top: 0.35rem;
+}
+
+/* Per-goal verdict. Colour is a reinforcement, never the message — the status
+   is spelled out in words on every row, so a monochrome or colour-blind read
+   loses nothing. */
+.rel__verdict {
+  margin: 0.4rem 0 0;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  border-radius: 6px;
+  background: var(--color-surface-3, #eef2f7);
+  color: var(--color-text-primary, #0f172a);
+}
+
+.rel__verdictTag {
+  display: inline-block;
+  margin-right: 0.4rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.rel__verdict--met .rel__verdictTag {
+  color: var(--color-success, #16a34a);
+}
+
+.rel__verdict--partial .rel__verdictTag {
+  color: var(--color-warning, #d97706);
+}
+
+.rel__verdict--blocked .rel__verdictTag {
+  color: var(--color-error, #dc2626);
+}
+
+.rel__verdict--optimised .rel__verdictTag {
+  color: var(--color-text-secondary, #475569);
+}
+
+/* Weight sits beside the tier label: the tier says whether a goal can be
+   traded at all, the weight says what it costs when it is. */
+.rel__ruleWeight {
+  display: inline-block;
+  margin-left: 0.5rem;
+  font-size: 0.625rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-disabled, #94a3b8);
+}

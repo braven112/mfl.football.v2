@@ -47,6 +47,8 @@
  * then home/away balance.
  */
 
+import { goalWeight } from './schedule-constraints.mjs';
+
 /* --------------------------------------------------------------- rounds */
 
 /**
@@ -142,6 +144,35 @@ export const mirrorRound = (games) => games.map((g) => ({ away: g.home, home: g.
 /* ------------------------------------------------------------ week plan */
 
 /**
+ * Weeks a division pair must be kept apart. The league's rule is "never twice
+ * inside three weeks", so 4 is the smallest gap that satisfies it.
+ */
+export const MIN_REMATCH_GAP = 4;
+
+/**
+ * The gap that is never traded, however much a schedule gains by it. The league
+ * demoted "no rematch inside three weeks" from a hard rule to a goal ranked
+ * below getting division games off byes — which permits encroaching on it, not
+ * abolishing it. Left unbounded, the colouring search promptly traded rivals
+ * down to a two-week gap to buy bye-week improvements.
+ */
+export const HARD_MIN_REMATCH_GAP = 3;
+
+/**
+ * What counts as a LIGHT bye week — the ones a forced bye-week division round
+ * should be steered onto.
+ *
+ * Two is not arbitrary: the NFL never schedules a bye week with fewer than two
+ * teams out, so this is the floor, and a two-team week means at most a couple
+ * of rosters in a 24-team league lose a starter. It is a TARGET, not a
+ * guarantee — some seasons have fewer light weeks than the format has forced
+ * rounds, and the rematch guarantee can put a light week out of reach. The
+ * planner always takes the lightest weeks its block can legally reach;
+ * `describeForcedByeWeeks` reports whether that cleared the bar.
+ */
+export const LIGHT_BYE_WEEK_MAX = 2;
+
+/**
  * Build the week plan for a season — DERIVED, never hard-coded.
  *
  * An earlier version of this file pinned the doubleheaders to Weeks 1, 2 and
@@ -179,6 +210,13 @@ export const buildWeekPlan = ({
   divisionSize,
   conferenceSize,
   crossWeek = null,
+  /**
+   * Weeks a division pair must be kept apart. 4 satisfies the league's "never
+   * twice inside three weeks" rule with nothing to spare, and it bounds how
+   * far back the second leg's window may be widened in search of a light bye
+   * week — see the block below.
+   */
+  minRematchGap = MIN_REMATCH_GAP,
 }) => {
   const dh = new Set(doubleheaders);
   const slots = [];
@@ -219,22 +257,60 @@ export const buildWeekPlan = ({
   for (let week = 1; week <= lastWeek && countSlots(earlyWeeks) < legRounds + crossRounds; week += 1) {
     earlyWeeks.push(week);
   }
+  // Slots available to the second leg if the first block ends at `week` — it
+  // cannot start until `minRematchGap` weeks later.
+  const lateCapacityAfter = (week) => {
+    let n = 0;
+    for (let w = week + minRematchGap; w <= lastWeek; w += 1) n += dh.has(w) ? 2 : 1;
+    return n;
+  };
   while (
     earlyWeeks.at(-1) + 1 <= lastWeek &&
     byes(earlyWeeks.at(-1) + 1) === 0 &&
-    countSlots([...earlyWeeks, earlyWeeks.at(-1) + 1]) < slots.length - legRounds
+    countSlots([...earlyWeeks, earlyWeeks.at(-1) + 1]) < slots.length - legRounds &&
+    // Never extend so far that the second leg cannot fit behind the rematch
+    // gap. The old bound was slot arithmetic alone, which is fine while byes
+    // stop the extension early — every real calendar has byes by Week 6. Feed
+    // it a season with NO byes and the extension eats the schedule: the first
+    // leg runs to Week 12, the second has nowhere legal to go, and the planner
+    // throws on the easiest calendar it will ever see.
+    lateCapacityAfter(earlyWeeks.at(-1) + 1) >= legRounds
   ) {
     earlyWeeks.push(earlyWeeks.at(-1) + 1);
   }
 
-  // Shortest suffix that holds the second leg, grown by one week when it fits
-  // exactly and carries byes, so an interdivision round can take the worst.
+  // Shortest suffix that holds the second leg, then WIDENED backwards to every
+  // week the rematch guarantee still allows.
+  //
+  // The widening is the whole reason a forced bye-week division round can pick
+  // which bye week it lands on. A shortest-suffix block only reaches the last
+  // few weeks of the season, so in 2026 the AFL's three unavoidable ones were
+  // stuck with Weeks 10, 13 and 14 — ten NFL teams out — while Week 9, with
+  // two out, sat one week beyond the block's edge and could not be considered.
+  // Widening puts every reachable week in front of `rankSlots`, which already
+  // sorts by bye count, so the lightest ones win. Nothing is forced INTO the
+  // wider window: the `preferLate` tie-break means an equal-bye earlier week
+  // loses to the later one, so the block only actually moves when moving buys
+  // a lighter week.
+  //
+  // The floor is the binding constraint, not a formality. A pair's rematch gap
+  // is (its leg-2 week − its leg-1 week), and the worst case pairs the LAST
+  // first-leg week with the FIRST second-leg week — so the earliest week the
+  // window may reach is `minRematchGap` past the end of the early block, and
+  // every draw is then safe by construction rather than by luck. `scoreSeason`
+  // has no rematch term to steer with, so a window one week too wide would
+  // produce a Week 4 / Week 5 rivalry rematch, score it as good, and be caught
+  // only by tests/schedule-optimization.test.ts.
   const lateWeeks = [];
   for (let week = lastWeek; week >= 1 && countSlots(lateWeeks) < legRounds; week -= 1) lateWeeks.unshift(week);
-  const first = lateWeeks[0];
-  if (countSlots(lateWeeks) === legRounds && lateWeeks.some((w) => byes(w) > 0) && first - 1 > earlyWeeks.at(-1)) {
-    lateWeeks.unshift(first - 1);
+  const earliestLate = earlyWeeks.at(-1) + minRematchGap;
+  if (lateWeeks[0] < earliestLate) {
+    throw new Error(
+      `the second division leg needs Week ${lateWeeks[0]}, only ${lateWeeks[0] - earlyWeeks.at(-1)} week(s) after ` +
+        `the first leg ends in Week ${earlyWeeks.at(-1)} — rivals would meet twice inside ${minRematchGap} weeks`,
+    );
   }
+  while (lateWeeks[0] - 1 >= earliestLate) lateWeeks.unshift(lateWeeks[0] - 1);
   if (lateWeeks[0] <= earlyWeeks.at(-1)) {
     throw new Error('early and late division blocks overlap — the season is too short for this format');
   }
@@ -358,16 +434,34 @@ export const scoreSeason = (weeks, ctx, weights = {}) => {
   const w = {
     byeDifferential: 1.0,
     netByeAdvantage: 0.6,
+    // Scaled from the published goal weights rather than tuned by hand, so the
+    // optimiser cannot rank this differently than the page says it is ranked:
+    // the light-bye-week goal outweighs bye luck 70 to 45, and byeDifferential
+    // is bye luck's term at 1.0. The other four are legacy tuning, kept because
+    // re-deriving them would change every existing draw for no stated reason;
+    // a test pins that their ORDER still matches the goal weights.
+    divisionByeCost: goalWeight('light-bye-weeks') / goalWeight('bye-luck'),
     doubleheaderStrength: 0.25,
     lateSeasonStrength: 0.25,
     homeAwayBalance: 0.15,
     ...weights,
   };
-  const { byesFor, rating, doubleheaderWeeks, lateWeeks, franchiseIds, gamesPerTeam } = ctx;
+  const { byesFor, rating, doubleheaderWeeks, lateWeeks, franchiseIds, gamesPerTeam, divisionOf } = ctx;
   const dh = new Set(doubleheaderWeeks);
   const late = new Set(lateWeeks);
 
   let byeDiff = 0;
+  // Starters missing from RIVALRY games specifically, summed over both sides.
+  //
+  // This is the term that makes the schedule choose a week for a particular
+  // matchup rather than for the league as a whole. byeDifferential only cares
+  // that the two sides are EQUALLY hurt — two division rivals both missing
+  // three starters scores perfectly on it, which is exactly the game nobody
+  // wants to play. Counting the absolute total, for division games only, is
+  // what expresses "put rivals against each other in weeks neither is missing
+  // anyone".
+  let divisionByeTotal = 0;
+  let divisionGames = 0;
   const net = {};
   const dhStrength = {};
   const lateStrength = {};
@@ -384,6 +478,10 @@ export const scoreSeason = (weeks, ctx, weights = {}) => {
       const ba = byesFor(g.away, week);
       const bb = byesFor(g.home, week);
       byeDiff += Math.abs(ba - bb);
+      if (divisionOf && divisionOf[g.away] === divisionOf[g.home]) {
+        divisionGames += 1;
+        divisionByeTotal += ba + bb;
+      }
       net[g.away] += bb - ba;
       net[g.home] += ba - bb;
       homeCount[g.home] += 1;
@@ -402,6 +500,7 @@ export const scoreSeason = (weeks, ctx, weights = {}) => {
   const terms = {
     // Per game, so leagues of different sizes compare.
     byeDifferential: byeDiff / ((gamesPerTeam * franchiseIds.length) / 2),
+    divisionByeCost: divisionGames ? divisionByeTotal / divisionGames : 0,
     netByeAdvantage: Math.sqrt(mean(franchiseIds.map((id) => net[id] ** 2))),
     doubleheaderStrength: Math.sqrt(variance(franchiseIds.map((id) => dhStrength[id]))),
     lateSeasonStrength: Math.sqrt(variance(franchiseIds.map((id) => lateStrength[id]))),
@@ -427,11 +526,37 @@ export const scoreSeason = (weeks, ctx, weights = {}) => {
  * the best possible is 8/9, and this reaches it. Doing it as a post-pass
  * instead of inside the annealer keeps each search iteration cheap.
  */
+/**
+ * Even out how often each franchise hosts, by flipping which side is home.
+ *
+ * ONLY GAMES BETWEEN PAIRS THAT MEET ONCE ARE ELIGIBLE. A pair that meets twice
+ * plays home-and-home — one meeting at each venue — and flipping a single one
+ * of them puts both at the same ground. Flipping BOTH just swaps which meeting
+ * is which and changes no home count at all, so a repeat pair can never help
+ * this function and can only be damaged by it.
+ *
+ * This was latent rather than live, and the chain that hid it is worth
+ * knowing: Kempe swaps move whole games between slots without touching sides,
+ * so the colouring preserves the seed's per-franchise home counts exactly; the
+ * seed is already balanced; so this function finds nothing to improve and
+ * returns without flipping anything. Thirty backtested seasons came out clean
+ * for that reason alone. Change any link — a move that flips sides, an
+ * imbalanced seed, a different `gamesPerTeam` — and it would have started
+ * quietly scheduling both halves of a rivalry at the same venue.
+ */
 export const balanceHomeAway = (weeks, franchiseIds, gamesPerTeam) => {
   const target = gamesPerTeam / 2;
   const home = {};
   for (const id of franchiseIds) home[id] = 0;
-  for (const games of weeks.values()) for (const g of games) home[g.home] += 1;
+  const meetings = {};
+  for (const games of weeks.values()) {
+    for (const g of games) {
+      home[g.home] += 1;
+      const key = [g.away, g.home].sort().join('-');
+      meetings[key] = (meetings[key] ?? 0) + 1;
+    }
+  }
+  const playsOnce = (g) => meetings[[g.away, g.home].sort().join('-')] === 1;
 
   const cost = (id) => (home[id] - target) ** 2;
   for (let pass = 0; pass < 50; pass += 1) {
@@ -439,6 +564,7 @@ export const balanceHomeAway = (weeks, franchiseIds, gamesPerTeam) => {
     for (const games of weeks.values()) {
       for (let i = 0; i < games.length; i += 1) {
         const g = games[i];
+        if (!playsOnce(g)) continue;
         const before = cost(g.home) + cost(g.away);
         home[g.home] -= 1;
         home[g.away] += 1;

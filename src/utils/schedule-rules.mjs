@@ -40,10 +40,27 @@ export const asArray = (v) => (Array.isArray(v) ? v : v == null ? [] : [v]);
 /* ------------------------------------------------------------------ byes */
 
 /** `{ week: number of NFL teams on bye }` for a season of data/nfl/bye-weeks.json. */
+/**
+ * Every bye week an NFL team has, as an array.
+ *
+ * The stored shape is `{ TEAM: week }` because the NFL has always given each
+ * team exactly one bye. It has been openly discussing a second one alongside an
+ * 18-game season, and the failure mode if that lands is silent: a
+ * `{ TEAM: [6, 12] }` payload makes `counts[week]` key off the string "6,12",
+ * so every week reads as bye-free and the planner cheerfully schedules
+ * doubleheaders into byes. Accepting both shapes costs one line and removes a
+ * whole class of wrong-but-quiet output.
+ */
+export const byeWeeksOf = (byesForSeason, team) => {
+  const value = byesForSeason?.[team];
+  if (value == null) return [];
+  return (Array.isArray(value) ? value : [value]).map(Number).filter((w) => Number.isInteger(w) && w > 0);
+};
+
 export const byeCountsByWeek = (byesForSeason) => {
   const counts = {};
-  for (const week of Object.values(byesForSeason ?? {})) {
-    counts[week] = (counts[week] ?? 0) + 1;
+  for (const team of Object.keys(byesForSeason ?? {})) {
+    for (const week of byeWeeksOf(byesForSeason, team)) counts[week] = (counts[week] ?? 0) + 1;
   }
   return counts;
 };
@@ -184,21 +201,86 @@ export const decomposeSeasonIntoRounds = (gamesByWeek, { divisionOf, conferenceO
  * that cannot fill its end window (2026 offers exactly one clean late week)
  * gets an uneven split rather than a doubleheader on a bye.
  */
-export const chooseDoubleheaderWeeks = ({ count, byeFree, startWindow, endWindow }) => {
+export const chooseDoubleheaderWeeks = ({
+  count,
+  byeFree,
+  startWindow,
+  endWindow,
+  required = [],
+  byeCounts = {},
+  lastWeek = 0,
+}) => {
   const clean = new Set(byeFree);
+  // A week the FORMAT forces to hold two rounds — the AFL's Week 1, which the
+  // constitution pins the cross-conference round to while a division round
+  // shares the slot. It is taken whether or not it is bye-free, because the
+  // format outranks the no-doubleheader-on-a-bye goal: 2017 had a Week 1 bye
+  // and the planner threw rather than scheduling the season at all. Taking it
+  // and letting the scorecard report the goal as failed is the honest outcome;
+  // refusing to produce a season is not.
+  const forced = required.filter((w) => Number.isInteger(w));
   const early = startWindow.filter((w) => clean.has(w)).sort((a, b) => a - b);
+  // DESCENDING, so the LATEST clean week in the window is taken first. That is
+  // the finale-doubleheader goal and it is the whole of its implementation:
+  // the league wants the season to finish on a double rather than taper off.
+  // It read as an arbitrary sort order for years and is exactly the kind of
+  // line someone tidies into ascending without knowing what it does.
   const late = endWindow.filter((w) => clean.has(w)).sort((a, b) => b - a);
 
-  const wantLate = Math.floor(count / 2);
-  const takeLate = late.slice(0, Math.min(wantLate, late.length));
-  const takeEarly = early.slice(0, count - takeLate.length);
-  const picked = [...takeEarly, ...takeLate];
+  const remaining = Math.max(0, count - forced.length);
+  // The late share comes from the FULL count, discounting only forced weeks
+  // that are themselves late.
+  //
+  // It used to be `floor(remaining / 2)`, which subtracted the forced week
+  // before halving. The forced week is Week 1 — always early — so subtracting
+  // it shrank the pool the LATE share was drawn from and skewed the whole
+  // split early: AFL 2011 got 2/0 with two clean end weeks going spare, and
+  // 2015 and 2017 got 3/1 where 2/2 was available. Four seasons, and the
+  // league's stated preference is doubleheaders at the start AND the end, as
+  // evenly as the calendar allows.
+  const forcedLate = forced.filter((w) => endWindow.includes(w)).length;
+  const wantLate = Math.max(0, Math.floor(count / 2) - forcedLate);
+  // Capped by `remaining` as well as by `wantLate`: the late share is drawn
+  // from what is LEFT after the format's forced weeks, and `wantLate` comes
+  // from `count` alone. Without the cap, 2 doubleheaders with 2 forced weeks
+  // returned 3.
+  const takeLate = late
+    .filter((w) => !forced.includes(w))
+    .slice(0, Math.min(wantLate, late.length, remaining));
+  // max(0, ...) is load-bearing: a NEGATIVE end makes slice count back from
+  // the end of the array rather than return nothing, so it would hand back
+  // all-but-n early weeks and over-pick. It goes negative whenever the format
+  // forces more weeks than the early share has room for -- today `required`
+  // holds at most the AFL's Week 1, but the format is an input that changes,
+  // and asking for 2 doubleheaders once returned 5.
+  const takeEarly = early
+    .filter((w) => !forced.includes(w))
+    .slice(0, Math.max(0, remaining - takeLate.length));
+  const picked = [...forced, ...takeEarly, ...takeLate];
 
   if (picked.length < count) {
     // Not enough clean weeks in either window; widen to any clean week.
     for (const w of byeFree) {
       if (picked.length >= count) break;
       if (!picked.includes(w)) picked.push(w);
+    }
+  }
+  // Still short: the season has FEWER bye-free weeks than the format needs
+  // doubleheaders, so one has to land on a bye. Replaying 2013-2020 found this
+  // is not hypothetical — those seasons ran 13 weeks against an 18-round
+  // format, needing five doubleheaders where only four weeks were bye-free.
+  // The planner used to throw and produce no season at all.
+  //
+  // The format outranks the no-doubleheader-on-a-bye goal, so take the
+  // LIGHTEST bye weeks going and let the scorecard report the goal as failed.
+  // A season with one doubleheader on a two-team bye week beats no season.
+  if (picked.length < count && lastWeek) {
+    const rest = [];
+    for (let w = 1; w <= lastWeek; w += 1) if (!picked.includes(w)) rest.push(w);
+    rest.sort((a, b) => (byeCounts[a] ?? 0) - (byeCounts[b] ?? 0) || a - b);
+    for (const w of rest) {
+      if (picked.length >= count) break;
+      picked.push(w);
     }
   }
   return picked.sort((a, b) => a - b);

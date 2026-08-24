@@ -13,7 +13,7 @@ import {
   regularSeasonGames,
 } from '../src/utils/schedule-rules.mjs';
 // @ts-expect-error - .mjs helper shared with the node scripts (see its header)
-import { buildWeekPlan } from '../src/utils/schedule-builder.mjs';
+import { buildWeekPlan, HARD_MIN_REMATCH_GAP, MIN_REMATCH_GAP } from '../src/utils/schedule-builder.mjs';
 
 /**
  * The annual schedule audit.
@@ -300,7 +300,12 @@ for (const league of LEAGUES) {
       ).toBeGreaterThanOrEqual(ceiling.ceiling - allowance);
     });
 
-    it(`${year}: division rivals never meet twice inside three weeks`, () => {
+    // The league demoted this from a hard rule to a goal ranked BELOW getting
+    // division games off bye weeks, so a schedule may legitimately encroach on
+    // the three-week target to buy a better one. What is never traded is the
+    // absolute floor: rivals do not play a fortnight apart. The colouring
+    // search, left unbounded, promptly went to a two-week gap.
+    it(`${year}: division rivals never meet closer than the hard floor`, () => {
       const met: Record<string, number[]> = {};
       for (const [week, games] of season.games) {
         for (const g of games as any[]) {
@@ -308,10 +313,23 @@ for (const league of LEAGUES) {
           (met[pairKey(g.away, g.home)] ??= []).push(week);
         }
       }
-      const tooClose = Object.entries(met)
-        .filter(([, weeks]) => weeks.length > 1 && Math.abs(weeks[1] - weeks[0]) <= 3)
+      const repeats = Object.entries(met).filter(([, weeks]) => weeks.length > 1);
+      const belowFloor = repeats
+        .filter(([, weeks]) => Math.abs(weeks[1] - weeks[0]) < HARD_MIN_REMATCH_GAP)
         .map(([k, weeks]) => `${k} in weeks ${weeks.join(' and ')}`);
-      expect(tooClose).toEqual([]);
+      expect(belowFloor).toEqual([]);
+
+      // Reported, not asserted: encroaching on the four-week target is a
+      // sanctioned trade, so failing the build on it would contradict the
+      // ranking. Keeping it visible stops it drifting unnoticed.
+      const belowTarget = repeats.filter(([, weeks]) => Math.abs(weeks[1] - weeks[0]) < MIN_REMATCH_GAP);
+      if (belowTarget.length) {
+        console.log(
+          `  [${league.slug} ${year}] ${belowTarget.length} of ${repeats.length} rivalries inside the ` +
+            `${MIN_REMATCH_GAP}-week target (floor is ${HARD_MIN_REMATCH_GAP}): ` +
+            belowTarget.map(([k, w]) => `${k} wk ${w.join('/')}`).join(', '),
+        );
+      }
     });
 
     if (league.crossConference) {

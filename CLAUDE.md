@@ -270,11 +270,16 @@ admin-only/unreleased features.
   hero. The gate is the `excludeFromHero: true` flag, honored by
   `resolveHeroState` (`src/utils/hero-resolver.ts`). `/update-whats-new` (and
   therefore `/live`) prompts for this — don't decide silently.
-- Smaller fixes go to `src/data/weekly-changelog-staging.json` (`date`,
-  `type`: `bug-fix | style-tweak`, user-facing `summary`, `impact`: `user |
-  admin`, `area`).
+- Smaller fixes go to the **`changes`** array of
+  `src/data/weekly-changelog-staging.json` (`date`, `type`: `bug-fix |
+  style-tweak`, user-facing `summary`, `impact`: `user | admin`, `area`,
+  `league`: `theleague | afl | both`). `league` is mandatory — the rollup
+  builds one entry per league from it and exits 1 on an untagged change; and
+  `changes` is the only array it reads, so an entry parked under any other key
+  is silently dropped when staging resets.
   `scripts/weekly-changelog-rollup.mjs` compiles them Mondays 8pm PT and needs
-  a top-level `featuredImage`/`featuredImageAlt` set before it runs.
+  a top-level `featuredImage`/`featuredImageAlt` set before it runs. It has no
+  dry-run mode — it always publishes and empties the queue.
 
 ## Merge conflicts — always rebase, resolve autonomously
 

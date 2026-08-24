@@ -9,6 +9,7 @@
  * CLAUDE.md about /cr).
  */
 import SchedulePlanner from './SchedulePlanner.tsx';
+import { scheduleConstraints, TIER_LABEL } from '../../utils/schedule-constraints.mjs';
 import '../../styles/schedule-planner.css';
 
 interface Props {
@@ -19,6 +20,11 @@ interface Props {
   seasons: number[];
 }
 const { leagueSlug, leagueName, defaultYear, seasons } = Astro.props;
+// No `season` here, deliberately. The builder DRAWS a schedule, so it applies
+// every rule the league has adopted, whichever year it is pointed at — the
+// planner is always current. Only the reveal page passes a season, because it
+// DISPLAYS a draw that already happened and must not backdate a rule onto it.
+const constraints = scheduleConstraints();
 ---
 
 <section class="schedplan">
@@ -40,14 +46,18 @@ const { leagueSlug, leagueName, defaultYear, seasons } = Astro.props;
   />
 
   <footer class="schedplan__foot">
-    <h2>What it enforces</h2>
-    <ul>
-      <li>No doubleheader on an NFL bye week &mdash; the bye calendar moves every year, so the week is re-derived, never copied forward.</li>
-      <li>Doubleheaders split as evenly as the bye-free weeks allow, between the start and the end of the season.</li>
-      <li>Division games take every bye-free slot available to them, reported against the ceiling the format allows rather than against zero.</li>
-      <li>Division rivals never meet twice inside three weeks.</li>
-      <li>Division opponents twice, everyone else once, and one game per franchise per week.</li>
-    </ul>
+    <h2>What it enforces, in priority order</h2>
+    {/* Same ordered list the reveal page and Schefter's column read, so the
+        three cannot drift into three different accounts of what outranks
+        what. The order is the order the planner applies. */}
+    <ol class="schedplan__rules">
+      {constraints.map((c) => (
+        <li>
+          <span class="schedplan__tier">{TIER_LABEL[c.tier]}</span>
+          {c.rule}
+        </li>
+      ))}
+    </ol>
     <p class="schedplan__stale">
       New season? Refresh the NFL bye calendar first: <code>node scripts/fetch-nfl-bye-weeks.mjs</code>. Without it
       this page has nothing to schedule against and will say so.
@@ -92,12 +102,27 @@ const { leagueSlug, leagueName, defaultYear, seasons } = Astro.props;
     color: var(--color-text-primary, #0f172a);
   }
 
-  .schedplan__foot ul {
+  .schedplan__rules {
     margin: 0;
-    padding-left: 1.15rem;
+    padding-left: 1.35rem;
     font-size: 0.875rem;
     line-height: 1.6;
     color: var(--color-text-secondary, #475569);
+  }
+
+  .schedplan__rules li {
+    margin-bottom: 0.3rem;
+  }
+
+  /* The tier in words, not only in position — the number says WHERE a rule
+     sits, this says what happens when it loses. */
+  .schedplan__tier {
+    display: inline-block;
+    margin-right: 0.4rem;
+    font-size: 0.625rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-text-disabled, #94a3b8);
   }
 
   .schedplan__stale {

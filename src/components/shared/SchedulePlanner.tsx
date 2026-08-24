@@ -52,6 +52,11 @@ type Plan = {
     pairs: { away: string; home: string; protectedRivalry: boolean }[];
   } | null;
   divisionGameCeiling: { total: number; ceiling: number; forcedOntoByeWeeks: number };
+  /**
+   * Present when the plan came from the API, which cannot afford the full
+   * colouring search inside a request. Absent means a full draw.
+   */
+  preview?: { coloringIterations: number; full: boolean };
   plan: SeasonSummary;
   currentPlan: SeasonSummary | null;
   problems: string[];
@@ -179,6 +184,16 @@ export default function SchedulePlanner({
             <p className="sched__ok">
               Passes every structural check — {plan.plan.games} games, {plan.plan.gamesPerFranchise.join('/')} per
               franchise, doubleheaders in {plan.doubleheaderWeeks.join(', ')} (all bye-free).
+            </p>
+          )}
+
+          {plan.preview && !plan.preview.full && (
+            <p className="sched__preview">
+              <strong>This is a preview, not the schedule that will be released.</strong> This page runs a short
+              search ({plan.preview.coloringIterations.toLocaleString()} refinement steps) so the request finishes;
+              the release job runs roughly twenty times as many and will produce a different — usually better —
+              draw. Use this to see what the calendar allows. The authoritative schedule to paste is the one on
+              Schedule Release Day, after the reveal locks it.
             </p>
           )}
 

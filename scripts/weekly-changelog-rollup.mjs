@@ -226,6 +226,20 @@ const enforceWhatsNewCap = (entries) => {
   return { active, archived: overflow.length };
 };
 
+// This script PUBLISHES and then EMPTIES the staging queue, so an unrecognised
+// flag must never be shrugged off. `--dry-run` looks like it should exist,
+// doesn't, and used to fall straight through to the real rollup — consuming
+// every staged change (including other people's) on what the caller believed
+// was a preview.
+const KNOWN_FLAGS = new Set(['--cap-only']);
+const unknownFlags = process.argv.slice(2).filter((a) => !KNOWN_FLAGS.has(a));
+if (unknownFlags.length > 0) {
+  console.error(`ERROR: unknown argument(s): ${unknownFlags.join(' ')}`);
+  console.error(`Supported flags: ${[...KNOWN_FLAGS].join(', ')} (no arguments = publish the staging queue).`);
+  console.error('There is no dry-run mode: this script always writes.');
+  process.exit(1);
+}
+
 // --cap-only: enforce the active-file cap without publishing staging (used
 // for the initial migration and safe to re-run any time).
 if (process.argv.includes('--cap-only')) {
