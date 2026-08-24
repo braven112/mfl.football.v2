@@ -132,6 +132,71 @@ hrefs to local copies, and open it in the bundled Chromium — it isolates
 
 ---
 
+## 2026-08-24 - A JSDoc Cast Is Inert in an `.astro` `<script>`; Type at the Query Instead
+
+**Context:** Clearing the `Property 'X' does not exist on type 'Element'` class
+(118 errors) in the type-remediation pass.
+
+**Insight:** Two pages carried
+`const anchor = /** @type {HTMLAnchorElement} */ (link);` and still failed on
+every `.href` below it. An `.astro` `<script>` block is **TypeScript, not
+JavaScript**, and TS only honours JSDoc casts in `.js`/`.checkJs` files — so
+the annotation does nothing and the value stays `Element`. It reads as
+type-safe in review, which is what makes it worth knowing.
+
+The general shape: `querySelector` / `querySelectorAll` / `closest` all return
+`Element`, which has no `style`, `dataset`, `disabled`, `href`, `focus`, `src`
+or `offsetParent`. Fixing at the USE site needs one cast per read; fixing at
+the QUERY site covers every read below it:
+
+```ts
+document.querySelectorAll<HTMLElement>('.view-tab')          // dataset, style
+overlay.querySelectorAll<HTMLInputElement | HTMLButtonElement>('input, button')
+```
+
+92 of the 118 were in `rosters.astro` and collapsed to ~45 query sites. Type
+arguments are erased at build, so this class of fix cannot change runtime
+behaviour — which is what makes it safe to do in bulk in that file.
+
+**Recommendation:** Never reach for a JSDoc cast in an `.astro` script. Type
+the query. And when a whole file lights up with `Element` errors, count the
+QUERIES, not the errors — the ratio is usually 2:1 or better.
+
+**Also worth knowing:** typing the DOM surfaces real defects that were hidden
+while everything was `Element`. This pass found a boolean assigned to
+`dataset.active` (working only via implicit coercion) and
+`th.dataset.sortKey` (`string | undefined`) flowing into a `string` sort key.
+
+**Evidence:** `WhatsNext.astro`, `calendar.astro`, `mvp.astro`,
+`salary-history.astro`, `rosters.astro`.
+
+## 2026-08-24 - An `.astro` File's Own Name Is a Local Binding, So a Same-Named Import Collides
+
+**Context:** Eight `ts(2440) Import declaration conflicts with local
+declaration of 'X'` errors, all in `.astro` pages.
+
+**Insight:** The checker treats a page's own PascalCased filename as a local
+declaration, so `schedule-release.astro` importing a component called
+`ScheduleRelease` conflicts with itself. The pattern is exact across all eight:
+`rules-chat.astro`/`RulesChat`, `draft-room.astro`/`DraftRoom`,
+`trade-builder.astro`/`TradeBuilder`, `CustomRankingsPage.astro`/
+`CustomRankingsPage`. It builds and runs fine — only the checker sees it.
+Alias the import (`ScheduleReleaseIsland`) rather than renaming the component.
+
+**Also:** a sibling class, `ts(5097)`, comes from importing an island with an
+explicit `.tsx` extension. The obvious fix — drop the extension — is WRONG
+here: `rankings/MyRankEditor.astro` and `MyRankEditor.tsx` share a basename, so
+dropping it changes which module resolves. `allowImportingTsExtensions` (with
+the `noEmit` it requires — Astro/Vite build the app, tsc only checks) leaves
+resolution untouched, which is the safer trade.
+
+**Recommendation:** When naming a new page, avoid giving it the same name as
+the island it hosts. When two files share a basename across extensions, never
+"simplify" an import by dropping the extension.
+
+**Evidence:** `tsconfig.json`, and the eight `*Island` import renames.
+
+
 ## 2026-08-24 - A Hoisted `function` Declaration Drops a Guard's Narrowing; an Arrow Assigned After It Keeps It
 
 **Context:** A repo-wide type audit. Most of the `'X' is possibly 'null'`
