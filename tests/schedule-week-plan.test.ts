@@ -430,3 +430,61 @@ describe('round constructions', () => {
     expect(Math.max(...homeCounts()) - Math.min(...homeCounts())).toBeLessThanOrEqual(1);
   });
 });
+
+/**
+ * Calendars the NFL has not produced yet but plausibly will. The commissioner's
+ * framing: the season only ever GROWS, an odd team count would put somebody on
+ * a bye every single week, and a second bye per team has been discussed
+ * alongside an 18-game season.
+ *
+ * History cannot test any of these, so they are constructed. Each one found a
+ * real defect when first run — see docs/claude/rules/schedule-optimization.md.
+ */
+describe('calendars the NFL has not produced yet', () => {
+  const plan = (byeCounts: Record<number, number>, { lastWeek = 14, doubleheaders = [1, 2, 12] } = {}) =>
+    buildWeekPlan({
+      lastWeek,
+      doubleheaders,
+      byeCounts,
+      divisionSize: 6,
+      conferenceSize: 12,
+      crossWeek: 1,
+    });
+
+  it('plans a season with NO byes at all', () => {
+    // The easiest calendar imaginable used to be the one that threw. With every
+    // week bye-free the early block's extension has nothing to stop it, so it
+    // ran to Week 12 and left the second leg nowhere legal to go.
+    expect(() => plan({})).not.toThrow();
+    const p = plan({});
+    const late = p
+      .filter((w: any) => w.slots.some((s: any) => s.kind === 'division' && s.leg === 1))
+      .map((w: any) => w.week);
+    const early = p
+      .filter((w: any) => w.slots.some((s: any) => s.kind === 'division' && s.leg === 0))
+      .map((w: any) => w.week);
+    expect(Math.min(...late) - Math.max(...early)).toBeGreaterThanOrEqual(MIN_REMATCH_GAP);
+  });
+
+  it('plans a season where EVERY week has a bye (odd NFL team count)', () => {
+    const everyWeek: Record<number, number> = {};
+    for (let w = 1; w <= 14; w += 1) everyWeek[w] = 1;
+    expect(() => plan(everyWeek)).not.toThrow();
+  });
+
+  it('plans a longer season', () => {
+    // The season only ever grows. 16 fantasy weeks against the same 17-round
+    // format means one doubleheader, not three.
+    expect(() => plan({ 6: 4, 9: 4 }, { lastWeek: 16, doubleheaders: [1] })).not.toThrow();
+  });
+
+  it('counts a team with TWO bye weeks as being out in both', () => {
+    // `{TEAM: [6, 12]}` used to key counts off the string "6,12", so every week
+    // read as bye-free and doubleheaders were scheduled straight into byes.
+    const counts = byeCountsByWeek({ BUF: [6, 12], MIA: 6, NYJ: [12] });
+    expect(counts[6]).toBe(2);
+    expect(counts[12]).toBe(2);
+    expect(byeFreeWeeks({ BUF: [6, 12], MIA: 6 }, 14)).not.toContain(6);
+    expect(byeFreeWeeks({ BUF: [6, 12], MIA: 6 }, 14)).not.toContain(12);
+  });
+});

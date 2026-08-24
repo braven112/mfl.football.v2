@@ -37,7 +37,7 @@
  * This is a PROJECTION, deliberately a coarse one. It is used to compare weeks
  * against each other months before kickoff, not to set anyone's lineup.
  */
-import { asArray } from './schedule-rules.mjs';
+import { asArray, byeWeeksOf } from './schedule-rules.mjs';
 
 /**
  * Composite value rank per MFL player id: the mean of its normalised rank in
@@ -172,9 +172,9 @@ export const starterByeExposure = ({
     lineups[f.id] = starterIds;
     table[f.id] ??= {};
     for (const id of starterIds) {
-      const week = byes[teamOf[id]];
-      if (!week) continue;
-      table[f.id][week] = (table[f.id][week] ?? 0) + 1;
+      for (const week of byeWeeksOf(byes, teamOf[id])) {
+        table[f.id][week] = (table[f.id][week] ?? 0) + 1;
+      }
     }
   }
   return { exposure: table, lineups };

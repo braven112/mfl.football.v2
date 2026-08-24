@@ -25,6 +25,7 @@ import {
   buildCrossConferencePairs,
   byeCountsByWeek,
   byeFreeWeeks,
+  byeWeeksOf,
   chooseDoubleheaderWeeks,
   decomposeSeasonIntoRounds,
   divisionFinishRanks,
@@ -126,10 +127,12 @@ export const byeExposure = (rostersJson, playersJson, byes, franchiseIds) => {
   for (const p of asArray(playersJson?.players?.player)) teamOf[p.id] = p.team;
   for (const f of asArray(rostersJson?.rosters?.franchise)) {
     for (const p of asArray(f.player)) {
-      const week = byes[teamOf[p.id]];
-      if (!week) continue;
-      table[f.id] ??= {};
-      table[f.id][week] = (table[f.id][week] ?? 0) + 1;
+      // A player can carry more than one bye week if the NFL ever adds a
+      // second — see byeWeeksOf.
+      for (const week of byeWeeksOf(byes, teamOf[p.id])) {
+        table[f.id] ??= {};
+        table[f.id][week] = (table[f.id][week] ?? 0) + 1;
+      }
     }
   }
   return table;

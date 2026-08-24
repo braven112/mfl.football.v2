@@ -239,6 +239,26 @@ landing on a bye. Both leagues fail goal 4 that year and the planner correctly
 prefers failing it to failing goal 3. That is exactly the season a commissioner
 staggers doubleheaders franchise by franchise.
 
+### Futures the NFL has told us to expect
+
+Three changes the commissioner flagged as plausible, all now covered by
+`--stress` in the backtest and pinned in `tests/schedule-week-plan.test.ts`.
+History cannot test them, so they are constructed.
+
+| Future | Status | What it found |
+|---|---|---|
+| Season length grows (only ever up) | handled | Doubleheader count is derived, so 16 weeks against a 17-round format means one doubleheader, not three. Weeks > rounds throws a named error rather than crashing — the league would need fantasy byes, which do not exist yet. |
+| Odd NFL team count → a bye EVERY week | handled | No week is bye-free, so `chooseDoubleheaderWeeks` has nothing clean to pick. Falls back to the lightest bye weeks; the top goal is correctly reported as failed rather than the planner refusing to schedule. |
+| Two bye weeks per team | handled | `{TEAM: [6, 12]}` used to key `counts[week]` off the STRING `"6,12"`, so every week read as bye-free and doubleheaders went straight into byes — wrong, and silent. `byeWeeksOf` now accepts either shape. |
+
+**And the easiest calendar imaginable was the one that threw.** With no byes at
+all, nothing stops the early block's extension — it ran to Week 12 and left the
+second leg nowhere legal to go. `lateCapacityAfter` now bounds the extension by
+whether the second leg can still fit behind the rematch gap. The lesson is the
+same one the historical backfill taught: the guard conditions were written
+against the calendars we had seen, and "there are byes by Week 6" was an
+unstated assumption in slot arithmetic that never mentioned byes.
+
 ### Still to build: mixed rounds
 
 Every round today is PURE — 13 of 14 AFL weeks are single-type — because

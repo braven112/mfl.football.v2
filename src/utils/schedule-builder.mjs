@@ -248,10 +248,24 @@ export const buildWeekPlan = ({
   for (let week = 1; week <= lastWeek && countSlots(earlyWeeks) < legRounds + crossRounds; week += 1) {
     earlyWeeks.push(week);
   }
+  // Slots available to the second leg if the first block ends at `week` — it
+  // cannot start until `minRematchGap` weeks later.
+  const lateCapacityAfter = (week) => {
+    let n = 0;
+    for (let w = week + minRematchGap; w <= lastWeek; w += 1) n += dh.has(w) ? 2 : 1;
+    return n;
+  };
   while (
     earlyWeeks.at(-1) + 1 <= lastWeek &&
     byes(earlyWeeks.at(-1) + 1) === 0 &&
-    countSlots([...earlyWeeks, earlyWeeks.at(-1) + 1]) < slots.length - legRounds
+    countSlots([...earlyWeeks, earlyWeeks.at(-1) + 1]) < slots.length - legRounds &&
+    // Never extend so far that the second leg cannot fit behind the rematch
+    // gap. The old bound was slot arithmetic alone, which is fine while byes
+    // stop the extension early — every real calendar has byes by Week 6. Feed
+    // it a season with NO byes and the extension eats the schedule: the first
+    // leg runs to Week 12, the second has nowhere legal to go, and the planner
+    // throws on the easiest calendar it will ever see.
+    lateCapacityAfter(earlyWeeks.at(-1) + 1) >= legRounds
   ) {
     earlyWeeks.push(earlyWeeks.at(-1) + 1);
   }

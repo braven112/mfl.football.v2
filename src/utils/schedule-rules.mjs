@@ -40,10 +40,27 @@ export const asArray = (v) => (Array.isArray(v) ? v : v == null ? [] : [v]);
 /* ------------------------------------------------------------------ byes */
 
 /** `{ week: number of NFL teams on bye }` for a season of data/nfl/bye-weeks.json. */
+/**
+ * Every bye week an NFL team has, as an array.
+ *
+ * The stored shape is `{ TEAM: week }` because the NFL has always given each
+ * team exactly one bye. It has been openly discussing a second one alongside an
+ * 18-game season, and the failure mode if that lands is silent: a
+ * `{ TEAM: [6, 12] }` payload makes `counts[week]` key off the string "6,12",
+ * so every week reads as bye-free and the planner cheerfully schedules
+ * doubleheaders into byes. Accepting both shapes costs one line and removes a
+ * whole class of wrong-but-quiet output.
+ */
+export const byeWeeksOf = (byesForSeason, team) => {
+  const value = byesForSeason?.[team];
+  if (value == null) return [];
+  return (Array.isArray(value) ? value : [value]).map(Number).filter((w) => Number.isInteger(w) && w > 0);
+};
+
 export const byeCountsByWeek = (byesForSeason) => {
   const counts = {};
-  for (const week of Object.values(byesForSeason ?? {})) {
-    counts[week] = (counts[week] ?? 0) + 1;
+  for (const team of Object.keys(byesForSeason ?? {})) {
+    for (const week of byeWeeksOf(byesForSeason, team)) counts[week] = (counts[week] ?? 0) + 1;
   }
   return counts;
 };

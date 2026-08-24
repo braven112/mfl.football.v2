@@ -49,13 +49,45 @@ const iterations = Number(arg('iterations', 6000));
 const restarts = Number(arg('restarts', 3));
 const onlyLeague = arg('league', null);
 
+/**
+ * Calendars the NFL has not produced yet but plausibly will. The league has
+ * said the season only ever GROWS, an odd team count would put somebody on a
+ * bye every single week, and a second bye per team has been openly discussed
+ * alongside an 18-game season. None of these can be backtested against history
+ * because history does not contain them, so they are constructed.
+ *
+ * `--stress` runs them against the most recent league config.
+ */
+const STRESS = {
+  'two byes per team': (byes) => {
+    const out = {};
+    const teams = Object.keys(byes);
+    teams.forEach((t, i) => {
+      // Second bye placed a fixed distance from the first so the calendar stays
+      // spread rather than piling every team into the same fortnight.
+      const first = Number(byes[t]);
+      out[t] = [first, ((first + 4 + (i % 3)) % 10) + 5];
+    });
+    return out;
+  },
+  'odd team count — a bye EVERY week': (byes, lastWeek) => {
+    const out = {};
+    // 33 teams: one sits out every week, so no week is ever bye-free.
+    Object.keys(byes).forEach((t, i) => {
+      out[t] = (i % lastWeek) + 1;
+    });
+    return out;
+  },
+  'no byes at all': () => ({}),
+};
+
 const slugs = Object.keys(SCHEDULE_POLICY).filter((s) => !onlyLeague || s === onlyLeague);
 const seasons = Object.keys(byeData).map(Number).filter((y) => y >= from && y <= to).sort();
 
 /** Short glyph per verdict so a 16-row matrix stays readable. */
 const GLYPH = { met: '  ok  ', partial: ' part ', blocked: ' FAIL ', optimised: ' opt  ' };
 
-for (const slug of slugs) {
+const runLeague = (slug) => {
   const registry = LEAGUES[slug];
   const readFeedFor = (year) => (y, feed) =>
     readJson(path.join(ROOT, registry.dataPath, 'mfl-feeds', String(y), `${feed}.json`));
@@ -132,4 +164,42 @@ for (const slug of slugs) {
     console.log(`\n  ${r.year}:`);
     for (const g of bad) console.log(`    [${g.status}] ${g.key}: ${g.detail}`);
   }
-}
+
+  // Calendars the NFL has not produced yet. A THROW here is the finding —
+  // it means a plausible future breaks the planner outright.
+  if (process.argv.includes('--stress')) {
+    const year = seasons.at(-1);
+    const read = readFeedFor(year);
+    if (!read(year, 'league')) return;
+    const lastWeek = Number(read(year, 'league').league.lastRegularSeasonWeek);
+    console.log(`\n  --- stress: hypothetical calendars against the ${year} league config ---`);
+    for (const [name, build] of Object.entries(STRESS)) {
+      const byes = build(byeData[String(year)], lastWeek);
+      try {
+        const plan = planSchedule({
+          slug, year, byes, readFeed: read,
+          rankingSources: readJson(path.join(ROOT, 'data', 'ranking-sources', `${year}.json`)),
+          search: { restarts: 1, iterations: 1500 },
+        });
+        const { goals } = scoreSeasonGoals(
+          goalFactsFromSeason({
+            season: year,
+            crossConference: Boolean(SCHEDULE_POLICY[slug]?.crossConference),
+            lastWeek: plan.lastWeek,
+            described: plan.plan,
+            ceiling: plan.divisionGameCeiling,
+            doubleheaders: plan.doubleheaderWeeks,
+            lightByeWeekMax: LIGHT_BYE_WEEK_MAX,
+            problems: plan.problems,
+          }),
+        );
+        const failed = goals.filter((g) => g.status === 'blocked').map((g) => g.key);
+        console.log(`    ${name.padEnd(34)} planned. DH ${JSON.stringify(plan.doubleheaderWeeks)}` +
+          `${failed.length ? ` | goals failed: ${failed.join(', ')}` : ' | every goal met or partial'}`);
+      } catch (err) {
+        console.log(`    ${name.padEnd(34)} THREW: ${err.message}`);
+      }
+    }
+  }
+};
+for (const slug of slugs) runLeague(slug);
