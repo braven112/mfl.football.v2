@@ -58,6 +58,19 @@ Confirm the failure before editing anything — a repro, the error, the log line
 or the wrong value on the page. The dominant hotfix failure mode is fixing the
 wrong thing under pressure and shipping twice.
 
+**The fastest confirmation is production's own telemetry**, not clicking around.
+The Vercel MCP reads a pre-aggregated table, so it answers "is this real, and how
+wide" in one call:
+
+- `get_runtime_errors` — error clusters, occurrence counts, affected routes.
+  Write down the count and `last seen`; step 7 checks that they stopped moving.
+- `get_runtime_logs` filtered to the route, for the actual message.
+
+**"No logs found" is itself a diagnosis.** A platform 502 (HTML body, not your
+JSON) with nothing in either tool is the signature of a hung `await` running into
+`maxDuration` — not a throw, which is why `try/catch` didn't catch it. See
+`docs/claude/insights/domains/deployment.md` (2026-07-07).
+
 Then check whether a **revert** is the fix:
 
 ```bash
@@ -96,6 +109,20 @@ or the bug was never in a single commit.
 ---
 
 ## Step 3: Validate locally
+
+**Preflight — make sure the suite can actually run.** A fresh clone or a cloud
+session has no `node_modules`, and `.claude/hooks/pre-push-check.sh` **exits 0
+silently** when vitest is missing: you lose the full-suite gate with nothing that
+looks like a failure. `pnpm install` is ~17s against a warm registry, so there is
+nothing to trade away here:
+
+```bash
+[ -x node_modules/.bin/vitest ] || pnpm install
+```
+
+Never fall back to "CI will catch it" because deps are missing. Push-and-wait
+costs a build plus a CI cycle *per iteration*, and on a hotfix, iteration count ×
+cycle time is outage length.
 
 Fail fast on the affected suites, then let the pre-push hook confirm the rest:
 
@@ -232,6 +259,17 @@ the one thing that outranks the clock.
 
 ## Step 6: Merge on green
 
+**Check the preview deployment before you merge.** It builds in parallel with CI,
+so it costs no extra wall-clock, and it is a better test environment than local
+dev — real env vars, real Redis, real MFL calls, none of which a fresh clone or
+worktree has an `.env.local` for. Confirming the symptom is gone here means step 7
+is confirming a deploy rather than discovering the fix doesn't hold under
+production conditions.
+
+Recover the preview hostname from the `Vercel Preview Comments` check run on the
+head SHA, then read it with `mcp__Vercel__web_fetch_vercel_url` — preview
+deployments are auth-protected and plain `curl` gets a 401.
+
 Approve and enable auto-merge:
 
 ```bash
@@ -284,7 +322,13 @@ reason this command exists rather than ending at `/live`.
    league. Build the URL with `leagueUrl(league, path)` semantics — never
    concatenate an origin and a path by hand.
 3. Confirm the **original symptom** is gone. Not "the page loads" — the specific
-   wrong value, error, or missing element from step 1.
+   wrong value, error, or missing element from step 1. `www.theleague.us/` has
+   returned 200 while `/rosters` returned 404 on the same deploy
+   (`docs/claude/insights/domains/deployment.md`, 2026-03-08), so check the broken
+   route, never the homepage.
+4. Re-run `get_runtime_errors` from step 1 and confirm the cluster stopped
+   climbing. "The page renders" and "the error stopped" are different claims — on
+   a partial fix the first is true and the second isn't.
 
 **Rollback trigger, armed.** If production is still broken, or worse, revert
 immediately rather than forward-fixing a second time under pressure:
