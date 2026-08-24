@@ -24,7 +24,7 @@ Phase 1 (`/theleague/franchises` index + `/theleague/franchises/[id]` detail pag
 
 | Need | Why | Format I'm expecting |
 |---|---|---|
-| **Owner names** — franchise → human name per era | Phase 2 rivalry pages will read better with names; Phase 3 badges like "Roger Tormentor" need to attach to humans | `data/theleague/owners.json` with `{ "0001": [{name, yearStart, yearEnd}], … }`. Same shape as `ownerHistory` but with human names. |
+| **Owner names** — franchise → human name per era | Phase 2 rivalry pages will read better with names; Phase 3 badges like "Roger Tormentor" need to attach to humans | ~~`data/theleague/owners.json` keyed by franchise~~ — **superseded.** See `docs/plans/owners-feature.md`: the registry is `src/data/owners-registry.json`, keyed by PERSON and league-neutral, because an owner can hold several franchise slots and play in more than one league. Names are optional there, so the feature ships before anyone is named. |
 | **2007 / 2011 / 2024 / 2026 championship confirmations** | Have all years now from Brandon's audit; just need to keep championship-history.json fresh as new seasons end | Brandon updates the JSON manually each January after the title game |
 
 If owner-name data shows up, the franchise pages should:
@@ -96,8 +96,10 @@ Format as a "Rivals" carousel/strip linking into rivalry pages.
 - Trade asset display works for player IDs, current draft picks (`DP_*`),
   and future picks (`FP_*`). `BBID` and `CASH` codes render generic — fine
   for a v1 but worth grading once we see real auction-era trades.
-- Owner names will improve all of this; the data is still gated on Brandon
-  populating `data/theleague/owners.json` per the open-data needs section.
+- Owner names will improve all of this. The registry that holds them is
+  specified in `docs/plans/owners-feature.md` (`src/data/owners-registry.json`)
+  — note that names are OPTIONAL there, so nothing here is gated on Brandon
+  any more; the tenures exist and are addressable while `displayName` is null.
 
 ## Phase 3: Badge engine
 
