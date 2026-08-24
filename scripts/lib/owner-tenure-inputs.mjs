@@ -84,6 +84,9 @@ export const loadLeagueInputs = (root, league) => {
     teams,
     ledgerRows: ledger.rows ?? [],
     yearSummaries: history.yearSummaries ?? [],
+    // Returning this is load-bearing: both callers pass it straight into
+    // buildOwnerTenures, and without it every gap-filled year loses its name.
+    feedIdentityFor,
     historyPath,
     ledgerPath,
     derivedDir,

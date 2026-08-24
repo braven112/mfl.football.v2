@@ -39,6 +39,18 @@ const former = data.owners.filter((o) => !o.isCurrent);
 const sortBySeasons = (a: Owner, b: Owner) =>
   b.totals.seasons - a.totals.seasons || a.yearStart - b.yearStart;
 
+/**
+ * Sort key for the Record column. Raw wins made the sort disagree with its own
+ * label: a 17-season owner at 145-146 outranked a 5-season owner with a far
+ * better record, purely by having played longer. The column shows a RECORD, so
+ * it sorts by win percentage.
+ */
+const winPctValue = (owner: Owner): number => {
+  const { wins, losses, ties } = owner.totals;
+  const games = wins + losses + ties;
+  return games === 0 ? 0 : (wins + ties / 2) / games;
+};
+
 const formerSorted = [...former].sort(sortBySeasons);
 const currentSorted = [...current].sort(sortBySeasons);
 
@@ -198,7 +210,7 @@ const generatedLabel = Number.isNaN(generatedDate.getTime())
                 data-slot={owner.tenures.map((t) => t.franchiseId).join(' ')}
                 data-years={owner.yearStart}
                 data-seasons={owner.totals.seasons}
-                data-record={owner.totals.wins}
+                data-record={winPctValue(owner)}
                 data-titles={owner.totals.championships.length}
                 data-divisions={owner.totals.divisionTitles.length}
               >

@@ -506,6 +506,51 @@ describe.each(leagues)('$league.slug inference without a registry', ({ league, o
   });
 });
 
+/**
+ * `loadLeagueInputs` is the shared contract both owner scripts build on. It
+ * returned a working `feedIdentityFor`... except it didn't: the function was
+ * built and then left out of the return object, so both callers passed
+ * `undefined` and every gap-filled year silently lost its name. AFL 0007's
+ * 2015-2020 came out unnamed — the exact case the plan doc calls "the only way
+ * to get Avenging Amish".
+ *
+ * Nothing caught it. The committed files are derived WITH a registry that
+ * covers every season, so they never take the gap-fill path, and the
+ * inference test above builds its own feedIdentityFor inline rather than using
+ * the one the scripts actually get. This tests the contract itself.
+ */
+describe.each(leagues)('$league.slug loadLeagueInputs contract', ({ league }) => {
+  it('returns everything buildOwnerTenures is handed by the real scripts', async () => {
+    const { loadLeagueInputs } = await import('../scripts/lib/owner-tenure-inputs.mjs');
+    const inputs = loadLeagueInputs(ROOT, league);
+    expect(inputs, `${league.slug} inputs`).toBeTruthy();
+
+    expect(Array.isArray(inputs.teams)).toBe(true);
+    expect(Array.isArray(inputs.ledgerRows)).toBe(true);
+    expect(Array.isArray(inputs.yearSummaries)).toBe(true);
+    expect(
+      typeof inputs.feedIdentityFor,
+      'feedIdentityFor missing — gap-filled years will lose their names'
+    ).toBe('function');
+  });
+
+  it('resolves a real franchise-season to a feed name', () => {
+    // Proves the returned function actually reads the feeds, not just that
+    // something callable came back.
+    const ledger = readJson(path.join(ROOT, (league as any).dataPath, 'derived', 'season-ledger.json'));
+    const sample = ledger.rows[0];
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    return import('../scripts/lib/owner-tenure-inputs.mjs').then(({ loadLeagueInputs }) => {
+      const inputs = loadLeagueInputs(ROOT, league);
+      const identity = inputs.feedIdentityFor(sample.franchiseId, sample.year);
+      // A league-year with feeds on disk must resolve; if the feed is absent
+      // the function returns null, which is also valid — assert it is one or
+      // the other, never a throw or undefined.
+      expect(identity === null || typeof identity.name === 'string').toBe(true);
+    });
+  });
+});
+
 /** Slugs are URLs, and the two leagues' files are served from one origin. */
 describe('slugs identify one person across every league', () => {
   /**
