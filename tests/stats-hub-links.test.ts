@@ -4,6 +4,7 @@ import path from 'node:path';
 import entries from '../src/data/page-directory.json';
 import { pathBelongsToLeague } from '../src/config/footer-config';
 import { resolveDirectoryHref } from '../src/utils/nav-utils';
+import { ALL_LEAGUES } from '../src/config/leagues';
 
 /**
  * The Stats & Reports hub (and its RelatedReports strip) group pages by the
@@ -18,12 +19,18 @@ import { resolveDirectoryHref } from '../src/utils/nav-utils';
  *
  * Two halves, so two guards: scope the list with pathBelongsToLeague(), and
  * build hrefs with resolveDirectoryHref() (which normalises an already
- * prefixed path) instead of string concatenation.
+ * prefixed path) instead of string concatenation. stats.astro was the THIRD
+ * consumer to get both wrong, after the same fix landed on search.astro and
+ * QuickLinks.astro — see docs/claude/insights/domains/frontend.md (2026-08-09,
+ * 2026-08-12, 2026-08-24). Prose did not hold it, so this file does.
  */
 
 const ROOT = process.cwd();
 const PAGES = path.join(ROOT, 'src/pages');
-const LEAGUE_PREFIXES = ['theleague', 'afl-fantasy', 'best-ball-1'];
+
+/** Registry-derived, so a fourth league is covered the day it is added. */
+const LEAGUE_SLUGS = ALL_LEAGUES.map((l) => l.slug);
+const SLUG_GROUP = LEAGUE_SLUGS.join('|');
 
 type DirectoryEntry = {
   id: string;
@@ -49,84 +56,171 @@ function routeExists(pathname: string): boolean {
   );
 }
 
-/** Every card the hub renders, as the browser would see it. */
-const hubCards = typedEntries
+/**
+ * Every TheLeague directory path, as the hub and its siblings render it.
+ *
+ * Deliberately NOT narrowed to entries carrying a `subcategory`: only 12 of
+ * ~100 do, and checking just those makes the assertions below tautological —
+ * the scoping filter has already removed anything that could fail them. Run
+ * over the whole scoped list, they actually exercise resolveDirectoryHref
+ * against real routes.
+ */
+const renderedHrefs = typedEntries
   .filter((p) => pathBelongsToLeague(p.path, 'theleague'))
-  .filter((p) => p.subcategory && p.visibility === 'all')
   .map((p) => ({
-    label: `${p.subcategory} › ${p.title}`,
+    label: `${p.subcategory ?? p.category ?? 'page'} › ${p.title}`,
     href: resolveDirectoryHref(p.path, 'theleague'),
   }));
 
-describe('Stats & Reports hub cards', () => {
-  it('renders at least one card', () => {
-    expect(hubCards.length).toBeGreaterThan(0);
+describe("TheLeague's directory hrefs", () => {
+  it('renders a non-trivial number of entries (sanity check)', () => {
+    expect(renderedHrefs.length).toBeGreaterThan(10);
   });
 
   it('has no dead links', () => {
-    const dead = hubCards.filter((c) => !routeExists(c.href));
+    const dead = renderedHrefs.filter((c) => !routeExists(c.href));
     expect(
       dead.map((d) => `${d.label} -> ${d.href}`),
-      'Hub cards with no backing route under src/pages/'
+      'Directory entries with no backing route under src/pages/'
     ).toEqual([]);
   });
 
   it('never points at another league', () => {
-    const foreign = hubCards.filter(
-      (c) => c.href === '/afl-fantasy' || c.href.startsWith('/afl-fantasy/') ||
-        c.href === '/best-ball-1' || c.href.startsWith('/best-ball-1/')
+    const foreign = renderedHrefs.filter((c) =>
+      LEAGUE_SLUGS.some(
+        (slug) => slug !== 'theleague' && (c.href === `/${slug}` || c.href.startsWith(`/${slug}/`))
+      )
     );
     expect(
       foreign.map((f) => `${f.label} -> ${f.href}`),
-      'Hub cards leaking into another league'
+      'Directory entries leaking into another league'
     ).toEqual([]);
   });
 
   it('never double-prefixes', () => {
-    const group = LEAGUE_PREFIXES.join('|');
-    const doubled = hubCards.filter((c) =>
-      new RegExp(`^/(${group})/(${group})/`).test(c.href)
+    const doubled = renderedHrefs.filter((c) =>
+      new RegExp(`^/(${SLUG_GROUP})/(${SLUG_GROUP})/`).test(c.href)
     );
     expect(doubled.map((d) => d.href)).toEqual([]);
   });
 });
 
+// ---------------------------------------------------------------------------
+// Source guard
+// ---------------------------------------------------------------------------
+
 /**
- * Source guard: anything reading the shared directory has to scope it, and
- * must not hand-build the href. Replicating the filter in the test above only
- * proves the data is clean today — this is what stops the code regressing.
+ * Every file that IMPORTS the directory, and what it owes.
+ *
+ * `scope` — must call pathBelongsToLeague() before rendering entries.
+ * `href`  — must build hrefs through resolveDirectoryHref().
+ *
+ * The registry itself is the guard: a new consumer that isn't listed here
+ * fails the first test below, which forces whoever adds it to state which
+ * halves apply. That is the check stats.astro needed — nothing about writing
+ * a new page prompts you to go read a rule about a JSON file you imported.
+ *
+ * What this canNOT catch: a listed file that imports both helpers and then
+ * builds one href by hand anyway. The negative regex below covers the three
+ * concrete concat forms; an href assembled through an intermediate variable
+ * would still slip past. Read the diff for that one.
  */
-function astroFilesUnder(dir: string): string[] {
+const CONSUMERS: Record<string, { scope: boolean; href: boolean; why?: string }> = {
+  'src/pages/theleague/stats.astro': { scope: true, href: true },
+  'src/pages/theleague/search.astro': { scope: true, href: true },
+  'src/components/theleague/RelatedReports.astro': { scope: true, href: true },
+  'src/components/shared/hp-sections/QuickLinks.astro': { scope: true, href: true },
+  'src/config/footer-config.ts': {
+    scope: true,
+    href: false,
+    why: 'returns bare paths; Footer.astro runs them through resolveDirectoryHref',
+  },
+  'src/components/theleague/OwnerActivityReport.astro': {
+    scope: false,
+    href: false,
+    why: 'builds a path→title map for labels only — renders no link',
+  },
+};
+
+function sourceFilesUnder(dir: string): string[] {
   const out: string[] = [];
   const walk = (d: string) => {
     for (const e of readdirSync(d, { withFileTypes: true })) {
       const full = path.join(d, e.name);
       if (e.isDirectory()) walk(full);
-      else if (e.name.endsWith('.astro')) out.push(full);
+      else if (/\.(astro|ts|tsx)$/.test(e.name)) out.push(full);
     }
   };
   walk(dir);
   return out;
 }
 
-const directoryConsumers = [
-  ...astroFilesUnder(path.join(ROOT, 'src/pages')),
-  ...astroFilesUnder(path.join(ROOT, 'src/components')),
-]
+/** A real import, not a mention in a comment (nav-utils.ts documents it). */
+const IMPORTS_DIRECTORY = /from\s+['"][^'"]*page-directory(\.json)?['"]/;
+
+const discovered = sourceFilesUnder(path.join(ROOT, 'src'))
   .map((file) => ({ file: path.relative(ROOT, file), source: readFileSync(file, 'utf8') }))
-  .filter(({ source }) => source.includes('page-directory.json'));
+  .filter(({ source }) => IMPORTS_DIRECTORY.test(source));
 
 describe('page-directory.json consumers', () => {
-  it('finds the consumers (sanity check)', () => {
-    expect(directoryConsumers.length).toBeGreaterThan(0);
+  it('are all registered above', () => {
+    const found = discovered.map((c) => c.file).sort();
+    const registered = Object.keys(CONSUMERS).sort();
+    expect(
+      found,
+      'A file imports page-directory.json without declaring what it owes. ' +
+        'page-directory.json is ONE list shared by every league: decide whether ' +
+        'this consumer needs pathBelongsToLeague() (scoping) and ' +
+        'resolveDirectoryHref() (hrefs), then add it to CONSUMERS with a reason ' +
+        'if it needs neither. Removed a consumer? Drop its entry.'
+    ).toEqual(registered);
   });
 
+  /**
+   * Source with every `import ... from '...'` stripped.
+   *
+   * Checking the raw file would pass on a leftover import after the CALL was
+   * deleted — verified by mutation: removing the pathBelongsToLeague() call
+   * from stats.astro while leaving its import kept this suite green. The
+   * helper has to be invoked, not merely in scope.
+   */
+  const callSites = (file: string) =>
+    readFileSync(path.join(ROOT, file), 'utf8').replace(
+      /import[\s\S]*?from\s*['"][^'"]*['"];?/g,
+      ''
+    );
+
+  for (const [file, owes] of Object.entries(CONSUMERS)) {
+
+    if (owes.scope) {
+      it(`${file} scopes the directory to one league`, () => {
+        expect(
+          callSites(file).includes('pathBelongsToLeague('),
+          `${file} renders directory entries, so it must filter them through ` +
+            'pathBelongsToLeague() — otherwise another league\'s pages show up in this one.'
+        ).toBe(true);
+      });
+    }
+
+    if (owes.href) {
+      it(`${file} builds hrefs through resolveDirectoryHref`, () => {
+        expect(
+          callSites(file).includes('resolveDirectoryHref('),
+          `${file} links to directory entries, so it must build the href through ` +
+            'resolveDirectoryHref() — some entries are stored already prefixed, and ' +
+            'concatenating a prefix onto those produces a dead double-prefixed link.'
+        ).toBe(true);
+      });
+    }
+  }
+
   it('never builds a directory href by concatenating a league prefix', () => {
-    const group = LEAGUE_PREFIXES.join('|');
-    const concat = new RegExp(`/(${group})\\$\\{`);
-    const offenders = directoryConsumers
-      .filter(({ source }) => concat.test(source))
-      .map(({ file }) => file);
+    // Three concrete forms, all of which have shipped or nearly shipped here:
+    //   `/theleague${page.path}`   `/theleague/${page.path}`   '/theleague' + page.path
+    const concat = new RegExp(
+      `/(${SLUG_GROUP})/?\\$\\{|['"\`]/(${SLUG_GROUP})['"\`]\\s*\\+`
+    );
+    const offenders = discovered.filter(({ source }) => concat.test(source)).map((c) => c.file);
     expect(
       offenders,
       'Use resolveDirectoryHref(path, league) — a directory path may already carry a prefix'
