@@ -1,10 +1,8 @@
 import { describe, it, expect } from 'vitest';
-// @ts-expect-error - .mjs without types
 import {
   buildDraftPickWrites,
   getExpectedRookieContractInfo,
 } from '../scripts/sync-draft-pick-contracts.mjs';
-// @ts-expect-error - .mjs without types
 import { getRookieSlotSalary } from '../scripts/lib/rookie-salary-slots.mjs';
 
 function makeDraftResults(picks: Array<Record<string, string>>) {

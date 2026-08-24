@@ -33,11 +33,8 @@ import { describe, it, expect, afterAll } from 'vitest';
 import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import path, { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-// @ts-expect-error — plain .mjs module without type declarations
 import { buildFactSheet, getSystemPrompt, getUserPrompt } from '../../scripts/article-types/cut-watch.mjs';
-// @ts-expect-error — plain .mjs module without type declarations
 import { callAnthropic } from '../../scripts/article-utils/ai-client.mjs';
-// @ts-expect-error — plain .mjs module without type declarations
 import { findValueBasedAutoCutClaimsInPost } from '../../scripts/lib/cut-watch-graders.mjs';
 import { parseJudgeJson } from '../../scripts/lib/roger-graders';
 import { fixtureData, fixtureAdp } from '../fixtures/cut-watch-fixture';

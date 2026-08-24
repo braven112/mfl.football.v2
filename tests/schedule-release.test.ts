@@ -2,9 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { loadSpriteIconIds } from './helpers/sprite-icons';
-// @ts-expect-error - .mjs helper shared with the node scripts (see its header)
 import { describeSeries, rivalrySeriesByPair } from '../src/utils/rivalry-intensity.mjs';
-// @ts-expect-error - .mjs helper shared with the node scripts (see its header)
 import {
   aflNationalLeagueDraft,
   laborDay,

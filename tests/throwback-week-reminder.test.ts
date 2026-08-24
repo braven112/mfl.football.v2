@@ -1,9 +1,7 @@
 import { readFileSync } from 'node:fs';
-// @ts-expect-error — sibling .mjs module, no .d.ts
 import { THROWBACK_WEEKS, isThrowbackWeek } from '../src/data/theleague/throwback-weeks.mjs';
 import path from 'node:path';
 import { describe, it, expect } from 'vitest';
-// @ts-expect-error — sibling .mjs module, no .d.ts
 import { shouldFireReminder, calendarDaysUntil } from '../scripts/lib/roger-reminder-window.mjs';
 import {
   getLaborDay,
@@ -15,7 +13,6 @@ import {
   throwbackWeekFromEventId,
   buildThrowbackReminder,
   DEFAULT_THROWBACK_WEEKS,
-  // @ts-expect-error — sibling .mjs module, no .d.ts
 } from '../scripts/lib/throwback-reminder.mjs';
 
 /**

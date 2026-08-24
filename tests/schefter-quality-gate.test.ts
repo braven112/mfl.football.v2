@@ -1,5 +1,4 @@
 import { describe, it, expect, vi } from 'vitest';
-// @ts-expect-error — sibling .mjs module, no .d.ts
 import { parseScorerResponse, checkGroupMeQuality, scoreSchefterPost, QUALITY_THRESHOLD } from '../scripts/lib/schefter-quality-gate.mjs';
 
 describe('parseScorerResponse', () => {

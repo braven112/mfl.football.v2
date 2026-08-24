@@ -1,0 +1,9 @@
+{
+  "$comment": "Ratchet baseline for `astro check --minimumSeverity error`. This number may only go DOWN. tests/typecheck-baseline.test.ts fails if it rises (a regression) and also fails if it drops (so the baseline is retightened rather than quietly leaving slack). Run `pnpm test:types` to check, then lower `total` to the reported count.",
+  "total": 2092,
+  "recordedAt": "2026-08-24",
+  "notes": {
+    "concentration": "src/pages/theleague/rosters.astro alone accounts for ~1160 of these. It is a ~12k-line file whose inline script the docs say to verify via @astrojs/compiler transform + esbuild parse, NOT a full astro check (see docs/claude/insights/features/august-roster-cuts.md).",
+    "composition": "The bulk is implicit-any annotation debt (ts7006/7005/7053) plus property-access noise (ts2339), not defects. The null-safety class outside rosters.astro is at zero and should stay there."
+  }
+}

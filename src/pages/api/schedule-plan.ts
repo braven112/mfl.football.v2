@@ -18,7 +18,6 @@ import path from 'node:path';
 import { getAuthUser, isCommissionerOrAdmin, isAuthorizedForLeague } from '../../utils/auth';
 import { getLeagueBySlug } from '../../config/leagues';
 import { byeWeeksForSeason } from '../../utils/nfl-bye-weeks';
-// @ts-expect-error - .mjs planner shared with the CLI scripts (see its header)
 import { planSchedule, SCHEDULE_POLICY } from '../../utils/schedule-plan.mjs';
 
 export const prerender = false;

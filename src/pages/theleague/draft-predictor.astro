@@ -866,11 +866,11 @@ const filteredHistoryRows = historyRows.filter((row) =>
 
 <script>
   const setupHistorySelect = () => {
-    const yearSelect = document.getElementById('historyYear');
-    const teamSelect = document.getElementById('historyTeam');
+    const yearSelect = document.getElementById('historyYear') as HTMLSelectElement | null;
+    const teamSelect = document.getElementById('historyTeam') as HTMLSelectElement | null;
     if (yearSelect) {
-      yearSelect.addEventListener('change', (e) => {
-        const year = e.target.value;
+      yearSelect.addEventListener('change', () => {
+        const year = yearSelect.value;
         const url = new URL(window.location.href);
         url.searchParams.set('view', 'history');
         url.searchParams.set('year', year);
@@ -882,8 +882,8 @@ const filteredHistoryRows = historyRows.filter((row) =>
       });
     }
     if (teamSelect) {
-      teamSelect.addEventListener('change', (e) => {
-        const team = e.target.value;
+      teamSelect.addEventListener('change', () => {
+        const team = teamSelect.value;
         const url = new URL(window.location.href);
         url.searchParams.set('view', 'history');
         url.searchParams.set('year', yearSelect ? yearSelect.value : '');

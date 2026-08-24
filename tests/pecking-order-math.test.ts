@@ -1,5 +1,4 @@
 import { describe, it, expect } from 'vitest';
-// @ts-expect-error — sibling .mjs module, no .d.ts
 import {
   parseStreak,
   computePeckingOrder,
@@ -7,9 +6,7 @@ import {
   avgMargin,
   describeMethodology,
   PECKING_ORDER_WEIGHTS,
-// @ts-expect-error — sibling .mjs module, no .d.ts
 } from '../scripts/lib/pecking-order-math.mjs';
-// @ts-expect-error — sibling .mjs module, no .d.ts
 import { rollingAvgPF } from '../scripts/lib/team-strength.mjs';
 
 describe('parseStreak', () => {

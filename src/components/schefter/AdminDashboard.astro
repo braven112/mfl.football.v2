@@ -847,12 +847,16 @@ const { base, navSlug } = Astro.props;
       : [];
     paintOffersInFlight();
 
-    archiveState.entries = Array.isArray(data.redis?.tradeOffersArchive)
+    // Bind the array to a local first: `data.redis` is untyped, so assigning it
+    // straight to `archiveState.entries` leaves that property `… | null` to the
+    // compiler and the `.length` read below cannot be proven safe.
+    const archiveEntries: ArchiveEntry[] = Array.isArray(data.redis?.tradeOffersArchive)
       ? data.redis.tradeOffersArchive
       : [];
+    archiveState.entries = archiveEntries;
     archiveState.total = typeof data.redis?.tradeOffersArchiveTotal === 'number'
       ? data.redis.tradeOffersArchiveTotal
-      : archiveState.entries.length;
+      : archiveEntries.length;
     paintArchive();
 
     const pill = (state: 'ok' | 'bad' | 'warn', label: string) =>

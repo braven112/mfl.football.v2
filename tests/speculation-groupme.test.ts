@@ -4,7 +4,6 @@ import {
   buildSpeculationGroupMeText,
   postSpeculationToGroupMe,
   __testing__,
-// @ts-expect-error — sibling .mjs module, no .d.ts
 } from '../scripts/lib/speculation-groupme.mjs';
 
 describe('buildSpeculationDeepLink', () => {

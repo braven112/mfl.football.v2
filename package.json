@@ -82,6 +82,7 @@
     "test:e2e": "node tests/e2e-cookie-test.mjs",
     "test:watch": "vitest",
     "test:mfl-integration": "tsx tests/mfl-write-integration.test.ts",
+    "test:types": "vitest run --config vitest.typecheck.config.ts tests/typecheck-baseline.typecheck.ts",
     "test:coverage": "vitest run --coverage",
     "check:bundle": "node scripts/check-bundle-size.mjs",
     "check:bundle:src": "node scripts/check-bundle-size.mjs --src",

@@ -62,9 +62,7 @@ describe('sanitizeAiPost', () => {
   it('returns null for empty/whitespace/non-string', () => {
     expect(sanitizeAiPost('')).toBeNull();
     expect(sanitizeAiPost('   ')).toBeNull();
-    // @ts-expect-error testing runtime guard
     expect(sanitizeAiPost(null)).toBeNull();
-    // @ts-expect-error testing runtime guard
     expect(sanitizeAiPost(undefined)).toBeNull();
   });
 

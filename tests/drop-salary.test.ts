@@ -1,5 +1,4 @@
 import { describe, it, expect } from 'vitest';
-// @ts-expect-error — plain .mjs module, no type declarations
 import { buildDropAdjustmentMap, resolveDropSalary } from '../scripts/lib/drop-salary.mjs';
 
 // Real MFL salary-adjustment descriptions (from data/theleague/mfl-feeds/2026).

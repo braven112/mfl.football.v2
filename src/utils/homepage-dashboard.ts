@@ -126,7 +126,7 @@ export function resolveUnsignedFaAlerts({
       && !player.contractInfo
       && !!player.deadlineTimestamp,
     )
-    .map((player) => {
+    .map((player): UnsignedFaAlert | null => {
       const acquisition = findAcquisitionTransaction(player.playerId, franchiseId, parsedTransactions);
       if (!acquisition || !player.deadlineTimestamp) return null;
 

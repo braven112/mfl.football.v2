@@ -16,9 +16,7 @@
 import { describe, it, expect } from 'vitest';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-// @ts-expect-error — plain .mjs module without type declarations
 import { buildGroupMePromo, buildFactSheet, buildPost, blendedCutValue } from '../scripts/article-types/cut-watch.mjs';
-// @ts-expect-error — plain .mjs module without type declarations
 import { isCutWindow } from '../scripts/article-utils/season-guards.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');

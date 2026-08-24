@@ -10,7 +10,6 @@
  */
 
 import { describe, it, expect } from 'vitest';
-// @ts-expect-error - plain .mjs helper, no types
 import {
   matchesSearch,
   summarizeEntry,

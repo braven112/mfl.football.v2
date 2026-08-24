@@ -1,5 +1,4 @@
 import { describe, it, expect } from 'vitest';
-// @ts-expect-error — plain .mjs module, no type declarations
 import { parseRosterMove } from '../scripts/lib/roster-move-parse.mjs';
 
 describe('parseRosterMove — MFL roster-move transaction parsing', () => {

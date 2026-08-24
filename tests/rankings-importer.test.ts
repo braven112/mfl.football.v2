@@ -470,7 +470,7 @@ describe('matchPlayerToMFL - Alternatives', () => {
   it('should not include best match in alternatives', () => {
     const result = matchPlayerToMFL('Josh Allen', 'QB', mflPlayers);
     if (result.alternatives && result.playerId) {
-      const alternativeIds = result.alternatives.map(a => a.id);
+      const alternativeIds = result.alternatives.map(a => a.playerId);
       expect(alternativeIds).not.toContain(result.playerId);
     }
   });

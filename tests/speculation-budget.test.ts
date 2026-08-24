@@ -4,7 +4,6 @@ import {
   MAX_GLOBAL_POSTS_PER_DAY,
   RESERVED_PEAK_SLOT,
   MIN_SPACING_MS,
-// @ts-expect-error — sibling .mjs module, no .d.ts
 } from '../scripts/lib/speculation-budget.mjs';
 
 const NORMAL = { reservesGlobalSlot: false };

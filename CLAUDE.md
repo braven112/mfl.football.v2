@@ -16,6 +16,15 @@ cross-cutting, add a line here. Keep this file short.
 - **Framework:** Astro (SSR + SSG). React for client-hydrated islands.
 - **Package manager:** pnpm (not npm). Scripts: see `package.json`.
 - **Unit tests:** vitest. Run one file: `pnpm vitest run path/to/foo.test.ts`.
+- **Type errors are ratcheted, not clean.** `pnpm test:unit` does NOT
+  type-check. The repo carries ~2.1k `astro check` errors (over half in the
+  12k-line `rosters.astro`), so a clean run is not the bar — `pnpm test:types`
+  is, and it fails if the total moves in EITHER direction: up is a regression,
+  down means retighten `tests/fixtures/typecheck-baseline.json`. It shells out
+  to `astro check` (~2.5 min, needs `--max-old-space-size`), which is why it
+  is not in the default suite. Treat `ts(2307) Cannot find module` as urgent:
+  an `import type` from a missing module is erased at build, so it has no
+  runtime symptom while voiding every type in the file.
 - **Prebuild:** `scripts/prebuild.mjs` runs build steps + network fetches in
   parallel. Add new build-time fetches there.
 - **Guard tests are the real memory.** ~228 suites in `tests/` mechanically

@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
-// @ts-expect-error - .mjs helper shared with the node scripts (see its header)
 import {
   byeCountsByWeek,
   byeFreeWeeks,
@@ -12,7 +11,6 @@ import {
   pairKey,
   regularSeasonGames,
 } from '../src/utils/schedule-rules.mjs';
-// @ts-expect-error - .mjs helper shared with the node scripts (see its header)
 import { buildWeekPlan, HARD_MIN_REMATCH_GAP, MIN_REMATCH_GAP } from '../src/utils/schedule-builder.mjs';
 
 /**

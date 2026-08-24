@@ -12,7 +12,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-// @ts-expect-error — sibling .mjs module, no .d.ts
 import {
   MAX_ATTEMPTS,
   SKIPPED_NO_CRED,
@@ -31,7 +30,6 @@ import {
   snapshotHasOutcomes,
   foldFranchiseIntoStored,
 } from '../src/utils/august-cuts-logic.mjs';
-// @ts-expect-error — sibling .mjs module, no .d.ts
 import { getAugustCutdownDate, calendarDaysUntilCutdown } from '../scripts/lib/august-cutdown.mjs';
 
 // 2026 deadline: Sunday Aug 16, 8:45 PM PT.

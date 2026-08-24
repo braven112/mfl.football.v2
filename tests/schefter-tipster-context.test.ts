@@ -1,5 +1,4 @@
 import { describe, it, expect } from 'vitest';
-// @ts-expect-error — .mjs imported via allowJs
 import {
   buildTipsterContext,
   tipsterScoreDelta,
@@ -10,7 +9,6 @@ import {
   BEAT_TIP_FLOOR,
   BEAT_CONCENTRATION,
 } from '../scripts/lib/schefter-tipster-context.mjs';
-// @ts-expect-error — .mjs imported via allowJs
 import { bucketPriorityScore } from '../scripts/lib/schefter-bucket-logic.mjs';
 
 type Tip = {

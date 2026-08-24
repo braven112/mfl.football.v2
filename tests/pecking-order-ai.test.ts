@@ -1,5 +1,4 @@
 import { describe, it, expect } from 'vitest';
-// @ts-expect-error — sibling .mjs module, no .d.ts
 import {
   validateBlurb,
   applyAIVoice,
@@ -7,7 +6,6 @@ import {
   HEADLINE_MAX,
   LEDE_MAX,
   BLURB_MAX,
-// @ts-expect-error — sibling .mjs module, no .d.ts
 } from '../scripts/lib/pecking-order-ai.mjs';
 
 const pigskins = {

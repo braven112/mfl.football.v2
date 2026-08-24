@@ -7,7 +7,6 @@ import {
   appendEntry,
   postsToday,
   lastPostAt,
-// @ts-expect-error — sibling .mjs module, no .d.ts
 } from '../scripts/lib/speculation-history.mjs';
 
 const DAY = 24 * 60 * 60 * 1000;
