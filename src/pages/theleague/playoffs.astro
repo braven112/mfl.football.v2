@@ -1829,7 +1829,7 @@ const grandTotal =
       window.location.href = url.toString();
     };
 
-    document.querySelectorAll('.view-tab').forEach(btn => {
+    document.querySelectorAll<HTMLElement>('.view-tab').forEach(btn => {
       btn.addEventListener('click', () => {
         const view = btn.dataset.view || 'winners';
         updateParam('view', view);

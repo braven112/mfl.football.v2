@@ -890,9 +890,9 @@ const getNflLogo = (team: string) => getNflLogoUrl(team);
     const teamOfYearView = document.getElementById('team-of-year-view');
     const allTimeTeamView = document.getElementById('all-time-team-view');
     const overallGrid = document.getElementById('overall-mvp-grid');
-    const positionMvpsSection = document.querySelector('.position-mvps');
-    const positionGroups = document.querySelectorAll('.position-group');
-    const teamOfYearSeasons = document.querySelectorAll('.team-of-year-season');
+    const positionMvpsSection = document.querySelector<HTMLElement>('.position-mvps');
+    const positionGroups = document.querySelectorAll<HTMLElement>('.position-group');
+    const teamOfYearSeasons = document.querySelectorAll<HTMLElement>('.team-of-year-season');
 
     function applyFilters() {
       if (!positionFilter || !yearFilter) return;

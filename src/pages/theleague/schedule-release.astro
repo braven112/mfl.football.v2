@@ -14,7 +14,7 @@
 export const prerender = false;
 
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
-import ScheduleRelease from '../../components/shared/ScheduleRelease.tsx';
+import ScheduleReleaseIsland from '../../components/shared/ScheduleRelease.tsx';
 import { getAuthUser, isAuthorizedForLeague } from '../../utils/auth';
 import { getLeagueBySlug } from '../../config/leagues';
 import { spriteUrl } from '../../utils/sprite-url';
@@ -28,5 +28,5 @@ if (!user || !league || !isAuthorizedForLeague(user, league.id)) {
 ---
 
 <TheLeagueLayout title="Schedule Release">
-  <ScheduleRelease client:load leagueSlug={league.slug} spriteHref={spriteUrl} />
+  <ScheduleReleaseIsland client:load leagueSlug={league.slug} spriteHref={spriteUrl} />
 </TheLeagueLayout>

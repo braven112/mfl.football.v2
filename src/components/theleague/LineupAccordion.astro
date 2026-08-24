@@ -344,7 +344,7 @@ const awayProjectedTotal = awayLineup.totalActual || homeAllPlayers
         }
         
         // Rotate chevron
-        const chevron = accordionButton.querySelector('.accordion-chevron');
+        const chevron = accordionButton.querySelector<HTMLElement>('.accordion-chevron');
         if (chevron) {
           chevron.style.transform = newExpanded ? 'rotate(180deg)' : 'rotate(0deg)';
         }

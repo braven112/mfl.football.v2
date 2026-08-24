@@ -148,9 +148,11 @@ const nextYearGroups = groupByCategory(nextYearEvents);
     // Normalize to 4-digit zero-padded format
     franchiseId = /^\d+$/.test(franchiseId) ? franchiseId.padStart(4, '0') : franchiseId;
 
-    const links = document.querySelectorAll('.calendar-card__link');
-    links.forEach((link) => {
-      const anchor = /** @type {HTMLAnchorElement} */ (link);
+    // Type at the query: a JSDoc cast is inert in an .astro script block
+    // (it is TypeScript, not JS), so `link` stayed `Element` and every
+    // `.href` read below it failed to compile.
+    const links = document.querySelectorAll<HTMLAnchorElement>('.calendar-card__link');
+    links.forEach((anchor) => {
       if (anchor.href.includes('%7BfranchiseId%7D') || anchor.href.includes('{franchiseId}')) {
         anchor.href = anchor.href
           .replace(/%7BfranchiseId%7D/g, franchiseId)

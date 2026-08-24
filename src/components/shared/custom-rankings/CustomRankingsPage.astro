@@ -15,7 +15,7 @@
  * vorpPoints column — the only one the board renders — stays meaningful.
  */
 import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
-import CustomRankingsPage from '../../theleague/custom-rankings/CustomRankingsPage';
+import CustomRankingsPageIsland from '../../theleague/custom-rankings/CustomRankingsPage';
 import { getLeagueYearForSlug } from '../../../utils/league-year';
 import { getPlayerMap } from '../../../utils/player-map';
 import { getLeagueContext } from '../../../utils/league-context';
@@ -172,7 +172,7 @@ for (const [id, result] of vorpResults) {
 ---
 
 <TheLeagueLayout title={title}>
-  <CustomRankingsPage
+  <CustomRankingsPageIsland
     client:load
     mflPlayersJson={JSON.stringify(mflPlayers)}
     franchiseId={user.franchiseId}

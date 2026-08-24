@@ -18,6 +18,12 @@
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
+    // Astro/Vite resolve the app; tsc only type-checks here, never emits.
+    "noEmit": true,
+    // Several islands are imported with an explicit .tsx extension. Dropping
+    // the extension instead would change module resolution where an .astro
+    // and a .tsx share a basename (rankings/MyRankEditor), so allow it.
+    "allowImportingTsExtensions": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": true
   }
