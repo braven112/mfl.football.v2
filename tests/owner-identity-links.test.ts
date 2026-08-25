@@ -18,7 +18,7 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
-import { ownerSlugForIdentity } from '../src/utils/owner-links';
+import { foldForFilter, ownerSlugForIdentity } from '../src/utils/owner-links';
 import { buildHistoricalIdentities } from '../src/utils/franchise-eras';
 import { LEAGUES } from '../src/config/leagues-data.mjs';
 
@@ -117,5 +117,49 @@ describe('ownerSlugForIdentity — both keys are load-bearing', () => {
 
   it('returns null for a name nobody held', () => {
     expect(ownerSlugForIdentity(index, 'Never Existed', 2007)).toBeNull();
+  });
+});
+
+/**
+ * The owners filter is the only way to find a former owner in a table of 65,
+ * and it was matching raw lowercase text. MFL hands back names exactly as the
+ * owner typed them, so its export spells Rick O’Keefe with a CURLY apostrophe
+ * — and `"rick o’keefe".includes("rick o'keefe")` is false. Typing his name
+ * the obvious way returned "No owners match that filter".
+ *
+ * Caught by Copilot on PR #615. These pin the fold in both directions: the
+ * three spellings must collapse to one key, and the fold must be applied to
+ * the query as well, or the mismatch simply moves.
+ */
+describe('foldForFilter', () => {
+  it('makes the three spellings of an apostrophe one key', () => {
+    const curly = foldForFilter('Rick O’Keefe');
+    expect(foldForFilter("Rick O'Keefe")).toBe(curly);
+    expect(foldForFilter('Rick OKeefe')).toBe(curly);
+    expect(curly).toBe('rick okeefe');
+  });
+
+  it('finds the owner however the searcher types it', () => {
+    // What the row carries, built from the registry's curly spelling.
+    const rowKey = foldForFilter('Rick O’Keefe');
+    for (const typed of ["O'Keefe", 'O’Keefe', 'okeefe', 'RICK O’KEEFE ']) {
+      expect(rowKey.includes(foldForFilter(typed)), `"${typed}" should match`).toBe(true);
+    }
+  });
+
+  it('folds punctuation in team names too', () => {
+    expect(foldForFilter("Habanero's")).toBe('habaneros');
+    expect(foldForFilter('M.L. Maniacs')).toBe('ml maniacs');
+    expect(foldForFilter('P-89s')).toBe('p89s');
+    expect(foldForFilter("Dan Marino's Tan Isotoners")).toBe('dan marinos tan isotoners');
+  });
+
+  it('keeps word boundaries so a two-word query still behaves', () => {
+    expect(foldForFilter('  Tim   Barlos ')).toBe('tim barlos');
+    expect(foldForFilter('Tim Barlos').includes(foldForFilter('tim bar'))).toBe(true);
+  });
+
+  it('does not fold two different people onto one key', () => {
+    expect(foldForFilter('Tim Barlos')).not.toBe(foldForFilter('Paul Tarsney'));
   });
 });
