@@ -23,10 +23,14 @@
  * ones.
  *
  * ── Credentials ───────────────────────────────────────────────────────────
- * Either:
+ * Any one of these, in the order resolveCookies() tries them:
+ *   MFL_USER_ID=... MFL_IS_COMMISH=... node scripts/fetch-owner-names.mjs
+ *   MFL_COOKIE='MFL_USER_ID=...; MFL_IS_COMMISH=...' node scripts/...
  *   MFL_USERNAME=... MFL_PASSWORD=... node scripts/fetch-owner-names.mjs
- * or, if you already have a session cookie:
- *   MFL_COOKIE='MFL_USER_ID=...' node scripts/fetch-owner-names.mjs
+ *
+ * MFL_IS_COMMISH is the one that matters — names come back only to a
+ * commissioner session, so the other cookie alone authenticates and returns
+ * nothing.
  *
  * Usage:
  *   node scripts/fetch-owner-names.mjs                 # dry run — prints what it would set
@@ -61,7 +65,8 @@ function parseArgs() {
     else if (arg === '--help' || arg === '-h') {
       console.log(
         'Usage: node scripts/fetch-owner-names.mjs [--league=<slug|afl>] [--year=YYYY] [--write]\n' +
-          '  Needs MFL_USERNAME + MFL_PASSWORD, or MFL_COOKIE.\n' +
+          '  Needs MFL_USER_ID + MFL_IS_COMMISH, or MFL_COOKIE, or\n' +
+          '  MFL_USERNAME + MFL_PASSWORD.\n' +
           '  Dry run by default. Names only — emails are never stored.'
       );
       process.exit(0);
@@ -98,24 +103,111 @@ export const assertNoContactInfo = (value, where) => {
   }
 };
 
-async function resolveCookies() {
-  if (process.env.MFL_COOKIE) return process.env.MFL_COOKIE;
+/**
+ * Commissioner cookies for `mflFetch`, as an OBJECT of cookie name -> value.
+ *
+ * `mflFetch` builds its header with `Object.entries(cookies)`, so handing it a
+ * STRING yields `0=h; 1=t; 2=t...` — a garbage header that MFL ignores, which
+ * comes back as a perfectly valid response carrying no owner names. That is the
+ * worst possible failure for this script: silent, and indistinguishable from a
+ * league that simply has none.
+ *
+ * THREE sources, tried in this order, and a source is taken only when it
+ * yields BOTH cookies (see the loop below for why a half-set one must not win):
+ *
+ *   1. MFL_USER_ID + MFL_IS_COMMISH — the stored session cookies. PREFERRED,
+ *      and what the rest of this repo drives MFL with
+ *      (`apply-pending-contracts.mjs`, `sync-draft-pick-contracts.mjs`,
+ *      `export-best-ball-draft.mjs`, `mfl-calendar-event.mjs` all do this).
+ *   2. MFL_COOKIE — a whole Cookie header pasted from a browser, split back
+ *      into the pair. Convenient for a local run.
+ *   3. MFL_USERNAME + MFL_PASSWORD — a fresh login, which RETURNS those same
+ *      two cookies as `{ mflUserId, mflIsCommish }`.
+ *
+ * `MFL_IS_COMMISH` is the one that matters here. Owner names are returned only
+ * to a commissioner session, so a request carrying MFL_USER_ID alone
+ * authenticates fine and still comes back anonymous.
+ */
+export async function resolveCookies() {
+  const envUserId = process.env.MFL_USER_ID;
+  const envCommish = process.env.MFL_IS_COMMISH;
   const username = process.env.MFL_USERNAME;
   const password = process.env.MFL_PASSWORD;
-  if (!username || !password) {
+
+  /**
+   * A whole Cookie header pasted from a browser, e.g.
+   * MFL_COOKIE='MFL_USER_ID=abc; MFL_IS_COMMISH=def'. Split back into the two
+   * cookies rather than passing the string on: mflFetch runs Object.entries()
+   * over what it is given, so a raw string becomes "0=M; 1=F; 2=L…" — a header
+   * MFL ignores while answering with a valid, entirely anonymous payload.
+   */
+  const parseCookieHeader = (header) => {
+    const parsed = Object.fromEntries(
+      header
+        .split(';')
+        .map((pair) => pair.trim())
+        .filter(Boolean)
+        .map((pair) => {
+          const eq = pair.indexOf('=');
+          return eq === -1 ? [pair, ''] : [pair.slice(0, eq).trim(), pair.slice(eq + 1).trim()];
+        })
+    );
+    return { mflUserId: parsed.MFL_USER_ID, mflIsCommish: parsed.MFL_IS_COMMISH };
+  };
+
+  /**
+   * Sources in preference order, each evaluated lazily.
+   *
+   * A source is only taken when it is COMPLETE — both cookies. A half-set
+   * source must not win: MFL_USER_ID alone authenticates and returns an
+   * anonymous payload, so short-circuiting on it would skip a login that could
+   * have produced a real commissioner session and hand back a run that finds
+   * no names while looking like it worked.
+   */
+  const cookieHeaderEnv = process.env.MFL_COOKIE;
+  const sources = [
+    { name: 'MFL_USER_ID + MFL_IS_COMMISH', get: () => ({ mflUserId: envUserId, mflIsCommish: envCommish }) },
+    { name: 'MFL_COOKIE', get: () => (cookieHeaderEnv ? parseCookieHeader(cookieHeaderEnv) : {}) },
+    {
+      name: 'MFL_USERNAME + MFL_PASSWORD',
+      // loginToMFL resolves to { mflUserId, mflIsCommish } — NOT { cookies }.
+      get: () => (username && password ? loginToMFL(username, password) : {}),
+    },
+  ];
+
+  let partial = null;
+  let mflUserId;
+  let mflIsCommish;
+  for (const source of sources) {
+    const result = (await source.get()) ?? {};
+    if (result.mflUserId && result.mflIsCommish) {
+      ({ mflUserId, mflIsCommish } = result);
+      break;
+    }
+    // Remember the first usable-but-incomplete source, in case nothing better
+    // turns up — running with it and a loud warning beats refusing to run.
+    if (!partial && result.mflUserId) partial = { ...result, name: source.name };
+  }
+
+  if (!mflUserId && partial) {
+    ({ mflUserId, mflIsCommish } = partial);
     console.error(
-      'No credentials. Set MFL_COOKIE, or MFL_USERNAME + MFL_PASSWORD.\n' +
+      `WARNING: ${partial.name} supplied MFL_USER_ID but no MFL_IS_COMMISH, and\n` +
+        'no other source produced a complete pair. MFL returns owner names ONLY\n' +
+        'to a commissioner session, so this run will almost certainly find none.'
+    );
+  }
+
+  if (!mflUserId) {
+    console.error(
+      'No credentials. Set MFL_USER_ID + MFL_IS_COMMISH, or MFL_COOKIE,\n' +
+        'or MFL_USERNAME + MFL_PASSWORD.\n' +
         'Owner names are only returned to a user with commissioner access.'
     );
     process.exit(1);
   }
-  const result = await loginToMFL(username, password);
-  const cookies = typeof result === 'string' ? result : result?.cookies ?? null;
-  if (!cookies) {
-    console.error('Login did not return a usable cookie — check the credentials.');
-    process.exit(1);
-  }
-  return cookies;
+
+  return { MFL_USER_ID: mflUserId, MFL_IS_COMMISH: mflIsCommish };
 }
 
 /** Years this league actually has feeds for — the years with owners to name. */
