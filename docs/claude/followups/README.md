@@ -7,15 +7,26 @@ because production was broken, and it is allowed to do that **only** because the
 findings land here instead of evaporating. A deferral that isn't captured is
 just skipping review with extra steps.
 
-Which means these files are also the audit trail for whether the fast lane gets
-repaid. The whole audit:
+**The brief is not the only copy.** `/hotfix` step 8b opens a
+`hotfix-followup`-labelled GitHub issue carrying the same items, because the two
+fail in different ways: a working tree is thrown away and a push can silently not
+land, while an issue survives both. `/followup` reads whichever it can find and
+recreates the missing one.
+
+Which means there are two views of the same audit — whether the fast lane gets
+repaid:
 
 ```bash
-grep -l "^status: open" docs/claude/followups/*.md
+grep -l "^status: open" docs/claude/followups/*.md      # briefs
+gh issue list --label hotfix-followup --state open      # issues (authoritative)
 ```
 
-If that list only ever grows, the hotfix workflow isn't a hotfix workflow — it's
-a quality-skipping machine, and that's worth knowing.
+Prefer the issue list: a brief that never got pushed is invisible to the grep. If
+either only ever grows, the hotfix workflow isn't a hotfix workflow — it's a
+quality-skipping machine, and that's worth knowing.
+
+Closed issues carry the verdict in their reason: `completed` means the debt was
+repaid, `not_planned` means every item was dropped. Don't blur them.
 
 ## Naming
 
@@ -32,8 +43,9 @@ severity: P0                 # the hotfix's triage severity
 opened: 2026-08-24
 hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/612
 hotfix_sha: a1b2c3d
+followup_issue: 123          # the durable backup copy — /hotfix step 8b
 followup_pr:                 # filled in by /followup step 7
-followup_session:            # session id from /hotfix step 8b, for tracing
+followup_session:            # session id from /hotfix step 8d, for tracing
 ---
 
 # Follow-up: live scoring crashed on a null athlete id
