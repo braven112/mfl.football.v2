@@ -39,9 +39,16 @@ import {
   pointsPerGame,
 } from '../src/utils/division-strength.mjs';
 import type { DivisionStrengthFile } from '../src/types/division-strength';
+import { ALL_TIME_SORT_KEYS, berthRate, eraTeamSeasons, playoffFieldRange } from '../src/utils/division-strength-view';
 
 const ROOT = path.resolve(__dirname, '..');
 const readJson = (p: string) => JSON.parse(readFileSync(p, 'utf8'));
+
+/** The shared render, read once — two guards below scan its source. */
+const page = readFileSync(
+  path.join(ROOT, 'src/components/shared/division-strength/DivisionStrengthPage.astro'),
+  'utf8'
+);
 
 /**
  * Who held a division in one season — franchise AND owners, order-independent.
@@ -150,6 +157,34 @@ it('builds a season that is under way, not just one that is finished', async () 
   expect(readFileSync(target.ledgerPath, 'utf8'), 'ledger not restored').toBe(original);
 });
 
+it('never reports a division title as a division-level or era-level achievement', () => {
+  // A division crowns exactly one winner every season it plays, so
+  // `DivisionAllTime.divisionTitles` and `DivisionMembershipEra.divisionTitles`
+  // are season counters — 15 titles in 15 seasons, for every division in both
+  // leagues (the per-league suite below pins that identity). They shipped on
+  // the page as "Titles / Champs 15 / 3" and as a sortable Titles column that
+  // ordered the table exactly like the Seasons column beside it.
+  //
+  // Per OWNER the same field is real — four owners split those fifteen — so
+  // the ban is on the receiver, not the name. `o` is the owner loop variable.
+  const offenders = page
+    .split('\n')
+    .map((line, i) => ({ line: line.trim(), n: i + 1 }))
+    .filter(({ line }) => /(?<![\w.])(?!o\.)[\w.]*\.divisionTitles\b/.test(line));
+  expect(
+    offenders.map((o) => `${o.n}: ${o.line}`),
+    'report playoffBerths / championships for a division or an era; divisionTitles is its season count'
+  ).toEqual([]);
+});
+
+it('offers no all-time sort on division titles', () => {
+  // Same bug from the URL side: `?sort=titles` ordered the table identically
+  // to `?sort=seasons` while reading as a trophy ranking. An unknown key
+  // clamps to the default, so an old bookmark degrades rather than 404s.
+  expect(ALL_TIME_SORT_KEYS as readonly string[]).not.toContain('titles');
+  expect(ALL_TIME_SORT_KEYS as readonly string[]).toContain('playoffs');
+});
+
 it('never renders an owner ref by its raw concatenated title', () => {
   // `title` joins every team name an owner has worn — "Vit's Brother /
   // Avenging Amish / Broke Back 'lil Half Dead's Brother" — so it is a lookup
@@ -159,10 +194,6 @@ it('never renders an owner ref by its raw concatenated title', () => {
   // Caught a real one: the "Built by N owners · …" summary was a seventh label
   // site added after the other six were converted, and it put the joined
   // string back on the AFL's North panel.
-  const page = readFileSync(
-    path.join(ROOT, 'src/components/shared/division-strength/DivisionStrengthPage.astro'),
-    'utf8'
-  );
   const offenders = page
     .split('\n')
     .map((line, i) => ({ line: line.trim(), n: i + 1 }))
@@ -473,6 +504,94 @@ describe.each(leagues)('$league.slug division strength', ({ league, dataPath, le
     ]);
     expect(data).not.toHaveProperty('strongest');
     expect(data).not.toHaveProperty('weakest');
+  });
+
+  // ── 7. Postseason: what the page reports in place of division titles.
+  it('carries no information in divisionTitles beyond the season count', () => {
+    // The whole reason the page stopped reporting it at this level. A division
+    // crowns exactly one winner in every season it plays, so its all-time
+    // title count — and a membership era's — is its season count, minus any
+    // season still in progress (a winner is only recorded once the season is
+    // complete). Berths and championships are earned against the rest of the
+    // league, so those DO separate two divisions of the same age.
+    const crowned = new Set(
+      data.years.filter((y) => y.divisions.some((d) => d.divisionWinner)).map((y) => y.year)
+    );
+    for (const division of data.divisions) {
+      expect(division.divisionTitles, `${division.name} all-time titles`).toBe(
+        division.years.filter((y) => crowned.has(y)).length
+      );
+      for (const era of division.membershipEras) {
+        expect(era.divisionTitles, `${division.name} ${era.yearStart}-${era.yearEnd} titles`).toBe(
+          division.years.filter((y) => crowned.has(y) && y >= era.yearStart && y <= era.yearEnd)
+            .length
+        );
+      }
+    }
+    // Stated the plain way for every division whose seasons are all complete:
+    // the number IS the season count, which is why it cannot be an achievement.
+    const complete = data.divisions.filter((d) => d.years.every((y) => crowned.has(y)));
+    expect(complete.length, 'no completed division to compare against').toBeGreaterThan(0);
+    for (const d of complete) {
+      expect(d.divisionTitles, `${d.name}: titles is the season count`).toBe(d.seasons);
+    }
+  });
+
+  it('rates playoff berths against the franchise-seasons that could have earned them', () => {
+    for (const division of data.divisions) {
+      const rate = berthRate(division.playoffBerths, division.teamSeasons);
+      expect(rate, `${division.name} berth rate`).not.toBeNull();
+      expect(rate!).toBeGreaterThanOrEqual(0);
+      // More berths than franchise-seasons would mean a team made the playoffs
+      // twice in one year — the arithmetic that says the denominator is right.
+      expect(rate!, `${division.name}: more berths than seasons to earn them`).toBeLessThanOrEqual(1);
+    }
+    // And unlike titles, the metric actually distinguishes the divisions.
+    if (data.divisions.length > 2) {
+      const distinct = new Set(
+        data.divisions.map((d) => berthRate(d.playoffBerths, d.teamSeasons))
+      );
+      expect(distinct.size, 'every division converts at the same rate — suspicious').toBeGreaterThan(1);
+    }
+  });
+
+  it("counts an era's franchise-seasons as its lineup size times its length", () => {
+    // An era is by definition the same franchise set every season, so the
+    // product is exact — checked against the seasons themselves rather than
+    // assumed, because a realignment that slipped inside an era would break it.
+    for (const division of data.divisions) {
+      for (const era of division.membershipEras) {
+        const counted = data.years
+          .filter((y) => y.year >= era.yearStart && y.year <= era.yearEnd)
+          .flatMap((y) => y.divisions.filter((d) => d.name === division.name))
+          .reduce((n, d) => n + d.teams.length, 0);
+        expect(
+          eraTeamSeasons(era),
+          `${division.name} ${era.yearStart}-${era.yearEnd} franchise-seasons`
+        ).toBe(counted);
+        expect(era.playoffBerths).toBeLessThanOrEqual(counted);
+      }
+    }
+  });
+
+  it('measures the playoff field only from seasons that have seeded one', () => {
+    // The page prints "as few as MIN and as many as MAX" to caveat comparing
+    // berth rates across a change in field size. A season in progress has
+    // seeded nobody yet, and counting its 0 would publish a field the league
+    // has never used.
+    const range = playoffFieldRange(data);
+    const seeded = data.years
+      .map((y) => y.divisions.reduce((n, d) => n + d.playoffBerths, 0))
+      .filter((n) => n > 0);
+    expect(range).not.toBeNull();
+    expect(range).toEqual({ min: Math.min(...seeded), max: Math.max(...seeded) });
+    const withInProgress = playoffFieldRange({
+      years: [
+        ...data.years,
+        { divisions: data.years[0].divisions.map((d) => ({ ...d, playoffBerths: 0 })) },
+      ] as DivisionStrengthFile['years'],
+    });
+    expect(withInProgress, 'an unseeded season moved the field').toEqual(range);
   });
 
   it('marks a division active only when it exists in the latest played season', () => {

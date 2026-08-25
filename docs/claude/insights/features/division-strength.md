@@ -321,3 +321,53 @@ selector that names an element by class alone will silently re-sort a nested
 flex container it was never written for. Scope ordering rules to the generation
 they mean — `.list > li > .thing`, not `.list .thing` — the moment any row wraps
 part of its content in a flex wrapper.
+## 2026-08-25 - "Division titles" is a season counter, not an achievement
+
+**Context:** An owner reading a division panel: *"it seems to count division
+titles but it's just counting how many years the division has been around."*
+Exactly right. The Northwest panel led with **Titles / Champs 15 / 3** over
+*2011–present* — 15 seasons, 15 titles.
+
+**Insight:** A division crowns exactly one winner in every season it plays, so
+a DIVISION's all-time division-title count is identically its season count.
+The number is a restatement of the row next to it, formatted as a trophy case.
+Checked before believing it: `divisionTitles === seasons` for 7 of 7 divisions
+and 28 of 28 membership eras in TheLeague, and 7 of 7 and 70 of 70 in the AFL —
+100%, because it is arithmetic and not a coincidence.
+
+Worse than redundant, it was load-bearing: the all-time table's **Titles**
+column was sortable, and `?sort=titles` produced exactly the same ordering as
+`?sort=seasons` while reading as a ranking of accomplishment.
+
+The same field is genuinely informative one level down. Inside a division, the
+owners split those titles unevenly — Bring The Pain has 8 of the Central's 19
+— so `DivisionOwnerEra.divisionTitles` stays, and only the two aggregate copies
+were pulled from the page.
+
+**Evidence:** What replaced it had to be earned against the rest of the league:
+`playoffBerths` and `championships`, which do vary between two divisions of the
+same age (Northwest 28/3 vs Southwest 27/3 over the same 15 seasons). Berths
+are reported over `playoffBerths / teamSeasons` — franchise-seasons, not
+seasons, because the AFL ran six divisions of four through 2012 and four of six
+after, and per-season would flatter the bigger ones.
+
+One caveat is real and is rendered only where it applies: a berth rate compares
+only within a fixed playoff field, and the AFL's moved (eight or nine of 24
+through 2017, four or five since). `playoffFieldRange()` measures the spread
+from the data, and the note prints only when it exceeds one seed — TheLeague
+has seeded 7 of 16 every season on file and must not carry the AFL's footnote.
+
+Three guards in `tests/division-strength-data.test.ts`: the identity itself is
+pinned (as "titles equals the seasons already crowned", so it holds mid-season
+too, when winners are not yet recorded); the page source is scanned for any
+`divisionTitles` receiver other than the owner loop variable; and
+`ALL_TIME_SORT_KEYS` is asserted not to contain `titles`. A stale
+`?sort=titles` bookmark clamps to the default like any unknown key.
+
+**Recommendation:** Before publishing a count, ask what the number would be if
+the thing being measured were maximally mediocre. If the answer is "the same",
+it is a structural constant wearing a metric's clothes — the tell here was a
+column that moved in lockstep with the one beside it. Awards that are handed
+out per-group per-season (division titles, weekly high score within a division,
+"most improved" of a fixed field) only carry information at the level BELOW the
+group that always receives one.

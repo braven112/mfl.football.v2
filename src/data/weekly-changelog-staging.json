@@ -12,6 +12,14 @@
     {
       "date": "2026-08-25",
       "type": "bug-fix",
+      "summary": "Strength of Division was handing out participation trophies. The \"Titles\" number on every division panel — 15 for the Northwest, 19 for the Central — was just the number of seasons that division has existed, because a division crowns a winner every single year. It's gone, along with the sortable Titles column that ordered the table exactly like the Seasons column beside it. Divisions now report what their teams actually earned against the rest of the league: playoff berths, the share of franchise-seasons that reached the postseason, and championships with the runner-up finishes beside them. Division titles still show where they mean something — per owner, inside the division, where four owners split them unevenly.",
+      "impact": "user",
+      "area": "standings",
+      "league": "both"
+    },
+    {
+      "date": "2026-08-25",
+      "type": "bug-fix",
       "summary": "Owner cards on the Owners page were wearing decade-old logos. Eight owners — Dangsters, Ninjas, Midwestside, Pigskins, Wabbits, Bring The Pain, Dark Magicians, Fire Ready Aim — now show the logo they actually run today instead of the one they retired years ago.",
       "impact": "user",
       "area": "owners",

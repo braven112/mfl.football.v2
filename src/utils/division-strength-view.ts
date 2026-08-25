@@ -17,13 +17,27 @@ import type {
   DivisionStrengthFile,
 } from '../types/division-strength';
 
-/** Columns the all-time table can sort on. */
+/**
+ * Columns the all-time table can sort on.
+ *
+ * There is deliberately no `titles` key. A division crowns exactly one winner
+ * every season it exists, so a DIVISION's all-time division-title count is its
+ * season count wearing a trophy — 15 titles in 15 seasons, for every division
+ * in both leagues. It was sortable and rendered here until Aug 2026 and it
+ * ordered the table identically to `seasons` while reading as an achievement.
+ * Postseason results are what actually separate divisions, so the column is
+ * `playoffs` (berth rate) and `championships`. Division titles still mean
+ * something per OWNER inside a division and are still reported there.
+ *
+ * A bookmarked `?sort=titles` clamps to the default like any other unknown
+ * key — see `resolveDivisionStrengthView`.
+ */
 export const ALL_TIME_SORT_KEYS = [
   'name',
   'seasons',
   'record',
   'interPct',
-  'titles',
+  'playoffs',
   'championships',
 ] as const;
 
@@ -89,6 +103,73 @@ export function resolveDivisionStrengthView(
     return { kind: 'redirect', to: basePath };
   }
   return { kind: 'season', year, sort, dir };
+}
+
+/* ── Postseason ────────────────────────────────────────────────────────────
+ *
+ * What a division actually achieved, as opposed to how long it existed.
+ *
+ * Division titles are NOT that: every division hands one out every season, so
+ * counting them at the division level counts seasons (see ALL_TIME_SORT_KEYS).
+ * Playoff berths and championships are earned against the rest of the league,
+ * so both vary between divisions — the Northwest and Southwest have run the
+ * same 15 seasons in TheLeague and separate at 28 berths / 3 titles against
+ * 27 / 3.
+ */
+
+/**
+ * Playoff berths per franchise-season — the share of the chances a division
+ * had that it converted.
+ *
+ * The raw berth count is longevity in disguise for the same reason the title
+ * count was: a division twice as old has had twice as many shots. The
+ * denominator is franchise-seasons rather than seasons because divisions have
+ * not always been the same size (the AFL ran six divisions of four through
+ * 2012 and four of six after), so "berths per season" would flatter the
+ * bigger ones.
+ *
+ * Null, never 0, when there are no franchise-seasons to divide by — an
+ * upcoming alignment that has not played.
+ */
+export function berthRate(berths: number, teamSeasons: number): number | null {
+  return teamSeasons > 0 ? berths / teamSeasons : null;
+}
+
+/**
+ * Franchise-seasons inside a membership era.
+ *
+ * Exact rather than approximate: an era is by definition the same franchise
+ * set in every one of its seasons, so the product is the count.
+ */
+export function eraTeamSeasons(
+  era: Pick<DivisionMembershipEra, 'franchiseIds' | 'seasons'>
+): number {
+  return era.franchiseIds.length * era.seasons;
+}
+
+/**
+ * How many teams the league has seeded in a season, smallest and largest, over
+ * the seasons on file.
+ *
+ * A berth rate only compares within a fixed field. TheLeague has seeded 7 of
+ * 16 every year since 2007 and the caveat is noise there; the AFL seeded eight
+ * or nine of 24 through 2017 and four or five since, which makes a rate from
+ * the wide-field era a materially easier number. The page reports the range
+ * when it varies and stays quiet when it does not, so neither league carries
+ * the other's footnote.
+ *
+ * Seasons with zero berths are excluded rather than counted as a small field:
+ * a season in progress has not seeded anyone yet, and 0 is "not known", not
+ * "nobody made it".
+ */
+export function playoffFieldRange(
+  data: Pick<DivisionStrengthFile, 'years'>
+): { min: number; max: number } | null {
+  const fields = data.years
+    .map((y) => y.divisions.reduce((n, d) => n + d.playoffBerths, 0))
+    .filter((n) => n > 0);
+  if (!fields.length) return null;
+  return { min: Math.min(...fields), max: Math.max(...fields) };
 }
 
 /* ── Membership eras ───────────────────────────────────────────────────────

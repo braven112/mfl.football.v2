@@ -59,7 +59,14 @@ import type { AllTimeSortKey, DivisionStrengthView } from '../../../utils/divisi
 // `rankEras` pre-formats each row's year span, so `formatEraYears` is not
 // imported here — the template must never re-derive a label the ranking
 // already resolved, or the two drift on the "–present" case.
-import { ERA_MIN_SEASONS, divisionAlumni, rankEras } from '../../../utils/division-strength-view';
+import {
+  ERA_MIN_SEASONS,
+  berthRate,
+  divisionAlumni,
+  eraTeamSeasons,
+  playoffFieldRange,
+  rankEras,
+} from '../../../utils/division-strength-view';
 
 interface Props {
   leagueSlug: CanonicalLeagueSlug;
@@ -124,6 +131,50 @@ const interRanks = rankMap(
   data.divisions.map((d) => ({ slug: d.slug, value: d.interDivision.games ? d.interDivision.winPct : null }))
 );
 
+// ── Postseason ─────────────────────────────────────────────────────────────
+//
+// The page used to lead this column with DIVISION TITLES, and that number was
+// a season counter: one division winner per division per season means a
+// 15-season division has 15 titles, always, in both leagues. It read as a
+// trophy case and sorted the table exactly like the Seasons column beside it.
+// What separates divisions is what their teams did against the rest of the
+// league — berths and championships — so that is what is reported here.
+//
+// Division titles are still real per OWNER inside a division (four owners
+// split fifteen of them) and are still in the owner table below.
+
+/** "47%" — a berth rate, or an em dash when there is nothing to rate. */
+const formatBerthRate = (rate: number | null) =>
+  rate === null ? '—' : `${Math.round(rate * 100)}%`;
+
+/**
+ * The caveat on every berth rate, when the league has one.
+ *
+ * A rate only compares within a fixed playoff field, and one league's field
+ * has moved: the AFL seeded eight or nine of 24 through 2017 and four or five
+ * since. TheLeague has seeded 7 of 16 every season on file, so it must not
+ * carry the AFL's footnote — hence measured from the data rather than written
+ * into the prose.
+ */
+const fieldRange = playoffFieldRange(data);
+const fieldMoved = !!fieldRange && fieldRange.max - fieldRange.min > 1;
+
+/**
+ * Championships with the near misses beside them.
+ *
+ * A division with six finalists and one ring is not the same as one that has
+ * been to a final once, and the bare count cannot tell them apart. Zeroes are
+ * dropped rather than printed — "0 runner-up" is noise, and both leagues have
+ * divisions with no third-place game on record at all.
+ */
+const finalsSubtitle = (d: DivisionAllTime): string => {
+  const parts: string[] = [];
+  if (d.runnerUps > 0) parts.push(`${d.runnerUps} runner-up`);
+  if (d.thirdPlaces > 0) parts.push(`${d.thirdPlaces} third`);
+  if (parts.length) return parts.join(' · ');
+  return d.championships > 0 ? 'no other podium finishes' : 'never won it';
+};
+
 // ── All-time sorting ───────────────────────────────────────────────────────
 const sortValue = (d: DivisionAllTime, key: AllTimeSortKey): number | string => {
   switch (key) {
@@ -131,7 +182,9 @@ const sortValue = (d: DivisionAllTime, key: AllTimeSortKey): number | string => 
     case 'seasons': return d.seasons;
     case 'record': return d.totals.winPct ?? -1;
     case 'interPct': return d.interDivision.games ? (d.interDivision.winPct ?? -1) : -1;
-    case 'titles': return d.divisionTitles;
+    // The RATE, not the count, for the same reason `record` sorts on win% —
+    // the count is longevity, and the Seasons column already sorts by that.
+    case 'playoffs': return berthRate(d.playoffBerths, d.teamSeasons) ?? -1;
     case 'championships': return d.championships;
   }
 };
@@ -185,7 +238,7 @@ const SORT_LABELS: Record<AllTimeSortKey, string> = {
   seasons: 'seasons played',
   record: 'overall win percentage',
   interPct: 'interdivisional win percentage',
-  titles: 'division titles',
+  playoffs: 'playoff berth rate',
   championships: 'championships',
 };
 
@@ -670,7 +723,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                         <th scope="col" class="num">Together</th>
                         <th scope="col" class="num">Record</th>
                         <th scope="col" class="num">Interdivisional</th>
-                        <th scope="col" class="num">Titles</th>
+                        <th scope="col" class="num">Playoffs<span class="visually-hidden"> (berths, over the share of the lineup's franchise-seasons)</span></th>
                         <th scope="col" class="num">Champs<span class="visually-hidden"> (championships)</span></th>
                         <th scope="col">Teams</th>
                       </tr>
@@ -715,7 +768,13 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                               )}
                             </span>
                           </td>
-                          <td class="num">{era.divisionTitles}</td>
+                          {/* Berths, not division titles: this lineup won one of
+                              those every season it played, so the column would
+                              have restated Together for every row. */}
+                          <td class="num">
+                            <span class="rec">{era.playoffBerths}</span>
+                            <span class="pct">{formatBerthRate(berthRate(era.playoffBerths, eraTeamSeasons(era)))}</span>
+                          </td>
                           <td class="num">{era.championships}</td>
                           {/* Crests come from the UPCOMING alignment when there is one,
                               so the column shows who is in the division now rather than
@@ -878,9 +937,9 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                           <span>Interdivisional</span><span class="sort-caret" aria-hidden="true"></span><span class="visually-hidden">{sortHint('interPct', 'interdivisional win percentage')}</span>
                         </a>
                       </th>
-                      <th scope="col" class="sortable num" aria-sort={ariaSort('titles')}>
-                        <a class="sort-link" href={sortHref('titles')}>
-                          <span>Titles</span><span class="sort-caret" aria-hidden="true"></span><span class="visually-hidden">{sortHint('titles', 'division titles')}</span>
+                      <th scope="col" class="sortable num" aria-sort={ariaSort('playoffs')}>
+                        <a class="sort-link" href={sortHref('playoffs')}>
+                          <span>Playoffs</span><span class="sort-caret" aria-hidden="true"></span><span class="visually-hidden">{sortHint('playoffs', 'playoff berth rate')}</span>
                         </a>
                       </th>
                       <th scope="col" class="sortable num" aria-sort={ariaSort('championships')}>
@@ -915,7 +974,10 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                           <span class="rec">{formatRecord(d.interDivision)}</span>
                           <span class="pct">{formatWinPct(d.interDivision)}</span>
                         </td>
-                        <td class="num">{d.divisionTitles}</td>
+                        <td class="num">
+                          <span class="rec">{d.playoffBerths}</span>
+                          <span class="pct">{formatBerthRate(berthRate(d.playoffBerths, d.teamSeasons))}</span>
+                        </td>
                         <td class="num">{d.championships}</td>
                         <td class="member-cell">
                           <span class="member-icons member-icons--alumni">
@@ -934,8 +996,16 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                 </table>
               </div>
               <p class="table-note">
-                Teams lists every franchise that has ever been in the division, most recent first;
-                one that has since moved elsewhere is dimmed.
+                Playoffs is every berth the division's teams have earned, over the share of its
+                franchise-seasons that reached the postseason — the share is what compares, because
+                the count is longevity.
+                {fieldMoved && (
+                  <> Compare shares within an era: the league has seeded as few as {fieldRange!.min}
+                  {' '}teams in a season and as many as {fieldRange!.max}, so the same rate is not the
+                  same achievement either side of that change.</>
+                )}
+                {' '}Teams lists every franchise that has ever been in the division, most recent
+                first; one that has since moved elsewhere is dimmed.
               </p>
             </section>
 
@@ -987,7 +1057,12 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                     <div class="metrics-grid">
                       <MetricCard label="Overall" value={formatRecord(d.totals)} subtitle={formatWinPct(d.totals)} />
                       <MetricCard label="Interdivisional" value={formatRecord(d.interDivision)} subtitle={formatWinPct(d.interDivision)} />
-                      <MetricCard label="Titles / Champs" value={`${d.divisionTitles} / ${d.championships}`} subtitle={`${d.playoffBerths} playoff berths`} />
+                      <MetricCard
+                        label="Playoff berths"
+                        value={String(d.playoffBerths)}
+                        subtitle={`${formatBerthRate(berthRate(d.playoffBerths, d.teamSeasons))} of ${d.teamSeasons} franchise-seasons`}
+                      />
+                      <MetricCard label="Championships" value={String(d.championships)} subtitle={finalsSubtitle(d)} />
                     </div>
 
                     <dl class="detail-rows">
@@ -1095,6 +1170,10 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                                   <th scope="col" class="num">Sn<span class="visually-hidden"> (seasons)</span></th>
                                   <th scope="col" class="num">Record</th>
                                   <th scope="col" class="num">Inter<span class="visually-hidden">divisional win percentage</span></th>
+                                  <th scope="col" class="num">Po<span class="visually-hidden"> (playoff berths)</span></th>
+                                  {/* Division titles ARE a real number here, unlike at the
+                                      division level: the division hands out one a season and
+                                      these owners split them. */}
                                   <th scope="col" class="num">Div<span class="visually-hidden"> (division titles)</span></th>
                                   <th scope="col" class="num">Ch<span class="visually-hidden"> (championships)</span></th>
                                 </tr>
@@ -1116,6 +1195,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                                     <td class="num">{o.seasons}</td>
                                     <td class="num">{formatRecord(o.totals)}</td>
                                     <td class="num">{formatWinPct(o.interDivision)}</td>
+                                    <td class="num">{o.playoffBerths || ''}</td>
                                     <td class="num">{o.divisionTitles || ''}</td>
                                     <td class="num">{o.championships || ''}</td>
                                   </tr>
@@ -1964,15 +2044,22 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
   }
 
   /* ── Metric strip ──────────────────────────────────────────────────────── */
+  /* Two columns, not three: the division panel's strip carries FOUR cards
+     (overall, interdivisional, berths, championships), and a three-up grid
+     strands the fourth alone on a second row at every width. The season strip
+     still carries three and keeps its own column count. */
   .metrics-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 0.625rem;
     margin: 0.875rem 0;
   }
-  .metrics-grid--season { margin: 1.5rem 0 0; }
+  .metrics-grid--season {
+    grid-template-columns: repeat(3, 1fr);
+    margin: 1.5rem 0 0;
+  }
   @media (max-width: 767px) {
-    .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+    .metrics-grid--season { grid-template-columns: repeat(2, 1fr); }
   }
 
   /* ── Division panels ───────────────────────────────────────────────────── */
