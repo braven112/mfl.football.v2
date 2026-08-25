@@ -18,7 +18,6 @@ export const ALL_TIME_SORT_KEYS = [
   'seasons',
   'record',
   'interPct',
-  'avgFinish',
   'titles',
   'championships',
 ] as const;

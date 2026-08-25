@@ -7,20 +7,20 @@
  *
  * ── Why this page refuses to name an all-time strongest division ───────────
  *
- * It reports two metrics that genuinely disagree, and picking one would be
- * picking an answer rather than reporting one:
+ * Sample size, not shyness. Rates flatter a short run: the AFL's Atlantic ran a
+ * single season at .556 and tops the list outright, above divisions carrying
+ * twenty-plus years of evidence. So the full ordering is shown with the season
+ * count beside every short run, and no division is crowned.
  *
- *   - Raw interdivisional win% flatters a short run. The AFL's Atlantic
- *     existed for a single season at .556 and tops that column outright.
- *   - Average finish, normalized so the AFL's six-division era and its
- *     four-division era compare, rewards sustained placement but flattens a
- *     dominant single year.
+ * Two RATES are reported per row — against the rest of the league, and overall
+ * — but only the first one sorts, because a division's overall record cannot
+ * separate it from anyone (see division-strength.mjs). They rank identically in
+ * both leagues today; where they diverge the overall figure is the flattering
+ * one, and the copy names the clearest example straight from the data.
  *
- * So both columns carry their own rank chip, side by side, always — the reader
- * sees both orderings at once and sees where they disagree — and the table
- * arrives sorted by SEASONS, which is neutral between them. Whichever column
- * the table sorts by on arrival reads as the answer no matter what the prose
- * says, which is why the default sort is a product decision and not a default.
+ * The table arrives sorted by SEASONS, neutral with respect to strength:
+ * whichever column it sorts by on arrival reads as the answer no matter what
+ * the prose says, so that default is a product decision.
  *
  * A SINGLE SEASON has no such problem, so the season view is deliberately
  * decisive: one strongest, one weakest, stated plainly. The tonal contrast is
@@ -112,7 +112,6 @@ const rankMap = (values: Array<{ slug: string; value: number | null }>) => {
 const interRanks = rankMap(
   data.divisions.map((d) => ({ slug: d.slug, value: d.interDivision.games ? d.interDivision.winPct : null }))
 );
-const finishRanks = rankMap(data.divisions.map((d) => ({ slug: d.slug, value: d.avgFinishPct })));
 
 // ── All-time sorting ───────────────────────────────────────────────────────
 const sortValue = (d: DivisionAllTime, key: AllTimeSortKey): number | string => {
@@ -121,7 +120,6 @@ const sortValue = (d: DivisionAllTime, key: AllTimeSortKey): number | string => 
     case 'seasons': return d.seasons;
     case 'record': return d.totals.winPct ?? -1;
     case 'interPct': return d.interDivision.games ? (d.interDivision.winPct ?? -1) : -1;
-    case 'avgFinish': return d.avgFinishPct ?? -1;
     case 'titles': return d.divisionTitles;
     case 'championships': return d.championships;
   }
@@ -176,7 +174,6 @@ const SORT_LABELS: Record<AllTimeSortKey, string> = {
   seasons: 'seasons played',
   record: 'overall win percentage',
   interPct: 'interdivisional win percentage',
-  avgFinish: 'finish score',
   titles: 'division titles',
   championships: 'championships',
 };
@@ -193,9 +190,6 @@ const SORT_LABELS: Record<AllTimeSortKey, string> = {
 const byInter = data.divisions
   .filter((d) => d.interDivision.games > 0)
   .sort((a, b) => (b.interDivision.winPct ?? 0) - (a.interDivision.winPct ?? 0));
-const byFinish = data.divisions
-  .filter((d) => d.avgFinishPct !== null)
-  .sort((a, b) => (b.avgFinishPct ?? 0) - (a.avgFinishPct ?? 0));
 
 // A division that ran a season or two is not a small sample of a long run —
 // it is a short division. Saying so inline, next to the name, is what stops
@@ -207,7 +201,29 @@ const isShortRun = (d: DivisionAllTime) => d.seasons < SHORT_RUN_SEASONS;
 // outright, rather than reporting the leader as a finding. Both leagues hit
 // this today — the AFL's Atlantic (1 season) and TheLeague's Midwest (4) lead
 // both columns — so this is the normal path, not an edge case.
-const shortRunLeader = [byInter[0], byFinish[0]].find((d) => d && isShortRun(d)) ?? null;
+/**
+ * The division whose OVERALL rate most flatters it relative to what it did
+ * against the rest of the league — i.e. the clearest example of why the two
+ * rates are not interchangeable, named from the data rather than hardcoded.
+ *
+ * The gap is driven by how much of a division's schedule is in-division: that
+ * slice sits at .500, so a division playing half its games against itself has
+ * half its record dragged toward the middle. The AFL East is the live case at
+ * 52% in-division — .459 against everyone else, .483 overall.
+ */
+const flatteredByOverall = (() => {
+  let best = null;
+  for (const d of byInter) {
+    const inter = d.interDivision.winPct;
+    const overall = d.totals.winPct;
+    if (inter === null || overall === null) continue;
+    const gap = overall - inter;
+    if (gap > 0.015 && (!best || gap > best.gap)) best = { d, gap };
+  }
+  return best;
+})();
+
+const shortRunLeader = byInter[0] && isShortRun(byInter[0]) ? byInter[0] : null;
 // Both leagues' copy quotes these, so they are read off the data rather than
 // written in — TheLeague's shortest run is 4 seasons and the AFL's is 1, and a
 // hardcoded number is wrong on one league the day it ships.
@@ -299,18 +315,6 @@ const currentLineups = data.divisions
   })
   .sort((a, b) => b.era.seasons - a.era.seasons || b.era.yearStart - a.era.yearStart);
 
-/**
- * Finish score: `avgFinishPct` as 0-100, where 100 is "first every season".
- *
- * The raw average finish CANNOT be displayed as the ranking number. The AFL
- * ran six divisions through 2012 and four since, so "2.0" earned in a
- * six-division year and "2.4" earned in four-division years are not the same
- * achievement — and showing them side by side put the worse one on top. The
- * score is the normalized value the ordering actually uses, so what the reader
- * sees is what the sort did. Raw average finish rides along as a subtitle.
- */
-const finishScore = (d: DivisionAllTime) =>
-  d.avgFinishPct === null ? null : Math.round(d.avgFinishPct * 100);
 
 const spanLabel = (d: DivisionAllTime) => {
   if (!d.active) return formatRuns(d.eras);
@@ -404,9 +408,10 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
         )
       ) : (
         <p class="lede">
-          Two honest answers, not one. We don't crown an all-time strongest division — a division
-          that ran {shortestRun.seasons} season{shortestRun.seasons === 1 ? '' : 's'} and one that
-          ran {longestRun.seasons} aren't the same claim. Pick a season and we'll name one.
+          Ranked on the games that can actually separate a division — the ones against everybody
+          else. We don't crown an all-time winner, though: a division that ran
+          {' '}{shortestRun.seasons} season{shortestRun.seasons === 1 ? '' : 's'} and one that ran
+          {' '}{longestRun.seasons} aren't the same claim. Pick a season and we'll name one.
         </p>
       )}
     </header>
@@ -591,53 +596,41 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
             )}
 
             <section class="verdict-pair" aria-labelledby="verdict-heading">
-              <h2 id="verdict-heading" class="section-title">Two ways to read it</h2>
-              <div class="verdict-pair__grid">
-                <div class="verdict-col">
-                  <h3 class="verdict-col__title">By interdivisional record</h3>
-                  <ol class="verdict-list">
-                    {byInter.map((d, i) => (
-                      <li>
-                        <span class="verdict-rank">{i + 1}</span>
-                        <a href={`#div-${d.slug}`} class="verdict-name">{d.name}</a>
-                        {isShortRun(d) && <span class="pill pill--sample">{d.seasons} season{d.seasons === 1 ? '' : 's'}</span>}
-                        <span class="verdict-value">{formatWinPct(d.interDivision)}</span>
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-                <div class="verdict-col">
-                  <h3 class="verdict-col__title">By finish score</h3>
-                  <ol class="verdict-list">
-                    {byFinish.map((d, i) => (
-                      <li>
-                        <span class="verdict-rank">{i + 1}</span>
-                        <a href={`#div-${d.slug}`} class="verdict-name">{d.name}</a>
-                        {isShortRun(d) && <span class="pill pill--sample">{d.seasons} season{d.seasons === 1 ? '' : 's'}</span>}
-                        <span class="verdict-value">
-                          {finishScore(d)}
-                          <span class="dim"> · avg {d.avgFinish?.toFixed(1)}</span>
-                        </span>
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-              </div>
+              <h2 id="verdict-heading" class="section-title">Strongest to weakest</h2>
+              <ol class="verdict-list verdict-list--solo">
+                {byInter.map((d, i) => (
+                  <li>
+                    <span class="verdict-rank">{i + 1}</span>
+                    <a href={`#div-${d.slug}`} class="verdict-name">{d.name}</a>
+                    {isShortRun(d) && <span class="pill pill--sample">{d.seasons} season{d.seasons === 1 ? '' : 's'}</span>}
+                    <span class="verdict-value">
+                      {formatWinPct(d.interDivision)}
+                      <span class="dim"> vs others · {formatWinPct(d.totals)} overall</span>
+                    </span>
+                  </li>
+                ))}
+              </ol>
               <p class="verdict-note">
-                <strong>Neither column is the answer.</strong> Interdivisional win percentage rewards a hot
-                run however short it was. Finish score — average placement that season, normalized so a
-                six-division year and a four-division year compare, where 100 is first every time —
-                rewards sustained placement but flattens a single dominant year.
-                {shortRunLeader && (
+                <strong>Ranked on games against the rest of the league</strong>, because a division's
+                overall record can't separate it from anyone. Every in-division game hands one of its
+                own teams a win and another a loss, so that slice sits at exactly .500 by arithmetic
+                and only dilutes the rest — which is why both rates are shown but only one of them
+                sorts. The two rank identically today; where they diverge, the overall figure is
+                the flattering one.
+                {flatteredByOverall && (
                   <>
-                    {' '}Note what tops them here: {shortRunLeader.name} ran {shortRunLeader.seasons}
-                    {' '}season{shortRunLeader.seasons === 1 ? '' : 's'}. A short run can lead either
-                    column outright, and the divisions with {longestRun.seasons} seasons behind them
-                    carry far more evidence — wherever they land.
+                    {' '}The {flatteredByOverall.d.name} is the clearest case: {formatWinPct(flatteredByOverall.d.interDivision)}
+                    {' '}against the rest of the league, {formatWinPct(flatteredByOverall.d.totals)} overall.
                   </>
                 )}
-                {' '}Intra-division games are excluded from both, because they cancel to .500 by
-                arithmetic — every one hands a division's own team a win and another a loss.
+                {shortRunLeader && (
+                  <>
+                    {' '}One caveat on the top of the list: {shortRunLeader.name} ran only
+                    {' '}{shortRunLeader.seasons} season{shortRunLeader.seasons === 1 ? '' : 's'}. A
+                    short run can top a rate, and the divisions with {longestRun.seasons} seasons
+                    behind them carry far more evidence — wherever they land.
+                  </>
+                )}
               </p>
             </section>
 
@@ -678,11 +671,6 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                           <span>Interdivisional</span><span class="sort-caret" aria-hidden="true"></span><span class="visually-hidden">{sortHint('interPct', 'interdivisional win percentage')}</span>
                         </a>
                       </th>
-                      <th scope="col" class="sortable num metric-col" aria-sort={ariaSort('avgFinish')}>
-                        <a class="sort-link" href={sortHref('avgFinish')}>
-                          <span>Finish score</span><span class="sort-caret" aria-hidden="true"></span><span class="visually-hidden">{sortHint('avgFinish', 'finish score, where 100 is first place every season')}</span>
-                        </a>
-                      </th>
                       <th scope="col" class="sortable num" aria-sort={ariaSort('titles')}>
                         <a class="sort-link" href={sortHref('titles')}>
                           <span>Titles</span><span class="sort-caret" aria-hidden="true"></span><span class="visually-hidden">{sortHint('titles', 'division titles')}</span>
@@ -715,13 +703,6 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                           )}
                           <span class="rec">{formatRecord(d.interDivision)}</span>
                           <span class="pct">{formatWinPct(d.interDivision)}</span>
-                        </td>
-                        <td class="num metric-col">
-                          {finishRanks.has(d.slug) && (
-                            <span class:list={['rank-chip', { 'rank-chip--top': finishRanks.get(d.slug) === 1 }]}>{finishRanks.get(d.slug)}</span>
-                          )}
-                          <span class="rec">{finishScore(d) ?? '—'}</span>
-                          <span class="pct">{d.avgFinish === null ? '' : `avg ${d.avgFinish.toFixed(1)}`}</span>
                         </td>
                         <td class="num">{d.divisionTitles}</td>
                         <td class="num">{d.championships}</td>
@@ -1296,38 +1277,14 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
 
   /* ── The paired podium ─────────────────────────────────────────────────── */
   .verdict-pair { margin: 1.5rem 0 0; }
-  .verdict-pair__grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 1.25rem;
+  .verdict-list { list-style: none; margin: 0; padding: 0; }
+  .verdict-list--solo {
     margin-top: 1rem;
-    padding: 1.125rem 1.25rem;
+    padding: 0.5rem 1.25rem;
     background: var(--ds-surface);
     border: 1px solid var(--ds-border);
     border-radius: var(--radius-md, 0.625rem);
   }
-  @media (min-width: 768px) {
-    .verdict-pair__grid { grid-template-columns: 1fr 1px 1fr; }
-    .verdict-col:nth-of-type(1) { grid-column: 1; }
-    /* The centre rule is drawn by the middle track's own background. */
-    .verdict-pair__grid::before {
-      content: '';
-      grid-column: 2;
-      grid-row: 1;
-      background: var(--ds-border);
-    }
-    .verdict-col:nth-of-type(2) { grid-column: 3; }
-    .verdict-col { grid-row: 1; }
-  }
-  .verdict-col__title {
-    margin: 0 0 0.625rem;
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--ds-ink-muted);
-  }
-  .verdict-list { list-style: none; margin: 0; padding: 0; }
   .verdict-list li {
     display: flex;
     align-items: baseline;

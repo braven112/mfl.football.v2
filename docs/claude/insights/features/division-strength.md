@@ -119,14 +119,22 @@ Replacing the top-three cut with the complete ordering, season counts visible on
 every short run, turned the same data into something that reads as data. The
 copy now names the short run outright instead of reporting it as a finding.
 
-Related: the raw average finish could not be the displayed number either. The
-AFL ran six divisions through 2012 and four since, so "2.0" earned in a
-six-division year and "2.4" in four-division years are not comparable — shown
-side by side, the worse one sorted higher. The displayed figure is the
-era-normalized score the sort actually uses, with the raw average as a subtitle.
+**Postscript (same day):** the second metric is gone. The owner found the
+era-normalized finish score opaque — fair, it is synthetic — and asked for plain
+overall win% instead. Measuring that first was worth the two minutes: overall
+win% ranks the divisions IDENTICALLY to interdivisional win%, 7 for 7 in both
+leagues, because the intra-division slice is exactly .500 and shrinks every
+division toward the middle by a similar factor. Two columns that always agree
+cannot be "two ways to read it".
+
+So the section is now one ranking, sorted on the interdivisional rate, with both
+rates on every row and the overall figure explicitly called out as the
+flattering one (the AFL East plays 52% of its games in-division: .459 against
+everyone else, .483 overall). The no-verdict decision survives, but it now rests
+on sample size alone, which is the reason that was always doing the real work.
 
 **Recommendation:** If a page deliberately declines to pick a winner, check that
 no component of it picks one anyway. Truncating a ranking, choosing a default
 sort, and generating comparative prose are all ways a "neutral" page takes a
-side. The default sort here is `seasons` — neutral between both metrics — for
-exactly this reason.
+side. The default sort here is `seasons`, which is neutral with respect to
+strength, for exactly this reason.
