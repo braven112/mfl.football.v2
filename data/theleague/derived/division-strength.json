@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-25T04:20:28.121Z",
+  "generatedAt": "2026-08-25T04:55:42.466Z",
   "league": "theleague",
   "leagueName": "The League",
   "yearsCovered": [
@@ -67,6 +67,101 @@
   },
   "divisions": [
     {
+      "membershipEras": [
+        {
+          "yearStart": 2007,
+          "yearEnd": 2010,
+          "seasons": 4,
+          "current": false,
+          "franchiseIds": [
+            "0007",
+            "0010",
+            "0014",
+            "0016"
+          ],
+          "members": [
+            {
+              "franchiseId": "0016",
+              "name": "Silver Bullets",
+              "nameMedium": "Silver Bullets",
+              "icon": "/assets/theleague/history/silver_bullets_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0027",
+                  "slug": "silver-bullets-2007",
+                  "title": "Silver Bullets",
+                  "icon": "/assets/theleague/history/silver_bullets_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0007",
+              "name": "Fire Ready Aim",
+              "nameMedium": "Fire Ready Aim",
+              "icon": "/assets/theleague/history/fire_ready_aim_2010_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0004",
+                  "slug": "fire-ready-aim-2010",
+                  "title": "Fire Ready Aim",
+                  "icon": "/assets/theleague/history/fire_ready_aim_2010_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0014",
+              "name": "Devil Dogs",
+              "nameMedium": "Devil Dogs",
+              "icon": "/assets/theleague/history/devil_dogs_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0021",
+                  "slug": "devil-dogs-2007",
+                  "title": "Devil Dogs",
+                  "icon": "/assets/theleague/history/devil_dogs_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0010",
+              "name": "Witch City Warlocks",
+              "nameMedium": "Witch City Warlocks",
+              "icon": "/assets/theleague/history/witch_city_warlocks_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0029",
+                  "slug": "witch-city-warlocks-2007",
+                  "title": "Witch City Warlocks",
+                  "icon": "/assets/theleague/history/witch_city_warlocks_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 152,
+            "losses": 136,
+            "ties": 0,
+            "games": 288,
+            "pointsFor": 26790.85,
+            "pointsAgainst": 28674.18,
+            "winPct": 0.528
+          },
+          "interDivision": {
+            "wins": 104,
+            "losses": 88,
+            "ties": 0,
+            "games": 192,
+            "pointsFor": 19108.24,
+            "pointsAgainst": 18587.05,
+            "winPct": 0.542
+          },
+          "avgFinishPct": 0.667,
+          "divisionTitles": 4,
+          "championships": 1,
+          "playoffBerths": 9
+        }
+      ],
+      "currentEra": null,
       "name": "Atlantic",
       "slug": "atlantic",
       "divisionIds": [
@@ -455,6 +550,388 @@
       ]
     },
     {
+      "membershipEras": [
+        {
+          "yearStart": 2007,
+          "yearEnd": 2015,
+          "seasons": 9,
+          "current": false,
+          "franchiseIds": [
+            "0005",
+            "0008",
+            "0009",
+            "0011"
+          ],
+          "members": [
+            {
+              "franchiseId": "0005",
+              "name": "The Executioners",
+              "nameMedium": "The Executioners",
+              "icon": "/assets/theleague/history/executioners_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0028",
+                  "slug": "the-executioners-2007",
+                  "title": "The Executioners",
+                  "icon": "/assets/theleague/history/executioners_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0011",
+              "name": "Amish Rakefighters",
+              "nameMedium": "Amish Rakefighters",
+              "icon": "/assets/theleague/history/amish_rakefighters_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0018",
+                  "slug": "amish-rakefighters-2007",
+                  "title": "Amish Rakefighters",
+                  "icon": "/assets/theleague/history/amish_rakefighters_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0008",
+              "name": "Bring The Pain",
+              "nameMedium": "Bring The Pain",
+              "icon": "/assets/theleague/history/bring_the_pain_2007_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0001",
+                  "slug": "bring-the-pain-2007",
+                  "title": "Bring The Pain",
+                  "icon": "/assets/theleague/history/bring_the_pain_2007_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0009",
+              "name": "Wascawy Wabbits",
+              "nameMedium": "Wascawy Wabbits",
+              "icon": "/assets/theleague/history/wabbits_2012_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0007",
+                  "slug": "wascawy-wabbits-2012",
+                  "title": "Wascawy Wabbits",
+                  "icon": "/assets/theleague/history/wabbits_2012_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 311,
+            "losses": 329,
+            "ties": 0,
+            "games": 640,
+            "pointsFor": 60047.57,
+            "pointsAgainst": 63929.94,
+            "winPct": 0.486
+          },
+          "interDivision": {
+            "wins": 203,
+            "losses": 221,
+            "ties": 0,
+            "games": 424,
+            "pointsFor": 42027.66,
+            "pointsAgainst": 42146.46,
+            "winPct": 0.479
+          },
+          "avgFinishPct": 0.407,
+          "divisionTitles": 9,
+          "championships": 2,
+          "playoffBerths": 15
+        },
+        {
+          "yearStart": 2016,
+          "yearEnd": 2016,
+          "seasons": 1,
+          "current": false,
+          "franchiseIds": [
+            "0005",
+            "0008",
+            "0011",
+            "0014"
+          ],
+          "members": [
+            {
+              "franchiseId": "0008",
+              "name": "Bring The Pain",
+              "nameMedium": "Bring The Pain",
+              "icon": "/assets/theleague/history/bring_the_pain_2007_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0001",
+                  "slug": "bring-the-pain-2007",
+                  "title": "Bring The Pain",
+                  "icon": "/assets/theleague/history/bring_the_pain_2007_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0014",
+              "name": "Devil Dogs",
+              "nameMedium": "Devil Dogs",
+              "icon": "/assets/theleague/history/devil_dogs_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0021",
+                  "slug": "devil-dogs-2007",
+                  "title": "Devil Dogs",
+                  "icon": "/assets/theleague/history/devil_dogs_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0005",
+              "name": "The Mariachi Ninjas",
+              "nameMedium": "The Mariachi Ninjas",
+              "icon": "/assets/theleague/history/mariachi_ninjas_2016_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0013",
+                  "slug": "the-mariachi-ninjas-2016",
+                  "title": "The Mariachi Ninjas",
+                  "icon": "/assets/theleague/history/mariachi_ninjas_2016_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0011",
+              "name": "Under Siege",
+              "nameMedium": "Under Siege",
+              "icon": "/assets/theleague/history/undersiege_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0035",
+                  "slug": "under-siege-2016",
+                  "title": "Under Siege",
+                  "icon": "/assets/theleague/history/undersiege_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 40,
+            "losses": 24,
+            "ties": 0,
+            "games": 64,
+            "pointsFor": 7035.15,
+            "pointsAgainst": 6583.15,
+            "winPct": 0.625
+          },
+          "interDivision": {
+            "wins": 28,
+            "losses": 12,
+            "ties": 0,
+            "games": 40,
+            "pointsFor": 4449.92,
+            "pointsAgainst": 3918.77,
+            "winPct": 0.7
+          },
+          "avgFinishPct": 1,
+          "divisionTitles": 1,
+          "championships": 0,
+          "playoffBerths": 3
+        },
+        {
+          "yearStart": 2017,
+          "yearEnd": 2025,
+          "seasons": 9,
+          "current": true,
+          "franchiseIds": [
+            "0003",
+            "0005",
+            "0008",
+            "0014"
+          ],
+          "members": [
+            {
+              "franchiseId": "0008",
+              "name": "Bring The Pain",
+              "nameMedium": "Bring The Pain",
+              "icon": "/assets/theleague/icons/bring_the_pain.png",
+              "owners": [
+                {
+                  "ownerId": "own-0001",
+                  "slug": "bring-the-pain-2007",
+                  "title": "Bring The Pain",
+                  "icon": "/assets/theleague/history/bring_the_pain_2007_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0005",
+              "name": "The Mariachi Ninjas",
+              "nameMedium": "Mariachi Ninjas",
+              "icon": "/assets/theleague/icons/ninjas.png",
+              "owners": [
+                {
+                  "ownerId": "own-0013",
+                  "slug": "the-mariachi-ninjas-2016",
+                  "title": "The Mariachi Ninjas",
+                  "icon": "/assets/theleague/history/mariachi_ninjas_2016_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0003",
+              "name": "Maverick",
+              "nameMedium": "Mavericks",
+              "icon": "/assets/theleague/icons/maverick.png",
+              "owners": [
+                {
+                  "ownerId": "own-0012",
+                  "slug": "maverick-2016",
+                  "title": "Maverick",
+                  "icon": "/assets/theleague/icons/maverick.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0014",
+              "name": "Cowboy Up",
+              "nameMedium": "Cowboy Up",
+              "icon": "/assets/theleague/icons/cowboy_up.png",
+              "owners": [
+                {
+                  "ownerId": "own-0045",
+                  "slug": "ross-lawrence",
+                  "title": "Ross Lawrence",
+                  "icon": "/assets/theleague/icons/cowboy_up.png"
+                },
+                {
+                  "ownerId": "own-0060",
+                  "slug": "shawn-klezovich",
+                  "title": "Shawn Klezovich",
+                  "icon": "/assets/theleague/icons/cowboy_up.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 296,
+            "losses": 336,
+            "ties": 0,
+            "games": 632,
+            "pointsFor": 60578.73,
+            "pointsAgainst": 64584.38,
+            "winPct": 0.468
+          },
+          "interDivision": {
+            "wins": 188,
+            "losses": 228,
+            "ties": 0,
+            "games": 416,
+            "pointsFor": 41258.19,
+            "pointsAgainst": 42763.84,
+            "winPct": 0.452
+          },
+          "avgFinishPct": 0.296,
+          "divisionTitles": 9,
+          "championships": 2,
+          "playoffBerths": 12
+        }
+      ],
+      "currentEra": {
+        "yearStart": 2017,
+        "yearEnd": 2025,
+        "seasons": 9,
+        "current": true,
+        "franchiseIds": [
+          "0003",
+          "0005",
+          "0008",
+          "0014"
+        ],
+        "members": [
+          {
+            "franchiseId": "0008",
+            "name": "Bring The Pain",
+            "nameMedium": "Bring The Pain",
+            "icon": "/assets/theleague/icons/bring_the_pain.png",
+            "owners": [
+              {
+                "ownerId": "own-0001",
+                "slug": "bring-the-pain-2007",
+                "title": "Bring The Pain",
+                "icon": "/assets/theleague/history/bring_the_pain_2007_icon_circle.png"
+              }
+            ]
+          },
+          {
+            "franchiseId": "0005",
+            "name": "The Mariachi Ninjas",
+            "nameMedium": "Mariachi Ninjas",
+            "icon": "/assets/theleague/icons/ninjas.png",
+            "owners": [
+              {
+                "ownerId": "own-0013",
+                "slug": "the-mariachi-ninjas-2016",
+                "title": "The Mariachi Ninjas",
+                "icon": "/assets/theleague/history/mariachi_ninjas_2016_icon_circle.png"
+              }
+            ]
+          },
+          {
+            "franchiseId": "0003",
+            "name": "Maverick",
+            "nameMedium": "Mavericks",
+            "icon": "/assets/theleague/icons/maverick.png",
+            "owners": [
+              {
+                "ownerId": "own-0012",
+                "slug": "maverick-2016",
+                "title": "Maverick",
+                "icon": "/assets/theleague/icons/maverick.png"
+              }
+            ]
+          },
+          {
+            "franchiseId": "0014",
+            "name": "Cowboy Up",
+            "nameMedium": "Cowboy Up",
+            "icon": "/assets/theleague/icons/cowboy_up.png",
+            "owners": [
+              {
+                "ownerId": "own-0045",
+                "slug": "ross-lawrence",
+                "title": "Ross Lawrence",
+                "icon": "/assets/theleague/icons/cowboy_up.png"
+              },
+              {
+                "ownerId": "own-0060",
+                "slug": "shawn-klezovich",
+                "title": "Shawn Klezovich",
+                "icon": "/assets/theleague/icons/cowboy_up.png"
+              }
+            ]
+          }
+        ],
+        "totals": {
+          "wins": 296,
+          "losses": 336,
+          "ties": 0,
+          "games": 632,
+          "pointsFor": 60578.73,
+          "pointsAgainst": 64584.38,
+          "winPct": 0.468
+        },
+        "interDivision": {
+          "wins": 188,
+          "losses": 228,
+          "ties": 0,
+          "games": 416,
+          "pointsFor": 41258.19,
+          "pointsAgainst": 42763.84,
+          "winPct": 0.452
+        },
+        "avgFinishPct": 0.296,
+        "divisionTitles": 9,
+        "championships": 2,
+        "playoffBerths": 12
+      },
       "name": "Central",
       "slug": "central",
       "divisionIds": [
@@ -1337,6 +1814,284 @@
       ]
     },
     {
+      "membershipEras": [
+        {
+          "yearStart": 2011,
+          "yearEnd": 2015,
+          "seasons": 5,
+          "current": false,
+          "franchiseIds": [
+            "0007",
+            "0014",
+            "0015",
+            "0016"
+          ],
+          "members": [
+            {
+              "franchiseId": "0016",
+              "name": "Running Down The Dream",
+              "nameMedium": "Running Down The Dream",
+              "icon": "/assets/theleague/icons/the_dream.png",
+              "owners": [
+                {
+                  "ownerId": "own-0009",
+                  "slug": "running-down-the-dream-2014",
+                  "title": "Running Down The Dream",
+                  "icon": "/assets/theleague/icons/the_dream.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0015",
+              "name": "Dark Magicians of Chaos",
+              "nameMedium": "Dark Magicians",
+              "icon": "/assets/theleague/history/dark_magicians_2015_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0002",
+                  "slug": "dark-magicians-of-chaos-2007",
+                  "title": "Dark Magicians of Chaos",
+                  "icon": "/assets/theleague/history/dark_magicians_2007_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0007",
+              "name": "Fire Ready Aim",
+              "nameMedium": "Fire Ready Aim",
+              "icon": "/assets/theleague/history/fire_ready_aim_2010_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0004",
+                  "slug": "fire-ready-aim-2010",
+                  "title": "Fire Ready Aim",
+                  "icon": "/assets/theleague/history/fire_ready_aim_2010_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0014",
+              "name": "Devil Dogs",
+              "nameMedium": "Devil Dogs",
+              "icon": "/assets/theleague/history/devil_dogs_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0021",
+                  "slug": "devil-dogs-2007",
+                  "title": "Devil Dogs",
+                  "icon": "/assets/theleague/history/devil_dogs_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 158,
+            "losses": 194,
+            "ties": 0,
+            "games": 352,
+            "pointsFor": 33490.99,
+            "pointsAgainst": 36237.52,
+            "winPct": 0.449
+          },
+          "interDivision": {
+            "wins": 98,
+            "losses": 134,
+            "ties": 0,
+            "games": 232,
+            "pointsFor": 22787.93,
+            "pointsAgainst": 24150.7,
+            "winPct": 0.422
+          },
+          "avgFinishPct": 0.267,
+          "divisionTitles": 5,
+          "championships": 2,
+          "playoffBerths": 7
+        },
+        {
+          "yearStart": 2016,
+          "yearEnd": 2025,
+          "seasons": 10,
+          "current": true,
+          "franchiseIds": [
+            "0007",
+            "0009",
+            "0015",
+            "0016"
+          ],
+          "members": [
+            {
+              "franchiseId": "0009",
+              "name": "Wascawy Wabbits",
+              "nameMedium": "Wascawy Wabbits",
+              "icon": "/assets/theleague/icons/wabbits.png",
+              "owners": [
+                {
+                  "ownerId": "own-0007",
+                  "slug": "wascawy-wabbits-2012",
+                  "title": "Wascawy Wabbits",
+                  "icon": "/assets/theleague/history/wabbits_2012_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0015",
+              "name": "Dark Magicians of Chaos",
+              "nameMedium": "Dark Magicians",
+              "icon": "/assets/theleague/icons/dark_magicians.png",
+              "owners": [
+                {
+                  "ownerId": "own-0002",
+                  "slug": "dark-magicians-of-chaos-2007",
+                  "title": "Dark Magicians of Chaos",
+                  "icon": "/assets/theleague/history/dark_magicians_2007_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0016",
+              "name": "Running down the Dream",
+              "nameMedium": "The Dream",
+              "icon": "/assets/theleague/icons/the_dream.png",
+              "owners": [
+                {
+                  "ownerId": "own-0009",
+                  "slug": "running-down-the-dream-2014",
+                  "title": "Running Down The Dream",
+                  "icon": "/assets/theleague/icons/the_dream.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0007",
+              "name": "Fire Ready Aim",
+              "nameMedium": "Fire Ready",
+              "icon": "/assets/theleague/icons/fire_ready_aim.png",
+              "owners": [
+                {
+                  "ownerId": "own-0004",
+                  "slug": "fire-ready-aim-2010",
+                  "title": "Fire Ready Aim",
+                  "icon": "/assets/theleague/history/fire_ready_aim_2010_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 363,
+            "losses": 333,
+            "ties": 0,
+            "games": 696,
+            "pointsFor": 71524.39,
+            "pointsAgainst": 71225.78,
+            "winPct": 0.522
+          },
+          "interDivision": {
+            "wins": 243,
+            "losses": 213,
+            "ties": 0,
+            "games": 456,
+            "pointsFor": 48274.47,
+            "pointsAgainst": 46072.26,
+            "winPct": 0.533
+          },
+          "avgFinishPct": 0.633,
+          "divisionTitles": 10,
+          "championships": 3,
+          "playoffBerths": 18
+        }
+      ],
+      "currentEra": {
+        "yearStart": 2016,
+        "yearEnd": 2025,
+        "seasons": 10,
+        "current": true,
+        "franchiseIds": [
+          "0007",
+          "0009",
+          "0015",
+          "0016"
+        ],
+        "members": [
+          {
+            "franchiseId": "0009",
+            "name": "Wascawy Wabbits",
+            "nameMedium": "Wascawy Wabbits",
+            "icon": "/assets/theleague/icons/wabbits.png",
+            "owners": [
+              {
+                "ownerId": "own-0007",
+                "slug": "wascawy-wabbits-2012",
+                "title": "Wascawy Wabbits",
+                "icon": "/assets/theleague/history/wabbits_2012_icon_circle.png"
+              }
+            ]
+          },
+          {
+            "franchiseId": "0015",
+            "name": "Dark Magicians of Chaos",
+            "nameMedium": "Dark Magicians",
+            "icon": "/assets/theleague/icons/dark_magicians.png",
+            "owners": [
+              {
+                "ownerId": "own-0002",
+                "slug": "dark-magicians-of-chaos-2007",
+                "title": "Dark Magicians of Chaos",
+                "icon": "/assets/theleague/history/dark_magicians_2007_icon_circle.png"
+              }
+            ]
+          },
+          {
+            "franchiseId": "0016",
+            "name": "Running down the Dream",
+            "nameMedium": "The Dream",
+            "icon": "/assets/theleague/icons/the_dream.png",
+            "owners": [
+              {
+                "ownerId": "own-0009",
+                "slug": "running-down-the-dream-2014",
+                "title": "Running Down The Dream",
+                "icon": "/assets/theleague/icons/the_dream.png"
+              }
+            ]
+          },
+          {
+            "franchiseId": "0007",
+            "name": "Fire Ready Aim",
+            "nameMedium": "Fire Ready",
+            "icon": "/assets/theleague/icons/fire_ready_aim.png",
+            "owners": [
+              {
+                "ownerId": "own-0004",
+                "slug": "fire-ready-aim-2010",
+                "title": "Fire Ready Aim",
+                "icon": "/assets/theleague/history/fire_ready_aim_2010_icon_circle.png"
+              }
+            ]
+          }
+        ],
+        "totals": {
+          "wins": 363,
+          "losses": 333,
+          "ties": 0,
+          "games": 696,
+          "pointsFor": 71524.39,
+          "pointsAgainst": 71225.78,
+          "winPct": 0.522
+        },
+        "interDivision": {
+          "wins": 243,
+          "losses": 213,
+          "ties": 0,
+          "games": 456,
+          "pointsFor": 48274.47,
+          "pointsAgainst": 46072.26,
+          "winPct": 0.533
+        },
+        "avgFinishPct": 0.633,
+        "divisionTitles": 10,
+        "championships": 3,
+        "playoffBerths": 18
+      },
       "name": "East",
       "slug": "east",
       "divisionIds": [
@@ -1900,6 +2655,285 @@
       ]
     },
     {
+      "membershipEras": [
+        {
+          "yearStart": 2007,
+          "yearEnd": 2007,
+          "seasons": 1,
+          "current": false,
+          "franchiseIds": [
+            "0003",
+            "0012",
+            "0013",
+            "0015"
+          ],
+          "members": [
+            {
+              "franchiseId": "0012",
+              "name": "BOYZ II MEN",
+              "nameMedium": "BOYZ II MEN",
+              "icon": "/assets/theleague/history/boyz2men_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0019",
+                  "slug": "boyz-ii-men-2007",
+                  "title": "BOYZ II MEN",
+                  "icon": "/assets/theleague/history/boyz2men_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0015",
+              "name": "Dark Magicians of Chaos",
+              "nameMedium": "Dark Magicians",
+              "icon": "/assets/theleague/history/dark_magicians_2007_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0002",
+                  "slug": "dark-magicians-of-chaos-2007",
+                  "title": "Dark Magicians of Chaos",
+                  "icon": "/assets/theleague/history/dark_magicians_2007_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0003",
+              "name": "Mistakes Were Made",
+              "nameMedium": "Mistakes Were Made",
+              "icon": "/assets/theleague/history/mistakes_were_made_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0024",
+                  "slug": "mistakes-were-made-2007",
+                  "title": "Mistakes Were Made",
+                  "icon": "/assets/theleague/history/mistakes_were_made_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0013",
+              "name": "DangerZone",
+              "nameMedium": "DangerZone",
+              "icon": "/assets/theleague/history/dangerzone_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0020",
+                  "slug": "dangerzone-2007",
+                  "title": "DangerZone",
+                  "icon": "/assets/theleague/history/dangerzone_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 41,
+            "losses": 31,
+            "ties": 0,
+            "games": 72,
+            "pointsFor": 6774.44,
+            "pointsAgainst": 7140.8,
+            "winPct": 0.569
+          },
+          "interDivision": {
+            "wins": 29,
+            "losses": 19,
+            "ties": 0,
+            "games": 48,
+            "pointsFor": 4842.64,
+            "pointsAgainst": 4481.7,
+            "winPct": 0.604
+          },
+          "avgFinishPct": 1,
+          "divisionTitles": 1,
+          "championships": 1,
+          "playoffBerths": 2
+        },
+        {
+          "yearStart": 2008,
+          "yearEnd": 2008,
+          "seasons": 1,
+          "current": false,
+          "franchiseIds": [
+            "0002",
+            "0003",
+            "0012",
+            "0013"
+          ],
+          "members": [
+            {
+              "franchiseId": "0003",
+              "name": "Mistakes Were Made",
+              "nameMedium": "Mistakes Were Made",
+              "icon": "/assets/theleague/history/mistakes_were_made_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0024",
+                  "slug": "mistakes-were-made-2007",
+                  "title": "Mistakes Were Made",
+                  "icon": "/assets/theleague/history/mistakes_were_made_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0012",
+              "name": "BOYZ II MEN",
+              "nameMedium": "BOYZ II MEN",
+              "icon": "/assets/theleague/history/boyz2men_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0019",
+                  "slug": "boyz-ii-men-2007",
+                  "title": "BOYZ II MEN",
+                  "icon": "/assets/theleague/history/boyz2men_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0013",
+              "name": "DangerZone",
+              "nameMedium": "DangerZone",
+              "icon": "/assets/theleague/history/dangerzone_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0020",
+                  "slug": "dangerzone-2007",
+                  "title": "DangerZone",
+                  "icon": "/assets/theleague/history/dangerzone_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0002",
+              "name": "Degenerates",
+              "nameMedium": "Degenerates",
+              "icon": "/assets/theleague/history/degenerates_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0030",
+                  "slug": "degenerates-2008",
+                  "title": "Degenerates",
+                  "icon": "/assets/theleague/history/degenerates_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 39,
+            "losses": 33,
+            "ties": 0,
+            "games": 72,
+            "pointsFor": 6724.2,
+            "pointsAgainst": 7173.88,
+            "winPct": 0.542
+          },
+          "interDivision": {
+            "wins": 27,
+            "losses": 21,
+            "ties": 0,
+            "games": 48,
+            "pointsFor": 4772.73,
+            "pointsAgainst": 4709.78,
+            "winPct": 0.563
+          },
+          "avgFinishPct": 0.667,
+          "divisionTitles": 1,
+          "championships": 0,
+          "playoffBerths": 2
+        },
+        {
+          "yearStart": 2009,
+          "yearEnd": 2010,
+          "seasons": 2,
+          "current": false,
+          "franchiseIds": [
+            "0002",
+            "0003",
+            "0012",
+            "0015"
+          ],
+          "members": [
+            {
+              "franchiseId": "0015",
+              "name": "Dark Magicians of Chaos",
+              "nameMedium": "Dark Magicians",
+              "icon": "/assets/theleague/history/dark_magicians_2007_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0002",
+                  "slug": "dark-magicians-of-chaos-2007",
+                  "title": "Dark Magicians of Chaos",
+                  "icon": "/assets/theleague/history/dark_magicians_2007_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0012",
+              "name": "BOYZ II MEN",
+              "nameMedium": "BOYZ II MEN",
+              "icon": "/assets/theleague/history/boyz2men_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0019",
+                  "slug": "boyz-ii-men-2007",
+                  "title": "BOYZ II MEN",
+                  "icon": "/assets/theleague/history/boyz2men_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0003",
+              "name": "Georgia Punishers",
+              "nameMedium": "Georgia Punishers",
+              "icon": "/assets/theleague/history/georgia_punishers_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0032",
+                  "slug": "georgia-punishers-2010",
+                  "title": "Georgia Punishers",
+                  "icon": "/assets/theleague/history/georgia_punishers_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0002",
+              "name": "Degenerates",
+              "nameMedium": "Degenerates",
+              "icon": "/assets/theleague/history/degenerates_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0030",
+                  "slug": "degenerates-2008",
+                  "title": "Degenerates",
+                  "icon": "/assets/theleague/history/degenerates_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 80,
+            "losses": 64,
+            "ties": 0,
+            "games": 144,
+            "pointsFor": 14041.47,
+            "pointsAgainst": 14637.77,
+            "winPct": 0.556
+          },
+          "interDivision": {
+            "wins": 56,
+            "losses": 40,
+            "ties": 0,
+            "games": 96,
+            "pointsFor": 10061.48,
+            "pointsAgainst": 9646.27,
+            "winPct": 0.583
+          },
+          "avgFinishPct": 0.833,
+          "divisionTitles": 2,
+          "championships": 0,
+          "playoffBerths": 4
+        }
+      ],
+      "currentEra": null,
       "name": "Midwest",
       "slug": "midwest",
       "divisionIds": [
@@ -2341,6 +3375,284 @@
       ]
     },
     {
+      "membershipEras": [
+        {
+          "yearStart": 2011,
+          "yearEnd": 2015,
+          "seasons": 5,
+          "current": false,
+          "franchiseIds": [
+            "0001",
+            "0010",
+            "0012",
+            "0013"
+          ],
+          "members": [
+            {
+              "franchiseId": "0001",
+              "name": "Pacific Pigskins",
+              "nameMedium": "Pigskins",
+              "icon": "/assets/theleague/history/pigskins_2013_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0003",
+                  "slug": "pacific-pigskins-2007",
+                  "title": "Pacific Pigskins",
+                  "icon": "/assets/theleague/history/pigskins_2007_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0012",
+              "name": "Vitside Mafia",
+              "nameMedium": "Vitside",
+              "icon": "/assets/theleague/icons/vitside_mafia.png",
+              "owners": [
+                {
+                  "ownerId": "own-0006",
+                  "slug": "vitside-mafia-2011",
+                  "title": "Vitside Mafia",
+                  "icon": "/assets/theleague/icons/vitside_mafia.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0013",
+              "name": "Gridiron Geeks",
+              "nameMedium": "Gridiron Geeks",
+              "icon": "/assets/theleague/icons/geeks.png",
+              "owners": [
+                {
+                  "ownerId": "own-0008",
+                  "slug": "gridiron-geeks-2014",
+                  "title": "Gridiron Geeks",
+                  "icon": "/assets/theleague/icons/geeks.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0010",
+              "name": "Midwestside Connection",
+              "nameMedium": "Midwestside Connection",
+              "icon": "/assets/theleague/history/midwestside_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0005",
+                  "slug": "midwestside-connection-2011",
+                  "title": "Midwestside Connection",
+                  "icon": "/assets/theleague/history/midwestside_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 181,
+            "losses": 171,
+            "ties": 0,
+            "games": 352,
+            "pointsFor": 34302.06,
+            "pointsAgainst": 35965.78,
+            "winPct": 0.514
+          },
+          "interDivision": {
+            "wins": 121,
+            "losses": 111,
+            "ties": 0,
+            "games": 232,
+            "pointsFor": 23650.41,
+            "pointsAgainst": 23269.43,
+            "winPct": 0.522
+          },
+          "avgFinishPct": 0.467,
+          "divisionTitles": 5,
+          "championships": 1,
+          "playoffBerths": 9
+        },
+        {
+          "yearStart": 2016,
+          "yearEnd": 2025,
+          "seasons": 10,
+          "current": true,
+          "franchiseIds": [
+            "0001",
+            "0002",
+            "0010",
+            "0012"
+          ],
+          "members": [
+            {
+              "franchiseId": "0002",
+              "name": "Da Dangsters",
+              "nameMedium": "Da Dangsters",
+              "icon": "/assets/theleague/icons/da_dangsters.png",
+              "owners": [
+                {
+                  "ownerId": "own-0010",
+                  "slug": "da-dangsters-2015",
+                  "title": "Da Dangsters",
+                  "icon": "/assets/theleague/history/da_dangsters_2017_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0010",
+              "name": "Computer Jocks",
+              "nameMedium": "Computer Jocks",
+              "icon": "/assets/theleague/icons/computer_jocks.png",
+              "owners": [
+                {
+                  "ownerId": "own-0011",
+                  "slug": "computer-jocks-2016",
+                  "title": "Computer Jocks",
+                  "icon": "/assets/theleague/icons/computer_jocks.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0012",
+              "name": "Vitside Mafia",
+              "nameMedium": "Vitside",
+              "icon": "/assets/theleague/icons/vitside_mafia.png",
+              "owners": [
+                {
+                  "ownerId": "own-0006",
+                  "slug": "vitside-mafia-2011",
+                  "title": "Vitside Mafia",
+                  "icon": "/assets/theleague/icons/vitside_mafia.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0001",
+              "name": "Pacific Pigskins",
+              "nameMedium": "Pigskins",
+              "icon": "/assets/theleague/icons/pigskins.png",
+              "owners": [
+                {
+                  "ownerId": "own-0003",
+                  "slug": "pacific-pigskins-2007",
+                  "title": "Pacific Pigskins",
+                  "icon": "/assets/theleague/history/pigskins_2007_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 358,
+            "losses": 338,
+            "ties": 0,
+            "games": 696,
+            "pointsFor": 68489.82,
+            "pointsAgainst": 71403.05,
+            "winPct": 0.514
+          },
+          "interDivision": {
+            "wins": 238,
+            "losses": 218,
+            "ties": 0,
+            "games": 456,
+            "pointsFor": 46059.25,
+            "pointsAgainst": 46695.71,
+            "winPct": 0.522
+          },
+          "avgFinishPct": 0.533,
+          "divisionTitles": 10,
+          "championships": 2,
+          "playoffBerths": 19
+        }
+      ],
+      "currentEra": {
+        "yearStart": 2016,
+        "yearEnd": 2025,
+        "seasons": 10,
+        "current": true,
+        "franchiseIds": [
+          "0001",
+          "0002",
+          "0010",
+          "0012"
+        ],
+        "members": [
+          {
+            "franchiseId": "0002",
+            "name": "Da Dangsters",
+            "nameMedium": "Da Dangsters",
+            "icon": "/assets/theleague/icons/da_dangsters.png",
+            "owners": [
+              {
+                "ownerId": "own-0010",
+                "slug": "da-dangsters-2015",
+                "title": "Da Dangsters",
+                "icon": "/assets/theleague/history/da_dangsters_2017_icon_circle.png"
+              }
+            ]
+          },
+          {
+            "franchiseId": "0010",
+            "name": "Computer Jocks",
+            "nameMedium": "Computer Jocks",
+            "icon": "/assets/theleague/icons/computer_jocks.png",
+            "owners": [
+              {
+                "ownerId": "own-0011",
+                "slug": "computer-jocks-2016",
+                "title": "Computer Jocks",
+                "icon": "/assets/theleague/icons/computer_jocks.png"
+              }
+            ]
+          },
+          {
+            "franchiseId": "0012",
+            "name": "Vitside Mafia",
+            "nameMedium": "Vitside",
+            "icon": "/assets/theleague/icons/vitside_mafia.png",
+            "owners": [
+              {
+                "ownerId": "own-0006",
+                "slug": "vitside-mafia-2011",
+                "title": "Vitside Mafia",
+                "icon": "/assets/theleague/icons/vitside_mafia.png"
+              }
+            ]
+          },
+          {
+            "franchiseId": "0001",
+            "name": "Pacific Pigskins",
+            "nameMedium": "Pigskins",
+            "icon": "/assets/theleague/icons/pigskins.png",
+            "owners": [
+              {
+                "ownerId": "own-0003",
+                "slug": "pacific-pigskins-2007",
+                "title": "Pacific Pigskins",
+                "icon": "/assets/theleague/history/pigskins_2007_icon_circle.png"
+              }
+            ]
+          }
+        ],
+        "totals": {
+          "wins": 358,
+          "losses": 338,
+          "ties": 0,
+          "games": 696,
+          "pointsFor": 68489.82,
+          "pointsAgainst": 71403.05,
+          "winPct": 0.514
+        },
+        "interDivision": {
+          "wins": 238,
+          "losses": 218,
+          "ties": 0,
+          "games": 456,
+          "pointsFor": 46059.25,
+          "pointsAgainst": 46695.71,
+          "winPct": 0.522
+        },
+        "avgFinishPct": 0.533,
+        "divisionTitles": 10,
+        "championships": 2,
+        "playoffBerths": 19
+      },
       "name": "Northwest",
       "slug": "northwest",
       "divisionIds": [
@@ -2948,6 +4260,285 @@
       ]
     },
     {
+      "membershipEras": [
+        {
+          "yearStart": 2007,
+          "yearEnd": 2007,
+          "seasons": 1,
+          "current": false,
+          "franchiseIds": [
+            "0001",
+            "0002",
+            "0004",
+            "0006"
+          ],
+          "members": [
+            {
+              "franchiseId": "0001",
+              "name": "Pacific Pigskins",
+              "nameMedium": "Pigskins",
+              "icon": "/assets/theleague/history/pigskins_2007_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0003",
+                  "slug": "pacific-pigskins-2007",
+                  "title": "Pacific Pigskins",
+                  "icon": "/assets/theleague/history/pigskins_2007_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0002",
+              "name": "Sabertooths",
+              "nameMedium": "Sabertooths",
+              "icon": "/assets/theleague/history/sabertooths_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0026",
+                  "slug": "sabertooths-2007",
+                  "title": "Sabertooths",
+                  "icon": "/assets/theleague/history/sabertooths_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0006",
+              "name": "LBer-DeCleaters",
+              "nameMedium": "LBer-DeCleaters",
+              "icon": "/assets/theleague/history/lb_decleaters_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0023",
+                  "slug": "lber-decleaters-2007",
+                  "title": "LBer-DeCleaters",
+                  "icon": "/assets/theleague/history/lb_decleaters_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0004",
+              "name": "Las Vegas Elite",
+              "nameMedium": "Las Vegas Elite",
+              "icon": "/assets/theleague/history/las_vegas_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0022",
+                  "slug": "las-vegas-elite-2007",
+                  "title": "Las Vegas Elite",
+                  "icon": "/assets/theleague/history/las_vegas_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 34,
+            "losses": 38,
+            "ties": 0,
+            "games": 72,
+            "pointsFor": 6455.38,
+            "pointsAgainst": 6918.52,
+            "winPct": 0.472
+          },
+          "interDivision": {
+            "wins": 22,
+            "losses": 26,
+            "ties": 0,
+            "games": 48,
+            "pointsFor": 4611.32,
+            "pointsAgainst": 4546.12,
+            "winPct": 0.458
+          },
+          "avgFinishPct": 0.333,
+          "divisionTitles": 1,
+          "championships": 0,
+          "playoffBerths": 1
+        },
+        {
+          "yearStart": 2008,
+          "yearEnd": 2008,
+          "seasons": 1,
+          "current": false,
+          "franchiseIds": [
+            "0001",
+            "0004",
+            "0006",
+            "0015"
+          ],
+          "members": [
+            {
+              "franchiseId": "0015",
+              "name": "Dark Magicians of Chaos",
+              "nameMedium": "Dark Magicians",
+              "icon": "/assets/theleague/history/dark_magicians_2007_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0002",
+                  "slug": "dark-magicians-of-chaos-2007",
+                  "title": "Dark Magicians of Chaos",
+                  "icon": "/assets/theleague/history/dark_magicians_2007_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0001",
+              "name": "Pacific Pigskins",
+              "nameMedium": "Pigskins",
+              "icon": "/assets/theleague/history/pigskins_2007_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0003",
+                  "slug": "pacific-pigskins-2007",
+                  "title": "Pacific Pigskins",
+                  "icon": "/assets/theleague/history/pigskins_2007_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0006",
+              "name": "LBer-DeCleaters",
+              "nameMedium": "LBer-DeCleaters",
+              "icon": "/assets/theleague/history/lb_decleaters_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0023",
+                  "slug": "lber-decleaters-2007",
+                  "title": "LBer-DeCleaters",
+                  "icon": "/assets/theleague/history/lb_decleaters_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0004",
+              "name": "Las Vegas Elite",
+              "nameMedium": "Las Vegas Elite",
+              "icon": "/assets/theleague/history/las_vegas_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0022",
+                  "slug": "las-vegas-elite-2007",
+                  "title": "Las Vegas Elite",
+                  "icon": "/assets/theleague/history/las_vegas_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 29,
+            "losses": 43,
+            "ties": 0,
+            "games": 72,
+            "pointsFor": 5969.08,
+            "pointsAgainst": 6562.6,
+            "winPct": 0.403
+          },
+          "interDivision": {
+            "wins": 17,
+            "losses": 31,
+            "ties": 0,
+            "games": 48,
+            "pointsFor": 4049.14,
+            "pointsAgainst": 4432.14,
+            "winPct": 0.354
+          },
+          "avgFinishPct": 0,
+          "divisionTitles": 1,
+          "championships": 1,
+          "playoffBerths": 1
+        },
+        {
+          "yearStart": 2009,
+          "yearEnd": 2010,
+          "seasons": 2,
+          "current": false,
+          "franchiseIds": [
+            "0001",
+            "0004",
+            "0006",
+            "0013"
+          ],
+          "members": [
+            {
+              "franchiseId": "0006",
+              "name": "LBer-DeCleaters",
+              "nameMedium": "LBer-DeCleaters",
+              "icon": "/assets/theleague/history/lb_decleaters_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0023",
+                  "slug": "lber-decleaters-2007",
+                  "title": "LBer-DeCleaters",
+                  "icon": "/assets/theleague/history/lb_decleaters_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0004",
+              "name": "Las Vegas Elite",
+              "nameMedium": "Las Vegas Elite",
+              "icon": "/assets/theleague/history/las_vegas_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0022",
+                  "slug": "las-vegas-elite-2007",
+                  "title": "Las Vegas Elite",
+                  "icon": "/assets/theleague/history/las_vegas_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0013",
+              "name": "Sabertooths",
+              "nameMedium": "Sabertooths",
+              "icon": "/assets/theleague/history/sabertooths_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0031",
+                  "slug": "sabertooths-2009",
+                  "title": "Sabertooths",
+                  "icon": "/assets/theleague/history/sabertooths_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0001",
+              "name": "Pacific Pigskins",
+              "nameMedium": "Pigskins",
+              "icon": "/assets/theleague/history/pigskins_2007_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0003",
+                  "slug": "pacific-pigskins-2007",
+                  "title": "Pacific Pigskins",
+                  "icon": "/assets/theleague/history/pigskins_2007_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 73,
+            "losses": 71,
+            "ties": 0,
+            "games": 144,
+            "pointsFor": 13071.68,
+            "pointsAgainst": 14039.88,
+            "winPct": 0.507
+          },
+          "interDivision": {
+            "wins": 49,
+            "losses": 47,
+            "ties": 0,
+            "games": 96,
+            "pointsFor": 9441.38,
+            "pointsAgainst": 9421.55,
+            "winPct": 0.51
+          },
+          "avgFinishPct": 0.5,
+          "divisionTitles": 2,
+          "championships": 1,
+          "playoffBerths": 4
+        }
+      ],
+      "currentEra": null,
       "name": "Pacific",
       "slug": "pacific",
       "divisionIds": [
@@ -3385,6 +4976,376 @@
       ]
     },
     {
+      "membershipEras": [
+        {
+          "yearStart": 2011,
+          "yearEnd": 2015,
+          "seasons": 5,
+          "current": false,
+          "franchiseIds": [
+            "0002",
+            "0003",
+            "0004",
+            "0006"
+          ],
+          "members": [
+            {
+              "franchiseId": "0006",
+              "name": "LBer-DeCleaters",
+              "nameMedium": "LBer-DeCleaters",
+              "icon": "/assets/theleague/history/lb_decleaters_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0023",
+                  "slug": "lber-decleaters-2007",
+                  "title": "LBer-DeCleaters",
+                  "icon": "/assets/theleague/history/lb_decleaters_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0004",
+              "name": "Las Vegas Elite",
+              "nameMedium": "Las Vegas Elite",
+              "icon": "/assets/theleague/history/las_vegas_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0022",
+                  "slug": "las-vegas-elite-2007",
+                  "title": "Las Vegas Elite",
+                  "icon": "/assets/theleague/history/las_vegas_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0002",
+              "name": "Da Dangsters",
+              "nameMedium": "Da Dangsters",
+              "icon": "/assets/theleague/history/da_dangsters_2017_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0010",
+                  "slug": "da-dangsters-2015",
+                  "title": "Da Dangsters",
+                  "icon": "/assets/theleague/history/da_dangsters_2017_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0003",
+              "name": "Poker in the Rear",
+              "nameMedium": "Poker in the Rear",
+              "icon": "/assets/theleague/history/poker_in_the_rear_2015_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0034",
+                  "slug": "poker-in-the-rear-2012",
+                  "title": "Poker in the Rear / Generals",
+                  "icon": "/assets/theleague/history/poker_in_the_rear_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 182,
+            "losses": 170,
+            "ties": 0,
+            "games": 352,
+            "pointsFor": 34148.04,
+            "pointsAgainst": 35528.61,
+            "winPct": 0.517
+          },
+          "interDivision": {
+            "wins": 122,
+            "losses": 110,
+            "ties": 0,
+            "games": 232,
+            "pointsFor": 23245.23,
+            "pointsAgainst": 23206.96,
+            "winPct": 0.526
+          },
+          "avgFinishPct": 0.667,
+          "divisionTitles": 5,
+          "championships": 0,
+          "playoffBerths": 9
+        },
+        {
+          "yearStart": 2016,
+          "yearEnd": 2016,
+          "seasons": 1,
+          "current": false,
+          "franchiseIds": [
+            "0003",
+            "0004",
+            "0006",
+            "0013"
+          ],
+          "members": [
+            {
+              "franchiseId": "0006",
+              "name": "LBer-DeCleaters",
+              "nameMedium": "LBer-DeCleaters",
+              "icon": "/assets/theleague/history/lb_decleaters_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0023",
+                  "slug": "lber-decleaters-2007",
+                  "title": "LBer-DeCleaters",
+                  "icon": "/assets/theleague/history/lb_decleaters_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0003",
+              "name": "Maverick",
+              "nameMedium": "Maverick",
+              "icon": "/assets/theleague/icons/maverick.png",
+              "owners": [
+                {
+                  "ownerId": "own-0012",
+                  "slug": "maverick-2016",
+                  "title": "Maverick",
+                  "icon": "/assets/theleague/icons/maverick.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0004",
+              "name": "Las Vegas Elite",
+              "nameMedium": "Las Vegas Elite",
+              "icon": "/assets/theleague/history/las_vegas_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0022",
+                  "slug": "las-vegas-elite-2007",
+                  "title": "Las Vegas Elite",
+                  "icon": "/assets/theleague/history/las_vegas_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0013",
+              "name": "Gridiron Geeks",
+              "nameMedium": "Gridiron Geeks",
+              "icon": "/assets/theleague/icons/geeks.png",
+              "owners": [
+                {
+                  "ownerId": "own-0008",
+                  "slug": "gridiron-geeks-2014",
+                  "title": "Gridiron Geeks",
+                  "icon": "/assets/theleague/icons/geeks.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 30,
+            "losses": 34,
+            "ties": 0,
+            "games": 64,
+            "pointsFor": 7198.35,
+            "pointsAgainst": 6813.06,
+            "winPct": 0.469
+          },
+          "interDivision": {
+            "wins": 18,
+            "losses": 22,
+            "ties": 0,
+            "games": 40,
+            "pointsFor": 4239.5,
+            "pointsAgainst": 4147.36,
+            "winPct": 0.45
+          },
+          "avgFinishPct": 0.667,
+          "divisionTitles": 1,
+          "championships": 1,
+          "playoffBerths": 2
+        },
+        {
+          "yearStart": 2017,
+          "yearEnd": 2025,
+          "seasons": 9,
+          "current": true,
+          "franchiseIds": [
+            "0004",
+            "0006",
+            "0011",
+            "0013"
+          ],
+          "members": [
+            {
+              "franchiseId": "0013",
+              "name": "Gridiron Geeks",
+              "nameMedium": "Gridiron Geeks",
+              "icon": "/assets/theleague/icons/geeks.png",
+              "owners": [
+                {
+                  "ownerId": "own-0008",
+                  "slug": "gridiron-geeks-2014",
+                  "title": "Gridiron Geeks",
+                  "icon": "/assets/theleague/icons/geeks.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0011",
+              "name": "Midwestside Connection",
+              "nameMedium": "Midwestside",
+              "icon": "/assets/theleague/icons/midwestside.png",
+              "owners": [
+                {
+                  "ownerId": "own-0005",
+                  "slug": "midwestside-connection-2011",
+                  "title": "Midwestside Connection",
+                  "icon": "/assets/theleague/history/midwestside_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0006",
+              "name": "Music City Mafia",
+              "nameMedium": "Music City",
+              "icon": "/assets/theleague/icons/music_city.png",
+              "owners": [
+                {
+                  "ownerId": "own-0015",
+                  "slug": "music-city-mafia-2019",
+                  "title": "The Music City Mafia",
+                  "icon": "/assets/theleague/icons/music_city.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0004",
+              "name": "Heavy Chevy",
+              "nameMedium": "Heavy Chevy",
+              "icon": "/assets/theleague/icons/heavy_chevy.png",
+              "owners": [
+                {
+                  "ownerId": "own-0038",
+                  "slug": "heavy-chevy-2020",
+                  "title": "Heavy Chevy",
+                  "icon": "/assets/theleague/icons/heavy_chevy.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 305,
+            "losses": 327,
+            "ties": 0,
+            "games": 632,
+            "pointsFor": 60927.25,
+            "pointsAgainst": 64109.73,
+            "winPct": 0.483
+          },
+          "interDivision": {
+            "wins": 197,
+            "losses": 219,
+            "ties": 0,
+            "games": 416,
+            "pointsFor": 41491.85,
+            "pointsAgainst": 42175.24,
+            "winPct": 0.474
+          },
+          "avgFinishPct": 0.444,
+          "divisionTitles": 9,
+          "championships": 2,
+          "playoffBerths": 16
+        }
+      ],
+      "currentEra": {
+        "yearStart": 2017,
+        "yearEnd": 2025,
+        "seasons": 9,
+        "current": true,
+        "franchiseIds": [
+          "0004",
+          "0006",
+          "0011",
+          "0013"
+        ],
+        "members": [
+          {
+            "franchiseId": "0013",
+            "name": "Gridiron Geeks",
+            "nameMedium": "Gridiron Geeks",
+            "icon": "/assets/theleague/icons/geeks.png",
+            "owners": [
+              {
+                "ownerId": "own-0008",
+                "slug": "gridiron-geeks-2014",
+                "title": "Gridiron Geeks",
+                "icon": "/assets/theleague/icons/geeks.png"
+              }
+            ]
+          },
+          {
+            "franchiseId": "0011",
+            "name": "Midwestside Connection",
+            "nameMedium": "Midwestside",
+            "icon": "/assets/theleague/icons/midwestside.png",
+            "owners": [
+              {
+                "ownerId": "own-0005",
+                "slug": "midwestside-connection-2011",
+                "title": "Midwestside Connection",
+                "icon": "/assets/theleague/history/midwestside_icon_circle.png"
+              }
+            ]
+          },
+          {
+            "franchiseId": "0006",
+            "name": "Music City Mafia",
+            "nameMedium": "Music City",
+            "icon": "/assets/theleague/icons/music_city.png",
+            "owners": [
+              {
+                "ownerId": "own-0015",
+                "slug": "music-city-mafia-2019",
+                "title": "The Music City Mafia",
+                "icon": "/assets/theleague/icons/music_city.png"
+              }
+            ]
+          },
+          {
+            "franchiseId": "0004",
+            "name": "Heavy Chevy",
+            "nameMedium": "Heavy Chevy",
+            "icon": "/assets/theleague/icons/heavy_chevy.png",
+            "owners": [
+              {
+                "ownerId": "own-0038",
+                "slug": "heavy-chevy-2020",
+                "title": "Heavy Chevy",
+                "icon": "/assets/theleague/icons/heavy_chevy.png"
+              }
+            ]
+          }
+        ],
+        "totals": {
+          "wins": 305,
+          "losses": 327,
+          "ties": 0,
+          "games": 632,
+          "pointsFor": 60927.25,
+          "pointsAgainst": 64109.73,
+          "winPct": 0.483
+        },
+        "interDivision": {
+          "wins": 197,
+          "losses": 219,
+          "ties": 0,
+          "games": 416,
+          "pointsFor": 41491.85,
+          "pointsAgainst": 42175.24,
+          "winPct": 0.474
+        },
+        "avgFinishPct": 0.444,
+        "divisionTitles": 9,
+        "championships": 2,
+        "playoffBerths": 16
+      },
       "name": "Southwest",
       "slug": "southwest",
       "divisionIds": [

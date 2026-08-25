@@ -148,8 +148,47 @@ export interface DivisionOwnerEra {
   sharedSeasons: number;
 }
 
+/** A franchise as a member of a division, identified enough to render. */
+export interface DivisionMember {
+  franchiseId: string;
+  name: string | null;
+  nameMedium: string | null;
+  icon: string | null;
+  owners: DivisionOwnerRef[];
+}
+
+/**
+ * A run of consecutive seasons with the SAME franchises in the division.
+ *
+ * A division name is only half its identity; the other half is who is in it.
+ * A division that has fielded the same four since 2016 and one reshuffled two
+ * years ago are not comparable things even under one name — so this is the
+ * slice where two divisions ARE compared as the same group of teams across
+ * their whole span. Breaks on a membership change or a gap year.
+ */
+export interface DivisionMembershipEra {
+  yearStart: number;
+  yearEnd: number;
+  seasons: number;
+  /** True for the era running through the most recently played season. */
+  current: boolean;
+  franchiseIds: string[];
+  /** Identities as of the era's LAST season, so a live lineup reads current. */
+  members: DivisionMember[];
+  totals: DivisionRecord;
+  interDivision: DivisionRecord;
+  avgFinishPct: number | null;
+  divisionTitles: number;
+  championships: number;
+  playoffBerths: number;
+}
+
 /** One division, all-time. Keyed by NAME — see the compute script's header. */
 export interface DivisionAllTime {
+  /** Membership runs, oldest first. */
+  membershipEras: DivisionMembershipEra[];
+  /** The era still running, or null for a retired division. */
+  currentEra: DivisionMembershipEra | null;
   name: string;
   slug: string;
   /** Every MFL slot id this name has occupied. Informational only. */

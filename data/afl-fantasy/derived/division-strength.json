@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-25T04:20:28.168Z",
+  "generatedAt": "2026-08-25T04:55:42.546Z",
   "league": "afl-fantasy",
   "leagueName": "AFL",
   "yearsCovered": [
@@ -75,6 +75,101 @@
   },
   "divisions": [
     {
+      "membershipEras": [
+        {
+          "yearStart": 2006,
+          "yearEnd": 2006,
+          "seasons": 1,
+          "current": false,
+          "franchiseIds": [
+            "0016",
+            "0019",
+            "0020",
+            "0023"
+          ],
+          "members": [
+            {
+              "franchiseId": "0019",
+              "name": "The Bandwagon",
+              "nameMedium": "The Bandwagon",
+              "icon": "/assets/afl/history/the_bandwagon_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0099",
+                  "slug": "the-bandwagon-2005",
+                  "title": "The Bandwagon",
+                  "icon": "/assets/afl/history/the_bandwagon_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0016",
+              "name": "Reckless",
+              "nameMedium": "Reckless",
+              "icon": "/assets/afl/history/reckless_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0097",
+                  "slug": "reckless-2005",
+                  "title": "Reckless",
+                  "icon": "/assets/afl/history/reckless_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0020",
+              "name": "Limp Ditkas",
+              "nameMedium": "Limp Ditkas",
+              "icon": "/assets/afl/history/limp_ditkas_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0103",
+                  "slug": "limp-ditkas-2006",
+                  "title": "Limp Ditkas",
+                  "icon": "/assets/afl/history/limp_ditkas_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0023",
+              "name": "No Frills",
+              "nameMedium": "No Frills",
+              "icon": "/assets/afl/history/no_frills_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0096",
+                  "slug": "no-frills-2005",
+                  "title": "No Frills",
+                  "icon": "/assets/afl/history/no_frills_icon_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 32,
+            "losses": 28,
+            "ties": 0,
+            "games": 60,
+            "pointsFor": 7033.72,
+            "pointsAgainst": 6074.16,
+            "winPct": 0.533
+          },
+          "interDivision": {
+            "wins": 20,
+            "losses": 16,
+            "ties": 0,
+            "games": 36,
+            "pointsFor": 3826.38,
+            "pointsAgainst": 3578.94,
+            "winPct": 0.556
+          },
+          "avgFinishPct": 0.8,
+          "divisionTitles": 1,
+          "championships": 0,
+          "playoffBerths": 2
+        }
+      ],
+      "currentEra": null,
       "name": "Atlantic",
       "slug": "atlantic",
       "divisionIds": [
@@ -399,6 +494,653 @@
       ]
     },
     {
+      "membershipEras": [
+        {
+          "yearStart": 2003,
+          "yearEnd": 2003,
+          "seasons": 1,
+          "current": false,
+          "franchiseIds": [
+            "0005",
+            "0006",
+            "0007",
+            "0012"
+          ],
+          "members": [
+            {
+              "franchiseId": "0006",
+              "name": "Chieftans",
+              "nameMedium": "Chieftans",
+              "icon": "/assets/afl/history/chieftans_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0065",
+                  "slug": "chieftans-2003",
+                  "title": "Chieftans",
+                  "icon": "/assets/afl/history/chieftans_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0007",
+              "name": "The Vandalizers",
+              "nameMedium": "The Vandalizers",
+              "icon": "/assets/afl/history/the_vandalizers_icon_jpg_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0080",
+                  "slug": "the-vandalizers-2003",
+                  "title": "The Vandalizers",
+                  "icon": "/assets/afl/history/the_vandalizers_icon_jpg_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0012",
+              "name": "Italian Stalions",
+              "nameMedium": "Ital Stalions",
+              "icon": "/assets/afl/history/italian_stalions_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0071",
+                  "slug": "italian-stalions-2003",
+                  "title": "Italian Stalions",
+                  "icon": "/assets/afl/history/italian_stalions_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0005",
+              "name": "Bernies Brewers",
+              "nameMedium": "Bernies Brewers",
+              "icon": "/assets/afl/history/bernies_brewers_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0064",
+                  "slug": "bernies-brewers-2003",
+                  "title": "Bernies Brewers",
+                  "icon": "/assets/afl/history/bernies_brewers_banner_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 28,
+            "losses": 34,
+            "ties": 0,
+            "games": 62,
+            "pointsFor": 0,
+            "pointsAgainst": 0,
+            "winPct": 0.452
+          },
+          "interDivision": {
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "games": 0,
+            "pointsFor": 0,
+            "pointsAgainst": 0,
+            "winPct": null
+          },
+          "avgFinishPct": null,
+          "divisionTitles": 1,
+          "championships": 0,
+          "playoffBerths": 1
+        },
+        {
+          "yearStart": 2004,
+          "yearEnd": 2004,
+          "seasons": 1,
+          "current": false,
+          "franchiseIds": [
+            "0003",
+            "0004",
+            "0008",
+            "0010"
+          ],
+          "members": [
+            {
+              "franchiseId": "0004",
+              "name": "The Vandalizers",
+              "nameMedium": "The Vandalizers",
+              "icon": "/assets/afl/history/the_vandalizers_icon_gif_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0093",
+                  "slug": "the-vandalizers-2004",
+                  "title": "The Vandalizers",
+                  "icon": "/assets/afl/history/the_vandalizers_icon_gif_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0003",
+              "name": "Marriedwithchildren",
+              "nameMedium": "Married",
+              "icon": "/assets/afl/history/marriedwithchildren_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0075",
+                  "slug": "marriedwithchildren-2003",
+                  "title": "Marriedwithchildren",
+                  "icon": "/assets/afl/history/marriedwithchildren_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0010",
+              "name": "Fullybaked",
+              "nameMedium": "Fullybaked",
+              "icon": "/assets/afl/icons/fullybaked.png",
+              "owners": [
+                {
+                  "ownerId": "own-0041",
+                  "slug": "fullybaked-2003",
+                  "title": "Fullybaked",
+                  "icon": "/assets/afl/icons/fullybaked.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0008",
+              "name": "The Nukes",
+              "nameMedium": "The Nukes",
+              "icon": "/assets/afl/history/the_nukes_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0079",
+                  "slug": "the-nukes-2003",
+                  "title": "The Nukes",
+                  "icon": "/assets/afl/history/the_nukes_banner_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 26,
+            "losses": 26,
+            "ties": 0,
+            "games": 52,
+            "pointsFor": 6803.24,
+            "pointsAgainst": 5383.28,
+            "winPct": 0.5
+          },
+          "interDivision": {
+            "wins": 14,
+            "losses": 14,
+            "ties": 0,
+            "games": 28,
+            "pointsFor": 2831.08,
+            "pointsAgainst": 2906.9,
+            "winPct": 0.5
+          },
+          "avgFinishPct": 0.6,
+          "divisionTitles": 1,
+          "championships": 0,
+          "playoffBerths": 1
+        },
+        {
+          "yearStart": 2005,
+          "yearEnd": 2006,
+          "seasons": 2,
+          "current": false,
+          "franchiseIds": [
+            "0002",
+            "0003",
+            "0008",
+            "0012"
+          ],
+          "members": [
+            {
+              "franchiseId": "0003",
+              "name": "Marriedwithchildren",
+              "nameMedium": "Married",
+              "icon": "/assets/afl/history/marriedwithchildren_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0075",
+                  "slug": "marriedwithchildren-2003",
+                  "title": "Marriedwithchildren",
+                  "icon": "/assets/afl/history/marriedwithchildren_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0012",
+              "name": "Habanero's",
+              "nameMedium": "Habanero's",
+              "icon": "/assets/afl/history/habanero_s_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0094",
+                  "slug": "habanero-s-2005",
+                  "title": "Habanero's",
+                  "icon": "/assets/afl/history/habanero_s_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0008",
+              "name": "The Nukes",
+              "nameMedium": "The Nukes",
+              "icon": "/assets/afl/history/the_nukes_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0079",
+                  "slug": "the-nukes-2003",
+                  "title": "The Nukes",
+                  "icon": "/assets/afl/history/the_nukes_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0002",
+              "name": "Drunk Indians",
+              "nameMedium": "Drunk Indians",
+              "icon": "/assets/afl/icons/drunk_indians.png",
+              "owners": [
+                {
+                  "ownerId": "own-0040",
+                  "slug": "drunk-indians-2003",
+                  "title": "Drunk Indians",
+                  "icon": "/assets/afl/icons/drunk_indians.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 61,
+            "losses": 59,
+            "ties": 0,
+            "games": 120,
+            "pointsFor": 13878.28,
+            "pointsAgainst": 12276.42,
+            "winPct": 0.508
+          },
+          "interDivision": {
+            "wins": 37,
+            "losses": 35,
+            "ties": 0,
+            "games": 72,
+            "pointsFor": 7268.58,
+            "pointsAgainst": 7323.36,
+            "winPct": 0.514
+          },
+          "avgFinishPct": 0.4,
+          "divisionTitles": 2,
+          "championships": 1,
+          "playoffBerths": 2
+        },
+        {
+          "yearStart": 2007,
+          "yearEnd": 2007,
+          "seasons": 1,
+          "current": false,
+          "franchiseIds": [
+            "0003",
+            "0004",
+            "0008",
+            "0011"
+          ],
+          "members": [
+            {
+              "franchiseId": "0003",
+              "name": "Marriedwithchildren",
+              "nameMedium": "Married",
+              "icon": "/assets/afl/history/marriedwithchildren_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0075",
+                  "slug": "marriedwithchildren-2003",
+                  "title": "Marriedwithchildren",
+                  "icon": "/assets/afl/history/marriedwithchildren_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0004",
+              "name": "Muck Juggling Micks",
+              "nameMedium": "Juggling Micks",
+              "icon": "/assets/afl/icons/micks.png",
+              "owners": [
+                {
+                  "ownerId": "own-0044",
+                  "slug": "muck-juggling-micks-2005",
+                  "title": "Muck Juggling Micks",
+                  "icon": "/assets/afl/icons/micks.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0011",
+              "name": "The Rookies",
+              "nameMedium": "The Rookies",
+              "icon": "/assets/afl/history/the_rookies_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0100",
+                  "slug": "the-rookies-2005",
+                  "title": "The Rookies",
+                  "icon": "/assets/afl/history/the_rookies_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0008",
+              "name": "The Nukes",
+              "nameMedium": "The Nukes",
+              "icon": "/assets/afl/history/the_nukes_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0079",
+                  "slug": "the-nukes-2003",
+                  "title": "The Nukes",
+                  "icon": "/assets/afl/history/the_nukes_banner_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 29,
+            "losses": 43,
+            "ties": 0,
+            "games": 72,
+            "pointsFor": 6812.74,
+            "pointsAgainst": 7846.58,
+            "winPct": 0.403
+          },
+          "interDivision": {
+            "wins": 17,
+            "losses": 31,
+            "ties": 0,
+            "games": 48,
+            "pointsFor": 4800.92,
+            "pointsAgainst": 5200.42,
+            "winPct": 0.354
+          },
+          "avgFinishPct": 0,
+          "divisionTitles": 1,
+          "championships": 0,
+          "playoffBerths": 1
+        },
+        {
+          "yearStart": 2008,
+          "yearEnd": 2009,
+          "seasons": 2,
+          "current": false,
+          "franchiseIds": [
+            "0003",
+            "0006",
+            "0008",
+            "0011"
+          ],
+          "members": [
+            {
+              "franchiseId": "0006",
+              "name": "More Cowbell",
+              "nameMedium": "More Cowbell",
+              "icon": "/assets/afl/history/more_cowbell_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0113",
+                  "slug": "more-cowbell-2008",
+                  "title": "More Cowbell",
+                  "icon": "/assets/afl/history/more_cowbell_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0003",
+              "name": "Marriedwithchildren",
+              "nameMedium": "Married",
+              "icon": "/assets/afl/history/marriedwithchildren_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0075",
+                  "slug": "marriedwithchildren-2003",
+                  "title": "Marriedwithchildren",
+                  "icon": "/assets/afl/history/marriedwithchildren_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0008",
+              "name": "The Nukes",
+              "nameMedium": "The Nukes",
+              "icon": "/assets/afl/history/the_nukes_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0079",
+                  "slug": "the-nukes-2003",
+                  "title": "The Nukes",
+                  "icon": "/assets/afl/history/the_nukes_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0011",
+              "name": "The Dark Side",
+              "nameMedium": "The Dark Side",
+              "icon": "/assets/afl/history/the_dark_side_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0118",
+                  "slug": "the-dark-side-2009",
+                  "title": "The Dark Side",
+                  "icon": "/assets/afl/history/the_dark_side_banner_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 77,
+            "losses": 67,
+            "ties": 0,
+            "games": 144,
+            "pointsFor": 14813.46,
+            "pointsAgainst": 15105.42,
+            "winPct": 0.535
+          },
+          "interDivision": {
+            "wins": 53,
+            "losses": 43,
+            "ties": 0,
+            "games": 96,
+            "pointsFor": 10369.94,
+            "pointsAgainst": 9869.92,
+            "winPct": 0.552
+          },
+          "avgFinishPct": 0.9,
+          "divisionTitles": 2,
+          "championships": 0,
+          "playoffBerths": 4
+        },
+        {
+          "yearStart": 2010,
+          "yearEnd": 2010,
+          "seasons": 1,
+          "current": false,
+          "franchiseIds": [
+            "0006",
+            "0007",
+            "0009",
+            "0011"
+          ],
+          "members": [
+            {
+              "franchiseId": "0009",
+              "name": "Vitside Mafia",
+              "nameMedium": "Vitside Mafia",
+              "icon": "/assets/afl/icons/vitside_mafia.png",
+              "owners": [
+                {
+                  "ownerId": "own-0049",
+                  "slug": "vitside-mafia-2010",
+                  "title": "Vitside Mafia",
+                  "icon": "/assets/afl/icons/vitside_mafia.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0006",
+              "name": "More Cowbell",
+              "nameMedium": "More Cowbell",
+              "icon": "/assets/afl/history/more_cowbell_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0113",
+                  "slug": "more-cowbell-2008",
+                  "title": "More Cowbell",
+                  "icon": "/assets/afl/history/more_cowbell_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0007",
+              "name": "Touchdown My Pants",
+              "nameMedium": "TD My Pants",
+              "icon": "/assets/afl/history/touchdown_my_pants_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0122",
+                  "slug": "touchdown-my-pants-2010",
+                  "title": "Touchdown My Pants",
+                  "icon": "/assets/afl/history/touchdown_my_pants_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0011",
+              "name": "Midwestside Connection",
+              "nameMedium": "Midwestside",
+              "icon": "/assets/afl/icons/midwestside.png",
+              "owners": [
+                {
+                  "ownerId": "own-0048",
+                  "slug": "midwestside-connection-2010",
+                  "title": "Midwestside Connection",
+                  "icon": "/assets/afl/icons/midwestside.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 28,
+            "losses": 44,
+            "ties": 0,
+            "games": 72,
+            "pointsFor": 7615.03,
+            "pointsAgainst": 8762.51,
+            "winPct": 0.389
+          },
+          "interDivision": {
+            "wins": 16,
+            "losses": 32,
+            "ties": 0,
+            "games": 48,
+            "pointsFor": 5446.67,
+            "pointsAgainst": 5999.19,
+            "winPct": 0.333
+          },
+          "avgFinishPct": 0,
+          "divisionTitles": 1,
+          "championships": 0,
+          "playoffBerths": 1
+        },
+        {
+          "yearStart": 2011,
+          "yearEnd": 2012,
+          "seasons": 2,
+          "current": false,
+          "franchiseIds": [
+            "0007",
+            "0009",
+            "0011",
+            "0012"
+          ],
+          "members": [
+            {
+              "franchiseId": "0009",
+              "name": "Vitside Mafia",
+              "nameMedium": "Vitside Mafia",
+              "icon": "/assets/afl/icons/vitside_mafia.png",
+              "owners": [
+                {
+                  "ownerId": "own-0049",
+                  "slug": "vitside-mafia-2010",
+                  "title": "Vitside Mafia",
+                  "icon": "/assets/afl/icons/vitside_mafia.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0007",
+              "name": "Touchdown My Pants",
+              "nameMedium": "TD My Pants",
+              "icon": "/assets/afl/history/touchdown_my_pants_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0122",
+                  "slug": "touchdown-my-pants-2010",
+                  "title": "Touchdown My Pants",
+                  "icon": "/assets/afl/history/touchdown_my_pants_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0011",
+              "name": "Midwestside Connection",
+              "nameMedium": "Midwestside",
+              "icon": "/assets/afl/icons/midwestside.png",
+              "owners": [
+                {
+                  "ownerId": "own-0048",
+                  "slug": "midwestside-connection-2010",
+                  "title": "Midwestside Connection",
+                  "icon": "/assets/afl/icons/midwestside.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0012",
+              "name": "Pubes",
+              "nameMedium": "Pubes",
+              "icon": "/assets/afl/history/pubes_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0046",
+                  "slug": "suh-girls-one-cup-2008",
+                  "title": "Shifty Joe / Pubes / Suh girls, one cup",
+                  "icon": "/assets/afl/history/pubes_banner_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 73,
+            "losses": 71,
+            "ties": 0,
+            "games": 144,
+            "pointsFor": 16260.57,
+            "pointsAgainst": 17534.19,
+            "winPct": 0.507
+          },
+          "interDivision": {
+            "wins": 49,
+            "losses": 47,
+            "ties": 0,
+            "games": 96,
+            "pointsFor": 11387.14,
+            "pointsAgainst": 11552.99,
+            "winPct": 0.51
+          },
+          "avgFinishPct": 0.6,
+          "divisionTitles": 2,
+          "championships": 0,
+          "playoffBerths": 2
+        }
+      ],
+      "currentEra": null,
       "name": "Central",
       "slug": "central",
       "divisionIds": [
@@ -1511,6 +2253,926 @@
       ]
     },
     {
+      "membershipEras": [
+        {
+          "yearStart": 2003,
+          "yearEnd": 2004,
+          "seasons": 2,
+          "current": false,
+          "franchiseIds": [
+            "0013",
+            "0018",
+            "0019",
+            "0022"
+          ],
+          "members": [
+            {
+              "franchiseId": "0013",
+              "name": "Cougs",
+              "nameMedium": "Cougs",
+              "icon": "/assets/afl/history/cougs_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0086",
+                  "slug": "cougs-2004",
+                  "title": "Cougs",
+                  "icon": "/assets/afl/history/cougs_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0019",
+              "name": "L.C. Maniacs",
+              "nameMedium": "L.C. Maniacs",
+              "icon": "/assets/afl/history/l_c_maniacs_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0088",
+                  "slug": "l-c-maniacs-2004",
+                  "title": "L.C. Maniacs",
+                  "icon": "/assets/afl/history/l_c_maniacs_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0018",
+              "name": "Red Dawn",
+              "nameMedium": "Red Dawn",
+              "icon": "/assets/afl/history/red_dawn_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0090",
+                  "slug": "red-dawn-2004",
+                  "title": "Red Dawn",
+                  "icon": "/assets/afl/history/red_dawn_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0022",
+              "name": "Melville Roadsters",
+              "nameMedium": "Roadsters",
+              "icon": "/assets/afl/history/melville_roadsters_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0076",
+                  "slug": "melville-roadsters-2003",
+                  "title": "Melville Roadsters",
+                  "icon": "/assets/afl/history/melville_roadsters_icon_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 65,
+            "losses": 55,
+            "ties": 0,
+            "games": 120,
+            "pointsFor": 6600,
+            "pointsAgainst": 5252.78,
+            "winPct": 0.542
+          },
+          "interDivision": {
+            "wins": 14,
+            "losses": 14,
+            "ties": 0,
+            "games": 28,
+            "pointsFor": 2653.48,
+            "pointsAgainst": 2832.3,
+            "winPct": 0.5
+          },
+          "avgFinishPct": 0.4,
+          "divisionTitles": 2,
+          "championships": 0,
+          "playoffBerths": 3
+        },
+        {
+          "yearStart": 2005,
+          "yearEnd": 2005,
+          "seasons": 1,
+          "current": false,
+          "franchiseIds": [
+            "0013",
+            "0014",
+            "0016",
+            "0018"
+          ],
+          "members": [
+            {
+              "franchiseId": "0013",
+              "name": "Cougs",
+              "nameMedium": "Cougs",
+              "icon": "/assets/afl/history/cougs_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0086",
+                  "slug": "cougs-2004",
+                  "title": "Cougs",
+                  "icon": "/assets/afl/history/cougs_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0014",
+              "name": "ISIS",
+              "nameMedium": "ISIS",
+              "icon": "/assets/afl/history/isis_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0095",
+                  "slug": "isis-2005",
+                  "title": "ISIS",
+                  "icon": "/assets/afl/history/isis_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0016",
+              "name": "Reckless",
+              "nameMedium": "Reckless",
+              "icon": "/assets/afl/history/reckless_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0097",
+                  "slug": "reckless-2005",
+                  "title": "Reckless",
+                  "icon": "/assets/afl/history/reckless_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0018",
+              "name": "Red Dawn",
+              "nameMedium": "Red Dawn",
+              "icon": "/assets/afl/history/red_dawn_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0090",
+                  "slug": "red-dawn-2004",
+                  "title": "Red Dawn",
+                  "icon": "/assets/afl/history/red_dawn_icon_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 28,
+            "losses": 32,
+            "ties": 0,
+            "games": 60,
+            "pointsFor": 6863.48,
+            "pointsAgainst": 6120.3,
+            "winPct": 0.467
+          },
+          "interDivision": {
+            "wins": 16,
+            "losses": 20,
+            "ties": 0,
+            "games": 36,
+            "pointsFor": 3516.28,
+            "pointsAgainst": 3622.9,
+            "winPct": 0.444
+          },
+          "avgFinishPct": 0.2,
+          "divisionTitles": 1,
+          "championships": 1,
+          "playoffBerths": 1
+        },
+        {
+          "yearStart": 2006,
+          "yearEnd": 2006,
+          "seasons": 1,
+          "current": false,
+          "franchiseIds": [
+            "0013",
+            "0014",
+            "0018",
+            "0022"
+          ],
+          "members": [
+            {
+              "franchiseId": "0014",
+              "name": "ISIS",
+              "nameMedium": "ISIS",
+              "icon": "/assets/afl/history/isis_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0095",
+                  "slug": "isis-2005",
+                  "title": "ISIS",
+                  "icon": "/assets/afl/history/isis_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0022",
+              "name": "Way More Funner",
+              "nameMedium": "Way More Funner",
+              "icon": "/assets/afl/history/way_more_funner_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0102",
+                  "slug": "way-more-funner-2005",
+                  "title": "Way More Funner",
+                  "icon": "/assets/afl/history/way_more_funner_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0013",
+              "name": "Cougs",
+              "nameMedium": "Cougs",
+              "icon": "/assets/afl/history/cougs_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0086",
+                  "slug": "cougs-2004",
+                  "title": "Cougs",
+                  "icon": "/assets/afl/history/cougs_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0018",
+              "name": "Red Dawn",
+              "nameMedium": "Red Dawn",
+              "icon": "/assets/afl/history/red_dawn_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0090",
+                  "slug": "red-dawn-2004",
+                  "title": "Red Dawn",
+                  "icon": "/assets/afl/history/red_dawn_icon_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 26,
+            "losses": 34,
+            "ties": 0,
+            "games": 60,
+            "pointsFor": 6784.54,
+            "pointsAgainst": 6023.6,
+            "winPct": 0.433
+          },
+          "interDivision": {
+            "wins": 14,
+            "losses": 22,
+            "ties": 0,
+            "games": 36,
+            "pointsFor": 3524.06,
+            "pointsAgainst": 3793.8,
+            "winPct": 0.389
+          },
+          "avgFinishPct": 0,
+          "divisionTitles": 1,
+          "championships": 0,
+          "playoffBerths": 1
+        },
+        {
+          "yearStart": 2007,
+          "yearEnd": 2008,
+          "seasons": 2,
+          "current": false,
+          "franchiseIds": [
+            "0018",
+            "0019",
+            "0022",
+            "0023"
+          ],
+          "members": [
+            {
+              "franchiseId": "0023",
+              "name": "No Frills",
+              "nameMedium": "No Frills",
+              "icon": "/assets/afl/history/no_frills_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0096",
+                  "slug": "no-frills-2005",
+                  "title": "No Frills",
+                  "icon": "/assets/afl/history/no_frills_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0022",
+              "name": "Way More Funner",
+              "nameMedium": "Way More Funner",
+              "icon": "/assets/afl/history/way_more_funner_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0102",
+                  "slug": "way-more-funner-2005",
+                  "title": "Way More Funner",
+                  "icon": "/assets/afl/history/way_more_funner_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0019",
+              "name": "The Bandwagon",
+              "nameMedium": "The Bandwagon",
+              "icon": "/assets/afl/history/the_bandwagon_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0099",
+                  "slug": "the-bandwagon-2005",
+                  "title": "The Bandwagon",
+                  "icon": "/assets/afl/history/the_bandwagon_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0018",
+              "name": "Carolina Blues",
+              "nameMedium": "Carolina Blues",
+              "icon": "/assets/afl/history/carolina_blues_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0106",
+                  "slug": "carolina-blues-2007",
+                  "title": "Carolina Blues",
+                  "icon": "/assets/afl/history/carolina_blues_banner_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 70,
+            "losses": 74,
+            "ties": 0,
+            "games": 144,
+            "pointsFor": 13843.42,
+            "pointsAgainst": 15025.78,
+            "winPct": 0.486
+          },
+          "interDivision": {
+            "wins": 46,
+            "losses": 50,
+            "ties": 0,
+            "games": 96,
+            "pointsFor": 9873.3,
+            "pointsAgainst": 10041.76,
+            "winPct": 0.479
+          },
+          "avgFinishPct": 0.4,
+          "divisionTitles": 2,
+          "championships": 1,
+          "playoffBerths": 2
+        },
+        {
+          "yearStart": 2009,
+          "yearEnd": 2010,
+          "seasons": 2,
+          "current": false,
+          "franchiseIds": [
+            "0015",
+            "0018",
+            "0019",
+            "0023"
+          ],
+          "members": [
+            {
+              "franchiseId": "0023",
+              "name": "No Frills",
+              "nameMedium": "No Frills",
+              "icon": "/assets/afl/history/no_frills_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0096",
+                  "slug": "no-frills-2005",
+                  "title": "No Frills",
+                  "icon": "/assets/afl/history/no_frills_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0018",
+              "name": "Zephyr",
+              "nameMedium": "Zephyr",
+              "icon": "/assets/afl/history/zephyr_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0119",
+                  "slug": "zephyr-2009",
+                  "title": "Zephyr",
+                  "icon": "/assets/afl/history/zephyr_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0015",
+              "name": "The Blunt Bros.",
+              "nameMedium": "The Blunt Bros.",
+              "icon": "/assets/afl/history/the_blunt_bros_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0078",
+                  "slug": "the-blunt-bros-2003",
+                  "title": "The Blunt Bros.",
+                  "icon": "/assets/afl/history/the_blunt_bros_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0019",
+              "name": "Minnesota Road Kill",
+              "nameMedium": "MN Road Kill",
+              "icon": "/assets/afl/history/minnesota_road_kill_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0116",
+                  "slug": "minnesota-road-kill-2009",
+                  "title": "Minnesota Road Kill",
+                  "icon": "/assets/afl/history/minnesota_road_kill_banner_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 77,
+            "losses": 67,
+            "ties": 0,
+            "games": 144,
+            "pointsFor": 14882.81,
+            "pointsAgainst": 15918.51,
+            "winPct": 0.535
+          },
+          "interDivision": {
+            "wins": 53,
+            "losses": 43,
+            "ties": 0,
+            "games": 96,
+            "pointsFor": 10768.32,
+            "pointsAgainst": 10734.77,
+            "winPct": 0.552
+          },
+          "avgFinishPct": 0.6,
+          "divisionTitles": 2,
+          "championships": 0,
+          "playoffBerths": 3
+        },
+        {
+          "yearStart": 2011,
+          "yearEnd": 2012,
+          "seasons": 2,
+          "current": false,
+          "franchiseIds": [
+            "0015",
+            "0017",
+            "0019",
+            "0020"
+          ],
+          "members": [
+            {
+              "franchiseId": "0019",
+              "name": "Cliffside Killer Clowns",
+              "nameMedium": "Killer Clowns",
+              "icon": "/assets/afl/history/cliffside_killer_clowns_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0123",
+                  "slug": "cliffside-killer-clowns-2011",
+                  "title": "Cliffside Killer Clowns",
+                  "icon": "/assets/afl/history/cliffside_killer_clowns_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0017",
+              "name": "Blitzkrieg",
+              "nameMedium": "Blitzkrieg",
+              "icon": "/assets/afl/history/blitzkrieg_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0111",
+                  "slug": "blitzkrieg-2008",
+                  "title": "Blitzkrieg",
+                  "icon": "/assets/afl/history/blitzkrieg_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0020",
+              "name": "The Boondock Saints",
+              "nameMedium": "Boondock Saints",
+              "icon": "/assets/afl/icons/saints.png",
+              "owners": [
+                {
+                  "ownerId": "own-0047",
+                  "slug": "the-boondock-saints-2008",
+                  "title": "The Boondock Saints",
+                  "icon": "/assets/afl/icons/saints.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0015",
+              "name": "The Mariachi Ninjas",
+              "nameMedium": "Mariachi Ninjas",
+              "icon": "/assets/afl/icons/ninjas.png",
+              "owners": [
+                {
+                  "ownerId": "own-0050",
+                  "slug": "the-mariachi-ninjas-2012",
+                  "title": "The Mariachi Ninjas",
+                  "icon": "/assets/afl/icons/ninjas.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 63,
+            "losses": 81,
+            "ties": 0,
+            "games": 144,
+            "pointsFor": 15458.67,
+            "pointsAgainst": 17566.75,
+            "winPct": 0.438
+          },
+          "interDivision": {
+            "wins": 39,
+            "losses": 57,
+            "ties": 0,
+            "games": 96,
+            "pointsFor": 11081.56,
+            "pointsAgainst": 11795.21,
+            "winPct": 0.406
+          },
+          "avgFinishPct": 0.2,
+          "divisionTitles": 2,
+          "championships": 0,
+          "playoffBerths": 2
+        },
+        {
+          "yearStart": 2013,
+          "yearEnd": 2015,
+          "seasons": 3,
+          "current": false,
+          "franchiseIds": [
+            "0015",
+            "0017",
+            "0019",
+            "0020",
+            "0022",
+            "0023"
+          ],
+          "members": [
+            {
+              "franchiseId": "0017",
+              "name": "Titsburgh Feelers",
+              "nameMedium": "Titsburgh",
+              "icon": "/assets/afl/icons/titsburgh_feelers.png",
+              "owners": [
+                {
+                  "ownerId": "own-0053",
+                  "slug": "titsburgh-feelers-2013",
+                  "title": "Titsburgh Feelers",
+                  "icon": "/assets/afl/icons/titsburgh_feelers.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0015",
+              "name": "The Mariachi Ninjas",
+              "nameMedium": "Mariachi Ninjas",
+              "icon": "/assets/afl/icons/ninjas.png",
+              "owners": [
+                {
+                  "ownerId": "own-0050",
+                  "slug": "the-mariachi-ninjas-2012",
+                  "title": "The Mariachi Ninjas",
+                  "icon": "/assets/afl/icons/ninjas.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0022",
+              "name": "Balls Deep",
+              "nameMedium": "Balls Deep",
+              "icon": "/assets/afl/icons/balls_deep.png",
+              "owners": [
+                {
+                  "ownerId": "own-0051",
+                  "slug": "balls-deep-2013",
+                  "title": "Balls Deep",
+                  "icon": "/assets/afl/icons/balls_deep.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0020",
+              "name": "The Boondock Saints",
+              "nameMedium": "Boondock Saints",
+              "icon": "/assets/afl/icons/saints.png",
+              "owners": [
+                {
+                  "ownerId": "own-0047",
+                  "slug": "the-boondock-saints-2008",
+                  "title": "The Boondock Saints",
+                  "icon": "/assets/afl/icons/saints.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0023",
+              "name": "No Frills",
+              "nameMedium": "No Frills",
+              "icon": "/assets/afl/history/no_frills_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0096",
+                  "slug": "no-frills-2005",
+                  "title": "No Frills",
+                  "icon": "/assets/afl/history/no_frills_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0019",
+              "name": "Badd Boys",
+              "nameMedium": "Badd Boys",
+              "icon": "/assets/afl/icons/badd_boys.png",
+              "owners": [
+                {
+                  "ownerId": "own-0054",
+                  "slug": "badd-boys-2015",
+                  "title": "Badd Boys",
+                  "icon": "/assets/afl/icons/badd_boys.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 144,
+            "losses": 162,
+            "ties": 0,
+            "games": 306,
+            "pointsFor": 35539.95,
+            "pointsAgainst": 36935.74,
+            "winPct": 0.471
+          },
+          "interDivision": {
+            "wins": 54,
+            "losses": 72,
+            "ties": 0,
+            "games": 126,
+            "pointsFor": 15355.39,
+            "pointsAgainst": 16075.92,
+            "winPct": 0.429
+          },
+          "avgFinishPct": 0.222,
+          "divisionTitles": 3,
+          "championships": 1,
+          "playoffBerths": 6
+        },
+        {
+          "yearStart": 2016,
+          "yearEnd": 2025,
+          "seasons": 10,
+          "current": true,
+          "franchiseIds": [
+            "0015",
+            "0017",
+            "0019",
+            "0022",
+            "0023",
+            "0024"
+          ],
+          "members": [
+            {
+              "franchiseId": "0015",
+              "name": "The Mariachi Ninjas",
+              "nameMedium": "Mariachi Ninjas",
+              "icon": "/assets/afl/icons/ninjas.png",
+              "owners": [
+                {
+                  "ownerId": "own-0050",
+                  "slug": "the-mariachi-ninjas-2012",
+                  "title": "The Mariachi Ninjas",
+                  "icon": "/assets/afl/icons/ninjas.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0017",
+              "name": "Titsburgh Feelers",
+              "nameMedium": "Titsburgh",
+              "icon": "/assets/afl/icons/titsburgh_feelers.png",
+              "owners": [
+                {
+                  "ownerId": "own-0053",
+                  "slug": "titsburgh-feelers-2013",
+                  "title": "Titsburgh Feelers",
+                  "icon": "/assets/afl/icons/titsburgh_feelers.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0019",
+              "name": "Badd Boys",
+              "nameMedium": "Badd Boys",
+              "icon": "/assets/afl/icons/badd_boys.png",
+              "owners": [
+                {
+                  "ownerId": "own-0054",
+                  "slug": "badd-boys-2015",
+                  "title": "Badd Boys",
+                  "icon": "/assets/afl/icons/badd_boys.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0022",
+              "name": "Balls Deep",
+              "nameMedium": "Balls Deep",
+              "icon": "/assets/afl/icons/balls_deep.png",
+              "owners": [
+                {
+                  "ownerId": "own-0051",
+                  "slug": "balls-deep-2013",
+                  "title": "Balls Deep",
+                  "icon": "/assets/afl/icons/balls_deep.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0024",
+              "name": "No Soup For You",
+              "nameMedium": "No Soup For You",
+              "icon": "/assets/afl/icons/no_soup.png",
+              "owners": [
+                {
+                  "ownerId": "own-0058",
+                  "slug": "no-soup-for-you-2019",
+                  "title": "No Soup For You",
+                  "icon": "/assets/afl/icons/no_soup.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0023",
+              "name": "Cock Gobbler",
+              "nameMedium": "Cock Gobbler",
+              "icon": "/assets/afl/history/gobblers_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0061",
+                  "slug": "the-show-2022",
+                  "title": "The Show / Cock Gobbler",
+                  "icon": "/assets/afl/icons/the_show.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 493,
+            "losses": 527,
+            "ties": 0,
+            "games": 1020,
+            "pointsFor": 124250.41,
+            "pointsAgainst": 124973.77,
+            "winPct": 0.483
+          },
+          "interDivision": {
+            "wins": 193,
+            "losses": 227,
+            "ties": 0,
+            "games": 420,
+            "pointsFor": 51607.07,
+            "pointsAgainst": 52124.88,
+            "winPct": 0.46
+          },
+          "avgFinishPct": 0.4,
+          "divisionTitles": 10,
+          "championships": 2,
+          "playoffBerths": 11
+        }
+      ],
+      "currentEra": {
+        "yearStart": 2016,
+        "yearEnd": 2025,
+        "seasons": 10,
+        "current": true,
+        "franchiseIds": [
+          "0015",
+          "0017",
+          "0019",
+          "0022",
+          "0023",
+          "0024"
+        ],
+        "members": [
+          {
+            "franchiseId": "0015",
+            "name": "The Mariachi Ninjas",
+            "nameMedium": "Mariachi Ninjas",
+            "icon": "/assets/afl/icons/ninjas.png",
+            "owners": [
+              {
+                "ownerId": "own-0050",
+                "slug": "the-mariachi-ninjas-2012",
+                "title": "The Mariachi Ninjas",
+                "icon": "/assets/afl/icons/ninjas.png"
+              }
+            ]
+          },
+          {
+            "franchiseId": "0017",
+            "name": "Titsburgh Feelers",
+            "nameMedium": "Titsburgh",
+            "icon": "/assets/afl/icons/titsburgh_feelers.png",
+            "owners": [
+              {
+                "ownerId": "own-0053",
+                "slug": "titsburgh-feelers-2013",
+                "title": "Titsburgh Feelers",
+                "icon": "/assets/afl/icons/titsburgh_feelers.png"
+              }
+            ]
+          },
+          {
+            "franchiseId": "0019",
+            "name": "Badd Boys",
+            "nameMedium": "Badd Boys",
+            "icon": "/assets/afl/icons/badd_boys.png",
+            "owners": [
+              {
+                "ownerId": "own-0054",
+                "slug": "badd-boys-2015",
+                "title": "Badd Boys",
+                "icon": "/assets/afl/icons/badd_boys.png"
+              }
+            ]
+          },
+          {
+            "franchiseId": "0022",
+            "name": "Balls Deep",
+            "nameMedium": "Balls Deep",
+            "icon": "/assets/afl/icons/balls_deep.png",
+            "owners": [
+              {
+                "ownerId": "own-0051",
+                "slug": "balls-deep-2013",
+                "title": "Balls Deep",
+                "icon": "/assets/afl/icons/balls_deep.png"
+              }
+            ]
+          },
+          {
+            "franchiseId": "0024",
+            "name": "No Soup For You",
+            "nameMedium": "No Soup For You",
+            "icon": "/assets/afl/icons/no_soup.png",
+            "owners": [
+              {
+                "ownerId": "own-0058",
+                "slug": "no-soup-for-you-2019",
+                "title": "No Soup For You",
+                "icon": "/assets/afl/icons/no_soup.png"
+              }
+            ]
+          },
+          {
+            "franchiseId": "0023",
+            "name": "Cock Gobbler",
+            "nameMedium": "Cock Gobbler",
+            "icon": "/assets/afl/history/gobblers_icon_circle.png",
+            "owners": [
+              {
+                "ownerId": "own-0061",
+                "slug": "the-show-2022",
+                "title": "The Show / Cock Gobbler",
+                "icon": "/assets/afl/icons/the_show.png"
+              }
+            ]
+          }
+        ],
+        "totals": {
+          "wins": 493,
+          "losses": 527,
+          "ties": 0,
+          "games": 1020,
+          "pointsFor": 124250.41,
+          "pointsAgainst": 124973.77,
+          "winPct": 0.483
+        },
+        "interDivision": {
+          "wins": 193,
+          "losses": 227,
+          "ties": 0,
+          "games": 420,
+          "pointsFor": 51607.07,
+          "pointsAgainst": 52124.88,
+          "winPct": 0.46
+        },
+        "avgFinishPct": 0.4,
+        "divisionTitles": 10,
+        "championships": 2,
+        "playoffBerths": 11
+      },
       "name": "East",
       "slug": "east",
       "divisionIds": [
@@ -3243,6 +4905,1048 @@
       ]
     },
     {
+      "membershipEras": [
+        {
+          "yearStart": 2003,
+          "yearEnd": 2003,
+          "seasons": 1,
+          "current": false,
+          "franchiseIds": [
+            "0001",
+            "0002",
+            "0004",
+            "0011"
+          ],
+          "members": [
+            {
+              "franchiseId": "0004",
+              "name": "Coke n Blowjobs",
+              "nameMedium": "Coke n Blowjobs",
+              "icon": "/assets/afl/history/coke_n_blowjobs_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0066",
+                  "slug": "coke-n-blowjobs-2003",
+                  "title": "Coke n Blowjobs",
+                  "icon": "/assets/afl/history/coke_n_blowjobs_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0001",
+              "name": "Smokane",
+              "nameMedium": "Smokane",
+              "icon": "/assets/afl/history/smokane_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0042",
+                  "slug": "smokane-fc-2003",
+                  "title": "Smokane / Smokane FC",
+                  "icon": "/assets/afl/icons/smokane.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0002",
+              "name": "Drunk Indians",
+              "nameMedium": "Drunk Indians",
+              "icon": "/assets/afl/icons/drunk_indians.png",
+              "owners": [
+                {
+                  "ownerId": "own-0040",
+                  "slug": "drunk-indians-2003",
+                  "title": "Drunk Indians",
+                  "icon": "/assets/afl/icons/drunk_indians.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0011",
+              "name": "HiGhClImBeRs",
+              "nameMedium": "HiGhClImBeRs",
+              "icon": "/assets/afl/history/highclimbers_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0070",
+                  "slug": "highclimbers-2003",
+                  "title": "HiGhClImBeRs",
+                  "icon": "/assets/afl/history/highclimbers_icon_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 33,
+            "losses": 32,
+            "ties": 0,
+            "games": 65,
+            "pointsFor": 0,
+            "pointsAgainst": 0,
+            "winPct": 0.508
+          },
+          "interDivision": {
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "games": 0,
+            "pointsFor": 0,
+            "pointsAgainst": 0,
+            "winPct": null
+          },
+          "avgFinishPct": null,
+          "divisionTitles": 1,
+          "championships": 0,
+          "playoffBerths": 2
+        },
+        {
+          "yearStart": 2004,
+          "yearEnd": 2004,
+          "seasons": 1,
+          "current": false,
+          "franchiseIds": [
+            "0001",
+            "0002",
+            "0005",
+            "0011"
+          ],
+          "members": [
+            {
+              "franchiseId": "0002",
+              "name": "Drunk Indians",
+              "nameMedium": "Drunk Indians",
+              "icon": "/assets/afl/icons/drunk_indians.png",
+              "owners": [
+                {
+                  "ownerId": "own-0040",
+                  "slug": "drunk-indians-2003",
+                  "title": "Drunk Indians",
+                  "icon": "/assets/afl/icons/drunk_indians.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0001",
+              "name": "Smokane",
+              "nameMedium": "Smokane",
+              "icon": "/assets/afl/history/smokane_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0042",
+                  "slug": "smokane-fc-2003",
+                  "title": "Smokane / Smokane FC",
+                  "icon": "/assets/afl/icons/smokane.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0011",
+              "name": "HiGhClImBeRs",
+              "nameMedium": "HiGhClImBeRs",
+              "icon": "/assets/afl/history/highclimbers_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0070",
+                  "slug": "highclimbers-2003",
+                  "title": "HiGhClImBeRs",
+                  "icon": "/assets/afl/history/highclimbers_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0005",
+              "name": "Bernies Brewers",
+              "nameMedium": "Bernies Brewers",
+              "icon": "/assets/afl/history/bernies_brewers_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0064",
+                  "slug": "bernies-brewers-2003",
+                  "title": "Bernies Brewers",
+                  "icon": "/assets/afl/history/bernies_brewers_banner_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 25,
+            "losses": 27,
+            "ties": 0,
+            "games": 52,
+            "pointsFor": 6687.88,
+            "pointsAgainst": 5211.66,
+            "winPct": 0.481
+          },
+          "interDivision": {
+            "wins": 13,
+            "losses": 15,
+            "ties": 0,
+            "games": 28,
+            "pointsFor": 2713.08,
+            "pointsAgainst": 2771.4,
+            "winPct": 0.464
+          },
+          "avgFinishPct": 0.2,
+          "divisionTitles": 1,
+          "championships": 0,
+          "playoffBerths": 1
+        },
+        {
+          "yearStart": 2005,
+          "yearEnd": 2006,
+          "seasons": 2,
+          "current": false,
+          "franchiseIds": [
+            "0001",
+            "0004",
+            "0005",
+            "0011"
+          ],
+          "members": [
+            {
+              "franchiseId": "0001",
+              "name": "Smokane",
+              "nameMedium": "Smokane",
+              "icon": "/assets/afl/history/smokane_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0042",
+                  "slug": "smokane-fc-2003",
+                  "title": "Smokane / Smokane FC",
+                  "icon": "/assets/afl/icons/smokane.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0004",
+              "name": "Muck Juggling Micks",
+              "nameMedium": "Juggling Micks",
+              "icon": "/assets/afl/icons/micks.png",
+              "owners": [
+                {
+                  "ownerId": "own-0044",
+                  "slug": "muck-juggling-micks-2005",
+                  "title": "Muck Juggling Micks",
+                  "icon": "/assets/afl/icons/micks.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0011",
+              "name": "The Rookies",
+              "nameMedium": "The Rookies",
+              "icon": "/assets/afl/history/the_rookies_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0100",
+                  "slug": "the-rookies-2005",
+                  "title": "The Rookies",
+                  "icon": "/assets/afl/history/the_rookies_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0005",
+              "name": "Bernies Brewers",
+              "nameMedium": "Bernies Brewers",
+              "icon": "/assets/afl/history/bernies_brewers_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0064",
+                  "slug": "bernies-brewers-2003",
+                  "title": "Bernies Brewers",
+                  "icon": "/assets/afl/history/bernies_brewers_banner_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 56,
+            "losses": 64,
+            "ties": 0,
+            "games": 120,
+            "pointsFor": 13536.38,
+            "pointsAgainst": 11872.78,
+            "winPct": 0.467
+          },
+          "interDivision": {
+            "wins": 32,
+            "losses": 40,
+            "ties": 0,
+            "games": 72,
+            "pointsFor": 7227.12,
+            "pointsAgainst": 7158.48,
+            "winPct": 0.444
+          },
+          "avgFinishPct": 0.5,
+          "divisionTitles": 2,
+          "championships": 0,
+          "playoffBerths": 3
+        },
+        {
+          "yearStart": 2007,
+          "yearEnd": 2007,
+          "seasons": 1,
+          "current": false,
+          "franchiseIds": [
+            "0001",
+            "0002",
+            "0006",
+            "0012"
+          ],
+          "members": [
+            {
+              "franchiseId": "0001",
+              "name": "Smokane",
+              "nameMedium": "Smokane",
+              "icon": "/assets/afl/history/smokane_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0042",
+                  "slug": "smokane-fc-2003",
+                  "title": "Smokane / Smokane FC",
+                  "icon": "/assets/afl/icons/smokane.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0006",
+              "name": "The Street",
+              "nameMedium": "The Street",
+              "icon": "/assets/afl/history/the_street_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0101",
+                  "slug": "the-street-2005",
+                  "title": "The Street",
+                  "icon": "/assets/afl/history/the_street_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0012",
+              "name": "Blitzkrieg",
+              "nameMedium": "Blitzkrieg",
+              "icon": "/assets/afl/history/blitzkrieg_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0105",
+                  "slug": "blitzkrieg-2007",
+                  "title": "Blitzkrieg",
+                  "icon": "/assets/afl/history/blitzkrieg_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0002",
+              "name": "Drunk Indians",
+              "nameMedium": "Drunk Indians",
+              "icon": "/assets/afl/icons/drunk_indians.png",
+              "owners": [
+                {
+                  "ownerId": "own-0040",
+                  "slug": "drunk-indians-2003",
+                  "title": "Drunk Indians",
+                  "icon": "/assets/afl/icons/drunk_indians.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 33,
+            "losses": 39,
+            "ties": 0,
+            "games": 72,
+            "pointsFor": 6920.5,
+            "pointsAgainst": 7649.94,
+            "winPct": 0.458
+          },
+          "interDivision": {
+            "wins": 21,
+            "losses": 27,
+            "ties": 0,
+            "games": 48,
+            "pointsFor": 4870.38,
+            "pointsAgainst": 5207.44,
+            "winPct": 0.438
+          },
+          "avgFinishPct": 0.2,
+          "divisionTitles": 1,
+          "championships": 0,
+          "playoffBerths": 1
+        },
+        {
+          "yearStart": 2008,
+          "yearEnd": 2010,
+          "seasons": 3,
+          "current": false,
+          "franchiseIds": [
+            "0001",
+            "0002",
+            "0004",
+            "0012"
+          ],
+          "members": [
+            {
+              "franchiseId": "0001",
+              "name": "Smokane FC",
+              "nameMedium": "Smokane FC",
+              "icon": "/assets/afl/icons/smokane.png",
+              "owners": [
+                {
+                  "ownerId": "own-0042",
+                  "slug": "smokane-fc-2003",
+                  "title": "Smokane / Smokane FC",
+                  "icon": "/assets/afl/icons/smokane.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0004",
+              "name": "Bay Area Ballers",
+              "nameMedium": "Ballers",
+              "icon": "/assets/afl/history/bay_area_ballers_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0110",
+                  "slug": "bay-area-ballers-2008",
+                  "title": "Bay Area Ballers",
+                  "icon": "/assets/afl/history/bay_area_ballers_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0012",
+              "name": "Pubes",
+              "nameMedium": "Pubes",
+              "icon": "/assets/afl/history/pubes_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0046",
+                  "slug": "suh-girls-one-cup-2008",
+                  "title": "Shifty Joe / Pubes / Suh girls, one cup",
+                  "icon": "/assets/afl/history/pubes_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0002",
+              "name": "Drunk Indians",
+              "nameMedium": "Drunk Indians",
+              "icon": "/assets/afl/icons/drunk_indians.png",
+              "owners": [
+                {
+                  "ownerId": "own-0040",
+                  "slug": "drunk-indians-2003",
+                  "title": "Drunk Indians",
+                  "icon": "/assets/afl/icons/drunk_indians.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 101,
+            "losses": 115,
+            "ties": 0,
+            "games": 216,
+            "pointsFor": 21589.14,
+            "pointsAgainst": 23717.62,
+            "winPct": 0.468
+          },
+          "interDivision": {
+            "wins": 65,
+            "losses": 79,
+            "ties": 0,
+            "games": 144,
+            "pointsFor": 15388.14,
+            "pointsAgainst": 15932.02,
+            "winPct": 0.451
+          },
+          "avgFinishPct": 0.133,
+          "divisionTitles": 3,
+          "championships": 0,
+          "playoffBerths": 3
+        },
+        {
+          "yearStart": 2011,
+          "yearEnd": 2012,
+          "seasons": 2,
+          "current": false,
+          "franchiseIds": [
+            "0001",
+            "0002",
+            "0004",
+            "0005"
+          ],
+          "members": [
+            {
+              "franchiseId": "0002",
+              "name": "Drunk Indians",
+              "nameMedium": "Drunk Indians",
+              "icon": "/assets/afl/icons/drunk_indians.png",
+              "owners": [
+                {
+                  "ownerId": "own-0040",
+                  "slug": "drunk-indians-2003",
+                  "title": "Drunk Indians",
+                  "icon": "/assets/afl/icons/drunk_indians.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0004",
+              "name": "The Dude that Abides",
+              "nameMedium": "Dude Abides",
+              "icon": "/assets/afl/history/the_dude_that_abides_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0129",
+                  "slug": "the-dude-that-abides-2012",
+                  "title": "The Dude that Abides",
+                  "icon": "/assets/afl/history/the_dude_that_abides_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0005",
+              "name": "booyakasha",
+              "nameMedium": "booyakasha",
+              "icon": "/assets/afl/history/booyakasha_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0120",
+                  "slug": "booyakasha-2010",
+                  "title": "booyakasha",
+                  "icon": "/assets/afl/history/booyakasha_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0001",
+              "name": "Smokane FC",
+              "nameMedium": "Smokane FC",
+              "icon": "/assets/afl/icons/smokane.png",
+              "owners": [
+                {
+                  "ownerId": "own-0042",
+                  "slug": "smokane-fc-2003",
+                  "title": "Smokane / Smokane FC",
+                  "icon": "/assets/afl/icons/smokane.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 78,
+            "losses": 66,
+            "ties": 0,
+            "games": 144,
+            "pointsFor": 17163.75,
+            "pointsAgainst": 17073.28,
+            "winPct": 0.542
+          },
+          "interDivision": {
+            "wins": 54,
+            "losses": 42,
+            "ties": 0,
+            "games": 96,
+            "pointsFor": 12016.94,
+            "pointsAgainst": 11171.69,
+            "winPct": 0.563
+          },
+          "avgFinishPct": 0.8,
+          "divisionTitles": 2,
+          "championships": 1,
+          "playoffBerths": 2
+        },
+        {
+          "yearStart": 2013,
+          "yearEnd": 2014,
+          "seasons": 2,
+          "current": false,
+          "franchiseIds": [
+            "0001",
+            "0002",
+            "0005",
+            "0006",
+            "0008",
+            "0010"
+          ],
+          "members": [
+            {
+              "franchiseId": "0005",
+              "name": "booyakasha",
+              "nameMedium": "booyakasha",
+              "icon": "/assets/afl/history/booyakasha_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0120",
+                  "slug": "booyakasha-2010",
+                  "title": "booyakasha",
+                  "icon": "/assets/afl/history/booyakasha_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0010",
+              "name": "Fullybaked",
+              "nameMedium": "Fullybaked",
+              "icon": "/assets/afl/icons/fullybaked.png",
+              "owners": [
+                {
+                  "ownerId": "own-0041",
+                  "slug": "fullybaked-2003",
+                  "title": "Fullybaked",
+                  "icon": "/assets/afl/icons/fullybaked.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0002",
+              "name": "Drunk Indians",
+              "nameMedium": "Drunk Indians",
+              "icon": "/assets/afl/icons/drunk_indians.png",
+              "owners": [
+                {
+                  "ownerId": "own-0040",
+                  "slug": "drunk-indians-2003",
+                  "title": "Drunk Indians",
+                  "icon": "/assets/afl/icons/drunk_indians.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0001",
+              "name": "Smokane FC",
+              "nameMedium": "Smokane FC",
+              "icon": "/assets/afl/icons/smokane.png",
+              "owners": [
+                {
+                  "ownerId": "own-0042",
+                  "slug": "smokane-fc-2003",
+                  "title": "Smokane / Smokane FC",
+                  "icon": "/assets/afl/icons/smokane.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0006",
+              "name": "Da Dangsters",
+              "nameMedium": "Da Dangsters",
+              "icon": "/assets/afl/icons/da_dangsters.png",
+              "owners": [
+                {
+                  "ownerId": "own-0039",
+                  "slug": "da-dangsters-2003",
+                  "title": "Da Dangsters",
+                  "icon": "/assets/afl/icons/da_dangsters.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0008",
+              "name": "The Nukes",
+              "nameMedium": "The Nukes",
+              "icon": "/assets/afl/history/the_nukes_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0079",
+                  "slug": "the-nukes-2003",
+                  "title": "The Nukes",
+                  "icon": "/assets/afl/history/the_nukes_banner_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 107,
+            "losses": 97,
+            "ties": 0,
+            "games": 204,
+            "pointsFor": 24441.92,
+            "pointsAgainst": 24342.16,
+            "winPct": 0.525
+          },
+          "interDivision": {
+            "wins": 47,
+            "losses": 37,
+            "ties": 0,
+            "games": 84,
+            "pointsFor": 10344.47,
+            "pointsAgainst": 10002.75,
+            "winPct": 0.56
+          },
+          "avgFinishPct": 0.833,
+          "divisionTitles": 2,
+          "championships": 1,
+          "playoffBerths": 4
+        },
+        {
+          "yearStart": 2015,
+          "yearEnd": 2018,
+          "seasons": 4,
+          "current": false,
+          "franchiseIds": [
+            "0001",
+            "0002",
+            "0006",
+            "0008",
+            "0010",
+            "0012"
+          ],
+          "members": [
+            {
+              "franchiseId": "0001",
+              "name": "Smokane FC",
+              "nameMedium": "Smokane FC",
+              "icon": "/assets/afl/icons/smokane.png",
+              "owners": [
+                {
+                  "ownerId": "own-0042",
+                  "slug": "smokane-fc-2003",
+                  "title": "Smokane / Smokane FC",
+                  "icon": "/assets/afl/icons/smokane.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0010",
+              "name": "Fullybaked",
+              "nameMedium": "Fullybaked",
+              "icon": "/assets/afl/icons/fullybaked.png",
+              "owners": [
+                {
+                  "ownerId": "own-0041",
+                  "slug": "fullybaked-2003",
+                  "title": "Fullybaked",
+                  "icon": "/assets/afl/icons/fullybaked.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0012",
+              "name": "Pubes",
+              "nameMedium": "Pubes",
+              "icon": "/assets/afl/history/pubes_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0046",
+                  "slug": "suh-girls-one-cup-2008",
+                  "title": "Shifty Joe / Pubes / Suh girls, one cup",
+                  "icon": "/assets/afl/history/pubes_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0002",
+              "name": "Drunk Indians",
+              "nameMedium": "Drunk Indians",
+              "icon": "/assets/afl/icons/drunk_indians.png",
+              "owners": [
+                {
+                  "ownerId": "own-0040",
+                  "slug": "drunk-indians-2003",
+                  "title": "Drunk Indians",
+                  "icon": "/assets/afl/icons/drunk_indians.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0006",
+              "name": "Da Dangsters",
+              "nameMedium": "Da Dangsters",
+              "icon": "/assets/afl/icons/da_dangsters.png",
+              "owners": [
+                {
+                  "ownerId": "own-0039",
+                  "slug": "da-dangsters-2003",
+                  "title": "Da Dangsters",
+                  "icon": "/assets/afl/icons/da_dangsters.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0008",
+              "name": "Blowing My Horn",
+              "nameMedium": "Blowing My Horn",
+              "icon": "/assets/afl/history/blowing_my_horn_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0134",
+                  "slug": "blowing-my-horn-2016",
+                  "title": "Blowing My Horn",
+                  "icon": "/assets/afl/history/blowing_my_horn_icon_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 199,
+            "losses": 209,
+            "ties": 0,
+            "games": 408,
+            "pointsFor": 48138.32,
+            "pointsAgainst": 49505.56,
+            "winPct": 0.488
+          },
+          "interDivision": {
+            "wins": 79,
+            "losses": 89,
+            "ties": 0,
+            "games": 168,
+            "pointsFor": 20104.06,
+            "pointsAgainst": 20907.41,
+            "winPct": 0.47
+          },
+          "avgFinishPct": 0.417,
+          "divisionTitles": 4,
+          "championships": 0,
+          "playoffBerths": 5
+        },
+        {
+          "yearStart": 2019,
+          "yearEnd": 2025,
+          "seasons": 7,
+          "current": true,
+          "franchiseIds": [
+            "0001",
+            "0002",
+            "0004",
+            "0006",
+            "0010",
+            "0012"
+          ],
+          "members": [
+            {
+              "franchiseId": "0001",
+              "name": "Smokane FC",
+              "nameMedium": "Smokane FC",
+              "icon": "/assets/afl/icons/smokane.png",
+              "owners": [
+                {
+                  "ownerId": "own-0042",
+                  "slug": "smokane-fc-2003",
+                  "title": "Smokane / Smokane FC",
+                  "icon": "/assets/afl/icons/smokane.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0002",
+              "name": "Drunk Indians",
+              "nameMedium": "Drunk Indians",
+              "icon": "/assets/afl/icons/drunk_indians.png",
+              "owners": [
+                {
+                  "ownerId": "own-0040",
+                  "slug": "drunk-indians-2003",
+                  "title": "Drunk Indians",
+                  "icon": "/assets/afl/icons/drunk_indians.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0012",
+              "name": "Suh girls, one cup",
+              "nameMedium": "Suh girls",
+              "icon": "/assets/afl/icons/suh.png",
+              "owners": [
+                {
+                  "ownerId": "own-0046",
+                  "slug": "suh-girls-one-cup-2008",
+                  "title": "Shifty Joe / Pubes / Suh girls, one cup",
+                  "icon": "/assets/afl/history/pubes_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0010",
+              "name": "Fullybaked",
+              "nameMedium": "Fullybaked",
+              "icon": "/assets/afl/icons/fullybaked.png",
+              "owners": [
+                {
+                  "ownerId": "own-0041",
+                  "slug": "fullybaked-2003",
+                  "title": "Fullybaked",
+                  "icon": "/assets/afl/icons/fullybaked.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0004",
+              "name": "Get off my Ditka",
+              "nameMedium": "Ditkas",
+              "icon": "/assets/afl/icons/ditka.png",
+              "owners": [
+                {
+                  "ownerId": "own-0062",
+                  "slug": "get-off-my-ditka-2025",
+                  "title": "Get off my Ditka",
+                  "icon": "/assets/afl/icons/ditka.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0006",
+              "name": "Da Dangsters",
+              "nameMedium": "Da Dangsters",
+              "icon": "/assets/afl/icons/da_dangsters.png",
+              "owners": [
+                {
+                  "ownerId": "own-0039",
+                  "slug": "da-dangsters-2003",
+                  "title": "Da Dangsters",
+                  "icon": "/assets/afl/icons/da_dangsters.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 378,
+            "losses": 336,
+            "ties": 0,
+            "games": 714,
+            "pointsFor": 89958.3,
+            "pointsAgainst": 88497.55,
+            "winPct": 0.529
+          },
+          "interDivision": {
+            "wins": 168,
+            "losses": 126,
+            "ties": 0,
+            "games": 294,
+            "pointsFor": 37407.74,
+            "pointsAgainst": 35354.25,
+            "winPct": 0.571
+          },
+          "avgFinishPct": 0.667,
+          "divisionTitles": 7,
+          "championships": 2,
+          "playoffBerths": 7
+        }
+      ],
+      "currentEra": {
+        "yearStart": 2019,
+        "yearEnd": 2025,
+        "seasons": 7,
+        "current": true,
+        "franchiseIds": [
+          "0001",
+          "0002",
+          "0004",
+          "0006",
+          "0010",
+          "0012"
+        ],
+        "members": [
+          {
+            "franchiseId": "0001",
+            "name": "Smokane FC",
+            "nameMedium": "Smokane FC",
+            "icon": "/assets/afl/icons/smokane.png",
+            "owners": [
+              {
+                "ownerId": "own-0042",
+                "slug": "smokane-fc-2003",
+                "title": "Smokane / Smokane FC",
+                "icon": "/assets/afl/icons/smokane.png"
+              }
+            ]
+          },
+          {
+            "franchiseId": "0002",
+            "name": "Drunk Indians",
+            "nameMedium": "Drunk Indians",
+            "icon": "/assets/afl/icons/drunk_indians.png",
+            "owners": [
+              {
+                "ownerId": "own-0040",
+                "slug": "drunk-indians-2003",
+                "title": "Drunk Indians",
+                "icon": "/assets/afl/icons/drunk_indians.png"
+              }
+            ]
+          },
+          {
+            "franchiseId": "0012",
+            "name": "Suh girls, one cup",
+            "nameMedium": "Suh girls",
+            "icon": "/assets/afl/icons/suh.png",
+            "owners": [
+              {
+                "ownerId": "own-0046",
+                "slug": "suh-girls-one-cup-2008",
+                "title": "Shifty Joe / Pubes / Suh girls, one cup",
+                "icon": "/assets/afl/history/pubes_banner_icon_circle.png"
+              }
+            ]
+          },
+          {
+            "franchiseId": "0010",
+            "name": "Fullybaked",
+            "nameMedium": "Fullybaked",
+            "icon": "/assets/afl/icons/fullybaked.png",
+            "owners": [
+              {
+                "ownerId": "own-0041",
+                "slug": "fullybaked-2003",
+                "title": "Fullybaked",
+                "icon": "/assets/afl/icons/fullybaked.png"
+              }
+            ]
+          },
+          {
+            "franchiseId": "0004",
+            "name": "Get off my Ditka",
+            "nameMedium": "Ditkas",
+            "icon": "/assets/afl/icons/ditka.png",
+            "owners": [
+              {
+                "ownerId": "own-0062",
+                "slug": "get-off-my-ditka-2025",
+                "title": "Get off my Ditka",
+                "icon": "/assets/afl/icons/ditka.png"
+              }
+            ]
+          },
+          {
+            "franchiseId": "0006",
+            "name": "Da Dangsters",
+            "nameMedium": "Da Dangsters",
+            "icon": "/assets/afl/icons/da_dangsters.png",
+            "owners": [
+              {
+                "ownerId": "own-0039",
+                "slug": "da-dangsters-2003",
+                "title": "Da Dangsters",
+                "icon": "/assets/afl/icons/da_dangsters.png"
+              }
+            ]
+          }
+        ],
+        "totals": {
+          "wins": 378,
+          "losses": 336,
+          "ties": 0,
+          "games": 714,
+          "pointsFor": 89958.3,
+          "pointsAgainst": 88497.55,
+          "winPct": 0.529
+        },
+        "interDivision": {
+          "wins": 168,
+          "losses": 126,
+          "ties": 0,
+          "games": 294,
+          "pointsFor": 37407.74,
+          "pointsAgainst": 35354.25,
+          "winPct": 0.571
+        },
+        "avgFinishPct": 0.667,
+        "divisionTitles": 7,
+        "championships": 2,
+        "playoffBerths": 7
+      },
       "name": "North",
       "slug": "north",
       "divisionIds": [
@@ -4650,6 +7354,561 @@
       ]
     },
     {
+      "membershipEras": [
+        {
+          "yearStart": 2003,
+          "yearEnd": 2003,
+          "seasons": 1,
+          "current": false,
+          "franchiseIds": [
+            "0014",
+            "0015",
+            "0017",
+            "0020"
+          ],
+          "members": [
+            {
+              "franchiseId": "0020",
+              "name": "Your Team Sucks",
+              "nameMedium": "Your Team Sucks",
+              "icon": "/assets/afl/history/your_team_sucks_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0082",
+                  "slug": "your-team-sucks-2003",
+                  "title": "Your Team Sucks",
+                  "icon": "/assets/afl/history/your_team_sucks_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0014",
+              "name": "Trevors Team",
+              "nameMedium": "Trevors Team",
+              "icon": "/assets/afl/history/trevors_team_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0081",
+                  "slug": "trevors-team-2003",
+                  "title": "Trevors Team",
+                  "icon": "/assets/afl/history/trevors_team_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0015",
+              "name": "The Blunt Bros.",
+              "nameMedium": "The Blunt Bros.",
+              "icon": "/assets/afl/history/the_blunt_bros_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0078",
+                  "slug": "the-blunt-bros-2003",
+                  "title": "The Blunt Bros.",
+                  "icon": "/assets/afl/history/the_blunt_bros_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0017",
+              "name": "Fat Chicks & a Six-Pack",
+              "nameMedium": "Fat Chicks",
+              "icon": "/assets/afl/history/fat_chicks_a_six_pack_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0067",
+                  "slug": "fat-chicks-and-a-six-pack-2003",
+                  "title": "Fat Chicks & a Six-Pack",
+                  "icon": "/assets/afl/history/fat_chicks_a_six_pack_icon_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 26,
+            "losses": 36,
+            "ties": 0,
+            "games": 62,
+            "pointsFor": 0,
+            "pointsAgainst": 0,
+            "winPct": 0.419
+          },
+          "interDivision": {
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "games": 0,
+            "pointsFor": 0,
+            "pointsAgainst": 0,
+            "winPct": null
+          },
+          "avgFinishPct": null,
+          "divisionTitles": 1,
+          "championships": 0,
+          "playoffBerths": 1
+        },
+        {
+          "yearStart": 2004,
+          "yearEnd": 2004,
+          "seasons": 1,
+          "current": false,
+          "franchiseIds": [
+            "0014",
+            "0015",
+            "0016",
+            "0020"
+          ],
+          "members": [
+            {
+              "franchiseId": "0015",
+              "name": "The Blunt Bros.",
+              "nameMedium": "The Blunt Bros.",
+              "icon": "/assets/afl/history/the_blunt_bros_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0078",
+                  "slug": "the-blunt-bros-2003",
+                  "title": "The Blunt Bros.",
+                  "icon": "/assets/afl/history/the_blunt_bros_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0020",
+              "name": "Your Team Sucks",
+              "nameMedium": "Your Team Sucks",
+              "icon": "/assets/afl/history/your_team_sucks_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0082",
+                  "slug": "your-team-sucks-2003",
+                  "title": "Your Team Sucks",
+                  "icon": "/assets/afl/history/your_team_sucks_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0014",
+              "name": "The A-Team",
+              "nameMedium": "The A-Team",
+              "icon": "/assets/afl/history/the_a_team_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0092",
+                  "slug": "the-a-team-2004",
+                  "title": "The A-Team",
+                  "icon": "/assets/afl/history/the_a_team_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0016",
+              "name": "Joey's Team",
+              "nameMedium": "Joey's Team",
+              "icon": "/assets/afl/history/joey_s_team_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0087",
+                  "slug": "joey-s-team-2004",
+                  "title": "Joey's Team",
+                  "icon": "/assets/afl/history/joey_s_team_banner_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 22,
+            "losses": 30,
+            "ties": 0,
+            "games": 52,
+            "pointsFor": 6601.1,
+            "pointsAgainst": 5277.3,
+            "winPct": 0.423
+          },
+          "interDivision": {
+            "wins": 10,
+            "losses": 18,
+            "ties": 0,
+            "games": 28,
+            "pointsFor": 2696.2,
+            "pointsAgainst": 2821.48,
+            "winPct": 0.357
+          },
+          "avgFinishPct": 0,
+          "divisionTitles": 1,
+          "championships": 0,
+          "playoffBerths": 2
+        },
+        {
+          "yearStart": 2005,
+          "yearEnd": 2005,
+          "seasons": 1,
+          "current": false,
+          "franchiseIds": [
+            "0015",
+            "0019",
+            "0020",
+            "0023"
+          ],
+          "members": [
+            {
+              "franchiseId": "0020",
+              "name": "Your Team Sucks",
+              "nameMedium": "Your Team Sucks",
+              "icon": "/assets/afl/history/your_team_sucks_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0082",
+                  "slug": "your-team-sucks-2003",
+                  "title": "Your Team Sucks",
+                  "icon": "/assets/afl/history/your_team_sucks_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0015",
+              "name": "The Blunt Bros.",
+              "nameMedium": "The Blunt Bros.",
+              "icon": "/assets/afl/history/the_blunt_bros_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0078",
+                  "slug": "the-blunt-bros-2003",
+                  "title": "The Blunt Bros.",
+                  "icon": "/assets/afl/history/the_blunt_bros_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0019",
+              "name": "The Bandwagon",
+              "nameMedium": "The Bandwagon",
+              "icon": "/assets/afl/history/the_bandwagon_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0099",
+                  "slug": "the-bandwagon-2005",
+                  "title": "The Bandwagon",
+                  "icon": "/assets/afl/history/the_bandwagon_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0023",
+              "name": "No Frills",
+              "nameMedium": "No Frills",
+              "icon": "/assets/afl/history/no_frills_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0096",
+                  "slug": "no-frills-2005",
+                  "title": "No Frills",
+                  "icon": "/assets/afl/history/no_frills_icon_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 30,
+            "losses": 30,
+            "ties": 0,
+            "games": 60,
+            "pointsFor": 6546.54,
+            "pointsAgainst": 5960.14,
+            "winPct": 0.5
+          },
+          "interDivision": {
+            "wins": 18,
+            "losses": 18,
+            "ties": 0,
+            "games": 36,
+            "pointsFor": 3491.2,
+            "pointsAgainst": 3593,
+            "winPct": 0.5
+          },
+          "avgFinishPct": 0.4,
+          "divisionTitles": 1,
+          "championships": 0,
+          "playoffBerths": 1
+        },
+        {
+          "yearStart": 2007,
+          "yearEnd": 2007,
+          "seasons": 1,
+          "current": false,
+          "franchiseIds": [
+            "0014",
+            "0016",
+            "0017",
+            "0020"
+          ],
+          "members": [
+            {
+              "franchiseId": "0020",
+              "name": "Limp Ditkas",
+              "nameMedium": "Limp Ditkas",
+              "icon": "/assets/afl/history/limp_ditkas_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0103",
+                  "slug": "limp-ditkas-2006",
+                  "title": "Limp Ditkas",
+                  "icon": "/assets/afl/history/limp_ditkas_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0016",
+              "name": "NOSX",
+              "nameMedium": "NOSX",
+              "icon": "/assets/afl/history/nosx_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0108",
+                  "slug": "nosx-2007",
+                  "title": "NOSX",
+                  "icon": "/assets/afl/history/nosx_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0017",
+              "name": "Fly Fishermen",
+              "nameMedium": "Fly Fishermen",
+              "icon": "/assets/afl/history/fly_fishermen_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0107",
+                  "slug": "fly-fishermen-2007",
+                  "title": "Fly Fishermen",
+                  "icon": "/assets/afl/history/fly_fishermen_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0014",
+              "name": "Thundering Herd",
+              "nameMedium": "Thundering Herd",
+              "icon": "/assets/afl/history/thundering_herd_icon.png",
+              "owners": [
+                {
+                  "ownerId": "own-0045",
+                  "slug": "ross-lawrence",
+                  "title": "Ross Lawrence",
+                  "icon": "/assets/afl/history/thundering_herd_icon.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 37,
+            "losses": 35,
+            "ties": 0,
+            "games": 72,
+            "pointsFor": 7137.24,
+            "pointsAgainst": 7882.96,
+            "winPct": 0.514
+          },
+          "interDivision": {
+            "wins": 25,
+            "losses": 23,
+            "ties": 0,
+            "games": 48,
+            "pointsFor": 5036.46,
+            "pointsAgainst": 5093.2,
+            "winPct": 0.521
+          },
+          "avgFinishPct": 0.6,
+          "divisionTitles": 1,
+          "championships": 0,
+          "playoffBerths": 2
+        },
+        {
+          "yearStart": 2008,
+          "yearEnd": 2010,
+          "seasons": 3,
+          "current": false,
+          "franchiseIds": [
+            "0013",
+            "0017",
+            "0020",
+            "0024"
+          ],
+          "members": [
+            {
+              "franchiseId": "0024",
+              "name": "The Street",
+              "nameMedium": "The Street",
+              "icon": "/assets/afl/history/the_street_0024_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0114",
+                  "slug": "the-street-2008",
+                  "title": "The Street",
+                  "icon": "/assets/afl/history/the_street_0024_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0013",
+              "name": "Delirium Tremens",
+              "nameMedium": "Delirium",
+              "icon": "/assets/afl/history/delirium_tremens_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0121",
+                  "slug": "delirium-tremens-2010",
+                  "title": "Delirium Tremens",
+                  "icon": "/assets/afl/history/delirium_tremens_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0017",
+              "name": "Blitzkrieg",
+              "nameMedium": "Blitzkrieg",
+              "icon": "/assets/afl/history/blitzkrieg_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0111",
+                  "slug": "blitzkrieg-2008",
+                  "title": "Blitzkrieg",
+                  "icon": "/assets/afl/history/blitzkrieg_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0020",
+              "name": "The Boondock Saints",
+              "nameMedium": "Boondock Saints",
+              "icon": "/assets/afl/icons/saints.png",
+              "owners": [
+                {
+                  "ownerId": "own-0047",
+                  "slug": "the-boondock-saints-2008",
+                  "title": "The Boondock Saints",
+                  "icon": "/assets/afl/icons/saints.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 108,
+            "losses": 108,
+            "ties": 0,
+            "games": 216,
+            "pointsFor": 22093.22,
+            "pointsAgainst": 23457.51,
+            "winPct": 0.5
+          },
+          "interDivision": {
+            "wins": 72,
+            "losses": 72,
+            "ties": 0,
+            "games": 144,
+            "pointsFor": 15630.71,
+            "pointsAgainst": 15421.27,
+            "winPct": 0.5
+          },
+          "avgFinishPct": 0.533,
+          "divisionTitles": 3,
+          "championships": 0,
+          "playoffBerths": 3
+        },
+        {
+          "yearStart": 2011,
+          "yearEnd": 2012,
+          "seasons": 2,
+          "current": false,
+          "franchiseIds": [
+            "0016",
+            "0018",
+            "0022",
+            "0023"
+          ],
+          "members": [
+            {
+              "franchiseId": "0023",
+              "name": "No Frills",
+              "nameMedium": "No Frills",
+              "icon": "/assets/afl/history/no_frills_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0096",
+                  "slug": "no-frills-2005",
+                  "title": "No Frills",
+                  "icon": "/assets/afl/history/no_frills_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0016",
+              "name": "Brady's Bastards",
+              "nameMedium": "Bastards",
+              "icon": "/assets/afl/history/brady_s_bastards_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0115",
+                  "slug": "brady-s-bastards-2009",
+                  "title": "Brady's Bastards",
+                  "icon": "/assets/afl/history/brady_s_bastards_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0018",
+              "name": "Zephyr",
+              "nameMedium": "Zephyr",
+              "icon": "/assets/afl/history/zephyr_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0119",
+                  "slug": "zephyr-2009",
+                  "title": "Zephyr",
+                  "icon": "/assets/afl/history/zephyr_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0022",
+              "name": "Sparta FC",
+              "nameMedium": "Sparta FC",
+              "icon": "/assets/afl/history/sparta_fc_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0128",
+                  "slug": "sparta-fc-2012",
+                  "title": "Sparta FC",
+                  "icon": "/assets/afl/history/sparta_fc_icon_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 72,
+            "losses": 72,
+            "ties": 0,
+            "games": 144,
+            "pointsFor": 16758.18,
+            "pointsAgainst": 17337.19,
+            "winPct": 0.5
+          },
+          "interDivision": {
+            "wins": 48,
+            "losses": 48,
+            "ties": 0,
+            "games": 96,
+            "pointsFor": 11795.63,
+            "pointsAgainst": 11417.28,
+            "winPct": 0.5
+          },
+          "avgFinishPct": 0.5,
+          "divisionTitles": 2,
+          "championships": 0,
+          "playoffBerths": 3
+        }
+      ],
+      "currentEra": null,
       "name": "Pacific",
       "slug": "pacific",
       "divisionIds": [
@@ -5897,6 +9156,1048 @@
       ]
     },
     {
+      "membershipEras": [
+        {
+          "yearStart": 2003,
+          "yearEnd": 2003,
+          "seasons": 1,
+          "current": false,
+          "franchiseIds": [
+            "0003",
+            "0008",
+            "0009",
+            "0010"
+          ],
+          "members": [
+            {
+              "franchiseId": "0003",
+              "name": "Marriedwithchildren",
+              "nameMedium": "Married",
+              "icon": "/assets/afl/history/marriedwithchildren_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0075",
+                  "slug": "marriedwithchildren-2003",
+                  "title": "Marriedwithchildren",
+                  "icon": "/assets/afl/history/marriedwithchildren_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0009",
+              "name": "Gamecocks",
+              "nameMedium": "Gamecocks",
+              "icon": "/assets/afl/history/gamecocks_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0068",
+                  "slug": "gamecocks-2003",
+                  "title": "Gamecocks",
+                  "icon": "/assets/afl/history/gamecocks_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0010",
+              "name": "Fullybaked",
+              "nameMedium": "Fullybaked",
+              "icon": "/assets/afl/icons/fullybaked.png",
+              "owners": [
+                {
+                  "ownerId": "own-0041",
+                  "slug": "fullybaked-2003",
+                  "title": "Fullybaked",
+                  "icon": "/assets/afl/icons/fullybaked.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0008",
+              "name": "The Nukes",
+              "nameMedium": "The Nukes",
+              "icon": "/assets/afl/history/the_nukes_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0079",
+                  "slug": "the-nukes-2003",
+                  "title": "The Nukes",
+                  "icon": "/assets/afl/history/the_nukes_banner_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 36,
+            "losses": 29,
+            "ties": 0,
+            "games": 65,
+            "pointsFor": 0,
+            "pointsAgainst": 0,
+            "winPct": 0.554
+          },
+          "interDivision": {
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "games": 0,
+            "pointsFor": 0,
+            "pointsAgainst": 0,
+            "winPct": null
+          },
+          "avgFinishPct": null,
+          "divisionTitles": 1,
+          "championships": 0,
+          "playoffBerths": 1
+        },
+        {
+          "yearStart": 2004,
+          "yearEnd": 2004,
+          "seasons": 1,
+          "current": false,
+          "franchiseIds": [
+            "0007",
+            "0009",
+            "0012",
+            "0017"
+          ],
+          "members": [
+            {
+              "franchiseId": "0017",
+              "name": "Bukkake Warriors",
+              "nameMedium": "Bukkake",
+              "icon": "/assets/afl/history/bukkake_warriors_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0084",
+                  "slug": "bukkake-warriors-2004",
+                  "title": "Bukkake Warriors",
+                  "icon": "/assets/afl/history/bukkake_warriors_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0012",
+              "name": "C.P. Bruisers",
+              "nameMedium": "C.P. Bruisers",
+              "icon": "/assets/afl/history/c_p_bruisers_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0085",
+                  "slug": "c-p-bruisers-2004",
+                  "title": "C.P. Bruisers",
+                  "icon": "/assets/afl/history/c_p_bruisers_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0009",
+              "name": "Gamecocks",
+              "nameMedium": "Gamecocks",
+              "icon": "/assets/afl/history/gamecocks_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0068",
+                  "slug": "gamecocks-2003",
+                  "title": "Gamecocks",
+                  "icon": "/assets/afl/history/gamecocks_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0007",
+              "name": "Chatmaster",
+              "nameMedium": "Chatmaster",
+              "icon": "/assets/afl/icons/chat.png",
+              "owners": [
+                {
+                  "ownerId": "own-0043",
+                  "slug": "chatmaster-2004",
+                  "title": "Chatmaster",
+                  "icon": "/assets/afl/icons/chat.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 31,
+            "losses": 21,
+            "ties": 0,
+            "games": 52,
+            "pointsFor": 7691.28,
+            "pointsAgainst": 5442.9,
+            "winPct": 0.596
+          },
+          "interDivision": {
+            "wins": 19,
+            "losses": 9,
+            "ties": 0,
+            "games": 28,
+            "pointsFor": 3125.12,
+            "pointsAgainst": 2757.54,
+            "winPct": 0.679
+          },
+          "avgFinishPct": 1,
+          "divisionTitles": 1,
+          "championships": 1,
+          "playoffBerths": 2
+        },
+        {
+          "yearStart": 2005,
+          "yearEnd": 2006,
+          "seasons": 2,
+          "current": false,
+          "franchiseIds": [
+            "0006",
+            "0007",
+            "0009",
+            "0010"
+          ],
+          "members": [
+            {
+              "franchiseId": "0009",
+              "name": "Gamecocks",
+              "nameMedium": "Gamecocks",
+              "icon": "/assets/afl/history/gamecocks_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0068",
+                  "slug": "gamecocks-2003",
+                  "title": "Gamecocks",
+                  "icon": "/assets/afl/history/gamecocks_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0007",
+              "name": "Chatmaster",
+              "nameMedium": "Chatmaster",
+              "icon": "/assets/afl/icons/chat.png",
+              "owners": [
+                {
+                  "ownerId": "own-0043",
+                  "slug": "chatmaster-2004",
+                  "title": "Chatmaster",
+                  "icon": "/assets/afl/icons/chat.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0010",
+              "name": "Fullybaked",
+              "nameMedium": "Fullybaked",
+              "icon": "/assets/afl/icons/fullybaked.png",
+              "owners": [
+                {
+                  "ownerId": "own-0041",
+                  "slug": "fullybaked-2003",
+                  "title": "Fullybaked",
+                  "icon": "/assets/afl/icons/fullybaked.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0006",
+              "name": "The Street",
+              "nameMedium": "The Street",
+              "icon": "/assets/afl/history/the_street_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0101",
+                  "slug": "the-street-2005",
+                  "title": "The Street",
+                  "icon": "/assets/afl/history/the_street_icon_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 62,
+            "losses": 58,
+            "ties": 0,
+            "games": 120,
+            "pointsFor": 13375.72,
+            "pointsAgainst": 12085.9,
+            "winPct": 0.517
+          },
+          "interDivision": {
+            "wins": 38,
+            "losses": 34,
+            "ties": 0,
+            "games": 72,
+            "pointsFor": 7300.6,
+            "pointsAgainst": 7328.64,
+            "winPct": 0.528
+          },
+          "avgFinishPct": 0.6,
+          "divisionTitles": 2,
+          "championships": 0,
+          "playoffBerths": 3
+        },
+        {
+          "yearStart": 2007,
+          "yearEnd": 2009,
+          "seasons": 3,
+          "current": false,
+          "franchiseIds": [
+            "0005",
+            "0007",
+            "0009",
+            "0010"
+          ],
+          "members": [
+            {
+              "franchiseId": "0010",
+              "name": "Fullybaked",
+              "nameMedium": "Fullybaked",
+              "icon": "/assets/afl/icons/fullybaked.png",
+              "owners": [
+                {
+                  "ownerId": "own-0041",
+                  "slug": "fullybaked-2003",
+                  "title": "Fullybaked",
+                  "icon": "/assets/afl/icons/fullybaked.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0007",
+              "name": "Chatmaster",
+              "nameMedium": "Chatmaster",
+              "icon": "/assets/afl/icons/chat.png",
+              "owners": [
+                {
+                  "ownerId": "own-0043",
+                  "slug": "chatmaster-2004",
+                  "title": "Chatmaster",
+                  "icon": "/assets/afl/icons/chat.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0005",
+              "name": "420 All-Stars",
+              "nameMedium": "420 All-Stars",
+              "icon": "/assets/afl/history/420_all_stars_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0104",
+                  "slug": "420-all-stars-2007",
+                  "title": "420 All-Stars",
+                  "icon": "/assets/afl/history/420_all_stars_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0009",
+              "name": "Gamecocks",
+              "nameMedium": "Gamecocks",
+              "icon": "/assets/afl/history/gamecocks_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0068",
+                  "slug": "gamecocks-2003",
+                  "title": "Gamecocks",
+                  "icon": "/assets/afl/history/gamecocks_icon_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 117,
+            "losses": 99,
+            "ties": 0,
+            "games": 216,
+            "pointsFor": 21329.4,
+            "pointsAgainst": 22491.22,
+            "winPct": 0.542
+          },
+          "interDivision": {
+            "wins": 81,
+            "losses": 63,
+            "ties": 0,
+            "games": 144,
+            "pointsFor": 15504.24,
+            "pointsAgainst": 14753.78,
+            "winPct": 0.563
+          },
+          "avgFinishPct": 0.733,
+          "divisionTitles": 3,
+          "championships": 1,
+          "playoffBerths": 6
+        },
+        {
+          "yearStart": 2010,
+          "yearEnd": 2010,
+          "seasons": 1,
+          "current": false,
+          "franchiseIds": [
+            "0003",
+            "0005",
+            "0008",
+            "0010"
+          ],
+          "members": [
+            {
+              "franchiseId": "0003",
+              "name": "Marriedwithchildren",
+              "nameMedium": "Married",
+              "icon": "/assets/afl/history/marriedwithchildren_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0075",
+                  "slug": "marriedwithchildren-2003",
+                  "title": "Marriedwithchildren",
+                  "icon": "/assets/afl/history/marriedwithchildren_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0010",
+              "name": "Fullybaked",
+              "nameMedium": "Fullybaked",
+              "icon": "/assets/afl/icons/fullybaked.png",
+              "owners": [
+                {
+                  "ownerId": "own-0041",
+                  "slug": "fullybaked-2003",
+                  "title": "Fullybaked",
+                  "icon": "/assets/afl/icons/fullybaked.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0008",
+              "name": "The Nukes",
+              "nameMedium": "The Nukes",
+              "icon": "/assets/afl/history/the_nukes_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0079",
+                  "slug": "the-nukes-2003",
+                  "title": "The Nukes",
+                  "icon": "/assets/afl/history/the_nukes_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0005",
+              "name": "booyakasha",
+              "nameMedium": "booyakasha",
+              "icon": "/assets/afl/history/booyakasha_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0120",
+                  "slug": "booyakasha-2010",
+                  "title": "booyakasha",
+                  "icon": "/assets/afl/history/booyakasha_banner_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 42,
+            "losses": 30,
+            "ties": 0,
+            "games": 72,
+            "pointsFor": 8098.4,
+            "pointsAgainst": 8351.04,
+            "winPct": 0.583
+          },
+          "interDivision": {
+            "wins": 30,
+            "losses": 18,
+            "ties": 0,
+            "games": 48,
+            "pointsFor": 5923.13,
+            "pointsAgainst": 5490.69,
+            "winPct": 0.625
+          },
+          "avgFinishPct": 1,
+          "divisionTitles": 1,
+          "championships": 0,
+          "playoffBerths": 2
+        },
+        {
+          "yearStart": 2011,
+          "yearEnd": 2012,
+          "seasons": 2,
+          "current": false,
+          "franchiseIds": [
+            "0003",
+            "0006",
+            "0008",
+            "0010"
+          ],
+          "members": [
+            {
+              "franchiseId": "0010",
+              "name": "Fullybaked",
+              "nameMedium": "Fullybaked",
+              "icon": "/assets/afl/icons/fullybaked.png",
+              "owners": [
+                {
+                  "ownerId": "own-0041",
+                  "slug": "fullybaked-2003",
+                  "title": "Fullybaked",
+                  "icon": "/assets/afl/icons/fullybaked.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0006",
+              "name": "Whitman's Wonders",
+              "nameMedium": "Whit Wonders",
+              "icon": "/assets/afl/history/whitman_s_wonders_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0126",
+                  "slug": "whitman-s-wonders-2011",
+                  "title": "Whitman's Wonders",
+                  "icon": "/assets/afl/history/whitman_s_wonders_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0008",
+              "name": "The Nukes",
+              "nameMedium": "The Nukes",
+              "icon": "/assets/afl/history/the_nukes_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0079",
+                  "slug": "the-nukes-2003",
+                  "title": "The Nukes",
+                  "icon": "/assets/afl/history/the_nukes_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0003",
+              "name": "Level 3 Inception",
+              "nameMedium": "Inception",
+              "icon": "/assets/afl/history/level_3_inception_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0125",
+                  "slug": "level-3-inception-2011",
+                  "title": "Level 3 Inception",
+                  "icon": "/assets/afl/history/level_3_inception_banner_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 67,
+            "losses": 77,
+            "ties": 0,
+            "games": 144,
+            "pointsFor": 16490.72,
+            "pointsAgainst": 18170.76,
+            "winPct": 0.465
+          },
+          "interDivision": {
+            "wins": 43,
+            "losses": 53,
+            "ties": 0,
+            "games": 96,
+            "pointsFor": 11588.17,
+            "pointsAgainst": 12145.03,
+            "winPct": 0.448
+          },
+          "avgFinishPct": 0.2,
+          "divisionTitles": 2,
+          "championships": 0,
+          "playoffBerths": 4
+        },
+        {
+          "yearStart": 2013,
+          "yearEnd": 2014,
+          "seasons": 2,
+          "current": false,
+          "franchiseIds": [
+            "0003",
+            "0004",
+            "0007",
+            "0009",
+            "0011",
+            "0012"
+          ],
+          "members": [
+            {
+              "franchiseId": "0004",
+              "name": "The Dude that Abides",
+              "nameMedium": "Dude Abides",
+              "icon": "/assets/afl/history/the_dude_that_abides_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0129",
+                  "slug": "the-dude-that-abides-2012",
+                  "title": "The Dude that Abides",
+                  "icon": "/assets/afl/history/the_dude_that_abides_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0011",
+              "name": "Midwestside Connection",
+              "nameMedium": "Midwestside",
+              "icon": "/assets/afl/icons/midwestside.png",
+              "owners": [
+                {
+                  "ownerId": "own-0048",
+                  "slug": "midwestside-connection-2010",
+                  "title": "Midwestside Connection",
+                  "icon": "/assets/afl/icons/midwestside.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0003",
+              "name": "Team Minty Fresh",
+              "nameMedium": "Minty Fresh",
+              "icon": "/assets/afl/icons/minty.png",
+              "owners": [
+                {
+                  "ownerId": "own-0052",
+                  "slug": "team-minty-fresh-2013",
+                  "title": "Team Minty Fresh",
+                  "icon": "/assets/afl/icons/minty.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0009",
+              "name": "Vitside Mafia",
+              "nameMedium": "Vitside Mafia",
+              "icon": "/assets/afl/icons/vitside_mafia.png",
+              "owners": [
+                {
+                  "ownerId": "own-0049",
+                  "slug": "vitside-mafia-2010",
+                  "title": "Vitside Mafia",
+                  "icon": "/assets/afl/icons/vitside_mafia.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0007",
+              "name": "Team Murderface",
+              "nameMedium": "Team Murderface",
+              "icon": "/assets/afl/history/team_murderface_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0133",
+                  "slug": "team-murderface-2014",
+                  "title": "Team Murderface / Avenging Amish",
+                  "icon": "/assets/afl/icons/amish.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0012",
+              "name": "Pubes",
+              "nameMedium": "Pubes",
+              "icon": "/assets/afl/history/pubes_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0046",
+                  "slug": "suh-girls-one-cup-2008",
+                  "title": "Shifty Joe / Pubes / Suh girls, one cup",
+                  "icon": "/assets/afl/history/pubes_banner_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 96,
+            "losses": 108,
+            "ties": 0,
+            "games": 204,
+            "pointsFor": 24429.6,
+            "pointsAgainst": 24974.06,
+            "winPct": 0.471
+          },
+          "interDivision": {
+            "wins": 36,
+            "losses": 48,
+            "ties": 0,
+            "games": 84,
+            "pointsFor": 10061.06,
+            "pointsAgainst": 10479.1,
+            "winPct": 0.429
+          },
+          "avgFinishPct": 0.167,
+          "divisionTitles": 2,
+          "championships": 0,
+          "playoffBerths": 3
+        },
+        {
+          "yearStart": 2015,
+          "yearEnd": 2018,
+          "seasons": 4,
+          "current": false,
+          "franchiseIds": [
+            "0003",
+            "0004",
+            "0005",
+            "0007",
+            "0009",
+            "0011"
+          ],
+          "members": [
+            {
+              "franchiseId": "0005",
+              "name": "Computer Jocks",
+              "nameMedium": "Computer Jocks",
+              "icon": "/assets/afl/icons/computer_jocks.png",
+              "owners": [
+                {
+                  "ownerId": "own-0055",
+                  "slug": "computer-jocks-2015",
+                  "title": "Computer Jocks",
+                  "icon": "/assets/afl/icons/computer_jocks.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0003",
+              "name": "Team Minty Fresh",
+              "nameMedium": "Minty Fresh",
+              "icon": "/assets/afl/icons/minty.png",
+              "owners": [
+                {
+                  "ownerId": "own-0052",
+                  "slug": "team-minty-fresh-2013",
+                  "title": "Team Minty Fresh",
+                  "icon": "/assets/afl/icons/minty.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0009",
+              "name": "Vitside Mafia",
+              "nameMedium": "Vitside Mafia",
+              "icon": "/assets/afl/icons/vitside_mafia.png",
+              "owners": [
+                {
+                  "ownerId": "own-0049",
+                  "slug": "vitside-mafia-2010",
+                  "title": "Vitside Mafia",
+                  "icon": "/assets/afl/icons/vitside_mafia.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0007",
+              "name": "Avenging Amish",
+              "nameMedium": "Avenging Amish",
+              "icon": "/assets/afl/icons/amish.png",
+              "owners": [
+                {
+                  "ownerId": "own-0133",
+                  "slug": "team-murderface-2014",
+                  "title": "Team Murderface / Avenging Amish",
+                  "icon": "/assets/afl/icons/amish.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0011",
+              "name": "Midwestside Connection",
+              "nameMedium": "Midwestside",
+              "icon": "/assets/afl/icons/midwestside.png",
+              "owners": [
+                {
+                  "ownerId": "own-0048",
+                  "slug": "midwestside-connection-2010",
+                  "title": "Midwestside Connection",
+                  "icon": "/assets/afl/icons/midwestside.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0004",
+              "name": "CSKA Sofia",
+              "nameMedium": "CSKA Sofia",
+              "icon": "/assets/afl/history/cska_sofia_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0137",
+                  "slug": "cska-sofia-2017",
+                  "title": "CSKA Sofia",
+                  "icon": "/assets/afl/history/cska_sofia_icon_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 213,
+            "losses": 195,
+            "ties": 0,
+            "games": 408,
+            "pointsFor": 48980.82,
+            "pointsAgainst": 48902.21,
+            "winPct": 0.522
+          },
+          "interDivision": {
+            "wins": 93,
+            "losses": 75,
+            "ties": 0,
+            "games": 168,
+            "pointsFor": 21097.41,
+            "pointsAgainst": 19841.76,
+            "winPct": 0.554
+          },
+          "avgFinishPct": 0.583,
+          "divisionTitles": 4,
+          "championships": 2,
+          "playoffBerths": 9
+        },
+        {
+          "yearStart": 2019,
+          "yearEnd": 2025,
+          "seasons": 7,
+          "current": true,
+          "franchiseIds": [
+            "0003",
+            "0005",
+            "0007",
+            "0008",
+            "0009",
+            "0011"
+          ],
+          "members": [
+            {
+              "franchiseId": "0008",
+              "name": "Dicks out for Harambe",
+              "nameMedium": "Harambe",
+              "icon": "/assets/afl/icons/harambe.png",
+              "owners": [
+                {
+                  "ownerId": "own-0057",
+                  "slug": "dicks-out-for-harambe-2017",
+                  "title": "Dicks out for Harambe",
+                  "icon": "/assets/afl/icons/harambe.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0005",
+              "name": "Computer Jocks",
+              "nameMedium": "Computer Jocks",
+              "icon": "/assets/afl/icons/computer_jocks.png",
+              "owners": [
+                {
+                  "ownerId": "own-0055",
+                  "slug": "computer-jocks-2015",
+                  "title": "Computer Jocks",
+                  "icon": "/assets/afl/icons/computer_jocks.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0007",
+              "name": "Avenging Amish",
+              "nameMedium": "Avenging Amish",
+              "icon": "/assets/afl/icons/amish.png",
+              "owners": [
+                {
+                  "ownerId": "own-0059",
+                  "slug": "avenging-amish-2021",
+                  "title": "Vit's Brother / Avenging Amish / Broke Back 'lil Half Dead's Brother",
+                  "icon": "/assets/afl/icons/amish.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0011",
+              "name": "Midwestside Connection",
+              "nameMedium": "Midwestside",
+              "icon": "/assets/afl/icons/midwestside.png",
+              "owners": [
+                {
+                  "ownerId": "own-0048",
+                  "slug": "midwestside-connection-2010",
+                  "title": "Midwestside Connection",
+                  "icon": "/assets/afl/icons/midwestside.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0009",
+              "name": "Vitside Mafia",
+              "nameMedium": "Vitside Mafia",
+              "icon": "/assets/afl/icons/vitside_mafia.png",
+              "owners": [
+                {
+                  "ownerId": "own-0049",
+                  "slug": "vitside-mafia-2010",
+                  "title": "Vitside Mafia",
+                  "icon": "/assets/afl/icons/vitside_mafia.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0003",
+              "name": "Team Minty Fresh",
+              "nameMedium": "Minty Fresh",
+              "icon": "/assets/afl/icons/minty.png",
+              "owners": [
+                {
+                  "ownerId": "own-0052",
+                  "slug": "team-minty-fresh-2013",
+                  "title": "Team Minty Fresh",
+                  "icon": "/assets/afl/icons/minty.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 338,
+            "losses": 376,
+            "ties": 0,
+            "games": 714,
+            "pointsFor": 85026.73,
+            "pointsAgainst": 86899.43,
+            "winPct": 0.473
+          },
+          "interDivision": {
+            "wins": 128,
+            "losses": 166,
+            "ties": 0,
+            "games": 294,
+            "pointsFor": 35202.3,
+            "pointsAgainst": 37091.42,
+            "winPct": 0.435
+          },
+          "avgFinishPct": 0.429,
+          "divisionTitles": 7,
+          "championships": 2,
+          "playoffBerths": 10
+        }
+      ],
+      "currentEra": {
+        "yearStart": 2019,
+        "yearEnd": 2025,
+        "seasons": 7,
+        "current": true,
+        "franchiseIds": [
+          "0003",
+          "0005",
+          "0007",
+          "0008",
+          "0009",
+          "0011"
+        ],
+        "members": [
+          {
+            "franchiseId": "0008",
+            "name": "Dicks out for Harambe",
+            "nameMedium": "Harambe",
+            "icon": "/assets/afl/icons/harambe.png",
+            "owners": [
+              {
+                "ownerId": "own-0057",
+                "slug": "dicks-out-for-harambe-2017",
+                "title": "Dicks out for Harambe",
+                "icon": "/assets/afl/icons/harambe.png"
+              }
+            ]
+          },
+          {
+            "franchiseId": "0005",
+            "name": "Computer Jocks",
+            "nameMedium": "Computer Jocks",
+            "icon": "/assets/afl/icons/computer_jocks.png",
+            "owners": [
+              {
+                "ownerId": "own-0055",
+                "slug": "computer-jocks-2015",
+                "title": "Computer Jocks",
+                "icon": "/assets/afl/icons/computer_jocks.png"
+              }
+            ]
+          },
+          {
+            "franchiseId": "0007",
+            "name": "Avenging Amish",
+            "nameMedium": "Avenging Amish",
+            "icon": "/assets/afl/icons/amish.png",
+            "owners": [
+              {
+                "ownerId": "own-0059",
+                "slug": "avenging-amish-2021",
+                "title": "Vit's Brother / Avenging Amish / Broke Back 'lil Half Dead's Brother",
+                "icon": "/assets/afl/icons/amish.png"
+              }
+            ]
+          },
+          {
+            "franchiseId": "0011",
+            "name": "Midwestside Connection",
+            "nameMedium": "Midwestside",
+            "icon": "/assets/afl/icons/midwestside.png",
+            "owners": [
+              {
+                "ownerId": "own-0048",
+                "slug": "midwestside-connection-2010",
+                "title": "Midwestside Connection",
+                "icon": "/assets/afl/icons/midwestside.png"
+              }
+            ]
+          },
+          {
+            "franchiseId": "0009",
+            "name": "Vitside Mafia",
+            "nameMedium": "Vitside Mafia",
+            "icon": "/assets/afl/icons/vitside_mafia.png",
+            "owners": [
+              {
+                "ownerId": "own-0049",
+                "slug": "vitside-mafia-2010",
+                "title": "Vitside Mafia",
+                "icon": "/assets/afl/icons/vitside_mafia.png"
+              }
+            ]
+          },
+          {
+            "franchiseId": "0003",
+            "name": "Team Minty Fresh",
+            "nameMedium": "Minty Fresh",
+            "icon": "/assets/afl/icons/minty.png",
+            "owners": [
+              {
+                "ownerId": "own-0052",
+                "slug": "team-minty-fresh-2013",
+                "title": "Team Minty Fresh",
+                "icon": "/assets/afl/icons/minty.png"
+              }
+            ]
+          }
+        ],
+        "totals": {
+          "wins": 338,
+          "losses": 376,
+          "ties": 0,
+          "games": 714,
+          "pointsFor": 85026.73,
+          "pointsAgainst": 86899.43,
+          "winPct": 0.473
+        },
+        "interDivision": {
+          "wins": 128,
+          "losses": 166,
+          "ties": 0,
+          "games": 294,
+          "pointsFor": 35202.3,
+          "pointsAgainst": 37091.42,
+          "winPct": 0.435
+        },
+        "avgFinishPct": 0.429,
+        "divisionTitles": 7,
+        "championships": 2,
+        "playoffBerths": 10
+      },
       "name": "South",
       "slug": "south",
       "divisionIds": [
@@ -7451,6 +11752,1110 @@
       ]
     },
     {
+      "membershipEras": [
+        {
+          "yearStart": 2003,
+          "yearEnd": 2003,
+          "seasons": 1,
+          "current": false,
+          "franchiseIds": [
+            "0016",
+            "0021",
+            "0023",
+            "0024"
+          ],
+          "members": [
+            {
+              "franchiseId": "0021",
+              "name": "Da Dangsters",
+              "nameMedium": "Da Dangsters",
+              "icon": "/assets/afl/icons/da_dangsters.png",
+              "owners": [
+                {
+                  "ownerId": "own-0039",
+                  "slug": "da-dangsters-2003",
+                  "title": "Da Dangsters",
+                  "icon": "/assets/afl/icons/da_dangsters.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0024",
+              "name": "Alcohol, Tobacco and Firearms",
+              "nameMedium": "ATF",
+              "icon": "/assets/afl/history/atf_icon_100.png",
+              "owners": [
+                {
+                  "ownerId": "own-0063",
+                  "slug": "alcohol-tobacco-and-firearms-2003",
+                  "title": "Alcohol, Tobacco and Firearms",
+                  "icon": "/assets/afl/history/atf_icon_100.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0016",
+              "name": "Its all my fault",
+              "nameMedium": "All My Fault",
+              "icon": "/assets/afl/history/its_all_my_fault_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0072",
+                  "slug": "its-all-my-fault-2003",
+                  "title": "Its all my fault",
+                  "icon": "/assets/afl/history/its_all_my_fault_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0023",
+              "name": "P-89s",
+              "nameMedium": "P-89s",
+              "icon": "/assets/afl/history/p_89s_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0077",
+                  "slug": "p-89s-2003",
+                  "title": "P-89s",
+                  "icon": "/assets/afl/history/p_89s_icon_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 31,
+            "losses": 31,
+            "ties": 0,
+            "games": 62,
+            "pointsFor": 0,
+            "pointsAgainst": 0,
+            "winPct": 0.5
+          },
+          "interDivision": {
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "games": 0,
+            "pointsFor": 0,
+            "pointsAgainst": 0,
+            "winPct": null
+          },
+          "avgFinishPct": null,
+          "divisionTitles": 1,
+          "championships": 0,
+          "playoffBerths": 1
+        },
+        {
+          "yearStart": 2004,
+          "yearEnd": 2004,
+          "seasons": 1,
+          "current": false,
+          "franchiseIds": [
+            "0006",
+            "0021",
+            "0023",
+            "0024"
+          ],
+          "members": [
+            {
+              "franchiseId": "0006",
+              "name": "Taco Hell",
+              "nameMedium": "Taco Hell",
+              "icon": "/assets/afl/history/taco_hell_banner_gif_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0091",
+                  "slug": "taco-hell-2004",
+                  "title": "Taco Hell",
+                  "icon": "/assets/afl/history/taco_hell_banner_gif_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0021",
+              "name": "Da Dangsters",
+              "nameMedium": "Da Dangsters",
+              "icon": "/assets/afl/icons/da_dangsters.png",
+              "owners": [
+                {
+                  "ownerId": "own-0039",
+                  "slug": "da-dangsters-2003",
+                  "title": "Da Dangsters",
+                  "icon": "/assets/afl/icons/da_dangsters.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0024",
+              "name": "ATF",
+              "nameMedium": "ATF",
+              "icon": "/assets/afl/history/atf_icon_100.png",
+              "owners": [
+                {
+                  "ownerId": "own-0083",
+                  "slug": "atf-2004",
+                  "title": "ATF",
+                  "icon": "/assets/afl/history/atf_icon_100.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0023",
+              "name": "Magnum's",
+              "nameMedium": "Magnum's",
+              "icon": "/assets/afl/history/magnum_s_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0089",
+                  "slug": "magnum-s-2004",
+                  "title": "Magnum's",
+                  "icon": "/assets/afl/history/magnum_s_icon_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 26,
+            "losses": 26,
+            "ties": 0,
+            "games": 52,
+            "pointsFor": 7069.54,
+            "pointsAgainst": 5293.52,
+            "winPct": 0.5
+          },
+          "interDivision": {
+            "wins": 14,
+            "losses": 14,
+            "ties": 0,
+            "games": 28,
+            "pointsFor": 2713.44,
+            "pointsAgainst": 2642.78,
+            "winPct": 0.5
+          },
+          "avgFinishPct": 0.8,
+          "divisionTitles": 1,
+          "championships": 0,
+          "playoffBerths": 2
+        },
+        {
+          "yearStart": 2005,
+          "yearEnd": 2005,
+          "seasons": 1,
+          "current": false,
+          "franchiseIds": [
+            "0017",
+            "0021",
+            "0022",
+            "0024"
+          ],
+          "members": [
+            {
+              "franchiseId": "0022",
+              "name": "Way More Funner",
+              "nameMedium": "Way More Funner",
+              "icon": "/assets/afl/history/way_more_funner_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0102",
+                  "slug": "way-more-funner-2005",
+                  "title": "Way More Funner",
+                  "icon": "/assets/afl/history/way_more_funner_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0021",
+              "name": "Da Dangsters",
+              "nameMedium": "Da Dangsters",
+              "icon": "/assets/afl/icons/da_dangsters.png",
+              "owners": [
+                {
+                  "ownerId": "own-0039",
+                  "slug": "da-dangsters-2003",
+                  "title": "Da Dangsters",
+                  "icon": "/assets/afl/icons/da_dangsters.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0024",
+              "name": "ATF",
+              "nameMedium": "ATF",
+              "icon": "/assets/afl/history/atf_icon_100.png",
+              "owners": [
+                {
+                  "ownerId": "own-0083",
+                  "slug": "atf-2004",
+                  "title": "ATF",
+                  "icon": "/assets/afl/history/atf_icon_100.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0017",
+              "name": "Taco Hell",
+              "nameMedium": "Taco Hell",
+              "icon": "/assets/afl/history/taco_hell_banner_png_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0098",
+                  "slug": "taco-hell-2005",
+                  "title": "Taco Hell",
+                  "icon": "/assets/afl/history/taco_hell_banner_png_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 34,
+            "losses": 26,
+            "ties": 0,
+            "games": 60,
+            "pointsFor": 6532.1,
+            "pointsAgainst": 5608.5,
+            "winPct": 0.567
+          },
+          "interDivision": {
+            "wins": 22,
+            "losses": 14,
+            "ties": 0,
+            "games": 36,
+            "pointsFor": 3567.26,
+            "pointsAgainst": 3361.38,
+            "winPct": 0.611
+          },
+          "avgFinishPct": 1,
+          "divisionTitles": 1,
+          "championships": 0,
+          "playoffBerths": 2
+        },
+        {
+          "yearStart": 2006,
+          "yearEnd": 2006,
+          "seasons": 1,
+          "current": false,
+          "franchiseIds": [
+            "0015",
+            "0017",
+            "0021",
+            "0024"
+          ],
+          "members": [
+            {
+              "franchiseId": "0015",
+              "name": "The Blunt Bros.",
+              "nameMedium": "The Blunt Bros.",
+              "icon": "/assets/afl/history/the_blunt_bros_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0078",
+                  "slug": "the-blunt-bros-2003",
+                  "title": "The Blunt Bros.",
+                  "icon": "/assets/afl/history/the_blunt_bros_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0021",
+              "name": "Da Dangsters",
+              "nameMedium": "Da Dangsters",
+              "icon": "/assets/afl/icons/da_dangsters.png",
+              "owners": [
+                {
+                  "ownerId": "own-0039",
+                  "slug": "da-dangsters-2003",
+                  "title": "Da Dangsters",
+                  "icon": "/assets/afl/icons/da_dangsters.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0024",
+              "name": "ATF",
+              "nameMedium": "ATF",
+              "icon": "/assets/afl/history/atf_icon_100.png",
+              "owners": [
+                {
+                  "ownerId": "own-0083",
+                  "slug": "atf-2004",
+                  "title": "ATF",
+                  "icon": "/assets/afl/history/atf_icon_100.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0017",
+              "name": "Taco Hell",
+              "nameMedium": "Taco Hell",
+              "icon": "/assets/afl/history/taco_hell_banner_png_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0098",
+                  "slug": "taco-hell-2005",
+                  "title": "Taco Hell",
+                  "icon": "/assets/afl/history/taco_hell_banner_png_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 31,
+            "losses": 29,
+            "ties": 0,
+            "games": 60,
+            "pointsFor": 6807.26,
+            "pointsAgainst": 6118.1,
+            "winPct": 0.517
+          },
+          "interDivision": {
+            "wins": 19,
+            "losses": 17,
+            "ties": 0,
+            "games": 36,
+            "pointsFor": 3683.28,
+            "pointsAgainst": 3644.26,
+            "winPct": 0.528
+          },
+          "avgFinishPct": 0.6,
+          "divisionTitles": 1,
+          "championships": 0,
+          "playoffBerths": 1
+        },
+        {
+          "yearStart": 2007,
+          "yearEnd": 2007,
+          "seasons": 1,
+          "current": false,
+          "franchiseIds": [
+            "0013",
+            "0015",
+            "0021",
+            "0024"
+          ],
+          "members": [
+            {
+              "franchiseId": "0024",
+              "name": "Sharpest Blade",
+              "nameMedium": "Sharpest Blade",
+              "icon": "/assets/afl/history/sharpest_blade_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0109",
+                  "slug": "sharpest-blade-2007",
+                  "title": "Sharpest Blade",
+                  "icon": "/assets/afl/history/sharpest_blade_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0021",
+              "name": "Da Dangsters",
+              "nameMedium": "Da Dangsters",
+              "icon": "/assets/afl/icons/da_dangsters.png",
+              "owners": [
+                {
+                  "ownerId": "own-0039",
+                  "slug": "da-dangsters-2003",
+                  "title": "Da Dangsters",
+                  "icon": "/assets/afl/icons/da_dangsters.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0015",
+              "name": "The Blunt Bros.",
+              "nameMedium": "The Blunt Bros.",
+              "icon": "/assets/afl/history/the_blunt_bros_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0078",
+                  "slug": "the-blunt-bros-2003",
+                  "title": "The Blunt Bros.",
+                  "icon": "/assets/afl/history/the_blunt_bros_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0013",
+              "name": "Cougs",
+              "nameMedium": "Cougs",
+              "icon": "/assets/afl/history/cougs_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0086",
+                  "slug": "cougs-2004",
+                  "title": "Cougs",
+                  "icon": "/assets/afl/history/cougs_icon_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 39,
+            "losses": 33,
+            "ties": 0,
+            "games": 72,
+            "pointsFor": 7300.94,
+            "pointsAgainst": 7576.28,
+            "winPct": 0.542
+          },
+          "interDivision": {
+            "wins": 27,
+            "losses": 21,
+            "ties": 0,
+            "games": 48,
+            "pointsFor": 5107.14,
+            "pointsAgainst": 4854.36,
+            "winPct": 0.563
+          },
+          "avgFinishPct": 0.8,
+          "divisionTitles": 1,
+          "championships": 0,
+          "playoffBerths": 1
+        },
+        {
+          "yearStart": 2008,
+          "yearEnd": 2008,
+          "seasons": 1,
+          "current": false,
+          "franchiseIds": [
+            "0014",
+            "0015",
+            "0016",
+            "0021"
+          ],
+          "members": [
+            {
+              "franchiseId": "0016",
+              "name": "NOSX",
+              "nameMedium": "NOSX",
+              "icon": "/assets/afl/history/nosx_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0108",
+                  "slug": "nosx-2007",
+                  "title": "NOSX",
+                  "icon": "/assets/afl/history/nosx_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0014",
+              "name": "Thundering Herd",
+              "nameMedium": "Thundering Herd",
+              "icon": "/assets/afl/history/thundering_herd_icon.png",
+              "owners": [
+                {
+                  "ownerId": "own-0045",
+                  "slug": "ross-lawrence",
+                  "title": "Ross Lawrence",
+                  "icon": "/assets/afl/history/thundering_herd_icon.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0021",
+              "name": "Da Dangsters",
+              "nameMedium": "Da Dangsters",
+              "icon": "/assets/afl/icons/da_dangsters.png",
+              "owners": [
+                {
+                  "ownerId": "own-0039",
+                  "slug": "da-dangsters-2003",
+                  "title": "Da Dangsters",
+                  "icon": "/assets/afl/icons/da_dangsters.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0015",
+              "name": "The Blunt Bros.",
+              "nameMedium": "The Blunt Bros.",
+              "icon": "/assets/afl/history/the_blunt_bros_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0078",
+                  "slug": "the-blunt-bros-2003",
+                  "title": "The Blunt Bros.",
+                  "icon": "/assets/afl/history/the_blunt_bros_banner_icon_circle.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 35,
+            "losses": 37,
+            "ties": 0,
+            "games": 72,
+            "pointsFor": 6692.94,
+            "pointsAgainst": 7228.98,
+            "winPct": 0.486
+          },
+          "interDivision": {
+            "wins": 23,
+            "losses": 25,
+            "ties": 0,
+            "games": 48,
+            "pointsFor": 4813.76,
+            "pointsAgainst": 4870.38,
+            "winPct": 0.479
+          },
+          "avgFinishPct": 0.2,
+          "divisionTitles": 1,
+          "championships": 0,
+          "playoffBerths": 2
+        },
+        {
+          "yearStart": 2009,
+          "yearEnd": 2010,
+          "seasons": 2,
+          "current": false,
+          "franchiseIds": [
+            "0014",
+            "0016",
+            "0021",
+            "0022"
+          ],
+          "members": [
+            {
+              "franchiseId": "0021",
+              "name": "Chatmaster",
+              "nameMedium": "Chatmaster",
+              "icon": "/assets/afl/icons/chat.png",
+              "owners": [
+                {
+                  "ownerId": "own-0043",
+                  "slug": "chatmaster-2004",
+                  "title": "Chatmaster",
+                  "icon": "/assets/afl/icons/chat.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0022",
+              "name": "Way More Funner",
+              "nameMedium": "Way More Funner",
+              "icon": "/assets/afl/history/way_more_funner_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0102",
+                  "slug": "way-more-funner-2005",
+                  "title": "Way More Funner",
+                  "icon": "/assets/afl/history/way_more_funner_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0016",
+              "name": "Brady's Bastards",
+              "nameMedium": "Bastards",
+              "icon": "/assets/afl/history/brady_s_bastards_banner_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0115",
+                  "slug": "brady-s-bastards-2009",
+                  "title": "Brady's Bastards",
+                  "icon": "/assets/afl/history/brady_s_bastards_banner_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0014",
+              "name": "Thundering Herd",
+              "nameMedium": "Thundering Herd",
+              "icon": "/assets/afl/history/thundering_herd_icon.png",
+              "owners": [
+                {
+                  "ownerId": "own-0045",
+                  "slug": "ross-lawrence",
+                  "title": "Ross Lawrence",
+                  "icon": "/assets/afl/history/thundering_herd_icon.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 71,
+            "losses": 73,
+            "ties": 0,
+            "games": 144,
+            "pointsFor": 15299.15,
+            "pointsAgainst": 16407.8,
+            "winPct": 0.493
+          },
+          "interDivision": {
+            "wins": 47,
+            "losses": 49,
+            "ties": 0,
+            "games": 96,
+            "pointsFor": 10894.07,
+            "pointsAgainst": 10957.98,
+            "winPct": 0.49
+          },
+          "avgFinishPct": 0.6,
+          "divisionTitles": 2,
+          "championships": 2,
+          "playoffBerths": 2
+        },
+        {
+          "yearStart": 2011,
+          "yearEnd": 2012,
+          "seasons": 2,
+          "current": false,
+          "franchiseIds": [
+            "0013",
+            "0014",
+            "0021",
+            "0024"
+          ],
+          "members": [
+            {
+              "franchiseId": "0013",
+              "name": "Delirium Tremens",
+              "nameMedium": "Delirium",
+              "icon": "/assets/afl/history/delirium_tremens_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0121",
+                  "slug": "delirium-tremens-2010",
+                  "title": "Delirium Tremens",
+                  "icon": "/assets/afl/history/delirium_tremens_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0024",
+              "name": "Angry Irish",
+              "nameMedium": "Angry Irish",
+              "icon": "/assets/afl/history/angry_irish_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0127",
+                  "slug": "angry-irish-2012",
+                  "title": "Angry Irish",
+                  "icon": "/assets/afl/history/angry_irish_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0021",
+              "name": "Chatmaster",
+              "nameMedium": "Chatmaster",
+              "icon": "/assets/afl/icons/chat.png",
+              "owners": [
+                {
+                  "ownerId": "own-0043",
+                  "slug": "chatmaster-2004",
+                  "title": "Chatmaster",
+                  "icon": "/assets/afl/icons/chat.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0014",
+              "name": "Thundering Herd",
+              "nameMedium": "Thundering Herd",
+              "icon": "/assets/afl/history/thundering_herd_icon.png",
+              "owners": [
+                {
+                  "ownerId": "own-0045",
+                  "slug": "ross-lawrence",
+                  "title": "Ross Lawrence",
+                  "icon": "/assets/afl/history/thundering_herd_icon.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 79,
+            "losses": 65,
+            "ties": 0,
+            "games": 144,
+            "pointsFor": 16867.24,
+            "pointsAgainst": 17624.77,
+            "winPct": 0.549
+          },
+          "interDivision": {
+            "wins": 55,
+            "losses": 41,
+            "ties": 0,
+            "games": 96,
+            "pointsFor": 11756.62,
+            "pointsAgainst": 11543.86,
+            "winPct": 0.573
+          },
+          "avgFinishPct": 0.7,
+          "divisionTitles": 2,
+          "championships": 1,
+          "playoffBerths": 3
+        },
+        {
+          "yearStart": 2013,
+          "yearEnd": 2015,
+          "seasons": 3,
+          "current": false,
+          "franchiseIds": [
+            "0013",
+            "0014",
+            "0016",
+            "0018",
+            "0021",
+            "0024"
+          ],
+          "members": [
+            {
+              "franchiseId": "0013",
+              "name": "Delirium Tremens",
+              "nameMedium": "Delirium",
+              "icon": "/assets/afl/history/delirium_tremens_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0121",
+                  "slug": "delirium-tremens-2010",
+                  "title": "Delirium Tremens",
+                  "icon": "/assets/afl/history/delirium_tremens_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0016",
+              "name": "Incurable Chlamydia",
+              "nameMedium": "Chlamydia",
+              "icon": "/assets/afl/history/incurable_chlamydia_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0132",
+                  "slug": "incurable-chlamydia-2014",
+                  "title": "Incurable Chlamydia",
+                  "icon": "/assets/afl/history/incurable_chlamydia_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0021",
+              "name": "Chatmaster",
+              "nameMedium": "Chatmaster",
+              "icon": "/assets/afl/icons/chat.png",
+              "owners": [
+                {
+                  "ownerId": "own-0043",
+                  "slug": "chatmaster-2004",
+                  "title": "Chatmaster",
+                  "icon": "/assets/afl/icons/chat.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0024",
+              "name": "Vinegar Strokes",
+              "nameMedium": "Vinegar Strokes",
+              "icon": "/assets/afl/history/vinegar_strokes_icon_icon_circle.png",
+              "owners": [
+                {
+                  "ownerId": "own-0130",
+                  "slug": "vinegar-strokes-2013",
+                  "title": "Vinegar Strokes",
+                  "icon": "/assets/afl/history/vinegar_strokes_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0018",
+              "name": "Jewpacabra",
+              "nameMedium": "Jewpacabra",
+              "icon": "/assets/afl/icons/jewpacabra.png",
+              "owners": [
+                {
+                  "ownerId": "own-0056",
+                  "slug": "jewpacabra-2015",
+                  "title": "Jewpacabra / Jesus Killers",
+                  "icon": "/assets/afl/icons/jewpacabra.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0014",
+              "name": "Thundering Herd",
+              "nameMedium": "Thundering Herd",
+              "icon": "/assets/afl/history/thundering_herd_icon.png",
+              "owners": [
+                {
+                  "ownerId": "own-0045",
+                  "slug": "ross-lawrence",
+                  "title": "Ross Lawrence",
+                  "icon": "/assets/afl/history/thundering_herd_icon.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 161,
+            "losses": 145,
+            "ties": 0,
+            "games": 306,
+            "pointsFor": 37288.75,
+            "pointsAgainst": 37201.14,
+            "winPct": 0.526
+          },
+          "interDivision": {
+            "wins": 71,
+            "losses": 55,
+            "ties": 0,
+            "games": 126,
+            "pointsFor": 15970.15,
+            "pointsAgainst": 15260.19,
+            "winPct": 0.563
+          },
+          "avgFinishPct": 0.778,
+          "divisionTitles": 3,
+          "championships": 0,
+          "playoffBerths": 8
+        },
+        {
+          "yearStart": 2016,
+          "yearEnd": 2025,
+          "seasons": 10,
+          "current": true,
+          "franchiseIds": [
+            "0013",
+            "0014",
+            "0016",
+            "0018",
+            "0020",
+            "0021"
+          ],
+          "members": [
+            {
+              "franchiseId": "0018",
+              "name": "Jewpacabra",
+              "nameMedium": "Jewpacabra",
+              "icon": "/assets/afl/icons/jewpacabra.png",
+              "owners": [
+                {
+                  "ownerId": "own-0056",
+                  "slug": "jewpacabra-2015",
+                  "title": "Jewpacabra / Jesus Killers",
+                  "icon": "/assets/afl/icons/jewpacabra.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0020",
+              "name": "The Boondock Saints",
+              "nameMedium": "Boondock Saints",
+              "icon": "/assets/afl/icons/saints.png",
+              "owners": [
+                {
+                  "ownerId": "own-0047",
+                  "slug": "the-boondock-saints-2008",
+                  "title": "The Boondock Saints",
+                  "icon": "/assets/afl/icons/saints.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0016",
+              "name": "Swiftie 4 Life",
+              "nameMedium": "Swiftie 4 Life",
+              "icon": "/assets/afl/icons/swift.png",
+              "owners": [
+                {
+                  "ownerId": "own-0060",
+                  "slug": "shawn-klezovich",
+                  "title": "Shawn Klezovich",
+                  "icon": "/assets/afl/history/swifty_4_life_icon_icon_circle.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0013",
+              "name": "Muck Juggling Micks",
+              "nameMedium": "Micks",
+              "icon": "/assets/afl/icons/micks.png",
+              "owners": [
+                {
+                  "ownerId": "own-0044",
+                  "slug": "muck-juggling-micks-2005",
+                  "title": "Muck Juggling Micks",
+                  "icon": "/assets/afl/icons/micks.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0021",
+              "name": "Chatmaster",
+              "nameMedium": "Chatmaster",
+              "icon": "/assets/afl/icons/chat.png",
+              "owners": [
+                {
+                  "ownerId": "own-0043",
+                  "slug": "chatmaster-2004",
+                  "title": "Chatmaster",
+                  "icon": "/assets/afl/icons/chat.png"
+                }
+              ]
+            },
+            {
+              "franchiseId": "0014",
+              "name": "Thundering Herd",
+              "nameMedium": "Thundering Herd",
+              "icon": "/assets/afl/history/thundering_herd_icon.png",
+              "owners": [
+                {
+                  "ownerId": "own-0045",
+                  "slug": "ross-lawrence",
+                  "title": "Ross Lawrence",
+                  "icon": "/assets/afl/history/thundering_herd_icon.png"
+                }
+              ]
+            }
+          ],
+          "totals": {
+            "wins": 523,
+            "losses": 497,
+            "ties": 0,
+            "games": 1020,
+            "pointsFor": 122791.57,
+            "pointsAgainst": 124073.59,
+            "winPct": 0.513
+          },
+          "interDivision": {
+            "wins": 223,
+            "losses": 197,
+            "ties": 0,
+            "games": 420,
+            "pointsFor": 51760.35,
+            "pointsAgainst": 51772.32,
+            "winPct": 0.531
+          },
+          "avgFinishPct": 0.533,
+          "divisionTitles": 10,
+          "championships": 3,
+          "playoffBerths": 15
+        }
+      ],
+      "currentEra": {
+        "yearStart": 2016,
+        "yearEnd": 2025,
+        "seasons": 10,
+        "current": true,
+        "franchiseIds": [
+          "0013",
+          "0014",
+          "0016",
+          "0018",
+          "0020",
+          "0021"
+        ],
+        "members": [
+          {
+            "franchiseId": "0018",
+            "name": "Jewpacabra",
+            "nameMedium": "Jewpacabra",
+            "icon": "/assets/afl/icons/jewpacabra.png",
+            "owners": [
+              {
+                "ownerId": "own-0056",
+                "slug": "jewpacabra-2015",
+                "title": "Jewpacabra / Jesus Killers",
+                "icon": "/assets/afl/icons/jewpacabra.png"
+              }
+            ]
+          },
+          {
+            "franchiseId": "0020",
+            "name": "The Boondock Saints",
+            "nameMedium": "Boondock Saints",
+            "icon": "/assets/afl/icons/saints.png",
+            "owners": [
+              {
+                "ownerId": "own-0047",
+                "slug": "the-boondock-saints-2008",
+                "title": "The Boondock Saints",
+                "icon": "/assets/afl/icons/saints.png"
+              }
+            ]
+          },
+          {
+            "franchiseId": "0016",
+            "name": "Swiftie 4 Life",
+            "nameMedium": "Swiftie 4 Life",
+            "icon": "/assets/afl/icons/swift.png",
+            "owners": [
+              {
+                "ownerId": "own-0060",
+                "slug": "shawn-klezovich",
+                "title": "Shawn Klezovich",
+                "icon": "/assets/afl/history/swifty_4_life_icon_icon_circle.png"
+              }
+            ]
+          },
+          {
+            "franchiseId": "0013",
+            "name": "Muck Juggling Micks",
+            "nameMedium": "Micks",
+            "icon": "/assets/afl/icons/micks.png",
+            "owners": [
+              {
+                "ownerId": "own-0044",
+                "slug": "muck-juggling-micks-2005",
+                "title": "Muck Juggling Micks",
+                "icon": "/assets/afl/icons/micks.png"
+              }
+            ]
+          },
+          {
+            "franchiseId": "0021",
+            "name": "Chatmaster",
+            "nameMedium": "Chatmaster",
+            "icon": "/assets/afl/icons/chat.png",
+            "owners": [
+              {
+                "ownerId": "own-0043",
+                "slug": "chatmaster-2004",
+                "title": "Chatmaster",
+                "icon": "/assets/afl/icons/chat.png"
+              }
+            ]
+          },
+          {
+            "franchiseId": "0014",
+            "name": "Thundering Herd",
+            "nameMedium": "Thundering Herd",
+            "icon": "/assets/afl/history/thundering_herd_icon.png",
+            "owners": [
+              {
+                "ownerId": "own-0045",
+                "slug": "ross-lawrence",
+                "title": "Ross Lawrence",
+                "icon": "/assets/afl/history/thundering_herd_icon.png"
+              }
+            ]
+          }
+        ],
+        "totals": {
+          "wins": 523,
+          "losses": 497,
+          "ties": 0,
+          "games": 1020,
+          "pointsFor": 122791.57,
+          "pointsAgainst": 124073.59,
+          "winPct": 0.513
+        },
+        "interDivision": {
+          "wins": 223,
+          "losses": 197,
+          "ties": 0,
+          "games": 420,
+          "pointsFor": 51760.35,
+          "pointsAgainst": 51772.32,
+          "winPct": 0.531
+        },
+        "avgFinishPct": 0.533,
+        "divisionTitles": 10,
+        "championships": 3,
+        "playoffBerths": 15
+      },
       "name": "West",
       "slug": "west",
       "divisionIds": [

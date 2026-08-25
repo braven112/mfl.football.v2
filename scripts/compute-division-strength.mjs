@@ -250,6 +250,7 @@ function buildLeague(slug) {
         thirdPlaces: 0,
         rankedYears: [],
         owners: new Map(),
+        seasonRows: [],
       });
     }
     return allTime.get(name);
@@ -509,6 +510,22 @@ function buildLeague(slug) {
         }
       }
       at.playoffBerths += d.playoffBerths;
+      // Kept so membership eras can be segmented after every season is in —
+      // a division's identity is as much WHO IS IN IT as what it is called,
+      // and that only becomes visible by comparing consecutive seasons.
+      at.seasonRows.push({
+        year,
+        memberKey: d.teams.map((t) => t.franchiseId).sort().join(','),
+        franchiseIds: d.teams.map((t) => t.franchiseId).sort(),
+        totals: d.totals,
+        interDivision: d.interDivision,
+        rank: d.rank,
+        of: yearDivisions.length,
+        playoffBerths: d.playoffBerths,
+        divisionTitles: d.teams.filter((t) => t.wonDivision).length,
+        championships: d.teams.filter((t) => t.playoffResult === 'champion').length,
+        teams: d.teams,
+      });
       if (d.rank !== null) {
         at.rankedYears.push({
           year,
@@ -620,8 +637,86 @@ function buildLeague(slug) {
             a.yearStart - b.yearStart
         );
 
+      /**
+       * Membership eras — runs of consecutive seasons with the SAME set of
+       * franchises in the division.
+       *
+       * A division name is only half its identity; the other half is who is in
+       * it. "The Northwest" that has fielded the same four since 2016 and a
+       * division reshuffled two years ago are not comparable things, even
+       * under one name. Segmenting on the member set is what makes
+       * "as currently constituted" a question the data can answer, and it is
+       * the only slice where two divisions are being compared as the same
+       * group of teams over their whole span.
+       *
+       * A run breaks on a membership CHANGE or on a gap year — the AFL's
+       * Pacific ran 2003-2005 and again 2007-2012, and treating that as one
+       * unbroken era would claim a season the division did not exist.
+       */
+      const rows = [...d.seasonRows].sort((a, b) => a.year - b.year);
+      const eraGroups = [];
+      for (const row of rows) {
+        const last = eraGroups[eraGroups.length - 1];
+        if (last && last.memberKey === row.memberKey && last.yearEnd === row.year - 1) {
+          last.yearEnd = row.year;
+          last.rows.push(row);
+        } else {
+          eraGroups.push({ memberKey: row.memberKey, yearStart: row.year, yearEnd: row.year, rows: [row] });
+        }
+      }
+
+      const membershipEras = eraGroups.map((group) => {
+        const totals = emptyRecord();
+        const inter = emptyRecord();
+        let titles = 0;
+        let champs = 0;
+        let berths = 0;
+        let ranked = 0;
+        let pctSum = 0;
+        for (const row of group.rows) {
+          totals.wins += row.totals.wins;
+          totals.losses += row.totals.losses;
+          totals.ties += row.totals.ties;
+          totals.pointsFor += row.totals.pointsFor;
+          totals.pointsAgainst += row.totals.pointsAgainst;
+          if (row.interDivision) mergeRecord(inter, row.interDivision);
+          titles += row.divisionTitles;
+          champs += row.championships;
+          berths += row.playoffBerths;
+          if (row.rank !== null) {
+            ranked += 1;
+            pctSum += finishPercentile(row.rank, row.of);
+          }
+        }
+        // Identities come from the era's LAST season, so a lineup that is still
+        // together is described by the names those franchises wear now.
+        const lastRow = group.rows[group.rows.length - 1];
+        return {
+          yearStart: group.yearStart,
+          yearEnd: group.yearEnd,
+          seasons: group.rows.length,
+          current: latestPlayedYear !== null && group.yearEnd === latestPlayedYear,
+          franchiseIds: lastRow.franchiseIds,
+          members: lastRow.teams.map((t) => ({
+            franchiseId: t.franchiseId,
+            name: t.name,
+            nameMedium: t.nameMedium,
+            icon: t.icon,
+            owners: t.owners,
+          })),
+          totals: finishRecord(totals),
+          interDivision: finishRecord(inter),
+          avgFinishPct: ranked ? round3(pctSum / ranked) : null,
+          divisionTitles: titles,
+          championships: champs,
+          playoffBerths: berths,
+        };
+      });
+
       const yearList = [...new Set(d.years)].sort((a, b) => a - b);
       return {
+        membershipEras,
+        currentEra: membershipEras.find((era) => era.current) ?? null,
         name: d.name,
         slug: d.slug,
         divisionIds: [...d.divisionIds].sort(),

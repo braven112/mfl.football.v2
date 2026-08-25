@@ -1,0 +1,1580 @@
+---
+/**
+ * Strength of Division — shared render for both leagues.
+ *
+ * One route, two reports: the all-time view (default) and a single season
+ * (`?year=`). The season rail switches between them.
+ *
+ * ── Why this page refuses to name an all-time strongest division ───────────
+ *
+ * It reports two metrics that genuinely disagree, and picking one would be
+ * picking an answer rather than reporting one:
+ *
+ *   - Raw interdivisional win% flatters a short run. The AFL's Atlantic
+ *     existed for a single season at .556 and tops that column outright.
+ *   - Average finish, normalized so the AFL's six-division era and its
+ *     four-division era compare, rewards sustained placement but flattens a
+ *     dominant single year.
+ *
+ * So both columns carry their own rank chip, side by side, always — the reader
+ * sees both orderings at once and sees where they disagree — and the table
+ * arrives sorted by SEASONS, which is neutral between them. Whichever column
+ * the table sorts by on arrival reads as the answer no matter what the prose
+ * says, which is why the default sort is a product decision and not a default.
+ *
+ * A SINGLE SEASON has no such problem, so the season view is deliberately
+ * decisive: one strongest, one weakest, stated plainly. The tonal contrast is
+ * the argument that the all-time restraint is a position, not indecision.
+ *
+ * ── Zero client JS ─────────────────────────────────────────────────────────
+ *
+ * Every control is a link that changes a URL param, and the owner-era
+ * disclosure is a native `<details>`. Nothing hydrates, nothing is serialized
+ * to the client, and every view is bookmarkable. The repo's own rule — a
+ * control whose only job is switching a URL param should be an `<a href>` —
+ * is why `components/theleague/YearSelector.astro` is NOT used here: it
+ * drives navigation from an inline `onchange`, so it dead-ends without script.
+ */
+import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../theleague/Breadcrumbs.astro';
+import MetricCard from '../../theleague/MetricCard.astro';
+import DivisionMatrix from './DivisionMatrix.astro';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import { getLeagueBySlug } from '../../../config/leagues';
+import type { CanonicalLeagueSlug } from '../../../config/leagues';
+import { formatRecord, formatRuns, formatWinPct } from '../../../utils/division-strength.mjs';
+import type {
+  DivisionAllTime,
+  DivisionStrengthFile,
+  DivisionStrengthYear,
+} from '../../../types/division-strength';
+import type { AllTimeSortKey, DivisionStrengthView } from '../../../utils/division-strength-view';
+
+interface Props {
+  leagueSlug: CanonicalLeagueSlug;
+  data: DivisionStrengthFile;
+  view: Extract<DivisionStrengthView, { kind: 'all-time' } | { kind: 'season' }>;
+}
+
+const { leagueSlug, data, view } = Astro.props as Props;
+const league = getLeagueBySlug(leagueSlug)!;
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+const r = (path: string) => resolveLeaguePath(`/${league.slug}${path}`, hideLeaguePrefix);
+
+const BASE = '/division-strength';
+
+/** "1st" / "2nd" / "3rd" / "4th" — 11-13 take "th". */
+const ordinal = (n: number): string => {
+  const rem100 = n % 100;
+  if (rem100 >= 11 && rem100 <= 13) return `${n}th`;
+  return `${n}${['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
+};
+
+const isSeason = view.kind === 'season';
+const season: DivisionStrengthYear | null = isSeason
+  ? (data.years.find((y) => y.year === view.year) ?? null)
+  : null;
+
+// ── Season rail ────────────────────────────────────────────────────────────
+// Newest first, so the interesting end is the visible end.
+const railYears = [...data.yearsCovered].sort((a, b) => b - a);
+const noLog = new Set(data.yearsWithoutGameLog);
+
+// ── All-time ranks ─────────────────────────────────────────────────────────
+// Computed once here and rendered into BOTH metric columns, so the reader sees
+// both orderings without sorting anything.
+const rankMap = (values: Array<{ slug: string; value: number | null }>) => {
+  const ranked = values
+    .filter((v) => v.value !== null)
+    .sort((a, b) => (b.value as number) - (a.value as number));
+  const out = new Map<string, number>();
+  ranked.forEach((entry, i) => {
+    const prev = ranked[i - 1];
+    out.set(entry.slug, prev && prev.value === entry.value ? (out.get(prev.slug) as number) : i + 1);
+  });
+  return out;
+};
+
+const interRanks = rankMap(
+  data.divisions.map((d) => ({ slug: d.slug, value: d.interDivision.games ? d.interDivision.winPct : null }))
+);
+const finishRanks = rankMap(data.divisions.map((d) => ({ slug: d.slug, value: d.avgFinishPct })));
+
+// ── All-time sorting ───────────────────────────────────────────────────────
+const sortValue = (d: DivisionAllTime, key: AllTimeSortKey): number | string => {
+  switch (key) {
+    case 'name': return d.name;
+    case 'seasons': return d.seasons;
+    case 'record': return d.totals.winPct ?? -1;
+    case 'interPct': return d.interDivision.games ? (d.interDivision.winPct ?? -1) : -1;
+    case 'avgFinish': return d.avgFinishPct ?? -1;
+    case 'titles': return d.divisionTitles;
+    case 'championships': return d.championships;
+  }
+};
+
+const sortedDivisions = [...data.divisions].sort((a, b) => {
+  const av = sortValue(a, view.sort);
+  const bv = sortValue(b, view.sort);
+  const cmp =
+    typeof av === 'string' || typeof bv === 'string'
+      ? String(av).localeCompare(String(bv))
+      : (av as number) - (bv as number);
+  // Name ties never happen (names are the key), so a stable secondary sort by
+  // name is enough to make every ordering total and reproducible.
+  return (view.dir === 'desc' ? -cmp : cmp) || a.name.localeCompare(b.name);
+});
+
+/**
+ * Sort link, preserving the other params. The `#strength-table` fragment
+ * restores scroll position across the server round trip — without it, sorting
+ * a table two screens down bounces the reader back to the top every time.
+ */
+const sortHref = (key: AllTimeSortKey) => {
+  const params = new URLSearchParams(Astro.url.search);
+  params.set('sort', key);
+  params.set('dir', view.sort === key && view.dir === 'desc' ? 'asc' : 'desc');
+  return `${r(BASE)}?${params.toString()}#strength-table`;
+};
+const ariaSort = (key: AllTimeSortKey) =>
+  view.sort === key ? (view.dir === 'desc' ? 'descending' : 'ascending') : undefined;
+
+const SORT_LABELS: Record<AllTimeSortKey, string> = {
+  name: 'division name',
+  seasons: 'seasons played',
+  record: 'overall win percentage',
+  interPct: 'interdivisional win percentage',
+  avgFinish: 'finish score',
+  titles: 'division titles',
+  championships: 'championships',
+};
+
+// ── The two orderings ──────────────────────────────────────────────────────
+//
+// These are FULL rankings, not top-three podiums, and that is the whole point.
+// A podium crowns, and both metrics here are led by the same short-lived
+// division — the AFL's Atlantic ran one season at .556 and tops both. Cutting
+// the list at three would have made that division the answer twice over, which
+// is a stronger claim than the underlying table supports and precisely the
+// claim this page exists not to make. A complete ordering, with the season
+// count visible on every short run, reads as data instead.
+const byInter = data.divisions
+  .filter((d) => d.interDivision.games > 0)
+  .sort((a, b) => (b.interDivision.winPct ?? 0) - (a.interDivision.winPct ?? 0));
+const byFinish = data.divisions
+  .filter((d) => d.avgFinishPct !== null)
+  .sort((a, b) => (b.avgFinishPct ?? 0) - (a.avgFinishPct ?? 0));
+
+// A division that ran a season or two is not a small sample of a long run —
+// it is a short division. Saying so inline, next to the name, is what stops
+// `.556` over one season from reading as a claim.
+const SHORT_RUN_SEASONS = 5;
+const isShortRun = (d: DivisionAllTime) => d.seasons < SHORT_RUN_SEASONS;
+
+// Does a short run currently sit atop either ordering? If so the note says so
+// outright, rather than reporting the leader as a finding. Both leagues hit
+// this today — the AFL's Atlantic (1 season) and TheLeague's Midwest (4) lead
+// both columns — so this is the normal path, not an edge case.
+const shortRunLeader = [byInter[0], byFinish[0]].find((d) => d && isShortRun(d)) ?? null;
+// Both leagues' copy quotes these, so they are read off the data rather than
+// written in — TheLeague's shortest run is 4 seasons and the AFL's is 1, and a
+// hardcoded number is wrong on one league the day it ships.
+const bySeasonCount = [...data.divisions].sort((a, b) => b.seasons - a.seasons);
+const longestRun = bySeasonCount[0];
+const shortestRun = bySeasonCount[bySeasonCount.length - 1];
+
+/**
+ * The like-for-like comparison: every division's CURRENT lineup, longest-
+ * standing first.
+ *
+ * This is the closest the page gets to answering "which division is toughest"
+ * fairly, because within one era the same teams are being compared across
+ * their whole shared span. The all-time columns can't do that — a division
+ * name outlives the teams that earned its record.
+ */
+const currentLineups = data.divisions
+  .filter((d) => d.currentEra)
+  .map((d) => ({ division: d, era: d.currentEra! }))
+  .sort((a, b) => b.era.seasons - a.era.seasons || b.era.yearStart - a.era.yearStart);
+
+/**
+ * How the current lineup's interdivisional rate compares with everything ever
+ * done under that division's name — i.e. how much of the name's reputation
+ * belongs to the teams still in it. Null when either side has no games, or
+ * when the era IS the whole history (nothing to compare against).
+ */
+const eraVsAllTime = (d: DivisionAllTime, era: { seasons: number; interDivision: { winPct: number | null } }) => {
+  const now = era.interDivision.winPct;
+  const ever = d.interDivision.winPct;
+  if (now === null || ever === null || era.seasons === d.seasons) return null;
+  const delta = now - ever;
+  if (Math.abs(delta) < 0.005) return null;
+  return { up: delta > 0, text: Math.abs(delta).toFixed(3).replace(/^0/, '') };
+};
+
+/**
+ * Finish score: `avgFinishPct` as 0-100, where 100 is "first every season".
+ *
+ * The raw average finish CANNOT be displayed as the ranking number. The AFL
+ * ran six divisions through 2012 and four since, so "2.0" earned in a
+ * six-division year and "2.4" earned in four-division years are not the same
+ * achievement — and showing them side by side put the worse one on top. The
+ * score is the normalized value the ordering actually uses, so what the reader
+ * sees is what the sort did. Raw average finish rides along as a subtitle.
+ */
+const finishScore = (d: DivisionAllTime) =>
+  d.avgFinishPct === null ? null : Math.round(d.avgFinishPct * 100);
+
+const spanLabel = (d: DivisionAllTime) => {
+  if (!d.active) return formatRuns(d.eras);
+  const runs = d.eras.map((era, i) =>
+    i === d.eras.length - 1 ? { ...era, present: true } : { ...era, present: false }
+  );
+  return runs
+    .map((run) =>
+      run.present
+        ? `${run.yearStart}–present`
+        : run.yearStart === run.yearEnd
+          ? `${run.yearStart}`
+          : `${run.yearStart}–${run.yearEnd}`
+    )
+    .join(', ');
+};
+
+// Timeline-bar geometry: position each era against the league's whole span.
+const firstYear = data.yearsCovered[0];
+const lastYear = data.yearsCovered[data.yearsCovered.length - 1];
+const spanRange = Math.max(1, lastYear - firstYear);
+const segments = (d: DivisionAllTime) =>
+  d.eras.map((era) => ({
+    from: (era.yearStart - firstYear) / spanRange,
+    to: (era.yearEnd - firstYear + 1) / spanRange,
+  }));
+
+const ownerHref = (slug: string) => r(`/owners/${slug}`);
+
+const generatedDate = new Date(data.generatedAt);
+const generatedLabel = Number.isNaN(generatedDate.getTime())
+  ? null
+  : generatedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+const pageTitle = isSeason
+  ? `Division Strength ${view.year} — ${league.name}`
+  : `Division Strength — ${league.name}`;
+
+// Season-view derived bits.
+const seasonRanked = season ? [...season.divisions].sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99)) : [];
+const seasonHasGames = !!season?.gamesResolved;
+const seasonNotPlayed = !!season && !season.gamesResolved && season.divisions.every(
+  (d) => d.totals.wins + d.totals.losses + d.totals.ties === 0
+);
+// AFL 2003: standings survived, the game log did not. Distinct from "not yet
+// played", and the page must say which it is.
+const seasonStandingsOnly = !!season && !season.gamesResolved && !seasonNotPlayed;
+---
+
+<TheLeagueLayout title={pageTitle}>
+  <div class="ds-page">
+    <Breadcrumbs
+      items={[
+        { label: league.name, href: `/${league.slug}` },
+        { label: 'Division Strength' },
+      ]}
+    />
+
+    <header class="ds-head">
+      <h1>Strength of Division{isSeason && <span class="ds-head__year"> · {view.year}</span>}</h1>
+      {isSeason ? (
+        <p class="lede">
+          How each division stacked up in {view.year} — every team's record, the division's
+          combined mark, and how it fared against the rest of the league.
+        </p>
+      ) : (
+        <p class="lede">
+          Two honest answers, not one. We don't crown an all-time strongest division — a division
+          that ran {shortestRun.seasons} season{shortestRun.seasons === 1 ? '' : 's'} and one that
+          ran {longestRun.seasons} aren't the same claim. Pick a season and we'll name one.
+        </p>
+      )}
+    </header>
+
+    <nav class="season-rail" aria-label="Report scope">
+      <div class="season-rail__track">
+        <a
+          class="season-chip season-chip--alltime"
+          href={r(BASE)}
+          aria-current={!isSeason ? 'page' : undefined}
+        >All-time</a>
+        {railYears.map((year) => (
+          <a
+            class:list={['season-chip', { 'season-chip--nolog': noLog.has(year) }]}
+            href={`${r(BASE)}?year=${year}`}
+            aria-current={isSeason && view.year === year ? 'page' : undefined}
+          >
+            {year}{noLog.has(year) && <span class="visually-hidden"> (standings only)</span>}
+          </a>
+        ))}
+      </div>
+    </nav>
+    {noLog.size > 0 && (
+      <p class="rail-legend">
+        <span class="rail-legend__dot" aria-hidden="true"></span>
+        no game-by-game log — standings only
+      </p>
+    )}
+
+    {!isSeason && (
+      <>
+        {data.divisions.length === 0 ? (
+          <p class="notice">No division data yet.</p>
+        ) : (
+          <>
+            {currentLineups.length > 0 && (
+              <section aria-labelledby="lineups-heading">
+                <div class="section-header">
+                  <h2 id="lineups-heading" class="section-header__title">As currently constituted</h2>
+                  <p class="section-header__sub">
+                    Each division's record with the teams in it <em>today</em>, over however long
+                    that exact lineup has been together. Realignment resets the clock, so some
+                    divisions have far more shared history than others.
+                  </p>
+                </div>
+
+                <div class="table-scroll">
+                  <table class="strength-table lineup-table">
+                    <caption class="visually-hidden">
+                      Current division lineups, longest-standing first, with each division's record
+                      over the span that exact set of teams has been together.
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Division</th>
+                        <th scope="col" class="num">Together</th>
+                        <th scope="col" class="num">Record</th>
+                        <th scope="col" class="num">Interdivisional</th>
+                        <th scope="col" class="num"><abbr title="Division titles">Titles</abbr></th>
+                        <th scope="col" class="num"><abbr title="Championships">Champs</abbr></th>
+                        <th scope="col">Teams</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {currentLineups.map(({ division, era }) => (
+                        <tr>
+                          <th scope="row" class="name-cell">
+                            <a href={`#div-${division.slug}`} class="name-link">{division.name}</a>
+                            <span class="span-text">since {era.yearStart}</span>
+                          </th>
+                          <td class="num">
+                            <span class="rec">{era.seasons}<span class="unit"> yr</span></span>
+                            <span class="pct">{era.seasons === division.seasons ? 'never realigned' : `of ${division.seasons}`}</span>
+                          </td>
+                          <td class="num">
+                            <span class="rec">{formatRecord(era.totals)}</span>
+                            <span class="pct">{formatWinPct(era.totals)}</span>
+                          </td>
+                          <td class="num metric-col">
+                            <span class="rec">{formatRecord(era.interDivision)}</span>
+                            <span class="pct">
+                              {formatWinPct(era.interDivision)}
+                              {eraVsAllTime(division, era) && (
+                                <span class:list={['delta', eraVsAllTime(division, era)!.up ? 'delta--up' : 'delta--down']}>
+                                  {eraVsAllTime(division, era)!.up ? '▲' : '▼'}{eraVsAllTime(division, era)!.text}
+                                </span>
+                              )}
+                            </span>
+                          </td>
+                          <td class="num">{era.divisionTitles}</td>
+                          <td class="num">{era.championships}</td>
+                          <td class="member-cell">
+                            <span class="member-icons">
+                              {era.members.map((m) => (
+                                m.icon
+                                  ? <img src={m.icon} alt={m.nameMedium ?? m.name ?? ''} title={m.name ?? ''} loading="lazy" width="24" height="24" />
+                                  : <span class="member-initials" title={m.name ?? ''}>{(m.nameMedium ?? m.name ?? '?').slice(0, 2)}</span>
+                              ))}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p class="table-note">
+                  The arrow compares each division's interdivisional record under its current lineup
+                  against that division name's whole history — how much of the name's record belongs
+                  to the teams still in it.
+                </p>
+              </section>
+            )}
+
+            <section class="verdict-pair" aria-labelledby="verdict-heading">
+              <h2 id="verdict-heading" class="section-title">Two ways to read it</h2>
+              <div class="verdict-pair__grid">
+                <div class="verdict-col">
+                  <h3 class="verdict-col__title">By interdivisional record</h3>
+                  <ol class="verdict-list">
+                    {byInter.map((d, i) => (
+                      <li>
+                        <span class="verdict-rank">{i + 1}</span>
+                        <a href={`#div-${d.slug}`} class="verdict-name">{d.name}</a>
+                        {isShortRun(d) && <span class="pill pill--sample">{d.seasons} season{d.seasons === 1 ? '' : 's'}</span>}
+                        <span class="verdict-value">{formatWinPct(d.interDivision)}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+                <div class="verdict-col">
+                  <h3 class="verdict-col__title">By finish score</h3>
+                  <ol class="verdict-list">
+                    {byFinish.map((d, i) => (
+                      <li>
+                        <span class="verdict-rank">{i + 1}</span>
+                        <a href={`#div-${d.slug}`} class="verdict-name">{d.name}</a>
+                        {isShortRun(d) && <span class="pill pill--sample">{d.seasons} season{d.seasons === 1 ? '' : 's'}</span>}
+                        <span class="verdict-value">
+                          {finishScore(d)}
+                          <span class="dim"> · avg {d.avgFinish?.toFixed(1)}</span>
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              </div>
+              <p class="verdict-note">
+                <strong>Neither column is the answer.</strong> Interdivisional win percentage rewards a hot
+                run however short it was. Finish score — average placement that season, normalized so a
+                six-division year and a four-division year compare, where 100 is first every time —
+                rewards sustained placement but flattens a single dominant year.
+                {shortRunLeader && (
+                  <>
+                    {' '}Note what tops them here: {shortRunLeader.name} ran {shortRunLeader.seasons}
+                    {' '}season{shortRunLeader.seasons === 1 ? '' : 's'}. A short run can lead either
+                    column outright, and the divisions with {longestRun.seasons} seasons behind them
+                    carry far more evidence — wherever they land.
+                  </>
+                )}
+                {' '}Intra-division games are excluded from both, because they cancel to .500 by
+                arithmetic — every one hands a division's own team a win and another a loss.
+              </p>
+            </section>
+
+            <section aria-labelledby="table-heading">
+              <div class="section-header">
+                <h2 id="table-heading" class="section-header__title">Every division, all-time</h2>
+                <p class="section-header__sub">
+                  {data.summary.activeDivisions.length} active, {data.summary.retiredDivisions.length} retired.
+                  Sorted by {SORT_LABELS[view.sort]}.
+                </p>
+              </div>
+
+              <div class="table-scroll">
+                <table class="strength-table" id="strength-table">
+                  <caption class="visually-hidden">
+                    Every division all-time, sorted by {SORT_LABELS[view.sort]},
+                    {view.dir === 'desc' ? ' highest first' : ' lowest first'}.
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col" class="sortable" aria-sort={ariaSort('name')}>
+                        <a class="sort-link" href={sortHref('name')}>
+                          <span>Division</span><span class="sort-caret" aria-hidden="true"></span>
+                          <span class="visually-hidden">{view.sort === 'name' ? `, currently sorted ${view.dir === 'desc' ? 'descending' : 'ascending'}; activate to reverse` : ', activate to sort by division name'}</span>
+                        </a>
+                      </th>
+                      <th scope="col" class="sortable num" aria-sort={ariaSort('seasons')}>
+                        <a class="sort-link" href={sortHref('seasons')}>
+                          <span>Seasons</span><span class="sort-caret" aria-hidden="true"></span>
+                          <span class="visually-hidden">{view.sort === 'seasons' ? `, currently sorted ${view.dir === 'desc' ? 'descending' : 'ascending'}; activate to reverse` : ', activate to sort by seasons played'}</span>
+                        </a>
+                      </th>
+                      <th scope="col" class="sortable num" aria-sort={ariaSort('record')}>
+                        <a class="sort-link" href={sortHref('record')}>
+                          <span>Overall</span><span class="sort-caret" aria-hidden="true"></span>
+                          <span class="visually-hidden">{view.sort === 'record' ? `, currently sorted ${view.dir === 'desc' ? 'descending' : 'ascending'}; activate to reverse` : ', activate to sort by overall win percentage'}</span>
+                        </a>
+                      </th>
+                      <th scope="col" class="sortable num metric-col" aria-sort={ariaSort('interPct')}>
+                        <a class="sort-link" href={sortHref('interPct')}>
+                          <span>Interdivisional</span><span class="sort-caret" aria-hidden="true"></span>
+                          <span class="visually-hidden">{view.sort === 'interPct' ? `, currently sorted ${view.dir === 'desc' ? 'descending' : 'ascending'}; activate to reverse` : ', activate to sort by interdivisional win percentage'}</span>
+                        </a>
+                      </th>
+                      <th scope="col" class="sortable num metric-col" aria-sort={ariaSort('avgFinish')}>
+                        <a class="sort-link" href={sortHref('avgFinish')}>
+                          <span>Finish score</span><span class="sort-caret" aria-hidden="true"></span>
+                          <span class="visually-hidden">{view.sort === 'avgFinish' ? `, currently sorted ${view.dir === 'desc' ? 'descending' : 'ascending'}; activate to reverse` : ', activate to sort by finish score, where 100 is first place every season'}</span>
+                        </a>
+                      </th>
+                      <th scope="col" class="sortable num" aria-sort={ariaSort('titles')}>
+                        <a class="sort-link" href={sortHref('titles')}>
+                          <span>Titles</span><span class="sort-caret" aria-hidden="true"></span>
+                          <span class="visually-hidden">{view.sort === 'titles' ? `, currently sorted ${view.dir === 'desc' ? 'descending' : 'ascending'}; activate to reverse` : ', activate to sort by division titles'}</span>
+                        </a>
+                      </th>
+                      <th scope="col" class="sortable num" aria-sort={ariaSort('championships')}>
+                        <a class="sort-link" href={sortHref('championships')}>
+                          <span>Champs</span><span class="sort-caret" aria-hidden="true"></span>
+                          <span class="visually-hidden">{view.sort === 'championships' ? `, currently sorted ${view.dir === 'desc' ? 'descending' : 'ascending'}; activate to reverse` : ', activate to sort by championships'}</span>
+                        </a>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedDivisions.map((d) => (
+                      <tr class:list={['strength-row', { 'strength-row--retired': !d.active }]}>
+                        <th scope="row" class="name-cell">
+                          <a href={`#div-${d.slug}`} class="name-link">{d.name}</a>
+                          {!d.active && <span class="pill pill--retired">Retired {d.lastYear}</span>}
+                          {isShortRun(d) && <span class="pill pill--sample">{d.seasons} season{d.seasons === 1 ? '' : 's'}</span>}
+                          <span class="span-text">{spanLabel(d)}</span>
+                        </th>
+                        <td class="num">{d.seasons}</td>
+                        <td class="num">
+                          <span class="rec">{formatRecord(d.totals)}</span>
+                          <span class="pct">{formatWinPct(d.totals)}</span>
+                        </td>
+                        <td class="num metric-col">
+                          {interRanks.has(d.slug) && (
+                            <span class:list={['rank-chip', { 'rank-chip--top': interRanks.get(d.slug) === 1 }]}>{interRanks.get(d.slug)}</span>
+                          )}
+                          <span class="rec">{formatRecord(d.interDivision)}</span>
+                          <span class="pct">{formatWinPct(d.interDivision)}</span>
+                        </td>
+                        <td class="num metric-col">
+                          {finishRanks.has(d.slug) && (
+                            <span class:list={['rank-chip', { 'rank-chip--top': finishRanks.get(d.slug) === 1 }]}>{finishRanks.get(d.slug)}</span>
+                          )}
+                          <span class="rec">{finishScore(d) ?? '—'}</span>
+                          <span class="pct">{d.avgFinish === null ? '' : `avg ${d.avgFinish.toFixed(1)}`}</span>
+                        </td>
+                        <td class="num">{d.divisionTitles}</td>
+                        <td class="num">{d.championships}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <section aria-labelledby="matrix-heading">
+              <div class="section-header">
+                <h2 id="matrix-heading" class="section-header__title">Division vs division</h2>
+                <p class="section-header__sub">
+                  Every division's all-time record against every other. Regular season only.
+                </p>
+              </div>
+              <DivisionMatrix
+                rows={data.divisions.map((d) => ({ name: d.name, slug: d.slug, vs: d.vs }))}
+                panelIdPrefix="div-"
+                idPrefix="alltime"
+                caption="Each row shows that division's all-time record against the division named in the column."
+              />
+            </section>
+
+            <section aria-labelledby="panels-heading">
+              <div class="section-header">
+                <h2 id="panels-heading" class="section-header__title">Who built each division</h2>
+                <p class="section-header__sub">
+                  Every owner who has held a team in a division, current and former.
+                </p>
+              </div>
+              <div class="division-panels">
+                {sortedDivisions.map((d) => (
+                  <article
+                    id={`div-${d.slug}`}
+                    class:list={['division-panel', { 'division-panel--retired': !d.active }]}
+                  >
+                    <header class="panel-head">
+                      <h3 class="panel-name">{d.name}</h3>
+                      <p class="panel-span">
+                        <span class="span-text">{spanLabel(d)}</span>
+                        <span
+                          class:list={['span-bar', d.active ? 'span-bar--active' : 'span-bar--retired']}
+                          role="img"
+                          aria-label={`${d.active ? 'Active' : 'Retired'}, ${spanLabel(d)}, ${d.seasons} season${d.seasons === 1 ? '' : 's'}`}
+                        >
+                          {segments(d).map((seg) => (
+                            <span class="span-bar__seg" style={`--from: ${seg.from.toFixed(4)}; --to: ${seg.to.toFixed(4)};`}></span>
+                          ))}
+                        </span>
+                      </p>
+                      {!d.active && <span class="pill pill--retired">Retired {d.lastYear}</span>}
+                    </header>
+
+                    <div class="metrics-grid">
+                      <MetricCard label="Overall" value={formatRecord(d.totals)} subtitle={formatWinPct(d.totals)} />
+                      <MetricCard label="Interdivisional" value={formatRecord(d.interDivision)} subtitle={formatWinPct(d.interDivision)} />
+                      <MetricCard label="Titles / Champs" value={`${d.divisionTitles} / ${d.championships}`} subtitle={`${d.playoffBerths} playoff berths`} />
+                    </div>
+
+                    <dl class="detail-rows">
+                      <div class="detail-row">
+                        <dt class="detail-label">Best</dt>
+                        <dd class="detail-value">{d.bestYear ? `${d.bestYear.year} — ${ordinal(d.bestYear.rank)} of ${d.bestYear.of}` : '—'}</dd>
+                      </div>
+                      <div class="detail-row">
+                        <dt class="detail-label">Worst</dt>
+                        <dd class="detail-value">{d.worstYear ? `${d.worstYear.year} — ${ordinal(d.worstYear.rank)} of ${d.worstYear.of}` : '—'}</dd>
+                      </div>
+                      <div class="detail-row">
+                        <dt class="detail-label">Teams</dt>
+                        <dd class="detail-value">{d.teamSeasons} franchise-seasons</dd>
+                      </div>
+                      {d.currentEra && (
+                        <div class="detail-row">
+                          <dt class="detail-label">Lineup</dt>
+                          <dd class="detail-value">
+                            same {d.currentEra.members.length} since {d.currentEra.yearStart}
+                            <span class="dim"> · {formatRecord(d.currentEra.totals)} together</span>
+                          </dd>
+                        </div>
+                      )}
+                    </dl>
+
+                    {d.membershipEras.length > 1 && (
+                      <details class="owner-eras">
+                        <summary class="owner-eras__summary">
+                          <span class="owner-eras__caret" aria-hidden="true"></span>
+                          <span class="owner-eras__label">
+                            <strong>{d.membershipEras.length} lineups</strong>
+                            <span class="dim"> · realigned {d.membershipEras.length - 1} time{d.membershipEras.length === 2 ? '' : 's'}</span>
+                          </span>
+                        </summary>
+                        <div class="owner-eras__reveal">
+                          <div class="owner-eras__inner">
+                            <ul class="era-list">
+                              {[...d.membershipEras].reverse().map((era) => (
+                                <li>
+                                  <span class="era-years">
+                                    {era.yearStart === era.yearEnd ? era.yearStart : `${era.yearStart}–${era.current ? 'present' : era.yearEnd}`}
+                                  </span>
+                                  <span class="member-icons">
+                                    {era.members.map((m) => (
+                                      m.icon
+                                        ? <img src={m.icon} alt={m.nameMedium ?? m.name ?? ''} title={m.name ?? ''} loading="lazy" width="20" height="20" />
+                                        : <span class="member-initials" title={m.name ?? ''}>{(m.nameMedium ?? m.name ?? '?').slice(0, 2)}</span>
+                                    ))}
+                                  </span>
+                                  <span class="era-rec">
+                                    {formatRecord(era.totals)}
+                                    {era.interDivision.games > 0 && <> · {formatWinPct(era.interDivision)} vs others</>}
+                                  </span>
+                                  {era.current && <span class="pill pill--sample era-current">current</span>}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+                      </details>
+                    )}
+
+                    <details class="owner-eras">
+                      <summary class="owner-eras__summary">
+                        <span class="owner-eras__caret" aria-hidden="true"></span>
+                        <span class="owner-eras__faces" aria-hidden="true">
+                          {d.owners.slice(0, 3).map((o) => (
+                            o.icon && <img src={o.icon} alt="" loading="lazy" width="24" height="24" />
+                          ))}
+                        </span>
+                        <span class="owner-eras__label">
+                          Built by <strong>{d.owners.length} owner{d.owners.length === 1 ? '' : 's'}</strong>
+                          {d.owners.length > 0 && (
+                            <span class="dim"> · {d.owners.slice(0, 2).map((o) => o.title).filter(Boolean).join(', ')}{d.owners.length > 2 ? ` and ${d.owners.length - 2} more` : ''}</span>
+                          )}
+                        </span>
+                      </summary>
+                      <div class="owner-eras__reveal">
+                        <div class="owner-eras__inner">
+                          {d.owners.some((o) => o.sharedSeasons > 0) && (
+                            <p class="table-note" id={`oe-note-${d.slug}`}>
+                              Co-owned seasons count for both owners, so these seasons add up to more
+                              than the division's {d.seasons}.
+                            </p>
+                          )}
+                          <div class="owner-eras__scroll">
+                            <table class="owner-era-table" aria-describedby={d.owners.some((o) => o.sharedSeasons > 0) ? `oe-note-${d.slug}` : undefined}>
+                              <caption class="visually-hidden">
+                                Owners who have held a team in the {d.name}, most seasons first.
+                              </caption>
+                              <thead>
+                                <tr>
+                                  <th scope="col">Owner</th>
+                                  <th scope="col">Years here</th>
+                                  <th scope="col" class="num">Sn</th>
+                                  <th scope="col" class="num">Record</th>
+                                  <th scope="col" class="num">Inter</th>
+                                  <th scope="col" class="num"><abbr title="Division titles">Div</abbr></th>
+                                  <th scope="col" class="num"><abbr title="Championships">Ch</abbr></th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {d.owners.map((o) => (
+                                  <tr>
+                                    <th scope="row" class="owner-cell">
+                                      <a href={ownerHref(o.slug)} class="owner-link">
+                                        {o.icon && <img src={o.icon} alt="" loading="lazy" width="20" height="20" />}
+                                        <span>{o.title ?? o.slug}</span>
+                                      </a>
+                                      {o.sharedSeasons > 0 && <span class="pill pill--shared">Co-owned</span>}
+                                    </th>
+                                    {/* One line on purpose: a newline between the separator
+                                        expression and the span renders as a literal space,
+                                        which shipped as "2003 , 2005–2012". */}
+                                    <td class="stints">{o.stints.map((s, i) => (<span class="stint">{i > 0 ? ', ' : ''}{s.yearStart === s.yearEnd ? `${s.yearStart}` : `${s.yearStart}–${s.yearEnd}`}</span>))}</td>
+                                    <td class="num">{o.seasons}</td>
+                                    <td class="num">{formatRecord(o.totals)}</td>
+                                    <td class="num">{formatWinPct(o.interDivision)}</td>
+                                    <td class="num">{o.divisionTitles || ''}</td>
+                                    <td class="num">{o.championships || ''}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </div>
+                    </details>
+                  </article>
+                ))}
+              </div>
+            </section>
+          </>
+        )}
+      </>
+    )}
+
+    {isSeason && season && (
+      <>
+        {seasonNotPlayed && (
+          <p class="notice" role="note">
+            <strong>The {season.year} season hasn't been played yet.</strong> Divisions are set —
+            records start in Week 1.
+          </p>
+        )}
+        {seasonStandingsOnly && (
+          <p class="notice" id={`nolog-${season.year}`} role="note">
+            <strong>{season.year} has no game-by-game log.</strong> Interdivisional records can't be
+            computed for this season, so no division is ranked. Final standings are shown instead.
+          </p>
+        )}
+
+        {seasonHasGames && season.strongest && (
+          <section class="verdict-banner" aria-labelledby="season-verdict">
+            <h2 id="season-verdict" class="visually-hidden">Strongest and weakest division in {season.year}</h2>
+            <div class="verdict-banner__main">
+              <p class="verdict-banner__kicker">Strongest</p>
+              <p class="verdict-banner__name">{season.strongest}</p>
+              <p class="verdict-banner__stat">
+                {(() => {
+                  const d = season.divisions.find((x) => x.name === season.strongest);
+                  return d?.interDivision ? `${formatRecord(d.interDivision)} (${formatWinPct(d.interDivision)}) against the rest of the league` : '';
+                })()}
+              </p>
+            </div>
+            <div class="verdict-banner__foil">
+              <p class="verdict-banner__kicker">Weakest</p>
+              <p class="verdict-banner__name">{season.weakest}</p>
+              <p class="verdict-banner__stat">
+                {(() => {
+                  const d = season.divisions.find((x) => x.name === season.weakest);
+                  return d?.interDivision ? `${formatRecord(d.interDivision)} (${formatWinPct(d.interDivision)})` : '';
+                })()}
+              </p>
+            </div>
+          </section>
+        )}
+
+        <div class="metrics-grid metrics-grid--season">
+          <MetricCard label="Teams" value={String(season.leagueSize)} subtitle={`${season.divisionCount} divisions`} />
+          <MetricCard label="Regular season" value={season.lastRegularSeasonWeek ? `${season.lastRegularSeasonWeek} weeks` : '—'} subtitle={seasonHasGames ? 'game log complete' : 'no game log'} />
+          <MetricCard label="Playoff berths" value={String(season.divisions.reduce((n, d) => n + d.playoffBerths, 0))} subtitle="across all divisions" />
+        </div>
+
+        {seasonHasGames && season.divisions.length > 1 && (
+          <section aria-labelledby="season-matrix-heading">
+            <div class="section-header">
+              <h2 id="season-matrix-heading" class="section-header__title">Division vs division, {season.year}</h2>
+              <p class="section-header__sub">Regular season only.</p>
+            </div>
+            <DivisionMatrix
+              rows={season.divisions.map((d) => ({ name: d.name, slug: d.slug, vs: d.vs }))}
+              idPrefix={`y${season.year}`}
+              caption={`Each row shows that division's ${season.year} record against the division named in the column.`}
+            />
+          </section>
+        )}
+
+        <section aria-labelledby="season-divisions-heading">
+          <div class="section-header">
+            <h2 id="season-divisions-heading" class="section-header__title">{season.year} by division</h2>
+            <p class="section-header__sub">
+              {seasonHasGames ? 'Strongest first.' : 'In division order.'}
+            </p>
+          </div>
+          <div class="division-panels">
+            {(seasonHasGames ? seasonRanked : season.divisions).map((d) => (
+              <article class="division-panel">
+                <header class="panel-head">
+                  <h3 class="panel-name">{d.name}</h3>
+                  {d.rank !== null && (
+                    <span class:list={['rank-chip', 'rank-chip--lg', { 'rank-chip--top': d.rank === 1 }]}>
+                      {ordinal(d.rank)}<span class="visually-hidden"> strongest of {season.divisionCount}</span>
+                    </span>
+                  )}
+                </header>
+
+                <dl class="detail-rows">
+                  <div class="detail-row">
+                    <dt class="detail-label">Record</dt>
+                    <dd class="detail-value">{formatRecord(d.totals)} <span class="dim">({formatWinPct(d.totals)})</span></dd>
+                  </div>
+                  {d.interDivision && (
+                    <div class="detail-row">
+                      <dt class="detail-label">vs others</dt>
+                      <dd class="detail-value">{formatRecord(d.interDivision)} <span class="dim">({formatWinPct(d.interDivision)})</span></dd>
+                    </div>
+                  )}
+                  <div class="detail-row">
+                    <dt class="detail-label">Winner</dt>
+                    <dd class="detail-value">{d.divisionWinner?.name ?? '—'}</dd>
+                  </div>
+                </dl>
+
+                <div class="table-scroll">
+                  <table class="season-team-table">
+                    <caption class="visually-hidden">{d.name} teams in {season.year}</caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Team</th>
+                        {!seasonNotPlayed && <th scope="col" class="num">W-L</th>}
+                        {!seasonNotPlayed && <th scope="col" class="num">PF</th>}
+                        {seasonHasGames && <th scope="col" class="num">PA</th>}
+                        <th scope="col">Owner</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {d.teams.map((t) => (
+                        <tr>
+                          <th scope="row" class="team-cell">
+                            {t.icon && <img src={t.icon} alt="" loading="lazy" width="22" height="22" />}
+                            <span class="team-name">{t.nameMedium ?? t.name}</span>
+                            {t.wonDivision && <span class="tag" title="Division winner">🛡</span>}
+                            {t.playoffResult === 'champion' && <span class="tag" title="League champion">🏆</span>}
+                          </th>
+                          {!seasonNotPlayed && <td class="num">{formatRecord(t)}</td>}
+                          {!seasonNotPlayed && <td class="num">{t.pointsFor.toFixed(1)}</td>}
+                          {seasonHasGames && <td class="num">{t.pointsAgainst?.toFixed(1) ?? '—'}</td>}
+                          <td class="owner-cell">
+                            {t.owners.map((o, i) => (
+                              <>
+                                {i > 0 && <span class="dim"> &amp; </span>}
+                                <a href={ownerHref(o.slug)} class="owner-link owner-link--inline">{o.title ?? o.slug}</a>
+                              </>
+                            ))}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      </>
+    )}
+
+    <p class="footnote">
+      Built from every season's final standings and its own game log, {firstYear}–{lastYear}.
+      Includes seasons played under former owners, which franchise pages don't show.
+      {generatedLabel && <> Updated {generatedLabel}.</>}
+    </p>
+  </div>
+</TheLeagueLayout>
+
+<style>
+  /* Local aliases so no child hardcodes a token name — and so the accent is
+     changed in exactly one place if it ever needs to be.
+
+     --ds-accent is --league-accent, NOT --color-primary. That is deliberate:
+     --color-primary is BLUE on AFL light mode (only html.dark[data-league=afl]
+     pins red), so every accent painted with it wears TheLeague's identity on
+     an AFL page. Do not "fix" this back to --color-primary. */
+  .ds-page {
+    --ds-accent: var(--league-accent, #1c497c);
+    --ds-surface: var(--card-bg, #fff);
+    --ds-surface-muted: var(--content-bg-muted, #f7f7f7);
+    --ds-border: var(--content-border, #e5e5e5);
+    --ds-ink: var(--page-text, #1a1a1a);
+    --ds-ink-muted: var(--content-text-muted, #666);
+    --ds-section-size: 0.75rem;
+
+    padding: 1.5rem 1rem 4rem;
+  }
+  /* AFL sets its body face to UFC Sans Condensed, which reads visibly smaller
+     at the same size — hence 0.9rem for its section titles. A bare
+     html[data-league='afl'] inside a scoped style block gets scoped and dies,
+     so this needs :global(). */
+  :global(html[data-league='afl']) .ds-page { --ds-section-size: 0.9rem; }
+
+  .ds-head { margin: 0.25rem 0 1.5rem; }
+  h1 {
+    margin: 0.25rem 0 0.5rem;
+    font-size: clamp(1.75rem, 4vw, 2.5rem);
+  }
+  .ds-head__year { color: var(--ds-ink-muted); font-weight: 400; }
+  .lede {
+    margin: 0;
+    max-width: 70ch;
+    color: var(--ds-ink-muted);
+    line-height: 1.55;
+  }
+  .dim { color: var(--ds-ink-muted); }
+
+  /* ── Section headers ───────────────────────────────────────────────────── */
+  .section-title,
+  .section-header__title {
+    margin: 0;
+    font-size: var(--ds-section-size);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ds-ink);
+    border-left: 2px solid var(--ds-accent);
+    padding-left: 0.625rem;
+    line-height: 1.3;
+  }
+  .section-header { margin: 2.5rem 0 1rem; }
+  .section-header__sub {
+    margin: 0.375rem 0 0 0.75rem;
+    font-size: 0.8125rem;
+    color: var(--ds-ink-muted);
+  }
+  section + section { margin-top: 0; }
+
+  /* ── Season rail ───────────────────────────────────────────────────────── */
+  .season-rail { margin: 0 0 0.5rem; }
+  .season-rail__track {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    overflow-x: auto;
+    padding: 0.25rem 0 0.5rem;
+    scrollbar-width: thin;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+  }
+  .season-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 0.75rem;
+    border: 1px solid var(--ds-border);
+    border-radius: var(--radius-full, 999px);
+    background: var(--ds-surface);
+    color: var(--ds-ink);
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    scroll-snap-align: start;
+    flex: 0 0 auto;
+    /* Containing block for the "(standings only)" visually-hidden span — an
+     * absolutely positioned span with auto offsets otherwise resolves against
+     * the initial containing block and sits far outside the viewport in
+     * document coordinates, growing the page's scroll width. The AFL rail (24
+     * chips) pushed the whole page 679px sideways before this. Same trap
+     * documented at length in DivisionMatrix.astro's .dsm-cell. */
+    position: relative;
+  }
+  .season-chip:hover { border-color: var(--ds-accent); }
+  .season-chip[aria-current='page'] {
+    background: var(--ds-accent);
+    border-color: var(--ds-accent);
+    color: #fff;
+    font-weight: 700;
+  }
+  /* Sticky so the way back to all-time is one click from anywhere in the rail,
+     even scrolled 24 years to the right. */
+  .season-chip--alltime {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    box-shadow: 0.5rem 0 0.5rem -0.5rem rgb(0 0 0 / 0.12);
+  }
+  .season-chip--nolog::after {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--ds-ink-muted);
+    margin-left: 0.375rem;
+  }
+  .rail-legend {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin: 0 0 1.5rem;
+    font-size: 0.75rem;
+    color: var(--ds-ink-muted);
+  }
+  .rail-legend__dot {
+    width: 4px; height: 4px; border-radius: 999px;
+    background: var(--ds-ink-muted);
+  }
+
+  /* ── The paired podium ─────────────────────────────────────────────────── */
+  .verdict-pair { margin: 1.5rem 0 0; }
+  .verdict-pair__grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+    margin-top: 1rem;
+    padding: 1.125rem 1.25rem;
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-border);
+    border-radius: var(--radius-md, 0.625rem);
+  }
+  @media (min-width: 768px) {
+    .verdict-pair__grid { grid-template-columns: 1fr 1px 1fr; }
+    .verdict-col:nth-of-type(1) { grid-column: 1; }
+    /* The centre rule is drawn by the middle track's own background. */
+    .verdict-pair__grid::before {
+      content: '';
+      grid-column: 2;
+      grid-row: 1;
+      background: var(--ds-border);
+    }
+    .verdict-col:nth-of-type(2) { grid-column: 3; }
+    .verdict-col { grid-row: 1; }
+  }
+  .verdict-col__title {
+    margin: 0 0 0.625rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ds-ink-muted);
+  }
+  .verdict-list { list-style: none; margin: 0; padding: 0; }
+  .verdict-list li {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    padding: 0.375rem 0;
+    border-bottom: 1px solid var(--ds-border);
+  }
+  .verdict-list li:last-child { border-bottom: none; }
+  .verdict-rank {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--ds-ink-muted);
+    min-width: 1rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .verdict-name { font-weight: 700; color: inherit; text-decoration: none; }
+  .verdict-name:hover { text-decoration: underline; }
+  .verdict-value {
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
+  .verdict-note {
+    margin: 0.875rem 0 0;
+    max-width: 78ch;
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    color: var(--ds-ink-muted);
+  }
+
+  /* ── Pills ─────────────────────────────────────────────────────────────── */
+  .pill {
+    display: inline-block;
+    padding: 0.0625rem 0.4375rem;
+    border-radius: var(--radius-full, 999px);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    line-height: 1.5;
+    white-space: nowrap;
+  }
+  .pill--retired {
+    background: var(--ds-surface-muted);
+    color: var(--ds-ink-muted);
+    border: 1px solid var(--ds-border);
+  }
+  .pill--sample {
+    background: transparent;
+    color: var(--ds-ink-muted);
+    border: 1px dashed var(--ds-border);
+    font-weight: 600;
+  }
+  .pill--shared {
+    background: var(--ds-surface-muted);
+    color: var(--ds-ink-muted);
+    border: 1px solid var(--ds-border);
+    font-weight: 600;
+  }
+
+  /* ── All-time table ────────────────────────────────────────────────────── */
+  .table-scroll {
+    overflow-x: auto;
+    border: 1px solid var(--ds-border);
+    border-radius: var(--radius-md, 0.5rem);
+    background: var(--ds-surface);
+  }
+  /* Every one of these tables lives inside a horizontal scroller and carries
+   * visually-hidden spans (captions, sort-state text, rank context). They and
+   * their cells need their own containing block or those spans escape to the
+   * initial containing block and widen the document — see .season-chip above. */
+  .strength-table,
+  .owner-era-table,
+  .season-team-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+    font-variant-numeric: tabular-nums;
+    position: relative;
+  }
+  .strength-table th,
+  .strength-table td,
+  .owner-era-table th,
+  .owner-era-table td,
+  .season-team-table th,
+  .season-team-table td { position: relative; }
+  .strength-table thead th,
+  .owner-era-table thead th,
+  .season-team-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--ds-surface);
+    box-shadow: inset 0 -1px 0 var(--ds-border);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ds-ink-muted);
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    white-space: nowrap;
+  }
+  .strength-table th.num,
+  .owner-era-table th.num,
+  .season-team-table th.num,
+  .strength-table td.num,
+  .owner-era-table td.num,
+  .season-team-table td.num { text-align: right; }
+  .strength-table tbody td,
+  .strength-table tbody th,
+  .owner-era-table tbody td,
+  .owner-era-table tbody th,
+  .season-team-table tbody td,
+  .season-team-table tbody th {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--ds-border);
+    text-align: left;
+    font-weight: 400;
+    vertical-align: middle;
+  }
+  .strength-table tbody tr:last-child td,
+  .strength-table tbody tr:last-child th,
+  .owner-era-table tbody tr:last-child td,
+  .owner-era-table tbody tr:last-child th,
+  .season-team-table tbody tr:last-child td,
+  .season-team-table tbody tr:last-child th { border-bottom: none; }
+  .strength-table tbody tr:hover,
+  .owner-era-table tbody tr:hover,
+  .season-team-table tbody tr:hover { background: var(--table-row-bg-hover, #f4f4f4); }
+
+  .sort-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    min-height: 44px;
+    color: inherit;
+    text-decoration: none;
+  }
+  .sort-link:hover { color: var(--ds-ink); }
+  .sort-link:focus-visible {
+    outline: 2px solid var(--ds-accent);
+    outline-offset: 2px;
+    border-radius: 0.25rem;
+  }
+  th.num .sort-link { justify-content: flex-end; }
+  /* Space is reserved on every header so sorting doesn't shift the layout;
+     only the active column's caret is visible. */
+  .sort-caret { width: 0.6em; visibility: hidden; font-size: 0.75em; }
+  .sort-caret::before { content: '▾'; }
+  th[aria-sort] .sort-caret { visibility: visible; color: var(--ds-accent); }
+  th[aria-sort='ascending'] .sort-caret::before { content: '▴'; }
+
+  .name-cell { min-width: 12rem; }
+  .name-link {
+    font-weight: 700;
+    color: inherit;
+    text-decoration: none;
+    margin-right: 0.375rem;
+  }
+  .name-link:hover { text-decoration: underline; }
+  .span-text {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--ds-ink-muted);
+    font-variant-numeric: tabular-nums;
+    margin-top: 0.125rem;
+  }
+  .strength-row--retired { background: var(--ds-surface-muted); }
+  .strength-row--retired .name-link { font-weight: 600; }
+
+  .rec { display: block; font-weight: 600; }
+  .pct { display: block; font-size: 0.75rem; color: var(--ds-ink-muted); }
+  .metric-col { min-width: 7rem; }
+  .unit { font-weight: 400; font-size: 0.75rem; color: var(--ds-ink-muted); }
+
+  /* ── Current-lineup table ──────────────────────────────────────────────── */
+  .lineup-table .member-cell { min-width: 8rem; }
+  .member-icons { display: inline-flex; align-items: center; }
+  .member-icons img,
+  .member-initials {
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    object-fit: contain;
+    background: var(--ds-surface-muted);
+    border: 1px solid var(--ds-surface);
+    margin-left: -5px;
+  }
+  .member-icons img:first-child,
+  .member-initials:first-child { margin-left: 0; }
+  .member-initials {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.5625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--ds-ink-muted);
+  }
+  /* Direction is carried by the glyph as well as the hue, so this survives
+     grayscale and colour-blind viewing. */
+  .delta { margin-left: 0.3125rem; font-weight: 700; }
+  .delta--up { color: #1f5d2d; }
+  .delta--down { color: #8b2a1f; }
+  :global(html.dark) .delta--up { color: #7ee0a0; }
+  :global(html.dark) .delta--down { color: #ff9c8a; }
+
+  /* ── Membership era history ────────────────────────────────────────────── */
+  .era-list { list-style: none; margin: 0.5rem 0 0; padding: 0; }
+  .era-list li {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.25rem 0;
+    font-size: 0.8125rem;
+    border-bottom: 1px solid var(--ds-border);
+  }
+  .era-list li:last-child { border-bottom: none; }
+  .era-years { font-weight: 700; font-variant-numeric: tabular-nums; min-width: 6.5rem; }
+  .era-rec { color: var(--ds-ink-muted); font-variant-numeric: tabular-nums; }
+  .era-current { margin-left: auto; }
+  /* The shared .member-icons rule sizes to 24px; the era list runs denser. */
+  .era-list .member-icons img,
+  .era-list .member-initials { width: 20px; height: 20px; }
+
+  .rank-chip {
+    display: inline-block;
+    min-width: 1.25rem;
+    padding: 0 0.25rem;
+    margin-right: 0.375rem;
+    border-radius: 0.25rem;
+    background: var(--ds-surface-muted);
+    border: 1px solid var(--ds-border);
+    color: var(--ds-ink-muted);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-align: center;
+    vertical-align: 1px;
+  }
+  .rank-chip--top {
+    background: color-mix(in srgb, var(--ds-accent) 14%, transparent);
+    border-color: color-mix(in srgb, var(--ds-accent) 35%, transparent);
+    color: var(--ds-accent);
+  }
+  .rank-chip--lg {
+    font-size: 0.8125rem;
+    padding: 0.125rem 0.5rem;
+    margin: 0;
+  }
+
+  /* ── Season verdict banner — deliberately decisive ─────────────────────── */
+  .verdict-banner {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    margin: 1.5rem 0 2rem;
+    padding: 1.25rem 1.375rem;
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-border);
+    border-left: 3px solid var(--ds-accent);
+    border-radius: var(--radius-md, 0.625rem);
+  }
+  @media (min-width: 640px) {
+    .verdict-banner { grid-template-columns: 2fr 1fr; align-items: end; }
+  }
+  .verdict-banner__kicker {
+    margin: 0;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--ds-ink-muted);
+  }
+  .verdict-banner__name {
+    margin: 0.125rem 0;
+    font-size: 1.75rem;
+    font-weight: 800;
+    line-height: 1.1;
+    color: var(--ds-ink);
+  }
+  .verdict-banner__foil .verdict-banner__name { font-size: 1.0625rem; font-weight: 700; }
+  .verdict-banner__stat {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--ds-ink-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Metric strip ──────────────────────────────────────────────────────── */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.625rem;
+    margin: 0.875rem 0;
+  }
+  .metrics-grid--season { margin: 1.5rem 0 0; }
+  @media (max-width: 767px) {
+    .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  /* ── Division panels ───────────────────────────────────────────────────── */
+  .division-panels {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(420px, 100%), 1fr));
+    gap: 1rem;
+  }
+  .division-panel {
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-border);
+    border-left: 3px solid var(--ds-accent);
+    border-radius: var(--radius-md, 0.625rem);
+    padding: 1rem 1.125rem 1.125rem;
+    scroll-margin-top: 5rem;
+  }
+  .division-panel--retired { border-left-color: var(--ds-border); }
+  .panel-head {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+  .panel-name { margin: 0; font-size: 1.125rem; font-weight: 800; }
+  .panel-span {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    margin: 0;
+    flex: 1 1 auto;
+  }
+  .panel-span .span-text { margin: 0; }
+
+  /* Active and retired differ in SHAPE, not saturation — the active bar fades
+     out at its right edge (ongoing), the retired one ends on a hard tick
+     (a tombstone). Survives grayscale and colour-blind viewing. */
+  .span-bar {
+    position: relative;
+    display: block;
+    height: 4px;
+    width: 6rem;
+    flex: 0 0 auto;
+    border-radius: var(--radius-full, 999px);
+    background: var(--ds-border);
+  }
+  .span-bar__seg {
+    position: absolute;
+    inset-block: 0;
+    border-radius: var(--radius-full, 999px);
+    left: calc(var(--from) * 100%);
+    width: calc((var(--to) - var(--from)) * 100%);
+  }
+  .span-bar--active .span-bar__seg {
+    background: var(--ds-accent);
+  }
+  .span-bar--active .span-bar__seg:last-child {
+    mask-image: linear-gradient(90deg, #000 78%, transparent);
+    -webkit-mask-image: linear-gradient(90deg, #000 78%, transparent);
+  }
+  .span-bar--retired .span-bar__seg { background: var(--ds-ink-muted); }
+  .span-bar--retired .span-bar__seg:last-child::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: -3px;
+    width: 2px;
+    height: 10px;
+    background: var(--ds-ink-muted);
+    border-radius: 1px;
+  }
+
+  .detail-rows { margin: 0 0 0.875rem; }
+  .detail-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    padding: 0.1875rem 0;
+    font-size: 0.8125rem;
+  }
+  .detail-label {
+    flex: 0 0 4.5rem;
+    text-align: right;
+    color: var(--ds-ink-muted);
+    font-weight: 600;
+  }
+  .detail-value { margin: 0; font-variant-numeric: tabular-nums; }
+
+  /* ── Owner eras ────────────────────────────────────────────────────────── */
+  .owner-eras { border-top: 1px solid var(--ds-border); padding-top: 0.75rem; }
+  .owner-eras__summary {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    min-height: 44px;
+    font-size: 0.875rem;
+    list-style: none;
+  }
+  .owner-eras__summary::-webkit-details-marker { display: none; }
+  .owner-eras__summary:focus-visible {
+    outline: 2px solid var(--ds-accent);
+    outline-offset: 2px;
+    border-radius: 0.25rem;
+  }
+  .owner-eras__caret {
+    flex: 0 0 auto;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-right: 2px solid var(--ds-ink-muted);
+    border-bottom: 2px solid var(--ds-ink-muted);
+    transform: rotate(-45deg);
+    transition: transform var(--transition-base, 0.2s ease);
+  }
+  .owner-eras[open] .owner-eras__caret { transform: rotate(45deg); }
+  .owner-eras__faces { display: inline-flex; }
+  .owner-eras__faces img {
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    object-fit: contain;
+    background: var(--ds-surface-muted);
+    border: 1px solid var(--ds-surface);
+    margin-left: -6px;
+  }
+  .owner-eras__faces img:first-child { margin-left: 0; }
+  .owner-eras__label { flex: 1 1 auto; }
+
+  /* The 0fr → 1fr reveal needs BOTH wrappers: without `min-height: 0` on the
+     inner one the table's intrinsic height defeats the 0fr track and nothing
+     collapses. Browsers hide <details> content on close, so this animates open
+     only and closes instantly — accepted, since the alternative needs JS. */
+  .owner-eras__reveal {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows var(--transition-base, 0.25s ease);
+  }
+  .owner-eras[open] .owner-eras__reveal { grid-template-rows: 1fr; }
+  .owner-eras__inner {
+    min-height: 0;
+    overflow: hidden;
+  }
+  .owner-eras__scroll {
+    max-height: 30rem;
+    overflow: auto;
+    overscroll-behavior: contain;
+    border: 1px solid var(--ds-border);
+    border-radius: var(--radius-md, 0.375rem);
+    background: var(--ds-surface-muted);
+  }
+  /* AFL dark collapses --card-bg / --card-surface / --content-bg to one value,
+     so a table inside a panel inside the page is three identical surfaces.
+     --color-surface-3 is dark-only by design — safe only in here. */
+  :global(html.dark) .owner-eras__scroll { background: var(--color-surface-3); }
+  .owner-era-table thead th { background: var(--ds-surface-muted); }
+  :global(html.dark) .owner-era-table thead th { background: var(--color-surface-3); }
+  .table-note {
+    margin: 0.625rem 0 0.5rem;
+    font-size: 0.75rem;
+    color: var(--ds-ink-muted);
+    line-height: 1.5;
+  }
+  .owner-cell { min-width: 10rem; }
+  .owner-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    color: inherit;
+    text-decoration: none;
+    font-weight: 600;
+  }
+  .owner-link--inline { font-weight: 400; }
+  .owner-link:hover { text-decoration: underline; }
+  .owner-link img { width: 20px; height: 20px; object-fit: contain; flex: 0 0 auto; }
+  /* Wrap BETWEEN runs, never inside one — "2011–" / "2013" on two lines is
+     unreadable. */
+  .stints { white-space: normal; font-variant-numeric: tabular-nums; }
+  .stint { white-space: nowrap; }
+
+  /* ── Season team tables ────────────────────────────────────────────────── */
+  .team-cell { display: flex; align-items: center; gap: 0.4375rem; min-width: 11rem; }
+  .team-cell img { width: 22px; height: 22px; object-fit: contain; flex: 0 0 auto; }
+  .team-name { font-weight: 600; }
+  .tag { font-size: 0.8125rem; }
+
+  /* ── Notices ───────────────────────────────────────────────────────────── */
+  .notice {
+    margin: 1.25rem 0;
+    padding: 0.875rem 1rem;
+    background: var(--ds-surface-muted);
+    border: 1px solid var(--ds-border);
+    border-left: 3px solid var(--ds-ink-muted);
+    border-radius: var(--radius-md, 0.5rem);
+    font-size: 0.875rem;
+    line-height: 1.55;
+    color: var(--ds-ink);
+  }
+  .footnote {
+    margin: 2.5rem 0 0;
+    max-width: 70ch;
+    font-size: 0.75rem;
+    line-height: 1.6;
+    color: var(--ds-ink-muted);
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .owner-eras__reveal,
+    .owner-eras__caret { transition: none; }
+  }
+</style>

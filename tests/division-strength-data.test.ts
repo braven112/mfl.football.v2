@@ -376,6 +376,123 @@ describe.each(leagues)('$league.slug division strength', ({ league, dataPath, le
     expect(data.summary.divisionCount).toBe(data.divisions.length);
   });
 
+  // ── 7. Membership eras: the "same teams" slice.
+  //
+  // A division name outlives the teams that earned its record, so the era is
+  // the only slice where two divisions are compared as the same group across
+  // their whole shared span. These pin that the segmentation is honest.
+  it('partitions every division season into exactly one membership era', () => {
+    for (const division of data.divisions) {
+      const eraYears = division.membershipEras.flatMap((era) => {
+        const out: number[] = [];
+        for (let y = era.yearStart; y <= era.yearEnd; y++) out.push(y);
+        return out;
+      });
+      expect(
+        [...eraYears].sort((a, b) => a - b),
+        `${division.name}: membership eras do not cover its seasons exactly once`
+      ).toEqual(division.years);
+      expect(eraYears.length).toBe(new Set(eraYears).size);
+    }
+  });
+
+  it('breaks an era only on a real membership change or a gap year', () => {
+    for (const division of data.divisions) {
+      const eras = division.membershipEras;
+      for (let i = 1; i < eras.length; i++) {
+        const prev = eras[i - 1];
+        const cur = eras[i];
+        expect(cur.yearStart).toBeGreaterThan(prev.yearEnd);
+        const contiguous = cur.yearStart === prev.yearEnd + 1;
+        if (contiguous) {
+          // Adjacent in time means the membership MUST differ, or the two
+          // should have been one era.
+          expect(
+            cur.franchiseIds.join(','),
+            `${division.name}: eras ending ${prev.yearEnd} and starting ${cur.yearStart} have identical membership`
+          ).not.toBe(prev.franchiseIds.join(','));
+        }
+      }
+    }
+  });
+
+  it('matches the membership of each era to the seasons inside it', () => {
+    for (const division of data.divisions) {
+      for (const era of division.membershipEras) {
+        expect(era.seasons).toBe(era.yearEnd - era.yearStart + 1);
+        expect(era.members.length).toBe(era.franchiseIds.length);
+        expect([...era.members.map((m) => m.franchiseId)].sort()).toEqual(era.franchiseIds);
+        // Every season in the era must have exactly this set of franchises.
+        for (let y = era.yearStart; y <= era.yearEnd; y++) {
+          const seasonDivision = data.years
+            .find((yr) => yr.year === y)!
+            .divisions.find((d) => d.name === division.name)!;
+          expect(
+            seasonDivision.teams.map((t) => t.franchiseId).sort(),
+            `${division.name} ${y}: season membership differs from its era's`
+          ).toEqual(era.franchiseIds);
+        }
+      }
+    }
+  });
+
+  it('sums each era record from its own seasons', () => {
+    for (const division of data.divisions) {
+      for (const era of division.membershipEras) {
+        const seasons = data.years
+          .filter((y) => y.year >= era.yearStart && y.year <= era.yearEnd)
+          .flatMap((y) => y.divisions.filter((d) => d.name === division.name));
+        const sum = seasons.reduce(
+          (acc, d) => ({
+            wins: acc.wins + d.totals.wins,
+            losses: acc.losses + d.totals.losses,
+            ties: acc.ties + d.totals.ties,
+          }),
+          { wins: 0, losses: 0, ties: 0 }
+        );
+        expect({ ...sum }, `${division.name} ${era.yearStart}-${era.yearEnd} totals`).toEqual({
+          wins: era.totals.wins,
+          losses: era.totals.losses,
+          ties: era.totals.ties,
+        });
+        expect(era.divisionTitles).toBe(seasons.filter((d) => d.divisionWinner).length);
+      }
+    }
+    // And the eras together reconstruct the division's all-time record.
+    for (const division of data.divisions) {
+      const sum = division.membershipEras.reduce(
+        (acc, e) => ({
+          wins: acc.wins + e.totals.wins,
+          losses: acc.losses + e.totals.losses,
+          ties: acc.ties + e.totals.ties,
+        }),
+        { wins: 0, losses: 0, ties: 0 }
+      );
+      expect({ ...sum }, `${division.name}: eras do not reconstruct the all-time record`).toEqual({
+        wins: division.totals.wins,
+        losses: division.totals.losses,
+        ties: division.totals.ties,
+      });
+    }
+  });
+
+  it('flags exactly the era still running as current, and none for a retired division', () => {
+    for (const division of data.divisions) {
+      const flagged = division.membershipEras.filter((e) => e.current);
+      if (division.active) {
+        expect(flagged.length, `${division.name} is active but has ${flagged.length} current eras`).toBe(1);
+        expect(flagged[0].yearEnd).toBe(data.latestPlayedYear);
+        expect(division.currentEra).toEqual(flagged[0]);
+        // It must be the LAST era — a current era in the middle would mean the
+        // division somehow resumed after its live lineup.
+        expect(division.membershipEras[division.membershipEras.length - 1]).toEqual(flagged[0]);
+      } else {
+        expect(flagged.length, `${division.name} is retired but claims a current era`).toBe(0);
+        expect(division.currentEra).toBeNull();
+      }
+    }
+  });
+
   it('keys divisions by name, never merging two divisions that shared an MFL slot', () => {
     const names = data.divisions.map((d) => d.name);
     expect(new Set(names).size).toBe(names.length);

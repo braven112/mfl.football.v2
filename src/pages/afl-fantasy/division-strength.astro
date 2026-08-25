@@ -1,0 +1,33 @@
+---
+/**
+ * Division Strength (AFL) — thin route wrapper.
+ *
+ * Shared implementation lives in
+ * components/shared/division-strength/DivisionStrengthPage.
+ *
+ * The derived file is imported HERE because static import specifiers can't be
+ * runtime variables, and importing both leagues' files in the shared component
+ * would ship the other league's report on every render of either route.
+ *
+ * The redirect also lives HERE, and must: `Astro.redirect()` only redirects
+ * from a PAGE. Returned from a component's frontmatter it merely stops
+ * rendering that component and the response is still a 200 with a blank body.
+ */
+import DivisionStrengthPage from '../../components/shared/division-strength/DivisionStrengthPage.astro';
+import divisionData from '../../../data/afl-fantasy/derived/division-strength.json';
+import { resolveDivisionStrengthView } from '../../utils/division-strength-view';
+import { resolveLeaguePath } from '../../utils/nav-utils';
+import type { DivisionStrengthFile } from '../../types/division-strength';
+
+export const prerender = false;
+
+const data = divisionData as unknown as DivisionStrengthFile;
+const basePath = resolveLeaguePath(
+  '/afl-fantasy/division-strength',
+  Astro.locals.hideLeaguePrefix ?? false
+);
+const view = resolveDivisionStrengthView(Astro.url, data, basePath);
+if (view.kind === 'redirect') return Astro.redirect(view.to, 302);
+---
+
+<DivisionStrengthPage leagueSlug="afl-fantasy" data={data} view={view} />
