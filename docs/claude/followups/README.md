@@ -33,6 +33,7 @@ opened: 2026-08-24
 hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/612
 hotfix_sha: a1b2c3d
 followup_pr:                 # filled in by /followup step 7
+followup_session:            # session id from /hotfix step 8b, for tracing
 ---
 
 # Follow-up: live scoring crashed on a null athlete id

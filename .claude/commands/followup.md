@@ -23,6 +23,13 @@ grep -l "^status: open" docs/claude/followups/*.md | sort | head -1
 
 If there are none, say "No open follow-ups." and stop.
 
+**If you were handed a path and the file isn't there**, the hotfix session
+spawned you before pushing the brief (`/hotfix` step 8a). Run `git fetch origin
+main` in case your clone predates the push; if it's still missing, say what's
+missing and stop. Do not reconstruct the work from the PR alone — the brief's
+value is the reasoning that isn't in the diff, and guessing at it defeats the
+handoff.
+
 Read it whole — it was written to be startable cold, and this session has none
 of the incident context.
 

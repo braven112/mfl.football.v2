@@ -366,25 +366,61 @@ Always include, when they apply:
 - any external reviewer findings that landed on the PR after the merge — re-read
   the PR comments now and fold Gemini / Copilot / CodeQL in
 
-Commit the brief on `main` (or as a tiny follow-on PR) so the debt is recorded
-in the repo, not just in a session transcript.
+**Commit and push the brief before you spawn anything.** A new cloud session
+clones the repo fresh at container start, so a brief that exists only in this
+session's working tree does not exist for the child — it will clone, find
+nothing, and have no work to do. This is the one step that fails silently, so
+verify the push landed rather than assuming it:
 
-**8b. Start the follow-up session.** Preferred — a genuinely separate session,
-so the long-term fix never competes with the incident:
+```bash
+git add docs/claude/followups/<file>.md
+git commit -m "docs: follow-up brief for hotfix <slug>"
+git push origin main          # or a tiny follow-on PR if main is protected
+git fetch origin main && git cat-file -e origin/main:docs/claude/followups/<file>.md \
+  && echo "brief is on origin/main"
+```
+
+**8b. Start the follow-up session.** Cloud sessions are the normal case, so this
+is the path rather than the fallback:
 
 ```
 mcp__Claude_Code_Remote__create_session
   title:  "Follow-up: <slug>"
+  tags:   ["hotfix-followup"]
   prompt: "/followup docs/claude/followups/<YYYY-MM-DD>-<slug>.md"
 ```
 
-If that tool isn't available in this environment, run `/followup <brief-path>`
-directly instead — it branches off fresh `origin/main`, so it stays separated
-from the hotfix either way. Never start it before step 7 passes: a parallel
-session editing the same files while the hotfix is still deploying is a conflict
-generator.
+Three rules keep it cheap:
 
-Tell the user which route you took and link the session or brief.
+- **Pass a pointer, not a payload.** The prompt is one line naming the brief. Do
+  not paste the findings, the diff, or a recap of the incident into it — the
+  brief is already in the child's clone, and anything inlined is paid for twice.
+- **One session per brief, never per item.** The items usually touch the same
+  files, so parallel sessions on them are a conflict generator, and each one
+  re-pays its own cold-start cost.
+- **Spawn and stop.** Don't poll the child or wait on it. Record the returned
+  session id in the brief's `followup_session` field, report it, and end. Polling
+  spends this session's remaining context on work that has already left it.
+
+The reason this saves context rather than duplicating it: **none of this
+session's transcript needs to travel.** The failed theories, the CI polling, the
+review adjudication, the outage timeline — all of it stays here. What the
+follow-up needs is the thirty lines of brief you wrote once, deliberately. Write
+the "Context to start cold" section properly and the child never needs this
+session, which matters, because it cannot ask.
+
+Leave `environment_id` and `model` unset — both inherit. Never pass
+`permission_mode: "plan"`: the child would stall at an approval prompt with
+nobody watching it.
+
+Never spawn before step 7 passes — a parallel session editing the same files
+while the hotfix is still deploying is a conflict generator.
+
+If `create_session` is unavailable (a local CLI session), say so plainly and run
+`/followup <brief-path>` in this session instead. It branches off fresh
+`origin/main`, so the work stays separated even when the session doesn't.
+
+Report which route you took, and link the session or the brief.
 
 ---
 
