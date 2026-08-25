@@ -460,7 +460,7 @@ describe('measured owner counts', () => {
   // 320 because it counts DISTINCT franchise-seasons, not owner-seasons.
   const cases = [
     { slug: 'theleague', total: 38, current: 17, former: 21, seasons: 320, shared: 2 },
-    { slug: 'afl-fantasy', total: 90, current: 24, former: 66, seasons: 576, shared: 0 },
+    { slug: 'afl-fantasy', total: 89, current: 24, former: 65, seasons: 576, shared: 0 },
   ];
 
   for (const expected of cases) {
@@ -477,6 +477,80 @@ describe('measured owner counts', () => {
         seasons: expected.seasons,
         shared: expected.shared,
       });
+    });
+  }
+});
+
+/**
+ * Two owner records in one league carrying the SAME team name is the signature
+ * of one person split in two. Ownership is inferred from a franchise slot
+ * changing hands, so a rename in place and a slot move both look exactly like
+ * a handover — that is how Tom Flanagan, Jim Shea, Shane Fitch and ten others
+ * each ended up as two strangers sharing a career. See
+ * docs/claude/insights/features/franchise-history.md (2026-08-25).
+ *
+ * The collision is invisible while the owners are anonymous, because two rows
+ * reading "Blitzkrieg" look like two teams that happened to share a name. This
+ * test is what looks instead of waiting for a human to notice.
+ *
+ * A collision is not ALWAYS a split — two different people can pick the same
+ * team name years apart — so genuine ones are allowlisted here WITH the reason.
+ * Adding to this list is a claim that you checked; the default is to merge.
+ */
+describe('no duplicate team name across owner records', () => {
+  const ALLOWED: Record<string, Record<string, string>> = {
+    'afl-fantasy': {
+      // A real handover where the incoming owner kept the outgoing team name.
+      'cska sofia': 'Evo Tchilin (2016) handed CSKA Sofia to the next owner in 2017',
+    },
+  };
+
+  for (const league of ALL_LEAGUES as any[]) {
+    if (!league.dataPath) continue;
+    const ownersPath = path.join(ROOT, league.dataPath, 'derived', 'owner-tenures.json');
+    const runIf = existsSync(ownersPath) ? it : it.skip;
+
+    runIf(`${league.slug}: every team name maps to one owner record`, () => {
+      const owners = readJson(ownersPath);
+      const byName = new Map<string, any[]>();
+      for (const owner of owners.owners) {
+        // Dedupe within an owner first: a name that recurs across two of that
+        // person's own identity runs is not a collision.
+        const seen = new Set<string>();
+        for (const identity of owner.identities) {
+          const key = normalizeIdentity(identity.name ?? '');
+          if (!key || seen.has(key)) continue;
+          seen.add(key);
+          if (!byName.has(key)) byName.set(key, []);
+          byName.get(key)!.push(owner);
+        }
+      }
+
+      // Co-owners of one shared team are two owner entries on one HOLDING, so
+      // they carry the same identity by construction — not a split. Handled
+      // structurally rather than by name, so a new shared team needs no entry.
+      const sameHolding = (list: any[]) =>
+        list.every((o) =>
+          list.every(
+            (other) =>
+              o.slug === other.slug ||
+              (o.coOwners ?? []).some((co: any) => co.slug === other.slug)
+          )
+        );
+
+      const allowed = ALLOWED[league.slug] ?? {};
+      const collisions = [...byName.entries()]
+        .filter(([key, list]) => list.length > 1 && !allowed[key] && !sameHolding(list))
+        .map(([key, list]) => `"${key}" is on ${list.map((o) => o.slug).join(' and ')}`);
+
+      expect(
+        collisions,
+        `Two owner records share a team name in ${league.slug}. Almost always this ` +
+          `is one person the slot-change inference split in two — merge them into ` +
+          `the EARLIER record (the later slug goes to previousSlugs, which ` +
+          `resolveOwnerDetail redirects from). If they really are two people, add ` +
+          `the name to ALLOWED above with the reason.\n  ${collisions.join('\n  ')}`
+      ).toEqual([]);
     });
   }
 });

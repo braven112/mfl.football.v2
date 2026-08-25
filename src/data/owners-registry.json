@@ -953,22 +953,6 @@
       "notes": null
     },
     {
-      "id": "own-0059",
-      "slug": "avenging-amish-2021",
-      "previousSlugs": [],
-      "displayName": "Danny Baccam",
-      "claims": [
-        {
-          "league": "afl-fantasy",
-          "franchiseId": "0007",
-          "yearStart": 2021,
-          "yearEnd": 9999
-        }
-      ],
-      "seededFrom": "mfl:league-export@2026-08-25",
-      "notes": null
-    },
-    {
       "id": "own-0060",
       "slug": "shawn-klezovich",
       "previousSlugs": [
@@ -2061,7 +2045,9 @@
     {
       "id": "own-0133",
       "slug": "team-murderface-2014",
-      "previousSlugs": [],
+      "previousSlugs": [
+        "avenging-amish-2021"
+      ],
       "displayName": "Danny Baccam",
       "claims": [
         {
@@ -2069,9 +2055,15 @@
           "franchiseId": "0007",
           "yearStart": 2014,
           "yearEnd": 2020
+        },
+        {
+          "league": "afl-fantasy",
+          "franchiseId": "0007",
+          "yearStart": 2021,
+          "yearEnd": 9999
         }
       ],
-      "seededFrom": "mfl:league-export@2026-08-25",
+      "seededFrom": "human:brandon@2026-08-25",
       "notes": null
     },
     {
