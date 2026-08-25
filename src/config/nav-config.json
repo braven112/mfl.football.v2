@@ -404,6 +404,14 @@
           "description": "All-time records, championships, and per-franchise profiles"
         },
         {
+          "id": "owners",
+          "label": "Owners",
+          "icon": "users",
+          "path": "/owners",
+          "external": false,
+          "description": "Every owner who has run a team here — current and former — with their full record"
+        },
+        {
           "id": "rivalries",
           "label": "Rivalries",
           "icon": "trophy",
@@ -551,7 +559,8 @@
     "/draft-room": "/draft-room",
     "/suggestions": "/suggestions",
     "/stats": "/stats",
-    "/rules-chat": "/rules-chat"
+    "/rules-chat": "/rules-chat",
+    "/owners": "/owners"
   },
   "verifyTeamUrl": {
     "theleague": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE20",

@@ -356,7 +356,11 @@ const attachTrophies = (totals, yearSummaries, ownedSlotYears) => {
         totals.divisionTitles.push({
           year,
           divisionId: winner.divisionId ?? null,
-          divisionName: winner.name ?? winner.divisionName ?? null,
+          // `winner.name` is the TEAM's name, `winner.divisionName` the
+          // division's — franchise-history.json's own divisionTitles use the
+          // latter, so reading `name` here would put "Acer FC Edge" where
+          // "Atlantic" belongs and silently diverge the two shapes.
+          divisionName: winner.divisionName ?? null,
         });
       }
     }

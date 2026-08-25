@@ -7,6 +7,9 @@ import leagueConfig from '../../../data/theleague.config.json';
 import { formatTradeAsset } from '../../../utils/franchise-trade-asset';
 import { buildFranchiseEras, type FranchiseEra as Era } from '../../../utils/franchise-eras';
 import EraSeasonTable from '../../../components/shared/franchises/EraSeasonTable.astro';
+import PreviousOwners from '../../../components/shared/franchises/PreviousOwners.astro';
+import ownerTenures from '../../../../data/theleague/derived/owner-tenures.json';
+import type { OwnerTenuresFile } from '../../../types/owner-tenures';
 
 export const prerender = false;
 
@@ -725,6 +728,14 @@ const formatBid = (n: number): string => {
         />
       ))}
     </section>
+
+    {/* The eras above are this owner's only. Everything the slot played under
+        someone else is on their page — this is the way there. */}
+    <PreviousOwners
+      leagueSlug="theleague"
+      franchiseId={id as string}
+      data={ownerTenures as unknown as OwnerTenuresFile}
+    />
 
     <p class="footnote">
       <a href={resolveLeaguePath('/theleague/franchises', hideLeaguePrefix)}>← All franchises</a>

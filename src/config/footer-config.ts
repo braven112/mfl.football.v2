@@ -161,6 +161,7 @@ const THELEAGUE_COLUMNS: ColumnMap = {
   'Record Book': [
     'stats',
     'franchises',
+    'owners',
     'rivalries',
     'pecking-order',
     'mvp',
@@ -214,6 +215,7 @@ const AFL_COLUMNS: ColumnMap = {
   'Record Book': [
     { label: 'Championship History', soon: true },
     { id: 'afl-franchises', label: 'Franchises' },
+    { id: 'afl-owners', label: 'Owners' },
     { id: 'afl-owner-activity', label: 'Owner Activity' },
   ],
   'League Office': [
