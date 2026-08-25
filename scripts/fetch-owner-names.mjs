@@ -112,13 +112,16 @@ export const assertNoContactInfo = (value, where) => {
  * worst possible failure for this script: silent, and indistinguishable from a
  * league that simply has none.
  *
- * Two sources, in the order the rest of this repo uses them
- * (`apply-pending-contracts.mjs`, `sync-draft-pick-contracts.mjs`,
- * `export-best-ball-draft.mjs`, `mfl-calendar-event.mjs` all do exactly this):
+ * THREE sources, tried in this order, and a source is taken only when it
+ * yields BOTH cookies (see the loop below for why a half-set one must not win):
  *
  *   1. MFL_USER_ID + MFL_IS_COMMISH — the stored session cookies. PREFERRED,
- *      and the only path proven to work from a runner.
- *   2. MFL_USERNAME + MFL_PASSWORD — a fresh login, which RETURNS those same
+ *      and what the rest of this repo drives MFL with
+ *      (`apply-pending-contracts.mjs`, `sync-draft-pick-contracts.mjs`,
+ *      `export-best-ball-draft.mjs`, `mfl-calendar-event.mjs` all do this).
+ *   2. MFL_COOKIE — a whole Cookie header pasted from a browser, split back
+ *      into the pair. Convenient for a local run.
+ *   3. MFL_USERNAME + MFL_PASSWORD — a fresh login, which RETURNS those same
  *      two cookies as `{ mflUserId, mflIsCommish }`.
  *
  * `MFL_IS_COMMISH` is the one that matters here. Owner names are returned only
