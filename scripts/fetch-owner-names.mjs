@@ -222,18 +222,40 @@ function yearsFor(league, only) {
   return only ? years.filter((y) => y === only) : years;
 }
 
-async function fetchOwnersForYear(league, year, cookies) {
+/**
+ * Owner names for one league-year, as `Map<franchiseId, name>`.
+ *
+ * Returns null when the response could not be read at all, and an EMPTY map
+ * when it was read but carried no names — the caller reports those
+ * differently, because they have completely different causes and the first
+ * version of this conflated them for 44 league-years in a row.
+ *
+ * `mflFetch` resolves to a `Response`. Its `.body` is a ReadableStream, so the
+ * original `JSON.parse(res.body)` stringified it to "[object ReadableStream]",
+ * threw, and was swallowed by a bare catch — every year returned null whatever
+ * the credentials were. Every other caller in this repo does `await
+ * res.text()`; so does this one now.
+ */
+export async function fetchOwnersForYear(league, year, cookies) {
   const url = `https://${league.mflHost}/${year}/export?TYPE=league&L=${league.id}&JSON=1`;
   const res = await mflFetch({ url, cookies, timeoutMs: 15_000 });
+  if (!res?.ok) {
+    throw new Error(`HTTP ${res?.status ?? '?'} from ${league.mflHost}/${year}`);
+  }
+  const text = await res.text();
   let payload;
   try {
-    payload = typeof res === 'string' ? JSON.parse(res) : res?.body ? JSON.parse(res.body) : res;
+    payload = JSON.parse(text);
   } catch {
-    return null;
+    // MFL answers a rejected request with HTML or an <error> body, not JSON.
+    throw new Error(
+      `${year}: response was not JSON (${text.slice(0, 120).replace(/\s+/g, ' ')})`
+    );
   }
   const franchises = payload?.league?.franchises?.franchise ?? [];
+  const list = Array.isArray(franchises) ? franchises : [franchises];
   const byFranchise = new Map();
-  for (const franchise of Array.isArray(franchises) ? franchises : [franchises]) {
+  for (const franchise of list) {
     if (!franchise?.id) continue;
     for (const field of NAME_FIELDS) {
       const name = cleanName(franchise[field]);
@@ -244,7 +266,11 @@ async function fetchOwnersForYear(league, year, cookies) {
       }
     }
   }
-  return byFranchise;
+  // Field NAMES only — never values. A response that parsed but carries no
+  // name field is either an unauthenticated one (the public field set) or a
+  // schema change, and only the key list tells you which.
+  const fieldsSeen = list.length ? Object.keys(list[0]).sort() : [];
+  return { byFranchise, franchiseCount: list.length, fieldsSeen };
 }
 
 /**
@@ -310,24 +336,49 @@ async function main() {
       continue;
     }
     let named = 0;
+    let anonymousYears = 0;
+    let lastFieldsSeen = null;
     for (const year of years) {
-      let byFranchise = null;
+      let result = null;
       try {
-        byFranchise = await fetchOwnersForYear(league, year, cookies);
+        result = await fetchOwnersForYear(league, year, cookies);
       } catch (err) {
         console.warn(`  [${slug}] ${year}: ${err.message}`);
       }
-      if (!byFranchise || byFranchise.size === 0) {
-        console.log(`  [${slug}] ${year}: no owner names returned (not commissioner for this year?)`);
+      if (!result) {
+        // Already reported by the catch above — a read failure, not an
+        // authorisation one. Do not print a second, misleading line.
+      } else if (result.byFranchise.size === 0) {
+        anonymousYears += 1;
+        lastFieldsSeen = result.fieldsSeen;
+        console.log(
+          `  [${slug}] ${year}: parsed ${result.franchiseCount} franchises, none carrying a name field`
+        );
       } else {
-        for (const [franchiseId, name] of byFranchise) {
+        for (const [franchiseId, name] of result.byFranchise) {
           observed.set(`${slug}|${franchiseId}|${year}`, name);
         }
-        named += byFranchise.size;
+        named += result.byFranchise.size;
       }
       await sleep(600); // be polite to MFL
     }
     console.log(`  [${slug}] collected ${named} franchise-year owner names across ${years.length} years`);
+    // The diagnosis, printed once per league rather than 20 times. Field NAMES
+    // only. If this list is the public set, the cookie was not honoured —
+    // almost always an expired MFL session, since MFL answers an unauthorised
+    // read with the PUBLIC payload rather than an error.
+    if (named === 0 && anonymousYears > 0 && lastFieldsSeen) {
+      console.log('');
+      console.log(`  [${slug}] every year parsed, no year carried an owner name.`);
+      console.log(`  [${slug}] fields MFL returned per franchise: ${lastFieldsSeen.join(', ')}`);
+      console.log(
+        `  [${slug}] expected one of: ${NAME_FIELDS.join(', ')}. If the list above is`
+      );
+      console.log(
+        `  [${slug}] the ordinary public field set, the cookies were ignored — refresh`
+      );
+      console.log(`  [${slug}] MFL_USER_ID / MFL_IS_COMMISH from a logged-in browser.`);
+    }
   }
 
   if (observed.size === 0) {

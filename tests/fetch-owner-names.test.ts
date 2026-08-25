@@ -279,3 +279,80 @@ describe('resolveCookies', () => {
     spy.mockRestore();
   });
 });
+
+/**
+ * fetchOwnersForYear — the parse, which never ran until MFL was called for real.
+ *
+ * `mflFetch` resolves to a `Response`, whose `.body` is a ReadableStream. The
+ * original code did `JSON.parse(res.body)`, which stringifies the stream to
+ * "[object ReadableStream]", throws, and was swallowed by a bare catch — so
+ * EVERY league-year returned null and the run reported "no owner names" for 44
+ * years straight with perfectly good credentials. These tests drive the
+ * function with a Response, which is what the real caller hands it.
+ */
+describe('fetchOwnersForYear', () => {
+  const league = { slug: 'theleague', id: '13522', mflHost: 'example.invalid' };
+  const asResponse = (body: unknown, init: { ok?: boolean; status?: number } = {}) =>
+    new Response(typeof body === 'string' ? body : JSON.stringify(body), {
+      status: init.status ?? 200,
+    });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const withFetch = async (body: unknown, status = 200) => {
+    const api = await import('../scripts/lib/mfl-api.mjs');
+    vi.spyOn(api, 'mflFetch').mockResolvedValue(asResponse(body, { status }) as any);
+    const mod = await import('../scripts/fetch-owner-names.mjs');
+    return mod.fetchOwnersForYear(league, 2009, { MFL_USER_ID: 'u', MFL_IS_COMMISH: 'c' });
+  };
+
+  it('reads names out of a real Response body', async () => {
+    const result = await withFetch({
+      league: {
+        franchises: {
+          franchise: [
+            { id: '0001', name: 'Pacific Pigskins', owner_name: 'Ross Lawrence' },
+            { id: '0002', name: 'Bring The Pain', owner_name: 'Someone Else' },
+          ],
+        },
+      },
+    });
+    expect(result.byFranchise.get('0001')).toBe('Ross Lawrence');
+    expect(result.byFranchise.size).toBe(2);
+  });
+
+  /** The exact shape MFL returns to an unauthenticated read. */
+  it('reports the public field set when no name field is present', async () => {
+    const result = await withFetch({
+      league: {
+        franchises: {
+          franchise: [{ id: '0001', name: 'Pacific Pigskins', abbrev: 'PAC', division: '00' }],
+        },
+      },
+    });
+    expect(result.byFranchise.size).toBe(0);
+    expect(result.franchiseCount).toBe(1);
+    // The diagnosis: field NAMES, so "auth ignored" is distinguishable from
+    // "genuinely no data" without ever logging a value.
+    expect(result.fieldsSeen).toEqual(['abbrev', 'division', 'id', 'name']);
+  });
+
+  it('normalizes MFL returning a single franchise as an object, not an array', async () => {
+    const result = await withFetch({
+      league: { franchises: { franchise: { id: '0001', owner_name: 'Solo Owner' } } },
+    });
+    expect(result.byFranchise.get('0001')).toBe('Solo Owner');
+  });
+
+  it('throws rather than silently returning nothing on a non-JSON body', async () => {
+    await expect(withFetch('<error>API requires commissioner access</error>')).rejects.toThrow(
+      /not JSON/
+    );
+  });
+
+  it('throws on a non-ok response instead of reporting it as anonymous', async () => {
+    await expect(withFetch({}, 403)).rejects.toThrow(/HTTP 403/);
+  });
+});
