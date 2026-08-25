@@ -357,6 +357,44 @@ describe('segmentSlotTenures', () => {
   });
 });
 
+describe('segmentSlotTenures artwork', () => {
+  /**
+   * The sibling of the `buildTenuresFromRows` fold: two adjacent history
+   * entries can share a name and differ only in artwork (TheLeague's 0001,
+   * 0008 and 0015 all do), so a run assembled from them must not keep the
+   * first entry's retired look. A gap-filled year is the exception — its icon
+   * is the MFL feed's guess, not a curated choice.
+   */
+  const slot = (history: any[]) => ({ franchiseId: '0001', name: 'Pacific Pigskins', history });
+
+  it('takes the newest entry of a same-name run', () => {
+    const groups = segmentSlotTenures({
+      team: slot([
+        { name: 'Pacific Pigskins', yearStart: 2007, yearEnd: 2012, icon: '/assets/theleague/history/pigskins_2007.png' },
+        { name: 'Pacific Pigskins', yearStart: 2013, yearEnd: 2016, icon: '/assets/theleague/history/pigskins_2013.png' },
+      ]),
+      years: [2007, 2012, 2013, 2016],
+      feedIdentityFor: null,
+    });
+    expect(groups[0].identities).toHaveLength(1);
+    // Cast: `segmentSlotTenures` is untyped .mjs, so an empty-literal fixture
+    // narrows `identities` to `never[]`.
+    expect((groups[0].identities[0] as any).icon).toBe('/assets/theleague/history/pigskins_2013.png');
+  });
+
+  it('does not let a gap-filled feed icon overwrite curated artwork', () => {
+    const groups = segmentSlotTenures({
+      team: slot([
+        { name: 'Pacific Pigskins', yearStart: 2007, yearEnd: 2012, icon: '/assets/theleague/history/pigskins_2007.png' },
+      ]),
+      years: [2007, 2012, 2013],
+      // 2013 has no covering entry, so it gap-fills from the feed.
+      feedIdentityFor: () => ({ name: 'Pacific Pigskins', icon: 'https://mfl.example/dead.gif', banner: null }),
+    });
+    expect((groups[0].identities[0] as any).icon).toBe('/assets/theleague/history/pigskins_2007.png');
+  });
+});
+
 describe('dominantIdentity', () => {
   it('picks the identity with the most seasons', () => {
     const groups = segmentSlotTenures({
@@ -712,18 +750,24 @@ describe('buildOwnerTenures identity artwork', () => {
     playoffResult: 'missed',
     seasonNotStarted: false,
   });
-
-  it('takes the newest year of a name run, not the oldest', () => {
-    const out = buildOwnerTenures({
+  // `buildOwnerTenures` is a .mjs with no type declarations, so TS infers its
+  // optional params from their DEFAULT VALUES — `resolveIcon = null` types as
+  // `null`, and passing a real resolver is an error. Cast the options bag
+  // rather than let these count against the type-error baseline.
+  const build = (ledgerRows: any[]) =>
+    buildOwnerTenures({
       league,
       teams: [{ franchiseId: '0002', name: 'Da Dangsters' }],
-      ledgerRows: [
-        row(2015, 'Da Dangsters', '/assets/theleague/history/old.png', '/assets/theleague/history/old_banner.png'),
-        row(2025, 'Da Dangsters', '/assets/theleague/icons/new.png', '/assets/theleague/banners/new.png'),
-      ],
+      ledgerRows,
       resolveIcon: ({ icon }: any) => icon,
       generatedAt: 'fixed',
-    });
+    } as any);
+
+  it('takes the newest year of a name run, not the oldest', () => {
+    const out = build([
+      row(2015, 'Da Dangsters', '/assets/theleague/history/old.png', '/assets/theleague/history/old_banner.png'),
+      row(2025, 'Da Dangsters', '/assets/theleague/icons/new.png', '/assets/theleague/banners/new.png'),
+    ]);
     const identity = out.owners[0].tenures[0].identities[0];
     expect(identity.years).toEqual([2015, 2025]);
     expect(identity.icon).toBe('/assets/theleague/icons/new.png');
@@ -733,33 +777,21 @@ describe('buildOwnerTenures identity artwork', () => {
   });
 
   it('keeps the run\'s own artwork when a newer year carries none', () => {
-    const out = buildOwnerTenures({
-      league,
-      teams: [{ franchiseId: '0002', name: 'Da Dangsters' }],
-      ledgerRows: [
-        row(2015, 'Da Dangsters', '/assets/theleague/history/old.png', '/assets/theleague/history/old_banner.png'),
-        { ...row(2025, 'Da Dangsters', '', ''), icon: null, banner: null },
-      ],
-      resolveIcon: ({ icon }: any) => icon,
-      generatedAt: 'fixed',
-    });
+    const out = build([
+      row(2015, 'Da Dangsters', '/assets/theleague/history/old.png', '/assets/theleague/history/old_banner.png'),
+      { ...row(2025, 'Da Dangsters', '', ''), icon: null, banner: null },
+    ]);
     const identity = out.owners[0].tenures[0].identities[0];
     expect(identity.icon).toBe('/assets/theleague/history/old.png');
     expect(identity.banner).toBe('/assets/theleague/history/old_banner.png');
   });
 
   it('does not leak artwork across a rename', () => {
-    const out = buildOwnerTenures({
-      league,
-      teams: [{ franchiseId: '0002', name: 'Da Dangsters' }],
-      ledgerRows: [
-        row(2014, 'Degenerates', '/assets/theleague/history/degenerates.png', '/assets/theleague/history/degenerates_banner.png'),
-        row(2015, 'Da Dangsters', '/assets/theleague/history/old.png', '/assets/theleague/history/old_banner.png'),
-        row(2025, 'Da Dangsters', '/assets/theleague/icons/new.png', '/assets/theleague/banners/new.png'),
-      ],
-      resolveIcon: ({ icon }: any) => icon,
-      generatedAt: 'fixed',
-    });
+    const out = build([
+      row(2014, 'Degenerates', '/assets/theleague/history/degenerates.png', '/assets/theleague/history/degenerates_banner.png'),
+      row(2015, 'Da Dangsters', '/assets/theleague/history/old.png', '/assets/theleague/history/old_banner.png'),
+      row(2025, 'Da Dangsters', '/assets/theleague/icons/new.png', '/assets/theleague/banners/new.png'),
+    ]);
     const identities = out.owners[0].tenures[0].identities;
     expect(identities.map((i: any) => i.icon)).toEqual([
       '/assets/theleague/history/degenerates.png',
@@ -803,7 +835,7 @@ describe('buildOwnerTenures owner card face', () => {
       ledgerRows,
       resolveIcon: ({ icon }: any) => icon,
       generatedAt: 'fixed',
-    });
+    } as any);
 
   const TEAM = [{ franchiseId: '0012', name: 'Suh girls, one cup', currentOwnerSince: 2009 }];
 

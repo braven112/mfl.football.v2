@@ -245,6 +245,17 @@ export const segmentSlotTenures = ({ team, years, feedIdentityFor }) => {
     if (last && normalizeIdentity(last.name) === normalizeIdentity(identityName ?? '')) {
       last.yearEnd = year;
       last.years.push(year);
+      // Newest art wins, same as the ledger-row fold in `buildTenuresFromRows`
+      // — two adjacent history entries can share a name and differ only in
+      // artwork (TheLeague's 0001, 0008 and 0015 all do), and taking the run's
+      // first entry pins it to the retired look.
+      //
+      // Only a real config ENTRY may overwrite. A gap-filled year carries the
+      // MFL feed's icon, which is uncurated and may be remote or dead; letting
+      // it win would have a feed guess clobber the art a human chose, and the
+      // resolver's repair only runs on icons it can already tell are unusable.
+      if (entry?.icon) last.icon = entry.icon;
+      if (entry?.banner) last.banner = entry.banner;
     } else {
       current.identities.push({
         name: identityName,
