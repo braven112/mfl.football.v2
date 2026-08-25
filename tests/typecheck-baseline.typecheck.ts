@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -21,6 +21,9 @@ import { fileURLToPath } from 'node:url';
 const BASELINE_PATH = fileURLToPath(new URL('./fixtures/typecheck-baseline.json', import.meta.url));
 const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url));
 
+/** Hard ceiling on one `astro check`. Observed runs are 140-230s. */
+const CHECK_TIMEOUT_MS = 420_000;
+
 interface Baseline {
   total: number;
   recordedAt: string;
@@ -34,6 +37,9 @@ function runAstroCheck(): string {
       cwd: REPO_ROOT,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
+      // The checker normally takes ~2.5 min; this only has to stop a stall
+      // being unbounded, so it is deliberately generous.
+      timeout: CHECK_TIMEOUT_MS,
       // The 12k-line rosters.astro OOMs the checker at the default heap.
       // Overridable so a smaller CI runner can cap it below the local default.
       env: {
@@ -45,7 +51,14 @@ function runAstroCheck(): string {
   } catch (err) {
     // `astro check` exits non-zero whenever errors remain, which is the normal
     // state here — the count in stdout is what matters, not the exit code.
-    const e = err as { stdout?: string; stderr?: string };
+    const e = err as { stdout?: string; stderr?: string; code?: string; signal?: string };
+    if (e.code === 'ETIMEDOUT' || e.signal === 'SIGTERM') {
+      throw new Error(
+        `astro check did not finish within ${CHECK_TIMEOUT_MS / 1000}s and was killed. `
+          + 'That is a stall, not a type error — re-run, and raise CHECK_TIMEOUT_MS if the '
+          + 'checker has genuinely got slower.',
+      );
+    }
     const out = `${e.stdout ?? ''}${e.stderr ?? ''}`;
     if (!out) throw err;
     return out;
@@ -140,9 +153,16 @@ function parseErrorTotal(output: string): number {
 }
 
 describe('type-error baseline', () => {
-  // One `astro check` run (~2.5 min) feeds both assertions below.
-  const output = runAstroCheck();
+  // One `astro check` run feeds both assertions below. It runs in beforeAll
+  // rather than in the describe body because code at describe() evaluation is
+  // collection-time: neither testTimeout nor hookTimeout applies there, so a
+  // stalled checker would hang the run with no timeout to stop it.
+  let output: string;
   const baseline = JSON.parse(readFileSync(BASELINE_PATH, 'utf8')) as Baseline;
+
+  beforeAll(() => {
+    output = runAstroCheck();
+  }, CHECK_TIMEOUT_MS + 60_000);
 
   it('never rises above the recorded baseline', () => {
     const actual = parseErrorTotal(output);
