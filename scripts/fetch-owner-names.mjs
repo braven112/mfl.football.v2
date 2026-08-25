@@ -222,18 +222,53 @@ function yearsFor(league, only) {
   return only ? years.filter((y) => y === only) : years;
 }
 
-async function fetchOwnersForYear(league, year, cookies) {
+/**
+ * Owner names for one league-year.
+ *
+ * @returns `{ byFranchise: Map<franchiseId, name>, franchiseCount, fieldsSeen }`.
+ *   `byFranchise` is EMPTY when the response parsed but carried no name field —
+ *   `fieldsSeen` (field NAMES only) is what tells you whether that was an
+ *   unauthenticated payload or a schema change.
+ * @throws on a non-OK response, or a body that is not JSON. Both are read
+ *   failures rather than authorisation ones, and the caller reports them as
+ *   errors — the first version returned null for all three cases and spent 44
+ *   league-years blaming the credentials for a parser bug.
+ *
+ * `mflFetch` resolves to a `Response`. Its `.body` is a ReadableStream, so the
+ * original `JSON.parse(res.body)` stringified it to "[object ReadableStream]",
+ * threw, and was swallowed by a bare catch. Every other caller in this repo
+ * does `await res.text()`; so does this one now.
+ */
+export async function fetchOwnersForYear(league, year, cookies) {
   const url = `https://${league.mflHost}/${year}/export?TYPE=league&L=${league.id}&JSON=1`;
   const res = await mflFetch({ url, cookies, timeoutMs: 15_000 });
+  if (!res?.ok) {
+    throw new Error(`HTTP ${res?.status ?? '?'} from ${league.mflHost}/${year}`);
+  }
+  const text = await res.text();
   let payload;
   try {
-    payload = typeof res === 'string' ? JSON.parse(res) : res?.body ? JSON.parse(res.body) : res;
+    payload = JSON.parse(text);
   } catch {
-    return null;
+    // MFL answers a rejected request with HTML or an <error> body, not JSON —
+    // that snippet is worth showing, because it names the reason.
+    //
+    // Anything else is NOT echoed. This response can carry owner names and
+    // email addresses, and malformed JSON is exactly the case where the PII
+    // guard downstream never gets to run. Reporting the shape instead of the
+    // content keeps a diagnostic from becoming the leak this script exists to
+    // prevent.
+    const head = text.trimStart();
+    const markupLike = head.startsWith('<');
+    const detail = markupLike
+      ? head.slice(0, 120).replace(/\s+/g, ' ')
+      : `${text.length} bytes, not markup — body withheld (may contain owner PII)`;
+    throw new Error(`${year}: response was not JSON (${detail})`);
   }
   const franchises = payload?.league?.franchises?.franchise ?? [];
+  const list = Array.isArray(franchises) ? franchises : [franchises];
   const byFranchise = new Map();
-  for (const franchise of Array.isArray(franchises) ? franchises : [franchises]) {
+  for (const franchise of list) {
     if (!franchise?.id) continue;
     for (const field of NAME_FIELDS) {
       const name = cleanName(franchise[field]);
@@ -244,7 +279,11 @@ async function fetchOwnersForYear(league, year, cookies) {
       }
     }
   }
-  return byFranchise;
+  // Field NAMES only — never values. A response that parsed but carries no
+  // name field is either an unauthenticated one (the public field set) or a
+  // schema change, and only the key list tells you which.
+  const fieldsSeen = list.length ? Object.keys(list[0]).sort() : [];
+  return { byFranchise, franchiseCount: list.length, fieldsSeen };
 }
 
 /**
@@ -310,24 +349,59 @@ async function main() {
       continue;
     }
     let named = 0;
+    let anonymousYears = 0;
+    let failedYears = 0;
+    let lastFieldsSeen = null;
     for (const year of years) {
-      let byFranchise = null;
+      let result = null;
       try {
-        byFranchise = await fetchOwnersForYear(league, year, cookies);
+        result = await fetchOwnersForYear(league, year, cookies);
       } catch (err) {
         console.warn(`  [${slug}] ${year}: ${err.message}`);
       }
-      if (!byFranchise || byFranchise.size === 0) {
-        console.log(`  [${slug}] ${year}: no owner names returned (not commissioner for this year?)`);
+      if (!result) {
+        // Already reported by the catch above — a read failure, not an
+        // authorisation one. Do not print a second, misleading line.
+        failedYears += 1;
+      } else if (result.byFranchise.size === 0) {
+        anonymousYears += 1;
+        lastFieldsSeen = result.fieldsSeen;
+        console.log(
+          `  [${slug}] ${year}: parsed ${result.franchiseCount} franchises, none carrying a name field`
+        );
       } else {
-        for (const [franchiseId, name] of byFranchise) {
+        for (const [franchiseId, name] of result.byFranchise) {
           observed.set(`${slug}|${franchiseId}|${year}`, name);
         }
-        named += byFranchise.size;
+        named += result.byFranchise.size;
       }
       await sleep(600); // be polite to MFL
     }
     console.log(`  [${slug}] collected ${named} franchise-year owner names across ${years.length} years`);
+    // The diagnosis, printed once per league rather than 20 times. Field NAMES
+    // only. If this list is the public set, the cookie was not honoured —
+    // almost always an expired MFL session, since MFL answers an unauthorised
+    // read with the PUBLIC payload rather than an error.
+    if (named === 0 && anonymousYears > 0 && lastFieldsSeen) {
+      console.log('');
+      // Say what actually happened. Claiming "every year parsed" while some
+      // years threw would point the reader at authorisation when the real
+      // problem is that those years never came back at all.
+      console.log(
+        failedYears === 0
+          ? `  [${slug}] every year parsed, no year carried an owner name.`
+          : `  [${slug}] ${anonymousYears} of ${years.length} years parsed with no owner name; ` +
+            `${failedYears} failed to read (see the errors above).`
+      );
+      console.log(`  [${slug}] fields MFL returned per franchise: ${lastFieldsSeen.join(', ')}`);
+      console.log(
+        `  [${slug}] expected one of: ${NAME_FIELDS.join(', ')}. If the list above is`
+      );
+      console.log(
+        `  [${slug}] the ordinary public field set, the cookies were ignored — refresh`
+      );
+      console.log(`  [${slug}] MFL_USER_ID / MFL_IS_COMMISH from a logged-in browser.`);
+    }
   }
 
   if (observed.size === 0) {
