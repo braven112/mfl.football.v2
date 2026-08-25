@@ -79,6 +79,24 @@ is dark-only (no `:root` value) — safe only inside a `:global(html.dark)` bloc
   `design-token-guard` nor `team-accent-css` can see. When the color isn't yours
   to choose, give the mark a hairline ring in the surface's own ink.
 
+## `--league-accent` is LIGHT in dark mode — white ink on it fails AA
+
+The accent flips brightness with the theme: `#1c497c` / `#c41e3a` in light, but
+`#3b82f6` (TheLeague) / `#ef5350` (AFL) / `#34d399` (bb1) in dark. So the
+reflex pairing — white text on an accent fill, correct in light at 9.2:1 and
+5.8:1 — measures **3.68:1**, **3.49:1** and **1.92:1** in dark, all under the
+4.5:1 floor. Nothing catches it: the token exists, resolves, and is defined in
+both themes, so `design-token-guard` passes and light mode looks perfect.
+
+Any filled accent chip (an active tab, a current-page pill, a selected state)
+needs `:global(html.dark) … { color: #0b1220; }` — dark ink on the same fill
+clears 5.09:1 / 5.37:1. And note 14px/700 is NOT large text; that floor is
+18.66px bold, so the 3:1 large-text allowance does not apply to a chip label.
+
+Measure the computed values in a real browser rather than reading the token —
+the accent is aliased through `--color-primary` on TheLeague and only pinned
+directly on AFL, so the source does not tell you the shipped colour.
+
 ## Smaller traps, each of which cost a session
 
 - **An inline `style` beats every `html.dark` rule.** JS-built markup carrying
