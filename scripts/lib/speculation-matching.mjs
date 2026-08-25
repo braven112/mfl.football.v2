@@ -273,6 +273,10 @@ function scoreCandidate({ marquee, returnPkg, divisionsAreSame }) {
  * @param {Map<string, number>} args.adpRankById - playerId → ADP rank
  * @param {Map<string, {division:string,nameMedium:string}>} args.teams
  * @param {number} [args.limit=5]
+ * @param {Record<string, number>|null} [args.medians] Pre-computed per-position
+ *   league medians. This is the injection point that keeps the function IO-free
+ *   for tests — it was destructured but never documented, so callers passing it
+ *   were flagged.
  * @returns {Array<{seller:string, buyer:string, marquee:object, returnPkg:Array, score:number, capRelief:boolean, scoreBreakdown?:string}>}
  */
 export function findTwoTeamCandidates({

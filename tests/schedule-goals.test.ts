@@ -60,7 +60,7 @@ describe('scoreSeasonGoals', () => {
       const future = { ...aflFacts, crossConference, season: 9999 };
       expect(() => scoreSeasonGoals(future), `crossConference=${crossConference}`).not.toThrow();
       const { goals } = scoreSeasonGoals(future);
-      expect(goals).toHaveLength(scheduleConstraints({ crossConference }).length);
+      expect(goals).toHaveLength(scheduleConstraints().length);
     }
   });
 
@@ -243,9 +243,8 @@ describe('the committed 2026 reveals carry their scorecard', () => {
     ['The League', theLeagueRelease as any],
   ] as const) {
     it(`${name} scores every in-force goal and defers the 2027 one`, () => {
-      const cross = name === 'AFL';
       expect(rec.goals.map((g: any) => g.key)).toEqual(
-        scheduleConstraints({ crossConference: cross, season: 2026 }).map((c: any) => c.key),
+        scheduleConstraints({ season: 2026 }).map((c: any) => c.key),
       );
       expect(rec.notYetAdopted).toEqual([{ key: 'light-bye-weeks', since: 2027 }]);
       // Nothing structural went wrong in a season that is being played.

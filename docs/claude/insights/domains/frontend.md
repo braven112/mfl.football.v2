@@ -132,6 +132,49 @@ hrefs to local copies, and open it in the bundled Chromium — it isolates
 
 ---
 
+## 2026-08-25 - A Narrow `@param` Is a Test Blind Spot: the Redaction Suite Never Exercised `nameMedium`
+
+**Context:** Clearing `ts(2353)` ("object literal may only specify known
+properties") across `tests/` — 40 errors, on the theory that a test passing a
+property the type omits may not be testing what its name claims.
+
+**Insight:** Almost all 40 were a declaration that had drifted from what the
+function really accepts, in two shapes:
+
+1. **Inferred, not written.** `function f(x, { a = [], b } = {})` makes TS infer
+   the options type from `a` alone and **drop `b` entirely** — it has neither a
+   default nor an annotation. Every caller passing `b` is then flagged even
+   though the function uses it. Hit `buildGroupPostText` (`now`),
+   `buildFormerNameCallback` (`currentName` — which its first line gates on),
+   and `checkGroupMeQuality` (`apiKey`, read six times). Fix by writing the
+   `@param` out; do not delete the argument.
+2. **Written but stale.** `appendOutcome`'s `@param` declared
+   `{playerId?, status, at?}` while production passes `reason` on 10 of 13 call
+   sites, `activeCount` on another, and a whole second `{type:'manual-done'}`
+   variant that *this same module* filters on. The annotation described data the
+   module does not hold.
+
+**The one that mattered:** `tests/schefter-franchise-name-redaction.test.ts`
+declared a local `TeamEntry` without `nameMedium`, so no fixture team could
+carry one without a type error — and none did. But the scanner redacts
+`['name', 'nameMedium', 'nameShort', 'abbrev']` in two sweeps, and its own
+comment cites a `nameMedium` ("Dead Cap" is 0004's) as the shape a tipster
+actually typed. **Deleting `nameMedium` from both sweeps left 99 of 101 tests
+green.** A franchise-name leak in that field had no test behind it.
+
+**Recommendation:** Treat `ts(2353)` in a test as a coverage question, not a
+typing nit — ask "can this fixture even represent the case the code handles?".
+And when a type is hand-written in a test to mirror production output, it is a
+second source of truth that drifts silently; the comment claiming it is "shaped
+exactly like loadTeams()' output" was already false. `pnpm test:types` now pins
+`ts(2353)` at zero so a new one has to be looked at.
+
+**Evidence:** the `nameMedium` fixture field and its two new tests; the widened
+`@param` on `appendOutcome`, `buildTipsterContext` (whose third parameter
+`navSlug` was undocumented entirely), `findTwoTeamCandidates` (`medians`, its
+IO-free injection point) and `isSeasonComplete`.
+
+
 ## 2026-08-24 - A JSDoc Cast Is Inert in an `.astro` `<script>`; Type at the Query Instead
 
 **Context:** Clearing the `Property 'X' does not exist on type 'Element'` class

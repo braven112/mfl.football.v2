@@ -87,8 +87,16 @@ function deriveBeat(topicCounts) {
 /**
  * Build a per-tipster context map for this scanner cycle.
  *
- * @param {Array<{source?: string, hashedOwnerId?: string}>} freshTips
+ * Callers hand over whole queued tips, not a projection: this reads only
+ * `source` and `hashedOwnerId`, but the objects also carry `id` and the rest of
+ * the tip, so the parameter is typed open rather than as those two fields alone.
+ *
+ * @param {Array<{source?: string, hashedOwnerId?: string, id?: string,
+ *   [key: string]: unknown}>} freshTips
  * @param {import('@upstash/redis').Redis | null} redis
+ * @param {string} [navSlug] league scope for the Redis key prefixes; production
+ *   passes NAV_SLUG from the scanner. Was undocumented despite being required
+ *   for a second league to read its own counters.
  * @returns {Promise<Map<string, TipsterContext>>}
  */
 export async function buildTipsterContext(freshTips, redis, navSlug = DEFAULT_SCHEFTER_NAV_SLUG) {

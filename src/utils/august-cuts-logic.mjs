@@ -225,8 +225,21 @@ export function buildSnapshotEntry({ franchiseId, franchiseName, markedList, ros
  * entry; the frozen plan (markedList / rosterAtExecution / slate) is never
  * modified.
  *
+ * Two shapes are recorded, and both are read back — `foldFranchiseIntoStored`
+ * below filters on `type === 'manual-done'`:
+ *   - an execution outcome from apply-august-cuts.mjs, keyed by `status`
+ *     (which also carries `reason` on 10 of its 13 call sites, and
+ *     `activeCount` on the at-or-under-limit path);
+ *   - a manual-done outcome the commissioner records through
+ *     src/pages/api/admin/autocut-control.ts, keyed by `type`.
+ *
+ * The previous annotation listed neither `reason`, `activeCount` nor the
+ * manual-done variant, so it described data this module does not actually hold.
+ *
  * @param {object} entry
- * @param {{ playerId?: string, status: string, at?: string }} outcome
+ * @param {{ status: string, at?: string, playerId?: string, reason?: string,
+ *   activeCount?: number }
+ *   | { type: 'manual-done', playerId?: string, by?: string, at?: string }} outcome
  */
 export function appendOutcome(entry, outcome) {
   return { ...entry, outcomes: [...(entry.outcomes ?? []), outcome] };

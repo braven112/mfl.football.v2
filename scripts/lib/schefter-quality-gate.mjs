@@ -113,6 +113,14 @@ export async function scoreSchefterPost(
 // `post` may carry optional `scope` and `topic` fields. They're passed through
 // to the scorer so it can calibrate the specificity check (commish / style-book
 // scopes get more leeway; division / league-wide scopes don't).
+/**
+ * @param {any} post
+ * @param {{ apiKey?: string, model?: string, threshold?: number,
+ *   log?: (...args: any[]) => void, warn?: (...args: any[]) => void }} [options]
+ *   Annotated because the defaults on `log`/`warn` otherwise make TS infer the
+ *   options shape from those two alone and drop `apiKey`, `model` and
+ *   `threshold` — `apiKey` is read six times in this function.
+ */
 export async function checkGroupMeQuality(post, { apiKey, model, threshold, log = console.log, warn = console.warn } = {}) {
   if (!apiKey) {
     log('  [quality-gate] no ANTHROPIC_API_KEY — allowing GroupMe send');
