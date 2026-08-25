@@ -176,22 +176,29 @@ describe('foldNamesOntoTenures', () => {
  *      owner names on record.
  */
 describe('resolveCookies', () => {
-  const saved = { ...process.env };
+  // vi.stubEnv rather than reassigning process.env: replacing the object
+  // outright drops Node's env proxy semantics and leaks into every other test
+  // file sharing this Vitest worker.
   afterEach(() => {
-    process.env = { ...saved };
+    vi.unstubAllEnvs();
   });
+  const CREDS = [
+    'MFL_USER_ID',
+    'MFL_IS_COMMISH',
+    'MFL_USERNAME',
+    'MFL_PASSWORD',
+    'MFL_COOKIE',
+  ] as const;
+  /** Start each case from a known-empty credential environment. */
   const clear = () => {
-    delete process.env.MFL_USER_ID;
-    delete process.env.MFL_IS_COMMISH;
-    delete process.env.MFL_USERNAME;
-    delete process.env.MFL_PASSWORD;
-    delete process.env.MFL_COOKIE;
+    for (const key of CREDS) vi.stubEnv(key, '');
   };
+  const set = (key: (typeof CREDS)[number], value: string) => vi.stubEnv(key, value);
 
   it('returns an OBJECT keyed by cookie name, never a string', async () => {
     clear();
-    process.env.MFL_USER_ID = 'uid-123';
-    process.env.MFL_IS_COMMISH = 'commish-456';
+    set('MFL_USER_ID', 'uid-123');
+    set('MFL_IS_COMMISH', 'commish-456');
     const cookies = await resolveCookies();
     // The whole point: mflFetch does Object.entries() on this.
     expect(typeof cookies).toBe('object');
@@ -200,8 +207,8 @@ describe('resolveCookies', () => {
 
   it('builds a real Cookie header the way mflFetch does', async () => {
     clear();
-    process.env.MFL_USER_ID = 'uid-123';
-    process.env.MFL_IS_COMMISH = 'commish-456';
+    set('MFL_USER_ID', 'uid-123');
+    set('MFL_IS_COMMISH', 'commish-456');
     const cookies = await resolveCookies();
     const header = Object.entries(cookies)
       .filter(([, v]) => v)
@@ -214,24 +221,24 @@ describe('resolveCookies', () => {
 
   it('parses a pasted MFL_COOKIE header into the two cookies', async () => {
     clear();
-    process.env.MFL_COOKIE = 'MFL_USER_ID=abc; MFL_IS_COMMISH=def';
+    set('MFL_COOKIE', 'MFL_USER_ID=abc; MFL_IS_COMMISH=def');
     const cookies = await resolveCookies();
     expect(cookies).toEqual({ MFL_USER_ID: 'abc', MFL_IS_COMMISH: 'def' });
   });
 
   it('tolerates a cookie header with extra pairs and loose spacing', async () => {
     clear();
-    process.env.MFL_COOKIE = ' PHPSESSID=zzz ;MFL_USER_ID=abc;  MFL_IS_COMMISH=def ; junk ';
+    set('MFL_COOKIE', ' PHPSESSID=zzz ;MFL_USER_ID=abc;  MFL_IS_COMMISH=def ; junk ');
     const cookies = await resolveCookies();
     expect(cookies).toEqual({ MFL_USER_ID: 'abc', MFL_IS_COMMISH: 'def' });
   });
 
   it('prefers the stored cookies over a login when both are present', async () => {
     clear();
-    process.env.MFL_USER_ID = 'uid-123';
-    process.env.MFL_IS_COMMISH = 'commish-456';
-    process.env.MFL_USERNAME = 'someone';
-    process.env.MFL_PASSWORD = 'secret';
+    set('MFL_USER_ID', 'uid-123');
+    set('MFL_IS_COMMISH', 'commish-456');
+    set('MFL_USERNAME', 'someone');
+    set('MFL_PASSWORD', 'secret');
     // If it tried to log in here it would attempt a real network call and fail.
     await expect(resolveCookies()).resolves.toEqual({
       MFL_USER_ID: 'uid-123',
@@ -239,9 +246,32 @@ describe('resolveCookies', () => {
     });
   });
 
+  /**
+   * The precedence bug: MFL_USER_ID alone used to short-circuit, so a complete
+   * pair sitting in MFL_COOKIE (or reachable by login) never got a look and the
+   * run returned an anonymous payload that looked like a league with no names.
+   */
+  it('does not let a half-set env pair beat a complete MFL_COOKIE', async () => {
+    clear();
+    set('MFL_USER_ID', 'incomplete-uid');
+    set('MFL_COOKIE', 'MFL_USER_ID=abc; MFL_IS_COMMISH=def');
+    const cookies = await resolveCookies();
+    expect(cookies).toEqual({ MFL_USER_ID: 'abc', MFL_IS_COMMISH: 'def' });
+  });
+
+  it('falls back to the half-set source when nothing complete exists', async () => {
+    clear();
+    set('MFL_USER_ID', 'uid-only');
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const cookies = await resolveCookies();
+    expect(cookies.MFL_USER_ID).toBe('uid-only');
+    expect(spy.mock.calls.flat().join(' ')).toMatch(/MFL_IS_COMMISH/);
+    spy.mockRestore();
+  });
+
   it('warns rather than silently returning nameless data without MFL_IS_COMMISH', async () => {
     clear();
-    process.env.MFL_USER_ID = 'uid-123';
+    set('MFL_USER_ID', 'uid-123');
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const cookies = await resolveCookies();
     expect(cookies.MFL_USER_ID).toBe('uid-123');
