@@ -23,10 +23,14 @@
  * ones.
  *
  * ── Credentials ───────────────────────────────────────────────────────────
- * Either:
+ * Any one of these, in the order resolveCookies() tries them:
+ *   MFL_USER_ID=... MFL_IS_COMMISH=... node scripts/fetch-owner-names.mjs
+ *   MFL_COOKIE='MFL_USER_ID=...; MFL_IS_COMMISH=...' node scripts/...
  *   MFL_USERNAME=... MFL_PASSWORD=... node scripts/fetch-owner-names.mjs
- * or, if you already have a session cookie:
- *   MFL_COOKIE='MFL_USER_ID=...' node scripts/fetch-owner-names.mjs
+ *
+ * MFL_IS_COMMISH is the one that matters — names come back only to a
+ * commissioner session, so the other cookie alone authenticates and returns
+ * nothing.
  *
  * Usage:
  *   node scripts/fetch-owner-names.mjs                 # dry run — prints what it would set
@@ -61,7 +65,8 @@ function parseArgs() {
     else if (arg === '--help' || arg === '-h') {
       console.log(
         'Usage: node scripts/fetch-owner-names.mjs [--league=<slug|afl>] [--year=YYYY] [--write]\n' +
-          '  Needs MFL_USERNAME + MFL_PASSWORD, or MFL_COOKIE.\n' +
+          '  Needs MFL_USER_ID + MFL_IS_COMMISH, or MFL_COOKIE, or\n' +
+          '  MFL_USERNAME + MFL_PASSWORD.\n' +
           '  Dry run by default. Names only — emails are never stored.'
       );
       process.exit(0);
@@ -129,7 +134,26 @@ export async function resolveCookies() {
   let mflUserId;
   let mflIsCommish;
 
-  if (envUserId) {
+  // A whole Cookie header pasted from a browser, e.g.
+  // MFL_COOKIE='MFL_USER_ID=abc; MFL_IS_COMMISH=def'. Split back into the two
+  // cookies rather than passing the string on: mflFetch runs Object.entries()
+  // over what it is given, so a raw string becomes "0=M; 1=F; 2=L…" — a header
+  // MFL ignores while answering with a valid, entirely anonymous payload.
+  const cookieHeader = process.env.MFL_COOKIE;
+  if (!envUserId && cookieHeader) {
+    const parsed = Object.fromEntries(
+      cookieHeader
+        .split(';')
+        .map((pair) => pair.trim())
+        .filter(Boolean)
+        .map((pair) => {
+          const eq = pair.indexOf('=');
+          return eq === -1 ? [pair, ''] : [pair.slice(0, eq).trim(), pair.slice(eq + 1).trim()];
+        })
+    );
+    mflUserId = parsed.MFL_USER_ID;
+    mflIsCommish = parsed.MFL_IS_COMMISH;
+  } else if (envUserId) {
     mflUserId = envUserId;
     mflIsCommish = envCommish;
   } else if (username && password) {
@@ -137,7 +161,8 @@ export async function resolveCookies() {
     ({ mflUserId, mflIsCommish } = await loginToMFL(username, password));
   } else {
     console.error(
-      'No credentials. Set MFL_USER_ID (+ MFL_IS_COMMISH), or MFL_USERNAME + MFL_PASSWORD.\n' +
+      'No credentials. Set MFL_USER_ID (+ MFL_IS_COMMISH), or MFL_COOKIE,\n' +
+        'or MFL_USERNAME + MFL_PASSWORD.\n' +
         'Owner names are only returned to a user with commissioner access.'
     );
     process.exit(1);

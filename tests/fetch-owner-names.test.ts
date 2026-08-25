@@ -212,6 +212,20 @@ describe('resolveCookies', () => {
     expect(header).not.toMatch(/^0=/);
   });
 
+  it('parses a pasted MFL_COOKIE header into the two cookies', async () => {
+    clear();
+    process.env.MFL_COOKIE = 'MFL_USER_ID=abc; MFL_IS_COMMISH=def';
+    const cookies = await resolveCookies();
+    expect(cookies).toEqual({ MFL_USER_ID: 'abc', MFL_IS_COMMISH: 'def' });
+  });
+
+  it('tolerates a cookie header with extra pairs and loose spacing', async () => {
+    clear();
+    process.env.MFL_COOKIE = ' PHPSESSID=zzz ;MFL_USER_ID=abc;  MFL_IS_COMMISH=def ; junk ';
+    const cookies = await resolveCookies();
+    expect(cookies).toEqual({ MFL_USER_ID: 'abc', MFL_IS_COMMISH: 'def' });
+  });
+
   it('prefers the stored cookies over a login when both are present', async () => {
     clear();
     process.env.MFL_USER_ID = 'uid-123';
