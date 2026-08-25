@@ -61,6 +61,60 @@ describe('normalizeFranchiseId', () => {
 });
 
 describe('normalizeAccountingExport', () => {
+  it('reads MFL\'s REAL export shape — a flat `entry` list of strings', () => {
+    // Captured verbatim from https://api.myfantasyleague.com/2025/export
+    // ?TYPE=accounting&L=19621&JSON=1 (AFL, Aug 2026). This is the shape MFL
+    // actually returns, and the three shapes originally guessed from the prose
+    // docs all parsed it to an EMPTY ledger — a league with 26 transactions
+    // reporting none, with no error anywhere. Do not remove this test: it is
+    // the only one tied to a real payload.
+    const ledger = normalizeAccountingExport({
+      version: '1.0',
+      accounting: {
+        entry: [
+          {
+            amount: '825',
+            franchise_id: '0015',
+            description: 'AFL Champion, NL Champion, NL East Champion, Premier League Champion',
+            id: '59799186',
+            timestamp: '1767219728',
+          },
+          {
+            franchise_id: '0015',
+            description: 'winnings sent via paypal',
+            amount: '-595',
+            id: '59799187',
+            timestamp: '1767219800',
+          },
+          {
+            amount: '150',
+            franchise_id: '0018',
+            description: 'NL West Division Championship',
+            id: '59799204',
+            timestamp: '1767220076',
+          },
+        ],
+      },
+    });
+
+    expect(ledger.records).toHaveLength(3);
+    // Every field arrives as a STRING, including the amount and timestamp.
+    expect(ledger.balances['0015']).toBe(230);
+    expect(ledger.balances['0018']).toBe(150);
+    // Paying an owner out is negative; a prize is positive.
+    expect(ledger.records.find((r) => r.description === 'winnings sent via paypal')?.amount).toBe(-595);
+  });
+
+  it('reads a single real entry that MFL collapsed to a bare object', () => {
+    const ledger = normalizeAccountingExport({
+      version: '1.0',
+      accounting: {
+        entry: { amount: '100', franchise_id: '0024', description: 'zelle', id: '1', timestamp: '1' },
+      },
+    });
+    expect(ledger.balances['0024']).toBe(100);
+  });
+
   it('reads the nested franchise/transaction shape', () => {
     const ledger = normalizeAccountingExport({
       accounting: {
@@ -162,7 +216,7 @@ describe('fetchAccountingLedger', () => {
   beforeEach(() => vi.resetModules());
   afterEach(() => vi.restoreAllMocks());
 
-  it('treats an empty 200 body as an auth failure, never an empty ledger', async () => {
+  it('treats an empty 200 body as a failed read, never an empty ledger', async () => {
     vi.doMock('../src/utils/mfl-fetch', () => ({
       mflFetch: async () => new Response('', { status: 200 }),
     }));
@@ -173,7 +227,9 @@ describe('fetchAccountingLedger', () => {
       mflUserCookie: 'cookie',
     });
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error).toMatch(/not authorized/i);
+    // The message must not claim "no records" — an empty ledger and a failed
+    // read look identical to a caller, and only one of them is safe to act on.
+    if (!result.ok) expect(result.error).toMatch(/not an empty ledger/i);
   });
 });
 

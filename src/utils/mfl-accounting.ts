@@ -3,8 +3,17 @@
  *
  * Two MFL endpoints back this, and they do NOT have the same access model:
  *
- *   READ   export?TYPE=accounting&L=<id>&JSON=1   any league OWNER's cookie
+ *   READ   export?TYPE=accounting&L=<id>&JSON=1   no cookie needed in practice
  *   WRITE  import?TYPE=accounting&L=<id>          the COMMISSIONER's cookie
+ *
+ * MFL's docs call the read "private league access restricted to league
+ * owners". Verified Aug 2026 against leagues 19621 and 13522, it is NOT: an
+ * unauthenticated request returns the full ledger. It answers on the api host
+ * with a 302 to the league's own host, so a client that does not follow
+ * redirects sees an empty body and looks exactly like a permission failure —
+ * that is what made it look gated. `mflFetch` follows the redirect and keeps
+ * the Cookie header across it, so the cookie is passed when we have one and
+ * simply is not required.
  *
  * The write takes ONE record per call (FRANCHISE, AMOUNT, DESCRIPTION) — there
  * is no batch form — so anything bulk (a CSV import, a season payout run) is a
@@ -105,17 +114,25 @@ export function formatAmount(amount: number): string {
 /**
  * Flatten MFL's accounting export into records.
  *
- * MFL has shipped this payload in more than one shape and the docs describe
- * none of them precisely, so this accepts all the ones seen in the wild rather
- * than pinning one and breaking on the others:
+ * THE REAL SHAPE, verified against live MFL (leagues 19621 and 13522,
+ * Aug 2026) — a flat list under `entry`, every field a STRING:
  *
- *   { accounting: { franchise: [ { id, transaction: [...] } ] } }   nested
- *   { accounting: { transaction: [ { franchise_id, ... } ] } }      flat
- *   { accounting: { franchise: [ { id, balance } ] } }              summary only
+ *   { version: "1.0", accounting: { entry: [
+ *       { id, franchise_id, amount, description, timestamp } ] } }
  *
- * A summary-only payload yields balances with no records, which is a legitimate
- * state — NOT an error, and not an empty ledger either. Callers must not read
- * "no records" as "nothing has ever been charged".
+ * This was originally written against three GUESSED shapes (`franchise` with
+ * nested `transaction`, a flat `transaction` list, a summary-only form), none
+ * of which MFL actually returns. Every one of them parsed the real payload to
+ * an EMPTY ledger — no error, no warning, just a page reporting that a league
+ * with 26 transactions had none. Guessing a response shape from prose docs is
+ * what produced that; `entry` is now the documented-and-tested path.
+ *
+ * The guessed shapes are still accepted below, purely because they cost
+ * nothing and MFL's other exports genuinely do vary in form. `entry` is the
+ * one with a real-payload test behind it.
+ *
+ * MFL also collapses a one-element list to a bare object, so a league with a
+ * single transaction arrives unwrapped.
  */
 export function normalizeAccountingExport(raw: unknown): AccountingLedger {
   const root = (raw as any)?.accounting ?? raw;
@@ -148,6 +165,13 @@ export function normalizeAccountingExport(raw: unknown): AccountingLedger {
     const entries = asArray<any>(franchise?.transaction ?? franchise?.record);
     for (const entry of entries) pushRecord(franchiseId, entry);
     if (stated !== null && entries.length === 0) balances[franchiseId] = stated;
+  }
+
+  // THE REAL SHAPE: a flat `entry` list, each naming its own franchise.
+  for (const entry of asArray<any>(root?.entry)) {
+    const franchiseId = normalizeFranchiseId(entry?.franchise_id ?? entry?.franchise);
+    if (!franchiseId) continue;
+    pushRecord(franchiseId, entry);
   }
 
   // Flat shape: transactions hang off the root and name their own franchise.
@@ -183,10 +207,12 @@ export type FetchLedgerResult =
 /**
  * Read the league ledger.
  *
- * MFL answers an unauthenticated request to this endpoint with HTTP 200 and an
- * EMPTY BODY rather than a 401 (verified against league 13522). An empty body
- * is therefore an auth failure, never an empty ledger, and must not be reported
- * as "no records" — that would render a page saying every owner is square.
+ * The empty-body guard below is a safety net, not an auth check: this endpoint
+ * reads fine without a cookie (see the header). What it catches is MFL
+ * answering with nothing usable — a maintenance page, a throttle, a redirect
+ * that went nowhere. Reporting any of those as "no records" would render a
+ * page saying every owner is square, which is the one wrong answer that looks
+ * completely normal.
  */
 export async function fetchAccountingLedger(
   opts: FetchLedgerOptions
@@ -218,7 +244,7 @@ export async function fetchAccountingLedger(
   if (!text) {
     return {
       ok: false,
-      error: 'MFL returned an empty accounting response — the session is not authorized to read this league’s ledger.',
+      error: 'MFL returned an empty accounting response. That is not an empty ledger — it usually means MFL is throttling or serving a maintenance page. Try again in a moment.',
     };
   }
 

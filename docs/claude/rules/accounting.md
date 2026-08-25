@@ -39,20 +39,44 @@ of helpfulness eventually pays a prize backwards.
 ## MFL's two endpoints do not have the same access model
 
 ```
-READ   export?TYPE=accounting&L=<id>&JSON=1   any league OWNER's cookie
+READ   export?TYPE=accounting&L=<id>&JSON=1   no cookie needed in practice
 WRITE  import?TYPE=accounting&L=<id>          the COMMISSIONER's cookie
 ```
 
-Three traps, each already handled and each easy to undo:
+### The response shape — verified, not guessed
+
+MFL returns a **flat `entry` list, every field a string**:
+
+```json
+{"version":"1.0","accounting":{"entry":[
+  {"id":"59799186","franchise_id":"0015","amount":"825",
+   "description":"AFL Champion, NL Champion, ...","timestamp":"1767219728"}]}}
+```
+
+This is worth stating loudly because the normalizer was originally written
+against three shapes *guessed from MFL's prose docs* — `franchise` with nested
+`transaction`, a flat `transaction` list, a summary-only form. **MFL returns
+none of them.** All three parsed the real payload to an empty ledger: a league
+with 26 transactions reporting zero, no error anywhere, every owner shown
+square. `tests/mfl-accounting.test.ts` pins the real payload — don't delete
+that test, and don't add a shape you haven't seen a response for.
+
+Four traps, each already handled and each easy to undo:
 
 1. **Commissioner imports are rejected on `api.myfantasyleague.com`.** They
    must go to the league's own web host — `www49` for TheLeague, `www44` for
    the AFL, both from the registry. Reads may use the api gateway.
-2. **An empty 200 body is an AUTH FAILURE, not an empty ledger.** MFL answers
-   an unauthorized accounting request with HTTP 200 and nothing in the body
-   (verified against league 13522). Reporting that as "no records" renders a
-   page saying every owner is square.
-3. **`response.ok` is not "the write landed".** MFL reports a rejected import
+2. **The read is NOT owner-gated, whatever the docs say.** Verified Aug 2026
+   against 19621 and 13522: an unauthenticated request returns the full
+   ledger. The api host answers with a **302** to the league host, so a client
+   that doesn't follow redirects sees an empty body and looks exactly like a
+   permission failure — which is what made it look gated. `mflFetch` follows
+   the redirect and carries the Cookie across it.
+3. **An empty body is a FAILED READ, not an empty ledger.** Not an auth
+   failure (see above) — a throttle, a maintenance page, a redirect that went
+   nowhere. Reporting it as "no records" renders a page saying every owner is
+   square, which is the one wrong answer that looks completely normal.
+4. **`response.ok` is not "the write landed".** MFL reports a rejected import
    at HTTP 200 with an `<error>` element. The body decides.
 
 **The import takes ONE record per call.** There is no batch form. Everything
@@ -258,9 +282,22 @@ blank 200. That is why the gate lives in each thin route wrapper and not in
 
 ## Testing without MFL credentials
 
-The authenticated read and every write need a real commissioner cookie, so
-they cannot be exercised from a container with no `.env.local`. The suites
-cover the parts that don't need one — sign convention, MFL's response shapes
-(including the empty-200 and `<error>`-at-200 cases, mocked), CSV round trips,
-payout derivation against committed 2025 feeds, and the gate. The live MFL
-round trip is verified on a preview deploy by a signed-in commissioner.
+**Reads are verifiable from anywhere** — no cookie required (see above), so
+the real export can be fetched and diffed against the normalizer at any time.
+That is how the `entry`-shape bug was caught, and it is the first thing to do
+when the ledger looks wrong:
+
+```bash
+curl -sL "https://api.myfantasyleague.com/2025/export?TYPE=accounting&L=19621&JSON=1"
+```
+
+`-L` is not optional — without it the api host's 302 leaves you with an empty
+body and a wrong conclusion.
+
+**Writes are not.** Every write needs a real commissioner cookie
+(`MFL_USER_ID` + `MFL_IS_COMMISH`), which only exists in a signed-in
+commissioner's session. They cannot be exercised from a container with no
+`.env.local`, so they are covered by mocked response shapes and must be
+verified from the app by a signed-in commissioner. Start with one small
+transaction: MFL's import has no delete, so a bad record is corrected with an
+offsetting one by hand.
