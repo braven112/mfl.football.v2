@@ -46,3 +46,29 @@ export function ownerSlugForIdentity(
   const dominant = name.split(' / ')[0];
   return identityIndex[key(dominant)] ?? null;
 }
+
+/**
+ * Fold a string into the key the owners filter matches on.
+ *
+ * MFL stores an owner's name exactly as that owner typed it, so the same
+ * apostrophe arrives three ways across the registry — ASCII (`'`), curly (`’`,
+ * which is what MFL's export actually gave us for Rick O’Keefe), or omitted
+ * entirely. A bare `toLowerCase().includes(q)` treats those as three different
+ * people: typing `O'Keefe` finds nothing, and the owner is unreachable through
+ * the one control on the page meant to find him. Team names have the same
+ * problem — `Habanero's`, `Magnum's`, `M.L. Maniacs`, `P-89s`.
+ *
+ * So both sides go through this: punctuation is dropped rather than
+ * normalized, which makes `O’Keefe`, `O'Keefe` and `OKeefe` one key. Spaces
+ * survive, so multi-word queries still behave the way people expect.
+ *
+ * It must be applied to the row key AND the query — folding one side only
+ * makes the mismatch worse, not better.
+ */
+export function foldForFilter(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}

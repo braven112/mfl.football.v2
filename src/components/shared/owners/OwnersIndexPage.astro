@@ -17,6 +17,7 @@ import TheLeagueLayout from '../../../layouts/TheLeagueLayout.astro';
 import Breadcrumbs from '../../theleague/Breadcrumbs.astro';
 import { resolveLeaguePath } from '../../../utils/nav-utils';
 import { getLeagueBySlug } from '../../../config/leagues';
+import { foldForFilter } from '../../../utils/owner-links';
 import type { CanonicalLeagueSlug } from '../../../config/leagues';
 import type { Owner, OwnerTenuresFile } from '../../../types/owner-tenures';
 import { formatOwnerRecord, ownerWinPct } from '../../../utils/owner-detail';
@@ -206,7 +207,7 @@ const generatedLabel = Number.isNaN(generatedDate.getTime())
           <tbody>
             {formerSorted.map((owner) => (
               <tr
-                data-name={owner.title.toLowerCase()}
+                data-name={foldForFilter(owner.title)}
                 data-slot={owner.tenures.map((t) => t.franchiseId).join(' ')}
                 data-years={owner.yearStart}
                 data-seasons={owner.totals.seasons}
@@ -245,6 +246,8 @@ const generatedLabel = Number.isNaN(generatedDate.getTime())
 <script>
   // Progressive enhancement: the table is fully rendered and readable without
   // this. Filtering and sorting are conveniences on top.
+  import { foldForFilter } from '../../../utils/owner-links';
+
   const table = document.getElementById('former-table') as HTMLTableElement | null;
   const filter = document.getElementById('owner-filter') as HTMLInputElement | null;
   const noResults = document.getElementById('no-results');
@@ -253,7 +256,8 @@ const generatedLabel = Number.isNaN(generatedDate.getTime())
     const rows = Array.from(tbody.rows);
 
     filter?.addEventListener('input', () => {
-      const q = filter.value.trim().toLowerCase();
+      // Same fold as the row keys — see foldForFilter. Both sides or neither.
+      const q = foldForFilter(filter.value);
       let visible = 0;
       for (const row of rows) {
         const name = row.dataset.name ?? '';

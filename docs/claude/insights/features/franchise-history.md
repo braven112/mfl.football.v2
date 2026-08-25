@@ -1,5 +1,69 @@
 # Franchise History Pages — Insights
 
+## 2026-08-25 - Slot-change inference splits ONE owner into two, and a name is what makes it visible
+
+**Context:** `/owners` shipped with 85 tenures MFL had no name for. Filling
+them in by hand turned up something the derivation could not have flagged on
+its own: fourteen of those "people" were one owner recorded twice. Tom
+Flanagan renamed NOSX to Brady's Bastards in 2009 and became two strangers,
+one of them holding the 2012 title. Shane Fitch became Level 3 Inception and
+lost eight seasons and a ring to his own alter ego. Jomar's Computer Jocks
+moved from AFL slot 0018 to 0005 in 2015. Jesse Schuffenhauer played 2003-04,
+left, came back in 2023 and was greeted as a new arrival. Danny Baccam is the
+one the naming pass did NOT find, because both halves of him already carried a
+name — the collision only surfaces if you compare identity NAMES across owner
+records, which is what the guard test now does.
+
+**Insight:** ownership is inferred from a franchise SLOT changing hands, so
+two events are indistinguishable from a handover and both produce a false
+split:
+
+- **a rename in place** — same slot, same person, new team name;
+- **a slot move** — same person, same team name, different slot, which the
+  league does whenever it restructures divisions.
+
+Neither is rare. Fourteen splits across 127 owner records is eleven percent of
+the board, and every one of them silently halved somebody's career.
+
+**Why it stayed invisible:** an anonymous owner is rendered by team name, and
+two records reading "Blitzkrieg" and "Blitzkrieg" look like two teams that
+happened to share a name. It is only when a human puts the SAME PERSON'S NAME
+on both that the duplicate becomes obvious. The data was wrong the whole time;
+the names are what made it legible. Expect the same class of bug anywhere an
+entity is identified by a slot rather than by a person.
+
+**What to do about it:**
+
+- **Exact team-name matches across two owner records are a merge candidate,
+  not a coincidence.** Five of the fourteen were found by normalizing identity
+  names and looking for collisions. `tests/owner-tenures-data.test.ts` now runs
+  that scan on every build: two owner records sharing a team name fail the
+  suite, with an allowlist for the genuine cases (co-owners of one shared team
+  are excluded structurally, via `coOwners`, so a new shared team needs no
+  entry).
+- **Merge into the EARLIER record.** Owner slugs are `<team>-<firstYear>`, so
+  the earlier slug stays correct for the merged span. The later slug goes into
+  `previousSlugs`, and `resolveOwnerDetail` redirects from it
+  (`src/utils/owner-detail.ts`), so no published URL breaks.
+- **Seasons must not move.** A merge relocates franchise-seasons between
+  HOLDINGS; it never creates or destroys one. TheLeague held at 320 and the
+  AFL at 576 across all fourteen — the conservation assertion in
+  `tests/owner-tenures-data.test.ts` is what proves it, and the owner-count
+  fixture beside it has to be updated by hand each time.
+- **Cross-league is NOT a merge.** Five people own teams in both leagues. The
+  repo models that as one registry person PER LEAGUE sharing a `displayName`
+  (Jomar is the original precedent), because merging would put one league's
+  team name in the other league's owner URL. Watch for spelling drift across
+  the two — MFL let Jim Shea enter himself as "James Shea" in one of them, and
+  two spellings render as two people.
+
+**Regenerating beats rebasing.** Twenty-seven commits of regenerated
+`owner-tenures.json` conflict on the first rebase hop. `owners-registry.json`
+is the source of truth and the derived files are a build artifact: reset the
+branch to `main`, replay the registry, re-run
+`scripts/compute-owner-tenures.mjs`, commit once. Same end state, no
+hand-merging of machine-written JSON.
+
 ## 2026-08-23 - An `ownerHistory` boundary is a CLAIM — one year wide and a page hands an owner a season he never played
 
 **Context:** Midwestside's owner read his own franchise page and found 2010 on
