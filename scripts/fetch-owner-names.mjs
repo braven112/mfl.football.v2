@@ -98,24 +98,64 @@ export const assertNoContactInfo = (value, where) => {
   }
 };
 
-async function resolveCookies() {
-  if (process.env.MFL_COOKIE) return process.env.MFL_COOKIE;
+/**
+ * Commissioner cookies for `mflFetch`, as an OBJECT of cookie name -> value.
+ *
+ * `mflFetch` builds its header with `Object.entries(cookies)`, so handing it a
+ * STRING yields `0=h; 1=t; 2=t...` — a garbage header that MFL ignores, which
+ * comes back as a perfectly valid response carrying no owner names. That is the
+ * worst possible failure for this script: silent, and indistinguishable from a
+ * league that simply has none.
+ *
+ * Two sources, in the order the rest of this repo uses them
+ * (`apply-pending-contracts.mjs`, `sync-draft-pick-contracts.mjs`,
+ * `export-best-ball-draft.mjs`, `mfl-calendar-event.mjs` all do exactly this):
+ *
+ *   1. MFL_USER_ID + MFL_IS_COMMISH — the stored session cookies. PREFERRED,
+ *      and the only path proven to work from a runner.
+ *   2. MFL_USERNAME + MFL_PASSWORD — a fresh login, which RETURNS those same
+ *      two cookies as `{ mflUserId, mflIsCommish }`.
+ *
+ * `MFL_IS_COMMISH` is the one that matters here. Owner names are returned only
+ * to a commissioner session, so a request carrying MFL_USER_ID alone
+ * authenticates fine and still comes back anonymous.
+ */
+export async function resolveCookies() {
+  const envUserId = process.env.MFL_USER_ID;
+  const envCommish = process.env.MFL_IS_COMMISH;
   const username = process.env.MFL_USERNAME;
   const password = process.env.MFL_PASSWORD;
-  if (!username || !password) {
+
+  let mflUserId;
+  let mflIsCommish;
+
+  if (envUserId) {
+    mflUserId = envUserId;
+    mflIsCommish = envCommish;
+  } else if (username && password) {
+    // loginToMFL resolves to { mflUserId, mflIsCommish } — NOT { cookies }.
+    ({ mflUserId, mflIsCommish } = await loginToMFL(username, password));
+  } else {
     console.error(
-      'No credentials. Set MFL_COOKIE, or MFL_USERNAME + MFL_PASSWORD.\n' +
+      'No credentials. Set MFL_USER_ID (+ MFL_IS_COMMISH), or MFL_USERNAME + MFL_PASSWORD.\n' +
         'Owner names are only returned to a user with commissioner access.'
     );
     process.exit(1);
   }
-  const result = await loginToMFL(username, password);
-  const cookies = typeof result === 'string' ? result : result?.cookies ?? null;
-  if (!cookies) {
-    console.error('Login did not return a usable cookie — check the credentials.');
+
+  if (!mflUserId) {
+    console.error('No MFL_USER_ID resolved — check the credentials.');
     process.exit(1);
   }
-  return cookies;
+  if (!mflIsCommish) {
+    // Not fatal: fetching still works, it just returns no names. Say so loudly
+    // rather than reporting "0 names found" as though the league had none.
+    console.error(
+      'WARNING: no MFL_IS_COMMISH cookie. MFL returns owner names ONLY to a\n' +
+        'commissioner session, so this run will almost certainly find none.'
+    );
+  }
+  return { MFL_USER_ID: mflUserId, MFL_IS_COMMISH: mflIsCommish };
 }
 
 /** Years this league actually has feeds for — the years with owners to name. */

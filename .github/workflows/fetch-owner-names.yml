@@ -9,10 +9,12 @@ name: Fetch Owner Names from MFL
 # every page anonymous.
 #
 # Runs here rather than locally or behind a UI for three reasons:
-#   1. MFL_USERNAME / MFL_PASSWORD are ALREADY repo secrets (roster-sync,
-#      apply-august-cuts, apply-pending-contracts, sync-draft-pick-contracts).
-#      This adds no new credential surface — the password never leaves GitHub's
-#      secret store and never reaches a developer machine.
+#   1. It reuses the credentials this repo ALREADY drives MFL with — no new
+#      credential surface, and nothing reaches a developer machine.
+#      MFL_USER_ID + MFL_IS_COMMISH are the stored session cookies every other
+#      commissioner script here uses (apply-pending-contracts,
+#      sync-draft-pick-contracts, export-best-ball-draft, mfl-calendar-event);
+#      MFL_USERNAME / MFL_PASSWORD are the login fallback.
 #   2. The registry is a committed JSON file, not a database. A UI would have to
 #      either push a git commit or write to KV, and KV would split the source of
 #      truth for a file the build reads.
@@ -96,6 +98,11 @@ jobs:
       - name: Dry run — what would be named
         id: dryrun
         env:
+          # MFL_IS_COMMISH is the load-bearing one: MFL returns owner names ONLY
+          # to a commissioner session. MFL_USER_ID alone authenticates and comes
+          # back anonymous.
+          MFL_USER_ID: ${{ secrets.MFL_USER_ID }}
+          MFL_IS_COMMISH: ${{ secrets.MFL_IS_COMMISH }}
           MFL_USERNAME: ${{ secrets.MFL_USERNAME }}
           MFL_PASSWORD: ${{ secrets.MFL_PASSWORD }}
         run: |
@@ -118,6 +125,8 @@ jobs:
       - name: Apply names to the registry
         if: inputs.write
         env:
+          MFL_USER_ID: ${{ secrets.MFL_USER_ID }}
+          MFL_IS_COMMISH: ${{ secrets.MFL_IS_COMMISH }}
           MFL_USERNAME: ${{ secrets.MFL_USERNAME }}
           MFL_PASSWORD: ${{ secrets.MFL_PASSWORD }}
         run: node ./scripts/fetch-owner-names.mjs ${{ steps.args.outputs.args }} --write

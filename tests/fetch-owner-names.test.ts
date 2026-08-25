@@ -13,11 +13,12 @@
  *      whichever appeared more — that is a tenure that should be SPLIT, and
  *      quietly picking a winner buries the boundary the registry exists for.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import {
   cleanName,
   assertNoContactInfo,
   foldNamesOntoTenures,
+  resolveCookies,
 } from '../scripts/fetch-owner-names.mjs';
 
 describe('cleanName', () => {
@@ -155,5 +156,82 @@ describe('foldNamesOntoTenures', () => {
     const registry = { people: [person('own-1', [claim('theleague', '0010', 2007, 2007)])] };
     const observed = new Map([['theleague|0010|2007', 'leaked@example.com']]);
     expect(() => foldNamesOntoTenures(registry, observed)).toThrow(/contact info/);
+  });
+});
+
+
+/**
+ * resolveCookies — the auth path, which shipped broken in three ways because
+ * nothing ever ran it. All three failed differently and only one failed loudly:
+ *
+ *   1. It didn't accept MFL_USER_ID / MFL_IS_COMMISH at all — the cookies this
+ *      repo actually drives MFL with, and the ones the workflow can supply.
+ *   2. It read `loginToMFL(...).cookies`, which does not exist (the helper
+ *      resolves to `{ mflUserId, mflIsCommish }`), so even correct credentials
+ *      exited 1.
+ *   3. It returned a STRING. `mflFetch` builds its header with
+ *      `Object.entries(cookies)`, so a string becomes `0=a; 1=b; 2=c…` — a
+ *      header MFL ignores, answering with a valid, entirely anonymous payload.
+ *      That one is the dangerous one: it looks exactly like a league with no
+ *      owner names on record.
+ */
+describe('resolveCookies', () => {
+  const saved = { ...process.env };
+  afterEach(() => {
+    process.env = { ...saved };
+  });
+  const clear = () => {
+    delete process.env.MFL_USER_ID;
+    delete process.env.MFL_IS_COMMISH;
+    delete process.env.MFL_USERNAME;
+    delete process.env.MFL_PASSWORD;
+    delete process.env.MFL_COOKIE;
+  };
+
+  it('returns an OBJECT keyed by cookie name, never a string', async () => {
+    clear();
+    process.env.MFL_USER_ID = 'uid-123';
+    process.env.MFL_IS_COMMISH = 'commish-456';
+    const cookies = await resolveCookies();
+    // The whole point: mflFetch does Object.entries() on this.
+    expect(typeof cookies).toBe('object');
+    expect(cookies).toEqual({ MFL_USER_ID: 'uid-123', MFL_IS_COMMISH: 'commish-456' });
+  });
+
+  it('builds a real Cookie header the way mflFetch does', async () => {
+    clear();
+    process.env.MFL_USER_ID = 'uid-123';
+    process.env.MFL_IS_COMMISH = 'commish-456';
+    const cookies = await resolveCookies();
+    const header = Object.entries(cookies)
+      .filter(([, v]) => v)
+      .map(([k, v]) => `${k}=${v}`)
+      .join('; ');
+    expect(header).toBe('MFL_USER_ID=uid-123; MFL_IS_COMMISH=commish-456');
+    // A string would have produced this instead — the silent-failure shape.
+    expect(header).not.toMatch(/^0=/);
+  });
+
+  it('prefers the stored cookies over a login when both are present', async () => {
+    clear();
+    process.env.MFL_USER_ID = 'uid-123';
+    process.env.MFL_IS_COMMISH = 'commish-456';
+    process.env.MFL_USERNAME = 'someone';
+    process.env.MFL_PASSWORD = 'secret';
+    // If it tried to log in here it would attempt a real network call and fail.
+    await expect(resolveCookies()).resolves.toEqual({
+      MFL_USER_ID: 'uid-123',
+      MFL_IS_COMMISH: 'commish-456',
+    });
+  });
+
+  it('warns rather than silently returning nameless data without MFL_IS_COMMISH', async () => {
+    clear();
+    process.env.MFL_USER_ID = 'uid-123';
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const cookies = await resolveCookies();
+    expect(cookies.MFL_USER_ID).toBe('uid-123');
+    expect(spy.mock.calls.flat().join(' ')).toMatch(/MFL_IS_COMMISH/);
+    spy.mockRestore();
   });
 });
