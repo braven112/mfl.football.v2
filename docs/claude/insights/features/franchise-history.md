@@ -341,6 +341,30 @@ branch), guarded by `buildOwnerTenures identity artwork` in
 `tests/owner-tenure-derivation.test.ts` — newest wins, a newer year with no
 icon does not blank the run, and artwork never leaks across a rename.
 
-**Confidence: High** — all 8 changed owners verified against the config's live
-`team.icon`, every former owner's era art unchanged, AFL byte-identical, and
-all 41 images on the rendered page return 200.
+**The same symptom had a second, unrelated cause — in the other league.**
+Fixing the fold made all 17 of TheLeague's current owners match their config
+`team.icon` exactly, and left three AFL owners still on retired art. Those come
+from `dominantIdentity`, which picks the identity a tenure is NAMED for by
+season count: AFL 0012 spent ten years as "Pubes" and the last eight as "Suh
+girls, one cup", and 0016's two names tie at two seasons each so the tie-break
+(*earliest* start) chose the older one deliberately. That function is right for
+a title and wrong for a face — the owner card answers "what does this team look
+like today". `finalizeOwner` now takes the newest non-punitive identity of the
+slot an owner holds TODAY, and falls back to dominant for former owners, whose
+era is over. The punitive skip is what keeps AFL 0014's card on Thundering Herd
+instead of the 2026 last-place rename.
+
+Two things generalize. First, **"all N of league A are now correct" is not
+evidence about league B** — the leagues' configs express the same idea
+differently (TheLeague restyles under one name; the AFL renames), so one defect
+surfaces through two mechanisms and a fix to one mechanism looks complete.
+Verify the invariant per league, against the config, rather than inspecting the
+diff. Second, `dominantName` and `icon` on an owner now describe different
+identities on purpose; that was only safe to do because nothing outside
+`src/types/owner-tenures.ts` reads `dominantName`.
+
+**Confidence: High** — all 8 changed TheLeague owners and both changed AFL
+owners verified against the config's live `team.icon`; every current owner in
+both leagues now matches it except AFL 0014, whose punitive exemption is
+asserted by test; no former owner's icon moved; 41 images on TheLeague's page
+and 107 on the AFL's all return 200.

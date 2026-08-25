@@ -687,6 +687,27 @@ export const buildOwnerTenures = ({
     // slot, which `tests/owner-tenures-data.test.ts` rejects.
     const heldToday = isCurrent ? currentFranchiseId ?? null : null;
 
+    // The card icon on /owners answers "what does this owner's team look like
+    // TODAY". That is not the question `dominantIdentity` answers — it picks
+    // the identity a tenure is NAMED for, by season count, which is right for
+    // a title and wrong for a face. The AFL's 0012 spent ten years as "Pubes"
+    // and the last eight as "Suh girls, one cup", so its card wore a logo
+    // retired in 2018; 0016's two names tie at two seasons each and the
+    // tie-break is *earliest*, which pinned it to the older one on purpose.
+    // Former owners keep the dominant identity: their era is over, so its
+    // most-worn look is the correct one.
+    const currentIdentity = (() => {
+      const held = heldToday ? tenures.find((t) => t.franchiseId === heldToday) : null;
+      if (!held) return null;
+      // Newest first, skipping a punitive rebrand — the AFL's last-place
+      // rename is a punishment worn for a season, not the team's identity.
+      // Same exemption `dominantIdentity` makes, and it is what keeps 0014's
+      // card on Thundering Herd rather than "A Bruin Pegs Me".
+      return [...held.identities].reverse().find((i) => i.name && !i.punitive) ?? null;
+    })();
+    const face = currentIdentity ?? dominant;
+    const faceSlot = currentIdentity ? heldToday : tenures[0].franchiseId;
+
     return {
       ownerId,
       slug,
@@ -694,8 +715,8 @@ export const buildOwnerTenures = ({
       displayName: displayName ?? null,
       title,
       dominantName: dominant?.name ?? null,
-      icon: dominant
-        ? icon({ icon: dominant.icon, name: dominant.name, franchiseId: tenures[0].franchiseId })
+      icon: face
+        ? icon({ icon: face.icon, name: face.name, franchiseId: faceSlot })
         : HISTORICAL_TEAM_ICON_FALLBACK,
       isCurrent,
       source,

@@ -767,3 +767,107 @@ describe('buildOwnerTenures identity artwork', () => {
     ]);
   });
 });
+
+describe('buildOwnerTenures owner card face', () => {
+  /**
+   * The card icon answers "what does this owner's team look like TODAY", which
+   * `dominantIdentity` does not: it picks the identity a tenure is NAMED for,
+   * by season count. The AFL's 0012 spent ten years as "Pubes" and the last
+   * eight as "Suh girls, one cup", so its card wore a logo retired in 2018.
+   */
+  const league = { slug: 'afl-fantasy', navSlug: 'afl', name: 'AFL' };
+  const row = (year: number, name: string, icon: string) => ({
+    year,
+    franchiseId: '0012',
+    attributedTo: '0012',
+    name,
+    nameMedium: null,
+    icon,
+    banner: null,
+    sourceFranchiseId: null,
+    wins: 8,
+    losses: 8,
+    ties: 0,
+    pointsFor: 1400,
+    regSeasonRank: 8,
+    divisionId: '01',
+    divisionName: 'East',
+    wonDivision: false,
+    playoffResult: 'missed',
+    seasonNotStarted: false,
+  });
+  const build = (ledgerRows: any[], teams: any[]) =>
+    buildOwnerTenures({
+      league,
+      teams,
+      ledgerRows,
+      resolveIcon: ({ icon }: any) => icon,
+      generatedAt: 'fixed',
+    });
+
+  const TEAM = [{ franchiseId: '0012', name: 'Suh girls, one cup', currentOwnerSince: 2009 }];
+
+  it('shows a current owner their newest identity, not their longest-worn one', () => {
+    const out = build(
+      [
+        row(2009, 'Pubes', '/assets/afl/history/pubes.png'),
+        row(2010, 'Pubes', '/assets/afl/history/pubes.png'),
+        row(2011, 'Pubes', '/assets/afl/history/pubes.png'),
+        row(2019, 'Suh girls, one cup', '/assets/afl/icons/suh.png'),
+      ],
+      TEAM
+    );
+    // The tenure is still NAMED for the longest-worn identity…
+    expect(out.owners[0].dominantName).toBe('Pubes');
+    // …but the face is the team as it stands today.
+    expect(out.owners[0].icon).toBe('/assets/afl/icons/suh.png');
+  });
+
+  it('never puts a punitive rebrand on the card', () => {
+    const out = build(
+      [
+        row(2024, 'Thundering Herd', '/assets/afl/history/herd.png'),
+        row(2025, 'Thundering Herd', '/assets/afl/history/herd.png'),
+        row(2026, 'A Bruin Pegs Me', '/assets/afl/icons/bruin.png'),
+      ],
+      [
+        {
+          franchiseId: '0012',
+          name: 'A Bruin Pegs Me',
+          currentOwnerSince: 2024,
+          currentRebrand: { reason: 'last-place' },
+          history: [{ name: 'Thundering Herd', yearStart: 2024, yearEnd: 2025 }],
+        },
+      ]
+    );
+    // The newest identity is a punishment, not an identity — skip to the one
+    // beneath it rather than crowning the rename.
+    expect(out.owners[0].icon).toBe('/assets/afl/history/herd.png');
+  });
+
+  it('leaves a former owner on their dominant identity', () => {
+    const out = build(
+      [
+        { ...row(2009, 'Pubes', '/assets/afl/history/pubes.png'), attributedTo: null },
+        { ...row(2010, 'Pubes', '/assets/afl/history/pubes.png'), attributedTo: null },
+        { ...row(2011, 'Pubes', '/assets/afl/history/pubes.png'), attributedTo: null },
+        { ...row(2012, 'Late Name', '/assets/afl/history/late.png'), attributedTo: null },
+      ],
+      [
+        {
+          franchiseId: '0012',
+          name: 'Someone Else',
+          currentOwnerSince: 2020,
+          // The orphan path segments from the CONFIG's history entries, not
+          // from the ledger rows, so the era art has to live here.
+          history: [
+            { name: 'Pubes', yearStart: 2009, yearEnd: 2011, icon: '/assets/afl/history/pubes.png' },
+            { name: 'Late Name', yearStart: 2012, yearEnd: 2012, icon: '/assets/afl/history/late.png' },
+          ],
+        },
+      ]
+    );
+    const former = out.owners.find((o: any) => !o.isCurrent);
+    expect(former?.icon).toBe('/assets/afl/history/pubes.png');
+  });
+});
