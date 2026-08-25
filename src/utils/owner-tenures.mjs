@@ -608,6 +608,14 @@ export const buildOwnerTenures = ({
           if (last && normalizeIdentity(last.name) === normalizeIdentity(row.name ?? '')) {
             last.yearEnd = row.year;
             last.years.push(row.year);
+            // A team can restyle without renaming: Da Dangsters wore
+            // `da_dangsters_2017_icon_circle.png` through 2024 and
+            // `icons/da_dangsters.png` from 2025. Both years fold into one
+            // identity run, so keeping the FIRST row's icon pinned every
+            // owner card to artwork the team retired years ago. The newest
+            // year in the run is the identity as it looks today.
+            if (row.icon) last.icon = row.icon;
+            if (row.banner) last.banner = row.banner;
           } else {
             identities.push({
               name: row.name,

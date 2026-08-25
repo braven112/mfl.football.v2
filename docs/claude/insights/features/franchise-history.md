@@ -301,3 +301,46 @@ rebrand can follow an owner onto a different franchise id — which is what
 file with counts unchanged, rendered on their franchise pages (two through the
 prior-owner path, four through the untouched name-history path for owners still
 holding their slot), and the guard mutation-checked.
+
+
+## 2026-08-25 - Folding a name run keeps the first row's artwork forever
+
+**Context:** Every current owner's card on `/owners` showed a logo their team
+had retired years ago — Da Dangsters as the 2017 wizard, Midwestside as the
+old photo circle, the Ninjas as the 2016 sombrero. The ledger was right: rows
+2015-2024 carry `history/da_dangsters_2017_icon_circle.png` and rows 2025-2026
+carry `icons/da_dangsters.png`. The page never saw the newer one.
+
+**Insight:** `buildTenuresFromRows` groups consecutive same-name seasons into
+one identity run. Creating a run copies the row's `icon`/`banner`; folding a
+later row into it only extended `yearEnd` and `years`. The grouping key is the
+NAME, but artwork is not a function of the name — **a team can restyle without
+renaming**, and TheLeague's config makes that the normal case: `history[]`
+holds the retired art (`Da Dangsters, 2015-2024`) while the live art lives on
+`team.icon`, so the same name spans both. Eight of TheLeague's seventeen
+current owners were affected; the AFL had zero, because its config keys icons
+by name and never restyles under one. A bug can be structural and still show
+up in exactly one league.
+
+`makeIconResolver` did not save it either: the resolver's by-name map does
+prefer `team.icon` (the current art) over `history[]`, but it is only consulted
+when the identity's own icon is unusable. A *stale but valid local path* is the
+worst input here — it looks healthy and wins.
+
+**Recommendation:** When collapsing rows into a run, ask which fields are
+constant across the run and which vary with time. Constant-by-construction
+(the name, the franchise slot) can come from any row; anything else needs a
+rule. For artwork the rule is newest-wins — the run's most recent year is what
+the identity looks like today. Note this is the second bug in this exact loop
+(see the `punitive`/`rebrandGroup` entry above): identities assembled from
+ledger rows keep losing attributes that the rows actually carry. Treat every
+new field on an identity as guilty until a test compares it against the source.
+
+**Evidence:** `src/utils/owner-tenures.mjs` (`buildTenuresFromRows`, the fold
+branch), guarded by `buildOwnerTenures identity artwork` in
+`tests/owner-tenure-derivation.test.ts` — newest wins, a newer year with no
+icon does not blank the run, and artwork never leaks across a rename.
+
+**Confidence: High** — all 8 changed owners verified against the config's live
+`team.icon`, every former owner's era art unchanged, AFL byte-identical, and
+all 41 images on the rendered page return 200.

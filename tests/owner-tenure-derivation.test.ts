@@ -681,3 +681,89 @@ describe('buildOwnerTenures cross-slot tenures', () => {
     expect(out.owners[0].currentFranchiseId).toBe('0011');
   });
 });
+
+describe('buildOwnerTenures identity artwork', () => {
+  /**
+   * A team can restyle without renaming — Da Dangsters wore the 2017 circle
+   * icon through 2024 and a new one from 2025, under one unbroken name. Both
+   * years fold into a single identity run, and taking the run's FIRST row
+   * pinned every current owner's card on /owners to artwork the team had
+   * already retired. The newest year in the run is what the identity looks
+   * like today.
+   */
+  const league = { slug: 'theleague', navSlug: 'theleague', name: 'The League' };
+  const row = (year: number, name: string, icon: string, banner: string) => ({
+    year,
+    franchiseId: '0002',
+    attributedTo: '0002',
+    name,
+    nameMedium: null,
+    icon,
+    banner,
+    sourceFranchiseId: null,
+    wins: 9,
+    losses: 9,
+    ties: 0,
+    pointsFor: 1500,
+    regSeasonRank: 7,
+    divisionId: '01',
+    divisionName: 'Central',
+    wonDivision: false,
+    playoffResult: 'missed',
+    seasonNotStarted: false,
+  });
+
+  it('takes the newest year of a name run, not the oldest', () => {
+    const out = buildOwnerTenures({
+      league,
+      teams: [{ franchiseId: '0002', name: 'Da Dangsters' }],
+      ledgerRows: [
+        row(2015, 'Da Dangsters', '/assets/theleague/history/old.png', '/assets/theleague/history/old_banner.png'),
+        row(2025, 'Da Dangsters', '/assets/theleague/icons/new.png', '/assets/theleague/banners/new.png'),
+      ],
+      resolveIcon: ({ icon }: any) => icon,
+      generatedAt: 'fixed',
+    });
+    const identity = out.owners[0].tenures[0].identities[0];
+    expect(identity.years).toEqual([2015, 2025]);
+    expect(identity.icon).toBe('/assets/theleague/icons/new.png');
+    expect(identity.banner).toBe('/assets/theleague/banners/new.png');
+    // …and it reaches the owner card, which is where the bug was visible.
+    expect(out.owners[0].icon).toBe('/assets/theleague/icons/new.png');
+  });
+
+  it('keeps the run\'s own artwork when a newer year carries none', () => {
+    const out = buildOwnerTenures({
+      league,
+      teams: [{ franchiseId: '0002', name: 'Da Dangsters' }],
+      ledgerRows: [
+        row(2015, 'Da Dangsters', '/assets/theleague/history/old.png', '/assets/theleague/history/old_banner.png'),
+        { ...row(2025, 'Da Dangsters', '', ''), icon: null, banner: null },
+      ],
+      resolveIcon: ({ icon }: any) => icon,
+      generatedAt: 'fixed',
+    });
+    const identity = out.owners[0].tenures[0].identities[0];
+    expect(identity.icon).toBe('/assets/theleague/history/old.png');
+    expect(identity.banner).toBe('/assets/theleague/history/old_banner.png');
+  });
+
+  it('does not leak artwork across a rename', () => {
+    const out = buildOwnerTenures({
+      league,
+      teams: [{ franchiseId: '0002', name: 'Da Dangsters' }],
+      ledgerRows: [
+        row(2014, 'Degenerates', '/assets/theleague/history/degenerates.png', '/assets/theleague/history/degenerates_banner.png'),
+        row(2015, 'Da Dangsters', '/assets/theleague/history/old.png', '/assets/theleague/history/old_banner.png'),
+        row(2025, 'Da Dangsters', '/assets/theleague/icons/new.png', '/assets/theleague/banners/new.png'),
+      ],
+      resolveIcon: ({ icon }: any) => icon,
+      generatedAt: 'fixed',
+    });
+    const identities = out.owners[0].tenures[0].identities;
+    expect(identities.map((i: any) => i.icon)).toEqual([
+      '/assets/theleague/history/degenerates.png',
+      '/assets/theleague/icons/new.png',
+    ]);
+  });
+});
