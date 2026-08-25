@@ -1,11 +1,11 @@
 {
   "$comment": "Ratchet baseline for `astro check --minimumSeverity error`. This number may only go DOWN. tests/typecheck-baseline.typecheck.ts fails if it rises (a regression) and also fails if it drops (so the baseline is retightened rather than quietly leaving slack). Run `pnpm test:types` to check, then lower `total` to the reported count.",
-  "total": 1607,
+  "total": 1545,
   "recordedAt": "2026-08-25",
   "notes": {
-    "concentration": "src/pages/theleague/rosters.astro still accounts for ~736 of these. It is a ~12k-line file whose inline script the docs say to verify via @astrojs/compiler transform + esbuild parse, NOT a full astro check (see docs/claude/insights/features/august-roster-cuts.md).",
+    "concentration": "src/pages/theleague/rosters.astro still accounts for ~675 of these. It is a ~12k-line file whose inline script the docs say to verify via @astrojs/compiler transform + esbuild parse, NOT a full astro check (see docs/claude/insights/features/august-roster-cuts.md).",
     "composition": "The bulk is implicit-any annotation debt (ts7006/7005/7053) plus property-access noise (ts2339), not defects. The null-safety class outside rosters.astro is at zero and should stay there.",
-    "provenance": "1678 after the rosters.astro split. Lineage: main at 130824d was 2318 alone; PR #599 removed 124; phases 1/3/5 removed 244; Phase 4 removed 37 (-> 1913); the split removed 235 — 29 from the contract-math extraction and the duplicated headshot/logo/team-name helpers, 18 from moving the live-odds + weeklyResults folds out of the frontmatter, and 188 from typing 23 row/slice parameters that defaulted to [] and were therefore never[], and 71 from declaring the season-keyed feed maps and the contract-action state that were left as bare {}.",
+    "provenance": "1678 after the rosters.astro split. Lineage: main at 130824d was 2318 alone; PR #599 removed 124; phases 1/3/5 removed 244; Phase 4 removed 37 (-> 1913); the split removed 235 — 29 from the contract-math extraction and the duplicated headshot/logo/team-name helpers, 18 from moving the live-odds + weeklyResults folds out of the frontmatter, and 188 from typing 23 row/slice parameters that defaulted to [] and were therefore never[], and 71 from declaring the season-keyed feed maps and the contract-action state that were left as bare {}, and 62 from typing the element query sites and declaring the page's window expandos in src/env.d.ts.",
     "clearedClasses": "These classes were driven to zero and are pinned there separately, because the total alone cannot protect them: an improvement elsewhere can mask a regression in one of these and still leave the total lower, which the ratchet would read as progress."
   },
   "clearedClasses": {

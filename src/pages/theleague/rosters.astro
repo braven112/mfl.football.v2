@@ -4988,6 +4988,13 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   // and the automation's reality cannot drift (plan requirement).
   import { selectAutoMoves } from '../../utils/august-cut-selection';
 
+  /**
+   * An element carrying the one-handler-only flag. Several controls in the
+   * declaration modal are wired from code that can run more than once per page
+   * life, so they stamp the element rather than tracking listeners separately.
+   */
+  type HandlerFlaggedElement = HTMLElement & { _handlerAdded?: boolean };
+
   const config = JSON.parse(
     document.getElementById('roster-config').textContent
   );
@@ -5414,7 +5421,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   // Update clear all / submit tags/extensions button visibility
   const updateClearAllButton = () => {
     const clearAllBtn = document.getElementById('clearAllTagsBtn');
-    const submitBtn = document.getElementById('submitFranchiseTagsBtn');
+    const submitBtn = document.getElementById('submitFranchiseTagsBtn') as HTMLButtonElement | null;
     const hasActions = Object.keys(contractActions).length > 0;
     const hasFranchiseTags = Object.values(contractActions).some(a => a.type === 'franchise');
     const hasVeteranExtensions = Object.values(contractActions).some(a => a.type === 'extension');
@@ -5429,7 +5436,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   });
 
   // Submit tags/extensions handler
-  const submitFranchiseTagsBtn = document.getElementById('submitFranchiseTagsBtn');
+  const submitFranchiseTagsBtn = document.getElementById('submitFranchiseTagsBtn') as HTMLButtonElement | null;
   submitFranchiseTagsBtn?.addEventListener('click', async () => {
     const actionsToSubmit = Object.values(contractActions).filter(
       a => a.type === 'franchise' || a.type === 'extension'
@@ -5883,7 +5890,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     };
 
     const seasonSelect = document.getElementById('rosterSeasonSelect');
-    const teamSelect = document.getElementById('rosterTeamSelect');
+    const teamSelect = document.getElementById('rosterTeamSelect') as HTMLSelectElement | null;
     const summaryCap = document.getElementById('summaryCap');
     const summaryPlayers = document.getElementById('summaryPlayers');
     const summaryOpen = document.getElementById('summaryOpen');
@@ -7656,10 +7663,10 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     const cdmModal = document.getElementById('contract-declaration-modal');
     const cdmOverlay = cdmModal?.querySelector('.cdm-overlay');
     const cdmCloseBtn = cdmModal?.querySelector('.cdm-close');
-    const cdmSubmitBtn = document.getElementById('cdm-submit');
+    const cdmSubmitBtn = document.getElementById('cdm-submit') as HTMLButtonElement | null;
     const cdmError = document.getElementById('cdm-error');
     const cdmSuccess = document.getElementById('cdm-success');
-    const cdmBackBtn = document.getElementById('cdm-back-btn');
+    const cdmBackBtn = document.getElementById('cdm-back-btn') as HandlerFlaggedElement | null;
     let cdmSelectedYears = null;
     let cdmSelectedSalary = null; // Pre-computed for franchise-tag and extension types
     let cdmSubmitType = null;     // Overrides elig.type for team-option sub-choices
@@ -7698,7 +7705,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     }
 
     // Wire step-1 dot click — guarded + DOM-state-aware
-    const cdmStepDot1El = document.getElementById('cdm-step-dot-1');
+    const cdmStepDot1El = document.getElementById('cdm-step-dot-1') as HandlerFlaggedElement | null;
     if (cdmStepDot1El && !cdmStepDot1El._handlerAdded) {
       cdmStepDot1El._handlerAdded = true;
       cdmStepDot1El.addEventListener('click', () => {
@@ -7713,7 +7720,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     }
 
     // Wire step-2 dot click — guarded + DOM-state-aware
-    const cdmStepDot2El = document.getElementById('cdm-step-dot-2');
+    const cdmStepDot2El = document.getElementById('cdm-step-dot-2') as HandlerFlaggedElement | null;
     if (cdmStepDot2El && !cdmStepDot2El._handlerAdded) {
       cdmStepDot2El._handlerAdded = true;
       cdmStepDot2El.addEventListener('click', () => {
@@ -7780,7 +7787,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         franchiseId: data.franchiseId || currentTeam,
       });
       document.getElementById('cdm-player-name').textContent = data.name;
-      document.getElementById('cdm-nfl-logo').src = data.nflLogo || '/assets/nfl-logos/NFL.svg';
+      (document.getElementById('cdm-nfl-logo') as HTMLImageElement).src = data.nflLogo || '/assets/nfl-logos/NFL.svg';
 
       // Meta line: "{City} · {Position}". Falls back to bare team code when the
       // city lookup misses, and "Free Agent" when there's no team at all.
@@ -7848,7 +7855,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
           if (remaining <= 0) {
             document.getElementById('cdm-deadline-text').textContent = 'Deadline passed';
             deadlineEl.className = 'cdm-deadline cdm-deadline--critical';
-            const submitBtn = document.getElementById('cdm-submit');
+            const submitBtn = document.getElementById('cdm-submit') as HTMLButtonElement | null;
             if (submitBtn) {
               submitBtn.disabled = true;
               submitBtn.textContent = 'Deadline Passed';
@@ -9327,16 +9334,16 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         errEl.removeAttribute('role');
         errEl.textContent = '';
       }
-      const pw = document.getElementById('cdp-reauth-password');
+      const pw = document.getElementById('cdp-reauth-password') as HTMLInputElement | null;
       if (pw) pw.value = '';
-      const submitBtn = document.getElementById('cdp-reauth-submit');
+      const submitBtn = document.getElementById('cdp-reauth-submit') as HTMLButtonElement | null;
       if (submitBtn) {
         submitBtn.disabled = false;
         submitBtn.textContent = 'Log in & save';
       }
       overlay.hidden = false;
       setTimeout(() => {
-        const user = document.getElementById('cdp-reauth-username');
+        const user = document.getElementById('cdp-reauth-username') as HTMLInputElement | null;
         (user && !user.value ? user : pw)?.focus();
       }, 0);
     };
@@ -9743,7 +9750,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
               `cost <strong>${_capSpaceFmt.format(totalDead)}</strong> in dead cap`;
       }
 
-      const cutnowBtn = document.getElementById('cdp-cutnow-btn');
+      const cutnowBtn = document.getElementById('cdp-cutnow-btn') as HTMLButtonElement | null;
       if (cutnowBtn) {
         cutnowBtn.disabled = markedCutIds.length === 0;
         cutnowBtn.title =
@@ -10055,8 +10062,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
       const progress = document.getElementById('cdp-cutnow-progress');
       const errEl = document.getElementById('cdp-cutnow-error');
-      const confirmBtn = document.getElementById('cdp-cutnow-confirm');
-      const cancelBtn = document.getElementById('cdp-cutnow-cancel');
+      const confirmBtn = document.getElementById('cdp-cutnow-confirm') as HTMLButtonElement | null;
+      const cancelBtn = document.getElementById('cdp-cutnow-cancel') as HTMLButtonElement | null;
       if (progress) progress.hidden = true;
       if (errEl) {
         errEl.hidden = true;
@@ -10119,8 +10126,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       const bar = document.getElementById('cdp-cutnow-bar-fill');
       const label = document.getElementById('cdp-cutnow-progress-label');
       const errEl = document.getElementById('cdp-cutnow-error');
-      const confirmBtn = document.getElementById('cdp-cutnow-confirm');
-      const cancelBtn = document.getElementById('cdp-cutnow-cancel');
+      const confirmBtn = document.getElementById('cdp-cutnow-confirm') as HTMLButtonElement | null;
+      const cancelBtn = document.getElementById('cdp-cutnow-cancel') as HTMLButtonElement | null;
       if (errEl) errEl.hidden = true;
       if (progress) progress.hidden = false;
       if (bar) bar.style.width = '0%';
@@ -10220,10 +10227,10 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     // the post-relogin retry save).
     const cdpReauthSubmit = async (e) => {
       e.preventDefault();
-      const username = document.getElementById('cdp-reauth-username')?.value?.trim();
-      const password = document.getElementById('cdp-reauth-password')?.value;
+      const username = (document.getElementById('cdp-reauth-username') as HTMLInputElement | null)?.value?.trim();
+      const password = (document.getElementById('cdp-reauth-password') as HTMLInputElement | null)?.value;
       const errEl = document.getElementById('cdp-reauth-error');
-      const submitBtn = document.getElementById('cdp-reauth-submit');
+      const submitBtn = document.getElementById('cdp-reauth-submit') as HTMLButtonElement | null;
       if (!username || !password) return;
       if (errEl) {
         errEl.hidden = true;
