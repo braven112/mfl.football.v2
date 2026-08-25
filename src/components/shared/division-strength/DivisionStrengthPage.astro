@@ -233,26 +233,59 @@ const upcoming = data.upcoming;
 const upcomingFor = (name: string) => upcoming?.divisions.find((d) => d.name === name) ?? null;
 
 /**
- * Is the team name worth saying alongside the incoming owner's title?
+ * How an owner is LABELLED in this report: by team, not by person.
+ *
+ * Owners are the grouping key — a mid-tenure rename must not split one stint
+ * into two entities — but `title` concatenates every name that owner has worn
+ * ("Vit's Brother / Avenging Amish / Broke Back 'lil Half Dead's Brother"),
+ * which is not a team name and wrapped to three lines. The label is the latest
+ * name within that owner's own tenure.
+ *
+ * Latest-within-TENURE, never latest-for-the-franchise: AFL franchise 0004 has
+ * had nine different owners, so a franchise-wide "current name" would stamp a
+ * stranger's team onto someone else's stint.
+ *
+ * Two forms, because the right one depends on where it lands. The fallback
+ * chain behind each is the same and still ends at `title` — a ref that somehow
+ * reaches the page without a resolved identity renders the long string rather
+ * than nothing.
+ */
+type OwnerLabelRef = {
+  latestNameMedium?: string | null;
+  latestName?: string | null;
+  title?: string | null;
+  slug?: string;
+};
+
+/** In a table cell, where the short form keeps the row on one line. */
+const teamLabel = (o: OwnerLabelRef) =>
+  o.latestNameMedium ?? o.latestName ?? o.title ?? o.slug ?? '';
+
+/** In a sentence, where the short form reads clipped ("Dead Cap takes over"). */
+const teamLabelLong = (o: OwnerLabelRef) =>
+  o.latestName ?? o.latestNameMedium ?? o.title ?? o.slug ?? '';
+
+/**
+ * Is the team name worth saying alongside the incoming owner's label?
  *
  * Owners here are usually titled after the team they run, so naming both gives
  * "Dead Cap Walking takes over Dead Cap". Compare on letters only, and treat
  * either being a prefix of the other as the same thing.
  */
-const namesTeamToo = (m: { name: string | null; nameMedium: string | null; newOwners: Array<{ title: string | null }> }) => {
+const namesTeamToo = (m: { name: string | null; nameMedium: string | null; newOwners: OwnerLabelRef[] }) => {
   const team = (m.nameMedium ?? m.name ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
   if (!team) return false;
   return !m.newOwners.some((o) => {
-    const owner = (o.title ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const owner = teamLabelLong(o).toLowerCase().replace(/[^a-z0-9]/g, '');
     return owner && (owner.startsWith(team) || team.startsWith(owner));
   });
 };
 
 /** Tooltip for a crest: team name, plus who took it over when that's news. */
-const memberTitle = (m: { name: string | null; newOwner?: boolean; newOwners?: Array<{ title: string | null }> }) => {
+const memberTitle = (m: { name: string | null; newOwner?: boolean; newOwners?: OwnerLabelRef[] }) => {
   const base = m.name ?? '';
   if (!m.newOwner || !m.newOwners?.length) return base;
-  return `${base} — new owner for ${upcoming?.year}: ${m.newOwners.map((o) => o.title).join(' & ')}`;
+  return `${base} — new owner for ${upcoming?.year}: ${m.newOwners.map(teamLabelLong).join(' & ')}`;
 };
 
 /**
@@ -490,14 +523,14 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                             <span class="whats-changed__item">
                               {m.icon && <img src={m.icon} alt="" loading="lazy" width="20" height="20" />}
                               {m.newOwners.map((o) => (
-                                <a href={ownerHref(o.slug)}><strong>{o.title ?? o.slug}</strong></a>
+                                <a href={ownerHref(o.slug)}><strong>{teamLabelLong(o)}</strong></a>
                               ))}
                               {/* An owner is usually titled after the team, so naming
                                   both reads as "Dead Cap Walking takes over Dead Cap".
                                   Say the team only when it adds something. */}
                               {namesTeamToo(m) ? <> takes over {m.nameMedium ?? m.name}</> : <> takes over</>}
                               {m.previousOwners.length > 0 && (
-                                <span class="dim"> from {m.previousOwners.map((o) => o.title ?? o.slug).join(' & ')}</span>
+                                <span class="dim"> from {m.previousOwners.map(teamLabelLong).join(' & ')}</span>
                               )}
                             </span>
                           ))}
@@ -829,7 +862,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                           <span class="visually-hidden">{d.name}: </span>
                           Built by <strong>{d.owners.length} owner{d.owners.length === 1 ? '' : 's'}</strong>
                           {d.owners.length > 0 && (
-                            <span class="dim"> · {d.owners.slice(0, 2).map((o) => o.title).filter(Boolean).join(', ')}{d.owners.length > 2 ? ` and ${d.owners.length - 2} more` : ''}</span>
+                            <span class="dim"> · {d.owners.slice(0, 2).map(teamLabel).filter(Boolean).join(', ')}{d.owners.length > 2 ? ` and ${d.owners.length - 2} more` : ''}</span>
                           )}
                         </span>
                       </summary>
@@ -848,7 +881,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                               </caption>
                               <thead>
                                 <tr>
-                                  <th scope="col">Owner</th>
+                                  <th scope="col">Team</th>
                                   <th scope="col">Years here</th>
                                   <th scope="col" class="num">Sn<span class="visually-hidden"> (seasons)</span></th>
                                   <th scope="col" class="num">Record</th>
@@ -863,7 +896,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                                     <th scope="row" class="owner-cell">
                                       <a href={ownerHref(o.slug)} class="owner-link">
                                         {o.icon && <img src={o.icon} alt="" loading="lazy" width="20" height="20" />}
-                                        <span>{o.title ?? o.slug}</span>
+                                        <span>{teamLabel(o)}</span>
                                       </a>
                                       {o.sharedSeasons > 0 && <span class="pill pill--shared">Co-owned</span>}
                                     </th>
@@ -989,15 +1022,21 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                     {d.members.map((m) => (
                       <li class:list={['preview-member', { 'preview-member--new': m.newOwner }]}>
                         {m.icon && <img src={m.icon} alt="" loading="lazy" width="26" height="26" />}
-                        <span class="preview-team">{m.nameMedium ?? m.name}</span>
-                        <span class="preview-owner">
-                          {m.owners.map((o, i) => (
-                            <>{i > 0 ? ' & ' : ''}<a href={ownerHref(o.slug)}>{o.title ?? o.slug}</a></>
-                          ))}
-                        </span>
+                        {/* One label, not two. Now that an owner is labelled by
+                            team, a separate owner column repeated the team name
+                            on 38 of these 41 rows — so the name IS the link.
+                            The one co-owned holding keeps the name unlinked
+                            rather than picking one of the two to point at; the
+                            owner-era table below links both. */}
+                        {m.owners.length === 1 ? (
+                          <a class="preview-team" href={ownerHref(m.owners[0].slug)}>{m.nameMedium ?? m.name}</a>
+                        ) : (
+                          <span class="preview-team">{m.nameMedium ?? m.name}</span>
+                        )}
+                        {m.owners.length > 1 && <span class="pill pill--shared">Co-owned</span>}
                         {m.newOwner && (
                           <span class="pill pill--new">
-                            new<span class="visually-hidden"> owner{m.previousOwners.length > 0 ? `, replacing ${m.previousOwners.map((o) => o.title ?? o.slug).join(' and ')}` : ''}</span>
+                            new<span class="visually-hidden"> owner{m.previousOwners.length > 0 ? `, replacing ${m.previousOwners.map(teamLabelLong).join(' and ')}` : ''}</span>
                           </span>
                         )}
                         {m.movedDivision && m.previousDivision && (
@@ -1059,7 +1098,6 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                         {!seasonNotPlayed && <th scope="col" class="num">W-L</th>}
                         {!seasonNotPlayed && <th scope="col" class="num">PF</th>}
                         {seasonHasGames && <th scope="col" class="num">PA</th>}
-                        <th scope="col">Owner</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1076,14 +1114,6 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                           {!seasonNotPlayed && <td class="num">{formatRecord(t)}</td>}
                           {!seasonNotPlayed && <td class="num">{t.pointsFor.toFixed(1)}</td>}
                           {seasonHasGames && <td class="num">{t.pointsAgainst?.toFixed(1) ?? '—'}</td>}
-                          <td class="owner-cell">
-                            {t.owners.map((o, i) => (
-                              <>
-                                {i > 0 && <span class="dim"> &amp; </span>}
-                                <a href={ownerHref(o.slug)} class="owner-link owner-link--inline" title={o.title ?? o.slug}>{o.title ?? o.slug}</a>
-                              </>
-                            ))}
-                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -1564,8 +1594,8 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
   .preview-member:last-child { border-bottom: none; }
   .preview-member img { width: 26px; height: 26px; object-fit: contain; flex: 0 0 auto; }
   .preview-team { font-weight: 700; }
-  .preview-owner { color: var(--ds-ink-muted); font-size: 0.8125rem; }
-  .preview-owner a { color: inherit; }
+  a.preview-team { color: inherit; text-decoration: none; }
+  a.preview-team:hover { text-decoration: underline; }
   .preview-member--new .preview-team { color: var(--ds-accent); }
 
   /* ── Membership era history ────────────────────────────────────────────── */
@@ -1822,29 +1852,25 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
     color: var(--ds-ink-muted);
     line-height: 1.5;
   }
-  .owner-cell { min-width: 10rem; }
-  /* A rebrand-joined owner title ("Vit's Brother / Avenging Amish / Broke
-   * Back Mountaineers") wraps to three lines and drags the whole ROW to 80px,
-   * leaving every other cell in a sea of whitespace. Keep it to one line; the
-   * full name is on the link's title and on the owner page it points at. */
-  .season-team-table .owner-cell { max-width: 14rem; }
-  .season-team-table .owner-link--inline {
-    display: inline-block;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    vertical-align: bottom;
-  }
+  .owner-cell { min-width: 10rem; max-width: 14rem; }
   .owner-link {
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
+    max-width: 100%;
     color: inherit;
     text-decoration: none;
     font-weight: 600;
   }
-  .owner-link--inline { font-weight: 400; }
+  /* Labelling by latest team name removed the 68-character rebrand-joined
+   * titles that dragged a row to three lines, but a team name can still be
+   * long ("Broke Back Mountaineers"). Keep the fallback: one line, ellipsis,
+   * full text on the owner page the link points at. */
+  .owner-link > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   .owner-link:hover { text-decoration: underline; }
   .owner-link img { width: 20px; height: 20px; object-fit: contain; flex: 0 0 auto; }
   /* Wrap BETWEEN runs, never inside one — "2011–" / "2013" on two lines is

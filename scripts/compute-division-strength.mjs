@@ -151,11 +151,32 @@ const finishRecord = (rec) => ({
  * never summed from owner eras — they are summed from franchise-seasons, which
  * exist once each. `tests/division-strength-data.test.ts` pins that separation.
  */
+/**
+ * The most recent team name an owner used.
+ *
+ * The division report labels history by TEAM, not by owner — but an owner's
+ * `title` concatenates every name they have worn ("Vit's Brother / Avenging
+ * Amish / Broke Back 'lil Half Dead's Brother", 68 characters), which is not a
+ * team name and wraps to three lines. The label is the LATEST name instead.
+ *
+ * "Latest" means latest within THIS OWNER's tenure, never the franchise's.
+ * AFL franchise 0007 has had several owners; using the franchise's newest name
+ * would stamp a stranger's team onto someone else's stint. Segmentation stays
+ * keyed on the owner so a mid-tenure rename does not split one stint in two —
+ * only the label changes.
+ */
+function latestIdentity(owner) {
+  const identities = owner?.identities ?? [];
+  if (!identities.length) return null;
+  return identities.reduce((best, cur) => (cur.yearEnd > best.yearEnd ? cur : best), identities[0]);
+}
+
 function buildOwnersBySeason(ownerFile) {
   const bySeason = new Map();
   const sharedSlugs = new Map();
   for (const owner of ownerFile?.owners ?? []) {
     sharedSlugs.set(owner.slug, new Set((owner.coOwners ?? []).map((c) => c.slug)));
+    const latest = latestIdentity(owner);
     for (const tenure of owner.tenures ?? []) {
       for (const season of tenure.seasons ?? []) {
         const key = `${season.year}|${tenure.franchiseId}`;
@@ -164,6 +185,8 @@ function buildOwnersBySeason(ownerFile) {
           ownerId: owner.ownerId,
           slug: owner.slug,
           title: owner.title,
+          latestName: latest?.name ?? null,
+          latestNameMedium: latest?.nameMedium ?? latest?.name ?? null,
           icon: owner.icon ?? null,
           isCurrent: !!owner.isCurrent,
           isShared: !!owner.isShared,
@@ -394,6 +417,8 @@ function buildLeague(slug) {
           ownerId: h.ownerId,
           slug: h.slug,
           title: h.title,
+          latestName: h.latestName,
+          latestNameMedium: h.latestNameMedium,
           icon: h.icon,
         })),
         shared: holders.length > 1,
@@ -549,6 +574,8 @@ function buildLeague(slug) {
               ownerId: holder.ownerId,
               slug: holder.slug,
               title: holder.title,
+              latestName: holder.latestName,
+              latestNameMedium: holder.latestNameMedium,
               icon: holder.icon,
               years: [],
               franchiseIds: new Set(),
@@ -613,6 +640,8 @@ function buildLeague(slug) {
           ownerId: era.ownerId,
           slug: era.slug,
           title: era.title,
+          latestName: era.latestName,
+          latestNameMedium: era.latestNameMedium,
           icon: era.icon,
           seasons: era.years.length,
           yearStart: Math.min(...era.years),
@@ -788,10 +817,10 @@ function buildLeague(slug) {
         name: row.name,
         nameMedium: row.nameMedium,
         icon: row.icon,
-        owners: holders.map((h) => ({ ownerId: h.ownerId, slug: h.slug, title: h.title, icon: h.icon })),
+        owners: holders.map((h) => ({ ownerId: h.ownerId, slug: h.slug, title: h.title, latestName: h.latestName, latestNameMedium: h.latestNameMedium, icon: h.icon })),
         newOwner: prevHolders.length > 0 && incoming.length > 0,
-        newOwners: incoming.map((h) => ({ ownerId: h.ownerId, slug: h.slug, title: h.title, icon: h.icon })),
-        previousOwners: prevHolders.map((h) => ({ ownerId: h.ownerId, slug: h.slug, title: h.title })),
+        newOwners: incoming.map((h) => ({ ownerId: h.ownerId, slug: h.slug, title: h.title, latestName: h.latestName, latestNameMedium: h.latestNameMedium, icon: h.icon })),
+        previousOwners: prevHolders.map((h) => ({ ownerId: h.ownerId, slug: h.slug, title: h.title, latestName: h.latestName, latestNameMedium: h.latestNameMedium })),
         previousDivision,
         movedDivision: previousDivision !== null && previousDivision !== row.divisionName,
       });

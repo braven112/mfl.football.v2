@@ -63,6 +63,30 @@ it('produces no division file for a league with no season ledger', () => {
   }
 });
 
+it('never renders an owner ref by its raw concatenated title', () => {
+  // `title` joins every team name an owner has worn — "Vit's Brother /
+  // Avenging Amish / Broke Back 'lil Half Dead's Brother" — so it is a lookup
+  // key, not a label. The page labels by team via teamLabel/teamLabelLong;
+  // `.title` may appear ONLY as the last-resort tail of those two chains.
+  //
+  // Caught a real one: the "Built by N owners · …" summary was a seventh label
+  // site added after the other six were converted, and it put the joined
+  // string back on the AFL's North panel.
+  const page = readFileSync(
+    path.join(ROOT, 'src/components/shared/division-strength/DivisionStrengthPage.astro'),
+    'utf8'
+  );
+  const offenders = page
+    .split('\n')
+    .map((line, i) => ({ line: line.trim(), n: i + 1 }))
+    .filter(({ line }) => /\bo\.title\b|\.map\(\(o\) => o\.title\)/.test(line))
+    .filter(({ line }) => !/\?\? o\.title \?\? o\.slug/.test(line));
+  expect(
+    offenders.map((o) => `${o.n}: ${o.line}`),
+    'label an owner with teamLabel() / teamLabelLong(), never o.title'
+  ).toEqual([]);
+});
+
 describe.each(leagues)('$league.slug division strength', ({ league, dataPath, ledgerPath }) => {
   const data: DivisionStrengthFile = readJson(dataPath);
   const ledger = readJson(ledgerPath);
@@ -588,6 +612,60 @@ describe.each(leagues)('$league.slug division strength', ({ league, dataPath, le
         expect(era.yearEnd).toBeLessThan(up.year);
       }
       for (const ry of division.rankedYears) expect(ry.year).not.toBe(up.year);
+    }
+  });
+
+  it('labels every owner ref by the latest team name in that owner tenure', () => {
+    // The report groups by OWNER but labels by TEAM, because `title`
+    // concatenates every name an owner has worn ("Vit's Brother / Avenging
+    // Amish / Broke Back 'lil Half Dead's Brother") and is not a name at all.
+    // Every ref must carry the resolved label, or the page's `?? o.title`
+    // fallback quietly puts that 68-character string back on screen.
+    //
+    // "Latest" is latest within THIS OWNER's tenure, never the franchise's:
+    // AFL franchise 0004 has had nine different owners, so a franchise-wide
+    // current name would stamp a stranger's team onto someone else's stint.
+    const owners = readJson(path.join(path.dirname(dataPath), 'owner-tenures.json'));
+    const expected = new Map<string, string>();
+    for (const owner of owners.owners) {
+      let best: any = null;
+      for (const identity of owner.identities ?? []) {
+        if (!best || identity.yearEnd > best.yearEnd) best = identity;
+      }
+      if (best?.name) expected.set(owner.ownerId, best.name);
+    }
+
+    const refs: Array<{ where: string; ref: any }> = [];
+    for (const year of data.years) {
+      for (const division of year.divisions) {
+        for (const team of division.teams) {
+          for (const ref of team.owners) refs.push({ where: `${year.year} ${division.name} ${team.franchiseId}`, ref });
+        }
+      }
+    }
+    for (const division of data.divisions) {
+      for (const era of division.owners) refs.push({ where: `${division.name} era`, ref: era });
+    }
+    const up = data.upcoming;
+    if (up) {
+      for (const division of up.divisions) {
+        for (const member of division.members) {
+          for (const ref of member.owners) refs.push({ where: `upcoming ${division.name} owners`, ref });
+          for (const ref of member.newOwners) refs.push({ where: `upcoming ${division.name} newOwners`, ref });
+          for (const ref of member.previousOwners) refs.push({ where: `upcoming ${division.name} previousOwners`, ref });
+        }
+      }
+    }
+
+    expect(refs.length).toBeGreaterThan(0);
+    for (const { where, ref } of refs) {
+      expect(ref.latestName, `${where}: ${ref.ownerId} carries no latestName`).toBeTruthy();
+      const want = expected.get(ref.ownerId);
+      if (want) {
+        expect(ref.latestName, `${where}: ${ref.ownerId} labelled "${ref.latestName}", newest identity is "${want}"`).toBe(want);
+      }
+      // The concatenated title is the thing this rule exists to keep out.
+      expect(ref.latestName, `${where}: ${ref.ownerId} label is a joined title`).not.toContain(' / ');
     }
   });
 

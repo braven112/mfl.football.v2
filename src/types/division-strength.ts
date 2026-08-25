@@ -40,11 +40,22 @@ export interface RankedYear {
   pct: number;
 }
 
-/** The owner reference carried on a team-season and on award rows. */
+/**
+ * The owner reference carried on a team-season and on award rows.
+ *
+ * `title` concatenates every team name the owner has worn, so it is NOT a
+ * label — the report renders `latestNameMedium ?? latestName`, the most recent
+ * team name within THAT owner's tenure. See `latestIdentity` in
+ * scripts/compute-division-strength.mjs.
+ */
 export interface DivisionOwnerRef {
   ownerId: string;
   slug: string;
   title: string | null;
+  /** Most recent team name in this owner's tenure. The label. */
+  latestName: string | null;
+  /** Short form of the same, for table cells. */
+  latestNameMedium: string | null;
   icon: string | null;
 }
 
@@ -125,6 +136,8 @@ export interface DivisionOwnerEra {
   ownerId: string;
   slug: string;
   title: string | null;
+  latestName: string | null;
+  latestNameMedium: string | null;
   icon: string | null;
   seasons: number;
   yearStart: number;
@@ -229,7 +242,13 @@ export interface UpcomingMember extends DivisionMember {
   /** Holders now who did NOT hold the slot in the last played season. */
   newOwner: boolean;
   newOwners: DivisionOwnerRef[];
-  previousOwners: Array<{ ownerId: string; slug: string; title: string | null }>;
+  previousOwners: Array<{
+    ownerId: string;
+    slug: string;
+    title: string | null;
+    latestName: string | null;
+    latestNameMedium: string | null;
+  }>;
   /** The division this franchise sat in last played season, if any. */
   previousDivision: string | null;
   movedDivision: boolean;
