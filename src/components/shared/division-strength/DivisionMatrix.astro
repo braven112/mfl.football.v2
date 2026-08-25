@@ -127,6 +127,15 @@ const rowId = (slug: string) => `${idPrefix}-row-${slug}`;
 </p>
 
 <style>
+  /* Defined locally, not inherited from the page's `.ds-page` block: this
+     component should render correctly wherever it is used, and a focus ring
+     that silently changes colour when the cascade shifts is exactly the kind
+     of half-defined token the design-system rules warn about.
+     --league-accent, never --color-primary — the latter is blue on AFL light. */
+  .dsm-scroll,
+  .dsm-legend {
+    --ds-accent: var(--league-accent, #1c497c);
+  }
   .dsm-scroll {
     overflow-x: auto;
     border: 1px solid var(--content-border, #e5e5e5);

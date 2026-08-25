@@ -136,6 +136,21 @@ const sortHref = (key: AllTimeSortKey) => {
   params.set('dir', view.sort === key && view.dir === 'desc' ? 'asc' : 'desc');
   return `${r(BASE)}?${params.toString()}#strength-table`;
 };
+/**
+ * The screen-reader half of a sort header.
+ *
+ * Centralised while the markup stays inline: the `<th>` cannot move into its
+ * own component, because Astro scoped CSS does not apply to markup a child
+ * component emits (the child's tags carry a different `data-astro-cid`), so
+ * extracting it silently killed the sticky-header and sort-link styling. This
+ * string is the part a sighted reviewer never sees and the part most likely to
+ * drift, so it is the part worth sharing.
+ */
+const sortHint = (key: AllTimeSortKey, describedAs: string) =>
+  view.sort === key
+    ? `, currently sorted ${view.dir === 'desc' ? 'descending' : 'ascending'}; activate to reverse`
+    : `, activate to sort by ${describedAs}`;
+
 const ariaSort = (key: AllTimeSortKey) =>
   view.sort === key ? (view.dir === 'desc' ? 'descending' : 'ascending') : undefined;
 
@@ -228,11 +243,6 @@ const memberTitle = (m: { name: string | null; newOwner?: boolean; newOwners?: A
   return `${base} — new owner for ${upcoming?.year}: ${m.newOwners.map((o) => o.title).join(' & ')}`;
 };
 
-const currentLineups = data.divisions
-  .filter((d) => d.currentEra)
-  .map((d) => ({ division: d, era: d.currentEra! }))
-  .sort((a, b) => b.era.seasons - a.era.seasons || b.era.yearStart - a.era.yearStart);
-
 /**
  * How the current lineup's interdivisional rate compares with everything ever
  * done under that division's name — i.e. how much of the name's reputation
@@ -247,6 +257,30 @@ const eraVsAllTime = (d: DivisionAllTime, era: { seasons: number; interDivision:
   if (Math.abs(delta) < 0.005) return null;
   return { up: delta > 0, text: Math.abs(delta).toFixed(3).replace(/^0/, '') };
 };
+
+// Everything each row needs is resolved ONCE here. Calling the helpers from
+// the template instead meant `eraVsAllTime` and `upcomingFor` ran three to
+// four times per row apiece, on every request.
+const currentLineups = data.divisions
+  .filter((d) => d.currentEra)
+  .map((d) => {
+    const era = d.currentEra!;
+    const up = upcomingFor(d.name);
+    // Normalize the two member shapes to ONE row type here rather than letting
+    // the template union `UpcomingMember[] | DivisionMember[]` and reach for
+    // `newOwner` through a cast — `DivisionMember` has no such field, so the
+    // cast was hiding a genuine mismatch rather than resolving it.
+    const members = (up?.members ?? era.members).map((m) => ({
+      franchiseId: m.franchiseId,
+      name: m.name,
+      nameMedium: m.nameMedium,
+      icon: m.icon,
+      newOwner: 'newOwner' in m ? m.newOwner : false,
+      newOwners: 'newOwners' in m ? m.newOwners : [],
+    }));
+    return { division: d, era, upcoming: up, delta: eraVsAllTime(d, era), members };
+  })
+  .sort((a, b) => b.era.seasons - a.era.seasons || b.era.yearStart - a.era.yearStart);
 
 /**
  * Finish score: `avgFinishPct` as 0-100, where 100 is "first every season".
@@ -443,7 +477,7 @@ const seasonStandingsOnly = !!season && !season.gamesResolved && !seasonNotPlaye
                       </tr>
                     </thead>
                     <tbody>
-                      {currentLineups.map(({ division, era }) => (
+                      {currentLineups.map(({ division, era, upcoming: up, delta, members }) => (
                         <tr>
                           <th scope="row" class="name-cell">
                             <a href={`#div-${division.slug}`} class="name-link">{division.name}</a>
@@ -461,9 +495,9 @@ const seasonStandingsOnly = !!season && !season.gamesResolved && !seasonNotPlaye
                             <span class="rec">{formatRecord(era.interDivision)}</span>
                             <span class="pct">
                               {formatWinPct(era.interDivision)}
-                              {eraVsAllTime(division, era) && (
-                                <span class:list={['delta', eraVsAllTime(division, era)!.up ? 'delta--up' : 'delta--down']}>
-                                  {eraVsAllTime(division, era)!.up ? '▲' : '▼'}{eraVsAllTime(division, era)!.text}
+                              {delta && (
+                                <span class:list={['delta', delta.up ? 'delta--up' : 'delta--down']}>
+                                  {delta.up ? '▲' : '▼'}{delta.text}
                                 </span>
                               )}
                             </span>
@@ -475,17 +509,15 @@ const seasonStandingsOnly = !!season && !season.gamesResolved && !seasonNotPlaye
                               who finished last season. A changed holding is marked. */}
                           <td class="member-cell">
                             <span class="member-icons">
-                              {(upcomingFor(division.name)?.members ?? era.members).map((m) => (
-                                <span class:list={['member-slot', { 'member-slot--new': (m as any).newOwner }]}>
+                              {members.map((m) => (
+                                <span class:list={['member-slot', { 'member-slot--new': m.newOwner }]}>
                                   {m.icon
                                     ? <img src={m.icon} alt={m.nameMedium ?? m.name ?? ''} title={memberTitle(m)} loading="lazy" width="24" height="24" />
                                     : <span class="member-initials" title={memberTitle(m)}>{(m.nameMedium ?? m.name ?? '?').slice(0, 2)}</span>}
                                 </span>
                               ))}
                             </span>
-                            {upcomingFor(division.name)?.newOwners.length ? (
-                              <span class="pill pill--new">new owner</span>
-                            ) : null}
+                            {up?.newOwners.length ? <span class="pill pill--new">new owner</span> : null}
                           </td>
                         </tr>
                       ))}
@@ -570,44 +602,37 @@ const seasonStandingsOnly = !!season && !season.gamesResolved && !seasonNotPlaye
                     <tr>
                       <th scope="col" class="sortable" aria-sort={ariaSort('name')}>
                         <a class="sort-link" href={sortHref('name')}>
-                          <span>Division</span><span class="sort-caret" aria-hidden="true"></span>
-                          <span class="visually-hidden">{view.sort === 'name' ? `, currently sorted ${view.dir === 'desc' ? 'descending' : 'ascending'}; activate to reverse` : ', activate to sort by division name'}</span>
+                          <span>Division</span><span class="sort-caret" aria-hidden="true"></span><span class="visually-hidden">{sortHint('name', 'division name')}</span>
                         </a>
                       </th>
                       <th scope="col" class="sortable num" aria-sort={ariaSort('seasons')}>
                         <a class="sort-link" href={sortHref('seasons')}>
-                          <span>Seasons</span><span class="sort-caret" aria-hidden="true"></span>
-                          <span class="visually-hidden">{view.sort === 'seasons' ? `, currently sorted ${view.dir === 'desc' ? 'descending' : 'ascending'}; activate to reverse` : ', activate to sort by seasons played'}</span>
+                          <span>Seasons</span><span class="sort-caret" aria-hidden="true"></span><span class="visually-hidden">{sortHint('seasons', 'seasons played')}</span>
                         </a>
                       </th>
                       <th scope="col" class="sortable num" aria-sort={ariaSort('record')}>
                         <a class="sort-link" href={sortHref('record')}>
-                          <span>Overall</span><span class="sort-caret" aria-hidden="true"></span>
-                          <span class="visually-hidden">{view.sort === 'record' ? `, currently sorted ${view.dir === 'desc' ? 'descending' : 'ascending'}; activate to reverse` : ', activate to sort by overall win percentage'}</span>
+                          <span>Overall</span><span class="sort-caret" aria-hidden="true"></span><span class="visually-hidden">{sortHint('record', 'overall win percentage')}</span>
                         </a>
                       </th>
                       <th scope="col" class="sortable num metric-col" aria-sort={ariaSort('interPct')}>
                         <a class="sort-link" href={sortHref('interPct')}>
-                          <span>Interdivisional</span><span class="sort-caret" aria-hidden="true"></span>
-                          <span class="visually-hidden">{view.sort === 'interPct' ? `, currently sorted ${view.dir === 'desc' ? 'descending' : 'ascending'}; activate to reverse` : ', activate to sort by interdivisional win percentage'}</span>
+                          <span>Interdivisional</span><span class="sort-caret" aria-hidden="true"></span><span class="visually-hidden">{sortHint('interPct', 'interdivisional win percentage')}</span>
                         </a>
                       </th>
                       <th scope="col" class="sortable num metric-col" aria-sort={ariaSort('avgFinish')}>
                         <a class="sort-link" href={sortHref('avgFinish')}>
-                          <span>Finish score</span><span class="sort-caret" aria-hidden="true"></span>
-                          <span class="visually-hidden">{view.sort === 'avgFinish' ? `, currently sorted ${view.dir === 'desc' ? 'descending' : 'ascending'}; activate to reverse` : ', activate to sort by finish score, where 100 is first place every season'}</span>
+                          <span>Finish score</span><span class="sort-caret" aria-hidden="true"></span><span class="visually-hidden">{sortHint('avgFinish', 'finish score, where 100 is first place every season')}</span>
                         </a>
                       </th>
                       <th scope="col" class="sortable num" aria-sort={ariaSort('titles')}>
                         <a class="sort-link" href={sortHref('titles')}>
-                          <span>Titles</span><span class="sort-caret" aria-hidden="true"></span>
-                          <span class="visually-hidden">{view.sort === 'titles' ? `, currently sorted ${view.dir === 'desc' ? 'descending' : 'ascending'}; activate to reverse` : ', activate to sort by division titles'}</span>
+                          <span>Titles</span><span class="sort-caret" aria-hidden="true"></span><span class="visually-hidden">{sortHint('titles', 'division titles')}</span>
                         </a>
                       </th>
                       <th scope="col" class="sortable num" aria-sort={ariaSort('championships')}>
                         <a class="sort-link" href={sortHref('championships')}>
-                          <span>Champs</span><span class="sort-caret" aria-hidden="true"></span>
-                          <span class="visually-hidden">{view.sort === 'championships' ? `, currently sorted ${view.dir === 'desc' ? 'descending' : 'ascending'}; activate to reverse` : ', activate to sort by championships'}</span>
+                          <span>Champs</span><span class="sort-caret" aria-hidden="true"></span><span class="visually-hidden">{sortHint('championships', 'championships')}</span>
                         </a>
                       </th>
                     </tr>
