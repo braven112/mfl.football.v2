@@ -89,33 +89,6 @@ const generatedLabel = Number.isNaN(generatedDate.getTime())
       </p>
     </header>
 
-    {forgottenChampions.length > 0 && (
-      <section class="forgotten" aria-labelledby="forgotten-heading">
-        <h2 id="forgotten-heading">Champions you've never seen</h2>
-        <p class="forgotten-sub">
-          These owners won {league.name} and then left. Their titles appear on no franchise page.
-        </p>
-        <ul class="forgotten-list">
-          {forgottenChampions.map((owner) => (
-            <li>
-              <a href={ownerHref(owner)} class="forgotten-card">
-                <img class="forgotten-icon" src={owner.icon} alt="" loading="lazy" width="40" height="40" />
-                <span class="forgotten-text">
-                  <span class="forgotten-name">{owner.title}</span>
-                  <span class="forgotten-meta">
-                    {owner.totals.championships.join(', ')} · {formatOwnerRecord(owner)}
-                  </span>
-                </span>
-                <span class="forgotten-count" aria-label={`${owner.totals.championships.length} titles`}>
-                  🏆 {owner.totals.championships.length}
-                </span>
-              </a>
-            </li>
-          ))}
-        </ul>
-      </section>
-    )}
-
     <section class="current-owners">
       <h2>Current owners <span class="count">{currentSorted.length}</span></h2>
       <div class="owner-grid">
@@ -178,6 +151,33 @@ const generatedLabel = Number.isNaN(generatedDate.getTime())
         ))}
       </div>
     </section>
+
+    {forgottenChampions.length > 0 && (
+      <section class="forgotten" aria-labelledby="forgotten-heading">
+        <h2 id="forgotten-heading">Champions you've never seen</h2>
+        <p class="forgotten-sub">
+          These owners won {league.name} and then left. Their titles appear on no franchise page.
+        </p>
+        <ul class="forgotten-list">
+          {forgottenChampions.map((owner) => (
+            <li>
+              <a href={ownerHref(owner)} class="forgotten-card">
+                <img class="forgotten-icon" src={owner.icon} alt="" loading="lazy" width="40" height="40" />
+                <span class="forgotten-text">
+                  <span class="forgotten-name">{owner.title}</span>
+                  <span class="forgotten-meta">
+                    {owner.totals.championships.join(', ')} · {formatOwnerRecord(owner)}
+                  </span>
+                </span>
+                <span class="forgotten-count" aria-label={`${owner.totals.championships.length} titles`}>
+                  🏆 {owner.totals.championships.length}
+                </span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )}
 
     <section class="former-owners">
       <h2>Former owners <span class="count">{formerSorted.length}</span></h2>

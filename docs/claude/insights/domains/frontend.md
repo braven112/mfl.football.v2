@@ -132,6 +132,34 @@ hrefs to local copies, and open it in the bundled Chromium — it isolates
 
 ---
 
+## 2026-08-25 - The Browser Pane Screenshots the Top of the Page, Not the Viewport You Scrolled To
+
+**Context:** Verifying a section reorder on `/owners` — the moved section sits
+~1400px down, below a 17-card grid.
+
+**Insight:** `computer{action:"screenshot"}` renders from the top of the
+document regardless of `window.scrollY`. Scrolling first — `scrollIntoView()`,
+`window.scrollTo()`, or the `scroll` action — changes nothing; you get a black
+frame or the same top-of-page shot, and `getBoundingClientRect()` will happily
+confirm the element IS in the visual viewport while the capture disagrees.
+`zoom` does not rescue it either: region crop is unsupported in the pane and it
+returns the full screenshot with a note saying so.
+
+**What works:** `resize_window` to a viewport tall enough that the target falls
+inside the captured region (e.g. 1100x1800), then screenshot. If the page is
+still too long, temporarily clamp the block above it from the console
+(`el.style.maxHeight`) — a throwaway DOM tweak, never a source edit — so the
+target rises into frame.
+
+**Recommendation:** This is why the head says *measure, don't screenshot*. Prove
+DOM order with `javascript_tool` — `[...document.querySelectorAll('.page > section')].map(e => e.className)`
+answers "did the section move?" in one call, and a `fetch()` + `DOMParser` of
+the sibling league's route answers it for BOTH leagues without a second tab.
+Spend the screenshot only on the thing a query cannot show: that the moved
+block still looks right where it landed.
+
+---
+
 ## 2026-08-25 - A Narrow `@param` Is a Test Blind Spot: the Redaction Suite Never Exercised `nameMedium`
 
 **Context:** Clearing `ts(2353)` ("object literal may only specify known

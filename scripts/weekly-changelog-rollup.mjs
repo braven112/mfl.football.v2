@@ -53,6 +53,7 @@ const AREA_LABELS = {
   'keeper-analysis': 'Keeper Report Card',
   'awards': 'Awards & Trophies',
   'franchises': 'Franchise Pages',
+  'owners': 'Owner Pages',
   'other': 'Other',
 };
 

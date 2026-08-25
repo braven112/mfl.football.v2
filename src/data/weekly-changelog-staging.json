@@ -6,7 +6,7 @@
       "type": "bug-fix",
       "summary": "Owner cards on the Owners page were wearing decade-old logos. Eight owners — Dangsters, Ninjas, Midwestside, Pigskins, Wabbits, Bring The Pain, Dark Magicians, Fire Ready Aim — now show the logo they actually run today instead of the one they retired years ago.",
       "impact": "user",
-      "area": "franchises",
+      "area": "owners",
       "league": "theleague"
     },
     {
@@ -14,8 +14,16 @@
       "type": "bug-fix",
       "summary": "Owner cards on the Owners page now show your current team, not your longest-running one. Shawn Huber gets Suh girls, one cup instead of a logo he retired in 2018, and Shawn Klezovich finally gets the Swiftie spelling. Last-place rebrands still don't count — Ross Lawrence keeps the Thundering Herd.",
       "impact": "user",
-      "area": "franchises",
+      "area": "owners",
       "league": "afl"
+    },
+    {
+      "date": "2026-08-25",
+      "type": "style-tweak",
+      "summary": "The Owners page now leads with current owners — the \"Champions you've never seen\" callout moved below the card grid instead of sitting above it.",
+      "impact": "user",
+      "area": "owners",
+      "league": "both"
     }
   ]
 }
