@@ -848,3 +848,167 @@ describe.each(leagues)('$league.slug division strength', ({ league, dataPath, le
     }
   });
 });
+
+/**
+ * The era board — `rankEras` / `divisionAlumni` / `formatEraYears`.
+ *
+ * These shape the derived `membershipEras[]` for the page's cross-division
+ * lineup ranking. What they can get wrong is not arithmetic (the eras' own
+ * records are pinned above) but IDENTITY:
+ *
+ *   1. **A qualifying era must be a real run.** The `ERA_MIN_SEASONS` floor is
+ *      the whole premise of the board — comparing groups with shared history —
+ *      and a floor that leaks admits the one-season lineups it exists to keep
+ *      out.
+ *   2. **A division may appear more than once and must not appear twice for
+ *      the same years.** Two long lineups under one name are two rows; the same
+ *      lineup rendered twice is a bug that reads as a realignment that never
+ *      happened.
+ *   3. **Alumni resolve to the LAST identity worn in that division.** Walking
+ *      the eras oldest-first would stamp a franchise's 2007 name onto its 2025
+ *      crest, which is how a departed owner ends up labelled as a current one.
+ */
+import {
+  ERA_MIN_SEASONS,
+  divisionAlumni,
+  formatEraYears,
+  rankEras,
+} from '../src/utils/division-strength-view';
+
+it('renders an era span as a closed range, and an open one as present', () => {
+  expect(formatEraYears({ yearStart: 2012, yearEnd: 2016, current: false })).toBe('2012–2016');
+  expect(formatEraYears({ yearStart: 2016, yearEnd: 2025, current: true })).toBe('2016–present');
+  expect(formatEraYears({ yearStart: 2009, yearEnd: 2009, current: false })).toBe('2009');
+  // A single-season era that is STILL RUNNING is a first year, not a closed
+  // one — "2026" would read as a lineup that has already finished.
+  expect(formatEraYears({ yearStart: 2026, yearEnd: 2026, current: true })).toBe('2026–present');
+});
+
+describe.each(leagues)('$league.slug era board', ({ dataPath }) => {
+  const data = readJson(dataPath) as DivisionStrengthFile;
+
+  it('admits only lineups that held together long enough to compare', () => {
+    for (const row of rankEras(data.divisions)) {
+      expect(row.era.seasons, row.label).toBeGreaterThanOrEqual(ERA_MIN_SEASONS);
+      expect(row.era.totals.games, row.label).toBeGreaterThan(0);
+      // The span must agree with the season count it claims — an era is
+      // contiguous by construction, so anything else means the two were
+      // computed from different things.
+      expect(row.era.yearEnd - row.era.yearStart + 1, row.label).toBe(row.era.seasons);
+    }
+  });
+
+  it('honors the floor it is given rather than a hardcoded one', () => {
+    const everything = rankEras(data.divisions, 1).length;
+    const strict = rankEras(data.divisions, 99).length;
+    expect(everything).toBeGreaterThanOrEqual(rankEras(data.divisions).length);
+    expect(strict).toBe(0);
+  });
+
+  it('lists a division once per qualifying lineup, never twice for one span', () => {
+    const rows = rankEras(data.divisions);
+    const keys = rows.map((r) => `${r.divisionSlug}:${r.era.yearStart}`);
+    expect(new Set(keys).size).toBe(keys.length);
+    // Two rows for one division must describe DIFFERENT, non-overlapping runs.
+    for (const division of data.divisions) {
+      const mine = rows
+        .filter((r) => r.divisionSlug === division.slug)
+        .sort((a, b) => a.era.yearStart - b.era.yearStart);
+      for (const row of mine) expect(row.divisionEraCount).toBe(mine.length);
+      for (let i = 1; i < mine.length; i += 1) {
+        expect(mine[i].era.yearStart, division.name).toBeGreaterThan(mine[i - 1].era.yearEnd);
+      }
+    }
+  });
+
+  it('ranks by overall win percentage, longer run first on a tie', () => {
+    const rows = rankEras(data.divisions);
+    for (let i = 1; i < rows.length; i += 1) {
+      const prev = rows[i - 1].era;
+      const cur = rows[i].era;
+      expect((prev.totals.winPct ?? 0), `${rows[i - 1].label} vs ${rows[i].label}`)
+        .toBeGreaterThanOrEqual(cur.totals.winPct ?? 0);
+      if ((prev.totals.winPct ?? 0) === (cur.totals.winPct ?? 0)) {
+        expect(prev.seasons).toBeGreaterThanOrEqual(cur.seasons);
+      }
+    }
+  });
+
+  // The page sorts this board on OVERALL win% to match the all-time ranking
+  // directly above it, which is only defensible while the two metrics agree.
+  // They do in both leagues today because an era's intra-division games are
+  // exactly zero-sum. If this ever fails, the board is sorting on the
+  // flattering number and should move to interdivisional.
+  it('orders the board identically on the interdivisional rate', () => {
+    const rows = rankEras(data.divisions);
+    const byInter = [...rows].sort(
+      (a, b) =>
+        (b.era.interDivision.winPct ?? 0) - (a.era.interDivision.winPct ?? 0) ||
+        b.era.seasons - a.era.seasons ||
+        b.era.yearStart - a.era.yearStart ||
+        a.divisionName.localeCompare(b.divisionName)
+    );
+    expect(byInter.map((r) => r.label)).toEqual(rows.map((r) => r.label));
+  });
+
+  it('labels every row with the division and the years the group was together', () => {
+    for (const row of rankEras(data.divisions)) {
+      expect(row.label).toBe(`${row.divisionName} (${row.years})`);
+      expect(row.years).toContain(String(row.era.yearStart));
+      expect(row.years).toBe(row.era.current ? `${row.era.yearStart}–present` : `${row.era.yearStart}–${row.era.yearEnd}`);
+    }
+  });
+
+  it('lists every franchise that has ever been in a division, exactly once', () => {
+    for (const division of data.divisions) {
+      const alumni = divisionAlumni(division);
+      const ids = alumni.map((a) => a.franchiseId);
+      expect(new Set(ids).size, division.name).toBe(ids.length);
+      const everySeen = new Set(division.membershipEras.flatMap((e) => e.franchiseIds));
+      expect(new Set(ids), division.name).toEqual(everySeen);
+    }
+  });
+
+  it('flags as current exactly the franchises in the lineup still running', () => {
+    for (const division of data.divisions) {
+      const current = divisionAlumni(division)
+        .filter((a) => a.current)
+        .map((a) => a.franchiseId)
+        .sort();
+      expect(current, division.name).toEqual([...(division.currentEra?.franchiseIds ?? [])].sort());
+      // A retired division has no current lineup, so nothing in it is current.
+      if (!division.active) expect(current, division.name).toEqual([]);
+    }
+  });
+
+  it('resolves each franchise to the last identity it wore in that division', () => {
+    for (const division of data.divisions) {
+      for (const alumnus of divisionAlumni(division)) {
+        // The newest era containing this franchise is the one its crest and
+        // name must come from.
+        const newest = [...division.membershipEras]
+          .reverse()
+          .find((era) => era.franchiseIds.includes(alumnus.franchiseId))!;
+        const want = newest.members.find((m) => m.franchiseId === alumnus.franchiseId)!;
+        expect(alumnus.name, `${division.name} ${alumnus.franchiseId}`).toBe(want.name);
+        expect(alumnus.icon, `${division.name} ${alumnus.franchiseId}`).toBe(want.icon);
+      }
+    }
+  });
+
+  it('orders alumni current lineup first, most recent departure next', () => {
+    for (const division of data.divisions) {
+      const alumni = divisionAlumni(division);
+      // Each franchise's last year in the division, descending — the order the
+      // crests are meant to read in.
+      const lastYear = (id: string) =>
+        Math.max(...division.membershipEras.filter((e) => e.franchiseIds.includes(id)).map((e) => e.yearEnd));
+      for (let i = 1; i < alumni.length; i += 1) {
+        expect(
+          lastYear(alumni[i - 1].franchiseId),
+          `${division.name}: ${alumni[i - 1].franchiseId} before ${alumni[i].franchiseId}`
+        ).toBeGreaterThanOrEqual(lastYear(alumni[i].franchiseId));
+      }
+    }
+  });
+});

@@ -56,6 +56,10 @@ import type {
   DivisionStrengthYear,
 } from '../../../types/division-strength';
 import type { AllTimeSortKey, DivisionStrengthView } from '../../../utils/division-strength-view';
+// `rankEras` pre-formats each row's year span, so `formatEraYears` is not
+// imported here — the template must never re-derive a label the ranking
+// already resolved, or the two drift on the "–present" case.
+import { ERA_MIN_SEASONS, divisionAlumni, rankEras } from '../../../utils/division-strength-view';
 
 interface Props {
   leagueSlug: CanonicalLeagueSlug;
@@ -197,6 +201,41 @@ const SORT_LABELS: Record<AllTimeSortKey, string> = {
 const byOverall = data.divisions
   .filter((d) => d.totals.games > 0)
   .sort((a, b) => (b.totals.winPct ?? 0) - (a.totals.winPct ?? 0));
+
+/**
+ * Who has actually been in each division, resolved once per row.
+ *
+ * The ranking above orders NAMES, and a name outlives its teams — "Central
+ * .484 over 19 seasons" is six franchises' work, not the four sitting in it
+ * now. The crests say whose record it is without the reader opening a panel.
+ * Built here rather than in the template so the walk happens once per
+ * division rather than once per render site.
+ */
+const alumniBySlug = new Map(data.divisions.map((d) => [d.slug, divisionAlumni(d)]));
+const alumniOf = (d: DivisionAllTime) => alumniBySlug.get(d.slug) ?? [];
+
+/**
+ * The era board: the same comparison, made honest.
+ *
+ * Every run of consecutive seasons a division kept an identical lineup, long
+ * enough to count, ranked across divisions. This is the one ordering on the
+ * page where two rows describe the same KIND of thing — a fixed group of
+ * franchises measured over its whole shared span — which is why it is allowed
+ * to sit directly under the all-time list rather than replacing it. The
+ * all-time list answers "which name has the record"; this answers "which group
+ * of teams was actually the toughest to sit in".
+ *
+ * A division appears more than once when it has realigned into two long
+ * lineups (TheLeague's Northwest is here twice), and not at all when it never
+ * held one together for `ERA_MIN_SEASONS`.
+ */
+const rankedEras = rankEras(data.divisions);
+const eraDivisions = new Set(rankedEras.map((e) => e.divisionSlug));
+// Named in the note so a reader who scans for their own division and misses it
+// gets told why, rather than assuming the board is broken.
+const erasMissing = data.divisions
+  .filter((d) => d.totals.games > 0 && !eraDivisions.has(d.slug))
+  .map((d) => d.name);
 
 // A division that ran a season or two is not a small sample of a long run —
 // it is a short division. Saying so inline, next to the name, is what stops
@@ -604,7 +643,11 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                         <tr>
                           <th scope="row" class="name-cell">
                             <a href={`#div-${division.slug}`} class="name-link">{division.name}</a>
-                            <span class="span-text">since {era.yearStart}</span>
+                            {/* The years the group was together, not "since
+                                2016" — every other number in the row is bounded
+                                by the last played season, so the span should
+                                say where it stops too. */}
+                            <span class="span-text">{era.yearStart}–{era.yearEnd}</span>
                           </th>
                           <td class="num">
                             <span class="rec">{era.seasons}<span class="unit"> yr</span></span>
@@ -663,6 +706,18 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                     <span class="verdict-rank">{i + 1}</span>
                     <a href={`#div-${d.slug}`} class="verdict-name">{d.name}</a>
                     {isShortRun(d) && <span class="pill pill--sample">{d.seasons} season{d.seasons === 1 ? '' : 's'}</span>}
+                    {/* Whose record this actually is. A departed franchise is
+                        dimmed rather than dropped — it earned part of the
+                        number on the right. */}
+                    <span class="member-icons member-icons--alumni">
+                      {alumniOf(d).map((m) => (
+                        <span class:list={['member-slot', { 'member-slot--past': !m.current }]}>
+                          {m.icon
+                            ? <img src={m.icon} alt={m.nameMedium ?? m.name ?? ''} title={m.current ? (m.name ?? '') : `${m.name ?? ''} — no longer in the ${d.name}`} loading="lazy" width="20" height="20" />
+                            : <span class="member-initials" title={m.name ?? ''}>{(m.nameMedium ?? m.name ?? '?').slice(0, 2)}</span>}
+                        </span>
+                      ))}
+                    </span>
                     <span class="verdict-value">
                       {formatRecord(d.totals)} <span class="dim">{formatWinPct(d.totals)}</span>
                     </span>
@@ -670,7 +725,8 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                 ))}
               </ol>
               <p class="verdict-note">
-                All-time record, every game included.
+                All-time record, every game included, with every franchise that has sat in the
+                division — dimmed once it has moved on.
                 {shortRunLeader && (
                   <>
                     {' '}{shortRunLeader.name} tops it on {shortRunLeader.seasons}
@@ -678,9 +734,63 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                     percentage, so the season count sits next to it.
                   </>
                 )}
-                {' '}The table below splits each division's record into games inside and outside it.
+                {' '}These are division NAMES, though, and a name outlives its teams. The board
+                below compares the lineups themselves.
               </p>
             </section>
+
+            {rankedEras.length > 0 && (
+              <section class="verdict-pair" aria-labelledby="eras-heading">
+                <h2 id="eras-heading" class="section-title">Every lineup, ranked</h2>
+                <p class="section-header__sub">
+                  A division's record belongs to the teams in it, so this ranks the teams. Each row
+                  is a run of consecutive seasons one division kept the exact same lineup —
+                  a realignment ends the run and starts a new one — and a lineup has to hold
+                  together {ERA_MIN_SEASONS} seasons to make the board. A division that has
+                  realigned into two long lineups appears twice.
+                </p>
+                <ol class="verdict-list verdict-list--solo era-board">
+                  {rankedEras.map((row, i) => (
+                    <li>
+                      <span class="verdict-rank">{i + 1}</span>
+                      <span class="era-board__name">
+                        <a href={`#div-${row.divisionSlug}`} class="verdict-name">{row.divisionName}</a>
+                        <span class="era-board__years">{row.years}</span>
+                        {row.era.current && <span class="pill pill--sample">current</span>}
+                      </span>
+                      <span class="member-icons">
+                        {row.era.members.map((m) => (
+                          m.icon
+                            ? <img src={m.icon} alt={m.nameMedium ?? m.name ?? ''} title={m.name ?? ''} loading="lazy" width="20" height="20" />
+                            : <span class="member-initials" title={m.name ?? ''}>{(m.nameMedium ?? m.name ?? '?').slice(0, 2)}</span>
+                        ))}
+                      </span>
+                      <span class="verdict-value">
+                        {formatRecord(row.era.totals)} <span class="dim">{formatWinPct(row.era.totals)}</span>
+                        <span class="era-board__inter">
+                          {formatWinPct(row.era.interDivision)} <span class="dim">vs others</span>
+                        </span>
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+                <p class="verdict-note">
+                  {ERA_MIN_SEASONS} seasons is the floor because a lineup that lasted one
+                  realignment cycle has a record, not a history.
+                  {erasMissing.length > 0 && (
+                    <>
+                      {' '}The{' '}
+                      {erasMissing.join(', ').replace(/, ([^,]*)$/, erasMissing.length > 2 ? ', and $1' : ' and $1')}
+                      {' '}{erasMissing.length === 1 ? 'is absent' : 'are absent'} — no group of
+                      teams has stayed together that long under
+                      {erasMissing.length === 1 ? ' that name' : ' those names'}.
+                    </>
+                  )}
+                  {' '}Both figures cover the era's own seasons only; the second excludes games
+                  inside the division, which are zero-sum and cannot separate anyone.
+                </p>
+              </section>
+            )}
 
             <section aria-labelledby="table-heading">
               <div class="section-header">
@@ -729,6 +839,10 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                           <span>Champs</span><span class="sort-caret" aria-hidden="true"></span><span class="visually-hidden">{sortHint('championships', 'championships')}</span>
                         </a>
                       </th>
+                      {/* Not sortable: there is no ordering of "who was in it"
+                          that means anything, and a sort control that produces
+                          an arbitrary order is worse than none. */}
+                      <th scope="col">Teams<span class="visually-hidden"> that have been in the division</span></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -754,11 +868,26 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                         </td>
                         <td class="num">{d.divisionTitles}</td>
                         <td class="num">{d.championships}</td>
+                        <td class="member-cell">
+                          <span class="member-icons member-icons--alumni">
+                            {alumniOf(d).map((m) => (
+                              <span class:list={['member-slot', { 'member-slot--past': !m.current }]}>
+                                {m.icon
+                                  ? <img src={m.icon} alt={m.nameMedium ?? m.name ?? ''} title={m.current ? (m.name ?? '') : `${m.name ?? ''} — no longer in the ${d.name}`} loading="lazy" width="24" height="24" />
+                                  : <span class="member-initials" title={m.name ?? ''}>{(m.nameMedium ?? m.name ?? '?').slice(0, 2)}</span>}
+                              </span>
+                            ))}
+                          </span>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+              <p class="table-note">
+                Teams lists every franchise that has ever been in the division, most recent first;
+                one that has since moved elsewhere is dimmed.
+              </p>
             </section>
 
             <section aria-labelledby="matrix-heading">
@@ -1332,9 +1461,11 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
     border: 1px solid var(--ds-border);
     border-radius: var(--radius-md, 0.625rem);
   }
+  /* `center`, not `baseline`: every row now carries crests, and a 20px image
+     sitting on a text baseline hangs the row. */
   .verdict-list li {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 0.5rem;
     padding: 0.375rem 0;
     border-bottom: 1px solid var(--ds-border);
@@ -1360,6 +1491,53 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
     font-size: 0.8125rem;
     line-height: 1.6;
     color: var(--ds-ink-muted);
+  }
+
+  /* ── Crests inside a ranked row ────────────────────────────────────────── */
+  /* Pushed right so they form a column of their own instead of trailing a
+     name whose width changes every row. The `+` selector out-specifies
+     `.verdict-value { margin-left: auto }` — with two `auto` margins the gap
+     splits between them and neither column lines up. */
+  .verdict-list .member-icons { margin-left: auto; flex: 0 0 auto; }
+  .verdict-list .member-icons + .verdict-value { margin-left: 1rem; }
+  .verdict-list .member-icons img,
+  .verdict-list .member-initials { width: 20px; height: 20px; }
+  /* A franchise that has left the division still earned part of the record,
+     so it stays in the row and reads as history. Never colour alone — the
+     title attribute says "no longer in the …" too. */
+  .member-slot--past { opacity: 0.4; filter: grayscale(1); }
+
+  /* ── The era board ─────────────────────────────────────────────────────── */
+  .era-board__name {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .era-board__years {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--ds-ink-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .era-board .verdict-value { text-align: right; }
+  .era-board__inter {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--ds-ink-muted);
+  }
+  /* Below the fold of a phone the crests and the record cannot share a line,
+     so the row becomes two: identity above, numbers below. */
+  @media (max-width: 559px) {
+    .verdict-list li { flex-wrap: wrap; row-gap: 0.25rem; }
+    .verdict-list .member-icons { margin-left: 0; order: 3; }
+    .verdict-list .member-icons + .verdict-value { margin-left: auto; order: 4; }
+    .verdict-rank { order: 1; }
+    .era-board__name,
+    .verdict-name,
+    .verdict-list .pill { order: 2; }
+    .era-board__inter { display: inline; margin-left: 0.5rem; }
   }
 
   /* ── Pills ─────────────────────────────────────────────────────────────── */
@@ -1508,7 +1686,11 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
   .unit { font-weight: 400; font-size: 0.75rem; color: var(--ds-ink-muted); }
 
   /* ── Current-lineup table ──────────────────────────────────────────────── */
-  .lineup-table .member-cell { min-width: 8rem; }
+  /* Both tables now carry a crest column, so the floor applies to both. The
+     all-time one runs wider than this on its own — every franchise ever in the
+     division, twelve of them in the AFL's West — and both tables sit in a
+     horizontal scroller, so it grows rather than squeezing the numbers. */
+  .strength-table .member-cell { min-width: 8rem; }
   .member-icons { display: inline-flex; align-items: center; }
   .member-icons img,
   .member-initials {
