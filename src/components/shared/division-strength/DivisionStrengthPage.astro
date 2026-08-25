@@ -267,9 +267,12 @@ const shortestRun = bySeasonCount[bySeasonCount.length - 1];
  * standing first.
  *
  * This is the closest the page gets to answering "which division is toughest"
- * fairly, because within one era the same teams are being compared across
+ * fairly, because within one era the same OWNERS are being compared across
  * their whole shared span. The all-time columns can't do that — a division
- * name outlives the teams that earned its record.
+ * name outlives the people who earned its record. The price is that an era can
+ * be short (a takeover ends one), which is why `Founded` carries the
+ * division's own age beside it and `eraVsAllTime` withholds its arrow below
+ * `SHORT_RUN_SEASONS`.
  */
 /**
  * The alignment for the season about to be played, when there is one.
@@ -345,11 +348,17 @@ const memberTitle = (m: { name: string | null; newOwner?: boolean; newOwners?: O
  * done under that division's name — i.e. how much of the name's reputation
  * belongs to the teams still in it. Null when either side has no games, or
  * when the era IS the whole history (nothing to compare against).
+ *
+ * Also null for a short era. Eras break on a takeover, so a division can be one
+ * season old — the AFL's North took a new owner for 2025 — and an arrow reading
+ * "▲.084 vs all-time" off a single season is a comparative claim the sample
+ * cannot carry. The record still shows, with "1 yr" next to it.
  */
 const eraVsAllTime = (d: DivisionAllTime, era: { seasons: number; interDivision: { winPct: number | null } }) => {
   const now = era.interDivision.winPct;
   const ever = d.interDivision.winPct;
   if (now === null || ever === null || era.seasons === d.seasons) return null;
+  if (era.seasons < SHORT_RUN_SEASONS) return null;
   const delta = now - ever;
   if (Math.abs(delta) < 0.005) return null;
   return { up: delta > 0, text: Math.abs(delta).toFixed(3).replace(/^0/, '') };
@@ -559,9 +568,10 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                 <div class="section-header">
                   <h2 id="lineups-heading" class="section-header__title">As currently constituted</h2>
                   <p class="section-header__sub">
-                    Each division's record with the teams in it, over however long that exact lineup
-                    has been together. Realignment resets the clock, so some divisions have far more
-                    shared history than others.
+                    Each division's record with the owners in it, over however long that exact group
+                    has been together. A realignment resets the clock and so does a team changing
+                    hands, so some divisions have far more shared history than others — Founded is
+                    the division's own age, Together is this group's.
                     {upcoming
                       ? <> Records run through {upcoming.previousPlayedYear}, the last completed season; the crests are the {upcoming.year} lineup.</>
                       : null}
@@ -631,12 +641,14 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                 <div class="table-scroll">
                   <table class="strength-table lineup-table">
                     <caption class="visually-hidden">
-                      Current division lineups, longest-standing first, with each division's record
-                      over the span that exact set of teams has been together.
+                      Current division lineups, longest-standing first, with the year each division
+                      was founded and its record over the span that exact set of owners has been
+                      together.
                     </caption>
                     <thead>
                       <tr>
                         <th scope="col">Division</th>
+                        <th scope="col" class="num">Founded</th>
                         <th scope="col" class="num">Together</th>
                         <th scope="col" class="num">Record</th>
                         <th scope="col" class="num">Interdivisional</th>
@@ -650,15 +662,21 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                         <tr>
                           <th scope="row" class="name-cell">
                             <a href={`#div-${division.slug}`} class="name-link">{division.name}</a>
-                            {/* The years the group was together, not "since
-                                2016" — every other number in the row is bounded
-                                by the last played season, so the span should
-                                say where it stops too. */}
-                            <span class="span-text">{era.yearStart}–{era.yearEnd}</span>
                           </th>
+                          {/* Founded is the DIVISION's own clock and never moves;
+                              Together is the current owners' and restarts on any
+                              change. Two columns because one number cannot be
+                              both, and merging them is the bug this table had. */}
+                          <td class="num">
+                            <span class="rec">{division.firstYear}</span>
+                            <span class="pct">{division.seasons} season{division.seasons === 1 ? '' : 's'}</span>
+                          </td>
                           <td class="num">
                             <span class="rec">{era.seasons}<span class="unit"> yr</span></span>
-                            <span class="pct">{era.seasons === division.seasons ? 'never realigned' : `of ${division.seasons}`}</span>
+                            {/* The years the group was together, not "since 2016" —
+                                every other number in the row is bounded by the last
+                                played season, so the span says where it stops too. */}
+                            <span class="pct">{era.seasons === division.seasons ? 'never changed' : `${era.yearStart}–${era.yearEnd}`}</span>
                           </td>
                           <td class="num">
                             <span class="rec">{formatRecord(era.totals)}</span>
@@ -700,7 +718,9 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                 <p class="table-note">
                   The arrow compares each division's interdivisional record under its current lineup
                   against that division name's whole history — how much of the name's record belongs
-                  to the teams still in it.
+                  to the teams still in it. Together counts only seasons this exact group of owners
+                  has played together — a team changing hands starts a new count, which is why a
+                  division founded decades ago can show a short one.
                 </p>
               </section>
             )}
@@ -965,7 +985,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                         <div class="detail-row">
                           <dt class="detail-label">Lineup</dt>
                           <dd class="detail-value">
-                            same {d.currentEra.members.length} since {d.currentEra.yearStart}
+                            same {d.currentEra.members.length} owners since {d.currentEra.yearStart}
                             <span class="dim"> · {formatRecord(d.currentEra.totals)} together</span>
                           </dd>
                         </div>
@@ -979,7 +999,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                           <span class="owner-eras__label">
                             <span class="visually-hidden">{d.name}: </span>
                             <strong>{d.membershipEras.length} lineups</strong>
-                            <span class="dim"> · realigned {d.membershipEras.length - 1} time{d.membershipEras.length === 2 ? '' : 's'}</span>
+                            <span class="dim"> · changed {d.membershipEras.length - 1} time{d.membershipEras.length === 2 ? '' : 's'}</span>
                           </span>
                         </summary>
                         <div class="owner-eras__reveal">

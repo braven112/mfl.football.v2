@@ -43,6 +43,21 @@ import type { DivisionStrengthFile } from '../src/types/division-strength';
 const ROOT = path.resolve(__dirname, '..');
 const readJson = (p: string) => JSON.parse(readFileSync(p, 'utf8'));
 
+/**
+ * Who held a division in one season — franchise AND owners, order-independent.
+ *
+ * This is the identity a membership era is a run of. Co-owner ids sort so a
+ * reordered pair cannot read as a takeover, and the franchise stays in the key
+ * so a straight swap of two teams between divisions still breaks the era.
+ */
+const ownerSetKey = (name: string, year: number, data: DivisionStrengthFile) =>
+  data.years
+    .find((y) => y.year === year)!
+    .divisions.find((d) => d.name === name)!
+    .teams.map((t) => `${t.franchiseId}:${(t.owners ?? []).map((o) => o.ownerId).sort().join('+')}`)
+    .sort()
+    .join(',');
+
 const leagues = ALL_LEAGUES.map((league: any) => {
   const derived = path.join(ROOT, league.dataPath, 'derived');
   return {
@@ -473,11 +488,13 @@ describe.each(leagues)('$league.slug division strength', ({ league, dataPath, le
     expect(data.summary.divisionCount).toBe(data.divisions.length);
   });
 
-  // ── 7. Membership eras: the "same teams" slice.
+  // ── 7. Membership eras: the "same owners" slice.
   //
-  // A division name outlives the teams that earned its record, so the era is
+  // A division name outlives the people who earned its record, so the era is
   // the only slice where two divisions are compared as the same group across
-  // their whole shared span. These pin that the segmentation is honest.
+  // their whole shared span. Eras break on a realignment, a TAKEOVER, or a gap
+  // year — "together" is a claim about people, not about slots. These pin that
+  // the segmentation is honest.
   it('partitions every division season into exactly one membership era', () => {
     for (const division of data.divisions) {
       const eraYears = division.membershipEras.flatMap((era) => {
@@ -503,11 +520,13 @@ describe.each(leagues)('$league.slug division strength', ({ league, dataPath, le
         const contiguous = cur.yearStart === prev.yearEnd + 1;
         if (contiguous) {
           // Adjacent in time means the membership MUST differ, or the two
-          // should have been one era.
+          // should have been one era. Compared on OWNERS: identical franchise
+          // ids across the boundary is legitimate — that is a takeover, which
+          // is exactly what an era is supposed to break on.
           expect(
-            cur.franchiseIds.join(','),
+            ownerSetKey(division.name, cur.yearStart, data),
             `${division.name}: eras ending ${prev.yearEnd} and starting ${cur.yearStart} have identical membership`
-          ).not.toBe(prev.franchiseIds.join(','));
+          ).not.toBe(ownerSetKey(division.name, prev.yearEnd, data));
         }
       }
     }
@@ -529,6 +548,36 @@ describe.each(leagues)('$league.slug division strength', ({ league, dataPath, le
             `${division.name} ${y}: season membership differs from its era's`
           ).toEqual(era.franchiseIds);
         }
+      }
+    }
+  });
+
+  it('holds one unbroken set of owners inside every era', () => {
+    // THE BUG THIS EXISTS FOR. Eras used to break on the franchise set alone,
+    // so TheLeague's Southwest was credited with 9 years "together" since 2017
+    // while three of its four seats changed hands inside that run (0004 in
+    // 2018, 2019 and 2020; 0006 and 0011 in 2019) — a group of people six
+    // years old, printed next to their crests and the word together.
+    //
+    // Recomputed here from `years[].divisions[].teams[].owners`, not read back
+    // off the era, so a change to the key has to satisfy the data.
+    for (const division of data.divisions) {
+      for (const era of division.membershipEras) {
+        const held = ownerSetKey(division.name, era.yearStart, data);
+        for (let y = era.yearStart; y <= era.yearEnd; y++) {
+          expect(
+            ownerSetKey(division.name, y, data),
+            `${division.name} ${y}: owners changed inside the ${era.yearStart}-${era.yearEnd} era`
+          ).toBe(held);
+        }
+        // The era's own members must be that same set, as of its last season.
+        expect(
+          era.members
+            .map((m) => `${m.franchiseId}:${m.owners.map((o) => o.ownerId).sort().join('+')}`)
+            .sort()
+            .join(','),
+          `${division.name} ${era.yearStart}-${era.yearEnd}: era members are not its owners`
+        ).toBe(held);
       }
     }
   });
