@@ -223,6 +223,54 @@ function yearsFor(league, only) {
 }
 
 /**
+ * The MFL league id for a given league-YEAR.
+ *
+ * This is the whole reason historical years came back nameless. Every MFL
+ * league-year is its own league with its own id, and the registry only carries
+ * the CURRENT one — so asking `/2009/export?L=13522` does not request
+ * TheLeague's 2009 season, it requests whatever league happened to be 13522 in
+ * 2009. That is somebody else's league, we are not its commissioner, and the
+ * reply is a public payload with no owner names. Measured: TheLeague was 76273
+ * in 2007, 42989 in 2009, 48815 in 2012, 28077 in 2015, 13522 from 2018; the
+ * AFL 47555 / 21465 / 26792 / 14236 / 19621. The years that DID resolve are
+ * exactly the ones where the current id is already correct.
+ *
+ * The committed feed for each year carries its own id inside the payload
+ * (`league.id`), which is authoritative because MFL wrote it. `fetch.meta.json`
+ * also has a `leagueId`, but it is NOT usable — several AFL years record
+ * TheLeague's id, so it is cross-contaminated.
+ *
+ * Falls back to the registry id when a year has no committed feed, which is
+ * right for the current year and harmless otherwise.
+ */
+const leagueIdCache = new Map();
+export function leagueIdForYear(league, year, root = ROOT) {
+  // Key on everything the answer depends on. Keying on slug+year alone was
+  // wrong: the result is read from `root`/`dataPath`, so two callers passing
+  // different roots — or a league object without a dataPath — would be served
+  // each other's answer. A cache narrower than its inputs is a correctness bug,
+  // and this one was caught by a test in the same file poisoning a later one.
+  const key = `${league.slug}|${league.dataPath ?? ''}|${root}|${year}`;
+  if (leagueIdCache.has(key)) return leagueIdCache.get(key);
+  let id = league.id;
+  // A league with no dataPath has no committed feeds to consult — the registry
+  // id is all there is. Returning it beats throwing from a lookup.
+  if (!league.dataPath) {
+    leagueIdCache.set(key, id);
+    return id;
+  }
+  const feed = path.join(root, league.dataPath, 'mfl-feeds', String(year), 'league.json');
+  try {
+    const fromFeed = JSON.parse(fs.readFileSync(feed, 'utf8'))?.league?.id;
+    if (fromFeed) id = String(fromFeed);
+  } catch {
+    // No committed feed for this year — the registry id is the best guess.
+  }
+  leagueIdCache.set(key, id);
+  return id;
+}
+
+/**
  * Owner names for one league-year.
  *
  * @returns `{ byFranchise: Map<franchiseId, name>, franchiseCount, fieldsSeen }`.
@@ -240,7 +288,9 @@ function yearsFor(league, only) {
  * does `await res.text()`; so does this one now.
  */
 export async function fetchOwnersForYear(league, year, cookies) {
-  const url = `https://${league.mflHost}/${year}/export?TYPE=league&L=${league.id}&JSON=1`;
+  // Per-YEAR id, not the registry's current one — see leagueIdForYear.
+  const leagueId = leagueIdForYear(league, year);
+  const url = `https://${league.mflHost}/${year}/export?TYPE=league&L=${leagueId}&JSON=1`;
   const res = await mflFetch({ url, cookies, timeoutMs: 15_000 });
   if (!res?.ok) {
     throw new Error(`HTTP ${res?.status ?? '?'} from ${league.mflHost}/${year}`);
@@ -283,7 +333,7 @@ export async function fetchOwnersForYear(league, year, cookies) {
   // name field is either an unauthenticated one (the public field set) or a
   // schema change, and only the key list tells you which.
   const fieldsSeen = list.length ? Object.keys(list[0]).sort() : [];
-  return { byFranchise, franchiseCount: list.length, fieldsSeen };
+  return { byFranchise, franchiseCount: list.length, fieldsSeen, leagueId };
 }
 
 /**
@@ -367,7 +417,8 @@ async function main() {
         anonymousYears += 1;
         lastFieldsSeen = result.fieldsSeen;
         console.log(
-          `  [${slug}] ${year}: parsed ${result.franchiseCount} franchises, none carrying a name field`
+          `  [${slug}] ${year}: L=${result.leagueId} parsed ${result.franchiseCount} franchises, ` +
+            `none carrying a name field`
         );
       } else {
         for (const [franchiseId, name] of result.byFranchise) {

@@ -14,6 +14,9 @@
  *      quietly picking a winner buries the boundary the registry exists for.
  */
 import { describe, it, expect, afterEach, vi } from 'vitest';
+import path from 'node:path';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { LEAGUES as LEAGUES_FOR_ID_TEST } from '../src/config/leagues-data.mjs';
 import {
   cleanName,
   assertNoContactInfo,
@@ -384,5 +387,65 @@ describe('fetchOwnersForYear', () => {
 
   it('throws on a non-ok response instead of reporting it as anonymous', async () => {
     await expect(withFetch({}, 403)).rejects.toThrow(/HTTP 403/);
+  });
+});
+
+/**
+ * leagueIdForYear — the reason historical years came back nameless.
+ *
+ * Every MFL league-year is its own league with its own id, and the registry
+ * carries only the CURRENT one. Asking `/2009/export?L=13522` therefore does
+ * not request TheLeague's 2009 season — it requests whatever league was 13522
+ * in 2009, which belongs to someone else, so the reply is a public payload
+ * with no owner names. 22 of the 44 committed league-years need a non-current
+ * id; the ones that resolved on the first successful run are exactly those
+ * where the current id already happened to be right.
+ */
+describe('leagueIdForYear', () => {
+  const leagues = Object.values(LEAGUES_FOR_ID_TEST) as any[];
+
+  it('matches the id inside every committed feed, for every year', async () => {
+    const { leagueIdForYear } = await import('../scripts/fetch-owner-names.mjs');
+    const mismatches: string[] = [];
+    let checked = 0;
+    for (const league of leagues) {
+      const dir = path.join(process.cwd(), league.dataPath, 'mfl-feeds');
+      if (!existsSync(dir)) continue;
+      for (const entry of readdirSync(dir)) {
+        const year = Number(entry);
+        if (!Number.isFinite(year)) continue;
+        const feed = path.join(dir, entry, 'league.json');
+        if (!existsSync(feed)) continue;
+        const truth = String(JSON.parse(readFileSync(feed, 'utf8')).league.id);
+        const got = leagueIdForYear(league, year, process.cwd());
+        checked++;
+        if (got !== truth) mismatches.push(`${league.slug} ${year}: got ${got}, feed says ${truth}`);
+      }
+    }
+    expect(checked).toBeGreaterThan(40);
+    expect(mismatches).toEqual([]);
+  });
+
+  /** If this ever hits zero, the resolver has silently become a no-op. */
+  it('actually overrides the registry id for historical years', async () => {
+    const { leagueIdForYear } = await import('../scripts/fetch-owner-names.mjs');
+    let overrides = 0;
+    for (const league of leagues) {
+      const dir = path.join(process.cwd(), league.dataPath, 'mfl-feeds');
+      if (!existsSync(dir)) continue;
+      for (const entry of readdirSync(dir)) {
+        const year = Number(entry);
+        if (!Number.isFinite(year)) continue;
+        if (!existsSync(path.join(dir, entry, 'league.json'))) continue;
+        if (leagueIdForYear(league, year, process.cwd()) !== league.id) overrides++;
+      }
+    }
+    expect(overrides).toBeGreaterThanOrEqual(20);
+  });
+
+  it('falls back to the registry id when a year has no committed feed', async () => {
+    const { leagueIdForYear } = await import('../scripts/fetch-owner-names.mjs');
+    const league = leagues.find((l) => l.slug === 'theleague');
+    expect(leagueIdForYear(league, 1999, process.cwd())).toBe(league.id);
   });
 });
