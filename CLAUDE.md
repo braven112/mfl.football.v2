@@ -17,15 +17,21 @@ cross-cutting, add a line here. Keep this file short.
 - **Package manager:** pnpm (not npm). Scripts: see `package.json`.
 - **Unit tests:** vitest. Run one file: `pnpm vitest run path/to/foo.test.ts`.
 - **Type errors are ratcheted, not clean.** `pnpm test:unit` does NOT
-  type-check. The repo carries ~2.1k `astro check` errors (over half in the
-  12k-line `rosters.astro`), so a clean run is not the bar — `pnpm test:types`
+  type-check. The repo carries a four-figure `astro check` error count (over
+  half of it in the 12k-line `rosters.astro`); the current figure lives in
+  `tests/fixtures/typecheck-baseline.json` and nowhere else, so a clean run is
+  not the bar — `pnpm test:types`
   is, and it fails if the total moves in EITHER direction: up is a regression,
   down means retighten `tests/fixtures/typecheck-baseline.json`. It shells out
   to `astro check` (~2.5 min, needs `--max-old-space-size`), which is why it
   is not in the default suite — CI runs it as its own parallel `Type baseline`
   job so it never delays the unit-test signal. Treat `ts(2307) Cannot find
   module` as urgent: an `import type` from a missing module is erased at build,
-  so it has no runtime symptom while voiding every type in the file.
+  so it has no runtime symptom while voiding every type in the file. Before
+  attacking the count, read
+  `docs/claude/insights/features/type-error-remediation.md` — it records which
+  phases are done and which two are deliberately NOT scheduled, with the
+  reasoning.
 - **Prebuild:** `scripts/prebuild.mjs` runs build steps + network fetches in
   parallel. Add new build-time fetches there.
 - **Guard tests are the real memory.** ~228 suites in `tests/` mechanically
