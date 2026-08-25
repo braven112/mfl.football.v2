@@ -45,6 +45,7 @@ import type { CanonicalLeagueSlug } from '../../../config/leagues';
 import { formatRecord, formatRuns, formatWinPct } from '../../../utils/division-strength.mjs';
 import type {
   DivisionAllTime,
+  DivisionOwnerRef,
   DivisionStrengthFile,
   DivisionStrengthYear,
 } from '../../../types/division-strength';
@@ -294,6 +295,16 @@ const eraVsAllTime = (d: DivisionAllTime, era: { seasons: number; interDivision:
 // Everything each row needs is resolved ONCE here. Calling the helpers from
 // the template instead meant `eraVsAllTime` and `upcomingFor` ran three to
 // four times per row apiece, on every request.
+/** One crest in the current-lineup row, flattened from either member shape. */
+type MemberRow = {
+  franchiseId: string;
+  name: string | null;
+  nameMedium: string | null;
+  icon: string | null;
+  newOwner: boolean;
+  newOwners: DivisionOwnerRef[];
+};
+
 const currentLineups = data.divisions
   .filter((d) => d.currentEra)
   .map((d) => {
@@ -303,14 +314,29 @@ const currentLineups = data.divisions
     // the template union `UpcomingMember[] | DivisionMember[]` and reach for
     // `newOwner` through a cast — `DivisionMember` has no such field, so the
     // cast was hiding a genuine mismatch rather than resolving it.
-    const members = (up?.members ?? era.members).map((m) => ({
-      franchiseId: m.franchiseId,
-      name: m.name,
-      nameMedium: m.nameMedium,
-      icon: m.icon,
-      newOwner: 'newOwner' in m ? m.newOwner : false,
-      newOwners: 'newOwners' in m ? m.newOwners : [],
-    }));
+    // Branch on the SOURCE, not on the member. `UpcomingMember` extends
+    // `DivisionMember`, so `'newOwner' in m` cannot separate them — TypeScript
+    // narrows to `DivisionMember & Record<'newOwner', unknown>` and every
+    // consumer downstream then fails on the `unknown`. Each array's element
+    // type is already concrete, so picking the array first is exact and needs
+    // no cast.
+    const members: MemberRow[] = up
+      ? up.members.map((m) => ({
+          franchiseId: m.franchiseId,
+          name: m.name,
+          nameMedium: m.nameMedium,
+          icon: m.icon,
+          newOwner: m.newOwner,
+          newOwners: m.newOwners,
+        }))
+      : era.members.map((m) => ({
+          franchiseId: m.franchiseId,
+          name: m.name,
+          nameMedium: m.nameMedium,
+          icon: m.icon,
+          newOwner: false,
+          newOwners: [],
+        }));
     return { division: d, era, upcoming: up, delta: eraVsAllTime(d, era), members };
   })
   .sort((a, b) => b.era.seasons - a.era.seasons || b.era.yearStart - a.era.yearStart);

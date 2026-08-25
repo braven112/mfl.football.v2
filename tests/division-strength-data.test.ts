@@ -214,8 +214,9 @@ describe.each(leagues)('$league.slug division strength', ({ league, dataPath, le
 
   it('sums each division vs-matrix row to its interdivisional record', () => {
     const check = (d: any, label: string) => {
-      const sum = Object.values(d.vs).reduce(
-        (acc: any, r: any) => ({
+      type WLT = { wins: number; losses: number; ties: number };
+      const sum = (Object.values(d.vs) as WLT[]).reduce<WLT>(
+        (acc, r) => ({
           wins: acc.wins + r.wins,
           losses: acc.losses + r.losses,
           ties: acc.ties + r.ties,
