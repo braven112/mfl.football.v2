@@ -1,6 +1,6 @@
 # Owners as a first-class concept
 
-> **Status:** **PR 1 shipped** (Aug 2026). PRs 2-4 still to build — see
+> **Status:** **PRs 1 and 2 shipped** (Aug 2026). PRs 3-4 still to build — see
 > Phasing. Written August 2026 in the session that fixed Midwestside's 2010
 > attribution (PR #597), which is what surfaced the gap. Everything here was
 > measured against real data in this repo — a future session should not need to
@@ -13,7 +13,13 @@
 > the shared `EraSeasonTable`, four routes, and five guard suites — full suite
 > 252 files / 6300 tests.
 >
-> **Two things a follow-up session should know:**
+> **What PR 2 landed:** the nav link + `routeEquivalence["/owners"]`, both
+> Record Book footers, the Former Identities fix (0 of 23 → 23 of 23 in
+> TheLeague, 95 of 95 in the AFL, all 118 verified live at 200), a shared
+> `PreviousOwners.astro` on BOTH franchise detail pages, and the What's New
+> entry (`excludeFromHero: true`). Full suite 259 files / 6586 tests.
+>
+> **Three things a follow-up session should know:**
 > - The **"Not verified" risk at the bottom of this doc is resolved.** Apex
 >   rewrites do handle these routes: `resolveLeagueRewrite` maps
 >   `theleague.us/owners` and `afl-fantasy.com/owners/<slug>` onto the league
@@ -24,6 +30,14 @@
 >   exercised by the derived file. `tests/owner-tenures-data.test.ts`
 >   therefore re-derives with `registry: null` and asserts conservation again.
 >   Keep that test if you touch the overlay.
+> - **The AFL detail page's `priorOwnerEras` is gone — one fewer boundary copy
+>   than this doc counts.** PR 2 replaced that list with `PreviousOwners`,
+>   which reads `owner-tenures.json`, so PR 3 has four call sites to migrate,
+>   not five. It was not merely redundant: it grouped by rebrand rather than by
+>   person and silently dropped owners (franchise 0004 showed 5 of its 8;
+>   0007's Avenging Amish years were missing entirely). The replacement was
+>   verified a strict superset before the old code came out — do that again for
+>   each site PR 3 migrates.
 
 ## Start here
 
@@ -335,14 +349,25 @@ icon). Ships complete and searchable.
 Deliberately **no nav yet** — `tests/nav-drawer-links.test.ts` only constrains
 pages once they're in `nav-config.json`, so this PR cannot break nav.
 
-**PR 2 — "Discoverable and connected."** Nav link + `routeEquivalence["/owners"]`;
-`footer-config.ts` (`owners` into TheLeague's `Record Book`, `afl-owners` into
-the AFL's); `whats-new.json` entry + light/dark webp pair (**ask about
-`excludeFromHero`**); franchise ⇄ owner cross-links; the Former Identities fix.
+**PR 2 — "Discoverable and connected."** ✅ **Shipped.** Nav link +
+`routeEquivalence["/owners"]`; `footer-config.ts` (`owners` into TheLeague's
+`Record Book`, `afl-owners` into the AFL's); `whats-new.json` entry +
+light/dark webp pair (`excludeFromHero: true`); franchise ⇄ owner cross-links
+via the shared `PreviousOwners.astro`; the Former Identities fix through
+`src/utils/owner-links.ts`.
+
+One thing worth carrying forward: the identity lookup needs TWO keys, not one.
+`buildHistoricalIdentities()` joins a multi-name group as `"A / B"` while
+`identityIndex` holds each name separately, so the combined string misses and
+the DOMINANT name — the first segment — is what hits. Exactly one real
+identity needs it (TheLeague's "Poker in the Rear / Generals", 2012), and
+`tests/owner-identity-links.test.ts` fails on real data if either key is
+dropped.
 
 **PR 3 — "One boundary, one implementation."** Migrate
 `compute-franchise-history.mjs`, `afl-awards.ts`, `franchise-eras.ts`, and
-`afl-fantasy/franchises/[id].astro:217-300` onto `owner-tenures.mjs`, resolving
+`afl-fantasy/franchises/[id].astro`'s `nameEras` onto `owner-tenures.mjs`
+(its `priorOwnerEras` half is already gone — see the status block), resolving
 the `ownerEra` divergence (trap 3). Flip the parity test from advisory to
 required. Zero user-visible change; snapshot both franchise pages before/after.
 
