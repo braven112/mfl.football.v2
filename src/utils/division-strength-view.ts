@@ -126,9 +126,7 @@ export interface RankedEra {
   era: DivisionMembershipEra;
   divisionName: string;
   divisionSlug: string;
-  /** Seasons the NAME has run, for the "of N" context beside the era's own. */
-  divisionSeasons: number;
-  /** How many qualifying eras this division contributes, for "2nd of 3" copy. */
+  /** How many qualifying eras this division contributes — 2 when it realigned. */
   divisionEraCount: number;
   /** "2012–2016". */
   years: string;
@@ -163,7 +161,6 @@ export function rankEras(
         era,
         divisionName: division.name,
         divisionSlug: division.slug,
-        divisionSeasons: division.seasons,
         divisionEraCount: qualifying.length,
         years,
         label: `${division.name} (${years})`,

@@ -230,11 +230,18 @@ const alumniOf = (d: DivisionAllTime) => alumniBySlug.get(d.slug) ?? [];
  * held one together for `ERA_MIN_SEASONS`.
  */
 const rankedEras = rankEras(data.divisions);
-const eraDivisions = new Set(rankedEras.map((e) => e.divisionSlug));
 // Named in the note so a reader who scans for their own division and misses it
 // gets told why, rather than assuming the board is broken.
+//
+// Tested against MEMBERSHIP, not against what reached the board. `rankEras`
+// also drops an era with no game log, and a division absent for THAT reason
+// has in fact kept a lineup together — saying "no group has stayed together
+// that long" about it would be a false claim in generated prose, which is a
+// bug this feature has shipped once before. Unreachable today (no era of
+// four-plus seasons lacks games in either league) and deliberately not
+// dependent on that staying true.
 const erasMissing = data.divisions
-  .filter((d) => d.totals.games > 0 && !eraDivisions.has(d.slug))
+  .filter((d) => d.totals.games > 0 && d.membershipEras.every((e) => e.seasons < ERA_MIN_SEASONS))
   .map((d) => d.name);
 
 // A division that ran a season or two is not a small sample of a long run —

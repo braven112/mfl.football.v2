@@ -914,7 +914,7 @@ describe.each(leagues)('$league.slug era board', ({ dataPath }) => {
       const mine = rows
         .filter((r) => r.divisionSlug === division.slug)
         .sort((a, b) => a.era.yearStart - b.era.yearStart);
-      for (const row of mine) expect(row.divisionEraCount).toBe(mine.length);
+      for (const row of mine) expect(row.divisionEraCount, division.name).toBe(mine.length);
       for (let i = 1; i < mine.length; i += 1) {
         expect(mine[i].era.yearStart, division.name).toBeGreaterThan(mine[i - 1].era.yearEnd);
       }
