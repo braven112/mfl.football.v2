@@ -4,15 +4,12 @@
 
 **Context:** `/owners` shipped with 85 tenures MFL had no name for. Filling
 them in by hand turned up something the derivation could not have flagged on
-its own: fourteen of those "people" were one owner recorded twice. Tom
+its own: thirteen of those "people" were one owner recorded twice. Tom
 Flanagan renamed NOSX to Brady's Bastards in 2009 and became two strangers,
 one of them holding the 2012 title. Shane Fitch became Level 3 Inception and
 lost eight seasons and a ring to his own alter ego. Jomar's Computer Jocks
 moved from AFL slot 0018 to 0005 in 2015. Jesse Schuffenhauer played 2003-04,
-left, came back in 2023 and was greeted as a new arrival. Danny Baccam is the
-one the naming pass did NOT find, because both halves of him already carried a
-name — the collision only surfaces if you compare identity NAMES across owner
-records, which is what the guard test now does.
+left, came back in 2023 and was greeted as a new arrival.
 
 **Insight:** ownership is inferred from a franchise SLOT changing hands, so
 two events are indistinguishable from a handover and both produce a false
@@ -22,7 +19,7 @@ split:
 - **a slot move** — same person, same team name, different slot, which the
   league does whenever it restructures divisions.
 
-Neither is rare. Fourteen splits across 127 owner records is eleven percent of
+Neither is rare. Thirteen splits across 128 owner records is ten percent of
 the board, and every one of them silently halved somebody's career.
 
 **Why it stayed invisible:** an anonymous owner is rendered by team name, and
@@ -35,7 +32,8 @@ entity is identified by a slot rather than by a person.
 **What to do about it:**
 
 - **Exact team-name matches across two owner records are a merge candidate,
-  not a coincidence.** Five of the fourteen were found by normalizing identity
+  not a coincidence — but it is a CANDIDATE, not proof (see the Baccam
+  correction below).** Five of the thirteen were found by normalizing identity
   names and looking for collisions. `tests/owner-tenures-data.test.ts` now runs
   that scan on every build: two owner records sharing a team name fail the
   suite, with an allowlist for the genuine cases (co-owners of one shared team
@@ -47,7 +45,7 @@ entity is identified by a slot rather than by a person.
   (`src/utils/owner-detail.ts`), so no published URL breaks.
 - **Seasons must not move.** A merge relocates franchise-seasons between
   HOLDINGS; it never creates or destroys one. TheLeague held at 320 and the
-  AFL at 576 across all fourteen — the conservation assertion in
+  AFL at 576 across all thirteen — the conservation assertion in
   `tests/owner-tenures-data.test.ts` is what proves it, and the owner-count
   fixture beside it has to be updated by hand each time.
 - **Cross-league is NOT a merge.** Five people own teams in both leagues. The
@@ -63,6 +61,46 @@ is the source of truth and the derived files are a build artifact: reset the
 branch to `main`, replay the registry, re-run
 `scripts/compute-owner-tenures.mjs`, commit once. Same end state, no
 hand-merging of machine-written JSON.
+
+## 2026-08-25 - A shared team name is a merge CANDIDATE, and MFL's owner name is not proof
+
+**Context:** the guard test from the entry above earned its keep within the
+hour, and then immediately showed why its finding needs a human. It flagged two
+AFL records sharing "Avenging Amish" on slot 0007 — Team Murderface / Avenging
+Amish (2014-2020) and Avenging Amish (2021-present). Both carried the SAME
+name, `Danny Baccam`, straight from `mfl:league-export`. Contiguous years, one
+slot, one name from the source of record: I merged them.
+
+Brandon then said Team Murderface is **Garrison Bravo**. The 2014 season was a
+real handover — Bravo held the slot for one year, Baccam took it in 2015 and
+renamed it — and the merge had swallowed it. Split back out; #615 had already
+shipped the wrong version, so it was fixed forward.
+
+**Insight:** MFL's owner name on a historical franchise-season is NOT evidence
+of who owned it. The export reports the name attached to the franchise record,
+and a handover overwrites that name backwards across years the previous owner
+played. So two adjacent records agreeing on a name is exactly what a handover
+looks like too — the agreement is an artifact of the same overwrite that lost
+the old owner's name in the first place.
+
+That inverts what the collision means. A shared team name says *look here*; it
+does not say *merge*. What actually separates the two cases is only knowable
+from outside the data:
+
+- **a rename** — one person, and the team name changed because they wanted it
+  to;
+- **a handover** — two people, and the incoming owner renamed the team on
+  arrival, which is the normal thing to do.
+
+Both produce identical rows. Nothing in MFL distinguishes them.
+
+**So: never merge on the guard test's say-so alone.** Take the collision to
+somebody who was in the league. Where nobody remembers, leave the records
+split — two half-careers are a smaller lie than one career credited to the
+wrong person, and the split is reversible while a merge that shipped is not.
+The weak signal, for what it is worth: slot 0007's abbrev stayed `FACE` from
+2014 into 2015 and only became `AMSH` in 2016, which reads like continuity and
+was in fact a new owner who had not gotten around to it.
 
 ## 2026-08-23 - An `ownerHistory` boundary is a CLAIM — one year wide and a page hands an owner a season he never played
 

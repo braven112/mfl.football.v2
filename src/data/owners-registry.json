@@ -483,7 +483,7 @@
       "id": "own-0032",
       "slug": "georgia-punishers-2010",
       "previousSlugs": [],
-      "displayName": null,
+      "displayName": "Shawn Sherman",
       "claims": [
         {
           "league": "theleague",
@@ -492,7 +492,7 @@
           "yearEnd": 2011
         }
       ],
-      "seededFrom": "inferred:identity-split@2026-08-24",
+      "seededFrom": "human:brandon@2026-08-25",
       "notes": null
     },
     {
@@ -1581,7 +1581,9 @@
     {
       "id": "own-0100",
       "slug": "the-rookies-2005",
-      "previousSlugs": [],
+      "previousSlugs": [
+        "the-dark-side-2009"
+      ],
       "displayName": "Dave Jordan",
       "claims": [
         {
@@ -1589,6 +1591,12 @@
           "franchiseId": "0011",
           "yearStart": 2005,
           "yearEnd": 2008
+        },
+        {
+          "league": "afl-fantasy",
+          "franchiseId": "0011",
+          "yearStart": 2009,
+          "yearEnd": 2009
         }
       ],
       "seededFrom": "human:brandon@2026-08-25",
@@ -1822,7 +1830,7 @@
       "id": "own-0116",
       "slug": "minnesota-road-kill-2009",
       "previousSlugs": [],
-      "displayName": "Shawn Serman",
+      "displayName": "Shawn Sherman",
       "claims": [
         {
           "league": "afl-fantasy",
@@ -1848,22 +1856,6 @@
         }
       ],
       "seededFrom": "human:brandon@2026-08-25",
-      "notes": null
-    },
-    {
-      "id": "own-0118",
-      "slug": "the-dark-side-2009",
-      "previousSlugs": [],
-      "displayName": null,
-      "claims": [
-        {
-          "league": "afl-fantasy",
-          "franchiseId": "0011",
-          "yearStart": 2009,
-          "yearEnd": 2009
-        }
-      ],
-      "seededFrom": "inferred:identity-split@2026-08-24",
       "notes": null
     },
     {
@@ -2045,6 +2037,22 @@
     {
       "id": "own-0133",
       "slug": "team-murderface-2014",
+      "previousSlugs": [],
+      "displayName": "Garrison Bravo",
+      "claims": [
+        {
+          "league": "afl-fantasy",
+          "franchiseId": "0007",
+          "yearStart": 2014,
+          "yearEnd": 2014
+        }
+      ],
+      "seededFrom": "human:brandon@2026-08-25",
+      "notes": null
+    },
+    {
+      "id": "own-0141",
+      "slug": "avenging-amish-2015",
       "previousSlugs": [
         "avenging-amish-2021"
       ],
@@ -2053,13 +2061,7 @@
         {
           "league": "afl-fantasy",
           "franchiseId": "0007",
-          "yearStart": 2014,
-          "yearEnd": 2020
-        },
-        {
-          "league": "afl-fantasy",
-          "franchiseId": "0007",
-          "yearStart": 2021,
+          "yearStart": 2015,
           "yearEnd": 9999
         }
       ],

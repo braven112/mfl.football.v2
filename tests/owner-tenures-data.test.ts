@@ -493,9 +493,17 @@ describe('measured owner counts', () => {
  * reading "Blitzkrieg" look like two teams that happened to share a name. This
  * test is what looks instead of waiting for a human to notice.
  *
- * A collision is not ALWAYS a split — two different people can pick the same
- * team name years apart — so genuine ones are allowlisted here WITH the reason.
- * Adding to this list is a claim that you checked; the default is to merge.
+ * A collision is a CANDIDATE, never proof. MFL's owner name is no help either:
+ * a handover overwrites the franchise's name backwards across years the
+ * previous owner played, so two adjacent records agreeing on a name is exactly
+ * what a handover looks like. That is how slot 0007 got merged and then
+ * un-merged within the hour — Team Murderface (2014) is Garrison Bravo, not
+ * the Danny Baccam that MFL reported for it. See the 2026-08-25 correction in
+ * the insights doc.
+ *
+ * So this test says LOOK HERE, not MERGE. Take a new collision to somebody who
+ * was in the league; where nobody remembers, leave the records split. Genuine
+ * collisions are allowlisted below WITH the reason.
  */
 describe('no duplicate team name across owner records', () => {
   const ALLOWED: Record<string, Record<string, string>> = {
@@ -545,11 +553,14 @@ describe('no duplicate team name across owner records', () => {
 
       expect(
         collisions,
-        `Two owner records share a team name in ${league.slug}. Almost always this ` +
-          `is one person the slot-change inference split in two — merge them into ` +
-          `the EARLIER record (the later slug goes to previousSlugs, which ` +
-          `resolveOwnerDetail redirects from). If they really are two people, add ` +
-          `the name to ALLOWED above with the reason.\n  ${collisions.join('\n  ')}`
+        `Two owner records share a team name in ${league.slug}. Usually that is one ` +
+          `person the slot-change inference split in two — but it can equally be a ` +
+          `handover where the incoming owner renamed the team, and MFL's owner name ` +
+          `cannot tell you which (it overwrites backwards). CONFIRM WITH A HUMAN ` +
+          `before merging. If it is one person, merge into the EARLIER record (the ` +
+          `later slug goes to previousSlugs, which resolveOwnerDetail redirects ` +
+          `from). If it is two, add the name to ALLOWED above with the reason.` +
+          `\n  ${collisions.join('\n  ')}`
       ).toEqual([]);
     });
   }
