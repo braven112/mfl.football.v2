@@ -5,10 +5,15 @@
  * Shared by the all-time view and the season view; the only difference is
  * which set of division records is handed in.
  *
- * Geometry is lifted from `src/pages/theleague/rivalries/index.astro` (sticky
- * row/column headers, heat-tinted cells, the light/dark hue pairs). Three
- * things are deliberately DIFFERENT from that page, each fixing a gap rather
- * than restyling it:
+ * Geometry is lifted from `src/pages/theleague/rivalries/index.astro`: sticky
+ * row headers, heat-tinted cells, the light/dark hue pairs. Note that only the
+ * ROW headers actually stick — `.dsm-scroll` caps no height, so it never
+ * scrolls vertically and the column headers' `top: 0` never engages. That is
+ * harmless at 4x4 to 7x7 (the matrix fits the fold) and is left in place for
+ * the day one of these grids gets tall enough to need it.
+ *
+ * Three things are deliberately DIFFERENT from that page, each fixing a gap
+ * rather than restyling it:
  *
  *  1. **Explicit `headers` on every cell.** Rivalries is 16x16 and relies on
  *     `scope` alone. At 4x4 or 6x6 the explicit wiring costs 16-36 attributes
@@ -217,10 +222,12 @@ const rowId = (slug: string) => `${idPrefix}-row-${slug}`;
      cell inside an overflow container is clipped on two sides. */
   .dsm-row-header a:focus-visible {
     outline: 2px solid var(--ds-accent, var(--league-accent, #1c497c));
+    /* Inset, so the ring is drawn INSIDE the cell and cannot be clipped by the
+       sticky header or the scroll container. (An earlier z-index here did
+       nothing: the sticky row header creates a stacking context, so a child
+       can never rise above it. The inset is doing all the work.) */
     outline-offset: -3px;
     border-radius: 0.25rem;
-    position: relative;
-    z-index: 4;
   }
 
   /* `position: relative` is LOAD-BEARING, not decoration.

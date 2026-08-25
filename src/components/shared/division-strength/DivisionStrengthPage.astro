@@ -78,7 +78,21 @@ const season: DivisionStrengthYear | null = isSeason
 // ── Season rail ────────────────────────────────────────────────────────────
 // Newest first, so the interesting end is the visible end.
 const railYears = [...data.yearsCovered].sort((a, b) => b - a);
-const noLog = new Set(data.yearsWithoutGameLog);
+/**
+ * The rail must draw the SAME distinction the page body does.
+ *
+ * `yearsWithoutGameLog` holds two different things: a season that was played
+ * but whose game log was lost (the AFL's 2003 — standings survived), and a
+ * season that has not happened at all (2026 — nothing to have a log of).
+ * Labelling both "standings only" told a screen-reader user that 2026 had
+ * standings, which is the one distinction this page exists to draw.
+ */
+const notPlayedYears = new Set(
+  data.years
+    .filter((y) => y.divisions.length === 0 || y.divisions.every((d) => d.totals.games === 0))
+    .map((y) => y.year)
+);
+const noLog = new Set(data.yearsWithoutGameLog.filter((y) => !notPlayedYears.has(y)));
 
 // ── All-time ranks ─────────────────────────────────────────────────────────
 // Computed once here and rendered into BOTH metric columns, so the reader sees
@@ -133,7 +147,10 @@ const sortedDivisions = [...data.divisions].sort((a, b) => {
 const sortHref = (key: AllTimeSortKey) => {
   const params = new URLSearchParams(Astro.url.search);
   params.set('sort', key);
-  params.set('dir', view.sort === key && view.dir === 'desc' ? 'asc' : 'desc');
+  // Numeric columns want their best value first; a NAME column wants A-Z.
+  const firstClickDir = key === 'name' ? 'asc' : 'desc';
+  const flipped = view.dir === firstClickDir ? (firstClickDir === 'asc' ? 'desc' : 'asc') : firstClickDir;
+  params.set('dir', view.sort === key ? flipped : firstClickDir);
   return `${r(BASE)}?${params.toString()}#strength-table`;
 };
 /**
@@ -341,6 +358,20 @@ const seasonNotPlayed = !!season && !season.gamesResolved && season.divisions.ev
 // AFL 2003: standings survived, the game log did not. Distinct from "not yet
 // played", and the page must say which it is.
 const seasonStandingsOnly = !!season && !season.gamesResolved && !seasonNotPlayed;
+
+/**
+ * A season with no PLAYED franchise-seasons has no division blocks of its own —
+ * every record-bearing structure is built from played rows. For the season
+ * about to start, the alignment still exists and is the whole story, so it is
+ * rendered from `upcoming` instead.
+ *
+ * Without this the page shipped "Teams 0 · 0 divisions", a "2026 by division"
+ * heading and an empty panel grid, directly under copy asserting "Divisions are
+ * set" — stating as fact the one thing it was failing to show.
+ */
+const upcomingSeason = season && upcoming && upcoming.year === season.year ? upcoming : null;
+const seasonPreview = !!season && season.divisions.length === 0 ? upcomingSeason : null;
+const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPreview;
 ---
 
 <TheLeagueLayout title={pageTitle}>
@@ -355,10 +386,22 @@ const seasonStandingsOnly = !!season && !season.gamesResolved && !seasonNotPlaye
     <header class="ds-head">
       <h1>Strength of Division{isSeason && <span class="ds-head__year"> · {view.year}</span>}</h1>
       {isSeason ? (
-        <p class="lede">
-          How each division stacked up in {view.year} — every team's record, the division's
-          combined mark, and how it fared against the rest of the league.
-        </p>
+        seasonPreview ? (
+          <p class="lede">
+            Who lines up where in {view.year}. The season hasn't started, so there are no records
+            yet — this is the alignment those records will be built from.
+          </p>
+        ) : seasonStandingsOnly ? (
+          <p class="lede">
+            How each division finished in {view.year}. This season's game log is missing, so the
+            standings are all there is — no interdivisional splits, no ranking.
+          </p>
+        ) : (
+          <p class="lede">
+            How each division stacked up in {view.year} — every team's record, the division's
+            combined mark, and how it fared against the rest of the league.
+          </p>
+        )
       ) : (
         <p class="lede">
           Two honest answers, not one. We don't crown an all-time strongest division — a division
@@ -377,19 +420,34 @@ const seasonStandingsOnly = !!season && !season.gamesResolved && !seasonNotPlaye
         >All-time</a>
         {railYears.map((year) => (
           <a
-            class:list={['season-chip', { 'season-chip--nolog': noLog.has(year) }]}
+            class:list={['season-chip', {
+              'season-chip--nolog': noLog.has(year),
+              'season-chip--upcoming': notPlayedYears.has(year),
+            }]}
             href={`${r(BASE)}?year=${year}`}
             aria-current={isSeason && view.year === year ? 'page' : undefined}
           >
-            {year}{noLog.has(year) && <span class="visually-hidden"> (standings only)</span>}
+            {year}
+            {noLog.has(year) && <span class="visually-hidden"> (standings only, no game log)</span>}
+            {notPlayedYears.has(year) && <span class="visually-hidden"> (not yet played)</span>}
           </a>
         ))}
       </div>
     </nav>
-    {noLog.size > 0 && (
+    {(noLog.size > 0 || notPlayedYears.size > 0) && (
       <p class="rail-legend">
-        <span class="rail-legend__dot" aria-hidden="true"></span>
-        no game-by-game log — standings only
+        {noLog.size > 0 && (
+          <span class="rail-legend__key">
+            <span class="rail-legend__dot" aria-hidden="true"></span>
+            no game-by-game log — standings only
+          </span>
+        )}
+        {notPlayedYears.size > 0 && (
+          <span class="rail-legend__key">
+            <span class="rail-legend__ring" aria-hidden="true"></span>
+            not played yet
+          </span>
+        )}
       </p>
     )}
 
@@ -471,8 +529,8 @@ const seasonStandingsOnly = !!season && !season.gamesResolved && !seasonNotPlaye
                         <th scope="col" class="num">Together</th>
                         <th scope="col" class="num">Record</th>
                         <th scope="col" class="num">Interdivisional</th>
-                        <th scope="col" class="num"><abbr title="Division titles">Titles</abbr></th>
-                        <th scope="col" class="num"><abbr title="Championships">Champs</abbr></th>
+                        <th scope="col" class="num">Titles</th>
+                        <th scope="col" class="num">Champs<span class="visually-hidden"> (championships)</span></th>
                         <th scope="col">Teams</th>
                       </tr>
                     </thead>
@@ -497,7 +555,7 @@ const seasonStandingsOnly = !!season && !season.gamesResolved && !seasonNotPlaye
                               {formatWinPct(era.interDivision)}
                               {delta && (
                                 <span class:list={['delta', delta.up ? 'delta--up' : 'delta--down']}>
-                                  {delta.up ? '▲' : '▼'}{delta.text}
+                                  <span aria-hidden="true">{delta.up ? '▲' : '▼'}</span><span class="visually-hidden">{delta.up ? 'up ' : 'down '}</span>{delta.text}
                                 </span>
                               )}
                             </span>
@@ -754,6 +812,7 @@ const seasonStandingsOnly = !!season && !season.gamesResolved && !seasonNotPlaye
                         <summary class="owner-eras__summary">
                           <span class="owner-eras__caret" aria-hidden="true"></span>
                           <span class="owner-eras__label">
+                            <span class="visually-hidden">{d.name}: </span>
                             <strong>{d.membershipEras.length} lineups</strong>
                             <span class="dim"> · realigned {d.membershipEras.length - 1} time{d.membershipEras.length === 2 ? '' : 's'}</span>
                           </span>
@@ -795,6 +854,7 @@ const seasonStandingsOnly = !!season && !season.gamesResolved && !seasonNotPlaye
                           ))}
                         </span>
                         <span class="owner-eras__label">
+                          <span class="visually-hidden">{d.name}: </span>
                           Built by <strong>{d.owners.length} owner{d.owners.length === 1 ? '' : 's'}</strong>
                           {d.owners.length > 0 && (
                             <span class="dim"> · {d.owners.slice(0, 2).map((o) => o.title).filter(Boolean).join(', ')}{d.owners.length > 2 ? ` and ${d.owners.length - 2} more` : ''}</span>
@@ -818,11 +878,11 @@ const seasonStandingsOnly = !!season && !season.gamesResolved && !seasonNotPlaye
                                 <tr>
                                   <th scope="col">Owner</th>
                                   <th scope="col">Years here</th>
-                                  <th scope="col" class="num">Sn</th>
+                                  <th scope="col" class="num">Sn<span class="visually-hidden"> (seasons)</span></th>
                                   <th scope="col" class="num">Record</th>
-                                  <th scope="col" class="num">Inter</th>
-                                  <th scope="col" class="num"><abbr title="Division titles">Div</abbr></th>
-                                  <th scope="col" class="num"><abbr title="Championships">Ch</abbr></th>
+                                  <th scope="col" class="num">Inter<span class="visually-hidden">divisional win percentage</span></th>
+                                  <th scope="col" class="num">Div<span class="visually-hidden"> (division titles)</span></th>
+                                  <th scope="col" class="num">Ch<span class="visually-hidden"> (championships)</span></th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -864,9 +924,11 @@ const seasonStandingsOnly = !!season && !season.gamesResolved && !seasonNotPlaye
     {isSeason && season && (
       <>
         {seasonNotPlayed && (
-          <p class="notice" role="note">
-            <strong>The {season.year} season hasn't been played yet.</strong> Divisions are set —
-            records start in Week 1.
+          <p class="notice" id={`notplayed-${season.year}`} role="note">
+            <strong>The {season.year} season hasn't been played yet.</strong>
+            {seasonPreview
+              ? <> Here is the alignment it starts from — records begin in Week 1.</>
+              : <> Its alignment hasn't been published yet either; divisions appear here once they're set.</>}
           </p>
         )}
         {seasonStandingsOnly && (
@@ -902,11 +964,22 @@ const seasonStandingsOnly = !!season && !season.gamesResolved && !seasonNotPlaye
           </section>
         )}
 
-        <div class="metrics-grid metrics-grid--season">
-          <MetricCard label="Teams" value={String(season.leagueSize)} subtitle={`${season.divisionCount} divisions`} />
-          <MetricCard label="Regular season" value={season.lastRegularSeasonWeek ? `${season.lastRegularSeasonWeek} weeks` : '—'} subtitle={seasonHasGames ? 'game log complete' : 'no game log'} />
-          <MetricCard label="Playoff berths" value={String(season.divisions.reduce((n, d) => n + d.playoffBerths, 0))} subtitle="across all divisions" />
-        </div>
+        {/* Suppressed entirely when there is nothing to count: publishing
+            "Teams 0 · 0 divisions · 0 playoff berths" presents absence as a
+            finding. A previewed season reports its alignment instead. */}
+        {seasonPreview ? (
+          <div class="metrics-grid metrics-grid--season">
+            <MetricCard label="Teams" value={String(seasonPreview.divisions.reduce((n, d) => n + d.members.length, 0))} subtitle={`${seasonPreview.divisions.length} divisions`} />
+            <MetricCard label="Regular season" value={season.lastRegularSeasonWeek ? `${season.lastRegularSeasonWeek} weeks` : '—'} subtitle="scheduled" />
+            <MetricCard label="New owners" value={String(seasonPreview.totalNewOwners)} subtitle={seasonPreview.totalNewOwners === 1 ? 'since last season' : 'since last season'} />
+          </div>
+        ) : !seasonHasNothing ? (
+          <div class="metrics-grid metrics-grid--season">
+            <MetricCard label="Teams" value={String(season.leagueSize)} subtitle={`${season.divisionCount} divisions`} />
+            <MetricCard label="Regular season" value={season.lastRegularSeasonWeek ? `${season.lastRegularSeasonWeek} weeks` : '—'} subtitle={seasonHasGames ? 'game log complete' : 'no game log'} />
+            <MetricCard label="Playoff berths" value={String(season.divisions.reduce((n, d) => n + d.playoffBerths, 0))} subtitle="across all divisions" />
+          </div>
+        ) : null}
 
         {seasonHasGames && season.divisions.length > 1 && (
           <section aria-labelledby="season-matrix-heading">
@@ -922,6 +995,52 @@ const seasonStandingsOnly = !!season && !season.gamesResolved && !seasonNotPlaye
           </section>
         )}
 
+        {seasonPreview && (
+          <section aria-labelledby="season-preview-heading">
+            <div class="section-header">
+              <h2 id="season-preview-heading" class="section-header__title">{season.year} alignment</h2>
+              <p class="section-header__sub">
+                Who is in each division for the coming season. No games played yet, so there are no
+                records to show — {seasonPreview.totalNewOwners > 0
+                  ? <>an owner marked <em>new</em> took over since {seasonPreview.previousPlayedYear}.</>
+                  : <>every team is where it finished {seasonPreview.previousPlayedYear}.</>}
+              </p>
+            </div>
+            <div class="division-panels">
+              {seasonPreview.divisions.map((d) => (
+                <article class="division-panel">
+                  <header class="panel-head">
+                    <h3 class="panel-name">{d.name}</h3>
+                    {!d.unchanged && <span class="pill pill--new">changed</span>}
+                  </header>
+                  <ul class="preview-members">
+                    {d.members.map((m) => (
+                      <li class:list={['preview-member', { 'preview-member--new': m.newOwner }]}>
+                        {m.icon && <img src={m.icon} alt="" loading="lazy" width="26" height="26" />}
+                        <span class="preview-team">{m.nameMedium ?? m.name}</span>
+                        <span class="preview-owner">
+                          {m.owners.map((o, i) => (
+                            <>{i > 0 ? ' & ' : ''}<a href={ownerHref(o.slug)}>{o.title ?? o.slug}</a></>
+                          ))}
+                        </span>
+                        {m.newOwner && (
+                          <span class="pill pill--new">
+                            new<span class="visually-hidden"> owner{m.previousOwners.length > 0 ? `, replacing ${m.previousOwners.map((o) => o.title ?? o.slug).join(' and ')}` : ''}</span>
+                          </span>
+                        )}
+                        {m.movedDivision && m.previousDivision && (
+                          <span class="pill pill--sample">from {m.previousDivision}</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {!seasonPreview && !seasonHasNothing && (
         <section aria-labelledby="season-divisions-heading">
           <div class="section-header">
             <h2 id="season-divisions-heading" class="section-header__title">{season.year} by division</h2>
@@ -959,7 +1078,8 @@ const seasonStandingsOnly = !!season && !season.gamesResolved && !seasonNotPlaye
                 </dl>
 
                 <div class="table-scroll">
-                  <table class="season-team-table">
+                  <table class="season-team-table"
+                    aria-describedby={seasonStandingsOnly ? `nolog-${season.year}` : seasonNotPlayed ? `notplayed-${season.year}` : undefined}>
                     <caption class="visually-hidden">{d.name} teams in {season.year}</caption>
                     <thead>
                       <tr>
@@ -976,8 +1096,8 @@ const seasonStandingsOnly = !!season && !season.gamesResolved && !seasonNotPlaye
                           <th scope="row" class="team-cell">
                             {t.icon && <img src={t.icon} alt="" loading="lazy" width="22" height="22" />}
                             <span class="team-name">{t.nameMedium ?? t.name}</span>
-                            {t.wonDivision && <span class="tag" title="Division winner">🛡</span>}
-                            {t.playoffResult === 'champion' && <span class="tag" title="League champion">🏆</span>}
+                            {t.wonDivision && <span class="tag" role="img" aria-label="Division winner" title="Division winner">🛡</span>}
+                            {t.playoffResult === 'champion' && <span class="tag" role="img" aria-label="League champion" title="League champion">🏆</span>}
                           </th>
                           {!seasonNotPlayed && <td class="num">{formatRecord(t)}</td>}
                           {!seasonNotPlayed && <td class="num">{t.pointsFor.toFixed(1)}</td>}
@@ -999,6 +1119,7 @@ const seasonStandingsOnly = !!season && !season.gamesResolved && !seasonNotPlaye
             ))}
           </div>
         </section>
+        )}
       </>
     )}
 
@@ -1081,6 +1202,10 @@ const seasonStandingsOnly = !!season && !season.gamesResolved && !seasonNotPlaye
     scrollbar-width: thin;
     scroll-snap-type: x proximity;
     -webkit-overflow-scrolling: touch;
+    /* Keyboard focus scrolls a chip flush to left:0 — exactly where the opaque
+       sticky "All-time" chip is painted one layer above, hiding the focus ring.
+       Reserve its width so a tabbed-to chip lands clear of it. */
+    scroll-padding-left: 7rem;
   }
   .season-chip {
     display: inline-flex;
@@ -1112,6 +1237,15 @@ const seasonStandingsOnly = !!season && !season.gamesResolved && !seasonNotPlaye
     color: #fff;
     font-weight: 700;
   }
+  /* --league-accent is a LIGHT blue/red in dark mode (#3b82f6 / #ef5350), so
+     white-on-accent measures 3.68:1 and 3.49:1 — under the 4.5:1 floor, and
+     14px/700 does not qualify as large text (that floor is 18.66px bold). This
+     is the current-page marker on the page's primary control, so it is the one
+     chip that must be legible. Dark ink on the same accent measures 5.09:1 and
+     5.37:1. Note this also protects best-ball, whose dark accent (#34d399) is
+     1.92:1 against white — the page is not on bb1 today, but the moment it is,
+     white ink here would be unreadable. */
+  :global(html.dark) .season-chip[aria-current='page'] { color: #0b1220; }
   /* Sticky so the way back to all-time is one click from anywhere in the rail,
      even scrolled 24 years to the right. */
   .season-chip--alltime {
@@ -1132,14 +1266,32 @@ const seasonStandingsOnly = !!season && !season.gamesResolved && !seasonNotPlaye
   .rail-legend {
     display: flex;
     align-items: center;
-    gap: 0.375rem;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
     margin: 0 0 1.5rem;
     font-size: 0.75rem;
     color: var(--ds-ink-muted);
   }
+  .rail-legend__key { display: inline-flex; align-items: center; gap: 0.375rem; }
   .rail-legend__dot {
     width: 4px; height: 4px; border-radius: 999px;
     background: var(--ds-ink-muted);
+  }
+  /* A ring, not a second dot — the two states must differ in SHAPE, since a
+     filled vs hollow 4px dot is not a distinction anyone can make. */
+  .rail-legend__ring {
+    width: 6px; height: 6px; border-radius: 999px;
+    border: 1px solid var(--ds-ink-muted);
+  }
+  .season-chip--upcoming::after {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    border: 1px solid currentColor;
+    opacity: 0.7;
+    margin-left: 0.375rem;
   }
 
   /* ── The paired podium ─────────────────────────────────────────────────── */
@@ -1245,6 +1397,7 @@ const seasonStandingsOnly = !!season && !season.gamesResolved && !seasonNotPlaye
    * visually-hidden spans (captions, sort-state text, rank context). They and
    * their cells need their own containing block or those spans escape to the
    * initial containing block and widen the document — see .season-chip above. */
+  .strength-table { scroll-margin-top: 5rem; }
   .strength-table,
   .owner-era-table,
   .season-team-table {
@@ -1446,6 +1599,24 @@ const seasonStandingsOnly = !!season && !season.gamesResolved && !seasonNotPlaye
   .delta--down { color: #8b2a1f; }
   :global(html.dark) .delta--up { color: #7ee0a0; }
   :global(html.dark) .delta--down { color: #ff9c8a; }
+
+  /* ── Season preview (alignment set, nothing played yet) ────────────────── */
+  .preview-members { list-style: none; margin: 0; padding: 0; }
+  .preview-member {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.4375rem 0;
+    border-bottom: 1px solid var(--ds-border);
+    font-size: 0.875rem;
+  }
+  .preview-member:last-child { border-bottom: none; }
+  .preview-member img { width: 26px; height: 26px; object-fit: contain; flex: 0 0 auto; }
+  .preview-team { font-weight: 700; }
+  .preview-owner { color: var(--ds-ink-muted); font-size: 0.8125rem; }
+  .preview-owner a { color: inherit; }
+  .preview-member--new .preview-team { color: var(--ds-accent); }
 
   /* ── Membership era history ────────────────────────────────────────────── */
   .era-list { list-style: none; margin: 0.5rem 0 0; padding: 0; }
