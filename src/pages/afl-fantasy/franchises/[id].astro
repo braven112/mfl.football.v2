@@ -26,6 +26,9 @@ import {
 } from '../../../utils/rivalries';
 import { getCurrentSeasonYear } from '../../../utils/league-year';
 import { segmentsForFranchiseRange as segmentsForFranchiseRangeUtil, type NameEra } from '../../../utils/afl-name-history';
+import PreviousOwners from '../../../components/shared/franchises/PreviousOwners.astro';
+import ownerTenures from '../../../../data/afl-fantasy/derived/owner-tenures.json';
+import type { OwnerTenuresFile } from '../../../types/owner-tenures';
 
 // Badge art loaded raw so the editable year can be stamped per win (an <img>
 // can't be edited per instance). These are build-time repo assets only — safe
@@ -214,12 +217,12 @@ const segmentsForFranchiseRange = (
 ): NameEra[] =>
   segmentsForFranchiseRangeUtil(aflConfig as any, id!, franchiseId, rangeStart, rangeEnd, finalSegmentIsCurrent);
 
-// The current OWNER's lineage (nameEras) and, separately, this slot's eras
-// that belonged to previous owners (priorOwnerEras). The boundary matches
-// stat attribution exactly: ownerHistory claims when present, otherwise
-// getCurrentOwnerSince (the same inference afl-awards uses).
+// The current OWNER's lineage. The boundary matches stat attribution exactly:
+// ownerHistory claims when present, otherwise getCurrentOwnerSince (the same
+// inference afl-awards uses). Seasons this slot played under EARLIER owners
+// are no longer re-derived here — PreviousOwners reads owner-tenures.json,
+// which is the reconciled record for exactly that question.
 let nameEras: NameEra[] = [];
-let priorOwnerEras: NameEra[] = [];
 if (Array.isArray((team as any).ownerHistory) && (team as any).ownerHistory.length > 0) {
   const sortedOwner = [...(team as any).ownerHistory].sort((a: any, b: any) => a.yearStart - b.yearStart);
   sortedOwner.forEach((entry: any, idx: number) => {
@@ -227,40 +230,6 @@ if (Array.isArray((team as any).ownerHistory) && (team as any).ownerHistory.leng
     const isFinalEntry = idx === sortedOwner.length - 1 && entry.yearEnd >= 9999;
     nameEras.push(...segmentsForFranchiseRange(entry.franchiseId, entry.yearStart, cap, isFinalEntry));
   });
-  // Anything in THIS slot's own history outside the owner's own-slot claims
-  // belonged to a previous owner — keep those names visible on this page.
-  // Subtract the claimed ranges from each entry (rather than all-or-nothing)
-  // so an entry spanning a claim boundary contributes only its unclaimed
-  // years here and never renders the same season in both lists.
-  const ownSlotClaims = sortedOwner.filter((o: any) => o.franchiseId === id);
-  const subtractClaims = (ys: number, ye: number): Array<[number, number]> => {
-    let ranges: Array<[number, number]> = [[ys, ye]];
-    for (const o of ownSlotClaims) {
-      const next: Array<[number, number]> = [];
-      for (const [s, e] of ranges) {
-        if (o.yearEnd < s || o.yearStart > e) { next.push([s, e]); continue; }
-        if (s < o.yearStart) next.push([s, o.yearStart - 1]);
-        if (e > o.yearEnd) next.push([o.yearEnd + 1, e]);
-      }
-      ranges = next;
-    }
-    return ranges;
-  };
-  if (Array.isArray(team.history)) {
-    for (const h of team.history as any[]) {
-      for (const [s, e] of subtractClaims(h.yearStart, h.yearEnd)) {
-        priorOwnerEras.push({
-          name: h.name,
-          yearStart: s,
-          yearEnd: e,
-          icon: h.icon,
-          banner: h.banner,
-          isCurrent: false,
-          rebrandGroup: h.rebrand?.group,
-        });
-      }
-    }
-  }
 } else if (Array.isArray(team.history) && team.history.length > 0) {
   // Current owner's run: from ownerSince (or the earliest recorded year when
   // the owner has been here throughout) to today, gap-filling uncovered years
@@ -271,21 +240,6 @@ if (Array.isArray((team as any).ownerHistory) && (team as any).ownerHistory.leng
   const ownerSince = getCurrentOwnerSince(id!);
   const lineageStart = ownerSince ?? earliestYear;
   nameEras.push(...segmentsForFranchiseRange(id!, lineageStart, CURRENT_YEAR, true));
-  for (const h of team.history as any[]) {
-    // Clip an entry spanning the ownership boundary so its pre-ownerSince
-    // years still show under "Previous owners" instead of vanishing.
-    if (ownerSince != null && h.yearStart < ownerSince) {
-      priorOwnerEras.push({
-        name: h.name,
-        yearStart: h.yearStart,
-        yearEnd: Math.min(h.yearEnd, ownerSince - 1),
-        icon: h.icon,
-        banner: h.banner,
-        isCurrent: false,
-        rebrandGroup: h.rebrand?.group,
-      });
-    }
-  }
 } else {
   nameEras.push({
     name: team.name,
@@ -298,7 +252,19 @@ if (Array.isArray((team as any).ownerHistory) && (team as any).ownerHistory.leng
   });
 }
 nameEras.sort((a, b) => a.yearStart - b.yearStart);
-priorOwnerEras.sort((a, b) => a.yearStart - b.yearStart);
+
+/**
+ * How many PREVIOUS owners this slot has — read from the owners file, which is
+ * the reconciled record, rather than re-deriving the boundary here for the
+ * sixth time. Only used to decide whether the name-history section renders at
+ * all; PreviousOwners below does its own filtering and hides itself when empty.
+ */
+const priorOwnerCount = (ownerTenures.bySlot as Record<string, string[]>)[id!]?.filter(
+  (slug) => {
+    const owner = (ownerTenures.owners as any[]).find((o) => o.slug === slug);
+    return owner && !(owner.isCurrent && owner.currentFranchiseId === id);
+  }
+).length ?? 0;
 
 // Other franchises whose history shares one of this franchise's rebrand
 // groups — surfaced as "same owner, different franchise ID" cross-links.
@@ -764,7 +730,7 @@ const hasHighlights = Boolean(
       </section>
     )}
 
-    {(nameEras.length > 1 || priorOwnerEras.length > 0) && (
+    {(nameEras.length > 1 || priorOwnerCount > 0) && (
       <section class="franchise-section name-history" id="name-history">
         <h2>Team Name History</h2>
         <ul class="name-history__list">
@@ -811,29 +777,18 @@ const hasHighlights = Boolean(
             ))}
           </p>
         )}
-        {priorOwnerEras.length > 0 && (
-          <>
-            <h3 class="name-history__subheading">Previous owners of this franchise</h3>
-            <ul class="name-history__list name-history__list--prior">
-              {priorOwnerEras.slice().reverse().map((era) => (
-                <li class:list={['name-history__item', era.rebrandGroup && 'name-history__item--rebrand']}>
-                  {era.icon ? (
-                    <img class="name-history__icon" src={era.icon} alt="" loading="lazy" />
-                  ) : null}
-                  <div class="name-history__meta">
-                    <span class="name-history__name">
-                      {era.name}
-                      {era.rebrandGroup && <span class="rebrand-tag" title="Punitive last-place rename">💀 Last-Place Rebrand</span>}
-                    </span>
-                    <span class="name-history__years">
-                      {era.yearStart}–{era.yearEnd >= 9999 ? 'present' : era.yearEnd}
-                    </span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
+        {/* Was a flat, unlinked list of NAMES built from this page's own
+            boundary pass — which grouped by rebrand rather than by person, and
+            silently dropped slots' earliest owners (franchise 0004 showed 5 of
+            its 8; 0007's Avenging Amish years were missing entirely). The
+            owners file is the reconciled record, so read it instead. Verified
+            a superset: every name the old list rendered still appears. */}
+        <PreviousOwners
+          leagueSlug="afl-fantasy"
+          franchiseId={id as string}
+          data={ownerTenures as unknown as OwnerTenuresFile}
+          headingLevel="h3"
+        />
       </section>
     )}
 

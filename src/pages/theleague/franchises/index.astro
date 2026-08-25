@@ -5,6 +5,8 @@ import { resolveLeaguePath } from '../../../utils/nav-utils';
 import franchiseHistory from '../../../../data/theleague/derived/franchise-history.json';
 import leagueConfig from '../../../data/theleague.config.json';
 import aggregatedAssets from '../../../data/theleague.assets.json';
+import ownerTenures from '../../../../data/theleague/derived/owner-tenures.json';
+import { ownerSlugForIdentity } from '../../../utils/owner-links';
 import {
   buildHistoricalIdentities,
   normalizeIdentity,
@@ -96,7 +98,19 @@ for (const t of (aggregatedAssets.teams ?? []) as any[]) {
   }
 }
 
+// Ordered, and the order is the fix. An identity held by a PRIOR owner of the
+// slot has no era anchor on the franchise page (see owner-links.ts), so before
+// this the strip fell through to the asset library for all 23 of TheLeague's.
+// The owner page is the destination that actually holds those seasons.
+//   1. the owner page for this identity   (new — resolves prior-owner names)
+//   2. the era anchor                     (unchanged — an owner's own rebrand
+//                                          stays on their franchise page)
+//   3. the asset library                  (unchanged fallback)
 const identityHref = (h: (typeof historicalIdentities)[number]): string => {
+  const ownerSlug = ownerSlugForIdentity(ownerTenures.identityIndex, h.name, h.yearStart);
+  if (ownerSlug) {
+    return resolveLeaguePath(`/theleague/owners/${ownerSlug}`, hideLeaguePrefix);
+  }
   if (renderedAnchorsByFranchise.get(h.franchiseId)?.has(h.yearStart)) {
     return resolveLeaguePath(`/theleague/franchises/${h.franchiseId}#era-${h.yearStart}`, hideLeaguePrefix);
   }
@@ -195,9 +209,9 @@ const identityHref = (h: (typeof historicalIdentities)[number]): string => {
       <section class="historical-identities">
         <h2>Former Identities</h2>
         <p class="dim">
-          Historical names this league has used. Identities from the current
-          owner's tenure link to their era on the franchise page; earlier ones
-          link to their art in the Asset Library.
+          Historical names this league has used. Each links to the owner who
+          ran it — including the ones whose seasons no longer show on any
+          franchise page.
         </p>
         <ul class="identity-list">
           {historicalIdentities.map((h) => (

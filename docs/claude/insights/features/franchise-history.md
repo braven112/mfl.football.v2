@@ -136,14 +136,16 @@ history — the owner's lineage AND a "Previous owners" list — so
 **Evidence:** `src/utils/franchise-eras.ts` (shared era builder, extracted from
 `src/pages/theleague/franchises/[id].astro`), PR #340.
 
-**Recommendation:** Anything linking into a theleague franchise page era must
-use `renderedEraStarts()` from `src/utils/franchise-eras.ts` to check the
-anchor exists, and fall back to the Asset Library card
-(`/theleague/assets#{slug}` — cards render `id={team.slug}` from
-`theleague.assets.json`; match by `normalizeIdentity()` on the name minus its
-trailing year parenthetical, former cards winning over active ones). Never
-duplicate the era-building logic — the detail page and any linker must share
-the utility or they will drift.
+**Recommendation:** ~~fall back to the Asset Library card~~ **SUPERSEDED
+2026-08-25 — the destination is now the owner page.** The diagnosis above still
+holds exactly (a prior-owner identity can never have an anchor, so re-keying
+the map fixes nothing), but the Asset Library was a consolation prize: it shows
+the art, not the seasons. `/owners` now holds those seasons, so the resolution
+order is `ownerSlugForIdentity()` (`src/utils/owner-links.ts`) → the era anchor
+via `renderedEraStarts()` → the Asset Library. That took TheLeague from 0 of 23
+resolving to 23 of 23, and the AFL from 95 blanket `#name-history` links to 95
+owner pages. Still never duplicate the era-building logic — the detail page and
+any linker must share the utility or they will drift.
 
 ## 2026-07-04 - overflow-wrap: anywhere breaks flex-item names mid-word
 
@@ -253,3 +255,49 @@ silent rebuild from the ledger fails), and the `scheduleCoveredWeeks` guard in
 **Confidence: High** — the game-loss percentages are measured per season against
 the feeds, and every stored AFL season replays to MFL's own standings
 (`tests/afl-schedule-integrity.test.ts`).
+
+
+## 2026-08-25 - A derived field nothing reads is a field that is silently wrong
+
+**Context:** PR 2 of the owners feature replaced the AFL franchise page's
+config-driven "Previous owners" list with a component reading
+`owner-tenures.json`. The six last-place rebrands the AFL page had always
+tagged with 💀 disappeared. The derived file's `identity.punitive` was `false`
+for all 141 owners in both leagues, and `identity.rebrandGroup` `null` for
+every one.
+
+**Insight:** `buildTenuresFromRows` assembles identities from LEDGER ROWS,
+which carry a name, icon and banner but no `rebrand` — so it hardcoded
+`rebrandGroup: null, punitive: false`. That shipped in PR 1 and nothing caught
+it for a simple reason: **no consumer read either field.** The owner pages
+render names, records and trophies; the schema declared the fields; the
+conservation tests checked season coverage. A field can be present, typed,
+documented, and wrong indefinitely, because a test suite that never reads it
+is not testing it. It only surfaced when a page switched its source from the
+config to the derived file — which is exactly when a silent gap becomes a
+visible regression.
+
+The corollary bit too. Swapping the AFL's list was verified as a "strict
+superset" by checking that every NAME the old list rendered still appeared —
+which it did. Names were the primary key, and the check passed while an
+attribute attached to those names vanished. **Superset verification over
+identity keys says nothing about the attributes hanging off them.**
+
+**Recommendation:** When a derived file gains a field, give it a test that
+compares it against the SOURCE, not just a shape assertion — here,
+`tests/owner-tenures-data.test.ts`'s `REBRANDS` case diffs the config's
+punitive entries against the derived identities, and fails when the hardcoded
+nulls are restored. And when replacing one rendering source with another,
+diff the rendered ATTRIBUTES (tags, badges, flags), not only the row labels:
+compare the two pages' output, not the two data structures' keys.
+
+**Evidence:** `src/utils/owner-tenures.mjs` (`rebrandsByName` / `rebrandFor`,
+matched by normalized name and year overlap across ALL teams, since a punitive
+rebrand can follow an owner onto a different franchise id — which is what
+`rebrandGroup` exists to express), and the `REBRANDS` assertion in
+`tests/owner-tenures-data.test.ts`.
+
+**Confidence: High** — all six config rebrands verified back in the derived
+file with counts unchanged, rendered on their franchise pages (two through the
+prior-owner path, four through the untouched name-history path for owners still
+holding their slot), and the guard mutation-checked.

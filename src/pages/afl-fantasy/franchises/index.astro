@@ -10,6 +10,9 @@ import {
 import { getAflCareerStats, type AflCareerStats } from '../../../utils/afl-career-stats';
 import { getConferenceName, type ConferenceId } from '../../../utils/afl-conference';
 import { buildHistoricalIdentities } from '../../../utils/franchise-eras';
+import { resolveLeaguePath } from '../../../utils/nav-utils';
+import ownerTenures from '../../../../data/afl-fantasy/derived/owner-tenures.json';
+import { ownerSlugForIdentity } from '../../../utils/owner-links';
 import { stripBadgeYear, namespaceBadgeIds } from '../../../utils/afl-badge';
 import { PREMIER_LEAGUE, D_LEAGUE, getTierLogo, getTierLogoDark } from '../../../utils/afl-tier-logo';
 import ThemeImage from '../../../components/ThemeImage.astro';
@@ -161,6 +164,22 @@ const pointsMissingYears = [
 // name history — the current owner's lineage AND previous owners — so every
 // identity has a real landing spot at #name-history.
 const historicalIdentities = buildHistoricalIdentities(aflConfig.teams as any[]);
+
+const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
+
+// Every entry in this strip belongs to SOMEBODY, and until the owners feature
+// existed there was nowhere to send them: the blanket `#name-history` link
+// dropped all 95 onto the same section of whichever franchise slot happens to
+// hold that name today, which for a prior owner's identity is a different
+// team's page. The owner page is where those seasons actually live. The
+// `#name-history` link stays as the fallback — it is at least the right slot.
+const identityHref = (h: (typeof historicalIdentities)[number]): string => {
+  const ownerSlug = ownerSlugForIdentity(ownerTenures.identityIndex, h.name, h.yearStart);
+  const path = ownerSlug
+    ? `/afl-fantasy/owners/${ownerSlug}`
+    : `/afl-fantasy/franchises/${h.franchiseId}#name-history`;
+  return resolveLeaguePath(path, hideLeaguePrefix);
+};
 ---
 
 <TheLeagueLayout title="Franchises | AFL">
@@ -268,12 +287,12 @@ const historicalIdentities = buildHistoricalIdentities(aflConfig.teams as any[])
         <h2>Former Identities</h2>
         <p class="historical-identities__sub">
           Every name these clubs have played under — punitive last-place
-          rebrands included. Each links to the franchise's name history.
+          rebrands included. Each links to the owner who ran it.
         </p>
         <ul class="identity-list">
           {historicalIdentities.map((h) => (
             <li>
-              <a href={`/afl-fantasy/franchises/${h.franchiseId}#name-history`}>
+              <a href={identityHref(h)}>
                 {h.icon && <img class="identity-icon" src={h.icon} alt="" loading="lazy" width="32" height="32" />}
                 <strong>{h.name}</strong>
                 <span class="identity-years">{h.yearStart === h.yearEnd ? h.yearStart : `${h.yearStart}–${h.yearEnd}`}</span>
