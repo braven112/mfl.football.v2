@@ -301,3 +301,70 @@ rebrand can follow an owner onto a different franchise id — which is what
 file with counts unchanged, rendered on their franchise pages (two through the
 prior-owner path, four through the untouched name-history path for owners still
 holding their slot), and the guard mutation-checked.
+
+
+## 2026-08-25 - Folding a name run keeps the first row's artwork forever
+
+**Context:** Every current owner's card on `/owners` showed a logo their team
+had retired years ago — Da Dangsters as the 2017 wizard, Midwestside as the
+old photo circle, the Ninjas as the 2016 sombrero. The ledger was right: rows
+2015-2024 carry `history/da_dangsters_2017_icon_circle.png` and rows 2025-2026
+carry `icons/da_dangsters.png`. The page never saw the newer one.
+
+**Insight:** `buildTenuresFromRows` groups consecutive same-name seasons into
+one identity run. Creating a run copies the row's `icon`/`banner`; folding a
+later row into it only extended `yearEnd` and `years`. The grouping key is the
+NAME, but artwork is not a function of the name — **a team can restyle without
+renaming**, and TheLeague's config makes that the normal case: `history[]`
+holds the retired art (`Da Dangsters, 2015-2024`) while the live art lives on
+`team.icon`, so the same name spans both. Eight of TheLeague's seventeen
+current owners were affected; the AFL had zero, because its config keys icons
+by name and never restyles under one. A bug can be structural and still show
+up in exactly one league.
+
+`makeIconResolver` did not save it either: the resolver's by-name map does
+prefer `team.icon` (the current art) over `history[]`, but it is only consulted
+when the identity's own icon is unusable. A *stale but valid local path* is the
+worst input here — it looks healthy and wins.
+
+**Recommendation:** When collapsing rows into a run, ask which fields are
+constant across the run and which vary with time. Constant-by-construction
+(the name, the franchise slot) can come from any row; anything else needs a
+rule. For artwork the rule is newest-wins — the run's most recent year is what
+the identity looks like today. Note this is the second bug in this exact loop
+(see the `punitive`/`rebrandGroup` entry above): identities assembled from
+ledger rows keep losing attributes that the rows actually carry. Treat every
+new field on an identity as guilty until a test compares it against the source.
+
+**Evidence:** `src/utils/owner-tenures.mjs` (`buildTenuresFromRows`, the fold
+branch), guarded by `buildOwnerTenures identity artwork` in
+`tests/owner-tenure-derivation.test.ts` — newest wins, a newer year with no
+icon does not blank the run, and artwork never leaks across a rename.
+
+**The same symptom had a second, unrelated cause — in the other league.**
+Fixing the fold made all 17 of TheLeague's current owners match their config
+`team.icon` exactly, and left three AFL owners still on retired art. Those come
+from `dominantIdentity`, which picks the identity a tenure is NAMED for by
+season count: AFL 0012 spent ten years as "Pubes" and the last eight as "Suh
+girls, one cup", and 0016's two names tie at two seasons each so the tie-break
+(*earliest* start) chose the older one deliberately. That function is right for
+a title and wrong for a face — the owner card answers "what does this team look
+like today". `finalizeOwner` now takes the newest non-punitive identity of the
+slot an owner holds TODAY, and falls back to dominant for former owners, whose
+era is over. The punitive skip is what keeps AFL 0014's card on Thundering Herd
+instead of the 2026 last-place rename.
+
+Two things generalize. First, **"all N of league A are now correct" is not
+evidence about league B** — the leagues' configs express the same idea
+differently (TheLeague restyles under one name; the AFL renames), so one defect
+surfaces through two mechanisms and a fix to one mechanism looks complete.
+Verify the invariant per league, against the config, rather than inspecting the
+diff. Second, `dominantName` and `icon` on an owner now describe different
+identities on purpose; that was only safe to do because nothing outside
+`src/types/owner-tenures.ts` reads `dominantName`.
+
+**Confidence: High** — all 8 changed TheLeague owners and both changed AFL
+owners verified against the config's live `team.icon`; every current owner in
+both leagues now matches it except AFL 0014, whose punitive exemption is
+asserted by test; no former owner's icon moved; 41 images on TheLeague's page
+and 107 on the AFL's all return 200.

@@ -245,6 +245,17 @@ export const segmentSlotTenures = ({ team, years, feedIdentityFor }) => {
     if (last && normalizeIdentity(last.name) === normalizeIdentity(identityName ?? '')) {
       last.yearEnd = year;
       last.years.push(year);
+      // Newest art wins, same as the ledger-row fold in `buildTenuresFromRows`
+      // — two adjacent history entries can share a name and differ only in
+      // artwork (TheLeague's 0001, 0008 and 0015 all do), and taking the run's
+      // first entry pins it to the retired look.
+      //
+      // Only a real config ENTRY may overwrite. A gap-filled year carries the
+      // MFL feed's icon, which is uncurated and may be remote or dead; letting
+      // it win would have a feed guess clobber the art a human chose, and the
+      // resolver's repair only runs on icons it can already tell are unusable.
+      if (entry?.icon) last.icon = entry.icon;
+      if (entry?.banner) last.banner = entry.banner;
     } else {
       current.identities.push({
         name: identityName,
@@ -608,6 +619,14 @@ export const buildOwnerTenures = ({
           if (last && normalizeIdentity(last.name) === normalizeIdentity(row.name ?? '')) {
             last.yearEnd = row.year;
             last.years.push(row.year);
+            // A team can restyle without renaming: Da Dangsters wore
+            // `da_dangsters_2017_icon_circle.png` through 2024 and
+            // `icons/da_dangsters.png` from 2025. Both years fold into one
+            // identity run, so keeping the FIRST row's icon pinned every
+            // owner card to artwork the team retired years ago. The newest
+            // year in the run is the identity as it looks today.
+            if (row.icon) last.icon = row.icon;
+            if (row.banner) last.banner = row.banner;
           } else {
             identities.push({
               name: row.name,
@@ -679,6 +698,27 @@ export const buildOwnerTenures = ({
     // slot, which `tests/owner-tenures-data.test.ts` rejects.
     const heldToday = isCurrent ? currentFranchiseId ?? null : null;
 
+    // The card icon on /owners answers "what does this owner's team look like
+    // TODAY". That is not the question `dominantIdentity` answers — it picks
+    // the identity a tenure is NAMED for, by season count, which is right for
+    // a title and wrong for a face. The AFL's 0012 spent ten years as "Pubes"
+    // and the last eight as "Suh girls, one cup", so its card wore a logo
+    // retired in 2018; 0016's two names tie at two seasons each and the
+    // tie-break is *earliest*, which pinned it to the older one on purpose.
+    // Former owners keep the dominant identity: their era is over, so its
+    // most-worn look is the correct one.
+    const currentIdentity = (() => {
+      const held = heldToday ? tenures.find((t) => t.franchiseId === heldToday) : null;
+      if (!held) return null;
+      // Newest first, skipping a punitive rebrand — the AFL's last-place
+      // rename is a punishment worn for a season, not the team's identity.
+      // Same exemption `dominantIdentity` makes, and it is what keeps 0014's
+      // card on Thundering Herd rather than "A Bruin Pegs Me".
+      return [...held.identities].reverse().find((i) => i.name && !i.punitive) ?? null;
+    })();
+    const face = currentIdentity ?? dominant;
+    const faceSlot = currentIdentity ? heldToday : tenures[0].franchiseId;
+
     return {
       ownerId,
       slug,
@@ -686,8 +726,8 @@ export const buildOwnerTenures = ({
       displayName: displayName ?? null,
       title,
       dominantName: dominant?.name ?? null,
-      icon: dominant
-        ? icon({ icon: dominant.icon, name: dominant.name, franchiseId: tenures[0].franchiseId })
+      icon: face
+        ? icon({ icon: face.icon, name: face.name, franchiseId: faceSlot })
         : HISTORICAL_TEAM_ICON_FALLBACK,
       isCurrent,
       source,

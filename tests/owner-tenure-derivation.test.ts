@@ -357,6 +357,44 @@ describe('segmentSlotTenures', () => {
   });
 });
 
+describe('segmentSlotTenures artwork', () => {
+  /**
+   * The sibling of the `buildTenuresFromRows` fold: two adjacent history
+   * entries can share a name and differ only in artwork (TheLeague's 0001,
+   * 0008 and 0015 all do), so a run assembled from them must not keep the
+   * first entry's retired look. A gap-filled year is the exception — its icon
+   * is the MFL feed's guess, not a curated choice.
+   */
+  const slot = (history: any[]) => ({ franchiseId: '0001', name: 'Pacific Pigskins', history });
+
+  it('takes the newest entry of a same-name run', () => {
+    const groups = segmentSlotTenures({
+      team: slot([
+        { name: 'Pacific Pigskins', yearStart: 2007, yearEnd: 2012, icon: '/assets/theleague/history/pigskins_2007.png' },
+        { name: 'Pacific Pigskins', yearStart: 2013, yearEnd: 2016, icon: '/assets/theleague/history/pigskins_2013.png' },
+      ]),
+      years: [2007, 2012, 2013, 2016],
+      feedIdentityFor: null,
+    });
+    expect(groups[0].identities).toHaveLength(1);
+    // Cast: `segmentSlotTenures` is untyped .mjs, so an empty-literal fixture
+    // narrows `identities` to `never[]`.
+    expect((groups[0].identities[0] as any).icon).toBe('/assets/theleague/history/pigskins_2013.png');
+  });
+
+  it('does not let a gap-filled feed icon overwrite curated artwork', () => {
+    const groups = segmentSlotTenures({
+      team: slot([
+        { name: 'Pacific Pigskins', yearStart: 2007, yearEnd: 2012, icon: '/assets/theleague/history/pigskins_2007.png' },
+      ]),
+      years: [2007, 2012, 2013],
+      // 2013 has no covering entry, so it gap-fills from the feed.
+      feedIdentityFor: () => ({ name: 'Pacific Pigskins', icon: 'https://mfl.example/dead.gif', banner: null }),
+    });
+    expect((groups[0].identities[0] as any).icon).toBe('/assets/theleague/history/pigskins_2007.png');
+  });
+});
+
 describe('dominantIdentity', () => {
   it('picks the identity with the most seasons', () => {
     const groups = segmentSlotTenures({
@@ -679,5 +717,189 @@ describe('buildOwnerTenures cross-slot tenures', () => {
     expect(out.owners[0].totals.seasons).toBe(3);
     // Current owner of 0011, NOT of the slot they left.
     expect(out.owners[0].currentFranchiseId).toBe('0011');
+  });
+});
+
+describe('buildOwnerTenures identity artwork', () => {
+  /**
+   * A team can restyle without renaming — Da Dangsters wore the 2017 circle
+   * icon through 2024 and a new one from 2025, under one unbroken name. Both
+   * years fold into a single identity run, and taking the run's FIRST row
+   * pinned every current owner's card on /owners to artwork the team had
+   * already retired. The newest year in the run is what the identity looks
+   * like today.
+   */
+  const league = { slug: 'theleague', navSlug: 'theleague', name: 'The League' };
+  const row = (year: number, name: string, icon: string, banner: string) => ({
+    year,
+    franchiseId: '0002',
+    attributedTo: '0002',
+    name,
+    nameMedium: null,
+    icon,
+    banner,
+    sourceFranchiseId: null,
+    wins: 9,
+    losses: 9,
+    ties: 0,
+    pointsFor: 1500,
+    regSeasonRank: 7,
+    divisionId: '01',
+    divisionName: 'Central',
+    wonDivision: false,
+    playoffResult: 'missed',
+    seasonNotStarted: false,
+  });
+  // `buildOwnerTenures` is a .mjs with no type declarations, so TS infers its
+  // optional params from their DEFAULT VALUES — `resolveIcon = null` types as
+  // `null`, and passing a real resolver is an error. Cast the options bag
+  // rather than let these count against the type-error baseline.
+  const build = (ledgerRows: any[]) =>
+    buildOwnerTenures({
+      league,
+      teams: [{ franchiseId: '0002', name: 'Da Dangsters' }],
+      ledgerRows,
+      resolveIcon: ({ icon }: any) => icon,
+      generatedAt: 'fixed',
+    } as any);
+
+  it('takes the newest year of a name run, not the oldest', () => {
+    const out = build([
+      row(2015, 'Da Dangsters', '/assets/theleague/history/old.png', '/assets/theleague/history/old_banner.png'),
+      row(2025, 'Da Dangsters', '/assets/theleague/icons/new.png', '/assets/theleague/banners/new.png'),
+    ]);
+    const identity = out.owners[0].tenures[0].identities[0];
+    expect(identity.years).toEqual([2015, 2025]);
+    expect(identity.icon).toBe('/assets/theleague/icons/new.png');
+    expect(identity.banner).toBe('/assets/theleague/banners/new.png');
+    // …and it reaches the owner card, which is where the bug was visible.
+    expect(out.owners[0].icon).toBe('/assets/theleague/icons/new.png');
+  });
+
+  it('keeps the run\'s own artwork when a newer year carries none', () => {
+    const out = build([
+      row(2015, 'Da Dangsters', '/assets/theleague/history/old.png', '/assets/theleague/history/old_banner.png'),
+      { ...row(2025, 'Da Dangsters', '', ''), icon: null, banner: null },
+    ]);
+    const identity = out.owners[0].tenures[0].identities[0];
+    expect(identity.icon).toBe('/assets/theleague/history/old.png');
+    expect(identity.banner).toBe('/assets/theleague/history/old_banner.png');
+  });
+
+  it('does not leak artwork across a rename', () => {
+    const out = build([
+      row(2014, 'Degenerates', '/assets/theleague/history/degenerates.png', '/assets/theleague/history/degenerates_banner.png'),
+      row(2015, 'Da Dangsters', '/assets/theleague/history/old.png', '/assets/theleague/history/old_banner.png'),
+      row(2025, 'Da Dangsters', '/assets/theleague/icons/new.png', '/assets/theleague/banners/new.png'),
+    ]);
+    const identities = out.owners[0].tenures[0].identities;
+    expect(identities.map((i: any) => i.icon)).toEqual([
+      '/assets/theleague/history/degenerates.png',
+      '/assets/theleague/icons/new.png',
+    ]);
+  });
+});
+
+describe('buildOwnerTenures owner card face', () => {
+  /**
+   * The card icon answers "what does this owner's team look like TODAY", which
+   * `dominantIdentity` does not: it picks the identity a tenure is NAMED for,
+   * by season count. The AFL's 0012 spent ten years as "Pubes" and the last
+   * eight as "Suh girls, one cup", so its card wore a logo retired in 2018.
+   */
+  const league = { slug: 'afl-fantasy', navSlug: 'afl', name: 'AFL' };
+  const row = (year: number, name: string, icon: string) => ({
+    year,
+    franchiseId: '0012',
+    attributedTo: '0012',
+    name,
+    nameMedium: null,
+    icon,
+    banner: null,
+    sourceFranchiseId: null,
+    wins: 8,
+    losses: 8,
+    ties: 0,
+    pointsFor: 1400,
+    regSeasonRank: 8,
+    divisionId: '01',
+    divisionName: 'East',
+    wonDivision: false,
+    playoffResult: 'missed',
+    seasonNotStarted: false,
+  });
+  const build = (ledgerRows: any[], teams: any[]) =>
+    buildOwnerTenures({
+      league,
+      teams,
+      ledgerRows,
+      resolveIcon: ({ icon }: any) => icon,
+      generatedAt: 'fixed',
+    } as any);
+
+  const TEAM = [{ franchiseId: '0012', name: 'Suh girls, one cup', currentOwnerSince: 2009 }];
+
+  it('shows a current owner their newest identity, not their longest-worn one', () => {
+    const out = build(
+      [
+        row(2009, 'Pubes', '/assets/afl/history/pubes.png'),
+        row(2010, 'Pubes', '/assets/afl/history/pubes.png'),
+        row(2011, 'Pubes', '/assets/afl/history/pubes.png'),
+        row(2019, 'Suh girls, one cup', '/assets/afl/icons/suh.png'),
+      ],
+      TEAM
+    );
+    // The tenure is still NAMED for the longest-worn identity…
+    expect(out.owners[0].dominantName).toBe('Pubes');
+    // …but the face is the team as it stands today.
+    expect(out.owners[0].icon).toBe('/assets/afl/icons/suh.png');
+  });
+
+  it('never puts a punitive rebrand on the card', () => {
+    const out = build(
+      [
+        row(2024, 'Thundering Herd', '/assets/afl/history/herd.png'),
+        row(2025, 'Thundering Herd', '/assets/afl/history/herd.png'),
+        row(2026, 'A Bruin Pegs Me', '/assets/afl/icons/bruin.png'),
+      ],
+      [
+        {
+          franchiseId: '0012',
+          name: 'A Bruin Pegs Me',
+          currentOwnerSince: 2024,
+          currentRebrand: { reason: 'last-place' },
+          history: [{ name: 'Thundering Herd', yearStart: 2024, yearEnd: 2025 }],
+        },
+      ]
+    );
+    // The newest identity is a punishment, not an identity — skip to the one
+    // beneath it rather than crowning the rename.
+    expect(out.owners[0].icon).toBe('/assets/afl/history/herd.png');
+  });
+
+  it('leaves a former owner on their dominant identity', () => {
+    const out = build(
+      [
+        { ...row(2009, 'Pubes', '/assets/afl/history/pubes.png'), attributedTo: null },
+        { ...row(2010, 'Pubes', '/assets/afl/history/pubes.png'), attributedTo: null },
+        { ...row(2011, 'Pubes', '/assets/afl/history/pubes.png'), attributedTo: null },
+        { ...row(2012, 'Late Name', '/assets/afl/history/late.png'), attributedTo: null },
+      ],
+      [
+        {
+          franchiseId: '0012',
+          name: 'Someone Else',
+          currentOwnerSince: 2020,
+          // The orphan path segments from the CONFIG's history entries, not
+          // from the ledger rows, so the era art has to live here.
+          history: [
+            { name: 'Pubes', yearStart: 2009, yearEnd: 2011, icon: '/assets/afl/history/pubes.png' },
+            { name: 'Late Name', yearStart: 2012, yearEnd: 2012, icon: '/assets/afl/history/late.png' },
+          ],
+        },
+      ]
+    );
+    const former = out.owners.find((o: any) => !o.isCurrent);
+    expect(former?.icon).toBe('/assets/afl/history/pubes.png');
   });
 });
