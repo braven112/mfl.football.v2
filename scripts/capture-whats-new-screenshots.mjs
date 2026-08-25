@@ -101,6 +101,11 @@ const CAPTURE_PATHS = {
   // AFL because that is where the naming work landed — 68 of the 85 blanks.
   'owners-get-their-names': '/afl-fantasy/owners',
   'built-in-rankings-2026-08-21': '/afl-fantasy/import-rankings',
+  // Both-league entry on the bare `/division-strength`, which 404s on the
+  // shared host — verified, not assumed. Shot against TheLeague because its
+  // seven divisions include the two retired ones, so the crest columns show
+  // both the dimmed-alumni and the current-lineup states in one frame.
+  'division-strength': '/theleague/division-strength',
   // No `link` on this entry (see whats-new.json) — without an override the
   // capture would shoot the site root.
   'rankings-on-the-decision-pages': '/afl-fantasy/players',

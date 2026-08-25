@@ -10,7 +10,12 @@
  * shared component (see CLAUDE.md). So the decision lives here, and each thin
  * route wrapper owns the redirect, mirroring `resolveCustomRankingsAccess`.
  */
-import type { DivisionStrengthFile } from '../types/division-strength';
+import type {
+  DivisionAllTime,
+  DivisionMember,
+  DivisionMembershipEra,
+  DivisionStrengthFile,
+} from '../types/division-strength';
 
 /** Columns the all-time table can sort on. */
 export const ALL_TIME_SORT_KEYS = [
@@ -84,4 +89,118 @@ export function resolveDivisionStrengthView(
     return { kind: 'redirect', to: basePath };
   }
   return { kind: 'season', year, sort, dir };
+}
+
+/* ── Membership eras ───────────────────────────────────────────────────────
+ *
+ * A division name outlives the teams that earned its record, so ranking names
+ * against each other ranks seven different sets of franchises. An ERA — a run
+ * of consecutive seasons with an identical franchise set — is the slice where
+ * two divisions are compared as the same group over their whole shared span.
+ *
+ * These shape `membershipEras[]` (already computed in
+ * `scripts/compute-division-strength.mjs`) for display. They live here rather
+ * than in the page's frontmatter so they can be tested without rendering.
+ */
+
+/**
+ * Consecutive seasons a lineup must survive to earn a place on the era board.
+ *
+ * The whole point of the board is comparing groups that actually have shared
+ * history; a lineup that lasted one realignment cycle has a record, not a
+ * story. Four is the owner's call and it is also where the data separates —
+ * both leagues realign in a way that produces a scatter of one-and-two-season
+ * lineups (the AFL's West has ten eras, six of them a single season) that
+ * would otherwise dominate any rate metric and bury the real ones.
+ */
+export const ERA_MIN_SEASONS = 4;
+
+/** "2012–2016", or "2016–present" for the era still running. */
+export function formatEraYears(era: Pick<DivisionMembershipEra, 'yearStart' | 'yearEnd' | 'current'>): string {
+  if (era.yearStart === era.yearEnd && !era.current) return String(era.yearStart);
+  return `${era.yearStart}–${era.current ? 'present' : era.yearEnd}`;
+}
+
+/** One lineup on the cross-division era board. */
+export interface RankedEra {
+  era: DivisionMembershipEra;
+  divisionName: string;
+  divisionSlug: string;
+  /** How many qualifying eras this division contributes — 2 when it realigned. */
+  divisionEraCount: number;
+  /** "2012–2016". */
+  years: string;
+  /** "Northwest (2012–2016)" — the label the owner asked for. */
+  label: string;
+}
+
+/**
+ * Every division's membership eras, long enough to count, ranked against each
+ * other.
+ *
+ * Sorted on OVERALL win%, matching the all-time ranking directly above it on
+ * the page. That is safe here for the same reason it is safe there: an era's
+ * intra-division games are exactly zero-sum, so overall win% is interdivisional
+ * win% compressed toward .500 by a similar factor for every era. Measured, not
+ * assumed — the two metrics order the qualifying eras identically in both
+ * leagues (9 for 9 in TheLeague, 6 for 6 in the AFL). Ties break toward the
+ * longer run, which is the one carrying more evidence.
+ */
+export function rankEras(
+  divisions: DivisionAllTime[],
+  minSeasons: number = ERA_MIN_SEASONS
+): RankedEra[] {
+  const rows: RankedEra[] = [];
+  for (const division of divisions) {
+    const qualifying = division.membershipEras.filter(
+      (era) => era.seasons >= minSeasons && era.totals.games > 0
+    );
+    for (const era of qualifying) {
+      const years = formatEraYears(era);
+      rows.push({
+        era,
+        divisionName: division.name,
+        divisionSlug: division.slug,
+        divisionEraCount: qualifying.length,
+        years,
+        label: `${division.name} (${years})`,
+      });
+    }
+  }
+  return rows.sort(
+    (a, b) =>
+      (b.era.totals.winPct ?? 0) - (a.era.totals.winPct ?? 0) ||
+      b.era.seasons - a.era.seasons ||
+      b.era.yearStart - a.era.yearStart ||
+      a.divisionName.localeCompare(b.divisionName)
+  );
+}
+
+/** A franchise that has been in a division at some point, with its latest look. */
+export interface DivisionAlumnus extends DivisionMember {
+  /** In the lineup that is still running. False for every departed franchise. */
+  current: boolean;
+}
+
+/**
+ * Every franchise that has ever sat in a division, current lineup first.
+ *
+ * Walking the eras NEWEST first does two jobs at once: it orders the crests by
+ * recency (so a reader scanning the row sees today's teams before a franchise
+ * that left in 2010), and it resolves each franchise to the identity it wore
+ * the LAST time it was in this division. `membershipEras[].members` is already
+ * stamped as of its own era's final season, so first-seen wins.
+ */
+export function divisionAlumni(division: DivisionAllTime): DivisionAlumnus[] {
+  const currentIds = new Set(division.currentEra?.franchiseIds ?? []);
+  const seen = new Set<string>();
+  const out: DivisionAlumnus[] = [];
+  for (let i = division.membershipEras.length - 1; i >= 0; i -= 1) {
+    for (const member of division.membershipEras[i].members) {
+      if (seen.has(member.franchiseId)) continue;
+      seen.add(member.franchiseId);
+      out.push({ ...member, current: currentIds.has(member.franchiseId) });
+    }
+  }
+  return out;
 }

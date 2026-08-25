@@ -138,3 +138,76 @@ no component of it picks one anyway. Truncating a ranking, choosing a default
 sort, and generating comparative prose are all ways a "neutral" page takes a
 side. The default sort here is `seasons`, which is neutral with respect to
 strength, for exactly this reason.
+
+## 2026-08-25 - Eras were computed but never compared; a name-only ranking is a different question
+
+**Context:** Same-day follow-up to the launch. `membershipEras[]` already
+existed and the "as currently constituted" table already used the CURRENT one
+— but the page's only actual ranking still ordered division NAMES, and every
+retired era on file was reachable only by opening a per-division `<details>`.
+
+**Insight:** Computing the right slice is not the same as comparing on it. The
+report shipped with the honest unit of comparison (a fixed set of franchises
+over its whole shared span) sitting one disclosure-triangle deep, while the
+prominent ranking compared seven labels. The fix was not new math — nothing in
+`compute-division-strength.mjs` changed — it was ranking the eras against each
+other across divisions, which turns the same numbers into the comparison the
+page's own copy had been arguing for.
+
+It re-reads the league. TheLeague's East is 2nd of nine qualifying lineups with
+the four it has had since 2016 and 9th — last — with the four it had 2011-2015.
+One name, two eras, opposite ends of the same list. A name-only ranking cannot
+express that at all; it averages the two into 4th and calls it the East.
+
+**Evidence:** `rankEras` / `divisionAlumni` / `formatEraYears` in
+`src/utils/division-strength-view.ts`, pinned by the `era board` block in
+`tests/division-strength-data.test.ts`.
+
+**Recommendation:** When a derived file already carries the defensible slice,
+check what the page RANKS on before adding anything. A field that exists but
+never sorts a list is not yet a position the page has taken.
+
+## 2026-08-25 - A minimum era length is a claim about evidence, not a filter
+
+**Context:** Choosing which membership eras earn a place on the cross-division
+board.
+
+**Insight:** The floor is four consecutive seasons, and it is doing the job the
+all-time list needs a caveat pill for. Both leagues realign in a way that
+scatters one- and two-season lineups — the AFL's West has ten eras, six of them
+a single season — and on a rate metric those short runs land at the extremes and
+push every long-standing lineup toward the middle of the board. Admitting them
+would reproduce, inside the honest comparison, exactly the sample-size problem
+that stops this page naming an all-time strongest division.
+
+Two consequences to accept rather than paper over. Divisions can be ABSENT: no
+group has held TheLeague's Midwest or Pacific together four years, so neither
+appears, and the note names them so a reader who scans for their own division
+is told why rather than assuming the board is broken. And a division can appear
+TWICE, which is the point — Northwest (2011-2015) and Northwest (2016-present)
+are two different sets of teams.
+
+**Evidence:** `ERA_MIN_SEASONS` in `src/utils/division-strength-view.ts`. The
+floor is a parameter with a default, and the suite asserts `rankEras` honors
+the one it is passed rather than a constant baked into the body.
+
+**Recommendation:** Any "compare these groups" ranking needs a stated minimum
+membership, chosen from how the underlying churn actually distributes rather
+than picked as a round number. Say what the minimum excluded, by name, in the
+copy under the ranking.
+
+## 2026-08-25 - Two `auto` margins do not make a column
+
+**Context:** Adding team crests to the all-time ranking rows, which already
+pushed the record to the right with `.verdict-value { margin-left: auto }`.
+
+**Insight:** Adding a second `margin-left: auto` to the crest span splits the
+free space between the two gaps instead of pinning either, so the crests landed
+at a different x on every row — the exact ragged edge the change was meant to
+fix. Only the FIRST auto margin can define the column; the element after it
+needs a fixed gap, which means out-specifying the existing rule
+(`.member-icons + .verdict-value`) rather than adding to it.
+
+**Recommendation:** In a flex row, `margin-left: auto` is a break between two
+groups, not a right-align. A second one starts a third group and un-pins the
+first.
