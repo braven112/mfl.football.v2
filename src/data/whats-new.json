@@ -1,5 +1,29 @@
 [
   {
+    "id": "division-strength",
+    "date": "2026-08-25",
+    "category": "new-page",
+    "icon": "rank",
+    "leagues": [
+      "theleague",
+      "afl"
+    ],
+    "title": "Your Division Is Not As Tough As You Think",
+    "link": "/division-strength",
+    "linkLabel": "See where yours lands",
+    "summary": "Nick asked for a Strength of Division report and here it is, for both leagues, back to the first season on file. Every division's record by year and all-time, a division-vs-division grid, and — the part that actually settles arguments — how each division has done with the exact teams in it right now.",
+    "description": [
+      "Everyone knows their division is the hard one. Nobody has ever been able to prove it. So: Strength of Division, by year and all-time, in The League and the AFL both.",
+      "Start with the number everyone already argues about: the overall record, ranked strongest to weakest. Worth knowing what it can and can't do, though. Every game a division plays against itself hands one of its own teams a win and another a loss, so that half of the schedule is pinned to .500 by arithmetic no matter how good anybody is. Pick a single season and the page ranks on the honest version instead — what a division did against everyone ELSE — because on one year's sample the two can genuinely disagree. Across twenty years they don't: we checked, and they order the divisions identically, seven for seven, in both leagues.",
+      "Then the part worth the price of admission: as currently constituted. A division name outlives the teams that earned its record, so every division is also scored over the exact span its current lineup has been together. The East and the Northwest have fielded the same four since 2016. The Central's four have been together since 2017 and are running .452 against the rest of the league, twenty-four points below what the Central name has done across nineteen seasons. In the AFL the North has been the same six since 2019 and is .571 the whole time — a good deal better than the .513 the name carries all-time. Realignment resets the clock, and now you can see whose clock started when.",
+      "And it knows about the offseason. Records only ever count seasons that were actually played, but the lineups are the ones taking the field next — so the Southwest is flagged for 2026, where Dead Cap Walking takes over from Heavy Chevy. A division with an incoming owner hasn't played a snap with that exact group yet, and the page says so rather than quietly crediting the new owner with the old one's record.",
+      "It goes down to division vs division, too, which is what Nick actually asked for: a grid of every division's record against every other, all-time and season by season. And because a division is really just the people in it, each one lists every team that has ever sat there — current and former, with the years they were in it, what they went, and what they won. The grouping is by owner, so a rebrand mid-tenure stays one line instead of splitting into two strangers, and the name you see is the last one that owner used. Former owners included, which means seasons that appear on no franchise page anywhere else on this site show up here.",
+      "One thing this page will not do is crown an all-time strongest division, and the reason is sample size rather than shyness: the division leading the AFL's list existed for exactly one season. So you get the full ranking, both rates on every row, the season counts next to them, and no fake verdict. Pick a single season and it will name a winner and a loser without flinching — one season is a fair sample of itself."
+    ],
+    "image": "division-strength.webp",
+    "imageAlt": "The Strength of Division page for The League in dark mode, headed “Two honest answers, not one. We don’t crown an all-time strongest division — a division that ran 4 seasons and one that ran 19 aren’t the same claim. Pick a season and we’ll name one.” Below it a rail of pill buttons with All-time selected, then 2026 through 2014. A section titled “As currently constituted” explains that records run through 2025, the last completed season, while the crests are the 2026 lineup. A highlighted panel headed “New for 2026” reads “Southwest — Dead Cap Walking takes over from Heavy Chevy”, and notes that a division with an incoming owner has not played a game with this exact group yet. The table beneath lists four rows: East, together 10 years of 15 since 2016, 363-333 (.522), interdivisional 243-213 at .533 with a green up arrow marked .037, 10 titles and 3 championships; Northwest, 10 years of 15 since 2016, 358-338 (.514), interdivisional 238-218 at .522, 10 titles and 2 championships; Central, 9 years of 19 since 2017, 296-336 (.468), interdivisional 188-228 at .452 with a red down arrow marked .024, 9 titles and 2 championships; and Southwest, 9 years of 15 since 2017, 305-327 (.483), interdivisional 197-219 at .474 with a red down arrow marked .016, 9 titles and 2 championships. Each row ends with four overlapping team crests; the Southwest row has one crest ringed in blue and a “new owner” pill beside it. Further down, a “Strongest to weakest” list ranks all seven divisions on their record against the rest of the league, each row also showing its overall percentage."
+  },
+  {
     "id": "owners-get-their-names",
     "date": "2026-08-25",
     "category": "enhancement",
@@ -870,28 +894,6 @@
     "imageAlt": "AFL franchises page showing American League cards with all-time records, seasons, career points, and title pills",
     "excludeFromHero": true,
     "leagues": [
-      "afl"
-    ]
-  },
-  {
-    "id": "footer-champions-band",
-    "date": "2026-08-09",
-    "category": "enhancement",
-    "icon": "trophy",
-    "title": "The Footer Grew a Trophy Case",
-    "summary": "Every page now ends on the defending champion — banner art, trophy badges, and a ribbon that knows the difference between a Double and a Treble — over a five-column directory that finally admits the whole site exists.",
-    "description": [
-      "The old footer was four thin columns of links, two of which went to the same page, sitting next to a champion banner that only TheLeague ever saw. On AFL and Best Ball the layout quietly collapsed into a 300-pixel gutter and left half the footer empty. Nobody complained, because nobody scrolls down to be disappointed. Still. It was there, on every page, being wrong.",
-      "Now the bottom of every page opens with <strong>the champions</strong>. Full banner art, the trophy badges that team actually won, and a ribbon that counts: two titles is <em>The Double</em>, three is <em>The Treble</em>. The ribbon is per team, not per league, so in a split season the club that took the championship and its division still gets its Double while a rival holds the Premier League on the card next door. Consolation hardware does not count toward a sweep, which the NIT winner is welcome to take up with the beat desk — and neither does a conference title on a card that already has the AFL Championship, because you do not reach the title game without winning your conference.",
-      "Underneath, the same five columns on both leagues — My Team, This Week, Front Office, Record Book, League Office — so the footer stops being a different shape depending on where you are. And a <strong>Deep Cuts</strong> line surfaces the quiet corners of the site by rule: any public page the columns do not already link, chosen automatically, so the Asset Browser and the Design System stop being things only three people know the URL for. There is a Trophy Case link too, for when one banner is not enough."
-    ],
-    "link": "/franchises",
-    "linkLabel": "Visit the Trophy Case",
-    "image": "footer-champions-band.webp",
-    "imageAlt": "Redesigned site footer showing the defending champion banner card, a Trophy Case panel, and five columns of site links",
-    "excludeFromHero": true,
-    "leagues": [
-      "theleague",
       "afl"
     ]
   }

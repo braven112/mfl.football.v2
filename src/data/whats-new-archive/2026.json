@@ -1,5 +1,27 @@
 [
   {
+    "id": "footer-champions-band",
+    "date": "2026-08-09",
+    "category": "enhancement",
+    "icon": "trophy",
+    "title": "The Footer Grew a Trophy Case",
+    "summary": "Every page now ends on the defending champion — banner art, trophy badges, and a ribbon that knows the difference between a Double and a Treble — over a five-column directory that finally admits the whole site exists.",
+    "description": [
+      "The old footer was four thin columns of links, two of which went to the same page, sitting next to a champion banner that only TheLeague ever saw. On AFL and Best Ball the layout quietly collapsed into a 300-pixel gutter and left half the footer empty. Nobody complained, because nobody scrolls down to be disappointed. Still. It was there, on every page, being wrong.",
+      "Now the bottom of every page opens with <strong>the champions</strong>. Full banner art, the trophy badges that team actually won, and a ribbon that counts: two titles is <em>The Double</em>, three is <em>The Treble</em>. The ribbon is per team, not per league, so in a split season the club that took the championship and its division still gets its Double while a rival holds the Premier League on the card next door. Consolation hardware does not count toward a sweep, which the NIT winner is welcome to take up with the beat desk — and neither does a conference title on a card that already has the AFL Championship, because you do not reach the title game without winning your conference.",
+      "Underneath, the same five columns on both leagues — My Team, This Week, Front Office, Record Book, League Office — so the footer stops being a different shape depending on where you are. And a <strong>Deep Cuts</strong> line surfaces the quiet corners of the site by rule: any public page the columns do not already link, chosen automatically, so the Asset Browser and the Design System stop being things only three people know the URL for. There is a Trophy Case link too, for when one banner is not enough."
+    ],
+    "link": "/franchises",
+    "linkLabel": "Visit the Trophy Case",
+    "image": "footer-champions-band.webp",
+    "imageAlt": "Redesigned site footer showing the defending champion banner card, a Trophy Case panel, and five columns of site links",
+    "excludeFromHero": true,
+    "leagues": [
+      "theleague",
+      "afl"
+    ]
+  },
+  {
     "id": "afl-conference-free-agents",
     "date": "2026-08-08",
     "category": "enhancement",
@@ -18,6 +40,27 @@
     "excludeFromHero": true,
     "leagues": [
       "afl"
+    ]
+  },
+  {
+    "id": "weekly-rollup-2026-08-03-bb1",
+    "date": "2026-08-03",
+    "title": "Weekly Fixes & Polish (Jul 28-Aug 2)",
+    "summary": "4 bug fixes and style improvements across homepage hero, search, standings, loading experience.",
+    "description": [
+      "This week's 4 bug fixes and polish improvements touched the following areas of the site:",
+      "<strong>homepage hero</strong> — On phones, the homepage event hero no longer draws a stray vertical line through the featured player's face — the countdown/CTA divider was sticking around after the button wrapped to its own row.",
+      "<strong>search</strong> — Site search now finds every page — Draft Room, Mock Draft, Contract Tools, League Comparison, the Style Book, and the AFL's home, activity, and franchise pages were all invisible to search until now. Two dead demo pages were removed while we were in there.",
+      "<strong>Standings</strong> — Standings now refresh live from MFL during the current season instead of waiting for a redeploy, so records and points update within about a minute (with the committed snapshot as a safety net).",
+      "<strong>loading experience</strong> — Loading feedback got a site-wide tune-up before kickoff: tables and lists now show shimmer placeholders instead of \"Loading...\" text, submit buttons show an inline spinner while they work, and long Ask Roger waits get a proper \"Roger is deep in the constitution\" moment with live narration. All of it respects reduced-motion settings."
+    ],
+    "category": "bug-fix",
+    "link": "/best-ball-1/whats-new",
+    "linkLabel": "See all updates",
+    "icon": "wrench",
+    "excludeFromHero": true,
+    "leagues": [
+      "bb1"
     ]
   },
   {

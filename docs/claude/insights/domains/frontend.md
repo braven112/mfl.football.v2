@@ -17,7 +17,8 @@
   client-injected DOM, and *a child component's own tags* carry no (or a
   different) `data-astro-cid`, so `.parent img {…}` stops matching the moment
   you swap an inline tag for a component. Re-anchor as
-  `.parent :global(img)`. Never `@import` a shared stylesheet inside a scoped
+  `.parent :global(img)`; and never extract a `<td>`/`<th>` into a child
+  component to dedupe markup — it leaves the parent's table styles behind. Never `@import` a shared stylesheet inside a scoped
   `<style>` — Vite inlines it and scopes every imported selector; import it in
   frontmatter instead.
 - **Interactive scripts must re-init on `astro:page-load`,** or they go dead on
@@ -44,41 +45,41 @@
 
 - **`1fr` means `minmax(auto, 1fr)`, and that `auto` floor is min-content.** If
   the floor is a child's fixed `width`, use `minmax(0, 1fr)` *and* drop that
-  width in the same breakpoint. If the floor is intrinsic content, use
+  width in the same breakpoint. For intrinsic content use
   `repeat(auto-fit, minmax(min(300px, 100%), 1fr))` — it cannot blow out.
 - **A grid blowout surfaces in the wrong subtree.** Every sibling stretches to
-  the widest one, so the element that looks broken is usually innocent. Check
-  `documentElement.scrollWidth > clientWidth` first, then find the track owner
-  by showing *one* child at a time (hiding them one at a time finds nothing
-  when two independently demand the width).
-- **Table columns:** `width: 1%` shrinks a column to its content;
-  `max-width: 0` *collapses it to nothing*. Never use the latter. And **never
-  put `display: flex` on a `<td>`** — it stops being a table cell, leaves the
-  column grid, and draws its `border-bottom` across its own box instead of the
-  row (a stray rule under one column). Lay the children out instead.
-- **`min-width: N` and `max-width: N` BOTH match at exactly N**, so a rule pair
-  written that way applies together for one pixel — how a row-tuned negative
-  margin ended up inside a column layout and got clipped. Writing the second as
-  `min-width: N+1` swaps it for the mirror bug: fractional widths (N+0.5, which
-  browsers do produce) match neither. Make one side the unconditional default
-  and query only the other.
+  the widest, so what looks broken is usually innocent. Check
+  `documentElement.scrollWidth > clientWidth`, then find the owner by showing
+  *one* child at a time (hiding one at a time finds nothing when two
+  independently demand the width).
+- **Table columns:** `width: 1%` shrinks a column to its content; `max-width: 0`
+  *collapses it to nothing* — never use the latter. And **never put
+  `display: flex` on a `<td>`**: it stops being a table cell, leaves the column
+  grid, and draws its `border-bottom` across its own box instead of the row.
+- **`min-width: N` and `max-width: N` BOTH match at exactly N**, so such a pair
+  applies together for one pixel; writing the second as `N+1` swaps it for the
+  mirror bug, since fractional widths (N+0.5) match neither. Make one side the
+  unconditional default and query only the other.
 - `text-overflow: ellipsis` no-ops on a flex child with non-`stretch` alignment
   (it shrink-wraps) — add `max-width: 100%`. `flex: 1` won't expand inside a
   `justify-content: center` ancestor — give the ancestor a definite width.
-- **A wrapping flex row's inset belongs to the ROW, not to one item.** A wrapped
+- **A wrapping flex row's inset belongs to the ROW, not one item.** A wrapped
   line lays out against the *container's* padding box, so padding on the first
-  item indents only that item — the wrapped line starts flush. Put the inset on
-  the flex container; if an item needs inline padding for a tap target, cancel
-  it with an equal negative margin so its label still starts at the padding edge.
+  item indents only that item. Put the inset on the container; if an item needs
+  inline padding for a tap target, cancel it with an equal negative margin.
 - Collapsibles animate `grid-template-rows: 0fr → 1fr` with `overflow: hidden`
   on a **bare** wrapper — a fixed `max-height` clips the moment content reflows.
-- `:not(:first-child)` spacing breaks when the first child is a
-  `visually-hidden` (absolutely positioned) heading — use flex/grid `gap`.
+- **`visually-hidden` is `position: absolute`, which bites twice.** It breaks
+  `:not(:first-child)` spacing when it's the first child (use flex/grid `gap`);
+  and with auto offsets it lays out at its STATIC position in the nearest
+  *positioned* ancestor — so one inside a horizontally-scrolled table or chip
+  rail sits far past the viewport in document coords, growing the page's scroll
+  width. Symptom: the page scrolls sideways while every element measures fine.
+  Give the containing cell/chip `position: relative`.
 - **No global `box-sizing: border-box`** (`TheLeagueLayout` scopes it to
-  `main`), so one class on both a `<button>` and a `<div>` sizes differently:
-  the UA sheet gives buttons border-box, the div content-box, so `width: 100%`
-  + padding overflows only where the div is used. Measure with
-  `getBoundingClientRect()`, never the declared width.
+  `main`), so one class on a `<button>` and a `<div>` sizes differently: the UA
+  sheet gives buttons border-box, divs content-box, so `width: 100%` + padding
+  overflows only on the div. Measure with `getBoundingClientRect()`.
 
 ## Two leagues, two of everything
 
@@ -106,20 +107,18 @@ CSS**. A fix applied to one does not propagate — grep both before calling it d
 
 ## One page can need BOTH year clocks
 
-CLAUDE.md tells you to pick the right clock per feature; it does not warn that a
-single page often needs two at once, and a page-level `const seasonYear = …`
-quietly applies one of them to everything on it. The AFL homepage resolved one
-year and used it for standings AND rosters, so for the whole offseason the team
-card counted a roster from a season that had already ended.
+CLAUDE.md says pick the right clock per feature; it doesn't warn that one page
+often needs both, and a page-level `const seasonYear = …` applies one to
+everything. The AFL homepage used one year for standings AND rosters, so all
+offseason the team card counted a roster from a season already over.
 
 - Standings / record / draft order → the **season** year (Labor Day).
 - Rosters / contracts / cap / anything a trade changes → the **league** year
-  (AFL: June 1, TheLeague: Feb 14). They are ~3 months apart for the AFL.
-- Symptom to grep for: one `resolve*YearWithData()` helper feeding feeds of
-  different shapes. Give each clock its own resolver and name it for the clock.
-- Both resolvers must walk backward for populated data — MFL creates the new
-  year's directory before it holds anything, so a bare `getX()` reads an empty
-  feed for weeks.
+  (AFL: June 1, TheLeague: Feb 14) — ~3 months apart for the AFL.
+- Symptom: one `resolve*YearWithData()` helper feeding feeds of different
+  shapes. Give each clock its own resolver, named for the clock.
+- Both must walk backward for populated data — MFL creates the new year's
+  directory before it holds anything, so a bare `getX()` reads empty for weeks.
 
 ## Verifying
 

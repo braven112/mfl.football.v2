@@ -470,3 +470,39 @@ owners verified against the config's live `team.icon`; every current owner in
 both leagues now matches it except AFL 0014, whose punitive exemption is
 asserted by test; no former owner's icon moved; 41 images on TheLeague's page
 and 107 on the AFL's all return 200.
+## 2026-08-25 - An owner's `title` is a lookup key, not a name — never render it
+
+**Context:** The Strength of Division report groups rows by owner and labelled
+each row with `owner.title`. The AFL South rendered `Vit's Brother / Avenging
+Amish / Broke Back 'lil Half Dead's Brother` — 68 characters over three lines.
+
+**Insight:** `title` in `owner-tenures.json` is **every identity that owner has
+worn, slash-joined** (`docs/plans/owners-feature.md:188` says so, but nothing
+warns the consumer). It exists so an owner is findable under any name they used;
+it is not a name anyone has ever gone by. 12 owner rows across the two leagues
+carried a joined title, so any surface that labels by owner hits this.
+
+The label is `identities[]` reduced to the highest `yearEnd` — and **"latest"
+must be scoped to that OWNER's tenure, never the franchise's.** AFL franchise
+`0004` has had NINE different owners; a franchise-wide "current name" stamps a
+stranger's team onto someone else's seasons. Same trap as the era-anchor and
+name-as-key entries above: the franchise outlives the people in it.
+
+Two second-order consequences, both measured rather than assumed:
+
+- **Labelling by team makes an adjacent owner column redundant.** Once the label
+  IS the team name, a separate owner column repeated column one on 38 of 41
+  rows; the 3 that differed were short-vs-long forms of one name, not renames.
+  Dropped it and moved the `/owners/` link onto the team name itself.
+- **The same rule is a REGRESSION on per-season rows.** Applying latest-name
+  there would relabel ~59 rows, nearly all `"Midwestside"` → `"Midwestside
+  Connection"` — the season row already resolved that season's name correctly,
+  and lengthening it fights the mobile layout and disagrees with
+  `/standings?year=`. Latest-name is for labels that span YEARS, nothing else.
+
+**Recommendation:** Grouping key and display label are different fields; if the
+"name" on a record is derived by joining history, it is a key. Convert every
+label site at once and add a **source-scan guard test** — converting six sites
+here left a seventh (`Built by N owners · …`) that a scan for `o.title` caught
+still printing the joined string on the AFL's North panel. Label sites get added
+after a sweep, so the guard is the only thing that holds.

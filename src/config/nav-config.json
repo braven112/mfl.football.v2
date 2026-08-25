@@ -420,6 +420,14 @@
           "description": "Head-to-head records, playoff meetings, and trade history between every pair of franchises"
         },
         {
+          "id": "division-strength",
+          "label": "Division Strength",
+          "icon": "rank",
+          "path": "/division-strength",
+          "external": false,
+          "description": "Which divisions have been the gauntlet — current lineups, interdivisional records, and the owners behind each one"
+        },
+        {
           "id": "record-book",
           "label": "Record Book",
           "icon": "trophy",
@@ -560,7 +568,8 @@
     "/suggestions": "/suggestions",
     "/stats": "/stats",
     "/rules-chat": "/rules-chat",
-    "/owners": "/owners"
+    "/owners": "/owners",
+    "/division-strength": "/division-strength"
   },
   "verifyTeamUrl": {
     "theleague": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE20",
