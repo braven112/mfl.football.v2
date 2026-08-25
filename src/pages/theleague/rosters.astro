@@ -23,6 +23,7 @@ import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
 import { getPlannerPhase } from '../../utils/planner-phase';
 import { analyzeFreeAgentNeeds } from '../../utils/free-agent-needs';
 import { getTeamEligibility, getAugustCutdownDate, parseTransactions } from '../../utils/contract-eligibility';
+import type { SalaryAveragesBySeason } from '../../utils/roster-contract-calcs';
 import { buildRookiePriorityFromFeeds } from '../../utils/august-cut-selection-core.mjs';
 import { getDeclarations } from '../../utils/contract-storage';
 import { getCutList, getCredentialCapturedAt } from '../../utils/autocut-storage';
@@ -88,7 +89,7 @@ import {
   generateDemoOddsData,
   type OddsMap,
 } from '../../utils/live-odds';
-import { processWeeklyScores } from '../../utils/roster-weekly-scores';
+import { processWeeklyScores, type WeeklyResultsRaw } from '../../utils/roster-weekly-scores';
 import { spriteUrl } from '../../utils/sprite-url';
 import { getLeagueBySlug } from '../../config/leagues';
 // Precomputed payloads for every historical season (see
@@ -190,10 +191,16 @@ const loadFeedJson = (year: string | number, filename: string) => {
 const currentLeagueYearStr = String(getCurrentLeagueYear());
 const feedYears = [...new Set([currentLeagueYearStr, currentSeasonYearStr])];
 
-const tradeBaitBySeason = {};
-const projectedScoresBySeason = {};
-const weeklyResultsRawBySeason = {};
-const fantasyPointsAllowedBySeason = {};
+// Season-keyed feed lookups. Declared rather than left as `{}`: an empty
+// object literal pins the type to `{}`, and every `map[season]` read below
+// then fails as an implicit-any index (ts7053). The feed bodies themselves are
+// raw MFL JSON whose shape is not stable across seasons, so the VALUE type is
+// deliberately loose while the KEY type is not.
+type SeasonKeyed<T> = Record<string, T>;
+const tradeBaitBySeason: SeasonKeyed<Set<string>> = {};
+const projectedScoresBySeason: SeasonKeyed<any> = {};
+const weeklyResultsRawBySeason: SeasonKeyed<WeeklyResultsRaw> = {};
+const fantasyPointsAllowedBySeason: SeasonKeyed<any> = {};
 
 // Fetch trade bait live from MFL so changes are reflected immediately on refresh
 // (the local JSON cache can't be updated on Vercel's read-only filesystem)
@@ -499,7 +506,7 @@ const aggregateDeadMoneyFromSeasonData = (seasonData = {}, franchiseId) => {
   return aggregateDeadMoney(adjustments, franchiseId);
 };
 
-const feedSalaryAdjustmentsBySeason = {};
+const feedSalaryAdjustmentsBySeason: SeasonKeyed<any[]> = {};
 Object.entries(salaryAdjustmentFeeds).forEach(([path, mod]) => {
   const season = extractFeedSeason(path);
   const data = getModuleData(mod);
@@ -539,7 +546,13 @@ Object.entries(salaryAdjustmentFeeds).forEach(([path, mod]) => {
     .filter((adj) => Number.isFinite(adj.amount));
 });
 
-const leagueMetaBySeason = {};
+interface LeagueSeasonMeta {
+  capLimit: number;
+  rosterLimit: number;
+  taxiPercent: number;
+  irPercent: number;
+}
+const leagueMetaBySeason: SeasonKeyed<LeagueSeasonMeta> = {};
 Object.entries(leagueFeeds).forEach(([path, mod]) => {
   const season = extractFeedSeason(path);
   const data = getModuleData(mod);
@@ -553,7 +566,7 @@ Object.entries(leagueFeeds).forEach(([path, mod]) => {
   };
 });
 
-const playersFeedBySeason = {};
+const playersFeedBySeason: SeasonKeyed<Record<string, any>> = {};
 Object.entries(playersFeeds).forEach(([path, mod]) => {
   const season = extractFeedSeason(path);
   const data = getModuleData(mod);
@@ -573,7 +586,7 @@ Object.entries(playersFeeds).forEach(([path, mod]) => {
 
 // Build player data mapping from live rosters data
 // This ensures we show current roster assignments AND salary data (not frozen week 14)
-const liveRosterDataByPlayerId = {};
+const liveRosterDataByPlayerId: SeasonKeyed<Record<string, any>> = {};
 
 // For the current league year, try Redis cache first (stale-while-revalidate).
 // This ensures contract changes on MFL are reflected within ~2 minutes without
@@ -618,7 +631,7 @@ Object.entries(rostersFeeds).forEach(([path, mod]) => {
 // the badge matches what owners see on MFL itself. Falls back to per-player
 // Sleeper data if the file is somehow missing (e.g. fresh checkout before the
 // first sync run).
-let mflInjuryData = {};
+let mflInjuryData: Record<string, { injuryStatus?: string; injuryBodyPart?: string }> = {};
 try {
   const injuryDataModule = await import(`../../../data/theleague/mfl-feeds/${currentLeagueYearStr}/injuries.json`);
   if (injuryDataModule.default?.injuries) {
@@ -628,7 +641,7 @@ try {
   console.warn(`MFL injury data not available for ${currentLeagueYearStr}:`, error.message);
 }
 
-const recordsBySeason = {};
+const recordsBySeason: SeasonKeyed<Record<string, any>> = {};
 Object.entries(standingsFeeds).forEach(([path, mod]) => {
   const season = extractFeedSeason(path);
   const data = getModuleData(mod);
@@ -643,7 +656,7 @@ Object.entries(standingsFeeds).forEach(([path, mod]) => {
     const n = parseInt(v, 10);
     return Number.isFinite(n) ? n : 0;
   };
-  const map = {};
+  const map: Record<string, any> = {};
   list.forEach((row) => {
     const id =
       row.franchise_id ??
@@ -754,7 +767,7 @@ const adjustmentsBySeasonAllYears = {
 };
 
 // Process salary averages for extension calculator
-const salaryAveragesBySeason = {};
+const salaryAveragesBySeason: SalaryAveragesBySeason = {};
 Object.entries(salaryAveragesModules).forEach(([path, mod]) => {
   const season = extractSeason(path);
   if (!season) return;
@@ -4959,6 +4972,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   } from '../../constants/roster-constants';
   // Contract math extracted out of this script — see the module header for why
   // it is NOT salary-calculations.ts (different averages shape).
+  import type { ContractAction } from '../../utils/roster-contract-calcs';
   import {
     ESCALATION_RATE,
     formatSalaryCompact,
@@ -4997,15 +5011,20 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   };
 
   // Contract Actions State Management
-  const contractActions = {}; // { playerId: { type, newSalary, newYears, originalSalary, originalYears, ufaYear } }
-  const franchiseTagsByYear = {}; // Track franchise tags by year: { yearIndex: playerId }
+  // Staged, unsubmitted contract actions, keyed by player id. Declaring the
+  // shape here rather than leaving `{}` is what stops every read below being an
+  // implicit-any index.
+  const contractActions: Record<string, ContractAction> = {};
+  /** Franchise tags by contract-year index — one per team per year. */
+  const franchiseTagsByYear: Record<string, string> = {};
   let currentVeteranExtension = null; // Track which player has veteran extension
   let currentSeason = config.defaultSeason; // Track current season for salary averages
 
   // --- Contract Declaration State ---
   const eligibilityByTeam = config.eligibilityByTeam ?? {};
   const declarationsByPlayer = { ...(config.declarationsByPlayer ?? {}) };
-  const localDeclarations = {}; // Optimistic: { playerId: { status, years } }
+  /** Optimistic local echo of a declaration the server has not confirmed yet. */
+  const localDeclarations: Record<string, { status: string; years: number }> = {};
   // ESCALATION_RATE is imported from utils/roster-contract-calcs.
 
   const DECLARATION_TYPE_LABELS = {

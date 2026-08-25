@@ -189,3 +189,44 @@ export function calculateCutPenalty(salary: number, contractYears: number): CutP
     totalPenalty: currentSeasonPenalty + futureSeasonPenalty,
   };
 }
+
+/** Every contract action an owner can stage on the rosters page. */
+export type ContractActionType =
+  | 'franchise'
+  | 'team-option'
+  | 'extension'
+  | 'rookie-extension'
+  | 'cut'
+  | 'trade';
+
+/**
+ * One staged, unsubmitted contract action, as `applyContractAction` records it
+ * in the page's `contractActions` map.
+ *
+ * The calculator result is spread in on top of the common fields, so which of
+ * the optional fields are present depends on `type`: a tag or option carries
+ * newSalary/newYears/ufaYearIndex, an extension adds salaryBreakdown, a cut
+ * carries the three penalty figures, and a trade only sets `removed`.
+ */
+export interface ContractAction {
+  type: ContractActionType;
+  playerId: string;
+  playerName?: string;
+  playerPosition?: string;
+  originalSalary?: number;
+  originalYears?: number;
+
+  /** Tag / option / extension. */
+  newSalary?: number;
+  newYears?: number;
+  ufaYearIndex?: number;
+  salaryBreakdown?: Record<string, number>;
+
+  /** Cut. */
+  currentPenalty?: number;
+  futurePenalty?: number;
+  totalPenalty?: number;
+
+  /** Trade. */
+  removed?: boolean;
+}
