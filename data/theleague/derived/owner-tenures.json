@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-08-25T16:47:25.780Z",
+  "generatedAt": "2026-08-25T18:09:16.939Z",
   "league": "theleague",
   "counts": {
-    "total": 39,
+    "total": 38,
     "current": 17,
-    "former": 22,
+    "former": 21,
     "seasons": 320,
     "shared": 2
   },
@@ -4025,7 +4025,7 @@
       },
       "slotSuccession": {
         "0013": {
-          "previous": "sabertooths-2009",
+          "previous": "sabertooths-2007",
           "next": null
         }
       },
@@ -6858,8 +6858,8 @@
       "ownerId": "own-0017",
       "slug": "acer-fc-edge-2007",
       "previousSlugs": [],
-      "displayName": null,
-      "title": "Acer FC Edge",
+      "displayName": "Russell Rice",
+      "title": "Russell Rice",
       "dominantName": "Acer FC Edge",
       "icon": "/assets/theleague/history/acer_fc_edge_icon_circle.png",
       "isCurrent": false,
@@ -7019,8 +7019,8 @@
       "ownerId": "own-0018",
       "slug": "amish-rakefighters-2007",
       "previousSlugs": [],
-      "displayName": null,
-      "title": "Amish Rakefighters",
+      "displayName": "Scott Friske",
+      "title": "Scott Friske",
       "dominantName": "Amish Rakefighters",
       "icon": "/assets/theleague/history/amish_rakefighters_icon_circle.png",
       "isCurrent": false,
@@ -7323,8 +7323,8 @@
       "ownerId": "own-0019",
       "slug": "boyz-ii-men-2007",
       "previousSlugs": [],
-      "displayName": null,
-      "title": "BOYZ II MEN",
+      "displayName": "Moe Walker",
+      "title": "Moe Walker",
       "dominantName": "BOYZ II MEN",
       "icon": "/assets/theleague/history/boyz2men_icon_circle.png",
       "isCurrent": false,
@@ -7502,13 +7502,13 @@
       "ownerId": "own-0020",
       "slug": "dangerzone-2007",
       "previousSlugs": [],
-      "displayName": null,
-      "title": "DangerZone",
+      "displayName": "coinflip",
+      "title": "coinflip",
       "dominantName": "DangerZone",
       "icon": "/assets/theleague/history/dangerzone_icon_circle.png",
       "isCurrent": false,
       "source": "registry",
-      "notes": null,
+      "notes": "Forum username, not a real name — placeholder until the person behind it is identified.",
       "yearStart": 2007,
       "yearEnd": 2008,
       "currentFranchiseId": null,
@@ -7620,7 +7620,7 @@
       "slotSuccession": {
         "0013": {
           "previous": null,
-          "next": "sabertooths-2009"
+          "next": "sabertooths-2007"
         }
       },
       "crossLeague": [],
@@ -7979,8 +7979,8 @@
       "ownerId": "own-0022",
       "slug": "las-vegas-elite-2007",
       "previousSlugs": [],
-      "displayName": null,
-      "title": "Las Vegas Elite",
+      "displayName": "Matt Kowalski",
+      "title": "Matt Kowalski",
       "dominantName": "Las Vegas Elite",
       "icon": "/assets/theleague/history/las_vegas_icon_circle.png",
       "isCurrent": false,
@@ -8729,8 +8729,8 @@
       "ownerId": "own-0024",
       "slug": "mistakes-were-made-2007",
       "previousSlugs": [],
-      "displayName": null,
-      "title": "Mistakes Were Made",
+      "displayName": "Mike",
+      "title": "Mike",
       "dominantName": "Mistakes Were Made",
       "icon": "/assets/theleague/history/mistakes_were_made_icon_circle.png",
       "isCurrent": false,
@@ -8885,8 +8885,8 @@
       "ownerId": "own-0025",
       "slug": "rolling-rockers-2007",
       "previousSlugs": [],
-      "displayName": null,
-      "title": "Rolling Rockers",
+      "displayName": "Marty Lincoln",
+      "title": "Marty Lincoln",
       "dominantName": "Rolling Rockers",
       "icon": "/assets/theleague/history/rolling_rockers_icon_circle.png",
       "isCurrent": false,
@@ -9084,16 +9084,18 @@
     {
       "ownerId": "own-0026",
       "slug": "sabertooths-2007",
-      "previousSlugs": [],
-      "displayName": null,
-      "title": "Sabertooths",
+      "previousSlugs": [
+        "sabertooths-2009"
+      ],
+      "displayName": "Shane Fitch",
+      "title": "Shane Fitch",
       "dominantName": "Sabertooths",
       "icon": "/assets/theleague/history/sabertooths_icon_circle.png",
       "isCurrent": false,
       "source": "registry",
       "notes": null,
       "yearStart": 2007,
-      "yearEnd": 2007,
+      "yearEnd": 2013,
       "currentFranchiseId": null,
       "identities": [
         {
@@ -9103,6 +9105,24 @@
           "yearEnd": 2007,
           "years": [
             2007
+          ],
+          "icon": "/assets/theleague/history/sabertooths_icon_circle.png",
+          "banner": "/assets/theleague/history/sabertooths_banner.png",
+          "rebrandGroup": null,
+          "punitive": false,
+          "inferredFromFeed": false
+        },
+        {
+          "name": "Sabertooths",
+          "nameMedium": "Sabertooths",
+          "yearStart": 2009,
+          "yearEnd": 2013,
+          "years": [
+            2009,
+            2010,
+            2011,
+            2012,
+            2013
           ],
           "icon": "/assets/theleague/history/sabertooths_icon_circle.png",
           "banner": "/assets/theleague/history/sabertooths_banner.png",
@@ -9156,24 +9176,171 @@
               "seasonNotStarted": false
             }
           ]
+        },
+        {
+          "franchiseId": "0013",
+          "franchiseName": "Gridiron Geeks",
+          "yearStart": 2009,
+          "yearEnd": 2013,
+          "identities": [
+            {
+              "name": "Sabertooths",
+              "nameMedium": "Sabertooths",
+              "yearStart": 2009,
+              "yearEnd": 2013,
+              "years": [
+                2009,
+                2010,
+                2011,
+                2012,
+                2013
+              ],
+              "icon": "/assets/theleague/history/sabertooths_icon_circle.png",
+              "banner": "/assets/theleague/history/sabertooths_banner.png",
+              "rebrandGroup": null,
+              "punitive": false,
+              "inferredFromFeed": false
+            }
+          ],
+          "seasons": [
+            {
+              "year": 2009,
+              "name": "Sabertooths",
+              "nameMedium": "Sabertooths",
+              "icon": "/assets/theleague/history/sabertooths_icon_circle.png",
+              "banner": "/assets/theleague/history/sabertooths_banner.png",
+              "isHistorical": true,
+              "sourceFranchiseId": null,
+              "wins": 7,
+              "losses": 11,
+              "ties": 0,
+              "pointsFor": 1239.39,
+              "regSeasonRank": 13,
+              "divisionId": "00",
+              "divisionName": "Pacific",
+              "wonDivision": false,
+              "playoffResult": "missed",
+              "franchiseId": "0013",
+              "attributedTo": null,
+              "seasonNotStarted": false
+            },
+            {
+              "year": 2010,
+              "name": "Sabertooths",
+              "nameMedium": "Sabertooths",
+              "icon": "/assets/theleague/history/sabertooths_icon_circle.png",
+              "banner": "/assets/theleague/history/sabertooths_banner.png",
+              "isHistorical": true,
+              "sourceFranchiseId": null,
+              "wins": 8,
+              "losses": 10,
+              "ties": 0,
+              "pointsFor": 1689.27,
+              "regSeasonRank": 10,
+              "divisionId": "00",
+              "divisionName": "Pacific",
+              "wonDivision": false,
+              "playoffResult": "missed",
+              "franchiseId": "0013",
+              "attributedTo": null,
+              "seasonNotStarted": false
+            },
+            {
+              "year": 2011,
+              "name": "Sabertooths",
+              "nameMedium": "Sabertooths",
+              "icon": "/assets/theleague/history/sabertooths_icon_circle.png",
+              "banner": "/assets/theleague/history/sabertooths_banner.png",
+              "isHistorical": true,
+              "sourceFranchiseId": null,
+              "wins": 11,
+              "losses": 7,
+              "ties": 0,
+              "pointsFor": 1799.74,
+              "regSeasonRank": 6,
+              "divisionId": "00",
+              "divisionName": "Northwest",
+              "wonDivision": true,
+              "playoffResult": "champion",
+              "franchiseId": "0013",
+              "attributedTo": null,
+              "seasonNotStarted": false
+            },
+            {
+              "year": 2012,
+              "name": "Sabertooths",
+              "nameMedium": "Sabertooths",
+              "icon": "/assets/theleague/history/sabertooths_icon_circle.png",
+              "banner": "/assets/theleague/history/sabertooths_banner.png",
+              "isHistorical": true,
+              "sourceFranchiseId": null,
+              "wins": 11,
+              "losses": 7,
+              "ties": 0,
+              "pointsFor": 1809.8,
+              "regSeasonRank": 7,
+              "divisionId": "00",
+              "divisionName": "Northwest",
+              "wonDivision": false,
+              "playoffResult": "playoffs",
+              "franchiseId": "0013",
+              "attributedTo": null,
+              "seasonNotStarted": false
+            },
+            {
+              "year": 2013,
+              "name": "Sabertooths",
+              "nameMedium": "Sabertooths",
+              "icon": "/assets/theleague/history/sabertooths_icon_circle.png",
+              "banner": "/assets/theleague/history/sabertooths_banner.png",
+              "isHistorical": true,
+              "sourceFranchiseId": null,
+              "wins": 5,
+              "losses": 13,
+              "ties": 0,
+              "pointsFor": 1453.58,
+              "regSeasonRank": 15,
+              "divisionId": "00",
+              "divisionName": "Northwest",
+              "wonDivision": false,
+              "playoffResult": "missed",
+              "franchiseId": "0013",
+              "attributedTo": null,
+              "seasonNotStarted": false
+            }
+          ]
         }
       ],
       "totals": {
-        "seasons": 1,
-        "wins": 9,
-        "losses": 9,
+        "seasons": 6,
+        "wins": 51,
+        "losses": 57,
         "ties": 0,
-        "pointsFor": 1743.14,
-        "playoffAppearances": 0,
-        "championships": [],
+        "pointsFor": 9734.92,
+        "playoffAppearances": 2,
+        "championships": [
+          2011
+        ],
         "runnerUps": [],
         "thirdPlaces": [],
-        "divisionTitles": [],
+        "divisionTitles": [
+          {
+            "year": 2011,
+            "divisionId": "00",
+            "divisionName": "Northwest"
+          }
+        ],
         "mvpAwards": [],
         "jerryJonesAwards": [],
-        "osweilerAwards": []
+        "osweilerAwards": [
+          2013
+        ]
       },
       "slotSuccession": {
+        "0013": {
+          "previous": "dangerzone-2007",
+          "next": "gridiron-geeks-2014"
+        },
         "0002": {
           "previous": null,
           "next": "degenerates-2008"
@@ -9187,8 +9354,8 @@
       "ownerId": "own-0027",
       "slug": "silver-bullets-2007",
       "previousSlugs": [],
-      "displayName": null,
-      "title": "Silver Bullets",
+      "displayName": "Michael Bowbliss",
+      "title": "Michael Bowbliss",
       "dominantName": "Silver Bullets",
       "icon": "/assets/theleague/history/silver_bullets_icon_circle.png",
       "isCurrent": false,
@@ -9368,8 +9535,8 @@
       "ownerId": "own-0028",
       "slug": "the-executioners-2007",
       "previousSlugs": [],
-      "displayName": null,
-      "title": "The Executioners",
+      "displayName": "John McMillan",
+      "title": "John McMillan",
       "dominantName": "The Executioners",
       "icon": "/assets/theleague/history/executioners_icon_circle.png",
       "isCurrent": false,
@@ -9662,8 +9829,8 @@
       "ownerId": "own-0029",
       "slug": "witch-city-warlocks-2007",
       "previousSlugs": [],
-      "displayName": null,
-      "title": "Witch City Warlocks",
+      "displayName": "Rick O’Keefe",
+      "title": "Rick O’Keefe",
       "dominantName": "Witch City Warlocks",
       "icon": "/assets/theleague/history/witch_city_warlocks_icon_circle.png",
       "isCurrent": false,
@@ -9844,8 +10011,8 @@
       "ownerId": "own-0030",
       "slug": "degenerates-2008",
       "previousSlugs": [],
-      "displayName": null,
-      "title": "Degenerates",
+      "displayName": "Joe Harris",
+      "title": "Joe Harris",
       "dominantName": "Degenerates",
       "icon": "/assets/theleague/history/degenerates_icon_circle.png",
       "isCurrent": false,
@@ -10097,210 +10264,6 @@
       "coOwners": []
     },
     {
-      "ownerId": "own-0031",
-      "slug": "sabertooths-2009",
-      "previousSlugs": [],
-      "displayName": null,
-      "title": "Sabertooths",
-      "dominantName": "Sabertooths",
-      "icon": "/assets/theleague/history/sabertooths_icon_circle.png",
-      "isCurrent": false,
-      "source": "registry",
-      "notes": null,
-      "yearStart": 2009,
-      "yearEnd": 2013,
-      "currentFranchiseId": null,
-      "identities": [
-        {
-          "name": "Sabertooths",
-          "nameMedium": "Sabertooths",
-          "yearStart": 2009,
-          "yearEnd": 2013,
-          "years": [
-            2009,
-            2010,
-            2011,
-            2012,
-            2013
-          ],
-          "icon": "/assets/theleague/history/sabertooths_icon_circle.png",
-          "banner": "/assets/theleague/history/sabertooths_banner.png",
-          "rebrandGroup": null,
-          "punitive": false,
-          "inferredFromFeed": false
-        }
-      ],
-      "tenures": [
-        {
-          "franchiseId": "0013",
-          "franchiseName": "Gridiron Geeks",
-          "yearStart": 2009,
-          "yearEnd": 2013,
-          "identities": [
-            {
-              "name": "Sabertooths",
-              "nameMedium": "Sabertooths",
-              "yearStart": 2009,
-              "yearEnd": 2013,
-              "years": [
-                2009,
-                2010,
-                2011,
-                2012,
-                2013
-              ],
-              "icon": "/assets/theleague/history/sabertooths_icon_circle.png",
-              "banner": "/assets/theleague/history/sabertooths_banner.png",
-              "rebrandGroup": null,
-              "punitive": false,
-              "inferredFromFeed": false
-            }
-          ],
-          "seasons": [
-            {
-              "year": 2009,
-              "name": "Sabertooths",
-              "nameMedium": "Sabertooths",
-              "icon": "/assets/theleague/history/sabertooths_icon_circle.png",
-              "banner": "/assets/theleague/history/sabertooths_banner.png",
-              "isHistorical": true,
-              "sourceFranchiseId": null,
-              "wins": 7,
-              "losses": 11,
-              "ties": 0,
-              "pointsFor": 1239.39,
-              "regSeasonRank": 13,
-              "divisionId": "00",
-              "divisionName": "Pacific",
-              "wonDivision": false,
-              "playoffResult": "missed",
-              "franchiseId": "0013",
-              "attributedTo": null,
-              "seasonNotStarted": false
-            },
-            {
-              "year": 2010,
-              "name": "Sabertooths",
-              "nameMedium": "Sabertooths",
-              "icon": "/assets/theleague/history/sabertooths_icon_circle.png",
-              "banner": "/assets/theleague/history/sabertooths_banner.png",
-              "isHistorical": true,
-              "sourceFranchiseId": null,
-              "wins": 8,
-              "losses": 10,
-              "ties": 0,
-              "pointsFor": 1689.27,
-              "regSeasonRank": 10,
-              "divisionId": "00",
-              "divisionName": "Pacific",
-              "wonDivision": false,
-              "playoffResult": "missed",
-              "franchiseId": "0013",
-              "attributedTo": null,
-              "seasonNotStarted": false
-            },
-            {
-              "year": 2011,
-              "name": "Sabertooths",
-              "nameMedium": "Sabertooths",
-              "icon": "/assets/theleague/history/sabertooths_icon_circle.png",
-              "banner": "/assets/theleague/history/sabertooths_banner.png",
-              "isHistorical": true,
-              "sourceFranchiseId": null,
-              "wins": 11,
-              "losses": 7,
-              "ties": 0,
-              "pointsFor": 1799.74,
-              "regSeasonRank": 6,
-              "divisionId": "00",
-              "divisionName": "Northwest",
-              "wonDivision": true,
-              "playoffResult": "champion",
-              "franchiseId": "0013",
-              "attributedTo": null,
-              "seasonNotStarted": false
-            },
-            {
-              "year": 2012,
-              "name": "Sabertooths",
-              "nameMedium": "Sabertooths",
-              "icon": "/assets/theleague/history/sabertooths_icon_circle.png",
-              "banner": "/assets/theleague/history/sabertooths_banner.png",
-              "isHistorical": true,
-              "sourceFranchiseId": null,
-              "wins": 11,
-              "losses": 7,
-              "ties": 0,
-              "pointsFor": 1809.8,
-              "regSeasonRank": 7,
-              "divisionId": "00",
-              "divisionName": "Northwest",
-              "wonDivision": false,
-              "playoffResult": "playoffs",
-              "franchiseId": "0013",
-              "attributedTo": null,
-              "seasonNotStarted": false
-            },
-            {
-              "year": 2013,
-              "name": "Sabertooths",
-              "nameMedium": "Sabertooths",
-              "icon": "/assets/theleague/history/sabertooths_icon_circle.png",
-              "banner": "/assets/theleague/history/sabertooths_banner.png",
-              "isHistorical": true,
-              "sourceFranchiseId": null,
-              "wins": 5,
-              "losses": 13,
-              "ties": 0,
-              "pointsFor": 1453.58,
-              "regSeasonRank": 15,
-              "divisionId": "00",
-              "divisionName": "Northwest",
-              "wonDivision": false,
-              "playoffResult": "missed",
-              "franchiseId": "0013",
-              "attributedTo": null,
-              "seasonNotStarted": false
-            }
-          ]
-        }
-      ],
-      "totals": {
-        "seasons": 5,
-        "wins": 42,
-        "losses": 48,
-        "ties": 0,
-        "pointsFor": 7991.78,
-        "playoffAppearances": 2,
-        "championships": [
-          2011
-        ],
-        "runnerUps": [],
-        "thirdPlaces": [],
-        "divisionTitles": [
-          {
-            "year": 2011,
-            "divisionId": "00",
-            "divisionName": "Northwest"
-          }
-        ],
-        "mvpAwards": [],
-        "jerryJonesAwards": [],
-        "osweilerAwards": [
-          2013
-        ]
-      },
-      "slotSuccession": {
-        "0013": {
-          "previous": "dangerzone-2007",
-          "next": "gridiron-geeks-2014"
-        }
-      },
-      "crossLeague": [],
-      "isShared": false,
-      "coOwners": []
-    },
-    {
       "ownerId": "own-0032",
       "slug": "georgia-punishers-2010",
       "previousSlugs": [],
@@ -10429,8 +10392,8 @@
       "ownerId": "own-0033",
       "slug": "treasure-coast-swamp-bandits-2011",
       "previousSlugs": [],
-      "displayName": null,
-      "title": "Treasure Coast Swamp Bandits",
+      "displayName": "Ed Gribben",
+      "title": "Ed Gribben",
       "dominantName": "Treasure Coast Swamp Bandits",
       "icon": "/assets/theleague/history/treasure_coast_icon_circle.png",
       "isCurrent": false,
@@ -10579,8 +10542,8 @@
       "ownerId": "own-0034",
       "slug": "poker-in-the-rear-2012",
       "previousSlugs": [],
-      "displayName": null,
-      "title": "Poker in the Rear / Generals",
+      "displayName": "Garrett Fronk",
+      "title": "Garrett Fronk",
       "dominantName": "Poker in the Rear",
       "icon": "/assets/theleague/history/poker_in_the_rear_icon_circle.png",
       "isCurrent": false,
@@ -10957,8 +10920,8 @@
       "ownerId": "own-0036",
       "slug": "the-art-of-war-2018",
       "previousSlugs": [],
-      "displayName": "James Shea",
-      "title": "James Shea",
+      "displayName": "Jim Shea",
+      "title": "Jim Shea",
       "dominantName": "The Art of War",
       "icon": "/assets/theleague/history/art_of_war_icon_circle.png",
       "isCurrent": false,
@@ -11163,8 +11126,8 @@
       "ownerId": "own-0038",
       "slug": "heavy-chevy-2020",
       "previousSlugs": [],
-      "displayName": null,
-      "title": "Heavy Chevy",
+      "displayName": "Ignacio Gaeta",
+      "title": "Ignacio Gaeta",
       "dominantName": "Heavy Chevy",
       "icon": "/assets/theleague/icons/heavy_chevy.png",
       "isCurrent": false,
@@ -11411,7 +11374,7 @@
     ],
     "0013": [
       "dangerzone-2007",
-      "sabertooths-2009",
+      "sabertooths-2007",
       "gridiron-geeks-2014"
     ],
     "0016": [
@@ -11479,11 +11442,11 @@
     "mistakes were made|2007": "mistakes-were-made-2007",
     "rolling rockers|2007": "rolling-rockers-2007",
     "sabertooths|2007": "sabertooths-2007",
+    "sabertooths|2009": "sabertooths-2007",
     "silver bullets|2007": "silver-bullets-2007",
     "executioners|2007": "the-executioners-2007",
     "witch city warlocks|2007": "witch-city-warlocks-2007",
     "degenerates|2008": "degenerates-2008",
-    "sabertooths|2009": "sabertooths-2009",
     "georgia punishers|2010": "georgia-punishers-2010",
     "treasure coast swamp bandits|2011": "treasure-coast-swamp-bandits-2011",
     "poker in the rear|2012": "poker-in-the-rear-2012",

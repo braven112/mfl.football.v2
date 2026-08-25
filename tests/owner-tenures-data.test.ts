@@ -459,8 +459,8 @@ describe('measured owner counts', () => {
   // its two co-owners are two owner entries on one franchise. `seasons` stays
   // 320 because it counts DISTINCT franchise-seasons, not owner-seasons.
   const cases = [
-    { slug: 'theleague', total: 39, current: 17, former: 22, seasons: 320, shared: 2 },
-    { slug: 'afl-fantasy', total: 102, current: 24, former: 78, seasons: 576, shared: 0 },
+    { slug: 'theleague', total: 38, current: 17, former: 21, seasons: 320, shared: 2 },
+    { slug: 'afl-fantasy', total: 90, current: 24, former: 66, seasons: 576, shared: 0 },
   ];
 
   for (const expected of cases) {
