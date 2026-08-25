@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-25T16:18:22.907Z",
+  "generatedAt": "2026-08-25T17:44:58.474Z",
   "upcoming": {
     "year": 2026,
     "previousPlayedYear": 2025,
@@ -144,7 +144,8 @@
         "departures": [],
         "newOwners": [],
         "unchanged": true,
-        "isNewDivision": false
+        "isNewDivision": false,
+        "dissolved": false
       },
       {
         "name": "East",
@@ -271,7 +272,8 @@
         "departures": [],
         "newOwners": [],
         "unchanged": true,
-        "isNewDivision": false
+        "isNewDivision": false,
+        "dissolved": false
       },
       {
         "name": "Northwest",
@@ -398,7 +400,8 @@
         "departures": [],
         "newOwners": [],
         "unchanged": true,
-        "isNewDivision": false
+        "isNewDivision": false,
+        "dissolved": false
       },
       {
         "name": "Southwest",
@@ -573,7 +576,8 @@
           }
         ],
         "unchanged": false,
-        "isNewDivision": false
+        "isNewDivision": false,
+        "dissolved": false
       }
     ],
     "totalNewOwners": 1,
@@ -642,7 +646,12 @@
       "Midwest",
       "Pacific"
     ],
-    "currentAlignment": [],
+    "currentAlignment": [
+      "Central",
+      "East",
+      "Northwest",
+      "Southwest"
+    ],
     "latestAlignmentYear": 2026
   },
   "divisions": [

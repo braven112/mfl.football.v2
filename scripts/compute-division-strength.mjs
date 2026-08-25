@@ -462,6 +462,19 @@ function buildLeague(slug) {
         )
       : new Map();
 
+    // Division winners are recorded only once a season is COMPLETE:
+    // compute-franchise-history.mjs gates `divisionTitleHolders` on
+    // `seasonHasGames && seasonComplete`, so from Week 1 until the regular
+    // season ends every division legitimately has zero. Asserting "exactly one"
+    // unconditionally made invariant 3 unsatisfiable for the whole season —
+    // and because prebuild treats a parallel step's failure as non-fatal, the
+    // derived file would have stopped refreshing in silence at 2026 kickoff.
+    //
+    // The invariant that IS true year-round is all-or-nothing: a season either
+    // has no winners yet, or has exactly one per division. A partial set is the
+    // real corruption signal, and this still catches it.
+    const seasonHasWinners = divisionList.some((d) => d.teams.some((t) => t.wonDivision));
+
     const yearDivisions = divisionList.map((d) => {
       d.teams.sort(
         (a, b) =>
@@ -470,9 +483,9 @@ function buildLeague(slug) {
           b.pointsFor - a.pointsFor
       );
 
-      // INVARIANT 3 — exactly one division winner.
+      // INVARIANT 3 — exactly one division winner, once the season has any.
       const winners = d.teams.filter((t) => t.wonDivision);
-      if (winners.length !== 1) {
+      if (seasonHasWinners && winners.length !== 1) {
         problems.push(
           `${year} ${d.name}: ${winners.length} division winners recorded (expected exactly 1)`
         );
@@ -826,6 +839,17 @@ function buildLeague(slug) {
       });
     }
 
+    // A division the realignment DISSOLVED has no row in the new alignment, so
+    // keying only off `byDivision` would drop it entirely: its departures would
+    // never be listed and `anyChange` could stay false while a whole division
+    // disappeared. Seed it with an empty member list so it reports as dissolved.
+    // Both leagues have retired divisions (Atlantic, Midwest, Pacific), so this
+    // is a shape this data genuinely takes — it just has not landed on an
+    // alignment boundary yet.
+    for (const row of playedRows) {
+      if (row.divisionName && !byDivision.has(row.divisionName)) byDivision.set(row.divisionName, []);
+    }
+
     const divisionsOut = [...byDivision.entries()]
       .map(([name, members]) => {
         members.sort((a, b) => a.franchiseId.localeCompare(b.franchiseId));
@@ -848,6 +872,8 @@ function buildLeague(slug) {
           // membership era's record still describes this exact group.
           unchanged: arrivals.length === 0 && departures.length === 0 && newOwners.length === 0,
           isNewDivision: !allTime.has(name),
+          /** Existed last played season, absent from the new alignment. */
+          dissolved: members.length === 0,
         };
       })
       .sort((a, b) => a.name.localeCompare(b.name));
@@ -885,8 +911,19 @@ function buildLeague(slug) {
       divisionCount: divisions.length,
       activeDivisions: divisions.filter((d) => d.active).map((d) => d.name),
       retiredDivisions: divisions.filter((d) => !d.active).map((d) => d.name),
-      currentAlignment: (yearPayloads.find((y) => y.year === latestAlignmentYear)?.divisions ?? [])
-        .map((d) => d.name),
+      // "Latest season on file, PLAYED OR NOT" — so it cannot read from the
+      // year payload, whose divisions are built from played rows only and are
+      // empty for a season that has not kicked off. That shipped
+      // `currentAlignment: []` alongside `latestAlignmentYear: 2026`, a field
+      // stating the opposite of its own contract. `upcoming` is the alignment
+      // when there is one; the played year's payload is right the rest of the
+      // time (in-season, when nothing is pending).
+      currentAlignment: (upcoming
+        ? upcoming.divisions.map((d) => d.name)
+        : (yearPayloads.find((y) => y.year === latestAlignmentYear)?.divisions ?? []).map(
+            (d) => d.name
+          )
+      ).sort((a, b) => a.localeCompare(b)),
       latestAlignmentYear,
     },
     divisions,

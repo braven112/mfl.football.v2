@@ -12,11 +12,17 @@
  * twenty-plus years of evidence. So the full ordering is shown with the season
  * count beside every short run, and no division is crowned.
  *
- * Two RATES are reported per row — against the rest of the league, and overall
- * — but only the first one sorts, because a division's overall record cannot
- * separate it from anyone (see division-strength.mjs). They rank identically in
- * both leagues today; where they diverge the overall figure is the flattering
- * one, and the copy names the clearest example straight from the data.
+ * The all-time list shows and sorts by the OVERALL record — the owner's call,
+ * made after measuring that overall and interdivisional win% order the
+ * divisions identically, 7 for 7 in both leagues (the intra-division slice is
+ * exactly .500 by arithmetic, so it pulls every division toward the middle by a
+ * similar factor). One number per row, and it is the one people already know.
+ *
+ * The per-SEASON rank is still computed on the interdivisional rate
+ * (`rankDivisionsByStrength`), because there the two can genuinely diverge on a
+ * small sample and interdivisional is the defensible one. Deliberate, not
+ * drift: the season view makes a claim ("strongest"), the all-time list only
+ * orders rows.
  *
  * The table arrives sorted by SEASONS, neutral with respect to strength:
  * whichever column it sorts by on arrival reads as the answer no matter what
@@ -372,7 +378,11 @@ const spanLabel = (d: DivisionAllTime) => {
 // Timeline-bar geometry: position each era against the league's whole span.
 const firstYear = data.yearsCovered[0];
 const lastYear = data.yearsCovered[data.yearsCovered.length - 1];
-const spanRange = Math.max(1, lastYear - firstYear);
+// INCLUSIVE of both ends: `to` divides by (yearEnd - firstYear + 1), so the
+// denominator must count the same way or the final era overhangs its track.
+// Masked today only because yearsCovered carries the unplayed 2026 while eras
+// stop at 2025 — the moment 2026 is played it would render 20/19.
+const spanRange = Math.max(1, lastYear - firstYear + 1);
 const segments = (d: DivisionAllTime) =>
   d.eras.map((era) => ({
     from: (era.yearStart - firstYear) / spanRange,
@@ -518,7 +528,18 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                     <ul class="whats-changed__list">
                       {upcoming.divisions.filter((d) => !d.unchanged).map((d) => (
                         <li>
-                          <a href={`#div-${d.slug}`} class="whats-changed__div">{d.name}</a>
+                          {/* The panels below are built from PLAYED seasons, so a
+                              division with no history has no #div- anchor and the
+                              link would scroll nowhere. Name it, don't link it. */}
+                          {d.isNewDivision
+                            ? <span class="whats-changed__div">{d.name}</span>
+                            : <a href={`#div-${d.slug}`} class="whats-changed__div">{d.name}</a>}
+                          {d.isNewDivision && <span class="whats-changed__item">is new for {upcoming.year}</span>}
+                          {d.dissolved && (
+                            <span class="whats-changed__item dim">
+                              is dissolved — its {d.departures.length} team{d.departures.length === 1 ? '' : 's'} move elsewhere
+                            </span>
+                          )}
                           {d.newOwners.map((m) => (
                             <span class="whats-changed__item">
                               {m.icon && <img src={m.icon} alt="" loading="lazy" width="20" height="20" />}
@@ -541,7 +562,10 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                               {m.previousDivision ? <> moves in from the {m.previousDivision}</> : <> joins</>}
                             </span>
                           ))}
-                          {d.departures.map((m) => (
+                          {/* A dissolved division's departures are ALL of it, and
+                              the line above already said so — listing each team
+                              as "leaves" would just restate it four times. */}
+                          {!d.dissolved && d.departures.map((m) => (
                             <span class="whats-changed__item dim">
                               {m.icon && <img src={m.icon} alt="" loading="lazy" width="20" height="20" />}
                               {m.name} leaves
@@ -976,7 +1000,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
           <div class="metrics-grid metrics-grid--season">
             <MetricCard label="Teams" value={String(seasonPreview.divisions.reduce((n, d) => n + d.members.length, 0))} subtitle={`${seasonPreview.divisions.length} divisions`} />
             <MetricCard label="Regular season" value={season.lastRegularSeasonWeek ? `${season.lastRegularSeasonWeek} weeks` : '—'} subtitle="scheduled" />
-            <MetricCard label="New owners" value={String(seasonPreview.totalNewOwners)} subtitle={seasonPreview.totalNewOwners === 1 ? 'since last season' : 'since last season'} />
+            <MetricCard label="New owners" value={String(seasonPreview.totalNewOwners)} subtitle="since last season" />
           </div>
         ) : !seasonHasNothing ? (
           <div class="metrics-grid metrics-grid--season">

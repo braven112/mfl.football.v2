@@ -264,7 +264,10 @@ export interface UpcomingDivision {
   newOwners: UpcomingMember[];
   /** Lineup AND every holding unchanged — the era record still describes it. */
   unchanged: boolean;
+  /** No history under this name — it has no all-time panel to link to. */
   isNewDivision: boolean;
+  /** Existed last played season, absent from the new alignment. */
+  dissolved: boolean;
 }
 
 /**

@@ -29,7 +29,7 @@
  * here or in the compute script.
  */
 import { describe, it, expect } from 'vitest';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { ALL_LEAGUES } from '../src/config/leagues-data.mjs';
 import { finishPercentile, contiguousRuns, winPct } from '../src/utils/division-strength.mjs';
@@ -61,6 +61,55 @@ it('produces no division file for a league with no season ledger', () => {
       `${league.slug} has no season ledger but has a division-strength file`
     ).toBe(false);
   }
+});
+
+it('builds a season that is under way, not just one that is finished', async () => {
+  // THE TIME BOMB THIS EXISTS FOR. Invariant 3 asserted "exactly one division
+  // winner" unconditionally, but compute-franchise-history.mjs only populates
+  // `divisionTitleHolders` when `seasonHasGames && seasonComplete`. So from
+  // Week 1 of a season to its final whistle EVERY division legitimately has
+  // zero winners, the invariant failed for all of them, and buildLeague threw.
+  //
+  // It passed all preseason only because rows with 0-0-0 and 0 points are
+  // filtered out as `seasonNotStarted` before they can reach a division bucket
+  // — the bug was invisible until the first real result landed. And prebuild
+  // treats a parallel step's failure as non-fatal, so the derived file would
+  // simply have stopped refreshing, in silence, for the whole regular season.
+  //
+  // Simulates that state on real data: strip 2025's division titles (as an
+  // in-progress season has none) and require the build to succeed anyway.
+  const { buildLeague } = await import('../scripts/compute-division-strength.mjs');
+  const target = leagues[0];
+  const original = readFileSync(target.ledgerPath, 'utf8');
+  try {
+    const ledger = JSON.parse(original);
+    const midYear = Math.max(...ledger.rows.map((r: any) => (r.seasonNotStarted ? 0 : r.year)));
+    let stripped = 0;
+    for (const row of ledger.rows) {
+      if (row.year !== midYear) continue;
+      row.wonDivision = false;
+      row.playoffResult = 'missed';
+      stripped += 1;
+    }
+    expect(stripped, 'no rows to simulate an in-progress season with').toBeGreaterThan(0);
+    writeFileSync(target.ledgerPath, JSON.stringify(ledger, null, 2));
+
+    const built = buildLeague(target.league.slug);
+    if (!built) throw new Error(`${midYear} in progress: buildLeague returned nothing`);
+    const year = built.years.find((y: any) => y.year === midYear);
+    if (!year) throw new Error(`${midYear} dropped from the build`);
+    expect(year.divisions.length).toBeGreaterThan(0);
+    // No winner is known yet, so none may be claimed.
+    for (const division of year.divisions) expect(division.divisionWinner).toBeNull();
+
+    // But a PARTIAL set is still corruption, and must still fail.
+    ledger.rows.find((r: any) => r.year === midYear && r.divisionName).wonDivision = true;
+    writeFileSync(target.ledgerPath, JSON.stringify(ledger, null, 2));
+    expect(() => buildLeague(target.league.slug)).toThrow(/division winners recorded/);
+  } finally {
+    writeFileSync(target.ledgerPath, original);
+  }
+  expect(readFileSync(target.ledgerPath, 'utf8'), 'ledger not restored').toBe(original);
 });
 
 it('never renders an owner ref by its raw concatenated title', () => {
@@ -552,6 +601,49 @@ describe.each(leagues)('$league.slug division strength', ({ league, dataPath, le
       for (const member of division.members) {
         expect(member.owners.length, `${member.franchiseId} has no holder in ${newest}`).toBeGreaterThan(0);
       }
+    }
+  });
+
+  it('states the current alignment it claims to have, played or not', () => {
+    // The field is documented as "the latest season on file, PLAYED OR NOT",
+    // but it was read off the year payload, whose divisions are built from
+    // played rows only. That shipped `currentAlignment: []` next to
+    // `latestAlignmentYear: 2026` — a derived field asserting the opposite of
+    // its own contract, and nothing in src/ read it, so nothing complained.
+    const { currentAlignment, latestAlignmentYear } = data.summary;
+    if (latestAlignmentYear === null) {
+      expect(currentAlignment).toEqual([]);
+      return;
+    }
+    expect(currentAlignment.length, `${latestAlignmentYear} alignment is empty`).toBeGreaterThan(0);
+    const expected = data.upcoming
+      ? data.upcoming.divisions.map((d) => d.name)
+      : (data.years.find((y) => y.year === latestAlignmentYear)?.divisions ?? []).map((d) => d.name);
+    expect([...currentAlignment].sort()).toEqual([...expected].sort());
+  });
+
+  it('accounts for every division on both sides of a realignment', () => {
+    // A dissolved division has no row in the new alignment, so keying the
+    // upcoming build off the new rows alone dropped it: its departures went
+    // unlisted and anyChange could read false while a whole division vanished.
+    const up = data.upcoming;
+    if (!up || up.previousPlayedYear === null) return;
+    const prevNames = new Set(
+      (data.years.find((y) => y.year === up.previousPlayedYear)?.divisions ?? []).map((d) => d.name)
+    );
+    const covered = new Set(up.divisions.map((d) => d.name));
+    for (const name of prevNames) {
+      expect(covered.has(name), `${name} existed in ${up.previousPlayedYear} but is absent from the ${up.year} alignment report`).toBe(true);
+    }
+    for (const division of up.divisions) {
+      expect(division.dissolved).toBe(division.members.length === 0);
+      if (division.dissolved) {
+        expect(division.departures.length, `${division.name} is dissolved but lists no departures`).toBeGreaterThan(0);
+        expect(division.unchanged).toBe(false);
+      }
+      // A division with no history has no all-time panel, so the page must not
+      // link it — `isNewDivision` is what tells it that.
+      expect(division.isNewDivision).toBe(!data.divisions.some((d) => d.name === division.name));
     }
   });
 
