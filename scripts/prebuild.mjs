@@ -53,7 +53,17 @@ const PARALLEL = [
   // Reads the season ledgers that compute:franchise-history (SEQUENTIAL, above)
   // writes. PARALLEL starts only after SEQUENTIAL finishes, so the dependency
   // holds without serializing this onto the critical path.
-  { name: 'compute:owner-tenures', cmd: 'pnpm run compute:owner-tenures' },
+  // Chained, not two entries: compute:division-strength reads the owner tenures
+  // the first command writes, and PARALLEL has no intra-list ordering — two
+  // separate entries would race and the division report would be built against
+  // whatever owner file happened to be on disk. Chaining keeps the dependency
+  // without moving either onto the sequential critical path. (Both read the
+  // season ledgers that compute:franchise-history writes in SEQUENTIAL above;
+  // PARALLEL starts only after SEQUENTIAL finishes, so that half holds already.)
+  {
+    name: 'compute:owner-tenures → division-strength',
+    cmd: 'pnpm run compute:owner-tenures && pnpm run compute:division-strength',
+  },
   { name: 'fetch:live:lineups', cmd: 'pnpm run fetch:live:lineups' },
   { name: 'fetch:trade-bait', cmd: 'pnpm run fetch:trade-bait' },
   { name: 'fetch:adp', cmd: 'pnpm run fetch:adp' },

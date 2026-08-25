@@ -39,6 +39,7 @@
     "compute:afl-free-agents": "node scripts/compute-afl-free-agents.mjs",
     "compute:schedule-strength": "node scripts/compute-schedule-strength.mjs",
     "compute:owner-tenures": "node scripts/compute-owner-tenures.mjs",
+    "compute:division-strength": "node scripts/compute-division-strength.mjs",
     "seed:owners-registry": "node scripts/seed-owners-registry.mjs",
     "fetch:owner-names": "node scripts/fetch-owner-names.mjs",
     "generate:pecking-order": "node scripts/generate-pecking-order.mjs",
