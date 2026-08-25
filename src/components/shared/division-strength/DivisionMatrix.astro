@@ -89,7 +89,7 @@ const rowId = (slug: string) => `${idPrefix}-row-${slug}`;
           {rows.map((col) => {
             if (col.slug === row.slug) {
               return (
-                <td class="dsm-cell dsm-self">
+                <td class="dsm-cell dsm-self" headers={`${rowId(row.slug)} ${colId(col.slug)}`}>
                   <span class="visually-hidden">{row.name} does not play itself</span>
                   <span aria-hidden="true">—</span>
                 </td>

@@ -93,10 +93,17 @@ export const formatWinPct = (rec) => {
   return pct.toFixed(3).replace(/^0/, '');
 };
 
-/** Average points scored per game, or null when no games were played. */
+/**
+ * Average points scored per game, or null when no games were played.
+ *
+ * Guards on `pointsFor == null`, NOT on falsiness: a division that played and
+ * scored 0 has a real 0.0 average, and `!rec.pointsFor` reported that as "no
+ * data" — indistinguishable from a season with no game log, which is exactly
+ * the distinction the rest of this file works to keep.
+ */
 export const pointsPerGame = (rec) => {
   const games = recordGames(rec);
-  if (!games || !rec.pointsFor) return null;
+  if (!games || rec.pointsFor == null) return null;
   return rec.pointsFor / games;
 };
 

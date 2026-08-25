@@ -32,7 +32,12 @@ import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { ALL_LEAGUES } from '../src/config/leagues-data.mjs';
-import { finishPercentile, contiguousRuns, winPct } from '../src/utils/division-strength.mjs';
+import {
+  finishPercentile,
+  contiguousRuns,
+  winPct,
+  pointsPerGame,
+} from '../src/utils/division-strength.mjs';
 import type { DivisionStrengthFile } from '../src/types/division-strength';
 
 const ROOT = path.resolve(__dirname, '..');
@@ -61,6 +66,24 @@ it('produces no division file for a league with no season ledger', () => {
       `${league.slug} has no season ledger but has a division-strength file`
     ).toBe(false);
   }
+});
+
+it('separates "scored nothing" from "no game log" in pointsPerGame', () => {
+  // The guard was `!rec.pointsFor`, so a division that played and scored 0
+  // reported null — the same value that means "this season has no game log".
+  // Keeping those two apart is most of what the null handling in this file is
+  // FOR, so a helper that merges them is worse than no helper.
+  // recordGames sums W/L/T — a `games` field is not what it reads.
+  const rec = (wins: number, losses: number, pointsFor: number | null) => ({
+    wins,
+    losses,
+    ties: 0,
+    pointsFor,
+  });
+  expect(pointsPerGame(rec(2, 2, 0))).toBe(0);
+  expect(pointsPerGame(rec(2, 2, 400))).toBe(100);
+  expect(pointsPerGame(rec(0, 0, 0))).toBeNull();
+  expect(pointsPerGame(rec(2, 2, null))).toBeNull();
 });
 
 it('builds a season that is under way, not just one that is finished', async () => {
