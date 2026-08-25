@@ -493,6 +493,103 @@ describe.each(leagues)('$league.slug division strength', ({ league, dataPath, le
     }
   });
 
+  // ── 8. The upcoming alignment.
+  //
+  // Records come from played seasons; membership must not. Keying "as
+  // currently constituted" off the last PLAYED season rendered last season's
+  // lineup — and last season's owner — under a heading promising today's.
+  // TheLeague's 0004 changed hands for 2026 and the table showed the outgoing
+  // owner, which is the bug these pin.
+  it('reads the upcoming alignment from the newest season on file, played or not', () => {
+    const newest = data.yearsCovered[data.yearsCovered.length - 1];
+    if (newest === data.latestPlayedYear) {
+      expect(data.upcoming, 'newest season is already played — nothing is pending').toBeNull();
+      return;
+    }
+    expect(data.upcoming, `${newest} is unplayed but no upcoming alignment was emitted`).toBeTruthy();
+    const up = data.upcoming!;
+    expect(up.year).toBe(newest);
+    expect(up.previousPlayedYear).toBe(data.latestPlayedYear);
+
+    // It must describe the alignment the LEDGER holds for that year, including
+    // franchise-seasons that have not been played.
+    const ledgerByDivision = new Map<string, string[]>();
+    for (const row of ledger.rows.filter((r: any) => r.year === newest && r.divisionName)) {
+      const list = ledgerByDivision.get(row.divisionName) ?? [];
+      list.push(row.franchiseId);
+      ledgerByDivision.set(row.divisionName, list);
+    }
+    expect(up.divisions.map((d) => d.name).sort()).toEqual([...ledgerByDivision.keys()].sort());
+    for (const division of up.divisions) {
+      expect(division.members.map((m) => m.franchiseId).sort()).toEqual(
+        ledgerByDivision.get(division.name)!.sort()
+      );
+      for (const member of division.members) {
+        expect(member.owners.length, `${member.franchiseId} has no holder in ${newest}`).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('flags an incoming owner only where the holding actually changed', () => {
+    const up = data.upcoming;
+    if (!up || up.previousPlayedYear === null) return;
+    const owners = readJson(path.join(path.dirname(dataPath), 'owner-tenures.json'));
+    const holdersOf = (year: number, fid: string) => {
+      const out: string[] = [];
+      for (const owner of owners.owners) {
+        for (const tenure of owner.tenures) {
+          if (tenure.franchiseId !== fid) continue;
+          if (tenure.seasons.some((s: any) => s.year === year)) out.push(owner.ownerId);
+        }
+      }
+      return out.sort();
+    };
+
+    for (const division of up.divisions) {
+      for (const member of division.members) {
+        const now = holdersOf(up.year, member.franchiseId);
+        const before = holdersOf(up.previousPlayedYear!, member.franchiseId);
+        const changed = before.length > 0 && now.some((id) => !before.includes(id));
+        expect(
+          member.newOwner,
+          `${division.name}/${member.franchiseId}: newOwner=${member.newOwner} but holders went ${before.join(',')} -> ${now.join(',')}`
+        ).toBe(changed);
+        if (member.newOwner) {
+          expect(member.newOwners.length).toBeGreaterThan(0);
+          // A pure RENAME keeps the ownerId and must never be reported as an
+          // ownership change — the name already tells that story.
+          for (const incoming of member.newOwners) {
+            expect(before).not.toContain(incoming.ownerId);
+          }
+        } else {
+          expect(member.newOwners).toEqual([]);
+        }
+      }
+      expect(division.newOwners.map((m) => m.franchiseId)).toEqual(
+        division.members.filter((m) => m.newOwner).map((m) => m.franchiseId)
+      );
+      expect(division.unchanged).toBe(
+        division.arrivals.length === 0 && division.departures.length === 0 && division.newOwners.length === 0
+      );
+    }
+    expect(up.anyChange).toBe(up.divisions.some((d) => !d.unchanged));
+    expect(up.totalNewOwners).toBe(up.divisions.reduce((n, d) => n + d.newOwners.length, 0));
+  });
+
+  it('never lets the upcoming season contribute to any record', () => {
+    const up = data.upcoming;
+    if (!up) return;
+    // The unplayed season must be absent from every played-season aggregate.
+    expect(data.yearsWithGameLog).not.toContain(up.year);
+    for (const division of data.divisions) {
+      expect(division.years, `${division.name} counts the unplayed ${up.year}`).not.toContain(up.year);
+      for (const era of division.membershipEras) {
+        expect(era.yearEnd).toBeLessThan(up.year);
+      }
+      for (const ry of division.rankedYears) expect(ry.year).not.toBe(up.year);
+    }
+  });
+
   it('keys divisions by name, never merging two divisions that shared an MFL slot', () => {
     const names = data.divisions.map((d) => d.name);
     expect(new Set(names).size).toBe(names.length);

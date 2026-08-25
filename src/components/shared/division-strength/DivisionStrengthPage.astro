@@ -192,6 +192,42 @@ const shortestRun = bySeasonCount[bySeasonCount.length - 1];
  * their whole shared span. The all-time columns can't do that — a division
  * name outlives the teams that earned its record.
  */
+/**
+ * The alignment for the season about to be played, when there is one.
+ *
+ * Records belong to played seasons; MEMBERSHIP does not. Keying "as currently
+ * constituted" off the last played year rendered last season's lineup — and
+ * last season's owner — under a heading that promises today's. TheLeague's
+ * franchise 0004 changed hands for 2026 and the table showed the outgoing
+ * owner. Null in-season, when the newest season on file is the one being
+ * played and nothing is pending.
+ */
+const upcoming = data.upcoming;
+const upcomingFor = (name: string) => upcoming?.divisions.find((d) => d.name === name) ?? null;
+
+/**
+ * Is the team name worth saying alongside the incoming owner's title?
+ *
+ * Owners here are usually titled after the team they run, so naming both gives
+ * "Dead Cap Walking takes over Dead Cap". Compare on letters only, and treat
+ * either being a prefix of the other as the same thing.
+ */
+const namesTeamToo = (m: { name: string | null; nameMedium: string | null; newOwners: Array<{ title: string | null }> }) => {
+  const team = (m.nameMedium ?? m.name ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (!team) return false;
+  return !m.newOwners.some((o) => {
+    const owner = (o.title ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    return owner && (owner.startsWith(team) || team.startsWith(owner));
+  });
+};
+
+/** Tooltip for a crest: team name, plus who took it over when that's news. */
+const memberTitle = (m: { name: string | null; newOwner?: boolean; newOwners?: Array<{ title: string | null }> }) => {
+  const base = m.name ?? '';
+  if (!m.newOwner || !m.newOwners?.length) return base;
+  return `${base} — new owner for ${upcoming?.year}: ${m.newOwners.map((o) => o.title).join(' & ')}`;
+};
+
 const currentLineups = data.divisions
   .filter((d) => d.currentEra)
   .map((d) => ({ division: d, era: d.currentEra! }))
@@ -334,11 +370,60 @@ const seasonStandingsOnly = !!season && !season.gamesResolved && !seasonNotPlaye
                 <div class="section-header">
                   <h2 id="lineups-heading" class="section-header__title">As currently constituted</h2>
                   <p class="section-header__sub">
-                    Each division's record with the teams in it <em>today</em>, over however long
-                    that exact lineup has been together. Realignment resets the clock, so some
-                    divisions have far more shared history than others.
+                    Each division's record with the teams in it, over however long that exact lineup
+                    has been together. Realignment resets the clock, so some divisions have far more
+                    shared history than others.
+                    {upcoming
+                      ? <> Records run through {upcoming.previousPlayedYear}, the last completed season; the crests are the {upcoming.year} lineup.</>
+                      : null}
                   </p>
                 </div>
+
+                {upcoming && upcoming.anyChange && (
+                  <div class="whats-changed" role="note">
+                    <p class="whats-changed__kicker">New for {upcoming.year}</p>
+                    <ul class="whats-changed__list">
+                      {upcoming.divisions.filter((d) => !d.unchanged).map((d) => (
+                        <li>
+                          <a href={`#div-${d.slug}`} class="whats-changed__div">{d.name}</a>
+                          {d.newOwners.map((m) => (
+                            <span class="whats-changed__item">
+                              {m.icon && <img src={m.icon} alt="" loading="lazy" width="20" height="20" />}
+                              {m.newOwners.map((o) => (
+                                <a href={ownerHref(o.slug)}><strong>{o.title ?? o.slug}</strong></a>
+                              ))}
+                              {/* An owner is usually titled after the team, so naming
+                                  both reads as "Dead Cap Walking takes over Dead Cap".
+                                  Say the team only when it adds something. */}
+                              {namesTeamToo(m) ? <> takes over {m.nameMedium ?? m.name}</> : <> takes over</>}
+                              {m.previousOwners.length > 0 && (
+                                <span class="dim"> from {m.previousOwners.map((o) => o.title ?? o.slug).join(' & ')}</span>
+                              )}
+                            </span>
+                          ))}
+                          {d.arrivals.filter((m) => !m.newOwner).map((m) => (
+                            <span class="whats-changed__item">
+                              {m.icon && <img src={m.icon} alt="" loading="lazy" width="20" height="20" />}
+                              <strong>{m.nameMedium ?? m.name}</strong>
+                              {m.previousDivision ? <> moves in from the {m.previousDivision}</> : <> joins</>}
+                            </span>
+                          ))}
+                          {d.departures.map((m) => (
+                            <span class="whats-changed__item dim">
+                              {m.icon && <img src={m.icon} alt="" loading="lazy" width="20" height="20" />}
+                              {m.name} leaves
+                            </span>
+                          ))}
+                        </li>
+                      ))}
+                    </ul>
+                    <p class="whats-changed__note">
+                      A division with an incoming owner has not played a game with this exact group
+                      yet, so its record below still belongs to the lineup that finished
+                      {' '}{upcoming.previousPlayedYear}.
+                    </p>
+                  </div>
+                )}
 
                 <div class="table-scroll">
                   <table class="strength-table lineup-table">
@@ -385,14 +470,22 @@ const seasonStandingsOnly = !!season && !season.gamesResolved && !seasonNotPlaye
                           </td>
                           <td class="num">{era.divisionTitles}</td>
                           <td class="num">{era.championships}</td>
+                          {/* Crests come from the UPCOMING alignment when there is one,
+                              so the column shows who is in the division now rather than
+                              who finished last season. A changed holding is marked. */}
                           <td class="member-cell">
                             <span class="member-icons">
-                              {era.members.map((m) => (
-                                m.icon
-                                  ? <img src={m.icon} alt={m.nameMedium ?? m.name ?? ''} title={m.name ?? ''} loading="lazy" width="24" height="24" />
-                                  : <span class="member-initials" title={m.name ?? ''}>{(m.nameMedium ?? m.name ?? '?').slice(0, 2)}</span>
+                              {(upcomingFor(division.name)?.members ?? era.members).map((m) => (
+                                <span class:list={['member-slot', { 'member-slot--new': (m as any).newOwner }]}>
+                                  {m.icon
+                                    ? <img src={m.icon} alt={m.nameMedium ?? m.name ?? ''} title={memberTitle(m)} loading="lazy" width="24" height="24" />
+                                    : <span class="member-initials" title={memberTitle(m)}>{(m.nameMedium ?? m.name ?? '?').slice(0, 2)}</span>}
+                                </span>
                               ))}
                             </span>
+                            {upcomingFor(division.name)?.newOwners.length ? (
+                              <span class="pill pill--new">new owner</span>
+                            ) : null}
                           </td>
                         </tr>
                       ))}
@@ -1256,6 +1349,71 @@ const seasonStandingsOnly = !!season && !season.gamesResolved && !seasonNotPlaye
     text-transform: uppercase;
     color: var(--ds-ink-muted);
   }
+  /* A slot whose holder changed for the coming season gets a ring in the
+     league accent — plus the "new owner" pill and the What's Changed list, so
+     the signal is never colour alone. */
+  .member-slot { display: inline-flex; border-radius: 999px; }
+  .member-slot--new {
+    box-shadow: 0 0 0 2px var(--ds-accent);
+    position: relative;
+    z-index: 1;
+  }
+  .pill--new {
+    display: inline-block;
+    margin-left: 0.5rem;
+    padding: 0.0625rem 0.4375rem;
+    border-radius: var(--radius-full, 999px);
+    background: color-mix(in srgb, var(--ds-accent) 14%, transparent);
+    border: 1px solid color-mix(in srgb, var(--ds-accent) 35%, transparent);
+    color: var(--ds-accent);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  /* ── What's changed for the coming season ──────────────────────────────── */
+  .whats-changed {
+    margin: 0 0 1rem;
+    padding: 0.875rem 1rem;
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-border);
+    border-left: 3px solid var(--ds-accent);
+    border-radius: var(--radius-md, 0.5rem);
+  }
+  .whats-changed__kicker {
+    margin: 0 0 0.5rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--ds-accent);
+  }
+  .whats-changed__list { list-style: none; margin: 0; padding: 0; }
+  .whats-changed__list li {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.25rem 0;
+    font-size: 0.875rem;
+  }
+  .whats-changed__div {
+    font-weight: 700;
+    color: inherit;
+    text-decoration: none;
+    min-width: 6rem;
+  }
+  .whats-changed__div:hover { text-decoration: underline; }
+  .whats-changed__item { display: inline-flex; align-items: center; gap: 0.375rem; }
+  .whats-changed__item img { width: 20px; height: 20px; object-fit: contain; border-radius: 999px; }
+  .whats-changed__item a { color: inherit; }
+  .whats-changed__note {
+    margin: 0.5rem 0 0;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--ds-ink-muted);
+  }
+
   /* Direction is carried by the glyph as well as the hue, so this survives
      grayscale and colour-blind viewing. */
   .delta { margin-left: 0.3125rem; font-weight: 700; }

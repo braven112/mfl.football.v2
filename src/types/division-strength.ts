@@ -224,6 +224,48 @@ export interface DivisionAllTime {
   owners: DivisionOwnerEra[];
 }
 
+/** A franchise as it stands in the upcoming (not yet played) alignment. */
+export interface UpcomingMember extends DivisionMember {
+  /** Holders now who did NOT hold the slot in the last played season. */
+  newOwner: boolean;
+  newOwners: DivisionOwnerRef[];
+  previousOwners: Array<{ ownerId: string; slug: string; title: string | null }>;
+  /** The division this franchise sat in last played season, if any. */
+  previousDivision: string | null;
+  movedDivision: boolean;
+}
+
+/** One division's upcoming lineup and everything that changed to reach it. */
+export interface UpcomingDivision {
+  name: string;
+  slug: string;
+  members: UpcomingMember[];
+  arrivals: UpcomingMember[];
+  departures: Array<{ franchiseId: string; name: string | null; icon: string | null }>;
+  newOwners: UpcomingMember[];
+  /** Lineup AND every holding unchanged — the era record still describes it. */
+  unchanged: boolean;
+  isNewDivision: boolean;
+}
+
+/**
+ * The alignment for the latest season on file, played or not.
+ *
+ * Records come from played seasons; membership must not. Between the last
+ * played season and the next kickoff, teams move and franchises change hands,
+ * and a "currently constituted" table keyed off the last PLAYED year states
+ * last season's lineup as today's. Null when the newest season on file has
+ * already been played (in-season, nothing pending).
+ */
+export interface UpcomingAlignment {
+  year: number;
+  previousPlayedYear: number | null;
+  divisions: UpcomingDivision[];
+  totalNewOwners: number;
+  totalMoves: number;
+  anyChange: boolean;
+}
+
 export interface DivisionStrengthSummary {
   divisionCount: number;
   activeDivisions: string[];
@@ -251,6 +293,8 @@ export interface DivisionStrengthFile {
   yearsWithGameLog: number[];
   yearsWithoutGameLog: number[];
   latestPlayedYear: number | null;
+  /** The not-yet-played alignment, with everything that changed to reach it. */
+  upcoming: UpcomingAlignment | null;
   summary: DivisionStrengthSummary;
   divisions: DivisionAllTime[];
   years: DivisionStrengthYear[];

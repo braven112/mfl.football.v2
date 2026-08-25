@@ -163,6 +163,7 @@ const THELEAGUE_COLUMNS: ColumnMap = {
     'franchises',
     'owners',
     'rivalries',
+    'division-strength',
     'pecking-order',
     'mvp',
     'league-summary',
@@ -216,6 +217,7 @@ const AFL_COLUMNS: ColumnMap = {
     { label: 'Championship History', soon: true },
     { id: 'afl-franchises', label: 'Franchises' },
     { id: 'afl-owners', label: 'Owners' },
+    { id: 'afl-division-strength', label: 'Division Strength' },
     { id: 'afl-owner-activity', label: 'Owner Activity' },
   ],
   'League Office': [

@@ -748,8 +748,95 @@ function buildLeague(slug) {
     })
     .sort((a, b) => a.name.localeCompare(b.name));
 
+  // ── The upcoming alignment ───────────────────────────────────────────────
+  //
+  // Records must come from PLAYED seasons; "who is in this division" must not.
+  // Between the last played season and the next kickoff, teams move and
+  // franchises change hands — TheLeague's 0004 passed from Heavy Chevy to Dead
+  // Cap Walking for 2026 — and a report whose "as currently constituted" table
+  // is keyed off the last PLAYED year states last season's lineup as today's.
+  // That is not a missing nicety, it is the table being wrong about the one
+  // thing its heading promises.
+  //
+  // So membership and holdings are read from the LATEST season on file whether
+  // or not it has been played, and every difference from the last played season
+  // is called out rather than silently folded in.
+  const buildUpcoming = () => {
+    if (latestAlignmentYear === null || latestAlignmentYear === latestPlayedYear) return null;
+    const rows = rowsByYear.get(latestAlignmentYear) ?? [];
+    if (!rows.length) return null;
+
+    const playedRows = latestPlayedYear === null ? [] : (rowsByYear.get(latestPlayedYear) ?? []);
+    const prevDivisionOf = new Map(playedRows.map((r) => [r.franchiseId, r.divisionName]));
+    const holdersFor = (year, fid) => ownersBySeason.get(`${year}|${fid}`) ?? [];
+
+    const byDivision = new Map();
+    for (const row of rows) {
+      if (!row.divisionName) continue;
+      if (!byDivision.has(row.divisionName)) byDivision.set(row.divisionName, []);
+      const holders = holdersFor(latestAlignmentYear, row.franchiseId);
+      const prevHolders = latestPlayedYear === null ? [] : holdersFor(latestPlayedYear, row.franchiseId);
+      const prevIds = new Set(prevHolders.map((h) => h.ownerId));
+      // A NEW owner is one holding the slot now who did not hold it in the last
+      // played season. A slot that merely RENAMED keeps its ownerId and is not
+      // flagged — the rename is already visible in the name, and calling it an
+      // ownership change would be wrong.
+      const incoming = holders.filter((h) => !prevIds.has(h.ownerId));
+      const previousDivision = prevDivisionOf.get(row.franchiseId) ?? null;
+      byDivision.get(row.divisionName).push({
+        franchiseId: row.franchiseId,
+        name: row.name,
+        nameMedium: row.nameMedium,
+        icon: row.icon,
+        owners: holders.map((h) => ({ ownerId: h.ownerId, slug: h.slug, title: h.title, icon: h.icon })),
+        newOwner: prevHolders.length > 0 && incoming.length > 0,
+        newOwners: incoming.map((h) => ({ ownerId: h.ownerId, slug: h.slug, title: h.title, icon: h.icon })),
+        previousOwners: prevHolders.map((h) => ({ ownerId: h.ownerId, slug: h.slug, title: h.title })),
+        previousDivision,
+        movedDivision: previousDivision !== null && previousDivision !== row.divisionName,
+      });
+    }
+
+    const divisionsOut = [...byDivision.entries()]
+      .map(([name, members]) => {
+        members.sort((a, b) => a.franchiseId.localeCompare(b.franchiseId));
+        const prevMembers = new Set(
+          playedRows.filter((r) => r.divisionName === name).map((r) => r.franchiseId)
+        );
+        const arrivals = members.filter((m) => !prevMembers.has(m.franchiseId));
+        const departures = playedRows
+          .filter((r) => r.divisionName === name && !members.some((m) => m.franchiseId === r.franchiseId))
+          .map((r) => ({ franchiseId: r.franchiseId, name: r.name, icon: r.icon }));
+        const newOwners = members.filter((m) => m.newOwner);
+        return {
+          name,
+          slug: divisionSlug(name),
+          members,
+          arrivals,
+          departures,
+          newOwners,
+          // True when the lineup AND every holding are unchanged, so the
+          // membership era's record still describes this exact group.
+          unchanged: arrivals.length === 0 && departures.length === 0 && newOwners.length === 0,
+          isNewDivision: !allTime.has(name),
+        };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    return {
+      year: latestAlignmentYear,
+      previousPlayedYear: latestPlayedYear,
+      divisions: divisionsOut,
+      totalNewOwners: divisionsOut.reduce((n, d) => n + d.newOwners.length, 0),
+      totalMoves: divisionsOut.reduce((n, d) => n + d.arrivals.length, 0),
+      anyChange: divisionsOut.some((d) => !d.unchanged),
+    };
+  };
+  const upcoming = buildUpcoming();
+
   return {
     generatedAt: new Date().toISOString(),
+    upcoming,
     league: slug,
     leagueName: league.name,
     yearsCovered: years,
