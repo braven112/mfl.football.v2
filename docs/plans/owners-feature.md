@@ -301,16 +301,21 @@ feature exists to reduce.
 
 ### Franchise pages keep working, and gain links
 
-Era construction, `priorOwnerEras`, `relatedRebrands`, `claimedBy`,
-`buildFranchiseEras` and `yearByYear` filtering are **untouched** — franchise
-pages keep showing the former identities of that slot exactly as today. Purely
-additive:
+Era construction, `relatedRebrands`, `claimedBy`, `buildFranchiseEras` and
+`yearByYear` filtering are **untouched** — franchise pages keep showing the
+former identities of that slot exactly as today.
+
+**`priorOwnerEras` is the one exception, and it is GONE** (PR 2). This section
+originally listed it as untouched; it isn't, and leaving that in would send PR 3
+hunting a fifth call site that no longer exists. See the status block at the top
+for why it was removed rather than kept.
 
 - TheLeague's `franchises/[id].astro` gains a **"Previous owners of this
-  franchise"** section (the AFL has one at `:816-830`) listing `bySlot[id]` with
-  records and links. That alone makes the 110 orphaned seasons reachable from
-  the page they belong to, and closes a two-league drift.
-- The AFL's existing list becomes links with records attached.
+  franchise"** section listing `bySlot[id]` with records and links. That alone
+  makes the 110 orphaned seasons reachable from the page they belong to, and
+  closes a two-league drift.
+- The AFL's existing list is replaced by the same shared component, so the two
+  leagues render one implementation rather than two.
 
 ### The Former Identities strip — fixed here
 

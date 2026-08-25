@@ -517,12 +517,33 @@ export const buildOwnerTenures = ({
    * is exactly what `rebrandGroup` exists to express.
    */
   const rebrandsByName = new Map();
+  const pushRebrand = (name, entry) => {
+    const key = normalizeIdentity(name);
+    if (!rebrandsByName.has(key)) rebrandsByName.set(key, []);
+    rebrandsByName.get(key).push(entry);
+  };
   for (const team of teams ?? []) {
     for (const entry of team.history ?? []) {
       if (!entry?.rebrand || !entry.name) continue;
-      const key = normalizeIdentity(entry.name);
-      if (!rebrandsByName.has(key)) rebrandsByName.set(key, []);
-      rebrandsByName.get(key).push(entry);
+      pushRebrand(entry.name, entry);
+    }
+    // A team serving its punishment RIGHT NOW carries `currentRebrand` on the
+    // team instead of on a history[] entry — the config only moves it into
+    // history once the name is retired. Indexing history alone reported the
+    // AFL's franchise 0014 ("A Bruin Pegs Me", 2026) as an ordinary rename.
+    // It has no years of its own: it applies to the current name, which starts
+    // the year after the last history entry ends.
+    if (team.currentRebrand && team.name) {
+      const lastHistoryYear = Math.max(
+        0,
+        ...(team.history ?? []).map((h) => h.yearEnd ?? 0)
+      );
+      pushRebrand(team.name, {
+        name: team.name,
+        yearStart: lastHistoryYear + 1,
+        yearEnd: 9999,
+        rebrand: team.currentRebrand,
+      });
     }
   }
   const rebrandFor = (name, yearStart, yearEnd) => {

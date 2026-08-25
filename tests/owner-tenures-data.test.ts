@@ -96,6 +96,13 @@ describe.each(leagues)('$league.slug owner tenures', ({ league, ownersPath, ledg
           expected.add(`${entry.name}|${entry.rebrand.group}`);
         }
       }
+      // A team serving its punishment right now carries `currentRebrand` on
+      // the TEAM, not in history[]. The first version of this test looked only
+      // at history[] — the same blind spot the code had — so it passed while
+      // the AFL's 2026 "A Bruin Pegs Me" came out non-punitive.
+      if (team.currentRebrand?.reason === 'last-place' && team.name) {
+        expected.add(`${team.name}|${team.currentRebrand.group}`);
+      }
     }
     const actual = new Set<string>();
     for (const owner of owners.owners as any[]) {
@@ -104,6 +111,36 @@ describe.each(leagues)('$league.slug owner tenures', ({ league, ownersPath, ledg
       }
     }
     expect([...actual].sort()).toEqual([...expected].sort());
+  });
+
+  /**
+   * `divisionTitles[].divisionName` must be the DIVISION's name, not the
+   * team's — `divisionWinners[]` carries both (`name` is the team). Reading
+   * the wrong one shipped "Acer FC Edge" where "Atlantic" belonged. Nothing
+   * renders the field yet, so only a source comparison catches a regression.
+   */
+  it('DIVISION NAMES: never the winning team name', () => {
+    const byYear = new Map<number, any[]>(
+      (history.yearSummaries ?? []).map((y: any) => [y.year, y.divisionWinners ?? []])
+    );
+    const teamNames = new Set<string>();
+    for (const summary of history.yearSummaries ?? []) {
+      for (const w of summary.divisionWinners ?? []) if (w.name) teamNames.add(w.name);
+    }
+    let checked = 0;
+    for (const owner of owners.owners as any[]) {
+      for (const title of owner.totals.divisionTitles) {
+        if (!title.divisionName) continue;
+        checked++;
+        const winners = byYear.get(title.year) ?? [];
+        const match = winners.find((w: any) => w.divisionId === title.divisionId);
+        expect(
+          title.divisionName,
+          `${owner.slug} ${title.year}: divisionName should be the division, not a team`
+        ).toBe(match?.divisionName ?? null);
+      }
+    }
+    expect(checked, 'no division titles to check').toBeGreaterThan(0);
   });
 
   it('puts no season under two owners unless they are declared co-owners', () => {
