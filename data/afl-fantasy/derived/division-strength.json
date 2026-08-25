@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-25T18:46:10.411Z",
+  "generatedAt": "2026-08-25T19:24:12.599Z",
   "upcoming": {
     "year": 2026,
     "previousPlayedYear": 2025,
@@ -445,8 +445,8 @@
             "icon": "/assets/afl/icons/amish.png",
             "owners": [
               {
-                "ownerId": "own-0133",
-                "slug": "team-murderface-2014",
+                "ownerId": "own-0141",
+                "slug": "avenging-amish-2015",
                 "title": "Danny Baccam",
                 "latestName": "Avenging Amish",
                 "latestNameMedium": "Avenging Amish",
@@ -457,8 +457,8 @@
             "newOwners": [],
             "previousOwners": [
               {
-                "ownerId": "own-0133",
-                "slug": "team-murderface-2014",
+                "ownerId": "own-0141",
+                "slug": "avenging-amish-2015",
                 "title": "Danny Baccam",
                 "latestName": "Avenging Amish",
                 "latestNameMedium": "Avenging Amish"
@@ -1623,8 +1623,8 @@
                   "ownerId": "own-0100",
                   "slug": "the-rookies-2005",
                   "title": "Dave Jordan",
-                  "latestName": "The Rookies",
-                  "latestNameMedium": "The Rookies",
+                  "latestName": "The Dark Side",
+                  "latestNameMedium": "The Dark Side",
                   "icon": "/assets/afl/history/the_rookies_icon_icon_circle.png"
                 }
               ]
@@ -1736,12 +1736,12 @@
               "icon": "/assets/afl/history/the_dark_side_banner_icon_circle.png",
               "owners": [
                 {
-                  "ownerId": "own-0118",
-                  "slug": "the-dark-side-2009",
-                  "title": "The Dark Side",
+                  "ownerId": "own-0100",
+                  "slug": "the-rookies-2005",
+                  "title": "Dave Jordan",
                   "latestName": "The Dark Side",
                   "latestNameMedium": "The Dark Side",
-                  "icon": "/assets/afl/history/the_dark_side_banner_icon_circle.png"
+                  "icon": "/assets/afl/history/the_rookies_icon_icon_circle.png"
                 }
               ]
             }
@@ -2435,6 +2435,65 @@
           "sharedSeasons": 0
         },
         {
+          "ownerId": "own-0100",
+          "slug": "the-rookies-2005",
+          "title": "Dave Jordan",
+          "latestName": "The Dark Side",
+          "latestNameMedium": "The Dark Side",
+          "icon": "/assets/afl/history/the_rookies_icon_icon_circle.png",
+          "seasons": 3,
+          "yearStart": 2007,
+          "yearEnd": 2009,
+          "stints": [
+            {
+              "yearStart": 2007,
+              "yearEnd": 2009
+            }
+          ],
+          "years": [
+            2007,
+            2008,
+            2009
+          ],
+          "franchiseIds": [
+            "0011"
+          ],
+          "identities": [
+            {
+              "name": "The Rookies",
+              "yearStart": 2007,
+              "yearEnd": 2008
+            },
+            {
+              "name": "The Dark Side",
+              "yearStart": 2009,
+              "yearEnd": 2009
+            }
+          ],
+          "totals": {
+            "wins": 22,
+            "losses": 32,
+            "ties": 0,
+            "games": 54,
+            "pointsFor": 5084.24,
+            "pointsAgainst": 5718.42,
+            "winPct": 0.407
+          },
+          "interDivision": {
+            "wins": 15,
+            "losses": 21,
+            "ties": 0,
+            "games": 36,
+            "pointsFor": 3496.94,
+            "pointsAgainst": 3623.8,
+            "winPct": 0.417
+          },
+          "divisionTitles": 1,
+          "championships": 0,
+          "playoffBerths": 1,
+          "sharedSeasons": 0
+        },
+        {
           "ownerId": "own-0048",
           "slug": "midwestside-connection-2010",
           "title": "Nathan Rich",
@@ -2593,59 +2652,6 @@
           "divisionTitles": 0,
           "championships": 0,
           "playoffBerths": 0,
-          "sharedSeasons": 0
-        },
-        {
-          "ownerId": "own-0100",
-          "slug": "the-rookies-2005",
-          "title": "Dave Jordan",
-          "latestName": "The Rookies",
-          "latestNameMedium": "The Rookies",
-          "icon": "/assets/afl/history/the_rookies_icon_icon_circle.png",
-          "seasons": 2,
-          "yearStart": 2007,
-          "yearEnd": 2008,
-          "stints": [
-            {
-              "yearStart": 2007,
-              "yearEnd": 2008
-            }
-          ],
-          "years": [
-            2007,
-            2008
-          ],
-          "franchiseIds": [
-            "0011"
-          ],
-          "identities": [
-            {
-              "name": "The Rookies",
-              "yearStart": 2007,
-              "yearEnd": 2008
-            }
-          ],
-          "totals": {
-            "wins": 17,
-            "losses": 19,
-            "ties": 0,
-            "games": 36,
-            "pointsFor": 3408.8,
-            "pointsAgainst": 3735.24,
-            "winPct": 0.472
-          },
-          "interDivision": {
-            "wins": 11,
-            "losses": 13,
-            "ties": 0,
-            "games": 24,
-            "pointsFor": 2314.06,
-            "pointsAgainst": 2349.92,
-            "winPct": 0.458
-          },
-          "divisionTitles": 1,
-          "championships": 0,
-          "playoffBerths": 1,
           "sharedSeasons": 0
         },
         {
@@ -3008,58 +3014,6 @@
             "pointsFor": 0,
             "pointsAgainst": 0,
             "winPct": null
-          },
-          "divisionTitles": 0,
-          "championships": 0,
-          "playoffBerths": 0,
-          "sharedSeasons": 0
-        },
-        {
-          "ownerId": "own-0118",
-          "slug": "the-dark-side-2009",
-          "title": "The Dark Side",
-          "latestName": "The Dark Side",
-          "latestNameMedium": "The Dark Side",
-          "icon": "/assets/afl/history/the_dark_side_banner_icon_circle.png",
-          "seasons": 1,
-          "yearStart": 2009,
-          "yearEnd": 2009,
-          "stints": [
-            {
-              "yearStart": 2009,
-              "yearEnd": 2009
-            }
-          ],
-          "years": [
-            2009
-          ],
-          "franchiseIds": [
-            "0011"
-          ],
-          "identities": [
-            {
-              "name": "The Dark Side",
-              "yearStart": 2009,
-              "yearEnd": 2009
-            }
-          ],
-          "totals": {
-            "wins": 5,
-            "losses": 13,
-            "ties": 0,
-            "games": 18,
-            "pointsFor": 1675.44,
-            "pointsAgainst": 1983.18,
-            "winPct": 0.278
-          },
-          "interDivision": {
-            "wins": 4,
-            "losses": 8,
-            "ties": 0,
-            "games": 12,
-            "pointsFor": 1182.88,
-            "pointsAgainst": 1273.88,
-            "winPct": 0.333
           },
           "divisionTitles": 0,
           "championships": 0,
@@ -3539,7 +3493,7 @@
                 {
                   "ownerId": "own-0116",
                   "slug": "minnesota-road-kill-2009",
-                  "title": "Shawn Serman",
+                  "title": "Shawn Sherman",
                   "latestName": "Minnesota Road Kill",
                   "latestNameMedium": "MN Road Kill",
                   "icon": "/assets/afl/history/minnesota_road_kill_banner_icon_circle.png"
@@ -5446,7 +5400,7 @@
         {
           "ownerId": "own-0116",
           "slug": "minnesota-road-kill-2009",
-          "title": "Shawn Serman",
+          "title": "Shawn Sherman",
           "latestName": "Minnesota Road Kill",
           "latestNameMedium": "MN Road Kill",
           "icon": "/assets/afl/history/minnesota_road_kill_banner_icon_circle.png",
@@ -6068,8 +6022,8 @@
                   "ownerId": "own-0100",
                   "slug": "the-rookies-2005",
                   "title": "Dave Jordan",
-                  "latestName": "The Rookies",
-                  "latestNameMedium": "The Rookies",
+                  "latestName": "The Dark Side",
+                  "latestNameMedium": "The Dark Side",
                   "icon": "/assets/afl/history/the_rookies_icon_icon_circle.png"
                 }
               ]
@@ -8045,8 +7999,8 @@
           "ownerId": "own-0100",
           "slug": "the-rookies-2005",
           "title": "Dave Jordan",
-          "latestName": "The Rookies",
-          "latestNameMedium": "The Rookies",
+          "latestName": "The Dark Side",
+          "latestNameMedium": "The Dark Side",
           "icon": "/assets/afl/history/the_rookies_icon_icon_circle.png",
           "seasons": 2,
           "yearStart": 2005,
@@ -10849,10 +10803,10 @@
                 {
                   "ownerId": "own-0133",
                   "slug": "team-murderface-2014",
-                  "title": "Danny Baccam",
-                  "latestName": "Avenging Amish",
-                  "latestNameMedium": "Avenging Amish",
-                  "icon": "/assets/afl/icons/amish.png"
+                  "title": "Garrison Bravo",
+                  "latestName": "Team Murderface",
+                  "latestNameMedium": "Team Murderface",
+                  "icon": "/assets/afl/history/team_murderface_icon_icon_circle.png"
                 }
               ]
             },
@@ -10965,8 +10919,8 @@
               "icon": "/assets/afl/icons/amish.png",
               "owners": [
                 {
-                  "ownerId": "own-0133",
-                  "slug": "team-murderface-2014",
+                  "ownerId": "own-0141",
+                  "slug": "avenging-amish-2015",
                   "title": "Danny Baccam",
                   "latestName": "Avenging Amish",
                   "latestNameMedium": "Avenging Amish",
@@ -11083,8 +11037,8 @@
               "icon": "/assets/afl/icons/amish.png",
               "owners": [
                 {
-                  "ownerId": "own-0133",
-                  "slug": "team-murderface-2014",
+                  "ownerId": "own-0141",
+                  "slug": "avenging-amish-2015",
                   "title": "Danny Baccam",
                   "latestName": "Avenging Amish",
                   "latestNameMedium": "Avenging Amish",
@@ -11218,8 +11172,8 @@
             "icon": "/assets/afl/icons/amish.png",
             "owners": [
               {
-                "ownerId": "own-0133",
-                "slug": "team-murderface-2014",
+                "ownerId": "own-0141",
+                "slug": "avenging-amish-2015",
                 "title": "Danny Baccam",
                 "latestName": "Avenging Amish",
                 "latestNameMedium": "Avenging Amish",
@@ -11771,84 +11725,6 @@
           "sharedSeasons": 0
         },
         {
-          "ownerId": "own-0133",
-          "slug": "team-murderface-2014",
-          "title": "Danny Baccam",
-          "latestName": "Avenging Amish",
-          "latestNameMedium": "Avenging Amish",
-          "icon": "/assets/afl/icons/amish.png",
-          "seasons": 12,
-          "yearStart": 2014,
-          "yearEnd": 2025,
-          "stints": [
-            {
-              "yearStart": 2014,
-              "yearEnd": 2025
-            }
-          ],
-          "years": [
-            2014,
-            2015,
-            2016,
-            2017,
-            2018,
-            2019,
-            2020,
-            2021,
-            2022,
-            2023,
-            2024,
-            2025
-          ],
-          "franchiseIds": [
-            "0007"
-          ],
-          "identities": [
-            {
-              "name": "Team Murderface",
-              "yearStart": 2014,
-              "yearEnd": 2014
-            },
-            {
-              "name": "Avenging Amish",
-              "yearStart": 2015,
-              "yearEnd": 2025
-            },
-            {
-              "name": "Vit's Brother",
-              "yearStart": 2021,
-              "yearEnd": 2021
-            },
-            {
-              "name": "Broke Back 'lil Half Dead's Brother",
-              "yearStart": 2023,
-              "yearEnd": 2023
-            }
-          ],
-          "totals": {
-            "wins": 71,
-            "losses": 133,
-            "ties": 0,
-            "games": 204,
-            "pointsFor": 22379.82,
-            "pointsAgainst": 25721.63,
-            "winPct": 0.348
-          },
-          "interDivision": {
-            "wins": 26,
-            "losses": 58,
-            "ties": 0,
-            "games": 84,
-            "pointsFor": 9451.36,
-            "pointsAgainst": 10628.21,
-            "winPct": 0.31
-          },
-          "divisionTitles": 1,
-          "championships": 0,
-          "playoffBerths": 2,
-          "sharedSeasons": 0
-        },
-        {
           "ownerId": "own-0055",
           "slug": "computer-jocks-2015",
           "title": "Jomar",
@@ -11908,6 +11784,78 @@
           "divisionTitles": 4,
           "championships": 2,
           "playoffBerths": 7,
+          "sharedSeasons": 0
+        },
+        {
+          "ownerId": "own-0141",
+          "slug": "avenging-amish-2015",
+          "title": "Danny Baccam",
+          "latestName": "Avenging Amish",
+          "latestNameMedium": "Avenging Amish",
+          "icon": "/assets/afl/icons/amish.png",
+          "seasons": 11,
+          "yearStart": 2015,
+          "yearEnd": 2025,
+          "stints": [
+            {
+              "yearStart": 2015,
+              "yearEnd": 2025
+            }
+          ],
+          "years": [
+            2015,
+            2016,
+            2017,
+            2018,
+            2019,
+            2020,
+            2021,
+            2022,
+            2023,
+            2024,
+            2025
+          ],
+          "franchiseIds": [
+            "0007"
+          ],
+          "identities": [
+            {
+              "name": "Avenging Amish",
+              "yearStart": 2015,
+              "yearEnd": 2025
+            },
+            {
+              "name": "Vit's Brother",
+              "yearStart": 2021,
+              "yearEnd": 2021
+            },
+            {
+              "name": "Broke Back 'lil Half Dead's Brother",
+              "yearStart": 2023,
+              "yearEnd": 2023
+            }
+          ],
+          "totals": {
+            "wins": 65,
+            "losses": 122,
+            "ties": 0,
+            "games": 187,
+            "pointsFor": 20324.62,
+            "pointsAgainst": 23480.32,
+            "winPct": 0.348
+          },
+          "interDivision": {
+            "wins": 22,
+            "losses": 55,
+            "ties": 0,
+            "games": 77,
+            "pointsFor": 8505.81,
+            "pointsAgainst": 9686.94,
+            "winPct": 0.286
+          },
+          "divisionTitles": 1,
+          "championships": 0,
+          "playoffBerths": 2,
           "sharedSeasons": 0
         },
         {
@@ -12740,6 +12688,58 @@
             "games": 7,
             "pointsFor": 872.6,
             "pointsAgainst": 779.78,
+            "winPct": 0.571
+          },
+          "divisionTitles": 0,
+          "championships": 0,
+          "playoffBerths": 0,
+          "sharedSeasons": 0
+        },
+        {
+          "ownerId": "own-0133",
+          "slug": "team-murderface-2014",
+          "title": "Garrison Bravo",
+          "latestName": "Team Murderface",
+          "latestNameMedium": "Team Murderface",
+          "icon": "/assets/afl/history/team_murderface_icon_icon_circle.png",
+          "seasons": 1,
+          "yearStart": 2014,
+          "yearEnd": 2014,
+          "stints": [
+            {
+              "yearStart": 2014,
+              "yearEnd": 2014
+            }
+          ],
+          "years": [
+            2014
+          ],
+          "franchiseIds": [
+            "0007"
+          ],
+          "identities": [
+            {
+              "name": "Team Murderface",
+              "yearStart": 2014,
+              "yearEnd": 2014
+            }
+          ],
+          "totals": {
+            "wins": 6,
+            "losses": 11,
+            "ties": 0,
+            "games": 17,
+            "pointsFor": 2055.2,
+            "pointsAgainst": 2241.31,
+            "winPct": 0.353
+          },
+          "interDivision": {
+            "wins": 4,
+            "losses": 3,
+            "ties": 0,
+            "games": 7,
+            "pointsFor": 945.55,
+            "pointsAgainst": 941.27,
             "winPct": 0.571
           },
           "divisionTitles": 0,
@@ -18627,8 +18627,8 @@
                   "ownerId": "own-0100",
                   "slug": "the-rookies-2005",
                   "title": "Dave Jordan",
-                  "latestName": "The Rookies",
-                  "latestNameMedium": "The Rookies",
+                  "latestName": "The Dark Side",
+                  "latestNameMedium": "The Dark Side",
                   "icon": "/assets/afl/history/the_rookies_icon_icon_circle.png"
                 }
               ],
@@ -20208,8 +20208,8 @@
                   "ownerId": "own-0100",
                   "slug": "the-rookies-2005",
                   "title": "Dave Jordan",
-                  "latestName": "The Rookies",
-                  "latestNameMedium": "The Rookies",
+                  "latestName": "The Dark Side",
+                  "latestNameMedium": "The Dark Side",
                   "icon": "/assets/afl/history/the_rookies_icon_icon_circle.png"
                 }
               ],
@@ -22094,8 +22094,8 @@
                   "ownerId": "own-0100",
                   "slug": "the-rookies-2005",
                   "title": "Dave Jordan",
-                  "latestName": "The Rookies",
-                  "latestNameMedium": "The Rookies",
+                  "latestName": "The Dark Side",
+                  "latestNameMedium": "The Dark Side",
                   "icon": "/assets/afl/history/the_rookies_icon_icon_circle.png"
                 }
               ],
@@ -23507,8 +23507,8 @@
                 "ownerId": "own-0100",
                 "slug": "the-rookies-2005",
                 "title": "Dave Jordan",
-                "latestName": "The Rookies",
-                "latestNameMedium": "The Rookies",
+                "latestName": "The Dark Side",
+                "latestNameMedium": "The Dark Side",
                 "icon": "/assets/afl/history/the_rookies_icon_icon_circle.png"
               }
             ]
@@ -23551,8 +23551,8 @@
                   "ownerId": "own-0100",
                   "slug": "the-rookies-2005",
                   "title": "Dave Jordan",
-                  "latestName": "The Rookies",
-                  "latestNameMedium": "The Rookies",
+                  "latestName": "The Dark Side",
+                  "latestNameMedium": "The Dark Side",
                   "icon": "/assets/afl/history/the_rookies_icon_icon_circle.png"
                 }
               ],
@@ -25220,12 +25220,12 @@
               },
               "owners": [
                 {
-                  "ownerId": "own-0118",
-                  "slug": "the-dark-side-2009",
-                  "title": "The Dark Side",
+                  "ownerId": "own-0100",
+                  "slug": "the-rookies-2005",
+                  "title": "Dave Jordan",
                   "latestName": "The Dark Side",
                   "latestNameMedium": "The Dark Side",
-                  "icon": "/assets/afl/history/the_dark_side_banner_icon_circle.png"
+                  "icon": "/assets/afl/history/the_rookies_icon_icon_circle.png"
                 }
               ],
               "shared": false
@@ -25555,7 +25555,7 @@
               {
                 "ownerId": "own-0116",
                 "slug": "minnesota-road-kill-2009",
-                "title": "Shawn Serman",
+                "title": "Shawn Sherman",
                 "latestName": "Minnesota Road Kill",
                 "latestNameMedium": "MN Road Kill",
                 "icon": "/assets/afl/history/minnesota_road_kill_banner_icon_circle.png"
@@ -25599,7 +25599,7 @@
                 {
                   "ownerId": "own-0116",
                   "slug": "minnesota-road-kill-2009",
-                  "title": "Shawn Serman",
+                  "title": "Shawn Sherman",
                   "latestName": "Minnesota Road Kill",
                   "latestNameMedium": "MN Road Kill",
                   "icon": "/assets/afl/history/minnesota_road_kill_banner_icon_circle.png"
@@ -27271,7 +27271,7 @@
                 {
                   "ownerId": "own-0116",
                   "slug": "minnesota-road-kill-2009",
-                  "title": "Shawn Serman",
+                  "title": "Shawn Sherman",
                   "latestName": "Minnesota Road Kill",
                   "latestNameMedium": "MN Road Kill",
                   "icon": "/assets/afl/history/minnesota_road_kill_banner_icon_circle.png"
@@ -32904,10 +32904,10 @@
                 {
                   "ownerId": "own-0133",
                   "slug": "team-murderface-2014",
-                  "title": "Danny Baccam",
-                  "latestName": "Avenging Amish",
-                  "latestNameMedium": "Avenging Amish",
-                  "icon": "/assets/afl/icons/amish.png"
+                  "title": "Garrison Bravo",
+                  "latestName": "Team Murderface",
+                  "latestNameMedium": "Team Murderface",
+                  "icon": "/assets/afl/history/team_murderface_icon_icon_circle.png"
                 }
               ],
               "shared": false
@@ -34340,8 +34340,8 @@
               },
               "owners": [
                 {
-                  "ownerId": "own-0133",
-                  "slug": "team-murderface-2014",
+                  "ownerId": "own-0141",
+                  "slug": "avenging-amish-2015",
                   "title": "Danny Baccam",
                   "latestName": "Avenging Amish",
                   "latestNameMedium": "Avenging Amish",
@@ -35635,8 +35635,8 @@
               },
               "owners": [
                 {
-                  "ownerId": "own-0133",
-                  "slug": "team-murderface-2014",
+                  "ownerId": "own-0141",
+                  "slug": "avenging-amish-2015",
                   "title": "Danny Baccam",
                   "latestName": "Avenging Amish",
                   "latestNameMedium": "Avenging Amish",
@@ -37045,8 +37045,8 @@
               },
               "owners": [
                 {
-                  "ownerId": "own-0133",
-                  "slug": "team-murderface-2014",
+                  "ownerId": "own-0141",
+                  "slug": "avenging-amish-2015",
                   "title": "Danny Baccam",
                   "latestName": "Avenging Amish",
                   "latestNameMedium": "Avenging Amish",
@@ -38383,8 +38383,8 @@
               },
               "owners": [
                 {
-                  "ownerId": "own-0133",
-                  "slug": "team-murderface-2014",
+                  "ownerId": "own-0141",
+                  "slug": "avenging-amish-2015",
                   "title": "Danny Baccam",
                   "latestName": "Avenging Amish",
                   "latestNameMedium": "Avenging Amish",
@@ -39864,8 +39864,8 @@
               },
               "owners": [
                 {
-                  "ownerId": "own-0133",
-                  "slug": "team-murderface-2014",
+                  "ownerId": "own-0141",
+                  "slug": "avenging-amish-2015",
                   "title": "Danny Baccam",
                   "latestName": "Avenging Amish",
                   "latestNameMedium": "Avenging Amish",
@@ -41231,8 +41231,8 @@
               },
               "owners": [
                 {
-                  "ownerId": "own-0133",
-                  "slug": "team-murderface-2014",
+                  "ownerId": "own-0141",
+                  "slug": "avenging-amish-2015",
                   "title": "Danny Baccam",
                   "latestName": "Avenging Amish",
                   "latestNameMedium": "Avenging Amish",
@@ -42626,8 +42626,8 @@
               },
               "owners": [
                 {
-                  "ownerId": "own-0133",
-                  "slug": "team-murderface-2014",
+                  "ownerId": "own-0141",
+                  "slug": "avenging-amish-2015",
                   "title": "Danny Baccam",
                   "latestName": "Avenging Amish",
                   "latestNameMedium": "Avenging Amish",
@@ -43989,8 +43989,8 @@
               },
               "owners": [
                 {
-                  "ownerId": "own-0133",
-                  "slug": "team-murderface-2014",
+                  "ownerId": "own-0141",
+                  "slug": "avenging-amish-2015",
                   "title": "Danny Baccam",
                   "latestName": "Avenging Amish",
                   "latestNameMedium": "Avenging Amish",
@@ -45291,8 +45291,8 @@
               },
               "owners": [
                 {
-                  "ownerId": "own-0133",
-                  "slug": "team-murderface-2014",
+                  "ownerId": "own-0141",
+                  "slug": "avenging-amish-2015",
                   "title": "Danny Baccam",
                   "latestName": "Avenging Amish",
                   "latestNameMedium": "Avenging Amish",
@@ -46406,8 +46406,8 @@
             "icon": "/assets/afl/icons/amish.png",
             "owners": [
               {
-                "ownerId": "own-0133",
-                "slug": "team-murderface-2014",
+                "ownerId": "own-0141",
+                "slug": "avenging-amish-2015",
                 "title": "Danny Baccam",
                 "latestName": "Avenging Amish",
                 "latestNameMedium": "Avenging Amish",
@@ -46493,8 +46493,8 @@
               },
               "owners": [
                 {
-                  "ownerId": "own-0133",
-                  "slug": "team-murderface-2014",
+                  "ownerId": "own-0141",
+                  "slug": "avenging-amish-2015",
                   "title": "Danny Baccam",
                   "latestName": "Avenging Amish",
                   "latestNameMedium": "Avenging Amish",
@@ -47881,8 +47881,8 @@
               },
               "owners": [
                 {
-                  "ownerId": "own-0133",
-                  "slug": "team-murderface-2014",
+                  "ownerId": "own-0141",
+                  "slug": "avenging-amish-2015",
                   "title": "Danny Baccam",
                   "latestName": "Avenging Amish",
                   "latestNameMedium": "Avenging Amish",
