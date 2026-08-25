@@ -25,7 +25,11 @@ cross-cutting, add a line here. Keep this file short.
   is not in the default suite — CI runs it as its own parallel `Type baseline`
   job so it never delays the unit-test signal. Treat `ts(2307) Cannot find
   module` as urgent: an `import type` from a missing module is erased at build,
-  so it has no runtime symptom while voiding every type in the file.
+  so it has no runtime symptom while voiding every type in the file. Before
+  attacking the count, read
+  `docs/claude/insights/features/type-error-remediation.md` — it records which
+  phases are done and which two are deliberately NOT scheduled, with the
+  reasoning.
 - **Prebuild:** `scripts/prebuild.mjs` runs build steps + network fetches in
   parallel. Add new build-time fetches there.
 - **Guard tests are the real memory.** ~228 suites in `tests/` mechanically
