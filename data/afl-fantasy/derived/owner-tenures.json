@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-08-25T18:42:21.219Z",
+  "generatedAt": "2026-08-25T18:47:28.007Z",
   "league": "afl-fantasy",
   "counts": {
-    "total": 90,
+    "total": 89,
     "current": 24,
-    "former": 66,
+    "former": 65,
     "seasons": 576,
     "shared": 0
   },
@@ -5849,7 +5849,7 @@
       },
       "slotSuccession": {
         "0011": {
-          "previous": "the-dark-side-2009",
+          "previous": "the-rookies-2005",
           "next": null
         }
       },
@@ -16470,7 +16470,9 @@
     {
       "ownerId": "own-0100",
       "slug": "the-rookies-2005",
-      "previousSlugs": [],
+      "previousSlugs": [
+        "the-dark-side-2009"
+      ],
       "displayName": "Dave Jordan",
       "title": "Dave Jordan",
       "dominantName": "The Rookies",
@@ -16479,7 +16481,7 @@
       "source": "registry",
       "notes": null,
       "yearStart": 2005,
-      "yearEnd": 2008,
+      "yearEnd": 2009,
       "currentFranchiseId": null,
       "identities": [
         {
@@ -16498,6 +16500,20 @@
           "rebrandGroup": null,
           "punitive": false,
           "inferredFromFeed": false
+        },
+        {
+          "name": "The Dark Side",
+          "nameMedium": "The Dark Side",
+          "yearStart": 2009,
+          "yearEnd": 2009,
+          "years": [
+            2009
+          ],
+          "icon": "/assets/afl/history/the_dark_side_banner_icon_circle.png",
+          "banner": "/assets/afl/history/the_dark_side_banner.png",
+          "rebrandGroup": null,
+          "punitive": false,
+          "inferredFromFeed": false
         }
       ],
       "tenures": [
@@ -16505,7 +16521,7 @@
           "franchiseId": "0011",
           "franchiseName": "Midwestside Connection",
           "yearStart": 2005,
-          "yearEnd": 2008,
+          "yearEnd": 2009,
           "identities": [
             {
               "name": "The Rookies",
@@ -16520,6 +16536,20 @@
               ],
               "icon": "/assets/afl/history/the_rookies_icon_icon_circle.png",
               "banner": "/assets/afl/history/the_rookies_banner.png",
+              "rebrandGroup": null,
+              "punitive": false,
+              "inferredFromFeed": false
+            },
+            {
+              "name": "The Dark Side",
+              "nameMedium": "The Dark Side",
+              "yearStart": 2009,
+              "yearEnd": 2009,
+              "years": [
+                2009
+              ],
+              "icon": "/assets/afl/history/the_dark_side_banner_icon_circle.png",
+              "banner": "/assets/afl/history/the_dark_side_banner.png",
               "rebrandGroup": null,
               "punitive": false,
               "inferredFromFeed": false
@@ -16609,16 +16639,37 @@
               "franchiseId": "0011",
               "attributedTo": null,
               "seasonNotStarted": false
+            },
+            {
+              "year": 2009,
+              "name": "The Dark Side",
+              "nameMedium": "The Dark Side",
+              "icon": "/assets/afl/history/the_dark_side_banner_icon_circle.png",
+              "banner": "/assets/afl/history/the_dark_side_banner.png",
+              "isHistorical": true,
+              "sourceFranchiseId": null,
+              "wins": 5,
+              "losses": 13,
+              "ties": 0,
+              "pointsFor": 1675.44,
+              "regSeasonRank": 20,
+              "divisionId": "01",
+              "divisionName": "Central",
+              "wonDivision": false,
+              "playoffResult": "missed",
+              "franchiseId": "0011",
+              "attributedTo": null,
+              "seasonNotStarted": false
             }
           ]
         }
       ],
       "totals": {
-        "seasons": 4,
-        "wins": 26,
-        "losses": 40,
+        "seasons": 5,
+        "wins": 31,
+        "losses": 53,
         "ties": 0,
-        "pointsFor": 6215.34,
+        "pointsFor": 7890.780000000001,
         "playoffAppearances": 1,
         "championships": [],
         "runnerUps": [],
@@ -16637,7 +16688,7 @@
       "slotSuccession": {
         "0011": {
           "previous": "highclimbers-2003",
-          "next": "the-dark-side-2009"
+          "next": "midwestside-connection-2010"
         }
       },
       "crossLeague": [],
@@ -19312,108 +19363,6 @@
         "0021": {
           "previous": "da-dangsters-2003",
           "next": "chatmaster-2004"
-        }
-      },
-      "crossLeague": [],
-      "isShared": false,
-      "coOwners": []
-    },
-    {
-      "ownerId": "own-0118",
-      "slug": "the-dark-side-2009",
-      "previousSlugs": [],
-      "displayName": null,
-      "title": "The Dark Side",
-      "dominantName": "The Dark Side",
-      "icon": "/assets/afl/history/the_dark_side_banner_icon_circle.png",
-      "isCurrent": false,
-      "source": "registry",
-      "notes": null,
-      "yearStart": 2009,
-      "yearEnd": 2009,
-      "currentFranchiseId": null,
-      "identities": [
-        {
-          "name": "The Dark Side",
-          "nameMedium": "The Dark Side",
-          "yearStart": 2009,
-          "yearEnd": 2009,
-          "years": [
-            2009
-          ],
-          "icon": "/assets/afl/history/the_dark_side_banner_icon_circle.png",
-          "banner": "/assets/afl/history/the_dark_side_banner.png",
-          "rebrandGroup": null,
-          "punitive": false,
-          "inferredFromFeed": false
-        }
-      ],
-      "tenures": [
-        {
-          "franchiseId": "0011",
-          "franchiseName": "Midwestside Connection",
-          "yearStart": 2009,
-          "yearEnd": 2009,
-          "identities": [
-            {
-              "name": "The Dark Side",
-              "nameMedium": "The Dark Side",
-              "yearStart": 2009,
-              "yearEnd": 2009,
-              "years": [
-                2009
-              ],
-              "icon": "/assets/afl/history/the_dark_side_banner_icon_circle.png",
-              "banner": "/assets/afl/history/the_dark_side_banner.png",
-              "rebrandGroup": null,
-              "punitive": false,
-              "inferredFromFeed": false
-            }
-          ],
-          "seasons": [
-            {
-              "year": 2009,
-              "name": "The Dark Side",
-              "nameMedium": "The Dark Side",
-              "icon": "/assets/afl/history/the_dark_side_banner_icon_circle.png",
-              "banner": "/assets/afl/history/the_dark_side_banner.png",
-              "isHistorical": true,
-              "sourceFranchiseId": null,
-              "wins": 5,
-              "losses": 13,
-              "ties": 0,
-              "pointsFor": 1675.44,
-              "regSeasonRank": 20,
-              "divisionId": "01",
-              "divisionName": "Central",
-              "wonDivision": false,
-              "playoffResult": "missed",
-              "franchiseId": "0011",
-              "attributedTo": null,
-              "seasonNotStarted": false
-            }
-          ]
-        }
-      ],
-      "totals": {
-        "seasons": 1,
-        "wins": 5,
-        "losses": 13,
-        "ties": 0,
-        "pointsFor": 1675.44,
-        "playoffAppearances": 0,
-        "championships": [],
-        "runnerUps": [],
-        "thirdPlaces": [],
-        "divisionTitles": [],
-        "mvpAwards": [],
-        "jerryJonesAwards": [],
-        "osweilerAwards": []
-      },
-      "slotSuccession": {
-        "0011": {
-          "previous": "the-rookies-2005",
-          "next": "midwestside-connection-2010"
         }
       },
       "crossLeague": [],
@@ -22168,7 +22117,6 @@
     "0011": [
       "highclimbers-2003",
       "the-rookies-2005",
-      "the-dark-side-2009",
       "midwestside-connection-2010"
     ],
     "0009": [
@@ -22335,6 +22283,7 @@
     "reckless|2005": "reckless-2005",
     "bandwagon|2005": "the-bandwagon-2005",
     "rookies|2005": "the-rookies-2005",
+    "dark side|2009": "the-rookies-2005",
     "street|2005": "the-street-2005",
     "street|2008": "the-street-2005",
     "way more funner|2005": "way-more-funner-2005",
@@ -22353,7 +22302,6 @@
     "more cowbell|2008": "more-cowbell-2008",
     "minnesota road kill|2009": "minnesota-road-kill-2009",
     "tackling dummies|2009": "tackling-dummies-2009",
-    "dark side|2009": "the-dark-side-2009",
     "zephyr|2009": "zephyr-2009",
     "booyakasha|2010": "booyakasha-2010",
     "touchdown my pants|2010": "touchdown-my-pants-2010",

@@ -1581,7 +1581,9 @@
     {
       "id": "own-0100",
       "slug": "the-rookies-2005",
-      "previousSlugs": [],
+      "previousSlugs": [
+        "the-dark-side-2009"
+      ],
       "displayName": "Dave Jordan",
       "claims": [
         {
@@ -1589,6 +1591,12 @@
           "franchiseId": "0011",
           "yearStart": 2005,
           "yearEnd": 2008
+        },
+        {
+          "league": "afl-fantasy",
+          "franchiseId": "0011",
+          "yearStart": 2009,
+          "yearEnd": 2009
         }
       ],
       "seededFrom": "human:brandon@2026-08-25",
@@ -1848,22 +1856,6 @@
         }
       ],
       "seededFrom": "human:brandon@2026-08-25",
-      "notes": null
-    },
-    {
-      "id": "own-0118",
-      "slug": "the-dark-side-2009",
-      "previousSlugs": [],
-      "displayName": null,
-      "claims": [
-        {
-          "league": "afl-fantasy",
-          "franchiseId": "0011",
-          "yearStart": 2009,
-          "yearEnd": 2009
-        }
-      ],
-      "seededFrom": "inferred:identity-split@2026-08-24",
       "notes": null
     },
     {
