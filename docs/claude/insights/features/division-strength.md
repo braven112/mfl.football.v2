@@ -196,6 +196,13 @@ membership, chosen from how the underlying churn actually distributes rather
 than picked as a round number. Say what the minimum excluded, by name, in the
 copy under the ranking.
 
+**Postscript (same day):** every count in this entry was measured against
+franchise-keyed eras. Re-keying them on OWNERS (see the last entry in this file)
+cut the board to 6 rows in TheLeague and 4 in the AFL, added the Atlantic to the
+absent list, and made the Central — not the Northwest — the division that
+appears more than once. The floor itself survived the change unaltered, which is
+the argument for stating it as a parameter.
+
 ## 2026-08-25 - Two `auto` margins do not make a column
 
 **Context:** Adding team crests to the all-time ranking rows, which already
@@ -238,7 +245,7 @@ argument for saying the span out loud, not for inflating it.
 **Evidence:** `seatKey()` in `compute-division-strength.mjs` is now the era key
 itself (franchise + sorted ownerIds, so a pure rename does not move it, matching
 `upcoming`'s `newOwner` rule). Eras got shorter and more numerous — TheLeague's
-Southwest 2→8 lineups, the AFL's West 6→18 — and two things absorb that:
+Southwest 3→8 lineups, the AFL's West 10→18 — and two things absorb that:
 
 - a **Founded** column carrying the division's own `firstYear` / `seasons`, so
   a 1-year Together on a 23-year-old division reads as information rather than
@@ -252,6 +259,16 @@ Southwest 2→8 lineups, the AFL's West 6→18 — and two things absorb that:
 era, that the era's own `members` are that set, and that adjacent eras differ
 on OWNERS — identical franchise ids across an era boundary is now legitimate,
 because that is exactly what a takeover looks like.
+
+It also moves the era board that landed on main the same afternoon (see the
+`ERA_MIN_SEASONS` entry above). Qualifying eras fall from 9 to 6 in TheLeague
+and 6 to 4 in the AFL; TheLeague's Atlantic joins the Midwest and Pacific in the
+absent list (its one 4-season franchise lineup was two owner groups), and the
+division that now appears more than once is the Central, three times, not the
+Northwest twice. Both the board's copy and the launch article's quoted examples
+had to be re-derived — a reminder that generated-looking prose naming specific
+rows is coupled to the segmentation key, and reads as confidently wrong the
+moment the key changes.
 
 **Recommendation:** When a derived span is segmented on identity, write down
 WHICH identity — a slot, a name, or a person — and check every label rendered

@@ -220,14 +220,16 @@ const alumniOf = (d: DivisionAllTime) => alumniBySlug.get(d.slug) ?? [];
  * Every run of consecutive seasons a division kept an identical lineup, long
  * enough to count, ranked across divisions. This is the one ordering on the
  * page where two rows describe the same KIND of thing — a fixed group of
- * franchises measured over its whole shared span — which is why it is allowed
+ * OWNERS measured over its whole shared span — which is why it is allowed
  * to sit directly under the all-time list rather than replacing it. The
  * all-time list answers "which name has the record"; this answers "which group
- * of teams was actually the toughest to sit in".
+ * of owners was actually the toughest to sit in".
  *
- * A division appears more than once when it has realigned into two long
- * lineups (TheLeague's Northwest is here twice), and not at all when it never
- * held one together for `ERA_MIN_SEASONS`.
+ * A division appears more than once when it has held two long-lived groups
+ * (TheLeague's Central is here three times), and not at all when it never held
+ * one together for `ERA_MIN_SEASONS`. Since eras break on a takeover as well as
+ * a realignment, the board is shorter than the number of divisions suggests —
+ * 6 rows in TheLeague and 4 in the AFL, not one or two per name.
  */
 const rankedEras = rankEras(data.divisions);
 // Named in the note so a reader who scans for their own division and misses it
@@ -692,7 +694,11 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                             {/* The years the group was together, not "since 2016" —
                                 every other number in the row is bounded by the last
                                 played season, so the span says where it stops too. */}
-                            <span class="pct">{era.seasons === division.seasons ? 'never changed' : `${era.yearStart}–${era.yearEnd}`}</span>
+                            <span class="pct">{era.seasons === division.seasons
+                              ? 'never changed'
+                              : era.yearStart === era.yearEnd
+                                ? `${era.yearStart}`
+                                : `${era.yearStart}–${era.yearEnd}`}</span>
                           </td>
                           <td class="num">
                             <span class="rec">{formatRecord(era.totals)}</span>
@@ -786,11 +792,11 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
               <section class="verdict-pair" aria-labelledby="eras-heading">
                 <h2 id="eras-heading" class="section-title">Every lineup, ranked</h2>
                 <p class="section-header__sub">
-                  A division's record belongs to the teams in it, so this ranks the teams. Each row
-                  is a run of consecutive seasons one division kept the exact same lineup —
-                  a realignment ends the run and starts a new one — and a lineup has to hold
-                  together {ERA_MIN_SEASONS} seasons to make the board. A division that has
-                  realigned into two long lineups appears twice.
+                  A division's record belongs to the owners in it, so this ranks the owners. Each
+                  row is a run of consecutive seasons one division kept the exact same group —
+                  a realignment ends the run, and so does a team changing hands — and a group has
+                  to hold together {ERA_MIN_SEASONS} seasons to make the board. A division that has
+                  held two long-lived groups appears more than once.
                 </p>
                 <ol class="verdict-list verdict-list--solo era-board">
                   {rankedEras.map((row, i) => (
@@ -825,7 +831,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                       {' '}The{' '}
                       {erasMissing.join(', ').replace(/, ([^,]*)$/, erasMissing.length > 2 ? ', and $1' : ' and $1')}
                       {' '}{erasMissing.length === 1 ? 'is absent' : 'are absent'} — no group of
-                      teams has stayed together that long under
+                      owners has stayed together that long under
                       {erasMissing.length === 1 ? ' that name' : ' those names'}.
                     </>
                   )}
