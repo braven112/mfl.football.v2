@@ -1584,10 +1584,15 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
     color: var(--ds-ink-muted);
   }
   /* Below the fold of a phone the crests and the record cannot share a line,
-     so the row becomes two: identity above, numbers below. */
+     so the row becomes three: identity, crests, numbers. `flex-basis: 100%`
+     rather than letting the crests wrap on their own — a wrap that depends on
+     name length puts them beside a short name and under a long one, so the
+     board alternates two- and three-line rows down the column. Claiming the
+     whole line also pushes the record onto its own line on every row, which
+     is what keeps the numbers in a straight right-hand edge. */
   @media (max-width: 559px) {
     .verdict-list li { flex-wrap: wrap; row-gap: 0.25rem; }
-    .verdict-list .member-icons { margin-left: 0; order: 3; }
+    .verdict-list .member-icons { margin-left: 0; order: 3; flex: 0 0 100%; }
     .verdict-list .member-icons + .verdict-value { margin-left: auto; order: 4; }
     .verdict-rank { order: 1; }
     .era-board__name,
