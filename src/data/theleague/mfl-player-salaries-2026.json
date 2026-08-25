@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-08-25T13:16:15.385Z"
+    "fetchedAt": "2026-08-25T15:00:57.953Z"
   },
   "players": [
     {
@@ -738,8 +738,8 @@
           "WR"
         ],
         "experience": 3,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Undisclosed",
+        "injuryStatus": null,
+        "injuryBodyPart": null,
         "gsisId": null
       },
       "nflverse": null,
@@ -2462,7 +2462,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 1,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "WR"
         ],
@@ -2473,7 +2473,12 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "17501",
+          "name": "Concepcion, KC"
+        }
+      ]
     },
     {
       "id": "0502",
@@ -2655,7 +2660,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": null,
-        "depthChartOrder": 8,
+        "depthChartOrder": 9,
         "fantasyPositions": [
           "WR"
         ],
@@ -3289,7 +3294,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 7,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
         ],
@@ -3348,7 +3353,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 3,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "WR"
         ],
@@ -3363,10 +3368,6 @@
         {
           "id": "15754",
           "name": "Olave, Chris"
-        },
-        {
-          "id": "16788",
-          "name": "Vele, Devaughn"
         }
       ]
     },
@@ -4164,7 +4165,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "WR"
         ],
@@ -4179,6 +4180,10 @@
         {
           "id": "15754",
           "name": "Olave, Chris"
+        },
+        {
+          "id": "17498",
+          "name": "Tyson, Jordyn"
         }
       ]
     },
@@ -5320,7 +5325,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 3,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "TE"
         ],
@@ -5867,7 +5872,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 5,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "TE"
         ],
@@ -6944,7 +6949,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 4,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "RB"
         ],
@@ -6963,6 +6968,10 @@
         {
           "id": "14823",
           "name": "Dowdle, Rico"
+        },
+        {
+          "id": "17048",
+          "name": "Johnson, Kaleb"
         }
       ]
     },
@@ -8840,12 +8849,12 @@
       "gamesPlayed": null,
       "depthChartAhead": [
         {
-          "id": "14833",
-          "name": "Jeudy, Jerry"
-        },
-        {
           "id": "17501",
           "name": "Concepcion, KC"
+        },
+        {
+          "id": "14833",
+          "name": "Jeudy, Jerry"
         },
         {
           "id": "17500",
@@ -10379,7 +10388,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": null,
-        "depthChartOrder": 8,
+        "depthChartOrder": 9,
         "fantasyPositions": [
           "WR"
         ],
@@ -12132,7 +12141,7 @@
         "active": true,
         "position": "QB",
         "depthChartPosition": "QB",
-        "depthChartOrder": 3,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "QB"
         ],
@@ -12147,6 +12156,10 @@
         {
           "id": "7836",
           "name": "Rodgers, Aaron"
+        },
+        {
+          "id": "17468",
+          "name": "Allar, Drew"
         }
       ]
     },
@@ -12713,7 +12726,7 @@
         "active": true,
         "position": "QB",
         "depthChartPosition": "QB",
-        "depthChartOrder": 4,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "QB"
         ],
@@ -12728,10 +12741,6 @@
         {
           "id": "7836",
           "name": "Rodgers, Aaron"
-        },
-        {
-          "id": "17036",
-          "name": "Howard, Will"
         }
       ]
     },
@@ -13765,7 +13774,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 6,
+        "depthChartOrder": 7,
         "fantasyPositions": [
           "WR"
         ],
@@ -14220,7 +14229,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 5,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
         ],
@@ -14275,7 +14284,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 5,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "RB"
         ],
@@ -14294,10 +14303,6 @@
         {
           "id": "14823",
           "name": "Dowdle, Rico"
-        },
-        {
-          "id": "17685",
-          "name": "Heidenreich, Eli"
         }
       ]
     },
@@ -14766,7 +14771,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "WR"
         ],
@@ -14777,12 +14782,7 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": [
-        {
-          "id": "14833",
-          "name": "Jeudy, Jerry"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "17519",
@@ -14834,12 +14834,12 @@
           "name": "Olave, Chris"
         },
         {
-          "id": "16788",
-          "name": "Vele, Devaughn"
-        },
-        {
           "id": "17498",
           "name": "Tyson, Jordyn"
+        },
+        {
+          "id": "16788",
+          "name": "Vele, Devaughn"
         }
       ]
     },
@@ -15531,7 +15531,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": null,
-        "depthChartOrder": 5,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
         ],
@@ -15926,7 +15926,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 4,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "WR"
         ],
@@ -15985,7 +15985,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 6,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "WR"
         ],
@@ -16862,7 +16862,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "WR"
         ],
@@ -17221,12 +17221,12 @@
       "gamesPlayed": null,
       "depthChartAhead": [
         {
-          "id": "14833",
-          "name": "Jeudy, Jerry"
-        },
-        {
           "id": "17501",
           "name": "Concepcion, KC"
+        },
+        {
+          "id": "14833",
+          "name": "Jeudy, Jerry"
         }
       ]
     },
@@ -18482,7 +18482,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 3,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "RB"
         ],
@@ -18537,7 +18537,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 3,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "TE"
         ],
