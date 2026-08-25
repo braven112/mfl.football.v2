@@ -292,10 +292,10 @@ describe('resolveCookies', () => {
  */
 describe('fetchOwnersForYear', () => {
   const league = { slug: 'theleague', id: '13522', mflHost: 'example.invalid' };
-  const asResponse = (body: unknown, init: { ok?: boolean; status?: number } = {}) =>
-    new Response(typeof body === 'string' ? body : JSON.stringify(body), {
-      status: init.status ?? 200,
-    });
+  // No `ok` option: Response.ok is derived from status, so accepting one would
+  // let a test claim a state the real object cannot be in.
+  const asResponse = (body: unknown, status = 200) =>
+    new Response(typeof body === 'string' ? body : JSON.stringify(body), { status });
 
   afterEach(() => {
     vi.restoreAllMocks();
@@ -303,7 +303,7 @@ describe('fetchOwnersForYear', () => {
 
   const withFetch = async (body: unknown, status = 200) => {
     const api = await import('../scripts/lib/mfl-api.mjs');
-    vi.spyOn(api, 'mflFetch').mockResolvedValue(asResponse(body, { status }) as any);
+    vi.spyOn(api, 'mflFetch').mockResolvedValue(asResponse(body, status) as any);
     const mod = await import('../scripts/fetch-owner-names.mjs');
     return mod.fetchOwnersForYear(league, 2009, { MFL_USER_ID: 'u', MFL_IS_COMMISH: 'c' });
   };
@@ -350,6 +350,25 @@ describe('fetchOwnersForYear', () => {
     await expect(withFetch('<error>API requires commissioner access</error>')).rejects.toThrow(
       /not JSON/
     );
+  });
+
+  it('echoes a markup body, because that names the reason', async () => {
+    await expect(withFetch('<error>API requires commissioner access</error>')).rejects.toThrow(
+      /API requires commissioner access/
+    );
+  });
+
+  /**
+   * Malformed JSON is the one case where the PII guard downstream never runs,
+   * so the error path must not become the leak the rest of the script prevents.
+   */
+  it('withholds a non-markup body, which could carry owner PII', async () => {
+    const leaky = '{"league":{"franchises":{"franchise":[{"owner_name":"Real Person",';
+    const err = await withFetch(leaky).catch((e: Error) => e);
+    expect(err.message).toMatch(/not JSON/);
+    expect(err.message).toMatch(/body withheld/);
+    expect(err.message).not.toContain('Real Person');
+    expect(err.message).not.toContain('owner_name');
   });
 
   it('throws on a non-ok response instead of reporting it as anonymous', async () => {
