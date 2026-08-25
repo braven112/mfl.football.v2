@@ -83,6 +83,14 @@ export function getReferenceSalary(
 export interface OneYearContractResult {
   newSalary: number;
   newYears: number;
+  /**
+   * Which contract year the player becomes a UFA in.
+   *
+   * Not computed here — `applyContractAction` in rosters.astro stamps it onto
+   * the returned object, because only the caller knows the player's current
+   * year index. Declared so that mutation is typed rather than an error.
+   */
+  ufaYearIndex?: number;
 }
 
 /** Franchise tag: the greater of a 20% raise and the top-3 positional average. */

@@ -28,6 +28,10 @@ import { getDeclarations } from '../../utils/contract-storage';
 import { getCutList, getCredentialCapturedAt } from '../../utils/autocut-storage';
 import CutdownPlanPanel from '../../components/theleague/CutdownPlanPanel.astro';
 import type { RosterPlayer, MFLPlayerInfo } from '../../types/contract-eligibility';
+// One row of the roster table, traced to scripts/lib/roster-season-payload.mjs.
+// Every row-shaped parameter below used to default to `[]`, which types it
+// never[] and fails every property read on a row separately.
+import type { RosterDisplayRow } from '../../types/roster-display-row';
 import {
   NFL_LOGO_ONERROR,
   NFL_LOGO_ONLOAD,
@@ -430,14 +434,14 @@ const getPositionRank = (pos) => {
   return rank === -1 ? positionOrder.length : rank;
 };
 
-const sortByPosition = (list) =>
+const sortByPosition = (list: RosterDisplayRow[]) =>
   list.slice().sort((a, b) => {
     const diff = getPositionRank(a.position) - getPositionRank(b.position);
     if (diff !== 0) return diff;
     return parseNumber(b.salary) - parseNumber(a.salary);
   });
 
-const annotatePositionDividers = (rows = []) => {
+const annotatePositionDividers = (rows: RosterDisplayRow[] = []) => {
   const normalized = rows.map((player, index) => {
     const prevPosition =
       index > 0 ? (rows[index - 1].position ?? '').toUpperCase() : null;
@@ -461,8 +465,8 @@ const annotatePositionDividers = (rows = []) => {
   });
 };
 
-const annotateTierDividers = (rows = []) => {
-  let lastTag = null;
+const annotateTierDividers = (rows: RosterDisplayRow[] = []) => {
+  let lastTag: string | null = null;
   return rows.map((player) => {
     const currentTag = player.displayTag ?? 'active';
     const divider =
@@ -475,7 +479,7 @@ const annotateTierDividers = (rows = []) => {
   });
 };
 
-const annotateActiveStriping = (rows = []) => {
+const annotateActiveStriping = (rows: RosterDisplayRow[] = []) => {
   let activeIndex = 0;
   return rows.map((player) => {
     if ((player.displayTag ?? 'active') === 'active') {
@@ -4941,6 +4945,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, COLLEGE_LOGO_ONERROR, COLLEGE_LOGO_ONLOAD } from '../../constants/roster-constants';
   import { initPlayerModalTrigger } from '../../utils/player-modal-trigger';
   import type { PlayerModalData } from '../../utils/player-modal-trigger';
+  import type { RosterDisplayRow } from '../../types/roster-display-row';
+  import type { ChartSlice } from '../../scripts/chart-utils';
   import { applyPlayerModalBand } from '../../utils/player-modal-band';
   import { NFL_TEAM_CITIES, normalizeTeamCode } from '../../utils/nfl';
   import { getWeatherIcon } from '../../utils/weather';
@@ -6071,7 +6077,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       return index === -1 ? positionOrder.length : index;
     };
 
-    const sortByPosition = (list = []) =>
+    const sortByPosition = (list: RosterDisplayRow[] = []) =>
       list.slice().sort((a, b) => {
         const diff = getPositionRank(a.position ?? '') - getPositionRank(b.position ?? '');
         if (diff !== 0) return diff;
@@ -6093,7 +6099,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       };
     };
 
-    const annotatePositionDividers = (rows = []) => {
+    const annotatePositionDividers = (rows: RosterDisplayRow[] = []) => {
       const normalized = rows.map((player, index) => {
         const prevPosition =
           index > 0 ? (rows[index - 1].position ?? '').toUpperCase() : null;
@@ -6110,8 +6116,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       });
     };
 
-    const annotateTierDividers = (rows = []) => {
-      let lastTag = null;
+    const annotateTierDividers = (rows: RosterDisplayRow[] = []) => {
+      let lastTag: string | null = null;
       return rows.map((player) => {
         const currentTag = player.displayTag ?? 'active';
         const tierDivider =
@@ -6121,7 +6127,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       });
     };
 
-    const annotateActiveStriping = (rows = []) => {
+    const annotateActiveStriping = (rows: RosterDisplayRow[] = []) => {
       let activeIndex = 0;
       return rows.map((player) => {
         if ((player.displayTag ?? 'active') === 'active') {
@@ -6505,7 +6511,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       return /^\d+$/.test(trimmed) ? trimmed.padStart(4, '0') : trimmed;
     };
 
-    const renderTableRows = (rows = []) => {
+    const renderTableRows = (rows: RosterDisplayRow[] = []) => {
       if (!rosterTableBody) return;
       if (!rows.length) {
         rosterTableBody.innerHTML = `<tr><td colspan="${6 + salaryYears.length}" class="roster-empty">This franchise has no players recorded for this season snapshot.</td></tr>`;
@@ -6991,7 +6997,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       }, 0);
     };
 
-    const updateYearTotals = (rows = [], deadMoney = []) => {
+    const updateYearTotals = (rows: RosterDisplayRow[] = [], deadMoney: number[] = []) => {
       const totals = calculateCapCharges(rows);
       const capThisYearBase = Number(getTeamData().seasonData?.metadata?.capLimit ?? capLimit) || 0;
       yearTotalCells.forEach((cell, index) => {
@@ -7007,7 +7013,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       return totals;
     };
 
-    const calculateCapCharges = (rows = []) =>
+    const calculateCapCharges = (rows: RosterDisplayRow[] = []) =>
       salaryYears.map((_, index) => {
         let total = rows.reduce((sum, player) => {
           // Skip cut/traded players
@@ -7055,7 +7061,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         return total;
       });
 
-    const calculateBucketCaps = (rows = []) =>
+    const calculateBucketCaps = (rows: RosterDisplayRow[] = []) =>
       rows.reduce(
         (acc, player) => {
           const tag = (player.displayTag ?? 'active').toUpperCase();
@@ -7077,7 +7083,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         { active: 0, practice: 0, injured: 0, counts: { active: 0, practice: 0, injured: 0 } }
       );
 
-    const calculatePositionCaps = (rows = []) =>
+    const calculatePositionCaps = (rows: RosterDisplayRow[] = []) =>
       rows.reduce((totals, player) => {
         if ((player.contractYears ?? 0) <= 0) return totals;
         const tagRaw = (player.displayTag ?? player.status ?? 'ACTIVE').toString().toUpperCase();
@@ -7093,7 +7099,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         return totals;
       }, {});
 
-    const calculateCapEfficiency = (rows = []) => {
+    const calculateCapEfficiency = (rows: RosterDisplayRow[] = []) => {
       const efficiency = {};
       rows.forEach((player) => {
         if ((player.contractYears ?? 0) <= 0 || (player.points ?? 0) <= 0) return;
@@ -7158,7 +7164,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       );
     };
 
-    const calculateContractYearsMeta = (rows = []) => {
+    const calculateContractYearsMeta = (rows: RosterDisplayRow[] = []) => {
       const contractYearsTotal = rows.reduce(
         (sum, player) => sum + Math.max(Number(player.contractYears ?? 0) || 0, 0),
         0
@@ -7170,7 +7176,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       return { contractYearsTotal, longestContract };
     };
 
-    const buildDonut = (el, slices = [], total = 0) => {
+    const buildDonut = (el, slices: ChartSlice[] = [], total = 0) => {
       if (!el) return;
       if (!total || total <= 0 || !slices.length) {
         el.style.background = 'conic-gradient(var(--color-gray-200, #e2e8f0) 0deg, var(--color-gray-200, #e2e8f0) 360deg)';
@@ -7193,7 +7199,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       el.style.background = `conic-gradient(${parts.join(',')})`;
     };
 
-    const renderLegend = (el, slices = [], formatter = null) => {
+    const renderLegend = (el, slices: ChartSlice[] = [], formatter = null) => {
       if (!el) return;
       if (!slices.length) {
         el.innerHTML = '';
@@ -7219,7 +7225,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       el.innerHTML = legendHTML;
     };
 
-    const buildBarChart = (el, slices = [], positionOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'], total = 0, formatter = null, minValue = undefined) => {
+    const buildBarChart = (el, slices: ChartSlice[] = [], positionOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'], total = 0, formatter = null, minValue = undefined) => {
       if (!el) return;
       if (!total || total <= 0 || !slices.length) {
         el.innerHTML = '';
@@ -7269,7 +7275,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       el.innerHTML = barsHTML;
     };
 
-    const buildAgeDistributionChart = (el, slices = [], total = 0) => {
+    const buildAgeDistributionChart = (el, slices: ChartSlice[] = [], total = 0) => {
       if (!el) return;
       if (!total || total <= 0 || !slices.length) {
         el.innerHTML = '';
@@ -7306,7 +7312,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       return age;
     };
 
-    const calculateAverageAge = (players = []) => {
+    const calculateAverageAge = (players: RosterDisplayRow[] = []) => {
       const ages = players
         .map((p) => calculateAge(p.birthdate))
         .filter((age) => age !== null);
@@ -7314,7 +7320,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       return Math.round((ages.reduce((sum, age) => sum + age, 0) / ages.length) * 10) / 10;
     };
 
-    const calculateAverageAgeByPosition = (players = []) => {
+    const calculateAverageAgeByPosition = (players: RosterDisplayRow[] = []) => {
       const byPosition = new Map();
       players.forEach((player) => {
         const pos = (player.position ?? 'UNK').toUpperCase();
