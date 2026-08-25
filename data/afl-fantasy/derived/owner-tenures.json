@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-08-25T18:51:22.404Z",
+  "generatedAt": "2026-08-25T20:04:39.236Z",
   "league": "afl-fantasy",
   "counts": {
-    "total": 89,
+    "total": 88,
     "current": 24,
-    "former": 65,
+    "former": 64,
     "seasons": 576,
     "shared": 0
   },
@@ -16981,7 +16981,7 @@
         },
         "0024": {
           "previous": "sharpest-blade-2007",
-          "next": "angry-irish-2012"
+          "next": "carolina-blues-2007"
         }
       },
       "crossLeague": [],
@@ -17793,16 +17793,18 @@
     {
       "ownerId": "own-0106",
       "slug": "carolina-blues-2007",
-      "previousSlugs": [],
-      "displayName": "coinflip",
-      "title": "coinflip",
+      "previousSlugs": [
+        "angry-irish-2012"
+      ],
+      "displayName": "Rich",
+      "title": "Rich",
       "dominantName": "Carolina Blues",
       "icon": "/assets/afl/history/carolina_blues_banner_icon_circle.png",
       "isCurrent": false,
       "source": "registry",
-      "notes": "Forum username, not a real name — placeholder until the person behind it is identified.",
+      "notes": "Known to the league as \"Coinflip\"; surname not recorded.",
       "yearStart": 2007,
-      "yearEnd": 2008,
+      "yearEnd": 2012,
       "currentFranchiseId": null,
       "identities": [
         {
@@ -17816,6 +17818,20 @@
           ],
           "icon": "/assets/afl/history/carolina_blues_banner_icon_circle.png",
           "banner": "/assets/afl/history/carolina_blues_banner.png",
+          "rebrandGroup": null,
+          "punitive": false,
+          "inferredFromFeed": false
+        },
+        {
+          "name": "Angry Irish",
+          "nameMedium": "Angry Irish",
+          "yearStart": 2012,
+          "yearEnd": 2012,
+          "years": [
+            2012
+          ],
+          "icon": "/assets/afl/history/angry_irish_icon_icon_circle.png",
+          "banner": "/assets/afl/history/angry_irish_banner.png",
           "rebrandGroup": null,
           "punitive": false,
           "inferredFromFeed": false
@@ -17888,14 +17904,59 @@
               "seasonNotStarted": false
             }
           ]
+        },
+        {
+          "franchiseId": "0024",
+          "franchiseName": "No Soup For You",
+          "yearStart": 2012,
+          "yearEnd": 2012,
+          "identities": [
+            {
+              "name": "Angry Irish",
+              "nameMedium": "Angry Irish",
+              "yearStart": 2012,
+              "yearEnd": 2012,
+              "years": [
+                2012
+              ],
+              "icon": "/assets/afl/history/angry_irish_icon_icon_circle.png",
+              "banner": "/assets/afl/history/angry_irish_banner.png",
+              "rebrandGroup": null,
+              "punitive": false,
+              "inferredFromFeed": false
+            }
+          ],
+          "seasons": [
+            {
+              "year": 2012,
+              "name": "Angry Irish",
+              "nameMedium": "Angry Irish",
+              "icon": "/assets/afl/history/angry_irish_icon_icon_circle.png",
+              "banner": "/assets/afl/history/angry_irish_banner.png",
+              "isHistorical": true,
+              "sourceFranchiseId": null,
+              "wins": 9,
+              "losses": 9,
+              "ties": 0,
+              "pointsFor": 2150.09,
+              "regSeasonRank": 10,
+              "divisionId": "04",
+              "divisionName": "West",
+              "wonDivision": false,
+              "playoffResult": "missed",
+              "franchiseId": "0024",
+              "attributedTo": null,
+              "seasonNotStarted": false
+            }
+          ]
         }
       ],
       "totals": {
-        "seasons": 2,
-        "wins": 15,
-        "losses": 21,
+        "seasons": 3,
+        "wins": 24,
+        "losses": 30,
         "ties": 0,
-        "pointsFor": 3554.76,
+        "pointsFor": 5704.85,
         "playoffAppearances": 0,
         "championships": [],
         "runnerUps": [],
@@ -17909,6 +17970,10 @@
         "0018": {
           "previous": "red-dawn-2004",
           "next": "zephyr-2009"
+        },
+        "0024": {
+          "previous": "the-street-2005",
+          "next": "vinegar-strokes-2013"
         }
       },
       "crossLeague": [],
@@ -19946,8 +20011,8 @@
       "ownerId": "own-0123",
       "slug": "cliffside-killer-clowns-2011",
       "previousSlugs": [],
-      "displayName": "Rob Rush",
-      "title": "Rob Rush",
+      "displayName": "Bob Rush",
+      "title": "Bob Rush",
       "dominantName": "Cliffside Killer Clowns",
       "icon": "/assets/afl/history/cliffside_killer_clowns_banner_icon_circle.png",
       "isCurrent": false,
@@ -20360,113 +20425,11 @@
       "coOwners": []
     },
     {
-      "ownerId": "own-0127",
-      "slug": "angry-irish-2012",
-      "previousSlugs": [],
-      "displayName": null,
-      "title": "Angry Irish",
-      "dominantName": "Angry Irish",
-      "icon": "/assets/afl/history/angry_irish_icon_icon_circle.png",
-      "isCurrent": false,
-      "source": "registry",
-      "notes": null,
-      "yearStart": 2012,
-      "yearEnd": 2012,
-      "currentFranchiseId": null,
-      "identities": [
-        {
-          "name": "Angry Irish",
-          "nameMedium": "Angry Irish",
-          "yearStart": 2012,
-          "yearEnd": 2012,
-          "years": [
-            2012
-          ],
-          "icon": "/assets/afl/history/angry_irish_icon_icon_circle.png",
-          "banner": "/assets/afl/history/angry_irish_banner.png",
-          "rebrandGroup": null,
-          "punitive": false,
-          "inferredFromFeed": false
-        }
-      ],
-      "tenures": [
-        {
-          "franchiseId": "0024",
-          "franchiseName": "No Soup For You",
-          "yearStart": 2012,
-          "yearEnd": 2012,
-          "identities": [
-            {
-              "name": "Angry Irish",
-              "nameMedium": "Angry Irish",
-              "yearStart": 2012,
-              "yearEnd": 2012,
-              "years": [
-                2012
-              ],
-              "icon": "/assets/afl/history/angry_irish_icon_icon_circle.png",
-              "banner": "/assets/afl/history/angry_irish_banner.png",
-              "rebrandGroup": null,
-              "punitive": false,
-              "inferredFromFeed": false
-            }
-          ],
-          "seasons": [
-            {
-              "year": 2012,
-              "name": "Angry Irish",
-              "nameMedium": "Angry Irish",
-              "icon": "/assets/afl/history/angry_irish_icon_icon_circle.png",
-              "banner": "/assets/afl/history/angry_irish_banner.png",
-              "isHistorical": true,
-              "sourceFranchiseId": null,
-              "wins": 9,
-              "losses": 9,
-              "ties": 0,
-              "pointsFor": 2150.09,
-              "regSeasonRank": 10,
-              "divisionId": "04",
-              "divisionName": "West",
-              "wonDivision": false,
-              "playoffResult": "missed",
-              "franchiseId": "0024",
-              "attributedTo": null,
-              "seasonNotStarted": false
-            }
-          ]
-        }
-      ],
-      "totals": {
-        "seasons": 1,
-        "wins": 9,
-        "losses": 9,
-        "ties": 0,
-        "pointsFor": 2150.09,
-        "playoffAppearances": 0,
-        "championships": [],
-        "runnerUps": [],
-        "thirdPlaces": [],
-        "divisionTitles": [],
-        "mvpAwards": [],
-        "jerryJonesAwards": [],
-        "osweilerAwards": []
-      },
-      "slotSuccession": {
-        "0024": {
-          "previous": "the-street-2005",
-          "next": "vinegar-strokes-2013"
-        }
-      },
-      "crossLeague": [],
-      "isShared": false,
-      "coOwners": []
-    },
-    {
       "ownerId": "own-0128",
       "slug": "sparta-fc-2012",
       "previousSlugs": [],
-      "displayName": null,
-      "title": "Sparta FC",
+      "displayName": "Rob Stanford",
+      "title": "Rob Stanford",
       "dominantName": "Sparta FC",
       "icon": "/assets/afl/history/sparta_fc_icon_icon_circle.png",
       "isCurrent": false,
@@ -20777,8 +20740,8 @@
       "ownerId": "own-0130",
       "slug": "vinegar-strokes-2013",
       "previousSlugs": [],
-      "displayName": null,
-      "title": "Vinegar Strokes",
+      "displayName": "Kevin Lam",
+      "title": "Kevin Lam",
       "dominantName": "Vinegar Strokes",
       "icon": "/assets/afl/history/vinegar_strokes_icon_icon_circle.png",
       "isCurrent": false,
@@ -20913,7 +20876,7 @@
       },
       "slotSuccession": {
         "0024": {
-          "previous": "angry-irish-2012",
+          "previous": "carolina-blues-2007",
           "next": "bronxbommr-2016"
         }
       },
@@ -20925,8 +20888,8 @@
       "ownerId": "own-0132",
       "slug": "incurable-chlamydia-2014",
       "previousSlugs": [],
-      "displayName": null,
-      "title": "Incurable Chlamydia",
+      "displayName": "Dan Hoffer",
+      "title": "Dan Hoffer",
       "dominantName": "Incurable Chlamydia",
       "icon": "/assets/afl/history/incurable_chlamydia_icon_icon_circle.png",
       "isCurrent": false,
@@ -22187,7 +22150,7 @@
       "alcohol-tobacco-and-firearms-2003",
       "sharpest-blade-2007",
       "the-street-2005",
-      "angry-irish-2012",
+      "carolina-blues-2007",
       "vinegar-strokes-2013",
       "bronxbommr-2016",
       "no-soup-for-you-2019"
@@ -22292,6 +22255,7 @@
     "blitzkrieg|2007": "blitzkrieg-2007",
     "blitzkrieg|2008": "blitzkrieg-2007",
     "carolina blues|2007": "carolina-blues-2007",
+    "angry irish|2012": "carolina-blues-2007",
     "fly fishermen|2007": "fly-fishermen-2007",
     "nosx|2007": "nosx-2007",
     "brady's bastards|2009": "nosx-2007",
@@ -22308,7 +22272,6 @@
     "cliffside killer clowns|2011": "cliffside-killer-clowns-2011",
     "gaelic rams|2011": "gaelic-rams-2011",
     "whitman's wonders|2011": "whitman-s-wonders-2011",
-    "angry irish|2012": "angry-irish-2012",
     "sparta fc|2012": "sparta-fc-2012",
     "dude that abides|2012": "the-dude-that-abides-2012",
     "vinegar strokes|2013": "vinegar-strokes-2013",

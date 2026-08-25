@@ -777,13 +777,13 @@ describe.each(leagues)('$league.slug division strength', ({ league, dataPath, le
     // AFL franchise 0004 has had nine different owners, so a franchise-wide
     // current name would stamp a stranger's team onto someone else's stint.
     const owners = readJson(path.join(path.dirname(dataPath), 'owner-tenures.json'));
-    const expected = new Map<string, string>();
+    const expected = new Map<string, { name: string; icon: string | null }>();
     for (const owner of owners.owners) {
       let best: any = null;
       for (const identity of owner.identities ?? []) {
         if (!best || identity.yearEnd > best.yearEnd) best = identity;
       }
-      if (best?.name) expected.set(owner.ownerId, best.name);
+      if (best?.name) expected.set(owner.ownerId, { name: best.name, icon: best.icon ?? null });
     }
 
     const refs: Array<{ where: string; ref: any }> = [];
@@ -813,7 +813,23 @@ describe.each(leagues)('$league.slug division strength', ({ league, dataPath, le
       expect(ref.latestName, `${where}: ${ref.ownerId} carries no latestName`).toBeTruthy();
       const want = expected.get(ref.ownerId);
       if (want) {
-        expect(ref.latestName, `${where}: ${ref.ownerId} labelled "${ref.latestName}", newest identity is "${want}"`).toBe(want);
+        expect(
+          ref.latestName,
+          `${where}: ${ref.ownerId} labelled "${ref.latestName}", newest identity is "${want.name}"`
+        ).toBe(want.name);
+        // The crest has to come from the SAME identity as the label. The
+        // generator briefly took the label from the latest identity and the icon
+        // from `owner.icon` (the DOMINANT one), which is identical for a
+        // single-name owner and wrong for everyone else: seven AFL owners
+        // rendered "Angry Irish" over a Carolina Blues crest and the like.
+        // A ref with no icon is a different, older shape (previousOwners carry
+        // none) and is not what this pins.
+        if (ref.icon) {
+          expect(
+            ref.icon,
+            `${where}: ${ref.ownerId} labelled "${ref.latestName}" but wearing another identity's crest`
+          ).toBe(want.icon);
+        }
       }
       // The concatenated title is the thing this rule exists to keep out.
       expect(ref.latestName, `${where}: ${ref.ownerId} label is a joined title`).not.toContain(' / ');
