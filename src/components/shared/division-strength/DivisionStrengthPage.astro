@@ -344,6 +344,22 @@ const memberTitle = (m: { name: string | null; newOwner?: boolean; newOwners?: O
 };
 
 /**
+ * What started this era, read against the one before it (`list` is newest-first,
+ * so the predecessor is the NEXT index).
+ *
+ * Same franchises, new era = the division changed hands; a different franchise
+ * set = a realignment. Null for the oldest era and across a gap year, where
+ * there is nothing to have changed FROM.
+ */
+const eraChangeLabel = (
+  era: { yearStart: number; franchiseIds: string[] },
+  previous?: { yearEnd: number; franchiseIds: string[] }
+) => {
+  if (!previous || previous.yearEnd !== era.yearStart - 1) return null;
+  return era.franchiseIds.join(',') === previous.franchiseIds.join(',') ? 'new owner' : 'realigned';
+};
+
+/**
  * How the current lineup's interdivisional rate compares with everything ever
  * done under that division's name — i.e. how much of the name's reputation
  * belongs to the teams still in it. Null when either side has no games, or
@@ -985,7 +1001,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                         <div class="detail-row">
                           <dt class="detail-label">Lineup</dt>
                           <dd class="detail-value">
-                            same {d.currentEra.members.length} owners since {d.currentEra.yearStart}
+                            same {d.currentEra.members.length} teams and the same owners since {d.currentEra.yearStart}
                             <span class="dim"> · {formatRecord(d.currentEra.totals)} together</span>
                           </dd>
                         </div>
@@ -1005,11 +1021,18 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                         <div class="owner-eras__reveal">
                           <div class="owner-eras__inner">
                             <ul class="era-list">
-                              {[...d.membershipEras].reverse().map((era) => (
+                              {/* Eras break on a takeover as well as a realignment, and a
+                                  takeover usually keeps the crest — so consecutive rows can
+                                  carry an IDENTICAL set of icons and read as duplicates.
+                                  Name what ended the previous one. */}
+                              {[...d.membershipEras].reverse().map((era, i, list) => (
                                 <li>
                                   <span class="era-years">
                                     {era.yearStart === era.yearEnd ? era.yearStart : `${era.yearStart}–${era.current ? 'present' : era.yearEnd}`}
                                   </span>
+                                  {eraChangeLabel(era, list[i + 1]) && (
+                                    <span class="era-change">{eraChangeLabel(era, list[i + 1])}</span>
+                                  )}
                                   <span class="member-icons">
                                     {era.members.map((m) => (
                                       m.icon
@@ -1845,6 +1868,16 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
   .era-list li:last-child { border-bottom: none; }
   .era-years { font-weight: 700; font-variant-numeric: tabular-nums; min-width: 6.5rem; }
   .era-rec { color: var(--ds-ink-muted); font-variant-numeric: tabular-nums; }
+  /* Why the era before this one ended — a takeover keeps the crests, so
+     without it two rows can look identical. */
+  .era-change {
+    font-size: 0.6875rem;
+    color: var(--ds-ink-muted);
+    border: 1px solid var(--ds-border);
+    border-radius: 999px;
+    padding: 0.0625rem 0.375rem;
+    white-space: nowrap;
+  }
   .era-current { margin-left: auto; }
   /* The shared .member-icons rule sizes to 24px; the era list runs denser. */
   .era-list .member-icons img,
