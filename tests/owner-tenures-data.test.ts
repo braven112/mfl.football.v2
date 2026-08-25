@@ -75,6 +75,37 @@ describe.each(leagues)('$league.slug owner tenures', ({ league, ownersPath, ledg
     expect(new Set(ledgerKeys).size).toBe(ledgerKeys.length);
   });
 
+  /**
+   * ★ The derived file carries the config's punitive rebrands.
+   *
+   * Identities are assembled from LEDGER ROWS, which have a name and an icon
+   * but no `rebrand` — so the first version of this hardcoded
+   * `rebrandGroup: null, punitive: false` and silently dropped all six of the
+   * AFL's last-place renames. Nothing caught it, because nothing read the
+   * field until a franchise page tried to render the 💀 tag from it.
+   */
+  it('REBRANDS: every punitive config entry survives into an identity', () => {
+    const cfg = readJson(path.join(ROOT, league.configPath));
+    const configTeams = Array.isArray(cfg.teams)
+      ? cfg.teams
+      : Object.values(cfg.teams ?? cfg);
+    const expected = new Set<string>();
+    for (const team of configTeams as any[]) {
+      for (const entry of team.history ?? []) {
+        if (entry?.rebrand?.reason === 'last-place' && entry.name) {
+          expected.add(`${entry.name}|${entry.rebrand.group}`);
+        }
+      }
+    }
+    const actual = new Set<string>();
+    for (const owner of owners.owners as any[]) {
+      for (const identity of owner.identities) {
+        if (identity.punitive) actual.add(`${identity.name}|${identity.rebrandGroup}`);
+      }
+    }
+    expect([...actual].sort()).toEqual([...expected].sort());
+  });
+
   it('puts no season under two owners unless they are declared co-owners', () => {
     const holders = new Map<string, any[]>();
     for (const owner of owners.owners) {

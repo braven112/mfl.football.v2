@@ -53,10 +53,30 @@ const isStillHere = (owner: Owner) =>
 
 const formatRecord = (w: number, l: number, t: number) => (t > 0 ? `${w}-${l}-${t}` : `${w}-${l}`);
 
+/**
+ * One row per HOLDING, not per owner.
+ *
+ * `bySlot` lists one slug per OWNER, and a shared team is held by two people
+ * who wear the same identities and the same record — so walking it directly
+ * renders a co-owned tenure twice, as two identical rows. `owner-tenures.mjs`
+ * collapses co-owners into a single holding for `slotSuccession` for exactly
+ * this reason; this does the same for display, and names both people on the
+ * one row. Not reachable today (the only shared holding is current, so
+ * `isStillHere` filters it), but it is one handover away from being the
+ * first thing anyone notices on that franchise's page.
+ */
+const seenSlugs = new Set<string>();
+
 /** Newest first — the reader is walking backwards from the team they know. */
 const entries = (data.bySlot[franchiseId] ?? [])
   .map((slug) => bySlug.get(slug))
   .filter((owner): owner is Owner => Boolean(owner) && !isStillHere(owner as Owner))
+  .filter((owner) => {
+    if (seenSlugs.has(owner.slug)) return false;
+    seenSlugs.add(owner.slug);
+    for (const co of owner.coOwners ?? []) seenSlugs.add(co.slug);
+    return true;
+  })
   .map((owner) => {
     const tenure = owner.tenures.find((t) => t.franchiseId === franchiseId);
     // Every slug in bySlot[franchiseId] has a tenure on it by construction, but
@@ -79,10 +99,27 @@ const entries = (data.bySlot[franchiseId] ?? [])
     const titles = inTenure(owner.totals.championships);
     const divisions = owner.totals.divisionTitles.filter((d) => years.has(d.year)).length;
 
+    // Co-owners of this same tenure, folded into this row by the filter above.
+    // Named here so a shared team reads as two people, not as one arbitrary
+    // winner of a dedupe — their own page carries the reciprocal link.
+    const coOwnerNames = (owner.coOwners ?? [])
+      .map((co) => co.displayName ?? co.title)
+      .filter(Boolean) as string[];
+
+    // The 💀 tag the AFL's franchise page has always shown for a last-place
+    // rename. It is per-IDENTITY, not per-tenure: an owner punished for one
+    // season keeps their ordinary name for the rest of the stint.
+    const punitiveNames = tenure.identities
+      .filter((identity) => identity.punitive)
+      .map((identity) => identity.name)
+      .filter(Boolean) as string[];
+
     return {
       slug: owner.slug,
       href: r(`/owners/${owner.slug}`),
       title: owner.displayName ?? owner.title,
+      coOwnerNames,
+      punitiveNames,
       icon: tenure.identities[0]?.icon ?? owner.icon,
       years:
         tenure.yearStart === tenure.yearEnd
@@ -120,7 +157,17 @@ const Heading = headingLevel;
               <span class="previous-owners__name">
                 {entry.title}
                 {entry.movedOn && <span class="previous-owners__tag">still in the league</span>}
+                {entry.punitiveNames.map((name) => (
+                  <span class="previous-owners__tag previous-owners__tag--rebrand" title={`Punitive last-place rename: ${name}`}>
+                    💀 Last-Place Rebrand
+                  </span>
+                ))}
               </span>
+              {entry.coOwnerNames.length > 0 && (
+                <span class="previous-owners__co">
+                  Co-owned with {entry.coOwnerNames.join(' and ')}
+                </span>
+              )}
               <span class="previous-owners__meta">
                 {entry.years}
                 {entry.record && <> · {entry.record}</>}
@@ -221,6 +268,19 @@ const Heading = headingLevel;
   .previous-owners__meta {
     font-size: 0.82rem;
     color: var(--content-text-muted, #666);
+  }
+
+  .previous-owners__co {
+    font-size: 0.78rem;
+    color: var(--content-text-muted, #666);
+  }
+
+  /* Deliberately louder than the neutral tag beside it — a last-place rename
+     is a punishment the league wants visible, not a footnote. */
+  .previous-owners__tag--rebrand {
+    background: var(--content-bg-muted, #f0f0f0);
+    text-transform: none;
+    letter-spacing: 0;
   }
 
   .previous-owners__trophies {

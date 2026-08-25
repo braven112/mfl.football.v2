@@ -503,6 +503,35 @@ export const buildOwnerTenures = ({
   const icon =
     resolveIcon ?? makeIconResolver({ league, teams });
 
+  /**
+   * Rebrand info for a config identity, looked up by NAME + year overlap.
+   *
+   * Identities below are assembled from LEDGER ROWS, which carry a name and
+   * icon but no `rebrand` — so without this the derived file reports every
+   * identity as non-punitive, and the 💀 last-place tag the franchise pages
+   * render simply disappears. That is what happened: all six of the AFL's
+   * punitive rebrands were dropped from owner-tenures.json.
+   *
+   * Indexed across ALL teams rather than the identity's own slot, because a
+   * punitive rebrand can follow an owner onto a different franchise id — which
+   * is exactly what `rebrandGroup` exists to express.
+   */
+  const rebrandsByName = new Map();
+  for (const team of teams ?? []) {
+    for (const entry of team.history ?? []) {
+      if (!entry?.rebrand || !entry.name) continue;
+      const key = normalizeIdentity(entry.name);
+      if (!rebrandsByName.has(key)) rebrandsByName.set(key, []);
+      rebrandsByName.get(key).push(entry);
+    }
+  }
+  const rebrandFor = (name, yearStart, yearEnd) => {
+    const candidates = rebrandsByName.get(normalizeIdentity(name ?? '')) ?? [];
+    return (
+      candidates.find((e) => e.yearStart <= yearEnd && e.yearEnd >= yearStart) ?? null
+    );
+  };
+
   const claimed = indexRegistryClaims(registry, league.slug);
   const registryPeople = new Map((registry?.people ?? []).map((p) => [p.id, p]));
 
@@ -567,6 +596,9 @@ export const buildOwnerTenures = ({
               years: [row.year],
               icon: row.icon ?? null,
               banner: row.banner ?? null,
+              // Filled in below, once the identity's full year span is known —
+              // a rebrand entry is matched by overlap, and the span grows as
+              // adjacent same-name rows fold into this identity.
               rebrandGroup: null,
               punitive: false,
               inferredFromFeed: false,
@@ -575,6 +607,9 @@ export const buildOwnerTenures = ({
         }
         for (const identity of identities) {
           identity.icon = icon({ icon: identity.icon, name: identity.name, franchiseId });
+          const entry = rebrandFor(identity.name, identity.yearStart, identity.yearEnd);
+          identity.rebrandGroup = rebrandGroupOf(entry);
+          identity.punitive = isPunitiveEntry(entry);
         }
         return {
           franchiseId,
