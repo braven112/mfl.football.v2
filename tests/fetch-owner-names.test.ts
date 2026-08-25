@@ -443,6 +443,20 @@ describe('leagueIdForYear', () => {
     expect(overrides).toBeGreaterThanOrEqual(20);
   });
 
+  /**
+   * The cache must key on every input the answer depends on. In the fallback
+   * path the answer IS `league.id`, so two leagues alike in slug/dataPath/root
+   * but differing in registry id must not share a cache entry. Two earlier
+   * versions of this key were too narrow to prevent exactly that.
+   */
+  it('does not serve one registry id from a cache entry made for another', async () => {
+    const { leagueIdForYear } = await import('../scripts/fetch-owner-names.mjs');
+    const a = { slug: 'ghost', id: 'AAA', dataPath: 'nope/does-not-exist' };
+    const b = { slug: 'ghost', id: 'BBB', dataPath: 'nope/does-not-exist' };
+    expect(leagueIdForYear(a, 2009, process.cwd())).toBe('AAA');
+    expect(leagueIdForYear(b, 2009, process.cwd())).toBe('BBB');
+  });
+
   it('falls back to the registry id when a year has no committed feed', async () => {
     const { leagueIdForYear } = await import('../scripts/fetch-owner-names.mjs');
     const league = leagues.find((l) => l.slug === 'theleague');

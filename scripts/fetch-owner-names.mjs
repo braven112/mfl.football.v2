@@ -245,12 +245,13 @@ function yearsFor(league, only) {
  */
 const leagueIdCache = new Map();
 export function leagueIdForYear(league, year, root = ROOT) {
-  // Key on everything the answer depends on. Keying on slug+year alone was
-  // wrong: the result is read from `root`/`dataPath`, so two callers passing
-  // different roots — or a league object without a dataPath — would be served
-  // each other's answer. A cache narrower than its inputs is a correctness bug,
-  // and this one was caught by a test in the same file poisoning a later one.
-  const key = `${league.slug}|${league.dataPath ?? ''}|${root}|${year}`;
+  // Key on EVERY input the answer depends on — including `league.id`, which is
+  // the value returned whenever the feed is absent or unreadable. Two earlier
+  // versions of this key were too narrow: slug+year alone let a league without
+  // a dataPath serve its answer to a real one, and adding dataPath/root still
+  // left the fallback keyed on something it does not fully determine. A cache
+  // narrower than its inputs is a correctness bug, not an optimisation detail.
+  const key = `${league.slug}|${league.id}|${league.dataPath ?? ''}|${root}|${year}`;
   if (leagueIdCache.has(key)) return leagueIdCache.get(key);
   let id = league.id;
   // A league with no dataPath has no committed feeds to consult — the registry
@@ -273,10 +274,12 @@ export function leagueIdForYear(league, year, root = ROOT) {
 /**
  * Owner names for one league-year.
  *
- * @returns `{ byFranchise: Map<franchiseId, name>, franchiseCount, fieldsSeen }`.
- *   `byFranchise` is EMPTY when the response parsed but carried no name field —
- *   `fieldsSeen` (field NAMES only) is what tells you whether that was an
- *   unauthenticated payload or a schema change.
+ * @returns `{ byFranchise, franchiseCount, fieldsSeen, leagueId }`.
+ *   `byFranchise` is a `Map<franchiseId, name>`, EMPTY when the response parsed
+ *   but carried no name field — `fieldsSeen` (field NAMES only) is what tells
+ *   you whether that was an unauthenticated payload or a schema change, and
+ *   `leagueId` is the per-year id actually queried, which the caller prints so
+ *   a wrong-league answer does not read as an auth failure.
  * @throws on a non-OK response, or a body that is not JSON. Both are read
  *   failures rather than authorisation ones, and the caller reports them as
  *   errors — the first version returned null for all three cases and spent 44
