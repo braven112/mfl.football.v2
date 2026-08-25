@@ -29,31 +29,55 @@ reasoning behind stopping where we stopped.
 | `packages/` + `party/` | 17 | |
 | *implicit-`any` (7006/7053/7005/7034)* | *845* | *44% of the total; 493 of them in rosters.astro* |
 
-**Lineage of the number.** `main` at `130824d` was 2318 on its own. PR #599
-removed 124; phases 1/3/5 (#603) removed 244; phase 4 + class floors (#606)
-removed 37. Main gained ~102 from PRs #600/#601 mid-flight — when the ratchet
-fires after a rebase, check whether the rise is yours before re-baselining.
+**Lineage of the number.** Each step is a measured total, and they reconcile:
+
+```
+2318   main at 130824d, before any of this
+-124   #599                       -> 2194
+-100   #603 phase 1               -> 2094
+-144   #603 phases 3+5            -> 1950
+- 37   #606 phase 4 + class floors -> 1913
+```
+
+Separately, and NOT a term in that sum: main gained ~102 errors from PRs
+#600/#601 while this work was in flight, and that rise is already inside the
+2318 above. It is recorded only because the ratchet fired on a rebase because
+of it — when that happens, measure whether the rise is yours before
+re-baselining.
 
 **Phases done, and what each was actually worth:**
 
-- **1 — untyped roots (−100).** A handful of values TS could not infer, each
-  breaking every read below it. Two lineup pages went 39 → 0 apiece off one
-  annotation each.
-- **3 — the `Element` cluster (−118).** `querySelector` returns `Element`;
-  typed at the query site, not per use. Surfaced two real defects.
-- **5 — structural (−22).** `.tsx` extension imports and `.astro` import-name
-  collisions.
-- **4 — stale option shapes, `ts(2353)` (−37).** The only phase that found a
-  correctness gap: the franchise-name redaction suite could not represent a
-  `nameMedium`, so that sweep had no test behind it.
+Class counts and total deltas are different numbers — clearing a class also
+stops downstream reads failing, so the total moves further than the class size.
+Phases 3 and 5 cleared 140 class errors and moved the total 144; the extra four
+are that cascade.
+
+- **1 — untyped roots.** Total −100. A handful of values TS could not infer,
+  each breaking every read below it. Two lineup pages went 39 → 0 apiece off
+  one annotation each.
+- **3 — the `Element` cluster.** 118 errors of that class. `querySelector`
+  returns `Element`; typed at the query site, not per use. Surfaced two real
+  defects.
+- **5 — structural.** 22 errors (`ts5097` 14, `ts2440` 8). `.tsx` extension
+  imports and `.astro` import-name collisions. Phases 3 and 5 shipped together:
+  total −144.
+- **4 — stale option shapes.** 40 errors of `ts(2353)`; total −37 for the PR,
+  which also added the class floors. The only phase that found a correctness
+  gap: the franchise-name redaction suite could not represent a `nameMedium`,
+  so that sweep had no test behind it.
 - **Class floors.** The ratchet asserted only on the total, so a regression in
   a cleared class could hide behind an improvement elsewhere and be reported as
   progress. Five classes are now pinned at zero independently.
 
 **Insight — the errors are not independent, and that is the whole method.**
-They cascade from a small number of untyped roots: a `new Map()` whose entries
-TS cannot infer, a `let x = {}`, a `JSON.parse` with nowhere to put a shape.
-Every downstream property read then fails separately and is counted separately.
+They cascade from a small number of untyped roots — a `new Map()` whose entries
+TS cannot infer, or a `let x = {}`. Every downstream property read on that value
+then fails separately and is counted separately.
+
+Note which half does the damage: `JSON.parse` returns `any`, and reads on `any`
+do not error at all. The root in `rosters.astro` was `let modalData = {}` — the
+DECLARATION pins the type to the empty object, and assigning a `JSON.parse`
+result to it afterwards does not widen it. Fix the declaration, not the parse.
 A five-line probe was applied and the checker re-run: **96 errors removed.** Do
 not estimate this ratio — measure it. Apply a candidate root fix, re-run, read
 the delta. Nobody would have guessed 5:96.
@@ -68,8 +92,10 @@ the delta. Nobody would have guessed 5:96.
   leaving it is now defensible: the gate stops it growing. If you do touch it,
   fix at query sites and never convert a hoisted `function` to an arrow.
 - **Implicit-`any` (845, 44%).** Lowest value per hour in the repo, zero safety
-  gain. Let the ratchet absorb it — each PR that touches a file annotates that
-  file's callbacks and the baseline steps down on its own.
+  gain. Let it come out incidentally: a PR that touches a file annotates that
+  file's callbacks, and `pnpm test:types` then FAILS on the improvement and
+  names the new number. The baseline never lowers itself — that failure is the
+  prompt to retighten it, in the same commit.
 
 **The reframe that makes both of those safe:** before the gate existed, the
 number mattered because it could grow unchecked; nothing consumed a type error,
