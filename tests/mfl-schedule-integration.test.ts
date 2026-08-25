@@ -19,10 +19,13 @@ describe('MFL Schedule Integration', () => {
   let mockTeams: FantasyTeam[];
 
   beforeEach(() => {
+    // No mock mode exists on this integration — `useMockData` was ignored.
+    // Every test below asks for week 15, which resolves from the committed
+    // data/theleague/mfl-feeds/2025/playoff-brackets.json, so the suite is
+    // offline by construction rather than by a flag.
     scheduleIntegration = createMFLScheduleIntegration({
       leagueId: '13522',
       year: '2025',
-      useMockData: true,
     });
     
     mockTeams = generateMockTeams();

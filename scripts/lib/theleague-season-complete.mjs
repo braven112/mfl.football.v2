@@ -36,8 +36,11 @@
  * DO NOT inline this again — tests/theleague-season-complete.test.ts locks it in.
  *
  * @param {number} year Season being computed.
- * @param {{champion?: string|null}|null|undefined} champResult Resolved
- *   championship result for that year, as built in computeYear().
+ * @param {{champion?: string|null, runnerUp?: string|null, thirdPlace?: string|null,
+ *   championPoints?: number, runnerUpPoints?: number}|null|undefined} champResult
+ *   Resolved championship result for that year, as built in computeYear() —
+ *   which returns all five fields, not `champion` alone. Only `champion` is
+ *   read here; the rest are listed so callers passing a real result type-check.
  * @param {number} currentYear Calendar year to compare against (injectable so
  *   the tests don't depend on the wall clock).
  * @returns {boolean} true when division titles may be credited.

@@ -240,6 +240,12 @@ export function buildBumpComment(proposal, { runUrl, now } = {}) {
  * Judge errors are deliberately NOT included. "ANTHROPIC_API_KEY is wedged" is
  * operations, and it goes to the logs and the workflow annotation where the
  * person who can fix it will see it.
+ *
+ * @param {any[]} newFindings
+ * @param {{ ownerReports?: any[], now?: Date | string }} [options] `now` is
+ *   read by ageInDays, which accepts a Date or a parseable string. Annotated
+ *   because the default on `ownerReports` otherwise makes TS infer the options
+ *   shape without `now` at all, flagging every caller that passes it.
  */
 export function buildGroupPostText(newFindings, { ownerReports = [], now } = {}) {
   const count = newFindings.length;

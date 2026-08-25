@@ -170,6 +170,13 @@ export function pickFormerName(team, nameOwners, { lastSeason, franchiseId } = {
  * channel the former name reaches the prompt through (tip text gets the name
  * normalized away by the redactor), so no payload means the LLM cannot reach
  * for it even if the tipster typed it.
+ *
+ * @param {any} team
+ * @param {{ currentName?: string, nameOwners?: Map<string, unknown>, franchiseId?: string,
+ *   now?: Date, rng?: () => number }} [options] Annotated because the defaults on
+ *   `now`/`rng` otherwise make TS infer the options shape from those two alone and
+ *   drop `currentName`, `nameOwners` and `franchiseId` — flagging every caller that
+ *   passes them, including the one this function gates on at its first line.
  */
 export function buildFormerNameCallback(team, {
   currentName,

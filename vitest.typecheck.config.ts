@@ -16,7 +16,9 @@ export default defineConfig({
     include: ['tests/**/*.typecheck.ts'],
     // One full `astro check` per test.
     testTimeout: 300_000,
-    hookTimeout: 60_000,
+    // The single astro check runs in beforeAll; give it more room than the
+    // check's own 420s ceiling so its error surfaces instead of the hook's.
+    hookTimeout: 540_000,
   },
   resolve: {
     alias: {

@@ -27,6 +27,11 @@ const SCANNER_SRC = readFileSync(
 
 type TeamEntry = {
   name: string;
+  /** Real configs carry this and the scanner redacts it alongside the others
+   *  (see the ['name','nameMedium','nameShort','abbrev'] sweeps in
+   *  schefter-rumor-scan.mjs). It was missing here, so no fixture team could
+   *  carry one and the nameMedium path went untested. */
+  nameMedium?: string;
   nameShort?: string;
   abbrev?: string;
   division?: string;
@@ -39,6 +44,7 @@ type TeamEntry = {
 const teams = new Map<string, TeamEntry>([
   ['0001', {
     name: 'Pacific Pigskins',
+    nameMedium: 'Pac Pigskins',
     nameShort: 'Pigskins',
     abbrev: 'SKINS',
     division: 'Northwest',
@@ -84,6 +90,24 @@ async function anonymizeFuzzed(text: string) {
   );
   return out[0];
 }
+
+describe('franchise-name redaction — nameMedium', () => {
+  // The scanner sweeps ['name', 'nameMedium', 'nameShort', 'abbrev'], and its
+  // own comment cites a nameMedium ("Dead Cap" is 0004's) as the shape a
+  // tipster actually typed. Until TeamEntry gained the field, no fixture team
+  // had one, so this sweep had no test behind it.
+  it("redacts a franchise named by its nameMedium alone", async () => {
+    const safe = await anonymizeFuzzed('Hearing Pac Pigskins are shopping a back');
+    expect(safe.text).not.toMatch(/Pac Pigskins/i);
+  });
+
+  it("redacts nameMedium when another franchise's tip names it", async () => {
+    const safe = await anonymizeMultiSource(
+      'Hearing Pac Pigskins and the Geeks are talking',
+    );
+    expect(safe.text).not.toMatch(/Pac Pigskins/i);
+  });
+});
 
 describe('franchise-name redaction — retired names', () => {
   it('redacts another franchise\'s retired name (the Cock Gobbler leak)', async () => {
