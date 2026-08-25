@@ -155,9 +155,15 @@ const rowId = (slug: string) => `${idPrefix}-row-${slug}`;
     /* Containing block for the visually-hidden <caption> — see .dsm-cell. */
     position: relative;
   }
+  /* NOTE: no `padding: 0` reset here.
+   *
+   * `.dsm th` outranks a bare `.dsm-row-header` on specificity, so a blanket
+   * reset silently defeated EVERY per-cell padding rule below — the matrix
+   * shipped with its labels flush against the cell borders and no rule
+   * appeared to be wrong when read in isolation. Each cell class owns its own
+   * padding instead; every cell in this table carries one. */
   .dsm th,
   .dsm td {
-    padding: 0;
     border-bottom: 1px solid var(--content-border, #f0f0f0);
     border-right: 1px solid var(--content-border, #f0f0f0);
     text-align: center;
@@ -171,6 +177,7 @@ const rowId = (slug: string) => `${idPrefix}-row-${slug}`;
 
   .dsm-corner {
     background: var(--content-bg-muted, #f7f7f7);
+    padding: 0.5rem 0.75rem;
     width: 10rem;
     min-width: 10rem;
     position: sticky;
@@ -248,7 +255,7 @@ const rowId = (slug: string) => `${idPrefix}-row-${slug}`;
   .dsm-cell {
     --ds-heat: 0;
     height: 3.25rem;
-    padding: 0.25rem;
+    padding: 0.375rem 0.5rem;
     line-height: 1.25;
     position: relative;
   }

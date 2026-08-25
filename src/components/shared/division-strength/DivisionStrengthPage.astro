@@ -188,9 +188,9 @@ const SORT_LABELS: Record<AllTimeSortKey, string> = {
 // is a stronger claim than the underlying table supports and precisely the
 // claim this page exists not to make. A complete ordering, with the season
 // count visible on every short run, reads as data instead.
-const byInter = data.divisions
-  .filter((d) => d.interDivision.games > 0)
-  .sort((a, b) => (b.interDivision.winPct ?? 0) - (a.interDivision.winPct ?? 0));
+const byOverall = data.divisions
+  .filter((d) => d.totals.games > 0)
+  .sort((a, b) => (b.totals.winPct ?? 0) - (a.totals.winPct ?? 0));
 
 // A division that ran a season or two is not a small sample of a long run —
 // it is a short division. Saying so inline, next to the name, is what stops
@@ -202,29 +202,7 @@ const isShortRun = (d: DivisionAllTime) => d.seasons < SHORT_RUN_SEASONS;
 // outright, rather than reporting the leader as a finding. Both leagues hit
 // this today — the AFL's Atlantic (1 season) and TheLeague's Midwest (4) lead
 // both columns — so this is the normal path, not an edge case.
-/**
- * The division whose OVERALL rate most flatters it relative to what it did
- * against the rest of the league — i.e. the clearest example of why the two
- * rates are not interchangeable, named from the data rather than hardcoded.
- *
- * The gap is driven by how much of a division's schedule is in-division: that
- * slice sits at .500, so a division playing half its games against itself has
- * half its record dragged toward the middle. The AFL East is the live case at
- * 52% in-division — .459 against everyone else, .483 overall.
- */
-const flatteredByOverall = (() => {
-  let best = null;
-  for (const d of byInter) {
-    const inter = d.interDivision.winPct;
-    const overall = d.totals.winPct;
-    if (inter === null || overall === null) continue;
-    const gap = overall - inter;
-    if (gap > 0.015 && (!best || gap > best.gap)) best = { d, gap };
-  }
-  return best;
-})();
-
-const shortRunLeader = byInter[0] && isShortRun(byInter[0]) ? byInter[0] : null;
+const shortRunLeader = byOverall[0] && isShortRun(byOverall[0]) ? byOverall[0] : null;
 // Both leagues' copy quotes these, so they are read off the data rather than
 // written in — TheLeague's shortest run is 4 seasons and the AFL's is 1, and a
 // hardcoded number is wrong on one league the day it ships.
@@ -434,10 +412,9 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
         )
       ) : (
         <p class="lede">
-          Ranked on the games that can actually separate a division — the ones against everybody
-          else. We don't crown an all-time winner, though: a division that ran
-          {' '}{shortestRun.seasons} season{shortestRun.seasons === 1 ? '' : 's'} and one that ran
-          {' '}{longestRun.seasons} aren't the same claim. Pick a season and we'll name one.
+          Every division's all-time record, strongest to weakest. We don't crown a winner: a
+          division that ran {shortestRun.seasons} season{shortestRun.seasons === 1 ? '' : 's'} and
+          one that ran {longestRun.seasons} aren't the same claim. Pick a season and we'll name one.
         </p>
       )}
     </header>
@@ -624,39 +601,27 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
             <section class="verdict-pair" aria-labelledby="verdict-heading">
               <h2 id="verdict-heading" class="section-title">Strongest to weakest</h2>
               <ol class="verdict-list verdict-list--solo">
-                {byInter.map((d, i) => (
+                {byOverall.map((d, i) => (
                   <li>
                     <span class="verdict-rank">{i + 1}</span>
                     <a href={`#div-${d.slug}`} class="verdict-name">{d.name}</a>
                     {isShortRun(d) && <span class="pill pill--sample">{d.seasons} season{d.seasons === 1 ? '' : 's'}</span>}
                     <span class="verdict-value">
-                      {formatWinPct(d.interDivision)}
-                      <span class="dim"> vs others · {formatWinPct(d.totals)} overall</span>
+                      {formatRecord(d.totals)} <span class="dim">{formatWinPct(d.totals)}</span>
                     </span>
                   </li>
                 ))}
               </ol>
               <p class="verdict-note">
-                <strong>Ranked on games against the rest of the league</strong>, because a division's
-                overall record can't separate it from anyone. Every in-division game hands one of its
-                own teams a win and another a loss, so that slice sits at exactly .500 by arithmetic
-                and only dilutes the rest — which is why both rates are shown but only one of them
-                sorts. The two rank identically today; where they diverge, the overall figure is
-                the flattering one.
-                {flatteredByOverall && (
-                  <>
-                    {' '}The {flatteredByOverall.d.name} is the clearest case: {formatWinPct(flatteredByOverall.d.interDivision)}
-                    {' '}against the rest of the league, {formatWinPct(flatteredByOverall.d.totals)} overall.
-                  </>
-                )}
+                All-time record, every game included.
                 {shortRunLeader && (
                   <>
-                    {' '}One caveat on the top of the list: {shortRunLeader.name} ran only
-                    {' '}{shortRunLeader.seasons} season{shortRunLeader.seasons === 1 ? '' : 's'}. A
-                    short run can top a rate, and the divisions with {longestRun.seasons} seasons
-                    behind them carry far more evidence — wherever they land.
+                    {' '}{shortRunLeader.name} tops it on {shortRunLeader.seasons}
+                    {' '}season{shortRunLeader.seasons === 1 ? '' : 's'} — a short run goes further on a
+                    percentage, so the season count sits next to it.
                   </>
                 )}
+                {' '}The table below splits each division's record into games inside and outside it.
               </p>
             </section>
 
@@ -1101,10 +1066,12 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                       {d.teams.map((t) => (
                         <tr>
                           <th scope="row" class="team-cell">
-                            {t.icon && <img src={t.icon} alt="" loading="lazy" width="22" height="22" />}
-                            <span class="team-name">{t.nameMedium ?? t.name}</span>
-                            {t.wonDivision && <span class="tag" role="img" aria-label="Division winner" title="Division winner">🛡</span>}
-                            {t.playoffResult === 'champion' && <span class="tag" role="img" aria-label="League champion" title="League champion">🏆</span>}
+                            <span class="team-lockup">
+                              {t.icon && <img src={t.icon} alt="" loading="lazy" width="22" height="22" />}
+                              <span class="team-name">{t.nameMedium ?? t.name}</span>
+                              {t.wonDivision && <span class="tag" role="img" aria-label="Division winner" title="Division winner">🛡</span>}
+                              {t.playoffResult === 'champion' && <span class="tag" role="img" aria-label="League champion" title="League champion">🏆</span>}
+                            </span>
                           </th>
                           {!seasonNotPlayed && <td class="num">{formatRecord(t)}</td>}
                           {!seasonNotPlayed && <td class="num">{t.pointsFor.toFixed(1)}</td>}
@@ -1113,7 +1080,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                             {t.owners.map((o, i) => (
                               <>
                                 {i > 0 && <span class="dim"> &amp; </span>}
-                                <a href={ownerHref(o.slug)} class="owner-link owner-link--inline">{o.title ?? o.slug}</a>
+                                <a href={ownerHref(o.slug)} class="owner-link owner-link--inline" title={o.title ?? o.slug}>{o.title ?? o.slug}</a>
                               </>
                             ))}
                           </td>
@@ -1856,6 +1823,19 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
     line-height: 1.5;
   }
   .owner-cell { min-width: 10rem; }
+  /* A rebrand-joined owner title ("Vit's Brother / Avenging Amish / Broke
+   * Back Mountaineers") wraps to three lines and drags the whole ROW to 80px,
+   * leaving every other cell in a sea of whitespace. Keep it to one line; the
+   * full name is on the link's title and on the owner page it points at. */
+  .season-team-table .owner-cell { max-width: 14rem; }
+  .season-team-table .owner-link--inline {
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
+  }
   .owner-link {
     display: inline-flex;
     align-items: center;
@@ -1873,10 +1853,33 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
   .stint { white-space: nowrap; }
 
   /* ── Season team tables ────────────────────────────────────────────────── */
-  .team-cell { display: flex; align-items: center; gap: 0.4375rem; min-width: 11rem; }
-  .team-cell img { width: 22px; height: 22px; object-fit: contain; flex: 0 0 auto; }
+  /* The lockup is an inner span, NOT the cell.
+   *
+   * `display: flex` on a <th>/<td> stops it being a table cell: it leaves the
+   * column grid and draws its border-bottom across its own box instead of the
+   * row, which shipped here as a row underline that stopped short under any
+   * team whose name wrapped. Lay the children out inside the cell instead. */
+  .team-cell { min-width: 11rem; padding-left: 0.875rem; }
+  .team-lockup { display: flex; align-items: center; gap: 0.5rem; }
+  .team-lockup img {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+    flex: 0 0 auto;
+    /* Breathing room so the crest never sits flush against the cell edge. */
+    margin-right: 0.125rem;
+  }
   .team-name { font-weight: 600; }
   .tag { font-size: 0.8125rem; }
+
+  /* A record must never break across lines: "12-5" wrapping to "12-" / "5"
+   * doubles the row height and reads as two numbers. */
+  .strength-table td.num,
+  .strength-table th.num,
+  .owner-era-table td.num,
+  .owner-era-table th.num,
+  .season-team-table td.num,
+  .season-team-table th.num { white-space: nowrap; }
 
   /* ── Notices ───────────────────────────────────────────────────────────── */
   .notice {
