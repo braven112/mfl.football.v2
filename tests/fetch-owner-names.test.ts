@@ -303,7 +303,11 @@ describe('fetchOwnersForYear', () => {
 
   const withFetch = async (body: unknown, status = 200) => {
     const api = await import('../scripts/lib/mfl-api.mjs');
-    vi.spyOn(api, 'mflFetch').mockResolvedValue(asResponse(body, status) as any);
+    // `api` is a namespace from an untyped .mjs, so TS resolves the property to
+    // `never` and the spy loses its methods. Cast the target, not the result.
+    vi.spyOn(api as unknown as Record<string, () => unknown>, 'mflFetch').mockResolvedValue(
+      asResponse(body, status)
+    );
     const mod = await import('../scripts/fetch-owner-names.mjs');
     return mod.fetchOwnersForYear(league, 2009, { MFL_USER_ID: 'u', MFL_IS_COMMISH: 'c' });
   };
@@ -364,11 +368,18 @@ describe('fetchOwnersForYear', () => {
    */
   it('withholds a non-markup body, which could carry owner PII', async () => {
     const leaky = '{"league":{"franchises":{"franchise":[{"owner_name":"Real Person",';
-    const err = await withFetch(leaky).catch((e: Error) => e);
-    expect(err.message).toMatch(/not JSON/);
-    expect(err.message).toMatch(/body withheld/);
-    expect(err.message).not.toContain('Real Person');
-    expect(err.message).not.toContain('owner_name');
+    // Capture the message rather than the error: `.catch(e => e)` widens the
+    // result to `Error | <resolved shape>`, on which `.message` does not exist.
+    let message = '';
+    try {
+      await withFetch(leaky);
+    } catch (e) {
+      message = (e as Error).message;
+    }
+    expect(message).toMatch(/not JSON/);
+    expect(message).toMatch(/body withheld/);
+    expect(message).not.toContain('Real Person');
+    expect(message).not.toContain('owner_name');
   });
 
   it('throws on a non-ok response instead of reporting it as anonymous', async () => {
