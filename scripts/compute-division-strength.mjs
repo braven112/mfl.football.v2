@@ -138,6 +138,30 @@ const finishRecord = (rec) => ({
 });
 
 /**
+ * A division seat, identified by WHO IS SITTING IN IT — franchise AND owners.
+ *
+ * This is the key membership eras break on, and the choice is deliberate: a
+ * division is the people in it, not the slots. Keying on franchise ids alone
+ * credited TheLeague's Southwest with 9 years "together" since 2017 while
+ * three of its four seats changed hands inside that run (0004 in 2018, 2019
+ * and 2020; 0006 and 0011 in 2019) — a group of people six years old, and a
+ * number the page printed next to crests and owner names.
+ *
+ * Consequence to accept: an era can be short. The AFL's North took a new owner
+ * in 2025, so its current era is one season, and the table says so rather than
+ * claiming seven. A division's FOUNDING year and total seasons are reported
+ * separately (`firstYear` / `seasons`) so the span still has context.
+ *
+ * A pure rename keeps the ownerId and does not move this key, exactly as
+ * `upcoming` treats a rename (see the `newOwner` block). Co-owners sort so
+ * their order can't fake a change.
+ */
+const seatKey = (team) =>
+  `${team.franchiseId}:${(team.owners ?? []).map((o) => o.ownerId).sort().join('+')}`;
+
+const ownerSetKey = (teams) => teams.map(seatKey).sort().join(',');
+
+/**
  * franchise-season -> the owners holding it.
  *
  * A season normally has exactly one holder. It has TWO when the slot is a
@@ -558,7 +582,9 @@ function buildLeague(slug) {
       // and that only becomes visible by comparing consecutive seasons.
       at.seasonRows.push({
         year,
-        memberKey: d.teams.map((t) => t.franchiseId).sort().join(','),
+        // Franchise AND owners — the same slots can hold different people, and
+        // an era is a group of people. See seatKey.
+        memberKey: ownerSetKey(d.teams),
         franchiseIds: d.teams.map((t) => t.franchiseId).sort(),
         totals: d.totals,
         interDivision: d.interDivision,
@@ -686,7 +712,7 @@ function buildLeague(slug) {
 
       /**
        * Membership eras — runs of consecutive seasons with the SAME set of
-       * franchises in the division.
+       * OWNERS in the division (franchise + who holds it; see seatKey).
        *
        * A division name is only half its identity; the other half is who is in
        * it. "The Northwest" that has fielded the same four since 2016 and a
@@ -694,7 +720,12 @@ function buildLeague(slug) {
        * under one name. Segmenting on the member set is what makes
        * "as currently constituted" a question the data can answer, and it is
        * the only slice where two divisions are being compared as the same
-       * group of teams over their whole span.
+       * group of owners over their whole span.
+       *
+       * A takeover breaks the run as surely as a realignment does — the games
+       * belong to the slot, but "together" is a claim about people. The span
+       * a division has EXISTED for is `firstYear` / `seasons`, reported beside
+       * it rather than folded into it.
        *
        * A run breaks on a membership CHANGE or on a gap year — the AFL's
        * Pacific ran 2003-2005 and again 2007-2012, and treating that as one

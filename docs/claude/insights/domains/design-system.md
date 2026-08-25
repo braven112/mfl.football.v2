@@ -2437,3 +2437,27 @@ half-defined. `tests/afl-brand-green-guard.test.ts` now scans the shared files
 for all three names — but its shared-file check only asserts that *an* AFL
 override exists, so a wrong selector or an override on the wrong property still
 passes. It narrows the gap; it does not close it.
+
+## 2026-08-25 — A What's New capture of a league-neutral link shoots a 404
+
+**Context:** Re-capturing the `division-strength` screenshot pair after the page
+changed.
+
+**Insight:** A both-league What's New entry must carry a league-NEUTRAL `link`
+(`/division-strength`), and `tests/whats-new-data.test.ts` enforces that. But a
+bare path only routes on a league's own apex host — on the dev server and on a
+preview deployment it 404s, so `capture-whats-new-screenshots.mjs` navigates,
+finds a perfectly renderable Schefter 404 page, and writes it over the entry's
+art. No error, no non-zero exit: the log line still reads `saved ->
+division-strength.webp`.
+
+`CAPTURE_PATHS` in that script exists precisely to name a concrete page for
+these entries, and four both-league entries were already in it — but nothing
+puts a NEW one there. A bare `node scripts/capture-whats-new-screenshots.mjs`
+re-captures anything it considers stale, so an omission is not limited to the
+run you are watching: it can overwrite good art on some later unrelated run.
+
+**Recommendation:** Adding a both-league What's New entry is a TWO-file change
+— the entry, and a `CAPTURE_PATHS` line naming the league page to shoot. And
+after any capture, LOOK at the .webp before committing it; the failure mode here
+renders as a valid image and is invisible in a diff stat.

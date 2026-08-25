@@ -196,6 +196,13 @@ membership, chosen from how the underlying churn actually distributes rather
 than picked as a round number. Say what the minimum excluded, by name, in the
 copy under the ranking.
 
+**Postscript (same day):** every count in this entry was measured against
+franchise-keyed eras. Re-keying them on OWNERS (see the last entry in this file)
+cut the board to 6 rows in TheLeague and 4 in the AFL, added the Atlantic to the
+absent list, and made the Central — not the Northwest — the division that
+appears more than once. The floor itself survived the change unaltered, which is
+the argument for stating it as a parameter.
+
 ## 2026-08-25 - Two `auto` margins do not make a column
 
 **Context:** Adding team crests to the all-time ranking rows, which already
@@ -211,3 +218,62 @@ needs a fixed gap, which means out-specifying the existing rule
 **Recommendation:** In a flex row, `margin-left: auto` is a break between two
 groups, not a right-align. A second one starts a third group and un-pins the
 first.
+## 2026-08-25 - An era is a group of PEOPLE, not a group of slots
+
+**Context:** An owner read the *As currently constituted* table and said the
+Together numbers did not look right.
+
+**Insight:** They weren't. Membership eras broke on a change in the franchise
+SET, and the page printed that span under the word "together", beside crests
+and owner names — so the reader hears *these people*. TheLeague's Southwest was
+credited with 9 shared years since 2017 while three of its four seats changed
+hands inside that run (0004 in 2018, 2019 and again in 2020; 0006 and 0011 in
+2019); the current group is six years old. Central was 9 for a group of eight.
+The same page's own "New for 2026" panel already treated a takeover as breaking
+the group ("has not played a game with this exact group yet"), so the two
+halves of one table contradicted each other.
+
+First fix shipped the franchise span with an owner annotation next to it
+("same owners since 2020"), on the argument that the RECORD belongs to the
+slots and that owner-keyed eras leave the AFL's North with a one-season sample.
+The PO overruled it in one line — *"franchise slots isn't important, it's
+owners together that we want to track"* — and that is the right call: the whole
+point of the slice is to compare divisions as the same group over their shared
+span, and a group is people. The sample objection was real but it was an
+argument for saying the span out loud, not for inflating it.
+
+**Evidence:** `seatKey()` in `compute-division-strength.mjs` is now the era key
+itself (franchise + sorted ownerIds, so a pure rename does not move it, matching
+`upcoming`'s `newOwner` rule). Eras got shorter and more numerous — TheLeague's
+Southwest 3→8 lineups, the AFL's West 10→18 — and two things absorb that:
+
+- a **Founded** column carrying the division's own `firstYear` / `seasons`, so
+  a 1-year Together on a 23-year-old division reads as information rather than
+  as an error;
+- `eraVsAllTime` returns null below `SHORT_RUN_SEASONS`, because "▲.084 vs
+  all-time" off one season is a comparative claim the sample cannot carry. The
+  record still shows, with "1 yr" beside it.
+
+`tests/division-strength-data.test.ts` recomputes the owner set per season from
+`years[].divisions[].teams[].owners` and pins that it is unbroken inside every
+era, that the era's own `members` are that set, and that adjacent eras differ
+on OWNERS — identical franchise ids across an era boundary is now legitimate,
+because that is exactly what a takeover looks like.
+
+It also moves the era board that landed on main the same afternoon (see the
+`ERA_MIN_SEASONS` entry above). Qualifying eras fall from 9 to 6 in TheLeague
+and 6 to 4 in the AFL; TheLeague's Atlantic joins the Midwest and Pacific in the
+absent list (its one 4-season franchise lineup was two owner groups), and the
+division that now appears more than once is the Central, three times, not the
+Northwest twice. Both the board's copy and the launch article's quoted examples
+had to be re-derived — a reminder that generated-looking prose naming specific
+rows is coupled to the segmentation key, and reads as confidently wrong the
+moment the key changes.
+
+**Recommendation:** When a derived span is segmented on identity, write down
+WHICH identity — a slot, a name, or a person — and check every label rendered
+next to it. And when the honest segmentation produces small samples, the answer
+is to show the sample size and withhold the comparative claims, not to pick a
+looser key. TheLeague's East and Northwest agree under both keys, which is
+exactly why this survived review: the two rows you read first are the two where
+the distinction does not show.

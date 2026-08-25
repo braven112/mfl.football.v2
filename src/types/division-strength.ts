@@ -171,13 +171,16 @@ export interface DivisionMember {
 }
 
 /**
- * A run of consecutive seasons with the SAME franchises in the division.
+ * A run of consecutive seasons with the SAME OWNERS in the division — the same
+ * franchises, held by the same people.
  *
  * A division name is only half its identity; the other half is who is in it.
- * A division that has fielded the same four since 2016 and one reshuffled two
- * years ago are not comparable things even under one name — so this is the
- * slice where two divisions ARE compared as the same group of teams across
- * their whole span. Breaks on a membership change or a gap year.
+ * A division whose four owners have sat together since 2016 and one reshuffled
+ * two years ago are not comparable things even under one name — so this is the
+ * slice where two divisions ARE compared as the same group across their whole
+ * span. Breaks on a realignment, a TAKEOVER, or a gap year: `seasons` answers
+ * "how long have these owners been together" and never "how long has this
+ * division existed", which is the division's own `firstYear` / `seasons`.
  */
 export interface DivisionMembershipEra {
   yearStart: number;

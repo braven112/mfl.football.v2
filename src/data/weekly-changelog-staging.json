@@ -32,6 +32,14 @@
       "impact": "user",
       "area": "design-system",
       "league": "theleague"
+    },
+    {
+      "date": "2026-08-25",
+      "type": "bug-fix",
+      "summary": "The \"Together\" column on Strength of Division was counting seasons with the same four franchises, which isn't the same as the same four owners — the Southwest was credited with nine shared years for a group that's only been together since 2020. Together now means exactly what it says: seasons this group of owners has played together, restarting when a team changes hands. A new Founded column carries the division's own age, so a young lineup in an old division reads right.",
+      "impact": "user",
+      "area": "standings",
+      "league": "both"
     }
   ]
 }

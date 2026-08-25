@@ -220,14 +220,16 @@ const alumniOf = (d: DivisionAllTime) => alumniBySlug.get(d.slug) ?? [];
  * Every run of consecutive seasons a division kept an identical lineup, long
  * enough to count, ranked across divisions. This is the one ordering on the
  * page where two rows describe the same KIND of thing — a fixed group of
- * franchises measured over its whole shared span — which is why it is allowed
+ * OWNERS measured over its whole shared span — which is why it is allowed
  * to sit directly under the all-time list rather than replacing it. The
  * all-time list answers "which name has the record"; this answers "which group
- * of teams was actually the toughest to sit in".
+ * of owners was actually the toughest to sit in".
  *
- * A division appears more than once when it has realigned into two long
- * lineups (TheLeague's Northwest is here twice), and not at all when it never
- * held one together for `ERA_MIN_SEASONS`.
+ * A division appears more than once when it has held two long-lived groups
+ * (TheLeague's Central is here three times), and not at all when it never held
+ * one together for `ERA_MIN_SEASONS`. Since eras break on a takeover as well as
+ * a realignment, the board is shorter than the number of divisions suggests —
+ * 6 rows in TheLeague and 4 in the AFL, not one or two per name.
  */
 const rankedEras = rankEras(data.divisions);
 // Named in the note so a reader who scans for their own division and misses it
@@ -267,9 +269,12 @@ const shortestRun = bySeasonCount[bySeasonCount.length - 1];
  * standing first.
  *
  * This is the closest the page gets to answering "which division is toughest"
- * fairly, because within one era the same teams are being compared across
+ * fairly, because within one era the same OWNERS are being compared across
  * their whole shared span. The all-time columns can't do that — a division
- * name outlives the teams that earned its record.
+ * name outlives the people who earned its record. The price is that an era can
+ * be short (a takeover ends one), which is why `Founded` carries the
+ * division's own age beside it and `eraVsAllTime` withholds its arrow below
+ * `SHORT_RUN_SEASONS`.
  */
 /**
  * The alignment for the season about to be played, when there is one.
@@ -341,15 +346,37 @@ const memberTitle = (m: { name: string | null; newOwner?: boolean; newOwners?: O
 };
 
 /**
+ * What started this era, read against the one before it (`list` is newest-first,
+ * so the predecessor is the NEXT index).
+ *
+ * Same franchises, new era = the division changed hands; a different franchise
+ * set = a realignment. Null for the oldest era and across a gap year, where
+ * there is nothing to have changed FROM.
+ */
+const eraChangeLabel = (
+  era: { yearStart: number; franchiseIds: string[] },
+  previous?: { yearEnd: number; franchiseIds: string[] }
+) => {
+  if (!previous || previous.yearEnd !== era.yearStart - 1) return null;
+  return era.franchiseIds.join(',') === previous.franchiseIds.join(',') ? 'new owner' : 'realigned';
+};
+
+/**
  * How the current lineup's interdivisional rate compares with everything ever
  * done under that division's name — i.e. how much of the name's reputation
  * belongs to the teams still in it. Null when either side has no games, or
  * when the era IS the whole history (nothing to compare against).
+ *
+ * Also null for a short era. Eras break on a takeover, so a division can be one
+ * season old — the AFL's North took a new owner for 2025 — and an arrow reading
+ * "▲.084 vs all-time" off a single season is a comparative claim the sample
+ * cannot carry. The record still shows, with "1 yr" next to it.
  */
 const eraVsAllTime = (d: DivisionAllTime, era: { seasons: number; interDivision: { winPct: number | null } }) => {
   const now = era.interDivision.winPct;
   const ever = d.interDivision.winPct;
   if (now === null || ever === null || era.seasons === d.seasons) return null;
+  if (era.seasons < SHORT_RUN_SEASONS) return null;
   const delta = now - ever;
   if (Math.abs(delta) < 0.005) return null;
   return { up: delta > 0, text: Math.abs(delta).toFixed(3).replace(/^0/, '') };
@@ -559,9 +586,10 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                 <div class="section-header">
                   <h2 id="lineups-heading" class="section-header__title">As currently constituted</h2>
                   <p class="section-header__sub">
-                    Each division's record with the teams in it, over however long that exact lineup
-                    has been together. Realignment resets the clock, so some divisions have far more
-                    shared history than others.
+                    Each division's record with the owners in it, over however long that exact group
+                    has been together. A realignment resets the clock and so does a team changing
+                    hands, so some divisions have far more shared history than others — Founded is
+                    the division's own age, Together is this group's.
                     {upcoming
                       ? <> Records run through {upcoming.previousPlayedYear}, the last completed season; the crests are the {upcoming.year} lineup.</>
                       : null}
@@ -631,12 +659,14 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                 <div class="table-scroll">
                   <table class="strength-table lineup-table">
                     <caption class="visually-hidden">
-                      Current division lineups, longest-standing first, with each division's record
-                      over the span that exact set of teams has been together.
+                      Current division lineups, longest-standing first, with the year each division
+                      was founded and its record over the span that exact set of owners has been
+                      together.
                     </caption>
                     <thead>
                       <tr>
                         <th scope="col">Division</th>
+                        <th scope="col" class="num">Founded</th>
                         <th scope="col" class="num">Together</th>
                         <th scope="col" class="num">Record</th>
                         <th scope="col" class="num">Interdivisional</th>
@@ -650,15 +680,25 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                         <tr>
                           <th scope="row" class="name-cell">
                             <a href={`#div-${division.slug}`} class="name-link">{division.name}</a>
-                            {/* The years the group was together, not "since
-                                2016" — every other number in the row is bounded
-                                by the last played season, so the span should
-                                say where it stops too. */}
-                            <span class="span-text">{era.yearStart}–{era.yearEnd}</span>
                           </th>
+                          {/* Founded is the DIVISION's own clock and never moves;
+                              Together is the current owners' and restarts on any
+                              change. Two columns because one number cannot be
+                              both, and merging them is the bug this table had. */}
+                          <td class="num">
+                            <span class="rec">{division.firstYear}</span>
+                            <span class="pct">{division.seasons} season{division.seasons === 1 ? '' : 's'}</span>
+                          </td>
                           <td class="num">
                             <span class="rec">{era.seasons}<span class="unit"> yr</span></span>
-                            <span class="pct">{era.seasons === division.seasons ? 'never realigned' : `of ${division.seasons}`}</span>
+                            {/* The years the group was together, not "since 2016" —
+                                every other number in the row is bounded by the last
+                                played season, so the span says where it stops too. */}
+                            <span class="pct">{era.seasons === division.seasons
+                              ? 'never changed'
+                              : era.yearStart === era.yearEnd
+                                ? `${era.yearStart}`
+                                : `${era.yearStart}–${era.yearEnd}`}</span>
                           </td>
                           <td class="num">
                             <span class="rec">{formatRecord(era.totals)}</span>
@@ -700,7 +740,9 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                 <p class="table-note">
                   The arrow compares each division's interdivisional record under its current lineup
                   against that division name's whole history — how much of the name's record belongs
-                  to the teams still in it.
+                  to the teams still in it. Together counts only seasons this exact group of owners
+                  has played together — a team changing hands starts a new count, which is why a
+                  division founded decades ago can show a short one.
                 </p>
               </section>
             )}
@@ -750,11 +792,11 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
               <section class="verdict-pair" aria-labelledby="eras-heading">
                 <h2 id="eras-heading" class="section-title">Every lineup, ranked</h2>
                 <p class="section-header__sub">
-                  A division's record belongs to the teams in it, so this ranks the teams. Each row
-                  is a run of consecutive seasons one division kept the exact same lineup —
-                  a realignment ends the run and starts a new one — and a lineup has to hold
-                  together {ERA_MIN_SEASONS} seasons to make the board. A division that has
-                  realigned into two long lineups appears twice.
+                  A division's record belongs to the owners in it, so this ranks the owners. Each
+                  row is a run of consecutive seasons one division kept the exact same group —
+                  a realignment ends the run, and so does a team changing hands — and a group has
+                  to hold together {ERA_MIN_SEASONS} seasons to make the board. A division that has
+                  held two long-lived groups appears more than once.
                 </p>
                 <ol class="verdict-list verdict-list--solo era-board">
                   {rankedEras.map((row, i) => (
@@ -789,7 +831,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                       {' '}The{' '}
                       {erasMissing.join(', ').replace(/, ([^,]*)$/, erasMissing.length > 2 ? ', and $1' : ' and $1')}
                       {' '}{erasMissing.length === 1 ? 'is absent' : 'are absent'} — no group of
-                      teams has stayed together that long under
+                      owners has stayed together that long under
                       {erasMissing.length === 1 ? ' that name' : ' those names'}.
                     </>
                   )}
@@ -965,7 +1007,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                         <div class="detail-row">
                           <dt class="detail-label">Lineup</dt>
                           <dd class="detail-value">
-                            same {d.currentEra.members.length} since {d.currentEra.yearStart}
+                            same {d.currentEra.members.length} teams and the same owners since {d.currentEra.yearStart}
                             <span class="dim"> · {formatRecord(d.currentEra.totals)} together</span>
                           </dd>
                         </div>
@@ -979,17 +1021,24 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                           <span class="owner-eras__label">
                             <span class="visually-hidden">{d.name}: </span>
                             <strong>{d.membershipEras.length} lineups</strong>
-                            <span class="dim"> · realigned {d.membershipEras.length - 1} time{d.membershipEras.length === 2 ? '' : 's'}</span>
+                            <span class="dim"> · changed {d.membershipEras.length - 1} time{d.membershipEras.length === 2 ? '' : 's'}</span>
                           </span>
                         </summary>
                         <div class="owner-eras__reveal">
                           <div class="owner-eras__inner">
                             <ul class="era-list">
-                              {[...d.membershipEras].reverse().map((era) => (
+                              {/* Eras break on a takeover as well as a realignment, and a
+                                  takeover usually keeps the crest — so consecutive rows can
+                                  carry an IDENTICAL set of icons and read as duplicates.
+                                  Name what ended the previous one. */}
+                              {[...d.membershipEras].reverse().map((era, i, list) => (
                                 <li>
                                   <span class="era-years">
                                     {era.yearStart === era.yearEnd ? era.yearStart : `${era.yearStart}–${era.current ? 'present' : era.yearEnd}`}
                                   </span>
+                                  {eraChangeLabel(era, list[i + 1]) && (
+                                    <span class="era-change">{eraChangeLabel(era, list[i + 1])}</span>
+                                  )}
                                   <span class="member-icons">
                                     {era.members.map((m) => (
                                       m.icon
@@ -1825,6 +1874,16 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
   .era-list li:last-child { border-bottom: none; }
   .era-years { font-weight: 700; font-variant-numeric: tabular-nums; min-width: 6.5rem; }
   .era-rec { color: var(--ds-ink-muted); font-variant-numeric: tabular-nums; }
+  /* Why the era before this one ended — a takeover keeps the crests, so
+     without it two rows can look identical. */
+  .era-change {
+    font-size: 0.6875rem;
+    color: var(--ds-ink-muted);
+    border: 1px solid var(--ds-border);
+    border-radius: 999px;
+    padding: 0.0625rem 0.375rem;
+    white-space: nowrap;
+  }
   .era-current { margin-left: auto; }
   /* The shared .member-icons rule sizes to 24px; the era list runs denser. */
   .era-list .member-icons img,
