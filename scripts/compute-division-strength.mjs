@@ -187,7 +187,12 @@ function buildOwnersBySeason(ownerFile) {
           title: owner.title,
           latestName: latest?.name ?? null,
           latestNameMedium: latest?.nameMedium ?? latest?.name ?? null,
-          icon: owner.icon ?? null,
+          // The crest has to come from the SAME identity as the label. `owner.icon`
+          // is the dominant identity's, which for a one-name owner is also the
+          // latest — but an owner who renamed or came back under a new team has
+          // two, and the pair then contradicts itself: "Angry Irish" over the
+          // Carolina Blues crest. Seven AFL owners already read that way.
+          icon: latest?.icon ?? owner.icon ?? null,
           isCurrent: !!owner.isCurrent,
           isShared: !!owner.isShared,
         });
