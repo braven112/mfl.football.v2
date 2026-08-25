@@ -97,6 +97,9 @@ const CAPTURE_PATHS = {
   // Both-league entry, so its link is the league-neutral bare `/owners` —
   // which only routes on a league's own apex host, not the shared one.
   'owners-pages': '/theleague/owners',
+  // Both-league entry on the bare `/owners`, same as above. Shot against the
+  // AFL because that is where the naming work landed — 68 of the 85 blanks.
+  'owners-get-their-names': '/afl-fantasy/owners',
   'built-in-rankings-2026-08-21': '/afl-fantasy/import-rankings',
   // No `link` on this entry (see whats-new.json) — without an override the
   // capture would shoot the site root.
@@ -142,6 +145,17 @@ const PAGE_HOOKS = {
       document.dispatchEvent(new CustomEvent('rankings:open-my-rank-editor'));
     });
     await page.waitForSelector('.mre__sheet', { timeout: 5000 }).catch(() => {});
+    await page.waitForTimeout(500);
+  },
+  'owners-get-their-names': async (page) => {
+    // The entry is about FORMER owners getting names; a top-of-page shot frames
+    // the current-owner grid, which was never anonymous. Scroll to the former
+    // table instead.
+    await page.evaluate(() => {
+      const el = document.querySelector('.former-owners') || document.getElementById('former-table');
+      if (el) el.scrollIntoView({ block: 'start' });
+      window.scrollBy(0, -110);
+    });
     await page.waitForTimeout(500);
   },
   'built-in-rankings-2026-08-21': async (page) => {
