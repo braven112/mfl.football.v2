@@ -94,6 +94,9 @@ const MANUAL_CAPTURE_ONLY = {
  * an error page. Name a concrete page to shoot instead.
  */
 const CAPTURE_PATHS = {
+  // Both-league entry, so its link is the league-neutral bare `/owners` —
+  // which only routes on a league's own apex host, not the shared one.
+  'owners-pages': '/theleague/owners',
   'built-in-rankings-2026-08-21': '/afl-fantasy/import-rankings',
   // No `link` on this entry (see whats-new.json) — without an override the
   // capture would shoot the site root.
