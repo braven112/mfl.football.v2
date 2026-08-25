@@ -730,6 +730,42 @@ describe.each(leagues)('$league.slug division strength', ({ league, dataPath, le
     }
   });
 
+  it('never lists one team twice in a division, unless it is co-owned', () => {
+    // The league has never had two different owners run teams under the same
+    // name, so two era rows reading the same thing is a data bug, not history.
+    // It shipped exactly once: the AFL South listed "Avenging Amish" twice,
+    // 2014-2020 and 2021-2025, because the owner inference had split Danny
+    // Baccam in half — a franchise slot changing hands and a rename in place
+    // look identical to it. Fixed upstream in the owners registry (#615).
+    //
+    // The ONE legitimate collision is a co-owned team: TheLeague's Cowboy Up
+    // is two owner records on a single holding, so both legitimately carry the
+    // same team name. That is separated structurally rather than by an
+    // allowlist — a co-owner's seasons are all `sharedSeasons`, a split
+    // owner's are none — so a newly shared team needs no change here.
+    const norm = (s: string | null) => (s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    for (const division of data.divisions) {
+      const byLabel = new Map<string, typeof division.owners>();
+      for (const owner of division.owners) {
+        const key = norm(owner.latestNameMedium ?? owner.latestName ?? owner.title);
+        if (!key) continue;
+        if (!byLabel.has(key)) byLabel.set(key, []);
+        byLabel.get(key)!.push(owner);
+      }
+      for (const [key, list] of byLabel) {
+        if (list.length === 1) continue;
+        const coOwned = list.every((o) => o.sharedSeasons > 0 && o.sharedSeasons === o.seasons);
+        expect(
+          coOwned,
+          `${division.name}: "${key}" is listed by ${list.length} owner records ` +
+            `(${list.map((o) => `${o.ownerId} ${o.yearStart}-${o.yearEnd}`).join(', ')}) ` +
+            `— either one owner was split in two upstream, or this is a shared ` +
+            `holding whose seasons are not all marked sharedSeasons`
+        ).toBe(true);
+      }
+    }
+  });
+
   it('labels every owner ref by the latest team name in that owner tenure', () => {
     // The report groups by OWNER but labels by TEAM, because `title`
     // concatenates every name an owner has worn ("Vit's Brother / Avenging
