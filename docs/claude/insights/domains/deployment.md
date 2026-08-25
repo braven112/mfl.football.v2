@@ -497,3 +497,21 @@ The general shape: a flag that *sounds* standard is more dangerous than a flag t
 **Evidence:** `scripts/weekly-changelog-rollup.mjs` now rejects any argument outside `KNOWN_FLAGS` with exit 1 and states plainly that there is no dry-run mode. `.github/workflows/weekly-changelog-rollup.yml` passes no arguments, so the cron path is unaffected.
 
 **Recommendation:** Any script that writes tracked files should reject unknown arguments rather than ignore them. And before running one to "check" something, read its argv handling — for a script whose whole job is to consume a queue, the safe preview is `cat` on its input, not a flag you are hoping exists.
+
+## 2026-08-24 - A Cloud Session Can Run The Whole Suite In ~64s, And The Pre-Push Hook Hides Its Own Absence
+
+**Context:** Building the `/hotfix` and `/followup` workflows in a Claude Code cloud session, and reporting to the user that the unit suite "couldn't be run here."
+
+**Insight:** That was wrong, and the shape of the error is worth recording because it is silent in both directions. A fresh cloud container has no `node_modules`, but `pnpm install --prefer-offline` finishes in **~17s** against a warm registry and `pnpm test:unit` then runs the full suite in **~47s** — there is no environment limitation, only an un-run command. Meanwhile `.claude/hooks/pre-push-check.sh` **exits 0** when `node_modules/.bin/vitest` is missing, deliberately, so a push from that container skips the full-suite gate and emits nothing that reads as a failure. Together they produce a session that believes it cannot test, pushes anyway, and loses the pre-push net without ever seeing a red signal.
+
+**Evidence:** `pnpm install --prefer-offline` → `Done in 17.2s using pnpm v10.33.0`. `pnpm test:unit` → `Test Files 257 passed (257) / Tests 6563 passed | 1 skipped / Duration 47.33s`. The hook's guard is `if [ ! -x node_modules/.bin/vitest ]; then ... exit 0; fi`.
+
+**Recommendation:** Treat a missing `node_modules` as a one-line preflight (`[ -x node_modules/.bin/vitest ] || pnpm install`), never as grounds to defer validation to CI — deferring costs a build plus a CI cycle per iteration, which on a hotfix is measured in outage minutes. And when a session claims it could not run tests, check whether it ever installed before believing it.
+
+## 2026-08-24 - Preview Protection No Longer Blocks Automated Checking — The Vercel MCP Reads Protected Deployments
+
+**Context:** Deciding whether a hotfix could be validated on its PR's preview deployment from a session with no browser and no Vercel CLI auth.
+
+**Insight:** The 2026-03-08 entry above concluded that preview protection blocks automated checking "unless preview auth/bypass is available." It now is. `mcp__Vercel__web_fetch_vercel_url` fetches a protected deployment directly, and `mcp__Vercel__get_access_to_vercel_url` mints a `_vercel_share` link valid for 23 hours for fetchers that handle their own cookies. Raw `curl` still gets 401, so the hostname-recovery procedure in that entry is still how you find the URL — only its "you can't read it" half is superseded.
+
+**Recommendation:** Validate a fix on its PR preview *before* merging rather than after deploying — the preview builds in parallel with CI, so it costs no extra wall-clock, and it carries the real env vars, Redis and MFL access that a fresh clone or worktree has no `.env.local` for. Keep production verification as its own step regardless: a working preview proves the fix, not the deploy.
