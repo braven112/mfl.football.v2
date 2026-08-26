@@ -1421,4 +1421,31 @@ The strip's crest sits on an ink chip (`#0b0e13`) in BOTH themes for the same
 reason the band does: the map hands out the DARK artwork plus its measured
 stroke, and that artwork is drawn for ink, not for a white card.
 
-Guarded by `tests/player-modal-owner-strip.test.ts`.
+**The AFL asks the question differently**, and the answer is per-conference.
+It is a duplicate-player league: the same NFL player is rostered once in the
+American League and once in the National League, by two different franchises —
+Josh Allen is Fullybaked's in the AL and the Titsburgh Feelers' in the NL. So
+there is no such thing as "the team that has him", only the team that has him
+in the conference you are looking at. `buildRosteredByConf`
+(`afl-conference-rosters.mjs`, shared by the prebuild snapshot AND the
+request-time live overlay) now records `ownersByConf` alongside the rostered
+sets, the page reads it through `ownerForView(p)` on the SAME boundary
+`isRosteredForView` already drew, and the conference comes from the existing
+`resolveConferenceSelection` — `?conf=`, else the signed-in owner's conference,
+else the AL. `activeConf` is re-read per render, not captured, because the
+conference switcher reassigns it without a reload; capture it and every row
+stays named by whichever conference the page opened on.
+
+Two smaller things that would bite a re-implementation:
+
+- **The live overlay re-derives owners, it does not carry the baked ones.** The
+  overlay exists because the snapshot's roster flags are stale by a deploy; a
+  player traded since then would otherwise be named under his previous team on
+  a row that correctly shows him rostered.
+- **`ownersForPlayer` tolerates sets built without an owner map.** The compute
+  script hand-builds `{ confIds, rosteredByConf }` when the rosters feed is
+  missing, and it runs in prebuild — returning `{}` there bakes "nobody to
+  name", where a throw would fail the build.
+
+Guarded by `tests/player-modal-owner-strip.test.ts` and the owner cases in
+`tests/afl-free-agents-live.test.ts`.

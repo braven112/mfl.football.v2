@@ -5,7 +5,7 @@ import {
   resolveConferenceSelection,
   type FaSnapshot,
 } from '../src/utils/afl-free-agents-live';
-import { buildConferenceStructure } from '../src/utils/afl-conference-rosters.mjs';
+import { buildConferenceStructure, ownersForPlayer } from '../src/utils/afl-conference-rosters.mjs';
 
 // The AFL is a duplicate-player conference league: the same NFL player can be
 // rostered once per conference, so a drop in one conference makes the player
@@ -68,6 +68,34 @@ describe('applyLiveRosters', () => {
     expect(p2.confs).toEqual(['01']);
     expect(p3.rostered).toBe(false);
     expect(p3.confs).toEqual([]);
+  });
+
+  it('names the franchise holding him in EACH conference, not one owner', () => {
+    // The whole point of a duplicate-player league: p1 is held by an AL team
+    // AND an NL team, and they are different franchises. A single `ownerId`
+    // would have to pick one and be wrong for half the league's viewers.
+    const view = applyLiveRosters(
+      makeSnapshot(),
+      rostersPayload({ '0001': ['p1'], '0002': [], '0013': ['p1', 'p2'], '0014': [] }),
+    );
+    expect(view.players.find((p) => p.id === 'p1')?.owners).toEqual({ '00': '0001', '01': '0013' });
+    // p2 is held only in the NL, so an AL viewer has nobody to name.
+    expect(view.players.find((p) => p.id === 'p2')?.owners).toEqual({ '01': '0013' });
+    // A free agent everywhere carries no owner at all.
+    expect(view.players.find((p) => p.id === 'p3')?.owners).toEqual({});
+  });
+
+  it('re-derives owners from the live payload rather than trusting the baked ones', () => {
+    // A trade since the last deploy is exactly the case the overlay exists
+    // for; carrying the snapshot's `owners` through would name the previous
+    // team under a correctly-updated row.
+    const snapshot = makeSnapshot();
+    snapshot.players[0].owners = { '00': '0002', '01': '0014' };
+    const view = applyLiveRosters(
+      snapshot,
+      rostersPayload({ '0001': ['p1'], '0002': [], '0013': ['p1'], '0014': [] }),
+    );
+    expect(view.players.find((p) => p.id === 'p1')?.owners).toEqual({ '00': '0001', '01': '0013' });
   });
 
   it('recomputes FA counts and the hero spotlight from the live flags', () => {
@@ -274,6 +302,17 @@ describe('resolveConferenceSelection', () => {
       userConfId: null,
       activeConfId: null,
     });
+  });
+});
+
+describe('ownersForPlayer', () => {
+  it('returns {} for hand-built sets with no owner map (the empty-rosters fallback)', () => {
+    // scripts/compute-afl-free-agents.mjs builds this shape itself when the
+    // rosters feed is missing, and it runs in prebuild — throwing here would
+    // fail the whole build instead of baking "nobody owns anyone", which is
+    // what that fallback means.
+    const sets = { confIds: ['00', '01'], rosteredByConf: new Map() };
+    expect(ownersForPlayer('p1', sets as never)).toEqual({});
   });
 });
 

@@ -1,12 +1,14 @@
 /**
  * Player modal → "Rostered by" owner strip.
  *
- * The Free Agents page lists rostered players too (the "Include rostered"
- * toggle, and every auction row), and the modal it opens had no way to say so:
- * the band fell back to NFL colors and the contract card stamped "FA · FREE
- * AGENT" on a player under contract somewhere. The fix is one payload field
- * (`franchiseId`) plus a strip that names the franchise, so each case below is
- * a way that regresses back into a page that calls owned players free.
+ * Both Free Agents pages list rostered players too (the "Include rostered"
+ * toggle, TheLeague's auction rows), and the modal they open had no way to say
+ * so: the band fell back to NFL colors and the contract card stamped "FA ·
+ * FREE AGENT" on a player under contract somewhere. The fix is one payload
+ * field (`franchiseId`) plus a strip that names the franchise, so each case
+ * below is a way that regresses back into a page that calls owned players
+ * free. The AFL's answer is per-conference — the same player has two owners
+ * there — so its wiring is guarded separately.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -20,6 +22,7 @@ import { chroma } from '../src/utils/nfl-team-colors';
 const read = (p: string) => readFileSync(resolve(__dirname, '..', p), 'utf8');
 
 const playersPage = read('src/pages/theleague/players.astro');
+const aflPlayersPage = read('src/pages/afl-fantasy/players.astro');
 const modal = read('src/components/theleague/PlayerDetailsModal.astro');
 
 describe('Free Agents → modal payload', () => {
@@ -39,6 +42,23 @@ describe('Free Agents → modal payload', () => {
     // the franchise from its value and there is nothing to hand the modal.
     expect(playersPage).toMatch(/franchiseId: franchise\.id/);
     expect(playersPage).toMatch(/franchiseId: rosterInfo\?\.franchiseId \?\? null/);
+  });
+});
+
+describe('AFL Free Agents → modal payload', () => {
+  it('sends the owner for the VIEWED conference, not a league-wide one', () => {
+    // The AFL is a duplicate-player league: the same player is held by one
+    // franchise in the AL and a different one in the NL. Sending either
+    // unconditionally names the wrong team for half the league.
+    expect(aflPlayersPage).toMatch(/franchiseId: ownerForView\(p\)/);
+    expect(aflPlayersPage).toMatch(/p\.owners\[activeConf \|\| ''\]/);
+  });
+
+  it('reads the conference at render time, so the switcher re-owns the rows', () => {
+    // `activeConf` is reassigned by the conference switcher without a
+    // reload. Capturing it once would leave every row named by the
+    // conference the page happened to open on.
+    expect(aflPlayersPage).toMatch(/function ownerForView\(p\) \{[\s\S]*?activeConf/);
   });
 });
 

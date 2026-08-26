@@ -68,10 +68,10 @@
     {
       "date": "2026-08-26",
       "type": "bug-fix",
-      "summary": "Open a player on Free Agents with \"Include rostered\" on and the card knew he was taken — it just refused to say so. Every profile wore his NFL colors and stamped \"FA · FREE AGENT\" over the contract, whether he was actually unowned or sitting on someone's roster at $9M. Now a rostered player's card wears the fantasy team that holds him — their colors, their crest — with a \"Rostered by\" line naming them and his real salary and contract years where the FA tag used to be.",
+      "summary": "Open a player on Free Agents with \"Include rostered\" on and the card knew he was taken — it just refused to say so. Every profile wore his NFL colors, and in TheLeague it stamped \"FA · FREE AGENT\" over the contract whether he was actually unowned or sitting on someone's roster at $9M. Now a rostered player's card wears the fantasy team that holds him — their colors, their crest — with a \"Rostered by\" line naming them, and TheLeague shows his real salary and contract years where the FA tag used to be. In the AFL, where the same player is rostered once per conference, the card names the team in the conference you're viewing: your own if you're signed in, the American League otherwise, and it re-owns every row when you flip the conference switcher.",
       "impact": "user",
       "area": "free-agents",
-      "league": "theleague"
+      "league": "both"
     }
   ]
 }

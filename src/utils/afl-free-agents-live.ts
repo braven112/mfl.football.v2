@@ -19,7 +19,7 @@
 import { getLeagueBySlug } from '../config/leagues';
 import { buildMflExportUrl } from './mfl-url';
 import { fetchWithTimeout } from './fetch-with-timeout';
-import { buildRosteredByConf, confsForPlayer } from './afl-conference-rosters.mjs';
+import { buildRosteredByConf, confsForPlayer, ownersForPlayer } from './afl-conference-rosters.mjs';
 
 export interface FaConferenceMeta {
   ids: string[];
@@ -36,6 +36,8 @@ export interface FaSnapshotPlayer {
   projected: number | null;
   rostered: boolean;
   confs?: string[];
+  /** `{ [conferenceId]: franchiseId }` for the conferences holding him. */
+  owners?: Record<string, string>;
   [key: string]: unknown;
 }
 
@@ -149,7 +151,12 @@ export function applyLiveRosters(snapshot: FaSnapshot, rostersJson: unknown): Fa
 
   const players = snapshot.players.map((p) => {
     const confs: string[] = confsForPlayer(p.id, rosterSets);
-    return { ...p, confs, rostered: confs.length === confCount };
+    // Owners are re-derived here rather than carried over from the snapshot:
+    // the whole point of the overlay is that the baked flags are stale, and a
+    // player traded since the last deploy would otherwise be named under his
+    // previous team while the row correctly shows him rostered.
+    const owners: Record<string, string> = ownersForPlayer(p.id, rosterSets);
+    return { ...p, confs, owners, rostered: confs.length === confCount };
   });
 
   const view: FaView = { players, ...deriveFaStats(players.filter((p) => !p.rostered)) };

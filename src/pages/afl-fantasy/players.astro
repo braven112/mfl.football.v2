@@ -536,6 +536,17 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     return p.rostered;
   }
 
+  // The franchise holding him IN THE VIEWED CONFERENCE, on the same boundary
+  // isRosteredForView draws: an AL viewer is told about the AL owner, and a
+  // player only the NL holds is a free agent here with nobody to name.
+  // Single-pool leagues key the one pseudo-conference as ''. Null whenever
+  // the snapshot predates baked owners or the live overlay fell back without
+  // them — the modal then reads exactly as it did before.
+  function ownerForView(p) {
+    if (!p.owners) return null;
+    return p.owners[activeConf || ''] || null;
+  }
+
   function confName(id) {
     return conferenceMeta?.names[id]?.name || id;
   }
@@ -940,6 +951,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         draftYear: p.draftYear || null, draftTeam: p.draftTeam || null,
         draftRound: p.draftRd || null, draftPick: p.draftPick || null,
         points: p.projected != null ? p.projected : (p.lastYrPts != null ? p.lastYrPts : null),
+        // Rostered in THIS conference → the modal band wears that franchise
+        // and the strip names it. Re-read per render, so flipping the
+        // conference switcher re-owns every row with it.
+        franchiseId: ownerForView(p),
       }));
       const rosteredDot = rosteredForView
         ? `<span class="rostered-dot" title="${activeConf ? `Rostered in the ${escapeAttr(confName(activeConf))}` : 'Rostered'}"></span>`
