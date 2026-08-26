@@ -154,6 +154,10 @@ export interface DivisionOwnerEra {
   identities: Array<{ name: string | null; yearStart: number; yearEnd: number }>;
   totals: DivisionRecord;
   interDivision: DivisionRecord;
+  /**
+   * Real here, unlike its division-level and era-level namesakes: the division
+   * hands out one a season and the owners in it split them.
+   */
   divisionTitles: number;
   championships: number;
   playoffBerths: number;
@@ -194,6 +198,10 @@ export interface DivisionMembershipEra {
   totals: DivisionRecord;
   interDivision: DivisionRecord;
   avgFinishPct: number | null;
+  /**
+   * DEGENERATE — equal to `seasons`, always. See `DivisionAllTime.divisionTitles`.
+   * Do not render it as an achievement.
+   */
   divisionTitles: number;
   championships: number;
   playoffBerths: number;
@@ -232,6 +240,21 @@ export interface DivisionAllTime {
   /** All-time record against each other division. Mirrored on the other side. */
   vs: Record<string, DivisionRecord>;
   playoffBerths: number;
+  /**
+   * DEGENERATE — equal to `seasons`, always, and carrying no information about
+   * the division.
+   *
+   * Every division crowns exactly one winner in every season it exists, so a
+   * division's all-time title count IS its season count. It shipped on the
+   * page as "Titles 15" beside "Seasons 15" until Aug 2026, where it read as a
+   * trophy case and sorted the table identically to the column next to it.
+   * `tests/division-strength-data.test.ts` pins the identity so the field
+   * cannot quietly start meaning something else, and the page reports
+   * `playoffBerths` / `championships` instead — the two that vary.
+   *
+   * Kept in the payload because it is what `DivisionOwnerEra.divisionTitles`
+   * sums to, and that one IS meaningful.
+   */
   divisionTitles: number;
   championships: number;
   runnerUps: number;

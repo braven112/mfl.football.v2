@@ -605,6 +605,11 @@ function buildLeague(slug) {
       }
 
       for (const team of d.teams) {
+        // NOTE: summed for the OWNER eras below, where four owners splitting
+        // fifteen titles is a real number. The division's own total is not —
+        // it hands out exactly one a season, so it always equals `seasons`.
+        // The page reports playoffBerths / championships instead; see
+        // `DivisionAllTime.divisionTitles` in src/types/division-strength.ts.
         if (team.wonDivision) at.divisionTitles += 1;
         if (team.playoffResult === 'champion') at.championships += 1;
         else if (team.playoffResult === 'runner-up') at.runnerUps += 1;

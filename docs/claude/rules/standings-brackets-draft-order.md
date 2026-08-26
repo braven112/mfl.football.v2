@@ -116,6 +116,26 @@ available" for every season before 2024. The GAMES were never missing:
   field; 2018+ it is only the 2-team final fed by separate AL/NL brackets.
   Seeding the modern shape with the old assumption produced the wrong 2019
   champion during development. `describePlayoffShape` handles this.
+  **This rule is not only about rendering a bracket — it decides who "made the
+  playoffs".** `compute-franchise-history.mjs` read participants straight out of
+  `brackets['1']` and so reported a two-team playoff field for 2018-2025,
+  surfacing as four or five berths a year in a league that has seeded exactly
+  EIGHT every season since 2003. It survived eight seasons because the
+  fallbacks kept the output plausible: the standings-seeding inference sized
+  itself off the same bracket (`teamsInvolved: 2`), and a belt-and-suspenders
+  pass added the division winners plus champion and runner-up. Every playoff
+  appearance in the repo — division report, `franchise-history`,
+  owner tenures, badges — came from that one id.
+  `src/utils/playoff-entry-brackets.mjs` now owns the question for both
+  leagues: the AFL resolves ENTRY brackets by name and start week
+  (championship-side title brackets opening in the first postseason week —
+  bracket 1 alone through 2017, AL + NL from 2018), TheLeague answers `['1']`
+  directly because a week rule would sweep in its Toilet Bowl Challenge, a full
+  7-team tournament starting the same week as the championship.
+  `tests/playoff-field-size.test.ts` is the guard, and it is a conservation law
+  rather than a policy claim: berths in the season ledger must equal the field
+  MFL's own bracket metadata declares, season by season, in both leagues. A
+  league that genuinely changes its playoff size stays green.
 - **Archived schedules contain rounds that aren't valid rounds.** 2012 week 14
   has an outright `0023 vs 0023` bye row; 2014 and 2015 NIT week 14 each carry
   a stray matchup pairing two teams already scheduled that week. `pruneRound`
@@ -128,7 +148,11 @@ available" for every season before 2024. The GAMES were never missing:
   range — the page's old hardcoded `winners = 1-5 / NIT = 6-9` split filed every
   pre-2018 NIT under the Championship tab and left the NIT tab empty.
   `tests/afl-bracket-kind.test.ts` runs the classifier over every committed feed
-  and greps the page to stop an id list creeping back in.
+  and greps the page to stop an id list creeping back in. That grep covers the
+  PAGE only, which is how `compute-franchise-history.mjs` kept its hardcoded
+  `brackets['1']` for eight seasons after this rule was written — when you fix
+  an id-keyed reader, audit every OTHER consumer of the same feed in the same
+  pass, because the one you already fixed is the one you will think of.
 - **The consolation/placement brackets are solved, not seeded.** Their fields
   are made of losers, so `reconstructConsolation` walks forward consuming the
   games the championship and NIT walks left behind: an open bracket first claims
