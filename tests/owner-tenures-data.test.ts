@@ -460,7 +460,9 @@ describe('measured owner counts', () => {
   // 320 because it counts DISTINCT franchise-seasons, not owner-seasons.
   const cases = [
     { slug: 'theleague', total: 38, current: 17, former: 21, seasons: 320, shared: 2 },
-    { slug: 'afl-fantasy', total: 88, current: 24, former: 64, seasons: 576, shared: 0 },
+    // 87, not 88: Taco Hell (2004-06) and the Fly Fishermen (2007) were the
+    // same man on the same franchise, so own-0107 merged into own-0091.
+    { slug: 'afl-fantasy', total: 87, current: 24, former: 63, seasons: 576, shared: 0 },
   ];
 
   for (const expected of cases) {
