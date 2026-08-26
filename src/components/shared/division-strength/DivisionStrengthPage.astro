@@ -293,8 +293,10 @@ const alumniOf = (d: DivisionAllTime) => alumniBySlug.get(d.slug) ?? [];
  * A division appears more than once when it has held two long-lived groups
  * (TheLeague's Central is here three times), and not at all when it never held
  * one together for `ERA_MIN_SEASONS`. Since eras break on a takeover as well as
- * a realignment, the board is not one or two rows per name — it is 10 rows in
- * TheLeague and 10 in the AFL.
+ * a realignment, the row count tracks how often teams have moved rather than
+ * how many division names there are — a name can contribute none or several.
+ * As of Aug 2026 that is 10 rows in each league against 7 division names in
+ * each; expect it to drift with every realignment.
  */
 const rankedEras = rankEras(data.divisions);
 // Named in the note so a reader who scans for their own division and misses it
