@@ -351,11 +351,12 @@ are reported over `playoffBerths / teamSeasons` — franchise-seasons, not
 seasons, because the AFL ran six divisions of four through 2012 and four of six
 after, and per-season would flatter the bigger ones.
 
-One caveat is real and is rendered only where it applies: a berth rate compares
-only within a fixed playoff field, and the AFL's moved (eight or nine of 24
-through 2017, four or five since). `playoffFieldRange()` measures the spread
-from the data, and the note prints only when it exceeds one seed — TheLeague
-has seeded 7 of 16 every season on file and must not carry the AFL's footnote.
+A berth rate compares only within a fixed playoff field, so the page measures
+that field from the data (`playoffFieldRange()`) and prints a caveat only when
+it has moved. It renders in neither league today: TheLeague has seeded 7 of 16
+every season since 2007 and the AFL 8 of 24 every season since 2003. The first
+draft of this entry said the AFL's field had shrunk to four or five — that was
+a bug, not a league, and the entry below is what it turned out to be.
 
 Three guards in `tests/division-strength-data.test.ts`: the identity itself is
 pinned (as "titles equals the seasons already crowned", so it holds mid-season
@@ -371,3 +372,72 @@ column that moved in lockstep with the one beside it. Awards that are handed
 out per-group per-season (division titles, weekly high score within a division,
 "most improved" of a fixed field) only carry information at the level BELOW the
 group that always receives one.
+
+## 2026-08-25 - Bracket 1 stopped being the AFL's playoff entry in 2018
+
+**Context:** Reviewing the berth numbers the entry above put on the page, the
+owner rejected the premise outright: *"only 8 ever playoff berths between AL
+and NL since year 1."* The derived data said four or five a year since 2018.
+The owner was right and the data was wrong.
+
+**Insight:** `compute-franchise-history.mjs` derived every playoff appearance
+in the repo — the division report, `franchise-history.playoffAppearances`,
+owner tenures, badges — from a single hardcoded bracket id: `brackets['1']`.
+That was correct for fifteen years and then silently stopped being correct.
+From 2018 the AFL seeds its eight playoff teams into TWO conference brackets,
+`2 AL Championship` (4 teams) and `3 NL Championship` (4), and `1 AFL
+Championship` became the two-team FINAL between their winners. Reading id 1
+therefore reported a two-team playoff field for eight straight seasons.
+
+It never showed as an error because two fallbacks quietly filled the hole with
+something plausible: the standings-seeding inference sized itself off the same
+bracket 1 (`teamsInvolved: 2`), and the belt-and-suspenders pass credited the
+division winners plus the champion and runner-up. That produced four or five
+berths a year — a number too reasonable to question, on pages nobody
+cross-checks against MFL.
+
+This is the SECOND bug from reading an AFL bracket by id. The first one
+mislabelled playoff rounds and was fixed by classifying on the bracket NAME
+(`afl-bracket-kind.mjs`, whose header even documents that id 2 became the AL
+bracket in 2018). The name-based resolver existed; the participant reader just
+never got moved onto it.
+
+**Evidence:** `src/utils/playoff-entry-brackets.mjs` now owns the question for
+both leagues. The AFL resolves it by name and start week — the
+championship-side title brackets that open in the FIRST postseason week, which
+is bracket 1 alone through 2017 and AL + NL from 2018. TheLeague answers `['1']`
+directly, because a week rule would be wrong there: its Toilet Bowl Challenge
+is a full 7-team tournament starting the same week as the championship, so the
+week rule alone would report a 14-team playoff field in a 16-team league.
+
+Participants now come from real games wherever they exist. MFL's export carries
+franchise ids only from 2024, so the reconstructed brackets
+(`derived/reconstructed-playoff-brackets.json`, 2004-2023, a schedule walk
+verified against championship-history) became the first fallback rather than
+being used only for round labels. Standings inference dropped to last resort —
+2003 alone. That also settled two seasons where the inference had produced a
+NINE-team field in an eight-team bracket, and corrected eight franchise-seasons
+between 2004 and 2014 where it had seeded the wrong team: 2014 credited berths
+to 0022 and 0002, who were both in the NIT that year.
+
+Every AFL division's berth count moved: North 28 → 38, West 37 → 44, East 29 →
+34. The ordering changed with it, and the corrected one agrees with
+interdivisional strength — West leads both at .536 and 37%, East trails both at
+.459 and 29%, where before the two metrics disagreed for no reason anyone could
+have explained.
+
+`tests/playoff-field-size.test.ts` is the guard, and it is a conservation law
+rather than a policy claim: berths counted in the season ledger must equal the
+field MFL's own bracket metadata declares, season by season, in both leagues. A
+league that genuinely changes its playoff size stays green; a reader pointed at
+the wrong bracket does not. Reverting the resolver to `['1']` fails it with
+"2018: 8 berths in the ledger, 2 seats in brackets [1]".
+
+**Recommendation:** A derived number that no page cross-checks against its
+source can be wrong for eight years without anyone noticing, and fallbacks make
+it worse by keeping the output plausible. Where an external system's structure
+is a fact you depend on, assert the derived result against that system's own
+declaration of it — MFL says how many teams it seeds; nothing was comparing our
+answer to it. And when a source is known to renumber its keys, fix every reader
+at once: this file already documented the renumbering, for the reader that got
+fixed the first time.

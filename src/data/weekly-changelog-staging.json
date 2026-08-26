@@ -12,6 +12,14 @@
     {
       "date": "2026-08-25",
       "type": "bug-fix",
+      "summary": "The AFL has seeded eight playoff teams every year since 2003, but the site had been crediting four or five a season since 2018 — it was reading the playoff field out of the AFL Championship bracket, which in 2018 stopped being the eight-team field and became the two-team final between the AL and NL winners. Every AFL playoff berth on the site was recomputed from the actual bracket games: North goes from 28 berths to 38, West 37 to 44, East 29 to 34. Playoff appearances on owner pages, franchise pages and the division report all move with it. Eight franchise-seasons between 2004 and 2014 were also credited to the wrong teams — 2014 had berths on two clubs that spent that postseason in the NIT.",
+      "impact": "user",
+      "area": "playoffs",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-25",
+      "type": "bug-fix",
       "summary": "Strength of Division was handing out participation trophies. The \"Titles\" number on every division panel — 15 for the Northwest, 19 for the Central — was just the number of seasons that division has existed, because a division crowns a winner every single year. It's gone, along with the sortable Titles column that ordered the table exactly like the Seasons column beside it. Divisions now report what their teams actually earned against the rest of the league: playoff berths, the share of franchise-seasons that reached the postseason, and championships with the runner-up finishes beside them. Division titles still show where they mean something — per owner, inside the division, where four owners split them unevenly.",
       "impact": "user",
       "area": "standings",

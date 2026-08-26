@@ -42,9 +42,15 @@ import { isSeasonComplete } from './lib/theleague-season-complete.mjs';
 import { aliasDivisionName, isUsableDivisionName } from '../src/utils/division-aliases.mjs';
 import {
   bracketKindFromName,
+  isTitleBracket,
   placementFromName,
   placementLabel,
 } from '../src/utils/afl-bracket-kind.mjs';
+import {
+  getChampionshipFieldSize,
+  getEntryBracketIds as resolveEntryBracketIds,
+  getEntryBracketParticipants,
+} from '../src/utils/playoff-entry-brackets.mjs';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -349,37 +355,29 @@ function getChampionshipResult(playoffBrackets) {
   };
 }
 
-function getPlayoffParticipants(playoffBrackets) {
-  if (!playoffBrackets) return new Set();
-  const champBracket = playoffBrackets.brackets?.['1']?.playoffBracket;
-  if (!champBracket) return new Set();
-  const participants = new Set();
-  toArray(champBracket.playoffRound).forEach((round) => {
-    toArray(round.playoffGame).forEach((game) => {
-      if (game.home?.franchise_id) participants.add(game.home.franchise_id);
-      if (game.away?.franchise_id) participants.add(game.away.franchise_id);
-    });
-  });
-  return participants;
-}
+/**
+ * This league's playoff entry brackets, and who was in them.
+ *
+ * The rule itself lives in src/utils/playoff-entry-brackets.mjs — read its
+ * header before touching anything here. Short version: it is NOT bracket 1.
+ * From 2018 the AFL seeds its eight teams through `2 AL Championship` and
+ * `3 NL Championship`, leaving bracket 1 as the two-team final, and reading id
+ * 1 alone credited four or five playoff berths a season for eight years.
+ */
+const getEntryBracketIds = (playoffBrackets) =>
+  resolveEntryBracketIds(LEAGUE_SLUG, playoffBrackets);
+const getPlayoffParticipants = getEntryBracketParticipants;
+const getChampionshipBracketSize = (playoffBrackets) =>
+  getChampionshipFieldSize(LEAGUE_SLUG, playoffBrackets);
 
-// Pre-2020 brackets reference seeds (no franchise IDs), so the function above
-// returns an empty set. Recover the teams that actually made the playoffs by
-// re-running MFL's standard seeding logic against the regular-season standings:
+// Last resort, when neither MFL's export nor the reconstruction names anyone:
+// re-run MFL's standard seeding logic against the regular-season standings:
 //
 //   * Seeds 1..N: division winners, ordered by overall record + tiebreakers.
 //   * Seeds N+1..: non-division winners, ordered by overall record.
 //
 // The championship bracket's metadata advertises `teamsInvolved` — the number
 // of seeds that count as "made the playoffs". Take the top N seeded teams.
-function getChampionshipBracketSize(playoffBrackets) {
-  if (!playoffBrackets) return 0;
-  const meta = toArray(playoffBrackets.playoffBrackets?.playoffBracket).find(
-    (b) => b.id === '1'
-  );
-  return meta ? Number(meta.teamsInvolved) || 0 : 0;
-}
-
 function inferPlayoffParticipants(standingsRows, divisionTitleHolders, bracketSize) {
   if (!bracketSize) return [];
   const divWinnerIds = new Set([...divisionTitleHolders.values()].filter(Boolean));
@@ -849,14 +847,31 @@ for (const year of years) {
     divisionWinnerLedger.sort((a, b) => String(a.divisionId).localeCompare(String(b.divisionId)));
   }
 
-  const playoffParticipants = getPlayoffParticipants(playoffBrackets);
+  const entryBracketIds = getEntryBracketIds(playoffBrackets);
+  const playoffParticipants = getPlayoffParticipants(playoffBrackets, entryBracketIds);
   const playoffMatchupKeys = getPlayoffMatchupKeys(playoffBrackets);
 
-  // MFL's pre-2020 brackets are metadata-only (no franchise IDs), so
-  // getPlayoffParticipants returns an empty set for those years. Reconstruct
-  // the participant list by re-running MFL's seeding logic (division winners
-  // first, then wildcards by record) and keeping the top `teamsInvolved`
-  // seeds — that's the actual size of the championship bracket per year.
+  // Fallback 1 — the reconstructed brackets (AFL). MFL's export carries
+  // franchise ids only from 2024, so for twenty seasons the set above is
+  // empty. The reconstruction is a walk over schedule.json with real teams and
+  // real scores, verified against championship-history.json before it is
+  // published, so it beats re-deriving the field from the standings: it is
+  // what HAPPENED rather than what the seeding rules imply. It also settles
+  // the two seasons where those disagreed — 2004 and 2007 each credited NINE
+  // berths, the inferred eight plus a division winner the inference had left
+  // out.
+  if (playoffParticipants.size === 0 && reconstructedBracketsByYear) {
+    const season = reconstructedBracketsByYear[String(year)];
+    if (season) {
+      for (const fid of getPlayoffParticipants(season, entryBracketIds)) {
+        playoffParticipants.add(fid);
+      }
+    }
+  }
+
+  // Fallback 2 — re-run MFL's seeding logic (division winners first, then
+  // wildcards by record) and keep the top `teamsInvolved` seeds, which is the
+  // size of the championship field that year.
   //
   // Gated on seasonComplete for the same reason division titles are, and it
   // matters MORE here: this is the only branch that runs from week 1 with

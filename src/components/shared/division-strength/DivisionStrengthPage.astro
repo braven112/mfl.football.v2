@@ -150,14 +150,19 @@ const formatBerthRate = (rate: number | null) =>
 /**
  * The caveat on every berth rate, when the league has one.
  *
- * A rate only compares within a fixed playoff field, and one league's field
- * has moved: the AFL seeded eight or nine of 24 through 2017 and four or five
- * since. TheLeague has seeded 7 of 16 every season on file, so it must not
- * carry the AFL's footnote — hence measured from the data rather than written
- * into the prose.
+ * A rate only compares within a fixed playoff field, so a league that has
+ * changed how many teams it seeds needs the reader told. NEITHER LEAGUE HAS —
+ * TheLeague has seeded 7 of 16 every season since 2007 and the AFL 8 of 24
+ * every season since 2003 — so this renders nowhere today, and that is the
+ * point of measuring it from the data instead of writing a footnote into the
+ * prose. An earlier draft of this page asserted the AFL's field had shrunk,
+ * on the strength of a derived count that was wrong: it read playoff
+ * participants out of MFL bracket 1, which stopped being the AFL's entry
+ * bracket in 2018 (see src/utils/playoff-entry-brackets.mjs). The claim was
+ * about the bug, not the league.
  */
 const fieldRange = playoffFieldRange(data);
-const fieldMoved = !!fieldRange && fieldRange.max - fieldRange.min > 1;
+const fieldMoved = !!fieldRange && fieldRange.max > fieldRange.min;
 
 /**
  * Championships with the near misses beside them.

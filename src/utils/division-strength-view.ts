@@ -151,12 +151,13 @@ export function eraTeamSeasons(
  * How many teams the league has seeded in a season, smallest and largest, over
  * the seasons on file.
  *
- * A berth rate only compares within a fixed field. TheLeague has seeded 7 of
- * 16 every year since 2007 and the caveat is noise there; the AFL seeded eight
- * or nine of 24 through 2017 and four or five since, which makes a rate from
- * the wide-field era a materially easier number. The page reports the range
- * when it varies and stays quiet when it does not, so neither league carries
- * the other's footnote.
+ * A berth rate only compares within a fixed field, so a league that changed
+ * how many teams it seeds owes the reader a caveat. Neither of these has:
+ * TheLeague has seeded 7 of 16 every season since 2007 and the AFL 8 of 24
+ * every season since 2003, which `tests/playoff-field-size.test.ts` checks
+ * against MFL's own bracket metadata season by season. The page reports the
+ * range only when it varies, so today it stays quiet in both leagues — and
+ * would speak up on its own the year one of them changes.
  *
  * Seasons with zero berths are excluded rather than counted as a small field:
  * a season in progress has not seeded anyone yet, and 0 is "not known", not
