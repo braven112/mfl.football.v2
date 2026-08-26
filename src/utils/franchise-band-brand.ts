@@ -49,7 +49,8 @@ import aflConfig from '../../data/afl-fantasy/afl.config.json';
 import bb1Config from '../../data/best-ball-1/bb1.config.json';
 import type { LeagueSlug } from '../types/nav';
 import { getTeamColorPrimary, getTeamColorSecondary } from './team-colors';
-import { chroma, mixHex } from './nfl-team-colors';
+import { mixHex } from './nfl-team-colors';
+import { pickBrandHue } from './franchise-hue';
 import { AA_LARGE_TEXT_RATIO, ensureContrastOn } from './team-color-contrast';
 import { getThrowbackFranchiseBrand } from './franchise-brand';
 import { preferredIconSrc } from './team-icon-dark-css';
@@ -104,14 +105,6 @@ function strokeFilterByFranchise(league: LeagueSlug, teams: any[]): Record<strin
 }
 
 /**
- * Minimum channel spread for a color to count as a HUE rather than a neutral.
- * `#181818` scores 0 and `#8b8f93` scores 8 — the two shades that collapse
- * whole groups of franchises into one band; every real brand color in any
- * league's config clears this comfortably.
- */
-const MIN_ANCHOR_CHROMA = 20;
-
-/**
  * The gradient anchor AND the glow for a franchise, resolved together so the
  * two are never the same hue: the brand primary when it carries a hue at all,
  * otherwise the secondary — and then the neutral primary becomes the glow.
@@ -128,13 +121,17 @@ function resolveBandPair(
   primary: string,
   secondary: string
 ): { anchor: string; glow: string } {
-  if (chroma(primary) >= MIN_ANCHOR_CHROMA) return { anchor: primary, glow: secondary };
-  // The primary is a neutral, so the secondary carries the band — and the
-  // NEUTRAL becomes the glow. Returning `secondary` for both would set `--pmb-g2`
-  // and `--pmb-glow` to the same hex, and the band would render as one flat
-  // colour with an invisible glow; four franchises land here.
-  if (chroma(secondary) >= MIN_ANCHOR_CHROMA) return { anchor: secondary, glow: primary };
-  return { anchor: primary, glow: secondary };
+  // The threshold and the pick live in `franchise-hue.ts` because the client
+  // band util needs the SAME answer for its tints (see that file).
+  //
+  // When the primary is a neutral the secondary carries the band — and the
+  // NEUTRAL becomes the glow. Returning `secondary` for both would set
+  // `--pmb-g2` and `--pmb-glow` to the same hex, and the band would render as
+  // one flat colour with an invisible glow; four franchises land here.
+  const anchor = pickBrandHue(primary, secondary);
+  return anchor === primary
+    ? { anchor: primary, glow: secondary }
+    : { anchor: secondary, glow: primary };
 }
 
 /**

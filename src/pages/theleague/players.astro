@@ -248,8 +248,10 @@ if (projectedScoresData?.projectedScores?.playerScore) {
   }
 }
 
-// Build rostered player map with contract info
-const rosteredPlayers = new Map<string, { salary: number | null; contractYrs: number | null }>();
+// Build rostered player map with contract info + the OWNING franchise, which
+// is what lets a rostered player's modal wear the fantasy team (band colors,
+// crest, "Rostered by" line) instead of the free-agent fallback.
+const rosteredPlayers = new Map<string, { salary: number | null; contractYrs: number | null; franchiseId: string }>();
 if (rostersData?.rosters?.franchise) {
   const franchises = Array.isArray(rostersData.rosters.franchise)
     ? rostersData.rosters.franchise
@@ -265,6 +267,7 @@ if (rostersData?.rosters?.franchise) {
       rosteredPlayers.set(p.id, {
         salary: salary && salary > 0 ? salary : null,
         contractYrs: contractYrs && contractYrs > 0 ? contractYrs : null,
+        franchiseId: franchise.id,
       });
     }
   }
@@ -452,6 +455,8 @@ interface PlayerRow {
   draftPick: number | null;
   salary: number | null;
   contractYrs: number | null;
+  /** Fantasy franchise that rosters him, or null for a true free agent. */
+  franchiseId: string | null;
   games: number | null;
   ppg: number | null;
   salaryYear1: number | null;
@@ -554,6 +559,7 @@ if (Array.isArray(allPlayers)) {
       draftPick: p.draft_pick ? parseInt(p.draft_pick, 10) : null,
       salary: rosterInfo?.salary ?? null,
       contractYrs: rosterInfo?.contractYrs ?? null,
+      franchiseId: rosterInfo?.franchiseId ?? null,
       ppg: (() => {
         const pts = lastYrPtsMap.get(p.id);
         const gp = lastYrGamesMap.get(p.id);
@@ -1901,8 +1907,17 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         draftRound: p.draftRd || null, draftPick: p.draftPick || null,
         points: p.projected != null ? p.projected : null,
         offenseSnaps: p.snaps != null ? p.snaps : null,
+        // Rostered players carry their owner, so the modal band wears the
+        // FANTASY team and names it — without this every player on this page
+        // opened as a free agent, including the ones that aren't.
+        franchiseId: p.franchiseId || null,
+        salary: p.salary != null ? p.salary : null,
+        contractYears: p.contractYrs != null ? p.contractYrs : null,
       }));
-      const rosteredDot = p.rostered ? '<span class="rostered-dot" title="Rostered"></span>' : '';
+      const rosteredTeam = p.franchiseId ? franchiseNameMap.get(p.franchiseId) : null;
+      const rosteredDot = p.rostered
+        ? `<span class="rostered-dot" title="${escapeAttr(rosteredTeam ? 'Rostered by ' + rosteredTeam : 'Rostered')}"></span>`
+        : '';
 
       html += `<tr class="${rosteredClass}" data-pos="${p.position.toLowerCase()}" data-player-id="${p.id}">
         <td class="cell-rank">${rank}</td>

@@ -72,6 +72,11 @@ is dark-only (no `:root` value) — safe only inside a `:global(html.dark)` bloc
   anchored on this field and shipped that pink; an owner reported it (Aug 2026).
 - `colorPrimary`/`Secondary`/… — brand colors, correct for a **fill** with text
   on top.
+- `FranchiseBandBrand.primary` (the band map) — a **gradient anchor for deep
+  ink**, not the franchise's color: `BAND_ART_DIRECTION` overwrites the pair
+  after the hue pick, so the black-led franchises ship a near-black there.
+  Right on the band, grey as a 12% tint on a light card. Off the band, use
+  `franchiseTintHue` / `pickBrandHue` (`src/utils/franchise-hue.ts`).
 - `teamAccentVar(fid)` → `--team-accent-<fid>` — the only correct source for a
   **foreground** (text, numerals, borders, chart lines, swatches). It guarantees
   3:1, but **only against `--card-surface`**. Put the mark on a custom chip or a

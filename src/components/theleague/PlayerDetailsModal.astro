@@ -55,6 +55,18 @@ const { class: className, hideContract = false } = Astro.props;
     </div>
 
     <div class="pdm-body">
+      <!-- Fantasy owner — shown only when the player is on a league roster.
+           Lives OUTSIDE the band on purpose: the band is a fixed-height
+           identity strip whose crest is sized off that height, so a fourth
+           line inside it grows both (see .pdm-hero__meta-text). The band
+           already wears the franchise's colors and crest; this says whose
+           they are in words. -->
+      <div class="pdm-owner" id="pdm-owner" style="display: none;">
+        <img class="pdm-owner__crest" id="pdm-owner-crest" alt="" aria-hidden="true" loading="lazy" decoding="async" />
+        <span class="pdm-owner__label">Rostered by</span>
+        <span class="pdm-owner__name" id="pdm-owner-name"></span>
+      </div>
+
       <!-- Key Metrics -->
       <div class="pdm-metrics" id="pdm-metrics">
         <div class="pdm-metric" id="metric-card-points">
@@ -363,6 +375,58 @@ const { class: className, hideContract = false } = Astro.props;
     white-space: nowrap;
     line-height: 1.4;
     flex-shrink: 0;
+  }
+
+  /* ================================================================
+     Fantasy Owner Strip
+     ================================================================ */
+  /* Tinted with the owning franchise's band hue, set inline as --pdm-owner-hue
+     when the strip is filled. The fill is a low-alpha wash of that same hue so
+     one rule works on the white card AND the #1e1e1e one — no dark override to
+     drift out of sync. */
+  .pdm-owner {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-md, 0.5rem);
+    background: color-mix(in srgb, var(--pdm-owner-hue, #64748b) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--pdm-owner-hue, #64748b) 28%, transparent);
+    min-width: 0;
+  }
+
+  /* The brand map deliberately hands out the DARK crest artwork (see
+     franchise-band-brand.ts), which is drawn for ink — on the white card it
+     would wash out. So the chip supplies the ink, in BOTH themes, exactly as
+     the band does. */
+  .pdm-owner__crest {
+    width: 26px;
+    height: 26px;
+    object-fit: contain;
+    flex-shrink: 0;
+    padding: 3px;
+    border-radius: var(--radius-sm, 0.25rem);
+    background: #0b0e13;
+  }
+
+  .pdm-owner__label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-gray-400, #9ca3af);
+    flex-shrink: 0;
+  }
+
+  .pdm-owner__name {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--color-gray-900, #111827);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   /* ================================================================
@@ -721,7 +785,7 @@ const { class: className, hideContract = false } = Astro.props;
 
 <script>
   import { NFL_TEAM_CITIES } from '../../utils/nfl';
-  import { applyPlayerModalBand } from '../../utils/player-modal-band';
+  import { applyPlayerModalBand, franchiseTintHue, getFranchiseBandBrand } from '../../utils/player-modal-band';
   import { getDefSpotlightPlayer } from '../../data/theleague/def-spotlight-players';
   import {
     loadPlayerNews,
@@ -1010,6 +1074,39 @@ const { class: className, hideContract = false } = Astro.props;
         franchiseId: playerData.franchiseId,
       });
 
+      // ── Owner strip: whose fantasy team he is on ──
+      // The band already wears this franchise's hues and crest; the strip
+      // names it, so "the background changed" is never the only signal. No
+      // franchiseId (a true free agent) or no brand map on the page → hidden,
+      // and the modal reads exactly as it did before.
+      var ownerBrand = getFranchiseBandBrand(playerData.franchiseId);
+      var ownerRow = document.getElementById('pdm-owner');
+      if (ownerRow) {
+        var ownerCrest = document.getElementById('pdm-owner-crest') as HTMLImageElement | null;
+        if (ownerBrand) {
+          setText('pdm-owner-name', ownerBrand.name);
+          ownerRow.style.setProperty('--pdm-owner-hue', franchiseTintHue(ownerBrand));
+          if (ownerCrest) {
+            if (ownerBrand.crest) {
+              ownerCrest.src = ownerBrand.crest;
+              // Same inline-filter contract as the band: the map hands us the
+              // DARK artwork plus the measured stroke, and the chip behind it
+              // is ink in both themes, so the stroke applies in both too.
+              ownerCrest.style.filter = ownerBrand.crestFilter ?? '';
+              ownerCrest.style.display = '';
+            } else {
+              ownerCrest.removeAttribute('src');
+              ownerCrest.style.filter = '';
+              ownerCrest.style.display = 'none';
+            }
+          }
+          ownerRow.style.display = '';
+        } else {
+          ownerRow.style.display = 'none';
+          if (ownerCrest) ownerCrest.removeAttribute('src');
+        }
+      }
+
       // ── Hero: Name ──
 
       setText('detail-name', playerData.name);
@@ -1105,6 +1202,12 @@ const { class: className, hideContract = false } = Astro.props;
           : 'Salary';
         setText('metric-contract-label', yrsLabel);
         if (contractCard) contractCard.classList.remove('pdm-metric--fa');
+      } else if (ownerBrand) {
+        // Rostered, but this surface didn't send a salary. "FA / Free Agent"
+        // would flatly contradict the owner strip and the band above it.
+        setText('metric-contract-value', '\u2014');
+        setText('metric-contract-label', 'Contract');
+        if (contractCard) contractCard.classList.add('pdm-metric--fa');
       } else {
         setText('metric-contract-value', 'FA');
         setText('metric-contract-label', 'Free Agent');
@@ -1183,7 +1286,10 @@ const { class: className, hideContract = false } = Astro.props;
       if (totalRem) cParts.push(totalRem + ' remaining');
       var cType = formatContractType(playerData.contractType);
       if (cType) cParts.push(cType);
-      setText('detail-contract-detail', cParts.length > 0 ? cParts.join(' \u00B7 ') : 'Free Agent');
+      setText(
+        'detail-contract-detail',
+        cParts.length > 0 ? cParts.join(' \u00B7 ') : (ownerBrand ? '\u2014' : 'Free Agent')
+      );
 
       // ── Details: Bye ──
 

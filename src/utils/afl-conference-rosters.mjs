@@ -77,7 +77,8 @@ export function buildConferenceStructure(leagueJson) {
 
 /**
  * Build per-conference rostered sets from an MFL rosters payload. Returns
- * `{ confIds, rosteredByConf }` (Map<conferenceId, Set<playerId>>; single
+ * `{ confIds, rosteredByConf, ownersByConf }` (Map<conferenceId,
+ * Set<playerId>> and Map<conferenceId, Map<playerId, franchiseId>>; single
  * shared pool uses one pseudo-conference '') or null when the payload can't
  * be trusted, so callers fall back rather than guess:
  *   - missing/empty `rosters.franchise`;
@@ -103,6 +104,11 @@ export function buildRosteredByConf(rostersJson, conferenceStructure, expectedFr
   );
   if (expected > 0 && franchises.length < expected) return null;
   const rosteredByConf = new Map(confIds.map((id) => [id, new Set()]));
+  // WHO holds him, not just that someone does — the free-agent surfaces name
+  // the owning franchise. Kept per conference for the same reason the sets
+  // are: in a duplicate-player league the AL's holder and the NL's holder are
+  // two different franchises, and only the viewed conference's is the answer.
+  const ownersByConf = new Map(confIds.map((id) => [id, new Map()]));
   let totalRostered = 0;
   for (const franchise of franchises) {
     const confId = multiConference ? franchiseConfs[franchise?.id ?? ''] : confIds[0];
@@ -113,15 +119,20 @@ export function buildRosteredByConf(rostersJson, conferenceStructure, expectedFr
         ? franchise.player
         : [franchise.player]
       : [];
+    const confOwners = ownersByConf.get(confId);
     for (const p of rosterPlayers) {
       if (p?.id) {
         confSet.add(String(p.id));
+        // MFL allows one copy per conference, so a second holder in the same
+        // one is a league misconfiguration, not a case to model: first writer
+        // wins and the set already counted him.
+        if (!confOwners.has(String(p.id))) confOwners.set(String(p.id), String(franchise.id));
         totalRostered++;
       }
     }
   }
   if (totalRostered === 0) return null;
-  return { confIds, rosteredByConf };
+  return { confIds, rosteredByConf, ownersByConf };
 }
 
 /**
@@ -131,4 +142,25 @@ export function buildRosteredByConf(rostersJson, conferenceStructure, expectedFr
 export function confsForPlayer(playerId, { confIds, rosteredByConf }) {
   const id = String(playerId);
   return confIds.filter((cid) => rosteredByConf.get(cid).has(id));
+}
+
+/**
+ * `{ [conferenceId]: franchiseId }` for the conferences holding a player —
+ * absent conferences mean he is available there. `{}` for a free agent, and
+ * `{}` from a caller that built its sets by hand without owners (the
+ * empty-rosters fallback), which reads downstream as "no owner to name"
+ * rather than as a wrong one.
+ */
+export function ownersForPlayer(playerId, { confIds, ownersByConf }) {
+  const id = String(playerId);
+  // Annotated because this module is type-checked as JS: a bare `{}` infers
+  // the empty type, and every consumer's `Record<string, string>` then fails.
+  /** @type {Record<string, string>} */
+  const out = {};
+  if (!ownersByConf) return out;
+  for (const cid of confIds) {
+    const owner = ownersByConf.get(cid)?.get(id);
+    if (owner) out[cid] = owner;
+  }
+  return out;
 }

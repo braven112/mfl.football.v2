@@ -40,6 +40,7 @@ import {
   buildConferenceStructure,
   buildRosteredByConf,
   confsForPlayer,
+  ownersForPlayer,
 } from '../src/utils/afl-conference-rosters.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -333,6 +334,11 @@ if (Array.isArray(allPlayers)) {
     // Conferences currently holding this player; "rostered" (= hidden by the
     // page's default filter) only when EVERY conference holds him.
     const confs = confsForPlayer(p.id, rosterSets);
+    // …and WHICH franchise holds him in each, so the page can name the team
+    // instead of only greying the row. Baked (not derived at request time
+    // alone) so the owner survives the live overlay's MFL-unreachable
+    // fallback, which serves these flags verbatim.
+    const owners = ownersForPlayer(p.id, rosterSets);
 
     playerList.push({
       id: p.id,
@@ -347,6 +353,7 @@ if (Array.isArray(allPlayers)) {
       projected: projectedMap.get(p.id) ?? null,
       rostered: confs.length === confIds.length,
       confs,
+      owners,
       exp: pos === 'DEF' ? 5 : exp,
       draftRd: (draftRd && draftRd > 0) ? draftRd : null,
       college: p.college || null,
