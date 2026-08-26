@@ -25,6 +25,7 @@ import {
   getBracketFinalWinner,
   getChampionshipFieldSize,
   getEntryBracketIds,
+  getEntryBracketParticipants,
   getThirdPlaceBracketId,
   hasDeclaredEntryBrackets,
 } from '../src/utils/playoff-entry-brackets.mjs';
@@ -113,8 +114,20 @@ describe.each(leagues)('$league.slug playoff field', ({ league, ledgerPath, feed
       if (top.includes(id)) offenders.push(`${year}: ${id} is third AND ${top.join('/')}`);
       // A third place with no final above it is incoherent — you cannot lose
       // before a game that was never played. (Asserting the row is not
-      // 'missed' would be tautological: `third` is filtered on the value.)
+      // 'missed' would be tautological: `third` is filtered on that value.)
       expect(top.length, `${year}: third place recorded with no champion/runner-up`).toBe(2);
+      // And they have to have been IN the playoffs, which the row's own label
+      // cannot tell us: compute-franchise-history adds champResult.thirdPlace
+      // to playoffParticipants unconditionally and then stamps the row, so a
+      // franchise resolved out of the wrong bracket would award itself both
+      // the berth and the label. Ask the entry brackets instead.
+      const brackets = bracketsFor(year);
+      const field = brackets
+        ? getEntryBracketParticipants(brackets, getEntryBracketIds(league.slug, brackets))
+        : new Set<string>();
+      if (field.size) {
+        expect([...field], `${year}: third place ${id} was not in the playoff field`).toContain(id);
+      }
     }
     expect(offenders, 'third place collides with the top two').toEqual([]);
   });
