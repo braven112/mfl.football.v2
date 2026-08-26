@@ -22,8 +22,11 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { ALL_LEAGUES } from '../src/config/leagues-data.mjs';
 import {
+  getBracketFinalWinner,
   getChampionshipFieldSize,
   getEntryBracketIds,
+  getEntryBracketParticipants,
+  getThirdPlaceBracketId,
   hasDeclaredEntryBrackets,
 } from '../src/utils/playoff-entry-brackets.mjs';
 
@@ -54,6 +57,17 @@ describe.each(leagues)('$league.slug playoff field', ({ league, ledgerPath, feed
     return existsSync(p) ? readJson(p) : null;
   };
 
+  /** The AFL's rebuilt brackets; null for a league that has none. */
+  const reconstructedPath = path.join(
+    ROOT,
+    league.dataPath,
+    'derived/reconstructed-playoff-brackets.json'
+  );
+  const reconstructed = existsSync(reconstructedPath)
+    ? readJson(reconstructedPath).seasons ?? {}
+    : {};
+  const reconstructedFor = (year: number) => reconstructed[String(year)] ?? null;
+
   it('seeds exactly as many teams as MFL says it does, every season', () => {
     const mismatches: string[] = [];
     for (const year of years) {
@@ -75,6 +89,114 @@ describe.each(leagues)('$league.slug playoff field', ({ league, ledgerPath, feed
       }
     }
     expect(mismatches, 'derived playoff berths disagree with the declared field').toEqual([]);
+  });
+
+  it('never crowns the champion or runner-up its own third place', () => {
+    // The invariant whose violation WAS the bug. `getChampionshipResult` read
+    // third place out of a hardcoded `brackets['2']`, which for the AFL from
+    // 2018 is `AL Championship` — a conference semifinal whose winner always
+    // goes on to win or lose the final. A third-place finisher lost before the
+    // final by definition, so a value equal to either is proof the wrong
+    // bracket was read. It stayed invisible for eight seasons because the
+    // caller's champion/runner-up branches claimed the row first, and the
+    // symptom was silence: third place recorded in 0 of the AFL's 23 seasons.
+    const offenders: string[] = [];
+    for (const year of years) {
+      const rows = played.filter((r: any) => r.year === year);
+      const third = rows.filter((r: any) => r.playoffResult === 'third-place');
+      // At most one per season, and never the top two.
+      expect(third.length, `${year}: ${third.length} third-place finishers`).toBeLessThanOrEqual(1);
+      if (!third.length) continue;
+      const id = third[0].franchiseId;
+      const top = rows
+        .filter((r: any) => r.playoffResult === 'champion' || r.playoffResult === 'runner-up')
+        .map((r: any) => r.franchiseId);
+      if (top.includes(id)) offenders.push(`${year}: ${id} is third AND ${top.join('/')}`);
+      // A third place with no final above it is incoherent — you cannot lose
+      // before a game that was never played. (Asserting the row is not
+      // 'missed' would be tautological: `third` is filtered on that value.)
+      expect(top.length, `${year}: third place recorded with no champion/runner-up`).toBe(2);
+      // And they have to have been IN the playoffs, which the row's own label
+      // cannot tell us: compute-franchise-history adds champResult.thirdPlace
+      // to playoffParticipants unconditionally and then stamps the row, so a
+      // franchise resolved out of the wrong bracket would award itself both
+      // the berth and the label. Ask the entry brackets instead.
+      const brackets = bracketsFor(year);
+      const field = brackets
+        ? getEntryBracketParticipants(brackets, getEntryBracketIds(league.slug, brackets))
+        : new Set<string>();
+      if (field.size) {
+        expect([...field], `${year}: third place ${id} was not in the playoff field`).toContain(id);
+      }
+    }
+    expect(offenders, 'third place collides with the top two').toEqual([]);
+  });
+
+  it('resolves third place from a bracket that decides third place', () => {
+    // Resolved by NAME, so assert the name — an id-keyed reader is what this
+    // whole file exists to catch, and it fails silently rather than loudly.
+    const offenders: string[] = [];
+    for (const year of years) {
+      const brackets = bracketsFor(year);
+      if (!brackets) continue;
+      const id = getThirdPlaceBracketId(league.slug, brackets);
+      if (!id) continue;
+      const meta = ([] as any[])
+        .concat(brackets.playoffBrackets?.playoffBracket ?? [])
+        .find((b: any) => String(b.id) === id);
+      const name = String(meta?.name ?? '');
+      // Either it says "3rd place", or it is the championship-side
+      // consolation/losers bracket whose final decides third. Never the NIT's
+      // or the Toilet Bowl's — those run their own placement games.
+      const ok =
+        /3rd place/i.test(name) || /\b(consolation|loser'?s?)\b/i.test(name);
+      if (!ok || /NIT|AFL Cup|toilet/i.test(name)) {
+        offenders.push(`${year}: bracket ${id} is "${name}"`);
+      }
+    }
+    expect(offenders, 'third place read from a bracket that does not decide it').toEqual([]);
+  });
+
+  it('recovers every third place the brackets can actually resolve', () => {
+    // A regression here means a season quietly stopped being recoverable — the
+    // failure mode that hid this bug is silence, so the seasons are pinned
+    // rather than left to "well, some of them have it".
+    //
+    // Scoped to seasons the DERIVED data already calls finished, because the
+    // two sides of this comparison are refreshed on different clocks: the feed
+    // is synced every few minutes and the ledger is rebuilt once a day. Without
+    // the scope, the hours between week 17's third-place game scoring and that
+    // night's rebuild are a red `main` — the sibling assertion above skips the
+    // same window via its `berths === 0` guard.
+    const settled = years.filter((year) =>
+      played.some((r: any) => r.year === year && r.playoffResult === 'champion')
+    );
+    const unrecovered: string[] = [];
+    for (const year of settled) {
+      const brackets = bracketsFor(year);
+      if (!brackets) continue;
+      const id = getThirdPlaceBracketId(league.slug, brackets);
+      if (!id) continue;
+      const rec = reconstructedFor(year);
+      const winner =
+        getBracketFinalWinner(brackets, id) ?? (rec ? getBracketFinalWinner(rec, id) : null);
+      if (!winner) continue;
+      const rows = played.filter((r: any) => r.year === year);
+      const top = rows
+        .filter((r: any) => r.playoffResult === 'champion' || r.playoffResult === 'runner-up')
+        .map((r: any) => r.franchiseId);
+      // Production discards a winner that collides with the top two rather than
+      // publishing it (resolveThirdPlace), so a season it legitimately rejected
+      // is not an unrecovered one — asserting otherwise reports the guard
+      // working as a failure.
+      if (top.includes(winner)) continue;
+      const recorded = rows.some((r: any) => r.playoffResult === 'third-place');
+      if (!recorded) unrecovered.push(`${year}: bracket ${id} resolves ${winner}`);
+    }
+    // Every season the data CAN answer must be answered. Seasons it cannot
+    // (TheLeague's bracket 2 is absent from the feed for 16 of 19 years, and
+    // there is no reconstruction for that league) are legitimately empty.
+    expect(unrecovered, 'third place is resolvable but unrecorded').toEqual([]);
   });
 
   it('never routes a team into the playoffs through a placement or consolation bracket', () => {

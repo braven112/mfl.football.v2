@@ -136,6 +136,30 @@ available" for every season before 2024. The GAMES were never missing:
   rather than a policy claim: berths in the season ledger must equal the field
   MFL's own bracket metadata declares, season by season, in both leagues. A
   league that genuinely changes its playoff size stays green.
+- **Third place comes from the bracket that DECIDES third place**, resolved by
+  name via `getThirdPlaceBracketId`. `getChampionshipResult` hardcoded
+  `brackets['2']` — the sibling of the bug above, in the next function down, and
+  it survived that fix by a week. For the AFL from 2018 bracket 2 is
+  `AL Championship`, a conference semifinal whose winner always goes on to win
+  or lose the final, so the caller's champion/runner-up branches claimed the row
+  first and **third place was recorded in 0 of the AFL's 23 seasons**. The era
+  map: 2004-2017 it is bracket 2, the 6-team `AFL Losers Bracket` /
+  `AFL Consolation Bracket`, whose FINAL winner is third; 2018+ it is bracket 4,
+  `AFL 3rd Place Game`. 2006 declares two candidates and the earlier-starting
+  one decides.
+  Recovering it needed the reconstruction as well as the rename: MFL's AFL
+  export carries franchise ids only from 2024, and `championship-history.json`
+  has no `thirdPlace` key at all. 22 seasons recovered.
+  **TheLeague answers `['2']` directly and must never get the AFL's shape rule**
+  — its `The Loser's Bracket` starts in week 14, EARLIER than
+  `The Consolation Bracket` in week 16, and is the fifth-place bracket (MFL
+  renamed the pair `5th Place Bracket` / `3rd Place Bracket` in 2025, which is
+  how we know). It resolves in only 3 of 19 seasons because bracket 2 is absent
+  from the committed feed for the rest — a data ceiling, not a bug.
+  The guard is the invariant whose violation IS the bug: a third-place finisher
+  lost before the final, so a value equal to the champion or runner-up is proof
+  the wrong bracket was read. `resolveThirdPlace` discards it and
+  `tests/playoff-field-size.test.ts` asserts it never happens.
 - **Archived schedules contain rounds that aren't valid rounds.** 2012 week 14
   has an outright `0023 vs 0023` bye row; 2014 and 2015 NIT week 14 each carry
   a stray matchup pairing two teams already scheduled that week. `pruneRound`
