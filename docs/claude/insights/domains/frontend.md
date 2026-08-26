@@ -131,6 +131,46 @@ hrefs to local copies, and open it in the bundled Chromium — it isolates
 
 ---
 
+## 2026-08-26 - Astro Scoping Lets a Type-Selector Rule Outrank a Class Rule
+
+**Context:** `DivisionStrengthPage.astro` set `.verdict-pair { margin: 1.5rem 0 0 }`
+on the two ranked-board sections. It never rendered: both headings sat flush
+against the paragraph closing the section above them while every other section
+heading on the page sat 2.5rem clear. Bumping the value changed nothing, which
+is the tell that the rule is losing rather than too small.
+
+**Insight:** Astro's scoping adds its hash to **every compound in a selector**,
+not once per rule. So a reset written three hundred lines earlier —
+`section + section { margin-top: 0 }` — compiles to
+`section[data-astro-cid-x] + section[data-astro-cid-x]`, scoring **two
+attributes plus two types (0,2,2)**, while `.verdict-pair` compiles to
+`.verdict-pair[data-astro-cid-x]` at **(0,2,0)**. The bare type-selector rule
+WINS, and nothing about the authored CSS suggests it should. Specificity in an
+Astro `<style>` has to be compared post-scoping: add one attribute per compound
+before you count. The more compounds a selector has, the more scoping inflates
+it — which inverts the usual "a class beats an element" intuition exactly where
+descendant/sibling resets live.
+
+**What works:** exempt the intentional rule from the reset rather than trying to
+out-specify it from the class — `section + section:not(.verdict-pair)`. Adding
+a type selector to the class rule (`section.verdict-pair`, (0,2,1)) still loses;
+the only ways to win from that side are `:not()`, an extra class, or `!important`,
+and the exemption reads as what it is.
+
+**Evidence:** `src/components/shared/division-strength/DivisionStrengthPage.astro`
+— the `section + section` reset and `.verdict-pair`. The margin had been dead
+since the section was written; it shipped and nobody could see why the heading
+crowded the paragraph.
+
+**Recommendation:** When a margin/padding on a scoped class does nothing and
+raising the value does nothing either, grep the same `<style>` for a
+descendant or sibling reset (`x + x`, `.a .b`, `ul li`) touching that property
+before touching the value again. Prefer writing such resets with an exemption
+hook from the start (`:not(.exception)`) — in scoped CSS they are stronger than
+they look.
+
+---
+
 ## 2026-08-25 - The Browser Pane Screenshots the Top of the Page, Not the Viewport You Scrolled To
 
 **Context:** Verifying a section reorder on `/owners` — the moved section sits

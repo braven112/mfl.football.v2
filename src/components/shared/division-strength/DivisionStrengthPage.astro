@@ -293,8 +293,10 @@ const alumniOf = (d: DivisionAllTime) => alumniBySlug.get(d.slug) ?? [];
  * A division appears more than once when it has held two long-lived groups
  * (TheLeague's Central is here three times), and not at all when it never held
  * one together for `ERA_MIN_SEASONS`. Since eras break on a takeover as well as
- * a realignment, the board is shorter than the number of divisions suggests —
- * 6 rows in TheLeague and 4 in the AFL, not one or two per name.
+ * a realignment, the row count tracks how often teams have moved rather than
+ * how many division names there are — a name can contribute none or several.
+ * As of Aug 2026 that is 10 rows in each league against 7 division names in
+ * each; expect it to drift with every realignment.
  */
 const rankedEras = rankEras(data.divisions);
 // Named in the note so a reader who scans for their own division and misses it
@@ -305,7 +307,7 @@ const rankedEras = rankEras(data.divisions);
 // has in fact kept a lineup together — saying "no group has stayed together
 // that long" about it would be a false claim in generated prose, which is a
 // bug this feature has shipped once before. Unreachable today (no era of
-// four-plus seasons lacks games in either league) and deliberately not
+// three-plus seasons lacks games in either league) and deliberately not
 // dependent on that staying true.
 const erasMissing = data.divisions
   .filter((d) => d.totals.games > 0 && d.membershipEras.every((e) => e.seasons < ERA_MIN_SEASONS))
@@ -885,6 +887,12 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                             : <span class="member-initials" title={m.name ?? ''}>{(m.nameMedium ?? m.name ?? '?').slice(0, 2)}</span>
                         ))}
                       </span>
+                      {/* The ranked figure leads: the board sorts on overall win%,
+                          so that is the number in the big type. The
+                          interdivisional rate sits under it — at the three-season
+                          floor the two disagree on three AFL pairs, all of them
+                          the 2008-2010 North against a row above it, and showing
+                          both is what keeps the ranking honest about it. */}
                       <span class="verdict-value">
                         {formatRecord(row.era.totals)} <span class="dim">{formatWinPct(row.era.totals)}</span>
                         <span class="era-board__inter">
@@ -895,8 +903,8 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                   ))}
                 </ol>
                 <p class="verdict-note">
-                  {ERA_MIN_SEASONS} seasons is the floor because a lineup that lasted one
-                  realignment cycle has a record, not a history.
+                  {ERA_MIN_SEASONS} seasons is the floor because a lineup that lasted a season
+                  or two has a record, not a history.
                   {erasMissing.length > 0 && (
                     <>
                       {' '}The{' '}
@@ -1494,7 +1502,14 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
     font-size: 0.8125rem;
     color: var(--ds-ink-muted);
   }
-  section + section { margin-top: 0; }
+  /* Sections space themselves (`.section-header` above, `.verdict-pair` below);
+     this only stops anything stacking on top of that. Astro scopes BOTH type
+     selectors with its hash class, so `section + section` scores two classes
+     plus two types and outweighs any bare class rule — which is why
+     `.verdict-pair`'s top margin never rendered and its heading sat flush
+     against the paragraph closing the section above it. Exempt it here rather
+     than trying to out-specify this from the class. */
+  section + section:not(.verdict-pair) { margin-top: 0; }
 
   /* ── Season rail ───────────────────────────────────────────────────────── */
   .season-rail { margin: 0 0 0.5rem; }
@@ -1600,7 +1615,10 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
   }
 
   /* ── The paired podium ─────────────────────────────────────────────────── */
-  .verdict-pair { margin: 1.5rem 0 0; }
+  /* 2.5rem, the same gap `.section-header` gives every other section. These two
+     sections carry a bare `.section-title` instead of that wrapper, and at
+     1.5rem their headings crowded the paragraph closing the section above. */
+  .verdict-pair { margin: 2.5rem 0 0; }
   .verdict-list { list-style: none; margin: 0; padding: 0; }
   .verdict-list--solo {
     margin-top: 1rem;

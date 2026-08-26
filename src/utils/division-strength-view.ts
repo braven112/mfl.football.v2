@@ -189,13 +189,13 @@ export function playoffFieldRange(
  * Consecutive seasons a lineup must survive to earn a place on the era board.
  *
  * The whole point of the board is comparing groups that actually have shared
- * history; a lineup that lasted one realignment cycle has a record, not a
- * story. Four is the owner's call and it is also where the data separates —
- * both leagues realign in a way that produces a scatter of one-and-two-season
- * lineups (the AFL's West has ten eras, six of them a single season) that
- * would otherwise dominate any rate metric and bury the real ones.
+ * history; a lineup that lasted a single season has a record, not a story.
+ * Three is the owner's call — it shows more eras than four did while still
+ * excluding the scatter of one-and-two-season lineups both leagues' realignments
+ * produce (the AFL's West has ten eras, six of them a single season) that would
+ * otherwise dominate any rate metric and bury the real ones.
  */
-export const ERA_MIN_SEASONS = 4;
+export const ERA_MIN_SEASONS = 3;
 
 /** "2012–2016", or "2016–present" for the era still running. */
 export function formatEraYears(era: Pick<DivisionMembershipEra, 'yearStart' | 'yearEnd' | 'current'>): string {
@@ -221,12 +221,18 @@ export interface RankedEra {
  * other.
  *
  * Sorted on OVERALL win%, matching the all-time ranking directly above it on
- * the page. That is safe here for the same reason it is safe there: an era's
- * intra-division games are exactly zero-sum, so overall win% is interdivisional
- * win% compressed toward .500 by a similar factor for every era. Measured, not
- * assumed — the two metrics order the qualifying eras identically in both
- * leagues (9 for 9 in TheLeague, 6 for 6 in the AFL). Ties break toward the
- * longer run, which is the one carrying more evidence.
+ * the page and the record each row leads with — a board sorted on one number
+ * while showing another in the big type reads as broken. That is the owner's
+ * call, made knowing the two metrics no longer agree everywhere: an era's
+ * intra-division games are exactly zero-sum, so overall win% is the
+ * interdivisional rate compressed toward .500, but only by an APPROXIMATELY
+ * equal factor. They ordered every era identically at the old four-season
+ * floor; at three, the AFL's North 2008–2010 beats three rows above it against
+ * the rest of the league (South 2019–present and both East runs) while trailing
+ * all three overall, so those pairs sit in the opposite order from an
+ * interdivisional ranking. The widest of them is .009 apart on the ranked
+ * number. Both figures are on every row, which is what keeps that honest. Ties break toward the longer run,
+ * which is the one carrying more evidence.
  */
 export function rankEras(
   divisions: DivisionAllTime[],
