@@ -293,8 +293,8 @@ const alumniOf = (d: DivisionAllTime) => alumniBySlug.get(d.slug) ?? [];
  * A division appears more than once when it has held two long-lived groups
  * (TheLeague's Central is here three times), and not at all when it never held
  * one together for `ERA_MIN_SEASONS`. Since eras break on a takeover as well as
- * a realignment, the board is shorter than the number of divisions suggests —
- * 6 rows in TheLeague and 4 in the AFL, not one or two per name.
+ * a realignment, the board is not one or two rows per name — it is 10 rows in
+ * TheLeague and 10 in the AFL.
  */
 const rankedEras = rankEras(data.divisions);
 // Named in the note so a reader who scans for their own division and misses it
@@ -305,7 +305,7 @@ const rankedEras = rankEras(data.divisions);
 // has in fact kept a lineup together — saying "no group has stayed together
 // that long" about it would be a false claim in generated prose, which is a
 // bug this feature has shipped once before. Unreachable today (no era of
-// four-plus seasons lacks games in either league) and deliberately not
+// three-plus seasons lacks games in either league) and deliberately not
 // dependent on that staying true.
 const erasMissing = data.divisions
   .filter((d) => d.totals.games > 0 && d.membershipEras.every((e) => e.seasons < ERA_MIN_SEASONS))
@@ -863,7 +863,8 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
               <section class="verdict-pair" aria-labelledby="eras-heading">
                 <h2 id="eras-heading" class="section-title">Every lineup, ranked</h2>
                 <p class="section-header__sub">
-                  A division's record belongs to the owners in it, so this ranks the owners. Each
+                  A division's record belongs to the owners in it, so this ranks the owners, on how
+                  each group fared against the rest of the league. Each
                   row is a run of consecutive seasons one division kept the exact same group —
                   a realignment ends the run, and so does a team changing hands — and a group has
                   to hold together {ERA_MIN_SEASONS} seasons to make the board. A division that has
@@ -885,18 +886,22 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                             : <span class="member-initials" title={m.name ?? ''}>{(m.nameMedium ?? m.name ?? '?').slice(0, 2)}</span>
                         ))}
                       </span>
+                      {/* The ranked figure leads. Sorting on the interdivisional
+                          rate while showing the overall one in the big type reads
+                          as a broken sort the first time the two disagree, which
+                          they now do. */}
                       <span class="verdict-value">
-                        {formatRecord(row.era.totals)} <span class="dim">{formatWinPct(row.era.totals)}</span>
+                        {formatRecord(row.era.interDivision)} <span class="dim">{formatWinPct(row.era.interDivision)} vs others</span>
                         <span class="era-board__inter">
-                          {formatWinPct(row.era.interDivision)} <span class="dim">vs others</span>
+                          {formatRecord(row.era.totals)} <span class="dim">{formatWinPct(row.era.totals)} overall</span>
                         </span>
                       </span>
                     </li>
                   ))}
                 </ol>
                 <p class="verdict-note">
-                  {ERA_MIN_SEASONS} seasons is the floor because a lineup that lasted one
-                  realignment cycle has a record, not a history.
+                  {ERA_MIN_SEASONS} seasons is the floor because a lineup that lasted a season
+                  or two has a record, not a history.
                   {erasMissing.length > 0 && (
                     <>
                       {' '}The{' '}
@@ -906,8 +911,9 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                       {erasMissing.length === 1 ? ' that name' : ' those names'}.
                     </>
                   )}
-                  {' '}Both figures cover the era's own seasons only; the second excludes games
-                  inside the division, which are zero-sum and cannot separate anyone.
+                  {' '}Both figures cover the era's own seasons only. The ranking uses the
+                  first, which counts games against the rest of the league — games inside the
+                  division are zero-sum and cannot separate anyone in it.
                 </p>
               </section>
             )}
@@ -1494,7 +1500,14 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
     font-size: 0.8125rem;
     color: var(--ds-ink-muted);
   }
-  section + section { margin-top: 0; }
+  /* Sections space themselves (`.section-header` above, `.verdict-pair` below);
+     this only stops anything stacking on top of that. Astro scopes BOTH type
+     selectors with its hash class, so `section + section` scores two classes
+     plus two types and outweighs any bare class rule — which is why
+     `.verdict-pair`'s top margin never rendered and its heading sat flush
+     against the paragraph closing the section above it. Exempt it here rather
+     than trying to out-specify this from the class. */
+  section + section:not(.verdict-pair) { margin-top: 0; }
 
   /* ── Season rail ───────────────────────────────────────────────────────── */
   .season-rail { margin: 0 0 0.5rem; }
@@ -1600,7 +1613,10 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
   }
 
   /* ── The paired podium ─────────────────────────────────────────────────── */
-  .verdict-pair { margin: 1.5rem 0 0; }
+  /* 2.5rem, the same gap `.section-header` gives every other section. These two
+     sections carry a bare `.section-title` instead of that wrapper, and at
+     1.5rem their headings crowded the paragraph closing the section above. */
+  .verdict-pair { margin: 2.5rem 0 0; }
   .verdict-list { list-style: none; margin: 0; padding: 0; }
   .verdict-list--solo {
     margin-top: 1rem;
@@ -1696,7 +1712,10 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
     .era-board__name,
     .verdict-list > li > .verdict-name,
     .verdict-list > li > .pill { order: 2; }
-    .era-board__inter { display: inline; margin-left: 0.5rem; }
+    /* Stays on its own line. It was folded inline when it read ".533 vs
+       others"; it now carries a full record too, and inline that line runs
+       past the edge of a phone. */
+    .era-board__inter { display: block; }
   }
 
   /* ── Pills ─────────────────────────────────────────────────────────────── */

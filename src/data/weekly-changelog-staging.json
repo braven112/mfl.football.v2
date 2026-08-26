@@ -80,6 +80,22 @@
       "impact": "user",
       "area": "owners",
       "league": "both"
+    },
+    {
+      "date": "2026-08-26",
+      "type": "bug-fix",
+      "summary": "The lineup board on Strength of Division now admits any group of owners that stayed together three seasons instead of four, which takes it from 6 rows to 10 in TheLeague and 4 to 10 in the AFL — the Atlantic of 2007-2009 turns out to be the toughest room either league has ever put together. Those shorter runs also broke the shortcut the board was ranked on: it sorted by overall record, which counts games inside the division that are zero-sum and cannot separate anyone in it. It now ranks on each group's record against the rest of the league, and that record leads the row with the overall one underneath.",
+      "impact": "user",
+      "area": "standings",
+      "league": "both"
+    },
+    {
+      "date": "2026-08-26",
+      "type": "style-tweak",
+      "summary": "The two ranked boards on Strength of Division — Strongest to Weakest and Every Lineup, Ranked — had their headings sitting flush against the paragraph above them instead of clear of it like every other section on the page. They now use the same spacing as the rest.",
+      "impact": "user",
+      "area": "standings",
+      "league": "both"
     }
   ]
 }

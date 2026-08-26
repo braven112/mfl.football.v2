@@ -1089,34 +1089,38 @@ describe.each(leagues)('$league.slug era board', ({ dataPath }) => {
     }
   });
 
-  it('ranks by overall win percentage, longer run first on a tie', () => {
+  it('ranks by interdivisional win percentage, longer run first on a tie', () => {
     const rows = rankEras(data.divisions);
     for (let i = 1; i < rows.length; i += 1) {
       const prev = rows[i - 1].era;
       const cur = rows[i].era;
-      expect((prev.totals.winPct ?? 0), `${rows[i - 1].label} vs ${rows[i].label}`)
-        .toBeGreaterThanOrEqual(cur.totals.winPct ?? 0);
-      if ((prev.totals.winPct ?? 0) === (cur.totals.winPct ?? 0)) {
+      expect((prev.interDivision.winPct ?? 0), `${rows[i - 1].label} vs ${rows[i].label}`)
+        .toBeGreaterThanOrEqual(cur.interDivision.winPct ?? 0);
+      if ((prev.interDivision.winPct ?? 0) === (cur.interDivision.winPct ?? 0)) {
         expect(prev.seasons).toBeGreaterThanOrEqual(cur.seasons);
       }
     }
   });
 
-  // The page sorts this board on OVERALL win% to match the all-time ranking
-  // directly above it, which is only defensible while the two metrics agree.
-  // They do in both leagues today because an era's intra-division games are
-  // exactly zero-sum. If this ever fails, the board is sorting on the
-  // flattering number and should move to interdivisional.
-  it('orders the board identically on the interdivisional rate', () => {
+  // The board sorted on OVERALL win% until the floor dropped to three seasons,
+  // on the argument that the two metrics agreed anyway (intra-division games
+  // are zero-sum, so overall win% is the interdivisional rate compressed toward
+  // .500). The shorter eras broke that: the AFL's North 2008-2010 beats South
+  // 2019-present against the rest of the league and trails it overall. So the
+  // row must LEAD with the ranked figure — a board sorted on one number while
+  // showing another in the big type reads as a broken sort.
+  it('leads each row with the interdivisional record it is ranked on', () => {
     const rows = rankEras(data.divisions);
-    const byInter = [...rows].sort(
-      (a, b) =>
-        (b.era.interDivision.winPct ?? 0) - (a.era.interDivision.winPct ?? 0) ||
-        b.era.seasons - a.era.seasons ||
-        b.era.yearStart - a.era.yearStart ||
-        a.divisionName.localeCompare(b.divisionName)
-    );
-    expect(byInter.map((r) => r.label)).toEqual(rows.map((r) => r.label));
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      expect(row.era.interDivision.games, row.label).toBeGreaterThan(0);
+      expect(row.era.interDivision.games, row.label).toBeLessThanOrEqual(row.era.totals.games);
+    }
+    expect(
+      page.indexOf('{formatRecord(row.era.interDivision)}'),
+      'the era row must render the interdivisional record before the overall one'
+    ).toBeLessThan(page.indexOf('{formatRecord(row.era.totals)}'));
+    expect(page.slice(page.indexOf('era-board__inter'))).toContain('overall');
   });
 
   it('labels every row with the division and the years the group was together', () => {
