@@ -113,9 +113,34 @@ const CAPTURE_PATHS = {
   // send AFL owners across the fence). The links themselves are the subject,
   // so the shot has to be of an article, not a feature page.
   'schefter-article-links': '/theleague/news/sf_2026_schedule_release_theleague',
+  // Both-league entry on the bare `/players`, which only routes on a league's
+  // own apex host. Shot against TheLeague because its card carries the
+  // contract half of the change (salary + years) as well as the owner strip;
+  // the AFL card has no contract UI at all.
+  'free-agents-rostered-by': '/theleague/players',
 };
 
 const PAGE_HOOKS = {
+  'free-agents-rostered-by': async (page) => {
+    // The whole subject is the MODAL of a ROSTERED player, and the page opens
+    // with rostered players filtered out — a blind capture shoots the free
+    // agent table, where nothing changed. Reveal them, then open one.
+    // The checkbox lives inside the (visually hidden) filter panel, so drive
+    // it through its change handler rather than clicking it.
+    await page.evaluate(() => {
+      const cb = document.getElementById('show-rostered');
+      if (cb) { cb.checked = true; cb.dispatchEvent(new Event('change', { bubbles: true })); }
+    });
+    await page.waitForTimeout(1200);
+    await page.evaluate(() => {
+      const row = document.querySelector('tr:has(.rostered-dot) [data-player-modal]');
+      if (row) row.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    await page.waitForSelector('#pdm-owner', { state: 'visible', timeout: 10000 }).catch(() => {});
+    // Let the ESPN news fetch land, so the card is shot full rather than
+    // mid-skeleton.
+    await page.waitForTimeout(2500);
+  },
   'homepage-whats-new-section': async (page) => {
     // The What's New panel sits at the bottom of the homepage's left column —
     // a top-of-page shot would frame the hero instead, so scroll it into view.
