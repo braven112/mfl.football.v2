@@ -1381,3 +1381,44 @@ no hue to pull. Their crests still separate the bands. It sits in the
 distinctness guard's `KNOWN_DATA_GAPS`; giving either franchise a real accent
 colour in the config is the fix whenever someone wants it.
 
+
+## "Rostered by" owner strip — the band needs words under it (2026-08-26)
+
+The modal band has worn the owning FRANCHISE since 2026-07-06, but only on the
+surfaces that send `franchiseId`. **Free Agents (`/players`) never did**, and it
+lists rostered players — the "Include rostered" toggle, plus every auction row —
+so a player under contract at $9M opened wearing his NFL colours with `FA ·
+FREE AGENT` stamped on the contract card. Two fixes, and the second is the one
+worth remembering:
+
+- The page's roster map now records `franchise.id` alongside salary/contract
+  years, and the row payload carries all three. That alone repaints the band.
+- **A repainted band is not a statement.** An owner who does not already know
+  Vitside's colours reads a red header and learns nothing; on the roster pages
+  the surface itself supplied the context, and on a free-agent list there is
+  none. So the band now has a `.pdm-owner` strip under it naming the franchise
+  in words, and the FA fallbacks (`metric-card-contract`, the contract detail
+  row) are gated on the same lookup — a card that says both "Rostered by
+  Vitside Mafia" and "FREE AGENT" is worse than either alone.
+
+**The trap, for anything that reuses a band brand off the band:**
+`FranchiseBandBrand.primary` is the band's GRADIENT ANCHOR, not the franchise's
+colour. `BAND_ART_DIRECTION` overwrites the pair AFTER `resolveBandPair` picks
+it, so Vitside — which resolves to red on its own — ships a `primary` of
+`#271b1a`. On deep ink that is the whole point (black band, red glow). At 12%
+on the modal's white card it is grey: the band glows red and the strip under it
+washes neutral, in the same viewport. `pickBrandHue`
+(`src/utils/franchise-hue.ts`) is the shared answer — one threshold, imported by
+the build-time map AND the client band util, because two copies of it is exactly
+how the two surfaces end up disagreeing. `franchiseTintHue` in
+`player-modal-band.ts` is what off-band callers should use.
+
+Midwestside is the deliberate near-miss: its art-directed black is tinted 10%
+toward its gold, which clears the hue test, so its strip IS that black — the
+same colour its band leads with. Correct, if less colourful than the gold.
+
+The strip's crest sits on an ink chip (`#0b0e13`) in BOTH themes for the same
+reason the band does: the map hands out the DARK artwork plus its measured
+stroke, and that artwork is drawn for ink, not for a white card.
+
+Guarded by `tests/player-modal-owner-strip.test.ts`.

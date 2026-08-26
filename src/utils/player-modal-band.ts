@@ -40,6 +40,7 @@
 import { getNflTeamColors, getNflTeamNickname, hexToRgba, mixHex } from './nfl-team-colors';
 import { normalizeTeamCode } from './nfl-logo';
 import type { FranchiseBandBrand, FranchiseBandBrandMap } from './franchise-band-brand';
+import { pickBrandHue } from './franchise-hue';
 
 /** Element id of the JSON island written by `FranchiseBandBrands.astro`. */
 export const FRANCHISE_BAND_BRANDS_ID = 'franchise-band-brands';
@@ -119,6 +120,19 @@ export function getFranchiseBandBrand(
   if (!franchiseId) return null;
   const map = readFranchiseBandBrands();
   return map?.teams?.[franchiseId] ?? null;
+}
+
+/**
+ * The hue that reads as this franchise's color OFF the band — a tint, a chip,
+ * a border on the modal's light card.
+ *
+ * Not `brand.primary`: that is the band's gradient anchor, and for the
+ * franchises that lead with a near-black it is a near-black. On deep ink that
+ * is the point; at 12% on a white card it is grey. `pickBrandHue` applies the
+ * same neutral test the band map itself uses, so the two can't drift apart.
+ */
+export function franchiseTintHue(brand: FranchiseBandBrand): string {
+  return pickBrandHue(brand.primary, brand.secondary);
 }
 
 /**
