@@ -460,6 +460,11 @@ describe('measured owner counts', () => {
   // 320 because it counts DISTINCT franchise-seasons, not owner-seasons.
   const cases = [
     { slug: 'theleague', total: 38, current: 17, former: 21, seasons: 320, shared: 2 },
+    // Back to 88 by two offsetting corrections: Taco Hell (2004-06) and the
+    // Fly Fishermen (2007) were one man on one franchise, so own-0107 merged
+    // into own-0091 (-1); and the Carolina Blues (Chris Broskey) turned out
+    // not to be the Angry Irish owner, so own-0024's 2012 stint split back
+    // out to its own record (+1).
     { slug: 'afl-fantasy', total: 88, current: 24, former: 64, seasons: 576, shared: 0 },
   ];
 
