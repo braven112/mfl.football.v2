@@ -50,6 +50,9 @@ const PARALLEL = [
   // output dir) — overlaps with the network fetches instead of serializing
   // onto the build critical path.
   { name: 'compute:schedule-strength', cmd: 'pnpm run compute:schedule-strength' },
+  // Reads only committed mfl-feeds + championship-history.json, so it has no
+  // ordering relationship with anything else here.
+  { name: 'compute:playoff-performance', cmd: 'pnpm run compute:playoff-performance' },
   // Reads the season ledgers that compute:franchise-history (SEQUENTIAL, above)
   // writes. PARALLEL starts only after SEQUENTIAL finishes, so the dependency
   // holds without serializing this onto the critical path.

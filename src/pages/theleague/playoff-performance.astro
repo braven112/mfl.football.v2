@@ -1,0 +1,243 @@
+---
+/**
+ * Playoff Performance — how often does the best regular season win anything?
+ *
+ * Two questions, in order of billing:
+ *   1. How often does the overall #1 seed win the league?
+ *   2. How often does the best all-play record win the league?
+ *
+ * Data: data/theleague/derived/playoff-performance.json
+ * (scripts/compute-playoff-performance.mjs). The #1 seed comes off the actual
+ * bracket — the team that took the first-round bye — because MFL's standings
+ * row order is NOT seed order when teams tie on record. The reasoning, and the
+ * five seasons that prove it, are documented at the top of the compute script.
+ */
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import Breadcrumbs from '../../components/theleague/Breadcrumbs.astro';
+import MetricCard from '../../components/theleague/MetricCard.astro';
+import performanceData from '../../../data/theleague/derived/playoff-performance.json';
+import type { PlayoffPerformanceFile } from '../../types/playoff-performance';
+
+export const prerender = false;
+
+const data = performanceData as unknown as PlayoffPerformanceFile;
+const { totals } = data;
+const seasons = [...data.seasons].sort((a, b) => b.year - a.year);
+
+const rate = (n: number) => (totals.seasons ? Math.round((100 * n) / totals.seasons) : 0);
+const ratio = (n: number) => `${n} of ${totals.seasons}`;
+const span = data.yearsCovered.length
+  ? `${data.yearsCovered[0]}–${data.yearsCovered[data.yearsCovered.length - 1]}`
+  : '';
+
+const topSeedRate = rate(totals.topSeedTitles);
+const allPlayRate = rate(totals.allPlayLeaderTitles);
+
+// A 16-team league: one team in sixteen is what pure chance looks like.
+const chance = Math.round(100 / 16);
+
+const fmtPct = (v: number | null) => (v == null ? '—' : v.toFixed(3).replace(/^0/, ''));
+---
+
+<TheLeagueLayout title="Playoff Performance · Does the Best Team Win?">
+  <div class="pp">
+    <Breadcrumbs
+      items={[{ label: 'The League', href: '/theleague' }, { label: 'Playoff Performance' }]}
+    />
+
+    <header class="pp__head">
+      <h1>Does the best regular season win anything?</h1>
+      <p class="pp__lede">
+        {totals.seasons} completed seasons, {span}. The #1 seed has won the title
+        <strong>{ratio(totals.topSeedTitles)}</strong> times. Picking a champion at random
+        out of a hat would hit about {chance}% of the time.
+      </p>
+    </header>
+
+    <section class="pp__cards" aria-label="Headline rates">
+      <MetricCard
+        label="#1 seed wins the title"
+        value={`${topSeedRate}%`}
+        subtitle={ratio(totals.topSeedTitles)}
+        hint={`Reached the final ${ratio(totals.topSeedFinals)}`}
+        hintVariant="info"
+      />
+      <MetricCard
+        label="All-play leader wins the title"
+        value={`${allPlayRate}%`}
+        subtitle={ratio(totals.allPlayLeaderTitles)}
+        hint={`Reached the final ${ratio(totals.allPlayLeaderFinals)}`}
+        hintVariant="info"
+      />
+      <MetricCard
+        label="Same team held both"
+        value={ratio(totals.topSeedIsAllPlayLeader)}
+        subtitle="#1 seed was also the all-play leader"
+      />
+      <MetricCard
+        label="Random baseline"
+        value={`${chance}%`}
+        subtitle="1 team in 16"
+      />
+    </section>
+
+    <section class="pp__section">
+      <h2>Season by season</h2>
+      <p class="pp__note">
+        All-play is cut at the end of the regular season — week
+        {seasons[0]?.lastRegularSeasonWeek ?? 14} in recent years, week 13 before 2021.
+      </p>
+
+      <div class="pp__scroll">
+        <table class="pp__table">
+          <thead>
+            <tr>
+              <th scope="col">Year</th>
+              <th scope="col">#1 seed</th>
+              <th scope="col">All-play leader</th>
+              <th scope="col">Champion</th>
+              <th scope="col" class="pp__num">Result</th>
+            </tr>
+          </thead>
+          <tbody>
+            {seasons.map((s) => (
+              <tr class={s.topSeedWonTitle || s.allPlayLeaderWonTitle ? 'pp__row--hit' : ''}>
+                <th scope="row">{s.year}</th>
+                <td>
+                  <span class="pp__team">{s.topSeed.name}</span>
+                  {s.topSeed.record && <span class="pp__meta">{s.topSeed.record}</span>}
+                </td>
+                <td>
+                  <span class="pp__team">{s.allPlayLeader.name}</span>
+                  <span class="pp__meta">{fmtPct(s.allPlayLeader.allPlayPct)}</span>
+                </td>
+                <td><span class="pp__team">{s.champion.name}</span></td>
+                <td class="pp__num">
+                  {s.topSeedWonTitle && <span class="pp__tag pp__tag--seed">#1 seed</span>}
+                  {s.allPlayLeaderWonTitle && <span class="pp__tag pp__tag--ap">all-play</span>}
+                  {!s.topSeedWonTitle && !s.allPlayLeaderWonTitle && (
+                    <span class="pp__tag pp__tag--none">neither</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="pp__section pp__method">
+      <h2>How these are counted</h2>
+      <ul>
+        <li>
+          <strong>The #1 seed</strong> is the team that took the first-round bye in that
+          season's championship bracket, read off the games actually played. MFL's standings
+          row order is not seed order when two teams tie on record — the bye went to the
+          second row in 2008 and 2010.
+        </li>
+        <li>
+          <strong>All-play</strong> is every team measured against every other team's score,
+          week by week, through the last regular-season week. MFL publishes an all-play
+          figure but it spans the playoff weeks too, which would let a champion's own title
+          run inflate the number this page is testing.
+        </li>
+        <li>
+          Every bracket is verified against the league's championship history before it
+          counts; a season with more than one possible bracket fails the build rather than
+          being guessed at.
+        </li>
+      </ul>
+    </section>
+  </div>
+</TheLeagueLayout>
+
+<style>
+  .pp {
+    --pp-accent: var(--league-accent, #1c497c);
+    --pp-surface: var(--card-bg, #fff);
+    --pp-surface-muted: var(--content-bg-muted, #f7f7f7);
+    --pp-border: var(--content-border, #e5e5e5);
+    --pp-ink: var(--page-text, #1a1a1a);
+    --pp-ink-muted: var(--content-text-muted, #666);
+    color: var(--pp-ink);
+    min-height: 60vh;
+  }
+
+  .pp__head { margin: 1.5rem 0 2rem; }
+  .pp__head h1 { margin: 0 0 0.5rem; line-height: 1.15; }
+  .pp__lede { margin: 0; max-width: 62ch; color: var(--pp-ink-muted); }
+  .pp__lede strong { color: var(--pp-ink); }
+
+  .pp__cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    gap: 1rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .pp__section { margin-bottom: 2.5rem; }
+  .pp__section h2 { margin: 0 0 0.35rem; font-size: 1.25rem; }
+  .pp__note { margin: 0 0 1rem; color: var(--pp-ink-muted); font-size: 0.9rem; }
+
+  /* Wide content scrolls inside its own container, never the page body. */
+  .pp__scroll {
+    overflow-x: auto;
+    border: 1px solid var(--pp-border);
+    border-radius: var(--radius-md, 0.5rem);
+    background: var(--pp-surface);
+  }
+
+  .pp__table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+  .pp__table th,
+  .pp__table td {
+    padding: 0.6rem 0.85rem;
+    text-align: left;
+    border-bottom: 1px solid var(--pp-border);
+    white-space: nowrap;
+  }
+  .pp__table thead th {
+    background: var(--pp-surface-muted);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--pp-ink-muted);
+  }
+  .pp__table tbody tr:last-child th,
+  .pp__table tbody tr:last-child td { border-bottom: 0; }
+  .pp__row--hit { background: color-mix(in srgb, var(--pp-accent) 7%, transparent); }
+
+  .pp__num { text-align: right; }
+  .pp__team { display: block; }
+  .pp__meta {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--pp-ink-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .pp__tag {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: var(--radius-full, 999px);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border: 1px solid var(--pp-border);
+  }
+  .pp__tag + .pp__tag { margin-left: 0.3rem; }
+  .pp__tag--seed { background: var(--pp-accent); color: #fff; border-color: var(--pp-accent); }
+  .pp__tag--ap {
+    background: color-mix(in srgb, var(--pp-accent) 15%, transparent);
+    color: var(--pp-ink);
+  }
+  .pp__tag--none { color: var(--pp-ink-muted); }
+
+  .pp__method ul { margin: 0; padding-left: 1.1rem; max-width: 70ch; }
+  .pp__method li { margin-bottom: 0.6rem; color: var(--pp-ink-muted); }
+  .pp__method strong { color: var(--pp-ink); }
+
+  @media (max-width: 40rem) {
+    .pp__table th,
+    .pp__table td { padding: 0.5rem 0.6rem; }
+  }
+</style>
