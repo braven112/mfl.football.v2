@@ -42,7 +42,6 @@ import { isSeasonComplete } from './lib/theleague-season-complete.mjs';
 import { aliasDivisionName, isUsableDivisionName } from '../src/utils/division-aliases.mjs';
 import {
   bracketKindFromName,
-  isTitleBracket,
   placementFromName,
   placementLabel,
 } from '../src/utils/afl-bracket-kind.mjs';
