@@ -220,16 +220,18 @@ export interface RankedEra {
  * Every division's membership eras, long enough to count, ranked against each
  * other.
  *
- * Sorted on INTERDIVISIONAL win%. The board used to sort on overall win% to
- * match the all-time ranking directly above it, which was defensible only
- * while the two metrics agreed — an era's intra-division games are exactly
- * zero-sum, so overall win% is the interdivisional rate compressed toward
- * .500, but the compression factor is only APPROXIMATELY equal across eras.
- * Dropping the floor to three seasons admitted a pair the two metrics order
- * differently (the AFL's North 2008–2010 outranks South 2019–present on games
- * against the rest of the league and trails it overall), so the board now
- * ranks on the number that can actually separate two groups. Ties break toward
- * the longer run, which is the one carrying more evidence.
+ * Sorted on OVERALL win%, matching the all-time ranking directly above it on
+ * the page and the record each row leads with — a board sorted on one number
+ * while showing another in the big type reads as broken. That is the owner's
+ * call, made knowing the two metrics no longer agree everywhere: an era's
+ * intra-division games are exactly zero-sum, so overall win% is the
+ * interdivisional rate compressed toward .500, but only by an APPROXIMATELY
+ * equal factor. They ordered every era identically at the old four-season
+ * floor; at three, the AFL's North 2008–2010 beats South 2019–present against
+ * the rest of the league and trails it overall, so that one pair sits in the
+ * opposite order from an interdivisional ranking. Both figures are on every
+ * row, which is what keeps that honest. Ties break toward the longer run,
+ * which is the one carrying more evidence.
  */
 export function rankEras(
   divisions: DivisionAllTime[],
@@ -254,7 +256,7 @@ export function rankEras(
   }
   return rows.sort(
     (a, b) =>
-      (b.era.interDivision.winPct ?? 0) - (a.era.interDivision.winPct ?? 0) ||
+      (b.era.totals.winPct ?? 0) - (a.era.totals.winPct ?? 0) ||
       b.era.seasons - a.era.seasons ||
       b.era.yearStart - a.era.yearStart ||
       a.divisionName.localeCompare(b.divisionName)

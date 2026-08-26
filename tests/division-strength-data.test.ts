@@ -1089,27 +1089,34 @@ describe.each(leagues)('$league.slug era board', ({ dataPath }) => {
     }
   });
 
-  it('ranks by interdivisional win percentage, longer run first on a tie', () => {
+  it('ranks by overall win percentage, longer run first on a tie', () => {
     const rows = rankEras(data.divisions);
     for (let i = 1; i < rows.length; i += 1) {
       const prev = rows[i - 1].era;
       const cur = rows[i].era;
-      expect((prev.interDivision.winPct ?? 0), `${rows[i - 1].label} vs ${rows[i].label}`)
-        .toBeGreaterThanOrEqual(cur.interDivision.winPct ?? 0);
-      if ((prev.interDivision.winPct ?? 0) === (cur.interDivision.winPct ?? 0)) {
+      expect((prev.totals.winPct ?? 0), `${rows[i - 1].label} vs ${rows[i].label}`)
+        .toBeGreaterThanOrEqual(cur.totals.winPct ?? 0);
+      if ((prev.totals.winPct ?? 0) === (cur.totals.winPct ?? 0)) {
         expect(prev.seasons).toBeGreaterThanOrEqual(cur.seasons);
       }
     }
   });
 
-  // The board sorted on OVERALL win% until the floor dropped to three seasons,
-  // on the argument that the two metrics agreed anyway (intra-division games
-  // are zero-sum, so overall win% is the interdivisional rate compressed toward
-  // .500). The shorter eras broke that: the AFL's North 2008-2010 beats South
-  // 2019-present against the rest of the league and trails it overall. So the
-  // row must LEAD with the ranked figure — a board sorted on one number while
-  // showing another in the big type reads as a broken sort.
-  it('leads each row with the interdivisional record it is ranked on', () => {
+  // The board sorts on OVERALL win%, which is the owner's call and which the
+  // two metrics used to make free: they ordered every era identically at the
+  // old four-season floor. At three they no longer do — the AFL's North
+  // 2008-2010 beats South 2019-present against the rest of the league and
+  // trails it overall — so this can no longer assert one order. What it can
+  // hold is the pair the ranking rests on:
+  //
+  //   * the ranked number is the one in the big type. A board sorted on one
+  //     figure while leading with another reads as a broken sort, whichever
+  //     figure is the better metric.
+  //   * both figures are on every row, so a reader can see where they part.
+  //
+  // A divergence WIDER than a rounding step would be the signal to revisit the
+  // choice of metric; today the widest is a hair over .010.
+  it('leads each row with the overall record it is ranked on, and shows the other', () => {
     const rows = rankEras(data.divisions);
     expect(rows.length).toBeGreaterThan(0);
     for (const row of rows) {
@@ -1117,10 +1124,22 @@ describe.each(leagues)('$league.slug era board', ({ dataPath }) => {
       expect(row.era.interDivision.games, row.label).toBeLessThanOrEqual(row.era.totals.games);
     }
     expect(
-      page.indexOf('{formatRecord(row.era.interDivision)}'),
-      'the era row must render the interdivisional record before the overall one'
-    ).toBeLessThan(page.indexOf('{formatRecord(row.era.totals)}'));
-    expect(page.slice(page.indexOf('era-board__inter'))).toContain('overall');
+      page.indexOf('{formatRecord(row.era.totals)}'),
+      'the era row must render the overall record it sorts on before the interdivisional rate'
+    ).toBeLessThan(page.indexOf('{formatWinPct(row.era.interDivision)}'));
+    expect(page.slice(page.indexOf('era-board__inter'))).toContain('vs others');
+
+    // Every out-of-order pair the two metrics disagree on stays inside a
+    // rounding step of each other on the ranked number.
+    for (let i = 1; i < rows.length; i += 1) {
+      const prev = rows[i - 1].era;
+      const cur = rows[i].era;
+      if ((prev.interDivision.winPct ?? 0) >= (cur.interDivision.winPct ?? 0)) continue;
+      expect(
+        (prev.totals.winPct ?? 0) - (cur.totals.winPct ?? 0),
+        `${rows[i - 1].label} outranks ${rows[i].label} overall but trails it vs others`
+      ).toBeLessThan(0.011);
+    }
   });
 
   it('labels every row with the division and the years the group was together', () => {

@@ -863,8 +863,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
               <section class="verdict-pair" aria-labelledby="eras-heading">
                 <h2 id="eras-heading" class="section-title">Every lineup, ranked</h2>
                 <p class="section-header__sub">
-                  A division's record belongs to the owners in it, so this ranks the owners, on how
-                  each group fared against the rest of the league. Each
+                  A division's record belongs to the owners in it, so this ranks the owners. Each
                   row is a run of consecutive seasons one division kept the exact same group —
                   a realignment ends the run, and so does a team changing hands — and a group has
                   to hold together {ERA_MIN_SEASONS} seasons to make the board. A division that has
@@ -886,14 +885,15 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                             : <span class="member-initials" title={m.name ?? ''}>{(m.nameMedium ?? m.name ?? '?').slice(0, 2)}</span>
                         ))}
                       </span>
-                      {/* The ranked figure leads. Sorting on the interdivisional
-                          rate while showing the overall one in the big type reads
-                          as a broken sort the first time the two disagree, which
-                          they now do. */}
+                      {/* The ranked figure leads: the board sorts on overall win%,
+                          so that is the number in the big type. The
+                          interdivisional rate sits under it — at the three-season
+                          floor the two disagree on one AFL pair, and showing both
+                          is what keeps the ranking honest about it. */}
                       <span class="verdict-value">
-                        {formatRecord(row.era.interDivision)} <span class="dim">{formatWinPct(row.era.interDivision)} vs others</span>
+                        {formatRecord(row.era.totals)} <span class="dim">{formatWinPct(row.era.totals)}</span>
                         <span class="era-board__inter">
-                          {formatRecord(row.era.totals)} <span class="dim">{formatWinPct(row.era.totals)} overall</span>
+                          {formatWinPct(row.era.interDivision)} <span class="dim">vs others</span>
                         </span>
                       </span>
                     </li>
@@ -911,9 +911,8 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
                       {erasMissing.length === 1 ? ' that name' : ' those names'}.
                     </>
                   )}
-                  {' '}Both figures cover the era's own seasons only. The ranking uses the
-                  first, which counts games against the rest of the league — games inside the
-                  division are zero-sum and cannot separate anyone in it.
+                  {' '}Both figures cover the era's own seasons only; the second excludes games
+                  inside the division, which are zero-sum and cannot separate anyone.
                 </p>
               </section>
             )}
@@ -1712,10 +1711,7 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
     .era-board__name,
     .verdict-list > li > .verdict-name,
     .verdict-list > li > .pill { order: 2; }
-    /* Stays on its own line. It was folded inline when it read ".533 vs
-       others"; it now carries a full record too, and inline that line runs
-       past the edge of a phone. */
-    .era-board__inter { display: block; }
+    .era-board__inter { display: inline; margin-left: 0.5rem; }
   }
 
   /* ── Pills ─────────────────────────────────────────────────────────────── */
