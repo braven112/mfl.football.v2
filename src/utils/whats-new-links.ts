@@ -2,7 +2,7 @@
  * Inline links inside What's New article bodies.
  *
  * THE BUG THIS EXISTS FOR. The Strength of Division launch article ran six
- * paragraphs naming the standings, the franchises pages and the division page
+ * paragraphs naming the standings, the franchise pages and the division page
  * itself, and the reader could not click a single one of them — the only link
  * on the page was the CTA button under the article. A `grep '<a '` across
  * `src/data/whats-new.json` at the time returned ZERO across all 40 entries.
@@ -115,6 +115,24 @@ export function extractDescriptionHrefs(
   return hrefs;
 }
 
+/**
+ * Inner HTML of an anchor reduced to its readable text.
+ *
+ * Repeated until it stops changing rather than one `.replace()` pass: a single
+ * pass over `<<b>>` leaves a stray `<>` behind, which CodeQL flags as an
+ * incomplete multi-character sanitizer. Nothing here is rendered — this feeds
+ * the "anchor text is not a bare URL" guard — but a stripper that silently
+ * leaves markup behind would make that guard read the wrong string.
+ */
+function stripTags(html: string): string {
+  let text = html;
+  for (let previous = ''; previous !== text; ) {
+    previous = text;
+    text = text.replace(/<[^<>]*>/g, '');
+  }
+  return text;
+}
+
 /** Every `{ href, text }` pair in an article body, in document order. */
 export function extractDescriptionLinks(
   description: readonly DescriptionBlock[] | undefined,
@@ -122,7 +140,7 @@ export function extractDescriptionLinks(
   const links: Array<{ href: string; text: string }> = [];
   for (const block of textBlocks(description)) {
     for (const match of block.matchAll(ANCHOR_PATTERN)) {
-      links.push({ href: match[2], text: match[3].replace(/<[^>]*>/g, '').trim() });
+      links.push({ href: match[2], text: stripTags(match[3]).trim() });
     }
   }
   return links;
