@@ -4,21 +4,13 @@
     {
       "date": "2026-08-26",
       "type": "bug-fix",
-      "summary": "Eighteen owners get a real name instead of a first name, an initial, or nothing at all — and two of them get their history straightened out. Maverick is Mick Travers, the LBer Decleaters’ “BSB” turns out to have been his initials all along — Brian Stanford-Brandt — the Gridiron Geeks are Bob Szelagowski, the Dark Magicians are Dan Le Cam, and Jomar Marinio finally gets a surname on the Computer Jocks in both leagues. On the AFL side: Nigel Dunnington (Titsburgh Feelers), Chuck Carper (M.L. Maniacs), Marnel Mangrubang, Boun Lovan, Jeffrey Tefertiller (ISIS), Justin “Pec” Collier (Cougs), Rafael Araiza — the Badd Boys’ “Ralfie” — plus originals who had no name at all — Andrew Wagner (2004 C.P. Bruisers), Pete Sisich (2003 Lucky Buck$), and, exactly as their team names always suggested, Trevor of Trevors Team and Joey of Joey’s Team. Bryan Sandes had been filed as two different strangers: Taco Hell 2004-06 and the Fly Fishermen in 2007 were the same man and the same franchise, so his four seasons now sit on one page. The Carolina Blues went the other way — they are Chris Broskey, not Coinflip, so the Angry Irish’s 2012 season moves back to a page of its own.",
-      "impact": "user",
-      "area": "owners",
-      "league": "both"
-    },
-    {
-      "date": "2026-08-25",
-      "type": "bug-fix",
       "summary": "The AFL has seeded eight playoff teams every year since 2003, but the site had been crediting four or five a season since 2018 — it was reading the playoff field out of the AFL Championship bracket, which in 2018 stopped being the eight-team field and became the two-team final between the AL and NL winners. Every AFL playoff berth on the site was recomputed from the actual bracket games: North goes from 28 berths to 38, West 37 to 44, East 29 to 34. Playoff appearances on owner pages, franchise pages and the division report all move with it. Eight franchise-seasons between 2004 and 2014 were also credited to the wrong teams — 2014 had berths on two clubs that spent that postseason in the NIT.",
       "impact": "user",
       "area": "playoffs",
       "league": "afl"
     },
     {
-      "date": "2026-08-25",
+      "date": "2026-08-26",
       "type": "bug-fix",
       "summary": "Strength of Division was handing out participation trophies. The \"Titles\" number on every division panel — 15 for the Northwest, 19 for the Central — was just the number of seasons that division has existed, because a division crowns a winner every single year. It's gone, along with the sortable Titles column that ordered the table exactly like the Seasons column beside it. Divisions now report what their teams actually earned against the rest of the league: playoff berths, the share of franchise-seasons that reached the postseason, and championships with the runner-up finishes beside them. Division titles still show where they mean something — per owner, inside the division, where four owners split them unevenly.",
       "impact": "user",
@@ -79,6 +71,14 @@
       "summary": "The Division Strength rankings read straight down on a phone now. Team logos always drop to their own line under the division name instead of tucking in beside the short names, so every row is the same shape and the records line up in one column. The rows also lead with the division name again — the phone layout had been putting the year range first.",
       "impact": "user",
       "area": "standings",
+      "league": "both"
+    },
+    {
+      "date": "2026-08-26",
+      "type": "bug-fix",
+      "summary": "Eighteen owners get a real name instead of a first name, an initial, or nothing at all — and two of them get their history straightened out. Maverick is Mick Travers, the LBer Decleaters’ “BSB” turns out to have been his initials all along — Brian Stanford-Brandt — the Gridiron Geeks are Bob Szelagowski, the Dark Magicians are Dan Le Cam, and Jomar Marinio finally gets a surname on the Computer Jocks in both leagues. On the AFL side: Nigel Dunnington (Titsburgh Feelers), Chuck Carper (M.L. Maniacs), Marnel Mangrubang, Boun Lovan, Jeffrey Tefertiller (ISIS), Justin “Pec” Collier (Cougs), Rafael Araiza — the Badd Boys’ “Ralfie” — plus originals who had no name at all — Andrew Wagner (2004 C.P. Bruisers), Pete Sisich (2003 Lucky Buck$), and, exactly as their team names always suggested, Trevor of Trevors Team and Joey of Joey’s Team. Bryan Sandes had been filed as two different strangers: Taco Hell 2004-06 and the Fly Fishermen in 2007 were the same man and the same franchise, so his four seasons now sit on one page. The Carolina Blues went the other way — they are Chris Broskey, not Coinflip, so the Angry Irish’s 2012 season moves back to a page of its own.",
+      "impact": "user",
+      "area": "owners",
       "league": "both"
     }
   ]
