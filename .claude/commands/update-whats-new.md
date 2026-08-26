@@ -64,6 +64,45 @@ If no entry exists, write a new one at the TOP of the array following the mandat
 - `heroPlayerId` (optional) — set ONLY when the entry is about a specific player (his MFL id); the homepage hero then casts him instead of showing the screenshot. Optional `heroPlayerDescriptor` labels his caption chip (default "Featured"). Never set it just to have a face — the screenshot IS the intended art.
 - `leagues` is required — `["theleague"]`, `["afl"]`, or both (from Step 3). The entry's `link` must point into a league it's visible in; both-league entries need a league-neutral link or no link. If the `title`/`summary` names a league, the entry must be tagged for exactly that league — both-league entries need league-neutral copy.
 - `excludeFromHero` — set from Step 3b: `true` for enhancements and for any feature/page the user said isn't a marquee hero launch; omit it when the entry is hero-eligible.
+- **Inline links are mandatory** — see Step 4b. An article with nothing to click
+  does not ship.
+
+## Step 4b: Link to every feature the article names
+
+`description` blocks render through `set:html`, so they take real anchors —
+and every `new-page` / `new-feature` / `enhancement` entry must carry at least
+one. `tests/whats-new-links.test.ts` fails the build without it. This is the
+same rule Schefter got in August (`scripts/article-utils/article-links.mjs`)
+and it exists for the same reason: the Strength of Division launch named the
+standings, the franchise pages and the division page itself over six paragraphs
+and the reader could not click one of them.
+
+Five rules, all enforced by that test:
+
+1. **Write the href league-neutral** — `/standings`, never
+   `/theleague/standings`. One article body is rendered to every league it is
+   tagged for; the detail page prefixes each href for the reader it is serving
+   (`rewriteDescriptionLinks`, `src/utils/whats-new-links.ts`). A prefixed href
+   in a both-league entry sends half the audience to the other league's site.
+2. **Only link a page every tagged league actually has.** `/contracts`,
+   `/salary`, `/dead-money`, `/throwback-settings` and `/design-system` are
+   TheLeague-only; `/keepers`, `/keeper-analysis` and `/records` are AFL-only.
+   Best Ball has almost nothing — an entry tagged `bb1` can safely link
+   `/import-rankings`, `/rosters`, `/live-scoring`, `/rules`, `/draft-room`.
+   Naming one of those pages in a both-league article is fine; linking it is a
+   dead link for the other league, so leave it as plain text.
+3. **A link to a PAGE is what counts.** An `https://` link or an
+   `/assets/…webp` download does not satisfy the rule — the article still named
+   a feature it never let you open. Close every `<a>`: the renderer prefixes an
+   unclosed anchor's href and every guard skips it.
+4. **Anchor text is a place in a sentence, not a button.** Link the noun phrase
+   already in the prose ("…is on <a>the standings</a>"), never a raw URL and
+   never a tacked-on "click here" footer. Weave two to five links through the
+   body; the CTA button under the article points at one place and the article
+   usually names half a dozen.
+5. **Static files are not pages.** `/assets/...`, `/embed/...`, `/api/...` and
+   anything with a file extension are served at the root and deliberately never
+   league-prefixed. External URLs (`https://…`) are left alone too.
 
 **If `bug-fix` or `style-tweak`:**
 

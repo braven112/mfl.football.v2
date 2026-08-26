@@ -2162,3 +2162,38 @@ grep for X", treat that as a note that the invariant still needs a mechanical
 guard, not as the fix. This repo's own framing says it — "guard tests are the
 real memory" — and the gap between the 08-12 write-up and this regression is
 what that sentence costs when only the prose half gets done.
+
+---
+
+## 2026-08-26 - `set:html` Skips the Link Resolver Too, Not Just Scoped CSS
+
+**Context:** What's New article bodies render through `set:html`. Across all 40
+live entries, `grep '<a '` returned zero — no article had ever linked to a page
+it discussed. Same week, same finding in the Schefter feed.
+
+**Insight:** The `set:html` trap in the curated head is stated in CSS terms
+(injected markup carries no `data-astro-cid`), but the mechanism is broader:
+injected markup skips **everything** the Astro component layer would have done
+to it, href resolution included. A normal `<a href={r(path)}>` in a component
+gets `resolveDirectoryHref()` + `resolveLeaguePath()`; a `<a href="/standings">`
+inside a `set:html` string gets nothing — the literal string ships. In a repo
+where the same body renders under `/theleague` and `/afl-fantasy`, that means
+there is no href an author can type that is correct: prefixed sends half the
+audience cross-league, bare 404s on the shared host. The resolution has to move
+to render time (`rewriteDescriptionLinks`, `src/utils/whats-new-links.ts`).
+
+Corollary worth remembering when writing such a rewriter: not every
+root-relative path is a page. `public/` mounts at the root and is not
+league-scoped, so `/assets/…jpg`, `/embed/…` and `/api/…` must be passed through
+untouched — prefixing a real file 404s it.
+
+**Evidence:** `src/utils/whats-new-links.ts#isLeagueScopedPath`,
+`tests/whats-new-links.test.ts`, `scripts/article-utils/article-links.mjs`
+(the Schefter half, which solves it at authoring time instead because its
+articles are generated per league).
+
+**Recommendation:** Any time raw HTML is injected into a page, ask what the
+component layer would have done to it — scoping AND path resolution AND
+sanitization — because none of it happens. If the HTML is authored data rather
+than a constant, pair the rewriter with a guard test over that data; the rule
+alone was already written down here and the link count was still zero.

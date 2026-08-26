@@ -19,6 +19,7 @@ import type { DescriptionImageBlock, WhatsNewEntry } from '../../../types/whats-
 import { WHATS_NEW_CATEGORY_LABELS } from '../../../types/whats-new';
 import { formatEntryDate } from '../../../utils/whats-new-helpers';
 import { resolveDirectoryHref, resolveLeaguePath } from '../../../utils/nav-utils';
+import { rewriteDescriptionLinks } from '../../../utils/whats-new-links';
 import SchefterWidget from '../SchefterWidget.astro';
 import type { SchefterFeed as FeedType } from '../../../types/schefter';
 import { getLeagueBySlug } from '../../../config/leagues';
@@ -55,6 +56,11 @@ const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
  * STRIPS a prefix, so a bare path stayed bare and 404'd on the shared host,
  * which has no root route. Prefix for the current league first, then let the
  * apex-host strip take it back off where it's redundant.
+ *
+ * The same resolver runs over every inline `<a href>` inside the article body
+ * (`rewriteDescriptionLinks`). Description blocks ship through `set:html`, so
+ * whatever string is in the JSON is the href unless something rewrites it —
+ * which is why those hrefs are stored league-neutral and resolved here.
  */
 const r = (path: string) =>
   resolveLeaguePath(resolveDirectoryHref(path, league.navSlug), hideLeaguePrefix);
@@ -150,7 +156,7 @@ const imagePath = entry.image ? `/assets/whats-new/${entry.image}` : null;
             <div class="wn-detail__body">
               {entry.description.map((block) => (
                 typeof block === 'string' ? (
-                  <p set:html={block} />
+                  <p set:html={rewriteDescriptionLinks(block, r)} />
                 ) : (block as DescriptionImageBlock).type === 'image' ? (
                   <figure class="wn-detail__inline-figure">
                     <div class="browser-frame browser-frame--inline">

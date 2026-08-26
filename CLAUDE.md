@@ -280,6 +280,18 @@ admin-only/unreleased features.
   (`image`/`imageAlt`, webp in `public/assets/whats-new/`);
   `tests/whats-new-data.test.ts` fails the build without one. `bug-fix` and
   `league-event` are exempt.
+- **Those same three categories require INLINE LINKS in the prose**, not just
+  the CTA button underneath — the launch article for Strength of Division named
+  the standings, the franchise pages and the division page itself and the reader
+  could not click one of them. `description` blocks render through `set:html`,
+  so they take real anchors. Write every href LEAGUE-NEUTRAL (`/standings`, not
+  `/theleague/standings`): one body is rendered to every league the entry is
+  tagged for, and `rewriteDescriptionLinks`
+  (`src/utils/whats-new-links.ts`) prefixes it per reader — a prefixed href
+  sends half the audience to the other league's site. Only link a page every
+  tagged league HAS (`/contracts` and `/salary` are TheLeague-only, `/keepers`
+  and `/records` AFL-only); name the rest without a link.
+  `tests/whats-new-links.test.ts` enforces all of it.
 - **Hero eligibility is for marquee launches only.** Set
   `excludeFromHero: true` on every `enhancement`; for `new-page` /
   `new-feature`, **ask the user** whether it's major enough for the homepage

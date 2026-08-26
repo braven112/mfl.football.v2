@@ -121,3 +121,65 @@ size-delta checks before committing. New entries whose pages are auth-gated,
 prod-data-dependent, staged (scrolled/clicked), or both-league-with-no-link
 (auto-capture shoots the MFL landing page) belong on `MANUAL_CAPTURE_ONLY`
 at authoring time, not after the first bad capture.
+
+---
+
+## 2026-08-26 - `set:html` Bodies Have No Link Resolver, So Nobody Ever Wrote a Link
+
+**Context:** An owner noticed the Strength of Division launch article named the
+standings, the franchise pages and the division page itself over six paragraphs
+without one of them being clickable. `grep '<a ' src/data/whats-new.json`
+returned ZERO across all 40 live entries — What's New had never linked to
+anything in its history. Identical to the Schefter finding three days earlier
+(`scripts/article-utils/article-links.mjs`), and the two are not a coincidence:
+both feeds render prose through `set:html`.
+
+**Insight:** The reason nobody wrote a link is that there was no *correct* way
+to write one, and the failure mode of guessing was invisible at authoring time.
+`description` blocks render via `set:html`, so whatever string sits in the JSON
+IS the href — it never passes through `resolveLeaguePath()` / `resolveDirectoryHref()`
+the way a normal `<a>` in a component does. That leaves two hrefs to choose
+between and both are wrong:
+
+- `/theleague/standings` — correct for TheLeague, sends every AFL reader of the
+  same both-league entry onto the other league's site. One entry body is
+  rendered once per league it is tagged for; there is no per-league copy.
+- `/standings` — league-neutral and correct-looking, but 404s on the shared
+  host, which has no root route.
+
+The resolution has to happen at RENDER, not authoring: store league-neutral,
+rewrite per reader. `rewriteDescriptionLinks` (`src/utils/whats-new-links.ts`)
+runs each block through the same `r()` the CTA button already used, so
+`/standings` becomes `/theleague/standings` or `/afl-fantasy/standings` and gets
+stripped back to `/standings` on an apex host.
+
+Three things that are load-bearing, not polish:
+
+1. **Not every root-relative path is a page.** `public/` is mounted at the root
+   and is not league-scoped — the vintage-art entry links a master banner at
+   `/assets/theleague/history/psd/…jpg`, and prefixing it to
+   `/theleague/assets/…` 404s a file that exists. `isLeagueScopedPath()` excludes
+   `/assets/`, `/embed/`, `/api/` and anything with a file extension on its last
+   segment. This was caught by the guard test on the FIRST run, not by review.
+2. **Route existence has to be checked per tagged league, not once.**
+   `/contracts` and `/salary` are TheLeague-only; `/keepers` and `/records` are
+   AFL-only; Best Ball has almost no routes at all. A both-league article may
+   NAME those pages but must not link them. Reused `tests/helpers/astro-routes.ts`
+   (built for the Schefter guard) rather than validating against
+   `page-directory.json` — the directory is a search index a page can legitimately
+   be missing from, a route either exists or 404s, and a link is about the second.
+3. **The "must have a link" rule needs an enforcement DATE, the correctness rules
+   do not.** Dead-link and wrong-league checks run over the full 146-entry history
+   including archives, because an archived article still renders at its permalink.
+   Requiring links only from 2026-08-09 avoids back-writing prose into 106
+   archived columns while still covering everything currently in the active file.
+
+**Evidence:** `src/utils/whats-new-links.ts`,
+`tests/whats-new-links.test.ts`, `WhatsNewDetailPage.astro` line ~153.
+Backfill: 71 inline links across 25 qualifying entries.
+
+**Recommendation:** Any feed that renders authored prose through `set:html` needs
+this pair before its first article ships — a render-time href rewriter and a
+guard test that the category which exists to send readers somewhere actually
+does. An editorial rule with no test is a rule that has already been broken; both
+times here the rule was written down and the count was still zero.
