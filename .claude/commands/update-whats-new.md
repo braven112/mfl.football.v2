@@ -77,7 +77,7 @@ and it exists for the same reason: the Strength of Division launch named the
 standings, the franchise pages and the division page itself over six paragraphs
 and the reader could not click one of them.
 
-Four rules, all enforced by that test:
+Five rules, all enforced by that test:
 
 1. **Write the href league-neutral** — `/standings`, never
    `/theleague/standings`. One article body is rendered to every league it is
@@ -91,12 +91,16 @@ Four rules, all enforced by that test:
    `/import-rankings`, `/rosters`, `/live-scoring`, `/rules`, `/draft-room`.
    Naming one of those pages in a both-league article is fine; linking it is a
    dead link for the other league, so leave it as plain text.
-3. **Anchor text is a place in a sentence, not a button.** Link the noun phrase
+3. **A link to a PAGE is what counts.** An `https://` link or an
+   `/assets/…webp` download does not satisfy the rule — the article still named
+   a feature it never let you open. Close every `<a>`: the renderer prefixes an
+   unclosed anchor's href and every guard skips it.
+4. **Anchor text is a place in a sentence, not a button.** Link the noun phrase
    already in the prose ("…is on <a>the standings</a>"), never a raw URL and
    never a tacked-on "click here" footer. Weave two to five links through the
    body; the CTA button under the article points at one place and the article
    usually names half a dozen.
-4. **Static files are not pages.** `/assets/...`, `/embed/...`, `/api/...` and
+5. **Static files are not pages.** `/assets/...`, `/embed/...`, `/api/...` and
    anything with a file extension are served at the root and deliberately never
    league-prefixed. External URLs (`https://…`) are left alone too.
 

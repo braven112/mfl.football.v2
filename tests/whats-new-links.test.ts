@@ -5,7 +5,8 @@ import type { WhatsNewEntry } from '../src/types/whats-new';
 import { ALL_LEAGUES } from '../src/config/leagues';
 import entries from '../src/data/whats-new.json';
 import {
-  countInlineLinks,
+  countAnchorOpenTags,
+  countSiteLinks,
   extractDescriptionLinks,
   isInternalPath,
   isLeagueScopedPath,
@@ -86,18 +87,42 @@ describe('whats-new inline links — every article points at what it is about', 
     expect(allEntries.length).toBeGreaterThan(0);
   });
 
-  it(`every new-page / new-feature / enhancement since ${LINK_ENFORCEMENT_DATE} links to something`, () => {
+  it(`every new-page / new-feature / enhancement since ${LINK_ENFORCEMENT_DATE} links to a page on this site`, () => {
+    // Counts PAGE links only. An external link or an /assets/… download is not
+    // the reader being sent to the feature, which is what the rule is for.
     const linkless = allEntries
       .filter((e) => requiresInlineLinks(e.category) && e.date >= LINK_ENFORCEMENT_DATE)
-      .filter((e) => countInlineLinks(e) === 0)
+      .filter((e) => countSiteLinks(e) === 0)
       .map((e) => `${e.id} (${e.category}, ${e.date})`);
     expect(
       linkless,
-      `What's New articles with no inline links. An article announcing a page or a feature ` +
-        `exists to send the reader there — weave <a href="/some-page">real anchors</a> into ` +
-        `the description prose, league-neutral (no /theleague or /afl-fantasy prefix). The CTA ` +
-        `button under the article is not a substitute: it points at ONE place, and the article ` +
-        `usually names half a dozen.`,
+      `What's New articles with no inline links to a page on this site. An article announcing ` +
+        `a page or a feature exists to send the reader there — weave ` +
+        `<a href="/some-page">real anchors</a> into the description prose, league-neutral (no ` +
+        `/theleague or /afl-fantasy prefix). The CTA button under the article is not a ` +
+        `substitute: it points at ONE place, and the article usually names half a dozen. ` +
+        `An https:// link or an /assets/ download does not satisfy this.`,
+    ).toEqual([]);
+  });
+
+  it('every anchor is closed, so no link can slip past the checks below', () => {
+    // The rewriter matches on `href=` and does not need the `</a>`; everything
+    // that validates links reads the full `<a>…</a>`. An unclosed anchor is
+    // therefore rewritten and shipped without any of the checks in this file
+    // ever seeing it.
+    const unbalanced: string[] = [];
+    for (const entry of allEntries) {
+      const opened = countAnchorOpenTags(entry.description);
+      const closed = extractDescriptionLinks(entry.description).length;
+      if (opened !== closed) {
+        unbalanced.push(`${entry.id}: ${opened} <a href=…> but ${closed} closed with </a>`);
+      }
+    }
+    expect(
+      unbalanced,
+      `Unclosed <a> in an article body. The renderer would league-prefix its href and every ` +
+        `guard in this file would skip it — a link pointing at the wrong league with nothing ` +
+        `checking. Close the tag.`,
     ).toEqual([]);
   });
 
@@ -197,6 +222,23 @@ describe('whats-new inline links — every article points at what it is about', 
       `Inline links to files that are not there. These paths are served from public/ at the ` +
         `root and are deliberately NOT league-prefixed, so a typo just 404s silently.`,
     ).toEqual([]);
+  });
+});
+
+describe('the guards guard themselves', () => {
+  it('countAnchorOpenTags sees an anchor that extractDescriptionLinks cannot', () => {
+    const unclosed = ['<a href="/standings">the standings and <a href="/players">free agents</a>'];
+    expect(countAnchorOpenTags(unclosed)).toBe(2);
+    expect(extractDescriptionLinks(unclosed)).toHaveLength(1);
+  });
+
+  it('countSiteLinks ignores external URLs and raw files', () => {
+    const external = { description: ['<a href="https://espn.com">ESPN</a>'] };
+    const asset = { description: ['<a href="/assets/x.webp">the banner</a>'] };
+    const page = { description: ['<a href="/standings">the standings</a>'] };
+    expect(countSiteLinks(external)).toBe(0);
+    expect(countSiteLinks(asset)).toBe(0);
+    expect(countSiteLinks(page)).toBe(1);
   });
 });
 

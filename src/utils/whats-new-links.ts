@@ -54,7 +54,14 @@ export function requiresInlineLinks(category: string): boolean {
  */
 const HREF_PATTERN = /(<a\b[^>]*?\bhref\s*=\s*)(["'])([^"']*)\2/gi;
 
-/** Anchor open tag through to its closing tag — used to read the link text. */
+/**
+ * Anchor open tag through to its closing tag — used to read the link text.
+ *
+ * Note this requires the `</a>` and `HREF_PATTERN` does not, which is exactly
+ * the gap `countAnchorOpenTags` exists to close: an unclosed `<a>` would be
+ * league-prefixed by the rewriter and then be invisible to every check that
+ * reads links out of the JSON.
+ */
 const ANCHOR_PATTERN = /<a\b[^>]*?\bhref\s*=\s*(["'])([^"']*)\1[^>]*>([\s\S]*?)<\/a>/gi;
 
 /**
@@ -121,9 +128,34 @@ export function extractDescriptionLinks(
   return links;
 }
 
-/** How many inline links an entry's body carries. */
-export function countInlineLinks(entry: Pick<WhatsNewEntry, 'description'>): number {
-  return extractDescriptionHrefs(entry.description).length;
+/**
+ * How many anchors the RENDERER will act on — open tags, closed or not.
+ *
+ * Compare against `extractDescriptionHrefs().length` to catch a missing `</a>`:
+ * the rewriter happily prefixes an unclosed anchor's href, while every guard
+ * that reads links out of the JSON matches on the full `<a>…</a>` and skips it.
+ * A link nothing validates is the one that ships pointing at the wrong league.
+ */
+export function countAnchorOpenTags(
+  description: readonly DescriptionBlock[] | undefined,
+): number {
+  let count = 0;
+  for (const block of textBlocks(description)) {
+    for (const _ of block.matchAll(HREF_PATTERN)) count++;
+  }
+  return count;
+}
+
+/**
+ * How many links in an entry's body point at a PAGE on this site.
+ *
+ * The "every launch article must link to something" rule is about sending the
+ * reader to the feature being announced, so only these count. An article whose
+ * one anchor is `https://espn.com` — or a `/assets/…webp` download — has still
+ * named a page it never let you open, which is the whole bug.
+ */
+export function countSiteLinks(entry: Pick<WhatsNewEntry, 'description'>): number {
+  return extractDescriptionHrefs(entry.description).filter(isLeagueScopedPath).length;
 }
 
 /**
