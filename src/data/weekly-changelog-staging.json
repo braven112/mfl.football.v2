@@ -4,6 +4,14 @@
     {
       "date": "2026-08-26",
       "type": "bug-fix",
+      "summary": "Twenty-two AFL third-place finishes are on the site for the first time. The code read third place out of the AFL Championship bracket's neighbour — which since 2018 has been the AL Championship, a semifinal bracket whose winner always goes on to win or lose the final. So the answer was always the champion or the runner-up, those two got claimed first, and third place quietly landed nowhere: 0 seasons out of 23. Every one from 2004 on has now been recovered from the actual bracket games. The East picks up six third-place finishes, the South five, the North and West four each.",
+      "impact": "user",
+      "area": "playoffs",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-26",
+      "type": "bug-fix",
       "summary": "The AFL has seeded eight playoff teams every year since 2003, but the site had been crediting four or five a season since 2018 — it was reading the playoff field out of the AFL Championship bracket, which in 2018 stopped being the eight-team field and became the two-team final between the AL and NL winners. Every AFL playoff berth on the site was recomputed from the actual bracket games: North goes from 28 berths to 38, West 37 to 44, East 29 to 34. Playoff appearances on owner pages, franchise pages and the division report all move with it. Eight franchise-seasons between 2004 and 2014 were also credited to the wrong teams — 2014 had berths on two clubs that spent that postseason in the NIT.",
       "impact": "user",
       "area": "playoffs",

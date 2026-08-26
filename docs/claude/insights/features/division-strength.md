@@ -442,3 +442,49 @@ declaration of it — MFL says how many teams it seeds; nothing was comparing ou
 answer to it. And when a source is known to renumber its keys, fix every reader
 at once: this file already documented the renumbering, for the reader that got
 fixed the first time.
+
+## 2026-08-26 - The same bug, one function down, found by fixing the first one
+
+**Context:** Follow-up to the bracket-id entry-bracket fix. Reviewing that PR
+turned up `getChampionshipResult` reading third place out of a hardcoded
+`brackets['2']` — 25 lines below the participant reader that had just been
+fixed for exactly the same reason.
+
+**Insight:** A hardcoded key does not appear once. It appears everywhere the
+same author reached for the same feed, and fixing the instance you were sent to
+fix leaves the others sitting there with the identical defect and no reason to
+be looked at. The first bug took eight seasons to notice; the second was
+sitting 25 lines away the whole time and was found only because someone
+reviewed the fix rather than the feature.
+
+The second one hid better, too. The participant bug produced a WRONG number
+(four berths instead of eight) — visible if anyone had compared it to MFL. The
+third-place bug produced NO number: the value it computed was always the
+champion or runner-up, and the caller's earlier `else if` branches claimed that
+franchise first, so the row silently fell through to plain `playoffs`. Third
+place was recorded in 0 of the AFL's 23 seasons and nothing anywhere looked
+wrong — the division panel just showed "Championships 5 · 1 runner-up" for a
+division with six third-place finishes.
+
+**Evidence:** 22 AFL seasons had a third-place finisher and none was recorded.
+Recovering them needed both halves: resolve the bracket by name
+(`getThirdPlaceBracketId` — bracket 2 through 2017, bracket 4 from 2018), and
+read it from the reconstruction, because MFL's export carries franchise ids only
+from 2024 and `championship-history.json` has no `thirdPlace` key at all.
+
+The check that makes it self-verifying: a third-place finisher lost before the
+final, so the value can never equal the champion or the runner-up. All 22
+recovered seasons satisfy it, and all 22 are already inside the playoff field —
+berths stayed at exactly 8 per season, which is the proof the recovery added
+information without moving anything it shouldn't. `resolveThirdPlace` enforces
+the same invariant at write time and discards a violation rather than
+publishing it.
+
+**Recommendation:** When a fix removes a hardcoded key, grep the file for the
+rest of them before closing the change — `bracketsList['`, in this case, would
+have found the second one in seconds. And weigh the two failure modes
+differently: a wrong number is a bug someone eventually reports, while a value
+that silently loses a race to an earlier branch produces absence, and nobody
+reports absence. The first is found by users; the second is only ever found by
+asking "should this field be empty?" — which is why "why is this always zero"
+deserves an hour even when nothing looks broken.

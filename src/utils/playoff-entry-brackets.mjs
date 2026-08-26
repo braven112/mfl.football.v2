@@ -29,7 +29,7 @@
  * import a .ts, and two copies of this rule would be free to drift on exactly
  * the seasons nobody looks at.
  */
-import { bracketKindFromName, isTitleBracket } from './afl-bracket-kind.mjs';
+import { bracketKindFromName, isTitleBracket, placementFromName } from './afl-bracket-kind.mjs';
 
 const toArray = (v) => (Array.isArray(v) ? v : v ? [v] : []);
 
@@ -157,4 +157,89 @@ export function getEntryBracketParticipants(playoffBrackets, entryBracketIds) {
     }
   }
   return participants;
+}
+
+/* ── The third-place bracket ───────────────────────────────────────────────
+ *
+ * The same question as the entry brackets, one placement down, and it had the
+ * same answer hardcoded: `getChampionshipResult` read third place out of
+ * `brackets['2']`. For the AFL from 2018 bracket 2 is `AL Championship`, a
+ * conference semifinal — so the "third place" it produced was always the team
+ * that went on to win or lose the final, and the caller's champion/runner-up
+ * branches claimed that franchise first. Third place was never recorded for
+ * the AFL in any of its 23 seasons.
+ */
+
+/**
+ * Which bracket decides third place.
+ *
+ * Per-league for the same reason `getEntryBracketIds` is. TheLeague's bracket 2
+ * has always been its third-place bracket (MFL renamed it `3rd Place Bracket`
+ * in 2025) and its ids have never moved. Resolving TheLeague by shape instead
+ * would actively break it: `The Loser's Bracket` starts in week 14, EARLIER
+ * than `The Consolation Bracket` in week 16, and it is the FIFTH-place bracket
+ * — renamed `5th Place Bracket` in 2025, which is how we know.
+ *
+ * The AFL moved twice, so it resolves by name:
+ *   2004-2017  `2 AFL Losers Bracket` / `AFL Consolation Bracket` — 6 teams
+ *              over three rounds, and its FINAL winner is third. (The rules
+ *              doc states the same: "they won the AFL Losers Bracket; 2nd is
+ *              the title-game loser".)
+ *   2018-2025  `4 AFL 3rd Place Game` — a direct two-team game.
+ *
+ * An explicit "3rd Place" name wins outright; otherwise the championship-side
+ * consolation bracket does, earliest-starting first — 2006 carries both
+ * `2 AFL Losers Bracket` (w15) and `3 AFL Losers Bracket Placing Games` (w16),
+ * and the earlier one is the decider.
+ *
+ * @returns {string | null} bracket id, or null when the season declares none
+ */
+export function getThirdPlaceBracketId(leagueSlug, playoffBrackets) {
+  const metas = bracketMetas(playoffBrackets);
+  if (!metas.length) return null;
+  if (leagueSlug !== 'afl-fantasy') return metas.some((m) => String(m.id) === '2') ? '2' : null;
+
+  // NIT and Cup run their own placement games ("NIT 3rd Place Game"), so the
+  // kind filter has to come first or the AFL's third place becomes the NIT's.
+  const ours = metas.filter((meta) => {
+    const kind = bracketKindFromName(meta?.name, String(meta?.id));
+    return kind === 'championship' || kind === 'al' || kind === 'nl';
+  });
+
+  const named = ours.filter((m) => placementFromName(m?.name) === 3);
+  if (named.length) return String(named[0].id);
+
+  const consolation = ours.filter(
+    (m) => isTitleBracket(m?.name) && NOT_AN_ENTRY.test(String(m?.name ?? ''))
+  );
+  if (!consolation.length) return null;
+  const weeks = consolation.map((m) => Number(m.startWeek)).filter((n) => Number.isFinite(n));
+  if (!weeks.length) return String(consolation[0].id);
+  const firstWeek = Math.min(...weeks);
+  return String(consolation.find((m) => Number(m.startWeek) === firstWeek).id);
+}
+
+/**
+ * The winner of a bracket's final round — third place, for the bracket above.
+ *
+ * Accepts MFL's export or a reconstructed season, like
+ * `getEntryBracketParticipants`. Returns null rather than a guess whenever the
+ * bracket has no franchise ids or no score, which is most AFL seasons in MFL's
+ * own export: it carries ids only from 2024.
+ *
+ * @returns {string | null} franchise id
+ */
+export function getBracketFinalWinner(playoffBrackets, bracketId) {
+  if (!playoffBrackets || !bracketId) return null;
+  const list =
+    playoffBrackets.brackets || playoffBrackets.playoffBrackets?.brackets || playoffBrackets;
+  const bracket = list?.[bracketId]?.playoffBracket;
+  if (!bracket) return null;
+  const rounds = toArray(bracket.playoffRound);
+  const game = toArray(rounds[rounds.length - 1]?.playoffGame)[0];
+  if (!game?.home?.franchise_id || !game?.away?.franchise_id) return null;
+  const home = Number(game.home.points) || 0;
+  const away = Number(game.away.points) || 0;
+  if (home <= 0 && away <= 0) return null;
+  return home >= away ? game.home.franchise_id : game.away.franchise_id;
 }

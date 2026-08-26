@@ -46,9 +46,11 @@ import {
   placementLabel,
 } from '../src/utils/afl-bracket-kind.mjs';
 import {
+  getBracketFinalWinner,
   getChampionshipFieldSize,
   getEntryBracketIds as resolveEntryBracketIds,
   getEntryBracketParticipants,
+  getThirdPlaceBracketId,
   hasDeclaredEntryBrackets,
 } from '../src/utils/playoff-entry-brackets.mjs';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
@@ -306,6 +308,20 @@ const attributeYear = (sourceId, year) => {
   return sourceId;
 };
 
+/**
+ * Third place, with the invariant that caught the bug enforced.
+ *
+ * A third-place finisher is by definition NEITHER the champion nor the runner-up
+ * — they lost before the final. So a resolved value equal to either is proof the
+ * wrong bracket was read, and is discarded rather than published. That is
+ * exactly what `brackets['2']` produced for the AFL from 2018, silently.
+ */
+function resolveThirdPlace(brackets, bracketId, champion, runnerUp) {
+  const third = getBracketFinalWinner(brackets, bracketId);
+  if (!third || third === champion || third === runnerUp) return null;
+  return third;
+}
+
 // --- Helpers for playoff bracket parsing ---
 function getChampionshipResult(playoffBrackets) {
   if (!playoffBrackets) return null;
@@ -331,20 +347,19 @@ function getChampionshipResult(playoffBrackets) {
   const winner = homePts >= awayPts ? finalGame.home : finalGame.away;
   const loser = homePts >= awayPts ? finalGame.away : finalGame.home;
 
-  // 3rd place = bracket "2"
-  let thirdPlace = null;
-  const consolation = bracketsList['2']?.playoffBracket;
-  if (consolation) {
-    const consoFinal = toArray(consolation.playoffRound).slice(-1)[0];
-    const consoGame = toArray(consoFinal?.playoffGame)[0];
-    if (consoGame?.home?.franchise_id && consoGame?.away?.franchise_id) {
-      const cHome = parseNum(consoGame.home.points);
-      const cAway = parseNum(consoGame.away.points);
-      if (cHome > 0 || cAway > 0) {
-        thirdPlace = cHome >= cAway ? consoGame.home.franchise_id : consoGame.away.franchise_id;
-      }
-    }
-  }
+  // Third place comes from whichever bracket DECIDES it, resolved by name —
+  // never from a fixed id. This read `bracketsList['2']` until Aug 2026, and
+  // for the AFL from 2018 bracket 2 is `AL Championship`: a conference
+  // semifinal whose winner always goes on to win or lose the final, so the
+  // caller's champion/runner-up branches claimed the row first and third place
+  // was never recorded in any of the AFL's 23 seasons. Same hardcoded-id bug
+  // as the participant reader above, one function apart.
+  const thirdPlace = resolveThirdPlace(
+    playoffBrackets,
+    getThirdPlaceBracketId(LEAGUE_SLUG, playoffBrackets),
+    winner.franchise_id,
+    loser.franchise_id
+  );
 
   return {
     champion: winner.franchise_id,
@@ -797,6 +812,27 @@ for (const year of years) {
         runnerUp: manual.runnerUp ?? null,
         thirdPlace: manual.thirdPlace ?? null,
       };
+    }
+  }
+
+  // Third place, recovered from the reconstruction — the same promotion the
+  // participant reader got, for the same reason. MFL's AFL export carries
+  // franchise ids only from 2024, so `getChampionshipResult` cannot read a
+  // third-place game before then; and championship-history.json, which covers
+  // the champion and runner-up for those years, has no `thirdPlace` key at
+  // all. Between them, 22 AFL seasons had a third-place finisher and not one
+  // was recorded. The reconstruction is a walk over real games, verified
+  // against championship-history before publication, and the collision guard
+  // in resolveThirdPlace still applies to whatever it returns.
+  if (champResult && !champResult.thirdPlace && reconstructedBracketsByYear) {
+    const season = reconstructedBracketsByYear[String(year)];
+    if (season) {
+      champResult.thirdPlace = resolveThirdPlace(
+        season,
+        getThirdPlaceBracketId(LEAGUE_SLUG, playoffBrackets),
+        champResult.champion,
+        champResult.runnerUp
+      );
     }
   }
 
