@@ -111,8 +111,10 @@ describe.each(leagues)('$league.slug playoff field', ({ league, ledgerPath, feed
         .filter((r: any) => r.playoffResult === 'champion' || r.playoffResult === 'runner-up')
         .map((r: any) => r.franchiseId);
       if (top.includes(id)) offenders.push(`${year}: ${id} is third AND ${top.join('/')}`);
-      // And they have to have been in the playoffs at all.
-      expect(third[0].playoffResult, `${year}: third place missed the playoffs`).not.toBe('missed');
+      // A third place with no final above it is incoherent — you cannot lose
+      // before a game that was never played. (Asserting the row is not
+      // 'missed' would be tautological: `third` is filtered on the value.)
+      expect(top.length, `${year}: third place recorded with no champion/runner-up`).toBe(2);
     }
     expect(offenders, 'third place collides with the top two').toEqual([]);
   });
@@ -144,10 +146,20 @@ describe.each(leagues)('$league.slug playoff field', ({ league, ledgerPath, feed
 
   it('recovers every third place the brackets can actually resolve', () => {
     // A regression here means a season quietly stopped being recoverable — the
-    // failure mode that hid this bug is silence, so the count is pinned rather
-    // than left to "well, some seasons have it".
-    const resolvable: number[] = [];
-    for (const year of years) {
+    // failure mode that hid this bug is silence, so the seasons are pinned
+    // rather than left to "well, some of them have it".
+    //
+    // Scoped to seasons the DERIVED data already calls finished, because the
+    // two sides of this comparison are refreshed on different clocks: the feed
+    // is synced every few minutes and the ledger is rebuilt once a day. Without
+    // the scope, the hours between week 17's third-place game scoring and that
+    // night's rebuild are a red `main` — the sibling assertion above skips the
+    // same window via its `berths === 0` guard.
+    const settled = years.filter((year) =>
+      played.some((r: any) => r.year === year && r.playoffResult === 'champion')
+    );
+    const unrecovered: string[] = [];
+    for (const year of settled) {
       const brackets = bracketsFor(year);
       if (!brackets) continue;
       const id = getThirdPlaceBracketId(league.slug, brackets);
@@ -155,18 +167,23 @@ describe.each(leagues)('$league.slug playoff field', ({ league, ledgerPath, feed
       const rec = reconstructedFor(year);
       const winner =
         getBracketFinalWinner(brackets, id) ?? (rec ? getBracketFinalWinner(rec, id) : null);
-      if (winner) resolvable.push(year);
+      if (!winner) continue;
+      const rows = played.filter((r: any) => r.year === year);
+      const top = rows
+        .filter((r: any) => r.playoffResult === 'champion' || r.playoffResult === 'runner-up')
+        .map((r: any) => r.franchiseId);
+      // Production discards a winner that collides with the top two rather than
+      // publishing it (resolveThirdPlace), so a season it legitimately rejected
+      // is not an unrecovered one — asserting otherwise reports the guard
+      // working as a failure.
+      if (top.includes(winner)) continue;
+      const recorded = rows.some((r: any) => r.playoffResult === 'third-place');
+      if (!recorded) unrecovered.push(`${year}: bracket ${id} resolves ${winner}`);
     }
-    const recorded = years.filter((year) =>
-      played.some((r: any) => r.year === year && r.playoffResult === 'third-place')
-    );
     // Every season the data CAN answer must be answered. Seasons it cannot
     // (TheLeague's bracket 2 is absent from the feed for 16 of 19 years, and
     // there is no reconstruction for that league) are legitimately empty.
-    expect(
-      resolvable.filter((y) => !recorded.includes(y)),
-      'seasons whose third place is resolvable but unrecorded'
-    ).toEqual([]);
+    expect(unrecovered, 'third place is resolvable but unrecorded').toEqual([]);
   });
 
   it('never routes a team into the playoffs through a placement or consolation bracket', () => {
