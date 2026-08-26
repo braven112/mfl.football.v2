@@ -416,9 +416,10 @@ franchise ids only from 2024, so the reconstructed brackets
 verified against championship-history) became the first fallback rather than
 being used only for round labels. Standings inference dropped to last resort —
 2003 alone. That also settled two seasons where the inference had produced a
-NINE-team field in an eight-team bracket, and corrected eight franchise-seasons
-between 2004 and 2014 where it had seeded the wrong team: 2014 credited berths
-to 0022 and 0002, who were both in the NIT that year.
+NINE-team field in an eight-team bracket — 2004, 2007 and 2013, three seasons
+rather than the two an earlier draft of this entry claimed — and corrected eight
+franchise-seasons between 2004 and 2014 where it had seeded the wrong team: 2014
+credited berths to 0022 and 0002, who were both in the NIT that year.
 
 Every AFL division's berth count moved: North 28 → 38, West 37 → 44, East 29 →
 34. The ordering changed with it, and the corrected one agrees with

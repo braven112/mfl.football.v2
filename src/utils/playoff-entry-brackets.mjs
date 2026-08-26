@@ -33,16 +33,37 @@ import { bracketKindFromName, isTitleBracket } from './afl-bracket-kind.mjs';
 
 const toArray = (v) => (Array.isArray(v) ? v : v ? [v] : []);
 
+/**
+ * Brackets a team can only reach by LOSING one it already entered.
+ *
+ * `bracketKindFromName` classifies anything AFL-side that is not NIT/Cup/AL/NL
+ * as `championship`, which is a tab, not a promise — so "The Loser's Bracket"
+ * and "The Toilet Bowl Challenge" fall through it as championship-side title
+ * brackets and, both starting the same week as the championship, would be
+ * picked up by the week rule below.
+ *
+ * That is not hypothetical. `fetch-mfl-feeds.mjs#generatePredictedBrackets`
+ * hardcodes TheLeague's bracket shape and writes it into whichever league it
+ * is fetching (roster-sync.yml loops the AFL through the same script), guarded
+ * only by `hasRealBracketData`. Fed that payload, the AFL resolver without
+ * this filter answers `['1','3','5']` — a nineteen-team playoff field in a
+ * league that seeds eight, crediting berths through the Toilet Bowl.
+ */
+const NOT_AN_ENTRY = /\b(consolation|loser'?s?|toilet)\b/i;
+
 const RESOLVERS = {
   theleague: () => ['1'],
   'afl-fantasy': (metas) => {
     const candidates = metas.filter((meta) => {
       const kind = bracketKindFromName(meta?.name, String(meta?.id));
-      // `championship` is the fallthrough kind, so the placement filter is what
-      // keeps "AFL 3rd Place Game" and "AFL 5th Place Game" out — a team is in
-      // one of those only by having already entered through AL or NL.
+      // `championship` is the fallthrough kind, so these two filters are what
+      // keep "AFL 3rd Place Game", "AFL 5th Place Game" and the consolation
+      // side out — a team is in any of those only by having already entered
+      // through the championship, AL or NL.
       return (
-        (kind === 'championship' || kind === 'al' || kind === 'nl') && isTitleBracket(meta?.name)
+        (kind === 'championship' || kind === 'al' || kind === 'nl') &&
+        isTitleBracket(meta?.name) &&
+        !NOT_AN_ENTRY.test(String(meta?.name ?? ''))
       );
     });
     const weeks = candidates.map((m) => Number(m.startWeek)).filter((n) => Number.isFinite(n));
@@ -52,9 +73,36 @@ const RESOLVERS = {
   },
 };
 
-/** The bracket metadata array, wherever MFL parked it this era. */
+/**
+ * The bracket metadata array, wherever MFL parked it this era — and empty for a
+ * PREDICTED payload.
+ *
+ * `fetch-mfl-feeds.mjs` invents a bracket shape from the standings when a
+ * season has no real one yet, stamping `predicted: true`. Those brackets carry
+ * no franchise ids, so they can never name a participant; what they can do is
+ * declare a field size, and it is a guess (and, for the AFL, a guess in another
+ * league's shape). Refusing to read them means an unplayed season contributes
+ * no playoff credit at all, which is the correct answer.
+ */
 export function bracketMetas(playoffBrackets) {
+  if (playoffBrackets?.predicted) return [];
   return toArray(playoffBrackets?.playoffBrackets?.playoffBracket);
+}
+
+/**
+ * True when the entry brackets were read off real metadata rather than guessed.
+ *
+ * `getEntryBracketIds` falls back to `['1']` when it has nothing to read, which
+ * is right for TheLeague and WRONG for the modern AFL, where bracket 1 is the
+ * two-team final. A caller about to resolve participants out of a bracket map
+ * needs to know which of those it got — see the reconstruction fallback in
+ * scripts/compute-franchise-history.mjs.
+ */
+export function hasDeclaredEntryBrackets(leagueSlug, playoffBrackets) {
+  const metas = bracketMetas(playoffBrackets);
+  if (!metas.length) return false;
+  const resolve = RESOLVERS[leagueSlug] ?? RESOLVERS.theleague;
+  return resolve(metas).length > 0;
 }
 
 /**

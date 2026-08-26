@@ -50,6 +50,7 @@ import {
   getChampionshipFieldSize,
   getEntryBracketIds as resolveEntryBracketIds,
   getEntryBracketParticipants,
+  hasDeclaredEntryBrackets,
 } from '../src/utils/playoff-entry-brackets.mjs';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 
@@ -857,12 +858,24 @@ for (const year of years) {
   // real scores, verified against championship-history.json before it is
   // published, so it beats re-deriving the field from the standings: it is
   // what HAPPENED rather than what the seeding rules imply. It also settles
-  // the two seasons where those disagreed — 2004 and 2007 each credited NINE
-  // berths, the inferred eight plus a division winner the inference had left
-  // out.
+  // the three seasons where those disagreed — 2004, 2007 and 2013 each credited
+  // NINE berths, the inferred eight plus a division winner the inference had
+  // left out.
+  //
+  // Gated on the entry brackets being DECLARED rather than guessed. With no
+  // readable metadata `getEntryBracketIds` answers `['1']`, and reading a
+  // reconstructed AFL season 2018-2023 at bracket 1 gets the two-team final —
+  // reproducing the exact bug this fallback exists to fix, from a corrupt or
+  // missing export instead of a hardcoded id. Better to credit nobody, loudly,
+  // than two teams, quietly.
   if (playoffParticipants.size === 0 && reconstructedBracketsByYear) {
     const season = reconstructedBracketsByYear[String(year)];
-    if (season) {
+    if (season && !hasDeclaredEntryBrackets(LEAGUE_SLUG, playoffBrackets)) {
+      console.warn(
+        `[franchise-history] ${year}: reconstructed brackets ignored — the MFL export ` +
+          'declares no playoff entry brackets, so which bracket is the field is a guess'
+      );
+    } else if (season) {
       for (const fid of getPlayoffParticipants(season, entryBracketIds)) {
         playoffParticipants.add(fid);
       }

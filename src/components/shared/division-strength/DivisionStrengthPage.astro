@@ -165,19 +165,26 @@ const fieldRange = playoffFieldRange(data);
 const fieldMoved = !!fieldRange && fieldRange.max > fieldRange.min;
 
 /**
- * Championships with the near misses beside them.
+ * Championships with the near misses beside them — and NOTHING when there are
+ * none to report.
  *
  * A division with six finalists and one ring is not the same as one that has
- * been to a final once, and the bare count cannot tell them apart. Zeroes are
- * dropped rather than printed — "0 runner-up" is noise, and both leagues have
- * divisions with no third-place game on record at all.
+ * been to a final once, and the bare count cannot tell them apart. But the
+ * silent case must stay silent: third place is recorded in 3 of TheLeague's 19
+ * seasons and in NONE of the AFL's 23 (`getChampionshipResult` reads the
+ * consolation final off bracket 2, which from 2018 is the AL bracket, not a
+ * placement game). An earlier draft closed with "no other podium finishes",
+ * which turned that gap into a positive claim — TheLeague's Midwest asserting
+ * four clean seasons where the data simply does not say.
+ *
+ * So: report what is recorded, return undefined otherwise, and let the card
+ * render without a subtitle. Absence of evidence does not get a sentence.
  */
-const finalsSubtitle = (d: DivisionAllTime): string => {
+const finalsSubtitle = (d: DivisionAllTime): string | undefined => {
   const parts: string[] = [];
   if (d.runnerUps > 0) parts.push(`${d.runnerUps} runner-up`);
   if (d.thirdPlaces > 0) parts.push(`${d.thirdPlaces} third`);
-  if (parts.length) return parts.join(' · ');
-  return d.championships > 0 ? 'no other podium finishes' : 'never won it';
+  return parts.length ? parts.join(' · ') : undefined;
 };
 
 // ── All-time sorting ───────────────────────────────────────────────────────
