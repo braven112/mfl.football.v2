@@ -3,6 +3,49 @@
 The Strength of Division report (`/division-strength`, both leagues), built from
 `data/<league>/derived/division-strength.json`.
 
+## 2026-08-26 - Lowering the era floor broke an assumption that had nothing to do with the floor
+
+**Context:** Dropping `ERA_MIN_SEASONS` from 4 to 3 so the lineup board shows
+more eras — 6 rows to 10 in TheLeague, 4 to 10 in the AFL.
+
+**Insight:** The board sorts on OVERALL win%, and the reason that was safe was
+recorded as a guard test, not as prose: an era's intra-division games are
+exactly zero-sum, so overall win% is the interdivisional rate compressed toward
+.500, and the test asserted the two metrics ordered every qualifying era
+identically in both leagues. That agreement was a MEASUREMENT of the eras the
+4-season floor happened to admit, not a property of the arithmetic — the
+compression factor is only approximately equal across eras, because how much of
+an era's schedule is intra-division varies with division size and length of
+run. Admitting the three-season eras admitted a pair that orders differently:
+the AFL's North 2008-2010 beats South 2019-present against the rest of the
+league (.451 to .435) and trails it overall (.468 to .473).
+
+So a threshold parameter nobody thought of as load-bearing invalidated a
+downstream ranking assumption. The guard did its job — it failed the moment the
+constant changed — but its comment prescribed a remedy ("move to
+interdivisional") that was only half the change: sorting on the second figure
+while the row LEADS with the first reads as a broken sort to anyone scanning
+the big numbers, so it also needs the row rebuilt to lead with the ranked
+figure. Both were tried; the owner's call was to keep overall, which is the
+number the row leads with and the one the all-time list above it uses.
+
+**Evidence:** `rankEras` in `src/utils/division-strength-view.ts`;
+`tests/division-strength-data.test.ts`. The old test asserted an identity that
+can no longer hold, so it was replaced rather than deleted: the board's ranked
+number must be the one in the big type, both figures must be on every row, and
+any pair the two metrics order differently must stay within a rounding step on
+the ranked one (widest today .005). A wider split is the signal to revisit the
+metric, and it fails loudly instead of silently ranking on the flattering
+number.
+
+**Recommendation:** When a guard pins an AGREEMENT between two metrics, write
+the tolerance into it, not just the equality — an exact-agreement test can only
+ever be deleted or rewritten when the data moves, and the deletion is where the
+reasoning gets lost. And treat a "just a threshold" constant as an input to
+every derived claim downstream of it: the floor here was documented as a claim
+about evidence, and it turned out to also be the load-bearing assumption under
+the sort.
+
 ## 2026-08-25 - A division's OVERALL record cannot measure its strength
 
 **Context:** Building the report from a league suggestion — "accumulate the
