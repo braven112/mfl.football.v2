@@ -288,7 +288,7 @@ layout.
 
 **Insight:** Wrapping is content-dependent, so it is a per-row outcome, not a
 row shape. A division called "South" with no `current` pill left room for six
-crests on line one; "2019–present North (current)" did not — so the same board
+crests on line one; "North 2019–present current" did not — so the same board
 rendered two-line and three-line rows alternately down the column, and the
 records had no shared edge. Nothing was wrong with any single row; the raggedness
 only exists between rows, which is why it survives a desktop check and every
@@ -301,3 +301,23 @@ wanted for the trailing column anyway. Reserve natural wrapping for content
 whose ragged edge is acceptable, and verify a list layout by screenshotting
 SEVERAL rows at the target width: the shortest label and the longest one wrap
 differently, and one row proves nothing.
+
+## 2026-08-25 - An unscoped `order` reaches into a nested flex container
+
+**Context:** Same mobile media block. `.verdict-name` and `.verdict-list .pill`
+carried `order: 2` to place the division name after the rank.
+
+**Insight:** On the era board those two elements are not children of the row —
+they sit inside `.era-board__name`, which is itself `display: inline-flex`. A
+descendant selector matched them there too, so `order: 2` applied against their
+real parent and reordered ITS children, while `.era-board__years` kept the
+implicit `order: 0` and sorted ahead of both. The phone read
+"2019–present North current" where desktop read "North 2019–present current".
+Nothing in the diff that introduced the wrapper touched the order rules; the
+selector simply started matching one level deeper.
+
+**Recommendation:** `order` resolves against an element's own flex parent, so a
+selector that names an element by class alone will silently re-sort a nested
+flex container it was never written for. Scope ordering rules to the generation
+they mean — `.list > li > .thing`, not `.list .thing` — the moment any row wraps
+part of its content in a flex wrapper.

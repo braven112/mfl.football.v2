@@ -1595,9 +1595,15 @@ const seasonHasNothing = !!season && season.divisions.length === 0 && !seasonPre
     .verdict-list .member-icons { margin-left: 0; order: 3; flex: 0 0 100%; }
     .verdict-list .member-icons + .verdict-value { margin-left: auto; order: 4; }
     .verdict-rank { order: 1; }
+    /* Direct children only. `.verdict-name` and `.pill` are nested inside
+       `.era-board__name` on the era board, and that span is itself a flex
+       container — an unscoped `order: 2` reached in and reordered ITS
+       children, leaving `.era-board__years` on the implicit 0 and flipping
+       the label to "2019-present North" on a phone while desktop read
+       "North 2019-present". */
     .era-board__name,
-    .verdict-name,
-    .verdict-list .pill { order: 2; }
+    .verdict-list > li > .verdict-name,
+    .verdict-list > li > .pill { order: 2; }
     .era-board__inter { display: inline; margin-left: 0.5rem; }
   }
 
