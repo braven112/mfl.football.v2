@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-08-25T20:12:37.549Z"
+    "fetchedAt": "2026-08-26T00:35:12.037Z"
   },
   "players": [
     {
@@ -1890,7 +1890,7 @@
       "status": "ROSTER",
       "contractYear": "3",
       "points": 0,
-      "team": "ARI",
+      "team": "FA",
       "draftYear": 2024,
       "draftTeam": "ARI",
       "birthdate": 1027396800,
@@ -5974,20 +5974,51 @@
       "status": "ROSTER",
       "contractYear": "2",
       "points": 0,
-      "team": "FA",
+      "team": "HOU",
       "draftYear": 2023,
       "draftTeam": "DAL",
       "birthdate": 1004677200,
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/16176_thumb.jpg",
       "externalIds": {
         "mfl": "16176",
-        "sleeper": null,
+        "sleeper": "9505",
         "gsis": null
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "9505",
+        "fullName": "Deuce Vaughn",
+        "team": "HOU",
+        "age": 24,
+        "height": "66",
+        "weight": "176",
+        "number": 31,
+        "college": "Kansas State",
+        "birthDate": "2001-11-02",
+        "status": "Active",
+        "active": true,
+        "position": "RB",
+        "depthChartPosition": "RB",
+        "depthChartOrder": 4,
+        "fantasyPositions": [
+          "RB"
+        ],
+        "experience": 3,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "14071",
+          "name": "Montgomery, David"
+        },
+        {
+          "id": "17053",
+          "name": "Marks, Woody"
+        }
+      ]
     },
     {
       "id": "16207",
@@ -7403,20 +7434,47 @@
       "status": "ROSTER",
       "contractYear": "3",
       "points": 0,
-      "team": "NE",
+      "team": "HOU",
       "draftYear": 2023,
       "draftTeam": "NEP",
       "birthdate": 1020744000,
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/16193_thumb.jpg",
       "externalIds": {
         "mfl": "16193",
-        "sleeper": null,
+        "sleeper": "9504",
         "gsis": null
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "9504",
+        "fullName": "Kayshon Boutte",
+        "team": "HOU",
+        "age": 24,
+        "height": "71",
+        "weight": "203",
+        "number": 9,
+        "college": "LSU",
+        "birthDate": "2002-05-07",
+        "status": "Active",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "SWR",
+        "depthChartOrder": 2,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 3,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "15290",
+          "name": "Collins, Nico"
+        }
+      ]
     },
     {
       "id": "17157",
@@ -8090,7 +8148,7 @@
         "id": "13285",
         "fullName": "Malachi Fields",
         "team": "NYG",
-        "age": 22,
+        "age": 23,
         "height": "76",
         "weight": "222",
         "number": 0,
@@ -9568,7 +9626,7 @@
         "id": "12471",
         "fullName": "DJ Giddens",
         "team": "IND",
-        "age": 22,
+        "age": 23,
         "height": "72",
         "weight": "212",
         "number": 21,
@@ -12995,7 +13053,7 @@
         "id": "8150",
         "fullName": "Kyren Williams",
         "team": "LAR",
-        "age": 25,
+        "age": 26,
         "height": "69",
         "weight": "207",
         "number": 23,
@@ -14224,6 +14282,10 @@
           "name": "Collins, Nico"
         },
         {
+          "id": "16193",
+          "name": "Boutte, Kayshon"
+        },
+        {
           "id": "16204",
           "name": "Dell, Tank"
         }
@@ -15305,20 +15367,47 @@
       "status": "ROSTER",
       "contractYear": "2",
       "points": 0,
-      "team": "LV",
+      "team": "NO",
       "draftYear": 2018,
       "draftTeam": "MIN",
       "birthdate": 790837200,
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/13718_thumb.jpg",
       "externalIds": {
         "mfl": "13718",
-        "sleeper": null,
-        "gsis": null
+        "sleeper": "5095",
+        "gsis": "00-0034161"
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "5095",
+        "fullName": "Daniel Carlson",
+        "team": "NO",
+        "age": 31,
+        "height": "77",
+        "weight": "215",
+        "number": 48,
+        "college": "Auburn",
+        "birthDate": "1995-01-23",
+        "status": "Active",
+        "active": true,
+        "position": "K",
+        "depthChartPosition": "K",
+        "depthChartOrder": 2,
+        "fantasyPositions": [
+          "K"
+        ],
+        "experience": 8,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": "00-0034161"
+      },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "17424",
+          "name": "Smyth, Charlie"
+        }
+      ]
     },
     {
       "id": "11222",
@@ -16855,6 +16944,10 @@
         {
           "id": "15290",
           "name": "Collins, Nico"
+        },
+        {
+          "id": "16193",
+          "name": "Boutte, Kayshon"
         }
       ]
     },
@@ -17217,7 +17310,7 @@
       "status": "TAXI_SQUAD",
       "contractYear": "5",
       "points": 0,
-      "team": "KC",
+      "team": "FA",
       "draftYear": 2026,
       "draftTeam": "FA",
       "birthdate": 1046581200,
