@@ -227,10 +227,11 @@ export interface RankedEra {
  * intra-division games are exactly zero-sum, so overall win% is the
  * interdivisional rate compressed toward .500, but only by an APPROXIMATELY
  * equal factor. They ordered every era identically at the old four-season
- * floor; at three, the AFL's North 2008–2010 beats South 2019–present against
- * the rest of the league and trails it overall, so that one pair sits in the
- * opposite order from an interdivisional ranking. Both figures are on every
- * row, which is what keeps that honest. Ties break toward the longer run,
+ * floor; at three, the AFL's North 2008–2010 beats three rows above it against
+ * the rest of the league (South 2019–present and both East runs) while trailing
+ * all three overall, so those pairs sit in the opposite order from an
+ * interdivisional ranking. The widest of them is .009 apart on the ranked
+ * number. Both figures are on every row, which is what keeps that honest. Ties break toward the longer run,
  * which is the one carrying more evidence.
  */
 export function rankEras(

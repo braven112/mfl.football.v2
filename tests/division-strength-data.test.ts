@@ -1104,10 +1104,10 @@ describe.each(leagues)('$league.slug era board', ({ dataPath }) => {
 
   // The board sorts on OVERALL win%, which is the owner's call and which the
   // two metrics used to make free: they ordered every era identically at the
-  // old four-season floor. At three they no longer do — the AFL's North
-  // 2008-2010 beats South 2019-present against the rest of the league and
-  // trails it overall — so this can no longer assert one order. What it can
-  // hold is the pair the ranking rests on:
+  // old four-season floor. At three they no longer do — three AFL pairs now
+  // disagree, all of them the North of 2008-2010 (better against the rest of
+  // the league, worse overall) against a row above it — so this can no longer
+  // assert one order. What it can hold is the pair the ranking rests on:
   //
   //   * the ranked number is the one in the big type. A board sorted on one
   //     figure while leading with another reads as a broken sort, whichever
@@ -1115,7 +1115,9 @@ describe.each(leagues)('$league.slug era board', ({ dataPath }) => {
   //   * both figures are on every row, so a reader can see where they part.
   //
   // A divergence WIDER than a rounding step would be the signal to revisit the
-  // choice of metric; today the widest is a hair over .010.
+  // choice of metric; today the widest is .009. The pairs are checked across
+  // the WHOLE board rather than between neighbours: two of today's three are
+  // non-adjacent, and an adjacent-only sweep would have reported one.
   it('leads each row with the overall record it is ranked on, and shows the other', () => {
     const rows = rankEras(data.divisions);
     expect(rows.length).toBeGreaterThan(0);
@@ -1123,22 +1125,28 @@ describe.each(leagues)('$league.slug era board', ({ dataPath }) => {
       expect(row.era.interDivision.games, row.label).toBeGreaterThan(0);
       expect(row.era.interDivision.games, row.label).toBeLessThanOrEqual(row.era.totals.games);
     }
-    expect(
-      page.indexOf('{formatRecord(row.era.totals)}'),
-      'the era row must render the overall record it sorts on before the interdivisional rate'
-    ).toBeLessThan(page.indexOf('{formatWinPct(row.era.interDivision)}'));
+    // `indexOf` returns -1 for markup that is not there, and -1 is less than
+    // any real index — so both halves have to be pinned as PRESENT first, or
+    // a row rewritten to drop the overall record passes this vacuously.
+    const leads = page.indexOf('{formatRecord(row.era.totals)}');
+    const follows = page.indexOf('{formatWinPct(row.era.interDivision)}');
+    expect(leads, 'the era row must render the overall record it sorts on').toBeGreaterThan(-1);
+    expect(follows, 'the era row must render the interdivisional rate too').toBeGreaterThan(-1);
+    expect(leads, 'the record it sorts on must come before the interdivisional rate').toBeLessThan(follows);
     expect(page.slice(page.indexOf('era-board__inter'))).toContain('vs others');
 
-    // Every out-of-order pair the two metrics disagree on stays inside a
-    // rounding step of each other on the ranked number.
-    for (let i = 1; i < rows.length; i += 1) {
-      const prev = rows[i - 1].era;
-      const cur = rows[i].era;
-      if ((prev.interDivision.winPct ?? 0) >= (cur.interDivision.winPct ?? 0)) continue;
-      expect(
-        (prev.totals.winPct ?? 0) - (cur.totals.winPct ?? 0),
-        `${rows[i - 1].label} outranks ${rows[i].label} overall but trails it vs others`
-      ).toBeLessThan(0.011);
+    // Every out-of-order pair, not just neighbouring ones: a row can outrank
+    // another on overall while trailing it vs others from anywhere above it.
+    for (let i = 0; i < rows.length; i += 1) {
+      for (let j = i + 1; j < rows.length; j += 1) {
+        const above = rows[i].era;
+        const below = rows[j].era;
+        if ((above.interDivision.winPct ?? 0) >= (below.interDivision.winPct ?? 0)) continue;
+        expect(
+          (above.totals.winPct ?? 0) - (below.totals.winPct ?? 0),
+          `${rows[i].label} outranks ${rows[j].label} overall but trails it vs others`
+        ).toBeLessThan(0.011);
+      }
     }
   });
 

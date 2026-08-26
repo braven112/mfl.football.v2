@@ -16,9 +16,11 @@ identically in both leagues. That agreement was a MEASUREMENT of the eras the
 4-season floor happened to admit, not a property of the arithmetic — the
 compression factor is only approximately equal across eras, because how much of
 an era's schedule is intra-division varies with division size and length of
-run. Admitting the three-season eras admitted a pair that orders differently:
-the AFL's North 2008-2010 beats South 2019-present against the rest of the
-league (.451 to .435) and trails it overall (.468 to .473).
+run. Admitting the three-season eras admitted three pairs that order
+differently, all of them the AFL's North 2008-2010: it beats South 2019-present
+and both East runs (2016-2018, 2019-2021) against the rest of the league — .451
+against .435 and .444 — while trailing all three overall, .468 against .473 and
+.477. The widest of those gaps on the ranked number is .009.
 
 So a threshold parameter nobody thought of as load-bearing invalidated a
 downstream ranking assumption. The guard did its job — it failed the moment the
@@ -34,9 +36,11 @@ number the row leads with and the one the all-time list above it uses.
 can no longer hold, so it was replaced rather than deleted: the board's ranked
 number must be the one in the big type, both figures must be on every row, and
 any pair the two metrics order differently must stay within a rounding step on
-the ranked one (widest today .005). A wider split is the signal to revisit the
+the ranked one (widest today .009). A wider split is the signal to revisit the
 metric, and it fails loudly instead of silently ranking on the flattering
-number.
+number. That sweep compares every pair on the board, not neighbouring rows: two
+of today's three divergences are non-adjacent, and an adjacent-only version of
+the check saw one of the three.
 
 **Recommendation:** When a guard pins an AGREEMENT between two metrics, write
 the tolerance into it, not just the equality — an exact-agreement test can only
