@@ -7,7 +7,7 @@
  * becomes the pre-draft screen instead — same furniture, different framing.
  */
 
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import type { DraftRoomPick, DraftRoomTeam } from '../../../types/draft-room';
 import type { BroadcastConference, BroadcastPlayer } from '../../../types/draft-broadcast';
 import { recentPicks, upcomingPicks } from '../../../utils/draft-broadcast';
@@ -47,6 +47,13 @@ export function OnTheClock({
   const notStarted = madeCount === 0;
   const complete = !onTheClock && picks.length > 0;
 
+  /** A crest that 404s hides itself — an alt-text stub in a logo slot reads as
+   *  broken on a TV, and the pick number and player name already identify the
+   *  row without it. */
+  const hideOnError = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
+    e.currentTarget.style.display = 'none';
+  }, []);
+
   // The clock team's colors and crest own the screen the same way the drafting
   // team owns a reveal — so the room can tell whose turn it is from across the
   // room without reading a word. Colors and crest ONLY: franchise banners were
@@ -80,7 +87,12 @@ export function OnTheClock({
         ) : (
           <>
             {team?.icon ? (
-              <img className="dbc-idle__crest" src={team.icon} alt="" />
+              <img
+                className="dbc-idle__crest"
+                src={team.icon}
+                alt=""
+                onError={hideOnError}
+              />
             ) : null}
             <p className="dbc-idle__kicker">
               {notStarted ? 'First on the clock' : 'On the clock'}
@@ -118,7 +130,24 @@ export function OnTheClock({
                         {player?.nflTeam ? ` · ${player.nflTeam}` : ''}
                       </em>
                     </span>
-                    <span className="dbc-idle__row-team">{by?.abbrev || by?.nameShort || ''}</span>
+                    {/* The drafting team reads as its CREST, not its abbrev.
+                        Every AFL franchise has an icon, the room knows the
+                        logos on sight, and "Up next" was already showing them —
+                        a text abbrev here made the two rails inconsistent and
+                        put some very MFL-era shorthand on a TV in front of
+                        everyone. Text only survives as the no-icon fallback. */}
+                    <span className="dbc-idle__row-team">
+                      {by?.icon ? (
+                        <img
+                          className="dbc-idle__row-icon"
+                          src={by.icon}
+                          alt={by.nameShort || by.name || ''}
+                          onError={hideOnError}
+                        />
+                      ) : (
+                        by?.nameShort || by?.abbrev || ''
+                      )}
+                    </span>
                   </li>
                 );
               })}
@@ -143,7 +172,12 @@ export function OnTheClock({
                       <strong>{by?.name || 'TBD'}</strong>
                     </span>
                     {by?.icon ? (
-                      <img className="dbc-idle__row-icon" src={by.icon} alt="" />
+                      <img
+                        className="dbc-idle__row-icon"
+                        src={by.icon}
+                        alt=""
+                        onError={hideOnError}
+                      />
                     ) : null}
                   </li>
                 );

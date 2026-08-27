@@ -527,6 +527,12 @@
 }
 
 .dbc-idle__row-team {
+  /* Holds a crest now, with text only as the no-icon fallback — so it needs to
+     center whichever one it gets. */
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 3.6vh;
   font-size: clamp(0.7rem, 1.7vh, 1.25rem);
   font-weight: 800;
   letter-spacing: 0.06em;
@@ -534,9 +540,10 @@
 }
 
 .dbc-idle__row-icon {
-  width: 3.2vh;
-  height: 3.2vh;
+  width: 3.6vh;
+  height: 3.6vh;
   object-fit: contain;
+  flex: none;
 }
 
 .dbc-idle__empty {
