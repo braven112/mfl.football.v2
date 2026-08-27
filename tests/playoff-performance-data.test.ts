@@ -79,6 +79,33 @@ describe('playoff-performance derived data', () => {
     }
   });
 
+  /**
+   * Seeds 1-4 are the division winners regardless of record and 5-7 the wild
+   * cards, so seed order is NOT standings order — 2025's seed 4 sits at
+   * standings row 8. The derivation is checked against MFL's own stated seeds
+   * on every build for the five seasons that carry them; these pins cover the
+   * fourteen that don't, including both 7-seed champions.
+   */
+  it('seeds the champion, and the top seed is always seed 1', () => {
+    const byYear = new Map(data.seasons.map((s) => [s.year, s]));
+    expect(byYear.get(2010)?.champion.seed).toBe(7);
+    expect(byYear.get(2020)?.champion.seed).toBe(7);
+    expect(byYear.get(2018)?.champion.seed).toBe(6);
+    expect(byYear.get(2015)?.champion.seed).toBe(1);
+    for (const s of data.seasons) {
+      expect(s.topSeed.seed, `${s.year} top seed`).toBe(1);
+      expect(s.champion.seed, `${s.year} champion seed`).toBeGreaterThanOrEqual(1);
+      expect(s.champion.seed, `${s.year} champion seed`).toBeLessThanOrEqual(7);
+      expect(s.runnerUp.seed, `${s.year} runner-up seed`).toBeGreaterThanOrEqual(1);
+    }
+    // A season the #1 seed won is a season the champion is seed 1, and vice versa.
+    for (const s of data.seasons) {
+      expect(s.champion.seed === 1, `${s.year} topSeedWonTitle agrees with seed`).toBe(
+        s.topSeedWonTitle
+      );
+    }
+  });
+
   it('names a real franchise in every slot', () => {
     for (const s of data.seasons) {
       for (const [slot, team] of Object.entries({

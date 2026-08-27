@@ -253,6 +253,93 @@ const allPlayThrough = (weekly, maxWeek) => {
  * regular-season cut is no longer MFL's definition and the build should fail
  * rather than quietly publish a different statistic.
  */
+/**
+ * Seed every team in the championship field, 1-7.
+ *
+ * The constitution: "Division champions are seeded 1-4. Three wild cards are
+ * seeded 5-7." So seeds 1-4 are the four division winners REGARDLESS of record
+ * — 2025's seed 4 sits at standings row 8, and its seed 5 at row 2 — which is
+ * why seed order and standings order are not the same list.
+ *
+ *   seed 1     the bracket's bye. Taken from the walk rather than the feed,
+ *              because the feed's first row is not the bye in 2008 or 2010.
+ *   seeds 2-4  the other division winners, in feed order. Feed order IS
+ *              authoritative for who won a division (76 of 76 division-seasons).
+ *   seeds 5-7  the wild cards, by the constitution's Wild Card chain: overall
+ *              record, then All Play, then total points. The All Play step is
+ *              load-bearing — 2023's two 11-7 wild cards are separated only by
+ *              it (.651 vs .592), and dropping it swaps seeds 6 and 7.
+ *
+ * Do NOT try to read seeds off the bracket shape instead. Round 1 is a fixed
+ * 2v7 / 3v6 / 4v5, but week 16 is "1 vs lowest seed winner" — the championship
+ * RESEEDS after round one, so the bye's semifinal opponent is not structurally
+ * the 4v5 winner. A shape-based derivation looks reasonable and reproduces 0 of
+ * the 5 seasons MFL gives us seeds for.
+ *
+ * Validated: exact on all 7 seeds in every season whose bracket carries both a
+ * seed and a franchise id (2020-2023, 2025). `verifySeeds` re-checks on build.
+ */
+const seedField = ({ bye, standingsRows, divisionOf, allPlay, pointsFor }) => {
+  const wins = (r) => {
+    const parts = String(r?.h2hwlt ?? '').split('-').map(Number);
+    return parts[0] || num(r?.h2hw);
+  };
+  const seenDivisions = new Set();
+  const divisionWinners = [];
+  const rest = [];
+  for (const row of standingsRows) {
+    const d = divisionOf.get(row.id);
+    if (d != null && !seenDivisions.has(d)) {
+      seenDivisions.add(d);
+      divisionWinners.push(row);
+    } else {
+      rest.push(row);
+    }
+  }
+  const winnerIds = [bye, ...divisionWinners.map((r) => r.id).filter((id) => id !== bye)];
+  const wildCards = [...rest]
+    .sort(
+      (a, b) =>
+        wins(b) - wins(a) ||
+        (allPlay[b.id]?.pct ?? 0) - (allPlay[a.id]?.pct ?? 0) ||
+        (pointsFor.get(b.id) ?? 0) - (pointsFor.get(a.id) ?? 0)
+    )
+    .map((r) => r.id);
+
+  const seeds = new Map();
+  [...winnerIds, ...wildCards].slice(0, 7).forEach((id, i) => seeds.set(id, i + 1));
+  return seeds;
+};
+
+/** MFL's own seed -> franchise, for the seasons whose bracket carries both. */
+const mflSeeds = (bracketFeed) => {
+  const bracket = bracketFeed?.brackets?.['1']?.playoffBracket;
+  if (!bracket) return null;
+  const out = new Map();
+  for (const round of arr(bracket.playoffRound))
+    for (const game of arr(round.playoffGame))
+      for (const side of [game.home, game.away])
+        if (side?.seed && side?.franchise_id) out.set(side.franchise_id, Number(side.seed));
+  return out.size ? out : null;
+};
+
+/**
+ * Where MFL states the seeds itself, our derivation must agree exactly. A drift
+ * here means the seeding rule changed (or our reading of it is wrong), and the
+ * report would start publishing confident, wrong seeds for the 14 seasons MFL
+ * does NOT state.
+ */
+const verifySeeds = (year, derived, stated) => {
+  if (!stated) return;
+  const diffs = [...stated.entries()].filter(([id, seed]) => derived.get(id) !== seed);
+  if (diffs.length) {
+    throw new Error(
+      `${year}: derived seeds disagree with MFL's own — ` +
+        diffs.map(([id, seed]) => `${id} is seed ${seed}, we said ${derived.get(id) ?? '—'}`).join('; ')
+    );
+  }
+};
+
 const verifyAllPlay = (year, weekly, standingsRows) => {
   // Check every row that HAS the column rather than skipping the whole season
   // when one row lacks it — a partial export should still be verified on the
@@ -337,10 +424,23 @@ for (const year of seasonYears()) {
     arr(leagueFeed.franchises?.franchise).map((f) => [f.id, String(f.name ?? '').trim()])
   );
   const records = new Map(standingsRows.map((r) => [r.id, fmtRecord(parseRecord(r))]));
+
+  const seeds = seedField({
+    bye: bracket.bye,
+    standingsRows,
+    divisionOf: new Map(arr(leagueFeed.franchises?.franchise).map((f) => [f.id, f.division])),
+    allPlay,
+    pointsFor,
+  });
+  verifySeeds(year, seeds, mflSeeds(feed(year, 'playoff-brackets.json')));
+
   const team = (id) => ({
     franchiseId: id,
     name: names.get(id) ?? id,
     record: records.get(id) ?? null,
+    // null for anyone outside the 7-team championship field — the all-play
+    // leader missed the playoffs entirely in some seasons.
+    seed: seeds.get(id) ?? null,
   });
 
   seasons.push({

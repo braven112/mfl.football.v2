@@ -111,7 +111,12 @@ const fmtPct = (v: number | null) => (v == null ? '—' : v.toFixed(3).replace(/
                   <span class="pp__team">{s.allPlayLeader.name}</span>
                   <span class="pp__meta">{fmtPct(s.allPlayLeader.allPlayPct)}</span>
                 </td>
-                <td><span class="pp__team">{s.champion.name}</span></td>
+                <td>
+                  <span class="pp__team">{s.champion.name}</span>
+                  {s.champion.seed && (
+                    <span class="pp__meta">{s.champion.seed} seed</span>
+                  )}
+                </td>
                 <td class="pp__num">
                   {s.topSeedWonTitle && <span class="pp__tag pp__tag--seed">#1 seed</span>}
                   {s.allPlayLeaderWonTitle && <span class="pp__tag pp__tag--ap">all-play</span>}
@@ -134,6 +139,12 @@ const fmtPct = (v: number | null) => (v == null ? '—' : v.toFixed(3).replace(/
           season's championship bracket, read off the games actually played. MFL's standings
           row order is not seed order when two teams tie on record — the bye went to the
           second row in 2008 and 2010.
+        </li>
+        <li>
+          <strong>The champion's seed</strong> is worth reading with one thing in mind: seeds
+          1–4 go to the four division winners whatever their record, and 5–7 to the wild
+          cards. So a 4 seed is not the fourth-best team — it's the division winner with the
+          weakest claim, and it has won more titles here than the 1 seed has.
         </li>
         <li>
           <strong>All-play</strong> is every team measured against every other team's score,

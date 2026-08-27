@@ -12,6 +12,12 @@ export interface PlayoffPerformanceTeam {
   franchiseId: string;
   name: string;
   record: string | null;
+  /**
+   * Playoff seed, 1-7, or null for a team outside the championship field (the
+   * all-play leader has missed the playoffs outright in some seasons). Seeds
+   * 1-4 are the division winners regardless of record, 5-7 the wild cards.
+   */
+  seed: number | null;
 }
 
 export interface PlayoffPerformanceSeason {
