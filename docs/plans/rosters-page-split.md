@@ -73,6 +73,33 @@ lines of imperative DOM mutation after hydration — had **no test at all**.
 
 ---
 
+## Status (2026-08-27)
+
+| Phase | | Result |
+|---|---|---|
+| 0 — Parity harness | **done** | 64 renders in ~23s, 29k values + 3,879 image srcs |
+| 1 — Delete duplicated payload | **done** | 10.37 MB → 8.26 MB |
+| 2 — On-demand historical seasons | **done** | 8.26 MB → 1.17 MB |
+| 3 — Extract pure client logic | **done** | 3 modules, 71 unit tests, −93 type errors |
+| 4 — Adopt canonical roster-constants | **done** | −7 type errors, fixed a UFA logo 404 |
+| 5 — Extract the autocut client module | **not started** | see the note under that phase |
+| 6 — Extract the rest of the client script | not started | |
+| 7 — Extract the server frontmatter | not started | |
+| 8 — Extract the styles | not started | |
+| 9 — Share the roster core across leagues | not started | |
+
+**Net so far, all verified render-identical across 64 (season, team) pairs:**
+
+| | Before | After | |
+|---|---:|---:|---|
+| `#roster-config` | 10.37 MB | 1.17 MB | **−88.7%** |
+| Page HTML | 14.08 MB | 4.88 MB | −65.4% |
+| Gzipped (what travels) | 1.25 MB | 0.45 MB | −63.7% |
+| `astro check` errors | 1913 | 1813 | −100 |
+| Roster unit tests | 0 | 76 | |
+
+---
+
 ## Phase 0 — Parity harness *(prerequisite for every other phase)*
 
 `scripts/roster-parity-check.mjs` drives a real browser against a real dev
@@ -88,7 +115,15 @@ node scripts/roster-parity-check.mjs --all-teams --seasons 2026,2025,2013,2007 -
 node scripts/roster-parity-check.mjs --compare before.json after.json
 ```
 
-64 renders in ~23s; 29,472 captured leaf values, 88% non-empty.
+64 renders in ~23s; 29,472 captured leaf values (88% non-empty) plus 3,879
+image srcs.
+
+One trap, learned by hitting it: the harness must serve a **decodable**
+placeholder for blocked external images. Headshots carry an inline onerror
+cascade (ESPN NFL → ESPN college → MFL photo → placeholder) that reassigns
+`this.src`, so an empty 200 fires that chain and makes the captured src a race
+against how far it walked — which reported 291 phantom diffs between two
+identical builds.
 
 It fingerprints **rendered output, never the config payload** — deliberately, so
 it stays valid across changes to how data reaches the client. Those are exactly
@@ -122,8 +157,10 @@ not have to be paid for at first paint.
   Switching between the 16 current rosters, which is the common action and the
   one goal 3 names, stays exactly as instant as it is today: same in-memory data,
   same synchronous render.
-- Historical seasons move behind `GET /api/theleague/roster-season/[year]`,
-  served from the same `roster-season-payloads.json` the page reads now.
+- Historical seasons move behind `GET /api/roster-season/[league]/[year]`,
+  served from the same `roster-season-payloads.json` the page reads now. The
+  route resolves the league through the registry and discovers payload files by
+  glob, so adding a league is a data-only change.
 - After first paint, an idle-time prefetch warms the remaining seasons in the
   background. By the time anyone opens the season picker, they are cached — so
   historical switching stays instant too, in practice.
@@ -134,30 +171,87 @@ This is the one phase with a genuine behavioral difference (a cold historical
 season switch can now show a spinner). Everything else about the page is
 unchanged, and the harness pins that.
 
-## Phase 3 — Extract the server frontmatter
+## Phase 3 — Extract the pure client logic *(done)*
 
-2,057 lines → a thin page frontmatter plus modules under `src/utils/rosters/`:
-season payload assembly, eligibility/declaration wiring, autocut config, draft
-assets, live odds + weather, owner activity. Each is a pure function of its
-inputs and gets unit tests — which is also how the type errors come out, since
-an exported function needs a signature.
+Three modules under `src/scripts/rosters/`, 71 unit tests:
 
-Low runtime risk: same functions, same inputs, same outputs, no closures moved.
+| Module | What moved |
+|---|---|
+| `roster-cap-math.ts` | cap charges, bucket/position caps, efficiency, contract-year totals |
+| `roster-rows.ts` | position ranking, sorting, divider/stripe flags |
+| `roster-age.ts` | age, averages by position, distribution buckets |
 
-## Phase 4 — Extract the client script
+Everything they closed over — the cap-inclusion table, pending contract actions,
+both declaration maps, the position order, "today" — is an explicit parameter
+now. That is most of the value: these produce every number in the cap footer and
+the bucket subtotals, and none of them could be exercised without a browser.
 
-7,081 lines → modules under `src/scripts/rosters/`, in ascending order of risk:
+`roster-rows.ts` is shared by the frontmatter AND the client script, which had
+duplicate copies that **had drifted**:
 
-1. **Pure logic** — cap math, sorting, age distribution, formatters. Unit-testable
-   with no DOM at all.
-2. **Autocut / Cutdown Plan** (~1,300 lines). Already scheduled:
-   `august-roster-cuts.md` deferred this explicitly **"until after the August
-   2026 deadline passes, not before."** That deadline was **Aug 16, 2026** — it
-   has passed, so this is now unblocked. It loads behind a dynamic `import()`
-   gated on `config.autocut`, so it stops shipping to the ~360 days a year and
-   the every-visitor-who-isn't-an-owner for whom it is inert.
-3. **Contract Declaration Modal** (~3,000 lines) — the wizard, step by step.
-4. **Demo/tutorial** (~400 lines) — behind a dynamic import too.
+- `annotatePositionDividers`: the server drew a rule above row 0 and did not
+  treat the last row as ending its group; the client did the opposite on both,
+  so SSR first paint and the hydrated re-render disagreed.
+- `sortByPosition`: the server ran salaries through `parseNumber`, the client
+  did not.
+
+Both differences are now options each call site passes, so extracting changed
+nothing — but the divergence is visible in a signature instead of buried in a
+second function body. **Deciding which variant is correct is still open work.**
+
+## Phase 4 — Adopt the canonical `roster-constants` helpers *(done)*
+
+`rosters.astro` already imported from `src/constants/roster-constants.ts` and
+then redefined most of what it exports — `DEFAULT_HEADSHOT_URL` three separate
+times in the one file. All verified byte-identical, then deleted in favor of the
+canonical exports.
+
+Two were not merely duplicated but worse:
+
+- the local `getPlayerImageUrl` pinned photos to the league's own `mflHost`;
+  `roster-constants` pins them to one verified photo host on purpose and
+  documents why. Same value for TheLeague, so nothing moved — but the local copy
+  was the exact mistake that comment warns against.
+- the local `getNflLogoUrl` only caught codes *starting with* `FA`, so `UFA`
+  produced `/assets/nfl-logos/UFA.svg` and 404'd. The canonical one normalizes
+  the code first.
+
+**Still open:** the same `player_photos_big_2014` pattern is duplicated across
+7 other files (`players.astro`, `rookies-2026.astro`, `showcase.astro`,
+`contracts/manage.astro`, `projected-free-agents.astro`,
+`afl-fantasy/players.astro`, and `roster-constants` itself). They can all adopt
+these exports; none were touched here because only the rosters page is covered
+by the harness.
+
+## Phase 5 — Extract the autocut / Cutdown Plan module *(next, but not overnight)*
+
+~1,300 lines, behind a dynamic `import()` gated on `config.autocut`, so it stops
+being parsed by the ~360 days a year and the every-visitor-who-isn't-an-owner
+for whom it is inert.
+
+**This is unblocked and it is the right next phase**, but it was deliberately
+left for a session someone is watching. `august-roster-cuts.md` deferred it
+"until after the August 2026 deadline passes, not before" — that deadline was
+**Aug 16, 2026**, so the calendar gate is satisfied. The reason to still not do
+it unattended is the other half of that note: *"the extraction risks
+destabilizing it."*
+
+Concretely, the risk is that the cut window being closed is exactly what makes
+this code unverifiable right now. The parity harness cannot cover it — the panel
+only renders for a logged-in owner, on their own team, inside an open cut window
+— so an extraction tonight would be 1,300 lines of stateful code (save races,
+encrypted credentials, real MFL writes) moved with no way to prove it still
+works until June 2027. That is the wrong trade.
+
+When picking it up: those lines reference ~50 closure variables from
+`initRosterPage`. Thread them through one explicit context object rather than
+per-symbol arguments, and exercise it with a forced-open cut window (a
+`?testDate=` inside the June→August range) before trusting it.
+
+## Phase 6 — Extract the rest of the client script
+
+1. **Contract Declaration Modal** (~3,000 lines) — the wizard, step by step.
+2. **Demo/tutorial** (~400 lines) — behind a dynamic import too.
 
 The module boundary also **fixes a bug class**: the July 2026 whole-page crash
 was a temporal-dead-zone read inside one giant function body. Imports hoist;
@@ -168,7 +262,17 @@ that only functions on your own team (`isOwnerViewingTeam`), yet it is parsed an
 run by every visitor browsing someone else's roster. Getting it behind dynamic
 imports is most of goal 3's remaining win after Phase 2.
 
-## Phase 5 — Extract the styles
+## Phase 7 — Extract the server frontmatter
+
+2,057 lines → a thin page frontmatter plus modules under `src/utils/rosters/`:
+season payload assembly, eligibility/declaration wiring, autocut config, draft
+assets, live odds + weather, owner activity. Each is a pure function of its
+inputs and gets unit tests — which is also how the type errors come out, since
+an exported function needs a signature.
+
+Low runtime risk: same functions, same inputs, same outputs, no closures moved.
+
+## Phase 8 — Extract the styles
 
 2,304 scoped lines → `src/styles/rosters/*.css`. Mechanical, but verify scoping
 first: rows are injected via `innerHTML` after hydration and therefore never
@@ -176,9 +280,9 @@ carry Astro's scope hash, so some of this block is already effectively global
 and some is genuinely scoped. The harness does not check pixels — pair this
 phase with screenshots.
 
-## Phase 6 — Share the roster core across leagues
+## Phase 9 — Share the roster core across leagues
 
-Only after 1–5. TheLeague, the AFL, and best-ball each render a roster; today
+Only after the phases above. TheLeague, the AFL, and best-ball each render a roster; today
 they share `PlayerCell`, `roster-constants`, and college logos, and re-implement
 the rest. Once the table, cap math, and row rendering are modules rather than
 closures, the AFL page can consume them — that is goal 4, and it is a
