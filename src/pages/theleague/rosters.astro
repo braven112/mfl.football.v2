@@ -1082,18 +1082,12 @@ Object.entries(rosterModules).forEach(([path, mod]) => {
   );
 });
 
-// The client config needs salary adjustments for EVERY season; the glob now
-// only carries current-era feeds, so historical seasons read from the derived
-// payloads (each one carries its own enriched salaryAdjustments array).
-const adjustmentsBySeasonAllYears = {
-  ...Object.fromEntries(
-    Object.entries(derivedSeasonPayloads).map(([season, payload]) => [
-      season,
-      (payload as any).salaryAdjustments ?? [],
-    ])
-  ),
-  ...feedSalaryAdjustmentsBySeason,
-};
+// Salary adjustments are NOT assembled into a separate per-season map any
+// more. Every entry of `rostersBySeason` already carries its own enriched
+// `salaryAdjustments` array — derived payloads bake theirs in, and live seasons
+// get theirs from `feedSalaryAdjustmentsBySeason` via the shared builder — so
+// the old `adjustmentsBySeasonAllYears` was a 1.5 MB byte-identical copy of
+// data the client already had. The client reads `seasons[y].salaryAdjustments`.
 
 // Process salary averages for extension calculator
 const salaryAveragesBySeason = {};
@@ -2005,9 +1999,15 @@ const serializedConfig = JSON.stringify({
   seasonOptions,
   defaultSeason,
   defaultTeamId,
-  initialSeasonData,
-  initialTeamData,
-  adjustmentsBySeason: adjustmentsBySeasonAllYears,
+  // `initialSeasonData`, `initialTeamData` and `adjustmentsBySeason` used to be
+  // serialized here too. All three were byte-identical duplicates of data
+  // already inside `seasons` — respectively `seasons[defaultSeason]`,
+  // `seasons[ds].teams[dt]`, and `seasons[y].salaryAdjustments` (verified
+  // identical across all 20 seasons) — and all three were only ever read as
+  // fallbacks behind those same lookups, so no consumer could reach them.
+  // Dropping them cut 2.13 MB off a 10.37 MB payload. The client rebuilds the
+  // fallback references from `seasons` (see initRosterPage). Do not re-add a
+  // pre-resolved copy of anything that is already a key of `seasons`.
   salaryAverages: salaryAveragesBySeason,
   extensionSeason,
   teams: teamLookup,
@@ -5980,9 +5980,6 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       seasons = {},
       defaultSeason,
       defaultTeamId,
-      initialSeasonData: initialSeasonDataConfig,
-      initialTeamData: initialTeamDataConfig,
-      adjustmentsBySeason = {},
       teams = {},
       rosterLimit,
       positionOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'],
@@ -5999,6 +5996,14 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       reserveForRookies = 5_000_000,
       trendWeeks = [],
     } = config;
+
+    // These were separate config keys until the payload dedup; they are now
+    // derived from `seasons`, which is where their bytes always came from.
+    // Both are read ONLY as the last fallback in getSeasonData()/getTeamData(),
+    // behind the very lookups they are derived from — keeping them costs
+    // nothing and preserves those chains exactly as they were written.
+    const initialSeasonDataConfig = seasons[defaultSeason];
+    const initialTeamDataConfig = initialSeasonDataConfig?.teams?.[defaultTeamId];
 
     // Initialize view tabs
     document.querySelectorAll<HTMLElement>('.view-tab').forEach(tab => {
@@ -7600,12 +7605,17 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       return result;
     };
 
+    // Every season payload carries its own `salaryAdjustments`, so the first
+    // branch is the one that fires. The remaining fallbacks used to read a
+    // separate `adjustmentsBySeason` config key that was a byte-identical copy
+    // of exactly these arrays; they now read the seasons map directly, which
+    // is the same data by a shorter path.
     const getSalaryAdjustments = (seasonData = {}) => {
       if (Array.isArray(seasonData.salaryAdjustments)) return seasonData.salaryAdjustments;
-      if (adjustmentsBySeason[currentSeason]) return adjustmentsBySeason[currentSeason];
-      if (adjustmentsBySeason[defaultSeason]) return adjustmentsBySeason[defaultSeason];
-      if (Array.isArray(initialSeasonDataConfig?.salaryAdjustments))
-        return initialSeasonDataConfig.salaryAdjustments;
+      const bySeason = seasons[currentSeason]?.salaryAdjustments;
+      if (Array.isArray(bySeason)) return bySeason;
+      const byDefault = seasons[defaultSeason]?.salaryAdjustments;
+      if (Array.isArray(byDefault)) return byDefault;
       return [];
     };
 
