@@ -15,7 +15,9 @@ const root = join(__dirname, '..');
 const feed = (league: string, file: string) =>
   JSON.parse(readFileSync(join(root, `data/${league}/mfl-feeds/2026/${file}`), 'utf-8'));
 
-const playersOf = (league: string) =>
+interface FeedPlayer { id: string; status?: string }
+
+const playersOf = (league: string): FeedPlayer[] =>
   feed(league, 'players.json').players.player.map((p: any) => ({ id: p.id, status: p.status }));
 
 describe('isInDraftPool', () => {
@@ -52,7 +54,7 @@ describe('resolveDraftAvailability — TheLeague (Rookie pool, one shared pool)'
   });
 
   it('admits only rookies', () => {
-    const byId = new Map(playersOf('theleague').map((p: any) => [p.id, p]));
+    const byId = new Map<string, FeedPlayer>(playersOf('theleague').map((p) => [p.id, p]));
     for (const id of result.availableIds) {
       expect(byId.get(id)?.status, `player ${id}`).toBe('R');
     }
@@ -119,7 +121,7 @@ describe('resolveDraftAvailability — AFL (Both pool, duplicate-player conferen
 
   it('does not restrict to rookies', () => {
     const result = resolveDraftAvailability({ players, leagueJson, rostersJson, franchiseId: '0001' })!;
-    const byId = new Map(players.map((p: any) => [p.id, p]));
+    const byId = new Map<string, FeedPlayer>(players.map((p) => [p.id, p]));
     expect(result.availableIds.some((id) => byId.get(id)?.status !== 'R')).toBe(true);
   });
 });

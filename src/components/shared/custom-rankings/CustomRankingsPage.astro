@@ -89,13 +89,6 @@ for (const [filepath, mod] of Object.entries(playersFeeds)) {
   }
 }
 
-// `status` is carried separately from the display list: it drives the draft
-// pool test (see draft-availability.ts) and has no business in the island's
-// player props, which are about rendering a row.
-const playerStatusById = new Map<string, string | null>(
-  rawPlayers.map((p: any) => [p.id, p.status ?? null]),
-);
-
 // Build player array with headshot info for client-side enrichment
 const crPlayerIdentityMap = getPlayerMap(leagueYear);
 const rawPlayers = playersData?.players?.player ?? [];
@@ -111,6 +104,15 @@ const mflPlayers = rawPlayers
       espnId: identity?.espnId ?? (p.espn_id || (espnCollegeIds as any).players?.[p.id]?.espnCollegeId || null),
     };
   });
+
+// `status` is carried separately from the display list: it drives the draft
+// pool test (see draft-availability.ts) and has no business in the island's
+// player props, which are about rendering a row. Declared HERE, after
+// rawPlayers — `const` is not hoisted, so sitting it above that line threw
+// "Cannot access 'rawPlayers' before initialization" and served a blank page.
+const playerStatusById = new Map<string, string | null>(
+  rawPlayers.map((p: any) => [p.id, p.status ?? null]),
+);
 
 // ---------------------------------------------------------------------------
 // Load projected scores + rosters for VORP calculation

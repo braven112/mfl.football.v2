@@ -150,6 +150,15 @@ export default function CustomRankingsPage({
 
   // Rookie-only leagues say "Rookies"; an all-comers pool says "Available".
   const availableLabel = draftPool === 'Rookie' ? 'Rookies only' : 'Available only';
+
+  /**
+   * The pool the RENDERED list is currently built from, or null for the whole
+   * board. Every caller of getFilteredPlayers must pass this same value: the
+   * drag and tier-move handlers map a position in the visible list back onto
+   * `rankings`, so a handler filtering differently than the list moves the
+   * wrong player.
+   */
+  const activePool = availableOnly ? availableIds : null;
   const hasVorp = Object.keys(vorpMap).length > 0;
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -279,7 +288,7 @@ export default function CustomRankingsPage({
   const handleReorder = useCallback(
     (oldIndex: number, newIndex: number) => {
       // Map filtered indices back to overall rankings if position filter is active
-      const filteredPlayers = getFilteredPlayers(rankings, positionFilter, playerById);
+      const filteredPlayers = getFilteredPlayers(rankings, positionFilter, playerById, activePool);
       const movedId = filteredPlayers[oldIndex]?.id;
       if (!movedId) return;
 
@@ -298,7 +307,7 @@ export default function CustomRankingsPage({
       setOverrides(newOverrides);
       scheduleSave(buildState(newRankings, newOverrides, tiers));
     },
-    [rankings, overrides, tiers, positionFilter, playerById, scheduleSave, buildState],
+    [rankings, overrides, tiers, positionFilter, playerById, activePool, scheduleSave, buildState],
   );
 
   const handleRemoveTier = useCallback(
@@ -323,7 +332,7 @@ export default function CustomRankingsPage({
 
   const handleMoveTier = useCallback(
     (afterPlayerId: string, direction: 'up' | 'down') => {
-      const filtered = getFilteredPlayers(rankings, positionFilter, playerById);
+      const filtered = getFilteredPlayers(rankings, positionFilter, playerById, activePool);
       const currentIdx = filtered.findIndex((p) => p.id === afterPlayerId);
       if (currentIdx === -1) return;
 
@@ -340,7 +349,7 @@ export default function CustomRankingsPage({
       setTiers(newTiers);
       scheduleSave(buildState(rankings, overrides, newTiers));
     },
-    [tiers, rankings, overrides, positionFilter, playerById, scheduleSave, buildState],
+    [tiers, rankings, overrides, positionFilter, playerById, activePool, scheduleSave, buildState],
   );
 
   const handleAddTierAfter = useCallback(
@@ -400,8 +409,8 @@ export default function CustomRankingsPage({
 
   // --- Enriched player list ---
   const filteredPlayers = useMemo(
-    () => getFilteredPlayers(rankings, positionFilter, playerById, availableOnly ? availableIds : null),
-    [rankings, positionFilter, playerById, availableOnly, availableIds],
+    () => getFilteredPlayers(rankings, positionFilter, playerById, activePool),
+    [rankings, positionFilter, playerById, activePool],
   );
 
   const enrichedPlayers: RankedPlayer[] = useMemo(
@@ -434,7 +443,7 @@ export default function CustomRankingsPage({
     };
     // Counted against the SAME availability filter the list uses — chips
     // reading the full board while the list shows a subset is just a lie.
-    const pool = availableOnly ? availableIds : null;
+    const pool = activePool;
     let total = 0;
     for (const id of rankings) {
       const p = playerById.get(id);
@@ -446,7 +455,7 @@ export default function CustomRankingsPage({
     }
     counts.ALL = total;
     return counts;
-  }, [rankings, playerById, availableOnly, availableIds]);
+  }, [rankings, playerById, activePool]);
 
   // --- Render ---
   if (loading) {

@@ -83,7 +83,12 @@ export function resolveDraftAvailability({
   const pool: DraftPlayerPool =
     ((leagueJson as any)?.league?.draftPlayerPool as string) || 'Both';
 
-  const structure = buildConferenceStructure(leagueJson);
+  // buildConferenceStructure is typed from JSDoc in a .mjs, so its
+  // franchiseConferences widens to `{}` here; name the shape we rely on
+  // rather than indexing an untyped object.
+  const structure = buildConferenceStructure(leagueJson) as
+    | { ids: string[]; franchiseConferences: Record<string, string> }
+    | null;
   const rostered = buildRosteredByConf(rostersJson, structure);
   if (!rostered) return null;
 
