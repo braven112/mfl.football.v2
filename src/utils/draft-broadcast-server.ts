@@ -14,7 +14,6 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { DraftRoomPick } from '../types/draft-room';
 import type { BroadcastPlayer, BroadcastPlayerExtras } from '../types/draft-broadcast';
-import { medianRank } from './draft-broadcast';
 import { parseTradeFromComment, selectDraftUnit } from './draft-utils';
 import { normalizeTeamCode } from './nfl-logo';
 
@@ -121,34 +120,6 @@ function loadByeWeeks(year: number): Map<string, number> {
 }
 
 /**
- * Per-source ranks from the built-in ranking sources.
- *
- * The superflex board is deliberately EXCLUDED from the consensus: the AFL
- * starts one quarterback, and a superflex list ranks QBs 30+ slots high, which
- * is enough to make every QB reveal read as a reach. It stays out of the chips
- * too — a rank the league's format doesn't use is noise on a TV.
- */
-const CONSENSUS_EXCLUDED_SOURCES = new Set(['espn-superflex']);
-
-function loadRankingSources(
-  year: number
-): Map<string, { label: string; rank: number }[]> {
-  const raw = readJson(`data/ranking-sources/${year}.json`);
-  const out = new Map<string, { label: string; rank: number }[]>();
-  for (const source of raw?.sources || []) {
-    if (CONSENSUS_EXCLUDED_SOURCES.has(source?.id)) continue;
-    for (const p of source?.players || []) {
-      const rank = typeof p?.rank === 'number' ? p.rank : parseInt(String(p?.rank), 10);
-      if (!p?.id || !Number.isFinite(rank)) continue;
-      const list = out.get(p.id) ?? [];
-      list.push({ label: source.label || source.id, rank });
-      out.set(p.id, list);
-    }
-  }
-  return out;
-}
-
-/**
  * Join broadcast-only extras onto an already-built draft player pool.
  *
  * Takes the pool from `buildDraftPlayers` rather than rebuilding it — that
@@ -163,18 +134,12 @@ export function enrichBroadcastPlayers(
   const projections = loadProjections(opts.dataPath, opts.year);
   const injuries = loadInjuries(opts.dataPath, opts.year);
   const byes = loadByeWeeks(opts.year);
-  const ranks = loadRankingSources(opts.year);
 
   return players.map((p) => {
-    const sourceRanks = ranks.get(p.id);
     const extras: BroadcastPlayerExtras = {
       projectedPoints: projections.get(p.id),
       injuryStatus: injuries.get(p.id),
       byeWeek: p.nflTeam ? byes.get(normalizeTeamCode(p.nflTeam)) : undefined,
-      sourceRanks: sourceRanks?.length ? sourceRanks : undefined,
-      consensusRank: sourceRanks?.length
-        ? medianRank(sourceRanks.map((r) => r.rank))
-        : undefined,
     };
     return { ...p, ...extras };
   });
@@ -198,7 +163,6 @@ export function trimToDraftable(
     (p) =>
       boardPlayerIds.has(p.id) ||
       p.adpAveragePick !== undefined ||
-      p.consensusRank !== undefined ||
       p.projectedPoints !== undefined
   );
 }
@@ -236,22 +200,17 @@ export function loadConferenceKeepers(
 }
 
 /**
- * A consensus-only player sorts after every ADP-carrying player of the same
- * number. ADP and consensus rank are different scales — mixing them raw would
- * interleave a consensus #40 with an ADP 40.0 as though they meant the same
- * thing — and "no ADP at all" is itself weak evidence, so the tie-break pushes
- * those players down rather than up.
- */
-const BOARD_RANK_FALLBACK_OFFSET = 1000;
-
-/**
  * Stamp each draftable player with his rank in this conference's pre-draft
  * pool — "board rank". Kept players get none; they were never on the board.
  *
- * Ordered by MFL average draft position, falling back to the consensus rank
- * for a player no ADP feed lists. `averagePick` is preferred because it is a
- * real pick number rather than an ordinal, so two sources can't disagree about
- * spacing. A player with neither is left unranked rather than guessed at.
+ * Ordered by MFL average draft position and nothing else (Brandon,
+ * 2026-08-27: the league's own ranking sources are not for this screen). MFL
+ * ADP is also the right single source here — it is a real pick number rather
+ * than an ordinal, and it is what the room's own drafters are looking at.
+ * Its coverage is the actual draftable universe: 107 of the 108 picks made on
+ * the 2025 board carried an MFL ADP, while the players it omits are the
+ * retired tail. A player without one is left unranked rather than guessed at,
+ * and the reveal simply shows no board line for him.
  */
 export function assignBoardRanks(
   players: BroadcastPlayer[],
@@ -259,12 +218,8 @@ export function assignBoardRanks(
 ): BroadcastPlayer[] {
   const rankable = players
     .filter((p) => !keptIds.has(p.id))
-    .filter((p) => p.adpAveragePick !== undefined || p.consensusRank !== undefined)
-    .sort((a, b) => {
-      const av = a.adpAveragePick ?? (a.consensusRank ?? 0) + BOARD_RANK_FALLBACK_OFFSET;
-      const bv = b.adpAveragePick ?? (b.consensusRank ?? 0) + BOARD_RANK_FALLBACK_OFFSET;
-      return av - bv;
-    });
+    .filter((p) => p.adpAveragePick !== undefined)
+    .sort((a, b) => a.adpAveragePick! - b.adpAveragePick!);
 
   const rank = new Map<string, number>();
   rankable.forEach((p, i) => rank.set(p.id, i + 1));

@@ -129,22 +129,6 @@ export function positionRunCount(
   }).length;
 }
 
-/**
- * Median of the ranks a player carries across the built-in sources.
- *
- * Median rather than mean because the source list mixes formats — the
- * superflex board ranks QBs 30+ slots above every other source, and one such
- * outlier moves a mean enough to make the chip wrong.
- */
-export function medianRank(ranks: number[]): number | undefined {
-  const valid = ranks.filter((r) => Number.isFinite(r)).sort((a, b) => a - b);
-  if (valid.length === 0) return undefined;
-  const mid = Math.floor(valid.length / 2);
-  return valid.length % 2 === 0
-    ? Math.round((valid[mid - 1] + valid[mid]) / 2)
-    : valid[mid];
-}
-
 /** Index teams by franchise id for O(1) lookup during a reveal. */
 export function teamMap(teams: DraftRoomTeam[]): Map<string, DraftRoomTeam> {
   return new Map(teams.map((t) => [t.franchiseId, t]));

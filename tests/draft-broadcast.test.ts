@@ -16,7 +16,6 @@ import {
   recentPicks,
   upcomingPicks,
   positionRunCount,
-  medianRank,
   applyRehearsal,
 } from '../src/utils/draft-broadcast';
 import {
@@ -129,19 +128,20 @@ describe('assignBoardRanks', () => {
     expect(byId.get('good')?.boardRank).toBe(2);
   });
 
-  it('sorts an ADP-less player below every ADP-carrying one', () => {
+  it('ranks on MFL ADP alone \u2014 the league\u2019s own sources are not an input', () => {
+    // Brandon, 2026-08-27: the ranking sources are not for this screen. A
+    // player MFL lists no ADP for stays off the board rather than being slotted
+    // in from another source, so the board can never quietly become a blend.
     const pool = [
-      { ...player('noAdp', 'WR'), consensusRank: 5 },
-      { ...player('lateAdp', 'RB', 200) },
-    ] as BroadcastPlayer[];
+      { ...player('noAdp', 'WR'), consensusRank: 5 } as unknown as BroadcastPlayer,
+      player('lateAdp', 'RB', 200),
+    ];
     const byId = new Map(assignBoardRanks(pool, new Set()).map((p) => [p.id, p]));
-    // Consensus 5 looks better than ADP 200, but the two are different scales
-    // and "no ADP at all" is itself weak evidence.
     expect(byId.get('lateAdp')?.boardRank).toBe(1);
-    expect(byId.get('noAdp')?.boardRank).toBe(2);
+    expect(byId.get('noAdp')?.boardRank).toBeUndefined();
   });
 
-  it('leaves a wholly unranked player out of the board', () => {
+  it('leaves a player with no ADP out of the board', () => {
     const pool = [player('ghost', 'TE')] as BroadcastPlayer[];
     expect(assignBoardRanks(pool, new Set())[0].boardRank).toBeUndefined();
   });
@@ -256,22 +256,6 @@ describe('positionRunCount', () => {
 
   it('returns 0 for an unknown position', () => {
     expect(positionRunCount([slot(1, 'a')], players, 1, '', 8)).toBe(0);
-  });
-});
-
-describe('medianRank', () => {
-  it('takes the median so one outlier source cannot drag the consensus', () => {
-    // A superflex-style outlier at 4 must not pull a consensus of ~30.
-    expect(medianRank([28, 30, 32, 4])).toBe(29);
-  });
-
-  it('handles odd counts and ignores non-finite values', () => {
-    expect(medianRank([10, 20, 30])).toBe(20);
-    // NaN is dropped first, so this is an EVEN pair [5, 7] → 6, not the
-    // odd-length middle. Dropping before measuring is the point: a source
-    // that lacks the player must not count as a vote.
-    expect(medianRank([NaN, 5, 7])).toBe(6);
-    expect(medianRank([])).toBeUndefined();
   });
 });
 

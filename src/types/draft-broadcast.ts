@@ -23,18 +23,13 @@ export interface BroadcastPlayerExtras {
   /** Injury status string from MFL's `injuries.json`, when the player has one. */
   injuryStatus?: string;
   /**
-   * Consensus rank across the built-in ranking sources — the median of
-   * whichever sources list the player. Median, not mean: one source omitting a
-   * player entirely shouldn't drag him, and superflex QB ranks are wild
-   * outliers in a 1-QB league.
-   */
-  consensusRank?: number;
-  /** Per-source ranks, in `data/ranking-sources/<year>.json` order. */
-  sourceRanks?: { label: string; rank: number }[];
-  /**
    * Rank in THIS conference's pre-draft pool — everyone the conference did not
-   * keep, ordered by ADP. Undefined for a kept player (he was never on the
-   * board) and for anyone no source ranks at all.
+   * keep, ordered by MFL ADP. Undefined for a kept player (he was never on the
+   * board) and for anyone MFL lists no ADP for.
+   *
+   * The league's own ranking sources (`data/ranking-sources/`) are deliberately
+   * NOT used or shipped here — Brandon, 2026-08-27: they are not for this
+   * screen. MFL ADP is the single input.
    */
   boardRank?: number;
 }

@@ -327,32 +327,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.dbc-reveal__chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5em;
-  margin: 0.9em 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.dbc-reveal__chip {
-  display: flex;
-  align-items: baseline;
-  gap: 0.4em;
-  padding: 0.25em 0.7em;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.38);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  font-size: clamp(0.6rem, 1.5vh, 1.15rem);
-  color: rgba(255, 255, 255, 0.72);
-}
-
-.dbc-reveal__chip strong {
-  color: #fff;
-  font-variant-numeric: tabular-nums;
-}
-
 .dbc-reveal__run {
   margin: 0.8em 0 0;
   font-size: clamp(0.8rem, 1.9vh, 1.5rem);

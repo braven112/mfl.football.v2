@@ -15,7 +15,8 @@
  *     name it reads as two competing pieces of type at the exact moment the
  *     room is trying to read one of them. Blurring it back far enough to stop
  *     competing left it contributing nothing.
- *   - It carries stats — board rank, projection, rankings, bye, injury —
+ *   - It carries stats — board rank, projection, bye, injury — but NOT the
+ *     league's ranking sources (Brandon, 2026-08-27: not for this screen) —
  *     because a reveal that owns a 65" screen for 18 seconds and says only a
  *     name is wasting the best real estate of the night.
  */
@@ -138,12 +139,6 @@ export function BroadcastRevealCard({ pick, team, player, picks, players }: Prop
           ) : null}
 
           <dl className="dbc-reveal__stats">
-            {player?.consensusRank ? (
-              <div className="dbc-reveal__stat">
-                <dt>Consensus</dt>
-                <dd>#{player.consensusRank}</dd>
-              </div>
-            ) : null}
             {player?.boardRank ? (
               <div className="dbc-reveal__stat">
                 {/* Board rank, not raw ADP. An AFL 1.02 sitting beside "ADP
@@ -166,17 +161,6 @@ export function BroadcastRevealCard({ pick, team, player, picks, players }: Prop
               </div>
             ) : null}
           </dl>
-
-          {player?.sourceRanks?.length ? (
-            <ul className="dbc-reveal__chips">
-              {player.sourceRanks.map((s) => (
-                <li key={s.label} className="dbc-reveal__chip">
-                  <span>{s.label}</span>
-                  <strong>#{s.rank}</strong>
-                </li>
-              ))}
-            </ul>
-          ) : null}
 
           {showRun && player ? (
             <p className="dbc-reveal__run">
