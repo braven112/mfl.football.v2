@@ -1,0 +1,156 @@
+---
+/**
+ * AFL Draft Broadcast — the big board for the room.
+ *
+ * A laptop plugged into a TV on draft night. Owners make their picks in MFL's
+ * own live draft room; this page follows along, and the moment a selection
+ * lands it throws the player on screen over his drafting franchise's colors.
+ *
+ * DELIBERATELY NOT a variant of /theleague/draft-room. That page is an
+ * interactive tool — queue, chat, filters, submit-pick — built for one person
+ * at a laptop. This is a zero-input display read from ten feet away. They share
+ * the data layer (`buildDraftPlayers`, `pick-reveal.ts`, `/api/draft/status`)
+ * and nothing else; making one page serve both would compromise both.
+ *
+ * The AFL drafts by CONFERENCE: two independent 108-pick boards
+ * (CONFERENCE00 = American, franchises 0001–0012; CONFERENCE01 = National,
+ * 0013–0024). `?conference=` picks which one is on the TV. In 2025 the two
+ * drafted on different DAYS, so the page must never assume both are live.
+ */
+
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import DraftBroadcastIsland from '../../components/afl/draft-broadcast/DraftBroadcast';
+import aflConfig from '../../../data/afl-fantasy/afl.config.json';
+import { getLeagueBySlug } from '../../config/leagues';
+import { getLeagueYearForSlug } from '../../utils/league-year';
+import { buildDraftPlayers } from '../../utils/build-draft-players';
+import {
+  buildConferenceBoard,
+  enrichBroadcastPlayers,
+  trimToDraftable,
+} from '../../utils/draft-broadcast-server';
+import type {
+  BroadcastConference,
+  BroadcastPlayer,
+  DraftBroadcastPageData,
+} from '../../types/draft-broadcast';
+import type { DraftRoomTeam } from '../../types/draft-room';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import '../../styles/draft-broadcast.css';
+
+export const prerender = false;
+
+// League constants come from the registry — never literals (see
+// tests/league-literal-guard.test.ts).
+const league = getLeagueBySlug('afl-fantasy')!;
+
+// The AFL's league year rolls over June 1, NOT TheLeague's Feb 14. Using the
+// wrong clock here shows last year's board for months.
+const defaultYear = getLeagueYearForSlug(league.slug);
+const yearParam = Astro.url.searchParams.get('year');
+const parsedYear = yearParam ? parseInt(yearParam, 10) : NaN;
+const leagueYear = Number.isFinite(parsedYear) ? parsedYear : defaultYear;
+
+// ── Which conference is on the TV ──
+const conferences: BroadcastConference[] = (aflConfig.conferences ?? []).map((c: any) => ({
+  code: c.code,
+  name: c.name,
+  unit: `CONFERENCE${c.code}`,
+}));
+const requestedCode = (Astro.url.searchParams.get('conference') || '').trim();
+const conference =
+  conferences.find((c) => c.code === requestedCode) ?? conferences[0];
+
+// ── Board skeleton (all 108 slots, filled or not) ──
+// fs rather than import.meta.glob: globbing would compile every season of
+// draftResults into the server bundle to serve one. Same call as
+// afl-draft-slot.ts makes for the same reason.
+let draftResultsRaw: any = null;
+try {
+  draftResultsRaw = JSON.parse(
+    readFileSync(
+      join(process.cwd(), `${league.dataPath}/mfl-feeds/${leagueYear}/draftResults.json`),
+      'utf-8'
+    )
+  );
+} catch {
+  draftResultsRaw = null;
+}
+
+const board = buildConferenceBoard(draftResultsRaw, conference?.unit ?? '');
+
+// ── Rehearsal ──
+// The real board is empty until draft night, so this is the only way to drive
+// the page end-to-end beforehand: point it at a COMPLETED season and let it
+// replay. `rehearse=N` means "start with N picks already made, then roll
+// forward one at a time" — the island does the rolling, through the SAME
+// ingest path a live poll uses, so a dry run exercises the real pipeline
+// rather than a mock of it. The FULL board ships either way; the island trims
+// it to the starting state. Clamped so a typo can't produce a negative board.
+const rehearseParam = Astro.url.searchParams.get('rehearse');
+const rehearseUpTo = rehearseParam ? Math.max(0, parseInt(rehearseParam, 10) || 0) : undefined;
+const picks = board.picks;
+
+// ── Franchise brands ──
+// Read straight off afl.config.json rather than through getFranchiseBrand(),
+// which is hardcoded to theleague.config.json. Every AFL franchise already
+// carries colorPrimary/colorSecondary/icon, so there's nothing to resolve.
+// These colors ride SERIALIZED on DraftRoomTeam — importing a brand util into
+// the island would ship the whole league config JSON to the client.
+const conferenceTeams = (aflConfig.teams ?? []).filter(
+  (t: any) => t.conference === conference?.code
+);
+const teams: DraftRoomTeam[] = conferenceTeams.map((t: any) => ({
+  franchiseId: t.franchiseId,
+  name: t.name,
+  nameMedium: t.nameMedium || t.name,
+  nameShort: t.nameShort || t.name,
+  abbrev: t.abbrev || '',
+  icon: t.icon || '',
+  colorPrimary: t.colorPrimary,
+  colorSecondary: t.colorSecondary,
+}));
+
+// ── Player pool ──
+// buildDraftPlayers reads theleague's players.json, which is correct here:
+// MFL player ids are GLOBAL and both leagues carry the identical 2609-player
+// universe. adpSource 'redraft' because the AFL re-drafts most of the roster
+// every year — a dynasty ADP would call every veteran pick a reach.
+// No viewerFranchiseId: RSP is licensed content and this screen is shown to a
+// room full of people.
+const allPlayers = buildDraftPlayers(leagueYear, {
+  adpSource: 'redraft',
+}) as BroadcastPlayer[];
+
+const enriched = enrichBroadcastPlayers(allPlayers, {
+  dataPath: league.dataPath,
+  year: leagueYear,
+});
+
+const boardPlayerIds = new Set(picks.map((p) => p.playerId).filter(Boolean));
+const players = trimToDraftable(enriched, boardPlayerIds);
+
+const pageData: DraftBroadcastPageData = {
+  leagueYear,
+  conference: conference ?? { code: '00', name: 'American League', unit: 'CONFERENCE00' },
+  totalRounds: board.totalRounds,
+  picksPerRound: board.picksPerRound,
+  teams,
+  picks,
+  players,
+  leagueId: league.id,
+  mflHost: league.mflHost,
+  rehearseUpTo,
+};
+
+const title = `${conference?.name ?? 'AFL'} Draft Board | AFL`;
+---
+
+<TheLeagueLayout title={title} hideMobileNavIcons>
+  <DraftBroadcastIsland
+    client:load
+    pageData={JSON.stringify(pageData)}
+    conferences={JSON.stringify(conferences)}
+  />
+</TheLeagueLayout>

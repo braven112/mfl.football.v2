@@ -79,6 +79,15 @@ const SYNC_NEWS_WINDOW_SECONDS = 120;
  * already-filled picks only count as fresh if their timestamp is recent:
  * joining an in-progress mock shouldn't replay history, but a first pick
  * landing in the same update that publishes the scaffold still splashes.
+ *
+ * BROADCAST MODE: pass `maxBurst = Infinity` to disable the burst drop. The
+ * default exists because a laptop rejoining mid-draft shouldn't replay 40
+ * splashes at a user who was reading the board — but on the AFL's TV board
+ * (DraftBroadcast.tsx) dropping is the worse failure: a live room that picks
+ * fast enough to land 4 selections inside one poll would see NOTHING, and the
+ * room notices a missing reveal far more than a slightly delayed one. There it
+ * queues and accelerates instead. The slot-sync guard above still applies, so
+ * opening the page mid-draft is still history, not a reveal storm.
  */
 export function collectFreshPicks(
   prevFilled: ReadonlySet<number> | null,

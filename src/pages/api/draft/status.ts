@@ -7,10 +7,20 @@
  *
  * The DraftRoom client polls this every 12s when picks are recent and 30s
  * otherwise (see DraftRoom.tsx). For an email draft 30s of latency is fine.
+ * The AFL broadcast board polls faster (see DraftBroadcast.tsx) — a live
+ * in-person draft can't wait 30s for the room to learn who was picked.
+ *
+ * DRAFT UNITS: `draftResults.draftUnit` is an OBJECT in a single-draft league
+ * (TheLeague, best-ball) but an ARRAY in a league that drafts by conference
+ * (the AFL runs CONFERENCE00 + CONFERENCE01 as two independent 108-pick
+ * boards). Reading `.draftPick` straight off the raw value therefore returned
+ * `undefined` for the AFL — and because that fell through to `picks: []` with
+ * a 200, the board looked empty rather than broken. `selectDraftUnit`
+ * normalizes both shapes; `?unit=` chooses among them.
  */
 
 import type { APIRoute } from 'astro';
-import { parseTradeFromComment } from '../../../utils/draft-utils';
+import { parseTradeFromComment, selectDraftUnit } from '../../../utils/draft-utils';
 import type { DraftRoomPick, DraftStatusResponse } from '../../../types/draft-room';
 import { getCurrentLeagueYear } from '../../../utils/league-year';
 import { buildMflExportUrl } from '../../../utils/mfl-url';
@@ -29,6 +39,7 @@ interface RawDraftPick {
   comments?: string;
   round?: string;
 }
+
 
 function buildPicks(rawPicks: RawDraftPick | RawDraftPick[] | undefined): DraftRoomPick[] {
   if (!rawPicks) return [];
@@ -62,6 +73,7 @@ export const GET: APIRoute = async ({ url }) => {
   const year = url.searchParams.get('year') || String(getCurrentLeagueYear());
   const leagueId = url.searchParams.get('league') || url.searchParams.get('L') || DEFAULT_LEAGUE_ID;
   const host = url.searchParams.get('host') || DEFAULT_HOST;
+  const unit = url.searchParams.get('unit');
 
   const mflUrl = buildMflExportUrl({ type: 'draftResults', leagueId, year, host: `https://${host}` });
 
@@ -79,8 +91,27 @@ export const GET: APIRoute = async ({ url }) => {
     }
 
     const data = await res.json();
-    const picks = buildPicks(data?.draftResults?.draftUnit?.draftPick);
-    const body: DraftStatusResponse = { picks, serverTime: Date.now() };
+    const selected = selectDraftUnit(data?.draftResults?.draftUnit, unit);
+
+    // A named unit that isn't on the board is a caller error, not an empty
+    // draft — say so instead of returning a plausible-looking empty board.
+    if (unit && !selected) {
+      return new Response(
+        JSON.stringify({
+          picks: [],
+          serverTime: Date.now(),
+          error: `unknown draft unit "${unit}"`,
+        }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+
+    const picks = buildPicks(selected?.draftPick);
+    const body: DraftStatusResponse = {
+      picks,
+      serverTime: Date.now(),
+      unit: selected?.unit,
+    };
 
     return new Response(JSON.stringify(body), {
       status: 200,

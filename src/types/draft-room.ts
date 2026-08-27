@@ -116,6 +116,13 @@ export interface DraftStatusResponse {
   picks: DraftRoomPick[];
   /** Timestamp of the API response for staleness detection */
   serverTime: number;
+  /**
+   * MFL draft unit the picks came from. A single-draft league reports
+   * "LEAGUE"; a conference-drafting one (the AFL) reports "CONFERENCE00" /
+   * "CONFERENCE01". Lets a conference board assert it got the board it asked
+   * for. Undefined only when the feed carried no unit at all.
+   */
+  unit?: string;
 }
 
 // ── Queue Types ──────────────────────────────────────────────────────────────

@@ -297,6 +297,47 @@ export function parseTradeFromComment(comment: string): string | undefined {
   return undefined;
 }
 
+/** One entry of MFL's `draftResults.draftUnit`. */
+export interface RawDraftUnit {
+  unit?: string;
+  draftPick?: unknown;
+}
+
+/**
+ * Pick the requested draft unit out of MFL's object-or-array `draftUnit`.
+ *
+ * `draftUnit` is an OBJECT in a single-draft league (TheLeague, best-ball) but
+ * an ARRAY in a league that drafts by conference — the AFL runs CONFERENCE00 +
+ * CONFERENCE01 as two independent 108-pick boards. Reading `.draftPick`
+ * straight off the raw value therefore yielded `undefined` for the AFL, and
+ * because callers treated that as "no picks" the board looked EMPTY rather
+ * than broken. That is the bug this function exists to make impossible.
+ *
+ * With no `unit` requested the first unit wins, which keeps single-draft
+ * leagues (where there IS only one) behaving exactly as before. A requested
+ * unit that doesn't exist returns null rather than silently falling back to
+ * unit 0 — showing the American League's board on a page that asked for the
+ * National League's is worse than showing an error.
+ */
+export function selectDraftUnit(
+  rawUnit: RawDraftUnit | RawDraftUnit[] | undefined,
+  requestedUnit?: string | null
+): RawDraftUnit | null {
+  if (!rawUnit) return null;
+  const units = Array.isArray(rawUnit) ? rawUnit : [rawUnit];
+  if (units.length === 0) return null;
+  if (!requestedUnit) return units[0] ?? null;
+
+  const wanted = requestedUnit.trim().toUpperCase();
+  return (
+    units.find((u) => (u?.unit || '').trim().toUpperCase() === wanted) ??
+    // MFL names them CONFERENCE00/CONFERENCE01; accept a bare "00"/"01" too so
+    // callers can pass the conference code straight from the league config.
+    units.find((u) => (u?.unit || '').trim().toUpperCase() === `CONFERENCE${wanted}`) ??
+    null
+  );
+}
+
 /**
  * Whether the draft order is FINAL (official) rather than a projection.
  *

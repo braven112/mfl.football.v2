@@ -1,0 +1,597 @@
+/**
+ * AFL Draft Broadcast — TV board styling.
+ *
+ * Sizing note: every type size here is in `vw`/`vh`, not rem. This surface has
+ * exactly one job — be legible on a TV across a room — and a rem scale tuned
+ * for a laptop reads as fine print at ten feet. Viewport units make the board
+ * scale with whatever screen it lands on, which is the whole point when nobody
+ * knows what TV it'll be plugged into until draft night. `clamp()` keeps it
+ * sane on a laptop preview.
+ *
+ * This surface is DELIBERATELY dark in both themes — team colors ARE the
+ * background, exactly like the player modal band (see player-modal-band.css).
+ * Ink is always white, so no html.dark overrides exist or are wanted.
+ */
+
+.dbc {
+  position: relative;
+  width: 100%;
+  /* Fill what's left of the window under the site header, rather than a flat
+     86vh that runs off the bottom once the header pushes the board down. The
+     floor keeps it usable if the header ever grows. */
+  height: max(30rem, calc(100vh - 12rem));
+  background: #05070b;
+  color: #fff;
+  overflow: hidden;
+  border-radius: 0.75rem;
+}
+
+/* The headings MUST restate their color. This surface is dark in both themes,
+   but it renders inside TheLeagueLayout, whose global h1/h2 rules set a dark
+   ink color that beats plain inheritance from `.dbc`. Without this the player
+   name renders near-black on the franchise gradient — legible on a laptop in
+   light mode, invisible on the TV. */
+.dbc h1,
+.dbc h2 {
+  color: #fff;
+}
+
+/* Fullscreen is the intended mode on draft night: the board becomes the whole
+   TV and the site chrome disappears. */
+.dbc:fullscreen,
+.dbc:-webkit-full-screen {
+  border-radius: 0;
+  height: 100vh;
+}
+
+.dbc:fullscreen .dbc-reveal,
+.dbc:fullscreen .dbc-idle {
+  height: 100vh;
+}
+
+/* ── Fullscreen toggle ─────────────────────────────────────────────────────
+   The only interactive element on the page, and it's here for exactly one
+   click at the start of the night. Dimmed until hovered so it doesn't sit on
+   the TV competing with the board. */
+.dbc__fullscreen {
+  position: absolute;
+  top: 1.2vw;
+  right: 1.2vw;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+  padding: 0.5em 1em;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  color: rgba(255, 255, 255, 0.72);
+  font: inherit;
+  font-size: clamp(0.7rem, 1.4vh, 1rem);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  opacity: 0.45;
+  transition: opacity 200ms ease, background 200ms ease;
+}
+
+.dbc__fullscreen:hover,
+.dbc__fullscreen:focus-visible {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+}
+
+/* ── Connection indicator ──────────────────────────────────────────────────
+   Small and calm on purpose. A dropped poll is not an emergency — the board
+   still shows the last known state correctly — so this must never look like
+   an error screen in front of a room. */
+.dbc__status {
+  position: absolute;
+  right: 1.2vw;
+  bottom: 1.2vw;
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0.4em 0.9em;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: clamp(0.7rem, 0.9vw, 1rem);
+  letter-spacing: 0.02em;
+  z-index: 5;
+}
+
+.dbc__status-dot {
+  width: 0.6em;
+  height: 0.6em;
+  border-radius: 50%;
+  background: #f5a524;
+  animation: dbc-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes dbc-pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+
+/* ══ REVEAL ═══════════════════════════════════════════════════════════════ */
+
+.dbc-reveal {
+  position: relative;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  background: linear-gradient(115deg, var(--dbc-primary, #10161f) 0%, var(--dbc-secondary, #1c497c) 100%);
+  animation: dbc-reveal-in 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes dbc-reveal-in {
+  from { opacity: 0; transform: scale(1.04); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.dbc-reveal__wash {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(58% 78% at 76% 28%, rgba(255, 255, 255, 0.16) 0%, transparent 62%),
+    linear-gradient(100deg, rgba(0, 0, 0, 0.58) 0%, rgba(0, 0, 0, 0.12) 55%, rgba(0, 0, 0, 0.45) 100%);
+}
+
+/* Site-standard ghost wordmark + crest watermark, at broadcast scale. */
+.dbc-reveal__ghost {
+  position: absolute;
+  left: 2vw;
+  bottom: -2.5vh;
+  font-size: 28vh;
+  font-weight: 900;
+  line-height: 0.8;
+  letter-spacing: -0.04em;
+  color: rgba(255, 255, 255, 0.07);
+  pointer-events: none;
+  user-select: none;
+}
+
+/* With the banner gone this crest is the only franchise ARTWORK on the reveal,
+   so it carries more weight than the site-standard 0.16 watermark — it has to
+   answer "who drafted him" on its own, from across a room. Still behind the
+   text, still never competing with the player. */
+.dbc-reveal__crest {
+  position: absolute;
+  right: -2vw;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 58vh;
+  height: 58vh;
+  object-fit: contain;
+  opacity: 0.3;
+  filter: drop-shadow(0 1vh 3vh rgba(0, 0, 0, 0.45));
+  pointer-events: none;
+}
+
+.dbc-reveal__body {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  align-items: center;
+  gap: 2vw;
+  width: 100%;
+  height: 100%;
+  padding: 0 4vw;
+}
+
+/* The figure keeps spanning the full height even though the body now centers
+   its items — the cutout has to reach the bottom edge to bleed off it, which
+   is the site-wide composite convention. */
+.dbc-reveal__figure {
+  position: relative;
+  align-self: stretch;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+/* The cutout bleeds off the bottom edge — the composite convention across the
+   site. Only transparent ESPN headshots ever reach this element. */
+.dbc-reveal__model {
+  max-height: 94%;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: bottom center;
+  filter: drop-shadow(0 1.4vh 2.4vh rgba(0, 0, 0, 0.55));
+  animation: dbc-model-in 760ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes dbc-model-in {
+  from { opacity: 0; transform: translateY(4vh) scale(0.94); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.dbc-reveal__text {
+  /* Vertically centered, NOT pinned to the bottom: the stats and rank chips are
+     the last thing rendered, so bottom-anchoring clipped them off the screen
+     exactly when the card had the most to say. */
+  align-self: center;
+  padding: 2vh 0;
+  max-height: 100%;
+  overflow: hidden;
+  animation: dbc-text-in 620ms 120ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes dbc-text-in {
+  from { opacity: 0; transform: translateY(2.4vh); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.dbc-reveal__kicker {
+  margin: 0 0 0.2em;
+  font-size: clamp(1rem, 2.1vh, 2rem);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.dbc-reveal__player {
+  margin: 0;
+  font-size: clamp(2.4rem, 9vh, 9rem);
+  font-weight: 900;
+  line-height: 0.94;
+  letter-spacing: -0.03em;
+  text-shadow: 0 0.4vh 2vh rgba(0, 0, 0, 0.5);
+}
+
+.dbc-reveal__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.8em;
+  margin: 0.5em 0 0;
+  font-size: clamp(0.9rem, 2.4vh, 2.2rem);
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.dbc-reveal__pos {
+  padding: 0.12em 0.5em;
+  border-radius: 0.28em;
+  background: rgba(255, 255, 255, 0.16);
+  font-weight: 800;
+}
+
+.dbc-reveal__injury {
+  padding: 0.12em 0.5em;
+  border-radius: 0.28em;
+  background: rgba(220, 38, 38, 0.85);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* The value meter — the line the room reacts to out loud. */
+.dbc-reveal__value {
+  display: inline-block;
+  margin: 0.6em 0 0;
+  padding: 0.22em 0.7em;
+  border-radius: 0.3em;
+  font-size: clamp(0.95rem, 2.6vh, 2.4rem);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.dbc-reveal__value--steal {
+  background: #16a34a;
+  color: #fff;
+}
+
+.dbc-reveal__value--reach {
+  background: #f5a524;
+  color: #1a1205;
+}
+
+.dbc-reveal__value--on-script {
+  background: rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.dbc-reveal__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2.2vw;
+  margin: 0.9em 0 0;
+}
+
+.dbc-reveal__stat dt {
+  font-size: clamp(0.65rem, 1.4vh, 1.1rem);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.dbc-reveal__stat dd {
+  margin: 0.1em 0 0;
+  font-size: clamp(1.2rem, 3.4vh, 3rem);
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.dbc-reveal__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+  margin: 0.9em 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dbc-reveal__chip {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4em;
+  padding: 0.25em 0.7em;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.38);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  font-size: clamp(0.6rem, 1.5vh, 1.15rem);
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.dbc-reveal__chip strong {
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+.dbc-reveal__run {
+  margin: 0.8em 0 0;
+  font-size: clamp(0.8rem, 1.9vh, 1.5rem);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #fbbf24;
+}
+
+/* ══ IDLE / ON THE CLOCK ══════════════════════════════════════════════════ */
+
+.dbc-idle {
+  position: relative;
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
+  overflow: hidden;
+  background: linear-gradient(150deg, var(--dbc-secondary, #0e2440) 0%, var(--dbc-primary, #1c497c) 130%);
+  transition: background 900ms ease;
+}
+
+.dbc-idle__wash {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.42) 0%, rgba(0, 0, 0, 0.12) 38%, rgba(0, 0, 0, 0.68) 100%);
+}
+
+.dbc-idle__header {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1em;
+  /* Right padding clears the absolutely-positioned fullscreen pill — without
+     it the progress line runs underneath the button. */
+  padding: 2.4vh clamp(9rem, 14vw, 13rem) 0 3vw;
+  font-size: clamp(0.7rem, 1.7vh, 1.3rem);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: rgba(255, 255, 255, 0.66);
+}
+
+.dbc-idle__league {
+  font-weight: 800;
+  color: #fff;
+}
+
+.dbc-idle__stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2vh 3vw;
+  /* Grid children default to min-height:auto and refuse to shrink below their
+     content — which pushed the rails and the conference switcher off the
+     bottom of the board. */
+  min-height: 0;
+}
+
+.dbc-idle__crest {
+  width: 17vh;
+  height: 17vh;
+  object-fit: contain;
+  margin-bottom: 1.2vh;
+  filter: drop-shadow(0 1vh 2vh rgba(0, 0, 0, 0.5));
+  animation: dbc-crest-in 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes dbc-crest-in {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.dbc-idle__kicker {
+  margin: 0;
+  font-size: clamp(0.8rem, 2vh, 1.7rem);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.dbc-idle__team {
+  margin: 0.15em 0 0;
+  font-size: clamp(2rem, 7.5vh, 7rem);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.025em;
+  text-shadow: 0 0.4vh 2vh rgba(0, 0, 0, 0.5);
+}
+
+.dbc-idle__pick {
+  margin: 0.5em 0 0;
+  font-size: clamp(0.9rem, 2.4vh, 2rem);
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.78);
+  font-variant-numeric: tabular-nums;
+}
+
+.dbc-idle__rails {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3vw;
+  padding: 0 3vw 2.4vh;
+  min-height: 0;
+}
+
+.dbc-idle__rail-title {
+  margin: 0 0 0.6em;
+  font-size: clamp(0.65rem, 1.5vh, 1.1rem);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.dbc-idle__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5vh;
+}
+
+.dbc-idle__row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 1em;
+  padding: 0.7vh 1vw;
+  border-radius: 0.4em;
+  background: rgba(0, 0, 0, 0.32);
+}
+
+.dbc-idle__row-pick {
+  font-size: clamp(0.7rem, 1.7vh, 1.3rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.dbc-idle__row-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.dbc-idle__row-main strong {
+  font-size: clamp(0.85rem, 2.1vh, 1.7rem);
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dbc-idle__row-main em {
+  font-style: normal;
+  font-size: clamp(0.6rem, 1.4vh, 1rem);
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.dbc-idle__row-team {
+  font-size: clamp(0.7rem, 1.7vh, 1.25rem);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.dbc-idle__row-icon {
+  width: 3.2vh;
+  height: 3.2vh;
+  object-fit: contain;
+}
+
+.dbc-idle__empty {
+  margin: 0;
+  font-size: clamp(0.75rem, 1.7vh, 1.2rem);
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.dbc-idle__footer {
+  position: relative;
+  display: flex;
+  gap: 0.5em;
+  padding: 0 3vw 2.4vh;
+}
+
+.dbc-idle__conf {
+  padding: 0.35em 1em;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(0, 0, 0, 0.3);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: clamp(0.65rem, 1.5vh, 1.05rem);
+  font-weight: 700;
+  text-decoration: none;
+  letter-spacing: 0.06em;
+}
+
+.dbc-idle__conf.is-active {
+  background: #fff;
+  color: #05070b;
+  border-color: #fff;
+}
+
+/* Narrow screens: the reveal stacks so the name never collides with the
+   cutout. Not the target device, but the page must not be broken on a phone
+   when someone checks the board from the couch. */
+@media (max-width: 900px) {
+  .dbc-reveal__body {
+    grid-template-columns: 1fr;
+    align-items: center;
+    padding: 0 6vw;
+  }
+
+  .dbc-reveal__figure {
+    display: none;
+  }
+
+  .dbc-reveal__text {
+    padding-bottom: 0;
+  }
+
+  .dbc-idle__rails {
+    grid-template-columns: 1fr;
+    gap: 2vh;
+  }
+}
+
+/* Honor reduced motion: the information is the point, the animation is not. */
+@media (prefers-reduced-motion: reduce) {
+  .dbc-reveal,
+  .dbc-reveal__model,
+  .dbc-reveal__text,
+  .dbc-idle__crest {
+    animation: none;
+  }
+
+  .dbc__status-dot {
+    animation: none;
+    opacity: 1;
+  }
+}

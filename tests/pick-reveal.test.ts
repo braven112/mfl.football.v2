@@ -132,6 +132,28 @@ describe('collectFreshPicks', () => {
     expect(collectFreshPicks(new Set(), 4, picks)).toEqual([]);
   });
 
+  it('keeps every pick of a burst when maxBurst is Infinity (broadcast mode)', () => {
+    // The AFL TV board must never silently swallow a fast round: dropping is a
+    // worse failure than delaying there. See the BROADCAST MODE note on
+    // collectFreshPicks.
+    const picks = [pick(1, 'a'), pick(2, 'b'), pick(3, 'c'), pick(4, 'd'), pick(5, 'e')];
+    const fresh = collectFreshPicks(new Set(), 5, picks, Infinity);
+    expect(fresh.map((p) => p.playerId)).toEqual(['a', 'b', 'c', 'd', 'e']);
+  });
+
+  it('still treats a first observation as history in broadcast mode', () => {
+    // Opening the TV page mid-draft must not replay the whole board.
+    expect(collectFreshPicks(null, 0, [pick(1, 'a'), pick(2, 'b')], Infinity)).toEqual([]);
+  });
+
+  it('still applies the slot-sync recency window in broadcast mode', () => {
+    // A board that publishes 60 already-made picks in one update is history,
+    // even with the burst cap lifted.
+    const nowMs = 1_700_000_000_000;
+    const stale = { ...pick(1, 'a'), timestamp: String(nowMs / 1000 - 9999) };
+    expect(collectFreshPicks(new Set(), 0, [stale], Infinity, nowMs)).toEqual([]);
+  });
+
   it('splashes a re-pick after an undo (slot leaves then re-enters the filled set)', () => {
     // After undo the caller rebuilds the seen set WITHOUT slot 2
     const afterUndoSeen = new Set([1]);
