@@ -280,9 +280,14 @@ const allPlayThrough = (weekly, maxWeek) => {
  * seed and a franchise id (2020-2023, 2025). `verifySeeds` re-checks on build.
  */
 const seedField = ({ bye, field, standingsRows, divisionOf, allPlay, pointsFor }) => {
-  const wins = (r) => {
-    const parts = String(r?.h2hwlt ?? '').split('-').map(Number);
-    return parts[0] || num(r?.h2hw);
+  // Win PERCENTAGE, not win count. The two order identically in every season on
+  // file — the league has never recorded a tie and every team in a given season
+  // plays the same number of games — but a single tie would make a count-based
+  // sort rank a 10-1-1 team below a 10-2-0 one.
+  const winPct = (r) => {
+    const { w, l, t } = parseRecord(r ?? {});
+    const played = w + l + t;
+    return played ? (w + t / 2) / played : 0;
   };
   // Division winners are identified across the WHOLE league — a division
   // winner is the first row of its division whether or not it is in the field.
@@ -317,7 +322,7 @@ const seedField = ({ bye, field, standingsRows, divisionOf, allPlay, pointsFor }
       const ra = rowOf.get(a) ?? {};
       const rb = rowOf.get(b) ?? {};
       return (
-        wins(rb) - wins(ra) ||
+        winPct(rb) - winPct(ra) ||
         (allPlay[b]?.pct ?? 0) - (allPlay[a]?.pct ?? 0) ||
         (pointsFor.get(b) ?? 0) - (pointsFor.get(a) ?? 0)
       );
