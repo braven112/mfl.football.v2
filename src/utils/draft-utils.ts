@@ -297,10 +297,19 @@ export function parseTradeFromComment(comment: string): string | undefined {
   return undefined;
 }
 
-/** One entry of MFL's `draftResults.draftUnit`. */
-export interface RawDraftUnit {
+/**
+ * One entry of MFL's `draftResults.draftUnit`.
+ *
+ * Generic in the pick shape so a caller that knows what a pick looks like gets
+ * it back typed. Declaring `draftPick` as a bare `unknown` here kept this
+ * module from depending on the API route's `RawDraftPick`, but it pushed the
+ * looseness onto every call site — `/api/draft/status` then had to hand an
+ * `unknown` to a function expecting real picks, which is a type error rather
+ * than a cast waiting to happen.
+ */
+export interface RawDraftUnit<TPick = unknown> {
   unit?: string;
-  draftPick?: unknown;
+  draftPick?: TPick | TPick[];
 }
 
 /**
@@ -319,10 +328,10 @@ export interface RawDraftUnit {
  * unit 0 — showing the American League's board on a page that asked for the
  * National League's is worse than showing an error.
  */
-export function selectDraftUnit(
-  rawUnit: RawDraftUnit | RawDraftUnit[] | undefined,
+export function selectDraftUnit<TPick = unknown>(
+  rawUnit: RawDraftUnit<TPick> | RawDraftUnit<TPick>[] | undefined,
   requestedUnit?: string | null
-): RawDraftUnit | null {
+): RawDraftUnit<TPick> | null {
   if (!rawUnit) return null;
   const units = Array.isArray(rawUnit) ? rawUnit : [rawUnit];
   if (units.length === 0) return null;

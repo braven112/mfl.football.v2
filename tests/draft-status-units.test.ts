@@ -9,9 +9,23 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { selectDraftUnit } from '../src/utils/draft-utils';
+import { selectDraftUnit, type RawDraftUnit } from '../src/utils/draft-utils';
 
 const PICK = { player: '13589', pick: '01', franchise: '0001', round: '01' };
+type Pick = typeof PICK;
+
+/**
+ * Normalize `draftPick` the way every real caller does.
+ *
+ * MFL hands back a bare OBJECT when a unit holds one pick and an ARRAY when it
+ * holds many — the same shape-shifting that made this endpoint return an empty
+ * board for the AFL. Indexing `[0]` straight off it only looks safe.
+ */
+function picksOf(unit: RawDraftUnit<Pick> | null): Pick[] {
+  const p = unit?.draftPick;
+  if (p === undefined) return [];
+  return Array.isArray(p) ? p : [p];
+}
 
 /** TheLeague / best-ball: one unnamed unit, as a bare object. */
 const SINGLE_UNIT = { draftPick: [PICK] };
@@ -36,7 +50,7 @@ describe('selectDraftUnit', () => {
   it('finds a named unit in an array', () => {
     const nl = selectDraftUnit(CONFERENCE_UNITS, 'CONFERENCE01');
     expect(nl?.unit).toBe('CONFERENCE01');
-    expect(nl?.draftPick?.[0].franchise).toBe('0013');
+    expect(picksOf(nl)[0].franchise).toBe('0013');
   });
 
   it('accepts a bare conference code, so callers can pass the config value', () => {

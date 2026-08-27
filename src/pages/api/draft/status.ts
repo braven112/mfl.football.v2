@@ -91,7 +91,7 @@ export const GET: APIRoute = async ({ url }) => {
     }
 
     const data = await res.json();
-    const selected = selectDraftUnit(data?.draftResults?.draftUnit, unit);
+    const selected = selectDraftUnit<RawDraftPick>(data?.draftResults?.draftUnit, unit);
 
     // A named unit that isn't on the board is a caller error, not an empty
     // draft — say so instead of returning a plausible-looking empty board.
