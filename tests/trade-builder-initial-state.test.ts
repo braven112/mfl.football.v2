@@ -61,6 +61,82 @@ describe('resolveInitialTradeState', () => {
     }
   });
 
+  it('seats the owner on the empty side of a ?b=-only link', () => {
+    const state = resolveInitialTradeState({
+      search: '?b=0005',
+      defaultTeamId: '0001',
+      teams: TEAMS,
+    });
+    expect(state.teamA.franchiseId).toBe('0001');
+    expect(state.teamB.franchiseId).toBe('0005');
+  });
+
+  it('never puts the same franchise on both sides', () => {
+    // The 🏷️ badge is on every roster, the owner's own included.
+    const state = resolveInitialTradeState({
+      search: '?b=0001',
+      defaultTeamId: '0001',
+      teams: TEAMS,
+    });
+    expect(state.teamB.franchiseId).toBe('0001');
+    expect(state.teamA.franchiseId).toBeNull();
+  });
+
+  it('leaves an explicit ?a= alone', () => {
+    // A shared two-sided trade link must not be rewritten to the reader's team.
+    const state = resolveInitialTradeState({
+      search: '?a=0003&b=0005',
+      defaultTeamId: '0001',
+      teams: TEAMS,
+    });
+    expect(state.teamA.franchiseId).toBe('0003');
+  });
+
+  it('seats a signed-in owner who never set a "my team" preference', () => {
+    // defaultTeamId comes from an optional cookie; the session franchise does
+    // not. An owner without the cookie still gets seated.
+    const state = resolveInitialTradeState({
+      search: '?b=0005',
+      defaultTeamId: '',
+      viewerFranchiseId: '0001',
+      teams: TEAMS,
+    });
+    expect(state.teamA.franchiseId).toBe('0001');
+  });
+
+  it('does not duplicate the viewer onto both sides either', () => {
+    const state = resolveInitialTradeState({
+      search: '?b=0001',
+      defaultTeamId: '',
+      viewerFranchiseId: '0001',
+      teams: TEAMS,
+    });
+    expect(state.teamA.franchiseId).toBeNull();
+    expect(state.teamB.franchiseId).toBe('0001');
+  });
+
+  it('leaves Team A empty for a logged-out visitor on a ?b=-only link', () => {
+    const state = resolveInitialTradeState({
+      search: '?b=0005',
+      defaultTeamId: '',
+      teams: TEAMS,
+    });
+    expect(state.teamA.franchiseId).toBeNull();
+  });
+
+  it('does NOT change which teams a no-params visit opens on', () => {
+    // The viewer fallback is scoped to one-sided links only — a logged-in
+    // owner hitting /trade-builder cold still gets the two roomiest caps.
+    const state = resolveInitialTradeState({
+      search: '',
+      defaultTeamId: '',
+      viewerFranchiseId: '0001',
+      teams: TEAMS,
+    });
+    expect(state.teamA.franchiseId).toBe('0003');
+    expect(state.teamB.franchiseId).toBe('0005');
+  });
+
   it('is pure — repeated calls with the same input agree', () => {
     const input = { search: '?a=0001&ap=1234,5678&b=0005', defaultTeamId: '', teams: TEAMS };
     expect(resolveInitialTradeState(input)).toEqual(resolveInitialTradeState(input));

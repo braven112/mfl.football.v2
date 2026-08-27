@@ -34,21 +34,43 @@ export interface InitialTradeStateInput {
   search: string;
   /** Owner's team from cookie/`?myteam`, or '' when they have no preference. */
   defaultTeamId: string;
+  /**
+   * The signed-in owner's own franchise, from the SERVER-rendered auth prop.
+   *
+   * Distinct from `defaultTeamId`, which comes from an optional "my team"
+   * preference cookie an owner may never have set. Used only to seat the
+   * viewer on the empty side of a one-sided link — never to change which teams
+   * a visitor with no URL params opens on.
+   */
+  viewerFranchiseId?: string | null;
   teams: InitialStateTeam[];
 }
 
 export function resolveInitialTradeState({
   search,
   defaultTeamId,
+  viewerFranchiseId,
   teams,
 }: InitialTradeStateInput): TradeState {
   // A shared trade link wins over every default — it is the whole point of
   // the link. `URLSearchParams` accepts the string with or without its '?'.
   const restored = deserializeTradeFromParams(new URLSearchParams(search || ''));
   if (restored.teamAId || restored.teamBId) {
+    // The roster page's 🏷️ trade-block badge links with only `?b=`, which used
+    // to land the owner on a half-empty form: the player they clicked on one
+    // side, "Select a team…" on the other. Seat them on the empty side. Guarded
+    // on the two ids differing, because the badge is on every team's roster
+    // including the owner's own — `?b=0001` for franchise 0001 must not put the
+    // same club on both sides of the trade.
+    const viewerTeam = defaultTeamId || viewerFranchiseId || '';
+    const teamAFallback =
+      !restored.teamAId && viewerTeam && viewerTeam !== restored.teamBId
+        ? viewerTeam
+        : restored.teamAId;
+
     return {
       teamA: {
-        franchiseId: restored.teamAId,
+        franchiseId: teamAFallback,
         playerIds: restored.teamAPlayerIds,
         draftPicks: restored.teamADraftPicks,
         rookieExtensions: {},

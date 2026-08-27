@@ -273,9 +273,15 @@ export default function TradeBuilder({
       resolveInitialTradeState({
         search: initialSearch,
         defaultTeamId,
+        // The PROP, not the `authUser` state above — that state is refreshed by
+        // a `/api/auth/me` effect after mount, and initial state must depend
+        // only on what the server also had.
+        viewerFranchiseId: authUserJson
+          ? JSON.parse(authUserJson).franchiseId
+          : null,
         teams: data.teams,
       }),
-    [defaultTeamId, data.teams, initialSearch]
+    [defaultTeamId, data.teams, initialSearch, authUserJson]
   );
 
   const [state, dispatch] = useReducer(tradeReducer, initialState);
