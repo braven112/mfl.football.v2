@@ -20,6 +20,7 @@ import {
   darkenForWhiteText,
   contrastWithWhite,
   toBroadcastColor,
+  toBroadcastPair,
 } from '../src/utils/draft-broadcast';
 import {
   assignBoardRanks,
@@ -466,6 +467,65 @@ describe('AFL franchise crest art', () => {
     for (const t of cfg.teams) {
       if (!t.groupMeDark) continue;
       expect(existsSync(`public${t.groupMeDark}`), `${t.name} groupMeDark`).toBe(true);
+    }
+  });
+});
+
+
+describe('toBroadcastPair', () => {
+  // Six AFL franchises pair a real brand colour with the near-white #e9e9e9.
+  // Resolved stop-by-stop that grey has no hue to keep, so it can only darken
+  // to grey — Suh Girls' warm brown faded into a dead slate halfway across the
+  // card. The pair lets a grey borrow the hue of the stop that has one.
+  const sat = (hex: string) => {
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+    const mx = Math.max(r, g, b);
+    const mn = Math.min(r, g, b);
+    const l = (mx + mn) / 2;
+    return mx === mn ? 0 : l > 0.5 ? (mx - mn) / (2 - mx - mn) : (mx - mn) / (mx + mn);
+  };
+  const hue = (hex: string) => {
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+    const mx = Math.max(r, g, b);
+    const mn = Math.min(r, g, b);
+    if (mx === mn) return 0;
+    const d = mx - mn;
+    const h = mx === r ? ((g - b) / d + (g < b ? 6 : 0)) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    return h / 6;
+  };
+
+  it('tints a greyscale stop with the partner stop hue', () => {
+    // Suh Girls: brown -> near-white must come out brown -> brown.
+    const out = toBroadcastPair('#b97c46', '#e9e9e9');
+    expect(sat(out.secondary)).toBeGreaterThan(0.3);
+    expect(Math.abs(hue(out.secondary) - hue(out.primary))).toBeLessThan(0.06);
+  });
+
+  it('borrows from the SECOND stop when the first is the grey one', () => {
+    // Avenging Amish lead with #e9e9e9 and carry their blue second.
+    const out = toBroadcastPair('#e9e9e9', '#529fcc');
+    expect(sat(out.primary)).toBeGreaterThan(0.3);
+    expect(Math.abs(hue(out.primary) - hue(out.secondary))).toBeLessThan(0.06);
+  });
+
+  it('leaves a genuinely greyscale franchise grey', () => {
+    // Titsburgh are grey on both stops — that IS the brand, so there is no hue
+    // to borrow and inventing one would be worse than leaving it.
+    const out = toBroadcastPair('#8b8f93', '#181818');
+    expect(sat(out.primary)).toBeLessThan(0.12);
+    expect(sat(out.secondary)).toBeLessThan(0.12);
+  });
+
+  it('still holds the contrast floor on both stops, league-wide', () => {
+    const cfg = JSON.parse(readFileSync('data/afl-fantasy/afl.config.json', 'utf-8'));
+    for (const t of cfg.teams) {
+      const out = toBroadcastPair(t.colorPrimary, t.colorSecondary || t.colorPrimary);
+      for (const k of ['primary', 'secondary'] as const) {
+        expect(
+          contrastWithWhite(out[k]),
+          `${t.nameMedium || t.name} ${k}`
+        ).toBeGreaterThanOrEqual(4.5);
+      }
     }
   });
 });

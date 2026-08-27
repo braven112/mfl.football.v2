@@ -28,7 +28,7 @@ import type { BroadcastPlayer } from '../../../types/draft-broadcast';
 import { isSplashCutoutEligible, resolveSplashColors } from '../../../utils/pick-reveal';
 import {
   bestAvailableAt,
-  toBroadcastColor,
+  toBroadcastPair,
   formatBestAvailable,
   positionRunCount,
 } from '../../../utils/draft-broadcast';
@@ -84,10 +84,7 @@ export function BroadcastRevealCard({
   // room, whose splash is a 3.6s overlay on a laptop, not a TV read from ten
   // feet; this is the broadcast screen's requirement, not a global one.
   const brand = resolveSplashColors(team, player);
-  const colors = {
-    primary: toBroadcastColor(brand.primary),
-    secondary: toBroadcastColor(brand.secondary),
-  };
+  const colors = toBroadcastPair(brand.primary, brand.secondary);
   const label = pickLabel(pick);
 
   // Where he stood among what was actually left on the board. A fact, not a

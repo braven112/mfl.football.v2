@@ -190,10 +190,10 @@
    for. Artwork goes behind artwork; type gets clean gradient. */
 .dbc-reveal__crest {
   position: absolute;
-  /* Centred between the copy and the cutout. It used to hide behind the player
-     on the left; the layout now reads text | crest | player across the frame. */
-  left: 50%;
-  top: 44%;
+  /* Sits with the player rather than dead centre — right of middle and low, so
+     it reads as his backdrop while still clearing the copy on the left. */
+  left: 58%;
+  top: 64%;
   transform: translate(-50%, -50%);
   width: 52vh;
   height: 52vh;
@@ -237,6 +237,11 @@
   align-items: flex-end;
   justify-content: center;
   overflow: hidden;
+  /* Pushed toward the outer edge. The clip box travels with it, so the cutout
+     itself is not sliced — it just sits further right, and the card's own
+     overflow decides where he bleeds off. Re-zeroed in portrait, where the
+     figure is a full-width row and shifting it would just crop him. */
+  transform: translateX(29%);
 }
 
 /* The cutout bleeds off the bottom edge — the composite convention across the
@@ -763,6 +768,7 @@
      phone layout on its head — copy on top, player below it. */
   .dbc-reveal__figure {
     order: 1;
+    transform: none;
   }
 
   .dbc-reveal__text {

@@ -280,3 +280,58 @@ export function toBroadcastColor(hex: string, minRatio = MIN_WHITE_CONTRAST): st
     sat === 0 ? rgb : hslToRgb([h, Math.min(1, sat * TV_SATURATION_BOOST), l]);
   return darkenForWhiteText(toHex(punched), minRatio);
 }
+
+
+/** Below this saturation a brand stop is "grey" — no hue of its own to keep. */
+const GREY_SATURATION = 0.08;
+/**
+ * Saturation and lightness handed to a tinted grey.
+ *
+ * The grey's OWN lightness is deliberately discarded. Rebuilding #e9e9e9 in
+ * hue at its native 0.91 lightness gives a pale wash whose channels sit within
+ * a few points of each other, and the contrast floor then scales it back down
+ * to something indistinguishable from the grey we were trying to escape. A
+ * mid lightness is what actually reads as the colour on a TV.
+ */
+const TINT_SATURATION = 0.52;
+const TINT_LIGHTNESS = 0.45;
+
+/**
+ * The gradient the reveal card actually paints, resolved as a PAIR.
+ *
+ * Six AFL franchises pair a real brand colour with the near-white #e9e9e9, and
+ * two more use a grey. Treated stop-by-stop that grey has no hue to preserve,
+ * so it can only ever darken to grey — Suh Girls' warm brown faded into a dead
+ * slate halfway across the card. Resolving the pair together lets a greyscale
+ * stop borrow the hue of whichever stop HAS one, so the gradient stays in the
+ * franchise's colour from end to end.
+ *
+ * A franchise that is greyscale on BOTH stops has no hue to borrow and stays
+ * grey, which is correct — that is genuinely its brand.
+ */
+export function toBroadcastPair(
+  primary: string,
+  secondary: string
+): { primary: string; secondary: string } {
+  const hueOf = (hex: string): number | null => {
+    const rgb = parseHex(hex);
+    if (!rgb) return null;
+    const [h, sat] = rgbToHsl(rgb);
+    return sat >= GREY_SATURATION ? h : null;
+  };
+  const hue = hueOf(primary) ?? hueOf(secondary);
+
+  const tint = (hex: string): string => {
+    if (hue === null) return hex;
+    const rgb = parseHex(hex);
+    if (!rgb) return hex;
+    const [, sat] = rgbToHsl(rgb);
+    if (sat >= GREY_SATURATION) return hex;
+    return toHex(hslToRgb([hue, TINT_SATURATION, TINT_LIGHTNESS]));
+  };
+
+  return {
+    primary: toBroadcastColor(tint(primary)),
+    secondary: toBroadcastColor(tint(secondary)),
+  };
+}
