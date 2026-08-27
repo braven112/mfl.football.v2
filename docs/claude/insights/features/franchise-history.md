@@ -65,9 +65,11 @@ recomputed only the tenures and listed only those paths in `add-paths`, so the
 bot could commit a name and leave division strength drifted on its own
 schedule; it now runs both computes and commits all four derived files.
 
-**Still anonymous (AFL, 7 left):** `chieftans-2003`, `italian-stalions-2003`,
+**Still anonymous (AFL, 6 left):** `chieftans-2003`, `italian-stalions-2003`,
 `the-vandalizers-2003` (also held 0004 in 2004), `red-dawn-2004`,
-`the-a-team-2004`, `habanero-s-2005`, `whitman-s-wonders-2011`.
+`the-a-team-2004`, `habanero-s-2005`. (`reckless-2005` → Kevin Smith and
+`whitman-s-wonders-2011` → Adam Inman were named in this PR; the count moves
+every time one lands, so re-derive it rather than trusting this line.)
 
 ## 2026-08-25 - Slot-change inference splits ONE owner into two, and a name is what makes it visible
 
