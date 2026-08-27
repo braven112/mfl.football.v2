@@ -546,6 +546,48 @@
   border-color: #fff;
 }
 
+/* Mode toggle — "Rehearse 2025" when live, "Go live" when rehearsing. Pushed
+   to the far end so it never reads as a third conference. */
+.dbc-idle__mode {
+  margin-left: auto;
+  padding: 0.35em 1em;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(0, 0, 0, 0.3);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: clamp(0.65rem, 1.5vh, 1.05rem);
+  font-weight: 700;
+  text-decoration: none;
+  letter-spacing: 0.06em;
+}
+
+.dbc-idle__mode:hover,
+.dbc-idle__mode:focus-visible {
+  border-color: rgba(255, 255, 255, 0.6);
+  color: #fff;
+}
+
+/* A replay on the TV must never be mistakable for the live draft — the picks
+   are real, just last year's. Amber, and it sits next to the "Go live" out. */
+.dbc-idle__rehearsal-flag {
+  margin-left: auto;
+  align-self: center;
+  padding: 0.35em 1em;
+  border-radius: 999px;
+  border: 1px solid rgba(245, 179, 65, 0.55);
+  background: rgba(245, 179, 65, 0.16);
+  color: #f5b341;
+  font-size: clamp(0.65rem, 1.5vh, 1.05rem);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* With the flag present it already claims the free space; the button follows. */
+.dbc-idle__rehearsal-flag + .dbc-idle__mode {
+  margin-left: 0.5em;
+}
+
 /* Short viewports (a laptop panel, a 720p TV) — the stage stack has to give
    ground or it runs into the rails below it. */
 @media (max-height: 950px) {

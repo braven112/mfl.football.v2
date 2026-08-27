@@ -23,15 +23,39 @@ interface Props {
   totalRounds: number;
   picksPerRound: number;
   madeCount: number;
+  /** True when this page is replaying a completed season rather than polling. */
+  rehearsing: boolean;
+  /** Season the "Rehearse" link points at, or undefined when none is complete. */
+  rehearsalYear?: number;
+  /** Season currently on the board — the replayed year while rehearsing. */
+  leagueYear: number;
 }
 
 function pickLabel(pick: DraftRoomPick): string {
   return `${pick.round}.${String(pick.pickInRound).padStart(2, '0')}`;
 }
 
+/**
+ * Build a link to this page in either mode. Passing `year` produces a
+ * rehearsal href (replay that season from pick 1); omitting it produces the
+ * live href. Always emits `conference` so neither control can strand the
+ * operator on the other conference's board.
+ */
+function modeHref(conferenceCode: string, year?: number): string {
+  const params = new URLSearchParams({ conference: conferenceCode });
+  if (year !== undefined) {
+    params.set('year', String(year));
+    params.set('rehearse', '1');
+  }
+  return `?${params}`;
+}
+
 export function OnTheClock({
   conference,
   conferences,
+  rehearsing,
+  rehearsalYear,
+  leagueYear,
   onTheClock,
   team,
   picks,
@@ -216,17 +240,38 @@ export function OnTheClock({
         </section>
       </div>
 
-      {conferences.length > 1 ? (
+      {conferences.length > 1 || rehearsing || rehearsalYear !== undefined ? (
         <footer className="dbc-idle__footer">
           {conferences.map((c) => (
             <a
               key={c.code}
               className={`dbc-idle__conf${c.code === conference.code ? ' is-active' : ''}`}
-              href={`?conference=${c.code}`}
+              /* Carries the rehearsal params across, so switching conference
+                 mid-rehearsal stays a rehearsal instead of silently dropping
+                 onto the live (empty) board. */
+              href={modeHref(c.code, rehearsing ? leagueYear : undefined)}
             >
               {c.name}
             </a>
           ))}
+
+          {rehearsing ? (
+            <>
+              <span className="dbc-idle__rehearsal-flag">
+                Rehearsal · replaying {leagueYear}
+              </span>
+              <a className="dbc-idle__mode" href={modeHref(conference.code)}>
+                Go live
+              </a>
+            </>
+          ) : rehearsalYear !== undefined ? (
+            <a
+              className="dbc-idle__mode"
+              href={modeHref(conference.code, rehearsalYear)}
+            >
+              Rehearse {rehearsalYear}
+            </a>
+          ) : null}
         </footer>
       ) : null}
     </div>

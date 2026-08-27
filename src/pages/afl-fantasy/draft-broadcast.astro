@@ -28,6 +28,7 @@ import {
   assignBoardRanks,
   buildConferenceBoard,
   enrichBroadcastPlayers,
+  findRehearsalYear,
   loadConferenceKeepers,
   trimToDraftable,
 } from '../../utils/draft-broadcast-server';
@@ -149,6 +150,15 @@ const ranked = assignBoardRanks(enriched, keptIds);
 
 const players = trimToDraftable(ranked, boardPlayerIds);
 
+// Which season the "Rehearse" link on the idle screen points at. Resolved
+// from the feeds (see findRehearsalYear) rather than assumed, so the link is
+// either correct or absent — never a board that renders empty. Skipped while
+// already rehearsing: the idle screen shows "Go live" in that state instead.
+const rehearsalYear =
+  rehearseUpTo === undefined
+    ? findRehearsalYear(league.dataPath, leagueYear, conference?.unit ?? '')
+    : undefined;
+
 const pageData: DraftBroadcastPageData = {
   leagueYear,
   conference: conference ?? { code: '00', name: 'American League', unit: 'CONFERENCE00' },
@@ -160,6 +170,7 @@ const pageData: DraftBroadcastPageData = {
   leagueId: league.id,
   mflHost: league.mflHost,
   rehearseUpTo,
+  rehearsalYear,
 };
 
 const title = `${conference?.name ?? 'AFL'} Draft Board | AFL`;

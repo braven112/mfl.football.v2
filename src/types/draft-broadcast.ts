@@ -67,4 +67,11 @@ export interface DraftBroadcastPageData {
    * only way to see the page work before the room fills up.
    */
   rehearseUpTo?: number;
+  /**
+   * Most recent season whose board for THIS conference is actually complete,
+   * or undefined when none is. Drives the "Rehearse <year>" link on the idle
+   * screen. Resolved server-side rather than assumed to be `leagueYear - 1`
+   * so the link can never point at a season that would render an empty board.
+   */
+  rehearsalYear?: number;
 }

@@ -213,10 +213,15 @@ const EVENT_VIEW: Record<string, ViewBuilder> = {
           ? 'The American League live draft is happening right now. Make your picks before the timer expires.'
           : `Your live draft is ${dayPhrase(days)} — Saturday at 12:30pm PT. Scout the board and finalize your queue.`
         : event.definition.description,
-      // This hero only surfaces in the pre-draft offseason window (post-NIT),
-      // when the order is official — never call it a "predictor" here.
-      link: '/afl-fantasy/draft-predictor',
-      linkLabel: live ? 'Enter Draft Room' : 'View Draft Order',
+      // Pre-draft the order is official (post-NIT), so this is never a
+      // "predictor" here. Once the draft is LIVE the useful destination is the
+      // broadcast board, not the order — the order is settled by then, and the
+      // board is what the room is watching. Conference is pinned to the AL so
+      // the link lands on the right one of the two independent boards.
+      link: live
+        ? '/afl-fantasy/draft-broadcast?conference=00'
+        : '/afl-fantasy/draft-predictor',
+      linkLabel: live ? 'Open the Draft Board' : 'View Draft Order',
       icon: 'draft-podium',
       accent: ACCENT_STEEL,
       glow: 'rgba(59,107,154,.55)',
@@ -239,8 +244,11 @@ const EVENT_VIEW: Record<string, ViewBuilder> = {
           ? 'The National League email draft is open. Submit your queue and watch the clock — picks tick through one at a time.'
           : `Your email draft starts ${dayPhrase(days)} — Sunday at 9am PT. Set your queue before the first pick is on the clock.`
         : event.definition.description,
-      // Same as the AL view: offseason-only hero, the order is official.
-      link: '/afl-fantasy/draft-predictor',
+      // Same as the AL view: the order is official pre-draft, and once picks
+      // are live the board is the destination. conference=01 is the NL board.
+      link: live
+        ? '/afl-fantasy/draft-broadcast?conference=01'
+        : '/afl-fantasy/draft-predictor',
       linkLabel: live ? 'Watch the Board' : 'View Draft Order',
       icon: 'draft-podium',
       accent: ACCENT_GOLD,

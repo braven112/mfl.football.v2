@@ -323,6 +323,9 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
           totalRounds={data.totalRounds}
           picksPerRound={data.picksPerRound}
           madeCount={madeCount}
+          rehearsing={rehearsing}
+          rehearsalYear={data.rehearsalYear}
+          leagueYear={data.leagueYear}
         />
       )}
 

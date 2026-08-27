@@ -20,8 +20,11 @@ import {
 } from '../src/utils/draft-broadcast';
 import {
   assignBoardRanks,
+  buildConferenceBoard,
+  findRehearsalYear,
   loadConferenceKeepers,
 } from '../src/utils/draft-broadcast-server';
+import { readFileSync } from 'node:fs';
 import type { DraftRoomPick } from '../src/types/draft-room';
 import type { BroadcastPlayer } from '../src/types/draft-broadcast';
 
@@ -277,5 +280,52 @@ describe('applyRehearsal', () => {
   it('empties the whole board at 0', () => {
     const rehearsed = applyRehearsal([slot(1, 'a'), slot(2, 'b')], 0);
     expect(rehearsed.every((p) => p.playerId === '')).toBe(true);
+  });
+});
+
+
+describe('findRehearsalYear', () => {
+  // The rehearsal link is the one control on this page that can dead-end:
+  // pointed at a season with no board it drops the operator onto a broadcast
+  // that never reveals anything, which looks exactly like the page being
+  // broken. So it resolves off the real feeds, and only ever returns a season
+  // it has confirmed is complete.
+  const AFL = 'data/afl-fantasy';
+
+  it('skips the current (empty) season and lands on a completed one', () => {
+    // 2026's board exists but is all-empty until draft night — the whole
+    // reason a rehearsal mode exists at all.
+    const year = findRehearsalYear(AFL, 2026, 'CONFERENCE00');
+    expect(year).toBeDefined();
+    expect(year).toBeLessThan(2026);
+  });
+
+  it('returns a board that is genuinely complete, not merely present', () => {
+    const year = findRehearsalYear(AFL, 2026, 'CONFERENCE00')!;
+    const { picks } = buildConferenceBoard(
+      JSON.parse(
+        readFileSync(`${AFL}/mfl-feeds/${year}/draftResults.json`, 'utf-8')
+      ),
+      'CONFERENCE00'
+    );
+    expect(picks.length).toBeGreaterThan(0);
+    expect(picks.every((p) => p.playerId)).toBe(true);
+  });
+
+  it('resolves per conference — a finished AL board does not vouch for the NL', () => {
+    // duplicatePlayers lets the two conferences draft independently, and in
+    // 2025 they ran on different DAYS. Each board answers for itself.
+    for (const unit of ['CONFERENCE00', 'CONFERENCE01']) {
+      const year = findRehearsalYear(AFL, 2026, unit);
+      expect(year, unit).toBeDefined();
+    }
+  });
+
+  it('returns undefined for an unknown unit rather than a wrong board', () => {
+    expect(findRehearsalYear(AFL, 2026, 'CONFERENCE99')).toBeUndefined();
+  });
+
+  it('returns undefined when the data path has no feeds at all', () => {
+    expect(findRehearsalYear('data/nope', 2026, 'CONFERENCE00')).toBeUndefined();
   });
 });
