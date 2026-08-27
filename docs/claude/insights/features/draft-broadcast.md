@@ -109,9 +109,72 @@ Franchise banners were tried as the reveal backdrop and cut: a banner is mostly
 its own wordmark, so behind a player's name it reads as two competing pieces of
 type at the moment the room is trying to read one. Blurring it back far enough
 to stop competing left it contributing nothing. Colors + crest only — and the
-crest sits behind the PLAYER, not behind the copy, or every stat line lands on
-a detailed shield.
+crest must never sit behind the COPY, or every stat line lands on a detailed
+shield.
+
+(Aug 2026: the layout mirrored to copy-left / crest / player-right, and the
+crest moved with the player rather than staying centred — dead centre put its
+left edge under the player's name, which is the same failure the banner was cut
+for. It now sits low and right, at 58%/64%.)
 
 The reveal also has to restate `color` on its headings: it renders inside
 `TheLeagueLayout`, whose global `h1`/`h2` rules beat plain inheritance, so the
 player's name came out near-black on the franchise gradient.
+
+
+### Franchise brand colours are not safe to paint text on
+
+Nine of the AFL's 24 franchises have a gradient stop white text cannot be read
+against — **six of them use the same near-white `#e9e9e9`**, and Midwestside's
+`#ffcd00` is worse. On a laptop that is a squint. On the TV it is an unreadable
+card in front of the whole league, which is what it took to notice.
+
+`toBroadcastPair` (`src/utils/draft-broadcast.ts`) saturates, then floors the
+contrast at 4.5. Three things about it are load-bearing:
+
+- **Saturate BEFORE darkening.** Darkening costs saturation, so boosting after
+  is partly undone. A TV across a lit room eats subtlety — a merely-accurate
+  colour reads washed out.
+- **Resolve the pair together, not stop by stop.** A greyscale stop has no hue
+  to preserve, so alone it can only ever darken to grey: Suh Girls' warm brown
+  faded into a dead slate halfway across the card. Borrowing the hue of
+  whichever stop HAS one keeps the gradient in the franchise's colour. A
+  franchise greyscale on both stops (Titsburgh) correctly stays grey.
+- **Discard the grey's own lightness when tinting it.** Rebuilt in hue at
+  `#e9e9e9`'s native 0.91 lightness the channels land within a few points of
+  each other, and the contrast floor then scales that straight back to the grey
+  you were escaping. A mid lightness is what reads as the colour.
+
+Applied in the broadcast card, NOT inside the shared `resolveSplashColors` —
+TheLeague's draft room uses that same helper for a 3.6s overlay on a laptop.
+
+### `icon` is 100x100; the TV needs the 400x400 group-me art
+
+Every AFL franchise's `icon` is 100x100, but the broadcast crest renders at
+~52-68vh — **roughly 560-730px on a 1080p TV** — so it was upscaled 5x+ and
+visibly pixelated. All 24 already had 400x400 art sitting in
+`public/assets/afl/group-me/`; only one was wired into the config. Resolution
+order is `groupMeDark -> groupMe -> icon`.
+
+Two traps here. First, checking the config FIELDS is not checking the
+FILESYSTEM: the art existed on disk for 26 franchises while the config knew
+about one, and reporting "we only have one" from the field scan was wrong.
+Second, a missing crest degrades to NO crest rather than to the small one, so
+`tests/draft-broadcast.test.ts` pins that every declared path resolves.
+
+### Two CSS traps this layout walked into
+
+Both cost a cycle and neither is visible in a diff:
+
+- **`translateX` on a flex child is a percentage of ITS OWN width**, not the
+  container's. The figure is half the card, so `translateX(10%)` moves the
+  player 5% of the screen — the first attempt landed at half the intended
+  distance.
+- **A `both`-fill animation's final keyframe transform beats a static
+  `transform` on the same element.** `.dbc-reveal__model` owns `dbc-model-in`,
+  which ends on `translateY(0) scale(1)`, so a translate set there is silently
+  swallowed. Shift the parent figure instead.
+
+And one that is only a trap because the breakpoints disagree: in the portrait
+single-column layout `order` decides the STACK, not left-vs-right, so a base
+`order` swap inverts the phone (copy above player) unless it is re-pinned.
