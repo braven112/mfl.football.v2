@@ -87,12 +87,22 @@ function loadProjections(dataPath: string, year: number): Map<string, number> {
   return out;
 }
 
-/** Injury status by player id — only players WITH an injury appear in the feed. */
+/**
+ * Injury status by player id — only players WITH an injury appear in the feed.
+ *
+ * `injuries.json` is written by our own fetcher as a KEYED MAP
+ * (`injuries: { "9694": { injuryStatus, injuryBodyPart, … } }`), not as MFL's
+ * raw `injuries.injury[]` list. Reading it the MFL way returned an empty map
+ * every time, so the reveal card's injury chip could never render — a feature
+ * that fails silently rather than loudly, which is why it survived a full
+ * build and a live data check.
+ */
 function loadInjuries(dataPath: string, year: number): Map<string, string> {
   const raw = readJson(`${dataPath}/mfl-feeds/${year}/injuries.json`);
   const out = new Map<string, string>();
-  for (const i of toArray<any>(raw?.injuries?.injury)) {
-    if (i?.id && i?.status) out.set(i.id, String(i.status));
+  for (const [id, entry] of Object.entries<any>(raw?.injuries ?? {})) {
+    const status = entry?.injuryStatus;
+    if (id && status) out.set(id, String(status));
   }
   return out;
 }
@@ -148,12 +158,17 @@ export function enrichBroadcastPlayers(
 /**
  * Drop players nobody will draft, to keep the serialized payload small.
  *
- * A TV page that ships all 2609 players wastes ~230 KB on names that will
- * never be revealed. Anyone carrying ADP, a consensus rank, or a projection is
- * plausibly draftable in a 9-round league; everyone else is filler. Players
- * already ON the board are always kept regardless — a pick whose player is
- * missing from the pool reveals as a blank card, which is the one outcome
- * worth spending bytes to avoid.
+ * A TV page that ships all 2609 players wastes bytes on names that will never
+ * be revealed. Anyone MFL lists an ADP or a week-1 projection for is plausibly
+ * draftable in a 9-round league; everyone else is filler.
+ *
+ * The `boardPlayerIds` escape hatch below is NOT load-bearing on draft night
+ * and must not be relied on: it is computed from the DEPLOYED board snapshot,
+ * which is empty until picks start landing. So a live pick of someone with
+ * neither an ADP nor a projection would not be in the shipped pool and would
+ * reveal as a blank card — the one outcome worth spending bytes to avoid. That
+ * is why the position filter below is the real guard: every draftable-position
+ * player with a name ships, whether or not any feed ranks him.
  */
 export function trimToDraftable(
   players: BroadcastPlayer[],
@@ -163,8 +178,29 @@ export function trimToDraftable(
     (p) =>
       boardPlayerIds.has(p.id) ||
       p.adpAveragePick !== undefined ||
-      p.projectedPoints !== undefined
+      p.projectedPoints !== undefined ||
+      // The catch-all: a real pick can be a deep flier no feed ranks. On the
+      // 2025 board that was 1 of 108 — rare, but it lands on a 65" screen.
+      // Gated on being ON an NFL roster: without that this also ships every
+      // retired player at a draftable position (Teddy Bridgewater et al) and
+      // the payload nearly doubles for names that cannot be picked.
+      isPlausiblyDraftable(p)
   );
+}
+
+/** Positions the AFL actually drafts. DEF is included: team defenses go late. */
+const DRAFTABLE_POSITIONS = new Set(['QB', 'RB', 'WR', 'TE', 'PK', 'DEF']);
+
+/**
+ * Not on an NFL roster, not draftable. `nflTeam` resolves to the NFL shield
+ * ('NFL') for free agents and retirees via `normalizeTeamCode`'s FA mapping,
+ * which is exactly the population to exclude.
+ */
+function isPlausiblyDraftable(p: BroadcastPlayer): boolean {
+  if (!p.name) return false;
+  if (!DRAFTABLE_POSITIONS.has((p.position || '').toUpperCase())) return false;
+  const team = normalizeTeamCode(p.nflTeam || '');
+  return !!team && team !== 'NFL' && team !== 'FA';
 }
 
 /**

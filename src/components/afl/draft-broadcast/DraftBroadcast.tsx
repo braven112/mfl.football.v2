@@ -77,8 +77,9 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
 
   /**
    * Slots we've already accounted for. Seeded from the SSR board on mount and
-   * NEVER null after that, which is what stops a mid-draft reload from
-   * replaying sixty reveals at a room that already watched them.
+   * NEVER null after that. Note the SSR board is a deployed snapshot, so this
+   * seed alone does not cover picks made since it was cut — see
+   * `absorbedFirstPollRef`.
    */
   const seenRef = useRef<Set<number>>(
     new Set(
@@ -88,8 +89,24 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
     )
   );
   /** Board size as of the LAST poll — drives collectFreshPicks' slot-sync
-   *  guard, which only means anything when the slot array goes 0 → N. */
+   *  guard, which only means anything when the slot array goes 0 → N. The AFL
+   *  publishes all 108 slots before the draft starts, so that guard never
+   *  actually fires here; `absorbedFirstPollRef` below is what protects the
+   *  reload case instead. */
   const slotCountRef = useRef(data.picks.length);
+  /**
+   * The SSR board comes from the DEPLOYED feed snapshot, which the roster cron
+   * refreshes every ~5 minutes. So on a mid-draft reload the first poll returns
+   * every pick made since that snapshot — history the room already watched. In
+   * broadcast mode `maxBurst` is Infinity, so nothing caps it and the TV would
+   * replay minutes of reveals at a room that has moved on. Absorb the first
+   * poll into the seen-set silently; reveal from the second onward.
+   *
+   * Starts TRUE when rehearsing: that path feeds `ingest` directly from a
+   * complete board with no stale snapshot to reconcile, so gating it would
+   * swallow the dry run's very first reveal.
+   */
+  const absorbedFirstPollRef = useRef(rehearsing);
   const errorCountRef = useRef(0);
 
   /** Merge a freshly polled board in, queueing anything new for reveal. */
@@ -99,13 +116,21 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
     // maxBurst = Infinity: on a TV, dropping a burst is the worse failure.
     // A fast round that lands 4 picks inside one poll would otherwise reveal
     // NOTHING, and the room notices a missing pick far more than a late one.
-    // The first-observation and slot-sync guards inside collectFreshPicks
-    // still apply, so this can't storm on load.
+    // Note collectFreshPicks' slot-sync guard does NOT protect us here — the
+    // AFL publishes all 108 slots up front, so the array never goes 0 → N.
+    // `absorbedFirstPollRef` below is what stops a reload storming.
     const fresh = collectFreshPicks(seenRef.current, slotCountRef.current, incoming, Infinity);
     slotCountRef.current = incoming.length;
 
     for (const p of fresh) seenRef.current.add(p.overallPickNumber);
     setPicks(incoming);
+
+    // First poll after load reconciles a stale SSR snapshot against live MFL.
+    // Whatever it turns up already happened; take it as read.
+    if (!absorbedFirstPollRef.current) {
+      absorbedFirstPollRef.current = true;
+      return;
+    }
 
     if (fresh.length > 0) {
       setQueue((q) => [
@@ -187,14 +212,25 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
 
   // ── Advance the reveal queue ──
   const current = queue[0] ?? null;
+  /**
+   * Depth is read through a ref rather than listed as a dependency. Keying the
+   * effect on `queue.length` meant every newly queued pick tore down and
+   * restarted the CURRENT reveal's timer — and with picks arriving faster than
+   * the hold (5s poll against an 18s hold), the board could sit on one player
+   * indefinitely, which is precisely the moment it must not stall.
+   */
+  const queueDepthRef = useRef(queue.length);
+  queueDepthRef.current = queue.length;
+
   useEffect(() => {
     if (!current) return;
     // Stacked picks get a shorter turn so the board catches back up to the room
-    // rather than narrating a round that already finished.
-    const hold = queue.length > RUSH_THRESHOLD ? REVEAL_RUSH_MS : REVEAL_MS;
+    // rather than narrating a round that already finished. Decided ONCE, when
+    // this reveal starts.
+    const hold = queueDepthRef.current > RUSH_THRESHOLD ? REVEAL_RUSH_MS : REVEAL_MS;
     const id = setTimeout(() => setQueue((q) => q.slice(1)), hold);
     return () => clearTimeout(id);
-  }, [current, queue.length]);
+  }, [current]);
 
   // ── Keep the TV awake ──
   // A screen that sleeps between picks is the single most likely way this fails

@@ -87,7 +87,12 @@ export function OnTheClock({
         ) : (
           <>
             {team?.icon ? (
+              /* Keyed by franchise so React remounts it when the clock moves
+                 to another team. Without a key it reuses the same DOM node and
+                 the inline `display:none` from a single 404 would hide the
+                 crest for every team that followed. */
               <img
+                key={team.franchiseId}
                 className="dbc-idle__crest"
                 src={team.icon}
                 alt=""

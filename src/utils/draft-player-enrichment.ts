@@ -45,8 +45,20 @@ interface RspIdMap {
   [name: string]: { mflId?: string };
 }
 
-let rspCache: Map<string, RspPlayer> | null = null;
-const adpCaches: Partial<Record<AdpSource, Map<string, any>>> = {};
+/**
+ * Caches are keyed BY YEAR, not just by source.
+ *
+ * They used to be keyed on the source alone, so the first year loaded in a
+ * process won every later call. That was invisible while every caller asked
+ * for the current year — but the leagues do not share a year. TheLeague rolls
+ * Feb 14 and the AFL rolls June 1, so between those dates the two legitimately
+ * request different seasons through this one cache; and the AFL broadcast
+ * board's `?year=` rehearsal asks for a completed season on purpose. Either
+ * path silently served one league another's ADP, which then drove board ranks
+ * that looked entirely plausible and were a season out.
+ */
+let rspCaches: Map<number, Map<string, RspPlayer>> = new Map();
+const adpCaches = new Map<string, Map<string, any>>();
 
 /**
  * Which MFL ADP feed to join. Dynasty is the default (TheLeague/AFL are
@@ -56,7 +68,8 @@ const adpCaches: Partial<Record<AdpSource, Map<string, any>>> = {};
 export type AdpSource = 'dynasty' | 'redraft';
 
 function loadRsp(leagueYear: number): Map<string, RspPlayer> {
-  if (rspCache) return rspCache;
+  const cached = rspCaches.get(leagueYear);
+  if (cached) return cached;
   const result = new Map<string, RspPlayer>();
   try {
     const idMapPath = join(process.cwd(), 'data/theleague/rsp-player-ids.json');
@@ -81,12 +94,13 @@ function loadRsp(leagueYear: number): Map<string, RspPlayer> {
   } catch {
     // RSP data unavailable — enrichment will be a no-op
   }
-  rspCache = result;
+  rspCaches.set(leagueYear, result);
   return result;
 }
 
 function loadAdp(leagueYear: number, source: AdpSource): Map<string, any> {
-  const cached = adpCaches[source];
+  const key = `${source}:${leagueYear}`;
+  const cached = adpCaches.get(key);
   if (cached) return cached;
   const result = new Map<string, any>();
   try {
@@ -104,7 +118,7 @@ function loadAdp(leagueYear: number, source: AdpSource): Map<string, any> {
   } catch {
     // ADP data unavailable
   }
-  adpCaches[source] = result;
+  adpCaches.set(key, result);
   return result;
 }
 
@@ -158,7 +172,6 @@ export function enrichDraftPlayers(
 }
 
 export function clearEnrichmentCache() {
-  rspCache = null;
-  delete adpCaches.dynasty;
-  delete adpCaches.redraft;
+  rspCaches = new Map();
+  adpCaches.clear();
 }

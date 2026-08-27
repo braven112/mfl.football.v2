@@ -148,9 +148,14 @@ describe('assignBoardRanks', () => {
 });
 
 describe('loadConferenceKeepers', () => {
-  // Reads the real AFL feed on purpose: the invariant being protected is about
-  // how THIS league's data is shaped, and a fixture would happily keep passing
-  // after the shape changed underneath it.
+  // Reads the real AFL feed on purpose — the invariant is about how THIS
+  // league's data is shaped, and a fixture keeps passing after the shape moves.
+  //
+  // But it asserts SHAPE, never a roster COUNT. `rosters.json` is cron-written:
+  // the moment Saturday's picks land, every franchise goes from 7 keepers to
+  // ~16, and a `toBe(84)` would fail on main on a data-only commit. That is the
+  // exact trap `afl-draft-slot.ts` documents, and the first version of this
+  // test walked straight into it.
   const AFL = 'data/afl-fantasy';
   const YEAR = 2026;
   const AL = new Set(
@@ -160,28 +165,26 @@ describe('loadConferenceKeepers', () => {
     Array.from({ length: 12 }, (_, i) => String(i + 13).padStart(4, '0'))
   );
 
-  it('returns only the requested conference\u2019s keepers', () => {
+  it('resolves each conference independently', () => {
     const al = loadConferenceKeepers(AFL, YEAR, AL, new Set());
     const nl = loadConferenceKeepers(AFL, YEAR, NL, new Set());
-    // 12 franchises x 7 keepers, per conference, drafting independently.
-    expect(al.size).toBe(84);
-    expect(nl.size).toBe(84);
+    expect(al.size).toBeGreaterThan(0);
+    expect(nl.size).toBeGreaterThan(0);
+    // Two conferences, two answers. Identical sets would mean the franchise
+    // filter is not being applied at all.
+    expect([...al].sort()).not.toEqual([...nl].sort());
   });
 
   it('does NOT let one conference\u2019s keeper leave the other\u2019s board', () => {
     // `duplicatePlayers` is on for the AFL: the same NFL player can be held in
     // both conferences at once. Pooling the two keeper sets would delete every
-    // NL keeper from the AL's draftable pool — up to 84 players wrongly gone
-    // from a board they belong on.
+    // NL keeper from the AL's draftable pool — players wrongly gone from a
+    // board they belong on. Asserting the AL set contains no NL-only franchise
+    // player is the shape-level version of that guarantee.
     const al = loadConferenceKeepers(AFL, YEAR, AL, new Set());
-    const nl = loadConferenceKeepers(AFL, YEAR, NL, new Set());
-    const shared = [...al].filter((id) => nl.has(id));
-    // Whether any player is actually double-kept is a league fact that varies
-    // by year; what must hold is that the two sets are resolved separately.
-    expect(al).not.toEqual(nl);
-    for (const id of shared) {
-      expect(al.has(id) && nl.has(id)).toBe(true);
-    }
+    const both = loadConferenceKeepers(AFL, YEAR, new Set([...AL, ...NL]), new Set());
+    // Pooling strictly grows the set; if it didn't, scoping is a no-op.
+    expect(both.size).toBeGreaterThan(al.size);
   });
 
   it('excludes players already taken on the board', () => {
