@@ -36,8 +36,16 @@
 import { createHmac } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import { LEAGUES, DEFAULT_LEAGUE_SLUG } from '../src/config/leagues-data.mjs';
 
 const CHROMIUM = '/opt/pw-browsers/chromium';
+
+/** League ids come from the registry, never inline (CLAUDE.md League registry). */
+function leagueBySlug(slug) {
+  const entry = LEAGUES[slug];
+  if (!entry) throw new Error(`Unknown league slug "${slug}" — check src/config/leagues-data.mjs`);
+  return entry;
+}
 
 // ---------------------------------------------------------------- args ----
 
@@ -50,14 +58,15 @@ function parseArgs(argv) {
     allTeams: false,
     out: null,
     compare: null,
-    league: 'theleague',
+    league: DEFAULT_LEAGUE_SLUG,
     franchiseId: '0001',
-    leagueId: '13522',
+    leagueId: null, // resolved from the registry once --league is known
     timeout: 180000,
   };
   for (let i = 2; i < argv.length; i += 1) {
     const a = argv[i];
     if (a === '--url') args.url = argv[++i];
+    else if (a === '--league') args.league = argv[++i];
     else if (a === '--secret') args.secret = argv[++i];
     else if (a === '--seasons') args.seasons = argv[++i].split(',').map((s) => s.trim());
     else if (a === '--teams') args.teams = argv[++i].split(',').map((s) => s.trim());
@@ -66,6 +75,7 @@ function parseArgs(argv) {
     else if (a === '--compare') args.compare = [argv[++i], argv[++i]];
     else if (a === '--timeout') args.timeout = Number(argv[++i]);
   }
+  args.leagueId = args.leagueId ?? leagueBySlug(args.league).id;
   return args;
 }
 
@@ -151,6 +161,47 @@ const CAPTURE_FN = () => {
 
 // ---------------------------------------------------------------- walk ----
 
+/**
+ * Block until the page stops mutating itself.
+ *
+ * Deliberately not `networkidle`: the season prefetch keeps issuing background
+ * requests long after the page is visually settled, so network quiet is both
+ * too late and not guaranteed. What matters is that the rendered output has
+ * stopped changing — so poll a cheap signature of it and require N consecutive
+ * identical reads.
+ */
+async function settle(page, { quietMs = 700, pollMs = 100, timeoutMs = 30000 } = {}) {
+  const signature = () =>
+    page.evaluate(() => {
+      const el = document.querySelector('.roster-page');
+      const body = document.getElementById('rosterTableBody');
+      return [
+        el?.getAttribute('data-rendered-season') ?? '',
+        el?.getAttribute('data-rendered-team') ?? '',
+        document.getElementById('rosterTeamSelect')?.value ?? '',
+        String(body?.querySelectorAll('tr').length ?? 0),
+        (body?.textContent ?? '').length.toString(),
+      ].join('|');
+    });
+
+  const needed = Math.ceil(quietMs / pollMs);
+  const deadline = Date.now() + timeoutMs;
+  let last = null;
+  let stable = 0;
+  while (Date.now() < deadline) {
+    const sig = await signature();
+    if (sig === last) {
+      stable += 1;
+      if (stable >= needed) return;
+    } else {
+      stable = 0;
+      last = sig;
+    }
+    await page.waitForTimeout(pollMs);
+  }
+  process.stderr.write('  ! settle() timed out; capturing anyway\n');
+}
+
 async function capture(args) {
   const { chromium } = await import('playwright');
   const browser = await chromium.launch({ executablePath: CHROMIUM });
@@ -191,6 +242,13 @@ async function capture(args) {
     () => (document.getElementById('rosterTableBody')?.querySelectorAll('tr').length ?? 0) > 0,
     { timeout: args.timeout },
   );
+
+  // The page finishes loading and THEN keeps mutating: hydrateTeamFromSession()
+  // awaits /api/auth/session and re-selects the logged-in owner's team, which
+  // clobbers whatever team is selected in the first moments after load. Walk
+  // the matrix before that lands and the first couple of shots capture a team
+  // the harness didn't ask for. Wait for the page to stop changing on its own.
+  await settle(page);
 
   const cfg = await page.evaluate(() => {
     const raw = document.getElementById('roster-config')?.textContent;
@@ -234,12 +292,22 @@ async function capture(args) {
         },
         [season, team],
       );
-      // updateView() is synchronous today; an on-demand season fetch makes it
-      // async. Wait for the selection to actually be reflected before reading.
+      // Wait for the RENDER to settle, not the input to be set. An uncached
+      // historical season is a fetch, so the picker's value and the table's
+      // contents are no longer the same instant — updateView() stamps
+      // data-rendered-season/team when it finishes, and that is the signal.
+      // Falls back to comparing the inputs on a build that predates the stamp,
+      // so one harness can fingerprint both sides of that change.
       await page.waitForFunction(
-        ([s, t]) =>
-          document.getElementById('rosterSeasonSelect')?.value === s
-          && document.getElementById('rosterTeamSelect')?.value === t,
+        ([s, t]) => {
+          const el = document.querySelector('.roster-page');
+          const rs = el?.getAttribute('data-rendered-season');
+          if (rs !== null && rs !== undefined) {
+            return rs === s && el?.getAttribute('data-rendered-team') === t;
+          }
+          return document.getElementById('rosterSeasonSelect')?.value === s
+            && document.getElementById('rosterTeamSelect')?.value === t;
+        },
         [season, team],
         { timeout: args.timeout },
       );

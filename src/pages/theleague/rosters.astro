@@ -1068,6 +1068,13 @@ const newestDerivedSeason = Math.max(
   ...Object.keys(derivedSeasonPayloads).map(Number).filter(Number.isFinite)
 );
 
+// Seasons built live from the feeds this request — i.e. the ones that are NOT
+// frozen. These are the only seasons inlined into the client config; every
+// other season is served on demand by /api/roster-season/[league]/[year] out of
+// the same derived file. `rostersBySeason` itself stays complete because the
+// server-side render below still reads across seasons.
+const liveSeasonKeys = new Set<string>();
+
 const rostersBySeason = { ...derivedSeasonPayloads };
 Object.entries(rosterModules).forEach(([path, mod]) => {
   const season = extractSeason(path);
@@ -1080,6 +1087,7 @@ Object.entries(rosterModules).forEach(([path, mod]) => {
     getModuleData(mod),
     tradeBaitBySeason[season] ?? new Set()
   );
+  liveSeasonKeys.add(season);
 });
 
 // Salary adjustments are NOT assembled into a separate per-season map any
@@ -1994,8 +2002,20 @@ if (autocutWindowActive && authUser?.franchiseId && teamLookup[authUser.franchis
   };
 }
 
+// Only the live seasons travel inline. `defaultSeason` is always among them
+// (it is a current year by definition), so the first paint never waits on a
+// fetch. Anything in `seasonOptions` but absent from `seasons` is fetched on
+// demand — the client infers that from the two keys rather than being handed a
+// third list that could drift out of sync with them.
+const inlineSeasons = Object.fromEntries(
+  Object.entries(rostersBySeason).filter(([season]) => liveSeasonKeys.has(season))
+);
+
 const serializedConfig = JSON.stringify({
-  seasons: rostersBySeason,
+  seasons: inlineSeasons,
+  // Endpoint template for the on-demand seasons. Built from the registry slug,
+  // never a hardcoded league path (CLAUDE.md League registry).
+  seasonEndpoint: `/api/roster-season/${getLeagueBySlug('theleague')!.slug}`,
   seasonOptions,
   defaultSeason,
   defaultTeamId,
@@ -5326,6 +5346,81 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     document.getElementById('roster-config').textContent
   );
 
+  // ================================================================
+  //  On-demand seasons
+  // ----------------------------------------------------------------
+  // `config.seasons` arrives holding only the live (non-frozen) seasons —
+  // `defaultSeason` is always one of them, so first paint never waits on a
+  // fetch. Every other season in `seasonOptions` is pulled from
+  // `seasonEndpoint` the first time it is asked for and cached in place.
+  //
+  // The invariant that keeps the rest of this file synchronous:
+  // **`currentSeason` is only ever assigned a season already present in
+  // `config.seasons`.** The awaiting happens in the change handler, before the
+  // assignment — so getSeasonData(), updateView() and everything downstream
+  // stay exactly as synchronous as they always were.
+  //
+  // MODULE SCOPE ON PURPOSE. initRosterPage() runs twice on initial load (see
+  // "Initial-Load Double-Init" in docs/claude/insights/domains/frontend.md);
+  // a per-run cache means two in-flight maps and two fetches for the same
+  // season. This is shared data, not per-run UI state, so it lives out here
+  // where both runs see one cache.
+  // ================================================================
+  config.seasons = config.seasons ?? {};
+
+  const isSeasonLoaded = (season) => Boolean(config.seasons[season]);
+
+  /** In-flight fetches, so a double-click and the prefetch share one request. */
+  const seasonFetches = new Map();
+
+  const loadSeason = (season) => {
+    if (isSeasonLoaded(season)) return Promise.resolve(true);
+    if (!config.seasonEndpoint) return Promise.resolve(false);
+    if (seasonFetches.has(season)) return seasonFetches.get(season);
+
+    const inflight = fetch(`${config.seasonEndpoint}/${season}`, {
+      headers: { Accept: 'application/json' },
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body) => {
+        if (!body?.payload) return false;
+        config.seasons[season] = body.payload;
+        return true;
+      })
+      .catch(() => false)
+      .finally(() => seasonFetches.delete(season));
+
+    seasonFetches.set(season, inflight);
+    return inflight;
+  };
+
+  /** Marks the page busy so the UI (and the parity harness) can see a fetch. */
+  const setSeasonLoading = (busy) => {
+    const el = document.querySelector('.roster-page');
+    if (el) el.setAttribute('data-season-loading', busy ? 'true' : 'false');
+  };
+
+  /**
+   * Warm every remaining season once the page is idle. This is what keeps the
+   * season picker feeling instant despite the payload no longer carrying all
+   * 20 seasons: by the time anyone opens it, the fetches are done. Sequential
+   * on purpose — background work must not contend with what the user asked
+   * for. Guarded so the double-init doesn't start two prefetch chains.
+   */
+  let prefetchStarted = false;
+  const prefetchRemainingSeasons = () => {
+    if (prefetchStarted) return;
+    prefetchStarted = true;
+    const pending = (config.seasonOptions ?? []).filter((s) => !isSeasonLoaded(s));
+    if (!pending.length) return;
+    const idle = window.requestIdleCallback ?? ((fn) => setTimeout(fn, 400));
+    const step = (i) => {
+      if (i >= pending.length) return;
+      idle(() => { loadSeason(pending[i]).then(() => step(i + 1)); });
+    };
+    step(0);
+  };
+
   /** Resolve league path — strips /theleague prefix on theleague.us */
   function resolveLeaguePath(path) {
     if (!config.hideLeaguePrefix) return path;
@@ -6312,40 +6407,14 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       return entry || null;
     };
 
-    // Create player name lookup across all seasons for dead money
-    const createPlayerLookup = () => {
-      const lookup = {};
-      Object.values(seasons).forEach(seasonData => {
-        if (seasonData?.teams) {
-          // Players are nested inside teams
-          Object.values(seasonData.teams).forEach(teamData => {
-            const allPlayers = [
-              ...(teamData.players || []),
-              ...(teamData.practiceSquad || []),
-              ...(teamData.injuredReserve || [])
-            ];
-            allPlayers.forEach(player => {
-              if (player.name && player.id) {
-                // Store by "Last, First" format — include espnId and headshot for dead money display
-                lookup[player.name.toLowerCase()] = {
-                  id: player.id,
-                  espnId: player.espnId || null,
-                  headshot: player.headshot || null,
-                };
-              }
-            });
-          });
-        }
-      });
-      return lookup;
-    };
-
-    const playerLookup = createPlayerLookup();
-
-    const findPlayerData = (playerName) => {
-      if (!playerName) return null;
-      return playerLookup[playerName.toLowerCase()] || null;
-    };
+    // NOTE: a `createPlayerLookup()` used to run here, walking every team of
+    // every season (320 team-seasons) on init to build a 2,027-entry name map
+    // "for dead money". Nothing consumed it: its only reader was
+    // findPlayerData(), and findPlayerData() had no callers — renderDeadMoney()
+    // resolves identity from the build-time enriched fields on each adjustment
+    // (adj.playerId / adj.espnId / adj.headshot) instead. Removing it deleted
+    // the last client-side dependency on having every season in memory, which
+    // is what allows historical seasons to be fetched on demand.
 
     const seasonSelect = document.getElementById('rosterSeasonSelect');
     const teamSelect = document.getElementById('rosterTeamSelect');
@@ -6400,6 +6469,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     let currentSeason = defaultSeason;
     let currentTeam = defaultTeamId;
     const hiddenColumns = new Set();
+
+
     let latestViewVersion = 0;
     let lastViewContext = null;
     let secondaryWarmHandle = null;
@@ -11836,6 +11907,17 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       };
       ensureSecondaryViewReady(currentView);
       scheduleSecondaryWarmup();
+
+      // What this render actually settled on. Season switching is async now
+      // (an uncached historical season is a fetch), so "the picker says 2013"
+      // and "the table shows 2013" are no longer the same instant. Anything
+      // waiting on a completed render — the parity harness, chiefly — reads
+      // these rather than the inputs.
+      const pageEl = document.querySelector('.roster-page');
+      if (pageEl) {
+        pageEl.setAttribute('data-rendered-season', String(currentSeason));
+        pageEl.setAttribute('data-rendered-team', String(currentTeam));
+      }
     };
 
     columnToggles.forEach((toggle) => {
@@ -11851,8 +11933,30 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       });
     });
 
-    seasonSelect?.addEventListener('change', (event) => {
-      currentSeason = event.target.value;
+    seasonSelect?.addEventListener('change', async (event) => {
+      const season = event.target.value;
+
+      // Fast path: already inline or already prefetched — indistinguishable
+      // from the old synchronous behavior, re-selecting the current season
+      // included (which re-rendered before and must still re-render now).
+      if (isSeasonLoaded(season)) {
+        currentSeason = season;
+        updateView();
+        return;
+      }
+
+      setSeasonLoading(true);
+      const ok = await loadSeason(season);
+      setSeasonLoading(false);
+
+      if (!ok) {
+        // Leave the view on the season we still have rather than rendering an
+        // empty roster that looks like a franchise with no players. Put the
+        // picker back so the UI does not claim a season it isn't showing.
+        if (seasonSelect) seasonSelect.value = currentSeason;
+        return;
+      }
+      currentSeason = season;
       updateView();
     });
 
@@ -11924,6 +12028,11 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     }
     updateView();
     hydrateTeamFromSession();
+
+    // First paint is done and used only inline seasons; pull the rest in the
+    // background so the season picker stays instant despite them not shipping
+    // with the page.
+    prefetchRemainingSeasons();
 
     // Attach delegated modal trigger after table is rendered
     const rosterTbody = document.getElementById('rosterTableBody');
