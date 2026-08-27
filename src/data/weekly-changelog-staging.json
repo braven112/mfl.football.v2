@@ -4,6 +4,14 @@
     {
       "date": "2026-08-27",
       "type": "bug-fix",
+      "summary": "Two more AFL blanks get filled. Reckless, who ran the franchise now known as Swiftie 4 Life in 2005 and 2006, is Kevin Smith — the 7-8 season and the 10-5 playoff year underneath it finally belong to a person. And Whitman's Wonders, two years on the Da Dangsters slot in 2011 and 2012, is Adam Inman. Six AFL owners are still headed by a team name instead of a person.",
+      "impact": "user",
+      "area": "owners",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-27",
+      "type": "bug-fix",
       "summary": "Clicking the little yellow 🏷️ trade-block tag next to a player on Roster/Salary threw up a full-width red error box. The Trade Builder decided which two teams to open with by reading the web address in the browser, but the server had already picked a different pair when it built the page — the two disagreed, and React complained loudly on the way through. The tag now opens the Trade Builder straight onto the tagged player's team, no red box. The same box had also started appearing on unrelated pages: the roster page's error catcher was staying switched on after you navigated away, so it reported other pages' problems as if they were the roster's. It now switches off when you leave.",
       "impact": "user",
       "area": "trade-builder",

@@ -1,5 +1,76 @@
 # Franchise History Pages — Insights
 
+## 2026-08-27 - Naming an anonymous owner touches ONE field; the slug rename is a different, riskier edit
+
+**Context:** Brandon named the AFL's Reckless (own-0097, slot 0016, 2005-2006)
+as Kevin Smith — the ninth of the seeded-anonymous entries to get a name, and
+the smallest possible version of this edit. It still had two forks in it that
+the registry's own precedent answers inconsistently.
+
+**Insight:** two fields look like they should move with a new `displayName`,
+and neither should.
+
+- **`slug` stays frozen.** `docs/plans/owners-feature.md` is explicit — the
+  slug is seeded as `kebab(dominantIdentity)-firstYear` and frozen; a nicer URL
+  later is a *separate, deliberate* edit that must push the old slug into
+  `previousSlugs` so `resolveOwnerDetail` keeps redirecting. The registry reads
+  as if renaming is the convention (own-0045 `a-bruin-pegs-me-2007` →
+  `ross-lawrence`, own-0060 → `shawn-klezovich`), but both of those are CURRENT
+  cross-league owners whose pages get linked by name. The closest analog to a
+  former AFL-only owner is own-0099 Mark Fowler, who kept `the-bandwagon-2005`.
+  Match Fowler, not Lawrence — a slug rename on a published former-owner page
+  buys nothing and costs a redirect you have to remember to add.
+- **`seededFrom` is not re-stamped.** It records where the *entry* came from,
+  not where the *name* came from. own-0045 and own-0060 are named humans still
+  carrying `inferred:identity-split@2026-08-24`, which is correct and is what
+  `tests/owners-registry.test.ts` documents ("a human naming a seeded person is
+  fine and expected"). own-0099's `human:brandon@` stamp is the odd one out.
+  The plan doc settles it in four words: *add a name later — nothing else
+  changes*.
+
+**What the edit actually is:** set `displayName`, then run BOTH computes —
+`compute-owner-tenures.mjs` and `compute-division-strength.mjs` — and commit
+every derived file they touch. The tenures diff should be exactly two lines per
+owner, `displayName` and `title`, with `dominantName` unchanged: the person's
+name headlines the page while the team identity keeps supplying the crest and
+the era art. A third changed line in THAT file means something else moved.
+
+**`owner-tenures.json` is not the only derived file carrying the name.**
+`compute-division-strength.mjs` copies `owner.title` onto every owner row it
+writes — six rows for one owner here — so naming someone in the registry and
+regenerating only the tenures leaves `division-strength.json` holding the old
+value.
+
+**Be precise about what that does and does not break, because the obvious
+story is wrong.** It is NOT a visible mislabel. Per the `title` entry below,
+Strength of Division deliberately labels by team, and
+`DivisionStrengthPage.astro` resolves a row as
+`latestNameMedium ?? latestName ?? title ?? slug` — `title` is the third
+fallback and `latestName` is always populated, so a stale `title` renders
+nowhere. Verified on the PR preview: the AFL division page shows "Reckless"
+13 times and "Kevin Smith" zero times, which is the CORRECT output both
+before and after the fix.
+
+What it actually is, is artifact drift: a committed build artifact that no
+longer matches its own generator. That still has to be fixed, because the next
+person to run the compute for an unrelated reason picks up somebody else's
+six-line diff and has to work out whether it was deliberate. Regenerate both,
+commit both, and the diff always belongs to whoever caused it. Note that
+`tests/division-strength-data.test.ts` passes with the file stale — nothing
+guards derived-vs-generator, so this class is invisible until someone
+regenerates.
+
+The same chain has to hold anywhere a name can land. `fetch-owner-names.yml`
+recomputed only the tenures and listed only those paths in `add-paths`, so the
+bot could commit a name and leave division strength drifted on its own
+schedule; it now runs both computes and commits all four derived files.
+
+**Still anonymous (AFL, 6 left):** `chieftans-2003`, `italian-stalions-2003`,
+`the-vandalizers-2003` (also held 0004 in 2004), `red-dawn-2004`,
+`the-a-team-2004`, `habanero-s-2005`. (`reckless-2005` → Kevin Smith and
+`whitman-s-wonders-2011` → Adam Inman were named in this PR; the count moves
+every time one lands, so re-derive it rather than trusting this line.)
+
 ## 2026-08-25 - Slot-change inference splits ONE owner into two, and a name is what makes it visible
 
 **Context:** `/owners` shipped with 85 tenures MFL had no name for. Filling
