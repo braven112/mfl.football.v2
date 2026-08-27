@@ -10,8 +10,16 @@ Two related rules, both from commissioner rulings in August 2026.
 
 **1. Never re-sort MFL's standings rows.** MFL's `leagueStandings` export
 returns rows in the league's OFFICIAL final order, with each league's
-constitution tiebreaker chain already applied — including head-to-head, which
-we cannot reproduce (the feed's `h2h*` columns only echo the overall record).
+constitution tiebreaker chain already applied. Some of that chain we cannot
+reproduce (Power Rank, Victory Points), and the wild-card rule appears to have
+changed mid-history — see rule 4.
+
+> Corrected 2026-08-26: this rule used to justify itself with "including
+> head-to-head, which we cannot reproduce (the feed's `h2h*` columns only echo
+> the overall record)". The columns do only echo the overall record, but
+> `schedule.json` carries every regular-season game, so h2h IS computable — and
+> computing it reproduces all 18 of TheLeague's tied division titles with zero
+> contradictions. The rule stands; that particular reason for it did not.
 The first row of each division IS that division's winner. Every standings,
 playoffs and homepage surface in BOTH leagues passes
 `{ preserveFeedOrder: true }` to `src/utils/standings.ts`; the awards scripts
@@ -80,6 +88,28 @@ erased TheLeague's entire 2022 season (`domains/mfl-api.md`), and owner-scoped
 attribution drops awards won under a slot's previous owner — which reads
 exactly like "defunct franchise" and leads to the wrong fix
 (`features/franchise-history.md`).
+
+**4. Standings order is NOT playoff seed order.** Rule 1 makes the feed
+authoritative for *division winners* — that holds, 76 of 76 division-seasons.
+It does not extend to seeds. Whenever teams tie on overall record the display
+order and the actual bracket disagree, in both directions: the first-round bye
+went to feed row 2 in 2008 and 2010, and the last championship slot went to row
+8 over row 7 in 2018, 2019 and 2024. The constitution's chains do not close the
+gap either — Wild Card ties break on All Play first, which is right for
+2018/2019/2024 and wrong for 2007 and 2016 (2016 seated the team with both the
+worse all-play and the worse points), consistent with the rule having changed
+somewhere between 2016 and 2018. A faithful implementation of both chains
+reaches 17/19 fields and 18/19 byes; nothing reaches 19/19.
+
+So for any COMPLETED season, take the seed from the games —
+`scripts/compute-playoff-performance.mjs` walks the championship bracket and the
+#1 seed is the bye team, which is structural and cannot be tied. Derive seeds
+only for the in-progress season. `src/utils/standings.ts` still derives them for
+that live path and has two known bugs there: division winners are sorted on Most
+Points Allowed (step 7 of the chain used as step 1) on a `pa` column that does
+not exist before 2025 and evaluates to `NaN`, and wild cards are sorted with no
+tiebreaker at all. Full evidence in
+`docs/claude/insights/features/playoff-performance.md`.
 
 
 ## AFL playoff brackets — reconstructed games, and ids that lie
