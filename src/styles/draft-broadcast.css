@@ -166,6 +166,12 @@
 /* Site-standard ghost wordmark + crest watermark, at broadcast scale. */
 .dbc-reveal__ghost {
   position: absolute;
+  /* Stays bottom-LEFT while the cutout moves right, which is the point: the
+     player's body used to cover this numeral, so it barely read on the TV.
+     It shares the left half with the copy rather than sitting on empty space,
+     which is why the alpha stays at 0.07 and the text renders over it — if it
+     ever starts fighting the copy, drop the alpha further, do not move it back
+     under the player. */
   left: 2vw;
   bottom: -2.5vh;
   font-size: 28vh;
@@ -180,17 +186,20 @@
 /* With the banner gone this crest is the only franchise ARTWORK on the reveal,
    so it carries more weight than the site-standard 0.16 watermark — it has to
    answer "who drafted him" on its own, from across a room.
-   It sits behind the PLAYER, on the left. Centered behind the copy (where it
-   started) it put a detailed shield under every stat line and the text became
+   It sits behind the PLAYER, who is on the RIGHT since the layout mirrored.
+   Centered behind the copy (where it started, and again briefly when the halves
+   swapped) it put a detailed shield under every stat line and the text became
    the hardest thing on the card to read — the exact failure the banner was cut
    for. Artwork goes behind artwork; type gets clean gradient. */
 .dbc-reveal__crest {
   position: absolute;
-  left: 8%;
-  top: 44%;
+  /* Sits with the player rather than dead centre — right of middle and low, so
+     it reads as his backdrop while still clearing the copy on the left. */
+  left: 58%;
+  top: 64%;
   transform: translate(-50%, -50%);
-  width: 52vh;
-  height: 52vh;
+  width: 68vh;
+  height: 68vh;
   object-fit: contain;
   opacity: 0.26;
   filter: drop-shadow(0 1vh 3vh rgba(0, 0, 0, 0.45));
@@ -208,6 +217,18 @@
   padding: 0 4vw;
 }
 
+/* Copy left, cutout right. Done with `order` rather than by reordering the
+   DOM so a screen reader still reaches the pick and the player's name before
+   the purely decorative cutout. The portrait breakpoint re-pins these, since
+   it is a single column where `order` decides the STACK, not the sides. */
+.dbc-reveal__text {
+  order: 1;
+}
+
+.dbc-reveal__figure {
+  order: 2;
+}
+
 /* The figure keeps spanning the full height even though the body now centers
    its items — the cutout has to reach the bottom edge to bleed off it, which
    is the site-wide composite convention. */
@@ -219,6 +240,11 @@
   align-items: flex-end;
   justify-content: center;
   overflow: hidden;
+  /* Pushed toward the outer edge. The clip box travels with it, so the cutout
+     itself is not sliced — it just sits further right, and the card's own
+     overflow decides where he bleeds off. Re-zeroed in portrait, where the
+     figure is a full-width row and shifting it would just crop him. */
+  transform: translateX(29%);
 }
 
 /* The cutout bleeds off the bottom edge — the composite convention across the
@@ -660,17 +686,14 @@
     padding: 0 4vw;
   }
 
-  /* DOM order is figure-then-text; `order` flips them without moving the
-     cutout ahead of the copy for a screen reader. */
+  /* Sides come from the base layer now — only the fit differs here. */
   .dbc-reveal__text {
-    order: 1;
     align-self: center;
     padding: 2vh 0;
     max-height: 100%;
   }
 
   .dbc-reveal__figure {
-    order: 2;
     align-self: stretch;
   }
 
@@ -681,15 +704,15 @@
     max-height: 100%;
   }
 
-  /* The crest follows the player to the right — it is his backdrop, and left
-     behind on the far side it would sit under the copy again. */
+  /* Centred, same as the TV — pinned right it would ride under the cutout and
+     this breakpoint would disagree with every other one. */
   .dbc-reveal__crest {
-    left: auto;
-    right: 4%;
+    left: 50%;
+    right: auto;
     top: 50%;
-    transform: translate(50%, -50%);
-    width: 76vh;
-    height: 76vh;
+    transform: translate(-50%, -50%);
+    width: 91vh;
+    height: 91vh;
     opacity: 0.2;
   }
 
@@ -743,6 +766,18 @@
     padding: 3vh 6vw 3vh;
   }
 
+  /* Re-pinned, because this is a single column: here `order` decides the STACK
+     rather than left-vs-right, and inheriting the base swap would stand the
+     phone layout on its head — copy on top, player below it. */
+  .dbc-reveal__figure {
+    order: 1;
+    transform: none;
+  }
+
+  .dbc-reveal__text {
+    order: 2;
+  }
+
   .dbc-reveal__figure {
     align-self: stretch;
     min-height: 0;
@@ -784,9 +819,17 @@
   /* The crest is scenery on a phone — at 58vh it swallowed the whole screen
      and read as the subject instead of the backdrop. */
   .dbc-reveal__crest {
-    width: 34vh;
-    height: 34vh;
+    width: 41vh;
+    height: 41vh;
+    /* `left` and `top` re-pinned, not just `right`: the base layer sets
+       left: 58%/top: 64% for the TV, and with a width set `left` wins over
+       `right` outright — so this block's `right` was inert and the phone crest
+       had silently moved on top of the stacked copy. Anchored off the right
+       edge again, as scenery behind the player. */
+    left: auto;
     right: -8vw;
+    top: 42%;
+    transform: translateY(-50%);
     opacity: 0.18;
   }
 

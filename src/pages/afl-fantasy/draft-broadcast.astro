@@ -110,7 +110,13 @@ const teams: DraftRoomTeam[] = conferenceTeams.map((t: any) => ({
   nameMedium: t.nameMedium || t.name,
   nameShort: t.nameShort || t.name,
   abbrev: t.abbrev || '',
-  icon: t.icon || '',
+  // Prefer the GroupMe art: `icon` is 100x100 for all 24 franchises, but the
+  // crest renders at ~52vh (~560px on a 1080p TV), so the stock icon is
+  // upscaled more than 5x and visibly pixelates on the big screen. The GroupMe
+  // files are 400x400. Dark first, because this card's background is now always
+  // dark (see toBroadcastColor). Falls back to `icon` per franchise, so the
+  // board stays correct while the remaining uploads trickle in.
+  icon: t.groupMeDark || t.groupMe || t.icon || '',
   colorPrimary: t.colorPrimary,
   colorSecondary: t.colorSecondary,
 }));

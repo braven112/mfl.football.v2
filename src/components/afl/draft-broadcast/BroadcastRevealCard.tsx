@@ -28,6 +28,7 @@ import type { BroadcastPlayer } from '../../../types/draft-broadcast';
 import { isSplashCutoutEligible, resolveSplashColors } from '../../../utils/pick-reveal';
 import {
   bestAvailableAt,
+  toBroadcastPair,
   formatBestAvailable,
   positionRunCount,
 } from '../../../utils/draft-broadcast';
@@ -76,7 +77,14 @@ export function BroadcastRevealCard({
     e.currentTarget.style.display = 'none';
   }, []);
 
-  const colors = resolveSplashColors(team, player);
+  // Franchise brand first (resolveSplashColors), then floored for legibility.
+  // Nine of 24 AFL franchises have a gradient stop white text cannot be read
+  // against — six of them a near-white #e9e9e9. Applied HERE rather than inside
+  // resolveSplashColors because that helper is shared with TheLeague's draft
+  // room, whose splash is a 3.6s overlay on a laptop, not a TV read from ten
+  // feet; this is the broadcast screen's requirement, not a global one.
+  const brand = resolveSplashColors(team, player);
+  const colors = toBroadcastPair(brand.primary, brand.secondary);
   const label = pickLabel(pick);
 
   // Where he stood among what was actually left on the board. A fact, not a
