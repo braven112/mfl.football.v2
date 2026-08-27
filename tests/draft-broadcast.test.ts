@@ -549,3 +549,41 @@ describe('toBroadcastPair', () => {
     }
   });
 });
+
+
+describe('idle screen and reveal card share one colour treatment', () => {
+  // The idle board is on screen between every pick and hands straight off to a
+  // reveal. It used to paint RAW brand colours while the reveal painted treated
+  // ones, so a light franchise flashed washed-out, then deep and saturated a
+  // second later. Both call toBroadcastPair now; this pins that neither can
+  // quietly go back to reading colorPrimary/colorSecondary directly.
+  const read = (f: string) => readFileSync(`src/components/afl/draft-broadcast/${f}`, 'utf-8');
+
+  /** Source with comments removed — the first version of this guard matched
+   *  `toBroadcastPair` in the explanatory comment sitting directly above the
+   *  call, so deleting the call itself kept the suite green. */
+  const code = (f: string) =>
+    read(f)
+      .replace(/\/\*[\s\S]*?\*\//g, ' ')
+      .replace(/^\s*\/\/.*$/gm, ' ');
+
+  it('both components CALL toBroadcastPair, not merely mention it', () => {
+    for (const f of ['OnTheClock.tsx', 'BroadcastRevealCard.tsx']) {
+      expect(code(f), `${f} must call toBroadcastPair(...)`).toMatch(
+        /toBroadcastPair\s*\(/
+      );
+    }
+  });
+
+  it('neither component reads a raw brand colour for its background', () => {
+    // The original bug was a local `const primary = team?.colorPrimary || …`
+    // feeding the CSS variable, which a rule keyed on the variable name alone
+    // would not have caught. Ban the raw property read outright instead.
+    for (const f of ['OnTheClock.tsx', 'BroadcastRevealCard.tsx']) {
+      expect(
+        /team[?.]*\.color(Primary|Secondary)/.test(code(f)),
+        `${f} reads team.color* directly — go through resolveSplashColors + toBroadcastPair`
+      ).toBe(false);
+    }
+  });
+});
