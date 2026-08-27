@@ -22,6 +22,7 @@ import {
   buildCompositePlayerList,
   mergeWithOverrides,
 } from '../../../utils/custom-rankings-seeding';
+import { syncBuiltinImports, initFromServer } from '../../../utils/rankings-storage';
 import {
   loadCustomRankings,
   saveCustomRankings,
@@ -56,6 +57,19 @@ interface Props {
    * feeds the other league's board.
    */
   importRankingsHref?: string;
+  /**
+   * Build-time snapshot of the built-in ranking sources, as JSON.
+   *
+   * The board reconciles it on mount for the same reason Import Rankings
+   * does — but here it is load-bearing rather than a convenience: it is the
+   * only thing that gives a first-time owner a board to push. Before this,
+   * `syncBuiltinImports` ran on the Import Rankings page and nowhere else, so
+   * an owner who came straight here had no composite, an empty board, and no
+   * way to build a draft list at all.
+   */
+  builtinSnapshotJson?: string | null;
+  /** Built-in source ids this league ticks on by default (registry-driven). */
+  defaultSourceIds?: string[];
 }
 
 // ESPN headshots are preferred; getPlayerImageUrl() (roster-constants.ts)
@@ -74,6 +88,8 @@ export default function CustomRankingsPage({
   franchiseId,
   vorpMapJson,
   importRankingsHref = '/theleague/import-rankings',
+  builtinSnapshotJson = null,
+  defaultSourceIds = [],
 }: Props) {
   const mflPlayers: MFLPlayerWithEspn[] = useMemo(
     () => JSON.parse(mflPlayersJson),
@@ -114,6 +130,26 @@ export default function CustomRankingsPage({
   // --- Load data on mount ---
   useEffect(() => {
     async function initialize() {
+      // 0. Reconcile the built-in ranking sources into this browser's store,
+      //    then pull the owner's own imports from the server. Both are no-ops
+      //    when nothing changed. This has to happen BEFORE the composite is
+      //    read or a first-time owner gets `isEmpty` and a dead end.
+      try {
+        const snapshot = builtinSnapshotJson ? JSON.parse(builtinSnapshotJson) : null;
+        const meta = new Map(
+          mflPlayers.map((p) => [p.id, { name: p.name, position: p.position, team: p.team }]),
+        );
+        syncBuiltinImports(snapshot, defaultSourceIds, meta);
+      } catch {
+        // A bad snapshot must not take the board down — the owner may still
+        // have their own imports, or a list on MFL to pull.
+      }
+      try {
+        await initFromServer();
+      } catch {
+        /* server sync is best-effort; localStorage still stands */
+      }
+
       // 1. Build composite from localStorage
       const composite = buildCompositePlayerList();
       if (!composite) {

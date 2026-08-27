@@ -110,7 +110,14 @@ export default function DraftListSync({ rankings, resolveName, onPulled }: Props
     if (busy) return;
 
     if (rankings.length === 0) {
-      say('Your board is empty — there is nothing to push.', true);
+      // Should be unreachable now that the board seeds its own built-in
+      // ranking sources, but say something actionable rather than something
+      // terminal if it ever is reached again.
+      say(
+        'Your board is empty, so there is nothing to push. Pull your list from MFL, ' +
+          'or set up Import Rankings to build one.',
+        true,
+      );
       return;
     }
 

@@ -20,6 +20,7 @@ import { getLeagueYearForSlug } from '../../../utils/league-year';
 import { getPlayerMap } from '../../../utils/player-map';
 import { getLeagueContext } from '../../../utils/league-context';
 import { getLeagueBySlug, ensureLeaguePrefix } from '../../../config/leagues';
+import { defaultRankingSourcesFor } from '../../../config/leagues-data.mjs';
 import '../../../styles/player-cell.css';
 import '../../../styles/custom-rankings.css';
 import { parseNumber } from '../../../utils/formatters';
@@ -163,6 +164,23 @@ for (const franchise of (rostersData?.rosters?.franchise ?? [])) {
 }
 const pointsPerDollar = calculatePointsPerDollar(projectedScores, rosteredPlayers);
 
+// ---------------------------------------------------------------------------
+// Built-in ranking sources (data/ranking-sources/<year>.json)
+// ---------------------------------------------------------------------------
+// Read on the SERVER and handed to the island, mirroring ImportRankingsPage.
+// The board needs these because it can no longer assume the owner has already
+// visited Import Rankings: syncBuiltinImports was called from that page and
+// nowhere else, so a browser that never opened it had no composite — and the
+// board, whose only seeds were the composite and MFL, had nothing to show and
+// nothing to push. That was a dead end for exactly the owner this page is for:
+// one with no MFL draft list yet who wants to build their first.
+const rankingSourceFiles = import.meta.glob(
+  '../../../../data/ranking-sources/*.json',
+  { eager: true },
+);
+const builtinSnapshot =
+  getModuleData(rankingSourceFiles[`../../../../data/ranking-sources/${leagueYearStr}.json`]) ?? null;
+
 // Calculate VORP for all players
 const vorpResults = calculateAllVORP(projectedScores, playerPositionMap, pointsPerDollar);
 const vorpMap: Record<string, { vorpPoints: number; vorpDollar: number }> = {};
@@ -178,5 +196,7 @@ for (const [id, result] of vorpResults) {
     franchiseId={user.franchiseId}
     vorpMapJson={JSON.stringify(vorpMap)}
     importRankingsHref={ensureLeaguePrefix(league, '/import-rankings')}
+    builtinSnapshotJson={JSON.stringify(builtinSnapshot)}
+    defaultSourceIds={defaultRankingSourcesFor(leagueSlug)}
   />
 </TheLeagueLayout>
