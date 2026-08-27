@@ -596,13 +596,101 @@
 /* Narrow screens: the reveal stacks so the name never collides with the
    cutout. Not the target device, but the page must not be broken on a phone
    when someone checks the board from the couch. */
+/* ── Short landscape: a phone turned sideways ────────────────────────────────
+   Wide but only ~400px tall. The portrait stack is exactly wrong here — it
+   splits 400px of height between a player and a text block and starves both,
+   which is what the width-only `max-width: 900px` breakpoint used to do to
+   this case. Orientation is the signal that matters, not width.
+
+   Side by side, and the player takes the RIGHT half: on a short screen the
+   copy stack (kicker, name, meta, value, ADP) is the tall element and wants
+   the reading edge, so the eye lands on the words first and the player closes
+   the card. That mirrors the TV layout deliberately — the constraint here is
+   height, not width, and it wants the opposite arrangement. */
+@media (orientation: landscape) and (max-height: 560px) {
+  .dbc-reveal__body {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    align-items: center;
+    gap: 2vw;
+    padding: 0 4vw;
+  }
+
+  /* DOM order is figure-then-text; `order` flips them without moving the
+     cutout ahead of the copy for a screen reader. */
+  .dbc-reveal__text {
+    order: 1;
+    align-self: center;
+    padding: 2vh 0;
+    max-height: 100%;
+  }
+
+  .dbc-reveal__figure {
+    order: 2;
+    align-self: stretch;
+  }
+
+  .dbc-reveal__model {
+    width: 100%;
+    height: auto;
+    max-width: 100%;
+    max-height: 100%;
+  }
+
+  /* The crest follows the player to the right — it is his backdrop, and left
+     behind on the far side it would sit under the copy again. */
+  .dbc-reveal__crest {
+    left: auto;
+    right: 4%;
+    top: 50%;
+    transform: translate(50%, -50%);
+    width: 76vh;
+    height: 76vh;
+    opacity: 0.2;
+  }
+
+  /* Type scales off the short axis so nothing overruns 400px of height. */
+  .dbc-reveal__player {
+    font-size: clamp(1.6rem, 11vh, 3.4rem);
+  }
+
+  .dbc-reveal__kicker {
+    font-size: clamp(0.7rem, 3.6vh, 1.1rem);
+  }
+
+  .dbc-reveal__meta {
+    font-size: clamp(0.75rem, 4.4vh, 1.2rem);
+    gap: 0.6em;
+  }
+
+  .dbc-reveal__value {
+    font-size: clamp(0.8rem, 4.6vh, 1.3rem);
+  }
+
+  .dbc-reveal__stats {
+    gap: 1.6vw;
+  }
+
+  .dbc-reveal__stat dd {
+    font-size: clamp(1rem, 6vh, 1.8rem);
+  }
+
+  .dbc-reveal__ghost {
+    font-size: 40vh;
+  }
+
+  .dbc-idle__rails {
+    gap: 2vw;
+  }
+}
+
 /* Narrow / portrait screens — a phone, or a TV somebody turned sideways.
    The two-column reveal collapses to a stack: player ON TOP, text under him.
    An earlier version hid `.dbc-reveal__figure` outright to stop the cutout
    colliding with the name once the columns merged. That "fixed" the collision
    by deleting the subject of the card — the whole page exists to show the
    player, so on a phone it showed a gradient and a name and nothing else. */
-@media (max-width: 900px) {
+@media (max-width: 900px) and (orientation: portrait) {
   .dbc-reveal__body {
     grid-template-columns: 1fr;
     grid-template-rows: minmax(0, 1fr) auto;
