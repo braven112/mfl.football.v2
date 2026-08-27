@@ -90,6 +90,9 @@ describe('playoff-performance derived data', () => {
         expect(team.franchiseId, `${s.year} ${slot} id`).toMatch(/^\d{4}$/);
         expect(team.name?.trim(), `${s.year} ${slot} name`).toBeTruthy();
         expect(team.name, `${s.year} ${slot} name is not an id`).not.toBe(team.franchiseId);
+        // MFL stores franchise 0016 as " Running Down The Dream", leading
+        // space and all — untrimmed it renders as a misaligned table cell.
+        expect(team.name, `${s.year} ${slot} name is trimmed`).toBe(team.name.trim());
       }
     }
   });

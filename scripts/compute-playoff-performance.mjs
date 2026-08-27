@@ -330,7 +330,12 @@ for (const year of seasonYears()) {
   }
   const [allPlayLeaderId, allPlayLeader] = ranked[0];
 
-  const names = new Map(arr(leagueFeed.franchises?.franchise).map((f) => [f.id, f.name]));
+  // Trim: MFL stores at least one franchise name with a leading space
+  // (`0016` is " Running Down The Dream" in both the 2015 and 2020 feeds),
+  // which renders as a visibly misaligned cell in the season table.
+  const names = new Map(
+    arr(leagueFeed.franchises?.franchise).map((f) => [f.id, String(f.name ?? '').trim()])
+  );
   const records = new Map(standingsRows.map((r) => [r.id, fmtRecord(parseRecord(r))]));
   const team = (id) => ({
     franchiseId: id,
