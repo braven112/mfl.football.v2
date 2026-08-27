@@ -248,8 +248,10 @@
      with a hard vertical line — the same failure the portrait rule documents.
      The card itself still clips, so he bleeds off the screen edge as intended. */
   overflow: visible;
-  /* Pushed toward the outer edge. Re-zeroed in portrait, where the figure is a
-     full-width row and shifting it would just crop him. */
+  /* Pushed toward the outer edge. The card's overflow, not this figure's,
+     decides where he bleeds off now — see `overflow: visible` above. Re-zeroed
+     in portrait, where the figure is a full-width row and shifting it would
+     just crop him. */
   transform: translateX(29%);
 }
 
@@ -260,8 +262,12 @@
    of his own column. Width fills the column and the overflow clips at the
    bottom, which is what makes him read as life-size across a room. */
 .dbc-reveal__model {
-  /* Wider than its column on purpose — see the figure's justify-content. */
+  /* Wider than its column on purpose — see the figure's justify-content.
+     flex-shrink: 0 because this IS a flex item and the width deliberately
+     overflows its container: left to shrink, the browser is free to pull it
+     back toward the column and quietly undo the overlap. */
   width: 120%;
+  flex-shrink: 0;
   height: auto;
   max-width: none;
   max-height: none;
@@ -708,6 +714,7 @@
     /* max-width must stay `none` here: capping at 100% silently clamps the
        120% back to the column and the player stops overlapping the crest. */
     width: 120%;
+    flex-shrink: 0;
     height: auto;
     max-width: none;
     max-height: 100%;

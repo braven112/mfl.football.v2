@@ -11,6 +11,7 @@ import { useCallback, useMemo } from 'react';
 import type { DraftRoomPick, DraftRoomTeam } from '../../../types/draft-room';
 import type { BroadcastConference, BroadcastPlayer } from '../../../types/draft-broadcast';
 import { recentPicks, toBroadcastPair, upcomingPicks } from '../../../utils/draft-broadcast';
+import { resolveSplashColors } from '../../../utils/pick-reveal';
 
 interface Props {
   conference: BroadcastConference;
@@ -102,10 +103,15 @@ export function OnTheClock({
   // franchise whose brand is light showed a washed-out card here and a deep,
   // saturated one a second later. toBroadcastPair saturates for the TV, floors
   // white-text contrast, and keeps a greyscale stop in the franchise's hue.
-  const { primary, secondary } = toBroadcastPair(
-    team?.colorPrimary || '#1c497c',
-    team?.colorSecondary || '#0e2440'
-  );
+  // resolveSplashColors FIRST, then the same treatment — the reveal card resolves
+  // its pair exactly this way. Hand-rolling the fallbacks here instead left the
+  // two screens able to disagree: this one fell back to navy for a missing
+  // secondary while the reveal falls back to the franchise's own primary, so a
+  // franchise defining only one colour would have flipped between them. No AFL
+  // franchise does today; going through the shared resolver makes that
+  // unreachable by construction rather than by luck.
+  const brand = resolveSplashColors(team);
+  const { primary, secondary } = toBroadcastPair(brand.primary, brand.secondary);
 
   return (
     <div

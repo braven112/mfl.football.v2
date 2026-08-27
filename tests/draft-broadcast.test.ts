@@ -559,17 +559,30 @@ describe('idle screen and reveal card share one colour treatment', () => {
   // quietly go back to reading colorPrimary/colorSecondary directly.
   const read = (f: string) => readFileSync(`src/components/afl/draft-broadcast/${f}`, 'utf-8');
 
-  it('neither component paints a raw brand colour into a CSS variable', () => {
+  /** Source with comments removed — the first version of this guard matched
+   *  `toBroadcastPair` in the explanatory comment sitting directly above the
+   *  call, so deleting the call itself kept the suite green. */
+  const code = (f: string) =>
+    read(f)
+      .replace(/\/\*[\s\S]*?\*\//g, ' ')
+      .replace(/^\s*\/\/.*$/gm, ' ');
+
+  it('both components CALL toBroadcastPair, not merely mention it', () => {
     for (const f of ['OnTheClock.tsx', 'BroadcastRevealCard.tsx']) {
-      const src = read(f);
-      expect(src, `${f} should resolve colours through toBroadcastPair`).toMatch(
-        /toBroadcastPair/
+      expect(code(f), `${f} must call toBroadcastPair(...)`).toMatch(
+        /toBroadcastPair\s*\(/
       );
-      // The variables must be fed from the treated pair, never straight off the
-      // team object.
+    }
+  });
+
+  it('neither component reads a raw brand colour for its background', () => {
+    // The original bug was a local `const primary = team?.colorPrimary || …`
+    // feeding the CSS variable, which a rule keyed on the variable name alone
+    // would not have caught. Ban the raw property read outright instead.
+    for (const f of ['OnTheClock.tsx', 'BroadcastRevealCard.tsx']) {
       expect(
-        /--dbc-primary'\]?:\s*team[?.]/.test(src),
-        `${f} assigns --dbc-primary straight from team`
+        /team[?.]*\.color(Primary|Secondary)/.test(code(f)),
+        `${f} reads team.color* directly — go through resolveSplashColors + toBroadcastPair`
       ).toBe(false);
     }
   });
