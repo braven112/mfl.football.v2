@@ -22,7 +22,7 @@
  * never depend on a modal the browser is free to refuse to show.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { activeRankingsScope } from '../../../utils/rankings-scope';
 
 interface Snapshot {
@@ -37,6 +37,17 @@ interface Props {
   resolveName: (id: string) => string | null;
   /** Called with MFL's list when a pull succeeds. */
   onPulled: (playerIds: string[]) => void;
+  /**
+   * Ids this franchise can actually draft, or null when unknown.
+   *
+   * Used only to WARN, never to silently trim the push. TheLeague drafts
+   * rookies only, so a board seeded from a full-league composite is mostly
+   * players its draft cannot take — worth saying out loud before overwriting,
+   * since MFL accepts the write either way and what it keeps is its business.
+   */
+  availableIds?: Set<string> | null;
+  /** MFL's draftPlayerPool, for naming the limit in that warning. */
+  draftPool?: string | null;
 }
 
 type Phase = 'idle' | 'pulling' | 'pushing' | 'restoring';
@@ -47,7 +58,13 @@ type Pending = null | { kind: 'push'; count: number } | { kind: 'restore'; count
 const apiUrl = (extra = '') =>
   `/api/draft-list?league=${encodeURIComponent(activeRankingsScope())}${extra}`;
 
-export default function DraftListSync({ rankings, resolveName, onPulled }: Props) {
+export default function DraftListSync({
+  rankings,
+  resolveName,
+  onPulled,
+  availableIds = null,
+  draftPool = null,
+}: Props) {
   const [phase, setPhase] = useState<Phase>('idle');
   const [message, setMessage] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
@@ -55,6 +72,11 @@ export default function DraftListSync({ rankings, resolveName, onPulled }: Props
   const [pending, setPending] = useState<Pending>(null);
 
   const busy = phase !== 'idle';
+
+  const outOfPool = useMemo(
+    () => (availableIds ? rankings.filter((id) => !availableIds.has(id)).length : 0),
+    [availableIds, rankings],
+  );
 
   const say = useCallback((text: string, error = false) => {
     setMessage(text);
@@ -230,7 +252,10 @@ export default function DraftListSync({ rankings, resolveName, onPulled }: Props
         <div className="cr-sync__confirm" role="group" aria-label="Confirm writing to MFL">
           <p className="cr-sync__confirm-text">
             {pending.kind === 'push'
-              ? `This completely replaces your My Draft List on MFL with these ${pending.count} players, in this order. Your current list is saved first so you can undo it.`
+              ? `This completely replaces your My Draft List on MFL with these ${pending.count} players, in this order. Your current list is saved first so you can undo it.` +
+                (outOfPool > 0
+                  ? ` ${outOfPool} of them are outside this league's draft pool${draftPool === 'Rookie' ? ' (it drafts rookies only)' : ''} — MFL decides what it keeps.`
+                  : '')
               : `This overwrites what is on MFL right now with the ${pending.count} players it held before your last push.`}
           </p>
           <div className="cr-sync__confirm-actions">

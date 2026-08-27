@@ -70,6 +70,17 @@ interface Props {
   builtinSnapshotJson?: string | null;
   /** Built-in source ids this league ticks on by default (registry-driven). */
   defaultSourceIds?: string[];
+  /**
+   * Player ids this franchise can actually draft, resolved on the server —
+   * the league's draftPlayerPool intersected with players not rostered in
+   * THIS owner's conference. Null means the feeds could not be trusted, and
+   * the filter is hidden rather than shown hiding the wrong players.
+   */
+  availableIdsJson?: string | null;
+  /** MFL's draftPlayerPool, for labelling the filter honestly. */
+  draftPool?: string | null;
+  /** True when availability was scoped per conference (the AFL). */
+  availabilityPerConference?: boolean;
 }
 
 // ESPN headshots are preferred; getPlayerImageUrl() (roster-constants.ts)
@@ -90,6 +101,9 @@ export default function CustomRankingsPage({
   importRankingsHref = '/theleague/import-rankings',
   builtinSnapshotJson = null,
   defaultSourceIds = [],
+  availableIdsJson = null,
+  draftPool = null,
+  availabilityPerConference = false,
 }: Props) {
   const mflPlayers: MFLPlayerWithEspn[] = useMemo(
     () => JSON.parse(mflPlayersJson),
@@ -123,6 +137,19 @@ export default function CustomRankingsPage({
   const [isEditing, setIsEditing] = useState(false);
   const [showVorp, setShowVorp] = useState(false);
   const [resetArmed, setResetArmed] = useState(false);
+  const [availableOnly, setAvailableOnly] = useState(false);
+
+  const availableIds = useMemo(() => {
+    if (!availableIdsJson) return null;
+    try {
+      return new Set<string>(JSON.parse(availableIdsJson));
+    } catch {
+      return null;
+    }
+  }, [availableIdsJson]);
+
+  // Rookie-only leagues say "Rookies"; an all-comers pool says "Available".
+  const availableLabel = draftPool === 'Rookie' ? 'Rookies only' : 'Available only';
   const hasVorp = Object.keys(vorpMap).length > 0;
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -373,8 +400,8 @@ export default function CustomRankingsPage({
 
   // --- Enriched player list ---
   const filteredPlayers = useMemo(
-    () => getFilteredPlayers(rankings, positionFilter, playerById),
-    [rankings, positionFilter, playerById],
+    () => getFilteredPlayers(rankings, positionFilter, playerById, availableOnly ? availableIds : null),
+    [rankings, positionFilter, playerById, availableOnly, availableIds],
   );
 
   const enrichedPlayers: RankedPlayer[] = useMemo(
@@ -405,15 +432,21 @@ export default function CustomRankingsPage({
       ALL: rankings.length,
       QB: 0, RB: 0, WR: 0, TE: 0, DEF: 0,
     };
+    // Counted against the SAME availability filter the list uses — chips
+    // reading the full board while the list shows a subset is just a lie.
+    const pool = availableOnly ? availableIds : null;
+    let total = 0;
     for (const id of rankings) {
       const p = playerById.get(id);
-      if (p) {
-        const pos = p.position as PositionFilterType;
-        if (pos in counts) counts[pos]++;
-      }
+      if (!p) continue;
+      if (pool && !pool.has(id)) continue;
+      total++;
+      const pos = p.position as PositionFilterType;
+      if (pos in counts) counts[pos]++;
     }
+    counts.ALL = total;
     return counts;
-  }, [rankings, playerById]);
+  }, [rankings, playerById, availableOnly, availableIds]);
 
   // --- Render ---
   if (loading) {
@@ -458,6 +491,8 @@ export default function CustomRankingsPage({
           rankings={rankings}
           resolveName={resolvePlayerName}
           onPulled={handleDraftListPulled}
+          availableIds={availableIds}
+          draftPool={draftPool}
         />
       </div>
     );
@@ -477,6 +512,21 @@ export default function CustomRankingsPage({
             >
               {isEditing ? 'Done' : 'Edit'}
             </button>
+            {availableIds && (
+              <button
+                className={`cr-btn cr-btn--sm${availableOnly ? ' cr-btn--active' : ''}`}
+                onClick={() => setAvailableOnly((v) => !v)}
+                type="button"
+                aria-pressed={availableOnly}
+                title={
+                  availabilityPerConference
+                    ? 'Players you can draft — not rostered in your conference'
+                    : 'Players you can draft — not on any roster'
+                }
+              >
+                {availableLabel}
+              </button>
+            )}
             {hasVorp && (
               <button
                 className={`cr-btn cr-btn--sm${showVorp ? ' cr-btn--active' : ''}`}
@@ -510,6 +560,8 @@ export default function CustomRankingsPage({
         rankings={rankings}
         resolveName={resolvePlayerName}
         onPulled={handleDraftListPulled}
+        availableIds={availableIds}
+        draftPool={draftPool}
       />
 
       <PositionFilter
@@ -538,11 +590,14 @@ function getFilteredPlayers(
   rankings: string[],
   filter: PositionFilterType,
   playerById: Map<string, MFLPlayerWithEspn>,
+  /** When non-null, keep only ids in this set (the draftable pool). */
+  availableIds: Set<string> | null,
 ): MFLPlayerWithEspn[] {
   const result: MFLPlayerWithEspn[] = [];
   for (const id of rankings) {
     const player = playerById.get(id);
     if (!player) continue;
+    if (availableIds && !availableIds.has(id)) continue;
     if (filter === 'ALL' || player.position === filter) {
       result.push(player);
     }
