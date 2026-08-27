@@ -80,8 +80,15 @@ export function resolveDraftAvailability({
   rostersJson: unknown;
   franchiseId: string;
 }): AvailabilityResult | null {
-  const pool: DraftPlayerPool =
-    ((leagueJson as any)?.league?.draftPlayerPool as string) || 'Both';
+  // No league feed, no answer. Defaulting the pool to 'Both' here looked
+  // harmless and is not: in the post-rollover window before MFL populates the
+  // new year's league.json, TheLeague would silently switch from "rookies
+  // only" to "everyone", and the AFL's two conferences would collapse into one
+  // shared pool — hiding, and dropping from the push, players held only in the
+  // other conference. Failing closed hides the filter instead.
+  const league = (leagueJson as any)?.league;
+  if (!league) return null;
+  const pool: DraftPlayerPool = (league.draftPlayerPool as string) || 'Both';
 
   // buildConferenceStructure is typed from JSDoc in a .mjs, so its
   // franchiseConferences widens to `{}` here; name the shape we rely on
@@ -89,7 +96,21 @@ export function resolveDraftAvailability({
   const structure = buildConferenceStructure(leagueJson) as
     | { ids: string[]; franchiseConferences: Record<string, string> }
     | null;
-  const rostered = buildRosteredByConf(rostersJson, structure);
+
+  // Pass the expected franchise count so the partial-payload guard actually
+  // fires for a SINGLE-conference league. buildRosteredByConf derives its
+  // expectation from the conference map, which is empty when there are no
+  // conferences — so without this, TheLeague's guard was disabled entirely and
+  // a truncated rosters.json would mark already-drafted players draftable, and
+  // then narrow the push to that wrong set.
+  const franchises = league.franchises?.franchise;
+  const expectedFranchises = Array.isArray(franchises)
+    ? franchises.length
+    : franchises
+      ? 1
+      : 0;
+
+  const rostered = buildRosteredByConf(rostersJson, structure, expectedFranchises);
   if (!rostered) return null;
 
   const perConference = rostered.confIds.length > 1;

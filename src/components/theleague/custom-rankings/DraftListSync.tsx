@@ -179,10 +179,30 @@ export default function DraftListSync({
 
     setPending({ kind: 'push', count: rankings.length });
     say(`Ready to overwrite your MFL draft list with ${rankings.length} players. Confirm below.`);
-  }, [busy, rankings, resolveName, say]);
+  }, [busy, rankings, resolveName, filterLabel, say]);
 
   const runPush = useCallback(async () => {
     setPending(null);
+
+    // Re-validate against the CURRENT list. The panel's count is frozen at arm
+    // time, but the board behind it stays interactive — toggling the
+    // availability filter while the confirmation is open would otherwise have
+    // an owner confirm "Overwrite 250" and write 40. Same for the unresolved-id
+    // block: it has to hold at the moment of the write, not when it was armed.
+    if (rankings.length === 0) {
+      say('That list is now empty — nothing was sent to MFL.', true);
+      return;
+    }
+    const stillUnresolved = rankings.filter((id) => !resolveName(id));
+    if (stillUnresolved.length > 0) {
+      say(
+        `The board changed while that was open — ${stillUnresolved.length} player` +
+          `${stillUnresolved.length === 1 ? '' : 's'} cannot be sent to MFL. Nothing was written.`,
+        true,
+      );
+      return;
+    }
+
     setPhase('pushing');
     say('Writing your board to MFL…');
     try {
@@ -211,7 +231,7 @@ export default function DraftListSync({
     } finally {
       setPhase('idle');
     }
-  }, [rankings, say]);
+  }, [rankings, resolveName, say]);
 
   const handleRestore = useCallback(() => {
     if (busy || !snapshot) return;

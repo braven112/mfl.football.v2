@@ -186,8 +186,11 @@ export const POST: APIRoute = async ({ request }) => {
     if (current.playerIds.length > 0) {
       snapshotSaved = await writeSnapshot(ctx.snapshotKey, current.playerIds);
     } else {
-      // Nothing to lose — an owner with no board yet needs no undo buffer.
-      snapshotSaved = true;
+      // MFL held nothing, so there is nothing to undo TO. Any older snapshot
+      // has to go: leaving it behind offers "Undo last push" that restores a
+      // list MFL did not have before this push — the one thing an undo must
+      // never do. An empty snapshot reads as "no undo available".
+      snapshotSaved = await writeSnapshot(ctx.snapshotKey, []);
     }
   }
 

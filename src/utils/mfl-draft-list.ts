@@ -180,10 +180,20 @@ export async function pushDraftList(
   try {
     const response = await mflFetch({ url, method: 'POST', mflUserCookie, body });
     text = await response.text();
-    // A transport-level failure is still worth surfacing, but only after the
-    // body has been read — MFL's own errors arrive with a 200.
-    if (!response.ok && !text.trim()) {
-      return { ok: false, error: `MFL returned HTTP ${response.status}.` };
+    // A non-2xx is a failure whatever the body says. The earlier version only
+    // treated it as one when the body was EMPTY, which meant a 502 carrying a
+    // plain-text "Bad Gateway" fell through: it is not JSON, not <error>, not
+    // HTML, so parseMflError found nothing and the write was reported as
+    // "Pushed N players" having landed nowhere. Read the body first only so a
+    // real MFL message can be quoted instead of a bare status code.
+    if (!response.ok) {
+      const detail = parseMflError(text);
+      return {
+        ok: false,
+        error: detail
+          ? `MFL returned HTTP ${response.status}: ${detail}`
+          : `MFL returned HTTP ${response.status}.`,
+      };
     }
   } catch (err) {
     return { ok: false, error: `Could not reach MFL: ${(err as Error).message}` };

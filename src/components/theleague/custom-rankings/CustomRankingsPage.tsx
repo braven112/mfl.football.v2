@@ -395,10 +395,21 @@ export default function CustomRankingsPage({
   const handleDraftListPulled = useCallback(
     (playerIds: string[]) => {
       const keptTiers = tiers.filter((t) => playerIds.includes(t.afterPlayerId));
+      // Every pulled position is an OVERRIDE of composite order, and marking
+      // them so is what makes the pull survive. mergeWithOverrides returns the
+      // raw new composite whenever the override set is empty, so clearing it
+      // here meant the first daily built-in-sources refresh — a composite hash
+      // change the owner never sees — silently discarded the order they just
+      // pulled from MFL and put composite order back.
+      const pulled = new Set(playerIds);
       setRankings(playerIds);
-      setOverrides(new Set());
+      setOverrides(pulled);
       setTiers(keptTiers);
-      scheduleSave(buildState(playerIds, new Set(), keptTiers));
+      // A pull out of the no-composite empty state has to leave it, or the
+      // board stays on the "No composite rankings found" branch with a full
+      // list of players behind it.
+      setIsEmpty(false);
+      scheduleSave(buildState(playerIds, pulled, keptTiers));
     },
     [tiers, scheduleSave, buildState],
   );
@@ -512,7 +523,8 @@ export default function CustomRankingsPage({
         </div>
         {/* Reachable with no composite ON PURPOSE: an owner who just wants
             their MFL board back should not have to build a composite first.
-            Pulling seeds `rankings` directly, which clears this state. */}
+            handleDraftListPulled clears isEmpty so a successful pull leaves
+            this branch — it did not, and the board stayed hidden behind it. */}
         <DraftListSync
           rankings={pushableRankings}
           boardTotal={rankings.length}
