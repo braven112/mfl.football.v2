@@ -1,5 +1,44 @@
 # Franchise History Pages — Insights
 
+## 2026-08-27 - Naming an anonymous owner touches ONE field; the slug rename is a different, riskier edit
+
+**Context:** Brandon named the AFL's Reckless (own-0097, slot 0016, 2005-2006)
+as Kevin Smith — the ninth of the seeded-anonymous entries to get a name, and
+the smallest possible version of this edit. It still had two forks in it that
+the registry's own precedent answers inconsistently.
+
+**Insight:** two fields look like they should move with a new `displayName`,
+and neither should.
+
+- **`slug` stays frozen.** `docs/plans/owners-feature.md` is explicit — the
+  slug is seeded as `kebab(dominantIdentity)-firstYear` and frozen; a nicer URL
+  later is a *separate, deliberate* edit that must push the old slug into
+  `previousSlugs` so `resolveOwnerDetail` keeps redirecting. The registry reads
+  as if renaming is the convention (own-0045 `a-bruin-pegs-me-2007` →
+  `ross-lawrence`, own-0060 → `shawn-klezovich`), but both of those are CURRENT
+  cross-league owners whose pages get linked by name. The closest analog to a
+  former AFL-only owner is own-0099 Mark Fowler, who kept `the-bandwagon-2005`.
+  Match Fowler, not Lawrence — a slug rename on a published former-owner page
+  buys nothing and costs a redirect you have to remember to add.
+- **`seededFrom` is not re-stamped.** It records where the *entry* came from,
+  not where the *name* came from. own-0045 and own-0060 are named humans still
+  carrying `inferred:identity-split@2026-08-24`, which is correct and is what
+  `tests/owners-registry.test.ts` documents ("a human naming a seeded person is
+  fine and expected"). own-0099's `human:brandon@` stamp is the odd one out.
+  The plan doc settles it in four words: *add a name later — nothing else
+  changes*.
+
+**What the edit actually is:** set `displayName`, run
+`node scripts/compute-owner-tenures.mjs --league=afl`, commit the regenerated
+`owner-tenures.json` alongside it. The derived diff should be exactly two lines
+per owner — `displayName` and `title` — with `dominantName` unchanged, because
+the person's name headlines the page while the team identity keeps supplying
+the crest and the era art. A third changed line means something else moved.
+
+**Still anonymous (AFL, 7 left):** `chieftans-2003`, `italian-stalions-2003`,
+`the-vandalizers-2003` (also held 0004 in 2004), `red-dawn-2004`,
+`the-a-team-2004`, `habanero-s-2005`, `whitman-s-wonders-2011`.
+
 ## 2026-08-25 - Slot-change inference splits ONE owner into two, and a name is what makes it visible
 
 **Context:** `/owners` shipped with 85 tenures MFL had no name for. Filling
