@@ -31,8 +31,16 @@ interface Snapshot {
 }
 
 interface Props {
-  /** Current board order, as MFL player ids. */
+  /**
+   * Exactly what a push sends: the board in its own order, already narrowed
+   * by the availability filter when that is on. Not narrowed by the position
+   * filter — see the note on pushableRankings in the board island.
+   */
   rankings: string[];
+  /** Size of the unfiltered board, so the UI can say what is being left out. */
+  boardTotal?: number;
+  /** Name of the active availability filter, or null when it is off. */
+  filterLabel?: string | null;
   /** Resolver for a display name; returns null for an id we can't identify. */
   resolveName: (id: string) => string | null;
   /** Called with MFL's list when a pull succeeds. */
@@ -60,6 +68,8 @@ const apiUrl = (extra = '') =>
 
 export default function DraftListSync({
   rankings,
+  boardTotal,
+  filterLabel = null,
   resolveName,
   onPulled,
   availableIds = null,
@@ -143,12 +153,12 @@ export default function DraftListSync({
     if (busy) return;
 
     if (rankings.length === 0) {
-      // Should be unreachable now that the board seeds its own built-in
-      // ranking sources, but say something actionable rather than something
-      // terminal if it ever is reached again.
       say(
-        'Your board is empty, so there is nothing to push. Pull your list from MFL, ' +
-          'or set up Import Rankings to build one.',
+        filterLabel
+          ? `No players on your board pass the "${filterLabel}" filter, so there is nothing to push. ` +
+              'Turn the filter off to push your whole board.'
+          : 'Your board is empty, so there is nothing to push. Pull your list from MFL, ' +
+              'or set up Import Rankings to build one.',
         true,
       );
       return;
@@ -240,7 +250,11 @@ export default function DraftListSync({
           {phase === 'pulling' ? 'Pulling…' : 'Pull from MFL'}
         </button>
         <button className="cr-btn cr-btn--sm" onClick={handlePush} disabled={busy || pending !== null} type="button">
-          {phase === 'pushing' ? 'Pushing…' : 'Push to MFL'}
+          {phase === 'pushing'
+            ? 'Pushing…'
+            : filterLabel
+              ? `Push ${rankings.length} to MFL`
+              : 'Push to MFL'}
         </button>
         {snapshot && snapshot.playerIds.length > 0 && (
           <button className="cr-btn cr-btn--sm" onClick={handleRestore} disabled={busy || pending !== null} type="button">
@@ -253,6 +267,9 @@ export default function DraftListSync({
           <p className="cr-sync__confirm-text">
             {pending.kind === 'push'
               ? `This completely replaces your My Draft List on MFL with these ${pending.count} players, in this order. Your current list is saved first so you can undo it.` +
+                (filterLabel && boardTotal && boardTotal > pending.count
+                  ? ` The "${filterLabel}" filter is on, so ${boardTotal - pending.count} of your ${boardTotal} board players are being left off.`
+                  : '') +
                 (outOfPool > 0
                   ? ` ${outOfPool} of them are outside this league's draft pool${draftPool === 'Rookie' ? ' (it drafts rookies only)' : ''} — MFL decides what it keeps.`
                   : '')

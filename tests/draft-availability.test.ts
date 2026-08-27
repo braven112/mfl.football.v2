@@ -9,7 +9,11 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { isInDraftPool, resolveDraftAvailability } from '../src/utils/draft-availability';
+import {
+  isInDraftPool,
+  resolveDraftAvailability,
+  selectPushablePlayers,
+} from '../src/utils/draft-availability';
 
 const root = join(__dirname, '..');
 const feed = (league: string, file: string) =>
@@ -153,5 +157,44 @@ describe('fails closed rather than hiding players wrongly', () => {
         franchiseId: '9999',
       }),
     ).toBeNull();
+  });
+});
+
+describe('selectPushablePlayers — what a push actually sends', () => {
+  const board = ['10', '20', '30', '40'];
+
+  it('sends the whole board when the filter is off', () => {
+    expect(selectPushablePlayers(board, null)).toEqual(board);
+  });
+
+  it('narrows to the draftable pool when the filter is on', () => {
+    expect(selectPushablePlayers(board, new Set(['20', '40']))).toEqual(['20', '40']);
+  });
+
+  it('preserves board ORDER — the order is the ranking', () => {
+    expect(selectPushablePlayers(['40', '10', '30'], new Set(['10', '30', '40'])))
+      .toEqual(['40', '10', '30']);
+  });
+
+  it('returns empty rather than silently sending everything when nothing qualifies', () => {
+    // pushDraftList refuses an empty list, so this surfaces as a blocked push
+    // with a message — never as an accidental full-board overwrite.
+    expect(selectPushablePlayers(board, new Set())).toEqual([]);
+  });
+});
+
+describe('the position filter must never reach the push', () => {
+  it('the board computes its push list from the availability pool alone', () => {
+    // Pushing while looking at QBs would replace the owner's whole MFL list
+    // with quarterbacks. The push list is a pure function of (order, pool);
+    // this pins that positionFilter is not wired into it.
+    const src = readFileSync(
+      join(root, 'src/components/theleague/custom-rankings/CustomRankingsPage.tsx'),
+      'utf-8',
+    );
+    const decl = src.slice(src.indexOf('const pushableRankings'));
+    const body = decl.slice(0, decl.indexOf('  );') + 4);
+    expect(body).toContain('selectPushablePlayers(rankings, activePool)');
+    expect(body).not.toContain('positionFilter');
   });
 });

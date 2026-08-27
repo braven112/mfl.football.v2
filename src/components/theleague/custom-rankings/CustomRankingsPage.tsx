@@ -28,6 +28,7 @@ import {
   saveCustomRankings,
 } from '../../../utils/custom-rankings-storage';
 import { detectTierBreaks } from '../../../utils/tier-detection';
+import { selectPushablePlayers } from '../../../utils/draft-availability';
 import { getPlayerImageUrl } from '../../../constants/roster-constants';
 import type {
   CustomRankingsState,
@@ -159,6 +160,22 @@ export default function CustomRankingsPage({
    * wrong player.
    */
   const activePool = availableOnly ? availableIds : null;
+
+  /**
+   * What a push actually sends: the board in its own order, narrowed to the
+   * draftable pool when that filter is on.
+   *
+   * The POSITION filter is deliberately NOT applied. Availability is a fact
+   * about the league — a player it cannot draft has no business on the list
+   * either way — but position is a way of reading the board, and pushing
+   * while looking at QBs would replace an owner's whole MFL list with
+   * quarterbacks. One of these belongs in a destructive write and the other
+   * does not.
+   */
+  const pushableRankings = useMemo(
+    () => selectPushablePlayers(rankings, activePool),
+    [rankings, activePool],
+  );
   const hasVorp = Object.keys(vorpMap).length > 0;
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -497,11 +514,13 @@ export default function CustomRankingsPage({
             their MFL board back should not have to build a composite first.
             Pulling seeds `rankings` directly, which clears this state. */}
         <DraftListSync
-          rankings={rankings}
+          rankings={pushableRankings}
+          boardTotal={rankings.length}
           resolveName={resolvePlayerName}
           onPulled={handleDraftListPulled}
           availableIds={availableIds}
           draftPool={draftPool}
+          filterLabel={availableOnly ? availableLabel : null}
         />
       </div>
     );
@@ -566,11 +585,13 @@ export default function CustomRankingsPage({
       </div>
 
       <DraftListSync
-        rankings={rankings}
+        rankings={pushableRankings}
+        boardTotal={rankings.length}
         resolveName={resolvePlayerName}
         onPulled={handleDraftListPulled}
         availableIds={availableIds}
         draftPool={draftPool}
+        filterLabel={availableOnly ? availableLabel : null}
       />
 
       <PositionFilter

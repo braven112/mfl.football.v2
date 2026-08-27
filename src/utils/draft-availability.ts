@@ -117,3 +117,23 @@ export function resolveDraftAvailability({
 
 /** Re-exported so callers needing the raw holders don't reach past this module. */
 export { confsForPlayer };
+
+/**
+ * What a push actually sends to MFL: the board in its own order, narrowed to
+ * `pool` when the availability filter is on, and unchanged when it is off.
+ *
+ * Lives here, apart from the board's render state, because of what must NOT
+ * reach it. The position filter is also a filter over the same list, and
+ * applying it here would let an owner looking at quarterbacks replace their
+ * entire MFL draft list with quarterbacks. Availability is a fact about the
+ * league; position is a way of reading the board. Only the first belongs in a
+ * destructive write, and keeping this a pure function of (order, pool) is
+ * what makes that impossible to get wrong by accident.
+ */
+export function selectPushablePlayers(
+  rankings: string[],
+  pool: ReadonlySet<string> | null,
+): string[] {
+  if (!pool) return rankings;
+  return rankings.filter((id) => pool.has(id));
+}
