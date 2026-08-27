@@ -37,19 +37,33 @@ the era art. A third changed line in THAT file means something else moved.
 
 **`owner-tenures.json` is not the only derived file carrying the name.**
 `compute-division-strength.mjs` copies `owner.title` onto every owner row it
-writes, so a name that lands in the tenures file alone leaves
-`division-strength.json` crediting the same seasons to the team name — six
-stale `title`s for one owner, in this case. Production hides it, which is what
-makes it dangerous: prebuild runs the two as one chained step
-(`scripts/prebuild.mjs`), so a deploy self-heals, while `astro dev` skips
-prebuild entirely and a local Strength of Division render disagrees with the
-owner page it links to. Both files are committed build artifacts imported
-statically; a stale one is wrong in the repo even when the site looks right.
+writes — six rows for one owner here — so naming someone in the registry and
+regenerating only the tenures leaves `division-strength.json` holding the old
+value.
+
+**Be precise about what that does and does not break, because the obvious
+story is wrong.** It is NOT a visible mislabel. Per the `title` entry below,
+Strength of Division deliberately labels by team, and
+`DivisionStrengthPage.astro` resolves a row as
+`latestNameMedium ?? latestName ?? title ?? slug` — `title` is the third
+fallback and `latestName` is always populated, so a stale `title` renders
+nowhere. Verified on the PR preview: the AFL division page shows "Reckless"
+13 times and "Kevin Smith" zero times, which is the CORRECT output both
+before and after the fix.
+
+What it actually is, is artifact drift: a committed build artifact that no
+longer matches its own generator. That still has to be fixed, because the next
+person to run the compute for an unrelated reason picks up somebody else's
+six-line diff and has to work out whether it was deliberate. Regenerate both,
+commit both, and the diff always belongs to whoever caused it. Note that
+`tests/division-strength-data.test.ts` passes with the file stale — nothing
+guards derived-vs-generator, so this class is invisible until someone
+regenerates.
 
 The same chain has to hold anywhere a name can land. `fetch-owner-names.yml`
 recomputed only the tenures and listed only those paths in `add-paths`, so the
-bot could commit a name and leave division strength stale on its own schedule;
-it now runs both computes and commits all four derived files.
+bot could commit a name and leave division strength drifted on its own
+schedule; it now runs both computes and commits all four derived files.
 
 **Still anonymous (AFL, 7 left):** `chieftans-2003`, `italian-stalions-2003`,
 `the-vandalizers-2003` (also held 0004 in 2004), `red-dawn-2004`,
