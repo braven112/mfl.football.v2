@@ -186,7 +186,13 @@ function toHex(rgb: [number, number, number]): string {
 /** Contrast ratio of white against this colour. */
 export function contrastWithWhite(hex: string): number {
   const rgb = parseHex(hex);
-  if (!rgb) return MIN_WHITE_CONTRAST;
+  // 0, not the floor value. Returning MIN_WHITE_CONTRAST here reads as "passes"
+  // to every caller, so an unparseable brand colour — `#e9e9e9ff`, an
+  // `rgb(...)` string, a typo — sailed through the league-wide guard tests and
+  // reached the card untouched. The runtime path still degrades gracefully
+  // (darkenForWhiteText returns the input unchanged); this is what makes the
+  // guards actually guard.
+  if (!rgb) return 0;
   return 1.05 / (relativeLuminance(rgb) + 0.05);
 }
 
@@ -194,10 +200,11 @@ export function contrastWithWhite(hex: string): number {
  * Darken a franchise colour just far enough that white copy stays legible on
  * it, leaving anything already dark enough completely untouched.
  *
- * Nine of the AFL's 24 franchises have at least one gradient stop that white
- * text cannot be read against — six of them use a near-white `#e9e9e9`, and
- * Midwestside's `#ffcd00` is worse still. On a laptop that is a squint; on the
- * TV it is an unreadable card in front of the whole league.
+ * Nine of the AFL's 24 franchises have a gradient stop that fails even the 3.0
+ * WCAG bar for large text — six of them a near-white `#e9e9e9`, and
+ * Midwestside's `#ffcd00` is worse still. Against the 4.5 this enforces, 21 of
+ * the 24 need adjusting. On a laptop that is a squint; on the TV it is an
+ * unreadable card in front of the whole league.
  *
  * Scales RGB toward black rather than mixing in grey, which holds the hue and
  * saturation — a light pink becomes a deeper pink, never a muddy one. Returns
@@ -300,7 +307,7 @@ const TINT_LIGHTNESS = 0.45;
  * The gradient the reveal card actually paints, resolved as a PAIR.
  *
  * Six AFL franchises pair a real brand colour with the near-white #e9e9e9, and
- * two more use a grey. Treated stop-by-stop that grey has no hue to preserve,
+ * three more pair one with a mid grey. Treated stop-by-stop that grey has no hue to preserve,
  * so it can only ever darken to grey — Suh Girls' warm brown faded into a dead
  * slate halfway across the card. Resolving the pair together lets a greyscale
  * stop borrow the hue of whichever stop HAS one, so the gradient stays in the
@@ -327,6 +334,12 @@ export function toBroadcastPair(
     if (!rgb) return hex;
     const [, sat] = rgbToHsl(rgb);
     if (sat >= GREY_SATURATION) return hex;
+    // Greyscale AND already legible means near-BLACK, which is a brand colour
+    // in its own right here — ten franchises pair a colour with #181818. The
+    // tint exists to rescue a LIGHT grey that would otherwise darken to slate;
+    // applied to black it repainted Vitside Mafia's black half red and flattened
+    // the gradient to colour-on-colour.
+    if (contrastWithWhite(hex) >= MIN_WHITE_CONTRAST) return hex;
     return toHex(hslToRgb([hue, TINT_SATURATION, TINT_LIGHTNESS]));
   };
 

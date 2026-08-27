@@ -167,9 +167,11 @@
 .dbc-reveal__ghost {
   position: absolute;
   /* Stays bottom-LEFT while the cutout moves right, which is the point: the
-     player's body used to cover this numeral, so it barely read on the TV. On
-     the empty left half it finally shows. If it ever fights the copy, drop the
-     alpha — do not move it back under the player. */
+     player's body used to cover this numeral, so it barely read on the TV.
+     It shares the left half with the copy rather than sitting on empty space,
+     which is why the alpha stays at 0.07 and the text renders over it — if it
+     ever starts fighting the copy, drop the alpha further, do not move it back
+     under the player. */
   left: 2vw;
   bottom: -2.5vh;
   font-size: 28vh;
@@ -818,7 +820,15 @@
   .dbc-reveal__crest {
     width: 41vh;
     height: 41vh;
+    /* `left` and `top` re-pinned, not just `right`: the base layer sets
+       left: 58%/top: 64% for the TV, and with a width set `left` wins over
+       `right` outright — so this block's `right` was inert and the phone crest
+       had silently moved on top of the stacked copy. Anchored off the right
+       edge again, as scenery behind the player. */
+    left: auto;
     right: -8vw;
+    top: 42%;
+    transform: translateY(-50%);
     opacity: 0.18;
   }
 

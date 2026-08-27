@@ -377,6 +377,15 @@ describe('darkenForWhiteText', () => {
     expect(g).toBeGreaterThanOrEqual(b);
   });
 
+  it('scores an unparseable colour as FAILING, so the guards can catch it', () => {
+    // Returning the floor value here read as "passes" to every caller, so a
+    // typo'd or non-hex brand colour sailed through all three league-wide
+    // guards and reached the card untouched.
+    for (const junk of ['#e9e9e9ff', 'rgb(233,233,233)', 'rebeccapurple', '']) {
+      expect(contrastWithWhite(junk)).toBe(0);
+    }
+  });
+
   it('returns a malformed colour untouched instead of throwing', () => {
     // Draft night is the wrong time to discover a typo'd brand colour crashes
     // the reveal — degrade to today's behaviour.
@@ -506,6 +515,17 @@ describe('toBroadcastPair', () => {
     const out = toBroadcastPair('#e9e9e9', '#529fcc');
     expect(sat(out.primary)).toBeGreaterThan(0.3);
     expect(Math.abs(hue(out.primary) - hue(out.secondary))).toBeLessThan(0.06);
+  });
+
+  it('preserves a near-BLACK stop instead of repainting it in the partner hue', () => {
+    // Ten franchises pair a colour with #181818. Black is greyscale, so a
+    // saturation-only grey test tinted it: Vitside Mafia's black half came out
+    // red and the card flattened to colour-on-colour. Black already passes the
+    // floor, so it needs no rescuing.
+    for (const [p, sec] of [['#181818', '#aa322b'], ['#2b972b', '#181818'], ['#ffcd00', '#181818']]) {
+      const out = toBroadcastPair(p, sec);
+      expect(p === '#181818' ? out.primary : out.secondary).toBe('#181818');
+    }
   });
 
   it('leaves a genuinely greyscale franchise grey', () => {

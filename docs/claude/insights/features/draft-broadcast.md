@@ -124,9 +124,11 @@ player's name came out near-black on the franchise gradient.
 
 ### Franchise brand colours are not safe to paint text on
 
-Nine of the AFL's 24 franchises have a gradient stop white text cannot be read
-against — **six of them use the same near-white `#e9e9e9`**, and Midwestside's
-`#ffcd00` is worse. On a laptop that is a squint. On the TV it is an unreadable
+Nine of the AFL's 24 franchises have a gradient stop that fails even the 3.0
+WCAG bar for large text — **six of them the same near-white `#e9e9e9`**, and
+Midwestside's `#ffcd00` is worse. Against the 4.5 the board enforces, 21 of the
+24 need adjusting. (Quote the bar with the count: "nine of 24" alone is the
+3.0 figure and reads as a much smaller problem than it is.) On a laptop that is a squint. On the TV it is an unreadable
 card in front of the whole league, which is what it took to notice.
 
 `toBroadcastPair` (`src/utils/draft-broadcast.ts`) saturates, then floors the
@@ -140,6 +142,10 @@ contrast at 4.5. Three things about it are load-bearing:
   faded into a dead slate halfway across the card. Borrowing the hue of
   whichever stop HAS one keeps the gradient in the franchise's colour. A
   franchise greyscale on both stops (Titsburgh) correctly stays grey.
+- **Only rescue a grey that actually FAILS.** Near-black is greyscale too, and
+  ten franchises pair a colour with `#181818`. A saturation-only grey test
+  repainted that black in the partner's hue — Vitside Mafia's black half came
+  out red — and flattened every one of those cards to colour-on-colour.
 - **Discard the grey's own lightness when tinting it.** Rebuilt in hue at
   `#e9e9e9`'s native 0.91 lightness the channels land within a few points of
   each other, and the contrast floor then scales that straight back to the grey
