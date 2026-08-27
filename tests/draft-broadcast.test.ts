@@ -549,3 +549,28 @@ describe('toBroadcastPair', () => {
     }
   });
 });
+
+
+describe('idle screen and reveal card share one colour treatment', () => {
+  // The idle board is on screen between every pick and hands straight off to a
+  // reveal. It used to paint RAW brand colours while the reveal painted treated
+  // ones, so a light franchise flashed washed-out, then deep and saturated a
+  // second later. Both call toBroadcastPair now; this pins that neither can
+  // quietly go back to reading colorPrimary/colorSecondary directly.
+  const read = (f: string) => readFileSync(`src/components/afl/draft-broadcast/${f}`, 'utf-8');
+
+  it('neither component paints a raw brand colour into a CSS variable', () => {
+    for (const f of ['OnTheClock.tsx', 'BroadcastRevealCard.tsx']) {
+      const src = read(f);
+      expect(src, `${f} should resolve colours through toBroadcastPair`).toMatch(
+        /toBroadcastPair/
+      );
+      // The variables must be fed from the treated pair, never straight off the
+      // team object.
+      expect(
+        /--dbc-primary'\]?:\s*team[?.]/.test(src),
+        `${f} assigns --dbc-primary straight from team`
+      ).toBe(false);
+    }
+  });
+});

@@ -192,6 +192,22 @@
       "impact": "user",
       "area": "other",
       "league": "afl"
+    },
+    {
+      "date": "2026-08-27",
+      "type": "style-tweak",
+      "summary": "The drafted player is bigger on the Draft Broadcast and now overlaps the team logo behind him, so the two read as one shot instead of two things sharing a screen.",
+      "impact": "user",
+      "area": "other",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-27",
+      "type": "bug-fix",
+      "summary": "The between-picks screen on the Draft Broadcast was still using raw team colours, so a team with a light colour looked washed out there and then deep and saturated a second later on the pick reveal. Both screens use the same treatment now.",
+      "impact": "user",
+      "area": "other",
+      "league": "afl"
     }
   ]
 }

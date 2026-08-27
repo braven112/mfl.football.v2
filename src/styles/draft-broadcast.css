@@ -238,12 +238,18 @@
   height: 100%;
   display: flex;
   align-items: flex-end;
-  justify-content: center;
-  overflow: hidden;
-  /* Pushed toward the outer edge. The clip box travels with it, so the cutout
-     itself is not sliced — it just sits further right, and the card's own
-     overflow decides where he bleeds off. Re-zeroed in portrait, where the
-     figure is a full-width row and shifting it would just crop him. */
+  /* Anchored to the OUTER edge, not centred: the cutout is wider than this
+     column now, and centring would grow it equally in both directions. Pinned
+     right, the extra width all goes leftward — over the crest, which is the
+     overlap that makes the two read as one composite instead of two objects
+     sharing a card. Bottom-anchored, so the extra height grows upward. */
+  justify-content: flex-end;
+  /* Visible, or the 20% that hangs past this column's left edge is sliced off
+     with a hard vertical line — the same failure the portrait rule documents.
+     The card itself still clips, so he bleeds off the screen edge as intended. */
+  overflow: visible;
+  /* Pushed toward the outer edge. Re-zeroed in portrait, where the figure is a
+     full-width row and shifting it would just crop him. */
   transform: translateX(29%);
 }
 
@@ -254,7 +260,8 @@
    of his own column. Width fills the column and the overflow clips at the
    bottom, which is what makes him read as life-size across a room. */
 .dbc-reveal__model {
-  width: 100%;
+  /* Wider than its column on purpose — see the figure's justify-content. */
+  width: 120%;
   height: auto;
   max-width: none;
   max-height: none;
@@ -698,9 +705,11 @@
   }
 
   .dbc-reveal__model {
-    width: 100%;
+    /* max-width must stay `none` here: capping at 100% silently clamps the
+       120% back to the column and the player stops overlapping the crest. */
+    width: 120%;
     height: auto;
-    max-width: 100%;
+    max-width: none;
     max-height: 100%;
   }
 
