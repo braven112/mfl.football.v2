@@ -1,7 +1,52 @@
 [
   {
+    "id": "my-draft-list",
+    "date": "2026-08-27",
+    "category": "new-feature",
+    "icon": "draft-podium",
+    "leagues": [
+      "theleague",
+      "afl"
+    ],
+    "title": "Your Board, On The Actual Draft Board",
+    "link": "/cr",
+    "linkLabel": "Build your board",
+    "summary": "The rankings board now talks to MFL. Build your order here, hit push, and it becomes the My Draft List your draft room reads off — the same list that sits there at 3am when the clock is running and you are not awake to defend yourself.",
+    "description": [
+      "There has always been a gap between the board you build and the board that drafts for you. You would spend an evening sorting players on <a href=\"/cr\">My Draft List</a>, then open MFL and hand-type the whole thing into a different list, in a different order, on a different screen. Most people did it once and then never again, which is how a carefully built board turns into an autopick taking the best available kicker.",
+      "That gap is closed. The board pulls your existing draft list down from MFL, and pushes your order back up to it — the real one, the one the Live Draft Room reads. Your previous list is saved before anything is overwritten, so an undo is one tap away, and the confirmation tells you exactly how many players are about to be written before you commit to anything. Seed it from the sources you already picked on <a href=\"/import-rankings\">Import Rankings</a>, drag it into the shape you want, push it, go to bed.",
+      "There is also a filter for the players you can actually draft, which is a shorter list than you think. In a rookie-draft league it is the rookies; in a league that drafts everyone it is anyone not already sitting on a roster in your conference — and it knows the difference, so a player another conference owns is still yours to take. Turn the filter on and it limits the push too: what you see is what gets written. No more discovering on draft night that a third of your board is on somebody else's <a href=\"/rosters\">roster</a>."
+    ],
+    "image": "my-draft-list.webp",
+    "imageAlt": "The My Draft List board with Pull from MFL and Push to MFL controls above a ranked player list",
+    "excludeFromHero": true
+  },
+  {
     "id": "afl-draft-broadcast",
     "date": "2026-08-27",
+    "category": "new-page",
+    "icon": "draft-podium",
+    "leagues": [
+      "afl"
+    ],
+    "title": "Put The Draft On The Big Screen",
+    "link": "/draft-broadcast",
+    "linkLabel": "Open the big board",
+    "summary": "Plug a laptop into the TV and let the room watch the draft happen. Every pick made in MFL lands on screen seconds later — the player, his new team's colors and crest, and exactly how far down the board he was when somebody grabbed him.",
+    "description": [
+      "Draft night has always had the same problem: the picks happen inside MFL, on twelve separate laptops, and the room has no idea what just went until somebody says it out loud. So here is <a href=\"/draft-broadcast\">the Draft Broadcast</a> — a page with one job, which is to be plugged into a TV and looked at.",
+      "Keep making your picks in MFL exactly like always. Nothing about that changes. This board just watches the same draft you're in and reacts to it: a few seconds after a selection lands, the player takes over the whole screen in the colors of the team that just took him, with his crest behind him. Position, pro team, bye week, what he's projected for.",
+      "And the line the room is going to argue about: where he actually stood when his name got called. <strong>BEST AVAILABLE</strong> means nobody left on the board was rated higher — that one turns green. <strong>14th best available</strong> means thirteen better men were sitting right there. The board doesn't call it a steal and it doesn't call it a reach; it tells you the number and lets twelve people draw their own conclusions, loudly. The one thing it will not do is measure you against a draft you aren't in — with seven <a href=\"/keepers\">keepers</a> per team the good players are gone before 1.01 is even called, so this counts only the men who were genuinely available to you.",
+      "Between picks the board keeps the room oriented — who's on the clock, what just came off, who's warming up next, in the order <a href=\"/draft-predictor\">the draft order</a> set months ago. Because the AFL drafts by conference, there's a board for each: open the American League or the National League, whichever one is actually running that night, and flip between them at the bottom. Hit Full Screen and the site disappears entirely.",
+      "Built for Saturday. Everything on it comes off the same MFL draft you're already in, so there is nothing to set up — open it and it follows along."
+    ],
+    "excludeFromHero": true,
+    "image": "afl-draft-broadcast.webp",
+    "imageAlt": "The AFL Draft Broadcast board on a TV, showing which franchise is on the clock over its team colors and crest, with the last four picks and the next three teams up."
+  },
+  {
+    "id": "playoff-performance",
+    "date": "2026-08-26",
     "category": "new-page",
     "icon": "draft-podium",
     "leagues": [
@@ -43,28 +88,6 @@
     "image": "free-agents-rostered-by.webp",
     "imageAlt": "The Free Agents page for The League with a player card open over the table. The card's header band is Vitside Mafia's deep red rather than Buffalo's blue, with the Mafia's dragon crest behind a cut-out of Josh Allen, headed “Josh Allen” beside a 30 yrs pill over “Buffalo · QB · #17” and “Wyoming · 8 yrs · 2018 Round 1, Pick 07”. Directly beneath the band, a red-tinted strip carries the dragon crest on a dark chip, the label ROSTERED BY, and the name Vitside Mafia. Under it the three stat tiles read 414.6 over 17 GAMES, 24.4 PER GAME, and $9.0M over 3 YRS — where an unowned player's card shows FA over FREE AGENT. Latest News and a week-by-week Season Results table follow. Behind the card, the free agent table lists Josh Allen, Joe Burrow, Brock Purdy and the rest with a red left edge marking the rows that are already rostered.",
     "excludeFromHero": true
-  },
-  {
-    "id": "playoff-performance",
-    "date": "2026-08-26",
-    "category": "new-page",
-    "icon": "playoff",
-    "leagues": [
-      "theleague"
-    ],
-    "title": "The #1 Seed Is A Trap",
-    "link": "/playoff-performance",
-    "linkLabel": "See the damage",
-    "summary": "Nineteen seasons of evidence that the best regular season buys you almost nothing. The #1 seed has won the title 4 times out of 19. Pulling a champion's name out of a hat hits about 6%. That's the entire edge for a first-round bye and home-field-that-isn't: fifteen points of probability, and a lot of teams who found out the hard way.",
-    "description": [
-      "Every year somebody clinches the top seed in November and starts talking like the trophy is in the mail. <a href=\"/playoff-performance\">Playoff Performance</a> is the page that shuts that down. Every completed season from 2007 to 2025, the #1 seed next to the team that actually won it, and a running tally of how rarely those are the same name.",
-      "Four for nineteen. Twenty-one percent. And it is worse than the number looks, because three of those four came in a row — 2022, 2023, 2024 — which means that across the first fifteen years of this league the top seed won exactly once. Then 2025 arrived and the 15-3 Wabbits handed the thing to the Computer Jocks, who were nobody's idea of a favorite.",
-      "The best exhibit is still 2018. The Wascawy Wabbits went 16-0. Sixteen and zero. They did not win the championship. They did not reach the final. Under Siege did, and Under Siege had spent the regular season at 8-8 — go pull it up on the <a href=\"/playoffs\">playoff bracket</a> if you don't believe it.",
-      "The secondary view asks whether all-play — every team measured against every other team's score, week by week, which strips out whether your schedule was kind — knows something the <a href=\"/standings\">standings</a> don't. Barely. The all-play leader has won 5 of 19, and across 9 of the 19 seasons the all-play leader and the top seed were the same team anyway. Being demonstrably the best is worth about five extra points of title odds over being lucky, which is not the answer anybody wants.",
-      "One note on how the #1 seed is decided here, because it matters and it bit us: we read it off the bracket — whoever took the first-round bye — not off the <a href=\"/standings\">standings</a> page. Those disagree. In 2008 and 2010 the team sitting in row one of the standings was not the team that got the bye. The games know who was seeded first; the table doesn't always."
-    ],
-    "image": "playoff-performance.webp",
-    "imageAlt": "The Playoff Performance page for The League in dark mode, headed “Does the best regular season win anything?” over the line “19 completed seasons, 2007–2025. The #1 seed has won the title 4 of 19 times. Picking a champion at random out of a hat would hit about 6% of the time.” Below sit four cards: “#1 seed wins the title” showing 21%, 4 of 19, with a note that it reached the final 7 of 19; “All-play leader wins the title” showing 26%, 5 of 19, reaching the final 9 of 19; “Same team held both” showing 9 of 19, the #1 seed also being the all-play leader; and “Random baseline” showing 6%, one team in 16. A “Season by season” table follows, noting all-play is cut at the end of the regular season — week 14 in recent years, week 13 before 2021 — with columns for Year, #1 seed, All-play leader, Champion and Result. The 2025 row lists the Wascawy Wabbits at 15-3 as top seed, Da Dangsters leading all-play at .729, Computer Jocks as champion, and a grey “neither” tag. The 2024, 2023 and 2022 rows each show one team sweeping all three columns — Wascawy Wabbits at 14-4 and .714, Fire Ready Aim at 15-3 and .762, and Vitside Mafia at 15-3 and .762 — every one of them carrying both a blue “#1 seed” tag and an “all-play” tag."
   },
   {
     "id": "division-strength",

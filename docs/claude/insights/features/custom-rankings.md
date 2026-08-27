@@ -64,3 +64,49 @@
 **Evidence:** `src/utils/custom-rankings-seeding.ts` — `computeCompositeHash()` uses sorted member IDs + player count. `mergeWithOverrides()` rebuilds the list: overridden players keep their relative order, new players slot in at composite position, removed players are dropped.
 
 **Recommendation:** For any feature that derives from user-configured source data, store a hash of the source config alongside the derived state. This enables automatic reconciliation without losing user customizations.
+
+---
+
+## 2026-08-27 - The Board Became the My Draft List Importer/Exporter
+
+**Context:** `/cr` was an admin-only experiment seeded from the composite. It
+now pulls from and pushes to MFL's `myDraftList` for every owner, and is
+gated only by league membership.
+
+**The board must seed its own ranking sources.** `syncBuiltinImports()` was
+called from the Import Rankings page and NOWHERE else, so a browser that had
+never opened that page had no built-ins, therefore no composite, therefore an
+empty board. With the board's only two seeds being the composite and MFL, an
+owner with no MFL draft list had no way to build one — the exact owner the
+importer exists for. It presented as "push does nothing" (the empty-board guard
+fired) and the true fault was three steps upstream. If a page depends on
+localStorage state that another page populates, it must populate it too:
+`tests/draft-list-board-seeding.test.ts` pins the call AND its ordering against
+the composite read, because seeding after the read is the same bug.
+
+**Availability is asked from one owner's seat, not the league's.** The Free
+Agents page defines `rostered` as "held in EVERY conference" — unavailable to
+anybody. A draft board must ask "held in MINE". The AFL is a duplicate-player
+league and 60 of its 108 rostered players sit on two rosters at once, so a
+player held only in the other conference is fully draftable by you. Same shared
+math (`afl-conference-rosters.mjs`), deliberately different predicate — don't
+collapse them. It fails closed: an untrustworthy roster payload hides the
+filter rather than hiding players wrongly.
+
+**Draft pool comes from `league.draftPlayerPool`, and rookies are `status: "R"`
+in the players feed** — a flag present only for the current league year, which
+is exactly what MFL drafts on. TheLeague is `Rookie` (237 draftable), the AFL
+is `Both` (2,525 for a franchise in either conference).
+
+**The availability filter limits the push; the position filter must not.**
+Availability is a fact about the league; position is a way of reading the
+board, and pushing while looking at QBs would replace an owner's whole MFL list
+with quarterbacks. The narrowing lives in `selectPushablePlayers()` as a pure
+function of (order, pool) precisely so the position filter is not one
+identifier away from reaching it.
+
+**A live board is mostly undraftable in a rookie league.** TheLeague's board
+seeded from veteran-heavy ranking sources carried 22 draftable rookies out of
+237 that exist. The filter is honest about it, but the board is a thin place to
+draft from — seeding a rookie-pool league from the draftable pool rather than
+the composite is the open follow-up.
