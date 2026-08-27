@@ -13,6 +13,13 @@
  * resolve in the league's player feed is BLOCKED rather than dropped, because
  * silently shipping a shorter list is how an owner discovers on draft night
  * that twelve players are missing.
+ *
+ * That confirmation is IN-PAGE, never `window.confirm`. The first version used
+ * the native dialog and the push silently did nothing on mobile: DuckDuckGo
+ * suppresses `confirm()`, which returns false, and `if (!confirmed) return`
+ * was the one path out of the handler that reported nothing. Vercel logs
+ * showed page loads and GETs and not a single POST. A destructive action must
+ * never depend on a modal the browser is free to refuse to show.
  */
 
 import { useCallback, useEffect, useState } from 'react';
@@ -34,6 +41,9 @@ interface Props {
 
 type Phase = 'idle' | 'pulling' | 'pushing' | 'restoring';
 
+/** Which destructive action is awaiting in-page confirmation. */
+type Pending = null | { kind: 'push'; count: number } | { kind: 'restore'; count: number };
+
 const apiUrl = (extra = '') =>
   `/api/draft-list?league=${encodeURIComponent(activeRankingsScope())}${extra}`;
 
@@ -42,6 +52,7 @@ export default function DraftListSync({ rankings, resolveName, onPulled }: Props
   const [message, setMessage] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
+  const [pending, setPending] = useState<Pending>(null);
 
   const busy = phase !== 'idle';
 
@@ -134,13 +145,12 @@ export default function DraftListSync({ rankings, resolveName, onPulled }: Props
       return;
     }
 
-    const confirmed = confirm(
-      `Overwrite your My Draft List on MFL with these ${rankings.length} players, in this order?\n\n` +
-        'This completely replaces whatever MFL currently has. Your previous list is saved ' +
-        'so you can undo it.',
-    );
-    if (!confirmed) return;
+    setPending({ kind: 'push', count: rankings.length });
+    say(`Ready to overwrite your MFL draft list with ${rankings.length} players. Confirm below.`);
+  }, [busy, rankings, resolveName, say]);
 
+  const runPush = useCallback(async () => {
+    setPending(null);
     setPhase('pushing');
     say('Writing your board to MFL…');
     try {
@@ -169,16 +179,16 @@ export default function DraftListSync({ rankings, resolveName, onPulled }: Props
     } finally {
       setPhase('idle');
     }
-  }, [busy, rankings, resolveName, say]);
+  }, [rankings, say]);
 
-  const handleRestore = useCallback(async () => {
+  const handleRestore = useCallback(() => {
     if (busy || !snapshot) return;
-    const confirmed = confirm(
-      `Put back the ${snapshot.playerIds.length}-player list MFL had before your last push?\n\n` +
-        'This overwrites what is on MFL right now.',
-    );
-    if (!confirmed) return;
+    setPending({ kind: 'restore', count: snapshot.playerIds.length });
+    say(`Ready to put back the ${snapshot.playerIds.length}-player list MFL had before your last push. Confirm below.`);
+  }, [busy, snapshot, say]);
 
+  const runRestore = useCallback(async () => {
+    setPending(null);
     setPhase('restoring');
     say('Restoring your previous MFL list…');
     try {
@@ -194,7 +204,12 @@ export default function DraftListSync({ rankings, resolveName, onPulled }: Props
     } finally {
       setPhase('idle');
     }
-  }, [busy, snapshot, say]);
+  }, [say]);
+
+  const cancelPending = useCallback(() => {
+    setPending(null);
+    say('Cancelled — nothing was sent to MFL.');
+  }, [say]);
 
   return (
     <div className="cr-sync">
@@ -202,15 +217,36 @@ export default function DraftListSync({ rankings, resolveName, onPulled }: Props
         <button className="cr-btn cr-btn--sm" onClick={handlePull} disabled={busy} type="button">
           {phase === 'pulling' ? 'Pulling…' : 'Pull from MFL'}
         </button>
-        <button className="cr-btn cr-btn--sm" onClick={handlePush} disabled={busy} type="button">
+        <button className="cr-btn cr-btn--sm" onClick={handlePush} disabled={busy || pending !== null} type="button">
           {phase === 'pushing' ? 'Pushing…' : 'Push to MFL'}
         </button>
         {snapshot && snapshot.playerIds.length > 0 && (
-          <button className="cr-btn cr-btn--sm" onClick={handleRestore} disabled={busy} type="button">
+          <button className="cr-btn cr-btn--sm" onClick={handleRestore} disabled={busy || pending !== null} type="button">
             {phase === 'restoring' ? 'Restoring…' : 'Undo last push'}
           </button>
         )}
       </div>
+      {pending && (
+        <div className="cr-sync__confirm" role="group" aria-label="Confirm writing to MFL">
+          <p className="cr-sync__confirm-text">
+            {pending.kind === 'push'
+              ? `This completely replaces your My Draft List on MFL with these ${pending.count} players, in this order. Your current list is saved first so you can undo it.`
+              : `This overwrites what is on MFL right now with the ${pending.count} players it held before your last push.`}
+          </p>
+          <div className="cr-sync__confirm-actions">
+            <button
+              className="cr-btn cr-btn--sm cr-btn--danger"
+              onClick={pending.kind === 'push' ? runPush : runRestore}
+              type="button"
+            >
+              {pending.kind === 'push' ? `Overwrite ${pending.count} on MFL` : 'Restore on MFL'}
+            </button>
+            <button className="cr-btn cr-btn--sm" onClick={cancelPending} type="button">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
       {message && (
         <p
           className={`cr-sync__status${isError ? ' cr-sync__status--error' : ''}`}

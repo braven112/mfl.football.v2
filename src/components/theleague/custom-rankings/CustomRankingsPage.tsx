@@ -122,6 +122,7 @@ export default function CustomRankingsPage({
   const [isEmpty, setIsEmpty] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [showVorp, setShowVorp] = useState(false);
+  const [resetArmed, setResetArmed] = useState(false);
   const hasVorp = Object.keys(vorpMap).length > 0;
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -349,8 +350,15 @@ export default function CustomRankingsPage({
     [tiers, scheduleSave, buildState],
   );
 
+  // Two-tap rather than window.confirm: mobile privacy browsers suppress
+  // native dialogs, which makes a suppressed confirm read as a cancel and the
+  // button look broken. That silently killed the MFL push — see DraftListSync.
   const handleReset = useCallback(() => {
-    if (!confirm('Reset all rankings to composite order? This cannot be undone.')) return;
+    if (!resetArmed) {
+      setResetArmed(true);
+      return;
+    }
+    setResetArmed(false);
 
     const composite = buildCompositePlayerList();
     if (!composite) return;
@@ -361,7 +369,7 @@ export default function CustomRankingsPage({
     setTiers(autoTiers);
     setCompositeMap(composite.compositeMap);
     scheduleSave(buildState(composite.playerIds, new Set(), autoTiers));
-  }, [scheduleSave, buildState]);
+  }, [resetArmed, scheduleSave, buildState]);
 
   // --- Enriched player list ---
   const filteredPlayers = useMemo(
@@ -464,7 +472,7 @@ export default function CustomRankingsPage({
             <SaveIndicator status={saveStatus} lastSaved={lastSaved} />
             <button
               className={`cr-btn cr-btn--sm${isEditing ? ' cr-btn--active' : ''}`}
-              onClick={() => setIsEditing((v) => !v)}
+              onClick={() => { setIsEditing((v) => !v); setResetArmed(false); }}
               type="button"
             >
               {isEditing ? 'Done' : 'Edit'}
@@ -484,7 +492,7 @@ export default function CustomRankingsPage({
                 onClick={handleReset}
                 type="button"
               >
-                Reset
+                {resetArmed ? 'Tap again to reset' : 'Reset'}
               </button>
             )}
           </div>
