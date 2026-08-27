@@ -2,6 +2,14 @@
   "weekOf": "2026-08-31",
   "changes": [
     {
+      "date": "2026-08-27",
+      "type": "bug-fix",
+      "summary": "Clicking the little yellow 🏷️ trade-block tag next to a player on Roster/Salary threw up a full-width red error box. The Trade Builder decided which two teams to open with by reading the web address in the browser, but the server had already picked a different pair when it built the page — the two disagreed, and React complained loudly on the way through. The tag now opens the Trade Builder straight onto the tagged player's team, no red box. The same box had also started appearing on unrelated pages: the roster page's error catcher was staying switched on after you navigated away, so it reported other pages' problems as if they were the roster's. It now switches off when you leave.",
+      "impact": "user",
+      "area": "trade-builder",
+      "league": "theleague"
+    },
+    {
       "date": "2026-08-26",
       "type": "bug-fix",
       "summary": "Twenty-two AFL third-place finishes are on the site for the first time. The code read third place out of the AFL Championship bracket's neighbour — which since 2018 has been the AL Championship, a semifinal bracket whose winner always goes on to win or lose the final. So the answer was always the champion or the runner-up, those two got claimed first, and third place quietly landed nowhere: 0 seasons out of 23. Every one from 2004 on has now been recovered from the actual bracket games. The East picks up six third-place finishes, the South five, the North and West four each.",

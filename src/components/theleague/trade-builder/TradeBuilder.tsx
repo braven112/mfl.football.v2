@@ -13,8 +13,8 @@ import type {
 import {
   computeTeamTradeImpact,
   serializeTradeToParams,
-  deserializeTradeFromParams,
 } from '../../../utils/trade-calculations';
+import { resolveInitialTradeState } from '../../../utils/trade-builder-initial-state';
 import { buildMflAssetString, parseFpCode, parseDpCode } from '../../../utils/trade-asset-parsing';
 import TeamPanel from './TeamPanel';
 import TradeBaitMarketplace from './TradeBaitMarketplace';
@@ -189,9 +189,27 @@ interface Props {
   pageData: string;
   defaultTeamId: string;
   authUser?: string;
+  /**
+   * `Astro.url.search` as the SERVER saw it (leading `?` included, or '').
+   *
+   * Required, and required to come from the server: the initial trade state is
+   * derived from the query string, so reading `window.location.search` here
+   * instead makes the server render one pair of teams and the client another —
+   * React 19 reports that as recoverable error #418, and `reportError` surfaces
+   * it as an uncaught window error. The roster page's 🏷️ trade-block link
+   * (`?b=<franchiseId>`) hit exactly that. The page is `prerender = false`, so
+   * the server always has the real query string; a ClientRouter navigation
+   * re-fetches this page from the server too, so both paths agree.
+   */
+  initialSearch: string;
 }
 
-export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUserJson }: Props) {
+export default function TradeBuilder({
+  pageData,
+  defaultTeamId,
+  authUser: authUserJson,
+  initialSearch,
+}: Props) {
   const data: TradeBuilderPageData = useMemo(
     () => JSON.parse(pageData),
     [pageData]
@@ -243,48 +261,22 @@ export default function TradeBuilder({ pageData, defaultTeamId, authUser: authUs
     errorMessage: null,
   });
 
-  // Initialize from URL params or defaults
-  const initialState = useMemo((): TradeState => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const restored = deserializeTradeFromParams(params);
-      if (restored.teamAId || restored.teamBId) {
-        return {
-          teamA: {
-            franchiseId: restored.teamAId,
-            playerIds: restored.teamAPlayerIds,
-            draftPicks: restored.teamADraftPicks,
-            rookieExtensions: {},
-          },
-          teamB: {
-            franchiseId: restored.teamBId,
-            playerIds: restored.teamBPlayerIds,
-            draftPicks: restored.teamBDraftPicks,
-            rookieExtensions: {},
-          },
-          rookieModalTarget: null,
-        };
-      }
-    }
-
-    // No user preference — pick the 2 teams with the most cap room
-    if (!defaultTeamId && data.teams.length >= 2) {
-      const byCapSpace = [...data.teams].sort(
-        (a, b) => b.currentCapSpace - a.currentCapSpace
-      );
-      return {
-        teamA: { ...EMPTY_SIDE, franchiseId: byCapSpace[0].franchiseId },
-        teamB: { ...EMPTY_SIDE, franchiseId: byCapSpace[1].franchiseId },
-        rookieModalTarget: null,
-      };
-    }
-
-    return {
-      teamA: { ...EMPTY_SIDE, franchiseId: defaultTeamId || null },
-      teamB: { ...EMPTY_SIDE },
-      rookieModalTarget: null,
-    };
-  }, [defaultTeamId, data.teams]);
+  // Initialize from URL params or defaults.
+  //
+  // The params come from the `initialSearch` PROP, never `window.location` —
+  // this runs during render, on the server as well as the client, and the two
+  // must produce identical output or React reports a hydration mismatch (see
+  // Props). The derivation itself lives in a pure module so a test can assert
+  // the server and browser answers agree.
+  const initialState = useMemo(
+    (): TradeState =>
+      resolveInitialTradeState({
+        search: initialSearch,
+        defaultTeamId,
+        teams: data.teams,
+      }),
+    [defaultTeamId, data.teams, initialSearch]
+  );
 
   const [state, dispatch] = useReducer(tradeReducer, initialState);
 

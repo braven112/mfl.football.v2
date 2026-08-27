@@ -5229,6 +5229,15 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 -->
 <script is:inline>
   (function () {
+    // ClientRouter swaps the DOM but leaves window listeners in place, so a
+    // banner installed here outlives the roster page and reports errors raised
+    // by whatever page the owner navigated to next. That is how the trade
+    // builder's hydration mismatch (#418, reached via the 🏷️ trade-block link)
+    // arrived as a red box an owner reported against ROSTERS. Install once,
+    // and tear down on the way out.
+    if (window.__diagErrorBannerInstalled) return;
+    window.__diagErrorBannerInstalled = true;
+
     function showDiagBanner(label, detail) {
       if (document.getElementById('__diag_error_banner')) return;
       var el = document.createElement('div');
@@ -5243,13 +5252,13 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
         label + '\n' + detail;
       (document.body || document.documentElement).appendChild(el);
     }
-    window.addEventListener('error', function (e) {
+    function onError(e) {
       showDiagBanner(
         e.message || 'Unknown error',
         (e.error && e.error.stack) || (e.filename + ':' + e.lineno + ':' + e.colno)
       );
-    });
-    window.addEventListener('unhandledrejection', function (e) {
+    }
+    function onRejection(e) {
       // TransitionNoiseGuard (layout <head>, so it registered first) already
       // called preventDefault on an aborted ClientRouter view transition. That
       // is Astro's own noise on a page that rendered fine — an owner reported
@@ -5260,6 +5269,19 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       var r = e.reason;
       if (window.__isAbortedViewTransition && window.__isAbortedViewTransition(r)) return;
       showDiagBanner('Unhandled promise rejection', (r && r.stack) || String(r));
+    }
+
+    window.addEventListener('error', onError);
+    window.addEventListener('unhandledrejection', onRejection);
+
+    // astro:before-swap fires on the OUTGOING document, i.e. exactly when the
+    // owner leaves this page. Re-entering rosters re-runs this inline script,
+    // which reinstalls — hence resetting the flag rather than leaving it set.
+    document.addEventListener('astro:before-swap', function teardown() {
+      window.removeEventListener('error', onError);
+      window.removeEventListener('unhandledrejection', onRejection);
+      document.removeEventListener('astro:before-swap', teardown);
+      window.__diagErrorBannerInstalled = false;
     });
   })();
 </script>
