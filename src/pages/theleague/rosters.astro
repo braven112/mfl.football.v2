@@ -71,6 +71,14 @@ import { buildWeeklyPlayerResults } from '../../utils/weekly-player-results';
 import liveOddsFallbackData from '../../data/nfl/live-odds.json';
 import { spriteUrl } from '../../utils/sprite-url';
 import { getLeagueBySlug } from '../../config/leagues';
+// Shared with the inline client script — see docs/plans/rosters-page-split.md.
+import {
+  getPositionRank as getPositionRankCore,
+  sortByPosition as sortByPositionCore,
+  annotatePositionDividers as annotatePositionDividersCore,
+  annotateTierDividers as annotateTierDividersCore,
+  annotateActiveStriping as annotateActiveStripingCore,
+} from '../../scripts/rosters/roster-rows';
 // Precomputed payloads for every historical season (see
 // scripts/compute-roster-season-payloads.mjs); the shared builder computes
 // the current league/season years live at request time.
@@ -770,68 +778,27 @@ const nflByeWeeks = {
   TEN: 10,
   WAS: 12,
 };
-const getPositionRank = (pos) => {
-  if (!pos) return positionOrder.length;
-  const rank = positionOrder.indexOf(pos.toUpperCase());
-  return rank === -1 ? positionOrder.length : rank;
-};
+// Server-side row shaping. Shares src/scripts/rosters/roster-rows.ts with the
+// client script below — these were duplicated function bodies that had drifted
+// apart. The options record where they differ so the split changed nothing:
+// this side draws a divider above row 0 and does NOT treat the last row as
+// ending its group; the client does the opposite on both. `parseNumber` is
+// passed because feed salaries can still be formatted strings here.
+const getPositionRank = (pos: string | null | undefined) =>
+  getPositionRankCore(pos, positionOrder);
 
-const sortByPosition = (list) =>
-  list.slice().sort((a, b) => {
-    const diff = getPositionRank(a.position) - getPositionRank(b.position);
-    if (diff !== 0) return diff;
-    return parseNumber(b.salary) - parseNumber(a.salary);
+const sortByPosition = (list: any[] = []) =>
+  sortByPositionCore(list, positionOrder, { readSalary: parseNumber });
+
+const annotatePositionDividers = (rows: any[] = []) =>
+  annotatePositionDividersCore(rows, {
+    dividerOnFirstRow: true,
+    dividerEndOnLastRow: false,
   });
 
-const annotatePositionDividers = (rows = []) => {
-  const normalized = rows.map((player, index) => {
-    const prevPosition =
-      index > 0 ? (rows[index - 1].position ?? '').toUpperCase() : null;
-    const current = (player.position ?? '').toUpperCase();
-    const showDivider = (index === 0) || (index > 0 && current !== prevPosition);
-    return {
-      ...player,
-      positionDivider: showDivider,
-      _positionGroup: current,
-    };
-  });
+const annotateTierDividers = (rows: any[] = []) => annotateTierDividersCore(rows);
 
-  return normalized.map((player, index) => {
-    const next = normalized[index + 1];
-    const isEndDivider =
-      !!next && (next._positionGroup ?? '') !== (player._positionGroup ?? '');
-    return {
-      ...player,
-      positionDividerEnd: isEndDivider,
-    };
-  });
-};
-
-const annotateTierDividers = (rows = []) => {
-  let lastTag = null;
-  return rows.map((player) => {
-    const currentTag = player.displayTag ?? 'active';
-    const divider =
-      lastTag !== null && currentTag !== lastTag && currentTag !== 'active';
-    lastTag = currentTag;
-    return {
-      ...player,
-      tierDivider: divider,
-    };
-  });
-};
-
-const annotateActiveStriping = (rows = []) => {
-  let activeIndex = 0;
-  return rows.map((player) => {
-    if ((player.displayTag ?? 'active') === 'active') {
-      const striped = activeIndex % 2 === 1;
-      activeIndex += 1;
-      return { ...player, activeStripe: striped };
-    }
-    return { ...player, activeStripe: false };
-  });
-};
+const annotateActiveStriping = (rows: any[] = []) => annotateActiveStripingCore(rows);
 
 // Wrapper for aggregateDeadMoney that accepts season data object
 const aggregateDeadMoneyFromSeasonData = (seasonData = {}, franchiseId) => {
@@ -5341,6 +5308,33 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   // Same selection function the deadline job runs — the Cutdown Plan preview
   // and the automation's reality cannot drift (plan requirement).
   import { selectAutoMoves } from '../../utils/august-cut-selection';
+  // Extracted roster logic. These were closures in this script; they are now
+  // modules with unit tests (tests/roster-{cap-math,rows,age}.test.ts). The
+  // local consts below bind each one to this page's config so that every
+  // existing call site reads exactly as it did before.
+  // See docs/plans/rosters-page-split.md.
+  import {
+    getCapPercent as getCapPercentCore,
+    calculateCapCharges as calculateCapChargesCore,
+    calculateBucketCaps as calculateBucketCapsCore,
+    calculatePositionCaps as calculatePositionCapsCore,
+    calculateCapEfficiency as calculateCapEfficiencyCore,
+    calculateContractYearsMeta as calculateContractYearsMetaCore,
+  } from '../../scripts/rosters/roster-cap-math';
+  import {
+    getPositionRank as getPositionRankCore,
+    sortByPosition as sortByPositionCore,
+    annotatePositionDividers as annotatePositionDividersCore,
+    annotateTierDividers as annotateTierDividersCore,
+    annotateActiveStriping as annotateActiveStripingCore,
+  } from '../../scripts/rosters/roster-rows';
+  import {
+    calculateAge as calculateAgeCore,
+    calculateAverageAge as calculateAverageAgeCore,
+    calculateAverageAgeByPosition as calculateAverageAgeByPositionCore,
+    getAgeDistribution as getAgeDistributionCore,
+    getAgeDistributionColors as getAgeDistributionColorsCore,
+  } from '../../scripts/rosters/roster-age';
 
   const config = JSON.parse(
     document.getElementById('roster-config').textContent
@@ -6620,24 +6614,18 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
     const formatCountLabel = (count) => `${count} Players`;
 
-    const getCapPercent = (tag = 'ACTIVE', isCurrent = true) => {
-      const normalized = String(tag).toUpperCase();
-      const map = capInclusion?.[normalized] ?? { current: 1, future: 1 };
-      return isCurrent ? map.current ?? 1 : map.future ?? 1;
-    };
+    // Config-bound wrappers over src/scripts/rosters/*. Same behavior, same
+    // signatures — the shared implementations just take what they used to close
+    // over as arguments.
+    const getCapPercent = (tag = 'ACTIVE', isCurrent = true) =>
+      getCapPercentCore(tag, isCurrent, capInclusion);
 
-    const getPositionRank = (pos = '') => {
-      const normalized = pos.toUpperCase();
-      const index = positionOrder.indexOf(normalized);
-      return index === -1 ? positionOrder.length : index;
-    };
+    const getPositionRank = (pos = '') => getPositionRankCore(pos, positionOrder);
 
-    const sortByPosition = (list = []) =>
-      list.slice().sort((a, b) => {
-        const diff = getPositionRank(a.position ?? '') - getPositionRank(b.position ?? '');
-        if (diff !== 0) return diff;
-        return (b.salary ?? 0) - (a.salary ?? 0);
-      });
+    // Salaries are numeric in the client payload, so the default salary reader
+    // matches what this call site did inline. The server copy passes
+    // `parseNumber` instead, because feed values there can still be strings.
+    const sortByPosition = (list = []) => sortByPositionCore(list, positionOrder);
 
     const enrichPlayer = (player = {}, tag = 'active') => {
       const nflTeam = (player.nflTeam ?? player.team ?? '').toUpperCase();
@@ -6654,45 +6642,20 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       };
     };
 
-    const annotatePositionDividers = (rows = []) => {
-      const normalized = rows.map((player, index) => {
-        const prevPosition =
-          index > 0 ? (rows[index - 1].position ?? '').toUpperCase() : null;
-        const current = (player.position ?? '').toUpperCase();
-        const divider = index > 0 && current !== prevPosition;
-        return { ...player, positionDivider: divider, _positionGroup: current };
+    // The two divider flags are where the server and client copies had drifted:
+    // the frontmatter drew a rule above row 0 and treated the last row as NOT
+    // ending its group; this side did the opposite on both counts. The options
+    // preserve each side exactly rather than silently picking a winner —
+    // see src/scripts/rosters/roster-rows.ts.
+    const annotatePositionDividers = (rows = []) =>
+      annotatePositionDividersCore(rows, {
+        dividerOnFirstRow: false,
+        dividerEndOnLastRow: true,
       });
 
-      return normalized.map((player, index) => {
-        const next = normalized[index + 1];
-        const positionDividerEnd =
-          !next || (next?._positionGroup ?? '') !== (player._positionGroup ?? '');
-        return { ...player, positionDividerEnd };
-      });
-    };
+    const annotateTierDividers = (rows = []) => annotateTierDividersCore(rows);
 
-    const annotateTierDividers = (rows = []) => {
-      let lastTag = null;
-      return rows.map((player) => {
-        const currentTag = player.displayTag ?? 'active';
-        const tierDivider =
-          lastTag !== null && currentTag !== lastTag && currentTag !== 'active';
-        lastTag = currentTag;
-        return { ...player, tierDivider };
-      });
-    };
-
-    const annotateActiveStriping = (rows = []) => {
-      let activeIndex = 0;
-      return rows.map((player) => {
-        if ((player.displayTag ?? 'active') === 'active') {
-          const striped = activeIndex % 2 === 1;
-          activeIndex += 1;
-          return { ...player, activeStripe: striped };
-        }
-        return { ...player, activeStripe: false };
-      });
-    };
+    const annotateActiveStriping = (rows = []) => annotateActiveStripingCore(rows);
 
     const buildDisplayRows = (teamData = {}) => {
       const combined = [
@@ -7568,113 +7531,24 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       return totals;
     };
 
+    // Config/state-bound wrappers over src/scripts/rosters/roster-cap-math.ts.
+    // What these used to close over — the cap-inclusion table, pending contract
+    // actions, and both declaration maps — is passed explicitly now, which is
+    // what made them testable (tests/roster-cap-math.test.ts).
     const calculateCapCharges = (rows = []) =>
-      salaryYears.map((_, index) => {
-        let total = rows.reduce((sum, player) => {
-          // Skip cut/traded players
-          const action = contractActions[player.id];
-          if (action && (action.type === 'cut' || action.type === 'trade')) {
-            return sum;
-          }
-
-          // Use declared contract years if available
-          const decl = localDeclarations[player.id] || declarationsByPlayer[player.id];
-          const declYears = decl ? (decl.years ?? decl.requestedYears ?? null) : null;
-          const effectiveContractYears = declYears != null ? declYears : (player.contractYears ?? 0);
-
-          if (effectiveContractYears > index) {
-            const isCurrent = index === 0;
-            const tagRaw = (player.displayTag ?? player.status ?? 'ACTIVE').toString().toUpperCase();
-            const tag = tagRaw.includes('PRACTICE')
-              ? 'PRACTICE'
-              : tagRaw.includes('INJURED') || tagRaw === 'IR'
-                ? 'INJURED'
-                : 'ACTIVE';
-            const percent = getCapPercent(tag, isCurrent);
-            const baseSalary = Number(player.salary ?? 0);
-
-            // If there's an extension, calculate salary for this year with 10% increases
-            // Otherwise, apply 10% annual salary escalation for multi-year contracts
-            let salaryForYear = baseSalary * Math.pow(1.10, index);
-            if (action && action.type === 'extension' && action.salaryBreakdown) {
-              const yearKey = `year${index}`;
-              salaryForYear = Number(action.salaryBreakdown[yearKey] ?? salaryForYear);
-            }
-
-            return sum + (salaryForYear * percent || 0);
-          }
-          return sum;
-        }, 0);
-
-        // Add franchise tag and team option salaries for this specific year
-        Object.values(contractActions).forEach(action => {
-          if ((action.type === 'franchise' || action.type === 'team-option') && action.ufaYearIndex === index) {
-            total += Number(action.newSalary ?? 0);
-          }
-        });
-
-        return total;
+      calculateCapChargesCore(rows, {
+        salaryYears,
+        capInclusion,
+        contractActions,
+        localDeclarations,
+        declarationsByPlayer,
       });
 
-    const calculateBucketCaps = (rows = []) =>
-      rows.reduce(
-        (acc, player) => {
-          const tag = (player.displayTag ?? 'active').toUpperCase();
-          const isCurrent = true;
-          const percent = getCapPercent(tag, isCurrent);
-          const salary = Number(player.salary ?? 0) || 0;
-          if (tag === 'PRACTICE') {
-            acc.practice += salary * percent;
-            acc.counts.practice += 1;
-          } else if (tag === 'INJURED') {
-            acc.injured += salary * percent;
-            acc.counts.injured += 1;
-          } else {
-            acc.active += salary * percent;
-            acc.counts.active += 1;
-          }
-          return acc;
-        },
-        { active: 0, practice: 0, injured: 0, counts: { active: 0, practice: 0, injured: 0 } }
-      );
+    const calculateBucketCaps = (rows = []) => calculateBucketCapsCore(rows, capInclusion);
 
-    const calculatePositionCaps = (rows = []) =>
-      rows.reduce((totals, player) => {
-        if ((player.contractYears ?? 0) <= 0) return totals;
-        const tagRaw = (player.displayTag ?? player.status ?? 'ACTIVE').toString().toUpperCase();
-        const tag = tagRaw.includes('PRACTICE')
-          ? 'PRACTICE'
-          : tagRaw.includes('INJURED') || tagRaw === 'IR'
-            ? 'INJURED'
-            : 'ACTIVE';
-        const percent = getCapPercent(tag, true);
-        const pos = (player.position ?? 'UNK').toUpperCase();
-        const salary = (Number(player.salary ?? 0) || 0) * percent;
-        totals[pos] = (totals[pos] ?? 0) + salary;
-        return totals;
-      }, {});
+    const calculatePositionCaps = (rows = []) => calculatePositionCapsCore(rows, capInclusion);
 
-    const calculateCapEfficiency = (rows = []) => {
-      const efficiency = {};
-      rows.forEach((player) => {
-        if ((player.contractYears ?? 0) <= 0 || (player.points ?? 0) <= 0) return;
-        const pos = (player.position ?? 'UNK').toUpperCase();
-        const salary = Number(player.salary ?? 0) || 0;
-        const points = Number(player.points ?? 0) || 0;
-
-        if (!efficiency[pos]) {
-          efficiency[pos] = { totalCost: 0, totalPoints: 0 };
-        }
-        efficiency[pos].totalCost += salary;
-        efficiency[pos].totalPoints += points;
-      });
-
-      const result = {};
-      Object.entries(efficiency).forEach(([pos, data]) => {
-        result[pos] = data.totalCost / data.totalPoints;
-      });
-      return result;
-    };
+    const calculateCapEfficiency = (rows = []) => calculateCapEfficiencyCore(rows);
 
     // Every season payload carries its own `salaryAdjustments`, so the first
     // branch is the one that fires. The remaining fallbacks used to read a
@@ -7724,17 +7598,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       );
     };
 
-    const calculateContractYearsMeta = (rows = []) => {
-      const contractYearsTotal = rows.reduce(
-        (sum, player) => sum + Math.max(Number(player.contractYears ?? 0) || 0, 0),
-        0
-      );
-      const longestContract = rows.reduce(
-        (max, player) => Math.max(max, Number(player.contractYears ?? 0) || 0),
-        0
-      );
-      return { contractYearsTotal, longestContract };
-    };
+    const calculateContractYearsMeta = (rows = []) => calculateContractYearsMetaCore(rows);
 
     const buildDonut = (el, slices = [], total = 0) => {
       if (!el) return;
@@ -7860,87 +7724,15 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       el.innerHTML = barsHTML;
     };
 
-    const calculateAge = (birthdate) => {
-      if (!birthdate) return null;
-      const birthDate = new Date(birthdate * 1000);
-      const today = new Date();
-      let age = today.getFullYear() - birthDate.getFullYear();
-      const monthDiff = today.getMonth() - birthDate.getMonth();
-      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-        age--;
-      }
-      return age;
-    };
-
-    const calculateAverageAge = (players = []) => {
-      const ages = players
-        .map((p) => calculateAge(p.birthdate))
-        .filter((age) => age !== null);
-      if (ages.length === 0) return null;
-      return Math.round((ages.reduce((sum, age) => sum + age, 0) / ages.length) * 10) / 10;
-    };
-
-    const calculateAverageAgeByPosition = (players = []) => {
-      const byPosition = new Map();
-      players.forEach((player) => {
-        const pos = (player.position ?? 'UNK').toUpperCase();
-        const age = calculateAge(player.birthdate);
-        if (age !== null) {
-          if (!byPosition.has(pos)) {
-            byPosition.set(pos, []);
-          }
-          byPosition.get(pos).push(age);
-        }
-      });
-
-      const result = new Map();
-      byPosition.forEach((ages, position) => {
-        const avgAge = Math.round((ages.reduce((sum, age) => sum + age, 0) / ages.length) * 10) / 10;
-        result.set(position, { avgAge, count: ages.length });
-      });
-      return result;
-    };
-
-    const getAgeDistribution = (players = [], bucketSize = 5) => {
-      const ages = players
-        .map((p) => calculateAge(p.birthdate))
-        .filter((age) => age !== null);
-      if (ages.length === 0) {
-        return [];
-      }
-
-      const buckets = new Map();
-      ages.forEach((age) => {
-        const bucketStart = Math.floor(age / bucketSize) * bucketSize;
-        buckets.set(bucketStart, (buckets.get(bucketStart) ?? 0) + 1);
-      });
-
-      return Array.from(buckets.entries())
-        .sort((a, b) => a[0] - b[0])
-        .map(([bucketStart, count]) => ({
-          range: `${bucketStart}-${bucketStart + bucketSize - 1}`,
-          count,
-          percentage: Math.round((count / ages.length) * 100),
-        }));
-    };
-
-    const getAgeDistributionColors = (count) => {
-      const colors = [
-        '#22c55e', // green (younger)
-        '#84cc16', // lime
-        '#eab308', // yellow
-        '#f97316', // orange
-        '#ef4444', // red (older)
-      ];
-      if (count <= colors.length) {
-        return colors.slice(0, count);
-      }
-      const result = [];
-      for (let i = 0; i < count; i++) {
-        result.push(colors[i % colors.length]);
-      }
-      return result;
-    };
+    // src/scripts/rosters/roster-age.ts. "Today" is a parameter there so the
+    // functions are testable; these call sites keep the implicit `new Date()`.
+    const calculateAge = (birthdate) => calculateAgeCore(birthdate);
+    const calculateAverageAge = (players = []) => calculateAverageAgeCore(players);
+    const calculateAverageAgeByPosition = (players = []) =>
+      calculateAverageAgeByPositionCore(players);
+    const getAgeDistribution = (players = [], bucketSize = 5) =>
+      getAgeDistributionCore(players, bucketSize);
+    const getAgeDistributionColors = (count) => getAgeDistributionColorsCore(count);
 
     const applyHiddenColumns = () => {
       if (!rosterTable) return;
