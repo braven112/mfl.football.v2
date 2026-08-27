@@ -135,9 +135,11 @@ jobs:
       # written without this would commit named people beside owner pages still
       # titled by their team identities. division-strength copies that same
       # `title` onto every owner row, so it is chained here exactly as prebuild
-      # chains it — recomputing only the tenures leaves the committed division
-      # pages crediting a season to the team name the owner page no longer uses.
-      - name: Recompute owner tenures
+      # chains it. Nothing user-visible depends on that copy — the division
+      # page labels by team on purpose — but leaving it behind commits an
+      # artifact that no longer matches its generator, and the next unrelated
+      # compute run inherits the diff.
+      - name: Recompute owner tenures and division strength
         if: inputs.write
         run: node ./scripts/compute-owner-tenures.mjs && node ./scripts/compute-division-strength.mjs
 
