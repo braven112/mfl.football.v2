@@ -81,7 +81,12 @@ export default function DraftListSync({
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [pending, setPending] = useState<Pending>(null);
 
-  const busy = phase !== 'idle';
+  // `pending` counts as busy. A confirmation panel names a specific list and
+  // count; leaving Pull clickable behind it lets the board be REPLACED while
+  // the owner is deciding, so the thing they confirm is not the thing that
+  // existed when they read it. runPush re-validates at write time as the
+  // backstop, but the interaction should not be reachable in the first place.
+  const busy = phase !== 'idle' || pending !== null;
 
   const outOfPool = useMemo(
     () => (availableIds ? rankings.filter((id) => !availableIds.has(id)).length : 0),
@@ -269,7 +274,7 @@ export default function DraftListSync({
         <button className="cr-btn cr-btn--sm" onClick={handlePull} disabled={busy} type="button">
           {phase === 'pulling' ? 'Pulling…' : 'Pull from MFL'}
         </button>
-        <button className="cr-btn cr-btn--sm" onClick={handlePush} disabled={busy || pending !== null} type="button">
+        <button className="cr-btn cr-btn--sm" onClick={handlePush} disabled={busy} type="button">
           {phase === 'pushing'
             ? 'Pushing…'
             : filterLabel
@@ -277,7 +282,7 @@ export default function DraftListSync({
               : 'Push to MFL'}
         </button>
         {snapshot && snapshot.playerIds.length > 0 && (
-          <button className="cr-btn cr-btn--sm" onClick={handleRestore} disabled={busy || pending !== null} type="button">
+          <button className="cr-btn cr-btn--sm" onClick={handleRestore} disabled={busy} type="button">
             {phase === 'restoring' ? 'Restoring…' : 'Undo last push'}
           </button>
         )}
@@ -291,7 +296,7 @@ export default function DraftListSync({
                   ? ` The "${filterLabel}" filter is on, so ${boardTotal - pending.count} of your ${boardTotal} board players are being left off.`
                   : '') +
                 (outOfPool > 0
-                  ? ` ${outOfPool} of them are outside this league's draft pool${draftPool === 'Rookie' ? ' (it drafts rookies only)' : ''} — MFL decides what it keeps.`
+                  ? ` ${outOfPool} of them are not draftable here — either outside the draft pool${draftPool === 'Rookie' ? ' (this league drafts rookies only)' : ''} or already rostered. MFL decides what it keeps.`
                   : '')
               : `This overwrites what is on MFL right now with the ${pending.count} players it held before your last push.`}
           </p>
