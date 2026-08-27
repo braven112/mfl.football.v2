@@ -28,7 +28,21 @@ import { getDeclarations } from '../../utils/contract-storage';
 import { getCutList, getCredentialCapturedAt } from '../../utils/autocut-storage';
 import CutdownPlanPanel from '../../components/theleague/CutdownPlanPanel.astro';
 import type { RosterPlayer, MFLPlayerInfo } from '../../types/contract-eligibility';
-import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD } from '../../constants/roster-constants';
+import {
+  NFL_LOGO_ONERROR,
+  NFL_LOGO_ONLOAD,
+  // Canonical shared definitions. This page used to redefine every one of
+  // these locally — DEFAULT_HEADSHOT_URL three separate times — while already
+  // importing from this module. See docs/plans/rosters-page-split.md.
+  DEFAULT_HEADSHOT_URL,
+  getPlayerImageUrl,
+  getPlayerHeadshot,
+  getNflLogoUrl,
+  positionOrder as sharedPositionOrder,
+  POSITION_COLORS as sharedPositionColors,
+  divisionOrder as sharedDivisionOrder,
+  nflByeWeeks as sharedNflByeWeeks,
+} from '../../constants/roster-constants';
 import type { PositionNeed } from '../../utils/free-agent-needs';
 import type { ChartSlice } from '../../scripts/chart-utils';
 import { getCurrentWeek } from '../../utils/current-week';
@@ -595,7 +609,7 @@ const weeklyPlayerResults = (nflScheduleData && weeklyResultsRawData && Array.is
     )
   : {};
 
-const divisionOrder = ['Northwest', 'Southwest', 'Central', 'East'];
+const divisionOrder = sharedDivisionOrder;
 
 const activeTeams = getActiveTeams(leagueAssets);
 
@@ -622,22 +636,13 @@ const teamsList = activeTeams
 
 const teamLookup = Object.fromEntries(teamsList.map((team) => [team.id, team]));
 
-const DEFAULT_HEADSHOT_URL =
-  `https://${THELEAGUE_MFL_HOST}/player_photos_2010/no_photo_available.jpg`;
-const getPlayerImageUrl = (playerId) =>
-  playerId
-    ? `https://${THELEAGUE_MFL_HOST}/player_photos_big_2014/${playerId}_thumb.jpg`
-    : DEFAULT_HEADSHOT_URL;
-const getPlayerHeadshot = (mflId, espnId) => {
-  if (espnId) return `https://a.espncdn.com/i/headshots/nfl/players/full/${espnId}.png`;
-  return getPlayerImageUrl(mflId);
-};
-
-const getNflLogoUrl = (teamCode) => {
-  // FA / FA* (conditional free agent) have no crest — use the shield.
-  if (!teamCode || teamCode.indexOf('FA') === 0) return '/assets/nfl-logos/NFL.svg';
-  return `/assets/nfl-logos/${teamCode}.svg`;
-};
+// DEFAULT_HEADSHOT_URL / getPlayerImageUrl / getPlayerHeadshot / getNflLogoUrl
+// now come from ../../constants/roster-constants (imported above). The local
+// copies pinned photos to this league's mflHost; the canonical ones pin to a
+// single verified photo host on purpose (see MFL_PHOTO_HOST there) — the same
+// value for TheLeague, so nothing moved. The canonical getNflLogoUrl also
+// normalizes the team code, so UFA joins FA/FA* in resolving to the NFL
+// shield instead of 404ing on /assets/nfl-logos/UFA.svg.
 
 const collegeLogosNormalized = Object.fromEntries(
   Object.entries(collegeLogos ?? {}).map(([name, data]) => [name.toLowerCase(), data])
@@ -724,16 +729,8 @@ const parseAdjustmentMeta = (description = '') => {
   return meta;
 };
 
-const positionOrder = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
-const POSITION_COLORS = {
-  QB: '#6366f1', // indigo
-  RB: '#f97316', // orange
-  WR: '#22c55e', // green
-  TE: '#14b8a6', // teal
-  PK: '#0ea5e9', // light blue
-  K: '#0ea5e9',
-  DEF: '#475569', // slate
-};
+const positionOrder = [...sharedPositionOrder];
+const POSITION_COLORS = sharedPositionColors;
 const DEAD_MONEY_SOURCES = ['deadMoney', 'salaryAdjustments'];
 const rosterColumnOptions = [
   { key: 'player', label: 'Player' },
@@ -744,40 +741,8 @@ const rosterColumnOptions = [
   })),
 ];
 
-const nflByeWeeks = {
-  ARI: 8,
-  ATL: 5,
-  BAL: 7,
-  BUF: 7,
-  CAR: 14,
-  CHI: 5,
-  CIN: 10,
-  CLE: 9,
-  DAL: 10,
-  DEN: 12,
-  DET: 8,
-  GB: 5,
-  HOU: 6,
-  IND: 11,
-  JAC: 8,
-  KC: 10,
-  LV: 8,
-  LAC: 12,
-  LAR: 8,
-  MIA: 12,
-  MIN: 6,
-  NE: 14,
-  NO: 11,
-  NYG: 14,
-  NYJ: 9,
-  PHI: 9,
-  PIT: 5,
-  SEA: 8,
-  SF: 14,
-  TB: 9,
-  TEN: 10,
-  WAS: 12,
-};
+const nflByeWeeks = sharedNflByeWeeks;
+
 // Server-side row shaping. Shares src/scripts/rosters/roster-rows.ts with the
 // client script below — these were duplicated function bodies that had drifted
 // apart. The options record where they differ so the split changed nothing:
@@ -5300,7 +5265,12 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
 <script>
   import { buildPlayerCellHTML } from '../../utils/player-cell-html';
-  import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, COLLEGE_LOGO_ONERROR, COLLEGE_LOGO_ONLOAD } from '../../constants/roster-constants';
+  import {
+    NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, COLLEGE_LOGO_ONERROR, COLLEGE_LOGO_ONLOAD,
+    // Same canonical helpers the frontmatter uses — one definition for both
+    // sides of the page instead of a copy each.
+    DEFAULT_HEADSHOT_URL, getPlayerImageUrl, getPlayerHeadshot, getNflLogoUrl,
+  } from '../../constants/roster-constants';
   import { initPlayerModalTrigger } from '../../utils/player-modal-trigger';
   import type { PlayerModalData } from '../../utils/player-modal-trigger';
   import { applyPlayerModalBand } from '../../utils/player-modal-band';
@@ -5563,22 +5533,11 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     return '<button class="yrs-chip yrs-chip--eligible" type="button"><span class="yrs-chip__value">' + years + '</span>' + badge + '</button>';
   };
 
-  const DEFAULT_HEADSHOT_URL =
-    `https://${config.mflHost}/player_photos_2010/no_photo_available.jpg`;
-  const getPlayerImageUrl = (playerId) =>
-    playerId
-      ? `https://${config.mflHost}/player_photos_big_2014/${playerId}_thumb.jpg`
-      : DEFAULT_HEADSHOT_URL;
-  const getPlayerHeadshot = (mflId, espnId) => {
-    if (espnId) return `https://a.espncdn.com/i/headshots/nfl/players/full/${espnId}.png`;
-    return getPlayerImageUrl(mflId);
-  };
-
-  const getNflLogoUrl = (teamCode) => {
-    // FA / FA* (conditional free agent) have no crest — use the shield.
-    if (!teamCode || teamCode.indexOf('FA') === 0) return '/assets/nfl-logos/NFL.svg';
-    return `/assets/nfl-logos/${teamCode}.svg`;
-  };
+  // DEFAULT_HEADSHOT_URL / getPlayerImageUrl / getPlayerHeadshot /
+  // getNflLogoUrl are imported from constants/roster-constants above. They
+  // used to be redefined here against config.mflHost; the canonical photo
+  // host is the same value for TheLeague, and pinning it centrally is
+  // deliberate (see MFL_PHOTO_HOST there).
 
   const NFL_TEAM_NAMES = {
     'ARI': 'Arizona Cardinals',
@@ -6392,8 +6351,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       return _capSpaceFmt.format(value);
     };
 
-    const DEFAULT_HEADSHOT_URL =
-      `https://${config.mflHost}/player_photos_2010/no_photo_available.jpg`;
+    // (The third copy of DEFAULT_HEADSHOT_URL lived here; it now resolves to
+    // the module-scope import, same as the other two did.)
 
     const getCollegeAssets = (collegeName) => {
       if (!collegeName) return null;

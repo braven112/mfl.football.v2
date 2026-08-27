@@ -40,6 +40,12 @@ import { LEAGUES, DEFAULT_LEAGUE_SLUG } from '../src/config/leagues-data.mjs';
 
 const CHROMIUM = '/opt/pw-browsers/chromium';
 
+/** 1x1 transparent GIF — a real, decodable image (see the route handler). */
+const PIXEL_GIF = Buffer.from(
+  'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
+  'base64',
+);
+
 /** League ids come from the registry, never inline (CLAUDE.md League registry). */
 function leagueBySlug(slug) {
   const entry = LEAGUES[slug];
@@ -125,6 +131,16 @@ const CAPTURE_FN = () => {
     id: tr.getAttribute('data-player-id') ?? '',
     cls: norm(tr.className),
     cells: [...tr.querySelectorAll('td')].map((td) => norm(td.textContent)),
+    // Text alone misses a whole class of change: headshot and team-crest URLs
+    // are computed per row, so swapping the function that builds them would
+    // otherwise diff clean.
+    //
+    // This is only meaningful because the route handler serves a DECODABLE
+    // placeholder image. Headshots carry an inline onerror cascade that
+    // reassigns this.src, so if an image fails to load the attribute read here
+    // is whatever step the cascade reached — a timing race, not a fact about
+    // the code. Serve a real pixel and the cascade never runs.
+    imgs: [...tr.querySelectorAll('img')].map((img) => img.getAttribute('src') ?? ''),
   }));
 
   return {
@@ -221,7 +237,13 @@ async function capture(args) {
     if (url.startsWith(args.url)) return route.continue();
     const type = route.request().resourceType();
     if (type === 'image' || type === 'font' || type === 'media') {
-      return route.fulfill({ status: 200, contentType: 'image/gif', body: Buffer.alloc(0) });
+      // Must be a DECODABLE image, not an empty 200. Player headshots carry an
+      // inline onerror chain (buildHeadshotOnerror: ESPN NFL -> ESPN college ->
+      // MFL photo -> placeholder) that REASSIGNS this.src, which rewrites the
+      // src attribute. A zero-byte body fails to decode, fires that chain, and
+      // makes the captured src a race against how far the cascade had walked —
+      // producing hundreds of phantom diffs between two identical builds.
+      return route.fulfill({ status: 200, contentType: 'image/gif', body: PIXEL_GIF });
     }
     return route.abort();
   });
