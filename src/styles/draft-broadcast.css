@@ -166,6 +166,10 @@
 /* Site-standard ghost wordmark + crest watermark, at broadcast scale. */
 .dbc-reveal__ghost {
   position: absolute;
+  /* Stays bottom-LEFT while the cutout moves right, which is the point: the
+     player's body used to cover this numeral, so it barely read on the TV. On
+     the empty left half it finally shows. If it ever fights the copy, drop the
+     alpha — do not move it back under the player. */
   left: 2vw;
   bottom: -2.5vh;
   font-size: 28vh;
@@ -186,7 +190,9 @@
    for. Artwork goes behind artwork; type gets clean gradient. */
 .dbc-reveal__crest {
   position: absolute;
-  left: 8%;
+  /* Centred between the copy and the cutout. It used to hide behind the player
+     on the left; the layout now reads text | crest | player across the frame. */
+  left: 50%;
   top: 44%;
   transform: translate(-50%, -50%);
   width: 52vh;
@@ -206,6 +212,18 @@
   width: 100%;
   height: 100%;
   padding: 0 4vw;
+}
+
+/* Copy left, cutout right. Done with `order` rather than by reordering the
+   DOM so a screen reader still reaches the pick and the player's name before
+   the purely decorative cutout. The portrait breakpoint re-pins these, since
+   it is a single column where `order` decides the STACK, not the sides. */
+.dbc-reveal__text {
+  order: 1;
+}
+
+.dbc-reveal__figure {
+  order: 2;
 }
 
 /* The figure keeps spanning the full height even though the body now centers
@@ -660,17 +678,14 @@
     padding: 0 4vw;
   }
 
-  /* DOM order is figure-then-text; `order` flips them without moving the
-     cutout ahead of the copy for a screen reader. */
+  /* Sides come from the base layer now — only the fit differs here. */
   .dbc-reveal__text {
-    order: 1;
     align-self: center;
     padding: 2vh 0;
     max-height: 100%;
   }
 
   .dbc-reveal__figure {
-    order: 2;
     align-self: stretch;
   }
 
@@ -681,13 +696,13 @@
     max-height: 100%;
   }
 
-  /* The crest follows the player to the right — it is his backdrop, and left
-     behind on the far side it would sit under the copy again. */
+  /* Centred, same as the TV — pinned right it would ride under the cutout and
+     this breakpoint would disagree with every other one. */
   .dbc-reveal__crest {
-    left: auto;
-    right: 4%;
+    left: 50%;
+    right: auto;
     top: 50%;
-    transform: translate(50%, -50%);
+    transform: translate(-50%, -50%);
     width: 76vh;
     height: 76vh;
     opacity: 0.2;
@@ -741,6 +756,17 @@
     align-items: stretch;
     gap: 0;
     padding: 3vh 6vw 3vh;
+  }
+
+  /* Re-pinned, because this is a single column: here `order` decides the STACK
+     rather than left-vs-right, and inheriting the base swap would stand the
+     phone layout on its head — copy on top, player below it. */
+  .dbc-reveal__figure {
+    order: 1;
+  }
+
+  .dbc-reveal__text {
+    order: 2;
   }
 
   .dbc-reveal__figure {

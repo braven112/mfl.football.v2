@@ -17,6 +17,9 @@ import {
   upcomingPicks,
   positionRunCount,
   applyRehearsal,
+  darkenForWhiteText,
+  contrastWithWhite,
+  toBroadcastColor,
 } from '../src/utils/draft-broadcast';
 import {
   assignBoardRanks,
@@ -24,7 +27,7 @@ import {
   findRehearsalYear,
   loadConferenceKeepers,
 } from '../src/utils/draft-broadcast-server';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import type { DraftRoomPick } from '../src/types/draft-room';
 import type { BroadcastPlayer } from '../src/types/draft-broadcast';
 
@@ -327,5 +330,142 @@ describe('findRehearsalYear', () => {
 
   it('returns undefined when the data path has no feeds at all', () => {
     expect(findRehearsalYear('data/nope', 2026, 'CONFERENCE00')).toBeUndefined();
+  });
+});
+
+
+describe('darkenForWhiteText', () => {
+  // The reveal card paints white copy straight onto franchise brand colours,
+  // and nine of the AFL's 24 franchises have a gradient stop white cannot be
+  // read against — six of them the near-white #e9e9e9. On a laptop that is a
+  // squint; on the TV it is an unreadable card in front of the whole league.
+  const AFL = 'data/afl-fantasy/afl.config.json';
+
+  it('leaves a colour that already passes completely alone', () => {
+    for (const dark of ['#181818', '#002244', '#1c497c']) {
+      expect(darkenForWhiteText(dark)).toBe(dark);
+    }
+  });
+
+  it('darkens every failing colour to at least the 4.5 floor', () => {
+    for (const light of ['#e9e9e9', '#ffcd00', '#e8aea6', '#ffffff']) {
+      expect(contrastWithWhite(darkenForWhiteText(light))).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it('holds the floor for EVERY stop of EVERY AFL franchise', () => {
+    // The real registry, not a fixture: the invariant is about this league's
+    // actual brand colours, and a new franchise must not be able to ship a
+    // stop the board cannot render text on.
+    const cfg = JSON.parse(readFileSync(AFL, 'utf-8'));
+    for (const t of cfg.teams) {
+      for (const key of ['colorPrimary', 'colorSecondary']) {
+        if (!t[key]) continue;
+        const ratio = contrastWithWhite(darkenForWhiteText(t[key]));
+        expect(ratio, `${t.nameMedium || t.name} ${key} ${t[key]}`).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  });
+
+  it('keeps the hue rather than washing to grey', () => {
+    // Scaling toward black preserves the channel ratios, so a light pink stays
+    // pink. Mixing in grey instead would hand the league a set of muddy cards.
+    const out = darkenForWhiteText('#e8aea6');
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(out.slice(i, i + 2), 16));
+    expect(r).toBeGreaterThan(g);
+    expect(g).toBeGreaterThanOrEqual(b);
+  });
+
+  it('returns a malformed colour untouched instead of throwing', () => {
+    // Draft night is the wrong time to discover a typo'd brand colour crashes
+    // the reveal — degrade to today's behaviour.
+    for (const junk of ['', 'rebeccapurple', '#12', 'not-a-color']) {
+      expect(darkenForWhiteText(junk)).toBe(junk);
+    }
+  });
+});
+
+
+describe('toBroadcastColor', () => {
+  // A TV across a lit room eats subtlety: accurate-but-flat brand colours read
+  // washed out, and light ones make the copy unreadable. Saturate, then floor.
+  const hsl = (hex: string) => {
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+    const mx = Math.max(r, g, b);
+    const mn = Math.min(r, g, b);
+    const l = (mx + mn) / 2;
+    const s = mx === mn ? 0 : l > 0.5 ? (mx - mn) / (2 - mx - mn) : (mx - mn) / (mx + mn);
+    return { s, l };
+  };
+
+  it('holds the contrast floor for every AFL brand stop', () => {
+    const cfg = JSON.parse(readFileSync('data/afl-fantasy/afl.config.json', 'utf-8'));
+    for (const t of cfg.teams) {
+      for (const key of ['colorPrimary', 'colorSecondary']) {
+        if (!t[key]) continue;
+        expect(
+          contrastWithWhite(toBroadcastColor(t[key])),
+          `${t.nameMedium || t.name} ${key}`
+        ).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  });
+
+  it('comes out MORE saturated, not just darker', () => {
+    // The whole point of the boost. Darkening alone costs saturation, which is
+    // why the boost is applied first.
+    for (const brand of ['#429b3f', '#42a349', '#529fcc']) {
+      expect(hsl(toBroadcastColor(brand)).s).toBeGreaterThan(hsl(brand).s);
+    }
+  });
+
+  it('leaves a greyscale brand grey instead of inventing a hue', () => {
+    const out = toBroadcastColor('#e9e9e9');
+    expect(hsl(out).s).toBe(0);
+    expect(contrastWithWhite(out)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('passes a malformed colour through untouched', () => {
+    expect(toBroadcastColor('not-a-color')).toBe('not-a-color');
+  });
+});
+
+
+describe('AFL franchise crest art', () => {
+  // The broadcast crest renders at ~52vh — roughly 560px on a 1080p TV — so
+  // the 100x100 `icon` files upscale more than 5x and visibly pixelate across
+  // a room. draft-broadcast.astro prefers groupMeDark -> groupMe -> icon; this
+  // pins that the preferred art actually EXISTS, because a 404 here degrades
+  // silently to no crest at all rather than to the small one.
+  const cfg = JSON.parse(readFileSync('data/afl-fantasy/afl.config.json', 'utf-8'));
+
+  it('points every declared crest path at a real file', () => {
+    for (const t of cfg.teams) {
+      for (const key of ['icon', 'iconDark', 'groupMe', 'groupMeDark']) {
+        if (!t[key]) continue;
+        expect(
+          existsSync(`public${t[key]}`),
+          `${t.nameMedium || t.name} ${key} -> ${t[key]}`
+        ).toBe(true);
+      }
+    }
+  });
+
+  it('gives every franchise crest art bigger than the 100px icon', () => {
+    // Not a nice-to-have: this is the difference between a crisp crest and a
+    // pixelated one on the only screen this page is built for.
+    for (const t of cfg.teams) {
+      expect(t.groupMe || t.groupMeDark, `${t.nameMedium || t.name} has no group-me art`)
+        .toBeTruthy();
+    }
+  });
+
+  it('never declares a dark cut that does not exist on disk', () => {
+    // The resolution order falls back groupMeDark -> groupMe, so a declared but
+    // missing dark path is strictly worse than not declaring one.
+    for (const t of cfg.teams) {
+      if (!t.groupMeDark) continue;
+      expect(existsSync(`public${t.groupMeDark}`), `${t.name} groupMeDark`).toBe(true);
+    }
   });
 });
