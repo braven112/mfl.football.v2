@@ -123,6 +123,49 @@ visible in any 16-matchup week: 2024 week 1 lists `0001` twice, once against
 scoring ranks, weekly percentiles) must dedupe by franchise per week. A week with
 more matchups than half the league size is the tell.
 
+## 2026-08-27 - The championship RESEEDS, so seeds are not readable off the bracket
+
+**Context:** Adding the champion's seed to the report. The bracket shape looked
+like it would give seeds for free: round 1 is a fixed 2v7 / 3v6 / 4v5 with seed
+1 on a bye, so the game whose winner meets the bye in round 2 "must" be the 4v5,
+and the rest follows.
+
+**Insight:** It does not. `src/data/league-constitution.ts` specifies week 16 as
+**"1 vs lowest seed winner; 2nd highest winner vs highest winner"** — the League
+Championship **reseeds after round one**. (The same section says the Toilet Bowl
+is explicitly NOT reseeded, which is the tell that the championship is.) So the
+bye's semifinal opponent is whichever first-round winner carries the lowest
+seed, not a fixed bracket slot, and nothing about round 2 identifies which round
+1 game was which pair.
+
+The shape-based derivation is not merely imprecise — it reproduced **0 of the 5**
+seasons MFL states seeds for.
+
+What works is the constitution read literally: seeds 1-4 are the four **division
+winners regardless of record**, seeds 5-7 the wild cards. That is why seed order
+and standings order are different lists in a way that has nothing to do with
+tiebreakers: 2025's seed 4 sits at standings row 8 and its seed 5 at row 2,
+because a 4 seed is the weakest division winner, not the fourth-best team.
+
+**Evidence:** MFL's `playoff-brackets.json` carries BOTH a `seed` and a
+`franchise_id` on the same ref for 2020-2023 and 2025 — five seasons of stated
+truth to check against. The final model (seed 1 from the bracket's bye; seeds
+2-4 the other division winners in feed order; 5-7 by record, then All Play, then
+total points) is exact on all 7 seeds in all 5. `verifySeeds` re-runs that on
+every build and throws on any disagreement.
+
+The All Play step is load-bearing, not decoration: 2023's two 11-7 wild cards are
+separated only by it (.651 vs .592), and dropping it swaps seeds 6 and 7.
+
+**Recommendation:** When a bracket's shape seems to encode seeds, check whether
+the format reseeds before deriving anything from it. And prefer a feed that
+states a value over any inference — the reason this error was caught in minutes
+rather than shipped is that five seasons carry MFL's own seeds, so the wrong
+model failed loudly instead of producing plausible numbers for all 19.
+
+Result worth knowing: the 4 seed has won five titles here, more than the 1
+seed's four, and both 2010 and 2020 were won by a 7 seed.
+
 ## 2026-08-26 - "We cannot reproduce h2h" was not true
 
 **Context:** `docs/claude/rules/standings-brackets-draft-order.md` justifies
