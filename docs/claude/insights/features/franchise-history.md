@@ -28,12 +28,28 @@ and neither should.
   The plan doc settles it in four words: *add a name later — nothing else
   changes*.
 
-**What the edit actually is:** set `displayName`, run
-`node scripts/compute-owner-tenures.mjs --league=afl`, commit the regenerated
-`owner-tenures.json` alongside it. The derived diff should be exactly two lines
-per owner — `displayName` and `title` — with `dominantName` unchanged, because
-the person's name headlines the page while the team identity keeps supplying
-the crest and the era art. A third changed line means something else moved.
+**What the edit actually is:** set `displayName`, then run BOTH computes —
+`compute-owner-tenures.mjs` and `compute-division-strength.mjs` — and commit
+every derived file they touch. The tenures diff should be exactly two lines per
+owner, `displayName` and `title`, with `dominantName` unchanged: the person's
+name headlines the page while the team identity keeps supplying the crest and
+the era art. A third changed line in THAT file means something else moved.
+
+**`owner-tenures.json` is not the only derived file carrying the name.**
+`compute-division-strength.mjs` copies `owner.title` onto every owner row it
+writes, so a name that lands in the tenures file alone leaves
+`division-strength.json` crediting the same seasons to the team name — six
+stale `title`s for one owner, in this case. Production hides it, which is what
+makes it dangerous: prebuild runs the two as one chained step
+(`scripts/prebuild.mjs`), so a deploy self-heals, while `astro dev` skips
+prebuild entirely and a local Strength of Division render disagrees with the
+owner page it links to. Both files are committed build artifacts imported
+statically; a stale one is wrong in the repo even when the site looks right.
+
+The same chain has to hold anywhere a name can land. `fetch-owner-names.yml`
+recomputed only the tenures and listed only those paths in `add-paths`, so the
+bot could commit a name and leave division strength stale on its own schedule;
+it now runs both computes and commits all four derived files.
 
 **Still anonymous (AFL, 7 left):** `chieftans-2003`, `italian-stalions-2003`,
 `the-vandalizers-2003` (also held 0004 in 2004), `red-dawn-2004`,

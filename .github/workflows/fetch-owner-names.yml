@@ -133,10 +133,13 @@ jobs:
 
       # The derived files carry displayName through to `title`, so a registry
       # written without this would commit named people beside owner pages still
-      # titled by their team identities.
+      # titled by their team identities. division-strength copies that same
+      # `title` onto every owner row, so it is chained here exactly as prebuild
+      # chains it — recomputing only the tenures leaves the committed division
+      # pages crediting a season to the team name the owner page no longer uses.
       - name: Recompute owner tenures
         if: inputs.write
-        run: node ./scripts/compute-owner-tenures.mjs
+        run: node ./scripts/compute-owner-tenures.mjs && node ./scripts/compute-division-strength.mjs
 
       # The registry guard tests are the backstop for a bad name landing:
       # overlapping claims, a name that is really contact info, a shared team
@@ -153,7 +156,7 @@ jobs:
         if: inputs.write
         uses: ./.github/actions/commit-push
         with:
-          add-paths: 'src/data/owners-registry.json data/theleague/derived/owner-tenures.json data/afl-fantasy/derived/owner-tenures.json'
+          add-paths: 'src/data/owners-registry.json data/theleague/derived/owner-tenures.json data/afl-fantasy/derived/owner-tenures.json data/theleague/derived/division-strength.json data/afl-fantasy/derived/division-strength.json'
           commit-message: 'chore: name owners from MFL (${{ inputs.league }})'
           no-changes-message: 'No new owner names — nothing to commit.'
           git-user-name: 'Owner Names Bot'
