@@ -46,6 +46,31 @@
 - **Pre-2016 years used different league ids.** `L=13522` on a pre-2016 year
   returns a real, valid-looking payload for *a different league*. Use
   `backfill-historical-feeds.mjs --force --year=YYYY`; plain runs no-op.
+- **`draftResults.draftUnit` is an OBJECT or an ARRAY depending on the league,
+  not on the result count.** A single-draft league (TheLeague, best-ball) gives
+  one object named `LEAGUE`; a conference-drafting one (the AFL) gives an array
+  of `CONFERENCE00` / `CONFERENCE01`. This is NOT the one-result-bare-object
+  rule above — the singular case is a differently-shaped object, so `asArray`
+  alone does not save you. Reading `.draftPick` off the raw value yielded
+  `undefined` for the AFL and every caller read that as "no picks": the board
+  rendered empty, with a 200 and no error, which is indistinguishable from a
+  draft that hasn't started. Go through `selectDraftUnit`
+  (`src/utils/draft-utils.ts`), which normalizes both and takes a unit name;
+  an unknown unit returns null rather than silently falling back to unit 0.
+- **`data/nfl/bye-weeks.json` speaks MFL's team codes, `PlayerIdentity.nflTeam`
+  speaks ESPN's.** MFL says GBP/LVR/KCC/NEP; `getPlayerMap()` has already
+  resolved players to GB/LV/KC/NE. Joining the two raw silently produced "no
+  bye week" for eight teams — a miss that looks exactly like a player who
+  genuinely has none. Run BOTH sides through `normalizeTeamCode`
+  (`src/utils/nfl-logo.ts`).
+- **MFL ADP is a REDRAFT scale and means nothing against a keeper draft's pick
+  numbers.** See `features/draft-broadcast.md`: the AFL keeps 7 per franchise,
+  so its 1.01 is the 85th pick of a from-scratch board, and comparing the two
+  directly labelled 90 of 108 picks a "reach".
+- **`espn_id` coverage differs BY SEASON in `players.json`.** The 2025 feed has
+  none for Kyle Pitts, Michael Pittman or Isaiah Likely; the 2026 feed has all
+  three. Never conclude "this player has no ESPN id" from one season's feed —
+  and never report a rehearsal year's gaps as a property of a live feature.
 
 ## Before you spend an hour
 

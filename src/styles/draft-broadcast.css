@@ -1,0 +1,748 @@
+/**
+ * AFL Draft Broadcast — TV board styling.
+ *
+ * Sizing note: every type size here is in `vw`/`vh`, not rem. This surface has
+ * exactly one job — be legible on a TV across a room — and a rem scale tuned
+ * for a laptop reads as fine print at ten feet. Viewport units make the board
+ * scale with whatever screen it lands on, which is the whole point when nobody
+ * knows what TV it'll be plugged into until draft night. `clamp()` keeps it
+ * sane on a laptop preview.
+ *
+ * This surface is DELIBERATELY dark in both themes — team colors ARE the
+ * background, exactly like the player modal band (see player-modal-band.css).
+ * Ink is always white, so no html.dark overrides exist or are wanted.
+ */
+
+.dbc {
+  position: relative;
+  width: 100%;
+  /* Fill what's left of the window under the site header, rather than a flat
+     86vh that runs off the bottom once the header pushes the board down. The
+     floor keeps it usable if the header ever grows. */
+  height: max(30rem, calc(100vh - 12rem));
+  background: #05070b;
+  color: #fff;
+  overflow: hidden;
+  border-radius: 0.75rem;
+}
+
+/* The headings MUST restate their color. This surface is dark in both themes,
+   but it renders inside TheLeagueLayout, whose global h1/h2 rules set a dark
+   ink color that beats plain inheritance from `.dbc`. Without this the player
+   name renders near-black on the franchise gradient — legible on a laptop in
+   light mode, invisible on the TV. */
+.dbc h1,
+.dbc h2 {
+  color: #fff;
+}
+
+/* Fullscreen is the intended mode on draft night: the board becomes the whole
+   TV and the site chrome disappears. */
+.dbc:fullscreen,
+.dbc:-webkit-full-screen {
+  border-radius: 0;
+  height: 100vh;
+}
+
+.dbc:fullscreen .dbc-reveal,
+.dbc:fullscreen .dbc-idle {
+  height: 100vh;
+}
+
+/* ── Fullscreen toggle ─────────────────────────────────────────────────────
+   The only interactive element on the page, and it's here for exactly one
+   click at the start of the night. Dimmed until hovered so it doesn't sit on
+   the TV competing with the board. */
+.dbc__fullscreen {
+  position: absolute;
+  top: 1.2vw;
+  right: 1.2vw;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+  padding: 0.5em 1em;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  color: rgba(255, 255, 255, 0.72);
+  font: inherit;
+  font-size: clamp(0.7rem, 1.4vh, 1rem);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  opacity: 0.45;
+  transition: opacity 200ms ease, background 200ms ease;
+}
+
+.dbc__fullscreen:hover,
+.dbc__fullscreen:focus-visible {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+}
+
+/* ── Connection indicator ──────────────────────────────────────────────────
+   Small and calm on purpose. A dropped poll is not an emergency — the board
+   still shows the last known state correctly — so this must never look like
+   an error screen in front of a room. */
+.dbc__status {
+  position: absolute;
+  right: 1.2vw;
+  bottom: 1.2vw;
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0.4em 0.9em;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: clamp(0.7rem, 0.9vw, 1rem);
+  letter-spacing: 0.02em;
+  z-index: 5;
+}
+
+.dbc__status-dot {
+  width: 0.6em;
+  height: 0.6em;
+  border-radius: 50%;
+  background: #f5a524;
+  animation: dbc-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes dbc-pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+
+/* ══ REVEAL ═══════════════════════════════════════════════════════════════ */
+
+.dbc-reveal {
+  position: relative;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  background: linear-gradient(115deg, var(--dbc-primary, #10161f) 0%, var(--dbc-secondary, #1c497c) 100%);
+  animation: dbc-reveal-in 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes dbc-reveal-in {
+  from { opacity: 0; transform: scale(1.04); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.dbc-reveal__wash {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(58% 78% at 76% 28%, rgba(255, 255, 255, 0.16) 0%, transparent 62%),
+    linear-gradient(100deg, rgba(0, 0, 0, 0.58) 0%, rgba(0, 0, 0, 0.12) 55%, rgba(0, 0, 0, 0.45) 100%);
+}
+
+/* Site-standard ghost wordmark + crest watermark, at broadcast scale. */
+.dbc-reveal__ghost {
+  position: absolute;
+  left: 2vw;
+  bottom: -2.5vh;
+  font-size: 28vh;
+  font-weight: 900;
+  line-height: 0.8;
+  letter-spacing: -0.04em;
+  color: rgba(255, 255, 255, 0.07);
+  pointer-events: none;
+  user-select: none;
+}
+
+/* With the banner gone this crest is the only franchise ARTWORK on the reveal,
+   so it carries more weight than the site-standard 0.16 watermark — it has to
+   answer "who drafted him" on its own, from across a room.
+   It sits behind the PLAYER, on the left. Centered behind the copy (where it
+   started) it put a detailed shield under every stat line and the text became
+   the hardest thing on the card to read — the exact failure the banner was cut
+   for. Artwork goes behind artwork; type gets clean gradient. */
+.dbc-reveal__crest {
+  position: absolute;
+  left: 8%;
+  top: 44%;
+  transform: translate(-50%, -50%);
+  width: 52vh;
+  height: 52vh;
+  object-fit: contain;
+  opacity: 0.26;
+  filter: drop-shadow(0 1vh 3vh rgba(0, 0, 0, 0.45));
+  pointer-events: none;
+}
+
+.dbc-reveal__body {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 2vw;
+  width: 100%;
+  height: 100%;
+  padding: 0 4vw;
+}
+
+/* The figure keeps spanning the full height even though the body now centers
+   its items — the cutout has to reach the bottom edge to bleed off it, which
+   is the site-wide composite convention. */
+.dbc-reveal__figure {
+  position: relative;
+  align-self: stretch;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* The cutout bleeds off the bottom edge — the composite convention across the
+   site. Only transparent ESPN headshots ever reach this element.
+   Sized on WIDTH, not height: a real ESPN headshot is about 600x436, so a
+   height cap never binds and the player ends up a postage stamp in the corner
+   of his own column. Width fills the column and the overflow clips at the
+   bottom, which is what makes him read as life-size across a room. */
+.dbc-reveal__model {
+  width: 100%;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  object-fit: contain;
+  object-position: bottom center;
+  filter: drop-shadow(0 1.4vh 2.4vh rgba(0, 0, 0, 0.55));
+  animation: dbc-model-in 760ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes dbc-model-in {
+  from { opacity: 0; transform: translateY(4vh) scale(0.94); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.dbc-reveal__text {
+  /* Vertically centered, NOT pinned to the bottom: the stats and rank chips are
+     the last thing rendered, so bottom-anchoring clipped them off the screen
+     exactly when the card had the most to say. */
+  align-self: center;
+  padding: 2vh 0;
+  max-height: 100%;
+  overflow: hidden;
+  animation: dbc-text-in 620ms 120ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes dbc-text-in {
+  from { opacity: 0; transform: translateY(2.4vh); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.dbc-reveal__kicker {
+  margin: 0 0 0.2em;
+  font-size: clamp(1rem, 2.1vh, 2rem);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.dbc-reveal__player {
+  margin: 0;
+  font-size: clamp(2.4rem, 9vh, 9rem);
+  font-weight: 900;
+  line-height: 0.94;
+  letter-spacing: -0.03em;
+  text-shadow: 0 0.4vh 2vh rgba(0, 0, 0, 0.5);
+}
+
+.dbc-reveal__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.8em;
+  margin: 0.5em 0 0;
+  font-size: clamp(0.9rem, 2.4vh, 2.2rem);
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.dbc-reveal__pos {
+  padding: 0.12em 0.5em;
+  border-radius: 0.28em;
+  background: rgba(255, 255, 255, 0.16);
+  font-weight: 800;
+}
+
+.dbc-reveal__injury {
+  padding: 0.12em 0.5em;
+  border-radius: 0.28em;
+  background: rgba(220, 38, 38, 0.85);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* The board-position line. Neutral by default: it states a fact rather than
+   passing a verdict, so only the genuine top of the board gets colour. */
+.dbc-reveal__value {
+  display: inline-block;
+  margin: 0.6em 0 0;
+  padding: 0.22em 0.7em;
+  border-radius: 0.3em;
+  font-size: clamp(0.95rem, 2.6vh, 2.4rem);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
+
+/* Only "BEST AVAILABLE" earns the green — taking the top man left is the one
+   thing on this line worth shouting about. */
+.dbc-reveal__value--top {
+  background: #16a34a;
+  color: #fff;
+}
+
+.dbc-reveal__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2.2vw;
+  margin: 0.9em 0 0;
+}
+
+.dbc-reveal__stat dt {
+  font-size: clamp(0.65rem, 1.4vh, 1.1rem);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.dbc-reveal__stat dd {
+  margin: 0.1em 0 0;
+  font-size: clamp(1.2rem, 3.4vh, 3rem);
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.dbc-reveal__run {
+  margin: 0.8em 0 0;
+  font-size: clamp(0.8rem, 1.9vh, 1.5rem);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #fbbf24;
+}
+
+/* ══ IDLE / ON THE CLOCK ══════════════════════════════════════════════════ */
+
+.dbc-idle {
+  position: relative;
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
+  overflow: hidden;
+  background: linear-gradient(150deg, var(--dbc-secondary, #0e2440) 0%, var(--dbc-primary, #1c497c) 130%);
+  transition: background 900ms ease;
+}
+
+.dbc-idle__wash {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.42) 0%, rgba(0, 0, 0, 0.12) 38%, rgba(0, 0, 0, 0.68) 100%);
+}
+
+.dbc-idle__header {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1em;
+  /* Right padding clears the absolutely-positioned fullscreen pill — without
+     it the progress line runs underneath the button. */
+  padding: 2.4vh clamp(9rem, 14vw, 13rem) 0 3vw;
+  font-size: clamp(0.7rem, 1.7vh, 1.3rem);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: rgba(255, 255, 255, 0.66);
+}
+
+.dbc-idle__league {
+  font-weight: 800;
+  color: #fff;
+}
+
+.dbc-idle__stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2vh 3vw;
+  /* Grid children default to min-height:auto and refuse to shrink below their
+     content — which pushed the rails and the conference switcher off the
+     bottom of the board. `overflow: hidden` is the belt to that braces: on a
+     short viewport the stage would otherwise bleed DOWN over the rails, and
+     "Pick 3.07" landed on top of "UP NEXT". */
+  min-height: 0;
+  overflow: hidden;
+}
+
+.dbc-idle__crest {
+  width: 17vh;
+  height: 17vh;
+  object-fit: contain;
+  margin-bottom: 1.2vh;
+  filter: drop-shadow(0 1vh 2vh rgba(0, 0, 0, 0.5));
+  animation: dbc-crest-in 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes dbc-crest-in {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.dbc-idle__kicker {
+  margin: 0;
+  font-size: clamp(0.8rem, 2vh, 1.7rem);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.dbc-idle__team {
+  margin: 0.15em 0 0;
+  font-size: clamp(2rem, 7.5vh, 7rem);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.025em;
+  text-shadow: 0 0.4vh 2vh rgba(0, 0, 0, 0.5);
+}
+
+.dbc-idle__pick {
+  margin: 0.5em 0 0;
+  font-size: clamp(0.9rem, 2.4vh, 2rem);
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.78);
+  font-variant-numeric: tabular-nums;
+}
+
+.dbc-idle__rails {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3vw;
+  padding: 0 3vw 2.4vh;
+  min-height: 0;
+}
+
+.dbc-idle__rail-title {
+  margin: 0 0 0.6em;
+  font-size: clamp(0.65rem, 1.5vh, 1.1rem);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.dbc-idle__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5vh;
+}
+
+.dbc-idle__row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 1em;
+  padding: 0.7vh 1vw;
+  border-radius: 0.4em;
+  background: rgba(0, 0, 0, 0.32);
+}
+
+.dbc-idle__row-pick {
+  font-size: clamp(0.7rem, 1.7vh, 1.3rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.dbc-idle__row-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.dbc-idle__row-main strong {
+  font-size: clamp(0.85rem, 2.1vh, 1.7rem);
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dbc-idle__row-main em {
+  font-style: normal;
+  font-size: clamp(0.6rem, 1.4vh, 1rem);
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.dbc-idle__row-team {
+  /* Holds a crest now, with text only as the no-icon fallback — so it needs to
+     center whichever one it gets. */
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 3.6vh;
+  font-size: clamp(0.7rem, 1.7vh, 1.25rem);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.dbc-idle__row-icon {
+  width: 3.6vh;
+  height: 3.6vh;
+  object-fit: contain;
+  flex: none;
+}
+
+.dbc-idle__empty {
+  margin: 0;
+  font-size: clamp(0.75rem, 1.7vh, 1.2rem);
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.dbc-idle__footer {
+  position: relative;
+  display: flex;
+  gap: 0.5em;
+  padding: 0 3vw 2.4vh;
+}
+
+.dbc-idle__conf {
+  padding: 0.35em 1em;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(0, 0, 0, 0.3);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: clamp(0.65rem, 1.5vh, 1.05rem);
+  font-weight: 700;
+  text-decoration: none;
+  letter-spacing: 0.06em;
+}
+
+.dbc-idle__conf.is-active {
+  background: #fff;
+  color: #05070b;
+  border-color: #fff;
+}
+
+/* Short viewports (a laptop panel, a 720p TV) — the stage stack has to give
+   ground or it runs into the rails below it. */
+@media (max-height: 950px) {
+  .dbc-idle__crest {
+    width: 12vh;
+    height: 12vh;
+    margin-bottom: 0.8vh;
+  }
+
+  .dbc-idle__team {
+    font-size: clamp(1.6rem, 6vh, 4.5rem);
+  }
+
+  .dbc-idle__pick {
+    margin-top: 0.3em;
+    font-size: clamp(0.8rem, 2vh, 1.4rem);
+  }
+
+  .dbc-idle__stage {
+    padding: 1vh 3vw;
+  }
+}
+
+/* Narrow screens: the reveal stacks so the name never collides with the
+   cutout. Not the target device, but the page must not be broken on a phone
+   when someone checks the board from the couch. */
+/* ── Short landscape: a phone turned sideways ────────────────────────────────
+   Wide but only ~400px tall. The portrait stack is exactly wrong here — it
+   splits 400px of height between a player and a text block and starves both,
+   which is what the width-only `max-width: 900px` breakpoint used to do to
+   this case. Orientation is the signal that matters, not width.
+
+   Side by side, and the player takes the RIGHT half: on a short screen the
+   copy stack (kicker, name, meta, value, ADP) is the tall element and wants
+   the reading edge, so the eye lands on the words first and the player closes
+   the card. That mirrors the TV layout deliberately — the constraint here is
+   height, not width, and it wants the opposite arrangement. */
+@media (orientation: landscape) and (max-height: 560px) {
+  .dbc-reveal__body {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    align-items: center;
+    gap: 2vw;
+    padding: 0 4vw;
+  }
+
+  /* DOM order is figure-then-text; `order` flips them without moving the
+     cutout ahead of the copy for a screen reader. */
+  .dbc-reveal__text {
+    order: 1;
+    align-self: center;
+    padding: 2vh 0;
+    max-height: 100%;
+  }
+
+  .dbc-reveal__figure {
+    order: 2;
+    align-self: stretch;
+  }
+
+  .dbc-reveal__model {
+    width: 100%;
+    height: auto;
+    max-width: 100%;
+    max-height: 100%;
+  }
+
+  /* The crest follows the player to the right — it is his backdrop, and left
+     behind on the far side it would sit under the copy again. */
+  .dbc-reveal__crest {
+    left: auto;
+    right: 4%;
+    top: 50%;
+    transform: translate(50%, -50%);
+    width: 76vh;
+    height: 76vh;
+    opacity: 0.2;
+  }
+
+  /* Type scales off the short axis so nothing overruns 400px of height. */
+  .dbc-reveal__player {
+    font-size: clamp(1.6rem, 11vh, 3.4rem);
+  }
+
+  .dbc-reveal__kicker {
+    font-size: clamp(0.7rem, 3.6vh, 1.1rem);
+  }
+
+  .dbc-reveal__meta {
+    font-size: clamp(0.75rem, 4.4vh, 1.2rem);
+    gap: 0.6em;
+  }
+
+  .dbc-reveal__value {
+    font-size: clamp(0.8rem, 4.6vh, 1.3rem);
+  }
+
+  .dbc-reveal__stats {
+    gap: 1.6vw;
+  }
+
+  .dbc-reveal__stat dd {
+    font-size: clamp(1rem, 6vh, 1.8rem);
+  }
+
+  .dbc-reveal__ghost {
+    font-size: 40vh;
+  }
+
+  .dbc-idle__rails {
+    gap: 2vw;
+  }
+}
+
+/* Narrow / portrait screens — a phone, or a TV somebody turned sideways.
+   The two-column reveal collapses to a stack: player ON TOP, text under him.
+   An earlier version hid `.dbc-reveal__figure` outright to stop the cutout
+   colliding with the name once the columns merged. That "fixed" the collision
+   by deleting the subject of the card — the whole page exists to show the
+   player, so on a phone it showed a gradient and a name and nothing else. */
+@media (max-width: 900px) and (orientation: portrait) {
+  .dbc-reveal__body {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr) auto;
+    align-items: stretch;
+    gap: 0;
+    padding: 3vh 6vw 3vh;
+  }
+
+  .dbc-reveal__figure {
+    align-self: stretch;
+    min-height: 0;
+    align-items: flex-end;
+  }
+
+  .dbc-reveal__model {
+    /* Fit the COLUMN width. `width:auto` let the cutout render at its natural
+       600px on a 390px phone, so the figure's overflow clip sliced both
+       shoulders off with hard vertical edges — it read as a photo in a box
+       rather than a cutout on a gradient. */
+    width: 100%;
+    height: auto;
+    max-width: 100%;
+    max-height: 100%;
+    object-position: bottom center;
+  }
+
+  .dbc-reveal__text {
+    align-self: end;
+    /* Bottom padding, or the last stat sits flush on the screen edge and the
+       phone's own chrome eats it. */
+    padding: 0 0 2vh;
+    max-height: none;
+  }
+
+  .dbc-reveal__player {
+    font-size: clamp(2rem, 8vw, 4rem);
+  }
+
+  .dbc-reveal__kicker {
+    font-size: clamp(0.75rem, 3.2vw, 1.1rem);
+  }
+
+  .dbc-reveal__meta {
+    font-size: clamp(0.8rem, 3.8vw, 1.3rem);
+  }
+
+  /* The crest is scenery on a phone — at 58vh it swallowed the whole screen
+     and read as the subject instead of the backdrop. */
+  .dbc-reveal__crest {
+    width: 34vh;
+    height: 34vh;
+    right: -8vw;
+    opacity: 0.18;
+  }
+
+  .dbc-reveal__ghost {
+    font-size: 18vh;
+  }
+
+  .dbc-idle__rails {
+    grid-template-columns: 1fr;
+    gap: 2vh;
+  }
+}
+
+/* Honor reduced motion: the information is the point, the animation is not. */
+@media (prefers-reduced-motion: reduce) {
+  .dbc-reveal,
+  .dbc-reveal__model,
+  .dbc-reveal__text,
+  .dbc-idle__crest {
+    animation: none;
+  }
+
+  .dbc__status-dot {
+    animation: none;
+    opacity: 1;
+  }
+}

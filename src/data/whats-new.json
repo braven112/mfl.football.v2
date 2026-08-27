@@ -1,25 +1,26 @@
 [
   {
-    "id": "playoff-performance",
-    "date": "2026-08-26",
+    "id": "afl-draft-broadcast",
+    "date": "2026-08-27",
     "category": "new-page",
-    "icon": "playoff",
+    "icon": "draft-podium",
     "leagues": [
-      "theleague"
+      "afl"
     ],
-    "title": "The #1 Seed Is A Trap",
-    "link": "/playoff-performance",
-    "linkLabel": "See the damage",
-    "summary": "Nineteen seasons of evidence that the best regular season buys you almost nothing. The #1 seed has won the title 4 times out of 19. Pulling a champion's name out of a hat hits about 6%. That's the entire edge for a first-round bye and home-field-that-isn't: fifteen points of probability, and a lot of teams who found out the hard way.",
+    "title": "Put The Draft On The Big Screen",
+    "link": "/draft-broadcast",
+    "linkLabel": "Open the big board",
+    "summary": "Plug a laptop into the TV and let the room watch the draft happen. Every pick made in MFL lands on screen seconds later — the player, his new team's colors and crest, and exactly how far down the board he was when somebody grabbed him.",
     "description": [
-      "Every year somebody clinches the top seed in November and starts talking like the trophy is in the mail. <a href=\"/playoff-performance\">Playoff Performance</a> is the page that shuts that down. Every completed season from 2007 to 2025, the #1 seed next to the team that actually won it, and a running tally of how rarely those are the same name.",
-      "Four for nineteen. Twenty-one percent. And it is worse than the number looks, because three of those four came in a row — 2022, 2023, 2024 — which means that across the first fifteen years of this league the top seed won exactly once. Then 2025 arrived and the 15-3 Wabbits handed the thing to the Computer Jocks, who were nobody's idea of a favorite.",
-      "The best exhibit is still 2018. The Wascawy Wabbits went 16-0. Sixteen and zero. They did not win the championship. They did not reach the final. Under Siege did, and Under Siege had spent the regular season at 8-8 — go pull it up on the <a href=\"/playoffs\">playoff bracket</a> if you don't believe it.",
-      "The secondary view asks whether all-play — every team measured against every other team's score, week by week, which strips out whether your schedule was kind — knows something the <a href=\"/standings\">standings</a> don't. Barely. The all-play leader has won 5 of 19, and across 9 of the 19 seasons the all-play leader and the top seed were the same team anyway. Being demonstrably the best is worth about five extra points of title odds over being lucky, which is not the answer anybody wants.",
-      "One note on how the #1 seed is decided here, because it matters and it bit us: we read it off the bracket — whoever took the first-round bye — not off the <a href=\"/standings\">standings</a> page. Those disagree. In 2008 and 2010 the team sitting in row one of the standings was not the team that got the bye. The games know who was seeded first; the table doesn't always."
+      "Draft night has always had the same problem: the picks happen inside MFL, on twelve separate laptops, and the room has no idea what just went until somebody says it out loud. So here is <a href=\"/draft-broadcast\">the Draft Broadcast</a> — a page with one job, which is to be plugged into a TV and looked at.",
+      "Keep making your picks in MFL exactly like always. Nothing about that changes. This board just watches the same draft you're in and reacts to it: a few seconds after a selection lands, the player takes over the whole screen in the colors of the team that just took him, with his crest behind him. Position, pro team, bye week, what he's projected for.",
+      "And the line the room is going to argue about: where he actually stood when his name got called. <strong>BEST AVAILABLE</strong> means nobody left on the board was rated higher — that one turns green. <strong>14th best available</strong> means thirteen better men were sitting right there. The board doesn't call it a steal and it doesn't call it a reach; it tells you the number and lets twelve people draw their own conclusions, loudly. The one thing it will not do is measure you against a draft you aren't in — with seven <a href=\"/keepers\">keepers</a> per team the good players are gone before 1.01 is even called, so this counts only the men who were genuinely available to you.",
+      "Between picks the board keeps the room oriented — who's on the clock, what just came off, who's warming up next, in the order <a href=\"/draft-predictor\">the draft order</a> set months ago. Because the AFL drafts by conference, there's a board for each: open the American League or the National League, whichever one is actually running that night, and flip between them at the bottom. Hit Full Screen and the site disappears entirely.",
+      "Built for Saturday. Everything on it comes off the same MFL draft you're already in, so there is nothing to set up — open it and it follows along."
     ],
-    "image": "playoff-performance.webp",
-    "imageAlt": "The Playoff Performance page for The League in dark mode, headed “Does the best regular season win anything?” over the line “19 completed seasons, 2007–2025. The #1 seed has won the title 4 of 19 times. Picking a champion at random out of a hat would hit about 6% of the time.” Below sit four cards: “#1 seed wins the title” showing 21%, 4 of 19, with a note that it reached the final 7 of 19; “All-play leader wins the title” showing 26%, 5 of 19, reaching the final 9 of 19; “Same team held both” showing 9 of 19, the #1 seed also being the all-play leader; and “Random baseline” showing 6%, one team in 16. A “Season by season” table follows, noting all-play is cut at the end of the regular season — week 14 in recent years, week 13 before 2021 — with columns for Year, #1 seed, All-play leader, Champion and Result. The 2025 row lists the Wascawy Wabbits at 15-3 as top seed, Da Dangsters leading all-play at .729, Computer Jocks as champion, and a grey “neither” tag. The 2024, 2023 and 2022 rows each show one team sweeping all three columns — Wascawy Wabbits at 14-4 and .714, Fire Ready Aim at 15-3 and .762, and Vitside Mafia at 15-3 and .762 — every one of them carrying both a blue “#1 seed” tag and an “all-play” tag."
+    "excludeFromHero": true,
+    "image": "afl-draft-broadcast.webp",
+    "imageAlt": "The AFL Draft Broadcast board on a TV, showing which franchise is on the clock over its team colors and crest, with the last four picks and the next three teams up."
   },
   {
     "id": "free-agents-rostered-by",
@@ -42,6 +43,28 @@
     "image": "free-agents-rostered-by.webp",
     "imageAlt": "The Free Agents page for The League with a player card open over the table. The card's header band is Vitside Mafia's deep red rather than Buffalo's blue, with the Mafia's dragon crest behind a cut-out of Josh Allen, headed “Josh Allen” beside a 30 yrs pill over “Buffalo · QB · #17” and “Wyoming · 8 yrs · 2018 Round 1, Pick 07”. Directly beneath the band, a red-tinted strip carries the dragon crest on a dark chip, the label ROSTERED BY, and the name Vitside Mafia. Under it the three stat tiles read 414.6 over 17 GAMES, 24.4 PER GAME, and $9.0M over 3 YRS — where an unowned player's card shows FA over FREE AGENT. Latest News and a week-by-week Season Results table follow. Behind the card, the free agent table lists Josh Allen, Joe Burrow, Brock Purdy and the rest with a red left edge marking the rows that are already rostered.",
     "excludeFromHero": true
+  },
+  {
+    "id": "playoff-performance",
+    "date": "2026-08-26",
+    "category": "new-page",
+    "icon": "playoff",
+    "leagues": [
+      "theleague"
+    ],
+    "title": "The #1 Seed Is A Trap",
+    "link": "/playoff-performance",
+    "linkLabel": "See the damage",
+    "summary": "Nineteen seasons of evidence that the best regular season buys you almost nothing. The #1 seed has won the title 4 times out of 19. Pulling a champion's name out of a hat hits about 6%. That's the entire edge for a first-round bye and home-field-that-isn't: fifteen points of probability, and a lot of teams who found out the hard way.",
+    "description": [
+      "Every year somebody clinches the top seed in November and starts talking like the trophy is in the mail. <a href=\"/playoff-performance\">Playoff Performance</a> is the page that shuts that down. Every completed season from 2007 to 2025, the #1 seed next to the team that actually won it, and a running tally of how rarely those are the same name.",
+      "Four for nineteen. Twenty-one percent. And it is worse than the number looks, because three of those four came in a row — 2022, 2023, 2024 — which means that across the first fifteen years of this league the top seed won exactly once. Then 2025 arrived and the 15-3 Wabbits handed the thing to the Computer Jocks, who were nobody's idea of a favorite.",
+      "The best exhibit is still 2018. The Wascawy Wabbits went 16-0. Sixteen and zero. They did not win the championship. They did not reach the final. Under Siege did, and Under Siege had spent the regular season at 8-8 — go pull it up on the <a href=\"/playoffs\">playoff bracket</a> if you don't believe it.",
+      "The secondary view asks whether all-play — every team measured against every other team's score, week by week, which strips out whether your schedule was kind — knows something the <a href=\"/standings\">standings</a> don't. Barely. The all-play leader has won 5 of 19, and across 9 of the 19 seasons the all-play leader and the top seed were the same team anyway. Being demonstrably the best is worth about five extra points of title odds over being lucky, which is not the answer anybody wants.",
+      "One note on how the #1 seed is decided here, because it matters and it bit us: we read it off the bracket — whoever took the first-round bye — not off the <a href=\"/standings\">standings</a> page. Those disagree. In 2008 and 2010 the team sitting in row one of the standings was not the team that got the bye. The games know who was seeded first; the table doesn't always."
+    ],
+    "image": "playoff-performance.webp",
+    "imageAlt": "The Playoff Performance page for The League in dark mode, headed “Does the best regular season win anything?” over the line “19 completed seasons, 2007–2025. The #1 seed has won the title 4 of 19 times. Picking a champion at random out of a hat would hit about 6% of the time.” Below sit four cards: “#1 seed wins the title” showing 21%, 4 of 19, with a note that it reached the final 7 of 19; “All-play leader wins the title” showing 26%, 5 of 19, reaching the final 9 of 19; “Same team held both” showing 9 of 19, the #1 seed also being the all-play leader; and “Random baseline” showing 6%, one team in 16. A “Season by season” table follows, noting all-play is cut at the end of the regular season — week 14 in recent years, week 13 before 2021 — with columns for Year, #1 seed, All-play leader, Champion and Result. The 2025 row lists the Wascawy Wabbits at 15-3 as top seed, Da Dangsters leading all-play at .729, Computer Jocks as champion, and a grey “neither” tag. The 2024, 2023 and 2022 rows each show one team sweeping all three columns — Wascawy Wabbits at 14-4 and .714, Fire Ready Aim at 15-3 and .762, and Vitside Mafia at 15-3 and .762 — every one of them carrying both a blue “#1 seed” tag and an “all-play” tag."
   },
   {
     "id": "division-strength",
@@ -91,6 +114,30 @@
     "linkLabel": "Meet the owners",
     "image": "owners-get-their-names.webp",
     "imageAlt": "The AFL Owners page scrolled to its “Former owners” section, badged 65, under the line “Sorted by seasons played, so one-season cameos sink to the bottom.” A filter box sits above a table with columns for identity, slot, years, seasons, record, trophies and division titles — and every row now leads with a person rather than a team: Lee Graves on slot 0023, 2005-2021, 17 seasons at 145-146 with a championship and three divisions; Tim Barlos on 0008, 2003-2015, 13 seasons at 88-128; Jim Shea on 0013, 2008-2019, 12 seasons at 132-77 with a title; Shane Fitch on 0003, 2003-2012, 10 seasons at 100-68 with a title and five divisions; then Nathan Clark, Leland Brasher, Brian Sevilla, Paul Post, Tom Flanagan, Paul Tarsney, David Stafford and Dan Winman. Two rows carry a pair of slot numbers — 0006, 0024 and 0012, 0017 — the tell for an owner whose franchise slot moved underneath him.",
+    "excludeFromHero": true
+  },
+  {
+    "id": "owners-pages",
+    "date": "2026-08-25",
+    "category": "new-page",
+    "icon": "users",
+    "leagues": [
+      "theleague",
+      "afl"
+    ],
+    "title": "340 Seasons Just Got Their Owners Back",
+    "summary": "Every franchise page only ever showed you the current owner's work — which meant 340 franchise-seasons across the two leagues, 14 championships and 73 division titles among them, lived on no page at all. Owners is a page for every person who has ever run a team here, current and former, with the full record they actually earned.",
+    "description": [
+      "Here is a thing nobody meant to build. <a href=\"/franchises\">Franchise pages</a> are owner-scoped, and correctly so: when a team changes hands, the new owner does not inherit the old one's rings. Midwestside's owner should not be walking around with the Witch City Warlocks' 38-34 on their permanent record, and they aren't.",
+      "But the seasons that got subtracted had to go somewhere, and they didn't. They went nowhere. Add it up across both leagues and it is 340 franchise-seasons — 110 in The League, 230 in the AFL — that were played, scored, won and lost, and then rendered on precisely zero pages. Fourteen league championships in there. Seventy-three division titles. The Warlocks won a division in 2007 and until this week you could not find that anywhere on this site.",
+      "So: <a href=\"/owners\">Owners</a>. One page per owner, 128 of them, 87 of whom don't run a team here anymore. Their record, their playoff runs, their trophies, every team name they ever wore, and — because people move slots and share teams — the whole chain of who handed the franchise to whom.",
+      "The old \"Former Identities\" strip on the <a href=\"/franchises\">franchises page</a> is the tell for how bad this was. Twenty-three historical team names in The League, ninety-five in the AFL, every one of them a link. Every one of them a link to nowhere useful, because the page they wanted to point at did not exist. All 118 now land on the owner who ran that team.",
+      "And each franchise page now ends with the people who had it before you. Their record on that slot, their seasons, their hardware, one click away. The record above it still belongs to whoever holds the team today. That was never the problem. The problem was that everything underneath it had been quietly deleted."
+    ],
+    "link": "/owners",
+    "linkLabel": "Meet the owners",
+    "image": "owners-pages.webp",
+    "imageAlt": "The Owners page for The League, headed “Every owner The League has had — 17 current, 22 former. Franchise pages only show the CURRENT owner’s record, which left 110 seasons — including 7 championships and 25 division titles — with nowhere to live. This is where they live.” Below it a highlighted panel, “Champions you’ve never seen — these owners won The League and then left. Their titles appear on no franchise page”, holding six crested cards: Devil Dogs 2012, 2013 with 89-105 and two trophies, Amish Rakefighters 2015 at 84-76, Las Vegas Elite 2009 at 76-118, LBer-DeCleaters 2016 at 140-70, Sabertooths 2011 at 42-48 and Under Siege 2018 at 24-26, each with one trophy. Under a “Current owners” heading badged 17 sits a grid of owner cards — Bring The Pain since 2007 on franchise 0008, 196-138 (.587) over 19 seasons and 34,852 points, with trophy, division, MVP and Jerry Jones chips; then Dark Magicians of Chaos, Pacific Pigskins, Fire Ready Aim, Vitside Mafia, Wascawy Wabbits, Midwestside Connection, Gridiron Geeks and Running Down The Dream.",
     "excludeFromHero": true
   },
   {
@@ -167,30 +214,6 @@
     "leagues": [
       "bb1"
     ]
-  },
-  {
-    "id": "owners-pages",
-    "date": "2026-08-25",
-    "category": "new-page",
-    "icon": "users",
-    "leagues": [
-      "theleague",
-      "afl"
-    ],
-    "title": "340 Seasons Just Got Their Owners Back",
-    "summary": "Every franchise page only ever showed you the current owner's work — which meant 340 franchise-seasons across the two leagues, 14 championships and 73 division titles among them, lived on no page at all. Owners is a page for every person who has ever run a team here, current and former, with the full record they actually earned.",
-    "description": [
-      "Here is a thing nobody meant to build. <a href=\"/franchises\">Franchise pages</a> are owner-scoped, and correctly so: when a team changes hands, the new owner does not inherit the old one's rings. Midwestside's owner should not be walking around with the Witch City Warlocks' 38-34 on their permanent record, and they aren't.",
-      "But the seasons that got subtracted had to go somewhere, and they didn't. They went nowhere. Add it up across both leagues and it is 340 franchise-seasons — 110 in The League, 230 in the AFL — that were played, scored, won and lost, and then rendered on precisely zero pages. Fourteen league championships in there. Seventy-three division titles. The Warlocks won a division in 2007 and until this week you could not find that anywhere on this site.",
-      "So: <a href=\"/owners\">Owners</a>. One page per owner, 128 of them, 87 of whom don't run a team here anymore. Their record, their playoff runs, their trophies, every team name they ever wore, and — because people move slots and share teams — the whole chain of who handed the franchise to whom.",
-      "The old \"Former Identities\" strip on the <a href=\"/franchises\">franchises page</a> is the tell for how bad this was. Twenty-three historical team names in The League, ninety-five in the AFL, every one of them a link. Every one of them a link to nowhere useful, because the page they wanted to point at did not exist. All 118 now land on the owner who ran that team.",
-      "And each franchise page now ends with the people who had it before you. Their record on that slot, their seasons, their hardware, one click away. The record above it still belongs to whoever holds the team today. That was never the problem. The problem was that everything underneath it had been quietly deleted."
-    ],
-    "link": "/owners",
-    "linkLabel": "Meet the owners",
-    "image": "owners-pages.webp",
-    "imageAlt": "The Owners page for The League, headed “Every owner The League has had — 17 current, 22 former. Franchise pages only show the CURRENT owner’s record, which left 110 seasons — including 7 championships and 25 division titles — with nowhere to live. This is where they live.” Below it a highlighted panel, “Champions you’ve never seen — these owners won The League and then left. Their titles appear on no franchise page”, holding six crested cards: Devil Dogs 2012, 2013 with 89-105 and two trophies, Amish Rakefighters 2015 at 84-76, Las Vegas Elite 2009 at 76-118, LBer-DeCleaters 2016 at 140-70, Sabertooths 2011 at 42-48 and Under Siege 2018 at 24-26, each with one trophy. Under a “Current owners” heading badged 17 sits a grid of owner cards — Bring The Pain since 2007 on franchise 0008, 196-138 (.587) over 19 seasons and 34,852 points, with trophy, division, MVP and Jerry Jones chips; then Dark Magicians of Chaos, Pacific Pigskins, Fire Ready Aim, Vitside Mafia, Wascawy Wabbits, Midwestside Connection, Gridiron Geeks and Running Down The Dream.",
-    "excludeFromHero": true
   },
   {
     "id": "mixed-round-schedule-builder",
@@ -876,26 +899,5 @@
     ],
     "image": "weekly-rollup-footer-keeper-link.webp",
     "imageAlt": "The AFL footer: champions band over the five-column directory, with the Front Office column's Keeper Report Card link now live."
-  },
-  {
-    "id": "weekly-rollup-2026-08-10-bb1",
-    "date": "2026-08-10",
-    "title": "Weekly Fixes & Polish (Aug 8-10)",
-    "summary": "6 bug fixes and style improvements across rosters, what's new, design system & theming, free agents.",
-    "description": [
-      "This week's 6 bug fixes and polish improvements touched the following areas of the site:",
-      "<strong>Rosters</strong> — The great team-logo blackout is over — for good this time. Certain NFL crests (looking at you, Tampa Bay and New Orleans) kept rendering as broken-image icons on roster and player pages, and every fix seemed to wear off by morning. Turns out the logo files had never actually shipped with the site, and once they did, a 4-hour cache kept serving phones the old broken answer. The logos are now committed, guard-tested in CI (including old-timey codes like OAK and STL on historical rosters), and if one ever fails to load anyway, it now quietly disappears instead of leaving that sad torn-photo icon.",
-      "<strong>What's New</strong> — What's New cards stopped stuttering. A fresh article was tagged 'NEW PAGE' and then, an inch to the right, 'NEW' again in green — same word, two different meanings — and the green one was floating as bare text right where the screenshot ends, so on a purple thumbnail you couldn't read it at all. It's now a proper chip that says 'JUST IN', which is what it always meant: published since you last stopped by. Dark mode finally reached the What's New pages. The category tags — New Page, Enhancement, Bug Fix — were painted in their daylight colors no matter which theme you were in, so the same article looked bright and legible on the homepage and went muddy the moment you opened the full list or clicked through to read it. All three surfaces now share one palette, and the filter buttons across the top got a contrast bump while we were in there.",
-      "<strong>Design System & Theming</strong> — NFL team and college logos no longer show up as broken-image icons in dark mode on spotty connections — the site now serves its own copies of the dark logo sets instead of leaning on ESPN's servers every time a page renders.",
-      "<strong>Free Agents</strong> — The Filters drawer on the Free Agents page opens all the way on a phone now. It used to stop dead partway through Weight, with Experience, Draft Round, the two include-toggles and the Clear Filters button all trapped behind the player table — the panel had a fixed height that only fit the desktop layout. It now sizes itself to whatever's inside it, on both leagues' pages. Free Agents no longer lies to you after you wander off and come back. Filter for 28-year-old Chiefs, go look at the standings, hit back — the table was still showing you those four guys, and the Filters button still claimed two filters were on, but the panel itself read empty with nothing to clear. The page now re-reads its own controls when you return, so the list matches what the filters say. Same fix retires two dead buttons on the way: the first click on Filters, and (in the AFL) the conference switcher, both used to do nothing at all on your first try after coming back."
-    ],
-    "category": "bug-fix",
-    "link": "/best-ball-1/whats-new",
-    "linkLabel": "See all updates",
-    "icon": "wrench",
-    "excludeFromHero": true,
-    "leagues": [
-      "bb1"
-    ]
   }
 ]
