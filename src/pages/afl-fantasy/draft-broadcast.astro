@@ -28,6 +28,7 @@ import {
   assignBoardRanks,
   buildConferenceBoard,
   enrichBroadcastPlayers,
+  findRehearsalYear,
   loadConferenceKeepers,
   trimToDraftable,
 } from '../../utils/draft-broadcast-server';
@@ -149,6 +150,24 @@ const ranked = assignBoardRanks(enriched, keptIds);
 
 const players = trimToDraftable(ranked, boardPlayerIds);
 
+// Which season each conference's "Rehearse" link points at. Resolved from the
+// feeds (see findRehearsalYear) rather than assumed, so a rehearsal link is
+// either correct or absent — never a board that renders empty.
+//
+// Computed for EVERY conference, including while already rehearsing, because
+// the conference switcher stays live during a replay: sending the current
+// replay's year to the other conference assumes the two finished the same
+// seasons, which is exactly what duplicatePlayers does not guarantee.
+// Anchored to defaultYear, NOT leagueYear: "most recent finished season" is a
+// property of today, not of whatever season is currently on screen. Using
+// leagueYear walks the candidates backwards on every hop — a 2025 replay would
+// offer 2024 on the conference switcher, then 2023 from there.
+const rehearsalYears: Record<string, number> = {};
+for (const c of conferences) {
+  const year = findRehearsalYear(league.dataPath, defaultYear, c.unit);
+  if (year !== undefined) rehearsalYears[c.code] = year;
+}
+
 const pageData: DraftBroadcastPageData = {
   leagueYear,
   conference: conference ?? { code: '00', name: 'American League', unit: 'CONFERENCE00' },
@@ -160,6 +179,7 @@ const pageData: DraftBroadcastPageData = {
   leagueId: league.id,
   mflHost: league.mflHost,
   rehearseUpTo,
+  rehearsalYears,
 };
 
 const title = `${conference?.name ?? 'AFL'} Draft Board | AFL`;

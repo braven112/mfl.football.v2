@@ -23,15 +23,42 @@ interface Props {
   totalRounds: number;
   picksPerRound: number;
   madeCount: number;
+  /** True when this page is replaying a completed season rather than polling. */
+  rehearsing: boolean;
+  /** Conference code → most recent season that conference actually finished. */
+  rehearsalYears?: Record<string, number>;
+  /** Season currently on the board — the replayed year while rehearsing. */
+  leagueYear: number;
 }
 
 function pickLabel(pick: DraftRoomPick): string {
   return `${pick.round}.${String(pick.pickInRound).padStart(2, '0')}`;
 }
 
+/**
+ * Build a link to this page in either mode. Passing `year` produces a
+ * rehearsal href (replay that season from pick 1); omitting it produces the
+ * live href. Always emits `conference` so neither control can strand the
+ * operator on the other conference's board.
+ */
+function modeHref(conferenceCode: string, year?: number): string {
+  const params = new URLSearchParams({ conference: conferenceCode });
+  if (year !== undefined) {
+    params.set('year', String(year));
+    // 0, not 1: `rehearse=N` means "start with N picks ALREADY made", so
+    // rehearse=1 seeds 1.01 onto the board and the first thing the room sees
+    // revealed is 1.02. Starting at 0 replays the season from its first pick.
+    params.set('rehearse', '0');
+  }
+  return `?${params}`;
+}
+
 export function OnTheClock({
   conference,
   conferences,
+  rehearsing,
+  rehearsalYears,
+  leagueYear,
   onTheClock,
   team,
   picks,
@@ -43,6 +70,9 @@ export function OnTheClock({
 }: Props) {
   const recent = useMemo(() => recentPicks(picks, 4), [picks]);
   const upcoming = useMemo(() => upcomingPicks(picks, 3), [picks]);
+
+  /** This conference's own most recent finished season, if it has one. */
+  const ownRehearsalYear = rehearsalYears?.[conference.code];
 
   const notStarted = madeCount === 0;
   const complete = !onTheClock && picks.length > 0;
@@ -216,17 +246,38 @@ export function OnTheClock({
         </section>
       </div>
 
-      {conferences.length > 1 ? (
+      {conferences.length > 1 || rehearsing || ownRehearsalYear !== undefined ? (
         <footer className="dbc-idle__footer">
           {conferences.map((c) => (
             <a
               key={c.code}
               className={`dbc-idle__conf${c.code === conference.code ? ' is-active' : ''}`}
-              href={`?conference=${c.code}`}
+              /* Stays a rehearsal across a conference switch — but on THAT
+                 conference's own most recent finished season, not this one's.
+                 A conference that has never finished one goes live instead. */
+              href={modeHref(c.code, rehearsing ? rehearsalYears?.[c.code] : undefined)}
             >
               {c.name}
             </a>
           ))}
+
+          {rehearsing ? (
+            <>
+              <span className="dbc-idle__rehearsal-flag">
+                Rehearsal · replaying {leagueYear}
+              </span>
+              <a className="dbc-idle__mode" href={modeHref(conference.code)}>
+                Go live
+              </a>
+            </>
+          ) : ownRehearsalYear !== undefined ? (
+            <a
+              className="dbc-idle__mode"
+              href={modeHref(conference.code, ownRehearsalYear)}
+            >
+              Rehearse {ownRehearsalYear}
+            </a>
+          ) : null}
         </footer>
       ) : null}
     </div>

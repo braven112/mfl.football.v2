@@ -265,3 +265,35 @@ export function assignBoardRanks(
     return boardRank === undefined ? p : { ...p, boardRank };
   });
 }
+
+/** How many seasons back to look for a board worth rehearsing against. */
+const REHEARSAL_LOOKBACK_YEARS = 12;
+
+/**
+ * Most recent season before `leagueYear` whose board for THIS conference is
+ * actually complete, or undefined when none is.
+ *
+ * Resolved by reading the feeds rather than assuming `leagueYear - 1`, because
+ * the rehearsal link is the one control on the page that can dead-end: pointing
+ * it at a season with an empty (or partial) board would drop the operator onto
+ * a broadcast that never reveals anything, which looks identical to the page
+ * being broken. Scoped per conference because `duplicatePlayers` lets the two
+ * conferences draft — and finish — independently; in 2025 they ran on separate
+ * days, so "the AL board is done" does not imply the NL board is.
+ *
+ * A board counts only if EVERY slot is filled. A half-finished season would
+ * replay fine up to the gap and then stall on an empty slot forever.
+ */
+export function findRehearsalYear(
+  dataPath: string,
+  leagueYear: number,
+  unit: string
+): number | undefined {
+  for (let year = leagueYear - 1; year >= leagueYear - REHEARSAL_LOOKBACK_YEARS; year--) {
+    const raw = readJson(`${dataPath}/mfl-feeds/${year}/draftResults.json`);
+    if (!raw) continue;
+    const { picks } = buildConferenceBoard(raw, unit);
+    if (picks.length > 0 && picks.every((p) => p.playerId)) return year;
+  }
+  return undefined;
+}

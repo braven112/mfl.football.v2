@@ -310,6 +310,8 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
           player={revealPlayer}
           picks={picks}
           players={players}
+          rehearsing={rehearsing}
+          leagueYear={data.leagueYear}
         />
       ) : (
         <OnTheClock
@@ -323,6 +325,9 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
           totalRounds={data.totalRounds}
           picksPerRound={data.picksPerRound}
           madeCount={madeCount}
+          rehearsing={rehearsing}
+          rehearsalYears={data.rehearsalYears}
+          leagueYear={data.leagueYear}
         />
       )}
 

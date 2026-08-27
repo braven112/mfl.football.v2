@@ -67,4 +67,17 @@ export interface DraftBroadcastPageData {
    * only way to see the page work before the room fills up.
    */
   rehearseUpTo?: number;
+  /**
+   * Conference code → most recent season whose board for THAT conference is
+   * actually complete. Drives the "Rehearse <year>" link on the idle screen.
+   *
+   * Keyed per conference, not a single year, because the conference switcher
+   * has to stay correct DURING a replay: `duplicatePlayers` lets the two
+   * conferences draft and finish independently (in 2025 they ran on separate
+   * days), so carrying one conference's replay year onto the other's board can
+   * land on a season it never finished — where the replay stalls on the first
+   * empty slot and looks exactly like the page being broken. A conference with
+   * no complete season is simply absent, and its link goes live instead.
+   */
+  rehearsalYears?: Record<string, number>;
 }

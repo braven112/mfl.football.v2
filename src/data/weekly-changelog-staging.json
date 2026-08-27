@@ -112,6 +112,30 @@
       "impact": "user",
       "area": "standings",
       "league": "both"
+    },
+    {
+      "date": "2026-08-27",
+      "type": "bug-fix",
+      "summary": "The Draft Broadcast — the big board built for draft night — shipped without a way to get to it from the menu, so you had to know the URL or find it through search. It now sits in Offseason War Room alongside the Keeper Planner.",
+      "impact": "user",
+      "area": "navigation",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-27",
+      "type": "bug-fix",
+      "summary": "While the AL and NL drafts are actually running, the homepage hero's button said \"Enter Draft Room\" but sent you to the draft order page. It now opens the Draft Broadcast for the conference that's drafting.",
+      "impact": "user",
+      "area": "homepage",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-27",
+      "type": "style-tweak",
+      "summary": "The Draft Broadcast can now be flipped between the live board and a replay of last year's draft from the page itself, instead of hand-editing the URL. A replay is clearly flagged in amber so nobody mistakes last year's picks for tonight's.",
+      "impact": "user",
+      "area": "other",
+      "league": "afl"
     }
   ]
 }
