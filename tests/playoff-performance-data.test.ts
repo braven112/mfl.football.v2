@@ -106,6 +106,39 @@ describe('playoff-performance derived data', () => {
     }
   });
 
+  /**
+   * The invariant an earlier version of seedField broke: it derived wild cards
+   * from the tiebreaker chain independently of the bracket, so in 2007 and 2016
+   * it seeded a team that never played a playoff game and left a real field
+   * member with no seed. Build-time throws alone don't gate this — prebuild's
+   * runner swallows a failed step — so it is asserted here.
+   */
+  it('seeds the championship field exactly: 7 teams, seeds 1-7, no duplicates', () => {
+    for (const s of data.seasons) {
+      const field = s.championshipField;
+      expect(field, `${s.year} field size`).toHaveLength(7);
+      expect(
+        field.map((t) => t.seed),
+        `${s.year} seeds`,
+      ).toEqual([1, 2, 3, 4, 5, 6, 7]);
+      const ids = field.map((t) => t.franchiseId);
+      expect(new Set(ids).size, `${s.year} duplicate franchise in field`).toBe(7);
+
+      // The four reported slots must agree with the field they came from.
+      expect(field[0].franchiseId, `${s.year} seed 1 is the top seed`).toBe(
+        s.topSeed.franchiseId,
+      );
+      for (const [slot, team] of [
+        ['champion', s.champion],
+        ['runnerUp', s.runnerUp],
+      ] as const) {
+        const inField = field.find((t) => t.franchiseId === team.franchiseId);
+        expect(inField, `${s.year} ${slot} is in the field`).toBeDefined();
+        expect(team.seed, `${s.year} ${slot} seed matches the field`).toBe(inField!.seed);
+      }
+    }
+  });
+
   it('names a real franchise in every slot', () => {
     for (const s of data.seasons) {
       for (const [slot, team] of Object.entries({

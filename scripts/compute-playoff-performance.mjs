@@ -279,36 +279,74 @@ const allPlayThrough = (weekly, maxWeek) => {
  * Validated: exact on all 7 seeds in every season whose bracket carries both a
  * seed and a franchise id (2020-2023, 2025). `verifySeeds` re-checks on build.
  */
-const seedField = ({ bye, standingsRows, divisionOf, allPlay, pointsFor }) => {
+const seedField = ({ bye, field, standingsRows, divisionOf, allPlay, pointsFor }) => {
   const wins = (r) => {
     const parts = String(r?.h2hwlt ?? '').split('-').map(Number);
     return parts[0] || num(r?.h2hw);
   };
+  // Division winners are identified across the WHOLE league — a division
+  // winner is the first row of its division whether or not it is in the field.
   const seenDivisions = new Set();
-  const divisionWinners = [];
-  const rest = [];
+  const divisionWinners = new Set();
   for (const row of standingsRows) {
     const d = divisionOf.get(row.id);
     if (d != null && !seenDivisions.has(d)) {
       seenDivisions.add(d);
-      divisionWinners.push(row);
-    } else {
-      rest.push(row);
+      divisionWinners.add(row.id);
     }
   }
-  const winnerIds = [bye, ...divisionWinners.map((r) => r.id).filter((id) => id !== bye)];
-  const wildCards = [...rest]
-    .sort(
-      (a, b) =>
-        wins(b) - wins(a) ||
-        (allPlay[b.id]?.pct ?? 0) - (allPlay[a.id]?.pct ?? 0) ||
-        (pointsFor.get(b.id) ?? 0) - (pointsFor.get(a.id) ?? 0)
-    )
-    .map((r) => r.id);
+
+  // ...but seeds are only ever assigned INSIDE the field the bracket walk
+  // found. The walk is ground truth about who played; the chain below only
+  // ORDERS those seven. Without this constraint the chain picks its own wild
+  // cards and disagrees with the bracket in exactly the seasons the chain is
+  // known to get wrong: 2007 seeded a team that never played a playoff game,
+  // and left a real field member with no seed at all. 2016 did the same.
+  const inField = new Set(field);
+  const rank = new Map(standingsRows.map((r, i) => [r.id, i]));
+  const ordered = [...inField].sort((a, b) => (rank.get(a) ?? 99) - (rank.get(b) ?? 99));
+
+  const winnerIds = [
+    bye,
+    ...ordered.filter((id) => id !== bye && divisionWinners.has(id)),
+  ];
+  const rowOf = new Map(standingsRows.map((r) => [r.id, r]));
+  const wildCards = ordered
+    .filter((id) => !winnerIds.includes(id))
+    .sort((a, b) => {
+      const ra = rowOf.get(a) ?? {};
+      const rb = rowOf.get(b) ?? {};
+      return (
+        wins(rb) - wins(ra) ||
+        (allPlay[b]?.pct ?? 0) - (allPlay[a]?.pct ?? 0) ||
+        (pointsFor.get(b) ?? 0) - (pointsFor.get(a) ?? 0)
+      );
+    });
 
   const seeds = new Map();
-  [...winnerIds, ...wildCards].slice(0, 7).forEach((id, i) => seeds.set(id, i + 1));
+  [...winnerIds, ...wildCards].forEach((id, i) => seeds.set(id, i + 1));
   return seeds;
+};
+
+/**
+ * Every team in the field carries exactly one seed 1..N, and nobody outside it
+ * carries any. This is the invariant the 2007/2016 bug violated, and it is
+ * checkable in all 19 seasons — unlike `verifySeeds`, which can only speak for
+ * the 5 seasons MFL states seeds for.
+ */
+const verifySeedCoverage = (year, seeds, field) => {
+  const assigned = [...seeds.keys()].sort();
+  const expected = [...field].sort();
+  const missing = expected.filter((id) => !seeds.has(id));
+  const extra = assigned.filter((id) => !field.includes(id));
+  const values = [...seeds.values()].sort((a, b) => a - b);
+  const wanted = field.map((_, i) => i + 1);
+  if (missing.length || extra.length || String(values) !== String(wanted)) {
+    throw new Error(
+      `${year}: seeds do not cover the bracket field exactly — ` +
+        `missing [${missing}], not in field [${extra}], seeds [${values}]`
+    );
+  }
 };
 
 /** MFL's own seed -> franchise, for the seasons whose bracket carries both. */
@@ -412,8 +450,12 @@ for (const year of seasonYears()) {
       a[0].localeCompare(b[0])
   );
   if (!ranked.length) {
-    skipped.push({ year, reason: 'no weekly scores to build all-play from' });
-    continue;
+    // Same invariant as the unmatched bracket above: a season that finished is
+    // a season we publish or fail on, never one we quietly drop from the rates.
+    throw new Error(
+      `${year}: championship-history records a champion but weekly-results.json has no ` +
+        `usable scores to build all-play from — refusing to publish rates that exclude it`
+    );
   }
   const [allPlayLeaderId, allPlayLeader] = ranked[0];
 
@@ -427,11 +469,13 @@ for (const year of seasonYears()) {
 
   const seeds = seedField({
     bye: bracket.bye,
+    field: bracket.field,
     standingsRows,
     divisionOf: new Map(arr(leagueFeed.franchises?.franchise).map((f) => [f.id, f.division])),
     allPlay,
     pointsFor,
   });
+  verifySeedCoverage(year, seeds, bracket.field);
   verifySeeds(year, seeds, mflSeeds(feed(year, 'playoff-brackets.json')));
 
   const team = (id) => ({
@@ -446,6 +490,13 @@ for (const year of seasonYears()) {
   seasons.push({
     year,
     lastRegularSeasonWeek,
+    // The whole seeded field, so the "every field member has exactly one seed
+    // 1..7 and nobody else has one" invariant is checkable in CI. The
+    // build-time throw alone is not enough of a gate: prebuild's runner
+    // swallows a failed step, so a violation would ship the stale JSON.
+    championshipField: [...seeds.entries()]
+      .sort((a, b) => a[1] - b[1])
+      .map(([franchiseId, seed]) => ({ ...team(franchiseId), seed })),
     topSeed: { ...team(bracket.bye), allPlayPct: allPlay[bracket.bye]?.pct ?? null },
     champion: team(bracket.champion),
     runnerUp: team(bracket.runnerUp),

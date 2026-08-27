@@ -23,6 +23,8 @@ export interface PlayoffPerformanceTeam {
 export interface PlayoffPerformanceSeason {
   year: number;
   lastRegularSeasonWeek: number;
+  /** The seeded championship field, seed 1 first. Always 7 entries. */
+  championshipField: (PlayoffPerformanceTeam & { seed: number })[];
   topSeed: PlayoffPerformanceTeam & { allPlayPct: number | null };
   champion: PlayoffPerformanceTeam;
   runnerUp: PlayoffPerformanceTeam;
