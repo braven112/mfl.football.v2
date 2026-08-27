@@ -39,6 +39,10 @@ interface Props {
   player?: BroadcastPlayer;
   picks: DraftRoomPick[];
   players: ReadonlyMap<string, BroadcastPlayer>;
+  /** True when this is a replay of a finished season, not the live draft. */
+  rehearsing?: boolean;
+  /** The season being replayed — only meaningful while `rehearsing`. */
+  leagueYear?: number;
 }
 
 /** "1.03" — the way a draft room says a pick out loud. */
@@ -46,7 +50,15 @@ function pickLabel(pick: DraftRoomPick): string {
   return `${pick.round}.${String(pick.pickInRound).padStart(2, '0')}`;
 }
 
-export function BroadcastRevealCard({ pick, team, player, picks, players }: Props) {
+export function BroadcastRevealCard({
+  pick,
+  team,
+  player,
+  picks,
+  players,
+  rehearsing,
+  leagueYear,
+}: Props) {
   const [cutoutSrc, setCutoutSrc] = useState<string | null>(() =>
     isSplashCutoutEligible(player) ? player!.headshot : null
   );
@@ -95,6 +107,15 @@ export function BroadcastRevealCard({ pick, team, player, picks, players }: Prop
       }
     >
       <div className="dbc-reveal__wash" aria-hidden="true" />
+      {/* The idle screen carries this too, but the reveal card is what is
+          actually on the TV for ~18 of every 20 seconds of a replay — flagging
+          only the idle screen would leave the room looking at last year's picks
+          with nothing on screen to say so. */}
+      {rehearsing ? (
+        <span className="dbc-reveal__rehearsal-flag">
+          Rehearsal · replaying {leagueYear}
+        </span>
+      ) : null}
       <span className="dbc-reveal__ghost" aria-hidden="true">{label}</span>
       {team?.icon ? (
         <img className="dbc-reveal__crest" src={team.icon} alt="" onError={hideOnError} />
