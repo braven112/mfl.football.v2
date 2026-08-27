@@ -202,3 +202,75 @@ export function trimToDraftable(
       p.projectedPoints !== undefined
   );
 }
+
+/**
+ * Players a conference's franchises are KEEPING, and therefore never draft.
+ *
+ * Derived as "rostered by this conference, minus anyone already on the board"
+ * rather than read as a static keeper list. MFL adds each pick to the drafting
+ * franchise's roster as it lands, so a plain roster read mid-draft would count
+ * the players just drafted as keepers and quietly shrink the pool under the
+ * board. Subtracting the board makes the set correct however far into the
+ * night the page is opened.
+ *
+ * Scoped to ONE conference on purpose: the AFL sets `duplicatePlayers`, so the
+ * same NFL player can be kept in the National League and still be drafted in
+ * the American. Pooling both conferences' keepers would delete ~84 legitimately
+ * draftable players from the American League's board.
+ */
+export function loadConferenceKeepers(
+  dataPath: string,
+  year: number,
+  franchiseIds: ReadonlySet<string>,
+  draftedIds: ReadonlySet<string>
+): Set<string> {
+  const raw = readJson(`${dataPath}/mfl-feeds/${year}/rosters.json`);
+  const kept = new Set<string>();
+  for (const f of toArray<any>(raw?.rosters?.franchise)) {
+    if (!f?.id || !franchiseIds.has(f.id)) continue;
+    for (const p of toArray<any>(f.player)) {
+      if (p?.id && !draftedIds.has(p.id)) kept.add(p.id);
+    }
+  }
+  return kept;
+}
+
+/**
+ * A consensus-only player sorts after every ADP-carrying player of the same
+ * number. ADP and consensus rank are different scales — mixing them raw would
+ * interleave a consensus #40 with an ADP 40.0 as though they meant the same
+ * thing — and "no ADP at all" is itself weak evidence, so the tie-break pushes
+ * those players down rather than up.
+ */
+const BOARD_RANK_FALLBACK_OFFSET = 1000;
+
+/**
+ * Stamp each draftable player with his rank in this conference's pre-draft
+ * pool — "board rank". Kept players get none; they were never on the board.
+ *
+ * Ordered by MFL average draft position, falling back to the consensus rank
+ * for a player no ADP feed lists. `averagePick` is preferred because it is a
+ * real pick number rather than an ordinal, so two sources can't disagree about
+ * spacing. A player with neither is left unranked rather than guessed at.
+ */
+export function assignBoardRanks(
+  players: BroadcastPlayer[],
+  keptIds: ReadonlySet<string>
+): BroadcastPlayer[] {
+  const rankable = players
+    .filter((p) => !keptIds.has(p.id))
+    .filter((p) => p.adpAveragePick !== undefined || p.consensusRank !== undefined)
+    .sort((a, b) => {
+      const av = a.adpAveragePick ?? (a.consensusRank ?? 0) + BOARD_RANK_FALLBACK_OFFSET;
+      const bv = b.adpAveragePick ?? (b.consensusRank ?? 0) + BOARD_RANK_FALLBACK_OFFSET;
+      return av - bv;
+    });
+
+  const rank = new Map<string, number>();
+  rankable.forEach((p, i) => rank.set(p.id, i + 1));
+
+  return players.map((p) => {
+    const boardRank = rank.get(p.id);
+    return boardRank === undefined ? p : { ...p, boardRank };
+  });
+}

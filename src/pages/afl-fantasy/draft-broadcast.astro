@@ -25,8 +25,10 @@ import { getLeagueBySlug } from '../../config/leagues';
 import { getLeagueYearForSlug } from '../../utils/league-year';
 import { buildDraftPlayers } from '../../utils/build-draft-players';
 import {
+  assignBoardRanks,
   buildConferenceBoard,
   enrichBroadcastPlayers,
+  loadConferenceKeepers,
   trimToDraftable,
 } from '../../utils/draft-broadcast-server';
 import type {
@@ -129,7 +131,23 @@ const enriched = enrichBroadcastPlayers(allPlayers, {
 });
 
 const boardPlayerIds = new Set(picks.map((p) => p.playerId).filter(Boolean));
-const players = trimToDraftable(enriched, boardPlayerIds);
+
+// ── Board rank ──
+// The AFL is a KEEPER league: each franchise holds 7, so 84 of this
+// conference's players are gone before 1.01 is called. Ranking against the
+// full player universe is what made the whole first round read as a reach.
+// Keepers are conference-scoped because `duplicatePlayers` lets the National
+// League keep a man the American League can still draft.
+const conferenceFranchiseIds = new Set(conferenceTeams.map((t: any) => t.franchiseId));
+const keptIds = loadConferenceKeepers(
+  league.dataPath,
+  leagueYear,
+  conferenceFranchiseIds,
+  boardPlayerIds
+);
+const ranked = assignBoardRanks(enriched, keptIds);
+
+const players = trimToDraftable(ranked, boardPlayerIds);
 
 const pageData: DraftBroadcastPageData = {
   leagueYear,

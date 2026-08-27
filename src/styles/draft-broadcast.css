@@ -282,7 +282,8 @@
   letter-spacing: 0.04em;
 }
 
-/* The value meter — the line the room reacts to out loud. */
+/* The board-position line. Neutral by default: it states a fact rather than
+   passing a verdict, so only the genuine top of the board gets colour. */
 .dbc-reveal__value {
   display: inline-block;
   margin: 0.6em 0 0;
@@ -292,21 +293,15 @@
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-}
-
-.dbc-reveal__value--steal {
-  background: #16a34a;
+  background: rgba(255, 255, 255, 0.16);
   color: #fff;
 }
 
-.dbc-reveal__value--reach {
-  background: #f5a524;
-  color: #1a1205;
-}
-
-.dbc-reveal__value--on-script {
-  background: rgba(255, 255, 255, 0.18);
-  color: rgba(255, 255, 255, 0.9);
+/* Only "BEST AVAILABLE" earns the green — taking the top man left is the one
+   thing on this line worth shouting about. */
+.dbc-reveal__value--top {
+  background: #16a34a;
+  color: #fff;
 }
 
 .dbc-reveal__stats {

@@ -31,29 +31,16 @@ export interface BroadcastPlayerExtras {
   consensusRank?: number;
   /** Per-source ranks, in `data/ranking-sources/<year>.json` order. */
   sourceRanks?: { label: string; rank: number }[];
+  /**
+   * Rank in THIS conference's pre-draft pool — everyone the conference did not
+   * keep, ordered by ADP. Undefined for a kept player (he was never on the
+   * board) and for anyone no source ranks at all.
+   */
+  boardRank?: number;
 }
 
 /** A player as the broadcast renders him: draft-room fields plus the extras. */
 export type BroadcastPlayer = DraftRoomPlayer & BroadcastPlayerExtras;
-
-/** How a selection compares to where the player was going in other drafts. */
-export type ValueVerdict = 'steal' | 'reach' | 'on-script' | 'unknown';
-
-/**
- * The value read-out under a revealed player — the single most fun number on
- * the board, and the one the room reacts to out loud.
- */
-export interface PickValue {
-  verdict: ValueVerdict;
-  /**
-   * Picks between the selection and the player's average draft position.
-   * Positive = taken LATER than ADP (a steal). Always absolute in the label;
-   * the sign lives in `verdict`.
-   */
-  delta: number;
-  /** The ADP this was measured against, for the fine print. */
-  adp?: number;
-}
 
 /** One conference's board. The AFL drafts two of these independently. */
 export interface BroadcastConference {

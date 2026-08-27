@@ -2,62 +2,79 @@
  * Pure helpers for the AFL live draft broadcast board.
  *
  * Split from the React components (same reason as `pick-reveal.ts`) so the
- * value math and board-state derivation are unit-testable without a DOM. The
- * components own animation and layout; everything here is data → data.
+ * board-state derivation is unit-testable without a DOM. The components own
+ * animation and layout; everything here is data → data.
  */
 
 import type { DraftRoomPick, DraftRoomTeam } from '../types/draft-room';
-import type { BroadcastPlayer, PickValue } from '../types/draft-broadcast';
+import type { BroadcastPlayer } from '../types/draft-broadcast';
 
 /**
- * A selection this far from ADP is just the draft working as intended. Below
- * the threshold the board says "on script" rather than crying steal on a
- * two-pick wobble — a meter that fires on everything stops meaning anything.
- */
-export const VALUE_THRESHOLD_PICKS = 8;
-
-/**
- * Compare a selection to where the player normally goes.
+ * Where a player stood among what was ACTUALLY still on the board when he was
+ * taken — the number the reveal leads with.
  *
- * `averagePick` is preferred over `adpRank` because it's a real pick number on
- * the same scale as `overallPickNumber`. Rank is an ORDINAL — comparing "the
- * 14th-ranked player went 20th" is only coincidentally meaningful, and in a
- * 12-team league the two scales drift apart fast.
+ * Replaces an earlier STEAL/REACH meter that compared the pick number straight
+ * against redraft ADP. That was wrong twice over in a keeper league. The AFL
+ * keeps 7 per franchise, so 84 players are gone before 1.01 is called and the
+ * AFL's 1.01 is really the 85th pick of a from-scratch draft — which made the
+ * whole first round read as a reach. And once that scale was corrected the
+ * deeper problem showed: past round one the AFL does not draft to redraft ADP
+ * at all (its median pick is the ~84th-best available by ADP), so no rescaling
+ * makes a verdict honest. A rank is a fact and needs no calibration: taking the
+ * top man left still reads as a win, and taking the 90th-best available is
+ * visibly a reach without the screen having to say so.
  *
- * Sign convention: positive delta = taken later than ADP = value gained.
+ * Counts only players carrying a `boardRank`, so keepers — who never had one —
+ * cannot inflate the position. Returns undefined when the player himself is
+ * unranked, which is the honest answer rather than a fabricated placing.
  */
-export function computePickValue(
-  overallPickNumber: number,
-  player?: Pick<BroadcastPlayer, 'adpAveragePick'>
-): PickValue {
-  const adp = player?.adpAveragePick;
-  if (!adp || !Number.isFinite(adp) || !Number.isFinite(overallPickNumber)) {
-    return { verdict: 'unknown', delta: 0 };
-  }
+export function bestAvailableAt(
+  picks: DraftRoomPick[],
+  players: ReadonlyMap<string, BroadcastPlayer>,
+  throughPickNumber: number,
+  playerId: string
+): number | undefined {
+  const self = players.get(playerId);
+  if (!self?.boardRank) return undefined;
 
-  const delta = overallPickNumber - adp;
-  if (Math.abs(delta) < VALUE_THRESHOLD_PICKS) {
-    return { verdict: 'on-script', delta: Math.round(Math.abs(delta)), adp };
+  // Everyone taken BEFORE this pick is off the board. Anything at or after it
+  // has not happened yet from this reveal's point of view — a queued reveal
+  // must not be re-ranked by picks that landed while it waited its turn.
+  const goneBefore = new Set(
+    picks
+      .filter((p) => p.playerId && p.overallPickNumber < throughPickNumber)
+      .map((p) => p.playerId)
+  );
+
+  let better = 0;
+  for (const p of players.values()) {
+    if (!p.boardRank || p.id === playerId) continue;
+    if (goneBefore.has(p.id)) continue;
+    if (p.boardRank < self.boardRank) better += 1;
   }
-  return {
-    verdict: delta > 0 ? 'steal' : 'reach',
-    delta: Math.round(Math.abs(delta)),
-    adp,
-  };
+  return better + 1;
 }
 
-/** Room-facing copy for the value meter. Short — it's read from ten feet away. */
-export function formatPickValue(value: PickValue): string | null {
-  switch (value.verdict) {
-    case 'steal':
-      return `STEAL · ${value.delta} picks past ADP`;
-    case 'reach':
-      return `REACH · ${value.delta} picks early`;
-    case 'on-script':
-      return 'RIGHT ON SCRIPT';
+/** English ordinal — 1st, 2nd, 3rd, 11th, 21st. */
+function ordinal(n: number): string {
+  const rem100 = n % 100;
+  if (rem100 >= 11 && rem100 <= 13) return `${n}th`;
+  switch (n % 10) {
+    case 1:
+      return `${n}st`;
+    case 2:
+      return `${n}nd`;
+    case 3:
+      return `${n}rd`;
     default:
-      return null;
+      return `${n}th`;
   }
+}
+
+/** Room-facing copy. Short — it is read from ten feet away. */
+export function formatBestAvailable(rank?: number): string | null {
+  if (!rank || !Number.isFinite(rank) || rank < 1) return null;
+  return rank === 1 ? 'BEST AVAILABLE' : `${ordinal(rank)} BEST AVAILABLE`;
 }
 
 /**

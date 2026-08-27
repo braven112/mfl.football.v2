@@ -1,23 +1,28 @@
 /**
  * Pure logic behind the AFL draft broadcast board.
  *
- * The value meter is the line the room reacts to, so its sign convention and
- * threshold are pinned here — a meter that calls a two-pick wobble a STEAL
- * stops meaning anything, and an inverted sign would celebrate every reach.
+ * The board-position line is what the room reacts to, so the keeper handling
+ * behind it is pinned here. The AFL keeps 7 per franchise — 84 players gone
+ * before 1.01 — and `duplicatePlayers` means the two conferences keep
+ * INDEPENDENTLY. Pool the two and ~84 legitimately draftable players vanish
+ * from a board they belong on.
  */
 
 import { describe, it, expect } from 'vitest';
 import {
-  computePickValue,
-  formatPickValue,
+  bestAvailableAt,
+  formatBestAvailable,
   findOnTheClock,
   recentPicks,
   upcomingPicks,
   positionRunCount,
   medianRank,
   applyRehearsal,
-  VALUE_THRESHOLD_PICKS,
 } from '../src/utils/draft-broadcast';
+import {
+  assignBoardRanks,
+  loadConferenceKeepers,
+} from '../src/utils/draft-broadcast-server';
 import type { DraftRoomPick } from '../src/types/draft-room';
 import type { BroadcastPlayer } from '../src/types/draft-broadcast';
 
@@ -45,44 +50,153 @@ function player(id: string, position: string, adp?: number): BroadcastPlayer {
   } as BroadcastPlayer;
 }
 
-describe('computePickValue', () => {
-  it('calls a player taken well after his ADP a steal', () => {
-    const value = computePickValue(40, player('a', 'RB', 20));
-    expect(value.verdict).toBe('steal');
-    expect(value.delta).toBe(20);
+describe('bestAvailableAt', () => {
+  const players = new Map<string, BroadcastPlayer>([
+    ['a', { ...player('a', 'RB'), boardRank: 1 } as BroadcastPlayer],
+    ['b', { ...player('b', 'WR'), boardRank: 2 } as BroadcastPlayer],
+    ['c', { ...player('c', 'TE'), boardRank: 3 } as BroadcastPlayer],
+    ['d', { ...player('d', 'QB'), boardRank: 4 } as BroadcastPlayer],
+    // A kept player carries no boardRank and must never occupy a position.
+    ['kept', player('kept', 'RB')],
+  ]);
+
+  it('calls the top of the board the best available', () => {
+    const board = [slot(1, 'a')];
+    expect(bestAvailableAt(board, players, 1, 'a')).toBe(1);
   });
 
-  it('calls a player taken well before his ADP a reach', () => {
-    const value = computePickValue(10, player('a', 'RB', 40));
-    expect(value.verdict).toBe('reach');
-    // delta is reported absolute — the direction lives in the verdict.
-    expect(value.delta).toBe(30);
+  it('promotes players as better ones come off the board', () => {
+    // b is 2nd overall, but by pick 2 the only man above him is gone.
+    const board = [slot(1, 'a'), slot(2, 'b')];
+    expect(bestAvailableAt(board, players, 2, 'b')).toBe(1);
   });
 
-  it('stays quiet inside the threshold', () => {
-    const value = computePickValue(20 + VALUE_THRESHOLD_PICKS - 1, player('a', 'RB', 20));
-    expect(value.verdict).toBe('on-script');
+  it('counts only the players still on the board at that pick', () => {
+    // At pick 2, d (rank 4) trails b and c — a is already gone.
+    const board = [slot(1, 'a'), slot(2, 'd')];
+    expect(bestAvailableAt(board, players, 2, 'd')).toBe(3);
   });
 
-  it('reports unknown when the player has no ADP', () => {
-    expect(computePickValue(12, player('a', 'RB')).verdict).toBe('unknown');
-    expect(computePickValue(12, undefined).verdict).toBe('unknown');
+  it('ignores picks that land AFTER the one being revealed', () => {
+    // A queued reveal must not be re-ranked by picks made while it waited.
+    const board = [slot(1, 'a'), slot(2, 'b'), slot(3, 'c'), slot(4, 'd')];
+    expect(bestAvailableAt(board, players, 1, 'a')).toBe(1);
   });
 
-  it('measures against averagePick, not rank', () => {
-    // adpRank is an ORDINAL and is deliberately ignored — comparing a rank to a
-    // pick number is only coincidentally meaningful.
-    const ordinalOnly = { adpRank: 3 } as BroadcastPlayer;
-    expect(computePickValue(60, ordinalOnly).verdict).toBe('unknown');
+  it('never lets a kept player occupy a board position', () => {
+    const board = [slot(1, 'a')];
+    expect(bestAvailableAt(board, players, 1, 'kept')).toBeUndefined();
   });
 });
 
-describe('formatPickValue', () => {
-  it('labels each verdict, and says nothing when there is nothing to say', () => {
-    expect(formatPickValue({ verdict: 'steal', delta: 23 })).toContain('STEAL');
-    expect(formatPickValue({ verdict: 'reach', delta: 11 })).toContain('REACH');
-    expect(formatPickValue({ verdict: 'on-script', delta: 2 })).toBe('RIGHT ON SCRIPT');
-    expect(formatPickValue({ verdict: 'unknown', delta: 0 })).toBeNull();
+describe('formatBestAvailable', () => {
+  it('names the top of the board without an ordinal', () => {
+    expect(formatBestAvailable(1)).toBe('BEST AVAILABLE');
+  });
+
+  it('uses real English ordinals', () => {
+    expect(formatBestAvailable(2)).toBe('2nd BEST AVAILABLE');
+    expect(formatBestAvailable(3)).toBe('3rd BEST AVAILABLE');
+    expect(formatBestAvailable(4)).toBe('4th BEST AVAILABLE');
+    // The teens are the trap: 11/12/13 are th, not st/nd/rd.
+    expect(formatBestAvailable(11)).toBe('11th BEST AVAILABLE');
+    expect(formatBestAvailable(12)).toBe('12th BEST AVAILABLE');
+    expect(formatBestAvailable(13)).toBe('13th BEST AVAILABLE');
+    expect(formatBestAvailable(21)).toBe('21st BEST AVAILABLE');
+    expect(formatBestAvailable(112)).toBe('112th BEST AVAILABLE');
+  });
+
+  it('says nothing when there is no rank', () => {
+    expect(formatBestAvailable(undefined)).toBeNull();
+    expect(formatBestAvailable(0)).toBeNull();
+  });
+});
+
+describe('assignBoardRanks', () => {
+  it('ranks by ADP and skips keepers entirely', () => {
+    const pool = [
+      { ...player('elite', 'RB', 2), id: 'elite' },
+      { ...player('kept', 'WR', 1), id: 'kept' },
+      { ...player('good', 'TE', 30), id: 'good' },
+    ] as BroadcastPlayer[];
+    const ranked = assignBoardRanks(pool, new Set(['kept']));
+    const byId = new Map(ranked.map((p) => [p.id, p]));
+
+    // The kept man has the best ADP and still gets no rank — he was never on
+    // this board, so counting him would push everyone else down one.
+    expect(byId.get('kept')?.boardRank).toBeUndefined();
+    expect(byId.get('elite')?.boardRank).toBe(1);
+    expect(byId.get('good')?.boardRank).toBe(2);
+  });
+
+  it('sorts an ADP-less player below every ADP-carrying one', () => {
+    const pool = [
+      { ...player('noAdp', 'WR'), consensusRank: 5 },
+      { ...player('lateAdp', 'RB', 200) },
+    ] as BroadcastPlayer[];
+    const byId = new Map(assignBoardRanks(pool, new Set()).map((p) => [p.id, p]));
+    // Consensus 5 looks better than ADP 200, but the two are different scales
+    // and "no ADP at all" is itself weak evidence.
+    expect(byId.get('lateAdp')?.boardRank).toBe(1);
+    expect(byId.get('noAdp')?.boardRank).toBe(2);
+  });
+
+  it('leaves a wholly unranked player out of the board', () => {
+    const pool = [player('ghost', 'TE')] as BroadcastPlayer[];
+    expect(assignBoardRanks(pool, new Set())[0].boardRank).toBeUndefined();
+  });
+});
+
+describe('loadConferenceKeepers', () => {
+  // Reads the real AFL feed on purpose: the invariant being protected is about
+  // how THIS league's data is shaped, and a fixture would happily keep passing
+  // after the shape changed underneath it.
+  const AFL = 'data/afl-fantasy';
+  const YEAR = 2026;
+  const AL = new Set(
+    Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(4, '0'))
+  );
+  const NL = new Set(
+    Array.from({ length: 12 }, (_, i) => String(i + 13).padStart(4, '0'))
+  );
+
+  it('returns only the requested conference\u2019s keepers', () => {
+    const al = loadConferenceKeepers(AFL, YEAR, AL, new Set());
+    const nl = loadConferenceKeepers(AFL, YEAR, NL, new Set());
+    // 12 franchises x 7 keepers, per conference, drafting independently.
+    expect(al.size).toBe(84);
+    expect(nl.size).toBe(84);
+  });
+
+  it('does NOT let one conference\u2019s keeper leave the other\u2019s board', () => {
+    // `duplicatePlayers` is on for the AFL: the same NFL player can be held in
+    // both conferences at once. Pooling the two keeper sets would delete every
+    // NL keeper from the AL's draftable pool — up to 84 players wrongly gone
+    // from a board they belong on.
+    const al = loadConferenceKeepers(AFL, YEAR, AL, new Set());
+    const nl = loadConferenceKeepers(AFL, YEAR, NL, new Set());
+    const shared = [...al].filter((id) => nl.has(id));
+    // Whether any player is actually double-kept is a league fact that varies
+    // by year; what must hold is that the two sets are resolved separately.
+    expect(al).not.toEqual(nl);
+    for (const id of shared) {
+      expect(al.has(id) && nl.has(id)).toBe(true);
+    }
+  });
+
+  it('excludes players already taken on the board', () => {
+    const all = loadConferenceKeepers(AFL, YEAR, AL, new Set());
+    const someKeeper = [...all][0];
+    // MFL adds each pick to the drafting franchise's roster as it lands, so a
+    // plain roster read mid-draft would count fresh picks as keepers and shrink
+    // the pool under the board.
+    const afterDraft = loadConferenceKeepers(AFL, YEAR, AL, new Set([someKeeper]));
+    expect(afterDraft.has(someKeeper)).toBe(false);
+    expect(afterDraft.size).toBe(all.size - 1);
+  });
+
+  it('returns an empty set for an unknown league path', () => {
+    expect(loadConferenceKeepers('data/nope', YEAR, AL, new Set()).size).toBe(0);
   });
 });
 

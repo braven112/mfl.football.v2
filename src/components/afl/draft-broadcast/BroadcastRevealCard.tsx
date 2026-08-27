@@ -15,7 +15,7 @@
  *     name it reads as two competing pieces of type at the exact moment the
  *     room is trying to read one of them. Blurring it back far enough to stop
  *     competing left it contributing nothing.
- *   - It carries stats — value vs ADP, projection, rankings, bye, injury —
+ *   - It carries stats — board rank, projection, rankings, bye, injury —
  *     because a reveal that owns a 65" screen for 18 seconds and says only a
  *     name is wasting the best real estate of the night.
  */
@@ -25,7 +25,11 @@ import type { DraftRoomPick } from '../../../types/draft-room';
 import type { DraftRoomTeam } from '../../../types/draft-room';
 import type { BroadcastPlayer } from '../../../types/draft-broadcast';
 import { isSplashCutoutEligible, resolveSplashColors } from '../../../utils/pick-reveal';
-import { computePickValue, formatPickValue, positionRunCount } from '../../../utils/draft-broadcast';
+import {
+  bestAvailableAt,
+  formatBestAvailable,
+  positionRunCount,
+} from '../../../utils/draft-broadcast';
 import { getCollegeHeadshot } from '../../../constants/roster-constants';
 
 interface Props {
@@ -61,8 +65,13 @@ export function BroadcastRevealCard({ pick, team, player, picks, players }: Prop
 
   const colors = resolveSplashColors(team, player);
   const label = pickLabel(pick);
-  const value = computePickValue(pick.overallPickNumber, player);
-  const valueText = formatPickValue(value);
+
+  // Where he stood among what was actually left on the board. A fact, not a
+  // verdict — see the keeper-league reasoning on `bestAvailableAt`.
+  const availRank = player
+    ? bestAvailableAt(picks, players, pick.overallPickNumber, player.id)
+    : undefined;
+  const availText = formatBestAvailable(availRank);
 
   // Rookies read best with their college as the origin line; vets get NFL team.
   const origin = player?.isRookie && player.college ? player.college : player?.nflTeam || '';
@@ -118,9 +127,13 @@ export function BroadcastRevealCard({ pick, team, player, picks, players }: Prop
             ) : null}
           </p>
 
-          {valueText ? (
-            <p className={`dbc-reveal__value dbc-reveal__value--${value.verdict}`}>
-              {valueText}
+          {availText ? (
+            <p
+              className={`dbc-reveal__value${
+                availRank === 1 ? ' dbc-reveal__value--top' : ''
+              }`}
+            >
+              {availText}
             </p>
           ) : null}
 
@@ -131,10 +144,13 @@ export function BroadcastRevealCard({ pick, team, player, picks, players }: Prop
                 <dd>#{player.consensusRank}</dd>
               </div>
             ) : null}
-            {player?.adpAveragePick ? (
+            {player?.boardRank ? (
               <div className="dbc-reveal__stat">
-                <dt>ADP</dt>
-                <dd>{player.adpAveragePick.toFixed(1)}</dd>
+                {/* Board rank, not raw ADP. An AFL 1.02 sitting beside "ADP
+                    24.1" reads as a blunder when it is nothing of the sort —
+                    the 24 counts 84 keepers who were never draftable here. */}
+                <dt>Board rank</dt>
+                <dd>#{player.boardRank}</dd>
               </div>
             ) : null}
             {player?.projectedPoints ? (
