@@ -46,6 +46,14 @@ export function OnTheClock({
 
   const notStarted = madeCount === 0;
   const complete = !onTheClock && picks.length > 0;
+  /**
+   * No slots at all means the feed was missing, unreadable, or `?conference=`
+   * named a unit that isn't on the board — never a real draft. Rendering the
+   * ordinary furniture then produced "Pick 0 of 0 · 1 rounds × 1", which is
+   * the same failure this feature already fixed once at the API layer: a
+   * broken board that looks like a valid one.
+   */
+  const boardMissing = picks.length === 0;
 
   /** A crest that 404s hides itself — an alt-text stub in a logo slot reads as
    *  broken on a TV, and the pick number and player name already identify the
@@ -72,14 +80,25 @@ export function OnTheClock({
       <header className="dbc-idle__header">
         <span className="dbc-idle__league">{conference.name}</span>
         <span className="dbc-idle__progress">
-          {complete
-            ? 'Draft complete'
-            : `Pick ${Math.min(madeCount + 1, picks.length)} of ${picks.length} · ${totalRounds} rounds × ${picksPerRound}`}
+          {boardMissing
+            ? 'Waiting for the draft board'
+            : complete
+              ? 'Draft complete'
+              : `Pick ${Math.min(madeCount + 1, picks.length)} of ${picks.length} · ${totalRounds} rounds × ${picksPerRound}`}
         </span>
       </header>
 
       <div className="dbc-idle__stage">
-        {complete ? (
+        {boardMissing ? (
+          <>
+            <p className="dbc-idle__kicker">Nothing to show yet</p>
+            <h1 className="dbc-idle__team">No draft board</h1>
+            <p className="dbc-idle__pick">
+              MFL hasn't published this conference's board — check the
+              conference below.
+            </p>
+          </>
+        ) : complete ? (
           <>
             <p className="dbc-idle__kicker">That's a wrap</p>
             <h1 className="dbc-idle__team">Every pick is in</h1>
@@ -174,7 +193,12 @@ export function OnTheClock({
                   <li key={p.overallPickNumber} className="dbc-idle__row">
                     <span className="dbc-idle__row-pick">{pickLabel(p)}</span>
                     <span className="dbc-idle__row-main">
-                      <strong>{by?.name || 'TBD'}</strong>
+                      {/* nameMedium in the RAIL: this row nowrap-ellipsises, so
+                          "Midwestside Connection" truncates while "Midwestside"
+                          fits whole. The two headline positions keep the full
+                          name — there it IS the content, and it was measured
+                          unclipped at every size. */}
+                      <strong>{by?.nameMedium || by?.name || 'TBD'}</strong>
                     </span>
                     {by?.icon ? (
                       <img
