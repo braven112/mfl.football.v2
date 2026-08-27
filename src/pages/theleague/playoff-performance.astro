@@ -143,8 +143,9 @@ const fmtPct = (v: number | null) => (v == null ? '—' : v.toFixed(3).replace(/
         </li>
         <li>
           Every bracket is verified against the league's championship history before it
-          counts; a season with more than one possible bracket fails the build rather than
-          being guessed at.
+          counts, and a season is only published once exactly one bracket fits the games
+          that were played. A season we can't pin down that precisely is refused rather
+          than guessed at.
         </li>
       </ul>
     </section>

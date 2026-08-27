@@ -36,9 +36,15 @@
  *   1. A candidate field is accepted ONLY if its final matches BOTH the
  *      champion and the runner-up in championship-history.json. A walk that
  *      looks plausible and is wrong is the failure mode here.
- *   2. `assertUniqueField` re-runs the search and refuses a season where more
- *      than one field satisfies the schedule. Ambiguity is a hard error, not a
- *      coin flip.
+ *   2. `assertUniqueBracket` refuses a season where more than one bracket
+ *      satisfies the schedule, and a completed season whose bracket cannot be
+ *      found at all is a throw rather than a skip — silently dropping it would
+ *      shrink the denominator of every rate on the page without changing
+ *      anything visible. Note that prebuild's runner treats a failed step as
+ *      non-fatal (`run()` in scripts/prebuild.mjs swallows the exit code), so
+ *      these throws surface in the build LOG, not as a failed build. The real
+ *      gate is `tests/playoff-performance-data.test.ts`, which pins all 19
+ *      seasons and every champion, so stale or wrong output fails CI.
  * Cross-checked against MFL's own bracket for the five seasons that DO carry
  * franchise ids (2020-2023, 2025): identical field, all five.
  *
@@ -196,12 +202,21 @@ const solveBracket = (year, schedule, startWeek, truth) => {
   return solutions;
 };
 
-/** A season with two consistent fields is a season we do not know. Throw. */
-const assertUniqueField = (year, solutions) => {
-  const fields = new Set(solutions.map((s) => [...s.field].sort().join(',')));
-  if (fields.size > 1) {
+/**
+ * A season we cannot pin down is a season we do not publish. Throw.
+ *
+ * Dedupes on the BYE as well as the field: the bye is what this report
+ * publishes as the #1 seed, and two solutions can agree on which seven teams
+ * played while disagreeing on which of them sat out the opening round. Checking
+ * only the field would let `solutions[0]` pick the #1 seed arbitrarily.
+ */
+const assertUniqueBracket = (year, solutions) => {
+  const shapes = new Set(
+    solutions.map((s) => `${s.bye}|${s.champion}|${[...s.field].sort().join(',')}`)
+  );
+  if (shapes.size > 1) {
     throw new Error(
-      `${year}: ${fields.size} different championship fields satisfy the schedule — refusing to guess`
+      `${year}: ${shapes.size} different championship brackets satisfy the schedule — refusing to guess`
     );
   }
 };
@@ -239,10 +254,13 @@ const allPlayThrough = (weekly, maxWeek) => {
  * rather than quietly publish a different statistic.
  */
 const verifyAllPlay = (year, weekly, standingsRows) => {
-  if (!standingsRows.length || standingsRows.some((r) => r.all_play_pct === undefined)) return null;
+  // Check every row that HAS the column rather than skipping the whole season
+  // when one row lacks it — a partial export should still be verified on the
+  // part it does carry. Seasons before 2015 carry no all-play at all and fall
+  // out via the empty-deltas guard below.
   const mine = allPlayThrough(weekly, null);
   const deltas = standingsRows
-    .filter((r) => mine[r.id])
+    .filter((r) => r.all_play_pct !== undefined && mine[r.id])
     .map((r) => Math.abs(num(r.all_play_pct) - mine[r.id].pct));
   if (!deltas.length) return null;
   const worst = Math.max(...deltas);
@@ -280,15 +298,32 @@ for (const year of seasonYears()) {
 
   const solutions = solveBracket(year, schedule, lastRegularSeasonWeek + 1, truth);
   if (!solutions.length) {
-    skipped.push({ year, reason: 'no championship bracket consistent with the schedule' });
-    continue;
+    // A season with a recorded champion is a season that finished, so failing
+    // to find its bracket is a broken input, not a season to quietly leave out
+    // of the rates. Silently skipping it would shrink the denominator of every
+    // headline number on the page without changing anything visible.
+    throw new Error(
+      `${year}: championship-history records a champion but no bracket in the schedule matches it ` +
+        `— refusing to publish rates that silently exclude a completed season`
+    );
   }
-  assertUniqueField(year, solutions);
+  assertUniqueBracket(year, solutions);
   const bracket = solutions[0];
 
   verifyAllPlay(year, weekly, standingsRows);
   const allPlay = allPlayThrough(weekly, lastRegularSeasonWeek);
-  const ranked = Object.entries(allPlay).sort((a, b) => b[1].pct - a[1].pct);
+  // Break an all-play tie the way the constitution does — total points scored
+  // is the step after All Play in both tiebreaker chains — then on franchise id
+  // so the result never depends on MFL's key order in weekly-results.json.
+  // The margin has been a single all-play game in 2012 and again in 2025, so a
+  // tie here is a live possibility, not a theoretical one.
+  const pointsFor = new Map(standingsRows.map((r) => [r.id, num(r.pf)]));
+  const ranked = Object.entries(allPlay).sort(
+    (a, b) =>
+      b[1].pct - a[1].pct ||
+      (pointsFor.get(b[0]) ?? 0) - (pointsFor.get(a[0]) ?? 0) ||
+      a[0].localeCompare(b[0])
+  );
   if (!ranked.length) {
     skipped.push({ year, reason: 'no weekly scores to build all-play from' });
     continue;
