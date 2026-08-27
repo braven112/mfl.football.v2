@@ -79,6 +79,66 @@ describe('playoff-performance derived data', () => {
     }
   });
 
+  /**
+   * Seeds 1-4 are the division winners regardless of record and 5-7 the wild
+   * cards, so seed order is NOT standings order — 2025's seed 4 sits at
+   * standings row 8. The derivation is checked against MFL's own stated seeds
+   * on every build for the five seasons that carry them; these pins cover the
+   * fourteen that don't, including both 7-seed champions.
+   */
+  it('seeds the champion, and the top seed is always seed 1', () => {
+    const byYear = new Map(data.seasons.map((s) => [s.year, s]));
+    expect(byYear.get(2010)?.champion.seed).toBe(7);
+    expect(byYear.get(2020)?.champion.seed).toBe(7);
+    expect(byYear.get(2018)?.champion.seed).toBe(6);
+    expect(byYear.get(2015)?.champion.seed).toBe(1);
+    for (const s of data.seasons) {
+      expect(s.topSeed.seed, `${s.year} top seed`).toBe(1);
+      expect(s.champion.seed, `${s.year} champion seed`).toBeGreaterThanOrEqual(1);
+      expect(s.champion.seed, `${s.year} champion seed`).toBeLessThanOrEqual(7);
+      expect(s.runnerUp.seed, `${s.year} runner-up seed`).toBeGreaterThanOrEqual(1);
+    }
+    // A season the #1 seed won is a season the champion is seed 1, and vice versa.
+    for (const s of data.seasons) {
+      expect(s.champion.seed === 1, `${s.year} topSeedWonTitle agrees with seed`).toBe(
+        s.topSeedWonTitle
+      );
+    }
+  });
+
+  /**
+   * The invariant an earlier version of seedField broke: it derived wild cards
+   * from the tiebreaker chain independently of the bracket, so in 2007 and 2016
+   * it seeded a team that never played a playoff game and left a real field
+   * member with no seed. Build-time throws alone don't gate this — prebuild's
+   * runner swallows a failed step — so it is asserted here.
+   */
+  it('seeds the championship field exactly: 7 teams, seeds 1-7, no duplicates', () => {
+    for (const s of data.seasons) {
+      const field = s.championshipField;
+      expect(field, `${s.year} field size`).toHaveLength(7);
+      expect(
+        field.map((t) => t.seed),
+        `${s.year} seeds`,
+      ).toEqual([1, 2, 3, 4, 5, 6, 7]);
+      const ids = field.map((t) => t.franchiseId);
+      expect(new Set(ids).size, `${s.year} duplicate franchise in field`).toBe(7);
+
+      // The four reported slots must agree with the field they came from.
+      expect(field[0].franchiseId, `${s.year} seed 1 is the top seed`).toBe(
+        s.topSeed.franchiseId,
+      );
+      for (const [slot, team] of [
+        ['champion', s.champion],
+        ['runnerUp', s.runnerUp],
+      ] as const) {
+        const inField = field.find((t) => t.franchiseId === team.franchiseId);
+        expect(inField, `${s.year} ${slot} is in the field`).toBeDefined();
+        expect(team.seed, `${s.year} ${slot} seed matches the field`).toBe(inField!.seed);
+      }
+    }
+  });
+
   it('names a real franchise in every slot', () => {
     for (const s of data.seasons) {
       for (const [slot, team] of Object.entries({
