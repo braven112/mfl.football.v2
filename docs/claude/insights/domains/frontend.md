@@ -30,16 +30,18 @@
   built from `Astro.url` — not a `<button>` plus a click handler.
 - Never wrap a `<script>` in a conditional (breaks Astro's dedup). Read
   `public/` files with `path.join(process.cwd(), …)`, never `import.meta.url`.
-- **React islands must not SSR anything time-derived** — start `null`, render a
-  placeholder, start the clock in `useEffect`. `?testDate=` makes the mismatch
-  a branch-level hydration failure, not a cosmetic one.
-- **An island that renders `null` until opened must be `client:only`.** A
-  hydrating directive makes Astro SSR an EMPTY `<astro-island>` and React 19
-  then reports #418 on every load — it will not hydrate a root the server gave
-  nothing. Modals/sheets driven entirely by localStorage have nothing to
-  hydrate anyway. Corollary: the trigger is plain HTML and lives from first
-  paint while the island lands whenever its chunk does, so a click can precede
-  the listener — have the open event carry a `handled` flag and retry briefly.
+- **A hydrating island must not SSR anything time- or request-derived, and must
+  SSR something.** Clock: start `null`, tick in `useEffect` (`?testDate=` makes
+  that mismatch branch-level, not cosmetic). Query string: take it as a prop
+  (`Astro.url.search`) — `window.location` behind `typeof window !==
+  'undefined'` doesn't dodge it, that *guarantees* the mismatch. Renders `null`
+  until opened: `client:only`, else Astro SSRs an EMPTY `<astro-island>` and
+  React won't hydrate a root the server gave nothing. Any divergence is #418,
+  which `reportError` re-fires as an uncaught window error — so it reads as a
+  crash on a page that in fact recovered.
+- **`window` listeners outlive the page that added them:** ClientRouter swaps
+  the DOM, not the window, so a page-scoped `error` handler keeps firing on
+  later pages and blames them on its own. Drop it on `astro:before-swap`.
 
 ## Layout traps that keep recurring
 
@@ -109,8 +111,7 @@ CSS**. A fix applied to one does not propagate — grep both before calling it d
 
 CLAUDE.md says pick the right clock per feature; it doesn't warn that one page
 often needs both, and a page-level `const seasonYear = …` applies one to
-everything. The AFL homepage used one year for standings AND rosters, so all
-offseason the team card counted a roster from a season already over.
+everything.
 
 - Standings / record / draft order → the **season** year (Labor Day).
 - Rosters / contracts / cap / anything a trade changes → the **league** year
@@ -128,6 +129,75 @@ production-only CSS bug, `curl` the shipped HTML + stylesheets, rewrite the
 hrefs to local copies, and open it in the bundled Chromium — it isolates
 "wrong bytes" from "device failing to apply right bytes" in minutes.
 <!-- /CURATED-HEAD -->
+
+---
+
+## 2026-08-27 - Request-Derived State Is the Third #418 Trigger, and a Debug Banner Outlived Its Page
+
+**Context:** An owner clicking the yellow 🏷️ trade-block badge on
+`/theleague/rosters` got a full-width red box reporting `Minified React error
+#418`. Others had been seeing the same box "while navigating pages". The roster
+page has no hydrating React island at all, and the badge is a plain `<a href>`.
+
+**Insight — two independent bugs, one symptom.**
+
+1. The badge links to `/theleague/trade-builder?b=<franchiseId>`, and
+   `TradeBuilder.tsx` derived its opening two teams inside a render-time
+   `useMemo`:
+
+   ```ts
+   if (typeof window !== 'undefined') {
+     const params = new URLSearchParams(window.location.search);   // client only
+     ...
+   }
+   // server falls through to defaultTeamId / top-2-cap-space
+   ```
+
+   That `typeof window` guard reads like a safety check and is the opposite:
+   the server has no `window`, so SSR took the default-team branch while the
+   browser took the `?b=` branch. Different franchises, different DOM, on every
+   single click of the badge. This is a THIRD #418 trigger distinct from the two
+   already recorded here — time-derived (2026-07 countdown hero) and
+   renders-`null` (2026-08-22 My Rank editor). The question is not only "is it
+   deterministic?" and "does it render anything?" but "does it depend on the
+   REQUEST, which the server also has?" On a `prerender = false` page the server
+   has the query string already: pass `Astro.url.search` in as a required prop
+   and derive from the prop in both passes. Deriving in a pure module
+   (`src/utils/trade-builder-initial-state.ts`) is what lets a plain node test
+   assert the two passes agree — the component itself is not testable without a
+   DOM, which is why the bug survived 265 green test files.
+
+2. `#418` is *recoverable* — React re-renders on the client and the page works.
+   It still reached the user, because React 19's default `onRecoverableError`
+   calls `reportError()`, which dispatches a **window `error` event**. The
+   roster page carries a temporary diagnostic banner listening for exactly that.
+   And ClientRouter swaps the DOM but NOT the window, so those listeners stayed
+   live after the owner navigated to the trade builder — a roster-page debugging
+   aid painting a Trade Builder fault, on a page that had already recovered.
+   That is the whole "similar errors when navigating pages" report: one page's
+   global error handler adopting every later page's errors. Any page-scoped
+   `window` listener under ClientRouter needs a teardown on `astro:before-swap`
+   plus a once-flag, or it accumulates and misattributes.
+
+**Evidence:** Playwright against `astro dev`, capturing `pageerror`:
+
+| | hydration error | red box after roster → 🏷️ click |
+|---|---|---|
+| original | `Hydration failed because the server rendered HTML didn't match the client` | **yes** |
+| banner scoped only | same error | no |
+| both fixed | none | no |
+
+The middle row is what proves bug 2 was the delivery mechanism rather than the
+fault — and, incidentally, that scoping the banner would have *hidden* bug 1
+rather than fixed it. Fix the mismatch AND the listener leak; either alone
+leaves a real defect in place.
+
+**Recommendation:** Grep any hydrating island for `window.` / `document.` /
+`localStorage` above its first `useEffect`. `typeof window !== 'undefined'`
+inside a render path is a bug signature, not a guard — it means the two passes
+were *designed* to differ. And never leave a global error listener page-scoped
+under ClientRouter without an `astro:before-swap` teardown; a debug aid that
+outlives its page sends you chasing bug reports filed against the wrong page.
 
 ---
 
