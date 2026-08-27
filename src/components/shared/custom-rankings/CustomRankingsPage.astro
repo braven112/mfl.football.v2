@@ -43,7 +43,7 @@ interface Props {
   user: AuthUser;
 }
 
-const { title = 'Custom Rankings | The League', user } = Astro.props as Props;
+const { title = 'My Draft List | The League', user } = Astro.props as Props;
 
 const leagueSlug = getLeagueContext(Astro.url).slug;
 const league = getLeagueBySlug(leagueSlug)!;

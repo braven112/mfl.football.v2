@@ -562,3 +562,39 @@
     white-space: nowrap;
   }
 }
+
+/* --- My Draft List sync (pull/push to MFL) ------------------------------ */
+/* Every color is a token with a real definition; a bare var() fallback here
+   would look correct in light mode and ship unreadable in dark. */
+.cr-sync {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0 0 1rem;
+}
+
+.cr-sync__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.cr-sync__status {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: var(--color-text-secondary, #4a4a4a);
+}
+
+.cr-sync__status--error {
+  color: var(--color-error, #b3261e);
+}
+
+@media (prefers-color-scheme: dark) {
+  .cr-sync__status {
+    color: var(--color-text-secondary, #b5b5b5);
+  }
+  .cr-sync__status--error {
+    color: var(--color-error, #f2b8b5);
+  }
+}

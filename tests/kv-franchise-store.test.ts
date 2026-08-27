@@ -2,11 +2,15 @@
  * Tests for createKvFranchiseStore (Phase 2 registry sweep) and its two
  * instantiations, api/cr.ts and api/ri.ts.
  *
- * api/cr.ts (Custom Rankings, admin-only) and api/ri.ts (Import Rankings,
- * any authenticated owner) were 85% identical — same GET/POST shape, same
- * per-franchise Redis key, different auth gate. This locks in that each
- * route kept its exact prior auth semantics after the merge into one
- * factory.
+ * api/cr.ts (Custom Rankings) and api/ri.ts (Import Rankings) were 85%
+ * identical — same GET/POST shape, same per-franchise Redis key. This locks
+ * in their auth semantics after the merge into one factory.
+ *
+ * cr.ts was admin-only until Aug 2026, while the board was an unreleased
+ * experiment. It now backs the My Draft List importer/exporter that every
+ * owner uses, so both routes allow any authenticated owner and the franchise
+ * scoping — not a role check — is what keeps one owner out of another's data.
+ * That makes the isolation tests below the load-bearing ones.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createSessionToken } from '../src/utils/session';
@@ -61,14 +65,14 @@ describe('createKvFranchiseStore — auth gate parity with pre-merge routes', ()
     fakeRedis.set.mockClear();
   });
 
-  it('GET /api/cr returns 401 for a non-admin owner (cr.ts requires commissioner/admin)', async () => {
+  it('GET /api/cr succeeds for a plain owner (no longer admin-gated)', async () => {
     const cookie = sessionCookieFor('owner');
     const res = await crGET(makeContext(new Request('http://test.invalid/api/cr', { headers: { cookie } })));
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(200);
   });
 
-  it('POST /api/cr returns 401 for a non-admin owner', async () => {
-    const cookie = sessionCookieFor('owner');
+  it('POST /api/cr writes a plain owner to THEIR OWN franchise key, not a shared one', async () => {
+    const cookie = sessionCookieFor('owner', '0007');
     const res = await crPOST(
       makeContext(
         new Request('http://test.invalid/api/cr', {
@@ -78,7 +82,27 @@ describe('createKvFranchiseStore — auth gate parity with pre-merge routes', ()
         })
       )
     );
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(200);
+    // The franchise number is what isolates owners now that the role check is
+    // gone — a bare `cr:` key here would pool every owner's board together.
+    expect(redisStore.has('cr:0007')).toBe(true);
+    expect(redisStore.has('cr:')).toBe(false);
+  });
+
+  it('two owners in the same league never share a custom-rankings key', async () => {
+    for (const franchise of ['0003', '0004']) {
+      await crPOST(
+        makeContext(
+          new Request('http://test.invalid/api/cr', {
+            method: 'POST',
+            headers: { cookie: sessionCookieFor('owner', franchise) },
+            body: JSON.stringify({ owner: franchise }),
+          })
+        )
+      );
+    }
+    expect(redisStore.get('cr:0003')).toEqual({ owner: '0003' });
+    expect(redisStore.get('cr:0004')).toEqual({ owner: '0004' });
   });
 
   it('GET /api/cr succeeds for a commissioner', async () => {

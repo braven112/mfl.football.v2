@@ -16,6 +16,7 @@ import '../../../styles/loading.css';
 import RankingList from './RankingList';
 import PositionFilter from './PositionFilter';
 import SaveIndicator from './SaveIndicator';
+import DraftListSync from './DraftListSync';
 import type { SaveStatus } from './SaveIndicator';
 import {
   buildCompositePlayerList,
@@ -290,6 +291,28 @@ export default function CustomRankingsPage({
     [tiers, rankings, overrides, scheduleSave, buildState],
   );
 
+  // --- MFL My Draft List sync ---
+  // MFL is the source of truth for the draft list, so a pull REPLACES the
+  // board rather than merging into it. Overrides are cleared with it: an
+  // "override" means "I moved this off the composite," and after a pull every
+  // position came from MFL, so keeping the old flags would mark the wrong
+  // rows. Tiers are kept only where their anchor player survived the pull.
+  const resolvePlayerName = useCallback(
+    (id: string) => playerById.get(id)?.name ?? null,
+    [playerById],
+  );
+
+  const handleDraftListPulled = useCallback(
+    (playerIds: string[]) => {
+      const keptTiers = tiers.filter((t) => playerIds.includes(t.afterPlayerId));
+      setRankings(playerIds);
+      setOverrides(new Set());
+      setTiers(keptTiers);
+      scheduleSave(buildState(playerIds, new Set(), keptTiers));
+    },
+    [tiers, scheduleSave, buildState],
+  );
+
   const handleReset = useCallback(() => {
     if (!confirm('Reset all rankings to composite order? This cannot be undone.')) return;
 
@@ -374,15 +397,24 @@ export default function CustomRankingsPage({
     return (
       <div className="cr-page">
         <div className="cr-page__header">
-          <h1 className="cr-page__title">Custom Rankings</h1>
+          <h1 className="cr-page__title">My Draft List</h1>
         </div>
         <div className="cr-page__empty">
           <p>No composite rankings found.</p>
           <p>
             <a href={importRankingsHref}>Import rankings</a> and select
-            at least 2 sources for "My Rank" to get started.
+            at least 2 sources for "My Rank" to get started — or pull the draft
+            list you already have on MFL and start from that.
           </p>
         </div>
+        {/* Reachable with no composite ON PURPOSE: an owner who just wants
+            their MFL board back should not have to build a composite first.
+            Pulling seeds `rankings` directly, which clears this state. */}
+        <DraftListSync
+          rankings={rankings}
+          resolveName={resolvePlayerName}
+          onPulled={handleDraftListPulled}
+        />
       </div>
     );
   }
@@ -391,7 +423,7 @@ export default function CustomRankingsPage({
     <div className="cr-page">
       <div className="cr-page__header">
         <div className="cr-page__header-top">
-          <h1 className="cr-page__title">Custom Rankings</h1>
+          <h1 className="cr-page__title">My Draft List</h1>
           <div className="cr-page__actions">
             <SaveIndicator status={saveStatus} lastSaved={lastSaved} />
             <button
@@ -429,6 +461,12 @@ export default function CustomRankingsPage({
           </a>
         </p>
       </div>
+
+      <DraftListSync
+        rankings={rankings}
+        resolveName={resolvePlayerName}
+        onPulled={handleDraftListPulled}
+      />
 
       <PositionFilter
         active={positionFilter}
