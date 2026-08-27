@@ -405,8 +405,11 @@
   padding: 2vh 3vw;
   /* Grid children default to min-height:auto and refuse to shrink below their
      content — which pushed the rails and the conference switcher off the
-     bottom of the board. */
+     bottom of the board. `overflow: hidden` is the belt to that braces: on a
+     short viewport the stage would otherwise bleed DOWN over the rails, and
+     "Pick 3.07" landed on top of "UP NEXT". */
   min-height: 0;
+  overflow: hidden;
 }
 
 .dbc-idle__crest {
@@ -555,6 +558,29 @@
   background: #fff;
   color: #05070b;
   border-color: #fff;
+}
+
+/* Short viewports (a laptop panel, a 720p TV) — the stage stack has to give
+   ground or it runs into the rails below it. */
+@media (max-height: 950px) {
+  .dbc-idle__crest {
+    width: 12vh;
+    height: 12vh;
+    margin-bottom: 0.8vh;
+  }
+
+  .dbc-idle__team {
+    font-size: clamp(1.6rem, 6vh, 4.5rem);
+  }
+
+  .dbc-idle__pick {
+    margin-top: 0.3em;
+    font-size: clamp(0.8rem, 2vh, 1.4rem);
+  }
+
+  .dbc-idle__stage {
+    padding: 1vh 3vw;
+  }
 }
 
 /* Narrow screens: the reveal stacks so the name never collides with the
