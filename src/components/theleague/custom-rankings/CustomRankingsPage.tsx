@@ -16,16 +16,19 @@ import '../../../styles/loading.css';
 import RankingList from './RankingList';
 import PositionFilter from './PositionFilter';
 import SaveIndicator from './SaveIndicator';
+import DraftListSync from './DraftListSync';
 import type { SaveStatus } from './SaveIndicator';
 import {
   buildCompositePlayerList,
   mergeWithOverrides,
 } from '../../../utils/custom-rankings-seeding';
+import { syncBuiltinImports, initFromServer } from '../../../utils/rankings-storage';
 import {
   loadCustomRankings,
   saveCustomRankings,
 } from '../../../utils/custom-rankings-storage';
 import { detectTierBreaks } from '../../../utils/tier-detection';
+import { selectPushablePlayers } from '../../../utils/draft-availability';
 import { getPlayerImageUrl } from '../../../constants/roster-constants';
 import type {
   CustomRankingsState,
@@ -55,6 +58,30 @@ interface Props {
    * feeds the other league's board.
    */
   importRankingsHref?: string;
+  /**
+   * Build-time snapshot of the built-in ranking sources, as JSON.
+   *
+   * The board reconciles it on mount for the same reason Import Rankings
+   * does — but here it is load-bearing rather than a convenience: it is the
+   * only thing that gives a first-time owner a board to push. Before this,
+   * `syncBuiltinImports` ran on the Import Rankings page and nowhere else, so
+   * an owner who came straight here had no composite, an empty board, and no
+   * way to build a draft list at all.
+   */
+  builtinSnapshotJson?: string | null;
+  /** Built-in source ids this league ticks on by default (registry-driven). */
+  defaultSourceIds?: string[];
+  /**
+   * Player ids this franchise can actually draft, resolved on the server —
+   * the league's draftPlayerPool intersected with players not rostered in
+   * THIS owner's conference. Null means the feeds could not be trusted, and
+   * the filter is hidden rather than shown hiding the wrong players.
+   */
+  availableIdsJson?: string | null;
+  /** MFL's draftPlayerPool, for labelling the filter honestly. */
+  draftPool?: string | null;
+  /** True when availability was scoped per conference (the AFL). */
+  availabilityPerConference?: boolean;
 }
 
 // ESPN headshots are preferred; getPlayerImageUrl() (roster-constants.ts)
@@ -73,6 +100,11 @@ export default function CustomRankingsPage({
   franchiseId,
   vorpMapJson,
   importRankingsHref = '/theleague/import-rankings',
+  builtinSnapshotJson = null,
+  defaultSourceIds = [],
+  availableIdsJson = null,
+  draftPool = null,
+  availabilityPerConference = false,
 }: Props) {
   const mflPlayers: MFLPlayerWithEspn[] = useMemo(
     () => JSON.parse(mflPlayersJson),
@@ -105,6 +137,45 @@ export default function CustomRankingsPage({
   const [isEmpty, setIsEmpty] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [showVorp, setShowVorp] = useState(false);
+  const [resetArmed, setResetArmed] = useState(false);
+  const [availableOnly, setAvailableOnly] = useState(false);
+
+  const availableIds = useMemo(() => {
+    if (!availableIdsJson) return null;
+    try {
+      return new Set<string>(JSON.parse(availableIdsJson));
+    } catch {
+      return null;
+    }
+  }, [availableIdsJson]);
+
+  // Rookie-only leagues say "Rookies"; an all-comers pool says "Available".
+  const availableLabel = draftPool === 'Rookie' ? 'Rookies only' : 'Available only';
+
+  /**
+   * The pool the RENDERED list is currently built from, or null for the whole
+   * board. Every caller of getFilteredPlayers must pass this same value: the
+   * drag and tier-move handlers map a position in the visible list back onto
+   * `rankings`, so a handler filtering differently than the list moves the
+   * wrong player.
+   */
+  const activePool = availableOnly ? availableIds : null;
+
+  /**
+   * What a push actually sends: the board in its own order, narrowed to the
+   * draftable pool when that filter is on.
+   *
+   * The POSITION filter is deliberately NOT applied. Availability is a fact
+   * about the league — a player it cannot draft has no business on the list
+   * either way — but position is a way of reading the board, and pushing
+   * while looking at QBs would replace an owner's whole MFL list with
+   * quarterbacks. One of these belongs in a destructive write and the other
+   * does not.
+   */
+  const pushableRankings = useMemo(
+    () => selectPushablePlayers(rankings, activePool),
+    [rankings, activePool],
+  );
   const hasVorp = Object.keys(vorpMap).length > 0;
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -113,6 +184,26 @@ export default function CustomRankingsPage({
   // --- Load data on mount ---
   useEffect(() => {
     async function initialize() {
+      // 0. Reconcile the built-in ranking sources into this browser's store,
+      //    then pull the owner's own imports from the server. Both are no-ops
+      //    when nothing changed. This has to happen BEFORE the composite is
+      //    read or a first-time owner gets `isEmpty` and a dead end.
+      try {
+        const snapshot = builtinSnapshotJson ? JSON.parse(builtinSnapshotJson) : null;
+        const meta = new Map(
+          mflPlayers.map((p) => [p.id, { name: p.name, position: p.position, team: p.team }]),
+        );
+        syncBuiltinImports(snapshot, defaultSourceIds, meta);
+      } catch {
+        // A bad snapshot must not take the board down — the owner may still
+        // have their own imports, or a list on MFL to pull.
+      }
+      try {
+        await initFromServer();
+      } catch {
+        /* server sync is best-effort; localStorage still stands */
+      }
+
       // 1. Build composite from localStorage
       const composite = buildCompositePlayerList();
       if (!composite) {
@@ -214,7 +305,7 @@ export default function CustomRankingsPage({
   const handleReorder = useCallback(
     (oldIndex: number, newIndex: number) => {
       // Map filtered indices back to overall rankings if position filter is active
-      const filteredPlayers = getFilteredPlayers(rankings, positionFilter, playerById);
+      const filteredPlayers = getFilteredPlayers(rankings, positionFilter, playerById, activePool);
       const movedId = filteredPlayers[oldIndex]?.id;
       if (!movedId) return;
 
@@ -233,7 +324,7 @@ export default function CustomRankingsPage({
       setOverrides(newOverrides);
       scheduleSave(buildState(newRankings, newOverrides, tiers));
     },
-    [rankings, overrides, tiers, positionFilter, playerById, scheduleSave, buildState],
+    [rankings, overrides, tiers, positionFilter, playerById, activePool, scheduleSave, buildState],
   );
 
   const handleRemoveTier = useCallback(
@@ -258,7 +349,7 @@ export default function CustomRankingsPage({
 
   const handleMoveTier = useCallback(
     (afterPlayerId: string, direction: 'up' | 'down') => {
-      const filtered = getFilteredPlayers(rankings, positionFilter, playerById);
+      const filtered = getFilteredPlayers(rankings, positionFilter, playerById, activePool);
       const currentIdx = filtered.findIndex((p) => p.id === afterPlayerId);
       if (currentIdx === -1) return;
 
@@ -275,7 +366,7 @@ export default function CustomRankingsPage({
       setTiers(newTiers);
       scheduleSave(buildState(rankings, overrides, newTiers));
     },
-    [tiers, rankings, overrides, positionFilter, playerById, scheduleSave, buildState],
+    [tiers, rankings, overrides, positionFilter, playerById, activePool, scheduleSave, buildState],
   );
 
   const handleAddTierAfter = useCallback(
@@ -290,8 +381,48 @@ export default function CustomRankingsPage({
     [tiers, rankings, overrides, scheduleSave, buildState],
   );
 
+  // --- MFL My Draft List sync ---
+  // MFL is the source of truth for the draft list, so a pull REPLACES the
+  // board rather than merging into it. Overrides are cleared with it: an
+  // "override" means "I moved this off the composite," and after a pull every
+  // position came from MFL, so keeping the old flags would mark the wrong
+  // rows. Tiers are kept only where their anchor player survived the pull.
+  const resolvePlayerName = useCallback(
+    (id: string) => playerById.get(id)?.name ?? null,
+    [playerById],
+  );
+
+  const handleDraftListPulled = useCallback(
+    (playerIds: string[]) => {
+      const keptTiers = tiers.filter((t) => playerIds.includes(t.afterPlayerId));
+      // Every pulled position is an OVERRIDE of composite order, and marking
+      // them so is what makes the pull survive. mergeWithOverrides returns the
+      // raw new composite whenever the override set is empty, so clearing it
+      // here meant the first daily built-in-sources refresh — a composite hash
+      // change the owner never sees — silently discarded the order they just
+      // pulled from MFL and put composite order back.
+      const pulled = new Set(playerIds);
+      setRankings(playerIds);
+      setOverrides(pulled);
+      setTiers(keptTiers);
+      // A pull out of the no-composite empty state has to leave it, or the
+      // board stays on the "No composite rankings found" branch with a full
+      // list of players behind it.
+      setIsEmpty(false);
+      scheduleSave(buildState(playerIds, pulled, keptTiers));
+    },
+    [tiers, scheduleSave, buildState],
+  );
+
+  // Two-tap rather than window.confirm: mobile privacy browsers suppress
+  // native dialogs, which makes a suppressed confirm read as a cancel and the
+  // button look broken. That silently killed the MFL push — see DraftListSync.
   const handleReset = useCallback(() => {
-    if (!confirm('Reset all rankings to composite order? This cannot be undone.')) return;
+    if (!resetArmed) {
+      setResetArmed(true);
+      return;
+    }
+    setResetArmed(false);
 
     const composite = buildCompositePlayerList();
     if (!composite) return;
@@ -302,12 +433,12 @@ export default function CustomRankingsPage({
     setTiers(autoTiers);
     setCompositeMap(composite.compositeMap);
     scheduleSave(buildState(composite.playerIds, new Set(), autoTiers));
-  }, [scheduleSave, buildState]);
+  }, [resetArmed, scheduleSave, buildState]);
 
   // --- Enriched player list ---
   const filteredPlayers = useMemo(
-    () => getFilteredPlayers(rankings, positionFilter, playerById),
-    [rankings, positionFilter, playerById],
+    () => getFilteredPlayers(rankings, positionFilter, playerById, activePool),
+    [rankings, positionFilter, playerById, activePool],
   );
 
   const enrichedPlayers: RankedPlayer[] = useMemo(
@@ -338,15 +469,21 @@ export default function CustomRankingsPage({
       ALL: rankings.length,
       QB: 0, RB: 0, WR: 0, TE: 0, DEF: 0,
     };
+    // Counted against the SAME availability filter the list uses — chips
+    // reading the full board while the list shows a subset is just a lie.
+    const pool = activePool;
+    let total = 0;
     for (const id of rankings) {
       const p = playerById.get(id);
-      if (p) {
-        const pos = p.position as PositionFilterType;
-        if (pos in counts) counts[pos]++;
-      }
+      if (!p) continue;
+      if (pool && !pool.has(id)) continue;
+      total++;
+      const pos = p.position as PositionFilterType;
+      if (pos in counts) counts[pos]++;
     }
+    counts.ALL = total;
     return counts;
-  }, [rankings, playerById]);
+  }, [rankings, playerById, activePool]);
 
   // --- Render ---
   if (loading) {
@@ -374,15 +511,29 @@ export default function CustomRankingsPage({
     return (
       <div className="cr-page">
         <div className="cr-page__header">
-          <h1 className="cr-page__title">Custom Rankings</h1>
+          <h1 className="cr-page__title">My Draft List</h1>
         </div>
         <div className="cr-page__empty">
           <p>No composite rankings found.</p>
           <p>
             <a href={importRankingsHref}>Import rankings</a> and select
-            at least 2 sources for "My Rank" to get started.
+            at least 2 sources for "My Rank" to get started — or pull the draft
+            list you already have on MFL and start from that.
           </p>
         </div>
+        {/* Reachable with no composite ON PURPOSE: an owner who just wants
+            their MFL board back should not have to build a composite first.
+            handleDraftListPulled clears isEmpty so a successful pull leaves
+            this branch — it did not, and the board stayed hidden behind it. */}
+        <DraftListSync
+          rankings={pushableRankings}
+          boardTotal={rankings.length}
+          resolveName={resolvePlayerName}
+          onPulled={handleDraftListPulled}
+          availableIds={availableIds}
+          draftPool={draftPool}
+          filterLabel={availableOnly ? availableLabel : null}
+        />
       </div>
     );
   }
@@ -391,16 +542,31 @@ export default function CustomRankingsPage({
     <div className="cr-page">
       <div className="cr-page__header">
         <div className="cr-page__header-top">
-          <h1 className="cr-page__title">Custom Rankings</h1>
+          <h1 className="cr-page__title">My Draft List</h1>
           <div className="cr-page__actions">
             <SaveIndicator status={saveStatus} lastSaved={lastSaved} />
             <button
               className={`cr-btn cr-btn--sm${isEditing ? ' cr-btn--active' : ''}`}
-              onClick={() => setIsEditing((v) => !v)}
+              onClick={() => { setIsEditing((v) => !v); setResetArmed(false); }}
               type="button"
             >
               {isEditing ? 'Done' : 'Edit'}
             </button>
+            {availableIds && (
+              <button
+                className={`cr-btn cr-btn--sm${availableOnly ? ' cr-btn--active' : ''}`}
+                onClick={() => setAvailableOnly((v) => !v)}
+                type="button"
+                aria-pressed={availableOnly}
+                title={
+                  availabilityPerConference
+                    ? 'Players you can draft — not rostered in your conference'
+                    : 'Players you can draft — not on any roster'
+                }
+              >
+                {availableLabel}
+              </button>
+            )}
             {hasVorp && (
               <button
                 className={`cr-btn cr-btn--sm${showVorp ? ' cr-btn--active' : ''}`}
@@ -416,7 +582,7 @@ export default function CustomRankingsPage({
                 onClick={handleReset}
                 type="button"
               >
-                Reset
+                {resetArmed ? 'Tap again to reset' : 'Reset'}
               </button>
             )}
           </div>
@@ -429,6 +595,16 @@ export default function CustomRankingsPage({
           </a>
         </p>
       </div>
+
+      <DraftListSync
+        rankings={pushableRankings}
+        boardTotal={rankings.length}
+        resolveName={resolvePlayerName}
+        onPulled={handleDraftListPulled}
+        availableIds={availableIds}
+        draftPool={draftPool}
+        filterLabel={availableOnly ? availableLabel : null}
+      />
 
       <PositionFilter
         active={positionFilter}
@@ -456,11 +632,14 @@ function getFilteredPlayers(
   rankings: string[],
   filter: PositionFilterType,
   playerById: Map<string, MFLPlayerWithEspn>,
+  /** When non-null, keep only ids in this set (the draftable pool). */
+  availableIds: Set<string> | null,
 ): MFLPlayerWithEspn[] {
   const result: MFLPlayerWithEspn[] = [];
   for (const id of rankings) {
     const player = playerById.get(id);
     if (!player) continue;
+    if (availableIds && !availableIds.has(id)) continue;
     if (filter === 'ALL' || player.position === filter) {
       result.push(player);
     }

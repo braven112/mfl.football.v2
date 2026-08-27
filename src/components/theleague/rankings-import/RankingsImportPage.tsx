@@ -17,7 +17,8 @@ import ManageImportsSection from './ManageImportsSection';
 interface Props {
   mflPlayersJson: string;
   siteConfigsJson: string;
-  isAdmin?: boolean;
+  /** League-scoped: may this session open /cr at all? Not an admin check. */
+  canOpenDraftList?: boolean;
   /**
    * Prefixed internal route to this league's Custom Rankings board, or null
    * when the league has none (best-ball leagues only consume the imports).
@@ -42,7 +43,7 @@ interface Props {
 export default function RankingsImportPage({
   mflPlayersJson,
   siteConfigsJson,
-  isAdmin = false,
+  canOpenDraftList = false,
   customRankingsHref = null,
   builtinSnapshotJson = null,
   defaultSourceIds = [],
@@ -100,9 +101,9 @@ export default function RankingsImportPage({
     <div className="ri-page">
       <div className="ri-page__header">
         <h1 className="ri-page__title">Import Rankings</h1>
-        {isAdmin && customRankingsHref && (
+        {canOpenDraftList && customRankingsHref && (
           <p className="ri-page__subtitle">
-            <a href={customRankingsHref} className="ri-page__link">Custom Rankings</a>
+            <a href={customRankingsHref} className="ri-page__link">My Draft List</a>
           </p>
         )}
       </div>

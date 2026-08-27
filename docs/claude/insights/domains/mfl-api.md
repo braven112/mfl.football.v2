@@ -567,6 +567,16 @@ Step 2: GET /export?TYPE=myleagues&JSON=1 with Cookie: MFL_USER_ID=<cookie>
 
 ## 2026-02-27 - myDraftList Has Both Read AND Write API Endpoints
 
+> **⚠️ CORRECTED — see 2026-08-27 entry below.** The export auth line below
+> ("MFL_USER_ID cookie or APIKEY") is only half right: APIKEY only ever works
+> for a key bound to an account that actually owns a franchise in this
+> league, and it **never** works for the import direction at all — MFL's own
+> docs say so explicitly, confirmed live. Also the POST-to-`api.` host
+> **does** 302-redirect for `/import` (this entry's "no redirect" assumption,
+> inherited from the general write-endpoint notes, does not hold specifically
+> for POST `/import`) — see the 2026-08-27 entry for the live evidence and
+> the URL-length risk that redirect creates for a large `PLAYERS` list.
+
 **Context:** Researching whether MFL supports programmatic draft board management for custom rankings feature
 
 **Insight:** MFL has a fully functional **import (write) endpoint** for `myDraftList` in addition to the export (read) endpoint. This enables programmatic draft board management.
@@ -574,7 +584,8 @@ Step 2: GET /export?TYPE=myleagues&JSON=1 with Cookie: MFL_USER_ID=<cookie>
 **Export (Read):**
 ```
 GET https://api.myfantasyleague.com/{YEAR}/export?TYPE=myDraftList&L={LEAGUE_ID}&JSON=1
-Auth: Owner (MFL_USER_ID cookie or APIKEY)
+Auth: Owner (MFL_USER_ID cookie or APIKEY — see 2026-08-27 entry for the
+      franchise-binding caveat on APIKEY)
 Returns: Authenticated franchise's ordered draft board
 ```
 
@@ -616,6 +627,17 @@ Behavior: COMPLETELY OVERWRITES the previous draft list — no partial updates
 ---
 
 ## 2026-02-27 - myWatchList: The Best MFL Endpoint for Full-Player Custom Rankings
+
+> **⚠️ draftPlayerPool question still open — see 2026-08-27 entry below.**
+> The "Critical unknown" and "Possibly restricted to draftPlayerPool" lines
+> in the `myDraftList` section below are still exactly that: MFL's own docs
+> say nothing about it either way (confirmed by re-reading the live
+> `api_info?STATE=details` page), and answering it needs a real owner
+> `MFL_USER_ID` cookie doing a real (destructive, single-player,
+> easily-reversed) write — no credential available in a research session can
+> settle it. The 2026-08-27 entry gives the exact test to run and everything
+> that WAS confirmed live in its place (auth model, response shape, and a
+> read-only way to pre-filter the pool without ever needing this answer).
 
 **Context:** Investigating all MFL endpoints that could store user-personalized player rankings beyond the rookie-only draft pool
 
@@ -2143,3 +2165,271 @@ that can't import the `.ts` must mirror it and say so in a comment.
 the moment a player is traded or cut, so a team mismatch must cost a candidate
 its confidence boost, not its place in the running — filtering on team drops
 every traded player from every import.
+
+---
+
+## 2026-08-27 - myDraftList Auth Model Fully Confirmed Live; draftPlayerPool Restriction Still Needs an Owner Cookie to Settle
+
+**Context:** Designing a "My Draft List" importer/exporter (replacing/extending
+`/cr`) for both leagues, all owners, using ONLY the repo's existing
+session-JWT-as-`MFL_USER_ID`-cookie write pattern (`cut-player.ts`'s method),
+never an APIKEY. This session's egress to `myfantasyleague.com` was NOT
+proxy-blocked (contra the "don't burn time curling it" line in this file's
+curated head — that may be sandbox-dependent; it worked cleanly here), so
+everything below marked "live" is a real unauthenticated request/response
+pair captured this session, not inference. No credential of any kind
+(`MFL_USER_ID`, `MFL_APIKEY`) exists anywhere in this repo or its env — every
+write-shaped question below that needs owner identity is answered with an
+exact test spec instead of a result, per the task's explicit no-destructive-
+write-without-approval constraint.
+
+### A. Auth model — CONFIRMED
+
+**Import never accepts APIKEY, for any request type, full stop.** This isn't
+inferred from a rejection — it's MFL's own docs, verified on the live
+`api_info` page (fetched this session):
+
+> "Note that for security reasons, this alternate method does not work for
+> import requests, only export. It also does not work for requests that
+> require Commissioner access (i.e. it's only valid for owners)."
+
+So the prior entry's "Auth: Owner (MFL_USER_ID cookie or APIKEY)" for
+`myDraftList` **import** was wrong — the APIKEY half of that line never
+applied to import, for this endpoint or any other. Confirmed independently by
+sending a bogus `APIKEY=BOGUSKEY123` on `import?TYPE=myDraftList`: MFL replies
+`<error>API Key Validation Failed</error>` — a different error than the
+no-cookie case, so MFL still *parses* the param on import (it isn't silently
+ignored the way the docs' wording might suggest), but per the docs text it can
+never grant write authorization even when valid.
+
+**For export, APIKEY is franchise-bound, not merely league-scoped** — this
+resolves the task's open hypothesis. Per the same docs page: "This API key is
+tied to a user/franchise/league combination and does not work outside that
+context." `tradeBait` is a league-wide report (works for any authorized
+viewer); `myDraftList`/`myWatchList` are "for the current franchise" and can
+only resolve if the key's bound account actually owns a franchise in that
+league. A key that's valid-but-not-franchise-bound-in-this-league (e.g. a
+commissioner-only account, or a key generated against a different league)
+explains the task's finding #3 (`tradeBait` OK, `myDraftList` "must be an
+owner") without needing "APIKEY is only league-scoped" as a hypothesis — the
+key format was fine, the bound account just doesn't resolve to an owner here.
+
+**No commissioner impersonation for `myDraftList` (or `myWatchList`).** The
+API details page marks `FRANCHISE_ID` impersonation explicitly, per-endpoint,
+with the sentence "Commissioner can impersonate owner using FRANCHISE_ID
+parameter" — present on `messageBoard`, `keepers`, `poolPicks`,
+`survivorPoolPick`. The `myDraftList` and `myWatchList` import entries have
+**no such sentence and no `FRANCHISE_ID` parameter listed** — their param
+tables are just `L` + `PLAYERS` (`myDraftList`) and `L` + `ADD` + `REMOVE`
+(`myWatchList`). A commissioner without their own franchise cannot set another
+owner's draft list at all. This matches (and further justifies) the project's
+decision to use the real owner's own session-derived `MFL_USER_ID` cookie —
+there is no alternate path for this endpoint even for admins.
+
+**Conclusion for our design:** `mflFetch()` with the viewer's own
+`MFL_USER_ID` cookie (exactly `cut-player.ts`'s pattern) is not just the
+chosen approach, it is the *only* approach MFL exposes for this endpoint.
+
+### B. draftPlayerPool restriction — STILL UNCONFIRMED, exact test below
+
+No official documentation mentions any relationship between `myDraftList` and
+`draftPlayerPool` — re-confirmed by grepping the live `api_info` (both the
+overview and `STATE=details` pages) for "draft list" / "draftPlayerPool"; zero
+hits either way. This is a real gap, not a documented rule we failed to find.
+It cannot be settled without a real owner `MFL_USER_ID` cookie performing an
+actual (small, reversible) import against a `draftPlayerPool: "Rookie"`
+league — no credential available anywhere in this repo/environment, and this
+session did not attempt one (destructive write, out of scope per the task's
+constraints). **Exact minimal test for the user to run themselves,
+in TheLeague (13522, `draftPlayerPool: "Rookie"`):**
+
+```
+# 1. SNAPSHOT — capture the owner's current list before touching anything
+GET https://www49.myfantasyleague.com/2026/export?TYPE=myDraftList&L=13522&JSON=1
+Cookie: MFL_USER_ID=<real owner cookie>
+→ save the response body verbatim
+
+# 2. WRITE — a single known-veteran id (confirmed live this session as a
+#    real, non-rookie 2026 player: 11936 = Chris Boswell, PK, drafted 2014;
+#    any TheLeague roster player with no "status":"R" in TYPE=players works)
+POST https://www49.myfantasyleague.com/2026/import?TYPE=myDraftList&L=13522&JSON=1
+Cookie: MFL_USER_ID=<same cookie>
+Body: PLAYERS=11936
+
+# 3. OBSERVE — the raw response body verbatim. Three distinguishable outcomes:
+#    a) <status>OK</status> (or {"status":"OK"} — see section C on why XML is
+#       likelier) AND step 4's re-export shows 11936 in the list → ACCEPTED,
+#       no pool restriction on write.
+#    b) <error>...</error> naming eligibility/pool/rookie → REJECTED outright,
+#       hard error.
+#    c) <status>OK</status> but step 4's re-export shows the list unchanged
+#       or missing 11936 → SILENTLY DROPPED (MFL's `<status>OK</status>`
+#       silent-no-op failure mode is already documented elsewhere in this
+#       file for other endpoints, so this is a real possible outcome, not a
+#       remote one).
+
+# 4. RE-EXPORT to see the actual resulting state (repeat step 1's call)
+
+# 5. RESTORE — re-run step 2 with step 1's original PLAYERS list (or an
+#    empty PLAYERS= if the snapshot was empty) to put the owner's real board
+#    back, since import is a full overwrite by design.
+```
+
+Do not skip step 1 or step 5 — this import type has no partial-update mode,
+so any test against a real owner's account destroys their existing list until
+restored.
+
+### C. Import response shape — CONFIRMED live (unauthenticated calls only)
+
+**Import ignores `JSON=1` and always answers in XML — this differs from
+export, which honors it.** Captured live, same host, same league, same
+missing-auth condition, only the command differs:
+
+```
+GET  .../export?TYPE=myDraftList&L=19621&JSON=1   (no cookie)
+→ {"encoding":"utf-8","version":"1.0","error":{"$t":"API requires logged in
+   user in league ID 19621 - Please be sure to pass the proper MFL_USER_ID
+   cookie or APIKEY parameter"}}
+
+POST .../import?TYPE=myDraftList&L=19621&JSON=1   (no cookie)
+→ <?xml version="1.0" encoding="utf-8"?>
+   <error>API requires a logged in user in league ID </error>
+```
+
+Same test repeated against `myWatchList`, `tradeBait`, `taxi_squad`, `ir` all
+returned the identical XML shape regardless of `JSON=1` — this is a property
+of the import auth-gate in general, not specific to `myDraftList`. Note also
+the message text itself is degraded on the import path (doesn't interpolate
+the league id, unlike export's message) — a second, independent MFL
+inconsistency between the two commands, not something to read into.
+
+This matches every previously-recorded *successful* import in this codebase
+(`<status>OK</status>` for salaries, ir, taxi_squad — never a JSON success
+shape recorded anywhere in this file). **Design rule: treat every
+`import?TYPE=myDraftList` response as XML, never attempt to parse it as
+JSON even with `JSON=1` set, and check for `<error>` before trusting
+`<status>OK</status>` at face value** (the "unrecognized parameter name still
+returns OK" failure mode in this file's curated head applies here too if a
+param name is ever mistyped).
+
+**Root-caused this session: why POSTing params in the request BODY (not the
+query string) to `api.myfantasyleague.com/{year}/import` returns MFL's HTML
+"Developers Program" landing page instead of an API response.** Reproduced
+exactly: `TYPE`/`L`/`APIKEY` sent as POST body only → `api.` host 302s to
+`https://www44.myfantasyleague.com/2026/import` (bare, no query string,
+because nothing in the query string survives — it was never there) → a
+plain HTTP client following that redirect converts POST→GET and drops the
+body per spec → the resulting bare GET to `/import` with zero params lands on
+the `api_info` dev-portal page. **`TYPE`, `L`, and `JSON` must be query-string
+parameters; only the write payload (`PLAYERS=...`) belongs in the POST body.**
+`mflFetch()` already does this correctly for every existing write endpoint —
+this is a warning for anyone hand-rolling a new call outside it, not a bug in
+the shared utility.
+
+**Correction to the 2026-03-13 entry's redirect table:** "`/import` POST — No
+redirect — Processed directly at api.mfl" does **not** hold today. Live this
+session, POSTing to `api.myfantasyleague.com/{year}/import` 302-redirected to
+the league's home host (`www44` for L=19621, `www49` for L=13522) in **every**
+case tried — `myDraftList`, `ir`, and `taxi_squad` alike, both with params in
+the query string and params in the body. `mflFetch()` still produces correct
+end-to-end behavior for small payloads because its manual redirect handling
+re-attaches the Cookie header AND folds the POST body into the redirect
+target's query string when a 302 demotes POST→GET (see its own comment: "302/
+303 converts POST→GET and drops the body ... Preserve params by appending
+them to the redirect URL"). **This is exactly why existing single-player
+writes (IR, taxi) have never shown a symptom** — one player id folds into a
+URL with room to spare. It is also why this matters newly for `myDraftList`:
+see section E.
+
+**Posting directly to the league's own write host skips the redirect
+entirely** — confirmed live: `POST https://www44.myfantasyleague.com/2026/
+import?TYPE=myDraftList&L=19621&JSON=1` (unauthenticated) returned
+`200 OK` immediately, no redirect, same XML auth-error body. This is the same
+`www##`-direct pattern the 2026-03-13 commissioner-write entry already
+established for a different reason (commissioner access requires it); it
+turns out to be worth doing for owner-mode `myDraftList` writes too, for the
+size reason in section E.
+
+### D. Read-only pool enumeration — CONFIRMED, and already free in this repo
+
+**`export?TYPE=players&DETAILS=1` (no `L`, no auth — public) exposes a
+current-season rookie flag: `"status":"R"`, present ONLY on players drafted
+in the current league year, absent on every veteran and on every prior
+draft class.** Verified live and cross-checked three ways this session:
+
+- A 2026 rookie (id 17462, Fernando Mendoza, drafted round 1) → `"status":"R"`
+  present, `"draft_year":"2026"`.
+- Two confirmed veterans on TheLeague's actual 2026 rosters (id 11936, Chris
+  Boswell, drafted 2014; id 14974, Darnell Mooney, drafted 2020) → no
+  `status` field at all.
+- Two players from the **2025** draft class (ids 17033, 17064 — the same
+  players last year's taxi-squad insight, 2026-04-22 entry, used as "recent
+  rookie" evidence) → in the **2026** player DB, `status` is **absent**. The
+  flag tracks "rookie this season," not "was ever a rookie," and it rolls off
+  automatically the following year — exactly the semantics
+  `draftPlayerPool: "Rookie"` needs.
+- Confirmed against the repo's own already-committed feed, zero extra API
+  calls required: `data/theleague/mfl-feeds/2026/players.json` — 2609 total
+  players, exactly 293 carry `status: "R"`, and every one of those 293 has
+  `draft_year: "2026"`.
+
+**This means our UI can grey out/filter ineligible players before the user
+ever attempts an import, entirely from data already synced daily** (this
+file's own "players DB updates at most once a day" note, and
+`scripts/fetch-mfl-feeds.mjs` already pulls it) — **no live MFL call needed
+per page view, and no dependency on section B's still-open question.** For a
+`draftPlayerPool: "Both"` league (AFL, 19621) the filter is simply "no
+filter" — every player is eligible regardless of `status`. This is a
+league-registry-driven UI concern (`leagueHasFeature`-shaped), not an MFL API
+concern.
+
+Caveat: this confirms what the **pool of rookies** is, not what
+`myDraftList`'s import actually *enforces* — those are two different
+questions. If section B's test comes back "silently dropped" or "hard
+error" for a `draftPlayerPool: "Rookie"` league, this `status: "R"` filter
+is still exactly the client-side gate needed to prevent the user from ever
+hitting that rejection in the first place. If B comes back "accepted", this
+filter becomes optional UX (grey out anyway to match the league's actual
+draft rules) rather than load-bearing.
+
+### E. Size limits — no documented cap; the real risk is the redirect, not a hard limit
+
+MFL's docs state no numeric limit on the `PLAYERS` list anywhere (checked the
+full `api_info` page for any length/character-count language — none found).
+GET is not rejected by the auth gate any differently than POST (confirmed
+live — both return the identical XML auth error), so there's no server-side
+method restriction either.
+
+**The actual size risk is the POST→redirect→GET-with-body-as-querystring path
+documented in section C**, which existing single-player writes never exercise
+long enough to hit. A full `myDraftList` board (TheLeague carries ~2600
+players in `players.json`; even just the ~1500 skill-position players at
+~6 characters + comma each is 9,000+ characters) sent through
+`api.myfantasyleague.com` would have its POST body folded into a GET URL on
+the mandatory redirect hop — well past the ~2,000-8,000 character URL limits
+common to browsers, proxies, and Apache itself (this server identifies as
+Apache 2.4 in every response header captured this session).
+
+**Recommendation: for `myDraftList` specifically, POST directly to the
+league's own write host** (`league.mflHost` from the registry — `www49.
+myfantasyleague.com` for TheLeague, `www44.myfantasyleague.com` for AFL, same
+`MFL_WRITE_HOST`-style override already used by `mfl-contract-writer.ts`),
+**not** `api.myfantasyleague.com`. This was confirmed live to return `200 OK`
+with no redirect at all, so the full POST body reaches MFL exactly as sent,
+regardless of list length. `mflFetch()` still works correctly either way (its
+manual-redirect handling is spec-correct), so this is a size/robustness
+recommendation, not a functional requirement — but it removes an entire class
+of "list mysteriously truncated at ~N players" bug before it can happen.
+
+**Evidence:** Live requests this session against `api.myfantasyleague.com`,
+`www44.myfantasyleague.com`, and `www49.myfantasyleague.com` for
+`export`/`import` on `TYPE=myDraftList`, `myWatchList`, `tradeBait`,
+`taxi_squad`, `ir`, and `players`; the live `api_info` and
+`api_info?STATE=details&L=13522` pages (fetched fresh this session, not
+quoted from memory); `data/theleague/mfl-feeds/2026/players.json`;
+`data/theleague/mfl-feeds/2026/league.json` (`draftPlayerPool` values);
+`src/utils/mfl-fetch.ts` (redirect-preservation logic); `src/pages/api/
+cut-player.ts` (the chosen owner-cookie auth pattern); `src/utils/
+mfl-matchup-api.ts` (`runRosterMove` — the existing `import?TYPE=ir`/
+`taxi_squad` call shape this design should mirror, adjusted per section E for
+the write host); `src/config/leagues-data.mjs` (`mflHost` per league).

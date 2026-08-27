@@ -61,6 +61,7 @@ const MANUAL_CAPTURE_ONLY = {
   'draft-room-pick-reveal': 'hand-staged pick-reveal splash mid-animation — auto-capture shoots the idle draft board',
   'schefter-og-unfurls': 'hand-made OG card image, not a page screenshot — auto-capture would replace it with the landing page',
   'trade-composites': 'hand-staged trade-confirmation modal with specific players — auto-capture shoots the bare trade builder',
+  'my-draft-list': 'auth-gated page — blind capture shoots the sign-in redirect',
   'submit-lineup': 'auth-gated page — blind capture shoots the sign-in redirect',
   'tip-schefter-gets-louder': 'auth-gated page — blind capture shoots the sign-in redirect',
   'lineup-faceoff-scoreboard': 'auth-gated page — blind capture shoots the sign-in redirect',

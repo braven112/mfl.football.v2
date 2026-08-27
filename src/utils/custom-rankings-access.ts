@@ -11,7 +11,7 @@
 import type { LeagueDefinition } from '../config/leagues';
 import { getLeagueBySlug } from '../config/leagues';
 import { getLeagueContext } from './league-context';
-import { getAuthUser, isAuthorizedForLeague, isCommissionerOrAdmin, type AuthUser } from './auth';
+import { getAuthUser, isAuthorizedForLeague, type AuthUser } from './auth';
 
 export interface CustomRankingsAccess {
   user: AuthUser;
@@ -21,12 +21,17 @@ export interface CustomRankingsAccess {
 /**
  * Resolve the session allowed to open THIS league's board, or null.
  *
- * Admin-only (same auth as the nav sidebar), and the session must belong to
- * the league whose page this is: franchise ids collide across leagues, so an
- * AFL 0001 session opening TheLeague's board would load — and then save over —
- * a different team's rankings. `isCommissionerOrAdmin` is already league-scoped
- * internally; the `isAuthorizedForLeague` check is what stops a valid admin in
- * one league from reaching the other's page at all.
+ * Open to EVERY owner since the board gained My Draft List sync — the thing it
+ * now writes is the owner's own MFL draft list, which MFL will only accept
+ * from that owner's own cookie, so there is nothing here for an admin to do on
+ * someone else's behalf and no reason to withhold it from the owners it
+ * belongs to. (It was admin-only while it was an unreleased experiment.)
+ *
+ * The session must still belong to the league whose page this is: franchise
+ * ids collide across leagues, so an AFL 0001 session opening TheLeague's board
+ * would load — and then save over — a different team's rankings. That check is
+ * what makes the per-franchise KV key unambiguous, and it is now the ONLY gate,
+ * so it carries more weight than it did.
  */
 export function resolveCustomRankingsAccess(
   request: Request,
@@ -38,7 +43,9 @@ export function resolveCustomRankingsAccess(
   const user = getAuthUser(request);
   if (!user) return null;
   if (!isAuthorizedForLeague(user, league.id)) return null;
-  if (!isCommissionerOrAdmin(user)) return null;
+  // A session with no franchise would share the bare KV key with every other
+  // such session — the same reason kv-franchise-store rejects it.
+  if (!user.franchiseId) return null;
 
   return { user, league };
 }

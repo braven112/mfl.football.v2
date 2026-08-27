@@ -21,7 +21,7 @@ import { getLeagueContext } from '../../../utils/league-context';
 import { ensureLeaguePrefix, getLeagueBySlug } from '../../../config/leagues';
 import { defaultRankingSourcesFor } from '../../../config/leagues-data.mjs';
 import bookmarkletManifest from '../../../data/bookmarklet-manifest.json';
-import { getAuthUser, isCommissionerOrAdmin, isAuthorizedForLeague } from '../../../utils/auth';
+import { getAuthUser, isAuthorizedForLeague } from '../../../utils/auth';
 
 interface Props {
   /** Page <title>; defaults to TheLeague's original string. */
@@ -43,15 +43,19 @@ const leagueYear = getLeagueYearForSlug(leagueSlug);
 const leagueYearStr = String(leagueYear);
 const league = getLeagueBySlug(leagueSlug);
 
-// The Custom Rankings link is admin-only AND league-scoped: the /cr route
-// bounces a session from a different league, so a TheLeague admin browsing
-// the AFL's page must not be shown a link that dead-ends on a redirect.
+// The My Draft List link is LEAGUE-SCOPED but no longer admin-only: /cr became
+// the draft-list importer every owner uses, so gating the only link to it on
+// the admin bit left it reachable by URL and invisible in the UI. The league
+// check stays and is now the whole gate — /cr bounces a session from another
+// league, so a TheLeague owner browsing the AFL's page must not be shown a
+// link that dead-ends on that redirect. Mirrors resolveCustomRankingsAccess,
+// including its franchise requirement.
 const user = getAuthUser(Astro.request);
-const isAdmin =
+const canOpenDraftList =
   !!user &&
   !!league &&
-  isAuthorizedForLeague(user, league.id) &&
-  isCommissionerOrAdmin(user);
+  !!user.franchiseId &&
+  isAuthorizedForLeague(user, league.id);
 
 // Internal route, so it stays PREFIXED (see CLAUDE.md) — the apex domains
 // redirect the prefixed form, the shared host requires it.
@@ -226,7 +230,7 @@ const siteConfigs = [
     client:load
     mflPlayersJson={JSON.stringify(mflPlayers)}
     siteConfigsJson={JSON.stringify(siteConfigs)}
-    isAdmin={isAdmin}
+    canOpenDraftList={canOpenDraftList}
     customRankingsHref={customRankingsHref}
     builtinSnapshotJson={JSON.stringify(builtinSnapshot)}
     defaultSourceIds={defaultRankingSourcesFor(leagueSlug)}

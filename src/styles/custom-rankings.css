@@ -562,3 +562,59 @@
     white-space: nowrap;
   }
 }
+
+/* --- My Draft List sync (pull/push to MFL) ------------------------------ */
+/* Tokens only, and only ones defined in BOTH tokens.css and tokens-dark.css.
+   --color-text-primary/secondary look reasonable here but are declared in
+   tokens-dark.css alone, so in light mode they resolve to whatever fallback
+   is written beside them — the theming trap in CLAUDE.md, just inverted.
+   --content-* carry real values in both files and flip themselves, which is
+   why there is no @media dark block below. */
+.cr-sync {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0 0 1rem;
+}
+
+.cr-sync__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.cr-sync__status {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: var(--content-text-muted, #64748b);
+}
+
+.cr-sync__status--error {
+  color: var(--color-error, #dc2626);
+}
+
+/* In-page confirmation for a destructive MFL write. Deliberately not a
+   window.confirm — mobile privacy browsers suppress those, and a suppressed
+   dialog made the push silently do nothing. */
+.cr-sync__confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid var(--content-border, #e2e8f0);
+  border-radius: 8px;
+  background: var(--content-bg, #fff);
+}
+
+.cr-sync__confirm-text {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.cr-sync__confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}

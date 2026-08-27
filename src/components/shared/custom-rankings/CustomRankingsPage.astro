@@ -20,6 +20,8 @@ import { getLeagueYearForSlug } from '../../../utils/league-year';
 import { getPlayerMap } from '../../../utils/player-map';
 import { getLeagueContext } from '../../../utils/league-context';
 import { getLeagueBySlug, ensureLeaguePrefix } from '../../../config/leagues';
+import { defaultRankingSourcesFor } from '../../../config/leagues-data.mjs';
+import { resolveDraftAvailability } from '../../../utils/draft-availability';
 import '../../../styles/player-cell.css';
 import '../../../styles/custom-rankings.css';
 import { parseNumber } from '../../../utils/formatters';
@@ -43,7 +45,7 @@ interface Props {
   user: AuthUser;
 }
 
-const { title = 'Custom Rankings | The League', user } = Astro.props as Props;
+const { title = 'My Draft List | The League', user } = Astro.props as Props;
 
 const leagueSlug = getLeagueContext(Astro.url).slug;
 const league = getLeagueBySlug(leagueSlug)!;
@@ -102,6 +104,15 @@ const mflPlayers = rawPlayers
       espnId: identity?.espnId ?? (p.espn_id || (espnCollegeIds as any).players?.[p.id]?.espnCollegeId || null),
     };
   });
+
+// `status` is carried separately from the display list: it drives the draft
+// pool test (see draft-availability.ts) and has no business in the island's
+// player props, which are about rendering a row. Declared HERE, after
+// rawPlayers — `const` is not hoisted, so sitting it above that line threw
+// "Cannot access 'rawPlayers' before initialization" and served a blank page.
+const playerStatusById = new Map<string, string | null>(
+  rawPlayers.map((p: any) => [p.id, p.status ?? null]),
+);
 
 // ---------------------------------------------------------------------------
 // Load projected scores + rosters for VORP calculation
@@ -163,6 +174,56 @@ for (const franchise of (rostersData?.rosters?.franchise ?? [])) {
 }
 const pointsPerDollar = calculatePointsPerDollar(projectedScores, rosteredPlayers);
 
+// ---------------------------------------------------------------------------
+// Built-in ranking sources (data/ranking-sources/<year>.json)
+// ---------------------------------------------------------------------------
+// Read on the SERVER and handed to the island, mirroring ImportRankingsPage.
+// The board needs these because it can no longer assume the owner has already
+// visited Import Rankings: syncBuiltinImports was called from that page and
+// nowhere else, so a browser that never opened it had no composite — and the
+// board, whose only seeds were the composite and MFL, had nothing to show and
+// nothing to push. That was a dead end for exactly the owner this page is for:
+// one with no MFL draft list yet who wants to build their first.
+const rankingSourceFiles = import.meta.glob(
+  '../../../../data/ranking-sources/*.json',
+  { eager: true },
+);
+const builtinSnapshot =
+  getModuleData(rankingSourceFiles[`../../../../data/ranking-sources/${leagueYearStr}.json`]) ?? null;
+
+// ---------------------------------------------------------------------------
+// Draftable-player availability (the "Available only" filter)
+// ---------------------------------------------------------------------------
+// Computed on the SERVER from the feeds this page already reads, so the board
+// needs no extra request to know what the owner can take. Two league-specific
+// rules, both handled in draft-availability.ts: the league's draftPlayerPool
+// (TheLeague drafts rookies only; the AFL drafts anyone) and roster membership
+// scoped to THIS owner's conference — the AFL holds the same player once per
+// conference, so "on a roster" is not the same question as "unavailable to
+// you". Resolves to null when the feeds can't be trusted, and the island then
+// hides the filter rather than hiding players wrongly.
+const theLeagueLeagueFeeds = import.meta.glob(
+  '../../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/league.json',
+  { eager: true },
+);
+const aflLeagueFeeds = import.meta.glob(
+  '../../../../data/afl-fantasy/mfl-feeds/20{2[5-9],[3-9][0-9]}/league.json',
+  { eager: true },
+);
+const leagueFeeds = isAfl ? aflLeagueFeeds : theLeagueLeagueFeeds;
+
+let leagueFeedData: any = null;
+for (const [fp, mod] of Object.entries(leagueFeeds)) {
+  if (extractFeedSeason(fp) === leagueYearStr) { leagueFeedData = getModuleData(mod); break; }
+}
+
+const availability = resolveDraftAvailability({
+  players: mflPlayers.map((p: any) => ({ id: p.id, status: playerStatusById.get(p.id) })),
+  leagueJson: leagueFeedData,
+  rostersJson: rostersData,
+  franchiseId: user.franchiseId,
+});
+
 // Calculate VORP for all players
 const vorpResults = calculateAllVORP(projectedScores, playerPositionMap, pointsPerDollar);
 const vorpMap: Record<string, { vorpPoints: number; vorpDollar: number }> = {};
@@ -178,5 +239,10 @@ for (const [id, result] of vorpResults) {
     franchiseId={user.franchiseId}
     vorpMapJson={JSON.stringify(vorpMap)}
     importRankingsHref={ensureLeaguePrefix(league, '/import-rankings')}
+    builtinSnapshotJson={JSON.stringify(builtinSnapshot)}
+    defaultSourceIds={defaultRankingSourcesFor(leagueSlug)}
+    availableIdsJson={availability ? JSON.stringify(availability.availableIds) : null}
+    draftPool={availability?.pool ?? null}
+    availabilityPerConference={availability?.perConference ?? false}
   />
 </TheLeagueLayout>

@@ -2237,3 +2237,73 @@ component layer would have done to it — scoping AND path resolution AND
 sanitization — because none of it happens. If the HTML is authored data rather
 than a constant, pair the rewriter with a guard test over that data; the rule
 alone was already written down here and the link count was still zero.
+
+## 2026-08-27 - A Destructive Action Gated On `window.confirm` Can Silently No-Op
+
+**Context:** The My Draft List push wrote nothing and reported nothing on a
+phone. Vercel runtime logs showed the page loading and the GETs firing, and not
+one POST — so the request was never made, and the UI said nothing about why.
+
+**Insight:** DuckDuckGo's mobile browser suppresses `window.confirm`. A
+suppressed dialog returns `false`, which is indistinguishable from the user
+clicking Cancel, so the standard shape
+
+```js
+const confirmed = confirm('Overwrite …?');
+if (!confirmed) return;   // silent
+```
+
+aborts the action while reporting nothing. It was the ONE path out of that
+handler that didn't call the status setter, which is exactly why it presented
+as "the button does nothing" rather than as an error. Safari Lockdown Mode and
+several in-app webviews behave the same way, and no user agent is obliged to
+show a modal.
+
+**Rule:** Never gate a destructive or state-changing action on `confirm()` /
+`alert()` / `prompt()`. Confirm in-page with real buttons — it also lets the
+prompt state the actual stakes ("Overwrite 22 on MFL") instead of a generic
+string, and it's testable. `tests/draft-list-no-native-dialogs.test.ts` pins
+this for the draft-list UI and is worth copying wherever a write is confirmed.
+
+**Corollary worth more than the finding:** every early return in a handler an
+owner can reach must say something. When auditing, the question is not "does
+this handle the case" but "if this returns here, what does the user see?" A
+`return` with no user-visible consequence is a bug even when the control flow
+is correct.
+
+**Diagnostic that found it in one step:** server logs answered "did the request
+happen at all?" before any client-side guessing. Page loads plus GETs plus zero
+POSTs localizes the fault to the browser immediately, and from there it is a
+short read to find the one silent `return`.
+
+## 2026-08-27 - Unit Tests Render No `.astro` Page, So They Cannot Catch Frontmatter TDZ
+
+**Context:** Both `/cr` routes served a blank page in production while 269 test
+files and 6,842 unit tests passed.
+
+**Insight:** `ReferenceError: Cannot access 'rawPlayers' before initialization`
+— a `const` read above its declaration in `.astro` frontmatter. `const` is not
+hoisted, and the page is `prerender: false`, so the throw happened per request
+inside the server chunk and Astro served a 200 with an empty body. Two things
+make this class invisible:
+
+1. **The unit suite imports modules; it never renders a page.** A `.astro`
+   file's frontmatter is not executed by any vitest run in this repo, so a
+   green suite says nothing about it.
+2. **A successful `pnpm build` does not prove it either.** The build only
+   renders prerendered routes; an SSR page is compiled, not executed.
+
+`astro check` DOES catch it (`ts(2448)`, block-scoped variable used before
+declaration) — but it is not in the default suite because it takes ~3 minutes,
+which is precisely why it gets skipped on "small" edits.
+
+**Rule:** any change to `.astro` frontmatter needs `pnpm test:types` before it
+is pushed, not just `pnpm test:unit`. For an auth-gated SSR page, also render it
+once — dev server plus a forged session cookie (`.claude/skills/verify`) — since
+a blank 200 is what a thrown frontmatter looks like from outside.
+
+**Related:** the same `test:types` run caught two call sites of a helper whose
+signature had gained a parameter, in handlers that map a visible-list index back
+onto the full list. Those would have moved the wrong row, silently, only while a
+filter was on. A signature change is exactly when the type baseline earns its
+three minutes.
