@@ -104,11 +104,15 @@ describe('trade builder hydration wiring', () => {
   it('the island never reads window.location during render', () => {
     // The render path runs on the server too. Everything below it (effects,
     // event handlers) is browser-only and may touch window freely.
+    // Both markers must exist, or the slice silently degrades and the guard
+    // passes on an empty string — a test that cannot fail is worse than none.
+    const start = island.indexOf('export default function TradeBuilder');
+    const end = island.indexOf('const [state, dispatch] = useReducer');
+    expect(start).toBeGreaterThan(-1);
+    expect(end).toBeGreaterThan(start);
+
     const renderPath = island
-      .slice(
-        island.indexOf('export default function TradeBuilder'),
-        island.indexOf('const [state, dispatch] = useReducer')
-      )
+      .slice(start, end)
       // Comments in this region explain the bug BY NAME — strip them so the
       // guard reads code, not prose.
       .replace(/\/\*[\s\S]*?\*\//g, '')
@@ -138,5 +142,15 @@ describe('roster diagnostic banner stays on the roster page', () => {
 
   it('installs only once per visit', () => {
     expect(rosters).toContain('window.__diagErrorBannerInstalled');
+  });
+
+  it('marks the banner script data-astro-rerun so it reinstalls on re-entry', () => {
+    // Teardown and data-astro-rerun are a PAIR. ClientRouter keys
+    // `scriptsAlreadyRan` on a script's textContent
+    // (astro/dist/transitions/swap-functions.js) and skips any inline script it
+    // already ran, so a teardown without this attribute uninstalls on the way
+    // out and nothing reinstalls: armed on visit 1, dead from visit 2 forever.
+    // Verified in a browser — removing the attribute reproduces exactly that.
+    expect(rosters).toContain('<script is:inline data-astro-rerun>');
   });
 });

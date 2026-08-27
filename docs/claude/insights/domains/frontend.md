@@ -30,18 +30,16 @@
   built from `Astro.url` — not a `<button>` plus a click handler.
 - Never wrap a `<script>` in a conditional (breaks Astro's dedup). Read
   `public/` files with `path.join(process.cwd(), …)`, never `import.meta.url`.
-- **A hydrating island must not SSR anything time- or request-derived, and must
-  SSR something.** Clock: start `null`, tick in `useEffect` (`?testDate=` makes
-  that mismatch branch-level, not cosmetic). Query string: take it as a prop
-  (`Astro.url.search`) — `window.location` behind `typeof window !==
-  'undefined'` doesn't dodge it, that *guarantees* the mismatch. Renders `null`
-  until opened: `client:only`, else Astro SSRs an EMPTY `<astro-island>` and
-  React won't hydrate a root the server gave nothing. Any divergence is #418,
-  which `reportError` re-fires as an uncaught window error — so it reads as a
-  crash on a page that in fact recovered.
+- **A hydrating island must SSR something, and nothing time- or
+  request-derived.** Clock: start `null`, tick in `useEffect`. Query string:
+  take it as a prop (`Astro.url.search`) — `window.location` behind `typeof
+  window !== 'undefined'` *guarantees* the mismatch. Renders `null` until
+  opened: `client:only`, else Astro SSRs an EMPTY `<astro-island>`. Each is
+  #418, which `reportError` re-fires as an uncaught window error.
 - **`window` listeners outlive the page that added them:** ClientRouter swaps
-  the DOM, not the window, so a page-scoped `error` handler keeps firing on
-  later pages and blames them on its own. Drop it on `astro:before-swap`.
+  the DOM, not the window, so a page-scoped `error` handler blames later pages'
+  faults on its own. Drop it on `astro:before-swap`, and mark that script
+  `data-astro-rerun` or it never re-installs on the way back in.
 
 ## Layout traps that keep recurring
 
@@ -111,7 +109,8 @@ CSS**. A fix applied to one does not propagate — grep both before calling it d
 
 CLAUDE.md says pick the right clock per feature; it doesn't warn that one page
 often needs both, and a page-level `const seasonYear = …` applies one to
-everything.
+everything. The AFL homepage used one year for standings AND rosters, so all
+offseason the team card counted a roster from a season already over.
 
 - Standings / record / draft order → the **season** year (Labor Day).
 - Rosters / contracts / cap / anything a trade changes → the **league** year
@@ -178,6 +177,15 @@ page has no hydrating React island at all, and the badge is a plain `<a href>`.
    global error handler adopting every later page's errors. Any page-scoped
    `window` listener under ClientRouter needs a teardown on `astro:before-swap`
    plus a once-flag, or it accumulates and misattributes.
+
+   **The teardown alone is a trap, and review caught it here.** ClientRouter
+   keys `scriptsAlreadyRan` on a script's `textContent`
+   (`astro/dist/transitions/swap-functions.js`) and skips any inline script it
+   has run before, so a teardown with no `data-astro-rerun` on the `<script
+   is:inline>` uninstalls on the way out and nothing ever reinstalls: the
+   listener is live on visit 1 and dead from visit 2 forever. Teardown and
+   `data-astro-rerun` are a pair — shipping one without the other converts a
+   leak into a silent no-op, which is strictly harder to notice.
 
 **Evidence:** Playwright against `astro dev`, capturing `pageerror`:
 

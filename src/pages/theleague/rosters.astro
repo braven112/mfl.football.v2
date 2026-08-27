@@ -5227,7 +5227,14 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   — needed because reports of this bug have come from owners who can't get
   to a console (mobile, non-technical).
 -->
-<script is:inline>
+<!--
+  data-astro-rerun is REQUIRED, not decoration. ClientRouter keys
+  `scriptsAlreadyRan` on a script's textContent (astro/dist/transitions/
+  swap-functions.js) and skips any inline script it has already run, so without
+  it the teardown below would uninstall the banner on the way out and nothing
+  would ever reinstall it — dead from the second visit to this page onward.
+-->
+<script is:inline data-astro-rerun>
   (function () {
     // ClientRouter swaps the DOM but leaves window listeners in place, so a
     // banner installed here outlives the roster page and reports errors raised
