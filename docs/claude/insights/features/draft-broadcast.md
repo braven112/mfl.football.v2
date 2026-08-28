@@ -613,3 +613,17 @@ rather than styling:
   `docs/claude/insights/features/player-composites.md` — the board is dark for
   a light-theme viewer too, so both ring properties take the dark-mode ring and
   a DEF chip resolves its own dark logo URL.
+
+### `hideOnError` on this board never fired for a crest that failed early
+
+The rails and the on-the-clock lockup are in the SERVER-rendered HTML, so a
+crest can finish 404ing before the island hydrates — and React does not replay
+an error event it was not mounted for. Stubbing `/assets/afl/group-me/**` to
+404 left all six crests visible as broken-image glyphs with `onError` never
+fired, and the on-the-clock copy left-aligned against a crest that was not
+there: precisely the failure the `is-crestless` flag was added to prevent. Each
+crest `<img>` now also carries a `ref` that re-checks
+`complete && naturalWidth === 0` at mount. Same fix, same reason, as
+`nflLogoRefCallback` in `roster-constants.ts`. Anything added to this board with
+an `onError` fallback needs the ref too — the reveal card is the exception,
+since it only ever mounts after a pick lands client-side.

@@ -1560,7 +1560,8 @@ team colour as its background.
 
 **The chip's dark treatment is keyed on `html.dark`, which is a property of the
 VIEWER, not of the surface.** `player-cell.css` swaps the ring under
-`html.dark .player-cell__avatar:not(--def)`, and the global NFL-logo swap
+`html.dark .player-cell__avatar:not(.player-cell__avatar--def):not(.player-cell__avatar--eligible)`,
+and the global NFL-logo swap
 (`buildNflLogoDarkCss`) is `html.dark img[src="<light>"] { content: url(…) }`.
 An owner whose site theme is light, driving a TV that is dark regardless, gets
 neither: a generic translucent-white ring instead of the team-tinted one, and
@@ -1576,22 +1577,54 @@ painted on a dark rail. Two consequences for any always-dark consumer:
 - **Resolve the dark logo URL yourself** — `resolveNflDarkLogoUrl(code)` from
   `nfl-logo-dark-css.ts` is importable client-side (it reads the tiny
   `nfl-dark-logos-manifest.json`), so a DEF chip can point straight at the dark
-  cut with the light SVG as its fallback instead of waiting for a CSS swap that
-  may never fire. The swap rules key on LIGHT srcs, so a dark URL set this way
-  is never double-swapped.
+  cut instead of waiting for a CSS swap that may never fire. The swap rules key
+  on LIGHT srcs, so the dark URL itself is never double-swapped — **but do not
+  put the light SVG under it as a fallback.** `/assets/nfl-logos/<code>.svg` is
+  one of those keys, and the swap stylesheet ships on any page using
+  TheLeagueLayout, so for a dark-theme viewer the fallback resolves to
+  `content: url(<the dark URL that just failed>)`. `content` has no error
+  fallback and fires no `onError` — the result is a broken-image glyph nothing
+  downstream can walk past or hide. One entry that hides itself on error beats
+  two where the second cannot fail safely. (The manifest ships `{"codes": []}`
+  until `scripts/fetch-nfl-dark-logos.mjs` runs in prebuild, so the dark URL is
+  ESPN's cross-origin PNG in a fresh checkout — this path is reachable, not
+  theoretical.)
 
 Two smaller things:
 
 - **The chip is content-box, so it paints 2px wider than
-  `--player-avatar-size`.** The `:not(--def)` rule's 1px ring lands outside the
+  `--player-avatar-size`.** The 1px ring on
+  `.player-cell__avatar:not(.player-cell__avatar--def):not(.player-cell__avatar--eligible)`
+  lands outside the
   declared width. Irrelevant in a table cell, but it put the chip out of line
   with a sibling column sized off the same number, half a board away — add
   `box-sizing: border-box` when the chip has to align with something else.
+- **An `onError` on a SERVER-RENDERED img is not a fallback — it is a coin
+  flip.** This is the one that actually bit, and it invalidates every cascade
+  above unless you close it. On an SSR page whose island is `client:load`, the
+  browser starts each img on first paint and can finish FAILING it before React
+  hydrates; React never replays an error event it wasn't mounted for. Stubbing
+  the CDN to 404 on the broadcast board left all three chips at
+  `complete && naturalWidth === 0`, still `display: block`, with `onError` never
+  fired — the cascade, and the hide at the end of it, were dead code on the
+  ordinary path. The same measurement caught the board's four-year-old crest
+  `hideOnError` failing identically, including the `is-crestless` re-centring
+  flag it hangs off. **Pair every such handler with a `ref` callback that
+  re-checks `complete && naturalWidth === 0` at mount** — the shape
+  `nflLogoRefCallback` (`roster-constants.ts`) already uses for NFL logos, and
+  the reason it exists. A cascade that only mounts AFTER hydration
+  (`BroadcastRevealCard`, rendered when a pick lands client-side) is exempt;
+  anything in the first paint's HTML is not. And test it by stubbing the CDN,
+  not by trusting the handler to be there.
+
 - **Walk the 404 chain in React state, not by reassigning `img.onerror`.**
   `PlayerCell.tsx` does the latter (its React `onError` and an imperative
   `img.onerror` both fire on the same failure, in an order nothing pins), which
   is survivable in a table and not worth copying. A `useState` index into a
   precomputed URL chain — the shape `BroadcastRevealCard` already uses for its
   cutout cascade — is the same four hops (ESPN NFL → ESPN college → MFL photo →
-  silhouette) with nothing to race. Clamp the index: a 404 on the LAST entry
-  must not walk past it and blank the chip.
+  silhouette) with nothing to race. Clamp the index so a 404 on the LAST entry
+  cannot walk past it, and give that terminal error a handler that HIDES the
+  img: every entry in the chain is remote, the silhouette included, so the end
+  of the walk is a real state, and an unhandled 404 there paints the browser's
+  broken-image glyph inside a team-coloured circle.
