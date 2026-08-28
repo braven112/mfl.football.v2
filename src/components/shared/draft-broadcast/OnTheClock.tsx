@@ -85,17 +85,39 @@ function pickLabel(pick: DraftRoomPick): string {
  * glyph nothing can walk past or hide. A single entry that hides itself is
  * strictly better than a second one that can't fail safely.
  */
+/**
+ * The NFL team code a team defense should render as its crest — empty for
+ * anyone who is not a defense, AND for a defense we cannot resolve a team for
+ * (no `nflTeam`, or one that normalizes to the generic shield).
+ *
+ * One function because two callers have to agree: the chain picks the LOGO off
+ * it and the chip picks the `--def` STYLING off it. Tested separately they can
+ * disagree — a defense with no team code took the person-headshot chain while
+ * still wearing the defense's transparent, backdrop-less chip, so the
+ * silhouette rendered square on nothing. Unreachable in today's feeds (every
+ * team-unit pseudo-player carries a code), which is exactly the kind of
+ * "unreachable" that stops being true quietly.
+ */
+function defenseLogoCode(player?: BroadcastPlayer): string {
+  if (player?.position?.toUpperCase() !== 'DEF') return '';
+  const code = player.nflTeam ? normalizeTeamCode(player.nflTeam) : '';
+  return code && code !== 'NFL' ? code : '';
+}
+
 function avatarChain(player?: BroadcastPlayer): string[] {
   if (!player) return [DEFAULT_HEADSHOT_URL];
 
-  const code = player.nflTeam ? normalizeTeamCode(player.nflTeam) : '';
+  const defCode = defenseLogoCode(player);
   const mflId = player.mflId ?? player.id;
   const candidates =
-    player.position?.toUpperCase() === 'DEF' && code && code !== 'NFL'
-      ? // null only for a code with no dark cut upstream (none today), which is
-        // also the one case where the light SVG carries no swap rule to send it
-        // back — so it is safe precisely when it is reachable.
-        [resolveNflDarkLogoUrl(code) ?? `/assets/nfl-logos/${code}.svg`]
+    defCode
+      ? // Exactly one entry, and deliberately NOTHING under it — see the header.
+        // `resolveNflDarkLogoUrl` returns null only for a code with no dark cut
+        // upstream (none today); the chain is then empty, `atEnd` is true at
+        // once, and the chip hides itself. That is the right degradation, and
+        // the reason not to reach for the light SVG to fill the gap: it is a
+        // swap KEY, so it would come back as the dark URL that just failed.
+        [resolveNflDarkLogoUrl(defCode)]
       : [
           // Server-resolved already (`build-draft-players`), so this is
           // normally the only entry that gets requested.
@@ -134,10 +156,14 @@ function avatarChain(player?: BroadcastPlayer): string[] {
 function RailAvatar({ player }: { player?: BroadcastPlayer }) {
   const chain = useMemo(() => avatarChain(player), [player]);
   const [step, setStep] = useState(0);
-  const isDef = player?.position?.toUpperCase() === 'DEF';
+  // The SAME test the chain branches on, not a second one that agrees by
+  // coincidence — see `defenseLogoCode`.
+  const isDef = defenseLogoCode(player) !== '';
 
   // Clamped rather than indexed raw: a 404 on the LAST entry must not walk past
-  // it and leave the chip pointed at nothing.
+  // it and leave the chip pointed at nothing. An empty chain (a defense with no
+  // dark cut) lands at -1, where `atEnd` is already true and the img — src-less,
+  // so `complete && naturalWidth === 0` — hides on the ref below.
   const index = Math.min(step, chain.length - 1);
   const atEnd = index >= chain.length - 1;
 
