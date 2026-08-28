@@ -143,9 +143,13 @@ testing pauses (rather than bills) at the cap. `.storybook/modes.ts` splits
 them deliberately: every story gets light + dark, and only genuinely
 cross-league components (the shared/loading tier) also get the two AFL modes.
 The playoff heroes are TheLeague-only surfaces — snapshotting them under the
-AFL skin would spend budget on a combination that never ships. That lands at
-(8 x 2) + (14 x 4) = 72 snapshots per full build, ~69 full builds a month,
-before TurboSnap.
+AFL skin would spend budget on a combination that never ships.
+
+Measured on build 1: **68 snapshots** for 22 stories across 7 components,
+captured in 2m06s. The arithmetic is (8 playoff x 2 modes) + (13 loading x 4
+modes) = 68 — note 13, not 14: `BrandedLoader/CyclingNarration` carries
+`disableSnapshot` and contributes zero. That is ~73 full builds a month before
+TurboSnap.
 
 **Snapshots are billed at CAPTURE time, not at approval time.** Every build
 captures the stories in scope whether or not you have accepted anything, and
@@ -156,8 +160,12 @@ existing build only charges for its denied and unreviewed tests.
 **A "turbosnap" is 0.2 of a billed snapshot, not free.** When TurboSnap copies
 an unchanged story's snapshot from the baseline it still bills a fifth. So a
 narrow PR here costs roughly `(changed stories x modes) + (0.2 x everything
-else)` — for a 4-story change that's about 21 billed, against 72 for a full
+else)` — for a 4-story change that's about 20 billed, against 68 for a full
 build. Real savings, but not an order of magnitude.
+
+**The first build is auto-accepted and has no baseline**, so it always captures
+everything and reports "Build 1 auto-accepted". There is no review queue to
+work through on day one.
 
 **TurboSnap needs three things**, and all of them fail quietly:
 - `storybook build --stats-json` (the `build:storybook:stats` script), which
@@ -194,3 +202,26 @@ The playoff heroes load real ESPN headshots, the one external dependency in
 the fixtures. `delay: 300` in preview.ts keeps a slow CDN response from being
 captured mid-load; if they still flake, stub the images rather than raising
 the delay.
+
+## Timing, measured
+
+Build 1 (first authenticated run, no baseline, full capture):
+
+| Step | Time |
+|---|---|
+| Checkout (`fetch-depth: 0` + `filter: blob:none`) | 15s |
+| pnpm install | 10s |
+| Chromatic: build, upload, capture 68 snapshots | 3m 07s |
+| **Total job** | **3m 40s** |
+
+Without `filter: blob:none` the checkout alone was **4m 40s** — full history
+across this repo's several hundred branches took longer than everything else
+combined.
+
+A cautionary note for whoever debugs this next: GitHub does not serve a job's
+step logs until the job **finishes**, so a Chromatic run in progress is opaque.
+Resist reading that as a hang. Build 1 was diagnosed mid-flight as "stuck for
+40 minutes" when it had in fact already passed in 3m40s — the diagnosis came
+from polling on a mistaken sense of elapsed time, not from evidence. Wait for
+the job to end, then read the log; `timeout-minutes: 25` is there so a genuine
+hang ends itself and becomes readable.
