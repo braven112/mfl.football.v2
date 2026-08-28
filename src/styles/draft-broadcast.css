@@ -542,6 +542,14 @@
 .dbc-idle__team,
 .dbc-idle__clock-status {
   margin: 0.15em 0 0;
+  /* Stated, not inherited from the tag. This file sets no font-family at all,
+     so every big line on the board gets the condensed display face purely by
+     being a heading — TheLeagueLayout's global `h1..h4` rule. `__clock-status`
+     is a <p> (the h1 belongs on the team name), so without this it fell through
+     to the body sans at 81px, beside a still-condensed name and the reveal card
+     it hands off to on every pick. The weight and negative tracking below were
+     picked against the condensed face too. */
+  font-family: var(--font-display);
   font-size: clamp(2rem, 7.5vh, 7rem);
   font-weight: 900;
   line-height: 1;
