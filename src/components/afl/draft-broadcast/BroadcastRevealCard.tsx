@@ -31,6 +31,7 @@ import {
   toBroadcastPair,
   formatBestAvailable,
   positionRunCount,
+  resolveBroadcastGradient,
 } from '../../../utils/draft-broadcast';
 import { getCollegeHeadshot } from '../../../constants/roster-constants';
 
@@ -85,6 +86,12 @@ export function BroadcastRevealCard({
   // feet; this is the broadcast screen's requirement, not a global one.
   const brand = resolveSplashColors(team, player);
   const colors = toBroadcastPair(brand.primary, brand.secondary);
+
+  // A franchise that declares its own `broadcastGradient` paints THAT instead —
+  // verbatim, contrast floor and all. Left unset when there is none (or it fails
+  // validation), which hands the card back to the stylesheet's derived fallback
+  // rather than painting a second, subtly different version of it here.
+  const gradient = resolveBroadcastGradient(team);
   const label = pickLabel(pick);
 
   // Where he stood among what was actually left on the board. A fact, not a
@@ -111,6 +118,7 @@ export function BroadcastRevealCard({
         {
           '--dbc-primary': colors.primary,
           '--dbc-secondary': colors.secondary,
+          ...(gradient ? { '--dbc-gradient': gradient } : {}),
         } as React.CSSProperties
       }
     >

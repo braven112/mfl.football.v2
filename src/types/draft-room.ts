@@ -48,6 +48,15 @@ export interface DraftRoomTeam {
   colorPrimary?: string;
   /** Franchise brand secondary (hex) — splash glow accent */
   colorSecondary?: string;
+  /**
+   * Hand-authored CSS `background` for the broadcast reveal card, straight from
+   * the league config's `broadcastGradient`. Painted VERBATIM — it is a design
+   * decision, not a derived colour, so it deliberately skips the saturation +
+   * 4.5:1 flooring `toBroadcastPair` applies to `colorPrimary`/`colorSecondary`.
+   * Absent (or malformed) falls back to that derived pair, so a franchise added
+   * without one still gets a card.
+   */
+  broadcastGradient?: string;
 }
 
 /** RSP tier grades A (elite) → F (UDFA watch) */

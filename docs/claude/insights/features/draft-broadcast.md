@@ -237,3 +237,73 @@ That flag then inherits the bug the `<img>` key was already added to prevent:
 state written onto a REUSED node outlives the team it was written for. Keying
 only the image left the row's flag stuck for every franchise after the first
 404. Key whatever element the state lands on, not just the one that failed.
+### Moving a computed value into config: generate the defaults, then guard the derivation
+
+`broadcastGradient` (Aug 2026) moved the reveal card's background out of code
+and into per-franchise league config. The migration technique is the reusable
+part, and it applies to anything here that is currently *computed* and wants to
+become *authored*:
+
+1. **Generate every default by running the function you are replacing.** All 38
+   non-hand-authored entries were written by calling
+   `toBroadcastPair(colorPrimary, colorSecondary)` and formatting its output —
+   not by eyeballing hexes. That makes the migration a provable visual no-op,
+   which is the only way to change 40 franchises at once and still sleep.
+2. **Guard the derivation, not the literal.**
+   `tests/broadcast-gradient-config.test.ts` re-derives all 38 and fails on
+   drift, with a `HAND_AUTHORED` exempt set for the ones deliberately designed.
+   Pinning literal strings instead would have made every future brand-colour
+   tweak a two-file edit with no signal about which one was wrong.
+3. **The fallback lives in ONE place.** The card sets `--dbc-gradient` only when
+   config supplies a valid value; the stylesheet's own `var()` fallback still
+   paints the derived pair. Computing a fallback string in the component too
+   would have given two subtly divergent implementations of "the old look".
+
+The cost of choosing a raw CSS string over structured stops is that **nothing
+else in the build can catch a typo, and the failure is invisible**: a stray `;`
+does not error, it ends the inline declaration and the card renders with no
+background at all — on a TV, mid-draft. `isSafeCssGradient` exists for that, and
+a failing value is ignored rather than painted.
+
+### The two broadcast screens are a PAIR, and they compose colour differently
+
+The board has two full-screen surfaces that alternate every ~20 seconds:
+`.dbc-reveal` (the pick) and `.dbc-idle` (on the clock). `#638` made the idle
+screen run the same `resolveSplashColors` → `toBroadcastPair` treatment as the
+reveal card precisely because the two were contradicting each other.
+
+They still **compose** that pair differently, and one string cannot serve both:
+
+| | angle | stop order | note |
+|---|---|---|---|
+| `.dbc-reveal` | 115deg (or 315deg, hand-authored) | primary → secondary | 315deg puts 0% in the bottom-right, under the cutout |
+| `.dbc-idle` | 150deg | secondary → primary | second stop at **130%**, so it never fully lands on screen |
+
+So changing one surface's colour source without the other reintroduces exactly
+the contradiction `#638` fixed. That is live right now: Midwestside's idle
+screen is gold-dominant while its reveal card is near-black (accepted
+deliberately, Aug 2026 — see `docs/claude/rules/theming-and-assets.md`).
+
+### `.dbc-reveal__wash` caps what a bottom-right accent can ever be
+
+The wash sits above the background and lays 45% black over the right edge (58%
+over the left, where the copy is). A corner accent therefore tops out at ~55% of
+its authored luminance no matter what: Midwestside's `#ffd400` lands ~`#8c7100`
+on screen. Author around it — a corner hue has to start genuinely bright — or
+change the wash, which affects all 24 cards.
+
+### `afl.config.json` does not survive a JSON round-trip
+
+`JSON.parse` → `JSON.stringify` on the league configs is **lossy**, so never
+rewrite them that way:
+
+- `afl.config.json` declares `groupMe` **twice** on franchise `0007` (lines ~370
+  and ~429, same value). Parsers keep the last; a round-trip silently deletes
+  one. Harmless today only because the two values are identical.
+- `theleague.config.json` hand-formats some arrays inline (`loaderQuips`), which
+  a re-stringify explodes into one-element-per-line — turning a 40-line diff
+  into a several-hundred-line one.
+
+Edit these files as TEXT (anchored line insertion) and validate with
+`JSON.parse` afterward. Verify the round-trip before trusting it:
+`node -e "s=fs.readFileSync(p,'utf8'); JSON.stringify(JSON.parse(s),null,2)===s"`.
