@@ -425,14 +425,16 @@
    shrunk to fit read as a smaller moment than one player, and the whole point
    of the pair is that it is not a lesser card (Brandon, 2026-08-28).
 
-   At the 601px a cutout really renders (see `min-width` below) each head is
-   ~180px, so the seats sit 245px apart — 49% of the 501px column — leaving a
-   65px air gap between head edges and 57% of the back man's body behind the
-   front one. TWO independent numbers live in these seats and they are worth
-   keeping separate: their SPACING (49%) is the composition and is derived from
-   the head size, so it must be recomputed if the cutouts ever change scale;
-   their midpoint (-35%) is just where Brandon wanted the pair sitting, and can
-   be slid freely by moving both seats together.
+   Each man is 120% of the column (see `width` below) and a head is ~30% of an
+   ESPN frame, so a head is ~0.36 columns. The seats sit 49% of a column apart,
+   which leaves ~0.13 columns of air between head edges and 57% of the back
+   man's body behind the front one. Every term there is a COLUMN PERCENTAGE, so
+   the composition holds at any card width — which is the property the earlier
+   px-floor version lost, and why it opened a head-overlap at narrow widths.
+   TWO independent numbers live in these seats: their SPACING (49%) is the
+   composition and follows head size, so recompute it if the cutouts change
+   scale; their MIDPOINT (-35%) is just where Brandon wanted the pair sitting
+   and slides freely by moving both seats together.
 
    POSITIONED, not flexed, and that is the whole reason this rule exists.
    The pair shipped as two flex items with `margin-left: -57%` on the second,
@@ -452,16 +454,19 @@
   position: absolute;
   /* Same seat a single cutout takes via the figure's `align-items: flex-end`. */
   bottom: 0;
-  width: 100%;
+  /* FULL size means whatever a lone cutout renders at, which is `width: 120%`
+     of the column — NOT 100%. Two wrong answers were tried first and both are
+     worth not repeating: plain `width: 100%` made each man 83% of a solo, and
+     `min-width: max-content` "fixed" that only at the one column width it was
+     measured against, because a px floor cannot track a percentage. It also
+     rested on a mechanism that does not exist — flex's `min-width: auto` can
+     never bind here, since `.dbc-reveal__model` sets `flex-shrink: 0`.
+     Matching the percentage is what makes the pair scale with the column, and
+     it matters most where it was never measured: the card is INSET on the
+     site, so the column is ~501px here but ~864px on the fullscreen TV this
+     page exists for. */
+  width: 120%;
   max-width: none;
-  /* FULL size means the size a lone cutout ACTUALLY renders at, which is not
-     `width: 100%`. A single cutout is a flex item, so it carries flex's
-     `min-width: auto` — an intrinsic floor that stops it shrinking below the
-     ESPN frame's own 600px. Absolutely positioning the pair removed that floor
-     and each man came out 501x364 against a solo 601x437: 17% smaller, the
-     opposite of the ask. This restores the same floor explicitly. Reset to 0 in
-     portrait, where a solo cutout is column-clamped instead. */
-  min-width: max-content;
   /* Deliberately NOT `max-height: none`. This rule out-specifies the
      short-landscape breakpoint's `max-height: 100%`, so overriding it here
      escaped that clamp: at 1920x540 each defender rendered 628px tall in a
@@ -1277,11 +1282,11 @@
      the card entirely. Re-centred on the figure instead: same 0.43-column
      spacing, no offset. Same specificity as the base seats and later in the
      file, which is what lets these win. */
-  /* A solo cutout is column-clamped in portrait rather than floored at its
-     intrinsic width, so the pair drops the floor to match — without this each
-     man is 600px wide in a 327px column. */
+  /* Portrait is the one place a solo cutout is NOT 120% — it is column-clamped,
+     because the figure is a full-width row here with no crest to overlap. The
+     pair matches it, or each man renders 20% past a 327px phone column. */
   .dbc-reveal__model.dbc-reveal__model--def {
-    min-width: 0;
+    width: 100%;
   }
 
   .dbc-reveal__model--def:nth-of-type(1) {
