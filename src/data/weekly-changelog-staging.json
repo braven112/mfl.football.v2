@@ -19,6 +19,14 @@
     },
     {
       "date": "2026-08-28",
+      "type": "style-tweak",
+      "summary": "Both rails at the bottom of the draft broadcast board got reordered, and one of them got faces. Up next now leads each row with the franchise logo instead of trailing it, so the three teams warming up stack into one column you can read straight down rather than logos hanging off the end of names of different lengths. Just off the board picks up the player headshot the rest of the site uses \u2014 same circle, same team-colour backdrop behind the head \u2014 sitting between the pick number and the name. Once a reveal is over, that rail is the only place the room sees the guy who just went, and four rows of nothing but type read like a receipt instead of a draft board. Team defenses get their NFL logo there, in the dark cut, since a defense has no headshot to show.",
+      "impact": "user",
+      "area": "draft",
+      "league": "both"
+    },
+    {
+      "date": "2026-08-28",
       "type": "bug-fix",
       "summary": "A duplicate line in the AFL league config is gone. The Avenging Amish had their GroupMe avatar listed twice in the same record — same file both times, so nothing ever looked wrong, but any tool that rewrote the config would have quietly dropped one of them, and if the two had ever pointed at different art the winner would have come down to which line happened to be last. Removed, and there is now a check that fails the build if any league config repeats a field.",
       "impact": "admin",

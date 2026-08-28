@@ -880,6 +880,10 @@
   gap: 3vw;
   padding: 0 3vw 2.4vh;
   min-height: 0;
+  /* The size of the image column BOTH rails now lead with — the player's face
+     on the left, the drafting franchise's crest on the right. One number, or
+     the two rails' logos sit at different scales half a board apart. */
+  --dbc-rail-figure: clamp(1.6rem, 4.2vh, 3.2rem);
 }
 
 .dbc-idle__rail-title {
@@ -908,6 +912,58 @@
   padding: 0.7vh 1vw;
   border-radius: 0.4em;
   background: rgba(0, 0, 0, 0.32);
+}
+
+/* Both rails put their IMAGE second — the player's face on the left rail, the
+   drafting franchise's crest on the right one — so the two columns scan as one
+   ordered sentence at a glance: pick, who, copy. The recent rail keeps the
+   drafting team's crest in a fourth column at the far end; it answers a
+   different question ("who took him") than the face does. */
+.dbc-idle__row--recent {
+  grid-template-columns: auto auto 1fr auto;
+  /* Tighter than the 1em default: the avatar is a lockup with the name it
+     labels, and a full em between them read as two separate columns. */
+  column-gap: 0.7em;
+}
+
+.dbc-idle__row--next {
+  grid-template-columns: auto auto 1fr;
+  column-gap: 0.7em;
+}
+
+/* The shared player-cell chip, retuned for a TV. Sizing goes through the
+   custom properties player-cell.css documents rather than overriding its
+   width/height, so the chip's own internals (the 1.18 headshot fill, the DEF
+   opt-out) keep working off one number. vh like everything else on this
+   surface — a 40px chip beside 2.1vh type is a thumbnail on a 65" screen. */
+.dbc-idle__row-avatar {
+  --player-avatar-size: var(--dbc-rail-figure);
+  flex: none;
+  /* player-cell.css sizes the chip content-box, so its 1px team ring lands
+     OUTSIDE the number below — which left this column 2px wider than the crest
+     column opposite and the two rails' logos a hair out of line with each
+     other. Same declared size, same painted size. */
+  box-sizing: border-box;
+}
+
+/* Holds the crest column open on the "Up next" rail whether or not there is a
+   crest to put in it — see the markup comment. Sized to match the avatar
+   opposite so the two rails' second columns line up across the board. */
+.dbc-idle__row-crest {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--dbc-rail-figure);
+  height: var(--dbc-rail-figure);
+}
+
+/* The crest reads at the avatar's scale in its own column — the 3.6vh it wore
+   as a trailing chip was sized to sit quietly at the end of a row, and leading
+   the row it is doing the identifying instead. */
+.dbc-idle__row-crest .dbc-idle__row-icon {
+  width: 100%;
+  height: 100%;
 }
 
 .dbc-idle__row-pick {
