@@ -469,3 +469,58 @@ Two smaller notes:
 - **`:hover` and `:focus-visible` are separate rules, never one selector list.**
   One unsupported pseudo-class invalidates the entire list per spec, and here
   that drops the reveal while leaving the hide in force.
+
+### The origin line's mark: ship the dark cut, and ship only the half you can't derive
+
+The reveal card's meta line names where a player came from — his college if he
+is a rookie, his NFL team otherwise — and carries that origin's logo to its
+left. Two decisions behind it that are not obvious from the code:
+
+**The card opts OUT of the site-wide dark-logo swap.** Every other surface ships
+the light mark and lets a `html.dark` rule replace it; this card cannot, because
+its franchise gradient is dark in BOTH themes, so for a light-theme viewer the
+swap never fires and the marks with dark outlines vanish. `resolveOrigin`
+resolves the dark cut server-side and ships it as the `src`. The full reasoning,
+and why `display: none` on error is safe here when it is wrong everywhere else,
+is in `dark-mode-team-icons.md` (2026-08-28) — that is the file to read before
+adding another logo to this page.
+
+**Only the college half rides on the player.** Resolving a school needs the
+80 KB `college-logos.json`, so it happens in `enrichBroadcastPlayers`; the NFL
+half is derived on the client from `nflTeam`, which every player already
+carries. Sending a resolved URL for both would have spent ~45 bytes × the whole
+draftable pool to ship a string the island can build — the same trade
+`buildDefenseFacesByTeam` already made, and the payload is the recurring cost on
+this page. The college lookup is gated on `usesCollegeOrigin`, the exported
+predicate the card itself uses to pick the label, so the server cannot resolve a
+school mark for a player the card will label with his pro team.
+
+**No mark beats a wrong mark.** A free agent and a retiree both normalize to the
+NFL shield, which says nothing beside a name; an unrecognised team code and a
+school absent from the table would 404. All four return `logo: null` and the
+label stands on its own.
+
+### Verifying this page in the sandbox: `page.route` did not intercept its images
+
+Chromium's context routes (`ctx.route('https://a.espncdn.com/**', …)`) never
+fired for the reveal card's logo and headshot requests in the remote sandbox —
+the handler's own `console.log` never printed, so the requests were not reaching
+it. Blocking the service worker (`serviceWorkers: 'block'`) did not change it,
+and the cause was not chased further. Recorded as observed behaviour, not as an
+explanation: **do not assume the `verify` skill's "fulfill them with a
+placeholder image" advice works on this page.**
+
+What did work, and is enough to judge layout: wait for `.dbc-reveal__meta`, then
+rewrite the src in the page.
+
+```js
+await page.$$eval('.dbc-reveal__origin-logo', (imgs) => {
+  for (const img of imgs) { img.style.display = ''; img.src = '/assets/nfl-logos/KC.svg'; }
+});
+```
+
+Read the element's `outerHTML` BEFORE that swap — the un-swapped src is the only
+evidence the resolution logic emitted the right URL, and the swap destroys it.
+Note also that a reveal is not on screen at load: the rehearsal replays picks on
+a poll interval, so a fixed `waitForTimeout` mostly screenshots the idle board.
+Wait on the selector (`?rehearse=3` reaches a reveal in well under a minute).
