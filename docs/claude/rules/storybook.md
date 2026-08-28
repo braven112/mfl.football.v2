@@ -386,7 +386,26 @@ on Titans navy, July 2026). Six near-black teams are pinned as standing
 guards. Verified working: TEN's navy `#0C2340` renders an anchor of
 `rgb(138,184,232)`, BAL's near-black purple `rgb(128,120,174)`.
 
-To story the modals properly they would need their content extracted into a
-prop-driven component, with the current shell reduced to a wrapper. That is a
-refactor, not a story — and it is the same finding as the season heroes: a
-component you cannot render from props is a component you cannot reuse.
+### Making `PlayerDetailsModal` storyable — why NOT extraction
+
+The obvious move is to extract the modal's body into a prop-driven child. Do
+not: the file is 1,444 lines of which only ~146 are template, and the other
+1,300 are 610 lines of **scoped** `<style>` plus 658 of client script. Astro
+scopes styles per component, so moving the markup into a child orphans every
+one of those CSS rules.
+
+What works instead is optional `preview` / `previewOpen` props ON the component
+itself, which server-render the same elements the client script targets. Omit
+them and the output is byte-equivalent to what always shipped; the runtime path
+is untouched because the script overwrites the content on open either way.
+
+The `Skeleton` story is the guard on that equivalence — it passes no `preview`
+at all, so it pins the production shape: 47 ids, `pdm-owner` still
+`display: none`, every placeholder still an em dash, news and weekly-results
+sections still collapsed.
+
+The `preview` fields are PRE-FORMATTED STRINGS deliberately. Formatting lives
+in the client script and a story cannot run it; duplicating it in fixtures
+would let the story drift from production. These stories pin layout, styling
+and the shape of each state — not the formatting logic. Be honest about that
+rather than implying more coverage than exists.

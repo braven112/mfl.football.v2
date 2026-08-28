@@ -21,12 +21,56 @@ export interface Props {
    * showing the "Free Agent" fallback is misleading there.
    */
   hideContract?: boolean;
+  /** Stories/previews only — see PlayerDetailsPreview. */
+  preview?: PlayerDetailsPreview;
+  /** Stories/previews only: render already-open instead of `display: none`. */
+  previewOpen?: boolean;
 }
 
-const { class: className, hideContract = false } = Astro.props;
+/**
+ * Server-rendered placeholder text, for STORIES AND PREVIEWS ONLY.
+ *
+ * In production this modal ships as an empty skeleton and every value below is
+ * written by the client script on open (`window.openPlayerDetailsModal`). That
+ * made the populated states — the ones anyone actually looks at — impossible to
+ * render without a live roster and a click, so they had no visual coverage.
+ *
+ * These props pre-fill the same elements the script targets. Omit them and the
+ * output is what it has always been: em dashes and hidden sections. The runtime
+ * path is unchanged, because the script overwrites this content on open either
+ * way.
+ *
+ * Fields are PRE-FORMATTED STRINGS on purpose. Formatting lives in the client
+ * script; duplicating it here would let a story drift from what production
+ * renders. A story pins layout, styling and the shape of each state — not the
+ * formatting logic.
+ */
+export interface PlayerDetailsPreview {
+  name?: string;
+  agePill?: string;
+  metaText?: string;
+  subText?: string;
+  ownerName?: string;
+  points?: string;
+  pointsLabel?: string;
+  ppg?: string;
+  contract?: string;
+  contractLabel?: string;
+  build?: string;
+  status?: string;
+  draft?: string;
+  college?: string;
+  contractDetail?: string;
+  bye?: string;
+}
+
+const { class: className, hideContract = false, preview, previewOpen = false } = Astro.props;
+
+/** Falls back to the em dash this skeleton has always shipped. */
+const t = (value?: string) => value ?? '\u2014';
 ---
 
-<div class:list={['player-details-modal', className]}>
+<div class:list={['player-details-modal', previewOpen && 'active', className]}>
   <div class="player-details-modal__overlay"></div>
   <div class="player-details-modal__content">
     <button class="pdm-close" aria-label="Close" title="Close (ESC)">
@@ -43,14 +87,14 @@ const { class: className, hideContract = false } = Astro.props;
       <img class="pmb__cutout" alt="" aria-hidden="true" loading="eager" decoding="async" />
       <div class="pdm-hero__info">
         <div class="pdm-hero__name-row">
-          <h3 class="pdm-hero__name" id="detail-name">&mdash;</h3>
-          <span class="pdm-hero__age" id="detail-age-pill"></span>
+          <h3 class="pdm-hero__name" id="detail-name">{t(preview?.name)}</h3>
+          <span class="pdm-hero__age" id="detail-age-pill">{preview?.agePill}</span>
         </div>
         <div class="pdm-hero__meta">
           <img class="pdm-hero__team-logo" id="detail-nfl-team-logo" src="" alt="" onerror={NFL_LOGO_ONERROR} onload={NFL_LOGO_ONLOAD} />
-          <span class="pdm-hero__meta-text" id="detail-meta-text">&mdash;</span>
+          <span class="pdm-hero__meta-text" id="detail-meta-text">{t(preview?.metaText)}</span>
         </div>
-        <div class="pdm-hero__sub" id="detail-sub-text">&mdash;</div>
+        <div class="pdm-hero__sub" id="detail-sub-text">{t(preview?.subText)}</div>
       </div>
     </div>
 
@@ -61,26 +105,26 @@ const { class: className, hideContract = false } = Astro.props;
            line inside it grows both (see .pdm-hero__meta-text). The band
            already wears the franchise's colors and crest; this says whose
            they are in words. -->
-      <div class="pdm-owner" id="pdm-owner" style="display: none;">
+      <div class="pdm-owner" id="pdm-owner" style={preview?.ownerName ? undefined : 'display: none;'}>
         <img class="pdm-owner__crest" id="pdm-owner-crest" alt="" aria-hidden="true" loading="lazy" decoding="async" />
         <span class="pdm-owner__label">Rostered by</span>
-        <span class="pdm-owner__name" id="pdm-owner-name"></span>
+        <span class="pdm-owner__name" id="pdm-owner-name">{preview?.ownerName}</span>
       </div>
 
       <!-- Key Metrics -->
       <div class="pdm-metrics" id="pdm-metrics">
         <div class="pdm-metric" id="metric-card-points">
-          <span class="pdm-metric__value" id="metric-points-value">&mdash;</span>
-          <span class="pdm-metric__label" id="metric-points-label">Points</span>
+          <span class="pdm-metric__value" id="metric-points-value">{t(preview?.points)}</span>
+          <span class="pdm-metric__label" id="metric-points-label">{preview?.pointsLabel ?? 'Points'}</span>
         </div>
         <div class="pdm-metric" id="metric-card-ppg">
-          <span class="pdm-metric__value" id="metric-ppg-value">&mdash;</span>
+          <span class="pdm-metric__value" id="metric-ppg-value">{t(preview?.ppg)}</span>
           <span class="pdm-metric__label">Per Game</span>
         </div>
         {!hideContract && (
           <div class="pdm-metric" id="metric-card-contract">
-            <span class="pdm-metric__value" id="metric-contract-value">&mdash;</span>
-            <span class="pdm-metric__label" id="metric-contract-label">Contract</span>
+            <span class="pdm-metric__value" id="metric-contract-value">{t(preview?.contract)}</span>
+            <span class="pdm-metric__label" id="metric-contract-label">{preview?.contractLabel ?? 'Contract'}</span>
           </div>
         )}
       </div>
@@ -135,35 +179,35 @@ const { class: className, hideContract = false } = Astro.props;
         <div class="pdm-details__grid">
           <div class="pdm-detail" id="detail-row-physical">
             <span class="pdm-detail__label">Build</span>
-            <span class="pdm-detail__value" id="detail-physical-value">&mdash;</span>
+            <span class="pdm-detail__value" id="detail-physical-value">{t(preview?.build)}</span>
           </div>
           <div class="pdm-detail" id="detail-row-status">
             <span class="pdm-detail__label">Status</span>
-            <span class="pdm-detail__value" id="detail-status-value">&mdash;</span>
+            <span class="pdm-detail__value" id="detail-status-value">{t(preview?.status)}</span>
           </div>
           <div class="pdm-detail" id="detail-row-draft">
             <span class="pdm-detail__label">Draft</span>
             <span class="pdm-detail__value pdm-detail__value--with-logo" id="detail-draft-value">
               <img class="pdm-detail__logo" id="detail-draft-team-logo" src="" alt="" onerror={NFL_LOGO_ONERROR} onload={NFL_LOGO_ONLOAD} />
-              <span id="detail-draft-text">&mdash;</span>
+              <span id="detail-draft-text">{t(preview?.draft)}</span>
             </span>
           </div>
           <div class="pdm-detail" id="detail-row-college">
             <span class="pdm-detail__label">College</span>
             <span class="pdm-detail__value pdm-detail__value--with-logo" id="detail-college-value">
               <img class="pdm-detail__logo pdm-detail__logo--college" id="detail-college-logo" src="" alt="" onerror={COLLEGE_LOGO_ONERROR} onload={COLLEGE_LOGO_ONLOAD} />
-              <span id="detail-college">&mdash;</span>
+              <span id="detail-college">{t(preview?.college)}</span>
             </span>
           </div>
           {!hideContract && (
             <div class="pdm-detail" id="detail-row-contract">
               <span class="pdm-detail__label">Contract</span>
-              <span class="pdm-detail__value" id="detail-contract-detail">&mdash;</span>
+              <span class="pdm-detail__value" id="detail-contract-detail">{t(preview?.contractDetail)}</span>
             </div>
           )}
           <div class="pdm-detail" id="detail-row-bye">
             <span class="pdm-detail__label">Bye</span>
-            <span class="pdm-detail__value" id="detail-bye-value">&mdash;</span>
+            <span class="pdm-detail__value" id="detail-bye-value">{t(preview?.bye)}</span>
           </div>
         </div>
       </div>

@@ -1,6 +1,8 @@
 import { definePreview } from '@storybook-astro/framework';
 import { themeModes } from './modes';
 import { buildTeamAccentCss } from '../src/utils/team-accent-css';
+import { buildNflLogoDarkCss } from '../src/utils/nfl-logo-dark-css';
+import { buildCollegeLogoDarkCss } from '../src/utils/college-logo-dark-css';
 
 // Global stylesheets the real app loads from TheLeagueLayout. Tokens first —
 // everything else resolves var(--*) against them.
@@ -29,6 +31,8 @@ import '../src/styles/utilities.css';
 import '../src/styles/playoff-round-hero.css';
 import '../src/styles/loading.css';
 import '../src/styles/player-cell.css';
+import '../src/styles/player-modal-band.css';
+import '../src/styles/player-news.css';
 
 /**
  * Theme and league are BOTH pure CSS in this codebase:
@@ -57,7 +61,12 @@ function applyGlobals(theme: string, league: string) {
 }
 
 /**
- * Franchise accent tokens — the layout's job in production, ours here.
+ * Head-injected layout styles — the layout's job in production, ours here.
+ *
+ * `TheLeagueLayout` renders four style components into <head>, and a story gets
+ * NONE of them. All four are plain builder functions with no Node
+ * dependencies, so we call the SAME functions the layout does and there is one
+ * source of truth per sheet.
  *
  * `TheLeagueLayout` renders `<TeamAccentStyles />`, which defines
  * `--team-accent-<franchiseId>` for every franchise in every league with an
@@ -72,16 +81,32 @@ function applyGlobals(theme: string, league: string) {
  * exists to catch (see docs/claude/rules/theming-and-assets.md: the Pecking
  * Order shipped invisible rank numbers in dark mode this way).
  *
- * We call the SAME `buildTeamAccentCss()` the layout does, so there is one
- * source of truth and the story cannot drift from production. Injected once,
- * client-side only — the SSR prerender pass has no document.
+ * The logo sheets matter for a second, less obvious reason. They carry
+ * `img.nfl-logo-failed { visibility: hidden; }`, the rule that hides a logo
+ * whose src never resolved. Without it, every `src=""` placeholder the client
+ * script fills on open renders as a BROKEN IMAGE ICON — which would have been
+ * baselined into the PlayerDetailsModal snapshots as permanent noise.
+ *
+ * KNOWN GAP: `TeamIconDarkStyles` is NOT reproduced here. Unlike the other
+ * three its builder is not zero-argument — it needs both leagues' team configs
+ * plus a separate crest-dark-stroke pass, and copying that composition into
+ * this file is exactly the drift risk these shared builders exist to avoid.
+ * The consequence is that franchise crests render their LIGHT variant in
+ * dark-mode stories. Closing it properly means extracting the composition into
+ * a shared util that both the layout component and this file call.
+ *
+ * Injected once, client-side only — the SSR prerender pass has no document.
  */
 function injectLayoutStyles() {
   if (typeof document === 'undefined') return;
-  if (document.getElementById('sb-team-accents')) return;
+  if (document.getElementById('sb-layout-styles')) return;
   const el = document.createElement('style');
-  el.id = 'sb-team-accents';
-  el.textContent = buildTeamAccentCss();
+  el.id = 'sb-layout-styles';
+  el.textContent = [
+    buildTeamAccentCss(),
+    buildNflLogoDarkCss(),
+    buildCollegeLogoDarkCss(),
+  ].join('\n');
   document.head.appendChild(el);
 }
 
