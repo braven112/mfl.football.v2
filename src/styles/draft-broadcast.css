@@ -1263,6 +1263,15 @@
     transition: none;
   }
 
+  /* The board's own gradient cross-fade is part of that same cut, and it is
+     easy to miss because it lives 500 lines away from the layer rules: the
+     idle screen re-paints in the next franchise's colours whenever the clock
+     moves. Cutting the layers but leaving this one means a reduced-motion
+     viewer still gets a slow wash through a whole gradient every pick. */
+  .dbc-idle {
+    transition: none;
+  }
+
   .dbc__status-dot {
     animation: none;
     opacity: 1;
