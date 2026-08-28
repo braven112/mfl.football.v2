@@ -586,4 +586,49 @@ describe('idle screen and reveal card share one colour treatment', () => {
       ).toBe(false);
     }
   });
+
+  // Matching the COLOURS was not enough. Both screens ran the same pair through
+  // the same treatment and still disagreed, because each COMPOSED that pair its
+  // own way — the reveal at 115/315deg, the idle board at 150deg with reversed
+  // stops and a stop running off the canvas at 130%. Midwestside is what proved
+  // it: a gold-dominant idle screen handing off to a near-black reveal, twice a
+  // minute, for the same franchise. Both surfaces now paint the franchise's one
+  // `broadcastGradient` string (Brandon, 2026-08-28).
+  it('both components resolve the franchise gradient', () => {
+    for (const f of ['OnTheClock.tsx', 'BroadcastRevealCard.tsx']) {
+      expect(code(f), `${f} must call resolveBroadcastGradient(...)`).toMatch(
+        /resolveBroadcastGradient\s*\(/
+      );
+    }
+  });
+
+  it('both components hand it to the SAME custom property', () => {
+    // Two different variable names would type-check, pass every unit test, and
+    // silently give the two screens separate paint paths again.
+    //
+    // Quote-agnostic on purpose (Copilot, #641): pinning the single quotes would
+    // fail on a formatter run that flipped them, which is a non-behavioural
+    // change. The property NAME is the thing being guarded.
+    for (const f of ['OnTheClock.tsx', 'BroadcastRevealCard.tsx']) {
+      expect(code(f), `${f} must set --dbc-gradient`).toMatch(/['"`]--dbc-gradient['"`]/);
+    }
+  });
+
+  it('both surfaces READ that property, with the derived pair as fallback', () => {
+    const css = readFileSync('src/styles/draft-broadcast.css', 'utf-8');
+    for (const sel of ['.dbc-idle', '.dbc-reveal']) {
+      // Anchored to column 0 with `m`: the TOP-LEVEL rule, not one of the
+      // indented `.dbc-idle { height: 100vh }` overrides inside a media query,
+      // which is what an unanchored match found first.
+      const block =
+        new RegExp(`^\\${sel} \\{[\\s\\S]*?\\n\\}`, 'm').exec(css)?.[0] ?? '';
+      expect(block, `${sel} rule not found`).not.toBe('');
+      expect(block, `${sel} must paint var(--dbc-gradient, …)`).toMatch(
+        /background:\s*var\(\s*--dbc-gradient,/
+      );
+      // The fallback has to stay a real gradient, or a franchise without one
+      // (or a board with no team at all) renders with no background.
+      expect(block, `${sel} must keep a gradient fallback`).toMatch(/linear-gradient\(/);
+    }
+  });
 });

@@ -272,17 +272,21 @@ The board has two full-screen surfaces that alternate every ~20 seconds:
 screen run the same `resolveSplashColors` → `toBroadcastPair` treatment as the
 reveal card precisely because the two were contradicting each other.
 
-They still **compose** that pair differently, and one string cannot serve both:
+They also **composed** that pair differently — which is why sharing the
+treatment was not enough, and why they now share the STRING itself
+(`broadcastGradient`, on `--dbc-gradient`, read by both rules):
 
 | | angle | stop order | note |
 |---|---|---|---|
 | `.dbc-reveal` | 115deg (or 315deg, hand-authored) | primary → secondary | 315deg puts 0% in the bottom-right, under the cutout |
 | `.dbc-idle` | 150deg | secondary → primary | second stop at **130%**, so it never fully lands on screen |
 
-So changing one surface's colour source without the other reintroduces exactly
-the contradiction `#638` fixed. That is live right now: Midwestside's idle
-screen is gold-dominant while its reveal card is near-black (accepted
-deliberately, Aug 2026 — see `docs/claude/rules/theming-and-assets.md`).
+Matching the colours while composing them differently is what let Midwestside
+show a gold-dominant idle board and a near-black reveal for the same franchise.
+The fix was to share the string, not just the treatment — which repainted the
+other 36 idle screens onto their reveal's composition, deliberately. The lesson
+generalises: when two surfaces must agree, sharing the INPUTS is not enough if
+each still owns the composition. Share the output, or expect them to drift.
 
 ### `.dbc-reveal__wash` caps what a bottom-right accent can ever be
 

@@ -10,7 +10,12 @@
 import { useCallback, useMemo } from 'react';
 import type { DraftRoomPick, DraftRoomTeam } from '../../../types/draft-room';
 import type { BroadcastConference, BroadcastPlayer } from '../../../types/draft-broadcast';
-import { recentPicks, toBroadcastPair, upcomingPicks } from '../../../utils/draft-broadcast';
+import {
+  recentPicks,
+  resolveBroadcastGradient,
+  toBroadcastPair,
+  upcomingPicks,
+} from '../../../utils/draft-broadcast';
 import { resolveSplashColors } from '../../../utils/pick-reveal';
 
 interface Props {
@@ -118,10 +123,26 @@ export function OnTheClock({
   const brand = resolveSplashColors(team);
   const { primary, secondary } = toBroadcastPair(brand.primary, brand.secondary);
 
+  // And when the franchise declares its own `broadcastGradient`, this screen
+  // paints THAT — the same string, on the same franchise, as the reveal card it
+  // hands off to (Brandon, 2026-08-28). Same reasoning as the treatment above,
+  // carried to its conclusion: matching the COLOURS but composing them
+  // differently still let the two screens disagree, and Midwestside proved it —
+  // a gold-dominant idle board handing off to a near-black reveal, twice a
+  // minute, for the same team. The pair above stays as the fallback for a
+  // franchise with no gradient of its own.
+  const gradient = resolveBroadcastGradient(team);
+
   return (
     <div
       className="dbc-idle"
-      style={{ '--dbc-primary': primary, '--dbc-secondary': secondary } as React.CSSProperties}
+      style={
+        {
+          '--dbc-primary': primary,
+          '--dbc-secondary': secondary,
+          ...(gradient ? { '--dbc-gradient': gradient } : {}),
+        } as React.CSSProperties
+      }
     >
       <div className="dbc-idle__wash" aria-hidden="true" />
 

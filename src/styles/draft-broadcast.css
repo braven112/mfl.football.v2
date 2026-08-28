@@ -413,7 +413,15 @@
   display: grid;
   grid-template-rows: auto 1fr auto auto;
   overflow: hidden;
-  background: linear-gradient(150deg, var(--dbc-secondary, #0e2440) 0%, var(--dbc-primary, #1c497c) 130%);
+  /* Same `--dbc-gradient` the reveal card paints, from the franchise's
+     `broadcastGradient` in league config — one string, both screens, so the
+     board cannot show a gold card between picks and a black one on the pick.
+     The 150deg derived pair stays as the fallback for a franchise that has no
+     gradient of its own. */
+  background: var(
+    --dbc-gradient,
+    linear-gradient(150deg, var(--dbc-secondary, #0e2440) 0%, var(--dbc-primary, #1c497c) 130%)
+  );
   transition: background 900ms ease;
 }
 

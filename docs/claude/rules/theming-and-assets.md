@@ -104,18 +104,26 @@ screen for ~18 seconds, so the look is a design decision, not a computed one.
   validate, and one transposed letter in a second layer blanks the card exactly
   like the `;` does. A value that fails is IGNORED, not thrown on — the card
   falls back to the derived pair.
-- **It drives the reveal card only. The on-the-clock screen does NOT read it**,
-  and the two can therefore disagree. `.dbc-idle` composes its own
-  `linear-gradient(150deg, secondary 0%, primary 130%)` from the pair `#638`
-  routed through `resolveSplashColors` + `toBroadcastPair` — a different angle,
-  reversed stop order, and a stop that runs off the canvas at 130%. One config
-  string cannot express both compositions, so pointing `.dbc-idle` at
-  `broadcastGradient` would repaint all 36 generated franchises' idle screens
-  and undo `#638`. Vitside happens to agree across both screens; **Midwestside
-  does not** — its idle screen is gold-dominant while its reveal card is
-  near-black. Closing that gap needs a second config field (`idleGradient`) or
-  a deliberate decision to re-treat every idle screen. Do not "fix" it by
-  wiring this field into `.dbc-idle`.
+- **It drives BOTH broadcast surfaces** — the reveal card and the on-the-clock
+  idle board — off one string, and that is the point. `#638` had already made
+  the two share a colour TREATMENT and they still disagreed, because each
+  composed the pair its own way: the reveal at 115/315deg, `.dbc-idle` at 150deg
+  with reversed stops and a stop running off the canvas at 130%. Midwestside
+  proved it — a gold-dominant idle board handing off to a near-black reveal,
+  twice a minute, for the same franchise. Both now paint
+  `var(--dbc-gradient, <derived pair>)`, set from `resolveBroadcastGradient`
+  (Brandon, Aug 2026). Adding a second field (`idleGradient`) was the
+  alternative and was rejected: two strings per franchise to keep in sync is how
+  they drift apart again.
+  - This DID repaint the other 36 franchises' idle screens, from
+    `150deg secondary→primary` to their reveal's `115deg primary→secondary`.
+    That was the accepted cost. Legibility is safe by construction — both stops
+    are already floored to 4.5:1 against white by `toBroadcastPair` — but any
+    future change to the idle composition now shows up on the reveal too.
+  - `tests/draft-broadcast.test.ts` pins that both components call
+    `resolveBroadcastGradient`, that both hand it to the SAME custom property
+    (two names would type-check and silently re-split the paint paths), and that
+    both CSS rules read it with a real gradient fallback.
 - **`.dbc-reveal__wash` still paints on top** — 58% black at the left edge, 45%
   at the right. Author around it: a bottom-right accent loses ~45% of its
   luminance, so a corner hue has to be a genuinely bright one to still read as
