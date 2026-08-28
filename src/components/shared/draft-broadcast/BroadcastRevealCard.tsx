@@ -209,10 +209,9 @@ export function BroadcastRevealCard({
       }
     >
       <div className="dbc-reveal__wash" aria-hidden="true" />
-      {/* The idle screen carries this too, but the reveal card is what is
-          actually on the TV for ~18 of every 20 seconds of a replay — flagging
-          only the idle screen would leave the room looking at last year's picks
-          with nothing on screen to say so. */}
+      {/* The idle screen carries this too, but flagging only the idle screen
+          would leave the room looking at last year's picks with nothing on
+          screen to say so for every second a reveal owns the TV. */}
       {rehearsing ? (
         <span className="dbc-reveal__rehearsal-flag">
           Rehearsal · replaying {leagueYear}
@@ -267,8 +266,17 @@ export function BroadcastRevealCard({
         </div>
 
         <div className="dbc-reveal__text">
+          {/* Two lines, not one wrapped sentence: at TV scale the pick number
+              and the franchise are the two things the room reads off this
+              card, and running them together let the line break land wherever
+              the team name happened to be long enough to force it — sometimes
+              mid-name. The spans are block-level in CSS so the break is fixed
+              and the sentence still reads as one for a screen reader. */}
           <p className="dbc-reveal__kicker">
-            With the {label}, {team?.name || 'the next team up'} select
+            <span className="dbc-reveal__kicker-line">With the {label} Pick,</span>
+            <span className="dbc-reveal__kicker-line">
+              {team?.name || 'the next team up'} select
+            </span>
           </p>
           <h1 className="dbc-reveal__player">{player?.name || 'Pick in'}</h1>
 

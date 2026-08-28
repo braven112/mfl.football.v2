@@ -349,10 +349,10 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
       ? parseFloat(raw)
       : raw.endsWith('s')
         ? parseFloat(raw) * 1000
-        : 620;
+        : 930;
 
     morphScreens(idleLayerRef.current, revealLayerRef.current, {
-      durationMs: Number.isFinite(durationMs) ? durationMs : 620,
+      durationMs: Number.isFinite(durationMs) ? durationMs : 930,
       toReveal: showingReveal,
     });
   }, [showingReveal]);

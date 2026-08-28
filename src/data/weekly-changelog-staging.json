@@ -4,6 +4,14 @@
     {
       "date": "2026-08-28",
       "type": "style-tweak",
+      "summary": "The line above the player's name on a draft broadcast reveal is now two lines. \"With the 1.02 Pick,\" and the drafting team get a row each, instead of running together into one long line that broke wherever the franchise name happened to be long enough to force it — sometimes mid-name.",
+      "impact": "user",
+      "area": "draft",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-28",
+      "type": "style-tweak",
       "summary": "The draft broadcast's rehearsal mode now spends its time on the right screen. A dry run stepped a pick every 20 seconds while each reveal held the TV for 18 of them, which left the on-the-clock board on screen for about two seconds a cycle — the half of the broadcast you most need to watch while rehearsing was the half you never saw. Rehearsals now step every 35 seconds and hold each reveal for 8, so the board gets roughly 27 seconds between picks. Draft night's own timing is untouched.",
       "impact": "user",
       "area": "draft",
@@ -36,7 +44,7 @@
     {
       "date": "2026-08-28",
       "type": "style-tweak",
-      "summary": "The draft broadcast stops cutting between its two screens. Handing off from the on-the-clock board to a pick reveal used to swap the whole TV in a single frame, which looked less like the board reacting and more like somebody changing the channel. Now the two screens are one moving picture: the franchise logo slides off its lockup and grows into the middle of the reveal card, and the copy beside it slides left and rewrites itself into the pick — team name into player name. When the reveal's turn is up the whole thing runs backwards and the logo shrinks back onto the board. The crest itself is bigger news than it was, too: it used to hide behind the player with half of it off the edge of the card, so from across the room it read as texture. It is now dead centre and noticeably brighter, with the player on one side of it and the pick on the other.",
+      "summary": "The draft broadcast stops cutting between its two screens. Handing off from the on-the-clock board to a pick reveal used to swap the whole TV in a single frame, which looked less like the board reacting and more like somebody changing the channel. Now one thing moves and everything else closes in around it: the franchise logo lifts off the on-the-clock lockup and flies to the middle of the reveal, the pick and player's name slide in from the left edge to meet it, and the player himself comes in from the right. The team name sitting beside the logo on the board no longer travels at all — it fades out on the spot, because two blocks of copy moving at once was a fight for your eye at the exact moment the room is trying to read a name. When the reveal's turn is up the logo flies back onto the board. The crest itself is bigger news than it was, too: it used to hide behind the player with half of it off the edge of the card, so from across the room it read as texture. It is now dead centre and noticeably brighter, with the player on one side of it and the pick on the other. The whole handoff also runs about half again as long as it did, so from ten feet away it reads as a move rather than a flicker.",
       "impact": "user",
       "area": "draft",
       "league": "afl"

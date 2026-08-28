@@ -1,18 +1,16 @@
 /**
  * Shared-element motion between the AFL draft broadcast's two screens.
  *
- * The idle board and the reveal both show the same two things: the franchise
- * CREST and a block of COPY beside it. They just show them in different places
- * — the idle board holds them as a side-by-side lockup in the middle of the
- * stage, the reveal puts the crest dead centre behind everything and the copy
- * over on the left. Cross-fading the two screens therefore threw away the one
- * piece of continuity the surface had: the room watched a logo vanish and a
- * different logo appear, when what is actually happening is that the SAME two
- * elements are being rearranged.
+ * The CREST is the one thing both screens show: the idle board holds it in a
+ * side-by-side lockup with the copy in the middle of the stage, the reveal puts
+ * it dead centre behind everything. Cross-fading the two screens therefore
+ * threw away the one piece of continuity the surface had: the room watched a
+ * logo vanish and a different logo appear, when what is actually happening is
+ * that the SAME mark is being rearranged.
  *
- * So each pair is animated between the two positions (a FLIP: measure both
+ * So the crest is animated between the two positions (a FLIP: measure both
  * boxes, start the arriving element on the departing one's box, and let it
- * travel home). The departing element runs the same path in reverse, which is
+ * travel home). The departing crest runs the same path in reverse, which is
  * what makes the pair read as one object moving through the cross-fade rather
  * than two objects swapping.
  *
@@ -20,6 +18,16 @@
  * behind a reveal has already advanced to whoever is on the clock next. That is
  * the point of dissolving them into each other along one path instead of
  * hard-cutting — the mark moves to centre and becomes the drafting team's.
+ *
+ * The COPY is deliberately NOT paired (Brandon, 2026-08-28). It used to fly the
+ * same path — the idle board's clock copy sliding left and rewriting itself
+ * into the player's name — and the two moving blocks fought each other for the
+ * eye at the exact moment the room is trying to read a name. The crest travels
+ * ALONE now: the idle copy fades out on the spot it already occupies, and the
+ * reveal's two halves arrive from their own outer edges (copy from the left,
+ * player from the right — see `dbc-text-in` / `dbc-model-in`), closing on the
+ * crest as it lands in the middle. One thing moves across the screen; the rest
+ * converge on it.
  *
  * This module owns the geometry; the timing lives with the CSS cross-fade
  * (`--dbc-fade`), which the caller reads and passes in so the two can never
@@ -92,11 +100,16 @@ function boxOf(el: Element): MorphBox {
  * The pairs that move. Left is the idle board's element, right is the reveal's.
  * Selectors rather than refs threaded through two component trees: this is a
  * display surface with exactly one instance of each on screen, and the
- * alternative is four refs forwarded through props for a purely visual effect.
+ * alternative is refs forwarded through props for a purely visual effect.
+ *
+ * The crest is the only pair, and adding a second one is a design decision, not
+ * a tidy-up: every element listed here travels the full width of the stage
+ * during the handoff, and the header explains why the copy stopped doing that.
+ * `fade` and `scale` stay because the shape is the general one — a pair of
+ * type would still need `scale: false` (see `morphDelta`).
  */
 const PAIRS: Array<{ idle: string; reveal: string; scale: boolean; fade: boolean }> = [
   { idle: '.dbc-idle__crest', reveal: '.dbc-reveal__crest', scale: true, fade: false },
-  { idle: '.dbc-idle__clock-copy', reveal: '.dbc-reveal__text', scale: false, fade: true },
 ];
 
 export interface MorphOptions {
@@ -127,14 +140,14 @@ export function morphScreens(
     return played;
   }
 
-  // Which pairs are even on screen, decided BEFORE anything is cancelled. The
-  // idle board has three states, and two of them — "no draft board" and the
+  // Whether the pair is even on screen, decided BEFORE anything is cancelled.
+  // The idle board has three states, and two of them — "no draft board" and the
   // last pick of the night, when it flips to "Every pick is in" in the same
-  // commit as the reveal — render neither the crest nor the clock copy. There
-  // is nothing to travel between there, and the card must keep the entrance it
-  // would have had: cancelling `dbc-reveal-in` first meant the biggest reveal
-  // of the draft lost its own animation and got a flat fade in exchange for a
-  // morph that never ran.
+  // commit as the reveal — render no crest at all. There is nothing to travel
+  // between there, and the card must keep the entrance it would have had:
+  // cancelling `dbc-reveal-in` first meant the biggest reveal of the draft lost
+  // its own animation and got a flat fade in exchange for a morph that never
+  // ran.
   const movable = PAIRS.filter(
     (pair) => idleLayer.querySelector(pair.idle) && revealLayer.querySelector(pair.reveal)
   );
@@ -165,7 +178,7 @@ export function morphScreens(
     if (!idleEl || !revealEl) continue;
 
     // Cancel first, THEN measure: an element still running its own entrance
-    // (dbc-crest-in, dbc-text-in) would otherwise be measured mid-flight, and
+    // (dbc-crest-in) would otherwise be measured mid-flight, and
     // every box in this morph would be wrong by however far it had got. Both
     // the boxes AND the base transforms below have to come from a settled
     // element — see the `fill` note on the leaving animation for what happens
@@ -202,7 +215,7 @@ export function morphScreens(
         // `backwards`, not `both`: the arriving element holds the start pose
         // until the clock starts, then hands the property back to the
         // stylesheet at the end. `both` would pin a stale transform on an
-        // element that lives on screen for the next 18 seconds.
+        // element that lives on screen for the rest of the reveal's turn.
         { duration: durationMs, easing: MORPH_EASING, fill: 'backwards' }
       ),
       leaving.animate([{ transform: home(leavingBase) }, { transform: leavingAway }], {
