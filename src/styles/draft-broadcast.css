@@ -18,12 +18,9 @@
   width: 100%;
   /* One place to retune the idle↔reveal handoff. Long enough to read as a
      dissolve on a TV, short enough that a pick landing still feels immediate.
-     Every entrance on this screen (crest, cutout, copy, the card itself) is
-     scaled to this same 1.5× pass, so the handoff stays one movement rather
-     than a slow fade with quick furniture arriving on top of it.
-     `broadcast-morph.ts` READS this at runtime rather than repeating it, so the
-     crest's flight and the cross-fade under it can never drift apart — keep it
-     in ms or s, and keep it on `.dbc` where the island can find it. */
+     Every entrance on this screen (cutout, copy, the card itself) is scaled off
+     this same number, so the handoff stays one movement rather than a fade with
+     furniture arriving on top of it at a different speed. */
   --dbc-fade: 930ms;
   /* Fill what's left of the window under the site header, rather than a flat
      86vh that runs off the bottom once the header pushes the board down. The
@@ -78,13 +75,13 @@
 }
 
 /* The reveal comes in OVER the board, never under it — and it fades on the way
-   OUT only. Coming IN, the card's own opacity animation is the fade (see
-   `broadcast-morph.ts`), and a transition here would MULTIPLY with it: two
-   620ms curves compound to their square, so the board dipped toward black at
-   the midpoint of every reveal. The first reveal escaped it — a freshly
-   inserted element does not transition — which made it an "only after the
-   first one" difference nobody could diagnose from the room. `.is-hidden` is
-   two classes and still wins, so the way out is unaffected. */
+   OUT only. Coming IN, the card's own `dbc-reveal-in` opacity is the fade, and
+   a transition here would MULTIPLY with it: two curves of the same length
+   compound to their square, so the board dipped toward black at the midpoint of
+   every reveal. The first reveal escaped it — a freshly inserted element does
+   not transition — which made it an "only after the first one" difference
+   nobody could diagnose from the room. `.is-hidden` is two classes and still
+   wins, so the way out is unaffected. */
 .dbc__screen--reveal {
   z-index: 2;
   transition: none;
@@ -258,6 +255,17 @@
   user-select: none;
 }
 
+/* The whole card arrives as one object. This used to be CANCELLED on most
+   reveals in favour of a shared-element morph — the franchise crest measured on
+   both screens and flown from the idle board's lockup to the centre of this
+   card, with the layers cross-fading under it. It was cut (Brandon,
+   2026-08-28): a logo travelling the width of a 65" TV is a lot of movement to
+   spend on the frame where the room is trying to read a name, and the card
+   simply revealing says the same thing. `broadcast-morph.ts` and its tests went
+   with it. If a shared element is ever wanted back, the trap it kept falling
+   into is worth knowing: `fill: forwards` on the leaving element SURVIVES
+   cancel() in Chrome, so the next morph measures a stale box and the animation
+   silently stops. */
 @keyframes dbc-reveal-in {
   from { opacity: 0; transform: scale(1.04); }
   to { opacity: 1; transform: scale(1); }
@@ -389,13 +397,11 @@
   animation: dbc-model-in 1140ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-/* In from the RIGHT edge — the side he already lives on. The crest is flying to
-   the middle at the same time (see `broadcast-morph.ts`), so the player closing
-   in from the outside reads as the composite assembling around it, where the
-   old rise-from-below read as a card of separate parts fading up together.
-   Percent, not vw: this composes with the figure's own translateX and the
-   cutout is deliberately wider than its column, so a viewport unit here travels
-   a different visual distance on a TV than on a laptop. */
+/* In from the RIGHT edge — the side he already lives on — while the copy comes
+   in from the left, so the card closes on its own centre. Percent, not vw: this
+   composes with the figure's own translateX and the cutout is deliberately
+   wider than its column, so a viewport unit here travels a different visual
+   distance on a TV than on a laptop. */
 @keyframes dbc-model-in {
   from { opacity: 0; transform: translateX(38%) scale(0.96); }
   to { opacity: 1; transform: translateX(0) scale(1); }
@@ -545,9 +551,7 @@
 }
 
 /* In from the LEFT edge, mirroring the player. The card clips, so the block
-   starts off screen rather than showing itself parked in the margin. This used
-   to be a FLIP from the idle board's clock copy — see `broadcast-morph.ts` for
-   why the copy stopped travelling and the crest now moves alone. */
+   starts off screen rather than showing itself parked in the margin. */
 @keyframes dbc-text-in {
   from { opacity: 0; transform: translateX(-7vw); }
   to { opacity: 1; transform: translateX(0); }

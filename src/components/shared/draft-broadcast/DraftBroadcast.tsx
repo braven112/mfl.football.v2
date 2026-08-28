@@ -13,13 +13,13 @@
  *   reveal     → a selection just landed (the moment everyone looks up)
  *
  * The idle board and the reveal are LAYERS, not alternatives — see the render
- * at the bottom. Both stay mounted and cross-fade, and the crest and copy they
- * have in common travel between their two positions across that fade (see
- * `broadcast-morph.ts`), because a hard swap between them looked like somebody
- * changing the channel.
+ * at the bottom. Both stay mounted and cross-fade, because a hard swap between
+ * them looked like somebody changing the channel. The reveal arrives as ONE
+ * card (`dbc-reveal-in`); the crest used to fly between the two screens as a
+ * shared element and no longer does — see the note on that keyframe.
  */
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { DraftRoomPick, DraftRoomTeam, DraftStatusResponse } from '../../../types/draft-room';
 import type {
   BroadcastConference,
@@ -28,21 +28,8 @@ import type {
 } from '../../../types/draft-broadcast';
 import { collectFreshPicks } from '../../../utils/pick-reveal';
 import { applyRehearsal, findOnTheClock, playerMap, teamMap } from '../../../utils/draft-broadcast';
-import { morphScreens } from '../../../utils/broadcast-morph';
 import { BroadcastRevealCard } from './BroadcastRevealCard';
 import { OnTheClock } from './OnTheClock';
-
-/**
- * `useLayoutEffect` on the client, a no-op `useEffect` on the server.
- *
- * This island is `client:load`, so it IS rendered once on the server, and React
- * logs "useLayoutEffect does nothing on the server" for every layout effect it
- * meets there — once per request to the broadcast page. The morph genuinely
- * needs layout timing in the browser (it measures both screens before the
- * browser paints the new arrangement) and needs nothing at all on the server,
- * which is exactly what this alias says.
- */
-const useIsomorphicLayoutEffect = typeof document === 'undefined' ? useEffect : useLayoutEffect;
 
 /** Poll cadence. The draft room's 12s/30s is tuned for an EMAIL draft; a room
  *  full of people watching a TV notices a 30s lag between the pick landing on
@@ -59,18 +46,19 @@ const REVEAL_RUSH_MS = 6_000;
 /** Queue depth past which we switch to the rush duration to catch up. */
 const RUSH_THRESHOLD = 3;
 
-/** Rehearsal cadence — a pick every ~35s, so a dry run plays at draft pace
- *  and each reveal gets its full turn on screen rather than being rushed.
+/**
+ * Rehearsal cadence — 8 seconds of reveal, then 8 seconds of board, repeating.
  *
- *  Rehearsal deliberately does NOT reuse the live pair. Live, the idle board is
- *  what fills the real gaps between picks, so the reveal can afford to be long.
- *  In a dry run the step is the ONLY thing separating one pick from the next,
- *  and at 20s against an 18s hold the idle board flashed past in ~2s — the half
- *  of the screen you most need to look at while rehearsing was the half you
- *  never saw. A longer step and a shorter hold trade reveal time for idle time
- *  (~27s of board, vs ~2s) without touching draft night's timing. */
-const REHEARSE_STEP_MS = 35_000;
+ * Rehearsal deliberately does NOT reuse the live pair. Live, the idle board is
+ * what fills the real gaps between picks, so the reveal can afford to be long.
+ * In a dry run the step is the ONLY thing separating one pick from the next, so
+ * the two numbers below are not independent: the board gets STEP minus HOLD.
+ * At the original 20s step against an 18s hold that was ~2s, and the half of
+ * the screen you most need to watch while rehearsing was the half you never
+ * saw. Keep the step exactly twice the hold to keep the two screens even.
+ */
 const REHEARSE_REVEAL_MS = 8_000;
+const REHEARSE_STEP_MS = REHEARSE_REVEAL_MS * 2;
 
 interface Props {
   pageData: string;
@@ -319,43 +307,13 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
     }
   }, []);
 
-  // ── Morph between the two screens ──
-  // The cross-fade is CSS (`.dbc__screen`); this is the part that has to be
-  // measured, because the crest and the copy live in completely different boxes
-  // on the two screens and only the browser knows where. Runs on the ENTER /
-  // LEAVE edge only — `current` changing from one pick straight to the next
-  // (a stacked queue) is a reveal replacing a reveal, which keeps its own
-  // entrance animation and has nothing to travel between.
-  const idleLayerRef = useRef<HTMLDivElement>(null);
-  const revealLayerRef = useRef<HTMLDivElement>(null);
+  // ── Which screen is up ──
+  // The handoff is entirely CSS now: the layers cross-fade on `.dbc__screen`
+  // and the reveal plays its own `dbc-reveal-in`. There WAS a measured
+  // shared-element morph here (the crest flying between its two boxes, since
+  // only the browser knows where those are); it was cut for a plain card
+  // reveal, which is why nothing on this screen needs layout timing any more.
   const showingReveal = !!current;
-  /** Nothing to morph FROM on the first paint — the board simply arrives. */
-  const morphedOnceRef = useRef(false);
-
-  // Layout, not passive: this measures both screens and starts the animations
-  // before the browser paints the new arrangement. A plain effect paints the
-  // jump first and then animates away from it, which is the jump we are here to
-  // remove.
-  useIsomorphicLayoutEffect(() => {
-    if (!morphedOnceRef.current) {
-      morphedOnceRef.current = true;
-      return;
-    }
-    // Read the fade duration off the CSS custom property rather than repeating
-    // it here. One number, in the stylesheet, tuned where you can see it.
-    const root = rootRef.current;
-    const raw = root ? getComputedStyle(root).getPropertyValue('--dbc-fade').trim() : '';
-    const durationMs = raw.endsWith('ms')
-      ? parseFloat(raw)
-      : raw.endsWith('s')
-        ? parseFloat(raw) * 1000
-        : 930;
-
-    morphScreens(idleLayerRef.current, revealLayerRef.current, {
-      durationMs: Number.isFinite(durationMs) ? durationMs : 930,
-      toReveal: showingReveal,
-    });
-  }, [showingReveal]);
 
   const onTheClock = useMemo(() => findOnTheClock(picks), [picks]);
   const madeCount = useMemo(() => picks.filter((p) => p.playerId).length, [picks]);
@@ -405,11 +363,10 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
           conference switcher and rehearsal button out of the tab order and the
           accessibility tree — but only once the fade FINISHES. `inert` flips
           the moment the handoff starts, so nothing can be tabbed into during
-          the ~620ms the outgoing layer is still painted. Nothing here decides
+          the fade while the outgoing layer is still painted. Nothing here decides
           timing — the queue still does. */}
       <div
         className={`dbc__screen${current ? ' is-hidden' : ''}`}
-        ref={idleLayerRef}
         inert={showingReveal}
       >
         <OnTheClock
@@ -432,7 +389,6 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
       {shownReveal ? (
         <div
           className={`dbc__screen dbc__screen--reveal${current ? '' : ' is-hidden'}`}
-          ref={revealLayerRef}
           inert={!showingReveal}
         >
           <BroadcastRevealCard
