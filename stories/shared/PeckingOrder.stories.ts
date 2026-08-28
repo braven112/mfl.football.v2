@@ -1,6 +1,7 @@
 import PeckingOrderIssue from '../../src/components/shared/PeckingOrderIssue.astro';
-import { themeModes } from '../../.storybook/modes';
+import { themeModes, leagueModes } from '../../.storybook/modes';
 import issue from '../fixtures/pecking-order-issue.json';
+import aflIssue from '../fixtures/pecking-order-issue-afl.json';
 
 /**
  * A full Pecking Order issue — power rankings, awards and standings, rendered
@@ -33,14 +34,28 @@ export const TheLeague = {
 };
 
 /**
- * The AFL renders the same component with a 24-team field against
- * TheLeague's 16. Here it is the same fixture under the AFL skin, which is
- * what the theme × league matrix is for — the field-size difference lives in
- * the data, the skin difference lives in CSS, and only one of them should
- * change between these two stories.
+ * The AFL rendering the same component — a real AFL issue, not TheLeague's
+ * data wearing an AFL skin.
+ *
+ * This uses its OWN frozen fixture (data/afl-fantasy/pecking-order/2025-13),
+ * because `league` drives franchise lookups: feeding TheLeague's fixture with
+ * `league: 'afl'` resolves TheLeague's franchise ids against the AFL config
+ * and produces a hybrid that exists nowhere. With the right fixture this
+ * genuinely exercises the 24-team field against TheLeague's 16 — the field
+ * size lives in the data, the skin in CSS, and both differ correctly here.
  */
 export const Afl = {
-  args: { issue, league: 'afl-fantasy', variant: 'live' },
+  // 'afl', NOT 'afl-fantasy'. This repo has TWO slug vocabularies:
+  // `LeagueSlug` (types/nav) is 'theleague' | 'afl' | 'bb1' and is what this
+  // component takes; `CanonicalLeagueSlug` (config/leagues) is 'theleague' |
+  // 'afl-fantasy' | 'best-ball-1' and is what QuickLinks takes. Passing the
+  // wrong one does not error — CONFIGS[league] falls back to TheLeague, so the
+  // story silently rendered TheLeague's franchises and gave zero AFL coverage.
+  args: { issue: aflIssue, league: 'afl', variant: 'live' },
+  // AFL content needs the AFL skin. The default themeModes pins
+  // data-league="theleague", which would render AFL data under TheLeague's
+  // palette — the exact mismatch this story exists to catch.
+  parameters: { chromatic: { modes: leagueModes } },
 };
 
 /**
@@ -54,9 +69,12 @@ export const SampleVariant = {
 };
 
 /**
- * An issue with no awards at all. The awards block is built conditionally, so
- * this is a genuinely different render — and it is the shape of an early-week
- * issue before there is anything to award.
+ * An issue with no awards at all — the shape of an early week, before there is
+ * anything to hand out.
+ *
+ * Note the section wrapper and its heading render regardless; only the cards
+ * are conditional. So this pins "awards heading with nothing under it", which
+ * is worth seeing precisely because it may not be what anyone intended.
  */
 export const NoAwards = {
   args: {

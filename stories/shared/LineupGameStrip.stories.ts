@@ -1,5 +1,5 @@
 import LineupGameStrip from '../../src/components/shared/LineupGameStrip.astro';
-import { allModes } from '../../.storybook/modes';
+import { themeModes } from '../../.storybook/modes';
 import { singleGame, doubleHeader, bandOnly, finalScore } from '../fixtures/lineup-cards';
 
 /**
@@ -11,15 +11,20 @@ import { singleGame, doubleHeader, bandOnly, finalScore } from '../fixtures/line
  * degraded card, which in production only appears when nobody on either
  * roster has a usable cutout.
  *
- * Snapshotted in both leagues because both render it, and the panel accents
- * come from franchise colors passed in rather than from the theme.
+ * Snapshotted light + dark only. Both leagues render it, but the panel accents
+ * come from franchise colors passed in as args rather than from the skin, so
+ * there is no league axis for a mode to express.
  */
 export default {
   title: 'Shared/LineupGameStrip',
   component: LineupGameStrip,
   parameters: {
     layout: 'fullscreen',
-    chromatic: { modes: allModes },
+    // themeModes, NOT allModes. Both leagues render this, but the component's
+    // styles read no league-scoped token — panel accents come from franchise
+    // colors passed in as args, not from the skin — so an AFL snapshot would
+    // be pixel-identical. 10 snapshots a build, not 20.
+    chromatic: { modes: themeModes },
   },
 };
 

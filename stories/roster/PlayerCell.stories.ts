@@ -1,5 +1,5 @@
 import PlayerCell from '../../src/components/theleague/PlayerCell.astro';
-import { allModes } from '../../.storybook/modes';
+import { themeModes } from '../../.storybook/modes';
 
 /**
  * The player lockup used everywhere a roster row appears — both leagues'
@@ -28,9 +28,13 @@ export default {
   title: 'Roster/PlayerCell',
   component: PlayerCell,
   parameters: {
-    // Both leagues render this, and nothing in the args says which league is
-    // active — the surface it sits on is themed by CSS. Genuine 4-mode case.
-    chromatic: { modes: allModes },
+    // themeModes, NOT allModes. Both leagues render this component, but
+    // player-cell.css reads ZERO league-scoped tokens (verified: no
+    // `--league-accent`, no `data-league`), so an AFL snapshot is
+    // pixel-identical to TheLeague's. That is 16 snapshots a build buying
+    // nothing, and it contradicts this repo's own rule — modes are for axes
+    // the args cannot express, and here there is no such axis.
+    chromatic: { modes: themeModes },
   },
 };
 
@@ -62,9 +66,18 @@ export const TeamDefense = {
   args: { name: 'Bills, Buffalo', position: 'DEF', nflTeam: 'BUF', isLogoAvatar: true },
 };
 
-/** No headshot at all. The fallback must not collapse the lockup. */
+/**
+ * No headshot at all — the component falls back to `DEFAULT_HEADSHOT_URL`.
+ *
+ * NOT SNAPSHOTTED. That fallback is a live URL on the MFL photo host, and this
+ * file's own rule is that a visual suite never depends on a third party's CDN.
+ * Kept browsable in Storybook because the fallback layout is worth being able
+ * to look at; excluded from Chromatic because it cannot be captured
+ * deterministically without stubbing the constant.
+ */
 export const MissingHeadshot = {
   args: { name: 'Unknown Rookie', position: 'TE', nflTeam: 'LAR' },
+  parameters: { chromatic: { disableSnapshot: true } },
 };
 
 /**
@@ -97,6 +110,8 @@ export const NearBlackRaiders = {
   args: { name: 'Brock Bowers', position: 'TE', nflTeam: 'LV', headshot: FACE },
 };
 
-export const NearBlackJaguars = {
-  args: { name: 'Brian Thomas Jr.', position: 'WR', nflTeam: 'JAX', headshot: FACE },
-};
+// Deliberately five, not six. Jacksonville was here originally and is wrong:
+// JAX's primary is #006778, a mid teal that clears both luminance thresholds
+// and so never exercises the swap/lighten path this block guards. Five real
+// near-blacks are worth more than six with a passenger — TEN #0c2340,
+// PIT/NO/LV #101820, BAL #241773.

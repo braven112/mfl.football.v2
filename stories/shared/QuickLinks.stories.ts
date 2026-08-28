@@ -1,5 +1,5 @@
 import QuickLinks from '../../src/components/shared/hp-sections/QuickLinks.astro';
-import { themeModes } from '../../.storybook/modes';
+import { themeModes, leagueModes } from '../../.storybook/modes';
 
 /**
  * The homepage quick-links grid — one of the few components that is genuinely
@@ -34,18 +34,30 @@ export const TheLeagueSignedIn = {
 };
 
 /**
- * Logged out. `visibility: 'admin'` entries and any my-team links must drop
- * out — a guest seeing an owner-only link is a real bug, and it is invisible
- * on a page you are always signed into while developing.
+ * Logged out.
+ *
+ * Being precise about what this does and does not guard: admin filtering is
+ * auth-independent here, and `isAuthenticated` mainly affects ordering rather
+ * than removing entries. So this pins the guest ORDERING and layout, not an
+ * access-control rule. Do not read it as a permissions test.
  */
 export const TheLeagueGuest = {
   args: { league: 'theleague', isAuthenticated: false },
 };
 
+// The AFL pair carries the AFL skin. Default themeModes pins
+// data-league="theleague", which would have rendered AFL links under
+// TheLeague's palette and baselined the very mismatch this file claims to
+// catch. (Note QuickLinks takes CanonicalLeagueSlug — 'afl-fantasy' — while
+// PeckingOrderIssue takes the nav LeagueSlug 'afl'. Two vocabularies.)
+const aflModes = { parameters: { chromatic: { modes: leagueModes } } };
+
 export const AflSignedIn = {
   args: { league: 'afl-fantasy', isAuthenticated: true },
+  ...aflModes,
 };
 
 export const AflGuest = {
   args: { league: 'afl-fantasy', isAuthenticated: false },
+  ...aflModes,
 };
