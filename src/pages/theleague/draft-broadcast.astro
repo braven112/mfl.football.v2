@@ -1,0 +1,224 @@
+---
+/**
+ * TheLeague Draft Broadcast — the big board for the room.
+ *
+ * The rookie-draft twin of `/afl-fantasy/draft-broadcast`, and deliberately the
+ * SAME island: a laptop plugged into a TV, following MFL's own live draft room
+ * and throwing each selection on screen over the drafting franchise's colors.
+ * Owners still make their picks in MFL; this page only watches.
+ *
+ * DELIBERATELY NOT a variant of /theleague/draft-room — that page is an
+ * interactive tool (queue, chat, filters, submit-pick) built for one person at
+ * a laptop. This is a zero-input display read from ten feet away.
+ *
+ * Two things differ from the AFL board, and they are the whole diff:
+ *
+ *  1. ONE draft unit. The AFL drafts by CONFERENCE — two independent 108-pick
+ *     boards, hence its `?conference=` switcher. TheLeague drafts as a single
+ *     `LEAGUE` unit, so there is nothing to switch between and the switcher
+ *     hides itself (see OnTheClock's `conferences.length > 1` gate).
+ *  2. ROOKIES ONLY. Three rounds, 51 picks, and every one of the 2026 board's
+ *     51 selections was a rookie. That changes what "board rank" means — see
+ *     the offBoardIds note below.
+ */
+
+import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
+import DraftBroadcastIsland from '../../components/shared/draft-broadcast/DraftBroadcast';
+import leagueConfigData from '../../data/theleague.config.json';
+import { getLeagueBySlug } from '../../config/leagues';
+import { getCurrentLeagueYear } from '../../utils/league-year';
+import { buildDraftPlayers } from '../../utils/build-draft-players';
+import { getFranchiseBrand } from '../../utils/franchise-brand';
+import {
+  assignBoardRanks,
+  buildConferenceBoard,
+  enrichBroadcastPlayers,
+  findRehearsalYear,
+  loadConferenceKeepers,
+  trimToDraftable,
+} from '../../utils/draft-broadcast-server';
+import type {
+  BroadcastConference,
+  BroadcastPlayer,
+  DraftBroadcastPageData,
+} from '../../types/draft-broadcast';
+import type { DraftRoomTeam } from '../../types/draft-room';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import '../../styles/draft-broadcast.css';
+
+export const prerender = false;
+
+// League constants come from the registry — never literals (see
+// tests/league-literal-guard.test.ts).
+const league = getLeagueBySlug('theleague')!;
+
+// The rookie draft is roster-management-shaped, so it runs on the LEAGUE year
+// (Feb 14 rollover), not the season year. Same clock /theleague/draft-room
+// uses — picking the season clock here would show last year's board for
+// roughly six months of the calendar.
+const defaultYear = getCurrentLeagueYear();
+const yearParam = Astro.url.searchParams.get('year');
+const parsedYear = yearParam ? parseInt(yearParam, 10) : NaN;
+const leagueYear = Number.isFinite(parsedYear) ? parsedYear : defaultYear;
+
+// ── Board skeleton (all 51 slots, filled or not) ──
+// fs rather than import.meta.glob: globbing would compile every season of
+// draftResults into the server bundle to serve one. (The draft ROOM globs;
+// it can afford to, being a smaller payload per season. This page reads the
+// same feed for up to 12 seasons when hunting a rehearsal year.)
+function readDraftResults(year: number): any {
+  try {
+    return JSON.parse(
+      readFileSync(
+        join(process.cwd(), `${league.dataPath}/mfl-feeds/${year}/draftResults.json`),
+        'utf-8'
+      )
+    );
+  } catch {
+    return null;
+  }
+}
+
+const draftResultsRaw = readDraftResults(leagueYear);
+
+// The unit id comes off the feed rather than being assumed, with MFL's
+// single-unit default as the fallback for a season whose feed is missing.
+// A wrong unit here selects nothing and renders an empty board.
+const rawUnit = draftResultsRaw?.draftResults?.draftUnit;
+const feedUnit = (Array.isArray(rawUnit) ? rawUnit[0] : rawUnit)?.unit;
+const unit: string = feedUnit || 'LEAGUE';
+
+// One "conference" — the league itself. The island's board-selection concept is
+// per-unit, and TheLeague has exactly one, so this is a single-entry list and
+// every switcher built on it collapses to nothing.
+const conferences: BroadcastConference[] = [
+  { code: 'league', name: league.name, unit },
+];
+const conference = conferences[0];
+
+const board = buildConferenceBoard(draftResultsRaw, unit);
+const picks = board.picks;
+
+// ── Rehearsal ──
+// The real board is empty until draft night, so this is the only way to drive
+// the page end-to-end beforehand: point it at a COMPLETED season and let it
+// replay. `rehearse=N` means "start with N picks already made, then roll
+// forward one at a time" — the island does the rolling, through the SAME
+// ingest path a live poll uses, so a dry run exercises the real pipeline
+// rather than a mock of it. Clamped so a typo can't produce a negative board.
+const rehearseParam = Astro.url.searchParams.get('rehearse');
+const rehearseUpTo = rehearseParam ? Math.max(0, parseInt(rehearseParam, 10) || 0) : undefined;
+
+// ── Franchise brands ──
+// Colors through getFranchiseBrand (the same resolver /theleague/draft-room
+// uses, so the reveal splash matches the room), but `broadcastGradient` and the
+// GroupMe art are read straight off the config — the brand resolver carries
+// neither. These ride SERIALIZED on DraftRoomTeam: importing a brand util into
+// the island would ship the whole league config JSON to the client.
+const teams: DraftRoomTeam[] = (leagueConfigData.teams ?? []).map((team: any) => {
+  const brand = getFranchiseBrand(team.franchiseId);
+  return {
+    franchiseId: team.franchiseId,
+    name: team.name,
+    nameMedium: team.nameMedium || team.name,
+    nameShort: team.nameShort || team.name,
+    abbrev: team.abbrev || '',
+    // Prefer the GroupMe art for the same reason the AFL board does: `icon` is
+    // 100x100, but the crest renders at ~52vh (~560px on a 1080p TV), so the
+    // stock icon upscales more than 5x and visibly pixelates on the big screen.
+    // The GroupMe files are 400x400. Dark first — this card's background is
+    // always dark (see toBroadcastColor).
+    icon: team.groupMeDark || team.groupMe || team.icon || '',
+    colorPrimary: brand.colorPrimary,
+    colorSecondary: brand.colorSecondary,
+    broadcastGradient: team.broadcastGradient,
+  };
+});
+
+// ── Player pool ──
+// The FULL draftable pool ships, not just rookies, for the reason spelled out
+// on trimToDraftable: a pick of someone who isn't in the shipped pool reveals
+// as a blank card, on a 65" screen, in front of the league. The draft is
+// rookies-only by rule, but "by rule" is not a guarantee worth a blank card.
+// No viewerFranchiseId: RSP is licensed content and this screen is shown to a
+// room full of people. adpSource defaults to 'dynasty', which is correct here —
+// TheLeague is a contract dynasty league.
+const allPlayers = buildDraftPlayers(leagueYear) as BroadcastPlayer[];
+
+const enriched = enrichBroadcastPlayers(allPlayers, {
+  dataPath: league.dataPath,
+  year: leagueYear,
+});
+
+const boardPlayerIds = new Set(picks.map((p) => p.playerId).filter(Boolean));
+
+// ── Board rank ──
+// "Board rank" is a player's slot in the pool the room was actually drafting
+// from, so for a ROOKIES-ONLY draft the veterans have to come out — ranking a
+// rookie against every unrostered dynasty veteran makes every pick in the
+// class read as a massive reach. Two populations are off the board:
+//
+//   1. Anyone rostered (minus the players already drafted tonight — MFL adds
+//      each pick to the drafting franchise's roster as it lands, so a plain
+//      roster read mid-draft would count tonight's picks as veterans and
+//      shrink the pool under the board).
+//   2. Every non-rookie, rostered or not.
+//
+// Rookie status is read off the pool already built above: buildDraftPlayers
+// stamps `isRookie` using the very predicate its own rookieOnly filter applies,
+// so asking it a second time re-derives a flag that is already on these
+// objects. That is not merely redundant — `loadRawPlayers` is uncached (unlike
+// getPlayerMap / loadCollegeMap), so a second call re-reads and re-parses the
+// 1.38 MB players.json on EVERY SSR request to this page.
+const allFranchiseIds = new Set<string>(
+  (leagueConfigData.teams ?? []).map((t: any) => t.franchiseId)
+);
+const rosteredIds = loadConferenceKeepers(
+  league.dataPath,
+  leagueYear,
+  allFranchiseIds,
+  boardPlayerIds
+);
+const offBoardIds = new Set<string>(rosteredIds);
+for (const p of enriched) {
+  if (!p.isRookie) offBoardIds.add(p.id);
+}
+
+const ranked = assignBoardRanks(enriched, offBoardIds);
+const players = trimToDraftable(ranked, boardPlayerIds);
+
+// Which season the "Rehearse" link points at. Resolved from the feeds (see
+// findRehearsalYear) rather than assumed, so the link is either correct or
+// absent — never a board that renders empty. Anchored to defaultYear, NOT
+// leagueYear: "most recent finished season" is a property of today, not of
+// whatever season is currently on screen. Using leagueYear would walk the
+// candidates backwards on every hop.
+const rehearsalYears: Record<string, number> = {};
+const rehearsalYear = findRehearsalYear(league.dataPath, defaultYear, unit);
+if (rehearsalYear !== undefined) rehearsalYears[conference.code] = rehearsalYear;
+
+const pageData: DraftBroadcastPageData = {
+  leagueYear,
+  conference,
+  totalRounds: board.totalRounds,
+  picksPerRound: board.picksPerRound,
+  teams,
+  picks,
+  players,
+  leagueId: league.id,
+  mflHost: league.mflHost,
+  rehearseUpTo,
+  rehearsalYears,
+};
+
+const title = `Rookie Draft Board | ${league.name}`;
+---
+
+<TheLeagueLayout title={title} hideMobileNavIcons>
+  <DraftBroadcastIsland
+    client:load
+    pageData={JSON.stringify(pageData)}
+    conferences={JSON.stringify(conferences)}
+  />
+</TheLeagueLayout>

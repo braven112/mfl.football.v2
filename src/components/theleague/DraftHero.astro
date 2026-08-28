@@ -47,6 +47,13 @@ const summary = live
 
 interface QuickLink { label: string; href: string; icon: string; external: boolean; }
 const quickLinks: QuickLink[] = [
+  // The TV board, and ONLY once picks are actually being made: before the draft
+  // starts it is 51 empty slots, which is why the pre-draft panel points at the
+  // order instead. Owners still pick in MFL (the CTA above) — this is the
+  // screen the room watches.
+  ...(live
+    ? [{ label: 'Draft broadcast', href: r('/theleague/draft-broadcast'), icon: 'scoreboard-2', external: false }]
+    : []),
   { label: 'Draft order', href: r(`/theleague/draft-predictor?view=history&year=${leagueYear}&team=all`), icon: 'standings-2', external: false },
   { label: 'Draft results', href: r('/theleague/draft-room'), icon: 'check', external: false },
   { label: 'Future picks', href: `${mflBase}&O=100`, icon: 'calendar', external: true },

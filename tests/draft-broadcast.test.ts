@@ -670,7 +670,7 @@ describe('idle screen and reveal card share one colour treatment', () => {
   // ones, so a light franchise flashed washed-out, then deep and saturated a
   // second later. Both call toBroadcastPair now; this pins that neither can
   // quietly go back to reading colorPrimary/colorSecondary directly.
-  const read = (f: string) => readFileSync(`src/components/afl/draft-broadcast/${f}`, 'utf-8');
+  const read = (f: string) => readFileSync(`src/components/shared/draft-broadcast/${f}`, 'utf-8');
 
   /** Source with comments removed — the first version of this guard matched
    *  `toBroadcastPair` in the explanatory comment sitting directly above the
@@ -756,7 +756,7 @@ describe('exit-full-screen chip hides on hover-capable devices only', () => {
   // two failures.
   const css = readFileSync('src/styles/draft-broadcast.css', 'utf-8');
   const tsx = readFileSync(
-    'src/components/afl/draft-broadcast/DraftBroadcast.tsx',
+    'src/components/shared/draft-broadcast/DraftBroadcast.tsx',
     'utf-8'
   );
 
@@ -880,5 +880,54 @@ describe('exit-full-screen chip hides on hover-capable devices only', () => {
       'an ::before on the chip is part of ITS hit area — use the zone wrapper'
     ).toBe(false);
     expect(tsx).not.toMatch(/dbc__fullscreen-zone[^>]*onClick/);
+  });
+});
+
+describe('the board serves single-unit leagues too', () => {
+  /**
+   * The broadcast started as an AFL page, where the league drafts by CONFERENCE
+   * — two independent boards, hence `?conference=`. TheLeague drafts as ONE
+   * `LEAGUE` unit, so everything built around switching between boards has to
+   * collapse rather than render a lone dead control pointing at the board the
+   * viewer is already on.
+   */
+  const onTheClock = readFileSync(
+    'src/components/shared/draft-broadcast/OnTheClock.tsx',
+    'utf-8'
+  );
+
+  it('the conference switcher is gated on there being more than one', () => {
+    expect(onTheClock).toMatch(/conferences\.length > 1 &&\s*\n?\s*conferences\.map/);
+  });
+
+  it('both league pages exist and share the one island', () => {
+    for (const page of [
+      'src/pages/afl-fantasy/draft-broadcast.astro',
+      'src/pages/theleague/draft-broadcast.astro',
+    ]) {
+      const src = readFileSync(page, 'utf-8');
+      expect(src, `${page} must import the shared island`).toMatch(
+        /components\/shared\/draft-broadcast\/DraftBroadcast/
+      );
+    }
+  });
+
+  it('TheLeague page ranks its board against ROOKIES, not every free agent', () => {
+    // A rookies-only draft ranked against the whole unrostered dynasty pool
+    // makes every pick in the class read as a massive reach — 1.01 came back
+    // as board rank #300-something. Non-rookies have to join the off-board set.
+    const src = readFileSync('src/pages/theleague/draft-broadcast.astro', 'utf-8');
+    expect(src).toMatch(/if \(!p\.isRookie\) offBoardIds\.add/);
+    expect(src).toMatch(/assignBoardRanks\(enriched,\s*offBoardIds\)/);
+  });
+
+  it('builds the player pool exactly ONCE per request', () => {
+    // `loadRawPlayers` is uncached, so every buildDraftPlayers call re-reads and
+    // re-parses the 1.38 MB players.json. A second call to recompute rookie
+    // status paid that on every SSR request for a flag the first call already
+    // stamped on each player (`isRookie`, same predicate).
+    const src = readFileSync('src/pages/theleague/draft-broadcast.astro', 'utf-8');
+    const calls = src.match(/buildDraftPlayers\(/g) ?? [];
+    expect(calls.length, 'one buildDraftPlayers call per request, not two').toBe(1);
   });
 });

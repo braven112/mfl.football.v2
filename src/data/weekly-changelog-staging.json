@@ -256,6 +256,14 @@
       "impact": "user",
       "area": "other",
       "league": "afl"
+    },
+    {
+      "date": "2026-08-28",
+      "type": "bug-fix",
+      "summary": "The homepage now gets you to whichever conference board is actually drafting. The hero leads with your own conference, and the two drafts run on different days — so on American League draft Saturday a National League owner's homepage showed their own draft counting down to tomorrow, with no way through to the AL board that was live at that moment. A second link now appears on the hero for any conference currently drafting, marked live, and disappears again once that draft is done. If it's your own conference on the clock, the main button already goes there and you don't get a duplicate.",
+      "impact": "user",
+      "area": "draft",
+      "league": "afl"
     }
   ]
 }

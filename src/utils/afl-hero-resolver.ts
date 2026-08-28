@@ -37,6 +37,14 @@ import { randomHeroPlayer } from './hero-players';
 /** How long a fresh What's New entry stays in the hero. */
 const FEATURE_HERO_DAYS = 7;
 
+/** A secondary hero link — rendered smaller, next to the primary CTA. */
+export interface HeroSecondaryLink {
+  label: string;
+  href: string;
+  /** Renders a live dot (plus an SR-only "live now") ahead of the label. */
+  live?: boolean;
+}
+
 /** Visual props passed straight to AflEventHero. */
 export interface EventHeroView {
   pill: string;
@@ -46,6 +54,15 @@ export interface EventHeroView {
   link?: string;
   linkLabel?: string;
   isExternal?: boolean;
+  /**
+   * Extra links rendered beside the primary CTA. Only the conference drafts
+   * populate this today: the hero leads with the VIEWER'S OWN conference, so
+   * without a second link an NL owner has no route to the AL board while the
+   * AL is actually drafting — and the two conferences draft on different days.
+   * Attached post-resolve in pickLeadCalendarEvent, never by a view builder:
+   * a builder only sees its own event and can't know the sibling's live state.
+   */
+  secondaryLinks?: HeroSecondaryLink[];
   icon?: string;
   badge?: string;
   /** Dark-mode variant of `badge` — required whenever `badge` is set. */
@@ -158,6 +175,13 @@ const GLOW_GREEN = 'rgba(46,135,67,.55)';
 const GLOW_AMBER = 'rgba(217,119,6,.55)';
 const GLOW_NAVY = 'rgba(28,73,124,.55)';
 
+/**
+ * The conference big board. `?conference=` is REQUIRED on every link: the page
+ * falls back to the first conference (the AL) when the param is missing, so a
+ * bare path silently sends National League owners to the American League board.
+ */
+const AFL_BROADCAST_PATH = '/afl-fantasy/draft-broadcast';
+
 // ── Per-event view configs ───────────────────────────────────────────────────
 
 interface ViewContext {
@@ -219,7 +243,7 @@ const EVENT_VIEW: Record<string, ViewBuilder> = {
       // board is what the room is watching. Conference is pinned to the AL so
       // the link lands on the right one of the two independent boards.
       link: live
-        ? '/afl-fantasy/draft-broadcast?conference=00'
+        ? `${AFL_BROADCAST_PATH}?conference=00`
         : '/afl-fantasy/draft-predictor',
       linkLabel: live ? 'Open the Draft Board' : 'View Draft Order',
       icon: 'draft-podium',
@@ -247,7 +271,7 @@ const EVENT_VIEW: Record<string, ViewBuilder> = {
       // Same as the AL view: the order is official pre-draft, and once picks
       // are live the board is the destination. conference=01 is the NL board.
       link: live
-        ? '/afl-fantasy/draft-broadcast?conference=01'
+        ? `${AFL_BROADCAST_PATH}?conference=01`
         : '/afl-fantasy/draft-predictor',
       linkLabel: live ? 'Watch the Board' : 'View Draft Order',
       icon: 'draft-podium',
@@ -575,9 +599,12 @@ interface LeadPick {
   event: ResolvedLeagueEvent;
   view: EventHeroView;
   priority: 'P0' | 'P1';
-  conferenceDraft?: AflHeroState extends { kind: 'calendar-event' }
-    ? AflHeroState['conferenceDraft']
-    : never;
+  // Extract, not a bare conditional: `AflHeroState extends {kind:'calendar-event'}`
+  // asks whether the WHOLE union is that member, which is false, so the old
+  // form silently resolved to `never` — every read of `.al`/`.nl` off this
+  // field was a type error, and the assignment below only type-checked because
+  // nothing consumed it yet.
+  conferenceDraft?: Extract<AflHeroState, { kind: 'calendar-event' }>['conferenceDraft'];
 }
 
 /** Per-event lead-up window override (days before startDate). Falls back to calendar's urgencyDays. */
@@ -671,6 +698,31 @@ function pickLeadCalendarEvent(
         userConference: ctx.userConferenceId,
       };
     }
+  }
+
+  // Route to whichever conference board is actually LIVE. The hero leads with
+  // the viewer's OWN conference, and the AL (Sat) and NL (Sun) draft on
+  // different days — so on AL draft day an NL owner leads with a not-yet-live
+  // NL card whose CTA is the draft order, and the live AL board is unreachable
+  // from the homepage. Only live boards are offered: a board for a draft that
+  // hasn't started is 108 empty slots, which is why the pre-draft CTA points at
+  // the order instead.
+  //
+  // Deduped against the primary CTA — when the viewer's own conference is live
+  // the CTA already IS that board, and a secondary link repeating it is noise.
+  if (conferenceDraft) {
+    const live = [
+      { code: '00', label: 'AL', state: conferenceDraft.al },
+      { code: '01', label: 'NL', state: conferenceDraft.nl },
+    ].filter((c) => c.state.live);
+    const secondary = live
+      .map((c) => ({
+        label: `${c.label} Draft Board`,
+        href: `${AFL_BROADCAST_PATH}?conference=${c.code}`,
+        live: true,
+      }))
+      .filter((l) => l.href !== view.link);
+    if (secondary.length > 0) view.secondaryLinks = secondary;
   }
 
   return { event: lead, view, priority, conferenceDraft };

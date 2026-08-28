@@ -1,27 +1,54 @@
-# AFL Draft Broadcast — the TV big board
+# Draft Broadcast — the TV big board
 
 ## Context
 
-`/afl-fantasy/draft-broadcast` (Aug 2026). A laptop plugged into a TV on draft
-night: owners keep picking in MFL's own live draft room, and this page follows
-along and throws each selection on screen. Zero interaction, read from ten feet.
+`/afl-fantasy/draft-broadcast` (Aug 2026), then `/theleague/draft-broadcast`
+(Aug 2026). A laptop plugged into a TV on draft night: owners keep picking in
+MFL's own live draft room, and this page follows along and throws each
+selection on screen. Zero interaction, read from ten feet.
 
 Deliberately NOT a variant of `/theleague/draft-room`. That page is an
 interactive tool (queue, chat, filters, submit); this is a display. They share
 the DATA layer — `buildDraftPlayers`, `pick-reveal.ts`, `/api/draft/status` —
 and nothing else.
 
+**Two leagues, ONE island.** The AFL drafts by CONFERENCE (two independent
+108-pick boards, hence `?conference=`); TheLeague drafts as a single `LEAGUE`
+unit. Everything built around switching boards is gated on
+`conferences.length > 1`, so the single-unit league gets no dead switcher —
+`tests/draft-broadcast.test.ts` pins that gate. Each league keeps its OWN thin
+page (feeds, franchise brands and the keeper/off-board rule differ); only the
+island and the two utils are shared.
+
 ## Key files
 
 | File | Role |
 |------|------|
-| `src/pages/afl-fantasy/draft-broadcast.astro` | SSR: board skeleton, brands, player pool |
-| `src/components/afl/draft-broadcast/DraftBroadcast.tsx` | Poll → diff → queue → reveal |
-| `src/components/afl/draft-broadcast/BroadcastRevealCard.tsx` | The reveal, TV scale |
+| `src/pages/afl-fantasy/draft-broadcast.astro` | SSR (AFL): per-conference board, brands, pool |
+| `src/pages/theleague/draft-broadcast.astro` | SSR (TheLeague): single-unit rookie board |
+| `src/components/shared/draft-broadcast/DraftBroadcast.tsx` | Poll → diff → queue → reveal |
+| `src/components/shared/draft-broadcast/BroadcastRevealCard.tsx` | The reveal, TV scale |
 | `src/utils/draft-broadcast.ts` | Pure: best-available, on-the-clock, rehearsal |
 | `src/utils/draft-broadcast-server.ts` | Keepers, board ranks, feed joins |
 
 ## Insights
+
+### Board rank must be scoped to the pool the room is actually drafting from
+
+The AFL learned this as a keeper problem (below). TheLeague's rookie draft is
+the same lesson wearing different clothes: it is **rookies only** — all 51 of
+the 2026 board's picks were `status: 'R'` — so ranking a rookie against every
+unrostered dynasty asset put the 1.01 somewhere in the 300s and made the entire
+class read as a reach. TheLeague's page adds every NON-ROOKIE to the off-board
+set alongside the rostered players, which is what makes `#1` mean "first name
+off the rookie board".
+
+The rookie set comes from `buildDraftPlayers({ rookieOnly: true, enrich: false })`
+rather than a re-derived "what counts as a rookie" check — one definition, and
+`enrich: false` keeps the second pass cheap. Note the page still SHIPS the full
+trimmed pool (not just rookies): a pick of someone outside the shipped pool
+reveals as a blank card on a 65" screen, and "rookies only by rule" is not a
+guarantee worth that.
 
 ### The AFL is a keeper league, and ADP does not survive that
 

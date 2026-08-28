@@ -119,9 +119,33 @@ const CAPTURE_PATHS = {
   // contract half of the change (salary + years) as well as the owner strip;
   // the AFL card has no contract UI at all.
   'free-agents-rostered-by': '/theleague/players',
+  // Single-league entry, but its link is the league-neutral bare
+  // `/draft-broadcast`, which only routes on TheLeague's own apex host. The
+  // REHEARSAL url is deliberate: the live board is whatever state the real
+  // draft is in — for most of the year "Draft complete", which is a dull and
+  // uninformative launch image. Replaying a finished season puts an actual
+  // pick reveal (the whole subject of the page) on screen. The page hook below
+  // waits for one and strips the rehearsal badge so the shot is not captioned
+  // as a dry run.
+  'theleague-draft-broadcast':
+    '/theleague/draft-broadcast?conference=league&year=2025&rehearse=0',
 };
 
 const PAGE_HOOKS = {
+  'theleague-draft-broadcast': async (page) => {
+    // The board opens on the idle screen and reveals its first pick one
+    // rehearsal step later, so a blind capture shoots "who's on the clock"
+    // rather than the reveal the article is about. Wait for a card, then drop
+    // the rehearsal badge — it is true of the capture, not of the feature.
+    await page.waitForSelector('.dbc-reveal', { timeout: 45000 }).catch(() => {});
+    await page.evaluate(() => {
+      document
+        .querySelectorAll('.dbc-reveal__rehearsal-flag, .dbc__fullscreen')
+        .forEach((el) => el.remove());
+    });
+    await page.waitForTimeout(800); // let the reveal's entrance animation land
+  },
+
   'free-agents-rostered-by': async (page) => {
     // The whole subject is the MODAL of a ROSTERED player, and the page opens
     // with rostered players filtered out — a blind capture shoots the free
