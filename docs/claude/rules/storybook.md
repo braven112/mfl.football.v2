@@ -363,3 +363,30 @@ args says which league is rendering — `LineupGameStrip` and the loading tier.
 There the four modes are four genuinely different renders.
 
 Rule: **modes are for axes the args cannot express.**
+
+## What is reachable from `rosters.astro`
+
+The roster page is the biggest risk surface in the repo (~12,500 lines in
+TheLeague, ~1,000 of the type-error baseline) and it is NOT storyable itself.
+What it is built from splits cleanly:
+
+| From the roster page | Storyable? |
+|---|---|
+| `PlayerCell` | **Yes** — richly prop-driven, both leagues, storied |
+| `PlayerDetailsModal` (1,444 lines) | Shell only. Props are `class` + `hideContract`; everything visible is injected by client JS through `initPlayerModalTrigger`. A story renders empty chrome. |
+| `PlayerInjuryModal` | Same — `class` only |
+| `ContractDeclarationModal`, `CutdownPlanPanel`, chart cards | TheLeague-only; not yet assessed |
+
+**`PlayerCell` is where the safety actually is**, because it carries a bug
+class the docs already record: the avatar backdrop must come from
+`getPlayerAvatarBackground` / `getPlayerAvatarBorder`, never a raw
+`getNflTeamColors` primary — about a third of the NFL wears a near-black
+primary and a dark-jerseyed headshot on it disappears in dark mode (Cam Ward
+on Titans navy, July 2026). Six near-black teams are pinned as standing
+guards. Verified working: TEN's navy `#0C2340` renders an anchor of
+`rgb(138,184,232)`, BAL's near-black purple `rgb(128,120,174)`.
+
+To story the modals properly they would need their content extracted into a
+prop-driven component, with the current shell reduced to a wrapper. That is a
+refactor, not a story — and it is the same finding as the season heroes: a
+component you cannot render from props is a component you cannot reuse.

@@ -28,6 +28,7 @@ import '../src/styles/utilities.css';
  */
 import '../src/styles/playoff-round-hero.css';
 import '../src/styles/loading.css';
+import '../src/styles/player-cell.css';
 
 /**
  * Theme and league are BOTH pure CSS in this codebase:
