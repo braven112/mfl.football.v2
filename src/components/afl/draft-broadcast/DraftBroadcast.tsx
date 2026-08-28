@@ -13,11 +13,13 @@
  *   reveal     → a selection just landed (the moment everyone looks up)
  *
  * The idle board and the reveal are LAYERS, not alternatives — see the render
- * at the bottom. Both stay mounted and cross-fade, because a hard swap between
- * them looked like somebody changing the channel.
+ * at the bottom. Both stay mounted and cross-fade, and the crest and copy they
+ * have in common travel between their two positions across that fade (see
+ * `broadcast-morph.ts`), because a hard swap between them looked like somebody
+ * changing the channel.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { DraftRoomPick, DraftRoomTeam, DraftStatusResponse } from '../../../types/draft-room';
 import type {
   BroadcastConference,
@@ -26,6 +28,7 @@ import type {
 } from '../../../types/draft-broadcast';
 import { collectFreshPicks } from '../../../utils/pick-reveal';
 import { applyRehearsal, findOnTheClock, playerMap, teamMap } from '../../../utils/draft-broadcast';
+import { morphScreens } from '../../../utils/broadcast-morph';
 import { BroadcastRevealCard } from './BroadcastRevealCard';
 import { OnTheClock } from './OnTheClock';
 
@@ -290,6 +293,46 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
     }
   }, []);
 
+  // ── Morph between the two screens ──
+  // The cross-fade is CSS (`.dbc__screen`); this is the part that has to be
+  // measured, because the crest and the copy live in completely different boxes
+  // on the two screens and only the browser knows where. Runs on the ENTER /
+  // LEAVE edge only — `current` changing from one pick straight to the next
+  // (a stacked queue) is a reveal replacing a reveal, which keeps its own
+  // entrance animation and has nothing to travel between.
+  const idleLayerRef = useRef<HTMLDivElement>(null);
+  const revealLayerRef = useRef<HTMLDivElement>(null);
+  const showingReveal = !!current;
+  /** Nothing to morph FROM on the first paint — the board simply arrives. */
+  const morphedOnceRef = useRef(false);
+
+  // Layout, not passive: this measures both screens and starts the animations
+  // before the browser paints the new arrangement. A plain effect paints the
+  // jump first and then animates away from it, which is the jump we are here to
+  // remove. `useLayoutEffect` is safe under `client:load` despite the SSR pass —
+  // effects don't run on the server, and this file already only renders on the
+  // client path for anything that matters.
+  useLayoutEffect(() => {
+    if (!morphedOnceRef.current) {
+      morphedOnceRef.current = true;
+      return;
+    }
+    // Read the fade duration off the CSS custom property rather than repeating
+    // it here. One number, in the stylesheet, tuned where you can see it.
+    const root = rootRef.current;
+    const raw = root ? getComputedStyle(root).getPropertyValue('--dbc-fade').trim() : '';
+    const durationMs = raw.endsWith('ms')
+      ? parseFloat(raw)
+      : raw.endsWith('s')
+        ? parseFloat(raw) * 1000
+        : 620;
+
+    morphScreens(idleLayerRef.current, revealLayerRef.current, {
+      durationMs: Number.isFinite(durationMs) ? durationMs : 620,
+      toReveal: showingReveal,
+    });
+  }, [showingReveal]);
+
   const onTheClock = useMemo(() => findOnTheClock(picks), [picks]);
   const madeCount = useMemo(() => picks.filter((p) => p.playerId).length, [picks]);
 
@@ -328,7 +371,7 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
           conference switcher and rehearsal button out of the tab order while a
           reveal owns the TV; opacity alone would leave them focusable behind
           it. Nothing here decides timing — the queue still does. */}
-      <div className={`dbc__screen${current ? ' is-hidden' : ''}`}>
+      <div className={`dbc__screen${current ? ' is-hidden' : ''}`} ref={idleLayerRef}>
         <OnTheClock
           conference={data.conference}
           conferences={allConferences}
@@ -347,7 +390,10 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
       </div>
 
       {shownReveal ? (
-        <div className={`dbc__screen dbc__screen--reveal${current ? '' : ' is-hidden'}`}>
+        <div
+          className={`dbc__screen dbc__screen--reveal${current ? '' : ' is-hidden'}`}
+          ref={revealLayerRef}
+        >
           <BroadcastRevealCard
             key={shownReveal.key}
             pick={shownReveal.pick}

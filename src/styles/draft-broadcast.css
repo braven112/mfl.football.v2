@@ -16,9 +16,12 @@
 .dbc {
   position: relative;
   width: 100%;
-  /* One place to retune the idle↔reveal cross-fade. Long enough to read as a
-     dissolve on a TV, short enough that a pick landing still feels immediate. */
-  --dbc-fade: 520ms;
+  /* One place to retune the idle↔reveal handoff. Long enough to read as a
+     dissolve on a TV, short enough that a pick landing still feels immediate.
+     `broadcast-morph.ts` READS this at runtime rather than repeating it, so the
+     crest's flight and the cross-fade under it can never drift apart — keep it
+     in ms or s, and keep it on `.dbc` where the island can find it. */
+  --dbc-fade: 620ms;
   /* Fill what's left of the window under the site header, rather than a flat
      86vh that runs off the bottom once the header pushes the board down. The
      floor keeps it usable if the header ever grows. */

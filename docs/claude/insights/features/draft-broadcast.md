@@ -301,6 +301,52 @@ Two things that are load-bearing about how that is wired:
   transition on `.dbc__screen` alone leaves the delayed flip in place, and the
   outgoing layer stays clickable for half a second after it vanishes.
 
+### The crest and the copy MOVE between the screens; a dissolve alone throws that away
+
+Both screens show the same two things — the franchise crest and a block of copy
+beside it — in different places: the idle board holds them as a side-by-side
+lockup mid-stage, the reveal puts the crest dead centre behind everything and
+the copy over on the left. Cross-fading alone made the room watch a logo vanish
+and another appear, when what is actually happening is that the same two
+elements are being rearranged. `src/utils/broadcast-morph.ts` FLIPs each pair
+across the fade (Brandon, Aug 28 2026: "the logo shifts to the background
+centred and the text slides left and updates to the reveal text").
+
+Measured on a 1920x1080 board: the crest travels (767, 426) at 367px wide →
+(960, 613) at 734px; the copy slides from cx 1169 to cx 690. Both directions
+run, so the board shrinks the crest back into the lockup when the reveal ends.
+
+What it cost to get right:
+
+- **Never `fill: 'forwards'`.** The obvious way to write the LEAVING half is to
+  pin it where it flew to — its layer is about to be hidden anyway. That
+  transform **survives `cancel()`** in Chrome: the finished animation stops
+  being listed by `getAnimations()` while still applying, so the next morph
+  measured the idle crest sitting on the reveal's box, computed a zero delta,
+  and the board silently stopped animating back. The leaving element now has no
+  fill at all and snaps home the instant it lands — invisible, because the
+  morph and the layer's opacity transition are the same duration and start
+  together. `tests/broadcast-morph.test.ts` pins the ban.
+- **Cancel, then measure, then read the base transform.** All three, in that
+  order. The reveal crest is centred with `translate(-50%, -50%)`, and a WAAPI
+  keyframe REPLACES the transform property rather than adding to it — animating
+  a bare `translate()` drops the centring and throws the crest half its own
+  width off in both directions. The base is read as the computed matrix so a CSS
+  change can't desync from the module, which is exactly why it must be read off
+  a settled element.
+- **`dbc-reveal-in` is cancelled on the way in.** It scales the whole card
+  1.04 → 1, and a crest measured inside a parent still growing under it sets off
+  from the wrong box and drifts the whole flight. The card gets a straight
+  opacity fade instead; the motion is the crest's job.
+- **Artwork scales, type does not.** The copy block goes from a 2.5vh team name
+  to a 9vh player name; scaling between them reads as a zoom effect rather than
+  as the same words moving. It translates and cross-fades its contents.
+- **The two elements in a pair are usually different franchises.** The board
+  behind a reveal has already advanced to whoever is on the clock next, so the
+  mark that flies to centre is not the one that lands there. Dissolving them
+  along one path is what makes that read as "the mark becomes the drafting
+  team's" instead of as a mistake.
+
 ### The two broadcast screens are a PAIR, and they compose colour differently
 
 The board has two full-screen surfaces that alternate every ~20 seconds:
