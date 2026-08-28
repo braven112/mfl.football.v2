@@ -1,5 +1,27 @@
 [
   {
+    "id": "theleague-draft-broadcast",
+    "date": "2026-08-28",
+    "category": "new-page",
+    "icon": "draft-podium",
+    "leagues": [
+      "theleague"
+    ],
+    "title": "Rookie Draft Night Gets A Television",
+    "link": "/draft-broadcast",
+    "linkLabel": "Open the big board",
+    "summary": "Plug a laptop into the TV and let the room watch the rookie draft happen. Keep making your picks in MFL exactly like always — this board just watches the same draft you are in, and puts every selection on screen seconds later: the player, the crest of the team that took him, and how far down the board he was when somebody reached.",
+    "description": [
+      "Three rounds, fifty-one picks, and for years the only way to know what went was to watch somebody's face change. The picks live inside MFL on sixteen separate laptops, which is fine for drafting and useless for a room. So here is <a href=\"/draft-broadcast\">the Draft Broadcast</a> — a page with exactly one job, which is to be plugged into a television and looked at.",
+      "Nothing about how you draft changes. Keep making picks in MFL. This board just watches the same draft you are in: a few seconds after a selection lands, the player takes over the whole screen in his new franchise's colors, crest behind him, position and college and bye week underneath. Between picks it tells the room who is on the clock and who is up next, and it keeps the screen awake so the TV does not go dark in the middle of round two.",
+      "The line that will start arguments is <strong>board rank</strong> — where the guy sat in the rookie class when his name got called. Taken well ahead of it and the screen says so. Still the top name available and it says <strong>Best Available</strong>, which is the polite way of announcing that everyone else left him there. It is ranked against the rookie class specifically, not against every free agent in the league, so 1.01 reads like 1.01 instead of like the 300th-best asset on the board.",
+      "It is live during the draft, and there is a rehearse mode that replays last year's draft pick by pick — worth running once before the night, if only to see the 1.01 land again. Once the picks are in, the <a href=\"/draft-room\">draft room</a> still holds the full board and the <a href=\"/draft-predictor\">draft order</a> still holds next year's."
+    ],
+    "image": "theleague-draft-broadcast.webp",
+    "imageAlt": "The Draft Broadcast page for The League, filling a widescreen display. A pick reveal is on screen: the eyebrow line reads “WITH THE 1.01, COWBOY UP SELECT” above the player name “Ashton Jeanty” in large condensed type, then a row giving his position RB, his college Boise State, and BYE 8. A green “BEST AVAILABLE” badge sits below, and under it “BOARD RANK” over a large “#1”. The drafting franchise’s crest is watermarked large behind the text over a deep red-to-navy gradient in that franchise’s colors, with a faint “1.01” numeral across the lower left. A “FULL SCREEN” button sits in the top right corner.",
+    "excludeFromHero": true
+  },
+  {
     "id": "my-draft-list",
     "date": "2026-08-27",
     "category": "new-feature",
@@ -48,24 +70,24 @@
     "id": "playoff-performance",
     "date": "2026-08-26",
     "category": "new-page",
-    "icon": "draft-podium",
+    "icon": "playoff",
     "leagues": [
-      "afl"
+      "theleague"
     ],
-    "title": "Put The Draft On The Big Screen",
-    "link": "/draft-broadcast",
-    "linkLabel": "Open the big board",
-    "summary": "Plug a laptop into the TV and let the room watch the draft happen. Every pick made in MFL lands on screen seconds later — the player, his new team's colors and crest, and exactly how far down the board he was when somebody grabbed him.",
+    "title": "The #1 Seed Is A Trap",
+    "link": "/playoff-performance",
+    "linkLabel": "See the damage",
+    "summary": "Nineteen seasons of evidence that the best regular season buys you almost nothing. The #1 seed has won the title 4 times out of 19. Pulling a champion's name out of a hat hits about 6%. That's the entire edge for a first-round bye and home-field-that-isn't: fifteen points of probability, and a lot of teams who found out the hard way.",
     "description": [
-      "Draft night has always had the same problem: the picks happen inside MFL, on twelve separate laptops, and the room has no idea what just went until somebody says it out loud. So here is <a href=\"/draft-broadcast\">the Draft Broadcast</a> — a page with one job, which is to be plugged into a TV and looked at.",
-      "Keep making your picks in MFL exactly like always. Nothing about that changes. This board just watches the same draft you're in and reacts to it: a few seconds after a selection lands, the player takes over the whole screen in the colors of the team that just took him, with his crest behind him. Position, pro team, bye week, what he's projected for.",
-      "And the line the room is going to argue about: where he actually stood when his name got called. <strong>BEST AVAILABLE</strong> means nobody left on the board was rated higher — that one turns green. <strong>14th best available</strong> means thirteen better men were sitting right there. The board doesn't call it a steal and it doesn't call it a reach; it tells you the number and lets twelve people draw their own conclusions, loudly. The one thing it will not do is measure you against a draft you aren't in — with seven <a href=\"/keepers\">keepers</a> per team the good players are gone before 1.01 is even called, so this counts only the men who were genuinely available to you.",
-      "Between picks the board keeps the room oriented — who's on the clock, what just came off, who's warming up next, in the order <a href=\"/draft-predictor\">the draft order</a> set months ago. Because the AFL drafts by conference, there's a board for each: open the American League or the National League, whichever one is actually running that night, and flip between them at the bottom. Hit Full Screen and the site disappears entirely.",
-      "Built for Saturday. Everything on it comes off the same MFL draft you're already in, so there is nothing to set up — open it and it follows along."
+      "Every year somebody clinches the top seed in November and starts talking like the trophy is in the mail. <a href=\"/playoff-performance\">Playoff Performance</a> is the page that shuts that down. Every completed season from 2007 to 2025, the #1 seed next to the team that actually won it, and a running tally of how rarely those are the same name.",
+      "Four for nineteen. Twenty-one percent. And it is worse than the number looks, because three of those four came in a row — 2022, 2023, 2024 — which means that across the first fifteen years of this league the top seed won exactly once. Then 2025 arrived and the 15-3 Wabbits handed the thing to the Computer Jocks, who were nobody's idea of a favorite.",
+      "The best exhibit is still 2018. The Wascawy Wabbits went 16-0. Sixteen and zero. They did not win the championship. They did not reach the final. Under Siege did, and Under Siege had spent the regular season at 8-8 — go pull it up on the <a href=\"/playoffs\">playoff bracket</a> if you don't believe it.",
+      "The secondary view asks whether all-play — every team measured against every other team's score, week by week, which strips out whether your schedule was kind — knows something the <a href=\"/standings\">standings</a> don't. Barely. The all-play leader has won 5 of 19, and across 9 of the 19 seasons the all-play leader and the top seed were the same team anyway. Being demonstrably the best is worth about five extra points of title odds over being lucky, which is not the answer anybody wants.",
+      "One note on how the #1 seed is decided here, because it matters and it bit us: we read it off the bracket — whoever took the first-round bye — not off the <a href=\"/standings\">standings</a> page. Those disagree. In 2008 and 2010 the team sitting in row one of the standings was not the team that got the bye. The games know who was seeded first; the table doesn't always."
     ],
-    "excludeFromHero": true,
-    "image": "afl-draft-broadcast.webp",
-    "imageAlt": "The AFL Draft Broadcast board on a TV, showing which franchise is on the clock over its team colors and crest, with the last four picks and the next three teams up."
+    "image": "playoff-performance.webp",
+    "imageAlt": "The Playoff Performance page for The League in dark mode, headed “Does the best regular season win anything?” over the line “19 completed seasons, 2007–2025. The #1 seed has won the title 4 of 19 times. Picking a champion at random out of a hat would hit about 6% of the time.” Below sit four cards: “#1 seed wins the title” showing 21%, 4 of 19, with a note that it reached the final 7 of 19; “All-play leader wins the title” showing 26%, 5 of 19, reaching the final 9 of 19; “Same team held both” showing 9 of 19, the #1 seed also being the all-play leader; and “Random baseline” showing 6%, one team in 16. A “Season by season” table follows, noting all-play is cut at the end of the regular season — week 14 in recent years, week 13 before 2021 — with columns for Year, #1 seed, All-play leader, Champion and Result. The 2025 row lists the Wascawy Wabbits at 15-3 as top seed, Da Dangsters leading all-play at .729, Computer Jocks as champion, and a grey “neither” tag. The 2024, 2023 and 2022 rows each show one team sweeping all three columns — Wascawy Wabbits at 14-4 and .714, Fire Ready Aim at 15-3 and .762, and Vitside Mafia at 15-3 and .762 — every one of them carrying both a blue “#1 seed” tag and an “all-play” tag.",
+    "excludeFromHero": true
   },
   {
     "id": "free-agents-rostered-by",
@@ -872,28 +894,6 @@
     "excludeFromHero": true,
     "leagues": [
       "afl"
-    ]
-  },
-  {
-    "id": "weekly-rollup-2026-08-10",
-    "date": "2026-08-10",
-    "title": "Weekly Fixes & Polish (Aug 8-10)",
-    "summary": "7 bug fixes and style improvements across rosters, what's new, other, design system & theming, and more.",
-    "description": [
-      "This week's 7 bug fixes and polish improvements touched the following areas of the site:",
-      "<strong>Rosters</strong> — The great team-logo blackout is over — for good this time. Certain NFL crests (looking at you, Tampa Bay and New Orleans) kept rendering as broken-image icons on roster and player pages, and every fix seemed to wear off by morning. Turns out the logo files had never actually shipped with the site, and once they did, a 4-hour cache kept serving phones the old broken answer. The logos are now committed, guard-tested in CI (including old-timey codes like OAK and STL on historical rosters), and if one ever fails to load anyway, it now quietly disappears instead of leaving that sad torn-photo icon.",
-      "<strong>What's New</strong> — What's New cards stopped stuttering. A fresh article was tagged 'NEW PAGE' and then, an inch to the right, 'NEW' again in green — same word, two different meanings — and the green one was floating as bare text right where the screenshot ends, so on a purple thumbnail you couldn't read it at all. It's now a proper chip that says 'JUST IN', which is what it always meant: published since you last stopped by. Dark mode finally reached the What's New pages. The category tags — New Page, Enhancement, Bug Fix — were painted in their daylight colors no matter which theme you were in, so the same article looked bright and legible on the homepage and went muddy the moment you opened the full list or clicked through to read it. All three surfaces now share one palette, and the filter buttons across the top got a contrast bump while we were in there.",
-      "<strong>Other</strong> — The Franchise History cards traded their full-width banner art for the crest-style icon lockup the AFL franchises page uses — same career records and award pills, tidier cards, and both leagues' franchise pages now share one design language.",
-      "<strong>Design System & Theming</strong> — NFL team and college logos no longer show up as broken-image icons in dark mode on spotty connections — the site now serves its own copies of the dark logo sets instead of leaning on ESPN's servers every time a page renders.",
-      "<strong>Free Agents</strong> — The Filters drawer on the Free Agents page opens all the way on a phone now. It used to stop dead partway through Weight, with Experience, Draft Round, the two include-toggles and the Clear Filters button all trapped behind the player table — the panel had a fixed height that only fit the desktop layout. It now sizes itself to whatever's inside it, on both leagues' pages. Free Agents no longer lies to you after you wander off and come back. Filter for 28-year-old Chiefs, go look at the standings, hit back — the table was still showing you those four guys, and the Filters button still claimed two filters were on, but the panel itself read empty with nothing to clear. The page now re-reads its own controls when you return, so the list matches what the filters say. Same fix retires two dead buttons on the way: the first click on Filters, and (in the AFL) the conference switcher, both used to do nothing at all on your first try after coming back."
-    ],
-    "category": "bug-fix",
-    "link": "/theleague/whats-new",
-    "linkLabel": "See all updates",
-    "icon": "wrench",
-    "excludeFromHero": true,
-    "leagues": [
-      "theleague"
     ]
   }
 ]

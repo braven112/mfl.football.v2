@@ -163,8 +163,9 @@ export function OnTheClock({
             <p className="dbc-idle__kicker">Nothing to show yet</p>
             <h1 className="dbc-idle__team">No draft board</h1>
             <p className="dbc-idle__pick">
-              MFL hasn't published this conference's board — check the
-              conference below.
+              {conferences.length > 1
+                ? "MFL hasn't published this conference's board — check the conference below."
+                : "MFL hasn't published the draft board yet."}
             </p>
           </>
         ) : complete ? (
@@ -308,18 +309,22 @@ export function OnTheClock({
 
       {conferences.length > 1 || rehearsing || ownRehearsalYear !== undefined ? (
         <footer className="dbc-idle__footer">
-          {conferences.map((c) => (
-            <a
-              key={c.code}
-              className={`dbc-idle__conf${c.code === conference.code ? ' is-active' : ''}`}
-              /* Stays a rehearsal across a conference switch — but on THAT
-                 conference's own most recent finished season, not this one's.
-                 A conference that has never finished one goes live instead. */
-              href={modeHref(c.code, rehearsing ? rehearsalYears?.[c.code] : undefined)}
-            >
-              {c.name}
-            </a>
-          ))}
+          {/* A league that drafts as ONE unit (TheLeague's rookie draft) has
+              nothing to switch to — a lone pill of the board you are already
+              on is a dead control. The AFL's two conferences still get theirs. */}
+          {conferences.length > 1 &&
+            conferences.map((c) => (
+              <a
+                key={c.code}
+                className={`dbc-idle__conf${c.code === conference.code ? ' is-active' : ''}`}
+                /* Stays a rehearsal across a conference switch — but on THAT
+                   conference's own most recent finished season, not this one's.
+                   A conference that has never finished one goes live instead. */
+                href={modeHref(c.code, rehearsing ? rehearsalYears?.[c.code] : undefined)}
+              >
+                {c.name}
+              </a>
+            ))}
 
           {rehearsing ? (
             <>

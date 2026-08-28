@@ -156,3 +156,70 @@ describe('conference-aware draft lead', () => {
     expect(leadFor(new Date(2026, 6, 20, 12, 0), '01')).toBe('afl-nl-draft');
   });
 });
+
+describe('live conference board links', () => {
+  /**
+   * The hero leads with the viewer's OWN conference, and the two conferences
+   * draft on different DAYS. So on AL draft day an NL owner leads with a
+   * not-yet-live NL card whose CTA points at the draft order — and the AL
+   * board, which is live right now, was unreachable from the homepage. The
+   * lead pick attaches a secondary link to every live board, deduped against
+   * the primary CTA.
+   */
+  const viewFor = (referenceDate: Date, userConferenceId?: '00' | '01') => {
+    const state = resolveAflHeroState({ referenceDate, whatsNewEntries: [], userConferenceId });
+    if (state.kind !== 'calendar-event') {
+      throw new Error(`expected calendar-event state, got ${state.kind}`);
+    }
+    return state.view;
+  };
+
+  const alDraftDay = new Date(2026, 7, 29, 13, 0); // Sat Aug 29, 1 PM — AL live
+  const nlDraftDay = new Date(2026, 7, 30, 12, 0); // Sun Aug 30, noon — NL live
+  const leadUp = new Date(2026, 7, 26, 12, 0); // Wed Aug 26 — neither live
+
+  it('AL draft day: an NL owner gets the live AL board as a secondary link', () => {
+    const view = viewFor(alDraftDay, '01');
+    // Their own (not-yet-live) conference still owns the CTA.
+    expect(view.link).toBe('/afl-fantasy/draft-predictor');
+    expect(view.secondaryLinks).toEqual([
+      { label: 'AL Draft Board', href: '/afl-fantasy/draft-broadcast?conference=00', live: true },
+    ]);
+  });
+
+  it('AL draft day: an AL owner gets no secondary link — the CTA already is that board', () => {
+    const view = viewFor(alDraftDay, '00');
+    expect(view.link).toBe('/afl-fantasy/draft-broadcast?conference=00');
+    expect(view.secondaryLinks).toBeUndefined();
+  });
+
+  it('NL draft day: an AL owner reaches the live NL board', () => {
+    const view = viewFor(nlDraftDay, '00');
+    const hrefs = [view.link, ...(view.secondaryLinks ?? []).map((l) => l.href)];
+    expect(hrefs).toContain('/afl-fantasy/draft-broadcast?conference=01');
+    // Never offer a board for a draft that has not started — it is 108 empty slots.
+    expect(hrefs).not.toContain('/afl-fantasy/draft-broadcast?conference=00');
+  });
+
+  it('lead-up week: no board links at all, for either conference', () => {
+    for (const conf of ['00', '01'] as const) {
+      const view = viewFor(leadUp, conf);
+      expect(view.secondaryLinks).toBeUndefined();
+      expect(view.link).toBe('/afl-fantasy/draft-predictor');
+    }
+  });
+
+  it('every board link carries ?conference= — a bare path silently serves the AL', () => {
+    for (const ref of [alDraftDay, nlDraftDay]) {
+      for (const conf of [undefined, '00', '01'] as const) {
+        const view = viewFor(ref, conf);
+        const links = [view.link, ...(view.secondaryLinks ?? []).map((l) => l.href)];
+        for (const href of links) {
+          if (href?.includes('/draft-broadcast')) {
+            expect(href).toMatch(/\?conference=(00|01)$/);
+          }
+        }
+      }
+    }
+  });
+});

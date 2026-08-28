@@ -15,6 +15,7 @@
 import { spriteUrl } from '../../utils/sprite-url';
 import ThemeImage from '../ThemeImage.astro';
 import type { HeroModel } from '../../utils/hero-casting';
+import type { HeroSecondaryLink } from '../../utils/afl-hero-resolver';
 import { getNflTeamColors, hexToRgba } from '../../utils/nfl-team-colors';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
 import { LEAGUES } from '../../config/leagues';
@@ -30,6 +31,8 @@ interface Props {
   link?: string;
   linkLabel?: string;
   isExternal?: boolean;
+  /** Extra links rendered after the CTA, e.g. the other conference's live draft board. */
+  secondaryLinks?: HeroSecondaryLink[];
   /** Sprite glyph id WITHOUT the "icon-" prefix (e.g. "draft-podium"). Ignored when `badge` is set. */
   icon?: string;
   /** Optional tier/conference badge svg (e.g. /assets/afl/premier.svg). Replaces the icon chip. */
@@ -70,6 +73,7 @@ const {
   link,
   linkLabel = 'Learn more',
   isExternal = false,
+  secondaryLinks = [],
   icon,
   badge,
   badgeDark,
@@ -104,7 +108,7 @@ const shotFrameUrl = link
   : aflLeague.domains[0];
 
 const hasCount = countValue !== undefined && countValue !== null && countValue !== '';
-const hasFooter = hasCount || !!link;
+const hasFooter = hasCount || !!link || secondaryLinks.length > 0;
 // Compose an SR-friendly label for the count chip — value + label read as one phrase.
 const countAriaLabel = hasCount
   ? countLabel
@@ -229,7 +233,7 @@ const countAriaLabel = hasCount
             {countLabel && <span class="afl-event-hero__count-label" aria-hidden="true">{countLabel}</span>}
           </div>
         )}
-        {hasCount && link && <span class="afl-event-hero__divider" aria-hidden="true"></span>}
+        {hasCount && (link || secondaryLinks.length > 0) && <span class="afl-event-hero__divider" aria-hidden="true"></span>}
         {link && (
           <a
             class="afl-event-hero__cta"
@@ -241,6 +245,18 @@ const countAriaLabel = hasCount
             <span class="afl-event-hero__cta-arrow" aria-hidden="true">→</span>
           </a>
         )}
+        {secondaryLinks.map((secondary) => (
+          <a class="afl-event-hero__cta afl-event-hero__cta--ghost" href={secondary.href}>
+            {secondary.live && (
+              <>
+                <span class="afl-event-hero__live-dot" aria-hidden="true"></span>
+                <span class="visually-hidden">Live now: </span>
+              </>
+            )}
+            {secondary.label}
+            <span class="afl-event-hero__cta-arrow" aria-hidden="true">→</span>
+          </a>
+        ))}
       </div>
     )}
   </div>
@@ -650,6 +666,40 @@ const countAriaLabel = hasCount
   }
   .afl-event-hero__cta:hover .afl-event-hero__cta-arrow {
     transform: translateX(2px);
+  }
+
+  /* Ghost CTA — the OTHER conference's live board. Outlined rather than solid
+     so it never competes with the primary CTA: the viewer's own conference is
+     still the headline, this is the room next door. The card is navy in both
+     themes, so these white-alpha values need no theme split. */
+  .afl-event-hero__cta--ghost {
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid var(--ev-divider);
+    color: var(--ev-ink);
+  }
+  .afl-event-hero__cta--ghost:hover {
+    background: rgba(255, 255, 255, 0.14);
+    filter: none;
+    box-shadow: none;
+  }
+  .afl-event-hero__live-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--ev-accent-ink);
+    box-shadow: 0 0 0 0 var(--ev-accent-ink);
+    animation: afl-event-hero-pulse 1.8s ease-out infinite;
+  }
+  @keyframes afl-event-hero-pulse {
+    70% { box-shadow: 0 0 0 0.375rem rgba(255, 255, 255, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+  }
+  /* A pulsing dot is decoration, not information — the SR label carries the
+     meaning, so honoring the OS setting costs nothing. */
+  @media (prefers-reduced-motion: reduce) {
+    .afl-event-hero__live-dot {
+      animation: none;
+    }
   }
 
   /* ── Responsive ── */
