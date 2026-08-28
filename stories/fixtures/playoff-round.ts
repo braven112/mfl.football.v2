@@ -7,9 +7,15 @@
  * none of which are reachable — or stable — from a story.
  *
  * Franchise names, colors, crests and icons are the real TheLeague values from
- * src/data/theleague.config.json so the branded panels render truthfully.
- * Headshots are real ESPN cutout URLs; they are the one external dependency
- * here and the first thing to stub if snapshots turn flaky.
+ * src/data/theleague.config.json so the branded panels render truthfully —
+ * they resolve from public/ via the `staticDirs` entry in main.ts.
+ *
+ * Headshots are an INLINE data-URI silhouette, not the real ESPN cutout URLs
+ * they started as. A visual regression suite must never depend on a third
+ * party's CDN: Chromatic waits for network idle before capturing, so a slow or
+ * blocked a.espncdn.com response turns every playoff-hero snapshot into a
+ * timeout, and an intermittent one turns them into false diffs. The silhouette
+ * is deterministic and offline, which is the whole point.
  *
  * These fixtures live outside src/ deliberately — see .storybook/main.ts for
  * the three repo guards that scan src/ and would fail on the franchise ids and
@@ -56,7 +62,7 @@ const PIGSKINS: TeamSeed = {
     name: 'Ja’Marr Chase',
     position: 'WR',
     nflTeam: 'CIN',
-    headshot: 'https://a.espncdn.com/i/headshots/nfl/players/full/4362628.png',
+    headshot: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyMDAgMjAwJz48cmVjdCB3aWR0aD0nMjAwJyBoZWlnaHQ9JzIwMCcgZmlsbD0nbm9uZScvPjxjaXJjbGUgY3g9JzEwMCcgY3k9JzcyJyByPSc0MicgZmlsbD0nI2NmZDRkYScvPjxwYXRoIGQ9J00yMCAyMDBjMC00NiAzNi03NCA4MC03NHM4MCAyOCA4MCA3NHonIGZpbGw9JyNjZmQ0ZGEnLz48L3N2Zz4=',
   },
   isUser: true,
 };
@@ -78,7 +84,7 @@ const DANGSTERS: TeamSeed = {
     name: 'Justin Jefferson',
     position: 'WR',
     nflTeam: 'MIN',
-    headshot: 'https://a.espncdn.com/i/headshots/nfl/players/full/4262921.png',
+    headshot: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyMDAgMjAwJz48cmVjdCB3aWR0aD0nMjAwJyBoZWlnaHQ9JzIwMCcgZmlsbD0nbm9uZScvPjxjaXJjbGUgY3g9JzEwMCcgY3k9JzcyJyByPSc0MicgZmlsbD0nI2NmZDRkYScvPjxwYXRoIGQ9J00yMCAyMDBjMC00NiAzNi03NCA4MC03NHM4MCAyOCA4MCA3NHonIGZpbGw9JyNjZmQ0ZGEnLz48L3N2Zz4=',
   },
 };
 
@@ -99,7 +105,7 @@ const MAVERICK: TeamSeed = {
     name: 'Patrick Mahomes',
     position: 'QB',
     nflTeam: 'KC',
-    headshot: 'https://a.espncdn.com/i/headshots/nfl/players/full/3139477.png',
+    headshot: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyMDAgMjAwJz48cmVjdCB3aWR0aD0nMjAwJyBoZWlnaHQ9JzIwMCcgZmlsbD0nbm9uZScvPjxjaXJjbGUgY3g9JzEwMCcgY3k9JzcyJyByPSc0MicgZmlsbD0nI2NmZDRkYScvPjxwYXRoIGQ9J00yMCAyMDBjMC00NiAzNi03NCA4MC03NHM4MCAyOCA4MCA3NHonIGZpbGw9JyNjZmQ0ZGEnLz48L3N2Zz4=',
   },
 };
 
@@ -120,7 +126,7 @@ const DEAD_CAP: TeamSeed = {
     name: 'Christian McCaffrey',
     position: 'RB',
     nflTeam: 'SF',
-    headshot: 'https://a.espncdn.com/i/headshots/nfl/players/full/3117251.png',
+    headshot: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyMDAgMjAwJz48cmVjdCB3aWR0aD0nMjAwJyBoZWlnaHQ9JzIwMCcgZmlsbD0nbm9uZScvPjxjaXJjbGUgY3g9JzEwMCcgY3k9JzcyJyByPSc0MicgZmlsbD0nI2NmZDRkYScvPjxwYXRoIGQ9J00yMCAyMDBjMC00NiAzNi03NCA4MC03NHM4MCAyOCA4MCA3NHonIGZpbGw9JyNjZmQ0ZGEnLz48L3N2Zz4=',
   },
 };
 
@@ -141,7 +147,7 @@ const NINJAS: TeamSeed = {
     name: 'Travis Kelce',
     position: 'TE',
     nflTeam: 'KC',
-    headshot: 'https://a.espncdn.com/i/headshots/nfl/players/full/15847.png',
+    headshot: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyMDAgMjAwJz48cmVjdCB3aWR0aD0nMjAwJyBoZWlnaHQ9JzIwMCcgZmlsbD0nbm9uZScvPjxjaXJjbGUgY3g9JzEwMCcgY3k9JzcyJyByPSc0MicgZmlsbD0nI2NmZDRkYScvPjxwYXRoIGQ9J00yMCAyMDBjMC00NiAzNi03NCA4MC03NHM4MCAyOCA4MCA3NHonIGZpbGw9JyNjZmQ0ZGEnLz48L3N2Zz4=',
   },
 };
 
@@ -162,7 +168,7 @@ const MUSIC_CITY: TeamSeed = {
     name: 'Bijan Robinson',
     position: 'RB',
     nflTeam: 'ATL',
-    headshot: 'https://a.espncdn.com/i/headshots/nfl/players/full/4430807.png',
+    headshot: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyMDAgMjAwJz48cmVjdCB3aWR0aD0nMjAwJyBoZWlnaHQ9JzIwMCcgZmlsbD0nbm9uZScvPjxjaXJjbGUgY3g9JzEwMCcgY3k9JzcyJyByPSc0MicgZmlsbD0nI2NmZDRkYScvPjxwYXRoIGQ9J00yMCAyMDBjMC00NiAzNi03NCA4MC03NHM4MCAyOCA4MCA3NHonIGZpbGw9JyNjZmQ0ZGEnLz48L3N2Zz4=',
   },
 };
 

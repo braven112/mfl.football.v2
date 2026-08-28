@@ -31,6 +31,12 @@ jobs:
   chromatic:
     name: Visual tests
     runs-on: ubuntu-latest
+    # The first attempt sat in the Chromatic step for 40+ minutes with no way
+    # to read its logs (GitHub only serves them once a job ends). Checkout and
+    # install take ~25s combined, so anything past this is hung, not slow —
+    # fail fast and surface the log instead of holding a runner for the 6-hour
+    # default.
+    timeout-minutes: 25
     steps:
       - name: Checkout
         uses: actions/checkout@v6
