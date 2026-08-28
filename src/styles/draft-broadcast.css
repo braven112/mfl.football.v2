@@ -124,7 +124,15 @@
   display: flex;
   align-items: center;
   overflow: hidden;
-  background: linear-gradient(115deg, var(--dbc-primary, #10161f) 0%, var(--dbc-secondary, #1c497c) 100%);
+  /* `--dbc-gradient` is the franchise's own `broadcastGradient` from league
+     config, painted verbatim. The fallback is the derived pair — the exact
+     gradient this card painted before the config field existed — so a franchise
+     with no entry, or the NFL-colour path when there is no team at all, is
+     unchanged. */
+  background: var(
+    --dbc-gradient,
+    linear-gradient(115deg, var(--dbc-primary, #10161f) 0%, var(--dbc-secondary, #1c497c) 100%)
+  );
   animation: dbc-reveal-in 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 

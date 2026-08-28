@@ -119,6 +119,10 @@ const teams: DraftRoomTeam[] = conferenceTeams.map((t: any) => ({
   icon: t.groupMeDark || t.groupMe || t.icon || '',
   colorPrimary: t.colorPrimary,
   colorSecondary: t.colorSecondary,
+  // The franchise's hand-authored card background. Rides serialized like the
+  // colors above, for the same reason: the island must not import the league
+  // config to look one string up.
+  broadcastGradient: t.broadcastGradient,
 }));
 
 // ── Player pool ──

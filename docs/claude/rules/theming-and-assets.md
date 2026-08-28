@@ -76,6 +76,52 @@ Pecking Order shipped invisible rank numbers in dark mode (August 2026).
   falls under 3:1 in either theme, or if the layout drops `TeamAccentStyles`.
 
 
+
+## `broadcastGradient` — the one franchise color that is NOT derived
+
+Every franchise in `afl.config.json` and `theleague.config.json` carries a
+`broadcastGradient`: a RAW CSS `background` string that the AFL draft
+broadcast's reveal card paints **verbatim**, sitting in config next to `icon`
+and the name fields. It is the deliberate exception to everything above — no
+accent token, no 3:1 floor, no `toBroadcastPair` saturation. The card owns a 65"
+screen for ~18 seconds, so the look is a design decision, not a computed one.
+
+- **36 of the 40 entries were GENERATED**, not designed — each is exactly the
+  gradient `toBroadcastPair(colorPrimary, colorSecondary)` already produced,
+  written down, so introducing the field changed nothing for them.
+  `tests/broadcast-gradient-config.test.ts` re-derives them and fails on drift,
+  with a `HAND_AUTHORED` exempt set holding the four entries that ARE designed
+  — Midwestside and Vitside, and note that is TWO franchises but FOUR entries,
+  since each appears in both leagues (Aug 2026). Hand-authoring another means
+  adding it to that set, not deleting the check.
+- **Raw CSS means nothing else can catch a typo.** A stray `;` doesn't look
+  wrong — it ends the inline declaration and the card renders with NO background
+  at all, on the TV, in front of the league. `isSafeCssGradient`
+  (`src/utils/draft-broadcast.ts`) is the gate: a charset with no `:` `;` `{` `}`
+  or quotes, balanced parens, and EVERY comma-separated layer must be a gradient
+  function — not just the first. That last part is not pedantry: anchoring the
+  check to the head of the string let `linear-gradient(…), lnear-gradient(…)`
+  validate, and one transposed letter in a second layer blanks the card exactly
+  like the `;` does. A value that fails is IGNORED, not thrown on — the card
+  falls back to the derived pair.
+- **It drives the reveal card only. The on-the-clock screen does NOT read it**,
+  and the two can therefore disagree. `.dbc-idle` composes its own
+  `linear-gradient(150deg, secondary 0%, primary 130%)` from the pair `#638`
+  routed through `resolveSplashColors` + `toBroadcastPair` — a different angle,
+  reversed stop order, and a stop that runs off the canvas at 130%. One config
+  string cannot express both compositions, so pointing `.dbc-idle` at
+  `broadcastGradient` would repaint all 36 generated franchises' idle screens
+  and undo `#638`. Vitside happens to agree across both screens; **Midwestside
+  does not** — its idle screen is gold-dominant while its reveal card is
+  near-black. Closing that gap needs a second config field (`idleGradient`) or
+  a deliberate decision to re-treat every idle screen. Do not "fix" it by
+  wiring this field into `.dbc-idle`.
+- **`.dbc-reveal__wash` still paints on top** — 58% black at the left edge, 45%
+  at the right. Author around it: a bottom-right accent loses ~45% of its
+  luminance, so a corner hue has to be a genuinely bright one to still read as
+  itself from ten feet. Midwestside's `#ffd400` corner lands ~`#8c7100` on
+  screen, which is the intended "just a bit of gold".
+
 ## Player headshots on team colors — use the shared avatar helpers
 
 A player headshot on a team-color backdrop must go through
