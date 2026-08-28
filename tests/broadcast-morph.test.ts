@@ -85,7 +85,7 @@ describe('the two traps this morph fell into', () => {
   const morph = readFileSync('src/utils/broadcast-morph.ts', 'utf-8');
   const css = readFileSync('src/styles/draft-broadcast.css', 'utf-8');
   const island = readFileSync(
-    'src/components/afl/draft-broadcast/DraftBroadcast.tsx',
+    'src/components/shared/draft-broadcast/DraftBroadcast.tsx',
     'utf-8'
   );
   /** Source with comments stripped — the notes below describe the traps by
