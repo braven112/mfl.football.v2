@@ -358,10 +358,18 @@
   padding: 0 4vw;
 }
 
-/* Copy left, cutout right. Done with `order` rather than by reordering the
-   DOM so a screen reader still reaches the pick and the player's name before
-   the purely decorative cutout. Portrait inherits these untouched: in a single
-   column the same order reads as the STACK — copy on top, player under it. */
+/* Copy left, cutout right, done with `order`. Portrait inherits these
+   untouched: in a single column the same order reads as the STACK — copy on
+   top, player under it.
+   An earlier version of this comment claimed the `order` was an accessibility
+   measure, "so a screen reader still reaches the pick and the player's name
+   before the cutout". It is not, and the code says the opposite:
+   `BroadcastRevealCard.tsx` authors the FIGURE first, so `order` is what makes
+   the visual order diverge from the DOM. That matters more than it looks,
+   because the figure is not purely decorative — `.dbc-reveal__face` carries the
+   defenders' real names — so a screen reader reaches those before the pick.
+   Fixing it means moving the copy ahead of the figure in the TSX and dropping
+   these two rules, not adjusting them. */
 .dbc-reveal__text {
   order: 1;
 }
@@ -1375,15 +1383,31 @@
     min-height: 0;
   }
 
+  /* Nothing to leave room for: the crest-only reveal for an unmapped defense
+     and a cutout whose headshot 404'd both render an EMPTY figure, and the
+     figure's `1fr` row would still hold half the card of bare gradient under
+     the copy. Collapse to a single row so the copy owns the card.
+     `:has()` and not a class because the states are decided in three different
+     places (no `cutoutSrc`, no `shownFaces`, every face 404'd) — and it is
+     sound here specifically because `handleCutoutError` nulls the state and
+     REMOVES the <img>. A `display: none` fallback would be invisible to
+     `:has()`, which is the trap noted further up this file. */
+  .dbc-reveal__body:not(:has(.dbc-reveal__model)) {
+    grid-template-rows: minmax(min-content, 1fr);
+  }
+
   /* The pair's half-a-player LEFT shift exists to clear the copy column, and
-     in this layout there is no copy column — the copy stacks UNDERNEATH. Left
-     in, the shift walks the first man's head to x=-88 on a 390px phone, off
-     the card entirely. Re-centred on the figure instead: same 0.43-column
-     spacing, no offset. Same specificity as the base seats and later in the
-     file, which is what lets these win. */
-  /* Portrait is the one place a solo cutout is NOT 120% — it is column-clamped,
-     because the figure is a full-width row here with no crest to overlap. The
-     pair matches it, or each man renders 20% past a 327px phone column. */
+     in this layout there is no copy column — the copy is a full-width row of
+     its own, stacked ABOVE the figure. Left in, the shift walks the first
+     man's head to x=-88 on a 390px phone, off the card entirely. Re-centred on
+     the figure instead: same 0.43-column spacing, no offset. Same specificity
+     as the base seats and later in the file, which is what lets these win. */
+  /* Portrait is the one place a solo cutout is NOT 120% — it is column-clamped.
+     120% exists on the TV so the cutout overlaps the crest and the two read as
+     one composite; here the figure is a full-width row and the crest is tucked
+     off the bottom-right corner behind the player, so the overlap is already
+     there without the extra width. The pair matches the solo width, or each man
+     renders 20% past a 327px phone column. */
   .dbc-reveal__model.dbc-reveal__model--def {
     width: 100%;
   }

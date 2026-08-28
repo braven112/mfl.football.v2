@@ -659,6 +659,12 @@ grid-template-rows: minmax(min-content, 1fr) minmax(0, 1fr);  /* copy, figure */
 - **`min-content` is the copy row's floor, not `0`.** The copy is the one thing
   on the card that must never be cropped, so on a short viewport it takes what
   it needs (255px at 600x660) and the figure row gives way.
+- **An EMPTY figure gives its row back**, via
+  `.dbc-reveal__body:not(:has(.dbc-reveal__model))` collapsing to one row.
+  Without it the crest-only reveal and a 404'd cutout leave half a card of bare
+  gradient under the copy. `:has()` is sound here only because
+  `handleCutoutError` nulls the state and REMOVES the `<img>` — a
+  `display: none` fallback would be invisible to it.
 - **`min-height: 0` on the figure must stay a zero.** A revision reserved
   `64vw` there so the absolutely-positioned defence pair (`--def`, `bottom: 0`)
   would have a box in a content-sized row — and that floor then applied to the

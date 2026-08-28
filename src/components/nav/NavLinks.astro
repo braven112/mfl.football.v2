@@ -517,8 +517,9 @@ const sectionRenderInfo = visibleSections.map((section) => {
      of the league blue every other nav icon uses. Setting color makes
      currentColor resolve to the same value, and covers the stroke-based one
      that a fill-only fix would have missed. Two are live in nav-config today:
-     podium-empty on the AFL's Draft Broadcast, standings on Custom Rankings
-     (both leagues). */
+     podium-empty on the AFL's Draft Broadcast, which every owner sees, and
+     standings on Custom Rankings, which is `visibility: admin` in both
+     leagues — so only the first one is a user-visible change. */
   .nav-links__icon :global(svg) {
     width: 24px;
     height: 24px;

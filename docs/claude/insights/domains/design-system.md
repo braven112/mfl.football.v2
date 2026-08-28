@@ -2489,9 +2489,10 @@ because `public/assets/icons/sprite.svg` is **mixed**: six symbols paint with
 and carries `fill="none" stroke="currentColor"` — and the rest carry no paint
 attribute at all.
 
-- A wrapper that sets only `color:` tints the five and leaves the rest black.
-- A wrapper that sets only `fill:` tints the rest and leaves the five painting
-  the inherited text colour.
+- A wrapper that sets only `color:` tints the six and leaves the rest black.
+- A wrapper that sets only `fill:` tints the rest and leaves the six painting
+  the inherited text colour — and misses `standings` even so, since `fill` does
+  not drive a stroke.
 
 Neither half of the rule is safe alone. Any wrapper that colours sprite icons
 must set **`fill:` and `color:` to the same value** — including the variant
