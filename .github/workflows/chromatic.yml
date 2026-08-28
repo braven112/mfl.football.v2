@@ -39,6 +39,12 @@ jobs:
           # TurboSnap (--only-changed) needs it to diff the file set. The
           # default fetch-depth of 1 silently degrades both.
           fetch-depth: 0
+          # ...but full history across this repo's several hundred branches
+          # cost 4m40s of pure checkout on the first run — longer than the
+          # rest of the job combined. A partial clone keeps every commit (so
+          # baseline detection and the TurboSnap diff are unaffected) and
+          # fetches file contents lazily only when something asks for them.
+          filter: blob:none
 
       - name: Setup pnpm + Node + install
         uses: ./.github/actions/setup
