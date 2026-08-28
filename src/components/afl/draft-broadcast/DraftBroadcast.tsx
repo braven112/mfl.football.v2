@@ -298,7 +298,12 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
 
   return (
     <div className="dbc" data-testid="draft-broadcast" ref={rootRef}>
-      <button className="dbc__fullscreen" type="button" onClick={toggleFullscreen}>
+      <button
+        className="dbc__fullscreen"
+        type="button"
+        onClick={toggleFullscreen}
+        data-in-fullscreen={isFullscreen ? 'true' : 'false'}
+      >
         {isFullscreen ? 'Exit full screen' : 'Full screen'}
       </button>
 

@@ -632,3 +632,70 @@ describe('idle screen and reveal card share one colour treatment', () => {
     }
   });
 });
+
+describe('exit-full-screen chip hides on hover-capable devices only', () => {
+  // On a laptop driving the TV the chip should vanish once the board is
+  // fullscreen and come back on hover. On a touchscreen there IS no hover to
+  // bring it back, so hiding it there strands the viewer in fullscreen with no
+  // way out but the OS. The whole rule therefore has to sit inside a
+  // `hover: hover` query, and the component has to emit the attribute it keys
+  // on — either half missing ships one of those two failures.
+  const css = readFileSync('src/styles/draft-broadcast.css', 'utf-8');
+  const tsx = readFileSync(
+    'src/components/afl/draft-broadcast/DraftBroadcast.tsx',
+    'utf-8'
+  );
+
+  it('the component marks the button with data-in-fullscreen', () => {
+    expect(tsx).toMatch(/data-in-fullscreen=\{/);
+  });
+
+  it('every rule that hides the chip sits inside a hover-capable query', () => {
+    // Slice the file into the @media blocks and the top level outside them, so
+    // a hiding rule added at the top level (where a touchscreen would read it)
+    // is what fails this.
+    const hoverBlocks: string[] = [];
+    let outside = '';
+    let i = 0;
+    while (i < css.length) {
+      const at = css.indexOf('@media', i);
+      if (at === -1) {
+        outside += css.slice(i);
+        break;
+      }
+      outside += css.slice(i, at);
+      const open = css.indexOf('{', at);
+      let depth = 0;
+      let j = open;
+      for (; j < css.length; j += 1) {
+        if (css[j] === '{') depth += 1;
+        else if (css[j] === '}') {
+          depth -= 1;
+          if (depth === 0) break;
+        }
+      }
+      const block = css.slice(at, j + 1);
+      if (/hover:\s*hover/.test(block)) hoverBlocks.push(block);
+      else outside += block;
+      i = j + 1;
+    }
+
+    const hides = /\[data-in-fullscreen=['"]true['"]\][^{]*\{[^}]*opacity:\s*0\s*[;}]/;
+    expect(
+      hides.test(outside),
+      'a touchscreen would read this rule and lose its only way out of fullscreen'
+    ).toBe(false);
+    expect(
+      hoverBlocks.some((b) => hides.test(b)),
+      'nothing hides the chip on a hover-capable device — the ask was hover-only there'
+    ).toBe(true);
+  });
+
+  it('hover and keyboard focus both bring it back', () => {
+    const revealed = css.match(
+      /\[data-in-fullscreen=['"]true['"]\]:(hover|focus-visible)/g
+    );
+    expect(revealed).toContain("[data-in-fullscreen='true']:hover");
+    expect(revealed).toContain("[data-in-fullscreen='true']:focus-visible");
+  });
+});

@@ -4,7 +4,15 @@
     {
       "date": "2026-08-28",
       "type": "style-tweak",
-      "summary": "The draft broadcast's between-picks screen now wears the same colours as the card that follows it. Each franchise had one gradient for the pick reveal and a separately-composed one for the on-the-clock board, and for Midwestside Connection the two had drifted a long way apart \u2014 a gold screen between picks handing off to a near-black one on the pick, twice a minute. Both screens now paint the franchise's single configured gradient, so Midwestside's on-the-clock board is black to match its reveal, and every other team's two screens line up as well.",
+      "summary": "The draft broadcast board no longer wears a button on TV. Once you go full screen on a laptop or desktop, the Exit full screen chip in the top-right corner disappears completely and only reappears when you move the mouse up to that corner — so the room sees the board and nothing else. On a phone or tablet, where there is no mouse to bring it back, the chip stays put exactly as it is today.",
+      "impact": "user",
+      "area": "draft",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-28",
+      "type": "style-tweak",
+      "summary": "The draft broadcast's between-picks screen now wears the same colours as the card that follows it. Each franchise had one gradient for the pick reveal and a separately-composed one for the on-the-clock board, and for Midwestside Connection the two had drifted a long way apart — a gold screen between picks handing off to a near-black one on the pick, twice a minute. Both screens now paint the franchise's single configured gradient, so Midwestside's on-the-clock board is black to match its reveal, and every other team's two screens line up as well.",
       "impact": "user",
       "area": "draft",
       "league": "afl"
@@ -20,7 +28,7 @@
     {
       "date": "2026-08-28",
       "type": "style-tweak",
-      "summary": "Two draft broadcast cards get repainted. Midwestside Connection's used to be a wall of muted gold; it's now a hard, near-black card with a single band of gold rising out of the bottom-right corner behind the player \u2014 the black does the talking and the gold just signs it. Vitside Mafia's is the same idea flipped: the deep red now fills the card and the black is the corner anchor under the player, instead of the other way round. Every other franchise's card is unchanged, but all of them now carry their gradient in league config alongside their crest and team names, so the next one is an edit rather than a code change.",
+      "summary": "Two draft broadcast cards get repainted. Midwestside Connection's used to be a wall of muted gold; it's now a hard, near-black card with a single band of gold rising out of the bottom-right corner behind the player — the black does the talking and the gold just signs it. Vitside Mafia's is the same idea flipped: the deep red now fills the card and the black is the corner anchor under the player, instead of the other way round. Every other franchise's card is unchanged, but all of them now carry their gradient in league config alongside their crest and team names, so the next one is an edit rather than a code change.",
       "impact": "user",
       "area": "draft",
       "league": "afl"

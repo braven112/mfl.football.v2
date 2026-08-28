@@ -83,6 +83,32 @@
   color: #fff;
 }
 
+/* Once the board owns the TV, the exit chip goes fully invisible on a machine
+   with a real pointer — nobody watching should see a button on the screen —
+   and comes back the moment the mouse (or keyboard focus) finds it. Gated on
+   `hover: hover and pointer: fine` so a touchscreen, where there is no hover
+   to bring it back, keeps the always-dimmed chip it has today. A click can
+   only land after the pointer is already on it, which is to say after it has
+   turned visible, so there is no invisible hit target to hit by accident. */
+@media (hover: hover) and (pointer: fine) {
+  .dbc__fullscreen[data-in-fullscreen='true'] {
+    opacity: 0;
+  }
+
+  .dbc__fullscreen[data-in-fullscreen='true']:hover,
+  .dbc__fullscreen[data-in-fullscreen='true']:focus-visible {
+    opacity: 1;
+  }
+
+  /* Invisible corner apron so the chip is findable by aiming at the corner
+     rather than at a rectangle you can't see. */
+  .dbc__fullscreen[data-in-fullscreen='true']::before {
+    content: '';
+    position: absolute;
+    inset: -1.6vw -1.6vw -1.6vw -3vw;
+  }
+}
+
 /* ── Connection indicator ──────────────────────────────────────────────────
    Small and calm on purpose. A dropped poll is not an emergency — the board
    still shows the last known state correctly — so this must never look like
