@@ -301,9 +301,11 @@ change the wash, which affects all 24 cards.
 `JSON.parse` → `JSON.stringify` on the league configs is **lossy**, so never
 rewrite them that way:
 
-- `afl.config.json` declares `groupMe` **twice** on franchise `0007` (lines ~370
-  and ~429, same value). Parsers keep the last; a round-trip silently deletes
-  one. Harmless today only because the two values are identical.
+- `afl.config.json` declared `groupMe` **twice** on franchise `0007` (same
+  value; parsers keep the last, so a round-trip would silently delete one).
+  Fixed Aug 2026, and `tests/league-config-duplicate-keys.test.ts` now scans all
+  three configs so it cannot come back — `JSON.parse` accepts a duplicate
+  without a word, so nothing else in the build can see one.
 - `theleague.config.json` hand-formats some arrays inline (`loaderQuips`), which
   a re-stringify explodes into one-element-per-line — turning a 40-line diff
   into a several-hundred-line one.

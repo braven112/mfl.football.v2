@@ -3,6 +3,14 @@
   "changes": [
     {
       "date": "2026-08-28",
+      "type": "bug-fix",
+      "summary": "A duplicate line in the AFL league config is gone. The Avenging Amish had their GroupMe avatar listed twice in the same record \u2014 same file both times, so nothing ever looked wrong, but any tool that rewrote the config would have quietly dropped one of them, and if the two had ever pointed at different art the winner would have come down to which line happened to be last. Removed, and there is now a check that fails the build if any league config repeats a field.",
+      "impact": "admin",
+      "area": "design-system",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-28",
       "type": "style-tweak",
       "summary": "The draft broadcast's between-picks screen now wears the same colours as the card that follows it. Each franchise had one gradient for the pick reveal and a separately-composed one for the on-the-clock board, and for Midwestside Connection the two had drifted a long way apart \u2014 a gold screen between picks handing off to a near-black one on the pick, twice a minute. Both screens now paint the franchise's single configured gradient, so Midwestside's on-the-clock board is black to match its reveal, and every other team's two screens line up as well.",
       "impact": "user",
