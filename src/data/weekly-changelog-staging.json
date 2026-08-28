@@ -4,10 +4,10 @@
     {
       "date": "2026-08-28",
       "type": "bug-fix",
-      "summary": "The Draft Broadcast link in the side nav was showing a white podium instead of a blue one. Every other icon in that menu paints itself league blue; a handful of the newer icons carry their own colour instruction, which quietly beat the menu's, so they came out the colour of the text next to them — near-white in dark mode. They match the rest of the list again.",
+      "summary": "Two icons in the side nav were painting themselves the colour of the label next to them instead of league blue — the podium on Draft Broadcast, and the one on Custom Rankings. In dark mode that read as white against a column of blue. Every other icon in the menu takes its colour from the menu; a handful of the newer ones carry their own colour instruction, which quietly won. They match the rest of the list again.",
       "impact": "user",
       "area": "navigation",
-      "league": "afl"
+      "league": "both"
     },
     {
       "date": "2026-08-28",

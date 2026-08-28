@@ -245,10 +245,13 @@ const cardClasses = [
     border-radius: 10px;
     background: color-mix(in srgb, var(--card-accent) 22%, transparent);
   }
+  /* `color` too — see the note in EventHeroShell: a currentColor symbol
+     (icon-playoff) ignores the fill and would take the card's text colour. */
   .calendar-card__icon {
     width: 1.1rem;
     height: 1.1rem;
     fill: var(--card-accent);
+    color: var(--card-accent);
   }
   .calendar-card__chip--multicolor {
     background: var(--card-chip-multicolor-bg);

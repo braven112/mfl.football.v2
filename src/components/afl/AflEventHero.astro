@@ -563,10 +563,12 @@ const countAriaLabel = hasCount
     border-radius: 12px;
     background: color-mix(in srgb, var(--ev-accent) 22%, transparent);
   }
+  /* `color` too — see the note in EventHeroShell. */
   .afl-event-hero__chip svg {
     width: 24px;
     height: 24px;
     fill: var(--ev-accent-ink);
+    color: var(--ev-accent-ink);
   }
   .afl-event-hero__pill {
     font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', 'Oswald', sans-serif);

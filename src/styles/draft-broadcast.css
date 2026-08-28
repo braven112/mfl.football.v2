@@ -1334,15 +1334,22 @@
 @media (max-width: 900px) and (orientation: portrait) {
   .dbc-reveal__body {
     grid-template-columns: 1fr;
-    /* Both rows content-sized, and the PAIR pushed to the bottom of the card:
-       the cutout has to reach the bottom edge to bleed off it, and the copy has
-       to sit directly on top of him. Give either row `1fr` instead and the
-       slack opens up BETWEEN the two — a third of a phone screen of bare
-       gradient between the last stat and the player's head. The slack belongs
-       above the stack, as headroom under the card's own header, which is
-       exactly where the old player-on-top layout put it. */
-    grid-template-rows: auto auto;
-    align-content: end;
+    /* Half the card each, and BOTH rows flexible on purpose.
+       The figure row must stay flexible because `.dbc-reveal__model`'s
+       `max-height: 100%` only binds against a definite track, and that clamp is
+       the only thing stopping a tall cutout from shoving the copy off the top
+       of a card sitting on its 30rem floor. Two `auto` rows plus
+       `align-content: end` was tried first — it closes the copy-to-player gap
+       nicely on a tall phone and then overlaps the two by 141px at 600x660,
+       because nothing is clamping anything. Do not go back to it.
+       The copy's row is flexible too, and `align-self: end` on the copy is what
+       banks the slack ABOVE it rather than between it and the player: with the
+       copy's row content-sized instead, all the leftover pools in the figure
+       row and a 390x844 phone gets ~170px of bare gradient under the last stat.
+       `min-content` as that row's floor, not `0`: the copy is the one thing on
+       the card that must never be cropped, so on a short viewport it takes what
+       it needs (600x660: 255px) and the figure row gives way. */
+    grid-template-rows: minmax(min-content, 1fr) minmax(0, 1fr);
     align-items: stretch;
     gap: 0;
     padding: 3vh 6vw 3vh;
@@ -1356,14 +1363,16 @@
     transform: none;
     align-self: stretch;
     align-items: flex-end;
-    /* NOT `min-height: 0`, which is what this said while the row was `1fr`.
-       The defence pair is absolutely positioned (`--def`, `bottom: 0`), so in a
-       content-sized row the figure has no in-flow child at all and collapses to
-       zero — both defenders would render up on the copy. Reserve the box a solo
-       cutout takes: an ESPN headshot is ~600x436, so at column width (100vw
-       less the body's 6vw either side) that is 0.727 x 88vw = 64vw. A taller
-       cutout still grows the row past it. */
-    min-height: 64vw;
+    /* The usual grid guard: clear the item's automatic minimum so the track
+       function above is what decides this row. It must NOT become a positive
+       floor — an earlier revision reserved 64vw here so the absolutely
+       positioned defence pair (`--def`, `bottom: 0`) would have a box in a
+       content-sized row, and that floor then applied to the two cases with
+       nothing to show as well: the crest-only reveal for an unmapped defense
+       (`tests/draft-broadcast.test.ts`) and a cutout that 404'd both render an
+       EMPTY figure, so it read as 250px of bare gradient under the copy. The
+       flexible row gives the pair its box for free. */
+    min-height: 0;
   }
 
   /* The pair's half-a-player LEFT shift exists to clear the copy column, and
@@ -1431,9 +1440,9 @@
   }
 
   .dbc-reveal__text {
-    /* Top of its row now that the copy leads the stack — `end` would drop it
-       down onto the player's head whenever the figure row is the taller one. */
-    align-self: start;
+    /* Bottom of its row, so the copy sits directly on the player and the row's
+       slack lands above it — see the track comment on the body. */
+    align-self: end;
     /* Bottom padding is the gap to the player rather than to the screen edge:
        the body's own 3vh keeps the kicker off the top of the phone. */
     padding: 0 0 2vh;
