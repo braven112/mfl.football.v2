@@ -3,6 +3,14 @@
   "changes": [
     {
       "date": "2026-08-28",
+      "type": "bug-fix",
+      "summary": "A duplicate line in the AFL league config is gone. The Avenging Amish had their GroupMe avatar listed twice in the same record \u2014 same file both times, so nothing ever looked wrong, but any tool that rewrote the config would have quietly dropped one of them, and if the two had ever pointed at different art the winner would have come down to which line happened to be last. Removed, and there is now a check that fails the build if any league config repeats a field.",
+      "impact": "admin",
+      "area": "design-system",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-28",
       "type": "style-tweak",
       "summary": "The draft broadcast board no longer wears a button on TV. Once you go full screen on a laptop or desktop, the Exit full screen chip in the top-right corner disappears completely and only reappears when you move the mouse up to that corner — so the room sees the board and nothing else. On a phone or tablet, where there is no mouse to bring it back, the chip stays put exactly as it is today.",
       "impact": "user",
