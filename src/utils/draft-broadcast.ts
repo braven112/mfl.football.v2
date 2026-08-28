@@ -364,6 +364,36 @@ const GRADIENT_CHARSET = /^[a-zA-Z0-9#%.,()\-+/ ]+$/;
 const GRADIENT_LAYER = /^(repeating-)?(linear|radial|conic)-gradient\(/;
 
 /**
+ * Split a `background` value into its comma-separated LAYERS.
+ *
+ * Depth-aware, because a gradient's own stop list is full of commas —
+ * `linear-gradient(115deg, #000 0%, #fff 100%)` is ONE layer containing two.
+ * Only a comma at paren depth 0 separates layers.
+ *
+ * Returns null on an unbalanced string, which is itself a rejection: an
+ * unclosed paren swallows whatever the browser finds next.
+ */
+function splitLayers(value: string): string[] | null {
+  const layers: string[] = [];
+  let depth = 0;
+  let start = 0;
+  for (let i = 0; i < value.length; i++) {
+    const ch = value[i];
+    if (ch === '(') depth += 1;
+    else if (ch === ')') {
+      depth -= 1;
+      if (depth < 0) return null;
+    } else if (ch === ',' && depth === 0) {
+      layers.push(value.slice(start, i).trim());
+      start = i + 1;
+    }
+  }
+  if (depth !== 0) return null;
+  layers.push(value.slice(start).trim());
+  return layers;
+}
+
+/**
  * Is this config string safe (and plausible) to paint as a `background`?
  *
  * Config is repo-authored, not user input, so this is not a security boundary —
@@ -381,22 +411,24 @@ export function isSafeCssGradient(value: string | undefined | null): value is st
   const trimmed = value.trim();
   if (!trimmed || trimmed.length > 600) return false;
   if (!GRADIENT_CHARSET.test(trimmed)) return false;
-  if (!GRADIENT_LAYER.test(trimmed)) return false;
   // `url(` and `image-set(` are already unreachable — `:` is off the charset so
   // no scheme can be written — but a relative `url(x.png)` is not, and it has no
   // business in a franchise's brand gradient.
   if (/\b(url|image-set|element|expression)\s*\(/i.test(trimmed)) return false;
 
-  // Balanced parens. An unclosed one swallows whatever the browser finds next.
-  let depth = 0;
-  for (const ch of trimmed) {
-    if (ch === '(') depth += 1;
-    else if (ch === ')') {
-      depth -= 1;
-      if (depth < 0) return false;
-    }
-  }
-  return depth === 0;
+  // EVERY layer must be a gradient, not just the first. Checking only the head
+  // of the string let `linear-gradient(…), lnear-gradient(…)` validate — one
+  // transposed letter in a second layer, which invalidates the whole `background`
+  // declaration and blanks the card exactly like the `;` this function was
+  // written to stop. A trailing comma slipped through the same way, since it
+  // leaves an empty final layer. (Copilot caught this on PR #640.)
+  //
+  // This also rejects a trailing plain colour (`linear-gradient(…), #000`),
+  // which is legal CSS. That is deliberate: this field paints franchise
+  // gradients, and being stricter than CSS costs nothing here.
+  const layers = splitLayers(trimmed);
+  if (!layers) return false;
+  return layers.every((layer) => GRADIENT_LAYER.test(layer));
 }
 
 /**

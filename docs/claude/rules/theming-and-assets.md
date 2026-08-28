@@ -97,9 +97,13 @@ screen for ~18 seconds, so the look is a design decision, not a computed one.
 - **Raw CSS means nothing else can catch a typo.** A stray `;` doesn't look
   wrong — it ends the inline declaration and the card renders with NO background
   at all, on the TV, in front of the league. `isSafeCssGradient`
-  (`src/utils/draft-broadcast.ts`) is the gate: gradient-function layers only,
-  balanced parens, and a charset with no `:` `;` `{` `}` or quotes. A value that
-  fails is IGNORED, not thrown on — the card falls back to the derived pair.
+  (`src/utils/draft-broadcast.ts`) is the gate: a charset with no `:` `;` `{` `}`
+  or quotes, balanced parens, and EVERY comma-separated layer must be a gradient
+  function — not just the first. That last part is not pedantry: anchoring the
+  check to the head of the string let `linear-gradient(…), lnear-gradient(…)`
+  validate, and one transposed letter in a second layer blanks the card exactly
+  like the `;` does. A value that fails is IGNORED, not thrown on — the card
+  falls back to the derived pair.
 - **It drives the reveal card only. The on-the-clock screen does NOT read it**,
   and the two can therefore disagree. `.dbc-idle` composes its own
   `linear-gradient(150deg, secondary 0%, primary 130%)` from the pair `#638`

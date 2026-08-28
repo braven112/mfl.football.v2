@@ -123,6 +123,38 @@ describe('isSafeCssGradient', () => {
     expect(isSafeCssGradient('red')).toBe(false);
   });
 
+  /**
+   * Copilot caught this on PR #640: the layer check was anchored to the START of
+   * the string, so only the FIRST layer had to be a gradient. A transposed letter
+   * in a second layer — or a trailing comma — validated fine and then invalidated
+   * the whole `background` declaration, blanking the card exactly like the `;`
+   * this validator exists to stop.
+   */
+  it('rejects a bad layer even when the FIRST layer is a valid gradient', () => {
+    expect(
+      isSafeCssGradient('linear-gradient(115deg, #000 0%, #fff 100%), notagradient(foo)')
+    ).toBe(false);
+    // The realistic version: one transposed letter.
+    expect(
+      isSafeCssGradient(
+        'linear-gradient(115deg, #000 0%, #fff 100%), lnear-gradient(1deg, #000 0%, #fff 100%)'
+      )
+    ).toBe(false);
+    // Trailing comma leaves an empty final layer.
+    expect(isSafeCssGradient('linear-gradient(115deg, #000 0%, #fff 100%),')).toBe(false);
+    // Legal CSS, but deliberately out of scope for this field.
+    expect(isSafeCssGradient('linear-gradient(115deg, #000 0%, #fff 100%), #000000')).toBe(false);
+  });
+
+  it('still accepts a genuine multi-layer value', () => {
+    expect(
+      isSafeCssGradient(
+        'radial-gradient(50% 50% at 80% 80%, #ffd400 0%, transparent 60%), linear-gradient(315deg, #000 0%, #111 100%)'
+      )
+    ).toBe(true);
+    expect(isSafeCssGradient('repeating-linear-gradient(45deg, #000 0px, #111 10px)')).toBe(true);
+  });
+
   it('rejects unbalanced parens, which swallow the next declaration', () => {
     expect(isSafeCssGradient('linear-gradient(115deg, #000 0%, #fff 100%')).toBe(false);
     expect(isSafeCssGradient('linear-gradient(115deg, #000 0%, #fff 100%))')).toBe(false);
