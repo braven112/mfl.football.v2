@@ -452,11 +452,54 @@
   overflow: hidden;
 }
 
+/* Crest and copy as one horizontal unit. Stacked, the two split the stage's
+   vertical budget and the crest could never grow past ~17vh without shoving
+   the team name into the rails; side by side they split WIDTH instead, which
+   the board has to spare, so the crest doubles for free. */
+.dbc-idle__clock {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(1.25rem, 2.6vw, 3.5rem);
+  max-width: 100%;
+  min-width: 0;
+}
+
+.dbc-idle__clock-copy {
+  /* Without min-width:0 a long franchise name refuses to wrap below its
+     longest word and pushes the crest off the left edge of the stage. */
+  min-width: 0;
+}
+
+/* Left-aligned ONLY next to a crest — it hangs off the logo's edge so the two
+   blocks read as one lockup. With no crest the copy sits alone in the middle
+   of the board, where left-aligning leaves the kicker and the pick line ragged
+   under a centred name; it re-centres instead.
+
+   Two ways to have no crest, and they need different selectors: a franchise
+   with no icon never renders the <img> at all (the sibling combinator simply
+   doesn't match), while a crest that 404s is hidden by `hideOnError` with an
+   inline `display: none` — the element is still a sibling, so that case has to
+   be flagged on the row. Neither `+` nor `:has()` can see `display: none`. */
+.dbc-idle__crest + .dbc-idle__clock-copy {
+  text-align: left;
+}
+
+.dbc-idle__clock.is-crestless .dbc-idle__clock-copy {
+  text-align: center;
+}
+
 .dbc-idle__crest {
-  width: 17vh;
-  height: 17vh;
+  /* Doubled from 17vh. Bounded by vw as well so a phone-width board doesn't
+     hand the logo two-thirds of the row and leave the name a column of
+     one-word lines. */
+  width: min(34vh, 32vw);
+  height: min(34vh, 32vw);
+  /* The row is a flex container; without this the crest is the first thing
+     squeezed when a long name wants room. */
+  flex: 0 0 auto;
   object-fit: contain;
-  margin-bottom: 1.2vh;
   filter: drop-shadow(0 1vh 2vh rgba(0, 0, 0, 0.5));
   animation: dbc-crest-in 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
@@ -657,9 +700,12 @@
    ground or it runs into the rails below it. */
 @media (max-height: 950px) {
   .dbc-idle__crest {
-    width: 12vh;
-    height: 12vh;
-    margin-bottom: 0.8vh;
+    width: min(24vh, 30vw);
+    height: min(24vh, 30vw);
+  }
+
+  .dbc-idle__clock {
+    gap: clamp(1rem, 2vw, 2.5rem);
   }
 
   .dbc-idle__team {
@@ -856,6 +902,30 @@
   .dbc-idle__rails {
     grid-template-columns: 1fr;
     gap: 2vh;
+  }
+
+  /* A phone held upright has no width to give a side-by-side lockup: the crest
+     and the name would each get ~45vw and the name would break into a column
+     of single words. Back to the stack, centred — this is the only viewport
+     where the pre-doubling layout was the right one. */
+  .dbc-idle__clock {
+    flex-direction: column;
+    gap: 0.8vh;
+    text-align: center;
+  }
+
+  .dbc-idle__crest + .dbc-idle__clock-copy {
+    text-align: center;
+  }
+
+  /* Deliberately the ORIGINAL stacked sizing, not the doubled one: measured on
+     a 390x844 phone, the stage is 231px and a doubled crest pushed "Pick 1.07"
+     out through the stage's `overflow: hidden` entirely. `min()` reproduces
+     both old sizes exactly — 26vw ≈ the 12vh a phone got from the short-
+     viewport rule, 17vh the base size a portrait tablet got. */
+  .dbc-idle__crest {
+    width: min(17vh, 26vw);
+    height: min(17vh, 26vw);
   }
 }
 
