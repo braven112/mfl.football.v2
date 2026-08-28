@@ -81,9 +81,20 @@
    with src/layouts/TheLeagueLayout.astro.
    ------------------------------------------------------------------ */
 
+/**
+ * The layout also sets `font-size: var(--font-size-base)` here — a clamp that
+ * lands near 18.9px, not the browser's 16px. It is DELIBERATELY omitted.
+ *
+ * Root font-size is the rem basis, so reproducing it re-scales every
+ * rem-sized rule in the canvas at once and moves every Chromatic baseline in
+ * the suite. That is a separate, deliberate change with its own full-capture
+ * build and review pass, not a side effect of a font fix. Until then the
+ * canvas is one step off production on SIZE while being right on TYPEFACE,
+ * which is the honest trade — and worth knowing before reading a story's
+ * spacing as pixel-accurate.
+ */
 html {
   font-family: var(--font-family-base);
-  font-size: var(--font-size-base);
   color: var(--page-text);
   background-color: var(--page-bg);
 }

@@ -161,22 +161,29 @@ Verified in Chromium against the static build:
 |---|---|---|
 | `html` / `body` font | `"Times New Roman"` | `"Vend Sans", system-ui, …` |
 | `h1` font | Nunito Sans (Storybook's) | `"UFC Sans Condensed", …` |
-| `html` font-size | 16px (browser default) | 18.912px (`--font-size-base` clamp) |
+| `html` font-size | 16px (browser default) | 16px — deliberately left alone, see below |
 | loaded faces | none | UFC Sans Condensed 700, Vend Sans 400/700 |
 
-That `font-size` row is the one to expect fallout from: the layout sets
-`html { font-size: var(--font-size-base) }`, so reproducing it re-scales every
-rem in the canvas — correct, but it moves **every** Chromatic baseline. Since
-`preview.ts` changed, TurboSnap forces a full rebuild anyway, so budget one
-full-capture build and a review pass over all of it.
+**The one rule NOT copied from the layout is `html { font-size:
+var(--font-size-base) }`**, a clamp that lands near 18.9px rather than the
+browser's 16px. Root font-size is the rem basis, so reproducing it re-scales
+every rem-sized rule in the canvas at once and moves **every** Chromatic
+baseline in the suite. That is a deliberate change with its own full-capture
+build and review pass, not a side effect of a font fix.
+
+So the canvas is now right on TYPEFACE and still one step off production on
+SIZE. Know that before reading a story's spacing as pixel-accurate — and when
+someone does take the size step, expect to review all 68 snapshots, since a
+`preview.ts` change forces a full rebuild regardless.
 
 Entry count unchanged at 67 with no `Dropped story` (Trap 1) on either side.
 
 `tests/storybook-fonts.test.ts` pins the chain — the `preview.ts` import, the
-`--font-vend-sans` declaration, the `staticDirs` mapping, and that every
-`@font-face` src resolves to a file on disk. Every link in it fails silently
-(the font 404s, the canvas falls back, the build stays green), which is the
-whole reason it is a test and not a comment. It also fails if a third-party
+`--font-vend-sans` declaration, the `staticDirs` mapping, that every
+`@font-face` src resolves to a file on disk, and that the `html` rule carries
+no `font-size` (so the baseline-moving step stays a decision, not a drive-by).
+Every link in it fails silently (the font 404s, the canvas falls back, the
+build stays green), which is the whole reason it is a test and not a comment. It also fails if a third-party
 font URL is reintroduced, or if the font is moved into `public/`.
 
 ## Trap 5 — the layout injects styles a story never gets

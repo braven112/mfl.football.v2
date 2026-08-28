@@ -68,6 +68,16 @@ describe('Storybook typography wiring', () => {
     expect(css).not.toMatch(/url\(['"]?https?:/);
   });
 
+  it('does NOT set a root font-size — that is a separate, baseline-moving change', () => {
+    // The layout sets `html { font-size: var(--font-size-base) }`, a clamp
+    // near 18.9px. Root font-size is the rem basis, so adding it here
+    // re-scales every rem in the canvas and moves every Chromatic baseline at
+    // once. Do that on purpose, with its own full-capture build and review
+    // pass — not as a side effect of a font change.
+    const htmlRule = css.match(/\bhtml\s*\{([^}]*)\}/)?.[1] ?? '';
+    expect(htmlRule).not.toMatch(/font-size/);
+  });
+
   it('applies the layout typography rules a component never carries', () => {
     // TheLeagueLayout's own <style> block. Keep in sync with it.
     expect(css).toMatch(/html\s*\{[^}]*font-family:\s*var\(--font-family-base\)/);
