@@ -127,6 +127,19 @@ export function morphScreens(
     return played;
   }
 
+  // Which pairs are even on screen, decided BEFORE anything is cancelled. The
+  // idle board has three states, and two of them — "no draft board" and the
+  // last pick of the night, when it flips to "Every pick is in" in the same
+  // commit as the reveal — render neither the crest nor the clock copy. There
+  // is nothing to travel between there, and the card must keep the entrance it
+  // would have had: cancelling `dbc-reveal-in` first meant the biggest reveal
+  // of the draft lost its own animation and got a flat fade in exchange for a
+  // morph that never ran.
+  const movable = PAIRS.filter(
+    (pair) => idleLayer.querySelector(pair.idle) && revealLayer.querySelector(pair.reveal)
+  );
+  if (movable.length === 0) return played;
+
   const card = revealLayer.querySelector<HTMLElement>('.dbc-reveal');
   if (toReveal && card) {
     // `dbc-reveal-in` fades the card AND scales it 1.04 → 1. The scale is fatal
@@ -135,6 +148,8 @@ export function morphScreens(
     // the whole way. Cancel it and hand the card a straight fade — the motion
     // is the crest's job now, not the container's.
     for (const a of card.getAnimations()) a.cancel();
+    // This fade is also the ONLY one on the way in — `.dbc__screen--reveal`
+    // deliberately carries no opacity transition, or the two would compound.
     played.push(
       card.animate([{ opacity: 0 }, { opacity: 1 }], {
         duration: durationMs,
@@ -144,7 +159,7 @@ export function morphScreens(
     );
   }
 
-  for (const pair of PAIRS) {
+  for (const pair of movable) {
     const idleEl = idleLayer.querySelector<HTMLElement>(pair.idle);
     const revealEl = revealLayer.querySelector<HTMLElement>(pair.reveal);
     if (!idleEl || !revealEl) continue;

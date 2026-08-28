@@ -282,7 +282,7 @@ a failing value is ignored rather than painted.
 the handoff replaced the entire screen in one frame — on a TV that reads as
 somebody changing the channel rather than as the board reacting to a pick. Both
 now mount at all times inside `.dbc__screen` layers and cross-fade on opacity
-(`--dbc-fade`, 520ms).
+(`--dbc-fade`, 620ms — read at runtime by the morph, never re-typed).
 
 Two things that are load-bearing about how that is wired:
 

@@ -74,9 +74,17 @@
   transition: opacity var(--dbc-fade) ease;
 }
 
-/* The reveal comes in OVER the board, never under it. */
+/* The reveal comes in OVER the board, never under it — and it fades on the way
+   OUT only. Coming IN, the card's own opacity animation is the fade (see
+   `broadcast-morph.ts`), and a transition here would MULTIPLY with it: two
+   620ms curves compound to their square, so the board dipped toward black at
+   the midpoint of every reveal. The first reveal escaped it — a freshly
+   inserted element does not transition — which made it an "only after the
+   first one" difference nobody could diagnose from the room. `.is-hidden` is
+   two classes and still wins, so the way out is unaffected. */
 .dbc__screen--reveal {
   z-index: 2;
+  transition: none;
 }
 
 .dbc__screen.is-hidden {
@@ -978,11 +986,13 @@
   .dbc-reveal__crest {
     width: 41vh;
     height: 41vh;
-    /* `left` and `top` re-pinned, not just `right`: the base layer sets
-       left: 58%/top: 64% for the TV, and with a width set `left` wins over
-       `right` outright — so this block's `right` was inert and the phone crest
-       had silently moved on top of the stacked copy. Anchored off the right
-       edge again, as scenery behind the player. */
+    /* `left` and `top` re-pinned, not just `right`: the base layer centres the
+       crest (left: 50%/top: 50%) for the TV, and with a width set `left` wins
+       over `right` outright — so this block's `right` was inert and the phone
+       crest had silently moved on top of the stacked copy. Anchored off the
+       right edge again, as scenery behind the player. Centring is wrong here
+       for a second reason now: in portrait the copy stacks UNDER the player, so
+       a centred crest would sit squarely on the player's name. */
     left: auto;
     right: -8vw;
     top: 42%;

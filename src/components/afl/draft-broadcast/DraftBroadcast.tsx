@@ -32,6 +32,18 @@ import { morphScreens } from '../../../utils/broadcast-morph';
 import { BroadcastRevealCard } from './BroadcastRevealCard';
 import { OnTheClock } from './OnTheClock';
 
+/**
+ * `useLayoutEffect` on the client, a no-op `useEffect` on the server.
+ *
+ * This island is `client:load`, so it IS rendered once on the server, and React
+ * logs "useLayoutEffect does nothing on the server" for every layout effect it
+ * meets there — once per request to the broadcast page. The morph genuinely
+ * needs layout timing in the browser (it measures both screens before the
+ * browser paints the new arrangement) and needs nothing at all on the server,
+ * which is exactly what this alias says.
+ */
+const useIsomorphicLayoutEffect = typeof document === 'undefined' ? useEffect : useLayoutEffect;
+
 /** Poll cadence. The draft room's 12s/30s is tuned for an EMAIL draft; a room
  *  full of people watching a TV notices a 30s lag between the pick landing on
  *  MFL and the screen reacting. 5s is well inside MFL's tolerance for a public
@@ -309,10 +321,8 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
   // Layout, not passive: this measures both screens and starts the animations
   // before the browser paints the new arrangement. A plain effect paints the
   // jump first and then animates away from it, which is the jump we are here to
-  // remove. `useLayoutEffect` is safe under `client:load` despite the SSR pass —
-  // effects don't run on the server, and this file already only renders on the
-  // client path for anything that matters.
-  useLayoutEffect(() => {
+  // remove.
+  useIsomorphicLayoutEffect(() => {
     if (!morphedOnceRef.current) {
       morphedOnceRef.current = true;
       return;
