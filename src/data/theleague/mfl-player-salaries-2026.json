@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-08-28T07:08:09.557Z"
+    "fetchedAt": "2026-08-28T19:24:58.808Z"
   },
   "players": [
     {
@@ -5884,7 +5884,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 6,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "TE"
         ],
@@ -6032,7 +6032,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 4,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "RB"
         ],
@@ -8257,30 +8257,6 @@
       "depthChartAhead": null
     },
     {
-      "id": "15777",
-      "name": "Austin III, Calvin",
-      "position": "WR",
-      "salary": 695447.5,
-      "franchiseId": "0008",
-      "status": "ROSTER",
-      "contractYear": "1",
-      "points": 0,
-      "team": "NYG",
-      "draftYear": 2022,
-      "draftTeam": "PIT",
-      "birthdate": 922251600,
-      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/15777_thumb.jpg",
-      "externalIds": {
-        "mfl": "15777",
-        "sleeper": null,
-        "gsis": null
-      },
-      "sleeper": null,
-      "nflverse": null,
-      "gamesPlayed": null,
-      "depthChartAhead": null
-    },
-    {
       "id": "16162",
       "name": "Gibbs, Jahmyr",
       "position": "RB",
@@ -9252,6 +9228,30 @@
         "injuryBodyPart": null,
         "gsisId": null
       },
+      "nflverse": null,
+      "gamesPlayed": null,
+      "depthChartAhead": null
+    },
+    {
+      "id": "15777",
+      "name": "Austin III, Calvin",
+      "position": "WR",
+      "salary": 695447.5,
+      "franchiseId": "0008",
+      "status": "INJURED_RESERVE",
+      "contractYear": "1",
+      "points": 0,
+      "team": "NYG",
+      "draftYear": 2022,
+      "draftTeam": "PIT",
+      "birthdate": 922251600,
+      "headshot": "https://www49.myfantasyleague.com/player_photos_2014/15777_thumb.jpg",
+      "externalIds": {
+        "mfl": "15777",
+        "sleeper": null,
+        "gsis": null
+      },
+      "sleeper": null,
       "nflverse": null,
       "gamesPlayed": null,
       "depthChartAhead": null
@@ -13703,8 +13703,8 @@
           "K"
         ],
         "experience": 4,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Questionable",
+        "injuryBodyPart": "Undisclosed",
         "gsisId": null
       },
       "nflverse": null,
@@ -18643,7 +18643,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 3,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "TE"
         ],
