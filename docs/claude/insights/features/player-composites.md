@@ -421,19 +421,30 @@ different from every other composite, and why:
   - **Re-drawn per reveal for free**, because `DraftBroadcast` keys the card by
     pick and every selection remounts it.
   - **The pair geometry is arithmetic, not taste.** An ESPN headshot is
-    ~600x436 with the head about 30% of the frame, centred. At `width: 90%` of
-    the column each head is ~0.27 column-widths, so the men need at least that
-    much daylight between head centres or they occlude. `margin-left: -50%` on
-    the second (a percentage margin resolves against the FIGURE's width, not the
-    image's) leaves 0.4 column-widths between centres — measured at 1920x1080:
-    66px of head clearance and 55% body overlap, which is the shoulder overlap.
-    The pair spans ~1.3 columns and the figure's existing clip trims the outer
-    shoulders, the same bleed a single cutout already gets.
+    ~600x436 with the head about 30% of the frame, centred. Each man is a FULL
+    column wide (Brandon, 2026-08-28 — two defenders shrunk to fit read as a
+    smaller moment than one player), so each head is ~0.30 column-widths and
+    they need at least that much daylight between head centres or they occlude.
+    Seated at ±21.5% of the column, head centres land 0.43 columns apart:
+    measured at 1920x1080, 65px of head clearance and 57% body overlap.
+  - **Position the pair, do not flex it — flex `center` does NOT split the
+    overflow.** The pair first shipped as two flex items with `margin-left:
+    -57%` on the second, assuming `justify-content: center` would hang the
+    oversized group evenly off both edges. Measured, it did not: the group sat
+    flush with the figure's RIGHT edge and hung entirely off the left, so the
+    figure's own `overflow: hidden` cut **40px off the left man's head on the
+    TV and 26px on a phone** — a sliced face, not the intended shoulder trim,
+    and invisible in a diff. Absolute `left` offsets off both edges are
+    symmetric by construction. `:only-of-type { left: 0 }` re-centres the lone
+    survivor of a 404, who would otherwise be stranded at the first seat and
+    clipped. Any future change here must be MEASURED against the figure's box,
+    not the card's — the card is wider, so head-inside-card says nothing about
+    what the figure clips.
   - **Double-class the modifier** (`.dbc-reveal__model.dbc-reveal__model--def`).
     The portrait and short-landscape breakpoints re-declare
-    `.dbc-reveal__model`'s width at equal specificity and LATER in the file, so
-    a single `--def` class loses to them and the pair snaps back to full width
-    on a phone.
+    `.dbc-reveal__model`'s width AND `max-width`/`max-height` at equal
+    specificity and LATER in the file, so a single `--def` class loses to them
+    and the pair's sizing changes out from under it on a phone.
   - **The higher-ranked man goes in FRONT** (`:first-of-type` gets `z-index: 1`);
     source order would otherwise paint the second on top and put the better
     player's ear behind the other man's shoulder.

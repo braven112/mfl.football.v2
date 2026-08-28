@@ -26,7 +26,8 @@
  *     team) — drawn at random from the top five and then held for the reveal
  *     (Brandon, 2026-08-28). Two rather than one
  *     because a defense is a unit and one man reads as a player card; they
- *     stand shoulder-over-shoulder at 90% scale so both heads clear.
+ *     stand shoulder-over-shoulder at FULL cutout scale — the same size a lone
+ *     player gets — offset so both heads clear.
  *     Not rotated: the Free Agents hero cycles faces because it is ambient
  *     furniture an owner scrolls past, but this card IS the moment, and a face
  *     that changes underneath the room mid-reveal reads as a second pick
