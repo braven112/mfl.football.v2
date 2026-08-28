@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-08-27T23:50:01.554Z"
+    "fetchedAt": "2026-08-28T07:08:09.557Z"
   },
   "players": [
     {
@@ -1894,20 +1894,55 @@
       "status": "ROSTER",
       "contractYear": "3",
       "points": 0,
-      "team": "FA",
+      "team": "ARI",
       "draftYear": 2024,
       "draftTeam": "ARI",
       "birthdate": 1027396800,
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/16594_thumb.jpg",
       "externalIds": {
         "mfl": "16594",
-        "sleeper": null,
+        "sleeper": "11589",
         "gsis": null
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "11589",
+        "fullName": "Trey Benson",
+        "team": "ARI",
+        "age": 24,
+        "height": "72",
+        "weight": "225",
+        "number": 33,
+        "college": "Florida State",
+        "birthDate": "2002-07-23",
+        "status": "Inactive",
+        "active": true,
+        "position": "RB",
+        "depthChartPosition": "RB",
+        "depthChartOrder": 5,
+        "fantasyPositions": [
+          "RB"
+        ],
+        "experience": 2,
+        "injuryStatus": "IR",
+        "injuryBodyPart": "Knee",
+        "gsisId": null
+      },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "17472",
+          "name": "Love, Jeremiyah"
+        },
+        {
+          "id": "15712",
+          "name": "Allgeier, Tyler"
+        },
+        {
+          "id": "13146",
+          "name": "Conner, James"
+        }
+      ]
     },
     {
       "id": "14832",
@@ -3638,8 +3673,8 @@
           "WR"
         ],
         "experience": 3,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Lower Body",
+        "injuryStatus": null,
+        "injuryBodyPart": null,
         "gsisId": null
       },
       "nflverse": null,
@@ -4238,7 +4273,7 @@
         "id": "11647",
         "fullName": "Kimani Vidal",
         "team": "LAC",
-        "age": 24,
+        "age": 25,
         "height": "68",
         "weight": "215",
         "number": 28,
@@ -7652,8 +7687,8 @@
           "RB"
         ],
         "experience": 1,
-        "injuryStatus": "Questionable",
-        "injuryBodyPart": "Ribs",
+        "injuryStatus": null,
+        "injuryBodyPart": null,
         "gsisId": null
       },
       "nflverse": null,
@@ -12173,8 +12208,8 @@
           "QB"
         ],
         "experience": 1,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
+        "injuryStatus": "Questionable",
+        "injuryBodyPart": "Head",
         "gsisId": null
       },
       "nflverse": null,
@@ -12694,7 +12729,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 3,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "RB"
         ],
@@ -17310,17 +17345,39 @@
       "status": "TAXI_SQUAD",
       "contractYear": "5",
       "points": 0,
-      "team": "FA",
+      "team": "KC",
       "draftYear": 2026,
       "draftTeam": "FA",
       "birthdate": 1046581200,
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17523_thumb.jpg",
       "externalIds": {
         "mfl": "17523",
-        "sleeper": null,
+        "sleeper": "13392",
         "gsis": null
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "13392",
+        "fullName": "Jeff Caldwell",
+        "team": "KC",
+        "age": 23,
+        "height": "77",
+        "weight": "215",
+        "number": 8,
+        "college": "Cincinnati",
+        "birthDate": "2003-03-02",
+        "status": "Inactive",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": null,
+        "depthChartOrder": null,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 0,
+        "injuryStatus": "IR",
+        "injuryBodyPart": "Knee",
+        "gsisId": null
+      },
       "nflverse": null,
       "gamesPlayed": null,
       "depthChartAhead": null
