@@ -272,6 +272,27 @@ tags generously (synonyms, data types, actions, slang a user might type).
 `tests/page-directory-data.test.ts` enforces the tag minimum, but nothing
 tells you to add the entry in the first place — you have to remember.
 
+## Second league's copy of a page — build a component, not a second page
+
+A route that exists under two league directories in `src/pages/` is a
+**sibling**. Copying one league's page file into the next league and editing it
+is how this repo accumulated ~57,800 lines across 24 forked siblings —
+`rosters.astro` is 12,521 + 2,465 + 245, `lineup.astro` is 2,574 next to an
+almost line-identical 2,580.
+
+`tests/page-fork-ratchet.test.ts` now stops the next one. It classifies every
+sibling route by the size of its largest copy (>80 lines = forked) and pins the
+forked set in `tests/fixtures/page-fork-baseline.json`. That list may only
+SHRINK: a new forked sibling fails the build, and so does a route that got
+unified (retighten the baseline rather than leave slack — same idiom as
+`typecheck-baseline.json`).
+
+The shape to copy is `src/pages/theleague/division-strength.astro`: a thin route
+wrapper holding the auth gate, the league's data import, and one shared page
+component. Note **why** the redirect and the data import stay in the route — a
+static import specifier can't be a runtime variable, and `Astro.redirect()` only
+redirects from a page (see the `/cr` note above).
+
 ## What's New changelog — required after user-facing work
 
 A new page, new user-facing feature, or an enhancement that changes how

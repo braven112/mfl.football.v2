@@ -119,6 +119,57 @@ renders as "and**League**". Keep an inline element and its surrounding spaces
 on ONE source line. The same applies to `fonts`, `integrations`, and the
 `process.env` hydration — a story gets none of it.
 
+## Trap 5 — the layout injects styles a story never gets
+
+`TheLeagueLayout` renders `<TeamAccentStyles />`, which defines
+`--team-accent-<franchiseId>` for every franchise with an `html.dark`
+override, each forced to clear 3:1 on its theme's surface. A story has no
+layout, so **every one of those tokens was undefined** and anything tinting by
+franchise fell back silently — the Pecking Order's sixteen rank numerals all
+rendered the same blue.
+
+This is worse than a cosmetic bug in a visual suite: baselining the fallback
+bakes wrong colors into Chromatic and blinds it to precisely the accent
+regressions it exists to catch (see `theming-and-assets.md` — the Pecking Order
+shipped invisible rank numbers in dark mode exactly this way).
+
+`preview.ts` now calls the SAME `buildTeamAccentCss()` the layout does and
+injects it once, so there is one source of truth. Verified: franchise 0002
+resolves `#8b6914` light / `#3f7fb0` dark, its real contrast pair.
+
+The same reasoning applies to the other head-injected style components
+(`NflLogoDarkStyles`, `TeamIconDarkStyles`, `CollegeLogoDarkStyles`). If a
+story starts showing the wrong logo variant in dark mode, that is why.
+
+
+**The `TeamIconDarkStyles` gap is now CLOSED**, and how it was closed is the
+point. It was the only one of the four head-injected sheets Storybook did not
+reproduce, because it is not a zero-argument builder but a COMPOSITION — four
+builder calls across both leagues' configs and two icon directories, which are
+pairing-sensitive (the stroke fallback must use the same `franchiseIconDir` as
+the swap for its league or the selectors miss). Copying that into `preview.ts`
+was exactly the drift risk the shared builders exist to avoid.
+
+The composition now lives in `src/utils/team-icon-dark-styles.ts`
+(`buildAllTeamIconDarkCss()`), called by both `TeamIconDarkStyles.astro` and
+`preview.ts`. Verified byte-identical to the old inline version at extraction
+time: 51 rules, ~7.4 KB, covering 11 of TheLeague's 16 franchises and 10 of the
+AFL's 24. Until then every franchise crest rendered its LIGHT artwork in
+dark-mode stories — and Chromatic would have baselined that as correct.
+
+`Theming/TeamIconCell` is the standing guard on that wiring. If the injection
+is ever dropped, `DarkSwapAvailable` stops differing between themes.
+
+## Trap 6 — no Node globals in a fixture module
+
+Story and fixture modules are bundled for the BROWSER. A fixture that built a
+data URI with `Buffer.from(...).toString('base64')` threw on import, so the
+args never constructed and every one of that component's stories rendered
+**empty** — no error in the console, just nothing. Write the literal instead.
+
+Symptom to recognize: a story that builds and appears in `index.json` but
+renders zero characters, while its siblings from another fixture are fine.
+
 ## Theme × league is pure CSS — which is why the matrix works
 
 Both axes are CSS-only in this codebase:
@@ -318,3 +369,173 @@ until build 10, regardless of how small the diff is. Budget for roughly
 680 snapshots of runway before the discount starts. After that a narrow PR
 drops to ~20 billed. The `turboSnapEnabled` flag in the job summary and on the
 Overview page says which regime you are in.
+
+## Choosing modes
+
+**`themeModes` is not theme-only.** It pins `league: 'theleague'` as well as
+the theme, because every snapshot needs *some* league global. Read the name as
+"the TheLeague pair", not "the neutral pair" — that misreading shipped AFL
+stories rendering under TheLeague's palette, and both the review and Copilot
+caught it independently.
+
+Three cases, and the middle one is the trap:
+
+| The component… | Use | Why |
+|---|---|---|
+| takes no league input; styles read a league token | `allModes` | Four genuinely different renders |
+| takes `league` as a PROP | `themeModes` for the TheLeague stories, `leagueModes` for the AFL ones | The args pick the CONTENT; the mode must pick a matching SKIN. Not a second axis — each story still gets 2 snapshots, just the right 2. |
+| takes no league input; styles read NO league token | `themeModes` | An AFL snapshot would be pixel-identical. `PlayerCell` and `LineupGameStrip` are here — checking cost 32 wasted snapshots a build to discover. |
+
+Before reaching for `allModes`, actually grep the component's stylesheet for
+`--league-accent` and `data-league`. If neither appears, the league axis does
+not exist for it.
+
+Rule: **a mode must change something the args cannot, and must not contradict
+what the args already said.**
+
+## What is reachable from `rosters.astro`
+
+The roster page is the biggest risk surface in the repo (~12,500 lines in
+TheLeague, ~1,000 of the type-error baseline) and it is NOT storyable itself.
+What it is built from splits cleanly:
+
+| From the roster page | Storyable? |
+|---|---|
+| `PlayerCell` | **Yes** — richly prop-driven, both leagues, storied |
+| `PlayerDetailsModal` (1,444 lines) | Shell only. Props are `class` + `hideContract`; everything visible is injected by client JS through `initPlayerModalTrigger`. A story renders empty chrome. |
+| `PlayerInjuryModal` | Same — `class` only |
+| `ContractDeclarationModal`, `CutdownPlanPanel`, chart cards | TheLeague-only; not yet assessed |
+
+**`PlayerCell` is where the safety actually is**, because it carries a bug
+class the docs already record: the avatar backdrop must come from
+`getPlayerAvatarBackground` / `getPlayerAvatarBorder`, never a raw
+`getNflTeamColors` primary — about a third of the NFL wears a near-black
+primary and a dark-jerseyed headshot on it disappears in dark mode (Cam Ward
+on Titans navy, July 2026). Six near-black teams are pinned as standing
+guards. Verified working: TEN's navy `#0C2340` renders an anchor of
+`rgb(138,184,232)`, BAL's near-black purple `rgb(128,120,174)`.
+
+### Making `PlayerDetailsModal` storyable — why NOT extraction
+
+The obvious move is to extract the modal's body into a prop-driven child. Do
+not: the file is 1,444 lines of which only ~146 are template, and the other
+1,300 are 610 lines of **scoped** `<style>` plus 658 of client script. Astro
+scopes styles per component, so moving the markup into a child orphans every
+one of those CSS rules.
+
+What works instead is optional `preview` / `previewOpen` props ON the component
+itself, which server-render the same elements the client script targets. Omit
+them and the output is byte-equivalent to what always shipped; the runtime path
+is untouched because the script overwrites the content on open either way.
+
+The `Skeleton` story is the guard on that equivalence — it passes no `preview`
+at all, so it pins the production shape: 47 ids, `pdm-owner` still
+`display: none`, every placeholder still an em dash, news and weekly-results
+sections still collapsed.
+
+The `preview` fields are PRE-FORMATTED STRINGS deliberately. Formatting lives
+in the client script and a story cannot run it; duplicating it in fixtures
+would let the story drift from production. These stories pin layout, styling
+and the shape of each state — not the formatting logic. Be honest about that
+rather than implying more coverage than exists.
+
+## The Storybook MCP server (`@storybook/addon-mcp`)
+
+Enabled in `.storybook/main.ts`. It serves an MCP endpoint at `/mcp` **from
+the running dev server** — `pnpm storybook`, then point an agent at
+`http://localhost:6006/mcp`. It is not wired into `.mcp.json` on purpose: the
+endpoint only exists while the dev server is up, and a committed entry would
+fail on every session that isn't running Storybook. Add it per-user instead:
+
+```bash
+claude mcp add --transport http storybook http://localhost:6006/mcp
+```
+
+**Verified against this repo's Astro setup**, not assumed. Four tools register:
+
+| Tool | What it does |
+|---|---|
+| `get-stories-by-component` | source file → the `storyId`s that render it |
+| `preview-stories` | `storyId`s → preview URLs |
+| `get-changed-stories` | stories marked new/modified/related |
+| `get-storybook-story-instructions` | canonical story-writing conventions |
+
+**Two of the three toolsets are dead here, and that is a property of the
+framework, not a setting to flip.** The addon gates each toolset on a runtime
+capability rather than a framework allowlist:
+
+- **docs** needs a component-manifest generator. `@storybook-astro/framework`
+  ships none (only React frameworks do today), so `getManifestStatus` reports
+  no manifests and the toolset never registers.
+- **test** needs `@storybook/addon-vitest`. We don't have it, and portable
+  stories don't work for `.astro` anyway.
+
+**THE BLIND SPOT — `get-stories-by-component` does not traverse `.astro`
+frontmatter imports.** It resolves direct story→component links correctly and
+reports nothing beyond them. Concretely: `PeckingOrderIssue.astro` imports
+`src/utils/team-accent-css` on line 21 and has four stories, but querying
+`src/utils/team-accent-css.ts` returns **"no stories found"**. So does
+`src/styles/tokens.css`, which affects every story in the suite.
+
+Treat a "no stories found" on a util or a stylesheet as **unknown, not
+uncovered**. Acting on it as though the file were unstoried is how you skip
+the visual check on a token change — the single most expensive bug class in
+this repo (see `docs/claude/rules/theming-and-assets.md`). This is the same
+shape as TurboSnap's CSS blindness, which is why `pnpm chromatic` passes
+`--externals "src/styles/**/*.css"`.
+
+It does not affect the static build: `pnpm build:storybook` produces the same
+52 entries with the addon on or off, so Chromatic is unchanged. `pnpm add`
+reports one unmet peer (`valibot@^1.4.0` against the installed 1.2.0); the
+server initializes and answers `tools/call` regardless.
+
+## The three dark-mode branches a crest can take
+
+`TeamIconCell` looks like a trivial `<img>` and is the most branch-heavy
+component in the suite, because none of the branching is in the component —
+it is all in the CSS the layout injects (see Trap 5). A crest in dark mode
+takes exactly ONE of these, and `Theming/TeamIconCell` pins all four states:
+
+| Team declares | Dark-mode result | Story |
+|---|---|---|
+| `iconDark` | `content: url(<dark>)` swap, no filter | `DarkSwapAvailable` |
+| nothing, but measured illegible | default white stroke | `StrokeDefaultWhite` |
+| `iconStrokeDark: "#rrggbb"` | that color as the stroke | `StrokeCustomColor` |
+| `iconStrokeDark: false` | **no stroke at all** | `StrokeExplicitlyOptedOut` |
+
+The swap and the stroke are mutually exclusive by construction: both the
+manifest and `withStrokeColors` exclude any team carrying an `iconDark`.
+
+**The opt-out is the one worth guarding.** `false` means "measured as
+illegible, and we still don't want a stroke", so a truthiness filter
+(`filter(t => t.iconStrokeDark)`) silently reclassifies it as "never set" —
+which puts the crest back on the DEFAULT white stroke, the exact treatment the
+`false` exists to refuse. `crest-dark-stroke-css.ts` carries a comment warning
+about this; `StrokeExplicitlyOptedOut` is what actually catches it.
+
+**Pick real teams when writing these stories, and check the config first.** The
+first draft of this file used Minty Fresh and Ditka as the stroke examples;
+both set `iconStrokeDark: false`, so both stories asserted a stroke that by
+design never renders. A story is only a guard if the fixture takes the branch
+you think it does — verify by reading the computed `filter` in the browser, not
+by assuming from the manifest.
+
+## `ThemeImage` — the one component whose light and dark captures MUST differ
+
+Everything else in this suite re-skins between themes. `ThemeImage` swaps the
+asset itself: it renders BOTH `<img>` elements server-side (with theme
+preference `auto`, the server cannot know the resolved theme) and lets
+`src/styles/theme-image.css` decide which is visible.
+
+That makes a regression invisible in whichever theme you happen to be looking
+at — drop the `.theme-img--dark` rule and light mode stays perfect while dark
+shows the wrong badge or both stacked. The light/dark pair is the only thing
+that catches it.
+
+The assertion to write is **exactly one visible `<img>` per theme**, not a
+pixel diff. A pixel comparison of the same story across themes ALWAYS differs
+because the canvas background changes with the theme — that says nothing about
+the swap. Read `getComputedStyle(...).display` on both images instead.
+
+`theme-image.css` is loaded from `preview.ts`: the component imports it in
+frontmatter, which is Trap 2.

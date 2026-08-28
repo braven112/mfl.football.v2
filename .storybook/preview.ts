@@ -1,5 +1,9 @@
 import { definePreview } from '@storybook-astro/framework';
 import { themeModes } from './modes';
+import { buildTeamAccentCss } from '../src/utils/team-accent-css';
+import { buildNflLogoDarkCss } from '../src/utils/nfl-logo-dark-css';
+import { buildCollegeLogoDarkCss } from '../src/utils/college-logo-dark-css';
+import { buildAllTeamIconDarkCss } from '../src/utils/team-icon-dark-styles';
 
 // Global stylesheets the real app loads from TheLeagueLayout. Tokens first —
 // everything else resolves var(--*) against them.
@@ -27,6 +31,10 @@ import '../src/styles/utilities.css';
  */
 import '../src/styles/playoff-round-hero.css';
 import '../src/styles/loading.css';
+import '../src/styles/player-cell.css';
+import '../src/styles/player-modal-band.css';
+import '../src/styles/player-news.css';
+import '../src/styles/theme-image.css';
 
 /**
  * Theme and league are BOTH pure CSS in this codebase:
@@ -52,6 +60,59 @@ function applyGlobals(theme: string, league: string) {
   const html = document.documentElement;
   html.classList.toggle('dark', theme === 'dark');
   html.setAttribute('data-league', league);
+}
+
+/**
+ * Head-injected layout styles — the layout's job in production, ours here.
+ *
+ * `TheLeagueLayout` renders four style components into <head>, and a story gets
+ * NONE of them. All four are plain builder functions with no Node
+ * dependencies, so we call the SAME functions the layout does and there is one
+ * source of truth per sheet.
+ *
+ * `TheLeagueLayout` renders `<TeamAccentStyles />`, which defines
+ * `--team-accent-<franchiseId>` for every franchise in every league with an
+ * `html.dark` override, each forced to clear 3:1 on its theme's card surface.
+ * Storybook renders components WITHOUT that layout, so every one of those
+ * tokens was undefined and anything tinting by franchise silently fell back —
+ * the Pecking Order's rank numerals all rendered the same blue instead of
+ * sixteen different team colors.
+ *
+ * That matters more than it looks. Baselining the fallback would bake wrong
+ * colors into Chromatic and make it blind to exactly the accent regressions it
+ * exists to catch (see docs/claude/rules/theming-and-assets.md: the Pecking
+ * Order shipped invisible rank numbers in dark mode this way).
+ *
+ * The logo sheets matter for a second, less obvious reason. They carry
+ * `img.nfl-logo-failed { visibility: hidden; }`, the rule that hides a logo
+ * whose src never resolved. Without it, every `src=""` placeholder the client
+ * script fills on open renders as a BROKEN IMAGE ICON — which would have been
+ * baselined into the PlayerDetailsModal snapshots as permanent noise.
+ *
+ * `TeamIconDarkStyles` was the one gap here, and it is now closed the way the
+ * gap note said it had to be. Its rules were not a zero-argument builder but a
+ * COMPOSITION — four builder calls across both leagues' configs and two icon
+ * directories — so reproducing it inline was the drift risk these shared
+ * builders exist to avoid. The composition moved to
+ * `src/utils/team-icon-dark-styles.ts`, which the layout component and this
+ * file both call. Until then every franchise crest rendered its LIGHT artwork
+ * in dark-mode stories: 51 rules and ~7.4 KB of swap-and-stroke CSS missing,
+ * covering 11 of TheLeague's 16 franchises and 10 of the AFL's 24.
+ *
+ * Injected once, client-side only — the SSR prerender pass has no document.
+ */
+function injectLayoutStyles() {
+  if (typeof document === 'undefined') return;
+  if (document.getElementById('sb-layout-styles')) return;
+  const el = document.createElement('style');
+  el.id = 'sb-layout-styles';
+  el.textContent = [
+    buildTeamAccentCss(),
+    buildNflLogoDarkCss(),
+    buildCollegeLogoDarkCss(),
+    buildAllTeamIconDarkCss(),
+  ].join('\n');
+  document.head.appendChild(el);
 }
 
 const preview = definePreview({
@@ -87,6 +148,7 @@ const preview = definePreview({
 
   decorators: [
     (story, context) => {
+      injectLayoutStyles();
       applyGlobals(
         String(context.globals.theme ?? 'light'),
         String(context.globals.league ?? 'theleague'),
