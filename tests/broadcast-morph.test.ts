@@ -99,7 +99,9 @@ describe('the two traps this morph fell into', () => {
     // The leaving crest stayed pinned on the reveal's box, the next morph
     // measured it there, computed a zero delta, and the board never animated
     // back. Nothing to pin means nothing to un-pin.
-    expect(code(morph)).not.toMatch(/fill:\s*'forwards'/);
+    // Quote style is not the rule — `fill: "forwards"` is the same bug, and
+    // prettier is free to change which one this file uses.
+    expect(code(morph)).not.toMatch(/fill:\s*['"`]forwards['"`]/);
   });
 
   it('takes its duration from the stylesheet, not a second copy of the number', () => {

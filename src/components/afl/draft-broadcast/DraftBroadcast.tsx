@@ -376,12 +376,19 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
       </button>
 
       {/* Both screens are mounted at all times and cross-faded by class — see
-          `.dbc__screen` in draft-broadcast.css. The hidden layer ends the fade
-          at `visibility: hidden`, which is what keeps the idle board's
-          conference switcher and rehearsal button out of the tab order while a
-          reveal owns the TV; opacity alone would leave them focusable behind
-          it. Nothing here decides timing — the queue still does. */}
-      <div className={`dbc__screen${current ? ' is-hidden' : ''}`} ref={idleLayerRef}>
+          `.dbc__screen` in draft-broadcast.css. Two things keep the covered
+          screen out of the way, and they cover different windows: the CSS ends
+          the fade at `visibility: hidden`, which takes the idle board's
+          conference switcher and rehearsal button out of the tab order and the
+          accessibility tree — but only once the fade FINISHES. `inert` flips
+          the moment the handoff starts, so nothing can be tabbed into during
+          the ~620ms the outgoing layer is still painted. Nothing here decides
+          timing — the queue still does. */}
+      <div
+        className={`dbc__screen${current ? ' is-hidden' : ''}`}
+        ref={idleLayerRef}
+        inert={showingReveal}
+      >
         <OnTheClock
           conference={data.conference}
           conferences={allConferences}
@@ -403,6 +410,7 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
         <div
           className={`dbc__screen dbc__screen--reveal${current ? '' : ' is-hidden'}`}
           ref={revealLayerRef}
+          inert={!showingReveal}
         >
           <BroadcastRevealCard
             key={shownReveal.key}
