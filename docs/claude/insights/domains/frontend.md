@@ -61,8 +61,9 @@
   mirror bug, since fractional widths (N+0.5) match neither. Make one side the
   unconditional default and query only the other.
 - `text-overflow: ellipsis` no-ops on a flex child with non-`stretch` alignment
-  (it shrink-wraps) — add `max-width: 100%`. `flex: 1` won't expand inside a
-  `justify-content: center` ancestor — give the ancestor a definite width.
+  (it shrink-wraps) — add `max-width: 100%` AND `min-width: 0`. `flex: 1` won't
+  expand inside a `justify-content: center` ancestor — give the ancestor a
+  definite width.
 - **A wrapping flex row's inset belongs to the ROW, not one item.** A wrapped
   line lays out against the *container's* padding box, so padding on the first
   item indents only that item. Put the inset on the container; if an item needs
@@ -128,6 +129,63 @@ production-only CSS bug, `curl` the shipped HTML + stylesheets, rewrite the
 hrefs to local copies, and open it in the bundled Chromium — it isolates
 "wrong bytes" from "device failing to apply right bytes" in minutes.
 <!-- /CURATED-HEAD -->
+
+---
+
+## 2026-08-28 - `max-width` Cannot Cap a Flex Item, and vh-Sized Type Does Not Know Its Box Shrank
+
+**Context:** The draft broadcast reveals a team defense as two of its stars, and
+their names rode one lower-third pill in the corner, one row per man. That plate
+encodes the pair's ORDER and nothing about their POSITIONS, so from ten feet
+away which name belonged to the man on the left was a guess. The fix is one chip
+per man, side by side, each centred on the head it names — two seats sized as a
+share of the column, following the cutouts' own arithmetic (a head sits at its
+cutout's `left` plus half its width).
+
+**Insight 1 — `max-width: 100%` does NOT cap a flex item, because `min-width`
+wins.** Each chip got `max-width: 100%` so it could not outgrow its seat, and
+each chip promptly outgrew its seat anyway. A flex item's initial `min-width` is
+`auto`, which for a `white-space: nowrap` item resolves to its full content
+width — and in CSS the min floor is applied AFTER the max cap, so min always
+wins. The chip's used width was its content, whatever the max said. On a 390px
+phone that put two names 20px into each other, which is strictly worse than the
+stack it replaced: overlapping chips do not just fail to say who is who, they
+say it wrongly. `min-width: 0` on the item is the fix, and it is needed on
+*every* level that must shrink — the chip AND the name inside it.
+
+This is the same shape as the head's existing ellipsis rule, and the head said
+only "add `max-width: 100%`". If a rule tells you to cap a flex item, assume it
+also needs the floor removed.
+
+**Insight 2 — sizing type in `vh` when its BOX is a share of something else is
+a latent overflow.** Every string on this card is sized in `vh`, which is right
+for type that must read from across a room. But a chip is capped at ~21% of the
+CARD, and the card is ~500px wide inset on the page versus ~864px once it is
+fullscreen on the TV — at identical `vh`. So the same font that fit comfortably
+on the television ellipsised a fifth of "C.J. Gardner-Johnson" away in the inset
+view, and no viewport-unit tuning can fix that, because the viewport is the one
+thing that did not change between the two.
+
+The fix is a container query, not a smaller font: `container-type: inline-size`
+on the card, then `font-size: clamp(0.8rem, min(2.1vh, 1.5cqw), 1.9rem)`. The
+`min()` is what makes this safe to add to tuned type — `2.1vh` still wins
+wherever it is the smaller of the two, so the TV read is byte-for-byte what it
+was, and the `cqw` term only binds in the case that was broken. Deriving the
+coefficient is arithmetic, not taste: a chip is ~13.5em wide at this weight, a
+seat is ~21% of the card, so anything above ~1.5cqw cannot fit.
+
+`container-type: inline-size` on a card that is already `position: relative` +
+`overflow: hidden` + animated turned out to be inert here — it adds layout and
+inline-size containment, and layout containment does not clip overflow (only
+`contain: paint` does), so the cutouts still bleed off the card exactly as
+before. Verified against a non-DEF reveal, which renders identically.
+
+**Insight 3 — geometry claims are cheap to actually measure, so measure them.**
+Both bugs above were found by driving the page in Chromium and printing, for
+every viewport, each chip's centre next to its cutout's centre. That probe is
+~20 lines and it turns "the names should line up" into a number that is 0 or is
+not. Six viewports plus the one-survivor 404 path, all Δ=0, took one script.
+The two failures it caught were invisible in the CSS and would have shipped.
 
 ---
 
