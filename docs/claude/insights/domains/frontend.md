@@ -131,6 +131,62 @@ hrefs to local copies, and open it in the bundled Chromium — it isolates
 
 ---
 
+## 2026-08-28 - A `fill: forwards` Transform Survives `cancel()`, and Poisons the Next Measurement
+
+**Context:** The AFL draft broadcast's two screens (idle board, pick reveal) got
+a shared-element morph — the franchise crest flies between its lockup position
+and the reveal's centred backdrop, the copy slides across. Standard FLIP:
+measure both boxes, start the arriving element on the departing one's box, let
+it travel home; run the departing one along the same path so the pair reads as
+one object through the cross-fade.
+
+The way IN worked first try. The way BACK silently did nothing — the board
+snapped, and the idle crest stayed parked at the reveal's centre, at 2x size,
+for the rest of the night.
+
+**Insight — the departing element was pinned with `fill: 'forwards'`, which is
+the obvious choice and a trap.** Its layer is about to be hidden, so parking it
+where it flew to looks free. But that transform **outlives `cancel()`** in
+Chrome: the finished animation stops being listed by `getAnimations()` while
+still applying to the element. So the standard defensive prelude —
+
+```js
+for (const a of el.getAnimations()) a.cancel();   // returns [] — nothing to cancel
+const box = el.getBoundingClientRect();           // still the PINNED box
+const base = getComputedStyle(el).transform;      // still the PINNED matrix
+```
+
+— cancels nothing, then measures the element sitting on the *other* screen's
+box. `from` and `to` come out identical, the delta is zero, and every keyframe
+is the pin. No error, no warning, no animation: the failure mode is a morph
+that quietly stops morphing after the first round trip.
+
+**Rules for any FLIP in this repo:**
+
+- **Don't pin. Nothing to un-pin.** Give the departing element no fill at all
+  and let it snap home the frame it lands. That snap is invisible as long as the
+  travel and the fade have the same duration and start together — which is why
+  `broadcast-morph.ts` reads its duration from the `--dbc-fade` custom property
+  rather than keeping a second copy of the number.
+- **Cancel, then measure, then read the base transform — in that order.** A
+  WAAPI keyframe REPLACES the transform property rather than adding to it, so an
+  element the stylesheet centres with `translate(-50%, -50%)` needs that matrix
+  carried into both keyframes. Reading it off a settled element is the whole
+  ballgame.
+- **Cancel the CSS entrance animation on the container too.** A card animating
+  `scale(1.04) → 1` under the element you are measuring hands you a box that is
+  4% wrong and shrinking; the flight then drifts the whole way. Replace it with
+  an opacity fade and let the shared element carry the motion.
+- **Artwork scales, type does not.** A copy block travelling between a 2.5vh
+  team name and a 9vh player name reads as a zoom effect if you scale it.
+  Translate it and cross-fade the contents.
+
+Pinned by `tests/broadcast-morph.test.ts` (the ban on `fill: 'forwards'`, the
+cancel-before-measure order, and the duration coming from CSS). Full write-up in
+`docs/claude/insights/features/draft-broadcast.md`.
+
+---
+
 ## 2026-08-27 - Request-Derived State Is the Third #418 Trigger, and a Debug Banner Outlived Its Page
 
 **Context:** An owner clicking the yellow 🏷️ trade-block badge on
