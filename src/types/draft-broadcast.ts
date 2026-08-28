@@ -11,6 +11,24 @@
 import type { DraftRoomPick, DraftRoomTeam, DraftRoomPlayer } from './draft-room';
 
 /**
+ * One marquee NFL defender standing in for a team defense on the reveal card.
+ *
+ * A DEF "player" is a crest, not a person, so a team-defense pick would
+ * otherwise reveal with an empty figure column. Same ranked pool the Free
+ * Agents hero spotlight and the player modal already draw from
+ * (`src/data/theleague/def-spotlight-players.ts`), resolved SERVER-side —
+ * importing that 20 KB map into the island would put all 32 teams' pools on
+ * the wire to use one, and the TV must not wait on a fetch mid-reveal.
+ */
+export interface BroadcastDefenseFace {
+  name: string;
+  /** ESPN athlete id — the headshot URL is built from it client-side. */
+  espnId: string;
+  /** Real NFL position (DT/LB/CB/S…), shown beside the name. */
+  position?: string;
+}
+
+/**
  * Per-player extras the broadcast card shows that the draft room never needed.
  * Joined server-side and shipped with the page — the TV must not depend on a
  * client fetch landing mid-reveal.
@@ -80,4 +98,18 @@ export interface DraftBroadcastPageData {
    * no complete season is simply absent, and its link goes live instead.
    */
   rehearsalYears?: Record<string, number>;
+  /**
+   * NFL team code → that defense's marquee defenders, best first. Keyed by the
+   * RAW `nflTeam` string the pool's players carry (MFL's `NEP`/`GBP`/`KCC`
+   * dialect), so the island looks a defense up with a plain index and needs no
+   * team-code normalizer of its own.
+   *
+   * Shipped ONCE per team rather than on each player, which is not a
+   * micro-optimization: `normPos` folds every MFL team-unit pseudo-player
+   * (`TMQB`, `TMDL`, `TMPN`, …) into `DEF`, so 320 players in the 2026 pool
+   * carry the position — 32 real defenses and 288 pseudo-players sharing their
+   * names and teams. Hanging the pool off each of them added 101 KB (+28%) to
+   * the serialized payload for 32 distinct lists.
+   */
+  defenseFaces?: Record<string, BroadcastDefenseFace[]>;
 }

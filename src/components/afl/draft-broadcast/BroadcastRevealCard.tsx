@@ -19,12 +19,24 @@
  *     league's ranking sources (Brandon, 2026-08-27: not for this screen) —
  *     because a reveal that owns a 65" screen for 18 seconds and says only a
  *     name is wasting the best real estate of the night.
+ *   - A TEAM DEFENSE gets real faces, not an empty figure column. `DEF` is
+ *     excluded from the site-wide cutout rule (a DEF "player" is a crest), so
+ *     the card opts back in with TWO of the unit's marquee defenders from the
+ *     shared `def-spotlight-players` pool (shipped with the page, keyed by NFL
+ *     team) — drawn at random from the top five and then held for the reveal
+ *     (Brandon, 2026-08-28). Two rather than one
+ *     because a defense is a unit and one man reads as a player card; they
+ *     stand shoulder-over-shoulder at 90% scale so both heads clear.
+ *     Not rotated: the Free Agents hero cycles faces because it is ambient
+ *     furniture an owner scrolls past, but this card IS the moment, and a face
+ *     that changes underneath the room mid-reveal reads as a second pick
+ *     landing. See docs/claude/insights/features/player-composites.md.
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { DraftRoomPick } from '../../../types/draft-room';
 import type { DraftRoomTeam } from '../../../types/draft-room';
-import type { BroadcastPlayer } from '../../../types/draft-broadcast';
+import type { BroadcastDefenseFace, BroadcastPlayer } from '../../../types/draft-broadcast';
 import { isSplashCutoutEligible, resolveSplashColors } from '../../../utils/pick-reveal';
 import {
   bestAvailableAt,
@@ -33,7 +45,7 @@ import {
   positionRunCount,
   resolveBroadcastGradient,
 } from '../../../utils/draft-broadcast';
-import { getCollegeHeadshot } from '../../../constants/roster-constants';
+import { getCollegeHeadshot, getPlayerHeadshot } from '../../../constants/roster-constants';
 
 interface Props {
   pick: DraftRoomPick;
@@ -45,7 +57,12 @@ interface Props {
   rehearsing?: boolean;
   /** The season being replayed — only meaningful while `rehearsing`. */
   leagueYear?: number;
+  /** NFL team code → that defense's marquee defenders. See `defenseFaces`. */
+  defenseFaces?: Record<string, BroadcastDefenseFace[]>;
 }
+
+/** How many defenders stand in for a team defense. */
+const DEFENSE_FACE_COUNT = 2;
 
 /** "1.03" — the way a draft room says a pick out loud. */
 function pickLabel(pick: DraftRoomPick): string {
@@ -60,6 +77,7 @@ export function BroadcastRevealCard({
   players,
   rehearsing,
   leagueYear,
+  defenseFaces,
 }: Props) {
   const [cutoutSrc, setCutoutSrc] = useState<string | null>(() =>
     isSplashCutoutEligible(player) ? player!.headshot : null
@@ -76,6 +94,73 @@ export function BroadcastRevealCard({
 
   const hideOnError = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     e.currentTarget.style.display = 'none';
+  }, []);
+
+  // ── Team-defense faces ──
+  // Two defenders out of the unit's top five, drawn once and then held for the
+  // whole reveal. The pool ships with the page keyed by NFL team code, so this
+  // is a plain lookup — nothing to fetch, and no team-code normalizer on the
+  // client (the key is the same raw string the player carries).
+  const facePool = player?.position?.toUpperCase() === 'DEF'
+    ? defenseFaces?.[player.nflTeam || '']
+    : undefined;
+  const [deadFaces, setDeadFaces] = useState<ReadonlySet<string>>(() => new Set());
+
+  // The draw is a stable SHUFFLE of the whole pool, taken once, and the pair is
+  // the first two entries still alive in it.
+  //
+  // That shape is the point, and it replaced seeded indices that re-derived
+  // themselves against the shrinking live list. Those indices moved when the
+  // list did: brute-forced over 200k seed pairs on a five-man pool, 15.04% of
+  // 404 events evicted the SURVIVING defender along with the missing one —
+  // unmounting a face that had already decoded and was on screen, which is
+  // exactly the "a face that changes underneath the room mid-reveal" failure
+  // the header forbids. Filtering a fixed order cannot do that: a survivor is
+  // still among the first two live entries by construction, so only the dead
+  // slot is backfilled.
+  //
+  // Random sort KEYS rather than a seeded PRNG because they survive the same
+  // way a seed would (drawn once, in state) while being a real uniform shuffle
+  // — and taking two off the front of a shuffle can never draw one man twice,
+  // which the index arithmetic had to hand-prove.
+  const [shuffleKeys] = useState<number[]>(() =>
+    Array.from({ length: 16 }, () => Math.random())
+  );
+
+  // Re-drawn per reveal for free: `DraftBroadcast` keys this card by pick, so
+  // every selection remounts it. That matters in the AFL specifically —
+  // `duplicatePlayers` lets both conferences draft the same defense, and a
+  // fixed pair would show the room the identical card twice.
+  const drawOrder = useMemo(
+    () =>
+      (facePool ?? [])
+        .map((face, rank) => ({ face, rank, key: shuffleKeys[rank] ?? rank }))
+        .sort((a, b) => a.key - b.key),
+    [facePool, shuffleKeys]
+  );
+
+  // Displayed in POOL order so the better defender is the one in front (see the
+  // `:first-of-type` z-index rule in draft-broadcast.css) and so the caption's
+  // two lines read left-to-right against the two cutouts. A 404 can therefore
+  // move the survivor from one side to the other — but it never replaces him,
+  // and his <img> is keyed by espnId so the node is not remounted.
+  const shownFaces = useMemo(
+    () =>
+      drawOrder
+        .filter((entry) => !deadFaces.has(entry.face.espnId))
+        .slice(0, DEFENSE_FACE_COUNT)
+        .sort((a, b) => a.rank - b.rank)
+        .map((entry) => entry.face),
+    [drawOrder, deadFaces]
+  );
+
+  const handleFaceError = useCallback((espnId: string) => {
+    setDeadFaces((prev) => {
+      if (prev.has(espnId)) return prev;
+      const next = new Set(prev);
+      next.add(espnId);
+      return next;
+    });
   }, []);
 
   // Franchise brand first (resolveSplashColors), then floored for legibility.
@@ -147,6 +232,36 @@ export function BroadcastRevealCard({
               decoding="async"
               onError={handleCutoutError}
             />
+          ) : null}
+          {/* Keyed by espnId so a 404 swap replaces the NODE: reusing one <img>
+              would leave the missing defender's broken frame on screen until
+              the replacement decoded, and would not replay the entrance
+              animation the rest of the card gets. */}
+          {shownFaces.map((face) => (
+            <img
+              key={face.espnId}
+              className="dbc-reveal__model dbc-reveal__model--def"
+              src={getPlayerHeadshot(undefined, face.espnId)}
+              alt=""
+              decoding="async"
+              onError={() => handleFaceError(face.espnId)}
+            />
+          ))}
+          {/* The headline is the DEFENSE ("Kansas City Chiefs"); without this
+              the room is looking at two faces the card never names. Real text,
+              not alt on decorative cutouts, so it is legible from ten feet.
+              One pill, one line per man, in the same order as the cutouts. */}
+          {shownFaces.length > 0 ? (
+            <p className="dbc-reveal__face">
+              {shownFaces.map((face) => (
+                <span className="dbc-reveal__face-row" key={face.espnId}>
+                  <span className="dbc-reveal__face-name">{face.name}</span>
+                  {face.position ? (
+                    <span className="dbc-reveal__face-pos">{face.position}</span>
+                  ) : null}
+                </span>
+              ))}
+            </p>
           ) : null}
         </div>
 

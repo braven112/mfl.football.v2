@@ -430,6 +430,7 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
             players={players}
             rehearsing={rehearsing}
             leagueYear={data.leagueYear}
+            defenseFaces={data.defenseFaces}
           />
         </div>
       ) : null}

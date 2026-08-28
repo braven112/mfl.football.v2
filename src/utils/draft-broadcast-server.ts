@@ -13,9 +13,14 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { DraftRoomPick } from '../types/draft-room';
-import type { BroadcastPlayer, BroadcastPlayerExtras } from '../types/draft-broadcast';
+import type {
+  BroadcastDefenseFace,
+  BroadcastPlayer,
+  BroadcastPlayerExtras,
+} from '../types/draft-broadcast';
 import { parseTradeFromComment, selectDraftUnit } from './draft-utils';
 import { normalizeTeamCode } from './nfl-logo';
+import { getDefSpotlightPlayers } from '../data/theleague/def-spotlight-players';
 
 function readJson(relPath: string): any {
   try {
@@ -125,6 +130,59 @@ function loadByeWeeks(year: number): Map<string, number> {
   for (const [team, week] of Object.entries(season)) {
     const w = typeof week === 'number' ? week : parseInt(String(week), 10);
     if (Number.isFinite(w)) out.set(normalizeTeamCode(team), w);
+  }
+  return out;
+}
+
+/**
+ * How many marquee defenders ride along with a team defense.
+ *
+ * The card shows TWO of them, drawn at random, so this is the size of the hat
+ * rather than a display budget. Five gives ten possible pairings — deep enough
+ * that the same defense drafted in both conferences (`duplicatePlayers` allows
+ * it) is unlikely to show the room the same two men, and shallow enough that
+ * every name in it is one the room recognises. The pool's sixth is a
+ * rotational safety nobody is looking up.
+ */
+const DEFENSE_FACE_LIMIT = 5;
+
+/**
+ * The marquee defenders each team defense in the pool can be represented by,
+ * keyed by the RAW `nflTeam` string its players carry.
+ *
+ * Built per TEAM, not per player, and that is load-bearing rather than tidy:
+ * `normPos` (build-draft-players.ts) folds every MFL team-unit pseudo-player —
+ * `TMQB`, `TMRB`, `TMDL`, `TMPN`, and six more — into `DEF`, and each shares
+ * its real defense's name and team code. The 2026 pool carries 320 such
+ * players for 32 distinct defenses, so hanging the pool off each one added
+ * 101 KB (+28%) to the serialized payload to ship 32 lists. There is no way to
+ * tell the 32 from the 288 downstream: by the time a player reaches this
+ * function its position has already been normalized, and the pseudo-players are
+ * byte-identical on name and team.
+ *
+ * `getDefSpotlightPlayers` does the team-code normalization itself, which is
+ * the whole reason to call it rather than index the map: a DEF's `nflTeam`
+ * arrives in MFL's dialect (`NEP`, `GBP`, `KCC`), the map is keyed ESPN-style
+ * (`NE`, `GB`, `KC`), and Washington disagrees with BOTH — indexing raw would
+ * silently drop nine of the 32 defenses. The RESULT is keyed by the raw string
+ * so the island can do a plain lookup without shipping a normalizer.
+ *
+ * A team with no mapped pool is simply absent, and its reveal falls back to the
+ * crest-only treatment.
+ */
+export function buildDefenseFacesByTeam(
+  players: BroadcastPlayer[]
+): Record<string, BroadcastDefenseFace[]> {
+  const out: Record<string, BroadcastDefenseFace[]> = {};
+  for (const p of players) {
+    if ((p.position || '').toUpperCase() !== 'DEF') continue;
+    const key = p.nflTeam || '';
+    if (!key || out[key]) continue;
+    const pool = getDefSpotlightPlayers(key)
+      .filter((d) => d.espnId)
+      .slice(0, DEFENSE_FACE_LIMIT);
+    if (pool.length === 0) continue;
+    out[key] = pool.map((d) => ({ name: d.name, espnId: d.espnId, position: d.position }));
   }
   return out;
 }

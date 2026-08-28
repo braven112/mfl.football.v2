@@ -35,7 +35,10 @@ per player.
   background and ruins the composite. Gate rendering on
   `headshot.includes('espncdn.com')` — never composite an MFL JPG.
 - **DEF "players" are logos, not people** — always exclude `position === 'DEF'`
-  from composites.
+  from composites. Two surfaces deliberately opt BACK IN with a stand-in face
+  from `def-spotlight-players` (the player modal, with one face; the AFL
+  broadcast reveal, with two — see the entries below). The exclusion itself
+  stays global.
 - `getPlayerMap()` (src/utils/player-map.ts) is the one-stop resolver:
   MFL ID → name/position/nflTeam/espnId/headshot, cached per year. It reads
   theleague's players.json but MFL player IDs are global, so it resolves AFL
@@ -364,6 +367,83 @@ different from every other composite, and why:
   clear; the offensive path reclaims the cutout via `applyPlayerModalBand` on
   the next open. The cutout stays `aria-hidden` + `alt=""` (decorative) — the
   defender's name rides the sub-line as real text for screen readers.
+- **The AFL broadcast reveal draws TWO defenders at random (2026-08-28).** Same
+  problem as the modal — a team-defense pick left the entire figure column
+  empty for the full 18 seconds the card owns a 65" screen — and a different
+  answer, arrived at over three passes on the same day. Built ROTATING (one
+  face every 6s), cut to ONE held face, then settled on a PAIR: a defense is a
+  unit, and a single man reads as an ordinary player card with the wrong name
+  over it. Rotation is the one to not re-propose — the Free Agents hero cycles
+  because it is ambient furniture an owner scrolls past, but this card IS the
+  moment, and a face changing underneath the room mid-reveal reads as a second
+  pick landing. What is load-bearing:
+  - **Resolved SERVER-side** (`buildDefenseFacesByTeam`) and shipped on the PAGE
+    as `defenseFaces`, one list per NFL team code, keyed by the RAW `nflTeam`
+    string players carry so the island needs no team-code normalizer. Importing
+    the map into the island would put all 32 teams' pools (20 KB) on the wire to
+    use one, and the TV must never wait on a fetch mid-reveal.
+  - **Per TEAM, never per player — `normPos` makes DEF a much bigger set than
+    you think.** It folds every MFL team-unit pseudo-player (`TMQB`, `TMRB`,
+    `TMDL`, `TMPN`, and six more) into `DEF`, and each one shares its real
+    defense's name AND team code — 320 players for 32 defenses in the 2026 pool,
+    with nothing downstream able to tell the 32 from the 288 (the position is
+    already normalized by then, and the rest is byte-identical). Hanging the
+    pool off each player added **101 KB, +28%** to the serialized payload to
+    ship 32 distinct lists; the per-team map is 12.7 KB. Any future per-player
+    join on a DEF-positioned field pays that same 10x.
+  - **Capped at 5** — the size of the hat, not a display budget. Ten possible
+    pairings is deep enough that a defense drafted in BOTH conferences
+    (`duplicatePlayers` allows it) is unlikely to show the same two men; the
+    pool's sixth is a rotational safety the room does not recognise. It is also
+    a floor in PRACTICE — but the test sweep across all 32 defenses asserts only
+    ≥1, because that is the real runtime invariant (the card renders a single
+    defender when that is all a pool holds) and because
+    `fetch-def-spotlight-players.mjs` only WARNS below `MIN_PER_TEAM` while its
+    hard gate is a league-wide total. A ≥2 sweep would let one thin roster on a
+    Wednesday `def-spotlight-sync.yml` push turn main red for a case the card
+    handles fine. A separate assertion pins that all 32 are currently pairable,
+    which catches a league-wide collapse without being breakable by one team.
+  - **The draw is a stable SHUFFLE filtered down, not indices recomputed.** The
+    pair is the first two entries of a once-drawn shuffle that are still alive.
+    The version before it stored two seeds and re-derived `floor(seed * n)`
+    against the SHRINKING live list — so a 404 moved both indices: brute-forced
+    over 200k seed pairs on a five-man pool, **15.04% of 404 events evicted the
+    surviving defender too**, unmounting a face that had already decoded and was
+    on screen. That is the "face changes underneath the room mid-reveal" failure
+    the design forbids, arriving through the error path instead of a timer.
+    Filtering a fixed order cannot do it: a survivor is still among the first
+    two live entries by construction. Random sort KEYS held in state rather than
+    a seeded PRNG — a real uniform shuffle, and taking two off the front can
+    never draw one man twice, which the index arithmetic had to hand-prove.
+    (Residual, accepted: display is re-sorted by pool rank, so a 404 can move
+    the survivor to the other side. He is keyed by `espnId`, so the node moves
+    rather than remounting.)
+  - **Re-drawn per reveal for free**, because `DraftBroadcast` keys the card by
+    pick and every selection remounts it.
+  - **The pair geometry is arithmetic, not taste.** An ESPN headshot is
+    ~600x436 with the head about 30% of the frame, centred. At `width: 90%` of
+    the column each head is ~0.27 column-widths, so the men need at least that
+    much daylight between head centres or they occlude. `margin-left: -50%` on
+    the second (a percentage margin resolves against the FIGURE's width, not the
+    image's) leaves 0.4 column-widths between centres — measured at 1920x1080:
+    66px of head clearance and 55% body overlap, which is the shoulder overlap.
+    The pair spans ~1.3 columns and the figure's existing clip trims the outer
+    shoulders, the same bleed a single cutout already gets.
+  - **Double-class the modifier** (`.dbc-reveal__model.dbc-reveal__model--def`).
+    The portrait and short-landscape breakpoints re-declare
+    `.dbc-reveal__model`'s width at equal specificity and LATER in the file, so
+    a single `--def` class loses to them and the pair snaps back to full width
+    on a phone.
+  - **The higher-ranked man goes in FRONT** (`:first-of-type` gets `z-index: 1`);
+    source order would otherwise paint the second on top and put the better
+    player's ear behind the other man's shoulder.
+  The names ride a lower-third pill (`.dbc-reveal__face`), one row per man in
+  the same order as the cutouts, because the HEADLINE is the unit ("Denver
+  Broncos") — without it the room is looking at two faces the card never names.
+  Two names on ONE line overran the column and ellipsised the second man out of
+  existence; stacked rows always fit. The pill is pinned to the figure's LEADING
+  edge, not centred in it: `.dbc-reveal__figure` carries a `translateX(29%)`
+  that walks a centred pill out past the card's own overflow clip.
 - **`getDefSpotlightPlayers` key gotcha: Washington is `WAS`, not `WSH`.**
   The spotlight JSON is keyed by players.astro's `normalizeMflTeam` (GBP→GB,
   JAC→JAX, but Washington stays `WAS`). Both `nfl-logo.ts#normalizeTeamCode`

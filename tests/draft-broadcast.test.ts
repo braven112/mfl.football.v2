@@ -25,6 +25,8 @@ import {
 import {
   assignBoardRanks,
   buildConferenceBoard,
+  buildDefenseFacesByTeam,
+  enrichBroadcastPlayers,
   findRehearsalYear,
   loadConferenceKeepers,
 } from '../src/utils/draft-broadcast-server';
@@ -331,6 +333,117 @@ describe('findRehearsalYear', () => {
 
   it('returns undefined when the data path has no feeds at all', () => {
     expect(findRehearsalYear('data/nope', 2026, 'CONFERENCE00')).toBeUndefined();
+  });
+});
+
+
+describe('buildDefenseFacesByTeam', () => {
+  // A DEF "player" is a crest, not a person, so the reveal card would show an
+  // empty figure column for every team defense taken. These are the faces that
+  // stand in for it — the same ranked pool the Free Agents hero draws from.
+  function def(nflTeam: string, id = '0501'): BroadcastPlayer {
+    return { id, name: 'Kansas City Chiefs', position: 'DEF', nflTeam, headshot: '' } as BroadcastPlayer;
+  }
+
+  it('gives a team defense its marquee defenders, best first', () => {
+    const faces = buildDefenseFacesByTeam([def('KCC')]).KCC;
+    expect(faces.length).toBeGreaterThan(0);
+    expect(faces[0].espnId).toMatch(/^\d+$/);
+    // The pool's own order is the ranking, and it survives the trim — the card
+    // draws from the TOP five, so a reshuffle here would put a rotational
+    // safety in the same hat as the unit's best player.
+    const pool = JSON.parse(readFileSync('src/data/theleague/def-spotlight-players.json', 'utf-8'));
+    expect(faces.map((f) => f.name)).toEqual(
+      pool.teams.KC.slice(0, faces.length).map((d: { name: string }) => d.name)
+    );
+  });
+
+  it('ships a hat deep enough to draw from, but only of names worth showing', () => {
+    // The card shows TWO of these, at random, so this is the size of the draw
+    // rather than a display budget. Capped at five: the pool's sixth man is a
+    // rotational safety the room does not recognise.
+    const faces = buildDefenseFacesByTeam([def('KCC')]).KCC;
+    expect(faces.length).toBeLessThanOrEqual(5);
+    expect(faces.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('resolves MFL team codes, not just ESPN ones', () => {
+    // The killer: a DEF arrives carrying MFL's dialect (NEP/GBP/KCC/LVR) while
+    // the pool is keyed ESPN-style (NE/GB/KC/LV), and Washington disagrees with
+    // BOTH normalizations. Indexing raw silently drops nine of 32 defenses.
+    const codes = ['NEP', 'GBP', 'KCC', 'LVR', 'NOS', 'SFO', 'TBB', 'JAC', 'WAS'];
+    const byTeam = buildDefenseFacesByTeam(codes.map((c, i) => def(c, `05${i}`)));
+    for (const code of codes) expect(byTeam[code], code).toBeTruthy();
+  });
+
+  it('keys the result by the RAW code the player carries, not the normalized one', () => {
+    // The island indexes this map with `player.nflTeam` verbatim so it does not
+    // have to ship a team-code normalizer. Re-keying to ESPN codes here would
+    // miss the same nine teams, one layer further down.
+    expect(Object.keys(buildDefenseFacesByTeam([def('GBP')]))).toEqual(['GBP']);
+  });
+
+  it('covers every NFL team a defense can belong to', () => {
+    const players = JSON.parse(
+      readFileSync('data/theleague/mfl-feeds/2026/players.json', 'utf-8')
+    ).players.player as any[];
+    const defenses = players.filter((p) => (p.position || '').toUpperCase() === 'DEF');
+    expect(defenses.length).toBe(32);
+    const byTeam = buildDefenseFacesByTeam(defenses.map((d) => def(d.team, d.id)));
+    for (const d of defenses) {
+      // At least ONE face, which is the real runtime invariant — the card
+      // renders a single defender when that is all a pool holds. Asserting a
+      // full pair here would be stricter than the code: the generator
+      // (`fetch-def-spotlight-players.mjs`) only WARNS below MIN_PER_TEAM and
+      // its hard gate is a league-wide total, so one thin roster on a Wednesday
+      // sync would turn main red for a case the card handles fine.
+      expect(byTeam[d.team]?.length ?? 0, `${d.name} (${d.team})`).toBeGreaterThanOrEqual(1);
+    }
+    // The pool is nonetheless deep across the league — a collapse to mostly
+    // single-face teams is a real regression even though one is not.
+    const pairable = defenses.filter((d) => (byTeam[d.team]?.length ?? 0) >= 2).length;
+    expect(pairable).toBe(32);
+  });
+
+  it('keys off POSITION alone — a non-DEF contributes nothing', () => {
+    // Deliberately NOT gated on `headshot`: an offensive player with no ESPN
+    // image still must not borrow his team's defenders, and a DEF whose feed
+    // somehow carries a headshot is still a crest. Both fixtures below are
+    // RBs; the headshot value is irrelevant to the gate, and pinning the test
+    // to it would imply a coupling the function does not have.
+    const rbNoImage = { id: '1', name: 'A Back', position: 'RB', nflTeam: 'KCC', headshot: '' } as BroadcastPlayer;
+    const rbWithImage = {
+      id: '2',
+      name: 'B Back',
+      position: 'RB',
+      nflTeam: 'KCC',
+      headshot: 'https://a.espncdn.com/i/headshots/nfl/players/full/1234.png',
+    } as BroadcastPlayer;
+    expect(buildDefenseFacesByTeam([rbNoImage, rbWithImage])).toEqual({});
+  });
+
+  it('falls back to the crest-only reveal for an unmapped defense', () => {
+    expect(buildDefenseFacesByTeam([def('XXX'), def('', '0502')])).toEqual({});
+  });
+
+  it('ships ONE list per team, not one per player', () => {
+    // `normPos` folds every MFL team-unit pseudo-player (TMQB, TMDL, TMPN, …)
+    // into DEF, and each shares its real defense's name and team code — 320
+    // players for 32 defenses in the 2026 pool. Hanging the pool off each one
+    // added 101 KB (+28%) to the serialized payload to ship 32 lists.
+    const crowd = Array.from({ length: 10 }, (_, i) => def('KCC', `06${i}`));
+    const byTeam = buildDefenseFacesByTeam(crowd);
+    expect(Object.keys(byTeam)).toEqual(['KCC']);
+  });
+
+  it('leaves the per-player payload alone', () => {
+    // The faces used to ride on every DEF-positioned player. They must not
+    // come back — enrichBroadcastPlayers is what the page ships.
+    const [enriched] = enrichBroadcastPlayers([def('KCC')], {
+      dataPath: 'data/afl-fantasy',
+      year: 2026,
+    });
+    expect(enriched).not.toHaveProperty('defenseFaces');
   });
 });
 

@@ -27,6 +27,7 @@ import { buildDraftPlayers } from '../../utils/build-draft-players';
 import {
   assignBoardRanks,
   buildConferenceBoard,
+  buildDefenseFacesByTeam,
   enrichBroadcastPlayers,
   findRehearsalYear,
   loadConferenceKeepers,
@@ -160,6 +161,11 @@ const ranked = assignBoardRanks(enriched, keptIds);
 
 const players = trimToDraftable(ranked, boardPlayerIds);
 
+// A team defense has no headshot of its own, so the reveal card stands two of
+// the unit's marquee defenders in for it. Built from the TRIMMED pool — one
+// list per team rather than one per player — see buildDefenseFacesByTeam.
+const defenseFaces = buildDefenseFacesByTeam(players);
+
 // Which season each conference's "Rehearse" link points at. Resolved from the
 // feeds (see findRehearsalYear) rather than assumed, so a rehearsal link is
 // either correct or absent — never a board that renders empty.
@@ -190,6 +196,7 @@ const pageData: DraftBroadcastPageData = {
   mflHost: league.mflHost,
   rehearseUpTo,
   rehearsalYears,
+  defenseFaces,
 };
 
 const title = `${conference?.name ?? 'AFL'} Draft Board | AFL`;

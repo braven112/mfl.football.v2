@@ -391,6 +391,112 @@
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+/* ── Team-defense pair ──
+   A defense is a UNIT, so it reveals as two of its stars rather than one man
+   (one reads as an ordinary player card with the wrong name over it).
+   Double-classed on purpose: the portrait and short-landscape breakpoints
+   below both re-declare `.dbc-reveal__model`'s width at equal specificity and
+   LATER in the file, so a single `--def` class would lose to them and the pair
+   would snap back to full width on a phone.
+
+   The geometry, since the numbers look arbitrary and are not: an ESPN headshot
+   is ~600x436 with the head about 30% of the frame, centred. At 90% of the
+   column each head is ~0.27 column-widths wide, so the two men need at least
+   that much daylight between their head centres or they occlude. The -50%
+   margin (a percentage margin resolves against the FIGURE's width, not the
+   image's) leaves them 0.4 column-widths apart — clear heads, and half of the
+   back man's body behind the front one, which is the shoulder overlap. The
+   pair spans ~1.3 columns and the figure's existing overflow clip trims the
+   outer shoulders, which is the same bleed a single cutout already gets. */
+.dbc-reveal__model.dbc-reveal__model--def {
+  width: 90%;
+  max-width: none;
+  flex: 0 0 auto;
+}
+
+.dbc-reveal__model--def + .dbc-reveal__model--def {
+  margin-left: -50%;
+}
+
+/* The FIRST man is the higher-ranked one (shownFaces is returned in pool
+   order) and he is the one in front — so his ear is never behind the other
+   man's shoulder. Without this, source order paints the second on top. */
+.dbc-reveal__model.dbc-reveal__model--def:first-of-type {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Team-defense face caption ──
+   A DEF pick's headline is the UNIT ("Kansas City Chiefs"), so the defender in
+   the figure column is a face the card would otherwise never name. Sits as a
+   lower-third ON the cutout rather than in the copy column: on a 65" screen
+   the two columns are far enough apart that a name over there would not read
+   as belonging to this face.
+   Absolutely positioned because the figure is a flex column whose one job is
+   bleeding the cutout off the bottom edge — as a flex sibling this would push
+   the player up and out of that bleed. */
+.dbc-reveal__face {
+  position: absolute;
+  /* Pinned to the figure's LEADING edge, not centred in it. The figure carries
+     a `translateX(29%)` that pushes the whole column toward the screen edge, so
+     a centred pill rides that shift out past the card's own overflow clip and
+     loses its last few characters. Anchored left it travels the same 29% and
+     still lands well inside — and a left-aligned lower third is what a
+     broadcast name chip looks like anyway. */
+  left: 0;
+  bottom: 3vh;
+  /* Above the cutouts, which now take z-index 1 of their own. */
+  z-index: 2;
+  display: flex;
+  /* One row per man, stacked. Both names on ONE line reliably overran the
+     column and ellipsised the second man out of existence; two rows always
+     fit, and their order matches the two cutouts left-to-right. */
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15em;
+  margin: 0;
+  padding: 0.35em 0.9em;
+  border-radius: 1em;
+  max-width: 100%;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  /* Safari only unprefixed `backdrop-filter` in 18.0, so an iOS 17 phone gets
+     no blur at all without this. The 55% black keeps the names legible either
+     way — this is polish, not legibility. */
+  -webkit-backdrop-filter: blur(6px);
+  animation: dbc-text-in 620ms 120ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.dbc-reveal__face-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  max-width: 100%;
+  white-space: nowrap;
+}
+
+.dbc-reveal__face-name {
+  /* `min-width: 0` is what actually lets a long name ellipsise: a flex item's
+     default `min-width: auto` refuses to shrink below its content, so the pill
+     would grow past the figure and be sliced by its overflow clip instead. */
+  min-width: 0;
+  font-size: clamp(0.8rem, 2.1vh, 1.9rem);
+  font-weight: 800;
+  color: #fff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dbc-reveal__face-pos {
+  padding: 0.12em 0.5em;
+  border-radius: 0.28em;
+  background: rgba(255, 255, 255, 0.18);
+  font-size: clamp(0.6rem, 1.5vh, 1.3rem);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.92);
+}
+
 .dbc-reveal__text {
   /* Vertically centered, NOT pinned to the bottom: the stats and rank chips are
      the last thing rendered, so bottom-anchoring clipped them off the screen
@@ -1099,6 +1205,7 @@
   .dbc-reveal,
   .dbc-reveal__model,
   .dbc-reveal__text,
+  .dbc-reveal__face,
   .dbc-idle__crest {
     animation: none;
   }
