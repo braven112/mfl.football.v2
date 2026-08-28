@@ -16,6 +16,12 @@
 .dbc {
   position: relative;
   width: 100%;
+  /* One place to retune the idle↔reveal handoff. Long enough to read as a
+     dissolve on a TV, short enough that a pick landing still feels immediate.
+     `broadcast-morph.ts` READS this at runtime rather than repeating it, so the
+     crest's flight and the cross-fade under it can never drift apart — keep it
+     in ms or s, and keep it on `.dbc` where the island can find it. */
+  --dbc-fade: 620ms;
   /* Fill what's left of the window under the site header, rather than a flat
      86vh that runs off the bottom once the header pushes the board down. The
      floor keeps it usable if the header ever grows. */
@@ -47,6 +53,45 @@
 .dbc:fullscreen .dbc-reveal,
 .dbc:fullscreen .dbc-idle {
   height: 100vh;
+}
+
+/* ── Screen layers ─────────────────────────────────────────────────────────
+   The idle board and the reveal are STACKED and cross-faded, not swapped. The
+   board used to render one OR the other, so the handoff replaced the whole
+   screen in a single frame — on a 65" TV that reads as somebody changing the
+   channel, not as the room's board reacting to a pick. Both layers are always
+   mounted; only their opacity changes.
+
+   `visibility` is what does the accessibility work here, NOT `aria-hidden`:
+   the idle board carries the conference switcher and the rehearsal button, and
+   a layer at opacity 0 would leave both focusable underneath a reveal — the
+   classic "aria-hidden with focusable children" trap. It flips at the END of
+   the fade (a 0s transition, delayed by the fade duration) so the outgoing
+   layer is still painted the whole way out. */
+.dbc__screen {
+  position: absolute;
+  inset: 0;
+  transition: opacity var(--dbc-fade) ease;
+}
+
+/* The reveal comes in OVER the board, never under it — and it fades on the way
+   OUT only. Coming IN, the card's own opacity animation is the fade (see
+   `broadcast-morph.ts`), and a transition here would MULTIPLY with it: two
+   620ms curves compound to their square, so the board dipped toward black at
+   the midpoint of every reveal. The first reveal escaped it — a freshly
+   inserted element does not transition — which made it an "only after the
+   first one" difference nobody could diagnose from the room. `.is-hidden` is
+   two classes and still wins, so the way out is unaffected. */
+.dbc__screen--reveal {
+  z-index: 2;
+  transition: none;
+}
+
+.dbc__screen.is-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity var(--dbc-fade) ease, visibility 0s linear var(--dbc-fade);
 }
 
 /* ── Fullscreen toggle ─────────────────────────────────────────────────────
@@ -246,22 +291,26 @@
 /* With the banner gone this crest is the only franchise ARTWORK on the reveal,
    so it carries more weight than the site-standard 0.16 watermark — it has to
    answer "who drafted him" on its own, from across a room.
-   It sits behind the PLAYER, who is on the RIGHT since the layout mirrored.
-   Centered behind the copy (where it started, and again briefly when the halves
-   swapped) it put a detailed shield under every stat line and the text became
-   the hardest thing on the card to read — the exact failure the banner was cut
-   for. Artwork goes behind artwork; type gets clean gradient. */
+
+   Tucked behind the player (right of centre, low) it spent most of its area
+   under the cutout, and the part that cleared him was cropped by the card's
+   own edge — from ten feet it read as texture rather than as a crest. Centred
+   and brighter (Brandon, 2026-08-28), the whole shield is on screen: the copy
+   crosses its left edge, the player its right, and both halves of the card sit
+   on the same mark. Legibility of the type is bought back by the shadow on
+   `.dbc-reveal__text`, so if this ever wants to go brighter still, deepen that
+   shadow — do NOT move the crest back off centre. Portrait keeps its own
+   anchoring: there the copy is stacked UNDER the player, so a centred crest
+   would sit squarely on the name. */
 .dbc-reveal__crest {
   position: absolute;
-  /* Sits with the player rather than dead centre — right of middle and low, so
-     it reads as his backdrop while still clearing the copy on the left. */
-  left: 58%;
-  top: 64%;
+  left: 50%;
+  top: 50%;
   transform: translate(-50%, -50%);
   width: 68vh;
   height: 68vh;
   object-fit: contain;
-  opacity: 0.26;
+  opacity: 0.42;
   filter: drop-shadow(0 1vh 3vh rgba(0, 0, 0, 0.45));
   pointer-events: none;
 }
@@ -350,6 +399,11 @@
   padding: 2vh 0;
   max-height: 100%;
   overflow: hidden;
+  /* The crest now passes under this whole block, not just the gradient — the
+     player name already carried its own shadow, and the kicker, meta line and
+     stats need the same separation or they sit directly on a franchise shield.
+     Inherited by every child, so it covers the ones added later too. */
+  text-shadow: 0 0.2vh 1.4vh rgba(0, 0, 0, 0.55);
   animation: dbc-text-in 620ms 120ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
@@ -874,7 +928,9 @@
   }
 
   /* Centred, same as the TV — pinned right it would ride under the cutout and
-     this breakpoint would disagree with every other one. */
+     this breakpoint would disagree with every other one. Held a step below the
+     TV's alpha because the crest is 91vh here against a 400px-tall screen: it
+     covers proportionally far more of the card, copy included. */
   .dbc-reveal__crest {
     left: 50%;
     right: auto;
@@ -882,7 +938,7 @@
     transform: translate(-50%, -50%);
     width: 91vh;
     height: 91vh;
-    opacity: 0.2;
+    opacity: 0.32;
   }
 
   /* Type scales off the short axis so nothing overruns 400px of height. */
@@ -990,11 +1046,13 @@
   .dbc-reveal__crest {
     width: 41vh;
     height: 41vh;
-    /* `left` and `top` re-pinned, not just `right`: the base layer sets
-       left: 58%/top: 64% for the TV, and with a width set `left` wins over
-       `right` outright — so this block's `right` was inert and the phone crest
-       had silently moved on top of the stacked copy. Anchored off the right
-       edge again, as scenery behind the player. */
+    /* `left` and `top` re-pinned, not just `right`: the base layer centres the
+       crest (left: 50%/top: 50%) for the TV, and with a width set `left` wins
+       over `right` outright — so this block's `right` was inert and the phone
+       crest had silently moved on top of the stacked copy. Anchored off the
+       right edge again, as scenery behind the player. Centring is wrong here
+       for a second reason now: in portrait the copy stacks UNDER the player, so
+       a centred crest would sit squarely on the player's name. */
     left: auto;
     right: -8vw;
     top: 42%;
@@ -1043,6 +1101,15 @@
   .dbc-reveal__text,
   .dbc-idle__crest {
     animation: none;
+  }
+
+  /* Straight cut between the two screens. Both states have to be listed —
+     killing the transition on `.dbc__screen` alone would leave the delayed
+     `visibility` flip in the is-hidden rule, so the outgoing layer would stay
+     clickable for half a second after it vanished. */
+  .dbc__screen,
+  .dbc__screen.is-hidden {
+    transition: none;
   }
 
   .dbc__status-dot {

@@ -11,9 +11,15 @@
  *   pre-draft  → nothing picked yet: draft order and the room's first pick
  *   idle       → who's on the clock, recent picks, who's next (most of the night)
  *   reveal     → a selection just landed (the moment everyone looks up)
+ *
+ * The idle board and the reveal are LAYERS, not alternatives — see the render
+ * at the bottom. Both stay mounted and cross-fade, and the crest and copy they
+ * have in common travel between their two positions across that fade (see
+ * `broadcast-morph.ts`), because a hard swap between them looked like somebody
+ * changing the channel.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { DraftRoomPick, DraftRoomTeam, DraftStatusResponse } from '../../../types/draft-room';
 import type {
   BroadcastConference,
@@ -22,8 +28,21 @@ import type {
 } from '../../../types/draft-broadcast';
 import { collectFreshPicks } from '../../../utils/pick-reveal';
 import { applyRehearsal, findOnTheClock, playerMap, teamMap } from '../../../utils/draft-broadcast';
+import { morphScreens } from '../../../utils/broadcast-morph';
 import { BroadcastRevealCard } from './BroadcastRevealCard';
 import { OnTheClock } from './OnTheClock';
+
+/**
+ * `useLayoutEffect` on the client, a no-op `useEffect` on the server.
+ *
+ * This island is `client:load`, so it IS rendered once on the server, and React
+ * logs "useLayoutEffect does nothing on the server" for every layout effect it
+ * meets there — once per request to the broadcast page. The morph genuinely
+ * needs layout timing in the browser (it measures both screens before the
+ * browser paints the new arrangement) and needs nothing at all on the server,
+ * which is exactly what this alias says.
+ */
+const useIsomorphicLayoutEffect = typeof document === 'undefined' ? useEffect : useLayoutEffect;
 
 /** Poll cadence. The draft room's 12s/30s is tuned for an EMAIL draft; a room
  *  full of people watching a TV notices a 30s lag between the pick landing on
@@ -286,14 +305,68 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
     }
   }, []);
 
+  // ── Morph between the two screens ──
+  // The cross-fade is CSS (`.dbc__screen`); this is the part that has to be
+  // measured, because the crest and the copy live in completely different boxes
+  // on the two screens and only the browser knows where. Runs on the ENTER /
+  // LEAVE edge only — `current` changing from one pick straight to the next
+  // (a stacked queue) is a reveal replacing a reveal, which keeps its own
+  // entrance animation and has nothing to travel between.
+  const idleLayerRef = useRef<HTMLDivElement>(null);
+  const revealLayerRef = useRef<HTMLDivElement>(null);
+  const showingReveal = !!current;
+  /** Nothing to morph FROM on the first paint — the board simply arrives. */
+  const morphedOnceRef = useRef(false);
+
+  // Layout, not passive: this measures both screens and starts the animations
+  // before the browser paints the new arrangement. A plain effect paints the
+  // jump first and then animates away from it, which is the jump we are here to
+  // remove.
+  useIsomorphicLayoutEffect(() => {
+    if (!morphedOnceRef.current) {
+      morphedOnceRef.current = true;
+      return;
+    }
+    // Read the fade duration off the CSS custom property rather than repeating
+    // it here. One number, in the stylesheet, tuned where you can see it.
+    const root = rootRef.current;
+    const raw = root ? getComputedStyle(root).getPropertyValue('--dbc-fade').trim() : '';
+    const durationMs = raw.endsWith('ms')
+      ? parseFloat(raw)
+      : raw.endsWith('s')
+        ? parseFloat(raw) * 1000
+        : 620;
+
+    morphScreens(idleLayerRef.current, revealLayerRef.current, {
+      durationMs: Number.isFinite(durationMs) ? durationMs : 620,
+      toReveal: showingReveal,
+    });
+  }, [showingReveal]);
+
   const onTheClock = useMemo(() => findOnTheClock(picks), [picks]);
   const madeCount = useMemo(() => picks.filter((p) => p.playerId).length, [picks]);
 
-  const revealTeam: DraftRoomTeam | undefined = current
-    ? teams.get(current.pick.franchiseId)
+  /**
+   * The reveal currently on screen, OR the one that just finished its turn.
+   *
+   * Rendering `current` alone meant React unmounted the outgoing card the
+   * instant the queue drained, so there was nothing left to fade OUT and the
+   * idle board hard-cut in behind it. Holding the last reveal keeps that layer
+   * mounted through its fade; it then sits inert (visibility: hidden) until the
+   * next pick replaces it. Read during render rather than parked in state on a
+   * timer: a state update lands AFTER the commit that dropped `current`, so the
+   * card would unmount and remount for a frame — restarting its entrance
+   * animations at the exact moment it is supposed to be leaving.
+   */
+  const lastRevealRef = useRef<QueuedReveal | null>(null);
+  if (current) lastRevealRef.current = current;
+  const shownReveal = current ?? lastRevealRef.current;
+
+  const revealTeam: DraftRoomTeam | undefined = shownReveal
+    ? teams.get(shownReveal.pick.franchiseId)
     : undefined;
-  const revealPlayer: BroadcastPlayer | undefined = current
-    ? players.get(current.pick.playerId)
+  const revealPlayer: BroadcastPlayer | undefined = shownReveal
+    ? players.get(shownReveal.pick.playerId)
     : undefined;
 
   return (
@@ -311,18 +384,20 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
         </button>
       </div>
 
-      {current ? (
-        <BroadcastRevealCard
-          key={current.key}
-          pick={current.pick}
-          team={revealTeam}
-          player={revealPlayer}
-          picks={picks}
-          players={players}
-          rehearsing={rehearsing}
-          leagueYear={data.leagueYear}
-        />
-      ) : (
+      {/* Both screens are mounted at all times and cross-faded by class — see
+          `.dbc__screen` in draft-broadcast.css. Two things keep the covered
+          screen out of the way, and they cover different windows: the CSS ends
+          the fade at `visibility: hidden`, which takes the idle board's
+          conference switcher and rehearsal button out of the tab order and the
+          accessibility tree — but only once the fade FINISHES. `inert` flips
+          the moment the handoff starts, so nothing can be tabbed into during
+          the ~620ms the outgoing layer is still painted. Nothing here decides
+          timing — the queue still does. */}
+      <div
+        className={`dbc__screen${current ? ' is-hidden' : ''}`}
+        ref={idleLayerRef}
+        inert={showingReveal}
+      >
         <OnTheClock
           conference={data.conference}
           conferences={allConferences}
@@ -338,7 +413,26 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
           rehearsalYears={data.rehearsalYears}
           leagueYear={data.leagueYear}
         />
-      )}
+      </div>
+
+      {shownReveal ? (
+        <div
+          className={`dbc__screen dbc__screen--reveal${current ? '' : ' is-hidden'}`}
+          ref={revealLayerRef}
+          inert={!showingReveal}
+        >
+          <BroadcastRevealCard
+            key={shownReveal.key}
+            pick={shownReveal.pick}
+            team={revealTeam}
+            player={revealPlayer}
+            picks={picks}
+            players={players}
+            rehearsing={rehearsing}
+            leagueYear={data.leagueYear}
+          />
+        </div>
+      ) : null}
 
       {connectionLost ? (
         <div className="dbc__status" role="status">
