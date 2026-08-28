@@ -570,7 +570,22 @@
   display: flex;
   align-items: center;
   gap: 0.5em;
-  max-width: 100%;
+  /* The air between the two plates, and it has to be bought HERE rather than
+     with `column-gap` on the seats. A gap between two `flex: 1 1 0` seats
+     narrows both and walks their centres apart by half of it — which is the
+     one property this whole layout exists to hold. Capping the chip inside a
+     seat that still spans the full 49% leaves the centres untouched, and two
+     chips at their cap end up exactly this far apart. Without it they meet at
+     0.0px on every phone-sized card and the two 55%-black pills paint as one
+     continuous plate — the single-caption read this replaced.
+
+     `box-sizing` is NOT optional here: this repo has no global `border-box`
+     (TheLeagueLayout scopes it to `main`, and this card is outside it), so the
+     cap landed on the CONTENT box and the chip's own 16px of padding sat
+     outside it — the plates still met at 0.0px with the cap dutifully
+     honoured. Cap the box the eye actually sees. */
+  box-sizing: border-box;
+  max-width: calc(100% - 0.6em);
   /* Load-bearing, and `max-width` alone does NOT cover it: a flex item's
      default `min-width: auto` floors it at its content, and min beats max, so
      the pill kept its full nowrap width and simply overflowed its seat. On a
@@ -597,14 +612,21 @@
      would grow past the figure and be sliced by its overflow clip instead. */
   min-width: 0;
   /* The `cqw` term is the seat cap, restated as type: a chip is roughly 13.5em
-     wide at this weight (name + badge + padding) and a seat is ~21% of the
-     card, so anything above ~1.5cqw cannot fit its seat. `min()` keeps 2.1vh —
-     the size every other line on this card is tuned against — wherever it is
-     the smaller of the two, which includes the fullscreen TV this page exists
-     for, so the read from ten feet is unchanged. It binds on the INSET card,
-     where 2.1vh alone put "C.J. Gardner-Johnson" at 216px inside a 165px chip
-     and ellipsised a fifth of the name away. */
-  font-size: clamp(0.8rem, min(2.1vh, 1.5cqw), 1.9rem);
+     wide at this weight (name + badge + padding), a seat is ~21% of the card,
+     and the chip gives 0.6em of that back as the gap — so anything above
+     ~1.4cqw cannot fit. Re-derive it if any of those three move. `min()`
+     keeps 2.1vh — the size every other line on this card is tuned against —
+     wherever it is the smaller of the two, which includes the fullscreen TV
+     this page exists for, so the read from ten feet is unchanged. It binds on
+     the INSET card, where 2.1vh alone put "C.J. Gardner-Johnson" at 216px
+     inside a 165px chip and ellipsised a fifth of the name away. */
+  /* Fallback first: `cqw` is Safari 16.0+, and a browser that does not know
+     the unit drops the ENTIRE declaration — with nothing before it the name
+     would fall to the inherited default and the chip's hierarchy with it. This
+     line is what every pre-16 iOS device gets, and it is what this card
+     shipped before the cap existed. */
+  font-size: clamp(0.8rem, 2.1vh, 1.9rem);
+  font-size: clamp(0.8rem, min(2.1vh, 1.4cqw), 1.9rem);
   font-weight: 800;
   color: #fff;
   overflow: hidden;
@@ -618,7 +640,9 @@
   /* Tracks the name's cap at the same ratio it always had (1.5/2.1), or the
      badge stays viewport-sized while the name shrinks and starts crowding the
      seat it was supposed to be leaving room in. */
-  font-size: clamp(0.6rem, min(1.5vh, 1.07cqw), 1.3rem);
+  /* Same fallback-first pair as the name above, for the same reason. */
+  font-size: clamp(0.6rem, 1.5vh, 1.3rem);
+  font-size: clamp(0.6rem, min(1.5vh, 1cqw), 1.3rem);
   font-weight: 800;
   letter-spacing: 0.06em;
   color: rgba(255, 255, 255, 0.92);
@@ -1366,12 +1390,20 @@
     width: 86%;
   }
 
-  /* A phone column is ~88vw, so a seat is ~38vw and the base padding is a
-     meaningful slice of it. Tightened so the ellipsis holds off a little
-     longer — the plate still reads, it just carries less air. */
+  /* A phone seat is ~38vw, and halving the width per name is what makes the
+     side-by-side layout cost something here: at 390px a name and its badge on
+     ONE row ellipsised both men, where the stacked plate this replaced showed
+     them in full. The name keeps its row; the BADGE moves under it, which is
+     the only part of the chip that can leave without losing information. That
+     buys the name the badge's width plus the gap — enough for every name in
+     the spotlight pool at 390px — and the two names stay one line each, side
+     by side, which is the point of the layout. Padding tightens for the same
+     reason: on a ~148px seat the base 0.9em is a meaningful slice of it. */
   .dbc-reveal__face-chip {
-    padding: 0.3em 0.6em;
-    gap: 0.35em;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.3em 0.5em;
+    gap: 0.1em;
   }
 
   .dbc-reveal__model {
