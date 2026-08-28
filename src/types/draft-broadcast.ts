@@ -11,6 +11,25 @@
 import type { DraftRoomPick, DraftRoomTeam, DraftRoomPlayer } from './draft-room';
 
 /**
+ * One marquee NFL defender standing in for a team defense on the reveal card.
+ *
+ * A DEF "player" is a crest, not a person, so a team-defense pick would
+ * otherwise reveal with an empty figure column. Same ranked pool the Free
+ * Agents hero spotlight and the player modal already draw from
+ * (`src/data/theleague/def-spotlight-players.ts`), resolved SERVER-side and
+ * shipped with the player: importing that 20 KB map into the island would put
+ * all 32 teams' pools on the wire to use one, and the TV must not wait on a
+ * fetch mid-reveal.
+ */
+export interface BroadcastDefenseFace {
+  name: string;
+  /** ESPN athlete id — the headshot URL is built from it client-side. */
+  espnId: string;
+  /** Real NFL position (DT/LB/CB/S…), shown beside the name. */
+  position?: string;
+}
+
+/**
  * Per-player extras the broadcast card shows that the draft room never needed.
  * Joined server-side and shipped with the page — the TV must not depend on a
  * client fetch landing mid-reveal.
@@ -32,6 +51,12 @@ export interface BroadcastPlayerExtras {
    * screen. MFL ADP is the single input.
    */
   boardRank?: number;
+  /**
+   * Team defenses only: the unit's marquee defenders, best first. Absent for
+   * every other position, and for a defense whose team has no mapped pool —
+   * which falls back to the crest-only treatment.
+   */
+  defenseFaces?: BroadcastDefenseFace[];
 }
 
 /** A player as the broadcast renders him: draft-room fields plus the extras. */

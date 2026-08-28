@@ -25,6 +25,8 @@ import {
 import {
   assignBoardRanks,
   buildConferenceBoard,
+  buildDefenseFaces,
+  enrichBroadcastPlayers,
   findRehearsalYear,
   loadConferenceKeepers,
 } from '../src/utils/draft-broadcast-server';
@@ -331,6 +333,74 @@ describe('findRehearsalYear', () => {
 
   it('returns undefined when the data path has no feeds at all', () => {
     expect(findRehearsalYear('data/nope', 2026, 'CONFERENCE00')).toBeUndefined();
+  });
+});
+
+
+describe('buildDefenseFaces', () => {
+  // A DEF "player" is a crest, not a person, so the reveal card would show an
+  // empty figure column for every team defense taken. These are the faces that
+  // stand in for it — the same ranked pool the Free Agents hero draws from.
+  function def(nflTeam: string): BroadcastPlayer {
+    return { id: '0501', name: 'Kansas City Chiefs', position: 'DEF', nflTeam, headshot: '' } as BroadcastPlayer;
+  }
+
+  it('gives a team defense its marquee defenders, best first', () => {
+    const faces = buildDefenseFaces(def('KCC'))!;
+    expect(faces.length).toBeGreaterThan(0);
+    expect(faces[0].name).toBeTruthy();
+    expect(faces[0].espnId).toMatch(/^\d+$/);
+    // The pool's own order is the ranking; the card leads with the top man.
+    const pool = JSON.parse(readFileSync('src/data/theleague/def-spotlight-players.json', 'utf-8'));
+    expect(faces[0].name).toBe(pool.teams.KC[0].name);
+  });
+
+  it('caps the pool at what a full-length reveal can actually show', () => {
+    // 18s reveal / 6s per face = 3. Shipping the pool's full six would double
+    // the payload for faces the card can never reach.
+    expect(buildDefenseFaces(def('KCC'))!.length).toBeLessThanOrEqual(3);
+  });
+
+  it('resolves MFL team codes, not just ESPN ones', () => {
+    // The killer: a DEF arrives carrying MFL's dialect (NEP/GBP/KCC/LVR) while
+    // the pool is keyed ESPN-style (NE/GB/KC/LV), and Washington disagrees with
+    // BOTH normalizations. Indexing raw silently drops nine of 32 defenses.
+    for (const code of ['NEP', 'GBP', 'KCC', 'LVR', 'NOS', 'SFO', 'TBB', 'JAC', 'WAS']) {
+      expect(buildDefenseFaces(def(code)), code).toBeTruthy();
+    }
+  });
+
+  it('covers every NFL team a defense can belong to', () => {
+    const players = JSON.parse(
+      readFileSync('data/theleague/mfl-feeds/2026/players.json', 'utf-8')
+    ).players.player as any[];
+    const defenses = players.filter((p) => (p.position || '').toUpperCase() === 'DEF');
+    expect(defenses.length).toBe(32);
+    for (const d of defenses) {
+      expect(buildDefenseFaces(def(d.team)), `${d.name} (${d.team})`).toBeTruthy();
+    }
+  });
+
+  it('carries no faces for a player who has a headshot of his own', () => {
+    // undefined, not [] — the extra must cost nothing on the wire for the
+    // ~2600 players in the pool who are people.
+    const rb = { id: '1', name: 'A Back', position: 'RB', nflTeam: 'KCC', headshot: '' } as BroadcastPlayer;
+    expect(buildDefenseFaces(rb)).toBeUndefined();
+  });
+
+  it('falls back to the crest-only reveal for an unmapped defense', () => {
+    expect(buildDefenseFaces(def('XXX'))).toBeUndefined();
+    expect(buildDefenseFaces(def(''))).toBeUndefined();
+  });
+
+  it('rides along on the enriched pool, not just as a standalone helper', () => {
+    // The join has to happen inside enrichBroadcastPlayers or the card never
+    // sees it — the page ships what that function returns.
+    const [enriched] = enrichBroadcastPlayers([def('KCC')], {
+      dataPath: 'data/afl-fantasy',
+      year: 2026,
+    });
+    expect(enriched.defenseFaces?.length).toBeGreaterThan(0);
   });
 });
 

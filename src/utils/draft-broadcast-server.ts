@@ -13,9 +13,14 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { DraftRoomPick } from '../types/draft-room';
-import type { BroadcastPlayer, BroadcastPlayerExtras } from '../types/draft-broadcast';
+import type {
+  BroadcastDefenseFace,
+  BroadcastPlayer,
+  BroadcastPlayerExtras,
+} from '../types/draft-broadcast';
 import { parseTradeFromComment, selectDraftUnit } from './draft-utils';
 import { normalizeTeamCode } from './nfl-logo';
+import { getDefSpotlightPlayers } from '../data/theleague/def-spotlight-players';
 
 function readJson(relPath: string): any {
   try {
@@ -130,6 +135,38 @@ function loadByeWeeks(year: number): Map<string, number> {
 }
 
 /**
+ * How many marquee defenders ride along with a team defense.
+ *
+ * The reveal holds the screen for 18s and rotates a face every 6s, so three is
+ * exactly what a full-length reveal can show. Sending the pool's full six
+ * would double this payload for faces the card can never reach.
+ */
+const DEFENSE_FACE_LIMIT = 3;
+
+/**
+ * The marquee defenders that stand in for a team defense's missing headshot.
+ *
+ * Returns undefined — not an empty array — for everyone else, so the extra
+ * costs nothing on the wire for the ~2600 players who are people. A defense
+ * whose team has no mapped pool also gets undefined and falls back to the
+ * crest-only reveal.
+ *
+ * `getDefSpotlightPlayers` does the team-code normalization itself, which is
+ * the whole reason to call it rather than index the map: a DEF's `nflTeam`
+ * arrives in MFL's dialect (`NEP`, `GBP`, `KCC`), the map is keyed ESPN-style
+ * (`NE`, `GB`, `KC`), and Washington disagrees with BOTH — indexing raw would
+ * silently drop nine of the 32 defenses.
+ */
+export function buildDefenseFaces(player: BroadcastPlayer): BroadcastDefenseFace[] | undefined {
+  if ((player.position || '').toUpperCase() !== 'DEF') return undefined;
+  const pool = getDefSpotlightPlayers(player.nflTeam)
+    .filter((d) => d.espnId)
+    .slice(0, DEFENSE_FACE_LIMIT);
+  if (pool.length === 0) return undefined;
+  return pool.map((d) => ({ name: d.name, espnId: d.espnId, position: d.position }));
+}
+
+/**
  * Join broadcast-only extras onto an already-built draft player pool.
  *
  * Takes the pool from `buildDraftPlayers` rather than rebuilding it — that
@@ -150,6 +187,7 @@ export function enrichBroadcastPlayers(
       projectedPoints: projections.get(p.id),
       injuryStatus: injuries.get(p.id),
       byeWeek: p.nflTeam ? byes.get(normalizeTeamCode(p.nflTeam)) : undefined,
+      defenseFaces: buildDefenseFaces(p),
     };
     return { ...p, ...extras };
   });

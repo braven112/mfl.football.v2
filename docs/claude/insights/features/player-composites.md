@@ -35,7 +35,9 @@ per player.
   background and ruins the composite. Gate rendering on
   `headshot.includes('espncdn.com')` — never composite an MFL JPG.
 - **DEF "players" are logos, not people** — always exclude `position === 'DEF'`
-  from composites.
+  from composites. Two surfaces deliberately opt BACK IN with a stand-in face
+  from `def-spotlight-players` (the player modal and the AFL broadcast reveal —
+  see the two entries below); the exclusion itself stays global.
 - `getPlayerMap()` (src/utils/player-map.ts) is the one-stop resolver:
   MFL ID → name/position/nflTeam/espnId/headshot, cached per year. It reads
   theleague's players.json but MFL player IDs are global, so it resolves AFL
@@ -364,6 +366,31 @@ different from every other composite, and why:
   clear; the offensive path reclaims the cutout via `applyPlayerModalBand` on
   the next open. The cutout stays `aria-hidden` + `alt=""` (decorative) — the
   defender's name rides the sub-line as real text for screen readers.
+- **The AFL broadcast reveal rotates the defense's faces (2026-08-28).** Same
+  problem as the modal, different answer, because the surface is different: the
+  reveal card owns a 65" screen for 18 seconds, and a team-defense pick left the
+  entire figure column empty for all of it. `BroadcastRevealCard` now renders
+  the unit's marquee defenders — one at a time, swapping every 6s, so a
+  full-length reveal shows exactly three and a RUSHED one (`REVEAL_RUSH_MS`,
+  also 6s) shows one and never animates. Four things are load-bearing:
+  - **Resolved SERVER-side**, in `enrichBroadcastPlayers` → `buildDefenseFaces`,
+    and shipped on the player as `defenseFaces`. Importing the map into the
+    island would put all 32 teams' pools (20 KB) on the wire to use one, and the
+    TV must never wait on a fetch mid-reveal.
+  - **Capped at 3** — the pool holds 6, and a reveal can never reach the rest.
+  - **Leads with the top defender**, like the modal and unlike the Free Agents
+    hero's random start: the room should see the biggest name on the defense
+    first, and a broadcast has no "repeat visit" to keep fresh.
+  - **A 404'd face is RETIRED from the pool, not hidden.** Hiding it in place
+    would leave the figure column empty for a third of the reveal; the next
+    defender is a better answer than a gap. `deadFaces` + a modulo index is the
+    whole mechanism, and it survives the list shortening underneath it.
+  The defender's name rides a lower-third pill (`.dbc-reveal__face`) because the
+  HEADLINE is the unit ("Denver Broncos") — without it the room is looking at a
+  face the card never names. That pill is pinned to the figure's LEADING edge,
+  not centred in it: `.dbc-reveal__figure` carries a `translateX(29%)` that
+  walks a centred pill out past the card's own overflow clip and eats its last
+  few characters.
 - **`getDefSpotlightPlayers` key gotcha: Washington is `WAS`, not `WSH`.**
   The spotlight JSON is keyed by players.astro's `normalizeMflTeam` (GBP→GB,
   JAC→JAX, but Washington stays `WAS`). Both `nfl-logo.ts#normalizeTeamCode`
