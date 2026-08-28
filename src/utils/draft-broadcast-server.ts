@@ -19,6 +19,7 @@ import type {
   BroadcastPlayerExtras,
 } from '../types/draft-broadcast';
 import { parseTradeFromComment, selectDraftUnit } from './draft-utils';
+import { buildMflExportUrl } from './mfl-url';
 import { normalizeTeamCode } from './nfl-logo';
 import { resolveCollegeDarkLogoUrl } from './college-logo-dark-css';
 import { usesCollegeOrigin } from './pick-reveal';
@@ -396,4 +397,44 @@ export function findRehearsalYear(
     if (picks.length > 0 && picks.every((p) => p.playerId)) return year;
   }
   return undefined;
+}
+
+/**
+ * Fetch a draft board straight from MFL, for a league we hold no feed for.
+ *
+ * ONLY the `?mflLeague=` override path calls this (see
+ * `draft-broadcast-source.ts`). The league's own board is read from the
+ * committed feed — a page that reached the network on every SSR render would
+ * put draft night behind MFL's availability, which is the one dependency this
+ * page was built to avoid.
+ *
+ * Returns null on ANY failure, including a slow one. The caller falls back to
+ * the local skeleton, so a test feed that cannot be reached degrades to "the
+ * real board, not following anything" rather than a blank TV — and the flag
+ * over the board still says an override was asked for, which is the difference
+ * between a page that is wrong and a page that is confusing.
+ */
+export async function fetchRemoteDraftResults(options: {
+  leagueId: string;
+  host: string;
+  year: number | string;
+  timeoutMs?: number;
+}): Promise<any | null> {
+  const url = buildMflExportUrl({
+    type: 'draftResults',
+    leagueId: options.leagueId,
+    year: options.year,
+    host: `https://${options.host}`,
+  });
+
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FantasyLeague/1.0)' },
+      signal: AbortSignal.timeout(options.timeoutMs ?? 8_000),
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
 }

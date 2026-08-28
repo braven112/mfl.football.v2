@@ -25,6 +25,7 @@ import type { DraftRoomPick, DraftStatusResponse } from '../../../types/draft-ro
 import { getCurrentLeagueYear } from '../../../utils/league-year';
 import { buildMflExportUrl } from '../../../utils/mfl-url';
 import { getLeagueBySlug } from '../../../config/leagues';
+import { resolveMflHost, resolveMflLeagueId } from '../../../utils/draft-broadcast-source';
 
 export const prerender = false;
 
@@ -71,8 +72,19 @@ function buildPicks(rawPicks: RawDraftPick | RawDraftPick[] | undefined): DraftR
 
 export const GET: APIRoute = async ({ url }) => {
   const year = url.searchParams.get('year') || String(getCurrentLeagueYear());
-  const leagueId = url.searchParams.get('league') || url.searchParams.get('L') || DEFAULT_LEAGUE_ID;
-  const host = url.searchParams.get('host') || DEFAULT_HOST;
+
+  // `league` and `host` are both interpolated into a URL this server then
+  // FETCHES, and both arrive from a public page's query string — the broadcast
+  // board's `?mflLeague=` override is one legitimate caller (see
+  // draft-broadcast-source.ts) and anyone with a browser is another. A host
+  // that is not MFL's is server-side request forgery with a URL bar for an
+  // interface, so an unrecognised value falls back to the default rather than
+  // erroring: every real caller passes a valid one, and a 400 here would only
+  // tell a prober it had found the right parameter.
+  const leagueId =
+    resolveMflLeagueId(url.searchParams.get('league') || url.searchParams.get('L')) ||
+    DEFAULT_LEAGUE_ID;
+  const host = resolveMflHost(url.searchParams.get('host'), DEFAULT_HOST);
   const unit = url.searchParams.get('unit');
 
   const mflUrl = buildMflExportUrl({ type: 'draftResults', leagueId, year, host: `https://${host}` });

@@ -4,6 +4,14 @@
     {
       "date": "2026-08-28",
       "type": "bug-fix",
+      "summary": "Headshots on the draft broadcast board no longer show up late. ESPN serves player photos with a cache window of under four minutes, so the laptop running the board was re-downloading a quarter-megabyte picture every single time a face went on screen — which is why a reveal sometimes sat there with a name and no player. The board now pulls every headshot, crest and logo it could need before the draft starts, keeps them for a week instead of four minutes, and shows a count in the corner while it works so you can see it finish before the room shows up. It also survives a reload and a bad stretch of wifi: an image that came down once stays down.",
+      "impact": "user",
+      "area": "draft",
+      "league": "both"
+    },
+    {
+      "date": "2026-08-28",
+      "type": "bug-fix",
       "summary": "The podium icon on the Draft Broadcast link in the side nav was showing white instead of blue, so it stood out against a column of icons that all match. Every other icon in that menu takes its colour from the menu; a handful of the newer ones carry their own colour instruction, which quietly won and left them the colour of the label beside them. It matches the rest of the list again.",
       "impact": "user",
       "area": "navigation",

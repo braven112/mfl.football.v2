@@ -694,3 +694,91 @@ leaving any one in re-centres the crest on an axis.
 ones (540x720, 600x660) are the failures, not the narrow tall ones everybody
 tests. Assert `text.bottom === figure.top` and that the kicker's top is never
 above the card's.
+
+## 2026-08-28 — Pre-flight: why the images arrive late, and how to rehearse the network
+
+Two draft-night problems that both live upstream of anything on screen.
+
+### ESPN's headshots expire in under four minutes
+
+`a.espncdn.com/i/headshots/nfl/players/full/<espnId>.png` is ~237 KB and comes
+back with `cache-control: max-age=233`. The value COUNTS DOWN across requests,
+so it is an edge TTL, not a hint about the client — and either way the browser
+throws the entry away in under four minutes.
+
+That is the whole explanation for "sometimes the images don't load". Nothing is
+racing and nothing is broken: every reveal starts a cold ~240 KB request for a
+picture the same laptop downloaded ten minutes ago, and on room wifi it lands
+some seconds into an eighteen-second card. The same applies to the reveal's
+origin mark, which `resolveOrigin` resolves to
+`a.espncdn.com/i/teamlogos/nfl/500-dark/<code>.png` — also remote, also short.
+
+Two pieces answer it, and NEITHER works without the other:
+
+- **`public/sw.js` now keeps `a.espncdn.com` images in their own cache**
+  (`IMAGE_CACHE_NAME`), cache-first for a week, on our clock rather than the
+  origin's. It is a separate cache name and is exempt from the activate sweep
+  (`KEEP_CACHES`) — bumping `CACHE_NAME` to evict a poisoned HTML entry must
+  not also throw away a board somebody warmed an hour before their draft.
+  The worker RE-ISSUES each request as CORS: an `<img>` request is `no-cors`,
+  and its opaque response is unreadable, unstampable, and charged to the origin
+  quota at a padded size. ESPN sends `access-control-allow-origin: *`, so this
+  costs nothing.
+- **`BroadcastWarmup` pulls the whole plan before the first pick**, in board
+  order (`planBroadcastImages`). It WAITS for the worker to control the page
+  first — warming into the plain HTTP cache buys four minutes, which is close
+  to nothing — and reports `data-durable="false"` on screen when there isn't
+  one. **The service worker is registered in PROD ONLY** (see
+  `TheLeagueLayout.astro`), so a warm-up on the dev server is always the weak
+  kind. That is not a bug to chase.
+
+Three things about the plan that are decisions, not details:
+
+- **Board order, not pool order.** The AFL ships 1,180 players to serve a
+  108-pick board. Warming in pool order spends the room's first minutes of wifi
+  on players nobody takes. `?warm=` sets the depth; the default (400) covers
+  the realistic board several times over at ~145 MB, `all` is ~4x that, and
+  `off` is the escape hatch for a connection where the warm-up would compete
+  with the poll it exists to protect.
+- **It gates on `isSplashCutoutEligible`, the card's own predicate.** A planner
+  with its own copy of that rule would drift into warming images the card never
+  requests (a DEF crest, an MFL JPG) and missing ones it does.
+- **Every defender in a defense pool, not the two on screen.** The reveal card
+  draws two at random from each five-man pool per pick, so a slice would leave
+  three of five cold on every team-defense selection.
+
+### `?rehearse=` cannot catch a network problem — `?mflLeague=` can
+
+Rehearsal replays a finished season through the real ingest path, which is why
+it is worth having. But it never calls `/api/draft/status`, so it proves
+nothing about the league id, the draft unit, the host, or whether a franchise id
+resolves to a crest — the four things that would actually ruin a night.
+
+`?mflLeague=<id>` (`draft-broadcast-source.ts`) points the board's POLL at
+another MFL league while everything else stays this league's: copy the league in
+MFL, turn the draft on in the copy, and the board follows it live. Verified
+end-to-end on 2026-08-28 against a real MFL league: SSR skeleton, poll, flag.
+
+- **The skeleton comes from the overridden league too.** Draft order and who is
+  on the clock come off the board, so reading the local feed there would show
+  the room the real league's order over the copy's picks.
+  `fetchRemoteDraftResults` returns null on any failure and the local skeleton
+  is the fallback — an unreachable test feed degrades to a board following
+  nothing, never a blank TV.
+- **The unit defaults to `null`, meaning "whichever unit this board has."** A
+  "draft only" copy can carry one unnamed unit where the AFL drafts by
+  conference, and `/api/draft/status` answers a NAMED unit that isn't there with
+  a 404 rather than a board. `?conference=` (explicit) or `?unit=` names one.
+- **The host is allowlisted to `*.myfantasyleague.com`, in the API as well as
+  the page.** `/api/draft/status` fetches whatever host it is handed and is
+  public, so a free-text host parameter is server-side request forgery with a
+  URL bar for an interface. It was already accepting one; `resolveMflHost` /
+  `resolveMflLeagueId` now gate both parameters there.
+- **An override is always flagged on screen**, above both layers — a test feed
+  that vanished for the eighteen seconds a reveal owns the TV is a test feed
+  nobody sees.
+
+Both pre-flight overlays share one top-centre stack (`.dbc__preflight`). Every
+other edge of this board is spoken for: the idle header owns the top corners,
+the fullscreen button is pinned top-right, the reveal's ghost pick number owns
+the bottom-left, and `.dbc__status` owns the bottom-right.

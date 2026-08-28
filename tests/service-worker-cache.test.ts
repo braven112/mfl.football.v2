@@ -58,6 +58,8 @@ type Harness = {
   fetchListener: (event: any) => void;
   cache: FakeCache;
   fetchCalls: string[];
+  /** `Request.mode` per call — the remote-image path must re-issue as CORS. */
+  fetchModes: string[];
   setNow: (ms: number) => void;
   setResponder: (fn: (request: Request) => Promise<Response>) => void;
 };
@@ -84,9 +86,11 @@ function loadWorker(): Harness {
   let responder: (request: Request) => Promise<Response> = async () => new Response('ok');
 
   const fetchCalls: string[] = [];
+  const fetchModes: string[] = [];
   const fetchStub = async (request: Request | string) => {
     const req = typeof request === 'string' ? new Request(new URL(request, ORIGIN)) : request;
     fetchCalls.push(req.url);
+    fetchModes.push(req.mode);
     return responder(req);
   };
 
@@ -98,6 +102,7 @@ function loadWorker(): Harness {
     fetchListener: listeners.fetch,
     cache,
     fetchCalls,
+    fetchModes,
     setNow: (ms: number) => { now = ms; },
     setResponder: (fn) => { responder = fn; },
   };
@@ -332,5 +337,133 @@ describe('service worker caching', () => {
     // Insertion-ordered eviction: the oldest deploy's output goes first.
     expect(astro).not.toContain(`${ORIGIN}/_astro/chunk.0.css`);
     expect(astro).toContain(`${ORIGIN}/_astro/chunk.119.css`);
+  });
+
+  /**
+   * Remote player images, and why the worker holds them at all.
+   *
+   * ESPN serves headshots with `cache-control: max-age=233` — under four
+   * minutes, counting down, because it is an edge TTL. The browser's own cache
+   * therefore cannot carry a draft-night board: every reveal re-downloads a
+   * ~240 KB PNG over room wifi at the exact moment a face has to be on screen,
+   * and a warm-up run before the room arrives is expired by the second round.
+   * Storing them here, on OUR clock, is the only thing that makes the broadcast
+   * board's pre-cache mean anything (see `BroadcastWarmup`).
+   */
+  describe('remote player images', () => {
+    const headshot = (id = '4362628') =>
+      new Request(`https://a.espncdn.com/i/headshots/nfl/players/full/${id}.png`);
+
+    /** What ESPN actually sends: a real body under a four-minute TTL. */
+    const espnResponse = () =>
+      new Response('png-bytes', {
+        status: 200,
+        headers: { 'content-type': 'image/png', 'cache-control': 'max-age=233' },
+      });
+
+    it('re-issues the request as CORS so the response is storable', async () => {
+      // An <img> fetch is no-cors and its response is opaque: unreadable,
+      // unstampable, and charged to the origin quota at a padded size.
+      h.setResponder(async () => espnResponse());
+      const { settle } = await respond(h, headshot());
+      await settle();
+
+      expect(h.fetchModes).toEqual(['cors']);
+      expect(await h.cache.match(headshot())).toBeDefined();
+    });
+
+    it('serves the second request from cache — past the origin’s four minutes', async () => {
+      h.setResponder(async () => espnResponse());
+      await seed(h, headshot());
+      const afterFirst = h.fetchCalls.length;
+
+      // Ten minutes on: the browser's HTTP cache would have given up twice over.
+      h.setNow(1_700_000_000_000 + 10 * 60 * 1000);
+      const { answered, settle } = await respond(h, headshot());
+      expect(await (await answered!).text()).toBe('png-bytes');
+      await settle();
+
+      expect(h.fetchCalls.length).toBe(afterFirst);
+    });
+
+    it('revalidates once the entry passes our own week-long cap', async () => {
+      h.setResponder(async () => espnResponse());
+      await seed(h, headshot());
+      const afterFirst = h.fetchCalls.length;
+
+      h.setNow(1_700_000_000_000 + 8 * 24 * HOUR);
+      const { settle } = await respond(h, headshot());
+      await settle();
+
+      expect(h.fetchCalls.length).toBeGreaterThan(afterFirst);
+    });
+
+    it('serves a stale image when the network is gone — room wifi is the norm', async () => {
+      h.setResponder(async () => espnResponse());
+      await seed(h, headshot());
+
+      h.setNow(1_700_000_000_000 + 8 * 24 * HOUR);
+      h.setResponder(async () => { throw new TypeError('Failed to fetch'); });
+      const { answered } = await respond(h, headshot());
+
+      expect(await (await answered!).text()).toBe('png-bytes');
+    });
+
+    it('holds a cached image rather than passing on a 404', async () => {
+      h.setResponder(async () => espnResponse());
+      await seed(h, headshot());
+
+      h.setNow(1_700_000_000_000 + 8 * 24 * HOUR);
+      h.setResponder(async () => new Response('gone', { status: 404 }));
+      const { answered } = await respond(h, headshot());
+
+      expect((await answered!).status).toBe(200);
+    });
+
+    it('leaves every other cross-origin request alone', async () => {
+      // The re-issue-and-store treatment is for known image CDNs only.
+      let respondedWith: Promise<Response> | undefined;
+      h.fetchListener({
+        request: new Request('https://fonts.googleapis.com/css2?family=Inter'),
+        respondWith: (p: Promise<Response>) => { respondedWith = p; },
+        waitUntil: () => {},
+      });
+
+      expect(respondedWith).toBeUndefined();
+    });
+
+    it('bounds the image cache so a season of browsing cannot fill the quota', async () => {
+      // Pre-seeded rather than driven through the worker 1,850 times: each
+      // round trip costs two macrotask flushes, and a loop that long is a
+      // ten-second test that proves the same thing as a fifty-long one. The
+      // trim itself still runs for real — it fires on the 50th WRITE, which is
+      // what the loop below is for.
+      for (let i = 0; i < 1_850; i += 1) {
+        h.cache.store.set(
+          `https://a.espncdn.com/i/headshots/nfl/players/full/${i}.png`,
+          new Response('png-bytes', { status: 200 })
+        );
+      }
+
+      h.setResponder(async () => espnResponse());
+      for (let i = 1_850; i < 1_900; i += 1) {
+        const { settle } = await respond(h, headshot(String(i)));
+        await settle();
+      }
+
+      const stored = [...h.cache.store.keys()].filter((url) => url.includes('a.espncdn.com'));
+      // Trimming runs every 50 writes rather than on each one (cache.keys()
+      // walks the whole cache, and a broadcast warm-up stores ~600 back to
+      // back), so the ceiling may be overshot by up to that batch.
+      expect(stored.length).toBeLessThanOrEqual(1800 + 50);
+      expect(stored.length).toBeGreaterThan(1_000);
+      // Insertion-ordered eviction: the least recently stored goes first.
+      expect(stored).not.toContain(
+        'https://a.espncdn.com/i/headshots/nfl/players/full/0.png'
+      );
+      expect(stored).toContain(
+        'https://a.espncdn.com/i/headshots/nfl/players/full/1899.png'
+      );
+    });
   });
 });

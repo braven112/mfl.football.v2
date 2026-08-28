@@ -95,9 +95,34 @@ export interface DraftBroadcastPageData {
   picks: DraftRoomPick[];
   /** Only players who could plausibly be drafted, to keep the payload sane. */
   players: BroadcastPlayer[];
-  /** MFL league id + host for the poll URL. Registry-derived, never literal. */
+  /** MFL league id + host for the poll URL. Registry-derived, never literal —
+   *  unless `?mflLeague=` pointed the board at another league's live draft, in
+   *  which case `sourceLabel` is set and says so on screen. See
+   *  `draft-broadcast-source.ts`. */
   leagueId: string;
   mflHost: string;
+  /**
+   * Draft unit to ask `/api/draft/status` for, or `null` for "the first unit
+   * on the board".
+   *
+   * Normally this is just `conference.unit`. It is separate from it because an
+   * override can be watching a league whose board is not split by conference
+   * at all, and asking a single-unit board for `CONFERENCE00` by name is a 404
+   * — see `resolveBroadcastSource`.
+   */
+  feedUnit?: string | null;
+  /**
+   * On-screen flag when the board is following a feed that is not its own
+   * league's. Empty/absent for the real board. A test feed that looks exactly
+   * like draft night is how a room ends up watching the wrong draft.
+   */
+  sourceLabel?: string;
+  /**
+   * How many players deep to warm images for, from `?warm=`. 0 disables the
+   * warm-up. See `planBroadcastImages` — and read the note there on ESPN's
+   * four-minute cache window before assuming this is optional.
+   */
+  warmDepth?: number;
   /**
    * Replay the board up to this pick and reveal each one as it "lands".
    * Rehearsal only — the real board is empty until draft night, so this is the

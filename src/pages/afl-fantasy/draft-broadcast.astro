@@ -16,6 +16,16 @@
  * (CONFERENCE00 = American, franchises 0001–0012; CONFERENCE01 = National,
  * 0013–0024). `?conference=` picks which one is on the TV. In 2025 the two
  * drafted on different DAYS, so the page must never assume both are live.
+ *
+ * Query string, all optional:
+ *   ?conference=00|01   which board is on the TV
+ *   ?year=YYYY          season (defaults to the AFL league year — June 1 clock)
+ *   ?rehearse=N         replay a finished season from pick N (no network)
+ *   ?mflLeague=<id>     FOLLOW ANOTHER MFL LEAGUE'S LIVE DRAFT — the dry run
+ *                       for draft night, since rehearsal never polls. Add
+ *                       ?mflHost= for a specific www## host, ?unit= to name a
+ *                       draft unit. Always flagged on screen.
+ *   ?warm=N|all|off     how many players deep to pre-cache images for
  */
 
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
@@ -29,10 +39,13 @@ import {
   buildConferenceBoard,
   buildDefenseFacesByTeam,
   enrichBroadcastPlayers,
+  fetchRemoteDraftResults,
   findRehearsalYear,
   loadConferenceKeepers,
   trimToDraftable,
 } from '../../utils/draft-broadcast-server';
+import { resolveBroadcastSource } from '../../utils/draft-broadcast-source';
+import { resolveWarmDepth } from '../../utils/draft-broadcast-images';
 import type {
   BroadcastConference,
   BroadcastPlayer,
@@ -82,7 +95,34 @@ try {
   draftResultsRaw = null;
 }
 
-const board = buildConferenceBoard(draftResultsRaw, conference?.unit ?? '');
+// ── Which draft this board is WATCHING ──
+// Its own, unless `?mflLeague=` points it at another MFL league's live draft —
+// the only way to exercise poll → diff → queue → reveal end to end before draft
+// night, since `?rehearse=` never touches the network. See
+// draft-broadcast-source.ts for why the host is allowlisted and why an override
+// is always flagged on screen.
+const source = resolveBroadcastSource(Astro.url.searchParams, {
+  leagueId: league.id,
+  mflHost: league.mflHost,
+  unit: conference?.unit ?? '',
+});
+
+// An override takes its SKELETON from the same league it will poll: draft
+// order, round count and who is on the clock before the first poll lands all
+// come from the board, so reading the local feed here would show the room the
+// real league's order over the copy's picks. Null on any failure — the local
+// skeleton is the fallback, so an unreachable test feed degrades to a board
+// that follows nothing rather than a blank TV.
+if (source.isOverride) {
+  const remote = await fetchRemoteDraftResults({
+    leagueId: source.leagueId,
+    host: source.mflHost,
+    year: leagueYear,
+  });
+  if (remote) draftResultsRaw = remote;
+}
+
+const board = buildConferenceBoard(draftResultsRaw, source.unit ?? '');
 
 // ── Rehearsal ──
 // The real board is empty until draft night, so this is the only way to drive
@@ -192,8 +232,11 @@ const pageData: DraftBroadcastPageData = {
   teams,
   picks,
   players,
-  leagueId: league.id,
-  mflHost: league.mflHost,
+  leagueId: source.leagueId,
+  mflHost: source.mflHost,
+  feedUnit: source.unit,
+  sourceLabel: source.label,
+  warmDepth: resolveWarmDepth(Astro.url.searchParams.get('warm')),
   rehearseUpTo,
   rehearsalYears,
   defenseFaces,

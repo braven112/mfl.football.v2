@@ -28,7 +28,9 @@ import type {
 } from '../../../types/draft-broadcast';
 import { collectFreshPicks } from '../../../utils/pick-reveal';
 import { applyRehearsal, findOnTheClock, playerMap, teamMap } from '../../../utils/draft-broadcast';
+import { planBroadcastImages } from '../../../utils/draft-broadcast-images';
 import { BroadcastRevealCard } from './BroadcastRevealCard';
+import { BroadcastWarmup } from './BroadcastWarmup';
 import { OnTheClock } from './OnTheClock';
 
 /** Poll cadence. The draft room's 12s/30s is tuned for an EMAIL draft; a room
@@ -188,12 +190,17 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
 
+    // `feedUnit` rather than `conference.unit`: a `?mflLeague=` override may be
+    // watching a board that is not split by conference at all, and MFL answers
+    // a named unit that isn't there with a 404 rather than a board. `null` means
+    // "whichever unit this draft has" — the param is omitted entirely.
+    const feedUnit = data.feedUnit === undefined ? data.conference.unit : data.feedUnit;
     const params = new URLSearchParams({
       league: data.leagueId,
       host: data.mflHost,
       year: String(data.leagueYear),
-      unit: data.conference.unit,
     });
+    if (feedUnit) params.set('unit', feedUnit);
 
     const tick = async () => {
       try {
@@ -224,7 +231,7 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [data.leagueId, data.mflHost, data.leagueYear, data.conference.unit, rehearsing, ingest]);
+  }, [data.leagueId, data.mflHost, data.leagueYear, data.conference.unit, data.feedUnit, rehearsing, ingest]);
 
   // ── Advance the reveal queue ──
   const current = queue[0] ?? null;
@@ -315,6 +322,27 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
   // reveal, which is why nothing on this screen needs layout timing any more.
   const showingReveal = !!current;
 
+  /**
+   * Every image the night will need, most-needed first.
+   *
+   * Planned from the SSR payload, so it costs no bytes on the wire and is ready
+   * the moment the island hydrates — which matters, because the warm-up's only
+   * job is to finish before the first pick lands. Depth is `?warm=`; see
+   * `resolveWarmDepth`.
+   */
+  const warmUrls = useMemo(
+    () =>
+      data.warmDepth === 0
+        ? []
+        : planBroadcastImages({
+            players: data.players,
+            teams: data.teams,
+            defenseFaces: data.defenseFaces,
+            depth: data.warmDepth,
+          }).urls,
+    [data.players, data.teams, data.defenseFaces, data.warmDepth]
+  );
+
   const onTheClock = useMemo(() => findOnTheClock(picks), [picks]);
   const madeCount = useMemo(() => picks.filter((p) => p.playerId).length, [picks]);
 
@@ -404,6 +432,23 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
           />
         </div>
       ) : null}
+
+      {/* Pre-flight, in one stack above BOTH layers.
+          Top-centre because every other edge of this board is spoken for: the
+          idle header owns the top-left and top-right, the fullscreen button is
+          pinned top-right, the reveal's ghost pick number owns the bottom-left,
+          and `.dbc__status` owns the bottom-right. Above the layers, not inside
+          one, because an override that vanished for the eighteen seconds a
+          reveal owns the TV would be an override nobody sees — the rehearsal
+          flag learned that lesson the hard way (see BroadcastRevealCard). */}
+      <div className="dbc__preflight">
+        {data.sourceLabel ? (
+          <div className="dbc__source-flag" data-testid="broadcast-source-flag">
+            {data.sourceLabel}
+          </div>
+        ) : null}
+        <BroadcastWarmup urls={warmUrls} />
+      </div>
 
       {connectionLost ? (
         <div className="dbc__status" role="status">
