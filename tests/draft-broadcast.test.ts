@@ -605,8 +605,12 @@ describe('idle screen and reveal card share one colour treatment', () => {
   it('both components hand it to the SAME custom property', () => {
     // Two different variable names would type-check, pass every unit test, and
     // silently give the two screens separate paint paths again.
+    //
+    // Quote-agnostic on purpose (Copilot, #641): pinning the single quotes would
+    // fail on a formatter run that flipped them, which is a non-behavioural
+    // change. The property NAME is the thing being guarded.
     for (const f of ['OnTheClock.tsx', 'BroadcastRevealCard.tsx']) {
-      expect(code(f), `${f} must set --dbc-gradient`).toMatch(/'--dbc-gradient'/);
+      expect(code(f), `${f} must set --dbc-gradient`).toMatch(/['"`]--dbc-gradient['"`]/);
     }
   });
 
