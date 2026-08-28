@@ -7,7 +7,7 @@
  * becomes the pre-draft screen instead — same furniture, different framing.
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { DraftRoomPick, DraftRoomTeam } from '../../../types/draft-room';
 import type { BroadcastConference, BroadcastPlayer } from '../../../types/draft-broadcast';
 import {
@@ -17,6 +17,24 @@ import {
   upcomingPicks,
 } from '../../../utils/draft-broadcast';
 import { resolveSplashColors } from '../../../utils/pick-reveal';
+import {
+  DEFAULT_HEADSHOT_URL,
+  getCollegeHeadshot,
+  getPlayerHeadshot,
+  getPlayerImageUrl,
+} from '../../../constants/roster-constants';
+import { normalizeTeamCode } from '../../../utils/nfl-logo';
+import { resolveNflDarkLogoUrl } from '../../../utils/nfl-logo-dark-css';
+import {
+  getPlayerAvatarBackground,
+  getPlayerAvatarBorder,
+  getPlayerAvatarRingDark,
+} from '../../../utils/nfl-team-colors';
+// The rail avatars wear the site's shared player-cell chip (circle, team-color
+// radial backdrop, the 1.18 fill scale, the DEF opt-out) rather than a
+// broadcast-only copy of it — only the SIZE is retuned below, through the
+// custom properties player-cell.css documents as the extension point.
+import '../../../styles/player-cell.css';
 
 interface Props {
   conference: BroadcastConference;
@@ -39,6 +57,101 @@ interface Props {
 
 function pickLabel(pick: DraftRoomPick): string {
   return `${pick.round}.${String(pick.pickInRound).padStart(2, '0')}`;
+}
+
+/**
+ * Every image the rail avatar is willing to try, best first.
+ *
+ * The site-wide headshot cascade (see `buildHeadshotOnerror`, the inline-JS
+ * twin of this chain): ESPN NFL cutout → ESPN college cutout → MFL's own photo
+ * → the silhouette. A pre-draft rookie's `espnId` is a COLLEGE id, so the
+ * second hop is the one that resolves him and the first is the 404 — which is
+ * why the chain is walked rather than branched on.
+ *
+ * A team defense is a crest, not a person, so it opts out into its NFL logo.
+ * The DARK cut, unconditionally: this board is dark in BOTH themes (see the
+ * header of draft-broadcast.css), and the global `html.dark` logo swap only
+ * fires for a viewer whose site theme is dark — a light-theme owner driving
+ * the TV would otherwise get the dark-outlined marks (Raiders, Jets, Jaguars)
+ * that swap exists to fix, invisible on a dark rail.
+ */
+function avatarChain(player?: BroadcastPlayer): string[] {
+  if (!player) return [DEFAULT_HEADSHOT_URL];
+
+  const code = player.nflTeam ? normalizeTeamCode(player.nflTeam) : '';
+  const mflId = player.mflId ?? player.id;
+  const candidates =
+    player.position?.toUpperCase() === 'DEF' && code && code !== 'NFL'
+      ? [resolveNflDarkLogoUrl(code), `/assets/nfl-logos/${code}.svg`]
+      : [
+          // Server-resolved already (`build-draft-players`), so this is
+          // normally the only entry that gets requested.
+          player.headshot || getPlayerHeadshot(mflId, player.espnId),
+          player.espnId ? getCollegeHeadshot(player.espnId) : '',
+          mflId ? getPlayerImageUrl(mflId) : '',
+          DEFAULT_HEADSHOT_URL,
+        ];
+
+  const seen = new Set<string>();
+  return candidates.filter((url): url is string => {
+    if (!url || seen.has(url)) return false;
+    seen.add(url);
+    return true;
+  });
+}
+
+/**
+ * The drafted player's face on a "Just off the board" row, in the site's
+ * shared player-cell chip — the same lockup a roster table, the trade builder
+ * and the custom-rankings board all use, so a player looks like himself
+ * everywhere. Only the size is retuned (in vh, like the rest of this surface).
+ *
+ * The 404 walk is React state rather than reassigning `img.onerror`, matching
+ * `BroadcastRevealCard`'s cutout cascade: the row is remounted per pick, so
+ * state is the shorter-lived thing, and it can't race the synthetic handler.
+ *
+ * Ring colour is the DARK-mode one on every viewer, for the same reason the
+ * DEF logo is: the board is dark whatever the site theme says. Both halves of
+ * player-cell.css's theme-split ring pair are set to it — the stylesheet reads
+ * `--player-avatar-ring` for a light-theme viewer and `--player-avatar-ring-dark`
+ * under `html.dark`, and this surface wants the light-on-dark echo in either
+ * case. Setting only one is the silent-gray-ring failure
+ * `tests/team-color-backdrop-guard.test.ts` exists to catch.
+ */
+function RailAvatar({ player }: { player?: BroadcastPlayer }) {
+  const chain = useMemo(() => avatarChain(player), [player]);
+  const [step, setStep] = useState(0);
+  const isDef = player?.position?.toUpperCase() === 'DEF';
+
+  // Clamped rather than indexed raw: the last entry is the silhouette (or the
+  // light SVG for a defense), and a 404 on it must not blank the chip.
+  const index = Math.min(step, chain.length - 1);
+  const atEnd = index >= chain.length - 1;
+
+  return (
+    <span
+      className={`dbc-idle__row-avatar player-cell__avatar${
+        isDef ? ' player-cell__avatar--def' : ''
+      }`}
+      style={
+        isDef || !player
+          ? undefined
+          : ({
+              '--player-avatar-bg': getPlayerAvatarBackground(player.nflTeam ?? ''),
+              '--player-avatar-border': getPlayerAvatarBorder(player.nflTeam ?? ''),
+              '--player-avatar-ring': getPlayerAvatarRingDark(player.nflTeam ?? ''),
+              '--player-avatar-ring-dark': getPlayerAvatarRingDark(player.nflTeam ?? ''),
+            } as React.CSSProperties)
+      }
+    >
+      <img
+        src={chain[index]}
+        alt=""
+        decoding="async"
+        onError={atEnd ? undefined : () => setStep((n) => n + 1)}
+      />
+    </span>
+  );
 }
 
 /**
@@ -236,8 +349,13 @@ export function OnTheClock({
                 const player = players.get(p.playerId);
                 const by = teams.get(p.franchiseId);
                 return (
-                  <li key={p.overallPickNumber} className="dbc-idle__row">
+                  <li key={p.overallPickNumber} className="dbc-idle__row dbc-idle__row--recent">
                     <span className="dbc-idle__row-pick">{pickLabel(p)}</span>
+                    {/* The face, not just the name. This rail is the only
+                        place the room sees a player after his 18 seconds of
+                        reveal are over, and four rows of pure type read as a
+                        transaction log rather than as a board. */}
+                    <RailAvatar player={player} />
                     <span className="dbc-idle__row-main">
                       <strong>{player?.name || 'Selection in'}</strong>
                       <em>
@@ -281,8 +399,28 @@ export function OnTheClock({
               {upcoming.map((p) => {
                 const by = teams.get(p.franchiseId);
                 return (
-                  <li key={p.overallPickNumber} className="dbc-idle__row">
+                  <li key={p.overallPickNumber} className="dbc-idle__row dbc-idle__row--next">
                     <span className="dbc-idle__row-pick">{pickLabel(p)}</span>
+                    {/* Crest ahead of the name, so this rail reads the same way
+                        round as the one beside it — pick, who, then the copy —
+                        and the three logos stack into one scannable column
+                        instead of hanging off ragged name lengths.
+
+                        Always rendered, even with no icon to put in it: it is
+                        what holds the column open. A franchise with no icon (or
+                        one whose crest 404s into `hideOnError`'s display:none)
+                        would otherwise pull its own name left out of line with
+                        the rows above it. */}
+                    <span className="dbc-idle__row-crest">
+                      {by?.icon ? (
+                        <img
+                          className="dbc-idle__row-icon"
+                          src={by.icon}
+                          alt=""
+                          onError={hideOnError}
+                        />
+                      ) : null}
+                    </span>
                     <span className="dbc-idle__row-main">
                       {/* nameMedium in the RAIL: this row nowrap-ellipsises, so
                           "Midwestside Connection" truncates while "Midwestside"
@@ -291,14 +429,6 @@ export function OnTheClock({
                           unclipped at every size. */}
                       <strong>{by?.nameMedium || by?.name || 'TBD'}</strong>
                     </span>
-                    {by?.icon ? (
-                      <img
-                        className="dbc-idle__row-icon"
-                        src={by.icon}
-                        alt=""
-                        onError={hideOnError}
-                      />
-                    ) : null}
                   </li>
                 );
               })}
