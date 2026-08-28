@@ -494,6 +494,7 @@ const sectionRenderInfo = visibleSections.map((section) => {
 
   .nav-links__link--active .nav-links__icon :global(svg) {
     fill: #ffffff;
+    color: #ffffff;
   }
 
   /* ============================================
@@ -508,10 +509,17 @@ const sectionRenderInfo = visibleSections.map((section) => {
     height: 24px;
   }
 
+  /* `color` as well as `fill`: a handful of sprite symbols (podium-empty,
+     playoff, scoreboard, money-bag, toilet) hard-code fill="currentColor" on
+     their paths, and a presentation attribute on the path beats the fill this
+     rule sets on the <svg>. Those icons were therefore painting in --nav-text
+     — near-white in dark mode — instead of the league blue every other nav
+     icon uses. Setting color makes currentColor resolve to the same value. */
   .nav-links__icon :global(svg) {
     width: 24px;
     height: 24px;
     fill: var(--color-primary, #1c497c);
+    color: var(--color-primary, #1c497c);
   }
 
   /* :global(img) because the AFL tier mark is rendered by <ThemeImage>, so

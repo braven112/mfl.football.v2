@@ -332,8 +332,8 @@
    on the same mark. Legibility of the type is bought back by the shadow on
    `.dbc-reveal__text`, so if this ever wants to go brighter still, deepen that
    shadow — do NOT move the crest back off centre. Portrait keeps its own
-   anchoring: there the copy is stacked UNDER the player, so a centred crest
-   would sit squarely on the name. */
+   anchoring: there the card is one column, so a crest centred on the short axis
+   crosses the copy instead of sitting behind the player. */
 .dbc-reveal__crest {
   position: absolute;
   left: 50%;
@@ -360,8 +360,8 @@
 
 /* Copy left, cutout right. Done with `order` rather than by reordering the
    DOM so a screen reader still reaches the pick and the player's name before
-   the purely decorative cutout. The portrait breakpoint re-pins these, since
-   it is a single column where `order` decides the STACK, not the sides. */
+   the purely decorative cutout. Portrait inherits these untouched: in a single
+   column the same order reads as the STACK — copy on top, player under it. */
 .dbc-reveal__text {
   order: 1;
 }
@@ -1322,7 +1322,11 @@
 }
 
 /* Narrow / portrait screens — a phone, or a TV somebody turned sideways.
-   The two-column reveal collapses to a stack: player ON TOP, text under him.
+   The two-column reveal collapses to a stack: copy ON TOP, player under it.
+   That ordering is deliberate (Brandon, 2026-08-28) and it is also what the
+   base layer already does, so portrait no longer re-pins `order` at all — a
+   cutout bleeds off the BOTTOM edge, which only works if it owns the bottom
+   row, and the pick and the name are what a phone reader wants first.
    An earlier version hid `.dbc-reveal__figure` outright to stop the cutout
    colliding with the name once the columns merged. That "fixed" the collision
    by deleting the subject of the card — the whole page exists to show the
@@ -1330,28 +1334,36 @@
 @media (max-width: 900px) and (orientation: portrait) {
   .dbc-reveal__body {
     grid-template-columns: 1fr;
-    grid-template-rows: minmax(0, 1fr) auto;
+    /* Both rows content-sized, and the PAIR pushed to the bottom of the card:
+       the cutout has to reach the bottom edge to bleed off it, and the copy has
+       to sit directly on top of him. Give either row `1fr` instead and the
+       slack opens up BETWEEN the two — a third of a phone screen of bare
+       gradient between the last stat and the player's head. The slack belongs
+       above the stack, as headroom under the card's own header, which is
+       exactly where the old player-on-top layout put it. */
+    grid-template-rows: auto auto;
+    align-content: end;
     align-items: stretch;
     gap: 0;
     padding: 3vh 6vw 3vh;
   }
 
-  /* Re-pinned, because this is a single column: here `order` decides the STACK
-     rather than left-vs-right, and inheriting the base swap would stand the
-     phone layout on its head — copy on top, player below it. */
+  /* `order` is inherited from the base layer — it already puts the copy first
+     and the figure second, which in a single column IS the stack we want. Only
+     the landscape shove toward the outer edge has to be unwound: in a
+     full-width row it would just crop him. */
   .dbc-reveal__figure {
-    order: 1;
     transform: none;
-  }
-
-  .dbc-reveal__text {
-    order: 2;
-  }
-
-  .dbc-reveal__figure {
     align-self: stretch;
-    min-height: 0;
     align-items: flex-end;
+    /* NOT `min-height: 0`, which is what this said while the row was `1fr`.
+       The defence pair is absolutely positioned (`--def`, `bottom: 0`), so in a
+       content-sized row the figure has no in-flow child at all and collapses to
+       zero — both defenders would render up on the copy. Reserve the box a solo
+       cutout takes: an ESPN headshot is ~600x436, so at column width (100vw
+       less the body's 6vw either side) that is 0.727 x 88vw = 64vw. A taller
+       cutout still grows the row past it. */
+    min-height: 64vw;
   }
 
   /* The pair's half-a-player LEFT shift exists to clear the copy column, and
@@ -1419,9 +1431,11 @@
   }
 
   .dbc-reveal__text {
-    align-self: end;
-    /* Bottom padding, or the last stat sits flush on the screen edge and the
-       phone's own chrome eats it. */
+    /* Top of its row now that the copy leads the stack — `end` would drop it
+       down onto the player's head whenever the figure row is the taller one. */
+    align-self: start;
+    /* Bottom padding is the gap to the player rather than to the screen edge:
+       the body's own 3vh keeps the kicker off the top of the phone. */
     padding: 0 0 2vh;
     max-height: none;
   }
@@ -1443,17 +1457,17 @@
   .dbc-reveal__crest {
     width: 41vh;
     height: 41vh;
-    /* `left` and `top` re-pinned, not just `right`: the base layer centres the
-       crest (left: 50%/top: 50%) for the TV, and with a width set `left` wins
-       over `right` outright — so this block's `right` was inert and the phone
-       crest had silently moved on top of the stacked copy. Anchored off the
-       right edge again, as scenery behind the player. Centring is wrong here
-       for a second reason now: in portrait the copy stacks UNDER the player, so
-       a centred crest would sit squarely on the player's name. */
+    /* `left`, `top` AND `transform` re-pinned, not just `right`: the base layer
+       centres the crest (left: 50%/top: 50%, translate(-50%, -50%)) for the TV,
+       and with a width set `left` wins over `right` outright — leave any of the
+       three in and the phone crest sits squarely on the copy. Anchored to the
+       BOTTOM-right instead, so it stays scenery behind the player: the copy now
+       leads the stack, and a crest centred on the short axis would cross it. */
     left: auto;
     right: -8vw;
-    top: 42%;
-    transform: translateY(-50%);
+    top: auto;
+    bottom: -6vh;
+    transform: none;
     opacity: 0.18;
   }
 
