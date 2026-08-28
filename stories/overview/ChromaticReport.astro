@@ -1,0 +1,242 @@
+---
+/**
+ * Storybook homepage: what this workbench is, and what the current Chromatic
+ * build cost.
+ *
+ * The live numbers are fetched at RUNTIME from `/.chromatic/chromatic-diagnostics.json`.
+ * Chromatic uploads that file next to the published Storybook on every build
+ * (see the "Uploading 7 metadata files" line in the CI log), so on a published
+ * Chromatic URL this reports the very build you are looking at — same origin,
+ * no token, no API call.
+ *
+ * Locally (`pnpm storybook`) that file does not exist, and the panel says so
+ * rather than rendering zeros. The static budget table below is always correct.
+ *
+ * This story is excluded from snapshots: it renders live, changing data, so
+ * capturing it would produce a diff on every single build.
+ */
+
+export interface Props {
+  /** Snapshot budget for the plan (free tier is 5,000/month). */
+  monthlyQuota?: number;
+}
+
+const { monthlyQuota = 5000 } = Astro.props;
+---
+
+<section class="cr">
+  <header class="cr__head">
+    <h1 class="cr__title">MFL Component Workbench</h1>
+    <p class="cr__sub">
+      Astro components and React islands, rendered in isolation across the
+      theme &times; league matrix.
+      Use the <strong>Theme</strong> and <strong>League</strong> toolbar controls above to re-skin any story.
+    </p>
+  </header>
+
+  <div class="cr__panel" id="cr-live" data-quota={String(monthlyQuota)}>
+    <h2 class="cr__h2">This build</h2>
+    <p class="cr__muted" id="cr-status">Loading build report&hellip;</p>
+    <dl class="cr__grid" id="cr-grid" hidden>
+      <div class="cr__cell"><dt>Snapshots captured</dt><dd id="cr-captured">&mdash;</dd></div>
+      <div class="cr__cell"><dt>Inherited (TurboSnap)</dt><dd id="cr-inherited">&mdash;</dd></div>
+      <div class="cr__cell cr__cell--em"><dt>Estimated billed</dt><dd id="cr-billed">&mdash;</dd></div>
+      <div class="cr__cell"><dt>Visual changes</dt><dd id="cr-changes">&mdash;</dd></div>
+      <div class="cr__cell"><dt>TurboSnap</dt><dd id="cr-turbo">&mdash;</dd></div>
+      <div class="cr__cell"><dt>Share of monthly quota</dt><dd id="cr-share">&mdash;</dd></div>
+    </dl>
+    <p class="cr__note" id="cr-warn" hidden></p>
+    <p class="cr__muted">
+      Per-build only.
+      The monthly total lives on <a id="cr-manage" href="https://www.chromatic.com/start" target="_blank" rel="noopener">Chromatic&rsquo;s Manage screen</a>, which is the authority on usage.
+    </p>
+  </div>
+
+  <div class="cr__panel">
+    <h2 class="cr__h2">Snapshot budget</h2>
+    <p class="cr__muted">
+      Modes multiply. Every story is captured light + dark; only genuinely
+      cross-league components (the loading tier,
+      whose accent reads <code>var(--league-accent)</code>) also get the two AFL modes.
+    </p>
+    <table class="cr__table">
+      <thead>
+        <tr><th>Group</th><th>Stories</th><th>Modes</th><th>Snapshots</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Playoff heroes <span class="cr__dim">(TheLeague only)</span></td><td>8</td><td>2</td><td>16</td></tr>
+        <tr><td>Loading tier <span class="cr__dim">(cross-league)</span></td><td>13</td><td>4</td><td>52</td></tr>
+        <tr><td colspan="3"><strong>Full build</strong></td><td><strong>68</strong></td></tr>
+      </tbody>
+    </table>
+    <p class="cr__muted">
+      13 loading stories, not 14 &mdash;
+      <code>BrandedLoader/CyclingNarration</code> cycles on a timer and opts out with <code>disableSnapshot</code>.
+    </p>
+  </div>
+</section>
+
+<script is:inline>
+  (async () => {
+    const root = document.getElementById('cr-live');
+    const status = document.getElementById('cr-status');
+    const grid = document.getElementById('cr-grid');
+    if (!root || !status || !grid) return;
+
+    var set = function (id, text) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = text;
+    };
+
+    // Depth-first search for the object carrying the build counters. The
+    // diagnostics file's nesting is not contractual, so a shape change
+    // degrades to "unavailable" rather than to a wrong number.
+    var findBuild = function (node, depth) {
+      depth = depth || 0;
+      if (depth > 8 || node === null || typeof node !== 'object') return null;
+      if (typeof node.actualCaptureCount === 'number' && typeof node.changeCount === 'number') return node;
+      for (const v of Array.isArray(node) ? node : Object.values(node)) {
+        var hit = findBuild(v, depth + 1);
+        if (hit) return hit;
+      }
+      return null;
+    };
+
+    let build = null;
+    try {
+      const res = await fetch('/.chromatic/chromatic-diagnostics.json', { cache: 'no-store' });
+      if (res.ok) build = findBuild(await res.json());
+    } catch {
+      /* local dev, or the file isn't published — handled below */
+    }
+
+    if (!build) {
+      status.textContent =
+        'No build report here. This panel fills in on the published Chromatic Storybook, where Chromatic uploads the build diagnostics alongside it.';
+      return;
+    }
+
+    const captured = build.actualCaptureCount ?? 0;
+    const inherited = build.inheritedCaptureCount ?? 0;
+    // Chromatic bills a fresh capture at 1 and a TurboSnap-inherited one at 0.2.
+    const billed = captured + inherited * 0.2;
+    const quota = Number(root.dataset.quota || '5000');
+
+    set('cr-captured', String(captured));
+    set('cr-inherited', String(inherited));
+    set('cr-billed', billed.toFixed(1));
+    set('cr-changes', String(build.changeCount ?? 0));
+    set('cr-turbo', build.turboSnapEnabled ? 'active' : 'not active');
+    set('cr-share', `${((billed / quota) * 100).toFixed(2)}%`);
+
+    status.textContent = `Build ${build.number ?? '?'} — ${build.componentCount ?? '?'} components, ${build.specCount ?? '?'} stories`;
+    grid.hidden = false;
+
+    const warn = document.getElementById('cr-warn');
+    if (warn) {
+      var notes = [];
+      if (build.wasLimited) notes.push('This build was LIMITED — the monthly quota is exhausted.');
+      if (!build.turboSnapEnabled) {
+        notes.push('TurboSnap is not active, so every story was captured at full price. Chromatic withholds it until at least 10 builds have run from CI.');
+      }
+      if (notes.length) {
+        warn.textContent = notes.join(' ');
+        warn.hidden = false;
+      }
+    }
+
+    const manage = document.getElementById('cr-manage');
+    if (manage && build.app && build.app.manageUrl) manage.href = build.app.manageUrl;
+  })();
+</script>
+
+<style>
+  .cr {
+    max-width: 60rem;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 3rem;
+    color: var(--page-text, #0f172a);
+    font-family: var(--font-vend-sans, system-ui, -apple-system, 'Segoe UI', sans-serif);
+  }
+  .cr__head { margin-bottom: 2rem; }
+  .cr__title {
+    margin: 0 0 0.5rem;
+    font-size: clamp(1.6rem, 4vw, 2.25rem);
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+  }
+  .cr__sub { margin: 0; max-width: 46rem; line-height: 1.6; color: var(--content-text-muted, #64748b); }
+  .cr__panel {
+    margin-bottom: 1.5rem;
+    padding: 1.25rem 1.5rem;
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: 12px;
+  }
+  .cr__h2 {
+    margin: 0 0 0.75rem;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--content-text-muted, #64748b);
+  }
+  .cr__muted { margin: 0.5rem 0 0; font-size: 0.875rem; line-height: 1.6; color: var(--content-text-muted, #64748b); }
+  .cr__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+    gap: 0.75rem;
+    margin: 1rem 0 0;
+  }
+  .cr__cell {
+    padding: 0.75rem 0.875rem;
+    background: var(--content-bg-muted, #f8fafc);
+    border-radius: 8px;
+  }
+  .cr__cell dt {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--content-text-muted, #64748b);
+  }
+  .cr__cell dd {
+    margin: 0.25rem 0 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .cr__cell--em { background: var(--league-accent, #1c497c); }
+  .cr__cell--em dt, .cr__cell--em dd { color: #fff; }
+  .cr__note {
+    margin: 1rem 0 0;
+    padding: 0.75rem 0.875rem;
+    border-left: 3px solid var(--league-accent, #1c497c);
+    background: var(--content-bg-muted, #f8fafc);
+    font-size: 0.875rem;
+    line-height: 1.55;
+    border-radius: 0 8px 8px 0;
+  }
+  .cr__table { width: 100%; border-collapse: collapse; margin-top: 0.75rem; font-size: 0.9rem; }
+  .cr__table th, .cr__table td {
+    padding: 0.5rem 0.5rem;
+    text-align: right;
+    border-bottom: 1px solid var(--content-border, #e2e8f0);
+    font-variant-numeric: tabular-nums;
+  }
+  .cr__table th:first-child, .cr__table td:first-child { text-align: left; }
+  .cr__table th {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--content-text-muted, #64748b);
+  }
+  .cr__table tbody tr:last-child td { border-bottom: none; }
+  .cr__dim { color: var(--content-text-muted, #64748b); font-weight: 400; }
+  .cr code {
+    padding: 0.1em 0.35em;
+    background: var(--content-bg-muted, #f8fafc);
+    border: 1px solid var(--content-border, #e2e8f0);
+    border-radius: 4px;
+    font-size: 0.85em;
+  }
+  .cr a { color: var(--league-accent, #1c497c); }
+</style>

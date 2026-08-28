@@ -99,6 +99,12 @@ const preview = definePreview({
     controls: { matchers: { color: /(background|color)$/i, date: /Date$/ } },
     backgrounds: { disable: true },
 
+    // Overview is the landing page and is pinned first; everything else keeps
+    // its natural (alphabetical) order.
+    options: {
+      storySort: { order: ['Overview', '*'] },
+    },
+
     chromatic: {
       // Every story is snapshotted light + dark. Cross-league components opt
       // into the AFL modes at the component level — see .storybook/modes.ts

@@ -84,6 +84,41 @@ That covers both causes:
 Rule of thumb: **if a story looks unstyled, add its stylesheet to
 `preview.ts`.**
 
+## Trap 3 — an `.astro` client `<script>` 404s in the static build
+
+A plain `<script>` in an `.astro` component is extracted by Astro and emitted
+as a module URL pointing at the source file:
+
+```
+/home/user/.../ChromaticReport.astro?astro&type=script&index=0&lang.ts  → 404
+```
+
+The dev server resolves that; **`storybook build` does not**. So the script
+works in `pnpm storybook` and silently does nothing in the static build — which
+is the build Chromatic snapshots and publishes. Nothing errors; the markup just
+sits there unhydrated.
+
+Use `<script is:inline>`, which leaves the script in the HTML with nothing to
+resolve. The catch: `is:inline` means Astro does not process it, so it must be
+**plain JS** — a TypeScript annotation is a syntax error that fails just as
+quietly.
+
+## Trap 4 — Storybook does not load `astro.config.ts`
+
+None of the project's Astro config reaches a story. The one that bites is
+`compressHTML: true`, which the app sets specifically to keep Astro 6's
+whitespace behaviour; without it, Astro 7's JSX-style handling strips the
+newline between an inline element and its neighbour, so
+
+```html
+Use the <strong>Theme</strong> and
+<strong>League</strong> controls
+```
+
+renders as "and**League**". Keep an inline element and its surrounding spaces
+on ONE source line. The same applies to `fonts`, `integrations`, and the
+`process.env` hydration — a story gets none of it.
+
 ## Theme × league is pure CSS — which is why the matrix works
 
 Both axes are CSS-only in this codebase:
@@ -225,3 +260,35 @@ Resist reading that as a hang. Build 1 was diagnosed mid-flight as "stuck for
 from polling on a mistaken sense of elapsed time, not from evidence. Wait for
 the job to end, then read the log; `timeout-minutes: 25` is there so a genuine
 hang ends itself and becomes readable.
+
+## Tracking snapshot usage
+
+Two places, one authoritative:
+
+- **Per build** — `scripts/chromatic-usage-summary.mjs` parses
+  `chromatic-diagnostics.json` and writes a cost table into the GitHub Actions
+  job summary. It runs with `if: always()` because Chromatic exits 1 on visual
+  changes (the normal "a human should look" path) and that build's cost still
+  needs reporting. It never fails the job.
+- **This build, on the Storybook itself** — the `Overview` story fetches
+  `/.chromatic/chromatic-diagnostics.json` at runtime. Chromatic uploads that
+  file next to the published Storybook on every build, same origin, so the
+  homepage reports the build you are looking at with no token and no API call.
+  Locally the file is absent and the panel says so instead of showing zeros.
+  It carries `disableSnapshot` — it renders live data, so snapshotting it would
+  diff on every build and train everyone to rubber-stamp changes.
+- **Monthly quota** — only Chromatic's Manage screen. Neither of the above can
+  see the account total; they report one build each.
+
+## TurboSnap is withheld until 10 CI builds
+
+```
+⚠ TurboSnap not available for your account
+TurboSnap is not available until at least 10 builds are created from CI.
+```
+
+`--only-changed` is a no-op until then, so **every build costs the full 68**
+until build 10, regardless of how small the diff is. Budget for roughly
+680 snapshots of runway before the discount starts. After that a narrow PR
+drops to ~20 billed. The `turboSnapEnabled` flag in the job summary and on the
+Overview page says which regime you are in.

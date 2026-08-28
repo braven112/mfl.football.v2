@@ -74,6 +74,13 @@ jobs:
             pnpm chromatic
           fi
 
+      # always(): Chromatic exits 1 whenever it finds visual changes, which is
+      # the normal "a human needs to look at this" path, not an error. The cost
+      # of that build still needs reporting.
+      - name: Report snapshot usage
+        if: always()
+        run: node scripts/chromatic-usage-summary.mjs
+
     # NOTE: this job is advisory while the baseline settles. Visual diffs need a
     # human to accept or reject them, so leave it non-required in branch
     # protection until the snapshots are known-good, then make it required.
