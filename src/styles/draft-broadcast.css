@@ -52,12 +52,25 @@
 /* ── Fullscreen toggle ─────────────────────────────────────────────────────
    The only interactive element on the page, and it's here for exactly one
    click at the start of the night. Dimmed until hovered so it doesn't sit on
-   the TV competing with the board. */
-.dbc__fullscreen {
+   the TV competing with the board.
+
+   The chip lives inside a larger invisible corner zone rather than carrying
+   its own padding, because the zone is a HOVER target that is not a CLICK
+   target: it has no handler, so a tap or a click that lands in the reach
+   around the chip does nothing, while the same movement still reveals the
+   chip. An `::before` apron on the button itself would have been simpler and
+   would have made that whole rectangle an invisible exit-fullscreen button. */
+.dbc__fullscreen-zone {
   position: absolute;
-  top: 1.2vw;
-  right: 1.2vw;
+  top: 0;
+  right: 0;
   z-index: 6;
+  /* Top/right reproduce the chip's old 1.2vw inset; the fatter left/bottom
+     are the reach that makes it findable by aiming at the corner. */
+  padding: 1.2vw 1.2vw 2.4vw 3vw;
+}
+
+.dbc__fullscreen {
   display: inline-flex;
   align-items: center;
   gap: 0.45em;
@@ -76,11 +89,50 @@
   transition: opacity 200ms ease, background 200ms ease;
 }
 
-.dbc__fullscreen:hover,
+/* :hover and :focus-visible are deliberately NOT one selector list. A single
+   unsupported pseudo-class invalidates the whole list per spec, and on the
+   fullscreen rules below that would drop the reveal while leaving the hide in
+   force — an exit control nothing can bring back. Split here too so the file
+   has one habit rather than a rule and an exception. */
+.dbc__fullscreen:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+}
+
 .dbc__fullscreen:focus-visible {
   opacity: 1;
   background: rgba(0, 0, 0, 0.75);
   color: #fff;
+}
+
+/* Once the board owns the TV, the exit chip goes fully invisible on a machine
+   with a real pointer — nobody watching should see a button on the screen —
+   and comes back the moment the mouse (or keyboard focus) finds it.
+
+   The `hover: hover and pointer: fine` gate is load-bearing, not defensive: a
+   touchscreen has no hover to bring the chip back and no Esc key either, so
+   the same rule there would seal the viewer into fullscreen with only the OS
+   gesture as a way out. Those two features describe the PRIMARY pointing
+   device, so a touchscreen laptop matches on its trackpad — correctly, since
+   the trackpad and Esc are both right there, and excluding every machine with
+   a touchscreen would exclude most of the laptops this page is driven from.
+
+   Hiding with `opacity` rather than `display`/`visibility` is what keeps the
+   chip hoverable while invisible. */
+@media (hover: hover) and (pointer: fine) {
+  .dbc__fullscreen[data-in-fullscreen='true'] {
+    opacity: 0;
+  }
+
+  /* Hovering anywhere in the corner zone, the chip included, brings it back. */
+  .dbc__fullscreen-zone:hover .dbc__fullscreen[data-in-fullscreen='true'] {
+    opacity: 1;
+  }
+
+  .dbc__fullscreen[data-in-fullscreen='true']:focus-visible {
+    opacity: 1;
+  }
 }
 
 /* ── Connection indicator ──────────────────────────────────────────────────
