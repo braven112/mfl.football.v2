@@ -255,17 +255,25 @@
   user-select: none;
 }
 
-/* The whole card arrives as one object. This used to be CANCELLED on most
-   reveals in favour of a shared-element morph — the franchise crest measured on
-   both screens and flown from the idle board's lockup to the centre of this
-   card, with the layers cross-fading under it. It was cut (Brandon,
-   2026-08-28): a logo travelling the width of a 65" TV is a lot of movement to
-   spend on the frame where the room is trying to read a name, and the card
-   simply revealing says the same thing. `broadcast-morph.ts` and its tests went
-   with it. If a shared element is ever wanted back, the trap it kept falling
-   into is worth knowing: `fill: forwards` on the leaving element SURVIVES
-   cancel() in Chrome, so the next morph measures a stale box and the animation
-   silently stops. */
+/* The whole card arrives as one object, and this is the ONLY animation left in
+   the handoff — the board and the reveal are two slides that dissolve into each
+   other, with nothing moving inside either one.
+
+   It got there in three cuts (Brandon, 2026-08-28), and the order matters if
+   any of it is ever proposed again. First the shared-element morph: the
+   franchise crest was measured on both screens and flown from the idle board's
+   lockup to the centre of this card, and this keyframe was CANCELLED on most
+   reveals to get out of its way. A logo travelling the width of a 65" TV is a
+   lot of movement to spend on the frame where the room is trying to read a
+   name. Then the copy and the cutout, which slid in from the left and right
+   edges to close on the crest — choreography that existed to partner the
+   flight, and read as fidgeting once the flight was gone. What is left says the
+   same thing: a pick landed, here it is.
+
+   If a shared element is ever wanted back, the trap it kept falling into is
+   worth knowing: `fill: forwards` on the leaving element SURVIVES cancel() in
+   Chrome, so the next morph measures a stale box and the animation silently
+   stops. */
 @keyframes dbc-reveal-in {
   from { opacity: 0; transform: scale(1.04); }
   to { opacity: 1; transform: scale(1); }
@@ -394,17 +402,9 @@
   object-fit: contain;
   object-position: bottom center;
   filter: drop-shadow(0 1.4vh 2.4vh rgba(0, 0, 0, 0.55));
-  animation: dbc-model-in 1140ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-/* In from the RIGHT edge — the side he already lives on — while the copy comes
-   in from the left, so the card closes on its own centre. Percent, not vw: this
-   composes with the figure's own translateX and the cutout is deliberately
-   wider than its column, so a viewport unit here travels a different visual
-   distance on a TV than on a laptop. */
-@keyframes dbc-model-in {
-  from { opacity: 0; transform: translateX(38%) scale(0.96); }
-  to { opacity: 1; transform: translateX(0) scale(1); }
+  /* No entrance of its own — see `dbc-reveal-in`. The cutout used to slide in
+     from the right edge while the copy came in from the left; both were cut
+     with the crest's flight, so the card arrives as one flat object. */
 }
 
 /* ── Team-defense pair ──
@@ -501,7 +501,10 @@
      no blur at all without this. The 55% black keeps the names legible either
      way — this is polish, not legibility. */
   -webkit-backdrop-filter: blur(6px);
-  animation: dbc-text-in 620ms 120ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  /* No entrance of its own. This plate arrived (#646) while the card still
+     assembled itself from moving parts, and rode `dbc-text-in` up from below
+     with the copy and the cutouts. Those are gone and so is that keyframe —
+     the card is one object now, and this rides in with it. */
 }
 
 .dbc-reveal__face-row {
@@ -547,14 +550,7 @@
      stats need the same separation or they sit directly on a franchise shield.
      Inherited by every child, so it covers the ones added later too. */
   text-shadow: 0 0.2vh 1.4vh rgba(0, 0, 0, 0.55);
-  animation: dbc-text-in 930ms 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-/* In from the LEFT edge, mirroring the player. The card clips, so the block
-   starts off screen rather than showing itself parked in the margin. */
-@keyframes dbc-text-in {
-  from { opacity: 0; transform: translateX(-7vw); }
-  to { opacity: 1; transform: translateX(0); }
+  /* No entrance of its own — see the cutout above and `dbc-reveal-in`. */
 }
 
 .dbc-reveal__kicker {
@@ -1250,9 +1246,6 @@
 /* Honor reduced motion: the information is the point, the animation is not. */
 @media (prefers-reduced-motion: reduce) {
   .dbc-reveal,
-  .dbc-reveal__model,
-  .dbc-reveal__text,
-  .dbc-reveal__face,
   .dbc-idle__crest {
     animation: none;
   }
