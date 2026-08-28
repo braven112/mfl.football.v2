@@ -3,6 +3,14 @@
   "changes": [
     {
       "date": "2026-08-28",
+      "type": "style-tweak",
+      "summary": "The draft broadcast's rehearsal mode now spends its time on the right screen. A dry run stepped a pick every 20 seconds while each reveal held the TV for 18 of them, which left the on-the-clock board on screen for about two seconds a cycle — the half of the broadcast you most need to watch while rehearsing was the half you never saw. Rehearsals now step every 35 seconds and hold each reveal for 8, so the board gets roughly 27 seconds between picks. Draft night's own timing is untouched.",
+      "impact": "user",
+      "area": "draft",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-28",
       "type": "bug-fix",
       "summary": "A duplicate line in the AFL league config is gone. The Avenging Amish had their GroupMe avatar listed twice in the same record \u2014 same file both times, so nothing ever looked wrong, but any tool that rewrote the config would have quietly dropped one of them, and if the two had ever pointed at different art the winner would have come down to which line happened to be last. Removed, and there is now a check that fails the build if any league config repeats a field.",
       "impact": "admin",

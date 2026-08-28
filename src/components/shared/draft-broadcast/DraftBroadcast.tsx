@@ -59,9 +59,18 @@ const REVEAL_RUSH_MS = 6_000;
 /** Queue depth past which we switch to the rush duration to catch up. */
 const RUSH_THRESHOLD = 3;
 
-/** Rehearsal cadence — a pick every ~20s, so a dry run plays at draft pace
- *  and each reveal gets its full turn on screen rather than being rushed. */
-const REHEARSE_STEP_MS = 20_000;
+/** Rehearsal cadence — a pick every ~35s, so a dry run plays at draft pace
+ *  and each reveal gets its full turn on screen rather than being rushed.
+ *
+ *  Rehearsal deliberately does NOT reuse the live pair. Live, the idle board is
+ *  what fills the real gaps between picks, so the reveal can afford to be long.
+ *  In a dry run the step is the ONLY thing separating one pick from the next,
+ *  and at 20s against an 18s hold the idle board flashed past in ~2s — the half
+ *  of the screen you most need to look at while rehearsing was the half you
+ *  never saw. A longer step and a shorter hold trade reveal time for idle time
+ *  (~27s of board, vs ~2s) without touching draft night's timing. */
+const REHEARSE_STEP_MS = 35_000;
+const REHEARSE_REVEAL_MS = 8_000;
 
 interface Props {
   pageData: string;
@@ -246,10 +255,15 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
     // Stacked picks get a shorter turn so the board catches back up to the room
     // rather than narrating a round that already finished. Decided ONCE, when
     // this reveal starts.
-    const hold = queueDepthRef.current > RUSH_THRESHOLD ? REVEAL_RUSH_MS : REVEAL_MS;
+    const hold =
+      queueDepthRef.current > RUSH_THRESHOLD
+        ? REVEAL_RUSH_MS
+        : rehearsing
+          ? REHEARSE_REVEAL_MS
+          : REVEAL_MS;
     const id = setTimeout(() => setQueue((q) => q.slice(1)), hold);
     return () => clearTimeout(id);
-  }, [current]);
+  }, [current, rehearsing]);
 
   // ── Keep the TV awake ──
   // A screen that sleeps between picks is the single most likely way this fails
