@@ -585,7 +585,7 @@
    the cap height it sits beside: these marks are mostly round, and matching
    them to 1em makes them read smaller than the type they accompany.
 
-   The `src` is already the dark cut (see resolveOrigin) — the card paints a
+   The `src` is resolved dark-first (see resolveOrigin) — the card paints a
    franchise gradient in both themes, so there is no html.dark swap to wait
    for and nothing keyed on this src to swap it back. */
 .dbc-reveal__origin {

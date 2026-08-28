@@ -51,7 +51,14 @@ export interface BroadcastPlayerExtras {
    */
   boardRank?: number;
   /**
-   * Dark-cut logo for the SCHOOL the origin line names, resolved server-side.
+   * Logo for the SCHOOL the origin line names, resolved server-side.
+   *
+   * The DARK cut where one exists — the card's background is dark in both
+   * themes, so it opts out of the site's `html.dark` swap (see `resolveOrigin`)
+   * — but NOT unconditionally: `resolveCollegeDarkLogoUrl` returns null for the
+   * NCAA ids whose `500-dark` cut 404s upstream, and those fall back to the
+   * light mark, which is the same call `buildCollegeLogoDarkCss` makes for them
+   * in CSS. Don't assume a dark variant downstream.
    *
    * Present only for players whose origin is a college at all (`usesCollegeOrigin`
    * — rookies with a school), which is what keeps this affordable: the lookup

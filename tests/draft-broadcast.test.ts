@@ -563,7 +563,9 @@ describe('the origin line and its logo', () => {
     // `.dbc-reveal__meta` is a flex row. A bare <img> + text would let the row
     // break between the logo and the name it belongs to.
     const css = readFileSync('src/styles/draft-broadcast.css', 'utf-8');
-    const rule = css.match(/\.dbc-reveal__origin \{[^}]*\}/)?.[0] ?? '';
+    // `\s*` not a literal space: a formatter closing that gap would otherwise
+    // fail this guard without changing a line of behaviour.
+    const rule = css.match(/\.dbc-reveal__origin\s*\{[^}]*\}/)?.[0] ?? '';
     expect(rule).toMatch(/display:\s*inline-flex/);
   });
 });
