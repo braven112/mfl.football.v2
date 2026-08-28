@@ -1,5 +1,6 @@
 import { definePreview } from '@storybook-astro/framework';
 import { themeModes } from './modes';
+import { buildTeamAccentCss } from '../src/utils/team-accent-css';
 
 // Global stylesheets the real app loads from TheLeagueLayout. Tokens first —
 // everything else resolves var(--*) against them.
@@ -54,6 +55,35 @@ function applyGlobals(theme: string, league: string) {
   html.setAttribute('data-league', league);
 }
 
+/**
+ * Franchise accent tokens — the layout's job in production, ours here.
+ *
+ * `TheLeagueLayout` renders `<TeamAccentStyles />`, which defines
+ * `--team-accent-<franchiseId>` for every franchise in every league with an
+ * `html.dark` override, each forced to clear 3:1 on its theme's card surface.
+ * Storybook renders components WITHOUT that layout, so every one of those
+ * tokens was undefined and anything tinting by franchise silently fell back —
+ * the Pecking Order's rank numerals all rendered the same blue instead of
+ * sixteen different team colors.
+ *
+ * That matters more than it looks. Baselining the fallback would bake wrong
+ * colors into Chromatic and make it blind to exactly the accent regressions it
+ * exists to catch (see docs/claude/rules/theming-and-assets.md: the Pecking
+ * Order shipped invisible rank numbers in dark mode this way).
+ *
+ * We call the SAME `buildTeamAccentCss()` the layout does, so there is one
+ * source of truth and the story cannot drift from production. Injected once,
+ * client-side only — the SSR prerender pass has no document.
+ */
+function injectLayoutStyles() {
+  if (typeof document === 'undefined') return;
+  if (document.getElementById('sb-team-accents')) return;
+  const el = document.createElement('style');
+  el.id = 'sb-team-accents';
+  el.textContent = buildTeamAccentCss();
+  document.head.appendChild(el);
+}
+
 const preview = definePreview({
   globalTypes: {
     theme: {
@@ -87,6 +117,7 @@ const preview = definePreview({
 
   decorators: [
     (story, context) => {
+      injectLayoutStyles();
       applyGlobals(
         String(context.globals.theme ?? 'light'),
         String(context.globals.league ?? 'theleague'),

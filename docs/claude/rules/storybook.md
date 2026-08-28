@@ -119,6 +119,38 @@ renders as "and**League**". Keep an inline element and its surrounding spaces
 on ONE source line. The same applies to `fonts`, `integrations`, and the
 `process.env` hydration — a story gets none of it.
 
+## Trap 5 — the layout injects styles a story never gets
+
+`TheLeagueLayout` renders `<TeamAccentStyles />`, which defines
+`--team-accent-<franchiseId>` for every franchise with an `html.dark`
+override, each forced to clear 3:1 on its theme's surface. A story has no
+layout, so **every one of those tokens was undefined** and anything tinting by
+franchise fell back silently — the Pecking Order's sixteen rank numerals all
+rendered the same blue.
+
+This is worse than a cosmetic bug in a visual suite: baselining the fallback
+bakes wrong colors into Chromatic and blinds it to precisely the accent
+regressions it exists to catch (see `theming-and-assets.md` — the Pecking Order
+shipped invisible rank numbers in dark mode exactly this way).
+
+`preview.ts` now calls the SAME `buildTeamAccentCss()` the layout does and
+injects it once, so there is one source of truth. Verified: franchise 0002
+resolves `#8b6914` light / `#3f7fb0` dark, its real contrast pair.
+
+The same reasoning applies to the other head-injected style components
+(`NflLogoDarkStyles`, `TeamIconDarkStyles`, `CollegeLogoDarkStyles`). If a
+story starts showing the wrong logo variant in dark mode, that is why.
+
+## Trap 6 — no Node globals in a fixture module
+
+Story and fixture modules are bundled for the BROWSER. A fixture that built a
+data URI with `Buffer.from(...).toString('base64')` threw on import, so the
+args never constructed and every one of that component's stories rendered
+**empty** — no error in the console, just nothing. Write the literal instead.
+
+Symptom to recognize: a story that builds and appears in `index.json` but
+renders zero characters, while its siblings from another fixture are fine.
+
 ## Theme × league is pure CSS — which is why the matrix works
 
 Both axes are CSS-only in this codebase:
@@ -318,3 +350,16 @@ until build 10, regardless of how small the diff is. Budget for roughly
 680 snapshots of runway before the discount starts. After that a narrow PR
 drops to ~20 billed. The `turboSnapEnabled` flag in the job summary and on the
 Overview page says which regime you are in.
+
+## Choosing modes: never snapshot the same axis twice
+
+A component that takes `league` as a PROP and has a story per league does NOT
+also want `leagueModes` — the args already cover that axis, so the modes just
+double the bill for the same coverage. `QuickLinks` and `PeckingOrderIssue`
+are in this category and use `themeModes` only.
+
+`leagueModes` is for components skinned purely by CSS, where nothing in the
+args says which league is rendering — `LineupGameStrip` and the loading tier.
+There the four modes are four genuinely different renders.
+
+Rule: **modes are for axes the args cannot express.**
