@@ -63,11 +63,30 @@ function teamById(slug: string, franchiseId: string) {
 describe('every franchise carries a broadcastGradient', () => {
   for (const { slug, teams } of LEAGUES) {
     it(`${slug}: all ${teams.length} franchises have one, and it validates`, () => {
-      const missing = teams.filter((t) => !t.broadcastGradient).map((t) => t.franchiseId);
+      // Only a franchise that HAS a brand colour needs one. `resolveSplashColors`
+      // falls back to the drafted PLAYER's NFL team colours when a franchise has
+      // no `colorPrimary`, which is a per-pick gradient no single config string
+      // can stand in for. Demanding one from a colourless expansion franchise
+      // would quietly pin it to a fixed league-blue card and kill that path — so
+      // the requirement is scoped, not blanket. Every franchise in both leagues
+      // has a `colorPrimary` today; this carve-out keeps the guard honest if one
+      // ever doesn't.
+      const branded = teams.filter((t) => t.colorPrimary);
+      const missing = branded.filter((t) => !t.broadcastGradient).map((t) => t.franchiseId);
       expect(missing, `${slug} franchises missing broadcastGradient`).toEqual([]);
 
+      // A colourless franchise must NOT carry one, for the reason above.
+      const overreach = teams
+        .filter((t) => !t.colorPrimary && t.broadcastGradient)
+        .map((t) => `${t.franchiseId} ${t.name}`);
+      expect(
+        overreach,
+        `${slug}: a franchise with no colorPrimary must leave broadcastGradient unset ` +
+          `so the reveal card can fall back to the drafted player's NFL colours`
+      ).toEqual([]);
+
       const invalid = teams
-        .filter((t) => !isSafeCssGradient(t.broadcastGradient))
+        .filter((t) => t.broadcastGradient && !isSafeCssGradient(t.broadcastGradient))
         .map((t) => `${t.franchiseId} ${t.name}: ${t.broadcastGradient}`);
       expect(invalid, `${slug} franchises with an unpaintable gradient`).toEqual([]);
     });
@@ -190,12 +209,13 @@ describe('the two hand-authored cards', () => {
 });
 
 /**
- * The other 38 franchises were GENERATED, not designed — each entry is exactly
+ * The other 36 franchises were GENERATED, not designed — each entry is exactly
  * the gradient `toBroadcastPair` already produced, written down. That makes this
  * whole change a visual no-op everywhere except the two cards above, and this
- * test is the proof.
+ * test is the proof. (Two franchises are hand-authored but FOUR entries are:
+ * Midwestside and Vitside each appear in both leagues.)
  *
- * Hand-authoring a third card is fine — add it to HAND_AUTHORED, and pin what
+ * Hand-authoring another card is fine — add it to HAND_AUTHORED, and pin what
  * you meant in the block above. What must NOT happen quietly is a franchise
  * drifting away from its brand colours because someone edited the string and
  * nothing noticed.
@@ -208,16 +228,22 @@ describe('generated gradients still match the derived pair', () => {
       const drifted: string[] = [];
       for (const t of teams) {
         if (HAND_AUTHORED.has(`${slug}:${t.franchiseId}`)) continue;
-        const pair = toBroadcastPair(
-          t.colorPrimary || '#1c497c',
-          t.colorSecondary || t.colorPrimary || '#0e2440'
-        );
+        // A colourless franchise has no derived pair to match — see the
+        // `colorPrimary` carve-out on the coverage test above.
+        if (!t.colorPrimary) continue;
+        const pair = toBroadcastPair(t.colorPrimary, t.colorSecondary || t.colorPrimary);
         const expected = `linear-gradient(115deg, ${pair.primary} 0%, ${pair.secondary} 100%)`;
         if (t.broadcastGradient !== expected) {
           drifted.push(`${t.franchiseId} ${t.name}\n  config: ${t.broadcastGradient}\n  derived: ${expected}`);
         }
       }
-      expect(drifted, `${slug} gradients no longer match their brand colours`).toEqual([]);
+      expect(
+        drifted,
+        `${slug} gradients no longer match their brand colours. If you changed a ` +
+          `franchise's colorPrimary/colorSecondary, regenerate its broadcastGradient ` +
+          `to the "derived" string shown above. If you MEANT to hand-author it, add ` +
+          `"${slug}:<franchiseId>" to HAND_AUTHORED and pin the intent in the block above.`
+      ).toEqual([]);
     });
   }
 });

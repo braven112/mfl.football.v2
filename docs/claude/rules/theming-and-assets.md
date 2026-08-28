@@ -86,13 +86,14 @@ and the name fields. It is the deliberate exception to everything above — no
 accent token, no 3:1 floor, no `toBroadcastPair` saturation. The card owns a 65"
 screen for ~18 seconds, so the look is a design decision, not a computed one.
 
-- **38 of the 40 entries were GENERATED**, not designed — each is exactly the
+- **36 of the 40 entries were GENERATED**, not designed — each is exactly the
   gradient `toBroadcastPair(colorPrimary, colorSecondary)` already produced,
   written down, so introducing the field changed nothing for them.
   `tests/broadcast-gradient-config.test.ts` re-derives them and fails on drift,
-  with a `HAND_AUTHORED` exempt set holding the two that ARE designed
-  (Midwestside, Vitside — Aug 2026). Hand-authoring a third means adding it to
-  that set, not deleting the check.
+  with a `HAND_AUTHORED` exempt set holding the four entries that ARE designed
+  — Midwestside and Vitside, and note that is TWO franchises but FOUR entries,
+  since each appears in both leagues (Aug 2026). Hand-authoring another means
+  adding it to that set, not deleting the check.
 - **Raw CSS means nothing else can catch a typo.** A stray `;` doesn't look
   wrong — it ends the inline declaration and the card renders with NO background
   at all, on the TV, in front of the league. `isSafeCssGradient`
@@ -105,7 +106,7 @@ screen for ~18 seconds, so the look is a design decision, not a computed one.
   routed through `resolveSplashColors` + `toBroadcastPair` — a different angle,
   reversed stop order, and a stop that runs off the canvas at 130%. One config
   string cannot express both compositions, so pointing `.dbc-idle` at
-  `broadcastGradient` would repaint all 38 generated franchises' idle screens
+  `broadcastGradient` would repaint all 36 generated franchises' idle screens
   and undo `#638`. Vitside happens to agree across both screens; **Midwestside
   does not** — its idle screen is gold-dominant while its reveal card is
   near-black. Closing that gap needs a second config field (`idleGradient`) or

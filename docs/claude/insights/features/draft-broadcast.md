@@ -244,13 +244,13 @@ and into per-franchise league config. The migration technique is the reusable
 part, and it applies to anything here that is currently *computed* and wants to
 become *authored*:
 
-1. **Generate every default by running the function you are replacing.** All 38
+1. **Generate every default by running the function you are replacing.** All 36
    non-hand-authored entries were written by calling
    `toBroadcastPair(colorPrimary, colorSecondary)` and formatting its output —
    not by eyeballing hexes. That makes the migration a provable visual no-op,
    which is the only way to change 40 franchises at once and still sleep.
 2. **Guard the derivation, not the literal.**
-   `tests/broadcast-gradient-config.test.ts` re-derives all 38 and fails on
+   `tests/broadcast-gradient-config.test.ts` re-derives all 36 and fails on
    drift, with a `HAND_AUTHORED` exempt set for the ones deliberately designed.
    Pinning literal strings instead would have made every future brand-colour
    tweak a two-file edit with no signal about which one was wrong.
