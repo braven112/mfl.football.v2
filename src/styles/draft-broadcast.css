@@ -425,35 +425,53 @@
    shrunk to fit read as a smaller moment than one player, and the whole point
    of the pair is that it is not a lesser card (Brandon, 2026-08-28).
 
-   That makes each head ~0.30 column-widths, so the two need at least that much
-   daylight between head centres or they occlude. The seats are 0.43 columns
-   apart (-71.5% and -28.5%), which leaves 0.13 columns of clear air between
-   head edges and 57% of the back man's body behind the front one — the
-   shoulder overlap. Only the SPACING is load-bearing there; the pair as a
-   whole then sits half a player-width left of the single-cutout position
-   (Brandon, 2026-08-28), which is why both numbers are negative. Move the pair
-   by shifting both seats together and the composition is preserved.
+   At the 601px a cutout really renders (see `min-width` below) each head is
+   ~180px, so the seats sit 245px apart — 49% of the 501px column — leaving a
+   65px air gap between head edges and 57% of the back man's body behind the
+   front one. TWO independent numbers live in these seats and they are worth
+   keeping separate: their SPACING (49%) is the composition and is derived from
+   the head size, so it must be recomputed if the cutouts ever change scale;
+   their midpoint (-35%) is just where Brandon wanted the pair sitting, and can
+   be slid freely by moving both seats together.
 
    POSITIONED, not flexed, and that is the whole reason this rule exists.
    The pair shipped as two flex items with `margin-left: -57%` on the second,
    on the assumption that `justify-content: center` splits the overflow evenly.
    It does not: measured at 1920x1080 the group hung entirely off the LEFT and
-   sat flush with the figure's right edge, so the figure's own `overflow:
-   hidden` cut 40px off the left man's HEAD on the TV and 26px on a phone —
-   a clipped face, not the clipped outer shoulder that was intended. Offsets
-   off both edges are symmetric by construction and cannot drift with the
-   flex line's width. */
+   sat flush with the figure's right edge — unpredictable placement for a
+   composition whose whole point is a measured head gap, and on a phone it put
+   the first man's head past the CARD's left edge and sliced his face. Offsets
+   off both edges are placed by construction and cannot drift with the flex
+   line's width.
+
+   Note what does the clipping, because the first write-up of this got it
+   backwards: `.dbc-reveal__figure` is `overflow: visible`, so it never cuts a
+   cutout no matter how far past its box one sits. `.dbc-reveal` is the only
+   thing that clips. Measure against the CARD. */
 .dbc-reveal__model.dbc-reveal__model--def {
   position: absolute;
   /* Same seat a single cutout takes via the figure's `align-items: flex-end`. */
   bottom: 0;
   width: 100%;
   max-width: none;
-  max-height: none;
+  /* FULL size means the size a lone cutout ACTUALLY renders at, which is not
+     `width: 100%`. A single cutout is a flex item, so it carries flex's
+     `min-width: auto` — an intrinsic floor that stops it shrinking below the
+     ESPN frame's own 600px. Absolutely positioning the pair removed that floor
+     and each man came out 501x364 against a solo 601x437: 17% smaller, the
+     opposite of the ask. This restores the same floor explicitly. Reset to 0 in
+     portrait, where a solo cutout is column-clamped instead. */
+  min-width: max-content;
+  /* Deliberately NOT `max-height: none`. This rule out-specifies the
+     short-landscape breakpoint's `max-height: 100%`, so overriding it here
+     escaped that clamp: at 1920x540 each defender rendered 628px tall in a
+     540px card, top at y=-88, and the card cut the tops off BOTH heads while a
+     lone cutout stayed clamped. Leaving the property out lets the base rule and
+     the breakpoints decide, exactly as they do for a single player. */
 }
 
 .dbc-reveal__model--def:nth-of-type(1) {
-  left: -71.5%;
+  left: -59.5%;
   /* The first man is the higher-ranked one (`shownFaces` is returned in pool
      order) and he is the one in front, so his ear is never behind the other
      man's shoulder. Source order alone would paint the second on top. */
@@ -461,14 +479,16 @@
 }
 
 .dbc-reveal__model--def:nth-of-type(2) {
-  left: -28.5%;
+  left: -10.5%;
 }
 
-/* A 404 can leave one man standing. Put him where a single cutout goes rather
-   than leaving him at the first seat, which is half a player further left than
-   the pair's own centre. */
+/* A 404 can leave one man standing. Seat him at the PAIR's centre — midway
+   between the two seats above — rather than leaving him in the first one,
+   which would park him well left of where the pair reads. Note this is the
+   pair's centre, not the position a single non-DEF cutout takes; those are
+   different points and the rest of this block is why. */
 .dbc-reveal__model--def:only-of-type {
-  left: -50%;
+  left: -35%;
 }
 
 /* ── Team-defense face caption ──
@@ -1257,6 +1277,13 @@
      the card entirely. Re-centred on the figure instead: same 0.43-column
      spacing, no offset. Same specificity as the base seats and later in the
      file, which is what lets these win. */
+  /* A solo cutout is column-clamped in portrait rather than floored at its
+     intrinsic width, so the pair drops the floor to match — without this each
+     man is 600px wide in a 327px column. */
+  .dbc-reveal__model.dbc-reveal__model--def {
+    min-width: 0;
+  }
+
   .dbc-reveal__model--def:nth-of-type(1) {
     left: -21.5%;
   }
