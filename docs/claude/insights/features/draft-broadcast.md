@@ -627,3 +627,38 @@ crest `<img>` now also carries a `ref` that re-checks
 `nflLogoRefCallback` in `roster-constants.ts`. Anything added to this board with
 an `onError` fallback needs the ref too — the reveal card is the exception,
 since it only ever mounts after a pick lands client-side.
+
+### Portrait: the stack is `auto auto` + `align-content: end`, and the figure needs a `min-height`
+
+Portrait leads with the copy and closes with the player (Brandon, 2026-08-28),
+which is what the BASE layer's `order` already does — so the breakpoint stopped
+re-pinning `order` entirely rather than inverting it a second time. Two things
+about the row sizing are not style:
+
+- **Neither row may be `1fr`.** Whichever row gets the free space opens it
+  where you do not want it: `auto 1fr` puts ~250px of bare gradient between the
+  last stat and the player's head on a 390x844 phone, and `1fr auto` floats the
+  whole stack off the bottom edge the cutout is supposed to bleed off. Both
+  rows content-sized with `align-content: end` pins the pair to the bottom and
+  banks the slack as headroom under the card's own header — which is where the
+  old player-on-top layout happened to put it too.
+- **`min-height: 64vw` on `.dbc-reveal__figure` is load-bearing, and replaced a
+  `min-height: 0` that was correct only while the row was `1fr`.** The defence
+  pair is `position: absolute; bottom: 0` (see the `--def` seats), so in a
+  content-sized row the figure has NO in-flow child and collapses to zero —
+  both defenders render up on the copy. 64vw is the box a solo cutout takes: an
+  ESPN headshot is ~600x436, so 0.727 x the 88vw column. A taller cutout still
+  grows the row past it.
+
+Growing the cutout to fill the leftover space is NOT the fix, and was tried
+first: `object-fit: contain` can never exceed the box's width, so on a
+width-bound cutout `height: 100%` changes nothing at all. The only way to fill
+vertically is `cover` (crops him) or width past the column (explicitly rejected
+for portrait — there is no crest to overlap in a full-width row).
+
+The crest re-anchors to the BOTTOM-right here (`top: auto; bottom: -6vh;
+transform: none`). Its old `top: 42%` centring was written for the previous
+stack, where the copy sat under the player; with the copy leading it crossed
+the name. Note all three of `left`, `top` and `transform` have to be unwound —
+the base layer centres with `left: 50%/top: 50%` + `translate(-50%, -50%)`, and
+leaving any one in re-centres the crest on an axis.

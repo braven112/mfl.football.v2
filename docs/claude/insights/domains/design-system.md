@@ -121,6 +121,9 @@ directly on AFL, so the source does not tell you the shipped colour.
   footer's background at 1.00:1. Define their tokens once, with no dark pair.
 - `var()` does not resolve in an SVG **presentation attribute** —
   `el.style.stroke = 'var(--x)'` works, `setAttribute('stroke', …)` renders nothing.
+- A path's own `fill="currentColor"` beats a CSS `fill` on the wrapping `<svg>`.
+  `sprite.svg` is mixed, so an icon wrapper must set `fill:` **and** `color:` to
+  the same value, or those symbols paint the surrounding text colour instead.
 
 ## Measuring
 
@@ -2466,6 +2469,38 @@ run you are watching: it can overwrite good art on some later unrelated run.
 — the entry, and a `CAPTURE_PATHS` line naming the league page to shoot. And
 after any capture, LOOK at the .webp before committing it; the failure mode here
 renders as a valid image and is invisible in a diff stat.
+
+## 2026-08-28 - The Sprite Is MIXED on `fill="currentColor"`, So an Icon Wrapper Needs Both Properties
+
+**Context:** The AFL side nav's Draft Broadcast entry rendered a white podium in
+a column of blue ones. `NavLinks.astro` sets `fill: var(--color-primary)` on
+`.nav-links__icon svg`, which every other glyph picked up — but
+`icon-podium-empty` carries `fill="currentColor"` on its own `<path>` elements,
+and a presentation attribute on the element that actually paints beats a value
+inherited from an ancestor, regardless of CSS specificity. `currentColor`
+resolved against the link's `--nav-text` (`#d8d8d8` in dark mode), so the icon
+came out the colour of the label beside it.
+
+**Insight:** This is the exact inverse of the 2026-06-25 entry above ("Sprite
+Icons Need `fill: currentColor` on the Wrapper"), and both are now true at once
+because `public/assets/icons/sprite.svg` is **mixed**: five symbols carry
+`fill="currentColor"` on their paths (`podium-empty`, `playoff`, `scoreboard`,
+`money-bag`, `toilet`) and the rest carry no fill at all.
+
+- A wrapper that sets only `color:` tints the five and leaves the rest black.
+- A wrapper that sets only `fill:` tints the rest and leaves the five painting
+  the inherited text colour.
+
+Neither half of the rule is safe alone. Any wrapper that colours sprite icons
+must set **`fill:` and `color:` to the same value** — including the variant
+states, or an active/hover rule re-opens the same split (`--active` here set
+`fill: #fff` and had to gain `color: #fff` too). Cheaper than editing the
+sprite, and it survives the next symbol someone adds with either convention.
+
+**Recommendation:** `grep -c 'fill="currentColor"' public/assets/icons/sprite.svg`
+before assuming a sprite is uniform. Auditing a component that tints icons,
+check it against a symbol from BOTH groups — the bug is invisible if the icon
+you happened to test is on the right side of the split.
 
 ---
 
