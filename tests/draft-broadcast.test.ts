@@ -917,8 +917,17 @@ describe('the board serves single-unit leagues too', () => {
     // makes every pick in the class read as a massive reach — 1.01 came back
     // as board rank #300-something. Non-rookies have to join the off-board set.
     const src = readFileSync('src/pages/theleague/draft-broadcast.astro', 'utf-8');
-    expect(src).toMatch(/rookieOnly:\s*true/);
-    expect(src).toMatch(/offBoardIds/);
+    expect(src).toMatch(/if \(!p\.isRookie\) offBoardIds\.add/);
     expect(src).toMatch(/assignBoardRanks\(enriched,\s*offBoardIds\)/);
+  });
+
+  it('builds the player pool exactly ONCE per request', () => {
+    // `loadRawPlayers` is uncached, so every buildDraftPlayers call re-reads and
+    // re-parses the 1.38 MB players.json. A second call to recompute rookie
+    // status paid that on every SSR request for a flag the first call already
+    // stamped on each player (`isRookie`, same predicate).
+    const src = readFileSync('src/pages/theleague/draft-broadcast.astro', 'utf-8');
+    const calls = src.match(/buildDraftPlayers\(/g) ?? [];
+    expect(calls.length, 'one buildDraftPlayers call per request, not two').toBe(1);
   });
 });

@@ -165,9 +165,12 @@ const boardPlayerIds = new Set(picks.map((p) => p.playerId).filter(Boolean));
 //      shrink the pool under the board).
 //   2. Every non-rookie, rostered or not.
 //
-// The rookie set is resolved through buildDraftPlayers' own rookieOnly filter
-// rather than re-deriving "what counts as a rookie" here — one definition,
-// and enrich:false keeps the second pass cheap.
+// Rookie status is read off the pool already built above: buildDraftPlayers
+// stamps `isRookie` using the very predicate its own rookieOnly filter applies,
+// so asking it a second time re-derives a flag that is already on these
+// objects. That is not merely redundant — `loadRawPlayers` is uncached (unlike
+// getPlayerMap / loadCollegeMap), so a second call re-reads and re-parses the
+// 1.38 MB players.json on EVERY SSR request to this page.
 const allFranchiseIds = new Set<string>(
   (leagueConfigData.teams ?? []).map((t: any) => t.franchiseId)
 );
@@ -177,12 +180,9 @@ const rosteredIds = loadConferenceKeepers(
   allFranchiseIds,
   boardPlayerIds
 );
-const rookieIds = new Set(
-  buildDraftPlayers(leagueYear, { rookieOnly: true, enrich: false }).map((p) => p.id)
-);
 const offBoardIds = new Set<string>(rosteredIds);
 for (const p of enriched) {
-  if (!rookieIds.has(p.id)) offBoardIds.add(p.id);
+  if (!p.isRookie) offBoardIds.add(p.id);
 }
 
 const ranked = assignBoardRanks(enriched, offBoardIds);

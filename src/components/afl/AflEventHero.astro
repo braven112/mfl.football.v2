@@ -640,6 +640,11 @@ const countAriaLabel = hasCount
   .afl-event-hero__cta {
     display: inline-flex;
     align-items: center;
+    /* There is no global box-sizing reset in this repo (see the note in
+       live-scoring.css). Without this the --ghost modifier's 1px border sits
+       OUTSIDE the fixed 50px height and the two buttons in this flex row
+       disagree by a pixel top and bottom. No-op for the borderless primary. */
+    box-sizing: border-box;
     gap: 0.5rem;
     height: 50px;
     padding: 0 1.5rem;
