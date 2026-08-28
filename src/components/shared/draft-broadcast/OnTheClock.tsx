@@ -292,6 +292,23 @@ export function OnTheClock({
   );
 
   /**
+   * ...and the hide has to be undoable, because these <img> nodes outlive the
+   * franchise in them.
+   *
+   * A rail row is keyed by pick SLOT, not by team, so a draft-day trade of an
+   * upcoming pick swaps the crest inside a node React reuses — and an inline
+   * `display: none` is imperative state React will never reset on its own. A
+   * franchise with a dead crest URL trading a pick would leave the incoming
+   * franchise's perfectly good crest hidden, permanently blanking the column
+   * this change added to carry identity. `roster-constants` pairs
+   * NFL_LOGO_ONERROR with NFL_LOGO_ONLOAD for exactly this; so does PlayerCell.
+   */
+  const showOnLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
+    e.currentTarget.style.display = '';
+    e.currentTarget.closest('.dbc-idle__clock')?.classList.remove('is-crestless');
+  }, []);
+
+  /**
    * ...but only if it is still loading when React arrives, and on this page it
    * usually is not.
    *
@@ -405,6 +422,7 @@ export function OnTheClock({
                 alt=""
                 ref={crestRef}
                 onError={hideOnError}
+                onLoad={showOnLoad}
               />
             ) : null}
             <div className="dbc-idle__clock-copy">
@@ -453,8 +471,21 @@ export function OnTheClock({
                     {/* The face, not just the name. This rail is the only
                         place the room sees a player after his 18 seconds of
                         reveal are over, and four rows of pure type read as a
-                        transaction log rather than as a board. */}
-                    <RailAvatar player={player} />
+                        transaction log rather than as a board.
+
+                        Keyed by PLAYER, not by the pick — the same reason and
+                        the same fix as the on-the-clock lockup's
+                        `key={franchiseId}` below. The <li> around it is keyed
+                        by pick slot, so a commissioner undoing a pick and
+                        re-entering it changes this row's player while the same
+                        instance stays mounted: the 404-walk index and any
+                        `display: none` from the last walk would carry over, and
+                        the new man would show up as the previous one's
+                        silhouette or as an empty disc. The rail is the ONLY
+                        place that correction appears, too — `collectFreshPicks`
+                        filters on the slot already being filled, so a re-picked
+                        slot never re-enters the reveal queue. */}
+                    <RailAvatar key={player?.id ?? p.playerId} player={player} />
                     <span className="dbc-idle__row-main">
                       <strong>{player?.name || 'Selection in'}</strong>
                       <em>
@@ -476,6 +507,7 @@ export function OnTheClock({
                           alt={by.nameShort || by.name || ''}
                           ref={crestRef}
                           onError={hideOnError}
+                          onLoad={showOnLoad}
                         />
                       ) : (
                         by?.nameShort || by?.abbrev || ''
@@ -519,6 +551,7 @@ export function OnTheClock({
                           alt=""
                           ref={crestRef}
                           onError={hideOnError}
+                          onLoad={showOnLoad}
                         />
                       ) : null}
                     </span>
