@@ -38,9 +38,27 @@ async function buildLeagueTools() {
           outDir: path.dirname(config.output),
           emptyOutDir: false,
           minify: 'terser',
+          // These bundles are INJECTED INTO MFL'S OWN PAGES, so the output
+          // contract matters more than usual and must not drift with the
+          // bundler. Both settings below were implicit under Vite 5 and
+          // silently changed under Vite 8:
+          //
+          //  - `target` was unpinned, so the default baseline moved and
+          //    top-level `const` was downlevelled to `var`.
+          //  - `strict` was defaulted, and the emitted IIFE lost its
+          //    "use strict" prologue. On a third-party page that is a real
+          //    semantic change: sloppy mode turns a failed assignment into a
+          //    silent no-op and an accidental global into a page-scope leak,
+          //    next to scripts we do not control.
+          //
+          // Pinned explicitly so `pnpm build:tools` is reproducible across
+          // bundler upgrades. The "use strict" lands INSIDE the IIFE wrapper,
+          // never at page scope.
+          target: 'es2020',
           rollupOptions: {
             output: {
               entryFileNames: path.basename(config.output),
+              strict: true,
             }
           }
         },
