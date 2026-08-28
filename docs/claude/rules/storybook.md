@@ -235,7 +235,7 @@ A full rebuild is also forced automatically when Storybook's own config
 changes (`main.ts`, `preview.ts`, `modes.ts`) or when dependency versions in
 `package.json` move — those can change how any story renders. Since
 `preview.ts` imports the global stylesheets, expect touching theming to cost a
-full 72-snapshot build.
+full 68-snapshot build.
 
 **One build per push, not two.** The workflow fires on `push` only. Adding
 `pull_request` as well would bill two builds for the same change — one for the
