@@ -11,6 +11,10 @@
  *   pre-draft  → nothing picked yet: draft order and the room's first pick
  *   idle       → who's on the clock, recent picks, who's next (most of the night)
  *   reveal     → a selection just landed (the moment everyone looks up)
+ *
+ * The idle board and the reveal are LAYERS, not alternatives — see the render
+ * at the bottom. Both stay mounted and cross-fade, because a hard swap between
+ * them looked like somebody changing the channel.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -289,11 +293,27 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
   const onTheClock = useMemo(() => findOnTheClock(picks), [picks]);
   const madeCount = useMemo(() => picks.filter((p) => p.playerId).length, [picks]);
 
-  const revealTeam: DraftRoomTeam | undefined = current
-    ? teams.get(current.pick.franchiseId)
+  /**
+   * The reveal currently on screen, OR the one that just finished its turn.
+   *
+   * Rendering `current` alone meant React unmounted the outgoing card the
+   * instant the queue drained, so there was nothing left to fade OUT and the
+   * idle board hard-cut in behind it. Holding the last reveal keeps that layer
+   * mounted through its fade; it then sits inert (visibility: hidden) until the
+   * next pick replaces it. Read during render rather than parked in state on a
+   * timer: a state update lands AFTER the commit that dropped `current`, so the
+   * card would unmount and remount for a frame — restarting its entrance
+   * animations at the exact moment it is supposed to be leaving.
+   */
+  const lastRevealRef = useRef<QueuedReveal | null>(null);
+  if (current) lastRevealRef.current = current;
+  const shownReveal = current ?? lastRevealRef.current;
+
+  const revealTeam: DraftRoomTeam | undefined = shownReveal
+    ? teams.get(shownReveal.pick.franchiseId)
     : undefined;
-  const revealPlayer: BroadcastPlayer | undefined = current
-    ? players.get(current.pick.playerId)
+  const revealPlayer: BroadcastPlayer | undefined = shownReveal
+    ? players.get(shownReveal.pick.playerId)
     : undefined;
 
   return (
@@ -302,18 +322,13 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
         {isFullscreen ? 'Exit full screen' : 'Full screen'}
       </button>
 
-      {current ? (
-        <BroadcastRevealCard
-          key={current.key}
-          pick={current.pick}
-          team={revealTeam}
-          player={revealPlayer}
-          picks={picks}
-          players={players}
-          rehearsing={rehearsing}
-          leagueYear={data.leagueYear}
-        />
-      ) : (
+      {/* Both screens are mounted at all times and cross-faded by class — see
+          `.dbc__screen` in draft-broadcast.css. The hidden layer ends the fade
+          at `visibility: hidden`, which is what keeps the idle board's
+          conference switcher and rehearsal button out of the tab order while a
+          reveal owns the TV; opacity alone would leave them focusable behind
+          it. Nothing here decides timing — the queue still does. */}
+      <div className={`dbc__screen${current ? ' is-hidden' : ''}`}>
         <OnTheClock
           conference={data.conference}
           conferences={allConferences}
@@ -329,7 +344,22 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
           rehearsalYears={data.rehearsalYears}
           leagueYear={data.leagueYear}
         />
-      )}
+      </div>
+
+      {shownReveal ? (
+        <div className={`dbc__screen dbc__screen--reveal${current ? '' : ' is-hidden'}`}>
+          <BroadcastRevealCard
+            key={shownReveal.key}
+            pick={shownReveal.pick}
+            team={revealTeam}
+            player={revealPlayer}
+            picks={picks}
+            players={players}
+            rehearsing={rehearsing}
+            leagueYear={data.leagueYear}
+          />
+        </div>
+      ) : null}
 
       {connectionLost ? (
         <div className="dbc__status" role="status">
