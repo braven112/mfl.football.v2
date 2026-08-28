@@ -1,4 +1,5 @@
 import Skeleton from '../../src/components/shared/loading/Skeleton.astro';
+import { allModes } from '../../.storybook/modes';
 
 /**
  * Tier 4 content placeholder. Brand-neutral by design (no accent), so unlike
@@ -7,6 +8,12 @@ import Skeleton from '../../src/components/shared/loading/Skeleton.astro';
  */
 export default {
   title: 'Loading/Skeleton',
+  parameters: {
+    // Snapshotted across leagues for the INVERSE reason to Spinner: this tier
+    // is brand-neutral, so the four modes must come out identical. A league
+    // diff here is an accent leaking in where it shouldn't.
+    chromatic: { modes: allModes },
+  },
   component: Skeleton,
 };
 

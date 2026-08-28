@@ -93,7 +93,8 @@ Both axes are CSS-only in this codebase:
 
 Nothing is decided in frontmatter. That is why a story pre-rendered *once*
 still re-skins correctly across all four combinations, and why these map
-directly onto Chromatic modes later. Verified end to end on `--league-accent`:
+directly onto the Chromatic modes below. Verified end to end on
+`--league-accent`:
 
 | | light | dark |
 |---|---|---|
@@ -125,3 +126,40 @@ One real consequence: `pnpm build:tools` (`scripts/build-league-tools.mjs`)
 calls `vite build`, so re-running it now minifies with Vite 8 and the committed
 bundles under `public/assets/js/dist/` change by ~100 bytes. Functionally
 equivalent, but don't be surprised by the diff.
+
+## Chromatic (visual regression)
+
+Set up Aug 2026. Runs from CI only — `.github/workflows/chromatic.yml`,
+path-filtered so it doesn't add an install to every data-sync PR. The
+project token lives in the `CHROMATIC_PROJECT_TOKEN` repo secret and must
+never be committed.
+
+```bash
+pnpm chromatic   # needs CHROMATIC_PROJECT_TOKEN in env; runs TurboSnap
+```
+
+**Modes multiply your bill.** The free plan is 5,000 snapshots/month and
+testing pauses (rather than bills) at the cap. `.storybook/modes.ts` splits
+them deliberately: every story gets light + dark, and only genuinely
+cross-league components (the shared/loading tier) also get the two AFL modes.
+The playoff heroes are TheLeague-only surfaces — snapshotting them under the
+AFL skin would spend budget on a combination that never ships. That lands at
+(8 x 2) + (14 x 4) = 72 snapshots per full build, ~69 full builds a month,
+before TurboSnap.
+
+**TurboSnap needs two things**, and both fail quietly:
+- `storybook build --stats-json` (the `build:storybook:stats` script), which
+  emits `storybook-static/preview-stats.json`.
+- `fetch-depth: 0` on checkout. `actions/checkout` defaults to depth 1, which
+  degrades both TurboSnap and Chromatic's baseline detection without erroring.
+
+**A story that can't be deterministic should opt out, not flake.**
+`BrandedLoader/CyclingNarration` cycles narration on a 2.5s timer, so it
+carries `chromatic: { disableSnapshot: true }`. A test that fails at random
+teaches you to ignore failures. Covering it properly needs the component to
+accept an injectable clock — a component change, not a story change.
+
+The playoff heroes load real ESPN headshots, the one external dependency in
+the fixtures. `delay: 300` in preview.ts keeps a slow CDN response from being
+captured mid-load; if they still flake, stub the images rather than raising
+the delay.

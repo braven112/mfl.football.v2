@@ -95,7 +95,9 @@
     "party:deploy": "partykit deploy",
     "measure:crest-contrast": "node scripts/measure-crest-contrast.mjs",
     "storybook": "storybook dev -p 6006 --no-open",
-    "build:storybook": "storybook build"
+    "build:storybook": "storybook build",
+    "build:storybook:stats": "storybook build --stats-json",
+    "chromatic": "chromatic --build-script-name build:storybook:stats --only-changed"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
@@ -120,6 +122,7 @@
     "autoprefixer": "^10.4.14",
     "baseline-browser-mapping": "^2.10.0",
     "chokidar": "^3.6.0",
+    "chromatic": "^18.6.1",
     "cssnano": "^6.0.1",
     "fast-check": "^4.4.0",
     "partykit": "^0.0.115",

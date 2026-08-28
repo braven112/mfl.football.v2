@@ -1,4 +1,5 @@
 import { definePreview } from '@storybook-astro/framework';
+import { themeModes } from './modes';
 
 // Global stylesheets the real app loads from TheLeagueLayout. Tokens first —
 // everything else resolves var(--*) against them.
@@ -97,6 +98,18 @@ const preview = definePreview({
   parameters: {
     controls: { matchers: { color: /(background|color)$/i, date: /Date$/ } },
     backgrounds: { disable: true },
+
+    chromatic: {
+      // Every story is snapshotted light + dark. Cross-league components opt
+      // into the AFL modes at the component level — see .storybook/modes.ts
+      // for the snapshot-budget reasoning.
+      modes: themeModes,
+
+      // External ESPN headshots load in the playoff heroes. Chromatic waits for
+      // network idle, but a small settle beat keeps a slow CDN response from
+      // being captured mid-load as a false diff.
+      delay: 300,
+    },
   },
 });
 

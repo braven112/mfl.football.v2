@@ -1,0 +1,70 @@
+name: Chromatic
+
+# Visual regression for the Storybook workbench. Dev-only: this never touches
+# the shipped app, and it does not gate the site build.
+#
+# Path-filtered on purpose. Every workflow in this repo pays a
+# `pnpm install --frozen-lockfile`, so this one only runs when something it
+# could actually change has changed — not on every data-sync or Schefter PR.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/components/**'
+      - 'src/styles/**'
+      - 'stories/**'
+      - '.storybook/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/chromatic.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/components/**'
+      - 'src/styles/**'
+      - 'stories/**'
+      - '.storybook/**'
+  workflow_dispatch:
+
+concurrency:
+  group: chromatic-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  chromatic:
+    name: Visual tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          # Chromatic needs full history to find the baseline commit, and
+          # TurboSnap (--only-changed) needs it to diff the file set. The
+          # default fetch-depth of 1 silently degrades both.
+          fetch-depth: 0
+
+      - name: Setup pnpm + Node + install
+        uses: ./.github/actions/setup
+
+      - name: Run Chromatic
+        id: chromatic
+        env:
+          CHROMATIC_PROJECT_TOKEN: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+        run: |
+          if [ -z "$CHROMATIC_PROJECT_TOKEN" ]; then
+            echo "::error::CHROMATIC_PROJECT_TOKEN secret is not set."
+            echo "Add it at Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
+          # On main, whatever landed was already reviewed on its PR, so accept
+          # it as the new baseline. On a PR, leave changes pending so a human
+          # accepts or rejects them in the Chromatic UI.
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            pnpm chromatic --auto-accept-changes
+          else
+            pnpm chromatic
+          fi
+
+    # NOTE: this job is advisory while the baseline settles. Visual diffs need a
+    # human to accept or reject them, so leave it non-required in branch
+    # protection until the snapshots are known-good, then make it required.

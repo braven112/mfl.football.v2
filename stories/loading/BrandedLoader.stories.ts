@@ -1,17 +1,22 @@
 import BrandedLoader from '../../src/components/shared/loading/BrandedLoader.astro';
+import { allModes } from '../../.storybook/modes';
 
 /**
  * Tier 5 "on the wire" moment for long (10s+) AI waits — the one loading tier
  * that carries league character.
  *
- * NOTE for visual testing: narration cycles client-side on a ~2.5s timer, so
- * this component is inherently non-deterministic. Multi-line stories below are
- * the exact shape that produces flaky snapshots; the single-line stories are
- * the stable ones. Pin `cycleSeconds` high, or snapshot only the single-line
- * variants, when this reaches Chromatic.
+ * Narration cycles client-side on a ~2.5s timer, so any story with more than
+ * one narration line is inherently non-deterministic. The single-line stories
+ * are stable and snapshotted; the cycling one opts OUT of snapshots below
+ * rather than feeding Chromatic a guaranteed false diff every build.
  */
 export default {
   title: 'Loading/BrandedLoader',
+  parameters: {
+    // Genuinely cross-league: the accent reads var(--league-accent), so the
+    // AFL skin is a real shipping combination worth snapshotting.
+    chromatic: { modes: allModes },
+  },
   component: BrandedLoader,
 };
 
@@ -36,9 +41,13 @@ export const Overlay = {
 };
 
 /**
- * Non-deterministic on purpose — cycles every 2.5s. Kept as the documentation
- * of the cycling behavior, and as the worked example of a story that needs
- * special handling before it can be snapshotted.
+ * Non-deterministic on purpose — narration cycles every 2.5s, so whichever
+ * line Chromatic happens to capture would differ between builds. Kept in
+ * Storybook as the documentation of the cycling behavior, but excluded from
+ * snapshots: a test that fails at random teaches you to ignore failures.
+ *
+ * To actually cover this, the component would need `cycleSeconds` honored as
+ * an injectable clock. That is a component change, not a story change.
  */
 export const CyclingNarration = {
   args: {
@@ -48,5 +57,8 @@ export const CyclingNarration = {
       'Confirming with sources…',
       'Getting a second source…',
     ],
+  },
+  parameters: {
+    chromatic: { disableSnapshot: true },
   },
 };

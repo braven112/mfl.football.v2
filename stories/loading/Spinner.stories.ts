@@ -1,4 +1,5 @@
 import Spinner from '../../src/components/shared/loading/Spinner.astro';
+import { allModes } from '../../.storybook/modes';
 
 /**
  * Tier 2/3 inline loading indicator.
@@ -10,6 +11,11 @@ import Spinner from '../../src/components/shared/loading/Spinner.astro';
  */
 export default {
   title: 'Loading/Spinner',
+  parameters: {
+    // Genuinely cross-league: the accent reads var(--league-accent), so the
+    // AFL skin is a real shipping combination worth snapshotting.
+    chromatic: { modes: allModes },
+  },
   component: Spinner,
 };
 

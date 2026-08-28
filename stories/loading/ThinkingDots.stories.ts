@@ -1,4 +1,5 @@
 import ThinkingDots from '../../src/components/shared/loading/ThinkingDots.astro';
+import { allModes } from '../../.storybook/modes';
 
 /**
  * Three bouncing dots for AI / "voice is working" waits. Dots take
@@ -9,6 +10,11 @@ import ThinkingDots from '../../src/components/shared/loading/ThinkingDots.astro
  */
 export default {
   title: 'Loading/ThinkingDots',
+  parameters: {
+    // Genuinely cross-league: the accent reads var(--league-accent), so the
+    // AFL skin is a real shipping combination worth snapshotting.
+    chromatic: { modes: allModes },
+  },
   component: ThinkingDots,
 };
 
