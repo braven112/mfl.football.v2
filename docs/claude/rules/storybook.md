@@ -267,7 +267,12 @@ Two places, one authoritative:
 
 - **Per build** — `scripts/chromatic-usage-summary.mjs` parses
   `chromatic-diagnostics.json` and writes a cost table into the GitHub Actions
-  job summary. It runs with `if: always()` because Chromatic exits 1 on visual
+  job summary. **`--diagnostics-file` must be passed explicitly** or there is
+  nothing to parse: the CLI logs "Wrote Chromatic diagnostics report to
+  chromatic-diagnostics.json" whenever it uploads metadata, but only
+  *persists* the file to disk when the flag is given as a string
+  (`persistDiagnosticsFile = typeof diagnosticsFile == 'string' || debug`).
+  The log line without the flag is about the upload, not a file you can read. It runs with `if: always()` because Chromatic exits 1 on visual
   changes (the normal "a human should look" path) and that build's cost still
   needs reporting. It never fails the job.
 - **This build, on the Storybook itself** — the `Overview` story fetches
@@ -276,7 +281,10 @@ Two places, one authoritative:
   homepage reports the build you are looking at with no token and no API call.
   Locally the file is absent and the panel says so instead of showing zeros.
   It carries `disableSnapshot` — it renders live data, so snapshotting it would
-  diff on every build and train everyone to rubber-stamp changes.
+  diff on every build and train everyone to rubber-stamp changes. It still
+  counts as a story (build 3 reported "23 stories across 8 components,
+  captured 68 snapshots") — the story count rises, the snapshot count does
+  not.
 - **Monthly quota** — only Chromatic's Manage screen. Neither of the above can
   see the account total; they report one build each.
 
