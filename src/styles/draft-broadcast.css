@@ -490,6 +490,23 @@
   text-align: center;
 }
 
+/* The franchise name, now the small line ABOVE the status. Deliberately not
+   the `__kicker` treatment it sits in the place of: a kicker is uppercased and
+   tracked out to read as a label, and a team name run through that stops
+   reading as a name — "DICKS OUT FOR HARAMBE" at 0.2em becomes a banner rather
+   than a byline. Franchise casing is kept, and it is full white where the
+   kicker is 70% — the name is the one piece of information on this screen the
+   crest can only imply. */
+.dbc-idle__clock-team {
+  margin: 0;
+  font-size: clamp(0.95rem, 2.5vh, 2.1rem);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: 0.01em;
+  color: #fff;
+  text-shadow: 0 0.3vh 1.4vh rgba(0, 0, 0, 0.45);
+}
+
 .dbc-idle__crest {
   /* Doubled from 17vh. Bounded by vw as well so a phone-width board doesn't
      hand the logo two-thirds of the row and leave the name a column of
@@ -518,7 +535,12 @@
   color: rgba(255, 255, 255, 0.7);
 }
 
-.dbc-idle__team {
+/* The board's headline treatment. Two elements wear it: `__team` in the
+   board-missing / draft-complete states, and `__clock-status` on the
+   on-the-clock state, where the big line is the status rather than the name.
+   One rule so the three states can never drift to different headline sizes. */
+.dbc-idle__team,
+.dbc-idle__clock-status {
   margin: 0.15em 0 0;
   font-size: clamp(2rem, 7.5vh, 7rem);
   font-weight: 900;
@@ -708,8 +730,17 @@
     gap: clamp(1rem, 2vw, 2.5rem);
   }
 
-  .dbc-idle__team {
+  .dbc-idle__team,
+  .dbc-idle__clock-status {
     font-size: clamp(1.6rem, 6vh, 4.5rem);
+  }
+
+  /* Shrinks LESS than the headline above it. The headline is the same phrase
+     every pick and stays readable at any size; the franchise name
+     is the line that actually varies, so on a 720p panel it holds a little
+     more of its size rather than tracking the headline down proportionally. */
+  .dbc-idle__clock-team {
+    font-size: clamp(0.95rem, 2.6vh, 1.7rem);
   }
 
   .dbc-idle__pick {

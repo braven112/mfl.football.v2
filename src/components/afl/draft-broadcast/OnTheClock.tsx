@@ -174,10 +174,22 @@ export function OnTheClock({
               />
             ) : null}
             <div className="dbc-idle__clock-copy">
-              <p className="dbc-idle__kicker">
+              {/* Name small and on top, status big underneath — the inverse of
+                  the other two stage states, and of what this screen used to
+                  do. With the crest at double size the logo already answers
+                  "which team", so spending the headline on the name repeated
+                  what the room could see; the headline now answers "what is
+                  happening" instead. The name stays directly above it so the
+                  two still read as one sentence.
+
+                  h1 remains on the NAME, not on the bigger line: it is what
+                  identifies this screen, and "On the clock" reads identically on
+                  every one of the 108 picks. Visual weight and
+                  document structure disagree here on purpose. */}
+              <h1 className="dbc-idle__clock-team">{team?.name || 'Waiting for MFL'}</h1>
+              <p className="dbc-idle__clock-status">
                 {notStarted ? 'First on the clock' : 'On the clock'}
               </p>
-              <h1 className="dbc-idle__team">{team?.name || 'Waiting for MFL'}</h1>
               {onTheClock ? (
                 <p className="dbc-idle__pick">
                   Pick {pickLabel(onTheClock)}
