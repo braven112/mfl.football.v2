@@ -351,18 +351,28 @@ until build 10, regardless of how small the diff is. Budget for roughly
 drops to ~20 billed. The `turboSnapEnabled` flag in the job summary and on the
 Overview page says which regime you are in.
 
-## Choosing modes: never snapshot the same axis twice
+## Choosing modes
 
-A component that takes `league` as a PROP and has a story per league does NOT
-also want `leagueModes` — the args already cover that axis, so the modes just
-double the bill for the same coverage. `QuickLinks` and `PeckingOrderIssue`
-are in this category and use `themeModes` only.
+**`themeModes` is not theme-only.** It pins `league: 'theleague'` as well as
+the theme, because every snapshot needs *some* league global. Read the name as
+"the TheLeague pair", not "the neutral pair" — that misreading shipped AFL
+stories rendering under TheLeague's palette, and both the review and Copilot
+caught it independently.
 
-`leagueModes` is for components skinned purely by CSS, where nothing in the
-args says which league is rendering — `LineupGameStrip` and the loading tier.
-There the four modes are four genuinely different renders.
+Three cases, and the middle one is the trap:
 
-Rule: **modes are for axes the args cannot express.**
+| The component… | Use | Why |
+|---|---|---|
+| takes no league input; styles read a league token | `allModes` | Four genuinely different renders |
+| takes `league` as a PROP | `themeModes` for the TheLeague stories, `leagueModes` for the AFL ones | The args pick the CONTENT; the mode must pick a matching SKIN. Not a second axis — each story still gets 2 snapshots, just the right 2. |
+| takes no league input; styles read NO league token | `themeModes` | An AFL snapshot would be pixel-identical. `PlayerCell` and `LineupGameStrip` are here — checking cost 32 wasted snapshots a build to discover. |
+
+Before reaching for `allModes`, actually grep the component's stylesheet for
+`--league-accent` and `data-league`. If neither appears, the league axis does
+not exist for it.
+
+Rule: **a mode must change something the args cannot, and must not contradict
+what the args already said.**
 
 ## What is reachable from `rosters.astro`
 
