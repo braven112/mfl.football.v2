@@ -574,3 +574,26 @@ global stylesheet), not just that the class name appears in the markup.
 **Evidence:** `src/styles/utilities.css:10`, `TheLeagueLayout.astro:20`,
 `SplashLayout.astro:16`. Found via the ESPN player-news modal audit; the stale
 insight is what produced the duplicate rule at `player-news.css:168`.
+
+## 2026-08-28 - Hover-Gating a Control Is Device-Conditional — an Escape Hatch Hidden on Touch Is Sealed Shut
+
+**Context:** The AFL draft broadcast board (`/afl-fantasy/draft-broadcast`) drives a TV, and its "Exit full screen" chip was the only non-board pixel on screen. The ask was to hide it until hovered. Written as a plain `opacity: 0` rule, that ships correctly on the laptop it was designed on and traps every phone and tablet viewer inside fullscreen.
+
+**Insight:** Hover is not a universal input. A control revealed on `:hover` is *unreachable* on a touchscreen — there is no hover state to enter, and unlike a modal there is no Esc key to fall back on either. The class of control this matters most for is the **escape hatch**: exit fullscreen, close, dismiss, cancel. Hiding a decorative affordance on touch is a cosmetic loss; hiding the only way out is a trap. Gate every hover-reveal on `@media (hover: hover) and (pointer: fine)` and let coarse pointers keep the always-visible version.
+
+**Pattern:**
+```css
+/* Always-visible baseline — this is what a touchscreen gets. */
+.chip { opacity: 0.45; transition: opacity 200ms ease; }
+
+@media (hover: hover) and (pointer: fine) {
+  .chip[data-in-fullscreen='true'] { opacity: 0; }
+  .chip[data-in-fullscreen='true']:hover,
+  .chip[data-in-fullscreen='true']:focus-visible { opacity: 1; }
+}
+```
+Three details that matter: pair `:hover` with `:focus-visible` so the keyboard reaches it too; use `opacity` rather than `display`/`visibility` so the element stays hit-testable (which is also why an invisible hit target can't be clicked by accident — the pointer being on it is what reveals it); and widen the target with an invisible `::before` apron if the control is small, since a pseudo-element must stay `pointer-events: auto` to trigger the parent's `:hover`.
+
+**Recommendation:** Guard this with a test, not a comment — the failure only appears on hardware the author isn't holding. `tests/draft-broadcast.test.ts` splits the stylesheet into `@media` blocks and fails if any rule hiding the chip lands outside a `hover: hover` query. Same check is worth copying for any future hover-reveal on a dismiss or exit control.
+
+**Evidence:** `src/styles/draft-broadcast.css`, `src/components/afl/draft-broadcast/DraftBroadcast.tsx`. Media-query gate verified by mutation: moving the hide rule to the top level fails the guard.

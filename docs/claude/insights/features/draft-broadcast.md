@@ -311,3 +311,29 @@ rewrite them that way:
 Edit these files as TEXT (anchored line insertion) and validate with
 `JSON.parse` afterward. Verify the round-trip before trusting it:
 `node -e "s=fs.readFileSync(p,'utf8'); JSON.stringify(JSON.parse(s),null,2)===s"`.
+### The exit chip hides on hover-capable devices ONLY
+
+The chip in the top-right corner is the only interactive element on the page,
+and once the board is fullscreen on a TV it is the only thing on screen that
+isn't the board — so on a laptop it drops to `opacity: 0` while fullscreen and
+comes back on `:hover` / `:focus-visible`.
+
+The gate is `@media (hover: hover) and (pointer: fine)`, and it is load-bearing
+rather than defensive: **a touchscreen has no hover to bring the chip back and
+no Esc key either**, so the same rule applied there leaves the viewer sealed in
+fullscreen with only the OS gesture as a way out. Touch keeps the always-dimmed
+chip. `tests/draft-broadcast.test.ts` slices the stylesheet into its `@media`
+blocks and fails if any rule hiding `[data-in-fullscreen='true']` sits outside a
+hover-capable query — a top-level hide is invisible in review and only breaks on
+a device nobody is testing on.
+
+Two smaller notes:
+
+- **Opacity, not `display`/`visibility`.** The chip has to stay hoverable while
+  invisible, which is also why there is no accidental invisible hit target: the
+  pointer being on it is exactly what makes it visible, so a click can only land
+  after it has appeared.
+- **An invisible `::before` apron widens the hover zone** into the corner, so it
+  is found by aiming at a corner rather than at a rectangle you can't see. A
+  pseudo-element with `pointer-events: none` would not work here — it has to be
+  hit-testable to trigger the parent's `:hover`.
