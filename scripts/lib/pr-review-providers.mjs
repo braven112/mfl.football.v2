@@ -59,6 +59,10 @@ const BACKOFF_BASE_MS = 2_000;
  * dead model id and a busy minute looking identical.
  */
 export class ProviderHttpError extends Error {
+  /**
+   * @param {string} message
+   * @param {{ status: number, retryable: boolean, retryAfterMs?: number | null }} options
+   */
   constructor(message, { status, retryable, retryAfterMs = null }) {
     super(message);
     this.name = 'ProviderHttpError';
@@ -68,7 +72,13 @@ export class ProviderHttpError extends Error {
   }
 }
 
-/** Parse `Retry-After` (delta-seconds or HTTP-date) into ms, or null. */
+/**
+ * Parse `Retry-After` (delta-seconds or HTTP-date) into ms, or null.
+ *
+ * @param {string | null | undefined} headerValue
+ * @param {number} [now]
+ * @returns {number | null}
+ */
 export function parseRetryAfter(headerValue, now = Date.now()) {
   if (!headerValue) return null;
   const seconds = Number(headerValue);
@@ -86,6 +96,10 @@ export function parseRetryAfter(headerValue, now = Date.now()) {
  *
  * Capped at 30s. The whole job is advisory and holds no merge, but a reviewer
  * that reports back after the PR has already merged has reviewed nothing.
+ *
+ * @param {number} attempt 1-indexed retry number.
+ * @param {{ retryAfterMs?: number | null, jitter?: () => number }} [options]
+ * @returns {number}
  */
 export function backoffMs(attempt, { retryAfterMs = null, jitter = Math.random } = {}) {
   if (retryAfterMs !== null) return Math.min(retryAfterMs, 30_000);
@@ -109,16 +123,23 @@ export async function callWithRetry(call, args, { maxAttempts = MAX_ATTEMPTS, on
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       return { text: await call(args), attempts: attempt };
-    } catch (error) {
+    } catch (thrown) {
+      // Normalize before touching it. `throw 'boom'` and `throw null` are both
+      // legal — a future provider, or a test stub, can do either — and this
+      // loop WRITES a property (`.attempts`) and READS `.message`. Against a
+      // primitive in module strict mode that write throws a TypeError of its
+      // own, which escapes the loop and replaces the provider's real failure
+      // with a confusing one. (Copilot, PR #648.)
+      const error = thrown instanceof Error ? thrown : new Error(String(thrown));
       lastError = error;
 
-      // A non-HTTP throw is a fetch/DNS/socket failure — transient by nature.
       // Report the real count on the error rather than making the caller infer
       // it from `retryable`. The inference happens to be right while every
       // transient path exhausts the budget, and would go quietly wrong the
       // first time one didn't.
       error.attempts = attempt;
 
+      // A non-HTTP throw is a fetch/DNS/socket failure — transient by nature.
       const retryable = error instanceof ProviderHttpError ? error.retryable : true;
       if (!retryable || attempt === maxAttempts) break;
 

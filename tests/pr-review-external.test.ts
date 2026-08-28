@@ -131,6 +131,26 @@ describe('callWithRetry', () => {
     expect.assertions(2);
   });
 
+  it('survives a provider that throws a non-Error, instead of masking it', async () => {
+    // The loop writes `.attempts` and reads `.message`. Against a primitive in
+    // module strict mode the write throws a TypeError that would escape and
+    // replace the provider's real failure with a confusing one.
+    for (const junk of ['boom', null, undefined, 42]) {
+      let calls = 0;
+      const fn = async () => {
+        calls++;
+        throw junk;
+      };
+
+      const error = await callWithRetry(fn, {}, { wait: noWait }).catch((e) => e);
+
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toBe(String(junk));
+      expect(error.attempts).toBe(MAX_ATTEMPTS); // treated as transient, so retried
+      expect(calls).toBe(MAX_ATTEMPTS);
+    }
+  });
+
   it('waits between attempts rather than hammering a model that just said it was busy', async () => {
     const waits: number[] = [];
     const { fn } = flakyCall(2, 503, true);
@@ -152,10 +172,17 @@ const OVERLOADED = JSON.stringify({
 });
 
 function fakeResponse(status: number, body: string, headers: Record<string, string> = {}) {
+  // Real `Headers.get()` is case-insensitive, so normalize the map rather than
+  // only the lookup key — otherwise a test passing `Retry-After` (the casing
+  // the spec and every real response actually use) silently reads as absent,
+  // and the stub quietly stops modelling production. (Copilot, PR #648.)
+  const lower = Object.fromEntries(
+    Object.entries(headers).map(([k, v]) => [k.toLowerCase(), v])
+  );
   return {
     ok: status >= 200 && status < 300,
     status,
-    headers: { get: (k: string) => headers[k.toLowerCase()] ?? null },
+    headers: { get: (k: string) => lower[k.toLowerCase()] ?? null },
     text: async () => body,
     json: async () => JSON.parse(body),
   };
@@ -261,6 +288,13 @@ describe('parseRetryAfter', () => {
     expect(parseRetryAfter(null)).toBeNull();
     expect(parseRetryAfter('')).toBeNull();
     expect(parseRetryAfter('soon')).toBeNull();
+  });
+
+  it('reads the header off a response regardless of its casing', () => {
+    // `Retry-After` is the casing the spec and real responses use; the lookup
+    // in the provider asks for `retry-after`. Both must resolve.
+    const res = fakeResponse(429, '{}', { 'Retry-After': '7' });
+    expect(parseRetryAfter(res.headers.get('retry-after'))).toBe(7_000);
   });
 });
 
