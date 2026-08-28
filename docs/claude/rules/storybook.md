@@ -141,6 +141,25 @@ The same reasoning applies to the other head-injected style components
 (`NflLogoDarkStyles`, `TeamIconDarkStyles`, `CollegeLogoDarkStyles`). If a
 story starts showing the wrong logo variant in dark mode, that is why.
 
+
+**The `TeamIconDarkStyles` gap is now CLOSED**, and how it was closed is the
+point. It was the only one of the four head-injected sheets Storybook did not
+reproduce, because it is not a zero-argument builder but a COMPOSITION — four
+builder calls across both leagues' configs and two icon directories, which are
+pairing-sensitive (the stroke fallback must use the same `franchiseIconDir` as
+the swap for its league or the selectors miss). Copying that into `preview.ts`
+was exactly the drift risk the shared builders exist to avoid.
+
+The composition now lives in `src/utils/team-icon-dark-styles.ts`
+(`buildAllTeamIconDarkCss()`), called by both `TeamIconDarkStyles.astro` and
+`preview.ts`. Verified byte-identical to the old inline version at extraction
+time: 51 rules, ~7.4 KB, covering 11 of TheLeague's 16 franchises and 10 of the
+AFL's 24. Until then every franchise crest rendered its LIGHT artwork in
+dark-mode stories — and Chromatic would have baselined that as correct.
+
+`Theming/TeamIconCell` is the standing guard on that wiring. If the injection
+is ever dropped, `DarkSwapAvailable` stops differing between themes.
+
 ## Trap 6 — no Node globals in a fixture module
 
 Story and fixture modules are bundled for the BROWSER. A fixture that built a
@@ -469,3 +488,54 @@ It does not affect the static build: `pnpm build:storybook` produces the same
 52 entries with the addon on or off, so Chromatic is unchanged. `pnpm add`
 reports one unmet peer (`valibot@^1.4.0` against the installed 1.2.0); the
 server initializes and answers `tools/call` regardless.
+
+## The three dark-mode branches a crest can take
+
+`TeamIconCell` looks like a trivial `<img>` and is the most branch-heavy
+component in the suite, because none of the branching is in the component —
+it is all in the CSS the layout injects (see Trap 5). A crest in dark mode
+takes exactly ONE of these, and `Theming/TeamIconCell` pins all four states:
+
+| Team declares | Dark-mode result | Story |
+|---|---|---|
+| `iconDark` | `content: url(<dark>)` swap, no filter | `DarkSwapAvailable` |
+| nothing, but measured illegible | default white stroke | `StrokeDefaultWhite` |
+| `iconStrokeDark: "#rrggbb"` | that color as the stroke | `StrokeCustomColor` |
+| `iconStrokeDark: false` | **no stroke at all** | `StrokeExplicitlyOptedOut` |
+
+The swap and the stroke are mutually exclusive by construction: both the
+manifest and `withStrokeColors` exclude any team carrying an `iconDark`.
+
+**The opt-out is the one worth guarding.** `false` means "measured as
+illegible, and we still don't want a stroke", so a truthiness filter
+(`filter(t => t.iconStrokeDark)`) silently reclassifies it as "never set" —
+which puts the crest back on the DEFAULT white stroke, the exact treatment the
+`false` exists to refuse. `crest-dark-stroke-css.ts` carries a comment warning
+about this; `StrokeExplicitlyOptedOut` is what actually catches it.
+
+**Pick real teams when writing these stories, and check the config first.** The
+first draft of this file used Minty Fresh and Ditka as the stroke examples;
+both set `iconStrokeDark: false`, so both stories asserted a stroke that by
+design never renders. A story is only a guard if the fixture takes the branch
+you think it does — verify by reading the computed `filter` in the browser, not
+by assuming from the manifest.
+
+## `ThemeImage` — the one component whose light and dark captures MUST differ
+
+Everything else in this suite re-skins between themes. `ThemeImage` swaps the
+asset itself: it renders BOTH `<img>` elements server-side (with theme
+preference `auto`, the server cannot know the resolved theme) and lets
+`src/styles/theme-image.css` decide which is visible.
+
+That makes a regression invisible in whichever theme you happen to be looking
+at — drop the `.theme-img--dark` rule and light mode stays perfect while dark
+shows the wrong badge or both stacked. The light/dark pair is the only thing
+that catches it.
+
+The assertion to write is **exactly one visible `<img>` per theme**, not a
+pixel diff. A pixel comparison of the same story across themes ALWAYS differs
+because the canvas background changes with the theme — that says nothing about
+the swap. Read `getComputedStyle(...).display` on both images instead.
+
+`theme-image.css` is loaded from `preview.ts`: the component imports it in
+frontmatter, which is Trap 2.

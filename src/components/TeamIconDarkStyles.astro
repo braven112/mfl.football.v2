@@ -15,34 +15,12 @@
  * collide across leagues) — no league branching, per the loading-standard
  * "structure vs. skin" rule.
  */
-import theleagueConfig from '../data/theleague.config.json';
-import aflConfig from '../../data/afl-fantasy/afl.config.json';
-import { buildTeamIconDarkCss } from '../utils/team-icon-dark-css';
-import { buildCrestDarkStrokeCss, withStrokeColors } from '../utils/crest-dark-stroke-css';
+import { buildAllTeamIconDarkCss } from '../utils/team-icon-dark-styles';
 
-const css = [
-  buildTeamIconDarkCss(theleagueConfig.teams, {
-    franchiseIconDir: '/assets/theleague/icons',
-  }),
-  buildTeamIconDarkCss(aflConfig.teams, {
-    franchiseIconDir: '/assets/afl/icons',
-  }),
-  // Fallback for crests with NO hand-authored dark variant that measure as
-  // illegible on a dark card — stroke the silhouette so a crest-only cell
-  // still identifies its team. `withStrokeColors` joins the measured manifest
-  // to each team's `iconStrokeDark`; both it and the manifest exclude any team
-  // with an `iconDark`, so the swap and the stroke can never both apply.
-  buildCrestDarkStrokeCss(
-    withStrokeColors('theleague', theleagueConfig.teams),
-    { franchiseIconDir: '/assets/theleague/icons' },
-  ),
-  buildCrestDarkStrokeCss(
-    withStrokeColors('afl', aflConfig.teams),
-    { franchiseIconDir: '/assets/afl/icons' },
-  ),
-]
-  .filter(Boolean)
-  .join('\n');
+// The composition lives in the util, NOT here: `.storybook/preview.ts` needs
+// the identical CSS (stories render without this layout) and the two must not
+// drift. See that file's header.
+const css = buildAllTeamIconDarkCss();
 ---
 
 {css && <style is:inline set:html={css} />}

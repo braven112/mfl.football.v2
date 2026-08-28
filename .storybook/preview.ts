@@ -3,6 +3,7 @@ import { themeModes } from './modes';
 import { buildTeamAccentCss } from '../src/utils/team-accent-css';
 import { buildNflLogoDarkCss } from '../src/utils/nfl-logo-dark-css';
 import { buildCollegeLogoDarkCss } from '../src/utils/college-logo-dark-css';
+import { buildAllTeamIconDarkCss } from '../src/utils/team-icon-dark-styles';
 
 // Global stylesheets the real app loads from TheLeagueLayout. Tokens first —
 // everything else resolves var(--*) against them.
@@ -33,6 +34,7 @@ import '../src/styles/loading.css';
 import '../src/styles/player-cell.css';
 import '../src/styles/player-modal-band.css';
 import '../src/styles/player-news.css';
+import '../src/styles/theme-image.css';
 
 /**
  * Theme and league are BOTH pure CSS in this codebase:
@@ -87,13 +89,15 @@ function applyGlobals(theme: string, league: string) {
  * script fills on open renders as a BROKEN IMAGE ICON — which would have been
  * baselined into the PlayerDetailsModal snapshots as permanent noise.
  *
- * KNOWN GAP: `TeamIconDarkStyles` is NOT reproduced here. Unlike the other
- * three its builder is not zero-argument — it needs both leagues' team configs
- * plus a separate crest-dark-stroke pass, and copying that composition into
- * this file is exactly the drift risk these shared builders exist to avoid.
- * The consequence is that franchise crests render their LIGHT variant in
- * dark-mode stories. Closing it properly means extracting the composition into
- * a shared util that both the layout component and this file call.
+ * `TeamIconDarkStyles` was the one gap here, and it is now closed the way the
+ * gap note said it had to be. Its rules were not a zero-argument builder but a
+ * COMPOSITION — four builder calls across both leagues' configs and two icon
+ * directories — so reproducing it inline was the drift risk these shared
+ * builders exist to avoid. The composition moved to
+ * `src/utils/team-icon-dark-styles.ts`, which the layout component and this
+ * file both call. Until then every franchise crest rendered its LIGHT artwork
+ * in dark-mode stories: 51 rules and ~7.4 KB of swap-and-stroke CSS missing,
+ * covering 11 of TheLeague's 16 franchises and 10 of the AFL's 24.
  *
  * Injected once, client-side only — the SSR prerender pass has no document.
  */
@@ -106,6 +110,7 @@ function injectLayoutStyles() {
     buildTeamAccentCss(),
     buildNflLogoDarkCss(),
     buildCollegeLogoDarkCss(),
+    buildAllTeamIconDarkCss(),
   ].join('\n');
   document.head.appendChild(el);
 }
