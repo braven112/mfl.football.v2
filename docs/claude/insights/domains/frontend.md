@@ -185,6 +185,15 @@ Pinned by `tests/broadcast-morph.test.ts` (the ban on `fill: 'forwards'`, the
 cancel-before-measure order, and the duration coming from CSS). Full write-up in
 `docs/claude/insights/features/draft-broadcast.md`.
 
+> **Update, Aug 28 2026 — the morph is gone; the rules are not.**
+> `src/utils/broadcast-morph.ts` and its test were deleted the day after this
+> entry: the broadcast now dissolves between two static slides, on the call that
+> a logo crossing a 65" TV is too much movement on the frame where the room is
+> reading a name. So this repo currently ships NO FLIP, and the file paths above
+> will not resolve. Everything above the "Pinned by" line is still the guidance
+> for the next one — it was written from four failures, and `fill: 'forwards'`
+> surviving `cancel()` is a Chrome behaviour, not a fact about that module.
+
 ---
 
 ## 2026-08-27 - Request-Derived State Is the Third #418 Trigger, and a Debug Banner Outlived Its Page

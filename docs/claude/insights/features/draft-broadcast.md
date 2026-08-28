@@ -130,6 +130,50 @@ as a property of the live board — "these three players have no ESPN id" — wh
 the 2026 feed has all three. **Before stating a data gap as a finding, check it
 against the year the feature will actually run on.**
 
+### Rehearsal's two timing numbers are COUPLED — the board gets STEP minus HOLD
+
+A rehearsal drives itself: `REHEARSE_STEP_MS` steps a pick, and the reveal that
+lands owns the screen for the hold. So the idle board is not given a duration
+anywhere — it gets **whatever is left over**, and the two numbers cannot be
+tuned independently even though they read as unrelated constants.
+
+That bit twice. Rehearsal originally reused draft night's 18s hold against a 20s
+step, which left the board on screen for ~2s per cycle: the half of the
+broadcast you most need to watch while rehearsing was the half you never saw.
+Live does not have this problem because real picks arrive on the room's clock,
+not on a step — **the live pair and the rehearsal pair are genuinely different
+problems, and sharing constants between them is the bug, not the DRY fix.**
+
+Rehearsal is now 8s of reveal and 8s of board, with the step DERIVED
+(`REHEARSE_STEP_MS = REHEARSE_REVEAL_MS * 2`) rather than written as a second
+number that can drift from the first. If you want an even split, derive it; if
+you want an uneven one, say so in the comment, because the next reader will
+otherwise "fix" one number in isolation.
+
+### Assert on `getAnimations()`, not on the stylesheet, when motion changes
+
+Every animation question on this page — is the crest still flying? does anything
+move inside the card? did the entrance survive the morph cancelling it? — is
+answered in one Playwright evaluate:
+
+```js
+el.getAnimations().map((a) => a.animationName || '(waapi)')
+// plus getComputedStyle(el).transform / .opacity, sampled across the entrance
+```
+
+That distinguishes the three states a static read of the CSS cannot: a keyframe
+that is declared and running, one that is declared and **cancelled at runtime**
+(what the morph did to `dbc-reveal-in` on most reveals), and one that is gone.
+Grepping the stylesheet would have called the middle case a live animation for
+months. Sampling the computed transform at a few points across the entrance also
+gives the direction and distance in real pixels (`translateX(-112px)` from the
+left, `+236px` from the right), which is the only way to check a `vw`/`%` value
+means what you meant on the viewport it will actually run on.
+
+Drive it with `?rehearse=N` and wait on `.dbc__screen--reveal` losing
+`is-hidden` — that also times the cadence for free (six consecutive transitions
+at 8.0s each is how the split above was confirmed).
+
 ### Artwork behind artwork; type on clean gradient
 
 Franchise banners were tried as the reveal backdrop and cut: a banner is mostly
@@ -309,15 +353,16 @@ a failing value is ignored rather than painted.
 the handoff replaced the entire screen in one frame — on a TV that reads as
 somebody changing the channel rather than as the board reacting to a pick. Both
 now mount at all times inside `.dbc__screen` layers and cross-fade on opacity
-(`--dbc-fade`, 620ms — read at runtime by the morph, never re-typed).
+(`--dbc-fade`, 930ms — one token, and every entrance on the screen is scaled off
+it so the handoff stays one movement).
 
 Two things that are load-bearing about how that is wired:
 
 - **The outgoing reveal is held through a REF read during render**, not parked in
   state by a timer. A state update lands after the commit that dropped
   `current`, so the card would unmount and remount for a frame — restarting
-  `dbc-reveal-in` and `dbc-model-in` at the exact moment it is supposed to be
-  leaving. `if (current) lastRevealRef.current = current` before the render reads
+  `dbc-reveal-in` at the exact moment it is supposed to be leaving.
+  `if (current) lastRevealRef.current = current` before the render reads
   it costs nothing and never drops a frame.
 - **The hidden layer ends its fade at `visibility: hidden`, not opacity 0.** The
   idle board carries the conference switcher and the rehearsal button; an
@@ -328,32 +373,46 @@ Two things that are load-bearing about how that is wired:
   transition on `.dbc__screen` alone leaves the delayed flip in place, and the
   outgoing layer stays clickable for half a second after it vanishes.
 
-### The crest and the copy MOVE between the screens; a dissolve alone throws that away
+### The shared-element morph was BUILT, then CUT — the dissolve is the answer
 
-Both screens show the same two things — the franchise crest and a block of copy
-beside it — in different places: the idle board holds them as a side-by-side
-lockup mid-stage, the reveal puts the crest dead centre behind everything and
-the copy over on the left. Cross-fading alone made the room watch a logo vanish
-and another appear, when what is actually happening is that the same two
-elements are being rearranged. `src/utils/broadcast-morph.ts` FLIPs each pair
-across the fade (Brandon, Aug 28 2026: "the logo shifts to the background
-centred and the text slides left and updates to the reveal text").
+**Current state: there is no morph.** `src/utils/broadcast-morph.ts` and
+`tests/broadcast-morph.test.ts` are deleted. The two screens are a pair of
+slides that dissolve into each other, and `dbc-reveal-in` (opacity + a 1.04 → 1
+settle on the whole card) is the only animation in the handoff. Nothing moves
+inside either screen.
 
-Measured on a 1920x1080 board: the crest travels (767, 426) at 367px wide →
-(960, 613) at 734px; the copy slides from cx 1169 to cx 690. Both directions
-run, so the board shrinks the crest back into the lockup when the reveal ends.
+It got there in three cuts over one session (Brandon, Aug 28 2026), and the
+ORDER is the lesson — each step was his call, and each one removed motion:
 
-What it cost to get right:
+1. The crest FLIPped between its two boxes while the layers cross-faded under
+   it ("the logo shifts to the background centred and the text slides left").
+2. The copy stopped travelling: the idle lockup's text faded in place instead,
+   and the reveal's copy and cutout slid in from the left and right edges to
+   close on the crest as it landed.
+3. Then the flight went too — "simplify the animation and reveal the whole card
+   instead of animating the logo" — and the slides went with it, because they
+   only existed to partner the flight and read as fidgeting without it.
+
+The thing to take from that: **a logo travelling the width of a 65" TV is a lot
+of movement to spend on the one frame where the room is trying to read a name.**
+The argument in the other direction is real and is written up below — a dissolve
+alone does throw away the continuity of "the same mark is being rearranged" —
+but it lost to legibility on an actual TV. Do not rebuild this because the
+argument sounds good in a diff; it sounded good here too.
+
+If a shared element IS ever wanted back, this is what it cost to get right the
+first time, and none of it is obvious:
 
 - **Never `fill: 'forwards'`.** The obvious way to write the LEAVING half is to
   pin it where it flew to — its layer is about to be hidden anyway. That
   transform **survives `cancel()`** in Chrome: the finished animation stops
   being listed by `getAnimations()` while still applying, so the next morph
   measured the idle crest sitting on the reveal's box, computed a zero delta,
-  and the board silently stopped animating back. The leaving element now has no
-  fill at all and snaps home the instant it lands — invisible, because the
-  morph and the layer's opacity transition are the same duration and start
-  together. `tests/broadcast-morph.test.ts` pins the ban.
+  and the board silently stopped animating back. The leaving element ended up
+  with no fill at all, snapping home the instant it landed — invisible, because
+  the morph and the layer's opacity transition were the same duration and
+  started together. The guard test that pinned this ban is deleted along with
+  the module, so this paragraph is now the only record of it.
 - **Cancel, then measure, then read the base transform.** All three, in that
   order. The reveal crest is centred with `translate(-50%, -50%)`, and a WAAPI
   keyframe REPLACES the transform property rather than adding to it — animating
@@ -361,10 +420,12 @@ What it cost to get right:
   width off in both directions. The base is read as the computed matrix so a CSS
   change can't desync from the module, which is exactly why it must be read off
   a settled element.
-- **`dbc-reveal-in` is cancelled on the way in.** It scales the whole card
-  1.04 → 1, and a crest measured inside a parent still growing under it sets off
-  from the wrong box and drifts the whole flight. The card gets a straight
-  opacity fade instead; the motion is the crest's job.
+- **`dbc-reveal-in` has to be cancelled on the way in.** It scales the whole
+  card 1.04 → 1, and a crest measured inside a parent still growing under it
+  sets off from the wrong box and drifts the whole flight. The card got a
+  straight opacity fade instead; the motion was the crest's job. Note this is
+  why the card's own entrance was invisible for most of the morph's life —
+  restoring it was most of what "reveal the whole card" meant.
 - **Artwork scales, type does not.** The copy block goes from a 2.5vh team name
   to a 9vh player name; scaling between them reads as a zoom effect rather than
   as the same words moving. It translates and cross-fades its contents.
@@ -376,7 +437,8 @@ What it cost to get right:
 
 ### The two broadcast screens are a PAIR, and they compose colour differently
 
-The board has two full-screen surfaces that alternate every ~20 seconds:
+The board has two full-screen surfaces that alternate all night (18s per reveal
+live, an even 8s/8s in rehearsal):
 `.dbc-reveal` (the pick) and `.dbc-idle` (on the clock). `#638` made the idle
 screen run the same `resolveSplashColors` → `toBroadcastPair` treatment as the
 reveal card precisely because the two were contradicting each other.

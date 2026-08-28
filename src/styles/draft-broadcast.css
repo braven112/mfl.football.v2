@@ -16,12 +16,16 @@
 .dbc {
   position: relative;
   width: 100%;
-  /* One place to retune the idle↔reveal handoff. Long enough to read as a
-     dissolve on a TV, short enough that a pick landing still feels immediate.
-     `broadcast-morph.ts` READS this at runtime rather than repeating it, so the
-     crest's flight and the cross-fade under it can never drift apart — keep it
-     in ms or s, and keep it on `.dbc` where the island can find it. */
-  --dbc-fade: 620ms;
+  /* THE handoff duration — retune here and nowhere else. Long enough to read
+     as a dissolve on a TV, short enough that a pick landing still feels
+     immediate. Both halves of the handoff read this token: the layers' opacity
+     transition below, and `dbc-reveal-in`, which is the reveal's own fade in.
+     They MUST stay equal, which is why neither one repeats the number —
+     `.dbc__screen--reveal` deliberately carries no in-transition on the grounds
+     that the card is already fading itself over exactly this long, so a literal
+     here that drifted from a literal there would open every reveal on a slice
+     of bare `#05070b`. */
+  --dbc-fade: 930ms;
   /* Fill what's left of the window under the site header, rather than a flat
      86vh that runs off the bottom once the header pushes the board down. The
      floor keeps it usable if the header ever grows. */
@@ -75,13 +79,13 @@
 }
 
 /* The reveal comes in OVER the board, never under it — and it fades on the way
-   OUT only. Coming IN, the card's own opacity animation is the fade (see
-   `broadcast-morph.ts`), and a transition here would MULTIPLY with it: two
-   620ms curves compound to their square, so the board dipped toward black at
-   the midpoint of every reveal. The first reveal escaped it — a freshly
-   inserted element does not transition — which made it an "only after the
-   first one" difference nobody could diagnose from the room. `.is-hidden` is
-   two classes and still wins, so the way out is unaffected. */
+   OUT only. Coming IN, the card's own `dbc-reveal-in` opacity is the fade, and
+   a transition here would MULTIPLY with it: two curves of the same length
+   compound to their square, so the board dipped toward black at the midpoint of
+   every reveal. The first reveal escaped it — a freshly inserted element does
+   not transition — which made it an "only after the first one" difference
+   nobody could diagnose from the room. `.is-hidden` is two classes and still
+   wins, so the way out is unaffected. */
 .dbc__screen--reveal {
   z-index: 2;
   transition: none;
@@ -230,7 +234,7 @@
     --dbc-gradient,
     linear-gradient(115deg, var(--dbc-primary, #10161f) 0%, var(--dbc-secondary, #1c497c) 100%)
   );
-  animation: dbc-reveal-in 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: dbc-reveal-in var(--dbc-fade) cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 /* Replay marker on the reveal itself. Top-LEFT: the fullscreen button is
@@ -255,6 +259,25 @@
   user-select: none;
 }
 
+/* The whole card arrives as one object, and this is the ONLY animation left in
+   the handoff — the board and the reveal are two slides that dissolve into each
+   other, with nothing moving inside either one.
+
+   It got there in three cuts (Brandon, 2026-08-28), and the order matters if
+   any of it is ever proposed again. First the shared-element morph: the
+   franchise crest was measured on both screens and flown from the idle board's
+   lockup to the centre of this card, and this keyframe was CANCELLED on most
+   reveals to get out of its way. A logo travelling the width of a 65" TV is a
+   lot of movement to spend on the frame where the room is trying to read a
+   name. Then the copy and the cutout, which slid in from the left and right
+   edges to close on the crest — choreography that existed to partner the
+   flight, and read as fidgeting once the flight was gone. What is left says the
+   same thing: a pick landed, here it is.
+
+   If a shared element is ever wanted back, the trap it kept falling into is
+   worth knowing: `fill: forwards` on the leaving element SURVIVES cancel() in
+   Chrome, so the next morph measures a stale box and the animation silently
+   stops. */
 @keyframes dbc-reveal-in {
   from { opacity: 0; transform: scale(1.04); }
   to { opacity: 1; transform: scale(1); }
@@ -383,12 +406,9 @@
   object-fit: contain;
   object-position: bottom center;
   filter: drop-shadow(0 1.4vh 2.4vh rgba(0, 0, 0, 0.55));
-  animation: dbc-model-in 760ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-@keyframes dbc-model-in {
-  from { opacity: 0; transform: translateY(4vh) scale(0.94); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  /* No entrance of its own — see `dbc-reveal-in`. The cutout used to slide in
+     from the right edge while the copy came in from the left; both were cut
+     with the crest's flight, so the card arrives as one flat object. */
 }
 
 /* ── Team-defense pair ──
@@ -489,7 +509,10 @@
      no blur at all without this. The 55% black keeps the names legible either
      way — this is polish, not legibility. */
   -webkit-backdrop-filter: blur(6px);
-  animation: dbc-text-in 620ms 120ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  /* No entrance of its own. This plate arrived (#646) while the card still
+     assembled itself from moving parts, and rode `dbc-text-in` up from below
+     with the copy and the cutouts. Those are gone and so is that keyframe —
+     the card is one object now, and this rides in with it. */
 }
 
 .dbc-reveal__face-row {
@@ -535,12 +558,7 @@
      stats need the same separation or they sit directly on a franchise shield.
      Inherited by every child, so it covers the ones added later too. */
   text-shadow: 0 0.2vh 1.4vh rgba(0, 0, 0, 0.55);
-  animation: dbc-text-in 620ms 120ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-@keyframes dbc-text-in {
-  from { opacity: 0; transform: translateY(2.4vh); }
-  to { opacity: 1; transform: translateY(0); }
+  /* No entrance of its own — see the cutout above and `dbc-reveal-in`. */
 }
 
 .dbc-reveal__kicker {
@@ -550,6 +568,14 @@
   text-transform: uppercase;
   letter-spacing: 0.14em;
   color: rgba(255, 255, 255, 0.72);
+}
+
+/* The pick number and the franchise get a line each. `block` rather than a
+   <br>, so the break belongs to the layout and the paragraph stays one
+   sentence in the accessibility tree. */
+.dbc-reveal__kicker-line {
+  display: block;
+  line-height: 1.25;
 }
 
 .dbc-reveal__player {
@@ -659,7 +685,7 @@
     --dbc-gradient,
     linear-gradient(150deg, var(--dbc-secondary, #0e2440) 0%, var(--dbc-primary, #1c497c) 130%)
   );
-  transition: background 900ms ease;
+  transition: background 1350ms ease;
 }
 
 .dbc-idle__wash {
@@ -771,7 +797,7 @@
   flex: 0 0 auto;
   object-fit: contain;
   filter: drop-shadow(0 1vh 2vh rgba(0, 0, 0, 0.5));
-  animation: dbc-crest-in 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: dbc-crest-in 1050ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 @keyframes dbc-crest-in {
@@ -1246,9 +1272,6 @@
 /* Honor reduced motion: the information is the point, the animation is not. */
 @media (prefers-reduced-motion: reduce) {
   .dbc-reveal,
-  .dbc-reveal__model,
-  .dbc-reveal__text,
-  .dbc-reveal__face,
   .dbc-idle__crest {
     animation: none;
   }
@@ -1259,6 +1282,15 @@
      clickable for half a second after it vanished. */
   .dbc__screen,
   .dbc__screen.is-hidden {
+    transition: none;
+  }
+
+  /* The board's own gradient cross-fade is part of that same cut, and it is
+     easy to miss because it lives 500 lines away from the layer rules: the
+     idle screen re-paints in the next franchise's colours whenever the clock
+     moves. Cutting the layers but leaving this one means a reduced-motion
+     viewer still gets a slow wash through a whole gradient every pick. */
+  .dbc-idle {
     transition: none;
   }
 
