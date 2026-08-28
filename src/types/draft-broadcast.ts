@@ -50,6 +50,18 @@ export interface BroadcastPlayerExtras {
    * screen. MFL ADP is the single input.
    */
   boardRank?: number;
+  /**
+   * Dark-cut logo for the SCHOOL the origin line names, resolved server-side.
+   *
+   * Present only for players whose origin is a college at all (`usesCollegeOrigin`
+   * — rookies with a school), which is what keeps this affordable: the lookup
+   * needs the 80 KB `college-logos.json`, so it cannot happen on the client, and
+   * a pool of several hundred players would spend real bytes shipping a URL to
+   * everyone who will be labelled with his NFL team instead. That NFL half is
+   * derived on the client from `nflTeam` in `resolveOrigin`, which is also the
+   * only place this field is read.
+   */
+  collegeLogo?: string;
 }
 
 /** A player as the broadcast renders him: draft-room fields plus the extras. */

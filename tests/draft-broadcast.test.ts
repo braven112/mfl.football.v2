@@ -21,6 +21,8 @@ import {
   contrastWithWhite,
   toBroadcastColor,
   toBroadcastPair,
+  resolveOrigin,
+  usesCollegeOrigin,
 } from '../src/utils/draft-broadcast';
 import {
   assignBoardRanks,
@@ -447,6 +449,103 @@ describe('buildDefenseFacesByTeam', () => {
   });
 });
 
+
+describe('the origin line and its logo', () => {
+  // The reveal card names where a player comes from — his school if he is a
+  // rookie, his pro team otherwise — and paints that side's mark to the left of
+  // the words. The mark and the words come out of ONE function precisely so a
+  // card can never show a helmet beside a school's name.
+
+  it('gives a rookie his school, and the school logo the server resolved', () => {
+    const origin = resolveOrigin({
+      isRookie: true,
+      college: 'Georgia',
+      collegeLogo: '/assets/college-logos/dark/61.png',
+      nflTeam: 'KCC',
+    });
+    expect(origin.label).toBe('Georgia');
+    expect(origin.logo).toBe('/assets/college-logos/dark/61.png');
+  });
+
+  it('gives a veteran his NFL team, even when MFL still reports his college', () => {
+    // MFL never stops reporting a school. A ten-year vet labelled "Alabama"
+    // with an Alabama logo beside it is the failure this pairing prevents.
+    const origin = resolveOrigin({ isRookie: false, college: 'Alabama', nflTeam: 'KCC' });
+    expect(origin.label).toBe('KCC');
+    expect(origin.logo).toMatch(/KC\.(png|svg)$/);
+  });
+
+  it('paints the DARK cut — the card is a dark gradient in both themes', () => {
+    // Every other surface ships the light logo and lets an `html.dark` rule
+    // swap it. This card cannot: it is franchise colour whatever theme the
+    // viewer resolved, so a light Raiders/Steelers/Jets mark would vanish for
+    // half the room. Shipping the dark URL as the src also means no swap rule
+    // is keyed on it, so nothing swaps it back.
+    const logo = resolveOrigin({ nflTeam: 'LVR' }).logo ?? '';
+    expect(logo).toMatch(/(\/dark\/|500-dark)/);
+  });
+
+  it('shows no mark for a free agent, a retiree, or a code it does not know', () => {
+    // `normalizeTeamCode` folds FA/UFA to the NFL shield. A generic shield
+    // beside a name says nothing, and an unrecognised code would 404.
+    for (const nflTeam of ['FA', 'UFA', 'XYZ', '']) {
+      expect(resolveOrigin({ nflTeam }).logo, nflTeam).toBeNull();
+    }
+  });
+
+  it('shows no mark for a rookie whose school is not in the logo table', () => {
+    const origin = resolveOrigin({ isRookie: true, college: 'Nowhere State' });
+    expect(origin.label).toBe('Nowhere State');
+    expect(origin.logo).toBeNull();
+  });
+
+  it('says nothing at all when there is no origin', () => {
+    expect(resolveOrigin(undefined)).toEqual({ label: '', logo: null });
+    expect(resolveOrigin({}).label).toBe('');
+  });
+
+  it('resolves a college logo ONLY for players the card labels with a college', () => {
+    // The lookup needs an 80 KB table, so it happens server-side — but a pool
+    // of several hundred players must not carry a URL each for a line that will
+    // read as an NFL team. Gated on the card's own rule, not on `p.college`.
+    const rookie = {
+      ...player('r1', 'WR'),
+      isRookie: true,
+      college: 'Georgia',
+    } as BroadcastPlayer;
+    const vet = { ...player('v1', 'WR'), isRookie: false, college: 'Georgia' } as BroadcastPlayer;
+
+    const [enrichedRookie, enrichedVet] = enrichBroadcastPlayers([rookie, vet], {
+      dataPath: 'data/afl-fantasy',
+      year: 2026,
+    });
+    expect(enrichedRookie.collegeLogo, 'a rookie carries his school mark').toBeTruthy();
+    expect(enrichedVet.collegeLogo, 'a veteran carries none').toBeUndefined();
+  });
+
+  it('matches a school whatever case MFL spells it in', () => {
+    const [enriched] = enrichBroadcastPlayers(
+      [{ ...player('r2', 'RB'), isRookie: true, college: 'gEoRgIa' } as BroadcastPlayer],
+      { dataPath: 'data/afl-fantasy', year: 2026 }
+    );
+    expect(enriched.collegeLogo).toBeTruthy();
+  });
+
+  it('keeps ONE rule for which side of the origin a player falls on', () => {
+    expect(usesCollegeOrigin({ isRookie: true, college: 'Georgia' })).toBe(true);
+    expect(usesCollegeOrigin({ isRookie: true })).toBe(false);
+    expect(usesCollegeOrigin({ isRookie: false, college: 'Georgia' })).toBe(false);
+    expect(usesCollegeOrigin(undefined)).toBe(false);
+  });
+
+  it('travels as one flex item, so a wrap cannot orphan the mark', () => {
+    // `.dbc-reveal__meta` is a flex row. A bare <img> + text would let the row
+    // break between the logo and the name it belongs to.
+    const css = readFileSync('src/styles/draft-broadcast.css', 'utf-8');
+    const rule = css.match(/\.dbc-reveal__origin \{[^}]*\}/)?.[0] ?? '';
+    expect(rule).toMatch(/display:\s*inline-flex/);
+  });
+});
 
 describe('darkenForWhiteText', () => {
   // The reveal card paints white copy straight onto franchise brand colours,

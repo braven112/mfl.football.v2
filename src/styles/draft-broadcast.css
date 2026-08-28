@@ -575,6 +575,35 @@
   font-weight: 800;
 }
 
+/* The origin — school or pro team — carries its own mark, ahead of the words.
+   inline-flex rather than a bare span because the meta row is a flex line: the
+   logo and its label have to travel as ONE item, or a wrap lands the mark at
+   the end of one line and the name it belongs to at the start of the next.
+
+   Sized in `em`, so it tracks the meta line's own clamp() across a 65" TV, a
+   laptop and a phone without a rule in each breakpoint. Slightly taller than
+   the cap height it sits beside: these marks are mostly round, and matching
+   them to 1em makes them read smaller than the type they accompany.
+
+   The `src` is already the dark cut (see resolveOrigin) — the card paints a
+   franchise gradient in both themes, so there is no html.dark swap to wait
+   for and nothing keyed on this src to swap it back. */
+.dbc-reveal__origin {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38em;
+}
+
+.dbc-reveal__origin-logo {
+  flex: none;
+  width: 1.55em;
+  height: 1.55em;
+  object-fit: contain;
+  /* Enough separation for a mark whose own dark cut still runs close to the
+     franchise colour behind it — Jets green on a green gradient, say. */
+  filter: drop-shadow(0 0.08em 0.16em rgba(0, 0, 0, 0.55));
+}
+
 .dbc-reveal__injury {
   padding: 0.12em 0.5em;
   border-radius: 0.28em;

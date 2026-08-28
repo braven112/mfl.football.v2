@@ -20,7 +20,10 @@ import type {
 } from '../types/draft-broadcast';
 import { parseTradeFromComment, selectDraftUnit } from './draft-utils';
 import { normalizeTeamCode } from './nfl-logo';
+import { resolveCollegeDarkLogoUrl } from './college-logo-dark-css';
+import { usesCollegeOrigin } from './draft-broadcast';
 import { getDefSpotlightPlayers } from '../data/theleague/def-spotlight-players';
+import collegeLogos from '../data/college-logos.json';
 
 function readJson(relPath: string): any {
   try {
@@ -188,6 +191,41 @@ export function buildDefenseFacesByTeam(
 }
 
 /**
+ * School name → the logo the reveal card paints beside it, lowercased on the
+ * key because MFL's spelling of a school is not reliably the table's casing.
+ *
+ * Dark cut preferred, light logo as the fallback, and that ordering is the same
+ * decision `buildCollegeLogoDarkCss` makes in CSS: `resolveCollegeDarkLogoUrl`
+ * returns null for the handful of ids whose `500-dark` cut 404s upstream, and
+ * for those the light mark is strictly better than a URL known to render a
+ * broken-image icon. The card's background is a franchise gradient in BOTH
+ * themes, so unlike every other surface this choice is made once here rather
+ * than left to an `html.dark` swap — see `resolveOrigin`.
+ *
+ * Built lazily and once: the table is 264 entries, and a page that reveals no
+ * rookie should not pay for it at import time.
+ */
+const COLLEGE_LOGO_TABLE = collegeLogos as Record<
+  string,
+  { logo?: string | null; logoDark?: string | null } | undefined
+>;
+
+let collegeLogoIndex: Map<string, string> | null = null;
+
+function collegeLogoFor(college?: string): string | undefined {
+  if (!college) return undefined;
+  if (!collegeLogoIndex) {
+    collegeLogoIndex = new Map();
+    for (const [name, entry] of Object.entries(COLLEGE_LOGO_TABLE)) {
+      const dark = entry?.logoDark ? resolveCollegeDarkLogoUrl(entry.logoDark) : null;
+      const url = dark ?? entry?.logo ?? null;
+      if (url) collegeLogoIndex.set(name.toLowerCase(), url);
+    }
+  }
+  return collegeLogoIndex.get(college.trim().toLowerCase());
+}
+
+/**
  * Join broadcast-only extras onto an already-built draft player pool.
  *
  * Takes the pool from `buildDraftPlayers` rather than rebuilding it — that
@@ -208,6 +246,10 @@ export function enrichBroadcastPlayers(
       projectedPoints: projections.get(p.id),
       injuryStatus: injuries.get(p.id),
       byeWeek: p.nflTeam ? byes.get(normalizeTeamCode(p.nflTeam)) : undefined,
+      // Gated on the card's OWN origin rule rather than on `p.college` so the
+      // two cannot drift: a veteran carries a school MFL never stops reporting,
+      // and the card labels him with his NFL team regardless.
+      collegeLogo: usesCollegeOrigin(p) ? collegeLogoFor(p.college) : undefined,
     };
     return { ...p, ...extras };
   });
