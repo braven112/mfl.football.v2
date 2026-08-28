@@ -20,7 +20,18 @@ import type { StorybookConfig } from '@storybook-astro/framework';
 const config: StorybookConfig = {
   stories: ['../stories/**/*.stories.@(ts|tsx)'],
 
-  addons: [],
+  /**
+   * MCP server for agents, served at /mcp by the DEV server only (it does not
+   * change the static build — same 52 entries with it on or off).
+   *
+   * Only the `dev` toolset registers here: `docs` needs a component-manifest
+   * generator, which the Astro framework does not ship, and `test` needs
+   * @storybook/addon-vitest. See docs/claude/rules/storybook.md for the tool
+   * list and for the one thing that will mislead you — `get-stories-by-component`
+   * does NOT traverse .astro frontmatter imports, so a util or stylesheet that
+   * many stories depend on comes back "no stories found".
+   */
+  addons: ['@storybook/addon-mcp'],
 
   // Franchise crests, team icons and fonts are referenced by absolute path
   // (/assets/...) exactly as the app serves them from public/.

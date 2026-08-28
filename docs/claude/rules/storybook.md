@@ -419,3 +419,53 @@ in the client script and a story cannot run it; duplicating it in fixtures
 would let the story drift from production. These stories pin layout, styling
 and the shape of each state — not the formatting logic. Be honest about that
 rather than implying more coverage than exists.
+
+## The Storybook MCP server (`@storybook/addon-mcp`)
+
+Enabled in `.storybook/main.ts`. It serves an MCP endpoint at `/mcp` **from
+the running dev server** — `pnpm storybook`, then point an agent at
+`http://localhost:6006/mcp`. It is not wired into `.mcp.json` on purpose: the
+endpoint only exists while the dev server is up, and a committed entry would
+fail on every session that isn't running Storybook. Add it per-user instead:
+
+```bash
+claude mcp add --transport http storybook http://localhost:6006/mcp
+```
+
+**Verified against this repo's Astro setup**, not assumed. Four tools register:
+
+| Tool | What it does |
+|---|---|
+| `get-stories-by-component` | source file → the `storyId`s that render it |
+| `preview-stories` | `storyId`s → preview URLs |
+| `get-changed-stories` | stories marked new/modified/related |
+| `get-storybook-story-instructions` | canonical story-writing conventions |
+
+**Two of the three toolsets are dead here, and that is a property of the
+framework, not a setting to flip.** The addon gates each toolset on a runtime
+capability rather than a framework allowlist:
+
+- **docs** needs a component-manifest generator. `@storybook-astro/framework`
+  ships none (only React frameworks do today), so `getManifestStatus` reports
+  no manifests and the toolset never registers.
+- **test** needs `@storybook/addon-vitest`. We don't have it, and portable
+  stories don't work for `.astro` anyway.
+
+**THE BLIND SPOT — `get-stories-by-component` does not traverse `.astro`
+frontmatter imports.** It resolves direct story→component links correctly and
+reports nothing beyond them. Concretely: `PeckingOrderIssue.astro` imports
+`src/utils/team-accent-css` on line 21 and has four stories, but querying
+`src/utils/team-accent-css.ts` returns **"no stories found"**. So does
+`src/styles/tokens.css`, which affects every story in the suite.
+
+Treat a "no stories found" on a util or a stylesheet as **unknown, not
+uncovered**. Acting on it as though the file were unstoried is how you skip
+the visual check on a token change — the single most expensive bug class in
+this repo (see `docs/claude/rules/theming-and-assets.md`). This is the same
+shape as TurboSnap's CSS blindness, which is why `pnpm chromatic` passes
+`--externals "src/styles/**/*.css"`.
+
+It does not affect the static build: `pnpm build:storybook` produces the same
+52 entries with the addon on or off, so Chromatic is unchanged. `pnpm add`
+reports one unmet peer (`valibot@^1.4.0` against the installed 1.2.0); the
+server initializes and answers `tools/call` regardless.
