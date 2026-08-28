@@ -316,24 +316,45 @@ Edit these files as TEXT (anchored line insertion) and validate with
 The chip in the top-right corner is the only interactive element on the page,
 and once the board is fullscreen on a TV it is the only thing on screen that
 isn't the board — so on a laptop it drops to `opacity: 0` while fullscreen and
-comes back on `:hover` / `:focus-visible`.
+comes back on hover or `:focus-visible`.
 
 The gate is `@media (hover: hover) and (pointer: fine)`, and it is load-bearing
 rather than defensive: **a touchscreen has no hover to bring the chip back and
 no Esc key either**, so the same rule applied there leaves the viewer sealed in
 fullscreen with only the OS gesture as a way out. Touch keeps the always-dimmed
-chip. `tests/draft-broadcast.test.ts` slices the stylesheet into its `@media`
-blocks and fails if any rule hiding `[data-in-fullscreen='true']` sits outside a
+chip. Note what those two features actually report: the PRIMARY pointing device,
+so a touchscreen laptop matches on its trackpad and hides the chip. That is the
+right call here (trackpad and Esc are both present), but it is not the same
+claim as "no touchscreen ever hides it" — don't write it down as if it were.
+
+`tests/draft-broadcast.test.ts` slices the stylesheet into its `@media` blocks
+and fails if any rule hiding `[data-in-fullscreen='true']` sits outside a
 hover-capable query — a top-level hide is invisible in review and only breaks on
-a device nobody is testing on.
+a device nobody is testing on. Three details in that guard exist because the
+first version of it passed a broken stylesheet:
+
+- **`.includes('hover: hover')` classifies the exact inversion as safe.**
+  `not all and (hover: hover)` means "hide on touch ONLY" and contains the
+  string; so does `any-hover: hover`, which reports on inputs that aren't in
+  use. The classifier has its own unit test for that reason.
+- **A hide is not only `opacity: 0`.** `visibility: hidden` and `display: none`
+  reintroduce the whole trap and are worse, because they also stop the chip
+  being hoverable — which is the entire mechanism by which it comes back.
+- **Checking the attribute EXISTS is not checking its value.** Inverting the
+  ternary hides the "Full screen" button before fullscreen and leaves the exit
+  chip on the TV during, and satisfies a presence check.
 
 Two smaller notes:
 
-- **Opacity, not `display`/`visibility`.** The chip has to stay hoverable while
-  invisible, which is also why there is no accidental invisible hit target: the
-  pointer being on it is exactly what makes it visible, so a click can only land
-  after it has appeared.
-- **An invisible `::before` apron widens the hover zone** into the corner, so it
-  is found by aiming at a corner rather than at a rectangle you can't see. A
-  pseudo-element with `pointer-events: none` would not work here — it has to be
-  hit-testable to trigger the parent's `:hover`.
+- **Opacity, not `display`/`visibility`**, so the chip stays hit-testable while
+  invisible — that is also why there is no invisible hit target on the chip
+  itself: the pointer being on it is what reveals it.
+- **The hover reach is a wrapper (`.dbc__fullscreen-zone`), not an `::before`
+  apron on the button.** An apron is part of the button's own hit area, which
+  makes the whole invisible rectangle an exit-fullscreen button — fine for a
+  pointer traveling into it, not fine for a tap or a pointer already parked in
+  that corner. The wrapper is a hover target with no handler, so a click in the
+  reach does nothing while the movement still reveals the chip.
+- **`:hover` and `:focus-visible` are separate rules, never one selector list.**
+  One unsupported pseudo-class invalidates the entire list per spec, and here
+  that drops the reveal while leaving the hide in force.

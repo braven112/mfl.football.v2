@@ -298,14 +298,18 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
 
   return (
     <div className="dbc" data-testid="draft-broadcast" ref={rootRef}>
-      <button
-        className="dbc__fullscreen"
-        type="button"
-        onClick={toggleFullscreen}
-        data-in-fullscreen={isFullscreen ? 'true' : 'false'}
-      >
-        {isFullscreen ? 'Exit full screen' : 'Full screen'}
-      </button>
+      {/* The wrapper is the hover target and the button is the click target —
+          see the note on `.dbc__fullscreen-zone`. Nothing is bound to it. */}
+      <div className="dbc__fullscreen-zone">
+        <button
+          className="dbc__fullscreen"
+          type="button"
+          onClick={toggleFullscreen}
+          data-in-fullscreen={isFullscreen ? 'true' : 'false'}
+        >
+          {isFullscreen ? 'Exit full screen' : 'Full screen'}
+        </button>
+      </div>
 
       {current ? (
         <BroadcastRevealCard

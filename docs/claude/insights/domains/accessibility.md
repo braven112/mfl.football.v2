@@ -587,13 +587,21 @@ insight is what produced the duplicate rule at `player-news.css:168`.
 .chip { opacity: 0.45; transition: opacity 200ms ease; }
 
 @media (hover: hover) and (pointer: fine) {
-  .chip[data-in-fullscreen='true'] { opacity: 0; }
-  .chip[data-in-fullscreen='true']:hover,
-  .chip[data-in-fullscreen='true']:focus-visible { opacity: 1; }
+  .chip[data-hidden='true'] { opacity: 0; }
+  /* Hovering the ZONE, not the chip — see below. */
+  .chip-zone:hover .chip[data-hidden='true'] { opacity: 1; }
+  /* Separate rule, deliberately. */
+  .chip[data-hidden='true']:focus-visible { opacity: 1; }
 }
 ```
-Three details that matter: pair `:hover` with `:focus-visible` so the keyboard reaches it too; use `opacity` rather than `display`/`visibility` so the element stays hit-testable (which is also why an invisible hit target can't be clicked by accident — the pointer being on it is what reveals it); and widen the target with an invisible `::before` apron if the control is small, since a pseudo-element must stay `pointer-events: auto` to trigger the parent's `:hover`.
 
-**Recommendation:** Guard this with a test, not a comment — the failure only appears on hardware the author isn't holding. `tests/draft-broadcast.test.ts` splits the stylesheet into `@media` blocks and fails if any rule hiding the chip lands outside a `hover: hover` query. Same check is worth copying for any future hover-reveal on a dismiss or exit control.
+Four details, each of which broke a version of this:
 
-**Evidence:** `src/styles/draft-broadcast.css`, `src/components/afl/draft-broadcast/DraftBroadcast.tsx`. Media-query gate verified by mutation: moving the hide rule to the top level fails the guard.
+- **Never group `:hover, :focus-visible` in one selector list on a hide/reveal pair.** One unsupported pseudo-class invalidates the ENTIRE list per spec, so a UA without `:focus-visible` drops the reveal and keeps the hide — a control nothing on the machine can bring back. Grouping is harmless on a hover *highlight*; it is not harmless on a hover *reveal*.
+- **Hide with `opacity`, not `display`/`visibility`.** The element has to stay hit-testable, since being hovered is the whole mechanism by which it returns.
+- **Widen the reach with a wrapper that has no handler, not an `::before` apron on the control.** An apron is part of the control's own hit area, so the invisible rectangle becomes an invisible button — harmless for a pointer traveling in (it reveals before it can be clicked), not harmless for a tap or a pointer already parked there.
+- **`hover`/`pointer` report the PRIMARY pointing device.** A touchscreen laptop matches on its trackpad. That is usually the right outcome — trackpad and Esc are both present, and excluding every machine with a touchscreen excludes most modern laptops — but it means the gate is "the primary input hovers", not "this device has no touchscreen". Don't document it as the stronger claim.
+
+**Recommendation:** Guard this with a test, not a comment — the failure only appears on hardware the author isn't holding. `tests/draft-broadcast.test.ts` splits the stylesheet into `@media` blocks and fails if any rule hiding the chip lands outside a hover-capable query. Two traps in writing that guard: classifying blocks with `.includes('hover: hover')` accepts `not all and (hover: hover)`, which is the exact inversion, and `any-hover: hover`, which reports on inputs not in use; and matching only `opacity: 0` misses a `visibility: hidden` hide, which is strictly worse. Both were live in the first version of the guard.
+
+**Evidence:** PR #644. `src/styles/draft-broadcast.css`, `src/components/afl/draft-broadcast/DraftBroadcast.tsx`. Every clause above is mutation-verified: inverting the query, swapping in `visibility: hidden`, inverting the component's ternary, regrouping the two pseudo-classes and restoring the `::before` apron each fail the suite.

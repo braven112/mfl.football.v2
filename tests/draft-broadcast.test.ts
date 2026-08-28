@@ -636,34 +636,45 @@ describe('idle screen and reveal card share one colour treatment', () => {
 describe('exit-full-screen chip hides on hover-capable devices only', () => {
   // On a laptop driving the TV the chip should vanish once the board is
   // fullscreen and come back on hover. On a touchscreen there IS no hover to
-  // bring it back, so hiding it there strands the viewer in fullscreen with no
-  // way out but the OS. The whole rule therefore has to sit inside a
-  // `hover: hover` query, and the component has to emit the attribute it keys
-  // on — either half missing ships one of those two failures.
+  // bring it back and no Esc key either, so hiding it there seals the viewer
+  // into fullscreen with only the OS gesture as a way out. The whole rule
+  // therefore has to sit inside a `hover: hover` query, and the component has
+  // to emit the attribute it keys on — either half missing ships one of those
+  // two failures.
   const css = readFileSync('src/styles/draft-broadcast.css', 'utf-8');
   const tsx = readFileSync(
     'src/components/afl/draft-broadcast/DraftBroadcast.tsx',
     'utf-8'
   );
 
-  it('the component marks the button with data-in-fullscreen', () => {
-    expect(tsx).toMatch(/data-in-fullscreen=\{/);
-  });
+  /** Rules that hide the chip, in any of the ways CSS can hide something.
+   *  An earlier version of this guard only knew `opacity: 0`, so a top-level
+   *  `visibility: hidden` — which is WORSE, because it also stops the chip
+   *  being hoverable — walked straight past it. */
+  const HIDES =
+    /\[data-in-fullscreen=['"]true['"]\][^{]*\{[^}]*(opacity:\s*0(\.0+)?(%|\b)|display:\s*none|visibility:\s*hidden)/;
 
-  it('every rule that hides the chip sits inside a hover-capable query', () => {
-    // Slice the file into the @media blocks and the top level outside them, so
-    // a hiding rule added at the top level (where a touchscreen would read it)
-    // is what fails this.
-    const hoverBlocks: string[] = [];
-    let outside = '';
+  /** True only for a query that means "this device hovers". `.includes()` is
+   *  not enough: `not all and (hover: hover)` is the exact INVERSION of the
+   *  gate — hide on touch only — and contains the string, and `any-hover`
+   *  reports on a device's non-primary inputs rather than the one in use. */
+  const isHoverCapableQuery = (condition: string) =>
+    /(^|[^-\w])hover:\s*hover/.test(condition) && !/\bnot\b/.test(condition);
+
+  /** Split the stylesheet into its @media blocks plus the top level outside
+   *  them, so a hiding rule added where a touchscreen would read it is what
+   *  fails this. */
+  const { hoverBlocks, outside } = (() => {
+    const blocks: string[] = [];
+    let rest = '';
     let i = 0;
     while (i < css.length) {
       const at = css.indexOf('@media', i);
       if (at === -1) {
-        outside += css.slice(i);
+        rest += css.slice(i);
         break;
       }
-      outside += css.slice(i, at);
+      rest += css.slice(i, at);
       const open = css.indexOf('{', at);
       let depth = 0;
       let j = open;
@@ -675,27 +686,80 @@ describe('exit-full-screen chip hides on hover-capable devices only', () => {
         }
       }
       const block = css.slice(at, j + 1);
-      if (/hover:\s*hover/.test(block)) hoverBlocks.push(block);
-      else outside += block;
+      if (isHoverCapableQuery(css.slice(at + '@media'.length, open))) {
+        blocks.push(block);
+      } else {
+        rest += block;
+      }
       i = j + 1;
     }
+    return { hoverBlocks: blocks, outside: rest };
+  })();
 
-    const hides = /\[data-in-fullscreen=['"]true['"]\][^{]*\{[^}]*opacity:\s*0\s*[;}]/;
+  it('classifies media queries by what they actually mean', () => {
+    // Guards the classifier itself — it is the only thing standing between
+    // the two assertions below and a stylesheet that passes them backwards.
+    expect(isHoverCapableQuery(' (hover: hover) and (pointer: fine) ')).toBe(true);
+    expect(isHoverCapableQuery(' not all and (hover: hover) ')).toBe(false);
+    expect(isHoverCapableQuery(' (any-hover: hover) ')).toBe(false);
+    expect(isHoverCapableQuery(' (max-width: 640px) ')).toBe(false);
+    expect(hoverBlocks.length).toBeGreaterThan(0);
+  });
+
+  it('the component marks the button with data-in-fullscreen, not inverted', () => {
+    // Presence alone is not enough: flipping the ternary satisfies a `has the
+    // attribute` check while hiding the chip BEFORE fullscreen and leaving it
+    // on the TV during.
+    expect(tsx.replace(/\s+/g, ' ')).toContain(
+      "data-in-fullscreen={isFullscreen ? 'true' : 'false'}"
+    );
+  });
+
+  it('every rule that hides the chip sits inside a hover-capable query', () => {
     expect(
-      hides.test(outside),
+      HIDES.test(outside),
       'a touchscreen would read this rule and lose its only way out of fullscreen'
     ).toBe(false);
     expect(
-      hoverBlocks.some((b) => hides.test(b)),
+      hoverBlocks.some((b) => HIDES.test(b)),
       'nothing hides the chip on a hover-capable device — the ask was hover-only there'
     ).toBe(true);
   });
 
   it('hover and keyboard focus both bring it back', () => {
-    const revealed = css.match(
-      /\[data-in-fullscreen=['"]true['"]\]:(hover|focus-visible)/g
+    const block = hoverBlocks.find((b) => HIDES.test(b))!;
+    expect(
+      /:hover[^{]*\[data-in-fullscreen=['"]true['"]\][^{]*\{[^}]*opacity:\s*1/.test(block),
+      'hover must reveal the chip it just hid'
+    ).toBe(true);
+    expect(
+      /\[data-in-fullscreen=['"]true['"]\]:focus-visible[^{]*\{[^}]*opacity:\s*1/.test(block),
+      'keyboard focus must reveal it too — hover is not the only way in'
+    ).toBe(true);
+  });
+
+  it('never groups :hover and :focus-visible in one chip selector list', () => {
+    // One unsupported pseudo-class invalidates the ENTIRE selector list per
+    // spec. Grouped, a UA without :focus-visible drops the reveal and keeps
+    // the hide — a chip nothing on the machine can bring back. Scoped to the
+    // chip on purpose: elsewhere in this file the same grouping only costs a
+    // hover highlight on an element that was visible anyway.
+    const bare = css.replace(/\/\*[\s\S]*?\*\//g, ' ');
+    const grouped = bare.match(
+      /[^{}]*dbc__fullscreen[^{}]*(:hover[^{;]*,[^{]*:focus-visible|:focus-visible[^{;]*,[^{]*:hover)[^{]*\{/
     );
-    expect(revealed).toContain("[data-in-fullscreen='true']:hover");
-    expect(revealed).toContain("[data-in-fullscreen='true']:focus-visible");
+    expect(grouped, `grouped chip selector: ${grouped?.[0]?.trim()}`).toBe(null);
+  });
+
+  it('the hover reach is not itself a click target', () => {
+    // The reach around the chip is a wrapper with no handler, not an ::before
+    // apron on the button — an apron would make that whole invisible
+    // rectangle an exit-fullscreen button you can hit without seeing it.
+    expect(css).toContain('.dbc__fullscreen-zone');
+    expect(
+      /\.dbc__fullscreen(\[[^\]]*\])?::before/.test(css),
+      'an ::before on the chip is part of ITS hit area — use the zone wrapper'
+    ).toBe(false);
+    expect(tsx).not.toMatch(/dbc__fullscreen-zone[^>]*onClick/);
   });
 });
