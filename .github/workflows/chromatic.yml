@@ -6,9 +6,13 @@ name: Chromatic
 # Path-filtered on purpose. Every workflow in this repo pays a
 # `pnpm install --frozen-lockfile`, so this one only runs when something it
 # could actually change has changed — not on every data-sync or Schefter PR.
+# Triggered on PUSH to any branch, deliberately NOT on pull_request as well.
+# Running both would bill two builds for the same change: one for the PR head
+# and one for the merge to main. Chromatic tracks baselines per branch from
+# push events on its own, and posts its result as a commit status, so the check
+# still shows up on the PR.
 on:
-  pull_request:
-    branches: [main]
+  push:
     paths:
       - 'src/components/**'
       - 'src/styles/**'
@@ -17,13 +21,6 @@ on:
       - 'package.json'
       - 'pnpm-lock.yaml'
       - '.github/workflows/chromatic.yml'
-  push:
-    branches: [main]
-    paths:
-      - 'src/components/**'
-      - 'src/styles/**'
-      - 'stories/**'
-      - '.storybook/**'
   workflow_dispatch:
 
 concurrency:

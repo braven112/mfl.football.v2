@@ -147,11 +147,42 @@ AFL skin would spend budget on a combination that never ships. That lands at
 (8 x 2) + (14 x 4) = 72 snapshots per full build, ~69 full builds a month,
 before TurboSnap.
 
-**TurboSnap needs two things**, and both fail quietly:
+**Snapshots are billed at CAPTURE time, not at approval time.** Every build
+captures the stories in scope whether or not you have accepted anything, and
+each capture counts against the quota. Approving is a review action; it never
+retroactively adds or frees snapshots. The one discount: *rerunning* an
+existing build only charges for its denied and unreviewed tests.
+
+**A "turbosnap" is 0.2 of a billed snapshot, not free.** When TurboSnap copies
+an unchanged story's snapshot from the baseline it still bills a fifth. So a
+narrow PR here costs roughly `(changed stories x modes) + (0.2 x everything
+else)` — for a 4-story change that's about 21 billed, against 72 for a full
+build. Real savings, but not an order of magnitude.
+
+**TurboSnap needs three things**, and all of them fail quietly:
 - `storybook build --stats-json` (the `build:storybook:stats` script), which
   emits `storybook-static/preview-stats.json`.
 - `fetch-depth: 0` on checkout. `actions/checkout` defaults to depth 1, which
   degrades both TurboSnap and Chromatic's baseline detection without erroring.
+- `--externals 'src/styles/**/*.css'`. **This one is the dangerous default.**
+  TurboSnap does not trace CSS and other externally-processed static assets
+  through the module graph, so without this flag a change to `tokens.css` or
+  `tokens-dark.css` can be treated as affecting NOTHING and skip the very
+  stories it broke. Given that this repo's most expensive recurring bug class
+  is exactly undefined/mismatched theme tokens, that failure mode would make
+  Chromatic quietly useless for the thing it was bought to catch. The flag
+  forces a full rebuild whenever any file under `src/styles/` changes.
+
+A full rebuild is also forced automatically when Storybook's own config
+changes (`main.ts`, `preview.ts`, `modes.ts`) or when dependency versions in
+`package.json` move — those can change how any story renders. Since
+`preview.ts` imports the global stylesheets, expect touching theming to cost a
+full 72-snapshot build.
+
+**One build per push, not two.** The workflow fires on `push` only. Adding
+`pull_request` as well would bill two builds for the same change — one for the
+PR head, one for the merge commit. Chromatic tracks baselines per branch from
+push events and reports via commit status, so the check still lands on the PR.
 
 **A story that can't be deterministic should opt out, not flake.**
 `BrandedLoader/CyclingNarration` cycles narration on a 2.5s timer, so it
