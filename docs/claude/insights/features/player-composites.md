@@ -377,23 +377,47 @@ different from every other composite, and why:
   because it is ambient furniture an owner scrolls past, but this card IS the
   moment, and a face changing underneath the room mid-reveal reads as a second
   pick landing. What is load-bearing:
-  - **Resolved SERVER-side**, in `enrichBroadcastPlayers` → `buildDefenseFaces`,
-    and shipped on the player as `defenseFaces`. Importing the map into the
-    island would put all 32 teams' pools (20 KB) on the wire to use one, and the
-    TV must never wait on a fetch mid-reveal.
+  - **Resolved SERVER-side** (`buildDefenseFacesByTeam`) and shipped on the PAGE
+    as `defenseFaces`, one list per NFL team code, keyed by the RAW `nflTeam`
+    string players carry so the island needs no team-code normalizer. Importing
+    the map into the island would put all 32 teams' pools (20 KB) on the wire to
+    use one, and the TV must never wait on a fetch mid-reveal.
+  - **Per TEAM, never per player — `normPos` makes DEF a much bigger set than
+    you think.** It folds every MFL team-unit pseudo-player (`TMQB`, `TMRB`,
+    `TMDL`, `TMPN`, and six more) into `DEF`, and each one shares its real
+    defense's name AND team code — 320 players for 32 defenses in the 2026 pool,
+    with nothing downstream able to tell the 32 from the 288 (the position is
+    already normalized by then, and the rest is byte-identical). Hanging the
+    pool off each player added **101 KB, +28%** to the serialized payload to
+    ship 32 distinct lists; the per-team map is 12.7 KB. Any future per-player
+    join on a DEF-positioned field pays that same 10x.
   - **Capped at 5** — the size of the hat, not a display budget. Ten possible
     pairings is deep enough that a defense drafted in BOTH conferences
     (`duplicatePlayers` allows it) is unlikely to show the same two men; the
     pool's sixth is a rotational safety the room does not recognise. It is also
-    a FLOOR: a pool of one cannot fill the pair, which is what
-    `tests/draft-broadcast.test.ts` pins across all 32 defenses.
-  - **The draw is stored SEEDS, not indices.** That is what makes the 404 path
-    work: a missing headshot retires its defender, the seeds re-land on
-    survivors, and the column shows different stars rather than a gap. Indices
-    would have to be re-derived by hand as the list shrank under them. The
-    second man is drawn from the `n-1` slots that are NOT the first and then
-    shifted past it — sampling twice and retrying on a collision would make the
-    draw depend on render count, which no seed survives.
+    a floor in PRACTICE — but the test sweep across all 32 defenses asserts only
+    ≥1, because that is the real runtime invariant (the card renders a single
+    defender when that is all a pool holds) and because
+    `fetch-def-spotlight-players.mjs` only WARNS below `MIN_PER_TEAM` while its
+    hard gate is a league-wide total. A ≥2 sweep would let one thin roster on a
+    Wednesday `def-spotlight-sync.yml` push turn main red for a case the card
+    handles fine. A separate assertion pins that all 32 are currently pairable,
+    which catches a league-wide collapse without being breakable by one team.
+  - **The draw is a stable SHUFFLE filtered down, not indices recomputed.** The
+    pair is the first two entries of a once-drawn shuffle that are still alive.
+    The version before it stored two seeds and re-derived `floor(seed * n)`
+    against the SHRINKING live list — so a 404 moved both indices: brute-forced
+    over 200k seed pairs on a five-man pool, **15.04% of 404 events evicted the
+    surviving defender too**, unmounting a face that had already decoded and was
+    on screen. That is the "face changes underneath the room mid-reveal" failure
+    the design forbids, arriving through the error path instead of a timer.
+    Filtering a fixed order cannot do it: a survivor is still among the first
+    two live entries by construction. Random sort KEYS held in state rather than
+    a seeded PRNG — a real uniform shuffle, and taking two off the front can
+    never draw one man twice, which the index arithmetic had to hand-prove.
+    (Residual, accepted: display is re-sorted by pool rank, so a 404 can move
+    the survivor to the other side. He is keyed by `espnId`, so the node moves
+    rather than remounting.)
   - **Re-drawn per reveal for free**, because `DraftBroadcast` keys the card by
     pick and every selection remounts it.
   - **The pair geometry is arithmetic, not taste.** An ESPN headshot is

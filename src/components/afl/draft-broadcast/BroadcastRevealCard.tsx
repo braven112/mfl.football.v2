@@ -22,8 +22,9 @@
  *   - A TEAM DEFENSE gets real faces, not an empty figure column. `DEF` is
  *     excluded from the site-wide cutout rule (a DEF "player" is a crest), so
  *     the card opts back in with TWO of the unit's marquee defenders from the
- *     shared `def-spotlight-players` pool — drawn at random from the top five
- *     and then held for the reveal (Brandon, 2026-08-28). Two rather than one
+ *     shared `def-spotlight-players` pool (shipped with the page, keyed by NFL
+ *     team) — drawn at random from the top five and then held for the reveal
+ *     (Brandon, 2026-08-28). Two rather than one
  *     because a defense is a unit and one man reads as a player card; they
  *     stand shoulder-over-shoulder at 90% scale so both heads clear.
  *     Not rotated: the Free Agents hero cycles faces because it is ambient
@@ -35,7 +36,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { DraftRoomPick } from '../../../types/draft-room';
 import type { DraftRoomTeam } from '../../../types/draft-room';
-import type { BroadcastPlayer } from '../../../types/draft-broadcast';
+import type { BroadcastDefenseFace, BroadcastPlayer } from '../../../types/draft-broadcast';
 import { isSplashCutoutEligible, resolveSplashColors } from '../../../utils/pick-reveal';
 import {
   bestAvailableAt,
@@ -56,7 +57,12 @@ interface Props {
   rehearsing?: boolean;
   /** The season being replayed — only meaningful while `rehearsing`. */
   leagueYear?: number;
+  /** NFL team code → that defense's marquee defenders. See `defenseFaces`. */
+  defenseFaces?: Record<string, BroadcastDefenseFace[]>;
 }
+
+/** How many defenders stand in for a team defense. */
+const DEFENSE_FACE_COUNT = 2;
 
 /** "1.03" — the way a draft room says a pick out loud. */
 function pickLabel(pick: DraftRoomPick): string {
@@ -71,6 +77,7 @@ export function BroadcastRevealCard({
   players,
   rehearsing,
   leagueYear,
+  defenseFaces,
 }: Props) {
   const [cutoutSrc, setCutoutSrc] = useState<string | null>(() =>
     isSplashCutoutEligible(player) ? player!.headshot : null
@@ -91,42 +98,61 @@ export function BroadcastRevealCard({
 
   // ── Team-defense faces ──
   // Two defenders out of the unit's top five, drawn once and then held for the
-  // whole reveal. Server-joined onto the player, so there is nothing to fetch
-  // and nothing to look up here.
+  // whole reveal. The pool ships with the page keyed by NFL team code, so this
+  // is a plain lookup — nothing to fetch, and no team-code normalizer on the
+  // client (the key is the same raw string the player carries).
+  const facePool = player?.position?.toUpperCase() === 'DEF'
+    ? defenseFaces?.[player.nflTeam || '']
+    : undefined;
+  const [deadFaces, setDeadFaces] = useState<ReadonlySet<string>>(() => new Set());
+
+  // The draw is a stable SHUFFLE of the whole pool, taken once, and the pair is
+  // the first two entries still alive in it.
   //
-  // The draw is stored as SEEDS rather than indices, which is what makes the
-  // 404 path work: a defender whose ESPN headshot is missing is retired from
-  // the pool, the seeds re-land on survivors, and the column shows a different
-  // star instead of a gap. Indices would have to be re-derived by hand as the
-  // list shrank underneath them.
+  // That shape is the point, and it replaced seeded indices that re-derived
+  // themselves against the shrinking live list. Those indices moved when the
+  // list did: brute-forced over 200k seed pairs on a five-man pool, 15.04% of
+  // 404 events evicted the SURVIVING defender along with the missing one —
+  // unmounting a face that had already decoded and was on screen, which is
+  // exactly the "a face that changes underneath the room mid-reveal" failure
+  // the header forbids. Filtering a fixed order cannot do that: a survivor is
+  // still among the first two live entries by construction, so only the dead
+  // slot is backfilled.
   //
+  // Random sort KEYS rather than a seeded PRNG because they survive the same
+  // way a seed would (drawn once, in state) while being a real uniform shuffle
+  // — and taking two off the front of a shuffle can never draw one man twice,
+  // which the index arithmetic had to hand-prove.
+  const [shuffleKeys] = useState<number[]>(() =>
+    Array.from({ length: 16 }, () => Math.random())
+  );
+
   // Re-drawn per reveal for free: `DraftBroadcast` keys this card by pick, so
   // every selection remounts it. That matters in the AFL specifically —
   // `duplicatePlayers` lets both conferences draft the same defense, and a
   // fixed pair would show the room the identical card twice.
-  const defenseFaces = player?.defenseFaces;
-  const [deadFaces, setDeadFaces] = useState<ReadonlySet<string>>(() => new Set());
-  const [seedA] = useState(() => Math.random());
-  const [seedB] = useState(() => Math.random());
-  const liveFaces = useMemo(
-    () => (defenseFaces ?? []).filter((f) => !deadFaces.has(f.espnId)),
-    [defenseFaces, deadFaces]
+  const drawOrder = useMemo(
+    () =>
+      (facePool ?? [])
+        .map((face, rank) => ({ face, rank, key: shuffleKeys[rank] ?? rank }))
+        .sort((a, b) => a.key - b.key),
+    [facePool, shuffleKeys]
   );
 
-  // Two DISTINCT men. The second is drawn from the n-1 slots that are not the
-  // first and then shifted past it — sampling twice and retrying on a collision
-  // would make the draw depend on render count, which is not a thing a seed can
-  // survive. Returned in POOL order so the better defender is the one in front,
-  // and so the caption's two lines read left-to-right against the two cutouts.
-  const shownFaces = useMemo(() => {
-    const n = liveFaces.length;
-    if (n === 0) return [];
-    const a = Math.floor(seedA * n);
-    if (n === 1) return [liveFaces[a]];
-    let b = Math.floor(seedB * (n - 1));
-    if (b >= a) b += 1;
-    return [a, b].sort((x, y) => x - y).map((i) => liveFaces[i]);
-  }, [liveFaces, seedA, seedB]);
+  // Displayed in POOL order so the better defender is the one in front (see the
+  // `:first-of-type` z-index rule in draft-broadcast.css) and so the caption's
+  // two lines read left-to-right against the two cutouts. A 404 can therefore
+  // move the survivor from one side to the other — but it never replaces him,
+  // and his <img> is keyed by espnId so the node is not remounted.
+  const shownFaces = useMemo(
+    () =>
+      drawOrder
+        .filter((entry) => !deadFaces.has(entry.face.espnId))
+        .slice(0, DEFENSE_FACE_COUNT)
+        .sort((a, b) => a.rank - b.rank)
+        .map((entry) => entry.face),
+    [drawOrder, deadFaces]
+  );
 
   const handleFaceError = useCallback((espnId: string) => {
     setDeadFaces((prev) => {
