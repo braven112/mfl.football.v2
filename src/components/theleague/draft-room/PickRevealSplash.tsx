@@ -3,6 +3,7 @@ import { getCollegeHeadshot } from '../../../constants/roster-constants';
 import {
   isSplashCutoutEligible,
   resolveSplashColors,
+  usesCollegeOrigin,
   type PickSplashItem,
 } from '../../../utils/pick-reveal';
 
@@ -84,7 +85,9 @@ function SplashCard({ item, onDone }: { item: PickSplashItem; onDone: (id: strin
 
   const colors = resolveSplashColors(team, player);
   // Rookies read best with their college as the origin line; vets get NFL team.
-  const origin = player?.isRookie && player.college ? player.college : player?.nflTeam || '';
+  // Shared with the broadcast card via `usesCollegeOrigin` — the same pick must
+  // not read "Georgia" on the TV board and "KCC" here.
+  const origin = usesCollegeOrigin(player) ? player!.college! : player?.nflTeam || '';
 
   return (
     <div

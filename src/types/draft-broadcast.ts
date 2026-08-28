@@ -50,6 +50,25 @@ export interface BroadcastPlayerExtras {
    * screen. MFL ADP is the single input.
    */
   boardRank?: number;
+  /**
+   * Logo for the SCHOOL the origin line names, resolved server-side.
+   *
+   * The DARK cut where one exists — the card's background is dark in both
+   * themes, so it opts out of the site's `html.dark` swap (see `resolveOrigin`)
+   * — but NOT unconditionally: `resolveCollegeDarkLogoUrl` returns null for the
+   * NCAA ids whose `500-dark` cut 404s upstream, and those fall back to the
+   * light mark, which is the same call `buildCollegeLogoDarkCss` makes for them
+   * in CSS. Don't assume a dark variant downstream.
+   *
+   * Present only for players whose origin is a college at all (`usesCollegeOrigin`
+   * — rookies with a school), which is what keeps this affordable: the lookup
+   * needs the 80 KB `college-logos.json`, so it cannot happen on the client, and
+   * a pool of several hundred players would spend real bytes shipping a URL to
+   * everyone who will be labelled with his NFL team instead. That NFL half is
+   * derived on the client from `nflTeam` in `resolveOrigin`, which is also the
+   * only place this field is read.
+   */
+  collegeLogo?: string;
 }
 
 /** A player as the broadcast renders him: draft-room fields plus the extras. */

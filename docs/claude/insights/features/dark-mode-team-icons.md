@@ -453,3 +453,50 @@ sibling in `public/assets/afl/group-me/` so it's ready, and set the field only
 in the league that names the light one. No consumer reads `groupMeDark` yet
 either way (the GroupMe crest watermark still always renders light), so nothing
 about this is visible on a page — only in the config.
+
+---
+
+## 2026-08-28 - The `html.dark` swap has a blind spot: a surface that is dark in BOTH themes
+
+**Context:** the Draft Broadcast reveal card paints white copy on a franchise
+gradient. That gradient is the same in light mode and dark mode — the page is
+built for a TV in a room, and it never consults the viewer's theme. Adding the
+NFL/college mark beside the card's origin line the ordinary way (ship the light
+logo, let `buildNflLogoDarkCss` / `buildCollegeLogoDarkCss` swap it) would have
+put a light Raiders, Steelers, Jets or Bengals mark — the ones whose dark
+outlines are the entire reason this file exists — onto a near-black card for
+every viewer whose theme resolved to LIGHT. The swap is keyed on `html.dark`,
+so for that half of the audience it simply never fires. Nobody would have seen
+it in review either: whoever checks the page is one theme, and the bug is the
+other one.
+
+**The rule this file was missing:** the swap's premise is *the background under
+this img follows the theme.* Every ordinary page satisfies that. A surface with
+a background it paints ITSELF, identically in both themes, does not — and there
+the correct move is the opposite of the house style: resolve the dark cut
+server-side and ship it as the `src`.
+
+`resolveNflDarkLogoUrl` and `resolveCollegeDarkLogoUrl` are already exported for
+exactly this and already prefer the self-hosted mirror, so opting out costs one
+call, not a second copy of the mirror logic. Two things make it safe rather than
+a fork:
+
+- **No rule is keyed on a dark URL.** `buildNflLogoDarkCss` keys its selectors
+  on the LIGHT srcs (`/assets/nfl-logos/{CODE}.svg`, ESPN `500`), so a dark
+  `src` passes through untouched — it cannot be double-swapped back. The Sunday
+  Ticket multi-view had already taken this path; the reveal card is the second.
+- **`display: none` on error is fine here, and only here.** The usual rule
+  (`NFL_LOGO_ONERROR` toggling a class, hidden by `visibility`) exists because a
+  light src can fail while the `content: url()` swap renders fine, so hiding the
+  element would kill a working dark image. With no swap rule keyed on this src
+  there is no second source of pixels, and hiding the img outright is correct.
+
+**Also note which way the fallback runs.** `resolveCollegeDarkLogoUrl` returns
+`null` for the handful of NCAA ids whose `500-dark` cut 404s upstream, meaning
+"emit no swap rule, keep the light logo". A direct-src caller has to spell that
+same decision out — `dark ?? light` — because for it, `null` is not "do
+nothing", it is "no logo at all".
+
+**Files:** `src/utils/draft-broadcast.ts` (`resolveOrigin`),
+`src/utils/draft-broadcast-server.ts` (`collegeLogoFor`),
+`src/utils/pick-reveal.ts` (`usesCollegeOrigin`).

@@ -20,7 +20,7 @@
     {
       "date": "2026-08-28",
       "type": "bug-fix",
-      "summary": "A duplicate line in the AFL league config is gone. The Avenging Amish had their GroupMe avatar listed twice in the same record \u2014 same file both times, so nothing ever looked wrong, but any tool that rewrote the config would have quietly dropped one of them, and if the two had ever pointed at different art the winner would have come down to which line happened to be last. Removed, and there is now a check that fails the build if any league config repeats a field.",
+      "summary": "A duplicate line in the AFL league config is gone. The Avenging Amish had their GroupMe avatar listed twice in the same record — same file both times, so nothing ever looked wrong, but any tool that rewrote the config would have quietly dropped one of them, and if the two had ever pointed at different art the winner would have come down to which line happened to be last. Removed, and there is now a check that fails the build if any league config repeats a field.",
       "impact": "admin",
       "area": "design-system",
       "league": "afl"
@@ -280,6 +280,14 @@
       "impact": "user",
       "area": "draft",
       "league": "afl"
+    },
+    {
+      "date": "2026-08-28",
+      "type": "style-tweak",
+      "summary": "The Draft Broadcast reveal now shows you where a player comes from before you finish reading it. The line under his name has always said the school or the pro team — \"Notre Dame\", \"JAX\" — and now the logo sits right there in front of the words. TheLeague's rookie draft gets college marks, the AFL's board gets NFL helmets, and either way a room ten feet from the TV recognises the shield before it reads the three letters. The marks are the dark-background versions, so the ones that normally disappear on a dark card — Raiders, Steelers, Jets — still show up, and a logo we don't have simply doesn't appear rather than leaving a hole in the line.",
+      "impact": "user",
+      "area": "draft",
+      "league": "both"
     }
   ]
 }

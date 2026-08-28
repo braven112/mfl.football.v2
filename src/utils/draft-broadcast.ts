@@ -8,6 +8,9 @@
 
 import type { DraftRoomPick, DraftRoomTeam } from '../types/draft-room';
 import type { BroadcastPlayer } from '../types/draft-broadcast';
+import { getAllNFLTeamCodes, normalizeTeamCode } from './nfl-logo';
+import { usesCollegeOrigin } from './pick-reveal';
+import { resolveNflDarkLogoUrl } from './nfl-logo-dark-css';
 
 /**
  * Where a player stood among what was ACTUALLY still on the board when he was
@@ -443,4 +446,67 @@ export function resolveBroadcastGradient(team?: {
   broadcastGradient?: string;
 }): string | undefined {
   return isSafeCssGradient(team?.broadcastGradient) ? team!.broadcastGradient : undefined;
+}
+
+// ── The origin line ──────────────────────────────────────────────────────────
+
+/** The origin line: what it reads, and the mark that goes to its left. */
+export interface BroadcastOrigin {
+  /** "Georgia" / "KC" — the words. Empty when the player has no origin at all. */
+  label: string;
+  /** Logo for that origin, or null when we have no mark to show for it. */
+  logo: string | null;
+}
+
+/** The 32 canonical ESPN codes, as a set — `normalizeTeamCode` passes an
+ *  unrecognised code through verbatim, so membership is the only proof that a
+ *  logo file exists for it. */
+const NFL_LOGO_CODES: ReadonlySet<string> = new Set(getAllNFLTeamCodes());
+
+/**
+ * The origin line's text and its logo, resolved together.
+ *
+ * One function for both halves so the mark can never contradict the words: the
+ * label picks college-or-NFL, and the logo is whichever of the two it picked.
+ *
+ * DARK CUTS, wherever one exists. Every other surface on the site ships the
+ * light logo and lets `buildNflLogoDarkCss` / `buildCollegeLogoDarkCss` swap it
+ * under `html.dark`, because with theme preference 'auto' the server cannot
+ * know which the reader resolved. This card is the exception those helpers describe
+ * and the Sunday Ticket multi-view already takes: it paints a franchise-colour
+ * gradient in BOTH themes, so the background is dark no matter what the viewer
+ * picked, and the marks that vanish against it (Raiders, Steelers, Jets,
+ * Bengals…) would vanish for the half of the room on the light theme. Shipping
+ * the dark URL as the `src` also means no swap rule is keyed on it, so nothing
+ * double-swaps it back.
+ *
+ * The college half arrives pre-resolved on the player (`collegeLogo`) — that
+ * lookup needs an 80 KB table the island must not carry, and it is the half
+ * that can hand back a LIGHT mark: a few NCAA dark cuts 404 upstream, and there
+ * the light logo beats no logo. Every NFL code has a dark cut, so that half is
+ * always dark. The NFL half is built
+ * here from `nflTeam`, which every player already ships, rather than sent as a
+ * ~45-byte string per player for a pool of hundreds.
+ *
+ * Returns `logo: null` — never a substitute mark — for a free agent, a retiree
+ * (both of which `normalizeTeamCode` folds to the NFL shield), an unrecognised
+ * team code, or a school the logo table does not carry. A wrong crest beside a
+ * player's name is worse than no crest.
+ */
+export function resolveOrigin(player?: {
+  isRookie?: boolean;
+  college?: string;
+  collegeLogo?: string;
+  nflTeam?: string;
+}): BroadcastOrigin {
+  if (!player) return { label: '', logo: null };
+
+  if (usesCollegeOrigin(player)) {
+    return { label: player.college!, logo: player.collegeLogo ?? null };
+  }
+
+  const label = player.nflTeam || '';
+  const code = normalizeTeamCode(label);
+  const logo = NFL_LOGO_CODES.has(code) ? resolveNflDarkLogoUrl(code) : null;
+  return { label, logo };
 }

@@ -45,6 +45,7 @@ import {
   formatBestAvailable,
   positionRunCount,
   resolveBroadcastGradient,
+  resolveOrigin,
 } from '../../../utils/draft-broadcast';
 import { getCollegeHeadshot, getPlayerHeadshot } from '../../../constants/roster-constants';
 
@@ -187,8 +188,10 @@ export function BroadcastRevealCard({
     : undefined;
   const availText = formatBestAvailable(availRank);
 
-  // Rookies read best with their college as the origin line; vets get NFL team.
-  const origin = player?.isRookie && player.college ? player.college : player?.nflTeam || '';
+  // Rookies read best with their college as the origin line; vets get NFL team
+  // — and each brings its own mark. `resolveOrigin` picks both together so the
+  // logo beside the words is always the thing the words name.
+  const origin = resolveOrigin(player);
 
   // "4th RB in 8 picks" — the run callout. Only shown once it's actually a run;
   // announcing the 1st or 2nd of a position is just noise.
@@ -282,7 +285,26 @@ export function BroadcastRevealCard({
 
           <p className="dbc-reveal__meta">
             {player?.position ? <span className="dbc-reveal__pos">{player.position}</span> : null}
-            {origin ? <span>{origin}</span> : null}
+            {origin.label ? (
+              <span className="dbc-reveal__origin">
+                {/* Ahead of the words, the way a broadcast lower-third does it:
+                    the room recognises a helmet at ten feet faster than it
+                    reads a three-letter code. Decorative — the school or team
+                    is already spelled out beside it — so no alt text, and a
+                    404 hides the img rather than leaving a broken frame in the
+                    middle of the meta row. */}
+                {origin.logo ? (
+                  <img
+                    className="dbc-reveal__origin-logo"
+                    src={origin.logo}
+                    alt=""
+                    decoding="async"
+                    onError={hideOnError}
+                  />
+                ) : null}
+                {origin.label}
+              </span>
+            ) : null}
             {player?.byeWeek ? <span>BYE {player.byeWeek}</span> : null}
             {player?.injuryStatus ? (
               <span className="dbc-reveal__injury">{player.injuryStatus}</span>
