@@ -225,6 +225,15 @@
   display: flex;
   align-items: center;
   overflow: hidden;
+  /* Queryable so the defender caption can size itself off the CARD (see
+     `__face-name`). Everything else on this card is sized in vh/vw, which is
+     right for type that only has to be legible from ten feet — but the
+     caption's chips are capped at a share of the COLUMN, and the column is
+     ~500px when the card is inset on the page and ~864px once it is
+     fullscreen on the TV, at the same vh. Sizing that one string in viewport
+     units is what let it overrun its chip in the inset case only.
+     `inline-size` and not `size`: this card's height comes from its parent. */
+  container-type: inline-size;
   /* `--dbc-gradient` is the franchise's own `broadcastGradient` from league
      config, painted verbatim. The fallback is the derived pair — the exact
      gradient this card painted before the config field existed — so a franchise
@@ -507,45 +516,79 @@
    the player up and out of that bleed. */
 .dbc-reveal__face {
   position: absolute;
-  /* Pinned to the figure's LEADING edge, not centred in it. The figure carries
-     a `translateX(29%)` that pushes the whole column toward the screen edge, so
-     a centred pill rides that shift out past the card's own overflow clip and
-     loses its last few characters. Anchored left it travels the same 29% and
-     still lands well inside — and a left-aligned lower third is what a
-     broadcast name chip looks like anyway. */
-  left: 0;
   bottom: 3vh;
   /* Above the cutouts, which now take z-index 1 of their own. */
   z-index: 2;
   display: flex;
-  /* One row per man, stacked. Both names on ONE line reliably overran the
-     column and ellipsised the second man out of existence; two rows always
-     fit, and their order matches the two cutouts left-to-right. */
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.15em;
+  /* Side by side on ONE line, not a stack: with two men on screen a stacked
+     pair only says which name is FIRST, and the room has to guess whether
+     first means the man in front or the man on the left (Brandon, 2026-08-28).
+     Seated under the heads, the pairing is read rather than inferred.
+
+     The seat arithmetic, which is why this box has these numbers: an ESPN
+     headshot is centred in its frame, so a man's HEAD sits at his cutout's
+     `left` + half his width — with the base seats (-59.5%/-10.5%, each 120%
+     of the column) that is 0.5% and 49.5% of the column, 49% apart. Two equal
+     seats 49% wide centred on those points span -24% → 74%, which is this
+     box. Every term is a column percentage, like the seats themselves, so the
+     caption tracks the cutouts at any card width.
+
+     Note what this box does NOT need: the old single pill was pinned `left: 0`
+     because centring it in the figure rode the column's `translateX(29%)` out
+     past the card's overflow clip. Each seat is capped at 49% of the column
+     instead of the full width, which puts the right chip's outer edge at 103%
+     of the column — inside the body's 4vw padding, and the failure does not
+     recur. Widening a seat past 49% re-opens it. */
+  left: -24%;
+  width: 98%;
+  flex-direction: row;
+  align-items: flex-end;
   margin: 0;
+  padding: 0;
+  /* The pill moved down to `__face-chip`: one plate behind both names reads as
+     a single caption for a single subject, which is the opposite of the point.
+     No entrance of its own. This plate arrived (#646) while the card still
+     assembled itself from moving parts, and rode `dbc-text-in` up from below
+     with the copy and the cutouts. Those are gone and so is that keyframe —
+     the card is one object now, and this rides in with it. */
+}
+
+/* The SEAT, not the pill: equal-width and centred on one cutout's head. A 404
+   leaves one man and one seat, which then takes the whole box and centres on
+   its midpoint — 25% of the column, exactly where `--def:only-of-type` seats
+   the survivor. That correspondence is free, and it is the reason the seats
+   are `flex: 1 1 0` rather than a fixed 49%. */
+.dbc-reveal__face-row {
+  flex: 1 1 0;
+  /* Or a long name refuses to shrink and shoves the other seat off its head. */
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+}
+
+.dbc-reveal__face-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  max-width: 100%;
+  /* Load-bearing, and `max-width` alone does NOT cover it: a flex item's
+     default `min-width: auto` floors it at its content, and min beats max, so
+     the pill kept its full nowrap width and simply overflowed its seat. On a
+     390px phone that put "Ja'Quan McMillian CB" and "Jonathon Cooper LB" 20px
+     into each other — two chips overlapping is worse than the stacked pair
+     this replaced, because it is no longer clear which name goes with which
+     face. Zero here, and the name's own `min-width: 0` below, are what let the
+     ellipsis do its job instead. */
+  min-width: 0;
+  white-space: nowrap;
   padding: 0.35em 0.9em;
   border-radius: 1em;
-  max-width: 100%;
   background: rgba(0, 0, 0, 0.55);
   backdrop-filter: blur(6px);
   /* Safari only unprefixed `backdrop-filter` in 18.0, so an iOS 17 phone gets
      no blur at all without this. The 55% black keeps the names legible either
      way — this is polish, not legibility. */
   -webkit-backdrop-filter: blur(6px);
-  /* No entrance of its own. This plate arrived (#646) while the card still
-     assembled itself from moving parts, and rode `dbc-text-in` up from below
-     with the copy and the cutouts. Those are gone and so is that keyframe —
-     the card is one object now, and this rides in with it. */
-}
-
-.dbc-reveal__face-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5em;
-  max-width: 100%;
-  white-space: nowrap;
 }
 
 .dbc-reveal__face-name {
@@ -553,7 +596,15 @@
      default `min-width: auto` refuses to shrink below its content, so the pill
      would grow past the figure and be sliced by its overflow clip instead. */
   min-width: 0;
-  font-size: clamp(0.8rem, 2.1vh, 1.9rem);
+  /* The `cqw` term is the seat cap, restated as type: a chip is roughly 13.5em
+     wide at this weight (name + badge + padding) and a seat is ~21% of the
+     card, so anything above ~1.5cqw cannot fit its seat. `min()` keeps 2.1vh —
+     the size every other line on this card is tuned against — wherever it is
+     the smaller of the two, which includes the fullscreen TV this page exists
+     for, so the read from ten feet is unchanged. It binds on the INSET card,
+     where 2.1vh alone put "C.J. Gardner-Johnson" at 216px inside a 165px chip
+     and ellipsised a fifth of the name away. */
+  font-size: clamp(0.8rem, min(2.1vh, 1.5cqw), 1.9rem);
   font-weight: 800;
   color: #fff;
   overflow: hidden;
@@ -564,7 +615,10 @@
   padding: 0.12em 0.5em;
   border-radius: 0.28em;
   background: rgba(255, 255, 255, 0.18);
-  font-size: clamp(0.6rem, 1.5vh, 1.3rem);
+  /* Tracks the name's cap at the same ratio it always had (1.5/2.1), or the
+     badge stays viewport-sized while the name shrinks and starts crowding the
+     seat it was supposed to be leaving room in. */
+  font-size: clamp(0.6rem, min(1.5vh, 1.07cqw), 1.3rem);
   font-weight: 800;
   letter-spacing: 0.06em;
   color: rgba(255, 255, 255, 0.92);
@@ -1299,6 +1353,25 @@
 
   .dbc-reveal__model--def:only-of-type {
     left: 0;
+  }
+
+  /* The seats move here (re-centred, and each man is column-width rather than
+     120%), so the caption has to move with them or the names stop sitting
+     under the faces they name. Same arithmetic as the base rule: a head is at
+     `left` + half a width, so 28.5% and 71.5% of the column, 43% apart — two
+     43% seats centred on those points span 7% → 93%. A lone survivor lands on
+     50%, which is where `--def:only-of-type` puts him. */
+  .dbc-reveal__face {
+    left: 7%;
+    width: 86%;
+  }
+
+  /* A phone column is ~88vw, so a seat is ~38vw and the base padding is a
+     meaningful slice of it. Tightened so the ellipsis holds off a little
+     longer — the plate still reads, it just carries less air. */
+  .dbc-reveal__face-chip {
+    padding: 0.3em 0.6em;
+    gap: 0.35em;
   }
 
   .dbc-reveal__model {

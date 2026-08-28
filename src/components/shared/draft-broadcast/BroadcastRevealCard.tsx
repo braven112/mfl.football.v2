@@ -143,9 +143,11 @@ export function BroadcastRevealCard({
 
   // Displayed in POOL order so the better defender is the one in front (see the
   // `:first-of-type` z-index rule in draft-broadcast.css) and so the caption's
-  // two lines read left-to-right against the two cutouts. A 404 can therefore
-  // move the survivor from one side to the other — but it never replaces him,
-  // and his <img> is keyed by espnId so the node is not remounted.
+  // two chips sit under the men they name — the seats are assigned by source
+  // order in CSS, so pool order here is what keeps name and face paired. A 404
+  // can therefore move the survivor from one side to the other — but it never
+  // replaces him, and his <img> is keyed by espnId so the node is not
+  // remounted.
   const shownFaces = useMemo(
     () =>
       drawOrder
@@ -253,15 +255,21 @@ export function BroadcastRevealCard({
           {/* The headline is the DEFENSE ("Kansas City Chiefs"); without this
               the room is looking at two faces the card never names. Real text,
               not alt on decorative cutouts, so it is legible from ten feet.
-              One pill, one line per man, in the same order as the cutouts. */}
+              One chip per man, side by side on one line, each seated under the
+              head it names — the three-level nesting is what buys that: the
+              <p> spans the pair, each row is an equal-width SEAT centred on a
+              cutout, and the chip inside it is the pill that shrinks to the
+              name. See the seat arithmetic in draft-broadcast.css. */}
           {shownFaces.length > 0 ? (
             <p className="dbc-reveal__face">
               {shownFaces.map((face) => (
                 <span className="dbc-reveal__face-row" key={face.espnId}>
-                  <span className="dbc-reveal__face-name">{face.name}</span>
-                  {face.position ? (
-                    <span className="dbc-reveal__face-pos">{face.position}</span>
-                  ) : null}
+                  <span className="dbc-reveal__face-chip">
+                    <span className="dbc-reveal__face-name">{face.name}</span>
+                    {face.position ? (
+                      <span className="dbc-reveal__face-pos">{face.position}</span>
+                    ) : null}
+                  </span>
                 </span>
               ))}
             </p>
