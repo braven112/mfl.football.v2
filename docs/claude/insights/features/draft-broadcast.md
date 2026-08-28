@@ -184,3 +184,56 @@ Both cost a cycle and neither is visible in a diff:
 And one that is only a trap because the breakpoints disagree: in the portrait
 single-column layout `order` decides the STACK, not left-vs-right, so a base
 `order` swap inverts the phone (copy above player) unless it is re-pinned.
+
+### The inline preview is NOT the geometry this page ships in
+
+Every size on this board is a `vh` of the VIEWPORT, but `.dbc` is only
+`calc(100vh - 12rem)` tall until someone hits Full screen, where it becomes
+`100vh`. So an element that is 34vh of the viewport occupies ~41% of the inline
+board and exactly 34% of the fullscreen one. Judging a size from an inline
+screenshot overstates it by about a fifth, which is the difference between "that
+crest is crowding the rails" and "that crest is fine".
+
+Screenshot it in the shape it ships in. No fullscreen API needed — inject
+
+```css
+.dbc { height: 100vh !important; position: fixed !important; inset: 0 !important;
+       z-index: 99999 !important; border-radius: 0 !important; }
+html, body { overflow: hidden !important; }
+```
+
+after load and the geometry matches the TV. Do NOT `display: none` the site
+chrome to get there: hiding `main` collapses `.dbc` and every measurement comes
+back as a zero-size rect, which reads as a broken selector rather than a broken
+harness.
+
+Measure, don't eyeball: `getBoundingClientRect()` on the crest, the stage and
+the rails catches an overflow that `overflow: hidden` has already cropped out of
+the screenshot. At 1920×1080 the stage is 600px; on a 390×844 phone it is 231px,
+which is why a size that is comfortable on the TV clips the pick line off a
+phone. Any change to the stage stack needs a measurement at BOTH.
+
+### Stacked, the crest is capped by the copy; side by side it is not
+
+The on-the-clock crest sat at 17vh for one reason: stacked above the name, the
+two shared the stage's vertical budget and anything larger pushed the copy into
+the rails. Moving the copy to the crest's right made them split WIDTH — which a
+1920px board has spare — and the same crest went to 34vh with room left over.
+When a vertical constraint is what is capping an element, changing the axis is
+cheaper than negotiating for pixels.
+
+### `display: none` is invisible to `+`, `:has()` and every other selector
+
+`hideOnError` hides a 404'd crest with an inline `display: none`, which leaves
+the `<img>` in the DOM. So a rule that adapts the copy to "is there a crest"
+cannot be written as `.dbc-idle__crest + .dbc-idle__clock-copy` alone — that
+matches a hidden crest exactly as it matches a visible one, and `:has()` has the
+same blind spot. There are two distinct no-crest cases and they need different
+mechanisms: a franchise with no icon never renders the element (the sibling
+combinator covers it), and a 404 needs the handler to flag an ancestor
+(`closest('.dbc-idle__clock')?.classList.add('is-crestless')`).
+
+That flag then inherits the bug the `<img>` key was already added to prevent:
+state written onto a REUSED node outlives the team it was written for. Keying
+only the image left the row's flag stuck for every franchise after the first
+404. Key whatever element the state lands on, not just the one that failed.
