@@ -10,6 +10,7 @@
     "about.astro",
     "activity.astro",
     "calendar.astro",
+    "draft-broadcast.astro",
     "draft-predictor.astro",
     "draft-room.astro",
     "franchises/[id].astro",
@@ -34,9 +35,10 @@
   ],
   "notes": {
     "threshold": "80 is not arbitrary. At the time of recording the largest thin sibling was pecking-order/[year]/[week].astro at 75 lines and the smallest forked one was mock-draft/[sessionId].astro at 98, so the cut falls in an empty band rather than through the middle of a distribution. Raising it to slip a page through is a change to this file and will show up in review.",
-    "scale": "These 24 routes carry ~57,800 lines between them. rosters.astro alone is 12,521 + 2,465 + 245; players.astro is 4,246 + 2,249; playoffs.astro is 2,275 + 2,939.",
+    "scale": "These 25 routes carry ~58,300 lines between them. rosters.astro alone is 12,521 + 2,465 + 245; players.astro is 4,246 + 2,249; playoffs.astro is 2,275 + 2,939.",
     "bestFirstTarget": "lineup.astro (2,574 vs 2,580) is the purest fork in the repo \u2014 two files of nearly identical length that drifted apart rather than one growing new features. It is the cheapest large win and the one to take first.",
     "knownGap": "Size is measured on the ROUTE FILE only. A pair of thin routes delegating to two per-league component trees would pass this guard while being just as forked. That hole is real; it is accepted because the regression this exists to stop is the cheap one \u2014 copying a league's page file to the next league and editing it \u2014 and because measuring duplication across component trees needs a different tool than a line count.",
-    "whyNotRatchetLines": "The metric is the SET of forked routes, not their line count. Ratcheting total lines would fail this test on any ordinary three-line bugfix to rosters.astro, which is hostile and would get the guard disabled. What must not regress is the NUMBER OF PAGES built twice."
+    "whyNotRatchetLines": "The metric is the SET of forked routes, not their line count. Ratcheting total lines would fail this test on any ordinary three-line bugfix to rosters.astro, which is hostile and would get the guard disabled. What must not regress is the NUMBER OF PAGES built twice.",
+    "draftBroadcast": "draft-broadcast.astro (theleague:225, afl-fantasy:212) landed on main in PRs #650-#653 while the branch introducing this guard was in flight, so it is baselined rather than fixed here. It is NOT unavoidable and should not be read as blessed: both copies already share the same island (components/shared/draft-broadcast/DraftBroadcast), so what is forked is only the per-league server-side data assembly, and their own header documents the whole difference as two things \u2014 TheLeague drafts as one unit where the AFL drafts by conference, and TheLeague's board is rookies-only. That is a tractable unification and a good Tier-2 target; it was kept out of a Storybook PR because turning it into a draft-broadcast refactor is how a reviewable change stops being reviewable."
   }
 }
