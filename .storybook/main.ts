@@ -33,9 +33,20 @@ const config: StorybookConfig = {
    */
   addons: ['@storybook/addon-mcp'],
 
-  // Franchise crests, team icons and fonts are referenced by absolute path
-  // (/assets/...) exactly as the app serves them from public/.
-  staticDirs: ['../public'],
+  /**
+   * Franchise crests, team icons and the self-hosted UFC Sans faces are
+   * referenced by absolute path (/assets/...) exactly as the app serves them
+   * from public/.
+   *
+   * `static/fonts` carries the ONE font the app does not serve from public/:
+   * Vend Sans, which production gets from astro.config.ts's font integration
+   * — config Storybook never loads (Trap 4). It is mapped to a distinct
+   * /storybook-fonts prefix so it is obvious the file is Storybook's and not
+   * the app's, and it stays out of public/ so the shipped Vercel bundle is
+   * still byte-identical with or without Storybook. See
+   * .storybook/preview-typography.css.
+   */
+  staticDirs: ['../public', { from: './static/fonts', to: '/storybook-fonts' }],
 
   framework: {
     name: '@storybook-astro/framework',

@@ -117,7 +117,67 @@ Use the <strong>Theme</strong> and
 
 renders as "and**League**". Keep an inline element and its surrounding spaces
 on ONE source line. The same applies to `fonts`, `integrations`, and the
-`process.env` hydration — a story gets none of it.
+`process.env` hydration — a story gets none of it. `fonts` is the one that had
+already shipped a wrong canvas; see Trap 4b.
+
+## Trap 4b — the FONTS are two separate misses, and both look like "close enough"
+
+Every story rendered in **Times New Roman** (body) and Storybook's own Nunito
+Sans (headings) until Aug 2026, with `document.fonts` reporting **zero** loaded
+faces. It reads as a slightly-off canvas rather than as a bug, which is why it
+survived the whole spike.
+
+Two independent causes, and fixing either alone leaves the canvas wrong:
+
+1. **`--font-vend-sans` does not exist.** `astro.config.ts` registers Vend Sans
+   via `fontProviders.google()`, and the layouts emit the @font-face plus the
+   variable with `<Font cssVariable="--font-vend-sans" />` (`astro:assets`).
+   Storybook loads neither (Trap 4), so tokens.css's
+   `--font-family-base: var(--font-vend-sans, 'Vend Sans'), system-ui, …`
+   resolved past the variable AND past the unloaded family to the system stack.
+2. **Nothing APPLIES the tokens.** The `html`/`body` `font-family`, the
+   `h1–h4 { font-family: var(--font-display) }` rule and the `code` rule all
+   live in `TheLeagueLayout`'s own `<style>` block. A component carries none of
+   them, so even 'UFC Sans Condensed' — which tokens.css already @font-faces and
+   `staticDirs` already serves — never reached a single heading.
+
+`.storybook/preview-typography.css` fixes both: it declares Vend Sans, sets
+`--font-vend-sans`, and mirrors the layout's typography rules. Keep it in sync
+with the layout's `<style>` block.
+
+**The font is self-hosted, not linked from fonts.googleapis.com.** Chromatic
+waits for network idle before capturing, so a third-party font request is a
+timeout risk and an intermittent one is a false diff — the same reasoning that
+stubbed the playoff-hero headshots to data URIs. It also matches production,
+where Astro's font pipeline self-hosts too. The file lives in
+`.storybook/static/fonts/` and is mapped to `/storybook-fonts` by `staticDirs`
+— deliberately NOT in `public/`, so the shipped Vercel bundle stays
+byte-identical. One 36 KB variable woff2 (latin subset) covers 400/500/600/700,
+declared as four faces exactly as Google delivers it.
+
+Verified in Chromium against the static build:
+
+| | before | after |
+|---|---|---|
+| `html` / `body` font | `"Times New Roman"` | `"Vend Sans", system-ui, …` |
+| `h1` font | Nunito Sans (Storybook's) | `"UFC Sans Condensed", …` |
+| `html` font-size | 16px (browser default) | 18.912px (`--font-size-base` clamp) |
+| loaded faces | none | UFC Sans Condensed 700, Vend Sans 400/700 |
+
+That `font-size` row is the one to expect fallout from: the layout sets
+`html { font-size: var(--font-size-base) }`, so reproducing it re-scales every
+rem in the canvas — correct, but it moves **every** Chromatic baseline. Since
+`preview.ts` changed, TurboSnap forces a full rebuild anyway, so budget one
+full-capture build and a review pass over all of it.
+
+Entry count unchanged at 67 with no `Dropped story` (Trap 1) on either side.
+
+`tests/storybook-fonts.test.ts` pins the chain — the `preview.ts` import, the
+`--font-vend-sans` declaration, the `staticDirs` mapping, and that every
+`@font-face` src resolves to a file on disk. Every link in it fails silently
+(the font 404s, the canvas falls back, the build stays green), which is the
+whole reason it is a test and not a comment. It also fails if a third-party
+font URL is reintroduced, or if the font is moved into `public/`.
 
 ## Trap 5 — the layout injects styles a story never gets
 
