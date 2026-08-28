@@ -460,6 +460,10 @@
   max-width: 100%;
   background: rgba(0, 0, 0, 0.55);
   backdrop-filter: blur(6px);
+  /* Safari only unprefixed `backdrop-filter` in 18.0, so an iOS 17 phone gets
+     no blur at all without this. The 55% black keeps the names legible either
+     way — this is polish, not legibility. */
+  -webkit-backdrop-filter: blur(6px);
   animation: dbc-text-in 620ms 120ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 

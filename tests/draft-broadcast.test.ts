@@ -405,9 +405,21 @@ describe('buildDefenseFacesByTeam', () => {
     expect(pairable).toBe(32);
   });
 
-  it('carries no faces for players who have headshots of their own', () => {
-    const rb = { id: '1', name: 'A Back', position: 'RB', nflTeam: 'KCC', headshot: '' } as BroadcastPlayer;
-    expect(buildDefenseFacesByTeam([rb])).toEqual({});
+  it('keys off POSITION alone — a non-DEF contributes nothing', () => {
+    // Deliberately NOT gated on `headshot`: an offensive player with no ESPN
+    // image still must not borrow his team's defenders, and a DEF whose feed
+    // somehow carries a headshot is still a crest. Both fixtures below are
+    // RBs; the headshot value is irrelevant to the gate, and pinning the test
+    // to it would imply a coupling the function does not have.
+    const rbNoImage = { id: '1', name: 'A Back', position: 'RB', nflTeam: 'KCC', headshot: '' } as BroadcastPlayer;
+    const rbWithImage = {
+      id: '2',
+      name: 'B Back',
+      position: 'RB',
+      nflTeam: 'KCC',
+      headshot: 'https://a.espncdn.com/i/headshots/nfl/players/full/1234.png',
+    } as BroadcastPlayer;
+    expect(buildDefenseFacesByTeam([rbNoImage, rbWithImage])).toEqual({});
   });
 
   it('falls back to the crest-only reveal for an unmapped defense', () => {
