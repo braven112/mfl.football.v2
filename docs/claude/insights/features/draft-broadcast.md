@@ -593,3 +593,23 @@ evidence the resolution logic emitted the right URL, and the swap destroys it.
 Note also that a reveal is not on screen at load: the rehearsal replays picks on
 a poll interval, so a fixed `waitForTimeout` mostly screenshots the idle board.
 Wait on the selector (`?rehearse=3` reaches a reveal in well under a minute).
+
+### Both rails lead with their image, and the chip came from player-cell
+
+"Up next" leads each row with the franchise crest and "Just off the board"
+leads with the player's headshot, both in a fixed-width second column sized off
+one `--dbc-rail-figure` on `.dbc-idle__rails`. Two things that are load-bearing
+rather than styling:
+
+- **The crest wrapper renders whether or not there is a crest.** A franchise
+  with no icon, or one whose crest 404s into `hideOnError`'s inline
+  `display: none`, would otherwise collapse its own grid column and pull that
+  row's name left out of line with the rows above it — the same
+  `display: none`-is-invisible-to-selectors trap the on-the-clock lockup hit
+  further up this file, in its cheaper form.
+- **The headshot chip is the shared `.player-cell__avatar`, not a copy**, which
+  means this board inherits two `html.dark`-keyed treatments it cannot rely on.
+  See "The avatar chip on an ALWAYS-DARK surface" in
+  `docs/claude/insights/features/player-composites.md` — the board is dark for
+  a light-theme viewer too, so both ring properties take the dark-mode ring and
+  a DEF chip resolves its own dark logo URL.

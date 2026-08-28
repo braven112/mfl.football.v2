@@ -1549,3 +1549,49 @@ Two smaller things that would bite a re-implementation:
 
 Guarded by `tests/player-modal-owner-strip.test.ts` and the owner cases in
 `tests/afl-free-agents-live.test.ts`.
+
+## The avatar chip on an ALWAYS-DARK surface: `html.dark` is the wrong hook (2026-08-28)
+
+The draft broadcast's "Just off the board" rail reuses the standalone
+`.player-cell__avatar` chip (see the 2026-07-22 section above), and reusing it
+there surfaced a trap that applies to every surface in this repo that is dark
+in BOTH themes — the broadcast board, the player modal band, anything painting
+team colour as its background.
+
+**The chip's dark treatment is keyed on `html.dark`, which is a property of the
+VIEWER, not of the surface.** `player-cell.css` swaps the ring under
+`html.dark .player-cell__avatar:not(--def)`, and the global NFL-logo swap
+(`buildNflLogoDarkCss`) is `html.dark img[src="<light>"] { content: url(…) }`.
+An owner whose site theme is light, driving a TV that is dark regardless, gets
+neither: a generic translucent-white ring instead of the team-tinted one, and
+the dark-outlined marks (Raiders, Jets, Jaguars) the swap exists to fix,
+painted on a dark rail. Two consequences for any always-dark consumer:
+
+- **Set BOTH halves of the ring pair to `getPlayerAvatarRingDark(...)`.** Not
+  ring→light / ring-dark→dark as an ordinary table row does — this surface
+  wants the light-on-dark echo whichever theme the viewer is in, so both
+  properties carry the same dark value. Setting only one is the silent
+  gray-ring failure `tests/team-color-backdrop-guard.test.ts` exists to catch,
+  and it caught exactly that on the first run of this change.
+- **Resolve the dark logo URL yourself** — `resolveNflDarkLogoUrl(code)` from
+  `nfl-logo-dark-css.ts` is importable client-side (it reads the tiny
+  `nfl-dark-logos-manifest.json`), so a DEF chip can point straight at the dark
+  cut with the light SVG as its fallback instead of waiting for a CSS swap that
+  may never fire. The swap rules key on LIGHT srcs, so a dark URL set this way
+  is never double-swapped.
+
+Two smaller things:
+
+- **The chip is content-box, so it paints 2px wider than
+  `--player-avatar-size`.** The `:not(--def)` rule's 1px ring lands outside the
+  declared width. Irrelevant in a table cell, but it put the chip out of line
+  with a sibling column sized off the same number, half a board away — add
+  `box-sizing: border-box` when the chip has to align with something else.
+- **Walk the 404 chain in React state, not by reassigning `img.onerror`.**
+  `PlayerCell.tsx` does the latter (its React `onError` and an imperative
+  `img.onerror` both fire on the same failure, in an order nothing pins), which
+  is survivable in a table and not worth copying. A `useState` index into a
+  precomputed URL chain — the shape `BroadcastRevealCard` already uses for its
+  cutout cascade — is the same four hops (ESPN NFL → ESPN college → MFL photo →
+  silhouette) with nothing to race. Clamp the index: a 404 on the LAST entry
+  must not walk past it and blank the chip.
