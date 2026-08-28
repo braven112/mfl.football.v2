@@ -255,3 +255,59 @@ Mechanism (both in `afl-hero-resolver.ts`):
 - **Keeper deadline 8:45 PM** (was 8:00), still July 15 (constitution date).
 - **New-season rollover June 1** (was Feb 15), matching the AFL league-year
   rollover in `leagues-data.mjs`.
+
+## 2026-08-28 - Leading with the viewer's own conference stranded the live board
+
+The conference-aware lead (2026-07-08 above) fixed one problem and created
+another. The hero leads with the viewer's OWN conference draft, and the two
+conferences draft on different DAYS — AL Saturday 12:30, NL Sunday 9 AM. So on
+AL draft day an NL owner led with a not-yet-live NL card whose CTA pointed at
+the draft order, while the AL board was live at that moment and unreachable
+from the homepage. Reversing it (lead with whichever is live) just recreates
+the original bug in the other direction: an NL owner staring at the AL card.
+
+The fix is a SECOND link, not a different lead. `pickLeadCalendarEvent` now
+attaches `view.secondaryLinks` for every conference whose draft `isActive`,
+rendered by `AflEventHero` as a ghost CTA with a live dot. Three things make it
+behave:
+
+- **Deduped against `view.link`.** When the viewer's own conference is live the
+  CTA already IS that board, and a secondary link repeating it is noise. The
+  dedupe is what makes one rule produce the right output for all four cases
+  (own-live, sibling-live, both, neither) without branching on who is viewing.
+- **LIVE only.** A board for a draft that has not started is 108 empty slots,
+  which is exactly why the pre-draft CTA points at the draft order instead.
+- **Attached post-resolve, not in the view builder.** A builder in `EVENT_VIEW`
+  only receives its own event, so it cannot know the sibling's live state. The
+  pairing already existed one level up.
+
+**`conferenceDraft` was dead-but-tested data for seven weeks.** The 2026-07-08
+entry above removed the `afl-draft-pills` that consumed it, but the resolver
+kept computing it and `tests/afl-conference-draft-pills.test.ts` kept pinning
+it. Worth knowing before you delete something that "nothing renders": the
+pairing logic (and its anchor-on-rawEvents fix) was still correct and ready.
+
+### A conditional type on a union silently resolves to `never`
+
+The field was typed:
+
+```ts
+conferenceDraft?: AflHeroState extends { kind: 'calendar-event' }
+  ? AflHeroState['conferenceDraft'] : never;
+```
+
+`AflHeroState` is a discriminated UNION, so `AflHeroState extends {kind: 'x'}`
+asks whether the WHOLE union is that member — always false. The field was
+`never`. Nothing caught it because nothing consumed the field: the assignment
+type-checked as an error nobody was looking at (it sat in the 1913-error
+ratchet), and the first read of `.al` off it added two more. Use `Extract`:
+
+```ts
+conferenceDraft?: Extract<AflHeroState, { kind: 'calendar-event' }>['conferenceDraft'];
+```
+
+Applies to any per-variant field on the `AflHeroState` / `HeroState` unions.
+The general shape of the trap: a conditional type is only a narrowing when the
+checked type is a naked type PARAMETER (`T extends … ? …`), where it
+distributes over the union. Written against a concrete union it evaluates once,
+against the whole thing.
