@@ -137,14 +137,18 @@ function loadByeWeeks(year: number): Map<string, number> {
 /**
  * How many marquee defenders ride along with a team defense.
  *
- * The reveal holds the screen for 18s and rotates a face every 6s, so three is
- * exactly what a full-length reveal can show. Sending the pool's full six
- * would double this payload for faces the card can never reach.
+ * The card shows TWO of them, drawn at random, so this is the size of the hat
+ * rather than a display budget. Five gives ten possible pairings — deep enough
+ * that the same defense drafted in both conferences (`duplicatePlayers` allows
+ * it) is unlikely to show the room the same two men, and shallow enough that
+ * every name in it is one the room recognises. The pool's sixth is a
+ * rotational safety nobody is looking up.
  */
-const DEFENSE_FACE_LIMIT = 3;
+const DEFENSE_FACE_LIMIT = 5;
 
 /**
- * The marquee defenders that stand in for a team defense's missing headshot.
+ * The marquee defenders a team defense can be represented by — the card draws
+ * two of them.
  *
  * Returns undefined — not an empty array — for everyone else, so the extra
  * costs nothing on the wire for the ~2600 players who are people. A defense

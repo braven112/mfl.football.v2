@@ -350,15 +350,23 @@ describe('buildDefenseFaces', () => {
     expect(faces.length).toBeGreaterThan(0);
     expect(faces[0].name).toBeTruthy();
     expect(faces[0].espnId).toMatch(/^\d+$/);
-    // The pool's own order is the ranking; the card leads with the top man.
+    // The pool's own order is the ranking, and it survives the trim — the card
+    // draws from the TOP five, so a reshuffle here would put a rotational
+    // safety in the same hat as the unit's best player.
     const pool = JSON.parse(readFileSync('src/data/theleague/def-spotlight-players.json', 'utf-8'));
-    expect(faces[0].name).toBe(pool.teams.KC[0].name);
+    expect(faces.map((f) => f.name)).toEqual(
+      pool.teams.KC.slice(0, faces.length).map((d: { name: string }) => d.name)
+    );
   });
 
-  it('caps the pool at what a full-length reveal can actually show', () => {
-    // 18s reveal / 6s per face = 3. Shipping the pool's full six would double
-    // the payload for faces the card can never reach.
-    expect(buildDefenseFaces(def('KCC'))!.length).toBeLessThanOrEqual(3);
+  it('ships a hat deep enough to draw from, but only of names worth showing', () => {
+    // The card shows TWO of these, at random, so this is the size of the draw
+    // rather than a display budget. Capped at five: the pool's sixth man is a
+    // rotational safety the room does not recognise. The floor matters as much
+    // as the cap — a one-man pool cannot fill a pair.
+    const faces = buildDefenseFaces(def('KCC'))!;
+    expect(faces.length).toBeLessThanOrEqual(5);
+    expect(faces.length).toBeGreaterThanOrEqual(2);
   });
 
   it('resolves MFL team codes, not just ESPN ones', () => {
@@ -377,7 +385,9 @@ describe('buildDefenseFaces', () => {
     const defenses = players.filter((p) => (p.position || '').toUpperCase() === 'DEF');
     expect(defenses.length).toBe(32);
     for (const d of defenses) {
-      expect(buildDefenseFaces(def(d.team)), `${d.name} (${d.team})`).toBeTruthy();
+      // Two, not one: every defense has to be able to fill the pair.
+      expect(buildDefenseFaces(def(d.team))?.length ?? 0, `${d.name} (${d.team})`)
+        .toBeGreaterThanOrEqual(2);
     }
   });
 

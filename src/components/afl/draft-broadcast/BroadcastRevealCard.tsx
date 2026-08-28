@@ -21,15 +21,18 @@
  *     name is wasting the best real estate of the night.
  *   - A TEAM DEFENSE gets real faces, not an empty figure column. `DEF` is
  *     excluded from the site-wide cutout rule (a DEF "player" is a crest), so
- *     the card opts back in the same way the Free Agents hero does: it shows
- *     the unit's marquee defenders from the shared `def-spotlight-players`
- *     pool, rotating while the card holds the screen. Unlike the hero it leads
- *     with the TOP defender rather than a random one — the room should see the
- *     biggest name on the defense first — which is also the player modal's
- *     rule (see docs/claude/insights/features/player-composites.md).
+ *     the card opts back in with TWO of the unit's marquee defenders from the
+ *     shared `def-spotlight-players` pool — drawn at random from the top five
+ *     and then held for the reveal (Brandon, 2026-08-28). Two rather than one
+ *     because a defense is a unit and one man reads as a player card; they
+ *     stand shoulder-over-shoulder at 90% scale so both heads clear.
+ *     Not rotated: the Free Agents hero cycles faces because it is ambient
+ *     furniture an owner scrolls past, but this card IS the moment, and a face
+ *     that changes underneath the room mid-reveal reads as a second pick
+ *     landing. See docs/claude/insights/features/player-composites.md.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { DraftRoomPick } from '../../../types/draft-room';
 import type { DraftRoomTeam } from '../../../types/draft-room';
 import type { BroadcastPlayer } from '../../../types/draft-broadcast';
@@ -42,16 +45,6 @@ import {
   resolveBroadcastGradient,
 } from '../../../utils/draft-broadcast';
 import { getCollegeHeadshot, getPlayerHeadshot } from '../../../constants/roster-constants';
-
-/**
- * How long one defender's face holds before the next takes over.
- *
- * 6s divides the 18s reveal into exactly three faces, and means a RUSHED
- * reveal (`REVEAL_RUSH_MS`, also 6s) shows one face and never swaps — a board
- * that is already behind the room should not spend its shortened turn
- * animating.
- */
-const DEF_FACE_MS = 6_000;
 
 interface Props {
   pick: DraftRoomPick;
@@ -97,30 +90,43 @@ export function BroadcastRevealCard({
   }, []);
 
   // ── Team-defense faces ──
-  // Server-joined onto the player, so there is nothing to fetch and nothing to
-  // look up here. A defender whose ESPN headshot 404s is retired from the pool
-  // rather than hidden in place: with three faces on a 6s rotation, hiding one
-  // would leave the figure column empty for a third of the reveal, and the
-  // next face is a better answer than a gap.
+  // Two defenders out of the unit's top five, drawn once and then held for the
+  // whole reveal. Server-joined onto the player, so there is nothing to fetch
+  // and nothing to look up here.
+  //
+  // The draw is stored as SEEDS rather than indices, which is what makes the
+  // 404 path work: a defender whose ESPN headshot is missing is retired from
+  // the pool, the seeds re-land on survivors, and the column shows a different
+  // star instead of a gap. Indices would have to be re-derived by hand as the
+  // list shrank underneath them.
+  //
+  // Re-drawn per reveal for free: `DraftBroadcast` keys this card by pick, so
+  // every selection remounts it. That matters in the AFL specifically —
+  // `duplicatePlayers` lets both conferences draft the same defense, and a
+  // fixed pair would show the room the identical card twice.
   const defenseFaces = player?.defenseFaces;
   const [deadFaces, setDeadFaces] = useState<ReadonlySet<string>>(() => new Set());
+  const [seedA] = useState(() => Math.random());
+  const [seedB] = useState(() => Math.random());
   const liveFaces = useMemo(
     () => (defenseFaces ?? []).filter((f) => !deadFaces.has(f.espnId)),
     [defenseFaces, deadFaces]
   );
-  const [faceTick, setFaceTick] = useState(0);
-  // Modulo rather than a bounded index: retiring a 404'd face shortens the
-  // list under the counter, and wrapping is the correct response either way.
-  const defenseFace = liveFaces.length > 0 ? liveFaces[faceTick % liveFaces.length] : null;
 
-  useEffect(() => {
-    if (liveFaces.length < 2) return;
-    // Reduced motion gets the top defender, held. The face is decoration; the
-    // pick is the information, and it never moves.
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
-    const id = setInterval(() => setFaceTick((t) => t + 1), DEF_FACE_MS);
-    return () => clearInterval(id);
-  }, [liveFaces.length]);
+  // Two DISTINCT men. The second is drawn from the n-1 slots that are not the
+  // first and then shifted past it — sampling twice and retrying on a collision
+  // would make the draw depend on render count, which is not a thing a seed can
+  // survive. Returned in POOL order so the better defender is the one in front,
+  // and so the caption's two lines read left-to-right against the two cutouts.
+  const shownFaces = useMemo(() => {
+    const n = liveFaces.length;
+    if (n === 0) return [];
+    const a = Math.floor(seedA * n);
+    if (n === 1) return [liveFaces[a]];
+    let b = Math.floor(seedB * (n - 1));
+    if (b >= a) b += 1;
+    return [a, b].sort((x, y) => x - y).map((i) => liveFaces[i]);
+  }, [liveFaces, seedA, seedB]);
 
   const handleFaceError = useCallback((espnId: string) => {
     setDeadFaces((prev) => {
@@ -201,28 +207,34 @@ export function BroadcastRevealCard({
               onError={handleCutoutError}
             />
           ) : null}
-          {/* Keyed by espnId so React swaps the NODE on rotation — reusing one
-              <img> would leave the previous defender on screen until the new
-              file decoded, and would not replay the entrance animation. */}
-          {defenseFace ? (
+          {/* Keyed by espnId so a 404 swap replaces the NODE: reusing one <img>
+              would leave the missing defender's broken frame on screen until
+              the replacement decoded, and would not replay the entrance
+              animation the rest of the card gets. */}
+          {shownFaces.map((face) => (
             <img
-              key={defenseFace.espnId}
-              className="dbc-reveal__model"
-              src={getPlayerHeadshot(undefined, defenseFace.espnId)}
+              key={face.espnId}
+              className="dbc-reveal__model dbc-reveal__model--def"
+              src={getPlayerHeadshot(undefined, face.espnId)}
               alt=""
               decoding="async"
-              onError={() => handleFaceError(defenseFace.espnId)}
+              onError={() => handleFaceError(face.espnId)}
             />
-          ) : null}
+          ))}
           {/* The headline is the DEFENSE ("Kansas City Chiefs"); without this
-              the room is looking at a face the card never names. Real text, not
-              alt on a decorative cutout, so it is legible from ten feet. */}
-          {defenseFace ? (
-            <p className="dbc-reveal__face" key={`${defenseFace.espnId}-name`}>
-              <span className="dbc-reveal__face-name">{defenseFace.name}</span>
-              {defenseFace.position ? (
-                <span className="dbc-reveal__face-pos">{defenseFace.position}</span>
-              ) : null}
+              the room is looking at two faces the card never names. Real text,
+              not alt on decorative cutouts, so it is legible from ten feet.
+              One pill, one line per man, in the same order as the cutouts. */}
+          {shownFaces.length > 0 ? (
+            <p className="dbc-reveal__face">
+              {shownFaces.map((face) => (
+                <span className="dbc-reveal__face-row" key={face.espnId}>
+                  <span className="dbc-reveal__face-name">{face.name}</span>
+                  {face.position ? (
+                    <span className="dbc-reveal__face-pos">{face.position}</span>
+                  ) : null}
+                </span>
+              ))}
             </p>
           ) : null}
         </div>
