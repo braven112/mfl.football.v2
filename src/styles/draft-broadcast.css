@@ -406,10 +406,13 @@
    of the pair is that it is not a lesser card (Brandon, 2026-08-28).
 
    That makes each head ~0.30 column-widths, so the two need at least that much
-   daylight between head centres or they occlude. They are placed ±21.5% off
-   the column, which sets head centres 0.43 columns apart: 0.13 columns of
-   clear air between head edges, and 57% of the back man's body behind the
-   front one, which is the shoulder overlap.
+   daylight between head centres or they occlude. The seats are 0.43 columns
+   apart (-71.5% and -28.5%), which leaves 0.13 columns of clear air between
+   head edges and 57% of the back man's body behind the front one — the
+   shoulder overlap. Only the SPACING is load-bearing there; the pair as a
+   whole then sits half a player-width left of the single-cutout position
+   (Brandon, 2026-08-28), which is why both numbers are negative. Move the pair
+   by shifting both seats together and the composition is preserved.
 
    POSITIONED, not flexed, and that is the whole reason this rule exists.
    The pair shipped as two flex items with `margin-left: -57%` on the second,
@@ -430,7 +433,7 @@
 }
 
 .dbc-reveal__model--def:nth-of-type(1) {
-  left: -21.5%;
+  left: -71.5%;
   /* The first man is the higher-ranked one (`shownFaces` is returned in pool
      order) and he is the one in front, so his ear is never behind the other
      man's shoulder. Source order alone would paint the second on top. */
@@ -438,13 +441,14 @@
 }
 
 .dbc-reveal__model--def:nth-of-type(2) {
-  left: 21.5%;
+  left: -28.5%;
 }
 
-/* A 404 can leave one man standing. Centre him rather than stranding him at
-   the first seat's -21.5%, which would clip the head of a lone cutout. */
+/* A 404 can leave one man standing. Put him where a single cutout goes rather
+   than leaving him at the first seat, which is half a player further left than
+   the pair's own centre. */
 .dbc-reveal__model--def:only-of-type {
-  left: 0;
+  left: -50%;
 }
 
 /* ── Team-defense face caption ──
@@ -1134,6 +1138,24 @@
     align-self: stretch;
     min-height: 0;
     align-items: flex-end;
+  }
+
+  /* The pair's half-a-player LEFT shift exists to clear the copy column, and
+     in this layout there is no copy column — the copy stacks UNDERNEATH. Left
+     in, the shift walks the first man's head to x=-88 on a 390px phone, off
+     the card entirely. Re-centred on the figure instead: same 0.43-column
+     spacing, no offset. Same specificity as the base seats and later in the
+     file, which is what lets these win. */
+  .dbc-reveal__model--def:nth-of-type(1) {
+    left: -21.5%;
+  }
+
+  .dbc-reveal__model--def:nth-of-type(2) {
+    left: 21.5%;
+  }
+
+  .dbc-reveal__model--def:only-of-type {
+    left: 0;
   }
 
   .dbc-reveal__model {

@@ -425,21 +425,30 @@ different from every other composite, and why:
     column wide (Brandon, 2026-08-28 — two defenders shrunk to fit read as a
     smaller moment than one player), so each head is ~0.30 column-widths and
     they need at least that much daylight between head centres or they occlude.
-    Seated at ±21.5% of the column, head centres land 0.43 columns apart:
-    measured at 1920x1080, 65px of head clearance and 57% body overlap.
+    The seats are 0.43 columns apart, which at 1920x1080 is 65px of head
+    clearance and 57% body overlap. Only that SPACING is load-bearing; where
+    the pair sits as a whole is separate, and it sits half a player-width left
+    of the single-cutout position (`-71.5%` / `-28.5%`, Brandon 2026-08-28) so
+    it clears the copy column — measured, the first head now starts at x=942
+    against copy ending at x=941. The portrait breakpoint re-centres to ±21.5%:
+    there the copy stacks UNDERNEATH rather than beside, so the shift has
+    nothing to clear and instead walked the first head to x=-88 on a 390px
+    phone, off the card entirely.
   - **Position the pair, do not flex it — flex `center` does NOT split the
     overflow.** The pair first shipped as two flex items with `margin-left:
     -57%` on the second, assuming `justify-content: center` would hang the
     oversized group evenly off both edges. Measured, it did not: the group sat
-    flush with the figure's RIGHT edge and hung entirely off the left, so the
-    figure's own `overflow: hidden` cut **40px off the left man's head on the
-    TV and 26px on a phone** — a sliced face, not the intended shoulder trim,
-    and invisible in a diff. Absolute `left` offsets off both edges are
-    symmetric by construction. `:only-of-type { left: 0 }` re-centres the lone
-    survivor of a 404, who would otherwise be stranded at the first seat and
-    clipped. Any future change here must be MEASURED against the figure's box,
-    not the card's — the card is wider, so head-inside-card says nothing about
-    what the figure clips.
+    flush with the figure's RIGHT edge and hung entirely off the left, which is
+    unpredictable placement for a composition whose whole point is a measured
+    head gap. On a phone it put the first man's head past the CARD's left edge
+    and sliced his face. Absolute `left` offsets are placed by construction.
+  - **`.dbc-reveal__figure` is `overflow: visible` — the CARD clips, not the
+    figure.** Worth stating because the first write-up of the finding above got
+    it wrong in the other direction, claiming the figure cut 40px off a head on
+    the TV. It did not: those coordinates sat outside the figure's box, and a
+    visible-overflow box does not clip. Only `.dbc-reveal`'s own `overflow:
+    hidden` ever cuts a cutout, which is why the portrait case was real and the
+    landscape one was not. Measure against the CARD.
   - **Double-class the modifier** (`.dbc-reveal__model.dbc-reveal__model--def`).
     The portrait and short-landscape breakpoints re-declare
     `.dbc-reveal__model`'s width AND `max-width`/`max-height` at equal
