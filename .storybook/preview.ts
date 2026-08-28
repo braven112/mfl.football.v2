@@ -111,9 +111,10 @@ const preview = definePreview({
       // for the snapshot-budget reasoning.
       modes: themeModes,
 
-      // External ESPN headshots load in the playoff heroes. Chromatic waits for
-      // network idle, but a small settle beat keeps a slow CDN response from
-      // being captured mid-load as a false diff.
+      // A short settle beat before capture. The fixtures are fully offline
+      // (headshots are inline data URIs, crests come from staticDirs), so this
+      // is only covering font application and layout settle, not a network
+      // round trip.
       delay: 300,
     },
   },

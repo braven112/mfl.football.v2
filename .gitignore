@@ -69,3 +69,10 @@ tests/eval/cut-watch-report-latest.json
 
 # Storybook build output (dev-only, never shipped)
 storybook-static/
+
+# Chromatic CLI artifacts. --diagnostics-file makes the CLI PERSIST this at the
+# repo root, so a local `pnpm chromatic` leaves it behind and committable.
+chromatic-diagnostics.json
+chromatic.log
+chromatic-build-*.xml
+build-storybook.log

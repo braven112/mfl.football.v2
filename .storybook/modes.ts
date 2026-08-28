@@ -15,10 +15,13 @@
  *     snapshotting them under the AFL skin would burn budget on a combination
  *     that never ships.
  *
- * At 22 stories that is (8 playoff x 2) + (14 loading x 4) = 72 snapshots per
- * full build, or roughly 69 full builds a month. TurboSnap (`--only-changed`,
- * wired up in the `chromatic` script) cuts a typical PR far below that by
- * snapshotting only the stories whose dependencies actually changed.
+ * Measured: (8 playoff x 2) + (13 loading x 4) = 68 snapshots per full build,
+ * roughly 73 full builds a month. 13 loading stories rather than 14 because
+ * `BrandedLoader/CyclingNarration` carries `disableSnapshot`.
+ *
+ * TurboSnap (`--only-changed`) narrows this once available, but Chromatic
+ * withholds it until 10 builds have run from CI, and an inherited snapshot
+ * still bills 0.2 rather than nothing.
  */
 
 export const themeModes = {

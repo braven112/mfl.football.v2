@@ -16,6 +16,15 @@ on:
     paths:
       - 'src/components/**'
       - 'src/styles/**'
+      # Stories reach past components: SemifinalHero renders through
+      # src/utils/franchise-brand.ts, and more will follow as the shared core
+      # is extracted. A util change that alters rendering must trigger a build,
+      # or the regression ships and is then auto-accepted as the new baseline
+      # on main — a visual test that certifies the bug.
+      - 'src/utils/**'
+      # Declared a visual input via --externals (crests and team icons render
+      # into the playoff heroes through staticDirs), so it belongs here too.
+      - 'public/assets/**'
       - 'stories/**'
       - '.storybook/**'
       - 'package.json'
@@ -25,7 +34,14 @@ on:
 
 concurrency:
   group: chromatic-${{ github.head_ref || github.ref }}
-  cancel-in-progress: true
+  # Superseding a feature-branch build is free — the snapshots it had already
+  # captured are billed either way, and only the newest head matters.
+  #
+  # NEVER cancel on main. Main is the only ref running --auto-accept-changes,
+  # so a cancelled build pays for its captures AND fails to accept them,
+  # leaving the baseline stale while the next PR diffs against the wrong
+  # reference. Two merges in quick succession would do exactly that.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   chromatic:

@@ -157,10 +157,25 @@ and pnpm resolves the framework's peer from the root, so it was bumped to
 on vite `^5` directly rather than as a peer, so it keeps its own nested 5.4.21
 and is unaffected.
 
-One real consequence: `pnpm build:tools` (`scripts/build-league-tools.mjs`)
-calls `vite build`, so re-running it now minifies with Vite 8 and the committed
-bundles under `public/assets/js/dist/` change by ~100 bytes. Functionally
-equivalent, but don't be surprised by the diff.
+**That bump changed a SHIPPED artifact, and the output contract is now pinned.**
+`pnpm build:tools` (`scripts/build-league-tools.mjs`) calls `vite build` to
+produce `public/assets/js/dist/*-tools.js` — bundles that are injected into
+MFL's own pages. Under Vite 8 the emitted IIFE silently **lost its
+`"use strict"` prologue** and downlevelled top-level `const` to `var`, because
+neither `build.target` nor `rollupOptions.output.strict` was pinned and both
+defaults moved.
+
+Losing strict mode on a third-party page is a real semantic change, not
+cosmetic: a failed assignment becomes a silent no-op and an accidental global
+leaks to page scope, alongside scripts we do not control. Both settings are now
+explicit in the build script, so the output survives the next bundler upgrade.
+The bundles were regenerated and committed with that pinning in place, so the
+change is attributable to the PR that caused it rather than ambushing whoever
+next runs the script.
+
+(The `"use strict"` now sits at file top rather than inside the IIFE. That is
+equivalent here — the directive is per-script, so it governs this bundle only
+and does not leak to MFL's other scripts.)
 
 ## Chromatic (visual regression)
 
@@ -233,10 +248,13 @@ carries `chromatic: { disableSnapshot: true }`. A test that fails at random
 teaches you to ignore failures. Covering it properly needs the component to
 accept an injectable clock — a component change, not a story change.
 
-The playoff heroes load real ESPN headshots, the one external dependency in
-the fixtures. `delay: 300` in preview.ts keeps a slow CDN response from being
-captured mid-load; if they still flake, stub the images rather than raising
-the delay.
+The playoff-hero fixtures are fully offline: headshots are inline data URIs
+and crests resolve from `public/` via `staticDirs`. They started as live
+`a.espncdn.com` URLs and were stubbed precisely because Chromatic waits for
+network idle before capturing — a slow CDN response is a timeout and an
+intermittent one is a false diff. `delay: 300` now only covers font
+application and layout settle. **Never reintroduce a third-party URL into a
+fixture.**
 
 ## Timing, measured
 
