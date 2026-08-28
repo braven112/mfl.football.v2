@@ -654,12 +654,17 @@ describe('exit-full-screen chip hides on hover-capable devices only', () => {
   const HIDES =
     /\[data-in-fullscreen=['"]true['"]\][^{]*\{[^}]*(opacity:\s*0(\.0+)?(%|\b)|display:\s*none|visibility:\s*hidden)/;
 
-  /** True only for a query that means "this device hovers". `.includes()` is
-   *  not enough: `not all and (hover: hover)` is the exact INVERSION of the
+  /** True only for a query that means "the pointer driving this device hovers
+   *  and is precise" — i.e. the whole shipped gate, both halves. `.includes()`
+   *  is not enough: `not all and (hover: hover)` is the exact INVERSION of the
    *  gate — hide on touch only — and contains the string, and `any-hover`
-   *  reports on a device's non-primary inputs rather than the one in use. */
+   *  reports on a device's non-primary inputs rather than the one in use.
+   *  `pointer: fine` is required too, so that widening the gate has to come
+   *  with a deliberate edit here rather than sliding past a green suite. */
   const isHoverCapableQuery = (condition: string) =>
-    /(^|[^-\w])hover:\s*hover/.test(condition) && !/\bnot\b/.test(condition);
+    /(^|[^-\w])hover:\s*hover/.test(condition) &&
+    /(^|[^-\w])pointer:\s*fine/.test(condition) &&
+    !/\bnot\b/.test(condition);
 
   /** Split the stylesheet into its @media blocks plus the top level outside
    *  them, so a hiding rule added where a touchscreen would read it is what
@@ -701,7 +706,8 @@ describe('exit-full-screen chip hides on hover-capable devices only', () => {
     // the two assertions below and a stylesheet that passes them backwards.
     expect(isHoverCapableQuery(' (hover: hover) and (pointer: fine) ')).toBe(true);
     expect(isHoverCapableQuery(' not all and (hover: hover) ')).toBe(false);
-    expect(isHoverCapableQuery(' (any-hover: hover) ')).toBe(false);
+    expect(isHoverCapableQuery(' (any-hover: hover) and (any-pointer: fine) ')).toBe(false);
+    expect(isHoverCapableQuery(' (hover: hover) ')).toBe(false);
     expect(isHoverCapableQuery(' (max-width: 640px) ')).toBe(false);
     expect(hoverBlocks.length).toBeGreaterThan(0);
   });
