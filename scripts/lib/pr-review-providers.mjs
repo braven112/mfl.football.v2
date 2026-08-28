@@ -24,6 +24,136 @@
 export const MAX_DIFF_BYTES = 200_000;
 
 /**
+ * HTTP statuses worth a second attempt.
+ *
+ * 503 is the one that matters here. Google returns it as "This model is
+ * currently experiencing high demand" — an explicit *try again later*, not a
+ * quota wall — and with a single-shot request it rendered as "Reviewer failed
+ * to run" on PRs #639, #644 and #646 inside four hours. Three consecutive
+ * no-reviews is what made the reviewer look permanently broken when the actual
+ * fault was one busy minute on Google's side.
+ *
+ * 429 is retried too but is a different animal: a per-minute rate limit clears
+ * in seconds, while an exhausted daily quota will not clear within any backoff
+ * we are willing to hold a CI job for. Retrying costs one extra request and
+ * fixes the first case, so it is in.
+ *
+ * NOT retried: 400 (malformed request), 401/403 (bad key), 404 (dead model id).
+ * Those are the same on attempt five as on attempt one, and a backoff turns an
+ * instant actionable error into a slow one.
+ */
+const RETRYABLE_STATUSES = new Set([408, 429, 500, 502, 503, 504]);
+
+/** Total attempts per provider call (1 initial + 3 retries). */
+export const MAX_ATTEMPTS = 4;
+
+/** Base backoff in ms; attempt N waits BASE * 2^(N-1) plus jitter. */
+const BACKOFF_BASE_MS = 2_000;
+
+/**
+ * An HTTP failure that carries whether it is worth retrying.
+ *
+ * The distinction survives all the way to the PR comment: a transient failure
+ * says the reviewer was unlucky, a permanent one says something is misconfigured
+ * and a human should look. Collapsing both into "failed to run" is what left a
+ * dead model id and a busy minute looking identical.
+ */
+export class ProviderHttpError extends Error {
+  /**
+   * @param {string} message
+   * @param {{ status: number, retryable: boolean, retryAfterMs?: number | null }} options
+   */
+  constructor(message, { status, retryable, retryAfterMs = null }) {
+    super(message);
+    this.name = 'ProviderHttpError';
+    this.status = status;
+    this.retryable = retryable;
+    this.retryAfterMs = retryAfterMs;
+  }
+}
+
+/**
+ * Parse `Retry-After` (delta-seconds or HTTP-date) into ms, or null.
+ *
+ * @param {string | null | undefined} headerValue
+ * @param {number} [now]
+ * @returns {number | null}
+ */
+export function parseRetryAfter(headerValue, now = Date.now()) {
+  if (!headerValue) return null;
+  const seconds = Number(headerValue);
+  if (Number.isFinite(seconds)) return Math.max(0, seconds * 1000);
+  const at = Date.parse(headerValue);
+  return Number.isNaN(at) ? null : Math.max(0, at - now);
+}
+
+/**
+ * Delay before attempt `attempt` (1-indexed retry count).
+ *
+ * Jitter is not decoration: the workflow's concurrency group cancels in-flight
+ * runs, but two PRs pushed together produce two jobs whose retries would
+ * otherwise land on the same millisecond and re-collide on the same busy model.
+ *
+ * Capped at 30s. The whole job is advisory and holds no merge, but a reviewer
+ * that reports back after the PR has already merged has reviewed nothing.
+ *
+ * @param {number} attempt 1-indexed retry number.
+ * @param {{ retryAfterMs?: number | null, jitter?: () => number }} [options]
+ * @returns {number}
+ */
+export function backoffMs(attempt, { retryAfterMs = null, jitter = Math.random } = {}) {
+  if (retryAfterMs !== null) return Math.min(retryAfterMs, 30_000);
+  const exponential = BACKOFF_BASE_MS * 2 ** (attempt - 1);
+  return Math.min(exponential + Math.floor(jitter() * 1_000), 30_000);
+}
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Call a provider with retries on transient failures.
+ *
+ * Retries the TRANSPORT, never the judgement: a provider that answers with an
+ * empty candidate gets one more go (it is a content-filter or truncation blip
+ * on Google's side, not a considered "no findings"), but a provider that
+ * returns real text is done — re-rolling until we like the review would be
+ * shopping for an opinion, not reviewing.
+ */
+export async function callWithRetry(call, args, { maxAttempts = MAX_ATTEMPTS, onRetry = () => {}, wait = sleep } = {}) {
+  let lastError;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return { text: await call(args), attempts: attempt };
+    } catch (thrown) {
+      // Normalize before touching it. `throw 'boom'` and `throw null` are both
+      // legal — a future provider, or a test stub, can do either — and this
+      // loop WRITES a property (`.attempts`) and READS `.message`. Against a
+      // primitive in module strict mode that write throws a TypeError of its
+      // own, which escapes the loop and replaces the provider's real failure
+      // with a confusing one. (Copilot, PR #648.)
+      const error = thrown instanceof Error ? thrown : new Error(String(thrown));
+      lastError = error;
+
+      // Report the real count on the error rather than making the caller infer
+      // it from `retryable`. The inference happens to be right while every
+      // transient path exhausts the budget, and would go quietly wrong the
+      // first time one didn't.
+      error.attempts = attempt;
+
+      // A non-HTTP throw is a fetch/DNS/socket failure — transient by nature.
+      const retryable = error instanceof ProviderHttpError ? error.retryable : true;
+      if (!retryable || attempt === maxAttempts) break;
+
+      const delay = backoffMs(attempt, {
+        retryAfterMs: error instanceof ProviderHttpError ? error.retryAfterMs : null,
+      });
+      onRetry({ attempt, maxAttempts, delay, reason: error.message });
+      await wait(delay);
+    }
+  }
+  throw lastError;
+}
+
+/**
  * Per-provider review lenses.
  *
  * WHY LENSES: three models given one identical prompt produce heavily
@@ -178,11 +308,16 @@ export const PROVIDERS = {
         // error, so fixing it is a copy-paste rather than another guess.
         if (res.status === 404) {
           const available = await listGeminiModels(apiKey).catch((e) => `(lookup failed: ${e.message})`);
-          throw new Error(
-            `Gemini API 404 for model "${model}": ${body}\n\nModels available to this key: ${available}`
+          throw new ProviderHttpError(
+            `Gemini API 404 for model "${model}": ${body}\n\nModels available to this key: ${available}`,
+            { status: 404, retryable: false }
           );
         }
-        throw new Error(`Gemini API ${res.status}: ${body}`);
+        throw new ProviderHttpError(`Gemini API ${res.status}: ${body}`, {
+          status: res.status,
+          retryable: RETRYABLE_STATUSES.has(res.status),
+          retryAfterMs: parseRetryAfter(res.headers.get('retry-after')),
+        });
       }
 
       const data = await res.json();
@@ -191,9 +326,19 @@ export const PROVIDERS = {
       if (!text.trim()) {
         // A blocked or empty candidate is not the same as a clean review, and
         // must not be reported as one.
-        throw new Error(
-          `Gemini returned no text (finishReason: ${data.candidates?.[0]?.finishReason ?? 'unknown'})`
-        );
+        //
+        // Whether to retry depends on WHY it was empty. SAFETY and RECITATION
+        // are verdicts on the diff itself — the same bytes get the same answer
+        // every time, so retrying just spends four calls of a quota we made
+        // scarce on purpose. MAX_TOKENS and the rest are blips (the model can
+        // spend its whole budget on reasoning and emit nothing) and a second
+        // roll at temperature 0.2 usually comes back with real text.
+        const finishReason = data.candidates?.[0]?.finishReason ?? 'unknown';
+        const deterministic = finishReason === 'SAFETY' || finishReason === 'RECITATION';
+        throw new ProviderHttpError(`Gemini returned no text (finishReason: ${finishReason})`, {
+          status: 200,
+          retryable: !deterministic,
+        });
       }
       return text.trim();
     },
@@ -221,14 +366,19 @@ export const PROVIDERS = {
       });
 
       if (!res.ok) {
-        throw new Error(`OpenAI API ${res.status}: ${(await res.text()).slice(0, 500)}`);
+        throw new ProviderHttpError(`OpenAI API ${res.status}: ${(await res.text()).slice(0, 500)}`, {
+          status: res.status,
+          retryable: RETRYABLE_STATUSES.has(res.status),
+          retryAfterMs: parseRetryAfter(res.headers.get('retry-after')),
+        });
       }
 
       const data = await res.json();
       const text = data.choices?.[0]?.message?.content ?? '';
       if (!text.trim()) {
-        throw new Error(
-          `OpenAI returned no text (finish_reason: ${data.choices?.[0]?.finish_reason ?? 'unknown'})`
+        throw new ProviderHttpError(
+          `OpenAI returned no text (finish_reason: ${data.choices?.[0]?.finish_reason ?? 'unknown'})`,
+          { status: 200, retryable: true }
         );
       }
       return text.trim();
@@ -284,12 +434,16 @@ export async function runProvider(name, { diff, context = '', env = process.env 
   const user = `${preamble}Diff under review:\n\n\`\`\`diff\n${capped}\n\`\`\``;
 
   try {
-    const text = await provider.call({
-      apiKey,
-      model,
-      system: buildSystemPrompt(lens),
-      user,
-    });
+    const { text, attempts } = await callWithRetry(
+      provider.call,
+      { apiKey, model, system: buildSystemPrompt(lens), user },
+      {
+        onRetry: ({ attempt, maxAttempts, delay, reason }) =>
+          console.log(
+            `  ${provider.label}: attempt ${attempt}/${maxAttempts} failed (${reason.split('\n')[0]}) — retrying in ${Math.round(delay / 1000)}s`
+          ),
+      }
+    );
     return {
       name,
       label: provider.label,
@@ -297,14 +451,22 @@ export async function runProvider(name, { diff, context = '', env = process.env 
       model,
       truncated,
       text,
+      attempts,
       focus: lens?.focus,
     };
   } catch (error) {
+    // Transient vs permanent is the actionable half of the message. "Busy,
+    // try again" and "your model id is dead" both used to render as the same
+    // "Reviewer failed to run", so nobody could tell a bad hour from a
+    // misconfiguration without opening the run log.
+    const transient = !(error instanceof ProviderHttpError) || error.retryable;
     return {
       name,
       label: provider.label,
       status: 'error',
       model,
+      transient,
+      attempts: error.attempts ?? 1,
       reason: error.message,
     };
   }

@@ -1,14 +1,27 @@
-Push the current branch, create a PR, gather advisory reviews (Claude + Codex in-session, Gemini + CodeQL + Copilot on the PR), adjudicate the findings yourself, auto-approve if nothing confirmed-critical remains, enable auto-merge, then monitor until the PR is merged.
+Push the current branch, create a PR, gather advisory reviews (Claude + Codex in-session, CodeQL + Copilot on the PR, Gemini on request), adjudicate the findings yourself, auto-approve if nothing confirmed-critical remains, enable auto-merge, then monitor until the PR is merged.
 
 **Reviewer lineup and what each costs.** No reviewer here bills money; every one is either a subscription you already hold or free tier. Never add one that needs a funded API key.
 
 | Reviewer | Where | Lens | Cost |
 |---|---|---|---|
-| Claude | in-session | correctness + cross-cutting (step 5) | Claude subscription |
+| Claude | in-session | correctness (5) + **cross-cutting (5b)** | Claude subscription |
 | Codex | in-session, **laptop only** | correctness & security | ChatGPT Pro |
-| Gemini | CI | cross-cutting consistency | Gemini API free tier |
 | CodeQL | CI | static security analysis | free (public repo) |
 | Copilot | CI | line-level defects | included |
+| Gemini | CI, **on request only** (step 6) | cross-cutting, second opinion | Gemini API free tier |
+
+**Gemini is opt-in as of Aug 2026, and you are the reason that is safe.** It
+used to run on every push and mostly failed — PRs #639, #644 and #646 each came
+back `503 model currently experiencing high demand` within four hours, so the
+free tier plainly could not carry a per-push reviewer. Two consequences you
+must hold onto:
+
+- **Step 5b is not optional and not a fallback.** The cross-cutting lens is now
+  *yours* on every PR, whether or not Gemini is asked. Do not treat requesting
+  Gemini as a way to skip it.
+- **Ask for Gemini when it would add something, not by reflex.** It is a second
+  opinion on the diffs where a missed call site is most likely, and used
+  sparingly it has quota left to actually answer. Step 6 has the criteria.
 
 ## Steps
 
@@ -69,12 +82,6 @@ Capture the PR number and URL. Print the PR URL as a clickable link.
 - Run `/code-review --comment` to review the diff and post inline PR comments
 - Focus: correctness bugs, design token compliance, CLAUDE.md guideline adherence, TypeScript safety
 
-**Also cover the cross-cutting lens yourself.** The external reviewers run on free-tier quota and may not run at all, so do not assume Gemini covered this:
-- Call sites the change missed — if a signature, contract or return shape changed, are ALL callers updated?
-- Half-applied refactors: a pattern introduced in one file but not its siblings.
-- **The two-league page pairs drifting apart.** TheLeague and AFL have near-identical sibling pages (`theleague/players.astro` / `afl-fantasy/players.astro`, both lineup pages, both draft predictors). A fix applied to one and not the other is a recurring bug class here, and it is invisible in a diff that only touches one of them.
-- Registries a new page must be added to: `src/data/page-directory.json` (10+ tags) and `src/data/whats-new.json`.
-
 ### 5a. Codex reviewer (local only, free)
 
 The `codex` CLI authenticates against a ChatGPT Pro subscription (`auth_mode: chatgpt`), so it costs nothing to run — but only where the CLI exists and is authed, which is a laptop and not the Claude cloud sandbox.
@@ -92,27 +99,105 @@ codex --version 2>/dev/null && python3 -c "import json,os;print(json.load(open(o
 
 Do **not** put Codex in CI: the OpenAI API has no free tier and a ChatGPT subscription grants no API credit, so a CI Codex reviewer can only ever 429.
 
-### 6. Collect the external reviewer (Gemini)
+### 5b. Claude's cross-cutting pass (mandatory — this is the lens Gemini used to hold)
 
-`.github/workflows/pr-external-review.yml` runs on every PR push and posts a sticky comment with the external reviewers' findings, under `## Critical` / `## Important` / `## Suggestions` headings.
+Run this as a **separate pass over the diff**, after the correctness review
+above and with the same seriousness. Do not fold it into step 5 and do not skip
+it because you plan to request Gemini in step 6 — Gemini is a second opinion on
+this lens, never the holder of it.
 
-**This reviewer is best-effort.** It runs on free-tier API quota, so a 429 is routine and the job deliberately does NOT fail when it happens. If no comment was posted, the reviewer simply didn't run — say so, treat the lens as uncovered by anyone but you (step 5), and proceed. Do not wait on it indefinitely and do not treat its absence as a problem to fix.
+This lens is the one that most needs the repo in front of it, which is exactly
+why it transfers to you cleanly: "you missed a call site" is unanswerable
+without knowing what the call sites are, and unlike an API reviewer you can go
+read them. **Grep, don't infer** — every item below is a search you can
+actually run, and a claim that all callers were updated is only worth anything
+if you enumerated them.
 
-Wait briefly for the run, then fetch it:
+- **Call sites the change missed.** If a function's signature, contract or
+  return shape changed, grep for every caller and confirm each one. Name the
+  count in your adjudication ("7 callers, all updated") so the claim is
+  checkable rather than asserted.
+- **Half-applied refactors** — a pattern introduced in one file but not its
+  siblings. If the diff establishes a new way of doing something, search for
+  the old way and say whether the leftovers are deliberate.
+- **The two-league page pairs drifting apart.** TheLeague and AFL have
+  near-identical sibling pages (`theleague/players.astro` /
+  `afl-fantasy/players.astro`, both lineup pages, both draft predictors). A fix
+  applied to one and not the other is a recurring bug class here, and it is
+  **invisible in a diff that only touches one of them** — so this check cannot
+  be done from the diff alone. Open the sibling.
+- **Registries and declarations the change should have updated:**
+  `src/data/page-directory.json` (10+ tags) for any new page,
+  `src/data/whats-new.json` for user-facing work, `defaultRankingSources` and
+  `rankings-scope.ts` for a new league, `relatedLinks` for a new Schefter
+  article type.
+- **Docs and guard tests that encode the rule being changed.** If the diff
+  changes behavior a `tests/` guard pins or a `docs/claude/rules/` doc
+  describes, both should move with it. A guard test that still passes because
+  the diff worked *around* it is a finding.
+- **Contradictions with conventions visible elsewhere in the diff.**
+
+Report the result in the step 7 adjudication table as a reviewer in its own
+right (`Claude (cross-cutting)`), with its own findings. If it found nothing,
+say what you checked — "cross-cutting: clean" with no evidence is the failure
+mode this step exists to prevent.
+
+### 6. Request the external reviewer (Gemini) — only when it earns its keep
+
+`.github/workflows/pr-external-review.yml` no longer runs on push. It runs when
+you dispatch it, and posts a sticky comment with findings under
+`## Critical` / `## Important` / `## Suggestions` headings.
+
+**Decide, then say what you decided.** Request Gemini when the diff has the
+shape where a second pair of eyes on the cross-cutting lens has somewhere to
+look — that is, when **any** of these hold:
+
+- A shared function's signature, contract or return shape changed.
+- A rename or pattern sweep touching **5+ files**.
+- It edits a registry or config read from many places
+  (`leagues-data.mjs`, `rankings-scope.ts`, `league-year.ts`, auth utils).
+- One half of a two-league sibling pair changed.
+- The diff is large: **15+ files** or **800+ changed lines**.
+
+Skip it — and this is the normal case — for a single-file change, a
+style/copy tweak, docs, data, tests only, or a self-contained new page with no
+shared-code edits. There is nothing for a cross-cutting reviewer to find in a
+diff with no second file in it, and every skipped run is quota left for a diff
+that needs it.
+
+If you are requesting it, dispatch it **early** — right after step 4, so it
+runs while you do steps 5 and 5b, rather than making the PR wait on it:
 
 ```bash
-gh run list --workflow=pr-external-review.yml --branch "$(git branch --show-current)" --limit 1
+gh workflow run pr-external-review.yml -f pr=<PR_NUMBER>
+```
+
+Then collect it here:
+
+```bash
+gh run list --workflow=pr-external-review.yml --limit 1
 gh pr view <PR_NUMBER> --json comments --jq '.comments[] | select(.body | contains("<!-- external-pr-review -->")) | .body'
 ```
 
-If the workflow is still running, give it one `gh run watch`; if it's quota-blocked or no comment appears, move on.
+Give it **one** `gh run watch` if it is still going. Do not wait on it
+indefinitely, and never hold the PR for it — you already own this lens.
 
-Three states that are **not** a clean pass, and must be reported rather than counted as zero findings:
-- "⚠️ **Reviewer failed to run**" — usually a 429. That reviewer reviewed nothing.
-- "Skipped — `GEMINI_API_KEY` not set" — no key configured.
-- No comment at all — the workflow skipped because nothing was configured.
+**States that are not a clean pass**, and must be reported rather than counted
+as zero findings:
 
-In every one of those cases the honest line is "Gemini: did not run", never "Gemini: clean".
+| What the comment says | Report it as |
+|---|---|
+| ⚠️ failed to run (**transient**) | `Gemini: did not run — API unavailable` |
+| ⛔ failed to run (**permanent**) | `Gemini: did not run — misconfigured`, **and fix it**: a dead model id or bad key is a real bug in this repo, not weather |
+| Skipped — `GEMINI_API_KEY` not set | `Gemini: did not run — no key` |
+| No comment at all | `Gemini: not requested` (only valid if you chose to skip it — otherwise the dispatch failed) |
+
+The honest line is always "Gemini: did not run", never "Gemini: clean". But
+note the asymmetry the retry logic now surfaces: a **transient** failure is
+weather and you proceed on your own cross-cutting pass; a **permanent** one is
+a broken tool that will keep failing for every future PR until someone fixes
+it, so fix it in this PR or open an issue. Do not shrug at the second kind
+because the first kind is common.
 
 ### 6a. Collect GitHub Copilot review feedback
 
@@ -188,7 +273,9 @@ Confirmed
 Rejected
   <finding>  — <why it isn't a problem>    (Gemini)
 Reviewers
-  Claude ✓   Codex did not run (cloud)   Gemini ✓   CodeQL ✓   Copilot ✓
+  Claude ✓   Claude cross-cutting ✓ (7 callers checked, both league pages)
+  Codex did not run (cloud)   CodeQL ✓   Copilot ✓
+  Gemini not requested (single-file change)
 Decision: <Proceeding / Blocked on N confirmed critical>
 ```
 
@@ -217,7 +304,13 @@ If you applied fixes for confirmed findings, re-run the Claude reviewer on the n
 1. All confirmed findings are now FIXED
 2. No new issues introduced by the refactor
 
-Pushing the fixes re-triggers the external-review workflow and Copilot, so re-fetch both (step 6 and 6a) against the new commit and adjudicate the new round the same way.
+Pushing the fixes re-triggers Copilot, so re-fetch it (step 6a) against the new
+commit and adjudicate the new round the same way. It does **not** re-trigger the
+external reviewer any more — that one is dispatch-only. Re-request it (step 6)
+only if your fixes were themselves broad enough to meet the step 6 criteria;
+a one-line fix to a finding does not need a fresh external review. Re-run your
+own cross-cutting pass (step 5b) over the fix either way — a fix that updates
+one call site and not its siblings is the exact bug class that pass exists for.
 
 Loop until you have no confirmed unfixed findings. **A reviewer re-raising something you already rejected with a reason does not restart the loop** — note it and move on, otherwise a stubborn false positive blocks the PR forever.
 
@@ -225,7 +318,7 @@ Loop until you have no confirmed unfixed findings. **A reviewer re-raising somet
 
 If no **confirmed** Critical issues:
 ```bash
-gh pr review <PR_NUMBER> --approve --body "Reviewed by Claude Code, with advisory review from Gemini/Codex/Copilot — no confirmed critical issues. CI must pass before merge."
+gh pr review <PR_NUMBER> --approve --body "Reviewed by Claude Code (correctness + cross-cutting), with advisory review from Copilot/CodeQL — no confirmed critical issues. CI must pass before merge."
 ```
 
 ### 9. Enable auto-merge

@@ -172,8 +172,12 @@ git diff | node scripts/gemini-ask.mjs -p "summarize the risk here"
   you're about to act on. Do that before editing anything.
 - **Explore mode is agentic** — the file set you pass is a floor, not a
   ceiling, so `--max-bytes` does not bound what it reads.
-- **Quota is shared with CI** (`.github/workflows/pr-external-review.yml`). A heavy sweep can
-  429 that day's PR reviews — they degrade to "did not run".
+- **Quota is shared with CI** (`.github/workflows/pr-external-review.yml`). A
+  heavy sweep can 429 a PR review — it degrades to "did not run". That reviewer
+  is opt-in as of Aug 2026 precisely because the free tier could not carry it
+  per-push (three straight PRs came back `503 high demand`), so when one IS
+  requested it is because someone judged the diff needed it. Don't spend the
+  day's quota on a sweep you could answer with a Read.
 - **Two CLIs are installed** (node 20's is broken). Always go through the
   script, never `gemini` directly.
 

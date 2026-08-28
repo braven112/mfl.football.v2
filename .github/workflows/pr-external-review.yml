@@ -13,9 +13,23 @@ name: External PR Review
 # Model ids are pinned here on purpose — they churn faster than the script does,
 # and a 404 from either API almost always means the id below needs bumping.
 
+# OPT-IN, NOT AUTOMATIC. This ran on every `opened`/`synchronize` until Aug
+# 2026, and the Gemini free tier could not carry it: PRs #639, #644 and #646
+# all came back "Reviewer failed to run — 503, model currently experiencing
+# high demand" inside four hours. A reviewer that fails on most PRs trains
+# everyone to skim past its comment, which is worse than not having it, and it
+# takes the honest "did not run" signal down with it.
+#
+# So it now runs only when asked — by `/live` (which dispatches it for diffs
+# where the cross-cutting lens actually earns its keep) or by hand. Claude
+# owns that lens on every PR either way; see step 5b of `.claude/commands/live.md`.
+# Sparingly also means the free-tier quota is there when we do ask.
 on:
+  # Adding the `external-review` label to a PR requests a review. The label
+  # does not exist by default in a fresh clone of this repo:
+  #   gh label create external-review -d "Request the Gemini PR reviewer"
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [labeled]
   workflow_dispatch:
     inputs:
       pr:
@@ -27,8 +41,10 @@ on:
         default: "gemini"
 
 concurrency:
-  # Supersede an in-flight review when the branch is pushed again — the older
-  # run would post findings against a diff that no longer exists.
+  # Supersede an in-flight review when the same PR is asked again — the older
+  # run would post findings against a diff that has moved on. Re-requesting
+  # after a push is now the normal way to get a fresh review, so this is the
+  # common case rather than a race.
   group: pr-external-review-${{ github.event.pull_request.number || inputs.pr }}
   cancel-in-progress: true
 
@@ -39,9 +55,19 @@ permissions:
 jobs:
   review:
     runs-on: ubuntu-latest
-    # Forked PRs don't get repo secrets, so both providers would skip and the
-    # job would post a comment saying nothing was reviewed. Skip it outright.
-    if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name == 'workflow_dispatch'
+    # Two gates:
+    #  - Only the `external-review` label requests a review. Without this, ANY
+    #    label added to a PR (`bug`, `wip`, a Dependabot label) would spend a
+    #    review, which is the opposite of using the quota sparingly.
+    #  - Forked PRs don't get repo secrets, so both providers would skip and
+    #    the job would post a comment saying nothing was reviewed.
+    # NB: every continuation line below sits at the SAME indent. A more-indented
+    # line makes YAML's folded scalar keep the newline instead of folding it,
+    # which embeds a raw \n in the expression GitHub has to parse.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.label.name == 'external-review' &&
+      github.event.pull_request.head.repo.full_name == github.repository)
     steps:
       # Runs BEFORE checkout, because the PR number is interpolated into the
       # checkout ref below. A dispatch input is a free-form string, and a ref

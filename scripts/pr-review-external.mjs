@@ -110,13 +110,25 @@ function renderSection(result) {
     return `### ${result.label}\n\n_Skipped — ${result.reason}._`;
   }
   if (result.status === 'error') {
-    return `### ${result.label}\n\n⚠️ **Reviewer failed to run** — ${result.reason}\n\nTreat this as "not reviewed", not as a clean pass.`;
+    // Say which KIND of failure it was. A transient one means try again; a
+    // permanent one means a human has to change something, and rendering both
+    // as a bare "failed to run" is what let a busy hour and a dead model id
+    // look identical from the PR.
+    const attempts = result.attempts > 1 ? ` after ${result.attempts} attempts` : '';
+    const kind = result.transient
+      ? `⚠️ **Reviewer failed to run**${attempts} (transient — the API was unavailable, not misconfigured)`
+      : `⛔ **Reviewer failed to run** (permanent — needs a fix, retrying will not help)`;
+    const nextStep = result.transient
+      ? 'Re-request it from the PR if the cross-cutting lens matters here.'
+      : 'Check the model id and API key in `.github/workflows/pr-external-review.yml`.';
+    return `### ${result.label}\n\n${kind} — ${result.reason}\n\nTreat this as "not reviewed", not as a clean pass. ${nextStep}`;
   }
   const truncNote = result.truncated
     ? '\n\n_Note: the diff was truncated — coverage is partial._'
     : '';
+  const retryNote = result.attempts > 1 ? ` · ${result.attempts} attempts` : '';
   const focus = result.focus ? ` · lens: **${result.focus}**` : '';
-  return `### ${result.label}\n\n<sub>\`${result.model}\`${focus}</sub>\n\n${result.text}${truncNote}`;
+  return `### ${result.label}\n\n<sub>\`${result.model}\`${focus}${retryNote}</sub>\n\n${result.text}${truncNote}`;
 }
 
 function buildComment(results) {
