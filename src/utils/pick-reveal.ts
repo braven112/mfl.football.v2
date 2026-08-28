@@ -32,6 +32,25 @@ function isEspnCdnUrl(url: string): boolean {
 }
 
 /**
+ * Does a player's origin line name his COLLEGE rather than his NFL team?
+ *
+ * Rookies read best with the school: their pro team is weeks old and the room
+ * knows them by where they played. Everyone else gets the NFL team.
+ *
+ * Lives here, with the composite rules, because BOTH reveal surfaces ask it —
+ * the draft room's splash and the broadcast card — and the two must never
+ * disagree about the same pick. It is also what the broadcast's server gates a
+ * school-logo lookup on, so a second copy would keep resolving marks for
+ * players the card had started labelling with their pro team.
+ */
+export function usesCollegeOrigin(player?: {
+  isRookie?: boolean;
+  college?: string;
+}): boolean {
+  return Boolean(player?.isRookie && player.college);
+}
+
+/**
  * Composites only work over transparent ESPN cutouts — MFL JPGs have baked
  * backgrounds, and DEF "players" are logos, not people. When this returns
  * false the splash shows its text treatment with no cutout.

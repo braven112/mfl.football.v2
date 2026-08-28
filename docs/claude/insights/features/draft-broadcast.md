@@ -495,6 +495,13 @@ this page. The college lookup is gated on `usesCollegeOrigin`, the exported
 predicate the card itself uses to pick the label, so the server cannot resolve a
 school mark for a player the card will label with his pro team.
 
+That predicate lives in `pick-reveal.ts`, not here, because the draft room's own
+splash asks the same question about the same pick — it had carried an identical
+inline copy, agreeing right up until one of them changed. Three call sites now
+share it (both reveal surfaces and the broadcast's server), and
+`tests/draft-broadcast.test.ts` fails if any of them re-derives
+`isRookie && college` inline again.
+
 **No mark beats a wrong mark.** A free agent and a retiree both normalize to the
 NFL shield, which says nothing beside a name; an unrecognised team code and a
 school absent from the table would 404. All four return `logo: null` and the

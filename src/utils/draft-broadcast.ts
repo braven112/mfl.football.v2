@@ -9,6 +9,7 @@
 import type { DraftRoomPick, DraftRoomTeam } from '../types/draft-room';
 import type { BroadcastPlayer } from '../types/draft-broadcast';
 import { getAllNFLTeamCodes, normalizeTeamCode } from './nfl-logo';
+import { usesCollegeOrigin } from './pick-reveal';
 import { resolveNflDarkLogoUrl } from './nfl-logo-dark-css';
 
 /**
@@ -448,25 +449,6 @@ export function resolveBroadcastGradient(team?: {
 }
 
 // ── The origin line ──────────────────────────────────────────────────────────
-
-/**
- * Does this player's origin line name his COLLEGE rather than his NFL team?
- *
- * Rookies read best with the school: their pro team is weeks old and the room
- * knows them by where they played. Everyone else gets the NFL team.
- *
- * Exported rather than inlined at the one call site because the SERVER has to
- * resolve a school's logo for exactly this population and no other (see
- * `collegeLogo` in draft-broadcast.ts's types) — a second copy of the rule
- * there would keep shipping college marks to players the card labels with
- * their NFL team the day this one changes.
- */
-export function usesCollegeOrigin(player?: {
-  isRookie?: boolean;
-  college?: string;
-}): boolean {
-  return Boolean(player?.isRookie && player.college);
-}
 
 /** The origin line: what it reads, and the mark that goes to its left. */
 export interface BroadcastOrigin {

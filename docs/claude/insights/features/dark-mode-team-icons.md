@@ -498,4 +498,5 @@ same decision out — `dark ?? light` — because for it, `null` is not "do
 nothing", it is "no logo at all".
 
 **Files:** `src/utils/draft-broadcast.ts` (`resolveOrigin`),
-`src/utils/draft-broadcast-server.ts` (`collegeLogoFor`).
+`src/utils/draft-broadcast-server.ts` (`collegeLogoFor`),
+`src/utils/pick-reveal.ts` (`usesCollegeOrigin`).

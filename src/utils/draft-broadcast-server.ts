@@ -21,7 +21,7 @@ import type {
 import { parseTradeFromComment, selectDraftUnit } from './draft-utils';
 import { normalizeTeamCode } from './nfl-logo';
 import { resolveCollegeDarkLogoUrl } from './college-logo-dark-css';
-import { usesCollegeOrigin } from './draft-broadcast';
+import { usesCollegeOrigin } from './pick-reveal';
 import { getDefSpotlightPlayers } from '../data/theleague/def-spotlight-players';
 import collegeLogos from '../data/college-logos.json';
 

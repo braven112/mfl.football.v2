@@ -22,8 +22,8 @@ import {
   toBroadcastColor,
   toBroadcastPair,
   resolveOrigin,
-  usesCollegeOrigin,
 } from '../src/utils/draft-broadcast';
+import { usesCollegeOrigin } from '../src/utils/pick-reveal';
 import {
   assignBoardRanks,
   buildConferenceBoard,
@@ -536,6 +536,27 @@ describe('the origin line and its logo', () => {
     expect(usesCollegeOrigin({ isRookie: true })).toBe(false);
     expect(usesCollegeOrigin({ isRookie: false, college: 'Georgia' })).toBe(false);
     expect(usesCollegeOrigin(undefined)).toBe(false);
+  });
+
+  it('has BOTH reveal surfaces ask that rule, rather than re-deriving it', () => {
+    // The draft room's splash and the broadcast card show the same pick, and
+    // for a while each carried its own copy of `isRookie && college`. They
+    // agreed — until one of them changed. `usesCollegeOrigin` lives in
+    // pick-reveal.ts precisely because both import it, and the broadcast's
+    // SERVER gates its school-logo lookup on it too: a drifted copy would keep
+    // resolving marks for players the card had started labelling with a team.
+    const surfaces = [
+      'src/components/theleague/draft-room/PickRevealSplash.tsx',
+      'src/utils/draft-broadcast.ts',
+      'src/utils/draft-broadcast-server.ts',
+    ];
+    for (const file of surfaces) {
+      const src = readFileSync(file, 'utf-8');
+      expect(src, `${file} must ask the shared rule`).toMatch(/usesCollegeOrigin\(/);
+      expect(src, `${file} re-derives the origin rule inline`).not.toMatch(
+        /isRookie\s*&&\s*[\w.?!]*college/
+      );
+    }
   });
 
   it('travels as one flex item, so a wrap cannot orphan the mark', () => {
