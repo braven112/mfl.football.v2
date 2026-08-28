@@ -91,6 +91,11 @@ export function OnTheClock({
    *  row without it. */
   const hideOnError = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     e.currentTarget.style.display = 'none';
+    // `display: none` is invisible to CSS selectors — the hidden <img> is still
+    // the copy block's sibling — so the on-the-clock row has to be told the
+    // crest is gone or the copy stays left-aligned against nothing. `closest`
+    // is null for the rail crests, which have no such row and want no flag.
+    e.currentTarget.closest('.dbc-idle__clock')?.classList.add('is-crestless');
   }, []);
 
   // The clock team's colors and crest own the screen the same way the drafting
@@ -147,33 +152,54 @@ export function OnTheClock({
             <h1 className="dbc-idle__team">Every pick is in</h1>
           </>
         ) : (
-          <>
+          /* Crest BESIDE the copy, not above it. Stacked, the crest had to
+             stay small enough to leave the name room underneath, and from
+             across a room the thing that identifies the team on the clock
+             fastest is its logo. Side by side the two stop competing for the
+             same vertical budget, so the crest doubles and the copy left-aligns
+             off its edge — one unit that reads as "this team is up".
+
+             Keyed by franchise so React remounts the whole row when the clock
+             moves to another team. Without it the same DOM nodes are reused and
+             one 404 sticks: the img keeps its inline `display: none` and the row
+             keeps its `is-crestless` flag, hiding the crest and centring the copy
+             for every team that follows. */
+          <div className="dbc-idle__clock" key={team?.franchiseId ?? 'no-team'}>
             {team?.icon ? (
-              /* Keyed by franchise so React remounts it when the clock moves
-                 to another team. Without a key it reuses the same DOM node and
-                 the inline `display:none` from a single 404 would hide the
-                 crest for every team that followed. */
               <img
-                key={team.franchiseId}
                 className="dbc-idle__crest"
                 src={team.icon}
                 alt=""
                 onError={hideOnError}
               />
             ) : null}
-            <p className="dbc-idle__kicker">
-              {notStarted ? 'First on the clock' : 'On the clock'}
-            </p>
-            <h1 className="dbc-idle__team">{team?.name || 'Waiting for MFL'}</h1>
-            {onTheClock ? (
-              <p className="dbc-idle__pick">
-                Pick {pickLabel(onTheClock)}
-                {onTheClock.isTraded && onTheClock.originalTeamName
-                  ? ` · via ${onTheClock.originalTeamName}`
-                  : ''}
+            <div className="dbc-idle__clock-copy">
+              {/* Name small and on top, status big underneath — the inverse of
+                  the other two stage states, and of what this screen used to
+                  do. With the crest at double size the logo already answers
+                  "which team", so spending the headline on the name repeated
+                  what the room could see; the headline now answers "what is
+                  happening" instead. The name stays directly above it so the
+                  two still read as one sentence.
+
+                  h1 remains on the NAME, not on the bigger line: it is what
+                  identifies this screen, and "On the clock" reads identically on
+                  every one of the 108 picks. Visual weight and
+                  document structure disagree here on purpose. */}
+              <h1 className="dbc-idle__clock-team">{team?.name || 'Waiting for MFL'}</h1>
+              <p className="dbc-idle__clock-status">
+                {notStarted ? 'First on the clock' : 'On the clock'}
               </p>
-            ) : null}
-          </>
+              {onTheClock ? (
+                <p className="dbc-idle__pick">
+                  Pick {pickLabel(onTheClock)}
+                  {onTheClock.isTraded && onTheClock.originalTeamName
+                    ? ` · via ${onTheClock.originalTeamName}`
+                    : ''}
+                </p>
+              ) : null}
+            </div>
+          </div>
         )}
       </div>
 
