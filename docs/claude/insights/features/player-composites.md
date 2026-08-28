@@ -457,13 +457,28 @@ different from every other composite, and why:
   - **The higher-ranked man goes in FRONT** (`:first-of-type` gets `z-index: 1`);
     source order would otherwise paint the second on top and put the better
     player's ear behind the other man's shoulder.
-  The names ride a lower-third pill (`.dbc-reveal__face`), one row per man in
-  the same order as the cutouts, because the HEADLINE is the unit ("Denver
-  Broncos") — without it the room is looking at two faces the card never names.
-  Two names on ONE line overran the column and ellipsised the second man out of
-  existence; stacked rows always fit. The pill is pinned to the figure's LEADING
-  edge, not centred in it: `.dbc-reveal__figure` carries a `translateX(29%)`
-  that walks a centred pill out past the card's own overflow clip.
+  The names ride lower-third pills (`.dbc-reveal__face`), because the HEADLINE
+  is the unit ("Denver Broncos") — without them the room is looking at two
+  faces the card never names. **One pill per man, side by side on one line,
+  each seated under the head it names** (Brandon, 2026-08-28). A stacked pair
+  only says which name is FIRST, and the room has to guess whether first means
+  the man in front or the man on the left; seated under the heads, the pairing
+  is read rather than inferred. Three levels, and each one is load-bearing:
+  the `<p>` spans the pair, each `__face-row` is an equal-width SEAT centred on
+  a cutout, and the `__face-chip` inside is the pill that shrinks to the name.
+  The seats follow the cutouts arithmetically — a head sits at its cutout's
+  `left` + half its width, so the base seats (-59.5%/-10.5% at 120% wide) put
+  heads at 0.5% and 49.5% of the column, and two 49% seats centred there span
+  -24% → 74%. Redo that sum in any breakpoint that moves the cutouts; portrait
+  already does. `flex: 1 1 0` on the seats is what makes a 404 survivor land on
+  the pair's midpoint by itself, matching `--def:only-of-type`.
+  Two names in ONE pill DID overrun the column and ellipsise the second man out
+  of existence, and that is not what this is: the seat caps each name at 49% of
+  the column instead of letting one eat the whole plate. Capping is also what
+  keeps the old centring bug closed — `.dbc-reveal__figure` carries a
+  `translateX(29%)` that walked a centred full-width pill out past the card's
+  overflow clip, whereas a 49% seat's outer edge lands at 103% of the column,
+  inside the body's 4vw padding. Widening a seat re-opens it.
 - **`getDefSpotlightPlayers` key gotcha: Washington is `WAS`, not `WSH`.**
   The spotlight JSON is keyed by players.astro's `normalizeMflTeam` (GBP→GB,
   JAC→JAX, but Washington stays `WAS`). Both `nfl-logo.ts#normalizeTeamCode`
