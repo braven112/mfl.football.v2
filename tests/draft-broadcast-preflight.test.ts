@@ -25,6 +25,8 @@ import {
   planBroadcastImages,
   resolveWarmDepth,
 } from '../src/utils/draft-broadcast-images';
+import { applyRehearsal, isRevealWorthy } from '../src/utils/draft-broadcast';
+import { collectFreshPicks } from '../src/utils/pick-reveal';
 import {
   MFL_EXPORT_HOST,
   toSafeMflUrl,
@@ -594,6 +596,90 @@ describe('the board never moves backwards on its own', () => {
     expect(branch).not.toContain('setPicks');
     expect(branch).not.toContain('seenRef.current =');
     expect(branch).not.toContain('acceptedRef.current =');
+  });
+});
+
+/**
+ * THE REHEARSAL MUST CLEAR THE LIVE AGE GATE — the pairing, not either half.
+ *
+ * `?rehearse=` replays a season that has already FINISHED, so every pick on
+ * that board is stamped months ago, and `isRevealWorthy` (90s, added the same
+ * morning for autopick bursts) rejected all of them. The dry run advanced pick
+ * by pick with the cadence and the rails all correct and never once showed the
+ * card that is the entire point of the night.
+ *
+ * `applyRehearsal`'s own unit tests cannot catch that coming back, because the
+ * fix lives in an ARGUMENT: the replay passes `rehearseUpTo` as the third
+ * parameter, and the parameter defaults to Infinity — drop it and every test
+ * that calls the function directly still passes while the board goes silent
+ * again. So this pins the two ends the unit tests leave open: the island really
+ * passes it, and the whole chain really produces a reveal at every step.
+ */
+describe('a rehearsal reveals every pick it rolls forward', () => {
+  const SEASON_OVER_SEC = 1_700_000_000;
+  const NOW_MS = 1_800_000_000_000;
+
+  const board = Array.from({ length: 9 }, (_, i) => ({
+    round: 1,
+    pickInRound: i + 1,
+    overallPickNumber: i + 1,
+    franchiseId: String(i + 1).padStart(4, '0'),
+    playerId: `p${i + 1}`,
+    timestamp: String(SEASON_OVER_SEC),
+    comments: '',
+    isTraded: false,
+  }));
+
+  it('produces a reveal at EVERY step of the replay, not just the first', () => {
+    // The island's replay loop, verbatim: applyRehearsal → collectFreshPicks →
+    // isRevealWorthy. A per-step assertion because the board advancing was
+    // never the broken half.
+    const startAt = 3;
+    const seen = new Set(
+      applyRehearsal(board, startAt).filter((p) => p.playerId).map((p) => p.overallPickNumber)
+    );
+
+    for (let step = startAt + 1; step <= board.length; step++) {
+      const incoming = applyRehearsal(board, step, startAt, NOW_MS);
+      const fresh = collectFreshPicks(seen, board.length, incoming, Infinity, NOW_MS);
+      for (const p of fresh) seen.add(p.overallPickNumber);
+
+      const revealed = fresh.filter((p) => isRevealWorthy(p, NOW_MS));
+      expect(revealed.map((p) => p.overallPickNumber)).toEqual([step]);
+    }
+  });
+
+  it('is silent on the same board without the fix — this is what regressed', () => {
+    // Two-arg call: what the island did before, and what it falls back to if
+    // the third argument is ever dropped.
+    const incoming = applyRehearsal(board, 4);
+    const fresh = collectFreshPicks(new Set([1, 2, 3]), board.length, incoming, Infinity, NOW_MS);
+
+    expect(fresh.map((p) => p.overallPickNumber)).toEqual([4]);
+    expect(fresh.filter((p) => isRevealWorthy(p, NOW_MS))).toEqual([]);
+  });
+
+  it('the island passes the replay origin — the argument IS the fix', () => {
+    const src = readFileSync(
+      join(__dirname, '..', 'src/components/shared/draft-broadcast/DraftBroadcast.tsx'),
+      'utf8'
+    );
+    // Guarding the DECISION, not the wording: whatever the replay is spelled
+    // like, the call it makes must carry a third argument. A two-argument call
+    // here is the regression, and it is silent.
+    const call = src.match(/ingest\(applyRehearsal\(([^)]*)\)\)/);
+    expect(call).not.toBeNull();
+    expect(call![1].split(',')).toHaveLength(3);
+    expect(call![1]).toContain('rehearseUpTo');
+  });
+
+  it('leaves the picks the operator started from alone', () => {
+    // They are history, exactly like the SSR board on draft night. Restamping
+    // them would make a reload of ?rehearse=40 storm forty reveals.
+    const start = applyRehearsal(board, 4, 2, NOW_MS);
+    expect(start[0].timestamp).toBe(String(SEASON_OVER_SEC));
+    expect(start[1].timestamp).toBe(String(SEASON_OVER_SEC));
+    expect(start[2].timestamp).toBe(String(Math.floor(NOW_MS / 1000)));
   });
 });
 
