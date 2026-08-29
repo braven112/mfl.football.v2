@@ -104,11 +104,15 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(
-        keys
+      Promise.all([
+        ...keys
           .filter((key) => !KEEP_CACHES.includes(key))
-          .map((key) => caches.delete(key))
-      )
+          .map((key) => caches.delete(key)),
+        // The image cache survives the sweep, so this is the one guaranteed
+        // moment to bound it — the per-write trim is sampled and a very unlucky
+        // run could otherwise let it drift well past the ceiling.
+        caches.open(IMAGE_CACHE_NAME).then(trimRemoteImages).catch(() => {}),
+      ])
     )
   );
   self.clients.claim();
@@ -373,17 +377,26 @@ async function remoteImageCacheFirst(event, request) {
  * `cache.keys()` walks the whole cache, and the broadcast board's warm-up
  * stores ~600 images back to back — trimming on every one of them turns a
  * bounded cache into a quadratic one, competing with the very warm-up it is
- * supposed to be cheap enough to allow. Every TRIM_EVERY writes is frequent
- * enough: the ceiling can be overshot by at most that many entries, which is
- * a rounding error against MAX_REMOTE_IMAGE_ENTRIES.
+ * supposed to be cheap enough to allow.
+ *
+ * SAMPLED, NOT COUNTED. A counter here was worse than no trim at all: module
+ * state lives only as long as the worker, and the browser kills an idle worker
+ * within seconds, so `writes % TRIM_EVERY === 0` reset to zero constantly and
+ * essentially never fired during ordinary browsing. The cache is exempt from
+ * the activate sweep (see KEEP_CACHES), so nothing else bounds it — it would
+ * grow until the origin quota, at which point `cache.put` starts throwing,
+ * `storeAsset`'s contract swallows it, and the durable cache silently stops
+ * working while the board's pill still reports images ready.
+ *
+ * A 1-in-TRIM_EVERY coin flip has the same expected frequency and no memory,
+ * so it behaves identically whether the worker has been alive for one write or
+ * a thousand.
  */
 const TRIM_EVERY = 50;
-let remoteImageWrites = 0;
 
 async function storeRemoteImage(cache, url, response, now) {
   await putStamped(cache, url, response, now);
-  remoteImageWrites += 1;
-  if (remoteImageWrites % TRIM_EVERY === 0) await trimRemoteImages(cache);
+  if (Math.random() < 1 / TRIM_EVERY) await trimRemoteImages(cache);
 }
 
 /**

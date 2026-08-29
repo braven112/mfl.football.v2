@@ -445,16 +445,26 @@ describe('service worker caching', () => {
         );
       }
 
-      h.setResponder(async () => espnResponse());
-      for (let i = 1_850; i < 1_900; i += 1) {
-        const { settle } = await respond(h, headshot(String(i)));
-        await settle();
+      // The trim is a 1-in-TRIM_EVERY coin flip (module state cannot be used —
+      // the browser kills an idle worker), so force the coin rather than
+      // assuming a fixed run of writes trips it. Testing the real path, just
+      // without the randomness.
+      const realRandom = Math.random;
+      Math.random = () => 0;
+      try {
+        h.setResponder(async () => espnResponse());
+        for (let i = 1_850; i < 1_900; i += 1) {
+          const { settle } = await respond(h, headshot(String(i)));
+          await settle();
+        }
+      } finally {
+        Math.random = realRandom;
       }
 
       const stored = [...h.cache.store.keys()].filter((url) => url.includes('a.espncdn.com'));
-      // Trimming runs every 50 writes rather than on each one (cache.keys()
-      // walks the whole cache, and a broadcast warm-up stores ~600 back to
-      // back), so the ceiling may be overshot by up to that batch.
+      // Sampled rather than per-write (cache.keys() walks the whole cache, and
+      // a broadcast warm-up stores ~600 back to back), so in the wild the
+      // ceiling can be overshot by roughly one sampling interval.
       expect(stored.length).toBeLessThanOrEqual(1800 + 50);
       expect(stored.length).toBeGreaterThan(1_000);
       // Insertion-ordered eviction: the least recently stored goes first.

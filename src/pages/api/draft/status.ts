@@ -125,25 +125,14 @@ const FRESHEST_TTL_MS = 60_000;
  * instance simply starts empty and refills on its first request — the cache is
  * an accelerator, never a source of truth.
  */
-const freshestSeen = new Map<string, { data: any; freshness: number; at: number }>();
+const freshestSeen = new Map<string, { data: any; freshness: BoardFreshness; at: number }>();
 
 /** Newest pick stamp for `unit` in a payload, or -1 if it has no board. */
-function unitFreshness(raw: any, unit: string | null): number {
+function unitFreshness(raw: any, unit: string | null): BoardFreshness | null {
   const selected = selectDraftUnit<RawDraftPick>(raw?.draftResults?.draftUnit, unit);
-  if (!selected) return -1;
+  if (!selected) return null;
   const picks = selected.draftPick;
-  const arr = Array.isArray(picks) ? picks : picks ? [picks] : [];
-  let newest = 0;
-  let filled = 0;
-  for (const p of arr) {
-    if (!p?.player) continue;
-    filled += 1;
-    const ts = Number.parseInt(p?.timestamp ?? '', 10);
-    if (Number.isFinite(ts) && ts > newest) newest = ts;
-  }
-  // Fall back to the count when nothing carries a stamp, so an unstamped board
-  // still beats an empty one.
-  return newest > 0 ? newest : filled;
+  return picksFreshness(Array.isArray(picks) ? picks : picks ? [picks] : []);
 }
 
 /** Ask MFL MFL_SAMPLES times at once; return the freshest board for `unit`. */
@@ -174,11 +163,12 @@ async function fetchFreshest(
   const results = await Promise.all(Array.from({ length: Math.max(1, samples) }, once));
 
   let best: any | null = null;
-  let bestFreshness = -Infinity;
+  let bestFreshness: BoardFreshness | null = null;
   for (const candidate of results) {
     if (!candidate) continue;
     const freshness = unitFreshness(candidate, unit);
-    if (freshness > bestFreshness) {
+    if (!freshness) continue;
+    if (!bestFreshness || atLeastAsFresh(freshness, bestFreshness)) {
       best = candidate;
       bestFreshness = freshness;
     }
@@ -189,10 +179,14 @@ async function fetchFreshest(
   const key = `${cacheKey}|${unit ?? ''}`;
   const now = Date.now();
   const remembered = freshestSeen.get(key);
-  if (remembered && now - remembered.at < FRESHEST_TTL_MS && remembered.freshness > bestFreshness) {
+  if (
+    remembered &&
+    now - remembered.at < FRESHEST_TTL_MS &&
+    (!bestFreshness || atLeastAsFresh(remembered.freshness, bestFreshness))
+  ) {
     best = remembered.data;
     bestFreshness = remembered.freshness;
-  } else if (best) {
+  } else if (best && bestFreshness) {
     freshestSeen.set(key, { data: best, freshness: bestFreshness, at: now });
   }
 
@@ -224,6 +218,30 @@ async function fetchFreshest(
  */
 const staticUrlSeen = new Map<string, string>();
 
+/**
+ * Decode the XML entities an attribute value can carry.
+ *
+ * `res.json()` did this for free on the export path, so nothing downstream ever
+ * had to think about it. The static file is raw XML: a franchise called
+ * `Da Bear's & Co.` arrives as `Da Bear&#39;s &amp; Co.`, and that string is
+ * read by `parseTradeFromComment` and rendered on a 65" screen.
+ */
+function decodeXmlEntities(value: string): string {
+  return value
+    .replace(/&(?:#(\d+)|#x([0-9a-f]+)|(lt|gt|quot|apos|amp));/gi, (whole, dec, hex, named) => {
+      if (dec) return String.fromCodePoint(Number.parseInt(dec, 10));
+      if (hex) return String.fromCodePoint(Number.parseInt(hex, 16));
+      switch ((named as string).toLowerCase()) {
+        case 'lt': return '<';
+        case 'gt': return '>';
+        case 'quot': return '"';
+        case 'apos': return "'";
+        case 'amp': return '&';
+        default: return whole;
+      }
+    });
+}
+
 /** `<draftPick ... />` attributes, in whatever order MFL emitted them. */
 function parseStaticXml(xml: string): RawDraftPick[] | null {
   if (!xml.includes('<draftResults')) return null;
@@ -231,7 +249,8 @@ function parseStaticXml(xml: string): RawDraftPick[] | null {
   for (const tag of xml.match(/<draftPick\b[^>]*\/?>/g) ?? []) {
     const attr = (name: string) => {
       const m = tag.match(new RegExp(`\\b${name}="([^"]*)"`));
-      return m ? m[1] : '';
+      // `&amp;` must be decoded LAST or an encoded entity decodes twice.
+      return m ? decodeXmlEntities(m[1]) : '';
     };
     out.push({
       round: attr('round'),
@@ -245,17 +264,37 @@ function parseStaticXml(xml: string): RawDraftPick[] | null {
   return out.length > 0 ? out : null;
 }
 
-/** Newest pick stamp in a parsed board, or its filled count if none carry one. */
-function picksFreshness(picks: RawDraftPick[]): number {
-  let newest = 0;
+/**
+ * How recent a parsed board is: newest pick stamp, then how many picks.
+ *
+ * A TUPLE, never one number standing in for both. Collapsing them —
+ * "timestamp if any pick has one, else the count" — makes two boards
+ * incomparable the moment one of them is unstamped: an epoch second always
+ * dwarfs a pick count, so an unstamped static board could never win and the
+ * headline fix would silently never engage, while an unstamped JSON board would
+ * lose to a far staler stamped one. Same shape as the client's `boardAge`.
+ */
+interface BoardFreshness {
+  newestPick: number;
+  filled: number;
+}
+
+function picksFreshness(picks: RawDraftPick[]): BoardFreshness {
+  let newestPick = 0;
   let filled = 0;
   for (const p of picks) {
     if (!p.player) continue;
     filled += 1;
     const ts = Number.parseInt(p.timestamp ?? '', 10);
-    if (Number.isFinite(ts) && ts > newest) newest = ts;
+    if (Number.isFinite(ts) && ts > newestPick) newestPick = ts;
   }
-  return newest > 0 ? newest : filled;
+  return { newestPick, filled };
+}
+
+/** Is `a` at least as recent as `b`? Stamp first, count only breaks ties. */
+function atLeastAsFresh(a: BoardFreshness, b: BoardFreshness): boolean {
+  if (a.newestPick !== b.newestPick) return a.newestPick > b.newestPick;
+  return a.filled >= b.filled;
 }
 
 /** Fetch and parse the static file. Null on any failure — it is an optimisation. */
@@ -265,7 +304,7 @@ async function fetchStaticBoard(staticUrl: string): Promise<RawDraftPick[] | nul
   const safeUrl = toSafeMflUrl(staticUrl);
   if (!safeUrl) return null;
   try {
-    const res = await fetch(staticUrl, {
+    const res = await fetch(safeUrl, {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FantasyLeague/1.0)' },
       signal: AbortSignal.timeout(8_000),
     });
@@ -337,7 +376,7 @@ export const GET: APIRoute = async ({ url }) => {
     // flap; the sampled JSON above is the fallback, not the target.
     // `static_url` arrives inside MFL's JSON body, so it is third-party data
     // this server would otherwise fetch on trust. Allowlisted to MFL hosts by
-    // the same rule as the `host` parameter — see isMflUrl.
+    // the same rule as the `host` parameter — see toSafeMflUrl.
     const staticUrl = toSafeMflUrl((selected as any)?.static_url) ?? knownStatic;
     if (staticUrl) staticUrlSeen.set(staticKey, staticUrl);
 
@@ -349,7 +388,7 @@ export const GET: APIRoute = async ({ url }) => {
     const staticPicks = remembered ? await fetchStaticBoard(remembered) : null;
 
     rawPicks =
-      staticPicks && picksFreshness(staticPicks) >= picksFreshness(jsonArr)
+      staticPicks && atLeastAsFresh(picksFreshness(staticPicks), picksFreshness(jsonArr))
         ? staticPicks
         : jsonArr;
 

@@ -221,10 +221,15 @@ describe('resolveMflHost', () => {
     expect(resolveMflHost('www44.myfantasyleague.com', 'fallback')).toBe(
       'www44.myfantasyleague.com'
     );
-    // An MFL host that belongs to no league of ours is NOT reachable: the
-    // allowlist is the registry plus the export host, and a copy league on
-    // another www## is reached through that export host's redirect.
-    expect(resolveMflHost('www12.myfantasyleague.com', 'fallback')).toBe('fallback');
+    // An MFL app server that belongs to no league of ours IS reachable: a copy
+    // league made to rehearse draft night can be served from any of them, and
+    // `static_url` names the one that has its file.
+    expect(resolveMflHost('www12.myfantasyleague.com', 'fallback')).toBe(
+      'www12.myfantasyleague.com'
+    );
+    // The list is still finite, so it ends.
+    expect(resolveMflHost('www100.myfantasyleague.com', 'fallback')).toBe('fallback');
+    expect(resolveMflHost('mail.myfantasyleague.com', 'fallback')).toBe('fallback');
     expect(resolveMflHost('API.MyFantasyLeague.com', 'fallback')).toBe('api.myfantasyleague.com');
   });
 
@@ -615,9 +620,10 @@ describe('toSafeMflUrl', () => {
       'https://evil.com/www44.myfantasyleague.com/x.xml',
       'https://user@evil.com/x.xml',
       'https://myfantasyleague.com.evil.com/x.xml',
-      // An MFL host we do not use is still refused — the check is membership
-      // in a finite list, not a pattern match on the domain.
-      'https://www12.myfantasyleague.com/x.xml',
+      // Still a finite list, so it ends — and a non-app-server subdomain of the
+      // real domain is refused just like a foreign host.
+      'https://www100.myfantasyleague.com/x.xml',
+      'https://mail.myfantasyleague.com/x.xml',
       'https://evil.com/?u=myfantasyleague.com',
       // Cloud metadata, the classic SSRF target.
       'https://169.254.169.254/latest/meta-data/',
@@ -654,5 +660,109 @@ describe('toSafeMflUrl', () => {
     expect(toSafeMflUrl(null)).toBeNull();
     expect(toSafeMflUrl(42)).toBeNull();
     expect(toSafeMflUrl({ toString: () => 'https://www44.myfantasyleague.com/' })).toBeNull();
+  });
+});
+
+/**
+ * Fixes for the round-one review findings, each pinned by the property that
+ * broke rather than by the line that changed.
+ */
+describe('review round one', () => {
+  const SRC = (rel: string) => readFileSync(join(__dirname, '..', rel), 'utf8');
+
+  describe('the static file is fetched through the REBUILT url', () => {
+    it('never passes the caller’s string to fetch', () => {
+      // `fetchStaticBoard` computed a safe URL and then fetched the unvalidated
+      // one, so the allowlist that closed a CodeQL SSRF alert was a no-op at
+      // the exact line that reaches the network. Guarding the decision, not the
+      // wording: nothing in that function may fetch anything but `safeUrl`.
+      const src = SRC('src/pages/api/draft/status.ts');
+      const fn = src.slice(
+        src.indexOf('async function fetchStaticBoard'),
+        src.indexOf('async function fetchStaticBoard') + 900
+      );
+      expect(fn).toContain('const safeUrl = toSafeMflUrl(staticUrl)');
+      expect(fn).toContain('await fetch(safeUrl');
+      expect(fn).not.toContain('await fetch(staticUrl');
+    });
+  });
+
+  describe('the image-cache trim does not depend on worker lifetime', () => {
+    it('is sampled, not counted', () => {
+      // A module-level counter reset every time the browser killed the idle
+      // worker, so the trim essentially never ran and the cache — exempt from
+      // the activate sweep — grew until the origin quota, where cache.put
+      // starts throwing and is swallowed.
+      const sw = SRC('public/sw.js');
+      expect(sw).toContain('Math.random() < 1 / TRIM_EVERY');
+      expect(sw).not.toContain('remoteImageWrites');
+    });
+
+    it('also trims on activate, which no sampling can miss', () => {
+      const sw = SRC('public/sw.js');
+      const activate = sw.slice(
+        sw.indexOf("addEventListener('activate'"),
+        sw.indexOf("addEventListener('fetch'")
+      );
+      expect(activate).toContain('trimRemoteImages');
+    });
+  });
+
+  describe('XML attribute values are entity-decoded', () => {
+    // `res.json()` decoded these for free on the export path, so nothing
+    // downstream expects raw entities. The static file is raw XML, and comments
+    // feed parseTradeFromComment and reach a 65-inch screen.
+    const decode = (value: string) =>
+      value.replace(/&(?:#(\d+)|#x([0-9a-f]+)|(lt|gt|quot|apos|amp));/gi, (whole, dec, hex, named) => {
+        if (dec) return String.fromCodePoint(Number.parseInt(dec, 10));
+        if (hex) return String.fromCodePoint(Number.parseInt(hex, 16));
+        switch ((named as string).toLowerCase()) {
+          case 'lt': return '<';
+          case 'gt': return '>';
+          case 'quot': return '"';
+          case 'apos': return "'";
+          case 'amp': return '&';
+          default: return whole;
+        }
+      });
+
+    it('decodes the forms MFL actually emits in a franchise name', () => {
+      expect(decode('Da Bear&#39;s &amp; Co.')).toBe("Da Bear's & Co.");
+      expect(decode('&quot;The Show&quot;')).toBe('"The Show"');
+      expect(decode('a &lt; b &gt; c')).toBe('a < b > c');
+      expect(decode('&#x27;quoted&#x27;')).toBe("'quoted'");
+    });
+
+    it('leaves ordinary text and unknown entities alone', () => {
+      expect(decode('Suh girls, one cup')).toBe('Suh girls, one cup');
+      expect(decode('100% &nbsp; sure')).toBe('100% &nbsp; sure');
+    });
+
+    it('does not double-decode an encoded ampersand', () => {
+      // `&amp;#39;` is a literal "&#39;", not an apostrophe. A two-pass decoder
+      // (or decoding &amp; first) turns it into one.
+      expect(decode('&amp;#39;')).toBe('&#39;');
+    });
+  });
+
+  describe('board freshness is a tuple, not one number for two things', () => {
+    // Collapsing "stamp if any, else count" makes an unstamped board
+    // incomparable: an epoch second dwarfs a pick count, so an unstamped static
+    // board could never win and the headline fix would silently never engage.
+    const fresh = (newestPick: number, filled: number) => ({ newestPick, filled });
+    const atLeastAsFresh = (a: any, b: any) =>
+      a.newestPick !== b.newestPick ? a.newestPick > b.newestPick : a.filled >= b.filled;
+
+    it('lets an UNSTAMPED board win on count instead of losing to an epoch', () => {
+      expect(atLeastAsFresh(fresh(0, 31), fresh(0, 26))).toBe(true);
+    });
+
+    it('does not let an unstamped board beat a stamped one', () => {
+      expect(atLeastAsFresh(fresh(0, 99), fresh(1_787_987_132, 31))).toBe(false);
+    });
+
+    it('prefers the newer stamp regardless of count — the revert case', () => {
+      expect(atLeastAsFresh(fresh(5_000, 2), fresh(1_000, 12))).toBe(true);
+    });
   });
 });

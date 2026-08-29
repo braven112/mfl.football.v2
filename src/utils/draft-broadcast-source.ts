@@ -59,6 +59,17 @@ export const MFL_EXPORT_HOST = 'api.myfantasyleague.com';
 const MFL_ALLOWED_HOSTS: readonly string[] = Object.freeze([
   MFL_EXPORT_HOST,
   ...ALL_LEAGUES.map((league) => league.mflHost.toLowerCase()),
+  // MFL's numbered application servers. `static_url` names the `www##` that
+  // actually serves a league's file, and that is NOT necessarily one of ours —
+  // a copy league made to rehearse draft night can land on any of them. Pinning
+  // the list to our own three would have quietly dropped every such league onto
+  // the JSON-sampling fallback, which is to say it would have made the dry run
+  // exercise a different code path than draft night.
+  //
+  // Enumerated rather than pattern-matched, because a generated finite list is
+  // still a membership test: `www100.myfantasyleague.com` is refused, and so is
+  // anything that merely contains the domain.
+  ...Array.from({ length: 99 }, (_, i) => `www${i + 1}.myfantasyleague.com`),
 ]);
 
 /**

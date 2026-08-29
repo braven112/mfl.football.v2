@@ -32,7 +32,7 @@ import type { DraftRoomTeam } from '../types/draft-room';
 import type { BroadcastDefenseFace, BroadcastPlayer } from '../types/draft-broadcast';
 import { isSplashCutoutEligible } from './pick-reveal';
 import { resolveOrigin } from './draft-broadcast';
-import { getPlayerHeadshot } from '../constants/roster-constants';
+import { getCollegeHeadshot, getPlayerHeadshot } from '../constants/roster-constants';
 
 /**
  * How many players deep the plan reaches by default.
@@ -120,7 +120,21 @@ export function planBroadcastImages({
     // Exactly the predicate the card uses to decide whether it paints a cutout
     // at all, so the plan can never warm an image the card will not request
     // (nor miss one it will) — see `isSplashCutoutEligible`.
-    if (isSplashCutoutEligible(player)) push(player.headshot, () => (cutouts += 1));
+    if (isSplashCutoutEligible(player)) {
+      push(player.headshot, () => (cutouts += 1));
+      // The card's 404 cascade is NFL cutout -> COLLEGE cutout -> no cutout
+      // (`handleCutoutError`), so warming only the first leaves the fallback to
+      // be fetched cold mid-reveal — the exact failure this plan exists to
+      // remove, and the COMMON path on TheLeague's rookies-only board where the
+      // NFL headshot is the one that 404s.
+      //
+      // Rookies only, deliberately. Warming a college fallback for every
+      // veteran would roughly double the plan to insure a 404 that does not
+      // happen to them; a rookie's NFL headshot missing is the ordinary case.
+      if (player.isRookie && player.espnId) {
+        push(getCollegeHeadshot(player.espnId), () => (cutouts += 1));
+      }
+    }
     push(resolveOrigin(player).logo, () => (logos += 1));
   }
 

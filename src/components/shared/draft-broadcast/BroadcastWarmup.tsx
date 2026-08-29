@@ -145,6 +145,13 @@ export function BroadcastWarmup({ urls, concurrency = DEFAULT_CONCURRENCY }: Pro
     const { signal } = controller;
     let cancelled = false;
 
+    // This run's counters start at zero. They are refs so the pill can publish
+    // them on a timer, which also means they survive a re-run of this effect —
+    // and a re-run re-walks the whole plan, counting every already-`warmed` URL
+    // again, so without this the pill can claim more images than the plan holds.
+    readyRef.current = 0;
+    failedRef.current = 0;
+
     const publish = setInterval(() => {
       setReady(readyRef.current);
       setFailed(failedRef.current);
