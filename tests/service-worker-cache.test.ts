@@ -461,7 +461,19 @@ describe('service worker caching', () => {
         Math.random = realRandom;
       }
 
-      const stored = [...h.cache.store.keys()].filter((url) => url.includes('a.espncdn.com'));
+      // Hostname equality, not a substring match. `url.includes('a.espncdn.com')`
+      // is true for `https://evil.com/?x=a.espncdn.com`, which is why CodeQL
+      // flags the pattern (incomplete URL substring sanitization) — and while
+      // nothing security-sensitive turns on it HERE, a test that selects the
+      // wrong rows is a test that can pass for the wrong reason.
+      const isEspn = (url: string) => {
+        try {
+          return new URL(url).hostname === 'a.espncdn.com';
+        } catch {
+          return false;
+        }
+      };
+      const stored = [...h.cache.store.keys()].filter(isEspn);
       // Sampled rather than per-write (cache.keys() walks the whole cache, and
       // a broadcast warm-up stores ~600 back to back), so in the wild the
       // ceiling can be overshot by roughly one sampling interval.
