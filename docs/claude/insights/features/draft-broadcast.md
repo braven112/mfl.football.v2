@@ -627,3 +627,70 @@ crest `<img>` now also carries a `ref` that re-checks
 `nflLogoRefCallback` in `roster-constants.ts`. Anything added to this board with
 an `onError` fallback needs the ref too — the reveal card is the exception,
 since it only ever mounts after a pick lands client-side.
+
+### Portrait: both rows flexible, and the clamp is what makes it safe
+
+Portrait leads with the copy and closes with the player (Brandon, 2026-08-28),
+which is what the BASE layer's `order` already does — so the breakpoint stopped
+re-pinning `order` entirely rather than inverting it a second time. The row
+sizing that goes with it is the part worth remembering, because the obvious
+version of it is wrong in a way you will not see on a phone:
+
+```css
+grid-template-rows: minmax(min-content, 1fr) minmax(0, 1fr);  /* copy, figure */
+.dbc-reveal__text   { align-self: end; }
+.dbc-reveal__figure { min-height: 0; }
+```
+
+- **The figure's row must stay FLEXIBLE.** `.dbc-reveal__model` is capped by
+  `max-height: 100%`, and a percentage max-height only binds against a definite
+  track — that clamp is the only thing stopping a tall cutout from shoving the
+  copy off the top of the card. `grid-template-rows: auto auto` plus
+  `align-content: end` was tried first because it closes the copy-to-player gap
+  on a tall phone and looks better there. It also overlapped the copy and the
+  player by **141px at 600x660** and 75px at 540x720 (Surface Duo), because
+  nothing was clamping anything. Measured, not reasoned: 375x667 and 360x640
+  both LOOK fine, so a phone-only check passes a broken layout.
+- **`align-self: end` on the copy is what banks the slack above it.** With the
+  copy's row content-sized instead, every leftover pixel pools in the figure row
+  and a 390x844 phone gets ~170px of bare gradient between the last stat and the
+  player's head. Both rows flexible + copy bottom-aligned puts the slack over
+  the copy as headroom, which is where the old player-on-top layout had it too.
+- **`min-content` is the copy row's floor, not `0`.** The copy is the one thing
+  on the card that must never be cropped, so on a short viewport it takes what
+  it needs (255px at 600x660) and the figure row gives way.
+- **An EMPTY figure gives its row back**, via
+  `.dbc-reveal__body:not(:has(.dbc-reveal__model))` collapsing to one row.
+  Without it the crest-only reveal and a 404'd cutout leave half a card of bare
+  gradient under the copy. `:has()` is sound here only because
+  `handleCutoutError` nulls the state and REMOVES the `<img>` — a
+  `display: none` fallback would be invisible to it.
+- **`min-height: 0` on the figure must stay a zero.** A revision reserved
+  `64vw` there so the absolutely-positioned defence pair (`--def`, `bottom: 0`)
+  would have a box in a content-sized row — and that floor then applied to the
+  two states with nothing to show, the crest-only reveal for an unmapped defense
+  and a cutout that 404'd, both of which render an EMPTY figure. It read as
+  250px of bare gradient under the copy. A flexible row gives the pair its box
+  for free.
+
+Growing the cutout to fill the leftover space is NOT the fix, and was tried
+first: `object-fit: contain` can never exceed the box's WIDTH, so on a
+width-bound cutout `height: 100%` changes nothing at all. The only ways to fill
+vertically are `cover` (crops him) or letting him run past the column — the
+120% the TV uses, explicitly declined for portrait further up this file.
+
+The crest re-anchors to the BOTTOM-right here (`top: auto; bottom: -6vh;
+transform: none`). Its old `top: 42%` centring was written for the previous
+stack, where the copy sat under the player; with the copy leading it crossed
+the name. Note all three of `left`, `top` and `transform` have to be unwound —
+the base layer centres with `left: 50%/top: 50%` + `translate(-50%, -50%)`, and
+leaving any one in re-centres the crest on an axis.
+
+**Sweep these eight viewports for any portrait change here**, all of them
+`orientation: portrait` and under the 900px breakpoint: 390x844, 375x667,
+360x640, 320x480, 430x500, 540x720, 600x660, 768x1024. The card's height is
+`max(30rem, 100vh - 12rem)`, so everything at or under ~672px tall sits on the
+480px floor and is where the budget actually gets tight — and the WIDE short
+ones (540x720, 600x660) are the failures, not the narrow tall ones everybody
+tests. Assert `text.bottom === figure.top` and that the kicker's top is never
+above the card's.

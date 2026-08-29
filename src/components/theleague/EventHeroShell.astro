@@ -295,10 +295,15 @@ const countAriaLabel = hasCount
     border-radius: 12px;
     background: color-mix(in srgb, var(--ev-accent) 22%, transparent);
   }
+  /* `color` too: sprite symbols that paint with currentColor on their own
+     paths (icon-playoff among them, and league-events.ts uses it) ignore an
+     inherited fill, so they rendered in the eyebrow's ink instead of the
+     accent. No-op for every symbol that carries its own fill. */
   .tl-event-hero__chip svg {
     width: 24px;
     height: 24px;
     fill: var(--ev-accent);
+    color: var(--ev-accent);
   }
   .tl-event-hero__pill {
     font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', 'Oswald', sans-serif);
@@ -482,6 +487,7 @@ const countAriaLabel = hasCount
     height: 0.95rem;
     flex-shrink: 0;
     fill: var(--ev-accent);
+    color: var(--ev-accent);
   }
   :global(.tl-hero-panel__link-label) {
     overflow: hidden;

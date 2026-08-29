@@ -494,6 +494,7 @@ const sectionRenderInfo = visibleSections.map((section) => {
 
   .nav-links__link--active .nav-links__icon :global(svg) {
     fill: #ffffff;
+    color: #ffffff;
   }
 
   /* ============================================
@@ -508,10 +509,22 @@ const sectionRenderInfo = visibleSections.map((section) => {
     height: 24px;
   }
 
+  /* `color` as well as `fill`: six sprite symbols paint with currentColor on
+     their own paths — podium-empty, playoff, scoreboard, money-bag and toilet
+     via `fill`, and standings via `stroke` behind a `fill="none"`. A
+     presentation attribute on the path beats the fill this rule sets on the
+     <svg>, so all six painted in --nav-text (near-white in dark mode) instead
+     of the league blue every other nav icon uses. Setting color makes
+     currentColor resolve to the same value, and covers the stroke-based one
+     that a fill-only fix would have missed. Two are live in nav-config today:
+     podium-empty on the AFL's Draft Broadcast, which every owner sees, and
+     standings on Custom Rankings, which is `visibility: admin` in both
+     leagues — so only the first one is a user-visible change. */
   .nav-links__icon :global(svg) {
     width: 24px;
     height: 24px;
     fill: var(--color-primary, #1c497c);
+    color: var(--color-primary, #1c497c);
   }
 
   /* :global(img) because the AFL tier mark is rendered by <ThemeImage>, so

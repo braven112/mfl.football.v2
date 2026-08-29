@@ -3,6 +3,22 @@
   "changes": [
     {
       "date": "2026-08-28",
+      "type": "bug-fix",
+      "summary": "The podium icon on the Draft Broadcast link in the side nav was showing white instead of blue, so it stood out against a column of icons that all match. Every other icon in that menu takes its colour from the menu; a handful of the newer ones carry their own colour instruction, which quietly won and left them the colour of the label beside them. It matches the rest of the list again.",
+      "impact": "user",
+      "area": "navigation",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-28",
+      "type": "style-tweak",
+      "summary": "Hold your phone upright on the draft broadcast and the pick now reads top to bottom the way you'd expect: the pick, the name and the numbers first, the player underneath them. It used to lead with the player and bury the name below him, so the thing you actually wanted — who just went — was the last thing on screen. The copy and the cutout now sit together at the bottom of the card with the headroom above them, instead of a strip of empty gradient in between.",
+      "impact": "user",
+      "area": "draft",
+      "league": "both"
+    },
+    {
+      "date": "2026-08-28",
       "type": "style-tweak",
       "summary": "When a team defense goes on the draft broadcast, the two defenders standing in for it now get their names side by side on one line, each one sitting in front of the man it belongs to. The names used to stack in a single plate in the bottom corner, which told the room the order they were listed in and nothing about which face was which — so the guy on the left and the guy on the right were a coin flip. Each name now rides its own chip under its own head, at every screen size, and if one headshot fails to load the survivor and his name slide to the middle together.",
       "impact": "user",
