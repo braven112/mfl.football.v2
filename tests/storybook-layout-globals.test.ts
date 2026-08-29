@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 /**
- * Storybook typography wiring — the guard on Trap 4b.
+ * Storybook layout-globals wiring — the guard on Trap 4b.
  *
  * Storybook loads neither astro.config.ts (where Vend Sans is registered) nor
  * TheLeagueLayout's <style> block (which applies --font-family-base and
@@ -11,7 +11,7 @@ import { join } from 'node:path';
  * Roman with zero web fonts loaded, and it read as a slightly-off canvas
  * rather than as a bug.
  *
- * `.storybook/preview-typography.css` closes both gaps. The failure mode if
+ * `.storybook/preview-layout-globals.css` closes both gaps. The failure mode if
  * any link in that chain is dropped is SILENT — the font 404s or the variable
  * goes undefined and the canvas falls back, exactly as before, with a green
  * build and a full set of wrong Chromatic baselines. So each link is pinned
@@ -21,13 +21,13 @@ import { join } from 'node:path';
  */
 
 const ROOT = join(__dirname, '..');
-const CSS_PATH = join(ROOT, '.storybook/preview-typography.css');
+const CSS_PATH = join(ROOT, '.storybook/preview-layout-globals.css');
 const css = readFileSync(CSS_PATH, 'utf8');
 
-describe('Storybook typography wiring', () => {
-  it('preview.ts imports the typography stylesheet', () => {
+describe('Storybook layout-globals wiring', () => {
+  it('preview.ts imports the stylesheet', () => {
     const preview = readFileSync(join(ROOT, '.storybook/preview.ts'), 'utf8');
-    expect(preview).toContain("import './preview-typography.css'");
+    expect(preview).toContain("import './preview-layout-globals.css'");
   });
 
   it('defines --font-vend-sans, which astro.config.ts supplies in production', () => {
@@ -58,7 +58,26 @@ describe('Storybook typography wiring', () => {
   });
 
   it('keeps Storybook fonts OUT of public/, so the shipped bundle is unchanged', () => {
-    expect(existsSync(join(ROOT, 'public/assets/fonts/vend-sans-latin.woff2'))).toBe(false);
+    // Asserted as a PROPERTY, not as one hardcoded path: a probe for a single
+    // filename passes for any other name or directory, which would let the
+    // byte-identical-bundle invariant break with a green suite. Every face
+    // must come from the Storybook-only mount.
+    const urls = [...css.matchAll(/url\(['"]([^'"]+)['"]\)/g)].map((m) => m[1]);
+    for (const url of urls) {
+      expect(url, `${url} is not served from the Storybook-only font mount`).toMatch(
+        /^\/storybook-fonts\//,
+      );
+    }
+  });
+
+  it('declares the font directory to Chromatic as a visual input', () => {
+    // TurboSnap does not trace staticDirs through the module graph — the built
+    // CSS keeps the literal url() and the woff2 is only copied. Without this
+    // glob, swapping or re-subsetting the font is treated as affecting
+    // NOTHING and every snapshot is inherited, so the regression ships green.
+    // Same reason public/assets/** is already listed.
+    const pkg = readFileSync(join(ROOT, 'package.json'), 'utf8');
+    expect(pkg).toContain('--externals \\"' + '.storybook/static/**' + '\\"');
   });
 
   it('self-hosts every face — a third-party font URL is a Chromatic flake', () => {
@@ -83,5 +102,14 @@ describe('Storybook typography wiring', () => {
     expect(css).toMatch(/html\s*\{[^}]*font-family:\s*var\(--font-family-base\)/);
     expect(css).toMatch(/body\s*\{[^}]*font-family:\s*var\(--font-family-base\)/);
     expect(css).toMatch(/h4\s*\{[^}]*font-family:\s*var\(--font-display\)/s);
+  });
+
+  it('applies the layout link colors, which Chromatic would otherwise baseline as UA blue', () => {
+    // main runs `chromatic --auto-accept-changes`, so an unstyled anchor does
+    // not just look wrong once — it becomes the accepted baseline and the
+    // suite goes blind to real link-color regressions.
+    expect(css).toMatch(/\ba\s*\{[^}]*color:\s*var\(--primary-link-default-text-color\)/s);
+    expect(css).toMatch(/a:hover\s*\{[^}]*color:\s*var\(--primary-link-hover-text-color\)/s);
+    expect(css).toMatch(/a:focus\s*\{[^}]*color:\s*var\(--primary-link-focus-text-color\)/s);
   });
 });

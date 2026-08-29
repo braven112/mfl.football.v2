@@ -44,7 +44,7 @@ const config: StorybookConfig = {
    * /storybook-fonts prefix so it is obvious the file is Storybook's and not
    * the app's, and it stays out of public/ so the shipped Vercel bundle is
    * still byte-identical with or without Storybook. See
-   * .storybook/preview-typography.css.
+   * .storybook/preview-layout-globals.css.
    */
   staticDirs: ['../public', { from: './static/fonts', to: '/storybook-fonts' }],
 

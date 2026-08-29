@@ -1,34 +1,48 @@
 /**
- * Typography the app gets from two places Storybook cannot see.
+ * The global rules `TheLeagueLayout` owns — which a story never gets.
  *
- * A story renders with NO layout and NO astro.config, so two independent
- * pieces of the app's type system were missing and the canvas silently fell
- * back to the browser default sans:
+ * A story renders with NO layout and NO astro.config, so anything the app
+ * applies from those two places is simply absent from the canvas. The failure
+ * is always silent: correct DOM, missing rules, a green build, and a Chromatic
+ * baseline that bakes the wrong render in as correct.
+ *
+ * Everything here is a copy of something in `TheLeagueLayout.astro`'s own
+ * `<style>` block (plus the font that block assumes is loaded). Keep it in
+ * sync with that file. One layout serves BOTH leagues — 61 TheLeague pages and
+ * 36 AFL pages import `TheLeagueLayout` — so there is exactly one source to
+ * track, not a per-league pair.
+ *
+ * ── The fonts, which were two separate misses ───────────────────────────────
+ *
+ * Until Aug 2026 every story rendered in Times New Roman (body) and
+ * Storybook's own Nunito Sans (headings), with `document.fonts` reporting ZERO
+ * loaded faces. It reads as a slightly-off canvas rather than as a bug, which
+ * is why it survived the whole spike. Two independent causes, and fixing
+ * either alone leaves the canvas wrong:
  *
  *  1. `--font-vend-sans` never exists. astro.config.ts registers Vend Sans
- *     through `fontProviders.google()` and `TheLeagueLayout` emits the
- *     @font-face + variable with `<Font cssVariable="--font-vend-sans" />`.
- *     Storybook does not load astro.config (see Trap 4 in
- *     docs/claude/rules/storybook.md), so tokens.css's
+ *     through `fontProviders.google()` and the layout emits the @font-face +
+ *     variable with `<Font cssVariable="--font-vend-sans" />`. Storybook does
+ *     not load astro.config (Trap 4 in docs/claude/rules/storybook.md), so
+ *     tokens.css's
  *     `--font-family-base: var(--font-vend-sans, 'Vend Sans'), system-ui, ...`
  *     resolved past BOTH the variable and the unloaded family, all the way to
- *     system-ui. Correct DOM, wrong typeface — the same silent shape as
- *     Trap 2.
+ *     system-ui.
  *
- *  2. The rules that APPLY those tokens live in `TheLeagueLayout`'s own
- *     `<style>` block (html/body font-family, the h1–h4 `--font-display`
- *     rule, code). A component never carries them, so even the already-loaded
- *     'UFC Sans Condensed' headings rendered in the default font.
+ *  2. Nothing APPLIED it. The html/body font-family and the h1-h4
+ *     `--font-display` rule live in the layout, not in a component — so even
+ *     'UFC Sans Condensed', which tokens.css already @font-faces and
+ *     staticDirs already serves, reached no heading.
  *
  * The font is self-hosted rather than linked from fonts.googleapis.com on
  * purpose: Chromatic waits for network idle before capturing, so a
  * third-party font request is a timeout risk and an intermittent one is a
  * false diff — the same reasoning that stubbed the playoff-hero headshots.
- * It also matches production more closely, since Astro's font pipeline
- * self-hosts too.
+ * It also matches production, since Astro's font pipeline self-hosts too.
  *
  * `.storybook/static/fonts` is served at /storybook-fonts by a staticDirs
- * mapping in main.ts. It deliberately does NOT live in public/ — Storybook is
+ * mapping in main.ts, and is declared to Chromatic via `--externals` in the
+ * `chromatic` script. It deliberately does NOT live in public/ — Storybook is
  * dev-only and the shipped Vercel bundle stays byte-identical.
  */
 
@@ -124,4 +138,38 @@ code {
   background: var(--color-gray-100);
   padding: var(--spacing-xs);
   border-radius: var(--radius-sm);
+}
+
+/**
+ * Links. Omitting these left every anchor on the UA default blue — verified
+ * rgb(0,0,238) light / rgb(158,158,255) dark against production's #111827 /
+ * #60a5fa. That is the same silent shape as the font gap, and worse in
+ * consequence: main runs Chromatic with `--auto-accept-changes`, so the wrong
+ * color would become the accepted baseline and the suite would go blind to
+ * real link-color regressions.
+ */
+a {
+  color: var(--primary-link-default-text-color);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--primary-link-hover-text-color);
+  text-decoration: underline;
+}
+
+a:focus {
+  color: var(--primary-link-focus-text-color);
+  text-decoration: underline;
+}
+
+/**
+ * No component in the story suite emits `class="table-wrapper"` today, so this
+ * moves no baseline. It is here because the components that DO use it
+ * (StandingsTable, FranchiseOptions, OwnerActivityReport, ...) are exactly the
+ * kind that get storied next, and a table that silently loses its horizontal
+ * scroll is the same class of gap as the two above.
+ */
+.table-wrapper {
+  overflow-x: auto;
 }

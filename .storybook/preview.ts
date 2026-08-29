@@ -12,14 +12,15 @@ import '../src/styles/tokens-dark.css';
 import '../src/styles/utilities.css';
 
 /**
- * Fonts + the layout's typography rules. Storybook loads neither
- * astro.config.ts (so `--font-vend-sans` never exists) nor
- * TheLeagueLayout's <style> block (so nothing applies --font-family-base or
- * --font-display in the first place), which left every story rendering in
- * Times New Roman with zero web fonts loaded. See the file header for the
- * full reasoning.
+ * The global rules TheLeagueLayout owns, which a story never gets: the fonts
+ * plus everything that applies them (html/body font-family, the h1-h4
+ * --font-display rule, code, links). Storybook loads neither astro.config.ts
+ * (so `--font-vend-sans` never exists) nor the layout's <style> block (so
+ * nothing applied --font-family-base or --font-display in the first place),
+ * which left every story rendering in Times New Roman with zero web fonts
+ * loaded and every anchor on the UA default blue. See the file header.
  */
-import './preview-typography.css';
+import './preview-layout-globals.css';
 
 /**
  * Component stylesheets MUST be imported here, not relied upon from the

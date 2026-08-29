@@ -97,7 +97,7 @@
     "storybook": "storybook dev -p 6006 --no-open",
     "build:storybook": "storybook build",
     "build:storybook:stats": "storybook build --stats-json",
-    "chromatic": "chromatic --build-script-name build:storybook:stats --only-changed --externals \"src/styles/**/*.css\" --externals \"public/assets/**\" --diagnostics-file chromatic-diagnostics.json"
+    "chromatic": "chromatic --build-script-name build:storybook:stats --only-changed --externals \"src/styles/**/*.css\" --externals \"public/assets/**\" --externals \".storybook/static/**\" --diagnostics-file chromatic-diagnostics.json"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

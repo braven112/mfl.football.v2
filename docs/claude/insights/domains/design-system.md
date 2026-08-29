@@ -2497,7 +2497,10 @@ surfaces in this repo have now had to solve it independently, and the second
 one is the tell: `src/utils/schefter-og.ts` registers its own faces from
 `src/assets/fonts/og/` and names `fontFamily: 'UFC Sans'` inline on every node,
 because Satori has neither the layout nor the token sheet. Storybook fixed it
-in `.storybook/preview-typography.css`. Any future non-layout surface — an
+in `.storybook/preview-layout-globals.css` — and note the scope crept honestly:
+the same "the layout owns it, a component never carries it" gap also had every
+bare anchor on the UA default blue, so the port is the layout's WHOLE global
+block, not just its type rules. Any future non-layout surface — an
 `/embed/*` route, an email, a canvas/PDF renderer — starts from the same
 deficit.
 
