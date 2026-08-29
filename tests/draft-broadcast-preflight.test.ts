@@ -27,7 +27,7 @@ import {
 } from '../src/utils/draft-broadcast-images';
 import {
   MFL_EXPORT_HOST,
-  isMflUrl,
+  toSafeMflUrl,
   resolveBroadcastSource,
   resolveMflHost,
   resolveMflLeagueId,
@@ -602,11 +602,9 @@ describe('the board never moves backwards on its own', () => {
  * server then requests. CodeQL flagged exactly that (high severity) on the
  * first cut of this change.
  */
-describe('isMflUrl', () => {
+describe('toSafeMflUrl', () => {
   it('accepts the real static-file URL MFL advertises', () => {
-    expect(
-      isMflUrl('https://www44.myfantasyleague.com/fflnetdynamic2026/21227_CONFERENCE01_draft_results.xml')
-    ).toBe(true);
+    expect(toSafeMflUrl('https://www44.myfantasyleague.com/fflnetdynamic2026/21227_CONFERENCE01_draft_results.xml')).not.toBeNull();
   });
 
   it('refuses a host that is not MFL, however it is dressed up', () => {
@@ -624,22 +622,37 @@ describe('isMflUrl', () => {
       // Cloud metadata, the classic SSRF target.
       'https://169.254.169.254/latest/meta-data/',
     ]) {
-      expect(isMflUrl(hostile), hostile).toBe(false);
+      expect(toSafeMflUrl(hostile), hostile).toBeNull();
     }
   });
 
+  it('REBUILDS the URL from the allowlist rather than returning the input', () => {
+    // The whole point: the origin this server connects to comes from the frozen
+    // list, not from the string MFL sent. A port or credential in the original
+    // is dropped rather than carried into the fetch.
+    expect(toSafeMflUrl('https://WWW44.MyFantasyLeague.com/a/b.xml?x=1')).toBe(
+      'https://www44.myfantasyleague.com/a/b.xml?x=1'
+    );
+    expect(toSafeMflUrl('https://www44.myfantasyleague.com:8443/a.xml')).toBe(
+      'https://www44.myfantasyleague.com/a.xml'
+    );
+    expect(toSafeMflUrl('https://u:p@www44.myfantasyleague.com/a.xml')).toBe(
+      'https://www44.myfantasyleague.com/a.xml'
+    );
+  });
+
   it('refuses non-https schemes', () => {
-    expect(isMflUrl('http://www44.myfantasyleague.com/x.xml')).toBe(false);
-    expect(isMflUrl('file:///etc/passwd')).toBe(false);
-    expect(isMflUrl('gopher://www44.myfantasyleague.com/')).toBe(false);
+    expect(toSafeMflUrl('http://www44.myfantasyleague.com/x.xml')).toBeNull();
+    expect(toSafeMflUrl('file:///etc/passwd')).toBeNull();
+    expect(toSafeMflUrl('gopher://www44.myfantasyleague.com/')).toBeNull();
   });
 
   it('refuses anything that is not a parseable URL string', () => {
-    expect(isMflUrl('')).toBe(false);
-    expect(isMflUrl('www44.myfantasyleague.com/x.xml')).toBe(false);
-    expect(isMflUrl(undefined)).toBe(false);
-    expect(isMflUrl(null)).toBe(false);
-    expect(isMflUrl(42)).toBe(false);
-    expect(isMflUrl({ toString: () => 'https://www44.myfantasyleague.com/' })).toBe(false);
+    expect(toSafeMflUrl('')).toBeNull();
+    expect(toSafeMflUrl('www44.myfantasyleague.com/x.xml')).toBeNull();
+    expect(toSafeMflUrl(undefined)).toBeNull();
+    expect(toSafeMflUrl(null)).toBeNull();
+    expect(toSafeMflUrl(42)).toBeNull();
+    expect(toSafeMflUrl({ toString: () => 'https://www44.myfantasyleague.com/' })).toBeNull();
   });
 });

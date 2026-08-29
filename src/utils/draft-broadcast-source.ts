@@ -61,9 +61,20 @@ const MFL_ALLOWED_HOSTS: readonly string[] = Object.freeze([
   ...ALL_LEAGUES.map((league) => league.mflHost.toLowerCase()),
 ]);
 
-/** Membership test — the only host check in this file. */
-function isAllowedMflHost(hostname: string): boolean {
-  return MFL_ALLOWED_HOSTS.includes(hostname.toLowerCase());
+/**
+ * The allowlist ENTRY matching this hostname, or null.
+ *
+ * Returns the constant from `MFL_ALLOWED_HOSTS` rather than the caller's
+ * string, and that distinction is the point rather than a style choice: every
+ * host that reaches a `fetch` then provably originates in this file's frozen
+ * list instead of merely having been compared against it. Validating a value
+ * and handing the SAME value onward leaves it user-derived — to a reader and to
+ * dataflow analysis alike.
+ */
+function allowedMflHost(hostname: unknown): string | null {
+  if (typeof hostname !== 'string') return null;
+  const wanted = hostname.toLowerCase();
+  return MFL_ALLOWED_HOSTS.find((allowed) => allowed === wanted) ?? null;
 }
 
 /** An MFL league id is digits. Bounded so a pathological string can't ride
@@ -101,7 +112,7 @@ export interface BroadcastSource {
 /** Normalize a host parameter, or fall back. Never returns a non-MFL host. */
 export function resolveMflHost(raw: string | null | undefined, fallback: string): string {
   const value = (raw || '').trim().replace(/^https?:\/\//i, '').replace(/\/.*$/, '');
-  return isAllowedMflHost(value) ? value.toLowerCase() : fallback;
+  return allowedMflHost(value) ?? fallback;
 }
 
 /**
@@ -115,15 +126,23 @@ export function resolveMflHost(raw: string | null | undefined, fallback: string)
  * `resolveMflHost`, applied to the parsed hostname so a path, credential or
  * query segment carrying `myfantasyleague.com` cannot pass for one.
  */
-export function isMflUrl(raw: unknown): raw is string {
-  if (typeof raw !== 'string') return false;
+export function toSafeMflUrl(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null;
   let parsed: URL;
   try {
     parsed = new URL(raw);
   } catch {
-    return false;
+    return null;
   }
-  return parsed.protocol === 'https:' && isAllowedMflHost(parsed.hostname);
+  if (parsed.protocol !== 'https:') return null;
+
+  // REBUILT, not returned. The origin comes from the frozen allowlist and the
+  // path from the response, so no part of the host this server connects to is
+  // carried over from the input — a credential, port or embedded host in the
+  // original is dropped rather than trusted.
+  const host = allowedMflHost(parsed.hostname);
+  if (!host) return null;
+  return `https://${host}${parsed.pathname}${parsed.search}`;
 }
 
 /** Normalize a league-id parameter. Returns null when it isn't one. */
