@@ -198,6 +198,79 @@ async function fetchFreshest(
   return { data: best, status: lastStatus };
 }
 
+
+/**
+ * MFL's STATIC draft-results file — the same one its own draft room reads.
+ *
+ * This is the fix for a problem sampling could not solve. The JSON export is
+ * served from backends whose caches disagree so badly that, measured with the
+ * draft PAUSED (truth static at 24 picks), 77 requests returned the CURRENT
+ * board 8% of the time and a seven-pick-stale board 70% of the time. Ten
+ * parallel samples still leaves the room watching a board five picks behind.
+ *
+ * The static file has none of that. Ten consecutive fetches during a live draft
+ * returned byte-identical, CURRENT results — 31 picks, matching the room's
+ * 3.08 on the clock exactly — where the JSON export was stuck at 26.
+ *
+ * MFL advertises the URL itself, in `static_url` on each draft unit, so it is
+ * never constructed by hand: the JSON response names the file, including the
+ * `www##` host that actually serves it (the `api.` host only redirects). The
+ * URL is remembered per league+unit so later polls fetch both at once.
+ *
+ * The JSON export stays as the fallback. It is the documented API; this file is
+ * an implementation detail of MFL's own UI, and if it ever moves the board
+ * degrades to the old behaviour rather than to nothing.
+ */
+const staticUrlSeen = new Map<string, string>();
+
+/** `<draftPick ... />` attributes, in whatever order MFL emitted them. */
+function parseStaticXml(xml: string): RawDraftPick[] | null {
+  if (!xml.includes('<draftResults')) return null;
+  const out: RawDraftPick[] = [];
+  for (const tag of xml.match(/<draftPick\b[^>]*\/?>/g) ?? []) {
+    const attr = (name: string) => {
+      const m = tag.match(new RegExp(`\\b${name}="([^"]*)"`));
+      return m ? m[1] : '';
+    };
+    out.push({
+      round: attr('round'),
+      pick: attr('pick'),
+      franchise: attr('franchise'),
+      player: attr('player'),
+      timestamp: attr('timestamp'),
+      comments: attr('comments'),
+    });
+  }
+  return out.length > 0 ? out : null;
+}
+
+/** Newest pick stamp in a parsed board, or its filled count if none carry one. */
+function picksFreshness(picks: RawDraftPick[]): number {
+  let newest = 0;
+  let filled = 0;
+  for (const p of picks) {
+    if (!p.player) continue;
+    filled += 1;
+    const ts = Number.parseInt(p.timestamp ?? '', 10);
+    if (Number.isFinite(ts) && ts > newest) newest = ts;
+  }
+  return newest > 0 ? newest : filled;
+}
+
+/** Fetch and parse the static file. Null on any failure — it is an optimisation. */
+async function fetchStaticBoard(staticUrl: string): Promise<RawDraftPick[] | null> {
+  try {
+    const res = await fetch(staticUrl, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FantasyLeague/1.0)' },
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (!res.ok) return null;
+    return parseStaticXml(await res.text());
+  } catch {
+    return null;
+  }
+}
+
 export const GET: APIRoute = async ({ url }) => {
   const year = url.searchParams.get('year') || String(getCurrentLeagueYear());
 
@@ -242,7 +315,28 @@ export const GET: APIRoute = async ({ url }) => {
       );
     }
 
-    const picks = buildPicks(selected?.draftPick);
+    // Prefer MFL's own static file when it is at least as fresh — see
+    // staticUrlSeen. It is the same board its draft room reads, and it does not
+    // flap; the sampled JSON above is the fallback, not the target.
+    const staticKey = `${host}|${leagueId}|${year}|${unit ?? ''}`;
+    const staticUrl = (selected as any)?.static_url || staticUrlSeen.get(staticKey);
+    if (typeof staticUrl === 'string' && staticUrl.startsWith('https://')) {
+      staticUrlSeen.set(staticKey, staticUrl);
+    }
+
+    let rawPicks: RawDraftPick[] | RawDraftPick[] | undefined = undefined;
+    const jsonPicks = selected?.draftPick;
+    const jsonArr = Array.isArray(jsonPicks) ? jsonPicks : jsonPicks ? [jsonPicks] : [];
+
+    const remembered = staticUrlSeen.get(staticKey);
+    const staticPicks = remembered ? await fetchStaticBoard(remembered) : null;
+
+    rawPicks =
+      staticPicks && picksFreshness(staticPicks) >= picksFreshness(jsonArr)
+        ? staticPicks
+        : jsonArr;
+
+    const picks = buildPicks(rawPicks);
     const body: DraftStatusResponse = {
       picks,
       serverTime: Date.now(),
