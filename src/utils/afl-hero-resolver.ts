@@ -292,13 +292,19 @@ const EVENT_VIEW: Record<string, ViewBuilder> = {
   'afl-al-draft': (event, { now, userConferenceId }) => {
     const live = event.isActive;
     const days = Math.max(0, daysBetween(event.startDate, now));
+    const isUserAl = userConferenceId === '00';
     // DRAFT DAY, from midnight — not just from the 12:30 start. Owners open the
     // homepage hours early to get set up, and the room accepts them before the
     // first pick (queue, autopick, chat). Gating the room link on `live` left
     // the morning-of hero pointing only at the draft order, with no route to
     // the place the draft actually happens.
-    const draftDay = live || days === 0;
-    const isUserAl = userConferenceId === '00';
+    //
+    // Offered ONLY to an AL owner, the same viewer the summary above speaks to.
+    // This card also leads for NL owners and for logged-out visitors (the lead
+    // falls back to the earliest draft when we don't know the viewer) — an NL
+    // owner has no business in the AL room, and a guest we can't identify just
+    // hits MFL's login wall. They keep the internal destinations below.
+    const enterRoom = (live || days === 0) && isUserAl;
     const roomUrl = aflLiveDraftRoomUrl(event.startDate.getFullYear());
     return {
       pill: 'AL · Live Draft',
@@ -312,22 +318,23 @@ const EVENT_VIEW: Record<string, ViewBuilder> = {
             : `Your live draft is ${dayPhrase(days)} — Saturday at 12:30pm PT. Scout the board and finalize your queue.`
         : event.definition.description,
       // Three destinations, and only one of them lets an owner PICK:
-      //   before draft day → our draft order (official post-NIT, never a
-      //     "predictor" here) — the room is 108 empty slots until draft day.
-      //   draft day        → MFL's live draft room. Beats both our pages: the
-      //     order is settled by now, and the broadcast board is read-only.
-      //   (live)           → the AL board still reaches the viewer as a
-      //     SECONDARY link, attached post-resolve in pickLeadCalendarEvent.
+      //   AL owner, draft day → MFL's live draft room. Beats both our pages:
+      //     the order is settled by now, and the broadcast board is read-only.
+      //     Once picks are live the AL board still reaches them as a SECONDARY
+      //     link, attached post-resolve in pickLeadCalendarEvent.
+      //   otherwise, live     → the broadcast board (what the room is watching).
+      //   otherwise           → our draft order (official post-NIT, never a
+      //     "predictor" here) — the board is 108 empty slots until the draft.
       // Conference is pinned to the AL wherever a board link is built, so it
       // lands on the right one of the two independent boards.
-      link: draftDay ? roomUrl : AFL_DRAFT_ORDER_PATH,
-      linkLabel: draftDay ? 'Enter Draft Room' : 'View Draft Order',
-      isExternal: draftDay,
+      link: enterRoom ? roomUrl : live ? `${AFL_BROADCAST_PATH}?conference=00` : AFL_DRAFT_ORDER_PATH,
+      linkLabel: enterRoom ? 'Enter Draft Room' : live ? 'Open the Draft Board' : 'View Draft Order',
+      isExternal: enterRoom,
       // Pre-start on draft day the board is empty, so the order — displaced as
       // the CTA — stays reachable here instead. Once picks are live the board
       // is the better second link and post-resolve supplies it.
       secondaryLinks:
-        draftDay && !live
+        enterRoom && !live
           ? [{ label: 'View Draft Order', href: AFL_DRAFT_ORDER_PATH }]
           : undefined,
       icon: 'draft-podium',
@@ -342,11 +349,12 @@ const EVENT_VIEW: Record<string, ViewBuilder> = {
   'afl-nl-draft': (event, { now, userConferenceId }) => {
     const live = event.isActive;
     const days = Math.max(0, daysBetween(event.startDate, now));
-    // Same draft-day rule as the AL card (see there): from midnight, not from
-    // the 9am start — an owner opening the homepage that morning needs the
-    // place they actually draft, not the order they already know.
-    const draftDay = live || days === 0;
     const isUserNl = userConferenceId === '01';
+    // Same draft-day rule as the AL card, including who it is for: from
+    // midnight rather than the 9am start, and only for an NL owner. This card
+    // leads for an AL owner all of NL draft day (their own draft is past by
+    // then and drops out of the lead candidates), and they do not draft here.
+    const openDraft = (live || days === 0) && isUserNl;
     const emailDraftUrl = aflEmailDraftUrl(event.startDate.getFullYear());
     return {
       pill: 'NL · Email Draft',
@@ -361,14 +369,13 @@ const EVENT_VIEW: Record<string, ViewBuilder> = {
         : event.definition.description,
       // Same shape as the AL card, one page different: the NL drafts off MFL's
       // EMAIL DRAFT page rather than the live-draft applet. Before draft day
-      // the order is the useful link; on draft day the page you draft from is.
-      // The NL board (conference=01) still reaches the viewer as a secondary
-      // link once picks are live, attached post-resolve.
-      link: draftDay ? emailDraftUrl : AFL_DRAFT_ORDER_PATH,
-      linkLabel: draftDay ? 'Open Email Draft' : 'View Draft Order',
-      isExternal: draftDay,
+      // the order is the useful link; on draft day the page you draft from is;
+      // for anyone who is not an NL owner, the board once picks are live.
+      link: openDraft ? emailDraftUrl : live ? `${AFL_BROADCAST_PATH}?conference=01` : AFL_DRAFT_ORDER_PATH,
+      linkLabel: openDraft ? 'Open Email Draft' : live ? 'Watch the Board' : 'View Draft Order',
+      isExternal: openDraft,
       secondaryLinks:
-        draftDay && !live
+        openDraft && !live
           ? [{ label: 'View Draft Order', href: AFL_DRAFT_ORDER_PATH }]
           : undefined,
       icon: 'draft-podium',

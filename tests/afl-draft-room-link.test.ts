@@ -16,6 +16,12 @@ import { LEAGUES } from '../src/config/leagues';
  * the AL meets live in MFL's ajax_ld applet; the NL runs a slow email draft
  * off MFL's email-draft option page, which never opens that applet.
  *
+ * And an MFL draft page is offered ONLY to an owner of the drafting
+ * conference. Each card also leads for people who don't draft in it — the
+ * other conference once its own draft is past, and logged-out visitors, whose
+ * lead falls back to the earliest draft. They keep the internal destinations
+ * (the order, or the board once picks are live).
+ *
  * 2026 anchors: Labor Day is Mon Sep 7 → AL draft Sat Aug 29, 12:30 PM PT
  * (live through 8:45 PM), NL draft Sun Aug 30, 9:00 AM PT.
  */
@@ -29,6 +35,11 @@ const viewFor = (referenceDate: Date, userConferenceId?: '00' | '01') => {
   }
   return state.view;
 };
+
+const hrefsOf = (view: ReturnType<typeof viewFor>) => [
+  view.link,
+  ...(view.secondaryLinks ?? []).map((l) => l.href),
+];
 
 const roomUrl2026 = buildMflLiveDraftUrl({
   leagueId: AFL.id,
@@ -143,20 +154,79 @@ describe('NL draft-day hero CTA', () => {
   });
 });
 
+describe('the MFL draft page is only for owners of that conference', () => {
+  it('logged out on AL draft day: the public CTA stays our own page', () => {
+    const morning = viewFor(new Date(2026, 7, 29, 7, 19));
+    expect(morning.link).toBe('/afl-fantasy/draft-predictor');
+    expect(morning.isExternal).toBeFalsy();
+    // A guest we can't identify would just hit MFL's login wall.
+    expect(morning.link).not.toContain('ajax_ld');
+
+    const live = viewFor(new Date(2026, 7, 29, 13, 0));
+    expect(live.link).toBe('/afl-fantasy/draft-broadcast?conference=00');
+    expect(live.linkLabel).toBe('Open the Draft Board');
+  });
+
+  it('logged out on NL draft day: same, no email draft page', () => {
+    const live = viewFor(new Date(2026, 7, 30, 12, 0));
+    expect(live.link).toBe('/afl-fantasy/draft-broadcast?conference=01');
+    expect(live.isExternal).toBeFalsy();
+  });
+
+  it('AL owner on NL draft day: their card is gone, so they get the board — not the NL email draft', () => {
+    // Their own draft is past by now and drops out of the lead candidates, so
+    // the NL card leads for them. They do not draft in it.
+    const view = viewFor(new Date(2026, 7, 30, 12, 0), '00');
+    expect(view.link).toBe('/afl-fantasy/draft-broadcast?conference=01');
+    expect(view.isExternal).toBeFalsy();
+    expect(view.linkLabel).toBe('Watch the Board');
+  });
+
+  it('NL owner on AL draft day: leads with their own card, never the AL room', () => {
+    const view = viewFor(new Date(2026, 7, 29, 7, 19), '01');
+    expect(view.link).toBe('/afl-fantasy/draft-predictor');
+    expect(view.isExternal).toBeFalsy();
+  });
+});
+
 describe('the two conferences are never crossed', () => {
-  it('the NL card never links to the AL live-draft room', () => {
+  const viewers = [undefined, '00', '01'] as const;
+
+  it('nobody is ever sent to the AL room on NL draft day', () => {
     for (const ref of [new Date(2026, 7, 30, 8, 0), new Date(2026, 7, 30, 12, 0)]) {
-      const view = viewFor(ref, '01');
-      const hrefs = [view.link, ...(view.secondaryLinks ?? []).map((l) => l.href)];
-      for (const href of hrefs) expect(href).not.toContain('ajax_ld');
+      for (const conf of viewers) {
+        const hrefs = hrefsOf(viewFor(ref, conf));
+        for (const href of hrefs) expect(href).not.toContain('ajax_ld');
+      }
     }
   });
 
-  it('the AL card never links to the email draft page', () => {
+  it('nobody is ever sent to the email draft page on AL draft day', () => {
     for (const ref of [new Date(2026, 7, 29, 7, 19), new Date(2026, 7, 29, 13, 0)]) {
-      const view = viewFor(ref, '00');
-      const hrefs = [view.link, ...(view.secondaryLinks ?? []).map((l) => l.href)];
-      for (const href of hrefs) expect(href).not.toContain('options?L=');
+      for (const conf of viewers) {
+        const hrefs = hrefsOf(viewFor(ref, conf));
+        for (const href of hrefs) expect(href).not.toContain('options?L=');
+      }
+    }
+  });
+
+  it('an MFL page is never the CTA for a viewer of the other conference, or none', () => {
+    for (const ref of [
+      new Date(2026, 7, 29, 7, 19),
+      new Date(2026, 7, 29, 13, 0),
+      new Date(2026, 7, 30, 8, 0),
+      new Date(2026, 7, 30, 12, 0),
+    ]) {
+      for (const conf of viewers) {
+        const view = viewFor(ref, conf);
+        const isMfl = !!view.link?.includes('myfantasyleague.com');
+        if (!isMfl) continue;
+        // Only an owner of the conference whose card this is may see one.
+        const own = conf === '00' ? 'ajax_ld' : 'options?L=';
+        expect(conf).toBeDefined();
+        expect(view.link).toContain(own);
+        expect(view.isExternal).toBe(true);
+      }
     }
   });
 });
