@@ -32,13 +32,39 @@
  *    like the real board is how a room ends up watching the wrong draft.
  */
 
+import { ALL_LEAGUES } from '../config/leagues';
+
 /** MFL's league-agnostic export host — right for a league we have no registry
  *  entry for, since a copy can live on any `www##` and the API host serves
  *  every league's exports. */
 export const MFL_EXPORT_HOST = 'api.myfantasyleague.com';
 
-/** Hosts `/api/draft/status` may be pointed at. */
-const MFL_HOST_PATTERN = /^[a-z0-9][a-z0-9.-]*\.myfantasyleague\.com$/i;
+/**
+ * The complete set of hosts this server will fetch a draft board from.
+ *
+ * A FINITE LIST, not a pattern. Both values that reach these fetches — the
+ * `host` request parameter and `static_url` out of MFL's response body — are
+ * outside our control, and a `*.myfantasyleague.com` regex is a weaker
+ * guarantee than it looks: it is one authoring slip from matching a host that
+ * merely contains the domain, and static analysis cannot see it as a barrier at
+ * all (CodeQL held a high-severity SSRF alert on this endpoint until the check
+ * became a membership test).
+ *
+ * Built from the league registry — never literals (see
+ * `tests/league-literal-guard.test.ts`) — plus MFL's export host, which serves
+ * every league and is what an override defaults to. A copy league on some other
+ * `www##` is reached through that export host's redirect, so nothing legitimate
+ * needs a wider door.
+ */
+const MFL_ALLOWED_HOSTS: readonly string[] = Object.freeze([
+  MFL_EXPORT_HOST,
+  ...ALL_LEAGUES.map((league) => league.mflHost.toLowerCase()),
+]);
+
+/** Membership test — the only host check in this file. */
+function isAllowedMflHost(hostname: string): boolean {
+  return MFL_ALLOWED_HOSTS.includes(hostname.toLowerCase());
+}
 
 /** An MFL league id is digits. Bounded so a pathological string can't ride
  *  into a URL. */
@@ -75,7 +101,7 @@ export interface BroadcastSource {
 /** Normalize a host parameter, or fall back. Never returns a non-MFL host. */
 export function resolveMflHost(raw: string | null | undefined, fallback: string): string {
   const value = (raw || '').trim().replace(/^https?:\/\//i, '').replace(/\/.*$/, '');
-  return MFL_HOST_PATTERN.test(value) ? value.toLowerCase() : fallback;
+  return isAllowedMflHost(value) ? value.toLowerCase() : fallback;
 }
 
 /**
@@ -97,7 +123,7 @@ export function isMflUrl(raw: unknown): raw is string {
   } catch {
     return false;
   }
-  return parsed.protocol === 'https:' && MFL_HOST_PATTERN.test(parsed.hostname);
+  return parsed.protocol === 'https:' && isAllowedMflHost(parsed.hostname);
 }
 
 /** Normalize a league-id parameter. Returns null when it isn't one. */

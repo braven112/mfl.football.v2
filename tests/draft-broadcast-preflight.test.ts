@@ -221,6 +221,10 @@ describe('resolveMflHost', () => {
     expect(resolveMflHost('www44.myfantasyleague.com', 'fallback')).toBe(
       'www44.myfantasyleague.com'
     );
+    // An MFL host that belongs to no league of ours is NOT reachable: the
+    // allowlist is the registry plus the export host, and a copy league on
+    // another www## is reached through that export host's redirect.
+    expect(resolveMflHost('www12.myfantasyleague.com', 'fallback')).toBe('fallback');
     expect(resolveMflHost('API.MyFantasyLeague.com', 'fallback')).toBe('api.myfantasyleague.com');
   });
 
@@ -613,6 +617,9 @@ describe('isMflUrl', () => {
       'https://evil.com/www44.myfantasyleague.com/x.xml',
       'https://user@evil.com/x.xml',
       'https://myfantasyleague.com.evil.com/x.xml',
+      // An MFL host we do not use is still refused — the check is membership
+      // in a finite list, not a pattern match on the domain.
+      'https://www12.myfantasyleague.com/x.xml',
       'https://evil.com/?u=myfantasyleague.com',
       // Cloud metadata, the classic SSRF target.
       'https://169.254.169.254/latest/meta-data/',
