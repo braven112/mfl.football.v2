@@ -88,10 +88,44 @@ function buildPicks(rawPicks: RawDraftPick | RawDraftPick[] | undefined): DraftR
  * and `Cache-Control: no-cache` returned the same spread — because this is
  * many backends, not one edge cache.
  *
- * Six parallel requests take the freshest of six draws. They run concurrently,
- * so the poll costs one round trip, and the client's 5s cadence is unchanged.
+ * Measured again with the draft PAUSED, so the truth was static at 24 picks,
+ * 77 requests returned: 17 picks 70% of the time, 18 picks 18%, 19 picks 3%,
+ * and the CURRENT board 8%. Seven picks behind is the single most likely answer
+ * MFL will give you.
+ *
+ * Ten parallel requests take the freshest of ten draws — about a 57% chance of
+ * the current board on any one poll, against 8% for a single request. They run
+ * concurrently, so a poll still costs one round trip.
+ *
+ * Sampling alone is not enough at those odds, which is what FRESHEST_TTL_MS is
+ * for: the freshest board is REMEMBERED between requests, so misses cost
+ * nothing and every client gets the best answer the server has seen.
  */
-const MFL_SAMPLES = 6;
+const MFL_SAMPLES = 10;
+
+/**
+ * How long the server keeps the freshest board it has seen, per league+unit.
+ *
+ * Sampling is a per-request lottery; this makes the wins stick. With clients
+ * polling every few seconds, the cache converges on the true board within a
+ * poll or two and then serves it to everyone INSTANTLY, including a client that
+ * just loaded.
+ *
+ * Bounded so it can heal. A commissioner reverting the draft makes the
+ * remembered board wrong, and 60s is long enough to smooth MFL's flapping while
+ * short enough that a revert clears on its own. The board's own recency rule
+ * (see `acceptedRef` in DraftBroadcast.tsx) is the second line of defence.
+ */
+const FRESHEST_TTL_MS = 60_000;
+
+/**
+ * Freshest board per league+unit, remembered across requests.
+ *
+ * Module scope, so it lives as long as the serverless instance does. A cold
+ * instance simply starts empty and refills on its first request — the cache is
+ * an accelerator, never a source of truth.
+ */
+const freshestSeen = new Map<string, { data: any; freshness: number; at: number }>();
 
 /** Newest pick stamp for `unit` in a payload, or -1 if it has no board. */
 function unitFreshness(raw: any, unit: string | null): number {
@@ -115,7 +149,8 @@ function unitFreshness(raw: any, unit: string | null): number {
 /** Ask MFL MFL_SAMPLES times at once; return the freshest board for `unit`. */
 async function fetchFreshest(
   mflUrl: string,
-  unit: string | null
+  unit: string | null,
+  cacheKey: string
 ): Promise<{ data: any | null; status?: number }> {
   let lastStatus: number | undefined;
 
@@ -147,6 +182,19 @@ async function fetchFreshest(
       bestFreshness = freshness;
     }
   }
+
+  // Fold in what earlier requests already won — see FRESHEST_TTL_MS. This is
+  // what turns a 57%-per-poll lottery into a board that is right continuously.
+  const key = `${cacheKey}|${unit ?? ''}`;
+  const now = Date.now();
+  const remembered = freshestSeen.get(key);
+  if (remembered && now - remembered.at < FRESHEST_TTL_MS && remembered.freshness > bestFreshness) {
+    best = remembered.data;
+    bestFreshness = remembered.freshness;
+  } else if (best) {
+    freshestSeen.set(key, { data: best, freshness: bestFreshness, at: now });
+  }
+
   return { data: best, status: lastStatus };
 }
 
@@ -170,7 +218,7 @@ export const GET: APIRoute = async ({ url }) => {
   const mflUrl = buildMflExportUrl({ type: 'draftResults', leagueId, year, host: `https://${host}` });
 
   try {
-    const { data, status } = await fetchFreshest(mflUrl, unit);
+    const { data, status } = await fetchFreshest(mflUrl, unit, `${host}|${leagueId}|${year}`);
 
     if (!data) {
       return new Response(

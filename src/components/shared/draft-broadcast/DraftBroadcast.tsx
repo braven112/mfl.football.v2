@@ -37,7 +37,7 @@ import { OnTheClock } from './OnTheClock';
  *  full of people watching a TV notices a 30s lag between the pick landing on
  *  MFL and the screen reacting. 5s is well inside MFL's tolerance for a public
  *  export and keeps the reveal feeling like it's responding to the room. */
-const POLL_MS = 5_000;
+const POLL_MS = 4_000;
 /** After repeated failures, stop hammering — but keep trying, quietly. */
 const POLL_BACKOFF_MS = 15_000;
 const ERRORS_BEFORE_BACKOFF = 3;
