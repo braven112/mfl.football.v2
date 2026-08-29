@@ -81,6 +81,30 @@ const POLL_WATCHDOG_MS = 30_000;
 const CATCHUP_BURST = 5;
 
 /**
+ * How old a pick may be and still be worth REVEALING.
+ *
+ * A reveal owns the whole TV for up to eighteen seconds, so it has to be news.
+ * Two things make a pick arrive late even when the poll is healthy:
+ *
+ *  - **Autopick bursts.** MFL fires a queued autopick the instant the clock
+ *    expires, and the 2026 rehearsal produced four picks stamped in the SAME
+ *    SECOND (`[Pick made based on ...]`). Four reveals at REVEAL_RUSH_MS is
+ *    twenty-four seconds of narration for something the room saw happen at
+ *    once.
+ *  - **Stale backends.** A current snapshot may not answer for several polls
+ *    (see `acceptedRef`), so picks can surface well after they were made.
+ *
+ * Either way the board ends up showing an old pick, then the live idle board,
+ * then another old pick — which reads exactly like it is bouncing around. Past
+ * this age a pick is absorbed silently: it still lands on the board and in the
+ * rails, it just does not take the screen.
+ *
+ * Generous on purpose. A pick made while the previous reveal was up is still
+ * news, and 90s is comfortably longer than a reveal plus a slow poll.
+ */
+const REVEAL_MAX_AGE_MS = 90_000;
+
+/**
  * How long the board must see NOTHING BUT older responses before it believes
  * the draft was rolled back.
  *
@@ -139,6 +163,19 @@ function boardAge(picks: DraftRoomPick[]): BoardAge {
     if (Number.isFinite(ts) && ts > newestPick) newestPick = ts;
   }
   return { newestPick, filled };
+}
+
+/**
+ * Is this pick recent enough to be worth the screen?
+ *
+ * A pick with no usable stamp IS revealed: the stamp is an optimisation for
+ * suppressing history, and a board that silently swallowed picks because MFL
+ * omitted a field would be the worse failure by far.
+ */
+function isRevealWorthy(pick: DraftRoomPick, nowMs: number): boolean {
+  const ts = Number.parseInt(pick.timestamp, 10);
+  if (!Number.isFinite(ts) || ts <= 0) return true;
+  return nowMs - ts * 1000 <= REVEAL_MAX_AGE_MS;
 }
 
 /**
@@ -317,11 +354,14 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
     }
 
     if (fresh.length > 0) {
-      // A jump this big is the board catching up to MFL, not the room picking
-      // that fast — see CATCHUP_BURST. Reveal the newest and take the rest as
-      // read, so the screen lands on what just happened instead of narrating
-      // its way there.
-      const toReveal = fresh.length > CATCHUP_BURST ? fresh.slice(-1) : fresh;
+      // Two filters, and they answer different failures. CATCHUP_BURST is about
+      // VOLUME — a jump this big is the board catching up to MFL, not the room
+      // picking that fast, so the screen lands on what just happened instead of
+      // narrating its way there. REVEAL_MAX_AGE_MS is about AGE — an autopick
+      // burst can be five picks stamped in one second, none of which is news by
+      // the time the third one would take the TV.
+      const recent = fresh.filter((pick) => isRevealWorthy(pick, now));
+      const toReveal = recent.length > CATCHUP_BURST ? recent.slice(-1) : recent;
       setQueue((q) => [
         ...q,
         // playerId is in the key so an undo + re-pick of the same slot reveals
