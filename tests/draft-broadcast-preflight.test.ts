@@ -27,6 +27,7 @@ import {
 } from '../src/utils/draft-broadcast-images';
 import {
   MFL_EXPORT_HOST,
+  isMflUrl,
   resolveBroadcastSource,
   resolveMflHost,
   resolveMflLeagueId,
@@ -584,5 +585,54 @@ describe('the board never moves backwards on its own', () => {
     expect(branch).not.toContain('setPicks');
     expect(branch).not.toContain('seenRef.current =');
     expect(branch).not.toContain('acceptedRef.current =');
+  });
+});
+
+/**
+ * `static_url` comes out of MFL's RESPONSE BODY, not our own parameters.
+ *
+ * /api/draft/status follows it to read MFL's static draft file, which is the
+ * only source fresh enough to keep the board level with the room. But a URL
+ * inside a third-party JSON document is not a URL we may fetch on trust:
+ * "starts with https://" would let anything in that body name a host this
+ * server then requests. CodeQL flagged exactly that (high severity) on the
+ * first cut of this change.
+ */
+describe('isMflUrl', () => {
+  it('accepts the real static-file URL MFL advertises', () => {
+    expect(
+      isMflUrl('https://www44.myfantasyleague.com/fflnetdynamic2026/21227_CONFERENCE01_draft_results.xml')
+    ).toBe(true);
+  });
+
+  it('refuses a host that is not MFL, however it is dressed up', () => {
+    for (const hostile of [
+      'https://evil.com/x.xml',
+      // The real domain in a path, a credential, or a subdomain suffix — all of
+      // which a naive substring check would wave through.
+      'https://evil.com/www44.myfantasyleague.com/x.xml',
+      'https://user@evil.com/x.xml',
+      'https://myfantasyleague.com.evil.com/x.xml',
+      'https://evil.com/?u=myfantasyleague.com',
+      // Cloud metadata, the classic SSRF target.
+      'https://169.254.169.254/latest/meta-data/',
+    ]) {
+      expect(isMflUrl(hostile), hostile).toBe(false);
+    }
+  });
+
+  it('refuses non-https schemes', () => {
+    expect(isMflUrl('http://www44.myfantasyleague.com/x.xml')).toBe(false);
+    expect(isMflUrl('file:///etc/passwd')).toBe(false);
+    expect(isMflUrl('gopher://www44.myfantasyleague.com/')).toBe(false);
+  });
+
+  it('refuses anything that is not a parseable URL string', () => {
+    expect(isMflUrl('')).toBe(false);
+    expect(isMflUrl('www44.myfantasyleague.com/x.xml')).toBe(false);
+    expect(isMflUrl(undefined)).toBe(false);
+    expect(isMflUrl(null)).toBe(false);
+    expect(isMflUrl(42)).toBe(false);
+    expect(isMflUrl({ toString: () => 'https://www44.myfantasyleague.com/' })).toBe(false);
   });
 });

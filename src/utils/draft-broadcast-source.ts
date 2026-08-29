@@ -78,6 +78,28 @@ export function resolveMflHost(raw: string | null | undefined, fallback: string)
   return MFL_HOST_PATTERN.test(value) ? value.toLowerCase() : fallback;
 }
 
+/**
+ * Is this a complete https URL on an MFL host?
+ *
+ * For URLs taken from RESPONSE BODIES rather than from our own parameters —
+ * specifically `static_url`, which `/api/draft/status` follows to read MFL's
+ * static draft file. That value arrives inside a third-party JSON document, so
+ * "it starts with https://" is not a check: it would let anything in that
+ * response body name a host this server then fetches. Same allowlist as
+ * `resolveMflHost`, applied to the parsed hostname so a path, credential or
+ * query segment carrying `myfantasyleague.com` cannot pass for one.
+ */
+export function isMflUrl(raw: unknown): raw is string {
+  if (typeof raw !== 'string') return false;
+  let parsed: URL;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    return false;
+  }
+  return parsed.protocol === 'https:' && MFL_HOST_PATTERN.test(parsed.hostname);
+}
+
 /** Normalize a league-id parameter. Returns null when it isn't one. */
 export function resolveMflLeagueId(raw: string | null | undefined): string | null {
   const value = (raw || '').trim();

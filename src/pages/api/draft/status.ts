@@ -25,7 +25,7 @@ import type { DraftRoomPick, DraftStatusResponse } from '../../../types/draft-ro
 import { getCurrentLeagueYear } from '../../../utils/league-year';
 import { buildMflExportUrl } from '../../../utils/mfl-url';
 import { getLeagueBySlug } from '../../../config/leagues';
-import { resolveMflHost, resolveMflLeagueId } from '../../../utils/draft-broadcast-source';
+import { isMflUrl, resolveMflHost, resolveMflLeagueId } from '../../../utils/draft-broadcast-source';
 
 export const prerender = false;
 
@@ -260,6 +260,9 @@ function picksFreshness(picks: RawDraftPick[]): number {
 
 /** Fetch and parse the static file. Null on any failure — it is an optimisation. */
 async function fetchStaticBoard(staticUrl: string): Promise<RawDraftPick[] | null> {
+  // Re-checked here rather than trusting the caller: this is the function that
+  // actually reaches the network with a URL from a response body.
+  if (!isMflUrl(staticUrl)) return null;
   try {
     const res = await fetch(staticUrl, {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FantasyLeague/1.0)' },
@@ -331,8 +334,11 @@ export const GET: APIRoute = async ({ url }) => {
     // Prefer MFL's own static file when it is at least as fresh — see
     // staticUrlSeen. It is the same board its draft room reads, and it does not
     // flap; the sampled JSON above is the fallback, not the target.
+    // `static_url` arrives inside MFL's JSON body, so it is third-party data
+    // this server would otherwise fetch on trust. Allowlisted to MFL hosts by
+    // the same rule as the `host` parameter — see isMflUrl.
     const staticUrl = (selected as any)?.static_url || knownStatic;
-    if (typeof staticUrl === 'string' && staticUrl.startsWith('https://')) {
+    if (isMflUrl(staticUrl)) {
       staticUrlSeen.set(staticKey, staticUrl);
     }
 
@@ -341,7 +347,7 @@ export const GET: APIRoute = async ({ url }) => {
     const jsonArr = Array.isArray(jsonPicks) ? jsonPicks : jsonPicks ? [jsonPicks] : [];
 
     const remembered = staticUrlSeen.get(staticKey);
-    const staticPicks = remembered ? await fetchStaticBoard(remembered) : null;
+    const staticPicks = isMflUrl(remembered) ? await fetchStaticBoard(remembered) : null;
 
     rawPicks =
       staticPicks && picksFreshness(staticPicks) >= picksFreshness(jsonArr)
