@@ -889,3 +889,38 @@ Past `CATCHUP_BURST` fresh picks, only the NEWEST is revealed and the rest are
 taken as read. Note this is deliberately not the old `maxBurst` behaviour of
 dropping the burst entirely: on a TV, a pick the room watched happen must still
 appear. Show the one that just happened, skip the history.
+
+
+### Reverting the draft breaks a plain union — two faults, one sentence
+
+Reported while restarting the rehearsal draft: "I reverted the draft to restart
+and now it switches between old picks and then to the correct pick."
+
+Two independent faults, and fixing either alone leaves the other:
+
+1. **A slot can come back FILLED WITH A DIFFERENT PLAYER.** The union's rule
+   was "a filled slot always wins", which is right against an empty one and
+   wrong against a stale backend still holding the PRE-revert selection: the
+   board took whichever answered last, so 1.01 flipped between the old player
+   and the re-pick. MFL stamps every pick with `timestamp` (epoch seconds, as a
+   string) and the newer one is the real one. A missing, unparseable or equal
+   stamp keeps what the board holds — stability is the right failure, since
+   without a comparison there is no reason to prefer the newcomer and
+   preferring it reopens the flip.
+2. **A revert is a legitimate un-fill**, and a union can never represent one.
+   Left alone, a restarted draft shows the old board forever.
+
+`lastSeenFilledRef` separates a flap from a revert without guessing which is
+which, and the asymmetry is the whole trick: **a flap alternates, a revert does
+not.** Some poll calls a flapping slot filled again within seconds (measured
+runs topped out at four polls, ~20s) and any single filled report resets the
+clock, so a flap can never accumulate toward release. After a revert no backend
+ever calls it filled again, so the clock runs out. A slot is released only
+after `REVERT_CONFIRM_MS` (45s, nine polls) of CONTINUOUS empty reports.
+
+Do not tighten that below ~25s — a normal flap would start un-filling picks
+mid-draft, which is the bug the union exists to prevent. Do not loosen it much
+past a minute either, or a restarted draft leaves the room on a stale board.
+
+Releasing a slot also removes it from `seenRef`, so the re-pick reveals instead
+of being swallowed as a duplicate.

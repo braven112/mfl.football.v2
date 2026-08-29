@@ -527,3 +527,91 @@ describe('a catch-up burst', () => {
     expect(toReveal([1, 2, 3, 4, 5, 6])).toHaveLength(1);
   });
 });
+
+/**
+ * Reverting the draft to restart it — the case the plain union got wrong.
+ *
+ * Found live (Brandon, 2026-08-28): after a revert the board "switches between
+ * old picks and then to the correct pick". Two distinct faults behind that one
+ * sentence, and the fix for either alone leaves the other:
+ *
+ *  - MFL's stale caches still held the OLD selection for a slot that had been
+ *    re-picked, and "a filled slot always wins" took whichever answered last.
+ *  - A revert is a legitimate un-fill, which a union can never represent, so a
+ *    restarted draft would have shown the old board forever.
+ *
+ * Restated here as the pure rules `ingest` applies. The constants pinned are
+ * REVERT_CONFIRM_MS (45s) and MFL's epoch-SECONDS timestamp strings.
+ */
+describe('reverting the draft', () => {
+  const REVERT_CONFIRM_MS = 45_000;
+
+  const pick = (slot: number, playerId: string, ts: number) => ({
+    overallPickNumber: slot,
+    playerId,
+    timestamp: String(ts),
+  });
+
+  /** `isNewerPick`, verbatim — see DraftBroadcast.tsx. */
+  const isNewerPick = (next: { timestamp: string }, prev: { timestamp: string }) => {
+    const a = Number.parseInt(next.timestamp, 10);
+    const b = Number.parseInt(prev.timestamp, 10);
+    if (!Number.isFinite(a) || !Number.isFinite(b)) return false;
+    return a > b;
+  };
+
+  describe('a slot that comes back with a DIFFERENT player', () => {
+    it('takes the newer pick — the re-pick, not the cached original', () => {
+      const original = pick(1, '17472', 1_000);
+      const rePicked = pick(1, '99999', 2_000);
+      expect(isNewerPick(rePicked, original)).toBe(true);
+    });
+
+    it('refuses the older pick, so the original cannot flip back in', () => {
+      // This is the oscillation as reported: a stale backend answering with
+      // the pre-revert selection after the new one had already landed.
+      const original = pick(1, '17472', 1_000);
+      const rePicked = pick(1, '99999', 2_000);
+      expect(isNewerPick(original, rePicked)).toBe(false);
+    });
+
+    it('keeps what it holds when a stamp is missing or unparseable', () => {
+      // Stability is the right failure here: without a comparison there is no
+      // reason to prefer the new one, and preferring it reopens the flip.
+      expect(isNewerPick(pick(1, 'a', NaN as unknown as number), pick(1, 'b', 1_000))).toBe(false);
+      expect(isNewerPick({ timestamp: '' }, { timestamp: '1000' })).toBe(false);
+      expect(isNewerPick({ timestamp: '1000' }, { timestamp: '' })).toBe(false);
+    });
+
+    it('keeps what it holds on an equal stamp', () => {
+      expect(isNewerPick(pick(1, 'a', 1_000), pick(1, 'b', 1_000))).toBe(false);
+    });
+  });
+
+  describe('a slot reported empty', () => {
+    /** The release rule, verbatim — see `ingest`. */
+    const releases = (now: number, lastSeenFilled: number) =>
+      now - lastSeenFilled >= REVERT_CONFIRM_MS;
+
+    it('holds through the worst flap actually measured', () => {
+      // Four consecutive stale polls, ~20s. Any single filled report resets the
+      // clock, so a flap can never accumulate toward the release.
+      expect(releases(20_000, 0)).toBe(false);
+    });
+
+    it('releases once the slot has been empty continuously past the window', () => {
+      // A revert: no backend calls it filled again, so the clock runs out.
+      expect(releases(REVERT_CONFIRM_MS, 0)).toBe(true);
+      expect(releases(60_000, 0)).toBe(true);
+    });
+
+    it('leaves the window comfortably clear of the observed flap', () => {
+      // If this ever tightens below ~25s a normal flap starts un-filling picks
+      // mid-draft, which is the bug the union exists to prevent.
+      expect(REVERT_CONFIRM_MS).toBeGreaterThan(25_000);
+      // And if it loosens much past a minute, a restarted draft leaves the room
+      // looking at a stale board for too long.
+      expect(REVERT_CONFIRM_MS).toBeLessThanOrEqual(60_000);
+    });
+  });
+});

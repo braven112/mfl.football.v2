@@ -80,6 +80,36 @@ const POLL_WATCHDOG_MS = 30_000;
  */
 const CATCHUP_BURST = 5;
 
+/**
+ * How long a slot must be reported EMPTY, continuously, before the board
+ * believes the pick is gone.
+ *
+ * The board holds a union of every pick it has seen so MFL's disagreeing
+ * caches cannot un-fill a slot (see `filledRef`). A commissioner reverting the
+ * draft to restart it is the case where an un-fill is real, and this is what
+ * tells the two apart without guessing: a flap alternates, so some poll calls
+ * the slot filled again within seconds — measured runs topped out at four
+ * polls, about twenty seconds. A revert never does.
+ *
+ * 45s is nine polls: comfortably past the worst flap observed, and short
+ * enough that a restarted draft is on screen inside a minute.
+ */
+const REVERT_CONFIRM_MS = 45_000;
+
+/**
+ * Is `next` a later selection than `prev` for the same slot?
+ *
+ * MFL stamps picks with epoch SECONDS as a string. A missing or unparseable
+ * stamp answers false — keeping what the board already holds, which is the
+ * stable choice when there is nothing to compare.
+ */
+function isNewerPick(next: DraftRoomPick, prev: DraftRoomPick): boolean {
+  const a = Number.parseInt(next.timestamp, 10);
+  const b = Number.parseInt(prev.timestamp, 10);
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return false;
+  return a > b;
+}
+
 /** How long one reveal owns the screen, and the hurry-up when picks stack. */
 const REVEAL_MS = 18_000;
 const REVEAL_RUSH_MS = 6_000;
@@ -184,6 +214,18 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
    * has landed cannot un-land, and a response that is stale for one slot but
    * fresh for another (which disagreeing backends make possible) contributes
    * its fresh half instead of being dropped whole.
+   *
+   * TWO THINGS THE PLAIN UNION GOT WRONG, both found by reverting the draft to
+   * restart it (Brandon, 2026-08-28) — see `lastSeenFilledRef` and the
+   * timestamp comparison in `ingest`:
+   *
+   *  - A slot can come back FILLED WITH A DIFFERENT PLAYER. After a revert and
+   *    a re-pick, the stale caches still hold the old selection, so "a filled
+   *    slot always wins" took whichever answered last and 1.01 flipped between
+   *    the old player and the new one. MFL stamps every pick with a
+   *    `timestamp`, and the newer one is the real one.
+   *  - A revert is a legitimate un-fill. The union alone can never represent
+   *    one, so a restarted draft would show the old board forever.
    */
   const filledRef = useRef<Map<number, DraftRoomPick>>(
     new Map(
@@ -193,15 +235,56 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
     )
   );
 
+  /**
+   * When each held slot was last reported FILLED by any poll.
+   *
+   * This is what separates a cache flap from a revert, and it needs no guess
+   * about which is which: a flap alternates, so some poll reports the slot
+   * filled again within seconds (measured runs topped out at four polls, ~20s).
+   * A revert does not — after it, EVERY backend eventually agrees the slot is
+   * empty. So a slot is released only once it has been reported empty
+   * continuously for REVERT_CONFIRM_MS, and any single filled report resets
+   * that clock.
+   */
+  const lastSeenFilledRef = useRef<Map<number, number>>(new Map());
+
   /** Merge a freshly polled board in, queueing anything new for reveal. */
   const ingest = useCallback((rawIncoming: DraftRoomPick[]) => {
     if (rawIncoming.length === 0) return;
 
-    // A slot we hold filled beats an empty one in the response — see filledRef.
-    // A slot the response fills always wins, so a genuine re-pick still lands.
-    const incoming = rawIncoming.map((p) =>
-      p.playerId ? p : filledRef.current.get(p.overallPickNumber) ?? p
-    );
+    const now = Date.now();
+
+    // Reconcile the response against the union — see filledRef. Three cases,
+    // and the middle one is the whole reason this is not a one-liner.
+    const incoming = rawIncoming.map((p) => {
+      const held = filledRef.current.get(p.overallPickNumber);
+
+      if (p.playerId) {
+        lastSeenFilledRef.current.set(p.overallPickNumber, now);
+        // Same slot, DIFFERENT player: a revert plus a re-pick, seen against a
+        // cache still holding the old selection. Newer timestamp wins, so the
+        // old pick cannot flip back in. An unparseable or equal stamp keeps
+        // what we hold, which is the stable answer either way.
+        if (held && held.playerId !== p.playerId && !isNewerPick(p, held)) return held;
+        return p;
+      }
+
+      if (!held) return p;
+
+      // Empty here, filled in the union. Flap or revert — decided by how long
+      // it has been since ANY poll called it filled, never by this poll alone.
+      const lastFilled = lastSeenFilledRef.current.get(p.overallPickNumber) ?? now;
+      if (now - lastFilled < REVERT_CONFIRM_MS) return held;
+
+      // Confirmed gone. Drop it from the union AND from the seen-set, so the
+      // slot reveals again when it is re-picked rather than being swallowed as
+      // a duplicate.
+      filledRef.current.delete(p.overallPickNumber);
+      lastSeenFilledRef.current.delete(p.overallPickNumber);
+      seenRef.current.delete(p.overallPickNumber);
+      return p;
+    });
+
     for (const p of incoming) {
       if (p.playerId) filledRef.current.set(p.overallPickNumber, p);
     }
