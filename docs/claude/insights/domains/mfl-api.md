@@ -67,6 +67,16 @@
   numbers.** See `features/draft-broadcast.md`: the AFL keeps 7 per franchise,
   so its 1.01 is the 85th pick of a from-scratch board, and comparing the two
   directly labelled 90 of 108 picks a "reach".
+- **Owner-facing MFL PAGES are not the API, and each draft type has its own.**
+  The live draft room is `https://<www##>/<year>/ajax_ld?L=<id>`; MFL's other
+  owner pages are numbered options, `.../<year>/options?L=<id>&O=<n>` (the
+  email draft is `O=52`). Neither is served by `api.myfantasyleague.com` — they
+  are league-site pages, so they need the league's own host from the registry.
+  The AFL runs BOTH in one league id: the AL meets live in the applet, the NL
+  runs a slow email draft that never opens it, so a single "the draft page"
+  link is wrong for one of the two conferences. Build both with
+  `buildMflLiveDraftUrl` / `buildMflOptionUrl` (`src/utils/mfl-url.ts`), and
+  give every `O=` number a named constant — `O=52` reads as nothing.
 - **`espn_id` coverage differs BY SEASON in `players.json`.** The 2025 feed has
   none for Kyle Pitts, Michael Pittman or Isaiah Likely; the 2026 feed has all
   three. Never conclude "this player has no ESPN id" from one season's feed —

@@ -279,7 +279,10 @@ behave:
   which is exactly why the pre-draft CTA points at the draft order instead.
 - **Attached post-resolve, not in the view builder.** A builder in `EVENT_VIEW`
   only receives its own event, so it cannot know the sibling's live state. The
-  pairing already existed one level up.
+  pairing already existed one level up. (Amended 2026-08-29: a builder MAY now
+  add a secondary link about its OWN event, and the two sets MERGE through
+  `mergeSecondaryLinks`. What a builder still cannot do is speak for the
+  sibling conference.)
 
 **`conferenceDraft` was dead-but-tested data for seven weeks.** The 2026-07-08
 entry above removed the `afl-draft-pills` that consumed it, but the resolver
@@ -311,3 +314,44 @@ The general shape of the trap: a conditional type is only a narrowing when the
 checked type is a naked type PARAMETER (`T extends … ? …`), where it
 distributes over the union. Written against a concrete union it evaluates once,
 against the whole thing.
+
+## 2026-08-29 - Draft day: three links and none of them let you pick
+
+The morning of the AL draft the hero counted down `0 DAYS TO AL DRAFT` and
+offered one button — our own draft order. Every destination the draft hero
+knew about was one of OURS, and on the one day that matters none of them is
+where the draft happens:
+
+| Ours | What it is | Good for |
+|---|---|---|
+| `/draft-predictor` | the order | before draft day (it is settled post-NIT, never a "prediction" in this window) |
+| `/draft-broadcast` | read-only TV board | while picks land |
+| — | | **making a pick: nowhere** |
+
+The room is MFL's. So on draft day the CTA becomes MFL's own page and our
+pages step down to secondary links. Two things about that switch:
+
+- **The gate is the calendar DAY, not `isActive`.** `event.isActive` means the
+  draft has started (12:30 PM); owners open the homepage hours earlier to get
+  set up, and both MFL pages accept them before the first pick. Gating on
+  `isActive` leaves the whole morning-of hero — the exact state in the
+  screenshot that prompted this — with no route to the draft. Use
+  `live || days === 0`.
+- **The year comes from `event.startDate.getFullYear()`, not the clock.** The
+  MFL URL carries a year path. Deriving it from "now" would be right by
+  accident today and wrong for a hero resolved against next year's draft.
+
+**The two conferences need two different pages**, and this is the part that is
+easy to get wrong from the AL screenshot alone: they share one MFL league id,
+but the AL meets LIVE (`ajax_ld`, the draft applet) while the NL runs a slow
+EMAIL draft (`options?O=52`) that never opens that applet. One "draft link" is
+a dead end for one of the two conferences on its own draft day. See the
+mfl-api head for the URL shapes.
+
+**Secondary links now merge instead of overwrite.** `pickLeadCalendarEvent`
+used to assign `view.secondaryLinks` outright, which was safe only while no
+builder set them. Now the AL/NL builders set one (the displaced draft order,
+pre-first-pick) and the post-resolve pass adds the live sibling boards;
+`mergeSecondaryLinks` concatenates and dedupes against `view.link`. That
+dedupe is what keeps the live case right: the CTA is the MFL room now, so the
+viewer's own board is no longer a duplicate of it and correctly rides along.

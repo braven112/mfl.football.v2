@@ -33,6 +33,8 @@ import { getAllResolvedAflEvents } from './league-event-resolver';
 import { getDailySlot } from './hero-resolver';
 import { getCurrentNFLWeek } from './current-week';
 import { randomHeroPlayer } from './hero-players';
+import { buildMflLiveDraftUrl, buildMflOptionUrl } from './mfl-url';
+import { LEAGUES } from '../config/leagues';
 
 /** How long a fresh What's New entry stays in the hero. */
 const FEATURE_HERO_DAYS = 7;
@@ -56,11 +58,16 @@ export interface EventHeroView {
   isExternal?: boolean;
   /**
    * Extra links rendered beside the primary CTA. Only the conference drafts
-   * populate this today: the hero leads with the VIEWER'S OWN conference, so
-   * without a second link an NL owner has no route to the AL board while the
-   * AL is actually drafting — and the two conferences draft on different days.
-   * Attached post-resolve in pickLeadCalendarEvent, never by a view builder:
-   * a builder only sees its own event and can't know the sibling's live state.
+   * populate this today, from two places that MERGE (see mergeSecondaryLinks):
+   *
+   * - A view builder may add a link about its OWN event — the AL draft-day
+   *   card demotes the draft order here once the CTA becomes the live room.
+   * - Sibling-conference LIVE board links are attached post-resolve in
+   *   pickLeadCalendarEvent, because a builder only sees its own event and
+   *   can't know the sibling's live state. The hero leads with the VIEWER'S
+   *   OWN conference, so without that an NL owner has no route to the AL
+   *   board while the AL is actually drafting — and the two conferences draft
+   *   on different days.
    */
   secondaryLinks?: HeroSecondaryLink[];
   icon?: string;
@@ -182,6 +189,64 @@ const GLOW_NAVY = 'rgba(28,73,124,.55)';
  */
 const AFL_BROADCAST_PATH = '/afl-fantasy/draft-broadcast';
 
+/** Our own draft-order page — the useful destination BEFORE draft day. */
+const AFL_DRAFT_ORDER_PATH = '/afl-fantasy/draft-predictor';
+
+/** MFL option number for the league's Email Draft page (`O=`). */
+const MFL_EMAIL_DRAFT_OPTION = 52;
+
+const aflMflHost = () => `https://${LEAGUES['afl-fantasy'].mflHost}`;
+
+/**
+ * Where each conference actually DRAFTS, on MFL. The two are different pages
+ * because the two drafts are different events: the AL meets live and picks in
+ * MFL's live-draft applet; the NL runs a slow email draft off MFL's email
+ * draft page, which never opens that applet. Sending either conference to the
+ * other's page is a dead end on the one day it matters.
+ *
+ * @param year Season being drafted (the draft event's own year, not the
+ *   calendar year — a hero rendered for next year's draft must not link into
+ *   this year's draft).
+ */
+function aflLiveDraftRoomUrl(year: number): string {
+  return buildMflLiveDraftUrl({
+    leagueId: LEAGUES['afl-fantasy'].id,
+    year,
+    host: aflMflHost(),
+  });
+}
+
+/** @see aflLiveDraftRoomUrl — the NL's half of the same rule. */
+function aflEmailDraftUrl(year: number): string {
+  return buildMflOptionUrl({
+    leagueId: LEAGUES['afl-fantasy'].id,
+    year,
+    option: MFL_EMAIL_DRAFT_OPTION,
+    host: aflMflHost(),
+  });
+}
+
+/**
+ * Combine a view builder's own secondary links with the ones attached
+ * post-resolve, dropping any that repeat the primary CTA (a second link to
+ * where the button already goes is noise) or each other. Order is preserved:
+ * builder links first, then the live sibling boards.
+ */
+function mergeSecondaryLinks(
+  own: HeroSecondaryLink[] | undefined,
+  extra: HeroSecondaryLink[],
+  primaryHref: string | undefined,
+): HeroSecondaryLink[] {
+  const seen = new Set<string>(primaryHref ? [primaryHref] : []);
+  const out: HeroSecondaryLink[] = [];
+  for (const link of [...(own ?? []), ...extra]) {
+    if (seen.has(link.href)) continue;
+    seen.add(link.href);
+    out.push(link);
+  }
+  return out;
+}
+
 // ── Per-event view configs ───────────────────────────────────────────────────
 
 interface ViewContext {
@@ -228,6 +293,19 @@ const EVENT_VIEW: Record<string, ViewBuilder> = {
     const live = event.isActive;
     const days = Math.max(0, daysBetween(event.startDate, now));
     const isUserAl = userConferenceId === '00';
+    // DRAFT DAY, from midnight — not just from the 12:30 start. Owners open the
+    // homepage hours early to get set up, and the room accepts them before the
+    // first pick (queue, autopick, chat). Gating the room link on `live` left
+    // the morning-of hero pointing only at the draft order, with no route to
+    // the place the draft actually happens.
+    //
+    // Offered ONLY to an AL owner, the same viewer the summary above speaks to.
+    // This card also leads for NL owners and for logged-out visitors (the lead
+    // falls back to the earliest draft when we don't know the viewer) — an NL
+    // owner has no business in the AL room, and a guest we can't identify just
+    // hits MFL's login wall. They keep the internal destinations below.
+    const enterRoom = (live || days === 0) && isUserAl;
+    const roomUrl = aflLiveDraftRoomUrl(event.startDate.getFullYear());
     return {
       pill: 'AL · Live Draft',
       headline: live ? (isUserAl ? 'Your draft is' : 'AL draft is') : 'Build your',
@@ -235,17 +313,30 @@ const EVENT_VIEW: Record<string, ViewBuilder> = {
       summary: isUserAl
         ? live
           ? 'The American League live draft is happening right now. Make your picks before the timer expires.'
-          : `Your live draft is ${dayPhrase(days)} — Saturday at 12:30pm PT. Scout the board and finalize your queue.`
+          : days === 0
+            ? 'Your live draft is today — Saturday at 12:30pm PT. Head into the draft room to set your queue before the clock starts.'
+            : `Your live draft is ${dayPhrase(days)} — Saturday at 12:30pm PT. Scout the board and finalize your queue.`
         : event.definition.description,
-      // Pre-draft the order is official (post-NIT), so this is never a
-      // "predictor" here. Once the draft is LIVE the useful destination is the
-      // broadcast board, not the order — the order is settled by then, and the
-      // board is what the room is watching. Conference is pinned to the AL so
-      // the link lands on the right one of the two independent boards.
-      link: live
-        ? `${AFL_BROADCAST_PATH}?conference=00`
-        : '/afl-fantasy/draft-predictor',
-      linkLabel: live ? 'Open the Draft Board' : 'View Draft Order',
+      // Three destinations, and only one of them lets an owner PICK:
+      //   AL owner, draft day → MFL's live draft room. Beats both our pages:
+      //     the order is settled by now, and the broadcast board is read-only.
+      //     Once picks are live the AL board still reaches them as a SECONDARY
+      //     link, attached post-resolve in pickLeadCalendarEvent.
+      //   otherwise, live     → the broadcast board (what the room is watching).
+      //   otherwise           → our draft order (official post-NIT, never a
+      //     "predictor" here) — the board is 108 empty slots until the draft.
+      // Conference is pinned to the AL wherever a board link is built, so it
+      // lands on the right one of the two independent boards.
+      link: enterRoom ? roomUrl : live ? `${AFL_BROADCAST_PATH}?conference=00` : AFL_DRAFT_ORDER_PATH,
+      linkLabel: enterRoom ? 'Enter Draft Room' : live ? 'Open the Draft Board' : 'View Draft Order',
+      isExternal: enterRoom,
+      // Pre-start on draft day the board is empty, so the order — displaced as
+      // the CTA — stays reachable here instead. Once picks are live the board
+      // is the better second link and post-resolve supplies it.
+      secondaryLinks:
+        enterRoom && !live
+          ? [{ label: 'View Draft Order', href: AFL_DRAFT_ORDER_PATH }]
+          : undefined,
       icon: 'draft-podium',
       accent: ACCENT_STEEL,
       glow: 'rgba(59,107,154,.55)',
@@ -259,6 +350,12 @@ const EVENT_VIEW: Record<string, ViewBuilder> = {
     const live = event.isActive;
     const days = Math.max(0, daysBetween(event.startDate, now));
     const isUserNl = userConferenceId === '01';
+    // Same draft-day rule as the AL card, including who it is for: from
+    // midnight rather than the 9am start, and only for an NL owner. This card
+    // leads for an AL owner all of NL draft day (their own draft is past by
+    // then and drops out of the lead candidates), and they do not draft here.
+    const openDraft = (live || days === 0) && isUserNl;
+    const emailDraftUrl = aflEmailDraftUrl(event.startDate.getFullYear());
     return {
       pill: 'NL · Email Draft',
       headline: live ? (isUserNl ? 'Your draft is' : 'NL draft is') : 'Build your',
@@ -266,14 +363,21 @@ const EVENT_VIEW: Record<string, ViewBuilder> = {
       summary: isUserNl
         ? live
           ? 'The National League email draft is open. Submit your queue and watch the clock — picks tick through one at a time.'
-          : `Your email draft starts ${dayPhrase(days)} — Sunday at 9am PT. Set your queue before the first pick is on the clock.`
+          : days === 0
+            ? 'Your email draft starts today — Sunday at 9am PT. Open the email draft page and set your queue before the first pick is on the clock.'
+            : `Your email draft starts ${dayPhrase(days)} — Sunday at 9am PT. Set your queue before the first pick is on the clock.`
         : event.definition.description,
-      // Same as the AL view: the order is official pre-draft, and once picks
-      // are live the board is the destination. conference=01 is the NL board.
-      link: live
-        ? `${AFL_BROADCAST_PATH}?conference=01`
-        : '/afl-fantasy/draft-predictor',
-      linkLabel: live ? 'Watch the Board' : 'View Draft Order',
+      // Same shape as the AL card, one page different: the NL drafts off MFL's
+      // EMAIL DRAFT page rather than the live-draft applet. Before draft day
+      // the order is the useful link; on draft day the page you draft from is;
+      // for anyone who is not an NL owner, the board once picks are live.
+      link: openDraft ? emailDraftUrl : live ? `${AFL_BROADCAST_PATH}?conference=01` : AFL_DRAFT_ORDER_PATH,
+      linkLabel: openDraft ? 'Open Email Draft' : live ? 'Watch the Board' : 'View Draft Order',
+      isExternal: openDraft,
+      secondaryLinks:
+        openDraft && !live
+          ? [{ label: 'View Draft Order', href: AFL_DRAFT_ORDER_PATH }]
+          : undefined,
       icon: 'draft-podium',
       accent: ACCENT_GOLD,
       glow: 'rgba(196,30,58,.55)',
@@ -708,21 +812,23 @@ function pickLeadCalendarEvent(
   // hasn't started is 108 empty slots, which is why the pre-draft CTA points at
   // the order instead.
   //
-  // Deduped against the primary CTA — when the viewer's own conference is live
-  // the CTA already IS that board, and a secondary link repeating it is noise.
+  // Deduped against the primary CTA — whenever the CTA already IS one of these
+  // boards (the live NL card, say), a secondary link repeating it is noise. On
+  // the AL's live card the CTA is MFL's draft room, so the AL board survives
+  // the dedupe and lands beside it, which is what we want: pick in the room,
+  // watch on the board.
   if (conferenceDraft) {
     const live = [
       { code: '00', label: 'AL', state: conferenceDraft.al },
       { code: '01', label: 'NL', state: conferenceDraft.nl },
     ].filter((c) => c.state.live);
-    const secondary = live
-      .map((c) => ({
-        label: `${c.label} Draft Board`,
-        href: `${AFL_BROADCAST_PATH}?conference=${c.code}`,
-        live: true,
-      }))
-      .filter((l) => l.href !== view.link);
-    if (secondary.length > 0) view.secondaryLinks = secondary;
+    const secondary = live.map((c) => ({
+      label: `${c.label} Draft Board`,
+      href: `${AFL_BROADCAST_PATH}?conference=${c.code}`,
+      live: true,
+    }));
+    const merged = mergeSecondaryLinks(view.secondaryLinks, secondary, view.link);
+    view.secondaryLinks = merged.length > 0 ? merged : undefined;
   }
 
   return { event: lead, view, priority, conferenceDraft };
