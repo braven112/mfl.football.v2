@@ -101,7 +101,11 @@ describe('Storybook layout-globals wiring', () => {
     // TheLeagueLayout's own <style> block. Keep in sync with it.
     expect(css).toMatch(/html\s*\{[^}]*font-family:\s*var\(--font-family-base\)/);
     expect(css).toMatch(/body\s*\{[^}]*font-family:\s*var\(--font-family-base\)/);
-    expect(css).toMatch(/h4\s*\{[^}]*font-family:\s*var\(--font-display\)/s);
+    // Match the GROUPED rule explicitly. `/h4\s*\{/` also passes today, but only
+    // because h4 happens to be last in the group and the group happens to
+    // precede the standalone `h4 { font-size }` block — reorder either and a
+    // correct stylesheet starts failing.
+    expect(css).toMatch(/h1,\s*h2,\s*h3,\s*h4\s*\{[^}]*font-family:\s*var\(--font-display\)/s);
   });
 
   it('applies the layout link colors, which Chromatic would otherwise baseline as UA blue', () => {
