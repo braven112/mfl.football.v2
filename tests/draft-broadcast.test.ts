@@ -17,6 +17,8 @@ import {
   upcomingPicks,
   positionRunCount,
   applyRehearsal,
+  isRevealWorthy,
+  REVEAL_MAX_AGE_MS,
   darkenForWhiteText,
   contrastWithWhite,
   toBroadcastColor,
@@ -273,6 +275,13 @@ describe('positionRunCount', () => {
   });
 });
 
+/** Epoch seconds inside a finished season — what a rehearsal board carries. */
+const OLD_DRAFT_SEC = 1_700_000_000;
+
+function stamped(overall: number, playerId: string, sec: number): DraftRoomPick {
+  return { ...slot(overall, playerId), timestamp: String(sec) };
+}
+
 describe('applyRehearsal', () => {
   it('keeps picks up to N and empties the rest, preserving slot identity', () => {
     const board = [slot(1, 'a', '0001'), slot(2, 'b', '0002'), slot(3, 'c', '0003')];
@@ -288,6 +297,81 @@ describe('applyRehearsal', () => {
   it('empties the whole board at 0', () => {
     const rehearsed = applyRehearsal([slot(1, 'a'), slot(2, 'b')], 0);
     expect(rehearsed.every((p) => p.playerId === '')).toBe(true);
+  });
+
+  it('leaves the starting board\'s stamps alone', () => {
+    // The picks the operator asked to start from are history, exactly like the
+    // SSR board on draft night. Restamping them would make a reload of
+    // ?rehearse=40 storm forty reveals.
+    const board = [stamped(1, 'a', OLD_DRAFT_SEC), stamped(2, 'b', OLD_DRAFT_SEC)];
+    expect(applyRehearsal(board, 2).map((p) => p.timestamp)).toEqual([
+      String(OLD_DRAFT_SEC),
+      String(OLD_DRAFT_SEC),
+    ]);
+  });
+
+  it('stamps the picks it rolls forward as happening NOW', () => {
+    // THE REGRESSION THIS PINS: a rehearsal replays a COMPLETED season, so every
+    // pick on it is stamped months ago. The live board only reveals a pick
+    // inside REVEAL_MAX_AGE_MS, so once that gate landed the dry run absorbed
+    // every single pick silently and the reveal never appeared again — with the
+    // board still advancing, which is exactly what makes it look like the page
+    // works. A replayed pick is happening now and must be stamped now.
+    const now = 1_800_000_000_000;
+    const board = [
+      stamped(1, 'a', OLD_DRAFT_SEC),
+      stamped(2, 'b', OLD_DRAFT_SEC),
+      stamped(3, 'c', OLD_DRAFT_SEC),
+    ];
+
+    // The replay started at pick 1 and has just rolled forward to pick 3.
+    const rehearsed = applyRehearsal(board, 3, 1, now);
+
+    expect(rehearsed[0].timestamp).toBe(String(OLD_DRAFT_SEC));
+    expect(rehearsed[1].timestamp).toBe(String(Math.floor(now / 1000)));
+    expect(rehearsed[2].timestamp).toBe(String(Math.floor(now / 1000)));
+
+    // The whole point: the live gate now lets them through.
+    expect(isRevealWorthy(rehearsed[2], now)).toBe(true);
+    expect(isRevealWorthy(board[2], now)).toBe(false);
+  });
+
+  it('keeps every step of a full replay reveal-worthy', () => {
+    // Walks the replay the way the board does — one pick at a time, from the
+    // starting point — and asserts the newest pick clears the gate at each
+    // step. A per-step check is what would have caught the original bug; the
+    // board advanced fine, it just never revealed.
+    const now = 1_800_000_000_000;
+    const board = [1, 2, 3, 4, 5].map((n) => stamped(n, `p${n}`, OLD_DRAFT_SEC));
+    const startAt = 2;
+
+    for (let step = startAt + 1; step <= board.length; step++) {
+      const rehearsed = applyRehearsal(board, step, startAt, now);
+      const newest = rehearsed[step - 1];
+      expect(newest.playerId).toBe(`p${step}`);
+      expect(isRevealWorthy(newest, now)).toBe(true);
+    }
+  });
+});
+
+describe('isRevealWorthy', () => {
+  const now = 1_800_000_000_000;
+
+  it('reveals a pick that just landed and absorbs a stale one', () => {
+    expect(isRevealWorthy(stamped(1, 'a', Math.floor(now / 1000)), now)).toBe(true);
+    expect(
+      isRevealWorthy(stamped(1, 'a', Math.floor((now - REVEAL_MAX_AGE_MS + 1_000) / 1000)), now)
+    ).toBe(true);
+    expect(
+      isRevealWorthy(stamped(1, 'a', Math.floor((now - REVEAL_MAX_AGE_MS - 1_000) / 1000)), now)
+    ).toBe(false);
+  });
+
+  it('reveals a pick MFL gave no usable stamp', () => {
+    // Swallowing a pick because a field was missing is the worse failure by far.
+    expect(isRevealWorthy(slot(1, 'a'), now)).toBe(true);
+    expect(isRevealWorthy({ ...slot(1, 'a'), timestamp: 'nonsense' }, now)).toBe(true);
+    expect(isRevealWorthy({ ...slot(1, 'a'), timestamp: '0' }, now)).toBe(true);
   });
 });
 

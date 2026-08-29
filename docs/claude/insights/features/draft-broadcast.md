@@ -1024,3 +1024,49 @@ loop and printing the distribution — not by reading code. Two of them looked
 exactly like our bug and were MFL's; two looked like MFL's and were ours. When
 this board misbehaves, sample the source first and get the distribution; the
 answer is usually in it.
+
+## 2026-08-29 — The rehearsal and the live clock
+
+### A wall-clock gate silently kills the rehearsal, and the rehearsal still LOOKS fine
+
+`REVEAL_MAX_AGE_MS` (item 4 above) shipped the same morning this broke. It
+judges a pick by the clock: older than 90 seconds and it lands on the board
+without taking the screen. Correct for the autopick burst it was written for —
+and fatal to `?rehearse=`, which replays a season that has already FINISHED.
+Every pick on that board is stamped months ago, so every pick failed the gate
+and the dry run revealed nothing at all.
+
+**What made it cost real time is that nothing looked broken.** The board
+advanced pick by pick, on-the-clock updated, the rails filled, the cadence was
+right. Only the card that is the entire point of the night never appeared, and
+"the reveal doesn't show" reads as a bug in the reveal — the last place it was.
+
+Two things follow, and the second is the general one:
+
+- **A pick the replay rolls forward IS happening now, so stamp it now.**
+  `applyRehearsal(picks, upTo, replayedFrom, nowMs)` restamps only what the
+  replay itself makes. Picks at or below the operator's starting `?rehearse=N`
+  keep their original stamps — they are history the operator asked to start
+  from, exactly like the SSR board on draft night, and restamping them would
+  make a reload of `?rehearse=40` storm forty reveals.
+- **Fix it by making the rehearsal PASS the gate, never by exempting it.**
+  A `if (rehearsing) skipTheCheck` would have fixed the symptom and quietly
+  retired the rehearsal's whole value: the replay feeds `ingest` — the live
+  path — precisely so a dry run exercises what draft night exercises. A dry run
+  that routes around the live logic proves nothing about the live logic. This
+  is the same point as "Measuring a rehearsal is not measuring the feature"
+  above, arriving from the opposite direction.
+
+The gate moved to `src/utils/draft-broadcast.ts` and is exported, so the
+contract between it and `applyRehearsal` is pinned by test rather than living
+half inside a React component where nothing could reach it. The guard walks a
+full replay step by step and asserts the newest pick clears the gate at each
+one — a per-step check, because the board advancing was never the broken half.
+
+**The rule to carry forward: any check on this board that reads `Date.now()`
+must be asked what it does to a replayed board before it merges.** The class is
+wider than the rehearsal, too — the gate is measured against the CLIENT clock,
+so a TV laptop running more than 90 seconds FAST would suppress every reveal on
+live draft night with the identical, silent symptom. Skew the other way is
+harmless. If that ever needs closing, the fix is to measure a pick's age
+against the board's own newest timestamp rather than the wall clock.

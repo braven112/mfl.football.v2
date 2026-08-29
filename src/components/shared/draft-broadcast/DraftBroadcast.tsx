@@ -27,7 +27,13 @@ import type {
   DraftBroadcastPageData,
 } from '../../../types/draft-broadcast';
 import { collectFreshPicks } from '../../../utils/pick-reveal';
-import { applyRehearsal, findOnTheClock, playerMap, teamMap } from '../../../utils/draft-broadcast';
+import {
+  applyRehearsal,
+  findOnTheClock,
+  isRevealWorthy,
+  playerMap,
+  teamMap,
+} from '../../../utils/draft-broadcast';
 import { planBroadcastImages } from '../../../utils/draft-broadcast-images';
 import { BroadcastRevealCard } from './BroadcastRevealCard';
 import { BroadcastWarmup } from './BroadcastWarmup';
@@ -81,30 +87,6 @@ const POLL_WATCHDOG_MS = 30_000;
 const CATCHUP_BURST = 5;
 
 /**
- * How old a pick may be and still be worth REVEALING.
- *
- * A reveal owns the whole TV for up to eighteen seconds, so it has to be news.
- * Two things make a pick arrive late even when the poll is healthy:
- *
- *  - **Autopick bursts.** MFL fires a queued autopick the instant the clock
- *    expires, and the 2026 rehearsal produced four picks stamped in the SAME
- *    SECOND (`[Pick made based on ...]`). Four reveals at REVEAL_RUSH_MS is
- *    twenty-four seconds of narration for something the room saw happen at
- *    once.
- *  - **Stale backends.** A current snapshot may not answer for several polls
- *    (see `acceptedRef`), so picks can surface well after they were made.
- *
- * Either way the board ends up showing an old pick, then the live idle board,
- * then another old pick — which reads exactly like it is bouncing around. Past
- * this age a pick is absorbed silently: it still lands on the board and in the
- * rails, it just does not take the screen.
- *
- * Generous on purpose. A pick made while the previous reveal was up is still
- * news, and 90s is comfortably longer than a reveal plus a slow poll.
- */
-const REVEAL_MAX_AGE_MS = 90_000;
-
-/**
  * How long the board must see NOTHING BUT older responses before it says so.
  *
  * A WARNING THRESHOLD, not a rollback trigger — see `rejectingSinceRef` for why
@@ -156,19 +138,6 @@ function boardAge(picks: DraftRoomPick[]): BoardAge {
     if (Number.isFinite(ts) && ts > newestPick) newestPick = ts;
   }
   return { newestPick, filled };
-}
-
-/**
- * Is this pick recent enough to be worth the screen?
- *
- * A pick with no usable stamp IS revealed: the stamp is an optimisation for
- * suppressing history, and a board that silently swallowed picks because MFL
- * omitted a field would be the worse failure by far.
- */
-function isRevealWorthy(pick: DraftRoomPick, nowMs: number): boolean {
-  const ts = Number.parseInt(pick.timestamp, 10);
-  if (!Number.isFinite(ts) || ts <= 0) return true;
-  return nowMs - ts * 1000 <= REVEAL_MAX_AGE_MS;
 }
 
 /**
@@ -379,7 +348,9 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
         return;
       }
       step += 1;
-      ingest(applyRehearsal(data.picks, step));
+      // `rehearseUpTo` as the replay origin: everything above it is a pick this
+      // dry run is MAKING, so it is stamped now and clears the live age gate.
+      ingest(applyRehearsal(data.picks, step, data.rehearseUpTo!));
     }, REHEARSE_STEP_MS);
 
     return () => clearInterval(id);
