@@ -2466,3 +2466,46 @@ run you are watching: it can overwrite good art on some later unrelated run.
 — the entry, and a `CAPTURE_PATHS` line naming the league page to shoot. And
 after any capture, LOOK at the .webp before committing it; the failure mode here
 renders as a valid image and is invisible in a diff stat.
+
+---
+
+## 2026-08-29 — `tokens.css` alone does not give you the app's typography
+
+**Context:** Every Storybook story had been rendering in **Times New Roman**
+(body) and Storybook's own Nunito Sans (headings) since the Aug 2026 spike,
+with `document.fonts` reporting zero loaded faces — despite `preview.ts`
+importing `tokens.css`, `tokens-dark.css` and `utilities.css`.
+
+**The generalizable finding:** importing the token sheets buys you colors,
+spacing and radii, but **not** type. The typography system is split across
+three files and only one of them is CSS:
+
+| Piece | Where it lives | Reaches a token-sheet-only surface? |
+|---|---|---|
+| UFC Sans / UFC Sans Condensed `@font-face` | `src/styles/tokens.css` | **Yes** |
+| Vend Sans `@font-face` + `--font-vend-sans` | `astro.config.ts` `fonts:` → `<Font cssVariable>` in the layout | **No** — it is build config, not CSS |
+| The rules that APPLY the tokens (`html`/`body` `font-family`, `h1–h4 { var(--font-display) }`, `code`) | `TheLeagueLayout.astro`'s own `<style>` block | **No** — a component never carries them |
+
+So a surface that renders **without a page layout** inherits neither the Vend
+Sans face nor any rule that applies `--font-family-base` / `--font-display`.
+`--font-family-base` then resolves past the missing variable AND past the
+unloaded family name to the system stack, and bare `<h1>`s never see
+`--font-display` at all. Nothing errors; the build stays green.
+
+**This is not Storybook-specific — it is a property of the split.** Two
+surfaces in this repo have now had to solve it independently, and the second
+one is the tell: `src/utils/schefter-og.ts` registers its own faces from
+`src/assets/fonts/og/` and names `fontFamily: 'UFC Sans'` inline on every node,
+because Satori has neither the layout nor the token sheet. Storybook fixed it
+in `.storybook/preview-typography.css`. Any future non-layout surface — an
+`/embed/*` route, an email, a canvas/PDF renderer — starts from the same
+deficit.
+
+**Recommendation:** when you render app markup outside a page layout, treat
+typography as a THIRD thing to port, alongside the token sheets and the
+head-injected style components. Verify it by reading computed style in a real
+browser (`getComputedStyle(document.body).fontFamily` plus
+`[...document.fonts]`), not by eye — "slightly-off sans" is exactly what a
+totally-unstyled type system looks like, which is why this survived a whole
+spike. The Storybook case, its self-hosting reasoning and its guard test are in
+`docs/claude/rules/storybook.md` (Trap 4b).
