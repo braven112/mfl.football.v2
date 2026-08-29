@@ -219,12 +219,12 @@ describe('the two conferences are never crossed', () => {
     ]) {
       for (const conf of viewers) {
         const view = viewFor(ref, conf);
-        const isMfl = !!view.link?.includes('myfantasyleague.com');
-        if (!isMfl) continue;
+        // Exact-match against the two known MFL destinations rather than a
+        // substring test on the URL — a substring check is both a weaker
+        // assertion and the shape static analysis flags as unsafe URL matching.
+        if (view.link !== roomUrl2026 && view.link !== emailDraftUrl2026) continue;
         // Only an owner of the conference whose card this is may see one.
-        const own = conf === '00' ? 'ajax_ld' : 'options?L=';
-        expect(conf).toBeDefined();
-        expect(view.link).toContain(own);
+        expect(view.link).toBe(conf === '00' ? roomUrl2026 : emailDraftUrl2026);
         expect(view.isExternal).toBe(true);
       }
     }

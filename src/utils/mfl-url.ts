@@ -16,6 +16,20 @@
 
 const DEFAULT_HOST = 'https://api.myfantasyleague.com';
 
+/**
+ * Drop trailing slashes from a host so `${host}/${year}` never doubles up.
+ *
+ * Deliberately not `host.replace(/\/+$/, '')`: an anchored `+` quantifier over
+ * a repeatable character is the shape static analysis reads as polynomial
+ * backtracking, and there is no reason to hand it a regex for this. Same
+ * output, linear, no engine involved.
+ */
+function trimTrailingSlashes(host: string): string {
+  let end = host.length;
+  while (end > 0 && host[end - 1] === '/') end -= 1;
+  return host.slice(0, end);
+}
+
 export interface BuildMflExportUrlOptions {
   /** MFL export TYPE, e.g. 'rosters', 'salaries', 'pendingTrades'. */
   type: string;
@@ -50,7 +64,7 @@ export function buildMflExportUrl({
   }
   query.set('JSON', '1');
 
-  const trimmedHost = host.replace(/\/+$/, '');
+  const trimmedHost = trimTrailingSlashes(host);
   return `${trimmedHost}/${year}/export?${query.toString()}`;
 }
 
@@ -79,7 +93,7 @@ export interface BuildMflLiveDraftUrlOptions {
  * that matters.
  */
 export function buildMflLiveDraftUrl({ leagueId, year, host }: BuildMflLiveDraftUrlOptions): string {
-  const trimmedHost = host.replace(/\/+$/, '');
+  const trimmedHost = trimTrailingSlashes(host);
   return `${trimmedHost}/${year}/ajax_ld?L=${encodeURIComponent(String(leagueId))}`;
 }
 
@@ -115,6 +129,6 @@ export function buildMflOptionUrl({
   option,
   host,
 }: BuildMflOptionUrlOptions): string {
-  const trimmedHost = host.replace(/\/+$/, '');
+  const trimmedHost = trimTrailingSlashes(host);
   return `${trimmedHost}/${year}/options?L=${encodeURIComponent(String(leagueId))}&O=${encodeURIComponent(String(option))}`;
 }
