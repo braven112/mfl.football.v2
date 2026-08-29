@@ -117,7 +117,97 @@ Use the <strong>Theme</strong> and
 
 renders as "and**League**". Keep an inline element and its surrounding spaces
 on ONE source line. The same applies to `fonts`, `integrations`, and the
-`process.env` hydration — a story gets none of it.
+`process.env` hydration — a story gets none of it. `fonts` is the one that had
+already shipped a wrong canvas; see Trap 4b.
+
+## Trap 4b — the FONTS are two separate misses, and both look like "close enough"
+
+Every story rendered in **Times New Roman** (body) and Storybook's own Nunito
+Sans (headings) until Aug 2026, with `document.fonts` reporting **zero** loaded
+faces. It reads as a slightly-off canvas rather than as a bug, which is why it
+survived the whole spike.
+
+Two independent causes, and fixing either alone leaves the canvas wrong:
+
+1. **`--font-vend-sans` does not exist.** `astro.config.ts` registers Vend Sans
+   via `fontProviders.google()`, and the layouts emit the @font-face plus the
+   variable with `<Font cssVariable="--font-vend-sans" />` (`astro:assets`).
+   Storybook loads neither (Trap 4), so tokens.css's
+   `--font-family-base: var(--font-vend-sans, 'Vend Sans'), system-ui, …`
+   resolved past the variable AND past the unloaded family to the system stack.
+2. **Nothing APPLIES the tokens.** The `html`/`body` `font-family`, the
+   `h1–h4 { font-family: var(--font-display) }` rule and the `code` rule all
+   live in `TheLeagueLayout`'s own `<style>` block. A component carries none of
+   them, so even 'UFC Sans Condensed' — which tokens.css already @font-faces and
+   `staticDirs` already serves — never reached a single heading.
+
+`.storybook/preview-layout-globals.css` fixes both: it declares Vend Sans, sets
+`--font-vend-sans`, and mirrors the layout's global rules. Keep it in sync with
+the layout's `<style>` block.
+
+**The fonts were the loudest instance, not the only one.** Cause 2 is
+structural — the layout owns rules no component carries — so the same gap
+existed for every other `:global()` rule in that block. The review of this
+change caught `:global(a)` / `a:hover` / `a:focus`: every anchor with no
+component color of its own was rendering on the **UA default blue**, measured
+`rgb(0,0,238)` light / `rgb(158,158,255)` dark against production's `#111827` /
+`#60a5fa`. `.table-wrapper` was in the same position (no storied component uses
+it *yet*, which is the only reason it cost nothing).
+
+That one is worse in consequence than the fonts, and the reason is worth
+holding onto: **main runs `chromatic --auto-accept-changes`**
+(`.github/workflows/chromatic.yml`), so a wrong render on main does not merely
+look wrong once — it becomes the accepted baseline, and the suite goes blind to
+the very regressions it exists to catch.
+
+So when porting from the layout, **enumerate the whole `<style>` block** rather
+than the rules that motivated the trip. The full set as of Aug 2026: `html`,
+`body`, `h1`–`h4`, `code`, `a` / `a:hover` / `a:focus`, `.table-wrapper`. The
+rest of the block (`main`, `.page-wrapper`, the nav-drawer rules) targets
+elements the layout itself renders, which a story never has — correctly not
+ported. One layout serves both leagues (61 TheLeague + 36 AFL pages import
+`TheLeagueLayout`), so there is one source to track, not a per-league pair.
+
+**The font is self-hosted, not linked from fonts.googleapis.com.** Chromatic
+waits for network idle before capturing, so a third-party font request is a
+timeout risk and an intermittent one is a false diff — the same reasoning that
+stubbed the playoff-hero headshots to data URIs. It also matches production,
+where Astro's font pipeline self-hosts too. The file lives in
+`.storybook/static/fonts/` and is mapped to `/storybook-fonts` by `staticDirs`
+— deliberately NOT in `public/`, so the shipped Vercel bundle stays
+byte-identical. One 36 KB variable woff2 (latin subset) covers 400/500/600/700,
+declared as four faces exactly as Google delivers it.
+
+Verified in Chromium against the static build:
+
+| | before | after |
+|---|---|---|
+| `html` / `body` font | `"Times New Roman"` | `"Vend Sans", system-ui, …` |
+| `h1` font | Nunito Sans (Storybook's) | `"UFC Sans Condensed", …` |
+| `html` font-size | 16px (browser default) | 16px — deliberately left alone, see below |
+| loaded faces | none | UFC Sans Condensed 700, Vend Sans 400/700 |
+
+**The one rule NOT copied from the layout is `html { font-size:
+var(--font-size-base) }`**, a clamp that lands near 18.9px rather than the
+browser's 16px. Root font-size is the rem basis, so reproducing it re-scales
+every rem-sized rule in the canvas at once and moves **every** Chromatic
+baseline in the suite. That is a deliberate change with its own full-capture
+build and review pass, not a side effect of a font fix.
+
+So the canvas is now right on TYPEFACE and still one step off production on
+SIZE. Know that before reading a story's spacing as pixel-accurate — and when
+someone does take the size step, expect to review all 68 snapshots, since a
+`preview.ts` change forces a full rebuild regardless.
+
+Entry count unchanged at 67 with no `Dropped story` (Trap 1) on either side.
+
+`tests/storybook-layout-globals.test.ts` pins the chain — the `preview.ts` import, the
+`--font-vend-sans` declaration, the `staticDirs` mapping, that every
+`@font-face` src resolves to a file on disk, and that the `html` rule carries
+no `font-size` (so the baseline-moving step stays a decision, not a drive-by).
+Every link in it fails silently (the font 404s, the canvas falls back, the
+build stays green), which is the whole reason it is a test and not a comment. It also fails if a third-party
+font URL is reintroduced, or if the font is moved into `public/`.
 
 ## Trap 5 — the layout injects styles a story never gets
 
@@ -273,7 +363,8 @@ work through on day one.
   emits `storybook-static/preview-stats.json`.
 - `fetch-depth: 0` on checkout. `actions/checkout` defaults to depth 1, which
   degrades both TurboSnap and Chromatic's baseline detection without erroring.
-- `--externals 'src/styles/**/*.css'`. **This one is the dangerous default.**
+- `--externals 'src/styles/**/*.css'` and `--externals '.storybook/static/**'`.
+  **This one is the dangerous default.**
   TurboSnap does not trace CSS and other externally-processed static assets
   through the module graph, so without this flag a change to `tokens.css` or
   `tokens-dark.css` can be treated as affecting NOTHING and skip the very
@@ -281,6 +372,14 @@ work through on day one.
   is exactly undefined/mismatched theme tokens, that failure mode would make
   Chromatic quietly useless for the thing it was bought to catch. The flag
   forces a full rebuild whenever any file under `src/styles/` changes.
+
+  `.storybook/static/**` is there for the same reason and is easy to miss: a
+  `staticDirs` mount is a visual input that lives entirely OUTSIDE the module
+  graph — the built CSS keeps the literal `url('/storybook-fonts/...')` and the
+  woff2 is only copied next to it. Swap or re-subset the font without this
+  glob and TurboSnap inherits every snapshot, so the regression ships green.
+  `public/assets/**` was already listed for exactly this reason; any future
+  `staticDirs` entry needs the same treatment.
 
 A full rebuild is also forced automatically when Storybook's own config
 changes (`main.ts`, `preview.ts`, `modes.ts`) or when dependency versions in
