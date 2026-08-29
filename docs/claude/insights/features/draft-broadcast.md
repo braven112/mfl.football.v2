@@ -943,3 +943,84 @@ between current-and-empty but between **current-small and stale-LARGE** — so
 the stale reports kept refreshing the old slots' clocks and the window never
 expired. A rule keyed on "how long since anyone said filled" is only safe when
 the stale reads are the emptier ones.
+
+
+## 2026-08-29 — Draft night, live: what MFL's draft feed actually does
+
+Six hours of testing against a live copy league (MFL 21227). Every entry below
+is a measurement, not a theory, and the last one supersedes a lot of work.
+
+### THE HEADLINE: read `static_url`, not the JSON export
+
+`TYPE=draftResults` is served from backends whose caches disagree, and the
+spread is not "occasionally stale" — it is unusable. Measured with the draft
+PAUSED, so the truth was frozen at 24 picks, 77 requests returned:
+
+| response  | share |
+|-----------|-------|
+| 17 picks  | 70%   |
+| 18 picks  | 18%   |
+| 19 picks  | 3%    |
+| 24 (true) | 8%    |
+
+**Seven picks behind is the single most likely answer MFL will give you.**
+Cache-busting query params and `Cache-Control: no-cache` change nothing — this
+is many backends, not one edge cache. Neither does host choice: `api.` 302s to
+`www##`, and both flap.
+
+MFL also publishes a STATIC file — the one its own draft room reads — and names
+it in `static_url` on every draft unit:
+
+```
+https://www44.myfantasyleague.com/fflnetdynamic2026/<league>_<unit>_draft_results.xml
+```
+
+Ten consecutive fetches during a live draft returned byte-identical, CURRENT
+results (31 picks, matching the room's 3.08 exactly) while the JSON export was
+serving 26. Its root element even carries `round="03" pick="08"` — the
+on-the-clock position outright. Present for every shape checked: both AFL
+conferences, a copy league, and TheLeague's single `LEAGUE` unit.
+
+`/api/draft/status` prefers it whenever it is at least as fresh. Three things
+about how:
+
+- **The URL is never constructed by hand.** It comes from MFL's own response,
+  including the `www##` host that actually serves it — the `api.` host only
+  redirects and will not serve the file.
+- **The JSON export stays as the fallback**, because it is the documented API
+  and this file is an implementation detail of MFL's UI. If it moves, the board
+  degrades to the old sampled behaviour rather than to nothing.
+- **Sampling drops to one request once the static URL is known.** Ten redundant
+  calls per poll per viewer is a lot to spend on a source about to be ignored.
+
+If a future session sees the board lagging again, check the static file FIRST.
+
+### Everything else that broke, in the order it was found
+
+1. **A hung `fetch` ends a self-chaining poll loop.** The client had no timeout
+   where the server had one; one request that never settled froze the board
+   until reload. `AbortSignal.timeout` + a watchdog + re-arm on
+   `visibilitychange`/`online`. A chained timeout with no abort is a single
+   point of failure, and it fails silently.
+2. **A union of picks cannot represent a revert.** See the superseded section
+   above. Recency (newest pick stamp, then filled count) handles the flap and
+   the revert with one rule.
+3. **Automatic rollback is unsafe when the freshest snapshot is rare.** With the
+   truth arriving ~10% of the time the board legitimately rejects most polls, so
+   a "nothing but older responses for 45s" trigger fires constantly during a
+   NORMAL draft and reversed a live board. THE BOARD NEVER MOVES BACKWARDS ON
+   ITS OWN; the threshold only raises a visible "reload to resync".
+4. **A reveal must be news.** MFL fires queued autopicks in bursts — four picks
+   stamped in the SAME SECOND — and each took its own 6s reveal, so the screen
+   alternated old pick / live board / old pick and read as "bouncing".
+   `REVEAL_MAX_AGE_MS` absorbs anything older than 90s onto the board silently.
+5. **One SSR fetch is a coin toss.** With 30% of responses empty, one load in
+   three seeded the board from an empty snapshot. The page render samples too.
+
+### The habit that actually found these
+
+Every one of the above was diagnosed by MEASURING the feed — polling MFL in a
+loop and printing the distribution — not by reading code. Two of them looked
+exactly like our bug and were MFL's; two looked like MFL's and were ours. When
+this board misbehaves, sample the source first and get the distribution; the
+answer is usually in it.

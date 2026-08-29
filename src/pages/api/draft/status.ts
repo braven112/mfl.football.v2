@@ -150,7 +150,8 @@ function unitFreshness(raw: any, unit: string | null): number {
 async function fetchFreshest(
   mflUrl: string,
   unit: string | null,
-  cacheKey: string
+  cacheKey: string,
+  samples: number = MFL_SAMPLES
 ): Promise<{ data: any | null; status?: number }> {
   let lastStatus: number | undefined;
 
@@ -170,7 +171,7 @@ async function fetchFreshest(
     }
   };
 
-  const results = await Promise.all(Array.from({ length: MFL_SAMPLES }, once));
+  const results = await Promise.all(Array.from({ length: Math.max(1, samples) }, once));
 
   let best: any | null = null;
   let bestFreshness = -Infinity;
@@ -291,7 +292,19 @@ export const GET: APIRoute = async ({ url }) => {
   const mflUrl = buildMflExportUrl({ type: 'draftResults', leagueId, year, host: `https://${host}` });
 
   try {
-    const { data, status } = await fetchFreshest(mflUrl, unit, `${host}|${leagueId}|${year}`);
+    // Once the static file's URL is known, the JSON export is only a fallback,
+    // so it is asked ONCE instead of MFL_SAMPLES times. Sampling exists to beat
+    // the export's disagreeing caches; the static file does not have them, and
+    // ten redundant requests per poll per viewer is a lot to spend on a source
+    // we are about to ignore. See staticUrlSeen.
+    const staticKey = `${host}|${leagueId}|${year}|${unit ?? ''}`;
+    const knownStatic = staticUrlSeen.get(staticKey);
+    const { data, status } = await fetchFreshest(
+      mflUrl,
+      unit,
+      `${host}|${leagueId}|${year}`,
+      knownStatic ? 1 : MFL_SAMPLES
+    );
 
     if (!data) {
       return new Response(
@@ -318,8 +331,7 @@ export const GET: APIRoute = async ({ url }) => {
     // Prefer MFL's own static file when it is at least as fresh — see
     // staticUrlSeen. It is the same board its draft room reads, and it does not
     // flap; the sampled JSON above is the fallback, not the target.
-    const staticKey = `${host}|${leagueId}|${year}|${unit ?? ''}`;
-    const staticUrl = (selected as any)?.static_url || staticUrlSeen.get(staticKey);
+    const staticUrl = (selected as any)?.static_url || knownStatic;
     if (typeof staticUrl === 'string' && staticUrl.startsWith('https://')) {
       staticUrlSeen.set(staticKey, staticUrl);
     }

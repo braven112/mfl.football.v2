@@ -4,7 +4,7 @@
     {
       "date": "2026-08-28",
       "type": "bug-fix",
-      "summary": "Headshots on the draft broadcast board no longer show up late. ESPN serves player photos with a cache window of under four minutes, so the laptop running the board was re-downloading a quarter-megabyte picture every single time a face went on screen — which is why a reveal sometimes sat there with a name and no player. The board now pulls every headshot, crest and logo it could need before the draft starts, keeps them for a week instead of four minutes, and shows a count in the corner while it works so you can see it finish before the room shows up. It also survives a reload and a bad stretch of wifi: an image that came down once stays down.",
+      "summary": "The draft broadcast board now keeps up with the room, and its images are ready before the first pick. Two separate problems, both outside our code and both worked around. ESPN expires player headshots after under four minutes, so every reveal was re-downloading a quarter-megabyte photo — which is why a card sometimes sat there with a name and no player; the board now pre-caches every headshot, crest and logo it could need before the draft starts, keeps them for a week, and shows a count in the corner so you can watch it finish. And MyFantasyLeague's draft feed turned out to serve whichever of several out-of-date copies it felt like — measured live, the correct board came back 8% of the time and one seven picks behind came back 70% — which had the board stuck rounds behind the room. It now reads the same file MFL's own draft room reads, so it tracks pick for pick.",
       "impact": "user",
       "area": "draft",
       "league": "both"
