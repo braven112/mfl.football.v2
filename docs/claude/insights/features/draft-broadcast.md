@@ -843,3 +843,49 @@ of the league. Do not "fix" this by trusting the newest response.
 Pinned in `tests/draft-broadcast-preflight.test.ts` ("a flapping MFL board"),
 including the four-in-a-row run — a one-poll tolerance would not have covered
 what was measured.
+
+
+### The poll loop had no client-side timeout — one hung request ended the night
+
+Reported mid-draft: "it stopped updating after pick 7", then "I refreshed and
+it was a few rounds ahead". MFL was at 25.
+
+The board's poll is a self-chaining `setTimeout`: the next tick is scheduled
+only once the current `await fetch(...)` settles. The **server** side of
+`/api/draft/status` has always carried `AbortSignal.timeout(10_000)`. The
+**browser** side carried nothing. So a request that never settles — a wifi
+drop, a laptop suspending mid-flight, a proxy holding the socket — does not
+delay the loop, it BREAKS it. The board freezes on its last value and only a
+reload recovers, which is exactly the reported shape.
+
+Three changes, in order of how much they cover:
+
+- **`AbortSignal.timeout(POLL_TIMEOUT_MS)` on the fetch.** A timeout now lands
+  in the same `catch` as any other failure: counted, backed off, and — the
+  point — rescheduled. This is the line that keeps a three-hour draft polling.
+- **A watchdog** (`POLL_WATCHDOG_MS`) comparing now against a timestamp each
+  tick stamps in its `finally`. It covers what an abort cannot: a timer the
+  browser throttled while the tab was backgrounded, or one the machine slept
+  through. It only ever re-arms; `inFlight` stops it polling in parallel.
+- **Re-arm on `visibilitychange` and `online`.** Returning from sleep or a
+  dropped network is when the board is most stale, so ask immediately instead
+  of waiting out the interval.
+
+Any future rewrite of this loop must keep all three. A chained timeout with no
+abort is not a slow poller, it is a poller with a single point of failure, and
+the failure is silent.
+
+### A jump of eighteen picks is a catch-up, not a fast round
+
+Consequence of the same MFL flapping. When a current snapshot finally answers
+after a run of stale ones, the union gains every pick at once — measured going
+from 3 to 25 in one poll. `maxBurst = Infinity` (correct for a genuinely fast
+round, where dropping a pick is the worse failure) then queued 22 reveals at
+`REVEAL_RUSH_MS` each: nearly two and a half minutes narrating a round the room
+finished, during which the idle board — who is ACTUALLY on the clock — never
+gets the screen.
+
+Past `CATCHUP_BURST` fresh picks, only the NEWEST is revealed and the rest are
+taken as read. Note this is deliberately not the old `maxBurst` behaviour of
+dropping the burst entirely: on a TV, a pick the room watched happen must still
+appear. Show the one that just happened, skip the history.

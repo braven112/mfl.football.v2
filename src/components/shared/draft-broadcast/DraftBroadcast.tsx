@@ -42,6 +42,44 @@ const POLL_MS = 5_000;
 const POLL_BACKOFF_MS = 15_000;
 const ERRORS_BEFORE_BACKOFF = 3;
 
+/**
+ * Ceiling on ONE poll's request.
+ *
+ * The loop is a self-chaining timeout: the next poll is only scheduled once the
+ * current `await fetch(...)` settles. A `fetch` with no timeout can hang
+ * indefinitely — a wifi drop, a sleeping laptop, a proxy holding the socket —
+ * and when it does, the chain is not delayed, it is BROKEN. The board freezes
+ * on the last value it saw and only a reload brings it back, which is exactly
+ * what happened during the 2026 rehearsal (frozen at pick 7 while MFL was at
+ * 25). The server side of this call has always had `AbortSignal.timeout`; the
+ * browser side had nothing.
+ */
+const POLL_TIMEOUT_MS = 12_000;
+
+/**
+ * If no poll has COMPLETED in this long, force one.
+ *
+ * The abort above fixes the hang we found; the watchdog covers the class. A
+ * chained timeout is also at the mercy of background-tab throttling and of the
+ * machine suspending mid-wait, and this page is meant to run unattended on a TV
+ * for hours. Cheap insurance: one comparison a second against a timestamp the
+ * poll itself stamps.
+ */
+const POLL_WATCHDOG_MS = 30_000;
+
+/**
+ * Fresh picks past which an update is a CATCH-UP, not a fast round.
+ *
+ * MFL serves the draft from caches that disagree (see `filledRef`), so the
+ * board can jump eighteen picks the moment a current snapshot finally answers.
+ * Revealing all of them is 18 x REVEAL_RUSH_MS of narrating a round the room
+ * finished minutes ago, during which the idle board — who is ACTUALLY on the
+ * clock — never gets the screen. Past this many, only the newest pick is
+ * revealed and the rest are taken as read: the room's attention belongs on the
+ * pick that just happened.
+ */
+const CATCHUP_BURST = 5;
+
 /** How long one reveal owns the screen, and the hurry-up when picks stack. */
 const REVEAL_MS = 18_000;
 const REVEAL_RUSH_MS = 6_000;
@@ -188,11 +226,16 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
     }
 
     if (fresh.length > 0) {
+      // A jump this big is the board catching up to MFL, not the room picking
+      // that fast — see CATCHUP_BURST. Reveal the newest and take the rest as
+      // read, so the screen lands on what just happened instead of narrating
+      // its way there.
+      const toReveal = fresh.length > CATCHUP_BURST ? fresh.slice(-1) : fresh;
       setQueue((q) => [
         ...q,
         // playerId is in the key so an undo + re-pick of the same slot reveals
         // again rather than being swallowed as a duplicate.
-        ...fresh.map((pick) => ({ key: `${pick.overallPickNumber}-${pick.playerId}`, pick })),
+        ...toReveal.map((pick) => ({ key: `${pick.overallPickNumber}-${pick.playerId}`, pick })),
       ]);
     }
   }, []);
@@ -239,9 +282,28 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
     });
     if (feedUnit) params.set('unit', feedUnit);
 
+    // When the last tick FINISHED. The watchdog reads it; nothing else does.
+    let lastCompleted = Date.now();
+    // Guards against two ticks running at once, which the watchdog and the
+    // wake-up listeners can both otherwise cause.
+    let inFlight = false;
+
+    const schedule = (ms: number) => {
+      clearTimeout(timer);
+      timer = setTimeout(tick, ms);
+    };
+
     const tick = async () => {
+      if (cancelled || inFlight) return;
+      inFlight = true;
       try {
-        const res = await fetch(`/api/draft/status?${params}`, { cache: 'no-store' });
+        const res = await fetch(`/api/draft/status?${params}`, {
+          cache: 'no-store',
+          // Without this the loop can be ended by a single request that never
+          // settles — see POLL_TIMEOUT_MS. This is the line that keeps a
+          // three-hour draft polling.
+          signal: AbortSignal.timeout(POLL_TIMEOUT_MS),
+        });
         const body = (await res.json()) as DraftStatusResponse & { error?: string };
         if (cancelled) return;
 
@@ -253,20 +315,46 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
           ingest(body.picks);
         }
       } catch {
+        // A timeout lands here like any other failure: count it, back off if it
+        // keeps happening, and — the point — schedule the next one regardless.
         if (cancelled) return;
         errorCountRef.current += 1;
+      } finally {
+        inFlight = false;
+        lastCompleted = Date.now();
       }
 
       if (cancelled) return;
       const failing = errorCountRef.current >= ERRORS_BEFORE_BACKOFF;
       setConnectionLost(failing);
-      timer = setTimeout(tick, failing ? POLL_BACKOFF_MS : POLL_MS);
+      schedule(failing ? POLL_BACKOFF_MS : POLL_MS);
     };
 
-    timer = setTimeout(tick, POLL_MS);
+    // The watchdog covers what the abort cannot: a timer the browser throttled
+    // while the tab was in the background, or one the machine slept through.
+    // It only ever RE-ARMS the loop — it never polls in parallel (`inFlight`).
+    const watchdog = setInterval(() => {
+      if (cancelled || inFlight) return;
+      if (Date.now() - lastCompleted > POLL_WATCHDOG_MS) schedule(0);
+    }, 1_000);
+
+    // Coming back from a sleeping laptop or a dropped network is the moment the
+    // board is most out of date, so ask immediately rather than waiting out the
+    // current interval.
+    const wake = () => {
+      if (cancelled || document.visibilityState !== 'visible') return;
+      schedule(0);
+    };
+    document.addEventListener('visibilitychange', wake);
+    window.addEventListener('online', wake);
+
+    schedule(POLL_MS);
     return () => {
       cancelled = true;
       clearTimeout(timer);
+      clearInterval(watchdog);
+      document.removeEventListener('visibilitychange', wake);
+      window.removeEventListener('online', wake);
     };
   }, [data.leagueId, data.mflHost, data.leagueYear, data.conference.unit, data.feedUnit, rehearsing, ingest]);
 

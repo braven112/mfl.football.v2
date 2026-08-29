@@ -484,3 +484,46 @@ describe('a flapping MFL board', () => {
     expect(high).toBe(2);
   });
 });
+
+/**
+ * A jump of eighteen picks is the board catching up, not the room drafting.
+ *
+ * MFL's disagreeing caches (see the flap block above) mean a current snapshot
+ * can finally answer after a run of stale ones, and the union then gains every
+ * pick at once. Queueing all of them is minutes of narrating a round that
+ * finished while the idle board — who is ACTUALLY on the clock — never gets
+ * the screen.
+ *
+ * `CATCHUP_BURST` in DraftBroadcast.tsx draws the line. The rule is stated
+ * here as the pure predicate it is; the constant it pins is 5.
+ */
+describe('a catch-up burst', () => {
+  const CATCHUP_BURST = 5;
+  /** The island's rule, verbatim — see `toReveal` in DraftBroadcast.tsx. */
+  const toReveal = <T,>(fresh: T[]) =>
+    fresh.length > CATCHUP_BURST ? fresh.slice(-1) : fresh;
+
+  it('reveals every pick of a genuinely fast round', () => {
+    // Four selections inside one 5s poll is a real thing in a live room, and
+    // dropping any of them is the failure the queue exists to prevent.
+    const fresh = [1, 2, 3, 4];
+    expect(toReveal(fresh)).toEqual(fresh);
+  });
+
+  it('reveals only the NEWEST pick when the board jumps', () => {
+    // The 2026 rehearsal: MFL sat on 3 picks, then answered with 25.
+    const fresh = Array.from({ length: 22 }, (_, i) => i + 4);
+    expect(toReveal(fresh)).toEqual([25]);
+  });
+
+  it('shows something rather than nothing — a catch-up is never silent', () => {
+    // The older maxBurst behaviour dropped an oversized burst entirely, which
+    // on a TV means a pick the room watched happen never appears.
+    expect(toReveal([1, 2, 3, 4, 5, 6]).length).toBe(1);
+  });
+
+  it('keeps the boundary where the constant says', () => {
+    expect(toReveal([1, 2, 3, 4, 5])).toHaveLength(5);
+    expect(toReveal([1, 2, 3, 4, 5, 6])).toHaveLength(1);
+  });
+});
