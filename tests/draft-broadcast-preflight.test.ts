@@ -386,102 +386,97 @@ describe('hasDraftSlots', () => {
 /**
  * MFL serves a FLAPPING board, and the TV must not.
  *
- * Measured live during the 2026 AFL rehearsal (2026-08-28): the same league
- * and the same unit alternated between one filled pick and zero across polls
- * two seconds apart, on `api.myfantasyleague.com` AND on the league's own
- * `www44`, with runs of four consecutive stale reads. The export is served
- * from backends whose caches disagree, so one poll is a sample of whichever
- * backend answered — not a monotonic view of the draft.
+ * Measured live during the 2026 AFL rehearsal (2026-08-28): polling one league
+ * and unit every two seconds returned SEVEN snapshots in rotation — 3, 4, 5, 6,
+ * 7, 8 and 25 picks — on `api.myfantasyleague.com` AND on the league's own
+ * `www44`, with runs of four consecutive stale reads. The room saw 1.01 land,
+ * the board flip back to "on the clock", and forward again, every few seconds.
  *
- * The room saw 1.01 land, the board flip back to "on the clock", and forward
- * again, every few seconds. And silently: `collectFreshPicks` already held the
- * pick in its seen-set, so it never re-revealed on the way back.
+ * Every snapshot was INTERNALLY COHERENT, though — a clean prefix of the draft,
+ * never a board with holes. The responses are not corrupt, just of different
+ * AGES. So the board takes the newest and ignores anything older.
  *
- * `DraftBroadcast` answers this by keeping the UNION of every filled slot it
- * has seen rather than the latest response. That merge is what these cases
- * pin — as a pure function, because the rule is about the DATA, and a test
- * that had to mount the island to state it would be testing React instead.
+ * A UNION of every pick ever seen was tried first and is wrong. It survived the
+ * plain flap and then failed the moment the draft was reverted to restart it:
+ * the stale backends kept serving the OLD board, so the union could never shed
+ * the abandoned picks and the screen jumped to 1.12 of a draft that no longer
+ * existed while the room was on 1.02. Recency handles both with one rule, which
+ * is why these cases are stated against board AGE and not a merge.
  */
 describe('a flapping MFL board', () => {
-  /** The island's merge, verbatim — see `filledRef` in DraftBroadcast.tsx. */
-  function mergeFilled(
-    held: Map<number, { overallPickNumber: number; playerId: string }>,
-    incoming: { overallPickNumber: number; playerId: string }[]
-  ) {
-    const merged = incoming.map((p) => (p.playerId ? p : held.get(p.overallPickNumber) ?? p));
-    for (const p of merged) if (p.playerId) held.set(p.overallPickNumber, p);
-    return merged;
-  }
-
-  const slot = (n: number, playerId = '') => ({ overallPickNumber: n, playerId });
-  const board = (...filled: Record<number, string>[]) => {
-    const map = Object.assign({}, ...filled) as Record<number, string>;
-    return [1, 2, 3].map((n) => slot(n, map[n] ?? ''));
+  /** `boardAge`, verbatim — see DraftBroadcast.tsx. */
+  const age = (picks: { playerId: string; timestamp: string }[]) => {
+    let newestPick = 0;
+    let filled = 0;
+    for (const p of picks) {
+      if (!p.playerId) continue;
+      filled += 1;
+      const ts = Number.parseInt(p.timestamp, 10);
+      if (Number.isFinite(ts) && ts > newestPick) newestPick = ts;
+    }
+    return { newestPick, filled };
   };
 
-  it('does not un-fill a pick when the next poll comes back empty', () => {
-    const held = new Map<number, ReturnType<typeof slot>>();
-    mergeFilled(held, board({ 1: '17472' }));
+  /** `isAtLeastAsRecent`, verbatim. */
+  const accepts = (
+    incoming: { playerId: string; timestamp: string }[],
+    onScreen: { playerId: string; timestamp: string }[]
+  ) => {
+    const a = age(incoming);
+    const b = age(onScreen);
+    if (a.newestPick !== b.newestPick) return a.newestPick > b.newestPick;
+    return a.filled >= b.filled;
+  };
 
-    // The exact stale read observed seconds later.
-    const after = mergeFilled(held, board());
+  /** A coherent prefix board of `n` picks, the last stamped `ts`. */
+  const board = (n: number, ts = 1_000) =>
+    Array.from({ length: n }, (_, i) => ({
+      playerId: String(1000 + i),
+      timestamp: String(ts - (n - 1 - i)),
+    }));
 
-    expect(after[0].playerId).toBe('17472');
+  it('ignores a stale snapshot that has fewer picks', () => {
+    // The exact read observed seconds after a 25-pick board: back to 3.
+    expect(accepts(board(3, 980), board(25, 1_000))).toBe(false);
   });
 
   it('survives a RUN of stale reads, not just one', () => {
-    // Four consecutive zeros were measured on api.myfantasyleague.com, so a
-    // one-poll tolerance would not have covered it.
-    const held = new Map<number, ReturnType<typeof slot>>();
-    mergeFilled(held, board({ 1: '17472' }));
-
-    let after = board();
-    for (let i = 0; i < 4; i += 1) after = mergeFilled(held, board());
-
-    expect(after[0].playerId).toBe('17472');
+    // Four consecutive stale responses were measured, so a one-poll tolerance
+    // would not have covered it. Recency needs no tolerance at all.
+    const onScreen = board(25, 1_000);
+    for (let i = 0; i < 4; i += 1) expect(accepts(board(3, 980), onScreen)).toBe(false);
   });
 
-  it('takes the fresh half of a response that is stale for another slot', () => {
-    // Disagreeing backends make a mixed response possible: this one has lost
-    // 1.01 but carries 1.02, which dropping the response whole would discard.
-    const held = new Map<number, ReturnType<typeof slot>>();
-    mergeFilled(held, board({ 1: '17472' }));
-
-    const after = mergeFilled(held, board({ 2: '99999' }));
-
-    expect(after.map((p) => p.playerId)).toEqual(['17472', '99999', '']);
+  it('takes a snapshot that carries a newer pick', () => {
+    expect(accepts(board(26, 1_010), board(25, 1_000))).toBe(true);
   });
 
-  it('lets a real re-pick through — the response always wins when it is filled', () => {
-    // A commissioner correcting a pick must still reach the board; only an
-    // EMPTY slot defers to what we hold.
-    const held = new Map<number, ReturnType<typeof slot>>();
-    mergeFilled(held, board({ 1: '17472' }));
-
-    const after = mergeFilled(held, board({ 1: '00001' }));
-
-    expect(after[0].playerId).toBe('00001');
+  it('accepts an unchanged board so the loop keeps flowing', () => {
+    expect(accepts(board(25, 1_000), board(25, 1_000))).toBe(true);
   });
 
-  it('never shrinks the filled count across a flapping sequence', () => {
-    const held = new Map<number, ReturnType<typeof slot>>();
-    const sequence = [
-      board({ 1: '17472' }),
-      board(),
-      board({ 1: '17472' }),
-      board(),
-      board(),
-      board({ 1: '17472', 2: '99999' }),
-      board({ 1: '17472' }),
-    ];
+  it('breaks a same-second tie on pick count', () => {
+    // MFL stamps in whole seconds, so two picks inside one second are not
+    // separable by time alone.
+    expect(accepts(board(26, 1_000), board(25, 1_000))).toBe(true);
+    expect(accepts(board(24, 1_000), board(25, 1_000))).toBe(false);
+  });
 
-    let high = 0;
-    for (const poll of sequence) {
-      const count = mergeFilled(held, poll).filter((p) => p.playerId).length;
-      expect(count).toBeGreaterThanOrEqual(high);
-      high = count;
-    }
-    expect(high).toBe(2);
+  it('prefers a SMALLER board carrying a newer pick — the revert case', () => {
+    // The one the union got wrong. After a revert and a re-pick the real board
+    // has two picks while stale caches still hold twelve; the re-picked 1.01 is
+    // stamped later than anything in the abandoned draft, so the small board
+    // wins on its first appearance and 1.12 cannot come back.
+    const abandoned = board(12, 1_000);
+    const restarted = board(2, 5_000);
+    expect(accepts(restarted, abandoned)).toBe(true);
+    expect(accepts(abandoned, restarted)).toBe(false);
+  });
+
+  it('never lets an empty board displace a live one on recency alone', () => {
+    // A revert with no re-pick yet is the one case recency cannot settle, and
+    // it is exactly what REVERT_CONFIRM_MS covers — see below.
+    expect(accepts([], board(12, 1_000))).toBe(false);
   });
 });
 
@@ -529,89 +524,40 @@ describe('a catch-up burst', () => {
 });
 
 /**
- * Reverting the draft to restart it — the case the plain union got wrong.
+ * Reverting the draft to restart it.
  *
- * Found live (Brandon, 2026-08-28): after a revert the board "switches between
- * old picks and then to the correct pick". Two distinct faults behind that one
- * sentence, and the fix for either alone leaves the other:
+ * Found live (Brandon, 2026-08-28), twice. First the board "switches between
+ * old picks and then to the correct pick"; then, after a full reset, it "jumped
+ * to the old 1.12 even though we are on 1.02".
  *
- *  - MFL's stale caches still held the OLD selection for a slot that had been
- *    re-picked, and "a filled slot always wins" took whichever answered last.
- *  - A revert is a legitimate un-fill, which a union can never represent, so a
- *    restarted draft would have shown the old board forever.
- *
- * Restated here as the pure rules `ingest` applies. The constants pinned are
- * REVERT_CONFIRM_MS (45s) and MFL's epoch-SECONDS timestamp strings.
+ * Recency settles the common case with no window at all: a re-picked slot is
+ * stamped later than anything in the abandoned draft, so the restarted board
+ * beats the stale one on its first appearance (pinned above). The window below
+ * covers only what recency cannot — a revert with NO re-pick yet, where the
+ * true board is both emptier and stamped earlier than what is on screen.
  */
 describe('reverting the draft', () => {
   const REVERT_CONFIRM_MS = 45_000;
 
-  const pick = (slot: number, playerId: string, ts: number) => ({
-    overallPickNumber: slot,
-    playerId,
-    timestamp: String(ts),
+  /** The rollback rule, verbatim — see `rejectingSinceRef` in ingest. */
+  const rollsBack = (now: number, rejectingSince: number) =>
+    now - rejectingSince >= REVERT_CONFIRM_MS;
+
+  it('holds through the worst flap actually measured', () => {
+    // Four consecutive stale polls, ~20s — and in a flap a current snapshot
+    // lands in between, which clears the clock entirely rather than pausing it.
+    expect(rollsBack(20_000, 0)).toBe(false);
   });
 
-  /** `isNewerPick`, verbatim — see DraftBroadcast.tsx. */
-  const isNewerPick = (next: { timestamp: string }, prev: { timestamp: string }) => {
-    const a = Number.parseInt(next.timestamp, 10);
-    const b = Number.parseInt(prev.timestamp, 10);
-    if (!Number.isFinite(a) || !Number.isFinite(b)) return false;
-    return a > b;
-  };
-
-  describe('a slot that comes back with a DIFFERENT player', () => {
-    it('takes the newer pick — the re-pick, not the cached original', () => {
-      const original = pick(1, '17472', 1_000);
-      const rePicked = pick(1, '99999', 2_000);
-      expect(isNewerPick(rePicked, original)).toBe(true);
-    });
-
-    it('refuses the older pick, so the original cannot flip back in', () => {
-      // This is the oscillation as reported: a stale backend answering with
-      // the pre-revert selection after the new one had already landed.
-      const original = pick(1, '17472', 1_000);
-      const rePicked = pick(1, '99999', 2_000);
-      expect(isNewerPick(original, rePicked)).toBe(false);
-    });
-
-    it('keeps what it holds when a stamp is missing or unparseable', () => {
-      // Stability is the right failure here: without a comparison there is no
-      // reason to prefer the new one, and preferring it reopens the flip.
-      expect(isNewerPick(pick(1, 'a', NaN as unknown as number), pick(1, 'b', 1_000))).toBe(false);
-      expect(isNewerPick({ timestamp: '' }, { timestamp: '1000' })).toBe(false);
-      expect(isNewerPick({ timestamp: '1000' }, { timestamp: '' })).toBe(false);
-    });
-
-    it('keeps what it holds on an equal stamp', () => {
-      expect(isNewerPick(pick(1, 'a', 1_000), pick(1, 'b', 1_000))).toBe(false);
-    });
+  it('rolls back once nothing but older responses has arrived for the window', () => {
+    expect(rollsBack(REVERT_CONFIRM_MS, 0)).toBe(true);
+    expect(rollsBack(60_000, 0)).toBe(true);
   });
 
-  describe('a slot reported empty', () => {
-    /** The release rule, verbatim — see `ingest`. */
-    const releases = (now: number, lastSeenFilled: number) =>
-      now - lastSeenFilled >= REVERT_CONFIRM_MS;
-
-    it('holds through the worst flap actually measured', () => {
-      // Four consecutive stale polls, ~20s. Any single filled report resets the
-      // clock, so a flap can never accumulate toward the release.
-      expect(releases(20_000, 0)).toBe(false);
-    });
-
-    it('releases once the slot has been empty continuously past the window', () => {
-      // A revert: no backend calls it filled again, so the clock runs out.
-      expect(releases(REVERT_CONFIRM_MS, 0)).toBe(true);
-      expect(releases(60_000, 0)).toBe(true);
-    });
-
-    it('leaves the window comfortably clear of the observed flap', () => {
-      // If this ever tightens below ~25s a normal flap starts un-filling picks
-      // mid-draft, which is the bug the union exists to prevent.
-      expect(REVERT_CONFIRM_MS).toBeGreaterThan(25_000);
-      // And if it loosens much past a minute, a restarted draft leaves the room
-      // looking at a stale board for too long.
-      expect(REVERT_CONFIRM_MS).toBeLessThanOrEqual(60_000);
-    });
+  it('leaves the window clear of the observed flap on both sides', () => {
+    // Below ~25s a normal flap would start rolling the board back mid-draft.
+    expect(REVERT_CONFIRM_MS).toBeGreaterThan(25_000);
+    // Much past a minute leaves a reset board stale in front of the room.
+    expect(REVERT_CONFIRM_MS).toBeLessThanOrEqual(60_000);
   });
 });

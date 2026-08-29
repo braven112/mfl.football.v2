@@ -891,36 +891,55 @@ dropping the burst entirely: on a TV, a pick the room watched happen must still
 appear. Show the one that just happened, skip the history.
 
 
-### Reverting the draft breaks a plain union — two faults, one sentence
+### A union of picks is the WRONG model — take the newest snapshot whole
 
-Reported while restarting the rehearsal draft: "I reverted the draft to restart
-and now it switches between old picks and then to the correct pick."
+The union (previous section) survived the plain flap and then failed the moment
+the draft was reverted to restart it. Two live reports, an hour apart:
 
-Two independent faults, and fixing either alone leaves the other:
+> "I reverted the draft to restart and now it switches between old picks and
+> then to the correct pick."
+> "it was working on the first pick and then jumped to the old 1.12 even though
+> we are on 1.02."
 
-1. **A slot can come back FILLED WITH A DIFFERENT PLAYER.** The union's rule
-   was "a filled slot always wins", which is right against an empty one and
-   wrong against a stale backend still holding the PRE-revert selection: the
-   board took whichever answered last, so 1.01 flipped between the old player
-   and the re-pick. MFL stamps every pick with `timestamp` (epoch seconds, as a
-   string) and the newer one is the real one. A missing, unparseable or equal
-   stamp keeps what the board holds — stability is the right failure, since
-   without a comparison there is no reason to prefer the newcomer and
-   preferring it reopens the flip.
-2. **A revert is a legitimate un-fill**, and a union can never represent one.
-   Left alone, a restarted draft shows the old board forever.
+The union can only grow, so it can never shed an abandoned draft. Worse, the
+first attempt at a fix — release a slot after it has been reported empty
+continuously for 45s — could not fire at all here, because the stale backends
+kept serving the OLD board and every one of those reports reset the slot's
+clock. 1.12 was immortal.
 
-`lastSeenFilledRef` separates a flap from a revert without guessing which is
-which, and the asymmetry is the whole trick: **a flap alternates, a revert does
-not.** Some poll calls a flapping slot filled again within seconds (measured
-runs topped out at four polls, ~20s) and any single filled report resets the
-clock, so a flap can never accumulate toward release. After a revert no backend
-ever calls it filled again, so the clock runs out. A slot is released only
-after `REVERT_CONFIRM_MS` (45s, nine polls) of CONTINUOUS empty reports.
+**The thing the union was built to fix does not need a union.** Every snapshot
+MFL served was INTERNALLY COHERENT — a clean prefix of the draft, never a board
+with holes (verified across seven distinct snapshots). The responses are not
+corrupt, they are of different AGES. So:
 
-Do not tighten that below ~25s — a normal flap would start un-filling picks
-mid-draft, which is the bug the union exists to prevent. Do not loosen it much
-past a minute either, or a restarted draft leaves the room on a stale board.
+- **Take the newest snapshot and use it whole**; ignore any older than what is
+  on screen. `boardAge` is `(newest pick timestamp, filled count)`, compared in
+  that order.
+- **The timestamp is the half that survives a revert.** A re-picked 1.01 is
+  stamped LATER than every pick of the abandoned draft, so a two-pick restarted
+  board beats a stale twelve-pick one on its first appearance, with no window to
+  wait out. That is the whole reason age is not just a pick count.
+- **The count only breaks ties inside one second**, which is where MFL's own
+  stamp resolution runs out.
 
-Releasing a slot also removes it from `seenRef`, so the re-pick reveals instead
-of being swallowed as a duplicate.
+`REVERT_CONFIRM_MS` survives, much reduced in scope: it now covers the single
+case recency cannot settle — a revert with NO re-pick yet, where the true board
+is both emptier and stamped earlier than what is on screen. A plain flap can
+never accumulate toward it, because a current snapshot lands every few polls and
+clears the clock outright.
+
+The general lesson, which cost two rounds: **when a source flaps, ask whether
+its individual responses are coherent before merging them.** Merging coherent
+snapshots invents states that never existed and, worse, makes the merged state
+impossible to walk back.
+
+### (superseded) The first revert fix, and why it failed
+
+Kept because the reasoning is a trap worth recognising, not because the code
+survives. The rule was: hold a slot filled until it has been reported empty
+CONTINUOUSLY for 45s, since "a flap alternates, a revert does not". The
+asymmetry is real. What it missed is that after a revert the flap is not
+between current-and-empty but between **current-small and stale-LARGE** — so
+the stale reports kept refreshing the old slots' clocks and the window never
+expired. A rule keyed on "how long since anyone said filled" is only safe when
+the stale reads are the emptier ones.

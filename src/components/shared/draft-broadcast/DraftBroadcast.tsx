@@ -70,7 +70,7 @@ const POLL_WATCHDOG_MS = 30_000;
 /**
  * Fresh picks past which an update is a CATCH-UP, not a fast round.
  *
- * MFL serves the draft from caches that disagree (see `filledRef`), so the
+ * MFL serves the draft from caches that disagree (see `acceptedRef`), so the
  * board can jump eighteen picks the moment a current snapshot finally answers.
  * Revealing all of them is 18 x REVEAL_RUSH_MS of narrating a round the room
  * finished minutes ago, during which the idle board — who is ACTUALLY on the
@@ -81,34 +81,21 @@ const POLL_WATCHDOG_MS = 30_000;
 const CATCHUP_BURST = 5;
 
 /**
- * How long a slot must be reported EMPTY, continuously, before the board
- * believes the pick is gone.
+ * How long the board must see NOTHING BUT older responses before it believes
+ * the draft was rolled back.
  *
- * The board holds a union of every pick it has seen so MFL's disagreeing
- * caches cannot un-fill a slot (see `filledRef`). A commissioner reverting the
- * draft to restart it is the case where an un-fill is real, and this is what
- * tells the two apart without guessing: a flap alternates, so some poll calls
- * the slot filled again within seconds — measured runs topped out at four
- * polls, about twenty seconds. A revert never does.
+ * This is the only window left, and it covers one case: a revert with no
+ * re-pick yet, where the true board is emptier AND stamped earlier than what is
+ * on screen, so recency alone cannot tell it from a stale backend. The moment
+ * anyone re-picks, the new stamp beats the abandoned draft and the board
+ * catches up without waiting.
  *
- * 45s is nine polls: comfortably past the worst flap observed, and short
- * enough that a restarted draft is on screen inside a minute.
+ * A plain flap can never accumulate toward this: a current snapshot lands every
+ * few polls and resets the clock. 45s is nine polls — past the worst flap run
+ * observed (four polls, ~20s) and short enough that a reset board is on screen
+ * inside a minute.
  */
 const REVERT_CONFIRM_MS = 45_000;
-
-/**
- * Is `next` a later selection than `prev` for the same slot?
- *
- * MFL stamps picks with epoch SECONDS as a string. A missing or unparseable
- * stamp answers false — keeping what the board already holds, which is the
- * stable choice when there is nothing to compare.
- */
-function isNewerPick(next: DraftRoomPick, prev: DraftRoomPick): boolean {
-  const a = Number.parseInt(next.timestamp, 10);
-  const b = Number.parseInt(prev.timestamp, 10);
-  if (!Number.isFinite(a) || !Number.isFinite(b)) return false;
-  return a > b;
-}
 
 /** How long one reveal owns the screen, and the hurry-up when picks stack. */
 const REVEAL_MS = 18_000;
@@ -129,6 +116,43 @@ const RUSH_THRESHOLD = 3;
  */
 const REHEARSE_REVEAL_MS = 8_000;
 const REHEARSE_STEP_MS = REHEARSE_REVEAL_MS * 2;
+
+/**
+ * How recent a polled board is: the newest pick it carries, then how many.
+ *
+ * MFL stamps picks with epoch SECONDS as a string. An unparseable stamp counts
+ * as 0 rather than poisoning the max, so a board with one bad row is still
+ * dated by its good ones.
+ */
+interface BoardAge {
+  newestPick: number;
+  filled: number;
+}
+
+function boardAge(picks: DraftRoomPick[]): BoardAge {
+  let newestPick = 0;
+  let filled = 0;
+  for (const p of picks) {
+    if (!p.playerId) continue;
+    filled += 1;
+    const ts = Number.parseInt(p.timestamp, 10);
+    if (Number.isFinite(ts) && ts > newestPick) newestPick = ts;
+  }
+  return { newestPick, filled };
+}
+
+/**
+ * Is `a` at least as recent as `b`?
+ *
+ * Timestamp first — that is the half that survives a revert, since a re-picked
+ * slot is stamped later than anything in the abandoned draft. Count only breaks
+ * ties inside the same second, which is where MFL's own resolution runs out.
+ * Equal is accepted so an unchanged board keeps flowing through.
+ */
+function isAtLeastAsRecent(a: BoardAge, b: BoardAge): boolean {
+  if (a.newestPick !== b.newestPick) return a.newestPick > b.newestPick;
+  return a.filled >= b.filled;
+}
 
 interface Props {
   pageData: string;
@@ -196,98 +220,82 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
   const errorCountRef = useRef(0);
 
   /**
-   * Every filled slot we have ever seen, by overall pick number.
+   * How recent the board currently on screen is.
    *
    * MFL SERVES A FLAPPING BOARD. Measured live during the 2026 AFL rehearsal
-   * (2026-08-28), the same league and unit alternated between one filled pick
-   * and zero across polls two seconds apart — on `api.myfantasyleague.com` AND
-   * on the league's own `www44`, with runs of four consecutive stale reads. The
-   * export is served from backends whose caches disagree, so a poll is not a
-   * monotonic view of the draft: it is a sample of whichever backend answered.
+   * (2026-08-28), polling one league and unit every two seconds returned SEVEN
+   * different snapshots in rotation — 3, 4, 5, 6, 7, 8 and 25 picks — on
+   * `api.myfantasyleague.com` AND on the league's own `www44`, with runs of
+   * four consecutive stale reads. The export is served from backends whose
+   * caches disagree, so a poll is not a view of the draft: it is a sample of
+   * whichever backend answered.
    *
-   * Rendered straight, that is what the room sees: 1.01 lands, the board flips
-   * back to "Da Dangsters on the clock", then forward again, every few seconds.
-   * Worse, it never re-reveals — `seenRef` already holds the pick, so the pick
-   * disappears and returns in silence.
+   * But every snapshot observed was INTERNALLY COHERENT — a clean prefix of the
+   * draft, never a board with holes. That is what makes this simple: the
+   * responses are not corrupt, they are just of different AGES. So the board
+   * takes the NEWEST snapshot and uses it whole, and ignores any that is older
+   * than what is already on screen.
    *
-   * So the board keeps the UNION rather than the latest response. A pick that
-   * has landed cannot un-land, and a response that is stale for one slot but
-   * fresh for another (which disagreeing backends make possible) contributes
-   * its fresh half instead of being dropped whole.
+   * A union of every pick ever seen was tried first and is wrong, which only
+   * showed up when the draft was reverted to restart it: the stale backends
+   * kept serving the OLD board, so the union could never shed the old picks and
+   * the screen jumped to a pick from a draft that no longer existed. Recency
+   * handles that case and the plain flap with one rule.
    *
-   * TWO THINGS THE PLAIN UNION GOT WRONG, both found by reverting the draft to
-   * restart it (Brandon, 2026-08-28) — see `lastSeenFilledRef` and the
-   * timestamp comparison in `ingest`:
-   *
-   *  - A slot can come back FILLED WITH A DIFFERENT PLAYER. After a revert and
-   *    a re-pick, the stale caches still hold the old selection, so "a filled
-   *    slot always wins" took whichever answered last and 1.01 flipped between
-   *    the old player and the new one. MFL stamps every pick with a
-   *    `timestamp`, and the newer one is the real one.
-   *  - A revert is a legitimate un-fill. The union alone can never represent
-   *    one, so a restarted draft would show the old board forever.
+   * Age is `(newest pick timestamp, filled count)`, compared in that order.
+   * The timestamp is what makes a revert work: a re-picked 1.01 is stamped
+   * LATER than every pick of the abandoned draft, so a snapshot carrying it
+   * beats a stale twelve-pick board immediately, with no window to wait out.
+   * The count only breaks ties within the same second.
    */
-  const filledRef = useRef<Map<number, DraftRoomPick>>(
-    new Map(
-      (rehearsing ? applyRehearsal(data.picks, data.rehearseUpTo!) : data.picks)
-        .filter((p) => p.playerId)
-        .map((p) => [p.overallPickNumber, p] as const)
-    )
+  const acceptedRef = useRef<BoardAge>(
+    boardAge(rehearsing ? applyRehearsal(data.picks, data.rehearseUpTo!) : data.picks)
   );
 
   /**
-   * When each held slot was last reported FILLED by any poll.
+   * When we started continuously rejecting responses as too old.
    *
-   * This is what separates a cache flap from a revert, and it needs no guess
-   * about which is which: a flap alternates, so some poll reports the slot
-   * filled again within seconds (measured runs topped out at four polls, ~20s).
-   * A revert does not — after it, EVERY backend eventually agrees the slot is
-   * empty. So a slot is released only once it has been reported empty
-   * continuously for REVERT_CONFIRM_MS, and any single filled report resets
-   * that clock.
+   * Only one thing can cause that: the authoritative board genuinely moved
+   * BACKWARDS — a commissioner reverting the draft with no re-pick yet, whose
+   * newest snapshot is emptier and stamped earlier than what we hold. A plain
+   * flap cannot, because a current snapshot lands every few polls and resets
+   * this to null.
+   *
+   * So after REVERT_CONFIRM_MS of nothing but older responses, the rollback is
+   * real and the newest response is taken wholesale.
    */
-  const lastSeenFilledRef = useRef<Map<number, number>>(new Map());
+  const rejectingSinceRef = useRef<number | null>(null);
 
   /** Merge a freshly polled board in, queueing anything new for reveal. */
   const ingest = useCallback((rawIncoming: DraftRoomPick[]) => {
     if (rawIncoming.length === 0) return;
 
     const now = Date.now();
+    const age = boardAge(rawIncoming);
 
-    // Reconcile the response against the union — see filledRef. Three cases,
-    // and the middle one is the whole reason this is not a one-liner.
-    const incoming = rawIncoming.map((p) => {
-      const held = filledRef.current.get(p.overallPickNumber);
+    // Older than what is on screen? That is a stale backend, not the draft
+    // going backwards — ignore it whole. See `acceptedRef`.
+    if (!isAtLeastAsRecent(age, acceptedRef.current)) {
+      if (rejectingSinceRef.current === null) rejectingSinceRef.current = now;
+      if (now - rejectingSinceRef.current < REVERT_CONFIRM_MS) return;
 
-      if (p.playerId) {
-        lastSeenFilledRef.current.set(p.overallPickNumber, now);
-        // Same slot, DIFFERENT player: a revert plus a re-pick, seen against a
-        // cache still holding the old selection. Newer timestamp wins, so the
-        // old pick cannot flip back in. An unparseable or equal stamp keeps
-        // what we hold, which is the stable answer either way.
-        if (held && held.playerId !== p.playerId && !isNewerPick(p, held)) return held;
-        return p;
-      }
-
-      if (!held) return p;
-
-      // Empty here, filled in the union. Flap or revert — decided by how long
-      // it has been since ANY poll called it filled, never by this poll alone.
-      const lastFilled = lastSeenFilledRef.current.get(p.overallPickNumber) ?? now;
-      if (now - lastFilled < REVERT_CONFIRM_MS) return held;
-
-      // Confirmed gone. Drop it from the union AND from the seen-set, so the
-      // slot reveals again when it is re-picked rather than being swallowed as
-      // a duplicate.
-      filledRef.current.delete(p.overallPickNumber);
-      lastSeenFilledRef.current.delete(p.overallPickNumber);
-      seenRef.current.delete(p.overallPickNumber);
-      return p;
-    });
-
-    for (const p of incoming) {
-      if (p.playerId) filledRef.current.set(p.overallPickNumber, p);
+      // Nothing but older responses for this long means the board really was
+      // rolled back. Take it wholesale and re-seed the reveal state from it, so
+      // the re-picks that follow reveal instead of being swallowed as
+      // duplicates. No reveals for the rollback itself — it is not news.
+      acceptedRef.current = age;
+      rejectingSinceRef.current = null;
+      seenRef.current = new Set(
+        rawIncoming.filter((p) => p.playerId).map((p) => p.overallPickNumber)
+      );
+      slotCountRef.current = rawIncoming.length;
+      setPicks(rawIncoming);
+      return;
     }
+
+    rejectingSinceRef.current = null;
+    acceptedRef.current = age;
+    const incoming = rawIncoming;
 
     // maxBurst = Infinity: on a TV, dropping a burst is the worse failure.
     // A fast round that lands 4 picks inside one poll would otherwise reveal
