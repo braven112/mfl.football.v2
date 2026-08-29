@@ -143,17 +143,86 @@ export function playerMap(players: BroadcastPlayer[]): Map<string, BroadcastPlay
 }
 
 /**
+ * How old a pick may be and still be worth REVEALING.
+ *
+ * A reveal owns the whole TV for up to eighteen seconds, so it has to be news.
+ * Two things make a pick arrive late even when the poll is healthy:
+ *
+ *  - **Autopick bursts.** MFL fires a queued autopick the instant the clock
+ *    expires, and the 2026 rehearsal produced four picks stamped in the SAME
+ *    SECOND (`[Pick made based on ...]`). Four reveals at the rush duration is
+ *    twenty-four seconds of narration for something the room saw happen at
+ *    once.
+ *  - **Stale backends.** A current snapshot may not answer for several polls
+ *    (see `acceptedRef` in DraftBroadcast.tsx), so picks can surface well
+ *    after they were made.
+ *
+ * Either way the board ends up showing an old pick, then the live idle board,
+ * then another old pick — which reads exactly like it is bouncing around. Past
+ * this age a pick is absorbed silently: it still lands on the board and in the
+ * rails, it just does not take the screen.
+ *
+ * Generous on purpose. A pick made while the previous reveal was up is still
+ * news, and 90s is comfortably longer than a reveal plus a slow poll.
+ *
+ * THIS GATE HAS ONE TRAP, and it has already sprung once: it judges a pick by
+ * the CLOCK, so any board whose stamps are not "now" fails it wholesale and
+ * silently. A rehearsal replays a finished season, so on the day this landed
+ * the dry run stopped revealing anything at all while still advancing
+ * perfectly — see `applyRehearsal`, which is what keeps the two in step.
+ */
+export const REVEAL_MAX_AGE_MS = 90_000;
+
+/**
+ * Is this pick recent enough to be worth the screen?
+ *
+ * A pick with no usable stamp IS revealed: the stamp is an optimisation for
+ * suppressing history, and a board that silently swallowed picks because MFL
+ * omitted a field would be the worse failure by far.
+ *
+ * Lives here rather than in the component because it is half of the rehearsal
+ * contract — see `applyRehearsal`. With the gate hidden inside the board, a
+ * dry run replaying a finished season failed it on EVERY pick and nothing
+ * could pin that.
+ */
+export function isRevealWorthy(pick: DraftRoomPick, nowMs: number): boolean {
+  const ts = Number.parseInt(pick.timestamp, 10);
+  if (!Number.isFinite(ts) || ts <= 0) return true;
+  return nowMs - ts * 1000 <= REVEAL_MAX_AGE_MS;
+}
+
+/**
  * Trim the board to the picks a rehearsal should have "already made".
  *
  * Used with `?rehearse=N` against a COMPLETED season so the page can be driven
  * end-to-end before draft night. Emptied slots keep their franchise and pick
  * numbers — only the player is cleared — so the board still knows who is on
  * the clock.
+ *
+ * RESTAMPS THE PICKS THE REPLAY HAS ROLLED FORWARD (those above `replayedFrom`)
+ * to `nowMs`. The season being replayed is finished by definition, so its picks
+ * carry stamps months old — and `isRevealWorthy` above, which the live board
+ * applies to every fresh pick, rejects all of them. The rehearsal ran the whole
+ * board without ever showing a single reveal, which is the one thing a dry run
+ * exists to prove. A replayed pick IS happening now, so it is stamped now, and
+ * the dry run goes through the real age gate rather than around it.
+ *
+ * `replayedFrom` defaults to Infinity — nothing is restamped — which is what
+ * the initial trimmed board wants: those picks are history the operator asked
+ * to start from, exactly like the SSR board on draft night.
  */
-export function applyRehearsal(picks: DraftRoomPick[], upTo: number): DraftRoomPick[] {
-  return picks.map((p) =>
-    p.overallPickNumber <= upTo ? p : { ...p, playerId: '', timestamp: '' }
-  );
+export function applyRehearsal(
+  picks: DraftRoomPick[],
+  upTo: number,
+  replayedFrom = Number.POSITIVE_INFINITY,
+  nowMs = Date.now()
+): DraftRoomPick[] {
+  const stamp = String(Math.floor(nowMs / 1000));
+  return picks.map((p) => {
+    if (p.overallPickNumber > upTo) return { ...p, playerId: '', timestamp: '' };
+    if (p.overallPickNumber > replayedFrom) return { ...p, timestamp: stamp };
+    return p;
+  });
 }
 
 // ── Broadcast contrast ───────────────────────────────────────────────────────
