@@ -70,6 +70,86 @@ function buildPicks(rawPicks: RawDraftPick | RawDraftPick[] | undefined): DraftR
   });
 }
 
+
+/**
+ * How many times to ask MFL for the same board, in parallel, keeping the
+ * freshest answer.
+ *
+ * MFL serves `draftResults` from backends whose caches disagree, and the spread
+ * is far worse than "occasionally stale". Measured against the live 2026 AFL
+ * rehearsal, 48 requests for one conference returned NINE distinct boards — 0,
+ * 1, 2, 3, 4, 6, 8, 9 and 13 picks — and the CURRENT one came back twice. MFL
+ * had the fresh data (its newest pick was 103 seconds old); it just handed it
+ * over about 4% of the time.
+ *
+ * A single request per poll therefore leaves the board minutes behind a live
+ * room, which is exactly how it was reported: "it was doing good till 10 now
+ * it's stuck and behind the draft". Cache-bypass headers do not help — plain
+ * and `Cache-Control: no-cache` returned the same spread — because this is
+ * many backends, not one edge cache.
+ *
+ * Six parallel requests take the freshest of six draws. They run concurrently,
+ * so the poll costs one round trip, and the client's 5s cadence is unchanged.
+ */
+const MFL_SAMPLES = 6;
+
+/** Newest pick stamp for `unit` in a payload, or -1 if it has no board. */
+function unitFreshness(raw: any, unit: string | null): number {
+  const selected = selectDraftUnit<RawDraftPick>(raw?.draftResults?.draftUnit, unit);
+  if (!selected) return -1;
+  const picks = selected.draftPick;
+  const arr = Array.isArray(picks) ? picks : picks ? [picks] : [];
+  let newest = 0;
+  let filled = 0;
+  for (const p of arr) {
+    if (!p?.player) continue;
+    filled += 1;
+    const ts = Number.parseInt(p?.timestamp ?? '', 10);
+    if (Number.isFinite(ts) && ts > newest) newest = ts;
+  }
+  // Fall back to the count when nothing carries a stamp, so an unstamped board
+  // still beats an empty one.
+  return newest > 0 ? newest : filled;
+}
+
+/** Ask MFL MFL_SAMPLES times at once; return the freshest board for `unit`. */
+async function fetchFreshest(
+  mflUrl: string,
+  unit: string | null
+): Promise<{ data: any | null; status?: number }> {
+  let lastStatus: number | undefined;
+
+  const once = async (): Promise<any | null> => {
+    try {
+      const res = await fetch(mflUrl, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FantasyLeague/1.0)' },
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (!res.ok) {
+        lastStatus = res.status;
+        return null;
+      }
+      return await res.json();
+    } catch {
+      return null;
+    }
+  };
+
+  const results = await Promise.all(Array.from({ length: MFL_SAMPLES }, once));
+
+  let best: any | null = null;
+  let bestFreshness = -Infinity;
+  for (const candidate of results) {
+    if (!candidate) continue;
+    const freshness = unitFreshness(candidate, unit);
+    if (freshness > bestFreshness) {
+      best = candidate;
+      bestFreshness = freshness;
+    }
+  }
+  return { data: best, status: lastStatus };
+}
+
 export const GET: APIRoute = async ({ url }) => {
   const year = url.searchParams.get('year') || String(getCurrentLeagueYear());
 
@@ -90,19 +170,15 @@ export const GET: APIRoute = async ({ url }) => {
   const mflUrl = buildMflExportUrl({ type: 'draftResults', leagueId, year, host: `https://${host}` });
 
   try {
-    const res = await fetch(mflUrl, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FantasyLeague/1.0)' },
-      signal: AbortSignal.timeout(10_000),
-    });
+    const { data, status } = await fetchFreshest(mflUrl, unit);
 
-    if (!res.ok) {
+    if (!data) {
       return new Response(
-        JSON.stringify({ picks: [], serverTime: Date.now(), error: `MFL ${res.status}` }),
+        JSON.stringify({ picks: [], serverTime: Date.now(), error: `MFL ${status ?? 'unreachable'}` }),
         { status: 502, headers: { 'Content-Type': 'application/json' } },
       );
     }
 
-    const data = await res.json();
     const selected = selectDraftUnit<RawDraftPick>(data?.draftResults?.draftUnit, unit);
 
     // A named unit that isn't on the board is a caller error, not an empty

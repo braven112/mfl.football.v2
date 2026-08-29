@@ -105,19 +105,12 @@ const CATCHUP_BURST = 5;
 const REVEAL_MAX_AGE_MS = 90_000;
 
 /**
- * How long the board must see NOTHING BUT older responses before it believes
- * the draft was rolled back.
+ * How long the board must see NOTHING BUT older responses before it says so.
  *
- * This is the only window left, and it covers one case: a revert with no
- * re-pick yet, where the true board is emptier AND stamped earlier than what is
- * on screen, so recency alone cannot tell it from a stale backend. The moment
- * anyone re-picks, the new stamp beats the abandoned draft and the board
- * catches up without waiting.
- *
- * A plain flap can never accumulate toward this: a current snapshot lands every
- * few polls and resets the clock. 45s is nine polls — past the worst flap run
- * observed (four polls, ~20s) and short enough that a reset board is on screen
- * inside a minute.
+ * A WARNING THRESHOLD, not a rollback trigger — see `rejectingSinceRef` for why
+ * the automatic rollback was removed. Long enough that MFL's ordinary flapping
+ * does not trip it, short enough that a genuinely stuck board is called out
+ * while the room is still watching.
  */
 const REVERT_CONFIRM_MS = 45_000;
 
@@ -218,6 +211,9 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
   );
   const [queue, setQueue] = useState<QueuedReveal[]>([]);
   const [connectionLost, setConnectionLost] = useState(false);
+  /** True when every response for a while has been older than what is shown —
+   *  the board is not wrong, but it may be behind, and only a reload resyncs. */
+  const [maybeStale, setMaybeStale] = useState(false);
 
   const teams = useMemo(() => teamMap(data.teams), [data.teams]);
   const players = useMemo(() => playerMap(data.players), [data.players]);
@@ -290,29 +286,23 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
   );
 
   /**
-   * When we started continuously rejecting responses as too old.
+   * When we started continuously rejecting responses as too old, or null.
    *
-   * Only one thing can cause that: the authoritative board genuinely moved
-   * BACKWARDS — a commissioner reverting the draft with no re-pick yet, whose
-   * newest snapshot is emptier and stamped earlier than what we hold. A plain
-   * flap cannot, because a current snapshot lands every few polls and resets
-   * this to null.
+   * This drives a WARNING ONLY. It used to roll the board back automatically
+   * after REVERT_CONFIRM_MS, on the theory that only a real revert could
+   * produce a long run of older responses. That theory died on the live NL
+   * board: MFL's freshest snapshot came back about 10% of the time, so the
+   * board legitimately rejects most polls, and a 45-second run of pure
+   * rejections happens constantly during a perfectly normal draft. The
+   * rollback fired, dropped the board to the best stale snapshot, and the room
+   * watched it go forwards and then back to a pick it had already passed.
    *
-   * So after REVERT_CONFIRM_MS of nothing but older responses, the rollback is
-   * real and the newest response is taken wholesale.
+   * THE BOARD NEVER MOVES BACKWARDS ON ITS OWN. A commissioner reverting the
+   * draft is real but rare, and it has an obvious operator action — reload —
+   * which re-seeds from a freshly sampled server render. Silently reversing a
+   * live board to serve that case cost far more than it ever saved.
    */
   const rejectingSinceRef = useRef<number | null>(null);
-
-  /**
-   * The freshest board seen WHILE rejecting, and its age.
-   *
-   * A rollback must not land on whatever happened to arrive last. Sampled
-   * against the live 2026 rehearsal, 30% of MFL's responses were a COMPLETELY
-   * EMPTY board — so "accept the newest response once the window expires" could
-   * put an empty board on the TV in the middle of a draft. The window says a
-   * rollback happened; this says what to roll back TO.
-   */
-  const bestRejectedRef = useRef<{ picks: DraftRoomPick[]; age: BoardAge } | null>(null);
 
   /** Merge a freshly polled board in, queueing anything new for reveal. */
   const ingest = useCallback((rawIncoming: DraftRoomPick[]) => {
@@ -324,33 +314,16 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
     // Older than what is on screen? That is a stale backend, not the draft
     // going backwards — ignore it whole. See `acceptedRef`.
     if (!isAtLeastAsRecent(age, acceptedRef.current)) {
+      // A stale backend answered. Ignore it — and note how long this has been
+      // going on, purely so the screen can SAY the board may be behind. It does
+      // not roll anything back; see rejectingSinceRef.
       if (rejectingSinceRef.current === null) rejectingSinceRef.current = now;
-      // Remember the best of what we are turning away — see bestRejectedRef.
-      const best = bestRejectedRef.current;
-      if (!best || isAtLeastAsRecent(age, best.age)) {
-        bestRejectedRef.current = { picks: rawIncoming, age };
-      }
-      if (now - rejectingSinceRef.current < REVERT_CONFIRM_MS) return;
-
-      // Nothing but older responses for this long means the board really was
-      // rolled back. Roll back to the FRESHEST thing seen during the window,
-      // not to whatever arrived last, and re-seed the reveal state from it so
-      // the re-picks that follow reveal instead of being swallowed as
-      // duplicates. No reveals for the rollback itself — it is not news.
-      const target = bestRejectedRef.current ?? { picks: rawIncoming, age };
-      acceptedRef.current = target.age;
-      rejectingSinceRef.current = null;
-      bestRejectedRef.current = null;
-      seenRef.current = new Set(
-        target.picks.filter((p) => p.playerId).map((p) => p.overallPickNumber)
-      );
-      slotCountRef.current = target.picks.length;
-      setPicks(target.picks);
+      if (now - rejectingSinceRef.current >= REVERT_CONFIRM_MS) setMaybeStale(true);
       return;
     }
 
     rejectingSinceRef.current = null;
-    bestRejectedRef.current = null;
+    setMaybeStale(false);
     acceptedRef.current = age;
     const incoming = rawIncoming;
 
@@ -730,6 +703,11 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
         <div className="dbc__status" role="status">
           <span className="dbc__status-dot" aria-hidden="true" />
           Reconnecting to MFL…
+        </div>
+      ) : maybeStale ? (
+        <div className="dbc__status" role="status">
+          <span className="dbc__status-dot" aria-hidden="true" />
+          MFL is serving an older board — reload to resync
         </div>
       ) : null}
     </div>

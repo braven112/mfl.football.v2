@@ -18,6 +18,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import {
   DEFAULT_WARM_DEPTH,
   planBroadcastImages,
@@ -524,106 +526,63 @@ describe('a catch-up burst', () => {
 });
 
 /**
- * Reverting the draft to restart it.
+ * The board never moves backwards on its own.
  *
- * Found live (Brandon, 2026-08-28), twice. First the board "switches between
- * old picks and then to the correct pick"; then, after a full reset, it "jumped
- * to the old 1.12 even though we are on 1.02".
+ * There WAS an automatic rollback here: after REVERT_CONFIRM_MS of nothing but
+ * older responses, take the newest one wholesale, on the theory that only a
+ * real revert could produce a run that long.
  *
- * Recency settles the common case with no window at all: a re-picked slot is
- * stamped later than anything in the abandoned draft, so the restarted board
- * beats the stale one on its first appearance (pinned above). The window below
- * covers only what recency cannot — a revert with NO re-pick yet, where the
- * true board is both emptier and stamped earlier than what is on screen.
+ * That theory died on the live NL board (Brandon, 2026-08-28). MFL served NINE
+ * distinct snapshots for one conference and the CURRENT one came back about 10%
+ * of the time, so the board legitimately rejects most polls and a 45-second run
+ * of pure rejections happens constantly during a perfectly normal draft. The
+ * rollback fired, dropped the board to the best stale snapshot, and the room
+ * watched it go forwards and then back to a pick it had already passed:
+ * "after a refresh it went forward and then flipped back to 1.11 where it was
+ * stuck before".
+ *
+ * The threshold now only raises a WARNING. A revert is real but rare and has an
+ * obvious operator action — reload, which re-seeds from a freshly sampled
+ * server render. Silently reversing a live board to serve that case cost far
+ * more than it ever saved.
  */
-describe('reverting the draft', () => {
+describe('the board never moves backwards on its own', () => {
   const REVERT_CONFIRM_MS = 45_000;
 
-  /** The rollback rule, verbatim — see `rejectingSinceRef` in ingest. */
-  const rollsBack = (now: number, rejectingSince: number) =>
+  /** What a sustained rejection run now does: warn, and nothing else. */
+  const warns = (now: number, rejectingSince: number) =>
     now - rejectingSince >= REVERT_CONFIRM_MS;
 
-  it('holds through the worst flap actually measured', () => {
-    // Four consecutive stale polls, ~20s — and in a flap a current snapshot
-    // lands in between, which clears the clock entirely rather than pausing it.
-    expect(rollsBack(20_000, 0)).toBe(false);
+  it('does not warn during MFL’s ordinary flapping', () => {
+    expect(warns(20_000, 0)).toBe(false);
   });
 
-  it('rolls back once nothing but older responses has arrived for the window', () => {
-    expect(rollsBack(REVERT_CONFIRM_MS, 0)).toBe(true);
-    expect(rollsBack(60_000, 0)).toBe(true);
+  it('warns once every response has been older for the whole window', () => {
+    expect(warns(REVERT_CONFIRM_MS, 0)).toBe(true);
+    expect(warns(60_000, 0)).toBe(true);
   });
 
-  it('leaves the window clear of the observed flap on both sides', () => {
-    // Below ~25s a normal flap would start rolling the board back mid-draft.
+  it('keeps the threshold clear of the flap on both sides', () => {
     expect(REVERT_CONFIRM_MS).toBeGreaterThan(25_000);
-    // Much past a minute leaves a reset board stale in front of the room.
     expect(REVERT_CONFIRM_MS).toBeLessThanOrEqual(60_000);
   });
-});
 
-/**
- * A reveal owns the whole TV for up to eighteen seconds, so it has to be NEWS.
- *
- * Reported live (Brandon, 2026-08-28) after the board's own state was verified
- * stable against MFL for twenty consecutive polls: "it's still messed and
- * bounces around picks". The picks were right; the REVEALS were narrating
- * history. The board showed an old pick, then the live idle board, then another
- * old pick, which reads exactly like bouncing.
- *
- * The cause is in the data: MFL fires queued autopicks the instant the clock
- * expires, and that draft produced 1.01 through 1.04 stamped in the SAME SECOND
- * (`[Pick made based on ...]`). Four reveals at REVEAL_RUSH_MS is 24 seconds of
- * narration for four picks the room watched happen at once.
- */
-describe('a reveal has to be news', () => {
-  const REVEAL_MAX_AGE_MS = 90_000;
-
-  /** `isRevealWorthy`, verbatim — see DraftBroadcast.tsx. */
-  const worthy = (timestamp: string, nowMs: number) => {
-    const ts = Number.parseInt(timestamp, 10);
-    if (!Number.isFinite(ts) || ts <= 0) return true;
-    return nowMs - ts * 1000 <= REVEAL_MAX_AGE_MS;
-  };
-
-  // The real autopick burst, from the 2026 rehearsal feed.
-  const BURST_TS = 1787981190;
-  const now = (secondsAfter: number) => (BURST_TS + secondsAfter) * 1000;
-
-  it('reveals a pick that just landed', () => {
-    expect(worthy(String(BURST_TS), now(2))).toBe(true);
-  });
-
-  it('still reveals a pick made while the previous reveal was up', () => {
-    // A full 18s reveal plus a slow poll must not push a real pick past the
-    // window — that would swallow news, which is the worse failure.
-    expect(worthy(String(BURST_TS), now(25))).toBe(true);
-  });
-
-  it('absorbs a pick the room saw happen minutes ago', () => {
-    expect(worthy(String(BURST_TS), now(120))).toBe(false);
-  });
-
-  it('reveals a pick with no usable stamp rather than swallowing it', () => {
-    // The stamp is an optimisation for suppressing history. A board that
-    // silently dropped picks because MFL omitted a field would be far worse
-    // than one that occasionally re-narrates.
-    expect(worthy('', now(600))).toBe(true);
-    expect(worthy('0', now(600))).toBe(true);
-    expect(worthy('not-a-number', now(600))).toBe(true);
-  });
-
-  it('lets the whole autopick burst through when the board is caught up', () => {
-    // Four picks in one second, seen immediately: all four are news, and the
-    // burst cap (5) does not trim them either.
-    const burst = [0, 0, 0, 0].map(() => String(BURST_TS));
-    expect(burst.every((ts) => worthy(ts, now(3)))).toBe(true);
-  });
-
-  it('drops that same burst once it has aged out', () => {
-    // The case that was on screen: the burst surfaced late, so none of it is
-    // news by the time it would reach the TV.
-    const burst = [0, 0, 0, 0].map(() => String(BURST_TS));
-    expect(burst.some((ts) => worthy(ts, now(300)))).toBe(false);
+  it('has no rollback left to fire — the shipped code only sets a flag', () => {
+    // Guarding the DECISION, not the wording: an automatic rollback is what put
+    // an already-passed pick back on the TV, and it must not come back.
+    const src = readFileSync(
+      join(__dirname, '..', 'src/components/shared/draft-broadcast/DraftBroadcast.tsx'),
+      'utf8'
+    );
+    const branch = src.slice(
+      src.indexOf('if (!isAtLeastAsRecent(age, acceptedRef.current))'),
+      src.indexOf('rejectingSinceRef.current = null;\n    setMaybeStale(false);')
+    );
+    expect(branch).toContain('setMaybeStale(true)');
+    // The rollback wrote board state from inside the reject branch. Nothing
+    // there may call setPicks or re-seed the reveal set again.
+    expect(branch).not.toContain('setPicks');
+    expect(branch).not.toContain('seenRef.current =');
+    expect(branch).not.toContain('acceptedRef.current =');
   });
 });
