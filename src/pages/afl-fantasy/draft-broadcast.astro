@@ -41,6 +41,7 @@ import {
   enrichBroadcastPlayers,
   fetchRemoteDraftResults,
   findRehearsalYear,
+  hasDraftSlots,
   loadConferenceKeepers,
   trimToDraftable,
 } from '../../utils/draft-broadcast-server';
@@ -110,16 +111,21 @@ const source = resolveBroadcastSource(Astro.url.searchParams, {
 // An override takes its SKELETON from the same league it will poll: draft
 // order, round count and who is on the clock before the first poll lands all
 // come from the board, so reading the local feed here would show the room the
-// real league's order over the copy's picks. Null on any failure — the local
-// skeleton is the fallback, so an unreachable test feed degrades to a board
-// that follows nothing rather than a blank TV.
+// real league's order over the copy's picks.
+//
+// Two ways that can come back with nothing, and the local skeleton is the
+// fallback for BOTH — an override must degrade to a board that follows nothing,
+// never to a blank TV. The second is the one that actually happens: a fresh
+// copy league answers with its draft units already named and zero slots in
+// them until someone sets the draft up (see hasDraftSlots). The poll takes over
+// the moment real slots appear either way.
 if (source.isOverride) {
   const remote = await fetchRemoteDraftResults({
     leagueId: source.leagueId,
     host: source.mflHost,
     year: leagueYear,
   });
-  if (remote) draftResultsRaw = remote;
+  if (remote && hasDraftSlots(remote, source.unit ?? '')) draftResultsRaw = remote;
 }
 
 const board = buildConferenceBoard(draftResultsRaw, source.unit ?? '');

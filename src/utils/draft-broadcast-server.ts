@@ -400,6 +400,27 @@ export function findRehearsalYear(
 }
 
 /**
+ * Does this feed actually carry a BOARD for the named unit?
+ *
+ * MFL publishes a league's draft units as soon as the league exists, but a
+ * unit's `draftPick` array stays EMPTY until someone sets the draft up — the
+ * copy league used to rehearse the 2026 AFL draft answered `draftResults` with
+ * two named conferences and zero slots between them. That is a valid response,
+ * not a failed fetch, so `fetchRemoteDraftResults` has nothing to report and an
+ * override would happily render a board with no slots in it: no draft order, no
+ * first pick, nothing on the pre-draft screen.
+ *
+ * The empty case has to be caught HERE rather than left to the poll, because
+ * the poll fixes itself and the pre-draft screen does not — `ingest` ignores an
+ * empty board, so the page would sit blank for however long it takes someone to
+ * finish setting the draft up.
+ */
+export function hasDraftSlots(draftResults: any, unit: string): boolean {
+  const selected = selectDraftUnit(draftResults?.draftResults?.draftUnit, unit);
+  return toArray<any>(selected?.draftPick).length > 0;
+}
+
+/**
  * Fetch a draft board straight from MFL, for a league we hold no feed for.
  *
  * ONLY the `?mflLeague=` override path calls this (see

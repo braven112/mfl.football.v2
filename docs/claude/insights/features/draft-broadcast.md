@@ -777,6 +777,22 @@ end-to-end on 2026-08-28 against a real MFL league: SSR skeleton, poll, flag.
 - **An override is always flagged on screen**, above both layers — a test feed
   that vanished for the eighteen seconds a reveal owns the TV is a test feed
   nobody sees.
+- **A copy league's draft units exist before its BOARD does.** The 2026
+  rehearsal copy (MFL 65915) answered `draftResults` with `CONFERENCE00` and
+  `CONFERENCE01` both named and zero `draftPick` slots between them, because
+  nobody had set the draft up yet. That is a valid response, so the fetch has
+  nothing to report and the override would have rendered a board with no draft
+  order and no first pick. `hasDraftSlots` is the check; the local skeleton is
+  the fallback for the empty case as well as the unreachable one. It has to be
+  caught at SSR because the poll cannot fix it — `ingest` ignores an empty
+  board, so the pre-draft screen would simply stay blank.
+
+A copy made through MFL's own league-copy keeps the franchise IDS, which is what
+makes the whole override work: 65915 carries 0001–0024 with the same
+conference split, so every pick resolves to an AFL name, colour and crest out of
+`afl.config.json`. The copy's own franchise names never reach the screen. If a
+future copy ever renumbers its franchises, the board will show "the next team up"
+with no crest — check `franchiseId` alignment first when that happens.
 
 Both pre-flight overlays share one top-centre stack (`.dbc__preflight`). Every
 other edge of this board is spoken for: the idle header owns the top corners,

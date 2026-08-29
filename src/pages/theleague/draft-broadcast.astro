@@ -39,6 +39,7 @@ import {
   enrichBroadcastPlayers,
   fetchRemoteDraftResults,
   findRehearsalYear,
+  hasDraftSlots,
   loadConferenceKeepers,
   trimToDraftable,
 } from '../../utils/draft-broadcast-server';
@@ -112,7 +113,13 @@ const remoteDraftResults = sourceParams.isOverride
       year: leagueYear,
     })
   : null;
-const draftResultsRaw = remoteDraftResults ?? localDraftResults;
+// `hasDraftSlots` and not a plain null check: a copy league answers with its
+// draft units already named and ZERO slots in them until someone sets the draft
+// up, which is a valid response the fetch cannot report as a failure.
+const draftResultsRaw =
+  remoteDraftResults && hasDraftSlots(remoteDraftResults, sourceParams.unit ?? '')
+    ? remoteDraftResults
+    : localDraftResults;
 
 // The unit id comes off the feed rather than being assumed, with MFL's
 // single-unit default as the fallback for a season whose feed is missing.

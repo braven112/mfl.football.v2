@@ -29,6 +29,7 @@ import {
   resolveMflHost,
   resolveMflLeagueId,
 } from '../src/utils/draft-broadcast-source';
+import { hasDraftSlots } from '../src/utils/draft-broadcast-server';
 import { isSplashCutoutEligible } from '../src/utils/pick-reveal';
 import type { DraftRoomTeam } from '../src/types/draft-room';
 import type { BroadcastPlayer } from '../src/types/draft-broadcast';
@@ -331,5 +332,53 @@ describe('resolveBroadcastSource', () => {
 
     expect(source.label).toContain('99999');
     expect(source.label.toLowerCase()).toContain('test feed');
+  });
+});
+
+describe('hasDraftSlots', () => {
+  /** What MFL returns for a league whose draft has not been set up yet: the
+   *  units exist and are named, and there is not a single slot between them.
+   *  Observed on the 2026 AFL rehearsal copy (league 65915). */
+  const emptyUnits = {
+    draftResults: {
+      draftUnit: [{ unit: 'CONFERENCE00' }, { unit: 'CONFERENCE01' }],
+    },
+  };
+
+  const withSlots = {
+    draftResults: {
+      draftUnit: [
+        { unit: 'CONFERENCE00', draftPick: [{ round: '01', pick: '01', franchise: '0006' }] },
+        { unit: 'CONFERENCE01' },
+      ],
+    },
+  };
+
+  it('rejects a named unit that carries no slots', () => {
+    // A valid response, not a failed fetch — so nothing upstream can catch it,
+    // and an override would render a board with no draft order in it.
+    expect(hasDraftSlots(emptyUnits, 'CONFERENCE00')).toBe(false);
+    expect(hasDraftSlots(emptyUnits, '')).toBe(false);
+  });
+
+  it('accepts a unit with a board, per unit', () => {
+    expect(hasDraftSlots(withSlots, 'CONFERENCE00')).toBe(true);
+    // The other conference of the same copy can still be empty — the AFL's two
+    // boards are independent and have drafted on different days.
+    expect(hasDraftSlots(withSlots, 'CONFERENCE01')).toBe(false);
+  });
+
+  it('takes the first unit when none is named', () => {
+    expect(hasDraftSlots(withSlots, '')).toBe(true);
+  });
+
+  it('rejects a missing feed, a missing unit, and MFL’s bare-object shape', () => {
+    expect(hasDraftSlots(null, 'CONFERENCE00')).toBe(false);
+    expect(hasDraftSlots({}, 'CONFERENCE00')).toBe(false);
+    expect(hasDraftSlots(withSlots, 'CONFERENCE09')).toBe(false);
+    // A single-draft league returns draftUnit as a bare OBJECT, not an array.
+    expect(
+      hasDraftSlots({ draftResults: { draftUnit: { unit: 'LEAGUE', draftPick: [{ round: '01' }] } } }, '')
+    ).toBe(true);
   });
 });
