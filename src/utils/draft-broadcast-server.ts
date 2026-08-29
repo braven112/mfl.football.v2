@@ -440,6 +440,8 @@ export async function fetchRemoteDraftResults(options: {
   host: string;
   year: number | string;
   timeoutMs?: number;
+  /** How many times to ask. See the sampling note above. */
+  samples?: number;
 }): Promise<any | null> {
   const url = buildMflExportUrl({
     type: 'draftResults',
@@ -448,14 +450,69 @@ export async function fetchRemoteDraftResults(options: {
     host: `https://${options.host}`,
   });
 
-  try {
-    const res = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FantasyLeague/1.0)' },
-      signal: AbortSignal.timeout(options.timeoutMs ?? 8_000),
-    });
-    if (!res.ok) return null;
-    return await res.json();
-  } catch {
-    return null;
+  const once = async (): Promise<any | null> => {
+    try {
+      const res = await fetch(url, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FantasyLeague/1.0)' },
+        signal: AbortSignal.timeout(options.timeoutMs ?? 8_000),
+      });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch {
+      return null;
+    }
+  };
+
+  const results = await Promise.all(
+    Array.from({ length: Math.max(1, options.samples ?? MFL_SAMPLES) }, once)
+  );
+
+  let best: any | null = null;
+  let bestAge = { newestPick: -1, filled: -1 };
+  for (const candidate of results) {
+    if (!candidate) continue;
+    const age = draftResultsAge(candidate);
+    if (age.newestPick > bestAge.newestPick ||
+        (age.newestPick === bestAge.newestPick && age.filled > bestAge.filled)) {
+      best = candidate;
+      bestAge = age;
+    }
   }
+  return best;
+}
+
+/**
+ * How many times to ask MFL for the same board, in parallel, and keep the
+ * freshest answer.
+ *
+ * MFL serves `draftResults` from backends whose caches disagree. Sampled
+ * against the live 2026 rehearsal, a single request answered with a COMPLETELY
+ * EMPTY board 30% of the time and a stale six-pick board another 16%, while the
+ * true board was eight picks. One fetch is therefore a coin toss, and the page
+ * this seeds is the first thing the room sees.
+ *
+ * Three parallel requests cut "every sample stale" to a few percent at the cost
+ * of two extra calls on a page that renders once. They run concurrently, so the
+ * render waits no longer than the slowest of the three.
+ */
+const MFL_SAMPLES = 3;
+
+/**
+ * Age a whole `draftResults` payload: the newest pick stamp anywhere in it,
+ * then how many picks are filled. Deliberately unit-agnostic — this picks
+ * between whole responses, and a response that is fresher for one conference is
+ * fresher for both (they come off the same backend).
+ */
+function draftResultsAge(raw: any): { newestPick: number; filled: number } {
+  let newestPick = 0;
+  let filled = 0;
+  for (const unit of toArray<any>(raw?.draftResults?.draftUnit)) {
+    for (const p of toArray<any>(unit?.draftPick)) {
+      if (!p?.player) continue;
+      filled += 1;
+      const ts = Number.parseInt(p?.timestamp, 10);
+      if (Number.isFinite(ts) && ts > newestPick) newestPick = ts;
+    }
+  }
+  return { newestPick, filled };
 }

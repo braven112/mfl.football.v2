@@ -303,6 +303,17 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
    */
   const rejectingSinceRef = useRef<number | null>(null);
 
+  /**
+   * The freshest board seen WHILE rejecting, and its age.
+   *
+   * A rollback must not land on whatever happened to arrive last. Sampled
+   * against the live 2026 rehearsal, 30% of MFL's responses were a COMPLETELY
+   * EMPTY board — so "accept the newest response once the window expires" could
+   * put an empty board on the TV in the middle of a draft. The window says a
+   * rollback happened; this says what to roll back TO.
+   */
+  const bestRejectedRef = useRef<{ picks: DraftRoomPick[]; age: BoardAge } | null>(null);
+
   /** Merge a freshly polled board in, queueing anything new for reveal. */
   const ingest = useCallback((rawIncoming: DraftRoomPick[]) => {
     if (rawIncoming.length === 0) return;
@@ -314,23 +325,32 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
     // going backwards — ignore it whole. See `acceptedRef`.
     if (!isAtLeastAsRecent(age, acceptedRef.current)) {
       if (rejectingSinceRef.current === null) rejectingSinceRef.current = now;
+      // Remember the best of what we are turning away — see bestRejectedRef.
+      const best = bestRejectedRef.current;
+      if (!best || isAtLeastAsRecent(age, best.age)) {
+        bestRejectedRef.current = { picks: rawIncoming, age };
+      }
       if (now - rejectingSinceRef.current < REVERT_CONFIRM_MS) return;
 
       // Nothing but older responses for this long means the board really was
-      // rolled back. Take it wholesale and re-seed the reveal state from it, so
+      // rolled back. Roll back to the FRESHEST thing seen during the window,
+      // not to whatever arrived last, and re-seed the reveal state from it so
       // the re-picks that follow reveal instead of being swallowed as
       // duplicates. No reveals for the rollback itself — it is not news.
-      acceptedRef.current = age;
+      const target = bestRejectedRef.current ?? { picks: rawIncoming, age };
+      acceptedRef.current = target.age;
       rejectingSinceRef.current = null;
+      bestRejectedRef.current = null;
       seenRef.current = new Set(
-        rawIncoming.filter((p) => p.playerId).map((p) => p.overallPickNumber)
+        target.picks.filter((p) => p.playerId).map((p) => p.overallPickNumber)
       );
-      slotCountRef.current = rawIncoming.length;
-      setPicks(rawIncoming);
+      slotCountRef.current = target.picks.length;
+      setPicks(target.picks);
       return;
     }
 
     rejectingSinceRef.current = null;
+    bestRejectedRef.current = null;
     acceptedRef.current = age;
     const incoming = rawIncoming;
 
