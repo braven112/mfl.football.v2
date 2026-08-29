@@ -382,3 +382,105 @@ describe('hasDraftSlots', () => {
     ).toBe(true);
   });
 });
+
+/**
+ * MFL serves a FLAPPING board, and the TV must not.
+ *
+ * Measured live during the 2026 AFL rehearsal (2026-08-28): the same league
+ * and the same unit alternated between one filled pick and zero across polls
+ * two seconds apart, on `api.myfantasyleague.com` AND on the league's own
+ * `www44`, with runs of four consecutive stale reads. The export is served
+ * from backends whose caches disagree, so one poll is a sample of whichever
+ * backend answered — not a monotonic view of the draft.
+ *
+ * The room saw 1.01 land, the board flip back to "on the clock", and forward
+ * again, every few seconds. And silently: `collectFreshPicks` already held the
+ * pick in its seen-set, so it never re-revealed on the way back.
+ *
+ * `DraftBroadcast` answers this by keeping the UNION of every filled slot it
+ * has seen rather than the latest response. That merge is what these cases
+ * pin — as a pure function, because the rule is about the DATA, and a test
+ * that had to mount the island to state it would be testing React instead.
+ */
+describe('a flapping MFL board', () => {
+  /** The island's merge, verbatim — see `filledRef` in DraftBroadcast.tsx. */
+  function mergeFilled(
+    held: Map<number, { overallPickNumber: number; playerId: string }>,
+    incoming: { overallPickNumber: number; playerId: string }[]
+  ) {
+    const merged = incoming.map((p) => (p.playerId ? p : held.get(p.overallPickNumber) ?? p));
+    for (const p of merged) if (p.playerId) held.set(p.overallPickNumber, p);
+    return merged;
+  }
+
+  const slot = (n: number, playerId = '') => ({ overallPickNumber: n, playerId });
+  const board = (...filled: Record<number, string>[]) => {
+    const map = Object.assign({}, ...filled) as Record<number, string>;
+    return [1, 2, 3].map((n) => slot(n, map[n] ?? ''));
+  };
+
+  it('does not un-fill a pick when the next poll comes back empty', () => {
+    const held = new Map<number, ReturnType<typeof slot>>();
+    mergeFilled(held, board({ 1: '17472' }));
+
+    // The exact stale read observed seconds later.
+    const after = mergeFilled(held, board());
+
+    expect(after[0].playerId).toBe('17472');
+  });
+
+  it('survives a RUN of stale reads, not just one', () => {
+    // Four consecutive zeros were measured on api.myfantasyleague.com, so a
+    // one-poll tolerance would not have covered it.
+    const held = new Map<number, ReturnType<typeof slot>>();
+    mergeFilled(held, board({ 1: '17472' }));
+
+    let after = board();
+    for (let i = 0; i < 4; i += 1) after = mergeFilled(held, board());
+
+    expect(after[0].playerId).toBe('17472');
+  });
+
+  it('takes the fresh half of a response that is stale for another slot', () => {
+    // Disagreeing backends make a mixed response possible: this one has lost
+    // 1.01 but carries 1.02, which dropping the response whole would discard.
+    const held = new Map<number, ReturnType<typeof slot>>();
+    mergeFilled(held, board({ 1: '17472' }));
+
+    const after = mergeFilled(held, board({ 2: '99999' }));
+
+    expect(after.map((p) => p.playerId)).toEqual(['17472', '99999', '']);
+  });
+
+  it('lets a real re-pick through — the response always wins when it is filled', () => {
+    // A commissioner correcting a pick must still reach the board; only an
+    // EMPTY slot defers to what we hold.
+    const held = new Map<number, ReturnType<typeof slot>>();
+    mergeFilled(held, board({ 1: '17472' }));
+
+    const after = mergeFilled(held, board({ 1: '00001' }));
+
+    expect(after[0].playerId).toBe('00001');
+  });
+
+  it('never shrinks the filled count across a flapping sequence', () => {
+    const held = new Map<number, ReturnType<typeof slot>>();
+    const sequence = [
+      board({ 1: '17472' }),
+      board(),
+      board({ 1: '17472' }),
+      board(),
+      board(),
+      board({ 1: '17472', 2: '99999' }),
+      board({ 1: '17472' }),
+    ];
+
+    let high = 0;
+    for (const poll of sequence) {
+      const count = mergeFilled(held, poll).filter((p) => p.playerId).length;
+      expect(count).toBeGreaterThanOrEqual(high);
+      high = count;
+    }
+    expect(high).toBe(2);
+  });
+});

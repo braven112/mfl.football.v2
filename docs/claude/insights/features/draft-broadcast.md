@@ -798,3 +798,48 @@ Both pre-flight overlays share one top-centre stack (`.dbc__preflight`). Every
 other edge of this board is spoken for: the idle header owns the top corners,
 the fullscreen button is pinned top-right, the reveal's ghost pick number owns
 the bottom-left, and `.dbc__status` owns the bottom-right.
+
+
+### MFL's draft export FLAPS — the board must keep the union, not the latest poll
+
+Measured live during the 2026 AFL rehearsal (2026-08-28), polling
+`TYPE=draftResults` for one league and one unit every two seconds:
+
+```
+03:07:13  api=1 pick   www44=0
+03:07:15  api=0        www44=0
+03:07:18  api=0        www44=1 pick
+03:07:21  api=1 pick   www44=0
+03:07:24  api=0        www44=0     <- four consecutive stale reads on api
+```
+
+Both hosts, alternating, with runs of four. MFL serves exports from backends
+whose caches disagree, so **one poll is a sample of whichever backend answered,
+not a monotonic view of the draft.** Switching hosts does not help — the
+league's own `www44` flaps too, so there is no "authoritative" host to prefer.
+
+Rendered straight, the room saw 1.01 land, the board flip back to
+"on the clock", and forward again, every few seconds (owner report, mid-draft).
+And silently in both directions: `collectFreshPicks` already held the pick in
+its seen-set, so it never re-revealed on the way back.
+
+`DraftBroadcast` now keeps `filledRef` — every filled slot it has ever seen, by
+overall pick number — and merges each poll against it. Three properties, and
+the first two are why it is a MERGE rather than a "drop the stale response":
+
+- **A filled slot in the response always wins**, so a commissioner's re-pick
+  still reaches the board. Only an EMPTY slot defers to what we hold.
+- **A response that is stale for one slot and fresh for another contributes its
+  fresh half.** Disagreeing backends make that combination possible, and
+  dropping the response whole would discard a real pick.
+- **The filled count can never shrink**, which is the property the room
+  actually watches.
+
+The cost is that a genuine UNDO is not reflected until someone re-picks that
+slot. That is the right trade for a TV board: an undo is rare and self-corrects
+on the next selection, while the flap was happening every few seconds in front
+of the league. Do not "fix" this by trusting the newest response.
+
+Pinned in `tests/draft-broadcast-preflight.test.ts` ("a flapping MFL board"),
+including the four-in-a-row run — a one-poll tolerance would not have covered
+what was measured.

@@ -127,9 +127,46 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
   const absorbedFirstPollRef = useRef(rehearsing);
   const errorCountRef = useRef(0);
 
+  /**
+   * Every filled slot we have ever seen, by overall pick number.
+   *
+   * MFL SERVES A FLAPPING BOARD. Measured live during the 2026 AFL rehearsal
+   * (2026-08-28), the same league and unit alternated between one filled pick
+   * and zero across polls two seconds apart — on `api.myfantasyleague.com` AND
+   * on the league's own `www44`, with runs of four consecutive stale reads. The
+   * export is served from backends whose caches disagree, so a poll is not a
+   * monotonic view of the draft: it is a sample of whichever backend answered.
+   *
+   * Rendered straight, that is what the room sees: 1.01 lands, the board flips
+   * back to "Da Dangsters on the clock", then forward again, every few seconds.
+   * Worse, it never re-reveals — `seenRef` already holds the pick, so the pick
+   * disappears and returns in silence.
+   *
+   * So the board keeps the UNION rather than the latest response. A pick that
+   * has landed cannot un-land, and a response that is stale for one slot but
+   * fresh for another (which disagreeing backends make possible) contributes
+   * its fresh half instead of being dropped whole.
+   */
+  const filledRef = useRef<Map<number, DraftRoomPick>>(
+    new Map(
+      (rehearsing ? applyRehearsal(data.picks, data.rehearseUpTo!) : data.picks)
+        .filter((p) => p.playerId)
+        .map((p) => [p.overallPickNumber, p] as const)
+    )
+  );
+
   /** Merge a freshly polled board in, queueing anything new for reveal. */
-  const ingest = useCallback((incoming: DraftRoomPick[]) => {
-    if (incoming.length === 0) return;
+  const ingest = useCallback((rawIncoming: DraftRoomPick[]) => {
+    if (rawIncoming.length === 0) return;
+
+    // A slot we hold filled beats an empty one in the response — see filledRef.
+    // A slot the response fills always wins, so a genuine re-pick still lands.
+    const incoming = rawIncoming.map((p) =>
+      p.playerId ? p : filledRef.current.get(p.overallPickNumber) ?? p
+    );
+    for (const p of incoming) {
+      if (p.playerId) filledRef.current.set(p.overallPickNumber, p);
+    }
 
     // maxBurst = Infinity: on a TV, dropping a burst is the worse failure.
     // A fast round that lands 4 picks inside one poll would otherwise reveal
