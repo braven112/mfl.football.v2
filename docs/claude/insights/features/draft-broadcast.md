@@ -694,3 +694,333 @@ leaving any one in re-centres the crest on an axis.
 ones (540x720, 600x660) are the failures, not the narrow tall ones everybody
 tests. Assert `text.bottom === figure.top` and that the kicker's top is never
 above the card's.
+
+## 2026-08-28 — Pre-flight: why the images arrive late, and how to rehearse the network
+
+Two draft-night problems that both live upstream of anything on screen.
+
+### ESPN's headshots expire in under four minutes
+
+`a.espncdn.com/i/headshots/nfl/players/full/<espnId>.png` is ~237 KB and comes
+back with `cache-control: max-age=233`. The value COUNTS DOWN across requests,
+so it is an edge TTL, not a hint about the client — and either way the browser
+throws the entry away in under four minutes.
+
+That is the whole explanation for "sometimes the images don't load". Nothing is
+racing and nothing is broken: every reveal starts a cold ~240 KB request for a
+picture the same laptop downloaded ten minutes ago, and on room wifi it lands
+some seconds into an eighteen-second card. The same applies to the reveal's
+origin mark, which `resolveOrigin` resolves to
+`a.espncdn.com/i/teamlogos/nfl/500-dark/<code>.png` — also remote, also short.
+
+Two pieces answer it, and NEITHER works without the other:
+
+- **`public/sw.js` now keeps `a.espncdn.com` images in their own cache**
+  (`IMAGE_CACHE_NAME`), cache-first for a week, on our clock rather than the
+  origin's. It is a separate cache name and is exempt from the activate sweep
+  (`KEEP_CACHES`) — bumping `CACHE_NAME` to evict a poisoned HTML entry must
+  not also throw away a board somebody warmed an hour before their draft.
+  The worker RE-ISSUES each request as CORS: an `<img>` request is `no-cors`,
+  and its opaque response is unreadable, unstampable, and charged to the origin
+  quota at a padded size. ESPN sends `access-control-allow-origin: *`, so this
+  costs nothing.
+- **`BroadcastWarmup` pulls the whole plan before the first pick**, in board
+  order (`planBroadcastImages`). It WAITS for the worker to control the page
+  first — warming into the plain HTTP cache buys four minutes, which is close
+  to nothing — and reports `data-durable="false"` on screen when there isn't
+  one. **The service worker is registered in PROD ONLY** (see
+  `TheLeagueLayout.astro`), so a warm-up on the dev server is always the weak
+  kind. That is not a bug to chase.
+
+Three things about the plan that are decisions, not details:
+
+- **Board order, not pool order.** The AFL ships 1,180 players to serve a
+  108-pick board. Warming in pool order spends the room's first minutes of wifi
+  on players nobody takes. `?warm=` sets the depth; the default (400) covers
+  the realistic board several times over at ~145 MB, `all` is ~4x that, and
+  `off` is the escape hatch for a connection where the warm-up would compete
+  with the poll it exists to protect.
+- **It gates on `isSplashCutoutEligible`, the card's own predicate.** A planner
+  with its own copy of that rule would drift into warming images the card never
+  requests (a DEF crest, an MFL JPG) and missing ones it does.
+- **Every defender in a defense pool, not the two on screen.** The reveal card
+  draws two at random from each five-man pool per pick, so a slice would leave
+  three of five cold on every team-defense selection.
+
+### `?rehearse=` cannot catch a network problem — `?mflLeague=` can
+
+Rehearsal replays a finished season through the real ingest path, which is why
+it is worth having. But it never calls `/api/draft/status`, so it proves
+nothing about the league id, the draft unit, the host, or whether a franchise id
+resolves to a crest — the four things that would actually ruin a night.
+
+`?mflLeague=<id>` (`draft-broadcast-source.ts`) points the board's POLL at
+another MFL league while everything else stays this league's: copy the league in
+MFL, turn the draft on in the copy, and the board follows it live. Verified
+end-to-end on 2026-08-28 against a real MFL league: SSR skeleton, poll, flag.
+
+- **The skeleton comes from the overridden league too.** Draft order and who is
+  on the clock come off the board, so reading the local feed there would show
+  the room the real league's order over the copy's picks.
+  `fetchRemoteDraftResults` returns null on any failure and the local skeleton
+  is the fallback — an unreachable test feed degrades to a board following
+  nothing, never a blank TV.
+- **The unit defaults to `null`, meaning "whichever unit this board has."** A
+  "draft only" copy can carry one unnamed unit where the AFL drafts by
+  conference, and `/api/draft/status` answers a NAMED unit that isn't there with
+  a 404 rather than a board. `?conference=` (explicit) or `?unit=` names one.
+- **The host is allowlisted to `*.myfantasyleague.com`, in the API as well as
+  the page.** `/api/draft/status` fetches whatever host it is handed and is
+  public, so a free-text host parameter is server-side request forgery with a
+  URL bar for an interface. It was already accepting one; `resolveMflHost` /
+  `resolveMflLeagueId` now gate both parameters there.
+- **An override is always flagged on screen**, above both layers — a test feed
+  that vanished for the eighteen seconds a reveal owns the TV is a test feed
+  nobody sees.
+- **A copy league's draft units exist before its BOARD does.** The 2026
+  rehearsal copy (MFL 65915) answered `draftResults` with `CONFERENCE00` and
+  `CONFERENCE01` both named and zero `draftPick` slots between them, because
+  nobody had set the draft up yet. That is a valid response, so the fetch has
+  nothing to report and the override would have rendered a board with no draft
+  order and no first pick. `hasDraftSlots` is the check; the local skeleton is
+  the fallback for the empty case as well as the unreachable one. It has to be
+  caught at SSR because the poll cannot fix it — `ingest` ignores an empty
+  board, so the pre-draft screen would simply stay blank.
+
+A copy made through MFL's own league-copy keeps the franchise IDS, which is what
+makes the whole override work: 65915 carries 0001–0024 with the same
+conference split, so every pick resolves to an AFL name, colour and crest out of
+`afl.config.json`. The copy's own franchise names never reach the screen. If a
+future copy ever renumbers its franchises, the board will show "the next team up"
+with no crest — check `franchiseId` alignment first when that happens.
+
+Both pre-flight overlays share one top-centre stack (`.dbc__preflight`). Every
+other edge of this board is spoken for: the idle header owns the top corners,
+the fullscreen button is pinned top-right, the reveal's ghost pick number owns
+the bottom-left, and `.dbc__status` owns the bottom-right.
+
+
+### MFL's draft export FLAPS — the board must keep the union, not the latest poll
+
+Measured live during the 2026 AFL rehearsal (2026-08-28), polling
+`TYPE=draftResults` for one league and one unit every two seconds:
+
+```
+03:07:13  api=1 pick   www44=0
+03:07:15  api=0        www44=0
+03:07:18  api=0        www44=1 pick
+03:07:21  api=1 pick   www44=0
+03:07:24  api=0        www44=0     <- four consecutive stale reads on api
+```
+
+Both hosts, alternating, with runs of four. MFL serves exports from backends
+whose caches disagree, so **one poll is a sample of whichever backend answered,
+not a monotonic view of the draft.** Switching hosts does not help — the
+league's own `www44` flaps too, so there is no "authoritative" host to prefer.
+
+Rendered straight, the room saw 1.01 land, the board flip back to
+"on the clock", and forward again, every few seconds (owner report, mid-draft).
+And silently in both directions: `collectFreshPicks` already held the pick in
+its seen-set, so it never re-revealed on the way back.
+
+`DraftBroadcast` now keeps `filledRef` — every filled slot it has ever seen, by
+overall pick number — and merges each poll against it. Three properties, and
+the first two are why it is a MERGE rather than a "drop the stale response":
+
+- **A filled slot in the response always wins**, so a commissioner's re-pick
+  still reaches the board. Only an EMPTY slot defers to what we hold.
+- **A response that is stale for one slot and fresh for another contributes its
+  fresh half.** Disagreeing backends make that combination possible, and
+  dropping the response whole would discard a real pick.
+- **The filled count can never shrink**, which is the property the room
+  actually watches.
+
+The cost is that a genuine UNDO is not reflected until someone re-picks that
+slot. That is the right trade for a TV board: an undo is rare and self-corrects
+on the next selection, while the flap was happening every few seconds in front
+of the league. Do not "fix" this by trusting the newest response.
+
+Pinned in `tests/draft-broadcast-preflight.test.ts` ("a flapping MFL board"),
+including the four-in-a-row run — a one-poll tolerance would not have covered
+what was measured.
+
+
+### The poll loop had no client-side timeout — one hung request ended the night
+
+Reported mid-draft: "it stopped updating after pick 7", then "I refreshed and
+it was a few rounds ahead". MFL was at 25.
+
+The board's poll is a self-chaining `setTimeout`: the next tick is scheduled
+only once the current `await fetch(...)` settles. The **server** side of
+`/api/draft/status` has always carried `AbortSignal.timeout(10_000)`. The
+**browser** side carried nothing. So a request that never settles — a wifi
+drop, a laptop suspending mid-flight, a proxy holding the socket — does not
+delay the loop, it BREAKS it. The board freezes on its last value and only a
+reload recovers, which is exactly the reported shape.
+
+Three changes, in order of how much they cover:
+
+- **`AbortSignal.timeout(POLL_TIMEOUT_MS)` on the fetch.** A timeout now lands
+  in the same `catch` as any other failure: counted, backed off, and — the
+  point — rescheduled. This is the line that keeps a three-hour draft polling.
+- **A watchdog** (`POLL_WATCHDOG_MS`) comparing now against a timestamp each
+  tick stamps in its `finally`. It covers what an abort cannot: a timer the
+  browser throttled while the tab was backgrounded, or one the machine slept
+  through. It only ever re-arms; `inFlight` stops it polling in parallel.
+- **Re-arm on `visibilitychange` and `online`.** Returning from sleep or a
+  dropped network is when the board is most stale, so ask immediately instead
+  of waiting out the interval.
+
+Any future rewrite of this loop must keep all three. A chained timeout with no
+abort is not a slow poller, it is a poller with a single point of failure, and
+the failure is silent.
+
+### A jump of eighteen picks is a catch-up, not a fast round
+
+Consequence of the same MFL flapping. When a current snapshot finally answers
+after a run of stale ones, the union gains every pick at once — measured going
+from 3 to 25 in one poll. `maxBurst = Infinity` (correct for a genuinely fast
+round, where dropping a pick is the worse failure) then queued 22 reveals at
+`REVEAL_RUSH_MS` each: nearly two and a half minutes narrating a round the room
+finished, during which the idle board — who is ACTUALLY on the clock — never
+gets the screen.
+
+Past `CATCHUP_BURST` fresh picks, only the NEWEST is revealed and the rest are
+taken as read. Note this is deliberately not the old `maxBurst` behaviour of
+dropping the burst entirely: on a TV, a pick the room watched happen must still
+appear. Show the one that just happened, skip the history.
+
+
+### A union of picks is the WRONG model — take the newest snapshot whole
+
+The union (previous section) survived the plain flap and then failed the moment
+the draft was reverted to restart it. Two live reports, an hour apart:
+
+> "I reverted the draft to restart and now it switches between old picks and
+> then to the correct pick."
+> "it was working on the first pick and then jumped to the old 1.12 even though
+> we are on 1.02."
+
+The union can only grow, so it can never shed an abandoned draft. Worse, the
+first attempt at a fix — release a slot after it has been reported empty
+continuously for 45s — could not fire at all here, because the stale backends
+kept serving the OLD board and every one of those reports reset the slot's
+clock. 1.12 was immortal.
+
+**The thing the union was built to fix does not need a union.** Every snapshot
+MFL served was INTERNALLY COHERENT — a clean prefix of the draft, never a board
+with holes (verified across seven distinct snapshots). The responses are not
+corrupt, they are of different AGES. So:
+
+- **Take the newest snapshot and use it whole**; ignore any older than what is
+  on screen. `boardAge` is `(newest pick timestamp, filled count)`, compared in
+  that order.
+- **The timestamp is the half that survives a revert.** A re-picked 1.01 is
+  stamped LATER than every pick of the abandoned draft, so a two-pick restarted
+  board beats a stale twelve-pick one on its first appearance, with no window to
+  wait out. That is the whole reason age is not just a pick count.
+- **The count only breaks ties inside one second**, which is where MFL's own
+  stamp resolution runs out.
+
+`REVERT_CONFIRM_MS` survives, much reduced in scope: it now covers the single
+case recency cannot settle — a revert with NO re-pick yet, where the true board
+is both emptier and stamped earlier than what is on screen. A plain flap can
+never accumulate toward it, because a current snapshot lands every few polls and
+clears the clock outright.
+
+The general lesson, which cost two rounds: **when a source flaps, ask whether
+its individual responses are coherent before merging them.** Merging coherent
+snapshots invents states that never existed and, worse, makes the merged state
+impossible to walk back.
+
+### (superseded) The first revert fix, and why it failed
+
+Kept because the reasoning is a trap worth recognising, not because the code
+survives. The rule was: hold a slot filled until it has been reported empty
+CONTINUOUSLY for 45s, since "a flap alternates, a revert does not". The
+asymmetry is real. What it missed is that after a revert the flap is not
+between current-and-empty but between **current-small and stale-LARGE** — so
+the stale reports kept refreshing the old slots' clocks and the window never
+expired. A rule keyed on "how long since anyone said filled" is only safe when
+the stale reads are the emptier ones.
+
+
+## 2026-08-29 — Draft night, live: what MFL's draft feed actually does
+
+Six hours of testing against a live copy league (MFL 21227). Every entry below
+is a measurement, not a theory, and the last one supersedes a lot of work.
+
+### THE HEADLINE: read `static_url`, not the JSON export
+
+`TYPE=draftResults` is served from backends whose caches disagree, and the
+spread is not "occasionally stale" — it is unusable. Measured with the draft
+PAUSED, so the truth was frozen at 24 picks, 77 requests returned:
+
+| response  | share |
+|-----------|-------|
+| 17 picks  | 70%   |
+| 18 picks  | 18%   |
+| 19 picks  | 3%    |
+| 24 (true) | 8%    |
+
+**Seven picks behind is the single most likely answer MFL will give you.**
+Cache-busting query params and `Cache-Control: no-cache` change nothing — this
+is many backends, not one edge cache. Neither does host choice: `api.` 302s to
+`www##`, and both flap.
+
+MFL also publishes a STATIC file — the one its own draft room reads — and names
+it in `static_url` on every draft unit:
+
+```
+https://www44.myfantasyleague.com/fflnetdynamic2026/<league>_<unit>_draft_results.xml
+```
+
+Ten consecutive fetches during a live draft returned byte-identical, CURRENT
+results (31 picks, matching the room's 3.08 exactly) while the JSON export was
+serving 26. Its root element even carries `round="03" pick="08"` — the
+on-the-clock position outright. Present for every shape checked: both AFL
+conferences, a copy league, and TheLeague's single `LEAGUE` unit.
+
+`/api/draft/status` prefers it whenever it is at least as fresh. Three things
+about how:
+
+- **The URL is never constructed by hand.** It comes from MFL's own response,
+  including the `www##` host that actually serves it — the `api.` host only
+  redirects and will not serve the file.
+- **The JSON export stays as the fallback**, because it is the documented API
+  and this file is an implementation detail of MFL's UI. If it moves, the board
+  degrades to the old sampled behaviour rather than to nothing.
+- **Sampling drops to one request once the static URL is known.** Ten redundant
+  calls per poll per viewer is a lot to spend on a source about to be ignored.
+
+If a future session sees the board lagging again, check the static file FIRST.
+
+### Everything else that broke, in the order it was found
+
+1. **A hung `fetch` ends a self-chaining poll loop.** The client had no timeout
+   where the server had one; one request that never settled froze the board
+   until reload. `AbortSignal.timeout` + a watchdog + re-arm on
+   `visibilitychange`/`online`. A chained timeout with no abort is a single
+   point of failure, and it fails silently.
+2. **A union of picks cannot represent a revert.** See the superseded section
+   above. Recency (newest pick stamp, then filled count) handles the flap and
+   the revert with one rule.
+3. **Automatic rollback is unsafe when the freshest snapshot is rare.** With the
+   truth arriving ~10% of the time the board legitimately rejects most polls, so
+   a "nothing but older responses for 45s" trigger fires constantly during a
+   NORMAL draft and reversed a live board. THE BOARD NEVER MOVES BACKWARDS ON
+   ITS OWN; the threshold only raises a visible "reload to resync".
+4. **A reveal must be news.** MFL fires queued autopicks in bursts — four picks
+   stamped in the SAME SECOND — and each took its own 6s reveal, so the screen
+   alternated old pick / live board / old pick and read as "bouncing".
+   `REVEAL_MAX_AGE_MS` absorbs anything older than 90s onto the board silently.
+5. **One SSR fetch is a coin toss.** With 30% of responses empty, one load in
+   three seeded the board from an empty snapshot. The page render samples too.
+
+### The habit that actually found these
+
+Every one of the above was diagnosed by MEASURING the feed — polling MFL in a
+loop and printing the distribution — not by reading code. Two of them looked
+exactly like our bug and were MFL's; two looked like MFL's and were ours. When
+this board misbehaves, sample the source first and get the distribution; the
+answer is usually in it.

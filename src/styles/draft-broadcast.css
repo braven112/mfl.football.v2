@@ -217,6 +217,94 @@
   50% { opacity: 1; }
 }
 
+/* ══ PRE-FLIGHT: WARM-UP + SOURCE FLAG ════════════════════════════════════
+
+   Two overlays that both belong to the hour BEFORE the room shows up, stacked
+   top-centre. Every edge of this board is already spoken for — the idle header
+   owns both top corners, the fullscreen button is pinned top-right, the
+   reveal's ghost pick number owns the bottom-left, and `.dbc__status`
+   (reconnecting) owns the bottom-right, which is the one that must never be
+   confusable with "still caching".
+
+   Neither is chrome the room should notice: the warm-up counts up, states its
+   total, and removes itself; the source flag stays for as long as the board is
+   watching a feed that is not its own, which is the point of it. */
+
+/* The stack itself. Centred rather than cornered, and clear of the idle
+   header's own line, so nothing here sits on the league label, the round
+   counter, or the fullscreen button. `pointer-events: none` on the stack (the
+   children re-enable nothing) keeps it from eating a click meant for the board
+   underneath. */
+.dbc__preflight {
+  position: absolute;
+  top: 7.5vh;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6em;
+  max-width: min(60vw, 46rem);
+  z-index: 20;
+  pointer-events: none;
+}
+
+.dbc__warmup {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0.4em 0.9em;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: clamp(0.7rem, 0.9vw, 1rem);
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  transition: opacity 600ms ease;
+}
+
+.dbc__warmup-dot {
+  width: 0.6em;
+  height: 0.6em;
+  border-radius: 50%;
+  background: #f5a524;
+  animation: dbc-pulse 1.6s ease-in-out infinite;
+}
+
+/* Done is a STATE, not a removal: the pill holds its final count so the number
+   can be read deliberately before it goes (the component unmounts it), and the
+   dot stops pulsing because there is nothing left in flight. */
+.dbc__warmup.is-done {
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.dbc__warmup.is-done .dbc__warmup-dot {
+  background: #3fb950;
+  animation: none;
+}
+
+/* No durable cache means the warm-up bought roughly four minutes (ESPN's
+   max-age) rather than the night — worth saying loudly enough to act on, since
+   the fix is "open the deployed site, not the dev server". */
+.dbc__warmup[data-durable='false'] .dbc__warmup-dot {
+  background: #f85149;
+  animation: none;
+}
+
+.dbc__source-flag {
+  padding: 0.35em 0.9em;
+  border-radius: 999px;
+  border: 1px solid rgba(245, 165, 36, 0.55);
+  background: rgba(0, 0, 0, 0.62);
+  color: #f5a524;
+  font-size: clamp(0.7rem, 0.95vw, 1.05rem);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
 /* ══ REVEAL ═══════════════════════════════════════════════════════════════ */
 
 .dbc-reveal {
@@ -1563,8 +1651,13 @@
     transition: none;
   }
 
-  .dbc__status-dot {
+  .dbc__status-dot,
+  .dbc__warmup-dot {
     animation: none;
     opacity: 1;
+  }
+
+  .dbc__warmup {
+    transition: none;
   }
 }

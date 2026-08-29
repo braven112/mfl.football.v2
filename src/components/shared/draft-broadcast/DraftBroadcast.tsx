@@ -28,17 +28,91 @@ import type {
 } from '../../../types/draft-broadcast';
 import { collectFreshPicks } from '../../../utils/pick-reveal';
 import { applyRehearsal, findOnTheClock, playerMap, teamMap } from '../../../utils/draft-broadcast';
+import { planBroadcastImages } from '../../../utils/draft-broadcast-images';
 import { BroadcastRevealCard } from './BroadcastRevealCard';
+import { BroadcastWarmup } from './BroadcastWarmup';
 import { OnTheClock } from './OnTheClock';
 
 /** Poll cadence. The draft room's 12s/30s is tuned for an EMAIL draft; a room
  *  full of people watching a TV notices a 30s lag between the pick landing on
  *  MFL and the screen reacting. 5s is well inside MFL's tolerance for a public
  *  export and keeps the reveal feeling like it's responding to the room. */
-const POLL_MS = 5_000;
+const POLL_MS = 4_000;
 /** After repeated failures, stop hammering — but keep trying, quietly. */
 const POLL_BACKOFF_MS = 15_000;
 const ERRORS_BEFORE_BACKOFF = 3;
+
+/**
+ * Ceiling on ONE poll's request.
+ *
+ * The loop is a self-chaining timeout: the next poll is only scheduled once the
+ * current `await fetch(...)` settles. A `fetch` with no timeout can hang
+ * indefinitely — a wifi drop, a sleeping laptop, a proxy holding the socket —
+ * and when it does, the chain is not delayed, it is BROKEN. The board freezes
+ * on the last value it saw and only a reload brings it back, which is exactly
+ * what happened during the 2026 rehearsal (frozen at pick 7 while MFL was at
+ * 25). The server side of this call has always had `AbortSignal.timeout`; the
+ * browser side had nothing.
+ */
+const POLL_TIMEOUT_MS = 12_000;
+
+/**
+ * If no poll has COMPLETED in this long, force one.
+ *
+ * The abort above fixes the hang we found; the watchdog covers the class. A
+ * chained timeout is also at the mercy of background-tab throttling and of the
+ * machine suspending mid-wait, and this page is meant to run unattended on a TV
+ * for hours. Cheap insurance: one comparison a second against a timestamp the
+ * poll itself stamps.
+ */
+const POLL_WATCHDOG_MS = 30_000;
+
+/**
+ * Fresh picks past which an update is a CATCH-UP, not a fast round.
+ *
+ * MFL serves the draft from caches that disagree (see `acceptedRef`), so the
+ * board can jump eighteen picks the moment a current snapshot finally answers.
+ * Revealing all of them is 18 x REVEAL_RUSH_MS of narrating a round the room
+ * finished minutes ago, during which the idle board — who is ACTUALLY on the
+ * clock — never gets the screen. Past this many, only the newest pick is
+ * revealed and the rest are taken as read: the room's attention belongs on the
+ * pick that just happened.
+ */
+const CATCHUP_BURST = 5;
+
+/**
+ * How old a pick may be and still be worth REVEALING.
+ *
+ * A reveal owns the whole TV for up to eighteen seconds, so it has to be news.
+ * Two things make a pick arrive late even when the poll is healthy:
+ *
+ *  - **Autopick bursts.** MFL fires a queued autopick the instant the clock
+ *    expires, and the 2026 rehearsal produced four picks stamped in the SAME
+ *    SECOND (`[Pick made based on ...]`). Four reveals at REVEAL_RUSH_MS is
+ *    twenty-four seconds of narration for something the room saw happen at
+ *    once.
+ *  - **Stale backends.** A current snapshot may not answer for several polls
+ *    (see `acceptedRef`), so picks can surface well after they were made.
+ *
+ * Either way the board ends up showing an old pick, then the live idle board,
+ * then another old pick — which reads exactly like it is bouncing around. Past
+ * this age a pick is absorbed silently: it still lands on the board and in the
+ * rails, it just does not take the screen.
+ *
+ * Generous on purpose. A pick made while the previous reveal was up is still
+ * news, and 90s is comfortably longer than a reveal plus a slow poll.
+ */
+const REVEAL_MAX_AGE_MS = 90_000;
+
+/**
+ * How long the board must see NOTHING BUT older responses before it says so.
+ *
+ * A WARNING THRESHOLD, not a rollback trigger — see `rejectingSinceRef` for why
+ * the automatic rollback was removed. Long enough that MFL's ordinary flapping
+ * does not trip it, short enough that a genuinely stuck board is called out
+ * while the room is still watching.
+ */
+const REVERT_CONFIRM_MS = 45_000;
 
 /** How long one reveal owns the screen, and the hurry-up when picks stack. */
 const REVEAL_MS = 18_000;
@@ -59,6 +133,56 @@ const RUSH_THRESHOLD = 3;
  */
 const REHEARSE_REVEAL_MS = 8_000;
 const REHEARSE_STEP_MS = REHEARSE_REVEAL_MS * 2;
+
+/**
+ * How recent a polled board is: the newest pick it carries, then how many.
+ *
+ * MFL stamps picks with epoch SECONDS as a string. An unparseable stamp counts
+ * as 0 rather than poisoning the max, so a board with one bad row is still
+ * dated by its good ones.
+ */
+interface BoardAge {
+  newestPick: number;
+  filled: number;
+}
+
+function boardAge(picks: DraftRoomPick[]): BoardAge {
+  let newestPick = 0;
+  let filled = 0;
+  for (const p of picks) {
+    if (!p.playerId) continue;
+    filled += 1;
+    const ts = Number.parseInt(p.timestamp, 10);
+    if (Number.isFinite(ts) && ts > newestPick) newestPick = ts;
+  }
+  return { newestPick, filled };
+}
+
+/**
+ * Is this pick recent enough to be worth the screen?
+ *
+ * A pick with no usable stamp IS revealed: the stamp is an optimisation for
+ * suppressing history, and a board that silently swallowed picks because MFL
+ * omitted a field would be the worse failure by far.
+ */
+function isRevealWorthy(pick: DraftRoomPick, nowMs: number): boolean {
+  const ts = Number.parseInt(pick.timestamp, 10);
+  if (!Number.isFinite(ts) || ts <= 0) return true;
+  return nowMs - ts * 1000 <= REVEAL_MAX_AGE_MS;
+}
+
+/**
+ * Is `a` at least as recent as `b`?
+ *
+ * Timestamp first — that is the half that survives a revert, since a re-picked
+ * slot is stamped later than anything in the abandoned draft. Count only breaks
+ * ties inside the same second, which is where MFL's own resolution runs out.
+ * Equal is accepted so an unchanged board keeps flowing through.
+ */
+function isAtLeastAsRecent(a: BoardAge, b: BoardAge): boolean {
+  if (a.newestPick !== b.newestPick) return a.newestPick > b.newestPick;
+  return a.filled >= b.filled;
+}
 
 interface Props {
   pageData: string;
@@ -87,6 +211,9 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
   );
   const [queue, setQueue] = useState<QueuedReveal[]>([]);
   const [connectionLost, setConnectionLost] = useState(false);
+  /** True when every response for a while has been older than what is shown —
+   *  the board is not wrong, but it may be behind, and only a reload resyncs. */
+  const [maybeStale, setMaybeStale] = useState(false);
 
   const teams = useMemo(() => teamMap(data.teams), [data.teams]);
   const players = useMemo(() => playerMap(data.players), [data.players]);
@@ -125,9 +252,80 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
   const absorbedFirstPollRef = useRef(rehearsing);
   const errorCountRef = useRef(0);
 
+  /**
+   * How recent the board currently on screen is.
+   *
+   * MFL SERVES A FLAPPING BOARD. Measured live during the 2026 AFL rehearsal
+   * (2026-08-28), polling one league and unit every two seconds returned SEVEN
+   * different snapshots in rotation — 3, 4, 5, 6, 7, 8 and 25 picks — on
+   * `api.myfantasyleague.com` AND on the league's own `www44`, with runs of
+   * four consecutive stale reads. The export is served from backends whose
+   * caches disagree, so a poll is not a view of the draft: it is a sample of
+   * whichever backend answered.
+   *
+   * But every snapshot observed was INTERNALLY COHERENT — a clean prefix of the
+   * draft, never a board with holes. That is what makes this simple: the
+   * responses are not corrupt, they are just of different AGES. So the board
+   * takes the NEWEST snapshot and uses it whole, and ignores any that is older
+   * than what is already on screen.
+   *
+   * A union of every pick ever seen was tried first and is wrong, which only
+   * showed up when the draft was reverted to restart it: the stale backends
+   * kept serving the OLD board, so the union could never shed the old picks and
+   * the screen jumped to a pick from a draft that no longer existed. Recency
+   * handles that case and the plain flap with one rule.
+   *
+   * Age is `(newest pick timestamp, filled count)`, compared in that order.
+   * The timestamp is what makes a revert work: a re-picked 1.01 is stamped
+   * LATER than every pick of the abandoned draft, so a snapshot carrying it
+   * beats a stale twelve-pick board immediately, with no window to wait out.
+   * The count only breaks ties within the same second.
+   */
+  const acceptedRef = useRef<BoardAge>(
+    boardAge(rehearsing ? applyRehearsal(data.picks, data.rehearseUpTo!) : data.picks)
+  );
+
+  /**
+   * When we started continuously rejecting responses as too old, or null.
+   *
+   * This drives a WARNING ONLY. It used to roll the board back automatically
+   * after REVERT_CONFIRM_MS, on the theory that only a real revert could
+   * produce a long run of older responses. That theory died on the live NL
+   * board: MFL's freshest snapshot came back about 10% of the time, so the
+   * board legitimately rejects most polls, and a 45-second run of pure
+   * rejections happens constantly during a perfectly normal draft. The
+   * rollback fired, dropped the board to the best stale snapshot, and the room
+   * watched it go forwards and then back to a pick it had already passed.
+   *
+   * THE BOARD NEVER MOVES BACKWARDS ON ITS OWN. A commissioner reverting the
+   * draft is real but rare, and it has an obvious operator action — reload —
+   * which re-seeds from a freshly sampled server render. Silently reversing a
+   * live board to serve that case cost far more than it ever saved.
+   */
+  const rejectingSinceRef = useRef<number | null>(null);
+
   /** Merge a freshly polled board in, queueing anything new for reveal. */
-  const ingest = useCallback((incoming: DraftRoomPick[]) => {
-    if (incoming.length === 0) return;
+  const ingest = useCallback((rawIncoming: DraftRoomPick[]) => {
+    if (rawIncoming.length === 0) return;
+
+    const now = Date.now();
+    const age = boardAge(rawIncoming);
+
+    // Older than what is on screen? That is a stale backend, not the draft
+    // going backwards — ignore it whole. See `acceptedRef`.
+    if (!isAtLeastAsRecent(age, acceptedRef.current)) {
+      // A stale backend answered. Ignore it — and note how long this has been
+      // going on, purely so the screen can SAY the board may be behind. It does
+      // not roll anything back; see rejectingSinceRef.
+      if (rejectingSinceRef.current === null) rejectingSinceRef.current = now;
+      if (now - rejectingSinceRef.current >= REVERT_CONFIRM_MS) setMaybeStale(true);
+      return;
+    }
+
+    rejectingSinceRef.current = null;
+    setMaybeStale(false);
+    acceptedRef.current = age;
+    const incoming = rawIncoming;
 
     // maxBurst = Infinity: on a TV, dropping a burst is the worse failure.
     // A fast round that lands 4 picks inside one poll would otherwise reveal
@@ -149,11 +347,19 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
     }
 
     if (fresh.length > 0) {
+      // Two filters, and they answer different failures. CATCHUP_BURST is about
+      // VOLUME — a jump this big is the board catching up to MFL, not the room
+      // picking that fast, so the screen lands on what just happened instead of
+      // narrating its way there. REVEAL_MAX_AGE_MS is about AGE — an autopick
+      // burst can be five picks stamped in one second, none of which is news by
+      // the time the third one would take the TV.
+      const recent = fresh.filter((pick) => isRevealWorthy(pick, now));
+      const toReveal = recent.length > CATCHUP_BURST ? recent.slice(-1) : recent;
       setQueue((q) => [
         ...q,
         // playerId is in the key so an undo + re-pick of the same slot reveals
         // again rather than being swallowed as a duplicate.
-        ...fresh.map((pick) => ({ key: `${pick.overallPickNumber}-${pick.playerId}`, pick })),
+        ...toReveal.map((pick) => ({ key: `${pick.overallPickNumber}-${pick.playerId}`, pick })),
       ]);
     }
   }, []);
@@ -188,16 +394,40 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
 
+    // `feedUnit` rather than `conference.unit`: a `?mflLeague=` override may be
+    // watching a board that is not split by conference at all, and MFL answers
+    // a named unit that isn't there with a 404 rather than a board. `null` means
+    // "whichever unit this draft has" — the param is omitted entirely.
+    const feedUnit = data.feedUnit === undefined ? data.conference.unit : data.feedUnit;
     const params = new URLSearchParams({
       league: data.leagueId,
       host: data.mflHost,
       year: String(data.leagueYear),
-      unit: data.conference.unit,
     });
+    if (feedUnit) params.set('unit', feedUnit);
+
+    // When the last tick FINISHED. The watchdog reads it; nothing else does.
+    let lastCompleted = Date.now();
+    // Guards against two ticks running at once, which the watchdog and the
+    // wake-up listeners can both otherwise cause.
+    let inFlight = false;
+
+    const schedule = (ms: number) => {
+      clearTimeout(timer);
+      timer = setTimeout(tick, ms);
+    };
 
     const tick = async () => {
+      if (cancelled || inFlight) return;
+      inFlight = true;
       try {
-        const res = await fetch(`/api/draft/status?${params}`, { cache: 'no-store' });
+        const res = await fetch(`/api/draft/status?${params}`, {
+          cache: 'no-store',
+          // Without this the loop can be ended by a single request that never
+          // settles — see POLL_TIMEOUT_MS. This is the line that keeps a
+          // three-hour draft polling.
+          signal: AbortSignal.timeout(POLL_TIMEOUT_MS),
+        });
         const body = (await res.json()) as DraftStatusResponse & { error?: string };
         if (cancelled) return;
 
@@ -209,22 +439,48 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
           ingest(body.picks);
         }
       } catch {
+        // A timeout lands here like any other failure: count it, back off if it
+        // keeps happening, and — the point — schedule the next one regardless.
         if (cancelled) return;
         errorCountRef.current += 1;
+      } finally {
+        inFlight = false;
+        lastCompleted = Date.now();
       }
 
       if (cancelled) return;
       const failing = errorCountRef.current >= ERRORS_BEFORE_BACKOFF;
       setConnectionLost(failing);
-      timer = setTimeout(tick, failing ? POLL_BACKOFF_MS : POLL_MS);
+      schedule(failing ? POLL_BACKOFF_MS : POLL_MS);
     };
 
-    timer = setTimeout(tick, POLL_MS);
+    // The watchdog covers what the abort cannot: a timer the browser throttled
+    // while the tab was in the background, or one the machine slept through.
+    // It only ever RE-ARMS the loop — it never polls in parallel (`inFlight`).
+    const watchdog = setInterval(() => {
+      if (cancelled || inFlight) return;
+      if (Date.now() - lastCompleted > POLL_WATCHDOG_MS) schedule(0);
+    }, 1_000);
+
+    // Coming back from a sleeping laptop or a dropped network is the moment the
+    // board is most out of date, so ask immediately rather than waiting out the
+    // current interval.
+    const wake = () => {
+      if (cancelled || document.visibilityState !== 'visible') return;
+      schedule(0);
+    };
+    document.addEventListener('visibilitychange', wake);
+    window.addEventListener('online', wake);
+
+    schedule(POLL_MS);
     return () => {
       cancelled = true;
       clearTimeout(timer);
+      clearInterval(watchdog);
+      document.removeEventListener('visibilitychange', wake);
+      window.removeEventListener('online', wake);
     };
-  }, [data.leagueId, data.mflHost, data.leagueYear, data.conference.unit, rehearsing, ingest]);
+  }, [data.leagueId, data.mflHost, data.leagueYear, data.conference.unit, data.feedUnit, rehearsing, ingest]);
 
   // ── Advance the reveal queue ──
   const current = queue[0] ?? null;
@@ -314,6 +570,27 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
   // only the browser knows where those are); it was cut for a plain card
   // reveal, which is why nothing on this screen needs layout timing any more.
   const showingReveal = !!current;
+
+  /**
+   * Every image the night will need, most-needed first.
+   *
+   * Planned from the SSR payload, so it costs no bytes on the wire and is ready
+   * the moment the island hydrates — which matters, because the warm-up's only
+   * job is to finish before the first pick lands. Depth is `?warm=`; see
+   * `resolveWarmDepth`.
+   */
+  const warmUrls = useMemo(
+    () =>
+      data.warmDepth === 0
+        ? []
+        : planBroadcastImages({
+            players: data.players,
+            teams: data.teams,
+            defenseFaces: data.defenseFaces,
+            depth: data.warmDepth,
+          }).urls,
+    [data.players, data.teams, data.defenseFaces, data.warmDepth]
+  );
 
   const onTheClock = useMemo(() => findOnTheClock(picks), [picks]);
   const madeCount = useMemo(() => picks.filter((p) => p.playerId).length, [picks]);
@@ -405,10 +682,32 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
         </div>
       ) : null}
 
+      {/* Pre-flight, in one stack above BOTH layers.
+          Top-centre because every other edge of this board is spoken for: the
+          idle header owns the top-left and top-right, the fullscreen button is
+          pinned top-right, the reveal's ghost pick number owns the bottom-left,
+          and `.dbc__status` owns the bottom-right. Above the layers, not inside
+          one, because an override that vanished for the eighteen seconds a
+          reveal owns the TV would be an override nobody sees — the rehearsal
+          flag learned that lesson the hard way (see BroadcastRevealCard). */}
+      <div className="dbc__preflight">
+        {data.sourceLabel ? (
+          <div className="dbc__source-flag" data-testid="broadcast-source-flag">
+            {data.sourceLabel}
+          </div>
+        ) : null}
+        <BroadcastWarmup urls={warmUrls} />
+      </div>
+
       {connectionLost ? (
         <div className="dbc__status" role="status">
           <span className="dbc__status-dot" aria-hidden="true" />
           Reconnecting to MFL…
+        </div>
+      ) : maybeStale ? (
+        <div className="dbc__status" role="status">
+          <span className="dbc__status-dot" aria-hidden="true" />
+          MFL is serving an older board — reload to resync
         </div>
       ) : null}
     </div>

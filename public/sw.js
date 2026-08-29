@@ -35,6 +35,43 @@ const CACHE_NAME = 'theleague-v4';
 const OFFLINE_URL = '/offline.html';
 
 /**
+ * Remote player images live in their OWN cache, on OUR clock.
+ *
+ * ESPN serves headshots with `cache-control: max-age=233` (measured
+ * 2026-08-28 — under four minutes, and the value counts down, so it is an edge
+ * TTL rather than a hint about the client). That is fine for a roster page and
+ * ruinous for the draft broadcast board: a laptop warmed at 6pm has re-expired
+ * every headshot before the second round, so each reveal re-downloads ~240 KB
+ * over room wifi at the exact moment a face has to be on screen.
+ *
+ * These entries are therefore kept for REMOTE_IMAGE_MAX_AGE_MS regardless of
+ * what the origin says. A player photo that changes inside a week is not a
+ * failure anyone can see; a headshot that arrives four seconds into an
+ * eighteen-second reveal is.
+ *
+ * Separate cache name, and kept across activations (see KEEP_CACHES), so
+ * bumping CACHE_NAME to evict a poisoned HTML entry does not also throw away a
+ * board that somebody warmed an hour before their draft.
+ */
+const IMAGE_CACHE_NAME = 'theleague-img-v1';
+
+/** Caches an activate must NOT delete. Everything else is last version's. */
+const KEEP_CACHES = [CACHE_NAME, IMAGE_CACHE_NAME];
+
+/** Hosts whose images get the durable treatment. Deliberately a short list of
+ *  known image CDNs: this path re-issues requests as CORS and stores the
+ *  bytes, which is not something to do to an arbitrary third party. */
+const REMOTE_IMAGE_HOSTS = ['a.espncdn.com'];
+
+/** How long a stored remote image stays servable without revalidation. */
+const REMOTE_IMAGE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** Ceiling on stored remote images. A full broadcast warm-up is ~600 entries;
+ *  1800 leaves room for both leagues' boards plus a season of roster browsing
+ *  before the oldest start falling off the front. */
+const MAX_REMOTE_IMAGE_ENTRIES = 1800;
+
+/**
  * How long a cached HTML document may still be served as an offline
  * fallback. Past this it is treated as absent and the offline page wins:
  * a document old enough to reference a retired build is worse than an
@@ -67,11 +104,15 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(
-        keys
-          .filter((key) => key !== CACHE_NAME)
-          .map((key) => caches.delete(key))
-      )
+      Promise.all([
+        ...keys
+          .filter((key) => !KEEP_CACHES.includes(key))
+          .map((key) => caches.delete(key)),
+        // The image cache survives the sweep, so this is the one guaranteed
+        // moment to bound it — the per-write trim is sampled and a very unlucky
+        // run could otherwise let it drift well past the ceiling.
+        caches.open(IMAGE_CACHE_NAME).then(trimRemoteImages).catch(() => {}),
+      ])
     )
   );
   self.clients.claim();
@@ -86,7 +127,14 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
 
-  // Skip cross-origin requests (fonts, analytics, etc.)
+  // Player headshots from an image CDN: durable cache-first, on our clock
+  // rather than the origin's four minutes. See IMAGE_CACHE_NAME.
+  if (REMOTE_IMAGE_HOSTS.includes(url.hostname)) {
+    event.respondWith(remoteImageCacheFirst(event, request));
+    return;
+  }
+
+  // Skip every other cross-origin request (fonts, analytics, etc.)
   if (url.origin !== self.location.origin) return;
 
   // Content-hashed build output: cache-first, immutable.
@@ -246,16 +294,21 @@ async function trimImmutableEntries(cache) {
  *
  * Takes ownership of `response` — callers pass a clone. Only a 200 is
  * stored: re-wrapping a null-body status (204/205/304) throws, and such a
- * document is worthless as an offline fallback anyway.
+ * document is worthless as a cached copy anyway.
+ *
+ * `key` is a Request or a URL string; `cache.put` accepts either, and the
+ * remote-image path keys by URL because the request it was handed is a
+ * no-cors `<img>` request while the response it stores came from a CORS
+ * re-issue of the same URL.
  */
-async function cacheHtmlWithTimestamp(cache, request, response, now) {
+async function putStamped(cache, key, response, now) {
   try {
     if (response.status !== 200) return;
     const body = await response.blob();
     const headers = new Headers(response.headers);
     headers.set(CACHED_AT_HEADER, String(now));
     await cache.put(
-      request,
+      key,
       new Response(body, {
         status: response.status,
         statusText: response.statusText,
@@ -267,11 +320,113 @@ async function cacheHtmlWithTimestamp(cache, request, response, now) {
   }
 }
 
-/** A cached HTML entry is usable only while it is younger than the cap. */
-function isFreshEnough(response, now) {
+/**
+ * Cache-first for remote player images, on our own freshness clock.
+ *
+ * Three things here are load-bearing:
+ *
+ *  - **The request is re-issued as CORS.** An `<img>` fetch is `no-cors`, and
+ *    its response is opaque: unreadable, unstampable, and charged against the
+ *    origin quota at a padded size (~7 MB per entry in Chrome) rather than its
+ *    real one. ESPN sends `access-control-allow-origin: *`, so re-asking as
+ *    CORS costs nothing and yields a response we can actually store. If that
+ *    re-issue fails, the original request is used and simply not cached — a
+ *    picture on screen beats a cache entry.
+ *  - **A stale hit beats a network failure.** Draft night runs on room wifi.
+ *    When the network is gone, last week's headshot is the correct answer.
+ *  - **The store is off the response path.** `keepAlive` holds the worker open
+ *    for the write; awaiting it would put a cache round-trip in front of every
+ *    image the page paints.
+ */
+async function remoteImageCacheFirst(event, request) {
+  const now = Date.now();
+  const cache = await caches.open(IMAGE_CACHE_NAME);
+  const cached = await cache.match(request.url);
+  if (cached && isFreshEnough(cached, now, REMOTE_IMAGE_MAX_AGE_MS)) return cached;
+
+  let response;
+  try {
+    response = await fetch(
+      new Request(request.url, { mode: 'cors', credentials: 'omit' })
+    );
+  } catch (error) {
+    if (error && error.name === 'AbortError') throw error;
+    // Expired but present is still a face on the TV.
+    if (cached) return cached;
+    // The CORS re-issue can fail for a reason the plain request would not
+    // (a CDN that drops the ACAO header on an error page), so try it before
+    // giving up — its opaque response is fine to display, just not to store.
+    return fetch(request);
+  }
+
+  if (response.ok && response.type !== 'opaque') {
+    keepAlive(event, storeRemoteImage(cache, request.url, response.clone(), now));
+    return response;
+  }
+
+  // A 404 is a real answer the card's fallback cascade knows how to handle,
+  // but a cached hit we already hold is a better one than a broken frame.
+  if (!response.ok && cached) return cached;
+  return response;
+}
+
+/**
+ * Stamped store, with the entry-count bound checked periodically rather than
+ * per write.
+ *
+ * `cache.keys()` walks the whole cache, and the broadcast board's warm-up
+ * stores ~600 images back to back — trimming on every one of them turns a
+ * bounded cache into a quadratic one, competing with the very warm-up it is
+ * supposed to be cheap enough to allow.
+ *
+ * SAMPLED, NOT COUNTED. A counter here was worse than no trim at all: module
+ * state lives only as long as the worker, and the browser kills an idle worker
+ * within seconds, so `writes % TRIM_EVERY === 0` reset to zero constantly and
+ * essentially never fired during ordinary browsing. The cache is exempt from
+ * the activate sweep (see KEEP_CACHES), so nothing else bounds it — it would
+ * grow until the origin quota, at which point `cache.put` starts throwing,
+ * `storeAsset`'s contract swallows it, and the durable cache silently stops
+ * working while the board's pill still reports images ready.
+ *
+ * A 1-in-TRIM_EVERY coin flip has the same expected frequency and no memory,
+ * so it behaves identically whether the worker has been alive for one write or
+ * a thousand.
+ */
+const TRIM_EVERY = 50;
+
+async function storeRemoteImage(cache, url, response, now) {
+  await putStamped(cache, url, response, now);
+  if (Math.random() < 1 / TRIM_EVERY) await trimRemoteImages(cache);
+}
+
+/**
+ * Bound the remote-image cache.
+ *
+ * Nothing else evicts these: they are cache-first for a week and the URLs
+ * repeat forever, so without a ceiling a season of roster browsing plus two
+ * draft warm-ups grows monotonically into the origin quota. `cache.keys()` is
+ * insertion-ordered, so the front of the list is the least recently STORED —
+ * which for images that never change is a good enough stand-in for least
+ * recently wanted.
+ */
+async function trimRemoteImages(cache) {
+  try {
+    const keys = await cache.keys();
+    const excess = keys.length - MAX_REMOTE_IMAGE_ENTRIES;
+    for (let i = 0; i < excess; i += 1) {
+      await cache.delete(keys[i]);
+    }
+  } catch {
+    // Same contract as storeAsset: the caller already has its response.
+  }
+}
+
+/** A stamped cache entry is usable only while it is younger than its cap.
+ *  HTML and remote images have very different caps and the same mechanism. */
+function isFreshEnough(response, now, maxAgeMs = HTML_STALE_MAX_AGE_MS) {
   const stamp = Number(response.headers.get(CACHED_AT_HEADER));
   if (!Number.isFinite(stamp) || stamp <= 0) return false;
-  return now - stamp < HTML_STALE_MAX_AGE_MS;
+  return now - stamp < maxAgeMs;
 }
 
 /**
@@ -316,7 +471,7 @@ async function networkFirstWithOfflineFallback(event, request) {
   if (response.ok) {
     if (isCacheable(response)) {
       // Cache successful HTML for stale fallback — off the response path.
-      keepAlive(event, cacheHtmlWithTimestamp(cache, request, response.clone(), now));
+      keepAlive(event, putStamped(cache, request, response.clone(), now));
     }
     return response;
   }

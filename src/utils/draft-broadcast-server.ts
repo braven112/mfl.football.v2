@@ -19,6 +19,7 @@ import type {
   BroadcastPlayerExtras,
 } from '../types/draft-broadcast';
 import { parseTradeFromComment, selectDraftUnit } from './draft-utils';
+import { buildMflExportUrl } from './mfl-url';
 import { normalizeTeamCode } from './nfl-logo';
 import { resolveCollegeDarkLogoUrl } from './college-logo-dark-css';
 import { usesCollegeOrigin } from './pick-reveal';
@@ -396,4 +397,122 @@ export function findRehearsalYear(
     if (picks.length > 0 && picks.every((p) => p.playerId)) return year;
   }
   return undefined;
+}
+
+/**
+ * Does this feed actually carry a BOARD for the named unit?
+ *
+ * MFL publishes a league's draft units as soon as the league exists, but a
+ * unit's `draftPick` array stays EMPTY until someone sets the draft up — the
+ * copy league used to rehearse the 2026 AFL draft answered `draftResults` with
+ * two named conferences and zero slots between them. That is a valid response,
+ * not a failed fetch, so `fetchRemoteDraftResults` has nothing to report and an
+ * override would happily render a board with no slots in it: no draft order, no
+ * first pick, nothing on the pre-draft screen.
+ *
+ * The empty case has to be caught HERE rather than left to the poll, because
+ * the poll fixes itself and the pre-draft screen does not — `ingest` ignores an
+ * empty board, so the page would sit blank for however long it takes someone to
+ * finish setting the draft up.
+ */
+export function hasDraftSlots(draftResults: any, unit: string): boolean {
+  const selected = selectDraftUnit(draftResults?.draftResults?.draftUnit, unit);
+  return toArray<any>(selected?.draftPick).length > 0;
+}
+
+/**
+ * Fetch a draft board straight from MFL, for a league we hold no feed for.
+ *
+ * ONLY the `?mflLeague=` override path calls this (see
+ * `draft-broadcast-source.ts`). The league's own board is read from the
+ * committed feed — a page that reached the network on every SSR render would
+ * put draft night behind MFL's availability, which is the one dependency this
+ * page was built to avoid.
+ *
+ * Returns null on ANY failure, including a slow one. The caller falls back to
+ * the local skeleton, so a test feed that cannot be reached degrades to "the
+ * real board, not following anything" rather than a blank TV — and the flag
+ * over the board still says an override was asked for, which is the difference
+ * between a page that is wrong and a page that is confusing.
+ */
+export async function fetchRemoteDraftResults(options: {
+  leagueId: string;
+  host: string;
+  year: number | string;
+  timeoutMs?: number;
+  /** How many times to ask. See the sampling note above. */
+  samples?: number;
+}): Promise<any | null> {
+  const url = buildMflExportUrl({
+    type: 'draftResults',
+    leagueId: options.leagueId,
+    year: options.year,
+    host: `https://${options.host}`,
+  });
+
+  const once = async (): Promise<any | null> => {
+    try {
+      const res = await fetch(url, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FantasyLeague/1.0)' },
+        signal: AbortSignal.timeout(options.timeoutMs ?? 8_000),
+      });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch {
+      return null;
+    }
+  };
+
+  const results = await Promise.all(
+    Array.from({ length: Math.max(1, options.samples ?? MFL_SAMPLES) }, once)
+  );
+
+  let best: any | null = null;
+  let bestAge = { newestPick: -1, filled: -1 };
+  for (const candidate of results) {
+    if (!candidate) continue;
+    const age = draftResultsAge(candidate);
+    if (age.newestPick > bestAge.newestPick ||
+        (age.newestPick === bestAge.newestPick && age.filled > bestAge.filled)) {
+      best = candidate;
+      bestAge = age;
+    }
+  }
+  return best;
+}
+
+/**
+ * How many times to ask MFL for the same board, in parallel, and keep the
+ * freshest answer.
+ *
+ * MFL serves `draftResults` from backends whose caches disagree. Sampled
+ * against the live 2026 rehearsal, a single request answered with a COMPLETELY
+ * EMPTY board 30% of the time and a stale six-pick board another 16%, while the
+ * true board was eight picks. One fetch is therefore a coin toss, and the page
+ * this seeds is the first thing the room sees.
+ *
+ * Three parallel requests cut "every sample stale" to a few percent at the cost
+ * of two extra calls on a page that renders once. They run concurrently, so the
+ * render waits no longer than the slowest of the three.
+ */
+const MFL_SAMPLES = 3;
+
+/**
+ * Age a whole `draftResults` payload: the newest pick stamp anywhere in it,
+ * then how many picks are filled. Deliberately unit-agnostic — this picks
+ * between whole responses, and a response that is fresher for one conference is
+ * fresher for both (they come off the same backend).
+ */
+function draftResultsAge(raw: any): { newestPick: number; filled: number } {
+  let newestPick = 0;
+  let filled = 0;
+  for (const unit of toArray<any>(raw?.draftResults?.draftUnit)) {
+    for (const p of toArray<any>(unit?.draftPick)) {
+      if (!p?.player) continue;
+      filled += 1;
+      const ts = Number.parseInt(p?.timestamp, 10);
+      if (Number.isFinite(ts) && ts > newestPick) newestPick = ts;
+    }
+  }
+  return { newestPick, filled };
 }

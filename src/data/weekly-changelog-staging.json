@@ -4,6 +4,14 @@
     {
       "date": "2026-08-28",
       "type": "bug-fix",
+      "summary": "The draft broadcast board now keeps up with the room, and its images are ready before the first pick. Two separate problems, both outside our code and both worked around. ESPN expires player headshots after under four minutes, so every reveal was re-downloading a quarter-megabyte photo — which is why a card sometimes sat there with a name and no player; the board now pre-caches every headshot, crest and logo it could need before the draft starts, keeps them for a week, and shows a count in the corner so you can watch it finish. And MyFantasyLeague's draft feed turned out to serve whichever of several out-of-date copies it felt like — measured live, the correct board came back 8% of the time and one seven picks behind came back 70% — which had the board stuck rounds behind the room. It now reads the same file MFL's own draft room reads, so it tracks pick for pick.",
+      "impact": "user",
+      "area": "draft",
+      "league": "both"
+    },
+    {
+      "date": "2026-08-28",
+      "type": "bug-fix",
       "summary": "The podium icon on the Draft Broadcast link in the side nav was showing white instead of blue, so it stood out against a column of icons that all match. Every other icon in that menu takes its colour from the menu; a handful of the newer ones carry their own colour instruction, which quietly won and left them the colour of the label beside them. It matches the rest of the list again.",
       "impact": "user",
       "area": "navigation",

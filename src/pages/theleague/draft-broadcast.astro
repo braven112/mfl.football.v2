@@ -20,6 +20,10 @@
  *  2. ROOKIES ONLY. Three rounds, 51 picks, and every one of the 2026 board's
  *     51 selections was a rookie. That changes what "board rank" means — see
  *     the offBoardIds note below.
+ *
+ * Query string: `?year=`, `?rehearse=`, `?mflLeague=` (+ `?mflHost=`,
+ * `?unit=`) and `?warm=`, all documented on the AFL twin and shared through
+ * `draft-broadcast-source.ts` / `draft-broadcast-images.ts`.
  */
 
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
@@ -33,10 +37,14 @@ import {
   assignBoardRanks,
   buildConferenceBoard,
   enrichBroadcastPlayers,
+  fetchRemoteDraftResults,
   findRehearsalYear,
+  hasDraftSlots,
   loadConferenceKeepers,
   trimToDraftable,
 } from '../../utils/draft-broadcast-server';
+import { resolveBroadcastSource } from '../../utils/draft-broadcast-source';
+import { resolveWarmDepth } from '../../utils/draft-broadcast-images';
 import type {
   BroadcastConference,
   BroadcastPlayer,
@@ -80,14 +88,45 @@ function readDraftResults(year: number): any {
   }
 }
 
-const draftResultsRaw = readDraftResults(leagueYear);
+// ── Which draft this board is WATCHING ──
+// Its own, unless `?mflLeague=` points it at another MFL league's live draft —
+// the only way to exercise poll → diff → queue → reveal end to end before draft
+// night, since `?rehearse=` never touches the network. An override takes its
+// SKELETON from the same league it will poll (draft order and who is on the
+// clock come from the board), falling back to the local feed on any failure so
+// an unreachable test feed degrades to a board that follows nothing rather than
+// a blank TV. See draft-broadcast-source.ts.
+const sourceParams = resolveBroadcastSource(Astro.url.searchParams, {
+  leagueId: league.id,
+  mflHost: league.mflHost,
+  // TheLeague drafts as one unit and the id comes off the feed below, so there
+  // is no unit to name up front — `null` is "whichever unit the board has",
+  // which is the right request for a single-unit league either way.
+  unit: '',
+});
+
+const localDraftResults = readDraftResults(leagueYear);
+const remoteDraftResults = sourceParams.isOverride
+  ? await fetchRemoteDraftResults({
+      leagueId: sourceParams.leagueId,
+      host: sourceParams.mflHost,
+      year: leagueYear,
+    })
+  : null;
+// `hasDraftSlots` and not a plain null check: a copy league answers with its
+// draft units already named and ZERO slots in them until someone sets the draft
+// up, which is a valid response the fetch cannot report as a failure.
+const draftResultsRaw =
+  remoteDraftResults && hasDraftSlots(remoteDraftResults, sourceParams.unit ?? '')
+    ? remoteDraftResults
+    : localDraftResults;
 
 // The unit id comes off the feed rather than being assumed, with MFL's
 // single-unit default as the fallback for a season whose feed is missing.
 // A wrong unit here selects nothing and renders an empty board.
 const rawUnit = draftResultsRaw?.draftResults?.draftUnit;
-const feedUnit = (Array.isArray(rawUnit) ? rawUnit[0] : rawUnit)?.unit;
-const unit: string = feedUnit || 'LEAGUE';
+const feedUnitId = (Array.isArray(rawUnit) ? rawUnit[0] : rawUnit)?.unit;
+const unit: string = feedUnitId || 'LEAGUE';
 
 // One "conference" — the league itself. The island's board-selection concept is
 // per-unit, and TheLeague has exactly one, so this is a single-entry list and
@@ -206,8 +245,15 @@ const pageData: DraftBroadcastPageData = {
   teams,
   picks,
   players,
-  leagueId: league.id,
-  mflHost: league.mflHost,
+  leagueId: sourceParams.leagueId,
+  mflHost: sourceParams.mflHost,
+  // Non-override: the unit id read off the feed, exactly as before. Override:
+  // whatever `resolveBroadcastSource` settled on, which is `null` (ask for the
+  // board's only unit) unless the URL named one — a copy league's unit is not
+  // required to be called what this league's is.
+  feedUnit: sourceParams.isOverride ? sourceParams.unit : unit,
+  sourceLabel: sourceParams.label,
+  warmDepth: resolveWarmDepth(Astro.url.searchParams.get('warm')),
   rehearseUpTo,
   rehearsalYears,
 };
