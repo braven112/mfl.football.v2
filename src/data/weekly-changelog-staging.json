@@ -2,6 +2,14 @@
   "weekOf": "2026-08-31",
   "changes": [
     {
+      "date": "2026-08-29",
+      "type": "bug-fix",
+      "summary": "On the morning of your draft, the homepage hero now sends you to the draft itself. It counted down \"0 days to AL draft\" and then offered one button — the draft order, which is settled by then and tells you nothing you don't already know. The button is now the room you pick in: MyFantasyLeague's live draft room for the American League, and the email draft page for the National League, each opening in a new tab and each pointing at that conference's own page so the two never get crossed. The draft order moves down beside it, still one click away, and once picks start the live board joins it. Nothing changes before draft day.",
+      "impact": "user",
+      "area": "homepage",
+      "league": "afl"
+    },
+    {
       "date": "2026-08-28",
       "type": "bug-fix",
       "summary": "The draft broadcast board now keeps up with the room, and its images are ready before the first pick. Two separate problems, both outside our code and both worked around. ESPN expires player headshots after under four minutes, so every reveal was re-downloading a quarter-megabyte photo — which is why a card sometimes sat there with a name and no player; the board now pre-caches every headshot, crest and logo it could need before the draft starts, keeps them for a week, and shows a count in the corner so you can watch it finish. And MyFantasyLeague's draft feed turned out to serve whichever of several out-of-date copies it felt like — measured live, the correct board came back 8% of the time and one seven picks behind came back 70% — which had the board stuck rounds behind the room. It now reads the same file MFL's own draft room reads, so it tracks pick for pick.",

@@ -187,10 +187,14 @@ describe('live conference board links', () => {
     ]);
   });
 
-  it('AL draft day: an AL owner gets no secondary link — the CTA already is that board', () => {
+  it('AL draft day, live: an AL owner picks in the room and watches on the board', () => {
     const view = viewFor(alDraftDay, '00');
-    expect(view.link).toBe('/afl-fantasy/draft-broadcast?conference=00');
-    expect(view.secondaryLinks).toBeUndefined();
+    // The CTA is MFL's live draft room (the only place a pick can be made), so
+    // the AL board is no longer a duplicate of it and rides along as secondary.
+    expect(view.link).toContain('/ajax_ld?L=');
+    expect(view.secondaryLinks).toEqual([
+      { label: 'AL Draft Board', href: '/afl-fantasy/draft-broadcast?conference=00', live: true },
+    ]);
   });
 
   it('NL draft day: an AL owner reaches the live NL board', () => {
