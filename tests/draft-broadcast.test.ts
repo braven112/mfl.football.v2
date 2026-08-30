@@ -18,6 +18,9 @@ import {
   positionRunCount,
   applyRehearsal,
   isRevealWorthy,
+  lastPickAtMs,
+  clockAnchorMs,
+  formatElapsedClock,
   REVEAL_MAX_AGE_MS,
   darkenForWhiteText,
   contrastWithWhite,
@@ -375,6 +378,145 @@ describe('isRevealWorthy', () => {
   });
 });
 
+
+describe('the on-the-clock count-up', () => {
+  // The idle screen said WHO was up and said it identically at ten seconds and
+  // at ten minutes. These pin the two halves of the answer: which pick the
+  // clock hangs off, and how the digits read on a TV.
+
+  describe('lastPickAtMs', () => {
+    it('takes the newest stamp on the board, in ms', () => {
+      // Deliberately out of pick order: MFL lets a commissioner fill a slot out
+      // of sequence, so "the last filled slot" is not "the most recent pick".
+      const picks = [stamped(1, 'a', 1_700_000_100), stamped(2, 'b', 1_700_000_400), slot(3)];
+      expect(lastPickAtMs(picks)).toBe(1_700_000_400_000);
+      expect(lastPickAtMs([...picks].reverse())).toBe(1_700_000_400_000);
+    });
+
+    it('ignores empty slots, so an unpicked board has no clock', () => {
+      expect(lastPickAtMs([slot(1), slot(2), slot(3)])).toBeNull();
+      expect(lastPickAtMs([])).toBeNull();
+    });
+
+    it('returns null rather than counting up from 1970', () => {
+      // A board whose picks carry no usable stamp must show NO timer. Zero, an
+      // empty string and garbage are all "MFL did not tell us".
+      expect(lastPickAtMs([slot(1, 'a')])).toBeNull();
+      expect(lastPickAtMs([{ ...slot(1, 'a'), timestamp: 'nonsense' }])).toBeNull();
+      expect(lastPickAtMs([stamped(1, 'a', 0)])).toBeNull();
+    });
+
+    it('is dated by its good rows when one stamp is bad', () => {
+      const picks = [stamped(1, 'a', 1_700_000_100), { ...slot(2, 'b'), timestamp: '' }];
+      expect(lastPickAtMs(picks)).toBe(1_700_000_100_000);
+    });
+
+    it('follows a revert forward, the way boardAge does', () => {
+      // A re-picked 1.01 is stamped later than everything in the abandoned
+      // draft, so the clock restarts from it rather than from the old board.
+      const reverted = [stamped(1, 'z', 1_700_009_000), slot(2), slot(3)];
+      expect(lastPickAtMs(reverted)).toBe(1_700_009_000_000);
+    });
+  });
+
+  describe('formatElapsedClock', () => {
+    it('reads as a stopwatch: unpadded minutes under an hour, padded above', () => {
+      expect(formatElapsedClock(0)).toBe('0:00');
+      expect(formatElapsedClock(7)).toBe('0:07');
+      expect(formatElapsedClock(59)).toBe('0:59');
+      expect(formatElapsedClock(60)).toBe('1:00');
+      expect(formatElapsedClock(252)).toBe('4:12');
+      expect(formatElapsedClock(3599)).toBe('59:59');
+      expect(formatElapsedClock(3600)).toBe('1:00:00');
+      expect(formatElapsedClock(3907)).toBe('1:05:07');
+      expect(formatElapsedClock(86_400)).toBe('24:00:00');
+    });
+
+    it('clamps a negative to zero', () => {
+      // The anchor is MFL's server clock and the count-up is the browser's, so
+      // a laptop running slow puts the newest pick in its own future. "0:00"
+      // is invisible; "-0:03" on a TV is a bug the whole room can see.
+      expect(formatElapsedClock(-1)).toBe('0:00');
+      expect(formatElapsedClock(-9_999)).toBe('0:00');
+    });
+
+    it('floors a partial second rather than rounding up', () => {
+      // A clock that shows 0:01 before a second has passed is wrong twice: at
+      // the start, and at every boundary after it.
+      expect(formatElapsedClock(0.9)).toBe('0:00');
+      expect(formatElapsedClock(59.99)).toBe('0:59');
+    });
+  });
+
+  it('every class the timer renders is actually styled', () => {
+    // The chip is three new class names on a surface whose stylesheet sets no
+    // font-family at all, so an unstyled `__elapsed-value` does not vanish — it
+    // renders in the body sans, at inherited size, with proportional digits
+    // that make the pill jitter once a second. Silent, and only visible on a TV.
+    const tsx = readFileSync('src/components/shared/draft-broadcast/OnTheClock.tsx', 'utf-8');
+    const css = readFileSync('src/styles/draft-broadcast.css', 'utf-8');
+    const used = [...tsx.matchAll(/dbc-idle__elapsed[\w-]*/g)].map((m) => m[0]);
+    expect(new Set(used).size).toBeGreaterThanOrEqual(3);
+    for (const cls of new Set(used)) {
+      expect(css, `.${cls} is rendered but never styled`).toContain(`.${cls}`);
+    }
+  });
+
+  it('the value wears fixed-width digits and the board display face', () => {
+    const css = readFileSync('src/styles/draft-broadcast.css', 'utf-8');
+    const block = /^\.dbc-idle__elapsed-value \{[\s\S]*?\n\}/m.exec(css)?.[0] ?? '';
+    expect(block, '.dbc-idle__elapsed-value rule not found').not.toBe('');
+    // Proportional digits change the pill's width on most of the ten
+    // transitions a minute — the chip visibly twitches for as long as a team is
+    // on the clock.
+    expect(block).toMatch(/font-variant-numeric:\s*tabular-nums/);
+    // Same reason `.dbc-idle__clock-status` states it: nothing on this page
+    // sets a font-family, and a <span> falls through to the body sans beside a
+    // condensed team name.
+    expect(block).toMatch(/font-family:\s*var\(--font-display\)/);
+  });
+
+  describe('clockAnchorMs', () => {
+    const opened = 1_800_000_000_000;
+    const live = [stamped(1, 'a', 1_799_999_400), slot(2)];
+
+    it('is the last pick, untouched, on a live board', () => {
+      // The SSR board is a deployed snapshot minutes old and counting from ITS
+      // newest stamp is correct — the pick really did land then. Flooring here
+      // would reset the room's clock on every reload of the laptop.
+      expect(clockAnchorMs(live, false, opened)).toBe(1_799_999_400_000);
+    });
+
+    it('floors a rehearsal to when the replay opened', () => {
+      // `?rehearse=8` seeds real picks from a FINISHED season, which
+      // applyRehearsal deliberately does not restamp. Measured on the dry run,
+      // that opened the board on `ELAPSED 2859:49:54`.
+      const seeded = [stamped(1, 'a', 1_700_000_000), stamped(2, 'b', 1_700_000_100), slot(3)];
+      expect(clockAnchorMs(seeded, true, opened)).toBe(opened);
+    });
+
+    it('lets a replayed pick overtake that floor', () => {
+      // applyRehearsal stamps everything the replay rolls forward to now, so the
+      // dry run's clock has to follow the replay rather than stay pinned to the
+      // moment the page opened.
+      const season = [
+        stamped(1, 'a', 1_700_000_000),
+        stamped(2, 'b', 1_700_000_100),
+        stamped(3, 'c', 1_700_000_200),
+      ];
+      const replayed = applyRehearsal(season, 2, 1, opened + 30_000);
+      expect(clockAnchorMs(replayed, true, opened)).toBe(opened + 30_000);
+    });
+
+    it('stays null when there is nothing to count from, rehearsing or not', () => {
+      // The floor must not conjure a timer onto the pre-draft screen, which
+      // says "First on the clock" and has no previous pick.
+      expect(clockAnchorMs([slot(1), slot(2)], true, opened)).toBeNull();
+      expect(clockAnchorMs([slot(1), slot(2)], false, opened)).toBeNull();
+      expect(clockAnchorMs([slot(1, 'a')], true, opened)).toBeNull();
+    });
+  });
+});
 
 describe('findRehearsalYear', () => {
   // The rehearsal link is the one control on this page that can dead-end:

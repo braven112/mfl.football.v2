@@ -91,6 +91,101 @@ export function findOnTheClock(picks: DraftRoomPick[]): DraftRoomPick | null {
   return picks.find((p) => !p.playerId) ?? null;
 }
 
+/**
+ * When MFL stamped the newest pick on this board, in epoch ms — or null when
+ * nothing has been picked yet, or when every stamp is unusable.
+ *
+ * This is the anchor the idle screen's count-up hangs off: the team on the
+ * clock has been on it since the pick before it landed, so "now minus this" is
+ * literally how long the room has been waiting. MFL's own stamp is the anchor
+ * rather than the moment this page first SAW the pick, because the board is
+ * reloadable and re-openable mid-draft — a client-side "when we noticed"
+ * anchor resets the clock to zero every time the laptop is refreshed, which is
+ * the one thing the room would notice immediately.
+ *
+ * `null` rather than 0 for "no stamp": a board whose picks carry no usable
+ * timestamp must show NO timer, not a timer counting up from 1970. Same
+ * philosophy as `isRevealWorthy` — a missing stamp is a missing fact, and this
+ * feature declines to invent one.
+ *
+ * The timestamp half of `boardAge` in DraftBroadcast.tsx is this function, on
+ * purpose: the flap-rejection comparison and the clock on screen must never
+ * disagree about which pick is the newest.
+ */
+export function lastPickAtMs(picks: DraftRoomPick[]): number | null {
+  let newest = 0;
+  for (const p of picks) {
+    if (!p.playerId) continue;
+    const ts = Number.parseInt(p.timestamp, 10);
+    if (Number.isFinite(ts) && ts > newest) newest = ts;
+  }
+  return newest > 0 ? newest * 1000 : null;
+}
+
+/**
+ * The instant the idle screen's count-up should count from, or null for no
+ * timer at all.
+ *
+ * Live, that is simply `lastPickAtMs`. The SSR board is a deployed feed
+ * snapshot up to a few minutes old, and counting from ITS newest stamp is not a
+ * bug — the pick really did land then, and the first accepted poll corrects the
+ * anchor the moment a fresher board arrives.
+ *
+ * A REHEARSAL needs a floor, and this is the whole reason this function exists.
+ * `applyRehearsal` restamps the picks the replay has rolled forward but
+ * deliberately leaves the SEEDED ones — the `?rehearse=N` history the operator
+ * asked to start from — carrying the finished season's own timestamps. That is
+ * right for `isRevealWorthy`, whose answer for months-old history is "don't
+ * reveal it". It is wrong here: measured on a dry run at `?rehearse=8`, the
+ * board opened on `ELAPSED 2859:49:54` and sat there until the first replayed
+ * pick landed sixteen seconds later. The dry run is the screen someone checks
+ * this feature on before draft night, so it is the last place it should show a
+ * five-digit hour count.
+ *
+ * `replayStartedMs` is when this board started watching. Flooring to it says
+ * the honest thing — the dry run has been running for eight seconds, so eight
+ * seconds is how long this team has been on the clock in the fiction being
+ * replayed — and lifts the moment a restamped pick overtakes it.
+ *
+ * NOT applied live, on purpose. A reload mid-draft would floor the anchor to
+ * the reload, so refreshing the laptop would silently reset a clock the room
+ * has been watching — the exact failure `lastPickAtMs` anchors off MFL's stamp
+ * to avoid.
+ */
+export function clockAnchorMs(
+  picks: DraftRoomPick[],
+  rehearsing: boolean,
+  replayStartedMs: number
+): number | null {
+  const last = lastPickAtMs(picks);
+  if (last === null) return null;
+  return rehearsing ? Math.max(last, replayStartedMs) : last;
+}
+
+/**
+ * Whole seconds as a wall clock — `4:12`, and `1:04:12` once it runs past an
+ * hour.
+ *
+ * Minutes are unpadded below an hour and padded above it, which is how every
+ * scoreboard and stopwatch a room has ever read one writes it: `9:07` alone,
+ * but `1:09:07` in a three-part clock.
+ *
+ * Clamps negatives to zero rather than rendering `-0:03`. That is not
+ * theoretical — the anchor comes from MFL's server clock and the count-up from
+ * the browser's, so a laptop running a few seconds slow makes the newest pick
+ * land in its future. A count-up that briefly sits at `0:00` is invisible; a
+ * negative one on a TV is a bug everyone in the room can see.
+ */
+export function formatElapsedClock(totalSeconds: number): string {
+  const total = Math.max(0, Math.floor(totalSeconds));
+  const seconds = total % 60;
+  const minutes = Math.floor(total / 60) % 60;
+  const hours = Math.floor(total / 3600);
+  const ss = String(seconds).padStart(2, '0');
+  if (hours <= 0) return `${minutes}:${ss}`;
+  return `${hours}:${String(minutes).padStart(2, '0')}:${ss}`;
+}
+
 /** The most recent selections, newest first, for the idle ticker. */
 export function recentPicks(picks: DraftRoomPick[], limit = 4): DraftRoomPick[] {
   return picks

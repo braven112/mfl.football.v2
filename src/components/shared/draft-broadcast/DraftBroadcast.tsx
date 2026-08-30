@@ -31,6 +31,7 @@ import {
   applyRehearsal,
   findOnTheClock,
   isRevealWorthy,
+  lastPickAtMs,
   playerMap,
   teamMap,
 } from '../../../utils/draft-broadcast';
@@ -129,15 +130,17 @@ interface BoardAge {
 }
 
 function boardAge(picks: DraftRoomPick[]): BoardAge {
-  let newestPick = 0;
+  // The newest-pick half is `lastPickAtMs`, which the idle screen's count-up
+  // also hangs off — one scanner, so the flap comparison here and the clock the
+  // room is reading can never disagree about which pick is the newest. It
+  // returns ms and null-for-none; this comparison wants MFL's own seconds and
+  // 0-for-none, which is what the conversion below restores.
+  const newest = lastPickAtMs(picks);
   let filled = 0;
   for (const p of picks) {
-    if (!p.playerId) continue;
-    filled += 1;
-    const ts = Number.parseInt(p.timestamp, 10);
-    if (Number.isFinite(ts) && ts > newestPick) newestPick = ts;
+    if (p.playerId) filled += 1;
   }
-  return { newestPick, filled };
+  return { newestPick: newest === null ? 0 : Math.floor(newest / 1000), filled };
 }
 
 /**
