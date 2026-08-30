@@ -1329,9 +1329,63 @@ describe('a traded pick names the team it came from, and nothing else', () => {
     expect(parseTradeFromComment('[Pick traded from Bring the Pain.] ')).toBe(
       'Bring the Pain'
     );
-    expect(parseTradeFromComment('[Pick traded Bring the Pain.]')).toBe(
-      'Bring the Pain'
+  });
+
+  it('reads a statement MFL did not wrap in brackets', () => {
+    // 77 comments in the committed feeds carry no brackets at all. The old
+    // pattern opened with `\[`, so every one of them read as UNTRADED.
+    expect(parseTradeFromComment('Pick traded from Da Dangsters.')).toBe(
+      'Da Dangsters'
     );
+  });
+
+  it('reads the hop out of a multi-statement block', () => {
+    // MFL puts several statements in ONE bracket block, newline-separated, so
+    // `.]` never follows the team name and `.` does not cross the newline.
+    // 93 of 250 bracketed trade comments were missed on this alone.
+    expect(
+      parseTradeFromComment(
+        '[Pick traded from Bring the Pain.\nPick made from Pre-Draft List] '
+      )
+    ).toBe('Bring the Pain');
+  });
+
+  it('reads a statement that sits AFTER a closed block', () => {
+    // Line-anchoring with `^` would fail this one.
+    expect(
+      parseTradeFromComment(
+        '[Pick made based on Pre-Draft List] Pick traded from Maverick.'
+      )
+    ).toBe('Maverick');
+  });
+
+  it('takes the FIRST hop — the original owner, not an intermediate', () => {
+    // MFL appends a line per hop, oldest first. Verified against TheLeague's
+    // 2023 `draftType: SAME` feed: position 07 belongs to The Music City
+    // Mafia, and 3.07's first line names it.
+    expect(
+      parseTradeFromComment(
+        '[Pick traded from The Music City Mafia.\nPick traded from Vitside Mafia.\nPick traded from Bring the Pain.]'
+      )
+    ).toBe('The Music City Mafia');
+  });
+
+  it('never reports the RECIPIENT of a "traded to" line as the origin', () => {
+    // `Pick traded to <TEAM>` names the team that received the pick. An
+    // optional `from` matches this and reports the origin exactly backwards.
+    expect(parseTradeFromComment('Pick traded to Dream')).toBeUndefined();
+    expect(parseTradeFromComment('[Pick traded to Dream.]')).toBeUndefined();
+  });
+
+  it('ignores owner chatter that merely contains the word "traded"', () => {
+    for (const comment of [
+      'Vit, you traded away your whole draft.',
+      'Almost traded this one.',
+      'The rights to Duke Johnson has been traded to Wabbits.',
+      'Player to be traded to Heavy Chevy.',
+    ]) {
+      expect(parseTradeFromComment(comment), comment).toBeUndefined();
+    }
   });
 
   it('trims the double space MFL writes after "from"', () => {
@@ -1371,6 +1425,14 @@ describe('a traded pick names the team it came from, and nothing else', () => {
       .filter(Boolean) as string[];
 
     expect(names.length, 'the 2023 feed has traded picks to parse').toBeGreaterThan(0);
+
+    // Every comment that says so is parsed — the bracket anchor used to drop
+    // the multi-statement ones, which read as untraded rather than as broken.
+    const claimTrade = picks.filter((p: { comments?: string }) =>
+      /Pick traded from /.test(p.comments || '')
+    ).length;
+    expect(names.length, 'no trade statement goes unparsed').toBe(claimTrade);
+
     for (const name of names) {
       expect(name, 'a parsed name is bare — the caller adds the preposition')
         .not.toMatch(/^from\b/i);

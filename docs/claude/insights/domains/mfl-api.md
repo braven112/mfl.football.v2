@@ -57,6 +57,13 @@
   draft that hasn't started. Go through `selectDraftUnit`
   (`src/utils/draft-utils.ts`), which normalizes both and takes a unit name;
   an unknown unit returns null rather than silently falling back to unit 0.
+- **`draftPick.comments` is a newline-separated LOG, not a sentence.** One
+  `[…]` block holds several statements, some picks carry none, and the trade
+  line can follow a closed block — so neither `\[…\]` nor a `^`-anchored line
+  match works. `Pick traded to <TEAM>` names the RECIPIENT, so `from` is
+  required, and the FIRST hop is the original owner. Go through
+  `parseTradeFromComment` (`src/utils/draft-utils.ts`); a comment that fails to
+  match reads as never-traded, not as an error.
 - **`data/nfl/bye-weeks.json` speaks MFL's team codes, `PlayerIdentity.nflTeam`
   speaks ESPN's.** MFL says GBP/LVR/KCC/NEP; `getPlayerMap()` has already
   resolved players to GB/LV/KC/NE. Joining the two raw silently produced "no
@@ -2443,3 +2450,56 @@ cut-player.ts` (the chosen owner-cookie auth pattern); `src/utils/
 mfl-matchup-api.ts` (`runRosterMove` — the existing `import?TYPE=ir`/
 `taxi_squad` call shape this design should mirror, adjusted per section E for
 the write host); `src/config/leagues-data.mjs` (`mflHost` per league).
+
+
+## 2026-08-30 - A Draft Pick's `comments` Is a LOG, Not a Sentence — and `traded to` Means the Opposite
+
+`parseTradeFromComment` (`src/utils/draft-utils.ts`) read `draftPick.comments`
+as one bracketed sentence. It is a newline-separated LOG of statements, and the
+gap shipped `Pick 1.11 · via from Bring the Pain` to a 65-inch screen on draft
+night. Four independent bugs in one regex; counted across every committed
+`draftResults.json`, **157 of 287 trade statements parsed before, 287 after.**
+
+**The `[…]` block holds SEVERAL statements, newline-separated.**
+`[Pick traded from A.\nPick made from Pre-Draft List]` — so `.]` does not follow
+the team name, and `.` does not match `\n`. 93 bracketed comments failed to
+match at all, and a pick that does not match reads as NEVER TRADED. That is the
+dangerous half: a wrong name is visible, a missing one is not.
+
+**Not every statement is bracketed, and not every one comes first.** 77 comments
+carry no brackets (`Pick traded from A.`); 8 put the statement AFTER a closed
+block (`[Pick made based on Pre-Draft List] Pick traded from A.`). So anchoring
+on `\[…\]` and anchoring each line with `^` each fail, on different rows. The
+terminator that works is a period followed by end-of-line, `]`, or end-of-string
+— which also preserves a team name that legitimately ends in one
+(`Be Gentle. It's my first time.`).
+
+**`Pick traded to <TEAM>` exists and names the RECIPIENT.** Requiring `from` is
+therefore load-bearing, not cosmetic. The original regex was
+`(?:traded|traded from)` — a dead alternation, since ordered alternation always
+matched `traded` first and left ` from ` to the capture, so every name came back
+as `"from X"`. Writing the obvious repair as an optional `(?: from)?` matches
+the `traded to` line too and reports the origin exactly BACKWARDS. There is no
+`[Pick traded <TEAM>.]` form anywhere in the corpus; the branch was never real.
+
+**The `"from X"` prefix also broke every name→franchise join in silence.** No
+team is called "from Bring the Pain", so each `config.name === originalTeamName`
+lookup that resolves the original owner's crest returned nothing — those logos
+had never once rendered. The doubled preposition was the only visible symptom of
+a bug with two halves. A downstream `replace(/^from\s+/i, '')` had been added in
+`BoardCell.tsx`, which fixed that one label while the `title` beside it still
+said `via from X`: the tell that the fix belonged at the parse, not the render.
+
+**MFL APPENDS one line per hop, oldest first, so the FIRST names the ORIGINAL
+owner** and the rest are intermediate holders — the shape `formatTradeChain`
+already renders as `from <first> via <rest>`. Proved rather than assumed, and
+the technique generalizes: TheLeague's 2023 feed is `draftType: SAME`, so pick
+position N belongs to one franchise in every round, which means an UNTRADED pick
+at position N reveals that position's original owner. Position 07's is The Music
+City Mafia and 3.07 leads with it; position 09's is Wascawy Wabbits and 3.09
+leads with it likewise.
+
+Guards live in `tests/draft-broadcast.test.ts` — one per shape above, the
+`traded to` and owner-chatter rejections, a sweep asserting every comment in the
+2023 feed saying `Pick traded from` parses, and a check that no consumer
+re-strips a `from ` prefix downstream.

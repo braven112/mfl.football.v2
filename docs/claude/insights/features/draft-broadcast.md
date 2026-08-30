@@ -569,6 +569,19 @@ NFL shield, which says nothing beside a name; an unrecognised team code and a
 school absent from the table would 404. All four return `logo: null` and the
 label stands on its own.
 
+### A traded pick's `via` line comes from a comment MFL writes as a LOG
+
+`· via from Bring the Pain` reached a 65-inch screen (2026-08-30) because
+`parseTradeFromComment` mis-parsed MFL's `draftPick.comments`. Four separate
+grammar bugs in one regex; 157 of 287 trade statements parsed before the fix,
+287 after, and the 130 recovered picks had been rendering as never-traded for
+the whole life of the feature.
+
+The grammar, the corpus counts, and the proof that the FIRST hop names the
+original owner live with the rest of the MFL feed data-shape traps:
+`grep -n "comments. is a LOG" docs/claude/insights/domains/mfl-api.md`.
+Guards are in `tests/draft-broadcast.test.ts`.
+
 ### Verifying this page in the sandbox: the `page.route` glob never matched
 
 **Corrected 2026-08-30 (Brandon).** The original note here recorded that

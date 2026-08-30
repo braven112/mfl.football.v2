@@ -294,21 +294,50 @@ function buildDraftPrediction(
  * comment MFL actually writes says "traded from", the capture began "from " on
  * literally all of them. That shipped as `· via from Bring the Pain` on the
  * broadcast, and silently broke every `config.name === originalTeamName`
- * lookup, so the traded-from crest never rendered anywhere. `(?: from)?` is
- * the same intent expressed as an optional group, which is what the
- * alternation was reaching for.
+ * lookup, so the traded-from crest never rendered anywhere.
+ *
+ * `from` is now REQUIRED rather than optional, because MFL also writes
+ * `Pick traded to <TEAM>` — which names the team that RECEIVED the pick. An
+ * optional `from` matches that line too and reports the recipient as the
+ * origin, i.e. exactly backwards. There is no `[Pick traded <TEAM>.]` form in
+ * any committed feed; the dead alternation branch was never a real shape.
  *
  * Trimmed because MFL's own feed contains double spaces after "from"
  * (`[Pick traded from  Running Down The Dream.]`) — a leading space fails an
  * exact name match exactly as invisibly as the "from " prefix did.
  *
+ * WHY NOT ANCHOR ON THE BRACKETS. Requiring `\[…\]` around the statement, as
+ * this did, silently dropped two thirds of the real corpus:
+ *
+ * - `[Pick traded from A.\nPick made from Pre-Draft List]` — MFL puts several
+ *   statements in ONE bracket block, newline-separated, so `.]` does not
+ *   follow the team name. `.` does not match `\n`, so this simply did not
+ *   match and the pick read as UNTRADED.
+ * - `Pick traded from A.` — 77 comments carry no brackets at all.
+ * - `[Pick made based on Pre-Draft List] Pick traded from A.` — the statement
+ *   can also sit AFTER a closed block, so line-anchoring with `^` fails too.
+ *
+ * The terminator is therefore "period, then end of line, `]`, or end of
+ * string" — which also keeps a team name that legitimately ends in a period
+ * (`Be Gentle. It's my first time.`) intact, since the lazy `(.+?)` only stops
+ * at a period that is actually followed by one of those.
+ *
+ * FIRST match wins because MFL APPENDS a line per hop, oldest first, so on a
+ * twice-traded pick the first names the ORIGINAL owner and the rest are
+ * intermediate holders — the shape `formatTradeChain` already renders as
+ * "from <first> via <rest>". Confirmed against TheLeague's 2023 feed, whose
+ * `draftType: SAME` means pick position N belongs to one franchise in every
+ * round: position 07's untraded owner is The Music City Mafia and 3.07 reads
+ * "traded from The Music City Mafia" first, then Vitside Mafia, then Bring the
+ * Pain; position 09's is Wascawy Wabbits, and 3.09 leads with it likewise.
+ *
  * @param comment - Draft pick comment from draftResults
- * @returns Parsed team name if traded, undefined if original
+ * @returns Original owner's team name if traded, undefined if never traded
  */
 export function parseTradeFromComment(comment: string): string | undefined {
   if (!comment) return undefined;
 
-  const tradeMatch = comment.match(/\[Pick traded(?: from)? (.+?)\.\]/);
+  const tradeMatch = comment.match(/Pick traded from (.+?)\.(?=\s*(?:\]|\n|$))/);
   if (tradeMatch) {
     return tradeMatch[1].trim();
   }
