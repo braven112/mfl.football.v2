@@ -169,6 +169,26 @@ Tests verify:
 3. **Test edge cases** - Null, undefined, empty arrays, boundary values
 4. **Keep tests fast** - Avoid real network calls in unit tests
 5. **Group related tests** - Use `describe` blocks for organization
+6. **Never assert a CALENDAR fact against a live feed** - Several suites read
+   the committed MFL feeds under `data/<league>/mfl-feeds/<year>/`, which a cron
+   keeps current. That is useful for checking a model behaves on real data, but
+   anything only true during part of the year is a time bomb. `starter-exposure`
+   asserted "the AFL's rosters are keepers only" and went red mid-season the day
+   the American League drafted - the feed went from 7 players to 16 for exactly
+   half the league (it drafts by conference), and nothing had regressed. State
+   the law instead (*"the lineup is the roster capped at the starter slots"*),
+   which holds pre-draft, mid-draft and post-draft, and let the feed check
+   consistency rather than the calendar. See #662.
+7. **A property covered only by live data is uncovered** - The corollary. When
+   the feed shape moves, coverage silently leaves with it: the same incident
+   removed the *only* check that short rosters start every player, because the
+   one franchise exercising it stopped being short. If a clause matters, pin it
+   on a fixture too - a fixture cannot drift halfway through a season.
+8. **Confirm a new guard can fail** - Mutate the implementation and watch it go
+   red before trusting it. The fixture added for #662 passed against a
+   deliberately broken `projectedStarters` on the first attempt, because its
+   roster held one player per position and never hit the position maximum the
+   code path exists for.
 
 ## Adding New Tests
 

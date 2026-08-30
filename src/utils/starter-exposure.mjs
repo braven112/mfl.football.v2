@@ -24,6 +24,18 @@
  * IS a starter and this returns exactly what the roster count returns. No
  * special-casing, and no pretending we know more than we do.
  *
+ * READ THE PARAGRAPH ABOVE AS BEING ABOUT REVEAL TIME, NOT ABOUT THE AFL.
+ * The degeneracy is a property of a roster too small to fill a lineup, which
+ * the AFL merely HAPPENS to have when its schedule is drawn. Its committed
+ * feeds keep moving after that: the AFL drafts by conference, so mid-draft the
+ * feed holds 12 franchises at 16 players and 12 still at 7-8, and once both
+ * conferences are done every roster is full. A test that asserts "the AFL is a
+ * no-op" against those feeds passes only inside the pre-draft window and goes
+ * red for the rest of the season with nothing actually broken — which is what
+ * happened (#662). `tests/starter-exposure.test.ts` states the cap law instead,
+ * and pins the short-roster clause on a fixture so it stays covered once no
+ * live franchise is short any more.
+ *
  * HOW A STARTER IS PICKED
  *
  * Best available by composite rank, filling the league's own lineup
