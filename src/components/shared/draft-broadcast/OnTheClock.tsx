@@ -75,13 +75,29 @@ const ELAPSED_TICK_MS = 250;
  *
  * Three things here are load-bearing:
  *
- * **It renders nothing until it has mounted.** This screen is in the
- * SERVER-rendered HTML (the board is `prerender = false`, the island is
+ * **It renders nothing until the BOARD has mounted, and `hydrated` is why that
+ * is not the same as "until THIS component has mounted".** This screen is in
+ * the SERVER-rendered HTML (the board is `prerender = false`, the island is
  * `client:load`), so a clock rendered during SSR ships a number baked at
  * response time — stale by however long the HTML sat in front of the browser,
- * and a hydration mismatch against the first client render besides. Starting at
- * `null` means the server emits no timer at all and the first client paint
- * agrees with it; the effect below fills it in on the very next frame.
+ * and a hydration mismatch against the first client render besides. So the
+ * first pass must emit nothing.
+ *
+ * The naive form of that — start at `null`, always — has a second-order bug
+ * that shipped and was caught in review. This chip sits inside
+ * `.dbc-idle__clock`, which is KEYED BY FRANCHISE so the crest's 404 walk
+ * resets when the clock moves (see the row's own comment). A key on an ancestor
+ * remounts everything under it, so `ClockElapsed` was remounted on every pick
+ * that changed the team on the clock, went back to `null`, and painted a frame
+ * with no chip before its effect refilled it — the exact blink the JSX comment
+ * at the call site claimed the design avoided, on all but the snake turn.
+ *
+ * `hydrated` is a single boolean that `OnTheClock` — which is never keyed and
+ * never remounts — flips once, after its own mount. Before it flips, this
+ * component is on the SSR/hydration pass and must render nothing. After it,
+ * every subsequent mount is a client-side remount where reading `Date.now()`
+ * in the initialiser is both safe and correct, so a remounted chip is painted
+ * with its number already in it.
  *
  * **It ticks four times a second, not once.** A one-second interval drifts —
  * the browser fires it late, the lateness accumulates, and the display skips a
@@ -106,8 +122,14 @@ const ELAPSED_TICK_MS = 250;
  * board. Implicit for the role, stated anyway so nobody "fixes" it into
  * `polite` later.
  */
-function ClockElapsed({ sinceMs }: { sinceMs: number }) {
-  const [nowSec, setNowSec] = useState<number | null>(null);
+function ClockElapsed({ sinceMs, hydrated }: { sinceMs: number; hydrated: boolean }) {
+  // Lazy initialiser, so `Date.now()` is read only on the mounts where it is
+  // allowed to be — see `hydrated` in the header. On the first pass this is
+  // `null` and the effect below fills it a frame later; on a remount it is
+  // already the answer.
+  const [nowSec, setNowSec] = useState<number | null>(() =>
+    hydrated ? Math.floor(Date.now() / 1000) : null
+  );
 
   useEffect(() => {
     const tick = () => {
@@ -367,6 +389,19 @@ export function OnTheClock({
   const openedAtRef = useRef(Date.now());
 
   /**
+   * False on the SSR pass and on the hydrating render, true forever after.
+   *
+   * `ClockElapsed` reads it to decide whether it may seed itself from
+   * `Date.now()` — see its header. It lives HERE because this component is the
+   * one that never remounts: the chip's own row is keyed by franchise, so any
+   * "have we mounted" state kept inside the chip resets every time the clock
+   * moves, which is precisely the bug this flag exists to fix. Flips once, so
+   * it costs exactly one extra render for the life of the board.
+   */
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
+
+  /**
    * When the previous pick landed — the origin of the on-the-clock count-up.
    *
    * Derived from the board rather than passed in, like `recent` and `upcoming`
@@ -577,12 +612,18 @@ export function OnTheClock({
                   "what" and "which pick" before it answers "how long", and the
                   count-up is the only line here that moves — at the bottom of
                   the stack it can change every second without shifting anything
-                  above it. Deliberately NOT keyed by the anchor: remounting
-                  it per pick puts the pill through a null render on the way
-                  back, so it blinks out and in on the TV every single time the
-                  clock moves. It reads the anchor during render instead, so a
-                  new one lands as 0:00 on the very same frame. */}
-              {clockAnchor !== null ? <ClockElapsed sinceMs={clockAnchor} /> : null}
+                  above it.
+
+                  Deliberately NOT keyed by the anchor — but note that it is
+                  remounted anyway, because `.dbc-idle__clock` above is keyed by
+                  franchise and a key remounts the whole subtree. `hydrated` is
+                  what makes that harmless: it lets a remounted chip paint with
+                  its number already in it instead of blinking through a null
+                  render. Both halves are needed — dropping the key here does
+                  not save it from the key up there. */}
+              {clockAnchor !== null ? (
+                <ClockElapsed sinceMs={clockAnchor} hydrated={hydrated} />
+              ) : null}
             </div>
           </div>
         )}

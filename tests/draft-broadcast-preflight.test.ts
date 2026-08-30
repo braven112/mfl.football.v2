@@ -25,7 +25,7 @@ import {
   planBroadcastImages,
   resolveWarmDepth,
 } from '../src/utils/draft-broadcast-images';
-import { applyRehearsal, isRevealWorthy } from '../src/utils/draft-broadcast';
+import { applyRehearsal, isRevealWorthy, lastPickAtMs } from '../src/utils/draft-broadcast';
 import { collectFreshPicks } from '../src/utils/pick-reveal';
 import {
   MFL_EXPORT_HOST,
@@ -418,17 +418,22 @@ describe('hasDraftSlots', () => {
  * is why these cases are stated against board AGE and not a merge.
  */
 describe('a flapping MFL board', () => {
-  /** `boardAge`, verbatim — see DraftBroadcast.tsx. */
+  /**
+   * `boardAge` from DraftBroadcast.tsx.
+   *
+   * The stamp half CALLS the real `lastPickAtMs` rather than re-typing its
+   * loop. This used to be a hand-copy marked "verbatim", which is a guard that
+   * decays silently: the copy keeps passing on its own terms while the source
+   * drifts, and it did exactly that the day `boardAge` was refactored onto
+   * `lastPickAtMs`. Only the count half is still local, because `boardAge`
+   * keeps that inline too.
+   */
   const age = (picks: { playerId: string; timestamp: string }[]) => {
-    let newestPick = 0;
-    let filled = 0;
-    for (const p of picks) {
-      if (!p.playerId) continue;
-      filled += 1;
-      const ts = Number.parseInt(p.timestamp, 10);
-      if (Number.isFinite(ts) && ts > newestPick) newestPick = ts;
-    }
-    return { newestPick, filled };
+    const newest = lastPickAtMs(picks);
+    return {
+      newestPick: newest === null ? 0 : Math.floor(newest / 1000),
+      filled: picks.filter((p) => p.playerId).length,
+    };
   };
 
   /** `isAtLeastAsRecent`, verbatim. */

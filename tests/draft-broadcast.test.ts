@@ -448,6 +448,38 @@ describe('the on-the-clock count-up', () => {
     });
   });
 
+  it('the chip survives the keyed row\'s remount without blinking', () => {
+    // `.dbc-idle__clock` is keyed by franchise so the crest's 404 walk resets
+    // when the clock moves. A key remounts the WHOLE subtree, and the chip is
+    // inside it — so a `ClockElapsed` that decides "have I mounted yet" from its
+    // OWN state goes back to null on every pick and paints a frame with no chip.
+    // That shipped and was caught in review; the fix is a `hydrated` flag owned
+    // by OnTheClock, which is never keyed.
+    const tsx = readFileSync('src/components/shared/draft-broadcast/OnTheClock.tsx', 'utf-8');
+
+    // The premise. If this ever stops matching, the crest walk changed too —
+    // re-read both before deciding the flag is unnecessary.
+    expect(tsx, 'the on-the-clock row is no longer keyed by franchise').toMatch(
+      /className="dbc-idle__clock"\s+key=/
+    );
+    // The seed is conditional on the flag, not an unconditional null.
+    expect(tsx, 'ClockElapsed must seed its clock from the hydrated flag').toMatch(
+      /hydrated \? Math\.floor\(Date\.now\(\)/
+    );
+    // And the flag is owned OUTSIDE the keyed row, or it resets with everything
+    // else and the guard above buys nothing.
+    expect(tsx, 'the hydrated flag must be passed into ClockElapsed').toMatch(
+      /<ClockElapsed[^>]*hydrated=\{hydrated\}/s
+    );
+    const flagDecl = tsx.indexOf('const [hydrated, setHydrated]');
+    const keyedRow = tsx.indexOf('className="dbc-idle__clock"');
+    expect(flagDecl, 'hydrated flag not declared').toBeGreaterThan(-1);
+    expect(
+      flagDecl < keyedRow,
+      'the hydrated flag must be declared in OnTheClock, above the keyed row'
+    ).toBe(true);
+  });
+
   it('every class the timer renders is actually styled', () => {
     // The chip is three new class names on a surface whose stylesheet sets no
     // font-family at all, so an unstyled `__elapsed-value` does not vanish — it

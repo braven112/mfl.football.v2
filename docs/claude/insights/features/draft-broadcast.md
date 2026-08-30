@@ -1073,91 +1073,69 @@ against the board's own newest timestamp rather than the wall clock.
 
 ## 2026-08-30 — The on-the-clock count-up
 
-The idle screen named the team on the clock and named it identically at eight
-seconds and at eight minutes, so the only instrument the room had was somebody
-eventually asking out loud whether the guy was even there. It now carries an
-`ELAPSED` chip counting up from the last pick — `lastPickAtMs` + `clockAnchorMs`
-+ `formatElapsedClock` in `draft-broadcast.ts`, `ClockElapsed` in
-`OnTheClock.tsx`, `.dbc-idle__elapsed*` in the stylesheet.
+An `ELAPSED` chip on the idle screen counting up from the last pick.
+`lastPickAtMs` / `clockAnchorMs` / `formatElapsedClock` in `draft-broadcast.ts`,
+`ClockElapsed` in `OnTheClock.tsx`, `.dbc-idle__elapsed*` in the stylesheet.
 
-### The `Date.now()` rule from the section above fired again, on its second try
+Two lessons out of this were not board-specific and live in
+`docs/claude/insights/domains/frontend.md` under the same date: **a `key` on an
+ANCESTOR remounts you** (this chip blinked on every pick — 4 in 4 team changes,
+measured — because `.dbc-idle__clock` above it is keyed by franchise), and **a
+guard test marked "verbatim" decays silently** (the preflight file's hand-copied
+`boardAge`). Read those before touching `OnTheClock`'s state or the preflight
+guards.
 
-The previous entry closes with "any check on this board that reads `Date.now()`
-must be asked what it does to a replayed board before it merges." This feature
-is that class, and asking the question up front caught HALF of it:
-`applyRehearsal` restamps the picks a replay rolls forward, so a dry run's clock
-follows the replay — the obvious case, and the one a test was written for first.
+### The `Date.now()` rule above fired again, and asking it caught only half
 
-What the question missed until the board was actually opened is the SEEDED half.
-`?rehearse=8` starts from eight real picks of a finished season, which
-`applyRehearsal` deliberately does not restamp. Measured on the dry run, the
-board opened on **`ELAPSED 2859:49:54`** and sat there for the sixteen seconds
-until the first replayed pick landed.
+The previous entry ends: "any check on this board that reads `Date.now()` must
+be asked what it does to a replayed board before it merges." Asking it up front
+caught the REPLAYED picks — `applyRehearsal` restamps those, so the clock
+follows the replay.
 
-Both halves are the same fact — a rehearsal's history is not the rehearsal's
-"now" — and the seeded half is invisible to reasoning about `applyRehearsal`
-alone, because that function is *right*: for `isRevealWorthy`, whose only
-question is "should this take the screen", months-old history correctly answers
-no. The anchor asks a different question of the same stamps and needs a
-different answer. Hence `clockAnchorMs(picks, rehearsing, replayStartedMs)` —
-one line of floor, applied ONLY while rehearsing, because flooring live would
-reset the room's clock every time somebody reloads the laptop.
+It missed the SEEDED ones. `?rehearse=8` starts from eight real picks of a
+finished season, which `applyRehearsal` deliberately does not restamp; the dry
+run opened on **`ELAPSED 2859:49:54`** and sat there until the first replayed
+pick landed. This is invisible from reasoning about `applyRehearsal` alone,
+because that function is *right*: for `isRevealWorthy`, whose question is "should
+this take the screen", months-old history correctly answers no. A second consumer
+asks a different question of the same stamps and needs a different answer. Hence
+`clockAnchorMs(picks, rehearsing, replayStartedMs)` — floor to the replay start,
+**rehearsal only**, because flooring live would reset the room's clock every time
+somebody reloads the laptop.
 
-**Carry forward:** when a second consumer starts reading a field, re-ask the
-rehearsal question *for that consumer*. "`applyRehearsal` already handles the
-stamps" is a statement about the first consumer.
+**Carry forward:** when a new consumer starts reading a field, re-ask the
+rehearsal question *for that consumer*. "`applyRehearsal` handles the stamps" is
+a statement about the first one.
 
-### An SSR-rendered clock is stale AND a hydration mismatch — start at null
-
-`OnTheClock` is in the server-rendered HTML (`prerender = false`, island is
-`client:load`). A count-up that renders a number during SSR bakes it at response
-time and then disagrees with the first client render. `ClockElapsed` starts at
-`null` and renders nothing until its effect runs, so the server emits no timer
-and hydration matches; the number appears on the next frame.
-
-Two smaller things that are load-bearing in the same component:
-
-- **Tick at 250ms, hold whole seconds in state.** A 1000ms interval drifts and
-  visibly skips a second every minute or so, which on a stopwatch the room is
-  staring at is the artefact that makes people stop trusting it. Setting state
-  to a value it already holds bails React out before rendering, so three ticks
-  in four cost one comparison.
-- **State holds the wall clock, not the elapsed count.** The elapsed value is
-  derived during render from the anchor prop, so the pick that moves the clock
-  to the next team lands as `0:00` on the same frame as the new team's name.
-  Storing elapsed instead — or keying the component on the anchor to remount it
-  — puts the chip through a null render on the way back, and it blinks out and
-  in on the TV at every single pick.
-
-`font-variant-numeric: tabular-nums` on the value is not styling. Without it the
-pill changes width on most of the ten digit transitions a minute, so it twitches
-for as long as a team is on the clock. `tests/draft-broadcast.test.ts` guards
-that, the display face, and that every `.dbc-idle__elapsed*` class the component
-renders is actually styled — this stylesheet sets no `font-family` at all, so an
-unstyled span does not vanish, it just quietly renders in the body sans.
+Also on this board specifically: tick the clock at **250ms holding whole
+seconds**, not a 1000ms interval, which drifts and visibly skips a second a
+minute on a stopwatch a room is staring at; same-value `setState` bails before
+rendering, so the extra ticks are free. And `font-variant-numeric: tabular-nums`
+on the digits is not styling — without it the pill changes width on most of the
+ten transitions a minute and twitches for as long as a team is on the clock.
 
 ### Correction: `page.route` DOES intercept this page's images — the GLOB was wrong
 
-The 2026-08-28 section above records context routes never firing for this page's
-headshots and logos, "cause not chased further". Chased now: the pattern was a
-glob like `**://*`, and Playwright's `*` does not cross `/`, so it never matched
-`https://a.espncdn.com/i/headshots/nfl/players/full/3915416.png` — or anything
-else with a path. The handler was correct and simply never ran, which is exactly
-what "the handler's own console.log never printed" reports.
-
-**Pass a RegExp instead** and interception works normally, including
-`route.fulfill`:
+The 2026-08-28 note above records context routes never firing here, "cause not
+chased further". Chased: the pattern was a glob, and Playwright's `*` does not
+cross `/`, so `**://*` never matched a URL with a path. The handler was correct
+and simply never ran — exactly what "its own `console.log` never printed"
+reports. Pass a **RegExp** instead and `route.fulfill` works normally:
 
 ```js
 await page.route(/^https?:\/\//, async (route) => { … });
 ```
 
-The remote sandbox also has no direct route to the CDNs — only the agent proxy,
+The remote sandbox also has no direct route to the CDNs, only the agent proxy,
 which speaks CONNECT and so cannot be handed to Chromium as an HTTP proxy for a
-`localhost` dev server. Fetching each asset with `curl` inside the handler and
-`route.fulfill`ing the bytes gets a board with real faces and crests on it. That
-is what produced the What's New capture; `?warm=0` turns off the pre-flight
-warm-up so the run is not also pulling 234 images through the same path.
+`localhost` dev server. Fetch each asset with `curl` inside the handler and
+fulfill the bytes; `?warm=0` stops the pre-flight warm-up competing for the same
+path. That is what produced a board with real faces on it for the What's New
+capture. The old advice still stands when you only need layout: rewrite `src` in
+the page, reading `outerHTML` first.
 
-The other half of the old advice still stands and is still the cheaper move when
-you only need layout: rewrite `src` in the page and read `outerHTML` first.
+> **This file is near the 64 KB `insights-curated-head` ceiling.** The next
+> substantial addition needs a `<!-- CURATED-HEAD -->` block — which also means
+> dating the `## Insights` subsections into 10+ archive entries, since that
+> guard checks for them. Budget for that rather than trimming prose again, and
+> prefer `domains/` for anything not specific to this board.

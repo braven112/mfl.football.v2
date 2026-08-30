@@ -112,7 +112,13 @@ export function findOnTheClock(picks: DraftRoomPick[]): DraftRoomPick | null {
  * purpose: the flap-rejection comparison and the clock on screen must never
  * disagree about which pick is the newest.
  */
-export function lastPickAtMs(picks: DraftRoomPick[]): number | null {
+export function lastPickAtMs(
+  // The two fields it actually reads, not the whole pick — `boardAge`'s guard in
+  // `tests/draft-broadcast-preflight.test.ts` builds boards out of exactly this
+  // pair, and a `DraftRoomPick[]` signature is what forced that guard to
+  // hand-copy the loop instead of calling it.
+  picks: readonly Pick<DraftRoomPick, 'playerId' | 'timestamp'>[]
+): number | null {
   let newest = 0;
   for (const p of picks) {
     if (!p.playerId) continue;
