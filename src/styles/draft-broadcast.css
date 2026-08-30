@@ -1072,6 +1072,52 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* The count-up since the last pick landed — how long this team has been on the
+   clock. A chip rather than a fourth line of loose copy: it is the one element
+   on this screen that MOVES, and the enclosure is what keeps a changing number
+   from reading as the copy stack twitching.
+
+   `inline-flex`, so it hugs its digits and inherits the copy block's alignment
+   — the lockup left-aligns beside a crest and re-centres without one (see
+   `.dbc-idle__crest + .dbc-idle__clock-copy`), and a block-level chip would
+   have to be told about both cases separately. */
+.dbc-idle__elapsed {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.55em;
+  margin: 0.55em 0 0;
+  padding: 0.28em 0.85em 0.34em;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 999px;
+  /* Dark rather than a white scrim: this chip sits on the franchise's own
+     gradient, which runs anywhere from near-black to gold, and a light wash
+     disappeared entirely on the pale end of that range. */
+  background: rgba(0, 0, 0, 0.32);
+}
+
+.dbc-idle__elapsed-label {
+  font-size: clamp(0.55rem, 1.3vh, 0.95rem);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.dbc-idle__elapsed-value {
+  /* Stated for the same reason `.dbc-idle__clock-status` states it: this file
+     sets no font-family, and a <span> gets the body sans rather than the
+     condensed display face every other big number on this board wears. */
+  font-family: var(--font-display);
+  font-size: clamp(1.05rem, 3.2vh, 2.7rem);
+  font-weight: 900;
+  line-height: 1;
+  color: #fff;
+  /* Not cosmetic. Without fixed-width digits the pill changes width on most of
+     the ten transitions per minute, so the whole chip jitters on the TV for the
+     entire time a team is on the clock. */
+  font-variant-numeric: tabular-nums;
+}
+
 .dbc-idle__rails {
   position: relative;
   display: grid;
@@ -1317,6 +1363,17 @@
   .dbc-idle__pick {
     margin-top: 0.3em;
     font-size: clamp(0.8rem, 2vh, 1.4rem);
+  }
+
+  /* Tracks the pick line down, for the same reason: the stage stack has to fit
+     above the rails on a 720p panel, and this chip is the bottom of it. */
+  .dbc-idle__elapsed {
+    margin-top: 0.35em;
+    padding: 0.24em 0.7em 0.3em;
+  }
+
+  .dbc-idle__elapsed-value {
+    font-size: clamp(1rem, 2.7vh, 1.9rem);
   }
 
   .dbc-idle__stage {

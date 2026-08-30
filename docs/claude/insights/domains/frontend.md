@@ -2508,3 +2508,55 @@ signature had gained a parameter, in handlers that map a visible-list index back
 onto the full list. Those would have moved the wrong row, silently, only while a
 filter was on. A signature change is exactly when the type baseline earns its
 three minutes.
+
+## 2026-08-30 - A `key` On An ANCESTOR Remounts You, So "I Didn't Key It" Proves Nothing
+
+The draft broadcast's new on-the-clock count-up (`ClockElapsed`,
+`OnTheClock.tsx`) is SSR-safe by the standard pattern: state starts `null`, the
+component renders nothing on the server and on the hydrating pass, and an effect
+fills it in. It shipped with a comment saying it is "deliberately NOT keyed, so
+it never blinks."
+
+It blinked on every pick. Its grandparent `.dbc-idle__clock` is keyed by
+franchise — deliberately, so a failed crest's `display:none` does not stick to
+the next team — and **a key remounts the entire subtree beneath it.** So the
+chip restarted at `null` on every pick that changed the team and painted one
+frame with nothing in it. Measured with a `MutationObserver` over the idle
+board: **4 blinks across 4 team changes** before the fix, 0 after.
+
+**The generalisation is the point.** Mount-once state is only mount-once if
+*every* ancestor up to a stable one is unkeyed — which is a property of code the
+component cannot see. A comment inside a component asserting that it does not
+remount is asserting something outside its own scope, and it will be wrong the
+first time a parent grows a `key`. This is the same shape as the TDZ and
+`set:html` entries above: a local claim about a non-local property.
+
+The fix separates "has the page hydrated yet?" (a boolean owned by the nearest
+component that is genuinely never keyed, flipped once in a mount effect and
+passed down) from "am I mounting?" (local). Before the flag flips, render
+nothing — the SSR pass, where a baked `Date.now()` is both stale by the age of
+the HTML and a hydration mismatch. After it, a remounting child may seed itself
+from `Date.now()` in its state initialiser and paint complete.
+
+Reach for this whenever an SSR-guarded island keeps state that must survive a
+re-render but sits under a list, a keyed row, or anything else whose identity
+can change.
+
+## 2026-08-30 - A Guard Test Marked "verbatim" Decays Silently The Moment Its Source Is Refactored
+
+`tests/draft-broadcast-preflight.test.ts` carried a hand-copied `boardAge` under
+the comment "`boardAge`, verbatim — see DraftBroadcast.tsx". Refactoring the
+real `boardAge` onto a shared helper made that comment false and **nothing
+failed** — the copy exercises itself, so it passes on its own terms no matter
+how far the source drifts. That is strictly worse than having no guard, because
+it reads like coverage in the file listing and in review.
+
+It was a copy only because there was nothing importable to call. The fix is
+usually available for free at exactly the moment you notice: extract the shared
+helper the copy was standing in for, and widen its parameter type to the fields
+it actually reads (`Pick<T, 'a' | 'b'>[]` rather than the full record) so the
+test's minimal fixtures still satisfy it.
+
+**`grep -rn "verbatim" tests/` before refactoring anything.** A comment is not a
+binding. That grep currently returns three more live copies in the broadcast
+preflight file alone.

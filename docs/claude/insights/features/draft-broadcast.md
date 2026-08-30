@@ -1070,3 +1070,72 @@ so a TV laptop running more than 90 seconds FAST would suppress every reveal on
 live draft night with the identical, silent symptom. Skew the other way is
 harmless. If that ever needs closing, the fix is to measure a pick's age
 against the board's own newest timestamp rather than the wall clock.
+
+## 2026-08-30 — The on-the-clock count-up
+
+An `ELAPSED` chip on the idle screen counting up from the last pick.
+`lastPickAtMs` / `clockAnchorMs` / `formatElapsedClock` in `draft-broadcast.ts`,
+`ClockElapsed` in `OnTheClock.tsx`, `.dbc-idle__elapsed*` in the stylesheet.
+
+Two lessons out of this were not board-specific and live in
+`docs/claude/insights/domains/frontend.md` under the same date: **a `key` on an
+ANCESTOR remounts you** (this chip blinked on every pick — 4 in 4 team changes,
+measured — because `.dbc-idle__clock` above it is keyed by franchise), and **a
+guard test marked "verbatim" decays silently** (the preflight file's hand-copied
+`boardAge`). Read those before touching `OnTheClock`'s state or the preflight
+guards.
+
+### The `Date.now()` rule above fired again, and asking it caught only half
+
+The previous entry ends: "any check on this board that reads `Date.now()` must
+be asked what it does to a replayed board before it merges." Asking it up front
+caught the REPLAYED picks — `applyRehearsal` restamps those, so the clock
+follows the replay.
+
+It missed the SEEDED ones. `?rehearse=8` starts from eight real picks of a
+finished season, which `applyRehearsal` deliberately does not restamp; the dry
+run opened on **`ELAPSED 2859:49:54`** and sat there until the first replayed
+pick landed. This is invisible from reasoning about `applyRehearsal` alone,
+because that function is *right*: for `isRevealWorthy`, whose question is "should
+this take the screen", months-old history correctly answers no. A second consumer
+asks a different question of the same stamps and needs a different answer. Hence
+`clockAnchorMs(picks, rehearsing, replayStartedMs)` — floor to the replay start,
+**rehearsal only**, because flooring live would reset the room's clock every time
+somebody reloads the laptop.
+
+**Carry forward:** when a new consumer starts reading a field, re-ask the
+rehearsal question *for that consumer*. "`applyRehearsal` handles the stamps" is
+a statement about the first one.
+
+Also on this board specifically: tick the clock at **250ms holding whole
+seconds**, not a 1000ms interval, which drifts and visibly skips a second a
+minute on a stopwatch a room is staring at; same-value `setState` bails before
+rendering, so the extra ticks are free. And `font-variant-numeric: tabular-nums`
+on the digits is not styling — without it the pill changes width on most of the
+ten transitions a minute and twitches for as long as a team is on the clock.
+
+### Correction: `page.route` DOES intercept this page's images — the GLOB was wrong
+
+The 2026-08-28 note above records context routes never firing here, "cause not
+chased further". Chased: the pattern was a glob, and Playwright's `*` does not
+cross `/`, so `**://*` never matched a URL with a path. The handler was correct
+and simply never ran — exactly what "its own `console.log` never printed"
+reports. Pass a **RegExp** instead and `route.fulfill` works normally:
+
+```js
+await page.route(/^https?:\/\//, async (route) => { … });
+```
+
+The remote sandbox also has no direct route to the CDNs, only the agent proxy,
+which speaks CONNECT and so cannot be handed to Chromium as an HTTP proxy for a
+`localhost` dev server. Fetch each asset with `curl` inside the handler and
+fulfill the bytes; `?warm=0` stops the pre-flight warm-up competing for the same
+path. That is what produced a board with real faces on it for the What's New
+capture. The old advice still stands when you only need layout: rewrite `src` in
+the page, reading `outerHTML` first.
+
+> **This file is near the 64 KB `insights-curated-head` ceiling.** The next
+> substantial addition needs a `<!-- CURATED-HEAD -->` block — which also means
+> dating the `## Insights` subsections into 10+ archive entries, since that
+> guard checks for them. Budget for that rather than trimming prose again, and
+> prefer `domains/` for anything not specific to this board.

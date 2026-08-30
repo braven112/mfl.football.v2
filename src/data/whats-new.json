@@ -1,5 +1,28 @@
 [
   {
+    "id": "draft-broadcast-clock-timer",
+    "date": "2026-08-30",
+    "category": "enhancement",
+    "icon": "draft-podium",
+    "leagues": [
+      "theleague",
+      "afl"
+    ],
+    "title": "The Room Can Now See Exactly How Long You've Been Thinking",
+    "link": "/draft-broadcast",
+    "linkLabel": "Open the big board",
+    "summary": "The big board told the room who was on the clock and said it in precisely the same way at eight seconds and at eight minutes. It now counts up from the last pick, so everybody watching the TV knows exactly how long a man has been sitting there.",
+    "description": [
+      "Between picks, <a href=\"/draft-broadcast\">the Draft Broadcast</a> has always answered one question very well and refused to answer the other one at all. Whose turn it is: crest the size of a dinner plate, name above it, ON THE CLOCK underneath, unmissable from the far end of the room. How long it has been his turn: nothing. The screen looked identical eight seconds after a pick and eight minutes after it, which meant the only instrument the room had was somebody eventually saying “is he even here?”",
+      "So the board now runs a clock. Under the pick number there is an <strong>ELAPSED</strong> chip counting up from the moment the previous selection landed — <strong>0:09</strong>, <strong>4:12</strong>, and if a round genuinely goes that way, <strong>1:05:07</strong>. It snaps back to 0:00 the instant the next team comes up, so the number on screen is always this team's, never the last one's.",
+      "It counts from MFL's own timestamp on the previous pick, not from whenever this page happened to open, and that distinction is the whole feature. Somebody's laptop dying and getting reloaded in round four does not hand the man on the clock a fresh three minutes — the board comes back up already knowing he has been thinking for six. Before the first pick of the night it stays away entirely, because “First on the clock” has nothing to count from, and once the last pick is in it leaves with the rest of the furniture.",
+      "Nothing else about draft night changes. Keep making your picks in MFL, keep the board plugged into the TV, and keep <a href=\"/draft-predictor\">the predictor</a> open on a second screen if you like being told what is about to happen to you. The clock is simply the room's answer to a question it was already asking out loud."
+    ],
+    "image": "draft-broadcast-clock-timer.webp",
+    "imageAlt": "The Draft Broadcast board for The League in full screen, painted in the Pacific Pigskins' deep red. The Pigskins' boar crest fills the left half of the stage, and to its right the copy reads “Pacific Pigskins” in small type over a large “On the clock”, then “Pick 1.10”, and beneath that a dark rounded chip labelled ELAPSED showing 0:08 in fixed-width digits. The header runs “THE LEAGUE” on the left and “PICK 10 OF 51 · 3 ROUNDS × 17” on the right. Along the bottom, JUST OFF THE BOARD lists 1.09 KC Concepcion (WR · CLE), 1.08 Eli Stowers (TE · PHI), 1.07 Fernando Mendoza (QB · LV) and 1.06 Makai Lemon (WR · PHI), each with the player's headshot and the drafting franchise's crest, while UP NEXT lists 1.11 Dark Magicians, 1.12 Vitside and 1.13 Da Dangsters.",
+    "excludeFromHero": true
+  },
+  {
     "id": "theleague-draft-broadcast",
     "date": "2026-08-28",
     "category": "new-page",
@@ -872,25 +895,6 @@
     "link": "/afl-fantasy/franchises/0014#name-history",
     "linkLabel": "See the full name history",
     "icon": "gavel",
-    "excludeFromHero": true,
-    "leagues": [
-      "afl"
-    ]
-  },
-  {
-    "id": "afl-division-titles-mfl-official-2026-08-11",
-    "date": "2026-08-11",
-    "title": "The Record Books Get an Audit: 22 Division Titles Restored to Their Rightful Owners",
-    "summary": "Historical AFL division titles were being computed with a homebrew tiebreaker instead of the constitution. MFL's official standings are now the source of truth — and 22 banners just changed hands, from 2004 all the way to last season.",
-    "description": [
-      "Somewhere along the way, the site's record books started freelancing. When we backfilled two decades of AFL history, the code crowning each division's champion sorted by division record first — and at one point even used raw points-for as a tiebreaker. That's not how this league works. The constitution is clear: overall record wins the division, and ties run the full gauntlet — head-to-head, division record, conference record, Power Rank, points, all-play, victory points, most points allowed, coin flip. MFL has been applying those exact rules all along.",
-      "So we stopped re-deriving history and went to the source. MFL's official final standings now decide every division title, every season, 2004 through 2025 — and an independent recomputation using the constitution's own tiebreaker chain agrees with MFL in all 100-plus division-seasons on the books. The fallout: 22 division banners moved to their rightful owners. Dicks out for Harambe's 12-5 season finally beats a 9-8 record for the 2025 AL South crown. Chatmaster's 14-3 masterpiece in 2017 takes the NL West it always deserved. And the all-time trophy count has a new king: the Drunk Indians, at 19 pieces of hardware, with Smokane FC sliding to second at 17.",
-      "The standings pages got the same treatment — historical and current standings now render in MFL's official order on every AFL surface, so the trophy room, the standings page, and the playoff picture finally tell the same story. A regression suite now locks all of this in so no homebrew math ever sneaks back into the record books."
-    ],
-    "category": "bug-fix",
-    "link": "/afl-fantasy/standings",
-    "linkLabel": "See the corrected standings",
-    "icon": "trophy",
     "excludeFromHero": true,
     "leagues": [
       "afl"
