@@ -51,6 +51,13 @@ Playwright is in node_modules; Chromium is pre-installed:
   switch https→http).
 - External headshot hosts (espncdn, myfantasyleague) are unreachable —
   fulfill them with a placeholder image or accept broken avatars.
+- **Prefer a `RegExp` over a glob in `route()`.** A single `*` does not cross
+  `/`, so `'**://*'` compiles to `^(.*)://([^/]*)$` and matches a bare
+  scheme + host but NOTHING with a path. A glob that matches nothing is not an
+  error — the handler registers and is simply never called, which reads as
+  "interception doesn't work on this page". `ctx.route(/espncdn\.com/, …)` has
+  no such trap. To check a glob:
+  `require('playwright-core/lib/utils/isomorphic/urlMatch.js').globToRegexPattern(p)`.
 - Dark mode: add cookie `theme_pref=dark`.
 
 ## Test data

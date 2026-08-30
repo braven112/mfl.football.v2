@@ -2,6 +2,14 @@
   "weekOf": "2026-08-31",
   "changes": [
     {
+      "date": "2026-08-30",
+      "type": "bug-fix",
+      "summary": "A traded pick now says who it came from once, and shows their logo. The draft broadcast had been announcing \"Pick 1.11 · via from Bring the Pain\" on the TV, and the same doubled-up wording turned up wherever a traded pick appeared — the draft room's board, the draft predictor, your team's pick list. MyFantasyLeague writes these as \"[Pick traded from Bring the Pain.]\" and we were keeping the word \"from\" as part of the team's name, then putting our own \"via\" or \"from\" in front of it. Worse, and quieter: because \"from Bring the Pain\" matches no team in the league, every place that tries to put the original owner's crest beside a traded pick looked for that team, failed, and showed nothing — so those logos have never once appeared. Both are fixed at the source, so the name is just the name everywhere it renders.",
+      "impact": "user",
+      "area": "draft",
+      "league": "both"
+    },
+    {
       "date": "2026-08-29",
       "type": "bug-fix",
       "summary": "The draft broadcast's rehearsal mode shows the big reveal again. Rehearsal replays a season that has already finished so the board can be driven end-to-end before draft night, and last week's fix for autopick bursts — which stops the screen narrating picks the room watched happen minutes ago — judged a pick's newsworthiness by how recently it was made. Every pick in a finished season is months old, so the dry run quietly absorbed all of them: the board advanced pick by pick exactly as it should, and the card that is the whole point of the night never once appeared. A pick the rehearsal rolls forward is now treated as happening at that moment, which is what it is, so the dry run goes through the same check draft night does instead of around it. Live drafts were never affected.",

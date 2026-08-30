@@ -283,15 +283,34 @@ function buildDraftPrediction(
  * Parse draft pick comments to extract trade information
  * Format: "[Pick traded from Team Name.]" or no comment for original pick
  *
+ * Returns the TEAM NAME alone. Callers render it after a preposition they
+ * supply themselves ("via X", "from X", "Originally owned by X") and match it
+ * against `TeamConfig.name` to resolve the original team's crest, so anything
+ * but a bare name is wrong in both directions.
+ *
+ * The alternation this used to open with — `(?:traded|traded from)` — could
+ * never reach its second branch: regex alternation is ordered, `traded` always
+ * matched first, and the ` from ` was left for `(.+?)` to swallow. Since every
+ * comment MFL actually writes says "traded from", the capture began "from " on
+ * literally all of them. That shipped as `· via from Bring the Pain` on the
+ * broadcast, and silently broke every `config.name === originalTeamName`
+ * lookup, so the traded-from crest never rendered anywhere. `(?: from)?` is
+ * the same intent expressed as an optional group, which is what the
+ * alternation was reaching for.
+ *
+ * Trimmed because MFL's own feed contains double spaces after "from"
+ * (`[Pick traded from  Running Down The Dream.]`) — a leading space fails an
+ * exact name match exactly as invisibly as the "from " prefix did.
+ *
  * @param comment - Draft pick comment from draftResults
  * @returns Parsed team name if traded, undefined if original
  */
 export function parseTradeFromComment(comment: string): string | undefined {
   if (!comment) return undefined;
 
-  const tradeMatch = comment.match(/\[Pick (?:traded|traded from) (.+?)\.\]/);
+  const tradeMatch = comment.match(/\[Pick traded(?: from)? (.+?)\.\]/);
   if (tradeMatch) {
-    return tradeMatch[1];
+    return tradeMatch[1].trim();
   }
 
   return undefined;

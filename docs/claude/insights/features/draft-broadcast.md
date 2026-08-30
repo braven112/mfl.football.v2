@@ -569,17 +569,53 @@ NFL shield, which says nothing beside a name; an unrecognised team code and a
 school absent from the table would 404. All four return `logo: null` and the
 label stands on its own.
 
-### Verifying this page in the sandbox: `page.route` did not intercept its images
+### Verifying this page in the sandbox: the `page.route` glob never matched
 
-Chromium's context routes (`ctx.route('https://a.espncdn.com/**', …)`) never
-fired for the reveal card's logo and headshot requests in the remote sandbox —
-the handler's own `console.log` never printed, so the requests were not reaching
-it. Blocking the service worker (`serviceWorkers: 'block'`) did not change it,
-and the cause was not chased further. Recorded as observed behaviour, not as an
-explanation: **do not assume the `verify` skill's "fulfill them with a
-placeholder image" advice works on this page.**
+**Corrected 2026-08-30 (Brandon).** The original note here recorded that
+context routes never fired for the reveal card's logo and headshot requests —
+the handler's own `console.log` never printed — and left the cause unchased,
+with a warning not to trust the `verify` skill's "fulfill them with a
+placeholder image" advice on this page. That warning was wrong, and the cause
+is not specific to this page at all. It was the glob.
 
-What did work, and is enough to judge layout: wait for `.dbc-reveal__meta`, then
+**A single `*` does not cross `/` in a Playwright URL pattern.** The pattern in
+play was `**://*`, which compiles to `^(.*)://([^/]*)$` — the leading `**`
+becomes `(.*)` and does cross slashes, but the TRAILING single `*` becomes
+`([^/]*)`, so the pattern matches a bare scheme + host and NOTHING with a path.
+Every headshot and logo URL has a path, so nothing was ever intercepted. A glob
+that matches no URL is not an error in Playwright: the handler is registered
+and simply never called, which is exactly what "the `console.log` never
+printed" looks like. Blocking the service worker was never going to change it.
+
+Verified against `playwright-core`'s own `globToRegexPattern`:
+
+| Pattern | Compiles to | `…espncdn.com/i/headshots/…png` |
+|---|---|---|
+| `**://*` | `^(.*)://([^/]*)$` | **no** |
+| `**://**` | `^(.*)://(.*)$` | yes |
+| `https://a.espncdn.com/**` | `^https://a\.espncdn\.com/(.*)$` | yes |
+| `**/*.png` | `^(.*/)([^/]*)\.png$` | yes |
+
+Note the third row: the host-anchored form the original note quoted would have
+worked — it was not the pattern that actually ran. Note also that it does NOT
+match the bare origin (no trailing path), which is its own quiet trap.
+
+**A `RegExp` sidesteps the whole question**, and is what to reach for when a
+route silently does nothing:
+
+```js
+await ctx.route(/espncdn\.com|myfantasyleague\.com/, (route) =>
+  route.fulfill({ path: 'public/assets/nfl-logos/KC.svg' })
+);
+```
+
+If a route handler seems not to fire, print the compiled pattern before
+assuming anything about the browser:
+`require('playwright-core/lib/utils/isomorphic/urlMatch.js').globToRegexPattern(p)`.
+
+The in-page src rewrite below still works and needs no interception, so it
+remains the quickest way to judge layout — but it is now a convenience, not a
+workaround for something unexplained. Wait for `.dbc-reveal__meta`, then
 rewrite the src in the page.
 
 ```js

@@ -25,10 +25,11 @@ export function BoardCell({ pick, player, team, teams, isCurrentPick, isUserTeam
     isNewPick ? 'dr-cell--flash' : '',
   ].filter(Boolean).join(' ');
 
-  // Find original team icon by name for traded picks
-  // MFL sometimes prefixes the name with "from " — strip it before matching
-  const cleanOriginalName = pick.originalTeamName?.replace(/^from\s+/i, '').trim();
-  const lowerOriginalName = cleanOriginalName?.toLowerCase();
+  // Find original team icon by name for traded picks. The "from " prefix this
+  // used to strip came from `parseTradeFromComment`, which now returns a bare
+  // trimmed name — stripping it here only ever fixed this one cell while the
+  // same prefix rendered as `via from X` in the title beside it.
+  const lowerOriginalName = pick.originalTeamName?.toLowerCase();
   const originalTeam = pick.isTraded && lowerOriginalName && teams
     ? teams.find((t) =>
         t.name?.toLowerCase() === lowerOriginalName ||
@@ -53,8 +54,8 @@ export function BoardCell({ pick, player, team, teams, isCurrentPick, isUserTeam
     <span className="dr-cell__trade" title={pick.originalTeamName ? `via ${pick.originalTeamName}` : 'Traded pick'}>
       <span className="dr-cell__trade-label">via</span>
       {originalTeam?.icon
-        ? <img src={originalTeam.icon} alt={originalTeam.nameShort || cleanOriginalName || ''} className="dr-cell__trade-logo" />
-        : <span className="dr-cell__trade-name">{cleanOriginalName}</span>
+        ? <img src={originalTeam.icon} alt={originalTeam.nameShort || pick.originalTeamName || ''} className="dr-cell__trade-logo" />
+        : <span className="dr-cell__trade-name">{pick.originalTeamName}</span>
       }
     </span>
   ) : null;
