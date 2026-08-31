@@ -121,6 +121,44 @@ The RB/WR/TE positions share a combined flex pool (minimum 3 of the 9 starters).
 - Dropped players are **locked until the next Sunday kickoff**.
 - **First-Come, First-Served (FCFS)** allowed **Wednesday 9:00 PM → Sunday kickoff**, and from **Draft Day until the regular season starts**. Players dropped during FCFS are locked until the next Sunday kickoff.
 
+### Setting the waiver order — MFL does not carry it across the rollover
+
+MFL stores waiver priority as a per-franchise `waiverSortOrder` (1–24), readable
+on `export?TYPE=league` and writable via `import?TYPE=franchises`. **It is not
+copied into the new league year.** Every June rollover the AFL starts at MFL's
+default — reverse franchise id, `0024` first and `0001` last — which has
+nothing to do with the constitution. Because the AFL is `WAIVERS_FCFS` (rolling
+priority, not blind bidding), that value **is** the waiver order, not a
+tiebreaker: the 2026 league was found on 2026-08-31 with the 2025 #1 seed at
+waiver 10 and a 17th-place team at waiver 1, days before Week 1.
+
+Run `scripts/set-afl-waiver-order.ts` (or the **Set AFL Waiver Order** workflow)
+once per league year, after the NIT wraps and before Week 1 waivers process.
+
+Three things about it are load-bearing:
+
+- **The base order is round 2 of the draft, not round 1.** The NIT bonus is a
+  round-1-only adjustment, so rounds 2–9 are the true reverse-standings order
+  with each conference champion forced last — which is what "base draft order"
+  means. Reading round 1 would bake three NIT swaps into the waiver order.
+- **The two conference orders are merged by strict ALTERNATION** (commissioner
+  ruling, 2026-08-31), led by the conference holding the league's single worst
+  team. The constitution defines the base order per conference (two 12-team
+  orders) but the waiver order is one list of 24, so the merge is an
+  interpretation — the rejected alternative was re-ranking all 24 league-wide,
+  which is tidier but is no longer the base order in any literal sense.
+  Alternation also guarantees neither conference sits systematically ahead.
+  `tests/afl-waiver-order.test.ts` pins the ruling.
+- **The write MUST carry `OVERLAY=1`.** MFL's franchises import erases every
+  field absent from the payload, and this payload carries only `id` and
+  `waiverSortOrder` — a non-overlay write blanks every team name, logo, icon,
+  abbreviation and division in the league. `setAflWaiverOrderUrl()` welds it on
+  and there is no parameter that turns it off.
+
+The order is **rolling**, so MFL mutates it all season as claims are awarded.
+Re-running mid-season refunds priority that teams have already spent; the script
+refuses once any waiver transaction exists for the year unless `--force`.
+
 ---
 
 ## Keepers
