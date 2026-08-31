@@ -1,0 +1,76 @@
+name: Set AFL Waiver Order
+
+# Sets the AFL's league-wide waiver order on MFL from the previous season's
+# base draft order, per the constitution ("Initial waiver order = base draft
+# order from the previous season").
+#
+# MFL does NOT carry waiverSortOrder across a league-year rollover — a new AFL
+# year starts at MFL's default (reverse franchise id) until someone sets it.
+# The AFL uses WAIVERS_FCFS, so that value IS the waiver order, not a
+# tiebreaker.
+#
+# MANUAL DISPATCH ONLY — no cron. This sets the INITIAL order and the AFL's
+# waiver system is rolling, so a scheduled re-run would refund priority to
+# teams that had already spent it. Run it once per league year, after the
+# previous season's NIT wraps and before Week 1 waivers process.
+#
+# dry_run is checked by default: the run prints the full before/after diff and
+# writes nothing. Read that diff, then re-dispatch with dry_run unchecked.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Print the before/after diff without writing to MFL"
+        type: boolean
+        required: false
+        default: true
+      year:
+        description: "League year to write (default: current AFL league year)"
+        required: false
+        type: string
+      standings_year:
+        description: "Season to derive the base order from (default: year - 1)"
+        required: false
+        type: string
+      force:
+        description: "Write even though waiver transactions already exist (resets the season's order)"
+        type: boolean
+        required: false
+        default: false
+
+concurrency:
+  group: set-afl-waiver-order
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  set-order:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm + Node + install
+        uses: ./.github/actions/setup
+
+      # The franchises import is commissioner-only AND per-league. These are the
+      # same secrets the contract-writer jobs use, i.e. TheLeague's commissioner
+      # — which is not automatically a commissioner of the AFL. If the live run
+      # fails on access, that pair is the first thing to check; the script says
+      # so explicitly when MFL's rejection looks like an access error.
+      - name: Set waiver order
+        env:
+          MFL_USER_ID: ${{ secrets.MFL_USER_ID }}
+          MFL_IS_COMMISH: ${{ secrets.MFL_IS_COMMISH }}
+        run: |
+          ARGS=""
+          if [ "${{ inputs.dry_run }}" != "true" ]; then ARGS="$ARGS --live"; fi
+          if [ "${{ inputs.force }}" = "true" ]; then ARGS="$ARGS --force"; fi
+          if [ -n "${{ inputs.year }}" ]; then ARGS="$ARGS --year ${{ inputs.year }}"; fi
+          if [ -n "${{ inputs.standings_year }}" ]; then ARGS="$ARGS --standings-year ${{ inputs.standings_year }}"; fi
+          echo "Running with:$ARGS"
+          pnpm exec tsx scripts/set-afl-waiver-order.ts $ARGS
