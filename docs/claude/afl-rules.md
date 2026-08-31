@@ -132,8 +132,21 @@ priority, not blind bidding), that value **is** the waiver order, not a
 tiebreaker: the 2026 league was found on 2026-08-31 with the 2025 #1 seed at
 waiver 10 and a 17th-place team at waiver 1, days before Week 1.
 
-Run `scripts/set-afl-waiver-order.ts` (or the **Set AFL Waiver Order** workflow)
-once per league year, after the NIT wraps and before Week 1 waivers process.
+**There is no API that sets it.** `waiverSortOrder` is readable on
+`export?TYPE=league` but `import?TYPE=franchises` does NOT carry it — proven
+2026-08-31 against throwaway league 36189: MFL answers the correct payload with
+`<status>OK</status>` and changes nothing (see the mfl-api insights entry). None
+of the other 78 import types covers waiver order. Do not re-derive "the field is
+on the export, so the import must take it" — that inference is what cost a live
+run against the AFL.
+
+`scripts/set-afl-waiver-order.ts` computes the correct order and prints it; its
+`--live` path is **blocked** and refuses to write, because a write can only be a
+silent no-op. Unblocking it means replacing the transport with a replay of MFL's
+own commissioner waiver-order form POST (under `options?L=<id>&O=<number>`),
+the way `src/pages/api/cut-player.ts` replays `add_drop` for exactly this
+reason. Until then the order is set by hand in MFL's UI, once per league year,
+after the NIT wraps and before Week 1 waivers process.
 
 Three things about it are load-bearing:
 
@@ -149,11 +162,17 @@ Three things about it are load-bearing:
   which is tidier but is no longer the base order in any literal sense.
   Alternation also guarantees neither conference sits systematically ahead.
   `tests/afl-waiver-order.test.ts` pins the ruling.
-- **The write MUST carry `OVERLAY=1`.** MFL's franchises import erases every
-  field absent from the payload, and this payload carries only `id` and
-  `waiverSortOrder` — a non-overlay write blanks every team name, logo, icon,
-  abbreviation and division in the league. `setAflWaiverOrderUrl()` welds it on
-  and there is no parameter that turns it off.
+- **Any franchises-import write MUST carry `OVERLAY=1`.** MFL's franchises
+  import erases every field absent from the payload, and a waiver payload
+  carries only `id` and `waiverSortOrder` — a non-overlay write would blank
+  every team name, logo, icon, abbreviation and division in the league.
+  `setAflWaiverOrderUrl()` welds it on and there is no parameter that turns it
+  off. This still matters even though the field is ignored: the erasure is a
+  property of the endpoint, not of the attribute.
+- **The DATA payload needs its `<franchises>` root.** MFL documents it as "the
+  contents of the `<franchises>` element", which reads as the children alone,
+  but sending bare `<franchise/>` elements returns `<error>XML Parsing
+  Error…</error>`. Wrapped is correct.
 
 The order is **rolling**, so MFL mutates it all season as claims are awarded.
 Re-running mid-season refunds priority that teams have already spent; the script
