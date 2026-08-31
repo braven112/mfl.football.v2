@@ -47,7 +47,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { calculateAFLDraftOrder, parseConferenceChampions, parseNITResults, buildHeadToHeadFromRaw, isDraftOrderFinal } from '../src/utils/afl-draft-utils';
-import { buildAflWaiverOrder, buildFranchisesWaiverXml, setAflWaiverOrderUrl, type ConferenceBaseOrder, type WaiverOrderEntry } from '../src/utils/afl-waiver-order';
+import { buildAflWaiverOrder, buildFranchisesWaiverXml, setAflWaiverOrderUrl, type ConferenceBaseOrder, type WaiverOrderEntry, type FranchisesXmlShape } from '../src/utils/afl-waiver-order';
 import { mflFetch } from '../src/utils/mfl-fetch';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 import { getAflLeagueYear } from '../src/utils/league-year';
@@ -244,49 +244,127 @@ const snapshot = {
 };
 fs.writeFileSync(snapshotFile, JSON.stringify(snapshot, null, 2));
 console.log(`\nPre-write snapshot: ${path.relative(root, snapshotFile)}`);
+// On a CI runner that file dies with the job, so the log is the real restore
+// artifact — print the prior order inline, in payload form, ready to replay.
+console.log('Prior order (restore payload — replay this DATA to undo):');
+console.log(
+  buildFranchisesWaiverXml(
+    snapshot.franchises
+      .filter((f) => f.waiverSortOrder)
+      .map((f) => ({
+        position: Number(f.waiverSortOrder),
+        franchiseId: f.id,
+        conference: '',
+        conferenceBasePosition: 0,
+      }))
+      .sort((a, b) => a.position - b.position)
+  )
+);
 
 const url = setAflWaiverOrderUrl(league.mflHost, targetYear, league.id);
-console.log(`POST ${url}`);
-const res = await mflFetch({
-  url,
-  method: 'POST',
-  mflUserCookie: userId,
-  mflCommishCookie: commish,
-  body: new URLSearchParams({ DATA: xml }).toString(),
-});
-const text = await res.text();
-if (!res.ok || /error/i.test(text)) {
-  const commishHint = /commissioner|not authorized|access/i.test(text)
-    ? `\n\nMFL says this is an access problem. The franchises import is commissioner-only AND ` +
-      `per-league: the MFL_USER_ID/MFL_IS_COMMISH pair used by this repo's other write jobs is ` +
-      `TheLeague's commissioner, which is NOT automatically a commissioner of AFL ${league.id}. ` +
-      `Supply an AFL commissioner's cookies.`
-    : '';
-  throw new Error(`MFL rejected the write (HTTP ${res.status}): ${text.slice(0, 400)}${commishHint}`);
-}
-console.log('MFL accepted the write. Verifying…');
 
-// ── 6. Verify — never trust the 200 ──────────────────────────────────────────
-const verifyRes = await fetch(exportUrl + `&_=${Date.now()}`);
-const verifyFranchises = asFranchiseList((await verifyRes.json())?.league?.franchises?.franchise);
-const actual = new Map<string, string>(verifyFranchises.map((f) => [f.id, f.waiverSortOrder ?? '?']));
-const mismatches = order.filter((e) => actual.get(e.franchiseId) !== String(e.position));
-if (mismatches.length > 0) {
-  for (const m of mismatches) {
+/** Read the live order back, keyed by franchise id. */
+async function readLiveOrder(): Promise<Map<string, string>> {
+  const res = await fetch(exportUrl + `&_=${Date.now()}`);
+  const list = asFranchiseList((await res.json())?.league?.franchises?.franchise);
+  return new Map(list.map((f) => [String(f?.id), String(f?.waiverSortOrder ?? '?'), ] as [string, string]));
+}
+
+/** Franchises whose name MFL dropped — the canary for OVERLAY not taking. */
+async function readBlankedNames(): Promise<string[]> {
+  const res = await fetch(exportUrl + `&_=${Date.now()}`);
+  const list = asFranchiseList((await res.json())?.league?.franchises?.franchise);
+  return list.filter((f) => !f?.name).map((f) => String(f?.id));
+}
+
+const commishHint =
+  `\n\nIf this is an access problem: the franchises import is commissioner-only AND ` +
+  `per-league, so the cookies must belong to a commissioner of AFL ${league.id} specifically.`;
+
+type Attempt = { shape: FranchisesXmlShape; outcome: 'applied' | 'noop' | 'partial'; body: string };
+
+async function attempt(shape: FranchisesXmlShape): Promise<Attempt> {
+  const payload = buildFranchisesWaiverXml(order, shape);
+  console.log(`\n--- Attempt: DATA shape "${shape}" (${payload.length} bytes) ---`);
+  console.log(`POST ${url}`);
+  const res = await mflFetch({
+    url,
+    method: 'POST',
+    mflUserCookie: userId,
+    mflCommishCookie: commish,
+    body: new URLSearchParams({ DATA: payload }).toString(),
+  });
+  const body = (await res.text()).trim();
+
+  // ALWAYS log what MFL said. A franchises import that silently no-ops returns
+  // HTTP 200 with no "error" anywhere, so the body is the only thing that
+  // distinguishes "not a commissioner", "attribute not importable", and "wrong
+  // DATA shape". The 2026-08-31 run had none of it and cost a full cycle.
+  console.log(`MFL responded HTTP ${res.status}, ${body.length} bytes:`);
+  console.log(body.slice(0, 800) || '  (empty body)');
+
+  // An HTML body is never a successful import — MFL answers imports with XML.
+  // A login page, a permission notice and a league home page are all HTML, all
+  // HTTP 200, and none of them contains the word "error".
+  if (/^\s*(<!doctype html|<html)/i.test(body)) {
+    throw new Error(`MFL returned an HTML page, not an import result — the write did NOT apply.${commishHint}`);
+  }
+  if (!res.ok || /error/i.test(body)) {
+    throw new Error(`MFL rejected the write (HTTP ${res.status}): ${body.slice(0, 400)}${commishHint}`);
+  }
+
+  // Data loss FIRST — it is the graver outcome and needs immediate action, so
+  // it must not sit behind a mismatch check that returns before it.
+  const blanked = await readBlankedNames();
+  if (blanked.length > 0) {
+    throw new Error(
+      `${blanked.length} franchise(s) lost their name (${blanked.join(', ')}) — OVERLAY did not take. ` +
+        `Restore IMMEDIATELY by replaying the prior-order payload printed above.`
+    );
+  }
+
+  const actual = await readLiveOrder();
+  const landed = order.filter((e) => actual.get(e.franchiseId) === String(e.position));
+  if (landed.length === order.length) return { shape, outcome: 'applied', body };
+
+  for (const m of order.filter((e) => actual.get(e.franchiseId) !== String(e.position))) {
     console.error(`  MISMATCH ${m.franchiseId} ${teamName(m.franchiseId)}: expected ${m.position}, MFL has ${actual.get(m.franchiseId)}`);
   }
-  throw new Error(
-    `${mismatches.length} franchise(s) did not land as sent. Restore from ${path.relative(root, snapshotFile)} if needed.`
-  );
+  // A no-op is exactly "every franchise still holds its PRE-write value".
+  const isNoOp = order.every((e) => actual.get(e.franchiseId) === before.get(e.franchiseId));
+  return { shape, outcome: isNoOp ? 'noop' : 'partial', body };
 }
 
-// Names surviving the write is the canary for OVERLAY having been honored.
-const blanked = verifyFranchises.filter((f) => !f.name);
-if (blanked.length > 0) {
-  throw new Error(
-    `${blanked.length} franchise(s) lost their name — OVERLAY did not take. ` +
-      `Restore immediately from ${path.relative(root, snapshotFile)}.`
-  );
+// MFL's DATA spec is ambiguous (see FranchisesXmlShape). Rather than guess a
+// second time, try the documented-by-analogy shape and, only if it provably
+// changed NOTHING, try the other reading. Both carry OVERLAY=1, so a no-op
+// costs nothing; a partial write stops the sequence immediately.
+const attempts: Attempt[] = [];
+for (const shape of ['wrapped', 'bare'] as FranchisesXmlShape[]) {
+  const result = await attempt(shape);
+  attempts.push(result);
+  if (result.outcome === 'applied') {
+    console.log(`\nDone. All ${order.length} franchises verified against the live league (DATA shape "${shape}").`);
+    process.exit(0);
+  }
+  if (result.outcome === 'partial') {
+    throw new Error(
+      `DATA shape "${shape}" applied to SOME franchises but not all. This is a partial write — ` +
+        `restore by replaying the prior-order payload printed above, and do not retry until the ` +
+        `cause is understood.`
+    );
+  }
+  console.log(`Shape "${shape}" changed nothing.`);
 }
 
-console.log(`\nDone. All ${order.length} franchises verified against the live league.`);
+throw new Error(
+  `Both DATA shapes were accepted by MFL and neither changed a single waiverSortOrder.\n\n` +
+    `That rules out the payload format. With commissioner cookies confirmed, the remaining\n` +
+    `explanation is that import?TYPE=franchises does not accept waiverSortOrder at all — MFL\n` +
+    `exposes the field on export but the import covers "names, graphics, contact information",\n` +
+    `and waiver order is a separate page in MFL's commissioner UI.\n\n` +
+    `Next step is NOT another API guess: capture the form POST MFL's own commissioner waiver-order\n` +
+    `page makes and replay that, the way src/pages/api/cut-player.ts replays add_drop for exactly\n` +
+    `this reason. Nothing was changed by this run.`
+);
+
