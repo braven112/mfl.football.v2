@@ -8,7 +8,11 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { planYearMigration, carryDescription } from '../src/utils/accounting-migration.mjs';
+import {
+  planYearMigration,
+  carryDescription,
+  assessCarryReadiness,
+} from '../src/utils/accounting-migration.mjs';
 
 const ledger = (balances: Record<string, number>) => ({
   balances,
@@ -204,5 +208,105 @@ describe('edge cases', () => {
       franchises: FRANCHISES,
     });
     expect(plan.lines[0].amount).toBe(-0.3);
+  });
+});
+
+/* ── Unattended-carry gates ─────────────────────────────────────────────── */
+
+describe('assessCarryReadiness', () => {
+  const NOW = 1_800_000_000_000;
+  const daysAgoTs = (days: number) => Math.floor((NOW - days * 86_400_000) / 1000);
+
+  /** A settled source: one record, well outside the quiet window. */
+  const settledSource = { records: [{ timestamp: daysAgoTs(60) }] };
+
+  const cleanPlan = (over: Record<string, unknown> = {}) => ({
+    lines: [{ status: 'payable' }],
+    warnings: [],
+    totals: { sourceNet: 100, carriedNet: 100, carryable: 100 },
+    ...over,
+  });
+
+  const assess = (over: Record<string, unknown> = {}) =>
+    assessCarryReadiness({
+      sourceLedger: settledSource,
+      plan: cleanPlan(),
+      nowMs: NOW,
+      settleAfterDays: 14,
+      ...over,
+    });
+
+  it('allows a settled year with a clean plan', () => {
+    expect(assess().ready).toBe(true);
+  });
+
+  it('refuses a source year with no records at all', () => {
+    // Indistinguishable from a failed read, and the failure mode of guessing
+    // is carrying nothing while reporting success.
+    const result = assess({ sourceLedger: { records: [] } });
+    expect(result.ready).toBe(false);
+    expect(result.reason).toMatch(/no accounting records/i);
+  });
+
+  it('refuses a year that is still being written to', () => {
+    // A carry moves a CLOSING balance. Anything added to the old year after
+    // the carry has to be moved by hand — a second run will not do it.
+    const result = assess({ sourceLedger: { records: [{ timestamp: daysAgoTs(3) }] } });
+    expect(result.ready).toBe(false);
+    expect(result.reason).toMatch(/still active/i);
+  });
+
+  it('allows it the moment the quiet window is met', () => {
+    expect(assess({ sourceLedger: { records: [{ timestamp: daysAgoTs(15) }] } }).ready).toBe(true);
+  });
+
+  it('judges quiet by the NEWEST record, not the oldest', () => {
+    // An old record alongside a fresh one must not make the year look settled.
+    const result = assess({
+      sourceLedger: { records: [{ timestamp: daysAgoTs(400) }, { timestamp: daysAgoTs(1) }] },
+    });
+    expect(result.ready).toBe(false);
+  });
+
+  it('refuses when any line conflicts', () => {
+    const result = assess({
+      plan: cleanPlan({ lines: [{ status: 'payable' }, { status: 'conflict' }] }),
+    });
+    expect(result.ready).toBe(false);
+    expect(result.reason).toMatch(/different amount/i);
+  });
+
+  it('refuses when a balance has no franchise to land on', () => {
+    // Real money with nowhere to go. Carrying "the rest" would drop it.
+    const result = assess({
+      plan: cleanPlan({ warnings: [{ franchiseId: '0009', balance: -250 }] }),
+    });
+    expect(result.ready).toBe(false);
+    expect(result.reason).toMatch(/no longer exists/i);
+  });
+
+  it('refuses when the two nets disagree', () => {
+    const result = assess({
+      plan: cleanPlan({ totals: { sourceNet: 100, carriedNet: 60, carryable: 60 } }),
+    });
+    expect(result.ready).toBe(false);
+    expect(result.reason).toMatch(/net mismatch/i);
+  });
+
+  it('reports nothing-to-do separately from a refusal', () => {
+    // An already-carried year is a no-op, not a problem worth alarming about.
+    const result = assess({ plan: cleanPlan({ lines: [{ status: 'already-migrated' }] }) });
+    expect(result.ready).toBe(false);
+    expect(result.nothingToDo).toBe(true);
+  });
+
+  it('refuses on the FIRST problem rather than carrying part of the league', () => {
+    // Unsettled AND conflicted: either alone is disqualifying, and the whole
+    // league is skipped either way.
+    const result = assess({
+      sourceLedger: { records: [{ timestamp: daysAgoTs(1) }] },
+      plan: cleanPlan({ lines: [{ status: 'conflict' }] }),
+    });
+    expect(result.ready).toBe(false);
   });
 });

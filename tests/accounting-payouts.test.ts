@@ -247,7 +247,7 @@ describe('2025 season, real feeds', () => {
     const league = LEAGUES['theleague'];
     const plan = planPayouts({
       year: 2025,
-      payouts: league.payouts,
+      payouts: league.payouts!,
       data: loadPayoutSeasonData(league, 2025),
     });
     expect(plan.unresolved).toEqual([]);
@@ -260,7 +260,7 @@ describe('2025 season, real feeds', () => {
     const league = LEAGUES['afl-fantasy'];
     const plan = planPayouts({
       year: 2025,
-      payouts: league.payouts,
+      payouts: league.payouts!,
       data: loadPayoutSeasonData(league, 2025),
     });
     expect(plan.unresolved).toEqual([]);
@@ -280,7 +280,7 @@ describe('2025 season, real feeds', () => {
     const league = LEAGUES['afl-fantasy'];
     const plan = planPayouts({
       year: 2025,
-      payouts: league.payouts,
+      payouts: league.payouts!,
       data: loadPayoutSeasonData(league, 2025),
     });
     const byKey = Object.fromEntries(

@@ -59,10 +59,18 @@ export function carryDescription(fromYear) {
  * @param {object} options
  * @param {number|string} options.fromYear Season/league year being closed out.
  * @param {number|string} options.toYear   League year receiving the balances.
- * @param {{balances?: Record<string, number>}} options.sourceLedger Year N's ledger.
+ * @param {{balances?: Record<string, number>, records?: Array<{franchiseId?: string, amount?: number, description?: string, timestamp?: number, id?: string}>}} options.sourceLedger
+ *   Year N's ledger. Only `balances` is read here, but every real caller hands
+ *   over a whole `AccountingLedger` — the API route and the carry-over script
+ *   both pass `result.ledger` straight through — so the declared shape has to
+ *   admit `records` rather than making them pass a stripped-down object.
  * @param {Array} [options.targetRecords] Year N+1's existing records, for idempotency.
  * @param {Array<{id: string, name?: string}>} [options.franchises] Target-year roster of franchises.
- * @returns {{lines: Array, skipped: Array, warnings: Array, totals: object}}
+ * @returns {{lines: Array, skipped: Array, warnings: Array, totals: {carryable: number, alreadyMigrated: number, conflicts: number, sourceNet: number, carriedNet: number, franchisesCarried: number}}}
+ *   `totals` is spelled out rather than left as `object` because consumers
+ *   genuinely read its fields — the carry-over script gates the whole write on
+ *   `sourceNet === carriedNet`, and a bare `object` makes that comparison a
+ *   type error at every call site.
  */
 export function planYearMigration({
   fromYear,
@@ -177,4 +185,83 @@ export function planYearMigration({
       franchisesCarried: lines.filter((line) => line.status === 'payable').length,
     },
   };
+}
+
+/**
+ * Whether an UNATTENDED carry may proceed, and if not, why.
+ *
+ * Split out of scripts/accounting-carry-over.ts so the refusal conditions are
+ * testable in isolation. They are the entire safety story for a job that
+ * writes real money with nobody watching, and MFL's import has no delete: a
+ * wrong record is corrected by hand, by a human who first has to notice. So
+ * this treats "don't know" as "don't write", and every gate refuses the whole
+ * league rather than carrying the part it is sure about — a partial carry that
+ * silently drops one franchise is worse than one that did not run.
+ *
+ * A human driving the page is deliberately NOT held to these: they can see the
+ * warnings and decide. This is the unattended path only.
+ *
+ * @param {object} options
+ * @param {{records?: Array<{timestamp?: number}>}} options.sourceLedger
+ * @param {{lines: Array<{status: string}>, warnings: Array, totals: {sourceNet: number, carriedNet: number, carryable: number}}} options.plan
+ * @param {number} options.nowMs Injected so the settle window is testable without a clock.
+ * @param {number} options.settleAfterDays Days of quiet before a year counts as closed.
+ * @returns {{ready: boolean, reason?: string, nothingToDo?: boolean}}
+ */
+export function assessCarryReadiness({ sourceLedger, plan, nowMs, settleAfterDays }) {
+  const records = asArray(sourceLedger?.records);
+
+  // An empty source is indistinguishable from a failed read, and the failure
+  // mode of guessing is carrying nothing while reporting success.
+  if (records.length === 0) {
+    return { ready: false, reason: 'the source year has no accounting records at all' };
+  }
+
+  // A carry moves a CLOSING balance. "The new league year exists" fires on
+  // rollover day, months before a season settles, so quiescence stands in for
+  // "these books are closed". Biased toward waiting on purpose: being a
+  // fortnight late costs nothing, carrying early costs a hand-reconciliation
+  // nobody will think to do.
+  const newest = records.reduce((max, record) => Math.max(max, record?.timestamp ?? 0), 0);
+  if (newest > 0) {
+    const ageDays = (nowMs - newest * 1000) / 86_400_000;
+    if (ageDays < settleAfterDays) {
+      return {
+        ready: false,
+        reason: `the source year is still active — last transaction ${ageDays.toFixed(1)}d ago, needs ${settleAfterDays}d of quiet`,
+      };
+    }
+  }
+
+  // A carry line already present at a different amount means the source moved
+  // after a partial run, or someone edited by hand. The correct balance is then
+  // ambiguous and no machine should pick one.
+  const conflicts = plan.lines.filter((line) => line.status === 'conflict').length;
+  if (conflicts) {
+    return { ready: false, reason: `${conflicts} franchise(s) already carried at a different amount` };
+  }
+
+  // A warning is a balance whose franchise no longer exists — real money with
+  // nowhere to go. Carrying "the rest" would quietly drop it.
+  if (plan.warnings.length) {
+    return {
+      ready: false,
+      reason: `${plan.warnings.length} balance(s) belong to a franchise that no longer exists`,
+    };
+  }
+
+  // If the two nets disagree the plan is losing money somewhere this gate did
+  // not anticipate, which is precisely when to stop.
+  if (plan.totals.sourceNet !== plan.totals.carriedNet) {
+    return {
+      ready: false,
+      reason: `net mismatch — source nets ${plan.totals.sourceNet} but the plan carries ${plan.totals.carriedNet}`,
+    };
+  }
+
+  if (!plan.lines.some((line) => line.status === 'payable')) {
+    return { ready: false, nothingToDo: true, reason: 'every balance is already carried' };
+  }
+
+  return { ready: true };
 }

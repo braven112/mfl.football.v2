@@ -1,0 +1,87 @@
+name: Accounting Carry-Over
+
+# Carries each league's closing balances into the new MFL league year.
+#
+# MFL's yearly league upgrade creates the new league with rosters, keepers and
+# picks carried and its BOOKS EMPTY. Nothing carries the money across, so
+# without this the league's books reset to zero every rollover and every
+# outstanding debt and credit silently disappears. See
+# docs/claude/rules/accounting.md.
+#
+# THIS WRITES REAL MONEY. MFL's accounting import has no delete and no upsert,
+# so the script refuses far more than it writes: it skips a league unless both
+# ledgers read cleanly, the plan has no conflicts and no orphaned balances, the
+# source and carried nets agree, and the source year has been QUIET for
+# SETTLED_AFTER_DAYS (a carry moves a CLOSING balance, and anything added to
+# the old year afterwards has to be carried by hand). Every skip is reported
+# with its reason in the job summary.
+#
+# Re-running is safe by design: a carried line comes back `already-migrated`
+# and is not written twice.
+#
+# Weekly, because this does real work roughly once a year per league and the
+# rest of the time is a deliberate no-op — the schedule exists so the carry
+# lands soon after a year settles, not so it runs often.
+#
+# Schedule lives in code, per the repo rule (no GitHub Actions `vars.*` gates):
+# to pause, comment out the cron line below; to change the settle window, edit
+# SETTLED_AFTER_DAYS in scripts/accounting-carry-over.ts.
+#
+# Manual run:
+#   GitHub UI → Actions → Accounting Carry-Over → Run workflow
+#   - dry_run: leave CHECKED to print the would-be writes without touching MFL.
+#              Uncheck to actually write.
+#   - league:  optional slug (e.g. afl-fantasy) to limit the run to one league.
+
+on:
+  schedule:
+    # Mondays 10:00 UTC, an hour after the AFL tier rollover so the two yearly
+    # jobs never contend for the same MFL host.
+    - cron: "0 10 * * 1"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry-run only (print, do not write to MFL)'
+        type: boolean
+        default: true
+      league:
+        description: 'Limit to one league slug (blank = every accounting league)'
+        type: string
+        default: ''
+
+concurrency:
+  # Never let two runs write the same ledger concurrently. Not cancel-in-progress:
+  # a run that is midway through writing records should finish, since each write
+  # is a separate MFL call and a cancelled run leaves a partial carry.
+  group: accounting-carry-over
+  cancel-in-progress: false
+
+jobs:
+  carry:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm + Node + install
+        uses: ./.github/actions/setup
+
+      - name: Carry closing balances into the new league year
+        env:
+          MFL_HOST: ${{ vars.MFL_HOST }}
+          MFL_USER_ID: ${{ secrets.MFL_USER_ID }}
+          MFL_IS_COMMISH: ${{ secrets.MFL_IS_COMMISH }}
+        run: |
+          # Scheduled runs have no inputs, so inputs.dry_run is empty.
+          # Treat anything other than the literal string "true" as live.
+          LEAGUE_ARG=""
+          if [ -n "${{ inputs.league }}" ]; then
+            LEAGUE_ARG="--league=${{ inputs.league }}"
+          fi
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            echo "::notice::Running in DRY-RUN mode (no MFL writes)"
+            pnpm exec tsx scripts/accounting-carry-over.ts --dry-run $LEAGUE_ARG
+          else
+            echo "::warning::LIVE MFL WRITE MODE — will carry closing balances into the new league year"
+            pnpm exec tsx scripts/accounting-carry-over.ts $LEAGUE_ARG
+          fi

@@ -47,7 +47,9 @@ const call = async (
   });
 
 describe('resolveAccountingContext', () => {
-  beforeEach(() => vi.resetModules());
+  beforeEach(() => {
+    vi.resetModules();
+  });
 
   it('401s an anonymous request', async () => {
     const mod = await loadContext(null, { mflUserId: 'c' });

@@ -17,7 +17,8 @@ import path from 'node:path';
 import type { LeagueDefinition } from '../config/leagues';
 import { calculateAllPlayFromWeekly, getTierAllPlayStandings } from './standings';
 import { getTierMembership } from './afl-tier';
-// @ts-expect-error - .mjs shared with node scripts (see its header)
+// .mjs shared with node scripts (see its header). No ts-expect-error: its
+// types resolve under the project config, so the directive would be unused.
 import { resolveTierCutoffWeek } from './all-play.mjs';
 import { resolveConfigForYear } from './team-names';
 import { extractSeasonStructure, applySeasonStructure } from './afl-structure';

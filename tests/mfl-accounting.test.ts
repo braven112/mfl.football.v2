@@ -213,8 +213,12 @@ describe('formatAmount', () => {
 /* ── Network-shaped behaviour ───────────────────────────────────────────── */
 
 describe('fetchAccountingLedger', () => {
-  beforeEach(() => vi.resetModules());
-  afterEach(() => vi.restoreAllMocks());
+  beforeEach(() => {
+    vi.resetModules();
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
 
   it('treats an empty 200 body as a failed read, never an empty ledger', async () => {
     vi.doMock('../src/utils/mfl-fetch', () => ({
@@ -234,8 +238,12 @@ describe('fetchAccountingLedger', () => {
 });
 
 describe('writeAccountingRecord', () => {
-  beforeEach(() => vi.resetModules());
-  afterEach(() => vi.restoreAllMocks());
+  beforeEach(() => {
+    vi.resetModules();
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
 
   const league = { id: '13522', mflHost: 'www49.myfantasyleague.com' };
 

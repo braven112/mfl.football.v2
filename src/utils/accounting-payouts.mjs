@@ -241,10 +241,18 @@ function buildLine({ prize, franchiseId, amount, description, ledgerIndex, detai
  *
  * @param {object} options
  * @param {number|string} options.year Season being paid. Appears in every description.
- * @param {{prizePool: number, prizes: Array}} options.payouts The league's registry prize table.
+ * @param {{prizePool?: number, prizes?: Array}|null|undefined} options.payouts
+ *   The league's registry prize table. Optional in the type because it is
+ *   optional in the registry — a league may have accounting on and publish no
+ *   prizes — and this function already handles that, returning every prize as
+ *   unresolved rather than throwing.
  * @param {object} options.data Injected season data (see the resolvers above).
  * @param {Array} [options.existingRecords] The current ledger, for idempotency.
- * @returns {{lines: Array, unresolved: Array, totals: object}}
+ * @returns {{lines: Array, unresolved: Array, totals: {payable: number, alreadyPaid: number, conflicts: number, planned: number, prizePool: number|null, drift: number|null}}}
+ *   `totals` is spelled out rather than left as `object`: callers read these
+ *   fields (the page renders `planned` against `prizePool`, the apply route
+ *   gates on `conflicts`), and a bare `object` makes every one of those a type
+ *   error at the call site.
  */
 export function planPayouts({ year, payouts, data = {}, existingRecords = [] }) {
   const lines = [];
