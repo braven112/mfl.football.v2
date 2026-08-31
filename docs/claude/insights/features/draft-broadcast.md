@@ -569,62 +569,14 @@ NFL shield, which says nothing beside a name; an unrecognised team code and a
 school absent from the table would 404. All four return `logo: null` and the
 label stands on its own.
 
-### A traded pick's `via` line comes from a comment MFL writes as a LOG
+### Verifying this page: the `page.route` glob never matched
 
-`· via from Bring the Pain` reached a 65-inch screen (2026-08-31) because
-`parseTradeFromComment` mis-parsed MFL's `draftPick.comments`. Four separate
-grammar bugs in one regex; 157 of 287 trade statements parsed before the fix,
-287 after, and the 130 recovered picks had been rendering as never-traded for
-the whole life of the feature.
-
-The grammar, the corpus counts, and the proof that the FIRST hop names the
-original owner live with the rest of the MFL feed data-shape traps:
-`grep -n "comments. is a LOG" docs/claude/insights/domains/mfl-api.md`.
-Guards are in `tests/draft-broadcast.test.ts`.
-
-### Verifying this page in the sandbox: the `page.route` glob never matched
-
-**Corrected 2026-08-31 (Brandon).** The original note here recorded that
-context routes never fired for the reveal card's logo and headshot requests —
-the handler's own `console.log` never printed — and left the cause unchased,
-with a warning not to trust the `verify` skill's "fulfill them with a
-placeholder image" advice on this page. That warning was wrong, and the cause
-is not specific to this page at all. It was the glob.
-
-**A single `*` does not cross `/` in a Playwright URL pattern.** The pattern in
-play was `**://*`, which compiles to `^(.*)://([^/]*)$` — the leading `**`
-becomes `(.*)` and does cross slashes, but the TRAILING single `*` becomes
-`([^/]*)`, so the pattern matches a bare scheme + host and NOTHING with a path.
-Every headshot and logo URL has a path, so nothing was ever intercepted. A glob
-that matches no URL is not an error in Playwright: the handler is registered
-and simply never called, which is exactly what "the `console.log` never
-printed" looks like. Blocking the service worker was never going to change it.
-
-Verified against `playwright-core`'s own `globToRegexPattern`:
-
-| Pattern | Compiles to | `…espncdn.com/i/headshots/…png` |
-|---|---|---|
-| `**://*` | `^(.*)://([^/]*)$` | **no** |
-| `**://**` | `^(.*)://(.*)$` | yes |
-| `https://a.espncdn.com/**` | `^https://a\.espncdn\.com/(.*)$` | yes |
-| `**/*.png` | `^(.*/)([^/]*)\.png$` | yes |
-
-Note the third row: the host-anchored form the original note quoted would have
-worked — it was not the pattern that actually ran. Note also that it does NOT
-match the bare origin (no trailing path), which is its own quiet trap.
-
-**A `RegExp` sidesteps the whole question**, and is what to reach for when a
-route silently does nothing:
-
-```js
-await ctx.route(/espncdn\.com|myfantasyleague\.com/, (route) =>
-  route.fulfill({ path: 'public/assets/nfl-logos/KC.svg' })
-);
-```
-
-If a route handler seems not to fire, print the compiled pattern before
-assuming anything about the browser:
-`require('playwright-core/lib/utils/isomorphic/urlMatch.js').globToRegexPattern(p)`.
+**Corrected 2026-08-31.** This blamed something page-specific and unchased.
+Wrong: a single `*` does not cross `/`, so `**://*` matches scheme + host but
+nothing with a path, and a glob matching no URL fires no handler and raises no
+error. Use a `RegExp`; the `verify` skill's placeholder advice is fine.
+`grep -n "RegExp. over a glob" .claude/skills/verify/SKILL.md`. The traded-pick
+parser fixed alongside: `grep -n "comments. is a LOG" domains/mfl-api.md`.
 
 The in-page src rewrite below still works and needs no interception, so it
 remains the quickest way to judge layout — but it is now a convenience, not a
