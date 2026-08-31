@@ -366,7 +366,52 @@ export async function writeAccountingRecord(
       error: 'MFL returned an empty response — the session is not authorized to write this league’s ledger.',
     };
   }
+  // MFL answers imports with XML. An HTML body is a LOGIN PAGE, a permission
+  // notice, or a league home page — all of which are HTTP 200, all non-empty,
+  // and none containing an <error> element. Without this check every one of
+  // them reads as a successful write.
+  //
+  // This is not hypothetical: it is exactly how a 15-record carry reported
+  // "carried into 2026" while the 2026 ledger stayed at 5 entries. Verified
+  // 2026-08-31 against the real AFL.
+  if (/^\s*(<!doctype html|<html|<head|<body)/i.test(text)) {
+    return {
+      ok: false,
+      error:
+        'MFL returned an HTML page instead of an import response — the session is not authorized to write this league’s ledger (sign in again as commissioner).',
+    };
+  }
   return { ok: true };
+}
+
+/**
+ * Which of the records we just wrote are NOT in the ledger.
+ *
+ * MFL's import can answer 200 with a body that parses fine and still apply
+ * nothing, so a response body cannot confirm a write — only re-reading can.
+ * The same rule the roster writer follows (see cut-player.ts, which verifies a
+ * drop by re-reading the roster rather than parsing the response).
+ *
+ * Matched on (franchise, description, amount), the same triple the idempotency
+ * check uses, so a record that verifies here is one a re-run will correctly
+ * skip.
+ */
+export function findMissingRecords(
+  ledger: AccountingLedger,
+  written: WriteRecordInput[]
+): WriteRecordInput[] {
+  const present = new Set(
+    ledger.records.map(
+      (record) =>
+        `${normalizeFranchiseId(record.franchiseId)}|${String(record.description ?? '').trim().toLowerCase()}|${record.amount.toFixed(2)}`
+    )
+  );
+  return written.filter(
+    (row) =>
+      !present.has(
+        `${normalizeFranchiseId(row.franchiseId)}|${row.description.trim().toLowerCase()}|${row.amount.toFixed(2)}`
+      )
+  );
 }
 
 export interface BulkWriteRow extends WriteRecordInput {

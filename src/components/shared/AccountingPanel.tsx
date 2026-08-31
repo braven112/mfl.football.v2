@@ -1012,10 +1012,19 @@ function Rollover({
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data?.error ?? `HTTP ${response.status}`);
+      // `unverifiedCount` is MFL claiming a write it did not make. Reported
+      // separately from an outright failure because it looks like success at
+      // every layer except the ledger itself.
+      const unverified = Number(data.unverifiedCount ?? 0);
+      const failedCount = Number(data.failedCount ?? 0);
       setApplied(
-        data.failedCount
-          ? `${data.written} carried, ${data.failedCount} failed. Re-run to retry only the failures.`
-          : `${data.written} balance${data.written === 1 ? '' : 's'} carried into ${year}.`
+        unverified > 0
+          ? `${data.written} carried. ${unverified} were accepted by MFL but are NOT in the ${year} ledger — nothing was actually written for them. Sign in again as commissioner and re-run.`
+          : failedCount
+            ? `${data.written} carried, ${failedCount} failed. Re-run to retry only the failures.`
+            : data.verified === false
+              ? `${data.written} submitted, but the ${year} ledger could not be re-read to confirm them. Refresh before re-running.`
+              : `${data.written} balance${data.written === 1 ? '' : 's'} carried into ${year}, confirmed against the ledger.`
       );
       onWritten();
       await loadPlan();

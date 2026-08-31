@@ -24,7 +24,11 @@
 import type { APIRoute } from 'astro';
 import { json, JSON_HEADERS_NO_STORE } from '../../../utils/api-response';
 import { resolveAccountingContext } from '../../../utils/accounting-request';
-import { fetchAccountingLedger, writeAccountingRecords } from '../../../utils/mfl-accounting';
+import {
+  fetchAccountingLedger,
+  writeAccountingRecords,
+  findMissingRecords,
+} from '../../../utils/mfl-accounting';
 import { loadFranchises } from '../../../utils/accounting-season-data';
 import { checkRateLimit } from '../../../utils/rate-limit';
 import { planYearMigration, assessCarryReadiness } from '../../../utils/accounting-migration.mjs';
@@ -221,8 +225,32 @@ export const POST: APIRoute = async (context) => {
     }
   );
 
-  const written = results.filter((result) => result.ok).length;
+  const claimed = results.filter((result) => result.ok);
   const failed = results.filter((result) => !result.ok);
+
+  // VERIFY BY RE-READING. MFL's import can answer 200 with a perfectly
+  // well-formed body and apply nothing, so the response is not proof. This is
+  // the only check that distinguishes "carried" from "reported carried" — a
+  // 15-record carry once returned success against a ledger that never changed.
+  let unverified: typeof claimed = [];
+  const after = await fetchAccountingLedger({
+    leagueId: ctx.league.id,
+    year: to,
+    mflUserCookie: ctx.mflUserCookie,
+    mflCommishCookie: ctx.mflCommishCookie,
+  });
+  if (after.ok) {
+    const missing = findMissingRecords(
+      after.ledger,
+      claimed.map((result) => result.row)
+    );
+    const missingKeys = new Set(missing.map((row) => `${row.franchiseId}|${row.description}`));
+    unverified = claimed.filter((result) =>
+      missingKeys.has(`${result.row.franchiseId}|${result.row.description}`)
+    );
+  }
+
+  const written = claimed.length - unverified.length;
 
   return json(
     {
@@ -230,10 +258,16 @@ export const POST: APIRoute = async (context) => {
       to,
       written,
       failedCount: failed.length,
+      // Rows MFL claimed to accept that are NOT in the ledger afterwards.
+      // Counted as failures, because that is what they are.
+      unverifiedCount: unverified.length,
+      // Stated when we could not re-read at all, so "verified" is never
+      // implied by silence.
+      verified: after.ok,
       results,
       // A partial carry is safe to re-run: the rows that landed come back
       // `already-migrated` on the next plan.
-      partial: failed.length > 0 && written > 0,
+      partial: (failed.length > 0 || unverified.length > 0) && written > 0,
       warnings: plan.warnings,
       totals: plan.totals,
     },

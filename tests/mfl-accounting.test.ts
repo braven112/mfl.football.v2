@@ -261,6 +261,24 @@ describe('writeAccountingRecord', () => {
     expect(result.error).toMatch(/commissioner/i);
   });
 
+  it('rejects an HTML body — a login page is 200 with no <error>', async () => {
+    // THE BUG THIS EXISTS FOR: MFL answers imports with XML, but serves a
+    // login page / permission notice / league home page as HTML at HTTP 200
+    // with no <error> element. Read as success, that reported a 15-record
+    // carry against a ledger that never changed (AFL, 2026-08-31).
+    vi.doMock('../src/utils/mfl-fetch', () => ({
+      mflFetch: async () =>
+        new Response('<!DOCTYPE html><html><body>Please log in</body></html>', { status: 200 }),
+    }));
+    const { writeAccountingRecord } = await import('../src/utils/mfl-accounting');
+    const result = await writeAccountingRecord(
+      { franchiseId: '0001', amount: 300, description: 'prize' },
+      { league, year: 2026, mflUserCookie: 'cookie' }
+    );
+    expect(result.ok).toBe(false);
+    expect(result.error).toMatch(/HTML page/i);
+  });
+
   it('posts a plain decimal amount to the league web host, not the api host', async () => {
     let seenUrl = '';
     let seenBody = '';
@@ -308,5 +326,44 @@ describe('writeAccountingRecord', () => {
     );
     // A failed row is a failed row, not an aborted batch.
     expect(results.map((r) => r.ok)).toEqual([true, false, true]);
+  });
+});
+
+describe('findMissingRecords', () => {
+  it('reports a claimed write that is absent from the ledger', async () => {
+    // MFL can accept an import and apply nothing, so only a re-read confirms.
+    const { findMissingRecords, normalizeAccountingExport } = await import('../src/utils/mfl-accounting');
+    const ledger = normalizeAccountingExport({
+      accounting: { entry: [{ franchise_id: '0001', amount: '-100', description: 'dues', id: '1', timestamp: '1' }] },
+    });
+    const missing = findMissingRecords(ledger, [
+      { franchiseId: '0001', amount: -100, description: 'dues' },
+      { franchiseId: '0002', amount: -100, description: 'dues' },
+    ]);
+    expect(missing).toHaveLength(1);
+    expect(missing[0].franchiseId).toBe('0002');
+  });
+
+  it('treats a same-description record at a different amount as missing', async () => {
+    // Matched on the same (franchise, description, amount) triple the
+    // idempotency check uses, so anything that verifies here is what a re-run
+    // will correctly skip.
+    const { findMissingRecords, normalizeAccountingExport } = await import('../src/utils/mfl-accounting');
+    const ledger = normalizeAccountingExport({
+      accounting: { entry: [{ franchise_id: '0001', amount: '-75', description: 'dues', id: '1', timestamp: '1' }] },
+    });
+    expect(findMissingRecords(ledger, [{ franchiseId: '0001', amount: -100, description: 'dues' }])).toHaveLength(1);
+  });
+
+  it('confirms a record that did land', async () => {
+    const { findMissingRecords, normalizeAccountingExport } = await import('../src/utils/mfl-accounting');
+    const ledger = normalizeAccountingExport({
+      accounting: { entry: [{ franchise_id: '0015', amount: '100', description: 'Balance carried forward from 2025', id: '1', timestamp: '1' }] },
+    });
+    expect(
+      findMissingRecords(ledger, [
+        { franchiseId: '0015', amount: 100, description: 'Balance carried forward from 2025' },
+      ])
+    ).toHaveLength(0);
   });
 });
