@@ -96,11 +96,81 @@
 - **Don't ship inferred parameter names to a write endpoint.** Transaction-log
   fields are past-tense (`activated`); import params are verbs (`ACTIVATE`), and
   the direction is inverted. That one-letter guess burned five PRs.
+- **Readable on export ≠ writable on import.** `import?TYPE=franchises` answers
+  a correct `waiverSortOrder` payload with `<status>OK</status>` and ignores the
+  field; no import type sets waiver order. Confirming a write means WATCHING THE
+  VALUE CHANGE, not reading MFL's 200 — and never discard the response body, or
+  a silent no-op is invisible. `res.ok && !/error/i` also passes an HTML login
+  page. (2026-08-31)
 - **MFL egress is proxy-blocked from web sandboxes.** Don't burn time curling it.
 - In tests, `resolveWeekLineup` and friends read committed feeds from
   `process.cwd()`. To assert an absence, use `NO_DISK_FEED_YEAR` (1999) — a real
   year asserts against bot-synced data and fails later, on `main`.
 <!-- /CURATED-HEAD -->
+
+---
+
+## 2026-08-31 - `import?TYPE=franchises` Reports OK And Ignores `waiverSortOrder`
+
+**Context:** Setting the AFL's league-wide waiver order from the constitution's
+base draft order, days before Week 1.
+
+**Insight:** `waiverSortOrder` is a franchise attribute on
+`export?TYPE=league`. It is NOT writable through `import?TYPE=franchises`. MFL
+accepts a correctly-formed payload, answers `<status>OK</status>`, and changes
+nothing.
+
+**Do not repeat the inference that caused this.** "The field is on the export,
+and the franchises import takes franchise data with `OVERLAY=1`, therefore the
+field is writable" is wrong, and it was stated as a confident yes before any
+write was attempted. It cost a live write against the real AFL league.
+
+**Evidence** (throwaway league 36189, commissioner cookies, `www49`):
+
+| DATA shape | MFL response | Effect |
+|---|---|---|
+| `<franchises><franchise id=".." waiverSortOrder=".."/>…</franchises>` | HTTP 200, `<status>OK</status>` | none |
+| bare `<franchise/>` children, no root | HTTP 200, `<error>XML Parsing Error: Inappropriate ioctl for device</error>` | none |
+
+The parse error on the bare form settles a second question: MFL documents DATA
+as "the contents of the `<franchises>` element", which reads as the children
+alone, but the **root element is required**. Wrapped is the correct shape — so
+the OK-and-ignore above is a real ignore, not a malformed payload.
+
+The same no-op reproduced on the live AFL league (19621, `www44`) with a
+24-franchise payload: HTTP 200, every `waiverSortOrder` unchanged, and no field
+damage (`OVERLAY=1` held).
+
+**Scope:** none of the 79 documented import types covers waiver order.
+`franchises` is documented as "names, graphics, contact information, and more",
+and in MFL's own commissioner UI waiver order is a **separate page** from
+franchise setup — which is the tell, in hindsight.
+
+**Two traps this exposed in our own write code:**
+
+1. `res.ok && !/error/i.test(body)` is not a success check. A login page, a
+   permission notice and a league home page are all HTTP 200 and contain no
+   "error". Require an affirmative signal; treat an HTML body as failure, since
+   MFL answers imports with XML.
+2. Never discard MFL's response body on the success path. A silent no-op is
+   invisible without it, and `<status>OK</status>` vs an XML parse error is the
+   entire diagnosis.
+
+**Recommendation:** to set waiver order programmatically, replay the form POST
+MFL's own commissioner waiver-order page makes (under
+`options?L=<id>&O=<number>`; the option number requires an authenticated
+capture — the menu is auth-gated and the page is not a bare CGI name, all of
+`waiver_order`, `set_waiver_order`, `commish_waiver_order`, `waivers`,
+`waiver_priority` 404). This is the pattern `src/pages/api/cut-player.ts`
+already uses: it replays MFL's `add_drop` page because `import?TYPE=fcfsWaiver`
+would not do the job.
+
+**Related:**
+- `scripts/probe-mfl-waiver-order-write.ts` — net-zero probe that produced this
+  (swaps two slots on a throwaway league, tries both shapes, restores)
+- `scripts/set-afl-waiver-order.ts` — computes the correct order; `--live` is
+  blocked pending a working transport
+- `docs/claude/afl-rules.md` § Setting the waiver order
 
 ---
 
