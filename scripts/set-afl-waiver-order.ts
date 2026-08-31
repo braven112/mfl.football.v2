@@ -49,7 +49,7 @@ import path from 'node:path';
 import { calculateAFLDraftOrder, parseConferenceChampions, parseNITResults, buildHeadToHeadFromRaw, isDraftOrderFinal } from '../src/utils/afl-draft-utils';
 import { buildAflWaiverOrder, buildFranchisesWaiverXml, setAflWaiverOrderUrl, type ConferenceBaseOrder, type WaiverOrderEntry } from '../src/utils/afl-waiver-order';
 import { mflFetch } from '../src/utils/mfl-fetch';
-import { getLeagueBySlug } from '../src/config/leagues';
+import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 import { getAflLeagueYear } from '../src/utils/league-year';
 
 const argv = process.argv.slice(2);
@@ -154,11 +154,17 @@ console.log(
 const order = buildAflWaiverOrder(baseOrders, worst.id);
 
 // ── 3. Current live order, for the diff and the pre-write snapshot ───────────
+/** MFL collapses a one-element list to a bare object; always read it as a list. */
+function asFranchiseList(raw: unknown): any[] {
+  if (Array.isArray(raw)) return raw;
+  return raw ? [raw] : [];
+}
+
 const exportUrl = `https://api.myfantasyleague.com/${targetYear}/export?TYPE=league&L=${league.id}&JSON=1`;
 const liveRes = await fetch(exportUrl);
 if (!liveRes.ok) throw new Error(`Could not read the live league: HTTP ${liveRes.status}`);
 const liveLeague = (await liveRes.json())?.league;
-const liveFranchises: any[] = liveLeague?.franchises?.franchise ?? [];
+const liveFranchises = asFranchiseList(liveLeague?.franchises?.franchise);
 if (liveFranchises.length !== order.length) {
   throw new Error(
     `MFL reports ${liveFranchises.length} franchises for ${targetYear} but the base order has ` +
@@ -224,7 +230,19 @@ if (!userId || !commish) {
 const snapshotDir = path.join(root, league.dataPath, 'waiver-order-backups');
 fs.mkdirSync(snapshotDir, { recursive: true });
 const snapshotFile = path.join(snapshotDir, `${targetYear}-${new Date().toISOString().replace(/[:.]/g, '-')}.json`);
-fs.writeFileSync(snapshotFile, JSON.stringify({ capturedAt: new Date().toISOString(), targetYear, franchises: liveFranchises }, null, 2));
+// Persist only the three primitive fields a restore needs, each coerced to a
+// string — never MFL's raw response object. Keeps an unexpected payload shape
+// (or anything else MFL decides to include) out of a file we later read back.
+const snapshot = {
+  capturedAt: new Date().toISOString(),
+  targetYear,
+  franchises: liveFranchises.map((f) => ({
+    id: String(f?.id ?? ''),
+    name: String(f?.name ?? ''),
+    waiverSortOrder: String(f?.waiverSortOrder ?? ''),
+  })),
+};
+fs.writeFileSync(snapshotFile, JSON.stringify(snapshot, null, 2));
 console.log(`\nPre-write snapshot: ${path.relative(root, snapshotFile)}`);
 
 const url = setAflWaiverOrderUrl(league.mflHost, targetYear, league.id);
@@ -250,7 +268,7 @@ console.log('MFL accepted the write. Verifying…');
 
 // ── 6. Verify — never trust the 200 ──────────────────────────────────────────
 const verifyRes = await fetch(exportUrl + `&_=${Date.now()}`);
-const verifyFranchises: any[] = (await verifyRes.json())?.league?.franchises?.franchise ?? [];
+const verifyFranchises = asFranchiseList((await verifyRes.json())?.league?.franchises?.franchise);
 const actual = new Map<string, string>(verifyFranchises.map((f) => [f.id, f.waiverSortOrder ?? '?']));
 const mismatches = order.filter((e) => actual.get(e.franchiseId) !== String(e.position));
 if (mismatches.length > 0) {

@@ -76,6 +76,13 @@ export function buildAflWaiverOrder(
   if (a.franchiseIds.length === 0) {
     throw new Error('Conference base orders are empty — refusing to build an empty waiver order');
   }
+  if (a.conference === b.conference) {
+    throw new Error(
+      `Both base orders carry conference "${a.conference}" — one conference is missing. ` +
+        `Alternating a conference with itself yields a full 24-slot order that looks valid ` +
+        `and is semantically wrong.`
+    );
+  }
 
   const seen = new Set<string>();
   for (const id of [...a.franchiseIds, ...b.franchiseIds]) {

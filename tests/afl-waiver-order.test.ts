@@ -100,6 +100,9 @@ describe('buildAflWaiverOrder — the merge rule', () => {
     expect(() =>
       buildAflWaiverOrder([{ conference: '00', franchiseIds: [] }, { conference: '01', franchiseIds: [] }], '0006')
     ).toThrow(/empty/);
+    expect(() =>
+      buildAflWaiverOrder([AM, { ...NA, conference: '00' }], '0006')
+    ).toThrow(/one conference is missing/);
   });
 });
 
@@ -121,7 +124,9 @@ describe('the write payload and URL', () => {
   });
 
   it('rejects the api host, which rejects commissioner imports', () => {
-    expect(() => setAflWaiverOrderUrl('api.myfantasyleague.com', 2026, '19621')).toThrow(/api\.myfantasyleague\.com/);
+    expect(() => setAflWaiverOrderUrl('api.myfantasyleague.com', 2026, '19621')).toThrow(
+      /must target the league's own host/
+    );
   });
 });
 
@@ -129,7 +134,11 @@ describe('the base order this is built from', () => {
   const league = getLeagueBySlug('afl-fantasy');
   const feeds = path.join(process.cwd(), league.dataPath, 'mfl-feeds', '2025');
   const has = (f: string) => fs.existsSync(path.join(feeds, f));
-  const ready = ['standings.json', 'weekly-results-raw.json', 'playoff-brackets.json'].every(has);
+  // The 2026 draft board is read unconditionally below, so it gates the test too.
+  const boardPath = path.join(process.cwd(), league.dataPath, 'mfl-feeds/2026/draftResults.json');
+  const ready =
+    ['standings.json', 'weekly-results-raw.json', 'playoff-brackets.json'].every(has) &&
+    fs.existsSync(boardPath);
 
   it.runIf(ready)('reproduces MFL\'s real 2026 draft board, so the base order is trustworthy', () => {
     const read = (f: string) => JSON.parse(fs.readFileSync(path.join(feeds, f), 'utf-8'));
@@ -161,7 +170,7 @@ describe('the base order this is built from', () => {
 
     // Round 1 carries the NIT bonus and is what MFL actually drafted — compare
     // against the real board so a regression in the standings chain is caught.
-    const actual = JSON.parse(fs.readFileSync(path.join(process.cwd(), league.dataPath, 'mfl-feeds/2026/draftResults.json'), 'utf-8'));
+    const actual = JSON.parse(fs.readFileSync(boardPath, 'utf-8'));
     const boardRound1 = (unit: string) =>
       actual.draftResults.draftUnit
         .find((u: any) => u.unit === unit)!

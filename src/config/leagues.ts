@@ -58,12 +58,6 @@ export interface LeagueDefinition {
   name: string;
   mflHost: string;
   dataPath: string;
-  /**
-   * Repo-relative path to the league's team config JSON. Declared by every
-   * league in leagues-data.mjs; typed here so TS consumers can read it
-   * instead of rebuilding the path from `dataPath` plus a hardcoded filename.
-   */
-  configPath: string;
   domains: string[];
   /** Canonical host for absolute URLs to this league — see leagueOrigin(). */
   canonicalDomain?: string;
