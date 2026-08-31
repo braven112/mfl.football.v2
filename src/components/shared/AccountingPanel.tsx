@@ -18,7 +18,7 @@
  *    as "done" rather than as "click to pay again".
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 interface Franchise {
   id: string;
@@ -83,6 +83,19 @@ export default function AccountingPanel({
   hasPayouts,
 }: Props) {
   const [tab, setTab] = useState<Tab>('ledger');
+  const tabsRef = useRef<HTMLElement | null>(null);
+
+  // Keep the selected tab on screen. The row scrolls horizontally, so a tab
+  // near the end (Import CSV) can sit outside the viewport while being the
+  // active one — which reads as no tab being selected at all. Runs on every
+  // change rather than only on mount because a narrow screen can leave the
+  // newly-clicked tab half-cut at either edge.
+  useEffect(() => {
+    const active = tabsRef.current?.querySelector<HTMLElement>('[aria-selected="true"]');
+    // scrollIntoView is not implemented in every environment this renders in
+    // (jsdom, older WebViews); a missing scroll is cosmetic, so never throw.
+    active?.scrollIntoView?.({ inline: 'nearest', block: 'nearest' });
+  }, [tab]);
   const [ledger, setLedger] = useState<LedgerRecord[] | null>(null);
   const [balances, setBalances] = useState<Record<string, number>>({});
   const [ledgerError, setLedgerError] = useState<string | null>(null);
@@ -122,13 +135,19 @@ export default function AccountingPanel({
 
   return (
     <div className="acct">
-      <nav className="acct__tabs" role="tablist" aria-label="Accounting sections">
+      <nav className="acct__tabs" role="tablist" aria-label="Accounting sections" ref={tabsRef}>
+        {/* One horizontal row you swipe through — see .acct__tabs. Order is
+            by how often a commissioner reaches for each: the ledger first,
+            then the two things they come here to DO, then the once-a-year
+            rollover. CSV import is deliberately LAST: it is the bulk,
+            occasional path, and it is the only tab that can write a whole
+            file's worth of records in one go. */}
         {([
           ['ledger', 'Ledger'],
           ['add', 'Add transaction'],
-          ['import', 'Import CSV'],
           ...(hasPayouts ? ([['payouts', 'Season payouts']] as Array<[Tab, string]>) : []),
           ['rollover', 'Year rollover'],
+          ['import', 'Import CSV'],
         ] as Array<[Tab, string]>).map(([id, label]) => (
           <button
             key={id}

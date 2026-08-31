@@ -16,11 +16,31 @@
 
 /* ----------------------------------------------------------------- tabs */
 
+/* ONE ROW, always — you swipe it rather than it wrapping to a second line.
+   Wrapping was the old behaviour and it reflowed the whole panel below as
+   tabs moved between rows, which on a phone meant the content jumped every
+   time the active tab changed rows. */
 .acct__tabs {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 0.5rem;
+  overflow-x: auto;
+  /* The row is the scroll container, so the underline has to sit on it or it
+     would only span the scrolled content and stop short of the viewport. */
   border-bottom: 1px solid var(--color-border-default, #cbd5e1);
+  -webkit-overflow-scrolling: touch;
+  /* `proximity`, not `mandatory`: a half-swipe should be allowed to settle
+     where the finger left it instead of being yanked to the next tab. */
+  scroll-snap-type: x proximity;
+  /* Firefox/standards. The WebKit pseudo-element below covers Safari+Chrome. */
+  scrollbar-width: none;
+}
+
+/* Hiding the bar is cosmetic only — the row stays scrollable by touch, wheel,
+   and keyboard. The partially-visible last tab is what signals there is more,
+   which is why no tab is allowed to shrink to fit (see flex below). */
+.acct__tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .acct__tab {
@@ -33,11 +53,24 @@
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
+  /* Never shrink and never wrap: a squeezed "Season payouts" breaking onto two
+     lines inside a 2.75rem tab is how this row stops looking like one line. */
+  flex: 0 0 auto;
+  white-space: nowrap;
+  scroll-snap-align: start;
 }
 
 .acct__tab.is-active {
   color: var(--color-text-primary, #0f172a);
   border-bottom-color: var(--btn-primary-bg, #1c497c);
+}
+
+/* Keep the focus ring visible against the scroll container's clipping — an
+   outline drawn outside the box gets cut off by `overflow-x: auto`. */
+.acct__tab:focus-visible {
+  outline: 2px solid var(--btn-primary-bg, #1c497c);
+  outline-offset: -2px;
+  border-radius: 6px 6px 0 0;
 }
 
 /* -------------------------------------------------------------- sections */
