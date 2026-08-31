@@ -1,0 +1,69 @@
+name: Probe Waiver Order Write
+
+# Answers one question against a THROWAWAY league: does
+# import?TYPE=franchises actually accept waiverSortOrder?
+#
+# Background: on 2026-08-31 the AFL waiver-order writer POSTed a full payload
+# with OVERLAY=1, MFL answered HTTP 200 with no error, and nothing changed.
+# Commissioner access was confirmed after the fact, leaving a DATA-shape
+# problem or an import that simply does not carry the field. This probe settles
+# it WITHOUT writing to a real league days before Week 1.
+#
+# Net-zero: swaps two franchises' waiver slots, checks whether the swap took,
+# and restores the original order on every path including failure. The script
+# refuses any league id present in the registry, so it cannot touch TheLeague
+# or the AFL.
+#
+# Default league is 36189 ("Copy of The League"), on www49 — the same throwaway
+# used for commissioner salary-write testing in March, so the existing
+# MFL_USER_ID / MFL_IS_COMMISH secrets are already a commissioner there.
+#
+# MANUAL DISPATCH ONLY. dry_run is checked by default.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Print the swap and payloads without writing"
+        type: boolean
+        required: false
+        default: true
+      league:
+        description: "Throwaway league id to probe (must NOT be in the registry)"
+        required: false
+        type: string
+        default: "36189"
+      year:
+        description: "League year (default: current calendar year)"
+        required: false
+        type: string
+
+concurrency:
+  group: probe-waiver-order-write
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm + Node + install
+        uses: ./.github/actions/setup
+
+      - name: Probe
+        env:
+          MFL_USER_ID: ${{ secrets.MFL_USER_ID }}
+          MFL_IS_COMMISH: ${{ secrets.MFL_IS_COMMISH }}
+        run: |
+          ARGS=""
+          if [ "${{ inputs.dry_run }}" != "true" ]; then ARGS="$ARGS --live"; fi
+          if [ -n "${{ inputs.league }}" ]; then ARGS="$ARGS --league ${{ inputs.league }}"; fi
+          if [ -n "${{ inputs.year }}" ]; then ARGS="$ARGS --year ${{ inputs.year }}"; fi
+          echo "Running with:$ARGS"
+          pnpm exec tsx scripts/probe-mfl-waiver-order-write.ts $ARGS
