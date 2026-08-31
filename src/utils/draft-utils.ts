@@ -283,15 +283,79 @@ function buildDraftPrediction(
  * Parse draft pick comments to extract trade information
  * Format: "[Pick traded from Team Name.]" or no comment for original pick
  *
+ * Returns the TEAM NAME alone. Callers render it after a preposition they
+ * supply themselves ("via X", "from X", "Originally owned by X") and match it
+ * against `TeamConfig.name` to resolve the original team's crest, so anything
+ * but a bare name is wrong in both directions.
+ *
+ * The alternation this used to open with — `(?:traded|traded from)` — could
+ * never reach its second branch: regex alternation is ordered, `traded` always
+ * matched first, and the ` from ` was left for `(.+?)` to swallow. Since every
+ * comment MFL actually writes says "traded from", the capture began "from " on
+ * literally all of them. That shipped as `· via from Bring the Pain` on the
+ * broadcast, and silently broke every `config.name === originalTeamName`
+ * lookup, so the traded-from crest never rendered anywhere.
+ *
+ * `from` is now REQUIRED rather than optional, because MFL also writes
+ * `Pick traded to <TEAM>` — which names the team that RECEIVED the pick. An
+ * optional `from` matches that line too and reports the recipient as the
+ * origin, i.e. exactly backwards. There is no `[Pick traded <TEAM>.]` form in
+ * any committed feed; the dead alternation branch was never a real shape.
+ *
+ * Trimmed because MFL's own feed contains double spaces after "from"
+ * (`[Pick traded from  Running Down The Dream.]`) — a leading space fails an
+ * exact name match exactly as invisibly as the "from " prefix did.
+ *
+ * WHY NOT ANCHOR ON THE BRACKETS. Requiring `\[…\]` around the statement, as
+ * this did, silently dropped two thirds of the real corpus:
+ *
+ * - `[Pick traded from A.\nPick made from Pre-Draft List]` — MFL puts several
+ *   statements in ONE bracket block, newline-separated, so `.]` does not
+ *   follow the team name. `.` does not match `\n`, so this simply did not
+ *   match and the pick read as UNTRADED.
+ * - `Pick traded from A.` — 77 comments carry no brackets at all.
+ * - `[Pick made based on Pre-Draft List] Pick traded from A.` — the statement
+ *   can also sit AFTER a closed block, so line-anchoring with `^` fails too.
+ *
+ * The terminator is therefore "period, then end of line, `]`, or end of
+ * string" — which also keeps a team name that legitimately ends in a period
+ * (`Be Gentle. It's my first time.`) intact, since the lazy `(.+?)` only stops
+ * at a period that is actually followed by one of those.
+ *
+ * FIRST match wins: MFL appears to APPEND a line per hop, oldest first, so the
+ * first names the ORIGINAL owner — the shape `formatTradeChain` already
+ * renders as "from <first> via <rest>".
+ *
+ * Be honest about how well that is established. It can only be checked where
+ * pick position N maps to one franchise in every round, which needs
+ * `draftType: SAME` AND every round the same size; of the corpus's 47
+ * multi-hop picks, exactly 3 clear both gates (TheLeague 2023) and all 3 put
+ * the original owner FIRST — position 07 is The Music City Mafia and 3.07
+ * leads with it, position 09 is Wascawy Wabbits and 3.09 leads with it. The
+ * other 44 sit in league-years with uneven rounds (TheLeague 2024 opens with
+ * 17 picks in round 1), where the inference is INVALID and reads first, last
+ * and neither more or less at random — do not mistake that noise for
+ * counter-evidence, and do not mistake n=3 for proof. If a twice-traded pick
+ * ever shows the wrong crest, this ordering is the first thing to re-check.
+ *
+ * KNOWN LIMIT: MFL sometimes appends free prose to its own statement line, and
+ * a team name may itself end in a period ("Be Gentle. It's my first time."),
+ * so `Pick traded from A. Great value here.` cannot be told apart from a team
+ * called "A. Great value here" by any regex. The capture is bounded to one
+ * line and cannot cross a `]`, which is as far as this can be taken here; the
+ * residue would need resolving the name against the league's franchises, which
+ * only the caller can do. Every one of the corpus's 287 statements parses to a
+ * real franchise name today.
+ *
  * @param comment - Draft pick comment from draftResults
- * @returns Parsed team name if traded, undefined if original
+ * @returns Original owner's team name if traded, undefined if never traded
  */
 export function parseTradeFromComment(comment: string): string | undefined {
   if (!comment) return undefined;
 
-  const tradeMatch = comment.match(/\[Pick (?:traded|traded from) (.+?)\.\]/);
+  const tradeMatch = comment.match(/Pick traded from ([^\]\n]+?)\.(?=\s*(?:\]|\n|$))/);
   if (tradeMatch) {
-    return tradeMatch[1];
+    return tradeMatch[1].trim();
   }
 
   return undefined;

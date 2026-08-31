@@ -28,6 +28,7 @@ import {
   toBroadcastPair,
   resolveOrigin,
 } from '../src/utils/draft-broadcast';
+import { parseTradeFromComment } from '../src/utils/draft-utils';
 import { usesCollegeOrigin } from '../src/utils/pick-reveal';
 import {
   assignBoardRanks,
@@ -37,7 +38,7 @@ import {
   findRehearsalYear,
   loadConferenceKeepers,
 } from '../src/utils/draft-broadcast-server';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import type { DraftRoomPick } from '../src/types/draft-room';
 import type { BroadcastPlayer } from '../src/types/draft-broadcast';
 
@@ -1309,5 +1310,189 @@ describe('the board serves single-unit leagues too', () => {
     const src = readFileSync('src/pages/theleague/draft-broadcast.astro', 'utf-8');
     const calls = src.match(/buildDraftPlayers\(/g) ?? [];
     expect(calls.length, 'one buildDraftPlayers call per request, not two').toBe(1);
+  });
+});
+
+describe('a traded pick names the team it came from, and nothing else', () => {
+  /**
+   * `[Pick traded from Bring the Pain.]` reached a 65-inch screen as
+   * "Pick 1.11 · via from Bring the Pain".
+   *
+   * The parser's `(?:traded|traded from)` alternation could not reach its
+   * second branch — alternation is ordered, `traded` matched first every time,
+   * and `(.+?)` swallowed the ` from `. Every consumer supplies its own
+   * preposition ("via", "from", "Originally owned by"), so the prefix reads
+   * twice wherever it renders, and every `config.name === originalTeamName`
+   * crest lookup misses in silence.
+   */
+  it('strips the "from", which the old alternation could never consume', () => {
+    expect(parseTradeFromComment('[Pick traded from Bring the Pain.] ')).toBe(
+      'Bring the Pain'
+    );
+  });
+
+  it('reads a statement MFL did not wrap in brackets', () => {
+    // 77 comments in the committed feeds carry no brackets at all. The old
+    // pattern opened with `\[`, so every one of them read as UNTRADED.
+    expect(parseTradeFromComment('Pick traded from Da Dangsters.')).toBe(
+      'Da Dangsters'
+    );
+  });
+
+  it('reads the hop out of a multi-statement block', () => {
+    // MFL puts several statements in ONE bracket block, newline-separated, so
+    // `.]` never follows the team name and `.` does not cross the newline.
+    // 93 of 250 bracketed trade comments were missed on this alone.
+    expect(
+      parseTradeFromComment(
+        '[Pick traded from Bring the Pain.\nPick made from Pre-Draft List] '
+      )
+    ).toBe('Bring the Pain');
+  });
+
+  it('reads a statement that sits AFTER a closed block', () => {
+    // Line-anchoring with `^` would fail this one.
+    expect(
+      parseTradeFromComment(
+        '[Pick made based on Pre-Draft List] Pick traded from Maverick.'
+      )
+    ).toBe('Maverick');
+  });
+
+  it('takes the FIRST hop — the original owner, not an intermediate', () => {
+    // MFL appends a line per hop, oldest first. Verified against TheLeague's
+    // 2023 `draftType: SAME` feed: position 07 belongs to The Music City
+    // Mafia, and 3.07's first line names it.
+    expect(
+      parseTradeFromComment(
+        '[Pick traded from The Music City Mafia.\nPick traded from Vitside Mafia.\nPick traded from Bring the Pain.]'
+      )
+    ).toBe('The Music City Mafia');
+  });
+
+  it('cannot let a capture run across a closing bracket', () => {
+    // The name is bounded to one line AND cannot cross `]`, so a malformed
+    // comment yields nothing rather than a garbage team name that silently
+    // resolves to no crest.
+    expect(parseTradeFromComment('Pick traded from A] trailing.')).toBeUndefined();
+  });
+
+  it('never reports the RECIPIENT of a "traded to" line as the origin', () => {
+    // `Pick traded to <TEAM>` names the team that received the pick. An
+    // optional `from` matches this and reports the origin exactly backwards.
+    expect(parseTradeFromComment('Pick traded to Dream')).toBeUndefined();
+    expect(parseTradeFromComment('[Pick traded to Dream.]')).toBeUndefined();
+  });
+
+  it('ignores owner chatter that merely contains the word "traded"', () => {
+    for (const comment of [
+      'Vit, you traded away your whole draft.',
+      'Almost traded this one.',
+      'The rights to Duke Johnson has been traded to Wabbits.',
+      'Player to be traded to Heavy Chevy.',
+    ]) {
+      expect(parseTradeFromComment(comment), comment).toBeUndefined();
+    }
+  });
+
+  it('trims the double space MFL writes after "from"', () => {
+    // Real string from data/theleague/mfl-feeds — a leading space fails an
+    // exact name match exactly as invisibly as the "from " prefix did.
+    expect(
+      parseTradeFromComment('[Pick traded from  Running Down The Dream.]')
+    ).toBe('Running Down The Dream');
+  });
+
+  it('keeps a team name that legitimately contains a period', () => {
+    expect(
+      parseTradeFromComment("[Pick traded from Be Gentle. It's my first time..]")
+    ).toBe("Be Gentle. It's my first time.");
+  });
+
+  it('returns undefined for the non-trade comments MFL also writes', () => {
+    for (const comment of [
+      '',
+      '[Pick made from Pre-Draft List] ',
+      '[Pick added by commissioner.] ',
+      'Pick going to Wabbits ',
+    ]) {
+      expect(parseTradeFromComment(comment), comment).toBeUndefined();
+    }
+  });
+
+  it('resolves against the real feed, so no committed comment yields a prefix', () => {
+    // The bug was invisible to a unit test built only from hand-written
+    // fixtures — it took the shape MFL actually emits to expose it.
+    const feed = 'data/theleague/mfl-feeds/2023/draftResults.json';
+    if (!existsSync(feed)) return;
+    const raw = JSON.parse(readFileSync(feed, 'utf-8'));
+    const picks = raw?.draftResults?.draftUnit?.draftPick ?? [];
+    const names = picks
+      .map((p: { comments?: string }) => parseTradeFromComment(p.comments || ''))
+      .filter(Boolean) as string[];
+
+    expect(names.length, 'the 2023 feed has traded picks to parse').toBeGreaterThan(0);
+
+    // Every comment that says so is parsed — the bracket anchor used to drop
+    // the multi-statement ones, which read as untraded rather than as broken.
+    const claimTrade = picks.filter((p: { comments?: string }) =>
+      /Pick traded from /.test(p.comments || '')
+    ).length;
+    expect(names.length, 'no trade statement goes unparsed').toBe(claimTrade);
+
+    for (const name of names) {
+      expect(name, 'a parsed name is bare — the caller adds the preposition')
+        .not.toMatch(/^from\b/i);
+      expect(name).toBe(name.trim());
+    }
+  });
+
+  it('no consumer re-strips the prefix downstream, anywhere in src/', () => {
+    // BoardCell carried a local `replace(/^from\s+/i, '')`, which fixed the one
+    // cell it ran in while the title beside it still read "via from X". The fix
+    // belongs in the parser; a second copy anywhere means it regressed.
+    //
+    // Scans all of src/ rather than naming BoardCell: pinning the one file that
+    // happened to have the workaround would not notice the same line reappearing
+    // in a sibling draft widget, which is how it got there in the first place.
+    const offenders: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = `${dir}/${entry.name}`;
+        if (entry.isDirectory()) walk(full);
+        else if (/\.(ts|tsx|astro|mjs)$/.test(entry.name)) {
+          // Tolerate the spacing variants: `replace(/^from`, `replace(/^\s*from`,
+          // `replace(/ ^\s+from`. Matching only the exact original spelling would let
+          // the same workaround back in under a one-character edit.
+          if (/replace\(\s*\/\^[^/]{0,12}from/i.test(readFileSync(full, 'utf-8'))) offenders.push(full);
+        }
+      }
+    };
+    walk('src');
+    expect(offenders, 'strip the "from " prefix in parseTradeFromComment, not at a render site').toEqual([]);
+  });
+
+  it('the broadcast board carries the bare name onto the stage', () => {
+    const board = buildConferenceBoard(
+      {
+        draftResults: {
+          draftUnit: {
+            unit: 'CONFERENCE00',
+            draftPick: [
+              { round: '01', pick: '11', franchise: '0003', player: '', comments: '[Pick traded from Bring the Pain.]' },
+              { round: '01', pick: '12', franchise: '0004', player: '', comments: '' },
+            ],
+          },
+        },
+      },
+      'CONFERENCE00'
+    );
+
+    const traded = board.picks[0];
+    expect(traded.isTraded).toBe(true);
+    expect(traded.originalTeamName).toBe('Bring the Pain');
+    // The literal string OnTheClock builds around it.
+    expect(` · via ${traded.originalTeamName}`).toBe(' · via Bring the Pain');
+    expect(board.picks[1].isTraded).toBe(false);
   });
 });

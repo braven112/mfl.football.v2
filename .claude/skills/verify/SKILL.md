@@ -51,6 +51,22 @@ Playwright is in node_modules; Chromium is pre-installed:
   switch https→http).
 - External headshot hosts (espncdn, myfantasyleague) are unreachable —
   fulfill them with a placeholder image or accept broken avatars.
+- **Prefer a `RegExp` over a glob in `route()`.** A single `*` does not cross
+  `/`. A glob that matches nothing is not an error — the handler registers and
+  is simply never called, which reads as "interception doesn't work on this
+  page" and cost one investigation exactly that way. Verified against
+  `playwright-core`'s own `globToRegexPattern`, for a headshot URL with a path:
+
+  | Pattern | Compiles to | matches |
+  |---|---|---|
+  | `**://*` | `^(.*)://([^/]*)$` | **no** — trailing `*` stops at the host |
+  | `**://**` | `^(.*)://(.*)$` | yes |
+  | `https://a.espncdn.com/**` | `^https://a\.espncdn\.com/(.*)$` | yes (but not the bare origin) |
+  | `**/*.png` | `^(.*/)([^/]*)\.png$` | yes |
+
+  So: `ctx.route(/espncdn\.com|myfantasyleague\.com/, r => r.fulfill({ path: 'public/assets/nfl-logos/KC.svg' }))`.
+  To check a glob before blaming the browser:
+  `require('playwright-core/lib/utils/isomorphic/urlMatch.js').globToRegexPattern(p)`.
 - Dark mode: add cookie `theme_pref=dark`.
 
 ## Test data

@@ -569,17 +569,18 @@ NFL shield, which says nothing beside a name; an unrecognised team code and a
 school absent from the table would 404. All four return `logo: null` and the
 label stands on its own.
 
-### Verifying this page in the sandbox: `page.route` did not intercept its images
+### Verifying this page: the `page.route` glob never matched
 
-Chromium's context routes (`ctx.route('https://a.espncdn.com/**', …)`) never
-fired for the reveal card's logo and headshot requests in the remote sandbox —
-the handler's own `console.log` never printed, so the requests were not reaching
-it. Blocking the service worker (`serviceWorkers: 'block'`) did not change it,
-and the cause was not chased further. Recorded as observed behaviour, not as an
-explanation: **do not assume the `verify` skill's "fulfill them with a
-placeholder image" advice works on this page.**
+**Corrected 2026-08-31.** This blamed something page-specific and unchased.
+Wrong: a single `*` does not cross `/`, so `**://*` matches scheme + host but
+nothing with a path, and a glob matching no URL fires no handler and raises no
+error. Use a `RegExp`; the `verify` skill's placeholder advice is fine.
+`grep -n "RegExp. over a glob" .claude/skills/verify/SKILL.md`. The traded-pick
+parser fixed alongside: `grep -n "comments. is a LOG" domains/mfl-api.md`.
 
-What did work, and is enough to judge layout: wait for `.dbc-reveal__meta`, then
+The in-page src rewrite below still works and needs no interception, so it
+remains the quickest way to judge layout — but it is now a convenience, not a
+workaround for something unexplained. Wait for `.dbc-reveal__meta`, then
 rewrite the src in the page.
 
 ```js
