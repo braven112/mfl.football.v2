@@ -98,6 +98,17 @@ export default function AccountingPanel({
   }, [tab]);
   const [ledger, setLedger] = useState<LedgerRecord[] | null>(null);
   const [balances, setBalances] = useState<Record<string, number>>({});
+  /**
+   * An unfinished carry-over from last year, or null.
+   *
+   * MFL's yearly league upgrade creates the new league with EMPTY books, so
+   * between that upgrade and the carry-over the league's real balances live in
+   * a year nobody is looking at any more. Nothing about the new year's ledger
+   * looks wrong in that state — it looks like a league that owes nothing —
+   * which is exactly why this has to announce itself rather than wait to be
+   * found on a tab.
+   */
+  const [outstanding, setOutstanding] = useState<{ total: number; count: number } | null>(null);
   const [ledgerError, setLedgerError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -133,8 +144,55 @@ export default function AccountingPanel({
     void loadLedger();
   }, [loadLedger]);
 
+  // Ask the migrate planner whether last year still has balances to carry.
+  // Reuses the endpoint the rollover tab drives, so the banner and the tab can
+  // never disagree about what is outstanding.
+  //
+  // Deliberately silent on failure: this is a nudge, not a gate. A league year
+  // with no prior books answers 409, which is a legitimate "nothing to carry",
+  // not an error worth putting in front of anyone.
+  const checkOutstanding = useCallback(async () => {
+    try {
+      const response = await fetch(
+        `${base}/migrate?league=${encodeURIComponent(leagueSlug)}&from=${year - 1}&to=${year}`
+      );
+      if (!response.ok) {
+        setOutstanding(null);
+        return;
+      }
+      const data = await response.json();
+      const carryable = Number(data?.totals?.carryable ?? 0);
+      const count = Number(data?.totals?.franchisesCarried ?? 0);
+      setOutstanding(count > 0 ? { total: carryable, count } : null);
+    } catch {
+      setOutstanding(null);
+    }
+  }, [base, leagueSlug, year]);
+
+  useEffect(() => {
+    void checkOutstanding();
+  }, [checkOutstanding]);
+
   return (
     <div className="acct">
+      {outstanding && tab !== 'rollover' && (
+        <div className="acct__banner" role="status">
+          <div>
+            <strong>{year - 1} balances haven&rsquo;t been carried into {year}.</strong>{' '}
+            {money(outstanding.total)} across {outstanding.count} franchise
+            {outstanding.count === 1 ? '' : 's'} is still sitting in the {year - 1} books. Until
+            this runs, {year} looks like a league that owes nothing.
+          </div>
+          <button
+            type="button"
+            className="acct__btn acct__btn--primary"
+            onClick={() => setTab('rollover')}
+          >
+            Review carry-over
+          </button>
+        </div>
+      )}
+
       <nav className="acct__tabs" role="tablist" aria-label="Accounting sections" ref={tabsRef}>
         {/* One horizontal row you swipe through — see .acct__tabs. Order is
             by how often a commissioner reaches for each: the ledger first,
@@ -207,7 +265,12 @@ export default function AccountingPanel({
           year={year}
           seasons={seasons}
           nameFor={nameFor}
-          onWritten={loadLedger}
+          onWritten={() => {
+            loadLedger();
+            // Re-check so the banner clears itself the moment the carry lands,
+            // rather than persisting until the page is reloaded.
+            void checkOutstanding();
+          }}
         />
       )}
     </div>

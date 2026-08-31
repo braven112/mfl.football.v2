@@ -186,6 +186,46 @@ credit silently disappears.
 `/api/accounting/migrate` plans and applies the carry-forward; the console's
 **Year rollover** tab drives it.
 
+### Carry-over is the LAST step of the yearly league upgrade
+
+MFL's yearly league upgrade creates next year's league with rosters, keepers
+and picks carried — and **empty books**. So the order is fixed, and the
+carry-over goes last:
+
+1. MFL creates the new league year (Feb 14 TheLeague, June 1 AFL).
+2. Last season's prizes are paid **into the season's own ledger**, before it is
+   closed out. `Season payouts` does this.
+3. Any remaining settlement in the old year — winnings sent, fees, corrections.
+4. **Carry-over.** `Year rollover` moves every closing balance into the new
+   league year.
+
+Last because it carries a *closing* balance: anything written to the old year
+after the carry has to be carried again by hand, and a second run will not do
+it (the description already matches, so the line comes back `already-migrated`
+at the old amount and the difference is simply lost). Settle the old year, then
+carry it.
+
+From step 4 on, **the newest league year is the only ledger anyone should
+touch.** The accounting page enforces that by always defaulting to the current
+league year — `leagueYearFor(league)`, which honours each league's own rollover
+date rather than a shared Feb 14.
+
+### The gap between the upgrade and the carry-over announces itself
+
+Between steps 1 and 4 the league's real balances live in a year nobody is
+looking at any more, and **nothing about the new year's ledger looks wrong** —
+it looks like a league that owes nothing. That is the failure this feature has
+to survive, because it is invisible by construction.
+
+So the console checks on load whether the previous year still has balances to
+carry, and if it does, says so in a banner above the tabs — visible from every
+tab, not just the one that fixes it. It reuses the `migrate` planner rather
+than re-deriving, so the banner and the rollover tab can never disagree.
+
+The check is a **nudge, not a gate**: it fails silent. A league year with no
+prior books answers 409, which is a legitimate "nothing to carry" and not an
+error worth putting in front of a commissioner.
+
 ### The sign is preserved, never flipped
 
 A franchise at **-100** at the close of 2025 (they owe $100) opens 2026 at
