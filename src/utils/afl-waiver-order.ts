@@ -111,6 +111,18 @@ export function buildAflWaiverOrder(
 }
 
 /**
+ * Which of the two readings of MFL's DATA spec to emit.
+ *
+ * MFL documents DATA as "the same as the contents of the `<franchises>`
+ * element in the export league API". That is ambiguous: `salaries` documents
+ * its payload WITH the `<salaries>` root, but "contents of" reads as the
+ * `<franchise>` children alone. The 2026-08-31 live run sent 'wrapped' and MFL
+ * accepted it while applying nothing, so neither reading is confirmed and the
+ * caller tries both rather than guessing again.
+ */
+export type FranchisesXmlShape = 'wrapped' | 'bare';
+
+/**
  * Serialize a waiver order as the `DATA` payload for
  * `import?TYPE=franchises`.
  *
@@ -120,11 +132,14 @@ export function buildAflWaiverOrder(
  * blank every team name, logo, icon, abbreviation and division in the league.
  * `setAflWaiverOrderUrl()` is the only supported way to build the target URL.
  */
-export function buildFranchisesWaiverXml(order: WaiverOrderEntry[]): string {
+export function buildFranchisesWaiverXml(
+  order: WaiverOrderEntry[],
+  shape: FranchisesXmlShape = 'wrapped'
+): string {
   const rows = order
     .map((e) => `  <franchise id="${xmlAttr(e.franchiseId)}" waiverSortOrder="${e.position}" />`)
     .join('\n');
-  return `<franchises>\n${rows}\n</franchises>`;
+  return shape === 'wrapped' ? `<franchises>\n${rows}\n</franchises>` : rows;
 }
 
 /**

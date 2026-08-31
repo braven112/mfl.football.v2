@@ -116,6 +116,21 @@ describe('the write payload and URL', () => {
     expect(xml).not.toMatch(/name=|logo=|icon=|division=/);
   });
 
+  it('emits the bare shape without the wrapper, same rows', () => {
+    // MFL's DATA spec is ambiguous and the wrapped form provably no-ops, so the
+    // writer tries both. The two shapes must differ ONLY by the wrapper.
+    const built = buildAflWaiverOrder([AM, NA], '0014');
+    const bare = buildFranchisesWaiverXml(built, 'bare');
+    expect(bare).not.toMatch(/<franchises>|<\/franchises>/);
+    expect(bare.match(/<franchise /g)).toHaveLength(24);
+    expect(buildFranchisesWaiverXml(built, 'wrapped')).toBe(`<franchises>\n${bare}\n</franchises>`);
+  });
+
+  it('defaults to the wrapped shape', () => {
+    const built = buildAflWaiverOrder([AM, NA], '0014');
+    expect(buildFranchisesWaiverXml(built)).toBe(buildFranchisesWaiverXml(built, 'wrapped'));
+  });
+
   it('welds OVERLAY=1 onto the URL — without it MFL erases every unsent franchise field', () => {
     const url = setAflWaiverOrderUrl('www44.myfantasyleague.com', 2026, '19621');
     expect(url).toBe('https://www44.myfantasyleague.com/2026/import?TYPE=franchises&L=19621&OVERLAY=1');
