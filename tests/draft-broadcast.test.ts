@@ -38,7 +38,7 @@ import {
   findRehearsalYear,
   loadConferenceKeepers,
 } from '../src/utils/draft-broadcast-server';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import type { DraftRoomPick } from '../src/types/draft-room';
 import type { BroadcastPlayer } from '../src/types/draft-broadcast';
 
@@ -1370,6 +1370,13 @@ describe('a traded pick names the team it came from, and nothing else', () => {
     ).toBe('The Music City Mafia');
   });
 
+  it('cannot let a capture run across a closing bracket', () => {
+    // The name is bounded to one line AND cannot cross `]`, so a malformed
+    // comment yields nothing rather than a garbage team name that silently
+    // resolves to no crest.
+    expect(parseTradeFromComment('Pick traded from A] trailing.')).toBeUndefined();
+  });
+
   it('never reports the RECIPIENT of a "traded to" line as the origin', () => {
     // `Pick traded to <TEAM>` names the team that received the pick. An
     // optional `from` matches this and reports the origin exactly backwards.
@@ -1440,15 +1447,29 @@ describe('a traded pick names the team it came from, and nothing else', () => {
     }
   });
 
-  it('no consumer re-strips the prefix downstream', () => {
+  it('no consumer re-strips the prefix downstream, anywhere in src/', () => {
     // BoardCell carried a local `replace(/^from\s+/i, '')`, which fixed the one
     // cell it ran in while the title beside it still read "via from X". The fix
-    // belongs in the parser; a second copy here means it regressed.
-    const cell = readFileSync(
-      'src/components/theleague/draft-room/BoardCell.tsx',
-      'utf-8'
-    );
-    expect(cell).not.toMatch(/replace\(\/\^from/);
+    // belongs in the parser; a second copy anywhere means it regressed.
+    //
+    // Scans all of src/ rather than naming BoardCell: pinning the one file that
+    // happened to have the workaround would not notice the same line reappearing
+    // in a sibling draft widget, which is how it got there in the first place.
+    const offenders: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = `${dir}/${entry.name}`;
+        if (entry.isDirectory()) walk(full);
+        else if (/\.(ts|tsx|astro|mjs)$/.test(entry.name)) {
+          // Tolerate the spacing variants: `replace(/^from`, `replace(/^\s*from`,
+          // `replace(/ ^\s+from`. Matching only the exact original spelling would let
+          // the same workaround back in under a one-character edit.
+          if (/replace\(\s*\/\^[^/]{0,12}from/i.test(readFileSync(full, 'utf-8'))) offenders.push(full);
+        }
+      }
+    };
+    walk('src');
+    expect(offenders, 'strip the "from " prefix in parseTradeFromComment, not at a render site').toEqual([]);
   });
 
   it('the broadcast board carries the bare name onto the stage', () => {

@@ -2490,14 +2490,22 @@ a bug with two halves. A downstream `replace(/^from\s+/i, '')` had been added in
 `BoardCell.tsx`, which fixed that one label while the `title` beside it still
 said `via from X`: the tell that the fix belonged at the parse, not the render.
 
-**MFL APPENDS one line per hop, oldest first, so the FIRST names the ORIGINAL
-owner** and the rest are intermediate holders — the shape `formatTradeChain`
-already renders as `from <first> via <rest>`. Proved rather than assumed, and
-the technique generalizes: TheLeague's 2023 feed is `draftType: SAME`, so pick
-position N belongs to one franchise in every round, which means an UNTRADED pick
-at position N reveals that position's original owner. Position 07's is The Music
-City Mafia and 3.07 leads with it; position 09's is Wascawy Wabbits and 3.09
-leads with it likewise.
+**MFL appears to APPEND one line per hop, oldest first, so the FIRST names the
+ORIGINAL owner** and the rest are intermediate holders — the shape
+`formatTradeChain` already renders as `from <first> via <rest>`.
+
+The technique for checking it: a `draftType: SAME` league drafts the same order
+every round, so an UNTRADED pick at position N reveals that position's original
+owner, and a multi-hop pick at N can be tested against it. **Mind the second
+gate, which cost a wrong conclusion once already** — it only holds if every
+round is the SAME SIZE, and TheLeague's are not (2024 opens with 17 picks in
+round 1, so position N slides). Of the corpus's 47 multi-hop picks exactly 3
+clear both gates, all in TheLeague 2023, and all 3 put the original owner
+first: position 07 is The Music City Mafia and 3.07 leads with it, position 09
+is Wascawy Wabbits and 3.09 leads with it. Run it over the other 44 without the
+even-round gate and you get 23 first / 4 last / 8 neither — noise from an
+invalid inference, which reads exactly like counter-evidence. **n=3 is the real
+support here; treat first-hop-wins as well-founded but not proven.**
 
 Guards live in `tests/draft-broadcast.test.ts` — one per shape above, the
 `traded to` and owner-chatter rejections, a sweep asserting every comment in the

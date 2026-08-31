@@ -322,14 +322,30 @@ function buildDraftPrediction(
  * (`Be Gentle. It's my first time.`) intact, since the lazy `(.+?)` only stops
  * at a period that is actually followed by one of those.
  *
- * FIRST match wins because MFL APPENDS a line per hop, oldest first, so on a
- * twice-traded pick the first names the ORIGINAL owner and the rest are
- * intermediate holders — the shape `formatTradeChain` already renders as
- * "from <first> via <rest>". Confirmed against TheLeague's 2023 feed, whose
- * `draftType: SAME` means pick position N belongs to one franchise in every
- * round: position 07's untraded owner is The Music City Mafia and 3.07 reads
- * "traded from The Music City Mafia" first, then Vitside Mafia, then Bring the
- * Pain; position 09's is Wascawy Wabbits, and 3.09 leads with it likewise.
+ * FIRST match wins: MFL appears to APPEND a line per hop, oldest first, so the
+ * first names the ORIGINAL owner — the shape `formatTradeChain` already
+ * renders as "from <first> via <rest>".
+ *
+ * Be honest about how well that is established. It can only be checked where
+ * pick position N maps to one franchise in every round, which needs
+ * `draftType: SAME` AND every round the same size; of the corpus's 47
+ * multi-hop picks, exactly 3 clear both gates (TheLeague 2023) and all 3 put
+ * the original owner FIRST — position 07 is The Music City Mafia and 3.07
+ * leads with it, position 09 is Wascawy Wabbits and 3.09 leads with it. The
+ * other 44 sit in league-years with uneven rounds (TheLeague 2024 opens with
+ * 17 picks in round 1), where the inference is INVALID and reads first, last
+ * and neither more or less at random — do not mistake that noise for
+ * counter-evidence, and do not mistake n=3 for proof. If a twice-traded pick
+ * ever shows the wrong crest, this ordering is the first thing to re-check.
+ *
+ * KNOWN LIMIT: MFL sometimes appends free prose to its own statement line, and
+ * a team name may itself end in a period ("Be Gentle. It's my first time."),
+ * so `Pick traded from A. Great value here.` cannot be told apart from a team
+ * called "A. Great value here" by any regex. The capture is bounded to one
+ * line and cannot cross a `]`, which is as far as this can be taken here; the
+ * residue would need resolving the name against the league's franchises, which
+ * only the caller can do. Every one of the corpus's 287 statements parses to a
+ * real franchise name today.
  *
  * @param comment - Draft pick comment from draftResults
  * @returns Original owner's team name if traded, undefined if never traded
@@ -337,7 +353,7 @@ function buildDraftPrediction(
 export function parseTradeFromComment(comment: string): string | undefined {
   if (!comment) return undefined;
 
-  const tradeMatch = comment.match(/Pick traded from (.+?)\.(?=\s*(?:\]|\n|$))/);
+  const tradeMatch = comment.match(/Pick traded from ([^\]\n]+?)\.(?=\s*(?:\]|\n|$))/);
   if (tradeMatch) {
     return tradeMatch[1].trim();
   }
