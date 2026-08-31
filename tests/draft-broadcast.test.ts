@@ -1562,12 +1562,26 @@ describe('screensaverAnchorMs', () => {
     expect(screensaverAnchorMs(board, 9_000_000)).toBe(9_000_000);
   });
 
-  it('floors to the end of the last reel, so passes do not run back to back', () => {
+  it('floors to the end of the last cycle, so passes do not run back to back', () => {
     // Without this the anchor is still the same hours-old pick the moment the
-    // reel ends, and the idle board — the half that says whose turn it is —
+    // cycle ends, and the idle board — the half that says whose turn it is —
     // never gets the screen again.
     const board = [stamped(1, 'a', 2_000)];
     expect(screensaverAnchorMs(board, opened, 8_000_000)).toBe(8_000_000);
+  });
+
+  it('a pick MFL stamped unusably still buys the room its ten minutes', () => {
+    // `lastPickAtMs` skips an unparseable stamp — but `isRevealWorthy`
+    // deliberately still REVEALS that pick, so the board hands the room a
+    // reveal and, without the quiet-since floor the component stamps on every
+    // fresh pick, re-arms the cycle the instant that reveal drains. On a board
+    // where no pick carries a usable stamp, that is every pick, not an edge
+    // case.
+    const board = [{ ...slot(1, 'a'), timestamp: 'not-a-number' }];
+    expect(lastPickAtMs(board)).toBeNull();
+    const sawPickAt = 9_500_000;
+    expect(screensaverAnchorMs(board, opened, sawPickAt)).toBe(sawPickAt);
+    expect(isScreensaverDue(sawPickAt, sawPickAt + SCREENSAVER_IDLE_MS - 1)).toBe(false);
   });
 
   it('survives a board whose picks carry no usable stamp', () => {
@@ -1624,6 +1638,15 @@ describe('the screensaver never impersonates a live pick', () => {
     readFileSync(`src/components/shared/draft-broadcast/${f}`, 'utf-8')
       .replace(/\/\*[\s\S]*?\*\//g, ' ')
       .replace(/^\s*\/\/.*$/gm, ' ');
+
+  it('a fresh pick re-floors the idle wait rather than clearing it', () => {
+    // Clearing the floor and leaning on the pick's own MFL stamp loses the
+    // whole wait for a pick stamped unusably — see the anchor test above.
+    const code = read('DraftBroadcast.tsx');
+    const ingest = code.slice(code.indexOf('const ingest ='), code.indexOf('Rehearsal replay'));
+    expect(ingest).toMatch(/setQuietSince\(now\)/);
+    expect(ingest).not.toMatch(/setQuietSince\(0\)/);
+  });
 
   it('a fresh pick clears the cycle inside ingest', () => {
     // The interrupt has to live where "new" is known. Arming is timing and can

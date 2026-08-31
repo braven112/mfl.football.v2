@@ -245,14 +245,16 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
   const [playlist, setPlaylist] = useState<ScreensaverScene[] | null>(null);
   const [sceneIndex, setSceneIndex] = useState(0);
   /**
-   * When the last cycle finished, or 0 if none has.
+   * The CLIENT-clock instant from which the room has had nothing new — the end
+   * of the last cycle, or the arrival of a fresh pick. 0 until one happens.
    *
-   * The idle countdown restarts from here, which is what puts the on-the-clock
-   * board back on the TV between passes. Without it the anchor is still the same
-   * hours-old pick the moment the cycle ends, so the screensaver would re-arm
-   * immediately and the room would never see whose turn it is again.
+   * It is one value rather than two because it answers one question, and both
+   * halves are load-bearing: without the cycle-end half the screensaver re-arms
+   * into a permanent loop with no idle board between passes, and without the
+   * fresh-pick half a pick MFL stamped unusably never moves the anchor at all.
+   * See `screensaverAnchorMs`, which holds the reasoning.
    */
-  const [restedAt, setRestedAt] = useState(0);
+  const [quietSince, setQuietSince] = useState(0);
   /** When this board started watching — the reload floor. See
    *  `screensaverAnchorMs`. A ref: fixed for the life of the board. */
   const openedAtRef = useRef(Date.now());
@@ -392,8 +394,12 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
     // is new rather than merely present.
     if (fresh.length > 0) {
       setPlaylist(null);
-      // The wait now runs from the pick, not from whenever the last cycle ended.
-      setRestedAt(0);
+      // ...and the wait starts again HERE. Not by clearing the floor and
+      // leaning on the pick's own timestamp: `lastPickAtMs` skips a stamp it
+      // cannot parse, which `isRevealWorthy` deliberately still reveals, so a
+      // cleared floor would hand the room the reveal and then re-arm the cycle
+      // the moment it drained.
+      setQuietSince(now);
     }
 
     // First poll after load reconciles a stale SSR snapshot against live MFL.
@@ -578,8 +584,8 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
   /** The instant the idle countdown runs from — newest pick, board open, or the
    *  end of the last cycle, whichever is latest. See `screensaverAnchorMs`. */
   const idleAnchor = useMemo(
-    () => screensaverAnchorMs(picks, openedAtRef.current, restedAt),
-    [picks, restedAt]
+    () => screensaverAnchorMs(picks, openedAtRef.current, quietSince),
+    [picks, quietSince]
   );
 
   // Arm. One absolute deadline rather than a repeating check: the anchor is a
@@ -614,13 +620,13 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
   }, [idleMs, reelLength, playlist, queue.length, idleAnchor, startCycle]);
 
   // Walk it. Runs off the end into `null`, which puts the idle board back and
-  // stamps `restedAt` so the next cycle is another full idle period away.
+  // stamps `quietSince` so the next cycle is another full idle period away.
   const scene = playlist ? playlist[sceneIndex] : undefined;
   useEffect(() => {
     if (!playlist) return;
     if (!scene) {
       setPlaylist(null);
-      setRestedAt(Date.now());
+      setQuietSince(Date.now());
       return;
     }
     // Each scene decides its own hold: a replayed pick is recognised in a

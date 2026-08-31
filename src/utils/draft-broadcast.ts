@@ -744,17 +744,29 @@ export function screensaverReel(picks: DraftRoomPick[]): DraftRoomPick[] {
  * live board first, then the reel, on a fresh load exactly as at any other
  * time.
  *
- * `lastRestedMs` is when the previous reel finished. Without it the anchor is
- * still the same hours-old pick the moment the reel ends, so the screensaver
- * would re-arm into a permanent loop with no idle board between passes — and
- * the idle board is the half that says whose turn it is.
+ * `quietSinceMs` is the CLIENT-clock instant from which the room has had
+ * nothing new: the end of the last cycle, or the arrival of a fresh pick. It
+ * covers two holes the other two cannot.
+ *
+ * Without the cycle-end half, the anchor is still the same hours-old pick the
+ * moment the cycle ends, so the screensaver would re-arm into a permanent loop
+ * with no idle board between passes — and the idle board is the half that says
+ * whose turn it is.
+ *
+ * Without the fresh-pick half, a pick MFL stamped unusably would not move the
+ * anchor at all — `lastPickAtMs` skips an unparseable stamp, though
+ * `isRevealWorthy` deliberately still reveals that pick — so the board would
+ * hand the room its reveal and then re-arm the cycle the instant the reveal
+ * drained, instead of the ten minutes of on-the-clock board a pick has just
+ * earned. On a board where NO pick carries a stamp that is not an edge case,
+ * it is every pick.
  */
 export function screensaverAnchorMs(
   picks: DraftRoomPick[],
   boardOpenedMs: number,
-  lastRestedMs = 0
+  quietSinceMs = 0
 ): number {
-  return Math.max(lastPickAtMs(picks) ?? 0, boardOpenedMs, lastRestedMs);
+  return Math.max(lastPickAtMs(picks) ?? 0, boardOpenedMs, quietSinceMs);
 }
 
 /**
