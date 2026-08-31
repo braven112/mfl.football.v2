@@ -680,3 +680,114 @@ export function resolveOrigin(player?: {
   const logo = NFL_LOGO_CODES.has(code) ? resolveNflDarkLogoUrl(code) : null;
   return { label, logo };
 }
+
+// ── The screensaver ──────────────────────────────────────────────────────────
+
+/**
+ * How long the idle board may sit unchanged before the board starts replaying
+ * the draft to itself.
+ *
+ * An EMAIL draft is the case this exists for: eight hours per pick is inside
+ * the rules, so the TV can hold one crest and one count-up for an entire
+ * evening, and a screen that never changes is a screen nobody looks at. Ten
+ * minutes is long enough that a room drafting at any normal pace never sees
+ * this at all — the live board is always the better screen when there is
+ * anything happening on it — and short enough that a stalled draft turns into
+ * a highlight reel while people are still in the room.
+ */
+export const SCREENSAVER_IDLE_MS = 10 * 60_000;
+
+/**
+ * How long one replayed pick owns the screen.
+ *
+ * Shorter than the live `REVEAL_MS` (18s) on purpose, and for the same reason
+ * the rehearsal step is: a live reveal is the only thing on screen for the
+ * eighteen seconds it owns the TV BECAUSE the idle board fills the rest of the
+ * night around it. In the reel there is no rest — it is reveal to reveal — so
+ * the hold is the entire pace. At 8s a 108-pick AFL board is a ~14-minute reel,
+ * which is about as long as anyone will watch one.
+ */
+export const SCREENSAVER_STEP_MS = 8_000;
+
+/**
+ * The reel: every pick actually made, in draft order.
+ *
+ * Draft ORDER, not recency — the reel is the night told from the beginning, so
+ * 1.01 opens it. Sorted rather than trusted, because the board array is MFL's
+ * and a commissioner filling a slot out of order is a thing that happens; the
+ * pick numbers are the truth about sequence.
+ *
+ * Unfilled slots are dropped, so the reel is naturally empty before the draft
+ * starts — which is what stops the screensaver arming on a pre-draft board
+ * that has nothing to replay.
+ */
+export function screensaverReel(picks: DraftRoomPick[]): DraftRoomPick[] {
+  return picks
+    .filter((p) => !!p.playerId)
+    .sort((a, b) => a.overallPickNumber - b.overallPickNumber);
+}
+
+/**
+ * The instant the idle countdown runs from — the latest of three clocks.
+ *
+ * `lastPickAtMs` is the one that matters on draft night: the room has been
+ * looking at this screen since that pick landed, which is exactly what the
+ * count-up beside it already says. Sharing that scanner is deliberate — the
+ * "Elapsed" number the room is reading and the trigger that starts the reel
+ * must never disagree about which pick is the newest.
+ *
+ * `boardOpenedMs` is a floor for the RELOAD case, and it is not cosmetic.
+ * Someone reloads the board mid-draft precisely because they want to see the
+ * live state; on a stalled email draft the last pick is already hours old, so
+ * without this floor the reload would be answered by the reel starting
+ * instantly and the on-the-clock screen never appearing at all. Ten minutes of
+ * live board first, then the reel, on a fresh load exactly as at any other
+ * time.
+ *
+ * `lastRestedMs` is when the previous reel finished. Without it the anchor is
+ * still the same hours-old pick the moment the reel ends, so the screensaver
+ * would re-arm into a permanent loop with no idle board between passes — and
+ * the idle board is the half that says whose turn it is.
+ */
+export function screensaverAnchorMs(
+  picks: DraftRoomPick[],
+  boardOpenedMs: number,
+  lastRestedMs = 0
+): number {
+  return Math.max(lastPickAtMs(picks) ?? 0, boardOpenedMs, lastRestedMs);
+}
+
+/**
+ * Has the board been idle long enough to start replaying?
+ *
+ * `idleMs <= 0` means the screensaver is switched off (`?screensaver=off`), and
+ * is checked here rather than at the call site so every caller — component,
+ * test, a future one — reads "off" the same way.
+ */
+export function isScreensaverDue(
+  anchorMs: number,
+  nowMs: number,
+  idleMs: number = SCREENSAVER_IDLE_MS
+): boolean {
+  if (!Number.isFinite(idleMs) || idleMs <= 0) return false;
+  return nowMs - anchorMs >= idleMs;
+}
+
+/**
+ * `?screensaver=` → the idle threshold in ms.
+ *
+ * Takes SECONDS, because the only reason to pass it is to watch the thing
+ * work without sitting in front of a TV for ten minutes (`?screensaver=20`).
+ * `off` disables it — for the night somebody wants the on-the-clock screen and
+ * nothing else, which is a legitimate way to run this page.
+ *
+ * Anything unparseable falls back to the default rather than to "off": a typo
+ * in a debug parameter must not silently remove a feature from draft night.
+ */
+export function resolveScreensaverIdleMs(raw: string | null | undefined): number {
+  if (raw === null || raw === undefined || raw === '') return SCREENSAVER_IDLE_MS;
+  const value = raw.trim().toLowerCase();
+  if (value === 'off' || value === 'no' || value === 'false' || value === '0') return 0;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed * 1000 : SCREENSAVER_IDLE_MS;
+}

@@ -26,6 +26,10 @@
  *                       ?mflHost= for a specific www## host, ?unit= to name a
  *                       draft unit. Always flagged on screen.
  *   ?warm=N|all|off     how many players deep to pre-cache images for
+ *   ?screensaver=N|off  seconds of idle board before it replays the draft to
+ *                       itself (default 600 — see SCREENSAVER_IDLE_MS). The
+ *                       short override is how you watch it work without
+ *                       standing in front of a TV for ten minutes.
  */
 
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
@@ -47,6 +51,7 @@ import {
 } from '../../utils/draft-broadcast-server';
 import { resolveBroadcastSource } from '../../utils/draft-broadcast-source';
 import { resolveWarmDepth } from '../../utils/draft-broadcast-images';
+import { resolveScreensaverIdleMs } from '../../utils/draft-broadcast';
 import type {
   BroadcastConference,
   BroadcastPlayer,
@@ -243,6 +248,7 @@ const pageData: DraftBroadcastPageData = {
   feedUnit: source.unit,
   sourceLabel: source.label,
   warmDepth: resolveWarmDepth(Astro.url.searchParams.get('warm')),
+  screensaverIdleMs: resolveScreensaverIdleMs(Astro.url.searchParams.get('screensaver')),
   rehearseUpTo,
   rehearsalYears,
   defenseFaces,

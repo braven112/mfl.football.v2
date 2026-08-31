@@ -124,6 +124,16 @@ export interface DraftBroadcastPageData {
    */
   warmDepth?: number;
   /**
+   * How long the idle board may sit unchanged before it starts replaying the
+   * draft to itself, in ms. 0 switches the screensaver off entirely.
+   *
+   * From `?screensaver=` (seconds, or `off`) — see `resolveScreensaverIdleMs`.
+   * It rides on the page data rather than being read in the island because the
+   * island never sees the URL, and the twenty-second override is the only
+   * practical way to check the feature without waiting ten minutes at a TV.
+   */
+  screensaverIdleMs?: number;
+  /**
    * Replay the board up to this pick and reveal each one as it "lands".
    * Rehearsal only — the real board is empty until draft night, so this is the
    * only way to see the page work before the room fills up.

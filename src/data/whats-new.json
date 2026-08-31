@@ -1,5 +1,28 @@
 [
   {
+    "id": "draft-broadcast-rewind",
+    "date": "2026-08-31",
+    "category": "enhancement",
+    "icon": "draft-podium",
+    "leagues": [
+      "theleague",
+      "afl"
+    ],
+    "title": "Ten Quiet Minutes And The Big Board Starts Replaying The Draft To Itself",
+    "link": "/draft-broadcast",
+    "linkLabel": "Open the big board",
+    "summary": "An email draft can leave one crest on the TV for six hours. Now, after ten minutes with nothing picked, the board rewinds to 1.01 and plays the whole draft back one selection at a time — and the second somebody actually picks, it drops everything and cuts to the live reveal.",
+    "description": [
+      "<a href=\"/draft-broadcast\">The Draft Broadcast</a> was built for a room: a pick lands, the player takes the whole screen over his franchise's colors, everybody looks up. That works beautifully on a night where the picks are ninety seconds apart. It works considerably less beautifully on an email draft, where the rules allow eight hours per selection and the television spends the entire evening showing one crest, one name, and an ELAPSED clock climbing past 2:41:19 like a hostage video.",
+      "So the board now entertains itself. Ten minutes with nothing picked and it rewinds to <strong>1.01</strong> and starts replaying the draft — every selection, in order, eight seconds each, the same full-screen reveal it gave that pick when it was news. Board rank, position runs, the franchise gradient, the lot. A chip in the corner reads <strong>REWIND · PICK 12 OF 47</strong> so nobody in the room mistakes history for a pick that just landed, and it carries <strong>who is actually on the clock</strong> the whole way through, because that is the one fact the rewind takes off the screen and the one the room keeps asking about.",
+      "When the reel runs out of picks, the on-the-clock board comes back. Ten more quiet minutes and it goes again. And the instant a real selection lands on MFL, the rewind is over mid-card — the live reveal wins, always, which is the only rule this thing has. A draft that is actually moving will never see it at all.",
+      "It runs on both boards, and there is nothing to turn on: put the page on the TV and forget about it. If you want the old behavior for a night, <code>?screensaver=off</code> pins the board to the on-the-clock screen and nothing else."
+    ],
+    "image": "draft-broadcast-rewind.webp",
+    "imageAlt": "The Draft Broadcast in full screen during a rewind. A blue chip at the top left reads REWIND · PICK 2 OF 108. The card is the American League board's 1.02: small type reading “With the 1.02 pick, Get Off My Ditka select” over a large “Omarion Hampton”, an RB badge, the North Carolina logo beside “North Carolina” and “BYE 12”, a green BEST AVAILABLE pill and BOARD RANK #2 underneath. The drafting franchise's crest fills the middle of a red-to-navy gradient, the player's cutout stands at the right, and a faded “1.02” sits behind the copy at the bottom left.",
+    "excludeFromHero": true
+  },
+  {
     "id": "draft-broadcast-clock-timer",
     "date": "2026-08-30",
     "category": "enhancement",
@@ -877,27 +900,6 @@
     "excludeFromHero": true,
     "leagues": [
       "theleague"
-    ]
-  },
-  {
-    "id": "afl-thundering-herd-rename-2026-08-11",
-    "date": "2026-08-11",
-    "title": "Justice Is Served: Thundering Herd Is Dead, Long Live \"A Bruin Pegs Me\"",
-    "summary": "Two titles, three conference crowns, and a proud dynasty — none of it matters when you finish dead last in the D-League. Franchise 0014 has been served its punitive rename, and the record books already know it.",
-    "description": [
-      "The D-League doesn't grade on a curve, and it definitely doesn't care about your trophy case. Franchise 0014 — two-time champion, three-time NL conference king, the Herd desk's own nostalgia machine — bottomed out the standings this season, and the league's oldest tradition came for its name. Thundering Herd is retired. \"A Bruin Pegs Me\" is what's stitched on the jersey now.",
-      "The old name isn't erased, just filed where it belongs: the franchise page's history tab still remembers every era back to 2003, the current owner keeps every year of stats and hardware they earned along the way, and the site's search bar will still find you if you type \"Herd\" out of muscle memory.",
-      "And the paperwork has now caught up. The new crest and banner are live across the site — a UCLA cheerleader in powder blue and gold, bat in hand, which for an owner who bleeds cardinal and gold is the part that actually stings. The franchise's brand colors moved to navy and gold to match, so every roster row, matchup card and player headshot backdrop wears it too. Thirteen trophies, third-most in the league, all still on the wall above it."
-    ],
-    "image": "afl-bruin-pegs-me-rebrand.webp",
-    "imageAlt": "The A Bruin Pegs Me franchise page showing the new UCLA-themed banner above the trophy wall and championship badges.",
-    "category": "league-event",
-    "link": "/afl-fantasy/franchises/0014#name-history",
-    "linkLabel": "See the full name history",
-    "icon": "gavel",
-    "excludeFromHero": true,
-    "leagues": [
-      "afl"
     ]
   }
 ]

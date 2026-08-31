@@ -22,8 +22,9 @@
  *     the offBoardIds note below.
  *
  * Query string: `?year=`, `?rehearse=`, `?mflLeague=` (+ `?mflHost=`,
- * `?unit=`) and `?warm=`, all documented on the AFL twin and shared through
- * `draft-broadcast-source.ts` / `draft-broadcast-images.ts`.
+ * `?unit=`), `?warm=` and `?screensaver=`, all documented on the AFL twin and
+ * shared through `draft-broadcast-source.ts` / `draft-broadcast-images.ts` /
+ * `draft-broadcast.ts`.
  */
 
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
@@ -45,6 +46,7 @@ import {
 } from '../../utils/draft-broadcast-server';
 import { resolveBroadcastSource } from '../../utils/draft-broadcast-source';
 import { resolveWarmDepth } from '../../utils/draft-broadcast-images';
+import { resolveScreensaverIdleMs } from '../../utils/draft-broadcast';
 import type {
   BroadcastConference,
   BroadcastPlayer,
@@ -254,6 +256,7 @@ const pageData: DraftBroadcastPageData = {
   feedUnit: sourceParams.isOverride ? sourceParams.unit : unit,
   sourceLabel: sourceParams.label,
   warmDepth: resolveWarmDepth(Astro.url.searchParams.get('warm')),
+  screensaverIdleMs: resolveScreensaverIdleMs(Astro.url.searchParams.get('screensaver')),
   rehearseUpTo,
   rehearsalYears,
 };

@@ -338,7 +338,12 @@
    pinned top-right at z-index 6, the ghost pick number owns the bottom-left,
    and the copy sits centre-right — this is the corner that is actually free.
    Amber so it never reads as live. */
-.dbc-reveal__rehearsal-flag {
+/* The rewind flag shares the rehearsal flag's box because it IS the same box —
+   one absolute slot at the top left, one chip in it at a time (see the card).
+   Its own rule below only changes the colour, so a room can tell a replay from
+   a dry run at a glance without either one moving. */
+.dbc-reveal__rehearsal-flag,
+.dbc-reveal__rewind-flag {
   position: absolute;
   top: 2.2vh;
   left: 2vw;
@@ -354,6 +359,15 @@
   text-transform: uppercase;
   pointer-events: none;
   user-select: none;
+}
+
+/* Cool where the rehearsal flag is warm. A dry run is a thing an operator set
+   up on purpose and the amber says "not real"; the rewind fires by itself on a
+   live board, where the honest thing to say is "this is the draft, earlier". */
+.dbc-reveal__rewind-flag {
+  border-color: rgba(120, 190, 255, 0.55);
+  background: rgba(4, 12, 22, 0.6);
+  color: #78beff;
 }
 
 /* The whole card arrives as one object, and this is the ONLY animation left in
