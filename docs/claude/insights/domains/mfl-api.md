@@ -2452,7 +2452,7 @@ mfl-matchup-api.ts` (`runRosterMove` — the existing `import?TYPE=ir`/
 the write host); `src/config/leagues-data.mjs` (`mflHost` per league).
 
 
-## 2026-08-30 - A Draft Pick's `comments` Is a LOG, Not a Sentence — and `traded to` Means the Opposite
+## 2026-08-31 - A Draft Pick's `comments` Is a LOG, Not a Sentence — and `traded to` Means the Opposite
 
 `parseTradeFromComment` (`src/utils/draft-utils.ts`) read `draftPick.comments`
 as one bracketed sentence. It is a newline-separated LOG of statements, and the

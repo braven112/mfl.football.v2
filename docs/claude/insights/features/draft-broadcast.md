@@ -571,7 +571,7 @@ label stands on its own.
 
 ### A traded pick's `via` line comes from a comment MFL writes as a LOG
 
-`· via from Bring the Pain` reached a 65-inch screen (2026-08-30) because
+`· via from Bring the Pain` reached a 65-inch screen (2026-08-31) because
 `parseTradeFromComment` mis-parsed MFL's `draftPick.comments`. Four separate
 grammar bugs in one regex; 157 of 287 trade statements parsed before the fix,
 287 after, and the 130 recovered picks had been rendering as never-traded for
@@ -584,7 +584,7 @@ Guards are in `tests/draft-broadcast.test.ts`.
 
 ### Verifying this page in the sandbox: the `page.route` glob never matched
 
-**Corrected 2026-08-30 (Brandon).** The original note here recorded that
+**Corrected 2026-08-31 (Brandon).** The original note here recorded that
 context routes never fired for the reveal card's logo and headshot requests —
 the handler's own `console.log` never printed — and left the cause unchased,
 with a warning not to trust the `verify` skill's "fulfill them with a
