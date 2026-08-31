@@ -52,7 +52,24 @@ const explicitUrl = value('--url');
 const page = value('--page');
 const url = explicitUrl ?? (page ? urlFromRegistry(value('--league') ?? 'afl-fantasy', page, value('--year')) : undefined);
 if (!url) throw new Error('Pass --page <CODE> (with optional --league/--year), or --url');
-if (!/^https:\/\/[a-z0-9.-]+\.myfantasyleague\.com\//i.test(url)) {
+
+/**
+ * Exact hostname test. Never regex-match a host inside a URL string — an
+ * unanchored pattern matches anywhere, so `https://evil.example/?x=
+ * myfantasyleague.com` would pass. Parse it and compare the hostname.
+ */
+function hostnameOf(u: string): string {
+  try {
+    return new URL(u).hostname.toLowerCase();
+  } catch {
+    return '';
+  }
+}
+const isMflHost = (u: string) => {
+  const h = hostnameOf(u);
+  return h === 'myfantasyleague.com' || h.endsWith('.myfantasyleague.com');
+};
+if (!isMflHost(url)) {
   throw new Error(`Refusing to send MFL cookies to a non-MFL host: ${url}`);
 }
 
@@ -82,7 +99,7 @@ const isNavNoise = (tag: string) => /id="sub\d+"/.test(tag) && /type="checkbox"/
 // chrome with the identity strip reading `Guest (Login)`. Both come back HTTP
 // 200, so the status tells you nothing — check for these two shapes instead.
 const landedOn = (res as Response).url || '';
-if (/home\.myfantasyleague\.com/i.test(landedOn) || /MyFantasyLeague Home Page/i.test(title ?? '')) {
+if (hostnameOf(landedOn) === 'home.myfantasyleague.com' || (title ?? '').includes('MyFantasyLeague Home Page')) {
   console.log(`MFL bounced this request to ${landedOn || 'its home page'} — the cookies did not authenticate.`);
   console.log('Commissioner setup pages redirect rather than 401. Check MFL_USER_ID / MFL_IS_COMMISH.');
   process.exit(1);
@@ -98,18 +115,13 @@ if (/\bGuest\b[\s\S]{0,80}\bLogin\b/i.test(html.slice(0, 40_000))) {
 const forms = [...html.matchAll(/<form\b[^>]*>([\s\S]*?)<\/form>/gi)];
 if (forms.length === 0) {
   console.log('Authenticated, but NO <form> found — the form is probably built by JavaScript.');
-  console.log('Content region below (nav, styles and scripts stripped):\n');
+  console.log('Raw content region below. It is printed as MARKUP, not stripped text: this is a');
+  console.log('form inspector, so the tags are the point, and regex tag-stripping is unreliable');
+  console.log('anyway (it misses `</script >`, comments, and `>` inside attribute values).\n');
   // The nav and footer are ~100 KB of boilerplate; #contentframe is the page.
-  const frame = /id="contentframe"[^>]*>([\s\S]*?)(?:<div[^>]*class="container-footer|$)/i.exec(html);
-  const region = frame?.[1] ?? html;
-  const text = region
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/<style[\s\S]*?<\/style>/gi, '')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-  console.log(text.slice(0, 2000));
+  const start = html.indexOf('id="contentframe"');
+  const region = start === -1 ? html : html.slice(start, start + 4000);
+  console.log(region);
   process.exit(1);
 }
 

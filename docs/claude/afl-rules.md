@@ -124,8 +124,8 @@ The RB/WR/TE positions share a combined flex pool (minimum 3 of the 9 starters).
 ### Setting the waiver order — MFL does not carry it across the rollover
 
 MFL stores waiver priority as a per-franchise `waiverSortOrder` (1–24), readable
-on `export?TYPE=league` and writable via `import?TYPE=franchises`. **It is not
-copied into the new league year.** Every June rollover the AFL starts at MFL's
+on `export?TYPE=league` and **writable by no API at all** (see below). **It is
+not copied into the new league year.** Every June rollover the AFL starts at MFL's
 default — reverse franchise id, `0024` first and `0001` last — which has
 nothing to do with the constitution. Because the AFL is `WAIVERS_FCFS` (rolling
 priority, not blind bidding), that value **is** the waiver order, not a
