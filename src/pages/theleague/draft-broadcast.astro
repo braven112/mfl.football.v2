@@ -42,6 +42,7 @@ import {
   findRehearsalYear,
   hasDraftSlots,
   loadConferenceKeepers,
+  loadFranchiseHoldings,
   trimToDraftable,
 } from '../../utils/draft-broadcast-server';
 import { resolveBroadcastSource } from '../../utils/draft-broadcast-source';
@@ -229,6 +230,18 @@ for (const p of enriched) {
 const ranked = assignBoardRanks(enriched, offBoardIds);
 const players = trimToDraftable(ranked, boardPlayerIds);
 
+// What each franchise already HOLDS — the standing dynasty roster, here — for
+// the screensaver's roster panels. Resolved against the UNTRIMMED pool
+// (`ranked`): a rostered veteran is not in the shipped pool at all, and he is
+// most of what these panels draw. Thin records only; see RosterHolding.
+const holdings = loadFranchiseHoldings(
+  league.dataPath,
+  leagueYear,
+  allFranchiseIds,
+  boardPlayerIds,
+  ranked
+);
+
 // Which season the "Rehearse" link points at. Resolved from the feeds (see
 // findRehearsalYear) rather than assumed, so the link is either correct or
 // absent — never a board that renders empty. Anchored to defaultYear, NOT
@@ -259,6 +272,7 @@ const pageData: DraftBroadcastPageData = {
   screensaverIdleMs: resolveScreensaverIdleMs(Astro.url.searchParams.get('screensaver')),
   rehearseUpTo,
   rehearsalYears,
+  holdings,
 };
 
 const title = `Rookie Draft Board | ${league.name}`;

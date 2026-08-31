@@ -7,7 +7,7 @@
  */
 
 import type { DraftRoomPick, DraftRoomTeam } from '../types/draft-room';
-import type { BroadcastPlayer } from '../types/draft-broadcast';
+import type { BroadcastPlayer, RosterHolding } from '../types/draft-broadcast';
 import { getAllNFLTeamCodes, normalizeTeamCode } from './nfl-logo';
 import { usesCollegeOrigin } from './pick-reveal';
 import { resolveNflDarkLogoUrl } from './nfl-logo-dark-css';
@@ -790,4 +790,225 @@ export function resolveScreensaverIdleMs(raw: string | null | undefined): number
   if (value === 'off' || value === 'no' || value === 'false' || value === '0') return 0;
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed * 1000 : SCREENSAVER_IDLE_MS;
+}
+
+/**
+ * How long one PANEL owns the screen — the roster and position screens.
+ *
+ * Longer than a replayed pick (8s), because a panel is read rather than
+ * recognised: a reveal is one name at 8vh that lands in a second, while a
+ * roster panel is a dozen faces and a count per position. Fifteen seconds is
+ * about two unhurried passes across a TV from ten feet.
+ */
+export const SCREENSAVER_PANEL_MS = 15_000;
+
+/**
+ * The order of the positions on the panels, and the only ones they draw.
+ *
+ * Fixed rather than sorted by count, so the row a viewer wants is always in the
+ * same place across the four panels a cycle shows — a board that re-sorts
+ * itself makes the room re-read it every time. `PK` is MFL's kicker code (the
+ * pool normalizes to it), and `DEF` covers every team unit.
+ */
+export const BROADCAST_POSITIONS = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'] as const;
+export type BroadcastPosition = (typeof BROADCAST_POSITIONS)[number];
+
+/** Anything else — an unranked oddity or a position the pool spells its own
+ *  way — is folded here rather than dropped, so a roster's count always adds
+ *  up to the roster. */
+const OTHER_POSITION = 'OTHER';
+
+function positionBucket(raw: string | undefined): string {
+  const pos = (raw || '').toUpperCase();
+  if ((BROADCAST_POSITIONS as readonly string[]).includes(pos)) return pos;
+  // The pool has spelled kickers both ways over the years, and a K row that
+  // silently became OTHER would be a row the room reads as a bug.
+  if (pos === 'K') return 'PK';
+  return OTHER_POSITION;
+}
+
+/** One position's row on the "off the board" panel. */
+export interface PositionTally {
+  position: string;
+  count: number;
+  /** The players taken there, MOST RECENT FIRST — the faces the row draws. */
+  players: BroadcastPlayer[];
+}
+
+/**
+ * How many of each position are off the board, with the faces to prove it.
+ *
+ * The number nobody tracks in an email draft and everybody argues about: the
+ * run happened three hours ago and the only record of it is a scrollback. Rows
+ * come back in `BROADCAST_POSITIONS` order — see the note there on why they are
+ * not sorted by count — and a position nobody has taken is omitted entirely
+ * rather than drawn as a zero, since an empty row on a TV reads as a loading
+ * state.
+ *
+ * Most recent first inside a row, so the faces a viewer sees first are the ones
+ * they might not have seen land.
+ */
+export function positionTallies(
+  picks: DraftRoomPick[],
+  players: ReadonlyMap<string, BroadcastPlayer>
+): PositionTally[] {
+  const byPosition = new Map<string, BroadcastPlayer[]>();
+  const made = [...picks]
+    .filter((p) => !!p.playerId)
+    .sort((a, b) => b.overallPickNumber - a.overallPickNumber);
+
+  for (const pick of made) {
+    const player = players.get(pick.playerId);
+    // A pick whose player the pool cannot name still COUNTS — the position is
+    // unknowable without him, so he lands in OTHER rather than vanishing and
+    // making the panel's total disagree with the board's.
+    const bucket = positionBucket(player?.position);
+    const row = byPosition.get(bucket);
+    if (row) row.push(player as BroadcastPlayer);
+    else byPosition.set(bucket, [player as BroadcastPlayer]);
+  }
+
+  const order = [...BROADCAST_POSITIONS, OTHER_POSITION];
+  return order
+    .filter((pos) => byPosition.has(pos))
+    .map((pos) => ({
+      position: pos,
+      count: byPosition.get(pos)!.length,
+      players: byPosition.get(pos)!.filter((p): p is BroadcastPlayer => !!p),
+    }));
+}
+
+/** One player on a roster panel: what he is, and whether he was taken tonight. */
+export interface RosterEntry {
+  id: string;
+  name: string;
+  position: string;
+  nflTeam: string;
+  espnId?: string;
+  /** "2.07" when this player was drafted tonight; absent for a holding. */
+  pickLabel?: string;
+}
+
+/** One position's row on a roster panel. */
+export interface RosterRow {
+  position: string;
+  count: number;
+  players: RosterEntry[];
+}
+
+/**
+ * What a franchise has at each position — holdings plus tonight's picks.
+ *
+ * The panel's whole job is "what does he still need?", which is only answerable
+ * against the WHOLE roster: in the AFL the seven keepers are most of it, and in
+ * TheLeague's rookie draft the standing dynasty roster is nearly all of it.
+ *
+ * Tonight's picks go FIRST inside a row and carry their pick label, because
+ * they are the half that changed while the room was watching.
+ *
+ * Deduped by player id, and that is not defensive tidiness: `rosters.json` is a
+ * cron snapshot that starts gaining tonight's picks partway through the draft,
+ * so the same man legitimately arrives from both sides. The live board wins,
+ * since it is the side that knows which pick he was.
+ */
+export function rosterRows(
+  holdings: readonly RosterHolding[] | undefined,
+  picks: DraftRoomPick[],
+  players: ReadonlyMap<string, BroadcastPlayer>,
+  franchiseId: string
+): RosterRow[] {
+  const entries: RosterEntry[] = [];
+  const seen = new Set<string>();
+
+  for (const pick of picks) {
+    if (pick.franchiseId !== franchiseId || !pick.playerId) continue;
+    const player = players.get(pick.playerId);
+    if (!player?.name) continue;
+    seen.add(player.id);
+    entries.push({
+      id: player.id,
+      name: player.name,
+      position: player.position || '',
+      nflTeam: player.nflTeam || '',
+      ...(player.espnId ? { espnId: player.espnId } : {}),
+      pickLabel: `${pick.round}.${String(pick.pickInRound).padStart(2, '0')}`,
+    });
+  }
+
+  for (const held of holdings ?? []) {
+    if (seen.has(held.id)) continue;
+    seen.add(held.id);
+    entries.push({ ...held });
+  }
+
+  const byPosition = new Map<string, RosterEntry[]>();
+  for (const entry of entries) {
+    const bucket = positionBucket(entry.position);
+    const row = byPosition.get(bucket);
+    if (row) row.push(entry);
+    else byPosition.set(bucket, [entry]);
+  }
+
+  const order = [...BROADCAST_POSITIONS, OTHER_POSITION];
+  return order
+    .filter((pos) => byPosition.has(pos))
+    .map((pos) => ({
+      position: pos,
+      count: byPosition.get(pos)!.length,
+      // Tonight's picks first, then the holdings, each side in the order it
+      // arrived — draft order for the picks, roster order for the rest.
+      players: byPosition
+        .get(pos)!
+        .slice()
+        .sort((a, b) => Number(!!b.pickLabel) - Number(!!a.pickLabel)),
+    }));
+}
+
+/**
+ * One screen in the screensaver's cycle.
+ *
+ * The reel was the first of these and is now just the tail: a `pick` scene per
+ * selection. The panels in front of it are about NOW — who is up, what he
+ * holds, what is gone — which is why they come first. In a draft this slow the
+ * room's questions are all present-tense; the reel is the nostalgia after.
+ */
+export type ScreensaverScene =
+  | { kind: 'roster'; franchiseId: string; role: 'clock' | 'deck' }
+  | { kind: 'positions' }
+  | { kind: 'pick'; pick: DraftRoomPick };
+
+/**
+ * The whole cycle, built ONCE when the screensaver arms.
+ *
+ * Built once rather than derived per frame so the cycle cannot reshuffle
+ * underneath the room — and it never needs to, because the one event that
+ * changes any of this (a pick landing) ends the screensaver outright.
+ *
+ * Empty when there is nothing to say: a pre-draft board has no reel, no
+ * position tally and no roster worth showing, and an empty cycle is what stops
+ * the screensaver arming on it at all.
+ */
+export function buildScreensaverPlaylist(picks: DraftRoomPick[]): ScreensaverScene[] {
+  const reel = screensaverReel(picks);
+  if (reel.length === 0) return [];
+
+  const scenes: ScreensaverScene[] = [];
+  const clock = findOnTheClock(picks);
+  if (clock) scenes.push({ kind: 'roster', franchiseId: clock.franchiseId, role: 'clock' });
+
+  const deck = upcomingPicks(picks, 1)[0];
+  // Back-to-back picks are ordinary once a pick has been traded, and the same
+  // roster twice in a row is a cycle that looks stuck.
+  if (deck && deck.franchiseId !== clock?.franchiseId) {
+    scenes.push({ kind: 'roster', franchiseId: deck.franchiseId, role: 'deck' });
+  }
+
+  scenes.push({ kind: 'positions' });
+  for (const pick of reel) scenes.push({ kind: 'pick', pick });
+  return scenes;
+}
+
+/** How long this scene holds the screen. */
+export function screensaverSceneMs(scene: ScreensaverScene): number {
+  return scene.kind === 'pick' ? SCREENSAVER_STEP_MS : SCREENSAVER_PANEL_MS;
 }

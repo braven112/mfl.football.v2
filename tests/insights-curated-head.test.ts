@@ -38,6 +38,10 @@ const CURATED = [
   `${DOMAINS}/design-system.md`,
   `${DOMAINS}/mfl-api.md`,
   `${FEATURES}/player-composites.md`,
+  // Passed 64 KB on 2026-08-31, four days and about a dozen entries after the
+  // board shipped. Its head is the rules that still bind on this page; the
+  // dated journal below them is the evidence.
+  `${FEATURES}/draft-broadcast.md`,
 ];
 
 /** Past this, "read this file before each task" stops being followable. */
@@ -119,11 +123,17 @@ describe('insights curated heads', () => {
       // dated-entry count below passes on the head's own content.
       expect(closeAt, `${file} has no ${CLOSE} marker`).toBeGreaterThan(0);
       const archive = body.slice(closeAt + CLOSE.length);
-      const dated = archive.match(/^## .*\d{4}-\d{2}-\d{2}/gm) ?? [];
+      // Dated journal entries OR topic sections. The domain files are journals
+      // and count the first; `features/` files are organized by topic under a
+      // handful of dated sweeps, so requiring dates there would have meant
+      // back-dating headings to satisfy a test — which is the tail wagging the
+      // dog. Either way the thing being guarded is the same: a well-meaning
+      // "cleanup" that replaces the evidence with the summary leaves neither.
+      const entries = archive.match(/^(## .*\d{4}-\d{2}-\d{2}|### )/gm) ?? [];
 
       expect(
-        dated.length,
-        `${file} has ${dated.length} dated entries left below the head. ` +
+        entries.length,
+        `${file} has ${entries.length} archive entries left below the head. ` +
           'The archive is the evidence for the head — do not delete it.',
       ).toBeGreaterThan(10);
     }

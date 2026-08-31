@@ -71,6 +71,25 @@ export interface BroadcastPlayerExtras {
   collegeLogo?: string;
 }
 
+/**
+ * One player a franchise already holds, as the screensaver's roster panels
+ * need him — and nothing more.
+ *
+ * A deliberately THIN record. `trimToDraftable` exists because a TV page
+ * shipping every player wastes bytes on names that will never be revealed, and
+ * a full `BroadcastPlayer` per rostered player would undo that (TheLeague
+ * rosters 25 apiece across 16 franchises). The panel draws a face, a name, a
+ * position and a team stripe; `espnId` is what the client builds the face URL
+ * from, through the same cascade `BroadcastFace` walks for everyone else.
+ */
+export interface RosterHolding {
+  id: string;
+  name: string;
+  position: string;
+  nflTeam: string;
+  espnId?: string;
+}
+
 /** A player as the broadcast renders him: draft-room fields plus the extras. */
 export type BroadcastPlayer = DraftRoomPlayer & BroadcastPlayerExtras;
 
@@ -123,6 +142,14 @@ export interface DraftBroadcastPageData {
    * four-minute cache window before assuming this is optional.
    */
   warmDepth?: number;
+  /**
+   * Franchise id → what that franchise already holds, for the screensaver's
+   * roster panels. Keepers in the AFL, the standing dynasty roster in
+   * TheLeague; tonight's picks are NOT in here — the island merges those from
+   * the live board, where their pick numbers are known too. See
+   * `loadFranchiseHoldings`.
+   */
+  holdings?: Record<string, RosterHolding[]>;
   /**
    * How long the idle board may sit unchanged before it starts replaying the
    * draft to itself, in ms. 0 switches the screensaver off entirely.

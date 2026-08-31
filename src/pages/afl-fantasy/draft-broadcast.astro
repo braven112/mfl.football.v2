@@ -47,6 +47,7 @@ import {
   findRehearsalYear,
   hasDraftSlots,
   loadConferenceKeepers,
+  loadFranchiseHoldings,
   trimToDraftable,
 } from '../../utils/draft-broadcast-server';
 import { resolveBroadcastSource } from '../../utils/draft-broadcast-source';
@@ -212,6 +213,18 @@ const ranked = assignBoardRanks(enriched, keptIds);
 
 const players = trimToDraftable(ranked, boardPlayerIds);
 
+// What each franchise already HOLDS — its keepers, here — for the screensaver's
+// roster panels. Resolved against the UNTRIMMED pool (`ranked`), because a
+// keeper is by definition not on the board and most of them are trimmed out of
+// the shipped pool by the line above. Thin records only; see RosterHolding.
+const holdings = loadFranchiseHoldings(
+  league.dataPath,
+  leagueYear,
+  conferenceFranchiseIds,
+  boardPlayerIds,
+  ranked
+);
+
 // A team defense has no headshot of its own, so the reveal card stands two of
 // the unit's marquee defenders in for it. Built from the TRIMMED pool — one
 // list per team rather than one per player — see buildDefenseFacesByTeam.
@@ -252,6 +265,7 @@ const pageData: DraftBroadcastPageData = {
   rehearseUpTo,
   rehearsalYears,
   defenseFaces,
+  holdings,
 };
 
 const title = `${conference?.name ?? 'AFL'} Draft Board | AFL`;

@@ -1732,3 +1732,290 @@
     transition: none;
   }
 }
+
+/* ── Screensaver panels ──────────────────────────────────────────────────────
+   The two non-reveal screens the screensaver cycles through: a franchise's
+   roster (painted in that franchise's own gradient, through the SAME
+   `--dbc-gradient` property the reveal card and idle board set — see
+   `.dbc-reveal`) and the position board (the house dark).
+
+   They share the reveal layer, so everything here sizes in vh/vw like the rest
+   of this stylesheet: this surface is read from ten feet on a screen whose
+   pixel count we do not control, and a rem here would be a font-size setting
+   away from unreadable. */
+.dbc-panel {
+  position: relative;
+  height: 100%;
+  /* With the default content-box, the padding below is ADDED to the 100% and
+     the panel stands ~40px taller than the layer it fills — which pushes the
+     last position row off the bottom of the TV and looks exactly like a row
+     that failed to render. */
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 3.5vh 3.5vw;
+  gap: 2.4vh;
+  background: var(
+    --dbc-gradient,
+    linear-gradient(115deg, var(--dbc-primary, #10161f) 0%, var(--dbc-secondary, #1c497c) 100%)
+  );
+  /* The same entrance the reveal card plays, for the same reason: the panels
+     are slides in one deck, and a panel that cut in while a card dissolved
+     would read as a different application. */
+  animation: dbc-reveal-in var(--dbc-fade) cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* A roster panel is the franchise's screen, so it wears the franchise's brand:
+   the gradient above resolves from `--dbc-gradient`, and the crest beside the
+   name is sized against it here rather than in the shared block, which the
+   position board also uses. */
+.dbc-panel--roster .dbc-panel__head {
+  padding-bottom: 1.2vh;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+/* The position board has no franchise, so it paints the board's own dark
+   rather than inheriting a stale `--dbc-primary` from nowhere. */
+.dbc-panel--positions {
+  background: linear-gradient(120deg, #0b1220 0%, #121c2e 55%, #0d1524 100%);
+}
+
+/* Same wash as the reveal card: franchise gradients are saturated for the TV
+   (see toBroadcastPair), and white copy needs the same knock-down here that it
+   gets there. */
+.dbc-panel__wash {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(60% 80% at 82% 18%, rgba(255, 255, 255, 0.12) 0%, transparent 64%),
+    linear-gradient(100deg, rgba(0, 0, 0, 0.62) 0%, rgba(0, 0, 0, 0.28) 60%, rgba(0, 0, 0, 0.5) 100%);
+  pointer-events: none;
+}
+
+.dbc-panel__head {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 2vw;
+  flex: none;
+}
+
+.dbc-panel__crest {
+  width: min(14vh, 16vw);
+  height: min(14vh, 16vw);
+  object-fit: contain;
+  filter: drop-shadow(0 0.6vh 1.2vh rgba(0, 0, 0, 0.45));
+}
+
+/* `min-width: 0` is what lets a long franchise name ellipsize instead of
+   pushing the crest off the panel — a flex item's default min-width is its
+   content, so without this the head simply overflows. */
+.dbc-panel__title {
+  min-width: 0;
+}
+
+.dbc-panel__eyebrow {
+  margin: 0;
+  font-size: clamp(0.8rem, 2vh, 1.6rem);
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.dbc-panel__team {
+  margin: 0.2vh 0 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 6.5vh, 5rem);
+  line-height: 1;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 0.4vh 1.6vh rgba(0, 0, 0, 0.5);
+}
+
+/* "47 of 108 picks" — the count is the headline, the unit is not. */
+.dbc-panel__team-of {
+  font-size: 0.5em;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.dbc-panel__sub {
+  margin: 0.6vh 0 0;
+  font-size: clamp(0.75rem, 1.9vh, 1.5rem);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.dbc-panel__empty {
+  position: relative;
+  z-index: 1;
+  margin: auto;
+  font-size: clamp(1rem, 3vh, 2.4rem);
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* One row per position, and the stack owns whatever height is left. `1fr` rows
+   rather than a fixed height: a roster with three rows should fill the screen
+   the same way one with six does, or the TV shows a panel floating in a gap. */
+.dbc-panel__rows {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-auto-rows: 1fr;
+  gap: 1.2vh;
+}
+
+/* The row is a SIZE container, and everything inside it is measured against
+   its own height rather than the viewport's.
+   
+   That is not styling for its own sake — it is what makes the panel fit. The
+   number of rows is data (a roster with six positions, a tally with three), the
+   panel's height is fixed, so a chip sized in vh either overflows the six-row
+   case or wastes half the screen on the three-row one. Sized in `cqh` the same
+   chip fills whatever row it lands in. `.dbc-panel__rows` is a `1fr` grid
+   inside a definite-height flex column, so every track has a definite height
+   for the container to resolve against. */
+.dbc-panel__row {
+  container-type: size;
+  display: grid;
+  grid-template-columns: minmax(9vw, auto) 1fr;
+  align-items: center;
+  column-gap: 1.6vw;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0.8vh 1.4vw;
+  border-radius: 1.2vh;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.dbc-panel__row-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.8vw;
+}
+
+.dbc-panel__pos {
+  font-size: min(24cqh, 2rem);
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.66);
+}
+
+.dbc-panel__count {
+  font-family: var(--font-display);
+  font-size: min(44cqh, 3.4rem);
+  font-weight: 900;
+  line-height: 1;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The position board's bar sits under the label and spans the row's second
+   column with the faces, so it reads as the row's own measure rather than a
+   chart of its own. */
+.dbc-panel__bar {
+  grid-column: 2;
+  height: min(7cqh, 0.7vh);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+  margin-bottom: 0.6vh;
+}
+
+.dbc-panel__bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #6ea8fe 0%, #b8d4ff 100%);
+}
+
+.dbc-panel__faces {
+  grid-column: 2;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 1.1vw;
+  min-height: 0;
+}
+
+.dbc-panel__face {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4vh;
+  min-width: 0;
+  /* Capped so eight chips and their captions cannot overrun the row on a
+     narrow board — the same reason the reveal card's defender captions are
+     capped against their column rather than the viewport. */
+  max-width: 9vw;
+}
+
+.dbc-panel__face-chip {
+  /* The cap keeps a three-row panel's chips from growing to portrait size;
+     the cqh is what makes a six-row panel fit at all. */
+  --player-avatar-size: min(54cqh, 7.5vh, 8vw);
+  flex: none;
+  box-sizing: border-box;
+}
+
+.dbc-panel__face-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: min(17cqh, 1.2rem);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+/* Tonight's picks, marked. The pick label is the proof — a ring alone would be
+   a colour nobody in the room has been told the meaning of. */
+.dbc-panel__face-tag {
+  padding: 0.1em 0.5em;
+  border-radius: 999px;
+  background: rgba(120, 190, 255, 0.22);
+  border: 1px solid rgba(120, 190, 255, 0.5);
+  font-size: min(13cqh, 0.95rem);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #cfe4ff;
+  font-variant-numeric: tabular-nums;
+}
+
+.dbc-panel__face.is-new .dbc-panel__face-name {
+  color: #fff;
+}
+
+.dbc-panel__more {
+  align-self: center;
+  font-size: min(20cqh, 1.6rem);
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.55);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Short viewports (a laptop panel, a 720p TV): the head gives ground first,
+   exactly as the idle stage does above. */
+@media (max-height: 950px) {
+  .dbc-panel {
+    padding: 2.4vh 3vw;
+    gap: 1.6vh;
+  }
+
+  .dbc-panel__crest {
+    width: min(11vh, 13vw);
+    height: min(11vh, 13vw);
+  }
+}
