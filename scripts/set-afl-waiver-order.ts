@@ -244,6 +244,22 @@ const snapshot = {
 };
 fs.writeFileSync(snapshotFile, JSON.stringify(snapshot, null, 2));
 console.log(`\nPre-write snapshot: ${path.relative(root, snapshotFile)}`);
+// On a CI runner that file dies with the job, so the log is the real restore
+// artifact — print the prior order inline, in payload form, ready to replay.
+console.log('Prior order (restore payload — replay this DATA to undo):');
+console.log(
+  buildFranchisesWaiverXml(
+    snapshot.franchises
+      .filter((f) => f.waiverSortOrder)
+      .map((f) => ({
+        position: Number(f.waiverSortOrder),
+        franchiseId: f.id,
+        conference: '',
+        conferenceBasePosition: 0,
+      }))
+      .sort((a, b) => a.position - b.position)
+  )
+);
 
 const url = setAflWaiverOrderUrl(league.mflHost, targetYear, league.id);
 console.log(`POST ${url}`);
@@ -255,13 +271,29 @@ const res = await mflFetch({
   body: new URLSearchParams({ DATA: xml }).toString(),
 });
 const text = await res.text();
+
+// ALWAYS log what MFL said. A franchises import that silently no-ops returns
+// HTTP 200 with no "error" anywhere, so the body is the only thing that
+// distinguishes "not a commissioner", "attribute not importable", and "wrong
+// DATA shape". The 2026-08-31 run lost half an hour to not having this.
+console.log(`MFL responded HTTP ${res.status}, ${text.length} bytes:`);
+console.log(text.slice(0, 800).trim() || '  (empty body)');
+
+const commishHint =
+  `\n\nIf this is an access problem: the franchises import is commissioner-only AND ` +
+  `per-league. The MFL_USER_ID/MFL_IS_COMMISH pair this repo's other write jobs use is ` +
+  `TheLeague's commissioner, which is NOT automatically a commissioner of AFL ${league.id}.`;
+
+// An HTML body is never a successful import — MFL answers imports with XML.
+// A login page, a permission notice and a league home page are all HTML, all
+// HTTP 200, and none of them contain the word "error".
+if (/^\s*(<!doctype html|<html)/i.test(text)) {
+  throw new Error(
+    `MFL returned an HTML page rather than an import result, so the write did NOT apply ` +
+      `(HTTP ${res.status}). Body above.${commishHint}`
+  );
+}
 if (!res.ok || /error/i.test(text)) {
-  const commishHint = /commissioner|not authorized|access/i.test(text)
-    ? `\n\nMFL says this is an access problem. The franchises import is commissioner-only AND ` +
-      `per-league: the MFL_USER_ID/MFL_IS_COMMISH pair used by this repo's other write jobs is ` +
-      `TheLeague's commissioner, which is NOT automatically a commissioner of AFL ${league.id}. ` +
-      `Supply an AFL commissioner's cookies.`
-    : '';
   throw new Error(`MFL rejected the write (HTTP ${res.status}): ${text.slice(0, 400)}${commishHint}`);
 }
 console.log('MFL accepted the write. Verifying…');
@@ -270,23 +302,34 @@ console.log('MFL accepted the write. Verifying…');
 const verifyRes = await fetch(exportUrl + `&_=${Date.now()}`);
 const verifyFranchises = asFranchiseList((await verifyRes.json())?.league?.franchises?.franchise);
 const actual = new Map<string, string>(verifyFranchises.map((f) => [f.id, f.waiverSortOrder ?? '?']));
+
+// Data loss FIRST. It is the graver outcome and the one needing immediate
+// action, so it must not sit behind a mismatch check that throws before it.
+// Names surviving is the canary for OVERLAY having been honored.
+const blanked = verifyFranchises.filter((f) => !f.name);
+if (blanked.length > 0) {
+  throw new Error(
+    `${blanked.length} franchise(s) lost their name — OVERLAY did not take. ` +
+      `Restore IMMEDIATELY by replaying the prior-order payload printed above.`
+  );
+}
+
 const mismatches = order.filter((e) => actual.get(e.franchiseId) !== String(e.position));
 if (mismatches.length > 0) {
   for (const m of mismatches) {
     console.error(`  MISMATCH ${m.franchiseId} ${teamName(m.franchiseId)}: expected ${m.position}, MFL has ${actual.get(m.franchiseId)}`);
   }
-  throw new Error(
-    `${mismatches.length} franchise(s) did not land as sent. Restore from ${path.relative(root, snapshotFile)} if needed.`
-  );
-}
-
-// Names surviving the write is the canary for OVERLAY having been honored.
-const blanked = verifyFranchises.filter((f) => !f.name);
-if (blanked.length > 0) {
-  throw new Error(
-    `${blanked.length} franchise(s) lost their name — OVERLAY did not take. ` +
-      `Restore immediately from ${path.relative(root, snapshotFile)}.`
-  );
+  // A no-op is exactly "every franchise still holds its PRE-write value".
+  const isNoOp = order.every((e) => actual.get(e.franchiseId) === before.get(e.franchiseId));
+  const noOpHint = isNoOp
+    ? `\n\nEvery value still matches the PRE-write order, so MFL accepted the request and ` +
+      `applied nothing — this is a silent no-op, not a partial write. Nothing needs restoring. ` +
+      `Read MFL's response body logged above to tell which it is: not a commissioner of this ` +
+      `league, waiverSortOrder not accepted by the franchises import, or a DATA shape MFL parsed ` +
+      `as zero franchises.`
+    : `\n\nThis is a PARTIAL write — some franchises moved. Restore by replaying the ` +
+      `prior-order payload printed above.`;
+  throw new Error(`${mismatches.length} franchise(s) did not land as sent.${noOpHint}`);
 }
 
 console.log(`\nDone. All ${order.length} franchises verified against the live league.`);
