@@ -39,10 +39,11 @@ async function loadContext(user: unknown, cookies: Record<string, string | null>
 
 const call = async (
   mod: any,
-  search: string
+  search: string,
+  method: string = 'GET'
 ): Promise<any> =>
   mod.resolveAccountingContext({
-    request: new Request('https://www.theleague.us/api/accounting/records'),
+    request: new Request('https://www.theleague.us/api/accounting/records', { method }),
     url: new URL(`https://www.theleague.us/api/accounting/records?${search}`),
   });
 
@@ -93,6 +94,33 @@ describe('resolveAccountingContext', () => {
     const result = await call(mod, 'league=theleague');
     expect(result).not.toBeInstanceOf(Response);
     expect(result.league.slug).toBe('theleague');
+    expect(result.mflCommishCookie).toBe('yes');
+  });
+
+  it('lets a READ through without the MFL commissioner cookie', async () => {
+    // Reads do not need it — the export is not commissioner-gated.
+    const mod = await loadContext(asUser(), { mflUserId: 'cookie' });
+    const result = await call(mod, 'league=theleague');
+    expect(result).not.toBeInstanceOf(Response);
+  });
+
+  it('refuses a WRITE without the MFL commissioner cookie', async () => {
+    // THE BUG THIS EXISTS FOR: isCommissionerOrAdmin also trusts the nav-config
+    // admin list, so it says yes without MFL_IS_COMMISH. The write then goes to
+    // MFL with no commissioner credential, MFL refuses it with a non-XML body,
+    // and the write reports success having done nothing — which is how a
+    // 15-record carry came back "carried into 2026" against an unchanged
+    // ledger (2026-08-31).
+    const mod = await loadContext(asUser(), { mflUserId: 'cookie' });
+    const result = await call(mod, 'league=theleague', 'POST');
+    expect(result).toBeInstanceOf(Response);
+    expect((result as Response).status).toBe(403);
+  });
+
+  it('allows a WRITE once the commissioner cookie is present', async () => {
+    const mod = await loadContext(asUser(), { mflUserId: 'cookie', mflIsCommish: 'yes' });
+    const result = await call(mod, 'league=theleague', 'POST');
+    expect(result).not.toBeInstanceOf(Response);
     expect(result.mflCommishCookie).toBe('yes');
   });
 

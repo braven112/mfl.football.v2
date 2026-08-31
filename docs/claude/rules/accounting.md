@@ -339,6 +339,46 @@ writes SEASON 2025's payouts into the 2026 LEAGUE's ledger. Collapsing them
 into one parameter pays the wrong season's winners out of the wrong year's
 books.
 
+## A write is only real once the ledger says so
+
+**MFL's import can answer HTTP 200 with a well-formed body and apply nothing.**
+The first live carry reported "15 balances carried into 2026" against a ledger
+that never changed — 5 entries and $500 before and after, zero carry records in
+either year.
+
+Three rules came out of it, and none of them is optional:
+
+1. **An HTML body is a hard failure.** MFL answers imports with XML. A login
+   page, a permission notice and a league home page are all HTTP 200, all
+   non-empty, and none contains an `<error>` element — so a check of
+   "200 + non-empty + no `<error>`" passes all three as successful writes.
+2. **Re-read to confirm.** Even a well-formed body is not proof. Every write
+   path re-reads the ledger afterwards and matches each claimed record on
+   (franchise, description, amount) — the same triple the idempotency check
+   uses, so anything that verifies is what a re-run will correctly skip.
+   Records MFL accepted that are absent afterwards are reported as
+   `unverifiedCount`, separately from outright failures, because they look like
+   success at every layer except the ledger. This is the rule `cut-player.ts`
+   already followed for roster moves, now applied to money.
+3. **A failed re-read is not a pass.** `verified: false` says the write is
+   unconfirmed rather than letting silence imply it landed.
+
+### Writes need the REAL commissioner cookie, not our idea of one
+
+`isCommissionerOrAdmin` is deliberately generous: it also trusts the nav-config
+admin franchise list, so it returns true — in its own words — "even if MFL
+didn't set the MFL_IS_COMMISH cookie at login". That is correct for showing
+admin UI and **wrong for writing to MFL**, which honours only the cookie.
+
+That gap is what produced the phantom carry: the app called the session
+commissioner, the page loaded, and every import went out with no commissioner
+credential. So `resolveAccountingContext` now requires `mfl_is_commish` on any
+non-GET/HEAD request, **inferred from the method** so a future write route
+cannot forget to ask. Reads stay open — the export is not commissioner-gated.
+
+The remedy it tells the user is the real one: sign out and sign in again. MFL
+issues that cookie only when you authenticate as the league commissioner.
+
 ## The gate
 
 Every route goes through `resolveAccountingContext()`:

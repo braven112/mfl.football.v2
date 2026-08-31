@@ -102,6 +102,31 @@ export function resolveAccountingContext(
     );
   }
 
+  // WRITES ADDITIONALLY REQUIRE THE REAL MFL COMMISSIONER COOKIE.
+  //
+  // `isCommissionerOrAdmin` above is deliberately generous: it also trusts the
+  // nav-config admin franchise list, so it says yes "even if MFL didn't set the
+  // MFL_IS_COMMISH cookie at login" (its own words). That is right for showing
+  // admin UI and wrong for writing to MFL, which only honours the cookie.
+  //
+  // Without this check a session that our app calls commissioner sends every
+  // import without the credential MFL needs, MFL refuses it with a non-XML
+  // body, and the write reports success having done nothing. That is exactly
+  // how a 15-record carry came back "carried into 2026" against a ledger that
+  // never changed (2026-08-31).
+  //
+  // Inferred from the METHOD rather than passed in, so a future write route
+  // cannot forget to ask for it.
+  if (request.method !== 'GET' && request.method !== 'HEAD' && !mflIsCommish) {
+    return json(
+      {
+        error:
+          'Your session has no MFL commissioner credential, so MFL will reject every write. Sign out and sign in again — MFL only issues it when you log in as the league commissioner.',
+      },
+      403
+    );
+  }
+
   return {
     user,
     league,
