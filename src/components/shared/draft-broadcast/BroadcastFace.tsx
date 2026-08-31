@@ -153,7 +153,26 @@ function avatarChain(player?: FacePlayer): string[] {
  */
 export function BroadcastFace({ player, className }: Props) {
   const chain = useMemo(() => avatarChain(player), [player]);
-  const [step, setStep] = useState(0);
+
+  /**
+   * How far down the chain we have walked, and the chain we walked it on.
+   *
+   * The pair, rather than a bare `step`, because the chain can change UNDER a
+   * mounted chip. Every call site keys its chip by player id, so a different
+   * player is a different element — but the same player can arrive with a
+   * better chain than the one he arrived with a moment ago: the roster panels
+   * show a man as a holding (no server-resolved cutout) until the board agrees
+   * he is tonight's pick, at which point the pool's own URL becomes the head of
+   * his chain. A `step` carried across that swap starts him partway down a
+   * chain he has never tried (Copilot, #668).
+   *
+   * Reset during render rather than in an effect: an effect resets it AFTER a
+   * commit that already pointed the <img> at the wrong entry, which is a
+   * request the browser has by then made.
+   */
+  const [walk, setWalk] = useState({ head: chain[0], step: 0 });
+  if (walk.head !== chain[0]) setWalk({ head: chain[0], step: 0 });
+  const step = walk.head === chain[0] ? walk.step : 0;
   // The SAME test the chain branches on, not a second one that agrees by
   // coincidence — see `defenseLogoCode`.
   const isDef = defenseLogoCode(player) !== '';
@@ -175,7 +194,10 @@ export function BroadcastFace({ player, className }: Props) {
     img.style.display = 'none';
   }, []);
 
-  const advance = useCallback(() => setStep((n) => n + 1), []);
+  const advance = useCallback(
+    () => setWalk((w) => ({ head: w.head, step: w.step + 1 })),
+    []
+  );
 
   /**
    * Close the hydration gap, or none of the above ever runs.

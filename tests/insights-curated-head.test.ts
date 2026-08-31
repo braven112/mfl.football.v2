@@ -123,13 +123,18 @@ describe('insights curated heads', () => {
       // dated-entry count below passes on the head's own content.
       expect(closeAt, `${file} has no ${CLOSE} marker`).toBeGreaterThan(0);
       const archive = body.slice(closeAt + CLOSE.length);
-      // Dated journal entries OR topic sections. The domain files are journals
-      // and count the first; `features/` files are organized by topic under a
-      // handful of dated sweeps, so requiring dates there would have meant
-      // back-dating headings to satisfy a test — which is the tail wagging the
-      // dog. Either way the thing being guarded is the same: a well-meaning
-      // "cleanup" that replaces the evidence with the summary leaves neither.
-      const entries = archive.match(/^(## .*\d{4}-\d{2}-\d{2}|### )/gm) ?? [];
+      // The domain journals stay strictly DATE-gated: dated entries are their
+      // whole contract, and counting `###` subheadings there would let every
+      // dated entry be deleted while the guard still passed (Copilot, #668).
+      // `features/` files are organized by topic under a handful of dated
+      // sweeps, so requiring dates there would have meant back-dating headings
+      // to satisfy a test — the tail wagging the dog. Either way the thing
+      // being guarded is the same: a "cleanup" that replaces the evidence with
+      // the summary leaves neither.
+      const pattern = file.startsWith(FEATURES)
+        ? /^(## .*\d{4}-\d{2}-\d{2}|### )/gm
+        : /^## .*\d{4}-\d{2}-\d{2}/gm;
+      const entries = archive.match(pattern) ?? [];
 
       expect(
         entries.length,

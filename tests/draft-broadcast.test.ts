@@ -1867,6 +1867,21 @@ describe('rosterRows', () => {
   it('survives a franchise with no holdings at all', () => {
     expect(rosterRows(undefined, [], pool, '0001')).toEqual([]);
   });
+
+  it("carries the pool's own resolved cutout for a pick", () => {
+    // The chip starts on `headshot` when it has one. Dropping it here made the
+    // panel rebuild a URL the server had already resolved and walk a 404 to get
+    // back to it (Copilot, #668). A HOLDING legitimately has none — RosterHolding
+    // is a thin record — so only the pick half carries it.
+    const withCutout = new Map<string, BroadcastPlayer>([
+      ['r1', { ...player('r1', 'RB'), headshot: 'https://cdn/r1.png', mflId: '9999' } as BroadcastPlayer],
+    ]);
+    const rows = rosterRows(held, [slot(1, 'r1', '0001')], withCutout, '0001');
+    const rb = rows.find((r) => r.position === 'RB')!;
+    expect(rb.players[0].headshot).toBe('https://cdn/r1.png');
+    expect(rb.players[0].mflId).toBe('9999');
+    expect(rb.players.find((p) => p.id === 'h1')!.headshot).toBeUndefined();
+  });
 });
 
 describe('faceLabel', () => {
@@ -1911,6 +1926,18 @@ describe('the panels are wired to real data, not decoration', () => {
       );
       expect(call).not.toMatch(/\bplayers\b/);
     }
+  });
+
+  it('the face chip resets its 404 walk when the chain changes under it', () => {
+    // Every call site keys a chip by player id, so a different player remounts
+    // — but the SAME player can gain a better chain (a holding becoming
+    // tonight's pick brings the pool's resolved cutout with it), and a step
+    // carried across that swap starts him partway down a chain he never tried.
+    const src = read('components/shared/draft-broadcast/BroadcastFace.tsx');
+    expect(src).toMatch(/walk\.head !== chain\[0\]/);
+    // During render, not in an effect: an effect resets AFTER a commit that has
+    // already pointed the <img> at the wrong entry.
+    expect(src).not.toMatch(/useEffect/);
   });
 
   it('the face chip has ONE implementation, shared by all three surfaces', () => {

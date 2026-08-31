@@ -897,6 +897,18 @@ export interface RosterEntry {
   position: string;
   nflTeam: string;
   espnId?: string;
+  /**
+   * The cutout the SERVER already resolved, when this entry came from the
+   * shipped pool — i.e. for a pick, never for a holding (a `RosterHolding` is a
+   * thin record and deliberately carries none).
+   *
+   * Passed through rather than dropped so the chip starts on the URL that is
+   * known to work instead of rebuilding one and walking a 404 to get back to it
+   * (Copilot, #668). `mflId` rides along for the same reason: it is the id the
+   * fallback hops are built from, and it is not always the MFL id on `id`.
+   */
+  headshot?: string;
+  mflId?: string;
   /** "2.07" when this player was drafted tonight; absent for a holding. */
   pickLabel?: string;
 }
@@ -943,6 +955,10 @@ export function rosterRows(
       position: player.position || '',
       nflTeam: player.nflTeam || '',
       ...(player.espnId ? { espnId: player.espnId } : {}),
+      // See RosterEntry: the pool's own resolved cutout, so the chip does not
+      // rebuild a URL it was handed.
+      ...(player.headshot ? { headshot: player.headshot } : {}),
+      ...(player.mflId ? { mflId: player.mflId } : {}),
       pickLabel: `${pick.round}.${String(pick.pickInRound).padStart(2, '0')}`,
     });
   }
