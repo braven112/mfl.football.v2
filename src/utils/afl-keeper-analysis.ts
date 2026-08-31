@@ -438,11 +438,29 @@ export function getOpeningRosterPids(
       ...asArray(weekOne.weeklyResults.franchise),
     ];
     // Pre-season, the feed already carries a week-1 SCHEDULE SHELL: matchup
-    // franchises with id/isHome/spread but no player lists. Week 1 is only
-    // authoritative once ANY franchise carries players; a bare shell falls
-    // through to the rosters fallback below (live pre-draft cycle).
-    const weekOneHasPlayers = franchises.some((fr) => asArray(fr.player).some((p) => p?.id));
-    if (weekOneHasPlayers) {
+    // franchises with id/isHome/spread. A shell falls through to the rosters
+    // fallback below (live pre-draft cycle).
+    //
+    // AUTHORITATIVE MEANS SCORED, NOT MERELY POPULATED. This used to test for
+    // the presence of PLAYERS, which held only while a pre-season week 1 was
+    // always empty. It isn't: once a franchise drafts, MFL lists its whole
+    // 16-man roster under week 1 with `result: "T"` and every `score` blank.
+    // During the 2026 AFL draft that made week 1 look authoritative on the
+    // strength of the three franchises whose owners had set a lineup, and the
+    // other 21 — absent from week 1, correctly refused the rosters fallback by
+    // the rule below — reconstructed ZERO keepers, i.e. the keeper page told
+    // seven eighths of the league it kept nobody.
+    //
+    // A score is the thing that only exists once the week has been PLAYED, so
+    // it is the honest test. Note this deliberately does NOT relax the
+    // franchise-missing-from-week-1 rule below, which exists to stop
+    // end-of-season rosters counting mid-season pickups as keeps
+    // (`never falls back to end-of-season rosters when week 1 has player
+    // data`) — both properties hold at once.
+    const weekOneScored = franchises.some((fr) =>
+      asArray(fr.player).some((p) => p?.id && p.score !== undefined && p.score !== '')
+    );
+    if (weekOneScored) {
       const pids = new Set<string>();
       for (const fr of franchises) {
         if (fr.id !== franchiseId) continue;
