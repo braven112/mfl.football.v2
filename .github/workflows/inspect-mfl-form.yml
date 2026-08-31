@@ -1,0 +1,65 @@
+name: Inspect MFL Form
+
+# READ-ONLY. Fetches an authenticated MFL page with the commissioner cookies
+# and prints its form structure — action, method, and every field name, type
+# and value (with a <select>'s options, since those are the contract).
+#
+# Why: some MFL functions have no API equivalent. Waiver order is one —
+# import?TYPE=franchises answers <status>OK</status> and ignores
+# waiverSortOrder (2026-08-31, see the mfl-api insights doc). Replaying the
+# page's own form POST is this repo's fallback (src/pages/api/cut-player.ts
+# replays add_drop for the same reason), and that needs the EXACT field names.
+# Guessing them is a documented way to burn PRs here, so read the real form.
+#
+# The script only ever issues a GET and refuses any non-myfantasyleague.com
+# host, so it cannot submit anything or leak cookies elsewhere.
+#
+# The target is built from the league REGISTRY (slug + csetup page code), never
+# a pasted URL — league ids and MFL hosts are never hardcoded here (CLAUDE.md,
+# enforced by tests/league-literal-guard.test.ts).
+
+on:
+  workflow_dispatch:
+    inputs:
+      league:
+        description: "League slug from the registry"
+        required: false
+        type: choice
+        options: [afl-fantasy, theleague]
+        default: afl-fantasy
+      page:
+        description: "Commissioner setup page code (e.g. WAIVORD = Custom Waiver Order)"
+        required: false
+        type: string
+        default: "WAIVORD"
+      year:
+        description: "League year (default: the league's current MFL year)"
+        required: false
+        type: string
+
+concurrency:
+  group: inspect-mfl-form
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm + Node + install
+        uses: ./.github/actions/setup
+
+      - name: Inspect
+        env:
+          MFL_USER_ID: ${{ secrets.MFL_USER_ID }}
+          MFL_IS_COMMISH: ${{ secrets.MFL_IS_COMMISH }}
+        run: |
+          ARGS="--league ${{ inputs.league }} --page ${{ inputs.page }}"
+          if [ -n "${{ inputs.year }}" ]; then ARGS="$ARGS --year ${{ inputs.year }}"; fi
+          pnpm exec tsx scripts/inspect-mfl-form.ts $ARGS
