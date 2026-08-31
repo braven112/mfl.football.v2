@@ -27,9 +27,17 @@ import { resolveAccountingContext } from '../../../utils/accounting-request';
 import { fetchAccountingLedger, writeAccountingRecords } from '../../../utils/mfl-accounting';
 import { loadFranchises } from '../../../utils/accounting-season-data';
 import { checkRateLimit } from '../../../utils/rate-limit';
-import { planYearMigration } from '../../../utils/accounting-migration.mjs';
+import { planYearMigration, assessCarryReadiness } from '../../../utils/accounting-migration.mjs';
 
 export const prerender = false;
+
+/**
+ * Mirrors SETTLED_AFTER_DAYS in scripts/accounting-carry-over.ts. Duplicated
+ * rather than imported because the script is not part of the app bundle; the
+ * two must agree, so a change to one is a change to both. The page uses it
+ * only to describe the old year's state — it never blocks a human's carry.
+ */
+const SETTLE_WINDOW_DAYS = 14;
 
 const parseYear = (raw: string | null): number | null => {
   if (!raw) return null;
@@ -110,7 +118,19 @@ async function buildMigration(ctx: Ctx, url: URL) {
     franchises: loadFranchises(ctx.league, to),
   });
 
-  return { plan, from, to };
+  // The same gate the unattended job is held to. Returned for DISPLAY only —
+  // a commissioner driving the page can see the warnings and decide, so
+  // nothing here blocks the POST below. It exists so the page can show whether
+  // the old year still looks active, which is the one step of the yearly
+  // sequence that has no direct signal.
+  const readiness = assessCarryReadiness({
+    sourceLedger: source.ledger,
+    plan,
+    nowMs: Date.now(),
+    settleAfterDays: SETTLE_WINDOW_DAYS,
+  });
+
+  return { plan, from, to, readiness };
 }
 
 export const GET: APIRoute = async (context) => {

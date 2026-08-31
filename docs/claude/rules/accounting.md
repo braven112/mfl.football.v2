@@ -210,6 +210,46 @@ touch.** The accounting page enforces that by always defaulting to the current
 league year — `leagueYearFor(league)`, which honours each league's own rollover
 date rather than a shared Feb 14.
 
+The **Yearly upgrade** tab renders these four steps as a checklist, and step 4
+— the carry — is the plan on that same tab.
+
+### Three of the four steps have a signal. One does not.
+
+| Step | How it is known |
+|---|---|
+| New league year exists | Its ledger reads. |
+| Prizes paid into the old year | `planPayouts(season N-1)` against the **N-1** ledger has nothing payable. |
+| Old year settled | **No signal exists.** |
+| Balances carried | The migration plan has nothing carryable. |
+
+Step 2 is checked against the OLD year's own ledger, not the current one:
+that is where a season's prizes belong, and paying them after the carry
+strands them in a year nobody looks at.
+
+Step 3 has no MFL flag for "I have finished sending everyone their winnings",
+and **inventing one would be worse than admitting it.** So the checklist shows
+the same quiescence proxy the unattended job uses, labelled as a proxy, and
+**never renders that step as done**. A checklist that ticks a box it cannot
+verify is how a commissioner ends up trusting it past the point it earns.
+
+### Automation: `accounting-carry-over.yml`
+
+The carry also runs unattended, weekly. It is real money written with nobody
+watching and MFL's import has no delete, so `assessCarryReadiness` (in the pure
+planner, tested in isolation) treats *don't know* as *don't write* and refuses
+the **whole league** rather than carrying the part it is sure about — a partial
+carry that silently drops one franchise is worse than one that never ran. It
+refuses when the source has no records, any line conflicts, a balance has no
+franchise to land on, the two nets disagree, or the old year is not yet quiet.
+
+**A human driving the page is deliberately NOT held to those gates** — they can
+see the warnings and decide. The API returns `readiness` for display only; it
+never blocks a commissioner's carry.
+
+`SETTLED_AFTER_DAYS` (14) lives in `scripts/accounting-carry-over.ts` and is
+mirrored as `SETTLE_WINDOW_DAYS` in the migrate route, which does not share the
+script's module. **The two must agree** — change one, change the other.
+
 ### The gap between the upgrade and the carry-over announces itself
 
 Between steps 1 and 4 the league's real balances live in a year nobody is

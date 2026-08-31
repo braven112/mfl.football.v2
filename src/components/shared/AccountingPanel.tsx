@@ -204,7 +204,7 @@ export default function AccountingPanel({
           ['ledger', 'Ledger'],
           ['add', 'Add transaction'],
           ...(hasPayouts ? ([['payouts', 'Season payouts']] as Array<[Tab, string]>) : []),
-          ['rollover', 'Year rollover'],
+          ['rollover', 'Yearly upgrade'],
           ['import', 'Import CSV'],
         ] as Array<[Tab, string]>).map(([id, label]) => (
           <button
@@ -901,6 +901,7 @@ interface MigrationLine {
 interface MigrationPlan {
   from: number;
   to: number;
+  readiness?: { ready: boolean; reason?: string; nothingToDo?: boolean };
   lines: MigrationLine[];
   skipped: Array<{ franchiseId: string; reason: string; balance: number }>;
   warnings: Array<{ franchiseId: string; balance: number; reason: string }>;
@@ -945,6 +946,14 @@ function Rollover({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [applied, setApplied] = useState<string | null>(null);
+  /**
+   * Whether the season being closed out still has prizes owed — step 2 of the
+   * sequence. Checked against the OLD year's own ledger, because that is where
+   * a season's prizes belong: paying them after the carry would strand them in
+   * a year nobody looks at. `null` while unknown (not yet loaded, or the check
+   * failed), which the checklist renders honestly rather than as a tick.
+   */
+  const [payoutsOwed, setPayoutsOwed] = useState<{ amount: number; count: number } | null | undefined>(undefined);
 
   const query = `league=${encodeURIComponent(leagueSlug)}&from=${from}&to=${year}`;
 
@@ -965,9 +974,32 @@ function Rollover({
     }
   }, [base, query]);
 
+  // Step 2 asks the payout planner about the OLD season against the OLD year's
+  // ledger — deliberately not the current year, which is where a payout run
+  // today would write.
+  const loadPayoutState = useCallback(async () => {
+    setPayoutsOwed(undefined);
+    try {
+      const response = await fetch(
+        `${base}/payouts?league=${encodeURIComponent(leagueSlug)}&season=${from}&year=${from}`
+      );
+      if (!response.ok) {
+        setPayoutsOwed(null);
+        return;
+      }
+      const data = await response.json();
+      const amount = Number(data?.totals?.payable ?? 0);
+      const count = (data?.lines ?? []).filter((l: any) => l.status === 'payable').length;
+      setPayoutsOwed(count > 0 ? { amount, count } : { amount: 0, count: 0 });
+    } catch {
+      setPayoutsOwed(null);
+    }
+  }, [base, leagueSlug, from]);
+
   useEffect(() => {
     void loadPlan();
-  }, [loadPlan]);
+    void loadPayoutState();
+  }, [loadPlan, loadPayoutState]);
 
   const apply = async () => {
     setBusy(true);
@@ -1020,9 +1052,18 @@ function Rollover({
 
       <p className="acct__note">
         MFL creates a brand-new league every year and its ledger starts empty &mdash; nothing carries over on
-        MFL&rsquo;s side. This writes each franchise&rsquo;s {from} closing balance into the {year} books, keeping
-        the sign: a franchise that owed money still owes it. Balances already carried are never written twice.
+        MFL&rsquo;s side. Carrying the balances is the LAST step of the yearly upgrade, because it moves a
+        <em> closing</em> balance: anything added to {from} afterwards has to be moved by hand.
       </p>
+
+      <SequenceChecklist
+        from={from}
+        to={year}
+        ledgerReadable={plan !== null}
+        payoutsOwed={payoutsOwed}
+        readiness={plan?.readiness}
+        carried={plan ? plan.totals.carryable === 0 : null}
+      />
 
       {error && <p className="acct__error" role="alert">{error}</p>}
       {applied && <p className="acct__ok" role="status">{applied}</p>}
@@ -1173,5 +1214,105 @@ function MigrationTable({
         </table>
       </div>
     </>
+  );
+}
+
+/* ── The yearly sequence ────────────────────────────────────────────────── */
+
+type StepState = 'done' | 'todo' | 'unknown';
+
+/**
+ * The four steps of the yearly upgrade, in order, with the carry last.
+ *
+ * Only three of them have a real signal. Step 3 — "settlement" — has none:
+ * there is no MFL flag for "I have finished sending everyone their winnings",
+ * and inventing one would be worse than admitting it. So it renders the same
+ * quiescence PROXY the unattended job uses, labelled as a proxy, and never
+ * claims to be done. A checklist that ticks a box it cannot actually verify is
+ * how a commissioner ends up trusting it past the point it earns.
+ */
+function SequenceChecklist({
+  from,
+  to,
+  ledgerReadable,
+  payoutsOwed,
+  readiness,
+  carried,
+}: {
+  from: number;
+  to: number;
+  ledgerReadable: boolean;
+  payoutsOwed: { amount: number; count: number } | null | undefined;
+  readiness?: { ready: boolean; reason?: string; nothingToDo?: boolean };
+  carried: boolean | null;
+}) {
+  // "still active" is the settle gate's own wording; anything else it refuses
+  // for is a different problem and must not be read as "not yet quiet".
+  const looksActive = Boolean(readiness && !readiness.ready && /still active/i.test(readiness.reason ?? ''));
+
+  const steps: Array<{ label: string; detail: string; state: StepState }> = [
+    {
+      label: `${to} league created on MFL`,
+      detail: ledgerReadable
+        ? `Its books are readable, and they start empty — nothing carries across on MFL's side.`
+        : `Could not read the ${to} ledger.`,
+      state: ledgerReadable ? 'done' : 'todo',
+    },
+    {
+      label: `${from} prizes paid into the ${from} books`,
+      detail:
+        payoutsOwed === undefined
+          ? 'Checking…'
+          : payoutsOwed === null
+            ? `Could not check ${from}'s payouts. Open Season payouts to see for yourself.`
+            : payoutsOwed.count === 0
+              ? `Every prize this app can derive is already in the ${from} ledger.`
+              : `${payoutsOwed.count} prize${payoutsOwed.count === 1 ? '' : 's'} (${money(payoutsOwed.amount)}) still owed for ${from}. Pay them into ${from} — after the carry they would land in the wrong year.`,
+      state:
+        payoutsOwed === undefined || payoutsOwed === null
+          ? 'unknown'
+          : payoutsOwed.count === 0
+            ? 'done'
+            : 'todo',
+    },
+    {
+      label: `${from} settled — winnings sent, fees and corrections in`,
+      // Deliberately never 'done'. See the component note.
+      detail: looksActive
+        ? `${from} is still being written to, so its balance isn't final yet.`
+        : `No signal for this — MFL has no "books closed" flag. ${from} has been quiet for a while, which is the only proxy there is. You are the check here.`,
+      state: looksActive ? 'todo' : 'unknown',
+    },
+    {
+      label: `Balances carried into ${to}`,
+      detail:
+        carried === null
+          ? 'Waiting on the plan.'
+          : carried
+            ? `Nothing left to carry — ${to} holds the ${from} closing balances.`
+            : `The plan below is ready to run.`,
+      state: carried === null ? 'unknown' : carried ? 'done' : 'todo',
+    },
+  ];
+
+  return (
+    <ol className="acct__steps">
+      {steps.map((step, index) => (
+        <li key={step.label} className={`acct__step is-${step.state}`}>
+          <span className="acct__step-mark" aria-hidden="true">
+            {step.state === 'done' ? '✓' : step.state === 'todo' ? index + 1 : '?'}
+          </span>
+          <span>
+            <strong>{step.label}</strong>
+            {/* The state is in the text too, not just the mark — the mark is a
+                glyph and a colour, neither of which a screen reader conveys. */}
+            <span className="acct__sr">
+              {step.state === 'done' ? ' — done. ' : step.state === 'todo' ? ' — still to do. ' : ' — not verifiable. '}
+            </span>
+            <span className="acct__step-detail">{step.detail}</span>
+          </span>
+        </li>
+      ))}
+    </ol>
   );
 }
