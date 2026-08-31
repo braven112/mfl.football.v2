@@ -17,6 +17,7 @@ import type {
   BroadcastDefenseFace,
   BroadcastPlayer,
   BroadcastPlayerExtras,
+  RosterHolding,
 } from '../types/draft-broadcast';
 import { parseTradeFromComment, selectDraftUnit } from './draft-utils';
 import { buildMflExportUrl } from './mfl-url';
@@ -334,6 +335,65 @@ export function loadConferenceKeepers(
     }
   }
   return kept;
+}
+
+/**
+ * What each franchise ALREADY HOLDS, for the screensaver's roster panels.
+ *
+ * The panels answer the question a slow draft makes everybody ask — "what does
+ * he still need?" — which only works if the screen knows what he already has.
+ * Tonight's picks the island can see for itself; this is the other half: the
+ * keepers (AFL) or the standing dynasty roster (TheLeague) that the draft is
+ * being added TO.
+ *
+ * Deliberately a THIN record per player rather than a `BroadcastPlayer`.
+ * `trimToDraftable` exists because a TV page shipping all 2609 players wastes
+ * bytes on names that will never be revealed, and shipping a full record for
+ * every rostered player would undo it — TheLeague rosters 25 apiece across 16
+ * franchises. A panel needs a name, a position, a face and a team stripe, and
+ * `espnId` is what the client builds the face URL from (the same cascade
+ * `BroadcastFace` walks), so that is all that ships.
+ *
+ * Players drafted TONIGHT are excluded via `draftedIds` — the island merges
+ * them back in from the live board, where their pick number is also known.
+ * That is not merely an optimisation: `rosters.json` is a cron snapshot that
+ * gains tonight's picks partway through the draft, so a panel that trusted it
+ * alone would show a pick as a holding minutes before the board agreed. The
+ * island dedupes by player id, so a player who appears in both is counted once
+ * and drawn as tonight's pick.
+ */
+export function loadFranchiseHoldings(
+  dataPath: string,
+  year: number,
+  franchiseIds: ReadonlySet<string>,
+  draftedIds: ReadonlySet<string>,
+  players: BroadcastPlayer[]
+): Record<string, RosterHolding[]> {
+  const raw = readJson(`${dataPath}/mfl-feeds/${year}/rosters.json`);
+  // The UNTRIMMED pool, so a holding can be resolved even when he is nobody's
+  // draft pick — which is most of them.
+  const byId = new Map(players.map((p) => [p.id, p]));
+  const holdings: Record<string, RosterHolding[]> = {};
+  for (const f of toArray<any>(raw?.rosters?.franchise)) {
+    if (!f?.id || !franchiseIds.has(f.id)) continue;
+    const roster: RosterHolding[] = [];
+    for (const p of toArray<any>(f.player)) {
+      if (!p?.id || draftedIds.has(p.id)) continue;
+      const known = byId.get(p.id);
+      // A player the pool cannot name is dropped rather than drawn as a blank
+      // chip: the panel is a roster, and an unnamed row in one reads as a bug.
+      if (!known?.name) continue;
+      roster.push({
+        id: known.id,
+        name: known.name,
+        position: known.position || '',
+        nflTeam: known.nflTeam || '',
+        ...(known.espnId ? { espnId: known.espnId } : {}),
+      });
+    }
+    if (roster.length > 0) holdings[f.id] = roster;
+  }
+  return holdings;
 }
 
 /**

@@ -26,6 +26,10 @@
  *                       ?mflHost= for a specific www## host, ?unit= to name a
  *                       draft unit. Always flagged on screen.
  *   ?warm=N|all|off     how many players deep to pre-cache images for
+ *   ?screensaver=N|off  seconds of idle board before it replays the draft to
+ *                       itself (default 600 — see SCREENSAVER_IDLE_MS). The
+ *                       short override is how you watch it work without
+ *                       standing in front of a TV for ten minutes.
  */
 
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
@@ -43,10 +47,12 @@ import {
   findRehearsalYear,
   hasDraftSlots,
   loadConferenceKeepers,
+  loadFranchiseHoldings,
   trimToDraftable,
 } from '../../utils/draft-broadcast-server';
 import { resolveBroadcastSource } from '../../utils/draft-broadcast-source';
 import { resolveWarmDepth } from '../../utils/draft-broadcast-images';
+import { resolveScreensaverIdleMs } from '../../utils/draft-broadcast';
 import type {
   BroadcastConference,
   BroadcastPlayer,
@@ -207,6 +213,18 @@ const ranked = assignBoardRanks(enriched, keptIds);
 
 const players = trimToDraftable(ranked, boardPlayerIds);
 
+// What each franchise already HOLDS — its keepers, here — for the screensaver's
+// roster panels. Resolved against the UNTRIMMED pool (`ranked`), because a
+// keeper is by definition not on the board and most of them are trimmed out of
+// the shipped pool by the line above. Thin records only; see RosterHolding.
+const holdings = loadFranchiseHoldings(
+  league.dataPath,
+  leagueYear,
+  conferenceFranchiseIds,
+  boardPlayerIds,
+  ranked
+);
+
 // A team defense has no headshot of its own, so the reveal card stands two of
 // the unit's marquee defenders in for it. Built from the TRIMMED pool — one
 // list per team rather than one per player — see buildDefenseFacesByTeam.
@@ -243,9 +261,11 @@ const pageData: DraftBroadcastPageData = {
   feedUnit: source.unit,
   sourceLabel: source.label,
   warmDepth: resolveWarmDepth(Astro.url.searchParams.get('warm')),
+  screensaverIdleMs: resolveScreensaverIdleMs(Astro.url.searchParams.get('screensaver')),
   rehearseUpTo,
   rehearsalYears,
   defenseFaces,
+  holdings,
 };
 
 const title = `${conference?.name ?? 'AFL'} Draft Board | AFL`;

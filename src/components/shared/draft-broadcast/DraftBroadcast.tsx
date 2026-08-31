@@ -7,10 +7,16 @@
  * arrives as `pageData` — nothing on this screen depends on a client fetch
  * landing, so a dropped poll degrades to "no new picks yet", never a blank TV.
  *
- * Three states, in order of how much of the night they own:
+ * Four states, in order of how much of the night they own:
  *   pre-draft  → nothing picked yet: draft order and the room's first pick
  *   idle       → who's on the clock, recent picks, who's next (most of the night)
  *   reveal     → a selection just landed (the moment everyone looks up)
+ *   screensaver→ ten minutes with no pick: rosters, the position board, then
+ *                the whole draft replayed from 1.01
+ *
+ * The screensaver is for the EMAIL draft, where "most of the night" can mean
+ * six hours on one frame. It borrows the reveal layer rather than adding a
+ * screen of its own, and any real pick ends it instantly. See `playlist`.
  *
  * The idle board and the reveal are LAYERS, not alternatives — see the render
  * at the bottom. Both stay mounted and cross-fade, because a hard swap between
@@ -30,13 +36,23 @@ import { collectFreshPicks } from '../../../utils/pick-reveal';
 import {
   applyRehearsal,
   findOnTheClock,
+  buildScreensaverPlaylist,
   isRevealWorthy,
+  isScreensaverDue,
   lastPickAtMs,
   playerMap,
+  positionTallies,
+  rosterRows,
+  screensaverAnchorMs,
+  screensaverReel,
+  screensaverSceneMs,
+  SCREENSAVER_IDLE_MS,
   teamMap,
+  type ScreensaverScene,
 } from '../../../utils/draft-broadcast';
 import { planBroadcastImages } from '../../../utils/draft-broadcast-images';
 import { BroadcastRevealCard } from './BroadcastRevealCard';
+import { BroadcastPositionPanel, BroadcastRosterPanel } from './BroadcastPanel';
 import { BroadcastWarmup } from './BroadcastWarmup';
 import { OnTheClock } from './OnTheClock';
 
@@ -166,6 +182,26 @@ interface QueuedReveal {
   pick: DraftRoomPick;
 }
 
+/**
+ * What the front layer is showing, whoever put it there.
+ *
+ * Three sources feed one layer — a live pick, a replayed one, and the
+ * screensaver's panels — and they must not each grow their own mounting,
+ * keying and fade-out handling. Resolving them to a single `Stage` per render
+ * is what keeps the cross-fade (and `lastStageRef`, which holds the OUTGOING
+ * screen through its fade) written once.
+ */
+type Stage =
+  | {
+      key: string;
+      kind: 'reveal';
+      reveal: QueuedReveal;
+      /** Present only for a REPLAYED pick — see BroadcastRevealCard's `rewind`. */
+      rewind?: { position: number; total: number; onTheClock?: DraftRoomTeam };
+    }
+  | { key: string; kind: 'roster'; franchiseId: string; role: 'clock' | 'deck' }
+  | { key: string; kind: 'positions' };
+
 export default function DraftBroadcast({ pageData, conferences }: Props) {
   const data = useMemo(() => JSON.parse(pageData) as DraftBroadcastPageData, [pageData]);
   const allConferences = useMemo(
@@ -186,6 +222,42 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
   /** True when every response for a while has been older than what is shown —
    *  the board is not wrong, but it may be behind, and only a reload resyncs. */
   const [maybeStale, setMaybeStale] = useState(false);
+
+  /**
+   * The screensaver's cycle, or null when it is not running, plus where in it
+   * we are.
+   *
+   * The screensaver is the answer to an EMAIL draft, where a pick can be hours
+   * apart and the idle board — correct, and the best screen in the room when
+   * anything is happening — becomes one unchanging frame for an entire evening.
+   * After `screensaverIdleMs` of nothing the board plays a cycle: the roster of
+   * the team on the clock, then the team on deck, then what is off the board by
+   * position, then the whole draft replayed from 1.01. See
+   * `buildScreensaverPlaylist`.
+   *
+   * The playlist is built ONCE, when the screensaver arms, and never rebuilt
+   * mid-cycle: the one event that would change it (a pick landing) ends the
+   * screensaver outright, so a cycle that reshuffled underneath the room could
+   * only ever be a bug. Nothing here impersonates a live pick — a replayed card
+   * is flagged as a rewind, the panels are built from the live board, and a real
+   * pick takes the screen back instantly (see `ingest`).
+   */
+  const [playlist, setPlaylist] = useState<ScreensaverScene[] | null>(null);
+  const [sceneIndex, setSceneIndex] = useState(0);
+  /**
+   * The CLIENT-clock instant from which the room has had nothing new — the end
+   * of the last cycle, or the arrival of a fresh pick. 0 until one happens.
+   *
+   * It is one value rather than two because it answers one question, and both
+   * halves are load-bearing: without the cycle-end half the screensaver re-arms
+   * into a permanent loop with no idle board between passes, and without the
+   * fresh-pick half a pick MFL stamped unusably never moves the anchor at all.
+   * See `screensaverAnchorMs`, which holds the reasoning.
+   */
+  const [quietSince, setQuietSince] = useState(0);
+  /** When this board started watching — the reload floor. See
+   *  `screensaverAnchorMs`. A ref: fixed for the life of the board. */
+  const openedAtRef = useRef(Date.now());
 
   const teams = useMemo(() => teamMap(data.teams), [data.teams]);
   const players = useMemo(() => playerMap(data.players), [data.players]);
@@ -310,6 +382,25 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
 
     for (const p of fresh) seenRef.current.add(p.overallPickNumber);
     setPicks(incoming);
+
+    // A REAL PICK ALWAYS WINS THE SCREEN BACK. This is the one rule the
+    // screensaver has: the reel is what fills a dead room, and the moment the
+    // room stops being dead it is over — mid-card, mid-reel, whatever it was
+    // showing. Placed above the first-poll absorb below on purpose, so a board
+    // that opened straight into a reel (a short `?screensaver=` while testing)
+    // still hands the screen back the instant MFL answers with something new.
+    // The rest of the arming is timing, and lives in the effects below; this
+    // half has to be here, because `ingest` is the only place that knows a pick
+    // is new rather than merely present.
+    if (fresh.length > 0) {
+      setPlaylist(null);
+      // ...and the wait starts again HERE. Not by clearing the floor and
+      // leaning on the pick's own timestamp: `lastPickAtMs` skips a stamp it
+      // cannot parse, which `isRevealWorthy` deliberately still reveals, so a
+      // cleared floor would hand the room the reveal and then re-arm the cycle
+      // the moment it drained.
+      setQuietSince(now);
+    }
 
     // First poll after load reconciles a stale SSR snapshot against live MFL.
     // Whatever it turns up already happened; take it as read.
@@ -483,7 +574,68 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
     return () => clearTimeout(id);
   }, [current, rehearsing]);
 
-  // ── Keep the TV awake ──
+  // ── The screensaver ──
+  // Two effects and a playlist. The first decides WHEN a cycle starts, the
+  // second walks it; `buildScreensaverPlaylist` decides what is in it.
+  const idleMs = data.screensaverIdleMs ?? SCREENSAVER_IDLE_MS;
+  /** Whether there is anything to show at all — the playlist is empty exactly
+   *  when the reel is, so this is also the pre-draft guard. */
+  const reelLength = useMemo(() => screensaverReel(picks).length, [picks]);
+  /** The instant the idle countdown runs from — newest pick, board open, or the
+   *  end of the last cycle, whichever is latest. See `screensaverAnchorMs`. */
+  const idleAnchor = useMemo(
+    () => screensaverAnchorMs(picks, openedAtRef.current, quietSince),
+    [picks, quietSince]
+  );
+
+  // Arm. One absolute deadline rather than a repeating check: the anchor is a
+  // timestamp, so a timer the browser fires late (a background tab, a laptop
+  // that slept) starts the cycle late rather than drifting the schedule. The
+  // effect re-runs on every accepted poll — `picks` is a new array each time —
+  // and recomputes the same deadline from the same anchor, so re-running is a
+  // no-op rather than a reset.
+  //
+  // `picksRef` rather than `picks` in the deps is deliberate: the playlist must
+  // be built from the board as it stands WHEN THE CYCLE STARTS, but listing
+  // `picks` here would rebuild the deadline into a new closure on every poll for
+  // no other reason.
+  const picksRef = useRef(picks);
+  picksRef.current = picks;
+  const startCycle = useCallback(() => {
+    setPlaylist(buildScreensaverPlaylist(picksRef.current));
+    setSceneIndex(0);
+  }, []);
+
+  useEffect(() => {
+    // Nothing to show, switched off, already running, or a live reveal owns the
+    // screen — in every case the screensaver has no business starting.
+    if (idleMs <= 0 || reelLength === 0 || playlist !== null || queue.length > 0) return;
+    if (isScreensaverDue(idleAnchor, Date.now(), idleMs)) {
+      startCycle();
+      return;
+    }
+    const wait = idleAnchor + idleMs - Date.now();
+    const id = setTimeout(startCycle, wait);
+    return () => clearTimeout(id);
+  }, [idleMs, reelLength, playlist, queue.length, idleAnchor, startCycle]);
+
+  // Walk it. Runs off the end into `null`, which puts the idle board back and
+  // stamps `quietSince` so the next cycle is another full idle period away.
+  const scene = playlist ? playlist[sceneIndex] : undefined;
+  useEffect(() => {
+    if (!playlist) return;
+    if (!scene) {
+      setPlaylist(null);
+      setQuietSince(Date.now());
+      return;
+    }
+    // Each scene decides its own hold: a replayed pick is recognised in a
+    // second, a panel has to be read. See `screensaverSceneMs`.
+    const id = setTimeout(() => setSceneIndex((i) => i + 1), screensaverSceneMs(scene));
+    return () => clearTimeout(id);
+  }, [playlist, scene]);
+
+    // ── Keep the TV awake ──
   // A screen that sleeps between picks is the single most likely way this fails
   // in the room. Best-effort: unsupported browsers just don't get it, and the
   // lock is re-taken if the OS drops it on tab visibility change.
@@ -538,12 +690,17 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
   }, []);
 
   // ── Which screen is up ──
-  // The handoff is entirely CSS now: the layers cross-fade on `.dbc__screen`
-  // and the reveal plays its own `dbc-reveal-in`. There WAS a measured
+  // The handoff is entirely CSS: the layers cross-fade on `.dbc__screen` and
+  // the reveal plays its own `dbc-reveal-in`. There WAS a measured
   // shared-element morph here (the crest flying between its two boxes, since
   // only the browser knows where those are); it was cut for a plain card
   // reveal, which is why nothing on this screen needs layout timing any more.
-  const showingReveal = !!current;
+  //
+  // THREE things can take the front layer, and they are ranked, not merged: a
+  // pick that just landed, a pick the screensaver is replaying, and the
+  // screensaver's panels. A live reveal always wins — `ingest` has already
+  // dropped the playlist by the time one is queued, so the ranking here is belt
+  // and braces for the frame in between.
 
   /**
    * Every image the night will need, most-needed first.
@@ -570,27 +727,91 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
   const madeCount = useMemo(() => picks.filter((p) => p.playerId).length, [picks]);
 
   /**
-   * The reveal currently on screen, OR the one that just finished its turn.
-   *
-   * Rendering `current` alone meant React unmounted the outgoing card the
-   * instant the queue drained, so there was nothing left to fade OUT and the
-   * idle board hard-cut in behind it. Holding the last reveal keeps that layer
-   * mounted through its fade; it then sits inert (visibility: hidden) until the
-   * next pick replaces it. Read during render rather than parked in state on a
-   * timer: a state update lands AFTER the commit that dropped `current`, so the
-   * card would unmount and remount for a frame — restarting its entrance
-   * animations at the exact moment it is supposed to be leaving.
+   * Where the reel sits inside the playlist, so a replayed card can say "pick
+   * 12 of 47" about the REEL rather than about the cycle — the panels in front
+   * of it are not picks and must not be counted as any.
    */
-  const lastRevealRef = useRef<QueuedReveal | null>(null);
-  if (current) lastRevealRef.current = current;
-  const shownReveal = current ?? lastRevealRef.current;
+  const reelSpan = useMemo(() => {
+    if (!playlist) return { first: -1, total: 0 };
+    const first = playlist.findIndex((sc) => sc.kind === 'pick');
+    return { first, total: first < 0 ? 0 : playlist.length - first };
+  }, [playlist]);
 
+  const activeStage: Stage | null = current
+    ? { key: current.key, kind: 'reveal', reveal: current }
+    : scene?.kind === 'pick'
+      ? {
+          // The scene index is in the key as well as the slot, so a reel that
+          // passes the same slot twice (a board where a commissioner re-picked
+          // one) still remounts the card and replays its entrance.
+          key: `replay-${sceneIndex}-${scene.pick.overallPickNumber}-${scene.pick.playerId}`,
+          kind: 'reveal',
+          reveal: {
+            key: `replay-${sceneIndex}-${scene.pick.overallPickNumber}-${scene.pick.playerId}`,
+            pick: scene.pick,
+          },
+          rewind: {
+            position: sceneIndex - reelSpan.first + 1,
+            total: reelSpan.total,
+            onTheClock: onTheClock ? teams.get(onTheClock.franchiseId) : undefined,
+          },
+        }
+      : scene?.kind === 'roster'
+        ? {
+            key: `roster-${sceneIndex}-${scene.franchiseId}`,
+            kind: 'roster',
+            franchiseId: scene.franchiseId,
+            role: scene.role,
+          }
+        : scene?.kind === 'positions'
+          ? { key: `positions-${sceneIndex}`, kind: 'positions' }
+          : null;
+
+  const showingReveal = !!activeStage;
+
+  /**
+   * The screen currently up, OR the one that just finished its turn.
+   *
+   * Rendering the active screen alone meant React unmounted the outgoing card
+   * the instant the queue drained, so there was nothing left to fade OUT and
+   * the idle board hard-cut in behind it. Holding the last stage keeps that
+   * layer mounted through its fade; it then sits inert (visibility: hidden)
+   * until the next screen replaces it. Read during render rather than parked in
+   * state on a timer: a state update lands AFTER the commit that dropped the
+   * active screen, so the card would unmount and remount for a frame —
+   * restarting its entrance animations at the exact moment it is supposed to be
+   * leaving.
+   */
+  const lastStageRef = useRef<Stage | null>(null);
+  if (activeStage) lastStageRef.current = activeStage;
+  const shownStage = activeStage ?? lastStageRef.current;
+
+  const shownReveal = shownStage?.kind === 'reveal' ? shownStage.reveal : null;
   const revealTeam: DraftRoomTeam | undefined = shownReveal
     ? teams.get(shownReveal.pick.franchiseId)
     : undefined;
   const revealPlayer: BroadcastPlayer | undefined = shownReveal
     ? players.get(shownReveal.pick.playerId)
     : undefined;
+
+  /**
+   * The panels' data, built from the LIVE board rather than from whatever the
+   * board looked like when the cycle armed. They are present-tense screens —
+   * "what does he have", "what is gone" — so a pick landing mid-panel should
+   * correct them, even though in practice it ends the cycle first.
+   */
+  const rosterFranchiseId = shownStage?.kind === 'roster' ? shownStage.franchiseId : '';
+  const panelRows = useMemo(
+    () =>
+      rosterFranchiseId
+        ? rosterRows(data.holdings?.[rosterFranchiseId], picks, players, rosterFranchiseId)
+        : [],
+    [rosterFranchiseId, data.holdings, picks, players]
+  );
+  const panelTallies = useMemo(
+    () => (shownStage?.kind === 'positions' ? positionTallies(picks, players) : []),
+    [shownStage?.kind, picks, players]
+  );
 
   return (
     <div className="dbc" data-testid="draft-broadcast" ref={rootRef}>
@@ -617,7 +838,7 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
           the fade while the outgoing layer is still painted. Nothing here decides
           timing — the queue still does. */}
       <div
-        className={`dbc__screen${current ? ' is-hidden' : ''}`}
+        className={`dbc__screen${activeStage ? ' is-hidden' : ''}`}
         inert={showingReveal}
       >
         <OnTheClock
@@ -637,22 +858,42 @@ export default function DraftBroadcast({ pageData, conferences }: Props) {
         />
       </div>
 
-      {shownReveal ? (
+      {shownStage ? (
         <div
-          className={`dbc__screen dbc__screen--reveal${current ? '' : ' is-hidden'}`}
+          className={`dbc__screen dbc__screen--reveal${activeStage ? '' : ' is-hidden'}`}
           inert={!showingReveal}
         >
-          <BroadcastRevealCard
-            key={shownReveal.key}
-            pick={shownReveal.pick}
-            team={revealTeam}
-            player={revealPlayer}
-            picks={picks}
-            players={players}
-            rehearsing={rehearsing}
-            leagueYear={data.leagueYear}
-            defenseFaces={data.defenseFaces}
-          />
+          {shownStage.kind === 'reveal' ? (
+            <BroadcastRevealCard
+              key={shownStage.key}
+              pick={shownStage.reveal.pick}
+              team={revealTeam}
+              player={revealPlayer}
+              picks={picks}
+              players={players}
+              rehearsing={rehearsing}
+              leagueYear={data.leagueYear}
+              defenseFaces={data.defenseFaces}
+              /* Carried on the STAGE, not recomputed here: the card fading OUT
+                 when a live pick interrupts the reel must keep the flag it was
+                 drawn with, and lose it only when it is genuinely a live card. */
+              rewind={shownStage.rewind}
+            />
+          ) : shownStage.kind === 'roster' ? (
+            <BroadcastRosterPanel
+              key={shownStage.key}
+              team={teams.get(shownStage.franchiseId)}
+              role={shownStage.role}
+              rows={panelRows}
+            />
+          ) : (
+            <BroadcastPositionPanel
+              key={shownStage.key}
+              tallies={panelTallies}
+              madeCount={madeCount}
+              totalSlots={picks.length}
+            />
+          )}
         </div>
       ) : null}
 

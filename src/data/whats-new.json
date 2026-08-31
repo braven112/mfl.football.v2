@@ -1,5 +1,29 @@
 [
   {
+    "id": "draft-broadcast-rewind",
+    "date": "2026-08-31",
+    "category": "enhancement",
+    "icon": "draft-podium",
+    "leagues": [
+      "theleague",
+      "afl"
+    ],
+    "title": "Ten Quiet Minutes And The Big Board Starts Talking To Itself",
+    "link": "/draft-broadcast",
+    "linkLabel": "Open the big board",
+    "summary": "An email draft can leave one crest on the TV for six hours. Now, after ten minutes with nothing picked, the board runs a highlight cycle — the roster of whoever is on the clock, then the team on deck, then every position that is off the board, then the whole draft replayed from 1.01. The second somebody actually picks, it drops everything and cuts to the live reveal.",
+    "description": [
+      "<a href=\"/draft-broadcast\">The Draft Broadcast</a> was built for a room: a pick lands, the player takes the whole screen over his franchise's colors, everybody looks up. That works beautifully on a night where the picks are ninety seconds apart. It works considerably less beautifully on an email draft, where the rules allow eight hours per selection and the television spends the entire evening showing one crest, one name, and an ELAPSED clock climbing past 2:41:19 like a hostage video.",
+      "So the board now entertains itself. Ten minutes with nothing picked and it starts a cycle, and it leads with the two things the room is actually arguing about while it waits. <strong>What has the man on the clock already got?</strong> — his whole roster, keepers and tonight's picks together, laid out by position with the faces, so the four running backs and the empty tight end row are visible from the back of the room. Then the same for <strong>whoever is on deck</strong>, because the next argument starts before the current one ends.",
+      "Then <strong>what is off the board</strong>: every position taken tonight, counted, ranked and drawn with the faces of the men who went there. That is the fact nobody can reconstruct in a draft that runs over days — the run on running backs happened on Tuesday and the only record of it is a group chat nobody is going to scroll on a television.",
+      "And then the <strong>rewind</strong>: the draft replayed from <strong>1.01</strong>, every selection in order, eight seconds each, the same full-screen reveal it got when it was news. A chip in the corner reads <strong>REWIND · PICK 12 OF 47</strong> so nobody mistakes history for a pick that just landed, and it carries who is actually on the clock the whole way through.",
+      "When the cycle runs out, the on-the-clock board comes back. Ten more quiet minutes and it goes again. And the instant a real selection lands on MFL, all of it is over mid-card — the live reveal wins, always, which is the only rule this thing has. A draft that is actually moving will never see it at all. It runs on both boards with nothing to turn on; if you want the old behavior for a night, <code>?screensaver=off</code> pins the board to the on-the-clock screen and nothing else."
+    ],
+    "image": "draft-broadcast-rewind.webp",
+    "imageAlt": "The Draft Broadcast in full screen showing a franchise roster panel, painted in the Boondock Saints' deep red. The header reads ON DECK over a large “Boondock Saints”, with the franchise crest to its left and “7 on the roster” underneath. Three rows follow, each a position label and a count beside a line of player headshots in team-colored circles: QB 1 (Daniels), RB 4 (Achane, Henry, Skattebo, Walker III) and WR 2 (Brown, Egbuka).",
+    "excludeFromHero": true
+  },
+  {
     "id": "draft-broadcast-clock-timer",
     "date": "2026-08-30",
     "category": "enhancement",
@@ -877,27 +901,6 @@
     "excludeFromHero": true,
     "leagues": [
       "theleague"
-    ]
-  },
-  {
-    "id": "afl-thundering-herd-rename-2026-08-11",
-    "date": "2026-08-11",
-    "title": "Justice Is Served: Thundering Herd Is Dead, Long Live \"A Bruin Pegs Me\"",
-    "summary": "Two titles, three conference crowns, and a proud dynasty — none of it matters when you finish dead last in the D-League. Franchise 0014 has been served its punitive rename, and the record books already know it.",
-    "description": [
-      "The D-League doesn't grade on a curve, and it definitely doesn't care about your trophy case. Franchise 0014 — two-time champion, three-time NL conference king, the Herd desk's own nostalgia machine — bottomed out the standings this season, and the league's oldest tradition came for its name. Thundering Herd is retired. \"A Bruin Pegs Me\" is what's stitched on the jersey now.",
-      "The old name isn't erased, just filed where it belongs: the franchise page's history tab still remembers every era back to 2003, the current owner keeps every year of stats and hardware they earned along the way, and the site's search bar will still find you if you type \"Herd\" out of muscle memory.",
-      "And the paperwork has now caught up. The new crest and banner are live across the site — a UCLA cheerleader in powder blue and gold, bat in hand, which for an owner who bleeds cardinal and gold is the part that actually stings. The franchise's brand colors moved to navy and gold to match, so every roster row, matchup card and player headshot backdrop wears it too. Thirteen trophies, third-most in the league, all still on the wall above it."
-    ],
-    "image": "afl-bruin-pegs-me-rebrand.webp",
-    "imageAlt": "The A Bruin Pegs Me franchise page showing the new UCLA-themed banner above the trophy wall and championship badges.",
-    "category": "league-event",
-    "link": "/afl-fantasy/franchises/0014#name-history",
-    "linkLabel": "See the full name history",
-    "icon": "gavel",
-    "excludeFromHero": true,
-    "leagues": [
-      "afl"
     ]
   }
 ]

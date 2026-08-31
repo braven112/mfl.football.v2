@@ -21,6 +21,17 @@ import {
   lastPickAtMs,
   clockAnchorMs,
   formatElapsedClock,
+  screensaverReel,
+  screensaverAnchorMs,
+  screensaverSceneMs,
+  isScreensaverDue,
+  resolveScreensaverIdleMs,
+  buildScreensaverPlaylist,
+  positionTallies,
+  rosterRows,
+  SCREENSAVER_IDLE_MS,
+  SCREENSAVER_STEP_MS,
+  SCREENSAVER_PANEL_MS,
   REVEAL_MAX_AGE_MS,
   darkenForWhiteText,
   contrastWithWhite,
@@ -28,6 +39,7 @@ import {
   toBroadcastPair,
   resolveOrigin,
 } from '../src/utils/draft-broadcast';
+import { faceLabel } from '../src/components/shared/draft-broadcast/BroadcastPanel';
 import { parseTradeFromComment } from '../src/utils/draft-utils';
 import { usesCollegeOrigin } from '../src/utils/pick-reveal';
 import {
@@ -1494,5 +1506,478 @@ describe('a traded pick names the team it came from, and nothing else', () => {
     // The literal string OnTheClock builds around it.
     expect(` · via ${traded.originalTeamName}`).toBe(' · via Bring the Pain');
     expect(board.picks[1].isTraded).toBe(false);
+  });
+});
+
+// ── The screensaver ──────────────────────────────────────────────────────────
+//
+// An email draft can leave the idle board on one frame for six hours. After ten
+// idle minutes the board replays itself from 1.01, reveal to reveal, and any
+// real pick ends the reel instantly. The timing lives in the component; what is
+// pinned here is every decision the component asks these helpers to make.
+
+describe('screensaverReel', () => {
+  it('replays the draft from the beginning, not from the newest pick', () => {
+    // The opposite of `recentPicks`, deliberately: this is the night told
+    // forwards, so 1.01 opens it.
+    const board = [slot(1, 'a'), slot(2, 'b'), slot(3, 'c'), slot(4)];
+    expect(screensaverReel(board).map((p) => p.overallPickNumber)).toEqual([1, 2, 3]);
+  });
+
+  it('sorts by pick number rather than trusting the board order', () => {
+    // MFL lets a commissioner fill a slot out of order, and the array comes back
+    // in whatever order it comes back in. The pick numbers are the truth.
+    const board = [slot(3, 'c'), slot(1, 'a'), slot(2, 'b')];
+    expect(screensaverReel(board).map((p) => p.overallPickNumber)).toEqual([1, 2, 3]);
+  });
+
+  it('is empty before the draft starts, so there is nothing to arm', () => {
+    expect(screensaverReel([slot(1), slot(2)])).toEqual([]);
+  });
+
+  it('does not reorder the caller\'s board', () => {
+    const board = [slot(3, 'c'), slot(1, 'a')];
+    screensaverReel(board);
+    expect(board.map((p) => p.overallPickNumber)).toEqual([3, 1]);
+  });
+});
+
+describe('screensaverAnchorMs', () => {
+  const opened = 1_000_000;
+  const stamped = (overall: number, id: string, sec: number) => ({
+    ...slot(overall, id),
+    timestamp: String(sec),
+  });
+
+  it('counts from the newest pick — the same instant the on-screen clock does', () => {
+    const board = [stamped(1, 'a', 2_000), stamped(2, 'b', 5_000)];
+    expect(screensaverAnchorMs(board, opened)).toBe(5_000_000);
+  });
+
+  it('floors to when the board was opened, so a reload gets the live screen', () => {
+    // The whole point of reloading mid-draft is to see the live state. Without
+    // this floor a stalled draft answers the reload by replaying immediately and
+    // the on-the-clock screen never appears at all.
+    const board = [stamped(1, 'a', 2_000)];
+    expect(screensaverAnchorMs(board, 9_000_000)).toBe(9_000_000);
+  });
+
+  it('floors to the end of the last cycle, so passes do not run back to back', () => {
+    // Without this the anchor is still the same hours-old pick the moment the
+    // cycle ends, and the idle board — the half that says whose turn it is —
+    // never gets the screen again.
+    const board = [stamped(1, 'a', 2_000)];
+    expect(screensaverAnchorMs(board, opened, 8_000_000)).toBe(8_000_000);
+  });
+
+  it('a pick MFL stamped unusably still buys the room its ten minutes', () => {
+    // `lastPickAtMs` skips an unparseable stamp — but `isRevealWorthy`
+    // deliberately still REVEALS that pick, so the board hands the room a
+    // reveal and, without the quiet-since floor the component stamps on every
+    // fresh pick, re-arms the cycle the instant that reveal drains. On a board
+    // where no pick carries a usable stamp, that is every pick, not an edge
+    // case.
+    const board = [{ ...slot(1, 'a'), timestamp: 'not-a-number' }];
+    expect(lastPickAtMs(board)).toBeNull();
+    const sawPickAt = 9_500_000;
+    expect(screensaverAnchorMs(board, opened, sawPickAt)).toBe(sawPickAt);
+    expect(isScreensaverDue(sawPickAt, sawPickAt + SCREENSAVER_IDLE_MS - 1)).toBe(false);
+  });
+
+  it('survives a board whose picks carry no usable stamp', () => {
+    expect(screensaverAnchorMs([slot(1, 'a')], opened)).toBe(opened);
+  });
+});
+
+describe('isScreensaverDue', () => {
+  it('waits out the full idle window', () => {
+    expect(isScreensaverDue(0, SCREENSAVER_IDLE_MS - 1)).toBe(false);
+    expect(isScreensaverDue(0, SCREENSAVER_IDLE_MS)).toBe(true);
+  });
+
+  it('is ten minutes by default', () => {
+    expect(SCREENSAVER_IDLE_MS).toBe(600_000);
+  });
+
+  it('is never due when switched off', () => {
+    // `?screensaver=off` resolves to 0, and "off" has to mean off however long
+    // the board has been sitting there.
+    expect(isScreensaverDue(0, Number.MAX_SAFE_INTEGER, 0)).toBe(false);
+    expect(isScreensaverDue(0, Number.MAX_SAFE_INTEGER, Number.NaN)).toBe(false);
+  });
+});
+
+describe('resolveScreensaverIdleMs', () => {
+  it('defaults to the ten-minute window', () => {
+    for (const raw of [null, undefined, '']) {
+      expect(resolveScreensaverIdleMs(raw)).toBe(SCREENSAVER_IDLE_MS);
+    }
+  });
+
+  it('takes SECONDS, so the feature can be watched without a ten-minute wait', () => {
+    expect(resolveScreensaverIdleMs('20')).toBe(20_000);
+  });
+
+  it('switches off on every spelling of off', () => {
+    for (const raw of ['off', 'OFF', 'no', 'false', '0']) {
+      expect(resolveScreensaverIdleMs(raw)).toBe(0);
+    }
+  });
+
+  it('falls back to the default on a typo rather than to off', () => {
+    // A mistyped debug parameter must not silently remove a feature from draft
+    // night — same reasoning as resolveWarmDepth.
+    for (const raw of ['soon', '-5', 'off?']) {
+      expect(resolveScreensaverIdleMs(raw)).toBe(SCREENSAVER_IDLE_MS);
+    }
+  });
+});
+
+describe('the screensaver never impersonates a live pick', () => {
+  const read = (f: string) =>
+    readFileSync(`src/components/shared/draft-broadcast/${f}`, 'utf-8')
+      .replace(/\/\*[\s\S]*?\*\//g, ' ')
+      .replace(/^\s*\/\/.*$/gm, ' ');
+
+  it('a fresh pick re-floors the idle wait rather than clearing it', () => {
+    // Clearing the floor and leaning on the pick's own MFL stamp loses the
+    // whole wait for a pick stamped unusably — see the anchor test above.
+    const code = read('DraftBroadcast.tsx');
+    const ingest = code.slice(code.indexOf('const ingest ='), code.indexOf('Rehearsal replay'));
+    expect(ingest).toMatch(/setQuietSince\(now\)/);
+    expect(ingest).not.toMatch(/setQuietSince\(0\)/);
+  });
+
+  it('a fresh pick clears the cycle inside ingest', () => {
+    // The interrupt has to live where "new" is known. Arming is timing and can
+    // live in an effect; cancelling cannot, because only `ingest` can tell a
+    // pick that just landed from one that was already on the board.
+    const code = read('DraftBroadcast.tsx');
+    const ingest = code.slice(code.indexOf('const ingest ='), code.indexOf('Rehearsal replay'));
+    expect(ingest).toMatch(/fresh\.length > 0[\s\S]*setPlaylist\(null\)/);
+  });
+
+  it('a live reveal outranks every screensaver scene', () => {
+    // `current ? … : scene…`, never the other way round: a pick that just
+    // landed is always the better screen, whatever the cycle was showing.
+    const code = read('DraftBroadcast.tsx');
+    const stage = code.slice(code.indexOf('const activeStage'), code.indexOf('const showingReveal'));
+    expect(stage).toMatch(/^\s*const activeStage[^=]*=\s*current\s*\?/);
+    expect(stage).toMatch(/scene\?\.kind === 'pick'/);
+  });
+
+  it('the replayed card is flagged as a rewind', () => {
+    // The card is otherwise identical to a live reveal, so without the flag the
+    // room has no way to tell a replay of 1.04 from a pick that just landed.
+    expect(read('DraftBroadcast.tsx')).toMatch(/rewind:\s*\{/);
+    expect(read('BroadcastRevealCard.tsx')).toMatch(/dbc-reveal__rewind-flag/);
+  });
+
+  it('the rewind counter is the REEL\'s, not the cycle\'s', () => {
+    // The panels sit in front of the picks in the playlist, so a raw scene
+    // index would open the reel at "pick 4 of 51" on a 48-pick board.
+    const code = read('DraftBroadcast.tsx');
+    expect(code).toMatch(/position: sceneIndex - reelSpan\.first \+ 1/);
+  });
+
+  it('the rewind flag says who is actually on the clock', () => {
+    // The reel takes the one fact the room needs off the screen, so the flag
+    // carries it — otherwise a ten-minute reel is ten minutes of not knowing
+    // whose turn it is.
+    expect(read('BroadcastRevealCard.tsx')).toMatch(/on the clock/);
+  });
+
+  it('the flag is painted, not left to inherit the rehearsal chip', () => {
+    const css = readFileSync('src/styles/draft-broadcast.css', 'utf-8');
+    expect(css).toMatch(/\.dbc-reveal__rewind-flag\s*\{/);
+    // It shares the rehearsal flag's absolute box — one slot, one chip.
+    expect(css).toMatch(/\.dbc-reveal__rehearsal-flag,\s*\n\.dbc-reveal__rewind-flag \{/);
+  });
+
+  it('both league pages hand the island the idle threshold', () => {
+    for (const page of ['afl-fantasy', 'theleague']) {
+      const src = readFileSync(`src/pages/${page}/draft-broadcast.astro`, 'utf-8');
+      expect(src, `${page} must resolve ?screensaver=`).toMatch(
+        /screensaverIdleMs:\s*resolveScreensaverIdleMs\(/
+      );
+    }
+  });
+});
+
+// ── The screensaver's other three screens ────────────────────────────────────
+//
+// The reel answers "what happened tonight". These answer the two questions a
+// slow draft actually leaves the room asking: what does the man on the clock
+// already have, and how much of each position is gone. Both are LIVE screens —
+// built from the board as it stands — which is why neither is flagged as a
+// rewind and why the cycle puts them in FRONT of the reel.
+
+describe('buildScreensaverPlaylist', () => {
+  const board = (madeThrough: number, slots = 6) =>
+    Array.from({ length: slots }, (_, i) =>
+      i < madeThrough ? slot(i + 1, `p${i + 1}`, `000${(i % 3) + 1}`) : slot(i + 1, '', `000${(i % 3) + 1}`)
+    );
+
+  it('leads with the present tense and ends with the reel', () => {
+    // Panels first is the whole editorial decision: in a draft this slow every
+    // question the room has is present-tense, and the reel is the nostalgia
+    // after it.
+    const scenes = buildScreensaverPlaylist(board(3));
+    expect(scenes.slice(0, 3).map((s) => s.kind)).toEqual(['roster', 'roster', 'positions']);
+    expect(scenes.slice(3).every((s) => s.kind === 'pick')).toBe(true);
+    expect(scenes.filter((s) => s.kind === 'pick')).toHaveLength(3);
+  });
+
+  it('shows the team on the clock, then the team on deck', () => {
+    const scenes = buildScreensaverPlaylist(board(3));
+    const rosters = scenes.filter((s) => s.kind === 'roster') as Extract<
+      ReturnType<typeof buildScreensaverPlaylist>[number],
+      { kind: 'roster' }
+    >[];
+    expect(rosters.map((r) => r.role)).toEqual(['clock', 'deck']);
+    // Slots 4 and 5 on this board — franchises 0001 and 0002.
+    expect(rosters.map((r) => r.franchiseId)).toEqual(['0001', '0002']);
+  });
+
+  it('never shows the same franchise twice in a row', () => {
+    // Back-to-back picks are ordinary once a pick has been traded, and the same
+    // roster twice running is a cycle that looks stuck.
+    const picks = [slot(1, 'a', '0001'), slot(2, '', '0007'), slot(3, '', '0007')];
+    const scenes = buildScreensaverPlaylist(picks);
+    expect(scenes.filter((s) => s.kind === 'roster')).toHaveLength(1);
+  });
+
+  it('is empty before the draft starts, which is what stops it arming', () => {
+    expect(buildScreensaverPlaylist([slot(1), slot(2)])).toEqual([]);
+  });
+
+  it('still plays the reel and the tally on a COMPLETE board', () => {
+    // Nobody is on the clock and nobody is on deck, so the roster panels drop
+    // out — the rest of the cycle has to survive that.
+    const scenes = buildScreensaverPlaylist(board(6));
+    expect(scenes.filter((s) => s.kind === 'roster')).toHaveLength(0);
+    expect(scenes[0].kind).toBe('positions');
+    expect(scenes.filter((s) => s.kind === 'pick')).toHaveLength(6);
+  });
+
+  it('gives a panel longer than a pick, because a panel has to be READ', () => {
+    expect(screensaverSceneMs({ kind: 'positions' })).toBe(SCREENSAVER_PANEL_MS);
+    expect(screensaverSceneMs({ kind: 'pick', pick: slot(1, 'a') })).toBe(SCREENSAVER_STEP_MS);
+    expect(SCREENSAVER_PANEL_MS).toBeGreaterThan(SCREENSAVER_STEP_MS);
+  });
+});
+
+describe('positionTallies', () => {
+  const pool = new Map<string, BroadcastPlayer>([
+    ['q1', player('q1', 'QB')],
+    ['r1', player('r1', 'RB')],
+    ['r2', player('r2', 'RB')],
+    ['w1', player('w1', 'WR')],
+    ['k1', player('k1', 'K')],
+    ['d1', { ...player('d1', 'DEF'), name: 'Kansas City Chiefs' } as BroadcastPlayer],
+  ]);
+
+  it('counts what is off the board, newest face first', () => {
+    const picks = [slot(1, 'r1'), slot(2, 'w1'), slot(3, 'r2')];
+    const rows = positionTallies(picks, pool);
+    const rb = rows.find((r) => r.position === 'RB')!;
+    expect(rb.count).toBe(2);
+    // 3.x landed after 1.x, so r2 leads the row.
+    expect(rb.players.map((p) => p.id)).toEqual(['r2', 'r1']);
+  });
+
+  it('keeps the rows in a FIXED order, not sorted by count', () => {
+    // A board that re-sorts itself makes the room re-read it every cycle.
+    const picks = [slot(1, 'w1'), slot(2, 'r1'), slot(3, 'q1'), slot(4, 'd1')];
+    expect(positionTallies(picks, pool).map((r) => r.position)).toEqual([
+      'QB',
+      'RB',
+      'WR',
+      'DEF',
+    ]);
+  });
+
+  it('omits a position nobody has taken rather than drawing a zero', () => {
+    // An empty row on a TV reads as a loading state.
+    const rows = positionTallies([slot(1, 'q1')], pool);
+    expect(rows.map((r) => r.position)).toEqual(['QB']);
+  });
+
+  it('files a kicker under PK however the pool spells him', () => {
+    // The pool has spelled kickers both ways, and a K row that silently became
+    // OTHER is a row the room reads as a bug.
+    expect(positionTallies([slot(1, 'k1')], pool)[0].position).toBe('PK');
+  });
+
+  it('still COUNTS a pick the pool cannot name', () => {
+    // The position is unknowable without him, but dropping the pick would make
+    // the panel's total disagree with the board's.
+    const rows = positionTallies([slot(1, 'ghost')], pool);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].count).toBe(1);
+    // ...and he contributes no face, rather than an undefined one.
+    expect(rows[0].players).toEqual([]);
+  });
+});
+
+describe('rosterRows', () => {
+  const pool = new Map<string, BroadcastPlayer>([
+    ['r1', player('r1', 'RB')],
+    ['w1', player('w1', 'WR')],
+  ]);
+  const held = [
+    { id: 'h1', name: 'Held Back', position: 'RB', nflTeam: 'KCC' },
+    { id: 'h2', name: 'Kept Wide', position: 'WR', nflTeam: 'GBP' },
+  ];
+
+  it('merges what he holds with what he has taken tonight', () => {
+    const picks = [slot(1, 'r1', '0001'), slot(2, 'w1', '0002')];
+    const rows = rosterRows(held, picks, pool, '0001');
+    expect(rows.map((r) => `${r.position}:${r.count}`)).toEqual(['RB:2', 'WR:1']);
+  });
+
+  it("counts only THIS franchise's picks", () => {
+    const picks = [slot(1, 'r1', '0001'), slot(2, 'w1', '0002')];
+    const rb = rosterRows(held, picks, pool, '0001').find((r) => r.position === 'RB')!;
+    expect(rb.players.map((p) => p.id)).toEqual(['r1', 'h1']);
+  });
+
+  it('puts tonight first and labels it with the pick', () => {
+    // The contrast between what he walked in with and what he has done about it
+    // is the entire point of showing this mid-draft.
+    const rows = rosterRows(held, [slot(14, 'r1', '0001')], pool, '0001');
+    const rb = rows.find((r) => r.position === 'RB')!;
+    expect(rb.players[0].pickLabel).toBe('2.02');
+    expect(rb.players[1].pickLabel).toBeUndefined();
+  });
+
+  it('counts a man once when the roster feed has already caught up', () => {
+    // rosters.json is a cron snapshot that starts gaining tonight's picks
+    // partway through the draft, so the same man legitimately arrives from both
+    // sides. The board wins — it is the side that knows which pick he was.
+    const alsoHeld = [...held, { id: 'r1', name: 'Player r1', position: 'RB', nflTeam: 'KCC' }];
+    const rb = rosterRows(alsoHeld, [slot(1, 'r1', '0001')], pool, '0001').find(
+      (r) => r.position === 'RB'
+    )!;
+    expect(rb.count).toBe(2);
+    expect(rb.players.filter((p) => p.id === 'r1')).toHaveLength(1);
+    expect(rb.players[0].pickLabel).toBe('1.01');
+  });
+
+  it('survives a franchise with no holdings at all', () => {
+    expect(rosterRows(undefined, [], pool, '0001')).toEqual([]);
+  });
+
+  it("carries the pool's own resolved cutout for a pick", () => {
+    // The chip starts on `headshot` when it has one. Dropping it here made the
+    // panel rebuild a URL the server had already resolved and walk a 404 to get
+    // back to it (Copilot, #668). A HOLDING legitimately has none — RosterHolding
+    // is a thin record — so only the pick half carries it.
+    const withCutout = new Map<string, BroadcastPlayer>([
+      ['r1', { ...player('r1', 'RB'), headshot: 'https://cdn/r1.png', mflId: '9999' } as BroadcastPlayer],
+    ]);
+    const rows = rosterRows(held, [slot(1, 'r1', '0001')], withCutout, '0001');
+    const rb = rows.find((r) => r.position === 'RB')!;
+    expect(rb.players[0].headshot).toBe('https://cdn/r1.png');
+    expect(rb.players[0].mflId).toBe('9999');
+    expect(rb.players.find((p) => p.id === 'h1')!.headshot).toBeUndefined();
+  });
+});
+
+describe('faceLabel', () => {
+  it('drops the first name, which the chip has no room for', () => {
+    expect(faceLabel('Omarion Hampton', 'RB')).toBe('Hampton');
+    expect(faceLabel('Amon-Ra St. Brown', 'WR')).toBe('St. Brown');
+  });
+
+  it('gives a team defense its CODE, not a half-name', () => {
+    // Dropping the first token of "Kansas City Chiefs" leaves "City Chiefs",
+    // which is the kind of small wrongness a room spots instantly.
+    expect(faceLabel('Kansas City Chiefs', 'DEF', 'KCC')).toBe('KCC');
+  });
+
+  it('never returns an empty caption', () => {
+    expect(faceLabel('Ogunbowale', 'RB')).toBe('Ogunbowale');
+    expect(faceLabel('', 'DEF', 'GBP')).toBe('GBP');
+  });
+});
+
+describe('the panels are wired to real data, not decoration', () => {
+  const read = (f: string) => readFileSync(`src/${f}`, 'utf-8');
+
+  it('both league pages ship what each franchise holds', () => {
+    // Without holdings the roster panel is just tonight's picks, which for a
+    // rookie draft is three players and answers nothing.
+    for (const page of ['afl-fantasy', 'theleague']) {
+      const src = read(`pages/${page}/draft-broadcast.astro`);
+      expect(src, `${page} must load holdings`).toMatch(/loadFranchiseHoldings\(/);
+      expect(src, `${page} must ship holdings on the page data`).toMatch(/^\s*holdings,$/m);
+    }
+  });
+
+  it('holdings resolve against the UNTRIMMED pool', () => {
+    // trimToDraftable drops everyone nobody will draft — which is exactly what
+    // a keeper IS. Passing the trimmed pool leaves every panel empty.
+    for (const page of ['afl-fantasy', 'theleague']) {
+      const src = read(`pages/${page}/draft-broadcast.astro`);
+      const call = /loadFranchiseHoldings\(([\s\S]*?)\);/.exec(src)?.[1] ?? '';
+      expect(call, `${page} passes the trimmed pool to loadFranchiseHoldings`).toMatch(
+        /\branked\b/
+      );
+      expect(call).not.toMatch(/\bplayers\b/);
+    }
+  });
+
+  it('the face chip resets its 404 walk when the chain changes under it', () => {
+    // Every call site keys a chip by player id, so a different player remounts
+    // — but the SAME player can gain a better chain (a holding becoming
+    // tonight's pick brings the pool's resolved cutout with it), and a step
+    // carried across that swap starts him partway down a chain he never tried.
+    const src = read('components/shared/draft-broadcast/BroadcastFace.tsx');
+    expect(src).toMatch(/walk\.head !== chain\[0\]/);
+    // During render, not in an effect: an effect resets AFTER a commit that has
+    // already pointed the <img> at the wrong entry.
+    expect(src).not.toMatch(/useEffect/);
+  });
+
+  it('the face chip has ONE implementation, shared by all three surfaces', () => {
+    // The 404 walk it does is subtle enough (a pre-hydration failure the event
+    // never replays; a defense whose single entry must hide rather than fall
+    // back) that a hand-copied second version would be a second source of the
+    // same bugs.
+    for (const f of ['OnTheClock.tsx', 'BroadcastPanel.tsx']) {
+      expect(
+        read(`components/shared/draft-broadcast/${f}`),
+        `${f} must render BroadcastFace rather than its own chip`
+      ).toMatch(/<BroadcastFace\b/);
+    }
+    // ...and only the shared module builds the cascade.
+    const owners = ['BroadcastFace.tsx', 'OnTheClock.tsx', 'BroadcastPanel.tsx'].filter((f) =>
+      /getCollegeHeadshot\s*\(/.test(read(`components/shared/draft-broadcast/${f}`))
+    );
+    expect(owners).toEqual(['BroadcastFace.tsx']);
+  });
+
+  it('every panel class the components render is actually styled', () => {
+    // The panels are ~20 new class names on a stylesheet that sets no
+    // font-family at all — an unstyled row does not vanish, it renders as body
+    // text in a stack, which looks like a half-loaded page on a TV.
+    const tsx = read('components/shared/draft-broadcast/BroadcastPanel.tsx');
+    const css = read('styles/draft-broadcast.css');
+    const used = new Set([...tsx.matchAll(/dbc-panel[\w-]*/g)].map((m) => m[0]));
+    expect(used.size).toBeGreaterThanOrEqual(12);
+    for (const cls of used) {
+      expect(css, `.${cls} is rendered but never styled`).toContain(`.${cls}`);
+    }
+  });
+
+  it('the panels paint through the same gradient property as the reveal', () => {
+    // Four screens, one painting path — the reason the idle board and the
+    // reveal card stopped disagreeing about a franchise's colours.
+    const tsx = read('components/shared/draft-broadcast/BroadcastPanel.tsx');
+    expect(tsx).toMatch(/toBroadcastPair\s*\(/);
+    expect(tsx).toMatch(/resolveBroadcastGradient\s*\(/);
+    expect(tsx).toMatch(/['"`]--dbc-gradient['"`]/);
+    expect(tsx).not.toMatch(/team[?.]*\.color(Primary|Secondary)/);
   });
 });

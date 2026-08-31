@@ -31,6 +31,48 @@ island and the two utils are shared.
 | `src/utils/draft-broadcast.ts` | Pure: best-available, on-the-clock, rehearsal |
 | `src/utils/draft-broadcast-server.ts` | Keepers, board ranks, feed joins |
 
+<!-- CURATED-HEAD -->
+
+## Read this, grep the rest
+
+This file is a journal and it is now bigger than anyone will actually read.
+Below is what still binds when you touch this board. Everything under it is the
+evidence: **grep the archive** for the term you care about (`flap`, `rehearse`,
+`static_url`, `wash`, `cqh`, `screensaver`) rather than reading it top to bottom.
+
+- **Four screens, ONE layer stack.** Idle board and front layer, cross-faded by
+  class; the front layer carries a live reveal, a replayed one, or a screensaver
+  panel. Never add a fifth screen — resolve it to a `Stage` in
+  `DraftBroadcast.tsx` and let the existing fade own it.
+- **MFL's draft export FLAPS.** A poll is a sample of whichever backend
+  answered, not a view of the draft. Take the NEWEST snapshot whole (timestamp,
+  then filled count); never union picks, never roll the board backwards on its
+  own. `grep acceptedRef`.
+- **Read `static_url`, not the JSON export**, for the live board. That is the
+  headline of draft night 2026.
+- **Anything time-gated must not be gated on the WALL CLOCK alone**, or a
+  rehearsal replaying a finished season fails it silently and completely
+  (`isRevealWorthy` + `applyRehearsal` are the pair that fixed it).
+- **Board rank is scoped to the pool the room is drafting from** — keepers out
+  in the AFL, non-rookies out in TheLeague. Unscoped, every pick reads as a
+  reach.
+- **Franchise brand colours are not safe to paint white text on.** Everything
+  goes through `toBroadcastPair` / `resolveBroadcastGradient`, and BOTH screens
+  paint the same `--dbc-gradient` — matching the colours but composing them
+  differently still let the two screens disagree.
+- **Sizes are vh/vw, not rem** (read from ten feet), and panel rows size in
+  `cqh` off a `container-type: size` row so a six-row roster fits where a
+  three-row one does. A `height: 100%` box with padding needs `box-sizing:
+  border-box` or it stands taller than the layer it fills.
+- **The image cascade has ONE implementation**: `BroadcastFace`. It walks a 404
+  chain the browser can finish failing before React mounts, so it re-checks in a
+  ref callback; a defense's single entry hides rather than falling back.
+- **Verify with `?rehearse=`, `?mflLeague=`, `?screensaver=N` and `?warm=`.**
+  A rehearsal cannot catch a network problem; only `?mflLeague=` can. When
+  screenshotting, use a `RegExp` in `page.route`, never a glob.
+
+<!-- /CURATED-HEAD -->
+
 ## Insights
 
 ### Board rank must be scoped to the pool the room is actually drafting from
@@ -1140,3 +1182,114 @@ the page, reading `outerHTML` first.
 > dating the `## Insights` subsections into 10+ archive entries, since that
 > guard checks for them. Budget for that rather than trimming prose again, and
 > prefer `domains/` for anything not specific to this board.
+
+## 2026-08-31 — The screensaver: ten idle minutes and the board rewinds itself
+
+**The problem is the EMAIL draft, not draft night.** Everything above is tuned
+for a room where picks land ninety seconds apart, and in that room the idle
+board is the right screen — it says whose turn it is, and it is up between every
+reveal. An email draft allows eight hours per pick. The same board then holds
+one crest, one name and an ELAPSED clock climbing past `2:41:19` for an entire
+evening, which is a screen nobody looks at twice.
+
+So after `SCREENSAVER_IDLE_MS` (10 min) with nothing picked, the board replays
+the draft to itself from 1.01, one pick every `SCREENSAVER_STEP_MS` (8s), until
+the reel runs out. Then the idle board comes back and the wait starts again.
+
+**It is a third source of reveals, not a fourth screen.** The reel plays through
+the same `BroadcastRevealCard` on the same layer a live pick uses, so everything
+the card knows how to say — board rank, the position run, the franchise's own
+gradient, the DEF spotlight — is said about a replayed pick too, and there is no
+second surface to keep in sync. `active = current ?? replayReveal` is the whole
+arbitration: a live pick always outranks the reel.
+
+Four things are load-bearing:
+
+- **A fresh pick cancels the reel inside `ingest`, not in an effect.** Arming is
+  timing and belongs in an effect; cancelling cannot, because `ingest` is the
+  only place that can tell a pick that just LANDED from one that was already on
+  the board. It fires above the first-poll absorb, so even a board that opened
+  straight into a reel hands the screen back on the first real pick.
+- **The idle anchor is the latest of three clocks** (`screensaverAnchorMs`):
+  the newest pick's MFL stamp — the same scanner the on-screen ELAPSED chip uses,
+  so the number the room reads and the trigger can never disagree — floored by
+  when the board OPENED and by when the last reel ENDED. The board-open floor is
+  the reload case: someone reloads mid-draft precisely to see live state, and on
+  a stalled draft the last pick is already hours old, so without it the reload is
+  answered by an instant replay and the on-the-clock screen never appears. The
+  rested floor is what puts the idle board back between passes; without it the
+  anchor is still the same hours-old pick the moment the reel ends and the
+  screensaver loops forever.
+- **The card is FLAGGED, and the flag carries who is on the clock.** A
+  full-screen reveal of 1.04 is indistinguishable from a pick that just landed,
+  so `dbc-reveal__rewind-flag` (blue, where the rehearsal chip is amber, in the
+  same absolute box — one slot, one chip) reads `REWIND · PICK 12 OF 47 ·
+  <TEAM> ON THE CLOCK`. That last clause is not decoration: the reel takes the
+  room's one question off the screen for minutes at a time.
+- **`?screensaver=N|off`** (seconds) — the only practical way to watch this work
+  without standing in front of a TV for ten minutes. A typo falls back to the
+  DEFAULT, never to off: a mistyped debug param must not quietly remove a
+  feature from draft night. Verified end to end against `?rehearse=50` — reel
+  starts, a replayed pick interrupts it with a live reveal, the reel restarts a
+  window later — and the full 108-pick loop (reel → idle → reel) with the step
+  temporarily shortened.
+
+Pinned by `tests/draft-broadcast.test.ts`: the reel's order and emptiness, all
+three anchor floors, the off switch, and source guards that the interrupt lives
+in `ingest`, that `current` outranks the reel, and that the replayed card is
+flagged.
+
+## 2026-08-31 — The screensaver grew three more screens
+
+The reel above answers "what happened tonight". Brandon's follow-up was that a
+slow draft leaves the room asking two other things the idle board cannot fit:
+what does the man on the clock already have, and how much of each position is
+gone. So the screensaver is now a CYCLE, not a reel:
+
+    roster (on the clock) → roster (on deck) → off the board → the reel → idle
+
+**Panels FIRST, and that is an editorial decision, not an ordering accident.**
+Every question a slow draft leaves open is present-tense; the reel is the
+nostalgia after it. Putting the reel first also means a 108-pick board never
+reaches the panels before the next pick interrupts.
+
+- **One playlist, built ONCE when the cycle arms** (`buildScreensaverPlaylist`).
+  Not derived per frame: the only event that would change it — a pick landing —
+  ends the screensaver outright, so a cycle that reshuffled underneath the room
+  could only ever be a bug.
+- **`Stage`, in DraftBroadcast.tsx, is what stopped this sprawling.** Three
+  sources now feed one layer (live pick, replayed pick, panel) and each was
+  about to grow its own mounting, keying and fade-out handling. Resolving them
+  to one value per render keeps `lastStageRef` — the ref that holds the OUTGOING
+  screen through its fade — written once. Add the fifth screen there.
+- **The rewind counter is the REEL's, not the cycle's.** The panels sit in front
+  of the picks in the playlist, so a raw scene index opens the reel at "pick 4
+  of 51" on a 48-pick board. `reelSpan` is the offset.
+- **Holdings ship from the server, resolved against the UNTRIMMED pool.** A
+  keeper is by definition not on the board, and `trimToDraftable` drops exactly
+  that population — pass it `players` instead of `ranked` and every panel is
+  empty. Measured cost for TheLeague (16 × ~24 rostered): 68 KB raw, **+8 KB
+  gzipped** on a page that was 121 KB gzipped. A tuple encoding was considered
+  and dropped: gzip already collapses the repeated keys, so it would have bought
+  ~2 KB for a decode step and a less obvious type.
+- **`rosters.json` is a cron snapshot that gains tonight's picks partway
+  through the draft**, so the same man legitimately arrives from both sides.
+  `rosterRows` dedupes by id and lets the BOARD win — it is the side that knows
+  which pick he was.
+- **Panel rows size in `cqh` off a `container-type: size` row.** The number of
+  rows is data (three positions on an AFL keeper roster, six on a TheLeague
+  dynasty one) and the panel's height is fixed, so a chip sized in vh either
+  overflows the six-row case or wastes half the screen on the three-row one.
+- **`height: 100%` + padding needs `box-sizing: border-box`.** Without it the
+  panel stood 43px taller than the layer it fills and the last row was cut off
+  the bottom of the TV — which looks exactly like a row that failed to render,
+  not like a layout bug. Caught by screenshotting, not by a test.
+- **The face chip now has ONE implementation** (`BroadcastFace.tsx`), extracted
+  from OnTheClock when the third caller appeared. Its 404 walk is subtle enough
+  — a pre-hydration failure React never replays, a defense whose single entry
+  must hide rather than fall back into the dark-swap key — that a hand-copied
+  second version would have been a second source of the same bugs.
+- **A guard test caught two unstyled classes** (`dbc-panel--roster`,
+  `dbc-panel__title`) before they reached a TV. On a stylesheet that sets no
+  font-family, an unstyled row does not vanish — it renders as body text in a
+  stack, which reads as a half-loaded page.

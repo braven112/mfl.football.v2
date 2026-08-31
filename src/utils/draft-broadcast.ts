@@ -7,7 +7,7 @@
  */
 
 import type { DraftRoomPick, DraftRoomTeam } from '../types/draft-room';
-import type { BroadcastPlayer } from '../types/draft-broadcast';
+import type { BroadcastPlayer, RosterHolding } from '../types/draft-broadcast';
 import { getAllNFLTeamCodes, normalizeTeamCode } from './nfl-logo';
 import { usesCollegeOrigin } from './pick-reveal';
 import { resolveNflDarkLogoUrl } from './nfl-logo-dark-css';
@@ -679,4 +679,364 @@ export function resolveOrigin(player?: {
   const code = normalizeTeamCode(label);
   const logo = NFL_LOGO_CODES.has(code) ? resolveNflDarkLogoUrl(code) : null;
   return { label, logo };
+}
+
+// ── The screensaver ──────────────────────────────────────────────────────────
+
+/**
+ * How long the idle board may sit unchanged before the board starts replaying
+ * the draft to itself.
+ *
+ * An EMAIL draft is the case this exists for: eight hours per pick is inside
+ * the rules, so the TV can hold one crest and one count-up for an entire
+ * evening, and a screen that never changes is a screen nobody looks at. Ten
+ * minutes is long enough that a room drafting at any normal pace never sees
+ * this at all — the live board is always the better screen when there is
+ * anything happening on it — and short enough that a stalled draft turns into
+ * a highlight reel while people are still in the room.
+ */
+export const SCREENSAVER_IDLE_MS = 10 * 60_000;
+
+/**
+ * How long one replayed pick owns the screen.
+ *
+ * Shorter than the live `REVEAL_MS` (18s) on purpose, and for the same reason
+ * the rehearsal step is: a live reveal is the only thing on screen for the
+ * eighteen seconds it owns the TV BECAUSE the idle board fills the rest of the
+ * night around it. In the reel there is no rest — it is reveal to reveal — so
+ * the hold is the entire pace. At 8s a 108-pick AFL board is a ~14-minute reel,
+ * which is about as long as anyone will watch one.
+ */
+export const SCREENSAVER_STEP_MS = 8_000;
+
+/**
+ * The reel: every pick actually made, in draft order.
+ *
+ * Draft ORDER, not recency — the reel is the night told from the beginning, so
+ * 1.01 opens it. Sorted rather than trusted, because the board array is MFL's
+ * and a commissioner filling a slot out of order is a thing that happens; the
+ * pick numbers are the truth about sequence.
+ *
+ * Unfilled slots are dropped, so the reel is naturally empty before the draft
+ * starts — which is what stops the screensaver arming on a pre-draft board
+ * that has nothing to replay.
+ */
+export function screensaverReel(picks: DraftRoomPick[]): DraftRoomPick[] {
+  return picks
+    .filter((p) => !!p.playerId)
+    .sort((a, b) => a.overallPickNumber - b.overallPickNumber);
+}
+
+/**
+ * The instant the idle countdown runs from — the latest of three clocks.
+ *
+ * `lastPickAtMs` is the one that matters on draft night: the room has been
+ * looking at this screen since that pick landed, which is exactly what the
+ * count-up beside it already says. Sharing that scanner is deliberate — the
+ * "Elapsed" number the room is reading and the trigger that starts the reel
+ * must never disagree about which pick is the newest.
+ *
+ * `boardOpenedMs` is a floor for the RELOAD case, and it is not cosmetic.
+ * Someone reloads the board mid-draft precisely because they want to see the
+ * live state; on a stalled email draft the last pick is already hours old, so
+ * without this floor the reload would be answered by the reel starting
+ * instantly and the on-the-clock screen never appearing at all. Ten minutes of
+ * live board first, then the reel, on a fresh load exactly as at any other
+ * time.
+ *
+ * `quietSinceMs` is the CLIENT-clock instant from which the room has had
+ * nothing new: the end of the last cycle, or the arrival of a fresh pick. It
+ * covers two holes the other two cannot.
+ *
+ * Without the cycle-end half, the anchor is still the same hours-old pick the
+ * moment the cycle ends, so the screensaver would re-arm into a permanent loop
+ * with no idle board between passes — and the idle board is the half that says
+ * whose turn it is.
+ *
+ * Without the fresh-pick half, a pick MFL stamped unusably would not move the
+ * anchor at all — `lastPickAtMs` skips an unparseable stamp, though
+ * `isRevealWorthy` deliberately still reveals that pick — so the board would
+ * hand the room its reveal and then re-arm the cycle the instant the reveal
+ * drained, instead of the ten minutes of on-the-clock board a pick has just
+ * earned. On a board where NO pick carries a stamp that is not an edge case,
+ * it is every pick.
+ */
+export function screensaverAnchorMs(
+  picks: DraftRoomPick[],
+  boardOpenedMs: number,
+  quietSinceMs = 0
+): number {
+  return Math.max(lastPickAtMs(picks) ?? 0, boardOpenedMs, quietSinceMs);
+}
+
+/**
+ * Has the board been idle long enough to start replaying?
+ *
+ * `idleMs <= 0` means the screensaver is switched off (`?screensaver=off`), and
+ * is checked here rather than at the call site so every caller — component,
+ * test, a future one — reads "off" the same way.
+ */
+export function isScreensaverDue(
+  anchorMs: number,
+  nowMs: number,
+  idleMs: number = SCREENSAVER_IDLE_MS
+): boolean {
+  if (!Number.isFinite(idleMs) || idleMs <= 0) return false;
+  return nowMs - anchorMs >= idleMs;
+}
+
+/**
+ * `?screensaver=` → the idle threshold in ms.
+ *
+ * Takes SECONDS, because the only reason to pass it is to watch the thing
+ * work without sitting in front of a TV for ten minutes (`?screensaver=20`).
+ * `off` disables it — for the night somebody wants the on-the-clock screen and
+ * nothing else, which is a legitimate way to run this page.
+ *
+ * Anything unparseable falls back to the default rather than to "off": a typo
+ * in a debug parameter must not silently remove a feature from draft night.
+ */
+export function resolveScreensaverIdleMs(raw: string | null | undefined): number {
+  if (raw === null || raw === undefined || raw === '') return SCREENSAVER_IDLE_MS;
+  const value = raw.trim().toLowerCase();
+  if (value === 'off' || value === 'no' || value === 'false' || value === '0') return 0;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed * 1000 : SCREENSAVER_IDLE_MS;
+}
+
+/**
+ * How long one PANEL owns the screen — the roster and position screens.
+ *
+ * Longer than a replayed pick (8s), because a panel is read rather than
+ * recognised: a reveal is one name at 8vh that lands in a second, while a
+ * roster panel is a dozen faces and a count per position. Fifteen seconds is
+ * about two unhurried passes across a TV from ten feet.
+ */
+export const SCREENSAVER_PANEL_MS = 15_000;
+
+/**
+ * The order of the positions on the panels, and the only ones they draw.
+ *
+ * Fixed rather than sorted by count, so the row a viewer wants is always in the
+ * same place across the four panels a cycle shows — a board that re-sorts
+ * itself makes the room re-read it every time. `PK` is MFL's kicker code (the
+ * pool normalizes to it), and `DEF` covers every team unit.
+ */
+export const BROADCAST_POSITIONS = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'] as const;
+export type BroadcastPosition = (typeof BROADCAST_POSITIONS)[number];
+
+/** Anything else — an unranked oddity or a position the pool spells its own
+ *  way — is folded here rather than dropped, so a roster's count always adds
+ *  up to the roster. */
+const OTHER_POSITION = 'OTHER';
+
+function positionBucket(raw: string | undefined): string {
+  const pos = (raw || '').toUpperCase();
+  if ((BROADCAST_POSITIONS as readonly string[]).includes(pos)) return pos;
+  // The pool has spelled kickers both ways over the years, and a K row that
+  // silently became OTHER would be a row the room reads as a bug.
+  if (pos === 'K') return 'PK';
+  return OTHER_POSITION;
+}
+
+/** One position's row on the "off the board" panel. */
+export interface PositionTally {
+  position: string;
+  count: number;
+  /** The players taken there, MOST RECENT FIRST — the faces the row draws. */
+  players: BroadcastPlayer[];
+}
+
+/**
+ * How many of each position are off the board, with the faces to prove it.
+ *
+ * The number nobody tracks in an email draft and everybody argues about: the
+ * run happened three hours ago and the only record of it is a scrollback. Rows
+ * come back in `BROADCAST_POSITIONS` order — see the note there on why they are
+ * not sorted by count — and a position nobody has taken is omitted entirely
+ * rather than drawn as a zero, since an empty row on a TV reads as a loading
+ * state.
+ *
+ * Most recent first inside a row, so the faces a viewer sees first are the ones
+ * they might not have seen land.
+ */
+export function positionTallies(
+  picks: DraftRoomPick[],
+  players: ReadonlyMap<string, BroadcastPlayer>
+): PositionTally[] {
+  const byPosition = new Map<string, BroadcastPlayer[]>();
+  const made = [...picks]
+    .filter((p) => !!p.playerId)
+    .sort((a, b) => b.overallPickNumber - a.overallPickNumber);
+
+  for (const pick of made) {
+    const player = players.get(pick.playerId);
+    // A pick whose player the pool cannot name still COUNTS — the position is
+    // unknowable without him, so he lands in OTHER rather than vanishing and
+    // making the panel's total disagree with the board's.
+    const bucket = positionBucket(player?.position);
+    const row = byPosition.get(bucket);
+    if (row) row.push(player as BroadcastPlayer);
+    else byPosition.set(bucket, [player as BroadcastPlayer]);
+  }
+
+  const order = [...BROADCAST_POSITIONS, OTHER_POSITION];
+  return order
+    .filter((pos) => byPosition.has(pos))
+    .map((pos) => ({
+      position: pos,
+      count: byPosition.get(pos)!.length,
+      players: byPosition.get(pos)!.filter((p): p is BroadcastPlayer => !!p),
+    }));
+}
+
+/** One player on a roster panel: what he is, and whether he was taken tonight. */
+export interface RosterEntry {
+  id: string;
+  name: string;
+  position: string;
+  nflTeam: string;
+  espnId?: string;
+  /**
+   * The cutout the SERVER already resolved, when this entry came from the
+   * shipped pool — i.e. for a pick, never for a holding (a `RosterHolding` is a
+   * thin record and deliberately carries none).
+   *
+   * Passed through rather than dropped so the chip starts on the URL that is
+   * known to work instead of rebuilding one and walking a 404 to get back to it
+   * (Copilot, #668). `mflId` rides along for the same reason: it is the id the
+   * fallback hops are built from, and it is not always the MFL id on `id`.
+   */
+  headshot?: string;
+  mflId?: string;
+  /** "2.07" when this player was drafted tonight; absent for a holding. */
+  pickLabel?: string;
+}
+
+/** One position's row on a roster panel. */
+export interface RosterRow {
+  position: string;
+  count: number;
+  players: RosterEntry[];
+}
+
+/**
+ * What a franchise has at each position — holdings plus tonight's picks.
+ *
+ * The panel's whole job is "what does he still need?", which is only answerable
+ * against the WHOLE roster: in the AFL the seven keepers are most of it, and in
+ * TheLeague's rookie draft the standing dynasty roster is nearly all of it.
+ *
+ * Tonight's picks go FIRST inside a row and carry their pick label, because
+ * they are the half that changed while the room was watching.
+ *
+ * Deduped by player id, and that is not defensive tidiness: `rosters.json` is a
+ * cron snapshot that starts gaining tonight's picks partway through the draft,
+ * so the same man legitimately arrives from both sides. The live board wins,
+ * since it is the side that knows which pick he was.
+ */
+export function rosterRows(
+  holdings: readonly RosterHolding[] | undefined,
+  picks: DraftRoomPick[],
+  players: ReadonlyMap<string, BroadcastPlayer>,
+  franchiseId: string
+): RosterRow[] {
+  const entries: RosterEntry[] = [];
+  const seen = new Set<string>();
+
+  for (const pick of picks) {
+    if (pick.franchiseId !== franchiseId || !pick.playerId) continue;
+    const player = players.get(pick.playerId);
+    if (!player?.name) continue;
+    seen.add(player.id);
+    entries.push({
+      id: player.id,
+      name: player.name,
+      position: player.position || '',
+      nflTeam: player.nflTeam || '',
+      ...(player.espnId ? { espnId: player.espnId } : {}),
+      // See RosterEntry: the pool's own resolved cutout, so the chip does not
+      // rebuild a URL it was handed.
+      ...(player.headshot ? { headshot: player.headshot } : {}),
+      ...(player.mflId ? { mflId: player.mflId } : {}),
+      pickLabel: `${pick.round}.${String(pick.pickInRound).padStart(2, '0')}`,
+    });
+  }
+
+  for (const held of holdings ?? []) {
+    if (seen.has(held.id)) continue;
+    seen.add(held.id);
+    entries.push({ ...held });
+  }
+
+  const byPosition = new Map<string, RosterEntry[]>();
+  for (const entry of entries) {
+    const bucket = positionBucket(entry.position);
+    const row = byPosition.get(bucket);
+    if (row) row.push(entry);
+    else byPosition.set(bucket, [entry]);
+  }
+
+  const order = [...BROADCAST_POSITIONS, OTHER_POSITION];
+  return order
+    .filter((pos) => byPosition.has(pos))
+    .map((pos) => ({
+      position: pos,
+      count: byPosition.get(pos)!.length,
+      // Tonight's picks first, then the holdings, each side in the order it
+      // arrived — draft order for the picks, roster order for the rest.
+      players: byPosition
+        .get(pos)!
+        .slice()
+        .sort((a, b) => Number(!!b.pickLabel) - Number(!!a.pickLabel)),
+    }));
+}
+
+/**
+ * One screen in the screensaver's cycle.
+ *
+ * The reel was the first of these and is now just the tail: a `pick` scene per
+ * selection. The panels in front of it are about NOW — who is up, what he
+ * holds, what is gone — which is why they come first. In a draft this slow the
+ * room's questions are all present-tense; the reel is the nostalgia after.
+ */
+export type ScreensaverScene =
+  | { kind: 'roster'; franchiseId: string; role: 'clock' | 'deck' }
+  | { kind: 'positions' }
+  | { kind: 'pick'; pick: DraftRoomPick };
+
+/**
+ * The whole cycle, built ONCE when the screensaver arms.
+ *
+ * Built once rather than derived per frame so the cycle cannot reshuffle
+ * underneath the room — and it never needs to, because the one event that
+ * changes any of this (a pick landing) ends the screensaver outright.
+ *
+ * Empty when there is nothing to say: a pre-draft board has no reel, no
+ * position tally and no roster worth showing, and an empty cycle is what stops
+ * the screensaver arming on it at all.
+ */
+export function buildScreensaverPlaylist(picks: DraftRoomPick[]): ScreensaverScene[] {
+  const reel = screensaverReel(picks);
+  if (reel.length === 0) return [];
+
+  const scenes: ScreensaverScene[] = [];
+  const clock = findOnTheClock(picks);
+  if (clock) scenes.push({ kind: 'roster', franchiseId: clock.franchiseId, role: 'clock' });
+
+  const deck = upcomingPicks(picks, 1)[0];
+  // Back-to-back picks are ordinary once a pick has been traded, and the same
+  // roster twice in a row is a cycle that looks stuck.
+  if (deck && deck.franchiseId !== clock?.franchiseId) {
+    scenes.push({ kind: 'roster', franchiseId: deck.franchiseId, role: 'deck' });
+  }
+
+  scenes.push({ kind: 'positions' });
+  for (const pick of reel) scenes.push({ kind: 'pick', pick });
+  return scenes;
+}
+
+/** How long this scene holds the screen. */
+export function screensaverSceneMs(scene: ScreensaverScene): number {
+  return scene.kind === 'pick' ? SCREENSAVER_STEP_MS : SCREENSAVER_PANEL_MS;
 }

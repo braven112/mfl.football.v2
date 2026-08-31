@@ -61,6 +61,25 @@ interface Props {
   leagueYear?: number;
   /** NFL team code → that defense's marquee defenders. See `defenseFaces`. */
   defenseFaces?: Record<string, BroadcastDefenseFace[]>;
+  /**
+   * Set when the screensaver put this card up rather than a live pick — see
+   * `replayIndex` in DraftBroadcast.
+   *
+   * The card is otherwise IDENTICAL to a live reveal, which is the point (the
+   * reel is the night as it happened, told properly) and also the hazard: a
+   * room glancing up at a full-screen reveal of 1.04 has no way to know it is
+   * watching history rather than a pick that just landed. So the flag is not
+   * decoration — it is the only thing separating the two, which is why it also
+   * carries who is ACTUALLY on the clock. That is the question the reel takes
+   * off the screen, and the one the room most needs answered while it plays.
+   */
+  rewind?: {
+    /** 1-based position in the reel, and its length — "12 of 47". */
+    position: number;
+    total: number;
+    /** Whoever the live board is waiting on, if the draft is still going. */
+    onTheClock?: DraftRoomTeam;
+  };
 }
 
 /** How many defenders stand in for a team defense. */
@@ -78,6 +97,7 @@ export function BroadcastRevealCard({
   picks,
   players,
   rehearsing,
+  rewind,
   leagueYear,
   defenseFaces,
 }: Props) {
@@ -217,7 +237,18 @@ export function BroadcastRevealCard({
       {/* The idle screen carries this too, but flagging only the idle screen
           would leave the room looking at last year's picks with nothing on
           screen to say so for every second a reveal owns the TV. */}
-      {rehearsing ? (
+      {rewind ? (
+        /* One chip, not two: the flag slot is a single absolute box at the top
+           left, and a rehearsal that has run out of picks reaches the
+           screensaver like any other idle board — so the rehearsal disclaimer
+           is folded in here rather than stacked on top of it. */
+        <span className="dbc-reveal__rewind-flag">
+          {rehearsing ? 'Rehearsal · ' : ''}Rewind · pick {rewind.position} of {rewind.total}
+          {rewind.onTheClock
+            ? ` · ${rewind.onTheClock.nameShort || rewind.onTheClock.name} on the clock`
+            : ''}
+        </span>
+      ) : rehearsing ? (
         <span className="dbc-reveal__rehearsal-flag">
           Rehearsal · replaying {leagueYear}
         </span>
