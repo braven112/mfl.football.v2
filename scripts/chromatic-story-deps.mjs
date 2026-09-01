@@ -100,10 +100,17 @@ export const STORY_ASSET_GLOBS = [
   'public/assets/theleague/icons/pigskins.png',
   'public/assets/theleague/icons/pigskins_dark.png',
   'public/assets/theleague/icons/cowboy_up.png',
+  'public/assets/theleague/icons/wabbits.png',
+  'public/assets/theleague/icons/wabbits_dark.png',
+  'public/assets/theleague/icons/ninjas.png',
+  'public/assets/theleague/icons/ninjas_dark.png',
+  'public/assets/theleague/group-me/pigskins.png',
+  'public/assets/theleague/group-me/cowboy_up.png',
+  'public/assets/theleague/group-me/wabbits.png',
+  'public/assets/theleague/group-me/ninjas.png',
   'public/assets/afl/icons/ninjas.png',
   'public/assets/afl/icons/ninjas_dark.png',
   'public/assets/afl/icons/the_show.png',
-  'public/assets/afl/icons/harambe.png',
   // AFL tier badges — ThemeImage's light/dark pairs.
   'public/assets/afl/premier.svg',
   'public/assets/afl/premier-dark.svg',
@@ -151,7 +158,7 @@ const LEAGUE_CONFIGS = ALL_LEAGUES.map((l) => l.configPath).filter(Boolean);
  */
 export function computeStoryAssetLiterals() {
   const found = new Set();
-  for (const file of SEED_GLOBS.flatMap((g) => globSync(g))) {
+  for (const file of storyTextFiles()) {
     for (const m of readFileSync(file, 'utf8').matchAll(/\/assets\/[A-Za-z0-9._/-]+/g)) {
       // A trailing path segment with no extension is a directory prefix, not a
       // file — `/assets/theleague/icons/` and friends.
@@ -166,6 +173,30 @@ export function computeStoryAssetLiterals() {
       if (team.icon && team.iconDark && found.has(`public${team.icon}`)) {
         found.add(`public${team.iconDark}`);
       }
+    }
+  }
+  return [...found].sort();
+}
+
+/**
+ * Directories a story reaches through an INTERPOLATED path, which the literal
+ * scan above cannot enumerate.
+ *
+ * `/assets/nfl-logos/${code}.svg` is fine — that tree keeps a `**` glob for
+ * exactly this reason. `/assets/theleague/icons/${seed.slug}.png` was NOT:
+ * the playoff fixtures built twelve crest paths that way, and when the two
+ * league trees were replaced by individual files those crests kept rendering
+ * with nothing in the trigger matching them. The literal scan saw nothing to
+ * complain about, because there was no literal.
+ *
+ * So the rule this exposes: **a dynamically-built asset path REQUIRES a `**`
+ * glob over its directory.** Write the paths out if you want a narrow trigger.
+ */
+export function computeStoryAssetPrefixes() {
+  const found = new Set();
+  for (const file of storyTextFiles()) {
+    for (const m of readFileSync(file, 'utf8').matchAll(/\/assets\/[A-Za-z0-9._/-]*(?=\$\{)/g)) {
+      if (m[0].endsWith('/')) found.add(`public${m[0]}`);
     }
   }
   return [...found].sort();
@@ -190,6 +221,18 @@ function resolveSpec(fromFile, spec) {
     if (existsSync(cand) && statSync(cand).isFile()) return cand;
   }
   return null;
+}
+
+/**
+ * Every text file under stories/ — story modules AND the fixtures they import.
+ *
+ * NOT `SEED_GLOBS`: that is `*.stories.ts` only, which is right for walking the
+ * import graph and wrong for scanning asset strings. Fixtures are where the
+ * bulky, asset-heavy data lives, and skipping them is how twelve playoff crests
+ * stayed outside the Chromatic trigger.
+ */
+function storyTextFiles() {
+  return globSync('stories/**/*.{ts,tsx}');
 }
 
 /** Every src/ file reachable from a story or from preview.ts. */

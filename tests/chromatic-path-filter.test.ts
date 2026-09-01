@@ -5,6 +5,7 @@ import {
   computeExternals,
   computeStoryStylesheets,
   computeStoryAssetLiterals,
+  computeStoryAssetPrefixes,
   STORY_ASSET_GLOBS,
 } from '../scripts/chromatic-story-deps.mjs';
 
@@ -202,6 +203,30 @@ describe('chromatic path filter', () => {
         `Add them to STORY_ASSET_GLOBS in scripts/chromatic-story-deps.mjs, ` +
         `then regenerate both workflow lists and chromatic.config.json.\n\n` +
         uncovered.map((f) => `  - '${f}'`).join('\n'),
+    ).toEqual([]);
+  });
+
+  it('keeps a wildcard tree behind every dynamically-built asset path', () => {
+    // The hole the literal scan CANNOT see. The playoff fixtures built twelve
+    // crest paths as `/assets/theleague/icons/${seed.slug}.png`; when the two
+    // league trees were replaced by individual files those crests kept
+    // rendering with nothing in the trigger matching them, and the scan had no
+    // literal to complain about. An interpolated path is only safe over a `**`
+    // tree — otherwise write the paths out.
+    const globPrefixes = STORY_ASSET_GLOBS.filter((g) => g.includes('*')).map(
+      (g) => g.slice(0, g.indexOf('*')),
+    );
+    const unguarded = computeStoryAssetPrefixes().filter(
+      (dir) => !globPrefixes.some((p) => dir.startsWith(p)),
+    );
+
+    expect(
+      unguarded,
+      `A story builds an asset path inside these directories at runtime, but ` +
+        `no wildcard entry in STORY_ASSET_GLOBS covers them — so the files it ` +
+        `reaches are invisible to both the literal scan and the trigger.\n\n` +
+        `Either write the paths out literally, or add a '<dir>**' entry.\n\n` +
+        unguarded.map((d) => `  - '${d}'`).join('\n'),
     ).toEqual([]);
   });
 
