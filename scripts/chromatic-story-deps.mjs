@@ -65,7 +65,7 @@ const EXT = [
  * NOTE this is the only thing filtered out. An earlier version filtered to
  * `src/` and silently dropped three files that genuinely render:
  * data/afl-fantasy/afl.config.json (AFL brand colors, imported by
- * PeckingOrderIssue and franchise-band-brand), data/afl-fantasy/tier-history.json
+ * franchise-band-brand), data/afl-fantasy/tier-history.json
  * and data/best-ball-1/bb1.config.json. They matched no `paths:` entry, so an
  * AFL brand-color edit would have built on neither the PR nor the merge — the
  * exact hole this generator exists to close, reintroduced by a leftover prefix

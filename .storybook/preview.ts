@@ -85,14 +85,17 @@ function applyGlobals(theme: string, league: string) {
  * `--team-accent-<franchiseId>` for every franchise in every league with an
  * `html.dark` override, each forced to clear 3:1 on its theme's card surface.
  * Storybook renders components WITHOUT that layout, so every one of those
- * tokens was undefined and anything tinting by franchise silently fell back —
- * the Pecking Order's rank numerals all rendered the same blue instead of
- * sixteen different team colors.
+ * tokens was undefined and anything tinting by franchise silently fell back to
+ * one flat blue. Baselining that fallback would bake wrong colors into
+ * Chromatic and make it blind to exactly the accent regressions it exists to
+ * catch (see docs/claude/rules/theming-and-assets.md for the dark-mode case
+ * that shipped invisible rank numbers).
  *
- * That matters more than it looks. Baselining the fallback would bake wrong
- * colors into Chromatic and make it blind to exactly the accent regressions it
- * exists to catch (see docs/claude/rules/theming-and-assets.md: the Pecking
- * Order shipped invisible rank numbers in dark mode this way).
+ * NOTE no story currently reads these tokens — the one that did
+ * (Shared/PeckingOrderIssue) was removed, because it rendered live franchise
+ * crests and so re-diffed every time an owner changed a logo. The injection
+ * stays: it is layout parity, it costs nothing while nothing consumes it, and
+ * the next franchise-tinted story would otherwise re-open the same hole.
  *
  * The logo sheets matter for a second, less obvious reason. They carry
  * `img.nfl-logo-failed { visibility: hidden; }`, the rule that hides a logo

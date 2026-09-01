@@ -34,7 +34,6 @@ on:
       - 'src/components/TeamIconCell.astro'
       - 'src/components/ThemeImage.astro'
       - 'src/components/shared/LineupGameStrip.astro'
-      - 'src/components/shared/PeckingOrderIssue.astro'
       - 'src/components/shared/hp-sections/QuickLinks.astro'
       - 'src/components/shared/loading/BrandedLoader.astro'
       - 'src/components/shared/loading/Skeleton.astro'
@@ -57,7 +56,7 @@ on:
       - 'src/styles/tokens-dark.css'
       - 'src/styles/tokens.css'
       - 'src/styles/utilities.css'
-      # Utils that reach a story. 247 utils exist; these 45 render.
+      # Utils that reach a story. 247 utils exist; these 44 render.
       - 'src/utils/afl-tier-logo.ts'
       - 'src/utils/afl-tier.ts'
       - 'src/utils/college-logo-dark-css.ts'
@@ -84,7 +83,6 @@ on:
       - 'src/utils/nfl-team-colors.ts'
       - 'src/utils/nfl.ts'
       - 'src/utils/offseason-hero-data.ts'
-      - 'src/utils/pecking-order-landing.ts'
       - 'src/utils/pecking-order-season-window.mjs'
       - 'src/utils/player-map.ts'
       - 'src/utils/player-modal-band.ts'
@@ -190,7 +188,6 @@ on:
       - 'src/components/TeamIconCell.astro'
       - 'src/components/ThemeImage.astro'
       - 'src/components/shared/LineupGameStrip.astro'
-      - 'src/components/shared/PeckingOrderIssue.astro'
       - 'src/components/shared/hp-sections/QuickLinks.astro'
       - 'src/components/shared/loading/BrandedLoader.astro'
       - 'src/components/shared/loading/Skeleton.astro'
@@ -213,7 +210,7 @@ on:
       - 'src/styles/tokens-dark.css'
       - 'src/styles/tokens.css'
       - 'src/styles/utilities.css'
-      # Utils that reach a story. 247 utils exist; these 45 render.
+      # Utils that reach a story. 247 utils exist; these 44 render.
       - 'src/utils/afl-tier-logo.ts'
       - 'src/utils/afl-tier.ts'
       - 'src/utils/college-logo-dark-css.ts'
@@ -240,7 +237,6 @@ on:
       - 'src/utils/nfl-team-colors.ts'
       - 'src/utils/nfl.ts'
       - 'src/utils/offseason-hero-data.ts'
-      - 'src/utils/pecking-order-landing.ts'
       - 'src/utils/pecking-order-season-window.mjs'
       - 'src/utils/player-map.ts'
       - 'src/utils/player-modal-band.ts'

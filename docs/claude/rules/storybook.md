@@ -215,13 +215,19 @@ font URL is reintroduced, or if the font is moved into `public/`.
 `--team-accent-<franchiseId>` for every franchise with an `html.dark`
 override, each forced to clear 3:1 on its theme's surface. A story has no
 layout, so **every one of those tokens was undefined** and anything tinting by
-franchise fell back silently — the Pecking Order's sixteen rank numerals all
-rendered the same blue.
+franchise fell back silently to one flat blue — found via the Pecking Order
+story's sixteen rank numerals, which all rendered identically.
 
 This is worse than a cosmetic bug in a visual suite: baselining the fallback
 bakes wrong colors into Chromatic and blinds it to precisely the accent
 regressions it exists to catch (see `theming-and-assets.md` — the Pecking Order
 shipped invisible rank numbers in dark mode exactly this way).
+
+That story is gone (see "Deleted: the Pecking Order stories" below) and **no
+story reads `--team-accent-*` today**, so this injection currently guards
+nothing. It stays anyway: it is layout parity, it costs nothing while nothing
+consumes it, and the next franchise-tinted story would otherwise reopen the
+hole silently.
 
 `preview.ts` now calls the SAME `buildTeamAccentCss()` the layout does and
 injects it once, so there is one source of truth. Verified: franchise 0002
@@ -289,6 +295,38 @@ The season heroes (`season-heroes/`) cannot be driven from args at all: they
 and `getPlayerMap(year)`, and import `theleague.config.json` directly. That is
 a finding, not a Storybook limitation — it is also why they can't be reused by
 a second product.
+
+## Deleted: the Pecking Order stories
+
+`stories/shared/PeckingOrder.stories.ts` (four stories, eight snapshots) was
+removed in Sept 2026. It is worth recording WHY, because the trap it hit is
+one any future story can walk into.
+
+The story froze its *data* correctly — a copied issue JSON, never an import of
+the cron-written file. But `PeckingOrderIssue.astro` does not take franchises
+as a prop: it builds its team lookup from the league config, and those configs
+point `icon` at live files under `public/assets/<league>/icons/`. So the story
+rendered whatever crest was on disk that day.
+
+That is a snapshot reading live data through a side door. Both asset trees are
+in `STORY_ASSET_GLOBS` and in the workflow's `paths:` (correctly — see
+"Choosing modes" and the Chromatic section), so an owner swapping a logo, or
+the sync bot doing it for them, both TRIGGERED a Chromatic build and
+GUARANTEED a diff on all eight snapshots. Every one of those needed a human to
+approve a change nobody made. Full-page snapshots of a 16-row ranking with a
+crest per row are the worst possible shape for this.
+
+**The general rule: a frozen fixture only freezes what the component takes as
+args.** Anything the component resolves itself — a config import, an asset path
+built from one — is still live, and a full-page story pulls in a lot of it.
+Before adding a story, ask what it renders that no arg controls.
+
+`TeamIconCell` deliberately keeps its live crests: icons ARE its subject, so a
+diff there is the test working. The Pecking Order was rendering them as
+scenery.
+
+If this ever comes back, it needs a `teams` prop (or a frozen copy of the two
+configs under `stories/fixtures/`) so the crests are args like everything else.
 
 ## Toolchain note
 
@@ -440,8 +478,8 @@ the bug. Extra patterns are always safe; missing ones fail the suite.
 **Filter by what a glob already covers, never by a path prefix.** The generator
 briefly ended in `.filter(f => f.startsWith('src/'))`, which silently dropped
 three files the walk had correctly found — `data/afl-fantasy/afl.config.json`
-(AFL brand colors, reached through both `PeckingOrderIssue` and
-`franchise-band-brand`), `data/afl-fantasy/tier-history.json` and
+(AFL brand colors, reached through `franchise-band-brand`),
+`data/afl-fantasy/tier-history.json` and
 `data/best-ball-1/bb1.config.json`. They render, matched no `paths:` entry, and
 the coverage assertions could not see it: a filtered-out file is not
 "uncovered", it is invisible. `tests/chromatic-path-filter.test.ts` now pins
@@ -681,9 +719,9 @@ capability rather than a framework allowlist:
 
 **THE BLIND SPOT — `get-stories-by-component` does not traverse `.astro`
 frontmatter imports.** It resolves direct story→component links correctly and
-reports nothing beyond them. Concretely: `PeckingOrderIssue.astro` imports
-`src/utils/team-accent-css` on line 21 and has four stories, but querying
-`src/utils/team-accent-css.ts` returns **"no stories found"**. So does
+reports nothing beyond them. Concretely: `TeamIconCell.astro` imports
+`src/utils/team-icon-dark-css` on line 41 and has six stories, but querying
+`src/utils/team-icon-dark-css.ts` returns **"no stories found"**. So does
 `src/styles/tokens.css`, which affects every story in the suite.
 
 Treat a "no stories found" on a util or a stylesheet as **unknown, not
