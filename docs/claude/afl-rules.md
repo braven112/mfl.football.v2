@@ -124,7 +124,9 @@ The RB/WR/TE positions share a combined flex pool (minimum 3 of the 9 starters).
 > **The processing time here is documentation, not the source of truth — read
 > MFL's calendar.** This doc said 9:00 PM until 2026-09-01; the AFL actually
 > runs at **8:00 PM PT** and TheLeague at **7:00 PM PT**, so a shared "9pm"
-> constant would have been wrong in both leagues. The times also differ
+> constant would have been wrong in both leagues. The **scoring-dispute
+> deadline** further down was corrected in the same pass — it is the same
+> Wednesday 8:00 PM PT cutoff, not an hour later. The times also differ
 > **before the season** — preseason waiver runs are not on the in-season
 > cadence. Nothing in the API states the live mode either
 > (`currentWaiverType` is the league's SYSTEM, `WAIVERS_FCFS`, not its current
@@ -304,7 +306,7 @@ the bye-free count (ceiling **96**), not to reach zero.
 ## Scoring & Errors (governance)
 
 - Notify the Commissioner by **email** on discovering a scoring error.
-- All disputes due by **Wednesday 9:00 PM**; the Commissioner reviews and notifies involved teams.
+- All disputes due by **Wednesday 8:00 PM PT**; the Commissioner reviews and notifies involved teams.
 - Official stat provider: **My Fantasy League** (system of record).
 - Confirmed errors that change a matchup outcome → league-wide notice + correction.
 

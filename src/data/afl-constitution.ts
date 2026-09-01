@@ -124,7 +124,7 @@ SCORING
 
 SCORING ERRORS
 - Notify the Commissioner by email on discovering a scoring error.
-- All disputes due by Wednesday 9:00 PM; Commissioner reviews and notifies involved teams.
+- All disputes due by Wednesday 8:00 PM PT; Commissioner reviews and notifies involved teams.
 - Official stat provider: My Fantasy League (system of record).
 - Confirmed errors that change a matchup outcome result in a league-wide notice and correction.
 
