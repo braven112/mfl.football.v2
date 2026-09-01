@@ -302,6 +302,9 @@ Every story that needs a franchise uses the same five: **Pacific Pigskins**,
 **The Mariachi Ninjas**, **Cowboy Up**, **Wascawy Wabbits** (TheLeague) and
 **The Show** (AFL). The playoff fixtures used to carry six unrelated
 franchises, `TeamIconCell` four more, and the name-fallback stories a seventh.
+Running down the Dream is the one addition outside that five, and it is not a
+preference — it is the only TheLeague crest that takes the default-white
+branch (see below).
 
 This is not tidiness. Every crest a story renders is a file
 `STORY_ASSET_GLOBS` has to name one by one, so each extra franchise is another
@@ -311,7 +314,8 @@ one (below).
 
 Adding a franchise to a story is therefore a real change, not set dressing:
 check `crest-dark-stroke-manifest.json` for which branch it lands on, and add
-its crest — and its `_dark` file if it has one — to the trigger.
+its crest — and its `_dark` file if it has one — to the trigger. Five teams
+cover every branch but one, and the sixth exists solely to cover that one.
 
 ## Deleted: the Pecking Order stories
 
@@ -805,18 +809,17 @@ takes exactly ONE of these, and `Theming/TeamIconCell` pins all four states:
 |---|---|---|
 | `iconDark` | `content: url(<dark>)` swap, no filter | `DarkSwapAvailable` (Pigskins, TL) |
 | `iconDark`, AFL side | same swap, AFL's rule set | `DarkSwapAvailableAfl` (Ninjas, AFL) |
-| nothing, but measured illegible | default white stroke | **none — see below** |
+| nothing, but measured illegible | default white stroke | `StrokeDefaultWhite` (Running down the Dream, TL) |
 | `iconStrokeDark: "#rrggbb"` | that color as the stroke | `StrokeCustomColor` (The Show, AFL) |
 | `iconStrokeDark: false` | **no stroke at all** | `StrokeExplicitlyOptedOut` (Cowboy Up, TL) |
 
-**The default-white-stroke branch is deliberately unsnapshotted, and that is a
-known gap, not a decision that aged well.** It needs a crest in the manifest
-declaring neither `iconDark` nor `iconStrokeDark`, and only four teams qualify
-league-wide — Harambe, Badd Boys, Saints (AFL) and The Dream (TheLeague) — none
-of them in the cast the suite standardized on (Sept 2026). So a regression that
-dropped `DEFAULT_CREST_STROKE_COLOR` would leave roughly a dozen crests
-illegible on dark cards with nothing here failing. Adding any one of those four
-back closes it, at the cost of one more crest in the trigger.
+**Default-white is the scarce branch — check before you swap it.** It needs a
+manifest crest declaring neither `iconDark` nor `iconStrokeDark`, and only four
+teams qualify league-wide: Harambe, Badd Boys, Saints (AFL) and Running down
+the Dream (TheLeague). Every other franchise either has a dark variant or an
+explicit stroke, so a "nicer" replacement almost certainly lands on a branch
+that is already covered — and leaves `DEFAULT_CREST_STROKE_COLOR` guarding
+roughly a dozen crests with nothing snapshotting it.
 
 **Both leagues need a swap story.** `buildAllTeamIconDarkCss()` is four builder
 calls across two configs and two icon directories, and the pairing is

@@ -104,6 +104,7 @@ export const STORY_ASSET_GLOBS = [
   'public/assets/theleague/icons/wabbits_dark.png',
   'public/assets/theleague/icons/ninjas.png',
   'public/assets/theleague/icons/ninjas_dark.png',
+  'public/assets/theleague/icons/the_dream.png',
   'public/assets/theleague/group-me/pigskins.png',
   'public/assets/theleague/group-me/cowboy_up.png',
   'public/assets/theleague/group-me/wabbits.png',

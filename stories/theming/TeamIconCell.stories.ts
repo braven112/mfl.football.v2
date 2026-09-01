@@ -42,13 +42,12 @@ import { themeModes } from '../../.storybook/modes';
  * `iconStrokeDark: false` = opt-out, in the manifest with neither = default
  * white.
  *
- * KNOWN GAP: the DEFAULT WHITE STROKE branch has no story. It needs a crest in
- * the manifest declaring neither `iconDark` nor `iconStrokeDark`, and only
- * four teams qualify league-wide — Harambe, Badd Boys, Saints (AFL) and The
- * Dream (TheLeague) — none of them in the cast this suite standardized on. So
- * `DEFAULT_CREST_STROKE_COLOR` is unsnapshotted: a regression that dropped the
- * fallback rule would leave roughly a dozen crests illegible on dark cards
- * with nothing here failing. Adding any one of those four closes it.
+ * The default-white branch is the SCARCE one: it needs a manifest crest
+ * declaring neither `iconDark` nor `iconStrokeDark`, and only four teams
+ * qualify league-wide — Harambe, Badd Boys, Saints (AFL) and Running down the
+ * Dream (TheLeague). Swap it for a team off that list or the branch goes
+ * untested, and roughly a dozen crests lose their only guard against shipping
+ * illegible on a dark card.
  */
 export default {
   title: 'Theming/TeamIconCell',
@@ -85,6 +84,23 @@ export const DarkSwapAvailableAfl = {
   args: {
     icon: '/assets/afl/icons/ninjas.png',
     name: 'The Mariachi Ninjas',
+  },
+};
+
+/**
+ * The DEFAULT WHITE STROKE branch. A crest with no dark variant that the
+ * manifest measured as illegible on a dark card, and whose team sets no
+ * `iconStrokeDark` — so it falls through to `DEFAULT_CREST_STROKE_COLOR`. Dark
+ * mode must show the same artwork carrying a white outline.
+ *
+ * The swap and the stroke are mutually exclusive by construction: the manifest
+ * and `withStrokeColors` both exclude any team with an `iconDark`, so a crest
+ * can never get both.
+ */
+export const StrokeDefaultWhite = {
+  args: {
+    icon: '/assets/theleague/icons/the_dream.png',
+    name: 'Running down the Dream',
   },
 };
 

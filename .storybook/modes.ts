@@ -15,7 +15,7 @@
  *     snapshotting them under the AFL skin would burn budget on a combination
  *     that never ships.
  *
- * The suite is now 63 stories, ~152 snapshots a full build. `leagueModes` is
+ * The suite is now 64 stories, ~154 snapshots a full build. `leagueModes` is
  * applied narrowly — only where
  * a component's own styles actually read a league-scoped token, or where a
  * story renders one league's CONTENT and needs that league's SKIN to match
