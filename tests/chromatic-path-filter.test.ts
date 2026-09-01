@@ -62,6 +62,9 @@ function extractPathLists(yaml: string): string[][] {
   return lists;
 }
 
+/** Characters that must be escaped to match literally inside a RegExp. */
+const REGEXP_META = new Set(['.', '+', '^', '$', '{', '}', '(', ')', '|', '[', ']', '\\', '?']);
+
 /**
  * Minimal glob to RegExp, supporting the `**` and `*` the workflow uses.
  *
@@ -83,7 +86,11 @@ function globToRegExp(pattern: string): RegExp {
       out += '[^/]*';
       i += 1;
     } else {
-      out += pattern[i].replace(/[.+^${}()|[\]\\?]/, '\\$&');
+      // Escape-by-test rather than String.replace: the receiver is a single
+      // character, so a non-global replace was already correct, but it reads
+      // as the classic "only replaces the first occurrence" bug and CodeQL
+      // flags it as one (alert 101). This says what it means.
+      out += REGEXP_META.has(pattern[i]) ? `\\${pattern[i]}` : pattern[i];
       i += 1;
     }
   }
