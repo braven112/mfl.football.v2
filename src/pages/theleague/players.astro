@@ -4451,12 +4451,24 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     border-color: var(--content-border, #e2e8f0);
     color: var(--color-gray-900, #111827);
   }
-  /* The Bid button reuses .place-bid-link, which is styled as an anchor. */
-  button.place-bid-link {
+  /* The Bid <button> reuses .place-bid-link so it is visually identical to the
+     Bid/Add pills already in this table.
+     MUST be :global() — table rows are injected via innerHTML from the client
+     script, and Astro's scoped styles only match elements that carried the
+     scope attribute at build time. A scoped rule here silently does nothing,
+     which is how this shipped as a washed-out pill: only the UA button styles
+     applied, painting `buttonface` grey behind the text.
+     Only the properties a <button> does NOT inherit are reset — border,
+     padding, colour, radius and size all come from .place-bid-link, so the
+     button and the anchor can never drift apart. */
+  :global(button.place-bid-link) {
     background: none;
-    border: none;
-    padding: 0;
-    font: inherit;
+    font-family: inherit;
+    line-height: inherit;
     cursor: pointer;
+  }
+  :global(button.place-bid-link:focus-visible) {
+    outline: 2px solid var(--color-primary, #1c497c);
+    outline-offset: 2px;
   }
 </style>
