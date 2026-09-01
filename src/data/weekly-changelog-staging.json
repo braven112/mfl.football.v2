@@ -4,6 +4,14 @@
     {
       "date": "2026-09-01",
       "type": "bug-fix",
+      "summary": "The AFL rules page had the waiver deadline an hour late. Claims process Wednesday at 8:00 PM PT — not 9:00 PM — and first-come-first-served opens the moment they do, so anyone who read the rules page and planned to get a claim in at 8:30 was submitting into a window that had already closed. The rules page, the constitution and Roger's answer all say 8:00 PM PT now. The new waiver claim builder was never affected: it reads the live processing time off MyFantasyLeague's own league calendar rather than the rulebook, which is also how it knows the times shift before the season starts.",
+      "impact": "user",
+      "area": "rules",
+      "league": "afl"
+    },
+    {
+      "date": "2026-09-01",
+      "type": "bug-fix",
       "summary": "Every record Schefter quoted was double what it actually was. MyFantasyLeague reports a team's head-to-head wins as one total plus two breakdowns of that same total — division games and everything else — and the article generator was adding all three together, so last season's 15-3 leader was handed to the writer as 30-6. It affected every recap, both previews, team grades and the championship writeup: essentially every article that has ever mentioned a record. The fact sheet now reads the record straight off the league standings and is checked against MyFantasyLeague's own W-L string for all sixteen teams.",
       "impact": "user",
       "area": "schefter",

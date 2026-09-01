@@ -128,7 +128,7 @@ export function resolveWaiverWindow(
   };
 }
 
-/** One-line summary for the page, e.g. "Waivers open · FCFS opens Wed 9:00 PM". */
+/** One-line summary for the page, e.g. "Waivers open · claims process Wed 8:00 PM". */
 export function describeWaiverWindow(win: WaiverWindow, timeZone = 'America/Los_Angeles'): string {
   const when = win.changesAt
     ? new Intl.DateTimeFormat('en-US', {

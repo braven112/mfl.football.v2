@@ -117,9 +117,24 @@ The RB/WR/TE positions share a combined flex pool (minimum 3 of the 9 starters).
 - **Rolling waiver system ("Yahoo" style)** for priority. *(Not BBID/blind-bid.)*
 - Initial waiver order = **base draft order from the previous season**.
 - Waiver adds allowed **Week 1 through Week 17**.
-- Requests accepted **Sunday kickoff → Wednesday 9:00 PM**; all claims process **Wednesday 9:00 PM**.
+- Requests accepted **Sunday kickoff → Wednesday 8:00 PM PT**; all claims process **Wednesday 8:00 PM PT**.
 - Dropped players are **locked until the next Sunday kickoff**.
-- **First-Come, First-Served (FCFS)** allowed **Wednesday 9:00 PM → Sunday kickoff**, and from **Draft Day until the regular season starts**. Players dropped during FCFS are locked until the next Sunday kickoff.
+- **First-Come, First-Served (FCFS)** allowed **Wednesday 8:00 PM PT → Sunday kickoff**, and from **Draft Day until the regular season starts**. Players dropped during FCFS are locked until the next Sunday kickoff.
+
+> **The processing time here is documentation, not the source of truth — read
+> MFL's calendar.** This doc said 9:00 PM until 2026-09-01; the AFL actually
+> runs at **8:00 PM PT** and TheLeague at **7:00 PM PT**, so a shared "9pm"
+> constant would have been wrong in both leagues. The times also differ
+> **before the season** — preseason waiver runs are not on the in-season
+> cadence. Nothing in the API states the live mode either
+> (`currentWaiverType` is the league's SYSTEM, `WAIVERS_FCFS`, not its current
+> state), so `resolveWaiverWindow` (`src/utils/waiver-window.ts`) derives
+> WAIVER vs FCFS from the synced `calendar` feed and returns `unknown` rather
+> than guessing when the calendar is missing. The calendar export is
+> **owner-gated** — an unauthenticated read returns an error that once looked
+> like an empty calendar. `tests/waiver-window.test.ts` asserts the cadence
+> against the real synced feed and deliberately pins only the SHAPE
+> (in-season processing lands Wednesday evening PT), never the hour.
 
 ### Setting the waiver order — MFL does not carry it across the rollover
 

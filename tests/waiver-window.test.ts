@@ -10,6 +10,8 @@
  * once looked like an empty calendar — hence the emphasis below on `unknown`
  * being a real, safe answer rather than something to guess past.
  */
+import fs from 'node:fs';
+import path from 'node:path';
 import { describe, it, expect } from 'vitest';
 import { resolveWaiverWindow, describeWaiverWindow, type MflCalendarEvent } from '../src/utils/waiver-window';
 
@@ -150,4 +152,141 @@ describe('the real weekly cadence, in weekday terms', () => {
       expect(resolveWaiverWindow(events, new Date(iso)).mode).toBe(expected);
     });
   }
+});
+
+describe('the REAL synced calendar', () => {
+  // Asserts against MFL's own calendar rather than a fixture.
+  //
+  // Nothing here hardcodes a clock time or a date. The processing hour differs
+  // per league (observed Wed 8pm PT for the AFL, Wed 7pm PT for TheLeague) and
+  // `docs/claude/afl-rules.md` still says 9:00 PM — which is exactly why the
+  // code reads the calendar instead of the constitution. It also differs
+  // BEFORE the season: preseason waiver runs are not on the in-season cadence,
+  // so every occurrence outside the regular season is excluded rather than
+  // asserted against.
+  //
+  // What is pinned is the SHAPE that has to hold whatever the hour is: in
+  // season, claims process Wednesday evening PT; the Monday before a
+  // processing run is a waiver day; the day after it is FCFS. The probe days
+  // are derived from a real occurrence, so they move with the calendar.
+  //
+  // Skips until scripts/fetch-mfl-feeds.mjs has synced the feed — the calendar
+  // export is owner-gated, so it cannot be fetched without credentials.
+  const leagues = [
+    { slug: 'theleague', dir: 'data/theleague/mfl-feeds' },
+    { slug: 'afl-fantasy', dir: 'data/afl-fantasy/mfl-feeds' },
+  ];
+
+  const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+  const PROCESS = ['WAIVER_BBID', 'WAIVER_REVERSE', 'WAIVER_LOCK'];
+
+  /** Same weekly expansion the resolver applies, so occurrences line up. */
+  const expand = (events: MflCalendarEvent[], types: string[]): number[] => {
+    const out: number[] = [];
+    for (const event of events) {
+      if (!types.includes(String(event?.type ?? '').toUpperCase())) continue;
+      const start = Number(event.start_time) * 1000;
+      if (!Number.isFinite(start) || start <= 0) continue;
+      const repeats = Math.max(0, Math.min(Number(event.happens) || 0, 30));
+      for (let i = 0; i <= repeats; i++) out.push(start + i * SEVEN_DAYS_MS);
+    }
+    return out.sort((a, b) => a - b);
+  };
+
+  const partsPt = (ms: number) => {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      weekday: 'long', hour: 'numeric', hour12: false, timeZone: 'America/Los_Angeles',
+    }).formatToParts(new Date(ms));
+    return {
+      weekday: parts.find((p) => p.type === 'weekday')!.value,
+      hour: Number(parts.find((p) => p.type === 'hour')!.value),
+    };
+  };
+
+  /** Latest synced season directory, so this does not pin a year either. */
+  const latestSeason = (dir: string): { file: string; year: number } | null => {
+    const root = path.join(process.cwd(), dir);
+    if (!fs.existsSync(root)) return null;
+    const years = fs
+      .readdirSync(root)
+      .filter((name) => /^\d{4}$/.test(name))
+      .map(Number)
+      .sort((a, b) => b - a);
+    for (const year of years) {
+      const file = path.join(root, String(year), 'calendar.json');
+      if (fs.existsSync(file)) return { file, year };
+    }
+    return null;
+  };
+
+  /**
+   * Regular-season occurrences only. Preseason waiver runs happen on their own
+   * schedule, so including them would assert a cadence the league is not on
+   * yet. September through December is the regular season in every year the
+   * league has existed.
+   */
+  const inSeason = (ms: number, year: number) =>
+    ms >= Date.UTC(year, 8, 1) && ms < Date.UTC(year + 1, 0, 1);
+
+  for (const { slug, dir } of leagues) {
+    const found = latestSeason(dir);
+
+    it.runIf(found)(`${slug}: in-season claims process Wednesday evening PT`, () => {
+      const { file, year } = found!;
+      const events: MflCalendarEvent[] = JSON.parse(fs.readFileSync(file, 'utf-8'));
+      const runs = expand(events, PROCESS).filter((ms) => inSeason(ms, year));
+      expect(runs.length, `${file} carries no in-season waiver processing event`).toBeGreaterThan(0);
+
+      for (const ms of runs) {
+        const { weekday, hour } = partsPt(ms);
+        const when = new Date(ms).toISOString();
+        expect(weekday, `processing run ${when} is not on Wednesday PT`).toBe('Wednesday');
+        // Evening, not morning — pins the day and half of the day without
+        // asserting 7pm vs 8pm vs 9pm, which is per-league and has moved.
+        expect(hour, `processing run ${when} is not in the evening PT`).toBeGreaterThanOrEqual(17);
+        expect(hour).toBeLessThanOrEqual(23);
+      }
+    });
+
+    it.runIf(found)(`${slug}: the Monday before a real run is waiver, the day after is FCFS`, () => {
+      const { file, year } = found!;
+      const events: MflCalendarEvent[] = JSON.parse(fs.readFileSync(file, 'utf-8'));
+      const opens = expand(events, ['WAIVER_UNLOCK']);
+      const runs = expand(events, PROCESS).filter((ms) => inSeason(ms, year));
+
+      // Anchor on a run that a real unlock precedes within the same week —
+      // otherwise the Monday probe could land before waivers ever opened and
+      // fail for a reason that has nothing to do with the cadence.
+      const anchor = runs.find((ms) => opens.some((o) => o > ms - SEVEN_DAYS_MS && o < ms));
+      expect(anchor, 'no in-season processing run is preceded by an unlock').toBeTruthy();
+
+      // Derived from the anchor, not written down: two days back lands on
+      // Monday, one day forward on Thursday, both sampled at midday.
+      const noonAfter = (ms: number) => {
+        const d = new Date(ms);
+        d.setUTCHours(19, 0, 0, 0); // ~noon PT on that UTC date
+        return d;
+      };
+      const monday = noonAfter(anchor! - 2 * 24 * 60 * 60 * 1000);
+      const dayAfter = noonAfter(anchor! + 24 * 60 * 60 * 1000);
+
+      expect(partsPt(monday.getTime()).weekday).toBe('Monday');
+      expect(resolveWaiverWindow(events, monday).mode).toBe('waiver');
+      expect(resolveWaiverWindow(events, dayAfter).mode).toBe('fcfs');
+    });
+  }
+
+  it('reports whether the calendar has been synced yet', () => {
+    const missing = leagues.filter(({ dir }) => !latestSeason(dir));
+    // Not a failure — the feed is owner-gated and syncs in CI. This exists so a
+    // green run does not read as "the calendar assertions passed" when they
+    // were skipped.
+    if (missing.length) {
+      console.warn(
+        `[waiver-window] calendar.json not synced for: ${missing.map((m) => m.slug).join(', ')} — ` +
+          `the real-calendar assertions were SKIPPED.`
+      );
+    }
+    expect(true).toBe(true);
+  });
 });
