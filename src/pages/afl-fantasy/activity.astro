@@ -10,11 +10,11 @@ import {
 	getDailyPageViews,
 	getGlobalPagePopularity,
 	getAllOwnerPagePopularity,
-	getActivityLevel,
-	getActivityLabel,
-	formatLastSeenLong,
-	type ActivityLevel,
+	buildOwnerActivityRow,
+	sortByLastSeen,
+	type OwnerActivityRow,
 } from '../../utils/owner-activity';
+import { lastMflMoveByFranchise, type MflMove } from '../../utils/mfl-activity';
 import { getLeagueContext, getLeagueBaseUrl } from '../../utils/league-context';
 
 // League resolved from URL via the registry — never hardcode the id/slug.
@@ -143,6 +143,11 @@ if (useMock) {
 // tracks waiver claims, which is AFL's rolling "Yahoo-style" add mechanism.
 interface TxCounts { trades: number; freeAgents: number; thirdStat: number; total: number; }
 const txCountMap: Record<string, TxCounts> = {};
+// Most recent owner-driven MFL move per franchise. This is the FALLBACK
+// MFL signal: MFL's own `lastVisit` (loaded below) is a real login timestamp
+// and strictly better, but it exists only for leagues we are commissioner of
+// and only once the sync workflow has run.
+let mflMoveMap: Record<string, MflMove> = {};
 const ensureFranchise = (id: string) => {
 	if (!txCountMap[id]) txCountMap[id] = { trades: 0, freeAgents: 0, thirdStat: 0, total: 0 };
 };
@@ -151,12 +156,22 @@ const ensureFranchise = (id: string) => {
 const txFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/transactions.json', { eager: true });
 
 if (useMock) {
+	const MOCK_MOVE_TYPES = ['TRADE', 'FREE_AGENT', 'WAIVER', 'IR'];
 	for (const fid of franchiseIds) {
 		const n = parseInt(fid, 10);
 		const trades = (n % 4);
 		const fa = (n % 6);
 		const waivers = (n % 5);
 		txCountMap[fid] = { trades, freeAgents: fa, thirdStat: waivers, total: trades + fa + waivers };
+		// Busier owners moved more recently; franchises with no moves are left
+		// out so the "no moves" branch of the blend is exercised too.
+		const moves = trades + fa + waivers;
+		if (moves > 0) {
+			mflMoveMap[fid] = {
+				at: Date.now() - Math.max(0.25, 30 / (moves + 1)) * 86_400_000,
+				type: MOCK_MOVE_TYPES[n % MOCK_MOVE_TYPES.length],
+			};
+		}
 	}
 } else {
 	// AFL spans many historical seasons. Walk years newest-first and use the
@@ -181,6 +196,8 @@ if (useMock) {
 		const parsed = parseTx(key);
 		if (parsed.length > 0) { rawTx = parsed; break; }
 	}
+
+	mflMoveMap = lastMflMoveByFranchise(rawTx);
 
 	for (const tx of rawTx) {
 		if (tx.type === 'TRADE') {
@@ -207,37 +224,42 @@ const txLeaderboard = aflConfig.teams
 	}))
 	.sort((a, b) => b.counts.total - a.counts.total);
 
-interface TeamActivity {
-	franchiseId: string;
-	name: string;
-	icon: string;
-	lastVisit: number | null;
-	level: ActivityLevel;
-	label: string;
-	timeAgo: string;
-}
+// MFL's own `lastVisit` — the real last-login timestamp per franchise, synced
+// by .github/workflows/sync-owner-last-visit.yml. A glob rather than a static
+// import so a league without the file yet builds fine instead of failing on a
+// missing module. Empty map = fall back to transaction recency.
+const lastVisitFiles = import.meta.glob('../../../data/afl-fantasy/owner-last-visit.json', { eager: true });
+const mflVisitMap: Record<string, number> = (() => {
+	const mod: any = Object.values(lastVisitFiles)[0];
+	const data = mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
+	const raw = data?.lastVisit;
+	if (!raw || typeof raw !== 'object') return {};
+	// Stored as epoch SECONDS (MFL's unit); everything downstream is ms.
+	const out: Record<string, number> = {};
+	for (const [franchiseId, seconds] of Object.entries(raw)) {
+		const n = Number(seconds);
+		if (Number.isFinite(n) && n > 0) out[franchiseId] = n * 1000;
+	}
+	return out;
+})();
 
-const teams: TeamActivity[] = aflConfig.teams.map((team: any) => {
-	const ts = activityMap[team.franchiseId] ?? null;
-	const level = getActivityLevel(ts);
-	return {
-		franchiseId: team.franchiseId,
-		name: chooseTeamName({
-			fullName: team.name,
-			nameMedium: team.nameMedium,
-			nameShort: team.nameShort,
-			abbrev: team.abbrev,
+const teams: OwnerActivityRow[] = sortByLastSeen(
+	aflConfig.teams.map((team: any) =>
+		buildOwnerActivityRow({
+			franchiseId: team.franchiseId,
+			name: chooseTeamName({
+				fullName: team.name,
+				nameMedium: team.nameMedium,
+				nameShort: team.nameShort,
+				abbrev: team.abbrev,
+			}),
+			icon: team.icon,
+			siteVisit: activityMap[team.franchiseId] ?? null,
+			mflVisit: mflVisitMap[team.franchiseId] ?? null,
+			move: mflMoveMap[team.franchiseId] ?? null,
 		}),
-		icon: team.icon,
-		lastVisit: ts,
-		level,
-		label: getActivityLabel(level),
-		timeAgo: formatLastSeenLong(ts),
-	};
-});
-
-// Sort by most recent visit (nulls/never-seen last)
-teams.sort((a, b) => (b.lastVisit ?? 0) - (a.lastVisit ?? 0));
+	),
+);
 
 // Build chart series data: one series per team with daily page view counts
 const chartTeams = aflConfig.teams.map((team: any, idx: number) => ({

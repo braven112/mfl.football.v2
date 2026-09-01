@@ -91,8 +91,16 @@
 
 ## Before you spend an hour
 
-- `export?TYPE=bogus` prints every valid export type — faster and more reliable
-  than the docs, which 403 from this environment.
+- `export?TYPE=bogus` prints every valid export type in its error message —
+  faster than reading the docs, and it is the authoritative list. It lists
+  ENDPOINTS, not fields — see the next bullet.
+- **Never conclude "MFL does not expose X" from an anonymous call.** A
+  commissioner cookie adds ~20 undocumented fields to every franchise in
+  `TYPE=league`, `lastVisit` (a real last-login timestamp) among them. That
+  one was written off as nonexistent on anonymous evidence in Aug 2026.
+  Probe with the cookie, and make the probe assert it actually authenticated
+  — an anonymous response is missing the field too, so the two look
+  identical. `scripts/probe-mfl-franchise-fields.mjs` is the pattern.
 - **Don't ship inferred parameter names to a write endpoint.** Transaction-log
   fields are past-tense (`activated`); import params are verbs (`ACTIVATE`), and
   the direction is inverted. That one-letter guess burned five PRs.
@@ -102,7 +110,11 @@
   VALUE CHANGE, not reading MFL's 200 — and never discard the response body, or
   a silent no-op is invisible. `res.ok && !/error/i` also passes an HTML login
   page. (2026-08-31)
-- **MFL egress is proxy-blocked from web sandboxes.** Don't burn time curling it.
+- **MFL egress from web sandboxes: try it before assuming it's blocked.** As of
+  2026-08-30, `api.myfantasyleague.com` GETs work fine through the agent proxy
+  (60-league sweeps, `export?TYPE=…`, the `api_info` docs page). What you will
+  NOT have is credentials — `MFL_USER_ID` lives in GitHub secrets, not in the
+  container — so anything owner- or commissioner-gated 302s to login.
 - In tests, `resolveWeekLineup` and friends read committed feeds from
   `process.cwd()`. To assert an absence, use `NO_DISK_FEED_YEAR` (1999) — a real
   year asserts against bot-synced data and fails later, on `main`.
@@ -220,6 +232,72 @@ would not do the job.
 - `scripts/set-afl-waiver-order.ts` — computes the correct order; `--live` is
   blocked pending a working transport
 - `docs/claude/afl-rules.md` § Setting the waiver order
+
+---
+
+## 2026-08-30 - MFL DOES Have a Last-Online Value: `lastVisit`, Commissioner-Only and Undocumented
+
+**Corrects an earlier conclusion in this file.** The first pass said MFL had no
+last-online number anywhere. That was wrong, and the way it was wrong is the
+lesson: every check was run ANONYMOUSLY, and anonymously it is true.
+
+**The field is `lastVisit`** — epoch SECONDS, on the franchise record of
+`export?TYPE=league`, populated for every franchise. It appears ONLY when the
+request carries a commissioner cookie. Proven by
+`scripts/probe-mfl-franchise-fields.mjs` (2026-08-30 run): TheLeague 16/16 and
+AFL 24/24 populated.
+
+**Why it hid for years.** All four of these are true and none of them found it:
+
+- It is in NO documentation. The words "visit", "online" and "login" appear
+  nowhere in MFL's API reference, and `TYPE=league`'s entry says only that a
+  commissioner cookie returns "owner names, email addresses, **etc.**" —
+  `lastVisit` is inside that "etc."
+- None of the 59 export types is activity-shaped (`export?TYPE=bogus` lists
+  them all). There is no `lastVisit` ENDPOINT, only a field.
+- Anonymously the franchise record carries only `id name abbrev division
+  waiverSortOrder icon logo bbidAvailableBalance salaryCapAmount stadium
+  sound` — swept across 60 public leagues.
+- Every `league.json` committed in this repo was fetched anonymously, so
+  grepping our own data finds nothing.
+
+**THE RULE THIS BUYS: never conclude "MFL does not expose X" from an anonymous
+call.** A commissioner session adds ~20 fields to each franchise —
+`address cell cell2 city country email fax future_draft_picks home_modules
+lastVisit mail_event owner_name phone play_audio state time_zone
+twitterUsername use_advanced_editor username zip` — plus `commish_username` on
+the league object. Anonymous absence is not evidence of absence. Check with the
+cookie before writing "MFL has no…" anywhere.
+
+**And the control that makes such a probe trustworthy:** an anonymous response
+has no `lastVisit` either, so "field not found" and "cookie did not
+authenticate" look identical. The probe therefore asserts owner-private fields
+ARE present and reports INCONCLUSIVE otherwise. Any future
+"does MFL expose X?" probe needs the same check or its negative result is
+worthless.
+
+**Where it is a commissioner-only field, it is genuinely absent.** Best Ball #1
+(an owner-only league for this account) adds just `mail_event` + `username` and
+no `lastVisit` — so the sync treats "no lastVisit AND no committed file" as a
+routine skip, and "no lastVisit BUT a committed file exists" as a credential
+regression.
+
+**How it is consumed.** `scripts/sync-owner-last-visit.mjs` (cron:
+`.github/workflows/sync-owner-last-visit.yml`, every 6h) writes
+`data/<league>/owner-last-visit.json`. It must run in Actions, not at page
+render: the commissioner cookie is a GitHub secret and does not exist in the
+Vercel runtime. **PRIVACY** — the same response carries emails, phone numbers,
+street addresses and real names, so the script whitelists `id` + `lastVisit`
+and asserts nothing contact-shaped reaches disk;
+`tests/owner-last-visit-data.test.ts` re-checks the committed files.
+
+Transaction recency (`src/utils/mfl-activity.ts`) remains the FALLBACK for
+where `lastVisit` is unavailable. It is a floor on the same quantity — an owner
+must log in to transact — and two exclusions are load-bearing there:
+`by_commish` rows (70 of TheLeague's 1,152 in 2025; the commish fixing a roster
+is not evidence the owner was awake) and the league-wide system types
+`LOCK_ALL_PLAYERS` / `AUTO_PROCESS_WAIVERS` / `BBID_AUTO_PROCESS_WAIVERS` /
+`LOAD_ROSTERS`, which fire weekly for everyone.
 
 ---
 

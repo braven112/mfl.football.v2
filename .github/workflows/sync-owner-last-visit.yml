@@ -1,0 +1,98 @@
+name: Sync Owner Last Visit
+
+# Commits each franchise's MFL `lastVisit` — the real last-login timestamp —
+# into data/<league>/owner-last-visit.json, for the Owner Activity page.
+#
+# WHY A WORKFLOW AND NOT A PAGE FETCH: `lastVisit` is returned ONLY to a
+# commissioner session, and the commissioner cookie lives in GitHub secrets,
+# not in the Vercel runtime. Actions holds the credential, the repo holds the
+# result — the same arrangement as fetch-owner-names.yml.
+#
+# PRIVACY: the same authenticated response carries email addresses, phone
+# numbers and real names. The script whitelists `id` + `lastVisit` only and
+# asserts the payload is free of contact-shaped text before writing. Nothing
+# else from that response is ever committed or logged.
+#
+# CADENCE: every 6 hours. The activity report buckets at 24h (Active) and 7d
+# (Idle), so finer resolution buys nothing, and writeJsonIfChanged skips the
+# commit entirely on a run where nobody's lastVisit moved.
+on:
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      league:
+        description: 'Single league slug (blank = all)'
+        required: false
+        type: string
+        default: ''
+      dry_run:
+        description: 'Report what would change without writing'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: sync-owner-last-visit
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+          ref: ${{ github.ref }}
+
+      - name: Setup pnpm + Node + install
+        uses: ./.github/actions/setup
+
+      - name: Fetch lastVisit from MFL
+        env:
+          # MFL_IS_COMMISH is load-bearing: lastVisit is a commissioner-only
+          # field. With MFL_USER_ID alone the response is anonymous, which the
+          # script detects (zero lastVisit values) and treats as a hard error
+          # rather than committing an empty map over good data.
+          MFL_USER_ID: ${{ secrets.MFL_USER_ID }}
+          MFL_IS_COMMISH: ${{ secrets.MFL_IS_COMMISH }}
+          MFL_USERNAME: ${{ secrets.MFL_USERNAME }}
+          MFL_PASSWORD: ${{ secrets.MFL_PASSWORD }}
+        run: |
+          set -o pipefail
+          ARGS=""
+          if [ -n "${{ inputs.league }}" ]; then ARGS="$ARGS --league=${{ inputs.league }}"; fi
+          if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
+          node ./scripts/sync-owner-last-visit.mjs $ARGS 2>&1 | tee /tmp/last-visit.txt
+
+      # The guard test is the backstop against a malformed or contact-carrying
+      # file landing — cheaper to fail here than to commit it.
+      - name: Verify the written data
+        if: inputs.dry_run != true
+        run: pnpm vitest run tests/owner-last-visit-data.test.ts
+
+      - name: Commit and push
+        if: inputs.dry_run != true
+        uses: ./.github/actions/commit-push
+        with:
+          add-paths: 'data/theleague/owner-last-visit.json data/afl-fantasy/owner-last-visit.json'
+          commit-message: 'chore: sync owner last-visit from MFL'
+          no-changes-message: 'No owner visited MFL since the last sync — nothing to commit.'
+          git-user-name: 'Owner Activity Bot'
+          push-ref: ${{ github.ref_name }}
+
+      - name: Summarise
+        if: always()
+        run: |
+          {
+            echo "## Owner last-visit sync"
+            echo ""
+            echo '```'
+            cat /tmp/last-visit.txt || echo "(no output)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
