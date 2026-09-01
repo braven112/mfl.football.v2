@@ -21,8 +21,13 @@ import { chroma } from '../src/utils/nfl-team-colors';
 
 const read = (p: string) => readFileSync(resolve(__dirname, '..', p), 'utf8');
 
-const playersPage = read('src/pages/theleague/players.astro');
-const aflPlayersPage = read('src/pages/afl-fantasy/players.astro');
+// Two sources per league since 2026-09-01, when the pages' table scripts were
+// de-inlined into modules (see tests/fixtures/inline-script-baseline.json):
+// the .astro still SHAPES each player row server-side, and the module builds
+// the modal payload from it in the browser. Both halves are pinned.
+const playersFrontmatter = read('src/pages/theleague/players.astro');
+const playersPage = read('src/scripts/players/theleague-players.ts');
+const aflPlayersPage = read('src/scripts/players/afl-players.ts');
 const modal = read('src/components/theleague/PlayerDetailsModal.astro');
 
 describe('Free Agents → modal payload', () => {
@@ -40,8 +45,9 @@ describe('Free Agents → modal payload', () => {
   it('carries the franchise from the roster feed rather than a bare rostered flag', () => {
     // `rosteredPlayers` is keyed by player id across all 16 franchises; drop
     // the franchise from its value and there is nothing to hand the modal.
-    expect(playersPage).toMatch(/franchiseId: franchise\.id/);
-    expect(playersPage).toMatch(/franchiseId: rosterInfo\?\.franchiseId \?\? null/);
+    // Server-side shaping, so this one is the page, not the module.
+    expect(playersFrontmatter).toMatch(/franchiseId: franchise\.id/);
+    expect(playersFrontmatter).toMatch(/franchiseId: rosterInfo\?\.franchiseId \?\? null/);
   });
 });
 
@@ -58,7 +64,7 @@ describe('AFL Free Agents → modal payload', () => {
     // `activeConf` is reassigned by the conference switcher without a
     // reload. Capturing it once would leave every row named by the
     // conference the page happened to open on.
-    expect(aflPlayersPage).toMatch(/function ownerForView\(p\) \{[\s\S]*?activeConf/);
+    expect(aflPlayersPage).toMatch(/function ownerForView\(p[^)]*\) \{[\s\S]*?activeConf/);
   });
 });
 

@@ -26,6 +26,17 @@ const FREE_AGENT_PAGES = [
   'src/pages/afl-fantasy/players.astro',
 ];
 
+/**
+ * The table logic itself. De-inlined 2026-09-01: each page kept its markup and
+ * a one-line payload bridge, and its ~1,750 / ~900 line `define:vars` block
+ * became a bundled module. Assertions about the SCRIPT belong here; ones about
+ * the page (which module it mounts, which stylesheet it pulls) stay above.
+ */
+const FREE_AGENT_SCRIPTS = [
+  'src/scripts/players/theleague-players.ts',
+  'src/scripts/players/afl-players.ts',
+];
+
 const ROSTER_PAGES = [
   'src/pages/theleague/rosters.astro',
   'src/pages/afl-fantasy/rosters.astro',
@@ -43,11 +54,16 @@ describe('rankings reach every decision page', () => {
       expect(src).toContain('initRankingTable(');
     });
 
-    it.each(FREE_AGENT_PAGES)('%s answers the module over CustomEvents', (page) => {
+    it.each(FREE_AGENT_SCRIPTS)('%s answers the module over CustomEvents', (page) => {
       const src = read(page);
-      // The inline table script is a classic (define:vars) script and cannot
-      // import — this event pair is the entire bridge. Drop either half and the
-      // columns render with no data behind them.
+      // This event pair is the entire bridge between the table script and the
+      // rankings module. Drop either half and the columns render with no data
+      // behind them.
+      //
+      // The bridge exists because these scripts were classic `define:vars`
+      // blocks and could not import. They are bundled modules now, so a direct
+      // import is finally possible — but swapping it in is a behavior change
+      // and has not been done, so the bridge is still what must hold.
       for (const event of [
         'rankings:page-ready',
         'rankings:set-lookup',
@@ -60,15 +76,15 @@ describe('rankings reach every decision page', () => {
       }
     });
 
-    it.each(FREE_AGENT_PAGES)('%s lets the shared module pick the columns', (page) => {
+    it.each([...FREE_AGENT_PAGES, ...FREE_AGENT_SCRIPTS])('%s lets the shared module pick the columns', (page) => {
       // Which ranking columns show is one rule for both leagues (the owner's
       // composite, capped). A page passing its own budget is how the two
       // tables drifted apart the first time.
       expect(read(page)).not.toContain('maxColumns');
     });
 
-    it.each(FREE_AGENT_PAGES)('%s ignores bridge events once its own table is detached', (page) => {
-      // After a ClientRouter swap the previous page's inline script is still
+    it.each(FREE_AGENT_SCRIPTS)('%s ignores bridge events once its own table is detached', (page) => {
+      // After a ClientRouter swap the previous page's table script is still
       // alive and still answers these document-level events — measured: two
       // handlers responded to rankings:get-sort on the AFL page after
       // navigating from TheLeague's. Both pages use the same element ids, so a
@@ -81,10 +97,12 @@ describe('rankings reach every decision page', () => {
       expect(guards.length).toBeGreaterThanOrEqual(5);
     });
 
-    it.each(FREE_AGENT_PAGES)('%s restores its own sort when the last ranking column goes', (page) => {
+    it.each(FREE_AGENT_SCRIPTS)('%s restores its own sort when the last ranking column goes', (page) => {
       // Hiding the last ranking source used to leave the table ordered by a
       // column that no longer exists, with no header left to click.
-      expect(read(page)).toContain('e.detail.key == null');
+      // Matched without the receiver: the modules read it through a
+      // `(e as CustomEvent).detail` cast now that they are type-checked.
+      expect(read(page)).toContain('detail.key == null');
     });
 
     it.each(FREE_AGENT_PAGES)('%s styles its injected ranking headers globally', (page) => {
@@ -104,7 +122,7 @@ describe('rankings reach every decision page', () => {
       expect(css).not.toContain(':global(');
     });
 
-    it.each(FREE_AGENT_PAGES)('%s re-applies column visibility after render', (page) => {
+    it.each(FREE_AGENT_SCRIPTS)('%s re-applies column visibility after render', (page) => {
       // render() rebuilds tbody with innerHTML, which wipes every inline
       // display style. Without this call the hidden group reappears on any
       // sort, filter or "load more".

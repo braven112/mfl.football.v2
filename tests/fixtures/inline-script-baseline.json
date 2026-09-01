@@ -3,10 +3,8 @@
   "recordedAt": "2026-09-01",
   "bridgeMaxLines": 25,
   "bridgeNote": "A file with 25 or fewer unbundled lines needs no entry here. That is deliberate slack, and it is safe: every current one is a payload bridge (a define:vars block whose whole job is handing a JSON string to the bundled module next to it) or a two-line guard. Nothing that small can hide an application. Cross the threshold and you must add an entry, which is the point — it forces the choice between `sanctioned` and `migrating` at the moment the code is written.",
-  "migratingTotal": 4346,
+  "migratingTotal": 1680,
   "migrating": {
-    "src/pages/theleague/players.astro": 1753,
-    "src/pages/afl-fantasy/players.astro": 913,
     "src/pages/theleague/mock-draft/index.astro": 492,
     "src/pages/theleague/projected-free-agents.astro": 385,
     "src/pages/theleague/playoffs.astro": 326,
@@ -38,6 +36,6 @@
   "notes": {
     "whyThisExists": "Interactivity in this app is written two ways: React islands (typed, testable, in Storybook) and hand-rolled DOM script. The bundled half of the script is fine — it is TypeScript under the type baseline. This guard is aimed at the ~4.4k lines that are neither: no types, no imports, no type-checking, and no way to share a helper with the island rendering beside them.",
     "howToShrink": "Move the block into a React island when a component owns the state, or into a bundled `<script>` module when the DOM is server-rendered and the script is progressive enhancement — then lower the numbers here. src/components/shared/assets/assets-page-behaviors.ts is the worked example of the second path (101 lines, 2026-09-01); the TradeBuilder/useSession migration is the worked example of the first. See docs/claude/rules/client-data.md § Retiring an inline script.",
-    "biggestFirst": "players.astro is 1,753 + 913 lines and is ALSO a forked sibling pair (see page-fork-baseline.json), so unforking it and de-inlining it are the same piece of work — do them together rather than twice."
+    "biggestFirst": "players.astro (both leagues) was de-inlined 2026-09-01 into src/scripts/players/. The pages stay FORKED — they had diverged 56% (TheLeague carries contracts, salary and the auction board; the AFL carries conferences and ADP), so a single page component would have been worse than two. The ~21 genuinely shared functions are the real unification target, and they are now in modules where that is possible. Next biggest inline blocks: mock-draft/index.astro (492) and projected-free-agents.astro (385)."
   }
 }

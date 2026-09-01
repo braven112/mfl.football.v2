@@ -113,7 +113,7 @@ inline script is broken up.
 
 `is:inline` and `define:vars` opt out of bundling, typing and imports at once:
 no TypeScript, nothing for `astro check` to read, and no way to share a helper
-with the component rendering beside them. **4,346 lines are still written that
+with the component rendering beside them. **1,680 lines are still written that
 way**, pinned per file in `tests/fixtures/inline-script-baseline.json` and
 enforced by `tests/inline-script-ratchet.test.ts`. That set may only shrink.
 Report: `node scripts/lib/inline-script-inventory.mjs`.
@@ -172,7 +172,53 @@ correctly filtered.
 5. Verify in a browser, including a **soft navigation away and back**. An
    HTML diff cannot see this class of bug.
 
-**Biggest target:** `players.astro` is 1,753 + 913 lines and is also a forked
-sibling pair (`tests/fixtures/page-fork-baseline.json`), so unforking it and
-de-inlining it are the same piece of work — do them together, not twice.
+## The payload-bridge shape, for a big block
+
+A `define:vars` block with twenty-odd injected consts cannot simply become an
+import — the module has no way to see them. The shape that works, and the one
+`LineupPage.astro` and both `players.astro` pages now use:
+
+1. Frontmatter builds ONE `JSON.stringify({...})` of everything the client
+   needs.
+2. A one-line `is:inline define:vars` bridge parses it onto a `window.__X__`
+   key. That block stays inline forever, and correctly so — it is under the
+   baseline's 25-line bridge threshold and needs no entry.
+3. The module reads that key and destructures it into the identifiers the body
+   already used, so the body itself moves **unchanged**.
+
+Step 3 is what makes a 1,750-line move reviewable: the diff is a header and an
+indentation change, and everything else is verifiable as a straight move.
+
+**Expect the type baseline to move.** Inline script is invisible to
+`astro check`; a module is not. De-inlining both players pages exposed 303
+latent errors that had been there all along — implicit-any parameters,
+untyped `let x = null` state, `.value`/`.checked` read off `HTMLElement`,
+`e.detail` off `Event`. They are annotation debt, not defects, and they are
+mechanical to clear (they were, in two passes per file). Budget for it, and
+do NOT raise the baseline to absorb them.
+
+**Done so far:** the assets page (101), and both `players.astro` pages
+(1,753 + 913) on 2026-09-01 → `src/scripts/players/`. Next biggest:
+`mock-draft/index.astro` (492) and `projected-free-agents.astro` (385).
+
+## When NOT to unfork at the same time
+
+`players.astro` was the case for doing both at once — it is a forked sibling
+pair AND the biggest inline block. Only half of that turned out to be right.
+
+The two pages had **diverged 56%** (3,613 differing lines of 6,493), unlike
+`lineup.astro`'s 3%: TheLeague carries contracts, salary, surplus value and a
+live auction board; the AFL carries conferences and ADP. Forcing them into one
+component would have meant a page-sized prop list gating whole features on
+league — worse than the fork it removed. So the pages stayed two, and only the
+scripts moved.
+
+What IS shared is real and now reachable: **21 of the 49/33 top-level
+functions** have the same names in both (`filterPlayers`, `sortPlayers`,
+`render`, `setActiveView`, `escapeAttr`, `getHeadshotUrl`, the DEF-spotlight
+rotation, the view-preference helpers). They could not be shared while both
+were classic scripts, because a classic script cannot import. They can now.
+That extraction is the actual unification target here — a shared module, not a
+shared page — and it is a separate change: the implementations have drifted,
+so it is a merge, not a move.
 
