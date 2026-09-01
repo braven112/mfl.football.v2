@@ -40,6 +40,9 @@ import {
   validateClaims,
   validateRound,
   buildPicksParam,
+  waiverImportType,
+  conferenceOfFranchise,
+  freeAgencyIsLeagueWide,
   type WaiverClaim,
 } from '../../utils/waiver-claim';
 
@@ -90,18 +93,10 @@ export const POST: APIRoute = async ({ request }) => {
 
     const rules = readBidRules(leaguePayload);
 
-    // Blind bidding is not universal. The AFL runs WAIVERS_FCFS — rolling
-    // priority, no bids — so blindBidWaiverRequest is the wrong endpoint there
-    // and its bid rules do not exist. Without this gate an AFL session reaches
-    // here, readBidRules falls back to a $0 minimum, and we POST a bid to a
-    // league that has no concept of one. The UI only offers this in TheLeague,
-    // but the endpoint is reachable from any authenticated session.
-    if (!rules.blindBid) {
-      return fail(
-        `${league.name} does not use blind-bid waivers, so claims cannot be submitted here.`,
-        400
-      );
-    }
+    // Both waiver systems are supported, but they are genuinely different:
+    // TheLeague bids (blindBidWaiverRequest, PICKS `add_bid_drop`), the AFL
+    // runs rolling priority (waiverRequest, PICKS `add_drop`). Sending a bid to
+    // a priority league would make MFL read the amount as the drop id.
 
     const roundError = validateRound(round, rules);
     if (roundError) return fail(roundError, 400);
@@ -122,8 +117,18 @@ export const POST: APIRoute = async ({ request }) => {
     const rosterPlayerIds = new Set<string>(
       (rosters[user.franchiseId] as any[]).map((p: any) => String(p.id ?? p))
     );
+    // In a duplicate-player league scoped by conference (the AFL), the same
+    // player can be rostered by one franchise in EACH conference — so a rival
+    // conference's roster says nothing about your availability, and treating it
+    // as "taken" would reject legal claims.
+    const leagueWide = freeAgencyIsLeagueWide(leaguePayload);
+    const myConference = leagueWide ? null : conferenceOfFranchise(leaguePayload, user.franchiseId);
+    const countsAgainstMe = (fid: string) =>
+      leagueWide || conferenceOfFranchise(leaguePayload, fid) === myConference;
     const rosteredEverywhere = new Set<string>(
-      Object.values(rosters).flatMap((list: any) => (list as any[]).map((p: any) => String(p.id ?? p)))
+      Object.entries(rosters)
+        .filter(([fid]) => countsAgainstMe(fid))
+        .flatMap(([, list]: any) => (list as any[]).map((p: any) => String(p.id ?? p)))
     );
     const requestedAdds = (claims ?? []).map((c) => String(c?.addPlayerId));
     const freeAgentIds = new Set(requestedAdds.filter((id) => id && !rosteredEverywhere.has(id)));
@@ -139,12 +144,14 @@ export const POST: APIRoute = async ({ request }) => {
     if (errors.length > 0) return fail(errors[0], 400, { errors });
 
     // ── Write, owner mode ───────────────────────────────────────────────────
-    const params = new URLSearchParams({ L: leagueId, PICKS: buildPicksParam(claims!) });
-    if (rules.conditional) params.set('ROUND', String(round));
+    const params = new URLSearchParams({ L: leagueId, PICKS: buildPicksParam(claims!, rules.system) });
+    // `waiverRequest` requires ROUND unconditionally; `blindBidWaiverRequest`
+    // only when the league bids conditionally.
+    if (rules.conditional || rules.system === 'priority') params.set('ROUND', String(round));
     if (replace) params.set('REPLACE', '1');
 
     const res = await mflFetch({
-      url: `https://api.myfantasyleague.com/${year}/import?TYPE=blindBidWaiverRequest&L=${leagueId}`,
+      url: `https://api.myfantasyleague.com/${year}/import?TYPE=${waiverImportType(rules)}&L=${leagueId}`,
       method: 'POST',
       mflUserCookie: user.id,
       body: params.toString(),

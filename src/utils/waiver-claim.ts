@@ -18,12 +18,16 @@
  * holding $1M.
  */
 
+export type WaiverSystem = 'bbid' | 'priority';
+
 export interface WaiverBidRules {
   /**
-   * Whether the league bids at all. TheLeague is BBID_FCFS; the AFL is
-   * WAIVERS_FCFS — rolling priority with no bidding, so a blind-bid request is
-   * simply the wrong endpoint there.
+   * Which system the league runs. TheLeague is BBID_FCFS (blind bidding); the
+   * AFL is WAIVERS_FCFS (rolling priority, no bids). They use DIFFERENT MFL
+   * import types and different PICKS shapes, so this is not cosmetic.
    */
+  system: WaiverSystem;
+  /** Convenience: `system === 'bbid'`. */
   blindBid: boolean;
   /** Minimum legal bid, in whole dollars. */
   minimum: number;
@@ -38,8 +42,8 @@ export interface WaiverBidRules {
 export interface WaiverClaim {
   /** MFL player id to bid on. */
   addPlayerId: string;
-  /** Whole dollars. */
-  bid: number;
+  /** Whole dollars. Ignored by priority-waiver leagues, which do not bid. */
+  bid?: number;
   /** MFL player id to drop if awarded; omit to add without dropping. */
   dropPlayerId?: string;
 }
@@ -65,8 +69,10 @@ export function readBidRules(league: Record<string, any> = {}): WaiverBidRules {
     const n = Number(v);
     return Number.isFinite(n) && n > 0 ? n : fallback;
   };
+  const blindBid = String(league.currentWaiverType ?? '').toUpperCase().includes('BBID');
   return {
-    blindBid: String(league.currentWaiverType ?? '').toUpperCase().includes('BBID'),
+    system: blindBid ? 'bbid' : 'priority',
+    blindBid,
     minimum: num(league.bbidMinimum, 0),
     // A zero or missing increment must not become a modulo-by-zero; treat it
     // as "any amount" rather than rejecting every bid.
@@ -105,16 +111,18 @@ export function validateClaims(claims: WaiverClaim[], ctx: ClaimValidationContex
       errors.push(`${label}: that player is not a free agent.`);
     }
 
-    if (!Number.isFinite(c.bid) || c.bid <= 0) {
+    if (rules.system !== 'bbid') {
+      // Priority waivers have no bid — position in the order decides.
+    } else if (!Number.isFinite(c.bid) || c.bid <= 0) {
       errors.push(`${label}: enter a bid amount.`);
     } else {
-      if (c.bid < rules.minimum) {
+      if (c.bid! < rules.minimum) {
         errors.push(`${label}: bid is below the $${rules.minimum.toLocaleString()} minimum.`);
       }
-      if (c.bid % rules.increment !== 0) {
+      if (c.bid! % rules.increment !== 0) {
         errors.push(`${label}: bid must be a multiple of $${rules.increment.toLocaleString()}.`);
       }
-      if (c.bid > ctx.availableBalance) {
+      if (c.bid! > ctx.availableBalance) {
         errors.push(
           `${label}: bid exceeds your $${ctx.availableBalance.toLocaleString()} remaining blind-bid budget.`
         );
@@ -144,9 +152,14 @@ export function validateClaims(claims: WaiverClaim[], ctx: ClaimValidationContex
  * Order is the owner's conditional priority and MFL honors it, so callers must
  * not re-sort.
  */
-export function buildPicksParam(claims: WaiverClaim[]): string {
+export function buildPicksParam(claims: WaiverClaim[], system: WaiverSystem = 'bbid'): string {
   return claims
-    .map((c) => `${c.addPlayerId}_${c.bid}_${c.dropPlayerId && c.dropPlayerId !== NO_DROP ? c.dropPlayerId : NO_DROP}`)
+    .map((c) => {
+      const drop = c.dropPlayerId && c.dropPlayerId !== NO_DROP ? c.dropPlayerId : NO_DROP;
+      // Blind bidding carries the bid; priority waivers are add_drop only —
+      // sending a bid there would make MFL read the amount as the drop id.
+      return system === 'bbid' ? `${c.addPlayerId}_${c.bid}_${drop}` : `${c.addPlayerId}_${drop}`;
+    })
     .join(',');
 }
 
@@ -155,10 +168,52 @@ export function buildPicksParam(claims: WaiverClaim[]): string {
  * Returns null when acceptable, else the reason.
  */
 export function validateRound(round: unknown, rules: WaiverBidRules): string | null {
-  if (!rules.conditional) return null;
+  // Priority waivers (`waiverRequest`) require ROUND unconditionally; blind
+  // bidding only requires it when the league bids conditionally.
+  if (!rules.conditional && rules.system !== 'priority') return null;
   const n = Number(round);
   if (!Number.isInteger(n) || n < 1 || n > rules.maxRounds) {
     return `Round must be a whole number between 1 and ${rules.maxRounds}.`;
   }
   return null;
+}
+
+/** MFL import type for a league's waiver system. */
+export function waiverImportType(rules: WaiverBidRules): string {
+  return rules.blindBid ? 'blindBidWaiverRequest' : 'waiverRequest';
+}
+
+/**
+ * Which conference a franchise belongs to, or null in a single-conference
+ * league. MFL puts `conference` on the DIVISION, not the franchise, so it has
+ * to be resolved through the divisions map.
+ */
+export function conferenceOfFranchise(
+  league: Record<string, any> = {},
+  franchiseId: string
+): string | null {
+  const divisions = league?.divisions?.division;
+  const list = Array.isArray(divisions) ? divisions : divisions ? [divisions] : [];
+  if (list.length === 0) return null;
+  const franchises = Array.isArray(league?.franchises?.franchise)
+    ? league.franchises.franchise
+    : [league?.franchises?.franchise].filter(Boolean);
+  const mine = franchises.find((f: any) => String(f?.id) === String(franchiseId));
+  if (!mine) return null;
+  const div = list.find((d: any) => String(d?.id) === String(mine.division));
+  return div?.conference != null ? String(div.conference) : null;
+}
+
+/**
+ * Whether a player being on SOMEONE ELSE'S roster makes them unavailable.
+ *
+ * False in a duplicate-player league scoped by conference (the AFL:
+ * `playerLimitUnit: CONFERENCE`), where the same player can be rostered by one
+ * franchise in each conference — so a rival conference's roster says nothing
+ * about your availability. Reading it as "taken" would silently reject
+ * perfectly legal claims. The registry carries the same warning for
+ * cut-player's ownership preflight.
+ */
+export function freeAgencyIsLeagueWide(league: Record<string, any> = {}): boolean {
+  return String(league?.playerLimitUnit ?? 'LEAGUE').toUpperCase() !== 'CONFERENCE';
 }

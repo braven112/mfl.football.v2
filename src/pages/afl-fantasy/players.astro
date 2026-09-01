@@ -39,6 +39,9 @@ import '../../styles/ranking-columns.css';
 import freeAgentsData from '../../../data/afl-fantasy/derived/free-agents.json';
 import { fetchLiveAflRosters, applyLiveRosters, conferenceScopedView, resolveConferenceSelection, type FaSnapshot } from '../../utils/afl-free-agents-live';
 import { getAuthUser } from '../../utils/auth';
+import { readBidRules } from '../../utils/waiver-claim';
+import { getAflLeagueYear } from '../../utils/league-year';
+import WaiverClaimModal from '../../components/shared/WaiverClaimModal.astro';
 // AFL uses team defenses (no IDP), so a DEF free agent has no headshot of its
 // own. Mirror TheLeague's hero treatment: surface a rotating pool of the team's
 // marquee defenders (ESPN headshots) over the logo watermark. The data is keyed
@@ -123,6 +126,40 @@ const { activeConfId } = resolveConferenceSelection(
 // here), matching the client script's default filter state so the numbers
 // don't pop on hydration.
 const scoped = conferenceScopedView(liveView, activeConfId, { includeRookies: true });
+
+// ── Waiver claim context ────────────────────────────────────────────────────
+// The AFL runs WAIVERS_FCFS: rolling priority, no bidding. readBidRules reports
+// that and WaiverClaimModal hides the bid field accordingly — the modal is
+// shared with TheLeague precisely so the two cannot fork.
+// league.json is ~12 KB, so an era-filtered glob costs nothing (the megafile
+// guard in tests/current-era-feed-globs.test.ts is about players.json).
+const aflLeagueModules = import.meta.glob(
+  '../../../data/afl-fantasy/mfl-feeds/20{2[5-9],[3-9][0-9]}/league.json',
+  { eager: true }
+);
+const claimYear = getAflLeagueYear();
+const aflLeagueFeed =
+  (Object.entries(aflLeagueModules).find(([path]) => path.includes(`/${claimYear}/`))?.[1] as any)
+    ?.default?.league ?? {};
+const claimFranchiseId = authUser?.franchiseId ?? null;
+const claimRules = readBidRules(aflLeagueFeed);
+// The drop picker offers only the caller's OWN roster IN THE ACTIVE CONFERENCE
+// — `owners` is keyed by conference because a player can be held once in each.
+// The server verifies ownership again regardless.
+const claimRoster = claimFranchiseId
+  ? liveView.players
+      .filter((pl) => pl.owners?.[activeConfId ?? ''] === claimFranchiseId)
+      .map((pl) => ({ id: pl.id, name: pl.name }))
+      .sort((a, b) => a.name.localeCompare(b.name))
+  : [];
+const claimConfig = {
+  canClaim: !!claimFranchiseId && claimRoster.length > 0,
+  system: claimRules.system,
+  franchiseId: claimFranchiseId,
+  rules: claimRules,
+  roster: claimRoster,
+  year: claimYear,
+};
 const faCounts = scoped.faCounts;
 const freeAgentsCount = scoped.freeAgentsCount;
 const topFa = scoped.topFa;
@@ -399,11 +436,16 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
             {hasProjected && (
               <th class="sortable col-num col-projected col-group--stats" data-sort="projected"><div class="th-content">Proj</div></th>
             )}
+            {claimConfig.canClaim && (
+              <th class="col-fa-action" aria-label="Claim this player"><div class="th-content">Claim</div></th>
+            )}
           </tr>
         </thead>
         <tbody id="player-table-body"></tbody>
       </table>
     </div>
+
+    <WaiverClaimModal config={claimConfig} />
 
     <!-- Show more -->
     <div class="show-more-wrapper" id="show-more-wrapper">
@@ -1005,6 +1047,13 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       }
       if (hasProjected) {
         html += `<td class="cell-num cell-pts col-projected col-group--stats">${p.projected != null ? p.projected.toFixed(1) : '<span class="na">-</span>'}</td>`;
+      }
+      if (claimConfig.canClaim) {
+        // `p.rostered` is conference-scoped on this page, which is exactly the
+        // availability that matters in a duplicate-player league.
+        html += p.rostered
+          ? `<td class="col-fa-action"></td>`
+          : `<td class="col-fa-action"><button type="button" class="place-bid-link claim-open" data-claim-id="${escapeAttr(p.id)}" data-claim-name="${escapeAttr(p.name)}" data-claim-pos="${escapeAttr(p.position || '')}" data-claim-team="${escapeAttr(p.nflTeam || p.team || '')}" data-claim-espn="${escapeAttr(p.espnId || '')}" data-claim-headshot="${escapeAttr(p.headshot || '')}" aria-label="Claim ${escapeAttr(p.name)}">Claim</button></td>`;
       }
       html += `</tr>`;
     }

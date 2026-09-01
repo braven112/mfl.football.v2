@@ -13,11 +13,14 @@ import {
   validateClaims,
   validateRound,
   buildPicksParam,
+  waiverImportType,
+  conferenceOfFranchise,
+  freeAgencyIsLeagueWide,
   NO_DROP,
   type ClaimValidationContext,
 } from '../src/utils/waiver-claim';
 
-const RULES = { blindBid: true, minimum: 425000, increment: 25000, conditional: true, maxRounds: 4 };
+const RULES = { system: 'bbid' as const, blindBid: true, minimum: 425000, increment: 25000, conditional: true, maxRounds: 4 };
 const ctx = (over: Partial<ClaimValidationContext> = {}): ClaimValidationContext => ({
   rules: RULES,
   availableBalance: 2_000_000,
@@ -30,13 +33,13 @@ describe('readBidRules — from the live league payload, never hardcoded', () =>
   it("matches TheLeague's committed league feed", () => {
     const p = path.join(process.cwd(), 'data/theleague/mfl-feeds/2026/league.json');
     const rules = readBidRules(JSON.parse(fs.readFileSync(p, 'utf-8')).league);
-    expect(rules).toEqual({ blindBid: true, minimum: 425000, increment: 25000, conditional: true, maxRounds: 4 });
+    expect(rules).toEqual({ system: 'bbid', blindBid: true, minimum: 425000, increment: 25000, conditional: true, maxRounds: 4 });
   });
 
   it('never yields a zero increment, which would divide by zero on every bid', () => {
     expect(readBidRules({ bbidIncrement: '0' }).increment).toBe(1);
     expect(readBidRules({}).increment).toBe(1);
-    expect(validateClaims([{ addPlayerId: '9001', bid: 7 }], ctx({ rules: readBidRules({}) }))).toEqual([]);
+    expect(validateClaims([{ addPlayerId: '9001', bid: 7 }], ctx({ rules: { ...readBidRules({}), system: 'bbid', blindBid: true } }))).toEqual([]);
   });
 });
 
@@ -115,6 +118,59 @@ describe('validateClaims', () => {
 
   it('rejects an empty board', () => {
     expect(validateClaims([], ctx())).toEqual(['Submit at least one claim.']);
+  });
+});
+
+describe('priority waivers (AFL) — no bidding', () => {
+  const PRIORITY = { ...RULES, system: 'priority' as const, blindBid: false, minimum: 0, increment: 1 };
+
+  it('accepts a claim with no bid at all', () => {
+    expect(validateClaims([{ addPlayerId: '9001', dropPlayerId: '1111' }], ctx({ rules: PRIORITY }))).toEqual([]);
+  });
+
+  it('still enforces roster and free-agent rules', () => {
+    expect(validateClaims([{ addPlayerId: '9001', dropPlayerId: '7777' }], ctx({ rules: PRIORITY })).join())
+      .toMatch(/only drop a player on your own roster/);
+    expect(validateClaims([{ addPlayerId: '1111' }], ctx({ rules: PRIORITY })).join())
+      .toMatch(/not a free agent/);
+  });
+
+  it('omits the bid from PICKS — a bid there would be read as the drop id', () => {
+    expect(buildPicksParam([{ addPlayerId: '9001', dropPlayerId: '1111' }], 'priority')).toBe('9001_1111');
+    expect(buildPicksParam([{ addPlayerId: '9001' }], 'priority')).toBe('9001_0000');
+  });
+
+  it('requires a round even though the league is not conditional', () => {
+    expect(validateRound(undefined, { ...PRIORITY, conditional: false })).toMatch(/between 1 and 4/);
+    expect(validateRound(3, { ...PRIORITY, conditional: false })).toBeNull();
+  });
+
+  it('picks the right MFL import type for each system', () => {
+    expect(waiverImportType(RULES)).toBe('blindBidWaiverRequest');
+    expect(waiverImportType(PRIORITY)).toBe('waiverRequest');
+  });
+});
+
+describe('conference-scoped free agency', () => {
+  it('reads TheLeague as league-wide and the AFL as conference-scoped', () => {
+    const tl = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'data/theleague/mfl-feeds/2026/league.json'), 'utf-8')).league;
+    const afl = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'data/afl-fantasy/mfl-feeds/2026/league.json'), 'utf-8')).league;
+    expect(freeAgencyIsLeagueWide(tl)).toBe(true);
+    // AFL is playerLimitUnit: CONFERENCE with duplicate players — a rival
+    // conference's roster says nothing about your availability.
+    expect(freeAgencyIsLeagueWide(afl)).toBe(false);
+  });
+
+  it('resolves a franchise\'s conference through the DIVISIONS map', () => {
+    // MFL puts `conference` on the division, not the franchise.
+    const afl = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'data/afl-fantasy/mfl-feeds/2026/league.json'), 'utf-8')).league;
+    expect(conferenceOfFranchise(afl, '0001')).toBe('00');
+    expect(conferenceOfFranchise(afl, '0021')).toBe('01');
+    expect(conferenceOfFranchise(afl, '9999')).toBeNull();
+  });
+
+  it('returns null in a league with no divisions', () => {
+    expect(conferenceOfFranchise({}, '0001')).toBeNull();
   });
 });
 
