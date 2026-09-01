@@ -20,6 +20,7 @@ import { getFrozenSalaryAveragesYear } from '../../utils/salary-calculations';
 import { calculateAllSurplusValues } from '../../utils/surplus-value';
 import { getAuthUser, isCommissionerOrAdmin } from '../../utils/auth';
 import { readBidRules } from '../../utils/waiver-claim';
+import { resolveWaiverWindow, describeWaiverWindow } from '../../utils/waiver-window';
 import WaiverClaimModal from '../../components/shared/WaiverClaimModal.astro';
 import '../../styles/player-cell.css';
 import '../../styles/ranking-columns.css';
@@ -686,6 +687,17 @@ const myRoster = claimFranchiseId
       .sort((a, b) => a.name.localeCompare(b.name))
   : [];
 // Auction season has its own Bid flow on MFL; claims are the rest of the year.
+// Which waiver window is live comes from MFL's own calendar (synced by
+// scripts/fetch-mfl-feeds.mjs — the export is owner-gated, so it cannot be read
+// from the browser). `currentWaiverType` is the league's SYSTEM, not the state.
+const calendarModules = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/calendar.json',
+  { eager: true }
+);
+const calendarEvents =
+  (Object.entries(calendarModules).find(([p]) => p.includes(`/${currentYear}/`))?.[1] as any)?.default ?? [];
+const waiverWindow = resolveWaiverWindow(calendarEvents);
+const waiverWindowLabel = describeWaiverWindow(waiverWindow);
 const canClaim = !!claimFranchiseId && !isAuctionSeason;
 const claimConfig = {
   canClaim,
@@ -693,6 +705,8 @@ const claimConfig = {
   franchiseId: claimFranchiseId,
   rules: bidRules,
   roster: myRoster,
+  windowMode: waiverWindow.mode,
+  windowLabel: waiverWindowLabel,
   year: currentYear,
 };
 
@@ -725,6 +739,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         <div class="hero-title-group">
           <h1 class="hero-title">Free Agents</h1>
           <span class="hero-count">{freeAgents.length} available players</span>
+          {canClaim && (
+            <span class="waiver-window-line" data-window={waiverWindow.mode}>{waiverWindowLabel}</span>
+          )}
         </div>
         <a href={r('/theleague/projected-free-agents')} class="hero-cross-link">
           See projected FAs
@@ -4299,4 +4316,24 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     outline: 2px solid var(--color-primary, #1c497c);
     outline-offset: 2px;
   }
+
+  .waiver-window-line {
+    display: inline-block;
+    margin-left: 0.6rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: var(--radius-full, 999px);
+    border: 1px solid currentColor;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    /* Colour carries the meaning: green = you can add right now. */
+    color: var(--color-primary, #1c497c);
+  }
+  /* Semantic green, NOT TheLeague's brand green: #2e8743 is the brand literal
+     and the AFL theme never overrides it, so it would paint TheLeague's colour
+     on AFL pages (tests/afl-brand-green-guard.test.ts). */
+  .waiver-window-line[data-window='fcfs'] { color: var(--color-success, #16a34a); }
+  .waiver-window-line[data-window='unknown'] { color: var(--content-text-muted, #6b7280); }
 </style>

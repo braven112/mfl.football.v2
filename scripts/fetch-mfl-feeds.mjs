@@ -448,6 +448,37 @@ const endpoints = [
     },
   },
   {
+    key: 'calendar',
+    // withAuth: the calendar export is owner-gated — unauthenticated requests
+    // get `API requires logged in user in league ID <id>`. It carries the
+    // WAIVER_UNLOCK / WAIVER_LOCK / WAIVER_BBID / WAIVER_REVERSE events that
+    // say WHEN the waiver window is open versus first-come-first-served, which
+    // is the only source of truth for that (currentWaiverType is the league's
+    // system, not the current state). Syncing it keeps the site's window in
+    // step with MFL instead of re-deriving the schedule from the constitution.
+    url: withAuth(`${host}/${year}/export?TYPE=calendar&L=${leagueId}&JSON=1`),
+    parser: (t) => {
+      try {
+        const data = JSON.parse(t);
+        if (data?.error) {
+          // An auth failure returns HTTP 200 with an error body. THROW rather
+          // than return: writeOut() is called unconditionally on whatever the
+          // parser returns, so returning null/[] here would overwrite a good
+          // calendar and the waiver window would read as "unknown" all season.
+          // The caller's catch logs and skips the write, leaving the last good
+          // copy in place (CLAUDE.md: never overwrite a committed feed with an
+          // error payload).
+          throw new Error(`calendar export: ${data.error.$t ?? JSON.stringify(data.error)}`);
+        }
+        const raw = data?.calendar?.event;
+        return Array.isArray(raw) ? raw : raw ? [raw] : [];
+      } catch (err) {
+        // Same reasoning — never return a value that would clobber the file.
+        throw new Error(`Failed to parse calendar JSON: ${err.message}`);
+      }
+    },
+  },
+  {
     key: 'tradeBait',
     // withAuth: MFL's tradeBait export is owner-gated for private leagues
     // (AFL) — unauthenticated requests get 200 with an empty payload, which

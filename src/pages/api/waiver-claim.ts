@@ -35,6 +35,7 @@ import { createMFLApiClient } from '../../utils/mfl-matchup-api';
 import { getLeagueById, DEFAULT_LEAGUE_ID } from '../../config/leagues';
 import { bustRosterCaches } from '../../utils/mfl-roster-cache';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../utils/api-response';
+import { resolveWaiverWindow } from '../../utils/waiver-window';
 import {
   readBidRules,
   validateClaims,
@@ -97,8 +98,28 @@ export const POST: APIRoute = async ({ request }) => {
     // TheLeague bids (blindBidWaiverRequest, PICKS `add_bid_drop`), the AFL
     // runs rolling priority (waiverRequest, PICKS `add_drop`). Sending a bid to
     // a priority league would make MFL read the amount as the drop id.
+    //
+    // ...AND each league alternates between that WAIVER window and an FCFS
+    // window where the add happens immediately (`fcfsWaiver`). Which one is
+    // live comes from MFL's own calendar — `currentWaiverType` is the league's
+    // SYSTEM, not the current state. Re-derived HERE rather than trusted from
+    // the client, because it decides which endpoint the write goes to.
+    const calendarRes = await fetch(
+      `https://api.myfantasyleague.com/${year}/export?TYPE=calendar&L=${leagueId}&JSON=1&_=${Date.now()}`,
+      { headers: { Cookie: `MFL_USER_ID=${user.id}` } }
+    );
+    const calendarBody = await calendarRes.json().catch(() => null);
+    const rawEvents = calendarBody?.calendar?.event;
+    const window = resolveWaiverWindow(
+      Array.isArray(rawEvents) ? rawEvents : rawEvents ? [rawEvents] : []
+    );
+    // `unknown` means the calendar told us nothing. Fall back to the queued
+    // claim rather than an immediate add — a claim that bounces is recoverable,
+    // an unintended instant pickup is not.
+    const immediate = window.mode === 'fcfs';
 
-    const roundError = validateRound(round, rules);
+    // FCFS executes now — there is no round to file it under.
+    const roundError = immediate ? null : validateRound(round, rules);
     if (roundError) return fail(roundError, 400);
 
     const franchises = Array.isArray(leaguePayload.franchises?.franchise)
@@ -135,7 +156,9 @@ export const POST: APIRoute = async ({ request }) => {
 
     const rosterLimit = Number(leaguePayload.rosterSize) || undefined;
     const errors = validateClaims(claims ?? [], {
-      rules,
+      // In the FCFS window there is no bid: TheLeague picks up at the league
+      // minimum and MFL sets the price itself, so bid rules must not gate it.
+      rules: immediate ? { ...rules, system: 'priority', blindBid: false } : rules,
       availableBalance,
       rosterPlayerIds,
       freeAgentIds,
@@ -144,14 +167,27 @@ export const POST: APIRoute = async ({ request }) => {
     if (errors.length > 0) return fail(errors[0], 400, { errors });
 
     // ── Write, owner mode ───────────────────────────────────────────────────
-    const params = new URLSearchParams({ L: leagueId, PICKS: buildPicksParam(claims!, rules.system) });
-    // `waiverRequest` requires ROUND unconditionally; `blindBidWaiverRequest`
-    // only when the league bids conditionally.
-    if (rules.conditional || rules.system === 'priority') params.set('ROUND', String(round));
-    if (replace) params.set('REPLACE', '1');
+    // FCFS is a different call entirely: a single immediate add/drop, no PICKS
+    // list and no round. Only the FIRST claim is meaningful — an ordered board
+    // of alternatives has no meaning when the add resolves instantly.
+    const params = new URLSearchParams({ L: leagueId });
+    if (immediate) {
+      const first = claims![0];
+      params.set('ADD', String(first.addPlayerId));
+      if (first.dropPlayerId && first.dropPlayerId !== '0000') {
+        params.set('DROP', String(first.dropPlayerId));
+      }
+    } else {
+      params.set('PICKS', buildPicksParam(claims!, rules.system));
+      // `waiverRequest` requires ROUND unconditionally; `blindBidWaiverRequest`
+      // only when the league bids conditionally.
+      if (rules.conditional || rules.system === 'priority') params.set('ROUND', String(round));
+      if (replace) params.set('REPLACE', '1');
+    }
 
+    const importType = immediate ? 'fcfsWaiver' : waiverImportType(rules);
     const res = await mflFetch({
-      url: `https://api.myfantasyleague.com/${year}/import?TYPE=${waiverImportType(rules)}&L=${leagueId}`,
+      url: `https://api.myfantasyleague.com/${year}/import?TYPE=${importType}&L=${leagueId}`,
       method: 'POST',
       mflUserCookie: user.id,
       body: params.toString(),
@@ -165,6 +201,30 @@ export const POST: APIRoute = async ({ request }) => {
     // MFL answers a dropped write with HTTP 200 and no error, so the response
     // is not evidence that anything was stored.
     let stored: string[] = [];
+    if (immediate) {
+      // An FCFS add lands on the ROSTER, not in pendingWaivers — checking the
+      // wrong list would report every successful pickup as unconfirmed.
+      try {
+        const fresh = await createMFLApiClient({ leagueId, year: String(year), mflUserId: user.id }).getRosters();
+        stored = ((fresh[user.franchiseId] as any[]) ?? []).map((p: any) => String(p.id ?? p));
+      } catch {
+        stored = [];
+      }
+      await bustRosterCaches(String(year), leagueId);
+      const landed = requestedAdds.filter((id) => stored.includes(id));
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: landed.length
+            ? `Added — ${requestedAdds.length === 1 ? 'the player is' : 'they are'} on your roster now.`
+            : 'MFL accepted the add, but your roster does not show it yet. Check your roster before retrying.',
+          mode: 'fcfs',
+          submitted: requestedAdds,
+          confirmed: landed,
+        }),
+        { status: 200, headers: JSON_HEADERS }
+      );
+    }
     try {
       const pending = await fetch(
         `https://api.myfantasyleague.com/${year}/export?TYPE=pendingWaivers&L=${leagueId}&JSON=1&_=${Date.now()}`,
@@ -190,6 +250,7 @@ export const POST: APIRoute = async ({ request }) => {
         message: unconfirmed.length
           ? `Submitted, but MFL has not echoed ${unconfirmed.length} of your claims yet. Check your pending waivers.`
           : `Round ${round} submitted — ${claims!.length} claim${claims!.length === 1 ? '' : 's'}.`,
+        mode: 'waiver',
         round,
         submitted: requestedAdds,
         confirmed: stored.filter((id) => requestedAdds.includes(id)),
