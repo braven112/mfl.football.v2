@@ -1,4 +1,357 @@
 {
-  "weekOf": "2026-09-07",
-  "changes": []
+  "weekOf": "2026-08-31",
+  "changes": [
+    {
+      "date": "2026-08-31",
+      "type": "bug-fix",
+      "summary": "Traded draft picks now say who they came from — once, with the right team, and on every pick that was actually traded. The draft broadcast had been announcing \"Pick 1.11 · via from Bring the Pain\" on the TV, and the same doubled-up wording turned up wherever a traded pick appeared: the draft room's board, the draft predictor, your team's pick list. MyFantasyLeague writes these as \"[Pick traded from Bring the Pain.]\" and we were keeping the word \"from\" as part of the team's name, then putting our own \"via\" or \"from\" in front of it. Because \"from Bring the Pain\" matches no team in the league, every place that tries to show the original owner's crest beside a traded pick looked for that team, found nothing, and showed nothing — so those logos had never once appeared. Reading the comment properly turned up a second, quieter problem: MFL often files several notes about one pick together (\"[Pick traded from Drunk Indians. / Pick made by Commissioner.]\"), sometimes files them with no brackets at all, and sometimes lists a pick that changed hands twice. We only recognised the simplest of those, so 130 traded picks across both leagues' draft history were being shown as though they had never moved. All 287 are now read correctly, a pick traded twice is credited to the owner it started with, and a note about a pick traded away to someone else is no longer mistaken for one coming in.",
+      "impact": "user",
+      "area": "draft",
+      "league": "both"
+    },
+    {
+      "date": "2026-08-29",
+      "type": "bug-fix",
+      "summary": "The draft broadcast's rehearsal mode shows the big reveal again. Rehearsal replays a season that has already finished so the board can be driven end-to-end before draft night, and last week's fix for autopick bursts — which stops the screen narrating picks the room watched happen minutes ago — judged a pick's newsworthiness by how recently it was made. Every pick in a finished season is months old, so the dry run quietly absorbed all of them: the board advanced pick by pick exactly as it should, and the card that is the whole point of the night never once appeared. A pick the rehearsal rolls forward is now treated as happening at that moment, which is what it is, so the dry run goes through the same check draft night does instead of around it. Live drafts were never affected.",
+      "impact": "admin",
+      "area": "draft",
+      "league": "both"
+    },
+    {
+      "date": "2026-08-29",
+      "type": "bug-fix",
+      "summary": "On the morning of your draft, the homepage hero now sends you to the draft itself. It counted down \"0 days to AL draft\" and then offered one button — the draft order, which is settled by then and tells you nothing you don't already know. The button is now the room you pick in: MyFantasyLeague's live draft room for the American League, and the email draft page for the National League, each opening in a new tab and each pointing at that conference's own page so the two never get crossed. The draft order moves down beside it, still one click away, and once picks start the live board joins it. Nothing changes before draft day.",
+      "impact": "user",
+      "area": "homepage",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-28",
+      "type": "bug-fix",
+      "summary": "The draft broadcast board now keeps up with the room, and its images are ready before the first pick. Two separate problems, both outside our code and both worked around. ESPN expires player headshots after under four minutes, so every reveal was re-downloading a quarter-megabyte photo — which is why a card sometimes sat there with a name and no player; the board now pre-caches every headshot, crest and logo it could need before the draft starts, keeps them for a week, and shows a count in the corner so you can watch it finish. And MyFantasyLeague's draft feed turned out to serve whichever of several out-of-date copies it felt like — measured live, the correct board came back 8% of the time and one seven picks behind came back 70% — which had the board stuck rounds behind the room. It now reads the same file MFL's own draft room reads, so it tracks pick for pick.",
+      "impact": "user",
+      "area": "draft",
+      "league": "both"
+    },
+    {
+      "date": "2026-08-28",
+      "type": "bug-fix",
+      "summary": "The podium icon on the Draft Broadcast link in the side nav was showing white instead of blue, so it stood out against a column of icons that all match. Every other icon in that menu takes its colour from the menu; a handful of the newer ones carry their own colour instruction, which quietly won and left them the colour of the label beside them. It matches the rest of the list again.",
+      "impact": "user",
+      "area": "navigation",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-28",
+      "type": "style-tweak",
+      "summary": "Hold your phone upright on the draft broadcast and the pick now reads top to bottom the way you'd expect: the pick, the name and the numbers first, the player underneath them. It used to lead with the player and bury the name below him, so the thing you actually wanted — who just went — was the last thing on screen. The copy and the cutout now sit together at the bottom of the card with the headroom above them, instead of a strip of empty gradient in between.",
+      "impact": "user",
+      "area": "draft",
+      "league": "both"
+    },
+    {
+      "date": "2026-08-28",
+      "type": "style-tweak",
+      "summary": "When a team defense goes on the draft broadcast, the two defenders standing in for it now get their names side by side on one line, each one sitting in front of the man it belongs to. The names used to stack in a single plate in the bottom corner, which told the room the order they were listed in and nothing about which face was which — so the guy on the left and the guy on the right were a coin flip. Each name now rides its own chip under its own head, at every screen size, and if one headshot fails to load the survivor and his name slide to the middle together.",
+      "impact": "user",
+      "area": "draft",
+      "league": "both"
+    },
+    {
+      "date": "2026-08-28",
+      "type": "style-tweak",
+      "summary": "The line above the player's name on a draft broadcast reveal is now two lines. \"With the 1.02 Pick,\" and the drafting team get a row each, instead of running together into one long line that broke wherever the franchise name happened to be long enough to force it — sometimes mid-name.",
+      "impact": "user",
+      "area": "draft",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-28",
+      "type": "style-tweak",
+      "summary": "The draft broadcast's rehearsal mode now spends its time on the right screen. A dry run stepped a pick every 20 seconds while each reveal held the TV for 18 of them, which left the on-the-clock board on screen for about two seconds a cycle — the half of the broadcast you most need to watch while rehearsing was the half you never saw. A rehearsal now splits its time evenly: 8 seconds on the pick, 8 seconds on the board, and around again. Draft night's own timing is untouched.",
+      "impact": "user",
+      "area": "draft",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-28",
+      "type": "style-tweak",
+      "summary": "Both rails at the bottom of the draft broadcast board got reordered, and one of them got faces. Up next now leads each row with the franchise logo instead of trailing it, so the three teams warming up stack into one column you can read straight down rather than logos hanging off the end of names of different lengths. Just off the board picks up the player headshot the rest of the site uses — same circle, same team-colour backdrop behind the head — sitting between the pick number and the name. Once a reveal is over, that rail is the only place the room sees the guy who just went, and four rows of nothing but type read like a receipt instead of a draft board. Team defenses get their NFL logo there, in the dark cut, since a defense has no headshot to show.",
+      "impact": "user",
+      "area": "draft",
+      "league": "both"
+    },
+    {
+      "date": "2026-08-28",
+      "type": "bug-fix",
+      "summary": "A duplicate line in the AFL league config is gone. The Avenging Amish had their GroupMe avatar listed twice in the same record — same file both times, so nothing ever looked wrong, but any tool that rewrote the config would have quietly dropped one of them, and if the two had ever pointed at different art the winner would have come down to which line happened to be last. Removed, and there is now a check that fails the build if any league config repeats a field.",
+      "impact": "admin",
+      "area": "design-system",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-28",
+      "type": "style-tweak",
+      "summary": "The draft broadcast board no longer wears a button on TV. Once you go full screen on a laptop or desktop, the Exit full screen chip in the top-right corner disappears completely and only reappears when you move the mouse up to that corner — so the room sees the board and nothing else. On a phone or tablet, where there is no mouse to bring it back, the chip stays put exactly as it is today.",
+      "impact": "user",
+      "area": "draft",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-28",
+      "type": "style-tweak",
+      "summary": "The draft broadcast's between-picks screen now wears the same colours as the card that follows it. Each franchise had one gradient for the pick reveal and a separately-composed one for the on-the-clock board, and for Midwestside Connection the two had drifted a long way apart — a gold screen between picks handing off to a near-black one on the pick, twice a minute. Both screens now paint the franchise's single configured gradient, so Midwestside's on-the-clock board is black to match its reveal, and every other team's two screens line up as well.",
+      "impact": "user",
+      "area": "draft",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-28",
+      "type": "style-tweak",
+      "summary": "The draft broadcast stops cutting between its two screens. Handing off from the on-the-clock board to a pick reveal used to swap the whole TV in a single frame, which looked less like the board reacting and more like somebody changing the channel. The two are now a pair of slides that dissolve into each other — the pick card comes up over the board as one piece, with nothing flying around inside it. The crest is bigger news than it was, too: it used to hide behind the player with half of it off the edge of the card, so from across the room it read as texture. It is now dead centre and noticeably brighter, with the player on one side of it and the pick on the other.",
+      "impact": "user",
+      "area": "draft",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-28",
+      "type": "style-tweak",
+      "summary": "The draft broadcast board makes it a lot harder to miss who's on the clock. The franchise crest was a small square sitting above the team name; it's now twice the size and moved alongside it, with the copy stacked to its right and left-aligned off the logo's edge. The type order flipped with it — \"On the clock\" is now the headline and the team name is the small line above it, because at that size the logo already tells the room which franchise is up. Phones keep the old stacked version, where there's no width to put the two side by side.",
+      "impact": "user",
+      "area": "draft",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-28",
+      "type": "style-tweak",
+      "summary": "Two draft broadcast cards get repainted. Midwestside Connection's used to be a wall of muted gold; it's now a hard, near-black card with a single band of gold rising out of the bottom-right corner behind the player — the black does the talking and the gold just signs it. Vitside Mafia's is the same idea flipped: the deep red now fills the card and the black is the corner anchor under the player, instead of the other way round. Every other franchise's card is unchanged, but all of them now carry their gradient in league config alongside their crest and team names, so the next one is an edit rather than a code change.",
+      "impact": "user",
+      "area": "draft",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-27",
+      "type": "style-tweak",
+      "summary": "The Avenging Amish crest gets a proper dark-mode version. The old one carried its own painted-on navy square, so on a dark card the Amish sat inside a visible box while every other crest floated free. The new artwork is cut out with a transparent background and a light rim, so it reads on the dark card and matches the rest of the AFL. The Amish GroupMe avatar gets the same treatment — its maroon ring swapped for a light blue one that survives a dark backdrop — and both are in the AFL Asset Library to download.",
+      "impact": "user",
+      "area": "design-system",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-27",
+      "type": "bug-fix",
+      "summary": "Two more AFL blanks get filled. Reckless, who ran the franchise now known as Swiftie 4 Life in 2005 and 2006, is Kevin Smith — the 7-8 season and the 10-5 playoff year underneath it finally belong to a person. And Whitman's Wonders, two years on the Da Dangsters slot in 2011 and 2012, is Adam Inman. Six AFL owners are still headed by a team name instead of a person.",
+      "impact": "user",
+      "area": "owners",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-27",
+      "type": "bug-fix",
+      "summary": "Clicking the little yellow 🏷️ trade-block tag next to a player on Roster/Salary threw up a full-width red error box. The Trade Builder decided which two teams to open with by reading the web address in the browser, but the server had already picked a different pair when it built the page — the two disagreed, and React complained loudly on the way through. The tag now opens the Trade Builder straight onto the tagged player's team, no red box. The same box had also started appearing on unrelated pages: the roster page's error catcher was staying switched on after you navigated away, so it reported other pages' problems as if they were the roster's. It now switches off when you leave.",
+      "impact": "user",
+      "area": "trade-builder",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-08-26",
+      "type": "bug-fix",
+      "summary": "Twenty-two AFL third-place finishes are on the site for the first time. The code read third place out of the AFL Championship bracket's neighbour — which since 2018 has been the AL Championship, a semifinal bracket whose winner always goes on to win or lose the final. So the answer was always the champion or the runner-up, those two got claimed first, and third place quietly landed nowhere: 0 seasons out of 23. Every one from 2004 on has now been recovered from the actual bracket games. The East picks up six third-place finishes, the South five, the North and West four each.",
+      "impact": "user",
+      "area": "playoffs",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-26",
+      "type": "bug-fix",
+      "summary": "The AFL has seeded eight playoff teams every year since 2003, but the site had been crediting four or five a season since 2018 — it was reading the playoff field out of the AFL Championship bracket, which in 2018 stopped being the eight-team field and became the two-team final between the AL and NL winners. Every AFL playoff berth on the site was recomputed from the actual bracket games: North goes from 28 berths to 38, West 37 to 44, East 29 to 34. Playoff appearances on owner pages, franchise pages and the division report all move with it. Eight franchise-seasons between 2004 and 2014 were also credited to the wrong teams — 2014 had berths on two clubs that spent that postseason in the NIT.",
+      "impact": "user",
+      "area": "playoffs",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-26",
+      "type": "bug-fix",
+      "summary": "Strength of Division was handing out participation trophies. The \"Titles\" number on every division panel — 15 for the Northwest, 19 for the Central — was just the number of seasons that division has existed, because a division crowns a winner every single year. It's gone, along with the sortable Titles column that ordered the table exactly like the Seasons column beside it. Divisions now report what their teams actually earned against the rest of the league: playoff berths, the share of franchise-seasons that reached the postseason, and championships with the runner-up finishes beside them. Division titles still show where they mean something — per owner, inside the division, where four owners split them unevenly.",
+      "impact": "user",
+      "area": "standings",
+      "league": "both"
+    },
+    {
+      "date": "2026-08-25",
+      "type": "bug-fix",
+      "summary": "Owner cards on the Owners page were wearing decade-old logos. Eight owners — Dangsters, Ninjas, Midwestside, Pigskins, Wabbits, Bring The Pain, Dark Magicians, Fire Ready Aim — now show the logo they actually run today instead of the one they retired years ago.",
+      "impact": "user",
+      "area": "owners",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-08-25",
+      "type": "bug-fix",
+      "summary": "Owner cards on the Owners page now show your current team, not your longest-running one. Shawn Huber gets Suh girls, one cup instead of a logo he retired in 2018, and Shawn Klezovich finally gets the Swiftie spelling. Last-place rebrands still don't count — Ross Lawrence keeps the Thundering Herd.",
+      "impact": "user",
+      "area": "owners",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-25",
+      "type": "style-tweak",
+      "summary": "The Owners page now leads with current owners — the \"Champions you've never seen\" callout moved below the card grid instead of sitting above it.",
+      "impact": "user",
+      "area": "owners",
+      "league": "both"
+    },
+    {
+      "date": "2026-08-25",
+      "type": "style-tweak",
+      "summary": "Music City Mafia's dark-mode logo no longer sits on a black box — the skyline backdrop is gone and the detective now floats clean on the page like every other team's icon.",
+      "impact": "user",
+      "area": "design-system",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-08-25",
+      "type": "bug-fix",
+      "summary": "The \"Together\" column on Strength of Division was counting seasons with the same four franchises, which isn't the same as the same four owners — the Southwest was credited with nine shared years for a group that's only been together since 2020. Together now means exactly what it says: seasons this group of owners has played together, restarting when a team changes hands. A new Founded column carries the division's own age, so a young lineup in an old division reads right.",
+      "impact": "user",
+      "area": "standings",
+      "league": "both"
+    },
+    {
+      "date": "2026-08-25",
+      "type": "bug-fix",
+      "summary": "What's New articles now link to the features they are talking about. The Strength of Division launch named the standings, the franchise pages and the division page itself across six paragraphs and you could not click one of them — the only link on the page was the button at the bottom. Every article since early August has had the links woven back into the prose, and they point at your own league's version of each page.",
+      "impact": "user",
+      "area": "whats-new",
+      "league": "both"
+    },
+    {
+      "date": "2026-08-25",
+      "type": "style-tweak",
+      "summary": "The Division Strength rankings read straight down on a phone now. Team logos always drop to their own line under the division name instead of tucking in beside the short names, so every row is the same shape and the records line up in one column. The rows also lead with the division name again — the phone layout had been putting the year range first.",
+      "impact": "user",
+      "area": "standings",
+      "league": "both"
+    },
+    {
+      "date": "2026-08-26",
+      "type": "bug-fix",
+      "summary": "Eighteen owners get a real name instead of a first name, an initial, or nothing at all — and two of them get their history straightened out. Maverick is Mick Travers, the LBer Decleaters’ “BSB” turns out to have been his initials all along — Brian Stanford-Brandt — the Gridiron Geeks are Bob Szelagowski, the Dark Magicians are Dan Le Cam, and Jomar Marinio finally gets a surname on the Computer Jocks in both leagues. On the AFL side: Nigel Dunnington (Titsburgh Feelers), Chuck Carper (M.L. Maniacs), Marnel Mangrubang, Boun Lovan, Jeffrey Tefertiller (ISIS), Justin “Pec” Collier (Cougs), Rafael Araiza — the Badd Boys’ “Ralfie” — plus originals who had no name at all — Andrew Wagner (2004 C.P. Bruisers), Pete Sisich (2003 Lucky Buck$), and, exactly as their team names always suggested, Trevor of Trevors Team and Joey of Joey’s Team. Bryan Sandes had been filed as two different strangers: Taco Hell 2004-06 and the Fly Fishermen in 2007 were the same man and the same franchise, so his four seasons now sit on one page. The Carolina Blues went the other way — they are Chris Broskey, not Coinflip, so the Angry Irish’s 2012 season moves back to a page of its own.",
+      "impact": "user",
+      "area": "owners",
+      "league": "both"
+    },
+    {
+      "date": "2026-08-26",
+      "type": "style-tweak",
+      "summary": "The lineup board on Strength of Division now admits any group of owners that stayed together three seasons instead of four, which takes it from 6 rows to 10 in TheLeague and 4 to 10 in the AFL — the Atlantic of 2007-2009 turns out to be the toughest room TheLeague has ever put together, and the AFL North of 2019-2022 went .643 against the rest of the league.",
+      "impact": "user",
+      "area": "standings",
+      "league": "both"
+    },
+    {
+      "date": "2026-08-26",
+      "type": "style-tweak",
+      "summary": "The two ranked boards on Strength of Division — Strongest to Weakest and Every Lineup, Ranked — had their headings sitting flush against the paragraph above them instead of clear of it like every other section on the page. They now use the same spacing as the rest.",
+      "impact": "user",
+      "area": "standings",
+      "league": "both"
+    },
+    {
+      "date": "2026-08-27",
+      "type": "bug-fix",
+      "summary": "The Draft Broadcast — the big board built for draft night — shipped without a way to get to it from the menu, so you had to know the URL or find it through search. It now sits in Offseason War Room alongside the Keeper Planner.",
+      "impact": "user",
+      "area": "navigation",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-27",
+      "type": "bug-fix",
+      "summary": "While the AL and NL drafts are actually running, the homepage hero's button said \"Enter Draft Room\" but sent you to the draft order page. It now opens the Draft Broadcast for the conference that's drafting.",
+      "impact": "user",
+      "area": "homepage",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-27",
+      "type": "style-tweak",
+      "summary": "The Draft Broadcast can now be flipped between the live board and a replay of last year's draft from the page itself, instead of hand-editing the URL. A replay is clearly flagged in amber so nobody mistakes last year's picks for tonight's.",
+      "impact": "user",
+      "area": "other",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-27",
+      "type": "style-tweak",
+      "summary": "The Draft Broadcast reveal now reads left to right: the pick and the player's details on the left, the drafting team's logo in the middle, and the player himself on the right.",
+      "impact": "user",
+      "area": "other",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-27",
+      "type": "bug-fix",
+      "summary": "Nine of the 24 AFL franchises have a team colour light enough that white text on it was hard to read on a TV — Suh Girls' tan and Minty Fresh's fade to white were the worst. Team colours are now deepened and saturated for the draft board, so every card reads from across the room.",
+      "impact": "user",
+      "area": "other",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-27",
+      "type": "bug-fix",
+      "summary": "Franchise logos on the draft board were pulling the 100x100 icon and pixelating badly when blown up on a TV. The board now uses the 400x400 GroupMe art every team already had.",
+      "impact": "user",
+      "area": "other",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-27",
+      "type": "style-tweak",
+      "summary": "The drafting team's logo on the Draft Broadcast is noticeably bigger and now sits low and to the right with the player, instead of small and centred behind his name.",
+      "impact": "user",
+      "area": "other",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-27",
+      "type": "style-tweak",
+      "summary": "Teams whose second colour is white or grey no longer fade into a dead grey on the draft board — the fade now stays in the team's own colour, so Suh Girls run brown to brown and Minty Fresh green to green.",
+      "impact": "user",
+      "area": "other",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-27",
+      "type": "style-tweak",
+      "summary": "The drafted player is bigger on the Draft Broadcast and now overlaps the team logo behind him, so the two read as one shot instead of two things sharing a screen.",
+      "impact": "user",
+      "area": "other",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-27",
+      "type": "bug-fix",
+      "summary": "The between-picks screen on the Draft Broadcast was still using raw team colours, so a team with a light colour looked washed out there and then deep and saturated a second later on the pick reveal. Both screens use the same treatment now.",
+      "impact": "user",
+      "area": "other",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-28",
+      "type": "bug-fix",
+      "summary": "The homepage now gets you to whichever conference board is actually drafting. The hero leads with your own conference, and the two drafts run on different days — so on American League draft Saturday a National League owner's homepage showed their own draft counting down to tomorrow, with no way through to the AL board that was live at that moment. A second link now appears on the hero for any conference currently drafting, marked live, and disappears again once that draft is done. If it's your own conference on the clock, the main button already goes there and you don't get a duplicate.",
+      "impact": "user",
+      "area": "draft",
+      "league": "afl"
+    },
+    {
+      "date": "2026-08-28",
+      "type": "style-tweak",
+      "summary": "The Draft Broadcast reveal now shows you where a player comes from before you finish reading it. The line under his name has always said the school or the pro team — \"Notre Dame\", \"JAX\" — and now the logo sits right there in front of the words. TheLeague's rookie draft gets college marks, the AFL's board gets NFL helmets, and either way a room ten feet from the TV recognises the shield before it reads the three letters. The marks are the dark-background versions, so the ones that normally disappear on a dark card — Raiders, Steelers, Jets — still show up, and a logo we don't have simply doesn't appear rather than leaving a hole in the line.",
+      "impact": "user",
+      "area": "draft",
+      "league": "both"
+    }
+  ]
 }
