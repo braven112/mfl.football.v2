@@ -27,7 +27,7 @@ import { resolveAccountingContext } from '../../../utils/accounting-request';
 import {
   fetchAccountingLedger,
   writeAccountingRecords,
-  findMissingRecords,
+  verifyWrites,
 } from '../../../utils/mfl-accounting';
 import { loadFranchises } from '../../../utils/accounting-season-data';
 import { checkRateLimit } from '../../../utils/rate-limit';
@@ -144,8 +144,17 @@ export const GET: APIRoute = async (context) => {
   const built = await buildMigration(ctx, context.url);
   if ('error' in built) return json({ error: built.error }, built.status);
 
+  // `readiness` is a SIBLING of `plan`, not part of it — spreading the plan
+  // alone silently dropped it, and the rollover checklist's settle-state step
+  // then had nothing to read and always rendered "not verifiable".
   return json(
-    { league: ctx.league.slug, from: built.from, to: built.to, ...built.plan },
+    {
+      league: ctx.league.slug,
+      from: built.from,
+      to: built.to,
+      readiness: built.readiness,
+      ...built.plan,
+    },
     200,
     JSON_HEADERS_NO_STORE
   );
@@ -232,25 +241,17 @@ export const POST: APIRoute = async (context) => {
   // well-formed body and apply nothing, so the response is not proof. This is
   // the only check that distinguishes "carried" from "reported carried" — a
   // 15-record carry once returned success against a ledger that never changed.
-  let unverified: typeof claimed = [];
-  const after = await fetchAccountingLedger({
-    leagueId: ctx.league.id,
-    year: to,
-    mflUserCookie: ctx.mflUserCookie,
-    mflCommishCookie: ctx.mflCommishCookie,
-  });
-  if (after.ok) {
-    const missing = findMissingRecords(
-      after.ledger,
-      claimed.map((result) => result.row)
-    );
-    const missingKeys = new Set(missing.map((row) => `${row.franchiseId}|${row.description}`));
-    unverified = claimed.filter((result) =>
-      missingKeys.has(`${result.row.franchiseId}|${result.row.description}`)
-    );
-  }
-
-  const written = claimed.length - unverified.length;
+  const check = await verifyWrites(
+    claimed.map((result) => result.row),
+    {
+      leagueId: ctx.league.id,
+      year: to,
+      mflUserCookie: ctx.mflUserCookie,
+      mflCommishCookie: ctx.mflCommishCookie,
+    }
+  );
+  const written = claimed.length - check.unverified.length;
+  const unverified = check.unverified;
 
   return json(
     {
@@ -263,7 +264,7 @@ export const POST: APIRoute = async (context) => {
       unverifiedCount: unverified.length,
       // Stated when we could not re-read at all, so "verified" is never
       // implied by silence.
-      verified: after.ok,
+      verified: check.verified,
       results,
       // A partial carry is safe to re-run: the rows that landed come back
       // `already-migrated` on the next plan.

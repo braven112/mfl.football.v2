@@ -367,3 +367,72 @@ describe('findMissingRecords', () => {
     ).toHaveLength(0);
   });
 });
+
+describe('verifyWrites', () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const creds = { leagueId: '19621', year: 2026, mflUserCookie: 'cookie' };
+
+  it('confirms rows that are in the ledger afterwards', async () => {
+    vi.doMock('../src/utils/mfl-fetch', () => ({
+      mflFetch: async () =>
+        new Response(
+          JSON.stringify({
+            accounting: {
+              entry: [{ franchise_id: '0001', amount: '-100', description: 'dues', id: '1', timestamp: '1' }],
+            },
+          }),
+          { status: 200 }
+        ),
+    }));
+    const { verifyWrites } = await import('../src/utils/mfl-accounting');
+    const result = await verifyWrites([{ franchiseId: '0001', amount: -100, description: 'dues' }], creds);
+    expect(result.verified).toBe(true);
+    expect(result.unverified).toHaveLength(0);
+  });
+
+  it('flags a row MFL accepted that never reached the ledger', async () => {
+    // The exact failure that shipped: every write "succeeded" and the ledger
+    // did not move.
+    vi.doMock('../src/utils/mfl-fetch', () => ({
+      mflFetch: async () =>
+        new Response(JSON.stringify({ accounting: { entry: [] } }), { status: 200 }),
+    }));
+    const { verifyWrites } = await import('../src/utils/mfl-accounting');
+    const result = await verifyWrites([{ franchiseId: '0001', amount: -100, description: 'dues' }], creds);
+    expect(result.verified).toBe(true);
+    expect(result.unverified).toHaveLength(1);
+  });
+
+  it('reports verified:false — and NO unverified rows — when the read fails', async () => {
+    // We genuinely do not know which landed. Listing them as unverified would
+    // claim knowledge we do not have; listing none as unverified alongside
+    // verified:true would read as success. Callers must surface the flag.
+    vi.doMock('../src/utils/mfl-fetch', () => ({
+      mflFetch: async () => new Response('', { status: 200 }),
+    }));
+    const { verifyWrites } = await import('../src/utils/mfl-accounting');
+    const result = await verifyWrites([{ franchiseId: '0001', amount: -100, description: 'dues' }], creds);
+    expect(result.verified).toBe(false);
+    expect(result.unverified).toHaveLength(0);
+  });
+
+  it('does not read the ledger when nothing was written', async () => {
+    let called = false;
+    vi.doMock('../src/utils/mfl-fetch', () => ({
+      mflFetch: async () => {
+        called = true;
+        return new Response('{}', { status: 200 });
+      },
+    }));
+    const { verifyWrites } = await import('../src/utils/mfl-accounting');
+    const result = await verifyWrites([], creds);
+    expect(called).toBe(false);
+    expect(result.verified).toBe(true);
+  });
+});

@@ -28,7 +28,11 @@
 import type { APIRoute } from 'astro';
 import { json, JSON_HEADERS_NO_STORE } from '../../../utils/api-response';
 import { resolveAccountingContext } from '../../../utils/accounting-request';
-import { fetchAccountingLedger, writeAccountingRecords } from '../../../utils/mfl-accounting';
+import {
+  fetchAccountingLedger,
+  writeAccountingRecords,
+  verifyWrites,
+} from '../../../utils/mfl-accounting';
 import { loadPayoutSeasonData } from '../../../utils/accounting-season-data';
 import { checkRateLimit } from '../../../utils/rate-limit';
 // .mjs planner, shared with node scripts (see its header). No ts-expect-error
@@ -168,17 +172,32 @@ export const POST: APIRoute = async (context) => {
     }
   );
 
-  const written = results.filter((result) => result.ok).length;
+  const claimed = results.filter((result) => result.ok);
   const failed = results.filter((result) => !result.ok);
+
+  // Prizes are the write it would hurt most to report falsely, so the ledger
+  // gets the last word here too.
+  const check = await verifyWrites(
+    claimed.map((result) => result.row),
+    {
+      leagueId: ctx.league.id,
+      year: ctx.year,
+      mflUserCookie: ctx.mflUserCookie,
+      mflCommishCookie: ctx.mflCommishCookie,
+    }
+  );
+  const written = claimed.length - check.unverified.length;
 
   return json(
     {
       written,
       failedCount: failed.length,
+      unverifiedCount: check.unverified.length,
+      verified: check.verified,
       results,
       // Reported so the page can say "12 of 17 paid — re-run to finish the
       // rest", which is safe precisely because of the already-paid check.
-      partial: failed.length > 0 && written > 0,
+      partial: (failed.length > 0 || check.unverified.length > 0) && written > 0,
       unresolved: plan.unresolved,
       totals: plan.totals,
     },

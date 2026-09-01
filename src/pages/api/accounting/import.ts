@@ -20,7 +20,7 @@
 import type { APIRoute } from 'astro';
 import { json, JSON_HEADERS_NO_STORE } from '../../../utils/api-response';
 import { resolveAccountingContext } from '../../../utils/accounting-request';
-import { writeAccountingRecords } from '../../../utils/mfl-accounting';
+import { writeAccountingRecords, verifyWrites } from '../../../utils/mfl-accounting';
 import { parseAccountingCsv } from '../../../utils/accounting-csv';
 import { checkRateLimit } from '../../../utils/rate-limit';
 
@@ -103,19 +103,33 @@ export const POST: APIRoute = async (context) => {
     }
   );
 
-  const written = results.filter((result) => result.ok).length;
+  const claimed = results.filter((result) => result.ok);
   const failed = results.filter((result) => !result.ok);
+
+  // A response body is not proof of a write — confirm against the ledger.
+  const check = await verifyWrites(
+    claimed.map((result) => result.row),
+    {
+      leagueId: ctx.league.id,
+      year: ctx.year,
+      mflUserCookie: ctx.mflUserCookie,
+      mflCommishCookie: ctx.mflCommishCookie,
+    }
+  );
+  const written = claimed.length - check.unverified.length;
 
   return json(
     {
       dryRun: false,
       written,
       failedCount: failed.length,
+      unverifiedCount: check.unverified.length,
+      verified: check.verified,
       results,
       // 207-style semantics in the body rather than the status: the client
       // renders per-row outcomes either way, and a non-2xx here would hide
       // the rows that DID land behind a generic error banner.
-      partial: failed.length > 0 && written > 0,
+      partial: (failed.length > 0 || check.unverified.length > 0) && written > 0,
     },
     200,
     JSON_HEADERS_NO_STORE

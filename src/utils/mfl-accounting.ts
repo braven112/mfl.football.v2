@@ -451,3 +451,43 @@ export async function writeAccountingRecords(
   }
   return results;
 }
+
+export interface VerifyWritesResult {
+  /** False when the confirming read itself failed — NOT a pass. */
+  verified: boolean;
+  /** Rows MFL accepted that are absent from the ledger afterwards. */
+  unverified: WriteRecordInput[];
+}
+
+/**
+ * Confirm a batch of writes by re-reading the ledger.
+ *
+ * MFL's import can answer 200 with a body that parses fine and apply nothing,
+ * so the response is never proof — only the ledger is. Every write path goes
+ * through this, because the one that did not is how a 15-record carry reported
+ * "carried into 2026" against a ledger that never changed (2026-08-31).
+ *
+ * One read for the whole batch, after the writes, so the cost does not scale
+ * with the number of records.
+ *
+ * A failed read returns `verified: false` with NO rows listed as unverified:
+ * we genuinely do not know which landed, and guessing in either direction is
+ * worse than saying so. Callers must surface that rather than treating an
+ * empty `unverified` as success.
+ */
+export async function verifyWrites(
+  written: WriteRecordInput[],
+  opts: { leagueId: string; year: string | number; mflUserCookie: string; mflCommishCookie?: string }
+): Promise<VerifyWritesResult> {
+  if (written.length === 0) return { verified: true, unverified: [] };
+
+  const after = await fetchAccountingLedger({
+    leagueId: opts.leagueId,
+    year: opts.year,
+    mflUserCookie: opts.mflUserCookie,
+    mflCommishCookie: opts.mflCommishCookie,
+  });
+  if (!after.ok) return { verified: false, unverified: [] };
+
+  return { verified: true, unverified: findMissingRecords(after.ledger, written) };
+}

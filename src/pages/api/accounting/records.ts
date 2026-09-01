@@ -21,6 +21,7 @@ import { resolveAccountingContext } from '../../../utils/accounting-request';
 import {
   fetchAccountingLedger,
   writeAccountingRecord,
+  verifyWrites,
   parseAmount,
   validateRecord,
 } from '../../../utils/mfl-accounting';
@@ -106,5 +107,31 @@ export const POST: APIRoute = async (context) => {
 
   if (!result.ok) return json({ error: result.error }, 502);
 
-  return json({ success: true, record }, 200, JSON_HEADERS_NO_STORE);
+  // MFL can accept an import and apply nothing, so the response is not proof.
+  // Confirm against the ledger before telling anyone the money moved.
+  const check = await verifyWrites([record], {
+    leagueId: ctx.league.id,
+    year: ctx.year,
+    mflUserCookie: ctx.mflUserCookie,
+    mflCommishCookie: ctx.mflCommishCookie,
+  });
+  if (check.unverified.length) {
+    return json(
+      {
+        error: `MFL accepted the record but it is not in the ${ctx.year} ledger. Nothing was written — check your commissioner access and try again.`,
+      },
+      502
+    );
+  }
+
+  return json(
+    {
+      success: true,
+      record,
+      // False when the confirming read failed: written, but unconfirmed.
+      verified: check.verified,
+    },
+    200,
+    JSON_HEADERS_NO_STORE
+  );
 };

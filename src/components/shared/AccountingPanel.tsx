@@ -521,6 +521,10 @@ function ImportCsv({
   const [csv, setCsv] = useState('');
   const [preview, setPreview] = useState<{ rows: PreviewRow[]; validCount: number; invalidCount: number; total: number } | null>(null);
   const [results, setResults] = useState<Array<{ row: { ref?: string; description: string }; ok: boolean; error?: string }> | null>(null);
+  // Counted server-side against the ledger, not from `results`: MFL reporting
+  // a row accepted is not the same as the row being there.
+  const [written, setWritten] = useState(0);
+  const [unverifiedCount, setUnverifiedCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -543,6 +547,8 @@ function ImportCsv({
         setResults(null);
       } else {
         setResults(data.results ?? []);
+        setWritten(Number(data.written ?? 0));
+        setUnverifiedCount(Number(data.unverifiedCount ?? 0));
         setPreview(null);
         onWritten();
       }
@@ -639,7 +645,11 @@ function ImportCsv({
       {results && (
         <>
           <p className="acct__note">
-            {results.filter((r) => r.ok).length} written, {results.filter((r) => !r.ok).length} failed.
+            {written} written, {results.filter((r) => !r.ok).length} failed
+            {unverifiedCount > 0
+              ? `, ${unverifiedCount} accepted by MFL but NOT in the ledger`
+              : ''}
+            .
           </p>
           <ul className="acct__results">
             {results.map((result, index) => (
@@ -716,10 +726,15 @@ function Payouts({
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data?.error ?? `HTTP ${response.status}`);
+      const unverified = Number(data.unverifiedCount ?? 0);
       setApplied(
-        data.failedCount
-          ? `${data.written} paid, ${data.failedCount} failed. Re-run to retry only the failures.`
-          : `${data.written} payout${data.written === 1 ? '' : 's'} written to MFL.`
+        unverified > 0
+          ? `${data.written} paid. ${unverified} were accepted by MFL but are NOT in the ledger — nothing was actually written for them.`
+          : data.failedCount
+            ? `${data.written} paid, ${data.failedCount} failed. Re-run to retry only the failures.`
+            : data.verified === false
+              ? `${data.written} submitted, but the ledger could not be re-read to confirm them.`
+              : `${data.written} payout${data.written === 1 ? '' : 's'} written to MFL, confirmed against the ledger.`
       );
       onWritten();
       await loadPlan();
