@@ -10,6 +10,7 @@ import { loadTeams, flipName, normalizePosition, formatDefName } from '../articl
 import { buildCachedSystem } from '../article-utils/ai-client.mjs';
 import { isChampionshipComplete } from '../article-utils/season-guards.mjs';
 import { primaryLink, articleLink, featureLink, linkList } from '../article-utils/article-links.mjs';
+import { franchiseRecord } from '../article-utils/franchise-record.mjs';
 
 const CHAMPIONSHIP_WEEK = 17;
 
@@ -102,8 +103,7 @@ export async function buildFactSheet(data, week, year, projectRoot) {
   lines.push('=== SEASON CONTEXT ===');
   for (const f of data.standings.leagueStandings?.franchise || []) {
     const t = teams.get(f.id);
-    const wins = parseInt(f.h2hw || 0) + parseInt(f.divw || 0) + parseInt(f.nondivw || 0);
-    const losses = parseInt(f.h2hl || 0) + parseInt(f.divl || 0) + parseInt(f.nondivl || 0);
+    const { wins, losses } = franchiseRecord(f);
     const pf = parseFloat(f.pf || 0).toFixed(2);
     lines.push(`  ${t?.name ?? f.id}: ${wins}-${losses}, PF: ${pf}`);
   }
