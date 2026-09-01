@@ -5,7 +5,7 @@ import {
   annotatePositionDividers,
   annotateTierDividers,
   annotateActiveStriping,
-} from '../src/scripts/rosters/roster-rows';
+} from '../src/utils/roster-utils';
 
 const ORDER = ['QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
 
@@ -36,7 +36,7 @@ describe('sortByPosition', () => {
       { position: 'QB', salary: 900, id: 'qb-rich' },
       { position: 'RB', salary: 300, id: 'rb-rich' },
     ];
-    expect(sortByPosition(rows, ORDER).map((r) => r.id)).toEqual([
+    expect(sortByPosition(rows, { order: ORDER }).map((r) => r.id)).toEqual([
       'qb-rich', 'qb-cheap', 'rb-rich', 'rb-cheap',
     ]);
   });
@@ -44,7 +44,7 @@ describe('sortByPosition', () => {
   it('does not mutate the input', () => {
     const rows = [{ position: 'RB', salary: 1 }, { position: 'QB', salary: 1 }];
     const copy = [...rows];
-    sortByPosition(rows, ORDER);
+    sortByPosition(rows, { order: ORDER });
     expect(rows).toEqual(copy);
   });
 
@@ -57,12 +57,12 @@ describe('sortByPosition', () => {
       { position: 'QB', salary: '9,000', id: 'rich' },
     ];
     const parse = (v: unknown) => Number(String(v ?? '').replace(/[^0-9.-]/g, '')) || 0;
-    expect(sortByPosition(rows, ORDER, { readSalary: parse }).map((r) => r.id))
+    expect(sortByPosition(rows, { order: ORDER, readSalary: parse }).map((r) => r.id))
       .toEqual(['rich', 'cheap']);
   });
 
   it('is empty-safe', () => {
-    expect(sortByPosition([], ORDER)).toEqual([]);
+    expect(sortByPosition([], { order: ORDER })).toEqual([]);
   });
 });
 
@@ -72,8 +72,15 @@ describe('annotatePositionDividers', () => {
   ];
 
   it('flags the row where the position changes', () => {
-    const out = annotatePositionDividers(rows);
+    // Explicit about the variant: this module's DEFAULT is the server's
+    // (a rule above row 0), so the no-arg call is not the neutral case.
+    const out = annotatePositionDividers(rows, { dividerOnFirstRow: false });
     expect(out.map((r) => r.positionDivider)).toEqual([false, false, true, true]);
+  });
+
+  it('defaults to the server variant — a leading rule above row 0', () => {
+    expect(annotatePositionDividers(rows)[0].positionDivider).toBe(true);
+    expect(annotatePositionDividers(rows).at(-1)!.positionDividerEnd).toBe(false);
   });
 
   it('honors dividerOnFirstRow — the server/client divergence', () => {

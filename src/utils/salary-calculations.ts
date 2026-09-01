@@ -51,10 +51,45 @@ export const normalizeStatus = (status = 'ROSTER'): 'ACTIVE' | 'PRACTICE' | 'INJ
  * @param isCurrent - Whether calculating for current season (vs future)
  * @returns Cap inclusion percentage (0.5 = 50%, 1 = 100%)
  */
-export const getCapPercent = (tag = 'ACTIVE', isCurrent = true): number => {
-  const normalized = tag.toUpperCase() as keyof typeof CAP_INCLUSION;
-  const map = CAP_INCLUSION[normalized] ?? { current: 1, future: 1 };
-  return isCurrent ? map.current ?? 1 : map.future ?? 1;
+export type CapInclusionTable = Record<string, { current?: number; future?: number }>;
+
+/**
+ * Percentage of a salary that counts against the cap for a bucket.
+ *
+ * `isCurrent` is not cosmetic: practice-squad players count at a reduced rate
+ * this year and in full in future years, so getting it wrong silently
+ * understates next year's cap.
+ *
+ * The table is injectable only so a caller holding its own copy — the rosters
+ * page reads `capInclusion` out of its serialized config — can pass it rather
+ * than keeping a parallel implementation. It defaults to CAP_INCLUSION and
+ * every existing caller is unaffected.
+ */
+export const getCapPercent = (
+  tag = 'ACTIVE',
+  isCurrent = true,
+  capInclusion: CapInclusionTable = CAP_INCLUSION,
+): number => {
+  const normalized = String(tag).toUpperCase();
+  const map = capInclusion[normalized] ?? { current: 1, future: 1 };
+  return (isCurrent ? map.current : map.future) ?? 1;
+};
+
+/**
+ * Collapse the many spellings of a roster status into the three buckets the
+ * cap rules recognise. Substring matching on purpose — `status` arrives as
+ * "IR", "Injured Reserve", "PRACTICE SQUAD" and more.
+ *
+ * Distinct from `normalizeStatus` above, which reads only `status`; this reads
+ * `displayTag` first and falls back, which is what the roster table needs.
+ */
+export const normalizeBucket = (
+  player: { displayTag?: string | null; status?: string | null },
+): 'ACTIVE' | 'PRACTICE' | 'INJURED' => {
+  const raw = String(player.displayTag ?? player.status ?? 'ACTIVE').toUpperCase();
+  if (raw.includes('PRACTICE')) return 'PRACTICE';
+  if (raw.includes('INJURED') || raw === 'IR') return 'INJURED';
+  return 'ACTIVE';
 };
 
 /**
@@ -148,6 +183,172 @@ export const aggregateDeadMoney = (
 
     return acc;
   }, Array(SALARY_YEARS.length).fill(0));
+};
+
+/**
+ * Annual salary escalation applied to every multi-year contract.
+ */
+export const ANNUAL_ESCALATION = 1.1;
+
+export interface ContractAction {
+  type?: string;
+  newSalary?: unknown;
+  ufaYearIndex?: number;
+  salaryBreakdown?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+export interface Declaration {
+  years?: number | null;
+  requestedYears?: number | null;
+  [key: string]: unknown;
+}
+
+export interface CapChargeOptions {
+  /** Override the module's SALARY_YEARS; only the LENGTH is read. */
+  salaryYears?: readonly unknown[];
+  capInclusion?: CapInclusionTable;
+  /** Pending, unsaved actions keyed by player id (cuts, trades, extensions). */
+  contractActions?: Record<string, ContractAction>;
+  /** Optimistic local declarations, which win over the saved ones. */
+  localDeclarations?: Record<string, Declaration>;
+  declarationsByPlayer?: Record<string, Declaration>;
+}
+
+/**
+ * Cap charge per contract year, accounting for unsaved roster moves.
+ *
+ * `calculateCapCharges` above is the plain read-only view. This is the same
+ * math with the roster page's *pending* state layered on, in this order:
+ *
+ *  - cut/traded players contribute nothing (their dead money is added by the
+ *    caller, not here);
+ *  - a declaration's year count overrides the player's own contract length,
+ *    and an optimistic local declaration overrides the saved one;
+ *  - an extension's explicit per-year breakdown overrides the 10% escalation.
+ *
+ * Franchise tags and team options are added at their UFA year rather than
+ * escalated, because they are one-year awards priced off positional averages.
+ *
+ * Called with no options this is equivalent to `calculateCapCharges(rows)`.
+ */
+export const calculateCapChargesWithActions = (
+  rows: (CapPlayer & { id?: string | number; status?: string | null })[] = [],
+  {
+    salaryYears = SALARY_YEARS,
+    capInclusion = CAP_INCLUSION,
+    contractActions = {},
+    localDeclarations = {},
+    declarationsByPlayer = {},
+  }: CapChargeOptions = {},
+): number[] =>
+  salaryYears.map((_, index) => {
+    let total = rows.reduce((sum, player) => {
+      const key = String(player.id ?? '');
+      const action = contractActions[key];
+      if (action && (action.type === 'cut' || action.type === 'trade')) return sum;
+
+      const decl = localDeclarations[key] || declarationsByPlayer[key];
+      const declYears = decl ? (decl.years ?? decl.requestedYears ?? null) : null;
+      const effectiveContractYears =
+        declYears != null ? declYears : parseNumber(player.contractYears ?? 0);
+
+      if (effectiveContractYears <= index) return sum;
+
+      const percent = getCapPercent(normalizeBucket(player), index === 0, capInclusion);
+      let salaryForYear = parseNumber(player.salary) * ANNUAL_ESCALATION ** index;
+      if (action && action.type === 'extension' && action.salaryBreakdown) {
+        salaryForYear = Number(action.salaryBreakdown[`year${index}`] ?? salaryForYear);
+      }
+      return sum + (salaryForYear * percent || 0);
+    }, 0);
+
+    Object.values(contractActions).forEach((action) => {
+      if (
+        (action.type === 'franchise' || action.type === 'team-option')
+        && action.ufaYearIndex === index
+      ) {
+        total += Number(action.newSalary ?? 0) || 0;
+      }
+    });
+
+    return total;
+  });
+
+export interface BucketCaps {
+  active: number;
+  practice: number;
+  injured: number;
+  counts: { active: number; practice: number; injured: number };
+}
+
+/**
+ * Current-year cap totals and headcounts per bucket.
+ *
+ * Reads `displayTag` only (not `status`) and always uses the current-year
+ * percentage — it describes the roster as displayed right now.
+ */
+export const calculateBucketCaps = (
+  rows: CapPlayer[] = [],
+  capInclusion: CapInclusionTable = CAP_INCLUSION,
+): BucketCaps =>
+  rows.reduce<BucketCaps>(
+    (acc, player) => {
+      const tag = String(player.displayTag ?? 'active').toUpperCase();
+      const percent = getCapPercent(tag, true, capInclusion);
+      const salary = parseNumber(player.salary);
+      if (tag === 'PRACTICE') {
+        acc.practice += salary * percent;
+        acc.counts.practice += 1;
+      } else if (tag === 'INJURED') {
+        acc.injured += salary * percent;
+        acc.counts.injured += 1;
+      } else {
+        acc.active += salary * percent;
+        acc.counts.active += 1;
+      }
+      return acc;
+    },
+    { active: 0, practice: 0, injured: 0, counts: { active: 0, practice: 0, injured: 0 } },
+  );
+
+/** Current-year cap spend per position. Expired contracts are excluded. */
+export const calculatePositionCaps = (
+  rows: (CapPlayer & { position?: string | null; status?: string | null })[] = [],
+  capInclusion: CapInclusionTable = CAP_INCLUSION,
+): Record<string, number> =>
+  rows.reduce<Record<string, number>>((totals, player) => {
+    if (parseNumber(player.contractYears ?? 0) <= 0) return totals;
+    const percent = getCapPercent(normalizeBucket(player), true, capInclusion);
+    const pos = String(player.position ?? 'UNK').toUpperCase();
+    totals[pos] = (totals[pos] ?? 0) + parseNumber(player.salary) * percent;
+    return totals;
+  }, {});
+
+/**
+ * Dollars per fantasy point, per position — lower is better value.
+ *
+ * Scoreless players are skipped rather than counted as infinitely expensive,
+ * which would make any position holding a benched player look terrible.
+ */
+export const calculateCapEfficiency = (
+  rows: (CapPlayer & { position?: string | null; points?: unknown })[] = [],
+): Record<string, number> => {
+  const totals: Record<string, { totalCost: number; totalPoints: number }> = {};
+  rows.forEach((player) => {
+    if (parseNumber(player.contractYears ?? 0) <= 0) return;
+    if (parseNumber(player.points ?? 0) <= 0) return;
+    const pos = String(player.position ?? 'UNK').toUpperCase();
+    if (!totals[pos]) totals[pos] = { totalCost: 0, totalPoints: 0 };
+    totals[pos].totalCost += parseNumber(player.salary);
+    totals[pos].totalPoints += parseNumber(player.points ?? 0);
+  });
+
+  const result: Record<string, number> = {};
+  Object.entries(totals).forEach(([pos, data]) => {
+    result[pos] = data.totalCost / data.totalPoints;
+  });
+  return result;
 };
 
 /**

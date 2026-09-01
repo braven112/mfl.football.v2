@@ -85,14 +85,16 @@ import { buildWeeklyPlayerResults } from '../../utils/weekly-player-results';
 import liveOddsFallbackData from '../../data/nfl/live-odds.json';
 import { spriteUrl } from '../../utils/sprite-url';
 import { getLeagueBySlug } from '../../config/leagues';
-// Shared with the inline client script — see docs/plans/rosters-page-split.md.
+// Canonical row shaping, shared with the inline client script below.
+// src/utils/roster-utils.ts already held every one of these; this page used to
+// carry its own copy in the frontmatter AND another in the client script.
 import {
   getPositionRank as getPositionRankCore,
   sortByPosition as sortByPositionCore,
   annotatePositionDividers as annotatePositionDividersCore,
   annotateTierDividers as annotateTierDividersCore,
   annotateActiveStriping as annotateActiveStripingCore,
-} from '../../scripts/rosters/roster-rows';
+} from '../../utils/roster-utils';
 // Precomputed payloads for every historical season (see
 // scripts/compute-roster-season-payloads.mjs); the shared builder computes
 // the current league/season years live at request time.
@@ -743,17 +745,18 @@ const rosterColumnOptions = [
 
 const nflByeWeeks = sharedNflByeWeeks;
 
-// Server-side row shaping. Shares src/scripts/rosters/roster-rows.ts with the
-// client script below — these were duplicated function bodies that had drifted
-// apart. The options record where they differ so the split changed nothing:
-// this side draws a divider above row 0 and does NOT treat the last row as
-// ending its group; the client does the opposite on both. `parseNumber` is
-// passed because feed salaries can still be formatted strings here.
+// Server-side row shaping, from src/utils/roster-utils.ts — the same module the
+// client script below uses. This page previously carried a copy in BOTH places
+// and they had drifted: this side draws a divider above row 0 and does not
+// treat the last row as ending its group; the client does the opposite on both.
+// The options record that difference instead of one side silently winning.
+// These defaults are roster-utils' own, so the arguments are here for the
+// reader rather than to change anything.
 const getPositionRank = (pos: string | null | undefined) =>
   getPositionRankCore(pos, positionOrder);
 
 const sortByPosition = (list: any[] = []) =>
-  sortByPositionCore(list, positionOrder, { readSalary: parseNumber });
+  sortByPositionCore(list, { order: positionOrder, readSalary: parseNumber });
 
 const annotatePositionDividers = (rows: any[] = []) =>
   annotatePositionDividersCore(rows, {
@@ -5283,28 +5286,32 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
   // local consts below bind each one to this page's config so that every
   // existing call site reads exactly as it did before.
   // See docs/plans/rosters-page-split.md.
+  // Canonical shared modules — the same ones the frontmatter uses. These were
+  // closures in this script; extracting them into NEW modules would have left
+  // the repo with two implementations of each, which is the thing this page is
+  // supposed to be getting away from.
   import {
     getCapPercent as getCapPercentCore,
-    calculateCapCharges as calculateCapChargesCore,
+    calculateCapChargesWithActions,
     calculateBucketCaps as calculateBucketCapsCore,
     calculatePositionCaps as calculatePositionCapsCore,
     calculateCapEfficiency as calculateCapEfficiencyCore,
     calculateContractYearsMeta as calculateContractYearsMetaCore,
-  } from '../../scripts/rosters/roster-cap-math';
+  } from '../../utils/salary-calculations';
   import {
     getPositionRank as getPositionRankCore,
     sortByPosition as sortByPositionCore,
     annotatePositionDividers as annotatePositionDividersCore,
     annotateTierDividers as annotateTierDividersCore,
     annotateActiveStriping as annotateActiveStripingCore,
-  } from '../../scripts/rosters/roster-rows';
+  } from '../../utils/roster-utils';
   import {
     calculateAge as calculateAgeCore,
     calculateAverageAge as calculateAverageAgeCore,
     calculateAverageAgeByPosition as calculateAverageAgeByPositionCore,
     getAgeDistribution as getAgeDistributionCore,
     getAgeDistributionColors as getAgeDistributionColorsCore,
-  } from '../../scripts/rosters/roster-age';
+  } from '../../utils/age-utils';
 
   const config = JSON.parse(
     document.getElementById('roster-config').textContent
@@ -6564,9 +6571,9 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
 
     const formatCountLabel = (count) => `${count} Players`;
 
-    // Config-bound wrappers over src/scripts/rosters/*. Same behavior, same
-    // signatures — the shared implementations just take what they used to close
-    // over as arguments.
+    // Config-bound wrappers over the shared utils. Same behavior, same local
+    // signatures — the shared implementations just take what these used to
+    // close over as arguments.
     const getCapPercent = (tag = 'ACTIVE', isCurrent = true) =>
       getCapPercentCore(tag, isCurrent, capInclusion);
 
@@ -6575,7 +6582,8 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     // Salaries are numeric in the client payload, so the default salary reader
     // matches what this call site did inline. The server copy passes
     // `parseNumber` instead, because feed values there can still be strings.
-    const sortByPosition = (list = []) => sortByPositionCore(list, positionOrder);
+    const sortByPosition = (list = []) =>
+      sortByPositionCore(list, { order: positionOrder, readSalary: (v) => Number(v ?? 0) || 0 });
 
     const enrichPlayer = (player = {}, tag = 'active') => {
       const nflTeam = (player.nflTeam ?? player.team ?? '').toUpperCase();
@@ -6596,7 +6604,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     // the frontmatter drew a rule above row 0 and treated the last row as NOT
     // ending its group; this side did the opposite on both counts. The options
     // preserve each side exactly rather than silently picking a winner —
-    // see src/scripts/rosters/roster-rows.ts.
+    // see src/utils/roster-utils.ts.
     const annotatePositionDividers = (rows = []) =>
       annotatePositionDividersCore(rows, {
         dividerOnFirstRow: false,
@@ -7481,12 +7489,12 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       return totals;
     };
 
-    // Config/state-bound wrappers over src/scripts/rosters/roster-cap-math.ts.
+    // Config/state-bound wrappers over src/utils/salary-calculations.ts.
     // What these used to close over — the cap-inclusion table, pending contract
     // actions, and both declaration maps — is passed explicitly now, which is
     // what made them testable (tests/roster-cap-math.test.ts).
     const calculateCapCharges = (rows = []) =>
-      calculateCapChargesCore(rows, {
+      calculateCapChargesWithActions(rows, {
         salaryYears,
         capInclusion,
         contractActions,
@@ -7674,7 +7682,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       el.innerHTML = barsHTML;
     };
 
-    // src/scripts/rosters/roster-age.ts. "Today" is a parameter there so the
+    // src/utils/age-utils.ts. "Today" is a parameter there so the
     // functions are testable; these call sites keep the implicit `new Date()`.
     const calculateAge = (birthdate) => calculateAgeCore(birthdate);
     const calculateAverageAge = (players = []) => calculateAverageAgeCore(players);

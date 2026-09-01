@@ -2,14 +2,14 @@ import { describe, it, expect } from 'vitest';
 import {
   getCapPercent,
   normalizeBucket,
-  calculateCapCharges,
+  calculateCapChargesWithActions,
   calculateBucketCaps,
   calculatePositionCaps,
   calculateCapEfficiency,
   calculateContractYearsMeta,
   ANNUAL_ESCALATION,
-  type CapInclusion,
-} from '../src/scripts/rosters/roster-cap-math';
+  type CapInclusionTable,
+} from '../src/utils/salary-calculations';
 
 /**
  * These numbers used to be unreachable without booting a browser — they were
@@ -19,7 +19,7 @@ import {
 
 // Mirrors the real shape: reduced current-year hit for practice/IR, full hit
 // in future years.
-const CAP_INCLUSION: CapInclusion = {
+const CAP_INCLUSION: CapInclusionTable = {
   ACTIVE: { current: 1, future: 1 },
   PRACTICE: { current: 0.5, future: 1 },
   INJURED: { current: 0.5, future: 1 },
@@ -72,7 +72,7 @@ describe('calculateCapCharges', () => {
   const ctx = { salaryYears: years, capInclusion: CAP_INCLUSION };
 
   it('escalates 10% a year and stops when the contract ends', () => {
-    const charges = calculateCapCharges([player({ salary: 1000, contractYears: 3 })], ctx);
+    const charges = calculateCapChargesWithActions([player({ salary: 1000, contractYears: 3 })], ctx);
     expect(charges[0]).toBeCloseTo(1000, 6);
     expect(charges[1]).toBeCloseTo(1000 * ANNUAL_ESCALATION, 6);
     expect(charges[2]).toBeCloseTo(1000 * ANNUAL_ESCALATION ** 2, 6);
@@ -81,7 +81,7 @@ describe('calculateCapCharges', () => {
 
   it('applies the reduced current-year percentage to practice squad only', () => {
     const rows = [player({ displayTag: 'practice', salary: 1000, contractYears: 2 })];
-    const charges = calculateCapCharges(rows, ctx);
+    const charges = calculateCapChargesWithActions(rows, ctx);
     expect(charges[0]).toBeCloseTo(500, 6); // 50% this year
     expect(charges[1]).toBeCloseTo(1000 * ANNUAL_ESCALATION, 6); // 100% next
   });
@@ -89,7 +89,7 @@ describe('calculateCapCharges', () => {
   it('excludes cut and traded players entirely', () => {
     const rows = [player({ id: 'a' }), player({ id: 'b' })];
     for (const type of ['cut', 'trade']) {
-      const charges = calculateCapCharges(rows, {
+      const charges = calculateCapChargesWithActions(rows, {
         ...ctx,
         contractActions: { b: { type } },
       });
@@ -99,7 +99,7 @@ describe('calculateCapCharges', () => {
 
   it('lets a declaration override the player contract length', () => {
     const rows = [player({ id: 'a', contractYears: 1 })];
-    const charges = calculateCapCharges(rows, {
+    const charges = calculateCapChargesWithActions(rows, {
       ...ctx,
       declarationsByPlayer: { a: { years: 3 } },
     });
@@ -108,7 +108,7 @@ describe('calculateCapCharges', () => {
 
   it('prefers an optimistic local declaration over the saved one', () => {
     const rows = [player({ id: 'a', contractYears: 1 })];
-    const charges = calculateCapCharges(rows, {
+    const charges = calculateCapChargesWithActions(rows, {
       ...ctx,
       declarationsByPlayer: { a: { years: 4 } },
       localDeclarations: { a: { years: 1 } },
@@ -118,7 +118,7 @@ describe('calculateCapCharges', () => {
 
   it('accepts requestedYears as the declaration alias', () => {
     const rows = [player({ id: 'a', contractYears: 1 })];
-    const charges = calculateCapCharges(rows, {
+    const charges = calculateCapChargesWithActions(rows, {
       ...ctx,
       declarationsByPlayer: { a: { requestedYears: 2 } },
     });
@@ -127,7 +127,7 @@ describe('calculateCapCharges', () => {
 
   it("uses an extension's explicit breakdown instead of escalating", () => {
     const rows = [player({ id: 'a', salary: 1000, contractYears: 3 })];
-    const charges = calculateCapCharges(rows, {
+    const charges = calculateCapChargesWithActions(rows, {
       ...ctx,
       contractActions: {
         a: { type: 'extension', salaryBreakdown: { year0: 500, year1: 600, year2: 700 } },
@@ -140,7 +140,7 @@ describe('calculateCapCharges', () => {
 
   it('adds franchise tags and team options at their UFA year, unescalated', () => {
     for (const type of ['franchise', 'team-option']) {
-      const charges = calculateCapCharges([], {
+      const charges = calculateCapChargesWithActions([], {
         ...ctx,
         contractActions: { a: { type, ufaYearIndex: 2, newSalary: 9000 } },
       });
@@ -149,12 +149,12 @@ describe('calculateCapCharges', () => {
   });
 
   it('returns one entry per configured salary year', () => {
-    expect(calculateCapCharges([player()], { salaryYears: [0, 1] })).toHaveLength(2);
-    expect(calculateCapCharges([player()], { salaryYears: years })).toHaveLength(4);
+    expect(calculateCapChargesWithActions([player()], { salaryYears: [0, 1] })).toHaveLength(2);
+    expect(calculateCapChargesWithActions([player()], { salaryYears: years })).toHaveLength(4);
   });
 
   it('is empty-safe', () => {
-    expect(calculateCapCharges([], ctx)).toEqual([0, 0, 0, 0]);
+    expect(calculateCapChargesWithActions([], ctx)).toEqual([0, 0, 0, 0]);
   });
 });
 

@@ -34,10 +34,15 @@ export interface RosterPlayer {
  * @param pos - Position code (QB, RB, WR, etc.)
  * @returns Numeric rank (lower = earlier in sort order)
  */
-export function getPositionRank(pos?: string): number {
-  if (!pos) return positionOrder.length;
-  const rank = positionOrder.indexOf(pos.toUpperCase() as any);
-  return rank === -1 ? positionOrder.length : rank;
+export function getPositionRank(
+  pos?: string | null,
+  order: readonly string[] = positionOrder,
+): number {
+  if (!pos) return order.length;
+  const rank = order.indexOf(String(pos).toUpperCase());
+  // Unknown positions sort LAST. Returning -1 here would float every
+  // unrecognised position to the top of the roster.
+  return rank === -1 ? order.length : rank;
 }
 
 /**
@@ -45,11 +50,28 @@ export function getPositionRank(pos?: string): number {
  * @param list - Array of players to sort
  * @returns Sorted array (does not mutate original)
  */
-export function sortByPosition<T extends RosterPlayer>(list: T[]): T[] {
+export interface SortByPositionOptions {
+  order?: readonly string[];
+  /**
+   * How to read a salary for the tiebreak.
+   *
+   * Defaults to `parseNumber`, because feed values reaching the SERVER can
+   * still be formatted strings. The client passes a plain numeric read: by the
+   * time rows are in `#roster-config` the salaries are already numbers, and
+   * routing them through `parseNumber` there would be a behavior change, not a
+   * tidy-up.
+   */
+  readSalary?: (value: unknown) => number;
+}
+
+export function sortByPosition<T extends { position?: string | null; salary?: unknown }>(
+  list: T[],
+  { order = positionOrder, readSalary = parseNumber }: SortByPositionOptions = {},
+): T[] {
   return list.slice().sort((a, b) => {
-    const diff = getPositionRank(a.position) - getPositionRank(b.position);
+    const diff = getPositionRank(a.position, order) - getPositionRank(b.position, order);
     if (diff !== 0) return diff;
-    return parseNumber(b.salary) - parseNumber(a.salary);
+    return readSalary(b.salary) - readSalary(a.salary);
   });
 }
 
@@ -59,27 +81,46 @@ export function sortByPosition<T extends RosterPlayer>(list: T[]): T[] {
  * @param rows - Array of players (should be sorted by position)
  * @returns Players with positionDivider and positionDividerEnd fields
  */
-export function annotatePositionDividers<T extends RosterPlayer>(rows: T[]): T[] {
+export interface PositionDividerOptions {
+  /**
+   * Whether row 0 gets a leading divider.
+   *
+   * The rosters page's server frontmatter said yes and its client script said
+   * no, so SSR first paint drew a rule above the first player and the hydrated
+   * re-render did not. Both behaviors are preserved by their call sites rather
+   * than one being silently picked; deciding which is correct is open work.
+   * Default matches the server, which is what this module already did.
+   */
+  dividerOnFirstRow?: boolean;
+  /**
+   * Whether the LAST row counts as ending its position group. Server said no
+   * (`!!next && …`), client said yes (`!next || …`). Same situation.
+   */
+  dividerEndOnLastRow?: boolean;
+}
+
+export function annotatePositionDividers<T extends { position?: string | null }>(
+  rows: T[],
+  { dividerOnFirstRow = true, dividerEndOnLastRow = false }: PositionDividerOptions = {},
+): Array<T & { positionDivider: boolean; positionDividerEnd: boolean; _positionGroup: string }> {
   const normalized = rows.map((player, index) => {
     const prevPosition =
-      index > 0 ? (rows[index - 1].position ?? '').toUpperCase() : null;
-    const current = (player.position ?? '').toUpperCase();
-    const showDivider = index === 0 || (index > 0 && current !== prevPosition);
+      index > 0 ? String(rows[index - 1].position ?? '').toUpperCase() : null;
+    const current = String(player.position ?? '').toUpperCase();
+    const changed = index > 0 && current !== prevPosition;
     return {
       ...player,
-      positionDivider: showDivider,
+      positionDivider: (dividerOnFirstRow && index === 0) || changed,
       _positionGroup: current,
     };
   });
 
   return normalized.map((player, index) => {
     const next = normalized[index + 1];
-    const isEndDivider =
-      !!next && (next._positionGroup ?? '') !== (player._positionGroup ?? '');
-    return {
-      ...player,
-      positionDividerEnd: isEndDivider,
-    };
+    const positionDividerEnd = next
+      ? (next._positionGroup ?? '') !== (player._positionGroup ?? '')
+      : dividerEndOnLastRow;
+    return { ...player, positionDividerEnd };
   });
 }
 
@@ -89,10 +130,12 @@ export function annotatePositionDividers<T extends RosterPlayer>(rows: T[]): T[]
  * @param rows - Array of players with displayTag set
  * @returns Players with tierDivider field
  */
-export function annotateTierDividers<T extends RosterPlayer>(rows: T[]): T[] {
+export function annotateTierDividers<T extends { displayTag?: string | null }>(
+  rows: T[],
+): Array<T & { tierDivider: boolean }> {
   let lastTag: string | null = null;
   return rows.map((player) => {
-    const currentTag = player.displayTag ?? 'active';
+    const currentTag = String(player.displayTag ?? 'active');
     const divider =
       lastTag !== null && currentTag !== lastTag && currentTag !== 'active';
     lastTag = currentTag;
@@ -109,10 +152,12 @@ export function annotateTierDividers<T extends RosterPlayer>(rows: T[]): T[] {
  * @param rows - Array of players with displayTag set
  * @returns Players with activeStripe field
  */
-export function annotateActiveStriping<T extends RosterPlayer>(rows: T[]): T[] {
+export function annotateActiveStriping<T extends { displayTag?: string | null }>(
+  rows: T[],
+): Array<T & { activeStripe: boolean }> {
   let activeIndex = 0;
   return rows.map((player) => {
-    if ((player.displayTag ?? 'active') === 'active') {
+    if (String(player.displayTag ?? 'active') === 'active') {
       const striped = activeIndex % 2 === 1;
       activeIndex += 1;
       return { ...player, activeStripe: striped };

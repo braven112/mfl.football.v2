@@ -5,11 +5,15 @@ import {
   calculateAverageAgeByPosition,
   getAgeDistribution,
   getAgeDistributionColors,
-} from '../src/scripts/rosters/roster-age';
+} from '../src/utils/age-utils';
 
 /**
- * The originals read `new Date()` directly, so none of this could be tested
- * without freezing the system clock. "Today" is a parameter now.
+ * Covers src/utils/age-utils.ts, which the rosters page's client script now
+ * uses instead of its own inline copies.
+ *
+ * These read `new Date()` directly until this branch, so none of it could be
+ * tested without freezing the system clock. "Today" is an optional last
+ * argument now; every existing caller is unaffected.
  */
 const TODAY = new Date('2026-08-27T12:00:00Z');
 

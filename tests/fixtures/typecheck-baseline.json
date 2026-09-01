@@ -1,11 +1,11 @@
 {
   "$comment": "Ratchet baseline for `astro check --minimumSeverity error`. This number may only go DOWN. tests/typecheck-baseline.typecheck.ts fails if it rises (a regression) and also fails if it drops (so the baseline is retightened rather than quietly leaving slack). Run `pnpm test:types` to check, then lower `total` to the reported count.",
-  "total": 1812,
+  "total": 1809,
   "recordedAt": "2026-08-28",
   "notes": {
     "concentration": "src/pages/theleague/rosters.astro still dominates this number. The split plan in docs/plans/rosters-page-split.md is the route down: each extracted module takes its errors with it, because an exported function needs a signature. Verify the inline script via @astrojs/compiler transform + esbuild parse, NOT a full astro check (see docs/claude/insights/features/august-roster-cuts.md).",
     "composition": "The bulk is implicit-any annotation debt (ts7006/7005/7053) plus property-access noise (ts2339), not defects. The null-safety class outside rosters.astro is at zero and should stay there.",
-    "provenance": "1812 after the first extraction phases of the rosters-page split (docs/plans/rosters-page-split.md): cap math, row shaping and age analytics moved out of rosters.astro into typed modules under src/scripts/rosters/, the page adopted the canonical constants/roster-constants helpers instead of local redefinitions, and dead code (createPlayerLookup + three duplicated payload keys) was removed. Measured on main at a2d3f4d, which stood at 1912; the split removes 100.",
+    "provenance": "1809 after the first extraction phases of the rosters-page split (docs/plans/rosters-page-split.md). The page's inline copies of the cap math, row shaping and age analytics were replaced by the CANONICAL shared modules that already held them \u2014 src/utils/salary-calculations.ts, roster-utils.ts and age-utils.ts \u2014 rather than by new parallel ones; it also adopted constants/roster-constants instead of local redefinitions, and dead code (createPlayerLookup + three duplicated payload keys) was removed. Measured on main at a2d3f4d, which stood at 1912; the split removes 103.",
     "clearedClasses": "These classes were driven to zero and are pinned there separately, because the total alone cannot protect them: an improvement elsewhere can mask a regression in one of these and still leave the total lower, which the ratchet would read as progress."
   },
   "clearedClasses": {

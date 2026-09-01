@@ -80,7 +80,7 @@ lines of imperative DOM mutation after hydration — had **no test at all**.
 | 0 — Parity harness | **done** | 64 renders in ~23s, 29k values + 3,879 image srcs |
 | 1 — Delete duplicated payload | **done** | 10.37 MB → 8.26 MB |
 | 2 — On-demand historical seasons | **done** | 8.26 MB → 1.17 MB |
-| 3 — Extract pure client logic | **done** | 3 modules, 71 unit tests, −93 type errors |
+| 3 — Onto the canonical shared modules | **done** | no new modules; age-utils/roster-utils/salary-calculations extended, 72 tests |
 | 4 — Adopt canonical roster-constants | **done** | −7 type errors, fixed a UFA logo 404 |
 | 5 — Extract the autocut client module | **not started** | see the note under that phase |
 | 6 — Extract the rest of the client script | not started | |
@@ -92,11 +92,11 @@ lines of imperative DOM mutation after hydration — had **no test at all**.
 
 | | Before | After | |
 |---|---:|---:|---|
-| `#roster-config` | 10.37 MB | 1.17 MB | **−88.7%** |
-| Page HTML | 14.08 MB | 4.88 MB | −65.4% |
-| Gzipped (what travels) | 1.25 MB | 0.45 MB | −63.7% |
-| `astro check` errors | 1913 | 1813 | −100 |
-| Roster unit tests | 0 | 76 | |
+| `#roster-config` | 10.29 MB | 1.12 MB | **−89.1%** |
+| Page HTML | 14.52 MB | 4.89 MB | −66% |
+| Gzipped (what travels) | 1.09 MB | 0.38 MB | −65% |
+| `astro check` errors | 1912 | 1809 | **−103** |
+| Roster unit tests | 0 | 77 | |
 
 ---
 
@@ -183,33 +183,52 @@ So the on-demand layer is groundwork, not a live feature. The user-visible value
 of this phase is entirely the payload cut — and the harness pins that nothing
 else moved.
 
-## Phase 3 — Extract the pure client logic *(done)*
+## Phase 3 — Move the pure client logic onto the canonical modules *(done)*
 
-Three modules under `src/scripts/rosters/`, 71 unit tests:
+**Correction, found in review:** this phase originally created three NEW
+modules under `src/scripts/rosters/`. Every function in them already existed as
+a shared, exported, typed module:
 
-| Module | What moved |
+| What was written | What already existed |
 |---|---|
-| `roster-cap-math.ts` | cap charges, bucket/position caps, efficiency, contract-year totals |
-| `roster-rows.ts` | position ranking, sorting, divider/stripe flags |
-| `roster-age.ts` | age, averages by position, distribution buckets |
+| `roster-age.ts` | `src/utils/age-utils.ts` — all 5 functions, **line-identical** |
+| `roster-rows.ts` | `src/utils/roster-utils.ts` — all 5, and it holds the *server* divider variant |
+| `roster-cap-math.ts` | `src/utils/salary-calculations.ts` — `getCapPercent` and `calculateContractYearsMeta` identical |
 
-Everything they closed over — the cap-inclusion table, pending contract actions,
-both declaration maps, the position order, "today" — is an explicit parameter
-now. That is most of the value: these produce every number in the cap footer and
-the bucket subtotals, and none of them could be exercised without a browser.
+That is net-neutral on duplication — it took the copies out of the page and put
+them in a new module — but the point of the phase is reuse, and a second
+implementation is the opposite of that. It is also the same mistake Phase 4
+catches for `roster-constants`. The three new modules are gone; the page now
+imports the canonical ones.
 
-`roster-rows.ts` is shared by the frontmatter AND the client script, which had
-duplicate copies that **had drifted**:
+`age-utils.ts` and `roster-utils.ts` turned out to have **zero importers** —
+written and never wired up — which is why the duplication was invisible from the
+page. They have a consumer now.
 
-- `annotatePositionDividers`: the server drew a rule above row 0 and did not
-  treat the last row as ending its group; the client did the opposite on both,
-  so SSR first paint and the hydrated re-render disagreed.
-- `sortByPosition`: the server ran salaries through `parseNumber`, the client
-  did not.
+What each canonical module gained, all strictly additive so existing callers are
+untouched (`salary-calculations` has 15):
 
-Both differences are now options each call site passes, so extracting changed
-nothing — but the divergence is visible in a signature instead of buried in a
-second function body. **Deciding which variant is correct is still open work.**
+- **`age-utils`** — an optional `now: Date` last argument on the four
+  date-dependent functions. Without that seam none of it is testable, which is
+  why it never was. Also drops two dead locals in `getAgeDistribution`.
+- **`roster-utils`** — `order` / `readSalary` options on `sortByPosition`, and
+  `dividerOnFirstRow` / `dividerEndOnLastRow` on `annotatePositionDividers`.
+  Defaults reproduce the module's existing (server) behavior exactly.
+- **`salary-calculations`** — an optional injected cap-inclusion table on
+  `getCapPercent`; `normalizeBucket`; `calculateCapChargesWithActions` (the
+  read-only `calculateCapCharges` with the page's *pending* state layered on:
+  cuts, declarations, extension breakdowns, franchise tags); and
+  `calculateBucketCaps` / `calculatePositionCaps` / `calculateCapEfficiency`,
+  which were genuinely new.
+
+**The divergence this surfaced is still open work.** The server and client
+copies of `annotatePositionDividers` disagree on two flags — whether row 0 gets
+a leading rule, and whether the last row ends its group — so SSR first paint and
+the hydrated re-render draw different dividers. Both are preserved as options
+and each call site passes what it did before, so nothing moved. Deciding which
+is correct is a visual judgement someone should actually make.
+
+72 unit tests now cover these, against the canonical modules.
 
 ## Phase 4 — Adopt the canonical `roster-constants` helpers *(done)*
 
