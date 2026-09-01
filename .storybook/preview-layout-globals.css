@@ -41,8 +41,8 @@
  * It also matches production, since Astro's font pipeline self-hosts too.
  *
  * `.storybook/static/fonts` is served at /storybook-fonts by a staticDirs
- * mapping in main.ts, and is declared to Chromatic via `--externals` in the
- * `chromatic` script. It deliberately does NOT live in public/ — Storybook is
+ * mapping in main.ts, and is declared to Chromatic via `externals` in
+ * `chromatic.config.json`. It deliberately does NOT live in public/ — Storybook is
  * dev-only and the shipped Vercel bundle stays byte-identical.
  */
 

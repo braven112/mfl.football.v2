@@ -106,9 +106,34 @@ describe('chromatic path filter', () => {
   it('resolves a non-trivial story closure', () => {
     // A resolver regression that silently returned [] would make every
     // coverage assertion below vacuously pass.
-    expect(deps.length).toBeGreaterThan(80);
+    expect(deps.length).toBeGreaterThan(90);
     expect(deps).toContain('src/utils/franchise-brand.ts');
     expect(deps).toContain('src/components/shared/PeckingOrderIssue.astro');
+  });
+
+  it('does not drop rendering files that live outside src/', () => {
+    // The bug this pins: computeStoryDeps used to end in
+    // `.filter(f => f.startsWith('src/'))`, which silently dropped three files
+    // the walk had correctly found. They render (AFL brand colors and tier
+    // history) but matched no `paths:` entry, so an edit to them built on
+    // NEITHER the PR nor the merge.
+    //
+    // The coverage assertions below could not catch it, because they iterate
+    // the already-filtered list — a filtered-out file is not "uncovered", it is
+    // invisible. Hence this explicit sentinel.
+    for (const file of [
+      'data/afl-fantasy/afl.config.json',
+      'data/afl-fantasy/tier-history.json',
+      'data/best-ball-1/bb1.config.json',
+    ]) {
+      expect(deps, `${file} renders into a story but fell out of the closure`).toContain(file);
+    }
+  });
+
+  it('drops only the seed directories, which have their own globs', () => {
+    // stories/** and .storybook/** already match in the workflow, so listing
+    // each file again would be noise — but nothing else may be filtered out.
+    expect(deps.filter((f) => f.startsWith('stories/') || f.startsWith('.storybook/'))).toEqual([]);
   });
 
   it.each([0, 1])('trigger block %i covers every rendering file', (index) => {

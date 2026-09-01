@@ -42,7 +42,36 @@ import { join, dirname, normalize } from 'node:path';
 
 const SEED_GLOBS = ['stories/**/*.stories.ts', 'stories/**/*.stories.tsx'];
 const EXTRA_SEEDS = ['.storybook/preview.ts'];
-const EXT = ['', '.ts', '.tsx', '.astro', '.mjs', '.js', '.css', '/index.ts'];
+const EXT = [
+  '',
+  '.ts',
+  '.tsx',
+  '.astro',
+  '.mjs',
+  '.js',
+  '.css',
+  '.json',
+  '/index.ts',
+  '/index.tsx',
+  '/index.mjs',
+  '/index.js',
+  '/index.astro',
+];
+
+/**
+ * Seed directories, which are covered by their own `stories/**` and
+ * `.storybook/**` globs and so are dropped from the emitted list.
+ *
+ * NOTE this is the only thing filtered out. An earlier version filtered to
+ * `src/` and silently dropped three files that genuinely render:
+ * data/afl-fantasy/afl.config.json (AFL brand colors, imported by
+ * PeckingOrderIssue and franchise-band-brand), data/afl-fantasy/tier-history.json
+ * and data/best-ball-1/bb1.config.json. They matched no `paths:` entry, so an
+ * AFL brand-color edit would have built on neither the PR nor the merge — the
+ * exact hole this generator exists to close, reintroduced by a leftover prefix
+ * check. Filter by what a glob already covers, never by a path prefix.
+ */
+const SEED_DIRS = ['stories/', '.storybook/'];
 
 /**
  * Asset trees a story can render. NOT derivable from the import graph: these
@@ -114,7 +143,7 @@ export function computeStoryDeps() {
       if (resolved && !seen.has(resolved)) stack.push(resolved);
     }
   }
-  return [...seen].filter((f) => f.startsWith('src/')).sort();
+  return [...seen].filter((f) => !SEED_DIRS.some((d) => f.startsWith(d))).sort();
 }
 
 /** The stylesheets a story renders - the traceable half of `externals`. */

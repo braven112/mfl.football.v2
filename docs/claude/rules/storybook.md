@@ -363,8 +363,8 @@ work through on day one.
   emits `storybook-static/preview-stats.json`.
 - `fetch-depth: 0` on checkout. `actions/checkout` defaults to depth 1, which
   degrades both TurboSnap and Chromatic's baseline detection without erroring.
-- `--externals 'src/styles/**/*.css'` and `--externals '.storybook/static/**'`.
-  **This one is the dangerous default.**
+- An `externals` list in `chromatic.config.json` covering every untraceable
+  visual input. **This one is the dangerous default — in BOTH directions.**
   TurboSnap does not trace CSS and other externally-processed static assets
   through the module graph, so without this flag a change to `tokens.css` or
   `tokens-dark.css` can be treated as affecting NOTHING and skip the very
@@ -397,9 +397,22 @@ feature-branch pushes. A single branch (`draft-broadcast-image-loading`) spent
 It now fires on:
 
 - `push` to **main only** (the baseline run, the one that auto-accepts)
-- `pull_request` with `types: [opened, ready_for_review, labeled]` and
-  deliberately **no `synchronize`**, so pushing to an open PR costs nothing
+- `pull_request` with `types: [opened, ready_for_review, labeled, synchronize]`
 - the `visual-check` label on demand — remove and re-add it to re-run
+
+**The cost control is the `paths:` list, NOT the trigger type.** A revision of
+this change dropped `synchronize` to make PR iteration free, and that was a
+coverage hole: a commit pushed after the PR opens would get its FIRST capture
+from the merge build on main, which runs `--auto-accept-changes` — so it would
+be blessed as the baseline having never been reviewed. Exactly the failure this
+page keeps warning about.
+
+Checked against the real burn rather than assumed: the 16-build
+`draft-broadcast-image-loading` branch touches only draft-broadcast components,
+styles, pages and types, none of which are in the closure, so it triggers
+**zero** builds under the narrowed paths. Build #117 still triggers, correctly,
+because it edited `src/config/leagues-data.mjs`. Narrow paths buy the savings;
+restricting the trigger type bought nothing but the hole.
 
 An earlier version of this section argued against `pull_request` because
 push+PR would double-bill. That was true only while `push` was unrestricted.
@@ -423,6 +436,16 @@ Narrowing this is safe in exactly one direction, and
 but is NOT matched means the regression never triggers a build, ships, and is
 then blessed by `--auto-accept-changes` on main — a visual test that certifies
 the bug. Extra patterns are always safe; missing ones fail the suite.
+
+**Filter by what a glob already covers, never by a path prefix.** The generator
+briefly ended in `.filter(f => f.startsWith('src/'))`, which silently dropped
+three files the walk had correctly found — `data/afl-fantasy/afl.config.json`
+(AFL brand colors, reached through both `PeckingOrderIssue` and
+`franchise-band-brand`), `data/afl-fantasy/tier-history.json` and
+`data/best-ball-1/bb1.config.json`. They render, matched no `paths:` entry, and
+the coverage assertions could not see it: a filtered-out file is not
+"uncovered", it is invisible. `tests/chromatic-path-filter.test.ts` now pins
+them by name for that reason.
 
 Generating the closure also exposed a **real hole in the old filter**:
 `src/config/**`, `src/constants/**`, `src/data/**` and `src/types/**` all
@@ -667,8 +690,9 @@ Treat a "no stories found" on a util or a stylesheet as **unknown, not
 uncovered**. Acting on it as though the file were unstoried is how you skip
 the visual check on a token change — the single most expensive bug class in
 this repo (see `docs/claude/rules/theming-and-assets.md`). This is the same
-shape as TurboSnap's CSS blindness, which is why `pnpm chromatic` passes
-`--externals "src/styles/**/*.css"`.
+shape as TurboSnap's CSS blindness, which is why the story stylesheets are
+listed in `chromatic.config.json`'s `externals` (individually — the old
+`src/styles/**/*.css` glob was disabling TurboSnap outright).
 
 It does not affect the static build: `pnpm build:storybook` produces the same
 52 entries with the addon on or off, so Chromatic is unchanged. `pnpm add`
