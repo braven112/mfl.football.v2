@@ -107,10 +107,50 @@ describe('assertPayloadHasNoContactInfo', () => {
 		);
 	});
 
-	it('throws when contact-shaped text reaches the payload', () => {
+	it('throws when contact-shaped text reaches an expected metadata field', () => {
+		// Inside a KNOWN key, so it gets past the shape check and has to be
+		// caught by the pattern scan — that is the path under test here.
 		expect(() =>
-			assertPayloadHasNoContactInfo({ owner: 'someone@example.com', lastVisit: { '0001': 1787915211 } }),
+			assertPayloadHasNoContactInfo({
+				generatedAt: 'x',
+				leagueId: 'someone@example.com',
+				lastVisit: { '0001': 1787915211 },
+			}),
 		).toThrow(/contact/i);
+	});
+
+	// THE BUG THIS PREVENTS: a phone-number pattern added to the scan matched a
+	// 10-digit epoch timestamp and rejected every real payload. The number map
+	// is validated by shape, so the pattern scan must not see it.
+	it('accepts a real payload whose epochs look like phone numbers', () => {
+		expect(() =>
+			assertPayloadHasNoContactInfo({
+				generatedAt: new Date().toISOString(),
+				leagueId: '13522',
+				year: 2026,
+				source: 'MFL export?TYPE=league (commissioner session)',
+				lastVisit: { '0001': 1787915211, '0002': 1788029356 },
+			}),
+		).not.toThrow();
+	});
+
+	it('rejects an unexpected top-level key, which is how a widened whitelist would leak', () => {
+		expect(() =>
+			assertPayloadHasNoContactInfo({
+				generatedAt: 'x',
+				lastVisit: { '0001': 1787915211 },
+				owner_name: 'A Real Person',
+			}),
+		).toThrow(/unexpected top-level key/i);
+	});
+
+	it('rejects a key that is not a franchise id', () => {
+		expect(() =>
+			assertPayloadHasNoContactInfo({
+				generatedAt: 'x',
+				lastVisit: { 'someone@example.com': 1787915211 },
+			}),
+		).toThrow(/not a franchise id/i);
 	});
 
 	it('does not trip on the source line, which legitimately names an endpoint', () => {

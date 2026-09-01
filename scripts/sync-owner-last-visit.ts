@@ -110,17 +110,35 @@ export function outputPathFor(league: Pick<LeagueEntry, 'dataPath'>): string {
  * committing an owner's email address to a public git history.
  */
 export function assertPayloadHasNoContactInfo(payload: Partial<LastVisitPayload> & Record<string, unknown>): void {
-	const CONTACT_SHAPED = /@|\bhttps?:\/\/|\.com\b|\.net\b|\.org\b/i;
+	// Shape first, patterns second. Matching only email/URL shapes would let a
+	// real name ("John Smith") or a bare phone number ("5555555555") straight
+	// through the guard whose entire job is to stop them — and those are three
+	// of the fields sitting beside `lastVisit` in the same MFL response. So the
+	// payload is pinned to an exact shape: known keys, numbers only.
+	const EXPECTED_KEYS = ['generatedAt', 'leagueId', 'year', 'source', 'lastVisit'];
+	const unexpected = Object.keys(payload).filter((k) => !EXPECTED_KEYS.includes(k));
+	if (unexpected.length > 0) {
+		throw new Error(`Refusing to write: unexpected top-level key(s) ${unexpected.join(', ')}.`);
+	}
+
 	for (const [franchiseId, value] of Object.entries(payload.lastVisit ?? {})) {
+		// A number cannot be a name, an address or an email. This one check is
+		// what actually makes the file safe; the pattern scan below is a
+		// belt-and-braces catch for the metadata strings.
 		if (typeof value !== 'number' || !Number.isFinite(value)) {
 			throw new Error(`Refusing to write: franchise ${franchiseId} lastVisit is not a number.`);
 		}
-		if (CONTACT_SHAPED.test(String(value))) {
-			throw new Error(`Refusing to write: franchise ${franchiseId} value looks like contact info.`);
+		if (!/^\d{4}$/.test(franchiseId)) {
+			throw new Error(`Refusing to write: "${franchiseId}" is not a franchise id.`);
 		}
 	}
-	const serialized = JSON.stringify(payload);
-	if (CONTACT_SHAPED.test(serialized.replace(/"(generatedAt|source)":"[^"]*"/g, ''))) {
+
+	// Scan the METADATA only. `lastVisit` is already proven to be 4-digit keys
+	// mapping to finite numbers, and a 10-digit epoch trips any phone-number
+	// pattern — scanning it would fail every real sync.
+	const { lastVisit: _validated, generatedAt: _ts, source: _src, ...metadata } = payload;
+	const CONTACT_SHAPED = /@|\bhttps?:\/\/|\.com\b|\.net\b|\.org\b|\d{3}[-.\s]?\d{3}[-.\s]?\d{4}/i;
+	if (CONTACT_SHAPED.test(JSON.stringify(metadata))) {
 		throw new Error('Refusing to write: payload contains contact-shaped text.');
 	}
 }
