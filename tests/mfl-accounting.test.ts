@@ -1,0 +1,438 @@
+/**
+ * Guard tests for the MFL accounting client.
+ *
+ * The sign convention is the load-bearing one here: MFL credits on POSITIVE
+ * and charges on NEGATIVE, and getting it backwards pays a prize as a bill
+ * with no error from MFL to catch it.
+ */
+
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import {
+  creditAmount,
+  chargeAmount,
+  parseAmount,
+  normalizeFranchiseId,
+  normalizeAccountingExport,
+  validateRecord,
+  formatAmount,
+} from '../src/utils/mfl-accounting';
+
+describe('sign convention', () => {
+  it('credits a prize as a POSITIVE amount', () => {
+    // A $300 championship prize must INCREASE the franchise's balance.
+    expect(creditAmount(300)).toBe(300);
+    expect(creditAmount(-300)).toBe(300);
+  });
+
+  it('charges dues as a NEGATIVE amount', () => {
+    expect(chargeAmount(100)).toBe(-100);
+    expect(chargeAmount(-100)).toBe(-100);
+  });
+});
+
+describe('parseAmount', () => {
+  it('reads currency formatting a commissioner would paste', () => {
+    expect(parseAmount('$1,234.56')).toBe(1234.56);
+    expect(parseAmount('-25')).toBe(-25);
+    expect(parseAmount('  42.50 ')).toBe(42.5);
+    expect(parseAmount(17)).toBe(17);
+  });
+
+  it('reads accounting parentheses as negative', () => {
+    // "(50.00)" in a spreadsheet export is a $50 CHARGE, not a $50 credit.
+    expect(parseAmount('(50.00)')).toBe(-50);
+  });
+
+  it('refuses junk rather than guessing zero', () => {
+    // Returning 0 here would write a real ledger line that moves no money.
+    expect(parseAmount('n/a')).toBeNull();
+    expect(parseAmount('')).toBeNull();
+    expect(parseAmount('$')).toBeNull();
+    expect(parseAmount(undefined)).toBeNull();
+  });
+});
+
+describe('normalizeFranchiseId', () => {
+  it('pads to four digits so "1" is not a different team than "0001"', () => {
+    expect(normalizeFranchiseId('1')).toBe('0001');
+    expect(normalizeFranchiseId('0015')).toBe('0015');
+    expect(normalizeFranchiseId(' 7 ')).toBe('0007');
+  });
+});
+
+describe('normalizeAccountingExport', () => {
+  it('reads MFL\'s REAL export shape — a flat `entry` list of strings', () => {
+    // Captured verbatim from https://api.myfantasyleague.com/2025/export
+    // ?TYPE=accounting&L=19621&JSON=1 (AFL, Aug 2026). This is the shape MFL
+    // actually returns, and the three shapes originally guessed from the prose
+    // docs all parsed it to an EMPTY ledger — a league with 26 transactions
+    // reporting none, with no error anywhere. Do not remove this test: it is
+    // the only one tied to a real payload.
+    const ledger = normalizeAccountingExport({
+      version: '1.0',
+      accounting: {
+        entry: [
+          {
+            amount: '825',
+            franchise_id: '0015',
+            description: 'AFL Champion, NL Champion, NL East Champion, Premier League Champion',
+            id: '59799186',
+            timestamp: '1767219728',
+          },
+          {
+            franchise_id: '0015',
+            description: 'winnings sent via paypal',
+            amount: '-595',
+            id: '59799187',
+            timestamp: '1767219800',
+          },
+          {
+            amount: '150',
+            franchise_id: '0018',
+            description: 'NL West Division Championship',
+            id: '59799204',
+            timestamp: '1767220076',
+          },
+        ],
+      },
+    });
+
+    expect(ledger.records).toHaveLength(3);
+    // Every field arrives as a STRING, including the amount and timestamp.
+    expect(ledger.balances['0015']).toBe(230);
+    expect(ledger.balances['0018']).toBe(150);
+    // Paying an owner out is negative; a prize is positive.
+    expect(ledger.records.find((r) => r.description === 'winnings sent via paypal')?.amount).toBe(-595);
+  });
+
+  it('reads a single real entry that MFL collapsed to a bare object', () => {
+    const ledger = normalizeAccountingExport({
+      version: '1.0',
+      accounting: {
+        entry: { amount: '100', franchise_id: '0024', description: 'zelle', id: '1', timestamp: '1' },
+      },
+    });
+    expect(ledger.balances['0024']).toBe(100);
+  });
+
+  it('reads the nested franchise/transaction shape', () => {
+    const ledger = normalizeAccountingExport({
+      accounting: {
+        franchise: [
+          {
+            id: '0001',
+            transaction: [
+              { amount: '-100.00', description: '2026 dues', timestamp: '1700000000' },
+              { amount: '300.00', description: '2025 League Champion', timestamp: '1700000100' },
+            ],
+          },
+        ],
+      },
+    });
+    expect(ledger.balances['0001']).toBe(200);
+    expect(ledger.records).toHaveLength(2);
+  });
+
+  it('reads the flat transaction shape', () => {
+    const ledger = normalizeAccountingExport({
+      accounting: {
+        transaction: [{ franchise_id: '2', amount: '-50', description: 'fee' }],
+      },
+    });
+    expect(ledger.balances['0002']).toBe(-50);
+  });
+
+  it('survives MFL collapsing a one-item list to a bare object', () => {
+    // The classic MFL trap: one record comes back unwrapped.
+    const ledger = normalizeAccountingExport({
+      accounting: {
+        franchise: { id: '0003', transaction: { amount: '25', description: 'credit' } },
+      },
+    });
+    expect(ledger.balances['0003']).toBe(25);
+    expect(ledger.records).toHaveLength(1);
+  });
+
+  it('keeps a stated balance when a franchise reports no transactions', () => {
+    // Summary-only payload: balances without records is a legitimate state and
+    // must not read as "this franchise is square".
+    const ledger = normalizeAccountingExport({
+      accounting: { franchise: [{ id: '0004', balance: '-75.00' }] },
+    });
+    expect(ledger.balances['0004']).toBe(-75);
+    expect(ledger.records).toHaveLength(0);
+  });
+
+  it('sorts newest first', () => {
+    const ledger = normalizeAccountingExport({
+      accounting: {
+        franchise: [
+          {
+            id: '0001',
+            transaction: [
+              { amount: '1', description: 'older', timestamp: '100' },
+              { amount: '2', description: 'newer', timestamp: '200' },
+            ],
+          },
+        ],
+      },
+    });
+    expect(ledger.records[0].description).toBe('newer');
+  });
+});
+
+describe('validateRecord', () => {
+  const good = { franchiseId: '0001', amount: -100, description: 'dues' };
+
+  it('accepts a well-formed record', () => {
+    expect(validateRecord(good)).toBeNull();
+  });
+
+  it('rejects a zero amount', () => {
+    // MFL accepts it; it writes a line that moves no money, which is how a
+    // mis-parsed column becomes a real-looking transaction.
+    expect(validateRecord({ ...good, amount: 0 })).toMatch(/zero/i);
+  });
+
+  it('rejects a missing description', () => {
+    expect(validateRecord({ ...good, description: '   ' })).toMatch(/required/i);
+  });
+
+  it('rejects a non-numeric franchise', () => {
+    expect(validateRecord({ ...good, franchiseId: 'Pigskins' })).toMatch(/franchise/i);
+  });
+});
+
+describe('formatAmount', () => {
+  it('keeps the minus outside the dollar sign', () => {
+    expect(formatAmount(-100)).toBe('-$100.00');
+    expect(formatAmount(45)).toBe('$45.00');
+  });
+});
+
+/* ── Network-shaped behaviour ───────────────────────────────────────────── */
+
+describe('fetchAccountingLedger', () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('treats an empty 200 body as a failed read, never an empty ledger', async () => {
+    vi.doMock('../src/utils/mfl-fetch', () => ({
+      mflFetch: async () => new Response('', { status: 200 }),
+    }));
+    const { fetchAccountingLedger } = await import('../src/utils/mfl-accounting');
+    const result = await fetchAccountingLedger({
+      leagueId: '13522',
+      year: 2026,
+      mflUserCookie: 'cookie',
+    });
+    expect(result.ok).toBe(false);
+    // The message must not claim "no records" — an empty ledger and a failed
+    // read look identical to a caller, and only one of them is safe to act on.
+    if (!result.ok) expect(result.error).toMatch(/not an empty ledger/i);
+  });
+});
+
+describe('writeAccountingRecord', () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const league = { id: '13522', mflHost: 'www49.myfantasyleague.com' };
+
+  it('rejects an MFL 200 that carries an <error> body', async () => {
+    // response.ok is NOT "the write landed" — MFL reports rejections at 200.
+    vi.doMock('../src/utils/mfl-fetch', () => ({
+      mflFetch: async () => new Response('<error>Not the commissioner</error>', { status: 200 }),
+    }));
+    const { writeAccountingRecord } = await import('../src/utils/mfl-accounting');
+    const result = await writeAccountingRecord(
+      { franchiseId: '0001', amount: 300, description: 'prize' },
+      { league, year: 2026, mflUserCookie: 'cookie' }
+    );
+    expect(result.ok).toBe(false);
+    expect(result.error).toMatch(/commissioner/i);
+  });
+
+  it('rejects an HTML body — a login page is 200 with no <error>', async () => {
+    // THE BUG THIS EXISTS FOR: MFL answers imports with XML, but serves a
+    // login page / permission notice / league home page as HTML at HTTP 200
+    // with no <error> element. Read as success, that reported a 15-record
+    // carry against a ledger that never changed (AFL, 2026-08-31).
+    vi.doMock('../src/utils/mfl-fetch', () => ({
+      mflFetch: async () =>
+        new Response('<!DOCTYPE html><html><body>Please log in</body></html>', { status: 200 }),
+    }));
+    const { writeAccountingRecord } = await import('../src/utils/mfl-accounting');
+    const result = await writeAccountingRecord(
+      { franchiseId: '0001', amount: 300, description: 'prize' },
+      { league, year: 2026, mflUserCookie: 'cookie' }
+    );
+    expect(result.ok).toBe(false);
+    expect(result.error).toMatch(/HTML page/i);
+  });
+
+  it('posts a plain decimal amount to the league web host, not the api host', async () => {
+    let seenUrl = '';
+    let seenBody = '';
+    vi.doMock('../src/utils/mfl-fetch', () => ({
+      mflFetch: async (opts: any) => {
+        seenUrl = opts.url;
+        seenBody = opts.body;
+        return new Response('<status>OK</status>', { status: 200 });
+      },
+    }));
+    const { writeAccountingRecord } = await import('../src/utils/mfl-accounting');
+    const result = await writeAccountingRecord(
+      { franchiseId: '1', amount: -100, description: '2026 dues' },
+      { league, year: 2026, mflUserCookie: 'cookie', mflCommishCookie: 'commish' }
+    );
+
+    expect(result.ok).toBe(true);
+    // Commissioner imports are rejected on api.myfantasyleague.com.
+    expect(seenUrl).toContain('www49.myfantasyleague.com');
+    expect(seenUrl).not.toContain('api.myfantasyleague.com');
+    expect(seenUrl).toContain('TYPE=accounting');
+    // MFL cannot parse "$" or a thousands comma in AMOUNT.
+    expect(seenBody).toContain('AMOUNT=-100.00');
+    expect(seenBody).toContain('FRANCHISE=0001');
+  });
+
+  it('reports each row of a bulk write separately', async () => {
+    let call = 0;
+    vi.doMock('../src/utils/mfl-fetch', () => ({
+      mflFetch: async () => {
+        call += 1;
+        return call === 2
+          ? new Response('<error>Nope</error>', { status: 200 })
+          : new Response('<status>OK</status>', { status: 200 });
+      },
+    }));
+    const { writeAccountingRecords } = await import('../src/utils/mfl-accounting');
+    const results = await writeAccountingRecords(
+      [
+        { franchiseId: '0001', amount: 10, description: 'a' },
+        { franchiseId: '0002', amount: 10, description: 'b' },
+        { franchiseId: '0003', amount: 10, description: 'c' },
+      ],
+      { league, year: 2026, mflUserCookie: 'cookie' }
+    );
+    // A failed row is a failed row, not an aborted batch.
+    expect(results.map((r) => r.ok)).toEqual([true, false, true]);
+  });
+});
+
+describe('findMissingRecords', () => {
+  it('reports a claimed write that is absent from the ledger', async () => {
+    // MFL can accept an import and apply nothing, so only a re-read confirms.
+    const { findMissingRecords, normalizeAccountingExport } = await import('../src/utils/mfl-accounting');
+    const ledger = normalizeAccountingExport({
+      accounting: { entry: [{ franchise_id: '0001', amount: '-100', description: 'dues', id: '1', timestamp: '1' }] },
+    });
+    const missing = findMissingRecords(ledger, [
+      { franchiseId: '0001', amount: -100, description: 'dues' },
+      { franchiseId: '0002', amount: -100, description: 'dues' },
+    ]);
+    expect(missing).toHaveLength(1);
+    expect(missing[0].franchiseId).toBe('0002');
+  });
+
+  it('treats a same-description record at a different amount as missing', async () => {
+    // Matched on the same (franchise, description, amount) triple the
+    // idempotency check uses, so anything that verifies here is what a re-run
+    // will correctly skip.
+    const { findMissingRecords, normalizeAccountingExport } = await import('../src/utils/mfl-accounting');
+    const ledger = normalizeAccountingExport({
+      accounting: { entry: [{ franchise_id: '0001', amount: '-75', description: 'dues', id: '1', timestamp: '1' }] },
+    });
+    expect(findMissingRecords(ledger, [{ franchiseId: '0001', amount: -100, description: 'dues' }])).toHaveLength(1);
+  });
+
+  it('confirms a record that did land', async () => {
+    const { findMissingRecords, normalizeAccountingExport } = await import('../src/utils/mfl-accounting');
+    const ledger = normalizeAccountingExport({
+      accounting: { entry: [{ franchise_id: '0015', amount: '100', description: 'Balance carried forward from 2025', id: '1', timestamp: '1' }] },
+    });
+    expect(
+      findMissingRecords(ledger, [
+        { franchiseId: '0015', amount: 100, description: 'Balance carried forward from 2025' },
+      ])
+    ).toHaveLength(0);
+  });
+});
+
+describe('verifyWrites', () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const creds = { leagueId: '19621', year: 2026, mflUserCookie: 'cookie' };
+
+  it('confirms rows that are in the ledger afterwards', async () => {
+    vi.doMock('../src/utils/mfl-fetch', () => ({
+      mflFetch: async () =>
+        new Response(
+          JSON.stringify({
+            accounting: {
+              entry: [{ franchise_id: '0001', amount: '-100', description: 'dues', id: '1', timestamp: '1' }],
+            },
+          }),
+          { status: 200 }
+        ),
+    }));
+    const { verifyWrites } = await import('../src/utils/mfl-accounting');
+    const result = await verifyWrites([{ franchiseId: '0001', amount: -100, description: 'dues' }], creds);
+    expect(result.verified).toBe(true);
+    expect(result.unverified).toHaveLength(0);
+  });
+
+  it('flags a row MFL accepted that never reached the ledger', async () => {
+    // The exact failure that shipped: every write "succeeded" and the ledger
+    // did not move.
+    vi.doMock('../src/utils/mfl-fetch', () => ({
+      mflFetch: async () =>
+        new Response(JSON.stringify({ accounting: { entry: [] } }), { status: 200 }),
+    }));
+    const { verifyWrites } = await import('../src/utils/mfl-accounting');
+    const result = await verifyWrites([{ franchiseId: '0001', amount: -100, description: 'dues' }], creds);
+    expect(result.verified).toBe(true);
+    expect(result.unverified).toHaveLength(1);
+  });
+
+  it('reports verified:false — and NO unverified rows — when the read fails', async () => {
+    // We genuinely do not know which landed. Listing them as unverified would
+    // claim knowledge we do not have; listing none as unverified alongside
+    // verified:true would read as success. Callers must surface the flag.
+    vi.doMock('../src/utils/mfl-fetch', () => ({
+      mflFetch: async () => new Response('', { status: 200 }),
+    }));
+    const { verifyWrites } = await import('../src/utils/mfl-accounting');
+    const result = await verifyWrites([{ franchiseId: '0001', amount: -100, description: 'dues' }], creds);
+    expect(result.verified).toBe(false);
+    expect(result.unverified).toHaveLength(0);
+  });
+
+  it('does not read the ledger when nothing was written', async () => {
+    let called = false;
+    vi.doMock('../src/utils/mfl-fetch', () => ({
+      mflFetch: async () => {
+        called = true;
+        return new Response('{}', { status: 200 });
+      },
+    }));
+    const { verifyWrites } = await import('../src/utils/mfl-accounting');
+    const result = await verifyWrites([], creds);
+    expect(called).toBe(false);
+    expect(result.verified).toBe(true);
+  });
+});

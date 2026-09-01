@@ -1,0 +1,455 @@
+/**
+ * Commissioner accounting console.
+ *
+ * Every colour is a token WITH a light-mode fallback. A bare hex renders
+ * correctly in light and ships white-on-white in dark, and a `var(--x)` whose
+ * token is never defined silently renders its fallback in BOTH themes — see
+ * docs/claude/rules/theming-and-assets.md. Tokens used here are the same set
+ * the schedule planner uses, so they are known to be defined.
+ */
+
+.acct {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* --------------------------------------------------------------- banner */
+
+/* The unfinished-carry-over notice. Sits ABOVE the tabs so it is visible from
+   every tab, not just the one that fixes it — the whole point is that it finds
+   you rather than waiting to be found.
+   Warning tokens, not error: an uncarried year is a step not yet taken, not a
+   fault. Both are redefined in tokens-dark.css. */
+.acct__banner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--color-warning-dark, #d97706);
+  background: var(--color-warning-light, #fef3c7);
+  border: 1px solid var(--color-warning-dark, #d97706);
+  border-radius: 10px;
+}
+
+.acct__banner > div {
+  flex: 1 1 20rem;
+}
+
+.acct__banner strong {
+  font-weight: 700;
+}
+
+/* ----------------------------------------------------------------- tabs */
+
+/* ONE ROW, always — you swipe it rather than it wrapping to a second line.
+   Wrapping was the old behaviour and it reflowed the whole panel below as
+   tabs moved between rows, which on a phone meant the content jumped every
+   time the active tab changed rows. */
+.acct__tabs {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+  overflow-x: auto;
+  /* The row is the scroll container, so the underline has to sit on it or it
+     would only span the scrolled content and stop short of the viewport. */
+  border-bottom: 1px solid var(--color-border-default, #cbd5e1);
+  -webkit-overflow-scrolling: touch;
+  /* `proximity`, not `mandatory`: a half-swipe should be allowed to settle
+     where the finger left it instead of being yanked to the next tab. */
+  scroll-snap-type: x proximity;
+  /* Firefox/standards. The WebKit pseudo-element below covers Safari+Chrome. */
+  scrollbar-width: none;
+}
+
+/* Hiding the bar is cosmetic only — the row stays scrollable by touch, wheel,
+   and keyboard. The partially-visible last tab is what signals there is more,
+   which is why no tab is allowed to shrink to fit (see flex below). */
+.acct__tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.acct__tab {
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-text-secondary, #475569);
+  cursor: pointer;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  /* Never shrink and never wrap: a squeezed "Season payouts" breaking onto two
+     lines inside a 2.75rem tab is how this row stops looking like one line. */
+  flex: 0 0 auto;
+  white-space: nowrap;
+  scroll-snap-align: start;
+}
+
+.acct__tab.is-active {
+  color: var(--color-text-primary, #0f172a);
+  border-bottom-color: var(--btn-primary-bg, #1c497c);
+}
+
+/* Keep the focus ring visible against the scroll container's clipping — an
+   outline drawn outside the box gets cut off by `overflow-x: auto`. */
+.acct__tab:focus-visible {
+  outline: 2px solid var(--btn-primary-bg, #1c497c);
+  outline-offset: -2px;
+  border-radius: 6px 6px 0 0;
+}
+
+/* -------------------------------------------------------------- sections */
+
+.acct__section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.acct__section h2 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--color-text-primary, #0f172a);
+}
+
+.acct__h3 {
+  margin: 0.5rem 0 0;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--color-text-primary, #0f172a);
+}
+
+.acct__h3.is-muted,
+.acct__note {
+  color: var(--color-text-secondary, #475569);
+}
+
+.acct__note,
+.acct__hint {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.acct__hint {
+  color: var(--color-text-secondary, #475569);
+}
+
+.acct__detail {
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary, #475569);
+}
+
+.acct__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.acct__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* ------------------------------------------------------------- controls */
+
+.acct__field,
+.acct__inline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text-secondary, #475569);
+}
+
+.acct__inline {
+  flex-direction: row;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.acct__field input,
+.acct__field select,
+.acct__field textarea,
+.acct__inline select,
+.acct__file {
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--color-text-primary, #0f172a);
+  background: var(--color-surface-1, #fff);
+  border: 1px solid var(--color-border-default, #cbd5e1);
+  border-radius: 8px;
+}
+
+.acct__field textarea {
+  min-height: 9rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.875rem;
+  resize: vertical;
+}
+
+.acct__btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0 1.1rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-text-primary, #0f172a);
+  text-decoration: none;
+  cursor: pointer;
+  background: var(--color-surface-1, #fff);
+  border: 1px solid var(--color-border-default, #cbd5e1);
+  border-radius: 8px;
+}
+
+.acct__btn--primary {
+  color: var(--btn-primary-text, #fff);
+  background: var(--btn-primary-bg, #1c497c);
+  border-color: var(--btn-primary-border, transparent);
+}
+
+.acct__btn--primary:hover:not(:disabled) {
+  background: var(--btn-primary-bg-hover, #163a63);
+}
+
+.acct__btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* --------------------------------------------------------------- tables */
+
+/* Wide tables scroll INSIDE this wrapper — the page body must never scroll
+   horizontally on a phone, which is where a commissioner actually does this. */
+.acct__tablewrap {
+  overflow-x: auto;
+}
+
+.acct__table {
+  width: 100%;
+  font-size: 0.9375rem;
+  border-collapse: collapse;
+}
+
+.acct__table th,
+.acct__table td {
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border-subtle, #e2e8f0);
+}
+
+.acct__table th {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary, #475569);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.acct__table td {
+  color: var(--color-text-primary, #0f172a);
+}
+
+.acct__table.is-muted td {
+  color: var(--color-text-secondary, #475569);
+}
+
+.acct__num {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* Negative is a CHARGE. Colour is a reinforcement, never the only signal —
+   the minus sign carries the meaning for anyone who can't see the hue.
+   --color-error and --color-error-light are both redefined in tokens-dark.css,
+   which is what makes them safe here; --color-danger* were not defined at all
+   and would have rendered their light-mode fallback in dark too. */
+.acct__num.is-negative {
+  color: var(--color-error, #dc2626);
+}
+
+.acct__table tr.is-bad td {
+  background: var(--color-error-light, #fee2e2);
+}
+
+/* ---------------------------------------------------------------- steps */
+
+.acct__steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0.9rem 1rem;
+  list-style: none;
+  background: var(--color-surface-2, #f8fafc);
+  border: 1px solid var(--color-border-subtle, #e2e8f0);
+  border-radius: 10px;
+}
+
+.acct__step {
+  display: flex;
+  gap: 0.7rem;
+  align-items: flex-start;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--color-text-secondary, #475569);
+}
+
+.acct__step strong {
+  color: var(--color-text-primary, #0f172a);
+  font-weight: 700;
+}
+
+.acct__step-detail {
+  display: block;
+}
+
+/* The mark carries state as a glyph AND a colour, so neither is load-bearing
+   alone — the step text states it too, for anyone getting neither. */
+.acct__step-mark {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  border-radius: 50%;
+}
+
+.acct__step.is-done .acct__step-mark {
+  color: var(--color-success-dark, #059669);
+  background: var(--color-success-light, #d1fae5);
+}
+
+.acct__step.is-todo .acct__step-mark {
+  color: var(--color-warning-dark, #d97706);
+  background: var(--color-warning-light, #fef3c7);
+}
+
+/* Unknown is grey on purpose: it is neither progress nor a problem, and
+   colouring it either way would overstate what we know. */
+.acct__step.is-unknown .acct__step-mark {
+  color: var(--color-text-secondary, #475569);
+  background: var(--color-surface-1, #fff);
+  border: 1px solid var(--color-border-default, #cbd5e1);
+}
+
+/* Visible to assistive tech only — the state word that the coloured mark
+   conveys visually. */
+.acct__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* --------------------------------------------------------------- status */
+
+.acct__totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin: 0;
+  padding: 0.9rem 1rem;
+  background: var(--color-surface-2, #f8fafc);
+  border: 1px solid var(--color-border-subtle, #e2e8f0);
+  border-radius: 10px;
+}
+
+.acct__totals dt {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-secondary, #475569);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.acct__totals dd {
+  margin: 0.15rem 0 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary, #0f172a);
+}
+
+.acct__drift {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text-secondary, #475569);
+}
+
+.acct__ok,
+.acct__error,
+.acct__warn {
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  border: 1px solid;
+  border-radius: 8px;
+}
+
+.acct__ok {
+  color: var(--color-success-dark, #059669);
+  background: var(--color-success-light, #d1fae5);
+  border-color: var(--color-success-dark, #059669);
+}
+
+.acct__error {
+  color: var(--color-error-dark, #b91c1c);
+  background: var(--color-error-light, #fee2e2);
+  border-color: var(--color-error, #dc2626);
+}
+
+.acct__warn {
+  color: var(--color-warning-dark, #d97706);
+  background: var(--color-warning-light, #fef3c7);
+  border-color: var(--color-warning-dark, #d97706);
+}
+
+.acct__results {
+  margin: 0.5rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.acct__results .is-ok {
+  color: var(--color-success-dark, #059669);
+}
+
+.acct__results .is-bad,
+.acct__bad {
+  color: var(--color-error-dark, #b91c1c);
+}
+
+@media (max-width: 640px) {
+  .acct__totals {
+    gap: 1rem;
+  }
+
+  .acct__toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
