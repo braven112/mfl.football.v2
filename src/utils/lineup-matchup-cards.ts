@@ -31,7 +31,15 @@ import {
 export interface MatchupCardBrand {
   name: string;
   color?: string;
+  /**
+   * Crest for the panel watermark, already resolved for a DARK surface — the
+   * panels are near-black in both themes, so the page picks the artwork
+   * server-side via `resolveDarkSurfaceCrest` rather than leaving it to the
+   * site's `html.dark` swap, which never fires for a light-theme owner.
+   */
   watermark?: string;
+  /** Inline ring for a `watermark` that is light artwork; see the same helper. */
+  watermarkFilter?: string;
 }
 
 /** One game's card on the strip: the composite (when it casts) plus the band. */
@@ -264,6 +272,7 @@ export function buildMatchupCards(input: BuildMatchupCardsInput): MatchupCard[] 
         chip: brand.name || `Franchise ${franchiseId}`,
         color: brand.color,
         watermark: brand.watermark,
+        watermarkFilter: brand.watermarkFilter,
         stat: statFor(cands, cast.model.mflId),
         // 'WR3' in place of a bare 'WR' — the meta line then says why this
         // face won the panel, at no extra width.

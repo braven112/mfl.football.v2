@@ -20,6 +20,7 @@ import { getWeeklyTopScorerCandidates, getLatestScoredWeek } from '../../../util
 import { castBestScoredModel } from '../../../utils/hero-casting';
 import { normalizeTeamCode } from '../../../utils/nfl-logo';
 import { getFranchiseBrand, franchiseGlow } from '../../../utils/franchise-brand';
+import { resolveDarkSurfaceCrest } from '../../../utils/dark-surface-crest';
 import RecapHero from './RecapHero.astro';
 
 export interface Props {
@@ -46,7 +47,19 @@ const winner = model ? candidates.find((c) => c.playerId === model.mflId) ?? nul
 const brand = winner ? getFranchiseBrand(winner.franchiseId) : null;
 const franchiseName = brand?.name ?? '';
 const franchiseColor = brand?.color ?? '#1c497c';
-const crest = brand?.groupMe ?? '';
+// The crest is picked SERVER-SIDE, and it is the dark artwork whenever the
+// franchise has any. This hero is a deep-ink composite in BOTH themes (see the
+// `.rch` block below — light mode is a saturated blue card, dark mode a
+// near-black one), so `TeamIconDarkStyles`' swap and white stroke, which fire
+// only under `html.dark`, do nothing for a light-theme reader here. Taking
+// `brand.groupMe` shipped every franchise's LIGHT mark onto ink in both
+// themes, and the near-black crests dissolved into it at 0.12 opacity. See
+// `dark-surface-crest.ts`.
+const crestArt = brand ? resolveDarkSurfaceCrest(brand, 'theleague') : null;
+const crest = crestArt?.src ?? '';
+// Inline, so it also beats the global `html.dark` stroke rule keyed on this
+// same src — a light crest can never end up wearing two rings.
+const crestFilter = crestArt?.filter;
 const glowDark = franchiseGlow(franchiseColor, 0.42);
 const glowLight = franchiseGlow(franchiseColor, 0.24);
 
@@ -64,7 +77,7 @@ const summary = franchiseName
     aria-label={`Week ${week} recap — top scorer`}
   >
     {crest ? (
-      <img class="rch__crest" src={crest} alt="" aria-hidden="true" loading="lazy" />
+      <img class="rch__crest" src={crest} style={crestFilter ? `filter: ${crestFilter};` : undefined} alt="" aria-hidden="true" loading="lazy" />
     ) : (
       <span class="rch__ghost" aria-hidden="true">WEEK {week}</span>
     )}
@@ -183,7 +196,9 @@ const summary = franchiseName
     width: clamp(180px, 24vw, 300px);
     aspect-ratio: 1;
     object-fit: contain;
-    /* Surface is dark in both themes now, so the crest reads the same way. */
+    /* Surface is dark in both themes, so the crest reads the same way — which
+       is exactly why the ARTWORK is resolved server-side in the frontmatter
+       rather than left to the site's `html.dark` swap. */
     opacity: 0.12;
     pointer-events: none;
     user-select: none;

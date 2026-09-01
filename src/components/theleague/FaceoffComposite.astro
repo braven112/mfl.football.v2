@@ -24,6 +24,15 @@ export interface FaceoffSide {
   color?: string;
   /** Watermark image behind the cutout (NFL logo or franchise crest). */
   watermark?: string;
+  /**
+   * Inline `filter` for the watermark — the white ring a LIGHT franchise crest
+   * needs to read on ink. Resolved server-side by `resolveDarkSurfaceCrest`,
+   * because these panels are dark in BOTH themes (see the style block) and the
+   * site's `html.dark` stroke rule therefore never fires for a light-theme
+   * reader. Applied inline so it also outranks that rule when it DOES fire,
+   * and the crest can never wear two rings.
+   */
+  watermarkFilter?: string;
   /** Optional stat line appended to the player meta (e.g. "24.6 proj"). */
   stat?: string;
   /** Overrides the bare position in the meta line — e.g. 'WR3' when the
@@ -68,7 +77,7 @@ const h = panelOf(home);
 <div class={`foc foc--${size}`} role={ariaLabel ? 'img' : undefined} aria-label={ariaLabel}>
   <div class="foc__panel foc__panel--away" style={`background: ${a.gradient};`}>
     <span class="foc__glow" style={`background: radial-gradient(circle, ${a.glow} 0%, transparent 65%);`} aria-hidden="true"></span>
-    {a.watermark && <img class="foc__watermark" src={a.watermark} alt="" aria-hidden="true" loading={imgLoading} />}
+    {a.watermark && <img class="foc__watermark" src={a.watermark} style={a.watermarkFilter ? `filter: ${a.watermarkFilter};` : undefined} alt="" aria-hidden="true" loading={imgLoading} />}
     <span class="foc__chip" aria-hidden="true">{a.chip}</span>
     <img class="foc__cutout foc__cutout--away" src={a.model.headshot} alt="" aria-hidden="true" loading={imgLoading} decoding="async" onerror="this.style.visibility='hidden'" />
     <span class="foc__player">
@@ -81,7 +90,7 @@ const h = panelOf(home);
 
   <div class="foc__panel foc__panel--home" style={`background: ${h.gradient};`}>
     <span class="foc__glow" style={`background: radial-gradient(circle, ${h.glow} 0%, transparent 65%);`} aria-hidden="true"></span>
-    {h.watermark && <img class="foc__watermark" src={h.watermark} alt="" aria-hidden="true" loading={imgLoading} />}
+    {h.watermark && <img class="foc__watermark" src={h.watermark} style={h.watermarkFilter ? `filter: ${h.watermarkFilter};` : undefined} alt="" aria-hidden="true" loading={imgLoading} />}
     <span class="foc__chip foc__chip--right" aria-hidden="true">{h.chip}</span>
     <img class="foc__cutout foc__cutout--home" src={h.model.headshot} alt="" aria-hidden="true" loading={imgLoading} decoding="async" onerror="this.style.visibility='hidden'" />
     <span class="foc__player foc__player--right">

@@ -29,6 +29,13 @@
  * franchise's outline — this file needs no edit, only the file and the config
  * field.
  *
+ * Everything that is NOT about the 68vh crest — the artwork order for a
+ * normal-sized crest, the three outline signals, the dark-cut test, the
+ * manifest index — lives in `dark-surface-crest.ts` and is shared with every
+ * other dark-in-both-themes surface (the recap hero, the lineup faceoff
+ * panels). What survives here is only the resolution-first BIG order and the
+ * two-crest shape it forces on `DraftRoomTeam`.
+ *
  * One quiet guarantee worth keeping: neither order can ever render the light
  * `icon` for a franchise that HAS an `iconDark`, because the dark cut sits
  * above it in both. That matters because the global swap
@@ -39,37 +46,19 @@
  */
 
 import {
-  DEFAULT_CREST_STROKE_COLOR,
-  withStrokeColors,
-} from './crest-dark-stroke-css';
+  crestStrokeIndex,
+  isDarkCut,
+  resolveCrestStroke,
+  type DarkSurfaceCrestTeam,
+} from './dark-surface-crest';
 import { preferredIconSrc } from './team-icon-dark-css';
 
-/** The crest-bearing fields this reads off a raw league-config team entry. */
-export interface BroadcastCrestTeam {
-  franchiseId?: string;
-  /** 100x100 light crest. */
-  icon?: string;
-  /** 100x100 hand-authored dark cut, when the franchise has one. */
-  iconDark?: string;
-  /** 400x400 light avatar. */
-  groupMe?: string;
-  /** 400x400 hand-authored dark cut — the best of both, when it exists. */
-  groupMeDark?: string;
-  /**
-   * Outline colour override from the league config. A string opts the crest in
-   * (and picks the colour); `false` opts it out of the stroke entirely. See
-   * `CrestStrokeEntry.strokeColor` for the reasoning on both directions.
-   *
-   * Typed `string | boolean` rather than `string | false` so the raw config
-   * array assigns without a cast — TypeScript widens a JSON `false` to
-   * `boolean`, and a page passing `config.teams` straight in is the only way
-   * this is ever called. That makes `true` type-legal, so it has to MEAN
-   * something: it opts the crest in at the default colour, which is what
-   * `withStrokeColors` already does with any truthy value. One config field
-   * must not mean two different things to its two readers.
-   */
-  iconStrokeDark?: string | boolean;
-}
+/**
+ * The crest-bearing fields this reads off a raw league-config team entry —
+ * the same set every dark-in-both-themes surface reads, so it is the shared
+ * shape rather than a second copy of it.
+ */
+export type BroadcastCrestTeam = DarkSurfaceCrestTeam;
 
 export interface BroadcastCrest {
   /**
@@ -88,74 +77,12 @@ export interface BroadcastCrest {
   iconSmallStroke?: string;
 }
 
-/** True when `src` is one of the franchise's hand-authored dark cuts. */
-function isDarkCut(team: BroadcastCrestTeam, src: string): boolean {
-  return !!src && (src === team.groupMeDark || src === team.iconDark);
-}
-
-/**
- * Whether a LIGHT crest needs an outline on the board, and in what colour.
- *
- * Three signals, most specific first:
- *
- * 1. `iconStrokeDark` in the config — a human's answer in either direction, so
- *    it outranks everything (`false` is an opt-out, not a falsy colour).
- * 2. The franchise HAS an `iconDark`. That is already a human saying this
- *    franchise's light artwork does not survive on a dark surface — the exact
- *    question being asked here. The site-wide manifest never measures these
- *    crests (`measure-crest-contrast.mjs` skips any team with an `iconDark`,
- *    correctly, since everywhere else they swap), so without this clause the
- *    franchises the big-crest resolution rule leaves on light art would come
- *    back with no signal at all.
- * 3. The measured manifest, via `withStrokeColors` — the same list the rest of
- *    the site strokes under `html.dark`.
- */
-function resolveStroke(
-  team: BroadcastCrestTeam,
-  measured: Map<string, string | false | undefined>
-): string | undefined {
-  const configured = team.iconStrokeDark;
-  if (configured === false) return undefined;
-  if (typeof configured === 'string' && configured) return configured;
-  // `true` opts in at the default colour — the same reading `withStrokeColors`
-  // gives any truthy value. Handled HERE rather than left to the index lookup
-  // below so the config field's meaning does not depend on which team array the
-  // caller happened to build the index from.
-  if (configured === true) return DEFAULT_CREST_STROKE_COLOR;
-  if (team.iconDark) return DEFAULT_CREST_STROKE_COLOR;
-  const franchiseId = team.franchiseId ?? '';
-  if (!measured.has(franchiseId)) return undefined;
-  const entry = measured.get(franchiseId);
-  // Re-check the opt-out here, not just on `team.iconStrokeDark` above. The two
-  // normally agree — the index is built from the same config objects — but the
-  // index is passed IN, so a caller can hand us a team record that has been
-  // rebuilt without the field (the way `franchise-band-brand.ts` rebuilds a
-  // franchise off its throwback identity). `false || DEFAULT` would then ring a
-  // crest a human explicitly opted out of.
-  if (entry === false) return undefined;
-  // Only a STRING is a colour. `withStrokeColors` copies `iconStrokeDark`
-  // through verbatim, so a `true` in the config arrives here as a boolean — and
-  // `entry || DEFAULT` would hand it straight out as the stroke colour. It then
-  // reaches CSS as `--dbc-crest-stroke: true`, which makes the whole composed
-  // `filter` invalid at computed-value time, so the crest loses its drop shadow
-  // as well as its ring. Caught by Codex in review.
-  return typeof entry === 'string' && entry ? entry : DEFAULT_CREST_STROKE_COLOR;
-}
-
 /**
  * Build the `franchiseId -> stroke colour` lookup for one league, once per
- * page. Split out so the per-team resolver stays cheap in a `.map()`.
+ * page. The board's index is the site-wide one — kept under this name so the
+ * two broadcast pages read as one unit.
  */
-export function broadcastStrokeIndex(
-  league: string,
-  teams: BroadcastCrestTeam[]
-): Map<string, string | false | undefined> {
-  const index = new Map<string, string | false | undefined>();
-  for (const entry of withStrokeColors(league, teams as any[])) {
-    if (entry?.franchiseId) index.set(entry.franchiseId, entry.strokeColor);
-  }
-  return index;
-}
+export const broadcastStrokeIndex = crestStrokeIndex;
 
 /**
  * Resolve one franchise's broadcast crests. `league` is the manifest's league
@@ -169,7 +96,7 @@ export function resolveBroadcastCrest(
   league: string,
   index?: Map<string, string | false | undefined>
 ): BroadcastCrest {
-  const measured = index ?? broadcastStrokeIndex(league, [team]);
+  const measured = index ?? crestStrokeIndex(league, [team]);
 
   // Resolution first, then theme. See the header for why this order and the
   // small one below disagree.
@@ -177,7 +104,7 @@ export function resolveBroadcastCrest(
   // Theme first: nothing here is big enough for 100px to show.
   const small = team.groupMeDark || team.iconDark || team.groupMe || team.icon || '';
 
-  const stroke = resolveStroke(team, measured);
+  const stroke = resolveCrestStroke(team, measured);
 
   return {
     // AFL configs carry absolute production URLs on some `icon` fields — take
