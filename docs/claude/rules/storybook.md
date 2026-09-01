@@ -298,13 +298,15 @@ a second product.
 
 ## One cast of teams across the whole suite
 
-Every story that needs a franchise uses the same five: **Pacific Pigskins**,
-**The Mariachi Ninjas**, **Cowboy Up**, **Wascawy Wabbits** (TheLeague) and
-**The Show** (AFL). The playoff fixtures used to carry six unrelated
-franchises, `TeamIconCell` four more, and the name-fallback stories a seventh.
-Running down the Dream is the one addition outside that five, and it is not a
-preference — it is the only TheLeague crest that takes the default-white
-branch (see below).
+Every story that needs a franchise draws from one small cast: **Pacific
+Pigskins**, **The Mariachi Ninjas**, **Cowboy Up**, **Wascawy Wabbits**
+(TheLeague), plus **No Soup For You** and **The Boondock Saints** (AFL). The
+playoff fixtures used to carry six unrelated franchises, `TeamIconCell` four
+more, and the name-fallback stories a seventh.
+
+The two AFL entries are not preferences — they are the only teams left on the
+custom-stroke and default-white branches respectively (see below). Those two
+slots are dictated by the data, and the data moves.
 
 This is not tidiness. Every crest a story renders is a file
 `STORY_ASSET_GLOBS` has to name one by one, so each extra franchise is another
@@ -818,17 +820,29 @@ takes exactly ONE of these, and `Theming/TeamIconCell` pins all four states:
 |---|---|---|
 | `iconDark` | `content: url(<dark>)` swap, no filter | `DarkSwapAvailable` (Pigskins, TL) |
 | `iconDark`, AFL side | same swap, AFL's rule set | `DarkSwapAvailableAfl` (Ninjas, AFL) |
-| nothing, but measured illegible | default white stroke | `StrokeDefaultWhite` (Running down the Dream, TL) |
-| `iconStrokeDark: "#rrggbb"` | that color as the stroke | `StrokeCustomColor` (The Show, AFL) |
+| nothing, but measured illegible | default white stroke | `StrokeDefaultWhite` (Boondock Saints, AFL) |
+| `iconStrokeDark: "#rrggbb"` | that color as the stroke | `StrokeCustomColor` (No Soup For You, AFL) |
 | `iconStrokeDark: false` | **no stroke at all** | `StrokeExplicitlyOptedOut` (Cowboy Up, TL) |
 
-**Default-white is the scarce branch — check before you swap it.** It needs a
-manifest crest declaring neither `iconDark` nor `iconStrokeDark`, and only four
-teams qualify league-wide: Harambe, Badd Boys, Saints (AFL) and Running down
-the Dream (TheLeague). Every other franchise either has a dark variant or an
-explicit stroke, so a "nicer" replacement almost certainly lands on a branch
-that is already covered — and leaves `DEFAULT_CREST_STROKE_COLOR` guarding
-roughly a dozen crests with nothing snapshotting it.
+**The stroke branches are a SHRINKING POOL, and a story on one can go stale
+with no edit to the story.** Every `iconDark` the asset sync adds removes a team
+from the stroke set — the manifest and `withStrokeColors` both exclude any team
+carrying one — so a crest picked for a stroke branch silently becomes a second
+swap test the day someone commits its dark artwork.
+
+That is not hypothetical. The Sept 2026 dark sweep (#680, #682, #683, #685)
+landed on main while the branch that chose these crests was open, and moved
+**The Show** off custom-stroke and **Running down the Dream** off default-white.
+Both stories kept passing while testing the wrong branch; the `_dark` derivation
+in `computeStoryAssetLiterals()` is what caught it, by demanding a
+`the_show_dark.png` the trigger did not list.
+
+Standing as of that sweep: **custom stroke has exactly one team left** (No Soup
+For You) and default white has three (Harambe, Badd Boys, Boondock Saints — all
+AFL). If the sweep reaches those, the branch loses its last representative and
+the fix is a synthetic fixture, not a repoint. **Re-derive from
+`crest-dark-stroke-manifest.json` and the configs before trusting any crest in
+this file** — including the ones this doc names.
 
 **Both leagues need a swap story.** `buildAllTeamIconDarkCss()` is four builder
 calls across two configs and two icon directories, and the pairing is

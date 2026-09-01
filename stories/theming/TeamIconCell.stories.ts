@@ -42,12 +42,18 @@ import { themeModes } from '../../.storybook/modes';
  * `iconStrokeDark: false` = opt-out, in the manifest with neither = default
  * white.
  *
- * The default-white branch is the SCARCE one: it needs a manifest crest
- * declaring neither `iconDark` nor `iconStrokeDark`, and only four teams
- * qualify league-wide — Harambe, Badd Boys, Saints (AFL) and Running down the
- * Dream (TheLeague). Swap it for a team off that list or the branch goes
- * untested, and roughly a dozen crests lose their only guard against shipping
- * illegible on a dark card.
+ * THE STROKE BRANCHES ARE A SHRINKING POOL, and that is the live hazard here.
+ * Every `iconDark` the asset sync adds REMOVES a team from the stroke set (the
+ * manifest and `withStrokeColors` both exclude any team carrying one), so a
+ * crest chosen today can silently become a swap test tomorrow with no edit to
+ * this file. That is not hypothetical: main's dark sweep moved The Show off
+ * custom-stroke and Running down the Dream off default-white while this branch
+ * was open, and both stories kept passing while testing the wrong thing.
+ *
+ * As of Sept 2026, after that sweep: custom stroke has exactly ONE team left
+ * (No Soup For You) and default white has three (Harambe, Badd Boys, Boondock
+ * Saints — all AFL). If the sweep reaches those, the branch loses its last
+ * representative and the fix is a synthetic fixture, not a repoint.
  */
 export default {
   title: 'Theming/TeamIconCell',
@@ -99,21 +105,28 @@ export const DarkSwapAvailableAfl = {
  */
 export const StrokeDefaultWhite = {
   args: {
-    icon: '/assets/theleague/icons/the_dream.png',
-    name: 'Running down the Dream',
+    icon: '/assets/afl/icons/saints.png',
+    name: 'The Boondock Saints',
   },
 };
 
 /**
- * The CUSTOM STROKE COLOR branch. The Show declares
- * `iconStrokeDark: "#bc8488"`, so it gets its own rule rather than joining the
+ * The CUSTOM STROKE COLOR branch. No Soup For You declares
+ * `iconStrokeDark: "#d03902"`, so it gets its own rule rather than joining the
  * shared white one — a crest whose silhouette reads better against its own
  * brand color than against white.
+ *
+ * As of Sept 2026 it is the ONLY team on this branch league-wide. The
+ * dark-artwork sweep (#680, #682, #683, #685) gave Midwestside and The Show
+ * real `iconDark` files, which by construction removes them from the stroke
+ * set — this story was on The Show and silently became a second swap test
+ * until CI caught it. If this crest ever gains an `iconDark`, the branch has NO
+ * representative left and the story cannot simply be repointed.
  */
 export const StrokeCustomColor = {
   args: {
-    icon: '/assets/afl/icons/the_show.png',
-    name: 'The Show',
+    icon: '/assets/afl/icons/no_soup.png',
+    name: 'No Soup For You',
   },
 };
 
