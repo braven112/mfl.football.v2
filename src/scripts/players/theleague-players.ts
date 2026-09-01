@@ -24,11 +24,10 @@ const config = (window as any).__TL_PLAYERS__ as Record<string, any> | undefined
 if (!config) throw new Error('Missing __TL_PLAYERS__ payload');
 
 const {
-  playerDataJson,
+  playerData,
   hasProjected,
   hasLastYrPts,
   hasSnapCounts,
-  nflTeamsJson,
   hasSurplusData,
   hasAuctionData,
   isAuctionSeason,
@@ -37,16 +36,16 @@ const {
   mflHost,
   mflLeagueId,
   mflActionYear,
-  franchiseNamesJson,
-  franchiseBannersJson,
-  defSpotlightJson,
-  nflAvatarBgJson,
+  franchiseNames,
+  franchiseBanners,
+  defSpotlight,
+  nflAvatarBg,
   nflAvatarBgFallback,
-  nflAvatarBorderJson,
+  nflAvatarBorder,
   nflAvatarBorderFallback,
-  nflAvatarRingJson,
+  nflAvatarRing,
   nflAvatarRingFallback,
-  nflAvatarRingDarkJson,
+  nflAvatarRingDark,
   nflAvatarRingDarkFallback,
   logoOnerror,
   collegeLogoOnerror,
@@ -54,13 +53,14 @@ const {
   rookieDraftComplete,
 } = config;
 
-// define:vars creates const — copy to let so polling can update at runtime
+// Destructured from the payload as a const — copy to let so auction polling
+// can update it at runtime.
 let _hasAuctionData = hasAuctionData;
-const players: PlayerRow[] = JSON.parse(playerDataJson);
+const players: PlayerRow[] = playerData;
 // team code → marquee defender { name, espnId } for the DEF hero spotlight
-const DEF_SPOTLIGHT = JSON.parse(defSpotlightJson);
-const franchiseNameMap: Map<string, string> = new Map(JSON.parse(franchiseNamesJson));
-const franchiseBannerMap: Map<string, string> = new Map(JSON.parse(franchiseBannersJson));
+const DEF_SPOTLIGHT = defSpotlight;
+const franchiseNameMap: Map<string, string> = new Map(franchiseNames);
+const franchiseBannerMap: Map<string, string> = new Map(franchiseBanners);
 
 // State — default to free agents only
 let filteredPlayers: PlayerRow[] = [];
@@ -98,7 +98,9 @@ let filterWtMin: number | null = null;
 let filterWtMax: number | null = null;
 let filtersOpen = false;
 
-// Rankings lookup — populated by the rankings module script
+// Rankings lookup — populated by the rankings module over CustomEvents.
+// NOTE: this file is a BUNDLED module now, so it CAN import — the bridge is
+// kept because replacing it is a behavior change, not because it is forced.
 let rankingLookup: RankingLookupState = { byImport: new Map(), columns: [] };
 let hasExplicitSortPref = false;
 
@@ -357,10 +359,6 @@ function getNflLogo(team: string) {
 // p.team is already the normalized ESPN code here — it's the same value that
 // feeds getNflLogo() above, so it lines up with the ESPN-keyed gradient map by
 // construction (a mismatch would break the team logo first).
-const nflAvatarBg = JSON.parse(nflAvatarBgJson);
-const nflAvatarBorder = JSON.parse(nflAvatarBorderJson);
-const nflAvatarRing = JSON.parse(nflAvatarRingJson);
-const nflAvatarRingDark = JSON.parse(nflAvatarRingDarkJson);
 function getAvatarBg(team: string) {
   return nflAvatarBg[team] || nflAvatarBgFallback;
 }
@@ -1187,9 +1185,11 @@ function render() {
 // Columns that default to desc when first clicked
 const descDefaults = new Set(['projected', 'exp', 'height', 'weight', 'lastYrPts', 'snaps', 'snapPct', 'contractYrs', 'salary', 'games', 'ppg', 'estimatedCost', 'salaryYear1', 'salaryYear2', 'salaryYear3', 'dollarValue', 'surplusValue', 'stealValue', 'auctionBid', 'auctionInitTime', 'auctionBidTime']);
 
-// CustomEvent-based API for the rankings module script to interact with this page.
+// CustomEvent-based API for the rankings module to interact with this page.
+// NOTE: this file is a BUNDLED module now, so it CAN import — the bridge is
+// kept because replacing it is a behavior change, not because it is forced.
 // All events use the document as the event bus — no global window properties needed.
-// After a ClientRouter swap the PREVIOUS page's inline script is still alive
+// After a ClientRouter swap the PREVIOUS page's table script is still alive
 // and its document-level listeners still answer these events — verified: two
 // handlers responded to rankings:get-sort on the AFL page after navigating
 // from TheLeague's. Both pages use the same element ids, so a stale handler
@@ -1248,14 +1248,14 @@ document.addEventListener('rankings:refilter', function () {
   filterPlayers();
 });
 
-// Synchronous request for sort state — the module script reads detail after dispatch
+// Synchronous request for sort state — the rankings module reads detail after dispatch
 document.addEventListener('rankings:get-sort', function (e: Event) {
   if (!isLivePage()) return;
   (e as CustomEvent).detail.currentSort = currentSort;
   (e as CustomEvent).detail.descDefaults = descDefaults;
 });
 
-// Signal that the inline script is ready for the module script
+// Signal that this table script is ready for the rankings module
 document.dispatchEvent(new CustomEvent('rankings:page-ready'));
 
 function init() {
@@ -1305,7 +1305,7 @@ function init() {
   }
 
   // Include rostered toggle. State is read back from the checkbox at init:
-  // under Astro's ClientRouter this inline script runs once per real page
+  // under Astro's ClientRouter this script is evaluated once per real page
   // load, so after a view-transition swap the fresh DOM (unchecked default)
   // is the truth while the module's persisted variable may hold a stale
   // true from the previous visit.
@@ -1479,7 +1479,8 @@ function init() {
     });
   }
 
-  // Player name click → open detail modal (delegated via shared utility in module script below)
+  // Player name click → open detail modal (delegated via the shared utility
+  // mounted by the page's other bundled script)
 
   // All of the state above lives in module scope and survives a ClientRouter
   // swap, but the markup init() just re-bound was rendered fresh — every

@@ -23,39 +23,38 @@ const config = (window as any).__AFL_PLAYERS__ as Record<string, any> | undefine
 if (!config) throw new Error('Missing __AFL_PLAYERS__ payload');
 
 const {
-  playerDataJson,
+  playerData,
   hasProjected,
   hasLastYrPts,
   hasAdp,
   defaultSort,
   defaultDir,
   mflHost,
-  defSpotlightJson,
-  conferenceMetaJson,
-  activeConfIdJson,
-  nflAvatarBgJson,
-  nflAvatarBorderJson,
+  defSpotlight,
+  conferenceMeta,
+  activeConfId,
+  nflAvatarBg,
+  nflAvatarBorder,
   nflAvatarBgFallback,
   nflAvatarBorderFallback,
-  nflAvatarRingJson,
+  nflAvatarRing,
   nflAvatarRingFallback,
-  nflAvatarRingDarkJson,
+  nflAvatarRingDark,
   nflAvatarRingDarkFallback,
   logoOnerror,
   collegeLogoOnerror,
   collegeLogoOnload,
 } = config;
 
-const players: PlayerRow[] = JSON.parse(playerDataJson);
-// Duplicate-player conference metadata (null = single shared pool).
-const conferenceMeta = JSON.parse(conferenceMetaJson);
+const players: PlayerRow[] = playerData;
+// `conferenceMeta` (duplicate-player metadata; null = single shared pool) and
+// the avatar maps come straight off the payload above.
+//
 // Active conference view (null = single shared pool). The page shows ONE
-// conference at a time — the hero switcher flips this and refilters.
-let activeConf = JSON.parse(activeConfIdJson);
-const nflAvatarBg = JSON.parse(nflAvatarBgJson);
-const nflAvatarBorder = JSON.parse(nflAvatarBorderJson);
-const nflAvatarRing = JSON.parse(nflAvatarRingJson);
-const nflAvatarRingDark = JSON.parse(nflAvatarRingDarkJson);
+// conference at a time — the hero switcher flips this and refilters, so it is
+// a `let` seeded from the server's choice rather than the payload value
+// itself.
+let activeConf = activeConfId;
 
 function getAvatarStyle(team: string) {
   // Not escapeAttr'd: values are precomputed hex/gradient strings from
@@ -86,9 +85,10 @@ let rookiesOnly = false;
 const BATCH_SIZE = 50;
 
 // ── Rankings state ──
-// Populated by the rankings module script below over CustomEvents: this is a
-// define:vars (classic) script and can't import. See
+// Populated by the rankings module over CustomEvents. See
 // docs/claude/insights/features/rankings-integration.md.
+// NOTE: this file is a BUNDLED module now, so it CAN import — the bridge is
+// kept because replacing it is a behavior change, not because it is forced.
 let rankingLookup: RankingLookupState = { byImport: new Map(), columns: [] };
 let hasRankingColumns = false;
 let hasExplicitSortPref = false;
@@ -200,7 +200,7 @@ let spotlightPlayerId: string | null = null;
 // maps each team to a ranked pool of its marquee defenders; when a DEF is
 // spotlighted we show one defender's ESPN headshot over the logo watermark and
 // (unless reduced-motion) rotate through the pool so it doesn't feel static.
-const DEF_SPOTLIGHT = JSON.parse(defSpotlightJson);
+const DEF_SPOTLIGHT = defSpotlight;
 const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const DEF_ROTATE_MS = 4500;
 let defRotateTimer: ReturnType<typeof setInterval> | null = null;
@@ -608,9 +608,12 @@ function render() {
       <td class="cell-sm">${htDisplay}</td>
       <td class="cell-sm">${wtDisplay}</td>`;
 
-    // Ranking cells sit right after Wt, matching where the module script
-    // injects their headers. Class list mirrors rankingCellClasses() in
-    // src/utils/rankings-table.ts — this script can't import it.
+    // Ranking cells sit right after Wt, matching where the rankings module
+    // injects their headers. This class list DUPLICATES rankingCellClasses()
+    // in src/utils/rankings-table.ts, which was exported precisely because the
+    // pages could not import it. They can now — collapsing the two is a real
+    // follow-up, and tests/rankings-page-integration.test.ts fails loudly if
+    // they drift in the meantime.
     for (const col of rankingLookup.columns) {
       const rnk = rankingLookup.byImport.get(col.importId)?.get(p.id);
       const avgCls = col.isAverage ? ' col-ranking-avg' : '';

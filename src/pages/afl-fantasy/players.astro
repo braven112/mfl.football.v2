@@ -184,24 +184,28 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 // One JSON blob handed over by a one-line bridge below, instead of 21
 // separate `define:vars` consts — that form forces the whole ~900-line
 // script to be a classic (un-importable, un-typed) block.
+// RAW values, never the pre-stringified `*Json` ones — nesting an
+// already-stringified blob inside this second JSON.stringify escapes every
+// quote twice and inflates the emitted HTML for nothing. See the same note on
+// TheLeague's page.
 const playersConfigJson = JSON.stringify({
-  playerDataJson,
+  playerData: players,
   hasProjected,
   hasLastYrPts,
   hasAdp,
   defaultSort,
   defaultDir,
   mflHost,
-  defSpotlightJson,
-  conferenceMetaJson,
-  activeConfIdJson,
-  nflAvatarBgJson,
-  nflAvatarBorderJson,
+  defSpotlight: DEF_SPOTLIGHT_PLAYERS,
+  conferenceMeta: conferenceMeta ?? null,
+  activeConfId,
+  nflAvatarBg,
+  nflAvatarBorder,
   nflAvatarBgFallback,
   nflAvatarBorderFallback,
-  nflAvatarRingJson,
+  nflAvatarRing,
   nflAvatarRingFallback,
-  nflAvatarRingDarkJson,
+  nflAvatarRingDark,
   nflAvatarRingDarkFallback,
   logoOnerror: NFL_LOGO_ONERROR,
   collegeLogoOnerror: COLLEGE_LOGO_ONERROR,

@@ -674,12 +674,17 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 // One JSON blob handed over by a one-line bridge below, instead of 28
 // separate `define:vars` consts — that form forces the whole ~1,750-line
 // script to be a classic (un-importable, un-typed) block.
+// RAW values, never the pre-stringified `*Json` ones. Nesting an
+// already-stringified blob inside this second JSON.stringify escapes every
+// quote a second time: on the 1.39 MB player feed that is ~+25% of emitted
+// HTML on the heaviest page in the app, plus a redundant stringify per SSR
+// request and a second parse in the browser. The `*Json` consts above still
+// exist for any server-side markup that interpolates them.
 const playersConfigJson = JSON.stringify({
-  playerDataJson,
+  playerData: playerList,
   hasProjected,
   hasLastYrPts,
   hasSnapCounts,
-  nflTeamsJson,
   hasSurplusData,
   hasAuctionData,
   isAuctionSeason,
@@ -688,16 +693,16 @@ const playersConfigJson = JSON.stringify({
   mflHost,
   mflLeagueId,
   mflActionYear,
-  franchiseNamesJson,
-  franchiseBannersJson,
-  defSpotlightJson,
-  nflAvatarBgJson,
+  franchiseNames: franchiseNameEntries,
+  franchiseBanners: franchiseBannerEntries,
+  defSpotlight: DEF_SPOTLIGHT_PLAYERS,
+  nflAvatarBg,
   nflAvatarBgFallback,
-  nflAvatarBorderJson,
+  nflAvatarBorder,
   nflAvatarBorderFallback,
-  nflAvatarRingJson,
+  nflAvatarRing,
   nflAvatarRingFallback,
-  nflAvatarRingDarkJson,
+  nflAvatarRingDark,
   nflAvatarRingDarkFallback,
   logoOnerror: NFL_LOGO_ONERROR,
   collegeLogoOnerror: COLLEGE_LOGO_ONERROR,
