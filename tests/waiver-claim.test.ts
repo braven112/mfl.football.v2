@@ -17,7 +17,7 @@ import {
   type ClaimValidationContext,
 } from '../src/utils/waiver-claim';
 
-const RULES = { minimum: 425000, increment: 25000, conditional: true, maxRounds: 4 };
+const RULES = { blindBid: true, minimum: 425000, increment: 25000, conditional: true, maxRounds: 4 };
 const ctx = (over: Partial<ClaimValidationContext> = {}): ClaimValidationContext => ({
   rules: RULES,
   availableBalance: 2_000_000,
@@ -30,13 +30,30 @@ describe('readBidRules — from the live league payload, never hardcoded', () =>
   it("matches TheLeague's committed league feed", () => {
     const p = path.join(process.cwd(), 'data/theleague/mfl-feeds/2026/league.json');
     const rules = readBidRules(JSON.parse(fs.readFileSync(p, 'utf-8')).league);
-    expect(rules).toEqual({ minimum: 425000, increment: 25000, conditional: true, maxRounds: 4 });
+    expect(rules).toEqual({ blindBid: true, minimum: 425000, increment: 25000, conditional: true, maxRounds: 4 });
   });
 
   it('never yields a zero increment, which would divide by zero on every bid', () => {
     expect(readBidRules({ bbidIncrement: '0' }).increment).toBe(1);
     expect(readBidRules({}).increment).toBe(1);
     expect(validateClaims([{ addPlayerId: '9001', bid: 7 }], ctx({ rules: readBidRules({}) }))).toEqual([]);
+  });
+});
+
+describe('blindBid — not every league bids', () => {
+  it('reads TheLeague as a blind-bid league', () => {
+    const p = path.join(process.cwd(), 'data/theleague/mfl-feeds/2026/league.json');
+    expect(readBidRules(JSON.parse(fs.readFileSync(p, 'utf-8')).league).blindBid).toBe(true);
+  });
+
+  it('reads the AFL as NOT a blind-bid league', () => {
+    // WAIVERS_FCFS: rolling priority, no bidding. Submitting a blind bid there
+    // is the wrong endpoint, and its bid rules do not exist — readBidRules
+    // would otherwise fall back to a $0 minimum and accept any amount.
+    const p = path.join(process.cwd(), 'data/afl-fantasy/mfl-feeds/2026/league.json');
+    const rules = readBidRules(JSON.parse(fs.readFileSync(p, 'utf-8')).league);
+    expect(rules.blindBid).toBe(false);
+    expect(rules.minimum).toBe(0);
   });
 });
 

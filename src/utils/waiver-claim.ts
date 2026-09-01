@@ -19,6 +19,12 @@
  */
 
 export interface WaiverBidRules {
+  /**
+   * Whether the league bids at all. TheLeague is BBID_FCFS; the AFL is
+   * WAIVERS_FCFS — rolling priority with no bidding, so a blind-bid request is
+   * simply the wrong endpoint there.
+   */
+  blindBid: boolean;
   /** Minimum legal bid, in whole dollars. */
   minimum: number;
   /** Bids must be a multiple of this above zero. */
@@ -60,6 +66,7 @@ export function readBidRules(league: Record<string, any> = {}): WaiverBidRules {
     return Number.isFinite(n) && n > 0 ? n : fallback;
   };
   return {
+    blindBid: String(league.currentWaiverType ?? '').toUpperCase().includes('BBID'),
     minimum: num(league.bbidMinimum, 0),
     // A zero or missing increment must not become a modulo-by-zero; treat it
     // as "any amount" rather than rejecting every bid.

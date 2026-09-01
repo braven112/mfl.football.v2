@@ -89,6 +89,20 @@ export const POST: APIRoute = async ({ request }) => {
     if (!leaguePayload) return fail('Could not read league settings from MFL. No claim was submitted.', 502);
 
     const rules = readBidRules(leaguePayload);
+
+    // Blind bidding is not universal. The AFL runs WAIVERS_FCFS — rolling
+    // priority, no bids — so blindBidWaiverRequest is the wrong endpoint there
+    // and its bid rules do not exist. Without this gate an AFL session reaches
+    // here, readBidRules falls back to a $0 minimum, and we POST a bid to a
+    // league that has no concept of one. The UI only offers this in TheLeague,
+    // but the endpoint is reachable from any authenticated session.
+    if (!rules.blindBid) {
+      return fail(
+        `${league.name} does not use blind-bid waivers, so claims cannot be submitted here.`,
+        400
+      );
+    }
+
     const roundError = validateRound(round, rules);
     if (roundError) return fail(roundError, 400);
 
