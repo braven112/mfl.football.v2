@@ -20,7 +20,7 @@
           {
             "type": "command",
             "command": ".claude/hooks/pre-push-check.sh",
-            "timeout": 120,
+            "timeout": 300,
             "statusMessage": "Running tests before push…"
           }
         ]

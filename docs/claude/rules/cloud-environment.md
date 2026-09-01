@@ -29,10 +29,11 @@ before the session gets control, so the gates are live.
 suite first, exactly like local. That is the point; don't route around it.
 
 Measured in the container: 290 files / 7452 tests / **~55s**. The pre-push hook
-is registered with `timeout: 120`, so the margin is roughly 2x. A slower or
-colder container that pushes the suite past 120s makes the hook *time out*
-rather than fail a test — if a push dies with no test failure named, check the
-hook timeout before hunting for a broken test.
+is registered with `timeout: 300` for that reason — a ~5x margin. At the old
+120s a slower or colder container could push the suite past the limit, and a
+hook *timeout* does not look like a test failure: the push dies without naming
+a broken test. If that ever happens again, check the hook timeout before
+hunting for one.
 
 ## The SessionStart hook
 
