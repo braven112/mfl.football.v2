@@ -53,6 +53,9 @@ import {
 import { loadFranchises } from '../src/utils/accounting-season-data';
 import { leagueYearFor } from '../src/utils/accounting-request';
 import { ALL_LEAGUES, type LeagueDefinition } from '../src/config/leagues';
+// Shared .mjs helper used by the other MFL write scripts. No ts-expect-error:
+// its types resolve under the project config, so the directive would be unused.
+import { loginToMFL } from './lib/mfl-api.mjs';
 // .mjs planner, shared with the API route (see its header). Its JSDoc types
 // resolve, so no ts-expect-error is needed here.
 import { planYearMigration, assessCarryReadiness } from '../src/utils/accounting-migration.mjs';
@@ -178,17 +181,47 @@ async function carryLeague(
 
 async function main() {
   const args = parseArgs();
-  const userCookie = process.env.MFL_USER_ID || '';
-  const commishCookie = process.env.MFL_IS_COMMISH || '';
+  // Cookie env vars first, username/password second — the same preference
+  // order apply-pending-contracts.mjs uses.
+  //
+  // The fallback is not a nicety. MFL session cookies EXPIRE, and a stale pair
+  // fails in the least visible way available: the accounting EXPORT is not
+  // auth-gated, so every read still succeeds and only the writes are refused.
+  // A dry run against expired credentials therefore looks perfect. That is
+  // exactly how a live run came back "carried 0/13; 13 failed" after a clean
+  // dry run (2026-09-01). Logging in fresh each run removes the failure mode
+  // rather than documenting it.
+  let userCookie = process.env.MFL_USER_ID || '';
+  let commishCookie = process.env.MFL_IS_COMMISH || '';
+
+  const username = process.env.MFL_USERNAME;
+  const password = process.env.MFL_PASSWORD;
+
+  if ((!userCookie || !commishCookie) && username && password) {
+    try {
+      const fresh = await loginToMFL(username, password);
+      // Only fill what is missing, so an explicitly-set cookie still wins.
+      userCookie = userCookie || fresh.mflUserId || '';
+      commishCookie = commishCookie || fresh.mflIsCommish || '';
+      console.log(`Logged in to MFL as ${username} (commish cookie: ${fresh.mflIsCommish ? 'yes' : 'no'})`);
+    } catch (error) {
+      console.error(`MFL login failed: ${(error as Error).message}`);
+    }
+  }
 
   if (!userCookie) {
-    console.error('MFL_USER_ID is not set — cannot read or write any ledger.');
+    console.error(
+      'No MFL credentials. Set MFL_USER_ID (+ MFL_IS_COMMISH), or MFL_USERNAME + MFL_PASSWORD to log in.'
+    );
     process.exit(1);
   }
   // Reads work without it, so an unset commish cookie would sail through the
   // whole plan and only fail at the first write. Fail before touching MFL.
   if (!commishCookie && !args.dryRun) {
-    console.error('MFL_IS_COMMISH is not set — MFL will reject every accounting write. Refusing to start.');
+    console.error(
+      'No MFL_IS_COMMISH cookie — MFL will reject every accounting write. Refusing to start. '
+        + 'Set the secret, or set MFL_USERNAME + MFL_PASSWORD so a fresh one can be fetched at run time.'
+    );
     process.exit(1);
   }
 

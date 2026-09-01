@@ -71,6 +71,11 @@ jobs:
           MFL_HOST: ${{ vars.MFL_HOST }}
           MFL_USER_ID: ${{ secrets.MFL_USER_ID }}
           MFL_IS_COMMISH: ${{ secrets.MFL_IS_COMMISH }}
+          # Fallback when the stored cookies have expired — MFL session cookies
+          # do, and they fail invisibly here because the accounting EXPORT is
+          # not auth-gated, so reads keep working and only writes are refused.
+          MFL_USERNAME: ${{ secrets.MFL_USERNAME }}
+          MFL_PASSWORD: ${{ secrets.MFL_PASSWORD }}
         run: |
           # Scheduled runs have no inputs, so inputs.dry_run is empty.
           # Treat anything other than the literal string "true" as live.
