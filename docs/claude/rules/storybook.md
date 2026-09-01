@@ -387,10 +387,52 @@ changes (`main.ts`, `preview.ts`, `modes.ts`) or when dependency versions in
 `preview.ts` imports the global stylesheets, expect touching theming to cost a
 full 68-snapshot build.
 
-**One build per push, not two.** The workflow fires on `push` only. Adding
-`pull_request` as well would bill two builds for the same change — one for the
-PR head, one for the merge commit. Chromatic tracks baselines per branch from
-push events and reports via commit status, so the check still lands on the PR.
+**Iterating on a PR is free — that is the whole budget model.** The workflow
+originally fired on `push` to ANY branch, one build per commit. Measured over
+Aug 28-31 2026 that was **60 builds x 160 snapshots = ~9,600 snapshots, about
+2x the entire 5,000/month free plan in four days**, and 49 of the 60 were
+feature-branch pushes. A single branch (`draft-broadcast-image-loading`) spent
+**16 builds — half a month's plan — iterating on one PR**.
+
+It now fires on:
+
+- `push` to **main only** (the baseline run, the one that auto-accepts)
+- `pull_request` with `types: [opened, ready_for_review, labeled]` and
+  deliberately **no `synchronize`**, so pushing to an open PR costs nothing
+- the `visual-check` label on demand — remove and re-add it to re-run
+
+An earlier version of this section argued against `pull_request` because
+push+PR would double-bill. That was true only while `push` was unrestricted.
+With push scoped to main, a change is built once on its PR and once on merge.
+
+Drafts are skipped until marked ready (a draft PR is still iterating), and the
+`labeled` trigger is gated to the one label in the job's `if:` — `labeled`
+fires for *every* label otherwise.
+
+**The `paths:` filter is GENERATED, not hand-written.** It used to trigger on
+`src/utils/**` — 247 files, of which **45 actually reach a story**. So most
+builds re-snapshotted the whole suite for code no snapshot renders.
+
+`scripts/chromatic-story-deps.mjs` walks the real import graph from every
+story *and* from `preview.ts` (which imports utils of its own to build the
+accent and dark-logo CSS) and prints the closure ready to paste. Run it and
+paste into **both** `paths:` lists.
+
+Narrowing this is safe in exactly one direction, and
+`tests/chromatic-path-filter.test.ts` is what enforces it: a file that renders
+but is NOT matched means the regression never triggers a build, ships, and is
+then blessed by `--auto-accept-changes` on main — a visual test that certifies
+the bug. Extra patterns are always safe; missing ones fail the suite.
+
+Generating the closure also exposed a **real hole in the old filter**:
+`src/config/**`, `src/constants/**`, `src/data/**` and `src/types/**` all
+reach stories (the league registry, `throwback-config.ts`, `roster-constants.ts`,
+`league-events.ts`) and none of them were listed. A change to any of those
+altered rendering and never triggered a build. They are covered now — but only
+the ~14 hand-maintained `src/data` files that are genuinely in the closure. The
+cron-written feeds (`schefter-feed.json`, `mfl-feeds/**`) are NOT in it and must
+stay out, which the guard test also asserts: if one ever enters, a snapshot has
+started reading live data.
 
 **A story that can't be deterministic should opt out, not flake.**
 `BrandedLoader/CyclingNarration` cycles narration on a 2.5s timer, so it
@@ -456,18 +498,37 @@ Two places, one authoritative:
 - **Monthly quota** — only Chromatic's Manage screen. Neither of the above can
   see the account total; they report one build each.
 
-## TurboSnap is withheld until 10 CI builds
+## TurboSnap has never actually engaged — and the 10-build rule is NOT why
+
+The original note here read "withheld until 10 builds are created from CI":
 
 ```
 ⚠ TurboSnap not available for your account
 TurboSnap is not available until at least 10 builds are created from CI.
 ```
 
-`--only-changed` is a no-op until then, so **every build costs the full 68**
-until build 10, regardless of how small the diff is. Budget for roughly
-680 snapshots of runway before the discount starts. After that a narrow PR
-drops to ~20 billed. The `turboSnapEnabled` flag in the job summary and on the
-Overview page says which regime you are in.
+**That explanation is stale and it cost a diagnosis.** Build #117 (Aug 31
+2026) still reported:
+
+| | |
+|---|---|
+| Snapshots captured | 160 |
+| Inherited (TurboSnap) | 0 |
+| TurboSnap active | **no** |
+
+117 builds in, well past 10, and `--only-changed` is still a no-op — every
+build pays full price. So the warm-up rule is not the blocker, and anyone
+reading the old note would keep waiting for a discount that is never coming.
+
+The leading suspect is the builder: TurboSnap needs a `preview-stats.json`
+from the build, and this repo is on `@storybook/builder-vite` with **no
+TurboSnap Vite plugin installed and no `chromatic.config.json`**. That is
+unverified — confirm against current Chromatic docs before wiring anything,
+since the Vite/TurboSnap requirements have moved across versions.
+
+Until it engages, cost is driven entirely by **build count**, not diff size —
+which is why the trigger model above is the lever that actually mattered.
+The `turboSnapEnabled` flag in the job summary says which regime you are in.
 
 ## Choosing modes
 
