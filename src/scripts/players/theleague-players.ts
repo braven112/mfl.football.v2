@@ -19,6 +19,7 @@
  */
 
 import type { PlayerRow, RankingLookupState } from './players-types';
+import { PLAYERS_EMPTY_RESET_ID, playersEmptyStateRow } from './empty-state';
 
 const config = (window as any).__TL_PLAYERS__ as Record<string, any> | undefined;
 if (!config) throw new Error('Missing __TL_PLAYERS__ payload');
@@ -886,11 +887,28 @@ function filterPlayers() {
     const el = document.getElementById(`count-${pos}`);
     if (el) el.textContent = String(counts[pos] || 0);
   }
+  // The hero's "N available players" mirrors the ALL pill — one semantic for
+  // both numbers. It used to be rendered once on the server and never touched,
+  // so a search that matched nothing left the page claiming 629 available
+  // players above pills that all read 0. (The AFL page already did this.)
+  const heroCountEl = document.getElementById('hero-count-num');
+  if (heroCountEl) heroCountEl.textContent = String(counts.ALL);
 
   updateFilterBadge();
   sortPlayers();
   visibleCount = BATCH_SIZE;
   render();
+}
+
+/** The "nothing matched" row for whatever is currently narrowing the list. */
+function currentEmptyStateRow(): string {
+  const colspan = document.querySelectorAll('.players-table thead th').length || 12;
+  return playersEmptyStateRow(colspan, {
+    search: searchQuery || undefined,
+    // The DEF/PK pill is labelled K in the UI; name it the way it is labelled.
+    position: activePosition === 'ALL' ? undefined : activePosition === 'PK' ? 'K' : activePosition,
+    advancedFilters: countActiveFilters(),
+  });
 }
 
 function render() {
@@ -1146,7 +1164,9 @@ function render() {
     html += `</tr>`;
   }
 
-  tbody.innerHTML = html;
+  // An empty table is ambiguous — "nothing matched" and "this broke" look
+  // identical — so say which, and name what is narrowing the list.
+  tbody.innerHTML = total === 0 ? currentEmptyStateRow() : html;
 
   // Update sort indicators — only add arrow span to the actively sorted column
   document.querySelectorAll<HTMLElement>('.players-table th.sortable').forEach(th => {
@@ -1409,38 +1429,62 @@ function init() {
     });
   }
 
-  // Clear all filters
+  // Clear the advanced filters (the panel's own "clear" button). Deliberately
+  // does NOT touch the search box or the position pill — those are visible
+  // controls the owner can see they set, and silently undoing them from inside
+  // a collapsed panel would be its own surprise.
+  function clearAdvancedFilters() {
+    filterTeam = '';
+    filterAgeMin = null;
+    filterAgeMax = null;
+    filterHtMin = null;
+    filterHtMax = null;
+    filterWtMin = null;
+    filterWtMax = null;
+    filterExp = '';
+    filterDraft = '';
+    showRostered = false;
+    showRookies = rookieDraftComplete;
+
+    // Reset DOM controls
+    if (teamSelect) teamSelect.value = '';
+    if (ageMin) ageMin.value = '';
+    if (ageMax) ageMax.value = '';
+    if (htMin) htMin.value = '';
+    if (htMax) htMax.value = '';
+    if (wtMin) wtMin.value = '';
+    if (wtMax) wtMax.value = '';
+    if (expSelect) expSelect.value = '';
+    if (draftSelect) draftSelect.value = '';
+    if (rosterCheck) rosterCheck.checked = false;
+    if (rookieCheck) rookieCheck.checked = rookieDraftComplete;
+  }
+
   const clearBtn = document.getElementById('filter-clear-btn');
   if (clearBtn) {
     clearBtn.addEventListener('click', () => {
-      filterTeam = '';
-      filterAgeMin = null;
-      filterAgeMax = null;
-      filterHtMin = null;
-      filterHtMax = null;
-      filterWtMin = null;
-      filterWtMax = null;
-      filterExp = '';
-      filterDraft = '';
-      showRostered = false;
-      showRookies = rookieDraftComplete;
-
-      // Reset DOM controls
-      if (teamSelect) teamSelect.value = '';
-      if (ageMin) ageMin.value = '';
-      if (ageMax) ageMax.value = '';
-      if (htMin) htMin.value = '';
-      if (htMax) htMax.value = '';
-      if (wtMin) wtMin.value = '';
-      if (wtMax) wtMax.value = '';
-      if (expSelect) expSelect.value = '';
-      if (draftSelect) draftSelect.value = '';
-      if (rosterCheck) rosterCheck.checked = false;
-      if (rookieCheck) rookieCheck.checked = rookieDraftComplete;
-
+      clearAdvancedFilters();
       filterPlayers();
     });
   }
+
+  // "Show all players", offered by the empty state. This one DOES clear the
+  // search and the position pill as well — it is the way back from a screen
+  // with nothing on it, so it has to undo everything that could be narrowing
+  // the list, not just the part hidden in the panel.
+  document.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement | null)?.closest(`#${PLAYERS_EMPTY_RESET_ID}`);
+    if (!btn || !isLivePage()) return;
+    clearAdvancedFilters();
+    searchQuery = '';
+    const searchEl = document.getElementById('player-search') as HTMLInputElement | null;
+    if (searchEl) searchEl.value = '';
+    activePosition = 'ALL';
+    document.querySelectorAll<HTMLElement>('.pos-pill').forEach((pill) => {
+      pill.classList.toggle('active', pill.getAttribute('data-pos') === 'ALL');
+    });
+    filterPlayers();
+  });
 
   // Sorting
   document.querySelectorAll<HTMLElement>('.players-table th.sortable').forEach(th => {

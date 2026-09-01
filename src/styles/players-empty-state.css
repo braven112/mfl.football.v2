@@ -1,0 +1,53 @@
+/**
+ * Free Agents "nothing matched" row.
+ *
+ * GLOBAL, not scoped: the row is injected by the table script, so it never
+ * carries a page's Astro scope class and every scoped rule would miss it —
+ * the same reason ranking-columns.css is global. Imported by both leagues'
+ * players pages; the markup comes from src/scripts/players/empty-state.ts.
+ *
+ * Every custom property below is defined in BOTH src/styles/tokens.css and
+ * src/styles/tokens-dark.css — checked, not assumed. A `var(--x)` with no
+ * definition renders its fallback in both themes, which is how a rule looks
+ * perfect in light and ships unreadable in dark (see CLAUDE.md § theming).
+ * That is also why there are no fallback values here: a light-only fallback
+ * would be exactly that trap, quietly waiting for a token rename.
+ *
+ * Deliberately NOT the --btn-secondary-* family for the button: that aliases
+ * --color-secondary, which is TheLeague's brand green, and this stylesheet
+ * renders on the AFL too (see tests/afl-brand-green-guard.test.ts).
+ */
+
+.players-empty__cell {
+  padding: 48px 24px 52px;
+  text-align: center;
+}
+
+.players-empty__line {
+  margin: 0;
+  color: var(--content-text-muted);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.players-empty__reset {
+  margin-top: 14px;
+  padding: 8px 16px;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--page-text);
+  background: transparent;
+  border: 1px solid var(--table-border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.players-empty__reset:hover {
+  background: var(--table-row-bg-hover);
+}
+
+.players-empty__reset:focus-visible {
+  outline: 2px solid var(--page-text);
+  outline-offset: 2px;
+}

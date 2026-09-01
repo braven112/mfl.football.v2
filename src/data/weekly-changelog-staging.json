@@ -4,6 +4,14 @@
     {
       "date": "2026-09-01",
       "type": "bug-fix",
+      "summary": "Free Agents tells you when nothing matched, and the headline count finally moves. Search for a player who isn't there and the table used to go completely blank — no message, no explanation, just the column headings and a stretch of empty page, which looks far more like the site broke than like a search that found nobody. It now says what it actually did: \"No players match your search for X\", naming the position pill and the number of advanced filters too when those are part of why the list is empty, with a Show all players button that clears the lot and puts everyone back. The other half of the confusion was the big count at the top of the page. On TheLeague it was written once when the page loaded and then never changed, so you could narrow the list to nothing and still be told 629 available players while every position pill beside it read 0 — three numbers on one screen and the biggest one wrong. It now tracks whatever you have filtered to, which is what the AFL page has always done.",
+      "impact": "user",
+      "area": "free-agents",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-01",
+      "type": "bug-fix",
       "summary": "The team search box on the Brand Assets page works the second time you visit it. Type a team name and the grid narrows to that team; leave for another page, come back, and the box had been doing nothing at all — you could type into it and all 49 teams just sat there, which reads as a broken search rather than a search with no matches. The page's filter was set up by a script the site runs once and then skips on every later visit, because moving between pages here swaps the content in place instead of reloading the whole page. It is now wired up on every arrival, so the filter, the copy-to-clipboard buttons and the image size labels all behave the same on your fifth visit as your first. The same fix also covers the AFL's assets page.",
       "impact": "user",
       "area": "design-system",

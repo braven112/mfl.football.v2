@@ -21,6 +21,7 @@ import { calculateAllSurplusValues } from '../../utils/surplus-value';
 import { getAuthUser, isCommissionerOrAdmin } from '../../utils/auth';
 import '../../styles/player-cell.css';
 import '../../styles/ranking-columns.css';
+import '../../styles/players-empty-state.css';
 import collegeLogos from '../../data/college-logos.json';
 import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
 import leagueConfig from '../../data/theleague.config.json';
@@ -736,7 +737,7 @@ const playersConfigJson = JSON.stringify({
       <div class="hero-top">
         <div class="hero-title-group">
           <h1 class="hero-title">Free Agents</h1>
-          <span class="hero-count">{freeAgents.length} available players</span>
+          <span class="hero-count"><span id="hero-count-num">{freeAgents.length}</span> available players</span>
         </div>
         <a href={r('/theleague/projected-free-agents')} class="hero-cross-link">
           See projected FAs
