@@ -1,21 +1,38 @@
 /**
- * Age calculation utilities for player rosters
+ * Age calculation utilities for player rosters.
+ *
+ * Every function takes "today" as an optional last argument. It defaults to
+ * `new Date()`, so no caller has to pass it — but without the seam none of this
+ * is testable, because the answers change with the system clock. That is why
+ * the rosters page's inline copies of these went untested for years.
  */
 
 import type { RosterPlayer } from './roster-utils';
 
+/** Anything with a birthdate. Looser than RosterPlayer so client-side rows
+ *  (plain parsed JSON, not the full typed shape) can be passed directly. */
+export interface HasBirthdate {
+  birthdate?: number | string | null;
+  position?: string | null;
+}
+
 /**
  * Calculate age from Unix timestamp birthdate
- * @param birthdate - Unix timestamp in seconds (from MFL API)
- * @returns Age in years (rounded down)
+ * @param birthdate - Unix timestamp in SECONDS (from MFL API), not milliseconds
+ * @param now - "Today"; injectable for tests
+ * @returns Age in years (rounded down), or null when there is no birthdate —
+ *          null rather than 0, so callers filter rather than averaging in a
+ *          newborn
  */
-export function calculateAge(birthdate?: number): number | null {
+export function calculateAge(
+  birthdate?: number | string | null,
+  now: Date = new Date(),
+): number | null {
   if (!birthdate) return null;
-  const birthDate = new Date(birthdate * 1000);
-  const today = new Date();
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDiff = today.getMonth() - birthDate.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+  const birthDate = new Date(Number(birthdate) * 1000);
+  let age = now.getFullYear() - birthDate.getFullYear();
+  const monthDiff = now.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birthDate.getDate())) {
     age--;
   }
   return age;
@@ -26,9 +43,12 @@ export function calculateAge(birthdate?: number): number | null {
  * @param players - Array of roster players
  * @returns Average age rounded to 1 decimal place, or null if no valid ages
  */
-export function calculateAverageAge(players: RosterPlayer[]): number | null {
+export function calculateAverageAge(
+  players: (RosterPlayer | HasBirthdate)[],
+  now: Date = new Date(),
+): number | null {
   const ages = players
-    .map((p) => calculateAge(p.birthdate))
+    .map((p) => calculateAge(p.birthdate, now))
     .filter((age): age is number => age !== null);
 
   if (ages.length === 0) return null;
@@ -41,13 +61,14 @@ export function calculateAverageAge(players: RosterPlayer[]): number | null {
  * @returns Map of position -> average age
  */
 export function calculateAverageAgeByPosition(
-  players: RosterPlayer[]
+  players: (RosterPlayer | HasBirthdate)[],
+  now: Date = new Date(),
 ): Map<string, { avgAge: number; count: number }> {
   const byPosition = new Map<string, number[]>();
 
   players.forEach((player) => {
-    const pos = (player.position ?? 'UNK').toUpperCase();
-    const age = calculateAge(player.birthdate);
+    const pos = String(player.position ?? 'UNK').toUpperCase();
+    const age = calculateAge(player.birthdate, now);
     if (age !== null) {
       if (!byPosition.has(pos)) {
         byPosition.set(pos, []);
@@ -72,19 +93,18 @@ export function calculateAverageAgeByPosition(
  * @returns Array of {range: string, count: number, percentage: number}
  */
 export function getAgeDistribution(
-  players: RosterPlayer[],
-  bucketSize: number = 5
+  players: (RosterPlayer | HasBirthdate)[],
+  bucketSize: number = 5,
+  now: Date = new Date(),
 ): Array<{ range: string; count: number; percentage: number }> {
   const ages = players
-    .map((p) => calculateAge(p.birthdate))
+    .map((p) => calculateAge(p.birthdate, now))
     .filter((age): age is number => age !== null);
 
   if (ages.length === 0) {
     return [];
   }
 
-  const minAge = Math.min(...ages);
-  const maxAge = Math.max(...ages);
   const buckets = new Map<number, number>();
 
   ages.forEach((age) => {
