@@ -253,7 +253,7 @@ function storyTextFiles() {
   // source, and JSON fixtures lived here until Sept 2026. An asset named from
   // either would be invisible to a guard that only reads TypeScript — the same
   // class of miss as skipping stories/fixtures/ in the first place.
-  return globSync('stories/**/*.{ts,tsx,astro,json}');
+  return globSync('stories/**/*.{ts,tsx,astro,js,mjs,json}');
 }
 
 /** Every src/ file reachable from a story or from preview.ts. */
