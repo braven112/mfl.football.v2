@@ -41,6 +41,7 @@ import type { BroadcastDefenseFace, BroadcastPlayer } from '../../../types/draft
 import { isSplashCutoutEligible, resolveSplashColors } from '../../../utils/pick-reveal';
 import {
   bestAvailableAt,
+  crestStrokeProps,
   toBroadcastPair,
   formatBestAvailable,
   positionRunCount,
@@ -254,8 +255,18 @@ export function BroadcastRevealCard({
         </span>
       ) : null}
       <span className="dbc-reveal__ghost" aria-hidden="true">{label}</span>
+      {/* The biggest crest on the site — 68vh, ~734px on a 1080p TV — so this
+          is the surface that takes the HIGHEST-RESOLUTION art and buys the
+          dark-board legibility back with an outline, rather than the other way
+          round. `resolveBroadcastCrest` decides both; the ring width for this
+          size lives on `.dbc-reveal__crest` in the stylesheet. */}
       {team?.icon ? (
-        <img className="dbc-reveal__crest" src={team.icon} alt="" onError={hideOnError} />
+        <img
+          {...crestStrokeProps('dbc-reveal__crest', team.iconStroke)}
+          src={team.icon}
+          alt=""
+          onError={hideOnError}
+        />
       ) : null}
 
       <div className="dbc-reveal__body">

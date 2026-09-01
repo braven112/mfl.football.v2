@@ -12,6 +12,7 @@ import type { DraftRoomPick, DraftRoomTeam } from '../../../types/draft-room';
 import type { BroadcastConference, BroadcastPlayer } from '../../../types/draft-broadcast';
 import {
   clockAnchorMs,
+  crestStrokeProps,
   formatElapsedClock,
   recentPicks,
   resolveBroadcastGradient,
@@ -368,9 +369,14 @@ export function OnTheClock({
              keeps its `is-crestless` flag, hiding the crest and centring the copy
              for every team that follows. */
           <div className="dbc-idle__clock" key={team?.franchiseId ?? 'no-team'}>
+            {/* ~34vh — the second-biggest crest on the board, so it takes the
+                same highest-resolution art the reveal card does, with an
+                outline where that art is a light cut. The rail crests below are
+                small enough to prefer the dark artwork instead; see
+                `resolveBroadcastCrest`. */}
             {team?.icon ? (
               <img
-                className="dbc-idle__crest"
+                {...crestStrokeProps('dbc-idle__crest', team.iconStroke)}
                 src={team.icon}
                 alt=""
                 ref={crestRef}
@@ -473,10 +479,10 @@ export function OnTheClock({
                         put some very MFL-era shorthand on a TV in front of
                         everyone. Text only survives as the no-icon fallback. */}
                     <span className="dbc-idle__row-team">
-                      {by?.icon ? (
+                      {by?.iconSmall ? (
                         <img
-                          className="dbc-idle__row-icon"
-                          src={by.icon}
+                          {...crestStrokeProps('dbc-idle__row-icon', by.iconSmallStroke)}
+                          src={by.iconSmall}
                           alt={by.nameShort || by.name || ''}
                           ref={crestRef}
                           onError={hideOnError}
@@ -517,10 +523,10 @@ export function OnTheClock({
                         would otherwise pull its own name left out of line with
                         the rows above it. */}
                     <span className="dbc-idle__row-crest">
-                      {by?.icon ? (
+                      {by?.iconSmall ? (
                         <img
-                          className="dbc-idle__row-icon"
-                          src={by.icon}
+                          {...crestStrokeProps('dbc-idle__row-icon', by.iconSmallStroke)}
+                          src={by.iconSmall}
                           alt=""
                           ref={crestRef}
                           onError={hideOnError}

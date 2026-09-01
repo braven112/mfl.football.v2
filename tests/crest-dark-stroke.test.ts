@@ -255,3 +255,43 @@ describe('iconStrokeDark overrides', () => {
     }
   });
 });
+
+describe('withStrokeColors — `true` is an opt-in, never a colour', () => {
+  // The map is typed `string | false` and all three readers trust that with
+  // `strokeColor || DEFAULT`. A boolean leaking through becomes the stroke
+  // colour: `drop-shadow(0.5px 0 0 true)` is invalid at computed-value time, so
+  // the generated rule is dropped — and for the two INLINE callers
+  // (franchise-band-brand, the draft broadcast) it takes their drop shadow with
+  // it. `iconStrokeDark` is typed `string | boolean` so the raw league config
+  // assigns, which makes `true` reachable.
+  const team = { franchiseId: '0099', name: 'X', icon: '/assets/x/x.png' };
+
+  it('normalizes `true` to absent, so consumers fall through to the default', () => {
+    // `.find`, not `[0]` — the measured manifest entries lead the array and the
+    // opt-ins are appended after them.
+    const entry = withStrokeColors('theleague', [{ ...team, iconStrokeDark: true }])
+      .find((e) => e.franchiseId === '0099');
+    expect(entry, 'true should still opt the crest in').toBeDefined();
+    expect(entry?.strokeColor).toBeUndefined();
+  });
+
+  it('still passes a string colour and a `false` opt-out through untouched', () => {
+    expect(
+      withStrokeColors('theleague', [{ ...team, iconStrokeDark: '#ffcd00' }])
+        .find((e) => e.franchiseId === '0099')?.strokeColor
+    ).toBe('#ffcd00');
+    // `false` on an unmeasured crest opts nothing in, so it does not appear at
+    // all — the assertion is that it never becomes a colour.
+    const off = withStrokeColors('theleague', [{ ...team, iconStrokeDark: false }])
+      .find((e) => e.franchiseId === '0099');
+    expect(off?.strokeColor === '#ffcd00').toBe(false);
+  });
+
+  it('emits no `true` into the generated CSS', () => {
+    const css = buildCrestDarkStrokeCss(
+      withStrokeColors('theleague', [{ ...team, iconStrokeDark: true }])
+    );
+    expect(css).not.toContain('true');
+    expect(css).toContain(DEFAULT_CREST_STROKE_COLOR);
+  });
+});

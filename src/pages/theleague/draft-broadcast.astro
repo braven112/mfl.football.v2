@@ -46,6 +46,7 @@ import {
   trimToDraftable,
 } from '../../utils/draft-broadcast-server';
 import { resolveBroadcastSource } from '../../utils/draft-broadcast-source';
+import { broadcastStrokeIndex, resolveBroadcastCrest } from '../../utils/broadcast-crest';
 import { resolveWarmDepth } from '../../utils/draft-broadcast-images';
 import { resolveScreensaverIdleMs } from '../../utils/draft-broadcast';
 import type {
@@ -155,9 +156,13 @@ const rehearseUpTo = rehearseParam ? Math.max(0, parseInt(rehearseParam, 10) || 
 // ── Franchise brands ──
 // Colors through getFranchiseBrand (the same resolver /theleague/draft-room
 // uses, so the reveal splash matches the room), but `broadcastGradient` and the
-// GroupMe art are read straight off the config — the brand resolver carries
+// crest art are read straight off the config — the brand resolver carries
 // neither. These ride SERIALIZED on DraftRoomTeam: importing a brand util into
 // the island would ship the whole league config JSON to the client.
+// One index for the whole league rather than one per team — see
+// broadcastStrokeIndex.
+const theleagueStrokeIndex = broadcastStrokeIndex('theleague', leagueConfigData.teams ?? []);
+
 const teams: DraftRoomTeam[] = (leagueConfigData.teams ?? []).map((team: any) => {
   const brand = getFranchiseBrand(team.franchiseId);
   return {
@@ -166,12 +171,11 @@ const teams: DraftRoomTeam[] = (leagueConfigData.teams ?? []).map((team: any) =>
     nameMedium: team.nameMedium || team.name,
     nameShort: team.nameShort || team.name,
     abbrev: team.abbrev || '',
-    // Prefer the GroupMe art for the same reason the AFL board does: `icon` is
-    // 100x100, but the crest renders at ~52vh (~560px on a 1080p TV), so the
-    // stock icon upscales more than 5x and visibly pixelates on the big screen.
-    // The GroupMe files are 400x400. Dark first — this card's background is
-    // always dark (see toBroadcastColor).
-    icon: team.groupMeDark || team.groupMe || team.icon || '',
+    // Crest art, and the outline a light cut needs to survive a board that is
+    // dark in BOTH themes — resolved server-side because none of the site's
+    // `html.dark` crest machinery reaches this page. See resolveBroadcastCrest
+    // for why the big and small surfaces can end up on different artwork.
+    ...resolveBroadcastCrest(team, 'theleague', theleagueStrokeIndex),
     colorPrimary: brand.colorPrimary,
     colorSecondary: brand.colorSecondary,
     broadcastGradient: team.broadcastGradient,

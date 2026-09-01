@@ -26,6 +26,14 @@
       "league": "both"
     },
     {
+      "date": "2026-09-01",
+      "type": "bug-fix",
+      "summary": "AFL franchise logos on the draft broadcast now hold their own against the board. That board is dark whatever theme you browse the site in, but the artwork was picked as if it weren't, so a crest drawn in near-black — Boondock Saints, Harambe, The Show — sank into the card behind it with nothing to separate the two. Twelve of the twenty-four AFL crests now get a fine outline traced around the logo's own shape, in white or in the franchise's own trim colour where one is set: Suh girls keep their pink, Jewpacabra their green, No Soup theirs. Five of those teams also have a small dark-mode crest drawn already, and the panel headers and pick rails now use it, since nothing at that size is big enough to show that the file is a smaller one. The reveal card and the on-the-clock logo stay on the larger artwork instead — they render past 700 pixels on a television and the small cut would visibly soften — which is what the outline is there to cover. TheLeague looks the same as it did yesterday, because every crest that needed one already got full-size dark artwork this week; the difference is that the board now works this out per franchise instead of assuming it.",
+      "impact": "user",
+      "area": "draft",
+      "league": "both"
+    },
+    {
       "date": "2026-08-31",
       "type": "bug-fix",
       "summary": "Traded draft picks now say who they came from — once, with the right team, and on every pick that was actually traded. The draft broadcast had been announcing \"Pick 1.11 · via from Bring the Pain\" on the TV, and the same doubled-up wording turned up wherever a traded pick appeared: the draft room's board, the draft predictor, your team's pick list. MyFantasyLeague writes these as \"[Pick traded from Bring the Pain.]\" and we were keeping the word \"from\" as part of the team's name, then putting our own \"via\" or \"from\" in front of it. Because \"from Bring the Pain\" matches no team in the league, every place that tries to show the original owner's crest beside a traded pick looked for that team, found nothing, and showed nothing — so those logos had never once appeared. Reading the comment properly turned up a second, quieter problem: MFL often files several notes about one pick together (\"[Pick traded from Drunk Indians. / Pick made by Commissioner.]\"), sometimes files them with no brackets at all, and sometimes lists a pick that changed hands twice. We only recognised the simplest of those, so 130 traded picks across both leagues' draft history were being shown as though they had never moved. All 287 are now read correctly, a pick traded twice is credited to the owner it started with, and a note about a pick traded away to someone else is no longer mistaken for one coming in.",

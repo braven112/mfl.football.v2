@@ -500,3 +500,67 @@ nothing", it is "no logo at all".
 **Files:** `src/utils/draft-broadcast.ts` (`resolveOrigin`),
 `src/utils/draft-broadcast-server.ts` (`collegeLogoFor`),
 `src/utils/pick-reveal.ts` (`usesCollegeOrigin`).
+
+## 2026-09-01 - On a both-themes-dark surface, the dark cut and the RESOLUTION can want different files
+
+**Context:** the 2026-08-28 entry above established the rule for a surface that
+is dark in both themes — resolve the dark artwork server-side and ship it as
+the `src`. That worked cleanly for NFL and college marks, because ESPN's
+`500-dark` cut is the same size as the light one. Franchise crests are the case
+where it does not: the hand-authored `iconDark` files are **100x100** and the
+GroupMe avatars are **400x400**, so on the draft broadcast the two goals point
+at different files.
+
+**The number that decides it is the DISPLAY size, and it is not one number.**
+The broadcast paints the same crest at four scales — reveal 68vh (~734px on a
+1080p TV), idle ~367px, panel head ~151px, rail icons ~40px. A 100px source is
+invisible-good at the bottom two and a 7x upscale at the top one. Measured
+side by side at reveal size (Music City), the dark cut wins the legibility and
+loses the sharpness badly enough that it reads as a broken image on a
+television. So there is no single right answer, and picking one is how you get
+a wrong one:
+
+- **Big surfaces take resolution** (`groupMeDark → groupMe → iconDark → icon`)
+  and buy legibility back with the stroke.
+- **Small surfaces take the dark cut** (`groupMeDark → iconDark → groupMe →
+  icon`).
+
+Two crest fields on the team record, not one. The same franchise genuinely
+wearing different artwork on the big crest and the rail is fine here — at 40px
+the cuts are indistinguishable — but it IS the thing the crest-stroke doc warns
+about in general, so it needs the size argument attached wherever it appears.
+
+**The reusable trap: the stroke manifest has a second false-negative class.**
+`measure-crest-contrast.mjs` skips any team with an `iconDark` — correct
+everywhere the swap fires, wrong on a surface that deliberately renders the
+LIGHT art anyway. Those franchises then come back with no signal at all, which
+looks like "measured fine" rather than "never measured". The fix is not a
+second manifest: **having an `iconDark` is itself a human saying this
+franchise's light artwork fails on dark**, which is precisely the question
+being asked, so read it as one. (This is the same shape as the 2026-08-15
+false-negatives entry — a score that was never taken reads identically to a
+good one.)
+
+**CSS mechanic worth stealing: `filter` does not compose across rules.** A
+stroke whose width has to differ per surface cannot be a plain class — the
+class would replace each surface's own `drop-shadow`. Put the ring in a custom
+property, have each surface rule set its own `--ring-w` and read
+`filter: var(--ring) drop-shadow(...its own...)`, and give the un-stroked case
+a **no-op filter value** rather than nothing: `opacity(1)` is valid, composes
+away, and keeps every rule's `filter` declaration well-formed. An empty
+`var(--ring, )` fallback also works but is easy to mis-read as a mistake.
+
+**Process note that cost a rewrite.** Assets and code moved in parallel: #680
+landed 400x400 dark art for nine franchises while this was in flight, which
+turned TheLeague's half of the change into a **complete no-op** (all sixteen
+crests already resolved to dark art) and left the visible effect entirely in
+the AFL, 12 of 24. Two lessons — rebase before writing the changelog copy, and
+**do not read a no-op diff on one league as the rule not working.** TheLeague
+is now correct by complete asset coverage; the rule is what keeps it correct
+when the next franchise arrives without it.
+
+**Files:** `src/utils/broadcast-crest.ts` (`resolveBroadcastCrest`),
+`src/utils/draft-broadcast.ts` (`crestStrokeProps`),
+`src/styles/draft-broadcast.css` (`--dbc-crest-ring`),
+`tests/broadcast-crest.test.ts`. Rule lives in
+`docs/claude/rules/theming-and-assets.md`.

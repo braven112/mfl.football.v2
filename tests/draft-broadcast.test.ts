@@ -948,11 +948,12 @@ describe('toBroadcastColor', () => {
 
 
 describe('AFL franchise crest art', () => {
-  // The broadcast crest renders at ~52vh — roughly 560px on a 1080p TV — so
-  // the 100x100 `icon` files upscale more than 5x and visibly pixelate across
-  // a room. draft-broadcast.astro prefers groupMeDark -> groupMe -> icon; this
-  // pins that the preferred art actually EXISTS, because a 404 here degrades
-  // silently to no crest at all rather than to the small one.
+  // The reveal crest renders at 68vh — roughly 734px on a 1080p TV — so the
+  // 100x100 `icon` files upscale more than 7x and visibly pixelate across a
+  // room. That is why `resolveBroadcastCrest` puts the 400px GroupMe art ahead
+  // of a 100px dark cut on the big surfaces; this pins that the preferred art
+  // actually EXISTS, because a 404 here degrades silently to no crest at all
+  // rather than to the small one.
   const cfg = JSON.parse(readFileSync('data/afl-fantasy/afl.config.json', 'utf-8'));
 
   it('points every declared crest path at a real file', () => {

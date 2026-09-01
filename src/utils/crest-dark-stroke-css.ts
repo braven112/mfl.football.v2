@@ -159,7 +159,15 @@ export function withStrokeColors(
   const colorByFranchise = new Map<string, string | false>(
     (teams ?? [])
       .filter((t) => t?.iconStrokeDark !== undefined)
-      .map((t) => [t.franchiseId, t.iconStrokeDark]),
+      // Normalize `true` away HERE rather than in each consumer. This map is
+      // typed `string | false` and every reader trusts that — all three do
+      // `strokeColor || DEFAULT`, which hands a boolean `true` straight out as
+      // the colour and emits `drop-shadow(… true)`. That is invalid at
+      // computed-value time, so the rule (or, for the inline callers, the whole
+      // `filter` including its drop shadow) is dropped. `true` means what any
+      // truthy value means to `optIns` below — opt in at the default colour —
+      // and `undefined` is exactly how this map spells that.
+      .map((t) => [t.franchiseId, t.iconStrokeDark === true ? undefined : t.iconStrokeDark]),
   );
   const measured = manifest.needsStroke.filter((e) => e.league === league);
   const measuredIds = new Set(measured.map((e) => e.franchiseId));

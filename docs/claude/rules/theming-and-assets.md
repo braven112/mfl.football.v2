@@ -183,6 +183,56 @@ Throwback Week-resolved. Four things there are load-bearing:
 `tests/franchise-band-brand.test.ts` pins all four, plus the requirement that
 exactly one component emits the map.
 
+## The draft broadcast picks its own crests, and it needs TWO of them
+
+The board is dark in both themes, exactly like the player modal band above, so
+the same rule applies: `resolveBroadcastCrest` (`src/utils/broadcast-crest.ts`)
+picks the artwork server-side, because the `html.dark` icon swap and the
+measured stroke both do nothing for a light-theme owner driving the TV. What is
+NEW here is that one crest is not enough.
+
+- **The reveal crest is 68vh** — ~734px on a 1080p TV, the biggest image on the
+  site — and the idle board's is ~367px. The hand-authored `iconDark` cuts are
+  100x100 and the GroupMe art is 400x400, so on those two surfaces the dark cut
+  costs a 7x upscale. Resolution wins there (Brandon, Sep 2026, off a
+  side-by-side of Music City at reveal size): `groupMeDark → groupMe → iconDark
+  → icon`, and the legibility is bought back with an outline instead.
+- **The panel crest (~151px) and the rail icons (~40px) take the dark cut** —
+  `groupMeDark → iconDark → groupMe → icon`. Nothing at that size shows a 100px
+  source, so there is no trade to make. `DraftRoomTeam` therefore carries
+  `icon` AND `iconSmall`, and the same franchise CAN wear different artwork on
+  the big crest and the rail. That is deliberate, not the inconsistency the
+  stroke doc warns about — at 40px the two cuts are indistinguishable.
+- **`groupMeDark` leads both orders**, so every 400x400 dark cut added to a
+  league config takes over the big crest on its own and drops that franchise's
+  outline. Adding one is a config + asset change; this file needs no edit.
+- **The outline has a third signal the site-wide manifest cannot give it.**
+  `measure-crest-contrast.mjs` skips any team with an `iconDark` — correct
+  everywhere else, since they swap — but those are exactly the franchises the
+  resolution rule strands on light art here. So HAVING an `iconDark` is itself
+  taken as "this franchise's light artwork fails on a dark surface".
+  `iconStrokeDark` still outranks it in both directions.
+- **The ring WIDTH belongs to the surface, not the filter.** Each crest rule in
+  `draft-broadcast.css` sets `--dbc-crest-ring-w` to ~0.5% of its own rendered
+  size and reads `var(--dbc-crest-ring)` inline alongside its own drop shadow —
+  `filter` does not compose across rules, so an un-stroked crest needs the
+  no-op `opacity(1)` default rather than nothing.
+- Neither order can render the light `icon` for a franchise that HAS an
+  `iconDark`, and that is load-bearing: `TeamIconDarkStyles` ships on this page,
+  so that exact src would swap under `html.dark` and the crest would follow the
+  VIEWER's theme on a board that has none.
+
+**Where this actually bites today is the AFL.** #680 gave every TheLeague crest
+that needed one a 400x400 `groupMeDark`, so all sixteen resolve to dark art on
+every surface and TheLeague's board is byte-identical before and after this
+rule — correct by complete coverage rather than by rule, which is the state
+this exists to survive. The AFL is 12 of 24 changed. Do not read a no-op
+diff on one league as the rule not working; check the other.
+
+`tests/broadcast-crest.test.ts` pins all of it, including a sweep asserting that
+every franchise left on light art either carries a ring or opted out. Its
+manifest cases deliberately use AFL franchises for the same reason.
+
 ## NFL team logos — committed files, guard-tested, must never 404
 
 Every player cell renders self-hosted `/assets/nfl-logos/{CODE}.svg`. Two
