@@ -4,6 +4,14 @@
     {
       "date": "2026-09-01",
       "type": "bug-fix",
+      "summary": "The team search box on the Brand Assets page works the second time you visit it. Type a team name and the grid narrows to that team; leave for another page, come back, and the box had been doing nothing at all — you could type into it and all 49 teams just sat there, which reads as a broken search rather than a search with no matches. The page's filter was set up by a script the site runs once and then skips on every later visit, because moving between pages here swaps the content in place instead of reloading the whole page. It is now wired up on every arrival, so the filter, the copy-to-clipboard buttons and the image size labels all behave the same on your fifth visit as your first. The same fix also covers the AFL's assets page.",
+      "impact": "user",
+      "area": "design-system",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-01",
+      "type": "bug-fix",
       "summary": "One dropped request can no longer log you out of the site while you are still logged in. Several parts of the page ask the server \"who is signed in?\" independently — the trade builder, the trade-offer bell, and the auth check the installed app runs on every screen — and each of them treated a request that FAILED exactly the same as a server that answered \"nobody is signed in.\" Those are different facts, and on a phone with one bar the difference is the whole experience: the trade builder would quietly decide you were a spectator and stop offering to submit the trade you had just built, and the installed app would bounce you out to the login screen even though your session was fine all along. Those checks now share one answer instead of each making their own request — which also means a page load asks once rather than up to four times — and a request that fails is treated as \"we couldn't check right now,\" leaving you signed in with whatever we last knew to be true. Signing out still signs you out immediately, everywhere on the page.",
       "impact": "user",
       "area": "other",

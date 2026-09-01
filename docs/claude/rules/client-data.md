@@ -106,3 +106,73 @@ becomes a component.
 (`hydrateTeamFromSession`) still reads `/api/auth/me` directly. It handles the
 failure correctly, so it is not urgent; it is left for whenever that file's
 inline script is broken up.
+
+---
+
+# Retiring an inline script
+
+`is:inline` and `define:vars` opt out of bundling, typing and imports at once:
+no TypeScript, nothing for `astro check` to read, and no way to share a helper
+with the component rendering beside them. **4,346 lines are still written that
+way**, pinned per file in `tests/fixtures/inline-script-baseline.json` and
+enforced by `tests/inline-script-ratchet.test.ts`. That set may only shrink.
+Report: `node scripts/lib/inline-script-inventory.mjs`.
+
+A plain `<script>` in an .astro file is **not** this problem — it is a bundled
+TypeScript module the type baseline already covers. Roughly 19,500 lines are
+that, and they are fine where they are.
+
+## Where a block should go
+
+| The DOM it drives | Destination |
+|---|---|
+| State a component owns; re-renders on interaction | **React island** (`.tsx` + a `client:` directive) |
+| Server-rendered markup across a page; progressive enhancement | **Bundled `<script>` module** |
+| Must run before paint, or before the router | **Stays `is:inline`** — add it to `sanctioned` with a reason |
+
+Do not force the first row. Making an island own static server markup means
+re-rendering it on the client for nothing;
+`src/components/shared/assets/assets-page-behaviors.ts` is the worked example
+of the second row, and `useSession` in `TradeBuilder.tsx` of the first.
+
+## The trap: a module is evaluated ONCE per session
+
+This is the bug you will ship if you move an inline block to a module without
+thinking about it, and it is the same one recorded for the game strip in
+`docs/claude/rules/lineups.md`:
+
+- An **inline script** the ClientRouter has already run is **not re-run** on a
+  return visit — so an inline block that wires up elements is already dead the
+  second time an owner opens the page (unless it carries `data-astro-rerun`).
+- A **module** is evaluated once per session, so module-scope init has the same
+  problem, *and* the elements it bound to were replaced by the swap.
+
+So wire per-element listeners inside an **`astro:page-load`** handler — it
+fires on the first load as well, so there is no separate init path — and
+register document-level delegation exactly once behind a **module-scope flag**
+(not a `window.__thing` global; module scope is the reason to be a module).
+
+The assets-page conversion fixed exactly this: its team filter went dead after
+any soft navigation back to the page. Verified as a controlled A/B in a real
+browser — old code 49 of 49 cards still showing after `goBack()`, new code
+correctly filtered.
+
+## Recipe
+
+1. Move the block into a `.ts` module beside its component (or a `.tsx`
+   island), typed. Delete the `window.*` globals — module scope replaces them.
+2. Wire per-element listeners on `astro:page-load`; guard delegation with a
+   module-scope flag.
+3. Replace the block with a bundled `<script>` that imports it — a relative
+   specifier from the **.astro file's own directory** (`./foo`, not a path
+   rebuilt from `src/`).
+4. Lower the file's number in `inline-script-baseline.json`, or delete the
+   entry when it reaches zero. The ratchet fails until you do — that is the
+   point.
+5. Verify in a browser, including a **soft navigation away and back**. An
+   HTML diff cannot see this class of bug.
+
+**Biggest target:** `players.astro` is 1,753 + 913 lines and is also a forked
+sibling pair (`tests/fixtures/page-fork-baseline.json`), so unforking it and
+de-inlining it are the same piece of work — do them together, not twice.
+
