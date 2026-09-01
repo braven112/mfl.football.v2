@@ -2,85 +2,123 @@ import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { GET } from '../src/pages/api/roster-season/[league]/[year]';
 
 /**
  * Guards the on-demand-season split of the rosters page.
  *
  * The page used to inline every season into #roster-config (8.2 MB of it).
  * Now only the LIVE seasons ship inline and everything frozen is fetched from
- * /api/roster-season/[league]/[year]. Two things have to stay true for that to
- * be safe, and neither is obvious from reading either file alone:
+ * /api/roster-season/[league]/[year].
  *
- *  1. The endpoint can actually serve every frozen season the page will ask
- *     for — otherwise the season picker silently dead-ends on some years.
- *  2. Each served payload still carries `salaryAdjustments`, because the
- *     separate `adjustmentsBySeason` config key that used to carry that data
- *     was removed as a duplicate. If a payload lost it, dead money would
- *     silently render as zero rather than failing loudly.
+ * These call the real handler and assert the real Response. An earlier version
+ * of this file grepped the route's source for `getLeagueBySlug` and
+ * `import.meta.glob`, which is the failure mode `docs/claude/rules/league-urls.md`
+ * records biting twice in one PR: a `toContain` is satisfied by an import line
+ * or a doc comment and stays green while the behavior it claims to pin is gone.
  */
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const derivedPath = path.join(
-  repoRoot,
-  'data/theleague/derived/roster-season-payloads.json',
+const derived = JSON.parse(
+  fs.readFileSync(path.join(repoRoot, 'data/theleague/derived/roster-season-payloads.json'), 'utf8'),
 );
+const seasons: Record<string, any> = derived.seasons ?? {};
 
-describe('roster season on-demand endpoint', () => {
-  const derived = JSON.parse(fs.readFileSync(derivedPath, 'utf8'));
-  const seasons: Record<string, any> = derived.seasons ?? {};
+/** The handler only reads `params`; everything else in the Astro context is unused. */
+const call = (league: string, year: string) =>
+  (GET as any)({ params: { league, year } }) as Promise<Response>;
 
-  it('has derived payloads to serve', () => {
-    expect(Object.keys(seasons).length).toBeGreaterThan(0);
+describe('GET /api/roster-season/[league]/[year]', () => {
+  it('serves every frozen season the page can ask for', async () => {
+    const years = Object.keys(seasons);
+    expect(years.length).toBeGreaterThan(0);
+
+    // Every one, not a sample — a single unservable year is a season the
+    // picker would silently dead-end on.
+    const failures: string[] = [];
+    for (const year of years) {
+      const res = await call('theleague', year);
+      if (res.status !== 200) failures.push(`${year} -> ${res.status}`);
+    }
+    expect(failures, 'derived seasons the endpoint cannot serve').toEqual([]);
   });
 
-  it('every derived season carries its own salaryAdjustments array', () => {
-    // The removed `adjustmentsBySeason` config key was a byte-identical copy of
-    // exactly these arrays. Dropping it is only safe while every payload still
-    // embeds its own — a payload without one renders dead money as zero.
-    const missing = Object.entries(seasons)
-      .filter(([, payload]) => !Array.isArray((payload as any)?.salaryAdjustments))
-      .map(([season]) => season);
-    expect(missing, 'derived seasons missing salaryAdjustments').toEqual([]);
+  it('returns the payload under the documented shape', async () => {
+    const year = Object.keys(seasons)[0];
+    const res = await call('theleague', year);
+    const body = await res.json();
+    expect(body.season).toBe(year);
+    expect(body.payload?.teams).toBeTruthy();
+    expect(Object.keys(body.payload.teams).length).toBeGreaterThan(0);
   });
 
-  it('every derived season has a teams map', () => {
-    const missing = Object.entries(seasons)
-      .filter(([, payload]) => {
-        const teams = (payload as any)?.teams;
-        return !teams || typeof teams !== 'object' || Object.keys(teams).length === 0;
-      })
-      .map(([season]) => season);
-    expect(missing, 'derived seasons with no teams').toEqual([]);
+  it('carries salaryAdjustments on every payload it serves', async () => {
+    // The separate `adjustmentsBySeason` config key was removed as a
+    // byte-identical duplicate of exactly these arrays. That is only safe
+    // while every payload still embeds its own — without it dead money
+    // renders as zero rather than failing loudly.
+    const missing: string[] = [];
+    for (const year of Object.keys(seasons)) {
+      const body = await (await call('theleague', year)).json();
+      if (!Array.isArray(body.payload?.salaryAdjustments)) missing.push(year);
+    }
+    expect(missing, 'served seasons missing salaryAdjustments').toEqual([]);
   });
 
-  it('the route exists and is registry-driven rather than league-hardcoded', () => {
-    const routePath = path.join(
-      repoRoot,
-      'src/pages/api/roster-season/[league]/[year].ts',
-    );
-    expect(fs.existsSync(routePath), 'endpoint route file').toBe(true);
-    const src = fs.readFileSync(routePath, 'utf8');
-    // Resolves the league through the registry...
-    expect(src).toContain('getLeagueBySlug');
-    // ...and discovers payload files by glob, so adding a league is data-only.
-    expect(src).toContain('import.meta.glob');
-    // Rejects a non-year param before it reaches a lookup.
-    expect(src).toMatch(/\\d\{4\}/);
+  it('404s a season it does not hold, rather than serving an empty one', async () => {
+    // A live season is built in the page frontmatter from the feeds; a stale
+    // derived copy would be wrong, so this route must not answer for one.
+    const res = await call('theleague', '2099');
+    expect(res.status).toBe(404);
   });
 
-  it('the rosters page inlines only live seasons and points at the endpoint', () => {
-    const pageSrc = fs.readFileSync(
-      path.join(repoRoot, 'src/pages/theleague/rosters.astro'),
-      'utf8',
-    );
-    // The config must carry the endpoint so the client never builds a league
-    // path itself, and must serialize the filtered map rather than the full one.
-    expect(pageSrc).toContain('seasonEndpoint');
+  it('rejects a non-year param before any lookup', async () => {
+    for (const bad of ['abcd', '20', '../../etc', '2013x']) {
+      const res = await call('theleague', bad);
+      expect(res.status, `year "${bad}"`).toBe(400);
+    }
+  });
+
+  it('404s an unknown league rather than guessing one', async () => {
+    const res = await call('not-a-league', '2013');
+    expect(res.status).toBe(404);
+  });
+
+  it('caches a hit and never caches a miss', async () => {
+    const hit = await call('theleague', Object.keys(seasons)[0]);
+    expect(hit.headers.get('Cache-Control')).toContain('max-age=');
+
+    const miss = await call('theleague', '2099');
+    expect(miss.headers.get('Cache-Control')).toBe('no-store');
+  });
+});
+
+describe('rosters page payload invariants', () => {
+  const pageSrc = fs.readFileSync(
+    path.join(repoRoot, 'src/pages/theleague/rosters.astro'),
+    'utf8',
+  );
+
+  it('serializes the filtered season map, not the full one', () => {
     expect(pageSrc).toContain('seasons: inlineSeasons');
     expect(pageSrc).toContain('liveSeasonKeys');
-    // The three deduplicated keys must not come back.
+  });
+
+  it('does not re-add the three deduplicated config keys', () => {
     expect(pageSrc).not.toMatch(/^\s*initialSeasonData,\s*$/m);
     expect(pageSrc).not.toMatch(/^\s*initialTeamData,\s*$/m);
     expect(pageSrc).not.toMatch(/adjustmentsBySeason:\s*adjustmentsBySeasonAllYears/);
+  });
+
+  it('does not prefetch seasons in the background', () => {
+    // An idle prefetch pulled all 18 frozen seasons — 7.09 MB, the entire
+    // payload this page stopped shipping — back over the wire to warm a cache
+    // nothing can read, since there is no season picker. If a picker ships,
+    // warm from its interaction, never unconditionally on load.
+    expect(pageSrc).not.toContain('prefetchRemainingSeasons');
+    // Not a blanket ban on requestIdleCallback — the page uses it legitimately
+    // to warm the analytics/planner views (scheduleIdleWork). What must not
+    // come back is an idle callback that calls loadSeason.
+    expect(pageSrc).not.toMatch(/requestIdleCallback[\s\S]{0,400}?loadSeason/);
   });
 });
