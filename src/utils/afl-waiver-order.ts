@@ -4,29 +4,31 @@
  * The AFL constitution (docs/claude/afl-rules.md, "Free Agents (Waivers)")
  * says: "Initial waiver order = base draft order from the previous season."
  *
- * That sentence needs one piece of interpretation, because the two sides of it
- * have different shapes:
+ * THE BASE DRAFT ORDER IS PER-CONFERENCE, AND SO IS THE WAIVER ORDER. The AFL
+ * drafts as two independent 12-team conferences (MFL runs them as separate
+ * draft units, `CONFERENCE00` / `CONFERENCE01`), so "the base draft order" is
+ * really TWO orders of 12 — reverse Week-13 standings with each conference
+ * champion forced to that conference's last slot. It is the round-2+ order,
+ * NOT round 1: the NIT bonus reshuffles round 1 only (see afl-draft-utils.ts).
  *
- *  - The BASE DRAFT ORDER is per-conference. The AFL drafts as two independent
- *    12-team conferences (MFL runs them as separate draft units,
- *    `CONFERENCE00` / `CONFERENCE01`), so "the base draft order" is really TWO
- *    orders of 12 — reverse Week-13 standings, with each conference champion
- *    forced to that conference's last slot. It is the round-2+ order, NOT
- *    round 1: the NIT bonus reshuffles round 1 only (see afl-draft-utils.ts).
+ * MFL's Custom Waiver Order page (`csetup?C=WAIVORD`) presents the two
+ * conferences as SEPARATE sections, and serializes them into the single
+ * `waiverSortOrder` field as one block after the other: American League 1-12,
+ * National League 13-24. There is no way to interleave them, and no reason to
+ * want to.
  *
- *  - The WAIVER ORDER is a single league-wide list of 24. MFL stores it as one
- *    `waiverSortOrder` per franchise, 1..24.
+ * WHY THE BLOCKING IS HARMLESS, which is the part that is easy to get wrong:
+ * the AFL is a duplicate-player league scoped by conference
+ * (`rostersPerPlayer: 1` with `playerLimitUnit: CONFERENCE`; `duplicatePlayers:
+ * true` in the registry). The same NFL player can be rostered simultaneously by
+ * one American and one National franchise, so teams in different conferences
+ * NEVER contend for the same claim. Only a franchise's rank WITHIN its own
+ * conference affects any real outcome.
  *
- * The commissioner's ruling (2026-08-31): render the two conference orders as
- * one list by STRICT ALTERNATION, preserving each conference's internal base
- * order exactly. The conference holding the single worst team in the league
- * leads, so waiver #1 still belongs to a team with a claim to being the worst.
- * The alternative considered and rejected was re-ranking all 24 league-wide,
- * which produces a tidier monotonic list but is no longer "the base draft
- * order" in any literal sense.
- *
- * Alternation is also what keeps the merge fair: each conference gets exactly
- * one of every two slots, so neither is systematically ahead of the other.
+ * An earlier version of this file merged the two orders by strict alternation
+ * to stop one conference sitting "systematically ahead" of the other. With
+ * separate player pools that was never a real risk, and MFL's own page cannot
+ * express it. Do not reintroduce it.
  */
 
 /** One franchise's slot in a conference's base draft order. */
@@ -48,64 +50,53 @@ export interface WaiverOrderEntry {
 }
 
 /**
- * Interleave two conference base orders into one league-wide waiver order.
+ * Serialize two conference base orders into MFL's single 1..N
+ * `waiverSortOrder` space, one conference block after the other in conference
+ * order ('00' American first, then '01' National) — the layout MFL's own
+ * Custom Waiver Order page produces.
  *
- * @param baseOrders     Exactly two conferences, each with the same team count.
- * @param leadFranchiseId Franchise whose conference takes waiver slot 1 —
- *                        pass the league's single worst team.
- * @throws If the two conferences differ in size, if a franchise appears twice,
- *         or if `leadFranchiseId` is not in either conference. Each of those
- *         would silently produce a wrong-but-plausible order, and this value is
- *         written straight to the live league.
+ * @param baseOrders Exactly two conferences, each with the same team count.
+ * @throws If the two conferences differ in size, carry the same conference
+ *         code, or repeat a franchise. Each would silently produce a
+ *         wrong-but-plausible order, and this value is read back against the
+ *         live league.
  */
-export function buildAflWaiverOrder(
-  baseOrders: ConferenceBaseOrder[],
-  leadFranchiseId: string
-): WaiverOrderEntry[] {
+export function buildAflWaiverOrder(baseOrders: ConferenceBaseOrder[]): WaiverOrderEntry[] {
   if (baseOrders.length !== 2) {
     throw new Error(`Expected exactly 2 conferences, got ${baseOrders.length}`);
   }
   const [a, b] = baseOrders;
+  if (a.conference === b.conference) {
+    throw new Error(
+      `Both base orders carry conference "${a.conference}" — one conference is missing.`
+    );
+  }
   if (a.franchiseIds.length !== b.franchiseIds.length) {
     throw new Error(
       `Conferences must be the same size — ${a.conference} has ${a.franchiseIds.length}, ` +
-        `${b.conference} has ${b.franchiseIds.length}. Alternation would leave a tail of ` +
-        `consecutive same-conference slots.`
+        `${b.conference} has ${b.franchiseIds.length}.`
     );
   }
   if (a.franchiseIds.length === 0) {
     throw new Error('Conference base orders are empty — refusing to build an empty waiver order');
   }
-  if (a.conference === b.conference) {
-    throw new Error(
-      `Both base orders carry conference "${a.conference}" — one conference is missing. ` +
-        `Alternating a conference with itself yields a full 24-slot order that looks valid ` +
-        `and is semantically wrong.`
-    );
-  }
-
   const seen = new Set<string>();
   for (const id of [...a.franchiseIds, ...b.franchiseIds]) {
     if (seen.has(id)) throw new Error(`Franchise ${id} appears in more than one base-order slot`);
     seen.add(id);
   }
-  if (!seen.has(leadFranchiseId)) {
-    throw new Error(`Lead franchise ${leadFranchiseId} is not in either conference base order`);
-  }
 
-  const lead = a.franchiseIds.includes(leadFranchiseId) ? a : b;
-  const follow = lead === a ? b : a;
-
+  const blocks = [...baseOrders].sort((x, y) => x.conference.localeCompare(y.conference));
   const order: WaiverOrderEntry[] = [];
-  for (let i = 0; i < lead.franchiseIds.length; i++) {
-    for (const conf of [lead, follow]) {
+  for (const block of blocks) {
+    block.franchiseIds.forEach((franchiseId, i) => {
       order.push({
         position: order.length + 1,
-        franchiseId: conf.franchiseIds[i],
-        conference: conf.conference,
+        franchiseId,
+        conference: block.conference,
         conferenceBasePosition: i + 1,
       });
-    }
+    });
   }
   return order;
 }
@@ -166,4 +157,129 @@ function xmlAttr(value: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+/** One conference's verdict when comparing the live order to the expected one. */
+export interface ConferenceDriftResult {
+  conference: string;
+  /** Expected franchise ids, worst-first. */
+  expected: string[];
+  /** Live franchise ids for this conference, ordered by their MFL slot. */
+  actual: string[];
+  /** Franchises the live league had no slot for at all. */
+  missing: string[];
+  ok: boolean;
+}
+
+/**
+ * Compare a computed waiver order against the live league, PER CONFERENCE.
+ *
+ * Rank within a conference is the only thing that affects an outcome in this
+ * league (per-conference player pools — see the header), and comparing the flat
+ * 1..N list would additionally break the moment MFL renumbers the blocks. So
+ * the comparison is the relative order of each conference's own franchises.
+ *
+ * @param expected The full computed order.
+ * @param liveSlot Franchise id → the `waiverSortOrder` MFL currently reports.
+ */
+export function compareAflWaiverOrder(
+  expected: WaiverOrderEntry[],
+  liveSlot: Map<string, number>
+): ConferenceDriftResult[] {
+  const conferences = [...new Set(expected.map((e) => e.conference))].sort();
+  return conferences.map((conference) => {
+    const want = expected.filter((e) => e.conference === conference).map((e) => e.franchiseId);
+    const missing = want.filter((id) => !liveSlot.has(id));
+    const present = want.filter((id) => liveSlot.has(id));
+    // Ties would make the comparison order-dependent and hide a real problem;
+    // fall back to franchise id so the result is at least deterministic.
+    const actual = [...present].sort(
+      (a, b) => liveSlot.get(a)! - liveSlot.get(b)! || a.localeCompare(b)
+    );
+    return {
+      conference,
+      expected: want,
+      actual,
+      missing,
+      ok: missing.length === 0 && actual.join() === want.join(),
+    };
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MFL's Custom Waiver Order form (`csetup?C=WAIVORD`)
+//
+// `import?TYPE=franchises` cannot set waiverSortOrder (2026-08-31 — it answers
+// <status>OK</status> and ignores the field), so the only way to write this is
+// to replay the page's own form POST, the way src/pages/api/cut-player.ts
+// replays `add_drop`. The contract below was captured from a real successful
+// save, verified against the resulting live league.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Human-readable conference labels, for logs. */
+export const AFL_CONFERENCE_LABELS: Record<string, string> = { '00': 'American', '01': 'National' };
+
+/** The page that owns the form. Commissioner-only; not an API endpoint. */
+export function waiverOrderPageUrl(mflHost: string, year: number, leagueId: string): string {
+  const host = mflHost.replace(/^https?:\/\//, '');
+  return `https://${host}/${year}/csetup?L=${leagueId}&C=WAIVORD`;
+}
+
+/**
+ * Pull the `input_expires` nonce out of the page HTML.
+ *
+ * This is NOT decoration. It is a unix timestamp a few tens of minutes in the
+ * future, and MFL rejects a POST carrying an expired one — SILENTLY: HTTP 200,
+ * no error, nothing changes. Observed live on 2026-08-31, where a stale tab's
+ * save (20 minutes past expiry) was dropped, which is the only reason a
+ * default-ordered payload did not overwrite the real order.
+ *
+ * So it must be harvested from a GET immediately before each POST. It can never
+ * be cached, stored, or reused.
+ */
+export function parseInputExpires(html: string): number | null {
+  const m = /name="input_expires"[^>]*\bvalue="(\d+)"/i.exec(html)
+    ?? /\bvalue="(\d+)"[^>]*name="input_expires"/i.exec(html);
+  if (!m) return null;
+  const n = Number(m[1]);
+  return Number.isSafeInteger(n) && n > 0 ? n : null;
+}
+
+/**
+ * Serialize a waiver order as the form body MFL's save button sends.
+ *
+ * Field shape, captured from a real save:
+ *   form_name=WAIVORD, LEAGUE_ID, C=WAIVORD, input_expires,
+ *   WAIVER_ORDER_CONFERENCE<CC>_COUNT, _SHOW_INDEX=1,
+ *   WAIVER_ORDER_CONFERENCE<CC>_<rank 1..N>=<franchiseId>,
+ *   SUBMIT
+ *
+ * Note the ranks are 1..N WITHIN each conference — MFL models this as two
+ * independent orders, not one list of 24.
+ */
+export function buildWaiverOrderFormBody(
+  order: WaiverOrderEntry[],
+  opts: { leagueId: string; inputExpires: number }
+): string {
+  const params = new URLSearchParams();
+  params.set('form_name', 'WAIVORD');
+  params.set('LEAGUE_ID', opts.leagueId);
+  params.set('C', 'WAIVORD');
+  params.set('input_expires', String(opts.inputExpires));
+
+  for (const conference of [...new Set(order.map((e) => e.conference))].sort()) {
+    const inConf = order
+      .filter((e) => e.conference === conference)
+      .sort((a, b) => a.conferenceBasePosition - b.conferenceBasePosition);
+    const prefix = `WAIVER_ORDER_CONFERENCE${conference}`;
+    params.set(`${prefix}_COUNT`, String(inConf.length));
+    params.set(`${prefix}_SHOW_INDEX`, '1');
+    inConf.forEach((e, i) => {
+      // Rank is the loop index, not conferenceBasePosition, so a gap in the
+      // computed positions can never emit a hole MFL would misread.
+      params.set(`${prefix}_${i + 1}`, e.franchiseId);
+    });
+  }
+  params.set('SUBMIT', 'Save Custom Waiver Order');
+  return params.toString();
 }

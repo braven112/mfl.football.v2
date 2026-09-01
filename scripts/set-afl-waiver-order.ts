@@ -1,56 +1,57 @@
 #!/usr/bin/env tsx
 /**
- * Set the AFL's league-wide waiver order on MFL from the previous season's
- * base draft order, per the AFL constitution.
+ * Set the AFL's waiver order on MFL from the previous season's base draft
+ * order, per the constitution.
  *
- * WHY THIS EXISTS: MFL does NOT carry `waiverSortOrder` across a league-year
- * rollover. When the new AFL league is created each June it starts at the
- * default — reverse franchise id (0024 first, 0001 last) — which has nothing
- * to do with the constitution. That is the state the 2026 league was found in
- * on 2026-08-31, with Week 1 waivers about to run: the 2025 #1 seed was
- * sitting at waiver 10 and a 17th-place team at waiver 1. The AFL uses
- * `WAIVERS_FCFS` (rolling "Yahoo style" priority, NOT blind bidding), so
- * `waiverSortOrder` is not a tiebreaker here — it IS the waiver order.
+ * WHY A FORM POST AND NOT THE API: `import?TYPE=franchises` does not carry
+ * `waiverSortOrder` — it answers `<status>OK</status>` and changes nothing
+ * (2026-08-31, proven against throwaway league 36189; see the mfl-api insights
+ * entry). No import type sets waiver order. So this replays the POST that MFL's
+ * own Custom Waiver Order page makes, the way src/pages/api/cut-player.ts
+ * replays `add_drop` for the same reason. The field contract was captured from
+ * a real successful save and is pinned byte-for-byte by
+ * tests/afl-waiver-order.test.ts.
+ *
+ * WHY IT MUST GET BEFORE IT POSTS: the form carries an `input_expires` nonce,
+ * valid for a few tens of minutes. MFL drops a POST with an expired one
+ * SILENTLY — HTTP 200, no error, nothing changes. That is not hypothetical: on
+ * 2026-08-31 a stale browser tab's save was dropped exactly this way, which is
+ * the only reason a default-ordered payload did not overwrite the real order.
+ * The nonce is harvested immediately before each POST and never reused.
  *
  * WHAT IT SETS: the INITIAL order. The AFL's waiver system is rolling, so MFL
- * mutates this value all season as claims are awarded. Run this ONCE per
- * league year, before the first claim of Week 1 — running it mid-season would
- * silently roll back every claim's priority cost. `--force` is required to
- * write once any waiver transaction exists for the year.
- *
- * THE ORDER: reverse previous-season standings per conference with each
- * conference champion forced last (i.e. the base draft order, which is the
- * round-2+ order — NOT round 1, which the NIT bonus reshuffles), then the two
- * conferences interleaved into one 24-slot list. See src/utils/afl-waiver-order.ts
- * for the merge rule and why it is an interpretation.
+ * mutates this all season as claims are awarded. Run it ONCE per league year,
+ * after the previous season's NIT wraps and before Week 1 waivers process.
+ * `--force` is required once any waiver transaction exists, because rewriting
+ * mid-season refunds priority teams have already spent.
  *
  * SAFETY:
- *   --dry-run is the DEFAULT. It prints the full before/after diff and exits
- *     without touching MFL. Live writes need an explicit --live.
- *   The write always carries OVERLAY=1 (welded on in setAflWaiverOrderUrl) —
- *     without it MFL erases every franchise field not in the payload.
- *   The pre-write franchises snapshot is saved to disk so the previous order
- *     can be restored by hand if a write lands wrong.
- *   After a live write it re-reads the league and fails loudly if the order
- *     that landed is not the one it sent.
+ *   --dry-run is the DEFAULT; it prints the diff and the exact body it would
+ *     send, and exits without contacting the write path.
+ *   Success is judged by RE-READING the live order, never by MFL's response —
+ *     a silent no-op is the failure mode this endpoint actually has.
+ *   The pre-write order is printed as a replayable form body, so a bad write
+ *     can be undone from the log alone (a CI runner's disk does not survive).
  *
- * Env (live writes only):
- *   MFL_USER_ID      commissioner's MFL_USER_ID cookie
- *   MFL_IS_COMMISH   commissioner's MFL_IS_COMMISH cookie
+ * Env (live only): MFL_USER_ID, MFL_IS_COMMISH — commissioner of THIS league.
  *
  * Usage:
- *   pnpm exec tsx scripts/set-afl-waiver-order.ts              # dry run
+ *   pnpm exec tsx scripts/set-afl-waiver-order.ts            # dry run
  *   pnpm exec tsx scripts/set-afl-waiver-order.ts --live
- *   pnpm exec tsx scripts/set-afl-waiver-order.ts --year 2026 --standings-year 2025
  */
 
-import fs from 'node:fs';
-import path from 'node:path';
-import { calculateAFLDraftOrder, parseConferenceChampions, parseNITResults, buildHeadToHeadFromRaw, isDraftOrderFinal } from '../src/utils/afl-draft-utils';
-import { buildAflWaiverOrder, buildFranchisesWaiverXml, setAflWaiverOrderUrl, type ConferenceBaseOrder, type WaiverOrderEntry, type FranchisesXmlShape } from '../src/utils/afl-waiver-order';
 import { mflFetch } from '../src/utils/mfl-fetch';
 import { getLeagueBySlug } from '../src/config/leagues-data.mjs';
 import { getAflLeagueYear } from '../src/utils/league-year';
+import { computeAflWaiverOrder } from '../src/utils/afl-waiver-order-source';
+import {
+  buildWaiverOrderFormBody,
+  compareAflWaiverOrder,
+  parseInputExpires,
+  waiverOrderPageUrl,
+  AFL_CONFERENCE_LABELS,
+  type WaiverOrderEntry,
+} from '../src/utils/afl-waiver-order';
 
 const argv = process.argv.slice(2);
 const hasFlag = (f: string) => argv.includes(f);
@@ -72,184 +73,176 @@ if (!Number.isInteger(targetYear) || !Number.isInteger(standingsYear)) {
   throw new Error('--year and --standings-year must be integers');
 }
 
-const feeds = (year: number, file: string) =>
-  path.join(root, league.dataPath, 'mfl-feeds', String(year), file);
-const readFeed = (year: number, file: string) => JSON.parse(fs.readFileSync(feeds(year, file), 'utf-8'));
-
 console.log(`\nAFL waiver order — league ${league.id}, setting ${targetYear} from the ${standingsYear} season`);
 console.log(`Mode: ${LIVE ? 'LIVE WRITE' : 'DRY RUN (pass --live to write)'}\n`);
 
-// ── 1. Base draft order, per conference ──────────────────────────────────────
-const aflConfig = JSON.parse(fs.readFileSync(path.join(root, league.configPath), 'utf-8'));
-const teamConfigMap = new Map<string, { id: string; name: string; conference?: string; division?: string }>(
-  aflConfig.teams.map((t: any) => [
-    t.franchiseId,
-    { id: t.franchiseId, name: t.name, conference: t.conference, division: t.division },
-  ])
-);
-const teamName = (id: string) => teamConfigMap.get(id)?.name ?? `(unknown ${id})`;
-
-const standingsData = readFeed(standingsYear, 'standings.json');
-const standings = Array.isArray(standingsData.leagueStandings.franchise)
-  ? standingsData.leagueStandings.franchise
-  : [standingsData.leagueStandings.franchise];
-
-// The same-division standings tiebreaker needs real head-to-head; the plain
-// standings feed's h2h fields only echo the overall record.
-const headToHead = buildHeadToHeadFromRaw(readFeed(standingsYear, 'weekly-results-raw.json'));
-const brackets = readFeed(standingsYear, 'playoff-brackets.json');
-const conferenceChampions = parseConferenceChampions(brackets, teamConfigMap as any);
-const nitResults = parseNITResults(brackets, teamConfigMap as any);
-
-// The champion forcing is what makes this the BASE order rather than plain
-// reverse standings, so an unresolved champion is a hard stop, not a warning.
-if (!isDraftOrderFinal(conferenceChampions, nitResults)) {
-  throw new Error(
-    `The ${standingsYear} draft order is still a projection — conference champions ` +
-      `and/or NIT finishers could not be resolved from playoff-brackets.json. ` +
-      `The base order is not final, so neither is the waiver order.`
-  );
-}
-console.log(`${standingsYear} conference champions: ` +
-  [...conferenceChampions.entries()].map(([c, f]) => `${c}=${f} ${teamName(f)}`).join(', '));
-
-const draftOrders = calculateAFLDraftOrder(
-  standings,
-  teamConfigMap as any,
-  conferenceChampions,
-  nitResults,
-  headToHead
-);
-
-// Round 2 IS the base order: the NIT bonus is a round-1-only adjustment, so
-// rounds 2-9 revert to reverse standings with the champion last.
-const CONFERENCE_CODES: Record<string, string> = { 'American League': '00', 'National League': '01' };
-const baseOrders: ConferenceBaseOrder[] = draftOrders.map((o) => {
-  const code = CONFERENCE_CODES[o.conference];
-  if (!code) throw new Error(`Unrecognized conference name "${o.conference}"`);
-  return {
-    conference: code,
-    franchiseIds: o.picks
-      .filter((p: any) => p.round === 2)
-      .sort((a: any, b: any) => a.pickInRound - b.pickInRound)
-      .map((p: any) => p.franchiseId),
-  };
-});
-
-// ── 2. Which conference leads the alternation ────────────────────────────────
-// The league's single worst team, so waiver #1 goes to a team with a claim to
-// being the worst overall. Ranked by win% then points-for, with franchise id as
-// a final tiebreak so the result can never flip between runs.
-const gp = (t: any) => Number(t.h2hw) + Number(t.h2hl) + Number(t.h2ht || 0);
-const winPct = (t: any) => (Number(t.h2hw) + 0.5 * Number(t.h2ht || 0)) / Math.max(1, gp(t));
-const worst = [...standings].sort((a: any, b: any) =>
-  winPct(a) - winPct(b) || Number(a.pf) - Number(b.pf) || a.id.localeCompare(b.id)
-)[0];
-const leadConference = teamConfigMap.get(worst.id)?.conference;
+// ── 1. What the order should be ──────────────────────────────────────────────
+const { teamNames, champions, order } = computeAflWaiverOrder(root, league, standingsYear);
+const name = (id: string) => teamNames.get(id) ?? `(unknown ${id})`;
 console.log(
-  `Worst ${standingsYear} team: ${worst.id} ${teamName(worst.id)} ` +
-  `(${worst.h2hw}-${worst.h2hl}, ${Number(worst.pf).toFixed(0)} PF) — conference ${leadConference} leads\n`
+  `${standingsYear} conference champions: ` +
+    [...champions.entries()].map(([c, f]) => `${c}=${f} ${name(f)}`).join(', ')
 );
 
-const order = buildAflWaiverOrder(baseOrders, worst.id);
+// ── 2. What it currently is ──────────────────────────────────────────────────
+const exportUrl = () =>
+  `https://api.myfantasyleague.com/${targetYear}/export?TYPE=league&L=${league.id}&JSON=1&_=${Date.now()}`;
+const asList = (raw: unknown): any[] => (Array.isArray(raw) ? raw : raw ? [raw] : []);
 
-// ── 3. Current live order, for the diff and the pre-write snapshot ───────────
-/** MFL collapses a one-element list to a bare object; always read it as a list. */
-function asFranchiseList(raw: unknown): any[] {
-  if (Array.isArray(raw)) return raw;
-  return raw ? [raw] : [];
+async function readLive(): Promise<{ slots: Map<string, number>; franchises: any[] }> {
+  const res = await fetch(exportUrl());
+  if (!res.ok) throw new Error(`Could not read the live league: HTTP ${res.status}`);
+  const body = await res.json();
+  if (body?.error) throw new Error(`MFL: ${body.error.$t ?? JSON.stringify(body.error)}`);
+  const franchises = asList(body?.league?.franchises?.franchise);
+  return { slots: new Map(franchises.map((f) => [String(f.id), Number(f.waiverSortOrder)])), franchises };
 }
 
-const exportUrl = `https://api.myfantasyleague.com/${targetYear}/export?TYPE=league&L=${league.id}&JSON=1`;
-const liveRes = await fetch(exportUrl);
-if (!liveRes.ok) throw new Error(`Could not read the live league: HTTP ${liveRes.status}`);
-const liveLeague = (await liveRes.json())?.league;
-const liveFranchises = asFranchiseList(liveLeague?.franchises?.franchise);
+const { slots: before, franchises: liveFranchises } = await readLive();
 if (liveFranchises.length !== order.length) {
   throw new Error(
-    `MFL reports ${liveFranchises.length} franchises for ${targetYear} but the base order has ` +
+    `MFL reports ${liveFranchises.length} franchises for ${targetYear} but the computed order has ` +
       `${order.length}. Refusing to write a partial order.`
   );
 }
-const before = new Map<string, string>(liveFranchises.map((f) => [f.id, f.waiverSortOrder ?? '?']));
 
-// A rolling waiver order is mutated by every awarded claim, so overwriting it
-// mid-season would refund priority to teams that already spent it.
-const transactionsPath = feeds(targetYear, 'transactions.json');
-if (fs.existsSync(transactionsPath) && !FORCE) {
-  const raw = JSON.parse(fs.readFileSync(transactionsPath, 'utf-8'));
-  const list = raw?.transactions?.transaction ?? [];
-  const waiverTx = (Array.isArray(list) ? list : [list]).filter((t: any) =>
-    typeof t?.type === 'string' && t.type.toUpperCase().includes('WAIVER')
+// ── 3. Report ────────────────────────────────────────────────────────────────
+let changing = 0;
+for (const conference of [...new Set(order.map((e) => e.conference))].sort()) {
+  console.log(`\n${AFL_CONFERENCE_LABELS[conference] ?? conference} League`);
+  console.log('  rank  was   franchise');
+  for (const e of order.filter((x) => x.conference === conference)) {
+    const was = before.get(e.franchiseId);
+    const moved = was !== e.position;
+    if (moved) changing++;
+    console.log(
+      `  ${String(e.conferenceBasePosition).padStart(4)}  ${String(was ?? '?').padStart(4)}  ` +
+        `${e.franchiseId} ${name(e.franchiseId)}${moved ? '' : '   (unchanged)'}`
+    );
+  }
+}
+console.log(`\n${changing} of ${order.length} franchises change slot.`);
+
+/** The current order, as a body that would restore it. */
+function restoreBody(expires: number): string {
+  const current: WaiverOrderEntry[] = order
+    .map((e) => ({ ...e, position: before.get(e.franchiseId) ?? e.position }))
+    .sort((a, b) => a.position - b.position);
+  // Re-rank within conference so the restore body is well-formed.
+  const byConf = new Map<string, WaiverOrderEntry[]>();
+  for (const e of current) {
+    if (!byConf.has(e.conference)) byConf.set(e.conference, []);
+    byConf.get(e.conference)!.push(e);
+  }
+  const renumbered: WaiverOrderEntry[] = [];
+  for (const [, list] of [...byConf.entries()].sort()) {
+    list.forEach((e, i) => renumbered.push({ ...e, conferenceBasePosition: i + 1 }));
+  }
+  return buildWaiverOrderFormBody(renumbered, { leagueId: league.id, inputExpires: expires });
+}
+
+const pageUrl = waiverOrderPageUrl(league.mflHost, targetYear, league.id);
+
+if (!LIVE) {
+  console.log(`\nDRY RUN — nothing written.`);
+  console.log(`Would POST to: ${pageUrl}`);
+  console.log(`Body (input_expires harvested live; shown as 0 here):\n`);
+  console.log(buildWaiverOrderFormBody(order, { leagueId: league.id, inputExpires: 0 }));
+  process.exit(0);
+}
+
+// ── 4. Guards ────────────────────────────────────────────────────────────────
+const userId = process.env.MFL_USER_ID || '';
+const commish = process.env.MFL_IS_COMMISH || '';
+if (!userId || !commish) {
+  throw new Error(
+    'A live write needs BOTH MFL_USER_ID and MFL_IS_COMMISH, belonging to a commissioner of ' +
+      `league ${league.id} specifically.`
   );
-  if (waiverTx.length > 0) {
+}
+
+if (!FORCE) {
+  const txUrl = `https://api.myfantasyleague.com/${targetYear}/export?TYPE=transactions&L=${league.id}&TRANS_TYPE=WAIVER&JSON=1&_=${Date.now()}`;
+  const tx = (await (await fetch(txUrl)).json())?.transactions?.transaction;
+  const count = Array.isArray(tx) ? tx.length : tx ? 1 : 0;
+  if (count > 0) {
     throw new Error(
-      `${waiverTx.length} waiver transaction(s) already exist for ${targetYear}. This sets the ` +
-        `INITIAL order and the AFL's system is rolling, so writing now would undo priority that ` +
-        `has already been spent. Pass --force only if you mean to reset the season's order.`
+      `${count} waiver transaction(s) already processed for ${targetYear}. This sets the INITIAL ` +
+        `order and the AFL's system is rolling, so writing now would refund priority teams have ` +
+        `already spent. Pass --force only if you mean to reset the season's order.`
     );
   }
 }
 
-// ── 4. Report ────────────────────────────────────────────────────────────────
-const confLabel = (c: string) => (c === '00' ? 'AM' : 'NA');
-let changed = 0;
-console.log('  new  was   conf  base  franchise');
-console.log('  ---  ----  ----  ----  ---------');
-for (const e of order) {
-  const wasValue = before.get(e.franchiseId) ?? '?';
-  const moved = String(e.position) !== wasValue;
-  if (moved) changed++;
-  console.log(
-    `  ${String(e.position).padStart(3)}  ${wasValue.padStart(4)}  ` +
-    `${confLabel(e.conference).padStart(4)}  ${String(e.conferenceBasePosition).padStart(4)}  ` +
-    `${e.franchiseId} ${teamName(e.franchiseId)}${moved ? '' : '   (unchanged)'}`
+// ── 5. Harvest the nonce, then write ─────────────────────────────────────────
+console.log(`\nGET ${pageUrl}`);
+const pageRes = await mflFetch({ url: pageUrl, method: 'GET', mflUserCookie: userId, mflCommishCookie: commish });
+const pageHtml = await pageRes.text();
+if (/\bGuest\b[\s\S]{0,80}\bLogin\b/i.test(pageHtml.slice(0, 40_000))) {
+  throw new Error(`MFL rendered the page as GUEST — the cookies are not a commissioner of league ${league.id}.`);
+}
+const expires = parseInputExpires(pageHtml);
+if (!expires) {
+  throw new Error(
+    'Could not find the input_expires nonce on the page. Without it MFL drops the POST silently. ' +
+      'The form may have changed — re-run scripts/inspect-mfl-form.ts and compare.'
   );
 }
-console.log(`\n${changed} of ${order.length} franchises change position.`);
+const secondsLeft = expires - Math.floor(Date.now() / 1000);
+console.log(`Harvested input_expires=${expires} (${secondsLeft}s remaining)`);
+if (secondsLeft <= 0) {
+  throw new Error(`The nonce is already expired (${secondsLeft}s). MFL would drop the POST silently.`);
+}
 
-const xml = buildFranchisesWaiverXml(order);
+console.log('\nPrior order (restore body — replay this to undo):');
+console.log(restoreBody(expires));
 
-if (!LIVE) {
-  console.log('\nDRY RUN — nothing was written. Payload that would be sent:\n');
-  console.log(xml);
-  console.log(`\nTarget: ${setAflWaiverOrderUrl(league.mflHost, targetYear, league.id)}`);
+const body = buildWaiverOrderFormBody(order, { leagueId: league.id, inputExpires: expires });
+console.log(`\nPOST ${pageUrl}`);
+const res = await mflFetch({
+  url: pageUrl,
+  method: 'POST',
+  mflUserCookie: userId,
+  mflCommishCookie: commish,
+  body,
+});
+const responseText = (await res.text()).trim();
+console.log(`MFL responded HTTP ${res.status}, ${responseText.length} bytes.`);
+
+// ── 6. Verify by RE-READING — never by the response ──────────────────────────
+// This endpoint's real failure mode is a silent no-op, so the response body
+// proves nothing either way.
+const { slots: after, franchises: afterFranchises } = await readLive();
+
+const blanked = afterFranchises.filter((f) => !f?.name).map((f) => String(f?.id));
+if (blanked.length > 0) {
+  throw new Error(
+    `${blanked.length} franchise(s) lost their name (${blanked.join(', ')}). Restore IMMEDIATELY ` +
+      `using the prior-order body printed above.`
+  );
+}
+
+const results = compareAflWaiverOrder(order, after);
+const failed = results.filter((r) => !r.ok);
+if (failed.length === 0) {
+  console.log(`\nVerified: all ${order.length} franchises are in the constitutional order.`);
   process.exit(0);
 }
 
-// ── 5. Blocked: the API cannot carry this field ─────────────────────────────
-//
-// PROVEN on 2026-08-31 against throwaway league 36189
-// (scripts/probe-mfl-waiver-order-write.ts, and the run log on
-// .github/workflows/probe-waiver-order-write.yml):
-//
-//   shape "wrapped"  → HTTP 200, `<status>OK</status>`, waiverSortOrder UNCHANGED
-//   shape "bare"     → HTTP 200, `<error>XML Parsing Error…</error>` (no root
-//                      element), so it is not a candidate shape at all
-//
-// The wrapped payload is therefore the CORRECT one and MFL explicitly reports
-// success while ignoring `waiverSortOrder`. The field is readable on
-// `export?TYPE=league` but is not writable through `import?TYPE=franchises`,
-// which is documented as carrying "names, graphics, contact information".
-// None of the other 78 import types covers waiver order either.
-//
-// So a live write here can only ever be a no-op against the real league. It is
-// refused rather than attempted: an owner watching a job say "MFL accepted the
-// write" and change nothing is worse than a job that says why it cannot run.
-//
-// TO UNBLOCK: replace the transport with a replay of the form POST that MFL's
-// own commissioner waiver-order page makes (it lives under
-// `options?L=<id>&O=<number>`; the option number needs one authenticated
-// capture). `src/pages/api/cut-player.ts` is the pattern — it replays MFL's
-// `add_drop` page for exactly this reason, because the documented API endpoint
-// would not do the job. The order computed above is correct and reusable as-is;
-// only the write path needs replacing.
+for (const r of failed) {
+  const label = AFL_CONFERENCE_LABELS[r.conference] ?? r.conference;
+  console.error(`\n${label} League did not land as sent:`);
+  r.expected.forEach((id, i) => {
+    if (id !== r.actual[i]) {
+      console.error(`  rank ${i + 1}: expected ${id} ${name(id)}, MFL has ${r.actual[i]} ${name(r.actual[i])}`);
+    }
+  });
+}
+const unchanged = order.every((e) => after.get(e.franchiseId) === before.get(e.franchiseId));
 throw new Error(
-  `Refusing to write: import?TYPE=franchises does not carry waiverSortOrder.\n\n` +
-    `This was proven against throwaway league 36189 on 2026-08-31 — MFL returns\n` +
-    `<status>OK</status> and changes nothing. A live run here would be a silent no-op.\n\n` +
-    `The order printed above IS correct; only the transport is missing. Unblock it by\n` +
-    `replaying MFL's commissioner waiver-order form POST (options?L=${league.id}&O=<number>),\n` +
-    `the way src/pages/api/cut-player.ts replays add_drop.\n\n` +
-    `Nothing was sent to MFL.`
+  unchanged
+    ? 'Nothing changed at all — MFL accepted the POST and applied none of it. That is the expired-nonce ' +
+      'signature, or the form contract has changed. Re-run scripts/inspect-mfl-form.ts and compare the ' +
+      'field names against tests/afl-waiver-order.test.ts. Nothing needs restoring.'
+    : 'PARTIAL write — some franchises moved. Restore using the prior-order body printed above.'
 );

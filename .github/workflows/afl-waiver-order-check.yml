@@ -1,0 +1,55 @@
+name: AFL Waiver Order Check
+
+# Weekly drift check: is the AFL's live waiver order still the constitutional
+# one? MFL does not carry waiverSortOrder across the June league-year rollover
+# and no API can set it back (2026-08-31 — see docs/claude/insights/domains/
+# mfl-api.md), so it silently reverts to reverse-franchise-id until a human
+# re-enters it. In 2026 that went unnoticed until ten days before Week 1.
+# Forgetting is the failure mode this guards, not mistyping.
+#
+# Self-guarding, so a year-round weekly cron is safe:
+#   - Once any waiver transaction exists for the year, the AFL's ROLLING order
+#     is supposed to have moved; the check reports that and exits 0.
+#   - Before the previous season's NIT resolves there is no final base order to
+#     compare against; it exits 0.
+# Only a real mismatch inside the pre-season window fails the run.
+#
+# Mondays 8am PT (15:00 UTC in PDT, 7am in PST — an hour early in winter is
+# fine for a weekly check, so this stays one line rather than two).
+
+on:
+  schedule:
+    - cron: "0 15 * * 1"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Never post to GroupMe, just print"
+        type: boolean
+        required: false
+        default: false
+
+concurrency:
+  group: afl-waiver-order-check
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm + Node + install
+        uses: ./.github/actions/setup
+
+      - name: Check waiver order
+        env:
+          GROUPME_ROGER_BOT_ID: ${{ secrets.GROUPME_ROGER_BOT_ID }}
+        run: |
+          ARGS=""
+          if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="--dry-run"; fi
+          pnpm exec tsx scripts/check-afl-waiver-order.ts $ARGS
