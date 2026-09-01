@@ -111,18 +111,22 @@ export function validateClaims(claims: WaiverClaim[], ctx: ClaimValidationContex
       errors.push(`${label}: that player is not a free agent.`);
     }
 
+    // Bind once so the number is genuinely narrowed — `Number.isFinite` is not
+    // a TypeScript type guard, so testing `c.bid` through it leaves the
+    // optional type in place and every later use needs a `!`.
+    const bid = typeof c.bid === 'number' && Number.isFinite(c.bid) ? c.bid : null;
     if (rules.system !== 'bbid') {
       // Priority waivers have no bid — position in the order decides.
-    } else if (!Number.isFinite(c.bid) || c.bid <= 0) {
+    } else if (bid === null || bid <= 0) {
       errors.push(`${label}: enter a bid amount.`);
     } else {
-      if (c.bid! < rules.minimum) {
+      if (bid < rules.minimum) {
         errors.push(`${label}: bid is below the $${rules.minimum.toLocaleString()} minimum.`);
       }
-      if (c.bid! % rules.increment !== 0) {
+      if (bid % rules.increment !== 0) {
         errors.push(`${label}: bid must be a multiple of $${rules.increment.toLocaleString()}.`);
       }
-      if (c.bid! > ctx.availableBalance) {
+      if (bid > ctx.availableBalance) {
         errors.push(
           `${label}: bid exceeds your $${ctx.availableBalance.toLocaleString()} remaining blind-bid budget.`
         );
@@ -156,9 +160,17 @@ export function buildPicksParam(claims: WaiverClaim[], system: WaiverSystem = 'b
   return claims
     .map((c) => {
       const drop = c.dropPlayerId && c.dropPlayerId !== NO_DROP ? c.dropPlayerId : NO_DROP;
-      // Blind bidding carries the bid; priority waivers are add_drop only —
-      // sending a bid there would make MFL read the amount as the drop id.
-      return system === 'bbid' ? `${c.addPlayerId}_${c.bid}_${drop}` : `${c.addPlayerId}_${drop}`;
+      // Priority waivers are add_drop only — sending a bid there would make MFL
+      // read the amount as the drop player id.
+      if (system !== 'bbid') return `${c.addPlayerId}_${drop}`;
+      // `bid` is optional on the type because priority leagues have none, but a
+      // blind bid without one is a programmer error. Refuse loudly: defaulting
+      // to 0 would send MFL a real, valid, zero-dollar bid.
+      const bid = c.bid;
+      if (typeof bid !== 'number' || !Number.isFinite(bid)) {
+        throw new Error(`Blind-bid claim for player ${c.addPlayerId} has no bid amount.`);
+      }
+      return `${c.addPlayerId}_${bid}_${drop}`;
     })
     .join(',');
 }

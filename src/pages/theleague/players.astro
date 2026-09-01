@@ -1058,7 +1058,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
 <WaiverClaimModal config={claimConfig} />
 
-<script define:vars={{ playerDataJson, hasProjected, hasLastYrPts, hasSnapCounts, nflTeamsJson, hasSurplusData, hasAuctionData, isAuctionSeason, isAdmin, currentYear, mflHost, mflLeagueId, mflActionYear, franchiseNamesJson, franchiseBannersJson, defSpotlightJson, nflAvatarBgJson, nflAvatarBgFallback, nflAvatarBorderJson, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD, rookieDraftComplete }}>
+<script define:vars={{ canClaim, playerDataJson, hasProjected, hasLastYrPts, hasSnapCounts, nflTeamsJson, hasSurplusData, hasAuctionData, isAuctionSeason, isAdmin, currentYear, mflHost, mflLeagueId, mflActionYear, franchiseNamesJson, franchiseBannersJson, defSpotlightJson, nflAvatarBgJson, nflAvatarBgFallback, nflAvatarBorderJson, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD, rookieDraftComplete }}>
   // define:vars creates const — copy to let so polling can update at runtime
   let _hasAuctionData = hasAuctionData;
   const players = JSON.parse(playerDataJson);
@@ -2141,7 +2141,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       // blind-bid (waiver) vs FCFS based on MFL's own in-season schedule. MFL is
       // the final gatekeeper on timing/cap/roster, so no phase math is needed.
       if (!p.rostered && !(isAuctionSeason && p.auctionStatus === 'won')) {
-        if (claimConfig.canClaim) {
+        if (canClaim) {
           // Signed-in owner outside the auction window: bid in place. The
           // server re-verifies everything this button implies.
           html += `<td class="col-fa-action"><button type="button" class="place-bid-link claim-open" data-claim-id="${escapeAttr(p.id)}" data-claim-name="${escapeAttr(p.name)}" data-claim-pos="${escapeAttr(p.position || '')}" data-claim-team="${escapeAttr(p.nflTeam || '')}" data-claim-espn="${escapeAttr(p.espnId || '')}" data-claim-headshot="${escapeAttr(p.headshot || '')}" aria-label="Bid on ${escapeAttr(p.name)}">Bid</button></td>`;

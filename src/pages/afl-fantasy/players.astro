@@ -152,8 +152,11 @@ const claimRoster = claimFranchiseId
       .map((pl) => ({ id: pl.id, name: pl.name }))
       .sort((a, b) => a.name.localeCompare(b.name))
   : [];
+// Passed to the CLIENT script via define:vars — the row builder runs in the
+// browser and cannot see frontmatter consts.
+const canClaim = !!claimFranchiseId && claimRoster.length > 0;
 const claimConfig = {
-  canClaim: !!claimFranchiseId && claimRoster.length > 0,
+  canClaim,
   system: claimRules.system,
   franchiseId: claimFranchiseId,
   rules: claimRules,
@@ -465,7 +468,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   <PlayerDetailsModal hideContract={true} />
 </TheLeagueLayout>
 
-<script define:vars={{ playerDataJson, hasProjected, hasLastYrPts, hasAdp, defaultSort, defaultDir, mflHost, defSpotlightJson, conferenceMetaJson, activeConfIdJson, nflAvatarBgJson, nflAvatarBorderJson, nflAvatarBgFallback, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD }}>
+<script define:vars={{ canClaim, playerDataJson, hasProjected, hasLastYrPts, hasAdp, defaultSort, defaultDir, mflHost, defSpotlightJson, conferenceMetaJson, activeConfIdJson, nflAvatarBgJson, nflAvatarBorderJson, nflAvatarBgFallback, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD }}>
   const players = JSON.parse(playerDataJson);
   // Duplicate-player conference metadata (null = single shared pool).
   const conferenceMeta = JSON.parse(conferenceMetaJson);
@@ -1048,7 +1051,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       if (hasProjected) {
         html += `<td class="cell-num cell-pts col-projected col-group--stats">${p.projected != null ? p.projected.toFixed(1) : '<span class="na">-</span>'}</td>`;
       }
-      if (claimConfig.canClaim) {
+      if (canClaim) {
         // `p.rostered` is conference-scoped on this page, which is exactly the
         // availability that matters in a duplicate-player league.
         html += p.rostered

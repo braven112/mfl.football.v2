@@ -189,6 +189,10 @@ describe('buildPicksParam', () => {
       .toBe('9001_425000_0000');
   });
 
+  it('refuses a blind bid with no amount rather than sending a $0 bid', () => {
+    expect(() => buildPicksParam([{ addPlayerId: '9001' }], 'bbid')).toThrow(/has no bid amount/);
+  });
+
   it('never re-sorts — the order IS the conditional priority', () => {
     const claims = [
       { addPlayerId: '9003', bid: 425000 },
