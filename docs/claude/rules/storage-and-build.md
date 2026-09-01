@@ -27,6 +27,15 @@ regrows a 7 GB `.git` or a 30 MB server chunk:
   rosters uses `data/theleague/derived/roster-season-payloads.json`
   (`compute-roster-season-payloads.mjs`; the payload builder is shared
   with the page via `scripts/lib/roster-season-payload.mjs`).
+- **A cron-generated data file must be read with `import.meta.glob`, not a
+  static import.** A static `import x from '../../../data/<league>/foo.json'`
+  is resolved at BUILD time, so the build hard-fails until the workflow that
+  generates it has run at least once — and it fails for every league that will
+  never have the file, not just the one you are waiting on. An eager glob over
+  the exact path returns `{}` instead, which the page treats as "no data yet"
+  and falls back. `owner-last-visit.json` (commissioner-only, so leagues we
+  only own a team in never get one) is the worked example in both
+  `activity.astro` routes.
 - **The schefter feeds are bounded, not append-forever.** Active window =
   `SCHEFTER_ACTIVE_MAX` (300) posts; a weekly workflow rotates the tail
   into `schefter-archive/<year>.json` beside each feed, and `mergeFeed`'s
