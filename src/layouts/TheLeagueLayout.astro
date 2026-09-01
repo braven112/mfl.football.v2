@@ -315,27 +315,37 @@ const themePref = getThemePreference(Astro.cookies);
 			<TheLeagueFooter hideLeaguePrefix={hideLeaguePrefix} franchiseId={sessionFranchiseId} />
 		</div>
 
-		<!-- PWA Auth Gate: require login when running as installed app -->
-		<script is:inline>
-			(function() {
-				var mqStandalone = window.matchMedia('(display-mode: standalone)').matches;
-				var navStandalone = !!navigator.standalone;
-				var isStandalone = mqStandalone || navStandalone;
+		<!-- PWA Auth Gate: require login when running as installed app.
+		     BUNDLED, not is:inline, so it can import the shared session query —
+		     this page also runs trade-alert.ts and may hydrate islands that all
+		     need the session, and going through the store makes that one
+		     /api/auth/me request instead of three. -->
+		<script>
+			import { ensureSession } from '../utils/queries/session';
+
+			(async function () {
+				const isStandalone =
+					window.matchMedia('(display-mode: standalone)').matches ||
+					!!(navigator as Navigator & { standalone?: boolean }).standalone;
 				if (!isStandalone) return;
 
-				var path = window.location.pathname;
+				const path = window.location.pathname;
 				if (path === '/login' || path === '/theleague/login') return;
 
-				fetch('/api/auth/me', { credentials: 'include' })
-					.then(function(r) { return r.json(); })
-					.then(function(data) {
-						if (!data.authenticated) {
-							var loginPath = path.startsWith('/theleague') ? '/theleague/login' : '/login';
-							var redirect = encodeURIComponent(path + window.location.search);
-							window.location.href = loginPath + '?redirect=' + redirect;
-						}
-					})
-					.catch(function() {});
+				try {
+					const session = await ensureSession();
+					// Only bounce on a CONFIRMED signed-out session. ensureSession
+					// throws when the request failed, which is a different fact —
+					// redirecting there would kick an owner whose phone dropped one
+					// request out to the login screen.
+					if (!session.authenticated) {
+						const loginPath = path.startsWith('/theleague') ? '/theleague/login' : '/login';
+						const redirect = encodeURIComponent(path + window.location.search);
+						window.location.href = loginPath + '?redirect=' + redirect;
+					}
+				} catch {
+					// Couldn't read the session — leave the page as it is.
+				}
 			})();
 		</script>
 

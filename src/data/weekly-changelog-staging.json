@@ -2,6 +2,14 @@
   "weekOf": "2026-08-31",
   "changes": [
     {
+      "date": "2026-09-01",
+      "type": "bug-fix",
+      "summary": "One dropped request can no longer log you out of the site while you are still logged in. Several parts of the page ask the server \"who is signed in?\" independently — the trade builder, the trade-offer bell, and the auth check the installed app runs on every screen — and each of them treated a request that FAILED exactly the same as a server that answered \"nobody is signed in.\" Those are different facts, and on a phone with one bar the difference is the whole experience: the trade builder would quietly decide you were a spectator and stop offering to submit the trade you had just built, and the installed app would bounce you out to the login screen even though your session was fine all along. Those checks now share one answer instead of each making their own request — which also means a page load asks once rather than up to four times — and a request that fails is treated as \"we couldn't check right now,\" leaving you signed in with whatever we last knew to be true. Signing out still signs you out immediately, everywhere on the page.",
+      "impact": "user",
+      "area": "other",
+      "league": "theleague"
+    },
+    {
       "date": "2026-08-31",
       "type": "bug-fix",
       "summary": "Traded draft picks now say who they came from — once, with the right team, and on every pick that was actually traded. The draft broadcast had been announcing \"Pick 1.11 · via from Bring the Pain\" on the TV, and the same doubled-up wording turned up wherever a traded pick appeared: the draft room's board, the draft predictor, your team's pick list. MyFantasyLeague writes these as \"[Pick traded from Bring the Pain.]\" and we were keeping the word \"from\" as part of the team's name, then putting our own \"via\" or \"from\" in front of it. Because \"from Bring the Pain\" matches no team in the league, every place that tries to show the original owner's crest beside a traded pick looked for that team, found nothing, and showed nothing — so those logos had never once appeared. Reading the comment properly turned up a second, quieter problem: MFL often files several notes about one pick together (\"[Pick traded from Drunk Indians. / Pick made by Commissioner.]\"), sometimes files them with no brackets at all, and sometimes lists a pick that changed hands twice. We only recognised the simplest of those, so 130 traded picks across both leagues' draft history were being shown as though they had never moved. All 287 are now read correctly, a pick traded twice is credited to the owner it started with, and a note about a pick traded away to someone else is no longer mistaken for one coming in.",

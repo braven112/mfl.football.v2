@@ -1,22 +1,35 @@
 /**
- * React Context for Authentication
- * Provides auth state and methods to all components
+ * React context for authentication.
+ *
+ * The fetching, caching and error semantics all live in the shared session
+ * query (src/utils/queries/session.ts) — this file is now just the context
+ * shape plus the login/logout mutations. It used to own a fourth independent
+ * copy of the `/api/auth/me` read; the point of routing it through the store
+ * is that a page can mount this provider AND other islands AND an inline
+ * script and still make one request, because the cache sits below React where
+ * all three can reach it.
+ *
+ * `login`/`logout` publish their result straight into that store rather than
+ * triggering a refetch: the response body IS the new session, and it is more
+ * current than anything a follow-up GET could tell us.
  */
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import { useSession } from '../hooks/useSession';
+import { setSession, type SessionUser } from '../utils/queries/session';
 
-export interface AuthUser {
-  userId: string;
-  username: string;
-  franchiseId: string;
-  leagueId: string;
-  role: 'owner' | 'commissioner' | 'admin';
-}
+/** Re-exported so existing importers of AuthUser keep working. */
+export type AuthUser = SessionUser;
 
 interface AuthContextType {
   user: AuthUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  /**
+   * Set by a failed login/logout, or by a session read that could not
+   * complete. Note that a read failure is NOT a logged-out user — `user` keeps
+   * the last known session so a dropped request doesn't sign anyone out.
+   */
   error: string | null;
   login: (username: string, password: string, leagueId?: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -25,106 +38,63 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const session = useSession();
+  const [mutating, setMutating] = useState(false);
+  const [mutationError, setMutationError] = useState<string | null>(null);
 
-  // Check authentication status on mount and periodically
-  useEffect(() => {
-    const checkAuth = async () => {
+  const login = useCallback(
+    async (username: string, password: string, leagueId?: string) => {
+      setMutating(true);
+      setMutationError(null);
       try {
-        setIsLoading(true);
-        setError(null);
-
-        const response = await fetch('/api/auth/me', {
-          credentials: 'include', // Include cookies in request
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ username, password, leagueId }),
         });
-
         const data = await response.json();
-
-        if (data.authenticated && data.user) {
-          setUser(data.user);
-        } else {
-          setUser(null);
-        }
+        if (!response.ok) throw new Error(data.message || 'Login failed');
+        setSession({ authenticated: true, user: data.user ?? null });
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to check authentication');
-        setUser(null);
+        const message = err instanceof Error ? err.message : 'Login failed';
+        setMutationError(message);
+        // A failed login says nothing new about the existing session, so the
+        // store is left alone rather than being cleared to logged-out.
+        throw err;
       } finally {
-        setIsLoading(false);
+        setMutating(false);
       }
-    };
+    },
+    [],
+  );
 
-    checkAuth();
+  const logout = useCallback(async () => {
+    setMutating(true);
+    setMutationError(null);
+    try {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+      setSession({ authenticated: false, user: null });
+    } catch (err) {
+      setMutationError(err instanceof Error ? err.message : 'Logout failed');
+    } finally {
+      setMutating(false);
+    }
   }, []);
 
-  const login = async (username: string, password: string, leagueId?: string) => {
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include', // Include cookies in request
-        body: JSON.stringify({
-          username,
-          password,
-          leagueId,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
-      }
-
-      setUser(data.user);
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Login failed';
-      setError(errorMsg);
-      setUser(null);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const logout = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      await fetch('/api/auth/logout', {
-        method: 'POST',
-        credentials: 'include',
-      });
-
-      setUser(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Logout failed');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isAuthenticated: !!user,
-        isLoading,
-        error,
-        login,
-        logout,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo<AuthContextType>(
+    () => ({
+      user: session.user,
+      isAuthenticated: session.isAuthenticated,
+      isLoading: session.isLoading || mutating,
+      error: mutationError ?? (session.isError ? session.error?.message ?? null : null),
+      login,
+      logout,
+    }),
+    [session, mutating, mutationError, login, logout],
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

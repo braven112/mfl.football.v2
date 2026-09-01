@@ -14,6 +14,8 @@ import {
   computeTeamTradeImpact,
   serializeTradeToParams,
 } from '../../../utils/trade-calculations';
+import { useSession } from '../../../hooks/useSession';
+import { invalidateSession } from '../../../utils/queries/session';
 import { resolveInitialTradeState } from '../../../utils/trade-builder-initial-state';
 import { buildMflAssetString, parseFpCode, parseDpCode } from '../../../utils/trade-asset-parsing';
 import TeamPanel from './TeamPanel';
@@ -215,28 +217,40 @@ export default function TradeBuilder({
     [pageData]
   );
 
-  const [authUser, setAuthUser] = useState<TradeBuilderAuthUser | null>(
-    () => (authUserJson ? JSON.parse(authUserJson) : null)
+  const serverAuthUser = useMemo<TradeBuilderAuthUser | null>(
+    () => (authUserJson ? JSON.parse(authUserJson) : null),
+    [authUserJson]
   );
 
-  // Hydrate authUser from session cookie if server didn't provide it
-  // (happens with client-side navigation via ViewTransitions)
-  useEffect(() => {
-    if (authUser) return;
-    fetch('/api/auth/me', { credentials: 'include' })
-      .then(r => r.json())
-      .then(data => {
-        if (data.authenticated && data.user?.franchiseId) {
-          setAuthUser({
-            name: data.user.username,
-            franchiseId: data.user.franchiseId,
-            leagueId: data.user.leagueId,
-            role: data.user.role,
-          });
-        }
-      })
-      .catch(() => {}); // Silent — user just isn't logged in
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Set only by a successful inline login in this session, which is newer and
+  // more authoritative than anything the shared session read can return.
+  const [loginAuthUser, setLoginAuthUser] = useState<TradeBuilderAuthUser | null>(null);
+
+  // Hydrate from the session cookie when the server didn't provide a user
+  // (happens on a client-side navigation via ViewTransitions).
+  //
+  // This is the SHARED session query, not a local `/api/auth/me` effect, so
+  // the trade builder and the layout around it make one request between them
+  // instead of one each. It also fixes what the old effect got wrong: its
+  // `.catch(() => {})` treated a failed request as "not logged in", which
+  // silently downgraded a signed-in owner to a spectator whenever one request
+  // dropped. `useSession` keeps those apart, and we only act on a CONFIRMED
+  // user — an error leaves `authUser` exactly as it was.
+  const { user: sessionUser } = useSession({
+    enabled: !serverAuthUser && !loginAuthUser,
+  });
+
+  const authUser = useMemo<TradeBuilderAuthUser | null>(() => {
+    if (loginAuthUser) return loginAuthUser;
+    if (serverAuthUser) return serverAuthUser;
+    if (!sessionUser?.franchiseId) return null;
+    return {
+      name: sessionUser.username,
+      franchiseId: sessionUser.franchiseId,
+      leagueId: sessionUser.leagueId,
+      role: sessionUser.role,
+    };
+  }, [loginAuthUser, serverAuthUser, sessionUser]);
 
   // Rankings lookup (admin-only)
   const isAdmin = authUser?.franchiseId === '0001';
@@ -402,7 +416,11 @@ export default function TradeBuilder({
 
   // Handle successful inline login
   const handleLoginSuccess = useCallback((user: TradeBuilderAuthUser) => {
-    setAuthUser(user);
+    setLoginAuthUser(user);
+    // Drop the shared session snapshot so every other island on the page
+    // re-reads the now-signed-in cookie instead of serving the cached
+    // logged-out answer from before this login.
+    invalidateSession();
     setShowLoginModal(false);
     // Immediately open the confirmation modal now that we're authenticated
     setSubmissionStatus({ status: 'idle', errorMessage: null });

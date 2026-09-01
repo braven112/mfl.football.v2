@@ -7,6 +7,7 @@
  */
 
 import { buildPlayerCellHTML } from '../utils/player-cell-html';
+import { ensureSession } from '../utils/queries/session';
 
 const TAM_STORAGE_KEY = 'mfl:trade-alert-dismissed';
 const TAM_DEBOUNCE_KEY = 'mfl:trade-alert-last-check';
@@ -922,15 +923,20 @@ function tamGetMockSentTrades(count: number): any[] {
 async function tamCheckAuth(): Promise<{ franchiseId: string; role: string } | null> {
   if (tamAuthCache !== undefined) return tamAuthCache;
   try {
-    const res = await fetch('/api/auth/me', { credentials: 'include' });
-    const data = await res.json();
-    if (data.authenticated && data.user?.franchiseId) {
-      tamAuthCache = { franchiseId: data.user.franchiseId, role: data.user.role || 'owner' };
-    } else {
-      tamAuthCache = null;
-    }
+    // Shared session read — this script runs on every TheLeague page inside a
+    // layout that also needs the session, so going through the store keeps the
+    // page at one /api/auth/me request instead of one per consumer.
+    const session = await ensureSession();
+    tamAuthCache =
+      session.authenticated && session.user?.franchiseId
+        ? { franchiseId: session.user.franchiseId, role: session.user.role || 'owner' }
+        : null;
   } catch {
-    tamAuthCache = null;
+    // The request FAILED — that is not the same as "signed out", so leave
+    // tamAuthCache `undefined` rather than caching a null. This poll does
+    // nothing, and the next one re-asks instead of treating a signed-in owner
+    // as a spectator for the rest of the page's life.
+    return null;
   }
   return tamAuthCache;
 }
