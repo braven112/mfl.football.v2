@@ -110,6 +110,55 @@
 
 ---
 
+## 2026-09-01 - Waiver Order Is Written Through MFL's Own Form, Gated By A Nonce
+
+**Context:** the follow-on to the 2026-08-31 finding that
+`import?TYPE=franchises` ignores `waiverSortOrder`.
+
+**Insight:** the write path is MFL's Custom Waiver Order page,
+`csetup?L=<id>&C=WAIVORD` — a commissioner setup page, NOT one of the
+`options?O=<number>` pages. Replaying its POST works. Contract, captured from a
+real successful save and verified against the resulting live league:
+
+```
+form_name=WAIVORD
+LEAGUE_ID=<id>
+C=WAIVORD
+input_expires=<nonce>
+WAIVER_ORDER_CONFERENCE<CC>_COUNT=<n>
+WAIVER_ORDER_CONFERENCE<CC>_SHOW_INDEX=1
+WAIVER_ORDER_CONFERENCE<CC>_<rank 1..n>=<franchiseId>
+SUBMIT=Save Custom Waiver Order
+```
+
+**`input_expires` is the part that bites.** It is a unix timestamp a few tens of
+minutes ahead, and MFL drops a POST carrying an expired one **silently** — HTTP
+200, no error, nothing changes. Two captures of the same page minutes apart
+differ ONLY in this field: one was accepted, one (20 minutes past expiry) was
+dropped. Harvest it with a GET immediately before each POST; never cache or
+reuse it.
+
+That expiry is also a safety net worth knowing about: a stale browser tab whose
+widget still showed MFL's default order had its Save dropped, which is the only
+reason it did not overwrite the league's real order.
+
+**Ranks are 1..n WITHIN each conference**, not a flat 1..24 — MFL models a
+two-conference league as two independent orders and the single `waiverSortOrder`
+on the export is merely their serialization (American 1-12, National 13-24).
+Anything comparing orders must compare within a conference.
+
+**Generalizes:** commissioner settings live under `csetup?C=<CODE>`. When an
+import type will not do the job, look there before concluding it is impossible —
+and read the real form (`scripts/inspect-mfl-form.ts`) rather than inferring
+field names.
+
+**Related:**
+- `scripts/set-afl-waiver-order.ts` — the writer
+- `tests/afl-waiver-order.test.ts` — pins the body byte-for-byte against the capture
+- `docs/claude/afl-rules.md` § Setting the waiver order
+
+---
+
 ## 2026-08-31 - `import?TYPE=franchises` Reports OK And Ignores `waiverSortOrder`
 
 **Context:** Setting the AFL's league-wide waiver order from the constitution's

@@ -30,6 +30,9 @@ import {
   buildFranchisesWaiverXml,
   setAflWaiverOrderUrl,
   compareAflWaiverOrder,
+  buildWaiverOrderFormBody,
+  parseInputExpires,
+  waiverOrderPageUrl,
   type ConferenceBaseOrder,
 } from '../src/utils/afl-waiver-order';
 import {
@@ -256,5 +259,59 @@ describe('compareAflWaiverOrder — drift detection', () => {
     const a = compareAflWaiverOrder(order, dupes).map((r) => r.actual.join());
     const b = compareAflWaiverOrder(order, dupes).map((r) => r.actual.join());
     expect(a).toEqual(b);
+  });
+});
+
+describe("MFL's Custom Waiver Order form", () => {
+  // Captured from the commissioner's REAL save on 2026-09-01 — the one MFL
+  // accepted, whose result matches the live league. This is the contract; if
+  // our body stops equalling it, the writer is broken.
+  const GOLDEN =
+    'form_name=WAIVORD&LEAGUE_ID=19621&C=WAIVORD&input_expires=1788232013' +
+    '&WAIVER_ORDER_CONFERENCE00_COUNT=12&WAIVER_ORDER_CONFERENCE00_SHOW_INDEX=1' +
+    '&WAIVER_ORDER_CONFERENCE00_1=0006&WAIVER_ORDER_CONFERENCE00_2=0004&WAIVER_ORDER_CONFERENCE00_3=0003' +
+    '&WAIVER_ORDER_CONFERENCE00_4=0010&WAIVER_ORDER_CONFERENCE00_5=0009&WAIVER_ORDER_CONFERENCE00_6=0012' +
+    '&WAIVER_ORDER_CONFERENCE00_7=0011&WAIVER_ORDER_CONFERENCE00_8=0002&WAIVER_ORDER_CONFERENCE00_9=0005' +
+    '&WAIVER_ORDER_CONFERENCE00_10=0001&WAIVER_ORDER_CONFERENCE00_11=0008&WAIVER_ORDER_CONFERENCE00_12=0007' +
+    '&WAIVER_ORDER_CONFERENCE01_COUNT=12&WAIVER_ORDER_CONFERENCE01_SHOW_INDEX=1' +
+    '&WAIVER_ORDER_CONFERENCE01_1=0021&WAIVER_ORDER_CONFERENCE01_2=0014&WAIVER_ORDER_CONFERENCE01_3=0013' +
+    '&WAIVER_ORDER_CONFERENCE01_4=0023&WAIVER_ORDER_CONFERENCE01_5=0024&WAIVER_ORDER_CONFERENCE01_6=0022' +
+    '&WAIVER_ORDER_CONFERENCE01_7=0016&WAIVER_ORDER_CONFERENCE01_8=0019&WAIVER_ORDER_CONFERENCE01_9=0017' +
+    '&WAIVER_ORDER_CONFERENCE01_10=0020&WAIVER_ORDER_CONFERENCE01_11=0018&WAIVER_ORDER_CONFERENCE01_12=0015' +
+    '&SUBMIT=Save+Custom+Waiver+Order';
+
+  it('reproduces the exact body MFL accepted', () => {
+    const body = buildWaiverOrderFormBody(buildAflWaiverOrder([AM, NA]), {
+      leagueId: '19621',
+      inputExpires: 1788232013,
+    });
+    expect(body).toBe(GOLDEN);
+  });
+
+  it('numbers ranks 1..12 within EACH conference, not 1..24', () => {
+    const body = buildWaiverOrderFormBody(buildAflWaiverOrder([AM, NA]), {
+      leagueId: '19621',
+      inputExpires: 1,
+    });
+    const p = new URLSearchParams(body);
+    expect(p.get('WAIVER_ORDER_CONFERENCE00_COUNT')).toBe('12');
+    expect(p.get('WAIVER_ORDER_CONFERENCE01_COUNT')).toBe('12');
+    expect(p.get('WAIVER_ORDER_CONFERENCE01_1')).toBe('0021'); // rank 1 of its own conference
+    expect(p.get('WAIVER_ORDER_CONFERENCE01_13')).toBeNull();  // never a flat 1..24
+  });
+
+  it('parses the input_expires nonce out of the page', () => {
+    expect(parseInputExpires('<input type="hidden" name="input_expires" value="1788232013">')).toBe(1788232013);
+    // attribute order varies across MFL pages
+    expect(parseInputExpires('<input value="1788232013" name="input_expires">')).toBe(1788232013);
+    expect(parseInputExpires('<input name="something_else" value="12">')).toBeNull();
+    expect(parseInputExpires('no form here')).toBeNull();
+  });
+
+  it('builds the commissioner page URL, protocol-normalized', () => {
+    expect(waiverOrderPageUrl('www44.myfantasyleague.com', 2026, '19621'))
+      .toBe('https://www44.myfantasyleague.com/2026/csetup?L=19621&C=WAIVORD');
+    expect(waiverOrderPageUrl('https://www44.myfantasyleague.com', 2026, '19621'))
+      .toBe('https://www44.myfantasyleague.com/2026/csetup?L=19621&C=WAIVORD');
   });
 });

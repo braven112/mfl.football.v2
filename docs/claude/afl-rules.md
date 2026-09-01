@@ -140,9 +140,22 @@ of the other 78 import types covers waiver order. Do not re-derive "the field is
 on the export, so the import must take it" — that inference is what cost a live
 run against the AFL.
 
-`scripts/set-afl-waiver-order.ts` computes the correct order and prints it; its
-`--live` path is **blocked** and refuses to write, because a write can only be a
-silent no-op. **`scripts/check-afl-waiver-order.ts` (weekly, `AFL Waiver Order
+**The write path is MFL's own form**, replayed the way
+`src/pages/api/cut-player.ts` replays `add_drop`: POST to
+`csetup?L=<id>&C=WAIVORD` with `WAIVER_ORDER_CONFERENCE<CC>_<rank>=<franchiseId>`
+(ranks 1..12 within EACH conference, plus `_COUNT` and `_SHOW_INDEX=1`), and an
+`input_expires` nonce. **The nonce is load-bearing:** it is valid for a few tens
+of minutes and MFL drops an expired POST *silently* — HTTP 200, no error,
+nothing changes. It must be harvested by a GET immediately before each POST and
+never cached. A stale browser tab hit exactly this on 2026-08-31, and the
+expiry is the only reason a default-ordered payload did not overwrite the real
+order. `tests/afl-waiver-order.test.ts` pins the body byte-for-byte against a
+capture of a real successful save.
+
+`scripts/set-afl-waiver-order.ts` computes the order and writes it through that
+form (`--dry-run` by default; success is judged by RE-READING the live order,
+never by MFL's response, because a silent no-op is this endpoint's real failure
+mode). **`scripts/check-afl-waiver-order.ts` (weekly, `AFL Waiver Order
 Check`) is the safety net**: it recomputes the order and compares it to the live
 league, alerting GroupMe on drift. It goes quiet once the season's first waiver
 transaction lands, because a rolling order is *supposed* to move after that —

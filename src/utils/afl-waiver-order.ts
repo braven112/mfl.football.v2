@@ -205,3 +205,81 @@ export function compareAflWaiverOrder(
     };
   });
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MFL's Custom Waiver Order form (`csetup?C=WAIVORD`)
+//
+// `import?TYPE=franchises` cannot set waiverSortOrder (2026-08-31 — it answers
+// <status>OK</status> and ignores the field), so the only way to write this is
+// to replay the page's own form POST, the way src/pages/api/cut-player.ts
+// replays `add_drop`. The contract below was captured from a real successful
+// save, verified against the resulting live league.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Human-readable conference labels, for logs. */
+export const AFL_CONFERENCE_LABELS: Record<string, string> = { '00': 'American', '01': 'National' };
+
+/** The page that owns the form. Commissioner-only; not an API endpoint. */
+export function waiverOrderPageUrl(mflHost: string, year: number, leagueId: string): string {
+  const host = mflHost.replace(/^https?:\/\//, '');
+  return `https://${host}/${year}/csetup?L=${leagueId}&C=WAIVORD`;
+}
+
+/**
+ * Pull the `input_expires` nonce out of the page HTML.
+ *
+ * This is NOT decoration. It is a unix timestamp a few tens of minutes in the
+ * future, and MFL rejects a POST carrying an expired one — SILENTLY: HTTP 200,
+ * no error, nothing changes. Observed live on 2026-08-31, where a stale tab's
+ * save (20 minutes past expiry) was dropped, which is the only reason a
+ * default-ordered payload did not overwrite the real order.
+ *
+ * So it must be harvested from a GET immediately before each POST. It can never
+ * be cached, stored, or reused.
+ */
+export function parseInputExpires(html: string): number | null {
+  const m = /name="input_expires"[^>]*\bvalue="(\d+)"/i.exec(html)
+    ?? /\bvalue="(\d+)"[^>]*name="input_expires"/i.exec(html);
+  if (!m) return null;
+  const n = Number(m[1]);
+  return Number.isSafeInteger(n) && n > 0 ? n : null;
+}
+
+/**
+ * Serialize a waiver order as the form body MFL's save button sends.
+ *
+ * Field shape, captured from a real save:
+ *   form_name=WAIVORD, LEAGUE_ID, C=WAIVORD, input_expires,
+ *   WAIVER_ORDER_CONFERENCE<CC>_COUNT, _SHOW_INDEX=1,
+ *   WAIVER_ORDER_CONFERENCE<CC>_<rank 1..N>=<franchiseId>,
+ *   SUBMIT
+ *
+ * Note the ranks are 1..N WITHIN each conference — MFL models this as two
+ * independent orders, not one list of 24.
+ */
+export function buildWaiverOrderFormBody(
+  order: WaiverOrderEntry[],
+  opts: { leagueId: string; inputExpires: number }
+): string {
+  const params = new URLSearchParams();
+  params.set('form_name', 'WAIVORD');
+  params.set('LEAGUE_ID', opts.leagueId);
+  params.set('C', 'WAIVORD');
+  params.set('input_expires', String(opts.inputExpires));
+
+  for (const conference of [...new Set(order.map((e) => e.conference))].sort()) {
+    const inConf = order
+      .filter((e) => e.conference === conference)
+      .sort((a, b) => a.conferenceBasePosition - b.conferenceBasePosition);
+    const prefix = `WAIVER_ORDER_CONFERENCE${conference}`;
+    params.set(`${prefix}_COUNT`, String(inConf.length));
+    params.set(`${prefix}_SHOW_INDEX`, '1');
+    inConf.forEach((e, i) => {
+      // Rank is the loop index, not conferenceBasePosition, so a gap in the
+      // computed positions can never emit a hole MFL would misread.
+      params.set(`${prefix}_${i + 1}`, e.franchiseId);
+    });
+  }
+  params.set('SUBMIT', 'Save Custom Waiver Order');
+  return params.toString();
+}
