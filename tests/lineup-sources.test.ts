@@ -242,7 +242,9 @@ describe('resolveLineupFillState', () => {
 });
 
 describe('lineup pages use the readable export', () => {
-  const pages = ['src/pages/theleague/lineup.astro', 'src/pages/afl-fantasy/lineup.astro'];
+  // ONE file now — the two routes are thin wrappers over it, so a rule that
+  // holds here holds for both leagues by construction.
+  const pages = ['src/components/shared/lineup/LineupPage.astro'];
 
   it('never requests myStarters as an export type', () => {
     for (const page of pages) {
@@ -554,7 +556,7 @@ describe('Set Optimal respects starter eligibility', () => {
   it('excludes taxi-squad and IR players client-side too', () => {
     // The server fill filters them; the button rebuilding the lineup in the
     // browser has to agree, or one tap seats an ineligible player.
-    for (const page of ['src/pages/theleague/lineup.astro', 'src/pages/afl-fantasy/lineup.astro']) {
+    for (const page of ['src/components/shared/lineup/LineupPage.astro']) {
       const src = readFileSync(join(process.cwd(), page), 'utf8');
       expect(src.includes("p.rosterStatus === 'ROSTER')"), `${page} Set Optimal filter`).toBe(true);
     }
@@ -720,7 +722,9 @@ describe('an outage on a week the disk copy carries', () => {
 });
 
 describe('drafts do not travel between read states', () => {
-  const pages = ['src/pages/theleague/lineup.astro', 'src/pages/afl-fantasy/lineup.astro'];
+  // ONE file now — the two routes are thin wrappers over it, so a rule that
+  // holds here holds for both leagues by construction.
+  const pages = ['src/components/shared/lineup/LineupPage.astro'];
 
   it('refuses to persist edits made on a base that cannot be submitted', () => {
     // One swap during a read-failed visit used to persist all nine slots —
@@ -803,10 +807,7 @@ describe('the Set Lineup game strip', () => {
   // Both leagues run double-headers, so both pages build the strip from the
   // SAME shared card builder + component. A page that grew its own copy would
   // drift — TheLeague's did exactly that for the whole faceoff panel.
-  const lineupPages = [
-    'src/pages/theleague/lineup.astro',
-    'src/pages/afl-fantasy/lineup.astro',
-  ];
+  const lineupPages = ['src/components/shared/lineup/LineupPage.astro'];
   const STRIP = 'src/components/shared/LineupGameStrip.astro';
 
   it('builds a card per scheduled game on both pages, not just the first', () => {

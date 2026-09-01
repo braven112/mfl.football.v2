@@ -35,3 +35,17 @@ export interface LineupPlayer {
   streak: number | null;
   recentScores: { week: number; score: number }[];
 }
+
+/**
+ * How a franchise's panel is branded on the Set Lineup faceoff strip.
+ *
+ * Lives here rather than in LineupPage.astro so the two routes can import the
+ * type without importing a type out of an .astro file. Each league resolves it
+ * differently — TheLeague from the async throwback store, the AFL from
+ * afl.config.json — which is why the resolver is a route-supplied prop.
+ */
+export interface LineupBrand {
+  name: string;
+  color?: string;
+  watermark?: string;
+}

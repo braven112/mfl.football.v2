@@ -292,7 +292,11 @@ unified (retighten the baseline rather than leave slack — same idiom as
 
 The shape to copy is `src/pages/theleague/division-strength.astro`: a thin route
 wrapper holding the auth gate, the league's data import, and one shared page
-component. Note **why** the redirect and the data import stay in the route — a
+component. `lineup.astro` is the worked example of UNFORKING an existing pair
+(Sept 2026): 2,573 + 2,579 lines that differed in twelve places became
+`src/components/shared/lineup/LineupPage.astro` plus two ~60-line wrappers,
+with per-league behavior passed as props — including an async `resolveBrands`,
+because one league's branding comes from a store and the other's from config. Note **why** the redirect and the data import stay in the route — a
 static import specifier can't be a runtime variable, and `Astro.redirect()` only
 redirects from a page (see the `/cr` note above).
 

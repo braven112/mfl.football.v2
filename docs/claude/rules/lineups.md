@@ -6,12 +6,19 @@
 
 ## Set Lineup — reading a submitted lineup, and MFL's soft failures
 
-Both lineup pages (`src/pages/theleague/lineup.astro`,
-`src/pages/afl-fantasy/lineup.astro`) SSR ~9 live MFL calls per view, and a
-week switch is a full page reload. Three things that bit us (owner report,
+**The Set Lineup page is ONE file** —
+`src/components/shared/lineup/LineupPage.astro` — rendered for both leagues
+behind two ~60-line route wrappers (`src/pages/<league>/lineup.astro`),
+unified 2026-09-01. It was two ~2,500-line files differing in twelve places,
+which is why rules below are phrased as "both pages": they now hold for both by
+construction. The routes keep only the auth gate (a component's
+`Astro.redirect()` does not redirect — it returns a blank 200), the league year
+(different rollover clocks), and `resolveBrands`.
+
+It SSRs ~9 live MFL calls per view, and a week switch is a full page reload. Three things that bit us (owner report,
 2026-08-18: "future weeks show no players one week and only numbers another"):
 
-- **`myStarters` is an IMPORT type, not an export.** Both pages read the
+- **`myStarters` is an IMPORT type, not an export.** The page reads the
   owner's saved lineup with `export?TYPE=myStarters`; MFL answers every one
   of those with `Invalid Data Type (myStarters)`, and a bare `catch` swallowed
   it — so the pages had NEVER shown a submitted lineup, silently rendering an
@@ -64,10 +71,12 @@ strip below was shared with it.)
 
 **The strip is shared, not copy-pasted.** `buildMatchupCards`
 (`src/utils/lineup-matchup-cards.ts`) builds the cards and
-`LineupGameStrip.astro` (`src/components/shared/`) renders them; the pages
-supply only what differs — the schedule payload, the roster feed, and
-`brandFor` (TheLeague resolves throwback identities, the AFL reads
-`afl.config.json`). Both pages must fetch `TYPE=rosters` LEAGUE-WIDE: a
+`LineupGameStrip.astro` (`src/components/shared/`) renders them; the ROUTES
+supply only what differs — `brandFor`, through the `resolveBrands` prop
+(TheLeague resolves throwback identities from an async store, the AFL reads
+`afl.config.json`). It is called ONCE with every franchise on the strip, so a
+double-header cannot re-read the throwback store per card.
+The page must fetch `TYPE=rosters` LEAGUE-WIDE: a
 franchise-scoped roster call has no opponent pool, so their projected total
 comes out 0.0 on any week MFL hasn't recorded starters for.
 
@@ -86,7 +95,7 @@ comes out 0.0 on any week MFL hasn't recorded starters for.
   stale total that contradicted the one a swipe away. The PAGE owns the
   numbers; the strip component owns the carousel — keep that split, or two
   scripts end up fighting over the same DOM. `tests/lineup-sources.test.ts`
-  pins the reader, that selector, and both pages using the shared builder.
+  pins the reader, that selector, and the page using the shared builder.
 - **Scroll position is the carousel's only state.** The arrows and dots just
   scroll the track; the dots, the counter, the arrow ends and which
   scoreboard holds `aria-live` are all re-derived from a scroll listener, so a
@@ -104,8 +113,9 @@ comes out 0.0 on any week MFL hasn't recorded starters for.
   opens the page. `astro:page-load` also fires on the FIRST load, so the init
   is guarded by a `data-carousel-wired` flag on the track — which the router
   replaces along with the DOM, so it never blocks a real re-init.
-  (The lineup PAGES' own scripts still lack this and go inert on a return
-  visit — a pre-existing bug across both, worth its own change.)
+  (The lineup page's own script still lacks this and goes inert on a return
+  visit — a pre-existing bug, worth its own change. Unification did not change
+  that behavior, but it did make it a ONE-place fix instead of two.)
 - **The AFL watermark takes `iconDark` first, ungated.** The panel is a
   team-color gradient over near-black in BOTH themes, so the site-wide
   `html.dark` crest swap (`TeamIconDarkStyles`) never fires on it. Nine of the

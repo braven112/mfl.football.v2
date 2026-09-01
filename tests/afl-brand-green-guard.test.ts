@@ -70,7 +70,13 @@ const AFL_DIRS = [
  * hero — it shipped `var(--color-secondary)` for the What's New hero. A
  * directory-shaped guard misses it, so name it explicitly.
  */
-const AFL_FILES = [path.join(SRC, 'utils', 'afl-hero-resolver.ts')];
+const AFL_FILES = [
+  path.join(SRC, 'utils', 'afl-hero-resolver.ts'),
+  // Renders on the AFL but lives outside AFL_DIRS: the Set Lineup page is one
+  // shared component behind two thin routes (unified 2026-09-01). Listed
+  // explicitly so unifying a page never silently drops it out of this guard.
+  path.join(SRC, 'components', 'shared', 'lineup', 'LineupPage.astro'),
+];
 
 /**
  * SHARED stylesheets that AFL pages import. A green here renders on the AFL
@@ -117,19 +123,20 @@ const FORBIDDEN = [
  */
 const ALLOWLIST = new Map<string, string>([
   [
-    'pages/afl-fantasy/lineup.astro:--color-secondary',
-    'Categorical position palette (--lineup-pos-rb) + the swapped-slot accent. ' +
-      'src/pages/theleague/lineup.astro declares an identical token block, so ' +
-      'recoloring only the AFL diverges two sibling pages, and a red RB chip ' +
-      'would collide with the error red on the same screen.',
+    'components/shared/lineup/LineupPage.astro:--color-secondary',
+    'Categorical position palette (--lineup-pos-rb) + the swapped-slot accent, ' +
+      'in the SHARED Set Lineup page both leagues render. Not brand voice: a ' +
+      'red RB chip would collide with the error red on the same screen. Was ' +
+      'allowlisted at pages/afl-fantasy/lineup.astro until the two sibling ' +
+      'pages were unified; the token block is unchanged.',
   ],
   [
-    'pages/afl-fantasy/lineup.astro:#2e8743',
+    'components/shared/lineup/LineupPage.astro:#2e8743',
     'Fallback hex on the --lineup-pos-rb / --lineup-slot-swapped-accent / ' +
       '--btn-secondary-bg references above — same categorical-palette reason.',
   ],
   [
-    'pages/afl-fantasy/lineup.astro:--btn-secondary-bg',
+    'components/shared/lineup/LineupPage.astro:--btn-secondary-bg',
     'Alias of --color-secondary, used for --lineup-submit-ready in the same ' +
       'categorical token block as the position palette above. Same reason.',
   ],

@@ -31,7 +31,9 @@ const ROSTER_PAGES = [
   'src/pages/afl-fantasy/rosters.astro',
 ];
 
-const LINEUP_PAGES = ['src/pages/theleague/lineup.astro', 'src/pages/afl-fantasy/lineup.astro'];
+// Unified 2026-09-01: both leagues' lineup routes are thin wrappers over one
+// shared component, so there is a single file to check instead of two.
+const LINEUP_PAGES = ['src/components/shared/lineup/LineupPage.astro'];
 
 describe('rankings reach every decision page', () => {
   describe('Free Agents', () => {
@@ -214,7 +216,10 @@ describe('rankings reach every decision page', () => {
   describe('Set Lineup', () => {
     it.each(LINEUP_PAGES)('%s reads the owner board via the shared module', (page) => {
       const src = read(page);
-      expect(src).toContain("from '../../utils/lineup-rankings'");
+      // Matched on the MODULE, not the relative prefix: the shared page sits a
+      // directory deeper than the routes it replaced, and pinning '../../' here
+      // failed the move rather than any behavior.
+      expect(src).toMatch(/from '(?:\.\.\/)+utils\/lineup-rankings'/);
       expect(src).toContain('loadLineupRankings()');
     });
 
