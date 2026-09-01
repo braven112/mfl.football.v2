@@ -498,37 +498,63 @@ Two places, one authoritative:
 - **Monthly quota** — only Chromatic's Manage screen. Neither of the above can
   see the account total; they report one build each.
 
-## TurboSnap has never actually engaged — and the 10-build rule is NOT why
+## TurboSnap: `--externals` was disabling it on EVERY build
 
-The original note here read "withheld until 10 builds are created from CI":
+The note here used to read "withheld until 10 builds are created from CI".
+**That was wrong twice over** — it was stale, and it sent the next reader
+looking at the account tier and the Vite builder, neither of which was the
+problem. Two hypotheses died before the log gave it up:
+
+- *"the free plan withholds it"* — build #117 still reported it off.
+- *"builder-vite emits no stats file"* — it does. `pnpm build:storybook:stats`
+  writes `storybook-static/preview-stats.json` with 119 modules in the right
+  `{id, name, reasons}` shape.
+
+The actual line is in the Chromatic step log, above the summary:
 
 ```
-⚠ TurboSnap not available for your account
-TurboSnap is not available until at least 10 builds are created from CI.
+⚠ TurboSnap disabled due to matching --externals
+Found 2 files with changes:
+→ src/styles/accounting.css
+→ src/styles/draft-broadcast.css
 ```
 
-**That explanation is stale and it cost a diagnosis.** Build #117 (Aug 31
-2026) still reported:
+**Neither file renders into a single story.** TurboSnap was available,
+configured and working — and switched off on almost every build by our own
+flag. From the CLI source (`node-src-*.cjs`):
 
-| | |
-|---|---|
-| Snapshots captured | 160 |
-| Inherited (TurboSnap) | 0 |
-| TurboSnap active | **no** |
+```js
+for (const e of externals) {
+  const n = changedFiles.filter(f => picomatch(e, f));
+  if (n.length > 0) { changedFiles = undefined; break; }  // TurboSnap dead
+}
+```
 
-117 builds in, well past 10, and `--only-changed` is still a no-op — every
-build pays full price. So the warm-up rule is not the blocker, and anyone
-reading the old note would keep waiting for a discount that is never coming.
+One match anywhere disables it for the WHOLE build. The old list was
+`src/styles/**/*.css` (26 stylesheets, 9 render) plus `public/assets/**`
+(which holds the What's New screenshots this repo adds constantly). Between
+them, virtually every build tripped it.
 
-The leading suspect is the builder: TurboSnap needs a `preview-stats.json`
-from the build, and this repo is on `@storybook/builder-vite` with **no
-TurboSnap Vite plugin installed and no `chromatic.config.json`**. That is
-unverified — confirm against current Chromatic docs before wiring anything,
-since the Vite/TurboSnap requirements have moved across versions.
+`externals` now comes from `scripts/chromatic-story-deps.mjs --externals` and
+lives in `chromatic.config.json`. **It is tight in one direction and complete
+in the other**, and gets both wrong if hand-edited:
 
-Until it engages, cost is driven entirely by **build count**, not diff size —
-which is why the trigger model above is the lever that actually mattered.
-The `turboSnapEnabled` flag in the job summary says which regime you are in.
+- too broad -> TurboSnap disabled, every story at full price (the old bug)
+- too narrow -> TurboSnap inherits a snapshot for a file it cannot trace, and
+  the regression ships GREEN
+
+`public/assets/fonts/**` is the entry that looks droppable and is not: the
+story stylesheets `@font-face` against it, and a re-subset font reflows every
+snapshot. `.storybook/static/**` stays for the same reason (Trap 4b).
+
+Verified by replaying build #117's real changed-file list through picomatch:
+old externals bail on `src/styles/**/*.css`; new externals do not match, so
+TurboSnap stays on.
+
+**Config moved to `chromatic.config.json`.** `package.json`'s script is now
+just `chromatic`. The file is strict-schema validated — an unknown key fails
+the run outright — and `--externals` requires `onlyChanged`, so both live
+there together. The workflow still appends `--auto-accept-changes` on main.
 
 ## Choosing modes
 

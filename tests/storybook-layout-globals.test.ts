@@ -75,9 +75,16 @@ describe('Storybook layout-globals wiring', () => {
     // CSS keeps the literal url() and the woff2 is only copied. Without this
     // glob, swapping or re-subsetting the font is treated as affecting
     // NOTHING and every snapshot is inherited, so the regression ships green.
-    // Same reason public/assets/** is already listed.
-    const pkg = readFileSync(join(ROOT, 'package.json'), 'utf8');
-    expect(pkg).toContain('--externals \\"' + '.storybook/static/**' + '\\"');
+    //
+    // Externals moved from a --externals flag in package.json into
+    // chromatic.config.json when the list was narrowed to stop it disabling
+    // TurboSnap outright; the invariant is unchanged, only its home.
+    const config = JSON.parse(readFileSync(join(ROOT, 'chromatic.config.json'), 'utf8'));
+    expect(config.externals).toContain('.storybook/static/**');
+
+    // The app's own faces live under public/assets/fonts and are referenced
+    // from the story stylesheets, so they need the same protection.
+    expect(config.externals).toContain('public/assets/fonts/**');
   });
 
   it('self-hosts every face — a third-party font URL is a Chromatic flake', () => {

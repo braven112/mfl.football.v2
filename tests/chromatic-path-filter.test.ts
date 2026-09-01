@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { computeStoryDeps } from '../scripts/chromatic-story-deps.mjs';
+import {
+  computeStoryDeps,
+  computeExternals,
+  computeStoryStylesheets,
+  STORY_ASSET_GLOBS,
+} from '../scripts/chromatic-story-deps.mjs';
 
 /**
  * Chromatic path-filter guard - the safety net under a narrowed visual trigger.
@@ -134,6 +139,15 @@ describe('chromatic path filter', () => {
     }
   });
 
+  it('triggers on every asset tree a story renders', () => {
+    // Assets are runtime URL strings, not imports, so they are absent from the
+    // module graph and cannot be derived from it. If the workflow stops
+    // matching one, a crest or logo swap never triggers a build.
+    for (const list of pathLists) {
+      for (const glob of STORY_ASSET_GLOBS) expect(list).toContain(glob);
+    }
+  });
+
   it('excludes the cron-written feeds', () => {
     // These churn on a schedule and render into nothing. If one ever enters
     // the closure, that is a real finding - a snapshot is reading live data,
@@ -145,5 +159,59 @@ describe('chromatic path filter', () => {
         /post-history\.json$/.test(f),
     );
     expect(noisy).toEqual([]);
+  });
+});
+
+/**
+ * TurboSnap externals - the OTHER half, and it fails in the opposite direction.
+ *
+ * The CLI disables TurboSnap for the whole build the moment any changed file
+ * matches any externals glob:
+ *
+ *   for (const e of externals) {
+ *     const n = changedFiles.filter(f => picomatch(e, f));
+ *     if (n.length > 0) { changedFiles = undefined; break; }
+ *   }
+ *
+ * So the list must be TIGHT (a stylesheet that renders nowhere disables the
+ * discount for everyone) and COMPLETE (a stylesheet that does render, left out,
+ * lets TurboSnap inherit a stale snapshot and ship the regression green).
+ * Exactly the story closure's CSS, plus the untraceable asset and font trees.
+ */
+describe('chromatic externals', () => {
+  const config = JSON.parse(readFileSync('chromatic.config.json', 'utf8'));
+
+  it('matches the generated set exactly', () => {
+    expect(config.externals).toEqual(computeExternals());
+  });
+
+  it('covers every stylesheet a story renders', () => {
+    const missing = computeStoryStylesheets().filter((f) => !config.externals.includes(f));
+    expect(
+      missing,
+      `These stylesheets render into a story but are not in externals, so ` +
+        `TurboSnap would inherit their snapshots and miss the regression.\n\n` +
+        `Regenerate with: node scripts/chromatic-story-deps.mjs --externals`,
+    ).toEqual([]);
+  });
+
+  it('does not re-widen to the globs that disabled TurboSnap', () => {
+    // `src/styles/**/*.css` matched 26 stylesheets of which 9 render, and
+    // `public/assets/**` matched the What's New screenshots this repo adds
+    // constantly. Together they disabled TurboSnap on essentially every build.
+    expect(config.externals).not.toContain('src/styles/**/*.css');
+    expect(config.externals).not.toContain('src/styles/**');
+    expect(config.externals).not.toContain('public/assets/**');
+  });
+
+  it('keeps --only-changed on, which externals requires', () => {
+    // The CLI throws if externals is set without onlyChanged.
+    expect(config.onlyChanged).toBe(true);
+    expect(config.buildScriptName).toBe('build:storybook:stats');
+  });
+
+  it('leaves the stats build wired up, since TurboSnap needs it', () => {
+    const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
+    expect(pkg.scripts[config.buildScriptName]).toContain('--stats-json');
   });
 });

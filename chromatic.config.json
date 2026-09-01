@@ -1,0 +1,28 @@
+{
+  "$schema": "https://www.chromatic.com/config-file.schema.json",
+  "buildScriptName": "build:storybook:stats",
+  "diagnosticsFile": "chromatic-diagnostics.json",
+  "onlyChanged": true,
+  "externals": [
+    "src/styles/loading.css",
+    "src/styles/player-cell.css",
+    "src/styles/player-modal-band.css",
+    "src/styles/player-news.css",
+    "src/styles/playoff-round-hero.css",
+    "src/styles/theme-image.css",
+    "src/styles/tokens-dark.css",
+    "src/styles/tokens.css",
+    "src/styles/utilities.css",
+    ".storybook/**/*.css",
+    ".storybook/static/**",
+    "public/assets/afl/**",
+    "public/assets/theleague/**",
+    "public/assets/nfl-logos/**",
+    "public/assets/college-logos/**",
+    "public/assets/logos/**",
+    "public/assets/icons/**",
+    "public/assets/hero-players/**",
+    "public/assets/fonts/**",
+    "public/assets/claude-schefter-avatar.webp"
+  ]
+}

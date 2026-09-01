@@ -134,11 +134,24 @@ on:
       - 'src/types/nav.ts'
       - 'src/types/schefter.ts'
       - 'src/types/whats-new.ts'
-      - 'public/assets/**'
+      # Asset trees a story renders. Same set as chromatic.config.json's
+      # externals, and for the same reason: these are runtime URL strings, so
+      # nothing links them into the module graph. whats-new/ screenshots and
+      # the other trees render nowhere and are deliberately absent.
+      - 'public/assets/afl/**'
+      - 'public/assets/theleague/**'
+      - 'public/assets/nfl-logos/**'
+      - 'public/assets/college-logos/**'
+      - 'public/assets/logos/**'
+      - 'public/assets/icons/**'
+      - 'public/assets/hero-players/**'
+      - 'public/assets/fonts/**'
+      - 'public/assets/claude-schefter-avatar.webp'
       - 'stories/**'
       - '.storybook/**'
       - 'package.json'
       - 'pnpm-lock.yaml'
+      - 'chromatic.config.json'
       - 'scripts/chromatic-story-deps.mjs'
       - '.github/workflows/chromatic.yml'
 
@@ -259,11 +272,24 @@ on:
       - 'src/types/nav.ts'
       - 'src/types/schefter.ts'
       - 'src/types/whats-new.ts'
-      - 'public/assets/**'
+      # Asset trees a story renders. Same set as chromatic.config.json's
+      # externals, and for the same reason: these are runtime URL strings, so
+      # nothing links them into the module graph. whats-new/ screenshots and
+      # the other trees render nowhere and are deliberately absent.
+      - 'public/assets/afl/**'
+      - 'public/assets/theleague/**'
+      - 'public/assets/nfl-logos/**'
+      - 'public/assets/college-logos/**'
+      - 'public/assets/logos/**'
+      - 'public/assets/icons/**'
+      - 'public/assets/hero-players/**'
+      - 'public/assets/fonts/**'
+      - 'public/assets/claude-schefter-avatar.webp'
       - 'stories/**'
       - '.storybook/**'
       - 'package.json'
       - 'pnpm-lock.yaml'
+      - 'chromatic.config.json'
       - 'scripts/chromatic-story-deps.mjs'
       - '.github/workflows/chromatic.yml'
 
