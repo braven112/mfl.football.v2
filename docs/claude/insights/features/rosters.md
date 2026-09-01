@@ -1,3 +1,39 @@
+## 2026-08-28 - Comparing A Branch Against Main Needs A Real Install, Not A Symlinked One
+
+**Context:** Proving the roster split was render-identical to the *current*
+main, not to a stale pre-rebase capture. The method: a `git worktree` of
+`origin/main`, a second dev server on another port, and the parity harness
+pointed at each in turn.
+
+**Insight:** The obvious shortcut — symlinking the main checkout's
+`node_modules` into the worktree to skip an install — breaks Astro in a way
+that reads as a page bug rather than a setup mistake. The page 500s and the
+daemon log says:
+
+```
+No cached compile metadata found for ".../astro/components/ClientRouter.astro"
+The main Astro module "/tmp/wt/home/user/repo/node_modules/astro/..."
+```
+
+Note the doubled path. Vite resolves through the symlink to the *real* location
+and then keys compile metadata under the worktree-prefixed path, so the module
+that compiled and the module being requested are never the same key. `pnpm
+install --frozen-lockfile` in the worktree costs ~7s against a warm store and
+avoids the whole class.
+
+Worth pairing with CLAUDE.md's existing note that worktrees don't inherit
+`.env`: a worktree is a fresh checkout in every way that matters, and the two
+shortcuts people reach for — symlinked deps and inherited env — both fail.
+
+**Evidence:** Run on 2026-08-28 comparing `origin/main` (a2d3f4d) against the
+rebased split branch. Result once the install was real: 64 (season, team)
+renders identical, payload 10.29 MB -> 1.12 MB.
+
+**Recommendation:** For any before/after that needs two versions of this app
+running at once, use a worktree with its own install and its own port. It is
+the only way to compare against a moving main rather than against a capture
+that silently ages.
+
 ## 2026-08-27 - The Roster Page Shipped 320 Team-Seasons To Render One
 
 **Context:** Starting the rosters.astro split (`docs/plans/rosters-page-split.md`).

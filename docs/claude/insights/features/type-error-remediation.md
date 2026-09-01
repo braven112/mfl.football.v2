@@ -118,3 +118,34 @@ found them.
 **Evidence:** `tests/typecheck-baseline.typecheck.ts` (both assertions),
 `tests/fixtures/typecheck-baseline.json` (total + `clearedClasses`), the
 `Type baseline` job in `.github/workflows/ci.yml`, and PRs #599, #603, #606.
+
+## 2026-08-28 - A Rebase Invalidates BOTH Sides Of The Baseline Conflict
+
+**Context:** The rosters-page split branch rebased onto a main that had moved
+106 commits. `tests/fixtures/typecheck-baseline.json` conflicted on two of the
+five commits being replayed.
+
+**Insight:** The conflict looks like an ordinary pick-a-side, and it is not.
+Both numbers were measured against a tree that no longer exists:
+
+- **main's number** (1912) counts main's code *without* the branch's changes.
+- **the branch's number** (1813) counts the branch's changes against the *old*
+  base main has since moved past.
+
+The post-rebase tree is neither, so either choice fails the ratchet on the next
+run — and because the gate fails on an improvement as well as a regression, the
+"safe" instinct of taking main's higher number fails just as loudly as taking
+the branch's lower one. Here the real figure was **1812**: main at 1912, minus
+the 100 the branch removes. Nothing in either side of the conflict said 1812.
+
+Note this applies even to a branch that changes no types. Main's own count
+drifts underneath you, so a rebase always ends in a re-measure — `--theirs` is
+never the answer for this file the way it is for a cron-written data file.
+
+**Evidence:** CLAUDE.md's merge-conflict list item 6 (added with this entry);
+resolved on the roster-split branch by discarding both sides and re-running
+`pnpm test:types`, which named 1812 directly.
+
+**Recommendation:** Resolve the markers with whatever, then re-measure and
+commit the reported number in the same commit. Budget ~2.5 min for the run;
+that is the cost of the only trustworthy answer.

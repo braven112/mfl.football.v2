@@ -357,6 +357,14 @@ and report what you did.
    structural change and re-apply the branch's behavioral change on top.
 5. **CLAUDE.md / docs** — additive. Both sides' new sections survive. Never
    drop a section.
+6. **`tests/fixtures/typecheck-baseline.json`** — **neither side is right.**
+   Both numbers were measured against a tree that no longer exists: main's
+   counts main's code without your changes, yours counts a base main has since
+   moved past. Picking either fails the ratchet on the very next run. Resolve
+   the markers with anything, then **re-run `pnpm test:types`** — it reports the
+   real post-rebase figure — and commit that. Same for a rebase that touches no
+   types at all: main's number still moved, so it is still a re-measure, not a
+   `--theirs`.
 
 Before pushing: `pnpm test:unit` at the same baseline as pre-rebase (new
 failures block; pre-existing are OK), `node --check` every `.mjs` you touched,
