@@ -115,3 +115,39 @@ describe('describeWaiverWindow', () => {
     expect(describeWaiverWindow(resolveWaiverWindow([]))).toMatch(/unknown — MFL will decide/);
   });
 });
+
+describe('the real weekly cadence, in weekday terms', () => {
+  // The league cycle, from the constitution: requests are accepted from Sunday
+  // kickoff and ALL claims process Wednesday 9:00 PM PT; FCFS then runs from
+  // Wednesday 9:00 PM until the next Sunday kickoff.
+  //
+  // Wednesday 9:00 PM PT is THURSDAY 04:00 UTC (PDT = UTC-7), which is easy to
+  // misread. Asserting by weekday name rather than by raw timestamp is the
+  // point of this block: it caught a reviewer statement that put Monday
+  // "after Wednesday-night processing".
+  const events: MflCalendarEvent[] = [
+    { type: 'WAIVER_UNLOCK', start_time: at('2026-09-13T17:00:00Z'), happens: '16' }, // Sun 10am PT
+    { type: 'WAIVER_BBID', start_time: at('2026-09-17T04:00:00Z'), happens: '16' },   // Wed 9pm PT
+  ];
+
+  const dayOf = (iso: string) =>
+    new Intl.DateTimeFormat('en-US', { weekday: 'long', timeZone: 'America/Los_Angeles' })
+      .format(new Date(iso));
+
+  const cases: Array<[string, 'waiver' | 'fcfs']> = [
+    ['2026-09-13T20:00:00Z', 'waiver'], // Sunday afternoon, after kickoff
+    ['2026-09-14T18:00:00Z', 'waiver'], // MONDAY — a waiver day
+    ['2026-09-15T18:00:00Z', 'waiver'], // Tuesday
+    ['2026-09-17T02:00:00Z', 'waiver'], // Wednesday evening, BEFORE 9pm PT
+    ['2026-09-17T05:00:00Z', 'fcfs'],   // Wednesday, just AFTER processing
+    ['2026-09-18T18:00:00Z', 'fcfs'],   // Thursday
+    ['2026-09-19T18:00:00Z', 'fcfs'],   // Friday
+    ['2026-09-20T15:00:00Z', 'fcfs'],   // Sunday morning, before kickoff
+  ];
+
+  for (const [iso, expected] of cases) {
+    it(`${dayOf(iso)} ${iso.slice(11, 16)}Z is ${expected}`, () => {
+      expect(resolveWaiverWindow(events, new Date(iso)).mode).toBe(expected);
+    });
+  }
+});
