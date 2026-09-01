@@ -1587,7 +1587,7 @@
   {
     "id": "owner-activity",
     "title": "Owner Activity",
-    "description": "See when each franchise owner was last around — a visit to this site or a login on MFL, whichever came later — plus their browsing patterns",
+    "description": "See when each franchise owner was last around — a visit to this site or a login on MFL, whichever came later — plus page views and the pages they actually use",
     "path": "/activity",
     "icon": "activity",
     "category": "reports",
@@ -1620,11 +1620,14 @@
       "status",
       "mfl",
       "mfl activity",
-      "roster moves",
-      "transactions",
       "last online",
       "last move",
-      "last login"
+      "last login",
+      "analytics",
+      "browsing",
+      "site usage",
+      "most visited pages",
+      "who is active"
     ],
     "visibility": "all",
     "popularity": 35
@@ -3592,23 +3595,15 @@
   {
     "id": "afl-owner-activity",
     "title": "Owner Activity (AFL)",
-    "description": "Trades, free agent moves and waiver claims across the AFL this season, plus when each owner was last around — here or on MFL",
+    "description": "When each AFL owner was last around — here or on MFL — plus daily page views and which pages they actually use",
     "path": "/afl-fantasy/activity",
     "icon": "activity",
     "category": "reports",
     "tags": [
       "afl activity",
       "owner activity",
-      "transactions",
-      "trades",
-      "free agent moves",
-      "waivers",
-      "waiver claims",
-      "moves",
-      "transaction log",
       "activity feed",
       "afl",
-      "roster moves",
       "last seen",
       "last online",
       "last visit",
@@ -3616,7 +3611,13 @@
       "active",
       "inactive",
       "dormant",
-      "engagement"
+      "engagement",
+      "page views",
+      "analytics",
+      "browsing",
+      "site usage",
+      "most visited pages",
+      "who is active"
     ],
     "visibility": "all",
     "popularity": 30

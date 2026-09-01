@@ -138,19 +138,13 @@ if (useMock) {
 	} catch { /* Redis unavailable */ }
 }
 
-// ── Transaction data ──
-// AFL has no auction (keeper league, 9-round NFL-style draft). The third stat
-// tracks waiver claims, which is AFL's rolling "Yahoo-style" add mechanism.
-interface TxCounts { trades: number; freeAgents: number; thirdStat: number; total: number; }
-const txCountMap: Record<string, TxCounts> = {};
-// Most recent owner-driven MFL move per franchise. This is the FALLBACK
-// MFL signal: MFL's own `lastVisit` (loaded below) is a real login timestamp
-// and strictly better, but it exists only for leagues we are commissioner of
-// and only once the sync workflow has run.
+// ── MFL move recency ──
+// Read ONLY to back the Last Seen column. This page is site analytics; the
+// league's transaction log is the Schefter feed's job, not a leaderboard here.
+// This is the FALLBACK MFL signal: MFL's own `lastVisit` (loaded below) is a
+// real login timestamp and strictly better, but it exists only for leagues we
+// are commissioner of and only once the sync workflow has run.
 let mflMoveMap: Record<string, MflMove> = {};
-const ensureFranchise = (id: string) => {
-	if (!txCountMap[id]) txCountMap[id] = { trades: 0, freeAgents: 0, thirdStat: 0, total: 0 };
-};
 
 // import.meta.glob must be at the top level (Vite requirement)
 const txFeeds = import.meta.glob('../../../data/afl-fantasy/mfl-feeds/*/transactions.json', { eager: true });
@@ -159,13 +153,9 @@ if (useMock) {
 	const MOCK_MOVE_TYPES = ['TRADE', 'FREE_AGENT', 'WAIVER', 'IR'];
 	for (const fid of franchiseIds) {
 		const n = parseInt(fid, 10);
-		const trades = (n % 4);
-		const fa = (n % 6);
-		const waivers = (n % 5);
-		txCountMap[fid] = { trades, freeAgents: fa, thirdStat: waivers, total: trades + fa + waivers };
 		// Busier owners moved more recently; franchises with no moves are left
 		// out so the "no moves" branch of the blend is exercised too.
-		const moves = trades + fa + waivers;
+		const moves = (n % 4) + (n % 6) + (n % 5);
 		if (moves > 0) {
 			mflMoveMap[fid] = {
 				at: Date.now() - Math.max(0.25, 30 / (moves + 1)) * 86_400_000,
@@ -177,7 +167,8 @@ if (useMock) {
 	// AFL spans many historical seasons. Walk years newest-first and use the
 	// most recent feed that actually has transactions — early in a new league
 	// year the freshest dir (e.g. 2026) can exist but be near-empty, which would
-	// render a blank leaderboard; fall back to the last season with real moves.
+	// leave every Last Seen row without its MFL fallback; fall back to the last
+	// season with real moves.
 	const yearKeys = Object.keys(txFeeds)
 		.map(p => { const m = p.match(/\/(\d{4})\/transactions\.json$/); return m ? { year: parseInt(m[1], 10), key: p } : null; })
 		.filter((e): e is { year: number; key: string } => e !== null)
@@ -198,31 +189,7 @@ if (useMock) {
 	}
 
 	mflMoveMap = lastMflMoveByFranchise(rawTx);
-
-	for (const tx of rawTx) {
-		if (tx.type === 'TRADE') {
-			ensureFranchise(tx.franchise); ensureFranchise(tx.franchise2);
-			txCountMap[tx.franchise].trades++; txCountMap[tx.franchise].total++;
-			txCountMap[tx.franchise2].trades++; txCountMap[tx.franchise2].total++;
-		} else if (tx.type === 'FREE_AGENT') {
-			ensureFranchise(tx.franchise);
-			txCountMap[tx.franchise].freeAgents++; txCountMap[tx.franchise].total++;
-		} else if (tx.type === 'WAIVER' || tx.type === 'BBID_WAIVER') {
-			// AFL waiver claims (rolling "Yahoo-style"; BBID_WAIVER is legacy data).
-			ensureFranchise(tx.franchise);
-			txCountMap[tx.franchise].thirdStat++; txCountMap[tx.franchise].total++;
-		}
-	}
 }
-
-const txLeaderboard = aflConfig.teams
-	.map((team: any) => ({
-		franchiseId: team.franchiseId,
-		name: chooseTeamName({ fullName: team.name, nameMedium: team.nameMedium, nameShort: team.nameShort, abbrev: team.abbrev }),
-		icon: team.icon,
-		counts: txCountMap[team.franchiseId] || { trades: 0, freeAgents: 0, thirdStat: 0, total: 0 },
-	}))
-	.sort((a, b) => b.counts.total - a.counts.total);
 
 // MFL's own `lastVisit` — the real last-login timestamp per franchise, synced
 // by .github/workflows/sync-owner-last-visit.yml. A glob rather than a static
@@ -292,12 +259,9 @@ const chartDates = pageViewData.dates;
 		leagueName={league.name}
 		leagueHref={baseUrl}
 		teams={teams}
-		txLeaderboard={txLeaderboard}
 		globalPages={globalPages}
 		ownerPages={ownerPages}
 		chartTeams={chartTeams}
 		chartDates={chartDates}
-		thirdStatLabel="Waivers"
-		txSubtitle="Trades, free agent moves, and waiver claims this season"
 	/>
 </TheLeagueLayout>
