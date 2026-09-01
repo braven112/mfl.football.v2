@@ -139,6 +139,12 @@ export const STORY_ASSET_GLOBS = [
  *
  * Read from the registry, per CLAUDE.md — a league added there brings its
  * crests along with no edit here.
+ *
+ * The match below is exact on the config's `icon` string, which is only correct
+ * while those are ROOT-RELATIVE (`/assets/...`). All 3 configs are today; an
+ * absolute `https://…` one would miss silently and leave the dark file out of
+ * the trigger, so `tests/chromatic-path-filter.test.ts` asserts the precondition
+ * rather than this normalizing a shape that does not exist.
  */
 const LEAGUE_CONFIGS = ALL_LEAGUES.map((l) => l.configPath).filter(Boolean);
 
@@ -196,8 +202,19 @@ export function computeStoryAssetLiterals() {
 export function computeStoryAssetPrefixes() {
   const found = new Set();
   for (const file of storyTextFiles()) {
-    for (const m of readFileSync(file, 'utf8').matchAll(/\/assets\/[A-Za-z0-9._/-]*(?=\$\{)/g)) {
-      if (m[0].endsWith('/')) found.add(`public${m[0]}`);
+    // Any `/assets/...` string that stops at a directory separator instead of a
+    // filename. Deliberately NOT keyed on a following `${`: template literals
+    // are one way to splice a path and `'/assets/x/' + slug + '.png'` is
+    // another, and a guard that only knows the first is one syntax away from
+    // the twelve-crest miss it exists to prevent. The DIRECTORY LITERAL is the
+    // tell, whatever follows it.
+    // The lookahead matters: it requires the path to STOP at the separator —
+    // either the string literal closes there (`'/assets/x/' + slug`) or an
+    // interpolation starts (`` `/assets/x/${slug}.png` ``). Without it, the
+    // directory inside a perfectly good filename matches too and every crest
+    // demands a `**` tree.
+    for (const m of readFileSync(file, 'utf8').matchAll(/\/assets\/[A-Za-z0-9._/-]*\/(?=['"`]|\$\{)/g)) {
+      found.add(`public${m[0]}`);
     }
   }
   return [...found].sort();
@@ -233,7 +250,11 @@ function resolveSpec(fromFile, spec) {
  * stayed outside the Chromatic trigger.
  */
 function storyTextFiles() {
-  return globSync('stories/**/*.{ts,tsx}');
+  // .astro and .json too: stories/overview/ChromaticReport.astro is a story
+  // source, and JSON fixtures lived here until Sept 2026. An asset named from
+  // either would be invisible to a guard that only reads TypeScript — the same
+  // class of miss as skipping stories/fixtures/ in the first place.
+  return globSync('stories/**/*.{ts,tsx,astro,json}');
 }
 
 /** Every src/ file reachable from a story or from preview.ts. */

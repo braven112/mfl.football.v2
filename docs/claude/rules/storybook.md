@@ -655,15 +655,24 @@ the league trees were replaced by individual files, those twelve rendered into
 snapshots with nothing in the trigger matching them — and the literal scan had
 nothing to complain about. Two fixes, both needed:
 
-- the scan reads `stories/**/*.{ts,tsx}`, not just `*.stories.ts`. Fixtures are
-  where the asset-heavy data lives; scanning only story modules is what let
-  this through.
-- `computeStoryAssetPrefixes()` collects the directory in front of every `${`,
-  and the test fails unless a `**` entry covers it. **A dynamically-built asset
-  path REQUIRES a wildcard tree over its directory** — that is the rule. The
-  `nfl-logos` / `college-logos` / `hero-players` trees stay broad for exactly
-  this reason. Want a narrow trigger? Write the paths out, as
-  `stories/fixtures/playoff-round.ts` now does.
+- the scan reads `stories/**/*.{ts,tsx,astro,json}`, not just `*.stories.ts`.
+  Fixtures are where the asset-heavy data lives; scanning only story modules is
+  what let this through, and `.astro` (`stories/overview/ChromaticReport.astro`)
+  and `.json` are story sources too.
+- `computeStoryAssetPrefixes()` collects every `/assets/...` string that stops
+  at a `/` instead of a filename, and the test fails unless a `**` entry covers
+  it. **A dynamically-built asset path REQUIRES a wildcard tree over its
+  directory** — that is the rule. The `nfl-logos` / `college-logos` /
+  `hero-players` trees stay broad for exactly this reason. Want a narrow
+  trigger? Write the paths out, as `stories/fixtures/playoff-round.ts` now does.
+
+  It keys on the **directory literal**, deliberately not on a following `${`.
+  Template interpolation is one way to splice a path and
+  `'/assets/x/' + slug + '.png'` is another; a guard that knows only the first
+  is one syntax away from the same miss. And because `[]` is the correct result
+  today, that test would keep passing if the detector stopped detecting — so a
+  second test exercises the detector against both syntaxes plus a plain
+  filename that must NOT match.
 
 `public/assets/fonts/**` is the entry that looks droppable and is not: the
 story stylesheets `@font-face` against it, and a re-subset font reflows every

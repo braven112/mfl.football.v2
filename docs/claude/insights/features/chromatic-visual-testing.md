@@ -117,11 +117,19 @@ inherits the derivation's blind spots, and reports them as passes.** Asking
 protects a narrowing.
 
 The fix that makes it hold is a guard on the blind spot rather than on the
-output: `computeStoryAssetPrefixes()` collects the directory before every `${`
-and fails unless a `**` entry covers it. That turns the undecidable case into a
-rule — **a dynamically-built asset path requires a wildcard tree over its
-directory; write the paths out if you want a narrow trigger** — and it is
-enforceable precisely because it does not try to resolve the interpolation.
+output: `computeStoryAssetPrefixes()` collects every `/assets/...` string that
+stops at a `/` instead of a filename, and fails unless a `**` entry covers it.
+That turns the undecidable case into a rule — **a dynamically-built asset path
+requires a wildcard tree over its directory; write the paths out if you want a
+narrow trigger** — and it is enforceable precisely because it does not try to
+resolve the interpolation.
+
+The first version of that guard keyed on a following `${`, which is the same
+mistake one level up: it encoded the *syntax of the bug I had just seen* rather
+than the property that makes a path dynamic. `'/assets/x/' + slug + '.png'`
+walked straight through it. The directory literal is the tell, whatever splices
+onto it — and a guard whose correct answer is `[]` needs a separate test that
+the detector still detects, or it decays into a pass that means nothing.
 
 Both guards were verified by re-introducing each bug and watching the test name
 the offending path. Worth doing every time: a guard written against a bug you
