@@ -71,7 +71,8 @@ One entry looks droppable and is not: `public/assets/fonts/**`. The story
 stylesheets `@font-face` against it, so a re-subset font reflows every snapshot,
 and no import links it into the graph. Found by grepping the CSS, not by
 reasoning about it — the assets half of both lists is runtime URL strings and
-cannot be derived.
+so is invisible to the import graph. (It is now *partly* derivable by text scan;
+see the next entry for what that scan still cannot see.)
 
 ## 2026-09-01 — build count, not diff size, was the actual bill
 
@@ -84,3 +85,45 @@ have cut cost *per build* ~5x, and it still would not have saved this month,
 because the workflow fired on every push to every branch. Fix the trigger before
 optimizing the unit. (Both were fixed here; the trigger was the larger lever by
 far.)
+
+## 2026-09-01 — narrowing a derived list re-opens the silent failure, unless the guard covers what the derivation cannot see
+
+The asset half of the trigger was two whole league trees, `public/assets/afl/**`
+and `public/assets/theleague/**` — ~700 files, of which seven rendered. Every
+owner logo swap started a build that could not change a pixel. Replacing them
+with the exact filenames is obviously right and quietly dangerous: it moves the
+assets from the "too broad" column of the table above into reach of the "too
+narrow" one, where the failure is silent and self-blessing.
+
+So the narrowing shipped with a text scan (`computeStoryAssetLiterals`) that
+re-derives what the stories name, and a test that fails if the list misses one.
+**That guard was not enough, and the gap is the transferable part.**
+
+Two blind spots, both of which had already shipped by the time they were found:
+
+1. **Scope.** The scan globbed `stories/**/*.stories.ts` — the same seed list
+   the import walk uses, which is correct *there*. But asset-heavy data lives in
+   `stories/fixtures/`, so the scan never opened the file with the most asset
+   strings in it.
+2. **Interpolation.** `stories/fixtures/playoff-round.ts` built twelve crest
+   paths as `/assets/theleague/icons/${seed.slug}.png`. A template literal has
+   no literal to find, so the scan reported clean while twelve crests rendered
+   outside the trigger.
+
+The lesson generalizes past Chromatic: **a guard built from a derivation
+inherits the derivation's blind spots, and reports them as passes.** Asking
+"does the derived list cover everything it found?" is not the same question as
+"can the derivation see everything the runtime does?" — and only the second one
+protects a narrowing.
+
+The fix that makes it hold is a guard on the blind spot rather than on the
+output: `computeStoryAssetPrefixes()` collects the directory before every `${`
+and fails unless a `**` entry covers it. That turns the undecidable case into a
+rule — **a dynamically-built asset path requires a wildcard tree over its
+directory; write the paths out if you want a narrow trigger** — and it is
+enforceable precisely because it does not try to resolve the interpolation.
+
+Both guards were verified by re-introducing each bug and watching the test name
+the offending path. Worth doing every time: a guard written against a bug you
+have already fixed is untested by construction, and this one shipped a version
+that passed while the bug was live.
