@@ -202,11 +202,17 @@ describe('committed owner-last-visit.json files', () => {
 		const addPaths = workflow.match(/add-paths:\s*'([^']+)'/)?.[1];
 		expect(addPaths, 'no add-paths found in the sync workflow').toBeTruthy();
 
+		/**
+		 * Glob -> RegExp. Escape EVERY regex metacharacter (backslash included —
+		 * escaping only `.` leaves `\` and friends live, which CodeQL flagged as
+		 * incomplete escaping), then re-open `*` as the one wildcard a glob has.
+		 */
+		const globToRegExp = (pattern: string): RegExp =>
+			new RegExp(`^${pattern.replace(/[\\^$.*+?()[\]{}|]/g, '\\$&').replace(/\\\*/g, '[^/]*')}$`);
+
 		for (const league of ALL_LEAGUES) {
 			const target = `${league.dataPath}/owner-last-visit.json`;
-			const covered = addPaths!
-				.split(/\s+/)
-				.some((pattern) => new RegExp(`^${pattern.replace(/[.]/g, '\\.').replace(/\*/g, '[^/]*')}$`).test(target));
+			const covered = addPaths!.split(/\s+/).some((pattern) => globToRegExp(pattern).test(target));
 			expect(covered, `${league.slug}: ${target} is not covered by add-paths "${addPaths}"`).toBe(
 				true,
 			);
