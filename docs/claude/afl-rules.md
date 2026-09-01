@@ -142,7 +142,12 @@ run against the AFL.
 
 `scripts/set-afl-waiver-order.ts` computes the correct order and prints it; its
 `--live` path is **blocked** and refuses to write, because a write can only be a
-silent no-op. Unblocking it means replacing the transport with a replay of MFL's
+silent no-op. **`scripts/check-afl-waiver-order.ts` (weekly, `AFL Waiver Order
+Check`) is the safety net**: it recomputes the order and compares it to the live
+league, alerting GroupMe on drift. It goes quiet once the season's first waiver
+transaction lands, because a rolling order is *supposed* to move after that —
+forgetting to set the order, not mistyping it, is what actually went wrong in
+2026. Unblocking it means replacing the transport with a replay of MFL's
 own commissioner waiver-order form POST (under `options?L=<id>&O=<number>`),
 the way `src/pages/api/cut-player.ts` replays `add_drop` for exactly this
 reason. Until then the order is set by hand in MFL's UI, once per league year,
@@ -154,14 +159,20 @@ Three things about it are load-bearing:
   round-1-only adjustment, so rounds 2–9 are the true reverse-standings order
   with each conference champion forced last — which is what "base draft order"
   means. Reading round 1 would bake three NIT swaps into the waiver order.
-- **The two conference orders are merged by strict ALTERNATION** (commissioner
-  ruling, 2026-08-31), led by the conference holding the league's single worst
-  team. The constitution defines the base order per conference (two 12-team
-  orders) but the waiver order is one list of 24, so the merge is an
-  interpretation — the rejected alternative was re-ranking all 24 league-wide,
-  which is tidier but is no longer the base order in any literal sense.
-  Alternation also guarantees neither conference sits systematically ahead.
-  `tests/afl-waiver-order.test.ts` pins the ruling.
+- **The order is PER-CONFERENCE, and so is MFL's page.** `csetup?C=WAIVORD`
+  shows two separate conference sections and serializes them into the single
+  `waiverSortOrder` field as one block after the other — American 1-12,
+  National 13-24. There is no way to interleave them, and no reason to want to:
+  the AFL is a duplicate-player league scoped by conference (`rostersPerPlayer:
+  1`, `playerLimitUnit: CONFERENCE`, `duplicatePlayers: true` in the registry),
+  so the same player can be rostered by one team in EACH conference and teams in
+  different conferences never contend for the same claim. **Only rank within a
+  conference affects an outcome.** An earlier revision of this doc specified
+  strict alternation to stop one conference sitting "systematically ahead" —
+  that solved a non-problem and MFL cannot express it. Do not reintroduce it.
+  Anything comparing orders must compare WITHIN a conference, never the flat
+  1-24 list, or it breaks the moment MFL renumbers the blocks.
+  `tests/afl-waiver-order.test.ts` pins this against the live 2026 order.
 - **Any franchises-import write MUST carry `OVERLAY=1`.** MFL's franchises
   import erases every field absent from the payload, and a waiver payload
   carries only `id` and `waiverSortOrder` — a non-overlay write would blank
