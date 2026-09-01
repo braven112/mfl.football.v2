@@ -363,8 +363,8 @@ work through on day one.
   emits `storybook-static/preview-stats.json`.
 - `fetch-depth: 0` on checkout. `actions/checkout` defaults to depth 1, which
   degrades both TurboSnap and Chromatic's baseline detection without erroring.
-- `--externals 'src/styles/**/*.css'` and `--externals '.storybook/static/**'`.
-  **This one is the dangerous default.**
+- An `externals` list in `chromatic.config.json` covering every untraceable
+  visual input. **This one is the dangerous default — in BOTH directions.**
   TurboSnap does not trace CSS and other externally-processed static assets
   through the module graph, so without this flag a change to `tokens.css` or
   `tokens-dark.css` can be treated as affecting NOTHING and skip the very
@@ -387,10 +387,75 @@ changes (`main.ts`, `preview.ts`, `modes.ts`) or when dependency versions in
 `preview.ts` imports the global stylesheets, expect touching theming to cost a
 full 68-snapshot build.
 
-**One build per push, not two.** The workflow fires on `push` only. Adding
-`pull_request` as well would bill two builds for the same change — one for the
-PR head, one for the merge commit. Chromatic tracks baselines per branch from
-push events and reports via commit status, so the check still lands on the PR.
+**Iterating on a PR is free — that is the whole budget model.** The workflow
+originally fired on `push` to ANY branch, one build per commit. Measured over
+Aug 28-31 2026 that was **60 builds x 160 snapshots = ~9,600 snapshots, about
+2x the entire 5,000/month free plan in four days**, and 49 of the 60 were
+feature-branch pushes. A single branch (`draft-broadcast-image-loading`) spent
+**16 builds — half a month's plan — iterating on one PR**.
+
+It now fires on:
+
+- `push` to **main only** (the baseline run, the one that auto-accepts)
+- `pull_request` with `types: [opened, ready_for_review, labeled, synchronize]`
+- the `visual-check` label on demand — remove and re-add it to re-run
+
+**The cost control is the `paths:` list, NOT the trigger type.** A revision of
+this change dropped `synchronize` to make PR iteration free, and that was a
+coverage hole: a commit pushed after the PR opens would get its FIRST capture
+from the merge build on main, which runs `--auto-accept-changes` — so it would
+be blessed as the baseline having never been reviewed. Exactly the failure this
+page keeps warning about.
+
+Checked against the real burn rather than assumed: the 16-build
+`draft-broadcast-image-loading` branch touches only draft-broadcast components,
+styles, pages and types, none of which are in the closure, so it triggers
+**zero** builds under the narrowed paths. Build #117 still triggers, correctly,
+because it edited `src/config/leagues-data.mjs`. Narrow paths buy the savings;
+restricting the trigger type bought nothing but the hole.
+
+An earlier version of this section argued against `pull_request` because
+push+PR would double-bill. That was true only while `push` was unrestricted.
+With push scoped to main, a change is built once on its PR and once on merge.
+
+Drafts are skipped until marked ready (a draft PR is still iterating), and the
+`labeled` trigger is gated to the one label in the job's `if:` — `labeled`
+fires for *every* label otherwise.
+
+**The `paths:` filter is GENERATED, not hand-written.** It used to trigger on
+`src/utils/**` — 247 files, of which **45 actually reach a story**. So most
+builds re-snapshotted the whole suite for code no snapshot renders.
+
+`scripts/chromatic-story-deps.mjs` walks the real import graph from every
+story *and* from `preview.ts` (which imports utils of its own to build the
+accent and dark-logo CSS) and prints the closure ready to paste. Run it and
+paste into **both** `paths:` lists.
+
+Narrowing this is safe in exactly one direction, and
+`tests/chromatic-path-filter.test.ts` is what enforces it: a file that renders
+but is NOT matched means the regression never triggers a build, ships, and is
+then blessed by `--auto-accept-changes` on main — a visual test that certifies
+the bug. Extra patterns are always safe; missing ones fail the suite.
+
+**Filter by what a glob already covers, never by a path prefix.** The generator
+briefly ended in `.filter(f => f.startsWith('src/'))`, which silently dropped
+three files the walk had correctly found — `data/afl-fantasy/afl.config.json`
+(AFL brand colors, reached through both `PeckingOrderIssue` and
+`franchise-band-brand`), `data/afl-fantasy/tier-history.json` and
+`data/best-ball-1/bb1.config.json`. They render, matched no `paths:` entry, and
+the coverage assertions could not see it: a filtered-out file is not
+"uncovered", it is invisible. `tests/chromatic-path-filter.test.ts` now pins
+them by name for that reason.
+
+Generating the closure also exposed a **real hole in the old filter**:
+`src/config/**`, `src/constants/**`, `src/data/**` and `src/types/**` all
+reach stories (the league registry, `throwback-config.ts`, `roster-constants.ts`,
+`league-events.ts`) and none of them were listed. A change to any of those
+altered rendering and never triggered a build. They are covered now — but only
+the ~14 hand-maintained `src/data` files that are genuinely in the closure. The
+cron-written feeds (`schefter-feed.json`, `mfl-feeds/**`) are NOT in it and must
+stay out, which the guard test also asserts: if one ever enters, a snapshot has
+started reading live data.
 
 **A story that can't be deterministic should opt out, not flake.**
 `BrandedLoader/CyclingNarration` cycles narration on a 2.5s timer, so it
@@ -456,18 +521,63 @@ Two places, one authoritative:
 - **Monthly quota** — only Chromatic's Manage screen. Neither of the above can
   see the account total; they report one build each.
 
-## TurboSnap is withheld until 10 CI builds
+## TurboSnap: `--externals` was disabling it on EVERY build
+
+The note here used to read "withheld until 10 builds are created from CI".
+**That was wrong twice over** — it was stale, and it sent the next reader
+looking at the account tier and the Vite builder, neither of which was the
+problem. Two hypotheses died before the log gave it up:
+
+- *"the free plan withholds it"* — build #117 still reported it off.
+- *"builder-vite emits no stats file"* — it does. `pnpm build:storybook:stats`
+  writes `storybook-static/preview-stats.json` with 119 modules in the right
+  `{id, name, reasons}` shape.
+
+The actual line is in the Chromatic step log, above the summary:
 
 ```
-⚠ TurboSnap not available for your account
-TurboSnap is not available until at least 10 builds are created from CI.
+⚠ TurboSnap disabled due to matching --externals
+Found 2 files with changes:
+→ src/styles/accounting.css
+→ src/styles/draft-broadcast.css
 ```
 
-`--only-changed` is a no-op until then, so **every build costs the full 68**
-until build 10, regardless of how small the diff is. Budget for roughly
-680 snapshots of runway before the discount starts. After that a narrow PR
-drops to ~20 billed. The `turboSnapEnabled` flag in the job summary and on the
-Overview page says which regime you are in.
+**Neither file renders into a single story.** TurboSnap was available,
+configured and working — and switched off on almost every build by our own
+flag. From the CLI source (`node-src-*.cjs`):
+
+```js
+for (const e of externals) {
+  const n = changedFiles.filter(f => picomatch(e, f));
+  if (n.length > 0) { changedFiles = undefined; break; }  // TurboSnap dead
+}
+```
+
+One match anywhere disables it for the WHOLE build. The old list was
+`src/styles/**/*.css` (26 stylesheets, 9 render) plus `public/assets/**`
+(which holds the What's New screenshots this repo adds constantly). Between
+them, virtually every build tripped it.
+
+`externals` now comes from `scripts/chromatic-story-deps.mjs --externals` and
+lives in `chromatic.config.json`. **It is tight in one direction and complete
+in the other**, and gets both wrong if hand-edited:
+
+- too broad -> TurboSnap disabled, every story at full price (the old bug)
+- too narrow -> TurboSnap inherits a snapshot for a file it cannot trace, and
+  the regression ships GREEN
+
+`public/assets/fonts/**` is the entry that looks droppable and is not: the
+story stylesheets `@font-face` against it, and a re-subset font reflows every
+snapshot. `.storybook/static/**` stays for the same reason (Trap 4b).
+
+Verified by replaying build #117's real changed-file list through picomatch:
+old externals bail on `src/styles/**/*.css`; new externals do not match, so
+TurboSnap stays on.
+
+**Config moved to `chromatic.config.json`.** `package.json`'s script is now
+just `chromatic`. The file is strict-schema validated — an unknown key fails
+the run outright — and `--externals` requires `onlyChanged`, so both live
+there together. The workflow still appends `--auto-accept-changes` on main.
 
 ## Choosing modes
 
@@ -580,8 +690,9 @@ Treat a "no stories found" on a util or a stylesheet as **unknown, not
 uncovered**. Acting on it as though the file were unstoried is how you skip
 the visual check on a token change — the single most expensive bug class in
 this repo (see `docs/claude/rules/theming-and-assets.md`). This is the same
-shape as TurboSnap's CSS blindness, which is why `pnpm chromatic` passes
-`--externals "src/styles/**/*.css"`.
+shape as TurboSnap's CSS blindness, which is why the story stylesheets are
+listed in `chromatic.config.json`'s `externals` (individually — the old
+`src/styles/**/*.css` glob was disabling TurboSnap outright).
 
 It does not affect the static build: `pnpm build:storybook` produces the same
 52 entries with the addon on or off, so Chromatic is unchanged. `pnpm add`

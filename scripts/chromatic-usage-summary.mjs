@@ -85,7 +85,11 @@ function main() {
   if (!turboSnap) {
     lines.push(
       '> TurboSnap is not active, so every story was captured at full price.',
-      '> Chromatic withholds it until at least 10 builds have run from CI.',
+      '> The usual cause is NOT the account tier and NOT a missing stats file:',
+      '> it is a changed file matching an `externals` glob in',
+      '> `chromatic.config.json`, which disables TurboSnap for the whole build.',
+      '> Search the Chromatic step log above for',
+      '> "TurboSnap disabled due to matching --externals" — it names the files.',
       '',
     );
   }
