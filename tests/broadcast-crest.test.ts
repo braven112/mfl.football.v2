@@ -147,6 +147,17 @@ describe('resolveBroadcastCrest — the outline', () => {
     );
   });
 
+  it('honours a config opt-out that only the INDEX knows about', () => {
+    // The index is passed in, so a caller can hand a team record rebuilt
+    // without `iconStrokeDark` (the way franchise-band-brand rebuilds a
+    // franchise off its throwback identity) while the index still carries the
+    // opt-out. `false || DEFAULT` would ring a crest a human opted out of.
+    const index = broadcastStrokeIndex('afl', afl.teams);
+    const chat = afl.teams.find((t: any) => t.franchiseId === '0021');
+    const stripped = { ...chat, iconStrokeDark: undefined, groupMeDark: undefined };
+    expect(resolveBroadcastCrest(stripped, 'afl', index).iconStroke).toBeUndefined();
+  });
+
   it('leaves an unflagged, dark-cut-less franchise unstroked', () => {
     const index = broadcastStrokeIndex('theleague', theleague.teams);
     // Gridiron Geeks measure legible and declare nothing — no ring.

@@ -283,8 +283,13 @@ TheLeague's draft room uses that same helper for a 3.6s overlay on a laptop.
 Every AFL franchise's `icon` is 100x100, but the broadcast crest renders at
 ~52-68vh — **roughly 560-730px on a 1080p TV** — so it was upscaled 5x+ and
 visibly pixelated. All 24 already had 400x400 art sitting in
-`public/assets/afl/group-me/`; only one was wired into the config. Resolution
-order is `groupMeDark -> groupMe -> icon`.
+`public/assets/afl/group-me/`; only one was wired into the config.
+
+Resolution order was `groupMeDark -> groupMe -> icon`; it is now split in two
+(`resolveBroadcastCrest`, Sep 2026) because the big crests want RESOLUTION and
+the small ones want the dark cut, and for a franchise whose only dark artwork is
+a 100px `iconDark` those are different files. See the
+`docs/claude/rules/theming-and-assets.md` section on it.
 
 Two traps here. First, checking the config FIELDS is not checking the
 FILESYSTEM: the art existed on disk for 26 franchises while the config knew

@@ -103,8 +103,8 @@ function isDarkCut(team: BroadcastCrestTeam, src: string): boolean {
  *    question being asked here. The site-wide manifest never measures these
  *    crests (`measure-crest-contrast.mjs` skips any team with an `iconDark`,
  *    correctly, since everywhere else they swap), so without this clause the
- *    ~14 franchises the big-crest resolution rule leaves on light art would
- *    come back with no signal at all.
+ *    franchises the big-crest resolution rule leaves on light art would come
+ *    back with no signal at all.
  * 3. The measured manifest, via `withStrokeColors` — the same list the rest of
  *    the site strokes under `html.dark`.
  */
@@ -118,7 +118,15 @@ function resolveStroke(
   if (team.iconDark) return DEFAULT_CREST_STROKE_COLOR;
   const franchiseId = team.franchiseId ?? '';
   if (!measured.has(franchiseId)) return undefined;
-  return measured.get(franchiseId) || DEFAULT_CREST_STROKE_COLOR;
+  const entry = measured.get(franchiseId);
+  // Re-check the opt-out here, not just on `team.iconStrokeDark` above. The two
+  // normally agree — the index is built from the same config objects — but the
+  // index is passed IN, so a caller can hand us a team record that has been
+  // rebuilt without the field (the way `franchise-band-brand.ts` rebuilds a
+  // franchise off its throwback identity). `false || DEFAULT` would then ring a
+  // crest a human explicitly opted out of.
+  if (entry === false) return undefined;
+  return entry || DEFAULT_CREST_STROKE_COLOR;
 }
 
 /**
