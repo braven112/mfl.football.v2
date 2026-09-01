@@ -10,11 +10,11 @@ import {
 	getDailyPageViews,
 	getGlobalPagePopularity,
 	getAllOwnerPagePopularity,
-	getActivityLevel,
-	getActivityLabel,
-	formatLastSeenLong,
-	type ActivityLevel,
+	buildOwnerActivityRow,
+	sortByLastSeen,
+	type OwnerActivityRow,
 } from '../../utils/owner-activity';
+import { lastMflMoveByFranchise, type MflMove } from '../../utils/mfl-activity';
 import { teamAccentVar } from '../../utils/team-accent-css';
 import { getCurrentLeagueYear } from '../../utils/league-year';
 import { getLeagueBySlug } from '../../config/leagues';
@@ -131,6 +131,11 @@ if (useMock) {
 // ── Transaction data ──
 interface TxCounts { trades: number; freeAgents: number; thirdStat: number; total: number; }
 const txCountMap: Record<string, TxCounts> = {};
+// Most recent owner-driven MFL move per franchise. This is the FALLBACK
+// MFL signal: MFL's own `lastVisit` (loaded below) is a real login timestamp
+// and strictly better, but it exists only for leagues we are commissioner of
+// and only once the sync workflow has run.
+let mflMoveMap: Record<string, MflMove> = {};
 const ensureFranchise = (id: string) => {
 	if (!txCountMap[id]) txCountMap[id] = { trades: 0, freeAgents: 0, thirdStat: 0, total: 0 };
 };
@@ -158,8 +163,27 @@ if (useMock) {
 		'0015': { trades: 1, fa: 2, auctions: 3 },
 		'0016': { trades: 2, fa: 4, auctions: 8 },
 	};
+	const MOCK_MOVE_TYPES = ['TRADE', 'FREE_AGENT', 'AUCTION_WON', 'IR', 'TAXI'];
+	// Hours since each franchise's last MFL move. Deliberately NOT derived from
+	// the site-visit profile — the cases worth seeing in mock are the ones where
+	// the two signals disagree: 0006 and 0011 look dormant on the site but have
+	// been moving on MFL, and 0014 has never loaded a page here at all yet is
+	// active in the league. Those rows are the entire reason for the blend.
+	// 0015 is omitted on purpose — it exercises the "no moves" half.
+	const mockMflHoursAgo: Record<string, number> = {
+		'0001': 26, '0002': 30, '0003': 96, '0004': 34, '0005': 20, '0006': 5,
+		'0007': 60, '0008': 40, '0009': 50, '0010': 44, '0011': 2, '0012': 80,
+		'0013': 70, '0014': 9, '0016': 55,
+	};
 	for (const [fid, p] of Object.entries(mockTxProfiles)) {
 		txCountMap[fid] = { trades: p.trades, freeAgents: p.fa, thirdStat: p.auctions, total: p.trades + p.fa + p.auctions };
+		const hours = mockMflHoursAgo[fid];
+		if (hours !== undefined) {
+			mflMoveMap[fid] = {
+				at: Date.now() - hours * 3_600_000,
+				type: MOCK_MOVE_TYPES[parseInt(fid, 10) % MOCK_MOVE_TYPES.length],
+			};
+		}
 	}
 } else {
 	const leagueYear = getCurrentLeagueYear();
@@ -169,6 +193,8 @@ if (useMock) {
 	const rawTx: any[] = txData?.transactions?.transaction
 		? (Array.isArray(txData.transactions.transaction) ? txData.transactions.transaction : [txData.transactions.transaction])
 		: [];
+
+	mflMoveMap = lastMflMoveByFranchise(rawTx);
 
 	for (const tx of rawTx) {
 		if (tx.type === 'TRADE') {
@@ -194,37 +220,51 @@ const txLeaderboard = leagueConfig.teams
 	}))
 	.sort((a, b) => b.counts.total - a.counts.total);
 
-interface TeamActivity {
-	franchiseId: string;
-	name: string;
-	icon: string;
-	lastVisit: number | null;
-	level: ActivityLevel;
-	label: string;
-	timeAgo: string;
-}
+// MFL's own `lastVisit` — the real last-login timestamp per franchise, synced
+// by .github/workflows/sync-owner-last-visit.yml. A glob rather than a static
+// import so a league without the file yet builds fine instead of failing on a
+// missing module. Empty map = fall back to transaction recency.
+const lastVisitFiles = import.meta.glob('../../../data/theleague/owner-last-visit.json', { eager: true });
+const mflVisitMap: Record<string, number> = useMock
+	? // Mock MFL logins. 0006 / 0011 / 0014 read MFL without transacting, which is
+	  // the case the real lastVisit exists to catch — transaction recency alone
+	  // would still call them dormant.
+	  Object.fromEntries(
+			Object.entries({ '0001': 1, '0002': 12, '0005': 6, '0006': 3, '0008': 0.5, '0011': 1.5, '0014': 4, '0016': 20 }).map(
+				([fid, hours]) => [fid, Date.now() - hours * 3_600_000],
+			),
+		)
+	: (() => {
+	const mod: any = Object.values(lastVisitFiles)[0];
+	const data = mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
+	const raw = data?.lastVisit;
+	if (!raw || typeof raw !== 'object') return {};
+	// Stored as epoch SECONDS (MFL's unit); everything downstream is ms.
+	const out: Record<string, number> = {};
+	for (const [franchiseId, seconds] of Object.entries(raw)) {
+		const n = Number(seconds);
+		if (Number.isFinite(n) && n > 0) out[franchiseId] = n * 1000;
+	}
+	return out;
+})();
 
-const teams: TeamActivity[] = leagueConfig.teams.map((team) => {
-	const ts = activityMap[team.franchiseId] ?? null;
-	const level = getActivityLevel(ts);
-	return {
-		franchiseId: team.franchiseId,
-		name: chooseTeamName({
-			fullName: team.name,
-			nameMedium: team.nameMedium,
-			nameShort: team.nameShort,
-			abbrev: team.abbrev,
+const teams: OwnerActivityRow[] = sortByLastSeen(
+	leagueConfig.teams.map((team) =>
+		buildOwnerActivityRow({
+			franchiseId: team.franchiseId,
+			name: chooseTeamName({
+				fullName: team.name,
+				nameMedium: team.nameMedium,
+				nameShort: team.nameShort,
+				abbrev: team.abbrev,
+			}),
+			icon: team.icon,
+			siteVisit: activityMap[team.franchiseId] ?? null,
+			mflVisit: mflVisitMap[team.franchiseId] ?? null,
+			move: mflMoveMap[team.franchiseId] ?? null,
 		}),
-		icon: team.icon,
-		lastVisit: ts,
-		level,
-		label: getActivityLabel(level),
-		timeAgo: formatLastSeenLong(ts),
-	};
-});
-
-// Sort by most recent visit (nulls/never-seen last)
-teams.sort((a, b) => (b.lastVisit ?? 0) - (a.lastVisit ?? 0));
+	),
+);
 
 // Build chart series data: one series per team with daily page view counts
 const chartTeams = leagueConfig.teams.map((team) => ({

@@ -1,0 +1,80 @@
+name: Probe MFL Franchise Fields
+
+# Answers one question that cannot be answered from a dev container: does MFL's
+# COMMISSIONER-authenticated `TYPE=league` export carry a last-visit /
+# last-online field?
+#
+# MFL's docs say a commissioner cookie returns "owner names, email addresses,
+# etc." — and that "etc." is the only place a last-visit value could still be
+# hiding, since none of the 59 export types is activity-shaped and the anonymous
+# franchise record has no such field. The credentials live in GitHub secrets, so
+# this is the only place the question can be settled.
+#
+# PRIVACY: the authenticated response carries real email addresses. The script
+# prints FIELD NAMES and redacted value SHAPES only — never a value. See the
+# header of scripts/probe-mfl-franchise-fields.ts.
+#
+# Read-only: a GET against `export?TYPE=league`. It writes nothing to MFL and
+# commits nothing here.
+#
+# Kept as an on-demand diagnostic: run it whenever you need to know whether MFL
+# exposes some field, rather than guessing from an anonymous response. It ran
+# once on 2026-08-30 and that is what found `lastVisit`.
+on:
+  workflow_dispatch:
+    inputs:
+      league:
+        description: 'Single league slug (blank = all)'
+        required: false
+        type: string
+        default: ''
+
+concurrency:
+  group: probe-mfl-franchise-fields
+  cancel-in-progress: true
+
+# Read-only probe — no commit, no MFL write.
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm + Node + install
+        uses: ./.github/actions/setup
+
+      - name: Probe authenticated TYPE=league
+        id: probe
+        env:
+          # MFL_IS_COMMISH is the load-bearing one — MFL returns owner-private
+          # fields only to a commissioner session. MFL_USER_ID alone
+          # authenticates and comes back anonymous, which the script's control
+          # check detects and reports as INCONCLUSIVE rather than as a result.
+          MFL_USER_ID: ${{ secrets.MFL_USER_ID }}
+          MFL_IS_COMMISH: ${{ secrets.MFL_IS_COMMISH }}
+          MFL_USERNAME: ${{ secrets.MFL_USERNAME }}
+          MFL_PASSWORD: ${{ secrets.MFL_PASSWORD }}
+          # Env var, not `${{ }}` inside `run:` — see the note in
+          # sync-owner-last-visit.yml. Same runner, same credentials.
+          INPUT_LEAGUE: ${{ inputs.league }}
+        run: |
+          set -o pipefail
+          ARGS=""
+          if [ -n "$INPUT_LEAGUE" ]; then ARGS="--league=$INPUT_LEAGUE"; fi
+          pnpm exec tsx ./scripts/probe-mfl-franchise-fields.ts $ARGS 2>&1 | tee /tmp/probe.txt
+
+      - name: Summarise
+        if: always()
+        run: |
+          {
+            echo "## MFL franchise field probe"
+            echo ""
+            echo '```'
+            cat /tmp/probe.txt || echo "(no output)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

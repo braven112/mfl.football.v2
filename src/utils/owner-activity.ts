@@ -8,6 +8,7 @@
  */
 
 import { getRedis } from './redis-client';
+import { describeMoveType, type MflMove } from './mfl-activity';
 
 export type ActivityLevel = 'active' | 'idle' | 'dormant' | 'unknown';
 
@@ -101,6 +102,48 @@ export async function getAllActivity(leagueId: string): Promise<Record<string, n
 	return result;
 }
 
+/**
+ * Which signal produced a franchise's blended last-seen time.
+ * `site` = a page view on our site, `mfl` = an owner-driven MFL roster move.
+ */
+export type ActivitySource = 'site' | 'mfl' | 'none';
+
+export interface BlendedActivity {
+	/** Last page view on our site, epoch ms, or null if never seen. */
+	siteVisit: number | null;
+	/** Last MFL-side sign of life, epoch ms, or null if we have none. */
+	mflSignal: number | null;
+	/** The more recent of the two — what the report ranks and grades on. */
+	lastSeen: number | null;
+	/** Which signal `lastSeen` came from. */
+	source: ActivitySource;
+}
+
+/**
+ * Blend our site-visit tracking with MFL-side activity.
+ *
+ * Neither signal alone is complete: site visits miss an owner who only ever
+ * logs into MFL, and MFL misses an owner who reads here and never touches
+ * their roster. The max of the two is the honest floor on "when was this owner
+ * last around", and both raw values are kept so the UI can show its work.
+ *
+ * Ties go to `site` — a page view is direct evidence of a human present, while
+ * a fallback waiver row is timestamped when the batch ran, not when the owner
+ * clicked.
+ */
+export function blendActivity(
+	siteVisit: number | null,
+	mflSignal: number | null,
+): BlendedActivity {
+	if (siteVisit === null && mflSignal === null) {
+		return { siteVisit: null, mflSignal: null, lastSeen: null, source: 'none' };
+	}
+	if (mflSignal !== null && (siteVisit === null || mflSignal > siteVisit)) {
+		return { siteVisit, mflSignal, lastSeen: mflSignal, source: 'mfl' };
+	}
+	return { siteVisit, mflSignal, lastSeen: siteVisit, source: 'site' };
+}
+
 /** Classify activity level based on time since last visit */
 export function getActivityLevel(lastVisitMs: number | null): ActivityLevel {
 	if (!lastVisitMs) return 'unknown';
@@ -157,6 +200,95 @@ export function formatLastSeenLong(timestampMs: number | null): string {
 	if (days === 1) return '1 day ago';
 	if (days < 30) return `${days} days ago`;
 	return `${Math.floor(days / 30)} month${Math.floor(days / 30) > 1 ? 's' : ''} ago`;
+}
+
+/**
+ * One row of the Owner Activity "Last Seen" table, as
+ * `OwnerActivityReport.astro` consumes it.
+ */
+export interface OwnerActivityRow {
+	franchiseId: string;
+	name: string;
+	icon: string;
+	/** The later of the site visit and the MFL signal — what the table ranks on. */
+	lastSeen: number | null;
+	/** Last page view on our site, epoch ms. */
+	siteVisit: number | null;
+	/** Last MFL LOGIN, epoch ms, from MFL's commissioner-only `lastVisit`. */
+	mflVisit: number | null;
+	/** Last owner-driven MFL roster move, epoch ms. */
+	mflMove: number | null;
+	source: ActivitySource;
+	level: ActivityLevel;
+	label: string;
+	timeAgo: string;
+	siteTimeAgo: string;
+	mflVisitTimeAgo: string;
+	mflMoveTimeAgo: string;
+	/** e.g. "trade" — what the most recent MFL move actually was. */
+	mflMoveLabel: string;
+}
+
+/**
+ * Build one Last Seen row: pick the MFL signal, blend it against the site
+ * visit, grade the result, and format every string the table needs.
+ *
+ * WHICH MFL SIGNAL. `mflVisit` is MFL's own `lastVisit` — a real login
+ * timestamp, and the better signal: an owner must log in to transact, so
+ * within a single MFL response a login is never older than a move.
+ *
+ * But the two reach us from DIFFERENT FILES on different cadences —
+ * `owner-last-visit.json` every 6 hours, the transactions feed every 5
+ * minutes — so that guarantee does not survive the trip. A trade made twenty
+ * minutes ago sits beside a login timestamp synced this morning. Taking the
+ * login on its own would then rank the owner by the older number while the
+ * row's own breakdown line said "Last move: 20m ago", which is both wrong and
+ * visibly self-contradictory. So the MFL signal is the LATER of the two, and
+ * the transaction also covers the case where there is no login at all (the
+ * sync has not run yet, or this is a league we are not commissioner of, where
+ * MFL withholds the field).
+ *
+ * Lives here rather than in the two `activity.astro` pages because they are
+ * forked siblings (`tests/page-fork-ratchet.test.ts`) — the league-specific
+ * part is only where the name, icon and feeds come from, and that stays in
+ * the routes.
+ */
+export function buildOwnerActivityRow(team: {
+	franchiseId: string;
+	name: string;
+	icon: string;
+	siteVisit: number | null;
+	mflVisit?: number | null;
+	move: MflMove | null;
+}): OwnerActivityRow {
+	const mflVisit = team.mflVisit ?? null;
+	const mflMove = team.move?.at ?? null;
+	const mflSignal =
+		mflVisit === null || mflMove === null ? (mflVisit ?? mflMove) : Math.max(mflVisit, mflMove);
+	const blended = blendActivity(team.siteVisit, mflSignal);
+	const level = getActivityLevel(blended.lastSeen);
+	return {
+		franchiseId: team.franchiseId,
+		name: team.name,
+		icon: team.icon,
+		lastSeen: blended.lastSeen,
+		siteVisit: blended.siteVisit,
+		mflVisit,
+		mflMove,
+		source: blended.source,
+		level,
+		label: getActivityLabel(level),
+		timeAgo: formatLastSeenLong(blended.lastSeen),
+		siteTimeAgo: blended.siteVisit === null ? '' : formatLastSeen(blended.siteVisit),
+		mflVisitTimeAgo: mflVisit === null ? '' : formatLastSeen(mflVisit),
+		mflMoveTimeAgo: mflMove === null ? '' : formatLastSeen(mflMove),
+		mflMoveLabel: team.move ? describeMoveType(team.move.type) : '',
+	};
+}
+
+/** Sort Last Seen rows by most recent sign of life, never-seen last. */
+export function sortByLastSeen(rows: OwnerActivityRow[]): OwnerActivityRow[] {
+	return rows.sort((a, b) => (b.lastSeen ?? 0) - (a.lastSeen ?? 0));
 }
 
 /** Date string for N days ago in YYYY-MM-DD format */

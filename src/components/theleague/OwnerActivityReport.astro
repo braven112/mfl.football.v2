@@ -3,7 +3,7 @@
 // each page (theleague / afl-fantasy) does its own data fetching + color
 // resolution, then hands the prepared data to this component to render.
 import Breadcrumbs from './Breadcrumbs.astro';
-import { type ActivityLevel } from '../../utils/owner-activity';
+import { type OwnerActivityRow } from '../../utils/owner-activity';
 import pageDirectory from '../../data/page-directory.json';
 
 const PAGE_NAMES: Record<string, string> = Object.fromEntries(
@@ -13,15 +13,9 @@ function pageName(path: string): string {
 	return PAGE_NAMES[path] || path.replace(/^\//, '').replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) || 'Homepage';
 }
 
-interface TeamActivity {
-	franchiseId: string;
-	name: string;
-	icon: string;
-	lastVisit: number | null;
-	level: ActivityLevel;
-	label: string;
-	timeAgo: string;
-}
+// The shared builder in owner-activity.ts owns this shape; both league routes
+// hand us rows straight out of it, so keep the alias rather than a second copy.
+type TeamActivity = OwnerActivityRow;
 
 interface TxLeaderboardEntry {
 	franchiseId: string;
@@ -74,7 +68,7 @@ const {
 	txSubtitle = 'Trades, free agent moves, and auction wins this season',
 } = Astro.props;
 
-const hasAnyData = teams.some((t) => t.lastVisit !== null);
+const hasAnyData = teams.some((t) => t.lastSeen !== null);
 const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 ---
 
@@ -85,7 +79,7 @@ const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 			{ label: 'Owner Activity' },
 		]} />
 		<h1 class="activity-page__title" id="activity-page-title">Owner Activity</h1>
-		<p class="activity-page__subtitle">Last time each owner visited the site</p>
+		<p class="activity-page__subtitle">Last time each owner was around — here or on MFL</p>
 	</div>
 
 	<!-- Daily Page Views Chart -->
@@ -226,16 +220,18 @@ const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 	<!-- Last Seen Table -->
 	<div class="section-header" style="margin-top:2rem">
 		<h2 class="section-header__title">Last Seen</h2>
-		<p class="section-header__sub">Ranked by most recent visit</p>
+		<p class="section-header__sub">
+			Ranked by most recent sign of life — a visit here, or a login on MFL
+		</p>
 	</div>
 
 	{!hasAnyData ? (
 		<div class="activity-page__empty" role="status">
-			<p>No activity data yet. Visit tracking begins once owners start logging in.</p>
+			<p>No activity data yet. Tracking begins once owners start visiting the site or making moves on MFL.</p>
 		</div>
 	) : (
 		<div class="table-wrapper">
-		<table class="activity-table" aria-label="Owner activity ranked by most recent visit">
+		<table class="activity-table" aria-label="Owner activity ranked by most recent site visit or MFL login">
 			<thead>
 				<tr>
 					<th scope="col" class="activity-table__th activity-table__th--rank">#</th>
@@ -264,7 +260,33 @@ const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 							</div>
 						</td>
 						<td class="activity-table__td activity-table__td--time">
-							{team.timeAgo}
+							<div class="activity-seen">
+								<span class="activity-seen__value">
+									{team.timeAgo}
+									{team.source !== 'none' && (
+										<span class="activity-seen__source" data-source={team.source}>
+											{team.source === 'mfl' ? 'MFL' : 'Site'}
+										</span>
+									)}
+								</span>
+								{team.lastSeen !== null && (
+									<span class="activity-seen__breakdown">
+										<span>Site: {team.siteTimeAgo || 'never'}</span>
+										{team.mflVisitTimeAgo && (
+											<Fragment>
+												<span aria-hidden="true">·</span>
+												<span>MFL: {team.mflVisitTimeAgo}</span>
+											</Fragment>
+										)}
+										{team.mflMoveTimeAgo && (
+											<Fragment>
+												<span aria-hidden="true">·</span>
+												<span>Last move: {team.mflMoveTimeAgo} ({team.mflMoveLabel})</span>
+											</Fragment>
+										)}
+									</span>
+								)}
+							</div>
 						</td>
 						<td
 							class="activity-table__td activity-table__td--status"
@@ -813,6 +835,52 @@ const hasChartData = chartTeams.some((t) => t.values.some((v) => v > 0));
 	.activity-team__name {
 		font-weight: 500;
 		color: var(--color-gray-700, #374151);
+	}
+
+	/* ── Last Seen cell ──
+	   Two lines: the blended value with a badge naming which signal won, and a
+	   quieter breakdown of both halves so a "3h ago" that came from a waiver
+	   batch is never mistaken for someone actually reading the site. */
+	.activity-seen {
+		display: flex;
+		flex-direction: column;
+		gap: 0.125rem;
+	}
+
+	.activity-seen__value {
+		display: flex;
+		align-items: center;
+		gap: 0.375rem;
+		flex-wrap: wrap;
+	}
+
+	.activity-seen__source {
+		font-size: 0.625rem;
+		font-weight: 700;
+		letter-spacing: 0.03em;
+		text-transform: uppercase;
+		padding: 0.0625rem 0.3125rem;
+		border-radius: var(--radius-md, 0.375rem);
+		border: 1px solid var(--content-border, var(--color-gray-200, #e5e7eb));
+		color: var(--color-gray-600, #4b5563);
+		background: var(--color-gray-50, #f9fafb);
+		white-space: nowrap;
+	}
+
+	.activity-seen__source[data-source='mfl'] {
+		border-color: var(--color-primary, #1c497c);
+		color: var(--color-primary, #1c497c);
+		background: transparent;
+	}
+
+	.activity-seen__breakdown {
+		display: flex;
+		align-items: center;
+		gap: 0.3125rem;
+		flex-wrap: wrap;
+		font-size: 0.6875rem;
+		line-height: 1.3;
+		color: var(--color-gray-500, #6b7280);
 	}
 
 	/* ── Status cell ── */
