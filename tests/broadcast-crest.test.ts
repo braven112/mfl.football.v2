@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import {
   broadcastStrokeIndex,
   resolveBroadcastCrest,
@@ -147,6 +147,29 @@ describe('resolveBroadcastCrest — the outline', () => {
     );
   });
 
+  it('never hands CSS a non-string colour', () => {
+    // `iconStrokeDark` is typed `string | boolean` so the raw config assigns,
+    // which makes `true` reachable. It has to come back as a real colour: a
+    // boolean reaches CSS as `--dbc-crest-stroke: true`, which invalidates the
+    // whole composed `filter` and costs the crest its drop shadow too.
+    const t = team({ groupMe: '/gm.png', iconStrokeDark: true });
+    const index = broadcastStrokeIndex('theleague', [t]);
+    const out = resolveBroadcastCrest(t, 'theleague', index);
+    expect(typeof out.iconStroke).toBe('string');
+    expect(out.iconStroke).toBe(DEFAULT_CREST_STROKE_COLOR);
+  });
+
+  it('reads `true` the same way the site-wide stroke builder does', () => {
+    // withStrokeColors treats any truthy `iconStrokeDark` as an opt-in. If this
+    // resolver disagreed, one config field would mean two things.
+    const t = team({ groupMe: '/gm.png', iconStrokeDark: true });
+    // Deliberately WITHOUT an index — the meaning must not depend on which team
+    // array the caller built one from.
+    expect(resolveBroadcastCrest(t, 'theleague').iconStroke).toBe(
+      DEFAULT_CREST_STROKE_COLOR
+    );
+  });
+
   it('honours a config opt-out that only the INDEX knows about', () => {
     // The index is passed in, so a caller can hand a team record rebuilt
     // without `iconStrokeDark` (the way franchise-band-brand rebuilds a
@@ -178,6 +201,28 @@ describe('every franchise, both leagues', () => {
         const out = resolveBroadcastCrest(t, league, index);
         expect(out.icon, `${t.nameMedium || t.name} icon`).toBeTruthy();
         expect(out.iconSmall, `${t.nameMedium || t.name} iconSmall`).toBeTruthy();
+      }
+    });
+
+    it(`${league}: every resolved crest path exists on disk`, () => {
+      // A missing crest degrades to NO crest on the TV, not to a smaller one.
+      // The existing guards do not cover this: tests/draft-broadcast.test.ts
+      // checks AFL config paths only, and tests/team-icon-dark-styles.test.ts
+      // only checks a `groupMe` belonging to a team that also has a
+      // `groupMeDark` — so a TheLeague franchise carrying just the light
+      // 400px art (Geeks, Cowboy Up, Dark Magicians) was unguarded, and this
+      // resolver returns exactly that path for them.
+      for (const t of cfg.teams) {
+        const out = resolveBroadcastCrest(t, league, index);
+        for (const [field, src] of [
+          ['icon', out.icon],
+          ['iconSmall', out.iconSmall],
+        ] as const) {
+          expect(
+            existsSync(`public${src}`),
+            `${t.nameMedium || t.name} ${field} -> ${src}`
+          ).toBe(true);
+        }
       }
     });
 

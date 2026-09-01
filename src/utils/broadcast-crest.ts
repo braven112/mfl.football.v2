@@ -63,8 +63,10 @@ export interface BroadcastCrestTeam {
    * Typed `string | boolean` rather than `string | false` so the raw config
    * array assigns without a cast — TypeScript widens a JSON `false` to
    * `boolean`, and a page passing `config.teams` straight in is the only way
-   * this is ever called. `true` is not a meaningful value; it falls through to
-   * the same signals a franchise that set nothing gets.
+   * this is ever called. That makes `true` type-legal, so it has to MEAN
+   * something: it opts the crest in at the default colour, which is what
+   * `withStrokeColors` already does with any truthy value. One config field
+   * must not mean two different things to its two readers.
    */
   iconStrokeDark?: string | boolean;
 }
@@ -115,6 +117,11 @@ function resolveStroke(
   const configured = team.iconStrokeDark;
   if (configured === false) return undefined;
   if (typeof configured === 'string' && configured) return configured;
+  // `true` opts in at the default colour — the same reading `withStrokeColors`
+  // gives any truthy value. Handled HERE rather than left to the index lookup
+  // below so the config field's meaning does not depend on which team array the
+  // caller happened to build the index from.
+  if (configured === true) return DEFAULT_CREST_STROKE_COLOR;
   if (team.iconDark) return DEFAULT_CREST_STROKE_COLOR;
   const franchiseId = team.franchiseId ?? '';
   if (!measured.has(franchiseId)) return undefined;
@@ -126,7 +133,13 @@ function resolveStroke(
   // franchise off its throwback identity). `false || DEFAULT` would then ring a
   // crest a human explicitly opted out of.
   if (entry === false) return undefined;
-  return entry || DEFAULT_CREST_STROKE_COLOR;
+  // Only a STRING is a colour. `withStrokeColors` copies `iconStrokeDark`
+  // through verbatim, so a `true` in the config arrives here as a boolean — and
+  // `entry || DEFAULT` would hand it straight out as the stroke colour. It then
+  // reaches CSS as `--dbc-crest-stroke: true`, which makes the whole composed
+  // `filter` invalid at computed-value time, so the crest loses its drop shadow
+  // as well as its ring. Caught by Codex in review.
+  return typeof entry === 'string' && entry ? entry : DEFAULT_CREST_STROKE_COLOR;
 }
 
 /**
