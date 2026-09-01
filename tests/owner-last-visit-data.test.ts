@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync } from 'fs';
 import { resolve } from 'path';
-import { extractLastVisits, assertNoContactInfo } from '../scripts/sync-owner-last-visit.mjs';
+import { extractLastVisits, assertPayloadHasNoContactInfo } from '../scripts/sync-owner-last-visit';
 import { ALL_LEAGUES } from '../src/config/leagues';
 
 /**
@@ -91,28 +91,31 @@ describe('extractLastVisits', () => {
 	});
 });
 
-describe('assertNoContactInfo', () => {
+describe('assertPayloadHasNoContactInfo', () => {
 	it('accepts a clean payload', () => {
 		expect(() =>
-			assertNoContactInfo({ generatedAt: 'x', lastVisit: { '0001': 1787915211 } }),
+			assertPayloadHasNoContactInfo({ generatedAt: 'x', lastVisit: { '0001': 1787915211 } }),
 		).not.toThrow();
 	});
 
 	it('throws when a value is not a number', () => {
-		expect(() => assertNoContactInfo({ lastVisit: { '0001': 'someone@example.com' } })).toThrow(
+		// Deliberately the wrong type — that is the case being guarded.
+		expect(() =>
+			assertPayloadHasNoContactInfo({ lastVisit: { '0001': 'someone@example.com' as unknown as number } }),
+		).toThrow(
 			/not a number/i,
 		);
 	});
 
 	it('throws when contact-shaped text reaches the payload', () => {
 		expect(() =>
-			assertNoContactInfo({ owner: 'someone@example.com', lastVisit: { '0001': 1787915211 } }),
+			assertPayloadHasNoContactInfo({ owner: 'someone@example.com', lastVisit: { '0001': 1787915211 } }),
 		).toThrow(/contact/i);
 	});
 
 	it('does not trip on the source line, which legitimately names an endpoint', () => {
 		expect(() =>
-			assertNoContactInfo({
+			assertPayloadHasNoContactInfo({
 				source: 'MFL export?TYPE=league (commissioner session)',
 				generatedAt: new Date().toISOString(),
 				lastVisit: { '0001': 1787915211 },
@@ -147,19 +150,25 @@ describe('committed owner-last-visit.json files', () => {
 		}
 	});
 
-	it('has a file for every league the sync workflow commits', () => {
-		// Guards the reverse failure: the workflow's add-paths naming a league
-		// whose file never appears means the sync silently stopped covering it.
-		// Skipped entirely until the first sync lands anything.
-		if (committedFiles.length === 0) return;
+	// The script probes EVERY registry league, but only leagues we are
+	// commissioner of produce a file. If add-paths ever named specific leagues,
+	// a league that later gained a commissioner would have its file written and
+	// silently never committed — so the pattern has to cover all of them.
+	it("the workflow's add-paths covers every league the script can write", () => {
 		const workflow = readFileSync(
 			resolve(ROOT, '.github/workflows/sync-owner-last-visit.yml'),
 			'utf-8',
 		);
-		for (const file of committedFiles) {
-			const league = ALL_LEAGUES.find((l) => l.slug === file.slug)!;
-			expect(workflow, `${file.slug} is committed but not in the workflow's add-paths`).toContain(
-				`${league.dataPath}/owner-last-visit.json`,
+		const addPaths = workflow.match(/add-paths:\s*'([^']+)'/)?.[1];
+		expect(addPaths, 'no add-paths found in the sync workflow').toBeTruthy();
+
+		for (const league of ALL_LEAGUES) {
+			const target = `${league.dataPath}/owner-last-visit.json`;
+			const covered = addPaths!
+				.split(/\s+/)
+				.some((pattern) => new RegExp(`^${pattern.replace(/[.]/g, '\\.').replace(/\*/g, '[^/]*')}$`).test(target));
+			expect(covered, `${league.slug}: ${target} is not covered by add-paths "${addPaths}"`).toBe(
+				true,
 			);
 		}
 	});

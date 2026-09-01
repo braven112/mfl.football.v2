@@ -28,13 +28,55 @@
  * cannot.
  *
  * Usage:
- *   MFL_USER_ID=... MFL_IS_COMMISH=... node scripts/probe-mfl-franchise-fields.mjs
- *   node scripts/probe-mfl-franchise-fields.mjs --league=theleague
+ *   MFL_USER_ID=... MFL_IS_COMMISH=... pnpm exec tsx scripts/probe-mfl-franchise-fields.ts
+ *   pnpm exec tsx scripts/probe-mfl-franchise-fields.ts --league=theleague
  */
 
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { mflFetch } from './lib/mfl-api.mjs';
+// A `.ts` script run through tsx so it can use the real league-year authority:
+// each MFL league-year is its own league and they do not all roll over on the
+// same date, so the calendar year asks for a league that does not exist yet for
+// weeks at a time — and a probe that queries the wrong league is worse than no
+// probe, because it answers confidently.
+import { getLeagueYearForSlug } from '../src/utils/league-year';
 import { resolveCookies } from './fetch-owner-names.mjs';
 import { LEAGUES } from '../src/config/leagues-data.mjs';
+
+interface LeagueEntry {
+	id: string;
+	slug: string;
+	name: string;
+	mflHost: string;
+}
+
+type Cookies = Record<string, string | undefined>;
+
+/** MFL's `TYPE=league` envelope, as far as this script reads it. */
+interface LeagueExport {
+	league?: {
+		franchises?: { franchise?: unknown };
+		[key: string]: unknown;
+	};
+}
+
+/** One league's probe outcome — an error, or a full result. */
+type ProbeResult =
+	| { league: string; error: string }
+	| {
+			league: string;
+			sessionProven: boolean;
+			newKeys: string[];
+			activityKeys: string[];
+			lgActivity: string[];
+		};
+
+/** Narrow a result to the error arm. */
+const isProbeError = (r: ProbeResult): r is { league: string; error: string } => 'error' in r;
+
+const messageOf = (err: unknown): string => (err instanceof Error ? err.message : String(err));
 
 const args = process.argv.slice(2);
 const onlyLeague = args.find((a) => a.startsWith('--league='))?.split('=')[1];
@@ -45,7 +87,7 @@ const ACTIVITY_NAME_PATTERN = /visit|online|login|logon|seen|active|access|lastm
 const TIMEISH_NAME_PATTERN = /visit|online|login|logon|seen|time|date|stamp|access/i;
 
 /** Redacted description of a value — its shape, never its content. */
-function classify(value) {
+function classify(value: unknown): string {
 	if (value === null || value === undefined) return 'null';
 	if (typeof value === 'object') return Array.isArray(value) ? `array(${value.length})` : 'object';
 	const str = String(value);
@@ -63,7 +105,7 @@ function classify(value) {
 }
 
 /** Decode a value to a date when the field name says it is a time. */
-function maybeDecodeDate(key, value) {
+function maybeDecodeDate(key: string, value: unknown): string | null {
 	if (!TIMEISH_NAME_PATTERN.test(key)) return null;
 	const str = String(value ?? '');
 	if (/^\d+$/.test(str)) {
@@ -75,9 +117,15 @@ function maybeDecodeDate(key, value) {
 	return null;
 }
 
-async function fetchLeagueExport(league, year, cookies) {
+async function fetchLeagueExport(
+	league: LeagueEntry,
+	year: number,
+	cookies: Cookies,
+): Promise<LeagueExport> {
 	const url = `https://${league.mflHost}/${year}/export?TYPE=league&L=${league.id}&JSON=1`;
-	const res = await mflFetch({ url, cookies, timeoutMs: 20_000 });
+	// `body` is optional for a GET; the helper is untyped .mjs and infers it as
+	// required, so pass it explicitly rather than casting the call away.
+	const res = await mflFetch({ url, cookies, body: undefined, timeoutMs: 20_000 });
 	const text = await res.text();
 	if (!res.ok) throw new Error(`HTTP ${res.status} for ${league.slug}`);
 	try {
@@ -88,21 +136,21 @@ async function fetchLeagueExport(league, year, cookies) {
 	}
 }
 
-function franchisesOf(payload) {
+function franchisesOf(payload: LeagueExport): Record<string, unknown>[] {
 	const raw = payload?.league?.franchises?.franchise;
-	if (Array.isArray(raw)) return raw;
-	if (raw && typeof raw === 'object') return [raw];
+	if (Array.isArray(raw)) return raw as Record<string, unknown>[];
+	if (raw && typeof raw === 'object') return [raw as Record<string, unknown>];
 	return [];
 }
 
 /** Every key on the league object itself, excluding the franchise list. */
-function leagueLevelKeys(payload) {
+function leagueLevelKeys(payload: LeagueExport): string[] {
 	const lg = payload?.league ?? {};
 	return Object.keys(lg).filter((k) => k !== 'franchises').sort();
 }
 
-async function probeLeague(league, cookies) {
-	const year = new Date().getFullYear();
+async function probeLeague(league: LeagueEntry, cookies: Cookies): Promise<ProbeResult> {
+	const year = getLeagueYearForSlug(league.slug);
 	console.log(`\n${'='.repeat(72)}`);
 	console.log(`${league.name} (L=${league.id}, ${year}, host ${league.mflHost})`);
 	console.log('='.repeat(72));
@@ -168,26 +216,26 @@ async function probeLeague(league, cookies) {
 	return { league: league.slug, sessionProven, newKeys, activityKeys, lgActivity };
 }
 
-async function main() {
+async function main(): Promise<void> {
 	const cookies = await resolveCookies();
 	console.log('Probing MFL authenticated TYPE=league for a last-visit / last-online field.');
 	console.log('Values are redacted throughout; only field NAMES and shapes are printed.');
 
 	const targets = Object.values(LEAGUES).filter((l) => !onlyLeague || l.slug === onlyLeague);
-	const results = [];
+	const results: ProbeResult[] = [];
 	for (const league of targets) {
 		try {
 			results.push(await probeLeague(league, cookies));
 		} catch (err) {
-			console.error(`\n${league.slug}: probe failed — ${err.message}`);
-			results.push({ league: league.slug, error: err.message });
+			console.error(`\n${league.slug}: probe failed — ${messageOf(err)}`);
+			results.push({ league: league.slug, error: messageOf(err) });
 		}
 	}
 
 	console.log(`\n${'='.repeat(72)}\nVERDICT\n${'='.repeat(72)}`);
 	let anyInconclusive = false;
 	for (const r of results) {
-		if (r.error) {
+		if (isProbeError(r)) {
 			anyInconclusive = true;
 			console.log(`${r.league}: ERROR — ${r.error}`);
 			continue;
@@ -207,7 +255,14 @@ async function main() {
 	if (anyInconclusive) process.exitCode = 1;
 }
 
-main().catch((err) => {
-	console.error(err);
-	process.exit(1);
-});
+// Guarded like fetch-owner-names.mjs and the sync script: without this, merely
+// importing the module fires live authenticated MFL requests and can
+// process.exit(1) out of the middle of a test run.
+const isMain =
+	process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (isMain) {
+	main().catch((err) => {
+		console.error(err);
+		process.exit(1);
+	});
+}

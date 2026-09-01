@@ -229,7 +229,17 @@ const txLeaderboard = aflConfig.teams
 // import so a league without the file yet builds fine instead of failing on a
 // missing module. Empty map = fall back to transaction recency.
 const lastVisitFiles = import.meta.glob('../../../data/afl-fantasy/owner-last-visit.json', { eager: true });
-const mflVisitMap: Record<string, number> = (() => {
+const mflVisitMap: Record<string, number> = useMock
+	? // Mock MFL logins, so ?mock stays self-contained. Reading the real file here
+	  // would mix live owner login times into a fixture page and make the mock's
+	  // own move fixtures unreachable. Every third franchise is left out so the
+	  // transaction fallback is exercised too.
+	  Object.fromEntries(
+			franchiseIds
+				.filter((_fid: string, i: number) => i % 3 !== 0)
+				.map((fid: string, i: number) => [fid, Date.now() - ((i * 7) % 60) * 3_600_000]),
+		)
+	: (() => {
 	const mod: any = Object.values(lastVisitFiles)[0];
 	const data = mod && typeof mod === 'object' && 'default' in mod ? mod.default : mod;
 	const raw = data?.lastVisit;

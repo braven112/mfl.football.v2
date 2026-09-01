@@ -201,6 +201,24 @@ describe('buildOwnerActivityRow — which MFL signal wins', () => {
 		expect(withLogin.source).toBe('mfl');
 	});
 
+	// THE BUG THIS PREVENTS: lastVisit is synced every 6h and transactions every
+	// 5 min, so a move can be NEWER than the login on file. Taking the login
+	// alone ranked the owner by the older number while the row's own breakdown
+	// line read "Last move: 20m ago" — wrong, and visibly self-contradictory.
+	it('takes the later of login and move when the move is fresher', () => {
+		const row = buildOwnerActivityRow({
+			...base,
+			siteVisit: hoursAgo(200),
+			mflVisit: hoursAgo(6),
+			move: { at: hoursAgo(1), type: 'TRADE' },
+		});
+		expect(row.lastSeen).toBe(hoursAgo(1));
+		expect(row.source).toBe('mfl');
+		// Both raw halves still render, so the breakdown agrees with the headline.
+		expect(row.mflVisit).toBe(hoursAgo(6));
+		expect(row.mflMove).toBe(hoursAgo(1));
+	});
+
 	it('falls back to transaction recency when no login is available', () => {
 		const row = buildOwnerActivityRow({
 			...base,

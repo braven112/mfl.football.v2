@@ -100,7 +100,7 @@
   one was written off as nonexistent on anonymous evidence in Aug 2026.
   Probe with the cookie, and make the probe assert it actually authenticated
   — an anonymous response is missing the field too, so the two look
-  identical. `scripts/probe-mfl-franchise-fields.mjs` is the pattern.
+  identical. `scripts/probe-mfl-franchise-fields.ts` is the pattern.
 - **Don't ship inferred parameter names to a write endpoint.** Transaction-log
   fields are past-tense (`activated`); import params are verbs (`ACTIVATE`), and
   the direction is inverted. That one-letter guess burned five PRs.
@@ -244,7 +244,7 @@ lesson: every check was run ANONYMOUSLY, and anonymously it is true.
 **The field is `lastVisit`** — epoch SECONDS, on the franchise record of
 `export?TYPE=league`, populated for every franchise. It appears ONLY when the
 request carries a commissioner cookie. Proven by
-`scripts/probe-mfl-franchise-fields.mjs` (2026-08-30 run): TheLeague 16/16 and
+`scripts/probe-mfl-franchise-fields.ts` (2026-08-30 run): TheLeague 16/16 and
 AFL 24/24 populated.
 
 **Why it hid for years.** All four of these are true and none of them found it:
@@ -282,7 +282,7 @@ no `lastVisit` — so the sync treats "no lastVisit AND no committed file" as a
 routine skip, and "no lastVisit BUT a committed file exists" as a credential
 regression.
 
-**How it is consumed.** `scripts/sync-owner-last-visit.mjs` (cron:
+**How it is consumed.** `scripts/sync-owner-last-visit.ts` (cron:
 `.github/workflows/sync-owner-last-visit.yml`, every 6h) writes
 `data/<league>/owner-last-visit.json`. It must run in Actions, not at page
 render: the commissioner cookie is a GitHub secret and does not exist in the

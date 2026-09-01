@@ -10,7 +10,7 @@
  * returned to an ANONYMOUS caller carries only id/name/abbrev/division/
  * waiverSortOrder/icon/logo/bbidAvailableBalance/salaryCapAmount/stadium/sound
  * (verified across 60 public leagues, Aug 2026). The real value is fetched in
- * CI by `scripts/sync-owner-last-visit.mjs` and committed, because the
+ * CI by `scripts/sync-owner-last-visit.ts` and committed, because the
  * commissioner cookie cannot exist in the page runtime.
  *
  * Transaction recency is the FALLBACK for where that value is unavailable: a

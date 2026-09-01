@@ -12,7 +12,7 @@ name: Probe MFL Franchise Fields
 #
 # PRIVACY: the authenticated response carries real email addresses. The script
 # prints FIELD NAMES and redacted value SHAPES only — never a value. See the
-# header of scripts/probe-mfl-franchise-fields.mjs.
+# header of scripts/probe-mfl-franchise-fields.ts.
 #
 # Read-only: a GET against `export?TYPE=league`. It writes nothing to MFL and
 # commits nothing here.
@@ -59,11 +59,14 @@ jobs:
           MFL_IS_COMMISH: ${{ secrets.MFL_IS_COMMISH }}
           MFL_USERNAME: ${{ secrets.MFL_USERNAME }}
           MFL_PASSWORD: ${{ secrets.MFL_PASSWORD }}
+          # Env var, not `${{ }}` inside `run:` — see the note in
+          # sync-owner-last-visit.yml. Same runner, same credentials.
+          INPUT_LEAGUE: ${{ inputs.league }}
         run: |
           set -o pipefail
           ARGS=""
-          if [ -n "${{ inputs.league }}" ]; then ARGS="--league=${{ inputs.league }}"; fi
-          node ./scripts/probe-mfl-franchise-fields.mjs $ARGS 2>&1 | tee /tmp/probe.txt
+          if [ -n "$INPUT_LEAGUE" ]; then ARGS="--league=$INPUT_LEAGUE"; fi
+          pnpm exec tsx ./scripts/probe-mfl-franchise-fields.ts $ARGS 2>&1 | tee /tmp/probe.txt
 
       - name: Summarise
         if: always()

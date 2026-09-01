@@ -234,11 +234,19 @@ export interface OwnerActivityRow {
  * visit, grade the result, and format every string the table needs.
  *
  * WHICH MFL SIGNAL. `mflVisit` is MFL's own `lastVisit` — a real login
- * timestamp, and strictly the better signal: an owner must log in to
- * transact, so a login is never older than their last move. When it is
- * missing (the sync has not run yet, or this is a league we are not
- * commissioner of, where MFL withholds the field) the last transaction is the
- * fallback — a floor on the same quantity rather than a different one.
+ * timestamp, and the better signal: an owner must log in to transact, so
+ * within a single MFL response a login is never older than a move.
+ *
+ * But the two reach us from DIFFERENT FILES on different cadences —
+ * `owner-last-visit.json` every 6 hours, the transactions feed every 5
+ * minutes — so that guarantee does not survive the trip. A trade made twenty
+ * minutes ago sits beside a login timestamp synced this morning. Taking the
+ * login on its own would then rank the owner by the older number while the
+ * row's own breakdown line said "Last move: 20m ago", which is both wrong and
+ * visibly self-contradictory. So the MFL signal is the LATER of the two, and
+ * the transaction also covers the case where there is no login at all (the
+ * sync has not run yet, or this is a league we are not commissioner of, where
+ * MFL withholds the field).
  *
  * Lives here rather than in the two `activity.astro` pages because they are
  * forked siblings (`tests/page-fork-ratchet.test.ts`) — the league-specific
@@ -255,7 +263,9 @@ export function buildOwnerActivityRow(team: {
 }): OwnerActivityRow {
 	const mflVisit = team.mflVisit ?? null;
 	const mflMove = team.move?.at ?? null;
-	const blended = blendActivity(team.siteVisit, mflVisit ?? mflMove);
+	const mflSignal =
+		mflVisit === null || mflMove === null ? (mflVisit ?? mflMove) : Math.max(mflVisit, mflMove);
+	const blended = blendActivity(team.siteVisit, mflSignal);
 	const level = getActivityLevel(blended.lastSeen);
 	return {
 		franchiseId: team.franchiseId,

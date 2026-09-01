@@ -9,7 +9,7 @@
  * every franchise. Anonymously the field does not exist at all, which is why
  * every `league.json` committed in this repo lacks it and why the API looked
  * for years like it had no such value. (Proved by
- * `scripts/probe-mfl-franchise-fields.mjs`; see the write-up in
+ * `scripts/probe-mfl-franchise-fields.ts`; see the write-up in
  * `docs/claude/insights/domains/mfl-api.md`.)
  *
  * WHY A COMMITTED FILE rather than a live fetch: the commissioner cookie lives
@@ -21,12 +21,26 @@
  * ADDRESSES, phone numbers, street addresses and real names. This script
  * whitelists exactly two fields per franchise (`id`, `lastVisit`) and then
  * asserts the payload it is about to write contains nothing contact-shaped.
+ * (Named distinctly from `fetch-owner-names.mjs`'s `assertNoContactInfo`,
+ * which guards a single name STRING — same concern, different shape.)
  * It throws rather than write if that assertion fails. Never widen the
  * whitelist without re-reading that check.
  *
+ * WHICH YEAR. Each MFL league-year is a separate league, and the leagues here
+ * do NOT roll over on the same date — TheLeague on Feb 14, the AFL and
+ * best-ball on Jun 1 (`leagueYearRollover` in the registry). The calendar year
+ * is therefore the wrong number for months at a time: on Jan 2 it asks MFL for
+ * a 2027 league that will not exist until Feb 14, gets an anonymous payload
+ * back, and reports it as expired credentials every 6 hours. Resolve it through
+ * `getLeagueYearForSlug`, never `new Date().getFullYear()` and never a re-port
+ * of the formula (CLAUDE.md: that one has shipped wrong in five files).
+ *
+ * This is a `.ts` script run through tsx for exactly that reason —
+ * `league-year.ts` is the authority and a plain `.mjs` cannot import it.
+ *
  * Usage:
- *   MFL_USER_ID=... MFL_IS_COMMISH=... node scripts/sync-owner-last-visit.mjs
- *   node scripts/sync-owner-last-visit.mjs --league=theleague --dry-run
+ *   MFL_USER_ID=... MFL_IS_COMMISH=... pnpm exec tsx scripts/sync-owner-last-visit.ts
+ *   pnpm exec tsx scripts/sync-owner-last-visit.ts --league=theleague --dry-run
  */
 
 import fs from 'node:fs';
@@ -35,8 +49,40 @@ import { fileURLToPath } from 'node:url';
 
 import { mflFetch } from './lib/mfl-api.mjs';
 import { resolveCookies } from './fetch-owner-names.mjs';
-import { writeJsonIfChanged } from './lib/canonical-json.mjs';
+import { writeJsonIfChanged as writeJsonIfChangedUntyped } from './lib/canonical-json.mjs';
 import { LEAGUES } from '../src/config/leagues-data.mjs';
+import { getLeagueYearForSlug } from '../src/utils/league-year';
+
+/**
+ * `canonical-json.mjs` is untyped JS, so TS infers its `ignoreKeys = []`
+ * default as `never[]` and rejects any real key list. Give it its actual
+ * signature once here rather than casting at the call site.
+ */
+const writeJsonIfChanged = writeJsonIfChangedUntyped as (
+	filePath: string,
+	data: unknown,
+	opts?: { ignoreKeys?: string[] },
+) => boolean;
+
+/** The registry shape this script needs. */
+interface LeagueEntry {
+	id: string;
+	slug: string;
+	name: string;
+	mflHost: string;
+	dataPath: string;
+}
+
+/** What gets written to disk — id -> epoch SECONDS, and nothing else. */
+interface LastVisitPayload {
+	generatedAt: string;
+	leagueId: string;
+	year: number;
+	source: string;
+	lastVisit: Record<string, number>;
+}
+
+type Cookies = Record<string, string | undefined>;
 
 const ROOT = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 
@@ -51,7 +97,7 @@ const ALLOWED_FIELDS = ['id', 'lastVisit'];
 const MIN_EPOCH_SECONDS = 946_684_800; // 2000-01-01
 const MAX_EPOCH_SECONDS = 4_102_444_800; // 2100-01-01
 
-export function outputPathFor(league) {
+export function outputPathFor(league: Pick<LeagueEntry, 'dataPath'>): string {
 	return path.join(ROOT, league.dataPath, 'owner-last-visit.json');
 }
 
@@ -63,7 +109,7 @@ export function outputPathFor(league) {
  * renames `lastVisit` into something carrying a string, hits this instead of
  * committing an owner's email address to a public git history.
  */
-export function assertNoContactInfo(payload) {
+export function assertPayloadHasNoContactInfo(payload: Partial<LastVisitPayload> & Record<string, unknown>): void {
 	const CONTACT_SHAPED = /@|\bhttps?:\/\/|\.com\b|\.net\b|\.org\b/i;
 	for (const [franchiseId, value] of Object.entries(payload.lastVisit ?? {})) {
 		if (typeof value !== 'number' || !Number.isFinite(value)) {
@@ -80,27 +126,36 @@ export function assertNoContactInfo(payload) {
 }
 
 /** Pull `{ franchiseId: epochSeconds }` out of an authenticated league export. */
-export function extractLastVisits(payload) {
-	const raw = payload?.league?.franchises?.franchise;
-	const franchises = Array.isArray(raw) ? raw : raw && typeof raw === 'object' ? [raw] : [];
-	const out = {};
+export function extractLastVisits(payload: unknown): Record<string, number> {
+	const raw = (payload as { league?: { franchises?: { franchise?: unknown } } })?.league?.franchises
+		?.franchise;
+	const franchises: Record<string, unknown>[] = Array.isArray(raw)
+		? (raw as Record<string, unknown>[])
+		: raw && typeof raw === 'object'
+			? [raw as Record<string, unknown>]
+			: [];
+	const out: Record<string, number> = {};
 	for (const franchise of franchises) {
 		// Whitelist, rather than delete-the-rest: an unknown new private field
 		// is then never carried along by accident.
 		const picked = Object.fromEntries(
 			ALLOWED_FIELDS.filter((k) => k in franchise).map((k) => [k, franchise[k]]),
 		);
-		if (!picked.id) continue;
+		const id = typeof picked.id === 'string' ? picked.id : '';
+		if (!id) continue;
 		const seconds = Number(picked.lastVisit);
 		if (!Number.isFinite(seconds) || seconds < MIN_EPOCH_SECONDS || seconds > MAX_EPOCH_SECONDS) continue;
-		out[picked.id] = seconds;
+		out[id] = seconds;
 	}
 	return out;
 }
 
-async function syncLeague(league, cookies, year) {
+async function syncLeague(league: LeagueEntry, cookies: Cookies): Promise<boolean> {
+	const year = getLeagueYearForSlug(league.slug);
 	const url = `https://${league.mflHost}/${year}/export?TYPE=league&L=${league.id}&JSON=1`;
-	const res = await mflFetch({ url, cookies, timeoutMs: 20_000 });
+	// `body` is optional for a GET; the helper is untyped .mjs and infers it
+	// as required, so pass it explicitly rather than casting the call away.
+	const res = await mflFetch({ url, cookies, body: undefined, timeoutMs: 20_000 });
 	const text = await res.text();
 	if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
@@ -142,7 +197,7 @@ async function syncLeague(league, cookies, year) {
 		source: 'MFL export?TYPE=league (commissioner session)',
 		lastVisit,
 	};
-	assertNoContactInfo(payload);
+	assertPayloadHasNoContactInfo(payload);
 
 	const outPath = outputPathFor(league);
 	const newest = Math.max(...Object.values(lastVisit));
@@ -164,19 +219,27 @@ async function syncLeague(league, cookies, year) {
 	return wrote;
 }
 
-async function main() {
+async function main(): Promise<void> {
 	const cookies = await resolveCookies();
-	const year = new Date().getFullYear();
 	const targets = Object.values(LEAGUES).filter((l) => !onlyLeague || l.slug === onlyLeague);
+
+	// A typo'd --league= would otherwise select nothing, sync nothing, and exit
+	// 0 — a green run that did no work is worse than a red one.
+	if (targets.length === 0) {
+		console.error(
+			`No league matches --league=${onlyLeague}. Known slugs: ${Object.keys(LEAGUES).join(', ')}`,
+		);
+		process.exit(1);
+	}
 
 	let failures = 0;
 	for (const league of targets) {
 		try {
-			await syncLeague(league, cookies, year);
+			await syncLeague(league, cookies);
 		} catch (err) {
 			// Keep going so one league's failure does not lose the others' sync,
 			// but remember it — the exit code below reports it.
-			console.error(`${league.slug}: ${err.message}`);
+			console.error(`${league.slug}: ${err instanceof Error ? err.message : String(err)}`);
 			failures++;
 		}
 	}
@@ -192,7 +255,7 @@ async function main() {
 const isMain =
 	process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) {
-	main().catch((err) => {
+	main().catch((err: unknown) => {
 		console.error(err);
 		process.exit(1);
 	});

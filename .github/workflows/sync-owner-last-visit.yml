@@ -63,12 +63,18 @@ jobs:
           MFL_IS_COMMISH: ${{ secrets.MFL_IS_COMMISH }}
           MFL_USERNAME: ${{ secrets.MFL_USERNAME }}
           MFL_PASSWORD: ${{ secrets.MFL_PASSWORD }}
+          # Dispatch inputs reach the shell as env vars, never interpolated into
+          # `run:` — a `${{ }}` expansion is substituted before bash sees the
+          # script, so a crafted value would execute on a runner holding
+          # `contents: write` and the MFL commissioner cookie.
+          INPUT_LEAGUE: ${{ inputs.league }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
         run: |
           set -o pipefail
           ARGS=""
-          if [ -n "${{ inputs.league }}" ]; then ARGS="$ARGS --league=${{ inputs.league }}"; fi
-          if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
-          node ./scripts/sync-owner-last-visit.mjs $ARGS 2>&1 | tee /tmp/last-visit.txt
+          if [ -n "$INPUT_LEAGUE" ]; then ARGS="$ARGS --league=$INPUT_LEAGUE"; fi
+          if [ "$INPUT_DRY_RUN" = "true" ]; then ARGS="$ARGS --dry-run"; fi
+          pnpm exec tsx ./scripts/sync-owner-last-visit.ts $ARGS 2>&1 | tee /tmp/last-visit.txt
 
       # The guard test is the backstop against a malformed or contact-carrying
       # file landing — cheaper to fail here than to commit it.
@@ -80,7 +86,10 @@ jobs:
         if: inputs.dry_run != true
         uses: ./.github/actions/commit-push
         with:
-          add-paths: 'data/theleague/owner-last-visit.json data/afl-fantasy/owner-last-visit.json'
+          # Glob, not two literals: the script probes every registry league, so a
+          # league that later gains a commissioner would otherwise have its file
+          # written and never committed.
+          add-paths: 'data/*/owner-last-visit.json'
           commit-message: 'chore: sync owner last-visit from MFL'
           no-changes-message: 'No owner visited MFL since the last sync — nothing to commit.'
           git-user-name: 'Owner Activity Bot'
