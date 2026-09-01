@@ -4,6 +4,14 @@
     {
       "date": "2026-09-01",
       "type": "bug-fix",
+      "summary": "Every record Schefter quoted was double what it actually was. MyFantasyLeague reports a team's head-to-head wins as one total plus two breakdowns of that same total — division games and everything else — and the article generator was adding all three together, so last season's 15-3 leader was handed to the writer as 30-6. It affected every recap, both previews, team grades and the championship writeup: essentially every article that has ever mentioned a record. The fact sheet now reads the record straight off the league standings and is checked against MyFantasyLeague's own W-L string for all sixteen teams.",
+      "impact": "user",
+      "area": "schefter",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-09-01",
+      "type": "bug-fix",
       "summary": "Team crests on the Set Lineup matchup cards and the Tuesday recap hero now hold up in light mode. Those panels are dark whatever theme you browse in — a near-black gradient with white type — but the logo on them was being chosen as if they followed the theme, so anyone reading the site in light mode got the light artwork sitting on ink, and the near-black crests simply weren't there. Thirteen of TheLeague's sixteen teams now wear their dark-mode crest on those cards. Six more do on the AFL side — Smokane, the Drunk Indians, Jewpacabra, Badd Boys, Chatmaster and No Soup — and the four whose logo still needs help separating from the panel get a fine outline traced around the logo's own shape: Harambe, Suh girls, Swiftie and the Boondock Saints, in their own trim colour where they have one. The two leagues' lineup pages had quietly disagreed about this for months: the AFL had worked it out at launch and TheLeague's copy never did.",
       "impact": "user",
       "area": "design-system",
