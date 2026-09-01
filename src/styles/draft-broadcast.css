@@ -422,6 +422,51 @@
   user-select: none;
 }
 
+/* ── Franchise crest outline ────────────────────────────────────────────────
+ *
+ * The board is dark in BOTH themes, so the site's measured white stroke
+ * (`crest-dark-stroke-css.ts`) never reaches it: that rule is `html.dark`-
+ * scoped, and a light-theme owner driving the TV would get no outline at all
+ * on a crest that needs one. WHICH crests need one, and in what colour, is
+ * decided server-side by `resolveBroadcastCrest` and arrives as
+ * `--dbc-crest-stroke` on the element itself.
+ *
+ * The WIDTH cannot be shared, which is why it is a per-surface variable rather
+ * than part of the filter: these four crests are 68vh, ~34vh, ~14vh and ~4vh,
+ * so any single literal is either invisible on the reveal or a sticker outline
+ * on the rail. Each surface sets `--dbc-crest-ring-w` to ~0.5% of its own
+ * rendered size — and because both are in `vh`, that ratio then holds across
+ * viewport sizes on its own; only a rule that changes the crest's multiplier
+ * has to restate it.
+ *
+ * `drop-shadow`, not `outline` or a background plate, for the same reason the
+ * site-wide stroke uses it: it is the only one that follows the image's ALPHA
+ * silhouette rather than drawing its bounding box, which on a transparent PNG
+ * is a white square around a logo. Four cardinal shadows compose — each applies
+ * to the previous one's result — so the corners fill in and the net effect is a
+ * continuous ring.
+ *
+ * `opacity(1)` is the no-op default, and it is load-bearing: `filter` does not
+ * compose across rules, so every crest rule below has to read
+ * `var(--dbc-crest-ring)` INLINE alongside its own drop shadow, and an
+ * un-stroked crest needs a value there that changes nothing. */
+.dbc-reveal__crest,
+.dbc-idle__crest,
+.dbc-idle__row-icon,
+.dbc-panel__crest {
+  --dbc-crest-ring: opacity(1);
+}
+
+/* Scoped under `.dbc` purely to outrank the per-surface defaults above — they
+   are single classes too, so without it this would depend on source order. */
+.dbc .dbc-crest--stroked {
+  --dbc-crest-ring:
+    drop-shadow(var(--dbc-crest-ring-w, 0.5px) 0 0 var(--dbc-crest-stroke))
+    drop-shadow(calc(-1 * var(--dbc-crest-ring-w, 0.5px)) 0 0 var(--dbc-crest-stroke))
+    drop-shadow(0 var(--dbc-crest-ring-w, 0.5px) 0 var(--dbc-crest-stroke))
+    drop-shadow(0 calc(-1 * var(--dbc-crest-ring-w, 0.5px)) 0 var(--dbc-crest-stroke));
+}
+
 /* With the banner gone this crest is the only franchise ARTWORK on the reveal,
    so it carries more weight than the site-standard 0.16 watermark — it has to
    answer "who drafted him" on its own, from across a room.
@@ -445,7 +490,8 @@
   height: 68vh;
   object-fit: contain;
   opacity: 0.42;
-  filter: drop-shadow(0 1vh 3vh rgba(0, 0, 0, 0.45));
+  --dbc-crest-ring-w: 0.36vh;
+  filter: var(--dbc-crest-ring) drop-shadow(0 1vh 3vh rgba(0, 0, 0, 0.45));
   pointer-events: none;
 }
 
@@ -1034,11 +1080,12 @@
      one-word lines. */
   width: min(34vh, 32vw);
   height: min(34vh, 32vw);
+  --dbc-crest-ring-w: 0.18vh;
   /* The row is a flex container; without this the crest is the first thing
      squeezed when a long name wants room. */
   flex: 0 0 auto;
   object-fit: contain;
-  filter: drop-shadow(0 1vh 2vh rgba(0, 0, 0, 0.5));
+  filter: var(--dbc-crest-ring) drop-shadow(0 1vh 2vh rgba(0, 0, 0, 0.5));
   animation: dbc-crest-in 1050ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
@@ -1270,6 +1317,11 @@
   height: 3.6vh;
   object-fit: contain;
   flex: none;
+  /* A flat hairline rather than a vh fraction: this crest is ~40px however the
+     board is sized, and 0.5px is the width the site-wide stroke settled on for
+     exactly that scale (see CREST_STROKE_WIDTH). */
+  --dbc-crest-ring-w: 0.5px;
+  filter: var(--dbc-crest-ring);
 }
 
 .dbc-idle__empty {
@@ -1355,6 +1407,7 @@
   .dbc-idle__crest {
     width: min(24vh, 30vw);
     height: min(24vh, 30vw);
+    --dbc-crest-ring-w: 0.13vh;
   }
 
   .dbc-idle__clock {
@@ -1451,6 +1504,7 @@
     width: 91vh;
     height: 91vh;
     opacity: 0.32;
+    --dbc-crest-ring-w: 0.4vh;
   }
 
   /* Type scales off the short axis so nothing overruns 400px of height. */
@@ -1649,6 +1703,7 @@
   .dbc-reveal__crest {
     width: 41vh;
     height: 41vh;
+    --dbc-crest-ring-w: 0.2vh;
     /* `left`, `top` AND `transform` re-pinned, not just `right`: the base layer
        centres the crest (left: 50%/top: 50%, translate(-50%, -50%)) for the TV,
        and with a width set `left` wins over `right` outright — leave any of the
@@ -1694,6 +1749,7 @@
   .dbc-idle__crest {
     width: min(17vh, 26vw);
     height: min(17vh, 26vw);
+    --dbc-crest-ring-w: 0.09vh;
   }
 }
 
@@ -1806,7 +1862,8 @@
   width: min(14vh, 16vw);
   height: min(14vh, 16vw);
   object-fit: contain;
-  filter: drop-shadow(0 0.6vh 1.2vh rgba(0, 0, 0, 0.45));
+  --dbc-crest-ring-w: 0.08vh;
+  filter: var(--dbc-crest-ring) drop-shadow(0 0.6vh 1.2vh rgba(0, 0, 0, 0.45));
 }
 
 /* `min-width: 0` is what lets a long franchise name ellipsize instead of
@@ -2017,5 +2074,6 @@
   .dbc-panel__crest {
     width: min(11vh, 13vw);
     height: min(11vh, 13vw);
+    --dbc-crest-ring-w: 0.06vh;
   }
 }

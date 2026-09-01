@@ -26,6 +26,7 @@ import { useCallback } from 'react';
 import type { DraftRoomTeam } from '../../../types/draft-room';
 import type { BroadcastPlayer } from '../../../types/draft-broadcast';
 import {
+  crestStrokeProps,
   resolveBroadcastGradient,
   toBroadcastPair,
   type PositionTally,
@@ -129,8 +130,18 @@ export function BroadcastRosterPanel({
     <div className="dbc-panel dbc-panel--roster" style={brandStyle(team)}>
       <div className="dbc-panel__wash" aria-hidden="true" />
       <header className="dbc-panel__head">
-        {team?.icon ? (
-          <img className="dbc-panel__crest" src={team.icon} alt="" onError={hideOnError} />
+        {/* `iconSmall`, not `icon`: this crest is ~14vh, small enough that a
+            100x100 dark cut is not upscaled enough to show, so the franchise's
+            own dark artwork beats the higher-resolution light one here. The
+            reveal and idle crests make the opposite trade — see
+            `resolveBroadcastCrest`. */}
+        {team?.iconSmall ? (
+          <img
+            {...crestStrokeProps('dbc-panel__crest', team.iconSmallStroke)}
+            src={team.iconSmall}
+            alt=""
+            onError={hideOnError}
+          />
         ) : null}
         <div className="dbc-panel__title">
           <p className="dbc-panel__eyebrow">{role === 'clock' ? 'On the clock' : 'On deck'}</p>

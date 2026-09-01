@@ -106,7 +106,16 @@ export function planBroadcastImages({
     bump();
   };
 
-  for (const team of teams) push(team.icon, () => (crests += 1));
+  // BOTH crests per franchise: a team whose only dark cut is a 100px `iconDark`
+  // wears different artwork on the big surfaces and the small ones (see
+  // `resolveBroadcastCrest`), and warming only one of the two leaves whichever
+  // screen comes up first fetching a crest cold. `push` dedupes, so the
+  // majority of franchises — where the two resolve to the same file — still
+  // cost exactly one entry.
+  for (const team of teams) {
+    push(team.icon, () => (crests += 1));
+    push(team.iconSmall, () => (crests += 1));
+  }
 
   // Sorted on a COPY: `players` is the island's own prop, and the reveal card
   // reads that array's order to seat the defender chips.

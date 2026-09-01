@@ -6,6 +6,7 @@
  * animation and layout; everything here is data → data.
  */
 
+import type { CSSProperties } from 'react';
 import type { DraftRoomPick, DraftRoomTeam } from '../types/draft-room';
 import type { BroadcastPlayer, RosterHolding } from '../types/draft-broadcast';
 import { getAllNFLTeamCodes, normalizeTeamCode } from './nfl-logo';
@@ -1039,4 +1040,33 @@ export function buildScreensaverPlaylist(picks: DraftRoomPick[]): ScreensaverSce
 /** How long this scene holds the screen. */
 export function screensaverSceneMs(scene: ScreensaverScene): number {
   return scene.kind === 'pick' ? SCREENSAVER_STEP_MS : SCREENSAVER_PANEL_MS;
+}
+
+// ── Franchise crests ─────────────────────────────────────────────────────────
+
+/**
+ * Class + custom property for a crest that needs an outline on the board.
+ *
+ * The colour is decided server-side (`resolveBroadcastCrest`) and travels on
+ * the team record; this is only the plumbing that hands it to CSS. The RING
+ * WIDTH is deliberately NOT here — it belongs to the surface, and the four
+ * crest surfaces are 68vh, ~34vh, ~14vh and ~4vh, so one width cannot serve
+ * them (see `--dbc-crest-ring-w` in draft-broadcast.css).
+ *
+ * A class rather than an inline `filter`, because every crest rule already sets
+ * its own `filter` for the drop shadow and an inline one would replace it
+ * wholesale — the shadow would vanish at whichever sizes happened to need a
+ * ring.
+ */
+export function crestStrokeProps(
+  baseClass: string,
+  color?: string
+): { className: string; style?: CSSProperties } {
+  if (!color) return { className: baseClass };
+  return {
+    className: `${baseClass} dbc-crest--stroked`,
+    // Custom properties are not in CSSProperties' key union — the cast is the
+    // same one `brandStyle` and the reveal card's own style object make.
+    style: { '--dbc-crest-stroke': color } as CSSProperties,
+  };
 }

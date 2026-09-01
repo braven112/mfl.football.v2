@@ -44,6 +44,21 @@ export interface DraftRoomTeam {
   nameShort: string;
   abbrev: string;
   icon: string;
+  /**
+   * Draft broadcast only — the crest for surfaces small enough that a 100x100
+   * dark cut is not upscaled enough to show (the panel head, the rail rows).
+   * `icon` carries the highest-RESOLUTION art for the reveal and idle crests,
+   * which are 68vh and ~34vh; the two disagree for a franchise whose only dark
+   * cut is a 100px `iconDark`. See `resolveBroadcastCrest`.
+   */
+  iconSmall?: string;
+  /**
+   * Draft broadcast only — outline colour for `icon`, set when that art is a
+   * LIGHT cut on a board that is dark in both themes. Absent means no outline.
+   */
+  iconStroke?: string;
+  /** Draft broadcast only — the same, for `iconSmall`. */
+  iconSmallStroke?: string;
   /** Franchise brand primary (hex) — tints the pick-reveal splash gradient */
   colorPrimary?: string;
   /** Franchise brand secondary (hex) — splash glow accent */
