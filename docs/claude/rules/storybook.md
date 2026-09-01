@@ -308,11 +308,10 @@ as a prop: it builds its team lookup from the league config, and those configs
 point `icon` at live files under `public/assets/<league>/icons/`. So the story
 rendered whatever crest was on disk that day.
 
-That is a snapshot reading live data through a side door. Both asset trees are
-in `STORY_ASSET_GLOBS` and in the workflow's `paths:` (correctly — see
-"Choosing modes" and the Chromatic section), so an owner swapping a logo, or
-the sync bot doing it for them, both TRIGGERED a Chromatic build and
-GUARANTEED a diff on all eight snapshots. Every one of those needed a human to
+That is a snapshot reading live data through a side door. Both league asset
+trees were in `STORY_ASSET_GLOBS` and in the workflow's `paths:` at the time,
+so an owner swapping a logo, or the sync bot doing it for them, both TRIGGERED
+a Chromatic build and GUARANTEED a diff on all eight snapshots. Every one of those needed a human to
 approve a change nobody made. Full-page snapshots of a 16-row ranking with a
 crest per row are the worst possible shape for this.
 
@@ -604,6 +603,34 @@ in the other**, and gets both wrong if hand-edited:
 - too narrow -> TurboSnap inherits a snapshot for a file it cannot trace, and
   the regression ships GREEN
 
+### The franchise crests are listed FILE BY FILE
+
+`public/assets/afl/**` and `public/assets/theleague/**` covered ~700 files —
+every franchise's icon, banner, group-me avatar and history art. Seven of them
+render. So every owner logo swap, and every sync-bot commit that touched one,
+started a Chromatic build (and disabled TurboSnap for it) over a file no
+snapshot could show.
+
+Both knobs now name the exact files. **This is the narrowing direction that
+ships bugs**, so it comes with a guard the other entries don't need:
+`computeStoryAssetLiterals()` text-scans `stories/**` for `/assets/...`
+literals — assets are runtime URL strings, invisible to the import graph, so a
+text scan is the only thing that can see them — and
+`tests/chromatic-path-filter.test.ts` fails if `STORY_ASSET_GLOBS` misses one.
+A second test fails if a listed path has left the repo, since a glob matching
+nothing fails exactly like a missing entry and looks like a working one.
+
+The scan alone is not enough, and the gap is worth knowing: **a swap crest
+pulls in a file no story names.** `TeamIconDarkStyles` keys its rule on the
+light `src`, so rendering `pigskins.png` also fetches `pigskins_dark.png`. The
+scanner derives those from the league configs (via the registry's
+`configPath`), so a crest that GAINS an `iconDark` later brings its dark file
+into the trigger automatically.
+
+The `**` trees above stay broad on purpose: those assets are reached through
+interpolated paths (`/assets/nfl-logos/${code}.svg`), which the scanner skips
+because they are not one file.
+
 `public/assets/fonts/**` is the entry that looks droppable and is not: the
 story stylesheets `@font-face` against it, and a re-subset font reflows every
 snapshot. `.storybook/static/**` stays for the same reason (Trap 4b).
@@ -744,12 +771,20 @@ component in the suite, because none of the branching is in the component —
 it is all in the CSS the layout injects (see Trap 5). A crest in dark mode
 takes exactly ONE of these, and `Theming/TeamIconCell` pins all four states:
 
-| Team declares | Dark-mode result | Story |
+| Team declares | Dark-mode result | Story (team) |
 |---|---|---|
-| `iconDark` | `content: url(<dark>)` swap, no filter | `DarkSwapAvailable` |
-| nothing, but measured illegible | default white stroke | `StrokeDefaultWhite` |
-| `iconStrokeDark: "#rrggbb"` | that color as the stroke | `StrokeCustomColor` |
-| `iconStrokeDark: false` | **no stroke at all** | `StrokeExplicitlyOptedOut` |
+| `iconDark` | `content: url(<dark>)` swap, no filter | `DarkSwapAvailable` (Pigskins, TL) |
+| `iconDark`, AFL side | same swap, AFL's rule set | `DarkSwapAvailableAfl` (Ninjas, AFL) |
+| nothing, but measured illegible | default white stroke | `StrokeDefaultWhite` (Harambe, AFL) |
+| `iconStrokeDark: "#rrggbb"` | that color as the stroke | `StrokeCustomColor` (The Show, AFL) |
+| `iconStrokeDark: false` | **no stroke at all** | `StrokeExplicitlyOptedOut` (Cowboy Up, TL) |
+
+**Both leagues need a swap story.** `buildAllTeamIconDarkCss()` is four builder
+calls across two configs and two icon directories, and the pairing is
+load-bearing — a league's stroke fallback must use the same `franchiseIconDir`
+as its swap or the selectors miss. Until Sept 2026 every AFL crest here was a
+stroke case, so a composition that dropped the AFL swap rules rendered light
+artwork in dark mode with nothing failing.
 
 The swap and the stroke are mutually exclusive by construction: both the
 manifest and `withStrokeColors` exclude any team carrying an `iconDark`.
@@ -767,6 +802,18 @@ both set `iconStrokeDark: false`, so both stories asserted a stroke that by
 design never renders. A story is only a guard if the fixture takes the branch
 you think it does — verify by reading the computed `filter` in the browser, not
 by assuming from the manifest.
+
+Which is why **swapping a crest for a nicer-looking team is not a cosmetic
+edit**. Read `src/data/crest-dark-stroke-manifest.json` against the league
+config before you do: `iconDark` = swap, `iconStrokeDark: "#hex"` = custom,
+`iconStrokeDark: false` = opt-out, in the manifest with neither = default
+white. A replacement on the wrong branch silently doubles up one state and
+leaves another untested. The default-white branch is the scarce one — only
+Harambe, Badd Boys, Saints (AFL) and The Dream (TL) qualify today.
+
+And the crest paths are now in the Chromatic trigger by name (see "The
+franchise crests are listed FILE BY FILE"), so a swap is a two-file change.
+`tests/chromatic-path-filter.test.ts` fails if you forget the second one.
 
 ## `ThemeImage` — the one component whose light and dark captures MUST differ
 

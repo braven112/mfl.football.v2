@@ -27,6 +27,20 @@ import { themeModes } from '../../.storybook/modes';
  * the args cannot express; here the args already express it.
  *
  * Crests come from public/ via staticDirs. No network.
+ *
+ * THE CREST LIST IS NOT COSMETIC. `STORY_ASSET_GLOBS` names these files
+ * individually rather than globbing the two league trees, because those trees
+ * hold ~700 files and any team's logo swap was starting a Chromatic build that
+ * could not change a pixel. So swapping a crest here is a two-file change —
+ * the new path has to enter the trigger too, or its regressions ship and get
+ * auto-accepted as the baseline on main. `tests/chromatic-path-filter.test.ts`
+ * text-scans this file and fails if you forget.
+ *
+ * Each crest is here for the BRANCH it covers, not for the team. Pick a
+ * replacement by checking `src/data/crest-dark-stroke-manifest.json` against
+ * the league config: `iconDark` = swap, `iconStrokeDark: "#hex"` = custom,
+ * `iconStrokeDark: false` = opt-out, in the manifest with neither = default
+ * white.
  */
 export default {
   title: 'Theming/TeamIconCell',
@@ -49,6 +63,24 @@ export const DarkSwapAvailable = {
 };
 
 /**
+ * The SAME swap branch on the AFL side, and it is not a duplicate.
+ *
+ * `buildAllTeamIconDarkCss()` composes four builder calls across both leagues'
+ * configs and two icon directories, and the pairing is load-bearing: a league's
+ * stroke fallback must use the same `franchiseIconDir` as its swap or the
+ * selectors miss. Only TheLeague's half of that was covered — every AFL crest
+ * in this file is a STROKE case — so a composition that dropped or
+ * mis-directed the AFL swap rules rendered light artwork in dark mode with
+ * nothing failing.
+ */
+export const DarkSwapAvailableAfl = {
+  args: {
+    icon: '/assets/afl/icons/ninjas.png',
+    name: 'The Mariachi Ninjas',
+  },
+};
+
+/**
  * The DEFAULT WHITE STROKE branch. An AFL crest with no dark variant that the
  * manifest measured as illegible on a dark card, and whose team sets no
  * `iconStrokeDark` — so it falls through to `DEFAULT_CREST_STROKE_COLOR`. Dark
@@ -66,24 +98,24 @@ export const StrokeDefaultWhite = {
 };
 
 /**
- * The CUSTOM STROKE COLOR branch. Midwestside declares
- * `iconStrokeDark: "#ffcd00"`, so it gets its own rule rather than joining the
+ * The CUSTOM STROKE COLOR branch. The Show declares
+ * `iconStrokeDark: "#bc8488"`, so it gets its own rule rather than joining the
  * shared white one — a crest whose silhouette reads better against its own
  * brand color than against white.
  */
 export const StrokeCustomColor = {
   args: {
-    icon: '/assets/afl/icons/midwestside.png',
-    name: 'Midwestside Connection',
+    icon: '/assets/afl/icons/the_show.png',
+    name: 'The Show',
   },
 };
 
 /**
  * THE OPT-OUT, and the subtlest of the three.
  *
- * Minty is IN the measured manifest but sets `iconStrokeDark: false`, which
- * means "measured as illegible, and we still don't want a stroke". It must
- * render with NO filter in either theme.
+ * Cowboy Up is IN the measured manifest but sets `iconStrokeDark: false`,
+ * which means "measured as illegible, and we still don't want a stroke". It
+ * must render with NO filter in either theme.
  *
  * This is a standing guard on a trap the source itself calls out: the opt-out
  * is stored as `false`, so a truthiness filter (`filter(t => t.iconStrokeDark)`)
@@ -94,8 +126,8 @@ export const StrokeCustomColor = {
  */
 export const StrokeExplicitlyOptedOut = {
   args: {
-    icon: '/assets/afl/icons/minty.png',
-    name: 'Team Minty Fresh',
+    icon: '/assets/theleague/icons/cowboy_up.png',
+    name: 'Cowboy Up',
   },
 };
 
@@ -105,10 +137,10 @@ export const StrokeExplicitlyOptedOut = {
  * is the difference between a degraded row and an erased one.
  */
 export const NoCrestFallsBackToName = {
-  args: { name: 'Computer Jocks' },
+  args: { name: 'Wascawy Wabbits' },
 };
 
 /** The same fallback bolded, which marks the signed-in owner's own row. */
 export const NoCrestEmphasised = {
-  args: { name: 'Computer Jocks', emphasis: true },
+  args: { name: 'Wascawy Wabbits', emphasis: true },
 };

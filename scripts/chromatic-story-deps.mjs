@@ -39,6 +39,7 @@
  */
 import { readFileSync, existsSync, statSync, globSync } from 'node:fs';
 import { join, dirname, normalize } from 'node:path';
+import { ALL_LEAGUES } from '../src/config/leagues-data.mjs';
 
 const SEED_GLOBS = ['stories/**/*.stories.ts', 'stories/**/*.stories.tsx'];
 const EXTRA_SEEDS = ['.storybook/preview.ts'];
@@ -89,8 +90,25 @@ const SEED_DIRS = ['stories/', '.storybook/'];
  * schefter/, tv-logos/, css/, js/, and the non-Schefter avatars.
  */
 export const STORY_ASSET_GLOBS = [
-  'public/assets/afl/**',
-  'public/assets/theleague/**',
+  // The franchise crests TeamIconCell renders — one per dark-mode branch, in
+  // both leagues for the swap — plus the two dark files those swaps fetch.
+  // Listed individually, NOT as the two league trees: `public/assets/afl/**` +
+  // `public/assets/theleague/**` matched ~700 files — every franchise's icon,
+  // banner, group-me and history art — so a logo swap for any of the 40 teams
+  // started a build that could not change a pixel.
+  // `computeStoryAssetLiterals()` below is what keeps this list honest.
+  'public/assets/theleague/icons/pigskins.png',
+  'public/assets/theleague/icons/pigskins_dark.png',
+  'public/assets/theleague/icons/cowboy_up.png',
+  'public/assets/afl/icons/ninjas.png',
+  'public/assets/afl/icons/ninjas_dark.png',
+  'public/assets/afl/icons/the_show.png',
+  'public/assets/afl/icons/harambe.png',
+  // AFL tier badges — ThemeImage's light/dark pairs.
+  'public/assets/afl/premier.svg',
+  'public/assets/afl/premier-dark.svg',
+  'public/assets/afl/dleague.svg',
+  'public/assets/afl/dleague-dark.svg',
   'public/assets/nfl-logos/**',
   'public/assets/college-logos/**',
   'public/assets/logos/**',
@@ -99,6 +117,59 @@ export const STORY_ASSET_GLOBS = [
   'public/assets/fonts/**',
   'public/assets/claude-schefter-avatar.webp',
 ];
+
+/**
+ * League configs, for the ONE asset a story needs that it does not name.
+ *
+ * A crest with an `iconDark` is swapped by the injected `TeamIconDarkStyles`
+ * CSS, keyed on the light `src`. So rendering `pigskins.png` also fetches
+ * `pigskins_dark.png`, and nothing in `stories/` says so. Derived rather than
+ * hardcoded: the day a story's crest GAINS a dark variant, the new file must
+ * enter the trigger, and the config edit that adds it cannot be what reminds
+ * anyone (that edit already triggers a build on its own — the dark PNG's
+ * LATER edits are the ones that would ship unbuilt).
+ *
+ * Read from the registry, per CLAUDE.md — a league added there brings its
+ * crests along with no edit here.
+ */
+const LEAGUE_CONFIGS = ALL_LEAGUES.map((l) => l.configPath).filter(Boolean);
+
+/**
+ * Every public/ asset a story renders, as repo-relative paths.
+ *
+ * Assets are runtime URL strings, so they are absent from the import graph —
+ * this is a TEXT scan of the story files, which is the only thing that can see
+ * them. Interpolated specifiers (`/assets/nfl-logos/${code}.svg`) and bare
+ * directories are skipped: neither is one file, and both are covered by the
+ * `**` globs above that stay broad for exactly that reason.
+ *
+ * `tests/chromatic-path-filter.test.ts` asserts STORY_ASSET_GLOBS covers all of
+ * it. That is the guard the individually-listed crests need: without it,
+ * a story rendering a fifth crest would silently fall outside the trigger, its
+ * regressions would ship, and `--auto-accept-changes` on main would bless them
+ * as the baseline.
+ */
+export function computeStoryAssetLiterals() {
+  const found = new Set();
+  for (const file of SEED_GLOBS.flatMap((g) => globSync(g))) {
+    for (const m of readFileSync(file, 'utf8').matchAll(/\/assets\/[A-Za-z0-9._/-]+/g)) {
+      // A trailing path segment with no extension is a directory prefix, not a
+      // file — `/assets/theleague/icons/` and friends.
+      if (/\.[A-Za-z0-9]+$/.test(m[0])) found.add(`public${m[0]}`);
+    }
+  }
+
+  // Add the dark counterpart of any crest above that declares one.
+  for (const cfg of LEAGUE_CONFIGS) {
+    if (!existsSync(cfg)) continue;
+    for (const team of JSON.parse(readFileSync(cfg, 'utf8')).teams ?? []) {
+      if (team.icon && team.iconDark && found.has(`public${team.icon}`)) {
+        found.add(`public${team.iconDark}`);
+      }
+    }
+  }
+  return [...found].sort();
+}
 
 /**
  * Storybook's own untraceable visual inputs.

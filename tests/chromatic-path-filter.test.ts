@@ -1,9 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import {
   computeStoryDeps,
   computeExternals,
   computeStoryStylesheets,
+  computeStoryAssetLiterals,
   STORY_ASSET_GLOBS,
 } from '../scripts/chromatic-story-deps.mjs';
 
@@ -178,6 +179,38 @@ describe('chromatic path filter', () => {
     for (const list of pathLists) {
       for (const glob of STORY_ASSET_GLOBS) expect(list).toContain(glob);
     }
+  });
+
+  it('covers every asset a story actually names', () => {
+    // THE GUARD UNDER THE INDIVIDUALLY-LISTED CRESTS.
+    //
+    // Most asset entries are `**` trees, which self-maintain. The franchise
+    // crests are not: they are four exact files, because the two league trees
+    // they replaced matched ~700 and made every team's logo swap start a build
+    // that could not change a pixel. Narrow means a NEW story rendering a
+    // fifth crest falls outside the trigger — its regression ships and
+    // --auto-accept-changes on main blesses it as the baseline. Nothing in the
+    // import graph can catch that, so this text-scans the stories instead.
+    const uncovered = computeStoryAssetLiterals().filter(
+      (file) => !matchesAny(file, STORY_ASSET_GLOBS),
+    );
+
+    expect(
+      uncovered,
+      `These assets are rendered by a story but no STORY_ASSET_GLOBS entry ` +
+        `matches them, so a change to one would never trigger Chromatic.\n\n` +
+        `Add them to STORY_ASSET_GLOBS in scripts/chromatic-story-deps.mjs, ` +
+        `then regenerate both workflow lists and chromatic.config.json.\n\n` +
+        uncovered.map((f) => `  - '${f}'`).join('\n'),
+    ).toEqual([]);
+  });
+
+  it('lists no asset that has left the repo', () => {
+    // An exact path is only a trigger while the file is there. A rename or a
+    // deleted crest turns its entry into a glob that matches nothing, which
+    // fails exactly like a missing entry and looks like a working one.
+    const missing = STORY_ASSET_GLOBS.filter((g) => !g.includes('*') && !existsSync(g));
+    expect(missing, `Listed in STORY_ASSET_GLOBS but not on disk`).toEqual([]);
   });
 
   it('excludes the cron-written feeds', () => {
