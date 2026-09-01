@@ -146,30 +146,42 @@ harness proves it.
 
 Do this first: it is free, and it shrinks the surface every later phase moves.
 
-## Phase 2 — Load historical seasons on demand
+## Phase 2 — Load historical seasons on demand *(done)*
 
 **8,379 KB → ~600 KB initial.**
 
-The page embeds 20 seasons because season switching must feel instant. It does
-not have to be paid for at first paint.
+**Correction, found in review:** this phase was designed around "season
+switching must feel instant", and **there is no season picker.**
+`rosterSeasonSelect` is a hidden input with no visible control bound to it and
+nothing dispatching `change` on it, `seasonOptions` is never rendered, and so
+`currentSeason` never leaves `defaultSeason` for a real visitor. The 19
+historical seasons in the payload were not merely unused at first paint — they
+were **unreachable**. That makes the cut more clearly correct than the original
+rationale claimed, and it makes one part of the original design actively wrong:
+an idle prefetch warmed all 18 frozen seasons after first paint, pulling back
+7.09 MB to populate a cache nothing could read. The prefetch is gone.
 
-- The initial payload carries **only the current season** — all 16 teams of it.
-  Switching between the 16 current rosters, which is the common action and the
-  one goal 3 names, stays exactly as instant as it is today: same in-memory data,
-  same synchronous render.
-- Historical seasons move behind `GET /api/roster-season/[league]/[year]`,
-  served from the same `roster-season-payloads.json` the page reads now. The
+What the phase actually is, stated honestly:
+
+- The initial payload carries **only the live (non-frozen) seasons** — all 16
+  teams of each. Switching between the 16 current rosters, the only switch a
+  visitor can actually perform, is untouched: same in-memory data, same
+  synchronous render.
+- Frozen seasons move behind `GET /api/roster-season/[league]/[year]`, served
+  from the same `roster-season-payloads.json` the page read inline before. The
   route resolves the league through the registry and discovers payload files by
   glob, so adding a league is a data-only change.
-- After first paint, an idle-time prefetch warms the remaining seasons in the
-  background. By the time anyone opens the season picker, they are cached — so
-  historical switching stays instant too, in practice.
-- The season switch gets a real loading state for the cold-cache case, because
-  `updateView()` becomes async on that one path.
+- **Nothing is fetched proactively.** A season is pulled only when something
+  asks for it, which today means the parity harness and, later, a season picker
+  if one ships. If one does, warm from *its* interaction — hover or open — never
+  unconditionally on load.
+- The switch is async on a cache miss, so it carries a monotonic request token:
+  only the newest selection may commit. Without it two in-flight switches can
+  resolve out of order and the slower one wins.
 
-This is the one phase with a genuine behavioral difference (a cold historical
-season switch can now show a spinner). Everything else about the page is
-unchanged, and the harness pins that.
+So the on-demand layer is groundwork, not a live feature. The user-visible value
+of this phase is entirely the payload cut — and the harness pins that nothing
+else moved.
 
 ## Phase 3 — Extract the pure client logic *(done)*
 
