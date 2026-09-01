@@ -56,6 +56,7 @@ cross-cutting, add a line here. Keep this file short.
 | Schedules, doubleheaders, NFL byes, division-game placement | `docs/claude/rules/schedule-optimization.md` | The late doubleheader week is not a constant — it is whichever of Week 12/13 is bye-free that year, and copying last year's week numbers has shipped a doubleheader onto a bye twice. |
 | Storybook, stories, component workbench | `docs/claude/rules/storybook.md` | An unguarded `document` in `preview.ts` makes the static build DROP every `.astro` story and still exit 0; and a component's own frontmatter CSS import never reaches the canvas, so stories render correct-but-unstyled. |
 | League accounting, dues, prize payouts, year rollover | `docs/claude/rules/accounting.md` | MFL credits on POSITIVE and its import has no delete — a prize written negative doubles the owner's bill; and MFL's new league year starts with EMPTY books, so a rollover that flips the carried sign turns every debt in the league into a credit. |
+| Cloud sessions (Claude Code on the web), env vars, session-start hook | `docs/claude/rules/cloud-environment.md` | A cloud container starts with no `node_modules`, and BOTH test gates in `.claude/hooks/` silently `exit 0` when vitest is missing — so the pre-push and Roger gates were off in every web session until `session-start.sh` ran. |
 
 Deeper history (dated journals, one file per feature/domain) lives in
 `docs/claude/insights/`. Reference docs (auth, testing, build, league rules)
