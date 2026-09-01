@@ -106,6 +106,30 @@ function calculateBaseYear(date: Date): number {
  * @param referenceDate - Optional date for testing (defaults to now, or URL testDate param)
  * @returns LeagueYearConfig with appropriate years for different contexts
  */
+/**
+ * Read a year pin from whichever env this module is running in.
+ *
+ * Vite exposes `.env` files ONLY on `import.meta.env`, which does not exist
+ * under plain node — and `import.meta.env.X` there is a TypeError, not
+ * undefined. That crashed `scripts/accounting-carry-over.ts`, the first node
+ * script to import this module: TheLeague resolved its league year through
+ * here and threw, while the AFL took the rollover path and did not.
+ *
+ * `process.env` is the node half. In the app both are populated —
+ * astro.config.ts hydrates `process.env` from `.env` at startup — so this
+ * changes nothing there and simply makes the module safe to import from a
+ * script. Pinned by tests/league-year-rollover.test.ts.
+ */
+function readEnvPin(key: 'PUBLIC_BASE_YEAR' | 'PUBLIC_MFL_YEAR'): string | undefined {
+  const viteEnv =
+    typeof import.meta !== 'undefined'
+      ? (import.meta as unknown as { env?: Record<string, string | undefined> }).env
+      : undefined;
+  const fromVite = viteEnv?.[key];
+  if (fromVite) return fromVite;
+  return typeof process !== 'undefined' ? process.env?.[key] : undefined;
+}
+
 export function getLeagueYear(referenceDate?: Date): LeagueYearConfig {
   // Priority: explicit param > URL testDate param > current date
   const date = referenceDate || getTestDateFromUrl() || new Date();
@@ -117,7 +141,7 @@ export function getLeagueYear(referenceDate?: Date): LeagueYearConfig {
   // Day cutoffs are computed in the current calendar year while the base stays
   // frozen. Clamping to the auto-calculated floor makes rollovers self-healing
   // with no manual env bump required.
-  const envBaseYear = import.meta.env.PUBLIC_BASE_YEAR || import.meta.env.PUBLIC_MFL_YEAR;
+  const envBaseYear = readEnvPin('PUBLIC_BASE_YEAR') || readEnvPin('PUBLIC_MFL_YEAR');
   const autoBaseYear = calculateBaseYear(date);
   const parsedEnvYear = envBaseYear ? parseInt(envBaseYear, 10) : NaN;
   const baseYear = Number.isFinite(parsedEnvYear)
