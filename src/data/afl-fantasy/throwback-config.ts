@@ -90,12 +90,12 @@ export const AFL_DEFAULT_THROWBACK_ERA: Record<string, number> = {
   '0003': 2003, // Team Minty Fresh → Marriedwithchildren — 8 seasons
   '0004': 2012, // Get off my Ditka → The Dude that Abides — 5 seasons
   '0005': 2010, // Computer Jocks → booyakasha — 5 seasons
-  '0006': 2008, // Da Dangsters → More Cowbell — 3 seasons
+  '0006': 2013, // Da Dangsters → Da Dangsters (The tommy gun) — 12 seasons
   '0007': 2010, // Avenging Amish → Touchdown My Pants — 4 seasons
   '0008': 2003, // Dicks out for Harambe → The Nukes — 13 seasons
   '0009': 2010, // Vitside Mafia → Vitside Mafia (The old lockup) — 15 seasons
   '0010': 2005, // Fullybaked → Fullybaked (Red graffiti) — 12 seasons
-  '0011': 2005, // Midwestside Connection → The Rookies — 4 seasons
+  '0011': 2010, // Midwestside Connection → Midwestside Connection (The gold lockup) — 15 seasons
   '0012': 2009, // Suh girls, one cup → Pubes — 10 seasons
   '0013': 2010, // Muck Juggling Micks → Delirium Tremens — 10 seasons
   '0014': 2007, // A Bruin Pegs Me → Thundering Herd — 19 seasons
