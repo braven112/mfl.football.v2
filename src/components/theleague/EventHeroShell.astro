@@ -44,15 +44,18 @@ interface Props {
   bordered?: boolean;
   regionLabel?: string;
   /**
-   * The signed-in owner's franchise colours + crest, resolved by the homepage
+   * The viewer's franchise colours + crest, resolved by the homepage
    * (`resolveHeroFranchiseBackdrop`). When set it REPLACES the card surface and
    * the corner glow in both themes; the green pill and green CTA are untouched,
    * so TheLeague's own brand is still on the card.
    *
-   * Opt-in and page-supplied, which is what keeps it OFF the two non-hero
-   * consumers of this shell — `WhatsNextCard` and `CalendarEventCard` are a row
-   * of small cards further down the page, and a franchise gradient on each of
-   * them is wallpaper, not identity.
+   * Page-supplied rather than resolved in here, because WHOSE franchise it is
+   * differs by page: this homepage has no team picker, so it passes a
+   * session-scoped franchise or nothing, while the AFL's follows that page's
+   * `?myteam=` / cookie preference like every other personalized card on it.
+   *
+   * Opt-in for a second reason too — six components render this shell, and the
+   * ones that are ABOUT another franchise must never take the viewer's colours.
    */
   backdrop?: HeroFranchiseBackdrop | null;
 }
@@ -246,23 +249,22 @@ const countAriaLabel = hasCount
   }
 
   /* ── Owner's franchise backdrop ──
-     The signed-in owner's `broadcastGradient` replaces the card surface, and
-     `--ev-surface` becomes the gradient's SECOND stop so the player photo's
-     `color-mix` fades still blend into what is actually behind them — that fade
-     sits on the right flank, where the 115deg gradient has arrived.
+     The owner's `broadcastGradient` replaces the card surface in both themes.
 
-     TWO selectors, and the dark one is not optional: `html.dark .tl-event-hero`
-     re-declares `--ev-surface` at (0,2,1), which outranks a lone modifier class
-     at (0,1,0) — without the second selector the gradient would paint in both
-     themes while the fades kept blending toward navy in dark mode only. The
-     pair ties on specificity and wins on source order, which is why this block
-     stays BELOW the theme blocks above.
+     ONE selector is enough, and it is worth saying why, because the near miss
+     here is instructive: `html.dark .tl-event-hero` re-declares `--ev-surface`
+     at (0,2,1) and would outrank a lone modifier class at (0,1,0) — so an
+     override of THAT variable really would need a paired `:global(html.dark)`
+     selector or it would apply in light mode only. But `--ev-surface` is not
+     overridden here at all: under this modifier its only consumers are the two
+     `__fade` overlays, and both are hidden below in favour of a mask. What IS
+     overridden is `background`, which the dark block never touches — it is
+     declared once on the base rule at the same (0,1,0), so source order alone
+     settles it, provided this block stays BELOW the theme blocks above.
 
      The brand glow goes: `.hero-fb__wash` is the wash now, and two washes over
      franchise colour muddied every gradient that was not TheLeague blue. */
-  .tl-event-hero--franchise,
-  :global(html.dark) .tl-event-hero--franchise {
-    --ev-surface: var(--hero-fb-surface, #0f1e2e);
+  .tl-event-hero--franchise {
     background: var(--hero-fb-gradient, #0f1e2e);
   }
   .tl-event-hero--franchise .tl-event-hero__glow {

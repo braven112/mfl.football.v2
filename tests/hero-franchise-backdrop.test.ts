@@ -21,7 +21,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { resolveHeroFranchiseBackdrop } from '../src/utils/hero-franchise-backdrop';
 import { isSafeCssGradient, toBroadcastPair } from '../src/utils/draft-broadcast';
@@ -81,16 +81,18 @@ describe('resolveHeroFranchiseBackdrop', () => {
     );
   });
 
-  it('hands the photo fade the gradient’s SECOND stop, not its first', () => {
-    // The fade sits on the card's right flank, where a 115deg gradient has
-    // already arrived at its end colour. Blending toward the primary there is
-    // what puts a seam down the middle of the card.
+  it('carries only the gradient in its style string', () => {
+    // The backdrop deliberately does NOT hand the shells a solid surface colour.
+    // `--ev-surface` exists to feather a rectangular player photo into a FLAT
+    // card, and against a gradient that overlay is a hard vertical seam — so
+    // both shells mask the photo instead and hide the fades, leaving nothing to
+    // read a surface colour. A resurrected `--hero-fb-surface` would be dead
+    // plumbing with a comment claiming otherwise, which is how it shipped once.
     const backdrop = resolveHeroFranchiseBackdrop(
       { franchiseId: '0001', colorPrimary: '#bd1f2b', colorSecondary: '#181818' },
       'theleague'
     );
-    expect(backdrop!.surface).toBe(toBroadcastPair('#bd1f2b', '#181818').secondary);
-    expect(backdrop!.style).toContain(`--hero-fb-surface:${backdrop!.surface}`);
+    expect(backdrop!.style).toBe(`--hero-fb-gradient:${backdrop!.gradient};`);
   });
 
   it('prefers a dark crest cut over the light artwork', () => {
@@ -163,14 +165,25 @@ describe('hero components', () => {
     });
   }
 
-  it('keeps the backdrop off the non-hero consumers of EventHeroShell', () => {
-    // WhatsNextCard and CalendarEventCard are a row of small cards further down
-    // the homepage. A franchise gradient on each of them is wallpaper.
-    for (const f of [
-      'src/components/theleague/WhatsNextCard.astro',
-      'src/components/theleague/CalendarEventCard.astro',
-    ]) {
-      expect(read(f)).not.toContain('backdrop');
+  it('has every EventHeroShell importer forwarding the prop', () => {
+    // The half-applied-refactor guard. A wrapper that renders the shell but
+    // never forwards `backdrop` is invisible — it just quietly shows league
+    // chrome on one phase of the calendar while the others wear team colours.
+    // Enumerated rather than listed, so a NEW wrapper is caught too.
+    const dir = resolve(__dirname, '..', 'src/components/theleague');
+    const importers = readdirSync(dir).filter((f) =>
+      f.endsWith('.astro') && /import EventHeroShell from/.test(readFileSync(resolve(dir, f), 'utf8'))
+    );
+    // Guards the guard: a glob that silently matches nothing would pass.
+    expect(importers.length).toBeGreaterThanOrEqual(6);
+    for (const f of importers) {
+      const src = readFileSync(resolve(dir, f), 'utf8');
+      // Either forwarding shape counts: an explicit prop, or the whole-props
+      // spread `LeagueEventHero` uses (which carries `backdrop` for free —
+      // but only because its own Props interface declares it, so require that).
+      const explicit = src.includes('backdrop={backdrop}');
+      const spread = /<EventHeroShell \{\.\.\.Astro\.props/.test(src) && src.includes('backdrop?:');
+      expect(explicit || spread, `${f} renders EventHeroShell without forwarding backdrop`).toBe(true);
     }
   });
 

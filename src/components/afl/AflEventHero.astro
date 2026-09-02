@@ -66,13 +66,21 @@ interface Props {
   /** Landmark label for the section element. Defaults to "AFL hero". */
   regionLabel?: string;
   /**
-   * The signed-in owner's franchise colours + crest, resolved by the page
+   * The viewer's franchise colours + crest, resolved by the page
    * (`resolveHeroFranchiseBackdrop`). When set it REPLACES the navy surface and
    * the red corner glow; the gold accent word, the red pill and the red CTA are
    * untouched, so the AFL's own brand is still on the card.
    *
-   * Null for a signed-out visitor, and the card renders exactly as it did
-   * before — which is why nothing here branches on auth.
+   * WHOSE franchise is the PAGE's decision, not this component's, and the two
+   * homepages answer it differently on purpose. The AFL page resolves it from
+   * `userTeam` — session, `?myteam=`, or the cookie — because every other
+   * personalized surface on that page (My Team, the standings highlight, the
+   * spotlight tile) already follows that same preference, and a hero that alone
+   * ignored it would be the odd one out. TheLeague has no such picker, so its
+   * homepage passes a session-scoped franchise or nothing.
+   *
+   * Null when the page resolves no team, and the card renders exactly as it did
+   * before — which is why nothing here branches on auth itself.
    */
   backdrop?: HeroFranchiseBackdrop | null;
 }
@@ -330,14 +338,14 @@ const countAriaLabel = hasCount
   }
 
   /* ── Owner's franchise backdrop ──
-     The signed-in owner's `broadcastGradient` replaces the navy card, and
-     `--ev-surface` becomes the gradient's SECOND stop so the legacy player
-     photo's `color-mix` fades still blend into what is actually behind them —
-     that fade sits on the right flank, where the 115deg gradient has arrived.
-     The AFL's red corner glow goes: `.hero-fb__wash` is the wash now, and two
-     washes over franchise colour muddied every gradient that was not red. */
+     The owner's `broadcastGradient` replaces the navy card. Same specificity as
+     the base rule's `background: var(--ev-surface)` and later in source, which
+     is what wins it; `--ev-surface` itself is deliberately NOT overridden,
+     because under this modifier nothing reads it — its only consumers are the
+     two `__fade` overlays, and both are hidden below in favour of a mask.
+     The AFL's red corner glow goes too: `.hero-fb__wash` is the wash now, and
+     two washes over franchise colour muddied every gradient that was not red. */
   .afl-event-hero--franchise {
-    --ev-surface: var(--hero-fb-surface, #002244);
     background: var(--hero-fb-gradient, #002244);
   }
   .afl-event-hero--franchise .afl-event-hero__glow {

@@ -389,11 +389,14 @@ async function main() {
         ['-sS', '--fail', '--location', '--max-time', '25', '-D', `${stem}.h`, '-o', `${stem}.b`, url],
         { stdio: ['ignore', 'ignore', 'pipe'] },
       );
-      const headers = readFileSync(`${stem}.h`, 'utf8');
-      const match = headers.match(/^content-type:\s*([^\r\n]+)/im);
+      // LAST match, not first: `--location` appends EVERY response's headers to
+      // one dump, so a redirected asset leads with the 301's `text/html` and
+      // the image would be fulfilled as HTML — a broken image in the shot, i.e.
+      // exactly the silent missing-art failure this whole block exists to stop.
+      const seen = [...readFileSync(`${stem}.h`, 'utf8').matchAll(/^content-type:\s*([^\r\n]+)/gim)];
       result = {
         body: readFileSync(`${stem}.b`),
-        contentType: match ? match[1].trim() : 'application/octet-stream',
+        contentType: seen.length ? seen[seen.length - 1][1].trim() : 'application/octet-stream',
       };
     } catch {
       result = null;
@@ -403,22 +406,41 @@ async function main() {
   }
 
   async function routeExternalAsset(route) {
+    let threw = false;
     if (routeFetchWorks) {
       try {
         return await route.fulfill({ response: await route.fetch({ timeout: 20000 }) });
       } catch {
-        routeFetchWorks = false;
+        threw = true;
       }
     }
-    if (!announcedFallback) {
+
+    const fetched = curlFetch(route.request().url());
+
+    // The latch flips only when curl SUCCEEDS on a URL route.fetch() threw on,
+    // because that is the only evidence that the browser path — rather than the
+    // URL — is what is broken. `route.fetch()` also throws for a request the
+    // page cancelled mid-flight, which every capture produces a few of; latching
+    // on the throw alone downgraded the whole run to curl on the first navigation
+    // away, and did it silently.
+    if (threw && fetched && !announcedFallback) {
+      routeFetchWorks = false;
       announcedFallback = true;
       console.warn(
         "  ! route.fetch() can't reach external hosts — falling back to curl for third-party assets",
       );
     }
-    const fetched = curlFetch(route.request().url());
-    if (!fetched) return route.abort();
-    return route.fulfill({ status: 200, contentType: fetched.contentType, body: fetched.body });
+
+    // Guarded: if route.fetch() threw because the request was already cancelled,
+    // settling it throws again — an unhandled rejection inside a route handler,
+    // which Playwright reports as a broken run rather than a skipped asset.
+    try {
+      return fetched
+        ? await route.fulfill({ status: 200, contentType: fetched.contentType, body: fetched.body })
+        : await route.abort();
+    } catch {
+      /* route already settled or the page is gone — nothing left to do */
+    }
   }
 
   // PLAYWRIGHT_CHROMIUM_PATH: cloud sessions ship a pre-installed chromium

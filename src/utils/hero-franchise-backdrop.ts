@@ -45,13 +45,6 @@ export interface HeroBackdropTeam extends DarkSurfaceCrestTeam {
 export interface HeroFranchiseBackdrop {
   /** CSS `background` for the card. */
   gradient: string;
-  /**
-   * A SOLID colour standing in for the card surface, for the `color-mix`
-   * fades that blend a rectangular player photo into it. Those fades sit on
-   * the card's RIGHT flank, which is where the gradient has reached its
-   * second stop — so this is the secondary, not the primary.
-   */
-  surface: string;
   /** Crest src — '' when the franchise config carries no artwork at all. */
   crest: string;
   /** Inline `filter` carrying the measured outline, only for a LIGHT cut. */
@@ -75,9 +68,8 @@ export function resolveHeroFranchiseBackdrop(
   if (!team) return null;
   if (!team.colorPrimary && !team.colorSecondary && !team.broadcastGradient) return null;
 
-  // Floored for white text before either use: the pair is what the derived
-  // gradient paints AND what the photo fade blends toward, so taking it once
-  // keeps the two from drifting.
+  // Floored for white text: a franchise gradient is the card's whole
+  // background and the copy sits on it in both themes.
   const pair = toBroadcastPair(
     team.colorPrimary || FALLBACK_PRIMARY,
     team.colorSecondary || FALLBACK_SECONDARY
@@ -90,9 +82,8 @@ export function resolveHeroFranchiseBackdrop(
 
   return {
     gradient,
-    surface: pair.secondary,
     crest: art.src,
     ...(art.filter ? { crestFilter: art.filter } : {}),
-    style: `--hero-fb-gradient:${gradient};--hero-fb-surface:${pair.secondary};`,
+    style: `--hero-fb-gradient:${gradient};`,
   };
 }
