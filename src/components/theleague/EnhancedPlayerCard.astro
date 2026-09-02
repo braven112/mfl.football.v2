@@ -7,7 +7,8 @@
 import PlayerStatusIndicator from './PlayerStatusIndicator.astro';
 import InjuryManager from './InjuryManager.astro';
 import type { FantasyPlayer, LineupOptimization } from '../../types/matchup-previews';
-import { getPlayerHeadshot, DEFAULT_HEADSHOT_URL } from '../../constants/roster-constants';
+import { getPlayerHeadshot } from '../../constants/roster-constants';
+import { buildNoHeadshotPlaceholder } from '../../utils/nfl-team-colors';
 import { DEFAULT_LEAGUE_ID } from '../../config/leagues';
 
 export interface Props {
@@ -60,7 +61,7 @@ const cardClasses = [
           src={getPlayerHeadshot(player.id, playerEspnId)}
           alt={player.name}
           class="player-headshot"
-          onerror={`this.src='${DEFAULT_HEADSHOT_URL}'`}
+          onerror={`this.src='${buildNoHeadshotPlaceholder(player.nflTeam)}'`}
         />
       </div>
     )}

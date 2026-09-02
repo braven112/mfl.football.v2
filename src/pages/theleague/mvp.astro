@@ -3,7 +3,8 @@ import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import Breadcrumbs from '../../components/theleague/Breadcrumbs.astro';
 import RelatedReports from '../../components/theleague/RelatedReports.astro';
 import leagueConfig from '../../data/theleague.config.json';
-import { DEFAULT_HEADSHOT_URL, NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, getNflLogoUrl, getPlayerImageUrl } from '../../constants/roster-constants';
+import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, getNflLogoUrl, getPlayerImageUrl, resolveHeadshotSrc } from '../../constants/roster-constants';
+import { buildNoHeadshotPlaceholder } from '../../utils/nfl-team-colors';
 import { getCurrentSeasonYear } from '../../utils/league-year';
 import { getTeamIdentityForYear, chooseTeamName } from '../../utils/team-names';
 
@@ -325,11 +326,11 @@ const getNflLogo = (team: string) => getNflLogoUrl(team);
                               </div>
                               <div class="player-info">
                                 <img
-                                  src={player.headshot ?? DEFAULT_HEADSHOT_URL}
+                                  src={resolveHeadshotSrc(player.headshot, player.team)}
                                   alt={`${player.name} headshot`}
                                   class="player-headshot"
                                   loading="lazy"
-                                  onerror={`this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';`}
+                                  onerror={`this.onerror=null;this.src='${buildNoHeadshotPlaceholder(player.team)}';`}
                                 />
                                 <div>
                                   <h2 class="player-info__headline">{player.name}</h2>
@@ -396,11 +397,11 @@ const getNflLogo = (team: string) => getNflLogoUrl(team);
                             </div>
                             <div class="player-info">
                               <img
-                                src={player.headshot ?? DEFAULT_HEADSHOT_URL}
+                                src={resolveHeadshotSrc(player.headshot, player.team)}
                                 alt={`${player.name} headshot`}
                                 class="player-headshot"
                                 loading="lazy"
-                                onerror={`this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';`}
+                                onerror={`this.onerror=null;this.src='${buildNoHeadshotPlaceholder(player.team)}';`}
                               />
                               <div>
                                 <h2>{player.name}</h2>
@@ -453,11 +454,11 @@ const getNflLogo = (team: string) => getNflLogoUrl(team);
                 </div>
                 <div class="player-info">
                   <img
-                    src={player.headshot ?? DEFAULT_HEADSHOT_URL}
+                    src={resolveHeadshotSrc(player.headshot, player.team)}
                     alt={`${player.name} headshot`}
                     class="player-headshot"
                     loading="lazy"
-                    onerror={`this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';`}
+                    onerror={`this.onerror=null;this.src='${buildNoHeadshotPlaceholder(player.team)}';`}
                   />
                   <div>
                     <h2>{player.name}</h2>
@@ -534,11 +535,11 @@ const getNflLogo = (team: string) => getNflLogoUrl(team);
                         </div>
                         <div class="player-info">
                           <img
-                            src={player.headshot ?? DEFAULT_HEADSHOT_URL}
+                            src={resolveHeadshotSrc(player.headshot, player.team)}
                             alt={`${player.name} headshot`}
                             class="player-headshot"
                             loading="lazy"
-                            onerror={`this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';`}
+                            onerror={`this.onerror=null;this.src='${buildNoHeadshotPlaceholder(player.team)}';`}
                           />
                           <div>
                             <h2>{player.name}</h2>

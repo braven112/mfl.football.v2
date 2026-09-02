@@ -5,7 +5,6 @@ import { POSITION_COLORS } from '../../../types/draft-room';
 import { calculateDraftPickSalary } from '../../../utils/draft-pick-cap-impact';
 import { normalizeTeamCode } from '../../../utils/nfl-logo';
 import {
-  DEFAULT_HEADSHOT_URL,
   getCollegeHeadshot,
   getPlayerImageUrl,
   nflLogoErrorHandler,
@@ -13,6 +12,7 @@ import {
   nflLogoRefCallback,
 } from '../../../constants/roster-constants';
 import {
+  buildNoHeadshotPlaceholder,
   getPlayerAvatarBackground,
   getPlayerAvatarBorder,
   getPlayerAvatarRing,
@@ -117,25 +117,26 @@ export function PlayerDetailModal({
   // college ESPN headshot URL that 404s.
   const handleImgError = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget;
+    const noHeadshot = buildNoHeadshotPlaceholder(player.nflTeam ?? '');
     img.onerror = null;
     if (player.espnId) {
       const college = getCollegeHeadshot(player.espnId);
       if (player.mflId) {
         const mfl = getPlayerImageUrl(player.mflId);
         img.onerror = () => {
-          img.onerror = () => { img.onerror = null; img.src = DEFAULT_HEADSHOT_URL; };
+          img.onerror = () => { img.onerror = null; img.src = noHeadshot; };
           img.src = mfl;
         };
         img.src = college;
       } else {
-        img.onerror = () => { img.onerror = null; img.src = DEFAULT_HEADSHOT_URL; };
+        img.onerror = () => { img.onerror = null; img.src = noHeadshot; };
         img.src = college;
       }
     } else if (player.mflId) {
-      img.onerror = () => { img.onerror = null; img.src = DEFAULT_HEADSHOT_URL; };
+      img.onerror = () => { img.onerror = null; img.src = noHeadshot; };
       img.src = getPlayerImageUrl(player.mflId);
     } else {
-      img.src = DEFAULT_HEADSHOT_URL;
+      img.src = noHeadshot;
     }
   };
 

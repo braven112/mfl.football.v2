@@ -15,7 +15,6 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import {
-  DEFAULT_HEADSHOT_URL,
   getCollegeHeadshot,
   getPlayerHeadshot,
   getPlayerImageUrl,
@@ -23,6 +22,8 @@ import {
 import { normalizeTeamCode } from '../../../utils/nfl-logo';
 import { resolveNflDarkLogoUrl } from '../../../utils/nfl-logo-dark-css';
 import {
+  NO_HEADSHOT_PLACEHOLDER,
+  buildNoHeadshotPlaceholder,
   getPlayerAvatarBackground,
   getPlayerAvatarBorder,
   getPlayerAvatarRingDark,
@@ -103,7 +104,7 @@ function defenseLogoCode(player?: FacePlayer): string {
 }
 
 function avatarChain(player?: FacePlayer): string[] {
-  if (!player) return [DEFAULT_HEADSHOT_URL];
+  if (!player) return [NO_HEADSHOT_PLACEHOLDER];
 
   const defCode = defenseLogoCode(player);
   const mflId = player.mflId ?? player.id;
@@ -122,7 +123,7 @@ function avatarChain(player?: FacePlayer): string[] {
           player.headshot || getPlayerHeadshot(mflId, player.espnId),
           player.espnId ? getCollegeHeadshot(player.espnId) : '',
           mflId ? getPlayerImageUrl(mflId) : '',
-          DEFAULT_HEADSHOT_URL,
+          buildNoHeadshotPlaceholder(player.nflTeam ?? ''),
         ];
 
   const seen = new Set<string>();

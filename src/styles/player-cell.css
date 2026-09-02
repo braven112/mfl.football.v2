@@ -91,6 +91,19 @@ html.dark .player-cell__avatar:not(.player-cell__avatar--def):not(.player-cell__
   transform-origin: top center;
 }
 
+/* No-headshot placeholder (buildNoHeadshotPlaceholder) — opt out of the
+   ESPN-cutout zoom above. The placeholder is drawn to fill its own frame, so
+   the 150%/scale(1.18) crop would blow the silhouette past the chip edge and
+   leave a headless shoulder. Matched on the `id="no-headshot"` baked into the
+   SVG (it survives URI-encoding) because the src is swapped in by an inline
+   onerror handler — there is no element to put a class on at that point. */
+.player-cell__avatar img[src*="no-headshot"] {
+  width: 100%;
+  object-fit: contain;
+  object-position: center;
+  transform: none;
+}
+
 .player-cell__avatar.player-cell__avatar--def {
   border: 0;
   background: transparent;

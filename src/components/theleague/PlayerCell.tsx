@@ -1,12 +1,12 @@
 import React from 'react';
 import '../../styles/player-cell.css';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
-import { getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark } from '../../utils/nfl-team-colors';
+import { buildNoHeadshotPlaceholder, getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark } from '../../utils/nfl-team-colors';
 import {
-  DEFAULT_HEADSHOT_URL,
   getCollegeHeadshot,
   getPlayerHeadshot,
   getPlayerImageUrl,
+  isPlaceholderHeadshot,
   nflLogoErrorHandler,
   nflLogoLoadHandler,
   nflLogoRefCallback,
@@ -53,8 +53,14 @@ export function PlayerCell({
   // which IDs are available. Falling through to getPlayerHeadshot(mflId,
   // espnId) assumes the espnId is always an NFL ID, which is wrong for
   // pre-draft rookies that only have a college ESPN ID.
+  // A caller-supplied headshot that is itself a placeholder (the legacy MFL
+  // "no photo available" disc, still baked into older payloads) counts as no
+  // headshot: it loads with a 200, so no onerror fires and the white disc
+  // blanks out the team-color chip behind it.
+  const noHeadshot = buildNoHeadshotPlaceholder(nflTeam ?? '');
   const resolvedHeadshot =
-    headshot || (espnId ? getPlayerHeadshot(mflId, espnId) : DEFAULT_HEADSHOT_URL);
+    (isPlaceholderHeadshot(headshot) ? '' : headshot)
+    || (espnId ? getPlayerHeadshot(mflId, espnId, nflTeam) : noHeadshot);
   const avatarSrc = isDef && teamLogoUrl ? teamLogoUrl : resolvedHeadshot;
   const nflLogoUrl = isDef ? '' : (explicitNflLogo ?? teamLogoUrl);
   // Team-color backdrop behind the headshot (DEF logos keep their transparent
@@ -78,21 +84,21 @@ export function PlayerCell({
         const mfl = getPlayerImageUrl(mflId);
         img.onerror = () => {
           img.onerror = null;
-          img.src = DEFAULT_HEADSHOT_URL;
+          img.src = noHeadshot;
         };
         // Try college first; if that fails the onerror above fires and tries mfl,
         // but we actually want: college → mfl → default. Wire a two-step chain:
         img.onerror = () => {
-          img.onerror = () => { img.onerror = null; img.src = DEFAULT_HEADSHOT_URL; };
+          img.onerror = () => { img.onerror = null; img.src = noHeadshot; };
           img.src = mfl;
         };
         img.src = college;
       } else {
-        img.onerror = () => { img.onerror = null; img.src = DEFAULT_HEADSHOT_URL; };
+        img.onerror = () => { img.onerror = null; img.src = noHeadshot; };
         img.src = college;
       }
     } else {
-      img.src = DEFAULT_HEADSHOT_URL;
+      img.src = noHeadshot;
     }
   };
 

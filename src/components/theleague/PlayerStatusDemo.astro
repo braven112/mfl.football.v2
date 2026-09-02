@@ -9,7 +9,7 @@ import LineupOptimizationIndicator from './LineupOptimizationIndicator.astro';
 import EnhancedPlayerCard from './EnhancedPlayerCard.astro';
 import type { FantasyPlayer, LineupOptimization } from '../../types/matchup-previews';
 import { DEFAULT_LEAGUE } from '../../config/leagues';
-import { DEFAULT_HEADSHOT_URL } from '../../constants/roster-constants';
+import { buildNoHeadshotPlaceholder } from '../../utils/nfl-team-colors';
 
 const demoActionUrl = `https://${DEFAULT_LEAGUE.mflHost}/2025/options?L=${DEFAULT_LEAGUE.id}&F=0001&O=07`;
 
@@ -156,7 +156,7 @@ const demoOptimizations: LineupOptimization[] = [
             src={`https://a.espncdn.com/combiner/i?img=/i/headshots/nfl/players/full/${player.id}.png&w=96&h=70`}
             alt={player.name}
             class="player-headshot-small"
-            onerror={`this.src='${DEFAULT_HEADSHOT_URL}'`}
+            onerror={`this.src='${buildNoHeadshotPlaceholder(player.nflTeam)}'`}
           />
           <div class="player-info-enhanced">
             <div class="player-header-enhanced">

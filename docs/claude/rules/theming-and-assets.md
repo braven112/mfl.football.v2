@@ -147,6 +147,39 @@ full-bleed surfaces with white text on the colored area, allowlisted in
 `tests/team-color-backdrop-guard.test.ts`, which fails the build for any new
 direct `getNflTeamColors` consumer.
 
+### The missing-headshot fallback is drawn, not fetched
+
+When there is no photo, the fallback is `buildNoHeadshotPlaceholder(team)` —
+an inline `data:image/svg+xml` painting the SAME gradient stops as the chip,
+with a translucent white silhouette over them. It used to be MFL's
+`no_photo_available.jpg`: a **white disc**, which loaded on top of the
+team-color chip and blanked it out completely (Sept 2026). Three things about
+it are load-bearing:
+
+- **The gradient is baked into the SVG, not left to the chip.** Only the
+  player-cell surfaces have a team-colored chip; dead money, MVP, the draft
+  board and the lineup accordion draw a neutral gray one, and a translucent
+  silhouette on gray is the same invisible smudge. Painting it inside makes the
+  placeholder correct on any background, and identical stops mean it coincides
+  seamlessly with the chip where there is one.
+- **It carries `id="no-headshot"`, and `player-cell.css` matches on it**
+  (`img[src*="no-headshot"]`) to skip the ESPN-cutout zoom. The src is swapped
+  in by an inline `onerror` handler, so there is no element to add a class to.
+  Without that rule the silhouette blows past the chip edge.
+- **The legacy MFL URL is still recognized as "no headshot"**
+  (`isPlaceholderHeadshot` / `resolveHeadshotSrc` in
+  `src/constants/roster-constants.ts`). It is baked into committed roster
+  payloads, loads with a **200**, and therefore never fires an `onerror` of its
+  own — recognizing the string is the only thing stopping a stale payload from
+  putting the white disc back.
+
+`DEFAULT_HEADSHOT_URL` is the team-less form of the same placeholder, so a
+renderer that ignores all this still gets a silhouette rather than a white
+hole — but pass the team wherever you have it.
+`tests/no-headshot-placeholder.test.ts` pins the color match, the id, and the
+`'`-free encoding that keeps the URI safe inside a single-quoted inline
+`onerror` string.
+
 
 ## A surface that is dark in BOTH themes must resolve its own crest
 

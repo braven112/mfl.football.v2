@@ -68,6 +68,9 @@ const cachedPlayersFile = path.join(feedsCacheDir, 'players.json');
 // /player_photos_* paths is unverified. Do not switch this to the
 // per-league mflHost without confirming photos exist on that host.
 const MFL_PHOTO_HOST = LEAGUES[DEFAULT_LEAGUE_SLUG].mflHost;
+// Sentinel only — see the same note in compute-roster-season-payloads.mjs.
+// Renderers treat this URL as "no headshot" (`isPlaceholderHeadshot`) and draw
+// the team-colored placeholder instead of MFL's white disc.
 const DEFAULT_HEADSHOT_URL =
   `https://${MFL_PHOTO_HOST}/player_photos_2010/no_photo_available.jpg`;
 

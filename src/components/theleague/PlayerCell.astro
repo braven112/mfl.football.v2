@@ -29,7 +29,7 @@
  */
 
 import '../../styles/player-cell.css';
-import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, buildHeadshotOnerror, getPlayerHeadshot } from '../../constants/roster-constants';
+import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, buildHeadshotOnerror, getPlayerHeadshot, isPlaceholderHeadshot } from '../../constants/roster-constants';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
 import { getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark } from '../../utils/nfl-team-colors';
 import type { PlayerModalData } from '../../utils/player-modal-trigger';
@@ -116,13 +116,18 @@ const avatarIsLogo = isLogoAvatar || (isDef && !!teamLogoUrl);
 // to getPlayerHeadshot, which is the same cascade PlayerDetailsModal uses:
 //   - ESPN NFL direct URL when we have an NFL espn_id
 //   - MFL photo URL when we only have an MFL id
-//   - DEFAULT_HEADSHOT_URL when neither is present
+//   - the team-colored no-headshot placeholder when neither is present
 // The previous version skipped from "no espnId" straight to DEFAULT, which
 // meant any player missing an espn_id rendered as the MFL silhouette even
 // when MFL had a perfectly good photo (Breece Hall on the AFL feed — his
 // row showed the silhouette, his click-through modal loaded fine because
 // PlayerDetailsModal does try the MFL photo URL as a step before default).
-const resolvedHeadshot = headshot || getPlayerHeadshot(resolvedMflId, resolvedEspnId);
+// A caller-supplied headshot that is itself a placeholder (the legacy MFL
+// "no photo available" disc, baked into older roster payloads) counts as NO
+// headshot — otherwise it loads with a 200, no onerror fires, and the white
+// disc blanks out the team-color chip it is sitting on.
+const resolvedHeadshot = (isPlaceholderHeadshot(headshot) ? '' : headshot)
+  || getPlayerHeadshot(resolvedMflId, resolvedEspnId, nflTeam);
 // Avatar: DEF uses team logo, others use headshot
 const avatarSrc = isDef && teamLogoUrl ? teamLogoUrl : resolvedHeadshot;
 
@@ -149,7 +154,7 @@ const avatarStyle = avatarBg
       alt={isDef ? `${nflTeam ?? 'DEF'} logo` : isLogoAvatar ? `${name} logo` : `${name} headshot`}
       loading="lazy"
       decoding="async"
-      onerror={avatarIsLogo ? NFL_LOGO_ONERROR : buildHeadshotOnerror(resolvedMflId, resolvedEspnId)}
+      onerror={avatarIsLogo ? NFL_LOGO_ONERROR : buildHeadshotOnerror(resolvedMflId, resolvedEspnId, nflTeam)}
       onload={avatarIsLogo ? NFL_LOGO_ONLOAD : undefined}
     />
   </div>

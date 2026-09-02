@@ -133,8 +133,6 @@ franchiseTagEligible.sort((a, b) => {
 
 const withRanks = franchiseTagEligible;
 
-const DEFAULT_HEADSHOT_URL = 'https://s.yimg.com/cv/apiv2/default/nfl/nophoto.png';
-
 const getPlayerDisplayName = (player: typeof players[0]): string => {
   if (player.position?.toUpperCase() === 'DEF') {
     const teamName = NFL_TEAM_NAMES[player.nflTeam] || player.nflTeam;
