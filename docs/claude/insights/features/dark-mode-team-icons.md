@@ -564,3 +564,61 @@ when the next franchise arrives without it.
 `src/styles/draft-broadcast.css` (`--dbc-crest-ring`),
 `tests/broadcast-crest.test.ts`. Rule lives in
 `docs/claude/rules/theming-and-assets.md`.
+
+## 2026-09-01 - The same blind spot, twice more — and the fix was already in the repo
+
+#681 fixed the draft broadcast. Two more surfaces had the identical bug and
+were found only by asking "what else paints ink in both themes":
+`RecapCompositeHero` (light mode is a saturated blue card) and TheLeague's
+lineup faceoff panels. Both rendered `brand.groupMe` — and note that neither
+the swap nor the stroke keys on `groupMe` **at all**, so those crests were
+getting no dark treatment in *either* theme. A surface reaching for the 400px
+avatar is invisible to both global stylesheets, which makes it quieter than the
+`icon` case: at least a light `icon` gets the ring under `html.dark`.
+
+**The fix already existed, in the sibling nobody opened.**
+`afl-fantasy/lineup.astro` had resolved this server-side since it launched,
+with a comment giving the same reasoning; `theleague/lineup.astro` — its
+forked twin, same shared component — never did. So the diff that introduced
+the bug and the diff that fixed it were in the same repo for months. Two
+things follow. A fix applied to one half of a sibling pair is
+**invisible in a diff that only touches the other half**, so the check has to
+be "open the sibling", not "read the diff". And before writing a new
+resolver, grep for the problem statement — the correct implementation may
+already be sitting in the twin.
+
+**Clearing a field on the RECORD does not clear the signal.** The throwback
+path hands the resolver a brand rebuilt off an era identity, and the obvious
+move is to clear `iconStrokeDark` so era artwork is not ringed with a colour
+measured against a crest it no longer wears. That does nothing: the stroke
+index is keyed by `franchiseId` and passed in **separately**, so a
+manifest-flagged franchise still comes back ringed. The field has to be set to
+its own opt-out (`false`), which stops the lookup before it happens. Generalize
+it: when a resolver reads a signal from two places — the record and an index —
+suppressing it means suppressing both, and only the value the resolver treats
+as "no" does that.
+
+**Test fixtures pinned to a config row on a migration path are scheduled
+failures.** #687 hit this on the broadcast test (Chatmaster gained real dark
+art and the fixture died); the sibling test added here had three more of the
+same. Every franchise in both leagues is getting dark artwork, and one that
+gains an `iconDark` may not carry `iconStrokeDark` at all, so
+`find(t => t.franchiseId === 'X')` in any crest test has an expiry date.
+**Search for the property under test, then assert the search found something**
+— the replacement passes vacuously on `undefined` otherwise, which is a worse
+failure than the one being fixed.
+
+**Counting trap in the changelog, twice in two PRs.** #684 corrected a wrong
+TheLeague crest count; this PR then shipped a wrong AFL one for a different
+reason — "eleven franchises changed artwork" conflated a *resolution* upgrade
+(100x100 `iconDark` → 400x400 `groupMeDark`, same theme) with a *theme* fix
+(light art → dark art). Only six franchises actually gained dark artwork. When
+a resolver's order has two axes, "the resolved src changed" is not the number
+any reader cares about; count the axis the entry is claiming.
+
+**Files:** `src/utils/dark-surface-crest.ts` (the general rule),
+`src/utils/broadcast-crest.ts` (now only the 68vh exception),
+`src/utils/franchise-brand.ts` (`eraCrestOverrides`),
+`src/components/theleague/FaceoffComposite.astro` (`watermarkFilter`),
+`tests/dark-surface-crest.test.ts`. Rule lives in
+`docs/claude/rules/theming-and-assets.md`.
