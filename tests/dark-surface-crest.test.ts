@@ -183,10 +183,23 @@ describe('resolveDarkSurfaceCrest — the ring', () => {
 
   it('leaves an unflagged, dark-cut-less franchise unringed', () => {
     // A franchise the measurement cleared, that declares nothing and has no
-    // dark cut: it renders its light art as authored. Found, not named — see
-    // above. TheLeague has one (Gridiron Geeks) until it gets dark artwork,
-    // and the AFL is checked too so the case survives either league running
-    // out first.
+    // dark cut: it renders its light art as authored.
+    //
+    // Gridiron Geeks was the last real one and has since taken dark artwork,
+    // so the real-data loop below now finds nothing in either league. The
+    // comment that used to sit here said to DELETE this case when that
+    // happened — but the code path did not go away with the data, and it is
+    // live for any franchise added without dark art. So the assertion moved
+    // synthetic (as the cases above it already had) and the real-data loop is
+    // kept opportunistically: it still checks a real franchise the day one
+    // qualifies again, and no longer demands that one exist.
+    const synthetic = resolveDarkSurfaceCrest(
+      { franchiseId: '9999', groupMe: '/gm.png' },
+      'theleague',
+      new Map<string, string | false | undefined>()
+    );
+    expect(synthetic.filter, 'unflagged light art must not be ringed').toBeUndefined();
+
     let checked = 0;
     for (const [league, cfg] of [['theleague', theleague], ['afl', afl]] as const) {
       const index = crestStrokeIndex(league, cfg.teams);
@@ -198,10 +211,8 @@ describe('resolveDarkSurfaceCrest — the ring', () => {
       checked++;
       expect(resolveDarkSurfaceCrest(clean, league, index).filter).toBeUndefined();
     }
-    // Only TheLeague has one today (Gridiron Geeks); the AFL has none. When
-    // the last one in BOTH leagues gets dark artwork this case stops existing
-    // and should be deleted, not left passing on an empty loop.
-    expect(checked, 'no franchise in either league is unflagged and dark-cut-less').toBeGreaterThan(0);
+    // Deliberately no `checked > 0` here any more: zero is the correct answer
+    // now, and the synthetic assertion above is what keeps this non-vacuous.
   });
 });
 

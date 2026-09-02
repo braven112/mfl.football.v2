@@ -107,11 +107,19 @@ export const DarkSwapAvailableAfl = {
 };
 
 /**
- * THE OPT-OUT, and the subtlest of the three.
+ * THE OPT-OUT, and the last stroke branch with a real franchise in it.
  *
- * Cowboy Up is IN the measured manifest but sets `iconStrokeDark: false`,
+ * Dark Magicians is IN the measured manifest but sets `iconStrokeDark: false`,
  * which means "measured as illegible, and we still don't want a stroke". It
- * must render with NO filter in either theme.
+ * must render with NO filter in either theme — and unlike every other crest in
+ * this file, its light artwork is deliberately the dark artwork too, so there
+ * is no swap to confuse it with.
+ *
+ * Repointed here from Cowboy Up, which took real dark artwork and left the
+ * branch. Dark Magicians is now the ONLY franchise in either league still
+ * opting out, so if it ever gains an `iconDark` this story has nothing left to
+ * point at — delete it and rely on the synthetic coverage in
+ * `tests/dark-surface-crest.test.ts`, the way the other stroke stories went.
  *
  * This is a standing guard on a trap the source itself calls out: the opt-out
  * is stored as `false`, so a truthiness filter (`filter(t => t.iconStrokeDark)`)
@@ -122,8 +130,8 @@ export const DarkSwapAvailableAfl = {
  */
 export const StrokeExplicitlyOptedOut = {
   args: {
-    icon: '/assets/theleague/icons/cowboy_up.png',
-    name: 'Cowboy Up',
+    icon: '/assets/theleague/icons/dark_magicians.png',
+    name: 'Dark Magicians of Chaos',
   },
 };
 
