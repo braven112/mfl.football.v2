@@ -34,6 +34,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { normalizeWeeklyResults } from './lib/normalize-weekly-results.mjs';
 import { fetchWithRetry } from './lib/fetch-retry.mjs';
+import { mflFetch } from './lib/mfl-api.mjs';
 import { getNonEmpty } from './lib/env.mjs';
 import { getLeagueById, DEFAULT_LEAGUE_SLUG } from '../src/config/leagues-data.mjs';
 import { writeJsonIfChanged, jsonEquivalent } from './lib/canonical-json.mjs';
@@ -250,12 +251,13 @@ const withAuth = (baseUrl) => {
 };
 
 /**
- * Cookie headers for the exports MFL gates on a logged-in OWNER rather than on
- * an APIKEY. `APIKEY` is NOT interchangeable: the AFL's calendar export answers
- * an APIKEY request with `API requires logged in user in league ID 19621 -
- * Please be sure to pass the proper MFL_USER_ID cookie or APIKEY parameter`,
- * which is why calendar.json had never synced for either league and the waiver
- * window read "unknown" all season.
+ * Cookies for the exports MFL gates on a logged-in OWNER rather than on an
+ * APIKEY. `APIKEY` is NOT interchangeable: the AFL's calendar export answers an
+ * APIKEY request with `API requires logged in user in league ID 19621 - Please
+ * be sure to pass the proper MFL_USER_ID cookie or APIKEY parameter`, and
+ * TheLeague's answers `API Key Validation Failed` — the same key that works
+ * fine for tradeBait. That is why calendar.json had never synced for either
+ * league and the waiver window read "unknown" all season.
  *
  * Applied ONLY to feeds that opt in with `cookie: true`. Sending it on every
  * export would be a privacy regression, not just noise: a commissioner cookie
@@ -263,8 +265,7 @@ const withAuth = (baseUrl) => {
  * `phone`, `cell`, `lastVisit` — and this script COMMITS what it fetches. See
  * docs/claude/insights/domains/mfl-api.md (2026-08-30, `lastVisit`).
  */
-const authCookieHeaders = () =>
-  mflUserId ? { Cookie: `MFL_USER_ID=${mflUserId}` } : undefined;
+const authCookies = () => (mflUserId ? { MFL_USER_ID: mflUserId } : null);
 
 const parseTradeBait = (data) => {
   // Handle MFL trade bait API response
@@ -476,15 +477,17 @@ const endpoints = [
     // system, not the current state). Syncing it keeps the site's window in
     // step with MFL instead of re-deriving the schedule from the constitution.
     //
-    // `cookie: true` and NOT just withAuth: MFL rejects an APIKEY here and asks
-    // for the cookie by name — verified live 2026-09-02 against the AFL, whose
-    // answer to an APIKEY request is `API requires logged in user in league ID
-    // 19621 - Please be sure to pass the proper MFL_USER_ID cookie or APIKEY
-    // parameter`. calendar.json had NEVER synced for either league because of
-    // this, so the waiver window read "unknown" permanently and every claim
+    // `cookie: true`, and NO withAuth — the two are not additive here. MFL
+    // validates the APIKEY first and refuses on it before the cookie is ever
+    // considered: with both attached (run 33657199368, 2026-09-02) TheLeague
+    // answered `API Key Validation Failed` for a key that works fine on
+    // tradeBait in the same run, and the AFL answered `API requires logged in
+    // user in league ID 19621 - Please be sure to pass the proper MFL_USER_ID
+    // cookie or APIKEY parameter`. calendar.json had NEVER synced for either
+    // league, so the waiver window read "unknown" permanently and every claim
     // went out as a queued request even during an FCFS window. Set MFL_USER_ID
     // in the workflow or the file stays unwritten (loudly — the parser throws).
-    url: withAuth(`${host}/${year}/export?TYPE=calendar&L=${leagueId}&JSON=1`),
+    url: `${host}/${year}/export?TYPE=calendar&L=${leagueId}&JSON=1`,
     cookie: true,
     parser: (t) => {
       try {
@@ -610,8 +613,24 @@ const endpoints = [
 // anyone with repo read access.
 const redactUrl = (url) => String(url).replace(/APIKEY=[^&]+/, 'APIKEY=***');
 
-const fetchText = async (url, headers) => {
-  const res = await fetch(url, headers ? { headers } : undefined);
+/**
+ * @param {string} url
+ * @param {boolean} [withCookie] Send the owner session cookie (feeds marked
+ *   `cookie: true`). Routed through `mflFetch`, NOT a bare `fetch`: Node's
+ *   undici DROPS the Cookie header on MFL's `api.` → `www4x.` cross-origin
+ *   redirect, so a plain `fetch` with a Cookie header reads back
+ *   "API requires logged in user" and looks exactly like a bad credential.
+ *   That is the trap src/utils/mfl-fetch.ts exists for, and this walked into
+ *   it once already.
+ */
+const fetchText = async (url, withCookie = false) => {
+  const cookies = withCookie ? authCookies() : null;
+  if (cookies) {
+    const res = await mflFetch({ url, cookies, timeoutMs: 15_000 });
+    if (!res.ok) throw new Error(`Fetch failed ${res.status} ${redactUrl(url)}`);
+    return res.text();
+  }
+  const res = await fetch(url);
   if (!res.ok) throw new Error(`Fetch failed ${res.status} ${redactUrl(url)}`);
   return res.text();
 };
@@ -885,7 +904,7 @@ const run = async () => {
     for (const { key, url, parser, cookie } of endpoints.filter(e => alwaysFetchKeys.has(e.key))) {
       try {
         console.log(`Fetching ${key} from ${redactUrl(url)}`);
-        const text = await fetchText(url, cookie ? authCookieHeaders() : undefined);
+        const text = await fetchText(url, !!cookie);
         const parsed = parser(text);
         writeOut(key, parsed);
       } catch (err) {
@@ -908,7 +927,7 @@ const run = async () => {
     if (!url) continue;
     try {
       console.log(`Fetching ${key} from ${redactUrl(url)}`);
-      const text = await fetchText(url, cookie ? authCookieHeaders() : undefined);
+      const text = await fetchText(url, !!cookie);
       const parsed = parser(text);
       writeOut(key, parsed);
     } catch (err) {
