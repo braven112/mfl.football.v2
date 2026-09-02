@@ -177,10 +177,21 @@ export function getPlayerHeadshot(mflId?: string, espnId?: string, teamCode?: st
  * @param mflId - MFL player ID
  * @param espnId - ESPN player ID
  * @param teamCode - NFL team code, so the final placeholder is team-colored
+ * @param fallbackSrc - Overrides the final placeholder. Pass
+ *   `NO_HEADSHOT_SILHOUETTE` when the avatar chip already paints the team
+ *   gradient itself: this whole string is inlined into an `onerror` attribute
+ *   on EVERY rendered row, and the backdrop-free variant is 371 chars against
+ *   the baked-in 794 — and identical across rows, so it compresses away
+ *   instead of shipping one variant per team.
  * @returns Inline JS string for an img onerror attribute
  */
-export function buildHeadshotOnerror(mflId?: string, espnId?: string, teamCode?: string): string {
-  const fallback = buildNoHeadshotPlaceholder(teamCode ?? '');
+export function buildHeadshotOnerror(
+  mflId?: string,
+  espnId?: string,
+  teamCode?: string,
+  fallbackSrc?: string,
+): string {
+  const fallback = fallbackSrc ?? buildNoHeadshotPlaceholder(teamCode ?? '');
   if (espnId && mflId) {
     const college = getCollegeHeadshot(espnId);
     const mfl = getPlayerImageUrl(mflId);

@@ -1,7 +1,7 @@
 import React from 'react';
 import '../../styles/player-cell.css';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
-import { buildNoHeadshotPlaceholder, getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark } from '../../utils/nfl-team-colors';
+import { NO_HEADSHOT_SILHOUETTE, buildNoHeadshotPlaceholder, getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark } from '../../utils/nfl-team-colors';
 import {
   getCollegeHeadshot,
   getPlayerHeadshot,
@@ -56,7 +56,11 @@ export function PlayerCell({
   // A caller-supplied headshot that is itself a placeholder (MFL's "no photo
   // available" disc) counts as no headshot: it loads with a 200, so no onerror
   // fires and the white disc blanks out the team-color chip behind it.
-  const noHeadshot = buildNoHeadshotPlaceholder(nflTeam ?? '');
+  // Backdrop-free silhouette whenever this chip paints the team gradient (every
+  // non-DEF avatar): it renders identically over the chip at less than half the
+  // bytes, and this string is inlined per row. A DEF row with no resolvable
+  // logo has a transparent chip, so it needs the baked-in variant.
+  const noHeadshot = isDef ? buildNoHeadshotPlaceholder(nflTeam ?? '') : NO_HEADSHOT_SILHOUETTE;
   const resolvedHeadshot =
     (isPlaceholderHeadshot(headshot) ? '' : headshot)
     || (espnId ? getPlayerHeadshot(mflId, espnId, nflTeam) : noHeadshot);

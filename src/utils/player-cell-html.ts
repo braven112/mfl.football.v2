@@ -21,7 +21,7 @@
 import type { PlayerModalData } from './player-modal-trigger';
 import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, buildHeadshotOnerror, getNflLogoUrl, getPlayerHeadshot, isPlaceholderHeadshot } from '../constants/roster-constants';
 import { normalizeTeamCode } from './nfl-logo';
-import { buildNoHeadshotPlaceholder, getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark } from './nfl-team-colors';
+import { NO_HEADSHOT_SILHOUETTE, buildNoHeadshotPlaceholder, getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark } from './nfl-team-colors';
 
 export interface PlayerCellOptions {
   name: string;
@@ -91,9 +91,14 @@ export function buildPlayerCellHTML(opts: PlayerCellOptions): string {
   // A placeholder URL from the payload (MFL's "no photo available" disc)
   // counts as no headshot — it 200s, so no onerror fires and the white disc
   // would blank out the team-color chip behind it.
+  // Backdrop-free silhouette whenever the chip paints the team gradient (every
+  // non-logo avatar): identical render over the chip, less than half the bytes,
+  // and this string is inlined into every row's onerror. A logo chip is
+  // transparent, so that case needs the baked-in variant.
+  const noHeadshot = isLogo ? buildNoHeadshotPlaceholder(nflTeam ?? '') : NO_HEADSHOT_SILHOUETTE;
   const resolvedHeadshot = resolvedEspnId
     ? getPlayerHeadshot(resolvedMflId, resolvedEspnId, nflTeam)
-    : ((isPlaceholderHeadshot(headshot) ? '' : headshot) || buildNoHeadshotPlaceholder(nflTeam ?? ''));
+    : ((isPlaceholderHeadshot(headshot) ? '' : headshot) || noHeadshot);
   const avatarSrc = isDef && teamLogo ? teamLogo : resolvedHeadshot;
   const nflLogoUrl = isDef ? '' : (teamLogo || '/assets/nfl-logos/NFL.svg');
 
@@ -132,7 +137,7 @@ export function buildPlayerCellHTML(opts: PlayerCellOptions): string {
   // Matches what the src actually is: a DEF row with no resolvable team falls
   // back to a headshot src and keeps the headshot cascade.
   const avatarIsLogo = isLogoAvatar || (isDef && !!teamLogo);
-  const avatarOnerror = avatarIsLogo ? NFL_LOGO_ONERROR : buildHeadshotOnerror(resolvedMflId, resolvedEspnId, nflTeam);
+  const avatarOnerror = avatarIsLogo ? NFL_LOGO_ONERROR : buildHeadshotOnerror(resolvedMflId, resolvedEspnId, nflTeam, noHeadshot);
 
   return `<div class="player-cell${sizeClass}${className ? ' ' + esc(className) : ''}">
   <div class="player-cell__avatar${defClass}"${avatarStyle}>

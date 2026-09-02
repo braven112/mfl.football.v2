@@ -6,6 +6,7 @@ import {
   NO_HEADSHOT_PLACEHOLDER,
   NO_HEADSHOT_SILHOUETTE,
 } from '../src/utils/nfl-team-colors';
+import { buildPlayerCellHTML } from '../src/utils/player-cell-html';
 import {
   DEFAULT_HEADSHOT_URL,
   LEGACY_MFL_NO_PHOTO_URL,
@@ -78,6 +79,23 @@ describe('no-headshot placeholder', () => {
     const handler = buildHeadshotOnerror('13145', '4239996', 'TEN');
     expect(handler).toContain(buildNoHeadshotPlaceholder('TEN'));
     expect(handler).not.toContain('no_photo_available');
+  });
+
+  it('keeps the per-row onerror off the baked-in variant', () => {
+    // buildHeadshotOnerror is inlined into EVERY rendered player row. The chip
+    // paints the gradient for every non-logo avatar, so the row's fallback is
+    // the 371-char silhouette, not the 794-char baked one — and it is the SAME
+    // string on every row, so it compresses away instead of shipping one
+    // variant per team. Copilot caught this on PR #697 after the map was fixed
+    // but the per-row duplication was not.
+    const row = buildPlayerCellHTML({ name: 'Rookie', position: 'WR', nflTeam: 'TEN' });
+    expect(row).toContain(NO_HEADSHOT_SILHOUETTE);
+    expect(row).not.toContain(buildNoHeadshotPlaceholder('TEN'));
+    expect(buildNoHeadshotPlaceholder('TEN').length).toBeGreaterThan(NO_HEADSHOT_SILHOUETTE.length * 1.8);
+
+    // A logo chip is transparent, so its cascade still needs the baked variant.
+    const def = buildPlayerCellHTML({ name: 'Bills, Buffalo', position: 'DEF', nflTeam: '' });
+    expect(def).toContain(buildNoHeadshotPlaceholder(''));
   });
 
   it('ends every headshot cascade on the team-colored placeholder', () => {
