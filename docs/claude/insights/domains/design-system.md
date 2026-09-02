@@ -164,10 +164,20 @@ read as a literal by everyone else. Before theming against an unfamiliar
 `--cat-*`/`--afl-*`/`--foo-*` name, grep for its declaration and check whether
 a token file is among the hits.
 
-**Consequence for the fix that found it:** inverting those pills in dark mode
-had to hardcode the pair (`background: #fff; color: var(--cat-regular-season,
-#1c497c)`) rather than lean on a token flip, because there is no dark value to
-flip — the fallback is the shipped color in both themes.
+One precision that matters when you go looking: both declarations are on
+`:root` *inside* a scoped `<style>`, which Astro leaves global — so they are
+page-global on any page mounting those two components, not component-local.
+Neither renders on `/afl-fantasy`, so the AFL card still gets the fallback; but
+"declared in a component" and "unreachable from elsewhere" are not the same
+claim, and on a TheLeague page the same `var()` would resolve.
+
+**Consequence for the fix that found it:** the dark rule hardcodes the navy
+(`background: #fff; color: #1c497c`) rather than referencing the token.
+`tokens.css:222` already flags this family for a move into the token files,
+and a migrated dark value would be *lightened* to read on a dark surface —
+which is precisely the wrong ink for a white pill. When you invert a pair,
+the half that lands on the light side of the inversion must be a literal or a
+token you have checked per-theme; a fallback you are relying on is neither.
 
 ---
 

@@ -384,12 +384,16 @@ const visible = rows.slice(0, 6);
     color: #fff;
   }
 
-  /* On a dark card the navy fill sits barely above the surface, so the four
-     seeds that matter read as the quietest pills on the table. Invert them:
-     white fill, navy numeral — the same pair, the loud way round. */
+  /* On a dark card the navy fill sits barely above the surface (1.63:1), so
+     the four seeds that matter read as the quietest pills on the table.
+     Invert them: white fill, navy numeral — the same pair, the loud way round.
+     The navy is a LITERAL here, not `var(--cat-regular-season)`: that family
+     is declared page-locally and tokens.css already flags it for a move into
+     the token files. A migrated dark value would be lightened to read on a
+     dark surface — which is exactly the wrong ink for a white pill. */
   :global(html.dark) .afl-conf__seed-badge--in {
     background: #fff;
-    color: var(--cat-regular-season, #1c497c);
+    color: #1c497c;
   }
 
   .afl-conf__td--team {
@@ -412,6 +416,16 @@ const visible = rows.slice(0, 6);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
+  }
+
+  /* The "Div" wordmark is the fallback for a division with no shield art, so
+     it is live for any layout the SVG set doesn't cover. Navy ink on a 14%
+     navy tint measures 1.53:1 on the dark card — the chip was there and
+     unreadable. Re-tint off white in dark for 7.7:1, quiet enough that it
+     still reads as a marker beside the crest rather than a second seed pill. */
+  :global(html.dark) .afl-conf__chip {
+    background: color-mix(in srgb, #fff 14%, transparent);
+    color: #dbe7f5;
   }
 
   /* Division-title shield in place of the old "Div" wordmark. The art is
