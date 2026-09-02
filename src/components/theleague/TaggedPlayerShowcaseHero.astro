@@ -6,15 +6,18 @@
  * tagging franchise). Gracefully handles the empty state before any tags.
  */
 import EventHeroShell from './EventHeroShell.astro';
+import type { HeroFranchiseBackdrop } from '../../utils/hero-franchise-backdrop';
 import type { HeroState } from '../../types/hero-state';
 import { CATEGORY_ACCENT, CATEGORY_GLOW } from '../../utils/league-event-hero-view';
 
 export interface Props {
   taggedShowcaseProps?: HeroState['taggedShowcaseProps'];
   resolveLeaguePath: (path: string) => string;
+  /** Signed-in owner's colours + crest behind the card. See EventHeroShell. */
+  backdrop?: HeroFranchiseBackdrop | null;
 }
 
-const { taggedShowcaseProps, resolveLeaguePath: r } = Astro.props;
+const { taggedShowcaseProps, resolveLeaguePath: r, backdrop = null } = Astro.props;
 const taggedPlayers = taggedShowcaseProps?.taggedPlayers ?? [];
 const hasPlayers = taggedPlayers.length > 0;
 const displayPlayers = taggedPlayers.slice(0, 5);
@@ -26,6 +29,7 @@ const summary = hasPlayers
 ---
 
 <EventHeroShell
+  backdrop={backdrop}
   pill="Tag showcase"
   headline="Tagged players"
   accentWord="in play."

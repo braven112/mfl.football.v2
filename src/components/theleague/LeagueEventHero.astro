@@ -9,6 +9,7 @@
  * (and its CSS) lives in EventHeroShell; this component just forwards props.
  */
 import EventHeroShell from './EventHeroShell.astro';
+import type { HeroFranchiseBackdrop } from '../../utils/hero-franchise-backdrop';
 
 interface Props {
   /** Pill label, e.g. "2026 NFL Draft" */
@@ -41,6 +42,8 @@ interface Props {
   bordered?: boolean;
   /** Landmark label for the section element. Defaults to "League hero". */
   regionLabel?: string;
+  /** Signed-in owner's colours + crest behind the card. See EventHeroShell. */
+  backdrop?: HeroFranchiseBackdrop | null;
 }
 ---
 

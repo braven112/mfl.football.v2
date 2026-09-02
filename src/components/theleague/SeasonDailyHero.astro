@@ -46,6 +46,7 @@ import MatchupSplitHero from './season-heroes/MatchupSplitHero.astro';
 import PlayoffRoundHero from './playoff-heroes/PlayoffRoundHero.astro';
 import BreakingStoryHero from './BreakingStoryHero.astro';
 import type { BreakingStory } from '../../utils/offseason-hero-data';
+import type { HeroFranchiseBackdrop } from '../../utils/hero-franchise-backdrop';
 
 export interface Props {
   /** Fully resolved hero state from the page frontmatter */
@@ -89,9 +90,20 @@ export interface Props {
   /** Cast headline player + story for the breaking-story hero (page-resolved) */
   breakingModel?: HeroModel | null;
   breakingStory?: BreakingStory | null;
+  /**
+   * The signed-in owner's franchise colours + crest (page-resolved), for the
+   * promo heroes built on `EventHeroShell`.
+   *
+   * Deliberately NOT forwarded to the heroes that are ABOUT a specific
+   * franchise or matchup — champion-crowned, the playoff bracket, live scoring,
+   * the matchup split, the recap composite. Those already wear the colours of
+   * whoever is IN them, and repainting one in the viewer's colours would claim
+   * a card that belongs to somebody else. Same rule as AflHero.
+   */
+  heroBackdrop?: HeroFranchiseBackdrop | null;
 }
 
-const { state, resolveLeaguePath, spriteUrl, liveScoring, userFranchiseId, isAuthenticated, featureModel, auctionModel, auctionClosingBid, cutWatchModel, udfaModels = [], showcasePanels = [], preseasonModel, preseasonModelIsOwn, kickoffGame, breakingModel, breakingStory } = Astro.props;
+const { state, resolveLeaguePath, spriteUrl, liveScoring, userFranchiseId, isAuthenticated, featureModel, auctionModel, auctionClosingBid, cutWatchModel, udfaModels = [], showcasePanels = [], preseasonModel, preseasonModelIsOwn, kickoffGame, breakingModel, breakingStory, heroBackdrop = null } = Astro.props;
 
 // Fresh What's New (P2) always gets the composite treatment. The model is
 // category-cast in the page frontmatter (rookie for new pages/features,
@@ -125,6 +137,7 @@ const isFridayArticle = ptWeekday === 'Fri';
     />
   ) : (
     <AuctionHero
+      backdrop={heroBackdrop}
       leagueYear={state.auctionProps.leagueYear}
       resolveLeaguePath={resolveLeaguePath}
       spriteUrl={spriteUrl}
@@ -137,6 +150,7 @@ const isFridayArticle = ptWeekday === 'Fri';
 {/* P0: Draft hero — delegate to existing component */}
 {(phase === 'draft-announced' || phase === 'draft-live') && state.draftProps && (
   <DraftHero
+    backdrop={heroBackdrop}
     leagueYear={state.draftProps.leagueYear}
     resolveLeaguePath={resolveLeaguePath}
     spriteUrl={spriteUrl}
@@ -215,6 +229,7 @@ const isFridayArticle = ptWeekday === 'Fri';
 
 {phase === 'tag-window' && (
   <TagExtensionHero
+    backdrop={heroBackdrop}
     resolveLeaguePath={resolveLeaguePath}
     referenceDate={state.metadata.referenceDate}
   />
@@ -232,6 +247,7 @@ const isFridayArticle = ptWeekday === 'Fri';
     />
   ) : (
     <TaggedPlayerShowcaseHero
+      backdrop={heroBackdrop}
       taggedShowcaseProps={state.taggedShowcaseProps}
       resolveLeaguePath={resolveLeaguePath}
     />
@@ -259,6 +275,7 @@ const isFridayArticle = ptWeekday === 'Fri';
     />
   ) : (
     <CutWatchHero
+      backdrop={heroBackdrop}
       cutWatchProps={state.cutWatchProps}
       resolveLeaguePath={resolveLeaguePath}
       spriteUrl={spriteUrl}
@@ -311,6 +328,7 @@ const isFridayArticle = ptWeekday === 'Fri';
   && (state.eventView ? (
   <LeagueEventHero
     {...state.eventView}
+    backdrop={heroBackdrop}
     bordered={state.eventBordered}
     regionLabel="Featured league event"
   />

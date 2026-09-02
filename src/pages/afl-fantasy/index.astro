@@ -46,6 +46,7 @@ import { getAflWhatsNextTimeline } from '../../utils/league-event-resolver';
 import { getAflLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
 import { loadAflDraftSlot } from '../../utils/afl-draft-slot';
 import { resolveAflTeamSpotlight } from '../../utils/afl-team-spotlight';
+import { resolveHeroFranchiseBackdrop } from '../../utils/hero-franchise-backdrop';
 import {
   getAFLPreference,
   setAFLPreference,
@@ -93,6 +94,16 @@ const userConferenceId = (userTeam?.conference === '00' || userTeam?.conference 
 const userConferenceName = userConferenceId
   ? aflConfig.conferences.find(c => c.code === userConferenceId)?.name
   : undefined;
+
+// The owner's own colours + crest behind the promo hero. Reads `userTeam`, not
+// the auth user directly, so it follows the SAME team this page's My Team card
+// and standings highlight already follow — an owner who set `?myteam=` to
+// another franchise gets one page about one team, not a card in their colours
+// over a page about somebody else's. Null when no team is resolved, and the
+// hero then renders its AFL navy chrome unchanged.
+// 'afl' and not AFL.slug: this is the crest manifest's league key, which is not
+// the route directory ('afl-fantasy'). See `crestStrokeIndex`.
+const heroBackdrop = resolveHeroFranchiseBackdrop(userTeam, 'afl');
 
 // ── Date / hero state ───────────────────────────────────────────────────────
 const testDateParam = Astro.url.searchParams.get('testDate');
@@ -266,6 +277,7 @@ const lastVisitDate = Astro.cookies.get('whats_new_last_visit')?.value ?? null;
           config={aflConfig}
           standings={standingsFranchises}
           userFranchiseId={userFranchiseId}
+          backdrop={heroBackdrop}
         />
       )}
 

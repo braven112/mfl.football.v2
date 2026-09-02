@@ -19,6 +19,8 @@ import type { HeroSecondaryLink } from '../../utils/afl-hero-resolver';
 import { getNflTeamColors, hexToRgba } from '../../utils/nfl-team-colors';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
 import { LEAGUES } from '../../config/leagues';
+import type { HeroFranchiseBackdrop } from '../../utils/hero-franchise-backdrop';
+import '../../styles/hero-franchise-backdrop.css';
 
 interface Props {
   /** Pill label, e.g. "2026 Keeper Deadline" */
@@ -63,6 +65,16 @@ interface Props {
   bordered?: boolean;
   /** Landmark label for the section element. Defaults to "AFL hero". */
   regionLabel?: string;
+  /**
+   * The signed-in owner's franchise colours + crest, resolved by the page
+   * (`resolveHeroFranchiseBackdrop`). When set it REPLACES the navy surface and
+   * the red corner glow; the gold accent word, the red pill and the red CTA are
+   * untouched, so the AFL's own brand is still on the card.
+   *
+   * Null for a signed-out visitor, and the card renders exactly as it did
+   * before — which is why nothing here branches on auth.
+   */
+  backdrop?: HeroFranchiseBackdrop | null;
 }
 
 const {
@@ -88,6 +100,7 @@ const {
   countLabel,
   bordered = false,
   regionLabel = 'AFL hero',
+  backdrop = null,
 } = Astro.props;
 
 // Composite model treatment: the model's NFL team primary color tints the
@@ -118,10 +131,26 @@ const countAriaLabel = hasCount
 ---
 
 <section
-  class:list={['afl-event-hero', { 'afl-event-hero--bordered': bordered }]}
-  style={`--ev-accent:${accent};--ev-glow:${glow};${modelStyle}`}
+  class:list={['afl-event-hero', { 'afl-event-hero--bordered': bordered, 'afl-event-hero--franchise': !!backdrop }]}
+  style={`--ev-accent:${accent};--ev-glow:${glow};${modelStyle}${backdrop?.style ?? ''}`}
   aria-label={regionLabel}
 >
+  {backdrop && (
+    <>
+      {backdrop.crest && (
+        <img
+          class="hero-fb__crest"
+          src={backdrop.crest}
+          style={backdrop.crestFilter ? `filter: ${backdrop.crestFilter};` : undefined}
+          alt=""
+          aria-hidden="true"
+          loading="lazy"
+          decoding="async"
+        />
+      )}
+      <span class="hero-fb__wash" aria-hidden="true"></span>
+    </>
+  )}
   <span class="afl-event-hero__glow" aria-hidden="true"></span>
 
   {model ? (
@@ -298,6 +327,61 @@ const countAriaLabel = hasCount
 
   .afl-event-hero--bordered {
     border: 2px solid var(--ev-accent);
+  }
+
+  /* ── Owner's franchise backdrop ──
+     The signed-in owner's `broadcastGradient` replaces the navy card, and
+     `--ev-surface` becomes the gradient's SECOND stop so the legacy player
+     photo's `color-mix` fades still blend into what is actually behind them —
+     that fade sits on the right flank, where the 115deg gradient has arrived.
+     The AFL's red corner glow goes: `.hero-fb__wash` is the wash now, and two
+     washes over franchise colour muddied every gradient that was not red. */
+  .afl-event-hero--franchise {
+    --ev-surface: var(--hero-fb-surface, #002244);
+    background: var(--hero-fb-gradient, #002244);
+  }
+  .afl-event-hero--franchise .afl-event-hero__glow {
+    display: none;
+  }
+  /* Same reason as the glow: the composite model's NFL-team tint is a SECOND
+     colour wash, and it fought the franchise's own on every cast player. */
+  .afl-event-hero--franchise .afl-event-hero__model-glow {
+    display: none;
+  }
+
+  /* The player photo is a RECTANGLE, and the shells blend its left edge in by
+     painting a flat `--ev-surface` overlay on top of it. That works against a
+     flat card and cannot work against a gradient: the overlay is one colour and
+     the card behind it is a different colour at every x, so the photo panel
+     picked up a hard vertical seam the moment a franchise gradient went in.
+
+     A MASK has no colour to get wrong — it dissolves the photo into whatever is
+     actually behind it. The stops mirror `--ev-fade-left` inverted (that overlay
+     is opaque where the photo should vanish; a mask is transparent there).
+
+     One layer, deliberately: the bottom fade would need a second mask layer and
+     `mask-composite: intersect`, which falls back to a UNION where unsupported —
+     and a union would paint the left edge back in at full opacity, i.e. exactly
+     the seam this is here to remove. The bottom of the photo meets the card's
+     own rounded edge, so losing that softening costs far less. */
+  .afl-event-hero--franchise .afl-event-hero__player img {
+    -webkit-mask-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(0, 0, 0, 0.4) 26%,
+      rgba(0, 0, 0, 0.9) 60%,
+      #000 100%
+    );
+    mask-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(0, 0, 0, 0.4) 26%,
+      rgba(0, 0, 0, 0.9) 60%,
+      #000 100%
+    );
+  }
+  .afl-event-hero--franchise .afl-event-hero__fade {
+    display: none;
   }
 
   .afl-event-hero__glow {

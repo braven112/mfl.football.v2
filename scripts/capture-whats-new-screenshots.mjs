@@ -57,6 +57,8 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:4321';
  * tests/whats-new-data.test.ts asserts every id here matches a real entry.
  */
 const MANUAL_CAPTURE_ONLY = {
+  'hero-wears-your-colors':
+    'the franchise backdrop only paints for a signed-in owner, and the entry is both-league with no link — a blind capture shoots the MFL landing page, and even pointed at a homepage it shoots the signed-out league chrome, which is the BEFORE state. Needs a forged owner session (AFL league id from the registry, franchise 0001 = Smokane FC, whose green reads clearly against the navy it replaces) and an element screenshot of `.afl-event-hero`, not the full page. The committed capture was taken where espncdn is unreachable, so the right flank shows the AFL logo stand-in rather than the cast player — a recapture with headshots reachable should update `imageAlt` to match.',
   'feature-first-heroes': 'both-league entry, no link — auto-capture would shoot the MFL landing page; capture the /theleague homepage hero manually',
   'draft-room-pick-reveal': 'hand-staged pick-reveal splash mid-animation — auto-capture shoots the idle draft board',
   'schefter-og-unfurls': 'hand-made OG card image, not a page screenshot — auto-capture would replace it with the landing page',

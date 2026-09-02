@@ -7,6 +7,7 @@
  * summary; the full rules sit one click away in the panel.
  */
 import EventHeroShell from './EventHeroShell.astro';
+import type { HeroFranchiseBackdrop } from '../../utils/hero-franchise-backdrop';
 import { randomHeroPlayer } from '../../utils/hero-players';
 import { getNthDayOfMonth } from '../../utils/league-event-resolver';
 import { DEFAULT_LEAGUE } from '../../config/leagues';
@@ -23,6 +24,8 @@ export interface Props {
   live?: boolean;
   /** Reference date (from the resolver) — countdown + day-stable player image. */
   referenceDate?: Date;
+  /** Signed-in owner's colours + crest behind the card. See EventHeroShell. */
+  backdrop?: HeroFranchiseBackdrop | null;
 }
 
 const {
@@ -33,6 +36,7 @@ const {
   spriteUrl,
   live = true,
   referenceDate,
+  backdrop = null,
 } = Astro.props;
 
 const now = referenceDate ?? new Date();
@@ -59,6 +63,7 @@ const quickLinks: QuickLink[] = [
 ---
 
 <EventHeroShell
+  backdrop={backdrop}
   pill={live ? 'Auction live' : 'Auction opens soon'}
   headline="Free agent"
   accentWord="auction."
