@@ -300,13 +300,15 @@ a second product.
 
 Every story that needs a franchise draws from one small cast: **Pacific
 Pigskins**, **The Mariachi Ninjas**, **Cowboy Up**, **Wascawy Wabbits**
-(TheLeague), plus **No Soup For You** and **The Boondock Saints** (AFL). The
+(TheLeague), plus **Suh girls, one cup** and **The Boondock Saints** (AFL). The
 playoff fixtures used to carry six unrelated franchises, `TeamIconCell` four
 more, and the name-fallback stories a seventh.
 
-The two AFL entries are not preferences — they are the only teams left on the
-custom-stroke and default-white branches respectively (see below). Those two
-slots are dictated by the data, and the data moves.
+The two AFL entries are not preferences — they hold the custom-stroke and
+default-white branches respectively (see below). Those two slots are dictated by
+the data, and the data moves: the custom-stroke slot was The Show, then No Soup
+For You, and is now Suh girls, each time because the previous holder gained an
+`iconDark` and left the branch. Expect to move it again.
 
 This is not tidiness. Every crest a story renders is a file
 `STORY_ASSET_GLOBS` has to name one by one, so each extra franchise is another
@@ -323,9 +325,22 @@ cover every branch but one, and the sixth exists solely to cover that one.
 all.** Give a franchise a `_dark` cut and, if a story already renders its light
 crest, that new file is named by the story's dark swap and
 `tests/chromatic-path-filter.test.ts` fails until it is in the trigger — the
-build breaks in a pure logo drop that never opened a `stories/` file. That is
-what happened when No Soup For You got `no_soup_dark.png` (Sept 2026). Before
-shipping dark art, check whether `stories/` names that franchise's light file.
+build breaks in a pure logo drop that never opened a `stories/` file.
+
+**The failing build is the lucky half.** The same act silently guts what the
+story TESTS: an `iconDark` removes a franchise from the stroke set by
+construction, so a story pinned to it as a stroke example quietly becomes a
+second swap example and keeps passing. Nothing in the suite catches that —
+`chromatic-path-filter` checks trigger coverage, not which branch a fixture
+still lands on. It has now happened twice to the same story, `StrokeCustomColor`
+(The Show in #685, then No Soup For You right after), and the second time the
+fix was to repoint it at Suh girls and drop BOTH no-soup paths from the trigger
+— not to add the dark file to the trigger, which would have preserved a story
+testing the wrong thing.
+
+So before shipping dark art: grep `stories/` for that franchise's light file.
+If it is named there, decide what the story was pinning before you change the
+data under it.
 
 **And the glob and the PNG must land in the SAME commit.** The same test also
 asserts every non-wildcard `STORY_ASSET_GLOBS` entry exists on disk, so neither
