@@ -340,6 +340,33 @@ diff on one league as the rule not working; check the other.
 every franchise left on light art either carries a ring or opted out. Its
 manifest cases deliberately use AFL franchises for the same reason.
 
+## Replacing a team's art is only a logo swap if no ERA changes
+
+`/publish-assets` regenerates three derived files (crest manifest, both asset
+registries) and that is complete for a straight refresh of a crest. It is NOT
+complete when the old look is being **retired into a `history[]` era**, which is
+what "new artwork for 2026 forward" always means here. Four more committed files
+bake a resolved icon path per franchise-season and will keep serving the old
+path forever:
+
+```bash
+pnpm run compute:franchise-history   # season-ledger.json, franchise-history.json
+pnpm run compute:owner-tenures       # owner-tenures.json
+pnpm run compute:division-strength   # division-strength.json
+```
+
+Nothing catches this: the JSON stays valid, the image still 200s, and the full
+suite passes. Two other rules travel with it — **snapshot the outgoing art into
+`history/` BEFORE overwriting the live file** (five TheLeague eras still point
+`icon` straight at the live path, so the overwrite would silently repaint
+history), and give the era an `eraLabel`, which is how the Throwback picker
+tells apart eras that share a name. Full recipe, including the banner re-cut and
+the one-grep check that catches a stale derived file:
+`docs/claude/insights/features/franchise-history.md` (2026-09-01).
+
+Also note the era edit itself puts the change OUTSIDE `/publish-assets`'s
+allowlist — `yearEnd`/`eraLabel` are not branding keys. It goes through `/live`.
+
 ## NFL team logos — committed files, guard-tested, must never 404
 
 Every player cell renders self-hosted `/assets/nfl-logos/{CODE}.svg`. Two
