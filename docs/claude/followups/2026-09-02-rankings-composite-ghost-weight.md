@@ -7,7 +7,7 @@ hotfix_pr: https://github.com/braven112/mfl.football.v2/pull/699
 hotfix_sha: 48396e8
 followup_issue: 701
 followup_pr:
-followup_session:
+followup_session: session_01WQNPQJB55Bfb1WL1aRL6Be
 ---
 
 # Follow-up: Import Rankings weights summed to 75, not 100
