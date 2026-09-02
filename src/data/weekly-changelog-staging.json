@@ -3,6 +3,14 @@
   "changes": [
     {
       "date": "2026-09-02",
+      "type": "bug-fix",
+      "summary": "Import Rankings no longer shows weights that refuse to add up to 100. If a ranking source in your composite had gone away — deleted on another device, or dropped from a daily refresh — its slice stayed on the books invisibly, so the header counted a source it never showed you and the weights you could see summed to 75. Your actual My Rank order was always computed correctly; it was the panel that was lying. Stale sources are now cleared out and the remaining weights rebalanced, so what you type is the share that source really gets.",
+      "impact": "user",
+      "area": "rankings",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-02",
       "type": "style-tweak",
       "summary": "The playoff-seed pills on the AL and NL standings cards flip in dark mode — white circle, navy number, instead of navy on navy. The top four seeds now read as the loudest thing in the table, which is what they are.",
       "impact": "user",

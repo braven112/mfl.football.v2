@@ -547,21 +547,59 @@ export function getCompositeConfig(): CompositeRankConfig | null {
 }
 
 /**
- * Every composite member, unfiltered.
+ * Every composite member the owner can actually see, self-healed.
  *
  * `getCompositeConfig()` deliberately returns null below 2 members (the
  * composite isn't meaningful with one), but the UI still has to render each
- * source's tick state and weight — so it needs the raw list. It used to reach
- * into localStorage for `'rankings.compositeConfig'` directly, which is
- * TheLeague's key: on an AFL or best-ball page that read the wrong league's
- * config, or nothing at all. Scoped here so no caller can get that wrong.
+ * source's tick state and weight — so it needs the member list rather than the
+ * config. It used to reach into localStorage for `'rankings.compositeConfig'`
+ * directly, which is TheLeague's key: on an AFL or best-ball page that read the
+ * wrong league's config, or nothing at all. Scoped here so no caller can get
+ * that wrong.
+ *
+ * It must ALSO drop members whose import is gone, exactly as
+ * `getCompositeConfig()` does. When only the math path filtered, a stale member
+ * was invisible but still counted: the header read "Composite of 4 ranking
+ * sources" over three rendered rows, their weights read 25/25/25 = 75, and the
+ * `weight/Σweight` hint that exists to catch precisely this stayed hidden —
+ * because the ghost's 25 padded the total back to exactly 100, so the typed
+ * number matched the computed share and the UI concluded there was nothing to
+ * warn about. A stale member is routine, not exotic: `initFromServer` restores
+ * the server's composite config before the local import list is reconciled, a
+ * source dropping out of the build snapshot removes its `builtin:` import with
+ * nothing pruning its membership, and the supersede path filters without
+ * rebalancing.
+ *
+ * Dropping them on read fixes the display but leaves the stored weights summing
+ * to less than 100, so the next `setCompositeWeight` would rebalance around the
+ * ghost again and quietly dilute the number the owner typed. Hence the write:
+ * the survivors are rebalanced back to 100 and persisted, so the weights are
+ * true percentages again.
+ *
+ * That write goes straight to localStorage rather than through
+ * `saveCompositeConfig`. This runs from component render, and
+ * `saveCompositeConfig` fires `rankingsUpdated` + pushes to the server — a
+ * server round-trip on a read, and an event that re-enters the components that
+ * just called this. It is idempotent either way: once healed there is nothing
+ * stale left, so the branch never runs twice.
  */
 export function getCompositeMembers(): CompositeImportConfig[] {
   try {
     const raw = localStorage.getItem(compositeConfigKey());
     if (!raw) return [];
     const parsed = JSON.parse(raw) as CompositeRankConfig;
-    return Array.isArray(parsed.members) ? parsed.members : [];
+    if (!Array.isArray(parsed.members)) return [];
+
+    // getAllImports(), not the raw store: a hidden built-in is not a source the
+    // owner can see or untick, so it must not hold weight either — which is the
+    // same conclusion setBuiltinHidden() reaches when it prunes on the way out.
+    const validIds = new Set(getAllImports().map((i) => i.id));
+    const valid = parsed.members.filter((m) => validIds.has(m.importId));
+    if (valid.length === parsed.members.length) return parsed.members;
+
+    const healed = rebalanceToHundred(valid);
+    localStorage.setItem(compositeConfigKey(), JSON.stringify({ members: healed }));
+    return healed;
   } catch {
     return [];
   }

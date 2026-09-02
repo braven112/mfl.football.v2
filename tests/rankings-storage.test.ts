@@ -8,6 +8,7 @@ import {
   findDuplicateImport,
   migrateFromLegacyKeys,
   getCompositeConfig,
+  getCompositeMembers,
   saveCompositeConfig,
   toggleCompositeImport,
   syncBuiltinImports,
@@ -426,6 +427,74 @@ describe('rankings-storage', () => {
       expect(config).not.toBeNull();
       expect(config!.members).toHaveLength(2);
       expect(config!.members.map((m) => m.importId)).toEqual(['valid-1', 'valid-2']);
+    });
+
+    // A stale member — one whose import is gone — used to be invisible to the
+    // UI but still counted, because only getCompositeConfig() filtered. The
+    // header read one source more than it rendered, and the visible weights
+    // summed to less than 100 while the ghost silently held the remainder.
+    it('getCompositeMembers drops stale members and rebalances to 100', () => {
+      saveImport(createMockImport({ id: 'valid-1', source: 'fantasypros', type: 'dynasty' }));
+      saveImport(createMockImport({ id: 'valid-2', source: 'fantasypros', type: 'redraft' }));
+      saveImport(createMockImport({ id: 'valid-3', source: 'dlf', type: 'dynasty' }));
+      localStorageMock.setItem(
+        'rankings.compositeConfig',
+        JSON.stringify({
+          members: [
+            { importId: 'valid-1', weight: 25 },
+            { importId: 'valid-2', weight: 25 },
+            { importId: 'valid-3', weight: 25 },
+            { importId: 'deleted-id', weight: 25 },
+          ],
+        }),
+      );
+
+      const members = getCompositeMembers();
+      expect(members).toHaveLength(3);
+      expect(members.map((m) => m.importId)).toEqual(['valid-1', 'valid-2', 'valid-3']);
+      // The whole point: the numbers the owner sees add up.
+      expect(members.reduce((sum, m) => sum + m.weight, 0)).toBeCloseTo(100, 5);
+    });
+
+    // Filtering on read alone would still leave the STORED weights summing to
+    // 75, so the next setCompositeWeight would rebalance around the ghost and
+    // dilute the number just typed. The heal has to persist.
+    it('getCompositeMembers persists the healed config', () => {
+      saveImport(createMockImport({ id: 'valid-1', source: 'fantasypros', type: 'dynasty' }));
+      saveImport(createMockImport({ id: 'valid-2', source: 'dlf', type: 'dynasty' }));
+      localStorageMock.setItem(
+        'rankings.compositeConfig',
+        JSON.stringify({
+          members: [
+            { importId: 'valid-1', weight: 25 },
+            { importId: 'valid-2', weight: 25 },
+            { importId: 'deleted-id', weight: 50 },
+          ],
+        }),
+      );
+
+      getCompositeMembers();
+
+      const stored = JSON.parse(localStorageMock._getStore()['rankings.compositeConfig']);
+      expect(stored.members).toHaveLength(2);
+      expect(stored.members.reduce((sum: number, m: any) => sum + m.weight, 0)).toBeCloseTo(100, 5);
+    });
+
+    it('getCompositeMembers leaves a clean config untouched', () => {
+      saveImport(createMockImport({ id: 'valid-1', source: 'fantasypros', type: 'dynasty' }));
+      saveImport(createMockImport({ id: 'valid-2', source: 'dlf', type: 'dynasty' }));
+      const clean = {
+        members: [
+          { importId: 'valid-1', weight: 70 },
+          { importId: 'valid-2', weight: 30 },
+        ],
+      };
+      localStorageMock.setItem('rankings.compositeConfig', JSON.stringify(clean));
+
+      expect(getCompositeMembers()).toEqual(clean.members);
+      // No rewrite: a deliberate 70/30 must not be normalized out from under
+      // the owner just because something read it.
+      expect(JSON.parse(localStorageMock._getStore()['rankings.compositeConfig'])).toEqual(clean);
     });
 
     it('saveCompositeConfig persists to localStorage and fires event', () => {
