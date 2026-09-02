@@ -322,9 +322,17 @@ describe('the Throwback Rebrand', () => {
     const identity = resolveThrowbackIdentity(findTeam('0014'), undefined, 'afl');
     expect(identity.name).toBe('Jesus Killers');
     expect(identity.isHistorical).toBe(true);
-    // Borrowed wholesale — art and palette, not just the name.
-    expect(identity.icon).toBe('/assets/afl/history/jesus_killers_icon_icon_circle.png');
-    expect(identity.colorPrimary).toBe('#643f29');
+    // Borrowed wholesale — art and palette, not just the name. Both are read
+    // from Jewpacabra's own era rather than restated here: the palettes are
+    // derived from the art (scripts/derive-era-palettes.mjs), so a literal
+    // would pin a hex that re-deriving is meant to be free to change, and it
+    // would still pass if the borrow quietly stopped carrying the palette.
+    const source = (findTeam('0018').history ?? []).find((e) => e.yearStart === 2019)!;
+    expect(identity.icon).toBe(source.icon);
+    expect(identity.banner).toBe(source.banner);
+    expect(identity.colorPrimary).toBe(source.colorPrimary);
+    expect(identity.colorSecondary).toBe(source.colorSecondary);
+    expect(source.colorPrimary).toBeTruthy();
   });
 
   it('ignores an owner override — a rebrand is imposed, not chosen', () => {
