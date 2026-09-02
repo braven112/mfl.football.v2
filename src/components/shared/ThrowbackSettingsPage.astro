@@ -21,6 +21,7 @@
  */
 import TheLeagueLayout from '../../layouts/TheLeagueLayout.astro';
 import type { ThrowbackSettingsView } from '../../utils/throwback-settings-view';
+import { eraBannerStyle } from '../../utils/era-banner-style';
 
 interface Props {
   view: ThrowbackSettingsView;
@@ -72,7 +73,12 @@ const weekLabel = `Week ${previewWeek}`;
 
     {imposedEra ? (
       <section class="tbw-imposed" aria-labelledby="tbw-imposed-title">
-        <img class="tbw-imposed__banner" src={imposedEra.banner} alt={`${imposedEra.name} banner`} />
+        <img
+          class="tbw-imposed__banner"
+          src={imposedEra.banner}
+          alt={`${imposedEra.name} banner`}
+          style={eraBannerStyle(imposedEra)}
+        />
         <div class="tbw-imposed__body">
           <img class="tbw-imposed__icon" src={imposedEra.icon} alt="" />
           <div>
@@ -101,7 +107,13 @@ const weekLabel = `Week ${previewWeek}`;
               value={era.yearStart}
               checked={era.yearStart === selectedYearStart}
             />
-            <img class="tbw-card__banner" src={era.banner} alt={`${era.name} banner`} loading="lazy" />
+            <img
+              class="tbw-card__banner"
+              src={era.banner}
+              alt={`${era.name} banner`}
+              style={eraBannerStyle(era)}
+              loading="lazy"
+            />
             <div class="tbw-card__body">
               <img class="tbw-card__icon" src={era.icon} alt="" loading="lazy" />
               <div>
@@ -171,7 +183,13 @@ const weekLabel = `Week ${previewWeek}`;
               <div class="tbw-cg__eras">
                 {row.eras.map((era) => (
                   <div class={`tbw-cg__era${era.isPicked ? ' tbw-cg__era--picked' : era.isDefault ? ' tbw-cg__era--default' : ''}`}>
-                    <img class="tbw-cg__banner" src={era.banner} alt={`${era.name} banner`} loading="lazy" />
+                    <img
+                      class="tbw-cg__banner"
+                      src={era.banner}
+                      alt={`${era.name} banner`}
+                      style={eraBannerStyle(era)}
+                      loading="lazy"
+                    />
                     <div class="tbw-cg__era-body">
                       <img class="tbw-cg__era-icon" src={era.icon} alt="" loading="lazy" />
                       <div class="tbw-cg__era-meta">
@@ -248,7 +266,12 @@ const weekLabel = `Week ${previewWeek}`;
   .tbw-imposed__banner {
     display: block;
     width: 100%;
-    height: auto;
+    /* Capped and contained rather than `height: auto`, which renders a
+       square legacy logo as a 589px-tall page header. The inline gradient
+       (see `eraBannerStyle`) fills whatever the art doesn't. */
+    height: 140px;
+    object-fit: contain;
+    background: var(--content-border);
   }
   .tbw-imposed__body {
     display: flex;
@@ -348,15 +371,12 @@ const weekLabel = `Week ${previewWeek}`;
     width: 100%;
     height: 90px;
     /* Fit the whole banner (letterboxed) so wordmarks are never clipped —
-       legacy banners vary wildly in aspect ratio. */
+       legacy banners vary wildly in aspect ratio, and 21 of them are the
+       square 2003/04 MFL franchise logo rather than a banner at all. The
+       letterbox is filled by the era's own palette inline, so `contain`
+       costs nothing; see `eraBannerStyle` for why cropping is worse. */
     object-fit: contain;
     background: var(--content-border);
-  }
-
-  /* Placeholder banners (no recovered art) are a generic svg — hide the
-     letterbox artifact and just show the muted fill. */
-  .tbw-card__banner[src$='.svg'] {
-    object-fit: cover;
   }
 
   .tbw-card__body {

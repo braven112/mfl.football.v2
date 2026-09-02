@@ -32,6 +32,16 @@ export interface ThrowbackEraView {
   eraLabel: string | undefined;
   icon: string | undefined;
   banner: string | undefined;
+  /**
+   * The era's palette, carried through so the settings page can back a
+   * letterboxed banner with the era's own colors instead of a flat grey.
+   * Twenty-one legacy "banners" are the 2003/04 MFL franchise logo — square
+   * or portrait, a few dozen pixels wide — and `object-fit: contain` renders
+   * those as a stamp on a grey field. The gradient is what makes that read as
+   * a designed lockup rather than a broken image.
+   */
+  colorPrimary: string | undefined;
+  colorSecondary: string | undefined;
 }
 
 export interface ThrowbackCommishEra extends ThrowbackEraView {
@@ -81,6 +91,8 @@ function toEraView(era: FranchiseHistoryEntry): ThrowbackEraView {
     eraLabel: era.eraLabel,
     icon: era.icon,
     banner: era.banner,
+    colorPrimary: era.colorPrimary,
+    colorSecondary: era.colorSecondary,
   };
 }
 
