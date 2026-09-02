@@ -62,7 +62,7 @@ export const DEFAULT_THROWBACK_ERA: Record<string, number> = {
                 //   which 0010 used to be named before that identity moved to 0011)
   '0011': 2019, // Midwestside Connection (older icon variant)
   '0012': 2007, // BOYZ II MEN (only prior era)
-  '0013': 2009, // Sabertooths
+  '0013': 2009, // Sabertooths (full rebrand beats the 2014 white-facemask Geeks look)
   '0014': 2007, // Devil Dogs (only prior era)
   '0015': 2015, // Dark Magicians of Chaos (2015-2024 icon)
   '0016': 2011, // Treasure Coast Swamp Bandits
