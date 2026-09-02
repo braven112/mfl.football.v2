@@ -147,6 +147,22 @@ function formatRecord(wlt: string): string {
     color: var(--cat-regular-season, #1c497c);
   }
 
+  /* Dark-mode rescue for the three `--cat-regular-season` call sites below.
+     That variable has NO value in tokens.css or tokens-dark.css — it is
+     declared only inside the scoped <style> of two TheLeague components,
+     neither of which mounts on /afl-fantasy. So every var() here renders its
+     #1c497c fallback in BOTH themes, and there is no token to flip; these are
+     literals on purpose. (design-token-guard passes it because its `defined`
+     set is repo-wide rather than scope-aware.) Surfaces are the AFL dark navy
+     ramp: card --content-bg #16283c, matchup strip --color-gray-50 #122132.
+     Light mode is healthy (pill 8.76:1, kicker 9.16:1) and is left alone. */
+
+  /* Navy ink directly on the dark card is 1.63:1 — the kicker was genuinely
+     unreadable, not merely quiet. Lift into the same steel-blue family: 7.26:1. */
+  :global(html.dark) .afl-playoffs-hero__kicker {
+    color: #8fb8e8;
+  }
+
   .afl-playoffs-hero__title {
     margin: 0;
     font-size: 1.35rem;
@@ -202,6 +218,14 @@ function formatRecord(wlt: string): string {
     border-radius: var(--radius-md, 0.5rem);
   }
 
+  /* The 3px accent rule against the card it sits on: 1.63:1, an invisible
+     border. A mid steel blue at 3.24:1 clears the 3:1 WCAG 1.4.11 asks of a
+     non-text boundary while staying quiet enough to frame the matchup rather
+     than compete with the white seed pills inside it. */
+  :global(html.dark) .afl-playoffs-hero__matchup {
+    border-left-color: #3576c4;
+  }
+
   .afl-playoffs-hero__matchup-label {
     font-size: 0.5625rem;
     font-weight: 700;
@@ -236,8 +260,35 @@ function formatRecord(wlt: string): string {
     font-weight: 700;
   }
 
+  /* The pill's real neighbour is the matchup strip (#122132), not the card —
+     it renders 1.78:1 there, so the marker dissolved into its own row.
+     Same treatment as the seed pills on the conference standings card
+     (AflConferencePlayoffPreview, `--seed-badge--in`): white circle, navy
+     numeral, the same pair the loud way round. Keeping the two cards on one
+     formula matters because they render on the SAME page — the homepage
+     stacks this bracket above those standings tables, so a bracket seed and
+     a standings seed sit inches apart and must not be two different pills.
+     White on the strip is 16.29:1 and the navy numeral on white is 9.16:1;
+     inverting also sidesteps the ceiling a colored fill runs into here,
+     where holding white ink at AA caps the fill at 3.62:1 on this surface. */
+  :global(html.dark) .afl-playoffs-hero__seed {
+    background: #fff;
+    color: #1c497c;
+  }
+
   .afl-playoffs-hero__team--user .afl-playoffs-hero__seed {
     background: var(--afl-accent);
+  }
+
+  /* The user's own pill keeps the red fill — with every other pill now white
+     it is what marks YOUR team — but it cannot keep white ink: --league-accent
+     brightens to #ef5350 in AFL dark and white on that is 3.49:1, so the one
+     seed an owner actually looks for was the only pill still failing AA. The
+     accent is fixed by the token, so the ink moves instead. The page's deepest
+     navy reads 4.84:1 and leaves every numeral on the card dark on a light
+     pill; only the fill says which one is yours. */
+  :global(html.dark) .afl-playoffs-hero__team--user .afl-playoffs-hero__seed {
+    color: #0f1e2e;
   }
 
   .afl-playoffs-hero__icon {
