@@ -14,6 +14,7 @@
 | Failure | Symptom | Guard? |
 |---|---|---|
 | Defined nowhere | Hardcoded fallback renders in BOTH themes | **Yes** |
+| Defined only in another file's scoped block | Same — but repo-wide "defined" satisfies the guard | No |
 | Defined light-only | Light value renders in dark mode | No |
 | Ink tokenized, surface hardcoded | Inverted ink on a fixed light surface — worst contrast of all | No |
 | Defined and valid, value rejected *for that property* | Property resets to its **initial** value | No |
@@ -132,6 +133,41 @@ Set the browser's color scheme and reload — **do not** toggle `html.dark`; on 
 numbers. For SVG ink use an alpha bounding box over rendered pixels: `getBBox()`
 excludes stroke, and the halo on every `-dark` badge *is* a stroke.
 <!-- /CURATED-HEAD -->
+
+---
+
+## 2026-09-02 - The Token Guard's "Defined" Set Is Repo-Wide, Not Scope-Aware
+
+**Context:** The AFL conference playoff card paints its clinching seed pills
+`background: var(--cat-regular-season, #1c497c)`. `tests/design-token-guard.test.ts`
+passes on it. It should not feel like it does: `--cat-regular-season` has no
+value in `tokens.css` or `tokens-dark.css`, and is declared in exactly two
+places in the repo — the scoped `<style>` blocks of
+`src/components/theleague/WhatsNextCard.astro` and `CalendarEventCard.astro`.
+Neither declaration is an ancestor of the AFL card, so that `var()` renders
+its `#1c497c` fallback, in both themes, forever.
+
+**Insight:** The guard builds ONE global `defined` set by regexing every
+`--name:` declaration in src/ (any `.css`/`.astro`/`.ts`), then asks only
+"is this name in the set". It has no notion of which element the declaration
+is reachable from — so a token declared inside one component's scoped block
+satisfies every `var()` reference in the repo. This is the "defined nowhere"
+row of the head's failure table wearing a disguise: same symptom (fallback in
+both themes, light looks perfect), but the guard reports clean instead of
+failing, which is worse.
+
+The tell is a token name that appears in `grep -rn -- '--name\s*:' src/` only
+inside `.astro` files, never in `src/styles/tokens*.css`. A real token is
+declared on `:root` (or an `html.dark` block) in the token files; anything
+declared only in a component is that component's local variable and should be
+read as a literal by everyone else. Before theming against an unfamiliar
+`--cat-*`/`--afl-*`/`--foo-*` name, grep for its declaration and check whether
+a token file is among the hits.
+
+**Consequence for the fix that found it:** inverting those pills in dark mode
+had to hardcode the pair (`background: #fff; color: var(--cat-regular-season,
+#1c497c)`) rather than lean on a token flip, because there is no dark value to
+flip — the fallback is the shipped color in both themes.
 
 ---
 
