@@ -128,21 +128,34 @@ describe('resolveBroadcastCrest — the outline', () => {
     ).toBeUndefined();
   });
 
+  // The next two pin the flagged-franchise branches with a SYNTHETIC index
+  // rather than a named franchise, and that is deliberate. Both were pinned to
+  // real teams and both were retired by the dark-artwork sweep within a day:
+  // the custom-colour case rode The Show, then No Soup For You, then Suh girls;
+  // the default-white case rode the Boondock Saints until they took a
+  // `groupMeDark`. A dark cut of ANY kind removes a franchise from these
+  // branches by construction, every franchise is on track for one, and at the
+  // time of writing ZERO franchises in either league still qualify for the
+  // default-white case — so there is nothing left to repoint to.
+  //
+  // The real-data contract has not been dropped; it lives in the
+  // `every franchise, both leagues` sweep below, which walks the actual configs
+  // and asserts every light-art crest is stroked or a deliberate opt-out.
+  // These two own the resolver's branching, which is franchise-agnostic.
+
   it('picks up a franchise the measured manifest flagged, in its own colour', () => {
-    const index = broadcastStrokeIndex('afl', afl.teams);
-    // Suh girls have no dark cut of any kind and declare their own pink ring.
-    // Deliberately an AFL franchise: TheLeague's crests are nearly all covered
-    // by 400px dark art now (#680), so it no longer exercises this path — the
-    // AFL is where the measured manifest still does the work.
-    const suh = afl.teams.find((t: any) => t.franchiseId === '0012');
-    expect(resolveBroadcastCrest(suh, 'afl', index).iconStroke).toBe('#ff769f');
+    // Presence in the index is what "the manifest flagged it" means; the value
+    // is the config colour. Pink so a default-white regression cannot pass.
+    const index = new Map<string, string | false | undefined>([['9999', '#ff769f']]);
+    expect(resolveBroadcastCrest(team(), 'afl', index).iconStroke).toBe('#ff769f');
   });
 
   it('falls back to the default white for a flagged franchise with no colour', () => {
-    const index = broadcastStrokeIndex('afl', afl.teams);
-    // Boondock Saints measure illegible and declare nothing.
-    const saints = afl.teams.find((t: any) => t.franchiseId === '0020');
-    expect(resolveBroadcastCrest(saints, 'afl', index).iconStroke).toBe(
+    // Flagged, declaring nothing: an `undefined` VALUE against a PRESENT key.
+    // `index.get()` cannot tell that apart from an absent key, so this is the
+    // case a `has`/`get` mix-up would silently break.
+    const index = new Map<string, string | false | undefined>([['9999', undefined]]);
+    expect(resolveBroadcastCrest(team(), 'afl', index).iconStroke).toBe(
       DEFAULT_CREST_STROKE_COLOR
     );
   });
