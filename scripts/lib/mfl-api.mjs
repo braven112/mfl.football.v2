@@ -22,8 +22,20 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  * Manual-redirect fetch that re-attaches the Cookie header on every hop.
  * Required because Node's undici strips Cookie on cross-origin 302s, and
  * MFL's api.* host always redirects to www49.* for authenticated calls.
+ *
+ * @param {object} opts
+ * @param {string} opts.url
+ * @param {'GET'|'POST'} [opts.method]
+ * @param {Record<string, string | undefined>} opts.cookies Cookie NAME → value.
+ *   Must be an object: a raw `name=value` string becomes `0=n; 1=a; 2=m…` under
+ *   Object.entries, a header MFL ignores while answering anonymously. Values may
+ *   be undefined — the header build below filters them — so callers holding an
+ *   optional second cookie (MFL_IS_COMMISH) can pass it straight through.
+ * @param {string} [opts.body]
+ * @param {number} [opts.timeoutMs]
+ * @param {string} [opts.userAgent] Optional UA, re-sent on every hop.
  */
-export async function mflFetch({ url, method = 'GET', cookies, body, timeoutMs = 10_000 }) {
+export async function mflFetch({ url, method = 'GET', cookies, body, timeoutMs = 10_000, userAgent }) {
   let currentUrl = url;
   let currentMethod = method;
   let currentBody = body;
@@ -33,7 +45,12 @@ export async function mflFetch({ url, method = 'GET', cookies, body, timeoutMs =
     .join('; ');
 
   for (let hop = 0; hop <= 3; hop++) {
+    // `userAgent` is optional and re-sent on every hop, same as the cookie.
+    // Several scripts tag their MFL traffic this way so a request pattern can
+    // be attributed when diagnosing MFL-side behaviour; converting a caller to
+    // mflFetch should not quietly cost it that.
     const headers = { Cookie: cookieHeader };
+    if (userAgent) headers['User-Agent'] = userAgent;
     if (currentMethod === 'POST' && currentBody) {
       headers['Content-Type'] = 'application/x-www-form-urlencoded';
     }

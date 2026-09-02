@@ -33,6 +33,7 @@
  *   node scripts/mfl-calendar-event.mjs --league=theleague
  */
 import { LEAGUES, defaultMflWriteHost } from '../src/config/leagues-data.mjs';
+import { mflFetch } from './lib/mfl-api.mjs';
 import { scheduleReleaseDate } from '../src/utils/schedule-release.mjs';
 
 const arg = (name, fallback) => {
@@ -102,12 +103,18 @@ if (!userId || !isCommish) {
   process.exit(1);
 }
 
-const res = await fetch(url, {
+// mflFetch, NOT a bare fetch. This one happens to be safe today because `host`
+// resolves to the league's own www## host and therefore does not redirect — but
+// MFL_WRITE_HOST can override it to api.myfantasyleague.com, and undici DROPS
+// the Cookie header on that cross-origin 302. A commissioner write arriving
+// anonymous is answered with HTTP 200 and a login page, which reads as a
+// mysterious no-op. See tests/mfl-cookie-redirect-guard.test.ts.
+const res = await mflFetch({
+  url,
   method: 'POST',
-  headers: {
-    Cookie: `MFL_USER_ID=${userId}; MFL_IS_COMMISH=${isCommish}`,
-    'User-Agent': 'mfl.football schedule release',
-  },
+  cookies: { MFL_USER_ID: userId, MFL_IS_COMMISH: isCommish },
+  userAgent: 'mfl.football schedule release',
+  timeoutMs: 15_000,
 });
 const body = await res.text();
 

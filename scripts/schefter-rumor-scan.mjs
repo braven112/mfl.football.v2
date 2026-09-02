@@ -76,6 +76,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
+import { mflFetch } from './lib/mfl-api.mjs';
 import { ingestGroupMeMentions, getLatestRogerQuote, mentionsSchefter } from './schefter-groupme-listen.mjs';
 import {
   redactTradeOffer,
@@ -2792,12 +2793,17 @@ async function loadAdpDynastyRanks(year) {
  */
 async function fetchPendingTradesForFranchise(leagueId, year, franchiseId, mflCookie) {
   const url = `https://${MFL_HOST}/${year}/export?TYPE=pendingTrades&L=${leagueId}&FRANCHISE_ID=${franchiseId}&JSON=1`;
-  const res = await fetch(url, {
-    headers: {
-      Cookie: `MFL_USER_ID=${mflCookie}`,
-      'User-Agent': 'schefter-rumor-scan/1.0',
-    },
-    redirect: 'follow',
+  // mflFetch, NOT a bare fetch: MFL_HOST defaults to api.myfantasyleague.com,
+  // which 302s to the league's www## host, and Node's undici DROPS the Cookie
+  // header on that cross-origin hop. This read arrived anonymous and MFL
+  // answered with the HTML login page — caught by the "returned HTML" guard
+  // below, so the whole trade-offer rumor scan failed quietly rather than
+  // loudly. See tests/mfl-cookie-redirect-guard.test.ts.
+  const res = await mflFetch({
+    url,
+    cookies: { MFL_USER_ID: mflCookie },
+    userAgent: 'schefter-rumor-scan/1.0',
+    timeoutMs: 15_000,
   });
   if (!res.ok) throw new Error(`MFL HTTP ${res.status}`);
   const text = await res.text();

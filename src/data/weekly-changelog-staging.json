@@ -4,6 +4,14 @@
     {
       "date": "2026-09-02",
       "type": "bug-fix",
+      "summary": "Schefter's trade-offer radar has been blind and nobody knew. Its reads of MyFantasyLeague's pending-trade list were losing their login on the way through — MFL forwards you from one server to another, and Node quietly drops the credential when it does — so every check came back as an anonymous visitor and the scan shrugged and logged a warning instead of an error. A dead feature that looked like a config nag. Fixed, along with the calendar-writing script that was one environment variable away from the same fate.",
+      "impact": "admin",
+      "area": "other",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-02",
+      "type": "bug-fix",
       "summary": "Free Agents had the waiver window exactly backwards. With the league calendar finally syncing, the page turned around and announced first-come-first-served in the middle of a live waiver period — because the code read MyFantasyLeague's “waivers lock” event as waivers ending, when locking the free agent pool is the very thing that starts them: once nobody can just take a player, a claim is the only way in. The AFL's own 2025 transaction log settles it — the lock event fires Monday at 6, the claims run Wednesday at 8, every week. Both leagues now show the real state, and the claim form routes to the right place instead of filing a first-come pickup into a round nobody runs.",
       "impact": "user",
       "area": "free-agents",
