@@ -104,10 +104,15 @@ export const POST: APIRoute = async ({ request }) => {
     // live comes from MFL's own calendar — `currentWaiverType` is the league's
     // SYSTEM, not the current state. Re-derived HERE rather than trusted from
     // the client, because it decides which endpoint the write goes to.
-    const calendarRes = await fetch(
-      `https://api.myfantasyleague.com/${year}/export?TYPE=calendar&L=${leagueId}&JSON=1&_=${Date.now()}`,
-      { headers: { Cookie: `MFL_USER_ID=${user.id}` } }
-    );
+    // mflFetch, NOT fetch: the calendar export is owner-gated, and Node's
+    // undici strips the Cookie header on MFL's api → www49 redirect. A bare
+    // fetch here reads back "API requires a logged in user", which parses as an
+    // empty calendar → `unknown` → every FCFS add submitted as a queued claim.
+    const calendarRes = await mflFetch({
+      url: `https://api.myfantasyleague.com/${year}/export?TYPE=calendar&L=${leagueId}&JSON=1&_=${Date.now()}`,
+      method: 'GET',
+      mflUserCookie: user.id,
+    });
     const calendarBody = await calendarRes.json().catch(() => null);
     const rawEvents = calendarBody?.calendar?.event;
     const window = resolveWaiverWindow(
@@ -226,10 +231,14 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
     try {
-      const pending = await fetch(
-        `https://api.myfantasyleague.com/${year}/export?TYPE=pendingWaivers&L=${leagueId}&JSON=1&_=${Date.now()}`,
-        { headers: { Cookie: `MFL_USER_ID=${user.id}` } }
-      );
+      // mflFetch for the same reason as the calendar read above — a bare fetch
+      // loses the cookie on the redirect and this verification silently never
+      // runs, leaving every submission unverified.
+      const pending = await mflFetch({
+        url: `https://api.myfantasyleague.com/${year}/export?TYPE=pendingWaivers&L=${leagueId}&JSON=1&_=${Date.now()}`,
+        method: 'GET',
+        mflUserCookie: user.id,
+      });
       const body = await pending.json();
       const raw = body?.pendingWaivers?.waiver ?? body?.pendingWaivers?.pendingWaiver ?? [];
       stored = (Array.isArray(raw) ? raw : [raw]).map((w: any) => String(w?.player?.id ?? w?.id ?? ''));
