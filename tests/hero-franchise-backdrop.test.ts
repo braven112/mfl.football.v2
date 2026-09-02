@@ -26,6 +26,7 @@ import { resolve } from 'node:path';
 import {
   resolveHeroFranchiseBackdrop,
   copyBackdrop,
+  panelBackdrop,
   SURFACE_BEHIND_DARK,
   SURFACE_BEHIND_LIGHT,
 } from '../src/utils/hero-franchise-backdrop';
@@ -278,6 +279,19 @@ describe('accent contrast contract', () => {
         }
       });
 
+      it('clears the BODY floor for the panel accent, on the card\'s FAR side', () => {
+        // Four heroes slot a data panel there — CutWatch, TaggedShowcase,
+        // Draft, Auction — whose 0.75rem type reads this over the gradient's
+        // far end under the thinnest wash. 25 of the 40 franchises were under
+        // 4.5:1 there while a single card-wide accent was published.
+        for (const { id, backdrop } of rows) {
+          expect(contrastRatio(backdrop.accentPanel, panelBackdrop(backdrop.gradient)), `${id} panel`)
+            .toBeGreaterThanOrEqual(AA_BODY_TEXT_RATIO);
+          expect(colorDistance(backdrop.accentPanel, '#ffffff'), `${id} panel vs headline`)
+            .toBeGreaterThanOrEqual(DISTINCT_FROM_WHITE);
+        }
+      });
+
       it('clears the non-text floor for the border, in BOTH themes', () => {
         // The border is the one mark measured against what is BEHIND the card,
         // so it needs a value per theme — and each against its own worst case.
@@ -294,6 +308,7 @@ describe('accent contrast contract', () => {
           for (const name of [
             '--hero-fb-gradient',
             '--hero-fb-accent',
+            '--hero-fb-accent-panel',
             '--hero-fb-pill-bg',
             '--hero-fb-pill-ink',
             '--hero-fb-cta-ink',
@@ -308,28 +323,75 @@ describe('accent contrast contract', () => {
   }
 });
 
-describe('copyBackdrop', () => {
-  it('takes the FIRST stop for a left-to-right gradient', () => {
-    // 0-180deg runs left-to-right, and all the copy is in the left column.
-    expect(copyBackdrop('linear-gradient(115deg, #28855f 0%, #1a875b 100%)'))
-      .toBe(shiftLightness('#28855f', -0.33));
+describe('backdrop sampling', () => {
+  const read = (f: string) => readFileSync(resolve(__dirname, '..', f), 'utf8');
+
+  it('takes the WORST case across a band, not one frozen point', () => {
+    // The bug this replaced: the resolver froze the gradient at x=0 while
+    // interpolating the wash to x≈0.5, so it cleared the accent somewhere the
+    // accent is not. The accent word is the LAST word of the headline, around
+    // x=0.48, and five franchises sat under 3:1 there while both the resolver
+    // and this test agreed on x=0 and called it passing.
+    const g = 'linear-gradient(115deg, #101010 0%, #cccccc 100%)';
+    // Light end is on the right, so the copy band's worst case must be lighter
+    // than its left edge — proof it sampled past x=0.
+    expect(relativeLuminance(copyBackdrop(g))).toBeGreaterThan(relativeLuminance('#101010'));
+    // And the panel band, further right still, must be lighter than the copy's.
+    expect(relativeLuminance(panelBackdrop(g)))
+      .toBeGreaterThan(relativeLuminance(copyBackdrop(g)));
   });
 
-  it('takes the LAST stop for a right-to-left gradient', () => {
-    // 180-360deg reverses it. Midwestside's card is 315deg: its gold sits in a
-    // wedge at the bottom RIGHT and the copy is over black. Reading the first
-    // stop here is what forced the accent to pure white before this existed.
+  it('reads a right-to-left gradient from the other end', () => {
+    // Midwestside's card is 315deg: its gold sits in a wedge at the bottom
+    // RIGHT and the copy is over black. Reading the stop list forwards here is
+    // what demanded an accent no gold can reach and drove the lift to white.
     const mws = 'linear-gradient(315deg, #ffd400 0%, #8a6d00 7%, #1c1500 22%, #070707 48%, #000000 100%)';
-    expect(copyBackdrop(mws)).toBe(shiftLightness('#000000', -0.33));
+    const fwd = 'linear-gradient(115deg, #ffd400 0%, #8a6d00 7%, #1c1500 22%, #070707 48%, #000000 100%)';
+    expect(relativeLuminance(copyBackdrop(mws))).toBeLessThan(relativeLuminance(copyBackdrop(fwd)));
   });
 
-  it('falls back to the lightest stop for a gradient it cannot read', () => {
-    // Radial, conic and multi-layer values are all legal `broadcastGradient`s.
-    // With no angle to reason from, the conservative stop is the right answer.
-    const radial = 'radial-gradient(circle, #101010 0%, #cccccc 100%)';
-    expect(copyBackdrop(radial)).toBe(shiftLightness('#cccccc', -0.33));
-    const layered = 'linear-gradient(115deg, #101010 0%, #202020 100%), linear-gradient(0deg, #dddddd 0%, #eeeeee 100%)';
-    expect(copyBackdrop(layered)).toBe(shiftLightness('#eeeeee', -0.33));
+  it('does not treat a vertical gradient as having a left end', () => {
+    // 0/180/360 are exactly vertical — no left or right — so they take the
+    // lightest stop rather than whichever end the comparison happened to pick.
+    // Latent today (all 40 configs are 115 or 315deg) and a one-character bug
+    // away from not being.
+    for (const angle of [0, 180, 360]) {
+      const g = `linear-gradient(${angle}deg, #101010 0%, #cccccc 100%)`;
+      expect(relativeLuminance(copyBackdrop(g)), `${angle}deg`)
+        .toBeGreaterThanOrEqual(relativeLuminance(copyBackdrop('linear-gradient(115deg, #101010 0%, #cccccc 100%)')));
+    }
+  });
+
+  it("falls back to the franchise's own colours when no hex is parseable", () => {
+    // `isSafeCssGradient` also permits rgb(), 3-digit hex and named colours, so
+    // a perfectly valid config can carry no #rrggbb at all. The old fallback
+    // invented a near-black surface — team-inaccurate, and in the wrong
+    // direction for a card that might be light.
+    const rgbGradient = 'linear-gradient(115deg, rgb(16 16 16) 0%, rgb(204 204 204) 100%)';
+    const withFallback = copyBackdrop(rgbGradient, ['#cccccc', '#dddddd']);
+    const without = copyBackdrop(rgbGradient);
+    expect(withFallback).not.toBe(without);
+    expect(relativeLuminance(withFallback)).toBeGreaterThan(relativeLuminance(without));
+  });
+
+  it('keeps the mobile scrim as heavy as the resolver assumes', () => {
+    // The resolver clears every accent against MOBILE_WASH_MIN. That constant
+    // and the stylesheet are two copies of one number by necessity — CSS cannot
+    // be measured from here — so lightening the scrim would silently invalidate
+    // all 40 accents at once with nothing failing.
+    const css = read('src/styles/hero-franchise-backdrop.css');
+    const mobile = css.slice(css.indexOf('@media (max-width: 640px)'));
+    const alphas = [...mobile.matchAll(/rgba\(0,\s*0,\s*0,\s*([\d.]+)\)/g)].map((m) => parseFloat(m[1]));
+    expect(alphas.length, 'mobile scrim stops').toBeGreaterThan(0);
+    expect(Math.min(...alphas), 'thinnest mobile scrim').toBeGreaterThanOrEqual(0.58);
+  });
+
+  it('keeps the desktop wash ramp as heavy as the resolver assumes', () => {
+    const css = read('src/styles/hero-franchise-backdrop.css');
+    const desktop = css.slice(0, css.indexOf('@media (max-width: 640px)'));
+    for (const alpha of ['0.66', '0.28', '0.5']) {
+      expect(desktop, `desktop wash stop ${alpha}`).toContain(`rgba(0, 0, 0, ${alpha})`);
+    }
   });
 });
 

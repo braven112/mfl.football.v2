@@ -66,6 +66,17 @@ export interface HeroFranchiseBackdrop {
    * the white it sits beside.
    */
   accent: string;
+  /**
+   * The accent for a slotted data panel's small type, on the card's FAR side.
+   *
+   * Separate from `accent` because it is a different surface AND a different
+   * floor: the panel sits over the gradient's far end under the thinnest wash,
+   * and its type is 0.75rem, so it is held to 4.5:1. One accent cannot serve
+   * both bands on a high-contrast gradient — Midwestside runs gold at one end
+   * and black at the other, so a colour readable on one is invisible on the
+   * other by construction.
+   */
+  accentPanel: string;
   /** Ink on the accent-filled pill — whichever of white/near-black clears. */
   pillInk: string;
   /** Ink on the neutral-white CTA, darkened until it clears 4.5:1 on white. */
@@ -96,15 +107,51 @@ export const SURFACE_BEHIND_DARK = '#16283c';
 export const SURFACE_BEHIND_LIGHT = '#e0e0e0';
 
 /**
- * How much black the wash lays over the gradient where the COPY sits.
+ * The two horizontal bands a mark can occupy, as fractions of the card width.
  *
- * `.hero-fb__wash` ramps `rgba(0,0,0,.66)` at the left edge to `.28` at 58%,
- * and the copy column ends around half way — so ~0.33 is the thinnest cover any
- * headline character gets. Using the thinnest rather than the average is the
- * whole point: a contrast figure computed against the darkest part of a ramp is
- * a figure that does not hold where the text actually ends.
+ * They are separate because a franchise gradient is not one colour — it is at
+ * its first stop on the left and its last on the right, and the wash over it is
+ * heaviest on the left and thinnest in the middle. A single accent cleared at
+ * one point and then published to the whole `<section>` is exactly the bug this
+ * replaced: the accent word is the LAST word of the headline, around x=0.48,
+ * where five franchises sat under 3:1 while the resolver measured x=0 and the
+ * guard test re-measured the same wrong point and agreed with it.
+ *
+ * The panel band exists because four heroes slot a data panel there
+ * (CutWatch, TaggedShowcase, Draft, Auction) whose small type reads
+ * `--ev-accent` over the far end of the gradient under the thinnest wash — 25
+ * of the 40 franchises were under 4.5:1 there.
  */
-const WASH_OVER_COPY = 0.33;
+const COPY_BAND: readonly [number, number] = [0, 0.55];
+const PANEL_BAND: readonly [number, number] = [0.62, 1];
+
+/**
+ * Alpha of `.hero-fb__wash`'s dark ramp at horizontal fraction `x`.
+ *
+ * Mirrors the stylesheet: `linear-gradient(100deg, rgba(0,0,0,.66) 0%,
+ * rgba(0,0,0,.28) 58%, rgba(0,0,0,.5) 100%)`. Both numbers live in two places
+ * by necessity — CSS cannot be measured from here — so the guard test pins the
+ * stylesheet against these constants rather than trusting them to stay in step.
+ */
+const WASH_STOPS: ReadonlyArray<readonly [number, number]> = [
+  [0, 0.66],
+  [0.58, 0.28],
+  [1, 0.5],
+];
+
+/**
+ * The mobile scrim, which is a flat-ish vertical wash rather than the desktop
+ * ramp — under 640px the copy spans the FULL width, so there is no left column
+ * for a horizontal ramp to protect.
+ *
+ * The thinnest point is what matters and it is deliberately heavier than the
+ * desktop ramp's thinnest: an accent proven on the desktop left column is
+ * otherwise unproven across the whole mobile card. Strengthening the scrim
+ * rather than darkening every accent is the trade that keeps Midwestside gold
+ * and Music City red on their own cards instead of pushing all 40 toward a
+ * safe, generic mid-tone.
+ */
+const MOBILE_WASH_MIN = 0.58;
 
 /** Channel spread below which a colour has no hue worth accenting with. */
 const GREY_SPREAD = 20;
@@ -113,7 +160,7 @@ const GREY_SPREAD = 20;
  * ΔE the accent must hold against the WHITE it sits beside.
  *
  * The accent word is one word inside a white headline, so contrast against the
- * BACKGROUND is only half its job — an accent that satisfies 4.5:1 by being
+ * BACKGROUND is only half its job — an accent that satisfies its floor by being
  * near-white is perfectly legible and completely invisible AS an accent. This
  * is the second half. 18 is the `DEFAULT_MIN_BG_CONTRAST` bar from
  * `team-color-contrast.ts`, reused rather than re-invented.
@@ -131,83 +178,164 @@ function channelSpread(hex: string): number {
   return Math.max(r, g, b) - Math.min(r, g, b);
 }
 
-/** Every 6-digit hex in a CSS gradient string, in source order. */
-function gradientStops(gradient: string): string[] {
-  return (gradient.match(/#[0-9a-f]{6}\b/gi) ?? []).map((h) => h.toLowerCase());
+function parseRgb(hex: string): [number, number, number] {
+  const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex.trim());
+  return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : [0, 0, 0];
+}
+
+function toHex(rgb: number[]): string {
+  return (
+    '#' +
+    rgb.map((v) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('')
+  );
+}
+
+function lerp(a: string, b: string, t: number): string {
+  const [ar, ag, ab] = parseRgb(a);
+  const [br, bg, bb] = parseRgb(b);
+  return toHex([ar + (br - ar) * t, ag + (bg - ag) * t, ab + (bb - ab) * t]);
+}
+
+/** Sample a piecewise-linear stop list at `t`. */
+function sampleStops(stops: ReadonlyArray<readonly [number, number]>, t: number): number {
+  if (t <= stops[0][0]) return stops[0][1];
+  for (let i = 1; i < stops.length; i += 1) {
+    if (t <= stops[i][0]) {
+      const [p0, v0] = stops[i - 1];
+      const [p1, v1] = stops[i];
+      return p1 === p0 ? v1 : v0 + (v1 - v0) * ((t - p0) / (p1 - p0));
+    }
+  }
+  return stops[stops.length - 1][1];
+}
+
+/** Every `#rrggbb` in a gradient, with its declared position where it has one. */
+function gradientStops(gradient: string): Array<{ hex: string; at: number | null }> {
+  const out: Array<{ hex: string; at: number | null }> = [];
+  const re = /#([0-9a-f]{6})\b\s*(?:(-?[\d.]+)%)?/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(gradient)) !== null) {
+    out.push({ hex: `#${m[1].toLowerCase()}`, at: m[2] === undefined ? null : parseFloat(m[2]) / 100 });
+  }
+  return out;
 }
 
 /**
- * The colour the copy is actually drawn on.
+ * The gradient's colour at horizontal fraction `x` of the CARD.
  *
- * All the copy — headline, pill, countdown, CTA — is in the card's LEFT column,
- * so the stop that matters is the one at the left edge, and which stop that is
- * depends on the gradient's angle. In CSS 0deg points to the top and angles
- * increase clockwise, so a gradient between 0 and 180deg runs left-to-right and
- * its FIRST stop is leftmost; between 180 and 360 it runs right-to-left and its
- * LAST stop is. Both shapes are in the configs: 38 of the 40 franchises use
- * 115deg, and the two hand-authored cards (Midwestside, Vitside) use 315deg.
+ * Which end of the stop list is on the left depends on the angle: CSS angles
+ * increase clockwise from 0deg = up, so 0-180 runs left-to-right and 180-360
+ * right-to-left. Both shapes ship — 38 franchises at 115deg, the two
+ * hand-authored cards at 315deg — and reading Midwestside's 315deg card
+ * forwards is what put its gold under the copy, which demanded an accent no
+ * gold can reach and drove the lift to pure white.
  *
- * The first cut of this took the LIGHTEST stop instead, to avoid parsing
- * anything. That is conservative in the abstract and wrong in practice, in a
- * way worth recording: Midwestside's gold sits in a 7% wedge at the BOTTOM
- * RIGHT of a card that is black everywhere the text goes, so measuring against
- * the gold demanded an accent no gold can reach — the lift ran to pure white
- * and the accent vanished into the headline it was supposed to punctuate.
- * Every other franchise came back a pastel for the same reason. A safety margin
- * that destroys the thing it is protecting is not a safety margin.
- *
- * Anything this cannot read as an angled linear-gradient — a radial, a conic,
- * a multi-layer value, all of which `broadcastGradient` permits — falls back to
- * the lightest stop, which needs no geometry and errs toward legibility.
- *
- * Exported so the guard test can measure the shipped accent against the SAME
- * surface this resolver measured it against. A test that recomputes the
- * backdrop its own way is testing its own arithmetic, which is how the first
- * pass of this reported fifteen franchises below the floor when none were.
+ * The exact 0/180/360 boundaries are vertical gradients with no left or right
+ * end. They take the lightest stop rather than an arbitrary one, which is the
+ * same answer this gives anything it cannot read.
  */
-export function copyBackdrop(gradient: string): string {
-  const stops = gradientStops(gradient);
-  if (stops.length === 0) return shiftLightness('#10161f', -WASH_OVER_COPY);
+function gradientAt(stops: ReturnType<typeof gradientStops>, angle: number | null, x: number): string {
+  if (stops.length === 1) return stops[0].hex;
+  if (angle === null || angle === 0 || angle === 180 || angle === 360) {
+    return stops.reduce((a, b) => (relativeLuminance(b.hex) > relativeLuminance(a.hex) ? b : a)).hex;
+  }
+  const forward = angle > 0 && angle < 180;
+  const seq = forward ? stops : [...stops].reverse();
+  // A reversed list's declared positions are measured from the other end.
+  const pos = seq.map((s, i) =>
+    s.at !== null ? (forward ? s.at : 1 - s.at) : i / (seq.length - 1)
+  );
+  const t = Math.max(0, Math.min(1, x));
+  if (t <= pos[0]) return seq[0].hex;
+  for (let i = 1; i < seq.length; i += 1) {
+    if (t <= pos[i]) {
+      const span = pos[i] - pos[i - 1];
+      return span <= 0 ? seq[i].hex : lerp(seq[i - 1].hex, seq[i].hex, (t - pos[i - 1]) / span);
+    }
+  }
+  return seq[seq.length - 1].hex;
+}
 
-  const lightest = () =>
-    stops.reduce((a, b) => (relativeLuminance(b) > relativeLuminance(a) ? b : a));
-
-  // One `linear-gradient(<n>deg, …)` layer and nothing else — the shape every
-  // real config uses. A second layer or a non-angle syntax takes the fallback.
-  const single = /^\s*linear-gradient\(\s*(-?[\d.]+)deg\s*,/i.exec(gradient);
-  const nearest =
-    single && gradient.toLowerCase().split('gradient(').length === 2
-      ? (() => {
-          const angle = ((parseFloat(single[1]) % 360) + 360) % 360;
-          return angle > 0 && angle < 180 ? stops[0] : stops[stops.length - 1];
-        })()
-      : lightest();
-
-  // A black overlay at alpha a is exactly a mix toward black by a.
-  return shiftLightness(nearest, -WASH_OVER_COPY);
+/** Leading `<n>deg` of a single-layer linear-gradient, or null. */
+function gradientAngle(gradient: string): number | null {
+  const m = /^\s*linear-gradient\(\s*(-?[\d.]+)deg\s*,/i.exec(gradient);
+  if (!m || gradient.toLowerCase().split('gradient(').length !== 2) return null;
+  return ((parseFloat(m[1]) % 360) + 360) % 360;
 }
 
 /**
- * The franchise colour that carries the accent, made readable without being
- * made generic.
+ * The LIGHTEST surface a mark in `band` can land on — the worst case for the
+ * light type this card carries, and therefore the one to measure against.
+ *
+ * Samples rather than solving: the gradient and the wash are both piecewise
+ * linear but in different spaces, so their composite has no closed form worth
+ * deriving. 21 samples across a band is far finer than the eye needs and costs
+ * nothing at build time.
+ *
+ * `fallbackStops` is used when the gradient carries no `#rrggbb` at all —
+ * `isSafeCssGradient` also permits `rgb()`, 3-digit hex and named colours, so
+ * this is reachable with a perfectly valid config. Handing it the franchise's
+ * own derived pair keeps the answer team-accurate instead of inventing a
+ * surface, which the earlier near-black fallback did in the wrong direction.
+ */
+function bandExtreme(
+  gradient: string,
+  band: readonly [number, number],
+  fallbackStops: string[]
+): string {
+  const parsed = gradientStops(gradient);
+  const stops = parsed.length > 0 ? parsed : fallbackStops.map((hex) => ({ hex, at: null }));
+  if (stops.length === 0) return '#10161f';
+  const angle = parsed.length > 0 ? gradientAngle(gradient) : 115;
+
+  let worst = '#000000';
+  const STEPS = 20;
+  for (let i = 0; i <= STEPS; i += 1) {
+    const x = band[0] + ((band[1] - band[0]) * i) / STEPS;
+    const base = gradientAt(stops, angle, x);
+    // Desktop ramp, and the mobile scrim at its thinnest. A black overlay at
+    // alpha a is exactly a mix toward black by a.
+    for (const alpha of [sampleStops(WASH_STOPS, x), MOBILE_WASH_MIN]) {
+      const lit = shiftLightness(base, -alpha);
+      if (relativeLuminance(lit) > relativeLuminance(worst)) worst = lit;
+    }
+  }
+  return worst;
+}
+
+/** Worst-case surface under the copy column (headline, countdown, pill, CTA). */
+export function copyBackdrop(gradient: string, fallbackStops: string[] = []): string {
+  return bandExtreme(gradient, COPY_BAND, fallbackStops);
+}
+
+/** Worst-case surface under a slotted data panel, on the card's far side. */
+export function panelBackdrop(gradient: string, fallbackStops: string[] = []): string {
+  return bandExtreme(gradient, PANEL_BAND, fallbackStops);
+}
+
+/**
+ * The franchise colour that carries an accent, made readable without being made
+ * generic.
  *
  * Candidate order puts SECONDARY first: the primary is usually the gradient
  * itself, so accenting with it is accenting with the background. Greyscale
- * entries are set aside unless the franchise is greyscale throughout — four
- * are (TITS and BADD in the AFL, Bring The Pain and Wabs in TheLeague), and for
- * those a light grey IS the brand, so it is the honest accent rather than a hue
- * invented for them.
+ * entries are set aside unless the franchise is greyscale throughout.
  *
- * Each candidate is lifted to 4.5:1 against the washed gradient first, THEN
- * tested for distinctness from white — that order matters, because the lift is
- * what moves a colour toward white and so is what can destroy the distinctness.
- * Testing before the lift would pass colours that fail after it.
+ * Each candidate is lifted to `floor` against the surface it will sit on FIRST,
+ * and only then tested for distinctness from white — that order matters,
+ * because the lift is what moves a colour toward white and so is what can
+ * destroy the distinctness. Testing before the lift passes colours that fail
+ * after it.
+ *
+ * `floor` is a parameter rather than a constant because the same function
+ * serves two marks with genuinely different requirements: the headline accent
+ * is large display type (3:1) and the panel accent is 0.75rem (4.5:1).
  *
  * Falling back to the best-scoring candidate rather than to a league colour is
  * deliberate (Brandon, Sep 2026): the accent stays the team's on every
  * franchise, nudged as far as it needs to go and no further.
  */
-function resolveAccent(team: HeroBackdropTeam, backdrop: string): string {
+function resolveAccent(team: HeroBackdropTeam, backdrop: string, floor: number): string {
   const candidates = [
     team.colorSecondary,
     team.colorTertiary,
@@ -216,7 +344,7 @@ function resolveAccent(team: HeroBackdropTeam, backdrop: string): string {
   ].filter((c): c is string => !!c && /^#[0-9a-f]{6}$/i.test(c.trim()));
 
   const unique = [...new Set(candidates.map((c) => c.toLowerCase()))];
-  if (unique.length === 0) return ensureContrastOn('#c9a94e', backdrop, AA_LARGE_TEXT_RATIO);
+  if (unique.length === 0) return ensureContrastOn('#c9a94e', backdrop, floor);
 
   const hued = unique.filter((c) => channelSpread(c) >= GREY_SPREAD);
 
@@ -225,33 +353,30 @@ function resolveAccent(team: HeroBackdropTeam, backdrop: string): string {
   // brand, so the accent stays grey, but WHICH grey has to be constructed
   // rather than picked.
   //
-  // Picking left them at #696969: the near-white stop fails the
-  // distinctness bound (ΔE 8 from the headline it sits in), so selection fell
-  // through to the near-black stop, which then had to be lifted to clear the
-  // backdrop — landing on a mid-grey that is DARKER than the white around it
-  // and reads as disabled text rather than as emphasis. Legible by the numbers,
-  // an anti-accent in practice.
+  // Picking left them at #696969: the near-white stop fails the distinctness
+  // bound (ΔE 8 from the headline it sits in), so selection fell through to the
+  // near-black stop, which then had to be lifted to clear the backdrop —
+  // landing on a mid-grey DARKER than the white around it, which reads as
+  // disabled text rather than as emphasis. Legible by the numbers, an
+  // anti-accent in practice.
   //
-  // Walking down from white to the first shade that clears the same bound
-  // lands ~#a3a3a3 — as distinct from the headline, and brighter than it is
-  // dark, so it reads as emphasis. It also makes all four agree, where
-  // selection had two of them at #a3a3a3 and two at #696969 for no reason a
-  // reader could see.
+  // Walking down from white to the first shade that clears the same bound lands
+  // ~#bfbfbf — as distinct, and brighter than it is dark. It also makes all four
+  // agree, where selection had two at #a3a3a3 and two at #696969 for no reason
+  // a reader could see.
   if (hued.length === 0) {
     let grey = HEADLINE_INK;
     for (let step = 0.05; step <= 1.0001; step += 0.05) {
       grey = shiftLightness(HEADLINE_INK, -step);
       if (colorDistance(grey, HEADLINE_INK) >= DISTINCT_FROM_WHITE) break;
     }
-    return ensureContrastOn(grey, backdrop, AA_LARGE_TEXT_RATIO);
+    return ensureContrastOn(grey, backdrop, floor);
   }
-
-  const pool = hued;
 
   let best = '';
   let bestScore = -1;
-  for (const candidate of pool) {
-    const safe = ensureContrastOn(candidate, backdrop, AA_LARGE_TEXT_RATIO);
+  for (const candidate of hued) {
+    const safe = ensureContrastOn(candidate, backdrop, floor);
     const score = colorDistance(safe, HEADLINE_INK);
     if (score >= DISTINCT_FROM_WHITE) return safe;
     if (score > bestScore) {
@@ -269,7 +394,7 @@ function resolveAccent(team: HeroBackdropTeam, backdrop: string): string {
     if (colorDistance(out, HEADLINE_INK) >= DISTINCT_FROM_WHITE) break;
     out = shiftLightness(best, -step);
   }
-  return ensureContrastOn(out, backdrop, AA_LARGE_TEXT_RATIO);
+  return ensureContrastOn(out, backdrop, floor);
 }
 
 /** Fallbacks matching the derived pair's own defaults, for a colourless entry. */
@@ -303,7 +428,10 @@ export function resolveHeroFranchiseBackdrop(
   // the gradient under its wash for the copy, the page surface for the border —
   // rather than against an assumed one. That is the difference between "this
   // clears 4.5:1" and "this clears 4.5:1 against something else".
-  const backdrop = copyBackdrop(gradient);
+  // The derived pair doubles as the fallback surface for a gradient that
+  // carries no parseable hex — see `bandExtreme`.
+  const fallbackStops = [pair.primary, pair.secondary];
+  const backdrop = copyBackdrop(gradient, fallbackStops);
   // 3:1, not 4.5:1, and the size is what earns it: every element the accent
   // colours is large text or non-text UI, which is exactly what WCAG's
   // large-text floor is for. The headline word runs clamp(2.2rem, 4.4vw,
@@ -314,7 +442,16 @@ export function resolveHeroFranchiseBackdrop(
   // being recognisable, which fails a different part of the same standard.
   // The pill is the exception and is handled at 4.5 below, because its label is
   // 0.8125rem — genuinely small text.
-  const accent = resolveAccent(team, backdrop);
+  const accent = resolveAccent(team, backdrop, AA_LARGE_TEXT_RATIO);
+
+  // The panel's own accent: far side of the card, small type, so a different
+  // surface and the body floor. Falls back to the copy accent when the two
+  // agree, which they do wherever the gradient is close to flat.
+  const accentPanel = resolveAccent(
+    team,
+    panelBackdrop(gradient, fallbackStops),
+    AA_BODY_TEXT_RATIO
+  );
 
   // Pill: the accent is the fill, so the ink is whichever of the two neutrals
   // reads on it, and the fill is then nudged AWAY from that ink if the pair
@@ -342,6 +479,7 @@ export function resolveHeroFranchiseBackdrop(
     crest: art.src,
     ...(art.filter ? { crestFilter: art.filter } : {}),
     accent,
+    accentPanel,
     pillInk,
     ctaInk,
     borderDark,
@@ -349,6 +487,7 @@ export function resolveHeroFranchiseBackdrop(
     style:
       `--hero-fb-gradient:${gradient};` +
       `--hero-fb-accent:${accent};` +
+      `--hero-fb-accent-panel:${accentPanel};` +
       `--hero-fb-pill-bg:${pillBg};` +
       `--hero-fb-pill-ink:${pillInk};` +
       `--hero-fb-cta-ink:${ctaInk};` +
