@@ -50,10 +50,18 @@ import { themeModes } from '../../.storybook/modes';
  * custom-stroke and Running down the Dream off default-white while this branch
  * was open, and both stories kept passing while testing the wrong thing.
  *
- * As of Sept 2026, after that sweep: custom stroke has exactly ONE team left
- * (No Soup For You) and default white has three (Harambe, Badd Boys, Boondock
- * Saints — all AFL). If the sweep reaches those, the branch loses its last
- * representative and the fix is a synthetic fixture, not a repoint.
+ * The sweep has since reached all of them. As of the end of Sept 2026 the
+ * ENTIRE stroke set is one franchise — Swiftie 4 Life, and only because it
+ * opts IN at 91% legible. Default white has NO team left (the four the
+ * manifest still flags all opt out with `iconStrokeDark: false`), and custom
+ * colour has none either, since Swiftie's `#ffffff` is the default hue.
+ *
+ * So the pool is not shrinking any more; it has essentially run out. The two
+ * stroke stories here collapsed into one, and the branch coverage moved to
+ * synthetic fixtures in `tests/broadcast-crest.test.ts`, which do not depend on
+ * a franchise staying un-arted. If Swiftie ever gains an `iconDark`, this story
+ * has nothing to point at either — delete it rather than pointing it at a crest
+ * that no longer strokes.
  */
 export default {
   title: 'Theming/TeamIconCell',
@@ -94,43 +102,39 @@ export const DarkSwapAvailableAfl = {
 };
 
 /**
- * The DEFAULT WHITE STROKE branch. A crest with no dark variant that the
- * manifest measured as illegible on a dark card, and whose team sets no
- * `iconStrokeDark` — so it falls through to `DEFAULT_CREST_STROKE_COLOR`. Dark
- * mode must show the same artwork carrying a white outline.
+ * THE STROKE, and there is now only one franchise left wearing one.
+ *
+ * A crest with no dark variant gets an outline so it does not dissolve into a
+ * dark card. Swiftie 4 Life is the last franchise that renders one: its
+ * `iconStrokeDark: "#ffffff"` is a config OPT-IN (the measurement scores it 91%
+ * legible and never flagged it), and white happens to be the same hue the
+ * shared default rule uses, so this story shows exactly what the default branch
+ * looks like too.
+ *
+ * **No franchise can reach the true default branch any more.** It needs a team
+ * that the manifest flagged AND that declares no colour; all four flagged teams
+ * left (Minty Fresh, Ditka, Cowboy Up, Dark Magicians) set `iconStrokeDark:
+ * false`, so they opt out instead. There is nothing to point a separate
+ * default-white story at — `tests/broadcast-crest.test.ts` covers that branch
+ * synthetically for the same reason.
+ *
+ * A companion `StrokeCustomColor` story lived here until the dark-artwork
+ * sweep took its subject for the fourth time (The Show, then No Soup For You,
+ * then Suh girls, each on gaining an `iconDark`). It was deleted rather than
+ * repointed a fifth time: Swiftie is the only franchise left declaring a
+ * colour, and `#ffffff` is the default hue spelled differently, so the story
+ * would have been visually identical to this one.
  *
  * The swap and the stroke are mutually exclusive by construction: the manifest
  * and `withStrokeColors` both exclude any team with an `iconDark`, so a crest
- * can never get both.
+ * can never get both. That is also why this story keeps losing subjects — and
+ * why a franchise named here gaining dark artwork silently turns it into a swap
+ * story that still passes. Check by hand.
  */
 export const StrokeDefaultWhite = {
   args: {
-    icon: '/assets/afl/icons/saints.png',
-    name: 'The Boondock Saints',
-  },
-};
-
-/**
- * The CUSTOM STROKE COLOR branch. Suh girls, one cup declares
- * `iconStrokeDark: "#ff769f"`, so it gets its own rule rather than joining the
- * shared white one — a crest whose silhouette reads better against its own
- * brand color than against white.
- *
- * This story has now been repointed TWICE by the dark-artwork sweep, because
- * giving a franchise a real `iconDark` removes it from the stroke set by
- * construction: it was on The Show until #685, then on No Soup For You until
- * the icon batch that followed. Both times the story kept passing while
- * silently testing the swap branch instead — the suite cannot catch this, so
- * check it by hand whenever a franchise named here gains dark artwork.
- *
- * Suh girls and Swiftie 4 Life are the two teams left on this branch. Prefer
- * Suh: Swiftie's `#ffffff` is the default hue spelled differently, so a reader
- * cannot tell its rule apart from the shared white one by looking.
- */
-export const StrokeCustomColor = {
-  args: {
-    icon: '/assets/afl/icons/suh.png',
-    name: 'Suh girls, one cup',
+    icon: '/assets/afl/icons/swift.png',
+    name: 'Swiftie 4 Life',
   },
 };
 
