@@ -2,7 +2,7 @@
  * AFL Throwback Week: the AFL's counterpart to
  * `src/data/theleague/throwback-config.ts`. Same two knobs — which eras are
  * excluded, and which era each franchise wears by default — over a much
- * deeper archive: 99 eras across 24 franchises going back to 2003, against
+ * deeper archive: 114 eras across 24 franchises going back to 2003, against
  * TheLeague's 42 back to 2007.
  *
  * Feature learnings live in docs/claude/insights/features/throwback-week.md.
@@ -87,7 +87,7 @@ export const AFL_THROWBACK_ASSET_CONFLICTS: { franchiseId: string; yearStart: nu
 export const AFL_DEFAULT_THROWBACK_ERA: Record<string, number> = {
   '0001': 2006, // Smokane FC → Smokane FC (The gas mask) — 13 seasons
   '0002': 2003, // Drunk Indians → Drunk Indians (The original Wahoo) — 14 seasons
-  '0003': 2003, // Team Minty Fresh → Marriedwithchildren — 8 seasons
+  '0003': 2013, // Team Minty Fresh → Team Minty Fresh (The mint leaf) — 12 seasons
   '0004': 2012, // Get off my Ditka → The Dude that Abides — 5 seasons
   '0005': 2010, // Computer Jocks → booyakasha — 5 seasons
   '0006': 2013, // Da Dangsters → Da Dangsters (The tommy gun) — 12 seasons
@@ -104,11 +104,11 @@ export const AFL_DEFAULT_THROWBACK_ERA: Record<string, number> = {
   '0017': 2008, // Titsburgh Feelers → Blitzkrieg — 5 seasons
   '0018': 2009, // Jewpacabra → Zephyr — 5 seasons
   '0019': 2005, // Badd Boys → The Bandwagon — 4 seasons
-  '0020': 2003, // The Boondock Saints → Your Team Sucks — 3 seasons
+  '0020': 2008, // The Boondock Saints → The Boondock Saints (The brothers) — 8 seasons
   '0021': 2010, // Chatmaster → Chatmaster (The AIM lockup) — 15 seasons
   '0022': 2005, // Balls Deep → Way More Funner — 7 seasons
   '0023': 2005, // The Show → No Frills — 17 seasons
-  '0024': 2008, // No Soup For You → The Street — 4 seasons
+  '0024': 2019, // No Soup For You → No Soup For You (The Soup Nazi) — 6 seasons
 };
 
 export const isAflThrowbackWeek: (week: number) => boolean = isWeek;

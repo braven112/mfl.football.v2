@@ -22,7 +22,12 @@ describe('segmentsForFranchiseRange', () => {
     expect(current?.name).toBe('A Bruin Pegs Me');
     expect(current?.rebrandGroup).toBe('a-bruin-pegs-me');
 
-    const herdEra = segments.find((s) => s.name === 'Thundering Herd');
+    // 0014 wore Thundering Herd through two distinct looks (2007-2016 and
+    // 2017-2025), so take the LAST one — this test is about the era that
+    // ends exactly at CURRENT_YEAR, not about the name's first appearance.
+    const herdEras = segments.filter((s) => s.name === 'Thundering Herd');
+    expect(herdEras.length).toBeGreaterThan(0);
+    const herdEra = herdEras[herdEras.length - 1];
     expect(herdEra?.isCurrent).toBe(false);
     expect(herdEra?.yearEnd).toBe(2025);
   });
