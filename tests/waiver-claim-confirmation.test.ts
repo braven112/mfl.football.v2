@@ -52,6 +52,22 @@ describe('readMflImportResult — nothing is accepted unless MFL says OK', () =>
     expect(/<error/i.test(login)).toBe(false);
   });
 
+  it('surfaces MFL\'s message from a JSON error payload, not just the XML one', () => {
+    // A JSON refusal was already REJECTED (it hit the unrecognized-body branch)
+    // but its message was discarded, exactly when the owner most needs it.
+    const nested = readMflImportResult('{"error":{"$t":"Invalid Waiver Round"}}');
+    expect(nested.accepted).toBe(false);
+    expect(nested.error).toBe('Invalid Waiver Round');
+
+    const flat = readMflImportResult('{"error":"Not your franchise"}');
+    expect(flat.error).toBe('Not your franchise');
+
+    // Malformed JSON must not throw — it falls through to unrecognized.
+    const broken = readMflImportResult('{"error": ');
+    expect(broken.accepted).toBe(false);
+    expect(broken.reason).toContain('Unrecognized');
+  });
+
   it('rejects an empty body and an unrecognized one, keeping the body for the log', () => {
     expect(readMflImportResult('').accepted).toBe(false);
     const odd = readMflImportResult('<something-else/>');
@@ -124,5 +140,18 @@ describe('the route still requires both proofs', () => {
 
   it('logs MFL\'s response body on a refused write — a no-op is invisible without it', () => {
     expect(ROUTE).toMatch(/console\.error\('\[waiver-claim\][^)]*text\.slice/);
+  });
+
+  it('verifies an FCFS add against the ONE claim it sent, not the whole board', () => {
+    // FCFS resolves instantly, so the route writes only `claims[0]`; the rest of
+    // an ordered board is never submitted and was never meant to be. Checking
+    // the roster against every requestedAdds entry counted those as missing and
+    // reported a successful pickup as "probably did NOT go through".
+    const fcfs = ROUTE.slice(ROUTE.indexOf('if (immediate) {', ROUTE.indexOf('Verify by reading')));
+    const branch = fcfs.slice(0, fcfs.indexOf("mode: 'fcfs'"));
+    expect(branch).toContain('fcfsAdds');
+    expect(branch, 'the FCFS read-back must not be scored against unsent claims').not.toMatch(
+      /(landed|missing)\s*=\s*stored\s*\?\s*requestedAdds/
+    );
   });
 });

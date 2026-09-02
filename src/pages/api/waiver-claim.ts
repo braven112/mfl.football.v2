@@ -241,8 +241,14 @@ export const POST: APIRoute = async ({ request }) => {
         stored = null;
       }
       await bustRosterCaches(String(year), leagueId);
-      const landed = stored ? requestedAdds.filter((id) => stored!.includes(id)) : [];
-      const missing = stored ? requestedAdds.filter((id) => !stored!.includes(id)) : requestedAdds;
+      // Verify ONLY what was actually written. The FCFS branch above sends a
+      // single ADD (`claims[0]`), so checking the roster against every
+      // `requestedAdds` entry would count claims 2..n as missing and report a
+      // successful pickup as "probably did NOT go through" — the alternatives
+      // in an FCFS board were never submitted and were never meant to be.
+      const fcfsAdds = [String(claims![0].addPlayerId)];
+      const landed = stored ? fcfsAdds.filter((id) => stored!.includes(id)) : [];
+      const missing = stored ? fcfsAdds.filter((id) => !stored!.includes(id)) : fcfsAdds;
       return new Response(
         JSON.stringify({
           success: true,
@@ -251,10 +257,13 @@ export const POST: APIRoute = async ({ request }) => {
             stored === null
               ? 'MFL accepted the add, but we could not read your roster back to confirm it. Check your roster before retrying.'
               : missing.length === 0
-                ? `Added — ${requestedAdds.length === 1 ? 'the player is' : 'they are'} on your roster now.`
+                ? 'Added — the player is on your roster now.'
                 : 'MFL accepted the add but your roster does not show it. It probably did NOT go through — check your roster before retrying.',
           mode: 'fcfs',
-          submitted: requestedAdds,
+          // `submitted`, not `requestedAdds`: an FCFS write resolves instantly,
+          // so only the first claim was ever sent. Reporting the whole board as
+          // submitted would be a lie the client could act on.
+          submitted: fcfsAdds,
           confirmed: landed,
         }),
         { status: 200, headers: JSON_HEADERS }

@@ -54,11 +54,28 @@ export function readMflImportResult(text: string, httpStatus = 200): MflImportRe
     return { accepted: false, error: null, reason: `HTTP ${httpStatus}` };
   }
 
-  // MFL's refusals: <error>message</error>, sometimes <error $t="…"> in JSON.
+  // MFL's refusals come in two shapes and BOTH carry the message we want to
+  // show the owner: XML `<error>message</error>`, and — when the caller asked
+  // for `JSON=1`, or MFL simply feels like it — `{"error":{"$t":"message"}}`.
+  // Parsing only the XML one leaves a JSON refusal classified as "unrecognized
+  // response", which is still correctly REJECTED but throws MFL's own
+  // explanation away at the moment it is most useful.
   const explicit = body.match(/<error[^>]*>([\s\S]*?)<\/error>/i)?.[1]?.trim();
   if (explicit) return { accepted: false, error: explicit, reason: null };
   if (/<error\b/i.test(body)) {
     return { accepted: false, error: null, reason: 'MFL returned an error element.' };
+  }
+  if (body.startsWith('{')) {
+    try {
+      const err = (JSON.parse(body) as { error?: unknown })?.error;
+      const message =
+        typeof err === 'string' ? err : typeof (err as { $t?: unknown })?.$t === 'string' ? (err as { $t: string }).$t : null;
+      if (message?.trim()) return { accepted: false, error: message.trim(), reason: null };
+      if (err) return { accepted: false, error: null, reason: 'MFL returned a JSON error payload.' };
+    } catch {
+      // Not JSON after all — fall through to the unrecognized-body branch,
+      // which keeps the first 200 characters for the log either way.
+    }
   }
 
   // A page, not an API answer — almost always the signed-out login page or a
