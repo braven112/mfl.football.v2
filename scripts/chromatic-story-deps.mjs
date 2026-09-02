@@ -99,8 +99,6 @@ export const STORY_ASSET_GLOBS = [
   // `computeStoryAssetLiterals()` below is what keeps this list honest.
   'public/assets/afl/icons/ninjas.png',
   'public/assets/afl/icons/ninjas_dark.png',
-  'public/assets/afl/icons/saints.png',
-  'public/assets/afl/icons/suh.png',
   'public/assets/theleague/group-me/cowboy_up.png',
   'public/assets/theleague/group-me/ninjas.png',
   'public/assets/theleague/group-me/pigskins.png',
