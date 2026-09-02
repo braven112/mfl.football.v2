@@ -16,6 +16,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { mflFetch } from './lib/mfl-api.mjs';
 import {
   loadLore,
   loadPostHistory,
@@ -1042,13 +1043,13 @@ async function fetchPendingCommishTrades(leagueId, year) {
   }
   const url = `https://${MFL_HOST}/${year}/export?TYPE=pendingTrades&L=${leagueId}&FRANCHISE_ID=0000&JSON=1`;
   try {
-    const res = await fetch(url, {
-      headers: {
-        Cookie: `MFL_USER_ID=${mflCookie}`,
-        'User-Agent': 'schefter-scan/1.0',
-      },
-      redirect: 'follow',
-    });
+    // mflFetch, NOT a bare fetch: MFL_HOST defaults to api.myfantasyleague.com,
+    // which 302s to the league's www## host, and undici DROPS the Cookie header
+    // on that cross-origin hop. This read arrived anonymous and MFL answered
+    // with the login page, which the "Got HTML" guard below turned into a quiet
+    // "auth likely failed" — a real outage that looked like a config warning.
+    // See tests/mfl-cookie-redirect-guard.test.ts.
+    const res = await mflFetch({ url, cookies: { MFL_USER_ID: mflCookie }, timeoutMs: 15_000 });
     if (!res.ok) return { trades: null, error: `HTTP ${res.status}` };
     const text = await res.text();
     if (text.trim().startsWith('<')) return { trades: null, error: 'Got HTML — auth likely failed' };

@@ -26,6 +26,15 @@
  * and cost a workflow run to tell apart (2026-09-02). The scan now covers
  * `scripts/` too. Node scripts cannot import `src/utils/mfl-fetch.ts` (it is app
  * TS); their equivalent is `scripts/lib/mfl-api.mjs`.
+ *
+ * Widening it immediately found three more, and they were NOT theoretical:
+ * there is no `MFL_HOST` repo variable, so `schefter-scan.mjs` and
+ * `schefter-rumor-scan.mjs` both fell back to `api.myfantasyleague.com` and
+ * their `pendingTrades` reads had been coming back anonymous in production —
+ * each behind a "returned HTML, auth likely failed" branch that logged a
+ * warning and carried on, so a dead feature looked like a config nag. That is
+ * the real lesson of this guard: the bug does not announce itself, it degrades
+ * into a plausible-looking warning.
  */
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
@@ -44,19 +53,16 @@ const ROOTS = [SRC, SCRIPTS];
  * `MFL_HOST` is unset. They are recorded here rather than fixed because they
  * belong to different features.
  *
- * The three `scripts/` entries were found when this scan was widened past
- * `src/` (2026-09-02) and are latent instances of the same bug: each sends
- * `Cookie: MFL_USER_ID=…` on a bare `fetch` to an owner-gated MFL export, so
- * each is reading an anonymous payload whenever the host redirects. Fixing them
- * means routing through `scripts/lib/mfl-api.mjs#mflFetch`.
+ * The three `scripts/` entries this list briefly held were NOT latent: with no
+ * `MFL_HOST` repo variable set, both schefter scans were resolving
+ * `api.myfantasyleague.com` and their commissioner/franchise `pendingTrades`
+ * reads had been arriving anonymous in production. They are fixed, not
+ * baselined — see the 2026-09-02 note above.
  *
  * This list may only SHRINK. Same idiom as tests/fixtures/typecheck-baseline.json:
  * fixing one and leaving it listed fails, so the baseline cannot rot.
  */
 const KNOWN_UNFIXED = [
-  'scripts/mfl-calendar-event.mjs',
-  'scripts/schefter-rumor-scan.mjs',
-  'scripts/schefter-scan.mjs',
   'src/pages/api/contracts/verify.ts',
   'src/utils/mfl-contract-writer.ts',
 ];

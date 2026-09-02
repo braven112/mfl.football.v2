@@ -126,6 +126,53 @@
 
 ---
 
+## 2026-09-02 - The Stripped-Cookie Bug Does Not Fail Loudly. It Degrades Into A Plausible Warning.
+
+**Context:** widening `tests/mfl-cookie-redirect-guard.test.ts` past `src/`
+found three more `Cookie`-on-a-bare-`fetch` call sites. Two of them were not
+latent — they had been broken in production for months.
+
+**The finding:** there is **no `MFL_HOST` repo variable** (`gh variable list`
+confirms it), so `scripts/schefter-scan.mjs` and `scripts/schefter-rumor-scan.mjs`
+both fell back to their `api.myfantasyleague.com` default. Verified live: that
+host answers the exact `pendingTrades` URL they call with
+
+```
+302 → https://www44.myfantasyleague.com/2026/export?TYPE=pendingTrades&…
+```
+
+so undici stripped the cookie and every commissioner/franchise pending-trade
+read arrived anonymous.
+
+**Why nobody noticed, and this is the transferable part.** Both call sites had a
+defensive branch for exactly this:
+
+```js
+if (text.trim().startsWith('<')) return { trades: null, error: 'Got HTML — auth likely failed' };
+```
+
+MFL answers an anonymous request with its login page, that branch caught it, and
+the scan logged a warning and carried on. **A dead feature looked like a config
+nag.** The guard against the failure mode was also the thing that hid it. When a
+credential-dependent read has a "looks like auth failed" fallback, that fallback
+needs to be loud — a `console.warn` in a cron log is indistinguishable from
+nothing.
+
+**Also fixed:** `scripts/mfl-calendar-event.mjs`, which was safe only because
+`host` resolves to the league's own `www##`. `MFL_WRITE_HOST` overriding it to
+`api.` would have made a commissioner write arrive anonymous — answered with
+HTTP 200 and a login page, i.e. a mysterious no-op.
+
+All three now go through `scripts/lib/mfl-api.mjs#mflFetch`, and the guard's
+`KNOWN_UNFIXED` is back down to the two contract-writer entries.
+
+**Rule:** an env var with a redirecting default is a cookie bug waiting for the
+var to be unset. Prefer the league's own host from the registry, and route every
+cookie-carrying call through `mflFetch` regardless — it costs nothing when there
+is no redirect.
+
+---
+
 ## 2026-09-02 - The Calendar Export Wants The Cookie ALONE — An APIKEY Alongside It Poisons The Request
 
 **Supersedes the 2026-07-08 entry's aside** that our stored credentials could
