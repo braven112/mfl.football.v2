@@ -3,6 +3,38 @@
   "changes": [
     {
       "date": "2026-09-02",
+      "type": "bug-fix",
+      "summary": "The Free Agents page can finally tell you which waiver window is open. It had been saying “waiver window unknown — MFL will decide when you submit” to everybody, all season, because the piece of MyFantasyLeague that knows the answer — the league calendar — had never once synced. It wanted a login and was being handed an API key, and the two are not the same thing. So the header now reads the real state: waivers open and your claim queued until they process, or first come, first served and the pickup happens on the spot. The claim form follows suit, which matters more than the wording — a first-come pickup filed as a queued claim is a claim that sits in a round nobody ever runs.",
+      "impact": "user",
+      "area": "free-agents",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-02",
+      "type": "bug-fix",
+      "summary": "A waiver claim that never reached MyFantasyLeague will no longer tell you it did. The Claim button said “Submitted ✓” and closed the moment MFL answered at all — and MFL answers a refused request with a perfectly cheerful blank page, so a claim could vanish between the click and the wire with nothing to show for it. Now the site insists on a yes from MFL, then goes back and reads your pending waivers to see the claim actually sitting there. If either check comes up short you get told so, in the words of what went wrong, with the claim form still open in front of you.",
+      "impact": "user",
+      "area": "free-agents",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-02",
+      "type": "style-tweak",
+      "summary": "The Claim button on the AFL's Free Agents page is a proper AFL-red pill now. It had been rendering as a raw grey system button — beveled edges, square corners, Arial — sitting in the middle of an otherwise dark table, because it was wearing a class name that only existed over in TheLeague. Both leagues now share one button, so the next one can't go out undressed.",
+      "impact": "user",
+      "area": "free-agents",
+      "league": "afl"
+    },
+    {
+      "date": "2026-09-02",
+      "type": "bug-fix",
+      "summary": "The Claim button on the AFL's Free Agents page no longer appears on players you cannot claim. With “Include rostered” switched on, anyone already held in your own conference was still offered up for a claim that was always going to bounce.",
+      "impact": "user",
+      "area": "free-agents",
+      "league": "afl"
+    },
+    {
+      "date": "2026-09-02",
       "type": "style-tweak",
       "summary": "The playoff bracket on the AFL homepage now flips its seed pills in dark mode too — white circle, navy number — so a seed in the bracket and a seed in the standings table below it are finally the same pill. They had been navy on navy: the number was legible, the circle around it wasn't there at all. Two more markings on that card had quietly gone the same way and are back: the \"Conference Playoffs\" line above the brackets, which was navy text on a navy card and genuinely unreadable, and the accent stripe down the left of each matchup. And if one of the four teams is yours, your own pill stays red so it still marks your team at a glance — but its number is dark now instead of white, because white on that red was the hardest thing on the card to read.",
       "impact": "user",
@@ -12,7 +44,7 @@
     {
       "date": "2026-09-01",
       "type": "style-tweak",
-      "summary": "The Gridiron Geeks have a new helmet. The facemask went from white to orange, which is the first time that crest has changed since 2014 — twelve seasons of the same grimace. The old white-facemask look is not gone, it is retired: it is now an era of its own, so every 2014-2025 season still wears the helmet it actually played in, and it turns up in the Throwback Week picker as \u201cThe white facemask\u201d alongside the Sabertooths and DangerZone. The orange one takes over from 2026 on, across the badge, the chat crest and the wordmark banner.",
+      "summary": "The Gridiron Geeks have a new helmet. The facemask went from white to orange, which is the first time that crest has changed since 2014 — twelve seasons of the same grimace. The old white-facemask look is not gone, it is retired: it is now an era of its own, so every 2014-2025 season still wears the helmet it actually played in, and it turns up in the Throwback Week picker as “The white facemask” alongside the Sabertooths and DangerZone. The orange one takes over from 2026 on, across the badge, the chat crest and the wordmark banner.",
       "impact": "user",
       "area": "design-system",
       "league": "theleague"

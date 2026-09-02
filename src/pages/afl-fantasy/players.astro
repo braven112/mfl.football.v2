@@ -33,6 +33,7 @@ import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, COLLEGE_LOGO_ONERROR, COLLEGE_LOGO_O
 import { NO_HEADSHOT_SILHOUETTE, getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark, getPlayerAvatarStyleMaps } from '../../utils/nfl-team-colors';
 import '../../styles/player-cell.css';
 import '../../styles/ranking-columns.css';
+import '../../styles/fa-claim-button.css';
 // Build-time-derived free-agent snapshot. All the heavy multi-year feed reads +
 // row assembly live in scripts/compute-afl-free-agents.mjs (wired into prebuild);
 // this page imports only the finished ~400KB result. See the SSR note below.
@@ -1077,9 +1078,14 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         html += `<td class="cell-num cell-pts col-projected col-group--stats">${p.projected != null ? p.projected.toFixed(1) : '<span class="na">-</span>'}</td>`;
       }
       if (canClaim) {
-        // `p.rostered` is conference-scoped on this page, which is exactly the
-        // availability that matters in a duplicate-player league.
-        html += p.rostered
+        // `rosteredForView`, NOT `p.rostered`: this is a duplicate-player
+        // league and only the ACTIVE conference decides whether you may claim
+        // someone. `p.rostered` means "held in EVERY conference"
+        // (afl-free-agents-live.ts: `confs.length === confCount`), so gating on
+        // it offered a Claim button — via "Include rostered" — on players
+        // already rostered in your own conference, and the server correctly
+        // 400s those with "that player is not a free agent."
+        html += rosteredForView
           ? `<td class="col-fa-action"></td>`
           : `<td class="col-fa-action"><button type="button" class="place-bid-link claim-open" data-claim-id="${escapeAttr(p.id)}" data-claim-name="${escapeAttr(p.name)}" data-claim-pos="${escapeAttr(p.position || '')}" data-claim-team="${escapeAttr(p.nflTeam || p.team || '')}" data-claim-espn="${escapeAttr(p.espnId || '')}" data-claim-headshot="${escapeAttr(p.headshot || '')}" aria-label="Claim ${escapeAttr(p.name)}">Claim</button></td>`;
       }

@@ -24,6 +24,7 @@ import { resolveWaiverWindow, describeWaiverWindow } from '../../utils/waiver-wi
 import WaiverClaimModal from '../../components/shared/WaiverClaimModal.astro';
 import '../../styles/player-cell.css';
 import '../../styles/ranking-columns.css';
+import '../../styles/fa-claim-button.css';
 import collegeLogos from '../../data/college-logos.json';
 import espnCollegeIds from '../../../data/theleague/espn-college-ids.json';
 import leagueConfig from '../../data/theleague.config.json';
@@ -3773,34 +3774,13 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     min-width: 80px;
   }
 
-  /* Place Bid button in Value view */
-  :global(.place-bid-link) {
-    display: inline-block;
-    padding: 0.2rem 0.5rem;
-    font-size: 0.6875rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    color: var(--color-primary, #1c497c);
-    border: 1px solid var(--color-primary, #1c497c);
-    border-radius: var(--radius-full, 999px);
-    text-decoration: none;
-    white-space: nowrap;
-    transition: all 0.15s;
-  }
-  :global(.place-bid-link:hover) {
-    background: var(--color-primary, #1c497c);
-    color: white;
-  }
+  /* .place-bid-link, button.place-bid-link and .col-fa-action now live in
+     src/styles/fa-claim-button.css, imported above and shared with the AFL's
+     Claim button — which emitted these same class names with nothing to match
+     them. */
   :global(.col-place-bid) {
     min-width: 60px;
     text-align: center;
-  }
-  :global(.col-fa-action) {
-    min-width: 60px;
-    text-align: center;
-    padding: 0.25rem 0.375rem;
-    width: 1%;
   }
 
   /* Rostered row — dashed left border instead of full opacity dim */
@@ -4304,26 +4284,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   }
 
 
-  /* The Bid <button> reuses .place-bid-link so it is visually identical to the
-     Bid/Add pills already in this table.
-     MUST be :global() — table rows are injected via innerHTML from the client
-     script, and Astro's scoped styles only match elements that carried the
-     scope attribute at build time. A scoped rule here silently does nothing,
-     which is how this shipped as a washed-out pill: only the UA button styles
-     applied, painting `buttonface` grey behind the text.
-     Only the properties a <button> does NOT inherit are reset — border,
-     padding, colour, radius and size all come from .place-bid-link, so the
-     button and the anchor can never drift apart. */
-  :global(button.place-bid-link) {
-    background: none;
-    font-family: inherit;
-    line-height: inherit;
-    cursor: pointer;
-  }
-  :global(button.place-bid-link:focus-visible) {
-    outline: 2px solid var(--color-primary, #1c497c);
-    outline-offset: 2px;
-  }
+  /* The Bid <button>'s reset moved to src/styles/fa-claim-button.css with the
+     rest of the pill — see the note there for why it must not be scoped. */
 
   .waiver-window-line {
     display: inline-block;

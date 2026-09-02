@@ -36,8 +36,10 @@ import { getLeagueById, DEFAULT_LEAGUE_ID } from '../../config/leagues';
 import { bustRosterCaches } from '../../utils/mfl-roster-cache';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../utils/api-response';
 import { resolveWaiverWindow } from '../../utils/waiver-window';
+import { readMflImportResult } from '../../utils/mfl-import-result';
 import {
   readBidRules,
+  readPendingWaiverPlayerIds,
   validateClaims,
   validateRound,
   buildPicksParam,
@@ -49,6 +51,35 @@ import {
 
 const fail = (message: string, status: number, extra: Record<string, unknown> = {}) =>
   new Response(JSON.stringify({ success: false, message, ...extra }), { status, headers: JSON_HEADERS });
+
+/**
+ * The franchise's currently-pending waiver claims, as player ids — read once
+ * before the write and once after, so confirmation can be the delta.
+ *
+ * `null` means the read did not happen or could not be understood, which is NOT
+ * "nothing is pending". A read failure must never be reported as a failed
+ * write: the write may well have landed.
+ *
+ * mflFetch, NOT fetch: this export is owner-gated, and undici drops the Cookie
+ * on MFL's api → www## redirect, so a bare fetch reads back an anonymous error
+ * payload and the verification silently never runs.
+ */
+async function readPendingWaivers(
+  year: number,
+  leagueId: string,
+  mflUserCookie: string
+): Promise<string[] | null> {
+  try {
+    const res = await mflFetch({
+      url: `https://api.myfantasyleague.com/${year}/export?TYPE=pendingWaivers&L=${leagueId}&JSON=1&_=${Date.now()}`,
+      method: 'GET',
+      mflUserCookie,
+    });
+    return readPendingWaiverPlayerIds(await res.json());
+  } catch {
+    return null;
+  }
+}
 
 export const POST: APIRoute = async ({ request }) => {
   const user = getAuthUser(request);
@@ -190,6 +221,14 @@ export const POST: APIRoute = async ({ request }) => {
       if (replace) params.set('REPLACE', '1');
     }
 
+    // ── Snapshot the pending round BEFORE the write ─────────────────────────
+    // "The player is in my pending waivers" is NOT proof this request stored
+    // anything — he may have been sitting there from an earlier round, in which
+    // case a dropped write reads back as a success. The repo's own rule for MFL
+    // writes is to WATCH THE VALUE CHANGE (docs/claude/insights/domains/
+    // mfl-api.md), so confirmation is the DELTA: present after, absent before.
+    // That also needs no assumption about MFL's undocumented round/bid shape.
+    const pendingBefore = immediate ? null : await readPendingWaivers(year, leagueId, user.id);
     const importType = immediate ? 'fcfsWaiver' : waiverImportType(rules);
     const res = await mflFetch({
       url: `https://api.myfantasyleague.com/${year}/import?TYPE=${importType}&L=${leagueId}`,
@@ -198,71 +237,118 @@ export const POST: APIRoute = async ({ request }) => {
       body: params.toString(),
     });
     const text = (await res.text()).trim();
-    if (!res.ok || /<error/i.test(text)) {
-      return fail(`MFL rejected the claim: ${text.slice(0, 300) || `HTTP ${res.status}`}`, 502);
+    // Require an AFFIRMATIVE `<status>OK</status>`. `!res.ok || /<error/` was
+    // not a success check: MFL answers a refused import with HTTP 200 and a
+    // body carrying no `<error>` at all (a login page, a permission notice),
+    // and this route reported "Round 1 submitted" for exactly that. See
+    // src/utils/mfl-import-result.ts.
+    const outcome = readMflImportResult(text, res.status);
+    if (!outcome.accepted) {
+      // Never discard MFL's body on a write — a silent no-op is invisible
+      // without it and it is the whole diagnosis.
+      console.error('[waiver-claim] MFL did not accept the write:', outcome.reason ?? outcome.error, text.slice(0, 300));
+      return fail(
+        outcome.error
+          ? `MFL rejected the claim: ${outcome.error}`
+          : 'MFL did not confirm the claim, so nothing was recorded. Try again, or file it on MyFantasyLeague.',
+        502
+      );
     }
 
     // ── Verify by reading the round back ────────────────────────────────────
-    // MFL answers a dropped write with HTTP 200 and no error, so the response
-    // is not evidence that anything was stored.
-    let stored: string[] = [];
+    // An acknowledged write is a FLOOR, not proof: MFL answers OK and quietly
+    // no-ops writes it does not accept. So the claim is only reported as filed
+    // once it is read back.
+    //
+    // `null` means the read-back could not be performed (network failure, or a
+    // payload we do not recognize) — which is NOT the same as "nothing is
+    // stored", and must never be reported as either success or failure. The
+    // previous `stored.length > 0` guard collapsed the two, disabling the
+    // verification in the exact case it was written for.
+    let stored: string[] | null = null;
     if (immediate) {
       // An FCFS add lands on the ROSTER, not in pendingWaivers — checking the
       // wrong list would report every successful pickup as unconfirmed.
       try {
         const fresh = await createMFLApiClient({ leagueId, year: String(year), mflUserId: user.id }).getRosters();
-        stored = ((fresh[user.franchiseId] as any[]) ?? []).map((p: any) => String(p.id ?? p));
+        stored = user.franchiseId in fresh
+          ? ((fresh[user.franchiseId] as any[]) ?? []).map((p: any) => String(p.id ?? p))
+          : null;
       } catch {
-        stored = [];
+        stored = null;
       }
       await bustRosterCaches(String(year), leagueId);
-      const landed = requestedAdds.filter((id) => stored.includes(id));
+      // Verify ONLY what was actually written. The FCFS branch above sends a
+      // single ADD (`claims[0]`), so checking the roster against every
+      // `requestedAdds` entry would count claims 2..n as missing and report a
+      // successful pickup as "probably did NOT go through" — the alternatives
+      // in an FCFS board were never submitted and were never meant to be.
+      const fcfsAdds = [String(claims![0].addPlayerId)];
+      const landed = stored ? fcfsAdds.filter((id) => stored!.includes(id)) : [];
+      const missing = stored ? fcfsAdds.filter((id) => !stored!.includes(id)) : fcfsAdds;
       return new Response(
         JSON.stringify({
           success: true,
-          message: landed.length
-            ? `Added — ${requestedAdds.length === 1 ? 'the player is' : 'they are'} on your roster now.`
-            : 'MFL accepted the add, but your roster does not show it yet. Check your roster before retrying.',
+          verified: stored !== null && missing.length === 0,
+          message:
+            stored === null
+              ? 'MFL accepted the add, but we could not read your roster back to confirm it. Check your roster before retrying.'
+              : missing.length === 0
+                ? 'Added — the player is on your roster now.'
+                : 'MFL accepted the add but your roster does not show it. It probably did NOT go through — check your roster before retrying.',
           mode: 'fcfs',
-          submitted: requestedAdds,
+          // `submitted`, not `requestedAdds`: an FCFS write resolves instantly,
+          // so only the first claim was ever sent. Reporting the whole board as
+          // submitted would be a lie the client could act on.
+          submitted: fcfsAdds,
           confirmed: landed,
         }),
         { status: 200, headers: JSON_HEADERS }
       );
     }
-    try {
-      // mflFetch for the same reason as the calendar read above — a bare fetch
-      // loses the cookie on the redirect and this verification silently never
-      // runs, leaving every submission unverified.
-      const pending = await mflFetch({
-        url: `https://api.myfantasyleague.com/${year}/export?TYPE=pendingWaivers&L=${leagueId}&JSON=1&_=${Date.now()}`,
-        method: 'GET',
-        mflUserCookie: user.id,
-      });
-      const body = await pending.json();
-      const raw = body?.pendingWaivers?.waiver ?? body?.pendingWaivers?.pendingWaiver ?? [];
-      stored = (Array.isArray(raw) ? raw : [raw]).map((w: any) => String(w?.player?.id ?? w?.id ?? ''));
-    } catch {
-      // Verification is best-effort: a read failure here must not be reported
-      // as a failed write, because the write may well have landed.
-      stored = [];
-    }
+    stored = await readPendingWaivers(year, leagueId, user.id);
 
     // A won claim changes rosters, and the page that submitted it will re-read
     // them; drop the cache so it does not serve a pre-claim snapshot.
     await bustRosterCaches(String(year), leagueId);
-    const unconfirmed = requestedAdds.filter((id) => stored.length > 0 && !stored.includes(id));
+
+    // Confirmation is the DELTA, not mere presence: an id that was ALREADY
+    // pending before this request proves nothing about this request. Without
+    // that, an owner who claims a player in round 1 and re-files him in round 2
+    // gets "Round 2 submitted" even when MFL dropped the round-2 write — the
+    // exact false confirmation this whole route was rewritten to stop.
+    // Both reads must have succeeded to compute it; either one failing leaves
+    // the round honestly UNVERIFIED rather than confidently wrong.
+    const canDiff = pendingBefore !== null && stored !== null;
+    const newlyPending = canDiff
+      ? requestedAdds.filter((id) => stored!.includes(id) && !pendingBefore!.includes(id))
+      : [];
+    const unconfirmed = canDiff ? requestedAdds.filter((id) => !newlyPending.includes(id)) : requestedAdds;
+    if (!canDiff) {
+      console.warn(
+        '[waiver-claim] could not read pendingWaivers on both sides of the write; reporting the round as unverified.',
+        { before: pendingBefore === null ? 'unreadable' : 'ok', after: stored === null ? 'unreadable' : 'ok' }
+      );
+    }
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: unconfirmed.length
-          ? `Submitted, but MFL has not echoed ${unconfirmed.length} of your claims yet. Check your pending waivers.`
-          : `Round ${round} submitted — ${claims!.length} claim${claims!.length === 1 ? '' : 's'}.`,
+        verified: canDiff && unconfirmed.length === 0,
+        message: !canDiff
+          ? 'Submitted, but we could not read your pending waivers back to confirm it. Check them on MyFantasyLeague.'
+          : unconfirmed.length === 0
+            ? `Round ${round} submitted — ${claims!.length} claim${claims!.length === 1 ? '' : 's'}.`
+            : `MFL accepted the request but your pending waivers do not show ${
+                unconfirmed.length === 1 ? 'the claim' : `${unconfirmed.length} of the claims`
+              } as newly added. It may NOT have gone through — check your pending waivers before retrying.`,
         mode: 'waiver',
         round,
         submitted: requestedAdds,
-        confirmed: stored.filter((id) => requestedAdds.includes(id)),
+        // Only the ids this request demonstrably ADDED — not everything of ours
+        // MFL happens to be holding, which would re-report an older round's
+        // claims as confirmations of this one.
+        confirmed: newlyPending,
       }),
       { status: 200, headers: JSON_HEADERS }
     );

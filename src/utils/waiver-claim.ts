@@ -229,3 +229,55 @@ export function conferenceOfFranchise(
 export function freeAgencyIsLeagueWide(league: Record<string, any> = {}): boolean {
   return String(league?.playerLimitUnit ?? 'LEAGUE').toUpperCase() !== 'CONFERENCE';
 }
+
+/**
+ * Player ids appearing in an `export?TYPE=pendingWaivers` payload — the
+ * read-back that proves a submitted round actually landed.
+ *
+ * Returns **null** when the payload cannot be interpreted (an error body, or no
+ * `pendingWaivers` key at all). Null is not "nothing is stored": the caller
+ * must report it as UNVERIFIED rather than as success or failure. Collapsing
+ * those two is what let a dropped write report "Round 1 submitted".
+ *
+ * MFL's shape here is undocumented and has changed before, so rather than pin
+ * one key path this walks the subtree and collects every id-shaped value. The
+ * bias is deliberate: a loose match can only cause a real failure to go
+ * unreported, whereas a too-narrow match tells an owner their perfectly good
+ * claim did not go through. `""` is MFL's empty-state for these list exports
+ * (same as `pendingTrades`) and is a genuine, verified "nothing pending".
+ */
+export function readPendingWaiverPlayerIds(body: any): string[] | null {
+  if (!body || typeof body !== 'object') return null;
+  if (body.error) return null;
+  const pending = body.pendingWaivers ?? body.pendingWaiver;
+  if (pending === undefined || pending === null) return null;
+  if (typeof pending === 'string') return pending.trim() === '' ? [] : null;
+  if (typeof pending !== 'object') return null;
+
+  const ids = new Set<string>();
+  const walk = (node: unknown): void => {
+    if (Array.isArray(node)) {
+      for (const child of node) walk(child);
+      return;
+    }
+    if (!node || typeof node !== 'object') return;
+    for (const [key, value] of Object.entries(node as Record<string, unknown>)) {
+      if (
+        (key === 'id' || key === 'player' || key === 'add' || key === 'drop') &&
+        (typeof value === 'string' || typeof value === 'number')
+      ) {
+        const id = String(value).trim();
+        if (/^\d{2,6}$/.test(id)) ids.add(id);
+        continue;
+      }
+      walk(value);
+    }
+  };
+  walk(pending);
+  // Zero ids out of a payload that HAD content is not "nothing pending" — it is
+  // a shape we do not recognize, and the two must not collapse. Reporting it as
+  // a verified empty list tells an owner their good claim did not go through;
+  // `null` tells them we could not check, which is the truth.
+  if (ids.size === 0 && Object.keys(pending as Record<string, unknown>).length > 0) return null;
+  return [...ids];
+}

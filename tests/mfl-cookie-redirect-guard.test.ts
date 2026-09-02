@@ -18,26 +18,47 @@
  *
  * The comment at the top of mfl-fetch.ts already warned about this. A comment
  * was not enough, so this is a test.
+ *
+ * ...and then it shipped a THIRD time, in `scripts/fetch-mfl-feeds.mjs`, because
+ * this test only ever scanned `src/`. The calendar feed was given a Cookie
+ * header on a bare `fetch` and MFL answered `API requires logged in user in
+ * league ID 19621` — which reads as a stale secret, not as a stripped header,
+ * and cost a workflow run to tell apart (2026-09-02). The scan now covers
+ * `scripts/` too. Node scripts cannot import `src/utils/mfl-fetch.ts` (it is app
+ * TS); their equivalent is `scripts/lib/mfl-api.mjs`.
  */
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 
 const SRC = path.join(process.cwd(), 'src');
+const SCRIPTS = path.join(process.cwd(), 'scripts');
+
+/** Paths are reported relative to the repo root so both roots read the same. */
+const ROOTS = [SRC, SCRIPTS];
 
 /**
- * Pre-existing call sites, from the contracts writer, that carry the same
- * shape. They are NOT exempt because they are safe — `MFL_READ_HOST` defaults
- * to `api.myfantasyleague.com`, so they are exposed to exactly this bug
- * whenever `MFL_HOST` is unset. They are recorded here rather than fixed
- * because they belong to a different feature.
+ * Pre-existing call sites that carry the same shape. They are NOT exempt
+ * because they are safe — `MFL_READ_HOST` defaults to
+ * `api.myfantasyleague.com`, so they are exposed to exactly this bug whenever
+ * `MFL_HOST` is unset. They are recorded here rather than fixed because they
+ * belong to different features.
+ *
+ * The three `scripts/` entries were found when this scan was widened past
+ * `src/` (2026-09-02) and are latent instances of the same bug: each sends
+ * `Cookie: MFL_USER_ID=…` on a bare `fetch` to an owner-gated MFL export, so
+ * each is reading an anonymous payload whenever the host redirects. Fixing them
+ * means routing through `scripts/lib/mfl-api.mjs#mflFetch`.
  *
  * This list may only SHRINK. Same idiom as tests/fixtures/typecheck-baseline.json:
  * fixing one and leaving it listed fails, so the baseline cannot rot.
  */
 const KNOWN_UNFIXED = [
-  'utils/mfl-contract-writer.ts',
-  'pages/api/contracts/verify.ts',
+  'scripts/mfl-calendar-event.mjs',
+  'scripts/schefter-rumor-scan.mjs',
+  'scripts/schefter-scan.mjs',
+  'src/pages/api/contracts/verify.ts',
+  'src/utils/mfl-contract-writer.ts',
 ];
 
 const walk = (dir: string): string[] =>
@@ -70,14 +91,17 @@ function bareFetchCalls(source: string): string[] {
 }
 
 describe('MFL authenticated reads must survive the api → www49 redirect', () => {
-  const offenders = walk(SRC)
+  const offenders = ROOTS.flatMap((root) => walk(root))
+    // The two manual-redirect helpers ARE the fix — they hold the only
+    // legitimate `fetch` that carries a Cookie.
     .filter((f) => !f.endsWith(path.join('utils', 'mfl-fetch.ts')))
+    .filter((f) => !f.endsWith(path.join('lib', 'mfl-api.mjs')))
     .flatMap((file) => {
       const source = fs.readFileSync(file, 'utf-8');
       if (!source.includes('Cookie')) return [];
       return bareFetchCalls(source)
         .filter((call) => /Cookie\s*:/.test(call))
-        .map(() => path.relative(SRC, file).split(path.sep).join('/'));
+        .map(() => path.relative(process.cwd(), file).split(path.sep).join('/'));
     });
 
   const unique = [...new Set(offenders)].sort();

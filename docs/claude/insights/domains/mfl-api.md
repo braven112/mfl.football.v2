@@ -12,14 +12,22 @@
 
 ## Non-negotiables
 
-- **Cookie on the request? Use `mflFetch()`** (`src/utils/mfl-fetch.ts`) — reads
-  included. `api.myfantasyleague.com` 302s to `www##`, and Node's undici strips
-  `Cookie` cross-origin. Raw `fetch()` is only for unauthenticated calls.
-- **HTTP 200 is not success.** MFL returns errors as 200 with an `{error:…}`
-  body, and an import with an *unrecognized parameter name* returns
-  `<status>OK</status>` having done nothing. Check the payload's own shape.
-  Never overwrite a committed feed with a payload carrying `error` — the ADP
-  and feed fetchers have guards for exactly this; don't remove them.
+- **Cookie on the request? Use `mflFetch()`** — `src/utils/mfl-fetch.ts` in the
+  app, `scripts/lib/mfl-api.mjs` in a node script (that TS is not importable
+  from one). Reads included. `api.myfantasyleague.com` 302s to `www##` and undici
+  strips `Cookie` cross-origin, so a raw `fetch()` carrying one arrives
+  ANONYMOUS — indistinguishable from a bad credential.
+- **HTTP 200 is not success, and absence of `<error>` is not either.** MFL
+  returns errors as 200 with an `{error:…}` body; an import with an unrecognized
+  parameter answers `<status>OK</status>` having done nothing; and a REFUSED
+  import answers 200 with an HTML login page or an EMPTY body, so
+  `res.ok && !/error/i` waves it through. Require an affirmative
+  `<status>OK</status>` (`readMflImportResult`, `src/utils/mfl-import-result.ts`)
+  and never discard the body — a silent no-op is invisible without it. Then
+  confirm the write by WATCHING THE VALUE CHANGE: `import?TYPE=franchises`
+  answers OK and ignores `waiverSortOrder` entirely. Never overwrite a committed
+  feed with a payload carrying `error` — the ADP and feed fetchers have guards
+  for exactly this; don't remove them.
 - **Never send `FRANCHISE_ID` on an owner-authenticated write.** It is
   commissioner-only and silently switches MFL to a stricter validation path.
 - **Commissioner writes need the `www##` host AND both cookies**
@@ -67,27 +75,26 @@
 - **`data/nfl/bye-weeks.json` speaks MFL's team codes, `PlayerIdentity.nflTeam`
   speaks ESPN's.** MFL says GBP/LVR/KCC/NEP; `getPlayerMap()` has already
   resolved players to GB/LV/KC/NE. Joining the two raw silently produced "no
-  bye week" for eight teams — a miss that looks exactly like a player who
-  genuinely has none. Run BOTH sides through `normalizeTeamCode`
-  (`src/utils/nfl-logo.ts`).
+  bye week" for eight teams, which looks exactly like a player who has none.
+  Run BOTH sides through `normalizeTeamCode` (`src/utils/nfl-logo.ts`).
 - **MFL ADP is a REDRAFT scale and means nothing against a keeper draft's pick
   numbers.** See `features/draft-broadcast.md`: the AFL keeps 7 per franchise,
-  so its 1.01 is the 85th pick of a from-scratch board, and comparing the two
+  so its 1.01 is the 85th pick of a from-scratch board — comparing them
   directly labelled 90 of 108 picks a "reach".
 - **Owner-facing MFL PAGES are not the API, and each draft type has its own.**
   The live draft room is `https://<www##>/<year>/ajax_ld?L=<id>`; MFL's other
   owner pages are numbered options, `.../<year>/options?L=<id>&O=<n>` (the
   email draft is `O=52`). Neither is served by `api.myfantasyleague.com` — they
   are league-site pages, so they need the league's own host from the registry.
-  The AFL runs BOTH in one league id: the AL meets live in the applet, the NL
-  runs a slow email draft that never opens it, so a single "the draft page"
-  link is wrong for one of the two conferences. Build both with
+  The AFL runs BOTH in one league id (AL live in the applet, NL a slow email
+  draft), so one "the draft page" link is wrong for one conference. Build both
+  with
   `buildMflLiveDraftUrl` / `buildMflOptionUrl` (`src/utils/mfl-url.ts`), and
   give every `O=` number a named constant — `O=52` reads as nothing.
-- **`espn_id` coverage differs BY SEASON in `players.json`.** The 2025 feed has
-  none for Kyle Pitts, Michael Pittman or Isaiah Likely; the 2026 feed has all
-  three. Never conclude "this player has no ESPN id" from one season's feed —
-  and never report a rehearsal year's gaps as a property of a live feature.
+- **`espn_id` coverage differs BY SEASON in `players.json`.** Pitts, Pittman
+  and Likely are absent from the 2025 feed and present in 2026. Never conclude
+  "no ESPN id" from one season's feed, and never report a rehearsal year's gaps
+  as a property of a live feature.
 
 ## Before you spend an hour
 
@@ -102,23 +109,75 @@
   — an anonymous response is missing the field too, so the two look
   identical. `scripts/probe-mfl-franchise-fields.ts` is the pattern.
 - **Don't ship inferred parameter names to a write endpoint.** Transaction-log
-  fields are past-tense (`activated`); import params are verbs (`ACTIVATE`), and
-  the direction is inverted. That one-letter guess burned five PRs.
-- **Readable on export ≠ writable on import.** `import?TYPE=franchises` answers
-  a correct `waiverSortOrder` payload with `<status>OK</status>` and ignores the
-  field; no import type sets waiver order. Confirming a write means WATCHING THE
-  VALUE CHANGE, not reading MFL's 200 — and never discard the response body, or
-  a silent no-op is invisible. `res.ok && !/error/i` also passes an HTML login
-  page. (2026-08-31)
-- **MFL egress from web sandboxes: try it before assuming it's blocked.** As of
-  2026-08-30, `api.myfantasyleague.com` GETs work fine through the agent proxy
-  (60-league sweeps, `export?TYPE=…`, the `api_info` docs page). What you will
-  NOT have is credentials — `MFL_USER_ID` lives in GitHub secrets, not in the
-  container — so anything owner- or commissioner-gated 302s to login.
+  fields are past-tense (`activated`); import params are verbs (`ACTIVATE`).
+  That guess burned five PRs.
+- **MFL egress from web sandboxes: try it before assuming it's blocked.**
+  `api.myfantasyleague.com` GETs work through the agent proxy; what you will not
+  have is credentials (`MFL_USER_ID` is a GitHub secret), so anything
+  owner-gated 302s to login. (2026-08-30)
+- **APIKEY and the owner cookie are not additive.** MFL validates the key FIRST
+  and refuses on it, so sending both to an owner-gated export fails where the
+  cookie alone works: `TYPE=calendar` answered `API Key Validation Failed` for a
+  key that worked on `tradeBait` in the same run. (2026-09-02)
 - In tests, `resolveWeekLineup` and friends read committed feeds from
   `process.cwd()`. To assert an absence, use `NO_DISK_FEED_YEAR` (1999) — a real
   year asserts against bot-synced data and fails later, on `main`.
 <!-- /CURATED-HEAD -->
+
+---
+
+## 2026-09-02 - The Calendar Export Wants The Cookie ALONE — An APIKEY Alongside It Poisons The Request
+
+**Supersedes the 2026-07-08 entry's aside** that our stored credentials could
+not read the calendar. `secrets.MFL_USER_ID` reads it fine for both leagues;
+what was wrong was how it was being sent.
+
+**Context:** `calendar.json` had NEVER synced for either league since the feed
+was added — no copy has ever been committed. It carries the `WAIVER_UNLOCK` /
+`WAIVER_LOCK` / `WAIVER_BBID` / `WAIVER_REVERSE` events that are the only source
+of truth for whether the waiver window is open or first-come-first-served, so
+`resolveWaiverWindow` returned `unknown` permanently. Both Free Agents pages
+read "waiver window unknown", and every claim was submitted as a queued
+`waiverRequest` — including during an FCFS window, where that files a round
+nobody processes. `tests/waiver-window.test.ts` had been reporting this the
+whole time as a SKIP (`calendar.json not synced for: theleague, afl-fantasy`),
+which is exactly why nobody noticed.
+
+**Three findings, in the order they were hit:**
+
+1. **`APIKEY` does not authenticate this export**, despite MFL's own error
+   naming it as an option ("pass the proper MFL_USER_ID cookie or APIKEY
+   parameter"). Consistent with the 2026-08-27 correction: an APIKEY only works
+   for a key bound to an account owning a franchise in that league.
+2. **A bare `fetch` with a `Cookie` header does not deliver it.** Node's undici
+   strips `Cookie` on the `api.` → `www4x.` cross-origin 302, so the request
+   arrives anonymous and MFL answers `API requires logged in user in league ID
+   19621` — *indistinguishable from a stale cookie*, which is what made this
+   look like an expired secret. `scripts/fetch-mfl-feeds.mjs` had declared
+   `MFL_USER_ID` since forever and never used it; the first fix reached for raw
+   headers because the head only named `src/utils/mfl-fetch.ts`, which is app TS
+   a node script cannot import. The scripts-side equivalent is
+   `scripts/lib/mfl-api.mjs#mflFetch`, and the head now names both.
+3. **THE NEW ONE: the cookie and the APIKEY are not additive.** With both
+   attached, MFL validates the KEY first and refuses on it before the cookie is
+   ever considered. TheLeague answered `API Key Validation Failed` — for the
+   same key that fetched `tradeBait` successfully in the same run — while the
+   AFL gave the generic logged-in-user error. Removing `withAuth()` from the
+   calendar URL and sending only the cookie fixed both leagues immediately.
+
+**Evidence:** run 33657199368 (both leagues fail, cookie sent via raw headers +
+APIKEY) → run 33658098268 (`Saved calendar -> data/theleague/mfl-feeds/2026/
+calendar.json`, same for `data/afl-fantasy/`). `scripts/fetch-mfl-feeds.mjs`
+now marks owner-gated feeds `cookie: true` and routes only those through
+`mflFetch`; the cookie is deliberately NOT sent on `TYPE=league`, whose
+commissioner-visible response carries owner emails, addresses and phone numbers
+that this job would then COMMIT (see the 2026-08-30 `lastVisit` entry).
+
+**A workflow_dispatch on a branch cannot commit its output.** `roster-sync.yml`
+checks out at `fetch-depth: 1`, so `git pull --rebase origin main` has no shared
+history with main and every file conflicts add/add. The fetch still runs and the
+log still proves whether it worked — which is how the above was diagnosed — but
+the data only lands from a run on `main`.
 
 ---
 
