@@ -61,9 +61,19 @@ export interface HeroFranchiseBackdrop {
   /** Inline `filter` carrying the measured outline, only for a LIGHT cut. */
   crestFilter?: string;
   /**
-   * The franchise's accent: headline word, countdown numeral, star chip, pill
-   * fill. Cleared for 4.5:1 against the washed gradient AND for ΔE ≥ 18 against
-   * the white it sits beside.
+   * The franchise's accent for the COPY band: headline word, countdown numeral,
+   * eyebrow chip.
+   *
+   * Cleared for **3:1** — `AA_LARGE_TEXT_RATIO` — against the washed gradient
+   * across that whole band, and for ΔE ≥ 18 against the white headline it sits
+   * beside. 3:1 is the correct floor and not a relaxed one: every mark this
+   * colours is large display type or non-text UI, which is exactly what WCAG's
+   * large-text bar covers. Do not "tighten" it to 4.5 — that was tried, and it
+   * drove every accent so far toward white that the brand colour stopped being
+   * recognisable, which fails a different part of the same standard.
+   *
+   * The pill's FILL is not this value: it is `--hero-fb-pill-bg`, nudged away
+   * from `pillInk` to clear 4.5:1, because a 0.8125rem label is small text.
    */
   accent: string;
   /**
