@@ -49,13 +49,11 @@ interface Props {
    * the corner glow in both themes; the green pill and green CTA are untouched,
    * so TheLeague's own brand is still on the card.
    *
-   * Page-supplied rather than resolved in here, because WHOSE franchise it is
-   * differs by page: this homepage has no team picker, so it passes a
-   * session-scoped franchise or nothing, while the AFL's follows that page's
-   * `?myteam=` / cookie preference like every other personalized card on it.
-   *
-   * Opt-in for a second reason too — six components render this shell, and the
-   * ones that are ABOUT another franchise must never take the viewer's colours.
+   * Page-supplied rather than resolved in here: both homepages pass the
+   * SIGNED-IN owner's franchise or nothing, and each reads its session its own
+   * way. Resolving it in the shell would also break the second reason it is
+   * opt-in — six components render this shell, and the ones that are ABOUT
+   * another franchise must never take the viewer's colours.
    */
   backdrop?: HeroFranchiseBackdrop | null;
 }

@@ -71,15 +71,15 @@ interface Props {
    * the red corner glow; the gold accent word, the red pill and the red CTA are
    * untouched, so the AFL's own brand is still on the card.
    *
-   * WHOSE franchise is the PAGE's decision, not this component's, and the two
-   * homepages answer it differently on purpose. The AFL page resolves it from
-   * `userTeam` — session, `?myteam=`, or the cookie — because every other
-   * personalized surface on that page (My Team, the standings highlight, the
-   * spotlight tile) already follows that same preference, and a hero that alone
-   * ignored it would be the odd one out. TheLeague has no such picker, so its
-   * homepage passes a session-scoped franchise or nothing.
+   * WHOSE franchise is the PAGE's decision, not this component's, and both
+   * homepages answer it the same way: the SIGNED-IN owner's franchise, or
+   * nothing. On this page that deliberately diverges from `userTeam` — the
+   * `?myteam=` / cookie preference the My Team card and standings highlight
+   * follow — because a card painted in someone's colours claims the site is
+   * theirs, and that should rest on having signed in rather than on a query
+   * param. See the note at the resolution site in `afl-fantasy/index.astro`.
    *
-   * Null when the page resolves no team, and the card renders exactly as it did
+   * Null for a signed-out visitor, and the card renders exactly as it did
    * before — which is why nothing here branches on auth itself.
    */
   backdrop?: HeroFranchiseBackdrop | null;

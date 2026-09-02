@@ -407,3 +407,23 @@ composite. Those already wear whoever is in them. Keeping the backdrop opt-in
 per call site rather than resolving it inside the shell is also what keeps it
 off `EventHeroShell`'s two non-hero consumers, `WhatsNextCard` and
 `CalendarEventCard`.
+
+### Whose franchise the backdrop paints: the SESSION, not the page's team preference
+
+The AFL homepage resolves `userTeam` from `?myteam=` / a cookie / the session,
+and every personalized card on it follows that — My Team, the standings
+highlight, the spotlight tile. The hero backdrop deliberately does NOT. It
+reads `authAflFranchiseId` alone.
+
+The distinction is what the surface is claiming. Those cards say "here is a
+team"; a hero painted in someone's colours says "this site is yours", and that
+should rest on having signed in rather than on a query param anyone can set. It
+also keeps the two homepages answering one question the same way — TheLeague
+has no team picker at all, so a preference-driven AFL hero would have been the
+only asymmetry between them. (Brandon's call, Sep 2026; the first cut followed
+`userTeam` and was changed before merge.)
+
+Practical consequence: `authAflFranchiseId` already carries the leagueId check,
+so routing the backdrop through it also stops a TheLeague session browsing the
+AFL from being handed the AFL's franchise 0001. Resolving from `userTeam` had
+no such guard.
