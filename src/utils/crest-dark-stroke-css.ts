@@ -112,8 +112,11 @@ export const DEFAULT_CREST_STROKE_COLOR = 'rgb(255 255 255 / 90%)';
  */
 export const CREST_STROKE_WIDTH = '0.5px';
 
-export function crestStrokeFilter(color: string = DEFAULT_CREST_STROKE_COLOR): string {
-  const w = CREST_STROKE_WIDTH;
+export function crestStrokeFilter(
+  color: string = DEFAULT_CREST_STROKE_COLOR,
+  width: string = CREST_STROKE_WIDTH
+): string {
+  const w = width;
   return (
     `drop-shadow(${w} 0 0 ${color}) ` +
     `drop-shadow(-${w} 0 0 ${color}) ` +

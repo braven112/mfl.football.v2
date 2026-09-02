@@ -5,6 +5,7 @@ import aflConfig from '../data/afl-fantasy/afl.config.json';
 import theleagueConfig from '../src/data/theleague.config.json';
 import {
   getEligibleThrowbackEras,
+  getImposedThrowbackEra,
   pickDefaultThrowbackEra,
   resolveThrowbackIdentity,
 } from '../src/utils/throwback-identity';
@@ -16,7 +17,10 @@ import {
   throwbackRules,
 } from '../src/utils/throwback-scope';
 import { makeThrowbackKey } from '../src/utils/throwback-store';
-import { AFL_THROWBACK_ASSET_CONFLICTS } from '../src/data/afl-fantasy/throwback-config';
+import {
+  AFL_THROWBACK_ASSET_CONFLICTS,
+  AFL_THROWBACK_REBRAND,
+} from '../src/data/afl-fantasy/throwback-config';
 import type { TeamConfig } from '../src/utils/team-names';
 
 const teams = (aflConfig as any).teams as TeamConfig[];
@@ -223,7 +227,13 @@ describe('throwback defaults — never a punitive last-place rebrand', () => {
     // but the site never chooses it for them. The seeding heuristic that
     // preceded it picked four of these outright, because a last-place rename
     // is by construction both recent and visually distinct.
+    //
+    // The Throwback Rebrand is the ONE deliberate exception, and it is not a
+    // hole in the rule — the rule is about what the site chooses FOR an owner,
+    // and that assignment is a sentence being served, not a default. It is
+    // covered separately below.
     for (const team of teams) {
+      if (getImposedThrowbackEra(team.franchiseId, 'afl')) continue;
       const identity = resolveThrowbackIdentity(team, undefined, 'afl');
       expect(
         identity.rebrand,
@@ -237,6 +247,7 @@ describe('throwback defaults — never a punitive last-place rebrand', () => {
     // "Fullybaked" and differ only by eraLabel, so a name lookup here silently
     // grades the wrong one.
     for (const team of teams) {
+      if (getImposedThrowbackEra(team.franchiseId, 'afl')) continue;
       const eligible = getEligibleThrowbackEras(team, 'afl');
       const clean = eligible.filter((e) => !e.rebrand);
       if (clean.length === 0) continue;
@@ -290,5 +301,66 @@ describe('throwback defaults — never a punitive last-place rebrand', () => {
       { name: 'Earlier', yearStart: 2005, yearEnd: 2007 },
     ] as any;
     expect(pickDefaultThrowbackEra(tied)!.name).toBe('Earlier');
+  });
+});
+
+describe('the Throwback Rebrand', () => {
+  const assignment = AFL_THROWBACK_REBRAND!;
+
+  it('targets the franchise that is actually serving a last-place rename', () => {
+    // The drift guard. If the rebrand moves to another team and nobody updates
+    // the assignment, this fails rather than dressing the wrong franchise in
+    // somebody else's shame name for a season.
+    const wearing = teams.filter((t) => (t as any).currentRebrand);
+    expect(
+      wearing.map((t) => t.franchiseId),
+      'exactly one AFL franchise should carry currentRebrand',
+    ).toEqual([assignment.franchiseId]);
+  });
+
+  it('dresses A Bruin Pegs Me as Jesus Killers, overriding its own history', () => {
+    const identity = resolveThrowbackIdentity(findTeam('0014'), undefined, 'afl');
+    expect(identity.name).toBe('Jesus Killers');
+    expect(identity.isHistorical).toBe(true);
+    // Borrowed wholesale — art and palette, not just the name.
+    expect(identity.icon).toBe('/assets/afl/history/jesus_killers_icon_icon_circle.png');
+    expect(identity.colorPrimary).toBe('#643f29');
+  });
+
+  it('ignores an owner override — a rebrand is imposed, not chosen', () => {
+    const bruin = findTeam('0014');
+    // Thundering Herd is its 19-season era and would otherwise be the default.
+    const own = (bruin.history ?? []).find((e) => e.name === 'Thundering Herd')!;
+    const identity = resolveThrowbackIdentity(bruin, own.yearStart, 'afl');
+    expect(identity.name).toBe('Jesus Killers');
+  });
+
+  it('takes the era off the SOURCE franchise while it is on loan', () => {
+    // Two teams in one identity on a single scoreboard is exactly what the
+    // asset conflicts exist to stop.
+    const jewpacabra = findTeam('0018');
+    const eligible = getEligibleThrowbackEras(jewpacabra, 'afl');
+    expect(eligible.map((e) => e.name)).not.toContain('Jesus Killers');
+    expect(eligible.length, 'Jewpacabra keeps its other eras').toBeGreaterThan(0);
+  });
+
+  it('leaves every other franchise alone', () => {
+    for (const team of teams) {
+      const imposed = getImposedThrowbackEra(team.franchiseId, 'afl');
+      if (team.franchiseId === assignment.franchiseId) expect(imposed).not.toBeNull();
+      else expect(imposed, `${team.name} should not be imposed on`).toBeNull();
+    }
+  });
+
+  it('does not leak into TheLeague', () => {
+    expect(getImposedThrowbackEra('0014', 'theleague')).toBeNull();
+    expect(throwbackRules('theleague').rebrand).toBeNull();
+  });
+
+  it('still puts exactly one Jesus Killers on the board', () => {
+    const worn = teams.map((t) => resolveThrowbackIdentity(t, undefined, 'afl').name);
+    expect(worn.filter((n) => n === 'Jesus Killers')).toHaveLength(1);
+    // And no other duplicate identity either.
+    expect(new Set(worn).size).toBe(worn.length);
   });
 });

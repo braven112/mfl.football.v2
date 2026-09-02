@@ -1,0 +1,100 @@
+/**
+ * Rim for Throwback Week era crests that were cut out of a banner.
+ *
+ * Most legacy crests in the archive were never drawn as icons — they are a
+ * circle punched out of the era's BANNER, so what you get is a gradient, a
+ * slice of a photograph, or half a wordmark with no edge of its own. On a card
+ * that reads as a crop rather than a crest. A ring in the era's own color
+ * gives it an edge and it becomes a badge.
+ *
+ * **Not the same thing as `crest-dark-stroke-css.ts`, and deliberately so.**
+ * That file solves dark-mode LEGIBILITY: a near-black logo dissolving into a
+ * dark card, measured by `scripts/measure-crest-contrast.mjs`, stroked white,
+ * under `html.dark` only. Every one of those choices is wrong here — a banner
+ * cut is perfectly legible, the problem is that it has no rim; white vanishes
+ * on the light card, which is where the crop looks most unfinished; and the
+ * rim is wanted in both themes. The two never touch the same crest anyway: the
+ * measured manifest covers current `icons/` art, this covers `history/` art.
+ *
+ * **`box-shadow`, not the `filter` the dark stroke uses.** A drop-shadow ring
+ * would work in isolation, but the surfaces these render on already set
+ * `filter` on the crest for depth (`.ls-crest img` and three siblings in
+ * live-scoring.css). `filter` does not merge: at equal specificity — and
+ * `img[src="..."]` and `.ls-crest img` are both (0,1,1) — one simply replaces
+ * the other, so the rim either lost to the shadow or would have deleted it.
+ * Measured in the browser, not assumed: the board's crests came back with the
+ * page's shadow and no rim.
+ *
+ * `box-shadow` is a different property, so it composes with that shadow
+ * instead of racing it, and `0 0 0 Npx` is a true even ring rather than four
+ * stacked offsets. It works here because every era crest is a CIRCLE filling
+ * its square box, so `border-radius: 50%` puts the ring exactly on the art's
+ * edge. (For non-circular art it would trace the box — which is why the field
+ * is opt-in per era rather than applied to all history art.)
+ *
+ * **The field is an opt-in whose absence is the goal.** Better era art is
+ * expected over time; dropping in a real crest and deleting the entry's
+ * `iconStroke` returns it to rendering as authored, with no code change and
+ * nothing to un-bake from the PNG. That is the whole reason this is a
+ * render-time filter keyed on `src` rather than a pass over the images.
+ *
+ * League-agnostic: it reads whatever `history[]` entries carry the field, so
+ * TheLeague can opt an era in by adding one line to its config.
+ */
+
+import { iconSrcVariants } from './team-icon-dark-css';
+
+/** Minimal shape this builder needs from a league config's teams. */
+interface EraStrokeTeam {
+  history?: { icon?: string; iconStroke?: string }[];
+}
+
+const HEX = /^#[0-9a-f]{6}$/i;
+
+/**
+ * Wider than the dark-mode hairline (0.5px), because it is doing a different
+ * job. That one separates a silhouette from the card and wants to be barely
+ * seen; this one IS the crest's rim, and at the 40-56px these render it has to
+ * read as a deliberate edge. 1.5px lands on whole device pixels at 2x.
+ */
+const ERA_RIM_WIDTH = '1.5px';
+
+/**
+ * CSS rules ringing every era crest that declares an `iconStroke`.
+ *
+ * Returns '' when no era opts in, so the caller can drop an empty <style>.
+ */
+export function buildEraCrestStrokeCss(teams: EraStrokeTeam[]): string {
+  const byColor = new Map<string, Set<string>>();
+
+  for (const team of teams ?? []) {
+    for (const era of team?.history ?? []) {
+      const color = era?.iconStroke;
+      const icon = era?.icon;
+      // A malformed color would emit a filter the browser drops silently,
+      // which looks exactly like "the ring feature does not work".
+      if (!icon || !color || !HEX.test(color)) continue;
+      const bucket = byColor.get(color) ?? new Set<string>();
+      for (const variant of iconSrcVariants(icon)) bucket.add(variant);
+      byColor.set(color, bucket);
+    }
+  }
+
+  if (byColor.size === 0) return '';
+
+  // Grouped by color so 36 crests emit a handful of rules rather than 36.
+  return [...byColor.entries()]
+    .map(([color, srcs]) => {
+      const selector = [...srcs]
+        .sort()
+        .map((src) => `img[src="${src}"]`)
+        .join(',\n');
+      return (
+        `${selector} {\n` +
+        `  border-radius: 50%;\n` +
+        `  box-shadow: 0 0 0 ${ERA_RIM_WIDTH} ${color};\n` +
+        `}`
+      );
+    })
+    .join('\n');
+}

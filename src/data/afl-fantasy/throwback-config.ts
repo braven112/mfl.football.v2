@@ -12,6 +12,8 @@ import {
   AFL_THROWBACK_WEEKS as WEEKS,
   isAflThrowbackWeek as isWeek,
 } from './throwback-weeks.mjs';
+import type { FranchiseHistoryEntry } from '../../utils/team-names';
+import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 
 /**
  * NFL week numbers that trigger AFL throwback identity. Defined in
@@ -108,3 +110,62 @@ export const AFL_DEFAULT_THROWBACK_ERA: Record<string, number> = {
 };
 
 export const isAflThrowbackWeek: (week: number) => boolean = isWeek;
+
+/**
+ * The Throwback Rebrand.
+ *
+ * Finishing last in the AFL gets you renamed for the season. This carries
+ * that into Throwback Week: the franchise currently serving its punishment
+ * does not throw back to its own history at all — it wears a shame name
+ * borrowed from someone ELSE's, chosen by the commissioner each year.
+ *
+ * 2026: A Bruin Pegs Me (0014) wears Jewpacabra's 2019 "Jesus Killers".
+ *
+ * Three consequences, all deliberate:
+ *
+ * - It OVERRIDES the owner's pick rather than seeding it. A rebrand is
+ *   imposed, not chosen — the same reason this franchise does not get to
+ *   pick its current name either. The settings page says so plainly instead
+ *   of offering a picker whose result would never render.
+ * - The SOURCE franchise loses the era while it is on loan. Two teams
+ *   wearing one identity on a single scoreboard is precisely what
+ *   `AFL_THROWBACK_ASSET_CONFLICTS` exists to prevent, and Jewpacabra can
+ *   still pick any of its other five.
+ * - It is NOT auto-expiring. A silent revert would be worse than a stale
+ *   entry, so this stays until someone changes it and
+ *   `tests/afl-throwback-identity.test.ts` fails the build if it stops
+ *   pointing at the franchise that actually carries `currentRebrand`.
+ */
+export interface ThrowbackRebrandAssignment {
+  /** Franchise serving the rebrand. Must be the one carrying `currentRebrand`. */
+  franchiseId: string;
+  /** Whose history the shame identity is borrowed from. */
+  sourceFranchiseId: string;
+  /** `yearStart` of that franchise's era. */
+  yearStart: number;
+}
+
+export const AFL_THROWBACK_REBRAND: ThrowbackRebrandAssignment | null = {
+  franchiseId: '0014', // A Bruin Pegs Me
+  sourceFranchiseId: '0018', // Jewpacabra
+  yearStart: 2019, // "Jesus Killers"
+};
+
+/**
+ * The assignment's era, resolved from the config rather than restated here.
+ *
+ * Copying the name/art/colors inline would be a second source of truth that
+ * drifts the moment the source era's art is retouched — and the whole point
+ * is that this IS Jewpacabra's 2019 identity, not a lookalike.
+ */
+export const AFL_THROWBACK_REBRAND_ERA: FranchiseHistoryEntry | null = (() => {
+  if (!AFL_THROWBACK_REBRAND) return null;
+  const source = ((aflConfig as any).teams ?? []).find(
+    (t: any) => t.franchiseId === AFL_THROWBACK_REBRAND!.sourceFranchiseId
+  );
+  return (
+    (source?.history ?? []).find(
+      (e: FranchiseHistoryEntry) => e.yearStart === AFL_THROWBACK_REBRAND!.yearStart
+    ) ?? null
+  );
+})();

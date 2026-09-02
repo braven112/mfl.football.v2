@@ -16,7 +16,11 @@
 
 import type { AuthUser } from './auth';
 import { isCommissionerOrAdmin } from './auth';
-import { getEligibleThrowbackEras, pickDefaultThrowbackEra } from './throwback-identity';
+import {
+  getEligibleThrowbackEras,
+  getImposedThrowbackEra,
+  pickDefaultThrowbackEra,
+} from './throwback-identity';
 import { getAllThrowbackPreferences, getThrowbackPreference, getRedis } from './throwback-store';
 import { throwbackRules, type ThrowbackScope } from './throwback-scope';
 import type { FranchiseHistoryEntry, TeamConfig } from './team-names';
@@ -49,6 +53,13 @@ export interface ThrowbackCommishRow {
 export interface ThrowbackSettingsView {
   /** The signed-in owner's own team. */
   team: TeamConfig;
+  /**
+   * Set when this franchise is serving the Throwback Rebrand: the shame
+   * identity imposed on it, which no pick can override. The page shows this
+   * INSTEAD of the picker — offering a choice that the scoreboard ignores is
+   * the silent failure this field exists to prevent.
+   */
+  imposedEra: ThrowbackEraView | null;
   /** Eras this franchise may pick. */
   eligibleEras: FranchiseHistoryEntry[];
   /** The owner's saved pick, or null when they are riding the default. */
@@ -104,7 +115,8 @@ export async function buildThrowbackSettingsView(
   const team = teams.find((t) => t.franchiseId === user.franchiseId);
   if (!team) return null;
 
-  const eligibleEras = getEligibleThrowbackEras(team, scope);
+  const imposed = getImposedThrowbackEra(user.franchiseId, scope);
+  const eligibleEras = imposed ? [] : getEligibleThrowbackEras(team, scope);
   const preference = await getThrowbackPreference(user.franchiseId, scope);
   const selectedYearStart = preference?.yearStart ?? null;
   const ownDefaultYearStart =
@@ -124,6 +136,19 @@ export async function buildThrowbackSettingsView(
       : {};
 
     commishRows = teams.map((t) => {
+      const rowImposed = getImposedThrowbackEra(t.franchiseId, scope);
+      if (rowImposed) {
+        // Imposed: no eras to list, and no pick can change it.
+        return {
+          franchiseId: t.franchiseId,
+          teamName: t.name,
+          icon: t.icon,
+          hasPick: false,
+          wearsName: rowImposed.name,
+          wearsYear: rowImposed.yearStart,
+          eras: [],
+        };
+      }
       const eligible = getEligibleThrowbackEras(t, scope);
       const storedYear = picks[t.franchiseId];
       const pickedEra =
@@ -149,6 +174,7 @@ export async function buildThrowbackSettingsView(
 
   return {
     team,
+    imposedEra: imposed ? toEraView(imposed) : null,
     eligibleEras,
     selectedYearStart,
     ownDefaultYearStart,

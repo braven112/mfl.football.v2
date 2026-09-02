@@ -33,6 +33,7 @@ interface Props {
 const { view, title, scoreboardPath } = Astro.props as Props;
 const {
   team,
+  imposedEra,
   eligibleEras,
   selectedYearStart,
   ownDefaultYearStart,
@@ -51,17 +52,41 @@ const weekLabel = `Week ${previewWeek}`;
   <main class="tbw-page">
     <header class="tbw-header">
       <h1>Throwback Week</h1>
-      <p>
-        Pick which era of {team.name} shows up on live scoring, matchups, and
-        your lineup during a designated Throwback Week. Your choice is saved
-        automatically and stays put until you change it.
-      </p>
+      {imposedEra ? (
+        <p>
+          {team.name} is serving a last-place rebrand, so its Throwback Week
+          identity is assigned rather than chosen. Here's what you wear on
+          live scoring, matchups and your lineup.
+        </p>
+      ) : (
+        <p>
+          Pick which era of {team.name} shows up on live scoring, matchups, and
+          your lineup during a designated Throwback Week. Your choice is saved
+          automatically and stays put until you change it.
+        </p>
+      )}
       <a class="tbw-preview-link" href={scoreboard}>
         Preview it on the scoreboard &rarr;
       </a>
     </header>
 
-    {eligibleEras.length === 0 ? (
+    {imposedEra ? (
+      <section class="tbw-imposed" aria-labelledby="tbw-imposed-title">
+        <img class="tbw-imposed__banner" src={imposedEra.banner} alt={`${imposedEra.name} banner`} />
+        <div class="tbw-imposed__body">
+          <img class="tbw-imposed__icon" src={imposedEra.icon} alt="" />
+          <div>
+            <p class="tbw-imposed__eyebrow">The Throwback Rebrand</p>
+            <h2 id="tbw-imposed-title" class="tbw-imposed__name">{imposedEra.name}</h2>
+            <p class="tbw-imposed__note">
+              You finished last, so you don't get to pick. On {weekLabel} you
+              wear {imposedEra.name} — borrowed from another franchise's worst
+              season. Win more and it's somebody else's problem next year.
+            </p>
+          </div>
+        </div>
+      </section>
+    ) : eligibleEras.length === 0 ? (
       <p class="tbw-empty">
         {team.name} doesn't have any eligible legacy eras yet — check back
         once more vintage art is recovered.
@@ -213,6 +238,48 @@ const weekLabel = `Week ${previewWeek}`;
 </script>
 
 <style>
+  .tbw-imposed {
+    margin: 0 0 1.5rem;
+    border: 2px solid var(--color-accent);
+    border-radius: var(--radius-md, 8px);
+    overflow: hidden;
+    background: var(--content-bg);
+  }
+  .tbw-imposed__banner {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .tbw-imposed__body {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem;
+  }
+  .tbw-imposed__icon {
+    width: 64px;
+    height: 64px;
+    flex: none;
+    object-fit: contain;
+  }
+  .tbw-imposed__eyebrow {
+    margin: 0;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+  }
+  .tbw-imposed__name {
+    margin: 0.15rem 0 0.4rem;
+    font-size: var(--font-size-xl);
+  }
+  .tbw-imposed__note {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    color: var(--content-text-muted, inherit);
+  }
+
   .tbw-page {
     max-width: 960px;
     margin: 0 auto;

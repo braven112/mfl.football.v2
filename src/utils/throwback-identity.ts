@@ -49,10 +49,38 @@ export function getEligibleThrowbackEras(
   scope: ThrowbackScope = DEFAULT_THROWBACK_SCOPE
 ): FranchiseHistoryEntry[] {
   if (!team.history?.length) return [];
+  const { rebrand } = throwbackRules(scope);
+  // An era on loan to the Throwback Rebrand leaves its OWNER's picker while
+  // it is being worn elsewhere. Two teams in one identity on a single
+  // scoreboard is the same problem the asset conflicts exist to stop; the
+  // source franchise keeps every other era it has.
+  const onLoan = (entry: FranchiseHistoryEntry) =>
+    !!rebrand &&
+    rebrand.sourceFranchiseId === team.franchiseId &&
+    rebrand.era.yearStart === entry.yearStart;
+
   return team.history.filter(
     (entry) =>
-      !isConflicted(team.franchiseId, entry.yearStart, scope) && !isSameAsCurrent(team, entry)
+      !isConflicted(team.franchiseId, entry.yearStart, scope) &&
+      !isSameAsCurrent(team, entry) &&
+      !onLoan(entry)
   );
+}
+
+/**
+ * The shame identity imposed on a franchise by the Throwback Rebrand, or null
+ * when this franchise is not the one serving it.
+ *
+ * Exported because the settings page has to KNOW, not infer: an owner handed
+ * a picker whose result never reaches the scoreboard is the silent-failure
+ * shape this codebase keeps re-learning.
+ */
+export function getImposedThrowbackEra(
+  franchiseId: string,
+  scope: ThrowbackScope = DEFAULT_THROWBACK_SCOPE
+): FranchiseHistoryEntry | null {
+  const { rebrand } = throwbackRules(scope);
+  return rebrand && rebrand.franchiseId === franchiseId ? rebrand.era : null;
 }
 
 function toIdentity(entry: FranchiseHistoryEntry): TeamIdentity {
@@ -124,9 +152,9 @@ export function pickDefaultThrowbackEra(
 }
 
 /**
- * Resolve a franchise's throwback identity: owner override -> the default era
- * (`pickDefaultThrowbackEra`) -> current identity, when there is no eligible
- * era at all.
+ * Resolve a franchise's throwback identity: the imposed Throwback Rebrand ->
+ * owner override -> the default era (`pickDefaultThrowbackEra`) -> current
+ * identity, when there is no eligible era at all.
  *
  * An owner override is honored even when it is a punitive rebrand — the
  * no-shame-name rule governs what we CHOOSE for someone, not what they may
@@ -142,6 +170,12 @@ export function resolveThrowbackIdentity(
   ownerOverrideYearStart?: number,
   scope: ThrowbackScope = DEFAULT_THROWBACK_SCOPE
 ): TeamIdentity {
+  // The Throwback Rebrand comes FIRST and ignores the owner override. A
+  // last-place rename is imposed, not chosen — this franchise did not pick
+  // its current name either.
+  const imposed = getImposedThrowbackEra(team.franchiseId, scope);
+  if (imposed) return toIdentity(imposed);
+
   const eligible = getEligibleThrowbackEras(team, scope);
 
   if (ownerOverrideYearStart !== undefined) {

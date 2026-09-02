@@ -164,6 +164,27 @@ export interface FranchiseHistoryEntry {
    */
   colorPrimary?: string;
   colorSecondary?: string;
+  /**
+   * Ring this era's crest in the given hex, in BOTH themes.
+   *
+   * Most era crests were cut out of the era's BANNER rather than drawn as
+   * icons, so they are a circle of banner — a gradient, a slice of a
+   * photograph, half a wordmark — with no rim of their own. A stroke in the
+   * era's own color gives that circle an edge and it reads as a badge instead
+   * of a crop.
+   *
+   * Deliberately NOT the same mechanism as a team's `iconStrokeDark`, which
+   * exists for dark-mode legibility, is measured by
+   * `scripts/measure-crest-contrast.mjs`, and is white. White is useless here
+   * — it vanishes on the light card, which is exactly where a banner cut looks
+   * most unfinished.
+   *
+   * **Presence is the opt-in, and absence is the endgame.** Better era art
+   * arriving is expected: drop the new file in and delete this field, and the
+   * crest renders as authored with no other change. Never bake a ring into the
+   * PNG for the same reason.
+   */
+  iconStroke?: string;
 }
 
 /**

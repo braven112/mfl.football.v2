@@ -20,7 +20,10 @@
 
 import type { APIRoute } from 'astro';
 import { getAuthUser, type AuthUser } from '../../utils/auth';
-import { getEligibleThrowbackEras } from '../../utils/throwback-identity';
+import {
+  getEligibleThrowbackEras,
+  getImposedThrowbackEra,
+} from '../../utils/throwback-identity';
 import { getThrowbackPreference, setThrowbackPreference } from '../../utils/throwback-store';
 import { strictThrowbackScopeForLeagueId, type ThrowbackScope } from '../../utils/throwback-scope';
 import theleagueConfig from '../../data/theleague.config.json';
@@ -79,6 +82,19 @@ export const POST: APIRoute = async ({ request }) => {
       status: 403,
       headers: JSON_HEADERS,
     });
+  }
+
+  // A franchise serving the Throwback Rebrand has its era imposed and cannot
+  // save one. Accepting the write would store a pick that never reaches the
+  // scoreboard — a lie the owner has no way to detect.
+  const imposed = getImposedThrowbackEra(user.franchiseId, scope);
+  if (imposed) {
+    return new Response(
+      JSON.stringify({
+        error: `Your franchise is serving the Throwback Rebrand and wears ${imposed.name} this year.`,
+      }),
+      { status: 409, headers: JSON_HEADERS },
+    );
   }
 
   let body: { yearStart?: unknown };

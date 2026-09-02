@@ -29,8 +29,11 @@ import {
 import {
   AFL_DEFAULT_THROWBACK_ERA,
   AFL_THROWBACK_ASSET_CONFLICTS,
+  AFL_THROWBACK_REBRAND,
+  AFL_THROWBACK_REBRAND_ERA,
   AFL_THROWBACK_WEEKS_LIST,
 } from '../data/afl-fantasy/throwback-config';
+import type { FranchiseHistoryEntry } from './team-names';
 
 /** The buckets throwback data can live in. Add one per league that runs it. */
 export type ThrowbackScope = 'theleague' | 'afl';
@@ -50,6 +53,30 @@ export interface ThrowbackRules {
   defaults: Record<string, number>;
   /** Eras excluded from eligibility (art or name claimed elsewhere). */
   conflicts: { franchiseId: string; yearStart: number }[];
+  /**
+   * The Throwback Rebrand, when the league runs one: a franchise serving a
+   * last-place rename wears a shame identity borrowed from another
+   * franchise's history, overriding its own pick. Null where the league has
+   * no such assignment.
+   */
+  rebrand: {
+    franchiseId: string;
+    sourceFranchiseId: string;
+    era: FranchiseHistoryEntry;
+  } | null;
+}
+
+/** Pair an assignment with its resolved era, or null if either is missing. */
+function toRebrandRule(
+  assignment: { franchiseId: string; sourceFranchiseId: string; yearStart: number } | null,
+  era: FranchiseHistoryEntry | null
+): ThrowbackRules['rebrand'] {
+  if (!assignment || !era) return null;
+  return {
+    franchiseId: assignment.franchiseId,
+    sourceFranchiseId: assignment.sourceFranchiseId,
+    era,
+  };
 }
 
 const RULES: Record<ThrowbackScope, ThrowbackRules> = {
@@ -57,11 +84,14 @@ const RULES: Record<ThrowbackScope, ThrowbackRules> = {
     weeks: THROWBACK_WEEKS,
     defaults: DEFAULT_THROWBACK_ERA,
     conflicts: THROWBACK_ASSET_CONFLICTS,
+    // TheLeague has no last-place rename, so nothing to impose.
+    rebrand: null,
   },
   afl: {
     weeks: AFL_THROWBACK_WEEKS_LIST,
     defaults: AFL_DEFAULT_THROWBACK_ERA,
     conflicts: AFL_THROWBACK_ASSET_CONFLICTS,
+    rebrand: toRebrandRule(AFL_THROWBACK_REBRAND, AFL_THROWBACK_REBRAND_ERA),
   },
 };
 
