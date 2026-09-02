@@ -85,7 +85,59 @@ for exactly this reason and which every other cell in the row already used. In a
 duplicate-player league, any availability question answered with `p.rostered` is
 answering a different question — see `afl-free-agents.md` (2026-08-08).
 
-## Two things the window logic still gets wrong when the calendar is missing
+## 2026-09-02 (later) - WAIVER_LOCK OPENS The Window. The Resolver Had It Backwards.
+
+**Context:** the calendar synced, the page immediately said "first come, first
+served", and Brandon said no — waivers are active, he had moved the processing
+date so the AL could claim around the NL draft.
+
+**Insight:** `WAIVER_LOCK` / `WAIVER_UNLOCK` name the state of the **free agent
+pool**, not the state of the claim window, and `resolveWaiverWindow` read them
+as the claim window. Locking the pool is precisely what OPENS waivers — nobody
+can take a player outright any more, so a claim is the only way in. Unlocking it
+is what ends them. Both constants were inverted:
+
+```
+OPEN_TYPES     was WAIVER_UNLOCK   →  is WAIVER_LOCK
+PROCESS_TYPES  was …, WAIVER_LOCK  →  is …, WAIVER_UNLOCK
+```
+
+**How to settle this kind of question without guessing:** the transaction log
+records what MFL actually DID, and the calendar records what it was told to do.
+Line them up. From `data/afl-fantasy/mfl-feeds/2025/transactions.json`:
+
+| 2026 calendar event | 2025 transaction it produced |
+|---|---|
+| `WAIVER_LOCK` Mon 6:00 PM ×17 | `LOCK_ALL_PLAYERS` — Mon 6:00 PM, weekly |
+| `WAIVER_REVERSE` Wed 8:00 PM ×14 | `AUTO_PROCESS_WAIVERS` + the `WAIVER` awards — Wed 8:00 PM |
+
+To the minute. And the pool being shut is visible independently: `FREE_AGENT`
+adds collapse to 5-11 a season on Mon/Tue against 100+ on Wed-Sun.
+
+**The structural tell, which needed no data at all:** under the old mapping both
+LOCK and REVERSE closed the window, and the AFL's only `WAIVER_UNLOCK` all
+season is one event on 2026-09-07. So from that date the resolver could never
+have returned `waiver` again — a league with weekly waivers reading FCFS for
+seventeen straight weeks. Any mapping that makes a recurring state unreachable
+is wrong on its face.
+
+**Why nothing caught it:** `tests/waiver-window.test.ts` asserted the inverted
+model in its fixtures, so it was self-consistent and green. The one block that
+would have failed — `the REAL synced calendar` — was SKIPPING for want of
+calendar.json, and had been since it was written. A guard that skips is not a
+guard, and the "reports whether the calendar has been synced yet" console.warn
+was the only thing saying so.
+
+**And its own assumptions were too strict** once it finally ran: it asserted
+every in-season processing run is Wednesday evening. Real calendars carry
+deliberate one-offs — a Monday run on Sep 7 2026 (Labor Day, set so the AL could
+claim around the NL draft) and a Tuesday run on Dec 29 in the playoff weeks. It
+now checks the recurring series for the weekday cadence and asserts the SHAPE
+for every run: between a lock and its run you are on waivers, an hour after a
+run you are not. Derived from real pairs, with no weekday or clock time written
+down, so a commissioner moving a date does not turn a test red.
+
+## The `unknown` fallback, and why it stopped protecting anything
 
 `resolveWaiverWindow` returns `unknown` when it has no events, and both the modal
 and the route then fall back to the QUEUED claim rather than an immediate add —
@@ -94,6 +146,12 @@ not. But note the asymmetry that produced: for the whole period `calendar.json`
 was unsynced, an FCFS-window pickup was filed as a `waiverRequest` into a round
 nobody processes. The fallback is safe; it is not *harmless*, and "unknown" being
 the permanent state is a bug in the feed, not a resting position.
+
+**And it stops protecting you the moment the feed works.** An empty calendar
+fails safe; a calendar read with an inverted mapping fails CONFIDENTLY, and it
+took syncing the feed to expose that. Fixing the input to a piece of logic that
+has never once run on real input is not the end of the job — it is the first
+time the logic is on trial.
 
 Note also that the SERVER re-derives the window live from MFL's calendar with the
 owner's own cookie, so it can disagree with the page — deliberately, because the

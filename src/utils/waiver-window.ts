@@ -44,10 +44,31 @@ export interface WaiverWindow {
   reason: string;
 }
 
-/** Events that CLOSE the waiver window (claims process, then FCFS opens). */
-const PROCESS_TYPES = new Set(['WAIVER_BBID', 'WAIVER_REVERSE', 'WAIVER_LOCK']);
-/** Events that OPEN the waiver window (claims start being accepted). */
-const OPEN_TYPES = new Set(['WAIVER_UNLOCK']);
+/**
+ * WHICH EVENT MEANS WHAT — and it is the opposite of how it reads.
+ *
+ * `WAIVER_LOCK` / `WAIVER_UNLOCK` name the state of the FREE AGENT POOL, not
+ * the state of the claim window. Locking the pool is exactly what OPENS
+ * waivers: nobody can grab a player outright any more, so the only way to get
+ * one is to file a claim. Unlocking it is what ends them.
+ *
+ * This file originally had both of these backwards, which made the resolver
+ * answer FCFS during a live waiver window — and, because the AFL's only
+ * `WAIVER_UNLOCK` all season is a single event on 2026-09-07, it could never
+ * have reported a waiver window again after that date.
+ *
+ * Proven against the AFL's own 2025 transaction log, where the calendar's
+ * recurring events line up to the minute with what MFL actually did:
+ *   WAIVER_LOCK    Mon 6:00 PM  →  `LOCK_ALL_PLAYERS`         Mon 6:00 PM
+ *   WAIVER_REVERSE Wed 8:00 PM  →  `AUTO_PROCESS_WAIVERS`     Wed 8:00 PM
+ *                                  + the `WAIVER` awards themselves
+ * and where FREE_AGENT adds collapse on Mon/Tue (5-11 a season) versus 100+
+ * on Wed-Sun — the pool being shut is visible in the data.
+ */
+/** Events that OPEN the waiver window: the pool locks, so claims are the only way in. */
+const OPEN_TYPES = new Set(['WAIVER_LOCK']);
+/** Events that CLOSE it: claims process and/or the pool unlocks, so adds are FCFS again. */
+const PROCESS_TYPES = new Set(['WAIVER_BBID', 'WAIVER_REVERSE', 'WAIVER_UNLOCK']);
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 

@@ -4,6 +4,14 @@
     {
       "date": "2026-09-02",
       "type": "bug-fix",
+      "summary": "Free Agents had the waiver window exactly backwards. With the league calendar finally syncing, the page turned around and announced first-come-first-served in the middle of a live waiver period — because the code read MyFantasyLeague's “waivers lock” event as waivers ending, when locking the free agent pool is the very thing that starts them: once nobody can just take a player, a claim is the only way in. The AFL's own 2025 transaction log settles it — the lock event fires Monday at 6, the claims run Wednesday at 8, every week. Both leagues now show the real state, and the claim form routes to the right place instead of filing a first-come pickup into a round nobody runs.",
+      "impact": "user",
+      "area": "free-agents",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-02",
+      "type": "bug-fix",
       "summary": "The Free Agents page can finally tell you which waiver window is open. It had been saying “waiver window unknown — MFL will decide when you submit” to everybody, all season, because the piece of MyFantasyLeague that knows the answer — the league calendar — had never once synced. It wanted a login and was being handed an API key, and the two are not the same thing. So the header now reads the real state: waivers open and your claim queued until they process, or first come, first served and the pickup happens on the spot. The claim form follows suit, which matters more than the wording — a first-come pickup filed as a queued claim is a claim that sits in a round nobody ever runs.",
       "impact": "user",
       "area": "free-agents",

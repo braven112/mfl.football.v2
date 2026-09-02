@@ -1,6 +1,14 @@
 /**
  * Waiver window resolution from MFL's league calendar.
  *
+ * READ THE EVENT NAMES CAREFULLY. `WAIVER_LOCK` / `WAIVER_UNLOCK` describe the
+ * FREE AGENT POOL, not the claim window, so LOCK is what OPENS waivers (nobody
+ * can grab a player outright, so the only way in is a claim) and UNLOCK is what
+ * ends them. This file asserted the opposite for its whole life, which is how
+ * the resolver shipped answering FCFS during a live waiver window. The
+ * `the REAL synced calendar` block below is the one that would have caught it —
+ * and it was SKIPPING, because calendar.json had never synced.
+ *
  * Both leagues alternate between a WAIVER window (claims queued, processed at a
  * deadline) and FCFS (immediate adds). They need different MFL import types, so
  * getting the mode wrong sends a claim through the wrong endpoint.
@@ -18,9 +26,9 @@ import { resolveWaiverWindow, describeWaiverWindow, type MflCalendarEvent } from
 const at = (iso: string) => String(Math.floor(new Date(iso).getTime() / 1000));
 
 describe('resolveWaiverWindow', () => {
-  it('reads WAIVER as open between an unlock and the next process event', () => {
+  it('reads WAIVER as open between the pool locking and the next process event', () => {
     const events: MflCalendarEvent[] = [
-      { type: 'WAIVER_UNLOCK', start_time: at('2026-09-13T17:00:00Z') },
+      { type: 'WAIVER_LOCK', start_time: at('2026-09-13T17:00:00Z') },
       { type: 'WAIVER_REVERSE', start_time: at('2026-09-17T04:00:00Z') },
     ];
     const win = resolveWaiverWindow(events, new Date('2026-09-15T12:00:00Z'));
@@ -29,11 +37,11 @@ describe('resolveWaiverWindow', () => {
     expect(win.changesAt?.toISOString()).toBe('2026-09-17T04:00:00.000Z');
   });
 
-  it('reads FCFS after claims process, until the next unlock', () => {
+  it('reads FCFS after claims process, until the pool locks again', () => {
     const events: MflCalendarEvent[] = [
-      { type: 'WAIVER_UNLOCK', start_time: at('2026-09-13T17:00:00Z') },
+      { type: 'WAIVER_LOCK', start_time: at('2026-09-13T17:00:00Z') },
       { type: 'WAIVER_REVERSE', start_time: at('2026-09-17T04:00:00Z') },
-      { type: 'WAIVER_UNLOCK', start_time: at('2026-09-20T17:00:00Z') },
+      { type: 'WAIVER_LOCK', start_time: at('2026-09-20T17:00:00Z') },
     ];
     const win = resolveWaiverWindow(events, new Date('2026-09-18T12:00:00Z'));
     expect(win.mode).toBe('fcfs');
@@ -44,23 +52,25 @@ describe('resolveWaiverWindow', () => {
     // One calendar entry covers the season; without expansion every week after
     // the first would resolve off the wrong transition.
     const events: MflCalendarEvent[] = [
-      { type: 'WAIVER_UNLOCK', start_time: at('2026-09-13T17:00:00Z'), happens: '16' },
+      { type: 'WAIVER_LOCK', start_time: at('2026-09-13T17:00:00Z'), happens: '16' },
       { type: 'WAIVER_BBID', start_time: at('2026-09-17T04:00:00Z'), happens: '16' },
     ];
-    // Unlocks recur Sundays 17:00Z; processing recurs Thursdays 04:00Z.
-    // Oct 26 is after that week's Sunday unlock and before Thursday's
+    // Locks recur Sundays 17:00Z; processing recurs Thursdays 04:00Z.
+    // Oct 26 is after that week's Sunday lock and before Thursday's
     // processing → waiver.
     expect(resolveWaiverWindow(events, new Date('2026-10-26T12:00:00Z')).mode).toBe('waiver');
     // Oct 29 12:00Z is after Thursday's processing → FCFS until Sunday.
     expect(resolveWaiverWindow(events, new Date('2026-10-29T12:00:00Z')).mode).toBe('fcfs');
-    // And the gap BEFORE that Sunday unlock is still FCFS, six weeks in.
+    // And the gap BEFORE that Sunday lock is still FCFS, six weeks in.
     expect(resolveWaiverWindow(events, new Date('2026-10-25T12:00:00Z')).mode).toBe('fcfs');
   });
 
-  it('treats WAIVER_LOCK and WAIVER_BBID as closing the window too', () => {
-    for (const type of ['WAIVER_LOCK', 'WAIVER_BBID', 'WAIVER_REVERSE']) {
+  it('treats UNLOCK, BBID and REVERSE as closing the window', () => {
+    // All three end the claim period: the pool reopening and the claims running
+    // both leave adds first-come-first-served.
+    for (const type of ['WAIVER_UNLOCK', 'WAIVER_BBID', 'WAIVER_REVERSE']) {
       const events = [
-        { type: 'WAIVER_UNLOCK', start_time: at('2026-09-13T17:00:00Z') },
+        { type: 'WAIVER_LOCK', start_time: at('2026-09-13T17:00:00Z') },
         { type, start_time: at('2026-09-17T04:00:00Z') },
       ];
       expect(
@@ -79,7 +89,7 @@ describe('resolveWaiverWindow', () => {
   });
 
   it('handles a time before the first transition', () => {
-    const events = [{ type: 'WAIVER_UNLOCK', start_time: at('2026-09-13T17:00:00Z') }];
+    const events = [{ type: 'WAIVER_LOCK', start_time: at('2026-09-13T17:00:00Z') }];
     const win = resolveWaiverWindow(events, new Date('2026-09-01T00:00:00Z'));
     expect(win.mode).toBe('fcfs');       // waivers have not opened yet
     expect(win.nextMode).toBe('waiver');
@@ -87,22 +97,22 @@ describe('resolveWaiverWindow', () => {
 
   it('ignores malformed events rather than throwing', () => {
     const events = [
-      { type: 'WAIVER_UNLOCK' },
-      { type: 'WAIVER_UNLOCK', start_time: 'nonsense' },
-      { type: 'WAIVER_UNLOCK', start_time: at('2026-09-13T17:00:00Z') },
+      { type: 'WAIVER_LOCK' },
+      { type: 'WAIVER_LOCK', start_time: 'nonsense' },
+      { type: 'WAIVER_LOCK', start_time: at('2026-09-13T17:00:00Z') },
     ] as MflCalendarEvent[];
     expect(resolveWaiverWindow(events, new Date('2026-09-15T00:00:00Z')).mode).toBe('waiver');
   });
 
   it('caps runaway recurrence so a bad HAPPENS cannot hang the page', () => {
-    const events = [{ type: 'WAIVER_UNLOCK', start_time: at('2026-09-13T17:00:00Z'), happens: '999999' }];
+    const events = [{ type: 'WAIVER_LOCK', start_time: at('2026-09-13T17:00:00Z'), happens: '999999' }];
     expect(() => resolveWaiverWindow(events, new Date('2026-09-15T00:00:00Z'))).not.toThrow();
   });
 });
 
 describe('describeWaiverWindow', () => {
   const events: MflCalendarEvent[] = [
-    { type: 'WAIVER_UNLOCK', start_time: at('2026-09-13T17:00:00Z') },
+    { type: 'WAIVER_LOCK', start_time: at('2026-09-13T17:00:00Z') },
     { type: 'WAIVER_BBID', start_time: at('2026-09-17T04:00:00Z') },
   ];
 
@@ -128,8 +138,8 @@ describe('the real weekly cadence, in weekday terms', () => {
   // point of this block: it caught a reviewer statement that put Monday
   // "after Wednesday-night processing".
   const events: MflCalendarEvent[] = [
-    { type: 'WAIVER_UNLOCK', start_time: at('2026-09-13T17:00:00Z'), happens: '16' }, // Sun 10am PT
-    { type: 'WAIVER_BBID', start_time: at('2026-09-17T04:00:00Z'), happens: '16' },   // Wed 9pm PT
+    { type: 'WAIVER_LOCK', start_time: at('2026-09-13T17:00:00Z'), happens: '16' }, // Sun 10am PT
+    { type: 'WAIVER_BBID', start_time: at('2026-09-17T04:00:00Z'), happens: '16' }, // Wed 9pm PT
   ];
 
   const dayOf = (iso: string) =>
@@ -137,14 +147,14 @@ describe('the real weekly cadence, in weekday terms', () => {
       .format(new Date(iso));
 
   const cases: Array<[string, 'waiver' | 'fcfs']> = [
-    ['2026-09-13T20:00:00Z', 'waiver'], // Sunday afternoon, after kickoff
+    ['2026-09-13T20:00:00Z', 'waiver'], // Sunday afternoon, after the pool locks
     ['2026-09-14T18:00:00Z', 'waiver'], // MONDAY — a waiver day
     ['2026-09-15T18:00:00Z', 'waiver'], // Tuesday
     ['2026-09-17T02:00:00Z', 'waiver'], // Wednesday evening, BEFORE 9pm PT
     ['2026-09-17T05:00:00Z', 'fcfs'],   // Wednesday, just AFTER processing
     ['2026-09-18T18:00:00Z', 'fcfs'],   // Thursday
     ['2026-09-19T18:00:00Z', 'fcfs'],   // Friday
-    ['2026-09-20T15:00:00Z', 'fcfs'],   // Sunday morning, before kickoff
+    ['2026-09-20T15:00:00Z', 'fcfs'],   // Sunday morning, before the pool locks
   ];
 
   for (const [iso, expected] of cases) {
@@ -178,7 +188,8 @@ describe('the REAL synced calendar', () => {
   ];
 
   const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
-  const PROCESS = ['WAIVER_BBID', 'WAIVER_REVERSE', 'WAIVER_LOCK'];
+  const PROCESS = ['WAIVER_BBID', 'WAIVER_REVERSE', 'WAIVER_UNLOCK'];
+  const OPENS = ['WAIVER_LOCK'];
 
   /** Same weekly expansion the resolver applies, so occurrences line up. */
   const expand = (events: MflCalendarEvent[], types: string[]): number[] => {
@@ -231,48 +242,61 @@ describe('the REAL synced calendar', () => {
   for (const { slug, dir } of leagues) {
     const found = latestSeason(dir);
 
-    it.runIf(found)(`${slug}: in-season claims process Wednesday evening PT`, () => {
+    it.runIf(found)(`${slug}: the RECURRING in-season run is Wednesday evening PT`, () => {
       const { file, year } = found!;
       const events: MflCalendarEvent[] = JSON.parse(fs.readFileSync(file, 'utf-8'));
-      const runs = expand(events, PROCESS).filter((ms) => inSeason(ms, year));
-      expect(runs.length, `${file} carries no in-season waiver processing event`).toBeGreaterThan(0);
+      // The WEEKLY SERIES only — events MFL repeats via HAPPENS. One-off runs
+      // are deliberately off-cadence and asserting Wednesday over all of them
+      // is simply false: the AFL's 2026 calendar carries a Monday run on
+      // Sep 7 (Labor Day, set so the AL could claim around the NL draft) and a
+      // Tuesday run on Dec 29 in the playoff weeks. Both are real, both are
+      // intentional, and a test that forbids them is a test that will be
+      // "fixed" by editing the league's calendar.
+      const recurring = events.filter((e) => Number(e.happens) >= 1);
+      const runs = expand(recurring, PROCESS).filter((ms) => inSeason(ms, year));
+      expect(runs.length, `${file} carries no recurring in-season processing event`).toBeGreaterThan(0);
 
       for (const ms of runs) {
         const { weekday, hour } = partsPt(ms);
         const when = new Date(ms).toISOString();
-        expect(weekday, `processing run ${when} is not on Wednesday PT`).toBe('Wednesday');
+        expect(weekday, `recurring run ${when} is not on Wednesday PT`).toBe('Wednesday');
         // Evening, not morning — pins the day and half of the day without
         // asserting 7pm vs 8pm vs 9pm, which is per-league and has moved.
-        expect(hour, `processing run ${when} is not in the evening PT`).toBeGreaterThanOrEqual(17);
+        expect(hour, `recurring run ${when} is not in the evening PT`).toBeGreaterThanOrEqual(17);
         expect(hour).toBeLessThanOrEqual(23);
       }
     });
 
-    it.runIf(found)(`${slug}: the Monday before a real run is waiver, the day after is FCFS`, () => {
+    it.runIf(found)(`${slug}: locked→run is a waiver window, and after a run is FCFS`, () => {
       const { file, year } = found!;
       const events: MflCalendarEvent[] = JSON.parse(fs.readFileSync(file, 'utf-8'));
-      const opens = expand(events, ['WAIVER_UNLOCK']);
+      const opens = expand(events, OPENS);
       const runs = expand(events, PROCESS).filter((ms) => inSeason(ms, year));
 
-      // Anchor on a run that a real unlock precedes within the same week —
-      // otherwise the Monday probe could land before waivers ever opened and
-      // fail for a reason that has nothing to do with the cadence.
-      const anchor = runs.find((ms) => opens.some((o) => o > ms - SEVEN_DAYS_MS && o < ms));
-      expect(anchor, 'no in-season processing run is preceded by an unlock').toBeTruthy();
+      // Assert the SHAPE, derived from real pairs, with no weekday or clock
+      // time written down: between the pool locking and the claims running you
+      // are on waivers, and immediately after they run you are not. That is
+      // the property the claim endpoint actually depends on, and it holds for
+      // an off-cadence run just as well as a weekly one.
+      const pairs = runs
+        .map((run) => ({ run, lock: opens.filter((o) => o < run && o > run - SEVEN_DAYS_MS).pop() }))
+        .filter((p): p is { run: number; lock: number } => p.lock !== undefined);
 
-      // Derived from the anchor, not written down: two days back lands on
-      // Monday, one day forward on Thursday, both sampled at midday.
-      const noonAfter = (ms: number) => {
-        const d = new Date(ms);
-        d.setUTCHours(19, 0, 0, 0); // ~noon PT on that UTC date
-        return d;
-      };
-      const monday = noonAfter(anchor! - 2 * 24 * 60 * 60 * 1000);
-      const dayAfter = noonAfter(anchor! + 24 * 60 * 60 * 1000);
+      expect(pairs.length, `${file} has no in-season run preceded by a pool lock`).toBeGreaterThan(0);
 
-      expect(partsPt(monday.getTime()).weekday).toBe('Monday');
-      expect(resolveWaiverWindow(events, monday).mode).toBe('waiver');
-      expect(resolveWaiverWindow(events, dayAfter).mode).toBe('fcfs');
+      for (const { run, lock } of pairs) {
+        const midway = new Date(lock + (run - lock) / 2);
+        const justAfter = new Date(run + 60 * 60 * 1000);
+        expect(
+          resolveWaiverWindow(events, midway).mode,
+          `${midway.toISOString()} sits between a lock and its run but did not read as waiver`
+        ).toBe('waiver');
+        // Unless the next lock lands within the hour, which no league does.
+        expect(
+          resolveWaiverWindow(events, justAfter).mode,
+          `${justAfter.toISOString()} is an hour after a run but did not read as fcfs`
+        ).toBe('fcfs');
+      }
     });
   }
 
