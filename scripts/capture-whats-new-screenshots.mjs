@@ -27,9 +27,10 @@
  * entry explicitly on the CLI to recapture it.
  */
 import { chromium } from 'playwright';
-import { readFileSync, existsSync, statSync, unlinkSync } from 'fs';
+import { readFileSync, existsSync, statSync, unlinkSync, mkdtempSync, rmSync } from 'fs';
 import { execFileSync } from 'child_process';
-import { resolve, dirname } from 'path';
+import { tmpdir } from 'os';
+import { resolve, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -343,6 +344,83 @@ async function main() {
 
   console.log(`Capturing ${targets.length} screenshot(s)...`);
 
+  // ── External assets, when the browser cannot reach the internet ──────────
+  //
+  // Several entries frame a player cutout, an NFL mark or an ESPN news card
+  // served by a third party. In a Claude Code cloud session Chromium cannot
+  // fetch any of them: outbound HTTPS goes through an egress relay its TLS
+  // does not survive, and EVERY external host — not one blocked domain —
+  // dies as `ERR_CONNECTION_RESET` a few seconds into the handshake. Nothing
+  // errors, which is the trap: the capture succeeds and quietly shoots the
+  // page's MISSING-IMAGE state, and that is what gets committed. It happened
+  // to `hero-wears-your-colors`.
+  //
+  // What rescues it is that `route.fetch()` does NOT go through Chromium's
+  // network stack — it runs on Playwright's own request context, which reads
+  // HTTPS_PROXY and so crosses the relay fine. So every external request is
+  // re-issued there and fulfilled back into the page. On a machine with normal
+  // internet this is a passthrough that changes nothing.
+  //
+  // curl is the second line, for an environment where that path fails too (it
+  // reaches hosts Chromium cannot, and was how the first hero capture was
+  // rescued by hand). It engages only after `route.fetch()` throws once —
+  // a network-level throw, not a 404, which comes back as a response — so the
+  // relay's timeout is paid once per RUN rather than once per asset. A
+  // spurious flip is harmless: curl returns the same bytes, at the cost of a
+  // subprocess.
+  //
+  // If BOTH paths fail the request aborts, exactly as an un-routed failure
+  // would, so a dead URL renders as the page's own broken state rather than
+  // hanging the capture — and the warning below is then the ONLY signal that
+  // the shot is unreliable. Read it before committing what comes out.
+  const netCacheDir = mkdtempSync(join(tmpdir(), 'wn-capture-'));
+  const netCache = new Map();
+  let routeFetchWorks = true;
+  let announcedFallback = false;
+
+  /** Fetch one URL with curl. Returns `{ body, contentType }`, or null. */
+  function curlFetch(url) {
+    if (netCache.has(url)) return netCache.get(url);
+    const stem = join(netCacheDir, String(netCache.size));
+    let result = null;
+    try {
+      execFileSync(
+        'curl',
+        ['-sS', '--fail', '--location', '--max-time', '25', '-D', `${stem}.h`, '-o', `${stem}.b`, url],
+        { stdio: ['ignore', 'ignore', 'pipe'] },
+      );
+      const headers = readFileSync(`${stem}.h`, 'utf8');
+      const match = headers.match(/^content-type:\s*([^\r\n]+)/im);
+      result = {
+        body: readFileSync(`${stem}.b`),
+        contentType: match ? match[1].trim() : 'application/octet-stream',
+      };
+    } catch {
+      result = null;
+    }
+    netCache.set(url, result);
+    return result;
+  }
+
+  async function routeExternalAsset(route) {
+    if (routeFetchWorks) {
+      try {
+        return await route.fulfill({ response: await route.fetch({ timeout: 20000 }) });
+      } catch {
+        routeFetchWorks = false;
+      }
+    }
+    if (!announcedFallback) {
+      announcedFallback = true;
+      console.warn(
+        "  ! route.fetch() can't reach external hosts — falling back to curl for third-party assets",
+      );
+    }
+    const fetched = curlFetch(route.request().url());
+    if (!fetched) return route.abort();
+    return route.fulfill({ status: 200, contentType: fetched.contentType, body: fetched.body });
+  }
+
   // PLAYWRIGHT_CHROMIUM_PATH: cloud sessions ship a pre-installed chromium
   // whose revision may not match this repo's pinned playwright — point the
   // launch at it explicitly (e.g. /opt/pw-browsers/chromium) instead of
@@ -356,6 +434,13 @@ async function main() {
     viewport: VIEWPORT,
     deviceScaleFactor: 1,
   });
+
+  // A PREDICATE, not a glob: the dev server's own requests must never be
+  // intercepted (they are the page under capture, and curl has no session
+  // cookie), and a glob broad enough to catch every third-party host would
+  // catch localhost too. See the note above `routeExternalAsset`.
+  const localHost = new URL(BASE_URL).host;
+  await context.route((url) => url.host !== localHost, routeExternalAsset);
 
   // Playwright doesn't support webp — capture as PNG then convert
   async function shoot(page, entryId, imageName) {
@@ -407,6 +492,7 @@ async function main() {
   }
 
   await browser.close();
+  rmSync(netCacheDir, { recursive: true, force: true });
   console.log('Done.');
 }
 
