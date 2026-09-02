@@ -26,9 +26,11 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  * @param {object} opts
  * @param {string} opts.url
  * @param {'GET'|'POST'} [opts.method]
- * @param {Record<string,string>} opts.cookies Cookie NAME → value. Must be an
- *   object: a raw `name=value` string becomes `0=n; 1=a; 2=m…` under
- *   Object.entries, a header MFL ignores while answering anonymously.
+ * @param {Record<string, string | undefined>} opts.cookies Cookie NAME → value.
+ *   Must be an object: a raw `name=value` string becomes `0=n; 1=a; 2=m…` under
+ *   Object.entries, a header MFL ignores while answering anonymously. Values may
+ *   be undefined — the header build below filters them — so callers holding an
+ *   optional second cookie (MFL_IS_COMMISH) can pass it straight through.
  * @param {string} [opts.body]
  * @param {number} [opts.timeoutMs]
  * @param {string} [opts.userAgent] Optional UA, re-sent on every hop.
