@@ -249,9 +249,7 @@ describe('throwback defaults — never a punitive last-place rebrand', () => {
     for (const team of teams) {
       if (getImposedThrowbackEra(team.franchiseId, 'afl')) continue;
       const eligible = getEligibleThrowbackEras(team, 'afl');
-      // Borrowed eras are excluded for the same reason rebrands are: they are
-      // selectable but never chosen FOR an owner.
-      const clean = eligible.filter((e) => !e.rebrand && !(e as any).borrowed);
+      const clean = eligible.filter((e) => !e.rebrand);
       if (clean.length === 0) continue;
       const longest = Math.max(...clean.map(span));
       const worn = pickDefaultThrowbackEra(
@@ -367,73 +365,62 @@ describe('the Throwback Rebrand', () => {
   });
 });
 
-describe('borrowed eras — the other league\'s history, offered not imposed', () => {
-  // Read from `borrowedIdentities`, NOT `history`. They are separate arrays on
-  // purpose: history[] is what award naming, standings and owner attribution
-  // read, and a borrowed identity carries the other league's timeline.
-  const borrowed = teams.flatMap((t) =>
-    ((t as any).borrowedIdentities ?? []).map((era: any) => ({ team: t, era })),
-  );
+describe('the two leagues never cross', () => {
+  const tlTeams = (theleagueConfig as any).teams as TeamConfig[];
 
-  it('only the five franchises that are the SAME OWNER in both leagues borrow', () => {
-    // The premise: their current crests are byte-identical across the two
-    // configs, so the other league's history is genuinely their own past.
-    expect(borrowed.length).toBeGreaterThan(0);
-    const allowed = new Set(['0005', '0006', '0009', '0011', '0015']);
-    for (const { team } of borrowed) {
-      expect(allowed.has(team.franchiseId), `${team.name} borrowed but is not a shared owner`).toBe(
-        true,
-      );
-    }
-  });
-
-  it('is selectable', () => {
-    for (const { team, era } of borrowed) {
-      const eligible = getEligibleThrowbackEras(team, 'afl');
-      expect(eligible.some((e) => e.yearStart === era.yearStart)).toBe(true);
-      expect(resolveThrowbackIdentity(team, era.yearStart, 'afl').name).toBe(era.name);
-    }
-  });
-
-  it('is never a DEFAULT — Throwback Week defaults to this league\'s own history', () => {
-    for (const team of teams) {
-      if (getImposedThrowbackEra(team.franchiseId, 'afl')) continue;
-      const worn = pickDefaultThrowbackEra(
-        getEligibleThrowbackEras(team, 'afl'),
-        throwbackRules('afl').defaults[team.franchiseId],
-      );
-      expect(
-        (worn as any)?.borrowed,
-        `${team.name} defaults to the borrowed "${worn?.name}"`,
-      ).toBeFalsy();
-    }
-  });
-
-  it('a seeded default that is borrowed is overruled, not honored', () => {
-    const eligible = [
-      { name: 'OnLoan', yearStart: 2020, yearEnd: 2024, borrowed: true },
-      { name: 'Ours', yearStart: 2010, yearEnd: 2011 },
-    ] as any;
-    expect(pickDefaultThrowbackEra(eligible, 2020)!.name).toBe('Ours');
-  });
-});
-
-describe('era keys stay unique', () => {
-  it('history[] never contains a borrowed identity', () => {
-    // The bug this pins actually shipped into the working tree: borrowed eras
-    // were first written into history[], which made the AFL claim franchise
-    // 0011 was "Under Siege" in 2016 and broke award naming and owner
-    // attribution across three suites.
+  it('no AFL era points at TheLeague art', () => {
+    // Several owners run a franchise in BOTH leagues — five pairs share a
+    // byte-identical current crest — which makes borrowing the other league's
+    // history look reasonable and is exactly why this guard exists. The two
+    // archives stay separate: an AFL throwback is something the franchise wore
+    // in the AFL.
     for (const team of teams) {
       for (const era of team.history ?? []) {
-        expect(
-          (era as any).borrowed,
-          `${team.name} "${era.name}" is borrowed but sits in history[]`,
-        ).toBeFalsy();
+        for (const asset of [era.icon, era.banner]) {
+          expect(
+            String(asset).includes('/theleague/'),
+            `${team.name} "${era.name}" points at TheLeague art: ${asset}`,
+          ).toBe(false);
+        }
       }
     }
   });
 
+  it('no TheLeague era points at AFL art', () => {
+    for (const team of tlTeams) {
+      for (const era of team.history ?? []) {
+        for (const asset of [era.icon, era.banner]) {
+          expect(
+            String(asset).includes('/afl/'),
+            `${team.name} "${era.name}" points at AFL art: ${asset}`,
+          ).toBe(false);
+        }
+      }
+    }
+  });
+
+  it('neither config carries a cross-league identity array', () => {
+    // The shape a reintroduction would take. `history[]` is the only source of
+    // throwback eras, and it means "what this franchise wore in THIS league".
+    for (const team of [...teams, ...tlTeams]) {
+      expect((team as any).borrowedIdentities, `${team.name} has borrowedIdentities`).toBeUndefined();
+      for (const era of team.history ?? []) {
+        expect((era as any).borrowed, `${team.name} "${era.name}" is flagged borrowed`).toBeUndefined();
+      }
+    }
+  });
+
+  it('a franchise resolves only to eras from its own league config', () => {
+    for (const team of teams) {
+      const own = new Set((team.history ?? []).map((e) => `${e.yearStart}:${e.name}`));
+      for (const era of getEligibleThrowbackEras(team, 'afl')) {
+        expect(own.has(`${era.yearStart}:${era.name}`)).toBe(true);
+      }
+    }
+  });
+});
+
+describe('era keys stay unique', () => {
   it('history[] spans never overlap', () => {
     // history[] answers "what was this franchise called in THIS league in
     // year N" and `getTeamIdentityForYear` reads it for award naming,
@@ -462,8 +449,7 @@ describe('era keys stay unique', () => {
     // carrying the OTHER league's timeline.
     for (const team of teams) {
       const seen = new Map<number, string>();
-      // Across the UNION — the picker offers both arrays as one list.
-      for (const era of [...(team.history ?? []), ...((team as any).borrowedIdentities ?? [])]) {
+      for (const era of team.history ?? []) {
         expect(
           seen.has(era.yearStart),
           `${team.name} has two eras at ${era.yearStart}: "${seen.get(era.yearStart)}" and "${era.name}"`,

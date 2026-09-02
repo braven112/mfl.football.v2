@@ -45,23 +45,21 @@ describe('era crest rim', () => {
     // outline around finished work.
     //
     // Checked by PROVENANCE rather than a filename pattern: the recovery work
-    // produced three naming families (`*_banner_icon_circle`, per-era cuts
-    // like `smokane_2006_icon`, and `*_tl_icon` borrowed wholesale), and a
-    // pattern that has to list all three stops being a check and becomes a
-    // restatement of the data. Two kinds are known-finished:
-    //
-    //   - `*_tl_icon.png` — borrowed from TheLeague, already a 100x100 crest.
-    //   - anything under `icons/` — a franchise's live logo.
+    // produced several naming families (`*_banner_icon_circle`, per-era cuts
+    // like `smokane_2006_icon`), and a pattern that has to list them all stops
+    // being a check and becomes a restatement of the data. What holds is that
+    // a rimmed crest is era art — never a franchise's live logo under
+    // `icons/`, which already has its own edge.
     for (const { team, era } of eras.filter((e) => e.era.iconStroke)) {
       const icon = String(era.icon);
-      expect(
-        icon.endsWith('_tl_icon.png'),
-        `${team.name} "${era.name}" rings a crest borrowed from TheLeague, which is finished art`,
-      ).toBe(false);
       expect(
         icon.includes('/history/'),
         `${team.name} "${era.name}" rings ${icon}, which is not era art`,
       ).toBe(true);
+      expect(
+        icon.includes('/theleague/'),
+        `${team.name} "${era.name}" rings cross-league art`,
+      ).toBe(false);
     }
   });
 

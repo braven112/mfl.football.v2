@@ -185,19 +185,6 @@ export interface FranchiseHistoryEntry {
    * PNG for the same reason.
    */
   iconStroke?: string;
-  /**
-   * True when this identity is on loan from the SAME OWNER's franchise in the
-   * other league, rather than something this franchise wore here.
-   *
-   * Five franchises are the same owner in both leagues (their current crests
-   * are byte-identical), so their other league's history is fair game as a
-   * throwback — it is genuinely their own past. But the year range on a
-   * borrowed era is the OTHER league's timeline and overlaps what this
-   * franchise was called here at the time, so it is offered as a choice and
-   * never picked as a default. `pickDefaultThrowbackEra` enforces that; the
-   * league's own history is what Throwback Week defaults to.
-   */
-  borrowed?: boolean;
 }
 
 /**
@@ -253,24 +240,6 @@ export interface TeamConfig {
   /** Optional dark-mode variant of `groupMe`. Not yet consumed anywhere — reserved for a future GroupMe-crest dark swap, mirroring `iconDark`. */
   groupMeDark?: string;
   history?: FranchiseHistoryEntry[];
-  /**
-   * Identities on loan from the SAME OWNER's franchise in the OTHER league,
-   * offered as extra Throwback Week choices.
-   *
-   * Deliberately NOT part of `history[]`, and the distinction is load-bearing.
-   * `history[]` answers "what was this franchise called in THIS league in
-   * these years" and is read by award naming, standings, franchise pages and
-   * owner attribution (`getTeamIdentityForYear`). A borrowed identity carries
-   * the OTHER league's timeline, which overlaps whatever the franchise was
-   * called here at the time — putting them in `history[]` made the AFL claim
-   * franchise 0011 was "Under Siege" in 2016 and broke award naming and owner
-   * attribution outright. Only the throwback picker reads this array.
-   *
-   * Five franchises qualify: the ones whose current crest is byte-identical
-   * across both configs, i.e. the same owner. Anyone else's history is not
-   * theirs to wear.
-   */
-  borrowedIdentities?: FranchiseHistoryEntry[];
   ownerHistory?: OwnerHistoryEntry[];
   /** Set when the CURRENT (non-historical) name is itself a punitive last-place rename. */
   currentRebrand?: RebrandTag;
