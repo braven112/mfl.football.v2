@@ -225,8 +225,11 @@ describe('every franchise, both leagues', () => {
       // The real invariant. Every crest the site rings under `html.dark` must
       // ALSO be ringed here when this surface leaves it on light artwork —
       // otherwise a franchise wears a ring on the standings card and none on
-      // the panel next to it, which reads as a rendering bug. Eight AFL
-      // franchises land here; TheLeague's three are all opt-outs.
+      // the panel next to it, which reads as a rendering bug. Four AFL
+      // franchises land here today, out of the seven the site rings; the other
+      // three now resolve to a dark cut, so there is no light art to ring.
+      // TheLeague rings none — all three of its manifest entries are
+      // `iconStrokeDark: false` opt-outs.
       const ringedSiteWide = new Set(
         withStrokeColors(league, cfg.teams)
           .filter((e) => e.strokeColor !== false && e.icon)
