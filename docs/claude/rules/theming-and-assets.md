@@ -148,6 +148,74 @@ full-bleed surfaces with white text on the colored area, allowlisted in
 direct `getNflTeamColors` consumer.
 
 
+## A surface that is dark in BOTH themes must resolve its own crest
+
+Every crest mechanism on this site is keyed on `html.dark`: the artwork swap in
+`team-icon-dark-css.ts` (`html.dark img[src="<light>"] { content: url(<dark>) }`)
+and the measured white ring in `crest-dark-stroke-css.ts` both fire only for a
+viewer whose SITE THEME resolved to dark. That is exactly right for a card that
+follows the theme, and it does **nothing** for the growing set of surfaces that
+paint deep ink in both themes — the player modal band, the draft broadcast
+board, the recap composite hero, the lineup faceoff panels. A light-theme owner
+looking at one of those gets the light crest on near-black, unringed, forever.
+The bug is invisible to anyone testing in dark mode.
+
+So those surfaces resolve the crest **server-side**, through
+`resolveDarkSurfaceCrest` (`src/utils/dark-surface-crest.ts`). That looks like a
+violation of "never pick a theme on the server" and it isn't: there is no theme
+to resolve, because the surface has only one.
+
+- **The order is theme first: `groupMeDark → iconDark → groupMe → icon`.** The
+  dark cuts are hand-authored, 100x100 (`iconDark`) or 400x400 (`groupMeDark`);
+  the light art is the same two sizes. Everything using this renders the crest
+  between ~40px and ~300px, where a 100px source upscales at most ~3x and — at
+  the 0.12–0.35 watermark opacities these surfaces use — shows nothing. Getting
+  the right ARTWORK is the whole game at that size. The draft broadcast's 68vh
+  reveal crest is the one exception and keeps its own order (below).
+- **`iconStrokeDark` is a human's answer in both directions.** A colour string
+  opts a crest in and picks the colour; `false` opts it out entirely. It
+  outranks everything, including the measurement. A JSON `true` is type-legal,
+  so it MEANS opt-in-at-default — never let it reach CSS as a colour, or
+  `drop-shadow(… true)` invalidates the whole composed `filter` and the crest
+  loses its drop shadow too.
+- **Having an `iconDark` at all is read as "this franchise's light art fails on
+  dark."** `measure-crest-contrast.mjs` skips those teams — correct everywhere
+  else, since they swap — so it is their only signal on an order that can strand
+  them on light artwork.
+- **The ring is applied INLINE by the caller**, which also outranks the global
+  `html.dark` rule keyed on the same src, so a crest can never wear two rings.
+- **Never render the light `icon` of a franchise that HAS an `iconDark`.**
+  `TeamIconDarkStyles` ships in the shared layout head on every page, so that
+  exact src would swap under `html.dark` and the crest would follow the VIEWER's
+  theme on a surface that has none. The order above guarantees this; anything
+  hand-rolled beside it must too.
+- **Era artwork (Throwback Week) inherits none of it.** An era crest has no dark
+  variant and was never measured, so `getThrowbackFranchiseBrand` drops
+  `iconDark` / `groupMeDark` and sets `iconStrokeDark: false` — `false`, not
+  cleared, because the stroke index is keyed by `franchiseId` and passed in
+  separately, so merely dropping the field still rings a flagged franchise with
+  a ring measured against the crest it is no longer wearing. Only when the
+  franchise ACTUALLY threw back: `resolveThrowbackIdentity` falls through to the
+  current identity for one with no eligible era, and stripping its dark art
+  there strands that franchise on light art for the week (`eraCrestOverrides`,
+  split out because that branch is unreachable through today's config).
+
+**Three surfaces got this wrong independently**, which is why it is written down
+here rather than in one of them: the broadcast (#681), the recap hero, and
+TheLeague's lineup page — whose AFL sibling had resolved it server-side since it
+launched, so the two sibling pages disagreed about the same panel. The helper is
+never the regression; a NEW dark-in-both-themes surface reaching straight for
+`brand.groupMe` is. `tests/dark-surface-crest.test.ts` pins the rule, sweeps
+both configs asserting this surface is never weaker than the themed ones beside
+it, and asserts the known call sites still route through the helper.
+
+**Still unconverted, and known:** the playoff heroes
+(`hero-data/playoff-round-data.ts` hands `brandOf` a bare `groupMe`, painted on
+a `franchiseGradient` — near-black in both themes) and the tagged-player
+showcase (`theleague/index.astro` passes `tc?.icon`). Both are seasonal
+surfaces; both are the same bug. Convert them when you are next in there rather
+than adding a third hand-rolled order.
+
 ## The player modal band wears the FRANCHISE, and it is dark in both themes
 
 `player-modal-band.ts` paints the header of every player modal
@@ -158,17 +226,16 @@ The map it reads (`franchise-band-brand.ts`) is server-rendered ONCE per page
 by `FranchiseBandBrands.astro` in the shared layout `<head>`, and is already
 Throwback Week-resolved. Four things there are load-bearing:
 
-- **The crest is picked server-side as the DARK artwork.** That is not a
-  violation of "never pick a theme server-side": the band is a deep-ink
-  composite, so its surface is dark in BOTH themes and there is no theme to
-  resolve. Emitting `iconDark` also means the global
-  `html.dark img[src="<light>"] { content: url(…) }` swap — which keys on the
-  LIGHT src — can never fire on it.
-- **The measured stroke is applied INLINE, by JS.** For a franchise with no
-  `iconDark` whose crest scores illegible on ink, the global stroke rule is
-  `html.dark`-scoped, so it does nothing in light mode — where this band is
-  still dark. The inline style covers light mode AND outranks the global rule,
-  so the two can never stack.
+- **The crest is picked server-side as the DARK artwork, and the measured
+  stroke is applied INLINE** — the dark-in-both-themes rule above, which this
+  band was the first surface to need. It predates `dark-surface-crest.ts` and
+  still resolves `iconDark || icon` itself, so it does NOT see the 400x400
+  `groupMeDark` cuts: a franchise with a `groupMeDark` and no `iconDark`
+  (Running down the Dream) wears light art here and dark art on every other
+  such surface. That franchise is an `iconStrokeDark: false` opt-out — a human
+  saying its light mark reads fine on ink — so this is a follow-up, not a live
+  bug. Do not "fix" one call site into agreement; move the band onto the shared
+  helper or leave it.
 - **The gradient anchor is the chart hue `color`, floored to 3:1 vs white.**
   `colorPrimary` is `#181818` for five TheLeague franchises, so anchoring
   there makes five teams the same near-black band. The chart hue is the
@@ -185,11 +252,11 @@ exactly one component emits the map.
 
 ## The draft broadcast picks its own crests, and it needs TWO of them
 
-The board is dark in both themes, exactly like the player modal band above, so
-the same rule applies: `resolveBroadcastCrest` (`src/utils/broadcast-crest.ts`)
-picks the artwork server-side, because the `html.dark` icon swap and the
-measured stroke both do nothing for a light-theme owner driving the TV. What is
-NEW here is that one crest is not enough.
+The board is dark in both themes, so the rule above applies and
+`resolveBroadcastCrest` (`src/utils/broadcast-crest.ts`) picks the artwork
+server-side. It shares every primitive with `dark-surface-crest.ts` — the ring
+signals, the dark-cut test, the manifest index. What is NEW here is that one
+crest is not enough.
 
 - **The reveal crest is 68vh** — ~734px on a 1080p TV, the biggest image on the
   site — and the idle board's is ~367px. The hand-authored `iconDark` cuts are

@@ -22,6 +22,7 @@ import { findWeekMatchups, resolveRostersPayload, resolveLineupFillState, resolv
 import LineupGameStrip from '../../components/shared/LineupGameStrip.astro';
 import { buildMatchupCards } from '../../utils/lineup-matchup-cards';
 import aflConfig from '../../../data/afl-fantasy/afl.config.json';
+import { crestStrokeIndex, resolveDarkSurfaceCrest } from '../../utils/dark-surface-crest';
 import { resolveSubmitButtonState } from '../../utils/lineup-submit-state';
 import { getCurrentWeekForYear } from '../../utils/current-week';
 import { getAflLeagueYear } from '../../utils/league-year';
@@ -424,15 +425,20 @@ const userProjTotal = slots.reduce(
 // plus the team's crest as the watermark, straight from the league config
 // (the AFL has no throwback identities, so there is nothing to resolve).
 //
-// `iconDark` FIRST, and not gated on the theme: the faceoff panel is a
+// The DARK cut first, and not gated on the theme: the faceoff panel is a
 // team-color gradient over near-black in BOTH themes, so the site-wide
 // `html.dark` crest swap (TeamIconDarkStyles) never fires here — a dark-inked
 // crest would sit invisible behind a 0.34-opacity watermark in light mode.
-// Ten of the 24 AFL teams ship a hand-authored dark variant; the rest fall
-// back to their light crest, which the chip already names either way.
+// `resolveDarkSurfaceCrest` is that rule for every such surface; it also picks
+// up the 400x400 `groupMeDark` cuts this page's hand-rolled `iconDark || icon`
+// could not see, and rings the crests that stay on light artwork — four
+// franchises today (Harambe, Suh girls, Swiftie, the Boondock Saints) that the
+// site strokes under `html.dark` and this panel did not.
 const aflTeamsById = new Map<string, any>(
   ((aflConfig as any).teams ?? []).map((t: any) => [t.franchiseId, t]),
 );
+// The manifest key is the league SLUG (`afl`), not the route directory.
+const crestStrokes = crestStrokeIndex('afl', (aflConfig as any).teams ?? []);
 
 const matchupCards = buildMatchupCards({
   userFranchiseId: user.franchiseId,
@@ -450,10 +456,12 @@ const matchupCards = buildMatchupCards({
   slotEligibility: SLOT_ELIGIBILITY,
   brandFor: (franchiseId) => {
     const team = aflTeamsById.get(franchiseId);
+    const crest = team ? resolveDarkSurfaceCrest(team, 'afl', crestStrokes) : null;
     return {
       name: team?.nameShort || team?.name || '',
       color: team?.colorPrimary,
-      watermark: team?.iconDark || team?.icon,
+      watermark: crest?.src,
+      watermarkFilter: crest?.filter,
     };
   },
 });

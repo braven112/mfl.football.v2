@@ -21,6 +21,8 @@ import { getPlayerMap } from '../../utils/player-map';
 import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, getPlayerHeadshot, nflByeWeeks } from '../../constants/roster-constants';
 import { loadLiveOdds, getFPAStats, parseSpread, processWeeklyScores, computeStreak } from '../../utils/coach-data';
 import { getThrowbackFranchiseBrand } from '../../utils/franchise-brand';
+import { crestStrokeIndex, resolveDarkSurfaceCrest } from '../../utils/dark-surface-crest';
+import leagueConfig from '../../data/theleague.config.json';
 import { isThrowbackWeek } from '../../data/theleague/throwback-config';
 import { getAllThrowbackPreferences } from '../../utils/throwback-store';
 import LineupGameStrip from '../../components/shared/LineupGameStrip.astro';
@@ -432,12 +434,23 @@ const userProjTotal = slots.reduce(
   0,
 );
 
-// Each panel wears its FRANCHISE — brand color tint + GroupMe crest watermark
-// (the RecapCompositeHero convention), not the player's NFL team. During a
-// Throwback Week the chip name swaps to the franchise's resolved legacy
-// identity (colors/watermark are unaffected — see plan). Resolved ONCE for
-// every franchise on the strip: a double-header would otherwise re-read the
-// throwback store per card.
+// Each panel wears its FRANCHISE — brand color tint + crest watermark, not the
+// player's NFL team. During a Throwback Week the chip name and crest swap to
+// the franchise's resolved legacy identity. Resolved ONCE for every franchise
+// on the strip: a double-header would otherwise re-read the throwback store
+// per card.
+//
+// The crest is picked SERVER-SIDE (`resolveDarkSurfaceCrest`) and it is the
+// dark artwork whenever the franchise has any. The faceoff panel is a
+// team-color gradient over near-black in BOTH themes, so the site-wide
+// `html.dark` swap and white ring (`TeamIconDarkStyles`) never fire here — the
+// page shipped `brand.groupMe`, and every near-black mark sat invisible behind
+// a 0.34-opacity watermark for a light-theme owner. The AFL page has resolved
+// this server-side since it launched; the two had drifted.
+//
+// One manifest lookup for the whole strip rather than one per panel.
+const crestStrokes = crestStrokeIndex('theleague', (leagueConfig as any).teams ?? []);
+
 const throwbackActive = isThrowbackWeek(week);
 const throwbackOverrides = throwbackActive
   ? await getAllThrowbackPreferences([user.franchiseId, ...userMatchups.map((m) => m.opponentFranchiseId)])
@@ -459,7 +472,11 @@ const matchupCards = buildMatchupCards({
   slotEligibility: SLOT_ELIGIBILITY,
   brandFor: (franchiseId) => {
     const brand = getThrowbackFranchiseBrand(franchiseId, throwbackActive, throwbackOverrides[franchiseId]);
-    return { name: brand.name, color: brand.color, watermark: brand.groupMe };
+    // A throwback brand arrives with its dark cuts already cleared, so an era
+    // crest resolves to the era artwork and is never ringed — see
+    // `getThrowbackFranchiseBrand`.
+    const crest = resolveDarkSurfaceCrest(brand, 'theleague', crestStrokes);
+    return { name: brand.name, color: brand.color, watermark: crest.src, watermarkFilter: crest.filter };
   },
 });
 

@@ -3,6 +3,14 @@
   "changes": [
     {
       "date": "2026-09-01",
+      "type": "bug-fix",
+      "summary": "Team crests on the Set Lineup matchup cards and the Tuesday recap hero now hold up in light mode. Those panels are dark whatever theme you browse in — a near-black gradient with white type — but the logo on them was being chosen as if they followed the theme, so anyone reading the site in light mode got the light artwork sitting on ink, and the near-black crests simply weren't there. Thirteen of TheLeague's sixteen teams now wear their dark-mode crest on those cards. Six more do on the AFL side — Smokane, the Drunk Indians, Jewpacabra, Badd Boys, Chatmaster and No Soup — and the four whose logo still needs help separating from the panel get a fine outline traced around the logo's own shape: Harambe, Suh girls, Swiftie and the Boondock Saints, in their own trim colour where they have one. The two leagues' lineup pages had quietly disagreed about this for months: the AFL had worked it out at launch and TheLeague's copy never did.",
+      "impact": "user",
+      "area": "design-system",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-01",
       "type": "style-tweak",
       "summary": "The Muck Juggling Micks got a full logo refresh — icon and chat crest, light mode and dark. The dark versions trade the green outer ring for gold so the leprechaun stops blending into the page at night.",
       "impact": "user",

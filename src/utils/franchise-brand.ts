@@ -46,10 +46,17 @@ export interface FranchiseBrand {
   colorQuaternary?: string;
   /** Square franchise icon */
   icon: string;
+  /** Optional 100x100 hand-authored dark cut of `icon`. */
+  iconDark?: string;
   /** GroupMe-sized franchise avatar/crest — used as a hero background watermark */
   groupMe: string;
-  /** Optional dark-mode variant of `groupMe`. Not yet consumed anywhere — reserved for a future dark-mode watermark swap. */
+  /** Optional 400x400 hand-authored dark cut of `groupMe`. */
   groupMeDark?: string;
+  /**
+   * The franchise's `iconStrokeDark` opt-in/opt-out, carried through verbatim
+   * so a brand can be handed straight to `resolveDarkSurfaceCrest`.
+   */
+  iconStrokeDark?: string | boolean;
   /** Franchise banner. Optional — not every consumer has needed this until Throwback Week. */
   banner?: string;
 }
@@ -77,11 +84,50 @@ for (const t of ((leagueConfig as any).teams ?? []) as any[]) {
     colorTertiary: getTeamColorTertiary(t.franchiseId),
     colorQuaternary: getTeamColorQuaternary(t.franchiseId),
     icon: t.icon ?? '',
+    iconDark: t.iconDark,
     // Prefer the explicit groupMe path; fall back to the per-id avatar.
     groupMe: t.groupMe ?? (t.franchiseId ? `/assets/theleague/group-me/${t.franchiseId}.png` : ''),
     groupMeDark: t.groupMeDark,
+    iconStrokeDark: t.iconStrokeDark,
     banner: t.banner,
   });
+}
+
+/**
+ * The crest fields an era brand must NOT inherit from the modern one.
+ *
+ * The dark cuts and the ring belong to the CURRENT mark: `iconDark` /
+ * `groupMeDark` would put today's logo under a legacy name on every
+ * dark-in-both-themes surface (`resolveDarkSurfaceCrest` prefers them over
+ * anything else).
+ *
+ * `iconStrokeDark` goes to `false` rather than `undefined`, and that is the
+ * load-bearing half. Clearing it would only drop what the BRAND carries — the
+ * measured stroke index is keyed by `franchiseId` and passed in separately, so
+ * a franchise the manifest flagged would still come back ringed, with a ring
+ * measured against a crest it is no longer wearing. `false` is the field's
+ * existing opt-out and stops the lookup before it happens. Era artwork was
+ * never measured; it renders as authored, which is the same call
+ * `franchise-band-brand.ts` makes when it clears `crestFilter` for an era
+ * crest.
+ *
+ * Cleared only when we ACTUALLY threw back. `resolveThrowbackIdentity` falls
+ * through to the CURRENT identity for a franchise with no eligible era, and
+ * there `icon`/`groupMe` are still the modern crest — stripping its dark art
+ * would strand that one franchise on light artwork for the week.
+ *
+ * Split out and exported for the same reason `resolveEraCrest` is at the
+ * player-modal band: every TheLeague franchise has an eligible era today, so
+ * the `false` branch is unreachable through the real config and a sweep over
+ * it can only ever pass. One `THROWBACK_ASSET_CONFLICTS` entry arms it, on the
+ * one week a year anyone would see it.
+ */
+export function eraCrestOverrides(
+  isHistorical: boolean
+): Partial<Pick<FranchiseBrand, 'iconDark' | 'groupMeDark' | 'iconStrokeDark'>> {
+  return isHistorical
+    ? { iconDark: undefined, groupMeDark: undefined, iconStrokeDark: false }
+    : {};
 }
 
 /** Brand for a franchise id, or the league-neutral fallback when unknown. */
@@ -118,11 +164,9 @@ export function getThrowbackFranchiseBrand(
     // name and legacy colors. Only one era in the config carries its own
     // `groupMe`, so the era ICON is the working crest for the rest; every
     // history entry has one and they are square, which is what the watermark
-    // box wants. `groupMeDark` is cleared for the same reason the *Dark
-    // colors are: it belongs to the CURRENT brand, and eras have no dark
-    // variant to swap in.
+    // box wants.
     groupMe: identity.groupMe ?? identity.icon ?? brand.groupMe,
-    groupMeDark: undefined,
+    ...eraCrestOverrides(identity.isHistorical),
     // Era palette when defined — legacy hues on the lineup hero, too.
     ...(identity.isHistorical && identity.colorPrimary
       ? {
