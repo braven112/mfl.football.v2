@@ -111,22 +111,26 @@ export const StrokeDefaultWhite = {
 };
 
 /**
- * The CUSTOM STROKE COLOR branch. No Soup For You declares
- * `iconStrokeDark: "#d03902"`, so it gets its own rule rather than joining the
+ * The CUSTOM STROKE COLOR branch. Suh girls, one cup declares
+ * `iconStrokeDark: "#ff769f"`, so it gets its own rule rather than joining the
  * shared white one — a crest whose silhouette reads better against its own
  * brand color than against white.
  *
- * As of Sept 2026 it is the ONLY team on this branch league-wide. The
- * dark-artwork sweep (#680, #682, #683, #685) gave Midwestside and The Show
- * real `iconDark` files, which by construction removes them from the stroke
- * set — this story was on The Show and silently became a second swap test
- * until CI caught it. If this crest ever gains an `iconDark`, the branch has NO
- * representative left and the story cannot simply be repointed.
+ * This story has now been repointed TWICE by the dark-artwork sweep, because
+ * giving a franchise a real `iconDark` removes it from the stroke set by
+ * construction: it was on The Show until #685, then on No Soup For You until
+ * the icon batch that followed. Both times the story kept passing while
+ * silently testing the swap branch instead — the suite cannot catch this, so
+ * check it by hand whenever a franchise named here gains dark artwork.
+ *
+ * Suh girls and Swiftie 4 Life are the two teams left on this branch. Prefer
+ * Suh: Swiftie's `#ffffff` is the default hue spelled differently, so a reader
+ * cannot tell its rule apart from the shared white one by looking.
  */
 export const StrokeCustomColor = {
   args: {
-    icon: '/assets/afl/icons/no_soup.png',
-    name: 'No Soup For You',
+    icon: '/assets/afl/icons/suh.png',
+    name: 'Suh girls, one cup',
   },
 };
 
