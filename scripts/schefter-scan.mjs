@@ -1049,7 +1049,12 @@ async function fetchPendingCommishTrades(leagueId, year) {
     // with the login page, which the "Got HTML" guard below turned into a quiet
     // "auth likely failed" — a real outage that looked like a config warning.
     // See tests/mfl-cookie-redirect-guard.test.ts.
-    const res = await mflFetch({ url, cookies: { MFL_USER_ID: mflCookie }, timeoutMs: 15_000 });
+    const res = await mflFetch({
+      url,
+      cookies: { MFL_USER_ID: mflCookie },
+      userAgent: 'schefter-scan/1.0',
+      timeoutMs: 15_000,
+    });
     if (!res.ok) return { trades: null, error: `HTTP ${res.status}` };
     const text = await res.text();
     if (text.trim().startsWith('<')) return { trades: null, error: 'Got HTML — auth likely failed' };

@@ -2799,7 +2799,12 @@ async function fetchPendingTradesForFranchise(leagueId, year, franchiseId, mflCo
   // answered with the HTML login page — caught by the "returned HTML" guard
   // below, so the whole trade-offer rumor scan failed quietly rather than
   // loudly. See tests/mfl-cookie-redirect-guard.test.ts.
-  const res = await mflFetch({ url, cookies: { MFL_USER_ID: mflCookie }, timeoutMs: 15_000 });
+  const res = await mflFetch({
+    url,
+    cookies: { MFL_USER_ID: mflCookie },
+    userAgent: 'schefter-rumor-scan/1.0',
+    timeoutMs: 15_000,
+  });
   if (!res.ok) throw new Error(`MFL HTTP ${res.status}`);
   const text = await res.text();
   if (text.trim().startsWith('<')) throw new Error('MFL returned HTML (auth likely failed)');

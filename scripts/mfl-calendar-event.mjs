@@ -113,6 +113,7 @@ const res = await mflFetch({
   url,
   method: 'POST',
   cookies: { MFL_USER_ID: userId, MFL_IS_COMMISH: isCommish },
+  userAgent: 'mfl.football schedule release',
   timeoutMs: 15_000,
 });
 const body = await res.text();
