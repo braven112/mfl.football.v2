@@ -427,8 +427,12 @@ const countAriaLabel = hasCount
   .tl-event-hero__chip svg {
     width: 24px;
     height: 24px;
-    fill: var(--hero-fb-accent-panel, var(--ev-accent));
-    color: var(--hero-fb-accent-panel, var(--ev-accent));
+    /* COPY band — top-left of the card, so the headline accent, not the panel's.
+       These two icon rules are easy to mix up: this one is the eyebrow chip and
+       `.tl-hero-panel__link-icon` below is the panel's, they are identical
+       two-line rules, and they need OPPOSITE accents. */
+    fill: var(--ev-accent);
+    color: var(--ev-accent);
   }
   .tl-event-hero__pill {
     font-family: var(--font-display, 'UFC Sans Condensed', 'Arial Narrow', 'Oswald', sans-serif);
@@ -615,8 +619,9 @@ const countAriaLabel = hasCount
     width: 0.95rem;
     height: 0.95rem;
     flex-shrink: 0;
-    fill: var(--ev-accent);
-    color: var(--ev-accent);
+    /* PANEL band — see the note on `.tl-event-hero__chip svg` above. */
+    fill: var(--hero-fb-accent-panel, var(--ev-accent));
+    color: var(--hero-fb-accent-panel, var(--ev-accent));
   }
   :global(.tl-hero-panel__link-label) {
     overflow: hidden;

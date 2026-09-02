@@ -202,6 +202,41 @@ describe('hero components', () => {
     }
   });
 
+  it('gives every panel-scope rule the PANEL accent, and no copy-scope rule it', () => {
+    // The two bands have identical-looking two-line icon rules that need
+    // OPPOSITE accents, and I got them backwards on the first pass: the
+    // eyebrow chip (copy band, top-left) took the panel accent while the
+    // panel's own link icon kept the copy one. Nothing about either rule
+    // says which band it is in, so this pins them by name.
+    const shell = read('src/components/theleague/EventHeroShell.astro');
+    const cutwatch = read('src/components/theleague/CutWatchHero.astro');
+
+    // Every selector that paints INSIDE the slotted panel.
+    const panelScoped = [
+      ['shell', shell, '.tl-hero-panel__title'],
+      ['shell', shell, '.tl-hero-panel__link-icon'],
+      ['cutwatch', cutwatch, '.cw-team__count'],
+    ] as const;
+    // Match the RULE, not the name: the comment on each rule names the other
+    // one (they are a matched pair and the note is the point), so a plain
+    // indexOf finds the prose first. This test failed on its own comment.
+    const ruleBody = (src: string, selector: string): string => {
+      const m = new RegExp(`${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\)?\\s*\\{`).exec(src);
+      expect(m, `${selector} rule not found`).not.toBeNull();
+      const from = m!.index + m![0].length;
+      return src.slice(from, src.indexOf('\n  }', from));
+    };
+
+    for (const [where, src, selector] of panelScoped) {
+      expect(ruleBody(src, selector), `${where} ${selector} must use the panel accent`)
+        .toContain('--hero-fb-accent-panel');
+    }
+
+    // And the eyebrow chip, which is in the COPY band, must NOT.
+    expect(ruleBody(shell, '.tl-event-hero__chip svg'), 'the eyebrow chip is copy-band')
+      .not.toContain('--hero-fb-accent-panel');
+  });
+
   it('keeps the backdrop off the heroes that are ABOUT another franchise', () => {
     // A bracket, a champion card and a matchup already wear the colours of
     // whoever is IN them; the viewer's own would claim somebody else's card.
