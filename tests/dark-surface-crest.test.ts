@@ -147,19 +147,29 @@ describe('resolveDarkSurfaceCrest — the ring', () => {
   });
 
   it('picks up a manifest-flagged franchise in its own colour', () => {
+    // FIND the franchise, never name one (#687). Every franchise in both
+    // leagues is on track for dark artwork, and a franchise with an `iconDark`
+    // may not carry `iconStrokeDark` at all (`crest-dark-stroke.test.ts`
+    // enforces that), so a hardcoded id here is a scheduled failure.
     const index = crestStrokeIndex('afl', afl.teams);
-    // Suh girls, one cup — measured illegible, config names the pink.
-    const suh = afl.teams.find((t: any) => t.franchiseId === '0012');
-    expect(resolveDarkSurfaceCrest(suh, 'afl', index).strokeColor).toBe('#ff769f');
+    const named = afl.teams.find(
+      (t: any) => typeof t.iconStrokeDark === 'string' && !t.iconDark
+    );
+    // Guard the search, or this passes vacuously on `undefined` once no
+    // franchise names its own colour any more.
+    expect(named, 'no AFL franchise names its own stroke colour').toBeDefined();
+    expect(resolveDarkSurfaceCrest(named, 'afl', index).strokeColor)
+      .toBe(named.iconStrokeDark);
   });
 
   it('honours an opt-out that only the INDEX knows about', () => {
     // A caller may hand in a record rebuilt without `iconStrokeDark` (the
     // throwback path does exactly that); `false || DEFAULT` would then ring a
-    // crest a human opted out of.
-    const index = new Map<string, string | false | undefined>([['0014', false]]);
+    // crest a human opted out of. Synthetic on both sides, so no franchise is
+    // named and nothing here expires.
+    const index = new Map<string, string | false | undefined>([['9999', false]]);
     const out = resolveDarkSurfaceCrest(
-      { franchiseId: '0014', groupMe: '/gm.png' },
+      { franchiseId: '9999', groupMe: '/gm.png' },
       'theleague',
       index
     );
@@ -173,10 +183,26 @@ describe('resolveDarkSurfaceCrest — the ring', () => {
   });
 
   it('leaves an unflagged, dark-cut-less franchise unringed', () => {
-    const index = crestStrokeIndex('theleague', theleague.teams);
-    // Gridiron Geeks measure legible and declare nothing.
-    const geeks = theleague.teams.find((t: any) => t.franchiseId === '0013');
-    expect(resolveDarkSurfaceCrest(geeks, 'theleague', index).filter).toBeUndefined();
+    // A franchise the measurement cleared, that declares nothing and has no
+    // dark cut: it renders its light art as authored. Found, not named — see
+    // above. TheLeague has one (Gridiron Geeks) until it gets dark artwork,
+    // and the AFL is checked too so the case survives either league running
+    // out first.
+    let checked = 0;
+    for (const [league, cfg] of [['theleague', theleague], ['afl', afl]] as const) {
+      const index = crestStrokeIndex(league, cfg.teams);
+      const clean = cfg.teams.find(
+        (t: any) => !t.iconDark && !t.groupMeDark && t.iconStrokeDark === undefined
+          && !index.has(t.franchiseId)
+      );
+      if (!clean) continue;
+      checked++;
+      expect(resolveDarkSurfaceCrest(clean, league, index).filter).toBeUndefined();
+    }
+    // Only TheLeague has one today (Gridiron Geeks); the AFL has none. When
+    // the last one in BOTH leagues gets dark artwork this case stops existing
+    // and should be deleted, not left passing on an empty loop.
+    expect(checked, 'no franchise in either league is unflagged and dark-cut-less').toBeGreaterThan(0);
   });
 });
 
@@ -260,10 +286,13 @@ describe('throwback brands stay on era artwork', () => {
       iconStrokeDark: false,
     });
     // A franchise the manifest DOES flag, dressed in era art, stays unringed
-    // even though the index still holds a colour for its id.
-    const flagged = { franchiseId: '0020', groupMe: '/era.png', ...eraCrestOverrides(true) };
-    expect(resolveDarkSurfaceCrest(flagged, 'afl', crestStrokeIndex('afl', afl.teams)).filter)
-      .toBeUndefined();
+    // even though the index still holds a colour for its id. Take that id off
+    // the manifest itself rather than naming one (#687).
+    const index = crestStrokeIndex('afl', afl.teams);
+    const flaggedId = [...index.entries()].find(([, v]) => v !== false)?.[0];
+    expect(flaggedId, 'no AFL franchise is flagged for a stroke').toBeDefined();
+    const flagged = { franchiseId: flaggedId, groupMe: '/era.png', ...eraCrestOverrides(true) };
+    expect(resolveDarkSurfaceCrest(flagged, 'afl', index).filter).toBeUndefined();
     // Spread over a modern brand, the false branch has to leave it intact.
     const t = theleague.teams.find((x: any) => x.iconDark && x.groupMeDark);
     const kept = { ...getFranchiseBrand(t.franchiseId), ...eraCrestOverrides(false) };
