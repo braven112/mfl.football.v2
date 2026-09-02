@@ -209,6 +209,21 @@ needs the modifier in your dark selector too. Confirm it by grepping the served
 CSS for the compiled rule rather than reasoning about the source, which shows
 neither attribute.
 
+**This conclusion is contingent on `scopedStyleStrategy`, so check it before
+relying on the numbers.** Astro has three strategies and they do not agree:
+`attribute` (the default, and what this repo gets — `astro.config.ts` does not
+set the option) emits `[data-astro-cid-…]`, worth a class each; `class` emits
+`.astro-…`, also a class; but **`where` emits `:where(.astro-…)`, which is
+specificity ZERO**. Under `where` the same two rules become `(0,2,1)` for the
+dark base and `(0,2,0)` for the modifier — the base would win and a
+`:global(html.dark)` rule *would* clobber the modifier it was never meant to
+touch. So the safe habit is the one above (grep the served CSS), not
+memorising the arithmetic: a repo-wide config change would silently invert
+this, and the failure mode is a modifier quietly losing its fill in one theme.
+A Codex reviewer flagged exactly this on PR #704 by assuming the `where`
+default; it was wrong for this repo, but right that the claim needs its
+premise stated.
+
 (The modifier here needed its own dark rule anyway, for the reason the head's
 `--league-accent` section already gives: the AFL accent brightens to `#ef5350`
 in dark and white on it is 3.49:1. Dark ink at 4.84:1 fixes it. That trap was
