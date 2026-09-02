@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-02T03:13:20.517Z",
+  "generatedAt": "2026-09-02T06:22:31.012Z",
   "teams": [
     {
       "key": "history_acer_fc_edge",
@@ -815,6 +815,12 @@
         "banners": [
           {
             "type": "banners",
+            "filename": "geeks_2014_banner.png",
+            "relativePath": "/assets/theleague/history/geeks_2014_banner.png",
+            "extension": ".png"
+          },
+          {
+            "type": "banners",
             "filename": "geeks.png",
             "relativePath": "/assets/theleague/banners/geeks.png",
             "extension": ".png"
@@ -831,12 +837,25 @@
         "icons": [
           {
             "type": "icons",
+            "filename": "geeks_2014_icon_circle.png",
+            "relativePath": "/assets/theleague/history/geeks_2014_icon_circle.png",
+            "extension": ".png"
+          },
+          {
+            "type": "icons",
             "filename": "geeks.png",
             "relativePath": "/assets/theleague/icons/geeks.png",
             "extension": ".png"
           }
         ]
-      }
+      },
+      "eras": [
+        {
+          "yearStart": 2014,
+          "yearEnd": 2025,
+          "franchiseId": "0013"
+        }
+      ]
     },
     {
       "key": "heavy_chevy",

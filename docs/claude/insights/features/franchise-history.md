@@ -1,5 +1,84 @@
 # Franchise History Pages — Insights
 
+## 2026-09-01 - Retiring a team's artwork into an era touches FOUR derived files, and none of them are the ones /publish-assets names
+
+**Context:** The Gridiron Geeks got new art (white facemask → orange) as their
+2026-forward identity, so the 2014-2025 look had to become an era of its own.
+Config edited, assets installed, `sync-theleague-assets.mjs` and
+`measure-crest-contrast.mjs` run, all 304 test files green. The franchise page
+still served today's crest on all twelve retired seasons.
+
+**Insight:** `/publish-assets` lists three generated downstreams — the crest
+manifest and the two asset registries — and that list is correct *for a logo
+swap*, which is what that command is scoped to. Retiring art into a `history[]`
+era moves a fourth chain the command never had reason to mention, because a
+plain swap does not touch eras:
+
+```bash
+pnpm run compute:franchise-history   # season-ledger.json + franchise-history.json
+pnpm run compute:owner-tenures       # owner-tenures.json  (reads the two above)
+pnpm run compute:division-strength   # division-strength.json (reads tenures)
+```
+
+Each of those bakes a **resolved icon path per franchise-season** at compute
+time. `getTeamIdentityForYear` is never consulted at render time for these
+pages, so a stale path is not re-resolved — it is served. And the failure is
+silent in every channel that normally catches things: the JSON is valid, the
+file exists, the image 200s, and no guard test compares a derived row against
+the config it came from.
+
+This is the **third** entry in this file about the same bug class (see the
+2026-08-25 fold bug and the `dominantIdentity` one under it). The shape repeats:
+identity rows assembled ahead of time keep serving artwork that was correct when
+the row was written. A stale-but-valid local path is the worst possible input
+here — it looks healthy and wins.
+
+**The check is a grep against a sibling, not a screenshot.** Pick a franchise
+that already has a retired era and compare crest filenames in the served HTML:
+
+```js
+const t = await (await fetch('/theleague/franchises/0013')).text();
+[...t.matchAll(/([a-z0-9_]*geeks[a-z0-9_]*\.png)/gi)]   // want geeks_2014_*  ×12
+```
+
+0001 served `pigskins_2013_icon_circle.png` twelve times; 0013 served
+`geeks.png` seventeen times and the history file zero. That one-line difference
+is the whole bug, and it is invisible in the config diff.
+
+**The trap underneath it: an era can point at the LIVE asset path.** Before this
+change 0013's era carried `icon: /assets/theleague/icons/geeks.png` — the file
+about to be overwritten. Dropping the new art in place would have retroactively
+repainted 2014-2025 with a helmet those seasons never wore, and left the two
+eras indistinguishable. The fix is a snapshot copy first
+(`history/geeks_2014_icon_circle.png`, `history/geeks_2014_banner.png`) plus an
+`eraLabel`, which is what `throwback-settings.astro` renders to tell apart eras
+that share a name.
+
+**Five teams are still in that state**, so the trap is live for whoever gets art
+next — Maverick, Music City Mafia, Computer Jocks, Cowboy Up, Running down the
+Dream. Enumerate before editing, never from memory:
+
+```bash
+node -e "const c=require('./src/data/theleague.config.json');
+for(const t of c.teams) for(const h of t.history??[]) if(h.icon===t.icon) console.log(t.franchiseId,t.name)"
+```
+
+**The wordmark banner takes the swap in place when the silhouette is unchanged.**
+New art that only recolors is pixel-identical in alpha (checked: 0 pixels differ
+either way, same bbox), which means the 950×158 banner does not need re-drawing
+— the new crest composites over the old one and covers it completely. Recover
+the placement by template-matching the 400px crest against the banner over
+scale and offset; the Geeks fit was 160px at (446, −2). Verify by compositing
+the OLD crest back at that fit and diffing: only thin anti-aliasing edges should
+light up, never a solid blob. Do NOT do this when the new art changes the
+outline — the old keyline will halo out from under it.
+
+**Confidence: High** — 12 season rows verified serving `geeks_2014_icon_circle.png`
+in the running app, hero serving the new banner, all 8 asset paths 200; icon
+derivation confirmed as a plain lanczos downscale against the shipped pair
+(1.30 / 0.36 mean channel diff) before generating anything.
+
+
 ## 2026-08-27 - Naming an anonymous owner touches ONE field; the slug rename is a different, riskier edit
 
 **Context:** Brandon named the AFL's Reckless (own-0097, slot 0016, 2005-2006)
