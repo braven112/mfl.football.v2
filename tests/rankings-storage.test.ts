@@ -497,6 +497,52 @@ describe('rankings-storage', () => {
       expect(JSON.parse(localStorageMock._getStore()['rankings.compositeConfig'])).toEqual(clean);
     });
 
+    // The imports and the composite config live under different localStorage
+    // keys, so one can be intact while the other is unreadable. Healing on a
+    // total miss would persist `{members: []}` and destroy the owner's ticks
+    // for good, where a read-only filter recovered by itself.
+    it('getCompositeMembers does not heal when NO member validates', () => {
+      const config = {
+        members: [
+          { importId: 'valid-1', weight: 50 },
+          { importId: 'valid-2', weight: 50 },
+        ],
+      };
+      // No imports saved at all — the pre-reconciliation / unreadable case.
+      localStorageMock.setItem('rankings.compositeConfig', JSON.stringify(config));
+
+      expect(getCompositeMembers()).toEqual(config.members);
+      expect(
+        JSON.parse(localStorageMock._getStore()['rankings.compositeConfig']),
+      ).toEqual(config);
+    });
+
+    // A failed persist must not poison the value already computed: returning []
+    // renders every source unticked AND makes initFromServer's
+    // `getCompositeMembers().length === 0` guard overwrite the local config.
+    it('getCompositeMembers survives a localStorage write failure', () => {
+      saveImport(createMockImport({ id: 'valid-1', source: 'fantasypros', type: 'dynasty' }));
+      saveImport(createMockImport({ id: 'valid-2', source: 'dlf', type: 'dynasty' }));
+      localStorageMock.setItem(
+        'rankings.compositeConfig',
+        JSON.stringify({
+          members: [
+            { importId: 'valid-1', weight: 25 },
+            { importId: 'valid-2', weight: 25 },
+            { importId: 'deleted-id', weight: 50 },
+          ],
+        }),
+      );
+
+      localStorageMock.setItem.mockImplementationOnce(() => {
+        throw new Error('QuotaExceededError');
+      });
+
+      const members = getCompositeMembers();
+      expect(members).toHaveLength(2);
+      expect(members.reduce((sum, m) => sum + m.weight, 0)).toBeCloseTo(100, 5);
+    });
+
     it('saveCompositeConfig persists to localStorage and fires event', () => {
       saveCompositeConfig({
         members: [

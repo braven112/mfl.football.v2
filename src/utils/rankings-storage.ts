@@ -597,8 +597,30 @@ export function getCompositeMembers(): CompositeImportConfig[] {
     const valid = parsed.members.filter((m) => validIds.has(m.importId));
     if (valid.length === parsed.members.length) return parsed.members;
 
+    // Nothing survived. That is "the import list isn't readable yet", not
+    // "every source the owner picked was deleted" — the two live under
+    // different localStorage keys, so one can be intact while the other is
+    // empty. getAllImports() returns [] when readFromStorage swallows a parse
+    // failure, and initFromServer probes this function BEFORE the server's
+    // imports reach localStorage (the pre-reconciliation window this
+    // function's own docstring names as a source of stale members). Healing
+    // here would persist `{members: []}` and permanently destroy every tick
+    // and weight the owner set, where a read-only filter recovered on its own
+    // as soon as the imports were readable again. So: filter nothing, write
+    // nothing, and let the next call heal once there is something to validate
+    // against.
+    if (valid.length === 0) return parsed.members;
+
     const healed = rebalanceToHundred(valid);
-    localStorage.setItem(compositeConfigKey(), JSON.stringify({ members: healed }));
+    // The persist is best-effort and MUST NOT poison the value we already
+    // computed. localStorage.setItem throws on a full quota and on an origin
+    // where storage is blocked outright; letting that reach the outer catch
+    // returned [], which renders every source unticked AND makes
+    // initFromServer's `getCompositeMembers().length === 0` guard overwrite an
+    // intact local config with the server's.
+    try {
+      localStorage.setItem(compositeConfigKey(), JSON.stringify({ members: healed }));
+    } catch { /* display is correct either way; retried on the next read */ }
     return healed;
   } catch {
     return [];
