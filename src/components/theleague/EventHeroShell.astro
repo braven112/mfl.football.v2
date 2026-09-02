@@ -18,6 +18,8 @@
  * slotting `panel` content shares one on-navy list look.
  */
 import { spriteUrl } from '../../utils/sprite-url';
+import type { HeroFranchiseBackdrop } from '../../utils/hero-franchise-backdrop';
+import '../../styles/hero-franchise-backdrop.css';
 
 interface Props {
   pill: string;
@@ -41,6 +43,19 @@ interface Props {
   countLabel?: string;
   bordered?: boolean;
   regionLabel?: string;
+  /**
+   * The viewer's franchise colours + crest, resolved by the homepage
+   * (`resolveHeroFranchiseBackdrop`). When set it REPLACES the card surface and
+   * the corner glow in both themes; the green pill and green CTA are untouched,
+   * so TheLeague's own brand is still on the card.
+   *
+   * Page-supplied rather than resolved in here: both homepages pass the
+   * SIGNED-IN owner's franchise or nothing, and each reads its session its own
+   * way. Resolving it in the shell would also break the second reason it is
+   * opt-in — six components render this shell, and the ones that are ABOUT
+   * another franchise must never take the viewer's colours.
+   */
+  backdrop?: HeroFranchiseBackdrop | null;
 }
 
 const {
@@ -62,6 +77,7 @@ const {
   countLabel,
   bordered = false,
   regionLabel = 'League hero',
+  backdrop = null,
 } = Astro.props;
 
 // A functional right-hand panel (slotted) takes the place of the player cut-out.
@@ -77,10 +93,26 @@ const countAriaLabel = hasCount
 ---
 
 <section
-  class:list={['tl-event-hero', { 'tl-event-hero--bordered': bordered, 'tl-event-hero--paneled': hasPanel }]}
-  style={`--ev-accent:${accent};--ev-glow:${glow};`}
+  class:list={['tl-event-hero', { 'tl-event-hero--bordered': bordered, 'tl-event-hero--paneled': hasPanel, 'tl-event-hero--franchise': !!backdrop }]}
+  style={`--ev-accent:${accent};--ev-glow:${glow};${backdrop?.style ?? ''}`}
   aria-label={regionLabel}
 >
+  {backdrop && (
+    <>
+      {backdrop.crest && (
+        <img
+          class="hero-fb__crest"
+          src={backdrop.crest}
+          style={backdrop.crestFilter ? `filter: ${backdrop.crestFilter};` : undefined}
+          alt=""
+          aria-hidden="true"
+          loading="lazy"
+          decoding="async"
+        />
+      )}
+      <span class="hero-fb__wash" aria-hidden="true"></span>
+    </>
+  )}
   <span class="tl-event-hero__glow" aria-hidden="true"></span>
 
   {!hasPanel && player && (
@@ -212,6 +244,64 @@ const countAriaLabel = hasCount
 
   .tl-event-hero--bordered {
     border: 2px solid var(--ev-accent);
+  }
+
+  /* ── Owner's franchise backdrop ──
+     The owner's `broadcastGradient` replaces the card surface in both themes.
+
+     ONE selector is enough, and it is worth saying why, because the near miss
+     here is instructive: `html.dark .tl-event-hero` re-declares `--ev-surface`
+     at (0,2,1) and would outrank a lone modifier class at (0,1,0) — so an
+     override of THAT variable really would need a paired `:global(html.dark)`
+     selector or it would apply in light mode only. But `--ev-surface` is not
+     overridden here at all: under this modifier its only consumers are the two
+     `__fade` overlays, and both are hidden below in favour of a mask. What IS
+     overridden is `background`, which the dark block never touches — it is
+     declared once on the base rule at the same (0,1,0), so source order alone
+     settles it, provided this block stays BELOW the theme blocks above.
+
+     The brand glow goes: `.hero-fb__wash` is the wash now, and two washes over
+     franchise colour muddied every gradient that was not TheLeague blue. */
+  .tl-event-hero--franchise {
+    background: var(--hero-fb-gradient, #0f1e2e);
+  }
+  .tl-event-hero--franchise .tl-event-hero__glow {
+    display: none;
+  }
+
+  /* The player photo is a RECTANGLE, and the shells blend its left edge in by
+     painting a flat `--ev-surface` overlay on top of it. That works against a
+     flat card and cannot work against a gradient: the overlay is one colour and
+     the card behind it is a different colour at every x, so the photo panel
+     picked up a hard vertical seam the moment a franchise gradient went in.
+
+     A MASK has no colour to get wrong — it dissolves the photo into whatever is
+     actually behind it. The stops mirror `--ev-fade-left` inverted (that overlay
+     is opaque where the photo should vanish; a mask is transparent there).
+
+     One layer, deliberately: the bottom fade would need a second mask layer and
+     `mask-composite: intersect`, which falls back to a UNION where unsupported —
+     and a union would paint the left edge back in at full opacity, i.e. exactly
+     the seam this is here to remove. The bottom of the photo meets the card's
+     own rounded edge, so losing that softening costs far less. */
+  .tl-event-hero--franchise .tl-event-hero__player img {
+    -webkit-mask-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(0, 0, 0, 0.4) 26%,
+      rgba(0, 0, 0, 0.9) 60%,
+      #000 100%
+    );
+    mask-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(0, 0, 0, 0.4) 26%,
+      rgba(0, 0, 0, 0.9) 60%,
+      #000 100%
+    );
+  }
+  .tl-event-hero--franchise .tl-event-hero__fade {
+    display: none;
   }
 
   /* Functional layout: content column + right data panel (replaces player cut-out). */

@@ -180,3 +180,55 @@ clone (no `.env`, project pins a newer Playwright than the image ships).
    pre-installed browser instead of dying on the revision mismatch. Insight
    #2 (cwebp absent → convert the kept PNGs with `sharp`) still applies —
    the script writes `.png` fallbacks and you finish the pair manually.
+
+## 2026-09-02 - Chromium can't reach ANY external host in a cloud session — `route.fetch()` can
+
+The 2026-07-06 entry above says sandboxed sessions can't reach MFL, prod or CDN
+hosts and should mock them. That is still true of Chromium, but the framing was
+too narrow in one direction and too pessimistic in the other, and both halves
+cost a bad commit here.
+
+**Too narrow: it is not a host list, it is every host.** Probed from a proxied
+Chromium, `example.com`, `www.google.com` and `a.espncdn.com` all die the same
+way — `ERR_CONNECTION_RESET`, a few seconds into the handshake. The agent
+proxy's own log tells the story: `tunnel closed (code 1006) after 6s; ~1720 B
+sent, 39 B received`. The tunnel opens, Chromium's ClientHello goes out, 39
+bytes come back, the relay drops it. curl over the same proxy gets 200s from
+all three. So this is the relay not carrying Chromium's TLS, **not** an egress
+allowlist — do not go asking for a domain to be allowlisted, and do not
+conclude a specific CDN is blocked. (Disabling the post-quantum key share, the
+usual cause of an oversized ClientHello that trips middleboxes, changed nothing
+— 1723 B → 1711 B, still reset.)
+
+**The failure is SILENT, which is the actual bug.** No request errors; the page
+just renders its missing-image state and the capture succeeds. The AFL hero
+falls back to the league-logo silhouette, and that is what gets committed —
+which is exactly how `hero-wears-your-colors` shipped its first capture with a
+logo where the cast player belongs. A capture that "worked" proves nothing;
+open the webp before committing it.
+
+**Too pessimistic: `route.fetch()` is not Chromium.** It runs on Playwright's
+own request context, which reads `HTTPS_PROXY` and crosses the relay fine. So
+the fix is not mocking — it is re-issuing every external request there and
+fulfilling it back into the page. `capture-whats-new-screenshots.mjs` now does
+this for every request whose host is not the dev server's, and the free-agents
+player modal captures with its real ESPN cutout, row avatars and news cards.
+On a machine with normal internet it is a pure passthrough.
+
+Three details in that shim that are load-bearing:
+
+- **A predicate matcher, not a glob.** `context.route((url) => url.host !==
+  localHost, …)`. A glob wide enough to catch every third-party host catches
+  localhost too, and the fallback carries no session cookie — it would
+  intercept the page under capture.
+- **curl is the second line, and it flips once per RUN.** Only a network-level
+  throw trips it; a 404 comes back as a *response*, so a dead URL cannot poison
+  the flag. Without the latch, a relay timeout costs 6s per asset instead of 6s
+  per run.
+- **Both paths failing aborts the request** — same as an un-routed failure — so
+  the printed warning is then the only signal the shot is bad. That is the
+  silent-failure mode above, re-armed; read the warning.
+
+For a capture that *also* needs auth (this one did), the shim doesn't help on
+its own — forge the session cookie and take an element screenshot, and add the
+entry to `MANUAL_CAPTURE_ONLY` with the staging recipe.

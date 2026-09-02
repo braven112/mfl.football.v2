@@ -13,6 +13,7 @@
  * likely to be cut — now surfacing position + salary (already in the data).
  */
 import EventHeroShell from './EventHeroShell.astro';
+import type { HeroFranchiseBackdrop } from '../../utils/hero-franchise-backdrop';
 import { formatCompactNumber } from '../../utils/formatters';
 import { TARGET_ACTIVE_COUNT } from '../../utils/salary-calculations';
 import type { HeroState } from '../../types/hero-state';
@@ -23,9 +24,11 @@ export interface Props {
   spriteUrl: string;
   /** Logged-in user's franchise id — their team leads the list when over the limit. */
   userFranchiseId?: string;
+  /** Signed-in owner's colours + crest behind the card. See EventHeroShell. */
+  backdrop?: HeroFranchiseBackdrop | null;
 }
 
-const { cutWatchProps, resolveLeaguePath: r, userFranchiseId } = Astro.props;
+const { cutWatchProps, resolveLeaguePath: r, userFranchiseId, backdrop = null } = Astro.props;
 const overLimitTeams = cutWatchProps?.overLimitTeams ?? [];
 const deadlineDate = cutWatchProps?.deadlineDate ?? '';
 const daysUntilDeadline = cutWatchProps?.daysUntilDeadline ?? 0;
@@ -72,6 +75,7 @@ const summary = !urgent
 ---
 
 <EventHeroShell
+  backdrop={backdrop}
   pill="Cut watch"
   headline={urgent ? 'Roster deadline' : 'Roster planning'}
   accentWord={!urgent ? 'ahead.' : isDeadlineDay ? 'today.' : 'approaching.'}

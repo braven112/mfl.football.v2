@@ -1,0 +1,75 @@
+/*
+ * hero-franchise-backdrop — the signed-in owner's colours and crest behind a
+ * homepage hero card. The layers only; the `background` swap itself stays in
+ * each hero's own scoped block, since that is where `--ev-surface` and the
+ * card's other chrome vars are declared.
+ *
+ * A PLAIN stylesheet rather than a scoped `<style>` in either component,
+ * because two components in two different class namespaces
+ * (`.afl-event-hero`, `.tl-event-hero`) paint the identical layers — and an
+ * Astro scoped rule only reaches elements carrying its own page's scope class,
+ * so a copy in each would be two copies to keep in sync. Both heroes import
+ * this file.
+ *
+ * STACKING. Both hero shells put their content at `z-index: 2` and their brand
+ * glow / player cut-out at `z-index: 1`. These two layers carry NO z-index at
+ * all, which is what keeps them underneath both: a positioned `z-index: auto`
+ * box always paints below a positioned `z-index: 1` one, whatever the source
+ * order. That is the whole requirement — "text and player over the top".
+ *
+ * ORDER within the pair is source order, and it is deliberate: crest first,
+ * wash over it. The wash's left-hand black ramp is what buys the copy its
+ * contrast, and a crest painted ON TOP of that ramp puts a bright mark back
+ * under the headline on exactly the franchises whose crest is lightest.
+ */
+
+.hero-fb__crest {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  /* Sized off the card's own height, not the viewport: this card is ~320-380px
+     inset in a page column, not a 68vh reveal owning a TV, and a vh-sized crest
+     would be a different size on the same card at every window height. */
+  width: min(90%, 26rem);
+  height: 100%;
+  object-fit: contain;
+  /* Well under the broadcast's 0.42. That card carries two lines of TV-scale
+     type; this one carries a pill, a headline, a paragraph and a footer, all at
+     reading size, over the same mark. */
+  opacity: 0.26;
+  pointer-events: none;
+  user-select: none;
+}
+
+/*
+ * The broadcast reveal's wash, with a deeper left ramp.
+ *
+ * Same two layers and the same intent — a soft highlight up and right, a dark
+ * ramp under the copy — but the reveal's 0.58 was tuned for a headline read
+ * from ten feet. Here the ramp sits under a paragraph and a countdown label,
+ * so it starts darker and holds longer before it opens up.
+ */
+.hero-fb__wash {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(58% 78% at 76% 28%, rgba(255, 255, 255, 0.14) 0%, transparent 62%),
+    linear-gradient(100deg, rgba(0, 0, 0, 0.66) 0%, rgba(0, 0, 0, 0.28) 58%, rgba(0, 0, 0, 0.5) 100%);
+  pointer-events: none;
+}
+
+/* On a phone the card is one column and the copy spans its full width, so the
+   ramp has nowhere to fall off to — it becomes a flat scrim instead, and the
+   crest shrinks out from behind the paragraph. */
+@media (max-width: 640px) {
+  .hero-fb__crest {
+    width: min(70%, 15rem);
+    opacity: 0.14;
+  }
+  .hero-fb__wash {
+    background:
+      radial-gradient(70% 60% at 80% 18%, rgba(255, 255, 255, 0.12) 0%, transparent 64%),
+      linear-gradient(180deg, rgba(0, 0, 0, 0.42) 0%, rgba(0, 0, 0, 0.58) 100%);
+  }
+}

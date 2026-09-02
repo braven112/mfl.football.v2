@@ -104,7 +104,13 @@ screen for ~18 seconds, so the look is a design decision, not a computed one.
   validate, and one transposed letter in a second layer blanks the card exactly
   like the `;` does. A value that fails is IGNORED, not thrown on — the card
   falls back to the derived pair.
-- **It drives BOTH broadcast surfaces** — the reveal card and the on-the-clock
+- **It drives every surface that paints a franchise, not just the broadcast.**
+  As of Sep 2026 that is THREE: the reveal card, the on-the-clock idle board,
+  and the two homepage heroes (`resolveHeroFranchiseBackdrop` →
+  `AflEventHero` / `EventHeroShell`), which paint the signed-in owner's own
+  gradient behind the promo card. A fourth would read the same field the same
+  way; that is the point of the field. What follows is the original two-surface
+  reasoning, and it generalizes — the reveal card and the on-the-clock
   idle board — off one string, and that is the point. `#638` had already made
   the two share a colour TREATMENT and they still disagreed, because each
   composed the pair its own way: the reveal at 115/315deg, `.dbc-idle` at 150deg

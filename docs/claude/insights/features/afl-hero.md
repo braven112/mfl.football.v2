@@ -355,3 +355,75 @@ pre-first-pick) and the post-resolve pass adds the live sibling boards;
 `mergeSecondaryLinks` concatenates and dedupes against `view.link`. That
 dedupe is what keeps the live case right: the CTA is the MFL room now, so the
 viewer's own board is no longer a duplicate of it and correctly rides along.
+
+## 2026-09-02 - The owner's franchise as hero backdrop: two traps neither theme catches
+
+`resolveHeroFranchiseBackdrop` (`src/utils/hero-franchise-backdrop.ts`) paints
+the signed-in owner's `broadcastGradient` behind the card with their crest
+centred, for both `AflEventHero` and TheLeague's `EventHeroShell`. Reading the
+config and swapping the background is the easy half. Two things are not.
+
+**A flat `--ev-surface` overlay cannot blend a photo into a GRADIENT.** Both
+shells feather the rectangular player photo's left edge by painting
+`--ev-fade-left` — a `color-mix` ramp from the surface colour — on top of it.
+That works only because the card behind it is one flat colour. Against a
+gradient the overlay is one colour and the card is a different colour at every
+x, so the photo panel picks up a hard vertical seam down the middle of the
+card. It is obvious in a screenshot and invisible in the CSS.
+
+Fix is a **mask**, not a better colour: an alpha mask has no colour to get
+wrong, so the photo dissolves into whatever is actually behind it. Mirror the
+fade's stops inverted (the overlay is opaque where the photo should vanish; the
+mask is transparent there) and hide the `__fade` spans. One layer only — the
+bottom fade would need a second mask layer plus `mask-composite: intersect`,
+which falls back to a **union** where unsupported, and a union paints the left
+edge back at full opacity, i.e. exactly the seam being removed. Losing the
+bottom softening costs far less; the photo meets the card's rounded edge anyway.
+
+**A modifier class loses to the theme block on TheLeague's shell.**
+`:global(html.dark) .tl-event-hero` re-declares `--ev-surface` at (0,2,1);
+`.tl-event-hero--franchise` is (0,1,0). Ship only the modifier and the gradient
+paints in both themes while the fades keep blending toward navy in dark mode
+alone — a theme-split bug from a rule that never mentions a theme. The override
+needs the paired selector:
+
+```css
+.tl-event-hero--franchise,
+:global(html.dark) .tl-event-hero--franchise { … }
+```
+
+They tie on specificity and win on source order, so the block must sit BELOW
+the theme blocks. AflEventHero needs no pair — its card is navy in both themes,
+so it has no `html.dark` surface rule to outrank.
+
+**Which crest resolver:** `resolveDarkSurfaceCrest`, *not* the broadcast's
+`resolveBroadcastCrest`. The resolution-first order exists for a 68vh crest on
+a TV, where a 7x upscale of a 100px dark cut is the more visible failure. A
+hero crest is ~300px, so the dark cut costs nothing and is simply right.
+
+**Who does NOT get it:** the heroes that are *about* another franchise —
+playoff bracket, champion crowned, live scoring, matchup split, recap
+composite. Those already wear whoever is in them. Keeping the backdrop opt-in
+per call site rather than resolving it inside the shell is also what keeps it
+off `EventHeroShell`'s two non-hero consumers, `WhatsNextCard` and
+`CalendarEventCard`.
+
+### Whose franchise the backdrop paints: the SESSION, not the page's team preference
+
+The AFL homepage resolves `userTeam` from `?myteam=` / a cookie / the session,
+and every personalized card on it follows that — My Team, the standings
+highlight, the spotlight tile. The hero backdrop deliberately does NOT. It
+reads `authAflFranchiseId` alone.
+
+The distinction is what the surface is claiming. Those cards say "here is a
+team"; a hero painted in someone's colours says "this site is yours", and that
+should rest on having signed in rather than on a query param anyone can set. It
+also keeps the two homepages answering one question the same way — TheLeague
+has no team picker at all, so a preference-driven AFL hero would have been the
+only asymmetry between them. (Brandon's call, Sep 2026; the first cut followed
+`userTeam` and was changed before merge.)
+
+Practical consequence: `authAflFranchiseId` already carries the leagueId check,
+so routing the backdrop through it also stops a TheLeague session browsing the
+AFL from being handed the AFL's franchise 0001. Resolving from `userTeam` had
+no such guard.

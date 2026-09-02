@@ -7,6 +7,7 @@
  * full rules sit one click away in the panel.
  */
 import EventHeroShell from './EventHeroShell.astro';
+import type { HeroFranchiseBackdrop } from '../../utils/hero-franchise-backdrop';
 import { getRookieDraftDate } from '../../utils/league-event-resolver';
 import { DEFAULT_LEAGUE } from '../../config/leagues';
 
@@ -21,6 +22,8 @@ export interface Props {
   draftStartFormatted: string;
   /** Reference date (from the resolver) — drives the countdown to the rookie draft. */
   referenceDate?: Date;
+  /** Signed-in owner's colours + crest behind the card. See EventHeroShell. */
+  backdrop?: HeroFranchiseBackdrop | null;
 }
 
 const {
@@ -32,6 +35,7 @@ const {
   live = true,
   draftStartFormatted,
   referenceDate,
+  backdrop = null,
 } = Astro.props;
 
 const now = referenceDate ?? new Date();
@@ -65,6 +69,7 @@ const quickLinks: QuickLink[] = [
 ---
 
 <EventHeroShell
+  backdrop={backdrop}
   pill={live ? 'Draft under way' : 'Draft day is coming'}
   headline="Rookie"
   accentWord="draft."

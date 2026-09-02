@@ -27,6 +27,7 @@ import WhatsNewRow from '../../components/theleague/WhatsNewRow.astro';
 import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.astro';
 import { getAuthUser } from '../../utils/auth';
 import { getLeagueBySlug } from '../../config/leagues';
+import { resolveHeroFranchiseBackdrop } from '../../utils/hero-franchise-backdrop';
 import { resolveHeroState, parseTestDate, isAuctionStripPeriod, isEntryInHeroWindow } from '../../utils/hero-resolver';
 import { getRelease } from '../../utils/schedule-release-store';
 import { getThrowbackPreference } from '../../utils/throwback-store';
@@ -208,6 +209,19 @@ try {
     }
   }
 } catch { /* fallback gracefully */ }
+
+// The owner's own colours + crest behind the promo hero. Read off the raw
+// config entry rather than `getFranchiseBrand`, for two reasons: the brand
+// record carries no `broadcastGradient` (the franchise's authored gradient,
+// which is the whole point of the backdrop), and it answers for an UNKNOWN
+// franchise id with a league-neutral fallback — so an owner signed in to the
+// AFL, whose franchise 0001 is Smokane FC, would have been handed TheLeague's
+// 0001 and shown the Pigskins' colours here. Hence the leagueId check.
+const heroBackdropTeam =
+  authUser?.leagueId === THELEAGUE.id && userFranchiseId
+    ? allTeams.find((t: { franchiseId: string }) => t.franchiseId === userFranchiseId)
+    : null;
+const heroBackdrop = resolveHeroFranchiseBackdrop(heroBackdropTeam, 'theleague');
 
 // ---------------------------------------------------------------------------
 // Homepage sections data: team summaries, standings context, unsigned FA alerts
@@ -692,6 +706,7 @@ if ((heroState.phase === 'playoffs' || heroState.phase === 'championship') && he
         kickoffGame={kickoffGame}
         breakingModel={breakingModel}
         breakingStory={breakingStory}
+        heroBackdrop={heroBackdrop}
       />
       )}
       {showAuctionsCard && activeAuctions.length > 0 && (

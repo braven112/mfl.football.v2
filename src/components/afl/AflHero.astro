@@ -22,6 +22,7 @@ import AflChampionshipHero from './AflChampionshipHero.astro';
 import AflEventHero from './AflEventHero.astro';
 import '../../styles/trade-deadline-hero.css';
 import type { AflHeroState } from '../../utils/afl-hero-resolver';
+import type { HeroFranchiseBackdrop } from '../../utils/hero-franchise-backdrop';
 
 /** Region label per state — gives screen-reader users a meaningful landmark cue. */
 const REGION_LABEL: Record<string, string> = {
@@ -39,9 +40,17 @@ interface Props {
   standings?: any[];
   /** User's franchise id, for highlighting in playoff brackets. */
   userFranchiseId?: string;
+  /**
+   * The signed-in owner's colours + crest for the promo hero's card. Only
+   * AflEventHero takes it — the trade-deadline, playoff and championship heroes
+   * are ABOUT specific franchises (a countdown, a bracket, a matchup), so
+   * painting the viewer's own colours behind them would claim a card that
+   * belongs to whoever is in it.
+   */
+  backdrop?: HeroFranchiseBackdrop | null;
 }
 
-const { state, config, standings, userFranchiseId } = Astro.props;
+const { state, config, standings, userFranchiseId, backdrop = null } = Astro.props;
 ---
 
 {state.kind === 'trade-deadline' ? (
@@ -69,5 +78,6 @@ const { state, config, standings, userFranchiseId } = Astro.props;
     {...state.view}
     bordered={state.kind === 'calendar-event'}
     regionLabel={REGION_LABEL[state.kind] ?? 'AFL hero'}
+    backdrop={backdrop}
   />
 )}

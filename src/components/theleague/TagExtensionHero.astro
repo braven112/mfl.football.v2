@@ -6,15 +6,18 @@
  * manage-roster CTA.
  */
 import EventHeroShell from './EventHeroShell.astro';
+import type { HeroFranchiseBackdrop } from '../../utils/hero-franchise-backdrop';
 import { randomHeroPlayer } from '../../utils/hero-players';
 import { CATEGORY_ACCENT, CATEGORY_GLOW } from '../../utils/league-event-hero-view';
 
 export interface Props {
   resolveLeaguePath: (path: string) => string;
   referenceDate: Date;
+  /** Signed-in owner's colours + crest behind the card. See EventHeroShell. */
+  backdrop?: HeroFranchiseBackdrop | null;
 }
 
-const { resolveLeaguePath: r, referenceDate } = Astro.props;
+const { resolveLeaguePath: r, referenceDate, backdrop = null } = Astro.props;
 
 // Calendar-day countdown to the Feb 14 deadline, so the count hits 0 (and the
 // "Deadline today" label shows) on Feb 14 itself rather than only after it passes.
@@ -30,6 +33,7 @@ const summary = isDeadlineDay
 ---
 
 <EventHeroShell
+  backdrop={backdrop}
   pill="Tag window"
   headline="Protect your"
   accentWord="core."

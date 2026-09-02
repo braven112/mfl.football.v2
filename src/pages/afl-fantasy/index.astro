@@ -46,6 +46,7 @@ import { getAflWhatsNextTimeline } from '../../utils/league-event-resolver';
 import { getAflLeagueYear, getCurrentSeasonYear } from '../../utils/league-year';
 import { loadAflDraftSlot } from '../../utils/afl-draft-slot';
 import { resolveAflTeamSpotlight } from '../../utils/afl-team-spotlight';
+import { resolveHeroFranchiseBackdrop } from '../../utils/hero-franchise-backdrop';
 import {
   getAFLPreference,
   setAFLPreference,
@@ -93,6 +94,28 @@ const userConferenceId = (userTeam?.conference === '00' || userTeam?.conference 
 const userConferenceName = userConferenceId
   ? aflConfig.conferences.find(c => c.code === userConferenceId)?.name
   : undefined;
+
+// The owner's own colours + crest behind the promo hero.
+//
+// Deliberately the SESSION's franchise, not `userTeam` — so this reads
+// `authAflFranchiseId` rather than the `?myteam=` / cookie preference that the
+// My Team card, the standings highlight and the spotlight tile all follow.
+// Those cards say "here is a team"; the hero, painted in someone's colours,
+// says "this site is yours", and that claim should rest on having actually
+// signed in rather than on a query param anyone can set. It also keeps the two
+// leagues' homepages answering the question the same way — TheLeague has no
+// team picker at all, so a preference-driven AFL hero would have been the one
+// asymmetry between them. (Brandon's call, Sep 2026.)
+//
+// `authAflFranchiseId` already carries the league check, so a TheLeague session
+// browsing here cannot be handed the AFL's franchise 0001.
+//
+// 'afl' and not AFL.slug: this is the crest manifest's league key, which is not
+// the route directory ('afl-fantasy'). See `crestStrokeIndex`.
+const heroBackdropTeam = authAflFranchiseId
+  ? aflConfig.teams.find(t => t.franchiseId === authAflFranchiseId)
+  : undefined;
+const heroBackdrop = resolveHeroFranchiseBackdrop(heroBackdropTeam, 'afl');
 
 // ── Date / hero state ───────────────────────────────────────────────────────
 const testDateParam = Astro.url.searchParams.get('testDate');
@@ -266,6 +289,7 @@ const lastVisitDate = Astro.cookies.get('whats_new_last_visit')?.value ?? null;
           config={aflConfig}
           standings={standingsFranchises}
           userFranchiseId={userFranchiseId}
+          backdrop={heroBackdrop}
         />
       )}
 
