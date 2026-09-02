@@ -4,6 +4,14 @@
     {
       "date": "2026-09-02",
       "type": "bug-fix",
+      "summary": "The Free Agents page can finally tell you which waiver window is open. It had been saying “waiver window unknown — MFL will decide when you submit” to everybody, all season, because the piece of MyFantasyLeague that knows the answer — the league calendar — had never once synced. It wanted a login and was being handed an API key, and the two are not the same thing. So the header now reads the real state: waivers open and your claim queued until they process, or first come, first served and the pickup happens on the spot. The claim form follows suit, which matters more than the wording — a first-come pickup filed as a queued claim is a claim that sits in a round nobody ever runs.",
+      "impact": "user",
+      "area": "free-agents",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-02",
+      "type": "bug-fix",
       "summary": "A waiver claim that never reached MyFantasyLeague will no longer tell you it did. The Claim button said “Submitted ✓” and closed the moment MFL answered at all — and MFL answers a refused request with a perfectly cheerful blank page, so a claim could vanish between the click and the wire with nothing to show for it. Now the site insists on a yes from MFL, then goes back and reads your pending waivers to see the claim actually sitting there. If either check comes up short you get told so, in the words of what went wrong, with the claim form still open in front of you.",
       "impact": "user",
       "area": "free-agents",
