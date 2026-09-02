@@ -319,6 +319,21 @@ check `crest-dark-stroke-manifest.json` for which branch it lands on, and add
 its crest — and its `_dark` file if it has one — to the trigger. Five teams
 cover every branch but one, and the sixth exists solely to cover that one.
 
+**The reverse direction bites during an asset batch, when no story changes at
+all.** Give a franchise a `_dark` cut and, if a story already renders its light
+crest, that new file is named by the story's dark swap and
+`tests/chromatic-path-filter.test.ts` fails until it is in the trigger — the
+build breaks in a pure logo drop that never opened a `stories/` file. That is
+what happened when No Soup For You got `no_soup_dark.png` (Sept 2026). Before
+shipping dark art, check whether `stories/` names that franchise's light file.
+
+**And the glob and the PNG must land in the SAME commit.** The same test also
+asserts every non-wildcard `STORY_ASSET_GLOBS` entry exists on disk, so neither
+half can go first: a glob for an unwritten file fails that check, and the file
+without its glob fails the coverage check. Splitting them across two PRs breaks
+`main` in whichever order you pick — which also means such a batch can NOT go
+through `/publish-assets`, whose allowlist stops at assets and registries.
+
 ## Deleted: the Pecking Order stories
 
 `stories/shared/PeckingOrder.stories.ts` (four stories, eight snapshots) was
