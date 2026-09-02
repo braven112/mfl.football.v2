@@ -384,6 +384,14 @@ const visible = rows.slice(0, 6);
     color: #fff;
   }
 
+  /* On a dark card the navy fill sits barely above the surface, so the four
+     seeds that matter read as the quietest pills on the table. Invert them:
+     white fill, navy numeral — the same pair, the loud way round. */
+  :global(html.dark) .afl-conf__seed-badge--in {
+    background: #fff;
+    color: var(--cat-regular-season, #1c497c);
+  }
+
   .afl-conf__td--team {
     display: flex;
     align-items: center;
