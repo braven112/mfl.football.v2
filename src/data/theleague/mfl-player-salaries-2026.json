@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-09-01T21:09:58.398Z"
+    "fetchedAt": "2026-09-02T01:05:46.917Z"
   },
   "players": [
     {
@@ -474,7 +474,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 2,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "RB"
         ],
@@ -485,12 +485,7 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": [
-        {
-          "id": "17068",
-          "name": "Harvey, RJ"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "0516",
@@ -1817,7 +1812,7 @@
         "active": true,
         "position": "QB",
         "depthChartPosition": "QB",
-        "depthChartOrder": 2,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "QB"
         ],
@@ -2426,7 +2421,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 1,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "WR"
         ],
@@ -2437,7 +2432,12 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "16187",
+          "name": "Downs, Josh"
+        }
+      ]
     },
     {
       "id": "14833",
@@ -2886,7 +2886,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 1,
+        "depthChartOrder": 2,
         "fantasyPositions": [
           "RB"
         ],
@@ -2897,7 +2897,12 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "14800",
+          "name": "Dobbins, J.K."
+        }
+      ]
     },
     {
       "id": "17043",
@@ -3366,7 +3371,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 8,
+        "depthChartOrder": 9,
         "fantasyPositions": [
           "WR"
         ],
@@ -5055,39 +5060,17 @@
       "status": "ROSTER",
       "contractYear": "2",
       "points": 0,
-      "team": "DET",
+      "team": "FA",
       "draftYear": 2018,
       "draftTeam": "MIN",
       "birthdate": 807080400,
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/13675_thumb.jpg",
       "externalIds": {
         "mfl": "13675",
-        "sleeper": "5133",
-        "gsis": "00-0034439"
+        "sleeper": null,
+        "gsis": null
       },
-      "sleeper": {
-        "id": "5133",
-        "fullName": "Tyler Conklin",
-        "team": "DET",
-        "age": 31,
-        "height": "75",
-        "weight": "245",
-        "number": 83,
-        "college": "Central Michigan",
-        "birthDate": "1995-07-30",
-        "status": "Active",
-        "active": true,
-        "position": "TE",
-        "depthChartPosition": null,
-        "depthChartOrder": null,
-        "fantasyPositions": [
-          "TE"
-        ],
-        "experience": 8,
-        "injuryStatus": null,
-        "injuryBodyPart": null,
-        "gsisId": "00-0034439"
-      },
+      "sleeper": null,
       "nflverse": null,
       "gamesPlayed": null,
       "depthChartAhead": null
@@ -5846,7 +5829,7 @@
       "status": "TAXI_SQUAD",
       "contractYear": "4",
       "points": 0,
-      "team": "FA",
+      "team": "MIA",
       "draftYear": 2026,
       "draftTeam": "DEN",
       "birthdate": 1089345600,
@@ -6281,6 +6264,10 @@
       "gamesPlayed": null,
       "depthChartAhead": [
         {
+          "id": "15282",
+          "name": "Smith, DeVonta"
+        },
+        {
           "id": "17499",
           "name": "Lemon, Makai"
         }
@@ -6397,7 +6384,7 @@
       "status": "ROSTER",
       "contractYear": "4",
       "points": 0,
-      "team": "TEN",
+      "team": "FA",
       "draftYear": 2025,
       "draftTeam": "FA",
       "birthdate": 1018584000,
@@ -6684,17 +6671,39 @@
       "status": "ROSTER",
       "contractYear": "4",
       "points": 0,
-      "team": "FA",
+      "team": "PHI",
       "draftYear": 2021,
       "draftTeam": "PHI",
       "birthdate": 911019600,
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/15282_thumb.jpg",
       "externalIds": {
         "mfl": "15282",
-        "sleeper": null,
+        "sleeper": "7525",
         "gsis": null
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "7525",
+        "fullName": "DeVonta Smith",
+        "team": "PHI",
+        "age": 27,
+        "height": "72",
+        "weight": "170",
+        "number": 6,
+        "college": "Alabama",
+        "birthDate": "1998-11-14",
+        "status": "Active",
+        "active": true,
+        "position": "WR",
+        "depthChartPosition": "LWR",
+        "depthChartOrder": 1,
+        "fantasyPositions": [
+          "WR"
+        ],
+        "experience": 5,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
       "nflverse": null,
       "gamesPlayed": null,
       "depthChartAhead": null
@@ -6829,7 +6838,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 5,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "RB"
         ],
@@ -7940,12 +7949,12 @@
       "gamesPlayed": null,
       "depthChartAhead": [
         {
-          "id": "15768",
-          "name": "Pierce, Alec"
-        },
-        {
           "id": "16187",
           "name": "Downs, Josh"
+        },
+        {
+          "id": "15768",
+          "name": "Pierce, Alec"
         },
         {
           "id": "11222",
@@ -8129,7 +8138,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 2,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "WR"
         ],
@@ -8140,12 +8149,7 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": [
-        {
-          "id": "15768",
-          "name": "Pierce, Alec"
-        }
-      ]
+      "depthChartAhead": null
     },
     {
       "id": "0503",
@@ -8824,7 +8828,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 2,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "RB"
         ],
@@ -9461,7 +9465,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 2,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "RB"
         ],
@@ -11380,12 +11384,12 @@
       "gamesPlayed": null,
       "depthChartAhead": [
         {
-          "id": "17068",
-          "name": "Harvey, RJ"
-        },
-        {
           "id": "14800",
           "name": "Dobbins, J.K."
+        },
+        {
+          "id": "17068",
+          "name": "Harvey, RJ"
         }
       ]
     },
@@ -11570,7 +11574,7 @@
         "active": true,
         "position": "RB",
         "depthChartPosition": "RB",
-        "depthChartOrder": 5,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "RB"
         ],
@@ -11969,7 +11973,7 @@
         "active": true,
         "position": "QB",
         "depthChartPosition": "QB",
-        "depthChartOrder": 4,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "QB"
         ],
@@ -12207,12 +12211,12 @@
           "name": "Douglas, Caleb"
         },
         {
-          "id": "15788",
-          "name": "Tolbert, Jalen"
-        },
-        {
           "id": "17528",
           "name": "Coleman, Kevin"
+        },
+        {
+          "id": "15788",
+          "name": "Tolbert, Jalen"
         }
       ]
     },
@@ -13575,7 +13579,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 4,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "WR"
         ],
@@ -13594,10 +13598,6 @@
         {
           "id": "17599",
           "name": "Douglas, Caleb"
-        },
-        {
-          "id": "15788",
-          "name": "Tolbert, Jalen"
         }
       ]
     },
@@ -15140,7 +15140,7 @@
         "active": true,
         "position": "K",
         "depthChartPosition": "K",
-        "depthChartOrder": 2,
+        "depthChartOrder": 1,
         "fantasyPositions": [
           "K"
         ],
@@ -15199,12 +15199,12 @@
       "gamesPlayed": null,
       "depthChartAhead": [
         {
-          "id": "15768",
-          "name": "Pierce, Alec"
-        },
-        {
           "id": "16187",
           "name": "Downs, Josh"
+        },
+        {
+          "id": "15768",
+          "name": "Pierce, Alec"
         }
       ]
     },
@@ -15813,7 +15813,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "SWR",
-        "depthChartOrder": 6,
+        "depthChartOrder": 5,
         "fantasyPositions": [
           "WR"
         ],
@@ -15868,7 +15868,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 4,
+        "depthChartOrder": 3,
         "fantasyPositions": [
           "WR"
         ],
@@ -16474,17 +16474,39 @@
       "status": "ROSTER",
       "contractYear": "4",
       "points": 0,
-      "team": "FA",
+      "team": "NYJ",
       "draftYear": 2023,
       "draftTeam": "FA",
       "birthdate": 910242000,
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/16444_thumb.jpg",
       "externalIds": {
         "mfl": "16444",
-        "sleeper": null,
+        "sleeper": "11058",
         "gsis": null
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "11058",
+        "fullName": "Blake Grupe",
+        "team": "NYJ",
+        "age": 27,
+        "height": "67",
+        "weight": "156",
+        "number": 10,
+        "college": "Notre Dame",
+        "birthDate": "1998-11-05",
+        "status": "Active",
+        "active": true,
+        "position": "K",
+        "depthChartPosition": "K",
+        "depthChartOrder": 1,
+        "fantasyPositions": [
+          "K"
+        ],
+        "experience": 3,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
       "nflverse": null,
       "gamesPlayed": null,
       "depthChartAhead": null
@@ -16604,7 +16626,7 @@
         "id": "4066",
         "fullName": "Evan Engram",
         "team": "DEN",
-        "age": 31,
+        "age": 32,
         "height": "75",
         "weight": "240",
         "number": 1,
@@ -17420,7 +17442,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "LWR",
-        "depthChartOrder": 3,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "WR"
         ],
@@ -17439,6 +17461,10 @@
         {
           "id": "17599",
           "name": "Douglas, Caleb"
+        },
+        {
+          "id": "17528",
+          "name": "Coleman, Kevin"
         }
       ]
     },
@@ -18178,7 +18204,7 @@
         "active": true,
         "position": "TE",
         "depthChartPosition": "TE",
-        "depthChartOrder": 3,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "TE"
         ],
@@ -18346,7 +18372,12 @@
       },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "15282",
+          "name": "Smith, DeVonta"
+        }
+      ]
     }
   ]
 }
