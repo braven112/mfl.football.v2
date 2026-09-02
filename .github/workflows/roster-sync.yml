@@ -48,6 +48,14 @@ jobs:
           MFL_USERNAME: ${{ secrets.MFL_USERNAME }}
           MFL_PASSWORD: ${{ secrets.MFL_PASSWORD }}
           MFL_API_KEY: ${{ secrets.MFL_API_KEY }}
+          # The calendar export is owner-gated and REJECTS an APIKEY ("Please be
+          # sure to pass the proper MFL_USER_ID cookie"), which is why
+          # calendar.json had never synced and the site's waiver window read
+          # "unknown" permanently. fetch-mfl-feeds.mjs sends this cookie ONLY on
+          # feeds marked `cookie: true` — never on TYPE=league, whose
+          # commissioner-visible response carries owner emails and addresses
+          # that this job would then commit.
+          MFL_USER_ID: ${{ secrets.MFL_USER_ID }}
           # fetch-mfl-feeds.mjs requires a non-empty MFL_LEAGUE_ID (no
           # registry fallback — see scripts/fetch-mfl-feeds.mjs), so the ids
           # below are literals by necessity: workflow YAML can't import

@@ -25,7 +25,9 @@
  *   MFL_YEAR (optional) - defaults to current year
  *   MFL_WEEK (optional) - defaults to 'YTD'
  *   MFL_HOST (optional) - defaults to https://api.myfantasyleague.com
- *   MFL_USER_ID (optional) - MFL user ID for authenticated requests
+ *   MFL_USER_ID (optional) - MFL login cookie, sent ONLY on feeds marked
+ *     `cookie: true` (today: calendar). Owner-gated exports that reject an
+ *     APIKEY need this; without it those feeds do not sync.
  *   MFL_APIKEY (optional) - MFL API key for authenticated requests (used for assets endpoint)
  */
 import fs from 'node:fs';
@@ -247,6 +249,23 @@ const withAuth = (baseUrl) => {
   return baseUrl;
 };
 
+/**
+ * Cookie headers for the exports MFL gates on a logged-in OWNER rather than on
+ * an APIKEY. `APIKEY` is NOT interchangeable: the AFL's calendar export answers
+ * an APIKEY request with `API requires logged in user in league ID 19621 -
+ * Please be sure to pass the proper MFL_USER_ID cookie or APIKEY parameter`,
+ * which is why calendar.json had never synced for either league and the waiver
+ * window read "unknown" all season.
+ *
+ * Applied ONLY to feeds that opt in with `cookie: true`. Sending it on every
+ * export would be a privacy regression, not just noise: a commissioner cookie
+ * adds ~20 fields to each franchise on `TYPE=league` — `email`, `address`,
+ * `phone`, `cell`, `lastVisit` — and this script COMMITS what it fetches. See
+ * docs/claude/insights/domains/mfl-api.md (2026-08-30, `lastVisit`).
+ */
+const authCookieHeaders = () =>
+  mflUserId ? { Cookie: `MFL_USER_ID=${mflUserId}` } : undefined;
+
 const parseTradeBait = (data) => {
   // Handle MFL trade bait API response
   // Structure: { tradeBaits: { tradeBait: [ { willGiveUp: "id1,id2,id3", ... }, ... ] } }
@@ -449,14 +468,24 @@ const endpoints = [
   },
   {
     key: 'calendar',
-    // withAuth: the calendar export is owner-gated — unauthenticated requests
-    // get `API requires logged in user in league ID <id>`. It carries the
+    // The calendar export is owner-gated — unauthenticated requests get
+    // `API requires logged in user in league ID <id>`. It carries the
     // WAIVER_UNLOCK / WAIVER_LOCK / WAIVER_BBID / WAIVER_REVERSE events that
     // say WHEN the waiver window is open versus first-come-first-served, which
     // is the only source of truth for that (currentWaiverType is the league's
     // system, not the current state). Syncing it keeps the site's window in
     // step with MFL instead of re-deriving the schedule from the constitution.
+    //
+    // `cookie: true` and NOT just withAuth: MFL rejects an APIKEY here and asks
+    // for the cookie by name — verified live 2026-09-02 against the AFL, whose
+    // answer to an APIKEY request is `API requires logged in user in league ID
+    // 19621 - Please be sure to pass the proper MFL_USER_ID cookie or APIKEY
+    // parameter`. calendar.json had NEVER synced for either league because of
+    // this, so the waiver window read "unknown" permanently and every claim
+    // went out as a queued request even during an FCFS window. Set MFL_USER_ID
+    // in the workflow or the file stays unwritten (loudly — the parser throws).
     url: withAuth(`${host}/${year}/export?TYPE=calendar&L=${leagueId}&JSON=1`),
+    cookie: true,
     parser: (t) => {
       try {
         const data = JSON.parse(t);
@@ -581,8 +610,8 @@ const endpoints = [
 // anyone with repo read access.
 const redactUrl = (url) => String(url).replace(/APIKEY=[^&]+/, 'APIKEY=***');
 
-const fetchText = async (url) => {
-  const res = await fetch(url);
+const fetchText = async (url, headers) => {
+  const res = await fetch(url, headers ? { headers } : undefined);
   if (!res.ok) throw new Error(`Fetch failed ${res.status} ${redactUrl(url)}`);
   return res.text();
 };
@@ -853,10 +882,10 @@ const run = async () => {
   if (!force && !refreshLive && freshToday) {
     console.log(`Feeds already fetched today for ${year}; using cached data in ${outDir}.`);
     // Still fetch tradeBait for latest trade bait
-    for (const { key, url, parser } of endpoints.filter(e => alwaysFetchKeys.has(e.key))) {
+    for (const { key, url, parser, cookie } of endpoints.filter(e => alwaysFetchKeys.has(e.key))) {
       try {
         console.log(`Fetching ${key} from ${redactUrl(url)}`);
-        const text = await fetchText(url);
+        const text = await fetchText(url, cookie ? authCookieHeaders() : undefined);
         const parsed = parser(text);
         writeOut(key, parsed);
       } catch (err) {
@@ -872,14 +901,14 @@ const run = async () => {
     console.log(`Live refresh for ${year}: skipping daily-only feeds (${[...dailyOnlyKeys].join(', ')}, weeklyResults).`);
   }
 
-  for (const { key, url, parser } of endpoints) {
+  for (const { key, url, parser, cookie } of endpoints) {
     if (skipDailyFeeds && dailyOnlyKeys.has(key)) continue;
     // Placeholder entries (weekly-results, playoff-brackets) have no URL —
     // they're fetched by their own dedicated flows below.
     if (!url) continue;
     try {
       console.log(`Fetching ${key} from ${redactUrl(url)}`);
-      const text = await fetchText(url);
+      const text = await fetchText(url, cookie ? authCookieHeaders() : undefined);
       const parsed = parser(text);
       writeOut(key, parsed);
     } catch (err) {
