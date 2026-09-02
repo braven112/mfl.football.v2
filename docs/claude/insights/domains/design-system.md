@@ -220,8 +220,10 @@ does escape (`#`, `"`, `<`, `>`) is what makes the URI attribute-safe.
 placeholder as a normal image with HTTP **200**, so `onerror` never fires for
 it and no amount of cascade work will catch it. Any fallback chain that ends at
 a third party's own placeholder has to recognize the *URL*, not wait for an
-error. That URL is also baked into committed roster payloads, which is why
-`isPlaceholderHeadshot` exists rather than just a better `onerror`.
+error. No committed payload carries that URL today, but two feed scripts still
+emit it for a player with no MFL id — which is why `isPlaceholderHeadshot`
+exists as a cheap guard rather than a better `onerror`, which cannot work at
+all here.
 
 ---
 

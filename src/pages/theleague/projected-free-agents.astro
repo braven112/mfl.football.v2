@@ -21,7 +21,7 @@ import { getPlayerMap } from '../../utils/player-map';
 import { buildWeeklyPlayerResults } from '../../utils/weekly-player-results';
 import { getCachedRosters } from '../../utils/mfl-roster-cache';
 import { chooseTeamName } from '../../utils/team-names';
-import { buildNoHeadshotPlaceholder, getNoHeadshotPlaceholderMap, getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark, getPlayerAvatarStyleMaps } from '../../utils/nfl-team-colors';
+import { NO_HEADSHOT_SILHOUETTE, getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark, getPlayerAvatarStyleMaps } from '../../utils/nfl-team-colors';
 import '../../styles/player-cell.css';
 import leagueConfig from '../../data/theleague.config.json';
 import { getLeagueBySlug } from '../../config/leagues';
@@ -354,11 +354,13 @@ const nflAvatarBgJson = JSON.stringify(nflAvatarBg);
 const nflAvatarBorderJson = JSON.stringify(nflAvatarBorder);
 const nflAvatarRingJson = JSON.stringify(nflAvatarRing);
 const nflAvatarRingDarkJson = JSON.stringify(nflAvatarRingDark);
-// Team-colored no-headshot placeholders, same keying as the gradient maps —
-// the client renderer looks one up instead of shipping MFL's white-disc
-// "no photo available" image, which blanked out the team-color chip.
-const noHeadshotJson = JSON.stringify(getNoHeadshotPlaceholderMap());
-const noHeadshotFallback = buildNoHeadshotPlaceholder('FA');
+// No-headshot fallback for the client row renderer, replacing MFL's white-disc
+// "no photo available" image. The SILHOUETTE variant, not the baked-in one:
+// every row here paints --player-avatar-bg on its own chip (getAvatarBg below),
+// so the gradient is already there and one shared string does the job — the
+// team-keyed map inlined 42 KB of data URIs into this page for no visible
+// difference. See NO_HEADSHOT_SILHOUETTE in utils/nfl-team-colors.
+const noHeadshot = NO_HEADSHOT_SILHOUETTE;
 const franchiseListJson = JSON.stringify(franchiseEntries);
 
 function formatSalary(salary: number): string {
@@ -517,7 +519,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   ></script>
 </TheLeagueLayout>
 
-<script define:vars={{ playerDataJson, posCountsJson, franchiseListJson, mflHost, nflAvatarBgJson, nflAvatarBorderJson, nflAvatarBgFallback, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, noHeadshotJson, noHeadshotFallback, logoOnerror: NFL_LOGO_ONERROR }}>
+<script define:vars={{ playerDataJson, posCountsJson, franchiseListJson, mflHost, nflAvatarBgJson, nflAvatarBorderJson, nflAvatarBgFallback, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, noHeadshot, logoOnerror: NFL_LOGO_ONERROR }}>
   // All data is server-rendered from MFL feeds — not user input.
   // escapeAttr() is applied to all interpolated values for safety.
   const players = JSON.parse(playerDataJson);
@@ -550,15 +552,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
   const posOrder = { QB: 1, RB: 2, WR: 3, TE: 4, PK: 5, DEF: 6 };
 
-  // Last stop of the headshot cascade: the team-colored silhouette, not MFL's
-  // "no photo available" white disc (which covered the team-color chip).
-  const noHeadshotMap = JSON.parse(noHeadshotJson);
-  function getNoHeadshot(team) {
-    return noHeadshotMap[team] || noHeadshotFallback;
-  }
 
-  function buildOnerror(mflId, espnId, team) {
-    const defaultHeadshot = getNoHeadshot(team);
+
+  function buildOnerror(mflId, espnId) {
+    const defaultHeadshot = noHeadshot;
     const college = espnId ? 'https://a.espncdn.com/i/headshots/college-football/players/full/' + espnId + '.png' : null;
     const mfl = mflId ? 'https://' + mflHost + '/player_photos_big_2014/' + mflId + '_thumb.jpg' : null;
     if (college && mfl) {
@@ -669,7 +666,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       + '<td class="cell-player">'
         + '<div class="player-cell">'
           + '<div class="player-cell__avatar' + avatarClass + '"' + (isDef ? '' : getAvatarStyle(p.nflTeam)) + '>'
-            + '<img src="' + escapeAttr(avatarSrc) + '" alt="' + escapeAttr(p.name) + '" loading="lazy" decoding="async" onerror="' + (isDef ? escapeAttr(logoOnerror) : escapeAttr(buildOnerror(p.id, p.espnId, p.nflTeam))) + '" />'
+            + '<img src="' + escapeAttr(avatarSrc) + '" alt="' + escapeAttr(p.name) + '" loading="lazy" decoding="async" onerror="' + (isDef ? escapeAttr(logoOnerror) : escapeAttr(buildOnerror(p.id, p.espnId))) + '" />'
           + '</div>'
           + '<div class="player-cell__info">'
             + '<strong class="player-cell__name player-cell__name--clickable" data-player-modal="' + modalData + '" title="View player details">' + escapeAttr(p.name) + '</strong>'

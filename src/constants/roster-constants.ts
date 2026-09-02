@@ -51,11 +51,13 @@ const MFL_PHOTO_HOST = getLeagueBySlug(DEFAULT_LEAGUE_SLUG)!.mflHost;
  * MFL's own "no photo available" image — a white disc with a black silhouette.
  *
  * NO LONGER RENDERED. It is kept only so `isPlaceholderHeadshot` can recognize
- * it: this URL is baked into committed data payloads (see
- * scripts/compute-roster-season-payloads.mjs) and gets passed to renderers as
- * a perfectly valid `headshot` prop, so it loads with a 200 and no `onerror`
- * ever fires. Treating it as "missing" at the render boundary is what stops a
- * stale payload from putting the white disc back on a team-color chip.
+ * it, which is DEFENSIVE rather than a fix for anything observed: no committed
+ * data file contains this URL today (checked), but two feed scripts still emit
+ * it when a player has no MFL id (compute-roster-season-payloads.mjs,
+ * update-salary-averages.mjs), and such a value reaches a renderer as a
+ * perfectly valid `headshot` prop. It would load with a 200, so no `onerror`
+ * would ever fire and the cascade could not catch it — recognizing the string
+ * is the only place that can.
  */
 export const LEGACY_MFL_NO_PHOTO_URL =
   `https://${MFL_PHOTO_HOST}/player_photos_2010/no_photo_available.jpg`;
@@ -72,9 +74,9 @@ export const DEFAULT_HEADSHOT_URL = NO_HEADSHOT_PLACEHOLDER;
 
 /**
  * True when a headshot URL is a placeholder rather than a real photo — either
- * the inline SVG or the legacy MFL no-photo image baked into older payloads.
- * Renderers use it to decide "I have no headshot", so a legacy URL falls
- * through to the team-colored placeholder instead of rendering the white disc.
+ * the inline SVG or MFL's legacy no-photo image. Renderers use it to decide
+ * "I have no headshot", so a legacy URL falls through to the team-colored
+ * placeholder instead of rendering the white disc.
  */
 export function isPlaceholderHeadshot(url?: string | null): boolean {
   if (!url) return true;
@@ -86,8 +88,8 @@ export function isPlaceholderHeadshot(url?: string | null): boolean {
  * real photo, otherwise the team-colored no-headshot placeholder.
  *
  * The one-liner every surface that renders `player.headshot` directly should
- * use — it collapses "no headshot", "empty string", and "a payload that baked
- * in MFL's white-disc placeholder" into the same, correct result.
+ * use — it collapses "no headshot", "empty string", and "MFL's white-disc
+ * placeholder came through as a real URL" into the same, correct result.
  */
 export function resolveHeadshotSrc(headshot?: string | null, teamCode?: string): string {
   return isPlaceholderHeadshot(headshot)

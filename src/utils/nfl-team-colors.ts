@@ -187,6 +187,29 @@ export function getPlayerAvatarBackground(teamCode: string): string {
 }
 
 /**
+ * Shared body of both no-headshot placeholders: `backdrop` is the SVG markup
+ * painted behind the silhouette (a gradient rect, or nothing).
+ *
+ * Double quotes only, and no apostrophes: encodeURIComponent leaves `'`
+ * unescaped, and these URIs get spliced into single-quoted JS strings inside
+ * inline `onerror` attributes (buildHeadshotOnerror). Anything it does escape
+ * (`#`, `"`, `<`, `>`) is what keeps the URI safe in an HTML attribute.
+ */
+function noHeadshotSvg(backdrop: string): string {
+  const svg =
+    '<svg id="no-headshot" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">'
+    + backdrop
+    + '<g fill="#ffffff" fill-opacity="0.55">'
+    // Head and shoulders sit high and centered on purpose: player-cell.css
+    // crops avatars to roughly the top-center 56% of the frame, so anything
+    // below y=56 is decoration for the uncropped surfaces.
+    + '<circle cx="50" cy="31" r="18"/>'
+    + '<path d="M50 54c-19 0-34 13-34 30v16h68V84c0-17-15-30-34-30z"/>'
+    + '</g></svg>';
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+
+/**
  * Inline "no headshot" placeholder: the team-color gradient with a translucent
  * white silhouette on it, as a `data:image/svg+xml` URI.
  *
@@ -217,28 +240,35 @@ export function getPlayerAvatarBackground(teamCode: string): string {
  */
 export function buildNoHeadshotPlaceholder(teamCode = ''): string {
   const { highlight, anchor, edge } = avatarGradientStops(teamCode);
-  // Double quotes only, and no apostrophes: encodeURIComponent leaves `'`
-  // unescaped, and these URIs get spliced into single-quoted JS strings inside
-  // inline `onerror` attributes (buildHeadshotOnerror). Anything it does escape
-  // (`#`, `"`, `<`, `>`) is what keeps the URI safe in an HTML attribute.
-  const svg = [
-    '<svg id="no-headshot" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">',
-    '<defs><radialGradient id="chip" cx="50%" cy="30%" r="78%">',
-    `<stop offset="0%" stop-color="${highlight}"/>`,
-    `<stop offset="58%" stop-color="${anchor}"/>`,
-    `<stop offset="100%" stop-color="${edge}"/>`,
-    '</radialGradient></defs>',
-    '<rect width="100" height="100" fill="url(#chip)"/>',
-    '<g fill="#ffffff" fill-opacity="0.55">',
-    // Head and shoulders sit high and centered on purpose: player-cell.css
-    // crops avatars to roughly the top-center 56% of the frame, so anything
-    // below y=56 is decoration for the uncropped surfaces.
-    '<circle cx="50" cy="31" r="18"/>',
-    '<path d="M50 54c-19 0-34 13-34 30v16h68V84c0-17-15-30-34-30z"/>',
-    '</g></svg>',
-  ].join('');
-  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+  return noHeadshotSvg(
+    `<defs><radialGradient id="chip" cx="50%" cy="30%" r="78%">`
+      + `<stop offset="0%" stop-color="${highlight}"/>`
+      + `<stop offset="58%" stop-color="${anchor}"/>`
+      + `<stop offset="100%" stop-color="${edge}"/>`
+      + `</radialGradient></defs>`
+      + `<rect width="100" height="100" fill="url(#chip)"/>`,
+  );
 }
+
+/**
+ * The silhouette WITHOUT a background — for a container that already paints
+ * `--player-avatar-bg` itself.
+ *
+ * Renders pixel-identically to `buildNoHeadshotPlaceholder(team)` on such a
+ * container, because the chip underneath is drawing the very same gradient.
+ * The point is that it is ONE string instead of one per team: the `define:vars`
+ * list renderers (players, projected free agents, AFL players) can't import
+ * this module, and shipping them a team-keyed map of baked-in gradients inlined
+ * 42 KB of data URIs into three of the heaviest pages in the repo — for a
+ * fallback that fires on a handful of rows.
+ *
+ * **Only use it where the container paints the team gradient.** On a neutral
+ * gray chip (dead money, MVP, the lineup accordion, the draft board) a
+ * transparent silhouette is the same invisible smudge this whole change
+ * exists to remove — those surfaces need the baked-in variant.
+ * `tests/no-headshot-placeholder.test.ts` pins the distinction.
+ */
+export const NO_HEADSHOT_SILHOUETTE = noHeadshotSvg('');
 
 /**
  * League-neutral "no headshot" placeholder — `buildNoHeadshotPlaceholder()`
@@ -283,24 +313,6 @@ export function getPlayerAvatarRingDark(teamCode: string): string {
  */
 export function getPlayerAvatarBorder(teamCode: string): string {
   return getNflTeamColors(teamCode).primary;
-}
-
-/**
- * Precomputed no-headshot placeholders, keyed the same way as
- * `getPlayerAvatarStyleMaps` — every ESPN code AND every MFL alias, so a raw
- * feed team code hits without client-side normalization.
- *
- * `define:vars` scripts (players.astro, projected-free-agents, AFL players)
- * build their rows in the browser and cannot import this module, so they take
- * the finished map and look up `map[team] || fallback`. The entries differ only
- * in three hex values, so this compresses to almost nothing on the wire.
- */
-export function getNoHeadshotPlaceholderMap(): Record<string, string> {
-  const map: Record<string, string> = {};
-  for (const code of [...Object.keys(NFL_TEAM_COLORS), ...Object.keys(TEAM_CODE_MAP)]) {
-    map[code] = buildNoHeadshotPlaceholder(code);
-  }
-  return map;
 }
 
 /**

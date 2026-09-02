@@ -88,9 +88,9 @@ export function buildPlayerCellHTML(opts: PlayerCellOptions): string {
   const teamLogo = normalized ? getNflLogoUrl(normalized) : '';
 
   // ESPN is the primary headshot source when espnId is available
-  // A placeholder URL from the payload (the legacy MFL "no photo available"
-  // disc) counts as no headshot — it 200s, so no onerror fires and the white
-  // disc would blank out the team-color chip behind it.
+  // A placeholder URL from the payload (MFL's "no photo available" disc)
+  // counts as no headshot — it 200s, so no onerror fires and the white disc
+  // would blank out the team-color chip behind it.
   const resolvedHeadshot = resolvedEspnId
     ? getPlayerHeadshot(resolvedMflId, resolvedEspnId, nflTeam)
     : ((isPlaceholderHeadshot(headshot) ? '' : headshot) || buildNoHeadshotPlaceholder(nflTeam ?? ''));

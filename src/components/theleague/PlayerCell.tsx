@@ -53,10 +53,9 @@ export function PlayerCell({
   // which IDs are available. Falling through to getPlayerHeadshot(mflId,
   // espnId) assumes the espnId is always an NFL ID, which is wrong for
   // pre-draft rookies that only have a college ESPN ID.
-  // A caller-supplied headshot that is itself a placeholder (the legacy MFL
-  // "no photo available" disc, still baked into older payloads) counts as no
-  // headshot: it loads with a 200, so no onerror fires and the white disc
-  // blanks out the team-color chip behind it.
+  // A caller-supplied headshot that is itself a placeholder (MFL's "no photo
+  // available" disc) counts as no headshot: it loads with a 200, so no onerror
+  // fires and the white disc blanks out the team-color chip behind it.
   const noHeadshot = buildNoHeadshotPlaceholder(nflTeam ?? '');
   const resolvedHeadshot =
     (isPlaceholderHeadshot(headshot) ? '' : headshot)

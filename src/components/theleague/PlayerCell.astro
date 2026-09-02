@@ -122,10 +122,9 @@ const avatarIsLogo = isLogoAvatar || (isDef && !!teamLogoUrl);
 // when MFL had a perfectly good photo (Breece Hall on the AFL feed — his
 // row showed the silhouette, his click-through modal loaded fine because
 // PlayerDetailsModal does try the MFL photo URL as a step before default).
-// A caller-supplied headshot that is itself a placeholder (the legacy MFL
-// "no photo available" disc, baked into older roster payloads) counts as NO
-// headshot — otherwise it loads with a 200, no onerror fires, and the white
-// disc blanks out the team-color chip it is sitting on.
+// A caller-supplied headshot that is itself a placeholder (MFL's "no photo
+// available" disc) counts as NO headshot — otherwise it loads with a 200, no
+// onerror fires, and the white disc blanks out the team-color chip it sits on.
 const resolvedHeadshot = (isPlaceholderHeadshot(headshot) ? '' : headshot)
   || getPlayerHeadshot(resolvedMflId, resolvedEspnId, nflTeam);
 // Avatar: DEF uses team logo, others use headshot

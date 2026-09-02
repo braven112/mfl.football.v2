@@ -95,9 +95,9 @@ const MFL_PHOTO_HOST = LEAGUE.mflHost;
 // Sentinel only. This URL is MFL's white-disc "no photo available" image and
 // is NEVER rendered any more: the renderers recognize it via
 // `isPlaceholderHeadshot` (src/constants/roster-constants.ts) and swap in the
-// team-colored placeholder instead. Kept as the emitted value so the payloads
-// this script has already written stay recognizable; don't "fix" it to a real
-// URL without updating that recognizer.
+// team-colored placeholder instead. Only reachable when a player has no MFL id,
+// which no current payload hits — don't "fix" it to a real URL without updating
+// that recognizer.
 const DEFAULT_HEADSHOT_URL = `https://${MFL_PHOTO_HOST}/player_photos_2010/no_photo_available.jpg`;
 const getPlayerImageUrl = (playerId) =>
   playerId

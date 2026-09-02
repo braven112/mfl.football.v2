@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import {
   buildNoHeadshotPlaceholder,
-  getNoHeadshotPlaceholderMap,
   getPlayerAvatarBackground,
   NFL_TEAM_COLORS,
   NO_HEADSHOT_PLACEHOLDER,
+  NO_HEADSHOT_SILHOUETTE,
 } from '../src/utils/nfl-team-colors';
 import {
   DEFAULT_HEADSHOT_URL,
@@ -86,12 +86,27 @@ describe('no-headshot placeholder', () => {
     expect(getPlayerHeadshot(undefined, undefined, 'BAL')).toBe(buildNoHeadshotPlaceholder('BAL'));
   });
 
-  it('keys the client map by ESPN codes and MFL aliases alike', () => {
-    const map = getNoHeadshotPlaceholderMap();
-    expect(map.TEN).toBe(buildNoHeadshotPlaceholder('TEN'));
-    // MFL alias — the define:vars renderers look up raw feed codes with no
-    // client-side normalization.
-    expect(map.KCC).toBe(buildNoHeadshotPlaceholder('KC'));
+  it('offers a backdrop-free variant for chips that paint the gradient themselves', () => {
+    // The define:vars list renderers set --player-avatar-bg on every chip that
+    // can reach the fallback, so they take the silhouette alone. Shipping them
+    // a team-keyed map of baked-in gradients instead inlined 42 KB of data URIs
+    // into three of the heaviest pages for no visible difference.
+    expect(NO_HEADSHOT_SILHOUETTE).not.toContain('radialGradient');
+    expect(NO_HEADSHOT_SILHOUETTE).not.toContain('rect');
+    expect(NO_HEADSHOT_SILHOUETTE).toContain('no-headshot');
+    expect(NO_HEADSHOT_SILHOUETTE).not.toContain("'");
+    // Small enough to inline once per page — the map was 42,551 bytes.
+    expect(NO_HEADSHOT_SILHOUETTE.length).toBeLessThan(600);
+
+    // The baked-in variant is the one for a NEUTRAL chip and must keep its
+    // backdrop: on gray, a transparent silhouette is the invisible smudge this
+    // whole change removes.
+    expect(buildNoHeadshotPlaceholder('TEN')).toContain('radialGradient');
+
+    // Same silhouette geometry in both, so they render identically on a chip.
+    const geometry = /%3Cg%20fill.*$/;
+    expect(NO_HEADSHOT_SILHOUETTE.match(geometry)?.[0])
+      .toBe(buildNoHeadshotPlaceholder('TEN').match(geometry)?.[0]);
   });
 });
 

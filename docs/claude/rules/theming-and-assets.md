@@ -168,10 +168,11 @@ it are load-bearing:
   Without that rule the silhouette blows past the chip edge.
 - **The legacy MFL URL is still recognized as "no headshot"**
   (`isPlaceholderHeadshot` / `resolveHeadshotSrc` in
-  `src/constants/roster-constants.ts`). It is baked into committed roster
-  payloads, loads with a **200**, and therefore never fires an `onerror` of its
-  own — recognizing the string is the only thing stopping a stale payload from
-  putting the white disc back.
+  `src/constants/roster-constants.ts`). This is defensive, not a fix for
+  anything observed — no committed data file carries that URL today — but two
+  feed scripts still emit it for a player with no MFL id, and it loads with a
+  **200**, so it would never fire an `onerror` and the cascade could not catch
+  it. Recognizing the string is the only place that can.
 
 `DEFAULT_HEADSHOT_URL` is the team-less form of the same placeholder, so a
 renderer that ignores all this still gets a silhouette rather than a white

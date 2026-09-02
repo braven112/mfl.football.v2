@@ -238,6 +238,18 @@ const cardClasses = [
     object-position: top;
   }
 
+  /* No-headshot placeholder: it fills its own frame, so it must skip the
+     150% headshot crop above — that would push the head past the chip edge
+     and leave a cropped shoulder. Matched on the id baked into the SVG
+     (see buildNoHeadshotPlaceholder); the src arrives via an inline onerror
+     handler, so there is no class to hang this on. player-cell.css carries
+     the same opt-out for its own copy of the crop. */
+  .player-headshot[src*="no-headshot"] {
+    width: 100%;
+    object-fit: contain;
+    object-position: center;
+  }
+
   .player-info {
     flex: 1;
     min-width: 0;
