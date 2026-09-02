@@ -39,6 +39,7 @@
  */
 import { readFileSync, existsSync, statSync, globSync } from 'node:fs';
 import { join, dirname, normalize } from 'node:path';
+import { ALL_LEAGUES } from '../src/config/leagues-data.mjs';
 
 const SEED_GLOBS = ['stories/**/*.stories.ts', 'stories/**/*.stories.tsx'];
 const EXTRA_SEEDS = ['.storybook/preview.ts'];
@@ -65,7 +66,7 @@ const EXT = [
  * NOTE this is the only thing filtered out. An earlier version filtered to
  * `src/` and silently dropped three files that genuinely render:
  * data/afl-fantasy/afl.config.json (AFL brand colors, imported by
- * PeckingOrderIssue and franchise-band-brand), data/afl-fantasy/tier-history.json
+ * franchise-band-brand), data/afl-fantasy/tier-history.json
  * and data/best-ball-1/bb1.config.json. They matched no `paths:` entry, so an
  * AFL brand-color edit would have built on neither the PR nor the merge — the
  * exact hole this generator exists to close, reintroduced by a leftover prefix
@@ -89,8 +90,32 @@ const SEED_DIRS = ['stories/', '.storybook/'];
  * schefter/, tv-logos/, css/, js/, and the non-Schefter avatars.
  */
 export const STORY_ASSET_GLOBS = [
-  'public/assets/afl/**',
-  'public/assets/theleague/**',
+  // The franchise crests TeamIconCell renders — one per dark-mode branch, in
+  // both leagues for the swap — plus the two dark files those swaps fetch.
+  // Listed individually, NOT as the two league trees: `public/assets/afl/**` +
+  // `public/assets/theleague/**` matched ~700 files — every franchise's icon,
+  // banner, group-me and history art — so a logo swap for any of the 40 teams
+  // started a build that could not change a pixel.
+  // `computeStoryAssetLiterals()` below is what keeps this list honest.
+  'public/assets/afl/icons/ninjas.png',
+  'public/assets/afl/icons/ninjas_dark.png',
+  'public/assets/afl/icons/no_soup.png',
+  'public/assets/afl/icons/saints.png',
+  'public/assets/theleague/group-me/cowboy_up.png',
+  'public/assets/theleague/group-me/ninjas.png',
+  'public/assets/theleague/group-me/pigskins.png',
+  'public/assets/theleague/group-me/wabbits.png',
+  'public/assets/theleague/icons/cowboy_up.png',
+  'public/assets/theleague/icons/ninjas.png',
+  'public/assets/theleague/icons/ninjas_dark.png',
+  'public/assets/theleague/icons/pigskins.png',
+  'public/assets/theleague/icons/pigskins_dark.png',
+  'public/assets/theleague/icons/wabbits.png',
+  'public/assets/theleague/icons/wabbits_dark.png',
+  'public/assets/afl/dleague-dark.svg',
+  'public/assets/afl/dleague.svg',
+  'public/assets/afl/premier-dark.svg',
+  'public/assets/afl/premier.svg',
   'public/assets/nfl-logos/**',
   'public/assets/college-logos/**',
   'public/assets/logos/**',
@@ -99,6 +124,100 @@ export const STORY_ASSET_GLOBS = [
   'public/assets/fonts/**',
   'public/assets/claude-schefter-avatar.webp',
 ];
+
+/**
+ * League configs, for the ONE asset a story needs that it does not name.
+ *
+ * A crest with an `iconDark` is swapped by the injected `TeamIconDarkStyles`
+ * CSS, keyed on the light `src`. So rendering `pigskins.png` also fetches
+ * `pigskins_dark.png`, and nothing in `stories/` says so. Derived rather than
+ * hardcoded: the day a story's crest GAINS a dark variant, the new file must
+ * enter the trigger, and the config edit that adds it cannot be what reminds
+ * anyone (that edit already triggers a build on its own — the dark PNG's
+ * LATER edits are the ones that would ship unbuilt).
+ *
+ * Read from the registry, per CLAUDE.md — a league added there brings its
+ * crests along with no edit here.
+ *
+ * The match below is exact on the config's `icon` string, which is only correct
+ * while those are ROOT-RELATIVE (`/assets/...`). All 3 configs are today; an
+ * absolute `https://…` one would miss silently and leave the dark file out of
+ * the trigger, so `tests/chromatic-path-filter.test.ts` asserts the precondition
+ * rather than this normalizing a shape that does not exist.
+ */
+const LEAGUE_CONFIGS = ALL_LEAGUES.map((l) => l.configPath).filter(Boolean);
+
+/**
+ * Every public/ asset a story renders, as repo-relative paths.
+ *
+ * Assets are runtime URL strings, so they are absent from the import graph —
+ * this is a TEXT scan of the story files, which is the only thing that can see
+ * them. Interpolated specifiers (`/assets/nfl-logos/${code}.svg`) and bare
+ * directories are skipped: neither is one file, and both are covered by the
+ * `**` globs above that stay broad for exactly that reason.
+ *
+ * `tests/chromatic-path-filter.test.ts` asserts STORY_ASSET_GLOBS covers all of
+ * it. That is the guard the individually-listed crests need: without it,
+ * a story rendering a fifth crest would silently fall outside the trigger, its
+ * regressions would ship, and `--auto-accept-changes` on main would bless them
+ * as the baseline.
+ */
+export function computeStoryAssetLiterals() {
+  const found = new Set();
+  for (const file of storyTextFiles()) {
+    for (const m of readFileSync(file, 'utf8').matchAll(/\/assets\/[A-Za-z0-9._/-]+/g)) {
+      // A trailing path segment with no extension is a directory prefix, not a
+      // file — `/assets/theleague/icons/` and friends.
+      if (/\.[A-Za-z0-9]+$/.test(m[0])) found.add(`public${m[0]}`);
+    }
+  }
+
+  // Add the dark counterpart of any crest above that declares one.
+  for (const cfg of LEAGUE_CONFIGS) {
+    if (!existsSync(cfg)) continue;
+    for (const team of JSON.parse(readFileSync(cfg, 'utf8')).teams ?? []) {
+      if (team.icon && team.iconDark && found.has(`public${team.icon}`)) {
+        found.add(`public${team.iconDark}`);
+      }
+    }
+  }
+  return [...found].sort();
+}
+
+/**
+ * Directories a story reaches through an INTERPOLATED path, which the literal
+ * scan above cannot enumerate.
+ *
+ * `/assets/nfl-logos/${code}.svg` is fine — that tree keeps a `**` glob for
+ * exactly this reason. `/assets/theleague/icons/${seed.slug}.png` was NOT:
+ * the playoff fixtures built twelve crest paths that way, and when the two
+ * league trees were replaced by individual files those crests kept rendering
+ * with nothing in the trigger matching them. The literal scan saw nothing to
+ * complain about, because there was no literal.
+ *
+ * So the rule this exposes: **a dynamically-built asset path REQUIRES a `**`
+ * glob over its directory.** Write the paths out if you want a narrow trigger.
+ */
+export function computeStoryAssetPrefixes() {
+  const found = new Set();
+  for (const file of storyTextFiles()) {
+    // Any `/assets/...` string that stops at a directory separator instead of a
+    // filename. Deliberately NOT keyed on a following `${`: template literals
+    // are one way to splice a path and `'/assets/x/' + slug + '.png'` is
+    // another, and a guard that only knows the first is one syntax away from
+    // the twelve-crest miss it exists to prevent. The DIRECTORY LITERAL is the
+    // tell, whatever follows it.
+    // The lookahead matters: it requires the path to STOP at the separator —
+    // either the string literal closes there (`'/assets/x/' + slug`) or an
+    // interpolation starts (`` `/assets/x/${slug}.png` ``). Without it, the
+    // directory inside a perfectly good filename matches too and every crest
+    // demands a `**` tree.
+    for (const m of readFileSync(file, 'utf8').matchAll(/\/assets\/[A-Za-z0-9._/-]*\/(?=['"`]|\$\{)/g)) {
+      found.add(`public${m[0]}`);
+    }
+  }
+  return [...found].sort();
+}
 
 /**
  * Storybook's own untraceable visual inputs.
@@ -119,6 +238,22 @@ function resolveSpec(fromFile, spec) {
     if (existsSync(cand) && statSync(cand).isFile()) return cand;
   }
   return null;
+}
+
+/**
+ * Every text file under stories/ — story modules AND the fixtures they import.
+ *
+ * NOT `SEED_GLOBS`: that is `*.stories.ts` only, which is right for walking the
+ * import graph and wrong for scanning asset strings. Fixtures are where the
+ * bulky, asset-heavy data lives, and skipping them is how twelve playoff crests
+ * stayed outside the Chromatic trigger.
+ */
+function storyTextFiles() {
+  // .astro and .json too: stories/overview/ChromaticReport.astro is a story
+  // source, and JSON fixtures lived here until Sept 2026. An asset named from
+  // either would be invisible to a guard that only reads TypeScript — the same
+  // class of miss as skipping stories/fixtures/ in the first place.
+  return globSync('stories/**/*.{ts,tsx,astro,js,mjs,json}');
 }
 
 /** Every src/ file reachable from a story or from preview.ts. */

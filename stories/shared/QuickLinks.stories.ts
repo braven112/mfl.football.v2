@@ -49,7 +49,9 @@ export const TheLeagueGuest = {
 // data-league="theleague", which would have rendered AFL links under
 // TheLeague's palette and baselined the very mismatch this file claims to
 // catch. (Note QuickLinks takes CanonicalLeagueSlug — 'afl-fantasy' — while
-// PeckingOrderIssue takes the nav LeagueSlug 'afl'. Two vocabularies.)
+// most shared components take the nav LeagueSlug 'afl'. Two vocabularies, and
+// passing the wrong one does not error: CONFIGS[league] falls back to
+// TheLeague, so a story silently renders the wrong league's data.)
 const aflModes = { parameters: { chromatic: { modes: leagueModes } } };
 
 export const AflSignedIn = {

@@ -1,11 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import {
   computeStoryDeps,
   computeExternals,
   computeStoryStylesheets,
+  computeStoryAssetLiterals,
+  computeStoryAssetPrefixes,
   STORY_ASSET_GLOBS,
 } from '../scripts/chromatic-story-deps.mjs';
+import { ALL_LEAGUES } from '../src/config/leagues-data.mjs';
 
 /**
  * Chromatic path-filter guard - the safety net under a narrowed visual trigger.
@@ -115,7 +118,7 @@ describe('chromatic path filter', () => {
     // coverage assertion below vacuously pass.
     expect(deps.length).toBeGreaterThan(90);
     expect(deps).toContain('src/utils/franchise-brand.ts');
-    expect(deps).toContain('src/components/shared/PeckingOrderIssue.astro');
+    expect(deps).toContain('src/components/TeamIconCell.astro');
   });
 
   it('does not drop rendering files that live outside src/', () => {
@@ -178,6 +181,107 @@ describe('chromatic path filter', () => {
     for (const list of pathLists) {
       for (const glob of STORY_ASSET_GLOBS) expect(list).toContain(glob);
     }
+  });
+
+  it('covers every asset a story actually names', () => {
+    // THE GUARD UNDER THE INDIVIDUALLY-LISTED CRESTS.
+    //
+    // Most asset entries are `**` trees, which self-maintain. The franchise
+    // crests are not: they are four exact files, because the two league trees
+    // they replaced matched ~700 and made every team's logo swap start a build
+    // that could not change a pixel. Narrow means a NEW story rendering a
+    // fifth crest falls outside the trigger — its regression ships and
+    // --auto-accept-changes on main blesses it as the baseline. Nothing in the
+    // import graph can catch that, so this text-scans the stories instead.
+    const literals = computeStoryAssetLiterals();
+
+    // A floor, for the same reason `deps.length > 90` has one: both helpers
+    // resolve `globSync` and `existsSync` relative to CWD, so a runner started
+    // elsewhere returns [] and every assertion below passes while checking
+    // nothing. An empty scan is a broken scan, not a clean one.
+    expect(literals.length).toBeGreaterThan(15);
+
+    const uncovered = literals.filter((file) => !matchesAny(file, STORY_ASSET_GLOBS));
+
+    expect(
+      uncovered,
+      `These assets are rendered by a story but no STORY_ASSET_GLOBS entry ` +
+        `matches them, so a change to one would never trigger Chromatic.\n\n` +
+        `Add them to STORY_ASSET_GLOBS in scripts/chromatic-story-deps.mjs, ` +
+        `then regenerate both workflow lists and chromatic.config.json.\n\n` +
+        uncovered.map((f) => `  - '${f}'`).join('\n'),
+    ).toEqual([]);
+  });
+
+  it('keeps a wildcard tree behind every dynamically-built asset path', () => {
+    // The hole the literal scan CANNOT see. The playoff fixtures built twelve
+    // crest paths as `/assets/theleague/icons/${seed.slug}.png`; when the two
+    // league trees were replaced by individual files those crests kept
+    // rendering with nothing in the trigger matching them, and the scan had no
+    // literal to complain about. An interpolated path is only safe over a `**`
+    // tree — otherwise write the paths out.
+    const globPrefixes = STORY_ASSET_GLOBS.filter((g) => g.includes('*')).map(
+      (g) => g.slice(0, g.indexOf('*')),
+    );
+    const unguarded = computeStoryAssetPrefixes().filter(
+      (dir) => !globPrefixes.some((p) => dir.startsWith(p)),
+    );
+
+    expect(
+      unguarded,
+      `A story builds an asset path inside these directories at runtime, but ` +
+        `no wildcard entry in STORY_ASSET_GLOBS covers them — so the files it ` +
+        `reaches are invisible to both the literal scan and the trigger.\n\n` +
+        `Either write the paths out literally, or add a '<dir>**' entry.\n\n` +
+        unguarded.map((d) => `  - '${d}'`).join('\n'),
+    ).toEqual([]);
+  });
+
+  it('detects a dynamic asset path at all', () => {
+    // computeStoryAssetPrefixes() correctly returns [] today, which makes the
+    // test above vacuous BY CONSTRUCTION — it would keep passing if the
+    // detector silently stopped detecting. So exercise the detector itself
+    // against both syntaxes that splice a path, and against a plain filename
+    // that must NOT be mistaken for one.
+    const detect = (src: string) =>
+      [...src.matchAll(/\/assets\/[A-Za-z0-9._/-]*\/(?=['"`]|\$\{)/g)].map((m) => m[0]);
+
+    expect(detect('icon: `/assets/theleague/icons/${seed.slug}.png`')).toEqual([
+      '/assets/theleague/icons/',
+    ]);
+    expect(detect("icon: '/assets/theleague/icons/' + seed.slug + '.png'")).toEqual([
+      '/assets/theleague/icons/',
+    ]);
+    expect(detect("icon: '/assets/theleague/icons/pigskins.png'")).toEqual([]);
+
+    // and the shipped helper agrees with it on the real story files
+    expect(computeStoryAssetPrefixes()).toEqual([]);
+  });
+
+  it('reads league crest paths as root-relative, which the dark derivation assumes', () => {
+    // computeStoryAssetLiterals() pairs a crest with its `_dark` file by exact
+    // string match on the config's `icon`. That is only correct while these are
+    // '/assets/...' — an absolute 'https://…/assets/...' would miss silently and
+    // leave the dark file outside the trigger. Assert the precondition instead
+    // of normalizing a shape no config actually has.
+    for (const cfg of ALL_LEAGUES.map((l) => l.configPath).filter(Boolean)) {
+      if (!existsSync(cfg)) continue;
+      for (const team of JSON.parse(readFileSync(cfg, 'utf8')).teams ?? []) {
+        for (const field of ['icon', 'iconDark'] as const) {
+          if (team[field]) {
+            expect(team[field], `${cfg} ${team.franchiseId} ${field}`).toMatch(/^\/assets\//);
+          }
+        }
+      }
+    }
+  });
+
+  it('lists no asset that has left the repo', () => {
+    // An exact path is only a trigger while the file is there. A rename or a
+    // deleted crest turns its entry into a glob that matches nothing, which
+    // fails exactly like a missing entry and looks like a working one.
+    const missing = STORY_ASSET_GLOBS.filter((g) => !g.includes('*') && !existsSync(g));
+    expect(missing, `Listed in STORY_ASSET_GLOBS but not on disk`).toEqual([]);
   });
 
   it('excludes the cron-written feeds', () => {

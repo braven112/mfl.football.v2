@@ -20,6 +20,18 @@
  * These fixtures live outside src/ deliberately — see .storybook/main.ts for
  * the three repo guards that scan src/ and would fail on the franchise ids and
  * league literals below.
+ *
+ * FOUR teams, and they are the suite's standard cast (Pigskins, Cowboy Up,
+ * Wabbits, Ninjas) rather than six arbitrary franchises. A bracket needs only
+ * four to fill two wild-card games, two semifinals and a final, and every
+ * crest a story renders is a file the Chromatic trigger has to name.
+ *
+ * `crest` and `icon` are WRITTEN OUT per team, not built from a slug. They
+ * used to be template literals, and an interpolated path is invisible to
+ * `computeStoryAssetLiterals()` — the scan that keeps STORY_ASSET_GLOBS honest
+ * — so twelve crests rendered into these snapshots with nothing in the trigger
+ * matching them. A logo swap would have shipped unbuilt and been auto-accepted
+ * as the new baseline. Keep them literal.
  */
 
 import type {
@@ -36,7 +48,9 @@ interface TeamSeed {
   color: string;
   colorPrimary: string;
   colorSecondary: string;
-  slug: string;
+  /** Written out per team, never interpolated — see the note above. */
+  crest: string;
+  icon: string;
   seed: number;
   record: string;
   pointsFor: string;
@@ -53,7 +67,8 @@ const PIGSKINS: TeamSeed = {
   color: '#cc2936',
   colorPrimary: '#bd1f2b',
   colorSecondary: '#181818',
-  slug: 'pigskins',
+  crest: '/assets/theleague/group-me/pigskins.png',
+  icon: '/assets/theleague/icons/pigskins.png',
   seed: 1,
   record: '11-3',
   pointsFor: '1,842',
@@ -67,36 +82,16 @@ const PIGSKINS: TeamSeed = {
   isUser: true,
 };
 
-const DANGSTERS: TeamSeed = {
-  franchiseId: '0002',
-  name: 'Da Dangsters',
-  medium: 'Da Dangsters',
-  short: 'Dangsters',
-  color: '#8b6914',
-  colorPrimary: '#1b435f',
-  colorSecondary: '#8b8f93',
-  slug: 'da_dangsters',
-  seed: 4,
-  record: '8-6',
-  pointsFor: '1,703',
-  proj: 119.7,
-  player: {
-    name: 'Justin Jefferson',
-    position: 'WR',
-    nflTeam: 'MIN',
-    headshot: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyMDAgMjAwJz48cmVjdCB3aWR0aD0nMjAwJyBoZWlnaHQ9JzIwMCcgZmlsbD0nbm9uZScvPjxjaXJjbGUgY3g9JzEwMCcgY3k9JzcyJyByPSc0MicgZmlsbD0nI2NmZDRkYScvPjxwYXRoIGQ9J00yMCAyMDBjMC00NiAzNi03NCA4MC03NHM4MCAyOCA4MCA3NHonIGZpbGw9JyNjZmQ0ZGEnLz48L3N2Zz4=',
-  },
-};
-
-const MAVERICK: TeamSeed = {
-  franchiseId: '0003',
-  name: 'Maverick',
-  medium: 'Mavericks',
-  short: 'Mavericks',
-  color: '#c4b060',
-  colorPrimary: '#181818',
-  colorSecondary: '#b5884a',
-  slug: 'maverick',
+const COWBOY_UP: TeamSeed = {
+  franchiseId: '0014',
+  name: 'Cowboy Up',
+  medium: 'Cowboy Up',
+  short: 'Cowboy',
+  color: '#0d2b56',
+  colorPrimary: '#153366',
+  colorSecondary: '#d32a3e',
+  crest: '/assets/theleague/group-me/cowboy_up.png',
+  icon: '/assets/theleague/icons/cowboy_up.png',
   seed: 2,
   record: '10-4',
   pointsFor: '1,798',
@@ -109,15 +104,16 @@ const MAVERICK: TeamSeed = {
   },
 };
 
-const DEAD_CAP: TeamSeed = {
-  franchiseId: '0004',
-  name: 'Dead Cap Walking',
-  medium: 'Dead Cap',
-  short: 'Dead Cap',
-  color: '#65b32e',
-  colorPrimary: '#203b5b',
-  colorSecondary: '#7eb458',
-  slug: 'dead_cap_walking',
+const WABBITS: TeamSeed = {
+  franchiseId: '0009',
+  name: 'Wascawy Wabbits',
+  medium: 'Wabbits',
+  short: 'Wabbits',
+  color: '#5c5c5c',
+  colorPrimary: '#181818',
+  colorSecondary: '#e9e9e9',
+  crest: '/assets/theleague/group-me/wabbits.png',
+  icon: '/assets/theleague/icons/wabbits.png',
   seed: 3,
   record: '9-5',
   pointsFor: '1,755',
@@ -138,8 +134,9 @@ const NINJAS: TeamSeed = {
   color: '#006847',
   colorPrimary: '#181818',
   colorSecondary: '#2f8b59',
-  slug: 'ninjas',
-  seed: 5,
+  crest: '/assets/theleague/group-me/ninjas.png',
+  icon: '/assets/theleague/icons/ninjas.png',
+  seed: 4,
   record: '8-6',
   pointsFor: '1,688',
   proj: 116.3,
@@ -147,27 +144,6 @@ const NINJAS: TeamSeed = {
     name: 'Travis Kelce',
     position: 'TE',
     nflTeam: 'KC',
-    headshot: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyMDAgMjAwJz48cmVjdCB3aWR0aD0nMjAwJyBoZWlnaHQ9JzIwMCcgZmlsbD0nbm9uZScvPjxjaXJjbGUgY3g9JzEwMCcgY3k9JzcyJyByPSc0MicgZmlsbD0nI2NmZDRkYScvPjxwYXRoIGQ9J00yMCAyMDBjMC00NiAzNi03NCA4MC03NHM4MCAyOCA4MCA3NHonIGZpbGw9JyNjZmQ0ZGEnLz48L3N2Zz4=',
-  },
-};
-
-const MUSIC_CITY: TeamSeed = {
-  franchiseId: '0006',
-  name: 'Music City Mafia',
-  medium: 'Music City',
-  short: 'Music City',
-  color: '#4b92db',
-  colorPrimary: '#113469',
-  colorSecondary: '#c8102e',
-  slug: 'music_city',
-  seed: 6,
-  record: '7-7',
-  pointsFor: '1,640',
-  proj: 112.8,
-  player: {
-    name: 'Bijan Robinson',
-    position: 'RB',
-    nflTeam: 'ATL',
     headshot: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyMDAgMjAwJz48cmVjdCB3aWR0aD0nMjAwJyBoZWlnaHQ9JzIwMCcgZmlsbD0nbm9uZScvPjxjaXJjbGUgY3g9JzEwMCcgY3k9JzcyJyByPSc0MicgZmlsbD0nI2NmZDRkYScvPjxwYXRoIGQ9J00yMCAyMDBjMC00NiAzNi03NCA4MC03NHM4MCAyOCA4MCA3NHonIGZpbGw9JyNjZmQ0ZGEnLz48L3N2Zz4=',
   },
 };
@@ -182,8 +158,8 @@ function team(seed: TeamSeed): PlayoffTeamView {
     color: seed.color,
     colorPrimary: seed.colorPrimary,
     colorSecondary: seed.colorSecondary,
-    crest: `/assets/theleague/group-me/${seed.slug}.png`,
-    icon: `/assets/theleague/icons/${seed.slug}.png`,
+    crest: seed.crest,
+    icon: seed.icon,
     record: seed.record,
     pointsFor: seed.pointsFor,
     proj: seed.proj,
@@ -213,10 +189,13 @@ export const wildCardView: PlayoffRoundView = {
   label: 'Wild Card Weekend',
   week: 15,
   games: [
-    game('wc-1', DEAD_CAP, MUSIC_CITY),
-    game('wc-2', DANGSTERS, NINJAS),
+    // Seeds 2v3 and 1v4. The featured headliner is deliberately NOT the user's
+    // team: `featured` and `isUser` drive different treatments (composite slot
+    // vs accent ring) and a fixture that fuses them tests one axis twice.
+    game('wc-1', COWBOY_UP, WABBITS),
+    game('wc-2', PIGSKINS, NINJAS),
   ],
-  featured: team(DEAD_CAP),
+  featured: team(COWBOY_UP),
 };
 
 /** Round 2 (Week 16) — two games, four faces, split by a vertical seam. */
@@ -225,8 +204,8 @@ export const semifinalView: PlayoffRoundView = {
   label: 'Semifinals',
   week: 16,
   games: [
-    game('sf-1', PIGSKINS, DEAD_CAP),
-    game('sf-2', MAVERICK, DANGSTERS),
+    game('sf-1', PIGSKINS, WABBITS),
+    game('sf-2', COWBOY_UP, NINJAS),
   ],
   featured: null,
 };
@@ -236,7 +215,7 @@ export const championshipView: PlayoffRoundView = {
   kind: 'championship',
   label: 'Championship',
   week: 17,
-  games: [game('final', PIGSKINS, MAVERICK)],
+  games: [game('final', PIGSKINS, COWBOY_UP)],
   featured: null,
 };
 
@@ -254,7 +233,7 @@ export const championshipPreGameView: PlayoffRoundView = {
     game(
       'final',
       { ...PIGSKINS, record: '', pointsFor: '', proj: 0 },
-      { ...MAVERICK, record: '', pointsFor: '', proj: 0 },
+      { ...COWBOY_UP, record: '', pointsFor: '', proj: 0 },
     ),
   ],
   featured: null,
