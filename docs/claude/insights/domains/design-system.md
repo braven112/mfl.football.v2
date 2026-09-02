@@ -136,6 +136,86 @@ excludes stroke, and the halo on every `-dark` badge *is* a stroke.
 
 ---
 
+## 2026-09-02 - On a Dark Surface, "Lighten the Fill" Has a Ceiling — That's What Forces the Invert
+
+**Context:** The AFL playoffs *hero* (`AflPlayoffsHero.astro`) had the same
+three untreated `--cat-regular-season` call sites as the conference standings
+card below it. The first attempt kept white numerals and lightened the pill
+fill, on the reasoning that these pills mark every team in a matchup rather
+than the clinchers, so inverting all eight to white would overstate them. The
+target was ~4.5:1 of pill against its surround. That target is unreachable, and
+the arithmetic says so before you start picking hexes.
+
+**Insight:** A filled pill with text on it has **two** contrast requirements
+pulling in opposite directions, and on a dark surround they are coupled:
+
+- ink-on-fill = `1.05 / (L_fill + 0.05)`
+- fill-on-surround = `(L_fill + 0.05) / (L_surround + 0.05)`
+
+Raising the fill's luminance helps the second and hurts the first. Setting them
+equal gives the best either can be:
+
+```
+max_balanced = sqrt(1.05 / (L_surround + 0.05))
+```
+
+On the AFL dark matchup strip (`--color-gray-50` → `#122132`, L = 0.0145) that
+is **4.04:1** — so 4.5:1 on both sides is arithmetically impossible, not merely
+awkward. Pinning white ink at the AA floor for a 10px numeral caps the fill at
+**3.62:1** against that strip. There is no hex that satisfies the brief.
+
+Two ways out, and the second is usually right:
+
+1. **Keep the colored fill and stop over-specifying it.** 4.5:1 is the *text*
+   bar and it belongs to the numeral. The pill *shape* is a non-text UI
+   component whose bar is 3:1 (WCAG 1.4.11). A 3.5:1 fill with a 4.6:1 white
+   numeral is fully conformant — the "4.5:1 pill" was a text intuition applied
+   to a shape.
+2. **Invert.** White fill sidesteps the coupling entirely: 16.29:1 on the strip
+   with a 9.16:1 navy numeral. Both numbers roughly quadruple.
+
+So "lighten, don't invert" is a legitimate *aesthetic* call, but it buys a
+strictly worse pair, and past ~4:1 it is not available at all. Decide it on
+whether the marker should shout — not on contrast, which always prefers the
+invert. Here the deciding factor was neither: this hero renders directly above
+the standings tables on the same homepage, so a bracket seed and a standings
+seed sit inches apart and had to be the same pill. Matching the sibling
+(`#fff` / `#1c497c`) settled it.
+
+**Corollary — measure against the pill's real parent.** The defect was reported
+at 1.63:1, computed against the card (`--content-bg` `#16283c`). The pills
+actually sit on `.afl-playoffs-hero__matchup`, which paints `--color-gray-50`
+(`#122132`), so the live figure was 1.78:1. Invisible either way, but the
+surround is an input to every formula above — read the computed
+`backgroundColor` of the element's actual parent rather than the card you
+assume it is on.
+
+**Related trap this did NOT hit, because of how Astro scopes.** Inverting the
+base `.__seed` rule looks like it should clobber the
+`.__team--user .__seed` modifier that paints the viewer's own pill with
+`--afl-accent`. It does not, and the reason is worth knowing: Astro appends
+`[data-astro-cid-…]` to **every compound** in a selector, not just the last.
+So the compiled rules are
+
+```
+html.dark .__seed[data-astro-cid-x]                        → (0,2,1)
+.__team--user[data-astro-cid-x] .__seed[data-astro-cid-x]  → (0,4,0)
+```
+
+and the modifier still wins on classes before specificity ever reaches the
+element count. A `:global(html.dark)` override of a **base** class is therefore
+safe against its modifiers — but the flip side is that theming the *modifier*
+needs the modifier in your dark selector too. Confirm it by grepping the served
+CSS for the compiled rule rather than reasoning about the source, which shows
+neither attribute.
+
+(The modifier here needed its own dark rule anyway, for the reason the head's
+`--league-accent` section already gives: the AFL accent brightens to `#ef5350`
+in dark and white on it is 3.49:1. Dark ink at 4.84:1 fixes it. That trap was
+already documented — this is a second instance of it, not a new finding.)
+
+---
+
 ## 2026-09-02 - The Token Guard's "Defined" Set Is Repo-Wide, Not Scope-Aware
 
 **Context:** The AFL conference playoff card paints its clinching seed pills
