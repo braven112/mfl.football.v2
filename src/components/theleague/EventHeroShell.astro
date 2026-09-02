@@ -83,6 +83,14 @@ const {
 // A functional right-hand panel (slotted) takes the place of the player cut-out.
 const hasPanel = Astro.slots.has('panel');
 
+// The accent is the franchise's when one is painting, the league's otherwise.
+// Resolved HERE rather than in the stylesheet because `--ev-accent` is written
+// into this element's inline `style`, and an inline declaration beats every
+// rule in the sheet — a `--ev-accent: var(--hero-fb-accent)` CSS override looks
+// right, cascades correctly, and is silently ignored. Everything keyed on the
+// variable (headline word, countdown numeral, panel rail, icon chip) follows.
+const effectiveAccent = backdrop?.accent ?? accent;
+
 const hasCount = countValue !== undefined && countValue !== null && countValue !== '';
 const hasFooter = hasCount || !!link;
 const countAriaLabel = hasCount
@@ -94,7 +102,7 @@ const countAriaLabel = hasCount
 
 <section
   class:list={['tl-event-hero', { 'tl-event-hero--bordered': bordered, 'tl-event-hero--paneled': hasPanel, 'tl-event-hero--franchise': !!backdrop }]}
-  style={`--ev-accent:${accent};--ev-glow:${glow};${backdrop?.style ?? ''}`}
+  style={`--ev-accent:${effectiveAccent};--ev-glow:${glow};${backdrop?.style ?? ''}`}
   aria-label={regionLabel}
 >
   {backdrop && (
@@ -264,6 +272,33 @@ const countAriaLabel = hasCount
      franchise colour muddied every gradient that was not TheLeague blue. */
   .tl-event-hero--franchise {
     background: var(--hero-fb-gradient, #0f1e2e);
+    /* Neutral-white CTA with the team colour darkened onto it. */
+    --ev-cta-bg: #ffffff;
+    --ev-cta-ink: var(--hero-fb-cta-ink, #10131a);
+    /* Light-theme tone as the base, dark as the override — see the theming
+       rules doc. 3:1 against the worst-case surface behind the card, which is
+       the WCAG 1.4.11 floor for non-text UI. */
+    border: 2px solid var(--hero-fb-border-light, var(--hero-fb-accent, #1c497c));
+  }
+  /*
+   * THIS pairing is load-bearing, unlike the one removed above it.
+   *
+   * `html.dark .tl-event-hero` declares `--ev-cta-bg` and `--ev-cta-ink` at
+   * (0,2,1) — the dark theme already gives this card a white button — so a lone
+   * modifier at (0,1,0) loses and the CTA would keep the dark theme's own ink
+   * instead of the franchise's. `--ev-surface` had no such consumer, which is
+   * exactly why that one was inert and this one is not.
+   */
+  :global(html.dark) .tl-event-hero--franchise {
+    --ev-cta-bg: #ffffff;
+    --ev-cta-ink: var(--hero-fb-cta-ink, #10131a);
+    border-color: var(--hero-fb-border-dark, var(--hero-fb-accent, #1c497c));
+  }
+  /* Small text (0.8125rem), so this pair is held to 4.5:1 rather than the
+     large-text floor the rest of the accent uses. */
+  .tl-event-hero--franchise .tl-event-hero__pill {
+    background: var(--hero-fb-pill-bg, var(--hero-fb-accent, #1c497c));
+    color: var(--hero-fb-pill-ink, #fff);
   }
   .tl-event-hero--franchise .tl-event-hero__glow {
     display: none;
@@ -392,6 +427,10 @@ const countAriaLabel = hasCount
   .tl-event-hero__chip svg {
     width: 24px;
     height: 24px;
+    /* COPY band — top-left of the card, so the headline accent, not the panel's.
+       These two icon rules are easy to mix up: this one is the eyebrow chip and
+       `.tl-hero-panel__link-icon` below is the panel's, they are identical
+       two-line rules, and they need OPPOSITE accents. */
     fill: var(--ev-accent);
     color: var(--ev-accent);
   }
@@ -519,8 +558,12 @@ const countAriaLabel = hasCount
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: var(--ev-accent);
-    border-left: 3px solid var(--ev-accent);
+    /* The PANEL accent, not the headline's: this type is 0.75rem and sits over
+       the gradient's far end under the thinnest wash, which is a different
+       surface and a stricter floor. Falls back to `--ev-accent` so a hero with
+       no franchise backdrop is unchanged. */
+    color: var(--hero-fb-accent-panel, var(--ev-accent));
+    border-left: 3px solid var(--hero-fb-accent-panel, var(--ev-accent));
     padding-left: 0.5rem;
   }
   :global(.tl-hero-panel__row) {
@@ -576,8 +619,9 @@ const countAriaLabel = hasCount
     width: 0.95rem;
     height: 0.95rem;
     flex-shrink: 0;
-    fill: var(--ev-accent);
-    color: var(--ev-accent);
+    /* PANEL band — see the note on `.tl-event-hero__chip svg` above. */
+    fill: var(--hero-fb-accent-panel, var(--ev-accent));
+    color: var(--hero-fb-accent-panel, var(--ev-accent));
   }
   :global(.tl-hero-panel__link-label) {
     overflow: hidden;

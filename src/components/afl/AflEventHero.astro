@@ -119,6 +119,15 @@ const modelGlowLight = modelColors ? hexToRgba(modelColors.primary, 0.22) : '';
 const modelGlowDark = modelColors ? hexToRgba(modelColors.primary, 0.42) : '';
 const modelStyle = model ? `--ev-model-glow-light:${modelGlowLight};--ev-model-glow-dark:${modelGlowDark};` : '';
 
+// The accent is the franchise's when one is painting, the league's otherwise.
+// Resolved HERE rather than in the stylesheet because `--ev-accent` is written
+// into this element's inline `style`, and an inline declaration beats every
+// rule in the sheet — a `--ev-accent: var(--hero-fb-accent)` CSS override looks
+// right, cascades correctly, and is silently ignored. Everything keyed on the
+// variable (headline word, countdown numeral, star chip tint and glyph) follows
+// from this one line.
+const effectiveAccent = backdrop?.accent ?? accent;
+
 // Feature screenshot theme pair (see capture-whats-new-screenshots.mjs).
 const shotSrc = screenshot ? `/assets/whats-new/${screenshot}` : null;
 const shotDarkSrc = shotSrc ? shotSrc.replace(/\.(\w+)$/, '-dark.$1') : null;
@@ -140,7 +149,7 @@ const countAriaLabel = hasCount
 
 <section
   class:list={['afl-event-hero', { 'afl-event-hero--bordered': bordered, 'afl-event-hero--franchise': !!backdrop }]}
-  style={`--ev-accent:${accent};--ev-glow:${glow};${modelStyle}${backdrop?.style ?? ''}`}
+  style={`--ev-accent:${effectiveAccent};--ev-glow:${glow};${modelStyle}${backdrop?.style ?? ''}`}
   aria-label={regionLabel}
 >
   {backdrop && (
@@ -347,6 +356,33 @@ const countAriaLabel = hasCount
      two washes over franchise colour muddied every gradient that was not red. */
   .afl-event-hero--franchise {
     background: var(--hero-fb-gradient, #002244);
+    /* Team-coloured edge so the card separates from the page. The LIGHT-theme
+       tone is the base declaration and the dark one overrides below — never the
+       other way round, or a light-theme reader gets the fallback (see
+       docs/claude/rules/theming-and-assets.md). Both are held to 3:1 against
+       the worst-case surface behind the card; a border is non-text UI, which is
+       the floor WCAG 1.4.11 sets for it. */
+    border: 2px solid var(--hero-fb-border-light, var(--hero-fb-accent, #c9a94e));
+  }
+  :global(html.dark) .afl-event-hero--franchise {
+    border-color: var(--hero-fb-border-dark, var(--hero-fb-accent, #c9a94e));
+  }
+  /* The league pill goes team too. Its label is 0.8125rem — small text — so the
+     fill/ink pair is the one thing held to 4.5:1 rather than the large-text
+     floor the rest of the accent uses. */
+  .afl-event-hero--franchise .afl-event-hero__pill {
+    background: var(--hero-fb-pill-bg, var(--hero-fb-accent, #c41e3a));
+    color: var(--hero-fb-pill-ink, #fff);
+  }
+  /* Neutral-white CTA. The label is the team colour DARKENED onto white rather
+     than the accent itself — the accent is tuned to be legible on a dark
+     gradient, which is the opposite problem. */
+  .afl-event-hero--franchise .afl-event-hero__cta:not(.afl-event-hero__cta--ghost) {
+    background: #ffffff;
+    color: var(--hero-fb-cta-ink, #10131a);
+  }
+  .afl-event-hero--franchise .afl-event-hero__cta:not(.afl-event-hero__cta--ghost):hover {
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
   }
   .afl-event-hero--franchise .afl-event-hero__glow {
     display: none;

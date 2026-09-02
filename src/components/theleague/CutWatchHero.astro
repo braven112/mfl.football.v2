@@ -171,13 +171,18 @@ const summary = !urgent
     letter-spacing: 0.06em;
     padding: 0.08rem 0.4rem;
     border-radius: 999px;
-    background: var(--ev-accent, #dc2626);
-    color: #fff;
+    /* The pill pair, not the raw accent: this chip hardcodes its ink, and a
+       franchise accent under it is a fill nobody chose white against — Midwestside
+       gold put this at 1.50:1. `--hero-fb-pill-*` are computed together and held
+       to 4.5:1, and unlike the accents they are surface-independent, because a
+       chip's contrast is ink-on-its-own-fill rather than against the card. */
+    background: var(--hero-fb-pill-bg, var(--ev-accent, #dc2626));
+    color: var(--hero-fb-pill-ink, #fff);
   }
   .cw-team__count {
     font-size: 0.75rem;
     font-weight: 700;
-    color: var(--ev-accent, #dc2626);
+    color: var(--hero-fb-accent-panel, var(--ev-accent, #dc2626));
     font-variant-numeric: tabular-nums;
     flex-shrink: 0;
     white-space: nowrap;

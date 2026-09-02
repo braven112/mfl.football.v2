@@ -67,9 +67,20 @@
     width: min(70%, 15rem);
     opacity: 0.14;
   }
+  /* 0.58 at its THINNEST, and that number is load-bearing: the resolver clears
+     every accent against `MOBILE_WASH_MIN` in hero-franchise-backdrop.ts, so
+     lightening this scrim silently invalidates all 40 accents at once. The two
+     are pinned together by tests/hero-franchise-backdrop.test.ts.
+
+     Heavier than the desktop ramp's thinnest point on purpose. Under 640px the
+     copy spans the FULL card width, so there is no left column for a horizontal
+     ramp to protect and the accent has to survive over the gradient's far end
+     too. Strengthening the scrim is what keeps Midwestside gold and Music City
+     red on their own cards; the alternative was darkening all 40 accents toward
+     a safe, generic mid-tone. */
   .hero-fb__wash {
     background:
       radial-gradient(70% 60% at 80% 18%, rgba(255, 255, 255, 0.12) 0%, transparent 64%),
-      linear-gradient(180deg, rgba(0, 0, 0, 0.42) 0%, rgba(0, 0, 0, 0.58) 100%);
+      linear-gradient(180deg, rgba(0, 0, 0, 0.58) 0%, rgba(0, 0, 0, 0.7) 100%);
   }
 }
