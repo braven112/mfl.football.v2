@@ -316,6 +316,22 @@ describe('the call sites', () => {
   // a re-fork of one of these two sibling pages — reaching straight for
   // `groupMe`/`icon` is, and that is exactly how TheLeague's lineup page and
   // the AFL's drifted apart in the first place.
+
+  /**
+   * Source with comments removed.
+   *
+   * Load-bearing for the ratchet below, not tidiness: every one of these files
+   * NAMES the helper in prose explaining why the crest is resolved server-side,
+   * so a bare-identifier search passes on the comment alone and would keep
+   * passing after someone deleted the call it describes. Caught by Copilot on
+   * #688 — the guard was weaker than the thing it guarded.
+   *
+   * `//` is only a comment when it does not follow a colon, or every `https://`
+   * in the file eats the rest of its line.
+   */
+  const stripComments = (src: string) =>
+    src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+
   const SURFACES = [
     'src/components/theleague/season-heroes/RecapCompositeHero.astro',
     'src/pages/theleague/lineup.astro',
@@ -326,17 +342,20 @@ describe('the call sites', () => {
 
   for (const file of SURFACES) {
     it(`${file} resolves its crest server-side`, () => {
-      const src = readFileSync(file, 'utf-8');
-      expect(/resolveDarkSurfaceCrest|resolveBroadcastCrest/.test(src)).toBe(true);
+      const src = stripComments(readFileSync(file, 'utf-8'));
+      // An actual CALL — the open paren is the point. `resolveDarkSurfaceCrest`
+      // as a bare identifier also matches the import line, which survives a
+      // deleted call just as happily as a comment does.
+      expect(
+        /\bresolve(DarkSurfaceCrest|BroadcastCrest)\s*\(/.test(src),
+        `${file} never calls the resolver`
+      ).toBe(true);
     });
   }
 
   for (const file of SURFACES.slice(0, 3)) {
     it(`${file} does not reach past it for light-only artwork`, () => {
-      const src = readFileSync(file, 'utf-8')
-        .split('\n')
-        .filter((l) => !l.trimStart().startsWith('//') && !l.trimStart().startsWith('*'))
-        .join('\n');
+      const src = stripComments(readFileSync(file, 'utf-8'));
       // The two ways the bug shipped: `brand.groupMe` on the hero, and
       // `team?.iconDark || team?.icon` hand-rolled on a lineup page.
       expect(/\bwatermark:\s*(brand|team)\??\.(groupMe|icon)\b/.test(src)).toBe(false);
@@ -345,8 +364,9 @@ describe('the call sites', () => {
   }
 
   it('the faceoff panel can carry a ring at all', () => {
-    // Without this prop the AFL's eight manifest-flagged crests have no way to
-    // separate from the panel — the site rings them, this surface could not.
+    // Without this prop the four AFL crests that still resolve to light art
+    // have no way to separate from the panel — the site rings them under
+    // `html.dark`, and this surface could not ring them at all.
     const foc = readFileSync('src/components/theleague/FaceoffComposite.astro', 'utf-8');
     expect(foc).toContain('watermarkFilter');
     const cards = readFileSync('src/utils/lineup-matchup-cards.ts', 'utf-8');
