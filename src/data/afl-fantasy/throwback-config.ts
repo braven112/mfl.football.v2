@@ -2,7 +2,7 @@
  * AFL Throwback Week: the AFL's counterpart to
  * `src/data/theleague/throwback-config.ts`. Same two knobs — which eras are
  * excluded, and which era each franchise wears by default — over a much
- * deeper archive: 114 eras across 24 franchises going back to 2003, against
+ * deeper archive: 116 eras across 24 franchises going back to 2003, against
  * TheLeague's 42 back to 2007.
  *
  * Feature learnings live in docs/claude/insights/features/throwback-week.md.
@@ -103,7 +103,7 @@ export const AFL_DEFAULT_THROWBACK_ERA: Record<string, number> = {
   '0016': 2009, // Swiftie 4 Life → Brady's Bastards — 5 seasons
   '0017': 2008, // Titsburgh Feelers → Blitzkrieg — 5 seasons
   '0018': 2009, // Jewpacabra → Zephyr — 5 seasons
-  '0019': 2005, // Badd Boys → The Bandwagon — 4 seasons
+  '0019': 2011, // Badd Boys → Cliffside Killer Clowns — 4 seasons
   '0020': 2008, // The Boondock Saints → The Boondock Saints (The brothers) — 8 seasons
   '0021': 2010, // Chatmaster → Chatmaster (The AIM lockup) — 15 seasons
   '0022': 2005, // Balls Deep → Way More Funner — 7 seasons

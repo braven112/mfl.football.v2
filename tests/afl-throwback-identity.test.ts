@@ -264,7 +264,7 @@ describe('throwback defaults — never a punitive last-place rebrand', () => {
     }
   });
 
-  it('The Show wears No Frills (17 seasons), not Cock Gobbler (1)', () => {
+  it('The Show wears No Frills (14 seasons), not Cock Gobbler (1)', () => {
     // The case that prompted the rule.
     const identity = resolveThrowbackIdentity(findTeam('0023'), undefined, 'afl');
     expect(identity.name).toBe('No Frills');
@@ -456,6 +456,90 @@ describe('era keys stay unique', () => {
         ).toBe(false);
         seen.set(era.yearStart, era.name);
       }
+    }
+  });
+});
+
+/**
+ * Eras that ARE invisible and cannot be fixed yet, `<league> <franchiseId> <yearStart>`.
+ *
+ * This list may only SHRINK. Each entry is an era whose distinct art no
+ * longer exists anywhere we can reach, so pointing it at the live files is
+ * the only option available — not a mistake left in place.
+ */
+const KNOWN_INVISIBLE_ERAS = new Set([
+  // All four are the same story, and it is TheLeague's version of the AFL bug
+  // this guard was written for: the franchise's LAST pre-2025 look lived on
+  // `theleague.us/images/team_banners/*.png` — named in every one of those
+  // years' league.json — and that host now answers every image request with a
+  // 124 KB HTML 404. There is no rehost of it (unlike afl-fantasy.com, which
+  // mfl.football mirrors), so these entries point at the 2025 rebrand files
+  // and the eras do not appear in TheLeague's picker.
+  //
+  // Recover the art — an owner's copy, an archive — and the line comes out.
+  'theleague 0003 2016', // Maverick
+  'theleague 0010 2016', // Computer Jocks
+  'theleague 0013 2014', // Gridiron Geeks
+  'theleague 0014 2018', // Cowboy Up
+]);
+
+describe('no era is invisible', () => {
+  it('no history entry duplicates its own franchise\'s live identity', () => {
+    // `getEligibleThrowbackEras` drops an entry whose name, icon AND banner
+    // all equal the franchise's current ones — correctly, since throwing back
+    // to today is not a throwback. But that makes a data error SILENT: the
+    // era is simply absent from the picker with nothing to indicate why.
+    //
+    // Jewpacabra's 2015-2018 entry was exactly that. It named the live team
+    // and pointed at `/assets/afl/icons/jewpacabra.png` and
+    // `/assets/afl/banners/jewpacabra.png` — the 2025 rebrand's own files —
+    // so the franchise carried seven history rows and could only pick five.
+    // The real 2015-2024 banner was in the MFL feed the whole time.
+    //
+    // A deliberate exclusion has a home: AFL_THROWBACK_ASSET_CONFLICTS. This
+    // one never does.
+    const found: string[] = [];
+    for (const [label, config] of [['afl', aflConfig], ['theleague', theleagueConfig]] as const) {
+      for (const team of (config as any).teams as TeamConfig[]) {
+        for (const era of team.history ?? []) {
+          const same =
+            era.name === team.name && era.icon === team.icon && era.banner === team.banner;
+          const key = `${label} ${team.franchiseId} ${era.yearStart}`;
+          if (same && !KNOWN_INVISIBLE_ERAS.has(key)) {
+            found.push(`${key} — "${era.name}" is byte-for-byte the live identity`);
+          }
+        }
+      }
+    }
+    expect(found, `invisible eras:\n${found.join('\n')}`).toEqual([]);
+  });
+
+  it('every known-invisible era is still actually invisible', () => {
+    // The same ratchet idiom as the typecheck and page-fork baselines: an
+    // entry that no longer describes reality is slack, and slack is how a
+    // pinned list stops being a check.
+    for (const key of KNOWN_INVISIBLE_ERAS) {
+      const [label, franchiseId, yearStart] = key.split(' ');
+      const config = label === 'afl' ? aflConfig : theleagueConfig;
+      const team = ((config as any).teams as TeamConfig[]).find(
+        (t) => t.franchiseId === franchiseId,
+      );
+      expect(team, `${key} names a franchise that does not exist`).toBeTruthy();
+      const era = (team!.history ?? []).find((e) => e.yearStart === Number(yearStart));
+      expect(era, `${key} names an era that does not exist`).toBeTruthy();
+      expect(
+        era!.name === team!.name && era!.icon === team!.icon && era!.banner === team!.banner,
+        `${key} has real art now — delete it from KNOWN_INVISIBLE_ERAS`,
+      ).toBe(true);
+    }
+  });
+
+  it('every AFL franchise offers at least one era', () => {
+    for (const team of teams) {
+      expect(
+        getEligibleThrowbackEras(team, 'afl').length,
+        `${team.name} has nothing to wear on Throwback Week`,
+      ).toBeGreaterThan(0);
     }
   });
 });
