@@ -50,18 +50,23 @@ import { themeModes } from '../../.storybook/modes';
  * custom-stroke and Running down the Dream off default-white while this branch
  * was open, and both stories kept passing while testing the wrong thing.
  *
- * The sweep has since reached all of them. As of the end of Sept 2026 the
- * ENTIRE stroke set is one franchise — Swiftie 4 Life, and only because it
- * opts IN at 91% legible. Default white has NO team left (the four the
- * manifest still flags all opt out with `iconStrokeDark: false`), and custom
- * colour has none either, since Swiftie's `#ffffff` is the default hue.
+ * The pool did not shrink; it emptied. As of the end of Sept 2026 the stroke
+ * set is EMPTY — `withStrokeColors` emits zero rules for either league. Every
+ * franchise the manifest flags now either carries an `iconDark` (which excludes
+ * it by construction) or opts out with `iconStrokeDark: false`. Swiftie 4 Life
+ * was the last one wearing a ring and took dark artwork too.
  *
- * So the pool is not shrinking any more; it has essentially run out. The two
- * stroke stories here collapsed into one, and the branch coverage moved to
- * synthetic fixtures in `tests/broadcast-crest.test.ts`, which do not depend on
- * a franchise staying un-arted. If Swiftie ever gains an `iconDark`, this story
- * has nothing to point at either — delete it rather than pointing it at a crest
- * that no longer strokes.
+ * So there are no stroke stories here any more — StrokeDefaultWhite and
+ * StrokeCustomColor were both deleted rather than repointed at crests that no
+ * longer stroke, which is the failure mode this file keeps hitting: a repointed
+ * story keeps passing while silently testing the swap branch.
+ *
+ * The mechanism is still live code and still worth having — it is what catches
+ * the NEXT franchise added without dark art. Its branches are pinned
+ * synthetically instead, in `tests/broadcast-crest.test.ts` and
+ * `tests/crest-dark-stroke.test.ts`, neither of which depends on a franchise
+ * staying un-arted. `StrokeExplicitlyOptedOut` below survives because its
+ * branch — `iconStrokeDark: false` — still has four real subjects.
  */
 export default {
   title: 'Theming/TeamIconCell',
@@ -98,43 +103,6 @@ export const DarkSwapAvailableAfl = {
   args: {
     icon: '/assets/afl/icons/ninjas.png',
     name: 'The Mariachi Ninjas',
-  },
-};
-
-/**
- * THE STROKE, and there is now only one franchise left wearing one.
- *
- * A crest with no dark variant gets an outline so it does not dissolve into a
- * dark card. Swiftie 4 Life is the last franchise that renders one: its
- * `iconStrokeDark: "#ffffff"` is a config OPT-IN (the measurement scores it 91%
- * legible and never flagged it), and white happens to be the same hue the
- * shared default rule uses, so this story shows exactly what the default branch
- * looks like too.
- *
- * **No franchise can reach the true default branch any more.** It needs a team
- * that the manifest flagged AND that declares no colour; all four flagged teams
- * left (Minty Fresh, Ditka, Cowboy Up, Dark Magicians) set `iconStrokeDark:
- * false`, so they opt out instead. There is nothing to point a separate
- * default-white story at — `tests/broadcast-crest.test.ts` covers that branch
- * synthetically for the same reason.
- *
- * A companion `StrokeCustomColor` story lived here until the dark-artwork
- * sweep took its subject for the fourth time (The Show, then No Soup For You,
- * then Suh girls, each on gaining an `iconDark`). It was deleted rather than
- * repointed a fifth time: Swiftie is the only franchise left declaring a
- * colour, and `#ffffff` is the default hue spelled differently, so the story
- * would have been visually identical to this one.
- *
- * The swap and the stroke are mutually exclusive by construction: the manifest
- * and `withStrokeColors` both exclude any team with an `iconDark`, so a crest
- * can never get both. That is also why this story keeps losing subjects — and
- * why a franchise named here gaining dark artwork silently turns it into a swap
- * story that still passes. Check by hand.
- */
-export const StrokeDefaultWhite = {
-  args: {
-    icon: '/assets/afl/icons/swift.png',
-    name: 'Swiftie 4 Life',
   },
 };
 
