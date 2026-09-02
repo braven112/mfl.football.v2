@@ -188,19 +188,17 @@ describe('resolveBroadcastCrest — the outline', () => {
     // without `iconStrokeDark` (the way franchise-band-brand rebuilds a
     // franchise off its throwback identity) while the index still carries the
     // opt-out. `false || DEFAULT` would ring a crest a human opted out of.
-    // Find the opted-out franchise rather than naming one. This was pinned to
-    // Chatmaster (0021) until it gained a real `iconDark` — and a franchise
-    // with `iconDark` may not carry `iconStrokeDark` at all, so the fixture
-    // died the moment that artwork landed. Every franchise here is getting
-    // dark art eventually, so any hardcoded id is a scheduled failure.
-    const index = broadcastStrokeIndex('afl', afl.teams);
-    const optedOut = afl.teams.find(
-      (t: any) => t.iconStrokeDark === false && !t.iconDark
-    );
-    // Guard the search itself: without this the test passes vacuously on
-    // `undefined` once no franchise opts out any more.
-    expect(optedOut, 'no AFL franchise opts out of the stroke').toBeDefined();
-    const stripped = { ...optedOut, iconStrokeDark: undefined, groupMeDark: undefined };
+    // Synthetic on both sides, matching the twin case in
+    // dark-surface-crest.test.ts. This was pinned to Chatmaster, then made to
+    // SEARCH the AFL for any opt-out — and the search itself ran dry when Minty
+    // Fresh and Ditka took dark artwork, leaving TheLeague holding the only two
+    // opt-outs in the repo. Scoping the search wider would just defer it again:
+    // every franchise is on track for dark art, and an `iconDark` forbids
+    // `iconStrokeDark` outright.
+    const index = new Map<string, string | false | undefined>([['9999', false]]);
+    // The record deliberately does NOT carry iconStrokeDark — the opt-out
+    // exists only in the index, which is the case being pinned.
+    const stripped = { franchiseId: '9999', groupMe: '/gm.png' };
     expect(resolveBroadcastCrest(stripped, 'afl', index).iconStroke).toBeUndefined();
   });
 
