@@ -74,15 +74,63 @@ function toIdentity(entry: FranchiseHistoryEntry): TeamIdentity {
 }
 
 /**
- * Resolve a franchise's throwback identity: owner override -> commissioner
- * default -> earliest eligible era -> current identity (if no eligible eras
- * exist at all).
+ * How long a franchise wore an era, in seasons.
  *
- * Note on the fallback: the "each team throws back to its most recent old
- * identity" policy is implemented by the SEEDED `DEFAULT_THROWBACK_ERA` map
- * (hand-tuned per franchise, with commissioner exceptions), not here. The
- * earliest-eligible-era branch below is a last resort that only fires when a
- * franchise has eligible eras but no (or an invalid) seeded default.
+ * `yearEnd` is inclusive, so a single-season era spans 1 rather than 0 — the
+ * difference between "shortest" and "tied for shortest" when this orders the
+ * default pick below.
+ */
+function eraSpan(entry: FranchiseHistoryEntry): number {
+  return (entry.yearEnd ?? entry.yearStart) - entry.yearStart + 1;
+}
+
+/**
+ * The era a franchise wears when its owner has not picked one.
+ *
+ * Two rules, and the first one is a league policy rather than a heuristic:
+ *
+ * 1. **A punitive last-place rebrand is never a DEFAULT.** Wearing the name
+ *    the league stuck you with for finishing last is a choice an owner can
+ *    make, not one the site makes for them — so `rebrand` eras stay
+ *    selectable in the picker and are skipped here. This is not a nicety:
+ *    the seeding heuristic that preceded it ("most recent look that differs
+ *    from today's") walked straight into four of them, because a shame
+ *    rename is by construction recent and visually distinct.
+ * 2. **Otherwise the LONGEST-RUNNING era wins**, ties going to the earlier
+ *    one. The identity a franchise wore for seventeen seasons is the one the
+ *    league actually remembers; the seeded map is the commissioner's chance
+ *    to overrule that, not a separate policy.
+ *
+ * A commissioner default that is itself a rebrand is skipped too, so rule 1
+ * cannot be defeated by a stale seed. The all-rebrand case still returns
+ * something — a franchise whose every era is a shame name has no better
+ * option, and rendering its CURRENT identity would silently drop it out of
+ * Throwback Week entirely.
+ */
+export function pickDefaultThrowbackEra(
+  eligible: FranchiseHistoryEntry[],
+  seededYearStart?: number
+): FranchiseHistoryEntry | null {
+  if (eligible.length === 0) return null;
+
+  const seeded = eligible.find((e) => e.yearStart === seededYearStart);
+  if (seeded && !seeded.rebrand) return seeded;
+
+  const byTenure = (pool: FranchiseHistoryEntry[]) =>
+    [...pool].sort((a, b) => eraSpan(b) - eraSpan(a) || a.yearStart - b.yearStart)[0];
+
+  const clean = eligible.filter((e) => !e.rebrand);
+  return byTenure(clean.length > 0 ? clean : eligible) ?? null;
+}
+
+/**
+ * Resolve a franchise's throwback identity: owner override -> the default era
+ * (`pickDefaultThrowbackEra`) -> current identity, when there is no eligible
+ * era at all.
+ *
+ * An owner override is honored even when it is a punitive rebrand — the
+ * no-shame-name rule governs what we CHOOSE for someone, not what they may
+ * choose for themselves.
  *
  * @param ownerOverrideYearStart - `yearStart` of the era the owner picked
  *   via the league's throwback-settings page, if any.
@@ -101,16 +149,11 @@ export function resolveThrowbackIdentity(
     if (chosen) return toIdentity(chosen);
   }
 
-  const defaultYearStart = throwbackRules(scope).defaults[team.franchiseId];
-  if (defaultYearStart !== undefined) {
-    const chosen = eligible.find((e) => e.yearStart === defaultYearStart);
-    if (chosen) return toIdentity(chosen);
-  }
-
-  if (eligible.length > 0) {
-    const earliest = [...eligible].sort((a, b) => a.yearStart - b.yearStart)[0];
-    return toIdentity(earliest);
-  }
+  const chosen = pickDefaultThrowbackEra(
+    eligible,
+    throwbackRules(scope).defaults[team.franchiseId]
+  );
+  if (chosen) return toIdentity(chosen);
 
   return {
     name: team.name,

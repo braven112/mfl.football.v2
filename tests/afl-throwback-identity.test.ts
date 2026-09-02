@@ -3,7 +3,11 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import aflConfig from '../data/afl-fantasy/afl.config.json';
 import theleagueConfig from '../src/data/theleague.config.json';
-import { getEligibleThrowbackEras, resolveThrowbackIdentity } from '../src/utils/throwback-identity';
+import {
+  getEligibleThrowbackEras,
+  pickDefaultThrowbackEra,
+  resolveThrowbackIdentity,
+} from '../src/utils/throwback-identity';
 import { applyThrowbackOverrides, type ConfigTeam } from '../src/utils/live-scoring-data';
 import {
   scopedThrowbackKey,
@@ -206,5 +210,85 @@ describe('AFL throwback — live-scoring overlay', () => {
     // 1999 is nobody's era — falls back down the default chain rather than
     // rendering an undefined identity.
     expect(resolveThrowbackIdentity(swiftie, 1999, 'afl').isHistorical).toBe(true);
+  });
+});
+
+describe('throwback defaults — never a punitive last-place rebrand', () => {
+  const span = (e: { yearStart: number; yearEnd?: number }) =>
+    (e.yearEnd ?? e.yearStart) - e.yearStart + 1;
+
+  it('no franchise is DEFAULTED into a shame name', () => {
+    // The rule this pins is a league policy, not a heuristic: an owner may
+    // choose to wear the name the league stuck them with for finishing last,
+    // but the site never chooses it for them. The seeding heuristic that
+    // preceded it picked four of these outright, because a last-place rename
+    // is by construction both recent and visually distinct.
+    for (const team of teams) {
+      const identity = resolveThrowbackIdentity(team, undefined, 'afl');
+      expect(
+        identity.rebrand,
+        `${team.name} is defaulted into its last-place rebrand "${identity.name}"`,
+      ).toBeUndefined();
+    }
+  });
+
+  it('defaults to the longest-running eligible era', () => {
+    // Compared by ENTRY, not by name: two of Fullybaked's eras are both called
+    // "Fullybaked" and differ only by eraLabel, so a name lookup here silently
+    // grades the wrong one.
+    for (const team of teams) {
+      const eligible = getEligibleThrowbackEras(team, 'afl');
+      const clean = eligible.filter((e) => !e.rebrand);
+      if (clean.length === 0) continue;
+      const longest = Math.max(...clean.map(span));
+      const worn = pickDefaultThrowbackEra(
+        eligible,
+        throwbackRules('afl').defaults[team.franchiseId],
+      )!;
+      expect(
+        span(worn),
+        `${team.name} defaults to "${worn.name}" (${worn.yearStart}, ${span(worn)}yr) ` +
+          `but its longest non-rebrand era runs ${longest}yr`,
+      ).toBe(longest);
+    }
+  });
+
+  it('The Show wears No Frills (17 seasons), not Cock Gobbler (1)', () => {
+    // The case that prompted the rule.
+    const identity = resolveThrowbackIdentity(findTeam('0023'), undefined, 'afl');
+    expect(identity.name).toBe('No Frills');
+  });
+
+  it('an owner may still CHOOSE a rebrand era', () => {
+    const show = findTeam('0023');
+    const shame = getEligibleThrowbackEras(show, 'afl').find((e) => e.rebrand)!;
+    expect(shame.name).toBe('Cock Gobbler');
+    expect(resolveThrowbackIdentity(show, shame.yearStart, 'afl').name).toBe('Cock Gobbler');
+  });
+
+  it('a seeded default that is a rebrand is overruled, not honored', () => {
+    // Rule 1 must not be defeatable by a stale entry in the seed map.
+    const eligible = [
+      { name: 'Shame', yearStart: 2020, yearEnd: 2020, rebrand: { reason: 'last-place', group: 'g' } },
+      { name: 'Real', yearStart: 2010, yearEnd: 2012 },
+    ] as any;
+    expect(pickDefaultThrowbackEra(eligible, 2020)!.name).toBe('Real');
+  });
+
+  it('falls back to a rebrand only when every era is one', () => {
+    const allShame = [
+      { name: 'Shame A', yearStart: 2020, yearEnd: 2020, rebrand: { reason: 'last-place', group: 'g' } },
+      { name: 'Shame B', yearStart: 2015, yearEnd: 2018, rebrand: { reason: 'last-place', group: 'g' } },
+    ] as any;
+    // Dropping out of Throwback Week entirely would be worse than the shame name.
+    expect(pickDefaultThrowbackEra(allShame)!.name).toBe('Shame B');
+  });
+
+  it('breaks a tenure tie on the earlier era, deterministically', () => {
+    const tied = [
+      { name: 'Later', yearStart: 2015, yearEnd: 2017 },
+      { name: 'Earlier', yearStart: 2005, yearEnd: 2007 },
+    ] as any;
+    expect(pickDefaultThrowbackEra(tied)!.name).toBe('Earlier');
   });
 });

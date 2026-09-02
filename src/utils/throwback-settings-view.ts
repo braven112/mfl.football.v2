@@ -16,7 +16,7 @@
 
 import type { AuthUser } from './auth';
 import { isCommissionerOrAdmin } from './auth';
-import { getEligibleThrowbackEras } from './throwback-identity';
+import { getEligibleThrowbackEras, pickDefaultThrowbackEra } from './throwback-identity';
 import { getAllThrowbackPreferences, getThrowbackPreference, getRedis } from './throwback-store';
 import { throwbackRules, type ThrowbackScope } from './throwback-scope';
 import type { FranchiseHistoryEntry, TeamConfig } from './team-names';
@@ -74,24 +74,21 @@ function toEraView(era: FranchiseHistoryEntry): ThrowbackEraView {
 }
 
 /**
- * The default-era chain, shared so the picker, the commissioner panel and the
- * scoreboard can never disagree about what a team wears: the seeded
- * commissioner default when it is still eligible, else the earliest eligible
- * era. (A stored pick that is no longer eligible lands here too — exactly what
- * `resolveThrowbackIdentity` does, so the page shows what will actually
- * render.)
+ * The default era, delegated to `pickDefaultThrowbackEra` rather than
+ * reimplemented.
+ *
+ * This page and the scoreboard must never disagree about what a team wears
+ * with no pick saved — the picker's "your default" chip is a promise about
+ * what Week 8 will actually render. A second copy of the rule here is exactly
+ * how that promise would quietly stop being true, and the rule now carries
+ * policy (no punitive rebrand as a default), not just an ordering.
  */
 function defaultEraFor(
   eligible: FranchiseHistoryEntry[],
   franchiseId: string,
   scope: ThrowbackScope
 ): FranchiseHistoryEntry | null {
-  const seeded = throwbackRules(scope).defaults[franchiseId];
-  return (
-    eligible.find((e) => e.yearStart === seeded) ??
-    [...eligible].sort((a, b) => a.yearStart - b.yearStart)[0] ??
-    null
-  );
+  return pickDefaultThrowbackEra(eligible, throwbackRules(scope).defaults[franchiseId]);
 }
 
 /**
