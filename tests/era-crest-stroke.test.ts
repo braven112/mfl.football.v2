@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import aflConfig from '../data/afl-fantasy/afl.config.json';
 import theleagueConfig from '../src/data/theleague.config.json';
 import { buildEraCrestStrokeCss } from '../src/utils/era-crest-stroke-css';
@@ -37,17 +39,39 @@ describe('era crest rim', () => {
     }
   });
 
-  it('only rings crests cut from a banner, never real icon art', () => {
-    // A crest drawn as an icon already has its own edge; ringing it would be
-    // a sticker outline around finished art.
+  it('never rings finished crest art', () => {
+    // The rim exists because a banner cut has no edge of its own. Art that
+    // arrived as a real crest already does, and ringing it is a sticker
+    // outline around finished work.
+    //
+    // Checked by PROVENANCE rather than a filename pattern: the recovery work
+    // produced three naming families (`*_banner_icon_circle`, per-era cuts
+    // like `smokane_2006_icon`, and `*_tl_icon` borrowed wholesale), and a
+    // pattern that has to list all three stops being a check and becomes a
+    // restatement of the data. Two kinds are known-finished:
+    //
+    //   - `*_tl_icon.png` — borrowed from TheLeague, already a 100x100 crest.
+    //   - anything under `icons/` — a franchise's live logo.
     for (const { team, era } of eras.filter((e) => e.era.iconStroke)) {
-      const base = String(era.icon).split('/').pop() ?? '';
-      const bannerCut =
-        base.includes('_banner_icon_circle') ||
-        base.endsWith('_banner.png') ||
-        base.endsWith('_banner.gif') ||
-        base === 'fullybaked_2005_icon.png';
-      expect(bannerCut, `${team.name} "${era.name}" (${base}) is not a banner cut`).toBe(true);
+      const icon = String(era.icon);
+      expect(
+        icon.endsWith('_tl_icon.png'),
+        `${team.name} "${era.name}" rings a crest borrowed from TheLeague, which is finished art`,
+      ).toBe(false);
+      expect(
+        icon.includes('/history/'),
+        `${team.name} "${era.name}" rings ${icon}, which is not era art`,
+      ).toBe(true);
+    }
+  });
+
+  it('every ringed crest file actually exists', () => {
+    // A rule keyed on a src that is not on disk is invisible dead CSS.
+    for (const { team, era } of eras.filter((e) => e.era.iconStroke)) {
+      expect(
+        existsSync(join(process.cwd(), 'public', String(era.icon))),
+        `${team.name} "${era.name}" rings a missing file: ${era.icon}`,
+      ).toBe(true);
     }
   });
 

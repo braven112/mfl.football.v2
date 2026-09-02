@@ -35,13 +35,46 @@
       "history": [
         {
           "name": "Smokane",
+          "eraLabel": "The original",
           "icon": "/assets/afl/history/smokane_banner_icon_circle.png",
           "banner": "/assets/afl/history/smokane_banner.png",
           "colorPrimary": "#57610e",
           "colorSecondary": "#cb6051",
           "iconStroke": "#cb6051",
           "yearStart": 2003,
-          "yearEnd": 2008
+          "yearEnd": 2003
+        },
+        {
+          "name": "Smokane",
+          "eraLabel": "The elephant",
+          "icon": "/assets/afl/history/smokane_2004_icon.png",
+          "banner": "/assets/afl/history/smokane_2004_banner.png",
+          "colorPrimary": "#15561d",
+          "colorSecondary": "#66432e",
+          "yearStart": 2004,
+          "yearEnd": 2005
+        },
+        {
+          "name": "Smokane FC",
+          "eraLabel": "The gas mask",
+          "icon": "/assets/afl/history/smokane_2006_icon.png",
+          "banner": "/assets/afl/history/smokane_2006_banner.png",
+          "colorPrimary": "#56600d",
+          "colorSecondary": "#cc6657",
+          "iconStroke": "#cc6657",
+          "yearStart": 2006,
+          "yearEnd": 2018
+        },
+        {
+          "name": "Smokane FC",
+          "eraLabel": "The wide wordmark",
+          "icon": "/assets/afl/history/smokane_2019_icon.png",
+          "banner": "/assets/afl/history/smokane_2019_banner.png",
+          "colorPrimary": "#d27062",
+          "colorSecondary": "#47805c",
+          "iconStroke": "#47805c",
+          "yearStart": 2019,
+          "yearEnd": 2024
         }
       ],
       "groupMe": "/assets/afl/group-me/smokane.png",
@@ -591,15 +624,60 @@
       "banner": "/assets/afl/banners/vitside_mafia.png",
       "groupMe": "/assets/afl/group-me/vitside-mafia.png",
       "groupMeDark": "/assets/afl/group-me/vitside-mafia_dark.png",
+      "borrowedIdentities": [
+        {
+          "name": "BOYZ II MEN",
+          "icon": "/assets/afl/history/boyz_ii_men_tl_icon.png",
+          "banner": "/assets/afl/history/boyz_ii_men_tl_banner.png",
+          "colorPrimary": "#679cbc",
+          "colorSecondary": "#679cbc",
+          "borrowed": true,
+          "yearStart": 2007,
+          "yearEnd": 2010
+        }
+      ],
       "history": [
         {
           "name": "Gamecocks",
+          "eraLabel": "The original",
           "icon": "/assets/afl/history/gamecocks_icon_icon_circle.png",
           "banner": "/assets/afl/history/gamecocks_banner.png",
           "colorPrimary": "#881b28",
           "colorSecondary": "#ae9d27",
           "yearStart": 2003,
+          "yearEnd": 2003
+        },
+        {
+          "name": "Gamecocks",
+          "eraLabel": "The red oval",
+          "icon": "/assets/afl/history/gamecocks_2004_icon.png",
+          "banner": "/assets/afl/history/gamecocks_2004_banner.png",
+          "colorPrimary": "#8e3d31",
+          "colorSecondary": "#234c52",
+          "yearStart": 2004,
+          "yearEnd": 2008
+        },
+        {
+          "name": "Gamecocks",
+          "eraLabel": "The rooster",
+          "icon": "/assets/afl/history/gamecocks_2009_icon.png",
+          "banner": "/assets/afl/history/gamecocks_2009_banner.png",
+          "colorPrimary": "#831b28",
+          "colorSecondary": "#ac9c27",
+          "iconStroke": "#ac9c27",
+          "yearStart": 2009,
           "yearEnd": 2009
+        },
+        {
+          "name": "Vitside Mafia",
+          "eraLabel": "The old lockup",
+          "icon": "/assets/afl/history/vitside_2010_icon.png",
+          "banner": "/assets/afl/history/vitside_2010_banner.png",
+          "colorPrimary": "#a63323",
+          "colorSecondary": "#a63323",
+          "iconStroke": "#a63323",
+          "yearStart": 2010,
+          "yearEnd": 2024
         }
       ]
     },
@@ -676,6 +754,28 @@
       "icon": "/assets/afl/icons/midwestside.png",
       "iconDark": "/assets/afl/icons/midwestside_dark.png",
       "banner": "/assets/afl/banners/midwestside.png",
+      "borrowedIdentities": [
+        {
+          "name": "Amish Rakefighters",
+          "icon": "/assets/afl/history/amish_rakefighters_tl_icon.png",
+          "banner": "/assets/afl/history/amish_rakefighters_tl_banner.png",
+          "colorPrimary": "#1d3358",
+          "colorSecondary": "#0e5227",
+          "borrowed": true,
+          "yearStart": 2007,
+          "yearEnd": 2015
+        },
+        {
+          "name": "Under Siege",
+          "icon": "/assets/afl/history/under_siege_tl_icon.png",
+          "banner": "/assets/afl/history/under_siege_tl_banner.png",
+          "colorPrimary": "#b31529",
+          "colorSecondary": "#e0bb7b",
+          "borrowed": true,
+          "yearStart": 2016,
+          "yearEnd": 2018
+        }
+      ],
       "history": [
         {
           "name": "HiGhClImBeRs",
@@ -980,6 +1080,18 @@
       "icon": "/assets/afl/icons/ninjas.png",
       "iconDark": "/assets/afl/icons/ninjas_dark.png",
       "banner": "/assets/afl/banners/ninjas.png",
+      "borrowedIdentities": [
+        {
+          "name": "The Executioners",
+          "icon": "/assets/afl/history/executioners_tl_icon.png",
+          "banner": "/assets/afl/history/executioners_tl_banner.png",
+          "colorPrimary": "#912718",
+          "colorSecondary": "#912718",
+          "borrowed": true,
+          "yearStart": 2007,
+          "yearEnd": 2015
+        }
+      ],
       "history": [
         {
           "name": "The Blunt Bros.",
@@ -1536,6 +1648,17 @@
           "iconStroke": "#312d52",
           "yearStart": 2009,
           "yearEnd": 2009
+        },
+        {
+          "name": "Chatmaster",
+          "eraLabel": "The AIM lockup",
+          "icon": "/assets/afl/history/chatmaster_2010_icon.png",
+          "banner": "/assets/afl/history/chatmaster_2010_banner.png",
+          "colorPrimary": "#bfb363",
+          "colorSecondary": "#a73828",
+          "iconStroke": "#a73828",
+          "yearStart": 2010,
+          "yearEnd": 2024
         }
       ],
       "groupMe": "/assets/afl/group-me/chat.png",

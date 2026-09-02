@@ -35,9 +35,15 @@ function isSameAsCurrent(team: TeamConfig, entry: FranchiseHistoryEntry): boolea
 }
 
 /**
- * Eras a franchise may throw back to: its full `history[]`, minus entries
- * whose art asset is claimed by another franchise (the scope's asset
- * conflicts) and minus entries identical to the team's current identity.
+ * Eras a franchise may throw back to: its full `history[]` PLUS any
+ * `borrowedIdentities[]`, minus entries whose art asset is claimed by another
+ * franchise (the scope's asset conflicts) and minus entries identical to the
+ * team's current identity.
+ *
+ * The two arrays are separate in the config and joined only here, because only
+ * the throwback picker may treat a borrowed identity as one of this
+ * franchise's looks — `history[]` alone is what award naming, standings and
+ * owner attribution read (see `TeamConfig.borrowedIdentities`).
  *
  * `scope` selects WHICH league's conflict list applies. It defaults to
  * TheLeague so every pre-existing call site keeps its exact behavior; an AFL
@@ -48,7 +54,8 @@ export function getEligibleThrowbackEras(
   team: TeamConfig,
   scope: ThrowbackScope = DEFAULT_THROWBACK_SCOPE
 ): FranchiseHistoryEntry[] {
-  if (!team.history?.length) return [];
+  const all = [...(team.history ?? []), ...(team.borrowedIdentities ?? [])];
+  if (all.length === 0) return [];
   const { rebrand } = throwbackRules(scope);
   // An era on loan to the Throwback Rebrand leaves its OWNER's picker while
   // it is being worn elsewhere. Two teams in one identity on a single
@@ -59,7 +66,7 @@ export function getEligibleThrowbackEras(
     rebrand.sourceFranchiseId === team.franchiseId &&
     rebrand.era.yearStart === entry.yearStart;
 
-  return team.history.filter(
+  return all.filter(
     (entry) =>
       !isConflicted(team.franchiseId, entry.yearStart, scope) &&
       !isSameAsCurrent(team, entry) &&
@@ -129,11 +136,11 @@ function eraSpan(entry: FranchiseHistoryEntry): number {
  *    league actually remembers; the seeded map is the commissioner's chance
  *    to overrule that, not a separate policy.
  *
- * A commissioner default that is itself a rebrand is skipped too, so rule 1
- * cannot be defeated by a stale seed. The all-rebrand case still returns
- * something — a franchise whose every era is a shame name has no better
- * option, and rendering its CURRENT identity would silently drop it out of
- * Throwback Week entirely.
+ * A commissioner default that is itself a rebrand or borrowed is skipped too,
+ * so rules 1 and 2 cannot be defeated by a stale seed. The degenerate case
+ * still returns something — a franchise whose every era is disqualified has no
+ * better option, and rendering its CURRENT identity would silently drop it out
+ * of Throwback Week entirely.
  */
 export function pickDefaultThrowbackEra(
   eligible: FranchiseHistoryEntry[],
@@ -141,13 +148,15 @@ export function pickDefaultThrowbackEra(
 ): FranchiseHistoryEntry | null {
   if (eligible.length === 0) return null;
 
+  const defaultable = (e: FranchiseHistoryEntry) => !e.rebrand && !e.borrowed;
+
   const seeded = eligible.find((e) => e.yearStart === seededYearStart);
-  if (seeded && !seeded.rebrand) return seeded;
+  if (seeded && defaultable(seeded)) return seeded;
 
   const byTenure = (pool: FranchiseHistoryEntry[]) =>
     [...pool].sort((a, b) => eraSpan(b) - eraSpan(a) || a.yearStart - b.yearStart)[0];
 
-  const clean = eligible.filter((e) => !e.rebrand);
+  const clean = eligible.filter(defaultable);
   return byTenure(clean.length > 0 ? clean : eligible) ?? null;
 }
 

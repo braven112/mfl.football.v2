@@ -73,9 +73,11 @@ export const AFL_THROWBACK_ASSET_CONFLICTS: { franchiseId: string; yearStart: nu
  * them out. Tenure asks a better question: the identity a franchise wore for
  * seventeen seasons is the one the league remembers.
  *
- * Owners self-serve an override at /afl-fantasy/throwback-settings, and a
- * rebrand era stays selectable there — wearing it is a choice an owner may
- * make, just not one the site makes for them.
+ * Owners self-serve an override at /afl-fantasy/throwback-settings, and both
+ * disqualified kinds stay selectable there — a rebrand era, and an era
+ * BORROWED from the same owner's franchise in TheLeague. Wearing either is a
+ * choice an owner may make, just not one the site makes for them; every
+ * default below is an era the franchise wore in THIS league.
  *
  * Franchises 0002 and 0010 are here at all only because their art was
  * recovered from MFL's own `fflnetdynamic` hosting in September 2026; they
@@ -83,7 +85,7 @@ export const AFL_THROWBACK_ASSET_CONFLICTS: { franchiseId: string; yearStart: nu
  * only AFL teams that could not throw back.
  */
 export const AFL_DEFAULT_THROWBACK_ERA: Record<string, number> = {
-  '0001': 2003, // Smokane FC → Smokane — 6 seasons
+  '0001': 2006, // Smokane FC → Smokane FC (The gas mask) — 13 seasons
   '0002': 2003, // Drunk Indians → Drunk Indians (The original Wahoo) — 14 seasons
   '0003': 2003, // Team Minty Fresh → Marriedwithchildren — 8 seasons
   '0004': 2012, // Get off my Ditka → The Dude that Abides — 5 seasons
@@ -91,7 +93,7 @@ export const AFL_DEFAULT_THROWBACK_ERA: Record<string, number> = {
   '0006': 2008, // Da Dangsters → More Cowbell — 3 seasons
   '0007': 2010, // Avenging Amish → Touchdown My Pants — 4 seasons
   '0008': 2003, // Dicks out for Harambe → The Nukes — 13 seasons
-  '0009': 2003, // Vitside Mafia → Gamecocks — 7 seasons
+  '0009': 2010, // Vitside Mafia → Vitside Mafia (The old lockup) — 15 seasons
   '0010': 2005, // Fullybaked → Fullybaked (Red graffiti) — 12 seasons
   '0011': 2005, // Midwestside Connection → The Rookies — 4 seasons
   '0012': 2009, // Suh girls, one cup → Pubes — 10 seasons
@@ -103,7 +105,7 @@ export const AFL_DEFAULT_THROWBACK_ERA: Record<string, number> = {
   '0018': 2009, // Jewpacabra → Zephyr — 5 seasons
   '0019': 2005, // Badd Boys → The Bandwagon — 4 seasons
   '0020': 2003, // The Boondock Saints → Your Team Sucks — 3 seasons
-  '0021': 2009, // Chatmaster → Tackling Dummies — 1 season
+  '0021': 2010, // Chatmaster → Chatmaster (The AIM lockup) — 15 seasons
   '0022': 2005, // Balls Deep → Way More Funner — 7 seasons
   '0023': 2005, // The Show → No Frills — 17 seasons
   '0024': 2008, // No Soup For You → The Street — 4 seasons
