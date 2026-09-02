@@ -92,10 +92,22 @@ version; the fifth pins that a deliberate `70/30` split is left untouched.
   - Source: cross-cutting lens, hotfix step 5
   - Where: `src/utils/rankings-storage.ts:541` (`getCompositeConfig`) and
     `src/utils/rankings-storage.ts:559`+ (`getCompositeMembers`)
-  - Why deferred: DRY, explicitly in the hotfix deferral bucket. But this is the
-    exact duplication that caused the bug — the two copies drifted once already,
-    and a single `validMembers(members)` helper is what stops copy three
-  - Note: worth doing *because* of the incident, not despite it
+  - Why deferred: DRY, explicitly in the hotfix deferral bucket
+  - **Promoted by production verification (step 7): this is the actual fix, not
+    housekeeping.** There are FOUR raw readers of the composite config —
+    `getCompositeConfig` (`:541`), `getCompositeMembers` (`:559`),
+    `setCompositeWeight` (`:676`) and `syncBuiltinImports` (`:350`) — and only
+    the first two filter stale members. `syncBuiltinImports` re-reads the raw
+    config and writes back `rebalanceToHundred(config.members)` without
+    filtering, so on a load where it has fresh sources to seed it UNDOES the
+    heal's write: the prod run finished with `ghost-deleted-import=25` back in
+    localStorage. The display stays correct either way (the filter is on read),
+    but `setCompositeWeight` reads raw storage too, so on that path a typed
+    weight can still be diluted across the ghost. A single
+    `validMembers(members)` helper applied at every read closes this properly.
+  - Note: on a steady-state device `syncBuiltinImports` early-returns via its
+    `upToDate` check and the heal persists fine, which is why this is narrower
+    than the original bug and did not block the hotfix
 
 - [ ] **F3 — The heal is a side effect inside a getter**
   - Source: design observation, hotfix step 5
@@ -119,6 +131,25 @@ version; the fifth pins that a deliberate `70/30` split is left untouched.
     user-supplied URL
   - Note: re-read the PR comments before starting; fold anything real into this
     list
+
+- [ ] **F5 — Newly seeded built-in sources join the composite at weight 0**
+  - Source: production verification, hotfix step 7
+  - Where: `src/utils/rankings-storage.ts:344-356`
+  - What: seeding pushes `{importId, weight: 0}` and then calls
+    `rebalanceToHundred(config.members)` with **no** `pinnedId`. With no pin,
+    `remaining` is 100 and `othersTotal` is the existing members' total, so the
+    existing members scale to themselves and the newly seeded sources stay at 0
+    — ticked in the UI, contributing nothing to My Rank.
+  - Evidence: the prod run rendered `Composite of 6 ranking sources` with
+    weights `33.4 / 33.3 / 33.3 / 0 / 0 / 0`.
+  - Why deferred: pre-existing, untouched by the hotfix diff, and not a
+    regression from it
+  - Note: `toggleCompositeImport` (`:647`) already guards this exact case — "a
+    source just ticked ON gets an even share (100/n) ... rebalancing it as a
+    plain zero-weight member would leave it at 0%, nominally in the composite,
+    actually ignored" — and the seeding path never got the same treatment. Only
+    bites when built-ins are seeded onto a store that already has weighted
+    members.
 
 ## Context to start cold
 
@@ -152,11 +183,23 @@ both leagues' `players.astro` and `rosters.astro`) and by
 both fixed by construction. Do not go looking for an `afl-fantasy/` copy of
 `ManageImportsSection` — there isn't one.
 
-**Verification limits.** The Vercel preview served
-`/theleague/import-rankings` at 200, but the Saved Rankings table is a
-client-only React island rendered from localStorage, so neither the preview nor
-production can be checked by fetching HTML. The unit tests are the real proof:
-`tests/rankings-storage.test.ts` seeds the exact screenshot state (three valid
-members at 25 plus one stale at 25) and asserts the survivors total 100.
-Confirming this on a real board means opening Import Rankings in a browser with
-a stale member in localStorage.
+**How production was verified, and how to redo it.** The Saved Rankings table
+is a client-only React island rendered from localStorage, so fetching HTML
+proves nothing — the page returns 200 either way. It was verified instead by
+driving Chromium at `https://theleague.us/import-rankings` with localStorage
+seeded to the reported state (three real imports ticked at 25 plus one stale
+member at 25), then reading `.ri-manage__weight-input` values out of the DOM.
+Result: `33.4 / 33.3 / 33.3`, summing to 100, where the pre-fix render was
+`25 / 25 / 25` summing to 75.
+
+One sandbox detail that makes this reproducible: **Chromium here cannot reach
+any external host** — outbound HTTPS goes through an egress relay its TLS does
+not survive. The run worked by intercepting every request with
+`ctx.route('**/*')` and re-issuing it through `route.fetch()`, which runs on
+Playwright's own request context and reads `HTTPS_PROXY`. Same technique as
+commit `dab9ef4`. Also pin `executablePath: '/opt/pw-browsers/chromium'` — the
+bundled Playwright expects a headless-shell build that is not installed.
+
+Both F2's promotion and F5 came out of that run rather than the unit tests,
+because both only appear once `syncBuiltinImports` reconciles against a real
+build snapshot.
