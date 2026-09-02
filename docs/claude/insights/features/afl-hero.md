@@ -427,3 +427,68 @@ Practical consequence: `authAflFranchiseId` already carries the leagueId check,
 so routing the backdrop through it also stops a TheLeague session browsing the
 AFL from being handed the AFL's franchise 0001. Resolving from `userTeam` had
 no such guard.
+
+### The whole card in the owner's palette, held to measured contrast floors
+
+`resolveHeroFranchiseBackdrop` now returns the accent, pill ink, CTA ink and a
+theme-pair of border colours alongside the gradient and crest, so the accent
+word, countdown numeral, star chip, pill and border are all the franchise's and
+the CTA is neutral white. Four things here are not obvious and each cost a
+round:
+
+**Measure against the surface that is actually rendered.** The accent sits on
+the gradient UNDER `.hero-fb__wash`, not on the raw gradient — so the check
+composites the wash's black (0.33 over the copy column, the thinnest cover any
+headline character gets) before measuring. A contrast figure computed against
+the un-washed gradient is a figure that does not hold where the text is.
+
+**Which gradient stop is the background depends on the ANGLE.** The first cut
+took the LIGHTEST stop to avoid parsing CSS — conservative in the abstract,
+destructive in practice. Midwestside's gold is a 7% wedge at the bottom right
+of a card that is black everywhere the copy goes, so measuring against the gold
+demanded an accent no gold can reach: the lift ran to pure white and the accent
+disappeared into the headline it was meant to punctuate. Every other franchise
+came back a pastel for the same reason. CSS angles increase clockwise from
+0deg=up, so 0-180 puts the FIRST stop at the left edge and 180-360 the LAST;
+all 40 configs are `linear-gradient(115deg|315deg, …)`. Unparseable values
+(radial, conic, multi-layer — all legal `broadcastGradient`s) keep the
+lightest-stop fallback.
+
+**Two bounds, not one.** Contrast alone passes a near-white accent that is
+perfectly legible and invisible AS an accent inside a white headline;
+perceptual distinctness alone passes a deep brand colour nobody can read on a
+dark card. The accent must clear 3:1 against the washed gradient AND ΔE ≥ 18
+from `#ffffff`. Order matters: lift for contrast FIRST, then test distinctness,
+because the lift is what moves a colour toward white.
+
+**3:1 is the correct floor, not a relaxed one.** Everything the accent touches
+is large display type (the headline word at clamp(2.2rem,4.4vw,3.25rem)/700,
+the countdown numeral at clamp(2.6rem,5vw,3.1rem)) or non-text UI, which is
+exactly what WCAG's large-text bar covers. Holding it to the 4.5 body bar is
+not extra safety — it drove every accent so far toward white that the brand
+colour stopped being recognisable. The pill IS held to 4.5: its label is
+0.8125rem, genuinely small text.
+
+**Greyscale franchises need a CONSTRUCTED grey, not a selected one.** Four have
+no hue anywhere (TITS, BADD, Bring The Pain, Wabs). Selecting from their stops
+rejected the near-white one on distinctness and fell through to the near-black
+one, which then had to be lifted — landing on a mid-grey DARKER than the white
+around it, which reads as disabled text. Walking down from white to the first
+shade clearing ΔE 18 lands ~#bfbfbf: as distinct, and brighter than it is dark.
+It also makes all four agree, where selection split them two-and-two.
+
+### `--ev-accent` must be set in FRONTMATTER, never in the stylesheet
+
+Both shells write `--ev-accent` into the section's inline `style` attribute. An
+inline declaration beats every rule in the sheet, so a
+`.x--franchise { --ev-accent: var(--hero-fb-accent); }` override looks right,
+cascades correctly, and is silently ignored — the accent word stayed league-gold
+on a fully team-coloured card and nothing errored. Resolve it as
+`backdrop?.accent ?? accent` in the component frontmatter instead.
+
+Corollary for the border: `--ev-cta-bg` / `--ev-cta-ink` ARE re-declared by
+`html.dark .tl-event-hero` at (0,2,1), so overriding those from a modifier class
+genuinely does need the paired `:global(html.dark)` selector — unlike the
+`--ev-surface` pairing removed earlier, which was inert because that variable
+had no consumer under the modifier. Same-looking rule, opposite verdict; check
+whether the variable is actually read before deciding.
