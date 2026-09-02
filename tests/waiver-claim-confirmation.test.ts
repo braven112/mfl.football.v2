@@ -106,6 +106,14 @@ describe('readPendingWaiverPlayerIds — "could not verify" is not "nothing ther
     expect(readPendingWaiverPlayerIds(flat)).toEqual(expect.arrayContaining(['12616', '15708']));
   });
 
+  it('an object payload it cannot read is null, NOT a verified-empty list', () => {
+    // Returning [] here told the owner their claim "did not go through" on the
+    // strength of a payload we did not understand. {} stays [] — an empty
+    // container is a credible "nothing pending".
+    expect(readPendingWaiverPlayerIds({ pendingWaivers: { somethingNew: [{ ref: 'abc' }] } })).toBeNull();
+    expect(readPendingWaiverPlayerIds({ pendingWaivers: {} })).toEqual([]);
+  });
+
   it('does not mistake a round number or a bid for a player id', () => {
     const ids = readPendingWaiverPlayerIds({
       pendingWaivers: { waiverRequest: [{ round: '1', timestamp: '1788333593', player: { id: '12616' } }] },
@@ -119,6 +127,24 @@ describe('the route still requires both proofs', () => {
     expect(ROUTE).toContain('readMflImportResult');
     // The exact check that shipped the bug.
     expect(ROUTE).not.toMatch(/!res\.ok \|\| \/<error\/i\.test\(text\)/);
+  });
+
+  it('confirms by DELTA — a player already pending cannot vouch for a new write', () => {
+    // Claim X in round 1, re-file X in round 2, MFL drops the round-2 write:
+    // X is in pendingWaivers either way, so presence alone reported success.
+    // The route reads pendingWaivers on BOTH sides and confirms only new ids.
+    expect(ROUTE).toContain('pendingBefore');
+    // Scoped to the QUEUED branch. The FCFS branch legitimately confirms by
+    // presence: validateClaims has just proved the add is a free agent, so
+    // finding him on the roster afterwards is itself the delta.
+    const queued = ROUTE.slice(ROUTE.indexOf("mode: 'fcfs'"));
+    expect(queued, 'confirmation must not be bare presence in the after-read').not.toMatch(
+      /verified:\s*stored !== null/
+    );
+    expect(queued).toContain('newlyPending');
+    // Both reads must succeed for a verdict; one failing means unverified.
+    expect(queued).toMatch(/canDiff\s*=\s*pendingBefore !== null && stored !== null/);
+    expect(queued).toMatch(/confirmed:\s*newlyPending/);
   });
 
   it('never re-introduces the guard that disabled the read-back', () => {

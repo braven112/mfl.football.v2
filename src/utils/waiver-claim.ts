@@ -274,5 +274,10 @@ export function readPendingWaiverPlayerIds(body: any): string[] | null {
     }
   };
   walk(pending);
+  // Zero ids out of a payload that HAD content is not "nothing pending" — it is
+  // a shape we do not recognize, and the two must not collapse. Reporting it as
+  // a verified empty list tells an owner their good claim did not go through;
+  // `null` tells them we could not check, which is the truth.
+  if (ids.size === 0 && Object.keys(pending as Record<string, unknown>).length > 0) return null;
   return [...ids];
 }
