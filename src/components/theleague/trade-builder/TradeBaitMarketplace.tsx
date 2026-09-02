@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import type { TradeBuilderTeam } from '../../../types/trade-builder';
+import type { TradeBuilderPlayer, TradeBuilderTeam } from '../../../types/trade-builder';
 import { formatCurrency } from '../../../utils/formatters';
-import { DEFAULT_HEADSHOT_URL as DEFAULT_HEADSHOT } from '../../../constants/roster-constants';
+import { resolveHeadshotSrc } from '../../../constants/roster-constants';
+import { buildNoHeadshotPlaceholder } from '../../../utils/nfl-team-colors';
 
 const POSITIONS = ['ALL', 'QB', 'RB', 'WR', 'TE', 'PK', 'DEF'];
 
@@ -149,7 +150,7 @@ export default function TradeBaitMarketplace({ teams, leagueYear, onStartTrade }
                 <div className="marketplace__players">
                   {players.map((player) => {
                     const isDef = player.position.toUpperCase() === 'DEF';
-                    const avatarSrc = isDef && player.nflLogo ? player.nflLogo : (player.headshot || DEFAULT_HEADSHOT);
+                    const avatarSrc = isDef && player.nflLogo ? player.nflLogo : resolveHeadshotSrc(player.headshot, player.nflTeam);
                     return (
                       <button
                         key={player.id}
@@ -163,7 +164,7 @@ export default function TradeBaitMarketplace({ teams, leagueYear, onStartTrade }
                             alt=""
                             loading="lazy"
                             decoding="async"
-                            onError={(e) => { (e.target as HTMLImageElement).onerror = null; (e.target as HTMLImageElement).src = DEFAULT_HEADSHOT; }}
+                            onError={(e) => { (e.target as HTMLImageElement).onerror = null; (e.target as HTMLImageElement).src = buildNoHeadshotPlaceholder(player.nflTeam ?? ''); }}
                           />
                         </div>
                         <div className="marketplace__player-info">

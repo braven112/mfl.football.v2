@@ -12,7 +12,8 @@ import leagueConfigData from '../../data/theleague.config.json';
 import { calculateDraftOrder, buildActualDraftPicks, convertActualPicksToPredictions, parseTradeFromComment, isLeagueDraftOrderFinal, isDraftConducted } from '../../utils/draft-utils';
 import { extractToiletBowlWinners, extractLeagueChampion } from '../../utils/toilet-bowl-utils';
 import { mergeStandingsWithFuturePicks, isValidFutureDraftPicksData } from '../../utils/future-draft-picks-utils';
-import { getPlayerHeadshot, getNflLogoUrl, DEFAULT_HEADSHOT_URL } from '../../constants/roster-constants';
+import { getPlayerHeadshot, getNflLogoUrl } from '../../constants/roster-constants';
+import { buildNoHeadshotPlaceholder } from '../../utils/nfl-team-colors';
 import type { DraftPrediction, ToiletBowlResult } from '../../types/standings';
 import { getTheLeaguePreference, setTheLeaguePreference, resolveTeamSelection } from '../../utils/team-preferences';
 import { getAuthUser } from '../../utils/auth';
@@ -513,7 +514,7 @@ const filteredHistoryRows = historyRows.filter((row) =>
                                   src={row.headshot}
                                   alt={row.playerName}
                                   class="history-player__headshot"
-                                  onerror={`this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';`}
+                                  onerror={`this.onerror=null;this.src='${buildNoHeadshotPlaceholder(row.nflTeam)}';`}
                                 />
                                 <div class="history-player__meta">
                                   <div class="history-player__name">{row.playerName || '—'}</div>

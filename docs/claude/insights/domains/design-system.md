@@ -178,6 +178,52 @@ and a migrated dark value would be *lightened* to read on a dark surface —
 which is precisely the wrong ink for a white pill. When you invert a pair,
 the half that lands on the light side of the inversion must be a literal or a
 token you have checked per-theme; a fallback you are relying on is neither.
+## 2026-09-02 - An `<img>` Data-URI SVG Is Its Own Document — Nothing on the Page Reaches It
+
+**Context:** Replacing the missing-headshot fallback. The old one was MFL's
+`no_photo_available.jpg`, an opaque white disc that covered the team-color
+avatar chip it sat on. The obvious replacement — a transparent silhouette that
+lets the chip show through — is wrong for a reason worth writing down, and the
+mechanism behind it generalizes past headshots.
+
+**Insight:** An SVG loaded as an `<img src="data:image/svg+xml,…">` is a
+**separate document**. The page's CSS never applies to it: no custom
+properties, no `currentColor`, no `html.dark` selector, no token of any kind.
+So a themeable image cannot be *styled* — it can only be **generated**, one
+variant per color, at the point that knows the color. That is why
+`buildNoHeadshotPlaceholder(team)` is a function of team rather than a constant,
+and why it bakes the gradient in rather than sitting transparent over whatever
+is underneath: only the player-cell surfaces have a team-colored chip, and on
+dead money / MVP / the draft board a transparent silhouette lands on gray and
+disappears — the exact failure being fixed.
+
+Two mechanical corollaries, both of which cost a debugging round:
+
+- **`prefers-color-scheme` inside the SVG DOES work** (the document has its own
+  rendering context) while `html.dark` on the page does NOT. If you ever need a
+  theme-aware inline image, the media query is the only hook you get.
+- **The host page can still select the `<img>` element itself**, and with an
+  `onerror`-swapped src there is no class to hang a rule on — so bake a stable
+  token into the markup and match the encoded src:
+  `id="no-headshot"` survives `encodeURIComponent`, and
+  `player-cell.css` uses `img[src*="no-headshot"]` to opt the placeholder out of
+  the ESPN-cutout zoom.
+
+**Encoding trap:** `encodeURIComponent` does not escape `'`. These URIs get
+spliced into single-quoted JS strings inside inline `onerror` attributes, so a
+single apostrophe anywhere in the SVG source silently terminates the literal.
+Write the SVG with double quotes only and no apostrophes; everything else it
+does escape (`#`, `"`, `<`, `>`) is what makes the URI attribute-safe.
+`tests/no-headshot-placeholder.test.ts` pins the `'`-free encoding.
+
+**The wider lesson — a 200 is not a photo.** MFL serves its "no photo"
+placeholder as a normal image with HTTP **200**, so `onerror` never fires for
+it and no amount of cascade work will catch it. Any fallback chain that ends at
+a third party's own placeholder has to recognize the *URL*, not wait for an
+error. No committed payload carries that URL today, but two feed scripts still
+emit it for a player with no MFL id — which is why `isPlaceholderHeadshot`
+exists as a cheap guard rather than a better `onerror`, which cannot work at
+all here.
 
 ---
 

@@ -67,17 +67,34 @@ export const TeamDefense = {
 };
 
 /**
- * No headshot at all — the component falls back to `DEFAULT_HEADSHOT_URL`.
+ * No headshot at all — the component falls back to `buildNoHeadshotPlaceholder`:
+ * the team's own avatar gradient with a translucent white silhouette on it.
  *
- * NOT SNAPSHOTTED. That fallback is a live URL on the MFL photo host, and this
- * file's own rule is that a visual suite never depends on a third party's CDN.
- * Kept browsable in Storybook because the fallback layout is worth being able
- * to look at; excluded from Chromatic because it cannot be captured
- * deterministically without stubbing the constant.
+ * NOW SNAPSHOTTED. It used to be excluded because the fallback was a live URL
+ * on the MFL photo host — that image was a WHITE DISC with a black silhouette,
+ * which loaded on top of the team-color chip and blanked it out entirely. The
+ * replacement is an inline data URI, so it is both deterministic (no CDN) and
+ * the thing worth guarding: if someone points the fallback back at a remote
+ * image, this story goes white and the diff is unmissable.
  */
 export const MissingHeadshot = {
   args: { name: 'Unknown Rookie', position: 'TE', nflTeam: 'LAR' },
-  parameters: { chromatic: { disableSnapshot: true } },
+};
+
+/**
+ * Missing headshot on a near-black team — the pairing that motivated the
+ * change. The placeholder must show Titans navy, not a white disc.
+ */
+export const MissingHeadshotNearBlack = {
+  args: { name: 'Unknown Rookie', position: 'QB', nflTeam: 'TEN' },
+};
+
+/**
+ * Missing headshot with no NFL team (free agent). The placeholder falls back
+ * to the league-neutral blue rather than rendering colorless.
+ */
+export const MissingHeadshotFreeAgent = {
+  args: { name: 'Unknown Rookie', position: 'WR', nflTeam: 'FA' },
 };
 
 /**

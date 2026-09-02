@@ -12,6 +12,14 @@
     {
       "date": "2026-09-02",
       "type": "style-tweak",
+      "summary": "Players without a headshot no longer punch a white hole in the roster. Where MyFantasyLeague has no photo, the site used to load MFL's own placeholder — a white disc with a black silhouette on it — which sat on top of the team-coloured chip and blanked it out entirely. The fallback is now drawn by us in the player's own NFL colours: the same gradient every headshot already sits on, with a soft silhouette over it. It shows up everywhere a player can appear without a photo — rosters, free agents, the lineup pages, the draft room and board, dead money, MVP tracking and the draft broadcast — and because it's drawn rather than downloaded, it appears instantly instead of after a round trip to MFL.",
+      "impact": "user",
+      "area": "design-system",
+      "league": "both"
+    },
+    {
+      "date": "2026-09-02",
+      "type": "style-tweak",
       "summary": "The playoff-seed pills on the AL and NL standings cards flip in dark mode — white circle, navy number, instead of navy on navy. The top four seeds now read as the loudest thing in the table, which is what they are.",
       "impact": "user",
       "area": "standings",

@@ -30,7 +30,7 @@ import PlayerDetailsModal from '../../components/theleague/PlayerDetailsModal.as
 import { resolveLeaguePath } from '../../utils/nav-utils';
 import { getLeagueBySlug } from '../../config/leagues';
 import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, COLLEGE_LOGO_ONERROR, COLLEGE_LOGO_ONLOAD, positionOrder } from '../../constants/roster-constants';
-import { getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark, getPlayerAvatarStyleMaps } from '../../utils/nfl-team-colors';
+import { NO_HEADSHOT_SILHOUETTE, getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark, getPlayerAvatarStyleMaps } from '../../utils/nfl-team-colors';
 import '../../styles/player-cell.css';
 import '../../styles/ranking-columns.css';
 // Build-time-derived free-agent snapshot. All the heavy multi-year feed reads +
@@ -231,6 +231,13 @@ const nflAvatarBgJson = JSON.stringify(nflAvatarBg);
 const nflAvatarBorderJson = JSON.stringify(nflAvatarBorder);
 const nflAvatarRingJson = JSON.stringify(nflAvatarRing);
 const nflAvatarRingDarkJson = JSON.stringify(nflAvatarRingDark);
+// No-headshot fallback for the client row renderer, replacing MFL's white-disc
+// "no photo available" image. The SILHOUETTE variant, not the baked-in one:
+// every row here paints --player-avatar-bg on its own chip (getAvatarBg below),
+// so the gradient is already there and one shared string does the job — the
+// team-keyed map inlined 42 KB of data URIs into this page for no visible
+// difference. See NO_HEADSHOT_SILHOUETTE in utils/nfl-team-colors.
+const noHeadshot = NO_HEADSHOT_SILHOUETTE;
 
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
@@ -485,7 +492,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   <PlayerDetailsModal hideContract={true} />
 </TheLeagueLayout>
 
-<script define:vars={{ canClaim, playerDataJson, hasProjected, hasLastYrPts, hasAdp, defaultSort, defaultDir, mflHost, defSpotlightJson, conferenceMetaJson, activeConfIdJson, nflAvatarBgJson, nflAvatarBorderJson, nflAvatarBgFallback, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD }}>
+<script define:vars={{ canClaim, playerDataJson, hasProjected, hasLastYrPts, hasAdp, defaultSort, defaultDir, mflHost, defSpotlightJson, conferenceMetaJson, activeConfIdJson, nflAvatarBgJson, nflAvatarBorderJson, nflAvatarBgFallback, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, noHeadshot, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD }}>
   const players = JSON.parse(playerDataJson);
   // Duplicate-player conference metadata (null = single shared pool).
   const conferenceMeta = JSON.parse(conferenceMetaJson);
@@ -560,8 +567,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     if (!team || team.indexOf('FA') === 0) return '/assets/nfl-logos/NFL.svg';
     return `/assets/nfl-logos/${team}.svg`;
   }
-  const defaultHeadshot = `https://${mflHost}/player_photos_2010/no_photo_available.jpg`;
+
   function buildOnerror(mflId, espnId) {
+    const defaultHeadshot = noHeadshot;
     const college = espnId ? `https://a.espncdn.com/i/headshots/college-football/players/full/${espnId}.png` : null;
     const mfl = mflId ? `https://${mflHost}/player_photos_big_2014/${mflId}_thumb.jpg` : null;
     if (college && mfl) {

@@ -21,7 +21,7 @@ import { getPlayerMap } from '../../utils/player-map';
 import { buildWeeklyPlayerResults } from '../../utils/weekly-player-results';
 import { getCachedRosters } from '../../utils/mfl-roster-cache';
 import { chooseTeamName } from '../../utils/team-names';
-import { getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark, getPlayerAvatarStyleMaps } from '../../utils/nfl-team-colors';
+import { NO_HEADSHOT_SILHOUETTE, getPlayerAvatarBackground, getPlayerAvatarBorder, getPlayerAvatarRing, getPlayerAvatarRingDark, getPlayerAvatarStyleMaps } from '../../utils/nfl-team-colors';
 import '../../styles/player-cell.css';
 import leagueConfig from '../../data/theleague.config.json';
 import { getLeagueBySlug } from '../../config/leagues';
@@ -354,6 +354,13 @@ const nflAvatarBgJson = JSON.stringify(nflAvatarBg);
 const nflAvatarBorderJson = JSON.stringify(nflAvatarBorder);
 const nflAvatarRingJson = JSON.stringify(nflAvatarRing);
 const nflAvatarRingDarkJson = JSON.stringify(nflAvatarRingDark);
+// No-headshot fallback for the client row renderer, replacing MFL's white-disc
+// "no photo available" image. The SILHOUETTE variant, not the baked-in one:
+// every row here paints --player-avatar-bg on its own chip (getAvatarBg below),
+// so the gradient is already there and one shared string does the job — the
+// team-keyed map inlined 42 KB of data URIs into this page for no visible
+// difference. See NO_HEADSHOT_SILHOUETTE in utils/nfl-team-colors.
+const noHeadshot = NO_HEADSHOT_SILHOUETTE;
 const franchiseListJson = JSON.stringify(franchiseEntries);
 
 function formatSalary(salary: number): string {
@@ -512,7 +519,7 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   ></script>
 </TheLeagueLayout>
 
-<script define:vars={{ playerDataJson, posCountsJson, franchiseListJson, mflHost, nflAvatarBgJson, nflAvatarBorderJson, nflAvatarBgFallback, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, logoOnerror: NFL_LOGO_ONERROR }}>
+<script define:vars={{ playerDataJson, posCountsJson, franchiseListJson, mflHost, nflAvatarBgJson, nflAvatarBorderJson, nflAvatarBgFallback, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, noHeadshot, logoOnerror: NFL_LOGO_ONERROR }}>
   // All data is server-rendered from MFL feeds — not user input.
   // escapeAttr() is applied to all interpolated values for safety.
   const players = JSON.parse(playerDataJson);
@@ -545,9 +552,10 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 
   const posOrder = { QB: 1, RB: 2, WR: 3, TE: 4, PK: 5, DEF: 6 };
 
-  const defaultHeadshot = 'https://' + mflHost + '/player_photos_2010/no_photo_available.jpg';
+
 
   function buildOnerror(mflId, espnId) {
+    const defaultHeadshot = noHeadshot;
     const college = espnId ? 'https://a.espncdn.com/i/headshots/college-football/players/full/' + espnId + '.png' : null;
     const mfl = mflId ? 'https://' + mflHost + '/player_photos_big_2014/' + mflId + '_thumb.jpg' : null;
     if (college && mfl) {

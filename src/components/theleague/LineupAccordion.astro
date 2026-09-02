@@ -7,7 +7,8 @@
 
 import PlayerStatusIndicator from './PlayerStatusIndicator.astro';
 import type { FantasyPlayer, StartingLineup } from '../../types/matchup-previews';
-import { getPlayerHeadshot as getHeadshot, DEFAULT_HEADSHOT_URL } from '../../constants/roster-constants';
+import { getPlayerHeadshot as getHeadshot } from '../../constants/roster-constants';
+import { buildNoHeadshotPlaceholder } from '../../utils/nfl-team-colors';
 
 interface Props {
   homeLineup: StartingLineup;
@@ -157,7 +158,7 @@ const awayProjectedTotal = awayLineup.totalActual || homeAllPlayers
                     src={getPlayerHeadshot(player)}
                     alt={player.name}
                     class="player-headshot"
-                    onerror={`this.src='${DEFAULT_HEADSHOT_URL}'`}
+                    onerror={`this.src='${buildNoHeadshotPlaceholder(player.nflTeam)}'`}
                   />
                 </div>
                 <div class="player-info">
@@ -195,7 +196,7 @@ const awayProjectedTotal = awayLineup.totalActual || homeAllPlayers
                       src={getPlayerHeadshot(player)}
                       alt={player.name}
                       class="player-headshot"
-                      onerror={`this.src='${DEFAULT_HEADSHOT_URL}'`}
+                      onerror={`this.src='${buildNoHeadshotPlaceholder(player.nflTeam)}'`}
                     />
                   </div>
                   <div class="player-info">
@@ -252,7 +253,7 @@ const awayProjectedTotal = awayLineup.totalActual || homeAllPlayers
                     src={getPlayerHeadshot(player)}
                     alt={player.name}
                     class="player-headshot"
-                    onerror={`this.src='${DEFAULT_HEADSHOT_URL}'`}
+                    onerror={`this.src='${buildNoHeadshotPlaceholder(player.nflTeam)}'`}
                   />
                 </div>
                 <div class="player-info">
@@ -290,7 +291,7 @@ const awayProjectedTotal = awayLineup.totalActual || homeAllPlayers
                       src={getPlayerHeadshot(player)}
                       alt={player.name}
                       class="player-headshot"
-                      onerror={`this.src='${DEFAULT_HEADSHOT_URL}'`}
+                      onerror={`this.src='${buildNoHeadshotPlaceholder(player.nflTeam)}'`}
                     />
                   </div>
                   <div class="player-info">
@@ -543,6 +544,18 @@ const awayProjectedTotal = awayLineup.totalActual || homeAllPlayers
     height: 100%;
     object-fit: cover;
     object-position: top;
+  }
+
+  /* No-headshot placeholder: it fills its own frame, so it must skip the
+     150% headshot crop above — that would push the head past the chip edge
+     and leave a cropped shoulder. Matched on the id baked into the SVG
+     (see buildNoHeadshotPlaceholder); the src arrives via an inline onerror
+     handler, so there is no class to hang this on. player-cell.css carries
+     the same opt-out for its own copy of the crop. */
+  .player-headshot[src*="no-headshot"] {
+    width: 100%;
+    object-fit: contain;
+    object-position: center;
   }
 
   .player-info {

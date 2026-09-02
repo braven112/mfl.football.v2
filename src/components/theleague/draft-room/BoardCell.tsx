@@ -1,6 +1,7 @@
 import React from 'react';
 import type { DraftRoomPick, DraftRoomPlayer, DraftRoomTeam } from '../../../types/draft-room';
-import { DEFAULT_HEADSHOT_URL, getCollegeHeadshot, getPlayerImageUrl, nflLogoErrorHandler, nflLogoLoadHandler, nflLogoRefCallback } from '../../../constants/roster-constants';
+import { getCollegeHeadshot, getPlayerImageUrl, nflLogoErrorHandler, nflLogoLoadHandler, nflLogoRefCallback, resolveHeadshotSrc } from '../../../constants/roster-constants';
+import { buildNoHeadshotPlaceholder } from '../../../utils/nfl-team-colors';
 import { normalizeTeamCode } from '../../../utils/nfl-logo';
 
 interface BoardCellProps {
@@ -75,7 +76,8 @@ export function BoardCell({ pick, player, team, teams, isCurrentPick, isUserTeam
   const isDef = player?.position?.toUpperCase() === 'DEF';
   const normalizedTeam = player?.nflTeam ? normalizeTeamCode(player.nflTeam) : '';
   const teamLogoUrl = normalizedTeam ? `/assets/nfl-logos/${normalizedTeam}.svg` : '';
-  const avatarSrc = isDef && teamLogoUrl ? teamLogoUrl : (player?.headshot ?? DEFAULT_HEADSHOT_URL);
+  const noHeadshot = buildNoHeadshotPlaceholder(player?.nflTeam ?? '');
+  const avatarSrc = isDef && teamLogoUrl ? teamLogoUrl : resolveHeadshotSrc(player?.headshot, player?.nflTeam);
   const avatarIsLogo = isDef && !!teamLogoUrl;
 
   const handleImgError = (e: React.SyntheticEvent<HTMLImageElement>) => {
@@ -86,19 +88,19 @@ export function BoardCell({ pick, player, team, teams, isCurrentPick, isUserTeam
       if (player.mflId) {
         const mfl = getPlayerImageUrl(player.mflId);
         img.onerror = () => {
-          img.onerror = () => { img.onerror = null; img.src = DEFAULT_HEADSHOT_URL; };
+          img.onerror = () => { img.onerror = null; img.src = noHeadshot; };
           img.src = mfl;
         };
         img.src = college;
       } else {
-        img.onerror = () => { img.onerror = null; img.src = DEFAULT_HEADSHOT_URL; };
+        img.onerror = () => { img.onerror = null; img.src = noHeadshot; };
         img.src = college;
       }
     } else if (player?.mflId) {
-      img.onerror = () => { img.onerror = null; img.src = DEFAULT_HEADSHOT_URL; };
+      img.onerror = () => { img.onerror = null; img.src = noHeadshot; };
       img.src = getPlayerImageUrl(player.mflId);
     } else {
-      img.src = DEFAULT_HEADSHOT_URL;
+      img.src = noHeadshot;
     }
   };
 

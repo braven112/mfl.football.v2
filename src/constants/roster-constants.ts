@@ -4,6 +4,7 @@
  */
 
 import { normalizeTeamCode } from '../utils/nfl-logo';
+import { buildNoHeadshotPlaceholder, NO_HEADSHOT_PLACEHOLDER } from '../utils/nfl-team-colors';
 import { getLeagueBySlug, DEFAULT_LEAGUE_SLUG } from '../config/leagues';
 
 /**
@@ -47,22 +48,67 @@ export const divisionOrder = ['Northwest', 'Southwest', 'Central', 'East'] as co
 const MFL_PHOTO_HOST = getLeagueBySlug(DEFAULT_LEAGUE_SLUG)!.mflHost;
 
 /**
- * Default player headshot URL when player image is unavailable.
+ * MFL's own "no photo available" image — a white disc with a black silhouette.
+ *
+ * NO LONGER RENDERED. It is kept only so `isPlaceholderHeadshot` can recognize
+ * it, which is DEFENSIVE rather than a fix for anything observed: no committed
+ * data file contains this URL today (checked), but two feed scripts still emit
+ * it when a player has no MFL id (compute-roster-season-payloads.mjs,
+ * update-salary-averages.mjs), and such a value reaches a renderer as a
+ * perfectly valid `headshot` prop. It would load with a 200, so no `onerror`
+ * would ever fire and the cascade could not catch it — recognizing the string
+ * is the only place that can.
  */
-export const DEFAULT_HEADSHOT_URL =
+export const LEGACY_MFL_NO_PHOTO_URL =
   `https://${MFL_PHOTO_HOST}/player_photos_2010/no_photo_available.jpg`;
+
+/**
+ * Default player headshot when the player image is unavailable: an inline,
+ * team-colored SVG (see `buildNoHeadshotPlaceholder`) rather than MFL's
+ * white-disc silhouette, which blanked out the team-color avatar chip it sat
+ * on. League-neutral because this constant takes no team — renderers that know
+ * the team should call `getPlayerHeadshot`/`buildHeadshotOnerror` with it, or
+ * `buildNoHeadshotPlaceholder(team)` directly.
+ */
+export const DEFAULT_HEADSHOT_URL = NO_HEADSHOT_PLACEHOLDER;
+
+/**
+ * True when a headshot URL is a placeholder rather than a real photo — either
+ * the inline SVG or MFL's legacy no-photo image. Renderers use it to decide
+ * "I have no headshot", so a legacy URL falls through to the team-colored
+ * placeholder instead of rendering the white disc.
+ */
+export function isPlaceholderHeadshot(url?: string | null): boolean {
+  if (!url) return true;
+  return url === LEGACY_MFL_NO_PHOTO_URL || url.includes('no_photo_available') || url.includes('no-headshot');
+}
+
+/**
+ * Resolve the `src` for a player image: the supplied headshot when it is a
+ * real photo, otherwise the team-colored no-headshot placeholder.
+ *
+ * The one-liner every surface that renders `player.headshot` directly should
+ * use — it collapses "no headshot", "empty string", and "MFL's white-disc
+ * placeholder came through as a real URL" into the same, correct result.
+ */
+export function resolveHeadshotSrc(headshot?: string | null, teamCode?: string): string {
+  return isPlaceholderHeadshot(headshot)
+    ? buildNoHeadshotPlaceholder(teamCode ?? '')
+    : (headshot as string);
+}
 
 /**
  * Get player headshot URL by player ID. Served from the canonical photo host
  * (see MFL_PHOTO_HOST above) for every league.
  *
  * @param playerId - MFL player ID
+ * @param teamCode - NFL team code, used to color the placeholder when there is no ID
  * @returns URL to player headshot image
  */
-export function getPlayerImageUrl(playerId?: string): string {
+export function getPlayerImageUrl(playerId?: string, teamCode?: string): string {
   return playerId
     ? `https://${MFL_PHOTO_HOST}/player_photos_big_2014/${playerId}_thumb.jpg`
-    : DEFAULT_HEADSHOT_URL;
+    : buildNoHeadshotPlaceholder(teamCode ?? '');
 }
 
 /**
@@ -115,34 +161,47 @@ export function resolveEspnId(
  * @param espnId - Optional ESPN player ID for higher quality headshots
  * @returns URL to player headshot image
  */
-export function getPlayerHeadshot(mflId?: string, espnId?: string): string {
+export function getPlayerHeadshot(mflId?: string, espnId?: string, teamCode?: string): string {
   if (espnId) {
     return `https://a.espncdn.com/i/headshots/nfl/players/full/${espnId}.png`;
   }
-  return getPlayerImageUrl(mflId);
+  return getPlayerImageUrl(mflId, teamCode);
 }
 
 /**
  * Build an inline onerror handler string that cascades through headshot fallbacks.
  *
  * Fallback chain (when espnId + mflId provided):
- *   ESPN NFL headshot → ESPN College headshot → MFL headshot → default placeholder
+ *   ESPN NFL headshot → ESPN College headshot → MFL headshot → team-colored placeholder
  *
  * @param mflId - MFL player ID
  * @param espnId - ESPN player ID
+ * @param teamCode - NFL team code, so the final placeholder is team-colored
+ * @param fallbackSrc - Overrides the final placeholder. Pass
+ *   `NO_HEADSHOT_SILHOUETTE` when the avatar chip already paints the team
+ *   gradient itself: this whole string is inlined into an `onerror` attribute
+ *   on EVERY rendered row, and the backdrop-free variant is 371 chars against
+ *   the baked-in 794 — and identical across rows, so it compresses away
+ *   instead of shipping one variant per team.
  * @returns Inline JS string for an img onerror attribute
  */
-export function buildHeadshotOnerror(mflId?: string, espnId?: string): string {
+export function buildHeadshotOnerror(
+  mflId?: string,
+  espnId?: string,
+  teamCode?: string,
+  fallbackSrc?: string,
+): string {
+  const fallback = fallbackSrc ?? buildNoHeadshotPlaceholder(teamCode ?? '');
   if (espnId && mflId) {
     const college = getCollegeHeadshot(espnId);
     const mfl = getPlayerImageUrl(mflId);
-    return `this.onerror=function(){this.onerror=function(){this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}'};this.src='${mfl}'};this.src='${college}'`;
+    return `this.onerror=function(){this.onerror=function(){this.onerror=null;this.src='${fallback}'};this.src='${mfl}'};this.src='${college}'`;
   }
   if (espnId) {
     const college = getCollegeHeadshot(espnId);
-    return `this.onerror=function(){this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}'};this.src='${college}'`;
+    return `this.onerror=function(){this.onerror=null;this.src='${fallback}'};this.src='${college}'`;
   }
-  return `this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}'`;
+  return `this.onerror=null;this.src='${fallback}'`;
 }
 
 /**

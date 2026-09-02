@@ -32,9 +32,10 @@ import {
   NFL_LOGO_ONERROR,
   NFL_LOGO_ONLOAD,
   // Canonical shared definitions. This page used to redefine every one of
-  // these locally — DEFAULT_HEADSHOT_URL three separate times — while already
+  // these locally — the no-photo URL three separate times — while already
   // importing from this module. See docs/plans/rosters-page-split.md.
-  DEFAULT_HEADSHOT_URL,
+  // (The no-headshot fallback itself is now team-colored and comes from
+  // buildNoHeadshotPlaceholder in utils/nfl-team-colors.)
   getPlayerImageUrl,
   getPlayerHeadshot,
   getNflLogoUrl,
@@ -5272,8 +5273,9 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
     NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD, COLLEGE_LOGO_ONERROR, COLLEGE_LOGO_ONLOAD,
     // Same canonical helpers the frontmatter uses — one definition for both
     // sides of the page instead of a copy each.
-    DEFAULT_HEADSHOT_URL, getPlayerImageUrl, getPlayerHeadshot, getNflLogoUrl,
+    getPlayerImageUrl, getPlayerHeadshot, getNflLogoUrl,
   } from '../../constants/roster-constants';
+  import { buildNoHeadshotPlaceholder } from '../../utils/nfl-team-colors';
   import { initPlayerModalTrigger } from '../../utils/player-modal-trigger';
   import type { PlayerModalData } from '../../utils/player-modal-trigger';
   import { applyPlayerModalBand } from '../../utils/player-modal-band';
@@ -6477,7 +6479,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
       return {
         id: playerId,
         name: nameEl?.textContent ?? '',
-        headshot: imgEl?.src ?? DEFAULT_HEADSHOT_URL,
+        headshot: imgEl?.src ?? buildNoHeadshotPlaceholder(modalData.nflTeam ?? ''),
         nflLogo: metaLogoEl?.src ?? '',
         // Serialized payload first — the rendered .player-meta__pos text can
         // carry a contract-status suffix ("QB - RC") that must not leak into
@@ -6891,7 +6893,7 @@ const defaultLastSeenText = formatLastSeen(defaultLastSeen);
           const enrichedEspnId = adj.espnId;
           const enrichedHeadshot = adj.headshot;
 
-          let headshot = DEFAULT_HEADSHOT_URL;
+          let headshot = buildNoHeadshotPlaceholder(adj.nflTeam || '');
           let isTeamIcon = false;
           if (enrichedHeadshot) {
             headshot = enrichedHeadshot;

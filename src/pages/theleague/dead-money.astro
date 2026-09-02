@@ -5,13 +5,13 @@ import DeadMoneyComposite from '../../components/theleague/DeadMoneyComposite.as
 import DeadMoneyPlayerCard from '../../components/theleague/DeadMoneyPlayerCard.astro';
 import RelatedReports from '../../components/theleague/RelatedReports.astro';
 import leagueConfig from '../../data/theleague.config.json';
-import { DEFAULT_HEADSHOT_URL, getPlayerImageUrl } from '../../constants/roster-constants';
+import { getPlayerImageUrl, resolveHeadshotSrc } from '../../constants/roster-constants';
 import { getCurrentSeasonYear } from '../../utils/league-year';
 import { getTeamIdentityForYear, chooseTeamName } from '../../utils/team-names';
 import { normalizeTeamCode } from '../../utils/nfl-logo';
 import { getGlobalPlayerMap } from '../../utils/player-map';
 import { resolveCutoutUrl } from '../../utils/player-modal-band';
-import { getNflTeamColors } from '../../utils/nfl-team-colors';
+import { buildNoHeadshotPlaceholder, getNflTeamColors } from '../../utils/nfl-team-colors';
 
 // Minimum salary to qualify for individual Brock Osweiler / Position Worst awards.
 // Filters out minimum-contract players — we want big-money busts, not dart throws.
@@ -460,11 +460,11 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
                           <div class="lineup-player">
                             <span class="lineup-slot">{player.slot}</span>
                             <img
-                              src={player.headshot ?? DEFAULT_HEADSHOT_URL}
+                              src={resolveHeadshotSrc(player.headshot, player.team)}
                               alt={player.name}
                               class="lineup-headshot"
                               loading="lazy"
-                              onerror={`this.onerror=null;this.src='${DEFAULT_HEADSHOT_URL}';`}
+                              onerror={`this.onerror=null;this.src='${buildNoHeadshotPlaceholder(player.team)}';`}
                             />
                             <div class="lineup-info">
                               <span class="lineup-name">{player.name}</span>
@@ -656,13 +656,13 @@ for (const [season, rankings] of jerryJonesStartersBySeason) {
                   <div class="shame-card" style={`--shame-accent: ${accent};`}>
                     <div class="shame-player-info">
                       <img
-                        src={espnShot ?? player.headshot ?? DEFAULT_HEADSHOT_URL}
+                        src={espnShot ?? resolveHeadshotSrc(player.headshot, player.team)}
                         alt={player.name}
                         class="shame-headshot"
                         loading="lazy"
                         onerror={espnShot
-                          ? `this.onerror=function(){this.onerror=null;this.src=${jsStr(DEFAULT_HEADSHOT_URL)};};this.src=${jsStr(player.headshot ?? DEFAULT_HEADSHOT_URL)};`
-                          : `this.onerror=null;this.src=${jsStr(DEFAULT_HEADSHOT_URL)};`}
+                          ? `this.onerror=function(){this.onerror=null;this.src=${jsStr(buildNoHeadshotPlaceholder(player.team))};};this.src=${jsStr(resolveHeadshotSrc(player.headshot, player.team))};`
+                          : `this.onerror=null;this.src=${jsStr(buildNoHeadshotPlaceholder(player.team))};`}
                       />
                       <div>
                         <span class="shame-name">{player.name}</span>

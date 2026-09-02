@@ -150,7 +150,7 @@
 
 <script>
   import { NFL_TEAM_CITIES, normalizeTeamCode } from '../../utils/nfl';
-  import { DEFAULT_HEADSHOT_URL } from '../../constants/roster-constants';
+  import { buildNoHeadshotPlaceholder } from '../../utils/nfl-team-colors';
 
   type ModalAction = 'ir-to' | 'ir-from' | 'cut' | 'trade-bait-add' | 'trade-bait-remove' | 'trade';
 
@@ -202,12 +202,12 @@
     const errorEl = modal.querySelector('#aam-error') as HTMLElement;
     const successEl = modal.querySelector('#aam-success') as HTMLElement;
 
-    // Default fallback headshot — same MFL no_photo URL the rest of the codebase
-    // uses (see DEFAULT_HEADSHOT_URL in src/constants/roster-constants.ts and
-    // PlayerDetailsModal's DEFAULT_IMG). Keeps the avatar tile from breaking
-    // when ESPN doesn't have a headshot for a player (free agents, defenses,
-    // pre-draft rookies).
-    const DEFAULT_HEADSHOT = DEFAULT_HEADSHOT_URL;
+    // Fallback headshot — the same team-colored silhouette the rest of the
+    // codebase draws (buildNoHeadshotPlaceholder in utils/nfl-team-colors).
+    // Keeps the avatar tile from breaking when ESPN doesn't have a headshot for
+    // a player (free agents, defenses, pre-draft rookies). Built per payload
+    // rather than once, so the placeholder wears the player's NFL colors.
+    const noHeadshotFor = (team?: string | null) => buildNoHeadshotPlaceholder(team ?? '');
 
     function formatDraft(
       year: number | null | undefined,
@@ -261,9 +261,10 @@
       // missing. The image's onerror attribute swaps to the same default if
       // the headshot URL 404s mid-load.
       playerNameEl.textContent = payload.playerName;
-      headshotEl.src = payload.headshot || DEFAULT_HEADSHOT;
+      const noHeadshot = noHeadshotFor(payload.nflTeam);
+      headshotEl.src = payload.headshot || noHeadshot;
       headshotEl.alt = `${payload.playerName} headshot`;
-      headshotEl.onerror = () => { headshotEl.src = DEFAULT_HEADSHOT; };
+      headshotEl.onerror = () => { headshotEl.src = noHeadshot; };
 
       // Normalize the inbound team code. The caller hands us whatever code
       // came off the PlayerCell logo URL, so we can see:
