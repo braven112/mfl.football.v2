@@ -12,6 +12,11 @@ import { isRegularSeasonOrPlayoffs } from '../article-utils/season-guards.mjs';
 import { getMatchupPairings } from '../article-utils/week-resolver.mjs';
 import { pickHeroPlayer } from '../article-utils/hero-player.mjs';
 import { primaryLink, articleLink, featureLink, linkList } from '../article-utils/article-links.mjs';
+import {
+  franchiseRecord,
+  summarizeWeekFormat,
+  doubleheaderBriefing,
+} from '../article-utils/franchise-record.mjs';
 
 export const config = {
   id: (year, week) => `sf_${year}_weekend_preview_w${String(week).padStart(2, '0')}`,
@@ -71,18 +76,23 @@ export async function buildFactSheet(data, week, year, projectRoot) {
 
   // Get matchup pairings
   const pairings = getMatchupPairings(data['weekly-results-raw'], week);
+  // Weeks 1, 2, 3 and 12 are doubleheaders — every franchise appears in the
+  // pairings TWICE. Unlabelled, that reads as a duplicate rather than the format.
+  const weekFormat = summarizeWeekFormat(pairings);
 
   // Standings for records
   const standingsMap = {};
   for (const f of data.standings.leagueStandings?.franchise || []) {
-    const wins = parseInt(f.h2hw || 0) + parseInt(f.divw || 0) + parseInt(f.nondivw || 0);
-    const losses = parseInt(f.h2hl || 0) + parseInt(f.divl || 0) + parseInt(f.nondivl || 0);
+    const { wins, losses } = franchiseRecord(f);
     standingsMap[f.id] = { wins, losses, pf: parseFloat(f.pf || 0), streak: f.strk || '' };
   }
 
   const lines = [];
   lines.push(`WEEK ${week} WEEKEND PREVIEW — TheLeague (${year} Season)`);
+  lines.push(`FORMAT: ${weekFormat.label}`);
   lines.push('');
+  const dhBriefing = doubleheaderBriefing(weekFormat);
+  if (dhBriefing) { lines.push(dhBriefing); lines.push(''); }
 
   // Build projected lineups for each matchup
   lines.push('=== PROJECTED MATCHUPS ===');
@@ -134,7 +144,7 @@ export async function buildFactSheet(data, week, year, projectRoot) {
 
 export function getSystemPrompt() {
   return buildCachedSystem(`\n\nARTICLE TYPE: Weekend Preview
-Build anticipation for the upcoming week. Identify the matchup of the week. Call out teams that need a win. Make bold predictions. This should feel like a Friday hype piece — get the owners excited about the weekend.`);
+Build anticipation for the upcoming week. Identify the matchup of the week. Call out teams that need a win. Make bold predictions. This should feel like a Friday hype piece — get the owners excited about the weekend.\nIf the fact sheet's FORMAT line says DOUBLEHEADER, say so early — it is the week's defining feature. A team appearing in two matchups is the schedule, not a duplicate, and the stakes are doubled.`);
 }
 
 export function getUserPrompt(factSheet) {

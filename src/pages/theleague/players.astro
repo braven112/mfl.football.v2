@@ -19,6 +19,9 @@ import { buildWeeklyPlayerResults } from '../../utils/weekly-player-results';
 import { getFrozenSalaryAveragesYear } from '../../utils/salary-calculations';
 import { calculateAllSurplusValues } from '../../utils/surplus-value';
 import { getAuthUser, isCommissionerOrAdmin } from '../../utils/auth';
+import { readBidRules } from '../../utils/waiver-claim';
+import { resolveWaiverWindow, describeWaiverWindow } from '../../utils/waiver-window';
+import WaiverClaimModal from '../../components/shared/WaiverClaimModal.astro';
 import '../../styles/player-cell.css';
 import '../../styles/ranking-columns.css';
 import collegeLogos from '../../data/college-logos.json';
@@ -668,6 +671,45 @@ const nflAvatarRingDarkJson = JSON.stringify(nflAvatarRingDark);
 const authUser = getAuthUser(Astro.request);
 const isAdmin = !!authUser && isCommissionerOrAdmin(authUser);
 
+// ── Waiver claim context ────────────────────────────────────────────────────
+// Owners can bid on a free agent without leaving for MFL. Bid rules come from
+// the league feed, never constants — the minimum and increment are league
+// settings and TheLeague's have changed before.
+const claimFranchiseId = authUser?.franchiseId ?? null;
+const bidRules = readBidRules((leagueData as any)?.league ?? {});
+// The drop picker only ever offers the caller's OWN roster; the server verifies
+// this again, but sending anything else would be a bug worth not shipping.
+const claimNameById = new Map(playerList.map((p: any) => [p.id, p.name]));
+const myRoster = claimFranchiseId
+  ? [...rosteredPlayers.entries()]
+      .filter(([, info]) => info.franchiseId === claimFranchiseId)
+      .map(([id]) => ({ id, name: claimNameById.get(id) ?? `Player ${id}` }))
+      .sort((a, b) => a.name.localeCompare(b.name))
+  : [];
+// Auction season has its own Bid flow on MFL; claims are the rest of the year.
+// Which waiver window is live comes from MFL's own calendar (synced by
+// scripts/fetch-mfl-feeds.mjs — the export is owner-gated, so it cannot be read
+// from the browser). `currentWaiverType` is the league's SYSTEM, not the state.
+const calendarModules = import.meta.glob(
+  '../../../data/theleague/mfl-feeds/20{2[5-9],[3-9][0-9]}/calendar.json',
+  { eager: true }
+);
+const calendarEvents =
+  (Object.entries(calendarModules).find(([p]) => p.includes(`/${currentYear}/`))?.[1] as any)?.default ?? [];
+const waiverWindow = resolveWaiverWindow(calendarEvents);
+const waiverWindowLabel = describeWaiverWindow(waiverWindow);
+const canClaim = !!claimFranchiseId && !isAuctionSeason;
+const claimConfig = {
+  canClaim,
+  system: bidRules.system,
+  franchiseId: claimFranchiseId,
+  rules: bidRules,
+  roster: myRoster,
+  windowMode: waiverWindow.mode,
+  windowLabel: waiverWindowLabel,
+  year: currentYear,
+};
+
 const hideLeaguePrefix = Astro.locals.hideLeaguePrefix ?? false;
 const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 ---
@@ -697,6 +739,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
         <div class="hero-title-group">
           <h1 class="hero-title">Free Agents</h1>
           <span class="hero-count">{freeAgents.length} available players</span>
+          {canClaim && (
+            <span class="waiver-window-line" data-window={waiverWindow.mode}>{waiverWindowLabel}</span>
+          )}
         </div>
         <a href={r('/theleague/projected-free-agents')} class="hero-cross-link">
           See projected FAs
@@ -1028,7 +1073,9 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
   ></script>
 </TheLeagueLayout>
 
-<script define:vars={{ playerDataJson, hasProjected, hasLastYrPts, hasSnapCounts, nflTeamsJson, hasSurplusData, hasAuctionData, isAuctionSeason, isAdmin, currentYear, mflHost, mflLeagueId, mflActionYear, franchiseNamesJson, franchiseBannersJson, defSpotlightJson, nflAvatarBgJson, nflAvatarBgFallback, nflAvatarBorderJson, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD, rookieDraftComplete }}>
+<WaiverClaimModal config={claimConfig} />
+
+<script define:vars={{ canClaim, playerDataJson, hasProjected, hasLastYrPts, hasSnapCounts, nflTeamsJson, hasSurplusData, hasAuctionData, isAuctionSeason, isAdmin, currentYear, mflHost, mflLeagueId, mflActionYear, franchiseNamesJson, franchiseBannersJson, defSpotlightJson, nflAvatarBgJson, nflAvatarBgFallback, nflAvatarBorderJson, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD, rookieDraftComplete }}>
   // define:vars creates const — copy to let so polling can update at runtime
   let _hasAuctionData = hasAuctionData;
   const players = JSON.parse(playerDataJson);
@@ -2111,11 +2158,17 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
       // blind-bid (waiver) vs FCFS based on MFL's own in-season schedule. MFL is
       // the final gatekeeper on timing/cap/roster, so no phase math is needed.
       if (!p.rostered && !(isAuctionSeason && p.auctionStatus === 'won')) {
-        const acqUrl = isAuctionSeason
-          ? `https://${mflHost}/${mflActionYear}/options?L=${mflLeagueId}&O=43&P=${encodeURIComponent(p.id)}`
-          : `https://${mflHost}/${mflActionYear}/add_drop?L=${mflLeagueId}`;
-        const acqLabel = isAuctionSeason ? 'Bid' : 'Add';
-        html += `<td class="col-fa-action"><a href="${escapeAttr(acqUrl)}" target="_blank" rel="noopener" class="place-bid-link" aria-label="${acqLabel} ${escapeAttr(p.name)} on MyFantasyLeague (opens in new tab)">${acqLabel} &#8599;</a></td>`;
+        if (canClaim) {
+          // Signed-in owner outside the auction window: bid in place. The
+          // server re-verifies everything this button implies.
+          html += `<td class="col-fa-action"><button type="button" class="place-bid-link claim-open" data-claim-id="${escapeAttr(p.id)}" data-claim-name="${escapeAttr(p.name)}" data-claim-pos="${escapeAttr(p.position || '')}" data-claim-team="${escapeAttr(p.nflTeam || '')}" data-claim-espn="${escapeAttr(p.espnId || '')}" data-claim-headshot="${escapeAttr(p.headshot || '')}" aria-label="Bid on ${escapeAttr(p.name)}">Bid</button></td>`;
+        } else {
+          const acqUrl = isAuctionSeason
+            ? `https://${mflHost}/${mflActionYear}/options?L=${mflLeagueId}&O=43&P=${encodeURIComponent(p.id)}`
+            : `https://${mflHost}/${mflActionYear}/add_drop?L=${mflLeagueId}`;
+          const acqLabel = isAuctionSeason ? 'Bid' : 'Add';
+          html += `<td class="col-fa-action"><a href="${escapeAttr(acqUrl)}" target="_blank" rel="noopener" class="place-bid-link" aria-label="${acqLabel} ${escapeAttr(p.name)} on MyFantasyLeague (opens in new tab)">${acqLabel} &#8599;</a></td>`;
+        }
       } else {
         html += `<td class="col-fa-action"></td>`;
       }
@@ -4242,4 +4295,45 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
     width: 1%;
   }
 
+
+  /* The Bid <button> reuses .place-bid-link so it is visually identical to the
+     Bid/Add pills already in this table.
+     MUST be :global() — table rows are injected via innerHTML from the client
+     script, and Astro's scoped styles only match elements that carried the
+     scope attribute at build time. A scoped rule here silently does nothing,
+     which is how this shipped as a washed-out pill: only the UA button styles
+     applied, painting `buttonface` grey behind the text.
+     Only the properties a <button> does NOT inherit are reset — border,
+     padding, colour, radius and size all come from .place-bid-link, so the
+     button and the anchor can never drift apart. */
+  :global(button.place-bid-link) {
+    background: none;
+    font-family: inherit;
+    line-height: inherit;
+    cursor: pointer;
+  }
+  :global(button.place-bid-link:focus-visible) {
+    outline: 2px solid var(--color-primary, #1c497c);
+    outline-offset: 2px;
+  }
+
+  .waiver-window-line {
+    display: inline-block;
+    margin-left: 0.6rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: var(--radius-full, 999px);
+    border: 1px solid currentColor;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    /* Colour carries the meaning: green = you can add right now. */
+    color: var(--color-primary, #1c497c);
+  }
+  /* Semantic green, NOT TheLeague's brand green: #2e8743 is the brand literal
+     and the AFL theme never overrides it, so it would paint TheLeague's colour
+     on AFL pages (tests/afl-brand-green-guard.test.ts). */
+  .waiver-window-line[data-window='fcfs'] { color: var(--color-success, #16a34a); }
+  .waiver-window-line[data-window='unknown'] { color: var(--content-text-muted, #6b7280); }
 </style>

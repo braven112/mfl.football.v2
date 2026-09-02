@@ -9,6 +9,7 @@
 import { loadTeams, flipName, normalizePosition, formatDefName, formatSalary } from '../article-utils/data-loaders.mjs';
 import { buildCachedSystem } from '../article-utils/ai-client.mjs';
 import { primaryLink, articleLink, featureLink, linkList } from '../article-utils/article-links.mjs';
+import { franchiseRecord } from '../article-utils/franchise-record.mjs';
 
 const SALARY_CAP = 45_000_000;
 const VALID_GRADES = ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'D-', 'F'];
@@ -51,8 +52,7 @@ export async function buildFactSheet(data, week, year, projectRoot) {
   // Prior year standings for context
   const priorStandings = {};
   for (const f of data.standings.leagueStandings?.franchise || []) {
-    const wins = parseInt(f.h2hw || 0) + parseInt(f.divw || 0) + parseInt(f.nondivw || 0);
-    const losses = parseInt(f.h2hl || 0) + parseInt(f.divl || 0) + parseInt(f.nondivl || 0);
+    const { wins, losses } = franchiseRecord(f);
     priorStandings[f.id] = { wins, losses, pf: parseFloat(f.pf || 0) };
   }
 

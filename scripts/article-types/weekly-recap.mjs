@@ -2,7 +2,9 @@
  * Weekly Recap — Week N recap article.
  * Runs Tuesday 6am PT after the previous week's games are complete.
  *
- * Fact sheet: All 8 matchups with scores + top scorers, standings, storylines.
+ * Fact sheet: every matchup with scores + top scorers, standings, storylines.
+ * NOT always 8 games: TheLeague plays doubleheaders in Weeks 1, 2, 3 and 12,
+ * where all 16 franchises play TWICE. See article-utils/franchise-record.mjs.
  * AI output: { headline, excerpt, content: string[] }
  */
 
@@ -10,6 +12,13 @@ import { loadPlayers, loadTeams, formatSalary } from '../article-utils/data-load
 import { buildCachedSystem } from '../article-utils/ai-client.mjs';
 import { isRegularSeasonOrPlayoffs } from '../article-utils/season-guards.mjs';
 import { primaryLink, articleLink, featureLink, linkList } from '../article-utils/article-links.mjs';
+import {
+  franchiseRecord,
+  summarizeWeekFormat,
+  doubleheaderBriefing,
+  resultsByFranchise,
+  weekSummaryLine,
+} from '../article-utils/franchise-record.mjs';
 
 export const config = {
   id: (year, week) => `sf_${year}_weekly_recap_w${String(week).padStart(2, '0')}`,
@@ -36,16 +45,30 @@ export async function buildFactSheet(data, week, year, projectRoot) {
     String(w?.weeklyResults?.week) === String(week)
   );
 
+  const matchups = weekData?.weeklyResults?.matchup || [];
+
+  // A doubleheader week lists every franchise twice. Say so up front, or the
+  // model reads a team that both won and lost as a contradiction and writes
+  // around it.
+  const format = summarizeWeekFormat(
+    matchups.map((m) => ({ franchise1Id: m?.franchise?.[0]?.id, franchise2Id: m?.franchise?.[1]?.id }))
+  );
+  const perFranchise = resultsByFranchise(matchups);
+
   const lines = [];
   lines.push(`WEEK ${week} RECAP — TheLeague (${year} Season)`);
+  lines.push(`FORMAT: ${format.label}`);
   lines.push('');
+  const briefing = doubleheaderBriefing(format);
+  if (briefing) {
+    lines.push(briefing);
+    lines.push('');
+  }
 
   // Matchup results
   lines.push('=== MATCHUP RESULTS ===');
-  const matchups = weekData?.weeklyResults?.matchup || [];
-  const teamScores = {};
 
-  for (const matchup of matchups) {
+  for (const [gameIndex, matchup] of matchups.entries()) {
     const [f1, f2] = matchup.franchise || [];
     if (!f1 || !f2) continue;
 
@@ -54,11 +77,9 @@ export async function buildFactSheet(data, week, year, projectRoot) {
     const s1 = parseFloat(f1.score ?? f1.spread ?? 0);
     const s2 = parseFloat(f2.score ?? f2.spread ?? 0);
 
-    teamScores[f1.id] = s1;
-    teamScores[f2.id] = s2;
-
     const winner = s1 > s2 ? t1?.name : s2 > s1 ? t2?.name : 'TIE';
-    lines.push(`${t1?.name ?? f1.id} ${s1.toFixed(2)} vs ${t2?.name ?? f2.id} ${s2.toFixed(2)} — Winner: ${winner}`);
+    const gameLabel = format.isDoubleheader ? `GAME ${gameIndex + 1}: ` : '';
+    lines.push(`${gameLabel}${t1?.name ?? f1.id} ${s1.toFixed(2)} vs ${t2?.name ?? f2.id} ${s2.toFixed(2)} — Winner: ${winner}`);
 
     // Top scorers per team from starter data
     for (const f of [f1, f2]) {
@@ -80,20 +101,32 @@ export async function buildFactSheet(data, week, year, projectRoot) {
     lines.push('');
   }
 
+  // On a doubleheader week the combined result is the story, and it is not
+  // derivable from the game rows without the reader doing the bookkeeping.
+  if (format.isDoubleheader) {
+    lines.push(`=== EACH TEAM'S WEEK (combined across ${format.gamesPerFranchise} games) ===`);
+    const summaries = [...perFranchise.entries()]
+      .map(([fid, games]) => ({ fid, games, total: games.reduce((a, g) => a + g.score, 0) }))
+      .sort((a, b) => b.total - a.total);
+    for (const { fid, games } of summaries) {
+      lines.push(`  ${teams.get(fid)?.name ?? fid}: ${weekSummaryLine(games)}`);
+    }
+    lines.push('');
+  }
+
   // Standings
   lines.push('=== STANDINGS (After Week ' + week + ') ===');
   const standings = data.standings.leagueStandings?.franchise || [];
   const sorted = [...standings].sort((a, b) => {
-    const wa = parseInt(a.h2hw || 0) + parseInt(a.divw || 0) + parseInt(a.nondivw || 0);
-    const wb = parseInt(b.h2hw || 0) + parseInt(b.divw || 0) + parseInt(b.nondivw || 0);
+    const wa = franchiseRecord(a).wins;
+    const wb = franchiseRecord(b).wins;
     if (wb !== wa) return wb - wa;
     return parseFloat(b.pf || 0) - parseFloat(a.pf || 0);
   });
 
   for (const [i, f] of sorted.entries()) {
     const t = teams.get(f.id);
-    const wins = parseInt(f.h2hw || 0) + parseInt(f.divw || 0) + parseInt(f.nondivw || 0);
-    const losses = parseInt(f.h2hl || 0) + parseInt(f.divl || 0) + parseInt(f.nondivl || 0);
+    const { wins, losses } = franchiseRecord(f);
     const pf = parseFloat(f.pf || 0).toFixed(2);
     const pa = parseFloat(f.pa || 0).toFixed(2);
     const streak = f.strk || '';
@@ -103,12 +136,28 @@ export async function buildFactSheet(data, week, year, projectRoot) {
 
   // Storylines
   lines.push('=== KEY STORYLINES ===');
-  const scores = Object.entries(teamScores);
-  if (scores.length > 0) {
-    const highest = scores.sort((a, b) => b[1] - a[1])[0];
-    const lowest = scores.sort((a, b) => a[1] - b[1])[0];
-    lines.push(`Highest scorer: ${teams.get(highest[0])?.name} at ${highest[1].toFixed(2)}`);
-    lines.push(`Lowest scorer: ${teams.get(lowest[0])?.name} at ${lowest[1].toFixed(2)}`);
+  // EVERY game, not one per franchise — a franchise-keyed map kept only the
+  // second game of a doubleheader and hid the other from these superlatives.
+  const allGames = [...perFranchise.entries()].flatMap(([fid, games]) =>
+    games.map((g) => ({ fid, ...g }))
+  );
+  if (allGames.length > 0) {
+    const byScore = [...allGames].sort((a, b) => b.score - a.score);
+    const highest = byScore[0];
+    const lowest = byScore[byScore.length - 1];
+    const suffix = format.isDoubleheader ? ' (single game)' : '';
+    lines.push(`Highest score${suffix}: ${teams.get(highest.fid)?.name} at ${highest.score.toFixed(2)}`);
+    lines.push(`Lowest score${suffix}: ${teams.get(lowest.fid)?.name} at ${lowest.score.toFixed(2)}`);
+    if (format.isDoubleheader) {
+      const byTotal = [...perFranchise.entries()]
+        .map(([fid, games]) => ({ fid, total: games.reduce((a, g) => a + g.score, 0) }))
+        .sort((a, b) => b.total - a.total);
+      lines.push(`Most points across both games: ${teams.get(byTotal[0].fid)?.name} at ${byTotal[0].total.toFixed(2)}`);
+      const sweeps = [...perFranchise.entries()].filter(([, g]) => g.every((x) => x.result === 'W'));
+      const winless = [...perFranchise.entries()].filter(([, g]) => g.every((x) => x.result === 'L'));
+      if (sweeps.length) lines.push(`Swept the doubleheader: ${sweeps.map(([f]) => teams.get(f)?.name).join(', ')}`);
+      if (winless.length) lines.push(`Lost both: ${winless.map(([f]) => teams.get(f)?.name).join(', ')}`);
+    }
 
     // Biggest blowout and closest game
     let biggestMargin = 0, biggestMatchup = '';
@@ -137,7 +186,7 @@ export async function buildFactSheet(data, week, year, projectRoot) {
 
 export function getSystemPrompt() {
   return buildCachedSystem(`\n\nARTICLE TYPE: Weekly Recap
-Write like a Monday morning ESPN column. Lead with the biggest story of the week — the biggest upset, the highest score, or the most dramatic finish. Weave in standings implications. End with a look-ahead to next week.`);
+Write like a Monday morning ESPN column. Lead with the biggest story of the week — the biggest upset, the highest score, or the most dramatic finish. Weave in standings implications. End with a look-ahead to next week.\nIf the fact sheet's FORMAT line says DOUBLEHEADER, every team played more than once: describe a team's week by its combined result (swept, split, dropped both), never as a single win or loss, and treat the two games as separate events when you cite scores.`);
 }
 
 export function getUserPrompt(factSheet) {

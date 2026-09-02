@@ -1,0 +1,349 @@
+---
+/**
+ * WaiverClaimModal — file a waiver claim without leaving for MFL.
+ *
+ * ONE component for both leagues, because the two waiver systems differ in
+ * ways that are data, not layout:
+ *   TheLeague  BBID_FCFS     → blind bid: amount + drop + round
+ *   AFL        WAIVERS_FCFS  → rolling priority: drop + round, no bid at all
+ * The `system` field in the config decides which fields render. Forking this
+ * into two components is how this repo grew 24 forked siblings
+ * (tests/page-fork-ratchet.test.ts); don't.
+ *
+ * The identity block is the SAME composite band the player modals use
+ * (`.pmb`, painted by applyPlayerModalBand — see
+ * src/styles/player-modal-band.css). Layout below mirrors `.cdm-band` so the
+ * action modals cannot drift apart.
+ *
+ * The trigger is delegated on document, so it survives the player table being
+ * re-rendered via innerHTML on every sort/filter.
+ */
+import '../../styles/player-modal-band.css';
+import { NFL_LOGO_ONERROR, NFL_LOGO_ONLOAD } from '../../constants/roster-constants';
+
+export interface WaiverClaimConfig {
+  canClaim: boolean;
+  system: 'bbid' | 'priority';
+  franchiseId: string | null;
+  rules: { minimum: number; increment: number; conditional: boolean; maxRounds: number };
+  roster: Array<{ id: string; name: string }>;
+  year: number;
+  /** Remaining blind-bid budget, for the hint line. Omitted on priority leagues. */
+  balance?: number;
+  /** Live waiver window from MFL's calendar: 'waiver' | 'fcfs' | 'unknown'. */
+  windowMode: 'waiver' | 'fcfs' | 'unknown';
+  /** One-line description of the window, shown in the modal and on the page. */
+  windowLabel: string;
+}
+
+interface Props {
+  config: WaiverClaimConfig;
+}
+const { config } = Astro.props;
+---
+
+<script type="application/json" id="waiver-claim-config" set:html={JSON.stringify(config)}></script>
+
+<dialog id="waiver-claim-modal" class="wcm" aria-labelledby="wcm-player-name">
+  <!-- Hero identity band — same composite as the player modals. -->
+  <div class="wcm-band pmb" id="wcm-band">
+    <span class="pmb__ghost" aria-hidden="true"></span>
+    <div class="pmb__glow" aria-hidden="true"></div>
+    <img class="pmb__crest" alt="" aria-hidden="true" loading="lazy" decoding="async" style="display:none" />
+    <img class="pmb__cutout" alt="" aria-hidden="true" loading="eager" decoding="async" />
+    <div class="wcm-band__info">
+      <div class="wcm-band__name-row">
+        <h3 class="wcm-band__name" id="wcm-player-name">&mdash;</h3>
+      </div>
+      <div class="wcm-band__meta">
+        <img class="wcm-band__team-logo" id="wcm-nfl-logo" src="" alt="" onerror={NFL_LOGO_ONERROR} onload={NFL_LOGO_ONLOAD} />
+        <span class="wcm-band__meta-text" id="wcm-meta-text">&mdash;</span>
+      </div>
+      <div class="wcm-band__sub" id="wcm-sub-text"></div>
+    </div>
+    <button type="button" class="wcm-close" id="wcm-close" aria-label="Close">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+        <path d="M14 4L4 14M4 4l10 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="wcm-body">
+    <p class="wcm-window" id="wcm-window">{config.windowLabel}</p>
+
+    <div class="wcm-field" id="wcm-bid-field">
+      <label for="wcm-bid">Bid</label>
+      <input type="number" id="wcm-bid" inputmode="numeric" />
+      <p class="wcm-hint" id="wcm-bid-hint"></p>
+    </div>
+
+    <div class="wcm-field">
+      <label for="wcm-drop">Drop if awarded</label>
+      <select id="wcm-drop">
+        <option value="0000">Nobody &mdash; add without dropping</option>
+      </select>
+    </div>
+
+    <div class="wcm-field">
+      <label for="wcm-round">Waiver round</label>
+      <select id="wcm-round"></select>
+      <p class="wcm-hint" id="wcm-round-hint"></p>
+    </div>
+
+    <p class="wcm-error" id="wcm-error" role="alert" hidden></p>
+
+    <div class="wcm-actions">
+      <button type="button" id="wcm-cancel" class="wcm-btn wcm-btn--ghost">Cancel</button>
+      <button type="button" id="wcm-submit" class="wcm-btn">Submit claim</button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+  import { applyPlayerModalBand } from '../../utils/player-modal-band';
+
+  const raw = document.getElementById('waiver-claim-config')?.textContent;
+  const cfg = raw ? JSON.parse(raw) : null;
+
+  if (cfg?.canClaim) {
+    const dlg = document.getElementById('waiver-claim-modal') as HTMLDialogElement;
+    const band = document.getElementById('wcm-band');
+    const nameEl = document.getElementById('wcm-player-name')!;
+    const metaEl = document.getElementById('wcm-meta-text')!;
+    const subEl = document.getElementById('wcm-sub-text')!;
+    const logoEl = document.getElementById('wcm-nfl-logo') as HTMLImageElement;
+    const bidField = document.getElementById('wcm-bid-field')!;
+    const bidInput = document.getElementById('wcm-bid') as HTMLInputElement;
+    const bidHint = document.getElementById('wcm-bid-hint')!;
+    const dropSel = document.getElementById('wcm-drop') as HTMLSelectElement;
+    const roundSel = document.getElementById('wcm-round') as HTMLSelectElement;
+    const roundHint = document.getElementById('wcm-round-hint')!;
+    const errBox = document.getElementById('wcm-error')!;
+    const submitBtn = document.getElementById('wcm-submit') as HTMLButtonElement;
+
+    // FCFS adds resolve IMMEDIATELY at the league minimum — there is nothing to
+    // bid and no round to file under. `unknown` falls back to the queued claim,
+    // matching the server: a claim that bounces is recoverable, an unintended
+    // instant pickup is not.
+    const immediate = cfg.windowMode === 'fcfs';
+    /** Sub-line under the player name; set below once the mode is known. */
+    let subLine = '';
+    const isBid = cfg.system === 'bbid' && !immediate;
+    const money = (n: number) => '$' + Number(n).toLocaleString();
+
+    bidField.hidden = !isBid;
+    (roundSel.closest('.wcm-field') as HTMLElement).hidden = immediate;
+    if (isBid) {
+      bidInput.min = String(cfg.rules.minimum);
+      bidInput.step = String(cfg.rules.increment);
+      bidHint.textContent =
+        `Minimum ${money(cfg.rules.minimum)}, in ${money(cfg.rules.increment)} steps.` +
+        (cfg.balance != null ? ` You have ${money(cfg.balance)} left.` : '');
+    } else if (!immediate) {
+      roundHint.textContent = 'Claims are awarded by waiver priority, not by bid.';
+    }
+    if (immediate) {
+      subLine = cfg.system === 'bbid'
+        ? `Free agent pickup at the league minimum (${money(cfg.rules.minimum)})`
+        : 'Free agent pickup — first come, first served';
+    }
+    submitBtn.textContent = immediate ? 'Add player' : 'Submit claim';
+
+    for (const p of cfg.roster) {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.name;
+      dropSel.appendChild(opt);
+    }
+    for (let r = 1; r <= cfg.rules.maxRounds; r++) {
+      const opt = document.createElement('option');
+      opt.value = String(r);
+      opt.textContent = `Round ${r}`;
+      roundSel.appendChild(opt);
+    }
+
+    let activeId: string | null = null;
+    const showError = (msg: string) => { errBox.textContent = msg; errBox.hidden = !msg; };
+    const reset = () => {
+      submitBtn.disabled = false;
+      submitBtn.textContent = immediate ? 'Add player' : 'Submit claim';
+    };
+
+    document.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement)?.closest?.('.claim-open') as HTMLElement | null;
+      if (!btn) return;
+      activeId = btn.getAttribute('data-claim-id');
+      const name = btn.getAttribute('data-claim-name') || '';
+      const pos = btn.getAttribute('data-claim-pos') || '';
+      const team = btn.getAttribute('data-claim-team') || '';
+
+      nameEl.textContent = name;
+      metaEl.textContent = [pos, team].filter(Boolean).join(' · ');
+      subEl.textContent = subLine || (isBid ? 'Blind bid' : 'Waiver priority claim');
+      logoEl.src = team ? `/assets/nfl/${team.toLowerCase()}.svg` : '';
+      logoEl.style.display = team ? '' : 'none';
+
+      // Same painter the player modals use — gradient, ghost wordmark, cutout.
+      applyPlayerModalBand(band, {
+        name,
+        position: pos,
+        nflTeam: team,
+        espnId: btn.getAttribute('data-claim-espn'),
+        headshot: btn.getAttribute('data-claim-headshot'),
+      });
+
+      if (isBid) bidInput.value = String(cfg.rules.minimum);
+      dropSel.value = '0000';
+      showError('');
+      reset();
+      dlg.showModal();
+    });
+
+    document.getElementById('wcm-cancel')!.addEventListener('click', () => dlg.close());
+    document.getElementById('wcm-close')!.addEventListener('click', () => dlg.close());
+
+    submitBtn.addEventListener('click', async () => {
+      const bid = isBid ? Number(bidInput.value) : undefined;
+      if (isBid) {
+        if (!Number.isFinite(bid!) || bid! < cfg.rules.minimum) {
+          return showError(`Bid must be at least ${money(cfg.rules.minimum)}.`);
+        }
+        if (bid! % cfg.rules.increment !== 0) {
+          return showError(`Bid must be a multiple of ${money(cfg.rules.increment)}.`);
+        }
+      }
+      showError('');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Submitting…';
+      try {
+        const res = await fetch('/api/waiver-claim', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            claims: [{ addPlayerId: activeId, ...(isBid ? { bid } : {}), dropPlayerId: dropSel.value }],
+            round: Number(roundSel.value || 1),
+            year: cfg.year,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) {
+          reset();
+          return showError(data.message || `Claim failed (HTTP ${res.status}).`);
+        }
+        submitBtn.textContent = immediate ? 'Added ✓' : 'Submitted ✓';
+        setTimeout(() => dlg.close(), 900);
+      } catch {
+        reset();
+        showError('Network error — your claim was not submitted.');
+      }
+    });
+  }
+</script>
+
+<style>
+  /* Layout mirrors .cdm-band so the action modals cannot drift. .pmb paints
+     the gradient, ghost wordmark, glow, crest and cutout. */
+  .wcm {
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-md, 0.5rem);
+    max-width: 26rem;
+    width: calc(100% - 2rem);
+    overflow: hidden;
+    background: var(--content-bg, #ffffff);
+    color: var(--color-gray-900, #111827);
+  }
+  .wcm::backdrop { background: rgb(0 0 0 / 0.55); }
+
+  .wcm-band {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    min-height: 108px;
+    padding: 1.1rem 1.5rem 1rem 1.75rem;
+  }
+  .wcm-band__info {
+    position: relative;
+    z-index: 2;
+    flex: 1;
+    min-width: 0;
+    padding-right: clamp(88px, 30%, 170px);
+  }
+  .wcm-band.pmb--no-cutout .wcm-band__info { padding-right: 2.25rem; }
+  .wcm-band__name-row { display: flex; align-items: baseline; gap: 0.5rem; }
+  .wcm-band__name {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #fff;
+    text-shadow: 0 1px 2px rgb(0 0 0 / 0.45);
+  }
+  .wcm-band__meta { display: flex; align-items: center; gap: 0.4rem; margin-top: 0.2rem; }
+  .wcm-band__team-logo { width: 18px; height: 18px; object-fit: contain; }
+  .wcm-band__meta-text,
+  .wcm-band__sub {
+    font-size: 0.8rem;
+    color: rgb(255 255 255 / 0.85);
+    text-shadow: 0 1px 2px rgb(0 0 0 / 0.45);
+  }
+  .wcm-band__sub { margin-top: 0.15rem; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  .wcm-close {
+    position: relative;
+    z-index: 3;
+    align-self: flex-start;
+    background: none;
+    border: none;
+    color: rgb(255 255 255 / 0.85);
+    cursor: pointer;
+    padding: 0.25rem;
+  }
+  .wcm-close:hover { color: #fff; }
+
+  .wcm-body { padding: 1rem 1.25rem 1.25rem; }
+  .wcm-field + .wcm-field { margin-top: 0.85rem; }
+  .wcm-field label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--content-text-muted, #6b7280);
+    margin-bottom: 0.3rem;
+  }
+  .wcm-field input,
+  .wcm-field select {
+    width: 100%;
+    padding: 0.45rem 0.55rem;
+    border: 1px solid var(--input-border, #d1d5db);
+    border-radius: var(--radius-sm, 0.375rem);
+    background: var(--input-bg, #ffffff);
+    color: var(--input-text, #111827);
+  }
+  .wcm-window {
+    margin: 0 0 0.9rem;
+    padding: 0.45rem 0.6rem;
+    border-radius: var(--radius-sm, 0.375rem);
+    background: var(--color-gray-100, #f3f4f6);
+    color: var(--content-text-muted, #6b7280);
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  .wcm-hint { margin: 0.3rem 0 0; font-size: 0.72rem; color: var(--content-text-muted, #6b7280); }
+  .wcm-error { margin: 0.9rem 0 0; font-size: 0.8rem; color: var(--color-error, #b91c1c); }
+  .wcm-actions { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1.1rem; }
+  .wcm-btn {
+    padding: 0.45rem 0.9rem;
+    border-radius: var(--radius-sm, 0.375rem);
+    border: 1px solid transparent;
+    background: var(--color-primary, #1c497c);
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .wcm-btn[disabled] { opacity: 0.6; cursor: default; }
+  .wcm-btn--ghost {
+    background: transparent;
+    border-color: var(--input-border, #d1d5db);
+    color: var(--color-gray-900, #111827);
+  }
+</style>

@@ -81,9 +81,9 @@ FREE AGENTS (WAIVERS)
 - Rolling waiver system ("Yahoo" style) for priority. NOT blind-bid / BBID.
 - Initial waiver order = base draft order from the previous season.
 - Waiver adds allowed Week 1 through Week 17.
-- Requests accepted Sunday kickoff through Wednesday 9:00 PM; all claims process Wednesday 9:00 PM.
+- Requests accepted Sunday kickoff through Wednesday 8:00 PM PT; all claims process Wednesday 8:00 PM PT.
 - Dropped players are locked until the next Sunday kickoff.
-- First-Come First-Served (FCFS) allowed Wednesday 9:00 PM through Sunday kickoff, and from Draft Day until the regular season starts.
+- First-Come First-Served (FCFS) allowed Wednesday 8:00 PM PT through Sunday kickoff, and from Draft Day until the regular season starts.
 - Players dropped during FCFS are locked until the next Sunday kickoff.
 
 KEEPERS
@@ -124,7 +124,7 @@ SCORING
 
 SCORING ERRORS
 - Notify the Commissioner by email on discovering a scoring error.
-- All disputes due by Wednesday 9:00 PM; Commissioner reviews and notifies involved teams.
+- All disputes due by Wednesday 8:00 PM PT; Commissioner reviews and notifies involved teams.
 - Official stat provider: My Fantasy League (system of record).
 - Confirmed errors that change a matchup outcome result in a league-wide notice and correction.
 

@@ -122,6 +122,37 @@
 
 ---
 
+## 2026-09-01 - `h2hw` Is The TOTAL, Not A Third Component — Every Article Record Was Doubled
+
+**Context:** Schefter fact sheets across five article types.
+
+**Insight:** in `export?TYPE=leagueStandings`, `h2hw`/`h2hl` are the franchise's
+TOTAL head-to-head record. `divw`/`divl` and `nondivw`/`nondivl` are that same
+record SPLIT IN TWO, not additional games. So:
+
+```
+divw + nondivw === h2hw          # always
+```
+
+Five article types computed `wins = h2hw + divw + nondivw`, which double-counts
+every game. The 2025 leader (`h2hwlt: "15-3-0"`, divw 5, nondivw 10) was handed
+to the model as **30-6**, and the published articles repeated it. Use
+`scripts/article-utils/franchise-record.mjs#franchiseRecord`.
+
+**The tell was in the payload the whole time:** `h2hwlt` is MFL's own W-L-T
+string. Anything deriving a record should be checked against it — a test now
+does, for all 16 franchises.
+
+**Related trap in the same fact sheets:** a doubleheader week (TheLeague plays
+them in Weeks 1, 2, 3 and 12) has every franchise in TWO matchups. Any map keyed
+by franchise id keeps only the second game — that is how the week's true high
+score was being dropped before the superlatives were computed. See
+`summarizeWeekFormat` / `resultsByFranchise` in the same module, and note that a
+fact sheet must SAY the week is a doubleheader or the model reads a team that
+both won and lost as a contradiction.
+
+---
+
 ## 2026-09-01 - Waiver Order Is Written Through MFL's Own Form, Gated By A Nonce
 
 **Context:** the follow-on to the 2026-08-31 finding that

@@ -12,6 +12,11 @@ import { isRegularSeasonOrPlayoffs } from '../article-utils/season-guards.mjs';
 import { getMatchupPairings } from '../article-utils/week-resolver.mjs';
 import path from 'node:path';
 import { primaryLink, articleLink, featureLink, linkList } from '../article-utils/article-links.mjs';
+import {
+  franchiseRecord,
+  summarizeWeekFormat,
+  doubleheaderBriefing,
+} from '../article-utils/franchise-record.mjs';
 
 export const config = {
   id: (year, week) => `sf_${year}_matchup_preview_w${String(week).padStart(2, '0')}`,
@@ -57,16 +62,21 @@ export async function buildFactSheet(data, week, year, projectRoot) {
   // Standings
   const standingsMap = {};
   for (const f of data.standings.leagueStandings?.franchise || []) {
-    const wins = parseInt(f.h2hw || 0) + parseInt(f.divw || 0) + parseInt(f.nondivw || 0);
-    const losses = parseInt(f.h2hl || 0) + parseInt(f.divl || 0) + parseInt(f.nondivl || 0);
+    const { wins, losses } = franchiseRecord(f);
     standingsMap[f.id] = { wins, losses };
   }
 
   const pairings = getMatchupPairings(data['weekly-results-raw'], week);
+  // Weeks 1, 2, 3 and 12 are doubleheaders — every franchise appears in the
+  // pairings TWICE. Unlabelled, that reads as a duplicate rather than the format.
+  const weekFormat = summarizeWeekFormat(pairings);
 
   const lines = [];
   lines.push(`WEEK ${week} MATCHUP PREVIEW + BROADCAST GUIDE — TheLeague (${year} Season)`);
+  lines.push(`FORMAT: ${weekFormat.label}`);
   lines.push('');
+  const dhBriefing = doubleheaderBriefing(weekFormat);
+  if (dhBriefing) { lines.push(dhBriefing); lines.push(''); }
 
   // Track NFL teams with rostered players for broadcast guide
   const nflTeamPlayers = {}; // nflTeam → [{player, position, franchiseName}]
@@ -144,7 +154,7 @@ export async function buildFactSheet(data, week, year, projectRoot) {
 
 export function getSystemPrompt() {
   return buildCachedSystem(`\n\nARTICLE TYPE: Matchup Preview + Broadcast Guide
-Break down each fantasy matchup in TheLeague for the week. Pick winners for each matchup — be bold, be wrong sometimes, that's what makes it fun. Include a section about which NFL games to watch based on rostered players. This is the Saturday morning "what to watch" guide.`);
+Break down each fantasy matchup in TheLeague for the week. Pick winners for each matchup — be bold, be wrong sometimes, that's what makes it fun. Include a section about which NFL games to watch based on rostered players. This is the Saturday morning "what to watch" guide.\nIf the fact sheet's FORMAT line says DOUBLEHEADER, every team plays twice: pick a winner for each GAME separately and name the team facing the toughest two-game slate.`);
 }
 
 export function getUserPrompt(factSheet) {
