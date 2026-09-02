@@ -23,7 +23,20 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { resolveHeroFranchiseBackdrop } from '../src/utils/hero-franchise-backdrop';
+import {
+  resolveHeroFranchiseBackdrop,
+  copyBackdrop,
+  SURFACE_BEHIND_DARK,
+  SURFACE_BEHIND_LIGHT,
+} from '../src/utils/hero-franchise-backdrop';
+import {
+  AA_BODY_TEXT_RATIO,
+  AA_LARGE_TEXT_RATIO,
+  colorDistance,
+  contrastRatio,
+  relativeLuminance,
+  shiftLightness,
+} from '../src/utils/team-color-contrast';
 import { isSafeCssGradient, toBroadcastPair } from '../src/utils/draft-broadcast';
 import aflConfig from '../data/afl-fantasy/afl.config.json';
 import theleagueConfig from '../src/data/theleague.config.json';
@@ -81,7 +94,7 @@ describe('resolveHeroFranchiseBackdrop', () => {
     );
   });
 
-  it('carries only the gradient in its style string', () => {
+  it('never resurrects the dead surface variable', () => {
     // The backdrop deliberately does NOT hand the shells a solid surface colour.
     // `--ev-surface` exists to feather a rectangular player photo into a FLAT
     // card, and against a gradient that overlay is a hard vertical seam — so
@@ -92,7 +105,8 @@ describe('resolveHeroFranchiseBackdrop', () => {
       { franchiseId: '0001', colorPrimary: '#bd1f2b', colorSecondary: '#181818' },
       'theleague'
     );
-    expect(backdrop!.style).toBe(`--hero-fb-gradient:${backdrop!.gradient};`);
+    expect(backdrop!.style).not.toContain('--hero-fb-surface');
+    expect(backdrop!.style).toContain(`--hero-fb-gradient:${backdrop!.gradient};`);
   });
 
   it('prefers a dark crest cut over the light artwork', () => {
@@ -203,5 +217,139 @@ describe('hero components', () => {
       const block = router.slice(at, router.indexOf('/>', at));
       expect(block, tag).not.toContain('heroBackdrop');
     }
+  });
+});
+
+/**
+ * The accent contract — the part of this feature that cannot be checked by
+ * looking at it.
+ *
+ * A colour that reads fine on the two franchises someone happened to screenshot
+ * is not evidence about the other thirty-eight, and the failures here are
+ * quiet: an accent a shade too dark is not a crash, it is one owner's headline
+ * being slightly harder to read than everyone else's, forever. So every
+ * franchise in both real configs is measured, against the SAME surface the
+ * resolver measured it against.
+ *
+ * Both bounds are asserted, because either alone is satisfiable by a colour
+ * that fails the feature. Contrast alone passes a near-white accent that is
+ * invisible AS an accent inside a white headline; distinctness alone passes a
+ * deep brand colour nobody can read on a dark card.
+ */
+describe('accent contrast contract', () => {
+  const DISTINCT_FROM_WHITE = 18;
+
+  for (const { key, teams } of LEAGUES) {
+    describe(key, () => {
+      const rows = (teams as any[]).map((team) => ({
+        id: team.abbrev ?? team.franchiseId,
+        team,
+        backdrop: resolveHeroFranchiseBackdrop(team, key)!,
+      }));
+
+      it('clears the large-text floor for the accent, on every franchise', () => {
+        for (const { id, backdrop } of rows) {
+          const surface = copyBackdrop(backdrop.gradient);
+          expect(contrastRatio(backdrop.accent, surface), `${id} accent on card`)
+            .toBeGreaterThanOrEqual(AA_LARGE_TEXT_RATIO);
+        }
+      });
+
+      it('keeps the accent visibly apart from the white headline it sits in', () => {
+        for (const { id, backdrop } of rows) {
+          expect(colorDistance(backdrop.accent, '#ffffff'), `${id} accent vs headline`)
+            .toBeGreaterThanOrEqual(DISTINCT_FROM_WHITE);
+        }
+      });
+
+      it('clears the BODY floor for the pill, whose label is small text', () => {
+        for (const { id, backdrop } of rows) {
+          const fill = /--hero-fb-pill-bg:(#[0-9a-f]{6})/i.exec(backdrop.style)?.[1] ?? '';
+          expect(fill, `${id} pill fill`).toMatch(/^#[0-9a-f]{6}$/i);
+          expect(contrastRatio(fill, backdrop.pillInk), `${id} pill`)
+            .toBeGreaterThanOrEqual(AA_BODY_TEXT_RATIO);
+        }
+      });
+
+      it('clears the BODY floor for the CTA label on neutral white', () => {
+        for (const { id, backdrop } of rows) {
+          expect(contrastRatio(backdrop.ctaInk, '#ffffff'), `${id} CTA ink`)
+            .toBeGreaterThanOrEqual(AA_BODY_TEXT_RATIO);
+        }
+      });
+
+      it('clears the non-text floor for the border, in BOTH themes', () => {
+        // The border is the one mark measured against what is BEHIND the card,
+        // so it needs a value per theme — and each against its own worst case.
+        for (const { id, backdrop } of rows) {
+          expect(contrastRatio(backdrop.borderDark, SURFACE_BEHIND_DARK), `${id} dark border`)
+            .toBeGreaterThanOrEqual(AA_LARGE_TEXT_RATIO);
+          expect(contrastRatio(backdrop.borderLight, SURFACE_BEHIND_LIGHT), `${id} light border`)
+            .toBeGreaterThanOrEqual(AA_LARGE_TEXT_RATIO);
+        }
+      });
+
+      it('emits every custom property the shells read', () => {
+        for (const { id, backdrop } of rows) {
+          for (const name of [
+            '--hero-fb-gradient',
+            '--hero-fb-accent',
+            '--hero-fb-pill-bg',
+            '--hero-fb-pill-ink',
+            '--hero-fb-cta-ink',
+            '--hero-fb-border-dark',
+            '--hero-fb-border-light',
+          ]) {
+            expect(backdrop.style, `${id} missing ${name}`).toContain(`${name}:`);
+          }
+        }
+      });
+    });
+  }
+});
+
+describe('copyBackdrop', () => {
+  it('takes the FIRST stop for a left-to-right gradient', () => {
+    // 0-180deg runs left-to-right, and all the copy is in the left column.
+    expect(copyBackdrop('linear-gradient(115deg, #28855f 0%, #1a875b 100%)'))
+      .toBe(shiftLightness('#28855f', -0.33));
+  });
+
+  it('takes the LAST stop for a right-to-left gradient', () => {
+    // 180-360deg reverses it. Midwestside's card is 315deg: its gold sits in a
+    // wedge at the bottom RIGHT and the copy is over black. Reading the first
+    // stop here is what forced the accent to pure white before this existed.
+    const mws = 'linear-gradient(315deg, #ffd400 0%, #8a6d00 7%, #1c1500 22%, #070707 48%, #000000 100%)';
+    expect(copyBackdrop(mws)).toBe(shiftLightness('#000000', -0.33));
+  });
+
+  it('falls back to the lightest stop for a gradient it cannot read', () => {
+    // Radial, conic and multi-layer values are all legal `broadcastGradient`s.
+    // With no angle to reason from, the conservative stop is the right answer.
+    const radial = 'radial-gradient(circle, #101010 0%, #cccccc 100%)';
+    expect(copyBackdrop(radial)).toBe(shiftLightness('#cccccc', -0.33));
+    const layered = 'linear-gradient(115deg, #101010 0%, #202020 100%), linear-gradient(0deg, #dddddd 0%, #eeeeee 100%)';
+    expect(copyBackdrop(layered)).toBe(shiftLightness('#eeeeee', -0.33));
+  });
+});
+
+describe('greyscale franchises', () => {
+  it('gives all four the same constructed grey, bright enough to read as emphasis', () => {
+    // TITS and BADD (AFL), Bring The Pain and Wabs (TheLeague) have no hue in
+    // their palettes at all. Selecting from their stops split them two-and-two
+    // between #a3a3a3 and a #696969 that read as disabled text; the grey is
+    // constructed from white now, so they agree and they are visible.
+    const greyscale = [
+      ...(aflConfig.teams as any[]).filter((t) => ['TITS', 'BADD'].includes(t.abbrev)),
+      ...(theleagueConfig.teams as any[]).filter((t) => ['PAIN', 'WABS'].includes(t.abbrev)),
+    ];
+    expect(greyscale).toHaveLength(4);
+    const accents = new Set(
+      greyscale.map((t, i) => resolveHeroFranchiseBackdrop(t, i < 2 ? 'afl' : 'theleague')!.accent)
+    );
+    expect(accents.size, `expected one shared grey, got ${[...accents].join(', ')}`).toBe(1);
+    const [grey] = [...accents];
+    // Lighter than mid — an accent that is DARKER than the headline recedes.
+    expect(relativeLuminance(grey)).toBeGreaterThan(relativeLuminance('#808080'));
   });
 });
