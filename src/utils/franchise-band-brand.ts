@@ -52,7 +52,8 @@ import { getTeamColorPrimary, getTeamColorSecondary } from './team-colors';
 import { mixHex } from './nfl-team-colors';
 import { pickBrandHue } from './franchise-hue';
 import { AA_LARGE_TEXT_RATIO, ensureContrastOn } from './team-color-contrast';
-import { getThrowbackFranchiseBrand } from './franchise-brand';
+import { resolveThrowbackIdentity } from './throwback-identity';
+import { strictThrowbackScopeForLeagueSlug } from './throwback-scope';
 import { preferredIconSrc } from './team-icon-dark-css';
 import { crestStrokeFilter, withStrokeColors } from './crest-dark-stroke-css';
 
@@ -214,16 +215,23 @@ export function resolveEraCrest(currentIcon: string, eraIcon: string): string {
 /**
  * Build the serializable franchise band map for one league.
  *
- * `throwbackActive` only does anything for TheLeague — it is the only league
- * with a `history[]` to throw back to, and the only one the throwback store
- * writes for.
+ * `throwbackActive` does something for any league that RUNS Throwback Week —
+ * TheLeague and, since September 2026, the AFL. Leagues without eras (Best
+ * Ball) resolve to no scope and ignore the flag entirely.
+ *
+ * The era is resolved through `resolveThrowbackIdentity` rather than
+ * `getThrowbackFranchiseBrand`, because that helper indexes TheLeague's config
+ * alone. The values are identical for TheLeague — its `brand.colorPrimary` IS
+ * `getTeamColorPrimary(franchiseId)` — and this way one code path serves both
+ * leagues instead of the AFL needing a second one.
  */
 export function buildFranchiseBandBrands(
   league: LeagueSlug,
   options: BuildFranchiseBandBrandsOptions = {}
 ): FranchiseBandBrandMap {
   const teams = LEAGUE_TEAMS[league] ?? [];
-  const throwback = !!options.throwbackActive && league === 'theleague';
+  const scope = strictThrowbackScopeForLeagueSlug(league);
+  const throwback = !!options.throwbackActive && scope !== null;
   const overrides = options.throwbackOverrides ?? {};
   const strokes = strokeFilterByFranchise(league, teams);
 
@@ -259,24 +267,29 @@ export function buildFranchiseBandBrands(
     // Only a crest rendered as its LIGHT artwork can need the stroke.
     let crestFilter = team.iconDark ? undefined : strokes[franchiseId];
 
-    if (throwback) {
-      const era = getThrowbackFranchiseBrand(franchiseId, true, overrides[franchiseId]);
-      name = era.name;
+    if (throwback && scope) {
+      const identity = resolveThrowbackIdentity(team, overrides[franchiseId], scope);
+      name = identity.name;
       // Same treatment as the current identity above — a few eras are
       // monochrome (the palette sampler falls back to a dark neutral for
       // character-heavy art), and those bands need the era secondary too.
-      // `era.colorPrimary`, NOT `era.color`. getThrowbackFranchiseBrand only
-      // overwrites `color` for a franchise that actually threw back
-      // (`isHistorical && colorPrimary`), so for one with no eligible era it
-      // is still the CURRENT chart hue — the exact field this file stopped
-      // anchoring on, sneaking back in on the one week a year it shows. Same
-      // shape as the crest bug `resolveEraCrest` guards.
-      const eraPair = resolveBandPair(era.colorPrimary, era.colorSecondary);
+      // Era colors ONLY when the franchise actually threw back. A franchise
+      // with no eligible era falls through to its CURRENT identity, which
+      // carries no era palette — taking one anyway would land on the chart
+      // hue this file deliberately stopped anchoring on, on the one week a
+      // year it shows. Same shape as the crest bug `resolveEraCrest` guards.
+      const eraHasColors = identity.isHistorical && !!identity.colorPrimary;
+      const eraPair = resolveBandPair(
+        eraHasColors ? identity.colorPrimary : getTeamColorPrimary(franchiseId, league),
+        eraHasColors
+          ? (identity.colorSecondary ?? identity.colorPrimary)
+          : getTeamColorSecondary(franchiseId, league),
+      );
       primary = eraPair.anchor;
       secondary = eraPair.glow;
       // Empty when this franchise has no eligible era to throw back to — see
-      // resolveEraCrest for why taking `era.icon` there is wrong twice over.
-      const eraCrest = resolveEraCrest(team.icon ?? '', era.icon ?? '');
+      // resolveEraCrest for why taking `identity.icon` there is wrong twice over.
+      const eraCrest = resolveEraCrest(team.icon ?? '', identity.icon ?? '');
       if (eraCrest) {
         // Era artwork has no dark variant and is not in the stroke manifest
         // (which measures current crests only), so it renders as authored.

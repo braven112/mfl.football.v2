@@ -13,10 +13,18 @@ import {
   type TeamConfig,
   type TeamIdentity,
 } from './team-names';
-import { DEFAULT_THROWBACK_ERA, THROWBACK_ASSET_CONFLICTS } from '../data/theleague/throwback-config';
+import {
+  DEFAULT_THROWBACK_SCOPE,
+  throwbackRules,
+  type ThrowbackScope,
+} from './throwback-scope';
 
-function isConflicted(franchiseId: string, yearStart: number): boolean {
-  return THROWBACK_ASSET_CONFLICTS.some(
+function isConflicted(
+  franchiseId: string,
+  yearStart: number,
+  scope: ThrowbackScope
+): boolean {
+  return throwbackRules(scope).conflicts.some(
     (c) => c.franchiseId === franchiseId && c.yearStart === yearStart
   );
 }
@@ -28,13 +36,22 @@ function isSameAsCurrent(team: TeamConfig, entry: FranchiseHistoryEntry): boolea
 
 /**
  * Eras a franchise may throw back to: its full `history[]`, minus entries
- * whose art asset is claimed by another franchise (THROWBACK_ASSET_CONFLICTS)
- * and minus entries identical to the team's current identity.
+ * whose art asset is claimed by another franchise (the scope's asset
+ * conflicts) and minus entries identical to the team's current identity.
+ *
+ * `scope` selects WHICH league's conflict list applies. It defaults to
+ * TheLeague so every pre-existing call site keeps its exact behavior; an AFL
+ * caller must pass 'afl' or it gets TheLeague's rules keyed by ids the two
+ * leagues share (0001–0016 exist in both).
  */
-export function getEligibleThrowbackEras(team: TeamConfig): FranchiseHistoryEntry[] {
+export function getEligibleThrowbackEras(
+  team: TeamConfig,
+  scope: ThrowbackScope = DEFAULT_THROWBACK_SCOPE
+): FranchiseHistoryEntry[] {
   if (!team.history?.length) return [];
   return team.history.filter(
-    (entry) => !isConflicted(team.franchiseId, entry.yearStart) && !isSameAsCurrent(team, entry)
+    (entry) =>
+      !isConflicted(team.franchiseId, entry.yearStart, scope) && !isSameAsCurrent(team, entry)
   );
 }
 
@@ -68,20 +85,23 @@ function toIdentity(entry: FranchiseHistoryEntry): TeamIdentity {
  * franchise has eligible eras but no (or an invalid) seeded default.
  *
  * @param ownerOverrideYearStart - `yearStart` of the era the owner picked
- *   via /theleague/throwback-settings, if any.
+ *   via the league's throwback-settings page, if any.
+ * @param scope - which league's era rules apply. Defaults to TheLeague; see
+ *   `getEligibleThrowbackEras` for why an AFL caller must pass its own.
  */
 export function resolveThrowbackIdentity(
   team: TeamConfig,
-  ownerOverrideYearStart?: number
+  ownerOverrideYearStart?: number,
+  scope: ThrowbackScope = DEFAULT_THROWBACK_SCOPE
 ): TeamIdentity {
-  const eligible = getEligibleThrowbackEras(team);
+  const eligible = getEligibleThrowbackEras(team, scope);
 
   if (ownerOverrideYearStart !== undefined) {
     const chosen = eligible.find((e) => e.yearStart === ownerOverrideYearStart);
     if (chosen) return toIdentity(chosen);
   }
 
-  const defaultYearStart = DEFAULT_THROWBACK_ERA[team.franchiseId];
+  const defaultYearStart = throwbackRules(scope).defaults[team.franchiseId];
   if (defaultYearStart !== undefined) {
     const chosen = eligible.find((e) => e.yearStart === defaultYearStart);
     if (chosen) return toIdentity(chosen);

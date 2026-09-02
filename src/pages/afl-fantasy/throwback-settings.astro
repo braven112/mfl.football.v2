@@ -1,6 +1,6 @@
 ---
 /**
- * Throwback Week settings (The League) — thin route wrapper.
+ * Throwback Week settings (AFL) — thin route wrapper.
  *
  * Shared implementation lives in components/shared/ThrowbackSettingsPage.
  *
@@ -20,35 +20,36 @@ import { buildThrowbackSettingsView } from '../../utils/throwback-settings-view'
 import { getLeagueBySlug } from '../../config/leagues';
 import { resolveLeaguePath } from '../../utils/nav-utils';
 import type { TeamConfig } from '../../utils/team-names';
-import leagueConfig from '../../data/theleague.config.json';
+import aflConfig from '../../../data/afl-fantasy/afl.config.json';
 
 const user = getAuthUser(Astro.request);
 if (!user?.franchiseId) {
-  return Astro.redirect('/theleague/login?redirect=/theleague/throwback-settings');
+  return Astro.redirect('/afl-fantasy/login?redirect=/afl-fantasy/throwback-settings');
 }
 
-// League scoping: AFL franchiseIds fully overlap TheLeague's, so a session
-// from the other league must not resolve to a TheLeague team (or, for AFL
-// franchise 0001, pass the admin-franchise fallback into the commish panel).
-if (user.leagueId !== getLeagueBySlug('theleague')?.id) {
-  return Astro.redirect('/theleague');
+// League scoping, and it is not decoration: TheLeague's franchiseIds fully
+// overlap the AFL's, so a TheLeague session would otherwise resolve to a
+// same-numbered AFL team — and TheLeague 0001's admin bit would open this
+// league's commissioner panel.
+if (user.leagueId !== getLeagueBySlug('afl-fantasy')?.id) {
+  return Astro.redirect('/afl-fantasy');
 }
 
 const view = await buildThrowbackSettingsView(
   user as typeof user & { franchiseId: string },
-  ((leagueConfig as any).teams ?? []) as TeamConfig[],
-  'theleague'
+  ((aflConfig as any).teams ?? []) as TeamConfig[],
+  'afl'
 );
-if (!view) return Astro.redirect('/theleague');
+if (!view) return Astro.redirect('/afl-fantasy');
 
 const scoreboardPath = resolveLeaguePath(
-  '/theleague/live-scoring',
+  '/afl-fantasy/live-scoring',
   Astro.locals.hideLeaguePrefix ?? false
 );
 ---
 
 <ThrowbackSettingsPage
   view={view}
-  title="Throwback Week Settings | The League"
+  title="Throwback Week Settings | AFL Fantasy"
   scoreboardPath={scoreboardPath}
 />

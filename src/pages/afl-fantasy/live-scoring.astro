@@ -2,12 +2,14 @@
 /**
  * AFL Fantasy — Live Scoring (/afl-fantasy/live-scoring)
  *
- * The AFL's counterpart to TheLeague's board, minus the parts that are
- * TheLeague-only (Throwback Week, and the commissioner era-preview bar that
- * rides along with it). Everything else is shared: assembleLiveScoringData and
- * the LiveScoreboard island are league-agnostic and key off the registry
- * entry, so the ESPN box scores / real game clock / red-zone flags / scoring
- * plays all arrive here with no per-league wiring.
+ * The AFL's counterpart to TheLeague's board. Everything is shared:
+ * assembleLiveScoringData and the LiveScoreboard island are league-agnostic
+ * and key off the registry entry, so the ESPN box scores / real game clock /
+ * red-zone flags / scoring plays all arrive here with no per-league wiring.
+ *
+ * Throwback Week runs here too as of September 2026 — NFL Week 8, against
+ * TheLeague's Week 4 — through the same `applyThrowbackToBoard` chokepoint and
+ * the same preview bar, differing only by `scope`.
  *
  * Two AFL facts that shape this page, both from the registry:
  *
@@ -32,6 +34,9 @@ import { getCurrentSeasonYear, getLeagueYearForSlug } from '../../utils/league-y
 import { getCurrentNFLWeek } from '../../utils/current-week';
 import { getDailySlot } from '../../utils/hero-resolver';
 import { assembleLiveScoringData, buildTeamsMap, loadStarterRules, type ConfigTeam } from '../../utils/live-scoring-data';
+import { applyThrowbackToBoard } from '../../utils/throwback-live-scoring';
+import ThrowbackPreviewBar from '../../components/shared/ThrowbackPreviewBar.astro';
+import { resolveLeaguePath } from '../../utils/nav-utils';
 import { getCurrentRosterSample, getLiveScoringSample } from '../../data/live-scoring-sample';
 import LiveScoreboard from '../../components/shared/LiveScoreboard';
 import NflGamesStrip from '../../components/shared/NflGamesStrip';
@@ -68,7 +73,29 @@ const authUser = getAuthUser(Astro.request);
 const userFranchiseId =
   authUser?.leagueId === league.leagueId ? authUser.franchiseId : undefined;
 
-const configTeams = ((aflConfig as { teams?: ConfigTeam[] }).teams ?? []) as ConfigTeam[];
+let configTeams = ((aflConfig as { teams?: ConfigTeam[] }).teams ?? []) as ConfigTeam[];
+
+// Throwback Week: swap every franchise to its resolved legacy identity BEFORE
+// any downstream assembly touches configTeams, so the scoreboard, the matchup
+// pairings and the sample replay all pick it up for free.
+//
+// `scope: 'afl'` is load-bearing, not a label. Franchise ids 0001-0016 exist
+// in BOTH leagues with different `history[]` arrays, so resolving with the
+// default scope would hand AFL teams TheLeague's era rules.
+const throwback = await applyThrowbackToBoard({
+  configTeams,
+  week,
+  scope: 'afl',
+  leagueId: league.leagueId,
+  authUser,
+  searchParams: Astro.url.searchParams,
+});
+configTeams = throwback.configTeams;
+const throwbackPreview = throwback.preview;
+const settingsPath = resolveLeaguePath(
+  '/afl-fantasy/throwback-settings',
+  Astro.locals.hideLeaguePrefix ?? false
+);
 
 // Demo/sample mode, same contract as TheLeague's page. MFL turns the
 // liveScoring feed off in the offseason, so an empty-but-healthy feed falls
@@ -173,6 +200,9 @@ if (useDemo) {
 
 <TheLeagueLayout title="Live Scoring | AFL Fantasy">
   <div class="ls-page">
+    {throwbackPreview && (
+      <ThrowbackPreviewBar preview={throwbackPreview} settingsPath={settingsPath} />
+    )}
     <LiveScoreboard client:load {...islandProps} />
     <div class="ls-page-strip">
       <NflGamesStrip client:visible week={islandProps.week} year={year}

@@ -16,6 +16,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { getPlayer } from './player-map';
 import { resolveThrowbackIdentity } from './throwback-identity';
+import { DEFAULT_THROWBACK_SCOPE, type ThrowbackScope } from './throwback-scope';
 import type { FranchiseHistoryEntry } from './team-names';
 import type { LineupSlotRules } from './live-scoring-view';
 import type {
@@ -51,12 +52,13 @@ export interface ConfigTeam {
 export function applyThrowbackOverrides(
   configTeams: ConfigTeam[],
   isThrowbackActive: boolean,
-  ownerOverrides: Record<string, number> = {}
+  ownerOverrides: Record<string, number> = {},
+  scope: ThrowbackScope = DEFAULT_THROWBACK_SCOPE
 ): ConfigTeam[] {
   if (!isThrowbackActive) return configTeams;
 
   return configTeams.map((t) => {
-    const identity = resolveThrowbackIdentity(t, ownerOverrides[t.franchiseId]);
+    const identity = resolveThrowbackIdentity(t, ownerOverrides[t.franchiseId], scope);
     // Don't fall back to the CURRENT team's nameMedium/nameShort/abbrev when
     // the legacy era entry doesn't define its own — that would silently
     // re-show the current identity's short name next to a legacy icon.

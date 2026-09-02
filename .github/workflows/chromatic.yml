@@ -101,6 +101,7 @@ on:
       - 'src/utils/team-icon-dark-styles.ts'
       - 'src/utils/team-names.ts'
       - 'src/utils/throwback-identity.ts'
+      - 'src/utils/throwback-scope.ts'
       # League registry + nav/footer config feed rendered output.
       - 'src/config/footer-config.ts'
       - 'src/config/leagues-data.mjs'
@@ -126,6 +127,8 @@ on:
       - 'src/data/theleague/nfl-draft-dates-fetched.json'
       - 'src/data/theleague/throwback-config.ts'
       - 'src/data/theleague/throwback-weeks.mjs'
+      - 'src/data/afl-fantasy/throwback-config.ts'
+      - 'src/data/afl-fantasy/throwback-weeks.mjs'
       # Type-only, but a ts(2307) here silently voids a file's types.
       - 'src/types/hero-state.ts'
       - 'src/types/league-events.ts'
@@ -272,6 +275,7 @@ on:
       - 'src/utils/team-icon-dark-styles.ts'
       - 'src/utils/team-names.ts'
       - 'src/utils/throwback-identity.ts'
+      - 'src/utils/throwback-scope.ts'
       # League registry + nav/footer config feed rendered output.
       - 'src/config/footer-config.ts'
       - 'src/config/leagues-data.mjs'
@@ -297,6 +301,8 @@ on:
       - 'src/data/theleague/nfl-draft-dates-fetched.json'
       - 'src/data/theleague/throwback-config.ts'
       - 'src/data/theleague/throwback-weeks.mjs'
+      - 'src/data/afl-fantasy/throwback-config.ts'
+      - 'src/data/afl-fantasy/throwback-weeks.mjs'
       # Type-only, but a ts(2307) here silently voids a file's types.
       - 'src/types/hero-state.ts'
       - 'src/types/league-events.ts'

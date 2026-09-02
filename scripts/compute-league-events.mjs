@@ -19,6 +19,7 @@ import {
   DEFAULT_THROWBACK_WEEKS,
 } from './lib/throwback-reminder.mjs';
 import { THROWBACK_WEEKS } from '../src/data/theleague/throwback-weeks.mjs';
+import { AFL_THROWBACK_WEEKS } from '../src/data/afl-fantasy/throwback-weeks.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const outputPath = path.join(projectRoot, 'src', 'data', 'theleague', 'resolved-events.json');
@@ -124,7 +125,10 @@ const EVENTS = [
   { id: 'league-championship', name: 'League Championship', startRule: { type: 'computed', rule: 'championship-week' }, tier: 'major' },
 ];
 
-// ── Throwback Week events (TheLeague only) ──
+// ── Throwback Week events ──
+// Both leagues run one now: TheLeague in Week 4, the AFL in Week 8. Each
+// reads ITS OWN registry list, so the two can never be conflated into one
+// date — the AFL's week is deliberately not TheLeague's.
 // The week number is a per-league constant and lives in the registry
 // (`throwbackWeeks`), read here through its .mjs accessor — IMPORTED, not
 // scraped. It used to be parsed out of throwback-config.ts because that file
@@ -135,9 +139,24 @@ const EVENTS = [
 // scripts/lib/throwback-reminder.mjs). tier: major → full 14d/7d/2d/day-of
 // Roger touch schedule.
 
+function throwbackEventsFor(weeks) {
+  return (weeks?.length ? weeks : DEFAULT_THROWBACK_WEEKS).map(week => ({
+    id: throwbackEventId(week),
+    name: `Throwback Week (NFL Week ${week})`,
+    startRule: { type: 'computed', rule: 'nfl-week-start', week },
+    tier: 'major',
+  }));
+}
+
 async function loadThrowbackEvents() {
-  const weeks = THROWBACK_WEEKS?.length ? THROWBACK_WEEKS : DEFAULT_THROWBACK_WEEKS;
-  return weeks.map(week => ({
+  return throwbackEventsFor(THROWBACK_WEEKS);
+}
+
+async function loadAflThrowbackEvents() {
+  // No DEFAULT_THROWBACK_WEEKS fallback here on purpose: that mirror exists
+  // for TheLeague's historical scrape path, and silently emitting Week 4 for
+  // the AFL would put its Throwback Week on the wrong date entirely.
+  return AFL_THROWBACK_WEEKS.map(week => ({
     id: throwbackEventId(week),
     name: `Throwback Week (NFL Week ${week})`,
     startRule: { type: 'computed', rule: 'nfl-week-start', week },
@@ -289,7 +308,8 @@ resolved.forEach(e => {
 
 // AFL — emit a parallel resolved-events.json so the schefter scanner's Roger
 // reminders fire on AFL deadlines using the same touch logic.
-const aflResolved = resolveEvents(year, AFL_EVENTS);
+const aflThrowbackEvents = await loadAflThrowbackEvents();
+const aflResolved = resolveEvents(year, [...AFL_EVENTS, ...aflThrowbackEvents]);
 const aflOutput = {
   computedAt: now.toISOString(),
   leagueYear: year,

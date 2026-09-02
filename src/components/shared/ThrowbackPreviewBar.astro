@@ -1,0 +1,142 @@
+---
+/**
+ * Throwback Week "try before you save" bar, above the live-scoring board.
+ *
+ * Shared by both leagues' `live-scoring.astro`. The markup is small but the
+ * SCRIPT is the reason this is a component rather than a copy: it posts to the
+ * preference API, and a forked copy is how the two boards would end up
+ * disagreeing about when the save button is offered.
+ *
+ * `ownSave` is decided server-side in `applyThrowbackToBoard` — false when a
+ * commissioner is previewing another franchise, because the preference API is
+ * deliberately owner-scoped with no commissioner override. The button is then
+ * not rendered at all, rather than rendered-and-rejected.
+ */
+import type { ThrowbackPreview } from '../../utils/throwback-live-scoring';
+
+interface Props {
+  preview: ThrowbackPreview;
+  /** This league's throwback-settings route, prefix already resolved. */
+  settingsPath: string;
+}
+
+const { preview, settingsPath } = Astro.props as Props;
+---
+
+<div class="ls-tb-preview" id="tb-preview-bar" data-year-start={preview.yearStart}>
+  <span class="ls-tb-preview__text">
+    {preview.ownSave ? (
+      <>
+        Previewing <strong>{preview.eraName} ({preview.yearStart})</strong> —
+        this is how your team looks on Throwback Week. Nothing is saved yet.
+      </>
+    ) : (
+      <>
+        Commissioner preview: <strong>{preview.teamName}</strong> as{' '}
+        <strong>{preview.eraName} ({preview.yearStart})</strong>.
+        View-only — only that team's owner can save a pick.
+      </>
+    )}
+  </span>
+  <span class="ls-tb-preview__actions">
+    {preview.ownSave && (
+      <button class="ls-tb-preview__save" id="tb-preview-save" type="button">Save this era</button>
+    )}
+    <a class="ls-tb-preview__back" href={settingsPath}>Back to eras</a>
+  </span>
+  <span class="ls-tb-preview__status" id="tb-preview-status" role="status" aria-live="polite"></span>
+</div>
+
+<script>
+  // Bound on astro:page-load (not module top-level) so the button still works
+  // when the page is reached via a ClientRouter view transition — same lesson
+  // as the throwback-settings picker.
+  function initTbPreviewSave() {
+    const bar = document.getElementById('tb-preview-bar');
+    const btn = document.getElementById('tb-preview-save') as HTMLButtonElement | null;
+    const status = document.getElementById('tb-preview-status');
+    if (!bar || !btn || bar.dataset.tbwBound === '1') return;
+    bar.dataset.tbwBound = '1';
+
+    btn.addEventListener('click', async () => {
+      const yearStart = Number(bar.dataset.yearStart);
+      btn.disabled = true;
+      if (status) status.textContent = 'Saving…';
+      try {
+        // No league parameter — the endpoint reads the scope from the session
+        // cookie, so this one URL is correct for every league.
+        const res = await fetch('/api/throwback-preference', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ yearStart }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          if (status) status.textContent = 'Saved — this is your Throwback Week look.';
+        } else {
+          btn.disabled = false;
+          if (status) status.textContent = data.error || 'Failed to save.';
+        }
+      } catch {
+        btn.disabled = false;
+        if (status) status.textContent = 'Failed to save — check your connection.';
+      }
+    });
+  }
+  document.addEventListener('astro:page-load', initTbPreviewSave);
+</script>
+
+<style>
+  .ls-tb-preview {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--spacing-sm) var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: 1px solid var(--color-accent);
+    border-radius: var(--radius-md, 8px);
+    background: var(--content-bg);
+  }
+  .ls-tb-preview__text {
+    flex: 1 1 260px;
+    font-size: var(--font-size-sm);
+  }
+  .ls-tb-preview__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+  }
+  .ls-tb-preview__save {
+    padding: var(--spacing-xs, 0.4rem) var(--spacing-sm, 0.9rem);
+    border: none;
+    border-radius: var(--radius-md, 8px);
+    background: var(--color-accent);
+    color: #fff;
+    font-weight: 600;
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+  }
+  .ls-tb-preview__save:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+  .ls-tb-preview__back {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--color-accent);
+    text-decoration: none;
+  }
+  .ls-tb-preview__back:hover,
+  .ls-tb-preview__back:focus-visible {
+    text-decoration: underline;
+  }
+  .ls-tb-preview__status {
+    flex-basis: 100%;
+    font-size: var(--font-size-sm);
+    color: var(--content-text-muted, inherit);
+  }
+  .ls-tb-preview__status:empty {
+    display: none;
+  }
+</style>
