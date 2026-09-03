@@ -58,8 +58,12 @@ const quickLinks: QuickLink[] = [
   ...(live
     ? [{ label: 'Draft broadcast', href: r('/theleague/draft/broadcast'), icon: 'scoreboard-2', external: false }]
     : []),
-  { label: 'Draft order', href: r(`/theleague/draft/order?view=history&year=${leagueYear}&team=all`), icon: 'standings-2', external: false },
-  { label: 'Draft results', href: r('/theleague/draft/room'), icon: 'check', external: false },
+  // Both of these were pointing somewhere other than their label said: 'Draft
+  // order' opened the order page's old ?view=history tab, and 'Draft results'
+  // opened the draft ROOM. There is now a real archive at /draft/results, so
+  // each link goes where it claims to.
+  { label: 'Draft order', href: r('/theleague/draft/order'), icon: 'standings-2', external: false },
+  { label: 'Draft results', href: r(`/theleague/draft/results?year=${leagueYear}`), icon: 'check', external: false },
   { label: 'Future picks', href: `${mflBase}&O=100`, icon: 'calendar', external: true },
   { label: 'Free agents', href: r('/theleague/players'), icon: 'binoculars', external: false },
   { label: 'Trade builder', href: r('/theleague/trade-builder'), icon: 'transactions-2', external: false },

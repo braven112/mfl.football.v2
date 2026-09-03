@@ -250,6 +250,38 @@
           "description": "Next season's schedule, locked and revealed — plus the games to circle"
         },
         {
+          "id": "draft-hub",
+          "label": "Draft",
+          "icon": "draft-podium",
+          "path": "/draft",
+          "external": false,
+          "description": "The draft front door — countdown, your picks, and every draft tool"
+        },
+        {
+          "id": "draft-predictor",
+          "label": "Draft Order",
+          "icon": "draft-podium",
+          "path": "/draft/order",
+          "external": false,
+          "description": "Draft order — projected in-season, official once the playoffs wrap"
+        },
+        {
+          "id": "draft-results",
+          "label": "Draft Results",
+          "icon": "history",
+          "path": "/draft/results",
+          "external": false,
+          "description": "Every draft the league has ever held, pick by pick"
+        },
+        {
+          "id": "draft-broadcast",
+          "label": "Draft Broadcast",
+          "icon": "podium-empty",
+          "path": "/draft/broadcast",
+          "external": false,
+          "description": "The big board for draft night — plug a laptop into the TV and watch every pick land"
+        },
+        {
           "id": "draft-room",
           "label": "Draft Room",
           "icon": "draft-podium",
@@ -266,23 +298,6 @@
           "external": false,
           "leagueOnly": "theleague",
           "description": "Run a mock auction or rookie draft simulation"
-        },
-        {
-          "id": "draft-predictor",
-          "label": "Draft Order",
-          "icon": "draft-podium",
-          "path": "/draft/order",
-          "external": false,
-          "description": "Draft order — projected in-season, official once the playoffs wrap"
-        },
-        {
-          "id": "afl-draft-broadcast",
-          "label": "Draft Broadcast",
-          "icon": "podium-empty",
-          "path": "/draft/broadcast",
-          "external": false,
-          "leagueOnly": "afl",
-          "description": "The big board for draft night — plug a laptop into the TV and watch every pick land"
         },
         {
           "id": "afl-keepers",
@@ -580,7 +595,10 @@
     "/stats": "/stats",
     "/rules-chat": "/rules-chat",
     "/owners": "/owners",
-    "/division-strength": "/division-strength"
+    "/division-strength": "/division-strength",
+    "/draft": "/draft",
+    "/draft/results": "/draft/results",
+    "/draft/broadcast": "/draft/broadcast"
   },
   "verifyTeamUrl": {
     "theleague": "https://{host}/{year}/home/{leagueId}?MODULE=MESSAGE20",
