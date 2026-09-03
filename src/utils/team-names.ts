@@ -186,6 +186,23 @@ export interface FranchiseHistoryEntry {
    */
   iconStroke?: string;
   /**
+   * Render this era's crest as a free-standing mark: no circular clip, and
+   * contained rather than cover-cropped.
+   *
+   * The crest slots are round because 100+ era crests ARE a circle punched
+   * out of a banner. A real logo on transparency is not — the Bears' ears and
+   * Texas Tech's Double T both put art outside the inscribed circle, and the
+   * round slot bites the corners off. Scaling the mark down until it fits is
+   * the alternative and is worse: it renders visibly smaller than the banner
+   * cuts beside it.
+   *
+   * Mutually exclusive with `iconStroke` by construction: a rim on an
+   * un-clipped mark is a rectangle drawn around loose art.
+   * `buildEraCrestShapeCss` emits the rule; `tests/era-crest-stroke.test.ts`
+   * pins that the two never appear together.
+   */
+  iconFreeform?: boolean;
+  /**
    * Set at RUNTIME, never in a config file: the franchise slot this era was
    * inherited from, when a franchise changed MFL slots and its earlier looks
    * live in the other slot's `history[]`.

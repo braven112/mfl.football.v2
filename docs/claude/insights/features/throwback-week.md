@@ -184,6 +184,26 @@ Two things about them are deliberate and easy to undo by accident:
   literally a white keyline — and a ring around a transparent PNG is a circle
   floating in empty space with the art loose inside it. Limp Ditkas had one
   and lost it in the same change.
+- **Both carry `iconFreeform`, which un-clips the crest slot.** Every crest
+  slot on the site is `border-radius: 50%` + `object-fit: cover`, correct for
+  the 100+ crests that ARE a circle of banner and wrong for a mark on
+  transparency: the Bears' ears sit at a radius of ~54 in a box whose circle
+  stops at 50, so the round slot bit them off. `buildEraCrestShapeCss`
+  (`era-crest-stroke-css.ts`) emits `border-radius: 0; object-fit: contain`
+  keyed on the src, riding the same composition as the rims.
+
+  The `!important` on those two declarations is load-bearing. Astro compiles a
+  component's scoped `.tbw-card__icon` to `.tbw-card__icon[data-astro-cid-…]`
+  — specificity (0,2,0) — which outranks a global sheet's `img[src="…"]` at
+  (0,1,1), so no selector reachable from `TeamIconDarkStyles` wins on
+  specificity alone. Verified in the browser, not assumed: the flagged crest
+  computes to `border-radius: 0px / object-fit: contain` while the two beside
+  it stay `50% / cover`.
+
+  The other way out — shrinking the mark until its bounding box fits the
+  inscribed circle (70.7% of the box) — is worse, because it renders visibly
+  smaller than the banner cuts beside it, which is the sizing problem this art
+  was brought in to fix.
 
 Both read correctly on the light card and the dark one, which is why the
 Bears' *dark* variant was the right pick rather than the standard mark: its

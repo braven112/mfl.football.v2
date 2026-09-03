@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import aflConfig from '../data/afl-fantasy/afl.config.json';
 import theleagueConfig from '../src/data/theleague.config.json';
-import { buildEraCrestStrokeCss } from '../src/utils/era-crest-stroke-css';
+import { buildEraCrestShapeCss, buildEraCrestStrokeCss } from '../src/utils/era-crest-stroke-css';
 import { buildAllTeamIconDarkCss } from '../src/utils/team-icon-dark-styles';
 
 const aflTeams = (aflConfig as any).teams as any[];
@@ -139,5 +139,66 @@ describe('era crest rim', () => {
     // A rule keyed on a src that does not exist is invisible dead CSS.
     const paths = new Set(eras.filter((e) => e.era.iconStroke).map((e) => e.era.icon));
     expect(paths.size).toBeGreaterThan(0);
+  });
+});
+
+describe('free-standing era crests', () => {
+  const freeform = eras.filter(({ era }) => era.iconFreeform);
+
+  it('un-clips every era that opts in, and only those', () => {
+    const css = buildEraCrestShapeCss(aflTeams);
+    expect(freeform.length).toBeGreaterThan(0);
+    for (const { team, era } of eras) {
+      const selector = `img[src="${era.icon}"]`;
+      if (era.iconFreeform) {
+        expect(css, `${team.name} "${era.name}" opted in but got no rule`).toContain(selector);
+      } else if (!freeform.some((f) => f.era.icon === era.icon)) {
+        expect(css, `${team.name} "${era.name}" was un-clipped without opting in`)
+          .not.toContain(selector);
+      }
+    }
+  });
+
+  it('drops the circle AND the cover crop', () => {
+    // `cover` re-crops the mark wherever the slot is not square, which is the
+    // same bug one step later.
+    const css = buildEraCrestShapeCss(aflTeams);
+    expect(css).toContain('border-radius: 0');
+    expect(css).toContain('object-fit: contain');
+  });
+
+  it('marks the rule !important, because a scoped class outranks it', () => {
+    // Astro compiles a component's `.tbw-card__icon` to
+    // `.tbw-card__icon[data-astro-cid-…]` — (0,2,0) — which beats this
+    // sheet's `img[src="…"]` at (0,1,1). No selector reachable from a global
+    // stylesheet wins that on specificity, so the override is explicit.
+    const css = buildEraCrestShapeCss(aflTeams);
+    for (const line of css.split('\n')) {
+      if (line.includes('border-radius') || line.includes('object-fit')) {
+        expect(line).toContain('!important');
+      }
+    }
+  });
+
+  it('never gives a free-standing mark a rim as well', () => {
+    // The rim traces the element box. On an un-clipped crest that is a
+    // rectangle drawn around loose art, not an edge on the mark.
+    for (const { team, era } of freeform) {
+      expect(
+        era.iconStroke,
+        `${team.name} "${era.name}" is both freeform and rimmed`,
+      ).toBeUndefined();
+    }
+  });
+
+  it('rides in the shared composition, like the rims do', () => {
+    const all = buildAllTeamIconDarkCss();
+    expect(all).toContain(`img[src="${freeform[0].era.icon}"]`);
+  });
+
+  it('emits nothing when no era opts in', () => {
+    expect(buildEraCrestShapeCss((theleagueConfig as any).teams)).toBe('');
+    expect(buildEraCrestShapeCss([])).toBe('');
+    expect(buildEraCrestShapeCss([{ history: [{ icon: '/a.png' }] }] as any)).toBe('');
   });
 });

@@ -46,7 +46,7 @@ import { iconSrcVariants } from './team-icon-dark-css';
 
 /** Minimal shape this builder needs from a league config's teams. */
 interface EraStrokeTeam {
-  history?: { icon?: string; iconStroke?: string }[];
+  history?: { icon?: string; iconStroke?: string; iconFreeform?: boolean }[];
 }
 
 const HEX = /^#[0-9a-f]{6}$/i;
@@ -97,4 +97,49 @@ export function buildEraCrestStrokeCss(teams: EraStrokeTeam[]): string {
       );
     })
     .join('\n');
+}
+
+/**
+ * Un-clips era crests that are a FREE-STANDING LOGO rather than a circle of
+ * banner.
+ *
+ * Every crest slot on the site is round — `border-radius: 50%` plus
+ * `object-fit: cover` — which is exactly right for the 100+ era crests that
+ * are a circle punched out of a banner. It is exactly wrong for a real mark
+ * on transparency: Texas Tech's Double T and the Bears' head both put art
+ * outside the inscribed circle (the Bears' ears sit at a radius of ~54 in a
+ * box whose circle stops at 50), so the round slot bites the corners off.
+ *
+ * Shrinking the mark until it fits the circle is the other way out and is
+ * worse: it renders visibly smaller than the banner cuts beside it, which is
+ * the sizing problem this art was brought in to fix.
+ *
+ * **`!important` is load-bearing here, not laziness.** Astro compiles a
+ * component's scoped `.tbw-card__icon` to `.tbw-card__icon[data-astro-cid-…]`
+ * — specificity (0,2,0) — which outranks this sheet's `img[src="…"]` at
+ * (0,1,1). No selector reachable from a global stylesheet wins that on
+ * specificity alone, and the alternative is editing the crest rule on every
+ * surface that renders an era crest, which is the fork this repo keeps
+ * refusing to make. One declaration, keyed on the one thing that identifies
+ * the art: its src.
+ *
+ * Opt-in per era via `iconFreeform`, and absence is again the normal state.
+ */
+export function buildEraCrestShapeCss(teams: EraStrokeTeam[]): string {
+  const srcs = new Set<string>();
+  for (const team of teams ?? []) {
+    for (const era of team?.history ?? []) {
+      if (!era?.icon || !era.iconFreeform) continue;
+      for (const variant of iconSrcVariants(era.icon)) srcs.add(variant);
+    }
+  }
+  if (srcs.size === 0) return '';
+  const selector = [...srcs].sort().map((src) => `img[src="${src}"]`).join(',\n');
+  return (
+    `${selector} {\n` +
+    `  border-radius: 0 !important;\n` +
+    // `cover` would crop the mark again wherever the slot is not square.
+    `  object-fit: contain !important;\n` +
+    `}`
+  );
 }
