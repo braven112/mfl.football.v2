@@ -13,7 +13,7 @@
       "sleeper": "cached",
       "nflverse": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
     },
-    "fetchedAt": "2026-09-02T19:17:20.174Z"
+    "fetchedAt": "2026-09-03T00:42:46.898Z"
   },
   "players": [
     {
@@ -3371,7 +3371,7 @@
         "active": true,
         "position": "WR",
         "depthChartPosition": "RWR",
-        "depthChartOrder": 9,
+        "depthChartOrder": 10,
         "fantasyPositions": [
           "WR"
         ],
@@ -4338,7 +4338,7 @@
         "id": "6130",
         "fullName": "Devin Singletary",
         "team": "NYG",
-        "age": 28,
+        "age": 29,
         "height": "67",
         "weight": "203",
         "number": 26,
@@ -5060,20 +5060,47 @@
       "status": "ROSTER",
       "contractYear": "2",
       "points": 0,
-      "team": "FA",
+      "team": "DET",
       "draftYear": 2018,
       "draftTeam": "MIN",
       "birthdate": 807080400,
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/13675_thumb.jpg",
       "externalIds": {
         "mfl": "13675",
-        "sleeper": null,
-        "gsis": null
+        "sleeper": "5133",
+        "gsis": "00-0034439"
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "5133",
+        "fullName": "Tyler Conklin",
+        "team": "DET",
+        "age": 31,
+        "height": "75",
+        "weight": "245",
+        "number": 83,
+        "college": "Central Michigan",
+        "birthDate": "1995-07-30",
+        "status": "Active",
+        "active": true,
+        "position": "TE",
+        "depthChartPosition": "TE",
+        "depthChartOrder": 3,
+        "fantasyPositions": [
+          "TE"
+        ],
+        "experience": 8,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": "00-0034439"
+      },
       "nflverse": null,
       "gamesPlayed": null,
-      "depthChartAhead": null
+      "depthChartAhead": [
+        {
+          "id": "16214",
+          "name": "LaPorta, Sam"
+        }
+      ]
     },
     {
       "id": "17070",
@@ -9560,17 +9587,39 @@
       "status": "ROSTER",
       "contractYear": "4",
       "points": 0,
-      "team": "FA",
+      "team": "PHI",
       "draftYear": 2025,
       "draftTeam": "DAL",
       "birthdate": 1073538000,
       "headshot": "https://www49.myfantasyleague.com/player_photos_2014/17069_thumb.jpg",
       "externalIds": {
         "mfl": "17069",
-        "sleeper": null,
+        "sleeper": "12457",
         "gsis": null
       },
-      "sleeper": null,
+      "sleeper": {
+        "id": "12457",
+        "fullName": "Jaydon Blue",
+        "team": "PHI",
+        "age": 22,
+        "height": "69",
+        "weight": "198",
+        "number": 23,
+        "college": "Texas",
+        "birthDate": "2004-01-08",
+        "status": "Active",
+        "active": true,
+        "position": "RB",
+        "depthChartPosition": null,
+        "depthChartOrder": null,
+        "fantasyPositions": [
+          "RB"
+        ],
+        "experience": 1,
+        "injuryStatus": null,
+        "injuryBodyPart": null,
+        "gsisId": null
+      },
       "nflverse": null,
       "gamesPlayed": null,
       "depthChartAhead": null
@@ -11995,7 +12044,7 @@
         "active": true,
         "position": "QB",
         "depthChartPosition": "QB",
-        "depthChartOrder": 3,
+        "depthChartOrder": 4,
         "fantasyPositions": [
           "QB"
         ],
