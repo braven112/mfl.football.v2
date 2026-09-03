@@ -147,12 +147,23 @@ export function franchiseMapKeys(navSlug, userId) {
   return navSlug === 'theleague' ? [scoped, `groupme:user:${userId}`] : [scoped];
 }
 
+/**
+ * Look up which franchise a GroupMe user owns.
+ *
+ * Coerced rather than type-checked for the same reason as the bot-id cache
+ * above: @upstash/redis deserializes on read. Franchise ids happen to be safe
+ * — "0008" has a leading zero, which is not valid JSON, so it always comes
+ * back a string — but that is a property of MFL's zero-padding, not of this
+ * code, and it is not worth betting a factless clapback on. Coercing costs
+ * nothing and removes the dependency on that accident.
+ */
 async function resolveFranchiseId(redis, navSlug, userId) {
   if (!redis || !userId) return null;
   for (const key of franchiseMapKeys(navSlug, userId)) {
     try {
-      const value = await redis.get(key);
-      if (typeof value === 'string' && value) return value;
+      const raw = await redis.get(key);
+      const value = raw == null ? '' : String(raw);
+      if (value) return value;
     } catch (err) {
       warn(`Franchise lookup failed on ${key}: ${err.message}`);
     }
@@ -337,10 +348,28 @@ export async function scanRogerReplies({ league, dryRun = false }) {
 
   // Roger's own post ids, so a native reply can be resolved against posts made
   // on earlier runs as well as ones in this batch.
+  //
+  // COERCE, don't type-check. @upstash/redis deserializes on read, so a stored
+  // id of all digits can come back as a NUMBER, and a `typeof === 'string'`
+  // filter then drops it — silently un-answering a genuine shot, because the
+  // post it replied to is no longer in this set. Observed live: 4 of 5 cached
+  // ids came back as strings and one as a number, since serialization differs
+  // by client version and CI installs its own.
+  //
+  // GroupMe ids are 18 digits, past Number.MAX_SAFE_INTEGER, so a number that
+  // got here has already lost precision and String() gives the shortest
+  // round-tripping form rather than a guaranteed original. That is still
+  // strictly better than discarding it, and the damage is bounded: this key
+  // expires in 48h, so the mixed population drains on its own.
   const rogerBotMsgIds = new Set();
   try {
     const cached = await redis.lrange(botIdsKey, 0, MAX_TRACKED_BOT_MESSAGES - 1);
-    if (Array.isArray(cached)) for (const id of cached) if (typeof id === 'string') rogerBotMsgIds.add(id);
+    if (Array.isArray(cached)) {
+      for (const id of cached) {
+        const normalized = id == null ? '' : String(id);
+        if (normalized) rogerBotMsgIds.add(normalized);
+      }
+    }
   } catch (err) {
     warn(`Bot-message-id cache read failed: ${err.message}`);
   }

@@ -116,7 +116,16 @@ export async function resolveLeagueGroupId({
   if (redis) {
     try {
       const cached = await redis.get(cacheKey);
-      if (typeof cached === 'string' && cached) return { groupId: cached, source: 'cache' };
+      // COERCE, don't type-check. @upstash/redis deserializes on read, and a
+      // group id is all digits with no leading zero — so "59643096" JSON.parses
+      // straight to the NUMBER 59643096 and a `typeof === 'string'` guard
+      // rejects its own cache entry every single time. This cache looked like
+      // it worked (the id was always right) while never once being read: every
+      // run paid for an extra GET /v3/bots and rewrote the same value. Group
+      // ids are 8 digits, far inside Number.MAX_SAFE_INTEGER, so the round trip
+      // through a double is exact.
+      const cachedId = cached == null ? '' : String(cached);
+      if (cachedId) return { groupId: cachedId, source: 'cache' };
     } catch {
       // Cache miss by failure is the same as a cache miss — fall through.
     }
