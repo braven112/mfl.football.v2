@@ -127,3 +127,38 @@ describe('the manage-claims route', () => {
     expect(CODE).not.toContain('myfantasyleague.com/2026');
   });
 });
+
+describe('the claims panel — hiding it', () => {
+  const COMPONENT = fs.readFileSync(
+    path.join(process.cwd(), 'src/components/shared/WaiverClaimsPanel.astro'),
+    'utf-8'
+  );
+
+  it('collapses the LIST, never the whole panel', () => {
+    // A control that made the panel vanish would leave no route back to claims
+    // that are still live and still going to process. The header stays, and the
+    // button carries the count.
+    expect(COMPONENT).toContain('body.hidden = collapsed');
+    expect(COMPONENT).toMatch(/Show\$\{count \? ` \(\$\{count\}\)` : ''\}/);
+    expect(COMPONENT, 'the panel itself must not be hidden by the toggle')
+      .not.toMatch(/panel\.hidden = collapsed/);
+  });
+
+  it('scopes the remembered choice per league', () => {
+    // Both leagues render this panel, and with the ClientRouter one module
+    // instance survives a hop between them — an unscoped key would carry the
+    // wrong league's choice across.
+    expect(COMPONENT).toMatch(/wcp\.collapsed\.\$\{cfg\.leagueId\}/);
+  });
+
+  it('never lets storage take the page down with it', () => {
+    // localStorage throws outright in some privacy modes.
+    expect(COMPONENT).toMatch(/try \{ return localStorage\.getItem/);
+    expect(COMPONENT).toMatch(/catch \{ return false; \}/);
+  });
+
+  it('keeps the control accessible', () => {
+    expect(COMPONENT).toContain('aria-expanded');
+    expect(COMPONENT).toContain('aria-controls="wcp-body"');
+  });
+});
