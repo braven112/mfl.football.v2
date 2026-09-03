@@ -28,6 +28,8 @@ export interface HubSeason {
   slots: number;
   /** Slots carrying a real selection. */
   made: number;
+  /** Slots the draft moved past — selected OR commissioner-skipped. */
+  resolved: number;
   /** Every unit's picks, flattened — the hub does not switch conferences. */
   rawUnits: RawDraftUnit<RawDraftResultPick>[];
 }
@@ -35,7 +37,7 @@ export interface HubSeason {
 /** Read one season's slot/selection counts without building a whole board. */
 export async function readHubSeason(feeds: LazyFeedGlob, year: number): Promise<HubSeason> {
   const key = Object.keys(feeds).find((p) => seasonOf(p) === year);
-  const empty: HubSeason = { year, slots: 0, made: 0, rawUnits: [] };
+  const empty: HubSeason = { year, slots: 0, made: 0, resolved: 0, rawUnits: [] };
   if (!key) return empty;
 
   let raw: any;
@@ -48,16 +50,23 @@ export async function readHubSeason(feeds: LazyFeedGlob, year: number): Promise<
   const rawUnits = asArray<any>(raw?.draftResults?.draftUnit).filter(Boolean);
   let slots = 0;
   let made = 0;
+  let resolved = 0;
   for (const u of rawUnits) {
     for (const p of asArray<any>(u?.draftPick)) {
       if (!p?.round || !p?.pick) continue;
       slots++;
-      // Only a numeric id is a selection: MFL writes '----' for a pick the
-      // commissioner skipped, and an empty string for one not yet made.
-      if (p.player && /^\d+$/.test(p.player)) made++;
+      // Only a numeric id is a SELECTION. '----' is a commissioner skip and ''
+      // is a pick not yet made — but a skip is a slot the draft moved PAST, so
+      // it counts toward completion even though nobody was taken.
+      if (p.player && /^\d+$/.test(p.player)) {
+        made++;
+        resolved++;
+      } else if (p.player === '----') {
+        resolved++;
+      }
     }
   }
-  return { year, slots, made, rawUnits };
+  return { year, slots, made, resolved, rawUnits };
 }
 
 /**
@@ -74,7 +83,7 @@ export async function readHubSeasons(feeds: LazyFeedGlob): Promise<{
 }> {
   const years = seasonsFromGlob(feeds).sort((a, b) => b - a);
   if (years.length === 0) {
-    return { newest: { year: 0, slots: 0, made: 0, rawUnits: [] }, lastDrafted: null };
+    return { newest: { year: 0, slots: 0, made: 0, resolved: 0, rawUnits: [] }, lastDrafted: null };
   }
 
   const newest = await readHubSeason(feeds, years[0]);
@@ -170,7 +179,7 @@ export async function buildDraftHubProps(input: {
   calendarFeeds: LazyFeedGlob;
   futurePickFeeds: LazyFeedGlob;
   leagueYear: number;
-  unionSlug: string;
+  unionSlug: import('../config/leagues').CanonicalLeagueSlug;
   teamsForYear: (year: number) => DraftResultsTeam[];
   /** The signed-in owner's franchise id, or null if not a member here. */
   myFranchiseId: string | null;
@@ -193,6 +202,7 @@ export async function buildDraftHubProps(input: {
     year: newest.year,
     slots: newest.slots,
     made: newest.made,
+    resolved: newest.resolved,
     startsAt: nextDraftStart(calendar ?? [], now),
   });
 

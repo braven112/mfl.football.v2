@@ -20,6 +20,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { normalizeTeamCode } from './nfl-logo';
+import type { CanonicalLeagueSlug } from '../config/leagues';
 import {
   getCollegeHeadshot,
   getPlayerHeadshot,
@@ -256,11 +257,14 @@ const globalMapCache = new Map<string, Map<string, PlayerIdentity>>();
  * TheLeague's for anyone it misses.
  *
  * @param leagueSlug - Which league's union to read. Defaults to TheLeague,
- *   which is what every pre-existing caller means.
+ *   which is what every pre-existing caller means. Typed to the registry's
+ *   slugs rather than `string`: it is interpolated into a filesystem path,
+ *   so a typo would silently read nothing and return an empty map, and a
+ *   non-constant caller could otherwise walk out of `data/`.
  * @returns Map of MFL player ID → PlayerIdentity (most-recent-season wins)
  */
 export function getGlobalPlayerMap(
-  leagueSlug: string = 'theleague'
+  leagueSlug: CanonicalLeagueSlug = 'theleague'
 ): Map<string, PlayerIdentity> {
   const cached = globalMapCache.get(leagueSlug);
   if (cached) return cached;

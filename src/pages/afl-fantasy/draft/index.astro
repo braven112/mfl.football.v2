@@ -15,7 +15,7 @@ import aflConfigData from '../../../../data/afl-fantasy/afl.config.json';
 import { getAuthUser, isAuthorizedForLeague } from '../../../utils/auth';
 import { getLeagueBySlug } from '../../../config/leagues';
 import { resolveConfigForYear } from '../../../utils/team-names';
-import { getCurrentLeagueYear } from '../../../utils/league-year';
+import { getLeagueYearForSlug } from '../../../utils/league-year';
 import { buildDraftHubProps } from '../../../utils/draft-hub-data';
 
 export const prerender = false;
@@ -31,7 +31,12 @@ const props = await buildDraftHubProps({
   draftFeeds: import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/*/draftResults.json'),
   calendarFeeds: import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/*/calendar.json'),
   futurePickFeeds: import.meta.glob('../../../../data/afl-fantasy/mfl-feeds/*/futureDraftPicks.json'),
-  leagueYear: getCurrentLeagueYear(),
+  // Per-league rollover, NOT TheLeague's clock: the AFL flips June 1 and
+  // TheLeague Feb 14, so using the latter would put the AFL hub on the wrong
+  // season's calendar, future picks and team config for ~3.5 months a year.
+  // getLeagueYearForSlug falls back for a league that declares no rollover,
+  // so TheLeague's behaviour is unchanged.
+  leagueYear: getLeagueYearForSlug('afl-fantasy'),
   unionSlug: 'afl-fantasy',
   myFranchiseId,
   teamsForYear: (year) =>

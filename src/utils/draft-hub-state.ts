@@ -28,10 +28,22 @@ export type DraftHubStatus =
 
 const DAY_MS = 86_400_000;
 
-/** The next DRAFT_START at or after `now`, or null. */
+/**
+ * The next draft start at or after `now`, or null.
+ *
+ * Matches DRAFT_START as a PREFIX, not an exact string. TheLeague drafts as one
+ * body and writes `DRAFT_START`; the AFL drafts by conference and writes
+ * `DRAFT_START_CONFERENCE00` / `_CONFERENCE01`. An equality check therefore
+ * found nothing for the AFL and its hub silently never showed a countdown —
+ * the "clean" result and the "no draft scheduled" result being identical is
+ * what made it invisible.
+ *
+ * The soonest across both conferences is the right answer for a league-wide
+ * hub: it is the next time anyone in the league is on the clock.
+ */
 export function nextDraftStart(events: RawCalendarEvent[], now: Date): Date | null {
   const upcoming = events
-    .filter((e) => (e.type || '').toUpperCase() === 'DRAFT_START')
+    .filter((e) => (e.type || '').toUpperCase().startsWith('DRAFT_START'))
     .map((e) => parseInt(e.start_time || '', 10))
     .filter((secs) => Number.isFinite(secs) && secs > 0)
     .map((secs) => new Date(secs * 1000))
@@ -48,16 +60,26 @@ export interface DraftHubStatusInput {
   slots: number;
   /** Slots with a real selection recorded. */
   made: number;
+  /**
+   * Slots the draft has moved PAST — a real selection or a deliberate skip.
+   * Completion turns on this, not on `made`: MFL writes `----` for a pick the
+   * commissioner skipped, so a draft that ends on one would have `made` stuck
+   * below `slots` and the hub would report it live forever.
+   *
+   * Required, deliberately: defaulting it to `made` would let a caller that
+   * forgot it silently reinstate the bug.
+   */
+  resolved: number;
   /** Next scheduled draft, when the calendar has one. */
   startsAt: Date | null;
 }
 
 export function resolveDraftHubStatus(input: DraftHubStatusInput): DraftHubStatus {
-  const { now, year, slots, made, startsAt } = input;
+  const { now, year, slots, made, resolved, startsAt } = input;
 
   // A draft in progress outranks a schedule: if picks are landing, the fact
   // that the calendar still lists a start time is not the interesting part.
-  if (made > 0 && made < slots) return { kind: 'live', year, made, slots };
+  if (resolved > 0 && resolved < slots) return { kind: 'live', year, made, slots };
 
   if (startsAt && startsAt.getTime() > now.getTime()) {
     return {
@@ -69,7 +91,7 @@ export function resolveDraftHubStatus(input: DraftHubStatusInput): DraftHubStatu
     };
   }
 
-  if (slots > 0 && made === slots) return { kind: 'complete', year, made };
+  if (slots > 0 && resolved === slots) return { kind: 'complete', year, made };
 
   return { kind: 'unknown' };
 }
