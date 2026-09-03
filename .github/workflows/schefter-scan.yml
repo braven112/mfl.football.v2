@@ -42,6 +42,16 @@ jobs:
           GROUPME_AFL_ROGER_BOT_ID: ${{ secrets.GROUPME_AFL_ROGER_BOT_ID }}
           GROUPME_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_SCHEFTER_BOT_ID }}
           GROUPME_AFL_SCHEFTER_BOT_ID: ${{ secrets.GROUPME_AFL_SCHEFTER_BOT_ID }}
+          # Roger's reply lane READS the group to find shots aimed at him, which
+          # the bot-post credentials above can't do — posting and reading are
+          # separate GroupMe credentials. Without these two the lane logs a
+          # warning and no-ops; Roger's reminders still post.
+          GROUPME_SERVICE_TOKEN: ${{ secrets.GROUPME_SERVICE_TOKEN }}
+          GROUPME_GROUP_ID: ${{ secrets.GROUPME_GROUP_ID }}
+          # Optional. Roger's own posts are otherwise identified by
+          # sender_type==='bot' plus a /roger/i name match; setting this pins
+          # them by id so a bot rename can't break reply detection.
+          GROUPME_ROGER_BOT_SENDER_ID: ${{ secrets.GROUPME_ROGER_BOT_SENDER_ID }}
           SCHEFTER_RUMOR_MILL_ENABLED: ${{ vars.SCHEFTER_RUMOR_MILL_ENABLED }}
           UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
           UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}

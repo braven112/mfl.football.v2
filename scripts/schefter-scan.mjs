@@ -44,6 +44,7 @@ import { buildDropAdjustmentMap, resolveDropSalary } from './lib/drop-salary.mjs
 
 import { getRedisConfig, createUpstashClient } from './lib/redis.mjs';
 import { postToGroupMe as sharedPostToGroupMe } from './lib/groupme.mjs';
+import { scanRogerReplies } from './roger-groupme-reply.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const MFL_HOST = process.env.MFL_HOST || 'api.myfantasyleague.com';
@@ -2630,6 +2631,12 @@ for (const league of LEAGUES) {
     totalPosts += await scanInjuries(league);
     // Scan odds (Vegas Vic)
     totalPosts += await scanOdds(league);
+    // Roger's reply lane — answer owners who took a shot at his reminders.
+    // Runs AFTER scanEventReminders so a reminder posted this tick is already
+    // in GroupMe (and cached as a Roger post id) before anyone can reply to it.
+    // Deliberately excluded from totalPosts: a clapback is a GroupMe-only
+    // message, not a Schefter feed post, and totalPosts drives the feed commit.
+    await scanRogerReplies({ league });
   } catch (err) {
     console.error(`  Error scanning ${league.slug}:`, err.message);
   }

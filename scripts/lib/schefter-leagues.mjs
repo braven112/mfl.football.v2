@@ -46,6 +46,15 @@ export function buildSchefterLeague(registrySlug, overrides) {
     registrySlug: reg.slug,
     leagueId: reg.id,
     playersPath: (year) => path.join(projectRoot, reg.dataPath, 'mfl-feeds', String(year), 'players.json'),
+    /**
+     * Any other MFL feed file for a season, resolved off the registry's
+     * dataPath. Roger's clapback lane reads rosters/league/draftResults through
+     * this rather than joining a league directory by hand — the
+     * league-literal guard forbids the literal, and the registry is the only
+     * thing that knows where a league's feeds actually live.
+     */
+    feedFilePath: (year, file) =>
+      path.join(projectRoot, reg.dataPath, 'mfl-feeds', String(year), file),
     // Canonical (cookie-safe) host — leagueOrigin, never domains[0] ad hoc:
     // session cookies are host-only, so a bare-apex link opens logged-out.
     baseUrl: leagueOrigin(reg),
