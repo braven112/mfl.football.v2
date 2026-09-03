@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { buildDraftResultsView } from '../src/utils/draft-results-feeds';
 import {
   buildDraftBoard,
   buildOverallNumbering,
@@ -453,5 +454,72 @@ describe('pick rows', () => {
       noPlayers
     );
     expect(board[0].teamName).toBe('Unknown Team');
+  });
+});
+
+describe('the season the page opens on (wiring, not just the helper)', () => {
+  // resolveDefaultYear was already covered above and passed — while the code
+  // that calls it passed `() => true`, so it always returned the newest feed
+  // and the guard never ran. Testing the helper in isolation could not see
+  // that. These drive buildDraftResultsView, which is where the decision is
+  // actually made.
+  /** A lazy glob, the shape import.meta.glob produces. */
+  const globOf = (seasons: Record<number, unknown>) =>
+    Object.fromEntries(
+      Object.entries(seasons).map(([year, doc]) => [
+        `../../data/x/mfl-feeds/${year}/draftResults.json`,
+        async () => ({ default: doc }),
+      ])
+    );
+
+  const board = (picks: { player?: string }[]) => ({
+    draftResults: {
+      draftUnit: {
+        unit: 'LEAGUE',
+        draftPick: picks.map((p, i) => ({
+          round: '1',
+          pick: String(i + 1),
+          franchise: '0001',
+          player: p.player ?? '',
+        })),
+      },
+    },
+  });
+
+  const drafted = board([{ player: '17042' }, { player: '17044' }]);
+  /** What MFL writes when it creates next year's board: slots, no players. */
+  const stubbed = board([{}, {}]);
+
+  const build = (seasons: Record<number, unknown>, qs = '') =>
+    buildDraftResultsView({
+      feeds: globOf(seasons) as any,
+      params: new URLSearchParams(qs),
+      teamsForYear: () => [{ id: '0001', name: 'A Team' }],
+      labelForUnit: () => 'League',
+      resolvePlayer: () => undefined,
+    });
+
+  it('skips a STUBBED newer season and opens on the last real draft', async () => {
+    // The regression: after the Feb rollover MFL creates next season's board,
+    // so the newest feed is 51 empty slots for the whole offseason.
+    const view = await build({ 2026: drafted, 2027: stubbed });
+    expect(view.year).toBe(2026);
+    expect(view.picks.length).toBeGreaterThan(0);
+  });
+
+  it('opens on the newest season once it HAS been drafted', async () => {
+    const view = await build({ 2026: drafted, 2027: drafted });
+    expect(view.year).toBe(2027);
+  });
+
+  it('still honours an explicit ?year=, stub or not', async () => {
+    const view = await build({ 2026: drafted, 2027: stubbed }, 'year=2027');
+    expect(view.year).toBe(2027);
+    expect(view.selectionless).toBe(2);
+  });
+
+  it('falls back to the newest year when nothing has been drafted at all', async () => {
+    const view = await build({ 2026: stubbed, 2027: stubbed });
+    expect(view.year).toBe(2027);
   });
 });

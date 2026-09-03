@@ -24,8 +24,8 @@ island and the two utils are shared.
 
 | File | Role |
 |------|------|
-| `src/pages/afl-fantasy/draft-broadcast.astro` | SSR (AFL): per-conference board, brands, pool |
-| `src/pages/theleague/draft-broadcast.astro` | SSR (TheLeague): single-unit rookie board |
+| `src/pages/afl-fantasy/draft/broadcast.astro` | SSR (AFL): per-conference board, brands, pool |
+| `src/pages/theleague/draft/broadcast.astro` | SSR (TheLeague): single-unit rookie board |
 | `src/components/shared/draft-broadcast/DraftBroadcast.tsx` | Poll → diff → queue → reveal |
 | `src/components/shared/draft-broadcast/BroadcastRevealCard.tsx` | The reveal, TV scale |
 | `src/utils/draft-broadcast.ts` | Pure: best-available, on-the-clock, rehearsal |

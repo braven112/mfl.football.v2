@@ -27,6 +27,12 @@ export interface DraftResultsSeason {
   rounds: number;
   /** Units with at least one pick. An empty conference is not a unit. */
   units: number;
+  /**
+   * Picks carrying a real selection. MFL creates every slot before a draft is
+   * conducted, so `units > 0` says the board EXISTS, not that it was drafted —
+   * only this distinguishes the two.
+   */
+  made: number;
 }
 
 const seasonOf = (path: string): number | null => {
@@ -58,13 +64,14 @@ export async function loadDraftResultsSeason(
   year: number
 ): Promise<DraftResultsSeason> {
   const key = Object.keys(feeds).find((p) => seasonOf(p) === year);
-  if (!key) return { year, rawUnit: undefined, rounds: 0, units: 0 };
+  const empty: DraftResultsSeason = { year, rawUnit: undefined, rounds: 0, units: 0, made: 0 };
+  if (!key) return empty;
 
   let raw: any;
   try {
     raw = unwrap(await feeds[key]());
   } catch {
-    return { year, rawUnit: undefined, rounds: 0, units: 0 };
+    return empty;
   }
 
   const rawUnit = raw?.draftResults?.draftUnit;
@@ -77,7 +84,13 @@ export async function loadDraftResultsSeason(
       .filter((n) => Number.isFinite(n))
   ).size;
 
-  return { year, rawUnit, rounds, units: populated.length };
+  // Only a numeric id is a selection: '' is a pick not yet made and '----' is
+  // one the commissioner skipped.
+  const made = asArray<any>(rawUnit)
+    .flatMap((u) => asArray<any>(u?.draftPick))
+    .filter((p: any) => p?.player && /^\d+$/.test(p.player)).length;
+
+  return { year, rawUnit, rounds, units: populated.length, made };
 }
 
 /**
@@ -102,14 +115,35 @@ export async function buildDraftResultsView(input: {
   );
 
   const availableYears = seasonsFromGlob(input.feeds);
+  const descending = [...availableYears].sort((a, b) => b - a);
+
+  // The season to OPEN on is the most recent draft that actually happened.
+  // MFL stubs every pick slot when it creates next year's board, so the newest
+  // feed is an empty board for most of the offseason — which is exactly what
+  // `resolveDefaultYear` exists to skip. Answering its `hasPicks` needs the
+  // feed read, and reads are async, so the walk-back happens here and the
+  // predicate is fed real answers rather than a hardcoded `true`.
+  //
+  // Bounded to four seasons: a league with nothing drafted at all should not
+  // read its whole archive on every request. Beyond that we fall back to the
+  // newest year, which is what resolveDefaultYear does with no match.
+  const requested = resolveRequestedYear(input.params, availableYears);
+  const drafted = new Map<number, boolean>();
+  if (requested === null) {
+    for (const candidate of descending.slice(0, 4)) {
+      const probe = await loadDraftResultsSeason(input.feeds, candidate);
+      drafted.set(candidate, probe.made > 0);
+      if (probe.made > 0) break;
+    }
+  }
   const year =
-    resolveRequestedYear(input.params, availableYears) ??
-    resolveDefaultYear(availableYears, () => true) ??
-    availableYears[0];
+    requested ??
+    resolveDefaultYear(availableYears, (y) => drafted.get(y) === true) ??
+    descending[0];
 
   const [season, latest] = await Promise.all([
     loadDraftResultsSeason(input.feeds, year),
-    loadDraftResultsSeason(input.feeds, Math.max(...availableYears)),
+    loadDraftResultsSeason(input.feeds, descending[0]),
   ]);
 
   return resolveDraftResultsView({

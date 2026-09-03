@@ -2190,7 +2190,7 @@ league-blind smell. Regression test: `tests/trades-pending-league-teams.test.ts`
 
 **Recommendation:** Use `isDraftConducted(draftResultsData)` from `src/utils/draft-utils.ts` (checks `/^\d+$/` on `player`) rather than re-deriving. Phase logic for order framing: `isDraftConducted` → drafted; else `isLeagueDraftOrderFinal` (champion + all 3 toilet bowl comp slots) → official; else projected. AFL equivalent: `isDraftOrderFinal` in `src/utils/afl-draft-utils.ts` (both conference champs + all 5 NIT positions). See CLAUDE.md "Draft order framing" for the framing rule itself.
 
-**Evidence:** `tests/draft-order-phase.test.ts`, `data/theleague/mfl-feeds/2026/draftResults.json` (51 real picks), `src/pages/theleague/draft-predictor.astro` phase switch.
+**Evidence:** `tests/draft-order-phase.test.ts`, `data/theleague/mfl-feeds/2026/draftResults.json` (51 real picks), `src/pages/theleague/draft/order.astro` phase switch.
 
 ## 2026-07-19 - `export?TYPE=myleagues&JSON=1` Returns TWO Different Wrapper Keys — Accept Both
 

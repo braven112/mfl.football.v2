@@ -268,7 +268,7 @@ The draft is annual, **9 rounds**, NFL-style. Only non-keepers are eligible.
 - **Rounds 2–9 follow the base reverse-standings order** (no NIT carryover).
 
 > **Implementation:** `src/utils/afl-draft-utils.ts` (`calculateAFLDraftOrder`) +
-> `src/pages/afl-fantasy/draft-predictor.astro`. The base order uses
+> `src/pages/afl-fantasy/draft/order.astro`. The base order uses
 > `sortByRecordReverse`, which applies the standings-tiebreaker chain below.
 > Head-to-head is derived from `weekly-results-raw.json`
 > (`buildHeadToHeadFromRaw`) because the standings feed's `h2h*` fields only
