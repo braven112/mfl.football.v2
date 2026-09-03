@@ -159,3 +159,36 @@ deliberately does not expose it.
 (verified to FAIL when the guard is removed) plus a real-config sweep asserting
 no franchise renders its own light crest during a throwback week.
 
+
+---
+
+## Two era crests are mirrored ESPN marks (September 2026)
+
+`trevors_team_2003_icon.png` (Texas Tech's Double T) and
+`limp_ditkas_2006_icon.png` (the Bears' dark-mode mark) are **not** cut from
+their banners. They are ESPN's own team logos, mirrored from
+`a.espncdn.com/i/teamlogos/ncaa/500/2641.png` and
+`.../nfl/500-dark/CHI.png` — the same source `scripts/fetch-nfl-dark-logos.mjs`
+already mirrors from, and in both cases the identical mark the era's banner
+carries, only transparent and at full resolution instead of punched out of a
+950x158 strip.
+
+Two things about them are deliberate and easy to undo by accident:
+
+- **They are trimmed, then fitted to 96 of the 100 px box.** An ESPN mark
+  arrives 500x500 with a wide transparent margin, so a plain resize renders it
+  visibly smaller than the full-bleed banner cuts beside it. Trim the margin
+  first; the 4px of remaining padding is breathing room, not slack.
+- **Neither carries an `iconStroke`.** The rim exists to give a banner CUT an
+  edge it does not have. These marks bring their own outline — the Bears' is
+  literally a white keyline — and a ring around a transparent PNG is a circle
+  floating in empty space with the art loose inside it. Limp Ditkas had one
+  and lost it in the same change.
+
+Both read correctly on the light card and the dark one, which is why the
+Bears' *dark* variant was the right pick rather than the standard mark: its
+white keyline disappears on the light card and the orange bear carries it,
+while on the dark card the keyline is what separates the mark from the ground.
+
+The palettes are untouched — `scripts/derive-era-palettes.mjs` samples the
+BANNER, never the crest, so swapping crest art cannot move an era's colors.
