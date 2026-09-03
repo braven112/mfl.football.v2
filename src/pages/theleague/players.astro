@@ -949,6 +949,8 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
           No bid
         </span>
       </div>
+      <WaiverClaimsPanel config={claimsPanelConfig} />
+
       <table class="players-table" id="players-table">
         <thead>
           <tr>
@@ -1091,7 +1093,6 @@ const r = (path: string) => resolveLeaguePath(path, hideLeaguePrefix);
 </TheLeagueLayout>
 
 <WaiverClaimModal config={claimConfig} />
-<WaiverClaimsPanel config={claimsPanelConfig} />
 
 <script define:vars={{ canClaim, playerDataJson, hasProjected, hasLastYrPts, hasSnapCounts, nflTeamsJson, hasSurplusData, hasAuctionData, isAuctionSeason, isAdmin, currentYear, mflHost, mflLeagueId, mflActionYear, franchiseNamesJson, franchiseBannersJson, defSpotlightJson, nflAvatarBgJson, nflAvatarBgFallback, nflAvatarBorderJson, nflAvatarBorderFallback, nflAvatarRingJson, nflAvatarRingFallback, nflAvatarRingDarkJson, nflAvatarRingDarkFallback, noHeadshot, logoOnerror: NFL_LOGO_ONERROR, collegeLogoOnerror: COLLEGE_LOGO_ONERROR, collegeLogoOnload: COLLEGE_LOGO_ONLOAD, rookieDraftComplete }}>
   // define:vars creates const — copy to let so polling can update at runtime
