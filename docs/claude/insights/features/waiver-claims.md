@@ -403,3 +403,86 @@ component script resolves at module scope is stale after the first ClientRouter
 navigation. `document` survives the swap; every element inside it does not —
 and that includes the `<script type="application/json">` config blob.
 
+
+## 2026-09-03 - `BBID_AMT` — The One Field That Broke Every TheLeague Claim
+
+**Context:** the queued-claim path was built and proven against the AFL. The
+first time a TheLeague owner used it, MFL refused — and kept refusing, for every
+owner, for as long as the route existed.
+
+**MFL's answer, once the page was actually read for it:**
+
+```
+Error: invalid waiver request:
+  Cannot Save Request: Invalid Bid Amount (bid amount must not include letters or symbols)
+  Cannot Save Request: Bid amount ($) is below bid minimum ($425000)
+```
+
+The `($)` is MFL echoing back the empty value it read. Our POST body:
+
+```
+L=13522&add_settings=&PROJSRC=mfl&add_pid=8851&drop_pid=&FORCE_WAIVER=on&ROUND=1&COMMENTS=&SUBMIT=Submit+Request
+```
+
+**The two leagues do not share a form.** The AFL runs rolling waiver PRIORITY —
+position in the order decides, so its `add_drop` has no amount box and none was
+ever sent. TheLeague is blind-bid (`currentWaiverType: BBID_FCFS`) and its form
+carries one. "It works in the AFL" was never evidence about TheLeague, and a
+route that serves both leagues through one code path needs a test per SYSTEM,
+not per league.
+
+**The field is `BBID_AMT`, and it was not guessable.** MFL's own JS names the
+wrapper `amt_field_id`:
+
+```js
+check_waiver_claim(this,'add_drop_submit','add_note_field_id','amt_field_id,round_field_id,comments_field_id')
+```
+
+and the sibling wrappers `round_field_id` / `comments_field_id` hold inputs named
+`ROUND` and `COMMENTS`. So the convention points at `AMT`, and the English points
+at `AMOUNT`. **Both are wrong.** This is the third time the curated rule "don't
+ship inferred parameter names to a write endpoint"
+(`docs/claude/insights/domains/mfl-api.md`) has paid for itself.
+
+Full field list of the real form, for the next person:
+
+```
+L, add_settings, PROJSRC, add_pid, drop_pid,
+FORCE_WAIVER (checkbox), BBID_AMT (text), ROUND (select), COMMENTS (textarea),
+SUBMIT (submit)
+```
+
+Send `BBID_AMT` as **bare integer dollars** — MFL parses the field itself and
+says so ("must not include letters or symbols"), so no `$`, no commas, no
+decimals. Send it only when `rules.blindBid`; the AFL's form has no such field
+and its claims work today.
+
+**How to read the form when you need it again.** `scripts/inspect-mfl-form.ts`
+needs `MFL_USER_ID`, which lives only in Vercel's environment — it is NOT in
+`.env.local`, so `vercel env pull` does not supply it and the script cannot run
+locally. The cheap path is the owner's own browser, anchored on an id you
+already know rather than on where you think the box is:
+
+```js
+[...document.getElementById('add_drop_submit').form.elements].map(e => `${e.name} (${e.type})`)
+```
+
+That walks up from the submit button to its form, so it cannot be aimed at the
+wrong element, and it lists hidden fields too — no need to tick FORCE_WAIVER
+first. (The server can also do it: the session JWT carries the caller's MFL
+cookie, so an admin-gated GET route can read the form as them. That was built
+and thrown away here; the console one-liner was faster.)
+
+**The reason this cost an afternoon is the error matcher, not the field.** MFL
+named the cause in plain English in the page body, and the matcher only knew
+`Transaction Would Create` and `Exceeds League Limit`. So the page classified as
+"no error found", the `pendingWaivers` delta then reported the claim missing, and
+the owner was told the generic "MFL did not record the claim". The route now
+collects **every** `Cannot Save Request:` line — MFL emits one per problem and
+the second is usually the actionable one — and returns MFL's own words.
+
+**Generalize that.** A refusal this route cannot parse is indistinguishable from
+a write that vanished, and both land on the same generic message. When adding a
+new MFL write path, harvest the failure text FIRST: make it fail on purpose, read
+what MFL says, and put that string in the matcher before shipping the success
+path.

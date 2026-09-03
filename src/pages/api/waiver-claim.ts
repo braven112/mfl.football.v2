@@ -279,6 +279,38 @@ export const POST: APIRoute = async ({ request }) => {
             // authenticated form, not guessed:
             //   <input type="checkbox" name="FORCE_WAIVER" id="FORCE_WAIVER" …>
             FORCE_WAIVER: 'on',
+            // THE BID. Blind-bid leagues only, and its absence is why NO claim
+            // TheLeague ever filed through this route was stored.
+            //
+            // `add_drop` was built and proven against the AFL, which runs
+            // rolling waiver PRIORITY — position in the order decides, so its
+            // form has no amount box and none was ever sent. TheLeague is
+            // blind-bid and MFL rejected every claim for it, in as many words:
+            //
+            //   Cannot Save Request: Invalid Bid Amount (bid amount must not
+            //   include letters or symbols)
+            //   Cannot Save Request: Bid amount ($) is below bid minimum
+            //   ($425000)
+            //
+            // The `($)` is MFL echoing back the empty value it read.
+            //
+            // `BBID_AMT` is READ OFF THE LIVE FORM, not inferred. MFL's own JS
+            // calls the wrapper `amt_field_id`, and the sibling wrappers
+            // `round_field_id` / `comments_field_id` hold inputs named ROUND and
+            // COMMENTS — so the obvious guesses were `AMT` and `AMOUNT`, and
+            // both are wrong. "Don't ship inferred parameter names to a write
+            // endpoint" (docs/claude/insights/domains/mfl-api.md) earned its
+            // place again here.
+            //
+            // Sent as bare integer dollars: MFL parses this field itself and
+            // says so — "must not include letters or symbols" — so no `$`, no
+            // commas, no decimals. `validateClaims` has already guaranteed a
+            // finite number at or above the minimum and on the increment for a
+            // bbid league, so there is nothing left to coerce.
+            //
+            // Omitted entirely for a priority league rather than sent empty:
+            // the AFL's form has no such field and its claims work today.
+            ...(rules.blindBid ? { BBID_AMT: String(c.bid) } : {}),
             ROUND: String(round),
             COMMENTS: '',
             // `Submit Request`, NOT `Perform Add/Drop`. MFL's server dispatches
@@ -330,10 +362,29 @@ export const POST: APIRoute = async ({ request }) => {
       }
       // MFL re-renders the page carrying its own complaint. Stop on the first
       // one rather than firing the rest of the board at a refusing endpoint.
+      //
+      // `Cannot Save Request:` IS THE ONE THAT MATTERS, and it was missing.
+      // MFL states a rejected waiver claim as prose in the page body, one
+      // sentence per problem:
+      //
+      //   Error: invalid waiver request: Cannot Save Request: Invalid Bid
+      //   Amount (bid amount must not include letters or symbols)
+      //   Cannot Save Request: Bid amount ($) is below bid minimum ($425000)
+      //
+      // Without that pattern the page classified as "no error found", the
+      // pendingWaivers delta then reported the claim as missing, and the owner
+      // was told the generic "MFL did not record the claim" — while MFL had
+      // named the cause in as many words. That cost an afternoon on 2026-09-03.
+      // EVERY occurrence is collected, not the first: MFL emits one line per
+      // problem and the second line is usually the actionable one.
+      const complaints = [...text.matchAll(/Cannot Save Request:[^<]*/gi)].map((m) => m[0].trim());
       const pageError =
         text.match(/Transaction Would Create[^<]*/i) ||
         text.match(/Exceeds League Limit[^<]*/i) ||
         text.match(/<error[^>]*>([\s\S]*?)<\/error>/i);
+      if (complaints.length > 0) {
+        return fail(`MFL rejected the claim: ${[...new Set(complaints)].join(' ')}`, 502);
+      }
       if (pageError) {
         return fail(
           `MFL rejected the claim: ${(pageError[1] || pageError[0] || '').trim()}`,
