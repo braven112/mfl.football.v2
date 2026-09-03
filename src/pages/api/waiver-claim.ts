@@ -40,6 +40,7 @@ import { bustRosterCaches } from '../../utils/mfl-roster-cache';
 import { JSON_HEADERS_NO_STORE as JSON_HEADERS } from '../../utils/api-response';
 import { resolveWaiverWindow } from '../../utils/waiver-window';
 import { readMflImportResult } from '../../utils/mfl-import-result';
+import { summarizeMflPage } from '../../utils/mfl-page-summary';
 import {
   readBidRules,
   readPendingWaiverPlayerIds,
@@ -279,7 +280,19 @@ export const POST: APIRoute = async ({ request }) => {
         body: write.body,
       })) as Response;
       text = (await res.text()).trim();
-      console.log(`[waiver-claim] MFL response: ${res.status} ${text.slice(0, 200)}`);
+      if (immediate) {
+        console.log(`[waiver-claim] MFL response: ${res.status} ${text.slice(0, 300)}`);
+      } else {
+        // add_drop answers with a full page, so a raw slice is doctype and
+        // <head> and nothing else — three rounds of logs proved only that a
+        // page came back. The SUBMIT controls are the payload here: a
+        // re-rendered form is MFL stating the action it expects right now.
+        const page = summarizeMflPage(text);
+        console.log(
+          `[waiver-claim] add_drop → ${res.status} | title=${JSON.stringify(page.title)} | submits=${JSON.stringify(page.submits)}`
+        );
+        console.log(`[waiver-claim] add_drop text: ${page.text}`);
+      }
       // MFL re-renders the page carrying its own complaint. Stop on the first
       // one rather than firing the rest of the board at a refusing endpoint.
       const pageError =
