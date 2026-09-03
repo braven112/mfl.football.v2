@@ -486,3 +486,47 @@ a write that vanished, and both land on the same generic message. When adding a
 new MFL write path, harvest the failure text FIRST: make it fail on purpose, read
 what MFL says, and put that string in the matcher before shipping the success
 path.
+
+## 2026-09-03 - `blindBidWaiverRequest` — The Same Bug, One Layer Up
+
+**Context:** the hour after `BBID_AMT` (above) made TheLeague's claims file for
+the first time. They filed, MFL listed them — and the manage panel said
+*"Could not read your pending waivers"* for every owner who had one.
+
+`export?TYPE=pendingWaivers` names the record after the WAIVER SYSTEM:
+
+```json
+// AFL — rolling priority
+{"pendingWaivers":{"waiverRequest":{
+   "timestamp":"1788405970","addsDrops":"15889_14059","comments":"","round":"1"}}}
+
+// TheLeague — blind bid
+{"pendingWaivers":{"blindBidWaiverRequest":{
+   "timestamp":"1788478227","round":"1","addsDrops":"16778_425000_0000","comments":""}}}
+```
+
+`readFiledWaiverClaims` looked up `waiverRequest` by name. Everything else about
+the payload was already handled — `addsDrops` keeps its name, and the parser
+already read `add_bid_drop` as well as `add_drop`. **One key.**
+
+**Two lessons, and the second is the reusable one.**
+
+1. This is the THIRD time in one day that code written against the AFL was wrong
+   for TheLeague, after the waiver-window tie and `BBID_AMT`. MFL varies its
+   payloads by waiver SYSTEM, not by league, and a route serving both systems
+   through one path has only ever been tested on one of them until proven
+   otherwise. Fixture-per-system, not fixture-per-league.
+
+2. **Find records by SHAPE, not by container name.** The parser now takes
+   anything carrying an `addsDrops` string, wherever it sits, so a third name
+   costs nothing. That is the right trade for a vendor payload whose keys are
+   editorial and whose *contents* are the contract — but it is only safe because
+   the shape test is specific. A generic "walk until you find digits" would
+   match `round`, `timestamp` and the bid amount too, which is exactly why
+   `readPendingWaiverPlayerIds` restricts its fallback to `id` / `player` keys.
+
+**Why this was a bug report and not a lost claim.** Both readers return `null`
+for an unreadable payload and `[]` only for a genuinely empty one. The panel
+therefore said *could not read* rather than showing an empty list — so the owner
+saw a broken panel, not a vanished claim. That distinction is load-bearing and is
+pinned by test; do not let a future refactor collapse them.

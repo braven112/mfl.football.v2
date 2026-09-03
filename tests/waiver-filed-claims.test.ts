@@ -13,12 +13,37 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { readFiledWaiverClaims } from '../src/utils/waiver-claim';
 
-/** Verbatim from `export?TYPE=pendingWaivers` with one claim filed. */
+/** Verbatim from the AFL's `export?TYPE=pendingWaivers` with one claim filed. */
 const REAL = {
   version: '1.0',
   encoding: 'utf-8',
   pendingWaivers: {
     waiverRequest: { timestamp: '1788405970', addsDrops: '15889_14059', comments: '', round: '1' },
+  },
+};
+
+/**
+ * Verbatim from TheLeague's `export?TYPE=pendingWaivers`, captured 2026-09-03
+ * immediately after a claim filed.
+ *
+ * NOTE THE CONTAINER KEY. Rolling priority (the AFL, above) answers with
+ * `waiverRequest`; blind bidding answers with `blindBidWaiverRequest`. The
+ * parser looked up `waiverRequest` by name, found nothing, and correctly
+ * reported the payload as UNREADABLE — so every TheLeague owner with a filed
+ * claim saw "Could not read your pending waivers" in the manage panel.
+ *
+ * The pick format needed no change: `add_bid_drop`, with `0000` for no drop.
+ */
+const REAL_BBID = {
+  version: '1.0',
+  encoding: 'utf-8',
+  pendingWaivers: {
+    blindBidWaiverRequest: {
+      timestamp: '1788478227',
+      round: '1',
+      addsDrops: '16778_425000_0000',
+      comments: '',
+    },
   },
 };
 
@@ -35,6 +60,46 @@ describe('readFiledWaiverClaims', () => {
         timestamp: '1788405970',
       },
     ]);
+  });
+
+  it('reads the real BLIND-BID payload, whose container key is different', () => {
+    // The bug this pins: `pendingWaivers.waiverRequest` is the PRIORITY league's
+    // key. TheLeague bids and answers with `blindBidWaiverRequest`, so the panel
+    // read null for every filed claim.
+    expect(readFiledWaiverClaims(REAL_BBID)).toEqual([
+      {
+        round: '1',
+        index: 0,
+        addPlayerId: '16778',
+        dropPlayerId: null,
+        bid: 425000,
+        comment: '',
+        timestamp: '1788478227',
+      },
+    ]);
+  });
+
+  it('finds the request by SHAPE, so a third container name needs no code change', () => {
+    // MFL has now used two names for the same record and there is no reason to
+    // believe two is the limit. The record is whatever carries an `addsDrops`
+    // string, which is the field the pick format already depends on.
+    const claims = readFiledWaiverClaims({
+      pendingWaivers: {
+        someFutureWaiverRequest: { round: '3', addsDrops: '16778_425000_0000', comments: 'hi' },
+      },
+    });
+    expect(claims).toHaveLength(1);
+    expect(claims![0]).toMatchObject({ round: '3', addPlayerId: '16778', bid: 425000, comment: 'hi' });
+  });
+
+  it('still separates UNREADABLE from NOTHING FILED after the shape search', () => {
+    // The whole reason this bug was legible as a bug: a payload with content but
+    // no recognisable record must be null, never []. Reporting [] tells an owner
+    // their filed claim is gone.
+    expect(readFiledWaiverClaims({ pendingWaivers: { somethingElse: { foo: 'bar' } } })).toBeNull();
+    // And the genuine empty states stay empty.
+    expect(readFiledWaiverClaims({ pendingWaivers: '' })).toEqual([]);
+    expect(readFiledWaiverClaims({ pendingWaivers: {} })).toEqual([]);
   });
 
   it('keeps MFL\'s order, because that order IS the priority', () => {
