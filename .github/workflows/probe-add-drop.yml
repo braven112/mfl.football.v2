@@ -1,0 +1,67 @@
+# TEMPORARY diagnostic. Read-only, dispatch-only, no schedule.
+#
+# The AFL waiver claim POSTs MFL's add_drop page and MFL re-renders the form
+# instead of filing the claim. The authenticated page is the diagnosis and it
+# cannot be read without a session cookie, which lives only here as a secret.
+#
+# This performs a GET and prints the form controls. It writes NOTHING. Delete
+# once the waiver claim is fixed.
+name: Probe add_drop form
+
+on:
+  workflow_dispatch:
+    inputs:
+      league:
+        description: MFL league id
+        required: true
+        default: '19621'
+      host:
+        description: MFL league host
+        required: true
+        default: 'www44.myfantasyleague.com'
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: GET the add/drop page as a logged-in owner
+        env:
+          MFL_USER_ID: ${{ secrets.MFL_USER_ID }}
+          LEAGUE: ${{ inputs.league }}
+          HOST: ${{ inputs.host }}
+        run: |
+          node --input-type=module -e '
+          const { MFL_USER_ID, LEAGUE, HOST } = process.env;
+          if (!MFL_USER_ID) { console.log("NO COOKIE SECRET"); process.exit(1); }
+          const year = 2026;
+          // Manual redirect: undici drops Cookie on the cross-origin hop.
+          async function get(url) {
+            for (let i = 0; i < 4; i++) {
+              const res = await fetch(url, { headers: { Cookie: `MFL_USER_ID=${MFL_USER_ID}` }, redirect: "manual" });
+              if (res.status < 300 || res.status >= 400) return { res, url };
+              url = new URL(res.headers.get("location"), url).href;
+            }
+            throw new Error("too many redirects");
+          }
+          for (const path of [`/${year}/add_drop?L=${LEAGUE}`, `/${year}/options?L=${LEAGUE}&O=47`]) {
+            const { res, url } = await get(`https://${HOST}${path}`);
+            const html = await res.text();
+            const title = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]?.trim();
+            console.log(`\n===== ${path} -> ${res.status} ${url}`);
+            console.log("TITLE:", title);
+            const authed = !/name=["\x27]PASSWORD["\x27]/i.test(html);
+            console.log("AUTHENTICATED:", authed);
+            for (const [tag] of html.matchAll(/<form[^>]*>/gi)) console.log("FORM:", tag.replace(/\s+/g, " "));
+            for (const [tag] of html.matchAll(/<input[^>]*>/gi)) {
+              if (!/type\s*=\s*["\x27]?submit/i.test(tag)) continue;
+              console.log("SUBMIT:", tag.replace(/\s+/g, " "));
+            }
+            // Field NAMES only — never values, which carry roster/owner data.
+            const names = [...html.matchAll(/<(?:input|select)[^>]*\bname\s*=\s*["\x27]([^"\x27]+)/gi)].map(m => m[1]);
+            console.log("FIELD NAMES:", JSON.stringify([...new Set(names)]));
+            const text = html.replace(/<script[\s\S]*?<\/script>/gi," ").replace(/<style[\s\S]*?<\/style>/gi," ")
+              .replace(/<[^>]+>/g," ").replace(/&nbsp;/gi," ").replace(/\s+/g," ").trim();
+            const i = text.toLowerCase().indexOf("waiver");
+            console.log("WAIVER CONTEXT:", i >= 0 ? text.slice(Math.max(0, i - 250), i + 450) : "(no mention)");
+          }
+          '
