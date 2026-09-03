@@ -330,7 +330,7 @@ defined only in some other file's scoped block satisfies it repo-wide while
 still rendering the fallback for you. That failure mode is row 2 of
 `design-system.md`'s "Four ways a token fails" table and remains unguarded.
 
-## 2026-09-03 - The Bid Button Dies After An In-Site Navigation (PRE-EXISTING, NOT FIXED)
+## 2026-09-03 - The Bid Button Dies After An In-Site Navigation (FIXED)
 
 **Found while reviewing the waiver-priority PR, in code that PR did not touch.**
 
@@ -350,22 +350,56 @@ against the fixed `WaiverPriorityModal` returns `open: true` with all 12 rows.
 Reproduce it as a user: Free Agents → Rosters → back to Free Agents (in-site
 links, no hard reload) → click Bid. Nothing happens until you reload.
 
-**Why it was not fixed in that PR.** The repair is mechanical — the repo already
-has the shape, in `WaiverClaimsPanel.astro`: hold the delegated handler in a
-module-scoped variable, `removeEventListener` it before re-adding, and re-run
-the whole init on `astro:page-load` so the closure is rebuilt against live
-nodes. But it wraps ~190 lines including the MFL submit flow, and a first
-attempt at it mid-review corrupted the file. Restructuring a working submit path
-under a merge is how a shipped feature breaks. It wants its own change and its
-own verification.
+**Why it was deferred out of that PR.** The repair is mechanical, but it wraps
+~190 lines including the MFL submit flow, and a first attempt at it mid-review
+corrupted the file. Restructuring a working submit path under a merge is how a
+shipped feature breaks. It wanted its own change and its own verification.
 
-**What that PR did instead:** `resumePendingClaim()` is called at module scope
-rather than on `astro:page-load`, with a comment saying why. The sign-in flow
-always does a full reload (LoginForm sets `location.href`), so the shipping path
-gets a fresh module and works; only the navigate-in-with-a-parked-id path is
-degraded, and it consumes the id rather than leaving it to ambush someone later.
+**The fix, in its own change.** The shape came straight from
+`WaiverClaimsPanel.astro`: the entire `if (cfg?.canClaim)` body moved inside an
+`init()` registered on `astro:page-load`, and the delegated `.claim-open`
+handler is held in a module-scoped `onDocumentClick` that is
+`removeEventListener`ed before it is re-added. That last part is the whole
+trick — remove-then-add yields exactly ONE listener *and* a closure over live
+nodes, where a once-flag yields one listener over dead ones, which is the same
+bug wearing a hat.
+
+Three details that are load-bearing, not style:
+
+- **The config blob is re-read inside `init()`, not next to the import.**
+  `#waiver-claim-config` is swapped out like everything else, so a captured
+  `cfg` is the previous page's rules, roster, balance and *year*. Verified by
+  driving three simulated navigations with a deliberately different config each
+  time: the bid minimum, increment, balance, roster size, round count and the
+  `year` in the submitted POST body all tracked the current page's config.
+- **`init()` is never called directly.** `astro:page-load` fires on the initial
+  load too, so a direct call double-inits — and this component *appends* to the
+  drop and round selects, so a double-init silently duplicates every option.
+  (The first probe caught exactly this shape, as an artifact of cloning an
+  already-initialised dialog rather than swapping in pristine server markup. If
+  a probe's option counts grow, suspect the probe before the code.)
+- **`resumePendingClaim()` moved onto `astro:page-load` too, and runs LAST.**
+  Its first act is a *synchronous* click on the parked player's button, so the
+  delegated handler has to be wired before it lands. It still sits outside the
+  `canClaim` block, for the original reason: it is the only thing that clears
+  the parked id. The comment explaining why it was pinned to module scope is
+  gone — this bug was the entire reason.
+
+**Measured after, the same way as before.** Three simulated ClientRouter swaps,
+pristine markup each time: `open: true`, the player's name populated, option
+counts exact, and `showModal` called exactly once per click (no stacking). The
+submit path still POSTs the right payload to `/api/waiver-claim` and shows
+"Submitted ✓". Against the pre-fix file the same probe returns `open: false`
+with the name still `—` and `showModal` never called.
+
+`tests/waiver-filed-claims.test.ts` now pins it: every `getElementById` and the
+`resumePendingClaim()` call must appear after `function init()`, the
+`astro:page-load` registration must exist, a bare `init();` must not, and the
+click listener must be removed before it is added. Both new cases fail against
+the pre-fix file.
 
 **The general rule, now in `frontend.md`'s head and worth restating:** anything a
 component script resolves at module scope is stale after the first ClientRouter
-navigation. `document` survives the swap; every element inside it does not.
+navigation. `document` survives the swap; every element inside it does not —
+and that includes the `<script type="application/json">` config blob.
 

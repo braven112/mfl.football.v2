@@ -22,10 +22,11 @@
   `@import` a shared stylesheet inside a scoped `<style>` — Vite inlines and
   scopes every imported selector; import it in frontmatter instead.
 - **Interactive scripts must re-init on `astro:page-load`,** or they go dead on
-  in-site navigation. Three traps: `document`-level listeners *stack* (guard
-  with a module-scoped once-flag); config captured at module-eval goes stale
-  (re-read the SSR JSON blob inside the handler); and `init()` can run twice on
-  the *initial* load, splitting closure state from the DOM it rebuilt.
+  in-site navigation. Three traps: `document` listeners *stack* — keep the
+  handler in a module-scoped var and `removeEventListener` before re-adding (a
+  once-flag is WORSE: one listener pinned to load 1's dead nodes); config goes
+  stale (re-read the SSR blob in `init()`); and `init()` double-runs if you also
+  call it.
 - **A control whose only job is switching a URL param should be an `<a href>`**
   built from `Astro.url` — not a `<button>` plus a click handler.
 - Never wrap a `<script>` in a conditional (breaks Astro's dedup). Read
@@ -129,6 +130,66 @@ production-only CSS bug, `curl` the shipped HTML + stylesheets, rewrite the
 hrefs to local copies, and open it in the bundled Chromium — it isolates
 "wrong bytes" from "device failing to apply right bytes" in minutes.
 <!-- /CURATED-HEAD -->
+
+---
+
+## 2026-09-03 - A Once-Flag Is Not A Fix For A Stacking ClientRouter Listener
+
+The head used to say: guard a `document`-level listener with a module-scoped
+once-flag. That stops the stacking and **keeps the bug**, so the advice is now
+remove-then-add.
+
+Both failure modes are real and they pull in opposite directions:
+
+- **Add it plainly** and you get one more listener per in-site navigation,
+  because `document` is the one node the swap does NOT replace.
+- **Add it once behind a flag** and you get exactly one listener — belonging to
+  the FIRST evaluation, closed over elements the swap detached. It fires, it
+  runs, it throws nothing, and it operates on a dead DOM.
+
+`WaiverClaimModal.astro` shipped the second shape by accident (the handler was
+registered at module scope, which is a once-flag with extra steps): after Free
+Agents → Rosters → Free Agents, the Bid button did nothing at all. `showModal()`
+on a detached `<dialog>` is silent — no error, no dialog, nothing to search for.
+
+**Remove-then-add is the only shape that gets both**: one listener AND a live
+closure.
+
+```js
+let onDocumentClick = null;
+function init() {
+  if (onDocumentClick) document.removeEventListener('click', onDocumentClick);
+  onDocumentClick = (e) => { /* closes over THIS page's nodes */ };
+  document.addEventListener('click', onDocumentClick);
+}
+document.addEventListener('astro:page-load', init);
+```
+
+A once-flag is only safe in the variant `WaiverPriorityModal.astro` uses, where
+the handler closes over nothing and reads a module-scoped `ctx` object that
+`init()` repopulates each load. That is a real pattern, but it is a different
+one — the flag is safe there *because* the closure holds no elements.
+
+**Two corollaries worth having:**
+
+- **The SSR config blob goes stale exactly like the elements do.** A
+  `<script type="application/json">` is swapped out with everything else, so a
+  `cfg` parsed next to the import is the previous page's rules, roster, balance
+  and year. Re-read it inside `init()`. In this component that was not cosmetic:
+  the year in the submitted waiver POST came from the config.
+- **Anything `init()` APPENDS makes double-init visible.** This one appends
+  `<option>`s to two selects, so calling `init()` directly *and* registering it
+  on `astro:page-load` silently doubles every option. That also makes it a
+  probe hazard: verify against pristine server markup, because cloning an
+  already-initialised node and re-running `init()` reproduces the duplication
+  and looks like a code bug. If a probe's counts grow, suspect the probe first.
+
+Verified by driving three simulated swaps with a different config each pass and
+asserting the option counts, the rendered values and the POST body, plus a
+patched `showModal` to count calls (exactly one per click). The pre-fix file
+fails the same probe with `open: false`. `tests/waiver-filed-claims.test.ts`
+pins the shape; see `docs/claude/insights/features/waiver-claims.md` for the
+full measurement.
 
 ---
 

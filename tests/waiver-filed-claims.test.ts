@@ -203,4 +203,41 @@ describe('the panel refreshes when a claim is filed', () => {
     expect(PANEL, 'a bare once-flag would keep a stale closure alive')
       .not.toMatch(/if \(!w\.__wcpListeners\)/);
   });
+
+  it('the modal re-initialises on astro:page-load rather than capturing the DOM once', () => {
+    // Same trap, one component over. A component script is evaluated ONCE per
+    // document and ClientRouter swaps the DOM without re-evaluating it, so a
+    // `dlg` resolved at module scope is a DETACHED node after the first in-site
+    // navigation and `showModal()` on it puts nothing on screen. The Bid button
+    // silently did nothing until a hard reload; that shipped.
+    const initAt = MODAL.indexOf('function init()');
+    expect(initAt, 'the wiring must live in an init() that re-runs per load').toBeGreaterThan(-1);
+
+    // The config blob goes stale exactly like the elements do, so it is re-read
+    // inside init() too — not captured alongside the import.
+    for (const read of [
+      "getElementById('waiver-claim-config')",
+      "getElementById('waiver-claim-modal')",
+      "getElementById('wcm-submit')",
+    ]) {
+      expect(MODAL.indexOf(read), `${read} must be re-read inside init()`).toBeGreaterThan(initAt);
+    }
+
+    // resumePendingClaim's first act is a synchronous click on the parked
+    // player's button, so it runs inside init() — after the handler is wired.
+    expect(MODAL.indexOf('resumePendingClaim()')).toBeGreaterThan(initAt);
+
+    expect(MODAL).toContain("document.addEventListener('astro:page-load', init)");
+    // astro:page-load fires on the initial load too — a direct call double-inits,
+    // which duplicates every option appended to the drop and round selects.
+    expect(MODAL, 'astro:page-load already fires on the first load').not.toMatch(/^\s*init\(\);\s*$/m);
+  });
+
+  it('the modal replaces its delegated click listener rather than stacking it', () => {
+    // `document` is the one thing that SURVIVES the swap, so re-adding per
+    // navigation stacks a handler each time. A once-flag is no better: it pins
+    // the survivor to the first page's dead nodes, which is the original bug.
+    expect(MODAL).toContain("removeEventListener('click', onDocumentClick)");
+    expect(MODAL).toContain("addEventListener('click', onDocumentClick)");
+  });
 });
