@@ -190,6 +190,51 @@ patched `showModal` to count calls (exactly one per click). The pre-fix file
 fails the same probe with `open: false`. `tests/waiver-filed-claims.test.ts`
 pins the shape; see `docs/claude/insights/features/waiver-claims.md` for the
 full measurement.
+## 2026-09-02 - `height: 100%` Inside a Grid Track Overlaps the Next Row, and Astro Hides Scoped CSS From `curl` in Production
+
+**Context:** The draft hub's tool cards painted on top of each other — the
+second row of cards sat over the bottom of the first, clipping its text. The
+grid row track measured 123.5px and every card in it measured 158px.
+
+**Insight 1 — the no-global-border-box trap has a GRID variant, and it does not
+look like an overflow.** The head already records that this repo has no global
+`box-sizing: border-box` (`TheLeagueLayout` scopes it to `main`, and box-sizing
+does not inherit), with `width: 100%` + padding on a div as the example. The
+grid form is nastier because the symptom is not a too-wide element:
+
+```css
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(255px, 1fr)); }
+.card  { height: 100%; padding: 0.85rem; border: 1px solid; }  /* WRONG */
+```
+
+`height: 100%` resolves against the row track, then padding and border are
+added ON TOP of it, so the card is exactly `2 × padding + 2 × border` taller
+than its row — here 34px — and that surplus lands on the row beneath. Nothing
+is "too wide", no scrollbar appears, and each card measures plausibly on its
+own; only comparing a card's `getBoundingClientRect().bottom` against the next
+row's `top` shows it.
+
+**The fix is not `box-sizing` — it is not using a percentage height at all.**
+Equal-height cards want the grid item to stretch, which it already does:
+
+```css
+.cards > li { display: flex; }   /* the <li> fills its track */
+.card       { flex: 1; }         /* the card fills the <li> */
+```
+
+A stretched flex item cannot overflow its container whatever the box model, so
+this is correct under content-box AND border-box. Verify by asserting the
+card's height EQUALS its grid item's height, at more than one column count — a
+one-column layout hides the bug entirely, because with one card per row there
+is no next row to overlap.
+
+**Insight 2 — you cannot verify a scoped-CSS fix by grepping the served HTML in
+production.** Astro inlines a component's scoped `<style>` in dev but extracts
+it to a hashed stylesheet in a production build, so
+`curl https://preview/... | grep 'dh__card'` returns nothing on a deployment
+that has the fix and nothing on one that does not — identical output, opposite
+meaning. Check computed geometry in a browser (`getBoundingClientRect`) or fetch
+the linked stylesheet; do not treat an empty grep as evidence either way.
 
 ---
 
