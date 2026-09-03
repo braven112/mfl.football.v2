@@ -4,6 +4,14 @@
     {
       "date": "2026-09-03",
       "type": "bug-fix",
+      "summary": "\"Your Waiver Claims\" on Free Agents said \"Could not read your pending waivers\" for anyone who actually had one filed, and filing a claim came back with a shrug — \"submitted, but we could not confirm it\" — instead of a clean checkmark. The claim was always there; we just could not find it when we looked. MyFantasyLeague labels the record differently depending on how a league runs waivers, and we only knew the label the AFL uses. TheLeague bids, so its claims went by another name and we read straight past them. The panel now finds a filed claim by its shape rather than by what MFL decided to call it that week, so a third name would not break it either. Your claims, your bids and the drop attached to each are all listed again.",
+      "impact": "user",
+      "area": "free-agents",
+      "league": "theleague"
+    },
+    {
+      "date": "2026-09-03",
+      "type": "bug-fix",
       "summary": "Filing a waiver claim from Free Agents now actually files it. Every claim TheLeague sent through the site was being thrown away by MyFantasyLeague, because the form we submit on your behalf was missing one box: the bid amount. The feature was built and tested in the AFL, which runs waiver priority and has no bid to send — TheLeague bids, so MFL read an empty amount, decided it was below the $425,000 minimum, and refused. It said so, too, in plain English, and we were not reading the part of the page it said it on: the error you saw was our own vague shrug rather than MFL's actual complaint. Both are fixed — the bid goes with the claim, and when MFL does turn one down you now get its exact words instead of a guess.",
       "impact": "user",
       "area": "free-agents",

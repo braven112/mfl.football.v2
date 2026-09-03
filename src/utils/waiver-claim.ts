@@ -356,8 +356,37 @@ export function readFiledWaiverClaims(body: any): FiledWaiverClaim[] | null {
   if (typeof pending === 'string') return pending.trim() === '' ? [] : null;
   if (typeof pending !== 'object') return null;
 
-  const raw = (pending as any).waiverRequest ?? (pending as any).waiver;
-  const requests = Array.isArray(raw) ? raw : raw ? [raw] : [];
+  // THE CONTAINER KEY IS PER WAIVER SYSTEM, so it is not looked up by name.
+  // Rolling priority answers with `waiverRequest`; blind bidding answers with
+  // `blindBidWaiverRequest`:
+  //
+  //   {"pendingWaivers":{"blindBidWaiverRequest":{
+  //      "timestamp":"1788478227","round":"1",
+  //      "addsDrops":"16778_425000_0000","comments":""}}}
+  //
+  // Reading only `waiverRequest` is why TheLeague's claims panel said "Could not
+  // read your pending waivers" for every owner who had one filed (2026-09-03) —
+  // and it said COULD NOT READ rather than "nothing filed", which is the only
+  // reason it read as a bug instead of as a lost claim.
+  //
+  // So the record is found by SHAPE — anything carrying an `addsDrops` string —
+  // rather than by enumerating names MFL has not finished inventing. The pick
+  // format is already system-agnostic below (`add_drop` or `add_bid_drop`), and
+  // this makes the container match it.
+  const requests: unknown[] = [];
+  const collect = (node: unknown): void => {
+    if (Array.isArray(node)) {
+      for (const child of node) collect(child);
+      return;
+    }
+    if (!node || typeof node !== 'object') return;
+    if (typeof (node as { addsDrops?: unknown }).addsDrops === 'string') {
+      requests.push(node);
+      return;
+    }
+    for (const value of Object.values(node as Record<string, unknown>)) collect(value);
+  };
+  collect(pending);
   if (requests.length === 0) {
     // An empty container is a credible "nothing filed"; anything else is a
     // shape we do not recognise and must not report as empty.
@@ -365,7 +394,14 @@ export function readFiledWaiverClaims(body: any): FiledWaiverClaim[] | null {
   }
 
   const out: FiledWaiverClaim[] = [];
-  for (const req of requests) {
+  for (const request of requests) {
+    const req = request as {
+      addsDrops?: unknown;
+      round?: unknown;
+      comments?: unknown;
+      comment?: unknown;
+      timestamp?: unknown;
+    };
     const picks = String(req?.addsDrops ?? '').trim();
     if (!picks) continue;
     const round = String(req?.round ?? '');
